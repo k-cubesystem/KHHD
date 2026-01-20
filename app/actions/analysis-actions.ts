@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { generateFateReport } from "@/lib/gemini";
 import { getSajuData } from "@/lib/saju";
 
-export async function startFateAnalysis(formData: FormData) {
+export async function startFateAnalysis(formData: FormData): Promise<void> {
     const supabase = await createClient();
     const memberId = formData.get("memberId") as string;
     const homeAddress = formData.get("homeAddress") as string;
@@ -20,7 +20,7 @@ export async function startFateAnalysis(formData: FormData) {
         .single();
 
     if (memberError || !member) {
-        throw new Error("대상 정보를 찾을 oily 수 없습니다.");
+        throw new Error("대상 정보를 찾을 수 없습니다.");
     }
 
     const sajuData = getSajuData(
@@ -34,7 +34,7 @@ export async function startFateAnalysis(formData: FormData) {
     let handImageUrl = member.hand_image_url;
 
     if (faceFile && faceFile.size > 0) {
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData } = await supabase.storage
             .from("face-images")
             .upload(`${memberId}_face_${Date.now()}`, faceFile);
         if (uploadData) {
@@ -44,7 +44,7 @@ export async function startFateAnalysis(formData: FormData) {
     }
 
     if (handFile && handFile.size > 0) {
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { data: uploadData } = await supabase.storage
             .from("hand-images")
             .upload(`${memberId}_hand_${Date.now()}`, handFile);
         if (uploadData) {
@@ -75,18 +75,16 @@ export async function startFateAnalysis(formData: FormData) {
         });
 
         // 5. saju_records에 저장
-        const { data: record, error: recordError } = await supabase.from("saju_records").insert([
+        await supabase.from("saju_records").insert([
             {
                 member_id: memberId,
                 full_report_html: reportText,
-                // 성공 확률 등 수치 데이터는 나중에 파싱하여 추가 가능
                 success_probability: 80,
                 happiness_index: 85,
             },
-        ]).select().single();
+        ]);
 
         revalidatePath("/protected/analysis");
-        return { success: true, recordId: record?.id };
     } catch (error: any) {
         console.error("AI Analysis Error:", error);
         throw new Error("AI 분석 중 오류가 발생했습니다: " + error.message);
