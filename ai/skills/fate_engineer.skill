@@ -1,0 +1,23 @@
+{
+  "id": "fate_engineer_skill",
+  "name": "운명 공학 분석 스킬",
+  "description": "사주, 관상, 풍수 데이터를 통합하여 운명을 분석하고 솔루션을 제공하는 기능",
+  "actions": [
+    {
+      "name": "get_user_family_context",
+      "description": "사용자가 등록한 가족 리스트와 그들의 사주 기초 정보를 가져옵니다."
+    },
+    {
+      "name": "calculate_complex_saju",
+      "description": "lunar-javascript 라이브러리를 호출하여 정확한 만세력과 오행 합충변화를 계산합니다."
+    },
+    {
+      "name": "analyze_multimodal_vision",
+      "description": "얼굴과 손금 이미지를 분석하여 관상학적 특징점과 피부 찰색을 데이터화합니다."
+    },
+    {
+      "name": "check_payment_status",
+      "description": "사용자가 프리미엄 리포트를 볼 수 있는 권한(크레딧)이 있는지 확인합니다."
+    }
+  ]
+}
