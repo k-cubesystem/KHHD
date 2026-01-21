@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ interface AnalysisFormProps {
 }
 
 export function AnalysisForm({ members }: AnalysisFormProps) {
+    const [isMounted, setIsMounted] = useState(false);
     const [step, setStep] = useState(1);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [facePreview, setFacePreview] = useState<string | null>(null);
@@ -30,6 +31,14 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
 
     const faceInputRef = useRef<HTMLInputElement>(null);
     const handInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) {
+        return <div className="w-full h-96 bg-white/5 animate-pulse rounded-2xl" />;
+    }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setPreview: (url: string | null) => void) => {
         const file = e.target.files?.[0];
@@ -64,6 +73,7 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
 
             const orderId = `ORDER_${Date.now()}_${selectedMemberId.slice(0, 8)}`;
             const homeAddress = (document.getElementById("address") as HTMLInputElement)?.value || "";
+            const origin = typeof window !== "undefined" ? window.location.origin : "";
 
             // Toss Payments 결제창 호출
             await tossPayments.requestPayment("카드", {
@@ -71,8 +81,8 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                 orderId,
                 orderName: "해화당 프리미엄 운명 분석",
                 customerName: members.find(m => m.id === selectedMemberId)?.name || "고객",
-                successUrl: `${window.location.origin}/protected/analysis/success?memberId=${selectedMemberId}&homeAddress=${encodeURIComponent(homeAddress)}`,
-                failUrl: `${window.location.origin}/protected/analysis/fail`,
+                successUrl: `${origin}/protected/analysis/success?memberId=${selectedMemberId}&homeAddress=${encodeURIComponent(homeAddress)}`,
+                failUrl: `${origin}/protected/analysis/fail`,
             });
         } catch (error: any) {
             console.error("[Payment] Error:", error);

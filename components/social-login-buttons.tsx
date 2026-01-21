@@ -17,16 +17,12 @@ export default function SocialLoginButtons() {
   }, []);
 
   const handleLogin = async (e: React.MouseEvent, provider: "google" | "kakao") => {
-    // 1. 기본 동작 및 버블링 원천 차단
     e.preventDefault();
     e.stopPropagation();
 
-    if (!isMounted) {
-      console.warn(`[OAuth] Attempted ${provider} login before mounting.`);
-      return;
-    }
+    if (!isMounted || typeof window === "undefined") return;
 
-    console.log(`[OAuth] 🚀 Attempting ${provider} login... (Origin: ${window.location.origin})`);
+    console.log(`[OAuth] 🚀 Attempting ${provider} login...`);
 
     try {
       setIsLoading(provider);
@@ -42,9 +38,7 @@ export default function SocialLoginButtons() {
         alert(`${provider} 로그인 중 오류가 발생했습니다: ${error.message}`);
         setIsLoading(null);
       } else if (data.url) {
-        console.log(`[OAuth] ${provider} redirect success, forcing navigation to:`, data.url);
         window.location.href = data.url;
-        // 페이지가 이동되므로 isLoading을 false로 되돌리지 않음 (스피너 유지)
       } else {
         setIsLoading(null);
       }
@@ -76,7 +70,6 @@ export default function SocialLoginButtons() {
         <span className="font-medium">{isLoading === "google" ? "연결 중..." : "Google로 시작하기"}</span>
       </Button>
 
-      {/* 카카오 로그인 버튼 */}
       <Button
         type="button"
         disabled={isLoading !== null}
