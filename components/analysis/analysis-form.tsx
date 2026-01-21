@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useFormStatus } from "react-dom";
-import { startFateAnalysis } from "@/app/actions/analysis-actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Sparkles, Upload, ChevronRight, Check } from "lucide-react";
+import { Sparkles, Upload, ChevronRight, Check, CreditCard } from "lucide-react";
 import Image from "next/image";
+import { getTossPayments } from "@/lib/tosspayments";
 
 interface FamilyMember {
     id: string;
@@ -49,15 +46,39 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
         setStep((prev) => prev + 1);
     };
 
-    const handleSubmit = async (formData: FormData) => {
+    const ANALYSIS_PRICE = 9900; // 9,900원
+
+    const handlePayment = async () => {
+        if (!selectedMemberId) {
+            alert("분석 대상을 선택해주세요.");
+            return;
+        }
+
         setIsSubmitting(true);
+
         try {
-            await startFateAnalysis(formData);
-            // Determine redirect or success state handled by server action revalidating/redirecting
-            // But since server action is void, we might want to wait or just let the redirect happen.
-            // If startFateAnalysis throws, we catch it here.
-        } catch (error) {
-            alert("분석 요청 중 오류가 발생했습니다. 다시 시도해주세요.");
+            const tossPayments = await getTossPayments();
+            if (!tossPayments) {
+                throw new Error("결제 모듈을 불러올 수 없습니다.");
+            }
+
+            const orderId = `ORDER_${Date.now()}_${selectedMemberId.slice(0, 8)}`;
+            const homeAddress = (document.getElementById("address") as HTMLInputElement)?.value || "";
+
+            // Toss Payments 결제창 호출
+            await tossPayments.requestPayment("카드", {
+                amount: ANALYSIS_PRICE,
+                orderId,
+                orderName: "해화당 프리미엄 운명 분석",
+                customerName: members.find(m => m.id === selectedMemberId)?.name || "고객",
+                successUrl: `${window.location.origin}/protected/analysis/success?memberId=${selectedMemberId}&homeAddress=${encodeURIComponent(homeAddress)}`,
+                failUrl: `${window.location.origin}/protected/analysis/fail`,
+            });
+        } catch (error: any) {
+            console.error("[Payment] Error:", error);
+            if (error.code !== "USER_CANCEL") {
+                alert(error.message || "결제 중 오류가 발생했습니다.");
+            }
             setIsSubmitting(false);
         }
     };
@@ -90,11 +111,7 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                 ))}
             </div>
 
-            <form action={handleSubmit} className="relative min-h-[400px]">
-                {/* Hidden inputs to store state across steps if we were unmounting, 
-            but CSS hiding keeps them in DOM for simple submission */}
-                <input type="hidden" name="memberId" value={selectedMemberId || ""} />
-
+            <div className="relative min-h-[400px]">
                 {/* Step 1: Member Selection */}
                 <div className={cn("space-y-6 transition-all duration-500", step === 1 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full fixed top-0 pointer-events-none")}>
                     <div className="text-center space-y-2 mb-8">
@@ -277,11 +294,19 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                                 다음 <ChevronRight className="w-4 h-4 ml-1" />
                             </Button>
                         ) : (
-                            <SubmitButton isSubmitting={isSubmitting} />
+                            <Button
+                                type="button"
+                                onClick={handlePayment}
+                                disabled={isSubmitting}
+                                className="bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black hover:from-[#F4E4BA] hover:to-[#D4AF37] font-black px-10 h-12 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all"
+                            >
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                9,900원 결제하고 분석받기
+                            </Button>
                         )}
                     </div>
                 </div>
-            </form>
+            </div>
 
             {/* Mystic Loading Overlay */}
             {isSubmitting && (
@@ -301,19 +326,3 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
     );
 }
 
-function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
-    const { pending } = useFormStatus();
-    // pending is true during the server action execution if inside <form>
-    // but isSubmitting state handles the outer overlay too.
-
-    return (
-        <Button
-            type="submit"
-            disabled={isSubmitting || pending}
-            className="bg-primary text-black hover:bg-primary/90 font-black px-10 h-12 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all"
-        >
-            <Sparkles className="w-4 h-4 mr-2" />
-            운명 분석 시작하기
-        </Button>
-    );
-}

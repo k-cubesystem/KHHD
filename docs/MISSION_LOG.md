@@ -41,5 +41,18 @@
   - staggered 진입 애니메이션 (`delay-300` ~ `delay-500`)
 - **다음 단계**: 히스토리 페이지 UI 통일, 실제 결제 플로우 테스트
 
+### [Checkpoint 9] 결제 연동 환경 정비 완료 (2026-01-21)
+- **담당자**: Claude Code
+- **완료 사항**:
+  1. **Toss Payments 환경변수명 수정**: `.env.local`과 코드 간 환경변수명 불일치 해결
+     - `lib/tosspayments.ts`: `NEXT_PUBLIC_TOSS_CLIENT_KEY` → `NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY`
+     - `payment-actions.ts`: `TOSS_SECRET_KEY` → `TOSS_PAYMENTS_SECRET_KEY`
+  2. **Next.js 16 빌드 안정화**: `/auth/login` 페이지 useSearchParams Suspense 래핑
+  3. **히스토리 페이지 확인**: Modern Nobility 테마 이미 적용 완료 상태 확인
+- **결제 플로우 분석**:
+  - 무료 분석: `analysis-form.tsx` → `startFateAnalysis()` 직접 호출
+  - 유료 분석: Toss 결제 → `success/page.tsx` → `confirmPayment()` → `startFateAnalysis()`
+- **다음 단계**: 결제 플로우 연동 (analysis-form에 Toss 결제 버튼 추가) 또는 Gemini 추가 지시 대기
+
 ---
-*다음 체크포인트는 히스토리 페이지 UI 업그레이드 및 결제 연동 테스트 후 업데이트됩니다.*
+*다음 체크포인트는 결제 플로우 완성 후 업데이트됩니다.*

@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-const secretKey = process.env.TOSS_SECRET_KEY || "test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb";
+const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || "test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb";
 
 export async function confirmPayment(paymentKey: string, orderId: string, amount: number) {
     const supabase = await createClient();

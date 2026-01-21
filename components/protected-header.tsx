@@ -40,6 +40,7 @@ export function ProtectedHeader({ user }: { user: any }) {
                 <div className="hidden md:flex items-center gap-8">
                     <Link href="/protected/analysis" className="text-sm font-medium text-muted-foreground hover:text-[#D4AF37] transition-colors">운명기상청</Link>
                     <Link href="/protected/history" className="text-sm font-medium text-muted-foreground hover:text-[#D4AF37] transition-colors">마스터 비록함</Link>
+                    <Link href="/protected/family" className="text-sm font-medium text-muted-foreground hover:text-[#D4AF37] transition-colors">가족/지인 관리</Link>
                 </div>
 
                 {/* Right Actions */}

@@ -1,6 +1,6 @@
 import { LoginForm } from "@/components/login-form";
-import { Link } from "lucide-react";
-import Image from "next/image";
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function Page() {
   return (
@@ -60,7 +60,9 @@ export default function Page() {
           <div className="w-full max-w-sm glass border-[#D4AF37]/20 shadow-2xl rounded-3xl p-1 relative group">
             <div className="absolute -inset-1 bg-gradient-to-br from-[#D4AF37]/30 to-transparent rounded-[1.7rem] blur-sm opacity-50 group-hover:opacity-100 transition-opacity" />
             <div className="relative bg-[#0A0A0A]/90 backdrop-blur-xl rounded-2xl p-6">
-              <LoginForm />
+              <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+                <LoginForm />
+              </Suspense>
             </div>
           </div>
         </div>

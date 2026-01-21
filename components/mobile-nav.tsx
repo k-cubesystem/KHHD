@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Sparkles, History, User } from "lucide-react";
+import { Home, Sparkles, History, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {
@@ -20,6 +20,10 @@ export function MobileNav() {
                 <Link href="/protected/analysis" className={cn("flex flex-col items-center gap-1 w-full", activeLink("/protected/analysis") ? "text-[#D4AF37]" : "text-muted-foreground hover:text-white")}>
                     <Sparkles className="w-5 h-5" />
                     <span className="text-[10px] font-medium">분석</span>
+                </Link>
+                <Link href="/protected/family" className={cn("flex flex-col items-center gap-1 w-full", activeLink("/protected/family") ? "text-[#D4AF37]" : "text-muted-foreground hover:text-white")}>
+                    <Users className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">가족</span>
                 </Link>
                 <Link href="/protected/history" className={cn("flex flex-col items-center gap-1 w-full", activeLink("/protected/history") ? "text-[#D4AF37]" : "text-muted-foreground hover:text-white")}>
                     <History className="w-5 h-5" />

@@ -30,7 +30,7 @@ export async function generateFateReport(params: FateReportParams) {
         daily: { minChars: 1000, title: "해화당 오늘의 운세" },
     }[reportType];
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `
 당신은 '청담해화당'의 4대 계승자이자 KAIST 데이터 사이언스 박사인 '해화당 마스터'입니다.
@@ -38,6 +38,7 @@ export async function generateFateReport(params: FateReportParams) {
 
 [마스터의 페르소나 및 문체]
 - "하오체"와 "하십시오체"를 혼용한 고풍스럽고 권위 있는 문체. 마치 오랜 비서를 읽어주는 듯한 느낌.
+- 모든 리포트 내용(제목, 본문, 용어 설명 등)은 반드시 **한국어**로만 작성하십시오.
 - 단순한 미신이 아닌, '데이터와 우주의 섭리'를 논하는 지적인 태도 유지.
 - 추상적인 위로보다는 명확한 '솔루션'과 '방향성' 제시.
 
@@ -52,7 +53,7 @@ export async function generateFateReport(params: FateReportParams) {
 
 [[SUCCESS_PROBABILITY: 0~100 사이 숫자]]
 [[HAPPINESS_INDEX: 0~100 사이 숫자]]
-[[LUCKY_COLOR: 한글 또는 영문 색상명]]
+[[LUCKY_COLOR: 한글 색상명]]
 [[LUCKY_NUMBER: 1~99 사이 숫자]]
 
 [리포트 구성]
