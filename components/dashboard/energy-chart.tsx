@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 interface EnergyChartProps {
     data: {
@@ -58,14 +58,17 @@ function getDataPolygonPoints(
 }
 
 export function EnergyChart({ data, className }: EnergyChartProps) {
+    const [isMounted, setIsMounted] = useState(false);
     const size = 280;
     const center = size / 2;
     const maxRadius = 100;
-
-    // 그리드 레벨 (20%, 40%, 60%, 80%, 100%)
     const gridLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
 
-    const dataPoints = useMemo(() => getDataPolygonPoints(center, center, maxRadius, data), [data]);
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    const dataPoints = useMemo(() => getDataPolygonPoints(center, center, maxRadius, data), [data, center, maxRadius]);
 
     // 꼭지점 좌표 계산 (라벨 배치용)
     const labelPositions = useMemo(() => {
@@ -79,7 +82,15 @@ export function EnergyChart({ data, className }: EnergyChartProps) {
                 value: data[el.key as keyof typeof data],
             };
         });
-    }, [data]);
+    }, [data, center, maxRadius]);
+
+    if (!isMounted) {
+        return (
+            <div className={cn("relative w-full max-w-[300px] mx-auto aspect-square flex items-center justify-center", className)}>
+                <div className="w-48 h-48 border-4 border-dashed border-white/5 rounded-full animate-pulse" />
+            </div>
+        );
+    }
 
     return (
         <div className={cn("relative w-full max-w-[300px] mx-auto", className)}>

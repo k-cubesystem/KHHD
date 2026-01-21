@@ -288,7 +288,7 @@ export default async function ProtectedPage() {
                           <div className="relative">
                             <div className="absolute -inset-1 bg-[#D4AF37]/0 rounded-2xl blur-md group-hover/item:bg-[#D4AF37]/30 transition-all duration-500" />
                             <div className="relative w-14 h-14 rounded-2xl border border-[#D4AF37]/20 flex items-center justify-center font-black text-xl text-[#D4AF37] bg-[#D4AF37]/5 group-hover/item:bg-[#D4AF37]/15 group-hover/item:border-[#D4AF37]/40 transition-all duration-300">
-                              {record.family_members.name.charAt(0)}
+                              {record.family_members?.name?.charAt(0) || "M"}
                             </div>
                             <div className="absolute -right-1 -bottom-1 w-5 h-5 bg-green-500 rounded-full border-[3px] border-[#0A0A0A] flex items-center justify-center">
                               <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
@@ -296,7 +296,7 @@ export default async function ProtectedPage() {
                           </div>
 
                           <div className="space-y-1.5">
-                            <p className="font-black text-base sm:text-lg group-hover/item:text-[#D4AF37] transition-colors duration-300">{record.family_members.name}님의 비록</p>
+                            <p className="font-black text-base sm:text-lg group-hover/item:text-[#D4AF37] transition-colors duration-300">{record.family_members?.name || "알 수 없음"}님의 비록</p>
                             <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
                               <span className="bg-[#D4AF37]/10 text-[#D4AF37] px-2.5 py-1 rounded-full border border-[#D4AF37]/20 uppercase tracking-tight font-bold text-[10px]">
                                 Prob. {record.success_probability}%
