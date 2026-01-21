@@ -28,6 +28,12 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
     const [facePreview, setFacePreview] = useState<string | null>(null);
     const [handPreview, setHandPreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState<"standard" | "test">("standard");
+
+    const PLANS = {
+        standard: { price: 9900, credits: 1, name: "프리미엄 분석", description: "1회 분석" },
+        test: { price: 500, credits: 10, name: "테스트 패키지", description: "10회 분석" },
+    };
 
     const faceInputRef = useRef<HTMLInputElement>(null);
     const handInputRef = useRef<HTMLInputElement>(null);
@@ -55,7 +61,7 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
         setStep((prev) => prev + 1);
     };
 
-    const ANALYSIS_PRICE = 9900; // 9,900원
+    const currentPlan = PLANS[selectedPlan];
 
     const handlePayment = async () => {
         if (!selectedMemberId) {
@@ -77,11 +83,11 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
 
             // Toss Payments 결제창 호출
             await tossPayments.requestPayment("카드", {
-                amount: ANALYSIS_PRICE,
+                amount: currentPlan.price,
                 orderId,
-                orderName: "해화당 프리미엄 운명 분석",
+                orderName: `해화당 ${currentPlan.name}`,
                 customerName: members.find(m => m.id === selectedMemberId)?.name || "고객",
-                successUrl: `${origin}/protected/analysis/success?memberId=${selectedMemberId}&homeAddress=${encodeURIComponent(homeAddress)}`,
+                successUrl: `${origin}/protected/analysis/success?memberId=${selectedMemberId}&homeAddress=${encodeURIComponent(homeAddress)}&plan=${selectedPlan}&credits=${currentPlan.credits}`,
                 failUrl: `${origin}/protected/analysis/fail`,
             });
         } catch (error: any) {
@@ -258,6 +264,44 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                             />
                         </div>
 
+                        {/* Plan Selection */}
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <Label className="text-xs font-bold uppercase text-primary">결제 플랜 선택</Label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div
+                                    onClick={() => setSelectedPlan("standard")}
+                                    className={cn(
+                                        "cursor-pointer p-4 rounded-xl border transition-all",
+                                        selectedPlan === "standard"
+                                            ? "bg-primary/10 border-primary"
+                                            : "bg-white/5 border-white/10 hover:border-primary/50"
+                                    )}
+                                >
+                                    <p className={cn("font-bold", selectedPlan === "standard" ? "text-primary" : "text-white")}>
+                                        프리미엄 분석
+                                    </p>
+                                    <p className="text-2xl font-black text-white">9,900원</p>
+                                    <p className="text-xs text-muted-foreground">1회 분석</p>
+                                </div>
+                                <div
+                                    onClick={() => setSelectedPlan("test")}
+                                    className={cn(
+                                        "cursor-pointer p-4 rounded-xl border transition-all relative",
+                                        selectedPlan === "test"
+                                            ? "bg-primary/10 border-primary"
+                                            : "bg-white/5 border-white/10 hover:border-primary/50"
+                                    )}
+                                >
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">TEST</span>
+                                    <p className={cn("font-bold", selectedPlan === "test" ? "text-primary" : "text-white")}>
+                                        테스트 패키지
+                                    </p>
+                                    <p className="text-2xl font-black text-white">500원</p>
+                                    <p className="text-xs text-muted-foreground">10회 분석</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="pt-4 border-t border-white/5 space-y-4">
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">분석 대상</span>
@@ -274,6 +318,10 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                                 <span className={cn("font-bold", handPreview ? "text-primary" : "text-muted-foreground/50")}>
                                     {handPreview ? "포함됨" : "미포함"}
                                 </span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">결제 금액</span>
+                                <span className="font-black text-primary">{currentPlan.price.toLocaleString()}원</span>
                             </div>
                         </div>
                     </div>
@@ -311,7 +359,7 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                                 className="bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black hover:from-[#F4E4BA] hover:to-[#D4AF37] font-black px-10 h-12 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all"
                             >
                                 <CreditCard className="w-4 h-4 mr-2" />
-                                9,900원 결제하고 분석받기
+                                {currentPlan.price.toLocaleString()}원 결제하고 분석받기
                             </Button>
                         )}
                     </div>
