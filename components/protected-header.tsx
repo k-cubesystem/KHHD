@@ -14,16 +14,33 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { User, LogOut, CreditCard, Sparkles } from "lucide-react";
 
 export function ProtectedHeader({ user }: { user: any }) {
+    const [isMounted, setIsMounted] = useState(false);
     const router = useRouter();
     const supabase = createClient();
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
         router.refresh();
     };
+
+    if (!isMounted) {
+        return (
+            <nav className="w-full flex justify-center h-16 items-center z-50 border-b border-white/5 bg-[#0A0A0A]/50 backdrop-blur-md sticky top-0">
+                <div className="w-full max-w-7xl flex justify-between items-center px-6">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 animate-pulse" />
+                    <div className="w-9 h-9 rounded-full bg-white/5 animate-pulse" />
+                </div>
+            </nav>
+        );
+    }
 
     const initial = user?.email?.charAt(0).toUpperCase() || "M";
 
