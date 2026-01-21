@@ -2,7 +2,24 @@
 
 import { motion } from "framer-motion";
 
+import { useState, useEffect } from "react";
+
 export function Hero() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-col gap-12 items-center text-center px-4 pt-20 pb-10 min-h-[400px]">
+        <div className="w-64 h-10 bg-white/5 animate-pulse rounded-lg" />
+        <div className="w-96 h-20 bg-white/5 animate-pulse rounded-lg" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-12 items-center text-center px-4 pt-20 pb-10">
       <motion.div

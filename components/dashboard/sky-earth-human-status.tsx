@@ -49,7 +49,19 @@ function StatusItem({ label, icon, status, description, delay }: StatusItemProps
     );
 }
 
+import { useState, useEffect } from "react";
+
 export function SkyEarthHumanStatus() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full h-32 bg-white/5 animate-pulse rounded-2xl" />;
+    }
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
             <StatusItem

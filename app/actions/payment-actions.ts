@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || "test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb";
 
-export async function confirmPayment(paymentKey: string, orderId: string, amount: number) {
+export async function confirmPayment(paymentKey: string, orderId: string, amount: number, credits: number = 1) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -31,12 +31,14 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
         throw new Error(result.message || "결제 승인에 실패했습니다.");
     }
 
-    // 결제 정보 저장
+    // 결제 정보 저장 (크레딧 포함)
     const { error } = await supabase.from("payments").insert({
         user_id: user.id,
         payment_key: paymentKey,
         order_id: orderId,
         amount,
+        credits_purchased: credits,
+        credits_remaining: credits,
         status: "completed",
     });
 
@@ -45,4 +47,58 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
     }
 
     return result;
+}
+
+// 사용 가능한 크레딧 확인
+export async function getAvailableCredits() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return 0;
+
+    const { data, error } = await supabase
+        .from("payments")
+        .select("credits_remaining")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .gt("credits_remaining", 0);
+
+    if (error || !data) return 0;
+
+    return data.reduce((sum, p) => sum + (p.credits_remaining || 0), 0);
+}
+
+// 크레딧 차감
+export async function useCredit() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("인증되지 않은 사용자입니다.");
+
+    // 가장 오래된 결제 중 크레딧이 남은 것 찾기
+    const { data: payment, error: findError } = await supabase
+        .from("payments")
+        .select("id, credits_remaining")
+        .eq("user_id", user.id)
+        .eq("status", "completed")
+        .gt("credits_remaining", 0)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+
+    if (findError || !payment) {
+        throw new Error("사용 가능한 분석 크레딧이 없습니다.");
+    }
+
+    // 크레딧 차감
+    const { error: updateError } = await supabase
+        .from("payments")
+        .update({ credits_remaining: payment.credits_remaining - 1 })
+        .eq("id", payment.id);
+
+    if (updateError) {
+        throw new Error("크레딧 차감 중 오류가 발생했습니다.");
+    }
+
+    return payment.credits_remaining - 1;
 }
