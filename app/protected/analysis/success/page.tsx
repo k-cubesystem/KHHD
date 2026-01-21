@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { confirmPayment } from "@/app/actions/payment-actions";
 import { startFateAnalysis } from "@/app/actions/analysis-actions";
@@ -8,12 +8,17 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 function PaymentProcessor() {
+    const [isMounted, setIsMounted] = useState(false);
     const searchParams = useSearchParams();
     const router = useRouter();
     const processed = useRef(false);
 
     useEffect(() => {
-        if (processed.current) return;
+        setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isMounted || processed.current) return;
         processed.current = true;
 
         const paymentKey = searchParams.get("paymentKey");
