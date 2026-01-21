@@ -1,8 +1,21 @@
+"use client";
+
 import Link from "next/link";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 
+import { useState, useEffect } from "react";
+
 export function SiteHeader() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return <div className="h-20 bg-background/50 backdrop-blur-md sticky top-0 border-b border-border/10" />;
+    }
     return (
         <nav className="w-full flex justify-center h-20 items-center z-50 border-b border-border/10 bg-background/50 backdrop-blur-md sticky top-0">
             <div className="w-full max-w-6xl flex justify-between items-center px-6">
