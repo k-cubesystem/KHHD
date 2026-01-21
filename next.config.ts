@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
+  /* cacheComponents disabled due to dynamic data requirements */
 };
 
 export default nextConfig;

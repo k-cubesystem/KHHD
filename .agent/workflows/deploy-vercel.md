@@ -2,6 +2,7 @@
 description: Vercel 자동 배포 및 환경 변수 설정 워크플로우
 ---
 
+
 1. 로컬 프로젝트 폴더(`d:\anti\haehwadang`)에서 GitHub 원격 저장소를 연결합니다.
    ```bash
    git remote add origin [GITHUB_REPO_URL]

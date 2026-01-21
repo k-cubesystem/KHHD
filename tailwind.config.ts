@@ -57,6 +57,25 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        breathe: {
+          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
+          "50%": { opacity: "0.6", transform: "scale(1.1)" },
+        },
+        scanline: {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(100%)" },
+        },
+      },
+      animation: {
+        shimmer: "shimmer 3s ease-in-out infinite",
+        breathe: "breathe 8s ease-in-out infinite",
+        scan: "scanline 2s linear infinite",
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],
