@@ -15,15 +15,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { User, LogOut, CreditCard, Sparkles } from "lucide-react";
+import { User, LogOut, CreditCard, Sparkles, LayoutDashboard } from "lucide-react";
+import { getCurrentUserRole } from "@/app/actions/products";
+import { UserRole } from "@/types/auth";
 
 export function ProtectedHeader({ user }: { user: any }) {
     const [isMounted, setIsMounted] = useState(false);
+    const [userRole, setUserRole] = useState<UserRole>("user");
     const router = useRouter();
     const supabase = createClient();
 
     useEffect(() => {
         setIsMounted(true);
+        getCurrentUserRole().then((res) => setUserRole(res.role));
     }, []);
 
     const handleSignOut = async () => {
@@ -84,7 +88,20 @@ export function ProtectedHeader({ user }: { user: any }) {
                                     </p>
                                 </div>
                             </DropdownMenuLabel>
+
                             <DropdownMenuSeparator />
+
+                            {/* Admin Menu Item - Only visible dynamically */}
+                            {userRole === "admin" && (
+                                <>
+                                    <DropdownMenuItem onClick={() => router.push("/admin")} className="text-yellow-500 focus:text-yellow-600 font-bold bg-yellow-500/10 focus:bg-yellow-500/20 cursor-pointer">
+                                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                                        <span>관리자 페이지 접속</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                </>
+                            )}
+
                             <DropdownMenuItem onClick={() => router.push("/protected/profile")}>
                                 <User className="mr-2 h-4 w-4" />
                                 <span>프로필 관리</span>

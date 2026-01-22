@@ -91,7 +91,7 @@ export async function getAvailableCredits() {
         .from("payments")
         .select("credits_remaining")
         .eq("user_id", user.id)
-        .eq("status", "completed")
+        .in("status", ["completed", "test_charge"])
         .gt("credits_remaining", 0);
 
     if (error || !data) return 0;
@@ -111,7 +111,7 @@ export async function useCredit() {
         .from("payments")
         .select("id, credits_remaining")
         .eq("user_id", user.id)
-        .eq("status", "completed")
+        .in("status", ["completed", "test_charge"])
         .gt("credits_remaining", 0)
         .order("created_at", { ascending: true })
         .limit(1)

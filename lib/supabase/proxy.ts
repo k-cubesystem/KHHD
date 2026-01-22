@@ -54,20 +54,44 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  console.log("[Middleware] Path:", request.nextUrl.pathname, "| User:", user ? user.email : "NONE");
+  console.log("[Proxy] Path:", request.nextUrl.pathname, "| User:", user ? user.email : "NONE");
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    console.log("[Middleware] ❌ Redirecting to /auth/login - No user found");
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+  const pathname = request.nextUrl.pathname;
+
+  // Protected routes - require authentication
+  if (pathname.startsWith("/protected") || pathname.startsWith("/admin")) {
+    if (!user) {
+      console.log("[Proxy] ❌ Redirecting to /auth/login - No user found");
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
+    }
   }
 
-  console.log("[Middleware] ✅ Auth check passed");
+  // Admin routes - require admin role
+  if (pathname.startsWith("/admin")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user!.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      console.log("[Proxy] ❌ Non-admin trying to access /admin, redirecting");
+      const url = request.nextUrl.clone();
+      url.pathname = "/protected";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Non-protected pages that require no auth check
+  if (pathname === "/") {
+    console.log("[Proxy] ✅ Home page, no auth required");
+    return supabaseResponse;
+  }
+
+  console.log("[Proxy] ✅ Auth check passed");
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

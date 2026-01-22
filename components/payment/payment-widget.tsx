@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { getTossPayments } from "@/lib/tosspayments";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Sparkles, Loader2 } from "lucide-react";
+import { Check, Sparkles, Loader2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getActivePlans, getCurrentUserRole, addTestCredits } from "@/app/actions/products";
+import type { PricePlan, UserRole } from "@/types/auth";
 
 interface PaymentWidgetProps {
     memberId: string;
@@ -14,41 +16,99 @@ interface PaymentWidgetProps {
     onCancel?: () => void;
 }
 
+interface DisplayPlan {
+    credits: number;
+    price: number;
+    label: string;
+    description: string;
+    badge?: string;
+    features: string[];
+    popular?: boolean;
+}
+
 export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidgetProps) {
     const [selectedPlan, setSelectedPlan] = useState<number>(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [isTestLoading, setIsTestLoading] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [plans, setPlans] = useState<DisplayPlan[]>([]);
+    const [userRole, setUserRole] = useState<UserRole>("user");
 
     useEffect(() => {
         setIsMounted(true);
+        loadData();
     }, []);
 
-    const plans = [
-        {
-            credits: 1,
-            price: 9900,
-            label: "운명 분석 1회",
-            description: "가장 기본적인 분석 패키지",
-            features: ["프리미엄 AI 리포트", "천지인 통합 분석", "영구 소장 가능"]
-        },
-        {
-            credits: 3,
-            price: 24900,
-            label: "운명 분석 3회",
-            description: "인연들과 함께 나누는 실속형",
-            badge: "가장 인기",
-            features: ["1회당 8,300원 (16% 할인)", "프리미엄 AI 리포트", "가족/친구 분석 최적화", "영구 소장 가능"],
-            popular: true
-        },
-        {
-            credits: 5,
-            price: 39900,
-            label: "운명 분석 5회",
-            description: "가장 합리적인 대용량 패키지",
-            badge: "최저가",
-            features: ["1회당 7,980원 (20% 할인)", "프리미엄 AI 리포트", "무제한 인연 분석", "영구 소장 가능", "분석 비록 우선 생성"]
-        },
-    ];
+    async function loadData() {
+        try {
+            // Load plans and user role in parallel
+            const [plansData, roleData] = await Promise.all([
+                getActivePlans(),
+                getCurrentUserRole(),
+            ]);
+
+            // Transform DB plans to display format
+            const displayPlans: DisplayPlan[] = plansData.map((plan: PricePlan) => ({
+                credits: plan.credits,
+                price: plan.price,
+                label: plan.name,
+                description: plan.description || "",
+                badge: plan.badge_text || undefined,
+                features: plan.features || [],
+                popular: plan.badge_text === "가장 인기",
+            }));
+
+            setPlans(displayPlans);
+            setUserRole(roleData.role);
+        } catch (error) {
+            console.error("[PaymentWidget] Error loading data:", error);
+            // Fallback to hardcoded plans
+            setPlans([
+                {
+                    credits: 1,
+                    price: 9900,
+                    label: "운명 분석 1회",
+                    description: "가장 기본적인 분석 패키지",
+                    features: ["프리미엄 AI 리포트", "천지인 통합 분석", "영구 소장 가능"]
+                },
+                {
+                    credits: 3,
+                    price: 24900,
+                    label: "운명 분석 3회",
+                    description: "인연들과 함께 나누는 실속형",
+                    badge: "가장 인기",
+                    features: ["1회당 8,300원 (16% 할인)", "프리미엄 AI 리포트", "가족/친구 분석 최적화", "영구 소장 가능"],
+                    popular: true
+                },
+                {
+                    credits: 5,
+                    price: 39900,
+                    label: "운명 분석 5회",
+                    description: "가장 합리적인 대용량 패키지",
+                    badge: "최저가",
+                    features: ["1회당 7,980원 (20% 할인)", "프리미엄 AI 리포트", "무제한 인연 분석", "영구 소장 가능", "분석 비록 우선 생성"]
+                },
+            ]);
+        }
+    }
+
+    const isPrivileged = userRole === "admin" || userRole === "tester";
+
+    const handleTestCharge = async () => {
+        setIsTestLoading(true);
+        try {
+            const result = await addTestCredits(100);
+            if (result.success) {
+                toast.success(`테스트 크레딧 100 충전 완료! (잔액: ${result.newBalance})`);
+            } else {
+                toast.error(result.error || "충전 실패");
+            }
+        } catch (error) {
+            toast.error("테스트 충전 중 오류가 발생했습니다.");
+        } finally {
+            setIsTestLoading(false);
+        }
+    };
 
     const handlePayment = async () => {
         if (!isMounted) return;
@@ -169,6 +229,36 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                     )}
                 </Button>
             </div>
+
+            {/* Tester/Admin Test Charge Button */}
+            {isPrivileged && (
+                <div className="border-t border-white/10 pt-6">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                        <Zap className="w-4 h-4 text-yellow-400" />
+                        <span className="text-xs text-yellow-400 font-medium">
+                            {userRole === "admin" ? "관리자" : "테스터"} 전용
+                        </span>
+                    </div>
+                    <Button
+                        onClick={handleTestCharge}
+                        disabled={isTestLoading}
+                        variant="outline"
+                        className="w-full h-12 border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
+                    >
+                        {isTestLoading ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                충전 중...
+                            </>
+                        ) : (
+                            <>
+                                <Zap className="w-4 h-4 mr-2" />
+                                무료 테스트 크레딧 +100 충전
+                            </>
+                        )}
+                    </Button>
+                </div>
+            )}
 
             <div className="text-center">
                 <p className="text-[10px] text-muted-foreground/40 leading-loose">

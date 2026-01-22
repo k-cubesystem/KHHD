@@ -1,38 +1,41 @@
-# Claude Protocol: Dashboard Renewal (v2.0)
+# Claude Protocol: Admin System & Phase 8 Implementation
 
-## Context
-We are upgrading the `protected/page.tsx` dashboard to the "Modern Nobility" design concept.
-You (Claude) are the "Frontend Artisan" responsible for the high-end UI/UX.
+**Updated**: 2026-01-22  
+**Planner**: Gemini
 
-## Objective
-Refactor `app/protected/page.tsx` and its sub-components to embody the **"Golden Fractal"** concept.
+---
 
-## Design Guidelines (from UI_CONCEPT.md)
-- **Theme**: Deep Space Black (#0A0A0A) background + Mystic Gold (#D4AF37) accents.
-- **Style**: Glassmorphism (High quality blurs, thin borders).
-- **Motion**: "Dynamic Breathing" - subtle, continuous background movement.
-- **Typography**: Clean, sans-serif (Inter/Pretendard) combined with elegant serif headings if appropriate.
+## 🚨 Current Mission: Admin System Construction
 
-## Specific Tasks
-1.  **Enhance Layout**:
-    - Use a css-grid layout that adapts perfectly to mobile/desktop.
-    - Ensure the "Top Decorative Beam" and background ambience are implemented elegantly.
-2.  **Component Refinement**:
-    - **Header**: Make the "Omni-Logic Authenticated" badge look like a high-tech security hologram.
-    - **EnergyChart**: Ensure the chart container looks like it's floating on glass.
-    - **Recent Records**: Improve the list items to look like premium cards with hover effects (gold glow).
-3.  **Interactivity**:
-    - Add subtle entry animations for all cards (staggered fade-in).
-    - Hover effects on cards should be smooth and luxurious (scale up slightly, border glow).
+You are now tasked with building the **Admin System** and implementing **Phase 8 features**.
+The Planner (Gemini) has already designed the database schema, page structure, and task list.
 
-## File Focus
-- `app/protected/page.tsx` (Main layout)
-- `components/dashboard/energy-chart.tsx` (If exists, or create a mock)
-- `components/dashboard/sky-earth-human-status.tsx` (If exists, or create a mock)
+### 📄 Key Documents (Read These First!)
+1.  `ai/skills/UX_PRO_MAX/SKILL.md`: **MUST READ**. Use this guide for all UI/UX implementations.
+2.  `docs/ADMIN_SYSTEM_DESIGN.md`: The architectural blueprint.
+3.  `docs/TASKS/PHASE8_ADMIN.md`: Your step-by-step to-do list.
 
-## Execution Mode
-- Please read the existing code in `app/protected/page.tsx` first.
-- Apply the changes directly or generate the full new file content.
-- Ensure no functionality is lost (family members loading, supabase calls).
+---
 
-**End of Instructions**
+## 🛠️ Execution Steps (Role: Developer & Engineer)
+
+1.  **Check the Task List**: Open `docs/TASKS/PHASE8_ADMIN.md` and follow the steps sequentially.
+2.  **Database Migration**:
+    *   Create the SQL file as specified.
+    *   **CRITICAL**: You must instruct the User to run the SQL in Supabase Dashboard (or if we have a way to run it, do so, but usually user action is safer for DDL).
+3.  **Backend Implementation**:
+    *   Update TS types (`types/supabase.ts`).
+    *   Implement Middleware for Admin route protection.
+    *   Create `app/admin/...` pages and layouts.
+4.  **Frontend Implementation**:
+    *   Refactor `PaymentWidget` to use dynamic pricing from DB.
+    *   Implement the "Tester" role features (Free credits).
+
+## 💡 Important Context
+- We have just finished Phase 7 (Payments). The `payments` table works correctly.
+- Security is paramount. Ensure `role === 'admin'` checks are robust.
+- Do not break existing user flows (`/protected`). Admin pages are separate.
+
+## 🚀 Action
+Your first move should be to **read the task list** and generate the **SQL migration file**.
+Good luck.
