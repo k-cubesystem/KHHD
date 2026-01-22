@@ -23,12 +23,11 @@ function PaymentProcessor() {
 
         const paymentKey = searchParams.get("paymentKey");
         const orderId = searchParams.get("orderId");
-        const amount = Number(searchParams.get("amount"));
         const memberId = searchParams.get("memberId");
         const homeAddress = searchParams.get("homeAddress");
         const credits = Number(searchParams.get("credits")) || 1;
 
-        if (!paymentKey || !orderId || !amount || !memberId) {
+        if (!paymentKey || !orderId || !memberId) {
             toast.error("잘못된 결제 정보입니다.");
             router.push("/protected/analysis");
             return;
@@ -36,8 +35,8 @@ function PaymentProcessor() {
 
         const processAll = async () => {
             try {
-                // 1. 결제 승인 (크레딧 포함)
-                await confirmPayment(paymentKey, orderId, amount, credits);
+                // 1. 결제 승인 (금액은 서버에서 검증)
+                await confirmPayment(paymentKey, orderId, credits);
                 toast.success(`결제가 승인되었습니다. (${credits}회 분석 크레딧 충전)`);
 
                 // 2. 크레딧 차감

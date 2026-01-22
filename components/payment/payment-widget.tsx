@@ -63,7 +63,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
             }
             const plan = plans.find(p => p.credits === selectedPlan)!;
 
-            // 결제 요청
+            // 결제 요청 (금액은 서버에서 검증됨)
             await tossPayments.requestPayment("카드", {
                 amount: plan.price,
                 orderId: `HHD_${Date.now()}_${memberId.slice(0, 4)}`,

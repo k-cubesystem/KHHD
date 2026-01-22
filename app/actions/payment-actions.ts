@@ -4,11 +4,23 @@ import { createClient } from "@/lib/supabase/server";
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || "test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb";
 
-export async function confirmPayment(paymentKey: string, orderId: string, amount: number, credits: number = 1) {
+export async function confirmPayment(paymentKey: string, orderId: string, credits: number = 1) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error("인증되지 않은 사용자입니다.");
+
+    // 서버에서 금액 계산 (클라이언트 데이터 신뢰 안 함)
+    const PRICE_MAP: Record<number, number> = {
+        1: 9900,
+        3: 24900,
+        5: 39900
+    };
+
+    const expectedAmount = PRICE_MAP[credits];
+    if (!expectedAmount) {
+        throw new Error("잘못된 크레딧 수량입니다.");
+    }
 
     const basicAuth = Buffer.from(`${secretKey}:`).toString("base64");
 
@@ -21,7 +33,7 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
         body: JSON.stringify({
             paymentKey,
             orderId,
-            amount,
+            amount: expectedAmount, // 서버에서 계산한 금액 사용
         }),
     });
 
@@ -31,11 +43,20 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
         throw new Error(result.message || "결제 승인에 실패했습니다.");
     }
 
+    // 토스페이먼츠 응답 금액과 서버 계산 금액 비교
+    if (result.totalAmount !== expectedAmount) {
+        console.error("[Payment] Amount mismatch:", {
+            expected: expectedAmount,
+            actual: result.totalAmount
+        });
+        throw new Error("결제 금액이 일치하지 않습니다.");
+    }
+
     // 결제 정보 저장 (크레딧 포함)
     console.log("[Payment] Attempting to save payment record:", {
         user_id: user.id,
         order_id: orderId,
-        amount,
+        amount: expectedAmount,
         credits
     });
 
@@ -43,7 +64,7 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
         user_id: user.id,
         payment_key: paymentKey,
         order_id: orderId,
-        amount,
+        amount: expectedAmount,
         credits_purchased: credits,
         credits_remaining: credits,
         status: "completed",
