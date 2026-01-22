@@ -1,141 +1,82 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { UserRole } from "@/types/auth";
+import { UserRole } from "@/types/auth";
+import { revalidatePath } from "next/cache";
 
-export interface FamilyMember {
+export interface AdminUser {
   id: string;
-  name: string;
-  relationship: string | null;
-  birth_date: string;
-  birth_time: string | null;
-  gender: string | null;
-  calendar_type: string | null;
+  email: string | null;
+  full_name: string | null;
+  role: UserRole;
   created_at: string;
+  last_sign_in_at?: string;
 }
 
-export async function getUserFamilyMembersAction(
-  userId: string
-): Promise<{ success: boolean; data?: FamilyMember[]; error?: string }> {
+export async function getUsers(page: number = 1, limit: number = 20, search: string = ""): Promise<{ data: AdminUser[], total: number }> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, error: "인증되지 않은 사용자입니다." };
-  }
+  // Check Admin Role
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
 
-  // Check if current user is admin
-  const { data: currentProfile } = await supabase
+  const { data: currentUserProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (currentUserProfile?.role !== "admin") throw new Error("Forbidden");
+
+  // Supabase Auth Admin API를 사용할 수 없으므로(Service Role Key 부재 가능성), 
+  // profiles 테이블 정보만 가져옵니다. 
+  // *단, profiles에 email이 없다면 auth.users 정보와 조인이 불가능합니다(Client Lib 한계).*
+  // *일단 profiles의 정보를 최대한 활용합니다.*
+
+  let query = supabase
     .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+    .select("id, full_name, role, created_at, email", { count: "exact" });
+  // 주의: profiles 테이블에 email 컬럼이 있다고 가정합니다. (대부분의 Supabase 템플릿이 그러함)
+  // 만약 없다면 마이그레이션 필요.
 
-  if (currentProfile?.role !== "admin") {
-    return { success: false, error: "권한이 없습니다." };
+  if (search) {
+    query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
   }
 
-  const { data, error } = await supabase
-    .from("family_members")
-    .select("id, name, relationship, birth_date, birth_time, gender, calendar_type, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await query
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("Error fetching users:", error);
+    throw new Error("Failed to fetch users");
   }
 
-  return { success: true, data: data || [] };
+  return {
+    data: data as AdminUser[],
+    total: count || 0
+  };
 }
 
-export async function updateUserRoleAction(
-  targetUserId: string,
-  newRole: UserRole
-): Promise<{ success: boolean; error?: string }> {
+export async function updateUserRole(targetUserId: string, newRole: UserRole) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, error: "인증되지 않은 사용자입니다." };
-  }
+  // Check Admin
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Unauthorized" };
 
-  // Check if current user is admin
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data: adminProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (adminProfile?.role !== "admin") return { success: false, error: "Forbidden" };
 
-  if (currentProfile?.role !== "admin") {
-    return { success: false, error: "권한이 없습니다." };
-  }
-
-  // Prevent admin from demoting themselves
-  if (targetUserId === user.id && newRole !== "admin") {
-    return { success: false, error: "자신의 관리자 권한은 변경할 수 없습니다." };
-  }
-
+  // Update
   const { error } = await supabase
     .from("profiles")
     .update({ role: newRole })
     .eq("id", targetUserId);
 
   if (error) {
+    console.error("Error updating role:", error);
     return { success: false, error: error.message };
   }
 
+  revalidatePath("/admin/users");
   return { success: true };
-}
-
-export async function adjustUserCreditsAction(
-  targetUserId: string,
-  amount: number
-): Promise<{ success: boolean; error?: string; newBalance?: number }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, error: "인증되지 않은 사용자입니다." };
-  }
-
-  // Check if current user is admin
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (currentProfile?.role !== "admin") {
-    return { success: false, error: "권한이 없습니다." };
-  }
-
-  // Get target user's current credits
-  const { data: targetProfile } = await supabase
-    .from("profiles")
-    .select("credits")
-    .eq("id", targetUserId)
-    .single();
-
-  if (!targetProfile) {
-    return { success: false, error: "대상 사용자를 찾을 수 없습니다." };
-  }
-
-  const newBalance = Math.max(0, (targetProfile.credits || 0) + amount);
-
-  const { error } = await supabase
-    .from("profiles")
-    .update({ credits: newBalance })
-    .eq("id", targetUserId);
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  return { success: true, newBalance };
 }

@@ -60,12 +60,16 @@ export async function addFamilyMember(formData: FormData) {
         throw new Error("인증된 사용자가 아닙니다.");
     }
 
+    const birthTimeRaw = formData.get("birth_time") as string;
+    // "unknown"이면 null로 저장, 그 외에는 시간값 저장
+    const birthTime = birthTimeRaw === "unknown" || !birthTimeRaw ? null : birthTimeRaw;
+
     const rawData = {
         user_id: user.id,
         name: formData.get("name") as string,
         relationship: formData.get("relationship") as string,
         birth_date: formData.get("birth_date") as string,
-        birth_time: formData.get("birth_time") as string,
+        birth_time: birthTime,
         calendar_type: formData.get("calendar_type") as string, // 'solar' | 'lunar'
         gender: formData.get("gender") as string,
     };
@@ -88,11 +92,14 @@ export async function updateFamilyMember(id: string, formData: FormData) {
         throw new Error("인증된 사용자가 아닙니다.");
     }
 
+    const birthTimeRaw = formData.get("birth_time") as string;
+    const birthTime = birthTimeRaw === "unknown" || !birthTimeRaw ? null : birthTimeRaw;
+
     const rawData = {
         name: formData.get("name") as string,
         relationship: formData.get("relationship") as string,
         birth_date: formData.get("birth_date") as string,
-        birth_time: formData.get("birth_time") as string,
+        birth_time: birthTime,
         calendar_type: formData.get("calendar_type") as string,
         gender: formData.get("gender") as string,
     };

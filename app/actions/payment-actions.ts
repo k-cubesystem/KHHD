@@ -87,6 +87,17 @@ export async function getAvailableCredits() {
 
     if (!user) return 0;
 
+    // 관리자/테스터는 무제한 크레딧
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.role === "admin" || profile?.role === "tester") {
+        return 999; // 무제한 표시용
+    }
+
     const { data, error } = await supabase
         .from("payments")
         .select("credits_remaining")
@@ -105,6 +116,17 @@ export async function useCredit() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) throw new Error("인증되지 않은 사용자입니다.");
+
+    // 관리자/테스터는 크레딧 차감 없이 바로 통과
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profile?.role === "admin" || profile?.role === "tester") {
+        return 999; // 무제한
+    }
 
     // 가장 오래된 결제 중 크레딧이 남은 것 찾기
     const { data: payment, error: findError } = await supabase

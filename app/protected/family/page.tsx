@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trash2, UserPlus, Calendar, Plus, Sparkles, User } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ZodiacTimeSelect } from "@/components/zodiac-time-select";
 
 export default function FamilyPage() {
     const [members, setMembers] = useState<any[]>([]);
@@ -97,7 +98,10 @@ export default function FamilyPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="birth_time" className="text-xs uppercase tracking-widest text-muted-foreground">생시 (선택)</Label>
-                                <Input id="birth_time" name="birth_time" type="time" className="bg-background/40 border-white/10 focus:border-primary/50 transition-all" />
+                                <ZodiacTimeSelect
+                                    name="birth_time"
+                                    className="bg-background/40 border-white/10 focus:border-primary/50 transition-all"
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">

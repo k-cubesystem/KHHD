@@ -1,53 +1,47 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { PricePlan } from "@/types/auth";
 import { revalidatePath } from "next/cache";
-import type { PricePlan } from "@/types/auth";
 
-export async function updateProductAction(
-  product: PricePlan
-): Promise<{ success: boolean; error?: string }> {
+export async function getAllPlans(): Promise<PricePlan[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, error: "인증되지 않은 사용자입니다." };
-  }
+  // Check Admin
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") throw new Error("Forbidden");
 
-  // Check if current user is admin
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  const { data, error } = await supabase
+    .from("price_plans")
+    .select("*")
+    .order("price", { ascending: true });
 
-  if (currentProfile?.role !== "admin") {
-    return { success: false, error: "권한이 없습니다." };
-  }
+  if (error) throw new Error(error.message);
+  return data as PricePlan[];
+}
 
+export async function updatePlan(id: string, updates: Partial<PricePlan>) {
+  const supabase = await createClient();
+
+  // Check Admin
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Unauthorized" };
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") return { success: false, error: "Forbidden" };
+
+  // Update
   const { error } = await supabase
     .from("price_plans")
-    .update({
-      name: product.name,
-      price: product.price,
-      credits: product.credits,
-      description: product.description,
-      badge_text: product.badge_text,
-      is_active: product.is_active,
-      features: product.features,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", product.id);
+    .update(updates)
+    .eq("id", id);
 
   if (error) {
     return { success: false, error: error.message };
   }
 
-  // Cache revalidate
   revalidatePath("/admin/products");
-  revalidatePath("/"); // 메인 페이지 가격 표시용
-
+  revalidatePath("/protected"); // 사용자가 보는 화면도 갱신
   return { success: true };
 }

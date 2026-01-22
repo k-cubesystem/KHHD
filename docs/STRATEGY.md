@@ -176,23 +176,80 @@ credits (크레딧 관리)
 
 ## 🚀 개발 로드맵
 
-### Phase 8: 프로덕션 안정화 (1-2주)
-- [ ] Vercel 프로덕션 환경 검증
-- [ ] 실제 사용자 테스트
-- [ ] 버그 수정 및 최적화
-- [ ] 모니터링 시스템 구축
+### Phase 8: 관리자 시스템 & UX Pro Max (진행 중)
+**목표**: 서비스 운영을 위한 완전한 관리자 통제권 확보 및 "Tangible Nobility" 디자인 언어 적용.
 
-### Phase 9: 기능 확장 (2-4주)
-- [ ] PDF 리포트 다운로드
-- [ ] 카카오톡 알림톡
-- [ ] 이메일 알림
-- [ ] 분석 히스토리 개선
+### 1단계: Foundation (완료 ✅)
+- [x] DB Schema: `price_plans`, `profiles.role` 추가.
+- [x] Middleware: `/admin` 경로 보안 및 Role 기반 접근 제어.
+- [x] Dashboard: 핵심 지표(회원수, 매출) 모니터링 카드 구현.
+- [x] Tester: 관리자/테스터 전용 '무료 크레딧 충전' 기능.
 
-### Phase 10: AI 고도화 (4-6주)
-- [ ] Gemini 2.0 Flash 적용
-- [ ] 프롬프트 최적화
-- [ ] 이미지 분석 정확도 향상
-- [ ] 다국어 지원 (영어)
+### 2단계: Core Management Features (진행 예정 🚀)
+**Target**: Claude 3.5 Sonnet
+1.  **회원 관리 (`/admin/users`)**:
+    -   Real-time Search: 이메일/이름 기반 검색.
+    -   Role Management: User <-> Tester <-> Admin 즉시 변경.
+    -   Family View: 사용자가 등록한 가족 구성원 데이터 조회.
+2.  **결제 내역 (`/admin/payments`)**:
+    -   Transaction Logs: 성공/실패/환불 모든 내역 조회.
+    -   Revenue Analysis: 월별/일별 매출 집계 (기초).
+3.  **상품 관리 (`/admin/products`)**:
+    -   Dynamic Pricing: 가격표(DB) 실시간 수정 UI.
+    -   Promotion: 할인(Badge) 및 설명 문구 변경 기능.
+
+### Phase 9: 서비스 구조 대개편 & 기능 확장 (Next Step 🚀)
+**목표**: 메뉴 구조의 직관화 및 만세력/궁합 분석의 고도화 (Killer Features).
+
+### 1단계: IA 구조 개편 (Navigation Redesign)
+- **해화사주 (`/saju`)**: 
+  - 하위 탭: [오늘의 운세], [사주풀이], [관상], [손금], [풍수].
+- **천지인 분석 (`/analysis`)**: 
+  - 기존 AI 분석 고도화.
+  - **New**: [궁합/파트너십] (2~3인 데이터 선택 분석).
+- **인연 관리 (`/relationships`)**: 
+  - CRUD 기능 강화.
+  - **Action**: 목록에서 인물 선택 -> '분석하기' 버튼으로 즉시 이동 연동.
+
+### 2단계: 만세력 Pro & 내 사주 관리
+- **위치**: 프로필 > 내 사주 관리.
+- **기능**:
+  - **Full Data**: 사주구성, 음양오행, 천간지지, 궁성론, 육친, 용신, 격국, 신살, 개운법 출력.
+  - **Interactive Learning**: 용어 클릭 시 설명 팝업(Tooltip/Dialog) 제공.
+- **Design**: "차분하고 고급스러운" Tangible UI. 복잡한 정보를 정갈한 Grid와 Typography로 표현.
+
+### 3단계: UI/UX Optimization
+- 우측 상단 프로필 메뉴 정리 ('새 분석 생성' 제거).
+- 전반적인 네비게이션 가시성 개선 (복잡도 낮추기).
+
+### Phase 10: AI 연동 및 사용자 경험 고도화 (진행 중 🔥)
+**목표**: 각 기능별 특화된 AI 엔진 탑재 및 리텐션 강화 장치 마련.
+
+#### 1. AI Analysis Engines (Gemini powered)
+- **Deep Saju**: 정통 명리학 기반의 텍스트 심층 분석.
+- **Vision AI**: 관상, 손금, 풍수 사진을 분석하여 인사이트 도출.
+- **Daily Fortune**: 매일 갱신되는 개인화 운세 및 캐싱 시스템.
+
+#### 2. Retention & Engagement
+- **Floating Menu**: 어디서든 홈/프로필로 이동 가능한 빠른 접근성 확보.
+- **Kakao Integration**: 
+  - 카카오톡 채널 연동.
+  - 오늘의 운세 알림톡(Notification) 설정 UI.
+
+### Phase 11: Enterprise Security & Expansion (Future)
+**목표**: 서비스 신뢰도 확보 및 글로벌 확장을 위한 기반 마련.
+
+#### 1. Security Hardening (보안 강화)
+- **Middleware Rate Limiting**: 비정상적인 요청(DDoS, Brute Force) 차단 (Upstash Redis 연동 고려).
+- **Secure Headers**: CSP, X-Frame-Options, HSTS 등 보안 헤더 완벽 적용.
+- **Audit Logging**: 관리자 페이지 내 모든 중요 변경 사항(Role 변경, 환불 처리 등)을 DB에 기록 및 조회 기능.
+- **SQL Injection 방지**: 모든 동적 쿼리에 Supabase RPC 또는 Parametrized Query 원칙 재확인.
+
+#### 2. Features Expansion (기능 확장)
+- **PDF 비록 소장하기**: 생성된 AI 분석 리포트를 고품질 PDF 전자책 형태로 다운로드.
+- **카카오톡 알림톡**: 결제 완료, 분석 완료 시 알림 발송 (Solapi/Aligo 연동).
+- **Globalization (i18n)**: 영어/일본어 UI 및 사주 용어 번역 지원으로 글로벌 진출 준비.
+지원 (영어)
 
 ### Phase 11: 추가 기능 (6-8주)
 - [ ] 궁합 분석
