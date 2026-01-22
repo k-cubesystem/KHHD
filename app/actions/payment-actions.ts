@@ -32,7 +32,14 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
     }
 
     // 결제 정보 저장 (크레딧 포함)
-    const { error } = await supabase.from("payments").insert({
+    console.log("[Payment] Attempting to save payment record:", {
+        user_id: user.id,
+        order_id: orderId,
+        amount,
+        credits
+    });
+
+    const { data: insertedPayment, error } = await supabase.from("payments").insert({
         user_id: user.id,
         payment_key: paymentKey,
         order_id: orderId,
@@ -40,12 +47,15 @@ export async function confirmPayment(paymentKey: string, orderId: string, amount
         credits_purchased: credits,
         credits_remaining: credits,
         status: "completed",
-    });
+    }).select().single();
 
     if (error) {
-        console.error("Payment Record Insert Error:", error);
+        console.error("[Payment] DB Insert Error:", error);
+        console.error("[Payment] Error details:", JSON.stringify(error, null, 2));
+        throw new Error(`결제는 성공했으나 크레딧 저장 실패: ${error.message}`);
     }
 
+    console.log("[Payment] Successfully saved payment:", insertedPayment);
     return result;
 }
 
