@@ -28,7 +28,7 @@ export default async function ProtectedPage() {
     return redirect("/auth/login");
   }
 
-  const members = await getFamilyMembers();
+  const members = (await getFamilyMembers()) || [];
 
   // 최근 분석 내역 (최대 5개)
   const { data: recentRecords } = await supabase
@@ -38,7 +38,9 @@ export default async function ProtectedPage() {
       family_members (name)
     `)
     .order("created_at", { ascending: false })
-    .limit(5);
+    .limit(5) || { data: [] };
+
+  const records = recentRecords || [];
 
   // Mock-up data for EnergyChart
   const energyData = {

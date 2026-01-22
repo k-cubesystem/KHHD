@@ -49,7 +49,7 @@ export async function getFamilyMembers() {
         return [];
     }
 
-    return data;
+    return data || [];
 }
 
 export async function addFamilyMember(formData: FormData) {
