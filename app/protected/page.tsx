@@ -278,9 +278,9 @@ export default async function ProtectedPage() {
               <div className="absolute -inset-1 bg-gradient-to-b from-[#D4AF37]/5 to-transparent rounded-[3rem] blur-xl opacity-50" />
 
               <div className="relative rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden bg-[#0A0A0A]/70 backdrop-blur-3xl">
-                {recentRecords && recentRecords.length > 0 ? (
+                {records && records.length > 0 ? (
                   <div className="divide-y divide-white/5">
-                    {recentRecords.map((record, idx) => (
+                    {records.map((record, idx) => (
                       <div
                         key={record.id}
                         className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group/item transition-all duration-500 animate-in fade-in slide-in-from-bottom-2"
