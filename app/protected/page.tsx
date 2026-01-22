@@ -18,6 +18,7 @@ import { getFamilyMembers } from "@/app/actions/family-actions";
 import { EnergyChart } from "@/components/dashboard/energy-chart";
 import { SkyEarthHumanStatus } from "@/components/dashboard/sky-earth-human-status";
 import { cn } from "@/lib/utils";
+import { CreditBalance } from "@/components/dashboard/credit-balance";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -71,7 +72,7 @@ export default async function ProtectedPage() {
       ═══════════════════════════════════════════════════════════════════ */}
       <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="space-y-6 max-w-2xl">
-          {/* Holographic Security Badge */}
+          {/* Holographic Security Badge & Credit Balance */}
           <div className="flex flex-wrap items-center gap-4">
             <div className="relative group">
               {/* Hologram outer glow */}
@@ -98,6 +99,9 @@ export default async function ProtectedPage() {
                 </div>
               </div>
             </div>
+
+            {/* Credit Balance Display */}
+            <CreditBalance className="border-[#D4AF37]/30" />
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground/70 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
               <Calendar className="w-3 h-3" />

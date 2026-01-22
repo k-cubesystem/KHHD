@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { confirmPayment } from "@/app/actions/payment-actions";
+import { confirmPayment, useCredit } from "@/app/actions/payment-actions";
 import { startFateAnalysis } from "@/app/actions/analysis-actions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -26,6 +26,7 @@ function PaymentProcessor() {
         const amount = Number(searchParams.get("amount"));
         const memberId = searchParams.get("memberId");
         const homeAddress = searchParams.get("homeAddress");
+        const credits = Number(searchParams.get("credits")) || 1;
 
         if (!paymentKey || !orderId || !amount || !memberId) {
             toast.error("잘못된 결제 정보입니다.");
@@ -35,11 +36,14 @@ function PaymentProcessor() {
 
         const processAll = async () => {
             try {
-                // 1. 결제 승인
-                await confirmPayment(paymentKey, orderId, amount);
-                toast.success("결제가 승인되었습니다. 비록 생성을 시작합니다.");
+                // 1. 결제 승인 (크레딧 포함)
+                await confirmPayment(paymentKey, orderId, amount, credits);
+                toast.success(`결제가 승인되었습니다. (${credits}회 분석 크레딧 충전)`);
 
-                // 2. 분석 시작 (결제 완료 후)
+                // 2. 크레딧 차감
+                await useCredit();
+
+                // 3. 분석 시작
                 const formData = new FormData();
                 formData.append("memberId", memberId);
                 if (homeAddress) formData.append("homeAddress", homeAddress);
@@ -54,7 +58,7 @@ function PaymentProcessor() {
         };
 
         processAll();
-    }, [searchParams, router]);
+    }, [searchParams, router, isMounted]);
 
     return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">

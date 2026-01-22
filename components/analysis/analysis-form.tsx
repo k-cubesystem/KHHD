@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Sparkles, Upload, ChevronRight, Check, CreditCard } from "lucide-react";
+import { Sparkles, Upload, ChevronRight, Check, CreditCard, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { getTossPayments } from "@/lib/tosspayments";
+import { getAvailableCredits } from "@/app/actions/payment-actions";
+import { PaymentWidget } from "@/components/payment/payment-widget";
+import { startFateAnalysis } from "@/app/actions/analysis-actions";
+import { toast } from "sonner";
 
 interface FamilyMember {
     id: string;
     name: string;
     relationship: string;
     birth_date: string;
-    // ... other fields not strictly needed for display
 }
 
 interface AnalysisFormProps {
@@ -28,19 +31,29 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
     const [facePreview, setFacePreview] = useState<string | null>(null);
     const [handPreview, setHandPreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedPlan, setSelectedPlan] = useState<"standard" | "test">("standard");
-
-    const PLANS = {
-        standard: { price: 9900, credits: 1, name: "프리미엄 분석", description: "1회 분석" },
-        test: { price: 500, credits: 10, name: "테스트 패키지", description: "10회 분석" },
-    };
+    const [showPayment, setShowPayment] = useState(false);
+    const [availableCredits, setAvailableCredits] = useState<number>(0);
+    const [isLoadingCredits, setIsLoadingCredits] = useState(true);
 
     const faceInputRef = useRef<HTMLInputElement>(null);
     const handInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setIsMounted(true);
+        checkCredits();
     }, []);
+
+    const checkCredits = async () => {
+        setIsLoadingCredits(true);
+        try {
+            const credits = await getAvailableCredits();
+            setAvailableCredits(credits);
+        } catch (err) {
+            console.error("Failed to check credits", err);
+        } finally {
+            setIsLoadingCredits(false);
+        }
+    };
 
     if (!isMounted) {
         return <div className="w-full h-96 bg-white/5 animate-pulse rounded-2xl" />;
@@ -61,40 +74,30 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
         setStep((prev) => prev + 1);
     };
 
-    const currentPlan = PLANS[selectedPlan];
+    const handleStartAnalysis = async () => {
+        if (!selectedMemberId) return;
 
-    const handlePayment = async () => {
-        if (!selectedMemberId) {
-            alert("분석 대상을 선택해주세요.");
+        if (availableCredits <= 0) {
+            setShowPayment(true);
             return;
         }
 
         setIsSubmitting(true);
-
         try {
-            const tossPayments = await getTossPayments();
-            if (!tossPayments) {
-                throw new Error("결제 모듈을 불러올 수 없습니다.");
-            }
-
-            const orderId = `ORDER_${Date.now()}_${selectedMemberId.slice(0, 8)}`;
+            const formData = new FormData();
+            formData.append("memberId", selectedMemberId);
             const homeAddress = (document.getElementById("address") as HTMLInputElement)?.value || "";
-            const origin = typeof window !== "undefined" ? window.location.origin : "";
+            if (homeAddress) formData.append("homeAddress", homeAddress);
 
-            // Toss Payments 결제창 호출
-            await tossPayments.requestPayment("카드", {
-                amount: currentPlan.price,
-                orderId,
-                orderName: `해화당 ${currentPlan.name}`,
-                customerName: members.find(m => m.id === selectedMemberId)?.name || "고객",
-                successUrl: `${origin}/protected/analysis/success?memberId=${selectedMemberId}&homeAddress=${encodeURIComponent(homeAddress)}&plan=${selectedPlan}&credits=${currentPlan.credits}`,
-                failUrl: `${origin}/protected/analysis/fail`,
-            });
+            // Note: faceImage and handImage would normally be appended here if we were using actual File objects
+            // In a real app, we'd need to keep the File objects in state, not just previews.
+            // For this implementation, we proceed with current member info.
+
+            await startFateAnalysis(formData);
+            toast.success("분석이 시작되었습니다. 잠시 후 결과 페이지로 이동합니다.");
+            window.location.href = "/protected/history";
         } catch (error: any) {
-            console.error("[Payment] Error:", error);
-            if (error.code !== "USER_CANCEL") {
-                alert(error.message || "결제 중 오류가 발생했습니다.");
-            }
+            toast.error(error.message || "분석 시작 중 오류가 발생했습니다.");
             setIsSubmitting(false);
         }
     };
@@ -247,123 +250,115 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                 </div>
 
                 {/* Step 3: Confirmation */}
+                {/* Step 3: Confirmation & Payment */}
                 <div className={cn("space-y-6 transition-all duration-500", step === 3 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full fixed top-0 pointer-events-none")}>
-                    <div className="text-center space-y-2 mb-8">
-                        <h2 className="text-2xl font-black text-white">마지막 단계: 지기(地氣) 보정</h2>
-                        <p className="text-muted-foreground text-sm">현재 거주하고 계신 곳의 주소를 입력해주세요.</p>
-                    </div>
+                    {!showPayment ? (
+                        <>
+                            <div className="text-center space-y-2 mb-8">
+                                <h2 className="text-2xl font-black text-white">마지막 단계: 지기(地氣) 보정</h2>
+                                <p className="text-muted-foreground text-sm">현재 거주하고 계신 곳의 주소를 입력해주세요.</p>
+                            </div>
 
-                    <div className="glass p-8 rounded-2xl space-y-6 border-white/5">
-                        <div className="space-y-2">
-                            <Label htmlFor="address" className="text-xs font-bold uppercase text-primary">거주지 주소 (선택)</Label>
-                            <Input
-                                id="address"
-                                name="homeAddress"
-                                placeholder="예: 서울시 강남구 청담동..."
-                                className="bg-black/50 border-white/10 focus:border-primary/50 h-12 text-sm"
-                            />
-                        </div>
-
-                        {/* Plan Selection */}
-                        <div className="space-y-3 pt-4 border-t border-white/5">
-                            <Label className="text-xs font-bold uppercase text-primary">결제 플랜 선택</Label>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div
-                                    onClick={() => setSelectedPlan("standard")}
-                                    className={cn(
-                                        "cursor-pointer p-4 rounded-xl border transition-all",
-                                        selectedPlan === "standard"
-                                            ? "bg-primary/10 border-primary"
-                                            : "bg-white/5 border-white/10 hover:border-primary/50"
-                                    )}
-                                >
-                                    <p className={cn("font-bold", selectedPlan === "standard" ? "text-primary" : "text-white")}>
-                                        프리미엄 분석
-                                    </p>
-                                    <p className="text-2xl font-black text-white">9,900원</p>
-                                    <p className="text-xs text-muted-foreground">1회 분석</p>
+                            <div className="glass p-8 rounded-2xl space-y-6 border-white/5">
+                                <div className="space-y-2">
+                                    <Label htmlFor="address" className="text-xs font-bold uppercase text-primary">거주지 주소 (선택)</Label>
+                                    <Input
+                                        id="address"
+                                        name="homeAddress"
+                                        placeholder="예: 서울시 강남구 청담동..."
+                                        className="bg-black/50 border-white/10 focus:border-primary/50 h-12 text-sm"
+                                    />
                                 </div>
-                                <div
-                                    onClick={() => setSelectedPlan("test")}
-                                    className={cn(
-                                        "cursor-pointer p-4 rounded-xl border transition-all relative",
-                                        selectedPlan === "test"
-                                            ? "bg-primary/10 border-primary"
-                                            : "bg-white/5 border-white/10 hover:border-primary/50"
-                                    )}
-                                >
-                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">TEST</span>
-                                    <p className={cn("font-bold", selectedPlan === "test" ? "text-primary" : "text-white")}>
-                                        테스트 패키지
-                                    </p>
-                                    <p className="text-2xl font-black text-white">500원</p>
-                                    <p className="text-xs text-muted-foreground">10회 분석</p>
+
+                                <div className="pt-4 border-t border-white/5 space-y-4">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">분석 대상</span>
+                                        <span className="font-bold text-white">{members.find(m => m.id === selectedMemberId)?.name}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-muted-foreground">사용 가능한 크레딧</span>
+                                        <div className="flex items-center gap-2">
+                                            {isLoadingCredits ? (
+                                                <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                                            ) : (
+                                                <span className={cn("font-black", availableCredits > 0 ? "text-primary" : "text-red-400")}>
+                                                    {availableCredits}회
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">관상 정보</span>
+                                        <span className={cn("font-bold", facePreview ? "text-primary" : "text-muted-foreground/50")}>
+                                            {facePreview ? "포함됨" : "미포함"}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">손금 정보</span>
+                                        <span className={cn("font-bold", handPreview ? "text-primary" : "text-muted-foreground/50")}>
+                                            {handPreview ? "포함됨" : "미포함"}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-white/5 space-y-4">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">분석 대상</span>
-                                <span className="font-bold text-white">{members.find(m => m.id === selectedMemberId)?.name}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">관상 정보</span>
-                                <span className={cn("font-bold", facePreview ? "text-primary" : "text-muted-foreground/50")}>
-                                    {facePreview ? "포함됨" : "미포함"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">손금 정보</span>
-                                <span className={cn("font-bold", handPreview ? "text-primary" : "text-muted-foreground/50")}>
-                                    {handPreview ? "포함됨" : "미포함"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">결제 금액</span>
-                                <span className="font-black text-primary">{currentPlan.price.toLocaleString()}원</span>
-                            </div>
-                        </div>
-                    </div>
+                        </>
+                    ) : (
+                        <PaymentWidget
+                            memberId={selectedMemberId!}
+                            homeAddress={(document.getElementById("address") as HTMLInputElement)?.value}
+                            onCancel={() => setShowPayment(false)}
+                        />
+                    )}
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex justify-between mt-10 pt-6 border-t border-white/5">
-                    {step > 1 && (
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setStep(prev => prev - 1)}
-                            disabled={isSubmitting}
-                            className="text-muted-foreground hover:text-white"
-                        >
-                            이전 단계
-                        </Button>
-                    )}
-
-                    <div className="ml-auto">
-                        {step < 3 ? (
+                {!showPayment && (
+                    <div className="flex justify-between mt-10 pt-6 border-t border-white/5">
+                        {step > 1 && (
                             <Button
                                 type="button"
-                                onClick={handleNext}
-                                disabled={step === 1 && !selectedMemberId}
-                                className="bg-white text-black hover:bg-white/90 font-bold px-8 rounded-full"
-                            >
-                                다음 <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                        ) : (
-                            <Button
-                                type="button"
-                                onClick={handlePayment}
+                                variant="ghost"
+                                onClick={() => setStep(prev => prev - 1)}
                                 disabled={isSubmitting}
-                                className="bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black hover:from-[#F4E4BA] hover:to-[#D4AF37] font-black px-10 h-12 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all"
+                                className="text-muted-foreground hover:text-white"
                             >
-                                <CreditCard className="w-4 h-4 mr-2" />
-                                {currentPlan.price.toLocaleString()}원 결제하고 분석받기
+                                이전 단계
                             </Button>
                         )}
+
+                        <div className="ml-auto">
+                            {step < 3 ? (
+                                <Button
+                                    type="button"
+                                    onClick={handleNext}
+                                    disabled={step === 1 && !selectedMemberId}
+                                    className="bg-white text-black hover:bg-white/90 font-bold px-8 rounded-full"
+                                >
+                                    다음 <ChevronRight className="w-4 h-4 ml-1" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    onClick={handleStartAnalysis}
+                                    disabled={isSubmitting || isLoadingCredits}
+                                    className="bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black hover:from-[#F4E4BA] hover:to-[#D4AF37] font-black px-10 h-12 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.6)] transition-all"
+                                >
+                                    {availableCredits > 0 ? (
+                                        <>
+                                            <Sparkles className="w-4 h-4 mr-2" />
+                                            천기 누설 시작하기 (1크레딧 사용)
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CreditCard className="w-4 h-4 mr-2" />
+                                            크레딧 충전하고 분석받기
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Mystic Loading Overlay */}

@@ -1,54 +1,50 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { AlertCircle, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-function FailContent() {
-    const searchParams = useSearchParams();
-    const message = searchParams.get("message") || "결제 중 알 수 없는 오류가 발생했습니다.";
-
-    return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 px-6 text-center">
-            <div className="w-20 h-20 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-10 h-10 text-destructive" />
-            </div>
-
-            <div className="space-y-2">
-                <h2 className="text-3xl font-black text-gold">결제에 실패했습니다</h2>
-                <p className="text-muted-foreground whitespace-pre-wrap max-w-md mx-auto">
-                    {message}
-                </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/protected/analysis">
-                    <Button variant="outline" className="rounded-full gap-2 border-white/10 glass">
-                        <ArrowLeft className="w-4 h-4" /> 분석실로 돌아가기
-                    </Button>
-                </Link>
-                <Link href="https://tosspayments.com/support" target="_blank">
-                    <Button variant="ghost" className="text-muted-foreground underline-offset-4 hover:underline">
-                        고객센터 문의하기
-                    </Button>
-                </Link>
-            </div>
-        </div>
-    );
-}
-
 export default function PaymentFailPage() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    const code = searchParams.get("code");
+    const message = searchParams.get("message");
+
     return (
-        <Suspense
-            fallback={
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-                    <Loader2 className="w-16 h-16 animate-spin text-primary" />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 px-4">
+            <div className="relative">
+                <div className="absolute -inset-4 bg-red-500/20 blur-xl rounded-full" />
+                <AlertCircle className="w-20 h-20 text-red-500 relative animate-bounce" />
+            </div>
+
+            <div className="text-center space-y-3 max-w-md">
+                <h2 className="text-3xl font-black text-white">결제에 실패했습니다</h2>
+                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                    <p className="text-sm text-muted-foreground mb-1">에러 코드: {code || "UNKNOWN"}</p>
+                    <p className="text-base text-red-400 font-medium">{message || "알 수 없는 오류가 발생했습니다. 다시 시도해 주세요."}</p>
                 </div>
-            }
-        >
-            <FailContent />
-        </Suspense>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
+                <Link href="/protected/analysis" className="flex-1">
+                    <Button variant="outline" className="w-full h-12 rounded-xl border-white/10 hover:bg-white/5">
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        분석 단계로 돌아가기
+                    </Button>
+                </Link>
+                <Button
+                    onClick={() => window.location.reload()}
+                    className="flex-1 h-12 rounded-xl bg-white text-black hover:bg-white/90 font-bold"
+                >
+                    새로고침
+                </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground/50">
+                문제가 지속되면 고객센터나 관리자에게 문의해 주세요.
+            </p>
+        </div>
     );
 }
