@@ -1,31 +1,110 @@
-import { Solar } from "lunar-javascript";
+import { Solar, Lunar } from 'lunar-javascript';
 
-// Accurate Solar Terms for a given year
-export function getAccurateSolarTerms(year: number) {
-    const solarTerms: { name: string, date: string }[] = [];
-    // (Implementation Placeholder)
-    return solarTerms;
+export interface SajuPillar {
+    gan: string;
+    ji: string;
+    ganHan: string;
+    jiHan: string;
+    color: string;
+    label: string;
+    korean: string; // e.g. "갑자"
 }
 
-// Convert Solar to Lunar with accurate time
-export function convertSolarToLunar(year: number, month: number, day: number) {
-    // 라이브러리 타입 정의 불일치로 인한 any 캐스팅
-    const solar = (Solar as any).fromYmd(year, month, day);
-    const lunar = solar.getLunar();
+export interface ManseResult {
+    year: SajuPillar;
+    month: SajuPillar;
+    day: SajuPillar;
+    time: SajuPillar;
+}
+
+// Mappings for UI
+const GAN_INFO: Record<string, { colorClass: string; element: string; colorName: string }> = {
+    "甲": { colorClass: "text-green-600 bg-green-50 border-green-200", element: "Wood", colorName: "청(靑)" }, // Yang Wood
+    "乙": { colorClass: "text-green-600 bg-green-50 border-green-200", element: "Wood", colorName: "청(靑)" }, // Yin Wood
+    "丙": { colorClass: "text-red-600 bg-red-50 border-red-200", element: "Fire", colorName: "적(赤)" }, // Yang Fire
+    "丁": { colorClass: "text-red-600 bg-red-50 border-red-200", element: "Fire", colorName: "적(赤)" }, // Yin Fire
+    "戊": { colorClass: "text-yellow-600 bg-yellow-50 border-yellow-200", element: "Earth", colorName: "황(黃)" }, // Yang Earth
+    "己": { colorClass: "text-yellow-600 bg-yellow-50 border-yellow-200", element: "Earth", colorName: "황(黃)" }, // Yin Earth
+    "庚": { colorClass: "text-gray-600 bg-gray-50 border-gray-200", element: "Metal", colorName: "백(白)" }, // Yang Metal
+    "辛": { colorClass: "text-gray-600 bg-gray-50 border-gray-200", element: "Metal", colorName: "백(白)" }, // Yin Metal
+    "壬": { colorClass: "text-blue-900 bg-blue-50 border-blue-200", element: "Water", colorName: "흑(黑)" }, // Yang Water
+    "癸": { colorClass: "text-blue-900 bg-blue-50 border-blue-200", element: "Water", colorName: "흑(黑)" }, // Yin Water
+};
+
+const JI_INFO: Record<string, { animal: string }> = {
+    "子": { animal: "쥐" },
+    "丑": { animal: "소" },
+    "寅": { animal: "호랑이" },
+    "卯": { animal: "토끼" },
+    "辰": { animal: "용" },
+    "巳": { animal: "뱀" },
+    "午": { animal: "말" },
+    "未": { animal: "양" },
+    "申": { animal: "원숭이" },
+    "酉": { animal: "닭" },
+    "戌": { animal: "개" },
+    "亥": { animal: "돼지" },
+};
+
+const KOREAN_GAN: Record<string, string> = {
+    "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
+    "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계"
+};
+
+const KOREAN_JI: Record<string, string> = {
+    "子": "자", "丑": "축", "寅": "인", "卯": "묘", "辰": "진", "巳": "사",
+    "午": "오", "未": "미", "申": "신", "酉": "유", "戌": "술", "亥": "해"
+};
+
+function createPillar(gan: string, ji: string): SajuPillar {
+    const ganInfo = GAN_INFO[gan] || { colorClass: "text-gray-800 bg-gray-100", element: "Unknown", colorName: "" };
+    const jiInfo = JI_INFO[ji] || { animal: "Unknown" };
+
+    // Combine color name and animal (e.g. "푸른 용" -> "청룡" styling in UI is separate, but label helps)
+    // Label example: "푸른 용" (Blue Dragon)
+    const colorLabelMap: Record<string, string> = {
+        "청(靑)": "푸른", "적(赤)": "붉은", "황(黃)": "황금", "백(白)": "흰", "흑(黑)": "검은"
+    };
+
+    const label = `${colorLabelMap[ganInfo.colorName] || ""} ${jiInfo.animal}`;
+    const korean = `${KOREAN_GAN[gan] || gan}${KOREAN_JI[ji] || ji}`;
+
     return {
-        lunarYear: lunar.getYear(),
-        lunarMonth: lunar.getMonth(),
-        lunarDay: lunar.getDay(),
-        isLeap: lunar.isLeap()
+        gan,
+        ji,
+        ganHan: gan,
+        jiHan: ji,
+        color: ganInfo.colorClass,
+        label,
+        korean
     };
 }
 
-// Check if valid date
-export function isValidDate(year: number, month: number, day: number): boolean {
-    try {
-        (Solar as any).fromYmd(year, month, day);
-        return true;
-    } catch (e) {
-        return false;
-    }
+/**
+ * Calculates the Four Pillars (Saju) from a given Gregorian date and time.
+ * @param dateStr Format: YYYY-MM-DD
+ * @param timeStr Format: HH:mm (optional, defaults to 00:00)
+ */
+export function calculateManse(dateStr: string, timeStr: string = "00:00"): ManseResult {
+    // strict parsing
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const [hour, minute] = timeStr.split(':').map(Number);
+
+    const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
+    const lunar = solar.getLunar();
+
+    // lunar-javascript's getEightChar method handles the logic for year/month change based on solar terms (Jeolgi)
+    const eightChar = lunar.getEightChar();
+
+    // Optional: Configure sect settings if needed (e.g., Zi hour processing)
+    // eightChar.setSect(1); // Default is 2 (starts day at 00:00). 1 starts day at 23:00 (Ja-Si)
+    // Usually for modern Saju, standard solar date crossing is handled, but classic libraries might differ.
+    // We will stick to defaults for now which are robust.
+
+    return {
+        year: createPillar(eightChar.getYearGan(), eightChar.getYearZhi()),
+        month: createPillar(eightChar.getMonthGan(), eightChar.getMonthZhi()),
+        day: createPillar(eightChar.getDayGan(), eightChar.getDayZhi()),
+        time: createPillar(eightChar.getTimeGan(), eightChar.getTimeZhi()),
+    };
 }
