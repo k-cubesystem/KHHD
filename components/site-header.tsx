@@ -47,9 +47,9 @@ export function SiteHeader() {
 
                         {/* 해화사주 Dropdown */}
                         <div className="relative group h-20 flex items-center">
-                            <button className="flex items-center gap-1.5 text-sm font-bold text-zen-text/70 hover:text-zen-wood transition-colors font-sans focus:outline-none">
+                            <Link href="/auth/login" className="flex items-center gap-1.5 text-sm font-bold text-zen-text/70 hover:text-zen-wood transition-colors font-sans focus:outline-none">
                                 해화사주 <ChevronDown className="w-3 h-3 opacity-50" />
-                            </button>
+                            </Link>
 
                             {/* Dropdown Panel */}
                             <div className="absolute top-20 left-0 w-48 bg-white border border-zen-border rounded-sm shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
@@ -152,6 +152,7 @@ export function SiteHeader() {
                             <Link href="/auth/login" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
                                 <Clock className="w-5 h-5 text-zen-muted" /> 비록함
                             </Link>
+
                         </div>
 
                         {/* Bottom Actions */}
