@@ -36,10 +36,14 @@ export async function updateSession(request: NextRequest) {
     // 1. 사용자 정보 가져오기
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 2. 보호된 경로(/protected) 접근 제어
+    // 2. 보호된 경로(/protected) 접근 제어 (비회원 접근 허용으로 변경)
+    // 원래는 여기서 막았으나, 비회원도 페이지를 볼 수 있게 요청받음.
+    // 개별 페이지나 컴포넌트 레벨에서 데이터 접근을 제어해야 함.
+    /*
     if (request.nextUrl.pathname.startsWith("/protected") && !user) {
         return NextResponse.redirect(new URL("/auth/login", request.url));
     }
+    */
 
     // 3. 관리자 경로(/admin) 접근 제어
     if (request.nextUrl.pathname.startsWith("/admin")) {

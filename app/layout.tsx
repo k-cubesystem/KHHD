@@ -25,12 +25,12 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "해화당(海華堂) AI - Premium 운명 공학 SaaS",
+  title: "청담해화당 - Premium 운명 공학 SaaS",
   description: "전통 명리학과 현대 데이터 사이언스의 결합, 해화당 마스터의 정교한 운명 분석 리포트",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: "/app-icon.png",
+    apple: "/app-icon.png",
   },
 };
 
