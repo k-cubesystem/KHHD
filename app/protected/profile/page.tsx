@@ -20,7 +20,31 @@ export default async function ProfilePage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-        return redirect("/auth/login");
+        return (
+            <div className="min-h-screen bg-zen-bg font-sans flex items-center justify-center p-6">
+                <Card className="max-w-md w-full border-zen-border bg-white shadow-lg text-center p-8 space-y-6">
+                    <div className="w-16 h-16 bg-zen-gold/10 rounded-full flex items-center justify-center mx-auto text-zen-gold">
+                        <User className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-serif font-bold text-zen-text">로그인이 필요합니다</h2>
+                        <p className="text-zen-muted text-sm">
+                            내 사주 정보를 관리하고 운명을 분석하려면<br />로그인이 필요합니다.
+                        </p>
+                    </div>
+                    <div className="pt-2">
+                        <Link href="/auth/login">
+                            <Button className="w-full h-12 bg-zen-wood text-white font-bold text-lg hover:bg-[#7A604D]">
+                                로그인하러 가기
+                            </Button>
+                        </Link>
+                    </div>
+                    <Link href="/" className="block text-xs text-zen-muted underline">
+                        메인으로 돌아가기
+                    </Link>
+                </Card>
+            </div>
+        );
     }
 
     // Fetch Profile Data (Birth info) - Try to get from 'profiles' table

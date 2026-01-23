@@ -4,35 +4,34 @@ import Link from "next/link";
 import { getFamilyMembers } from "@/app/actions/family-actions";
 import { Sparkles, Cloud, Map, User, ChevronRight, Clock, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OrbBackground } from "@/components/ui/orb-background";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return redirect("/auth/login");
+  // User Info (Handle Guest)
+  const masterName = user?.email?.split('@')[0] || "예비 마스터";
+  const members = user ? ((await getFamilyMembers()) || []) : [];
+
+  // Recent Records (Mock for Guest)
+  let records = [];
+  if (user) {
+    const { data: recentRecords } = await supabase
+      .from("saju_records")
+      .select(`*, family_members (name)`)
+      .order("created_at", { ascending: false })
+      .limit(3);
+    records = recentRecords || [];
   }
 
-  const members = (await getFamilyMembers()) || [];
-  const masterName = user.email?.split('@')[0] || "마스터";
-
-  // 최근 분석 내역
-  const { data: recentRecords } = await supabase
-    .from("saju_records")
-    .select(`*, family_members (name)`)
-    .order("created_at", { ascending: false })
-    .limit(3) || { data: [] };
-
-  const records = recentRecords || [];
-
   return (
-    <div className="min-h-screen w-full bg-zen-bg text-zen-text selection:bg-zen-gold/30">
+    <div className="relative min-h-screen w-full bg-zen-bg text-zen-text selection:bg-zen-gold/30">
+      {/* UX Pro Max: Orb Background */}
+      <OrbBackground variant="subtle" />
 
       {/* Top Banner Area */}
       <div className="max-w-7xl mx-auto px-6 pt-12 pb-8 space-y-8">
-
-
-
         {/* Main Title */}
         <div className="space-y-4">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight tracking-tight text-zen-text">
@@ -40,9 +39,19 @@ export default async function ProtectedPage() {
             <span className="text-zen-gold border-b-4 border-zen-gold/30 pb-1">길(吉)함</span>을 향해 있습니다.
           </h1>
           <p className="text-zen-text/70 max-w-2xl text-lg font-sans leading-relaxed">
-            환영합니다, <span className="text-zen-wood font-bold border-b border-zen-wood/30">{masterName}</span> 마스터님.<br />
-            해화당 AI가 당신의 천지인(天地人) 데이터를 동기화했습니다.
+            환영합니다, <span className="text-zen-wood font-bold border-b border-zen-wood/30">{masterName}</span>님.<br />
+            {!user ? "로그인하여 당신의 천지인(天地人) 데이터를 확인하세요." : "해화당 AI가 당신의 천지인(天地人) 데이터를 동기화했습니다."}
           </p>
+
+          {!user && (
+            <div className="pt-4">
+              <Link href="/auth/login">
+                <Button className="bg-zen-wood text-white hover:bg-[#7A604D] font-bold px-8 py-6 text-lg shadow-lg">
+                  로그인하고 내 운명 분석하기
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -50,6 +59,14 @@ export default async function ProtectedPage() {
 
         {/* Left Column: 5-Element Graph (Radar Chart Mock - Zen Style) */}
         <div className="lg:col-span-4 rounded-sm bg-white border border-zen-border p-8 relative overflow-hidden h-[500px] flex flex-col justify-between shadow-sm">
+          {!user && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-20 flex items-center justify-center text-center p-6">
+              <div className="space-y-4">
+                <p className="font-serif font-bold text-xl text-zen-text">로그인이 필요합니다</p>
+                <p className="text-sm text-zen-muted">오행 분석 데이터를 보시려면 로그인하세요.</p>
+              </div>
+            </div>
+          )}
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-zen-gold/40 to-transparent" />
 
           <div className="flex items-center gap-2 text-zen-wood text-sm font-bold tracking-widest mb-4 uppercase">
@@ -112,7 +129,7 @@ export default async function ProtectedPage() {
           {/* Top Cards: Heaven, Earth, Human - Zen Style */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 md:h-[200px]">
             {/* Heaven Card */}
-            <Link href="/protected/analysis" className="group h-full">
+            <Link href={user ? "/protected/analysis" : "/auth/login"} className="group h-full">
               <div className="h-full bg-white border border-zen-border rounded-sm p-4 md:p-6 relative overflow-hidden hover:border-zen-gold/50 hover:shadow-md transition-all flex flex-col justify-between group-hover:-translate-y-1 duration-300 gap-4 md:gap-0">
                 <div className="flex justify-between items-start">
                   <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zen-bg flex items-center justify-center border border-zen-border group-hover:bg-zen-gold/10 transition-colors">
@@ -130,7 +147,7 @@ export default async function ProtectedPage() {
             </Link>
 
             {/* Earth Card */}
-            <Link href="/protected/saju/fengshui" className="group h-full">
+            <Link href={user ? "/protected/saju/fengshui" : "/auth/login"} className="group h-full">
               <div className="h-full bg-white border border-zen-border rounded-sm p-4 md:p-6 relative overflow-hidden hover:border-zen-gold/50 hover:shadow-md transition-all flex flex-col justify-between group-hover:-translate-y-1 duration-300 gap-4 md:gap-0">
                 <div className="flex justify-between items-start">
                   <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zen-bg flex items-center justify-center border border-zen-border group-hover:bg-zen-gold/10 transition-colors">
@@ -146,7 +163,7 @@ export default async function ProtectedPage() {
             </Link>
 
             {/* Human Card */}
-            <Link href="/protected/destiny/face" className="group h-full col-span-2 md:col-span-1">
+            <Link href={user ? "/protected/saju/face" : "/auth/login"} className="group h-full col-span-2 md:col-span-1">
               <div className="h-full bg-white border border-zen-border rounded-sm p-4 md:p-6 relative overflow-hidden hover:border-zen-gold/50 hover:shadow-md transition-all flex flex-col justify-between group-hover:-translate-y-1 duration-300 gap-4 md:gap-0 flex-row md:flex-col items-center md:items-stretch">
                 <div className="flex justify-between items-start md:w-full">
                   <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zen-bg flex items-center justify-center border border-zen-border group-hover:bg-zen-gold/10 transition-colors">
@@ -169,11 +186,11 @@ export default async function ProtectedPage() {
                 <Clock className="w-5 h-5 text-zen-wood" />
                 <h3 className="text-lg font-serif font-bold text-zen-text">최근 생성된 마스터 비록</h3>
               </div>
-              <Link href="/protected/history" className="text-xs font-bold text-zen-wood hover:underline hover:text-zen-gold uppercase tracking-wider">View All</Link>
+              <Link href={user ? "/protected/history" : "/auth/login"} className="text-xs font-bold text-zen-wood hover:underline hover:text-zen-gold uppercase tracking-wider">View All</Link>
             </div>
 
             <div className="grid gap-3">
-              {records.map((record, idx) => (
+              {records.map((record: any) => (
                 <div key={record.id} className="group relative flex items-center justify-between bg-zen-bg border border-transparent rounded-sm p-4 hover:bg-white hover:border-zen-border hover:shadow-sm transition-all cursor-pointer">
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-sm bg-white border border-zen-border flex items-center justify-center font-serif font-bold text-xl text-zen-text relative shadow-sm group-hover:border-zen-gold transition-colors">
@@ -197,8 +214,8 @@ export default async function ProtectedPage() {
               {records.length === 0 && (
                 <div className="text-center py-20 text-zen-muted flex flex-col items-center">
                   <Box className="w-10 h-10 mb-3 opacity-30" />
-                  <p className="font-serif text-lg">아직 생성된 비록이 없습니다.</p>
-                  <span className="text-sm font-sans mt-2">첫 번째 운명 분석을 시작하여 삶의 길을 확인하세요.</span>
+                  <p className="font-serif text-lg">{user ? "아직 생성된 비록이 없습니다." : "로그인하면 비록을 확인할 수 있습니다."}</p>
+                  <span className="text-sm font-sans mt-2">{user ? "첫 번째 운명 분석을 시작하여 삶의 길을 확인하세요." : "지금 바로 시작해보세요."}</span>
                 </div>
               )}
             </div>
@@ -207,18 +224,20 @@ export default async function ProtectedPage() {
 
       </div>
 
-      {/* Floating Family Badge - Zen Style */}
-      <div className="fixed top-32 right-6 hidden xl:block">
-        <Link href="/protected/family" className="flex items-center gap-4 bg-white border border-zen-border px-6 py-4 rounded-sm hover:border-zen-gold hover:shadow-md transition-all group">
-          <div className="w-10 h-10 rounded-sm bg-zen-bg flex items-center justify-center group-hover:bg-zen-gold/10 transition-colors border border-zen-border group-hover:border-zen-gold/30">
-            <User className="w-5 h-5 text-zen-wood group-hover:text-zen-gold" />
-          </div>
-          <div className="text-left">
-            <p className="text-[10px] uppercase text-zen-muted font-bold tracking-wider">인연 (Destiny Ties)</p>
-            <p className="text-2xl font-serif font-bold text-zen-text">{members.length}<span className="text-sm font-sans font-normal text-zen-muted ml-1">명</span></p>
-          </div>
-        </Link>
-      </div>
+      {/* Floating Family Badge - Zen Style (Guest: Hidden or Generic) */}
+      {user && (
+        <div className="fixed top-32 right-6 hidden xl:block">
+          <Link href="/protected/family" className="flex items-center gap-4 bg-white border border-zen-border px-6 py-4 rounded-sm hover:border-zen-gold hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-sm bg-zen-bg flex items-center justify-center group-hover:bg-zen-gold/10 transition-colors border border-zen-border group-hover:border-zen-gold/30">
+              <User className="w-5 h-5 text-zen-wood group-hover:text-zen-gold" />
+            </div>
+            <div className="text-left">
+              <p className="text-[10px] uppercase text-zen-muted font-bold tracking-wider">인연 (Destiny Ties)</p>
+              <p className="text-2xl font-serif font-bold text-zen-text">{members.length}<span className="text-sm font-sans font-normal text-zen-muted ml-1">명</span></p>
+            </div>
+          </Link>
+        </div>
+      )}
 
     </div>
   );
