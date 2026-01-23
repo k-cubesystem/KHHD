@@ -16,7 +16,7 @@ export default async function ProtectedLayout({
       <ProtectedHeader user={user} />
 
       {/* Main Content Area */}
-      <div className="flex-1 w-full flex flex-col items-center relative z-10">
+      <div className="flex-1 w-full flex flex-col items-center relative z-10 pt-20">
         <div className="w-full flex-1">
           {children}
         </div>

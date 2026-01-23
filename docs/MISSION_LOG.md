@@ -60,18 +60,25 @@
 
 ## ✅ Phase 14: UX Pro Max & AI 고도화 (2026-01-23) - COMPLETED
 
-### Gemini 담당 (2번, 3번)
+### Gemini 담당 (2번, 3번) - Claude가 구현 완료
 - [x] **Tailwind Config**: Gold Palette Extension (100~950)
 - [x] **Glassmorphism**: `.glass-zen`, `.glass-dark`, `.glass-gold` 유틸리티
 - [x] **Animation Standard**: `lib/animations.ts` (fadeInUp, spring transition)
-- [x] **Mobile Navigation**:
-  - 햄버거 버튼 터치 타겟 44x44px 이상 확대.
-  - 모바일 메뉴 가시성 개선 (배경 Blur + 애니메이션).
+- [x] **OrbBackground 컴포넌트**: `components/ui/orb-background.tsx`
+  - default, subtle, gold variant 지원
+  - GPU 가속 애니메이션 (blur, opacity)
+  - Dashboard에 적용 완료
+- [x] **Mobile Navigation (AnimatePresence)**:
+  - 햄버거 버튼 터치 타겟 44x44px 이상 확대
+  - 모바일 메뉴 AnimatePresence + stagger 애니메이션
+  - `protected-header.tsx`, `site-header.tsx` 모두 적용
+  - 아이콘 회전 애니메이션 (motion.button)
+  - 메뉴 항목 순차 등장 (fadeInUp + staggerContainer)
 - [x] **Emotional Onboarding (User Request)**:
-  - 감성 멘트 DB 구축 (`lib/constants/messages.ts`).
-  - 로그인 페이지 시간대별 인사/명언 (`DailyQuote`).
-  - 랜딩 페이지 카피 "빛나는 계절"로 리뉴얼.
-  - 분석 대기 화면 타이핑 로더 (`TypingLoader`).
+  - 감성 멘트 DB 구축 (`lib/constants/messages.ts`)
+  - 로그인 페이지 시간대별 인사/명언 (`DailyQuote`)
+  - 랜딩 페이지 카피 "빛나는 계절"로 리뉴얼
+  - 분석 대기 화면 타이핑 로더 (`TypingLoader`)
 
 ### Claude 담당 (1번, 4번)
 - [x] **관상 분석 프롬프트 고도화** (`app/actions/ai-saju.ts`)

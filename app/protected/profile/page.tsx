@@ -11,6 +11,7 @@ import Link from "next/link";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 import { calculateManse } from "@/lib/saju/manse";
+import { PremiumManseCard } from "@/components/saju/premium-manse-card";
 
 export default async function ProfilePage() {
     const supabase = await createClient();
@@ -100,62 +101,7 @@ export default async function ProfilePage() {
 
                     {hasSajuInfo && manse ? (
                         // Case A: Data Exists (Show Manse)
-                        <Card className="border-zen-border shadow-sm overflow-hidden bg-white">
-                            <CardContent className="p-0">
-                                {/* 4 Pillars Grid */}
-                                <div className="grid grid-cols-4 divide-x divide-zen-border border-b border-zen-border">
-                                    {/* Header */}
-                                    <div className="text-center py-2 text-xs font-bold text-zen-muted bg-zen-bg/30">시주(時)</div>
-                                    <div className="text-center py-2 text-xs font-bold text-zen-muted bg-zen-bg/30">일주(日)</div>
-                                    <div className="text-center py-2 text-xs font-bold text-zen-muted bg-zen-bg/30">월주(月)</div>
-                                    <div className="text-center py-2 text-xs font-bold text-zen-muted bg-zen-bg/30">년주(年)</div>
-                                </div>
-                                <div className="grid grid-cols-4 divide-x divide-zen-border h-32">
-                                    {/* Gan (Upper) */}
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.time.color}`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.time.gan}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">천간</span>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.day.color} ring-1 ring-inset ring-zen-gold/20`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.day.gan}</span>
-                                        <span className="text-[10px] opacity-70 mt-1 font-bold text-zen-wood">나(我)</span>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.month.color}`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.month.gan}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">천간</span>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.year.color}`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.year.gan}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">천간</span>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-4 divide-x divide-zen-border border-t border-zen-border h-32">
-                                    {/* Ji (Lower) */}
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.time.color}`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.time.ji}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">{manse.time.label}</span>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.day.color} ring-1 ring-inset ring-zen-gold/20`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.day.ji}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">{manse.day.label}</span>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.month.color}`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.month.ji}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">{manse.month.label}</span>
-                                    </div>
-                                    <div className={`flex flex-col items-center justify-center p-2 ${manse.year.color}`}>
-                                        <span className="text-3xl font-serif font-bold">{manse.year.ji}</span>
-                                        <span className="text-[10px] opacity-70 mt-1">{manse.year.label}</span>
-                                    </div>
-                                </div>
-                            </CardContent>
-                            <div className="bg-zen-bg/30 p-4 text-center border-t border-zen-border">
-                                <p className="text-sm text-zen-text leading-relaxed font-serif">
-                                    "당신은 <span className="font-bold text-zen-wood">{manse.day.label.split(' ')[0]} {manse.day.ji}({manse.day.label.split(' ')[1]})</span>의 날에 태어났으며,<br />
-                                    {manse.month.label.split(' ')[0]} {manse.month.ji}({manse.month.label.split(' ')[1]})의 계절을 품고 있습니다."
-                                </p>
-                            </div>
-                        </Card>
+                        <PremiumManseCard manse={manse} />
                     ) : (
                         // Case B: Data Missing (Empty State)
                         <Card className="border-dashed border-2 border-zen-border bg-zen-bg/20">

@@ -94,7 +94,7 @@ export function calculateManse(dateStr: string, timeStr: string = "00:00"): Mans
     const lunar = solar.getLunar();
 
     // lunar-javascript's getEightChar method handles the logic for year/month change based on solar terms (Jeolgi)
-    const eightChar = lunar.getEightChar();
+    const eightChar: any = lunar.getEightChar();
 
     // Optional: Configure sect settings if needed (e.g., Zi hour processing)
     // eightChar.setSect(1); // Default is 2 (starts day at 00:00). 1 starts day at 23:00 (Ja-Si)
