@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-import { calculateManse } from "@/lib/saju/manse";
+import { calculateManse, calculateDaewoon } from "@/lib/saju/manse";
 import { PremiumManseCard } from "@/components/saju/premium-manse-card";
 import { FiveElementsChart } from "@/components/saju/five-elements-chart";
+import { DaewoonTimeline } from "@/components/saju/daewoon-timeline";
 
 export default async function ProfilePage() {
     const supabase = await createClient();
@@ -65,6 +66,20 @@ export default async function ProfilePage() {
     // Calculate Manse if info exists
     const manse = hasSajuInfo ? calculateManse(profile.birth_date, profile.birth_time) : null;
 
+    // Calculate Daewoon (대운) if info exists
+    let daewoon = null;
+    if (hasSajuInfo && profile.birth_date && profile.birth_time && profile.gender) {
+        const birthYear = parseInt(profile.birth_date.split('-')[0]);
+        const currentYear = new Date().getFullYear();
+        const currentAge = currentYear - birthYear;
+        daewoon = calculateDaewoon(
+            profile.birth_date,
+            profile.birth_time,
+            profile.gender as 'male' | 'female',
+            currentAge
+        );
+    }
+
     return (
         <div className="min-h-screen bg-zen-bg font-sans pb-20">
             {/* 1. Header Area */}
@@ -105,6 +120,7 @@ export default async function ProfilePage() {
                         <div className="space-y-6">
                             <PremiumManseCard manse={manse} />
                             <FiveElementsChart manse={manse} />
+                            {daewoon && <DaewoonTimeline periods={daewoon} />}
                         </div>
                     ) : (
                         // Case B: Data Missing (Empty State)

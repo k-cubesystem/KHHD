@@ -108,3 +108,80 @@ export function calculateManse(dateStr: string, timeStr: string = "00:00"): Mans
         time: createPillar(eightChar.getTimeGan(), eightChar.getTimeZhi()),
     };
 }
+
+/**
+ * 대운(大運) 인터페이스
+ */
+export interface DaewoonPeriod {
+    pillar: SajuPillar;
+    startAge: number;
+    endAge: number;
+    startYear: number;
+    endYear: number;
+    isCurrent: boolean;
+}
+
+/**
+ * 대운(大運) 계산 - 10년 단위 운세 주기
+ * @param birthDate 생년월일 (YYYY-MM-DD)
+ * @param birthTime 생시 (HH:mm)
+ * @param gender 성별 ('male' | 'female')
+ * @param currentAge 현재 나이 (만 나이)
+ */
+export function calculateDaewoon(
+    birthDate: string,
+    birthTime: string,
+    gender: 'male' | 'female',
+    currentAge: number
+): DaewoonPeriod[] {
+    const [birthYear] = birthDate.split('-').map(Number);
+    const manse = calculateManse(birthDate, birthTime);
+
+    // 대운 시작 나이 계산 (간략화: 남자 양년생/여자 음년생은 순행, 반대는 역행)
+    // 실제로는 절기 계산이 필요하지만, 여기서는 간소화
+    const isYangYear = birthYear % 2 === 0;
+    const isForward = (gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear);
+
+    // 대운 시작 나이 (보통 3-8세 사이, 여기서는 간략히 5세로 설정)
+    const startAge = 5;
+
+    // 월주 기준으로 대운 계산
+    const monthGanIndex = Object.keys(KOREAN_GAN).indexOf(manse.month.gan);
+    const monthJiIndex = Object.keys(KOREAN_JI).indexOf(manse.month.ji);
+
+    const daewoonPeriods: DaewoonPeriod[] = [];
+    const ganKeys = Object.keys(KOREAN_GAN);
+    const jiKeys = Object.keys(KOREAN_JI);
+
+    // 10개의 대운 주기 생성 (100년)
+    for (let i = 0; i < 10; i++) {
+        const periodStartAge = startAge + (i * 10);
+        const periodEndAge = periodStartAge + 9;
+        const periodStartYear = birthYear + periodStartAge;
+        const periodEndYear = birthYear + periodEndAge;
+
+        // 순행/역행에 따라 천간지지 계산
+        let ganIdx, jiIdx;
+        if (isForward) {
+            ganIdx = (monthGanIndex + i + 1) % 10;
+            jiIdx = (monthJiIndex + i + 1) % 12;
+        } else {
+            ganIdx = (monthGanIndex - i - 1 + 10) % 10;
+            jiIdx = (monthJiIndex - i - 1 + 12) % 12;
+        }
+
+        const pillar = createPillar(ganKeys[ganIdx], jiKeys[jiIdx]);
+        const isCurrent = currentAge >= periodStartAge && currentAge <= periodEndAge;
+
+        daewoonPeriods.push({
+            pillar,
+            startAge: periodStartAge,
+            endAge: periodEndAge,
+            startYear: periodStartYear,
+            endYear: periodEndYear,
+            isCurrent,
+        });
+    }
+
+    return daewoonPeriods;
+}
