@@ -131,7 +131,7 @@ export function SiteHeader() {
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: "100%" }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                        className="lg:hidden fixed inset-0 top-20 left-0 w-full h-[calc(100vh-5rem)] bg-zen-bg/98 backdrop-blur-md z-[90] overflow-y-auto border-t border-zen-border shadow-inner"
+                        className="lg:hidden fixed inset-0 top-20 left-0 w-full h-[calc(100vh-5rem)] bg-zen-bg z-[1000] overflow-y-auto border-t border-zen-border shadow-inner"
                     >
                         <nav className="flex flex-col p-6 gap-6 font-serif pb-32">
                             {/* 1. 해화사주 Group with Stagger */}

@@ -22,6 +22,8 @@ import { getCurrentUserRole } from "@/app/actions/products";
 import { UserRole } from "@/types/auth";
 import { TalismanBalance } from "@/components/talisman-balance";
 import { SubscriptionBadge } from "@/components/membership/subscription-badge";
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeInUp, staggerContainer, mobileMenuVariants } from "@/lib/animations";
 
 export function ProtectedHeader({ user }: { user: any }) {
     const [isMounted, setIsMounted] = useState(false);
@@ -181,77 +183,122 @@ export function ProtectedHeader({ user }: { user: any }) {
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Mobile Toggle */}
-                    <button
-                        className="lg:hidden p-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-zen-text hover:bg-zen-bg rounded-sm transition-colors active:scale-95"
+                    {/* Mobile Toggle - UX Pro Max */}
+                    <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        className="lg:hidden p-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-zen-text hover:bg-zen-gold/10 rounded-sm transition-colors active:bg-zen-gold/20"
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         aria-label={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
                     >
-                        {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </button>
+                        <motion.div
+                            initial={false}
+                            animate={{ rotate: mobileMenuOpen ? 90 : 0 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                        </motion.div>
+                    </motion.button>
                 </div>
             </div>
 
-            {/* Mobile Menu (Updated Layout) */}
-            {mobileMenuOpen && (
-                <div className="lg:hidden fixed inset-0 top-20 left-0 w-full h-[calc(100vh-5rem)] bg-zen-bg z-[90] animate-in fade-in slide-in-from-top-4 overflow-y-auto border-t border-zen-border shadow-inner">
-                    <nav className="flex flex-col p-6 gap-6 font-serif pb-32">
+            {/* Mobile Menu (UX Pro Max - AnimatePresence) */}
+            <AnimatePresence>
+                {mobileMenuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, x: "100%" }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: "100%" }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className="lg:hidden fixed inset-0 top-20 left-0 w-full h-[calc(100vh-5rem)] bg-zen-bg z-[1000] overflow-y-auto border-t border-zen-border shadow-inner"
+                    >
+                        <nav className="flex flex-col p-6 gap-6 font-serif pb-32">
+                            {/* 1. 해화사주 Group with Stagger */}
+                            <motion.div
+                                variants={staggerContainer}
+                                initial="initial"
+                                animate="animate"
+                                className="space-y-2"
+                            >
+                                <motion.div variants={fadeInUp} className="text-xs font-bold text-zen-muted uppercase tracking-widest px-1">해화사주 (Haehwa Saju)</motion.div>
+                                <div className="grid grid-cols-1 gap-2">
+                                    <motion.div variants={fadeInUp}>
+                                        <Link href="/protected/saju/today" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                            <Sun className="w-5 h-5 text-zen-gold flex-shrink-0" /> 오늘의 운세
+                                        </Link>
+                                    </motion.div>
+                                    <motion.div variants={fadeInUp}>
+                                        <Link href="/protected/analysis" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                            <BookOpen className="w-5 h-5 text-zen-gold flex-shrink-0" /> 사주 풀이
+                                        </Link>
+                                    </motion.div>
+                                    <motion.div variants={fadeInUp}>
+                                        <Link href="/protected/saju/face" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                            <ScanFace className="w-5 h-5 text-zen-gold flex-shrink-0" /> 관상
+                                        </Link>
+                                    </motion.div>
+                                    <motion.div variants={fadeInUp}>
+                                        <Link href="/protected/saju/hand" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                            <Hand className="w-5 h-5 text-zen-gold flex-shrink-0" /> 손금
+                                        </Link>
+                                    </motion.div>
+                                    <motion.div variants={fadeInUp}>
+                                        <Link href="/protected/saju/fengshui" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                            <Compass className="w-5 h-5 text-zen-gold flex-shrink-0" /> 풍수
+                                        </Link>
+                                    </motion.div>
+                                </div>
+                            </motion.div>
 
-                        {/* 1. 해화사주 Group */}
-                        <div className="space-y-2">
-                            <div className="text-xs font-bold text-zen-muted uppercase tracking-widest px-1">해화사주 (Haehwa Saju)</div>
-                            <div className="grid grid-cols-1 gap-2">
-                                <Link href="/protected/saju/today" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
-                                    <Sun className="w-5 h-5 text-zen-gold" /> 오늘의 운세
-                                </Link>
-                                <Link href="/protected/analysis" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
-                                    <BookOpen className="w-5 h-5 text-zen-gold" /> 사주 풀이
-                                </Link>
-                                <Link href="/protected/saju/face" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
-                                    <ScanFace className="w-5 h-5 text-zen-gold" /> 관상
-                                </Link>
-                                <Link href="/protected/saju/hand" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
-                                    <Hand className="w-5 h-5 text-zen-gold" /> 손금
-                                </Link>
-                                <Link href="/protected/saju/fengshui" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
-                                    <Compass className="w-5 h-5 text-zen-gold" /> 풍수
-                                </Link>
-                            </div>
-                        </div>
+                            {/* 2. Main Links */}
+                            <motion.div
+                                variants={staggerContainer}
+                                initial="initial"
+                                animate="animate"
+                                className="space-y-2 pt-2 border-t border-zen-border/50"
+                            >
+                                <motion.div variants={fadeInUp}>
+                                    <Link href="/protected/analysis" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-surface active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                        <Activity className="w-5 h-5 text-zen-muted flex-shrink-0" /> 천지인 분석
+                                    </Link>
+                                </motion.div>
+                                <motion.div variants={fadeInUp}>
+                                    <Link href="/protected/family" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-surface active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                        <Users className="w-5 h-5 text-zen-muted flex-shrink-0" /> 인연 관리
+                                    </Link>
+                                </motion.div>
+                                <motion.div variants={fadeInUp}>
+                                    <Link href="/protected/history" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-surface active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                        <Clock className="w-5 h-5 text-zen-muted flex-shrink-0" /> 비록함
+                                    </Link>
+                                </motion.div>
+                            </motion.div>
 
-                        {/* 2. Main Links */}
-                        <div className="space-y-2 pt-2 border-t border-zen-border/50">
-                            <Link href="/protected/analysis" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
-                                <Activity className="w-5 h-5 text-zen-muted" /> 천지인 분석
-                            </Link>
-                            <Link href="/protected/family" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
-                                <Users className="w-5 h-5 text-zen-muted" /> 인연 관리
-                            </Link>
-                            <Link href="/protected/history" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
-                                <Clock className="w-5 h-5 text-zen-muted" /> 비록함
-                            </Link>
-                        </div>
-
-                        {/* Bottom Actions */}
-                        <div className="mt-4 pt-6 border-t border-zen-border">
-                            <Link href="/protected/billing" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                                <Button className="w-full h-14 bg-zen-wood text-white text-lg font-bold rounded-sm shadow-md flex items-center gap-2">
-                                    <Ticket className="w-5 h-5" /> 부적 충전하기
-                                </Button>
-                            </Link>
-
-                            <div className="flex items-center justify-between mt-6 px-2">
-                                <Link href="/protected/profile" onClick={() => setMobileMenuOpen(false)} className="text-sm font-bold text-zen-text flex items-center gap-2">
-                                    <User className="w-4 h-4" /> 내 프로필
+                            {/* Bottom Actions */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="mt-4 pt-6 border-t border-zen-border"
+                            >
+                                <Link href="/protected/billing" className="w-full" onClick={() => setMobileMenuOpen(false)}>
+                                    <Button className="w-full h-14 bg-zen-wood text-white text-lg font-bold rounded-sm shadow-md flex items-center gap-2">
+                                        <Ticket className="w-5 h-5" /> 부적 충전하기
+                                    </Button>
                                 </Link>
-                                <button onClick={handleSignOut} className="text-sm font-bold text-red-500 hover:text-red-700 flex items-center gap-2">
-                                    <LogOut className="w-4 h-4" /> 로그아웃
-                                </button>
-                            </div>
-                        </div>
-                    </nav>
-                </div>
-            )}
+
+                                <div className="flex items-center justify-between mt-6 px-2">
+                                    <Link href="/protected/profile" onClick={() => setMobileMenuOpen(false)} className="text-sm font-bold text-zen-text flex items-center gap-2 p-2 min-h-[44px]">
+                                        <User className="w-4 h-4" /> 내 프로필
+                                    </Link>
+                                    <button onClick={handleSignOut} className="text-sm font-bold text-red-500 hover:text-red-700 flex items-center gap-2 p-2 min-h-[44px]">
+                                        <LogOut className="w-4 h-4" /> 로그아웃
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </nav>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </header>
     );
 }
