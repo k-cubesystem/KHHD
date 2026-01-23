@@ -124,7 +124,7 @@ export function ProtectedHeader({ user }: { user: any }) {
                     {/* Profile */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="relative p-0.5 h-10 w-10 rounded-full border border-zen-border hover:border-zen-gold transition-colors overflow-hidden bg-white shadow-sm outline-none hidden md:block">
+                            <button className="relative p-0.5 h-10 w-10 rounded-full border border-zen-border hover:border-zen-gold transition-colors overflow-hidden bg-white shadow-sm outline-none">
                                 <Avatar className="h-full w-full">
                                     <AvatarImage src={avatarUrl} className="object-cover" />
                                     <AvatarFallback className="bg-zen-bg text-zen-wood font-bold text-xs font-serif">

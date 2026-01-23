@@ -33,9 +33,9 @@ export function SubscriptionBadge() {
         // 비구독자: 멤버십 가입 유도 버튼
         return (
             <Link href="/protected/membership">
-                <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-zen-gold/10 border border-zen-gold/30 hover:bg-zen-gold/20 cursor-pointer transition-all text-zen-gold text-xs font-bold">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-zen-gold/10 border border-zen-gold/30 hover:bg-zen-gold/20 cursor-pointer transition-all text-zen-gold text-xs font-bold">
                     <Crown className="w-3.5 h-3.5" />
-                    <span>멤버십</span>
+                    <span className="hidden sm:inline">멤버십</span>
                 </div>
             </Link>
         );
@@ -46,7 +46,7 @@ export function SubscriptionBadge() {
         <Link href="/protected/membership/manage">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gradient-to-r from-zen-gold/20 to-amber-100 border border-zen-gold/50 cursor-pointer transition-all shadow-sm hover:shadow-md">
                 <Crown className="w-3.5 h-3.5 text-zen-gold" />
-                <span className="font-serif font-bold text-zen-gold text-xs tracking-wide">MEMBER</span>
+                <span className="hidden sm:inline font-serif font-bold text-zen-gold text-xs tracking-wide">MEMBER</span>
             </div>
         </Link>
     );
