@@ -108,7 +108,7 @@
 
 **빌드 상태**: ✅ 성공 (2026-01-23)
 
-## ✅ Phase 15: Premium Manse Card & Interactive UI (2026-01-23) - IN PROGRESS
+## ✅ Phase 15: Premium Manse Card & Interactive UI (2026-01-23) - COMPLETED ✅
 
 ### Task 1: Premium Manse Card Design - COMPLETED ✅
 - [x] **PremiumManseCard 컴포넌트** (`components/saju/premium-manse-card.tsx`)
@@ -122,14 +122,46 @@
   - 기존 Grid 레이아웃을 PremiumManseCard로 교체
   - 인터랙티브 사주 카드 경험 제공
 
+### Task 2: 오행 분석 차트 - COMPLETED ✅
+- [x] **FiveElementsChart 컴포넌트** (`components/saju/five-elements-chart.tsx`)
+  - Recharts 기반 Radar Chart 구현
+  - 사주 팔자(8글자)에서 오행 분포 자동 계산
+  - 오행별 색상 코딩 (목/화/토/금/수)
+  - 용신(用神) 자동 추천 시스템
+  - 보완 방법 제시 (색상, 방위)
+  - Custom Tooltip with 상세 정보
+- [x] **프로필 페이지 통합**
+  - 만세력 카드 아래에 배치
+  - 반응형 레이아웃 (max-w-4xl)
+
+### Task 3: 대운 타임라인 - COMPLETED ✅
+- [x] **대운 계산 로직** (`lib/saju/manse.ts`)
+  - calculateDaewoon 함수 구현
+  - 순행/역행 판단 (성별 + 년도)
+  - 10년 단위 100년치 대운 생성
+  - 현재 대운 자동 감지
+- [x] **DaewoonTimeline 컴포넌트** (`components/saju/daewoon-timeline.tsx`)
+  - 가로 스크롤 타임라인 UI
+  - 현재 대운 강조 표시 (Highlight + Ring)
+  - 오행별 색상 바
+  - Framer Motion 순차 애니메이션
+  - 나이/년도 범위 표시
+- [x] **프로필 페이지 통합**
+  - 성별 정보 활용하여 대운 계산
+  - 조건부 렌더링 (gender 필수)
+
+### Task 4: 디지털 부적 효과 - COMPLETED ✅
+- [x] **DigitalTalisman 컴포넌트** (`components/saju/digital-talisman.tsx`)
+  - 5가지 부적 타입 (길운/호신/재물/건강/인연)
+  - SVG 종이 질감 (Paper Texture)
+  - Shimmer 효과 (금빛 빛남)
+  - Canvas Confetti 도장 애니메이션
+  - 낙관(印) 스탬프 회전 애니메이션
+  - 클릭하여 펼치기 인터랙션
+
 **디자인 원칙**: "화려하되 경박하지 않게 (Luxurious but not tacky)"
 
-### 다음 작업 (Task 2-4)
-- [ ] Task 2: 오행 분석 차트 (Radar/Donut Chart with Recharts)
-- [ ] Task 3: 대운 타임라인 (10년 운 가로 스크롤)
-- [ ] Task 4: 디지털 부적 효과 (Shimmer + Canvas Confetti)
-
-**빌드 상태**: ✅ 성공 (2026-01-23 16:30)
+**빌드 상태**: ✅ 성공 (2026-01-23 16:40)
 
 
 
