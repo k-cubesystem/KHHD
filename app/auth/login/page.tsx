@@ -1,70 +1,44 @@
 import { LoginForm } from "@/components/login-form";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { SimpleTyping } from "@/components/ui/simple-typing";
+import Link from "next/link";
 
 export default function Page() {
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 md:p-10 overflow-hidden bg-[#0A0A0A]">
-      {/* Background Decorative Elements */}
-      <div className="absolute top-[-10%] left-[20%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[20%] w-[60%] h-[60%] bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-20 pointer-events-none" />
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 overflow-hidden bg-zen-bg bg-hanji text-zen-text selection:bg-zen-gold/30">
 
-      <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+      {/* Background Decorative Elements (Zen Style) - 은은하게 유지 */}
+      <div className="absolute top-[-20%] right-[-10%] w-[1000px] h-[1000px] bg-zen-gold/5 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[800px] h-[800px] bg-zen-wood/5 rounded-full blur-[120px] pointer-events-none" />
 
-        {/* Left Column: Marketing Content (Migrated from Main Page) */}
-        <div className="space-y-12 animate-in fade-in slide-in-from-left-4 duration-1000">
-          <div className="space-y-6">
-            <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight">
-              <span className="text-primary">운명</span>을<br />
-              <span className="bg-gradient-to-r from-white to-white/50 bg-clip-text text-transparent">설계하다.</span>
-            </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
-              전통 명리학과 현대 데이터 사이언스의 정교한 결합.<br />
-              해화당(海華堂)이 당신의 삶에 숨겨진 패턴을 분석합니다.
-            </p>
+      <div className="z-10 w-full max-w-lg flex flex-col items-center gap-12 animate-in fade-in duration-1000">
+
+        {/* 1. Header: Logo (Minimal) */}
+        <Link href="/" className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 flex items-center justify-center border border-zen-text rounded-sm relative overflow-hidden group hover:bg-zen-text transition-colors duration-500">
+            <span className="font-serif font-bold text-lg text-zen-text group-hover:text-zen-bg z-10 transition-colors">海</span>
           </div>
+          <span className="font-serif font-bold text-lg tracking-widest text-zen-text/80">청담해화당</span>
+        </Link>
 
-          <div className="grid gap-6">
-            <div className="glass p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-colors">
-              <h3 className="text-lg font-bold text-[#D4AF37] mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />
-                The KAIST Algorithm
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                단순한 신비주의를 넘어섭니다. 데이터의 상호작용(Interaction) 분석을 통해
-                성공 확률을 수치화하고 시뮬레이션합니다.
-                <br />
-                <span className="text-indigo-400 font-mono font-semibold text-xs mt-2 block">
-                  天(Fate) + 人(Self) + 地(Environment) = Probability
-                </span>
-              </p>
-            </div>
-
-            <div className="glass p-6 rounded-3xl border border-white/5 bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-colors">
-              <h3 className="text-lg font-bold text-[#D4AF37] mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#D4AF37]" />
-                4대 계승자의 직관
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                4대째 이어져 온 청담해화당의 통찰력을 AI에 담았습니다.
-                유려한 문체와 심도 깊은 리포트로 단순한 길흉화복을 넘어
-                당신의 삶에 대한 철학적 해답을 제시합니다.
-              </p>
-            </div>
-          </div>
+        {/* 2. Focus: Typing Message */}
+        <div className="text-center py-4">
+          <SimpleTyping
+            messages={[
+              "당신의 운명이 들려주는 이야기.",
+              "가장 빛나는 계절을 찾아서.",
+              "4대째 이어온 지혜, AI를 만나다."
+            ]}
+            className="text-2xl md:text-3xl font-serif font-medium text-zen-text leading-relaxed"
+          />
         </div>
 
-        {/* Right Column: Login Form */}
-        <div className="flex justify-center lg:justify-end animate-in fade-in slide-in-from-right-4 duration-1000 delay-200">
-          <div className="w-full max-w-sm glass border-[#D4AF37]/20 shadow-2xl rounded-3xl p-1 relative group">
-            <div className="absolute -inset-1 bg-gradient-to-br from-[#D4AF37]/30 to-transparent rounded-[1.7rem] blur-sm opacity-50 group-hover:opacity-100 transition-opacity" />
-            <div className="relative bg-[#0A0A0A]/90 backdrop-blur-xl rounded-2xl p-6">
-              <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
-                <LoginForm />
-              </Suspense>
-            </div>
-          </div>
+        {/* 3. Action: Login Form */}
+        <div className="w-full">
+          <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-zen-wood" /></div>}>
+            <LoginForm />
+          </Suspense>
         </div>
 
       </div>

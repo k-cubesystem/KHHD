@@ -1,24 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import {
-  Sparkles,
-  Users,
-  History,
-  Zap,
-  ChevronRight,
-  ShieldCheck,
-  Calendar,
-  Compass,
-  Hexagon,
-  Scan
-} from "lucide-react";
 import Link from "next/link";
 import { getFamilyMembers } from "@/app/actions/family-actions";
-import { EnergyChart } from "@/components/dashboard/energy-chart";
-import { SkyEarthHumanStatus } from "@/components/dashboard/sky-earth-human-status";
-import { cn } from "@/lib/utils";
-import { CreditBalance } from "@/components/dashboard/credit-balance";
+import { Sparkles, Cloud, Map, User, ChevronRight, Clock, Box } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -29,355 +14,212 @@ export default async function ProtectedPage() {
   }
 
   const members = (await getFamilyMembers()) || [];
+  const masterName = user.email?.split('@')[0] || "마스터";
 
-  // 최근 분석 내역 (최대 5개)
+  // 최근 분석 내역
   const { data: recentRecords } = await supabase
     .from("saju_records")
-    .select(`
-      *,
-      family_members (name)
-    `)
+    .select(`*, family_members (name)`)
     .order("created_at", { ascending: false })
-    .limit(5) || { data: [] };
+    .limit(3) || { data: [] };
 
   const records = recentRecords || [];
 
-  // Mock-up data for EnergyChart
-  const energyData = {
-    wood: 75,
-    fire: 40,
-    earth: 60,
-    metal: 30,
-    water: 85
-  };
-
-  const masterName = user.email?.split('@')[0] || "마스터";
-
   return (
-    <div className="relative flex flex-col gap-12 w-full max-w-7xl mx-auto py-16 px-6 overflow-hidden">
+    <div className="min-h-screen w-full bg-zen-bg text-zen-text selection:bg-zen-gold/30">
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          TOP DECORATIVE BEAM - Golden Fractal Line
-      ═══════════════════════════════════════════════════════════════════ */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37] to-transparent animate-pulse opacity-50" />
-        {/* Fractal shimmer effect */}
-        <div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"
-          style={{ backgroundSize: '200% 100%' }}
-        />
-      </div>
+      {/* Top Banner Area */}
+      <div className="max-w-7xl mx-auto px-6 pt-12 pb-8 space-y-8">
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          HEADER SECTION - With Holographic Badge
-      ═══════════════════════════════════════════════════════════════════ */}
-      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-10 relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="space-y-6 max-w-2xl">
-          {/* Holographic Security Badge & Credit Balance */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative group">
-              {/* Hologram outer glow */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-[#D4AF37]/30 via-[#F4E4BA]/40 to-[#D4AF37]/30 rounded-full blur-sm opacity-75 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-[#D4AF37]/20 via-[#F4E4BA]/30 to-[#D4AF37]/20 rounded-full animate-pulse" />
 
-              {/* Badge container */}
-              <div className="relative flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4AF37]/50 bg-[#0A0A0A]/90 backdrop-blur-xl overflow-hidden">
-                {/* Scanning line effect */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#D4AF37]/10 to-transparent animate-scan" />
 
-                {/* Holographic shimmer */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#D4AF37]/20 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
-
-                <div className="relative flex items-center gap-2">
-                  <div className="relative">
-                    <Hexagon className="w-4 h-4 text-[#D4AF37]" strokeWidth={1.5} />
-                    <Scan className="w-2.5 h-2.5 text-[#D4AF37] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" strokeWidth={2} />
-                  </div>
-                  <span className="text-[10px] font-black tracking-[0.2em] uppercase text-[#D4AF37]">
-                    Omni-Logic Authenticated
-                  </span>
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
-                </div>
-              </div>
-            </div>
-
-            {/* Credit Balance Display */}
-            <CreditBalance className="border-[#D4AF37]/30" />
-
-            <div className="flex items-center gap-2 text-xs text-muted-foreground/70 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
-              <Calendar className="w-3 h-3" />
-              <span className="font-medium">{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</span>
-            </div>
-          </div>
-
-          {/* Main Heading */}
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.1] animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
-            전해오는 기운이 <br />
-            <span className="relative inline-block">
-              <span className="bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer">
-                길(吉)함을 향해 있습니다.
-              </span>
-              {/* Underline glow */}
-              <span className="absolute -bottom-2 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#D4AF37]/50 to-transparent" />
-            </span>
+        {/* Main Title */}
+        <div className="space-y-4">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold leading-tight tracking-tight text-zen-text">
+            전해오는 기운이<br />
+            <span className="text-zen-gold border-b-4 border-zen-gold/30 pb-1">길(吉)함</span>을 향해 있습니다.
           </h1>
-
-          {/* Welcome Message */}
-          <p className="text-muted-foreground text-base sm:text-lg max-w-lg leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-            환영합니다, <span className="text-[#D4AF37] font-bold">{masterName}</span> 마스터님. <br />
+          <p className="text-zen-text/70 max-w-2xl text-lg font-sans leading-relaxed">
+            환영합니다, <span className="text-zen-wood font-bold border-b border-zen-wood/30">{masterName}</span> 마스터님.<br />
             해화당 AI가 당신의 천지인(天地人) 데이터를 동기화했습니다.
           </p>
         </div>
+      </div>
 
-        {/* Stats Card */}
-        <div className="hidden md:flex gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-          <div className="relative group">
-            {/* Card glow on hover */}
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-[#D4AF37]/0 via-[#D4AF37]/0 to-[#D4AF37]/0 rounded-[2rem] opacity-0 group-hover:opacity-100 group-hover:from-[#D4AF37]/20 group-hover:via-[#D4AF37]/10 group-hover:to-[#D4AF37]/20 blur-xl transition-all duration-500" />
+      <div className="max-w-7xl mx-auto px-6 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-            <div className="relative glass px-8 py-6 rounded-[2rem] border-[#D4AF37]/10 flex items-center gap-5 group-hover:border-[#D4AF37]/30 group-hover:scale-[1.02] transition-all duration-500 shadow-2xl">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 flex items-center justify-center border border-[#D4AF37]/20 group-hover:border-[#D4AF37]/40 transition-colors">
-                <Users className="w-7 h-7 text-[#D4AF37]" />
+        {/* Left Column: 5-Element Graph (Radar Chart Mock - Zen Style) */}
+        <div className="lg:col-span-4 rounded-sm bg-white border border-zen-border p-8 relative overflow-hidden h-[500px] flex flex-col justify-between shadow-sm">
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-zen-gold/40 to-transparent" />
+
+          <div className="flex items-center gap-2 text-zen-wood text-sm font-bold tracking-widest mb-4 uppercase">
+            <Sparkles className="w-4 h-4" />
+            Five Element Balance
+          </div>
+
+          {/* Radar Chart Visual (SVG Mock) */}
+          <div className="flex-1 flex items-center justify-center relative">
+            {/* Background Grid */}
+            <svg viewBox="0 0 200 200" className="w-full h-full max-w-[300px] opacity-20 stroke-zen-muted fill-none" strokeWidth="0.5">
+              <polygon points="100,20 176,76 147,163 53,163 24,76" />
+              <polygon points="100,50 145,83 128,135 72,135 55,83" />
+              <line x1="100" y1="100" x2="100" y2="20" />
+              <line x1="100" y1="100" x2="176" y2="76" />
+              <line x1="100" y1="100" x2="147" y2="163" />
+              <line x1="100" y1="100" x2="53" y2="163" />
+              <line x1="100" y1="100" x2="24" y2="76" />
+            </svg>
+
+            {/* Active Data Area (Gold) */}
+            <svg viewBox="0 0 200 200" className="absolute w-full h-full max-w-[300px] overflow-visible">
+              <polygon
+                points="100,50 160,76 130,140 70,140 40,90"
+                className="fill-zen-gold/20 stroke-zen-gold stroke-2"
+              />
+              {/* Points */}
+              <circle cx="100" cy="50" r="3" fill="#10b981" /> {/* Mok (Green) */}
+              <circle cx="160" cy="76" r="3" fill="#ef4444" /> {/* Hwa (Red) */}
+              <circle cx="130" cy="140" r="3" fill="#ca8a04" /> {/* To (Yellow) */}
+              <circle cx="70" cy="140" r="3" fill="#9ca3af" /> {/* Geum (Grey) */}
+              <circle cx="40" cy="90" r="3" fill="#3b82f6" /> {/* Su (Blue) */}
+            </svg>
+
+            {/* Labels */}
+            <div className="absolute inset-0 max-w-[300px] mx-auto pointer-events-none">
+              <span className="absolute top-[5%] left-1/2 -translate-x-1/2 text-xs font-bold text-zen-text/80">목(Tree) 75%</span>
+              <span className="absolute top-[35%] right-[5%] text-xs font-bold text-zen-text/80">화(Fire) 40%</span>
+              <span className="absolute bottom-[25%] right-[10%] text-xs font-bold text-zen-text/80">토(Earth) 60%</span>
+              <span className="absolute bottom-[25%] left-[10%] text-xs font-bold text-zen-text/80">금(Metal) 30%</span>
+              <span className="absolute top-[40%] left-[2%] text-xs font-bold text-zen-text/80">수(Water) 85%</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-5 gap-2 mt-4">
+            {['WOOD', 'FIRE', 'EARTH', 'METAL', 'WATER'].map((el) => (
+              <div key={el} className="flex flex-col items-center gap-1">
+                <span className="text-[10px] text-zen-muted font-bold">{el}</span>
+                <div className="w-full h-1 bg-zen-border rounded-full overflow-hidden">
+                  <div className="h-full bg-zen-gold" style={{ width: '60%' }} />
+                </div>
               </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.15em] mb-1.5">등록된 소중한 인연</p>
-                <p className="text-3xl font-black tabular-nums text-white">{members.length}<span className="text-sm font-medium ml-1 text-muted-foreground">명</span></p>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: Cards & List */}
+        <div className="lg:col-span-8 flex flex-col gap-8">
+
+          {/* Top Cards: Heaven, Earth, Human - Zen Style */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 md:h-[200px]">
+            {/* Heaven Card */}
+            <Link href="/protected/analysis" className="group h-full">
+              <div className="h-full bg-white border border-zen-border rounded-sm p-4 md:p-6 relative overflow-hidden hover:border-zen-gold/50 hover:shadow-md transition-all flex flex-col justify-between group-hover:-translate-y-1 duration-300 gap-4 md:gap-0">
+                <div className="flex justify-between items-start">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zen-bg flex items-center justify-center border border-zen-border group-hover:bg-zen-gold/10 transition-colors">
+                    <Cloud className="w-4 h-4 md:w-5 md:h-5 text-zen-muted group-hover:text-zen-gold" />
+                  </div>
+                  <div className="px-1.5 py-0.5 md:px-2 rounded-full bg-zen-bg text-[8px] md:text-[10px] font-bold text-zen-wood uppercase tracking-wider hidden md:block">
+                    Fate
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-lg font-serif font-bold text-zen-text mb-0.5 md:mb-1">天 - 사주분석</h3>
+                  <p className="text-[10px] md:text-xs text-zen-text/60 leading-relaxed font-sans line-clamp-2 md:line-clamp-none">인생의 설계도와 선천적 기운 분석 완료.</p>
+                </div>
               </div>
+            </Link>
+
+            {/* Earth Card */}
+            <Link href="/protected/saju/fengshui" className="group h-full">
+              <div className="h-full bg-white border border-zen-border rounded-sm p-4 md:p-6 relative overflow-hidden hover:border-zen-gold/50 hover:shadow-md transition-all flex flex-col justify-between group-hover:-translate-y-1 duration-300 gap-4 md:gap-0">
+                <div className="flex justify-between items-start">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zen-bg flex items-center justify-center border border-zen-border group-hover:bg-zen-gold/10 transition-colors">
+                    <Map className="w-4 h-4 md:w-5 md:h-5 text-zen-muted group-hover:text-zen-gold" />
+                  </div>
+                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-zen-border group-hover:bg-zen-gold transition-colors" />
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-lg font-serif font-bold text-zen-text mb-0.5 md:mb-1">地 - 풍수분석</h3>
+                  <p className="text-[10px] md:text-xs text-zen-text/60 leading-relaxed font-sans line-clamp-2 md:line-clamp-none">거주지 및 공간의 기운 조율 대기 중.</p>
+                </div>
+              </div>
+            </Link>
+
+            {/* Human Card */}
+            <Link href="/protected/destiny/face" className="group h-full col-span-2 md:col-span-1">
+              <div className="h-full bg-white border border-zen-border rounded-sm p-4 md:p-6 relative overflow-hidden hover:border-zen-gold/50 hover:shadow-md transition-all flex flex-col justify-between group-hover:-translate-y-1 duration-300 gap-4 md:gap-0 flex-row md:flex-col items-center md:items-stretch">
+                <div className="flex justify-between items-start md:w-full">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zen-bg flex items-center justify-center border border-zen-border group-hover:bg-zen-gold/10 transition-colors">
+                    <User className="w-4 h-4 md:w-5 md:h-5 text-zen-muted group-hover:text-zen-gold" />
+                  </div>
+                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-zen-border group-hover:bg-zen-gold transition-colors hidden md:block" />
+                </div>
+                <div className="text-right md:text-left flex-1 md:flex-none">
+                  <h3 className="text-sm md:text-lg font-serif font-bold text-zen-text mb-0.5 md:mb-1">人 - 관상분석</h3>
+                  <p className="text-[10px] md:text-xs text-zen-text/60 leading-relaxed font-sans md:line-clamp-none">손금/관상을 통한 후천적 변화 분석 전.</p>
+                </div>
+              </div>
+            </Link>
+          </div>
+
+          {/* Recent Records List - Zen Style */}
+          <div className="flex-1 bg-white border border-zen-border rounded-sm p-8 relative overflow-hidden min-h-[300px] shadow-sm">
+            <div className="flex items-center justify-between mb-6 border-b border-zen-border pb-4">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-zen-wood" />
+                <h3 className="text-lg font-serif font-bold text-zen-text">최근 생성된 마스터 비록</h3>
+              </div>
+              <Link href="/protected/history" className="text-xs font-bold text-zen-wood hover:underline hover:text-zen-gold uppercase tracking-wider">View All</Link>
+            </div>
+
+            <div className="grid gap-3">
+              {records.map((record, idx) => (
+                <div key={record.id} className="group relative flex items-center justify-between bg-zen-bg border border-transparent rounded-sm p-4 hover:bg-white hover:border-zen-border hover:shadow-sm transition-all cursor-pointer">
+                  <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 rounded-sm bg-white border border-zen-border flex items-center justify-center font-serif font-bold text-xl text-zen-text relative shadow-sm group-hover:border-zen-gold transition-colors">
+                      {record.family_members?.name?.[0]}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-zen-text group-hover:text-zen-wood transition-colors font-serif">{record.family_members?.name}님의 비록</h4>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[10px] font-bold text-zen-muted bg-white px-2 py-0.5 rounded border border-zen-border">PROB. 88%</span>
+                        <span className="text-xs text-zen-muted font-sans">{new Date(record.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button variant="ghost" className="text-zen-muted hover:text-zen-text hover:bg-zen-bg rounded-sm px-4 text-xs font-bold uppercase tracking-wider">
+                    Read Report
+                  </Button>
+                </div>
+              ))}
+
+              {records.length === 0 && (
+                <div className="text-center py-20 text-zen-muted flex flex-col items-center">
+                  <Box className="w-10 h-10 mb-3 opacity-30" />
+                  <p className="font-serif text-lg">아직 생성된 비록이 없습니다.</p>
+                  <span className="text-sm font-sans mt-2">첫 번째 운명 분석을 시작하여 삶의 길을 확인하세요.</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </header>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          MAIN GRID SECTION - CSS Grid Layout
-      ═══════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 relative z-10">
-
-        {/* ─────────────────────────────────────────────────────────────────
-            LEFT COLUMN: Energy & Quick Actions
-        ───────────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
-
-          {/* Energy Balance Card - Floating Glass Effect */}
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
-              <Zap className="w-4 h-4 text-[#D4AF37]" />
-              오행 에너지 균형
-            </h3>
-
-            {/* Floating Glass Container */}
-            <div className="relative group">
-              {/* Outer glow layer */}
-              <div className="absolute -inset-1 bg-gradient-to-b from-[#D4AF37]/10 to-transparent rounded-[3rem] blur-xl opacity-50 group-hover:opacity-80 transition-opacity duration-700" />
-
-              {/* Glass card */}
-              <div className="relative rounded-[3rem] p-8 border border-[#D4AF37]/10 bg-[#0A0A0A]/60 backdrop-blur-2xl overflow-hidden group-hover:border-[#D4AF37]/25 group-hover:translate-y-[-2px] transition-all duration-500 shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)]">
-                {/* Inner gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#D4AF37]/5 via-transparent to-transparent pointer-events-none" />
-
-                {/* Chart */}
-                <div className="relative">
-                  <EnergyChart data={energyData} />
-                </div>
-
-                {/* Mini bars */}
-                <div className="mt-8 grid grid-cols-5 gap-3">
-                  {Object.entries(energyData).map(([key, value]) => (
-                    <div key={key} className="text-center space-y-2">
-                      <div className="text-[9px] uppercase font-bold text-muted-foreground/50 tracking-wider">{key}</div>
-                      <div className="h-14 w-full bg-white/5 rounded-full relative overflow-hidden border border-white/5">
-                        <div
-                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#D4AF37]/60 to-[#D4AF37]/20 transition-all duration-1000 ease-out"
-                          style={{ height: `${value}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Quote */}
-                <div className="mt-6 text-center text-[10px] text-muted-foreground/50 leading-relaxed italic px-4">
-                  "수(水)의 기운이 충만하니 지혜가 깊어지는 날입니다."
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Quick Actions Card */}
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-600">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
-              <Compass className="w-4 h-4 text-[#D4AF37]" />
-              핵심 인텔리전스
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              {[
-                { label: "인연 관리", sub: "가족/지인 프로필 관리", icon: Users, href: "/protected/family", color: "text-blue-400" },
-                { label: "운명 분석", sub: "프리미엄 리포트 생성", icon: Sparkles, href: "/protected/analysis", color: "text-[#D4AF37]" },
-                { label: "분석 비록", sub: "과거 로그 재열람", icon: History, href: "/protected/history", color: "text-purple-400" },
-              ].map((action, idx) => (
-                <Link key={action.label} href={action.href}>
-                  <div
-                    className="relative group animate-in fade-in slide-in-from-bottom-2 duration-500"
-                    style={{ animationDelay: `${700 + idx * 100}ms` }}
-                  >
-                    {/* Hover glow */}
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-[#D4AF37]/0 to-[#D4AF37]/0 rounded-2xl opacity-0 group-hover:opacity-100 group-hover:from-[#D4AF37]/20 group-hover:to-[#D4AF37]/10 blur-lg transition-all duration-300" />
-
-                    <div className="relative glass p-5 rounded-2xl border-white/5 group-hover:border-[#D4AF37]/30 transition-all duration-300 flex items-center justify-between group-hover:translate-x-1">
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-11 h-11 rounded-xl bg-white/5 flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:bg-white/10",
-                          action.color
-                        )}>
-                          <action.icon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm tracking-tight group-hover:text-[#D4AF37] transition-colors">{action.label}</p>
-                          <p className="text-[10px] text-muted-foreground">{action.sub}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#D4AF37] group-hover:translate-x-1 transition-all duration-300" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* ─────────────────────────────────────────────────────────────────
-            RIGHT COLUMN: Status & Records
-        ───────────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-8 space-y-8 order-1 lg:order-2">
-
-          {/* Sky-Earth-Human Status */}
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-1">
-              <ShieldCheck className="w-4 h-4 text-green-500" />
-              천지인(天地人) 통합 상태
-            </h3>
-            <SkyEarthHumanStatus />
-          </section>
-
-          {/* Recent Records Section - Premium Cards */}
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400">
-            <div className="flex justify-between items-end px-1">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                <History className="w-4 h-4 text-[#D4AF37]" />
-                최근 생성된 마스터 비록
-              </h3>
-              <Link href="/protected/history" className="text-[10px] text-[#D4AF37] hover:text-[#F4E4BA] font-bold uppercase tracking-widest transition-colors">
-                View All
-              </Link>
-            </div>
-
-            {/* Premium Glass Container */}
-            <div className="relative group/container">
-              {/* Container glow */}
-              <div className="absolute -inset-1 bg-gradient-to-b from-[#D4AF37]/5 to-transparent rounded-[3rem] blur-xl opacity-50" />
-
-              <div className="relative rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden bg-[#0A0A0A]/70 backdrop-blur-3xl">
-                {records && records.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {records.map((record, idx) => (
-                      <div
-                        key={record.id}
-                        className="relative p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group/item transition-all duration-500 animate-in fade-in slide-in-from-bottom-2"
-                        style={{ animationDelay: `${500 + idx * 100}ms` }}
-                      >
-                        {/* Row hover glow */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/0 via-[#D4AF37]/0 to-[#D4AF37]/0 opacity-0 group-hover/item:opacity-100 group-hover/item:from-[#D4AF37]/5 group-hover/item:via-[#D4AF37]/10 group-hover/item:to-[#D4AF37]/5 transition-all duration-500" />
-
-                        <div className="relative flex items-center gap-5">
-                          {/* Avatar with glow */}
-                          <div className="relative">
-                            <div className="absolute -inset-1 bg-[#D4AF37]/0 rounded-2xl blur-md group-hover/item:bg-[#D4AF37]/30 transition-all duration-500" />
-                            <div className="relative w-14 h-14 rounded-2xl border border-[#D4AF37]/20 flex items-center justify-center font-black text-xl text-[#D4AF37] bg-[#D4AF37]/5 group-hover/item:bg-[#D4AF37]/15 group-hover/item:border-[#D4AF37]/40 transition-all duration-300">
-                              {record.family_members?.name?.charAt(0) || "M"}
-                            </div>
-                            <div className="absolute -right-1 -bottom-1 w-5 h-5 bg-green-500 rounded-full border-[3px] border-[#0A0A0A] flex items-center justify-center">
-                              <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <p className="font-black text-base sm:text-lg group-hover/item:text-[#D4AF37] transition-colors duration-300">{record.family_members?.name || "알 수 없음"}님의 비록</p>
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
-                              <span className="bg-[#D4AF37]/10 text-[#D4AF37] px-2.5 py-1 rounded-full border border-[#D4AF37]/20 uppercase tracking-tight font-bold text-[10px]">
-                                Prob. {record.success_probability}%
-                              </span>
-                              <span className="opacity-40">·</span>
-                              <span className="text-muted-foreground/60">{new Date(record.created_at).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Link href={`/protected/history?id=${record.id}`} className="relative w-full sm:w-auto">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full sm:w-auto rounded-full border-[#D4AF37]/20 text-xs px-6 hover:bg-[#D4AF37] hover:text-[#0A0A0A] hover:border-[#D4AF37] transition-all duration-300 group-hover/item:border-[#D4AF37]/40"
-                          >
-                            데이터 열람
-                          </Button>
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-20 sm:py-24 text-center space-y-6 px-6 animate-in fade-in duration-700 delay-500">
-                    <div className="relative w-20 h-20 mx-auto">
-                      <div className="absolute inset-0 bg-[#D4AF37]/20 rounded-full blur-xl animate-pulse" />
-                      <div className="relative w-full h-full bg-[#D4AF37]/5 rounded-full flex items-center justify-center border border-[#D4AF37]/10">
-                        <Sparkles className="w-8 h-8 text-[#D4AF37]/60" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-lg font-bold">아직 생성된 비록이 없습니다.</p>
-                      <p className="text-xs text-muted-foreground">당신의 첫 번째 운명을 분석할 준비가 되었나요?</p>
-                    </div>
-                    <Link href="/protected/analysis">
-                      <Button className="rounded-full bg-[#D4AF37] text-[#0A0A0A] px-10 hover:bg-[#F4E4BA] transition-all font-bold">
-                        분석 시작하기
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          BACKGROUND AMBIENCE - Dynamic Breathing
-      ═══════════════════════════════════════════════════════════════════ */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        {/* Primary orb - top left */}
-        <div className="absolute top-[10%] left-[5%] w-[600px] h-[600px] bg-[#D4AF37]/5 rounded-full blur-[180px] animate-breathe" />
-
-        {/* Secondary orb - bottom right */}
-        <div
-          className="absolute bottom-[5%] right-[-5%] w-[700px] h-[700px] bg-[#D4AF37]/8 rounded-full blur-[200px] animate-breathe"
-          style={{ animationDelay: '2s' }}
-        />
-
-        {/* Tertiary orb - center */}
-        <div
-          className="absolute top-[40%] left-[40%] w-[400px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[150px] animate-breathe"
-          style={{ animationDelay: '4s' }}
-        />
-
-        {/* Subtle grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(#D4AF37 1px, transparent 1px), linear-gradient(90deg, #D4AF37 1px, transparent 1px)`,
-            backgroundSize: '100px 100px'
-          }}
-        />
+      {/* Floating Family Badge - Zen Style */}
+      <div className="fixed top-32 right-6 hidden xl:block">
+        <Link href="/protected/family" className="flex items-center gap-4 bg-white border border-zen-border px-6 py-4 rounded-sm hover:border-zen-gold hover:shadow-md transition-all group">
+          <div className="w-10 h-10 rounded-sm bg-zen-bg flex items-center justify-center group-hover:bg-zen-gold/10 transition-colors border border-zen-border group-hover:border-zen-gold/30">
+            <User className="w-5 h-5 text-zen-wood group-hover:text-zen-gold" />
+          </div>
+          <div className="text-left">
+            <p className="text-[10px] uppercase text-zen-muted font-bold tracking-wider">인연 (Destiny Ties)</p>
+            <p className="text-2xl font-serif font-bold text-zen-text">{members.length}<span className="text-sm font-sans font-normal text-zen-muted ml-1">명</span></p>
+          </div>
+        </Link>
       </div>
+
     </div>
   );
 }

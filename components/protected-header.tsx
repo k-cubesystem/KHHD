@@ -1,47 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-    DropdownMenuSub,
-    DropdownMenuSubTrigger,
-    DropdownMenuSubContent,
-    DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
-    User, LogOut, CreditCard, LayoutDashboard,
-    Sun, BookOpen, Scan, Hand, Compass, ChevronDown,
-    Sparkles, Users, ScrollText, Menu, X
+    User, LogOut, LayoutDashboard, Menu, X, ChevronDown,
+    Sun, BookOpen, ScanFace, Hand, Compass, CreditCard, Ticket,
+    Users, Clock, Crown, Activity
 } from "lucide-react";
 import { getCurrentUserRole } from "@/app/actions/products";
 import { UserRole } from "@/types/auth";
-import { cn } from "@/lib/utils";
-
-const sajuMenuItems = [
-    { href: "/protected/saju/today", label: "오늘의 운세", icon: Sun },
-    { href: "/protected/saju/detail", label: "사주 풀이", icon: BookOpen },
-    { href: "/protected/saju/face", label: "관상", icon: Scan },
-    { href: "/protected/saju/hand", label: "손금", icon: Hand },
-    { href: "/protected/saju/fengshui", label: "풍수", icon: Compass },
-];
+import { TalismanBalance } from "@/components/talisman-balance";
+import { SubscriptionBadge } from "@/components/membership/subscription-badge";
 
 export function ProtectedHeader({ user }: { user: any }) {
     const [isMounted, setIsMounted] = useState(false);
     const [userRole, setUserRole] = useState<UserRole>("user");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const router = useRouter();
-    const pathname = usePathname();
     const supabase = createClient();
 
     useEffect(() => {
@@ -51,214 +37,221 @@ export function ProtectedHeader({ user }: { user: any }) {
 
     const handleSignOut = async () => {
         await supabase.auth.signOut();
+        router.push("/");
         router.refresh();
     };
 
-    if (!isMounted) {
-        return (
-            <nav className="w-full flex justify-center h-16 items-center z-50 border-b border-white/5 bg-[#0A0A0A]/50 backdrop-blur-md sticky top-0">
-                <div className="w-full max-w-7xl flex justify-between items-center px-6">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 animate-pulse" />
-                    <div className="w-9 h-9 rounded-full bg-white/5 animate-pulse" />
-                </div>
-            </nav>
-        );
-    }
+    if (!isMounted) return null;
 
-    const initial = user?.email?.charAt(0).toUpperCase() || "M";
-    const isSajuActive = pathname?.startsWith("/protected/saju");
+    const userEmail = user?.email || "";
+    const userName = userEmail.split("@")[0] || "User";
+    const userInitial = userName[0]?.toUpperCase() || "U";
+    const avatarUrl = user?.user_metadata?.avatar_url;
 
     return (
-        <>
-            <nav className="w-full flex justify-center h-16 items-center z-50 border-b border-white/5 bg-[#0A0A0A]/50 backdrop-blur-md sticky top-0">
-                <div className="w-full max-w-7xl flex justify-between items-center px-6">
-                    {/* Logo */}
-                    <Link href="/protected" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-primary-foreground transition-transform group-hover:scale-110">海</div>
-                        <span className="font-bold text-xl tracking-tight hidden md:block">海華堂</span>
+        <header className="fixed top-0 left-0 w-full z-[100] bg-zen-bg/95 backdrop-blur-md border-b border-zen-border transition-all duration-300">
+            <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+
+                {/* Left: Logo & Navigation */}
+                <div className="flex items-center gap-12">
+                    {/* Logo: Zen Style */}
+                    <Link href="/protected" className="flex items-center gap-3 group">
+                        <div className="w-8 h-8 flex items-center justify-center border border-zen-text rounded-sm relative overflow-hidden group-hover:bg-zen-text transition-colors duration-300">
+                            <span className="font-serif font-bold text-zen-text group-hover:text-zen-bg z-10 transition-colors">海</span>
+                            <div className="absolute inset-0 bg-zen-text opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <h1 className="font-serif text-xl font-bold text-zen-text tracking-tight group-hover:text-zen-wood transition-colors">
+                            청담해화당
+                        </h1>
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center gap-6">
-                        {/* 해화사주 드롭다운 */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button className={cn(
-                                    "flex items-center gap-1 text-sm font-medium transition-colors",
-                                    isSajuActive ? "text-[#D4AF37]" : "text-muted-foreground hover:text-[#D4AF37]"
-                                )}>
-                                    해화사주
-                                    <ChevronDown className="w-3 h-3" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-48">
-                                {sajuMenuItems.map((item) => (
-                                    <DropdownMenuItem
-                                        key={item.href}
-                                        onClick={() => router.push(item.href)}
-                                        className="cursor-pointer"
-                                    >
-                                        <item.icon className="mr-2 h-4 w-4" />
-                                        <span>{item.label}</span>
-                                    </DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                    <nav className="hidden lg:flex items-center gap-8">
 
-                        <Link
-                            href="/protected/analysis"
-                            className={cn(
-                                "text-sm font-medium transition-colors",
-                                pathname?.startsWith("/protected/analysis") ? "text-[#D4AF37]" : "text-muted-foreground hover:text-[#D4AF37]"
-                            )}
-                        >
-                            천지인 분석
-                        </Link>
-                        <Link
-                            href="/protected/relationships"
-                            className={cn(
-                                "text-sm font-medium transition-colors",
-                                pathname?.startsWith("/protected/relationships") ? "text-[#D4AF37]" : "text-muted-foreground hover:text-[#D4AF37]"
-                            )}
-                        >
-                            인연 관리
-                        </Link>
-                        <Link
-                            href="/protected/history"
-                            className={cn(
-                                "text-sm font-medium transition-colors",
-                                pathname?.startsWith("/protected/history") ? "text-[#D4AF37]" : "text-muted-foreground hover:text-[#D4AF37]"
-                            )}
-                        >
-                            비록함
-                        </Link>
-                    </div>
+                        {/* 해화사주 Dropdown */}
+                        <div className="relative group h-20 flex items-center">
+                            <Link href="/protected" className="flex items-center gap-1.5 text-sm font-bold text-zen-text/70 hover:text-zen-wood transition-colors font-sans">
+                                해화사주 <ChevronDown className="w-3 h-3 opacity-50" />
+                            </Link>
 
-                    {/* Right Actions */}
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:block">
-                            <ThemeSwitcher />
-                        </div>
-
-                        {/* Mobile Menu Button */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="md:hidden"
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        >
-                            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                        </Button>
-
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-9 w-9 rounded-full ring-2 ring-primary/20 hover:ring-primary/50 transition-all">
-                                    <Avatar className="h-9 w-9">
-                                        <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                                        <AvatarFallback className="bg-primary/10 text-primary font-bold">{initial}</AvatarFallback>
-                                    </Avatar>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end" forceMount>
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{user?.user_metadata?.full_name || "마스터"}</p>
-                                        <p className="text-xs leading-none text-muted-foreground">
-                                            {user?.email}
-                                        </p>
-                                    </div>
-                                </DropdownMenuLabel>
-
-                                <DropdownMenuSeparator />
-
-                                {/* Admin Menu Item */}
-                                {userRole === "admin" && (
-                                    <>
-                                        <DropdownMenuItem onClick={() => router.push("/admin")} className="text-yellow-500 focus:text-yellow-600 font-bold bg-yellow-500/10 focus:bg-yellow-500/20 cursor-pointer">
-                                            <LayoutDashboard className="mr-2 h-4 w-4" />
-                                            <span>관리자 페이지</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                    </>
-                                )}
-
-                                <DropdownMenuItem onClick={() => router.push("/protected/profile")}>
-                                    <User className="mr-2 h-4 w-4" />
-                                    <span>프로필 관리</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push("/protected/profile/manse")}>
-                                    <ScrollText className="mr-2 h-4 w-4" />
-                                    <span>내 사주 (만세력)</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push("/protected/profile?tab=subscription")}>
-                                    <CreditCard className="mr-2 h-4 w-4" />
-                                    <span>구독 및 결제</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500">
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>로그아웃</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
-            </nav>
-
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-                <div className="md:hidden fixed inset-x-0 top-16 z-40 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-white/5 animate-in slide-in-from-top-2 duration-200">
-                    <div className="px-6 py-4 space-y-4">
-                        {/* 해화사주 서브메뉴 */}
-                        <div className="space-y-2">
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">해화사주</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {sajuMenuItems.map((item) => (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        onClick={() => setMobileMenuOpen(false)}
-                                        className="flex items-center gap-2 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                                    >
-                                        <item.icon className="w-4 h-4 text-[#D4AF37]" />
-                                        <span className="text-sm">{item.label}</span>
-                                    </Link>
-                                ))}
+                            {/* Dropdown Panel */}
+                            <div className="absolute top-20 left-0 w-48 bg-white border border-zen-border rounded-sm shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+                                <Link href="/protected/saju/today" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-zen-bg text-zen-text/80 hover:text-zen-wood transition-colors">
+                                    <Sun className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">오늘의 운세</span>
+                                </Link>
+                                <Link href="/protected/analysis" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-zen-bg text-zen-text/80 hover:text-zen-wood transition-colors">
+                                    <BookOpen className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">사주 풀이</span>
+                                </Link>
+                                <Link href="/protected/saju/face" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-zen-bg text-zen-text/80 hover:text-zen-wood transition-colors">
+                                    <ScanFace className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">관상</span>
+                                </Link>
+                                <Link href="/protected/saju/hand" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-zen-bg text-zen-text/80 hover:text-zen-wood transition-colors">
+                                    <Hand className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">손금</span>
+                                </Link>
+                                <Link href="/protected/saju/fengshui" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-zen-bg text-zen-text/80 hover:text-zen-wood transition-colors">
+                                    <Compass className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">풍수</span>
+                                </Link>
                             </div>
                         </div>
 
-                        <div className="h-px bg-white/5" />
+                        <Link href="/protected/analysis" className="text-sm font-bold text-zen-text/70 hover:text-zen-wood transition-colors font-sans">
+                            천지인 분석
+                        </Link>
+                        <Link href="/protected/family" className="text-sm font-bold text-zen-text/70 hover:text-zen-wood transition-colors font-sans">
+                            인연 관리
+                        </Link>
+                        <Link href="/protected/history" className="text-sm font-bold text-zen-text/70 hover:text-zen-wood transition-colors font-sans">
+                            비록함
+                        </Link>
+                    </nav>
+                </div>
 
-                        {/* 다른 메뉴 */}
+                {/* Right: Actions */}
+                <div className="flex items-center gap-3">
+                    {/* Subscription Badge */}
+                    <SubscriptionBadge />
+
+                    {/* Talisman Balance */}
+                    <TalismanBalance />
+
+                    {/* Profile */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="relative p-0.5 h-10 w-10 rounded-full border border-zen-border hover:border-zen-gold transition-colors overflow-hidden bg-white shadow-sm outline-none hidden md:block">
+                                <Avatar className="h-full w-full">
+                                    <AvatarImage src={avatarUrl} className="object-cover" />
+                                    <AvatarFallback className="bg-zen-bg text-zen-wood font-bold text-xs font-serif">
+                                        {userInitial}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </button>
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent className="w-64 bg-white border-zen-border text-zen-text p-2 shadow-2xl rounded-sm mt-3 font-sans" align="end">
+                            <div className="px-3 py-4 border-b border-zen-border mb-1">
+                                <div className="font-serif font-bold text-zen-text text-base mb-0.5">{userName}</div>
+                                <div className="text-xs text-zen-muted font-mono">{userEmail}</div>
+                            </div>
+
+                            {userRole === 'admin' && (
+                                <DropdownMenuItem asChild>
+                                    <Link href="/admin" className="cursor-pointer group flex items-center gap-3 p-3 rounded-sm text-zen-wood hover:bg-zen-bg mb-1 transition-colors">
+                                        <LayoutDashboard className="w-4 h-4" />
+                                        <span className="font-bold text-sm text-zen-text">관리자 페이지</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuItem asChild>
+                                <Link href="/protected/profile" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-bg transition-colors">
+                                    <User className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">프로필 관리</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/protected/profile/manse" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-bg transition-colors">
+                                    <BookOpen className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm">내 사주 (만세력)</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/protected/membership" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-gold/10 transition-colors">
+                                    <Crown className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm font-bold text-zen-gold">멤버십</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href="/protected/billing" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-bg transition-colors">
+                                    <CreditCard className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm font-bold">부적 충전</span>
+                                </Link>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator className="bg-zen-border my-1" />
+
+                            <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer flex items-center gap-3 p-3 rounded-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors">
+                                <LogOut className="w-4 h-4" />
+                                <span className="text-sm font-bold">로그아웃</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Mobile Toggle */}
+                    <button
+                        className="lg:hidden p-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-zen-text hover:bg-zen-bg rounded-sm transition-colors active:scale-95"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        aria-label={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
+                    >
+                        {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                    </button>
+                </div>
+            </div>
+
+            {/* Mobile Menu (Updated Layout) */}
+            {mobileMenuOpen && (
+                <div className="lg:hidden fixed inset-0 top-20 left-0 w-full h-[calc(100vh-5rem)] bg-zen-bg z-[90] animate-in fade-in slide-in-from-top-4 overflow-y-auto border-t border-zen-border shadow-inner">
+                    <nav className="flex flex-col p-6 gap-6 font-serif pb-32">
+
+                        {/* 1. 해화사주 Group */}
                         <div className="space-y-2">
-                            <Link
-                                href="/protected/analysis"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                            >
-                                <Sparkles className="w-5 h-5 text-[#D4AF37]" />
-                                <span>천지인 분석</span>
+                            <div className="text-xs font-bold text-zen-muted uppercase tracking-widest px-1">해화사주 (Haehwa Saju)</div>
+                            <div className="grid grid-cols-1 gap-2">
+                                <Link href="/protected/saju/today" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                    <Sun className="w-5 h-5 text-zen-gold" /> 오늘의 운세
+                                </Link>
+                                <Link href="/protected/analysis" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                    <BookOpen className="w-5 h-5 text-zen-gold" /> 사주 풀이
+                                </Link>
+                                <Link href="/protected/saju/face" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                    <ScanFace className="w-5 h-5 text-zen-gold" /> 관상
+                                </Link>
+                                <Link href="/protected/saju/hand" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                    <Hand className="w-5 h-5 text-zen-gold" /> 손금
+                                </Link>
+                                <Link href="/protected/saju/fengshui" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                    <Compass className="w-5 h-5 text-zen-gold" /> 풍수
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* 2. Main Links */}
+                        <div className="space-y-2 pt-2 border-t border-zen-border/50">
+                            <Link href="/protected/analysis" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
+                                <Activity className="w-5 h-5 text-zen-muted" /> 천지인 분석
                             </Link>
-                            <Link
-                                href="/protected/relationships"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                            >
-                                <Users className="w-5 h-5 text-[#D4AF37]" />
-                                <span>인연 관리</span>
+                            <Link href="/protected/family" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
+                                <Users className="w-5 h-5 text-zen-muted" /> 인연 관리
                             </Link>
-                            <Link
-                                href="/protected/history"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                            >
-                                <ScrollText className="w-5 h-5 text-[#D4AF37]" />
-                                <span>비록함</span>
+                            <Link href="/protected/history" className="p-3 text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 rounded-sm hover:bg-zen-bg-sub" onClick={() => setMobileMenuOpen(false)}>
+                                <Clock className="w-5 h-5 text-zen-muted" /> 비록함
                             </Link>
                         </div>
-                    </div>
+
+                        {/* Bottom Actions */}
+                        <div className="mt-4 pt-6 border-t border-zen-border">
+                            <Link href="/protected/billing" className="w-full" onClick={() => setMobileMenuOpen(false)}>
+                                <Button className="w-full h-14 bg-zen-wood text-white text-lg font-bold rounded-sm shadow-md flex items-center gap-2">
+                                    <Ticket className="w-5 h-5" /> 부적 충전하기
+                                </Button>
+                            </Link>
+
+                            <div className="flex items-center justify-between mt-6 px-2">
+                                <Link href="/protected/profile" onClick={() => setMobileMenuOpen(false)} className="text-sm font-bold text-zen-text flex items-center gap-2">
+                                    <User className="w-4 h-4" /> 내 프로필
+                                </Link>
+                                <button onClick={handleSignOut} className="text-sm font-bold text-red-500 hover:text-red-700 flex items-center gap-2">
+                                    <LogOut className="w-4 h-4" /> 로그아웃
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
                 </div>
             )}
-        </>
+        </header>
     );
 }

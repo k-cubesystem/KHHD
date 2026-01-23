@@ -5,7 +5,8 @@
       "Bash(ping:*)",
       "Bash(npm run dev:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add:*)"
     ]
   }
 }

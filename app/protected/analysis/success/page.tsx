@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { confirmPayment, useCredit } from "@/app/actions/payment-actions";
+import { confirmPayment } from "@/app/actions/payment-actions";
 import { startFateAnalysis } from "@/app/actions/analysis-actions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -37,10 +37,7 @@ function PaymentProcessor() {
             try {
                 // 1. 결제 승인 (금액은 서버에서 검증)
                 await confirmPayment(paymentKey, orderId, credits);
-                toast.success(`결제가 승인되었습니다. (${credits}회 분석 크레딧 충전)`);
-
-                // 2. 크레딧 차감
-                await useCredit();
+                toast.success(`결제가 승인되었습니다. (${credits}장 부적 충전)`);
 
                 // 3. 분석 시작
                 const formData = new FormData();

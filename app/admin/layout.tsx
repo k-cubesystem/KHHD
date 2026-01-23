@@ -40,29 +40,20 @@ export default async function AdminLayout({
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#050505] text-white relative overflow-hidden">
-      {/* Background Orbs for TUI Effect */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#D4AF37]/5 rounded-full blur-[150px] animate-pulse"
-          style={{ animationDuration: '8s' }}
-        />
-        <div
-          className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[120px] animate-pulse"
-          style={{ animationDuration: '12s', animationDelay: '2s' }}
-        />
-      </div>
+    <div className="flex min-h-screen bg-zen-bg text-zen-text bg-hanji relative overflow-hidden">
 
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-white/10 bg-[#0A0A0A] hidden md:flex flex-col">
-        <div className="p-6 border-b border-white/10">
-          <Link href="/protected" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#D4AF37] to-[#8C6D1F] flex items-center justify-center font-serif font-black text-[#0A0A0A]">
+      {/* Sidebar - Zen Style */}
+      <aside className="w-64 border-r border-zen-border bg-white hidden md:flex flex-col z-20 shadow-sm">
+        <div className="p-6 border-b border-zen-border">
+          <Link href="/protected" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-sm bg-zen-wood flex items-center justify-center font-serif font-black text-white group-hover:bg-zen-gold transition-colors">
               H
             </div>
             <div>
-              <div className="font-bold text-[#D4AF37]">해화당 Admin</div>
-              <div className="text-[10px] text-muted-foreground group-hover:text-white transition-colors">서비스로 돌아가기 &rarr;</div>
+              <div className="font-serif font-bold text-zen-text">해화당 Admin</div>
+              <div className="text-[10px] text-zen-muted group-hover:text-zen-wood transition-colors flex items-center gap-1 font-sans">
+                <ArrowLeft className="w-2 h-2" /> 서비스로 돌아가기
+              </div>
             </div>
           </Link>
         </div>
@@ -72,7 +63,7 @@ export default async function AdminLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/60 hover:text-[#D4AF37] hover:bg-white/5 transition-all duration-200"
+              className="flex items-center gap-3 px-4 py-3 rounded-sm text-sm font-medium text-zen-text/70 hover:text-zen-wood hover:bg-zen-bg transition-all duration-200"
             >
               <item.icon className="w-4 h-4" />
               {item.label}
@@ -80,18 +71,18 @@ export default async function AdminLayout({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/10">
-          <div className="px-4 py-2 text-xs text-white/40">
+        <div className="p-4 border-t border-zen-border">
+          <div className="px-4 py-2 text-xs text-zen-muted font-mono">
             Admin System v1.0
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <header className="h-16 border-b border-white/10 flex items-center px-6 md:hidden">
+      <main className="flex-1 overflow-auto relative z-10">
+        <header className="h-16 border-b border-zen-border bg-white/80 backdrop-blur flex items-center px-6 md:hidden">
           {/* Mobile Header (Simplified) */}
-          <div className="font-bold">해화당 ADMIN</div>
+          <div className="font-serif font-bold text-zen-text">해화당 ADMIN</div>
         </header>
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
           {children}

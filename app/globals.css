@@ -4,115 +4,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    /* 
+      Modern Oriental Zen (Default Theme) 
+      Concept: Calm, Tradition, Modern Sophistication (Hanji Texture)
+    */
+    --background: 40 10% 97%; /* #F9F8F5 (Warm Off-White) */
+    --foreground: 30 5% 10%;  /* #1C1B1A (Sharp Charcoal - Contrast Up) */
+    
+    --card: 0 0% 100%; /* Pure White */
+    --card-foreground: 30 5% 10%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 35 30% 55%;
-    /* Brass/Gold */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 35 30% 96%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 30 5% 10%;
+    
+    --primary: 26 23% 45%; /* #8B6E58 (Sandalwood) */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 40 10% 94%; /* Light Stone */
+    --secondary-foreground: 30 5% 10%;
+    
+    --muted: 40 10% 92%;
+    --muted-foreground: 25 5% 35%; /* #595450 (Deep Warm Grey - Contrast Up) */
+    
+    --accent: 49 46% 56%; /* #C5B358 (Antique Gold) */
+    --accent-foreground: 30 5% 10%;
+    
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 35 30% 55%;
-    --radius: 0.75rem;
+
+    --border: 40 10% 89%; /* #E5E3DF (Pale Grey) */
+    --input: 40 10% 89%;
+    --ring: 26 23% 45%; /* Zen Wood */
+    
+    --radius: 0.25rem; /* Sharp Edges (4px) */
   }
 
   .dark {
-    --background: 240 10% 4%;
-    /* Deep Charcoal */
-    --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 4%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 35 35% 65%;
-    /* Elegant Gold */
-    --primary-foreground: 240 10% 4%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
+    /* Midnight in Seoul (Legacy / Dark Mode) */
+    --background: 240 4% 6%;
+    --foreground: 60 5% 96%;
+    --card: 240 4% 8%;
+    --card-foreground: 60 5% 96%;
+    --popover: 240 4% 8%;
+    --popover-foreground: 60 5% 96%;
+    --primary: 43 46% 56%;
+    --primary-foreground: 240 4% 6%;
+    --secondary: 240 4% 12%;
+    --secondary-foreground: 60 5% 96%;
+    --muted: 240 4% 12%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 35 35% 65%;
-  }
-}
-
-@layer utilities {
-  .glass {
-    @apply bg-background/60 backdrop-blur-md border border-white/10;
-  }
-
-  .text-gold {
-    @apply bg-clip-text text-transparent bg-gradient-to-tr from-[#C5A059] via-[#F1D299] to-[#C5A059] bg-[length:200%_auto] animate-shimmer;
-  }
-
-  .shimmer {
-    @apply animate-shimmer;
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0) 100%);
-    background-size: 200% 100%;
-  }
-
-  /* Golden Fractal - Dynamic Breathing Animation */
-  .animate-breathe {
-    animation: breathe 8s ease-in-out infinite;
-  }
-
-  /* Holographic Shimmer Animation */
-  .animate-shimmer {
-    animation: shimmer 3s ease-in-out infinite;
-  }
-
-  /* Scanning Line Effect */
-  .animate-scan {
-    animation: scanline 2s linear infinite;
-  }
-}
-
-/* Custom Keyframes for Golden Fractal Theme */
-@keyframes breathe {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.1);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-@keyframes scanline {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
+    --accent: 43 46% 56%;
+    --accent-foreground: 240 4% 6%;
+    --destructive: 343 79% 35%;
+    --destructive-foreground: 60 5% 96%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 43 46% 56%;
   }
 }
 
@@ -120,12 +67,68 @@
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-background text-foreground;
-    background-image:
-      radial-gradient(at 0% 0%, hsla(35, 30%, 15%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(240, 10%, 10%, 0.1) 0px, transparent 50%);
-    background-attachment: fixed;
+    @apply bg-background text-foreground antialiased selection:bg-zen-gold/30 selection:text-zen-text;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+  
+  /* Typography Guidelines */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight text-zen-text;
+  }
+  
+  p, span, div {
+     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  /* Hanji Texture Overlay */
+  .bg-hanji {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+
+  /* Zen Card Style - Minimal Shadow, Sharp */
+  .zen-card {
+    @apply bg-white border border-zen-border shadow-sm hover:shadow-md transition-all duration-300 rounded-[var(--radius)];
+  }
+
+  /* Glassmorphism - Zen Style (Frosted White) */
+  .glass-zen {
+    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-sm supports-[backdrop-filter]:bg-white/40;
+  }
+
+  /* UX Pro Max: Dark Glass (Midnight) */
+  .glass-dark {
+    @apply bg-ink-900/80 backdrop-blur-xl border border-gold-500/20 shadow-2xl shadow-gold-900/50 supports-[backdrop-filter]:bg-ink-900/60;
+  }
+  
+  /* UX Pro Max: Light Glass (Morning) */
+  .glass-light {
+    @apply bg-white/70 backdrop-blur-md border border-zen-border/40 shadow-lg shadow-zen-wood/10 supports-[backdrop-filter]:bg-white/40;
+  }
+  
+  /* UX Pro Max: Premium Gold Glass */
+  .glass-gold {
+    @apply bg-gradient-to-br from-gold-100/90 to-gold-300/80 backdrop-blur-lg border border-gold-500/30 shadow-xl shadow-gold-500/20;
+  }
+  
+  /* Buttons - Zen Style */
+  .btn-zen-primary {
+    @apply bg-zen-wood text-white hover:bg-[#7A604D] rounded-[var(--radius)] shadow-sm active:scale-[0.98] transition-all relative overflow-hidden;
+  }
+  
+  .btn-zen-secondary {
+    @apply bg-white border border-zen-border text-zen-text hover:bg-zen-bg hover:border-zen-wood/30 rounded-[var(--radius)] transition-all active:scale-[0.98];
+  }
+
+  /* Typography Utilities */
+  .text-zen-title {
+     @apply font-serif font-bold text-zen-text;
+  }
+  
+  .text-zen-body {
+     @apply font-sans text-zen-text/80 leading-relaxed;
   }
 }

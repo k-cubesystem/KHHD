@@ -9,7 +9,18 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"],
+        serif: ["var(--font-serif)", "ui-serif", "Georgia"],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -51,11 +62,54 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        // Haehwadang Custom Palette (Zen & Legacy)
+        zen: {
+          bg: "#F9F8F5", // Warm Off-White
+          text: "#2C2A29", // Soft Charcoal
+          wood: "#8B6E58", // Sandalwood
+          muted: "#989390", // Warm Grey
+          gold: "#C5B358", // Antique Gold
+          border: "#E5E3DF", // Pale Grey
+          surface: "#FFFFFF",
+        },
+        ink: {
+          50: "#f6f6f7",
+          100: "#e3e3e6",
+          200: "#c6c6cc",
+          300: "#a2a2ab",
+          400: "#7c7c88",
+          500: "#5d5d6b",
+          600: "#494954",
+          700: "#3b3b42",
+          800: "#303036",
+          900: "#1c1c1e", // Wet Stone
+          950: "#0f0f10", // Deep Ink
+        },
+        gold: {
+          50: "#fbf8f1",
+          100: "#F9F5E3", // Highlight (UX Pro Max)
+          200: "#ead9b4",
+          300: "#F4E4BA", // Main Text (UX Pro Max)
+          400: "#d1a55f",
+          500: "#D4AF37", // Brand Color (UX Pro Max)
+          550: "#C5A059", // Yugi Gold (Legacy)
+          600: "#a96f2d",
+          700: "#875526",
+          800: "#6e4525",
+          900: "#3E3210", // Deep Shadow (UX Pro Max)
+          950: "#331e0f",
+        },
+        seal: {
+          500: "#9f1239", // Seal Red
+        },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "0.25rem", // Sharp edges (4px)
+        md: "0.125rem", // 2px
+        sm: "0.0625rem", // 1px
+      },
+      backgroundImage: {
+        'noise': "url('/texture/noise.png')",
       },
       keyframes: {
         shimmer: {

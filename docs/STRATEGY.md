@@ -1,310 +1,76 @@
-# 해화당 개발 전략 문서
-
-**최종 업데이트**: 2026-01-22 11:25
-
-## 🎯 프로젝트 비전
-
-**"AI 기반 프리미엄 운명 분석 플랫폼"**
-
-전통 사주명리학과 최신 AI 기술을 결합하여, 사용자에게 과학적이고 신뢰할 수 있는 운명 분석 서비스를 제공합니다.
-
-## 🏗️ 아키텍처 전략
-
-### 1. 기술 스택 선정 원칙
-
-#### Frontend
-- **Next.js 15**: Server Components로 성능 최적화
-- **React 19**: 최신 기능 활용 (use, Suspense 개선)
-- **TypeScript**: 타입 안전성 확보
-- **Tailwind CSS**: 빠른 UI 개발 및 일관성
-
-**선정 이유**:
-- SEO 최적화 (Server-Side Rendering)
-- 빠른 페이지 로드 (Static Generation)
-- 개발 생산성 향상
-- 유지보수 용이성
-
-#### Backend
-- **Supabase**: PostgreSQL + Auth + Storage 통합
-- **Server Actions**: API 라우트 없이 서버 로직 실행
-- **Edge Functions**: 필요 시 확장 가능
-
-**선정 이유**:
-- 빠른 개발 속도
-- 자동 스케일링
-- 강력한 보안 (RLS)
-- 비용 효율성
-
-#### AI
-- **Google Gemini 1.5 Pro**: 멀티모달 분석
-- **Gemini 2.0 Flash**: 향후 업그레이드 예정
-
-**선정 이유**:
-- 이미지 + 텍스트 동시 분석
-- 긴 컨텍스트 윈도우 (100만 토큰)
-- 한국어 성능 우수
-- 합리적인 가격
-
-### 2. 데이터베이스 설계 전략
-
-#### 핵심 원칙
-1. **정규화**: 데이터 중복 최소화
-2. **RLS 적용**: 모든 테이블에 보안 정책
-3. **인덱스 최적화**: 자주 조회되는 컬럼
-4. **타임스탬프**: 모든 레코드에 created_at, updated_at
-
-#### 테이블 구조
-```
-users (Supabase Auth)
-  ↓
-profiles (사용자 프로필)
-  ↓
-family_members (가족/지인 정보)
-  ↓
-saju_records (분석 결과)
-
-payments (결제 내역)
-  ↓
-credits (크레딧 관리)
-```
-
-### 3. 보안 전략
-
-#### 인증 & 인가
-- **Supabase Auth**: 이메일/소셜 로그인
-- **RLS**: 데이터베이스 레벨 권한 관리
-- **Server Actions**: 서버 측 검증
-
-#### 데이터 보호
-- **환경 변수**: 민감 정보 분리
-- **HTTPS**: 모든 통신 암호화
-- **Input Validation**: 모든 사용자 입력 검증
-
-#### 결제 보안
-- **Toss Payments**: PCI-DSS 준수
-- **서버 측 검증**: 결제 금액 이중 확인
-- **트랜잭션**: 원자성 보장
-
-## 💰 비즈니스 전략
-
-### 1. 수익 모델
-
-#### Phase 1: 크레딧 기반 (현재)
-- **1회 분석**: 9,900원
-- **3회 패키지**: 24,900원 (회당 8,300원)
-- **5회 패키지**: 39,900원 (회당 7,980원)
-
-**장점**:
-- 낮은 진입 장벽
-- 유연한 사용
-- 테스트 용이
-
-#### Phase 2: 구독 모델 (예정)
-- **일일 운세**: 월 4,900원
-- **프리미엄**: 월 14,900원 (무제한 분석)
-- **패밀리**: 월 29,900원 (최대 5명)
-
-**장점**:
-- 안정적인 수익
-- 높은 LTV (Lifetime Value)
-- 사용자 락인 효과
-
-### 2. 성장 전략
-
-#### 단기 (1-3개월)
-1. **베타 테스트**: 100명 목표
-2. **입소문 마케팅**: 추천 보상 시스템
-3. **SNS 마케팅**: 인스타그램, 유튜브
-
-#### 중기 (3-6개월)
-1. **파트너십**: 점집, 카페 제휴
-2. **콘텐츠 마케팅**: 블로그, 유튜브
-3. **인플루언서**: 협업 캠페인
-
-#### 장기 (6-12개월)
-1. **B2B 진출**: 기업 복지 서비스
-2. **해외 진출**: 영어/중국어 버전
-3. **모바일 앱**: iOS/Android
-
-### 3. 차별화 전략
-
-#### vs. 기존 사주 서비스
-- ✅ **AI 분석**: 객관적이고 일관된 결과
-- ✅ **이미지 분석**: 관상, 수상 동시 분석
-- ✅ **프리미엄 UI**: 현대적이고 세련된 디자인
-- ✅ **즉시 결과**: 10-15초 내 리포트 생성
-
-#### vs. AI 챗봇 서비스
-- ✅ **전문성**: 사주명리학 특화
-- ✅ **신뢰성**: 검증된 알고리즘
-- ✅ **개인화**: 상세한 개인 정보 기반
-- ✅ **시각화**: 아름다운 차트와 그래프
-
-## 🎨 UX/UI 전략
-
-### 1. 디자인 원칙
-
-#### 프리미엄 느낌
-- **Glassmorphism**: 투명하고 현대적
-- **골드 컬러**: 고급스러운 브랜드 아이덴티티
-- **다크 모드**: 눈의 피로 감소
-- **애니메이션**: 부드럽고 자연스러운 전환
-
-#### 사용자 친화성
-- **직관적 네비게이션**: 3클릭 이내 모든 기능 접근
-- **명확한 CTA**: 다음 행동 유도
-- **피드백**: 모든 액션에 즉각적인 반응
-- **에러 처리**: 친절한 안내 메시지
-
-### 2. 사용자 플로우
-
-#### 신규 사용자
-```
-랜딩 페이지 → 회원가입 → 가족 등록 → 분석 요청 → 결제 → 리포트 확인
-```
-
-#### 재방문 사용자
-```
-로그인 → 대시보드 → 크레딧 확인 → 분석 요청 → 리포트 확인
-```
-
-#### 최적화 포인트
-- **회원가입**: 소셜 로그인 우선
-- **가족 등록**: 나중에 추가 가능
-- **결제**: 테스트 결제 안내
-- **리포트**: PDF 다운로드 제공
-
-## 🚀 개발 로드맵
-
-### Phase 8: 관리자 시스템 & UX Pro Max (진행 중)
-**목표**: 서비스 운영을 위한 완전한 관리자 통제권 확보 및 "Tangible Nobility" 디자인 언어 적용.
-
-### 1단계: Foundation (완료 ✅)
-- [x] DB Schema: `price_plans`, `profiles.role` 추가.
-- [x] Middleware: `/admin` 경로 보안 및 Role 기반 접근 제어.
-- [x] Dashboard: 핵심 지표(회원수, 매출) 모니터링 카드 구현.
-- [x] Tester: 관리자/테스터 전용 '무료 크레딧 충전' 기능.
-
-### 2단계: Core Management Features (진행 예정 🚀)
-**Target**: Claude 3.5 Sonnet
-1.  **회원 관리 (`/admin/users`)**:
-    -   Real-time Search: 이메일/이름 기반 검색.
-    -   Role Management: User <-> Tester <-> Admin 즉시 변경.
-    -   Family View: 사용자가 등록한 가족 구성원 데이터 조회.
-2.  **결제 내역 (`/admin/payments`)**:
-    -   Transaction Logs: 성공/실패/환불 모든 내역 조회.
-    -   Revenue Analysis: 월별/일별 매출 집계 (기초).
-3.  **상품 관리 (`/admin/products`)**:
-    -   Dynamic Pricing: 가격표(DB) 실시간 수정 UI.
-    -   Promotion: 할인(Badge) 및 설명 문구 변경 기능.
-
-### Phase 9: 서비스 구조 대개편 & 기능 확장 (Next Step 🚀)
-**목표**: 메뉴 구조의 직관화 및 만세력/궁합 분석의 고도화 (Killer Features).
-
-### 1단계: IA 구조 개편 (Navigation Redesign)
-- **해화사주 (`/saju`)**: 
-  - 하위 탭: [오늘의 운세], [사주풀이], [관상], [손금], [풍수].
-- **천지인 분석 (`/analysis`)**: 
-  - 기존 AI 분석 고도화.
-  - **New**: [궁합/파트너십] (2~3인 데이터 선택 분석).
-- **인연 관리 (`/relationships`)**: 
-  - CRUD 기능 강화.
-  - **Action**: 목록에서 인물 선택 -> '분석하기' 버튼으로 즉시 이동 연동.
-
-### 2단계: 만세력 Pro & 내 사주 관리
-- **위치**: 프로필 > 내 사주 관리.
-- **기능**:
-  - **Full Data**: 사주구성, 음양오행, 천간지지, 궁성론, 육친, 용신, 격국, 신살, 개운법 출력.
-  - **Interactive Learning**: 용어 클릭 시 설명 팝업(Tooltip/Dialog) 제공.
-- **Design**: "차분하고 고급스러운" Tangible UI. 복잡한 정보를 정갈한 Grid와 Typography로 표현.
-
-### 3단계: UI/UX Optimization
-- 우측 상단 프로필 메뉴 정리 ('새 분석 생성' 제거).
-- 전반적인 네비게이션 가시성 개선 (복잡도 낮추기).
-
-### Phase 10: AI 연동 및 사용자 경험 고도화 (진행 중 🔥)
-**목표**: 각 기능별 특화된 AI 엔진 탑재 및 리텐션 강화 장치 마련.
-
-#### 1. AI Analysis Engines (Gemini powered)
-- **Deep Saju**: 정통 명리학 기반의 텍스트 심층 분석.
-- **Vision AI**: 관상, 손금, 풍수 사진을 분석하여 인사이트 도출.
-- **Daily Fortune**: 매일 갱신되는 개인화 운세 및 캐싱 시스템.
-
-#### 2. Retention & Engagement
-- **Floating Menu**: 어디서든 홈/프로필로 이동 가능한 빠른 접근성 확보.
-- **Kakao Integration**: 
-  - 카카오톡 채널 연동.
-  - 오늘의 운세 알림톡(Notification) 설정 UI.
-
-### Phase 11: Enterprise Security & Expansion (Future)
-**목표**: 서비스 신뢰도 확보 및 글로벌 확장을 위한 기반 마련.
-
-#### 1. Security Hardening (보안 강화)
-- **Middleware Rate Limiting**: 비정상적인 요청(DDoS, Brute Force) 차단 (Upstash Redis 연동 고려).
-- **Secure Headers**: CSP, X-Frame-Options, HSTS 등 보안 헤더 완벽 적용.
-- **Audit Logging**: 관리자 페이지 내 모든 중요 변경 사항(Role 변경, 환불 처리 등)을 DB에 기록 및 조회 기능.
-- **SQL Injection 방지**: 모든 동적 쿼리에 Supabase RPC 또는 Parametrized Query 원칙 재확인.
-
-#### 2. Features Expansion (기능 확장)
-- **PDF 비록 소장하기**: 생성된 AI 분석 리포트를 고품질 PDF 전자책 형태로 다운로드.
-- **카카오톡 알림톡**: 결제 완료, 분석 완료 시 알림 발송 (Solapi/Aligo 연동).
-- **Globalization (i18n)**: 영어/일본어 UI 및 사주 용어 번역 지원으로 글로벌 진출 준비.
-지원 (영어)
-
-### Phase 11: 추가 기능 (6-8주)
-- [ ] 궁합 분석
-- [ ] 일일 운세
-- [ ] 타로 카드 연동
-- [ ] 커뮤니티 기능
-
-### Phase 12: 모바일 앱 (8-12주)
-- [ ] React Native 프로젝트 초기화
-- [ ] 핵심 기능 이식
-- [ ] 푸시 알림
-- [ ] 앱스토어 출시
-
-## 📊 성과 지표 (KPI)
-
-### 사용자 지표
-- **MAU** (Monthly Active Users): 목표 1,000명 (3개월)
-- **전환율**: 방문자 → 회원가입 20%
-- **결제 전환율**: 회원 → 결제 30%
-- **재구매율**: 50% (6개월 내)
-
-### 비즈니스 지표
-- **MRR** (Monthly Recurring Revenue): 목표 500만원 (6개월)
-- **ARPU** (Average Revenue Per User): 15,000원
-- **CAC** (Customer Acquisition Cost): 5,000원 이하
-- **LTV** (Lifetime Value): 50,000원 이상
-
-### 기술 지표
-- **페이지 로드 시간**: <2초
-- **AI 응답 시간**: <15초
-- **에러율**: <1%
-- **가동률**: >99.9%
-
-## 🎯 성공 기준
-
-### 3개월 목표
-- ✅ 베타 사용자 100명 확보
-- ✅ 월 매출 100만원 달성
-- ✅ 평균 평점 4.5/5.0 이상
-- ✅ 재구매율 30% 이상
-
-### 6개월 목표
-- ✅ MAU 1,000명 달성
-- ✅ MRR 500만원 달성
-- ✅ 모바일 앱 출시
-- ✅ 해외 진출 준비 완료
-
-### 12개월 목표
-- ✅ MAU 10,000명 달성
-- ✅ MRR 5,000만원 달성
-- ✅ 시리즈 A 투자 유치
-- ✅ 팀 확장 (10명)
+# 🏗️ Haehwadang Design Renewal Strategy
+
+## 1. 프로젝트 개요
+- **목표**: 혜화당(Haehwadang) 앱을 '동양적 신비로움'과 '현대적 고급스러움'이 공존하는 프리미엄 사주/운세 플랫폼으로 리뉴얼.
+- **핵심 가치**: 신뢰감(Trust), 신비로움(Mystical), 편안함(Comfort).
+- **타겟 유저**: 삶의 방향을 찾고자 하는 2040 현대인, 프리미엄 상담을 원하는 VIP 고객.
+
+## 2. 현황 분석
+- **현재 상태**: Next.js + Tailwind CSS 기반. 기본적인 골격은 갖춰져 있으나, 디자인 통일성과 브랜드 아이덴티티가 부족함.
+- **개선점**:
+  - `globals.css`에 정의된 'Hanji Glassmorphism'이 컴포넌트 레벨까지 일관되게 적용되지 않음.
+  - 폰트와 컬러 시스템이 명확하지 않아 시각적 위계가 약함.
+  - 반응형 및 모바일 최적화 필요.
+
+## 3. 디자인 리뉴얼 전략 (The "Modern Oriental" Approach)
+
+### A. 디자인 시스템 구축 (Design System)
+- **컬러 팔레트**: 
+  - **Primary**: Deep Ink (먹물색, #1C1C1E) & Yugi Gold (유기 그릇 금색, #D4AF37).
+  - **Secondary**: Hanji White (한지색, #F5F5F0) & Jade Green (비취색, 포인트).
+  - **Background**: Noise Texture가 은은하게 깔린 Dark Paper 질감.
+- **타이포그래피**: 
+  - **국문**: Noto Serif KR (명조, 진지함/신뢰) - 제목용.
+  - **영문/UI**: Inter or Pretendard (고딕, 가독성) - 본문/UI용.
+- **질감(Texture)**: CSS Filter를 활용한 '디지털 한지' 질감 구현.
+
+### B. UX/UI 핵심 개선
+1.  **몰입형 사주 분석 경험**:
+    - 사주 결과를 단순히 텍스트로 나열하지 않고, 인터랙티브한 카드와 차트로 시각화.
+    - 스크롤에 따라 운세가 풀리는 스토리텔링형 UI.
+2.  **직관적인 네비게이션**:
+    - 복잡한 명리 용어를 아이콘화하여 진입 장벽 낮춤.
+    - 하단 탭바(Mobile) 및 미니멀 사이드바(Desktop) 적용.
+3.  **감성적 마이크로 인터랙션**:
+    - 버튼 클릭 시 묵직한 타격감(Haptic/Visual).
+    - 로딩 시 붓글씨가 써지는 듯한 애니메이션.
+
+## 4. 기술적 실행 계획 (Technical Plan)
+- **Framework**: Next.js App Router 유지.
+- **Styling**: Tailwind CSS + CSS Variables (Theme Switching 용이성 확보).
+- **Animation**: Framer Motion (복잡한 인터랙션), Tailwind Animate (기본 효과).
+- **Assets**: SVG 아이콘 (Lucide React), AI 생성 이미지 (동양화 스타일).
+
+## 5. 단계별 로드맵
+1.  **Phase 1: Foundation** - `globals.css` 재정비, 폰트/컬러 변수 확정, 기본 UI 컴포넌트(Button, Card, Input) 제작. ✅
+2.  **Phase 2: Core Layout** - 메인 레이아웃, 네비게이션, GNB/Footer 구현. ✅
+3.  **Phase 3: Key Pages** - 메인 홈, 사주 입력 폼, 결과 페이지 리뉴얼. ✅
+4.  **Phase 4: Polish** - 애니메이션 추가, 반응형 디테일 수정, 성능 최적화. ✅
+5.  **Phase 5-10**: Auth, Payments, Admin, AI Integration. ✅
+6.  **Phase 11**: AI 개운 솔루션 (관상/풍수 이미지 생성). ✅
+7.  **Phase 12**: Wallet & Dynamic Pricing System. ✅
+8.  **Phase 13**: 멤버십 구독 시스템 (Toss Payments 빌링키). ✅
+9.  **Phase 14**: UX Pro Max 리팩토링 & 디자인 시스템 확장. 🔄 진행 중
 
 ---
 
-**작성일**: 2026-01-22  
-**작성자**: Antigravity AI (Claude 3.5 Sonnet)  
-**승인자**: 프로젝트 오너
+## 6. Phase 14: UX Pro Max 리팩토링 (Current)
+
+### 목표
+- UX Pro Max Skill 적용으로 프리미엄 사용자 경험 구현
+- TUI(Tangible User Interface) 철학 적용
+- 모바일 네비게이션 완전 개선
+
+### 주요 작업
+1. **디자인 시스템 확장**: Gold Palette 확장 (100~900), Glassmorphism 유틸리티
+2. **애니메이션 표준화**: Framer Motion 표준 정의 (`lib/animations.ts`)
+3. **컴포넌트 리팩토링**: Button Shimmer, Card Depth, Input Focus Ring
+4. **모바일 UX**: 햄버거 메뉴 44x44px, AnimatePresence 적용
+5. **배경 효과**: "The Orb Pattern" 구현
+
+### 협업 구조
+- **Gemini**: 디자인 시스템, 컴포넌트 리팩토링, 모바일 UX (Task 1-20)
+- **Claude**: AI 기능 고도화, 문서 작성 (별도 작업)
+
+### 상세 문서
+→ `/docs/TASKS/PHASE14_UX_REFACTORING.md`
