@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 
 import { calculateManse } from "@/lib/saju/manse";
 import { PremiumManseCard } from "@/components/saju/premium-manse-card";
+import { FiveElementsChart } from "@/components/saju/five-elements-chart";
 
 export default async function ProfilePage() {
     const supabase = await createClient();
@@ -85,7 +86,7 @@ export default async function ProfilePage() {
                 </div>
             </div>
 
-            <div className="max-w-md mx-auto px-6 py-8 space-y-8">
+            <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
 
                 {/* 2. Main Content: Saju Manse (Destiny Chart) */}
                 <section>
@@ -101,7 +102,10 @@ export default async function ProfilePage() {
 
                     {hasSajuInfo && manse ? (
                         // Case A: Data Exists (Show Manse)
-                        <PremiumManseCard manse={manse} />
+                        <div className="space-y-6">
+                            <PremiumManseCard manse={manse} />
+                            <FiveElementsChart manse={manse} />
+                        </div>
                     ) : (
                         // Case B: Data Missing (Empty State)
                         <Card className="border-dashed border-2 border-zen-border bg-zen-bg/20">
