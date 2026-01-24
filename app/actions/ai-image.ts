@@ -131,11 +131,12 @@ Style: Professional headshot, warm lighting, confident expression.`;
             improvementPrompt,
             recommendations,
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Face Destiny Analysis Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
         return {
             success: false,
-            error: error.message || "관상 분석 중 오류가 발생했습니다.",
+            error: errorMessage,
         };
     }
 }
@@ -219,11 +220,12 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
             improvementPrompt,
             shoppingList,
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Interior Fengshui Analysis Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
         return {
             success: false,
-            error: error.message || "풍수 인테리어 분석 중 오류가 발생했습니다.",
+            error: errorMessage,
         };
     }
 }
@@ -231,8 +233,10 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 // 3. Generate Image (Placeholder - 실제 이미지 생성 API 연동 필요)
 export async function generateDestinyImage(
     originalImageBase64: string,
-    prompt: string,
-    type: "face" | "interior"
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _prompt: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _type: "face" | "interior"
 ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
     // NOTE: 실제 구현 시 DALL-E 3 또는 Stability AI API 연동 필요
     // 현재는 분석 결과만 제공하고, 이미지 생성은 준비 중 상태로 표시
@@ -247,7 +251,7 @@ export async function generateDestinyImage(
             success: true,
             imageUrl: `data:image/jpeg;base64,${originalImageBase64}`,
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Image Generation Error:", error);
         return {
             success: false,

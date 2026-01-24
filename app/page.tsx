@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
-import { Sparkles, ArrowRight, Quote, ShieldCheck, Zap, Cloud, Map, User, Scroll, Fingerprint } from "lucide-react";
+import { Sparkles, ArrowRight, Quote, ShieldCheck, Zap, Cloud, Map, User, Scroll } from "lucide-react";
 import { SimpleTyping } from "@/components/ui/simple-typing";
 import { ReviewMarquee } from "@/components/landing/review-marquee";
 import { LiveMemberCounter } from "@/components/landing/live-member-counter";
@@ -109,7 +109,7 @@ export default function Home() {
               <p>
                 청담해화당은 단순한 운세 앱이 아닙니다.
                 조선 중기부터 이어져 온 정통 명리학의 방대한 빅데이터를
-                현대적인 알고리즘으로 재해석한 <strong>'운명 공학(Fate Engineering)'</strong> 솔루션입니다.
+                현대적인 알고리즘으로 재해석한 <strong>&apos;운명 공학(Fate Engineering)&apos;</strong> 솔루션입니다.
               </p>
               <p>
                 한 사람의 인생을 518,400가지의 경우의 수로 분석하여,

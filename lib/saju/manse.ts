@@ -8,6 +8,8 @@ export interface SajuPillar {
     color: string;
     label: string;
     korean: string; // e.g. "갑자"
+    ganElement: string; // 천간의 오행 (Wood, Fire, Earth, Metal, Water)
+    jiElement: string; // 지지의 오행 (Wood, Fire, Earth, Metal, Water)
 }
 
 export interface ManseResult {
@@ -31,19 +33,19 @@ const GAN_INFO: Record<string, { colorClass: string; element: string; colorName:
     "癸": { colorClass: "text-blue-900 bg-blue-50 border-blue-200", element: "Water", colorName: "흑(黑)" }, // Yin Water
 };
 
-const JI_INFO: Record<string, { animal: string }> = {
-    "子": { animal: "쥐" },
-    "丑": { animal: "소" },
-    "寅": { animal: "호랑이" },
-    "卯": { animal: "토끼" },
-    "辰": { animal: "용" },
-    "巳": { animal: "뱀" },
-    "午": { animal: "말" },
-    "未": { animal: "양" },
-    "申": { animal: "원숭이" },
-    "酉": { animal: "닭" },
-    "戌": { animal: "개" },
-    "亥": { animal: "돼지" },
+const JI_INFO: Record<string, { animal: string; element: string }> = {
+    "子": { animal: "쥐", element: "Water" },
+    "丑": { animal: "소", element: "Earth" },
+    "寅": { animal: "호랑이", element: "Wood" },
+    "卯": { animal: "토끼", element: "Wood" },
+    "辰": { animal: "용", element: "Earth" },
+    "巳": { animal: "뱀", element: "Fire" },
+    "午": { animal: "말", element: "Fire" },
+    "未": { animal: "양", element: "Earth" },
+    "申": { animal: "원숭이", element: "Metal" },
+    "酉": { animal: "닭", element: "Metal" },
+    "戌": { animal: "개", element: "Earth" },
+    "亥": { animal: "돼지", element: "Water" },
 };
 
 const KOREAN_GAN: Record<string, string> = {
@@ -58,7 +60,7 @@ const KOREAN_JI: Record<string, string> = {
 
 function createPillar(gan: string, ji: string): SajuPillar {
     const ganInfo = GAN_INFO[gan] || { colorClass: "text-gray-800 bg-gray-100", element: "Unknown", colorName: "" };
-    const jiInfo = JI_INFO[ji] || { animal: "Unknown" };
+    const jiInfo = JI_INFO[ji] || { animal: "Unknown", element: "Unknown" };
 
     // Combine color name and animal (e.g. "푸른 용" -> "청룡" styling in UI is separate, but label helps)
     // Label example: "푸른 용" (Blue Dragon)
@@ -76,7 +78,9 @@ function createPillar(gan: string, ji: string): SajuPillar {
         jiHan: ji,
         color: ganInfo.colorClass,
         label,
-        korean
+        korean,
+        ganElement: ganInfo.element,
+        jiElement: jiInfo.element
     };
 }
 

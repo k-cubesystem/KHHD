@@ -1,5 +1,4 @@
 {
-  "model": "claude-sonnet-4-5-20250514",
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
@@ -7,7 +6,9 @@
       "Bash(npm run dev:*)",
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(tree:*)"
     ]
-  }
+  },
+  "model": "claude-sonnet-4-5-20250514"
 }

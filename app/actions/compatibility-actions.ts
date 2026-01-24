@@ -58,7 +58,8 @@ export async function createCompatibilityInvite(): Promise<{ success: boolean; i
 }
 
 // 2. Get Invite Data
-export async function getInviteData(inviteCode: string): Promise<{ success: boolean; data?: InviteData; error?: string }> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getInviteData(_inviteCode: string): Promise<{ success: boolean; data?: InviteData; error?: string }> {
     // In production, fetch from database
     // For now, this is a placeholder
     return {
@@ -69,8 +70,10 @@ export async function getInviteData(inviteCode: string): Promise<{ success: bool
 
 // 3. Calculate Compatibility
 export async function calculateCompatibility(
-    person1: { birthDate: string; birthTime?: string; gender: string },
-    person2: { birthDate: string; birthTime?: string; gender: string }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _person1: { birthDate: string; birthTime?: string; gender: string },
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _person2: { birthDate: string; birthTime?: string; gender: string }
 ): Promise<{ success: boolean; score?: number; analysis?: string; error?: string }> {
     // This would integrate with your existing Saju analysis
     // For now, return a placeholder

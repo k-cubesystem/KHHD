@@ -14,25 +14,16 @@ interface FiveElementsChartProps {
 }
 
 // 오행 정보
+// 오행 정보 (Updated for better visibility)
 const ELEMENTS = {
-    Wood: { name: "목(木)", color: "#10b981", bgColor: "bg-green-50", textColor: "text-green-600" },
-    Fire: { name: "화(火)", color: "#ef4444", bgColor: "bg-red-50", textColor: "text-red-600" },
-    Earth: { name: "토(土)", color: "#eab308", bgColor: "bg-yellow-50", textColor: "text-yellow-600" },
-    Metal: { name: "금(金)", color: "#6b7280", bgColor: "bg-gray-50", textColor: "text-gray-600" },
-    Water: { name: "수(水)", color: "#3b82f6", bgColor: "bg-blue-50", textColor: "text-blue-600" },
+    Wood: { name: "목(木)", color: "#22c55e", bgColor: "bg-green-500/10", textColor: "text-green-500" }, // Green-500
+    Fire: { name: "화(火)", color: "#ef4444", bgColor: "bg-red-500/10", textColor: "text-red-500" },     // Red-500
+    Earth: { name: "토(土)", color: "#eab308", bgColor: "bg-yellow-500/10", textColor: "text-yellow-500" }, // Yellow-500
+    Metal: { name: "금(金)", color: "#94a3b8", bgColor: "bg-slate-400/10", textColor: "text-slate-400" },  // Slate-400 (Metal)
+    Water: { name: "수(水)", color: "#3b82f6", bgColor: "bg-blue-500/10", textColor: "text-blue-500" },   // Blue-500
 };
 
-// 오행 추출 함수
-const getElement = (colorClass: string): keyof typeof ELEMENTS => {
-    if (colorClass.includes("green")) return "Wood";
-    if (colorClass.includes("red")) return "Fire";
-    if (colorClass.includes("yellow")) return "Earth";
-    if (colorClass.includes("gray")) return "Metal";
-    if (colorClass.includes("blue")) return "Water";
-    return "Wood";
-};
-
-// 오행 분포 계산
+// 오행 분포 계산 (천간과 지지를 분리하여 정확하게 계산)
 const calculateElementDistribution = (manse: ManseResult) => {
     const counts: Record<string, number> = {
         Wood: 0,
@@ -42,10 +33,16 @@ const calculateElementDistribution = (manse: ManseResult) => {
         Water: 0,
     };
 
-    // 천간과 지지 모두 카운트 (총 8개)
+    // 천간과 지지를 각각 카운트 (총 8개: 년월일시 각각 천간+지지)
     [manse.year, manse.month, manse.day, manse.time].forEach((pillar) => {
-        const element = getElement(pillar.color);
-        counts[element] += 2; // 천간 + 지지
+        // 천간의 오행
+        if (pillar.ganElement && counts[pillar.ganElement] !== undefined) {
+            counts[pillar.ganElement] += 1;
+        }
+        // 지지의 오행
+        if (pillar.jiElement && counts[pillar.jiElement] !== undefined) {
+            counts[pillar.jiElement] += 1;
+        }
     });
 
     // 백분율로 변환 (총 8개 중)
@@ -125,8 +122,8 @@ export function FiveElementsChart({ manse, className }: FiveElementsChartProps) 
                                 dataKey="value"
                                 stroke="#D4AF37"
                                 fill="#D4AF37"
-                                fillOpacity={0.3}
-                                strokeWidth={2}
+                                fillOpacity={0.6}
+                                strokeWidth={3}
                             />
                             <Tooltip content={<CustomTooltip />} />
                         </RadarChart>

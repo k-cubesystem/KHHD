@@ -57,6 +57,14 @@ async function getStats() {
   };
 }
 
+interface Payment {
+  id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  profiles: { full_name: string }[] | null;
+}
+
 export default async function AdminDashboard() {
   const stats = await getStats();
 
@@ -130,14 +138,14 @@ export default async function AdminDashboard() {
               결제 내역이 없습니다.
             </p>
           ) : (
-            stats.recentPayments.map((payment: any) => (
+            stats.recentPayments.map((payment: Payment) => (
               <div
                 key={payment.id}
                 className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
               >
                 <div>
                   <p className="text-sm font-medium">
-                    {payment.profiles?.full_name || "익명"}
+                    {payment.profiles?.[0]?.full_name || "익명"}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(payment.created_at).toLocaleString("ko-KR")}
@@ -148,19 +156,18 @@ export default async function AdminDashboard() {
                     {payment.amount?.toLocaleString()}원
                   </p>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full ${
-                      payment.status === "completed"
-                        ? "bg-green-400/20 text-green-400"
-                        : payment.status === "pending"
+                    className={`text-[10px] px-2 py-0.5 rounded-full ${payment.status === "completed"
+                      ? "bg-green-400/20 text-green-400"
+                      : payment.status === "pending"
                         ? "bg-yellow-400/20 text-yellow-400"
                         : "bg-red-400/20 text-red-400"
-                    }`}
+                      }`}
                   >
                     {payment.status === "completed"
                       ? "완료"
                       : payment.status === "pending"
-                      ? "대기"
-                      : "실패"}
+                        ? "대기"
+                        : "실패"}
                   </span>
                 </div>
               </div>

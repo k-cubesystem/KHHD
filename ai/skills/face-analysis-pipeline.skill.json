@@ -1,0 +1,284 @@
+{
+  "id": "face_analysis_pipeline",
+  "name": "고급 관상 분석 파이프라인",
+  "version": "1.0.0",
+  "description": "얼굴 이미지 업로드부터 AI 비전 분석, 오관(五官) 및 삼정(三停) 판독, 개운 이미지 생성까지 전체 파이프라인을 자동화합니다.",
+  "category": "vision-analysis",
+  "author": "Claude (해화당 UI/UX 전문가)",
+  "created": "2026-01-24",
+
+  "pipeline": {
+    "stages": [
+      {
+        "id": "stage1_image_upload",
+        "name": "이미지 업로드 및 전처리",
+        "description": "사용자가 업로드한 얼굴 이미지를 검증하고 최적화합니다.",
+        "action": "uploadAndPreprocessImage",
+        "steps": [
+          {
+            "task": "이미지 형식 검증",
+            "check": "JPG, PNG, WEBP 지원 / 최대 10MB"
+          },
+          {
+            "task": "얼굴 감지",
+            "check": "최소 1개의 얼굴이 존재하는지 확인"
+          },
+          {
+            "task": "이미지 최적화",
+            "action": "리사이징 (최대 1920px), 압축"
+          },
+          {
+            "task": "Supabase Storage 업로드",
+            "bucket": "face-images",
+            "path": "face_{userId}_{timestamp}.jpg"
+          }
+        ],
+        "output": {
+          "imageUrl": "string (public URL)",
+          "width": "number",
+          "height": "number",
+          "fileSize": "number (bytes)"
+        }
+      },
+      {
+        "id": "stage2_vision_analysis",
+        "name": "AI 비전 분석",
+        "description": "Gemini 2.5 Flash Vision으로 관상학적 특징을 분석합니다.",
+        "action": "analyzeFaceWithVision",
+        "serverAction": "app/actions/ai-saju.ts:analyzeFace",
+        "analysisPoints": {
+          "오관_五官": [
+            "귀(耳): 조상운, 어린 시절 운",
+            "눈썹(眉): 형제운, 사회성",
+            "눈(目): 정신, 지혜, 건강",
+            "코(鼻): 재물운, 자존심",
+            "입(口): 언변, 식복, 자손운"
+          ],
+          "삼정_三停": [
+            "상정(上停): 이마 - 조상, 어린 시절 (1-30세)",
+            "중정(中停): 눈썹~코 - 중년 사회생활 (31-50세)",
+            "하정(下停): 입~턱 - 말년 가정 (51세~)"
+          ],
+          "피부_찰색": [
+            "기색(氣色): 전반적 건강 상태",
+            "혈색(血色): 현재 운기 흐름"
+          ]
+        },
+        "input": {
+          "imageUrl": "from stage1",
+          "prompt": "고급 관상 분석 프롬프트 (오관, 삼정, 찰색)"
+        },
+        "output": {
+          "오관분석": {
+            "귀": "string",
+            "눈썹": "string",
+            "눈": "string",
+            "코": "string",
+            "입": "string"
+          },
+          "삼정분석": {
+            "상정": "string",
+            "중정": "string",
+            "하정": "string"
+          },
+          "피부찰색": {
+            "기색": "string",
+            "혈색": "string"
+          },
+          "신뢰도점수": "number (0-100)",
+          "종합평가": "markdown string"
+        },
+        "cost": {
+          "talisman": 2,
+          "type": "VISION_ANALYSIS"
+        }
+      },
+      {
+        "id": "stage3_destiny_solution",
+        "name": "개운(開運) 솔루션 생성",
+        "description": "분석 결과를 바탕으로 맞춤형 개운 방법을 제안합니다.",
+        "action": "generateDestinySolution",
+        "solutions": [
+          {
+            "type": "face_destiny",
+            "name": "얼굴 개운법",
+            "options": [
+              "헤어스타일",
+              "메이크업",
+              "안경/선글라스",
+              "액세서리"
+            ]
+          },
+          {
+            "type": "color_therapy",
+            "name": "색상 치료",
+            "basis": "오행 기반 색상 추천"
+          },
+          {
+            "type": "lifestyle",
+            "name": "생활 습관",
+            "areas": ["식습관", "운동", "수면"]
+          }
+        ],
+        "output": {
+          "recommendations": "string[]",
+          "imagePrompt": "string (개운 이미지 생성용)"
+        }
+      },
+      {
+        "id": "stage4_image_generation",
+        "name": "개운 이미지 생성",
+        "description": "Imagen 3을 사용하여 개운 후 모습을 시각화합니다.",
+        "action": "generateDestinyImage",
+        "serverAction": "app/actions/ai-image.ts:generateDestinyImage",
+        "input": {
+          "prompt": "from stage3.imagePrompt",
+          "type": "face",
+          "referenceDescription": "from stage2.종합평가"
+        },
+        "output": {
+          "imageData": "base64 string",
+          "generatedUrl": "string (optional)"
+        },
+        "cost": {
+          "talisman": 3,
+          "type": "IMAGE_GENERATION"
+        }
+      },
+      {
+        "id": "stage5_report_compilation",
+        "name": "통합 리포트 생성",
+        "description": "모든 분석과 이미지를 하나의 리포트로 통합합니다.",
+        "action": "compileFaceAnalysisReport",
+        "sections": [
+          "관상 분석 결과 (오관, 삼정)",
+          "현재 운세 (피부 찰색)",
+          "개운 방법 제안",
+          "개운 후 이미지"
+        ],
+        "output": {
+          "reportId": "string",
+          "pdfUrl": "string (optional)",
+          "shareableLink": "string"
+        }
+      }
+    ]
+  },
+
+  "qualityControl": {
+    "imageQuality": {
+      "minResolution": "640x480",
+      "preferredResolution": "1920x1080",
+      "lighting": "정면 조명, 그림자 최소화",
+      "angle": "정면 또는 약간의 각도 (±15도)",
+      "expression": "자연스러운 표정 권장"
+    },
+    "analysisAccuracy": {
+      "신뢰도_70이상": "고품질 분석 결과",
+      "신뢰도_50_70": "보통 품질, 참고용",
+      "신뢰도_50미만": "재촬영 권장"
+    }
+  },
+
+  "privacy": {
+    "dataRetention": "90일 (사용자 요청 시 즉시 삭제)",
+    "encryption": "저장 및 전송 시 암호화",
+    "access": "본인만 접근 가능",
+    "sharing": "사용자 명시적 동의 시에만 공유 가능"
+  },
+
+  "errorHandling": {
+    "stage1": {
+      "얼굴_미감지": "재업로드 안내 + 촬영 가이드 제공",
+      "파일_크기_초과": "자동 압축 또는 재업로드 요청",
+      "업로드_실패": "재시도 (최대 3회)"
+    },
+    "stage2": {
+      "AI_분석_실패": "재시도 → 기본 분석 템플릿 사용",
+      "신뢰도_낮음": "사용자에게 경고 표시"
+    },
+    "stage3": {
+      "솔루션_생성_실패": "일반적인 개운법 제공"
+    },
+    "stage4": {
+      "이미지_생성_실패": "텍스트 설명만 제공",
+      "부적_부족": "결제 페이지 안내"
+    }
+  },
+
+  "ui": {
+    "components": [
+      "ImageUploader (드래그앤드롭 지원)",
+      "FacePreview (업로드 전 미리보기)",
+      "AnalysisProgress (5단계 진행 표시)",
+      "ResultsDisplay (오관/삼정 탭 구조)",
+      "BeforeAfterComparison (슬라이더)"
+    ],
+    "animations": [
+      "업로드 시 Shimmer 효과",
+      "분석 중 Typing 로더",
+      "결과 표시 시 FadeInUp"
+    ]
+  },
+
+  "dependencies": {
+    "libraries": [
+      "@google/generative-ai",
+      "sharp (이미지 처리)",
+      "canvas (얼굴 감지 오버레이)"
+    ],
+    "serverActions": [
+      "app/actions/ai-saju.ts:analyzeFace",
+      "app/actions/ai-image.ts:generateDestinyImage",
+      "app/actions/wallet-actions.ts:deductTalisman"
+    ],
+    "storage": [
+      "Supabase Storage: face-images bucket",
+      "Supabase Storage: generated-images bucket"
+    ]
+  },
+
+  "testCases": [
+    {
+      "name": "정상 케이스 - 고품질 이미지",
+      "imageSpecs": {
+        "resolution": "1920x1080",
+        "format": "JPG",
+        "lighting": "정면 조명"
+      },
+      "expectedAccuracy": "> 80%",
+      "expectedDuration": "< 15초"
+    },
+    {
+      "name": "저품질 이미지",
+      "imageSpecs": {
+        "resolution": "640x480",
+        "lighting": "어두움"
+      },
+      "expectedBehavior": "신뢰도 경고 표시"
+    }
+  ],
+
+  "monitoring": {
+    "metrics": [
+      "이미지 업로드 성공률",
+      "AI 분석 신뢰도 평균",
+      "개운 이미지 생성 성공률",
+      "전체 파이프라인 완료율",
+      "단계별 평균 처리 시간"
+    ],
+    "alerts": [
+      "AI 분석 실패율 > 10%",
+      "이미지 생성 실패율 > 5%",
+      "평균 신뢰도 < 60%"
+    ]
+  },
+
+  "futureEnhancements": [
+    "실시간 웹캠 분석",
+    "AR 필터로 개운법 미리보기",
+    "연예인 관상 비교 기능",
+    "시간대별 운세 변화 추적",
+    "3D 얼굴 모델링"
+  ]
+}

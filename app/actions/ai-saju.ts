@@ -28,19 +28,40 @@ export async function analyzeSajuDetail(
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인이 필요합니다." };
 
+        // Fetch User Extended Profile
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('job, hobbies, specialties, life_philosophy, marital_status, religion')
+            .eq('id', user.id)
+            .single();
+
         const deductResult = await deductTalisman("SAJU_BASIC");
         if (!deductResult.success) return deductResult;
+
+        // Construct Context String
+        const userContext = profile ? `
+        User Background Context:
+        - Job: ${profile.job || "Unknown"}
+        - Hobbies: ${profile.hobbies || "None"}
+        - Marital Status: ${profile.marital_status || "Unknown"}
+        - Life Philosophy: ${profile.life_philosophy || "None"}
+        - Religion: ${profile.religion || "None"}
+
+        * IMPORTANT: Please incorporate this user background into your advice. For example, relate their career luck to their actual job '${profile.job}', or suggest hobbies compatible with '${profile.hobbies}'.
+        ` : "";
 
         const prompt = `
         Analyze the Saju (Four Pillars of Destiny) for:
         Name: ${name}, Gender: ${gender}
         Birth: ${birthDate} ${birthTime} (${calendarType})
 
+        ${userContext}
+
         Provide a deep, insightful analysis covering:
-        1. Core Energy (Il-gan) & Personality
-        2. Career & Wealth (Jae-seong, Gwan-seong)
-        3. Relationships (Gwan-seong/Jae-seong)
-        4. Health & Advice
+        1. Core Energy (Il-gan) & Personality (relate to their life philosophy if provided)
+        2. Career & Wealth (Jae-seong, Gwan-seong) - tailored to their job '${profile?.job || "current path"}'
+        3. Relationships (Gwan-seong/Jae-seong) - considering they are '${profile?.marital_status || "single"}'
+        4. Health & Advice (suggest tailored activities)
 
         Format: Returns JSON strictly.
         {
@@ -57,9 +78,10 @@ export async function analyzeSajuDetail(
 
         return { success: true, ...JSON.parse(jsonMatch[0]) };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Saju Error:", error);
-        return { success: false, error: error.message || "사주 분석 중 오류가 발생했습니다." };
+        const errorMessage = error instanceof Error ? error.message : "사주 분석 중 오류가 발생했습니다.";
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -87,7 +109,7 @@ export async function getTodayFortune(birthDate: string) {
 
         if (!jsonMatch) return { success: false, error: "Parse Error" };
         return { success: true, ...JSON.parse(jsonMatch[0]) };
-    } catch (error) {
+    } catch {
         return { success: false, error: "운세 조회 실패" };
     }
 }
@@ -228,9 +250,10 @@ ${goal === 'wealth' ? '재물운' : goal === 'love' ? '도화운' : '관운'} �
         if (!jsonMatch) throw new Error("AI 응답 파싱 실패 (JSON 형식 아님)");
         return { success: true, ...JSON.parse(jsonMatch[0]) };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Face Analysis Error:", error);
-        return { success: false, error: error.message || "분석 실패 (상세 로그 확인)" };
+        const errorMessage = error instanceof Error ? error.message : "분석 실패 (상세 로그 확인)";
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -284,9 +307,10 @@ export async function analyzePalm(imageBase64: string) {
         if (!jsonMatch) throw new Error("AI 응답 파싱 실패 (JSON 형식 아님)");
         return { success: true, ...JSON.parse(jsonMatch[0]) };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Palm Analysis Error:", error);
-        return { success: false, error: error.message || "손금 분석 실패" };
+        const errorMessage = error instanceof Error ? error.message : "손금 분석 실패";
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -324,9 +348,10 @@ export async function analyzeInteriorForFengshui(imageBase64: string, theme: Int
         if (!jsonMatch) throw new Error("JSON Parse Error");
         return { success: true, ...JSON.parse(jsonMatch[0]) };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Feng Shui Error:", error);
-        return { success: false, error: error.message || "분석 실패" };
+        const errorMessage = error instanceof Error ? error.message : "분석 실패";
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -388,8 +413,9 @@ export async function generateDestinyImage(basePrompt: string, style: "face" | "
 
         return { success: true, imageData };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Image Gen Error:", error);
-        return { success: false, error: error.message || "이미지 생성 실패" };
+        const errorMessage = error instanceof Error ? error.message : "이미지 생성 실패";
+        return { success: false, error: errorMessage };
     }
 }

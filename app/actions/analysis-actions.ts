@@ -132,8 +132,9 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
         revalidatePath("/protected/analysis");
         revalidatePath("/protected/history");
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("AI Analysis Critical Error:", error);
-        throw new Error(error.message || "AI 분석 중 치명적인 오류가 발생했습니다.");
+        const errorMessage = error instanceof Error ? error.message : "AI 분석 중 치명적인 오류가 발생했습니다.";
+        throw new Error(errorMessage);
     }
 }

@@ -213,7 +213,7 @@ const PillarCell = ({ pillar, label, isDay }: { pillar: SajuPillar; label: strin
                             </div>
                             <div className="pt-2 border-t border-zen-border/50">
                                 <p className="text-[10px] text-zen-muted italic">
-                                    십신 및 12운성 분석은 곧 추가됩니다
+                                    심화 분석 기능이 준비 중입니다
                                 </p>
                             </div>
                         </div>
@@ -256,12 +256,12 @@ export function PremiumManseCard({ manse, className }: PremiumManseCardProps) {
 
                 {/* 하단 설명 */}
                 <motion.div
-                    className="bg-zen-bg/30 p-6 text-center border-t border-zen-border"
+                    className="bg-gray-50 p-6 text-center border-t border-zen-border"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                 >
-                    <p className="text-sm text-zen-text leading-relaxed font-serif">
+                    <p className="text-sm text-gray-900 leading-relaxed font-serif">
                         당신은{" "}
                         <span className="font-bold text-zen-wood">
                             {manse.day.label.split(" ")[0]} {manse.day.ji}({manse.day.label.split(" ")[1]})
@@ -273,7 +273,7 @@ export function PremiumManseCard({ manse, className }: PremiumManseCardProps) {
                         </span>
                         의 계절을 품고 있습니다.
                     </p>
-                    <p className="text-xs text-zen-muted mt-3 italic">
+                    <p className="text-xs text-gray-500 mt-3 italic">
                         각 기둥을 클릭하여 상세 정보를 확인하세요
                     </p>
                 </motion.div>

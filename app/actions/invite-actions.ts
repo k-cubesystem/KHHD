@@ -168,11 +168,12 @@ export async function analyzeCompatibility(
         }
 
         return { success: false, error: "궁합 데이터 파싱 실패" };
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Compatibility Analysis Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "궁합 분석 중 오류가 발생했습니다.";
         return {
             success: false,
-            error: error.message || "궁합 분석 중 오류가 발생했습니다.",
+            error: errorMessage,
         };
     }
 }

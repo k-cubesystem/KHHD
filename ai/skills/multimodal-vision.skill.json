@@ -1,0 +1,330 @@
+{
+  "id": "multimodal_vision_analysis",
+  "name": "멀티모달 비전 분석 스킬",
+  "version": "1.0.0",
+  "description": "얼굴(관상) + 손금(수상) + 사주(명리)를 통합하여 3차원 운명 분석을 제공합니다. 각 영역의 데이터를 교차 검증하여 신뢰도를 높입니다.",
+  "category": "integrated-analysis",
+  "author": "Claude (해화당 UI/UX 전문가)",
+  "created": "2026-01-24",
+
+  "concept": {
+    "philosophy": "천지인(天地人) 통합 분석",
+    "천_天": "사주(四柱) - 태어난 시간의 기운",
+    "지_地": "관상(觀相) - 부모로부터 받은 형체",
+    "인_人": "수상(手相) - 스스로 만드는 운명"
+  },
+
+  "dataModalities": [
+    {
+      "modality": "text",
+      "source": "사주 데이터 (생년월일시)",
+      "analysis": "만세력, 오행, 대운",
+      "weight": 0.4
+    },
+    {
+      "modality": "vision_face",
+      "source": "얼굴 이미지",
+      "analysis": "오관, 삼정, 피부 찰색",
+      "weight": 0.3
+    },
+    {
+      "modality": "vision_palm",
+      "source": "손금 이미지",
+      "analysis": "삼대선(생명선/지능선/감정선), 주요 문양",
+      "weight": 0.3
+    }
+  ],
+
+  "workflow": {
+    "phases": [
+      {
+        "id": "phase1_data_collection",
+        "name": "데이터 수집",
+        "description": "사용자로부터 사주, 얼굴, 손금 데이터를 모두 수집합니다.",
+        "tasks": [
+          {
+            "task": "사주 정보 입력",
+            "fields": ["이름", "성별", "생년월일시", "양/음력"]
+          },
+          {
+            "task": "얼굴 사진 업로드",
+            "requirements": ["정면", "자연광", "표정 중립"]
+          },
+          {
+            "task": "손금 사진 업로드",
+            "requirements": ["양손 모두", "손바닥 펼침", "선명한 조명"]
+          }
+        ],
+        "validation": {
+          "completeness": "3개 데이터 모두 필수",
+          "quality": "이미지 해상도 640px 이상"
+        }
+      },
+      {
+        "id": "phase2_parallel_analysis",
+        "name": "병렬 분석",
+        "description": "3가지 데이터를 동시에 분석하여 시간을 단축합니다.",
+        "parallel_tasks": [
+          {
+            "task": "사주 분석",
+            "skill": "saju_analysis_workflow",
+            "duration": "~8초"
+          },
+          {
+            "task": "관상 분석",
+            "skill": "face_analysis_pipeline",
+            "duration": "~12초"
+          },
+          {
+            "task": "수상 분석",
+            "action": "analyzePalm",
+            "description": "손금의 삼대선과 주요 문양을 판독합니다.",
+            "analysis": {
+              "생명선": "건강, 체력, 수명",
+              "지능선": "사고방식, 재능",
+              "감정선": "애정, 감성",
+              "운명선": "직업, 성취 (선택)",
+              "재물선": "금전운 (선택)",
+              "결혼선": "애정운 (선택)"
+            },
+            "duration": "~10초"
+          }
+        ],
+        "optimization": {
+          "method": "Promise.all() 사용",
+          "expectedTotalTime": "~12초 (병렬 처리)"
+        }
+      },
+      {
+        "id": "phase3_cross_validation",
+        "name": "교차 검증",
+        "description": "3가지 분석 결과를 비교하여 일치도를 확인합니다.",
+        "validations": [
+          {
+            "check": "성격 일치도",
+            "compare": [
+              "사주 → 일간(日干)의 성격",
+              "관상 → 오관 종합 성격",
+              "수상 → 지능선 성격"
+            ],
+            "threshold": "70% 이상 일치 시 신뢰도 높음"
+          },
+          {
+            "check": "재물운 일치도",
+            "compare": [
+              "사주 → 재성(財星) 분석",
+              "관상 → 코(鼻) 분석",
+              "수상 → 재물선 분석"
+            ]
+          },
+          {
+            "check": "건강운 일치도",
+            "compare": [
+              "사주 → 오행 균형",
+              "관상 → 피부 찰색",
+              "수상 → 생명선 길이/깊이"
+            ]
+          }
+        ],
+        "output": {
+          "consistencyScore": "number (0-100)",
+          "divergentPoints": "string[] (불일치 항목)",
+          "interpretation": "일치 → 확실한 운명 / 불일치 → 변화 가능성"
+        }
+      },
+      {
+        "id": "phase4_synthesis",
+        "name": "종합 해석",
+        "description": "3가지 분석을 통합하여 최종 운명 리포트를 생성합니다.",
+        "synthesis": {
+          "천_사주": "타고난 운명의 큰 틀 (변경 불가)",
+          "지_관상": "부모로부터 받은 기질 (변경 어려움)",
+          "인_수상": "노력으로 개척하는 운 (변경 가능)"
+        },
+        "sections": [
+          {
+            "title": "천지인 통합 성격 분석",
+            "content": "3가지 데이터의 성격 특성을 종합"
+          },
+          {
+            "title": "운명 vs 노력의 비율",
+            "visualization": "파이 차트 (타고난 운 vs 만드는 운)"
+          },
+          {
+            "title": "인생 시기별 운세",
+            "periods": [
+              "청년기 (1-30세): 관상 상정 + 사주 초년운",
+              "중년기 (31-50세): 관상 중정 + 사주 대운",
+              "노년기 (51세~): 관상 하정 + 수상 생명선"
+            ]
+          },
+          {
+            "title": "개운 로드맵",
+            "recommendations": [
+              "즉시 실천 (수상 기반 - 습관 변화)",
+              "중기 계획 (관상 기반 - 외모 관리)",
+              "장기 전략 (사주 기반 - 대운 활용)"
+            ]
+          }
+        ],
+        "output": {
+          "finalReport": "markdown string (5000자 이상)",
+          "confidenceLevel": "high|medium|low",
+          "actionItems": "string[] (실행 가능한 개운법)"
+        }
+      },
+      {
+        "id": "phase5_visualization",
+        "name": "3D 시각화",
+        "description": "천지인 데이터를 3차원 그래프로 시각화합니다.",
+        "visualizations": [
+          {
+            "type": "radar_chart",
+            "name": "천지인 균형도",
+            "axes": [
+              "재물운 (사주/관상/수상)",
+              "건강운",
+              "애정운",
+              "사업운",
+              "학문운"
+            ]
+          },
+          {
+            "type": "timeline",
+            "name": "인생 흐름도",
+            "layers": [
+              "대운 타임라인 (사주)",
+              "삼정 변화 (관상)",
+              "손금 발달 (수상)"
+            ]
+          },
+          {
+            "type": "heatmap",
+            "name": "일치도 매트릭스",
+            "cells": "사주 vs 관상 vs 수상 각 항목별 일치도"
+          }
+        ]
+      }
+    ]
+  },
+
+  "aiModel": {
+    "provider": "Google Gemini",
+    "model": "gemini-2.5-flash-lite",
+    "capabilities": [
+      "멀티모달 입력 (텍스트 + 이미지)",
+      "긴 컨텍스트 처리 (100만 토큰)",
+      "JSON 출력 강제"
+    ],
+    "prompting": {
+      "systemPrompt": "당신은 동양 명리학, 관상학, 수상학의 전문가입니다. 사주, 얼굴, 손금 데이터를 통합하여 종합적인 운명 분석을 제공하세요.",
+      "fewShot": "예제 3개 포함 (고일치/중일치/저일치 케이스)",
+      "outputFormat": "JSON with markdown embedded"
+    }
+  },
+
+  "cost": {
+    "talisman": 5,
+    "type": "PREMIUM_MULTIMODAL",
+    "breakdown": {
+      "사주_분석": 1,
+      "관상_분석": 2,
+      "수상_분석": 1,
+      "통합_해석": 1
+    },
+    "discount": "패키지 할인 -20% (개별 구매 시 6개 → 5개)"
+  },
+
+  "userFlow": {
+    "entry": "프로필 페이지 '천지인 통합 분석' 버튼",
+    "steps": [
+      "데이터 수집 화면 (3개 입력)",
+      "분석 중 로딩 (병렬 처리 애니메이션)",
+      "교차 검증 결과 (일치도 표시)",
+      "종합 리포트 (탭 구조: 사주/관상/수상/통합)",
+      "개운 액션 플랜 (체크리스트 형태)"
+    ],
+    "exitPoints": [
+      "리포트 저장 → PDF 다운로드",
+      "리포트 공유 → SNS 공유 링크",
+      "추가 분석 → 가족 멤버 추가 분석"
+    ]
+  },
+
+  "errorHandling": {
+    "missingData": "3가지 중 1개 누락 시 → 부분 분석 제공 + 경고",
+    "lowQualityImage": "재촬영 가이드 + 예시 이미지 제공",
+    "lowConsistency": "불일치 항목 강조 + '운명은 변할 수 있습니다' 메시지",
+    "aiFailure": "재시도 (최대 2회) → 개별 분석 결과만 제공"
+  },
+
+  "privacy": {
+    "dataStorage": "90일 보관 후 자동 삭제",
+    "anonymization": "리포트에서 개인정보 마스킹",
+    "consent": "데이터 수집 전 명시적 동의",
+    "deletion": "언제든지 즉시 삭제 가능"
+  },
+
+  "dependencies": {
+    "skills": [
+      "saju_analysis_workflow",
+      "face_analysis_pipeline"
+    ],
+    "serverActions": [
+      "app/actions/ai-saju.ts",
+      "app/actions/ai-image.ts",
+      "app/actions/analysis-actions.ts"
+    ],
+    "libraries": [
+      "@google/generative-ai",
+      "recharts (3D 시각화)",
+      "three.js (optional, 3D 모델)",
+      "jsPDF (PDF 생성)"
+    ]
+  },
+
+  "testCases": [
+    {
+      "name": "완벽 일치 케이스",
+      "scenario": "사주/관상/수상 모두 재물운 강함",
+      "expectedConsistency": "> 85%",
+      "expectedInterpretation": "확실한 재물운 보유"
+    },
+    {
+      "name": "불일치 케이스",
+      "scenario": "사주는 약하나 수상은 강함",
+      "expectedConsistency": "50-70%",
+      "expectedInterpretation": "노력으로 극복 가능한 운명"
+    }
+  ],
+
+  "monitoring": {
+    "metrics": [
+      "데이터 수집 완료율",
+      "평균 일치도 점수",
+      "병렬 처리 성능",
+      "사용자 만족도",
+      "리포트 공유율"
+    ],
+    "alerts": [
+      "평균 일치도 < 60%",
+      "병렬 처리 시간 > 20초",
+      "AI 실패율 > 10%"
+    ]
+  },
+
+  "roadmap": [
+    {
+      "phase": "MVP (현재)",
+      "features": ["사주/관상/수상 통합 분석", "교차 검증", "텍스트 리포트"]
+    },
+    {
+      "phase": "v2.0",
+      "features": ["3D 시각화", "타임라인 애니메이션", "AR 손금 가이드"]
+    },
+    {
+      "phase": "v3.0",
+      "features": ["가족 궁합 매트릭스", "AI 코칭", "실시간 운세 변화 추적"]
+    }
+  ]
+}

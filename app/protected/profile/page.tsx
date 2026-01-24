@@ -14,6 +14,7 @@ import { calculateManse, calculateDaewoon } from "@/lib/saju/manse";
 import { PremiumManseCard } from "@/components/saju/premium-manse-card";
 import { FiveElementsChart } from "@/components/saju/five-elements-chart";
 import { DaewoonTimeline } from "@/components/saju/daewoon-timeline";
+import { ProfileEditForm } from "@/components/profile/profile-edit-form";
 
 export default async function ProfilePage() {
     const supabase = await createClient();
@@ -50,32 +51,40 @@ export default async function ProfilePage() {
         );
     }
 
-    // Fetch Profile Data (Birth info) - Try to get from 'profiles' table
+    // Fetch Profile Data (Basic)
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
+    // Fetch Saju Data from family_members (relationship = '본인')
+    const { data: mySaju } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('relationship', '본인')
+        .maybeSingle();
+
     const initial = user.email?.charAt(0).toUpperCase() || "U";
     const avatarUrl = user.user_metadata.avatar_url;
 
     // Check if user has entered saju info
-    const hasSajuInfo = profile?.birth_date && profile?.birth_time;
+    const hasSajuInfo = mySaju?.birth_date && mySaju?.birth_time;
 
     // Calculate Manse if info exists
-    const manse = hasSajuInfo ? calculateManse(profile.birth_date, profile.birth_time) : null;
+    const manse = hasSajuInfo ? calculateManse(mySaju.birth_date, mySaju.birth_time) : null;
 
     // Calculate Daewoon (대운) if info exists
     let daewoon = null;
-    if (hasSajuInfo && profile.birth_date && profile.birth_time && profile.gender) {
-        const birthYear = parseInt(profile.birth_date.split('-')[0]);
+    if (hasSajuInfo && mySaju.birth_date && mySaju.birth_time && mySaju.gender) {
+        const birthYear = parseInt(mySaju.birth_date.split('-')[0]);
         const currentYear = new Date().getFullYear();
         const currentAge = currentYear - birthYear;
         daewoon = calculateDaewoon(
-            profile.birth_date,
-            profile.birth_time,
-            profile.gender as 'male' | 'female',
+            mySaju.birth_date,
+            mySaju.birth_time,
+            mySaju.gender as 'male' | 'female',
             currentAge
         );
     }
@@ -180,13 +189,11 @@ export default async function ProfilePage() {
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="pb-4 pt-1">
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-zen-muted">이름</Label>
-                                        <Input defaultValue={user.user_metadata.full_name} disabled className="bg-zen-bg" />
-                                    </div>
-                                    <Button className="w-full" disabled>수정 불가 (관리자 문의)</Button>
-                                </div>
+                                <ProfileEditForm
+                                    userId={user.id}
+                                    initialData={mySaju}
+                                    profileData={profile}
+                                />
                             </AccordionContent>
                         </AccordionItem>
 

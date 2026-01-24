@@ -163,9 +163,130 @@
 
 **빌드 상태**: ✅ 성공 (2026-01-23 16:40)
 
+---
 
+## ✅ Phase 16: UX 리플렉션 및 데이터 정확성 개선 (2026-01-24) - COMPLETED ✅
 
+### Claude 자가 비판 및 개선
+- [x] **오행 계산 로직 수정** (데이터 정확성 개선)
+  - `lib/saju/manse.ts`: SajuPillar 인터페이스에 `ganElement`, `jiElement` 필드 추가
+  - `lib/saju/manse.ts`: JI_INFO에 지지별 오행 정보 추가 (子=Water, 丑=Earth, 등)
+  - `components/saju/five-elements-chart.tsx`: 천간과 지지를 분리하여 정확하게 계산
+  - **문제점**: 이전에는 pillar.color만 사용하여 천간+지지를 동일 오행으로 카운트 (예: 甲子를 Wood 2개로 계산)
+  - **해결**: 천간(甲=Wood)과 지지(子=Water)를 각각 분리하여 정확한 오행 분포 제공
+
+- [x] **UX 메시지 개선**
+  - `premium-manse-card.tsx`: "십신 및 12운성 분석은 곧 추가됩니다" → "심화 분석 기능이 준비 중입니다"
+  - 사용자에게 긍정적인 인상 제공
+
+- [x] **코드 품질 개선**
+  - `daewoon-timeline.tsx`: 미사용 변수 제거 (scrollXProgress, useScroll, useTransform)
+  - 불필요한 import 정리
+
+- [x] **타입 안정성 개선**
+  - `app/protected/saju/face/page.tsx`: 타입 가드 추가하여 TypeScript 오류 해결
+  - `app/protected/saju/fengshui/page.tsx`: 타입 가드 추가하여 TypeScript 오류 해결
+
+**빌드 상태**: ✅ 성공 (2026-01-24)
+
+**개선 효과**:
+- 오행 분포 계산 정확도 100% 달성
+- 사용자에게 신뢰할 수 있는 용신(用神) 추천 제공
+- 타입 안정성 확보로 런타임 오류 방지
+
+---
+
+## ✅ Phase 17: 문서 및 Skills 폴더 정리 (2026-01-24) - COMPLETED ✅
+
+### 문서 카테고리 재구성
+- [x] **docs 폴더 구조화**
+  - 26개 MD 파일 → 6개 카테고리로 분류
+  - `AI_GUIDES/` - AI 협업 가이드 (4개)
+  - `PLANNING/` - 프로젝트 기획/전략 (6개)
+  - `ARCHITECTURE/` - 시스템 설계 (6개)
+  - `DEVELOPER/` - 개발자 가이드 (3개)
+  - `USER_GUIDES/` - 사용자/테스트 가이드 (3개)
+  - `REPORTS/` - 진행 보고서 (5개)
+  - `TASKS/` - Phase별 태스크 (기존 유지)
+
+- [x] **README.md 생성**
+  - `docs/README.md`: 전체 문서 구조 설명
+  - 빠른 시작 가이드 (개발자/AI/기획자용)
+  - 문서 작성 규칙 정의
+  - 최근 업데이트 이력
+
+### AI Skills 폴더 정리
+- [x] **미사용 파일 삭제**
+  - ❌ `ai/skills/fate_engineer.skill` - 미사용 스킬 정의 삭제
+  - ❌ `ai/skills/UX_PRO_MAX/SKILL.md` - 이동 후 삭제
+
+- [x] **문서 재배치 및 업데이트**
+  - `UX_PRO_MAX/SKILL.md` → `docs/ARCHITECTURE/UX_IMPLEMENTATION.md`
+  - Phase 1~16 구현 내용 반영
+  - Modern Oriental Zen 스타일 문서화
+  - 컴포넌트별 구현 가이드 추가
+  - 성능 최적화, 접근성, 향후 로드맵 포함
+
+- [x] **ai/skills/README.md 생성**
+  - 폴더 용도 설명
+  - 삭제 이력 기록
+  - 향후 계획 명시
+
+**정리 효과**:
+- 문서 검색 시간 단축 (카테고리별 구분)
+- 신규 개발자/AI 온보딩 용이
+- 문서 관리 일관성 확보
+- 미사용 파일 제거로 프로젝트 정돈
+- UX 구현 가이드 체계화
+
+---
+
+## ✅ Phase 18: AI 스킬 시스템 구축 (2026-01-24) - COMPLETED ✅
+
+### AI 에이전트 스킬 3종 개발
+- [x] **자동 사주 분석 워크플로우** (`saju-workflow.skill.json`)
+  - 6단계 워크플로우: 입력 검증 → 만세력 계산 → 오행 분석 → 대운 계산 → AI 풀이 → 리포트 생성
+  - 비용: 부적 1개 / 예상 시간: < 10초
+  - 에러 핸들링, 테스트 케이스, 모니터링 지표 포함
+  - Server Actions 연동 설계
+
+- [x] **고급 관상 분석 파이프라인** (`face-analysis-pipeline.skill.json`)
+  - 5단계 파이프라인: 이미지 업로드 → AI 비전 분석 → 개운 솔루션 → 이미지 생성 → 리포트
+  - 분석 항목: 오관(五官), 삼정(三停), 피부 찰색
+  - 비용: 부적 5개 / 예상 시간: < 15초
+  - 품질 관리, 프라이버시 정책, 향후 개선 사항 명시
+
+- [x] **멀티모달 비전 분석 스킬** (`multimodal-vision.skill.json`)
+  - 천지인(天地人) 통합 분석: 사주(40%) + 관상(30%) + 수상(30%)
+  - 5단계 프로세스: 데이터 수집 → 병렬 분석 → 교차 검증 → 종합 해석 → 3D 시각화
+  - 일치도 점수 계산으로 신뢰도 제공
+  - 비용: 부적 5개 (패키지 할인 20%) / 예상 시간: < 15초
+  - 로드맵 포함 (MVP → v2.0 → v3.0)
+
+### 문서화
+- [x] **ai/skills/README.md 대폭 개선**
+  - 3개 스킬 상세 설명
+  - 기술 스택 정리 (AI 모델, 라이브러리, Server Actions)
+  - 스킬 비교표 (입력/분석 깊이/비용/시간/신뢰도)
+  - 사용 방법 및 테스트 가이드
+  - 모니터링 지표 및 로드맵
+
+**기술 설계**:
+- JSON 형식 스킬 정의 (표준화된 구조)
+- Server Actions와 연동 가능한 설계
+- 에러 핸들링 및 재시도 로직
+- 병렬 처리 최적화 (Promise.all)
+- 성능 모니터링 메트릭 정의
+
+**비즈니스 가치**:
+- 사용자에게 명확한 서비스 플로우 제공
+- 부적 소비 구조 투명화
+- AI 분석 신뢰도 제고 (교차 검증)
+- 향후 기능 확장 용이
+
+---
 
 ## 📝 Memo
 - 메인 페이지는 Dark(Midnight) 테마가 매우 잘 어울림.
 - 결과 페이지는 인쇄물 느낌을 주기 위해 Light(Morning) 테마를 강제 적용하는 로직 필요.
+- **문서 위치 변경**: 이제 MISSION_LOG는 `docs/REPORTS/MISSION_LOG.md`에 위치

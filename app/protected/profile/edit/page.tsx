@@ -13,16 +13,24 @@ export default async function ProfileEditPage() {
         return redirect("/auth/login");
     }
 
-    // Fetch existing profile data
+    // Fetch existing profile data (Basic Info & Extra Fields)
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
+    // Fetch existing Saju data (from family_members)
+    const { data: sajuRecord } = await supabase
+        .from('family_members')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('relationship', '본인')
+        .maybeSingle();
+
     return (
         <div className="min-h-screen bg-zen-bg font-sans pb-20">
-            <div className="max-w-2xl mx-auto px-6 py-12 space-y-6">
+            <div className="max-w-3xl mx-auto px-6 py-12 space-y-6">
                 {/* Back Button */}
                 <Link
                     href="/protected/profile"
@@ -35,20 +43,19 @@ export default async function ProfileEditPage() {
                 {/* Header */}
                 <div className="space-y-2">
                     <h1 className="text-3xl font-serif font-bold text-zen-text">
-                        사주 정보 입력
+                        내 정보 수정
                     </h1>
                     <p className="text-zen-muted">
-                        정확한 사주 분석을 위해 생년월일시 정보를 입력해 주세요.
+                        정확한 사주 분석과 맞춤형 서비스를 위해 상세 정보를 입력해 주세요.
                     </p>
                 </div>
 
-                {/* Form Card */}
-                <Card className="border-zen-border shadow-lg bg-white">
-                    <ProfileEditForm
-                        userId={user.id}
-                        initialData={profile}
-                    />
-                </Card>
+                {/* Form Component (Interior Card) */}
+                <ProfileEditForm
+                    userId={user.id}
+                    initialData={sajuRecord}
+                    profileData={profile}
+                />
             </div>
         </div>
     );

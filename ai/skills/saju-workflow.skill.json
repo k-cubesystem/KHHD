@@ -1,0 +1,211 @@
+{
+  "id": "saju_analysis_workflow",
+  "name": "자동 사주 분석 워크플로우",
+  "version": "1.0.0",
+  "description": "사용자의 생년월일시 입력부터 AI 사주 분석, 오행 균형, 대운 계산까지 전체 워크플로우를 자동화합니다.",
+  "category": "analysis",
+  "author": "Claude (해화당 UI/UX 전문가)",
+  "created": "2026-01-24",
+
+  "workflow": {
+    "steps": [
+      {
+        "id": "step1_input_validation",
+        "name": "입력 검증",
+        "description": "생년월일시, 성별, 양/음력 정보를 검증합니다.",
+        "action": "validateBirthInput",
+        "input": {
+          "name": "string",
+          "gender": "male|female",
+          "birthDate": "YYYY-MM-DD",
+          "birthTime": "HH:mm",
+          "calendarType": "solar|lunar"
+        },
+        "output": {
+          "isValid": "boolean",
+          "errors": "string[]"
+        }
+      },
+      {
+        "id": "step2_manse_calculation",
+        "name": "만세력 계산",
+        "description": "lunar-javascript를 사용하여 사주 팔자(四柱八字)를 계산합니다.",
+        "action": "calculateManse",
+        "serverAction": "lib/saju/manse.ts:calculateManse",
+        "input": {
+          "birthDate": "from step1",
+          "birthTime": "from step1"
+        },
+        "output": {
+          "year": "SajuPillar",
+          "month": "SajuPillar",
+          "day": "SajuPillar",
+          "time": "SajuPillar"
+        }
+      },
+      {
+        "id": "step3_five_elements",
+        "name": "오행 균형 분석",
+        "description": "천간과 지지의 오행을 분리하여 정확한 분포를 계산합니다.",
+        "action": "calculateFiveElements",
+        "component": "components/saju/five-elements-chart.tsx",
+        "input": {
+          "manse": "from step2"
+        },
+        "output": {
+          "distribution": {
+            "Wood": "number",
+            "Fire": "number",
+            "Earth": "number",
+            "Metal": "number",
+            "Water": "number"
+          },
+          "recommendedElement": "string (용신)"
+        }
+      },
+      {
+        "id": "step4_daewoon",
+        "name": "대운 계산",
+        "description": "10년 단위 대운 타임라인을 생성하고 현재 운을 표시합니다.",
+        "action": "calculateDaewoon",
+        "serverAction": "lib/saju/manse.ts:calculateDaewoon",
+        "input": {
+          "birthDate": "from step1",
+          "birthTime": "from step1",
+          "gender": "from step1",
+          "currentAge": "number (만 나이)"
+        },
+        "output": {
+          "periods": "DaewoonPeriod[]",
+          "currentPeriod": "DaewoonPeriod"
+        }
+      },
+      {
+        "id": "step5_ai_analysis",
+        "name": "AI 사주 풀이",
+        "description": "Gemini 2.5 Flash를 사용하여 상세한 사주 해석을 생성합니다.",
+        "action": "analyzeSajuDetail",
+        "serverAction": "app/actions/ai-saju.ts:analyzeSajuDetail",
+        "input": {
+          "name": "from step1",
+          "gender": "from step1",
+          "birthDate": "from step1",
+          "birthTime": "from step1",
+          "calendarType": "from step1"
+        },
+        "output": {
+          "coreCharacter": "string",
+          "fiveElements": "object",
+          "detailedAnalysis": "markdown string"
+        },
+        "cost": {
+          "talisman": 1,
+          "type": "SAJU_BASIC"
+        }
+      },
+      {
+        "id": "step6_report_generation",
+        "name": "리포트 생성",
+        "description": "모든 분석 결과를 통합하여 사용자에게 제공합니다.",
+        "action": "generateSajuReport",
+        "input": {
+          "manse": "from step2",
+          "fiveElements": "from step3",
+          "daewoon": "from step4",
+          "aiAnalysis": "from step5"
+        },
+        "output": {
+          "reportId": "string",
+          "pdfUrl": "string (optional)",
+          "timestamp": "ISO8601"
+        }
+      }
+    ]
+  },
+
+  "errorHandling": {
+    "step1": "사용자에게 입력 오류 안내 → 재입력 요청",
+    "step2": "만세력 계산 실패 → lunar-javascript 라이브러리 오류 로깅",
+    "step3": "오행 계산 실패 → 기본값(균등 분포) 사용",
+    "step4": "대운 계산 실패 → 스킵하고 다른 분석 계속 진행",
+    "step5": "AI 분석 실패 → 재시도 (최대 3회) → 기본 템플릿 사용",
+    "step6": "리포트 생성 실패 → 임시 저장 후 사용자에게 알림"
+  },
+
+  "ui": {
+    "progressSteps": [
+      "입력 확인",
+      "만세력 계산",
+      "오행 분석",
+      "대운 계산",
+      "AI 풀이",
+      "리포트 생성"
+    ],
+    "loadingMessages": [
+      "당신의 사주를 계산하고 있습니다...",
+      "천간과 지지의 오행을 분석 중입니다...",
+      "100년의 대운 흐름을 그리고 있습니다...",
+      "AI가 당신의 운명을 풀이하고 있습니다...",
+      "결과를 정리하고 있습니다..."
+    ]
+  },
+
+  "dependencies": {
+    "libraries": [
+      "lunar-javascript",
+      "@google/generative-ai",
+      "framer-motion",
+      "recharts"
+    ],
+    "serverActions": [
+      "app/actions/ai-saju.ts",
+      "app/actions/wallet-actions.ts"
+    ],
+    "components": [
+      "components/saju/premium-manse-card.tsx",
+      "components/saju/five-elements-chart.tsx",
+      "components/saju/daewoon-timeline.tsx"
+    ]
+  },
+
+  "testCases": [
+    {
+      "name": "정상 케이스 - 남성, 양력",
+      "input": {
+        "name": "홍길동",
+        "gender": "male",
+        "birthDate": "1990-01-15",
+        "birthTime": "14:30",
+        "calendarType": "solar"
+      },
+      "expectedSteps": 6,
+      "expectedDuration": "< 10초"
+    },
+    {
+      "name": "자정 경계 케이스",
+      "input": {
+        "name": "김철수",
+        "gender": "male",
+        "birthDate": "1985-05-20",
+        "birthTime": "23:45",
+        "calendarType": "lunar"
+      },
+      "note": "자시(23:00-01:00) 경계 처리 확인"
+    }
+  ],
+
+  "monitoring": {
+    "metrics": [
+      "워크플로우 완료율",
+      "각 단계별 실패율",
+      "평균 처리 시간",
+      "AI 응답 시간",
+      "부적(Talisman) 소비량"
+    ],
+    "alerts": [
+      "AI 분석 실패율 > 5%",
+      "워크플로우 완료율 < 90%",
+      "평균 처리 시간 > 15초"
+    ]
+  }
+}

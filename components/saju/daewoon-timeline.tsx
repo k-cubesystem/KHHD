@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,6 @@ const ELEMENT_COLORS: Record<string, string> = {
 
 export function DaewoonTimeline({ periods, className }: DaewoonTimelineProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const { scrollXProgress } = useScroll({ container: scrollRef });
     const currentPeriod = periods.find(p => p.isCurrent);
 
     return (

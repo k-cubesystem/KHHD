@@ -104,7 +104,8 @@ export default function FaceDestinyPage() {
                 setGeneratedImage(result.imageData);
                 toast.success("개운(開運) 이미지가 생성되었습니다!");
             } else {
-                toast.error(result.error || "이미지 생성 실패");
+                const errorMsg = 'error' in result ? result.error : "이미지 생성 실패";
+                toast.error(errorMsg || "이미지 생성 실패");
             }
         } catch (err) {
             toast.error("이미지 생성 중 오류가 발생했습니다.");
