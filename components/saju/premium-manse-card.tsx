@@ -134,7 +134,7 @@ const PillarCell = ({ pillar, label, isDay }: { pillar: SajuPillar; label: strin
                 {/* 천간 (상단) */}
                 <div className="relative h-32 flex flex-col items-center justify-center p-2 border-b border-zen-border/30">
                     <motion.span
-                        className="text-4xl font-serif font-bold relative"
+                        className="text-4xl font-serif font-bold relative text-gray-900 z-10 drop-shadow-sm"
                         initial={{ opacity: 0, scale: 0.5 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
@@ -157,23 +157,23 @@ const PillarCell = ({ pillar, label, isDay }: { pillar: SajuPillar; label: strin
                             </motion.div>
                         )}
                     </motion.span>
-                    <span className="text-[10px] opacity-70 mt-1">천간</span>
+                    <span className="text-[10px] text-gray-600 font-bold mt-1 z-10">천간</span>
                     {isDay && (
-                        <span className="text-[10px] font-bold text-zen-wood mt-0.5">나(我)</span>
+                        <span className="text-[10px] font-bold text-zen-wood mt-0.5 z-10">나(我)</span>
                     )}
                 </div>
 
                 {/* 지지 (하단) */}
                 <div className="relative h-32 flex flex-col items-center justify-center p-2">
                     <motion.span
-                        className="text-4xl font-serif font-bold"
+                        className="text-4xl font-serif font-bold text-gray-900 z-10 drop-shadow-sm"
                         initial={{ opacity: 0, scale: 0.5 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
                         {pillar.ji}
                     </motion.span>
-                    <span className="text-[10px] opacity-70 mt-1">{pillar.label}</span>
+                    <span className="text-[10px] text-gray-600 font-bold mt-1 z-10">{pillar.label}</span>
                 </div>
 
                 {/* 확장 인디케이터 */}

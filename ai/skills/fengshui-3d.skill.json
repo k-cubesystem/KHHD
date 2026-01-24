@@ -1,0 +1,117 @@
+{
+  "id": "fengshui_3d_simulation",
+  "name": "풍수 인테리어 스킬 (3D 시뮬레이션)",
+  "version": "1.0.0",
+  "description": "사용자의 사주에 맞는 인테리어를 3D로 시뮬레이션하고, 방위별 가구 배치를 추천합니다.",
+  "category": "lifestyle-solution",
+  "author": "Claude",
+  "created": "2026-01-24",
+
+  "features": [
+    "3D 룸 플래너 (Three.js 기반)",
+    "사주 기반 길한 방위 표시",
+    "가구 드래그앤드롭 배치",
+    "색상 팔레트 추천 (오행 기반)",
+    "Before/After 비교",
+    "AR 미리보기 (선택)"
+  ],
+
+  "workflow": {
+    "steps": [
+      {
+        "id": "step1_room_scan",
+        "name": "방 스캔 또는 도면 입력",
+        "methods": [
+          "방 사진 업로드 → AI가 자동 치수 추정",
+          "수동 입력 (가로x세로x높이)",
+          "기본 템플릿 선택 (원룸/투룸/거실 등)"
+        ]
+      },
+      {
+        "id": "step2_direction_analysis",
+        "name": "방위 분석",
+        "description": "사용자 사주의 용신(用神)에 맞는 길한 방위를 계산합니다.",
+        "algorithm": {
+          "용신_목(木)": "동쪽 강조",
+          "용신_화(火)": "남쪽 강조",
+          "용신_토(土)": "중앙 강조",
+          "용신_금(金)": "서쪽 강조",
+          "용신_수(水)": "북쪽 강조"
+        }
+      },
+      {
+        "id": "step3_3d_render",
+        "name": "3D 룸 렌더링",
+        "tech": "Three.js + React Three Fiber",
+        "features": [
+          "카메라 회전 (OrbitControls)",
+          "가구 라이브러리 (침대, 책상, 소파 등)",
+          "방위 표시 (나침반 오버레이)",
+          "길한 구역 하이라이트 (초록색 영역)"
+        ]
+      },
+      {
+        "id": "step4_furniture_placement",
+        "name": "가구 배치 추천",
+        "recommendations": [
+          "침대: 길한 방위 머리 향하기",
+          "책상: 집중력 향상 방위",
+          "화장대: 재물운 방위",
+          "식물: 생기 활성화 구역"
+        ]
+      },
+      {
+        "id": "step5_color_scheme",
+        "name": "색상 팔레트 추천",
+        "input": "사용자 오행 분포",
+        "output": {
+          "primary": "용신 색상",
+          "secondary": "보조 색상",
+          "accent": "포인트 색상"
+        }
+      },
+      {
+        "id": "step6_ar_preview",
+        "name": "AR 미리보기 (선택)",
+        "description": "스마트폰 카메라로 실제 공간에 가구를 배치해봅니다.",
+        "tech": "WebXR Device API"
+      }
+    ]
+  },
+
+  "ui": {
+    "mainView": "3D Canvas (풀스크린)",
+    "sidebar": {
+      "furnitureLibrary": "드래그 가능한 가구 아이콘",
+      "colorPalette": "추천 색상 칩",
+      "directionGuide": "방위별 설명"
+    },
+    "controls": {
+      "rotate": "마우스 드래그",
+      "zoom": "스크롤",
+      "place": "가구 클릭 후 룸에 클릭"
+    }
+  },
+
+  "cost": {
+    "basic": "부적 2개 (3D 시뮬레이션)",
+    "arPreview": "부적 1개 추가"
+  },
+
+  "dependencies": {
+    "libraries": [
+      "three",
+      "react-three-fiber",
+      "@react-three/drei",
+      "@react-three/xr (AR)"
+    ],
+    "models": "3D 가구 모델 (GLTF 형식)"
+  },
+
+  "futureEnhancements": [
+    "AI 자동 배치 (최적 레이아웃 제안)",
+    "실제 제품 링크 (구매 가능)",
+    "가상 워크스루 (룸 투어)",
+    "풍수 점수 시스템"
+  ]
+}

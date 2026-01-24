@@ -53,6 +53,9 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
     const [loading, setLoading] = useState(false);
     const [isAddressOpen, setIsAddressOpen] = useState(false);
 
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+
     // 사주 데이터 (family_members)
     const [sajuData, setSajuData] = useState({
         name: initialData?.name || "",
@@ -102,6 +105,10 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 specialties: profileData.specialties || prev.specialties,
                 life_philosophy: profileData.life_philosophy || prev.life_philosophy,
             }));
+            // Set initial avatar preview if exists
+            if (profileData.avatar_url) {
+                setPreviewImage(profileData.avatar_url);
+            }
         }
     }, [initialData, profileData]);
 
@@ -124,12 +131,53 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
         setIsAddressOpen(false);
     };
 
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                toast.error("이미지 크기는 5MB 이하여야 합니다.");
+                return;
+            }
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
             const supabase = createClient();
+            let avatarUrl = profileData?.avatar_url;
+
+            // 0. Upload Image if selected
+            if (imageFile) {
+                const fileExt = imageFile.name.split('.').pop();
+                const fileName = `${userId}-${Math.random()}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('profile-images')
+                    .upload(filePath, imageFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('profile-images')
+                    .getPublicUrl(filePath);
+
+                avatarUrl = publicUrl;
+
+                // Update auth metadata as well for instant UI updates (optional but good)
+                await supabase.auth.updateUser({
+                    data: { avatar_url: publicUrl }
+                });
+            }
 
             // 1. Update family_members (Saju Data)
             const { data: existingMember } = await supabase
@@ -164,13 +212,12 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 if (error) throw error;
             }
 
-            // 2. Update profiles (Extra Data)
-            // extraData의 키들이 profiles 테이블에 존재해야 함. 
-            // SQL 마이그레이션이 선행되어야 함.
+            // 2. Update profiles (Extra Data & Avatar)
             const { error: profileError } = await supabase
                 .from('profiles')
                 .update({
                     ...extraData,
+                    avatar_url: avatarUrl,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', userId);
@@ -181,8 +228,9 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
             router.push("/protected/profile");
             router.refresh();
         } catch (error: any) {
-            console.error("Error saving profile:", error);
-            toast.error("저장 중 오류가 발생했습니다: " + error.message);
+            console.error("Error saving profile details:", JSON.stringify(error, null, 2));
+            const errorMessage = error?.message || error?.error_description || JSON.stringify(error) || "알 수 없는 오류";
+            toast.error("저장 실패: " + errorMessage);
         } finally {
             setLoading(false);
         }
@@ -209,6 +257,33 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Profile Image Upload */}
+                            <div className="md:col-span-2 flex flex-col items-center justify-center space-y-4 pb-4">
+                                <Label className="text-zen-text font-bold">프로필 이미지</Label>
+                                <div className="relative group">
+                                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-zen-border shadow-sm group-hover:border-zen-gold transition-colors">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={previewImage || "https://ui-avatars.com/api/?name=User&background=random"}
+                                            alt="Profile Preview"
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => { e.currentTarget.src = "https://ui-avatars.com/api/?name=User&background=random"; }}
+                                        />
+                                    </div>
+                                    <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 shadow-md border border-gray-200 cursor-pointer hover:bg-zen-bg transition-colors">
+                                        <PenTool className="w-3 h-3 text-zen-text" />
+                                        <input
+                                            id="avatar-upload"
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleImageChange}
+                                        />
+                                    </label>
+                                </div>
+                                <p className="text-xs text-zen-muted">1장만 업로드 가능합니다.</p>
+                            </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="name" className="text-zen-text font-bold">이름</Label>
                                 <Input

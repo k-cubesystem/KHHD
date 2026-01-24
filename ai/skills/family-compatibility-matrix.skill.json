@@ -1,0 +1,197 @@
+{
+  "id": "family_compatibility_matrix",
+  "name": "가족 궁합 매트릭스",
+  "version": "2.0.0",
+  "description": "가족 구성원 간의 사주 기반 궁합을 히트맵으로 시각화하고, AI가 관계 개선 조언을 제공합니다.",
+  "category": "relationship-analysis",
+  "author": "Claude (해화당 UI/UX 전문가)",
+  "created": "2026-01-24",
+  "updated": "2026-01-24",
+
+  "features": {
+    "core": [
+      "전체 가족 구성원 간 N:N 궁합 분석",
+      "실제 사주 기반 궁합 점수 계산 (합충론, 오행론)",
+      "히트맵 시각화 (점수별 색상 코딩)",
+      "클릭 시 상세 분석 모달",
+      "AI 기반 관계 개선 조언"
+    ],
+    "advanced": [
+      "시간대별 궁합 변화 (대운 반영)",
+      "특정 이벤트 날짜 궁합 (예: 여행 날짜 추천)",
+      "가족 내 역할 분석 (중재자, 조화자 등)"
+    ]
+  },
+
+  "workflow": {
+    "steps": [
+      {
+        "id": "step1_load_family",
+        "name": "가족 구성원 로드",
+        "action": "loadFamilyMembers",
+        "description": "사용자의 프로필과 family_members 테이블에서 모든 구성원을 가져옵니다.",
+        "output": {
+          "members": "FamilyMember[] (id, name, birth_date, birth_time, relation)"
+        }
+      },
+      {
+        "id": "step2_calculate_saju",
+        "name": "각 구성원의 사주 계산",
+        "action": "calculateAllSaju",
+        "description": "lunar-javascript로 각 구성원의 사주 팔자를 계산합니다.",
+        "input": {
+          "members": "from step1"
+        },
+        "output": {
+          "sajuMap": "Map<memberId, SajuData>"
+        }
+      },
+      {
+        "id": "step3_compatibility_matrix",
+        "name": "궁합 매트릭스 계산",
+        "action": "calculateCompatibilityMatrix",
+        "description": "N*N 매트릭스로 모든 조합의 궁합을 계산합니다.",
+        "algorithm": {
+          "천간_합(合)": "+15점 (갑기합토, 을경합금, 병신합수, 정임합목, 무계합화)",
+          "지지_합(合)": "+10점 (자축합토, 인해합목, 묘술합화, 진유합금, 사신합수, 오미합화)",
+          "지지_충(沖)": "-20점 (자오충, 축미충, 인신충, 묘유충, 진술충, 사해충)",
+          "오행_균형": "±10점 (부족한 오행을 보완하면 +점수)",
+          "일간_상생": "+10점 (목생화, 화생토, 토생금, 금생수, 수생목)",
+          "일간_상극": "-10점 (목극토, 토극수, 수극화, 화극금, 금극목)",
+          "기본_점수": "70점"
+        },
+        "output": {
+          "matrix": "CompatibilityData[] (from, to, score, type, reason)"
+        }
+      },
+      {
+        "id": "step4_ai_analysis",
+        "name": "AI 상세 분석 (선택)",
+        "action": "analyzeCompatibilityWithAI",
+        "description": "Gemini가 두 사람의 사주를 분석하여 상세한 관계 조언을 생성합니다.",
+        "input": {
+          "person1Saju": "SajuData",
+          "person2Saju": "SajuData",
+          "currentRelation": "string (부부, 부모자식, 형제 등)"
+        },
+        "prompt": "두 사람의 사주를 분석하여: 1) 성격 궁합, 2) 의사소통 스타일, 3) 갈등 발생 가능 영역, 4) 관계 개선 조언을 제공하세요.",
+        "output": {
+          "aiAdvice": "string (markdown)"
+        },
+        "cost": {
+          "talisman": 1,
+          "type": "COMPATIBILITY_AI"
+        }
+      },
+      {
+        "id": "step5_visualization",
+        "name": "히트맵 시각화",
+        "description": "궁합 점수를 색상으로 표현한 매트릭스를 렌더링합니다.",
+        "ui": {
+          "heatmap": "N*N 그리드 (대각선은 본인이므로 비활성)",
+          "colorScale": "빨강(0-50) → 노랑(51-70) → 초록(71-100)",
+          "interaction": "셀 클릭 시 상세 모달 표시"
+        }
+      }
+    ]
+  },
+
+  "ui": {
+    "page": "app/protected/family/compatibility-matrix/page.tsx",
+    "components": [
+      "CompatibilityHeatmap (히트맵 그리드)",
+      "CompatibilityDetailModal (상세 분석 모달)",
+      "FamilyMemberSelector (구성원 선택)"
+    ],
+    "animations": [
+      "매트릭스 셀 순차 등장 (stagger)",
+      "점수별 색상 페이드인",
+      "모달 슬라이드업"
+    ]
+  },
+
+  "dataStructure": {
+    "CompatibilityData": {
+      "from": "string (구성원 이름)",
+      "fromId": "string (UUID)",
+      "to": "string (구성원 이름)",
+      "toId": "string (UUID)",
+      "score": "number (0-100)",
+      "type": "string (천생연분/대길/상생/평화/조화필요/주의)",
+      "reason": "string (점수 산출 근거)",
+      "description": "string (관계 설명)",
+      "advice": "string[] (개선 조언)",
+      "aiAnalysis": "string? (AI 상세 분석)"
+    }
+  },
+
+  "algorithm": {
+    "천간합_갑기합토": "甲-己 조합 시 +15점",
+    "천간합_을경합금": "乙-庚 조합 시 +15점",
+    "천간합_병신합수": "丙-辛 조합 시 +15점",
+    "천간합_정임합목": "丁-壬 조합 시 +15점",
+    "천간합_무계합화": "戊-癸 조합 시 +15점",
+    "지지합_자축합토": "子-丑 조합 시 +10점",
+    "지지합_인해합목": "寅-亥 조합 시 +10점",
+    "지지합_묘술합화": "卯-戌 조합 시 +10점",
+    "지지합_진유합금": "辰-酉 조합 시 +10점",
+    "지지합_사신합수": "巳-申 조합 시 +10점",
+    "지지합_오미합화": "午-未 조합 시 +10점",
+    "지지충_자오충": "子-午 조합 시 -20점",
+    "지지충_축미충": "丑-未 조합 시 -20점",
+    "지지충_인신충": "寅-申 조합 시 -20점",
+    "지지충_묘유충": "卯-酉 조합 시 -20점",
+    "지지충_진술충": "辰-戌 조합 시 -20점",
+    "지지충_사해충": "巳-亥 조합 시 -20점"
+  },
+
+  "cost": {
+    "basic": "무료 (궁합 점수 표시)",
+    "detailed": "부적 1개 (AI 상세 분석)"
+  },
+
+  "testCases": [
+    {
+      "name": "천간합 케이스",
+      "person1": "甲子일주",
+      "person2": "己亥일주",
+      "expected": "천간합(갑기합토) 감지 → +15점"
+    },
+    {
+      "name": "지지충 케이스",
+      "person1": "甲子일주",
+      "person2": "丙午일주",
+      "expected": "지지충(자오충) 감지 → -20점"
+    }
+  ],
+
+  "dependencies": {
+    "libraries": [
+      "lunar-javascript",
+      "@google/generative-ai"
+    ],
+    "serverActions": [
+      "app/actions/compatibility-actions.ts"
+    ],
+    "utils": [
+      "lib/saju.ts",
+      "lib/compatibility.ts"
+    ]
+  },
+
+  "monitoring": {
+    "metrics": [
+      "일일 매트릭스 조회 수",
+      "평균 가족 구성원 수",
+      "AI 상세 분석 요청 수",
+      "궁합 점수 분포"
+    ]
+  },
+
+  "futureEnhancements": [
+    "시간대별 궁합 변화 그래프 (대운 반영)",
+    "특정 날짜 궁합 (여행, 이사 등)",
+    "가족 내 중재자 추천 (전체 궁합 점수 합산)",
+    "궁합 개선 액션 플랜 (색상 치료, 방위 조정 등)"
+  ]
+}

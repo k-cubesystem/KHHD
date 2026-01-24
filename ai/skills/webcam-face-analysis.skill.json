@@ -1,0 +1,179 @@
+{
+  "id": "realtime_webcam_face_analysis",
+  "name": "실시간 웹캠 관상 분석",
+  "version": "1.0.0",
+  "description": "웹캠을 통해 실시간으로 얼굴을 분석하고, AI가 즉각적인 관상학 피드백을 제공합니다. 최적의 각도와 조명을 가이드하여 정확도를 높입니다.",
+  "category": "realtime-analysis",
+  "author": "Claude",
+  "created": "2026-01-24",
+
+  "features": [
+    "실시간 얼굴 감지 (FaceAPI.js)",
+    "자동 가이드 (얼굴 각도, 조명, 거리)",
+    "캡처 타이밍 제안 (최적 순간 알림)",
+    "즉시 관상 분석 (오관, 삼정)",
+    "비교 모드 (과거 사진과 비교)"
+  ],
+
+  "workflow": {
+    "steps": [
+      {
+        "id": "step1_permission",
+        "name": "카메라 권한 요청",
+        "api": "navigator.mediaDevices.getUserMedia({ video: true })"
+      },
+      {
+        "id": "step2_stream",
+        "name": "비디오 스트림 시작",
+        "display": "<video> 엘리먼트에 스트림 연결"
+      },
+      {
+        "id": "step3_face_detection",
+        "name": "실시간 얼굴 감지",
+        "library": "face-api.js",
+        "models": [
+          "ssdMobilenetv1 (얼굴 감지)",
+          "faceLandmark68Net (랜드마크 68개)",
+          "faceRecognitionNet (특징 추출)"
+        ],
+        "fps": "10-15 FPS (실시간성 vs 성능 균형)"
+      },
+      {
+        "id": "step4_quality_check",
+        "name": "품질 검사",
+        "checks": [
+          {
+            "name": "얼굴 정면 확인",
+            "method": "Pitch, Yaw, Roll 각도",
+            "threshold": "±15도 이내"
+          },
+          {
+            "name": "조명 확인",
+            "method": "픽셀 밝기 분석",
+            "threshold": "100-200 (적정 범위)"
+          },
+          {
+            "name": "거리 확인",
+            "method": "얼굴 크기",
+            "threshold": "화면의 20-40% 차지"
+          },
+          {
+            "name": "흔들림 확인",
+            "method": "프레임 간 랜드마크 변화",
+            "threshold": "< 5px 이동"
+          }
+        ],
+        "ui": {
+          "overlay": "얼굴 외곽선 표시 (타원)",
+          "guidanceText": "얼굴을 정면으로 향해주세요",
+          "qualityIndicator": "체크마크 (✓) 또는 경고 (!)"
+        }
+      },
+      {
+        "id": "step5_capture_timing",
+        "name": "최적 캡처 타이밍",
+        "algorithm": "품질 체크 4개 모두 통과 시 '지금 촬영하세요!' 표시",
+        "autoCapture": "3초 카운트다운 후 자동 촬영 (선택)"
+      },
+      {
+        "id": "step6_snapshot",
+        "name": "스냅샷 캡처",
+        "method": "Canvas API로 현재 프레임 저장",
+        "format": "base64 PNG"
+      },
+      {
+        "id": "step7_analysis",
+        "name": "AI 관상 분석",
+        "pipeline": "face-analysis-pipeline.skill.json 참조",
+        "input": "캡처된 이미지",
+        "output": "오관, 삼정, 피부 찰색 분석"
+      },
+      {
+        "id": "step8_feedback",
+        "name": "실시간 피드백 표시",
+        "ui": {
+          "overlay": "랜드마크 포인트 (68개) 표시",
+          "sidebar": "실시간 분석 결과 (오관 점수)"
+        }
+      }
+    ]
+  },
+
+  "ui": {
+    "layout": {
+      "main": "웹캠 비디오 (풀스크린 또는 중앙)",
+      "overlay": {
+        "faceOutline": "타원 가이드",
+        "landmarks": "68개 포인트 (선택적 표시)",
+        "qualityChecks": "우측 상단 (4개 체크리스트)",
+        "captureButton": "하단 중앙 (활성화 시 펄스 애니메이션)"
+      },
+      "sidebar": "실시간 분석 결과 (오관 점수 바)"
+    },
+    "animations": [
+      "가이드 타원 펄스 (정면 유도)",
+      "캡처 카운트다운 (3, 2, 1)",
+      "플래시 효과 (촬영 순간)"
+    ]
+  },
+
+  "performance": {
+    "optimization": [
+      "Web Worker로 얼굴 감지 오프로드",
+      "requestAnimationFrame으로 렌더링 최적화",
+      "모델 캐싱 (초기 로딩 후 재사용)"
+    ],
+    "targetFPS": "15 FPS",
+    "maxResolution": "1280x720 (HD)"
+  },
+
+  "privacy": {
+    "storage": "비디오 스트림은 저장하지 않음",
+    "transmission": "캡처된 이미지만 서버 전송",
+    "consent": "첫 사용 시 개인정보 동의"
+  },
+
+  "cost": {
+    "clientSide": "무료 (웹캠 사용)",
+    "aiAnalysis": "부적 2개 (관상 분석)"
+  },
+
+  "dependencies": {
+    "libraries": [
+      "face-api.js (얼굴 감지)",
+      "react-webcam (웹캠 컴포넌트)",
+      "@mediapipe/face_mesh (선택, 더 정확한 랜드마크)"
+    ],
+    "models": [
+      "face-api.js models (WASM 또는 TensorFlow.js)"
+    ]
+  },
+
+  "testCases": [
+    {
+      "scenario": "정면 얼굴, 좋은 조명",
+      "expected": "모든 품질 체크 통과 → 자동 캡처 제안"
+    },
+    {
+      "scenario": "얼굴 옆으로 돌림",
+      "expected": "Yaw 각도 경고 → 가이드 메시지 표시"
+    },
+    {
+      "scenario": "어두운 조명",
+      "expected": "조명 경고 → '밝은 곳으로 이동하세요'"
+    }
+  ],
+
+  "futureEnhancements": [
+    "멀티 얼굴 감지 (가족 동시 분석)",
+    "표정 분석 (감정 상태 추가)",
+    "노화 시뮬레이션 (10년 후 모습)",
+    "비교 모드 (과거 사진 오버레이)"
+  ],
+
+  "technicalNotes": {
+    "browserSupport": "Chrome, Edge, Safari (WebRTC 지원 필수)",
+    "mobileSupport": "모바일 브라우저도 지원 (카메라 전환 가능)",
+    "offlineMode": "얼굴 감지는 클라이언트에서 가능, AI 분석은 온라인 필요"
+  }
+}

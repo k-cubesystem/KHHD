@@ -24,7 +24,7 @@
     --secondary-foreground: 30 5% 10%;
     
     --muted: 40 10% 92%;
-    --muted-foreground: 25 5% 35%; /* #595450 (Deep Warm Grey - Contrast Up) */
+    --muted-foreground: 25 5% 20%; /* #363330 (Dark Charcoal - High Contrast) */
     
     --accent: 49 46% 56%; /* #C5B358 (Antique Gold) */
     --accent-foreground: 30 5% 10%;
@@ -52,7 +52,7 @@
     --secondary: 240 4% 12%;
     --secondary-foreground: 60 5% 96%;
     --muted: 240 4% 12%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted-foreground: 240 5% 75%; /* Increased contrast for dark mode */
     --accent: 43 46% 56%;
     --accent-foreground: 240 4% 6%;
     --destructive: 343 79% 35%;

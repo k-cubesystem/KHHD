@@ -101,7 +101,7 @@ export default async function ProfilePage() {
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-serif font-bold text-zen-text">
-                                {user.user_metadata.full_name || "익명의 인연"}
+                                {mySaju?.name || profile?.name || user.user_metadata.full_name || "익명의 인연"}
                             </h1>
                             <Badge variant="secondary" className="bg-zen-gold/10 text-zen-gold border-zen-gold/20 text-[10px] px-1.5 py-0">MEMBER</Badge>
                         </div>
@@ -112,97 +112,88 @@ export default async function ProfilePage() {
 
             <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
 
-                {/* 2. Main Content: Saju Manse (Destiny Chart) */}
-                <section>
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-serif font-bold text-zen-text flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-zen-gold" />
-                            나의 사주 원국 (四柱命式)
-                        </h2>
-                        {hasSajuInfo && (
-                            <Link href="/protected/profile/edit" className="text-xs text-zen-muted underline">정보 수정</Link>
-                        )}
-                    </div>
+                {/* Unified Accordion: All Profile Sections */}
+                <Accordion type="single" collapsible className="w-full bg-white border border-zen-border rounded-sm shadow-sm">
 
-                    {hasSajuInfo && manse ? (
-                        // Case A: Data Exists (Show Manse)
-                        <div className="space-y-6">
-                            <PremiumManseCard manse={manse} />
-                            <FiveElementsChart manse={manse} />
-                            {daewoon && <DaewoonTimeline periods={daewoon} />}
-                        </div>
-                    ) : (
-                        // Case B: Data Missing (Empty State)
-                        <Card className="border-dashed border-2 border-zen-border bg-zen-bg/20">
-                            <CardContent className="flex flex-col items-center justify-center py-10 space-y-4">
-                                <div className="p-4 rounded-full bg-zen-gold/10 text-zen-gold">
-                                    <Calendar className="w-8 h-8" />
+                    {/* 1. Saju Manse */}
+                    <AccordionItem value="saju-info" className="border-b border-zen-border px-4">
+                        <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3">
+                                <Sparkles className="w-4 h-4 text-zen-gold" />
+                                <span className="font-serif text-zen-text text-lg">나의 사주 원국 (四柱命式)</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-6 pt-2">
+                            {hasSajuInfo && manse ? (
+                                <div className="space-y-6">
+                                    <PremiumManseCard manse={manse} />
+                                    <FiveElementsChart manse={manse} />
+                                    {daewoon && <DaewoonTimeline periods={daewoon} />}
                                 </div>
-                                <div className="text-center space-y-1">
-                                    <h3 className="font-serif font-bold text-zen-text text-lg">아직 운명 정보가 없습니다.</h3>
-                                    <p className="text-sm text-zen-muted max-w-[200px] mx-auto leading-relaxed">
-                                        정확한 사주 분석을 위해 생년월일시 정보를 등록해 주세요.
-                                    </p>
-                                </div>
-                                <Link href="/protected/profile/edit">
-                                    <Button className="font-serif bg-zen-wood text-white mt-2">
-                                        내 사주 정보 입력하기
-                                    </Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
-                    )}
-                </section>
+                            ) : (
+                                <Card className="border-dashed border-2 border-zen-border bg-zen-bg/20">
+                                    <CardContent className="flex flex-col items-center justify-center py-10 space-y-4">
+                                        <div className="p-4 rounded-full bg-zen-gold/10 text-zen-gold">
+                                            <Calendar className="w-8 h-8" />
+                                        </div>
+                                        <div className="text-center space-y-1">
+                                            <h3 className="font-serif font-bold text-zen-text text-lg">아직 운명 정보가 없습니다.</h3>
+                                            <p className="text-sm text-zen-muted max-w-[200px] mx-auto leading-relaxed">
+                                                아래 '기본 정보 수정'에서 생년월일시를 입력해주세요.
+                                            </p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
 
-                {/* 3. Settings & Membership (Accordion for cleaner mobile view) */}
-                <section>
-                    <h2 className="text-lg font-serif font-bold text-zen-text mb-4 flex items-center gap-2">
-                        <Settings className="w-4 h-4 text-zen-muted" />
-                        계정 관리
-                    </h2>
-                    <Accordion type="single" collapsible className="w-full bg-white border border-zen-border rounded-sm shadow-sm">
-                        <AccordionItem value="membership" className="border-b border-zen-border px-4">
-                            <AccordionTrigger className="hover:no-underline py-4">
-                                <div className="flex items-center gap-3">
-                                    <CreditCard className="w-4 h-4 text-zen-gold" />
-                                    <span className="font-serif text-zen-text">멤버십 & 부적</span>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pb-4 pt-1 space-y-4">
-                                <div className="p-4 bg-zen-bg rounded-sm border border-zen-border flex items-center justify-between">
-                                    <span className="text-sm text-zen-muted">보유 부적</span>
-                                    <span className="font-bold text-zen-gold text-lg">0장</span>
-                                </div>
-                                <Link href="/protected/billing">
-                                    <Button variant="outline" className="w-full border-zen-gold text-zen-gold hover:bg-zen-gold/5">
-                                        충전하러 가기
-                                    </Button>
-                                </Link>
-                            </AccordionContent>
-                        </AccordionItem>
+                    {/* 2. Membership & Talisman */}
+                    <AccordionItem value="membership" className="border-b border-zen-border px-4">
+                        <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3">
+                                <CreditCard className="w-4 h-4 text-zen-gold" />
+                                <span className="font-serif text-zen-text">멤버십 & 부적</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4 pt-1 space-y-4">
+                            <div className="p-4 bg-zen-bg rounded-sm border border-zen-border flex items-center justify-between">
+                                <span className="text-sm text-zen-muted">보유 부적</span>
+                                <span className="font-bold text-zen-gold text-lg">0장</span>
+                            </div>
+                            <Link href="/protected/billing">
+                                <Button variant="outline" className="w-full border-zen-gold text-zen-gold hover:bg-zen-gold/5">
+                                    충전하러 가기
+                                </Button>
+                            </Link>
+                        </AccordionContent>
+                    </AccordionItem>
 
-                        <AccordionItem value="profile-edit" className="border-b border-zen-border px-4">
-                            <AccordionTrigger className="hover:no-underline py-4">
-                                <div className="flex items-center gap-3">
-                                    <User className="w-4 h-4 text-zen-muted" />
-                                    <span className="font-serif text-zen-text">기본 정보 수정</span>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pb-4 pt-1">
-                                <ProfileEditForm
-                                    userId={user.id}
-                                    initialData={mySaju}
-                                    profileData={profile}
-                                />
-                            </AccordionContent>
-                        </AccordionItem>
+                    {/* 3. Profile Edit Form */}
+                    <AccordionItem value="profile-edit" className="border-b border-zen-border px-4">
+                        <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3">
+                                <User className="w-4 h-4 text-zen-muted" />
+                                <span className="font-serif text-zen-text">기본 정보 수정</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4 pt-1">
+                            <ProfileEditForm
+                                userId={user.id}
+                                initialData={mySaju}
+                                profileData={profile}
+                            />
+                        </AccordionContent>
+                    </AccordionItem>
 
-                        <Link href="/auth/logout" className="flex items-center justify-between px-4 py-4 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                    {/* Logout Link */}
+                    <div className="px-4 py-4">
+                        <Link href="/auth/logout" className="flex items-center justify-between text-sm text-red-500 hover:text-red-700 transition-colors">
                             <span>로그아웃</span>
                             <ChevronRight className="w-4 h-4 opacity-50" />
                         </Link>
-                    </Accordion>
-                </section>
+                    </div>
+                </Accordion>
             </div>
         </div>
     );

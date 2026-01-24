@@ -1,0 +1,211 @@
+{
+  "id": "ar_palm_reading_guide",
+  "name": "AR 손금 가이드",
+  "version": "1.0.0",
+  "description": "AR 기술로 실시간으로 손바닥을 스캔하고, 삼대선(생명선/지능선/감정선)을 오버레이로 표시하며 AI가 즉각 해석합니다.",
+  "category": "ar-analysis",
+  "author": "Claude",
+  "created": "2026-01-24",
+
+  "concept": {
+    "vision": "마치 전문가가 손을 보며 설명하는 듯한 경험",
+    "interaction": "손바닥을 카메라에 비추면 → AR로 선이 그려지며 → 음성/텍스트로 설명"
+  },
+
+  "features": [
+    "실시간 손 감지 (MediaPipe Hands)",
+    "삼대선 자동 감지 및 오버레이",
+    "AR 라벨 (각 선의 이름과 의미)",
+    "음성 해설 (TTS)",
+    "3D 손 모델과 비교",
+    "양손 비교 모드"
+  },
+
+  "workflow": {
+    "steps": [
+      {
+        "id": "step1_ar_initialization",
+        "name": "AR 세션 시작",
+        "tech": "WebXR Device API 또는 MediaPipe Hands",
+        "fallback": "WebXR 미지원 시 MediaPipe로 대체"
+      },
+      {
+        "id": "step2_hand_detection",
+        "name": "손 감지",
+        "library": "MediaPipe Hands",
+        "output": "21개 랜드마크 좌표 (3D)",
+        "landmarks": [
+          "손목(0)",
+          "엄지(1-4)",
+          "검지(5-8)",
+          "중지(9-12)",
+          "약지(13-16)",
+          "소지(17-20)"
+        ]
+      },
+      {
+        "id": "step3_palm_line_detection",
+        "name": "손금 선 감지",
+        "algorithm": "OpenCV.js 또는 Custom CNN",
+        "lines": {
+          "lifeLine": "생명선 (엄지 아래 곡선)",
+          "headLine": "지능선 (손바닥 중앙 가로선)",
+          "heartLine": "감정선 (손가락 아래 가로선)",
+          "fateLine": "운명선 (선택, 손바닥 중앙 세로선)",
+          "sunLine": "태양선 (선택, 약지 아래)"
+        },
+        "output": "각 선의 시작점, 끝점, 곡률, 두께"
+      },
+      {
+        "id": "step4_ar_overlay",
+        "name": "AR 오버레이 렌더링",
+        "rendering": {
+          "lines": "3D 공간에 선 그리기 (Three.js)",
+          "labels": "각 선 옆에 라벨 표시 (HTML CSS3D)",
+          "colors": {
+            "lifeLine": "빨강",
+            "headLine": "파랑",
+            "heartLine": "분홍",
+            "fateLine": "보라",
+            "sunLine": "노랑"
+          }
+        }
+      },
+      {
+        "id": "step5_interpretation",
+        "name": "AI 해석",
+        "input": "선의 길이, 두께, 곡률, 끊김 여부",
+        "analysis": {
+          "lifeLine": {
+            "길고 굵음": "건강, 체력 우수",
+            "짧음": "체력 보충 필요",
+            "끊김": "건강 주의 시기"
+          },
+          "headLine": {
+            "직선": "현실적, 논리적",
+            "곡선": "창의적, 감성적",
+            "분기": "다재다능"
+          },
+          "heartLine": {
+            "높음": "이상적 사랑",
+            "낮음": "현실적 사랑",
+            "여러 갈래": "감정 기복"
+          }
+        },
+        "output": "텍스트 + 음성 해설"
+      },
+      {
+        "id": "step6_voice_narration",
+        "name": "음성 해설 (TTS)",
+        "tech": "Web Speech API - speechSynthesis",
+        "example": "당신의 생명선은 길고 뚜렷하여 건강한 체질을 나타냅니다. 지능선이 약간 곡선을 그리고 있어 창의적 사고가 강합니다."
+      },
+      {
+        "id": "step7_comparison",
+        "name": "양손 비교 (선택)",
+        "leftHand": "타고난 운명",
+        "rightHand": "만들어가는 운명",
+        "display": "좌우 손 동시 표시 + 차이점 강조"
+      }
+    ]
+  },
+
+  "ui": {
+    "arView": {
+      "mainDisplay": "카메라 뷰 (풀스크린)",
+      "overlay": "감지된 손금 선 + 라벨",
+      "controls": {
+        "captureButton": "현재 상태 스냅샷",
+        "voiceToggle": "음성 해설 ON/OFF",
+        "handSwitch": "왼손/오른손 전환"
+      }
+    },
+    "tutorial": {
+      "step1": "손바닥을 카메라에 비추세요",
+      "step2": "손을 가만히 유지하세요",
+      "step3": "AR로 선이 표시됩니다"
+    },
+    "animations": [
+      "손 감지 시 외곽선 펄스",
+      "선 감지 완료 시 라인 드로잉 애니메이션",
+      "라벨 페이드인"
+    ]
+  },
+
+  "technicalStack": {
+    "arFramework": "WebXR (1순위) 또는 AR.js (2순위)",
+    "handTracking": "MediaPipe Hands (Google)",
+    "lineDetection": "OpenCV.js 또는 Custom TensorFlow.js 모델",
+    "3dRendering": "Three.js + React Three Fiber",
+    "tts": "Web Speech API (speechSynthesis)"
+  },
+
+  "performance": {
+    "targetFPS": "30 FPS (AR 권장)",
+    "latency": "< 100ms (감지 → 오버레이)",
+    "optimization": [
+      "손 감지는 매 프레임마다 실행",
+      "선 감지는 손이 안정된 후 1회 실행",
+      "AR 렌더링은 requestAnimationFrame 사용"
+    ]
+  },
+
+  "privacy": {
+    "videoStream": "로컬에서만 처리, 서버 전송 안 함",
+    "snapshot": "사용자 요청 시에만 캡처 및 저장",
+    "consent": "카메라 사용 동의 필수"
+  },
+
+  "cost": {
+    "arSession": "무료 (클라이언트 처리)",
+    "aiInterpretation": "부적 1개 (상세 분석)"
+  },
+
+  "dependencies": {
+    "libraries": [
+      "@mediapipe/hands",
+      "three",
+      "@react-three/fiber",
+      "@react-three/xr",
+      "opencv.js (선 감지)"
+    ],
+    "models": [
+      "MediaPipe Hands Model (WASM)",
+      "Custom Palm Line Detection Model (선택)"
+    ]
+  },
+
+  "browserSupport": {
+    "webxr": "Chrome, Edge (Android), Quest Browser",
+    "mediapipe": "모든 최신 브라우저",
+    "fallback": "WebXR 미지원 시 2D 오버레이로 대체"
+  },
+
+  "testCases": [
+    {
+      "scenario": "손바닥 정면",
+      "expected": "21개 랜드마크 감지 → 삼대선 표시"
+    },
+    {
+      "scenario": "손 흔들림",
+      "expected": "안정화 가이드 메시지 표시"
+    },
+    {
+      "scenario": "조명 부족",
+      "expected": "밝기 조정 안내"
+    }
+  ],
+
+  "futureEnhancements": [
+    "AI 학습으로 선 감지 정확도 향상",
+    "문양 분석 (별, 섬, 십자 등)",
+    "시간대별 손금 변화 추적 (Photo Timeline)",
+    "VR 모드 (Quest에서 양손 동시 분석)"
+  ],
+
+  "marketingAngle": {
+    "tagline": "세계 최초 AR 손금 분석",
+    "demo": "제품 런칭 시 SNS 바이럴 영상 제작",
+    "partnership": "AR 글래스 제조사와 협업 가능"
+  }
+}

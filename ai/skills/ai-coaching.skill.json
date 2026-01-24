@@ -1,0 +1,97 @@
+{
+  "id": "ai_coaching_chat",
+  "name": "AI 코칭 스킬 (대화형 운세 상담)",
+  "version": "1.0.0",
+  "description": "Gemini와 실시간 대화하며 사주, 관상, 손금 기반의 맞춤형 운세 상담을 받습니다. 사용자의 질문에 즉각 응답하고, 개운법을 추천합니다.",
+  "category": "interactive-consulting",
+  "author": "Claude",
+  "created": "2026-01-24",
+
+  "concept": {
+    "philosophy": "1:1 전문가 상담 경험",
+    "approach": "사용자 맥락 이해 → 맞춤형 조언 → 실행 가능한 솔루션"
+  },
+
+  "features": [
+    "실시간 채팅 UI (스트리밍 응답)",
+    "사용자 사주 데이터 자동 로드",
+    "멀티턴 대화 (이전 대화 기억)",
+    "음성 입력 지원 (Web Speech API)",
+    "대화 히스토리 저장 및 내보내기"
+  ],
+
+  "workflow": {
+    "initialization": {
+      "step1": "사용자 프로필에서 사주 데이터 로드",
+      "step2": "시스템 프롬프트 설정 (명리학 전문가 페르소나)",
+      "step3": "채팅 세션 시작"
+    },
+    "conversation": {
+      "userInput": "질문 입력 (텍스트 또는 음성)",
+      "aiProcessing": "Gemini가 사주 데이터 + 질문 분석",
+      "aiResponse": "스트리밍 응답 (타이핑 효과)",
+      "followUp": "추가 질문 유도"
+    },
+    "actions": [
+      "개운법 추천 시 → 바로 부적 구매 링크",
+      "날짜 운세 질문 시 → 달력 UI 표시",
+      "궁합 질문 시 → 가족 구성원 선택 UI"
+    ]
+  },
+
+  "systemPrompt": "당신은 해화당의 AI 명리학 전문가입니다. 사용자의 사주를 분석하여 친절하고 구체적인 조언을 제공하세요. 존댓말을 사용하고, 과도한 불안감을 주지 마세요. 실행 가능한 개운법을 제안하세요.",
+
+  "ui": {
+    "layout": "좌측: 채팅 창 | 우측: 사주 요약 카드",
+    "chatBubbles": {
+      "user": "오른쪽 정렬, 파란색",
+      "ai": "왼쪽 정렬, 회색, 프로필 아이콘"
+    },
+    "inputArea": {
+      "textInput": "하단 고정, 멀티라인 지원",
+      "voiceButton": "마이크 아이콘, 클릭 시 음성 인식",
+      "sendButton": "엔터키 또는 버튼 클릭"
+    },
+    "quickActions": [
+      "오늘의 운세",
+      "이번 달 재물운",
+      "궁합 보기",
+      "개운법 추천"
+    ]
+  },
+
+  "exampleConversations": [
+    {
+      "user": "요즘 직장에서 스트레스가 심한데, 이직해야 할까요?",
+      "ai": "안녕하세요. 현재 대운을 보니 [분석 내용]. 이직보다는 [조언]을 추천드립니다. 만약 이직을 고려하신다면 [길한 시기]가 좋습니다."
+    },
+    {
+      "user": "남자친구와 결혼해도 될까요?",
+      "ai": "궁합을 보기 위해 상대방의 생년월일시를 알려주시겠어요?"
+    }
+  ],
+
+  "cost": {
+    "firstSession": "무료 (10턴까지)",
+    "extended": "부적 1개 (추가 20턴)"
+  },
+
+  "dependencies": {
+    "ai": "Gemini 2.5 Flash (스트리밍 지원)",
+    "libraries": [
+      "@google/generative-ai",
+      "react-markdown (AI 응답 렌더링)"
+    ],
+    "components": [
+      "ChatInterface",
+      "VoiceInput",
+      "QuickActionButtons"
+    ]
+  },
+
+  "futureEnhancements": [
+    "음성 출력 (TTS)",
+    "이미지 업로드 (관상/손금 즉석 분석)",
+    "대화 요약 및 액션 아이템 추출"
+  ]
+}
