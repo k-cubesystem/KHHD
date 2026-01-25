@@ -7,7 +7,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest add:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(find:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

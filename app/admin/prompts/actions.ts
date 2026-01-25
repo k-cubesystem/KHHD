@@ -74,3 +74,70 @@ export async function updatePrompt(key: string, newTemplate: string) {
     revalidatePath("/admin/prompts");
     return { success: true };
 }
+
+export async function createPrompt(
+    key: string,
+    label: string,
+    category: string,
+    template: string,
+    description?: string
+) {
+    const supabase = await createClient();
+
+    // Check Admin
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    if (profile?.role !== "admin") return { success: false, error: "Forbidden" };
+
+    // Use Admin Client if available
+    let dbClient = supabase;
+    try {
+        dbClient = createAdminClient();
+    } catch (e) {
+        console.warn("createPrompt: Fallback to standard client");
+    }
+
+    const { error } = await dbClient
+        .from("ai_prompts")
+        .insert({ key, label, category, template, description });
+
+    if (error) {
+        console.error("Error creating prompt:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/prompts");
+    return { success: true };
+}
+
+export async function deletePrompt(key: string) {
+    const supabase = await createClient();
+
+    // Check Admin
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "Unauthorized" };
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    if (profile?.role !== "admin") return { success: false, error: "Forbidden" };
+
+    // Use Admin Client if available
+    let dbClient = supabase;
+    try {
+        dbClient = createAdminClient();
+    } catch (e) {
+        console.warn("deletePrompt: Fallback to standard client");
+    }
+
+    const { error } = await dbClient
+        .from("ai_prompts")
+        .delete()
+        .eq("key", key);
+
+    if (error) {
+        console.error("Error deleting prompt:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath("/admin/prompts");
+    return { success: true };
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AdminUser, getUsers, updateUserRole } from "./actions";
+import { AdminUser, getUsers, updateUserRole, deleteUser } from "./actions";
 import { UserRole } from "@/types/auth";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,9 +22,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2, ChevronLeft, ChevronRight, UserCog } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, UserCog, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export function UserManagementClient() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -54,6 +55,25 @@ export function UserManagementClient() {
       setLoading(false);
     }
   }
+
+  const handleDelete = async (userId: string) => {
+    if (!confirm("정말 이 사용자를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없으며, 사용자의 모든 데이터(결제, 사주기록 등)가 삭제됩니다.")) {
+      return;
+    }
+
+    const toastId = toast.loading("사용자 삭제 중...");
+    try {
+      const result = await deleteUser(userId);
+      if (result.success) {
+        toast.success("사용자가 삭제되었습니다.", { id: toastId });
+        fetchUsers(); // Refresh list
+      } else {
+        toast.error("삭제 실패: " + result.error, { id: toastId });
+      }
+    } catch (e) {
+      toast.error("삭제 중 오류가 발생했습니다.", { id: toastId });
+    }
+  };
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     const oldUsers = [...users];
@@ -187,9 +207,21 @@ export function UserManagementClient() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-zen-muted hover:text-zen-wood hover:bg-zen-bg">
-                        <UserCog className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/admin/users/${user.id}`}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-zen-muted hover:text-zen-wood hover:bg-zen-bg">
+                            <UserCog className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zen-muted hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDelete(user.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </motion.tr>
                 ))}

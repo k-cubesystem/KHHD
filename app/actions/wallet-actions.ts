@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { canUseTalisman, incrementDailyUsage } from "./membership-limits";
 
 /**
  * Get feature cost from database
@@ -75,6 +76,12 @@ export async function deductTalisman(
         return { success: true, remainingBalance: 999 };
     }
 
+    // Check daily talisman usage limit (멤버십 일일 한도 체크)
+    const dailyCheck = await canUseTalisman();
+    if (!dailyCheck.allowed) {
+        return { success: false, error: dailyCheck.message };
+    }
+
     // Get cost
     const cost = customAmount || await getFeatureCost(featureKey);
 
@@ -118,6 +125,9 @@ export async function deductTalisman(
         feature_key: featureKey,
         description: `${featureCost?.label || featureKey} 사용`
     });
+
+    // Increment daily usage counter
+    await incrementDailyUsage(cost);
 
     return { success: true, remainingBalance: newBalance };
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { getTossPayments } from "@/lib/tosspayments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Sparkles, Loader2, Zap, ShieldCheck, Crown, Gift, Calendar, MessageCircle, Ticket } from "lucide-react";
+import { Check, Sparkles, Loader2, Zap, ShieldCheck, Crown, Gift, Calendar, MessageCircle, Ticket, Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getActivePlans, getCurrentUserRole, addTestCredits } from "@/app/actions/products";
@@ -160,94 +160,98 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                     <span className="text-[10px] font-bold text-zen-muted uppercase tracking-[0.2em]">Haehwadang Hybrid Payment System</span>
                 </div>
                 <h2 className="text-4xl md:text-5xl font-serif font-bold text-zen-text italic">운명을 여는 <span className="text-zen-wood">길(道)</span>의 선택</h2>
-                <p className="text-zen-muted text-sm max-w-xl mx-auto leading-relaxed">
-                    매달 전해지는 천기를 무제한으로 누리는 멤버십과 <br />
-                    필요할 때마다 정성을 담아 사용하는 부적 패키지 중 선택해 주세요.
-                </p>
+                <div className="text-zen-muted text-sm max-w-xl mx-auto leading-relaxed">
+                    <p>매달 전해지는 천기를 무제한으로 누리는 멤버십과</p>
+                    <p>필요할 때마다 정성을 담아 사용하는 부적 패키지 중 선택해 주세요.</p>
+                    <p className="mt-2 text-zen-wood font-bold">* 무료 회원은 '오늘의 운세'만 이용 가능합니다.</p>
+                </div>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-16 bg-zen-bg border border-zen-border p-1 rounded-sm mb-10">
-                    <TabsTrigger value="membership" className="font-serif font-bold text-lg data-[state=active]:bg-white data-[state=active]:text-zen-wood data-[state=active]:shadow-sm rounded-sm">
-                        해화 멤버십 (Subscription)
-                    </TabsTrigger>
-                    <TabsTrigger value="talisman" className="font-serif font-bold text-lg data-[state=active]:bg-white data-[state=active]:text-zen-wood data-[state=active]:shadow-sm rounded-sm">
-                        부적 충전소 (Store)
-                    </TabsTrigger>
-                </TabsList>
+            <div className="space-y-16">
+                {/* Section 1: Membership Plans */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                        <Crown className="w-6 h-6 text-zen-gold" />
+                        <h3 className="text-2xl font-serif font-bold text-zen-text">해화 멤버십 (Subscription)</h3>
+                    </div>
 
-                {/* Membership Content */}
-                <TabsContent value="membership" className="space-y-8 animate-in fade-in duration-500">
-                    {membershipPlans.map((plan) => (
-                        <Card key={plan.id} className="relative overflow-hidden border-zen-gold bg-white rounded-sm shadow-2xl p-8 md:p-12 border-t-8 border-t-zen-gold">
-                            <div className="flex flex-col md:flex-row gap-12 items-center">
-                                <div className="flex-1 space-y-8">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-3">
-                                            <Crown className="w-8 h-8 text-zen-gold" />
-                                            <h3 className="text-3xl font-serif font-bold text-zen-text">{plan.name}</h3>
-                                            <Badge className="bg-zen-gold text-white font-bold px-3 py-1 rounded-sm">PREMIUM</Badge>
-                                        </div>
-                                        <p className="text-zen-muted leading-relaxed font-sans text-lg italic">"{plan.description}"</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {membershipPlans.map((plan) => (
+                            <Card key={plan.id} className="relative overflow-hidden border-zen-gold bg-white rounded-sm shadow-lg border-t-4 flex flex-col">
+                                <div className="p-6 flex-1 space-y-6">
+                                    <div className="space-y-2 text-center">
+                                        <h3 className="text-2xl font-serif font-bold text-zen-text">{plan.name}</h3>
+                                        {plan.tier === "FAMILY" && <Badge className="bg-zen-gold text-white font-bold px-2 py-0.5 rounded-sm mx-auto flex w-fit">BEST CHOICE</Badge>}
+                                        <p className="text-zen-muted font-sans text-sm italic h-10 flex items-center justify-center">"{plan.description}"</p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {[
-                                            { icon: Gift, text: `매월 부적 ${plan.talismans_per_period}장 지급` },
-                                            { icon: Sparkles, text: "오늘의 운세 무제한 열람" },
-                                            { icon: MessageCircle, text: "매일 아침 행운 카톡 알림" },
-                                            { icon: Calendar, text: "분석 비록 PDF 평생 소장" }
-                                        ].map((benefit, i) => (
-                                            <div key={i} className="flex items-center gap-3 p-3 bg-zen-bg rounded-sm border border-zen-border/50">
-                                                <benefit.icon className="w-4 h-4 text-zen-wood" />
-                                                <span className="text-sm font-bold text-zen-text">{benefit.text}</span>
+                                    <div className="text-center pb-4 border-b border-zen-border/50">
+                                        <div className="flex items-baseline justify-center gap-1">
+                                            <span className="text-4xl font-serif font-bold text-zen-text">{plan.price.toLocaleString()}</span>
+                                            <span className="text-base text-zen-muted">원</span>
+                                        </div>
+                                        <p className="text-[10px] text-zen-muted uppercase tracking-widest mt-1">Per Month</p>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <Gift className="w-4 h-4 text-zen-wood shrink-0" />
+                                            <span className="text-sm text-zen-text">매월 <strong>부적 {plan.talismans_per_period}장</strong> 지급</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Clock className="w-4 h-4 text-zen-wood shrink-0" />
+                                            <span className="text-sm text-zen-text">하루 <strong>{plan.daily_talisman_limit}장</strong> 사용 가능</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Sparkles className="w-4 h-4 text-zen-wood shrink-0" />
+                                            <span className="text-sm text-zen-text">오늘의 운세 무제한</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <MessageCircle className="w-4 h-4 text-zen-wood shrink-0" />
+                                            <span className="text-sm text-zen-text">알림톡 서비스</span>
+                                        </div>
+                                        {plan.name === '패밀리 멤버십' && (
+                                            <div className="flex items-center gap-3">
+                                                <Users className="w-4 h-4 text-zen-wood shrink-0" />
+                                                <span className="text-sm text-zen-text">가족 궁합 분석</span>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
 
-                                <div className="w-full md:w-80 flex flex-col items-center justify-center space-y-6 pt-10 md:pt-0 md:border-l md:border-zen-border md:pl-12">
-                                    <div className="text-center">
-                                        <div className="flex items-baseline justify-center gap-1">
-                                            <span className="text-6xl font-serif font-bold text-zen-text">{plan.price.toLocaleString()}</span>
-                                            <span className="text-xl text-zen-muted">원</span>
-                                        </div>
-                                        <p className="text-sm text-zen-muted mt-2 uppercase tracking-widest font-bold">Per Month</p>
-                                    </div>
+                                <div className="p-6 pt-0 bg-gray-50/50 mt-auto">
                                     <Button
                                         onClick={() => handleMembershipPayment(plan.id)}
                                         disabled={isLoading}
-                                        className="w-full h-16 bg-zen-wood text-white hover:bg-[#7A604D] font-serif font-bold text-xl rounded-sm shadow-xl transition-all active:scale-[0.98]"
+                                        className="w-full bg-zen-wood text-white hover:bg-[#7A604D] font-serif font-bold shadow-md h-12"
                                     >
-                                        {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "멤버십 구독 시작하기"}
+                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "구독하기"}
                                     </Button>
-                                    <p className="text-[10px] text-zen-muted italic text-center leading-relaxed">
-                                        언제든 해지 가능하며, <br /> 위약금 없이 현재 기간 동안 혜택이 유지됩니다.
-                                    </p>
                                 </div>
-                            </div>
-                        </Card>
-                    ))}
-                </TabsContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
 
-                {/* Talisman Content */}
-                <TabsContent value="talisman" className="space-y-10 animate-in fade-in duration-500">
+                {/* Section 2: Talisman Plans */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                        <Ticket className="w-6 h-6 text-zen-wood" />
+                        <h3 className="text-2xl font-serif font-bold text-zen-text">부적 충전소 (One-time)</h3>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {pricePlans.map((plan) => (
                             <Card
                                 key={plan.credits}
                                 className={cn(
-                                    "relative flex flex-col p-8 cursor-pointer transition-all duration-300 overflow-hidden group border rounded-sm",
-                                    selectedPlan === plan.credits
-                                        ? "bg-white border-zen-wood shadow-xl scale-[1.02] ring-1 ring-zen-wood"
-                                        : "bg-white/50 border-zen-border hover:border-zen-gold/50 shadow-sm hover:shadow-md"
+                                    "relative flex flex-col transition-all duration-300 overflow-hidden group border rounded-sm bg-white hover:shadow-lg border-zen-border"
                                 )}
-                                onClick={() => setSelectedPlan(plan.credits)}
                             >
                                 {plan.badge && (
                                     <div className="absolute top-0 right-0">
                                         <div className={cn(
-                                            "text-[10px] font-bold px-4 py-1.5 rounded-bl-sm uppercase tracking-wider",
+                                            "text-[10px] font-bold px-3 py-1 rounded-bl-sm uppercase tracking-wider",
                                             plan.popular ? "bg-zen-gold text-white" : "bg-zen-wood text-white"
                                         )}>
                                             {plan.badge}
@@ -255,51 +259,69 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                                     </div>
                                 )}
 
-                                <div className="space-y-6 flex-1">
-                                    <div className="space-y-2">
-                                        <div className="w-10 h-10 rounded-sm bg-zen-bg border border-zen-border flex items-center justify-center text-zen-gold mb-4 group-hover:scale-110 transition-transform">
-                                            <Ticket className="w-5 h-5" />
+                                <div className="p-6 flex-1 space-y-4">
+                                    <div className="space-y-1">
+                                        <h4 className="font-serif font-bold text-xl text-zen-text">{plan.label}</h4>
+                                        <p className="text-xs text-zen-muted font-sans line-clamp-2 min-h-[2.5em]">{plan.description}</p>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pb-4 border-b border-zen-border/50">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-zen-bg flex items-center justify-center text-zen-gold">
+                                                <Sparkles className="w-4 h-4" />
+                                            </div>
+                                            <span className="font-bold text-zen-text">{plan.credits}장</span>
                                         </div>
-                                        <h4 className="font-serif font-bold text-2xl text-zen-text italic">{plan.label}</h4>
-                                        <p className="text-xs text-zen-muted font-sans leading-relaxed">{plan.description}</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-xl font-serif font-bold text-zen-text">{plan.price.toLocaleString()}</span>
+                                            <span className="text-xs text-zen-muted">원</span>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-baseline gap-1 py-4 border-y border-zen-border/50">
-                                        <span className="text-4xl font-serif font-bold tabular-nums text-zen-text">{plan.price.toLocaleString()}</span>
-                                        <span className="text-lg font-medium text-zen-muted">원</span>
-                                    </div>
-
-                                    <div className="space-y-3 pt-2">
-                                        {plan.features.map((feature, i) => (
-                                            <div key={i} className="flex items-start gap-3 text-[12px] text-zen-text/70 leading-relaxed font-sans">
-                                                <Check className="w-4 h-4 text-zen-gold shrink-0 mt-0.5" />
+                                    <div className="space-y-2">
+                                        {plan.features.slice(0, 3).map((feature, i) => (
+                                            <div key={i} className="flex items-center gap-2 text-[11px] text-zen-text/80">
+                                                <Check className="w-3 h-3 text-zen-gold shrink-0" />
                                                 <span>{feature}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
+
+                                <div className="p-4 bg-gray-50/50">
+                                    <Button
+                                        onClick={async () => {
+                                            setIsLoading(true);
+                                            try {
+                                                const tossPayments = await getTossPayments();
+                                                if (!tossPayments) {
+                                                    toast.error("결제 모듈을 불러올 수 없습니다.");
+                                                    setIsLoading(false);
+                                                    return;
+                                                }
+                                                await tossPayments.requestPayment("카드", {
+                                                    amount: plan.price,
+                                                    orderId: `HHD_${Date.now()}_${memberId.slice(0, 4)}`,
+                                                    orderName: plan.label,
+                                                    successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&homeAddress=${encodeURIComponent(homeAddress || "")}&credits=${plan.credits}`,
+                                                    failUrl: `${window.location.origin}/protected/analysis/fail`,
+                                                });
+                                            } catch (error: any) {
+                                                toast.error(error.message || "결제 준비 중 오류가 발생했습니다.");
+                                                setIsLoading(false);
+                                            }
+                                        }}
+                                        disabled={isLoading}
+                                        className="w-full bg-zen-bg text-zen-wood border border-zen-wood/20 hover:bg-zen-wood hover:text-white font-bold h-10 transition-colors"
+                                    >
+                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "충전하기"}
+                                    </Button>
+                                </div>
                             </Card>
                         ))}
                     </div>
-
-                    <div className="flex justify-center pt-4">
-                        <Button
-                            onClick={handleTalismanPayment}
-                            disabled={isLoading}
-                            className="w-full max-w-md h-16 rounded-sm bg-zen-wood text-white hover:bg-[#7A604D] font-serif font-bold text-xl shadow-xl active:scale-[0.98] transition-all"
-                        >
-                            {isLoading ? (
-                                <Loader2 className="w-6 h-6 animate-spin" />
-                            ) : (
-                                <div className="flex items-center gap-3">
-                                    <Sparkles className="w-6 h-6" />
-                                    <span>부적 {selectedPlan}장 충전하기</span>
-                                </div>
-                            )}
-                        </Button>
-                    </div>
-                </TabsContent>
-            </Tabs>
+                </div>
+            </div>
 
             {/* Tester/Admin Test Charge Button */}
             {(userRole === "admin" || userRole === "tester") && (

@@ -1,20 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AIPrompt, getPrompts, updatePrompt } from "./actions";
+import { AIPrompt, getPrompts, updatePrompt, createPrompt, deletePrompt } from "./actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Loader2 } from "lucide-react";
+import { PromptEditor } from "@/components/admin/prompt-editor";
 
 export function PromptManagementClient() {
     const [prompts, setPrompts] = useState<AIPrompt[]>([]);
     const [loading, setLoading] = useState(true);
-    const [editingPrompts, setEditingPrompts] = useState<Record<string, string>>({}); // Key -> Edited Template
-    const [saving, setSaving] = useState<string | null>(null); // Key of prompt being saved
+    const [saving, setSaving] = useState<string | null>(null);
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+
+    // Create form state
+    const [newKey, setNewKey] = useState("");
+    const [newLabel, setNewLabel] = useState("");
+    const [newCategory, setNewCategory] = useState("ANALYSIS");
+    const [newTemplate, setNewTemplate] = useState("");
+    const [newDescription, setNewDescription] = useState("");
 
     useEffect(() => {
         loadPrompts();
@@ -32,51 +42,170 @@ export function PromptManagementClient() {
         }
     }
 
-    const handleTemplateChange = (key: string, value: string) => {
-        setEditingPrompts((prev) => ({ ...prev, [key]: value }));
-    };
-
-    const handleSave = async (key: string) => {
-        const newTemplate = editingPrompts[key];
-        if (newTemplate === undefined) return; // No change
-
+    const handleSave = async (key: string, newTemplate: string) => {
         setSaving(key);
         const result = await updatePrompt(key, newTemplate);
         if (result.success) {
             toast.success("프롬프트가 수정되었습니다.");
-            // Update local state to reflect saved status
-            setPrompts(prompts.map(p => p.key === key ? { ...p, template: newTemplate } : p));
-
-            // Clear edit state for this key (optional, keeping it allows further edits without reset)
-            // setEditingPrompts(prev => { const n = {...prev}; delete n[key]; return n; });
+            setPrompts(prompts.map(p => p.key === key ? { ...p, template: newTemplate, updated_at: new Date().toISOString() } : p));
         } else {
             toast.error("저장 실패: " + result.error);
         }
         setSaving(null);
     };
 
-    const handleReset = (key: string) => {
-        const original = prompts.find(p => p.key === key)?.template || "";
-        setEditingPrompts(prev => ({ ...prev, [key]: original }));
-        toast.info("변경 사항을 취소했습니다.");
+    const handleDelete = async (key: string) => {
+        setSaving(key);
+        const result = await deletePrompt(key);
+        if (result.success) {
+            toast.success("프롬프트가 삭제되었습니다.");
+            setPrompts(prompts.filter(p => p.key !== key));
+        } else {
+            toast.error("삭제 실패: " + result.error);
+        }
+        setSaving(null);
     };
 
-    // Group prompts by category for Tabs (if needed), or just list them
-    // For now, listing them in a nice grid or categories is good.
+    const handleCreate = async () => {
+        if (!newKey || !newLabel || !newTemplate) {
+            toast.error("필수 항목을 모두 입력해주세요.");
+            return;
+        }
+
+        setSaving("create");
+        const result = await createPrompt(newKey, newLabel, newCategory, newTemplate, newDescription);
+        if (result.success) {
+            toast.success("새 프롬프트가 생성되었습니다.");
+            await loadPrompts();
+            setShowCreateDialog(false);
+            resetCreateForm();
+        } else {
+            toast.error("생성 실패: " + result.error);
+        }
+        setSaving(null);
+    };
+
+    const resetCreateForm = () => {
+        setNewKey("");
+        setNewLabel("");
+        setNewCategory("ANALYSIS");
+        setNewTemplate("");
+        setNewDescription("");
+    };
+
     const categories = Array.from(new Set(prompts.map(p => p.category)));
 
-    // Fallback if no prompts (e.g. initial load before seed)
     if (!loading && prompts.length === 0) {
         return (
             <div className="text-center py-20 bg-white border border-zen-border rounded-xl">
                 <p className="text-zen-muted">등록된 프롬프트가 없습니다.</p>
-                <p className="text-xs text-zen-muted/50 mt-1">DB 마이그레이션을 확인하세요.</p>
+                <p className="text-xs text-zen-muted/50 mt-1">아래 버튼을 눌러 새 프롬프트를 생성하세요.</p>
+                <Button onClick={() => setShowCreateDialog(true)} className="mt-4">
+                    <Plus className="w-4 h-4 mr-2" /> 프롬프트 생성
+                </Button>
             </div>
         );
     }
 
     return (
         <div className="space-y-6">
+            {/* Create Button */}
+            <div className="flex justify-end">
+                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                    <DialogTrigger asChild>
+                        <Button className="bg-zen-wood text-white hover:bg-zen-wood/90">
+                            <Plus className="w-4 h-4 mr-2" /> 새 프롬프트 생성
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+                        <DialogHeader>
+                            <DialogTitle>새 AI 프롬프트 생성</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="key">키 (고유값) *</Label>
+                                    <Input
+                                        id="key"
+                                        value={newKey}
+                                        onChange={(e) => setNewKey(e.target.value)}
+                                        placeholder="saju_analysis"
+                                        className="font-mono"
+                                    />
+                                    <p className="text-xs text-zen-muted mt-1">영문, 숫자, 언더스코어만 사용</p>
+                                </div>
+                                <div>
+                                    <Label htmlFor="category">카테고리 *</Label>
+                                    <Select value={newCategory} onValueChange={setNewCategory}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ANALYSIS">ANALYSIS</SelectItem>
+                                            <SelectItem value="CHAT">CHAT</SelectItem>
+                                            <SelectItem value="SYSTEM">SYSTEM</SelectItem>
+                                            <SelectItem value="IMAGE">IMAGE</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="label">레이블 (표시명) *</Label>
+                                <Input
+                                    id="label"
+                                    value={newLabel}
+                                    onChange={(e) => setNewLabel(e.target.value)}
+                                    placeholder="사주 상세 분석"
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="description">설명</Label>
+                                <Input
+                                    id="description"
+                                    value={newDescription}
+                                    onChange={(e) => setNewDescription(e.target.value)}
+                                    placeholder="사주 팔자를 바탕으로 한 상세 분석 프롬프트"
+                                />
+                            </div>
+
+                            <div>
+                                <Label htmlFor="template">템플릿 *</Label>
+                                <Textarea
+                                    id="template"
+                                    value={newTemplate}
+                                    onChange={(e) => setNewTemplate(e.target.value)}
+                                    placeholder="프롬프트 템플릿을 입력하세요...&#10;&#10;예시:&#10;당신은 전문 역술인입니다.&#10;{{name}}님의 사주를 분석하세요.&#10;&#10;변수 사용: {{변수명}}"
+                                    className="font-mono text-sm min-h-[200px]"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 justify-end">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setShowCreateDialog(false)}
+                                >
+                                    취소
+                                </Button>
+                                <Button
+                                    onClick={handleCreate}
+                                    disabled={saving === "create"}
+                                    className="bg-zen-wood text-white"
+                                >
+                                    {saving === "create" ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        "생성"
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            {/* Prompts List */}
             {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="h-48 bg-zen-bg rounded-xl animate-pulse" />
@@ -97,69 +226,15 @@ export function PromptManagementClient() {
 
                     {categories.map(cat => (
                         <TabsContent key={cat} value={cat} className="mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            {prompts.filter(p => p.category === cat).map(prompt => {
-                                const isEdited = editingPrompts[prompt.key] !== undefined && editingPrompts[prompt.key] !== prompt.template;
-                                const currentValue = editingPrompts[prompt.key] !== undefined ? editingPrompts[prompt.key] : prompt.template;
-
-                                return (
-                                    <Card key={prompt.key} className="p-6 bg-white border-zen-border shadow-sm hover:shadow-md transition-shadow">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="text-lg font-bold text-zen-text flex items-center gap-2">
-                                                        <Sparkles className="w-4 h-4 text-zen-gold" />
-                                                        {prompt.label}
-                                                    </h3>
-                                                    <Badge variant="outline" className="text-[10px] text-zen-muted border-zen-border bg-zen-bg">
-                                                        {prompt.key}
-                                                    </Badge>
-                                                </div>
-                                                <p className="text-sm text-zen-muted mt-1">{prompt.description}</p>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {isEdited && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleReset(prompt.key)}
-                                                        className="border-zen-border text-zen-muted hover:text-zen-text"
-                                                    >
-                                                        <RotateCcw className="w-4 h-4 mr-1" /> 되돌리기
-                                                    </Button>
-                                                )}
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => handleSave(prompt.key)}
-                                                    disabled={!isEdited || saving === prompt.key}
-                                                    className="bg-zen-wood text-white hover:bg-zen-wood/90"
-                                                >
-                                                    {saving === prompt.key ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <Save className="w-4 h-4 mr-1" />
-                                                            저장 ({currentValue.length}자)
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Textarea
-                                                value={currentValue}
-                                                onChange={(e) => handleTemplateChange(prompt.key, e.target.value)}
-                                                className="font-mono text-sm min-h-[200px] bg-zen-bg/30 text-zen-text border-zen-border focus:border-zen-gold leading-relaxed"
-                                                placeholder="프롬프트 내용을 입력하세요..."
-                                            />
-                                            <div className="flex justify-between text-xs text-zen-muted/60 px-1">
-                                                <span>마지막 수정: {new Date(prompt.updated_at).toLocaleString()}</span>
-                                                <span>Tip: &#123;&#123;변수명&#125;&#125; 형태로 동적 데이터를 삽입할 수 있습니다.</span>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                );
-                            })}
+                            {prompts.filter(p => p.category === cat).map(prompt => (
+                                <PromptEditor
+                                    key={prompt.key}
+                                    prompt={prompt}
+                                    onSave={handleSave}
+                                    onDelete={handleDelete}
+                                    isSaving={saving === prompt.key}
+                                />
+                            ))}
                         </TabsContent>
                     ))}
                 </Tabs>

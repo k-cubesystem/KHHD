@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { getSajuData } from "@/lib/saju";
 import { calculateAdvancedCompatibility } from "@/lib/compatibility-advanced";
+import { CompatibilityMatrix as NetworkGraph, type FamilyNode, type CompatibilityEdge } from "@/components/social/compatibility-matrix";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // 궁합 타입 정의
 interface CompatibilityData {
@@ -330,9 +332,17 @@ export default function CompatibilityMatrixPage() {
                     </div>
                 </motion.div>
 
-                {/* Matrix Chart */}
+                {/* View Toggle - Grid vs Network */}
                 <motion.div variants={fadeInUp}>
-                    <Card className="zen-card overflow-hidden">
+                    <Tabs defaultValue="grid" className="w-full">
+                        <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+                            <TabsTrigger value="grid">그리드 뷰</TabsTrigger>
+                            <TabsTrigger value="network">네트워크 그래프</TabsTrigger>
+                        </TabsList>
+
+                        {/* Grid View (Existing) */}
+                        <TabsContent value="grid">
+                            <Card className="zen-card overflow-hidden">
                         <CardHeader className="border-b border-zen-border bg-zen-bg/50">
                             <CardTitle className="text-zen-title flex items-center gap-2">
                                 <span className="w-1 h-6 bg-zen-gold rounded-full" />
@@ -426,6 +436,26 @@ export default function CompatibilityMatrixPage() {
                             </div>
                         </CardContent>
                     </Card>
+                        </TabsContent>
+
+                        {/* Network Graph View (New) */}
+                        <TabsContent value="network">
+                            <NetworkGraph
+                                nodes={family.map((member): FamilyNode => ({
+                                    id: member.id,
+                                    name: member.name,
+                                    relationship: member.relation || "지인",
+                                    birthDate: member.birth_date,
+                                }))}
+                                edges={matrix.map((compat): CompatibilityEdge => ({
+                                    from: compat.fromId,
+                                    to: compat.toId,
+                                    score: compat.score,
+                                    type: compat.score >= 80 ? "love" : compat.score >= 60 ? "friendship" : "business",
+                                }))}
+                            />
+                        </TabsContent>
+                    </Tabs>
                 </motion.div>
 
                 {/* 통계 요약 */}

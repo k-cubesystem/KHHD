@@ -13,16 +13,27 @@ export interface MembershipPlan {
     id: string;
     name: string;
     description: string | null;
+    tier: "SINGLE" | "FAMILY" | "BUSINESS";
     price: number;
     interval: "MONTH" | "YEAR";
     talismans_per_period: number;
+    daily_talisman_limit: number;
+    relationship_limit: number;
+    storage_limit: number;
     features: {
         daily_fortune?: boolean;
         pdf_archive?: boolean;
         kakao_daily?: boolean;
+        ai_shaman?: boolean;
+        family_compatibility?: boolean;
+        network_visualization?: boolean;
+        api_access?: boolean;
+        priority_support?: boolean;
+        custom_reports?: boolean;
         bonus_rate?: number;
     };
     is_active: boolean;
+    sort_order?: number;
 }
 
 export interface Subscription {
@@ -70,7 +81,7 @@ export async function getMembershipPlans(): Promise<MembershipPlan[]> {
         .order("sort_order", { ascending: true });
 
     if (error) {
-        console.error("[Subscription] Get plans error:", error);
+        console.error("[Subscription] Get plans error:", JSON.stringify(error, null, 2));
         return [];
     }
 
@@ -650,19 +661,27 @@ export async function getSubscriptionPayments(limit: number = 10): Promise<Subsc
 
     if (!user) return [];
 
-    const { data, error } = await supabase
-        .from("subscription_payments")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(limit);
+    try {
+        const { data, error } = await supabase
+            .from("subscription_payments")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(limit);
 
-    if (error) {
-        console.error("[Subscription] Get payments error:", error);
+        if (error) {
+            // Only log in development mode
+            if (process.env.NODE_ENV === 'development') {
+                console.warn("[Subscription] Could not fetch payment history. This is expected if migrations haven't been run yet.");
+            }
+            return [];
+        }
+
+        return data || [];
+    } catch (err) {
+        // Silently return empty array if table doesn't exist
         return [];
     }
-
-    return data || [];
 }
 
 // ============================================

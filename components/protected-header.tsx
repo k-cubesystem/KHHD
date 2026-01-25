@@ -16,9 +16,10 @@ import { useState, useEffect } from "react";
 import {
     User, LogOut, LayoutDashboard, Menu, X, ChevronDown,
     Sun, BookOpen, ScanFace, Hand, Compass, CreditCard, Ticket,
-    Users, Clock, Crown, Activity
+    Users, Clock, Crown, Activity, Sparkles
 } from "lucide-react";
 import { getCurrentUserRole } from "@/app/actions/products";
+import { getSubscriptionStatus } from "@/app/actions/subscription-actions";
 import { UserRole } from "@/types/auth";
 import { TalismanBalance } from "@/components/talisman-balance";
 import { SubscriptionBadge } from "@/components/membership/subscription-badge";
@@ -28,6 +29,7 @@ import { fadeInUp, staggerContainer, mobileMenuVariants } from "@/lib/animations
 export function ProtectedHeader({ user }: { user: any }) {
     const [isMounted, setIsMounted] = useState(false);
     const [userRole, setUserRole] = useState<UserRole>("user");
+    const [planName, setPlanName] = useState<string>("");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const router = useRouter();
     const supabase = createClient();
@@ -35,6 +37,18 @@ export function ProtectedHeader({ user }: { user: any }) {
     useEffect(() => {
         setIsMounted(true);
         getCurrentUserRole().then((res) => setUserRole(res.role));
+        getSubscriptionStatus().then((res) => {
+            if (res.isSubscribed && res.plan) {
+                // Determine display name based on tier if possible, or use name logic
+                // Plan names are "싱글 멤버십", "패밀리 멤버십", etc.
+                // We can just show the tier or name. User asked for "Plan Grade" (플랜등급).
+                // Let's use the plan name but maybe simplified.
+                // Actually, let's just use plan.name (e.g. "싱글 멤버십").
+                setPlanName(res.plan.name);
+            } else {
+                setPlanName("무료 회원");
+            }
+        });
     }, []);
 
     const handleSignOut = async () => {
@@ -78,6 +92,11 @@ export function ProtectedHeader({ user }: { user: any }) {
 
                             {/* Dropdown Panel */}
                             <div className="absolute top-20 left-0 w-48 bg-white border border-zen-border rounded-sm shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+                                <Link href="/protected/ai-shaman" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-gold-50 text-zen-text/80 hover:text-zen-gold transition-colors border-b border-zen-border/30 mb-1">
+                                    <Sparkles className="w-4 h-4 text-zen-gold" />
+                                    <span className="text-sm font-bold">AI 신당</span>
+                                    <Crown className="w-3 h-3 text-zen-gold ml-auto" />
+                                </Link>
                                 <Link href="/protected/saju/today" className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-zen-bg text-zen-text/80 hover:text-zen-wood transition-colors">
                                     <Sun className="w-4 h-4 text-zen-gold" />
                                     <span className="text-sm">오늘의 운세</span>
@@ -115,10 +134,8 @@ export function ProtectedHeader({ user }: { user: any }) {
 
                 {/* Right: Actions */}
                 <div className="flex items-center gap-3">
-                    {/* Subscription Badge */}
-                    <SubscriptionBadge />
-
                     {/* Talisman Balance */}
+
                     <TalismanBalance />
 
                     {/* Profile */}
@@ -136,7 +153,14 @@ export function ProtectedHeader({ user }: { user: any }) {
 
                         <DropdownMenuContent className="w-64 bg-white border-zen-border text-zen-text p-2 shadow-2xl rounded-sm mt-3 font-sans" align="end">
                             <div className="px-3 py-4 border-b border-zen-border mb-1">
-                                <div className="font-serif font-bold text-zen-text text-base mb-0.5">{userName}</div>
+                                <div className="flex items-center justify-between mb-0.5">
+                                    <div className="font-serif font-bold text-zen-text text-base">{userName}</div>
+                                    {planName && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.5 bg-zen-gold/10 text-zen-gold rounded-full border border-zen-gold/20">
+                                            {planName}
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="text-xs text-zen-muted font-mono">{userEmail}</div>
                             </div>
 
@@ -162,15 +186,9 @@ export function ProtectedHeader({ user }: { user: any }) {
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                                <Link href="/protected/membership" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-gold/10 transition-colors">
-                                    <Crown className="w-4 h-4 text-zen-gold" />
-                                    <span className="text-sm font-bold text-zen-gold">멤버십</span>
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href="/protected/billing" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-bg transition-colors">
+                                <Link href="/protected/membership/manage?tab=store" className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-zen-bg transition-colors">
                                     <CreditCard className="w-4 h-4 text-zen-gold" />
-                                    <span className="text-sm font-bold">부적 충전</span>
+                                    <span className="text-sm font-bold">멤버십 결제</span>
                                 </Link>
                             </DropdownMenuItem>
 
@@ -221,6 +239,12 @@ export function ProtectedHeader({ user }: { user: any }) {
                             >
                                 <motion.div variants={fadeInUp} className="text-xs font-bold text-zen-muted uppercase tracking-widest px-1">해화사주 (Haehwa Saju)</motion.div>
                                 <div className="grid grid-cols-1 gap-2">
+                                    <motion.div variants={fadeInUp}>
+                                        <Link href="/protected/ai-shaman" className="p-4 min-h-[56px] text-lg font-bold text-zen-gold hover:text-zen-wood flex items-center gap-3 bg-gradient-to-r from-gold-50 to-white border-2 border-zen-gold/30 rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
+                                            <Sparkles className="w-5 h-5 text-zen-gold flex-shrink-0" /> AI 신당
+                                            <Crown className="w-4 h-4 text-zen-gold ml-auto" />
+                                        </Link>
+                                    </motion.div>
                                     <motion.div variants={fadeInUp}>
                                         <Link href="/protected/saju/today" className="p-4 min-h-[56px] text-lg font-bold text-zen-text hover:text-zen-wood flex items-center gap-3 bg-white/50 border border-zen-border rounded-sm active:scale-[0.98] transition-all" onClick={() => setMobileMenuOpen(false)}>
                                             <Sun className="w-5 h-5 text-zen-gold flex-shrink-0" /> 오늘의 운세
@@ -280,7 +304,7 @@ export function ProtectedHeader({ user }: { user: any }) {
                                 transition={{ delay: 0.3 }}
                                 className="mt-4 pt-6 border-t border-zen-border"
                             >
-                                <Link href="/protected/billing" className="w-full" onClick={() => setMobileMenuOpen(false)}>
+                                <Link href="/protected/membership/manage?tab=store" className="w-full" onClick={() => setMobileMenuOpen(false)}>
                                     <Button className="w-full h-14 bg-zen-wood text-white text-lg font-bold rounded-sm shadow-md flex items-center gap-2">
                                         <Ticket className="w-5 h-5" /> 부적 충전하기
                                     </Button>
