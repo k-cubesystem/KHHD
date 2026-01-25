@@ -28,11 +28,11 @@ export function SiteFooter() {
                 <div className="space-y-4">
                     <h4 className="font-bold text-white">사업자 정보</h4>
                     <ul className="space-y-2 text-xs">
-                        <li>(주) 안티그래비티</li>
-                        <li>대표: 이도현</li>
+                        <li>(주) 해화당</li>
+                        <li>대표: 홍길동</li>
                         <li>사업자등록번호: 123-45-67890</li>
-                        <li>통신판매업신고: 제 2026-서울강남-0000호</li>
-                        <li>주소: 서울특별시 강남구 테헤란로 123, 10층</li>
+                        <li>통신판매업신고: 제 2026-서울종로-1234호</li>
+                        <li>주소: 서울특별시 종로구 종로 1, 10층</li>
                     </ul>
                 </div>
 
