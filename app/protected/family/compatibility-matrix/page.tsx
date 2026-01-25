@@ -15,6 +15,8 @@ import { ArrowLeft, Users, Sparkles, Heart, AlertTriangle, Star, X } from "lucid
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { getSajuData } from "@/lib/saju";
+import { calculateAdvancedCompatibility } from "@/lib/compatibility-advanced";
 
 // 궁합 타입 정의
 interface CompatibilityData {
@@ -164,22 +166,50 @@ export default function CompatibilityMatrixPage() {
 
             setFamily(familyList);
 
-            // 궁합 매트릭스 계산 (Mock - 실제로는 사주 기반 계산)
+            // 궁합 매트릭스 계산 (실제 사주 기반 - Phase 21)
             const matrixData: CompatibilityData[] = [];
             for (let i = 0; i < familyList.length; i++) {
                 for (let j = i + 1; j < familyList.length; j++) {
-                    // TODO: 실제 사주 기반 궁합 계산 로직 연동
-                    const score = Math.floor(50 + Math.random() * 50);
-                    matrixData.push({
-                        from: familyList[i].name,
-                        fromId: familyList[i].id,
-                        to: familyList[j].name,
-                        toId: familyList[j].id,
-                        score,
-                        type: getCompatibilityType(score),
-                        description: getCompatibilityDescription(score, familyList[i].name, familyList[j].name),
-                        advice: getCompatibilityAdvice(score),
-                    });
+                    try {
+                        // 각 구성원의 사주 계산
+                        const saju1 = getSajuData(
+                            familyList[i].birth_date,
+                            familyList[i].birth_time || "00:00",
+                            true // 기본 양력으로 가정
+                        );
+                        const saju2 = getSajuData(
+                            familyList[j].birth_date,
+                            familyList[j].birth_time || "00:00",
+                            true
+                        );
+
+                        // 고급 궁합 계산
+                        const compatibility = calculateAdvancedCompatibility(saju1, saju2);
+
+                        matrixData.push({
+                            from: familyList[i].name,
+                            fromId: familyList[i].id,
+                            to: familyList[j].name,
+                            toId: familyList[j].id,
+                            score: compatibility.score,
+                            type: compatibility.type,
+                            description: compatibility.description,
+                            advice: compatibility.advice,
+                        });
+                    } catch (error) {
+                        console.error("궁합 계산 오류:", error);
+                        // 오류 발생 시 기본값
+                        matrixData.push({
+                            from: familyList[i].name,
+                            fromId: familyList[i].id,
+                            to: familyList[j].name,
+                            toId: familyList[j].id,
+                            score: 70,
+                            type: "분석불가",
+                            description: "생년월일 정보가 부족하여 궁합을 계산할 수 없습니다.",
+                            advice: ["정확한 생년월일시를 입력해주세요"],
+                        });
+                    }
                 }
             }
 

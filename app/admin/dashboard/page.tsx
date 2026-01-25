@@ -2,16 +2,33 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Users, CreditCard, TrendingUp, Activity } from "lucide-react";
 
+import { createAdminClient } from "@/lib/supabase/admin";
+
 async function getStats() {
   const supabase = await createClient();
 
+  // Check Admin
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { totalUsers: 0, totalRevenue: 0, todayRevenue: 0, totalAnalyses: 0, recentPayments: [] };
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") return { totalUsers: 0, totalRevenue: 0, todayRevenue: 0, totalAnalyses: 0, recentPayments: [] };
+
+  // Use Admin Client if available
+  let dbClient = supabase;
+  try {
+    dbClient = createAdminClient();
+  } catch (e) {
+    console.warn("getStats: Fallback to standard client");
+  }
+
   // Get total users count
-  const { count: totalUsers } = await supabase
+  const { count: totalUsers } = await dbClient
     .from("profiles")
     .select("*", { count: "exact", head: true });
 
   // Get total revenue
-  const { data: payments } = await supabase
+  const { data: payments } = await dbClient
     .from("payments")
     .select("amount")
     .eq("status", "completed");
@@ -22,7 +39,7 @@ async function getStats() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const { data: todayPayments } = await supabase
+  const { data: todayPayments } = await dbClient
     .from("payments")
     .select("amount")
     .eq("status", "completed")
@@ -31,12 +48,12 @@ async function getStats() {
   const todayRevenue = todayPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
 
   // Get total analyses
-  const { count: totalAnalyses } = await supabase
+  const { count: totalAnalyses } = await dbClient
     .from("saju_records")
     .select("*", { count: "exact", head: true });
 
   // Get recent payments
-  const { data: recentPayments } = await supabase
+  const { data: recentPayments } = await dbClient
     .from("payments")
     .select(`
       id,
@@ -53,7 +70,7 @@ async function getStats() {
     totalRevenue,
     todayRevenue,
     totalAnalyses: totalAnalyses || 0,
-    recentPayments: recentPayments || [],
+    recentPayments: (recentPayments as Payment[]) || [],
   };
 }
 

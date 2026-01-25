@@ -64,12 +64,12 @@ export function PaymentManagementClient() {
       {/* Filters */}
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-white/60">상태 필터:</span>
+          <span className="text-sm text-zen-muted font-sans">상태 필터:</span>
           <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setPage(1); }}>
-            <SelectTrigger className="w-[180px] bg-white/5 border-white/10 text-white">
+            <SelectTrigger className="w-[180px] bg-white border-zen-border text-zen-text">
               <SelectValue placeholder="모든 상태" />
             </SelectTrigger>
-            <SelectContent className="bg-[#1A1A1A] border-white/10 text-white">
+            <SelectContent className="bg-white border-zen-border text-zen-text">
               <SelectItem value="all">모든 결제</SelectItem>
               <SelectItem value="completed">결제 성공</SelectItem>
               <SelectItem value="test_charge">테스트 충전</SelectItem>
@@ -85,11 +85,11 @@ export function PaymentManagementClient() {
             size="icon"
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
-            className="bg-white/5 border-white/10 hover:bg-white/10"
+            className="bg-white border-zen-border text-zen-text hover:bg-zen-bg"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-sm font-medium text-white/50 px-2">
+          <span className="text-sm font-medium text-zen-muted px-2">
             {page} / {totalPages || 1}
           </span>
           <Button
@@ -97,7 +97,7 @@ export function PaymentManagementClient() {
             size="icon"
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages || loading}
-            className="bg-white/5 border-white/10 hover:bg-white/10"
+            className="bg-white border-zen-border text-zen-text hover:bg-zen-bg"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -105,33 +105,33 @@ export function PaymentManagementClient() {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden backdrop-blur-sm">
+      <div className="rounded-xl border border-zen-border bg-white overflow-hidden shadow-sm">
         <Table>
-          <TableHeader className="bg-white/5">
-            <TableRow className="border-white/10 hover:bg-white/5">
-              <TableHead className="text-white/50">주문 ID</TableHead>
-              <TableHead className="text-white/50">사용자</TableHead>
-              <TableHead className="text-white/50">금액</TableHead>
-              <TableHead className="text-white/50">크레딧</TableHead>
-              <TableHead className="text-white/50">상태</TableHead>
-              <TableHead className="text-white/50">일시</TableHead>
+          <TableHeader className="bg-zen-bg/50">
+            <TableRow className="border-zen-border hover:bg-zen-bg/80">
+              <TableHead className="text-zen-muted font-serif">주문 ID</TableHead>
+              <TableHead className="text-zen-muted font-serif">사용자</TableHead>
+              <TableHead className="text-zen-muted font-serif">금액</TableHead>
+              <TableHead className="text-zen-muted font-serif">크레딧</TableHead>
+              <TableHead className="text-zen-muted font-serif">상태</TableHead>
+              <TableHead className="text-zen-muted font-serif">일시</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-white/10">
-                  <TableCell><div className="h-4 w-32 bg-white/10 rounded animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 w-24 bg-white/10 rounded animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 w-20 bg-white/10 rounded animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 w-10 bg-white/10 rounded animate-pulse" /></TableCell>
-                  <TableCell><div className="h-6 w-16 bg-white/10 rounded animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 w-24 bg-white/10 rounded animate-pulse" /></TableCell>
+                <TableRow key={i} className="border-zen-border">
+                  <TableCell><div className="h-4 w-32 bg-zen-bg rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-zen-bg rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 w-20 bg-zen-bg rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 w-10 bg-zen-bg rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-6 w-16 bg-zen-bg rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-zen-bg rounded animate-pulse" /></TableCell>
                 </TableRow>
               ))
             ) : payments.length === 0 ? (
-              <TableRow className="border-white/10">
-                <TableCell colSpan={6} className="h-40 text-center text-white/40">
+              <TableRow className="border-zen-border">
+                <TableCell colSpan={6} className="h-40 text-center text-zen-muted">
                   결제 내역이 없습니다.
                 </TableCell>
               </TableRow>
@@ -142,25 +142,25 @@ export function PaymentManagementClient() {
                     key={payment.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="border-white/10 hover:bg-white/5 transition-colors"
+                    className="border-zen-border hover:bg-zen-bg/30 transition-colors"
                   >
-                    <TableCell className="font-mono text-xs text-white/60">{payment.order_id}</TableCell>
+                    <TableCell className="font-mono text-xs text-zen-muted">{payment.order_id}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="text-sm text-white/90">{payment.profiles?.full_name || "Unknown"}</span>
-                        <span className="text-xs text-white/40">{payment.profiles?.email}</span>
+                        <span className="text-sm text-zen-text/90 font-medium">{payment.profiles?.full_name || "Unknown"}</span>
+                        <span className="text-xs text-zen-muted">{payment.profiles?.email}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="font-bold tabular-nums">
+                    <TableCell className="font-bold tabular-nums text-zen-text">
                       ₩{payment.amount.toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="bg-white/10 hover:bg-white/20 text-white/80">
+                      <Badge variant="secondary" className="bg-zen-bg hover:bg-zen-border text-zen-text border border-zen-border/50">
                         +{payment.credits_purchased}
                       </Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                    <TableCell className="text-xs text-white/50">
+                    <TableCell className="text-xs text-zen-muted">
                       {new Date(payment.created_at).toLocaleString()}
                     </TableCell>
                   </motion.tr>

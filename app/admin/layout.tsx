@@ -7,7 +7,8 @@ import {
   CreditCard,
   Package,
   Database,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from "lucide-react";
 
 export default async function AdminLayout({
@@ -36,6 +37,7 @@ export default async function AdminLayout({
     { href: "/admin/users", label: "회원 관리", icon: Users },
     { href: "/admin/payments", label: "결제 내역", icon: CreditCard },
     { href: "/admin/products", label: "상품(가격) 관리", icon: Package },
+    { href: "/admin/prompts", label: "AI 프롬프트 관리", icon: Sparkles },
     { href: "/admin/database", label: "데이터베이스", icon: Database },
   ];
 

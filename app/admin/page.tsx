@@ -76,8 +76,12 @@ export default async function AdminDashboardPage() {
       <DashboardStats cards={cards} />
 
       {/* TODO: Recent Activity Chart or List */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/30 border-dashed">
-        <p>차트 및 상세 통계 영역 (준비 중)</p>
+      {/* TODO: Recent Activity Chart or List */}
+      <div className="rounded-2xl border border-zen-border bg-white p-12 text-center text-zen-muted border-dashed">
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-serif text-lg">상세 통계 분석</p>
+          <p className="text-sm opacity-50">차트 및 주간 리포트 기능이 준비 중입니다.</p>
+        </div>
       </div>
     </>
   );

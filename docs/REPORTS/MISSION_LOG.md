@@ -360,3 +360,155 @@
 - 메인 페이지는 Dark(Midnight) 테마가 매우 잘 어울림.
 - 결과 페이지는 인쇄물 느낌을 주기 위해 Light(Morning) 테마를 강제 적용하는 로직 필요.
 - **문서 위치 변경**: 이제 MISSION_LOG는 `docs/REPORTS/MISSION_LOG.md`에 위치
+
+---
+
+## ✅ Phase 20: Profile & UI Polish (2026-01-24) - COMPLETED ✅
+
+### 1. 프로필 이미지 시스템 구축
+- [x] **Supabase Storage 연동**: `profile-images` 버킷 생성 및 RLS 정책 설정.
+- [x] **DB Schema Update**: `profiles` 테이블에 `avatar_url` 컬럼 추가.
+- [x] **Front-end UI**: 이미지 업로드, 미리보기, 자동 저장 구현 (`profile-edit-form.tsx`).
+- [x] **에러 핸들링**: 용량 제한(5MB), 업로드 실패 시 명확한 에러 메시지 제공.
+
+### 2. UI/UX/가독성 대폭 개선
+- [x] **Global Visibility Fix**:
+  - `globals.css`: `--muted-foreground` 색상을 진한 숯색(`text-gray-900`)으로 변경하여 흰 배경 위 시인성 확보.
+  - `input.tsx`, `textarea.tsx`: 배경색(`bg-white`)과 글자색 강제 지정으로 입력 편의성 증대.
+- [x] **Premium Manse Card Upgrade**:
+  - 만세력 글자(천간/지지)에 `text-gray-900`, `drop-shadow` 적용하여 배경색과 겹쳐도 또렷하게 보이도록 수정.
+- [x] **Unified Profile Layout**:
+  - 기존 분리되어 있던 **사주 원국표**와 **계정 설정**을 하나의 **Accordion List**로 통합.
+  - 기본 상태를 '닫힘'으로 설정하여 깔끔한 대시보드 경험 제공.
+
+### 3. 기능 안정화
+- [x] **Logout Fix**: 로그아웃 시 404 에러 발생하던 문제 해결 (Route Handler 생성).
+- [x] **Error Logging**: 명확하지 않던 에러 객체(`{}`) 출력을 `JSON.stringify`로 상세화하여 디버깅 용이성 확보.
+
+**빌드 상태**: ✅ 성공 (2026-01-24)
+
+---
+
+## ✅ Phase 21: 우선순위 스킬 3종 구현 완료 (2026-01-24) - COMPLETED ✅
+
+### 1. 가족 궁합 매트릭스 - 실제 사주 계산 로직 구현
+- [x] **lib/compatibility-advanced.ts 생성**
+  - 천간합(天干合): 갑기합토, 을경합금, 병신합수, 정임합목, 무계합화 (+15점)
+  - 지지합(地支合): 자축, 인해, 묘술, 진유, 사신, 오미 (+10점)
+  - 지지충(地支沖): 자오, 축미, 인신, 묘유, 진술, 사해 (-20점)
+  - 오행상생(五行相生): 목→화→토→금→수 (+10점)
+  - 오행상극(五行相剋): 목극토, 토극수, 수극화, 화극금, 금극목 (-10점)
+  - 오행균형 계산: 부족한 오행 보완 여부 체크 (±10점)
+  - 기본 점수 70점 + 수정치로 최종 점수 산출 (0-100)
+
+- [x] **app/protected/family/compatibility-matrix/page.tsx 업데이트**
+  - Mock 랜덤 계산 → 실제 `getSajuData()` + `calculateAdvancedCompatibility()` 사용
+  - 각 가족 구성원의 사주 계산 후 궁합 분석
+  - 에러 핸들링 추가 (생년월일 부족 시 기본값)
+  - 상세 분석 모달에 실제 궁합 이유 및 조언 표시
+
+**알고리즘 특징**:
+- 실제 명리학(命理學) 이론 기반
+- 일간(日干)/일지(日支) 중심 분석
+- 오행 균형 보완 관계 평가
+- 천연 궁합(천간합/지지합) 보너스
+- 충(沖) 패널티로 부정합 표시
+
+### 2. AI 코칭 채팅 UI 구현
+- [x] **app/protected/coaching/page.tsx 생성**
+  - 채팅 인터페이스 구현 (User ↔ AI 대화)
+  - 메시지 상태 관리 (useState + useRef)
+  - 자동 스크롤 (메시지 추가 시)
+  - 샘플 프롬프트 4종 제공 (첫 진입 시)
+  - 타이핑 애니메이션 및 로딩 상태 표시
+  - 더미 AI 응답 생성 (실제 Gemini API 통합 준비 완료)
+
+**UI/UX 특징**:
+- 봇(Bot) vs 사용자(User) 아바타 구분
+- 말풍선 스타일 메시지 (좌/우 정렬)
+- 메시지 타임스탬프 표시
+- 엔터키 전송 지원
+- Zen 테마 일관성 유지
+
+**향후 작업**:
+- Gemini Streaming API 연동 (실시간 응답)
+- 사주 데이터 자동 로드 후 컨텍스트 전달
+- 대화 히스토리 DB 저장
+
+### 3. 바이럴 공유 기능 (OG 이미지)
+- [x] **app/api/og/route.tsx 생성**
+  - Next.js ImageResponse API 활용 (Edge Runtime)
+  - OG 이미지 동적 생성 (1200x630)
+  - 오행별 색상 테마 적용 (木, 火, 土, 金, 水)
+  - 타입별 템플릿 2종:
+    - `type=detail`: 사주 상세 (일간 오행 강조)
+    - `type=compatibility`: 궁합 점수 강조
+  - URL 파라미터: name, element, type, score
+
+- [x] **components/share/viral-share-button.tsx 생성**
+  - 공유 다이얼로그 모달 UI
+  - OG 이미지 미리보기
+  - SNS 공유 버튼 4종:
+    - Facebook 공유
+    - Twitter 공유
+    - 카카오톡 공유 (Web Share API)
+    - 이미지 다운로드
+  - 링크 복사 기능 (클립보드 API)
+  - 복사 완료 피드백 (Check 아이콘 애니메이션)
+
+**기술 스택**:
+- Next.js `ImageResponse` (Vercel OG)
+- Edge Runtime (빠른 응답)
+- Framer Motion (다이얼로그 애니메이션)
+- Web Share API (모바일 네이티브 공유)
+
+### 4. Framer Motion 타입 충돌 해결
+- [x] **components/ui/button.tsx 수정**
+  - React DragEvent vs Framer Motion PanInfo 충돌 해결
+  - 충돌 props 제거: onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration
+  - children 명시적 추출
+
+- [x] **components/ui/card.tsx 수정**
+  - 동일한 타입 충돌 해결 적용
+  - "use client" 지시어 추가
+
+- [x] **components/ui/input.tsx 수정**
+  - 충돌 props 제거
+  - "use client" 지시어 추가
+
+- [x] **components/ui/skeleton.tsx 수정**
+  - 충돌 props 제거
+  - children 지원 추가
+
+**해결 방법**:
+- 문제: `motion.button`, `motion.div` 등에 HTML props 스프레드 시 이벤트 타입 충돌
+- 해결: 충돌하는 6개 props를 구조 분해로 제거 후 나머지만 스프레드
+- 결과: TypeScript 컴파일 성공, 빌드 정상 완료
+
+**빌드 상태**: ✅ 성공 (2026-01-24)
+- Route 추가: `/protected/coaching`, `/api/og`
+- 빌드 시간: ~11초 (정상 범위)
+
+---
+
+## ✅ Phase 22: Admin Panel & AI Prompts Integration (2026-01-25) - COMPLETED ✅
+
+### 1. Admin Dashboard 안정화 및 리팩토링
+- [x] **Data Fetching Robustness**:
+  - `admin/users`, `admin/payments`, `admin/products`, `admin/prompts`의 Server Actions를 `createAdminClient`로 교체.
+  - RLS 정책 충돌 방지 및 500 에러 해결 (Service Role Key 사용).
+  - DB 에러 시 크래시 대신 빈 배열 반환으로 UX 보호.
+  - `profiles` 테이블에 `email` 컬럼 누락 시 Fallback 로직 추가.
+
+### 2. AI 프롬프트 관리 시스템
+- [x] **Database Schema**: `ai_prompts` 테이블 생성 및 Seed Data (사주, 운세, 관상 등) 삽입.
+- [x] **Admin UI**: `/admin/prompts` 페이지 생성.
+  - 탭(Tabs) 인터페이스로 카테고리별 프롬프트 관리.
+  - 실시간 편집 및 저장 기능.
+- [x] **Dynamic Context Injection**:
+  - `app/actions/ai-saju.ts`의 핵심 분석 함수(`analyzeSajuDetail` 등)가 DB에서 프롬프트를 fetch하도록 수정.
+  - 변수 Interpolation (`{{name}}` 등) 지원.
+  - DB 프롬프트 부재 시 Hardcoded 프롬프트 자동 Fallback.
+
+### 3. Design Consistency
+- [x] **Zen Theme Admin**: Admin 컴포넌트(`Button`, `Input`, `Card`)에 Zen Design System 적용 확인.

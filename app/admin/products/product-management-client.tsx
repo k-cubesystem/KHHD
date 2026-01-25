@@ -81,11 +81,11 @@ export function ProductManagementClient() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {loading ? (
         Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-64 rounded-xl bg-white/5 animate-pulse" />
+          <div key={i} className="h-64 rounded-xl bg-zen-bg animate-pulse border border-zen-border" />
         ))
       ) : plans.map((plan) => (
         <Card key={plan.id} className={cn(
-          "p-6 bg-white/5 border-white/10 relative overflow-hidden group transition-all duration-300",
+          "p-6 bg-white border-zen-border relative overflow-hidden group transition-all duration-300 hover:shadow-lg",
           !plan.is_active && "opacity-60 grayscale"
         )}>
           {/* Active Status Ribbon */}
@@ -98,16 +98,16 @@ export function ProductManagementClient() {
 
           <div className="space-y-4 relative z-10">
             <div className="space-y-1 pr-12">
-              <div className="text-xs text-brand-gold uppercase tracking-wider font-bold mb-1">
+              <div className="text-xs text-zen-gold uppercase tracking-wider font-bold mb-1">
                 Credit x {plan.credits}
               </div>
-              <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-              <p className="text-sm text-white/50 h-10 line-clamp-2">{plan.description}</p>
+              <h3 className="text-xl font-bold text-zen-text font-serif">{plan.name}</h3>
+              <p className="text-sm text-zen-muted h-10 line-clamp-2">{plan.description}</p>
             </div>
 
             <div className="flex items-baseline gap-1 py-2">
-              <span className="text-3xl font-black text-white tabular-nums">{plan.price.toLocaleString()}</span>
-              <span className="text-sm font-medium text-white/40">원</span>
+              <span className="text-3xl font-black text-zen-text tabular-nums">{plan.price.toLocaleString()}</span>
+              <span className="text-sm font-medium text-zen-muted">원</span>
             </div>
 
             {/* Edit Button (Dialog Trigger) */}
@@ -115,7 +115,7 @@ export function ProductManagementClient() {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full bg-white/5 hover:bg-white/10 border-white/10 text-white group-hover:border-primary/50 transition-colors"
+                  className="w-full bg-white hover:bg-zen-bg border-zen-border text-zen-text group-hover:border-zen-gold/50 transition-colors"
                   onClick={() => { setEditingPlan(plan); setOpen(true); }}
                 >
                   <Edit2 className="w-4 h-4 mr-2" />
@@ -124,7 +124,7 @@ export function ProductManagementClient() {
               </DialogTrigger>
 
               {/* Modal Content */}
-              <DialogContent className="bg-[#1A1A1A] border-white/10 text-white sm:max-w-[425px]">
+              <DialogContent className="bg-white border-zen-border text-zen-text sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>상품 정보 수정</DialogTitle>
                   <DialogDescription>
@@ -139,7 +139,7 @@ export function ProductManagementClient() {
                       <Input
                         value={editingPlan.name}
                         onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
-                        className="col-span-3 bg-black/50 border-white/10"
+                        className="col-span-3 bg-white border-zen-border text-zen-text"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -148,7 +148,7 @@ export function ProductManagementClient() {
                         type="number"
                         value={editingPlan.price}
                         onChange={(e) => setEditingPlan({ ...editingPlan, price: Number(e.target.value) })}
-                        className="col-span-3 bg-black/50 border-white/10"
+                        className="col-span-3 bg-white border-zen-border text-zen-text"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -157,7 +157,7 @@ export function ProductManagementClient() {
                         type="number"
                         value={editingPlan.credits}
                         onChange={(e) => setEditingPlan({ ...editingPlan, credits: Number(e.target.value) })}
-                        className="col-span-3 bg-black/50 border-white/10"
+                        className="col-span-3 bg-white border-zen-border text-zen-text"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -166,7 +166,7 @@ export function ProductManagementClient() {
                         value={editingPlan.badge_text || ""}
                         onChange={(e) => setEditingPlan({ ...editingPlan, badge_text: e.target.value })}
                         placeholder="예: BEST, 인기"
-                        className="col-span-3 bg-black/50 border-white/10"
+                        className="col-span-3 bg-white border-zen-border text-zen-text"
                       />
                     </div>
                   </div>
@@ -174,7 +174,7 @@ export function ProductManagementClient() {
 
                 <DialogFooter>
                   <Button variant="ghost" onClick={() => setOpen(false)}>취소</Button>
-                  <Button onClick={handleSaveEdit} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button onClick={handleSaveEdit} className="bg-zen-wood text-white hover:bg-zen-wood/90">
                     <Save className="w-4 h-4 mr-2" />
                     저장하기
                   </Button>
@@ -184,7 +184,7 @@ export function ProductManagementClient() {
           </div>
 
           {/* Background Glow */}
-          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-[50px] group-hover:bg-primary/20 transition-all duration-500" />
+          <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-zen-gold/10 rounded-full blur-[50px] group-hover:bg-zen-gold/20 transition-all duration-500" />
         </Card>
       ))}
     </div>

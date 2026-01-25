@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { type FaceDestinyGoal, type InteriorTheme } from "@/lib/constants";
 import { deductTalisman } from "./wallet-actions";
 
@@ -13,6 +14,24 @@ const getGeminiModel = () => {
     // User requested "Gemini 2.5 Flash-Lite" (gemini-2.5-flash-lite)
     return genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 };
+
+// Helper: Fetch System Prompt from Supabase
+async function getSystemPrompt(key: string, variables: Record<string, string> = {}) {
+    try {
+        const adminSupabase = createAdminClient();
+        const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', key).single();
+        if (data?.template) {
+            let text = data.template;
+            for (const [k, v] of Object.entries(variables)) {
+                text = text.replace(new RegExp(`{{${k}}}`, 'g'), v);
+            }
+            return text;
+        }
+    } catch (e) {
+        console.warn(`Failed to fetch prompt for ${key}:`, e);
+    }
+    return null;
+}
 
 // 0. Saju Detail Analysis
 export async function analyzeSajuDetail(
@@ -50,8 +69,13 @@ export async function analyzeSajuDetail(
         * IMPORTANT: Please incorporate this user background into your advice. For example, relate their career luck to their actual job '${profile.job}', or suggest hobbies compatible with '${profile.hobbies}'.
         ` : "";
 
+        // Fetch Dynamic Prompt
+        const systemPrompt = await getSystemPrompt('saju_analysis') || "Analyze the Saju (Four Pillars of Destiny) for:";
+
         const prompt = `
-        Analyze the Saju (Four Pillars of Destiny) for:
+        ${systemPrompt}
+
+        Target User:
         Name: ${name}, Gender: ${gender}
         Birth: ${birthDate} ${birthTime} (${calendarType})
 
@@ -90,9 +114,12 @@ export async function getTodayFortune(birthDate: string) {
     try {
         const model = getGeminiModel();
         const today = new Date().toISOString().split('T')[0];
+
+        const systemPrompt = await getSystemPrompt('daily_fortune', { date: today, birthDate }) || `Provide a daily fortune for someone born on ${birthDate}. Today is ${today}.`;
+
         const prompt = `
-        Provide a daily fortune for someone born on ${birthDate}.
-        Today is ${today}.
+        ${systemPrompt}
+        
         Focus on: Specific advice for today, lucky color, lucky time.
         Format: JSON.
         {
@@ -166,8 +193,10 @@ export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDesti
             authority: "관운 (官運) - 눈썹의 형태, 턱선의 각도, 이마의 너비에 집중",
         };
 
+        const systemPrompt = await getSystemPrompt('face_reading') || "당신은 30년 경력의 관상학 대가이자 한의학 전문가입니다.";
+
         const prompt = `
-당신은 30년 경력의 관상학 대가이자 한의학 전문가입니다.
+${systemPrompt}
 아래 얼굴 이미지를 분석하여 **${goalPrompts[goal]}**에 초점을 맞추어 정밀 분석하세요.
 
 ## 분석 항목
@@ -268,8 +297,10 @@ export async function analyzePalm(imageBase64: string) {
         const deductResult = await deductTalisman("PALM_AI");
         if (!deductResult.success) return deductResult;
 
+        const systemPrompt = await getSystemPrompt('palm_reading') || "You are a Master of Palmistry & Oriental Medicine (Acupuncture).";
+
         const prompt = `
-        You are a Master of Palmistry & Oriental Medicine (Acupuncture).
+        ${systemPrompt}
         Analyze the uploaded palm image.
         Identify weak energy points or health issues visible in the palm lines (e.g., weak stomach, stress, circulation).
 

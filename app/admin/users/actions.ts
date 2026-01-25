@@ -13,47 +13,77 @@ export interface AdminUser {
   last_sign_in_at?: string;
 }
 
+import { createAdminClient } from "@/lib/supabase/admin";
+
 export async function getUsers(page: number = 1, limit: number = 20, search: string = ""): Promise<{ data: AdminUser[], total: number }> {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
-  // Check Admin Role
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Unauthorized");
+    // 1. Check Caller Auth (Security)
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return { data: [], total: 0 };
 
-  const { data: currentUserProfile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (currentUserProfile?.role !== "admin") throw new Error("Forbidden");
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    if (profile?.role !== "admin") return { data: [], total: 0 };
 
-  // Supabase Auth Admin API를 사용할 수 없으므로(Service Role Key 부재 가능성), 
-  // profiles 테이블 정보만 가져옵니다. 
-  // *단, profiles에 email이 없다면 auth.users 정보와 조인이 불가능합니다(Client Lib 한계).*
-  // *일단 profiles의 정보를 최대한 활용합니다.*
+    // 2. Use Admin Client for Data (Bypass RLS) if available
+    let dbClient = supabase;
+    try {
+      dbClient = createAdminClient();
+    } catch (e) {
+      console.warn("getUsers: Falling back to standard client (Service Role Key likely missing)");
+    }
 
-  let query = supabase
-    .from("profiles")
-    .select("id, full_name, role, created_at, email", { count: "exact" });
-  // 주의: profiles 테이블에 email 컬럼이 있다고 가정합니다. (대부분의 Supabase 템플릿이 그러함)
-  // 만약 없다면 마이그레이션 필요.
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-  if (search) {
-    query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`);
+    // Try selecting with email first
+    let query = dbClient
+      .from("profiles")
+      .select("id, full_name, role, created_at, email", { count: "exact" });
+
+    if (search) {
+      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    let { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    // If 'email' column missing OR RLS error, retry without it
+    if (error) {
+      console.warn("getUsers: Fetch error (email/RLS), retrying simplified.", error);
+      query = dbClient
+        .from("profiles")
+        .select("id, full_name, role, created_at", { count: "exact" });
+
+      if (search) {
+        query = query.or(`full_name.ilike.%${search}%`);
+      }
+
+      const retryResult = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      data = retryResult.data;
+      error = retryResult.error;
+      count = retryResult.count;
+    }
+
+    if (error) {
+      console.error("getUsers: Admin Query Error", error);
+      return { data: [], total: 0 };
+    }
+
+    return {
+      data: (data as AdminUser[]) || [],
+      total: count || 0
+    };
+
+  } catch (e) {
+    console.error("getUsers Critical Error:", e);
+    return { data: [], total: 0 };
   }
-
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    console.error("Error fetching users:", error);
-    throw new Error("Failed to fetch users");
-  }
-
-  return {
-    data: data as AdminUser[],
-    total: count || 0
-  };
 }
 
 export async function updateUserRole(targetUserId: string, newRole: UserRole) {

@@ -48,23 +48,23 @@ export function DashboardStats({ cards }: DashboardStatsProps) {
             }}
             whileTap={{ scale: 0.98 }}
           >
-            <Card className="p-6 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer group relative overflow-hidden">
+            <Card className="p-6 bg-white border-zen-border hover:shadow-lg hover:border-zen-gold/30 transition-all cursor-pointer group relative overflow-hidden">
               {/* Shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-zen-gold/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
 
               {/* Content */}
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-4">
-                  <div className={cn("p-2 rounded-lg bg-white/5", card.color)}>
+                  <div className={cn("p-2 rounded-lg bg-zen-bg border border-zen-border", card.color)}>
                     <Icon className="w-5 h-5" />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-sm font-medium text-white/50">{card.label}</h3>
-                  <div className="text-2xl font-bold text-white tabular-nums">
+                  <h3 className="text-sm font-medium text-zen-muted font-sans">{card.label}</h3>
+                  <div className="text-2xl font-bold text-zen-text tabular-nums font-serif">
                     {card.value}
                   </div>
-                  <p className="text-xs text-white/30">{card.sub}</p>
+                  <p className="text-xs text-zen-muted/80">{card.sub}</p>
                 </div>
               </div>
             </Card>
@@ -87,10 +87,10 @@ export function AnimatedHeader({ title, subtitle }: AnimatedHeaderProps) {
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
-      <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+      <h1 className="text-3xl font-bold text-zen-text font-serif">
         {title}
       </h1>
-      <p className="text-white/40 mt-1">{subtitle}</p>
+      <p className="text-zen-muted mt-1 font-sans">{subtitle}</p>
     </motion.div>
   );
 }
