@@ -16,7 +16,7 @@ interface PricingCardProps {
         name: string;
         tier: string;
         price: number;
-        description?: string;
+        description?: string | null;
         daily_talisman_limit?: number;
         relationship_limit?: number;
         storage_limit?: number;
@@ -148,8 +148,8 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
                         <>
                             {isRecommended && <Crown className="w-4 h-4 mr-2" />}
                             {plan.tier === 'SINGLE' ? "시작하기" :
-                             plan.tier === 'FAMILY' ? "가입하기" :
-                             "문의하기"}
+                                plan.tier === 'FAMILY' ? "가입하기" :
+                                    "문의하기"}
                         </>
                     )}
                 </Button>
