@@ -51,7 +51,7 @@ export default function Home() {
     <div className="relative min-h-screen w-full flex flex-col bg-ink-950 text-white overflow-x-hidden antialiased font-serif selection:bg-gold-500/30">
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
-      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-end pb-24 md:pb-32 lg:pb-40 text-center overflow-hidden">
+      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-end pb-32 md:pb-48 lg:pb-64 text-center overflow-hidden">
 
         {/* Background Layer (Transitioning) */}
         {slides.map((slide, index) => (
@@ -73,12 +73,12 @@ export default function Home() {
         ))}
 
         {/* Content Container */}
-        <div className="relative z-10 flex flex-col items-center gap-8 md:gap-12 lg:gap-20 px-6 max-w-4xl pb-safe">
+        <div className="relative z-10 flex flex-col items-center gap-14 md:gap-24 lg:gap-32 px-6 max-w-4xl pb-safe">
 
           {/* Header Group */}
           <div className="flex flex-col items-center gap-4 md:gap-6">
             {/* Welcome Label */}
-            <span className="font-gungseo text-xs md:text-sm font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
+            <span className="font-gungseo text-sm md:text-base lg:text-lg font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
               청담해화당
             </span>
 
@@ -91,7 +91,7 @@ export default function Home() {
           </div>
 
           {/* Dynamic Content (Keyed for Re-animation) */}
-          <div key={currentSlide} className="flex flex-col items-center gap-6 md:gap-10 lg:gap-14 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div key={currentSlide} className="flex flex-col items-center gap-8 md:gap-14 lg:gap-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Headline */}
             <h1 className="font-gungseo text-2xl sm:text-3xl md:text-5xl lg:text-7xl font-light leading-relaxed tracking-tight text-white drop-shadow-2xl break-keep">
               {slides[currentSlide].headline}
