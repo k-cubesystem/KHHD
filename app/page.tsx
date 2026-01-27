@@ -16,7 +16,7 @@ const slides = [
   },
   {
     id: 2,
-    image: "/images/intro-wealth.jpg",
+    image: "/images/intro-wealth-v2.jpg",
     headline: <>그 집 아이가 유독 잘 풀리는 이유,<br />엄마들 사이의 '비밀'은 따로 있습니다.</>,
     subhead: "노력만으로는 닿을 수 없는 운의 영역이 있습니다. 알 만한 청담동 엄마들이 조용히 다녀간 그곳. 우리 아이가 가진 운명의 그릇을 가장 크게 키워줄 '결정적 시기'를 놓치지 마세요.",
     buttonText: "합격운 & 재물운 확인하기",
