@@ -8,29 +8,30 @@ export default async function ProtectedPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Handle Guest
+  // Handle Guest Logic
   const masterName = user?.email?.split('@')[0] || "Guest";
+  const isGuest = !user;
 
   const menuGroups = [
     {
       title: "Essential Tools",
       items: [
-        { label: "운명 분석", sub: "Fate Analysis", href: "/protected/analysis", icon: Cloud, span: "col-span-1" },
-        { label: "정통 만세력", sub: "Manse-ryok", href: "/protected/profile/manse", icon: ScrollText, span: "col-span-1" },
+        { label: "운명 분석", sub: "Fate Analysis", href: isGuest ? "/auth/sign-up" : "/protected/analysis", icon: Cloud, span: "col-span-1" },
+        { label: "정통 만세력", sub: "Manse-ryok", href: isGuest ? "/auth/sign-up" : "/protected/profile/manse", icon: ScrollText, span: "col-span-1" },
       ]
     },
     {
       title: "Deep Insight",
       items: [
-        { label: "풍수 지리", sub: "Feng Shui", href: "/protected/saju/fengshui", icon: Map, span: "col-span-1" },
-        { label: "관상 분석", sub: "Face Reading", href: "/protected/saju/face", icon: User, span: "col-span-1" },
+        { label: "풍수 지리", sub: "Feng Shui", href: isGuest ? "/auth/sign-up" : "/protected/saju/fengshui", icon: Map, span: "col-span-1" },
+        { label: "관상 분석", sub: "Face Reading", href: isGuest ? "/auth/sign-up" : "/protected/saju/face", icon: User, span: "col-span-1" },
       ]
     },
     {
       title: "Personal Space",
       items: [
-        { label: "마이 아카이브", sub: "My Profile & History", href: "/protected/profile", icon: BookOpen, span: "col-span-2" },
-        { label: "인연 관리", sub: "Relationships", href: "/protected/relationships", icon: Users, span: "col-span-2" },
+        { label: "마이 아카이브", sub: "My Profile & History", href: isGuest ? "/auth/sign-up" : "/protected/profile", icon: BookOpen, span: "col-span-2" },
+        { label: "인연 관리", sub: "Relationships", href: isGuest ? "/auth/sign-up" : "/protected/relationships", icon: Users, span: "col-span-2" },
       ]
     },
   ];

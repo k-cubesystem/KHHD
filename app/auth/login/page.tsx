@@ -1,50 +1,59 @@
 import { LoginForm } from "@/components/login-form";
 import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Flower } from "lucide-react";
 import Link from "next/link";
 
 export default function Page() {
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 overflow-hidden bg-background text-foreground selection:bg-primary/30 font-serif">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 overflow-hidden bg-ink-950 text-white font-serif">
 
-      {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] opacity-5 pointer-events-none mix-blend-overlay" />
-      <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] bg-primary/10 rounded-full blur-[150px] pointer-events-none" />
+      {/* 1. Background Layer (Hanok Night) */}
+      <div
+        className="absolute inset-0 bg-cover bg-center z-0"
+        style={{ backgroundImage: "url('/images/hanok-night-hero.jpg')" }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink-950/60 via-ink-950/80 to-ink-950/95 z-0" />
 
-      <div className="z-10 w-full max-w-lg flex flex-col items-center gap-10 animate-in fade-in duration-1000">
+      {/* 2. Content Container */}
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
 
-        {/* 1. Header: Logo */}
-        <Link href="/" className="flex flex-col items-center gap-4 group">
-          <div className="w-12 h-12 flex items-center justify-center border border-primary/30 bg-background/50 backdrop-blur-sm rounded-md relative overflow-hidden transition-all duration-500 group-hover:border-primary">
-            <span className="font-serif font-bold text-xl text-primary">海</span>
+        {/* Header: Logo & Title */}
+        <div className="flex flex-col items-center gap-5 md:gap-8">
+          {/* Welcome Label */}
+          <span className="font-gungseo text-lg md:text-xl lg:text-2xl font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
+            청담해화당
+          </span>
+
+          {/* Decorative Divider */}
+          <div className="flex items-center gap-3 md:gap-4 opacity-80 animate-in fade-in duration-1000 delay-100">
+            <div className="h-px w-8 md:w-12 bg-gold-400/50" />
+            <Flower className="w-4 h-4 md:w-5 md:h-5 text-gold-400" strokeWidth={1} />
+            <div className="h-px w-8 md:w-12 bg-gold-400/50" />
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="font-serif font-bold text-lg tracking-[0.3em] text-white">청담해화당</span>
-            <span className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-sans">Cheongdam Haehwadang</span>
-          </div>
-        </Link>
-
-        {/* 2. Message */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-light text-white/90">
-            운명의 <span className="text-primary font-normal">결</span>을 읽다
-          </h1>
-          <p className="text-sm text-muted-foreground font-sans font-light">
-            데이터로 마주하는 당신의 고유한 패턴
-          </p>
         </div>
 
-        {/* 3. Login Form Container */}
-        <div className="w-full bg-card/50 backdrop-blur-sm border border-border p-8 rounded-lg shadow-2xl">
-          <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>}>
+        {/* Login Form Card */}
+        <div className="w-full bg-white/5 backdrop-blur-md border border-white/10 p-8 rounded-xl shadow-2xl">
+          <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-gold-400" /></div>}>
             <LoginForm />
           </Suspense>
         </div>
 
-        <div className="flex gap-6 text-xs text-muted-foreground font-sans tracking-wide">
-          <Link href="/auth/reset-password">비밀번호 찾기</Link>
-          <span className="text-border">|</span>
-          <Link href="/auth/sign-up" className="text-primary hover:underline">회원가입</Link>
+        {/* Footer Links */}
+        {/* Footer Links (Redesigned) */}
+        <div className="flex flex-col items-center gap-4 mt-2">
+
+          {/* Divider Line */}
+          <div className="w-full max-w-[200px] h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+          <div className="flex items-center justify-center gap-6 font-sans text-sm tracking-wide">
+            <Link
+              href="/auth/reset-password"
+              className="text-white/50 hover:text-white transition-colors duration-300"
+            >
+              비밀번호를 잊으셨나요?
+            </Link>
+          </div>
         </div>
 
       </div>

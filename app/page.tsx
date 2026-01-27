@@ -12,7 +12,7 @@ const slides = [
     headline: <>모두가 부러워하는 당신의 삶,<br />하지만 정작 당신은 행복하십니까?</>,
     subhead: <>시선에 맞춰 완벽해야 했던 지난날들.<br />화려한 조명이 꺼진 뒤 밀려오는 알 수 없는 공허함까지,<br />아무에게도 말 못한 당신의 그 깊은 외로움을<br />청담해화당이 안아드립니다.</>,
     buttonText: "내 마음의 매듭 풀기",
-    link: "/auth/login"
+    link: "/protected"
   },
   {
     id: 2,
@@ -20,7 +20,7 @@ const slides = [
     headline: <>그 집 아이가 유독 잘 풀리는 이유,<br />엄마들 사이의 '비밀'은 따로 있습니다.</>,
     subhead: <>노력만으로는 닿을 수 없는 운의 영역이 있습니다.<br />알 만한 청담동 엄마들이 조용히 다녀간 그곳.<br />우리 아이가 가진 운명의 그릇을 가장 크게 키워줄<br />'결정적 시기'를 놓치지 마세요.</>,
     buttonText: "합격운 & 재물운 확인하기",
-    link: "/auth/login"
+    link: "/protected"
   },
   {
     id: 3,
@@ -28,7 +28,7 @@ const slides = [
     headline: <>다시, 내 인생에도<br />봄바람이 불어올까요?</>,
     subhead: <>메마른 가슴에 단비처럼 찾아올 귀한 인연.<br />당신을 아껴줄 그 사람이 지금 어디쯤 오고 있는지,<br />해화당이 미리 짚어드립니다.</>,
     buttonText: "새로운 인연이 있을까?",
-    link: "/auth/login"
+    link: "/protected"
   }
 ];
 
@@ -51,7 +51,7 @@ export default function Home() {
     <div className="relative min-h-screen w-full flex flex-col bg-ink-950 text-white overflow-x-hidden antialiased font-serif selection:bg-gold-500/30">
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
-      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[30vh] md:pt-[35vh] text-center overflow-hidden">
+      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] md:pt-[35vh] text-center overflow-hidden">
 
         {/* Background Layer (Transitioning) */}
         {slides.map((slide, index) => (
@@ -73,7 +73,7 @@ export default function Home() {
         ))}
 
         {/* Header Group (Fixed Top) */}
-        <div className="absolute top-16 md:top-24 lg:top-32 left-0 right-0 z-50 flex flex-col items-center gap-5 md:gap-8">
+        <div className="absolute top-14 md:top-24 lg:top-32 left-0 right-0 z-50 flex flex-col items-center gap-5 md:gap-8">
           {/* Welcome Label */}
           <span className="font-gungseo text-lg md:text-xl lg:text-2xl font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
             청담해화당
@@ -91,21 +91,21 @@ export default function Home() {
         <div className="relative z-10 flex flex-col items-center px-6 max-w-4xl pb-10">
 
           {/* Dynamic Content (Keyed for Re-animation) */}
-          <div key={currentSlide} className="flex flex-col items-center gap-8 md:gap-14 lg:gap-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div key={currentSlide} className="flex flex-col items-center gap-6 md:gap-14 lg:gap-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Headline */}
-            <h1 className="font-gungseo text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light leading-relaxed tracking-tight text-white drop-shadow-2xl break-keep">
+            <h1 className="font-gungseo text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light leading-relaxed tracking-tight text-white drop-shadow-sm break-keep">
               {slides[currentSlide].headline}
             </h1>
 
             {/* Subhead */}
-            <p className="font-sans text-white/80 font-light text-xs sm:text-sm md:text-base tracking-wide leading-loose max-w-[90%] md:max-w-2xl break-keep opacity-90">
+            <p className="font-sans text-white/80 font-light text-sm sm:text-base md:text-lg tracking-wide leading-7 max-w-[85%] md:max-w-2xl break-keep opacity-90">
               {slides[currentSlide].subhead}
             </p>
 
             {/* CTA Button */}
-            <Link href={slides[currentSlide].link} className="pt-4 md:pt-8">
-              <button className="group relative px-8 py-3 md:px-12 md:py-5 bg-white/5 backdrop-blur-[2px] rounded-xl border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center gap-3 md:gap-5 transition-all duration-500 hover:bg-cinnabar/80 hover:border-cinnabar hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-[1.02]">
-                <span className="font-gungseo font-medium text-sm md:text-lg tracking-widest pt-1 text-white/90 group-hover:text-white transition-colors">
+            <Link href={slides[currentSlide].link} className="pt-8 md:pt-10">
+              <button className="group relative px-10 py-3.5 md:px-14 md:py-4 bg-white/5 backdrop-blur-[2px] rounded-xl border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center gap-3 md:gap-5 transition-all duration-500 hover:bg-cinnabar/80 hover:border-cinnabar hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-[1.02]">
+                <span className="font-gungseo font-light text-sm md:text-lg tracking-[0.2em] pt-0.5 text-white/90 group-hover:text-white transition-colors">
                   {slides[currentSlide].buttonText}
                 </span>
                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors shadow-inner">
