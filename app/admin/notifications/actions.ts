@@ -83,7 +83,7 @@ export async function runManualAutomation() {
         // 4. Process Batch
         const promises = subscriptions.map(async (sub) => {
             try {
-                const genResult = await generateDailyFortune(sub.user_id);
+                const genResult = await generateDailyFortune(sub.user_id, sub.user_id, 'USER');
                 if (genResult.success && genResult.content) {
                     await sendKakaoNotification(sub.user_id, templateId, {
                         content: genResult.content.substring(0, 50) + "...",
