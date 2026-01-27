@@ -24,7 +24,7 @@ const slides = [
   },
   {
     id: 3,
-    image: "/images/intro-relationship.jpg",
+    image: "/images/intro-relationship-v2.jpg",
     headline: <>다시, 내 인생에도<br />봄바람이 불어올까요?</>,
     subhead: "메마른 가슴에 단비처럼 찾아올 귀한 인연. 당신을 아껴줄 그 사람이 지금 어디쯤 오고 있는지, 해화당이 미리 짚어드립니다.",
     buttonText: "새로운 인연이 있을까?",
