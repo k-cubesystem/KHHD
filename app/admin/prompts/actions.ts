@@ -10,6 +10,7 @@ export interface AIPrompt {
     category: string;
     template: string;
     description: string | null;
+    talisman_cost: number;
     updated_at: string;
 }
 
@@ -34,7 +35,7 @@ export async function getPrompts(): Promise<AIPrompt[]> {
     const { data, error } = await dbClient
         .from("ai_prompts")
         .select("*")
-        .order("category", { ascending: true }); // 카테고리별 정렬, 그 다음 key 등
+        .order("category", { ascending: true });
 
     if (error) {
         console.error("Error fetching prompts:", error);
@@ -44,7 +45,7 @@ export async function getPrompts(): Promise<AIPrompt[]> {
     return data as AIPrompt[];
 }
 
-export async function updatePrompt(key: string, newTemplate: string) {
+export async function updatePrompt(key: string, data: { template?: string, talisman_cost?: number }) {
     const supabase = await createClient();
 
     // Check Admin
@@ -61,9 +62,13 @@ export async function updatePrompt(key: string, newTemplate: string) {
         console.warn("updatePrompt: Fallback to standard client");
     }
 
+    const updates: any = { updated_at: new Date().toISOString() };
+    if (data.template !== undefined) updates.template = data.template;
+    if (data.talisman_cost !== undefined) updates.talisman_cost = data.talisman_cost;
+
     const { error } = await dbClient
         .from("ai_prompts")
-        .update({ template: newTemplate, updated_at: new Date().toISOString() })
+        .update(updates)
         .eq("key", key);
 
     if (error) {
@@ -80,7 +85,8 @@ export async function createPrompt(
     label: string,
     category: string,
     template: string,
-    description?: string
+    description?: string,
+    talismanCost: number = 1
 ) {
     const supabase = await createClient();
 
@@ -100,7 +106,7 @@ export async function createPrompt(
 
     const { error } = await dbClient
         .from("ai_prompts")
-        .insert({ key, label, category, template, description });
+        .insert({ key, label, category, template, description, talisman_cost: talismanCost });
 
     if (error) {
         console.error("Error creating prompt:", error);

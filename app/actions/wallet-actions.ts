@@ -9,6 +9,18 @@ import { canUseTalisman, incrementDailyUsage } from "./membership-limits";
 export async function getFeatureCost(featureKey: string): Promise<number> {
     const supabase = await createClient();
 
+    // 1. Try finding in AI Prompts (Preferred configuration source)
+    const { data: prompt } = await supabase
+        .from("ai_prompts")
+        .select("talisman_cost")
+        .eq("key", featureKey)
+        .single();
+
+    if (prompt && prompt.talisman_cost !== null) {
+        return prompt.talisman_cost;
+    }
+
+    // 2. Fallback to legacy feature_costs table
     const { data, error } = await supabase
         .from("feature_costs")
         .select("cost")
@@ -17,8 +29,8 @@ export async function getFeatureCost(featureKey: string): Promise<number> {
         .single();
 
     if (error || !data) {
-        console.error(`Feature cost not found for ${featureKey}:`, error);
-        return 1; // Fallback to 1
+        // console.error(`Feature cost not found for ${featureKey}:`, error); // Suppress error for cleaner logs
+        return 1; // Default fallback
     }
 
     return data.cost;

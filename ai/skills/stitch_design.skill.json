@@ -1,0 +1,24 @@
+{
+    "id": "stitch_design_skill",
+    "name": "Stitches Design System Helper",
+    "version": "1.0.0",
+    "description": "Provides instructions and snippets for using Stitches (@stitches/react) to style components.",
+    "category": "design_implementation",
+    "author": "Claude (UI/UX Specialist)",
+    "created": "2026-01-27",
+    "usage": {
+        "import": "import { styled } from '@/design-system/stitches.config';",
+        "convention": "Use `styled` for creating styled components. Keep styles collocated with components."
+    },
+    "snippets": {
+        "box": "const Box = styled('div', { boxSizing: 'border-box' });",
+        "flex": "const Flex = styled('div', { display: 'flex' });",
+        "grid": "const Grid = styled('div', { display: 'grid' });",
+        "button": "const Button = styled('button', { backgroundColor: '$primary', color: '$text', padding: '$2 $3', borderRadius: '$2', '&:hover': { backgroundColor: '$primaryHover' } });"
+    },
+    "best_practices": [
+        "Utilize theme tokens ($colors, $space, $radii) instead of hardcoded values.",
+        "Use variants for component states (e.g., variant: 'primary' | 'secondary').",
+        "Implement responsive styles using the `media` config (bp1, bp2, etc.)."
+    ]
+}

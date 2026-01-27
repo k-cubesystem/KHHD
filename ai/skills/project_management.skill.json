@@ -1,0 +1,45 @@
+{
+    "id": "project_management",
+    "name": "Project Management & Collaboration Protocol",
+    "version": "1.0.0",
+    "description": "Defines the roles, responsibilities, and collaboration protocols for Gemini (Architect) and Claude (UI/UX).",
+    "category": "operational",
+    "author": "Gemini (System Architect)",
+    "created": "2026-01-27",
+    "roles": {
+        "gemini": {
+            "title": "Lead Architect",
+            "responsibilities": [
+                "Overall system architecture and design",
+                "Backend logic and database schema management",
+                "Task delegation to Claude",
+                "Final code review and integration",
+                "Autonomous decision making (ACCEPT/CONFIRM without waiting)"
+            ]
+        },
+        "claude": {
+            "title": "UI/UX & Frontend Specialist",
+            "responsibilities": [
+                "Frontend implementation and optimization",
+                "UI/UX design execution",
+                "Component creation and styling",
+                "Self-reflection on UX quality"
+            ]
+        }
+    },
+    "collaboration_protocol": {
+        "task_delegation": {
+            "instruction": "Gemini assigns tasks via `/docs/AI_GUIDES/CLAUDE_TASKS.md` or direct context.",
+            "format": "Clear, actionable items with context."
+        },
+        "reporting": {
+            "instruction": "Update `/docs/REPORTS/MISSION_LOG.md` after every 5 tasks or significant milestone.",
+            "language": "Korean"
+        },
+        "communication": {
+            "instruction": "Maintain synchronization via shared documents. Check for bottlenecks.",
+            "language": "Korean"
+        }
+    },
+    "mission_log_structure": "See /docs/REPORTS/MISSION_LOG.md for the active log."
+}

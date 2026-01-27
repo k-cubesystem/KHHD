@@ -2,11 +2,11 @@ import Link from "next/link";
 
 export function SiteFooter() {
     return (
-        <footer className="w-full border-t border-white/5 bg-black py-12 text-sm text-zinc-400">
+        <footer className="w-full border-t border-border bg-background py-12 text-sm text-muted-foreground">
             <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
                 {/* Brand */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-serif font-bold text-[#D4AF37]">해화당 (海華堂)</h3>
+                    <h3 className="text-lg font-serif font-bold text-primary">해화당 (海華堂)</h3>
                     <p className="text-xs leading-relaxed">
                         전통 명리학과 현대 AI 기술의 만남.<br />
                         당신의 운명을 공학적으로 분석하고 해답을 제시합니다.
@@ -15,18 +15,18 @@ export function SiteFooter() {
 
                 {/* Sitemap */}
                 <div className="space-y-4">
-                    <h4 className="font-bold text-white">서비스</h4>
+                    <h4 className="font-bold text-foreground">서비스</h4>
                     <ul className="space-y-2 text-xs">
-                        <li><Link href="/protected/saju/today" className="hover:text-[#D4AF37]">오늘의 운세</Link></li>
-                        <li><Link href="/protected/saju/detail" className="hover:text-[#D4AF37]">정통 사주 분석</Link></li>
-                        <li><Link href="/protected/saju/compatibility" className="hover:text-[#D4AF37]">AI 궁합 분석</Link></li>
-                        <li><Link href="/protected/destiny/face" className="hover:text-[#D4AF37]">관상 성형 (개운)</Link></li>
+                        <li><Link href="/protected/saju/today" className="hover:text-primary">오늘의 운세</Link></li>
+                        <li><Link href="/protected/saju/detail" className="hover:text-primary">정통 사주 분석</Link></li>
+                        <li><Link href="/protected/saju/compatibility" className="hover:text-primary">AI 궁합 분석</Link></li>
+                        <li><Link href="/protected/destiny/face" className="hover:text-primary">관상 성형 (개운)</Link></li>
                     </ul>
                 </div>
 
                 {/* Company Info */}
                 <div className="space-y-4">
-                    <h4 className="font-bold text-white">사업자 정보</h4>
+                    <h4 className="font-bold text-foreground">사업자 정보</h4>
                     <ul className="space-y-2 text-xs">
                         <li>(주) 해화당</li>
                         <li>대표: 홍길동</li>
@@ -38,20 +38,20 @@ export function SiteFooter() {
 
                 {/* CS Center */}
                 <div className="space-y-4">
-                    <h4 className="font-bold text-white">고객센터</h4>
+                    <h4 className="font-bold text-foreground">고객센터</h4>
                     <ul className="space-y-2 text-xs">
                         <li>운영시간: 평일 10:00 - 18:00 (주말/공휴일 휴무)</li>
                         <li>이메일: support@haehwadang.com</li>
                         <li>전화: 1544-0000</li>
                         <li className="pt-2">
-                            <Link href="/terms" className="mr-4 hover:text-white underline">이용약관</Link>
-                            <Link href="/privacy" className="hover:text-white underline">개인정보처리방침</Link>
+                            <Link href="/terms" className="mr-4 hover:text-foreground underline">이용약관</Link>
+                            <Link href="/privacy" className="hover:text-foreground underline">개인정보처리방침</Link>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <div className="mt-12 text-center text-[10px] text-zinc-600 border-t border-white/5 pt-8">
+            <div className="mt-12 text-center text-[10px] text-muted-foreground/60 border-t border-border pt-8">
                 Copyright © 2026 Haehwadang AI. All rights reserved.
             </div>
         </footer>

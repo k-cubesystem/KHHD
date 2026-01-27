@@ -1,0 +1,44 @@
+{
+    "id": "design_system_protocol",
+    "name": "Design System & UX Protocol",
+    "version": "1.0.0",
+    "description": "Guidelines for UI/UX design, including color palettes, typography, and component usage, governed by the 'Oriental Luxury' aesthetic.",
+    "category": "design",
+    "author": "Claude (UI/UX Specialist)",
+    "created": "2026-01-27",
+    "aesthetics": {
+        "theme": "Oriental Luxury (Saju/Fortune-telling)",
+        "keywords": [
+            "Premium",
+            "Mystical",
+            "Elegant",
+            "Responsive",
+            "Dynamic"
+        ],
+        "core_principles": [
+            "Wow factor at first glance",
+            "Smooth gradients and glassmorphism",
+            "Micro-animations for engagement",
+            "Mobile-first responsive design"
+        ]
+    },
+    "implementation_rules": {
+        "styling": {
+            "primary": "Stitches (CSS-in-JS) or TailwindCSS (if specified)",
+            "avoid": "Generic browser defaults",
+            "fonts": "Google Fonts (Inter, Roboto, Outfit)"
+        },
+        "components": {
+            "location": "components/",
+            "rule": "Use reusable components from the design system. Avoid ad-hoc styling."
+        },
+        "dark_mode": "Mandatory support for seamless dark/light theme transitions."
+    },
+    "workflow": {
+        "step1": "Understand requirements & aesthetic goal",
+        "step2": "Update/Verify design tokens in config",
+        "step3": "Build components",
+        "step4": "Assemble pages",
+        "step5": "Polish (Animations, Transitions)"
+    }
+}

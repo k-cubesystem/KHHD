@@ -1,12 +1,13 @@
 {
-    "name": "청담해화당 - AI 운세 & 관상",
-    "short_name": "청담해화당",
-    "description": "AI로 분석하는 당신의 운명, 청담해화당",
+    "name": "청담해화당 - Premium 운명 공학 SaaS",
+    "short_name": "해화당",
+    "description": "전통 명리학과 현대 데이터 사이언스의 결합, AI 마스터의 정교한 운명 분석",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#000000",
+    "background_color": "#1C1C1E",
     "theme_color": "#D4AF37",
     "orientation": "portrait",
+    "id": "/",
     "icons": [
         {
             "src": "/app-icon.png",
@@ -17,6 +18,14 @@
             "src": "/app-icon.png",
             "sizes": "512x512",
             "type": "image/png"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/og-preview.png",
+            "sizes": "1200x630",
+            "type": "image/png",
+            "form_factor": "wide"
         }
     ]
 }

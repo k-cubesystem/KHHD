@@ -1,200 +1,119 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sparkles, User, Settings, CreditCard, Calendar, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { LogoutButton } from "@/components/logout-button";
+import { User, ScrollText, Users, CreditCard, ChevronRight, Settings } from "lucide-react";
 
-import { calculateManse, calculateDaewoon } from "@/lib/saju/manse";
-import { PremiumManseCard } from "@/components/saju/premium-manse-card";
-import { FiveElementsChart } from "@/components/saju/five-elements-chart";
-import { DaewoonTimeline } from "@/components/saju/daewoon-timeline";
-import { ProfileEditForm } from "@/components/profile/profile-edit-form";
-
-export default async function ProfilePage() {
+export default async function MyPage() {
     const supabase = await createClient();
-
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        return (
-            <div className="min-h-screen bg-zen-bg font-sans flex items-center justify-center p-6">
-                <Card className="max-w-md w-full border-zen-border bg-white shadow-lg text-center p-8 space-y-6">
-                    <div className="w-16 h-16 bg-zen-gold/10 rounded-full flex items-center justify-center mx-auto text-zen-gold">
-                        <User className="w-8 h-8" />
-                    </div>
-                    <div className="space-y-2">
-                        <h2 className="text-2xl font-serif font-bold text-zen-text">로그인이 필요합니다</h2>
-                        <p className="text-zen-muted text-sm">
-                            내 사주 정보를 관리하고 운명을 분석하려면<br />로그인이 필요합니다.
-                        </p>
-                    </div>
-                    <div className="pt-2">
-                        <Link href="/auth/login">
-                            <Button className="w-full h-12 bg-zen-wood text-white font-bold text-lg hover:bg-[#7A604D]">
-                                로그인하러 가기
-                            </Button>
-                        </Link>
-                    </div>
-                    <Link href="/" className="block text-xs text-zen-muted underline">
-                        메인으로 돌아가기
-                    </Link>
-                </Card>
-            </div>
-        );
+        return redirect("/auth/login");
     }
 
-    // Fetch Profile Data (Basic)
+    // Fetch real profile data
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-    // Fetch Saju Data from family_members (relationship = '본인')
-    const { data: mySaju } = await supabase
-        .from('family_members')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('relationship', '본인')
-        .maybeSingle();
+    const displayName = profile?.name || user.email?.split("@")[0] || "Guest";
+    const membershipLevel = profile?.membership_tier || "Standard";
+    // If 'membership_tier' doesn't exist, it might default to undefined, handle gracefully.
 
-    const initial = user.email?.charAt(0).toUpperCase() || "U";
-    const avatarUrl = user.user_metadata.avatar_url;
+    // Mock Archives (Replace with real data if 'consultations' table exists)
+    const archives = [
+        { date: "2026.01.15", title: "을사년 신년 운세 (Year of Snake)", type: "Annual" },
+        { date: "2025.10.02", title: "사업 확장 시기 분석", type: "Specific" },
+    ];
 
-    // Check if user has entered saju info
-    const hasSajuInfo = mySaju?.birth_date && mySaju?.birth_time;
-
-    // Calculate Manse if info exists
-    const manse = hasSajuInfo ? calculateManse(mySaju.birth_date, mySaju.birth_time) : null;
-
-    // Calculate Daewoon (대운) if info exists
-    let daewoon = null;
-    if (hasSajuInfo && mySaju.birth_date && mySaju.birth_time && mySaju.gender) {
-        const birthYear = parseInt(mySaju.birth_date.split('-')[0]);
-        const currentYear = new Date().getFullYear();
-        const currentAge = currentYear - birthYear;
-        daewoon = calculateDaewoon(
-            mySaju.birth_date,
-            mySaju.birth_time,
-            mySaju.gender as 'male' | 'female',
-            currentAge
-        );
-    }
+    const menuItems = [
+        { label: "내 정보 수정", href: "/protected/profile/edit", icon: User, desc: "사주 정보 및 계정 설정" },
+        { label: "정통 만세력", href: "/protected/profile/manse", icon: ScrollText, desc: "전문가용 만세력 분석" },
+        { label: "인연 관리", href: "/protected/relationships", icon: Users, desc: "가족 및 지인 정보 등록" },
+        { label: "멤버십 관리", href: "/protected/membership", icon: CreditCard, desc: "구독 및 결제 내역" },
+    ];
 
     return (
-        <div className="min-h-screen bg-zen-bg font-sans pb-20">
-            {/* 1. Header Area */}
-            <div className="bg-white border-b border-zen-border pt-12 pb-8 px-6">
-                <div className="max-w-md mx-auto flex items-center gap-6">
-                    <Avatar className="w-20 h-20 border border-zen-border shadow-sm">
-                        <AvatarImage src={avatarUrl} className="object-cover" />
-                        <AvatarFallback className="bg-zen-wood text-white font-serif text-2xl">{initial}</AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-serif font-bold text-zen-text">
-                                {mySaju?.name || profile?.name || user.user_metadata.full_name || "익명의 인연"}
-                            </h1>
-                            <Badge variant="secondary" className="bg-zen-gold/10 text-zen-gold border-zen-gold/20 text-[10px] px-1.5 py-0">MEMBER</Badge>
-                        </div>
-                        <p className="text-sm text-zen-muted font-mono">{user.email}</p>
+        <div className="min-h-screen w-full bg-hanji text-ink font-serif flex flex-col items-center py-12 px-6 relative overflow-x-hidden">
+
+            {/* Background Texture */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]" />
+
+            {/* Header / Nav (Minimal) */}
+            <header className="w-full max-w-2xl flex justify-between items-center mb-16 z-10">
+                <Link href="/protected" className="font-gungseo text-ink/80 text-lg hover:text-cinnabar transition-colors">海花堂</Link>
+                <div className="flex items-center gap-4">
+                    <span className="text-[10px] tracking-widest text-ink/40 uppercase">{user.email}</span>
+                    <LogoutButton />
+                </div>
+            </header>
+
+            {/* 1. Profile Seal Section (Organic Modernism Design) */}
+            <section className="flex flex-col items-center gap-6 mb-16 z-10 animate-in fade-in zoom-in duration-700">
+                <div className="relative group cursor-default">
+                    {/* Seal Container */}
+                    <div className="w-28 h-28 bg-cinnabar/10 rounded-full flex items-center justify-center border border-cinnabar/20 group-hover:bg-cinnabar group-hover:text-hanji transition-all duration-500 shadow-lg">
+                        <span className="font-gungseo text-4xl font-bold text-cinnabar group-hover:text-hanji transition-colors">
+                            {displayName[0]}
+                        </span>
                     </div>
                 </div>
-            </div>
+                <div className="text-center space-y-2">
+                    <h1 className="font-gungseo text-2xl text-ink font-bold">{displayName}</h1>
+                    <span className="inline-block px-3 py-1 rounded-full border border-gold-400/30 bg-gold-500/5 text-[10px] uppercase tracking-[0.2em] text-gold-600 font-sans">
+                        {membershipLevel} Member
+                    </span>
+                </div>
+            </section>
 
-            <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-
-                {/* Unified Accordion: All Profile Sections */}
-                <Accordion type="single" collapsible className="w-full bg-white border border-zen-border rounded-sm shadow-sm">
-
-                    {/* 1. Saju Manse */}
-                    <AccordionItem value="saju-info" className="border-b border-zen-border px-4">
-                        <AccordionTrigger className="hover:no-underline py-4">
-                            <div className="flex items-center gap-3">
-                                <Sparkles className="w-4 h-4 text-zen-gold" />
-                                <span className="font-serif text-zen-text text-lg">나의 사주 원국 (四柱命式)</span>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-6 pt-2">
-                            {hasSajuInfo && manse ? (
-                                <div className="space-y-6">
-                                    <PremiumManseCard manse={manse} />
-                                    <FiveElementsChart manse={manse} />
-                                    {daewoon && <DaewoonTimeline periods={daewoon} />}
+            {/* 2. Menu Configuration (Restored Structure) */}
+            <section className="w-full max-w-xl mb-12 z-10 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {menuItems.map((item) => (
+                        <Link key={item.label} href={item.href} className="group relative bg-white/40 border border-ink/5 p-6 rounded-sm hover:border-gold-500/50 hover:bg-white/80 transition-all duration-300 shadow-sm hover:shadow-md">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="w-10 h-10 rounded-full bg-ink/5 flex items-center justify-center text-ink/60 group-hover:bg-gold-500/10 group-hover:text-gold-600 transition-colors">
+                                    <item.icon className="w-5 h-5" />
                                 </div>
-                            ) : (
-                                <Card className="border-dashed border-2 border-zen-border bg-zen-bg/20">
-                                    <CardContent className="flex flex-col items-center justify-center py-10 space-y-4">
-                                        <div className="p-4 rounded-full bg-zen-gold/10 text-zen-gold">
-                                            <Calendar className="w-8 h-8" />
-                                        </div>
-                                        <div className="text-center space-y-1">
-                                            <h3 className="font-serif font-bold text-zen-text text-lg">아직 운명 정보가 없습니다.</h3>
-                                            <p className="text-sm text-zen-muted max-w-[200px] mx-auto leading-relaxed">
-                                                아래 '기본 정보 수정'에서 생년월일시를 입력해주세요.
-                                            </p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </AccordionContent>
-                    </AccordionItem>
-
-                    {/* 2. Membership & Talisman */}
-                    <AccordionItem value="membership" className="border-b border-zen-border px-4">
-                        <AccordionTrigger className="hover:no-underline py-4">
-                            <div className="flex items-center gap-3">
-                                <CreditCard className="w-4 h-4 text-zen-gold" />
-                                <span className="font-serif text-zen-text">멤버십 & 부적</span>
+                                <ChevronRight className="w-4 h-4 text-ink/20 group-hover:text-gold-500 transition-colors" />
                             </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-4 pt-1 space-y-4">
-                            <div className="p-4 bg-zen-bg rounded-sm border border-zen-border flex items-center justify-between">
-                                <span className="text-sm text-zen-muted">보유 부적</span>
-                                <span className="font-bold text-zen-gold text-lg">0장</span>
+                            <div>
+                                <h3 className="font-gungseo text-lg font-bold text-ink mb-1 group-hover:text-gold-700 transition-colors">{item.label}</h3>
+                                <p className="font-sans text-xs text-ink/50 font-light">{item.desc}</p>
                             </div>
-                            <Link href="/protected/billing">
-                                <Button variant="outline" className="w-full border-zen-gold text-zen-gold hover:bg-zen-gold/5">
-                                    충전하러 가기
-                                </Button>
-                            </Link>
-                        </AccordionContent>
-                    </AccordionItem>
-
-                    {/* 3. Profile Edit Form */}
-                    <AccordionItem value="profile-edit" className="border-b border-zen-border px-4">
-                        <AccordionTrigger className="hover:no-underline py-4">
-                            <div className="flex items-center gap-3">
-                                <User className="w-4 h-4 text-zen-muted" />
-                                <span className="font-serif text-zen-text">기본 정보 수정</span>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pb-4 pt-1">
-                            <ProfileEditForm
-                                userId={user.id}
-                                initialData={mySaju}
-                                profileData={profile}
-                            />
-                        </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Logout Link */}
-                    <div className="px-4 py-4">
-                        <Link href="/auth/logout" className="flex items-center justify-between text-sm text-red-500 hover:text-red-700 transition-colors">
-                            <span>로그아웃</span>
-                            <ChevronRight className="w-4 h-4 opacity-50" />
                         </Link>
-                    </div>
-                </Accordion>
-            </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* 3. Consultation Archive (New Design Element) */}
+            <section className="w-full max-w-xl space-y-6 z-10 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-200">
+                <div className="flex items-center gap-4">
+                    <div className="h-px flex-1 bg-ink/10" />
+                    <span className="text-[10px] font-sans tracking-[0.2em] text-ink/40 uppercase">Archive</span>
+                    <div className="h-px flex-1 bg-ink/10" />
+                </div>
+
+                <div className="space-y-3">
+                    {archives.map((item, idx) => (
+                        <Link key={idx} href={`/protected/analysis/result`} className="block group">
+                            <div className="relative bg-white border border-ink/5 p-5 shadow-sm hover:shadow-md hover:border-ink/20 transition-all duration-300 rounded-[2px] flex items-center justify-between">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] font-sans text-ink/30 tracking-widest">{item.date}</span>
+                                    <h4 className="font-gungseo text-sm text-ink/80 group-hover:text-ink">{item.title}</h4>
+                                </div>
+                                <div className="w-8 h-8 flex items-center justify-center border border-ink/10 rounded-full text-ink/20 group-hover:bg-ink group-hover:text-hanji transition-all">
+                                    <ScrollText className="w-4 h-4" />
+                                </div>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </section>
+
         </div>
     );
 }

@@ -3,15 +3,35 @@
 import { useState, useEffect } from "react";
 import { AIPrompt, getPrompts, updatePrompt, createPrompt, deletePrompt } from "./actions";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Ticket, Sparkles, BookOpen } from "lucide-react";
 import { PromptEditor } from "@/components/admin/prompt-editor";
+
+const VARIABLE_GUIDE = {
+    ANALYSIS: [
+        { name: "{{name}}", desc: "사용자 이름" },
+        { name: "{{gender}}", desc: "성별 (남성/여성)" },
+        { name: "{{birthDate}}", desc: "생년월일 (YYYY-MM-DD)" },
+        { name: "{{birthTime}}", desc: "태어난 시간 (HH:mm)" },
+        { name: "{{saju}}", desc: "사주 팔자 텍스트 (예: 甲子년...)" },
+        { name: "{{date}}", desc: "기준 날짜 (오늘)" }
+    ],
+    CHAT: [
+        { name: "{{context}}", desc: "이전 대화 요약" },
+        { name: "{{user_input}}", desc: "사용자 질문" }
+    ],
+    SYSTEM: [],
+    IMAGE: []
+};
+
+const DEFAULT_TEMPLATES = {
+    daily_fortune: `당신은 '해화당'의 AI 점술가입니다.\n사용자의 사주 정보를 바탕으로 '오늘의 운세'를 생성해주세요.\n날짜: {{date}}\n사용자: {{name}} ({{gender}}, {{birthDate}} {{birthTime}})\n사주: {{saju}}\n\n요구사항:\n1. 100~200자 내외로 핵심만 간결하게 작성하세요.\n2. 부드럽고 신뢰감 있는 '해요체'를 사용하세요.\n3. 오늘의 총운, 재물운, 애정운, 조언을 자연스럽게 섞어서 이야기해주세요.\n4. 마지막에는 행운의 색상과 방향을 추천해주세요.`
+};
 
 export function PromptManagementClient() {
     const [prompts, setPrompts] = useState<AIPrompt[]>([]);
@@ -25,6 +45,7 @@ export function PromptManagementClient() {
     const [newCategory, setNewCategory] = useState("ANALYSIS");
     const [newTemplate, setNewTemplate] = useState("");
     const [newDescription, setNewDescription] = useState("");
+    const [newTalismanCost, setNewTalismanCost] = useState(1);
 
     useEffect(() => {
         loadPrompts();
@@ -42,12 +63,17 @@ export function PromptManagementClient() {
         }
     }
 
-    const handleSave = async (key: string, newTemplate: string) => {
+    const handleSave = async (key: string, data: { template: string, talisman_cost: number }) => {
         setSaving(key);
-        const result = await updatePrompt(key, newTemplate);
+        const result = await updatePrompt(key, { template: data.template, talisman_cost: data.talisman_cost });
         if (result.success) {
             toast.success("프롬프트가 수정되었습니다.");
-            setPrompts(prompts.map(p => p.key === key ? { ...p, template: newTemplate, updated_at: new Date().toISOString() } : p));
+            setPrompts(prompts.map(p => p.key === key ? {
+                ...p,
+                template: data.template,
+                talisman_cost: data.talisman_cost,
+                updated_at: new Date().toISOString()
+            } : p));
         } else {
             toast.error("저장 실패: " + result.error);
         }
@@ -73,7 +99,7 @@ export function PromptManagementClient() {
         }
 
         setSaving("create");
-        const result = await createPrompt(newKey, newLabel, newCategory, newTemplate, newDescription);
+        const result = await createPrompt(newKey, newLabel, newCategory, newTemplate, newDescription, newTalismanCost);
         if (result.success) {
             toast.success("새 프롬프트가 생성되었습니다.");
             await loadPrompts();
@@ -91,29 +117,40 @@ export function PromptManagementClient() {
         setNewCategory("ANALYSIS");
         setNewTemplate("");
         setNewDescription("");
+        setNewTalismanCost(1);
     };
 
-    const categories = Array.from(new Set(prompts.map(p => p.category)));
+    const handleQuickCreateDaily = () => {
+        setNewKey("daily_fortune");
+        setNewLabel("오늘의 운세");
+        setNewCategory("ANALYSIS");
+        setNewTemplate(DEFAULT_TEMPLATES.daily_fortune);
+        setNewDescription("매일 아침 제공되는 오늘의 운세 프롬프트");
+        setNewTalismanCost(0);
+        setShowCreateDialog(true);
+    };
 
-    if (!loading && prompts.length === 0) {
-        return (
-            <div className="text-center py-20 bg-white border border-zen-border rounded-xl">
-                <p className="text-zen-muted">등록된 프롬프트가 없습니다.</p>
-                <p className="text-xs text-zen-muted/50 mt-1">아래 버튼을 눌러 새 프롬프트를 생성하세요.</p>
-                <Button onClick={() => setShowCreateDialog(true)} className="mt-4">
-                    <Plus className="w-4 h-4 mr-2" /> 프롬프트 생성
-                </Button>
-            </div>
-        );
-    }
+    const hasDailyFortune = prompts.some(p => p.key.toLowerCase() === "daily_fortune");
 
     return (
         <div className="space-y-6">
-            {/* Create Button */}
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+                {/* Quick Actions */}
+                {!loading && !hasDailyFortune && (
+                    <Button
+                        variant="outline"
+                        onClick={handleQuickCreateDaily}
+                        className="bg-gold-50 border-gold-200 text-gold-700 hover:bg-gold-100"
+                    >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        '오늘의 운세' 프롬프트 자동 생성 (필수)
+                    </Button>
+                )}
+
+                {/* Create Button */}
                 <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                     <DialogTrigger asChild>
-                        <Button className="bg-zen-wood text-white hover:bg-zen-wood/90">
+                        <Button className="bg-zen-wood text-white hover:bg-zen-wood/90 ml-auto">
                             <Plus className="w-4 h-4 mr-2" /> 새 프롬프트 생성
                         </Button>
                     </DialogTrigger>
@@ -129,7 +166,7 @@ export function PromptManagementClient() {
                                         id="key"
                                         value={newKey}
                                         onChange={(e) => setNewKey(e.target.value)}
-                                        placeholder="saju_analysis"
+                                        placeholder="daily_fortune"
                                         className="font-mono"
                                     />
                                     <p className="text-xs text-zen-muted mt-1">영문, 숫자, 언더스코어만 사용</p>
@@ -150,14 +187,30 @@ export function PromptManagementClient() {
                                 </div>
                             </div>
 
-                            <div>
-                                <Label htmlFor="label">레이블 (표시명) *</Label>
-                                <Input
-                                    id="label"
-                                    value={newLabel}
-                                    onChange={(e) => setNewLabel(e.target.value)}
-                                    placeholder="사주 상세 분석"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="label">레이블 (표시명) *</Label>
+                                    <Input
+                                        id="label"
+                                        value={newLabel}
+                                        onChange={(e) => setNewLabel(e.target.value)}
+                                        placeholder="오늘의 운세"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="cost">차감 부적 개수</Label>
+                                    <div className="relative">
+                                        <Ticket className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gold-500" />
+                                        <Input
+                                            id="cost"
+                                            type="number"
+                                            min="0"
+                                            value={newTalismanCost}
+                                            onChange={(e) => setNewTalismanCost(parseInt(e.target.value) || 0)}
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
@@ -166,17 +219,33 @@ export function PromptManagementClient() {
                                     id="description"
                                     value={newDescription}
                                     onChange={(e) => setNewDescription(e.target.value)}
-                                    placeholder="사주 팔자를 바탕으로 한 상세 분석 프롬프트"
+                                    placeholder="프롬프트에 대한 설명"
                                 />
                             </div>
 
-                            <div>
+                            <div className="space-y-2">
                                 <Label htmlFor="template">템플릿 *</Label>
+
+                                {/* Variable Guide */}
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs space-y-2">
+                                    <p className="font-bold flex items-center gap-1 text-slate-700">
+                                        <BookOpen className="w-3 h-3" /> 사용 가능한 변수 ({newCategory})
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(VARIABLE_GUIDE[newCategory as keyof typeof VARIABLE_GUIDE] || []).map((v) => (
+                                            <div key={v.name} className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm" title={v.desc}>
+                                                <code className="text-gold-600 font-bold">{v.name}</code>
+                                                <span className="text-slate-500">{v.desc}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <Textarea
                                     id="template"
                                     value={newTemplate}
                                     onChange={(e) => setNewTemplate(e.target.value)}
-                                    placeholder="프롬프트 템플릿을 입력하세요...&#10;&#10;예시:&#10;당신은 전문 역술인입니다.&#10;{{name}}님의 사주를 분석하세요.&#10;&#10;변수 사용: {{변수명}}"
+                                    placeholder="프롬프트 템플릿을 입력하세요..."
                                     className="font-mono text-sm min-h-[200px]"
                                 />
                             </div>
@@ -205,39 +274,31 @@ export function PromptManagementClient() {
                 </Dialog>
             </div>
 
-            {/* Prompts List */}
+            {/* Prompts List Grid (No Tabs) */}
             {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="h-48 bg-zen-bg rounded-xl animate-pulse" />
                 ))
             ) : (
-                <Tabs defaultValue={categories[0]} className="w-full">
-                    <TabsList className="w-full justify-start bg-white border border-zen-border p-1 h-auto flex-wrap gap-2">
-                        {categories.map(cat => (
-                            <TabsTrigger
-                                key={cat}
-                                value={cat}
-                                className="data-[state=active]:bg-zen-wood data-[state=active]:text-white capitalize px-4 py-2"
-                            >
-                                {cat}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
-
-                    {categories.map(cat => (
-                        <TabsContent key={cat} value={cat} className="mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            {prompts.filter(p => p.category === cat).map(prompt => (
-                                <PromptEditor
-                                    key={prompt.key}
-                                    prompt={prompt}
-                                    onSave={handleSave}
-                                    onDelete={handleDelete}
-                                    isSaving={saving === prompt.key}
-                                />
-                            ))}
-                        </TabsContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+                    {prompts.map(prompt => (
+                        <PromptEditor
+                            key={prompt.key}
+                            prompt={prompt}
+                            onSave={handleSave}
+                            onDelete={handleDelete}
+                            isSaving={saving === prompt.key}
+                        />
                     ))}
-                </Tabs>
+                    {prompts.length === 0 && !hasDailyFortune && (
+                        <div className="col-span-full text-center py-20 bg-white border border-zen-border rounded-xl">
+                            <p className="text-zen-muted">등록된 프롬프트가 없습니다.</p>
+                            <Button onClick={handleQuickCreateDaily} className="mt-4 bg-gold-500 hover:bg-gold-600">
+                                <Sparkles className="w-4 h-4 mr-2" /> '오늘의 운세' 프롬프트 생성하기
+                            </Button>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );

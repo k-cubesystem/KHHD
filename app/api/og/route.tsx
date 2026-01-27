@@ -1,177 +1,120 @@
-import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
+import { ImageResponse } from '@vercel/og';
+import { NextRequest } from 'next/server';
 
-export const runtime = "edge";
+export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
-    const { searchParams } = request.nextUrl;
+    try {
+        const { searchParams } = new URL(request.url);
 
-    // URL 파라미터에서 데이터 추출
-    const name = searchParams.get("name") || "사용자";
-    const element = searchParams.get("element") || "木";
-    const type = searchParams.get("type") || "detail";
-    const score = searchParams.get("score") || "85";
+        // Dynamic params
+        const title = searchParams.get('title')?.slice(0, 100) || '청담해화당';
+        const description = searchParams.get('desc')?.slice(0, 100) || '당신의 운명을 비춰주는 프리미엄 사주 분석';
+        const score = searchParams.get('score');
 
-    // 오행별 색상
-    const elementColors: Record<string, { bg: string; accent: string }> = {
-        木: { bg: "#E8F5E9", accent: "#2E7D32" },
-        火: { bg: "#FFEBEE", accent: "#C62828" },
-        土: { bg: "#FFF8E1", accent: "#F57F17" },
-        金: { bg: "#F3E5F5", accent: "#6A1B9A" },
-        水: { bg: "#E3F2FD", accent: "#1565C0" },
-    };
+        // Font loading (Noto Serif KR Bold)
+        const fontData = await fetch(
+            new URL('https://github.com/google/fonts/raw/main/ofl/notoserifkr/NotoSerifKR-Bold.otf', import.meta.url)
+        ).then((res) => res.arrayBuffer());
 
-    const colors = elementColors[element] || elementColors["木"];
-
-    // 타입별 템플릿
-    if (type === "compatibility") {
         return new ImageResponse(
             (
                 <div
                     style={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: colors.bg,
-                        fontFamily: "sans-serif",
-                        padding: "60px",
+                        height: '100%',
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#1C1C1E', // Ink-900
+                        backgroundImage: 'linear-gradient(to bottom right, #1C1C1E, #2A2A2D)',
+                        border: '24px solid #D4AF37', // Zen Gold
+                        color: '#F5F5F0',
+                        fontFamily: '"Noto Serif KR"',
+                        position: 'relative',
                     }}
                 >
+                    {/* Decorative Pattern Overlay (Abstract) */}
                     <div
                         style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            backgroundColor: "white",
-                            borderRadius: "24px",
-                            padding: "60px",
-                            boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
-                            border: `4px solid ${colors.accent}`,
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundImage: 'radial-gradient(circle at 25px 25px, rgba(212, 175, 55, 0.1) 2%, transparent 0%), radial-gradient(circle at 75px 75px, rgba(212, 175, 55, 0.1) 2%, transparent 0%)',
+                            backgroundSize: '100px 100px',
+                            opacity: 0.5,
                         }}
-                    >
-                        <div
-                            style={{
-                                fontSize: 72,
-                                fontWeight: "bold",
-                                color: colors.accent,
-                                marginBottom: 20,
-                            }}
-                        >
-                            ✨ 궁합 분석 결과
+                    />
+
+                    {/* Logo / Brand */}
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 40, borderBottom: '2px solid #D4AF37', paddingBottom: 10 }}>
+                        <span style={{ fontSize: 32, color: '#D4AF37', fontWeight: 900, letterSpacing: '-0.02em' }}>청담해화당 (Haehwadang)</span>
+                    </div>
+
+                    {/* Main Title */}
+                    <div style={{
+                        fontSize: 70,
+                        fontWeight: 900,
+                        textAlign: 'center',
+                        maxWidth: '80%',
+                        lineHeight: 1.2,
+                        textShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                        backgroundImage: 'linear-gradient(to bottom, #FFFFFF, #E5E5E5)',
+                        backgroundClip: 'text',
+                        color: 'transparent',
+                    }}>
+                        {title}
+                    </div>
+
+                    {/* Optional Score Badge */}
+                    {score && (
+                        <div style={{
+                            marginTop: 30,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                            border: '2px solid #D4AF37',
+                            borderRadius: 50,
+                            padding: '10px 30px',
+                        }}>
+                            <span style={{ fontSize: 36, color: '#D4AF37', fontWeight: 900 }}>{score}점</span>
                         </div>
-                        <div
-                            style={{
-                                fontSize: 120,
-                                fontWeight: "bold",
-                                color: colors.accent,
-                                marginBottom: 20,
-                            }}
-                        >
-                            {score}점
-                        </div>
-                        <div
-                            style={{
-                                fontSize: 48,
-                                color: "#666",
-                                textAlign: "center",
-                            }}
-                        >
-                            {name}님의 궁합 분석
-                        </div>
-                        <div
-                            style={{
-                                marginTop: 40,
-                                fontSize: 32,
-                                color: "#999",
-                            }}
-                        >
-                            해화당 • Haehwadang
-                        </div>
+                    )}
+
+                    {/* Description */}
+                    <div style={{
+                        fontSize: 32,
+                        marginTop: score ? 30 : 40,
+                        color: '#A1A1AA',
+                        textAlign: 'center',
+                        maxWidth: '70%',
+                        fontWeight: 400
+                    }}>
+                        {description}
                     </div>
                 </div>
             ),
             {
                 width: 1200,
                 height: 630,
-            }
+                fonts: [
+                    {
+                        name: 'Noto Serif KR',
+                        data: fontData,
+                        style: 'normal',
+                        weight: 700,
+                    },
+                ],
+            },
         );
+    } catch (e: any) {
+        console.log(`${e.message}`);
+        return new Response(`Failed to generate the image`, {
+            status: 500,
+        });
     }
-
-    // 기본 사주 상세 템플릿
-    return new ImageResponse(
-        (
-            <div
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.bg,
-                    fontFamily: "sans-serif",
-                    padding: "60px",
-                }}
-            >
-                <div
-                    style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        backgroundColor: "white",
-                        borderRadius: "24px",
-                        padding: "60px",
-                        boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
-                        border: `4px solid ${colors.accent}`,
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: 96,
-                            fontWeight: "bold",
-                            color: colors.accent,
-                            marginBottom: 30,
-                        }}
-                    >
-                        {element}
-                    </div>
-                    <div
-                        style={{
-                            fontSize: 56,
-                            fontWeight: "bold",
-                            color: "#333",
-                            marginBottom: 20,
-                        }}
-                    >
-                        {name}님의 사주
-                    </div>
-                    <div
-                        style={{
-                            fontSize: 40,
-                            color: "#666",
-                            textAlign: "center",
-                        }}
-                    >
-                        일간: {element} | 사주명리 분석 완료
-                    </div>
-                    <div
-                        style={{
-                            marginTop: 40,
-                            fontSize: 32,
-                            color: "#999",
-                        }}
-                    >
-                        해화당 • Haehwadang
-                    </div>
-                </div>
-            </div>
-        ),
-        {
-            width: 1200,
-            height: 630,
-        }
-    );
 }

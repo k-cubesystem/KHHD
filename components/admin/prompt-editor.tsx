@@ -2,31 +2,31 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Save, RotateCcw, Eye, Trash2, FileText } from "lucide-react";
+import { Loader2, Save, RotateCcw, Eye, Trash2, FileText, Ticket } from "lucide-react";
 import type { AIPrompt } from "@/app/admin/prompts/actions";
 import { cn } from "@/lib/utils";
 
 interface PromptEditorProps {
     prompt: AIPrompt;
-    onSave: (key: string, newTemplate: string) => Promise<void>;
+    onSave: (key: string, data: { template: string, talisman_cost: number }) => Promise<void>;
     onDelete: (key: string) => Promise<void>;
     isSaving: boolean;
 }
 
 export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEditorProps) {
     const [editedTemplate, setEditedTemplate] = useState(prompt.template);
+    const [editedCost, setEditedCost] = useState(prompt.talisman_cost || 1);
     const [showPreview, setShowPreview] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const isEdited = editedTemplate !== prompt.template;
+    const isEdited = editedTemplate !== prompt.template || editedCost !== prompt.talisman_cost;
 
     // Extract template variables ({{variable}})
     const extractVariables = (template: string): string[] => {
@@ -74,11 +74,12 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
     };
 
     const handleSave = async () => {
-        await onSave(prompt.key, editedTemplate);
+        await onSave(prompt.key, { template: editedTemplate, talisman_cost: editedCost });
     };
 
     const handleReset = () => {
         setEditedTemplate(prompt.template);
+        setEditedCost(prompt.talisman_cost || 1);
         toast.info("변경 사항을 취소했습니다.");
     };
 
@@ -101,11 +102,26 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                         <Badge variant="outline" className="text-[10px] text-zen-muted border-zen-border bg-zen-bg">
                             {prompt.key}
                         </Badge>
-                        <Badge className="text-[10px] bg-gold-100 text-gold-800 border-gold-300">
+                        <Badge className={"text-[10px] bg-slate-100 text-slate-800 border-slate-300"}>
                             {prompt.category}
                         </Badge>
                     </div>
                     <p className="text-sm text-zen-muted mt-1">{prompt.description}</p>
+
+                    {/* Cost Input */}
+                    <div className="mt-3 flex items-center gap-2">
+                        <div className="relative w-32">
+                            <Ticket className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gold-500" />
+                            <Input
+                                type="number"
+                                min="0"
+                                value={editedCost}
+                                onChange={(e) => setEditedCost(parseInt(e.target.value) || 0)}
+                                className="pl-8 h-8 text-sm"
+                            />
+                        </div>
+                        <span className="text-xs text-zen-muted">부적 소모량</span>
+                    </div>
                 </div>
 
                 <div className="flex gap-2">

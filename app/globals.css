@@ -5,61 +5,52 @@
 @layer base {
   :root {
     /* 
-      Modern Oriental Zen (Default Theme) 
-      Concept: Calm, Tradition, Modern Sophistication (Hanji Texture)
+      Organic Modernism (Default Theme) 
+      Concept: Hanji Paper, Deep Ink, Muted Gold, Cinnabar Accents
     */
-    --background: 40 10% 97%; /* #F9F8F5 (Warm Off-White) */
-    --foreground: 30 5% 10%;  /* #1C1B1A (Sharp Charcoal - Contrast Up) */
+    --background: 40 20% 96%; /* #F9F7F2 (Hanji Paper) */
+    --foreground: 0 0% 17%; /* #2C2C2C (Deep Ink) */
     
-    --card: 0 0% 100%; /* Pure White */
-    --card-foreground: 30 5% 10%;
+    --card: 40 20% 94%; /* #F4F1EA */
+    --card-foreground: 0 0% 17%;
     
-    --popover: 0 0% 100%;
-    --popover-foreground: 30 5% 10%;
+    --popover: 40 20% 96%;
+    --popover-foreground: 0 0% 17%;
     
-    --primary: 26 23% 45%; /* #8B6E58 (Sandalwood) */
+    --primary: 38 47% 56%; /* #C5A059 (Muted Gold) */
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 40 10% 94%; /* Light Stone */
-    --secondary-foreground: 30 5% 10%;
+    --secondary: 40 20% 92%;
+    --secondary-foreground: 0 0% 17%;
     
-    --muted: 40 10% 92%;
-    --muted-foreground: 25 5% 20%; /* #363330 (Dark Charcoal - High Contrast) */
+    --muted: 40 10% 90%;
+    --muted-foreground: 0 0% 40%;
     
-    --accent: 49 46% 56%; /* #C5B358 (Antique Gold) */
-    --accent-foreground: 30 5% 10%;
+    --accent: 0 46% 38%; /* #8E3535 (Cinnabar Red) */
+    --accent-foreground: 0 0% 100%;
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 40 10% 89%; /* #E5E3DF (Pale Grey) */
-    --input: 40 10% 89%;
-    --ring: 26 23% 45%; /* Zen Wood */
+    --border: 40 10% 85%;
+    --input: 40 10% 85%;
+    --ring: 38 47% 56%;
     
-    --radius: 0.25rem; /* Sharp Edges (4px) */
+    --radius: 0.25rem;
   }
 
+  /* Support for light mode if strictly requested via system preference, but default design is Dark */
+  /* Explicit Dark Mode (Deep Ink) */
   .dark {
-    /* Midnight in Seoul (Legacy / Dark Mode) */
-    --background: 240 4% 6%;
-    --foreground: 60 5% 96%;
-    --card: 240 4% 8%;
-    --card-foreground: 60 5% 96%;
-    --popover: 240 4% 8%;
-    --popover-foreground: 60 5% 96%;
-    --primary: 43 46% 56%;
-    --primary-foreground: 240 4% 6%;
-    --secondary: 240 4% 12%;
-    --secondary-foreground: 60 5% 96%;
-    --muted: 240 4% 12%;
-    --muted-foreground: 240 5% 75%; /* Increased contrast for dark mode */
-    --accent: 43 46% 56%;
-    --accent-foreground: 240 4% 6%;
-    --destructive: 343 79% 35%;
-    --destructive-foreground: 60 5% 96%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 43 46% 56%;
+    --background: 0 0% 7%; /* #111111 */
+    --foreground: 40 20% 96%; /* Hanji White */
+    --card: 0 0% 10%;
+    --card-foreground: 40 20% 96%;
+    --primary: 43 85% 50%;
+    --primary-foreground: 0 0% 10%;
+    --border: 0 0% 20%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 40 10% 70%;
   }
 }
 
@@ -130,5 +121,42 @@
   
   .text-zen-body {
      @apply font-sans text-zen-text/80 leading-relaxed;
+  }
+
+  /* Ink On Paper Effect */
+  .text-ink-texture {
+    @apply text-ink mix-blend-multiply opacity-90;
+  }
+
+  /* Seal Typography */
+  .font-seal {
+    @apply font-sans font-bold tracking-widest uppercase;
+  }
+  
+  /* Marquee Animation */
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee var(--duration) linear infinite;
+  }
+
+  .animate-marquee-vertical {
+    animation: marquee-vertical var(--duration) linear infinite;
   }
 }
