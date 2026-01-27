@@ -51,7 +51,7 @@ export default function Home() {
     <div className="relative min-h-screen w-full flex flex-col bg-ink-950 text-white overflow-x-hidden antialiased font-serif selection:bg-gold-500/30">
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
-      <main className="relative z-40 w-full h-screen flex flex-col items-center justify-end pb-32 lg:pb-40 text-center overflow-hidden">
+      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-end pb-24 md:pb-32 lg:pb-40 text-center overflow-hidden">
 
         {/* Background Layer (Transitioning) */}
         {slides.map((slide, index) => (
@@ -73,43 +73,43 @@ export default function Home() {
         ))}
 
         {/* Content Container */}
-        <div className="relative z-10 flex flex-col items-center gap-12 lg:gap-20 px-6 max-w-4xl pb-10">
+        <div className="relative z-10 flex flex-col items-center gap-8 md:gap-12 lg:gap-20 px-6 max-w-4xl pb-safe">
 
           {/* Header Group */}
-          <div className="flex flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-4 md:gap-6">
             {/* Welcome Label */}
-            <span className="font-gungseo text-sm font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
+            <span className="font-gungseo text-xs md:text-sm font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
               청담해화당
             </span>
 
             {/* Decorative Divider */}
-            <div className="flex items-center gap-4 opacity-80 animate-in fade-in duration-1000 delay-100">
-              <div className="h-px w-12 bg-gold-400/50" />
-              <Flower className="w-5 h-5 text-gold-400" strokeWidth={1} />
-              <div className="h-px w-12 bg-gold-400/50" />
+            <div className="flex items-center gap-3 md:gap-4 opacity-80 animate-in fade-in duration-1000 delay-100">
+              <div className="h-px w-8 md:w-12 bg-gold-400/50" />
+              <Flower className="w-4 h-4 md:w-5 md:h-5 text-gold-400" strokeWidth={1} />
+              <div className="h-px w-8 md:w-12 bg-gold-400/50" />
             </div>
           </div>
 
           {/* Dynamic Content (Keyed for Re-animation) */}
-          <div key={currentSlide} className="flex flex-col items-center gap-10 lg:gap-14 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div key={currentSlide} className="flex flex-col items-center gap-6 md:gap-10 lg:gap-14 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Headline */}
-            <h1 className="font-gungseo text-3xl md:text-5xl lg:text-7xl font-light leading-snug tracking-tight text-white drop-shadow-2xl break-keep">
+            <h1 className="font-gungseo text-2xl sm:text-3xl md:text-5xl lg:text-7xl font-light leading-relaxed tracking-tight text-white drop-shadow-2xl break-keep">
               {slides[currentSlide].headline}
             </h1>
 
             {/* Subhead */}
-            <p className="font-sans text-white/80 font-light text-sm md:text-base tracking-wide leading-loose max-w-2xl break-keep opacity-90">
+            <p className="font-sans text-white/80 font-light text-xs sm:text-sm md:text-base tracking-wide leading-loose max-w-[85%] md:max-w-2xl break-keep opacity-90 line-clamp-3 md:line-clamp-none">
               {slides[currentSlide].subhead}
             </p>
 
             {/* CTA Button */}
-            <Link href={slides[currentSlide].link} className="pt-8">
-              <button className="group relative px-12 py-5 bg-white/5 backdrop-blur-[2px] rounded-xl border border-white/20 shadow-lg flex items-center gap-5 transition-all duration-500 hover:bg-cinnabar/80 hover:border-cinnabar hover:shadow-cinnabar/30 hover:scale-[1.02]">
-                <span className="font-gungseo font-medium text-white/90 text-lg tracking-widest pt-1 group-hover:text-white transition-colors">
+            <Link href={slides[currentSlide].link} className="pt-4 md:pt-8">
+              <button className="group relative px-8 py-3 md:px-12 md:py-5 bg-white/5 backdrop-blur-[2px] rounded-xl border border-white/20 shadow-lg flex items-center gap-3 md:gap-5 transition-all duration-500 hover:bg-cinnabar/80 hover:border-cinnabar hover:shadow-cinnabar/30 hover:scale-[1.02]">
+                <span className="font-gungseo font-medium text-sm md:text-lg tracking-widest pt-1 text-white/90 group-hover:text-white transition-colors">
                   {slides[currentSlide].buttonText}
                 </span>
-                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                  <ArrowRight className="w-4 h-4 text-white/70 group-hover:text-white transition-colors" />
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                  <ArrowRight className="w-3 h-3 md:w-4 md:h-4 text-white/70 group-hover:text-white transition-colors" />
                 </div>
               </button>
             </Link>
