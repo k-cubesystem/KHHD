@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     const promises = subscriptions.map(async (sub) => {
         try {
             // A. Generate Fortune
-            const genResult = await generateDailyFortune(sub.user_id);
+            const genResult = await generateDailyFortune(sub.user_id, sub.user_id, 'USER');
             if (!genResult.success) throw new Error(genResult.error);
 
             // B. Send Notification
