@@ -12,4 +12,17 @@
 
 ## 3. 한글소통
 - 모든 소통은 한국어로 이루어집니다.
-- 
+
+## 4. Design System (THE LAW: Midnight in Cheongdam)
+All UI generation **MUST** strictly follow `docs/DESIGN_SYSTEM.md` without exception.
+- **Theme**: Dark Premium Saju Sanctuary (Deep Charcoal `#0A0A0A`).
+- **Mandatory Skeleton**:
+  ```tsx
+  <div className="min-h-screen bg-background text-ink-light font-sans relative overflow-hidden">
+    <div className="hanji-overlay" /> {/* Essential Texture */}
+    {/* Content */}
+  </div>
+  ```
+- **Typography**: `font-serif` (Headings) / `font-sans` (Body).
+- **Colors**: `text-primary` (Gold), `bg-seal` (Red Buttons).
+- **Strict Prohibition**: Light mode, pure white backgrounds. 

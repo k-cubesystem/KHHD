@@ -1,44 +1,35 @@
 {
-    "id": "design_system_protocol",
-    "name": "Design System & UX Protocol",
-    "version": "1.0.0",
-    "description": "Guidelines for UI/UX design, including color palettes, typography, and component usage, governed by the 'Oriental Luxury' aesthetic.",
-    "category": "design",
-    "author": "Claude (UI/UX Specialist)",
-    "created": "2026-01-27",
-    "aesthetics": {
-        "theme": "Oriental Luxury (Saju/Fortune-telling)",
-        "keywords": [
-            "Premium",
-            "Mystical",
-            "Elegant",
-            "Responsive",
-            "Dynamic"
-        ],
-        "core_principles": [
-            "Wow factor at first glance",
-            "Smooth gradients and glassmorphism",
-            "Micro-animations for engagement",
-            "Mobile-first responsive design"
-        ]
+    "id": "design_haehwadang_v2",
+    "name": "Design_Haehwadang_V2",
+    "version": "2.0.0",
+    "description": "Generates UI strictly following the 'Dark Luxury Saju' design system (Stitch export).",
+    "triggers": [
+        "Design this page",
+        "Create UI",
+        "Make it look like Cheongdam"
+    ],
+    "context": {
+        "theme": "Midnight in Cheongdam",
+        "background": "#0A0A0A (Deep Black) or #181611 (Ink Black)",
+        "colors": {
+            "bg": "bg-background",
+            "text": "text-primary (Gold)",
+            "border": "border-primary-dim"
+        },
+        "overlay": "Always wrap main container with `relative overflow-hidden` and add `<div className=\"hanji-overlay\" />`",
+        "typography": {
+            "headings": "Vertical Writing for Korean emotional keywords (.writing-vertical-rl)",
+            "icons": "Material Symbols or Lucide (minimalist style)"
+        },
+        "buttons": "Seal Style (Dojang) - feel like stamping a seal"
     },
     "implementation_rules": {
-        "styling": {
-            "primary": "Stitches (CSS-in-JS) or TailwindCSS (if specified)",
-            "avoid": "Generic browser defaults",
-            "fonts": "Google Fonts (Inter, Roboto, Outfit)"
-        },
-        "components": {
-            "location": "components/",
-            "rule": "Use reusable components from the design system. Avoid ad-hoc styling."
-        },
-        "dark_mode": "Mandatory support for seamless dark/light theme transitions."
-    },
-    "workflow": {
-        "step1": "Understand requirements & aesthetic goal",
-        "step2": "Update/Verify design tokens in config",
-        "step3": "Build components",
-        "step4": "Assemble pages",
-        "step5": "Polish (Animations, Transitions)"
+        "stack": "Next.js App Router + Tailwind CSS",
+        "component_structure": [
+            "Main Container (relative, overflow-hidden, bg-background)",
+            "  Hanji Overlay (absolute, inset-0, pointer-events-none)",
+            "  Content (z-10, relative)"
+        ],
+        "example_snippet": "<button className=\"bg-seal text-white px-8 py-3 rounded-sm shadow-md hover:bg-red-800 transition-colors font-serif tracking-widest flex items-center gap-2\">\n  <span>상담 예약</span>\n  <span className=\"material-symbols-outlined\">verified</span>\n</button>"
     }
 }

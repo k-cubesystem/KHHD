@@ -6,14 +6,14 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "rounded-[var(--radius)] bg-white border border-zen-border transition-all duration-300",
+  "rounded-lg bg-surface border border-primary-dim/20 transition-all duration-300 backdrop-blur-sm",
   {
     variants: {
       depth: {
         flat: "shadow-none",
-        low: "shadow-sm hover:shadow-md",
-        medium: "shadow-md hover:shadow-lg",
-        high: "shadow-lg shadow-zen-wood/10 hover:shadow-xl hover:shadow-zen-wood/20",
+        low: "shadow-sm hover:shadow-md hover:shadow-primary/5",
+        medium: "shadow-md hover:shadow-lg hover:shadow-primary/10",
+        high: "shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 hover:border-primary-dim/40",
       },
     },
     defaultVariants: {
@@ -75,7 +75,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("font-semibold leading-none tracking-tight", className)}
+    className={cn("font-serif font-semibold leading-none tracking-tight text-ink-light", className)}
     {...props}
   />
 ));
@@ -87,7 +87,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-ink-faint font-sans", className)}
     {...props}
   />
 ));

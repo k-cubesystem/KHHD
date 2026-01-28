@@ -48,7 +48,10 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col bg-ink-950 text-white overflow-x-hidden antialiased font-serif selection:bg-gold-500/30">
+    <div className="relative min-h-screen w-full flex flex-col bg-background text-ink-light overflow-x-hidden antialiased font-serif selection:bg-primary/30">
+
+      {/* Texture Overlay */}
+      <div className="hanji-overlay" />
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
       <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] md:pt-[35vh] text-center overflow-hidden">
@@ -68,22 +71,22 @@ export default function Home() {
               style={{ backgroundImage: `url('${slide.image}')` }}
             />
             {/* Dark Overlay Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-ink-900/30 via-ink-950/60 to-ink-950/90" />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background/90" />
           </div>
         ))}
 
         {/* Header Group (Fixed Top) */}
         <div className="absolute top-14 md:top-24 lg:top-32 left-0 right-0 z-50 flex flex-col items-center gap-5 md:gap-8">
           {/* Welcome Label */}
-          <span className="font-gungseo text-lg md:text-xl lg:text-2xl font-bold tracking-[0.5em] text-gold-400 animate-in fade-in duration-1000">
+          <span className="font-serif text-lg md:text-xl lg:text-2xl font-bold tracking-[0.5em] text-primary animate-in fade-in duration-1000 gold-glow">
             청담해화당
           </span>
 
           {/* Decorative Divider */}
           <div className="flex items-center gap-3 md:gap-4 opacity-80 animate-in fade-in duration-1000 delay-100">
-            <div className="h-px w-8 md:w-12 bg-gold-400/50" />
-            <Flower className="w-4 h-4 md:w-5 md:h-5 text-gold-400" strokeWidth={1} />
-            <div className="h-px w-8 md:w-12 bg-gold-400/50" />
+            <div className="h-px w-8 md:w-12 bg-primary/50" />
+            <Flower className="w-4 h-4 md:w-5 md:h-5 text-primary" strokeWidth={1} />
+            <div className="h-px w-8 md:w-12 bg-primary/50" />
           </div>
         </div>
 
@@ -93,23 +96,23 @@ export default function Home() {
           {/* Dynamic Content (Keyed for Re-animation) */}
           <div key={currentSlide} className="flex flex-col items-center gap-6 md:gap-14 lg:gap-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Headline */}
-            <h1 className="font-gungseo text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light leading-relaxed tracking-tight text-white drop-shadow-sm break-keep">
+            <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light leading-relaxed tracking-tight text-ink-light drop-shadow-sm break-keep">
               {slides[currentSlide].headline}
             </h1>
 
             {/* Subhead */}
-            <p className="font-sans text-white/80 font-light text-sm sm:text-base md:text-lg tracking-wide leading-7 max-w-[85%] md:max-w-2xl break-keep opacity-90">
+            <p className="font-sans text-ink-light/80 font-light text-sm sm:text-base md:text-lg tracking-wide leading-7 max-w-[85%] md:max-w-2xl break-keep opacity-90">
               {slides[currentSlide].subhead}
             </p>
 
             {/* CTA Button */}
             <Link href={slides[currentSlide].link} className="pt-8 md:pt-10">
-              <button className="group relative px-10 py-3.5 md:px-14 md:py-4 bg-white/5 backdrop-blur-[2px] rounded-xl border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center gap-3 md:gap-5 transition-all duration-500 hover:bg-cinnabar/80 hover:border-cinnabar hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-[1.02]">
-                <span className="font-gungseo font-light text-sm md:text-lg tracking-[0.2em] pt-0.5 text-white/90 group-hover:text-white transition-colors">
+              <button className="group relative px-10 py-3.5 md:px-14 md:py-4 bg-surface/10 backdrop-blur-[2px] rounded-xl border border-primary/30 shadow-[0_0_20px_rgba(236,182,19,0.1)] flex items-center gap-3 md:gap-5 transition-all duration-500 hover:bg-seal hover:border-seal hover:shadow-[0_0_30px_rgba(154,42,42,0.4)] hover:scale-[1.02]">
+                <span className="font-serif font-light text-sm md:text-lg tracking-[0.2em] pt-0.5 text-ink-light/90 group-hover:text-ink-light transition-colors">
                   {slides[currentSlide].buttonText}
                 </span>
                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors shadow-inner">
-                  <ArrowRight className="w-3 h-3 md:w-4 md:h-4 text-white/70 group-hover:text-white transition-colors" />
+                  <ArrowRight className="w-3 h-3 md:w-4 md:h-4 text-ink-light/70 group-hover:text-ink-light transition-colors" />
                 </div>
               </button>
             </Link>
@@ -125,7 +128,7 @@ export default function Home() {
               onClick={() => setCurrentSlide(index)}
               className={cn(
                 "w-2 h-2 rounded-full transition-all duration-300",
-                index === currentSlide ? "bg-gold-400 w-6" : "bg-white/20 hover:bg-white/40"
+                index === currentSlide ? "bg-primary w-6 gold-glow" : "bg-white/20 hover:bg-white/40"
               )}
               aria-label={`Go to slide ${index + 1}`}
             />

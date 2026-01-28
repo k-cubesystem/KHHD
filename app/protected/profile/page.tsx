@@ -2,7 +2,20 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogoutButton } from "@/components/logout-button";
-import { User, ScrollText, Users, CreditCard, ChevronRight, Settings } from "lucide-react";
+import {
+    ChevronLeft,
+    Settings,
+    Star,
+    ArrowRight,
+    Calendar,
+    Droplets,
+    Flame,
+    Bell,
+    Shield,
+    Headphones,
+    User as UserIcon
+} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export default async function MyPage() {
     const supabase = await createClient();
@@ -12,107 +25,174 @@ export default async function MyPage() {
         return redirect("/auth/login");
     }
 
-    // Fetch real profile data
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
-    const displayName = profile?.name || user.email?.split("@")[0] || "Guest";
-    const membershipLevel = profile?.membership_tier || "Standard";
-    // If 'membership_tier' doesn't exist, it might default to undefined, handle gracefully.
-
-    // Mock Archives (Replace with real data if 'consultations' table exists)
-    const archives = [
-        { date: "2026.01.15", title: "을사년 신년 운세 (Year of Snake)", type: "Annual" },
-        { date: "2025.10.02", title: "사업 확장 시기 분석", type: "Specific" },
-    ];
-
-    const menuItems = [
-        { label: "내 정보 수정", href: "/protected/profile/edit", icon: User, desc: "사주 정보 및 계정 설정" },
-        { label: "정통 만세력", href: "/protected/profile/manse", icon: ScrollText, desc: "전문가용 만세력 분석" },
-        { label: "인연 관리", href: "/protected/relationships", icon: Users, desc: "가족 및 지인 정보 등록" },
-        { label: "멤버십 관리", href: "/protected/membership", icon: CreditCard, desc: "구독 및 결제 내역" },
-    ];
+    // Fallback display name
+    const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Guest";
 
     return (
-        <div className="min-h-screen w-full bg-hanji text-ink font-serif flex flex-col items-center py-12 px-6 relative overflow-x-hidden">
+        <div className="min-h-screen w-full bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
+            <div className="hanji-overlay" />
 
-            {/* Background Texture */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]" />
-
-            {/* Header / Nav (Minimal) */}
-            <header className="w-full max-w-2xl flex justify-between items-center mb-16 z-10">
-                <Link href="/protected" className="font-gungseo text-ink/80 text-lg hover:text-cinnabar transition-colors">海花堂</Link>
-                <div className="flex items-center gap-4">
-                    <span className="text-[10px] tracking-widest text-ink/40 uppercase">{user.email}</span>
-                    <LogoutButton />
-                </div>
+            {/* Header */}
+            <header className="flex items-center justify-between px-6 py-5 sticky top-0 bg-background/90 backdrop-blur-md z-50 border-b border-primary/20">
+                <Link href="/protected" className="p-1 -ml-1 hover:bg-surface/10 rounded-full transition-colors">
+                    <ChevronLeft className="w-6 h-6 text-ink-light/90" />
+                </Link>
+                <h1 className="text-sm font-serif tracking-[0.2em] text-ink-light/90 uppercase">My Page</h1>
+                <Link href="/protected/settings" className="p-1 -mr-1 hover:bg-surface/10 rounded-full transition-colors">
+                    <Settings className="w-5 h-5 text-ink-light/60" />
+                </Link>
             </header>
 
-            {/* 1. Profile Seal Section (Organic Modernism Design) */}
-            <section className="flex flex-col items-center gap-6 mb-16 z-10 animate-in fade-in zoom-in duration-700">
-                <div className="relative group cursor-default">
-                    {/* Seal Container */}
-                    <div className="w-28 h-28 bg-cinnabar/10 rounded-full flex items-center justify-center border border-cinnabar/20 group-hover:bg-cinnabar group-hover:text-hanji transition-all duration-500 shadow-lg">
-                        <span className="font-gungseo text-4xl font-bold text-cinnabar group-hover:text-hanji transition-colors">
-                            {displayName[0]}
-                        </span>
+            {/* Profile Section */}
+            <section className="flex flex-col items-center pt-10 pb-10 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
+                {/* Avatar */}
+                <div className="relative mb-6 group cursor-pointer">
+                    <div className="w-28 h-28 rounded-full border-2 border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-lg group-hover:border-primary/50 transition-colors">
+                        {/* Placeholder for Avatar Image */}
+                        <span className="font-serif text-4xl text-primary">{displayName[0]}</span>
+                    </div>
+                    {/* Star Badge */}
+                    <div className="absolute bottom-1 right-1 bg-primary text-background rounded-full p-1.5 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                        <Star className="w-3.5 h-3.5 fill-current" />
                     </div>
                 </div>
-                <div className="text-center space-y-2">
-                    <h1 className="font-gungseo text-2xl text-ink font-bold">{displayName}</h1>
-                    <span className="inline-block px-3 py-1 rounded-full border border-gold-400/30 bg-gold-500/5 text-[10px] uppercase tracking-[0.2em] text-gold-600 font-sans">
-                        {membershipLevel} Member
-                    </span>
+
+                {/* Name & Tier */}
+                <h2 className="text-2xl font-serif text-ink-light mb-3 tracking-wide">{displayName}</h2>
+                <div className="flex items-center gap-3">
+                    <div className="h-px w-8 bg-primary/30" />
+                    <span className="text-primary text-[10px] tracking-[0.3em] uppercase font-bold">VVIP Member</span>
+                    <div className="h-px w-8 bg-primary/30" />
                 </div>
             </section>
 
-            {/* 2. Menu Configuration (Restored Structure) */}
-            <section className="w-full max-w-xl mb-12 z-10 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-100">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {menuItems.map((item) => (
-                        <Link key={item.label} href={item.href} className="group relative bg-white/40 border border-ink/5 p-6 rounded-sm hover:border-gold-500/50 hover:bg-white/80 transition-all duration-300 shadow-sm hover:shadow-md">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="w-10 h-10 rounded-full bg-ink/5 flex items-center justify-center text-ink/60 group-hover:bg-gold-500/10 group-hover:text-gold-600 transition-colors">
-                                    <item.icon className="w-5 h-5" />
-                                </div>
-                                <ChevronRight className="w-4 h-4 text-ink/20 group-hover:text-gold-500 transition-colors" />
-                            </div>
+            {/* Stats Row */}
+            <section className="px-6 mb-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100 relative z-10">
+                <div className="bg-surface/10 border border-primary/10 rounded-2xl p-6 grid grid-cols-3 divide-x divide-primary/10 backdrop-blur-sm shadow-xl">
+                    {/* Stat Items */}
+                    <div className="flex flex-col items-center gap-1.5 hover:bg-surface/10 transition-colors rounded-lg py-1">
+                        <span className="text-xl font-serif text-ink-light font-medium">12</span>
+                        <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">Readings</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5 hover:bg-surface/10 transition-colors rounded-lg py-1">
+                        <span className="text-xl font-serif text-ink-light font-medium">4</span>
+                        <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">Saved</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-1.5 hover:bg-surface/10 transition-colors rounded-lg py-1">
+                        <span className="text-xl font-serif text-primary font-medium">Gold</span>
+                        <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">Tier</span>
+                    </div>
+                </div>
+            </section>
+
+            {/* Recent Consultations */}
+            <section className="px-6 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xs font-bold tracking-widest text-ink-light/50 uppercase">Recent Consultations</h3>
+                    <Link href="#" className="text-[10px] text-primary tracking-wider font-bold hover:text-ink-light transition-colors">VIEW ALL</Link>
+                </div>
+
+                <div className="space-y-4">
+                    {/* Completed Card */}
+                    <Link href="#" className="block group">
+                        <div className="bg-surface/5 border border-primary/10 rounded-xl p-5 flex items-center justify-between hover:bg-surface/10 hover:border-primary/20 transition-all duration-300">
                             <div>
-                                <h3 className="font-gungseo text-lg font-bold text-ink mb-1 group-hover:text-gold-700 transition-colors">{item.label}</h3>
-                                <p className="font-sans text-xs text-ink/50 font-light">{item.desc}</p>
+                                <span className="inline-block px-2 py-0.5 bg-primary/20 text-primary text-[9px] font-bold rounded-sm mb-2 uppercase tracking-wide">Completed</span>
+                                <h4 className="text-base font-serif text-ink-light/90 mb-1 group-hover:text-primary transition-colors">2026 Annual Destiny</h4>
+                                <p className="text-[10px] text-ink-light/40">Jan 14, 2026 • Master Lee</p>
                             </div>
-                        </Link>
-                    ))}
+                            <div className="w-8 h-8 rounded-full border border-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary group-hover:text-background text-ink-light/50 transition-all">
+                                <ArrowRight className="w-4 h-4" />
+                            </div>
+                        </div>
+                    </Link>
+
+                    {/* Scheduled Card */}
+                    <Link href="#" className="block group">
+                        <div className="bg-surface/5 border border-primary/10 rounded-xl p-5 flex items-center justify-between hover:bg-surface/10 hover:border-primary/20 transition-all duration-300">
+                            <div>
+                                <span className="inline-block px-2 py-0.5 bg-surface/20 text-ink-light/60 text-[9px] font-bold rounded-sm mb-2 uppercase tracking-wide">Scheduled</span>
+                                <h4 className="text-base font-serif text-ink-light/90 mb-1">Career Path Insight</h4>
+                                <p className="text-[10px] text-ink-light/40">Feb 22, 2026 • Master Park</p>
+                            </div>
+                            <div className="w-8 h-8 rounded-full border border-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-background text-ink-light/50 transition-all">
+                                <Calendar className="w-4 h-4" />
+                            </div>
+                        </div>
+                    </Link>
                 </div>
             </section>
 
-            {/* 3. Consultation Archive (New Design Element) */}
-            <section className="w-full max-w-xl space-y-6 z-10 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-200">
-                <div className="flex items-center gap-4">
-                    <div className="h-px flex-1 bg-ink/10" />
-                    <span className="text-[10px] font-sans tracking-[0.2em] text-ink/40 uppercase">Archive</span>
-                    <div className="h-px flex-1 bg-ink/10" />
-                </div>
-
-                <div className="space-y-3">
-                    {archives.map((item, idx) => (
-                        <Link key={idx} href={`/protected/analysis/result`} className="block group">
-                            <div className="relative bg-white border border-ink/5 p-5 shadow-sm hover:shadow-md hover:border-ink/20 transition-all duration-300 rounded-[2px] flex items-center justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-sans text-ink/30 tracking-widest">{item.date}</span>
-                                    <h4 className="font-gungseo text-sm text-ink/80 group-hover:text-ink">{item.title}</h4>
-                                </div>
-                                <div className="w-8 h-8 flex items-center justify-center border border-ink/10 rounded-full text-ink/20 group-hover:bg-ink group-hover:text-hanji transition-all">
-                                    <ScrollText className="w-4 h-4" />
-                                </div>
-                            </div>
-                        </Link>
-                    ))}
+            {/* Saved Destiny Results */}
+            <section className="px-6 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300 relative z-10">
+                <h3 className="text-xs font-bold tracking-widest text-ink-light/50 uppercase mb-6">Saved Destiny Results</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Water Card */}
+                    <div className="bg-surface/5 border border-primary/10 rounded-xl p-5 aspect-[4/3] flex flex-col justify-between hover:bg-surface/10 hover:border-primary/20 transition-all cursor-pointer group">
+                        <Droplets className="w-6 h-6 text-primary/70 group-hover:text-primary transition-colors" />
+                        <div>
+                            <h4 className="font-serif text-ink-light/90 text-sm mb-1 group-hover:text-primary transition-colors">The Flow of Water</h4>
+                            <p className="text-[9px] text-ink-light/30">Saved 2 days ago</p>
+                        </div>
+                    </div>
+                    {/* Fire Card */}
+                    <div className="bg-surface/5 border border-primary/10 rounded-xl p-5 aspect-[4/3] flex flex-col justify-between hover:bg-surface/10 hover:border-primary/20 transition-all cursor-pointer group">
+                        <Flame className="w-6 h-6 text-primary/70 group-hover:text-primary transition-colors" />
+                        <div>
+                            <h4 className="font-serif text-ink-light/90 text-sm mb-1 group-hover:text-primary transition-colors">Passion & Career</h4>
+                            <p className="text-[9px] text-ink-light/30">Saved 1 month ago</p>
+                        </div>
+                    </div>
                 </div>
             </section>
+
+            {/* Settings Menu */}
+            <section className="px-6 mb-16 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500 relative z-10">
+                <div className="space-y-1">
+                    {/* Notifications */}
+                    <div className="flex items-center justify-between p-4 hover:bg-surface/10 rounded-lg transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-4">
+                            <Bell className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors" />
+                            <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">Notifications</span>
+                        </div>
+                        <Switch id="notify" className="data-[state=checked]:bg-primary" />
+                    </div>
+
+                    {/* Privacy */}
+                    <Link href="/policy/privacy" className="flex items-center justify-between p-4 hover:bg-surface/10 rounded-lg transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-4">
+                            <Shield className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors" />
+                            <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">Privacy & Security</span>
+                        </div>
+                        <ChevronLeft className="w-4 h-4 text-ink-light/30 rotate-180 group-hover:text-ink-light transition-colors" />
+                    </Link>
+
+                    {/* Support */}
+                    <Link href="/support" className="flex items-center justify-between p-4 hover:bg-surface/10 rounded-lg transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-4">
+                            <Headphones className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors" />
+                            <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">Support</span>
+                        </div>
+                        <ChevronLeft className="w-4 h-4 text-ink-light/30 rotate-180 group-hover:text-ink-light transition-colors" />
+                    </Link>
+                </div>
+            </section>
+
+            {/* Logout */}
+            <div className="text-center animate-in fade-in duration-1000 delay-700 relative z-10">
+                <LogoutButton
+                    variant="ghost"
+                    className="text-ink-light/30 text-[10px] tracking-[0.2em] hover:text-ink-light hover:bg-transparent transition-colors uppercase font-serif"
+                >
+                    Log Out
+                </LogoutButton>
+            </div>
 
         </div>
     );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display } from "next/font/google";
+import { Noto_Sans_KR, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
@@ -7,10 +7,11 @@ import { AgentationWrapper } from "@/components/agentation-wrapper";
 import StitchesRegistry from "./stitches-registry";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-sans",
+const notoSans = Noto_Sans_KR({
+  variable: "--font-noto-sans",
   display: "swap",
   subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "700", "900"],
 });
 
 const notoSerif = Noto_Serif_KR({
@@ -93,7 +94,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning translate="no">
-      <body className={`${inter.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-sans antialiased notranslate`} suppressHydrationWarning>
+      <body className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-sans antialiased notranslate`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

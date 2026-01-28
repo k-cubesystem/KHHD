@@ -4,159 +4,115 @@
 
 @layer base {
   :root {
-    /* 
-      Organic Modernism (Default Theme) 
-      Concept: Hanji Paper, Deep Ink, Muted Gold, Cinnabar Accents
-    */
-    --background: 40 20% 96%; /* #F9F7F2 (Hanji Paper) */
-    --foreground: 0 0% 17%; /* #2C2C2C (Deep Ink) */
-    
-    --card: 40 20% 94%; /* #F4F1EA */
-    --card-foreground: 0 0% 17%;
-    
-    --popover: 40 20% 96%;
-    --popover-foreground: 0 0% 17%;
-    
-    --primary: 38 47% 56%; /* #C5A059 (Muted Gold) */
-    --primary-foreground: 0 0% 100%;
-    
-    --secondary: 40 20% 92%;
-    --secondary-foreground: 0 0% 17%;
-    
-    --muted: 40 10% 90%;
-    --muted-foreground: 0 0% 40%;
-    
-    --accent: 0 46% 38%; /* #8E3535 (Cinnabar Red) */
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 40 10% 85%;
-    --input: 40 10% 85%;
-    --ring: 38 47% 56%;
-    
-    --radius: 0.25rem;
+    --background: 0 0% 3.9%; /* #0A0A0A - Deep Charcoal */
+    --foreground: 0 0% 90%; /* #E5E5E5 - Light Ink */
+    --radius: 0.5rem;
   }
 
-  /* Support for light mode if strictly requested via system preference, but default design is Dark */
-  /* Explicit Dark Mode (Deep Ink) */
-  .dark {
-    --background: 0 0% 7%; /* #111111 */
-    --foreground: 40 20% 96%; /* Hanji White */
-    --card: 0 0% 10%;
-    --card-foreground: 40 20% 96%;
-    --primary: 43 85% 50%;
-    --primary-foreground: 0 0% 10%;
-    --border: 0 0% 20%;
-    --muted: 0 0% 20%;
-    --muted-foreground: 40 10% 70%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-zen-gold/30 selection:text-zen-text;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    @apply bg-background text-ink-light font-serif antialiased overflow-x-hidden;
+    font-feature-settings: "kern" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  
-  /* Typography Guidelines */
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-serif tracking-tight text-zen-text;
+
+  /* Scrollbar Styling (Dark Luxury) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-  
-  p, span, div {
-     @apply font-sans;
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary-dim/50 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary-dim;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary/30 text-ink-light;
+  }
+
+  ::-moz-selection {
+    @apply bg-primary/30 text-ink-light;
   }
 }
 
 @layer utilities {
-  /* Hanji Texture Overlay */
-  .bg-hanji {
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-    background-repeat: repeat;
+  /* 세로쓰기 유틸리티 */
+  .writing-vertical-rl {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
   }
 
-  /* Zen Card Style - Minimal Shadow, Sharp */
-  .zen-card {
-    @apply bg-white border border-zen-border shadow-sm hover:shadow-md transition-all duration-300 rounded-[var(--radius)];
+  /* 한지 질감 오버레이 (전역 적용) */
+  .hanji-overlay {
+    background-image: url('/images/texture/cream-paper.png');
+    opacity: 0.08;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    position: absolute;
+    inset: 0;
+    z-index: 10;
   }
 
-  /* Glassmorphism - Zen Style (Frosted White) */
-  .glass-zen {
-    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-sm supports-[backdrop-filter]:bg-white/40;
+  /* 금빛 글로우 효과 (Dark Luxury) */
+  .gold-glow {
+    text-shadow: 0 0 20px rgba(236, 182, 19, 0.5),
+                 0 0 40px rgba(236, 182, 19, 0.3);
   }
 
-  /* UX Pro Max: Dark Glass (Midnight) */
-  .glass-dark {
-    @apply bg-ink-900/80 backdrop-blur-xl border border-gold-500/20 shadow-2xl shadow-gold-900/50 supports-[backdrop-filter]:bg-ink-900/60;
-  }
-  
-  /* UX Pro Max: Light Glass (Morning) */
-  .glass-light {
-    @apply bg-white/70 backdrop-blur-md border border-zen-border/40 shadow-lg shadow-zen-wood/10 supports-[backdrop-filter]:bg-white/40;
-  }
-  
-  /* UX Pro Max: Premium Gold Glass */
-  .glass-gold {
-    @apply bg-gradient-to-br from-gold-100/90 to-gold-300/80 backdrop-blur-lg border border-gold-500/30 shadow-xl shadow-gold-500/20;
-  }
-  
-  /* Buttons - Zen Style */
-  .btn-zen-primary {
-    @apply bg-zen-wood text-white hover:bg-[#7A604D] rounded-[var(--radius)] shadow-sm active:scale-[0.98] transition-all relative overflow-hidden;
-  }
-  
-  .btn-zen-secondary {
-    @apply bg-white border border-zen-border text-zen-text hover:bg-zen-bg hover:border-zen-wood/30 rounded-[var(--radius)] transition-all active:scale-[0.98];
+  /* 금빛 테두리 글로우 */
+  .gold-border-glow {
+    box-shadow: 0 0 15px rgba(236, 182, 19, 0.3),
+                inset 0 0 10px rgba(236, 182, 19, 0.1);
   }
 
-  /* Typography Utilities */
-  .text-zen-title {
-     @apply font-serif font-bold text-zen-text;
-  }
-  
-  .text-zen-body {
-     @apply font-sans text-zen-text/80 leading-relaxed;
+  /* 도장 그림자 (Oriental Seal) */
+  .dojang-shadow {
+    box-shadow: 4px 4px 0 0 rgba(154, 42, 42, 0.4);
   }
 
-  /* Ink On Paper Effect */
-  .text-ink-texture {
-    @apply text-ink mix-blend-multiply opacity-90;
+  /* 고급스러운 카드 글로우 */
+  .luxury-card-glow {
+    box-shadow: 0 4px 20px rgba(197, 160, 89, 0.15),
+                0 0 40px rgba(197, 160, 89, 0.05);
   }
 
-  /* Seal Typography */
-  .font-seal {
-    @apply font-sans font-bold tracking-widest uppercase;
+  /* 부드러운 Fade In 애니메이션 */
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
   }
-  
-  /* Marquee Animation */
-  @keyframes marquee {
+
+  @keyframes fadeIn {
     from {
-      transform: translateX(0);
+      opacity: 0;
+      transform: translateY(10px);
     }
     to {
-      transform: translateX(calc(-100% - var(--gap)));
-    }
-  }
-
-  @keyframes marquee-vertical {
-    from {
+      opacity: 1;
       transform: translateY(0);
     }
-    to {
-      transform: translateY(calc(-100% - var(--gap)));
-    }
   }
 
-  .animate-marquee {
-    animation: marquee var(--duration) linear infinite;
+  /* 글자 간격 조정 (한글 가독성) */
+  .letter-spacing-hangeul {
+    letter-spacing: -0.02em;
   }
 
-  .animate-marquee-vertical {
-    animation: marquee-vertical var(--duration) linear infinite;
+  /* 고급스러운 그라데이션 배경 */
+  .gradient-dark-luxury {
+    background: linear-gradient(
+      135deg,
+      #0A0A0A 0%,
+      #181611 50%,
+      #0A0A0A 100%
+    );
   }
 }
