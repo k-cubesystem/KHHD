@@ -71,6 +71,14 @@ CREATE TABLE IF NOT EXISTS public.feature_costs (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- 기존 테이블이 있을 경우 category 컬럼 추가 보장
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'feature_costs' AND column_name = 'category') THEN
+        ALTER TABLE public.feature_costs ADD COLUMN category text DEFAULT 'GENERAL';
+    END IF;
+END $$;
+
 -- RLS
 ALTER TABLE public.feature_costs ENABLE ROW LEVEL SECURITY;
 
