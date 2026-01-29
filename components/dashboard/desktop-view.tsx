@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { User, Crown, CloudMoon, Star, Settings, Bell, Zap, BookOpen, Sparkles, LogOut, LayoutDashboard, Database, ScrollText, Users, Compass, Fingerprint, Coins } from "lucide-react";
+import { User, CloudMoon, Settings, Bell, Zap, BookOpen, Sparkles, LayoutDashboard, ScrollText, Users, Compass, Fingerprint, Coins, Flower2 } from "lucide-react";
 import Image from "next/image";
-import { LogoutButton } from "@/components/logout-button";
 
 interface DesktopViewProps {
     isGuest: boolean;
@@ -28,9 +27,9 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
             <header className="fixed top-0 w-full z-40 border-b border-primary/10 bg-background/90 backdrop-blur-md h-16 transition-all duration-300">
                 <div className="max-w-[1400px] mx-auto h-full flex items-center justify-between px-6">
                     <Link href="/protected" className="flex items-center gap-3 group">
-                        <Crown className="text-primary w-6 h-6" strokeWidth={0.7} />
-                        <h2 className="text-ink-light text-lg font-bold tracking-widest uppercase font-serif group-hover:text-primary transition-colors">
-                            Cheongdam <span className="text-primary">Haehwadang</span>
+                        <Flower2 className="text-primary w-6 h-6" strokeWidth={1} />
+                        <h2 className="text-ink-light text-lg font-bold tracking-widest font-serif group-hover:text-primary transition-colors">
+                            청담 <span className="text-primary">해화당</span>
                         </h2>
                     </Link>
                     <nav className="flex items-center gap-6">
@@ -50,49 +49,8 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
             <div className="flex-1 pt-24 pb-12 px-6">
                 <div className="max-w-[1400px] mx-auto grid grid-cols-12 gap-8">
 
-                    {/* Left Sidebar (Profile & Nav) */}
-                    <aside className="col-span-12 lg:col-span-3 space-y-6">
-                        {/* Profile Card */}
-                        <div className="bg-surface/50 border border-primary/20 rounded-2xl p-6 relative overflow-hidden group">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-16 h-16 rounded-full bg-surface border-2 border-primary/30 flex items-center justify-center relative">
-                                    <User className="w-8 h-8 text-ink-light/70" strokeWidth={1} />
-                                    <div className="absolute -bottom-1 -right-1 bg-primary text-background p-1 rounded-full border border-background">
-                                        <Star className="w-3 h-3 fill-current" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-primary font-bold tracking-widest uppercase mb-1">VVIP Member</p>
-                                    <h3 className="text-xl font-serif font-bold text-ink-light">{masterName}님</h3>
-                                </div>
-                            </div>
-                            <div className="space-y-3 pt-6 border-t border-white/5">
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-ink-light/50">보유 크레딧</span>
-                                    <span className="text-primary font-bold">1,200 C</span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm">
-                                    <span className="text-ink-light/50">나의 등급</span>
-                                    <span className="text-ink-light/90">Gold Class</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Quick Menu */}
-                        <div className="bg-surface/30 border border-white/5 rounded-2xl p-4 space-y-2">
-                            <SidebarLink href="/protected" icon={LayoutDashboard} label="대시보드" active />
-                            <SidebarLink href="/protected/profile" icon={User} label="내 사주 정보 (MY)" />
-                            <SidebarLink href="/protected/history" icon={Database} label="분석 기록 보관함" />
-                            <div className="my-2 h-px bg-white/5" />
-                            <LogoutButton className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-rose-400 hover:bg-rose-950/10 transition-colors">
-                                <LogOut className="w-4 h-4" strokeWidth={1.5} />
-                                로그아웃
-                            </LogoutButton>
-                        </div>
-                    </aside>
-
-                    {/* Center & Right Content */}
-                    <main className="col-span-12 lg:col-span-9 space-y-8">
+                    {/* Center & Right Content (Full Width No Sidebar) */}
+                    <main className="col-span-12 space-y-8">
 
                         {/* 1. Marketing Banner (Slim) */}
                         <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-primary/20 group cursor-pointer">
@@ -216,14 +174,4 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
     );
 }
 
-function SidebarLink({ href, icon: Icon, label, active }: { href: string, icon: any, label: string, active?: boolean }) {
-    return (
-        <Link
-            href={href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${active ? "bg-primary/10 text-primary border border-primary/20" : "text-ink-light/60 hover:text-ink-light hover:bg-white/5"}`}
-        >
-            <Icon className="w-4 h-4" strokeWidth={1} />
-            {label}
-        </Link>
-    )
-}
+

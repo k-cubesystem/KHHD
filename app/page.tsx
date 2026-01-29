@@ -4,6 +4,8 @@ import Link from "next/link";
 import { ArrowRight, Flower } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 const slides = [
   {
@@ -52,6 +54,9 @@ export default function Home() {
 
       {/* Texture Overlay */}
       <div className="hanji-overlay" />
+
+      {/* Global Navigation */}
+      <SiteHeader />
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
       <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] md:pt-[35vh] text-center overflow-hidden">
@@ -136,6 +141,9 @@ export default function Home() {
         </div>
 
       </main>
+
+      {/* Footer */}
+      <SiteFooter />
 
     </div>
   );

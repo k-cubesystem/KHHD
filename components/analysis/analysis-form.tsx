@@ -11,6 +11,8 @@ import { PaymentWidget } from "@/components/payment/payment-widget";
 import { startFateAnalysis } from "@/app/actions/analysis-actions";
 import { getWalletBalance } from "@/app/actions/wallet-actions";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 interface FamilyMember {
     id: string;
@@ -24,7 +26,9 @@ interface AnalysisFormProps {
 }
 
 export function AnalysisForm({ members }: AnalysisFormProps) {
+    const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
+    const [isGuest, setIsGuest] = useState(false);
     const [step, setStep] = useState(1);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [facePreview, setFacePreview] = useState<string | null>(null);
@@ -39,8 +43,19 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
 
     useEffect(() => {
         setIsMounted(true);
-        checkCredits();
+        checkAuthAndCredits();
     }, []);
+
+    const checkAuthAndCredits = async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsGuest(!user);
+        if (user) {
+            checkCredits();
+        } else {
+            setIsLoadingCredits(false);
+        }
+    };
 
     const checkCredits = async () => {
         setIsLoadingCredits(true);
@@ -74,6 +89,12 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
     };
 
     const handleStartAnalysis = async () => {
+        if (isGuest) {
+            toast.error("로그인이 필요한 기능입니다.");
+            router.push("/auth/sign-up");
+            return;
+        }
+
         if (!selectedMemberId) return;
 
         if (availableCredits <= 0) {
@@ -345,7 +366,12 @@ export function AnalysisForm({ members }: AnalysisFormProps) {
                                     disabled={isSubmitting || isLoadingCredits}
                                     className="bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500 font-bold px-10 h-14 text-lg rounded-full shadow-[0_0_30px_rgba(197,160,89,0.3)] hover:shadow-[0_0_50px_rgba(197,160,89,0.5)] transition-all transform hover:-translate-y-1"
                                 >
-                                    {availableCredits > 0 ? (
+                                    {isGuest ? (
+                                        <>
+                                            <Sparkles className="w-5 h-5 mr-2" />
+                                            로그인하고 분석 시작
+                                        </>
+                                    ) : availableCredits > 0 ? (
                                         <>
                                             <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
                                             천기 누설 시작하기

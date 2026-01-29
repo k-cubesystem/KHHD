@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { User, ScrollText, Compass, Sparkles, BookOpen, Crown, Zap, CloudMoon, Home, Users, Bell, Fingerprint, Coins } from "lucide-react";
+import { User, ScrollText, Compass, Sparkles, BookOpen, Crown, Zap, CloudMoon, Home, Users, Bell, Fingerprint, Coins, Flower2 } from "lucide-react";
 import Image from "next/image";
 
 interface MobileViewProps {
@@ -27,11 +27,11 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
             {/* Header */}
             <header className="px-6 pt-12 pb-4 flex items-center justify-between relative z-20">
                 <div className="flex flex-col">
-                    <span className="text-[10px] text-primary tracking-[0.2em] font-serif mb-1">CHEONGDAM HAEHWADANG</span>
+                    <span className="text-xs text-primary font-bold tracking-[0.2em] font-serif mb-1">청담 해화당</span>
                     <h1 className="text-xl font-serif text-ink-light">안녕하세요, <span className="text-primary">{masterName}</span>님</h1>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-surface border border-primary/20 flex items-center justify-center">
-                    <Crown className="w-5 h-5 text-primary" strokeWidth={0.7} />
+                    <Flower2 className="w-5 h-5 text-primary" strokeWidth={1} />
                 </div>
             </header>
 

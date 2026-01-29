@@ -26,13 +26,13 @@ export default async function MembershipPage() {
     const sortedPlans = plans.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
     return (
-        <div className="min-h-screen py-16 px-4 md:px-6 bg-gradient-to-b from-zen-bg via-white to-zen-bg">
+        <div className="min-h-screen py-16 px-4 md:px-6">
             <div className="max-w-7xl mx-auto">
 
                 {/* Back Link */}
                 <Link
                     href="/protected"
-                    className="inline-flex items-center gap-2 text-zen-muted hover:text-zen-wood transition-colors mb-8"
+                    className="inline-flex items-center gap-2 text-ink/60 hover:text-ink-light transition-colors mb-8"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     대시보드로 돌아가기
@@ -40,16 +40,16 @@ export default async function MembershipPage() {
 
                 {/* Header */}
                 <div className="text-center mb-16 space-y-6">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-zen-gold/10 border border-zen-gold/30 rounded-sm">
-                        <Crown className="w-5 h-5 text-zen-gold" />
-                        <span className="text-zen-gold font-serif font-bold text-sm">Premium Membership</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-none">
+                        <Crown className="w-5 h-5 text-primary" />
+                        <span className="text-primary font-serif font-bold text-sm">Premium Membership</span>
                     </div>
 
-                    <h1 className="text-4xl md:text-6xl font-serif font-bold text-zen-text">
+                    <h1 className="text-4xl md:text-6xl font-serif font-bold text-ink-light">
                         당신에게 맞는 플랜을 선택하세요
                     </h1>
 
-                    <p className="text-zen-muted text-lg max-w-2xl mx-auto">
+                    <p className="text-ink/60 text-lg max-w-2xl mx-auto">
                         싱글부터 비즈니스까지, 모든 이에게 맞는 멤버십을 준비했습니다.<br />
                         언제든 업그레이드하거나 해지할 수 있습니다.
                     </p>
@@ -89,25 +89,25 @@ export default async function MembershipPage() {
                             tierFeatures.push("맞춤형 리포트");
                         }
 
-                        // 등급별 색상 테마
+                        // 등급별 색상 테마 (V2 Design System)
                         const tierTheme = {
                             SINGLE: {
-                                badge: "bg-gray-100 text-gray-700 border-gray-300",
-                                border: "border-gray-200",
-                                accent: "text-gray-600",
-                                button: "bg-gray-700 hover:bg-gray-800 text-white"
+                                badge: "bg-surface text-ink/60 border-white/10",
+                                border: "border-white/10 hover:border-white/30",
+                                accent: "text-ink/40",
+                                button: "bg-surface border border-white/10 hover:bg-white/5 text-ink-light"
                             },
                             FAMILY: {
-                                badge: "bg-gold-100 text-gold-800 border-gold-300",
-                                border: "border-gold-300 shadow-xl shadow-gold-500/10",
-                                accent: "text-gold-600",
-                                button: "bg-zen-gold hover:bg-zen-gold/90 text-white"
+                                badge: "bg-primary/20 text-primary border-primary/50",
+                                border: "border-primary/50 shadow-xl shadow-primary/10",
+                                accent: "text-primary",
+                                button: "bg-primary hover:bg-primary/90 text-background font-bold"
                             },
                             BUSINESS: {
-                                badge: "bg-ink-900 text-gold-300 border-gold-500",
-                                border: "border-ink-800",
-                                accent: "text-ink-800",
-                                button: "bg-ink-900 hover:bg-ink-800 text-gold-300"
+                                badge: "bg-ink-950 text-primary-dim border-primary/30",
+                                border: "border-primary/20 hover:border-primary/50",
+                                accent: "text-primary-dim",
+                                button: "bg-primary-dark hover:bg-primary-dark/90 text-white"
                             }
                         }[plan.tier as 'SINGLE' | 'FAMILY' | 'BUSINESS'];
 
@@ -124,8 +124,8 @@ export default async function MembershipPage() {
                 </div>
 
                 {/* Common Benefits */}
-                <div className="bg-white border border-zen-border rounded-sm p-8 md:p-12 mb-16">
-                    <h2 className="text-2xl font-serif font-bold text-zen-text text-center mb-8">
+                <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 p-8 md:p-12 mb-16 shadow-lg rounded-none">
+                    <h2 className="text-2xl font-serif font-bold text-ink-light text-center mb-8">
                         모든 플랜 공통 혜택
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -136,58 +136,58 @@ export default async function MembershipPage() {
                             { title: "부적 추가 증정", desc: `${sortedPlans[0]?.features?.bonus_rate || 10}% 보너스` }
                         ].map((item, i) => (
                             <div key={i} className="text-center">
-                                <div className="w-12 h-12 bg-zen-gold/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                                    <Check className="w-6 h-6 text-zen-gold" />
+                                <div className="w-12 h-12 bg-primary/10 flex items-center justify-center mx-auto mb-3 border border-primary/20 rounded-none">
+                                    <Check className="w-6 h-6 text-primary" />
                                 </div>
-                                <h3 className="font-bold text-zen-text mb-1">{item.title}</h3>
-                                <p className="text-sm text-zen-muted">{item.desc}</p>
+                                <h3 className="font-bold text-ink-light mb-1">{item.title}</h3>
+                                <p className="text-sm text-ink/60">{item.desc}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* FAQ Section */}
-                <div className="bg-white border border-zen-border rounded-sm p-8 md:p-12">
-                    <h2 className="text-2xl font-serif font-bold text-zen-text mb-8">
+                <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 p-8 md:p-12 mb-24 rounded-none">
+                    <h2 className="text-2xl font-serif font-bold text-ink-light mb-8">
                         자주 묻는 질문
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <h3 className="font-bold text-zen-text mb-2 flex items-center gap-2">
-                                <span className="w-6 h-6 bg-zen-gold/20 text-zen-gold rounded-full flex items-center justify-center text-xs font-bold">Q</span>
+                            <h3 className="font-bold text-ink-light mb-2 flex items-center gap-2">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-none">Q</span>
                                 플랜 변경은 어떻게 하나요?
                             </h3>
-                            <p className="text-zen-muted text-sm pl-8">
+                            <p className="text-ink/60 text-sm pl-8">
                                 멤버십 관리 페이지에서 언제든 업그레이드하거나 다운그레이드할 수 있습니다. 업그레이드 시 차액만 결제되며, 다운그레이드는 다음 결제일부터 적용됩니다.
                             </p>
                         </div>
 
                         <div>
-                            <h3 className="font-bold text-zen-text mb-2 flex items-center gap-2">
-                                <span className="w-6 h-6 bg-zen-gold/20 text-zen-gold rounded-full flex items-center justify-center text-xs font-bold">Q</span>
+                            <h3 className="font-bold text-ink-light mb-2 flex items-center gap-2">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-none">Q</span>
                                 일일 한도는 어떻게 계산되나요?
                             </h3>
-                            <p className="text-zen-muted text-sm pl-8">
+                            <p className="text-ink/60 text-sm pl-8">
                                 일일 부적 한도는 매일 자정(KST)에 리셋됩니다. 사용하지 않은 한도는 이월되지 않으며, 매월 지급되는 부적은 별도로 적립됩니다.
                             </p>
                         </div>
 
                         <div>
-                            <h3 className="font-bold text-zen-text mb-2 flex items-center gap-2">
-                                <span className="w-6 h-6 bg-zen-gold/20 text-zen-gold rounded-full flex items-center justify-center text-xs font-bold">Q</span>
+                            <h3 className="font-bold text-ink-light mb-2 flex items-center gap-2">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-none">Q</span>
                                 해지 후 부적은 어떻게 되나요?
                             </h3>
-                            <p className="text-zen-muted text-sm pl-8">
+                            <p className="text-ink/60 text-sm pl-8">
                                 해지해도 이미 충전된 부적은 그대로 유지되며, 결제 기간이 끝날 때까지 멤버십 혜택을 이용할 수 있습니다. 부적 잔액은 영구 보존됩니다.
                             </p>
                         </div>
 
                         <div>
-                            <h3 className="font-bold text-zen-text mb-2 flex items-center gap-2">
-                                <span className="w-6 h-6 bg-zen-gold/20 text-zen-gold rounded-full flex items-center justify-center text-xs font-bold">Q</span>
+                            <h3 className="font-bold text-ink-light mb-2 flex items-center gap-2">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-none">Q</span>
                                 Business 플랜의 API는 언제 제공되나요?
                             </h3>
-                            <p className="text-zen-muted text-sm pl-8">
+                            <p className="text-ink/60 text-sm pl-8">
                                 API 접근 기능은 곧 출시 예정입니다. Business 플랜 구독자께는 베타 테스트 참여 기회가 우선 제공됩니다.
                             </p>
                         </div>

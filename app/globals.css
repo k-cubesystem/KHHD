@@ -6,7 +6,7 @@
   :root {
     --background: 0 0% 3.9%; /* #0A0A0A - Deep Charcoal */
     --foreground: 0 0% 90%; /* #E5E5E5 - Light Ink */
-    --radius: 0.5rem;
+    --radius: 0px;
   }
 
   body {
@@ -14,6 +14,11 @@
     font-feature-settings: "kern" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Force Square Design Globally */
+  * {
+    border-radius: 0 !important;
   }
 
   /* 전체 화면에 노이즈 텍스처를 오버레이로 깝니다 */

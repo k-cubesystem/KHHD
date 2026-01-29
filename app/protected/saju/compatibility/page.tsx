@@ -54,13 +54,13 @@ function CompatibilityContent() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6 animate-in fade-in duration-700">
                 <div className="relative">
-                    <Heart className="w-16 h-16 text-zen-gold animate-pulse opacity-50" />
-                    <Loader2 className="absolute inset-0 w-16 h-16 text-zen-wood animate-spin m-auto" />
+                    <Heart className="w-16 h-16 text-primary animate-pulse opacity-50" />
+                    <Loader2 className="absolute inset-0 w-16 h-16 text-primary-dim animate-spin m-auto" />
                 </div>
-                <h2 className="text-2xl font-serif font-bold text-zen-text">
+                <h2 className="text-2xl font-serif font-bold text-ink-light">
                     두 운명의 조화를 읽고 있습니다...
                 </h2>
-                <p className="text-zen-muted font-sans">
+                <p className="text-ink/60 font-sans">
                     오행의 생극제화와 간지의 합충을 분석 중입니다.
                 </p>
             </div>
@@ -70,21 +70,21 @@ function CompatibilityContent() {
     if (!target1Id || !target2Id) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 animate-in fade-in duration-1000">
-                <div className="p-6 rounded-full bg-zen-bg border border-zen-border shadow-sm">
-                    <Users className="w-12 h-12 text-zen-wood" />
+                <div className="p-6 bg-surface/50 border border-primary/20 shadow-sm backdrop-blur-sm">
+                    <Users className="w-12 h-12 text-primary-dim" />
                 </div>
                 <div className="space-y-4 max-w-lg">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-zen-text">
+                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-ink-light">
                         궁합(宮合) 분석
                     </h1>
-                    <p className="text-lg text-zen-muted font-sans font-light leading-relaxed">
+                    <p className="text-lg text-ink/60 font-sans font-light leading-relaxed">
                         인연 관리 메뉴에서 두 사람을 선택하여<br />
                         서로의 기운이 빚어내는 가능성을 확인하세요.
                     </p>
                 </div>
                 <Button
                     onClick={() => router.push("/protected/family")}
-                    className="h-14 px-8 text-lg bg-zen-wood text-white hover:bg-[#7A604D] rounded-sm font-serif shadow-md transition-all active:scale-95"
+                    className="h-14 px-8 text-lg bg-primary-dark text-white hover:bg-primary-dark/90 rounded-none font-serif shadow-md transition-all active:scale-95"
                 >
                     인연 선택하러 가기
                 </Button>
@@ -99,7 +99,7 @@ function CompatibilityContent() {
             <Button
                 variant="ghost"
                 onClick={() => router.push("/protected/family")}
-                className="mb-8 text-zen-muted hover:text-zen-wood gap-2 pl-0 hover:bg-transparent"
+                className="mb-8 text-ink/60 hover:text-ink-light gap-2 pl-0 hover:bg-transparent rounded-none"
             >
                 <ArrowLeft className="w-4 h-4" /> 다른 인연 선택하기
             </Button>
@@ -107,48 +107,48 @@ function CompatibilityContent() {
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-12">
 
                 {/* Result Card */}
-                <Card className="lg:col-span-12 bg-white border-zen-border shadow-lg p-8 md:p-12 text-center rounded-sm relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-zen-wood via-zen-gold to-zen-wood" />
+                <Card className="lg:col-span-12 bg-surface/40 backdrop-blur-md border-primary/20 shadow-lg p-8 md:p-12 text-center rounded-none relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-dark via-primary to-primary-dark" />
 
                     <div className="flex items-center justify-center gap-8 mb-8">
                         <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-zen-bg border border-zen-border flex items-center justify-center font-serif font-bold text-2xl text-zen-text mx-auto mb-2 shadow-sm">
+                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-bold text-2xl text-ink-light mx-auto mb-2 shadow-sm rounded-none">
                                 {m1?.name[0]}
                             </div>
-                            <span className="text-sm font-bold text-zen-muted">{m1?.name}</span>
+                            <span className="text-sm font-bold text-ink/60">{m1?.name}</span>
                         </div>
-                        <Heart className="w-8 h-8 text-zen-gold fill-current animate-pulse" />
+                        <Heart className="w-8 h-8 text-primary fill-current animate-pulse" />
                         <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-zen-bg border border-zen-border flex items-center justify-center font-serif font-bold text-2xl text-zen-text mx-auto mb-2 shadow-sm">
+                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-bold text-2xl text-ink-light mx-auto mb-2 shadow-sm rounded-none">
                                 {m2?.name[0]}
                             </div>
-                            <span className="text-sm font-bold text-zen-muted">{m2?.name}</span>
+                            <span className="text-sm font-bold text-ink/60">{m2?.name}</span>
                         </div>
                     </div>
 
                     <div className="mb-8">
-                        <span className="text-sm font-bold text-zen-gold uppercase tracking-widest border border-zen-gold/30 px-3 py-1 rounded-sm">Compatibility Score</span>
-                        <div className="mt-4 text-7xl font-serif font-bold text-zen-text tracking-tight">
-                            {result.score}<span className="text-4xl text-zen-muted/50 ml-1 font-sans font-light">/100</span>
+                        <span className="text-sm font-bold text-primary uppercase tracking-widest border border-primary/30 px-3 py-1 rounded-none">Compatibility Score</span>
+                        <div className="mt-4 text-7xl font-serif font-bold text-ink-light tracking-tight">
+                            {result.score}<span className="text-4xl text-ink/40 ml-1 font-sans font-light">/100</span>
                         </div>
                     </div>
 
                     <div className="max-w-xl mx-auto space-y-4">
-                        <h3 className="text-2xl font-serif font-bold text-zen-text">
+                        <h3 className="text-2xl font-serif font-bold text-ink-light">
                             "{result.comment}"
                         </h3>
-                        <p className="text-zen-muted leading-relaxed font-sans">
+                        <p className="text-ink/60 leading-relaxed font-sans">
                             두 분의 사주에서 나타나는 오행의 흐름이 위와 같은 조화를 이루고 있습니다.
                             (더 상세한 분석 로직은 추후 업데이트될 예정입니다.)
                         </p>
                     </div>
 
-                    <div className="mt-12 pt-8 border-t border-zen-border flex justify-center gap-4">
-                        <Button variant="outline" className="border-zen-border hover:bg-zen-bg text-zen-muted font-sans h-12 px-6 rounded-sm">
+                    <div className="mt-12 pt-8 border-t border-primary/10 flex justify-center gap-4">
+                        <Button variant="outline" className="border-primary/20 hover:bg-surface text-ink/60 font-sans h-12 px-6 rounded-none">
                             <Share2 className="w-4 h-4 mr-2" />
                             결과 공유하기
                         </Button>
-                        <Button className="bg-zen-wood text-white hover:bg-[#7A604D] font-serif font-bold h-12 px-8 rounded-sm shadow-sm">
+                        <Button className="bg-primary-dark text-white hover:bg-primary-dark/90 font-serif font-bold h-12 px-8 rounded-none shadow-sm">
                             <Sparkles className="w-4 h-4 mr-2" />
                             상세 리포트 저장 (1Cr)
                         </Button>
@@ -164,10 +164,10 @@ export default function CompatibilityPage() {
     return (
         <div className="relative w-full overflow-hidden">
             {/* Zen Background Decoration */}
-            <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-zen-wood/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-zen-gold/5 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-primary-dim/5 rounded-full blur-[100px] pointer-events-none" />
 
-            <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="animate-spin text-zen-wood" /></div>}>
+            <Suspense fallback={<div className="flex min-h-[60vh] items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>}>
                 <CompatibilityContent />
             </Suspense>
         </div>

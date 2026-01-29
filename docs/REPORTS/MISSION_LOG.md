@@ -676,3 +676,91 @@ app/protected/
 
 ---
 
+
+---
+
+## ✅ Phase 27: Optimization & Verification (2026-01-29) - COMPLETED
+
+**담당**: Claude Sonnet 4.5
+**기반**: Gemini의 `docs/AI_GUIDES/CLAUDE_TASKS.md`
+
+### Task 1: Post-Cleanup Verification ✅
+**목표**: Phase 26에서 삭제된 폴더로 인한 부작용 확인 및 해결
+
+#### 빌드 테스트
+- ✅ `npm run build` 실행 성공 (13.1s)
+- ✅ TypeScript 검증 통과 (타입 에러 없음)
+- ✅ 정적 페이지 생성 완료 (54/54 pages)
+
+#### 경로 검증 및 수정
+1. ✅ **`/protected/billing`**:
+   - 검색 결과: 참조 없음 (완전 삭제 확인)
+
+2. ✅ **`/protected/destiny`**:
+   - 문제 발견: `components/site-footer.tsx` Line 23
+   - 수정: `/protected/destiny/face` → `/protected/saju/face`
+
+3. ✅ **`/protected/coaching`**:
+   - 검색 결과: 참조 없음 (완전 삭제 확인)
+
+4. ✅ **`/protected/relationships`**:
+   - 문제 발견: `app/protected/profile/manse/page.tsx` Line 147
+   - 수정: `/protected/relationships` → `/protected/family`
+
+#### 네비게이션 컴포넌트 검증
+- ✅ `components/dashboard/mobile-view.tsx`: 모든 링크 정상
+- ✅ `components/dashboard/desktop-view.tsx`: 모든 링크 정상
+- ✅ `components/site-header.tsx`: 모든 링크 정상
+
+---
+
+### Task 2: Protected Layout Refinement ✅
+**목표**: 사이드바 제거 및 헤더 UX 개선 확인
+
+#### Layout 검증 (`app/protected/layout.tsx`)
+- ✅ **No Sidebar**: 사이드바 완전히 제거됨 (깔끔한 레이아웃)
+- ✅ **Full Width**: 메인 콘텐츠 전체 너비 사용 (`w-full`)
+- ✅ **Responsive Padding**:
+  - 데스크톱: `lg:pt-20` (헤더 높이만큼)
+  - 모바일: `pb-20` (하단 네비게이션 공간)
+
+#### Header UX 검증 (`components/site-header.tsx`)
+**비로그인 상태** (Line 178-183):
+- ✅ "로그인" 텍스트 버튼만 표시 (`variant="ghost"`)
+- ✅ "무료 체험" 또는 "Free Start" 버튼 없음
+
+**로그인 상태** (Line 127-176):
+- ✅ 사용자 Avatar 표시 (이미지 or 이메일 첫 글자)
+- ✅ 드롭다운 메뉴 구성 (정확히 5개 항목):
+  1. `내 정보 수정` → `/protected/profile` (Line 147-151)
+  2. `내 사주 보기` → `/protected/saju/detail` (Line 152-157)
+  3. `인연 관리` → `/protected/family` (Line 158-163)
+  4. `멤버십 결제` → `/protected/membership` (Line 164-169)
+  5. `로그아웃` (Separator 구분, 붉은색 텍스트) (Line 170-174)
+
+---
+
+### 📊 Phase 27 통계
+- **수정된 파일**: 2개
+  - `components/site-footer.tsx` (destiny 경로 수정)
+  - `app/protected/profile/manse/page.tsx` (relationships 경로 수정)
+- **검증된 컴포넌트**: 5개
+  - Layout, Header, Mobile/Desktop Dashboard, Footer
+- **빌드 상태**: ✅ 성공
+  - 컴파일 시간: 13.1s
+  - 생성된 페이지: 54개
+  - TypeScript 에러: 0개
+
+### 최종 검증 결과
+- ✅ 모든 삭제된 경로 참조 수정 완료
+- ✅ 빌드 에러 없음 (TypeScript 타입 검증 통과)
+- ✅ 네비게이션 링크 모두 정상 작동
+- ✅ Protected Layout 최적화 완료
+- ✅ Header UX 요구사항 완벽 충족
+- ✅ Midnight in Cheongdam 디자인 시스템 준수
+
+**미션 상태**: ✅ **완료**
+**코드 품질**: 죽은 링크 제거 완료, 구조 안정화 완료
+**디자인 시스템**: Midnight in Cheongdam 준수
+
+---

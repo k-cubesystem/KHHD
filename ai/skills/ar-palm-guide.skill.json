@@ -6,12 +6,10 @@
   "category": "ar-analysis",
   "author": "Claude",
   "created": "2026-01-24",
-
   "concept": {
     "vision": "마치 전문가가 손을 보며 설명하는 듯한 경험",
     "interaction": "손바닥을 카메라에 비추면 → AR로 선이 그려지며 → 음성/텍스트로 설명"
   },
-
   "features": [
     "실시간 손 감지 (MediaPipe Hands)",
     "삼대선 자동 감지 및 오버레이",
@@ -19,8 +17,7 @@
     "음성 해설 (TTS)",
     "3D 손 모델과 비교",
     "양손 비교 모드"
-  },
-
+  ],
   "workflow": {
     "steps": [
       {
@@ -109,7 +106,6 @@
       }
     ]
   },
-
   "ui": {
     "arView": {
       "mainDisplay": "카메라 뷰 (풀스크린)",
@@ -131,7 +127,6 @@
       "라벨 페이드인"
     ]
   },
-
   "technicalStack": {
     "arFramework": "WebXR (1순위) 또는 AR.js (2순위)",
     "handTracking": "MediaPipe Hands (Google)",
@@ -139,7 +134,6 @@
     "3dRendering": "Three.js + React Three Fiber",
     "tts": "Web Speech API (speechSynthesis)"
   },
-
   "performance": {
     "targetFPS": "30 FPS (AR 권장)",
     "latency": "< 100ms (감지 → 오버레이)",
@@ -149,18 +143,15 @@
       "AR 렌더링은 requestAnimationFrame 사용"
     ]
   },
-
   "privacy": {
     "videoStream": "로컬에서만 처리, 서버 전송 안 함",
     "snapshot": "사용자 요청 시에만 캡처 및 저장",
     "consent": "카메라 사용 동의 필수"
   },
-
   "cost": {
     "arSession": "무료 (클라이언트 처리)",
     "aiInterpretation": "부적 1개 (상세 분석)"
   },
-
   "dependencies": {
     "libraries": [
       "@mediapipe/hands",
@@ -174,13 +165,11 @@
       "Custom Palm Line Detection Model (선택)"
     ]
   },
-
   "browserSupport": {
     "webxr": "Chrome, Edge (Android), Quest Browser",
     "mediapipe": "모든 최신 브라우저",
     "fallback": "WebXR 미지원 시 2D 오버레이로 대체"
   },
-
   "testCases": [
     {
       "scenario": "손바닥 정면",
@@ -195,14 +184,12 @@
       "expected": "밝기 조정 안내"
     }
   ],
-
   "futureEnhancements": [
     "AI 학습으로 선 감지 정확도 향상",
     "문양 분석 (별, 섬, 십자 등)",
     "시간대별 손금 변화 추적 (Photo Timeline)",
     "VR 모드 (Quest에서 양손 동시 분석)"
   ],
-
   "marketingAngle": {
     "tagline": "세계 최초 AR 손금 분석",
     "demo": "제품 런칭 시 SNS 바이럴 영상 제작",

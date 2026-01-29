@@ -67,33 +67,32 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
     return (
         <Card
             className={cn(
-                "relative overflow-hidden bg-white transition-all duration-300 hover:scale-[1.02]",
+                "relative overflow-hidden bg-surface/30 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] border rounded-none",
                 theme.border,
-                isRecommended && "transform scale-105 md:scale-110"
+                isRecommended && "transform scale-105 md:scale-110 shadow-xl"
             )}
-            depth={isRecommended ? "high" : "medium"}
         >
             {/* Recommended Badge */}
             {isRecommended && (
-                <div className="absolute top-0 right-0 bg-gradient-to-br from-zen-gold via-zen-gold to-zen-wood text-white px-4 py-1 text-xs font-bold flex items-center gap-1 rounded-bl-lg">
+                <div className="absolute top-0 right-0 bg-gradient-to-br from-primary via-primary to-primary-dark text-background px-4 py-1 text-xs font-bold flex items-center gap-1 shadow-md z-10">
                     <Star className="w-3 h-3 fill-current" />
                     추천
                 </div>
             )}
 
             {/* Top Bar */}
-            <div className={cn("h-2", isRecommended ? "bg-gradient-to-r from-zen-gold via-zen-wood to-zen-gold" : "bg-gray-300")} />
+            <div className={cn("h-2", isRecommended ? "bg-gradient-to-r from-primary via-primary-dark to-primary" : "bg-white/10")} />
 
             <div className="p-8">
                 {/* Header */}
                 <div className="mb-6">
-                    <Badge className={cn("mb-3", theme.badge)}>
+                    <Badge className={cn("mb-3 rounded-none", theme.badge)}>
                         {plan.tier}
                     </Badge>
-                    <h3 className="text-2xl font-serif font-bold text-zen-text mb-2">
+                    <h3 className="text-2xl font-serif font-bold text-ink-light mb-2">
                         {plan.name}
                     </h3>
-                    <p className="text-sm text-zen-muted">
+                    <p className="text-sm text-ink/60">
                         {plan.description}
                     </p>
                 </div>
@@ -101,19 +100,19 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
                 {/* Price */}
                 <div className="mb-8">
                     <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-serif font-bold text-zen-text">
+                        <span className="text-4xl font-serif font-bold text-ink-light">
                             {plan.price.toLocaleString()}
                         </span>
-                        <span className="text-lg text-zen-muted">원</span>
-                        <span className="text-zen-muted ml-1">/ 월</span>
+                        <span className="text-lg text-ink/60">원</span>
+                        <span className="text-ink/60 ml-1">/ 월</span>
                     </div>
                     {plan.tier === 'FAMILY' && (
-                        <p className="text-xs text-zen-gold mt-2">
+                        <p className="text-xs text-primary mt-2">
                             ⭐ 가장 인기 있는 플랜
                         </p>
                     )}
                     {plan.tier === 'BUSINESS' && (
-                        <p className="text-xs text-ink-700 mt-2">
+                        <p className="text-xs text-ink/40 mt-2">
                             💼 프로페셔널을 위한 선택
                         </p>
                     )}
@@ -124,7 +123,7 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
                     {features.map((feature, index) => (
                         <li key={index} className="flex items-start gap-3">
                             <Check className={cn("w-5 h-5 flex-shrink-0 mt-0.5", theme.accent)} />
-                            <span className="text-sm text-zen-text">{feature}</span>
+                            <span className="text-sm text-ink-light">{feature}</span>
                         </li>
                     ))}
                 </ul>
@@ -134,9 +133,9 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
                     onClick={handleSubscribe}
                     disabled={isLoading}
                     className={cn(
-                        "w-full h-12 font-bold transition-all",
+                        "w-full h-12 font-bold transition-all rounded-none",
                         theme.button,
-                        isRecommended && "shadow-lg shadow-zen-gold/30"
+                        isRecommended && "shadow-lg shadow-primary/30"
                     )}
                 >
                     {isLoading ? (
@@ -155,7 +154,7 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
                 </Button>
 
                 {/* Note */}
-                <p className="text-xs text-zen-muted text-center mt-4">
+                <p className="text-xs text-ink/40 text-center mt-4">
                     언제든 해지 가능 · 위약금 없음
                 </p>
             </div>

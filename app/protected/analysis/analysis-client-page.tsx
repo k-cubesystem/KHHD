@@ -51,26 +51,26 @@ export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
             {/* Header */}
             <motion.section variants={fadeInUp} className="space-y-6 text-center">
                 <div className="flex justify-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-zen-border shadow-sm mb-2">
-                        <BookOpen className="w-4 h-4 text-zen-gold" />
-                        <span className="text-[10px] font-bold text-zen-muted uppercase tracking-[0.2em] font-sans">Heaven Earth Man Analysis</span>
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-primary/20 backdrop-blur-sm mb-2">
+                        <BookOpen className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-bold text-primary tracking-[0.2em] font-sans uppercase">Heaven Earth Man Analysis</span>
                     </div>
                 </div>
                 <div className="space-y-4">
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-zen-text italic leading-tight">
+                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light italic leading-tight">
                         천지인(天地人) <br />
-                        <span className="text-zen-wood">심층 분석실</span>
+                        <span className="text-primary-dim">심층 분석실</span>
                     </h1>
                 </div>
             </motion.section>
 
             <Tabs defaultValue={defaultTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px] mx-auto mb-8 bg-black/5">
-                    <TabsTrigger value="analysis" className="data-[state=active]:bg-zen-gold data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300">
+                <TabsList className="grid w-full grid-cols-2 max-w-[400px] mx-auto mb-8 bg-surface/30 border border-primary/10 p-0 h-auto">
+                    <TabsTrigger value="analysis" className="data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-lg transition-all duration-300 py-3 border-r border-primary/10 last:border-0 rounded-none">
                         <Sparkles className="w-4 h-4 mr-2" />
                         운명 분석
                     </TabsTrigger>
-                    <TabsTrigger value="daily" className="data-[state=active]:bg-zen-gold data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300">
+                    <TabsTrigger value="daily" className="data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-lg transition-all duration-300 py-3 rounded-none">
                         <Calendar className="w-4 h-4 mr-2" />
                         오늘의 운세
                     </TabsTrigger>
@@ -78,8 +78,8 @@ export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
 
                 <TabsContent value="analysis">
                     <motion.div variants={fadeInUp}>
-                        <Card depth="medium" className="relative bg-white p-1 shadow-2xl shadow-zen-wood/10">
-                            <div className="absolute inset-0 bg-zen-wood/5 rounded-sm -m-1 pointer-events-none border border-zen-border shadow-inner" />
+                        <Card className="relative bg-surface/30 backdrop-blur-md p-1 shadow-2xl border border-primary/20 rounded-none overflow-hidden">
+                            <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
                             <AnalysisForm members={members} />
                         </Card>
                     </motion.div>
@@ -90,9 +90,9 @@ export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
                         {userId ? (
                             <DailyFortuneView userId={userId} userName={userName} />
                         ) : (
-                            <div className="text-center p-12 bg-white/5 rounded-xl border border-white/10">
-                                <Loader2 className="w-6 h-6 animate-spin mx-auto text-zen-gold" />
-                                <p className="mt-4 text-zen-muted">사용자 정보를 불러오고 있습니다...</p>
+                            <div className="text-center p-12 bg-surface/5 border border-primary/10">
+                                <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                                <p className="mt-4 text-ink-light/50">사용자 정보를 불러오고 있습니다...</p>
                             </div>
                         )}
                     </motion.div>
@@ -100,13 +100,13 @@ export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
             </Tabs>
 
             {/* Footer */}
-            <motion.section variants={fadeInUp} className="text-center space-y-4 opacity-50 font-serif italic text-sm text-zen-muted mt-8">
+            <motion.section variants={fadeInUp} className="text-center space-y-4 opacity-50 font-serif italic text-sm text-ink-light/40 mt-8">
                 <p>※ 모든 분석은 명리학적 전통 가이드라인과 최신 데이터 알고리즘을 준수합니다.</p>
                 <div className="flex items-center justify-center gap-4 uppercase tracking-[0.2em] font-sans font-bold text-[10px] not-italic">
                     <span>Authentic</span>
-                    <span className="w-1 h-1 rounded-full bg-zen-gold" />
+                    <span className="w-1 h-1 bg-primary" />
                     <span>Precise</span>
-                    <span className="w-1 h-1 rounded-full bg-zen-gold" />
+                    <span className="w-1 h-1 bg-primary" />
                     <span>Haehwadang Master Identity</span>
                 </div>
             </motion.section>

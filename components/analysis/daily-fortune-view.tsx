@@ -126,62 +126,62 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
     const selectedProfile = profiles.find(p => p.id === selectedProfileId);
 
     return (
-        <Card className="p-6 md:p-8 bg-white/5 border-zen-gold/20 relative overflow-hidden">
+        <Card className="p-6 md:p-8 bg-surface/30 backdrop-blur-sm border-primary/20 relative overflow-hidden shadow-lg">
             {/* Background Pattern */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-zen-gold/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
             <div className="relative z-10 space-y-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-serif font-bold text-zen-text flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-zen-gold" />
-                            <span className="text-zen-wood">{selectedProfile?.name}</span>님의 오늘의 운세
+                        <h2 className="text-2xl font-serif font-bold text-ink-light flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-primary" />
+                            <span className="text-primary-dim">{selectedProfile?.name}</span>님의 오늘의 운세
                         </h2>
-                        <p className="text-sm text-zen-muted mt-1">
+                        <p className="text-sm text-ink/60 mt-1">
                             {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
-                            <SelectTrigger className="w-[140px] bg-white/50 border-zen-border">
-                                <Users className="w-4 h-4 mr-2 text-zen-muted" />
+                            <SelectTrigger className="w-[140px] bg-surface/50 border-primary/20 text-ink-light">
+                                <Users className="w-4 h-4 mr-2 text-ink/60" />
                                 <SelectValue placeholder="대상 선택" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-surface border-primary/20 text-ink-light">
                                 {profiles.map(profile => (
-                                    <SelectItem key={profile.id} value={profile.id}>
+                                    <SelectItem key={profile.id} value={profile.id} className="focus:bg-primary/20 focus:text-ink-light">
                                         {profile.name}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
 
-                        <Button variant="ghost" size="icon" onClick={() => loadFortune(true)} className="text-zen-muted hover:text-zen-text" title="새로고침(다시 생성)">
+                        <Button variant="ghost" size="icon" onClick={() => loadFortune(true)} className="text-ink/60 hover:text-ink-light hover:bg-white/10" title="새로고침(다시 생성)">
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </Button>
                     </div>
                 </div>
 
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-zen-border/30 rounded-xl bg-white/5">
-                        <Loader2 className="w-8 h-8 text-zen-gold animate-spin" />
-                        <p className="text-zen-muted font-serif animate-pulse">
+                    <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
+                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                        <p className="text-ink/60 font-serif animate-pulse">
                             {selectedProfile?.name}님의 기운을 읽고 있습니다...
                         </p>
                     </div>
                 ) : missingInfo ? (
-                    <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-zen-border/30 rounded-xl bg-white/5">
-                        <Sparkles className="w-12 h-12 text-zen-muted/50" />
+                    <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
+                        <Sparkles className="w-12 h-12 text-ink/40" />
                         <div className="text-center space-y-2">
-                            <p className="text-zen-text font-serif text-lg">
+                            <p className="text-ink-light font-serif text-lg">
                                 사주 정보를 찾을 수 없습니다
                             </p>
-                            <p className="text-zen-muted text-sm">
+                            <p className="text-ink/60 text-sm">
                                 정확한 운세 분석을 위해 생년월일시 정보가 필요합니다.
                             </p>
                         </div>
-                        <Button asChild className="bg-zen-wood text-white hover:bg-zen-wood/90">
+                        <Button asChild className="bg-primary-dark text-white hover:bg-primary-dark/90">
                             <Link href="/protected/family">
                                 정보 등록하러 가기 <ArrowRight className="w-4 h-4 ml-2" />
                             </Link>
@@ -191,7 +191,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white/5 p-6 rounded-xl border border-white/30 leading-relaxed text-zen-text/90 font-serif text-lg whitespace-pre-wrap shadow-inner"
+                        className="bg-surface/40 p-6 rounded-xl border border-primary/10 leading-relaxed text-ink-light/90 font-serif text-lg whitespace-pre-wrap shadow-inner"
                     >
                         {fortune}
                     </motion.div>
@@ -204,8 +204,8 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
                         disabled={subscribing}
                         className={`
                             ${isSubscribed
-                                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                                : "border-zen-border text-zen-muted hover:bg-zen-bg hover:text-zen-text"
+                                ? "bg-primary text-background hover:bg-primary/90"
+                                : "border-primary/20 text-ink/60 hover:bg-surface/50 hover:text-ink-light"
                             }
                         `}
                     >
@@ -217,7 +217,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
                         variant="outline"
                         onClick={handleSendKakao}
                         disabled={sending || !fortune}
-                        className="border-yellow-400/50 text-yellow-500 hover:bg-yellow-400/10 hover:text-yellow-400"
+                        className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary-dim"
                     >
                         {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageCircle className="w-4 h-4 mr-2" />}
                         카카오톡으로 공유

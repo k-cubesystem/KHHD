@@ -101,13 +101,13 @@ export function SignUpForm({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-md"
+                    className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">성별</Label>
                   <Select value={gender} onValueChange={setGender}>
-                    <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-md">
+                    <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-none">
                       <SelectValue placeholder="성별 선택" />
                     </SelectTrigger>
                     <SelectContent className="bg-ink-900 border-white/10 text-white">
@@ -140,10 +140,10 @@ export function SignUpForm({
                     required
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-md [color-scheme:dark]"
+                    className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none [color-scheme:dark]"
                   />
                   <Select value={birthTime} onValueChange={setBirthTime}>
-                    <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-md">
+                    <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-none">
                       <SelectValue placeholder="태어난 시간 (자시~해시)" />
                     </SelectTrigger>
                     <SelectContent className="bg-ink-900 border-white/10 text-white max-h-[300px]">
@@ -175,7 +175,7 @@ export function SignUpForm({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-md"
+                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
                 />
               </div>
 
@@ -188,7 +188,7 @@ export function SignUpForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-md"
+                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-none"
                 />
               </div>
 
@@ -201,19 +201,19 @@ export function SignUpForm({
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-md"
+                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-none"
                 />
               </div>
 
               {error && (
-                <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-xs text-red-400 animate-in fade-in slide-in-from-top-1 text-center">
+                <div className="p-3 rounded-none bg-red-500/10 border border-red-500/20 text-xs text-red-400 animate-in fade-in slide-in-from-top-1 text-center">
                   {error}
                 </div>
               )}
 
               <Button
                 type="submit"
-                className="w-full h-12 font-bold bg-gold-500 text-ink-950 hover:bg-gold-400 active:scale-[0.98] transition-all rounded-md shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] mt-2 font-serif tracking-wide"
+                className="w-full h-12 font-bold bg-gold-500 text-ink-950 hover:bg-gold-400 active:scale-[0.98] transition-all rounded-none shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] mt-2 font-serif tracking-wide"
                 disabled={isLoading}
               >
                 {isLoading ? (

@@ -144,7 +144,7 @@ export default function MansePage() {
                 <h1 className="text-2xl font-bold mb-2">등록된 정보가 없습니다</h1>
                 <p className="text-muted-foreground mb-6">인연 관리에서 먼저 정보를 등록해주세요.</p>
                 <Button asChild className="bg-[#D4AF37] text-black hover:bg-[#F4E4BA]">
-                    <a href="/protected/relationships">인연 등록하기</a>
+                    <a href="/protected/family">인연 등록하기</a>
                 </Button>
             </div>
         );

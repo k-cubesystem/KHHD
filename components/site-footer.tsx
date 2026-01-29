@@ -20,7 +20,7 @@ export function SiteFooter() {
                         <li><Link href="/protected/saju/today" className="hover:text-primary">오늘의 운세</Link></li>
                         <li><Link href="/protected/saju/detail" className="hover:text-primary">정통 사주 분석</Link></li>
                         <li><Link href="/protected/saju/compatibility" className="hover:text-primary">AI 궁합 분석</Link></li>
-                        <li><Link href="/protected/destiny/face" className="hover:text-primary">관상 성형 (개운)</Link></li>
+                        <li><Link href="/protected/saju/face" className="hover:text-primary">관상 성형 (개운)</Link></li>
                     </ul>
                 </div>
 
