@@ -15,7 +15,7 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
         { label: "관상", icon: User, href: "/protected/saju/face" },
         { label: "손금", icon: Fingerprint, href: "/protected/saju/palm" },
         { label: "풍수", icon: Compass, href: "/protected/saju/fengshui" },
-        { label: "궁합", icon: Sparkles, href: "/protected/relationships" },
+        { label: "궁합", icon: Sparkles, href: "/protected/family" },
         { label: "재물운", icon: Coins, href: "/protected/saju/wealth" },
     ];
 
@@ -83,7 +83,7 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
                     </Link>
 
                     {/* Relationship Management Card */}
-                    <Link href={isGuest ? "/auth/sign-up" : "/protected/relationships"} className="block">
+                    <Link href={isGuest ? "/auth/sign-up" : "/protected/family"} className="block">
                         <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Users className="w-24 h-24 text-seal" strokeWidth={0.5} />
@@ -152,7 +152,7 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
                 <div className="max-w-md mx-auto flex items-center justify-around h-16 px-2">
                     <NavButton icon={Home} label="홈" href={isGuest ? "/auth/sign-up" : "/protected"} active />
                     <NavButton icon={BookOpen} label="소개" href={isGuest ? "/auth/sign-up" : "/protected/services"} />
-                    <NavButton icon={Users} label="인연관리" href={isGuest ? "/auth/sign-up" : "/protected/relationships"} />
+                    <NavButton icon={Users} label="인연관리" href={isGuest ? "/auth/sign-up" : "/protected/family"} />
                     <NavButton icon={CloudMoon} label="천지인" href={isGuest ? "/auth/sign-up" : "/protected/cheonjiin"} />
                     <NavButton icon={User} label="MY" href={isGuest ? "/auth/sign-up" : "/protected/profile"} />
                 </div>

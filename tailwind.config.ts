@@ -16,48 +16,52 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // 청담해화당 전용 컬러 팔레트 (Stitch 분석 기반)
-        background: "#0A0A0A", // Deep Charcoal (메인 배경)
-        surface: "#181611",    // 카드/패널 배경
+        // [New] Premium Champagne Gold Palette (Sophisticated Luxury)
+        background: "#0F0F0F", // Deep Ink Black
+        surface: "#1A1917",    // Warm Dark Grey
         primary: {
-          DEFAULT: "#ECB613",  // 밝은 금색 (강조)
-          dim: "#C5A059",      // 차분한 금색 (본문/테두리)
-          dark: "#B8860B",     // 어두운 금색
+          DEFAULT: "#E2D5B5",  // Light Champagne Gold (Text, Icons, Thin Borders)
+          dim: "#C8B273",      // Muted Gold (Accents)
+          dark: "#8C7B50",     // Darker Gold for depth
         },
-        ink: {
-          light: "#E5E5E5",    // 다크모드 본문
-          DEFAULT: "#1A1A1A",  // 라이트모드 본문
-          faint: "rgba(255, 255, 255, 0.4)",
-          // Legacy Compatibility
-          900: "#181611",
-          950: "#0A0A0A",
+        secondary: {
+          DEFAULT: "#C8B273",  // Muted Gold (Secondary Action / Hover)
+          foreground: "#1A1917"
         },
-        seal: "#9A2A2A",       // 도장(인주) 색상
+        seal: "#8E2828",       // Dojang Red
 
-        // Legacy / Compatibility Aliases (Mapped to New System)
-        gold: {
-          400: "#ECB613",
-          500: "#ECB613",
-          600: "#B8860B",
-          metallic: "#ECB613",
-          luxury: "#C5A059",
+        // [Legacy/Compat] Mapping to new system
+        ink: {
+          light: "#FFFFFF",    // Pure White for Body Text
+          DEFAULT: "#1A1A1A",
+          faint: "rgba(255, 255, 255, 0.4)",
+          900: "#181611",
+          950: "#0F0F0F",
         },
         zen: {
-          wood: "#181611",
-          text: "#E5E5E5",
-          gold: "#ECB613",
-          muted: "#888888",
-          border: "rgba(236, 182, 19, 0.2)",
+          wood: "#1A1917",
+          text: "#FFFFFF",     // Map to White
+          gold: "#E2D5B5",     // Map to Primary
+          muted: "#8C7B50",
+          border: "rgba(226, 213, 181, 0.2)",
         },
-        cinnabar: "#9A2A2A",
-        "charcoal-deep": "#0A0A0A",
+        gold: {
+          400: "#E2D5B5",
+          500: "#C8B273",
+          600: "#8C7B50",
+          metallic: "#E2D5B5",
+          luxury: "#C8B273",
+        },
+        cinnabar: "#8E2828",
+        "charcoal-deep": "#0F0F0F",
       },
       fontFamily: {
-        serif: ["var(--font-noto-serif)", "serif"], // 명조체 (제목)
-        sans: ["var(--font-noto-sans)", "sans-serif"], // 고딕체 (본문)
+        serif: ["var(--font-noto-serif)", "serif"],
+        sans: ["var(--font-noto-sans)", "sans-serif"],
       },
       backgroundImage: {
-        'hanji-texture': "url('/images/texture/cream-paper.png')", // 로컬 이미지 경로 권장
+        'noise-pattern': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")",
+        'hanji-texture': "url('/images/texture/cream-paper.png')", // Fallback
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       },
       keyframes: {
@@ -81,7 +85,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")], // shadcn/ui 호환
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;

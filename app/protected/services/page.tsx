@@ -30,7 +30,7 @@ export default async function ServicesPage() {
             title: "궁합 (Compatibility)",
             description: "연인, 비즈니스 파트너와의 에너지 조화를 분석합니다. 서로의 부족한 기운을 채워주는 최적의 관계 전략을 제안합니다.",
             icon: Sparkles,
-            href: "/protected/relationships"
+            href: "/protected/family"
         },
         {
             title: "풍수 (Feng Shui)",

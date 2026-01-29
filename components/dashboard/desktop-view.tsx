@@ -16,7 +16,7 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
         { label: "관상", icon: User, href: "/protected/saju/face", desc: "얼굴에 담긴 운명" },
         { label: "손금", icon: Fingerprint, href: "/protected/saju/palm", desc: "손안의 인생 지도" },
         { label: "풍수", icon: Compass, href: "/protected/saju/fengshui", desc: "공간 에너지 조화" },
-        { label: "궁합", icon: Sparkles, href: "/protected/relationships", desc: "인연의 깊이 확인" },
+        { label: "궁합", icon: Sparkles, href: "/protected/family", desc: "인연의 깊이 확인" },
         { label: "재물운", icon: Coins, href: "/protected/saju/wealth", desc: "부의 흐름 파악" },
     ];
 
@@ -138,7 +138,7 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
                             </Link>
 
                             {/* Relationship */}
-                            <Link href={isGuest ? "/auth/sign-up" : "/protected/relationships"} className="group relative h-64 bg-surface/40 border border-primary/20 rounded-2xl p-8 overflow-hidden hover:border-seal/60 transition-all hover:shadow-[0_0_30px_rgba(154,42,42,0.1)]">
+                            <Link href={isGuest ? "/auth/sign-up" : "/protected/family"} className="group relative h-64 bg-surface/40 border border-primary/20 rounded-2xl p-8 overflow-hidden hover:border-seal/60 transition-all hover:shadow-[0_0_30px_rgba(154,42,42,0.1)]">
                                 <div className="relative z-10 flex flex-col h-full justify-between">
                                     <div>
                                         <div className="flex items-center gap-3 mb-4">

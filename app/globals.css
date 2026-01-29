@@ -10,10 +10,24 @@
   }
 
   body {
-    @apply bg-background text-ink-light font-serif antialiased overflow-x-hidden;
+    @apply bg-background text-ink-light font-serif antialiased overflow-x-hidden relative;
     font-feature-settings: "kern" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 전체 화면에 노이즈 텍스처를 오버레이로 깝니다 */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    @apply bg-noise-pattern pointer-events-none;
+    opacity: 0.05; /* 노이즈 강도 조절 (0.03 ~ 0.08 추천) */
+    z-index: 50;
+    mix-blend-mode: overlay;
   }
 
   /* Scrollbar Styling (Dark Luxury) */
@@ -51,7 +65,7 @@
     text-orientation: upright;
   }
 
-  /* 한지 질감 오버레이 (전역 적용) */
+  /* 한지 질감 오버레이 (전역 적용) - Legacy but kept for compatibility */
   .hanji-overlay {
     background-image: url('/images/texture/cream-paper.png');
     opacity: 0.08;

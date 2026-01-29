@@ -1,52 +1,33 @@
-# 🤖 Claude Collaboration Tasks (Phase 25: Membership Overhaul)
+# Mission: Project Cleanup & Consolidation
 
-> **목적**: Gemini가 기획한 새로운 멤버십 체계(3단계 등급, 일일 제한 등)를 구현하고 관리자 기능을 강화합니다.
+## 1. 개요
+Gemini가 작성한 `docs/REPORTS/PAGE_AUDIT.md`를 기반으로, 중복되거나 불필요한 페이지를 정리하고 프로젝트 구조를 최적화하십시오.
 
-## ✅ Task 1: 멤버십 스키마 및 등급 개편 (Schema & Plans)
-- **목표**: 기존 단일 멤버십을 3단계 등급제(Single, Family, Business)로 확장하고, 일일 사용량을 제어합니다.
-- **DB 변경 사항 (`membership_plans` 테이블 컬럼 추가)**:
-  - `tier`: TEXT CHECK (tier IN ('SINGLE', 'FAMILY', 'BUSINESS'))
-  - `daily_talisman_limit`: INTEGER (일일 부적 사용/생성 한도)
-  - `relationship_limit`: INTEGER (인연 관리 등록 가능 인원)
-  - `storage_limit`: INTEGER (분석 결과 저장 개수)
-- **기본 데이터 (Seed Data)**:
-  1. **Single (싱글)**: 월 9,900원 / 일일 부적 10개 / 인연 3명 / 저장 10개
-  2. **Family (패밀리)**: 월 29,900원 / 일일 부적 30개 / 인연 10명 / 저장 50개 / +가족 궁합 시각화
-  3. **Business (비즈니스)**: 월 99,000원 / 일일 부적 100개 / 인연 50명 / 저장 무제한 / +API 접근(예정)
-- **공통 혜택**: 카카오톡 매일 운세 알림 (모든 등급 포함).
+## 2. 작업 목표
+- **불필요한 폴더 삭제**: 분석 결과 중복으로 판명된 폴더를 과감히 정리.
+- **기능 통합**: 분산된 기능(결제, 사주 등)을 핵심 폴더로 통합.
+- **네비게이션 최적화**: 변경된 경로에 맞춰 메뉴 링크 수정.
 
-## ✅ Task 2: 멤버십 구독 페이지 리뉴얼 (Subscription UI)
-- **목표**: 3가지 티어를 비교하고 선택할 수 있는 가격표(Pricing Table) UI 구현.
-- **주요 기능**:
-  - **Tier Comparison**: 3개 카드를 나란히 배치하여 혜택 비교 (추천: Family 등급 강조).
-  - **Visual Hierarchy**: 등급별 색상 테마 적용 (Single: Silver, Family: Gold, Business: Black/Platinum).
-  - **Upgrade/Downgrade**: 기존 구독자의 플랜 변경 처리 (차액 결제 또는 즉시 변경 로직 확인).
-  - **Artifact**: `app/protected/membership/page.tsx`
+## 3. 상세 작업 항목 (Tasks)
 
-## ✅ Task 3: 관리자 멤버십 관리 기능 (Admin Membership Control)
-- **목표**: 관리자가 코드를 수정하지 않고도 플랜의 스펙을 즉시 조정할 수 있어야 함.
-- **위치**: `/admin/membership/plans` (신규 페이지)
-- **주요 기능**:
-  - **Plan Editor**: 각 플랜의 가격, 일일 부적 한도, 인연 한도, 저장 한도 수정 Form.
-  - **Live Update**: 수정 즉시 DB 반영 및 유저 혜택 적용.
-  - **Artifact**: `app/admin/membership/plans/page.tsx`
+### A. 폴더 삭제 및 통합 (Priority: High)
+1.  **`app/protected/billing` 삭제**
+    -   삭제 전: `membership` 폴더에 결제 수단 관리 기능이 없다면 필요한 코드만 복사.
+    -   실행: 폴더 전체 삭제.
+2.  **`app/protected/destiny` 삭제**
+    -   실행: `saju` 폴더와 기능이 겹치므로 삭제.
+3.  **`app/protected/coaching` 삭제**
+    -   실행: `ai-shaman`이 존재하므로 삭제.
+4.  **`app/protected/relationships`, `services` 삭제**
+    -   실행: 더 이상 사용하지 않는 레거시 폴더 삭제.
 
-## ✅ Task 4: 등급별 제한 로직 적용 (Enforcement)
-- **목표**: 유저의 등급에 따라 실제 서비스 이용을 제한.
-- **적용 지점**:
-  - **인연 추가 시**: `relationship_limit` 체크 (초과 시 업그레이드 유도 모달).
-  - **부적 사용 시**: `daily_talisman_limit` 체크 (매일 자정 리셋 로직 필요 - 별도 테이블 `daily_usage_logs` 등 고려).
-  - **결과 저장 시**: `storage_limit` 체크.
+### B. 네비게이션 업데이트 (Priority: Medium)
+1.  `components/dashboard/mobile-view.tsx` 및 `desktop-view.tsx` 확인.
+2.  위에서 삭제된 경로로 연결되는 링크가 있다면 제거하거나 올바른 경로(`saju`, `membership` 등)로 수정.
 
-## 📝 고급 기능 제안 (Advanced Features)
-- **Family Tree Visualization**: Family 등급 이상 전용, 가계도 시각화.
-- **Calendar Sync**: Business 등급 전용, 구글/애플 캘린더에 길일(Lucky Day) 자동 동기화.
-- **PDF Export**: 분석 결과 PDF 다운로드 기능 (기존 포함 여부 확인, Business는 브랜드 로고 제거 등).
+### C. 결과 보고
+- 작업 완료 후 제거된 파일 목록과 수정된 파일 목록을 `docs/REPORTS/MISSION_LOG.md`에 기록할 것.
 
----
-
-### 작업 순서
-1. **DB Migration**: `membership_plans` 테이블 수정 및 데이터 초기화.
-2. **Admin UI**: 관리자 설정 페이지 먼저 구현 (데이터 확인 용이).
-3. **User UI**: 구독 페이지 리뉴얼.
-4. **Backend**: 제한 로직 미들웨어 또는 서비스 함수 구현.
+## 4. 주의사항
+- **백업**: 삭제 전 중요한 코드가 있는지 한 번 더 확인(Dual Check).
+- **디자인**: 수정하는 모든 UI는 `Midnight in Cheongdam` 디자인 시스템을 따를 것.
