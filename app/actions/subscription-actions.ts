@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { addTalismans } from "./wallet-actions";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || "test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb";
 const basicAuth = Buffer.from(`${secretKey}:`).toString("base64");
@@ -68,11 +70,26 @@ export interface SubscriptionPayment {
     created_at: string;
 }
 
+// Helper to create Admin Client
+async function createAdminClient() {
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            cookies: {
+                getAll() { return []; }, // Empty cookies to ensure we use Service Role (Admin) and not User Session
+                setAll(cookiesToSet) { }
+            },
+        }
+    );
+}
+
 // ============================================
 // 멤버십 플랜 조회
 // ============================================
 export async function getMembershipPlans(): Promise<MembershipPlan[]> {
-    const supabase = await createClient();
+    // Use Admin Client to avoid RLS recursion issues since plans are public
+    const supabase = await createAdminClient();
 
     const { data, error } = await supabase
         .from("membership_plans")
@@ -89,7 +106,8 @@ export async function getMembershipPlans(): Promise<MembershipPlan[]> {
 }
 
 export async function getMembershipPlan(planId: string): Promise<MembershipPlan | null> {
-    const supabase = await createClient();
+    // Use Admin Client to avoid RLS recursion issues since plans are public
+    const supabase = await createAdminClient();
 
     const { data, error } = await supabase
         .from("membership_plans")

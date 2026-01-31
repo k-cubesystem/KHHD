@@ -23,6 +23,7 @@ interface PricingCardProps {
     };
     features: string[];
     isRecommended?: boolean;
+    isGuest?: boolean;
     theme: {
         badge: string;
         border: string;
@@ -31,11 +32,18 @@ interface PricingCardProps {
     };
 }
 
-export function PricingCard({ plan, features, isRecommended, theme }: PricingCardProps) {
+export function PricingCard({ plan, features, isRecommended, isGuest = false, theme }: PricingCardProps) {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
     const handleSubscribe = async () => {
+        // 게스트는 회원가입 페이지로 이동
+        if (isGuest) {
+            toast.info("먼저 회원가입을 진행해주세요.");
+            router.push("/auth/sign-up");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -142,6 +150,11 @@ export function PricingCard({ plan, features, isRecommended, theme }: PricingCar
                         <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             결제 준비 중...
+                        </>
+                    ) : isGuest ? (
+                        <>
+                            {isRecommended && <Crown className="w-4 h-4 mr-2" />}
+                            회원가입하고 시작하기
                         </>
                     ) : (
                         <>

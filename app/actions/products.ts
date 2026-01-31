@@ -3,14 +3,29 @@
 import { createClient } from "@/lib/supabase/server";
 import { PricePlan, UserRole } from "@/types/auth";
 import { revalidatePath } from "next/cache";
+import { createServerClient } from "@supabase/ssr";
+
+// Helper to create Admin Client (Service Role)
+function createAdminClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() { return []; },
+        setAll(cookiesToSet) { }
+      },
+    }
+  );
+}
 
 /**
  * 활성화된 모든 가격 정책(상품)을 가져옵니다.
  */
 export async function getActivePlans(): Promise<PricePlan[]> {
-  const supabase = await createClient();
+  // Use Admin Client to avoid RLS recursion issues since plans are public
+  const supabase = createAdminClient();
 
-  // RLS 정책에 따라 누구나 조회 가능
   const { data, error } = await supabase
     .from("price_plans")
     .select("*")
@@ -29,12 +44,14 @@ export async function getActivePlans(): Promise<PricePlan[]> {
  * 현재 로그인한 사용자의 권한(Role)을 가져옵니다.
  */
 export async function getCurrentUserRole(): Promise<{ role: UserRole, userId: string | null }> {
-  const supabase = await createClient();
+  const supabase = await createClient(); // User client for auth check
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) return { role: "user", userId: null };
 
-  const { data: profile } = await supabase
+  // Use Admin Client for profile fetch to safely bypass RLS recursion
+  const adminSupabase = createAdminClient();
+  const { data: profile } = await adminSupabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)

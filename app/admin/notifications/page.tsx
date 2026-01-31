@@ -168,7 +168,7 @@ export default function NotificationAdminPage() {
                                     <tr key={log.id} className="border-b border-zen-border/50 hover:bg-zen-bg/30">
                                         <td className="p-3">{new Date(log.sent_at).toLocaleString()}</td>
                                         <td className="p-3">
-                                            <div className="font-bold">{log.profiles?.name || "Unknown"}</div>
+                                            <div className="font-bold">{log.profiles?.full_name || "Unknown"}</div>
                                             <div className="text-xs text-zen-muted">{log.profiles?.email}</div>
                                         </td>
                                         <td className="p-3">

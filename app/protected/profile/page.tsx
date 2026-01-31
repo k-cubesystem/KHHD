@@ -14,10 +14,12 @@ import {
     User as UserIcon,
     Coins,
     BookOpen,
-    Sparkles
+    Sparkles,
+    Users
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { getWalletBalance } from "@/app/actions/wallet-actions";
+import { getCurrentUserRole } from "@/app/actions/products";
 import { Button } from "@/components/ui/button";
 
 export default async function MyPage() {
@@ -87,12 +89,20 @@ export default async function MyPage() {
                                 무제한 AI 기능을 이용하세요
                             </p>
 
-                            <Link href="/auth/sign-up">
-                                <Button className="bg-primary hover:bg-primary-dim text-background font-serif px-8 py-6 text-base">
-                                    가입하고 시작하기
-                                    <ArrowRight className="w-5 h-5 ml-2" />
-                                </Button>
-                            </Link>
+                            <div className="flex flex-col gap-3 max-w-sm mx-auto">
+                                <Link href="/auth/sign-up">
+                                    <Button className="w-full bg-primary hover:bg-primary-dim text-background font-serif px-8 py-6 text-base">
+                                        가입하고 시작하기
+                                        <ArrowRight className="w-5 h-5 ml-2" />
+                                    </Button>
+                                </Link>
+                                <Link href="/protected/membership">
+                                    <Button variant="outline" className="w-full border-primary/30 text-ink-light hover:border-primary hover:bg-primary/10 font-serif px-8 py-6 text-base">
+                                        <Crown className="w-5 h-5 mr-2" />
+                                        멤버십 플랜 보기
+                                    </Button>
+                                </Link>
+                            </div>
 
                             <div className="pt-6 border-t border-primary/10 mt-8">
                                 <p className="text-xs text-ink-light/50">
@@ -110,7 +120,7 @@ export default async function MyPage() {
     }
 
     // Parallel Data Fetching
-    const [profileData, walletBalance, recordsData] = await Promise.all([
+    const [profileData, walletBalance, recordsData, userRoleData] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         getWalletBalance(),
         supabase.from('saju_records')
@@ -125,13 +135,14 @@ export default async function MyPage() {
             `)
             .eq('family_members.user_id', user.id)
             .order('created_at', { ascending: false })
-            .limit(3)
+            .limit(3),
+        getCurrentUserRole()
     ]);
 
     const profile = profileData.data;
     const records = recordsData.data || [];
     const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Guest";
-    const isAdmin = profile?.role === 'admin';
+    const isAdmin = userRoleData.role === 'admin';
 
     // Calculate Tier (Simple logic for display)
     const tier = isAdmin ? "Administrator" : (profile?.is_subscribed ? "Gold Member" : "Silver Member");
@@ -143,15 +154,7 @@ export default async function MyPage() {
             {/* Header - Transparent on Mobile for minimalist look, or sticky as preferred. User wanted "No Top Menu" on mobile in global layout.
                 But `MyPage` often needs a title. Layout handles Global Nav. This is a local header. 
                 I will style it strictly. */}
-            <header className="flex items-center justify-between px-6 py-5 sticky top-0 bg-background/90 backdrop-blur-md z-50 border-b border-primary/20">
-                <Link href="/protected" className="p-1 -ml-1 hover:bg-surface/10 transition-colors">
-                    <ChevronLeft className="w-6 h-6 text-ink-light/90" />
-                </Link>
-                <h1 className="text-sm font-serif tracking-[0.2em] text-ink-light/90 uppercase">My Page</h1>
-                <Link href="/protected/settings" className="p-1 -mr-1 hover:bg-surface/10 transition-colors">
-                    <Settings className="w-5 h-5 text-ink-light/60" />
-                </Link>
-            </header>
+
 
             {/* Profile Section */}
             <section className="flex flex-col items-center pt-10 pb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
@@ -172,78 +175,66 @@ export default async function MyPage() {
 
                 {/* Name & Tier */}
                 <h2 className="text-2xl font-serif text-ink-light mb-3 tracking-wide">{displayName}</h2>
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="h-px w-8 bg-primary/30" />
-                    <span className="text-primary text-[10px] tracking-[0.3em] uppercase font-bold">{tier}</span>
-                    <div className="h-px w-8 bg-primary/30" />
-                </div>
+                <Link href="/protected/membership" className="flex items-center gap-3 mb-6 group cursor-pointer">
+                    <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
+                    <span className="text-primary text-[10px] tracking-[0.3em] uppercase font-bold group-hover:text-primary-dim transition-colors">
+                        {tier} <span className="ml-1 text-[8px] opacity-70">(UPGRADE)</span>
+                    </span>
+                    <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
+                </Link>
 
                 {/* Admin Button */}
-                {isAdmin && (
-                    <Link href="/admin" className="mb-4">
-                        <button className="flex items-center gap-2 px-5 py-2 bg-seal/10 border border-seal/30 hover:bg-seal/20 hover:border-seal transition-colors group">
-                            <LayoutDashboard className="w-4 h-4 text-seal group-hover:text-ink-light transition-colors" />
-                            <span className="text-xs font-bold text-seal group-hover:text-ink-light transition-colors">관리자 페이지 접속</span>
-                        </button>
-                    </Link>
-                )}
+
             </section>
 
-            {/* Stats Row */}
-            <section className="px-6 mb-10 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100 relative z-10">
-                <div className="bg-surface/30 border border-primary/20 p-6 grid grid-cols-2 divide-x divide-primary/10 backdrop-blur-sm shadow-xl">
-                    {/* Wallet Balance */}
-                    <div className="flex flex-col items-center gap-1.5 hover:bg-surface/10 transition-colors py-1">
-                        <Coins className="w-5 h-5 text-primary mb-1" strokeWidth={1} />
-                        <span className="text-xl font-serif text-ink-light font-medium">{walletBalance > 900 ? "∞" : walletBalance}</span>
-                        <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">Credits</span>
-                    </div>
-                    {/* Readings Count */}
-                    <div className="flex flex-col items-center gap-1.5 hover:bg-surface/10 transition-colors py-1">
-                        <BookOpen className="w-5 h-5 text-ink-light/60 mb-1" strokeWidth={1} />
-                        <span className="text-xl font-serif text-ink-light font-medium">{recordsData.data?.length || 0}</span>
-                        <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">History</span>
-                    </div>
-                </div>
-            </section>
 
-            {/* Recent Analysis */}
+
+            {/* Dashboard Navigation Grid */}
             <section className="px-6 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
-                <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xs font-bold tracking-widest text-ink-light/50 uppercase">Recent Analysis</h3>
-                    <Link href="/protected/history" className="text-[10px] text-primary tracking-wider font-bold hover:text-ink-light transition-colors">VIEW ALL</Link>
-                </div>
+                <h3 className="text-xs font-bold tracking-widest text-ink-light/50 uppercase mb-6">Menu</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    {isAdmin && (
+                        <Link href="/admin" className="group col-span-2 mb-2">
+                            <div className="bg-gradient-to-r from-seal/20 via-seal/10 to-seal/20 border-2 border-seal/40 hover:border-seal hover:from-seal/30 hover:via-seal/20 hover:to-seal/30 p-6 flex items-center justify-center gap-3 transition-all duration-300 relative overflow-hidden shadow-lg">
+                                {/* Background shimmer */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-seal/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
-                <div className="space-y-4">
-                    {records.length > 0 ? (
-                        records.map((record: any) => (
-                            <Link href={`/protected/result/${record.id}`} key={record.id} className="block group">
-                                <div className="bg-surface/5 border border-primary/10 p-5 flex items-center justify-between hover:bg-surface/10 hover:border-primary/20 transition-all duration-300">
-                                    <div>
-                                        <span className="inline-block px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-bold mb-2 uppercase tracking-wide">
-                                            {record.family_members?.relationship || "Self"}
-                                        </span>
-                                        <h4 className="text-base font-serif text-ink-light/90 mb-1 group-hover:text-primary transition-colors">
-                                            {record.family_members?.name}의 사주 분석
-                                        </h4>
-                                        <p className="text-[10px] text-ink-light/40">
-                                            {new Date(record.created_at).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <div className="w-8 h-8 border border-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary group-hover:text-background text-ink-light/50 transition-all">
-                                        <ArrowRight className="w-4 h-4" />
-                                    </div>
-                                </div>
-                            </Link>
-                        ))
-                    ) : (
-                        <div className="text-center py-8 bg-surface/5 border border-white/5">
-                            <p className="text-xs text-ink-light/40 mb-3">아직 분석 기록이 없습니다.</p>
-                            <Link href="/protected/cheonjiin">
-                                <span className="text-xs text-primary underline underline-offset-4">첫 분석 시작하기</span>
-                            </Link>
-                        </div>
+                                {/* Content */}
+                                <Shield className="w-6 h-6 text-seal group-hover:scale-110 transition-transform stroke-[1.5] relative z-10" />
+                                <span className="text-base font-serif font-bold text-seal tracking-widest relative z-10 uppercase">
+                                    관리자 대시보드
+                                </span>
+                                <ArrowRight className="w-5 h-5 text-seal/60 group-hover:text-seal group-hover:translate-x-1 transition-all relative z-10" />
+                            </div>
+                        </Link>
                     )}
+                    <Link href="/protected/settings" className="group">
+                        <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
+                            <UserIcon className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
+                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">내 정보 수정</span>
+                        </div>
+                    </Link>
+
+                    <Link href="/protected/family" className="group">
+                        <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
+                            <Users className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
+                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">인연 관리</span>
+                        </div>
+                    </Link>
+
+                    <Link href="/protected/membership" className="group">
+                        <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
+                            <Crown className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
+                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">멤버십 안내</span>
+                        </div>
+                    </Link>
+
+                    <Link href="/protected/history" className="group">
+                        <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
+                            <BookOpen className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
+                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">사주 기록</span>
+                        </div>
+                    </Link>
                 </div>
             </section>
 

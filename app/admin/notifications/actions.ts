@@ -49,7 +49,7 @@ export async function getNotificationLogs(page = 1, limit = 20) {
 
     const { data, count, error } = await supabase
         .from('notification_logs')
-        .select('*, profiles:user_id(name, email)', { count: 'exact' })
+        .select('*, profiles:user_id(full_name, email)', { count: 'exact' })
         .order('sent_at', { ascending: false })
         .range(from, to);
 

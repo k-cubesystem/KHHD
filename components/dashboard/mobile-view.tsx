@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { User, ScrollText, Compass, Sparkles, BookOpen, Crown, Zap, CloudMoon, Home, Users, Bell, Fingerprint, Coins, Flower2 } from "lucide-react";
-import Image from "next/image";
+import { User, ScrollText, Compass, Sparkles, BookOpen, Crown, Zap, CloudMoon, Home, Users, Bell, Fingerprint, Coins, Flower2, Ticket } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Hero2026 } from "./hero-2026";
 
 interface MobileViewProps {
     isGuest: boolean;
     masterName: string;
+    userData: {
+        avatarUrl?: string;
+        email?: string;
+        balance: number;
+        tier: string | null;
+    };
 }
 
-export function MobileView({ isGuest, masterName }: MobileViewProps) {
+export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
     const individualTools = [
         { label: "사주풀이", icon: BookOpen, href: "/protected/analysis" },
         { label: "관상", icon: User, href: "/protected/saju/face" },
@@ -19,38 +26,49 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
         { label: "재물운", icon: Coins, href: "/protected/saju/wealth" },
     ];
 
+    const getTierLabel = (tier: string | null) => {
+        if (!tier) return "무료 회원";
+        if (tier === "SINGLE") return "싱글";
+        if (tier === "FAMILY") return "패밀리";
+        if (tier === "BUSINESS") return "비즈니스";
+        return tier;
+    };
+
     return (
         <div className="min-h-screen bg-background text-ink-light pb-28 font-sans relative overflow-hidden">
             {/* Background Texture */}
             <div className="hanji-overlay" />
 
             {/* Header */}
-            <header className="px-6 pt-12 pb-4 flex items-center justify-between relative z-20">
-                <div className="flex flex-col">
-                    <span className="text-xs text-primary font-bold tracking-[0.2em] font-serif mb-1">청담 해화당</span>
-                    <h1 className="text-xl font-serif text-ink-light">안녕하세요, <span className="text-primary">{masterName}</span>님</h1>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-surface border border-primary/20 flex items-center justify-center">
-                    <Flower2 className="w-5 h-5 text-primary" strokeWidth={1} />
-                </div>
-            </header>
-
-            {/* Marketing Banner */}
-            <section className="px-6 mb-8 relative z-20">
-                <div className="relative w-full aspect-[2.5/1] rounded-xl overflow-hidden border border-primary/10 group">
-                    <Image
-                        src="/images/intro-wealth-v2.jpg"
-                        alt="Banner"
-                        fill
-                        className="object-cover opacity-40 group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background/50" />
-                    <div className="absolute inset-0 flex flex-col justify-center px-6">
-                        <span className="text-[9px] text-primary border border-primary/30 px-2 py-0.5 rounded-full w-fit mb-2 backdrop-blur-sm">PREMIUM EVENT</span>
-                        <h3 className="font-serif text-lg text-ink-light mb-1">당신의 귀인을 찾아서</h3>
-                        <p className="text-[10px] text-ink-light/70">지금 인연관리 비법서를 확인하세요</p>
+            <header className="px-6 pt-10 pb-4 flex items-center justify-between relative z-20">
+                {/* Left: Brand & Status */}
+                <div className="flex flex-col items-start gap-2">
+                    <span className="text-xs font-serif font-bold text-primary tracking-widest">청담 해화당</span>
+                    <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-ink-light/70 bg-surface/50 px-2 py-0.5 rounded border border-white/5 backdrop-blur-sm">
+                            {getTierLabel(userData.tier)}
+                        </span>
+                        <div className="h-2 w-px bg-white/10" />
+                        <Link href="/protected/membership" className="flex items-center gap-1.5 active:scale-95 transition-transform">
+                            <Ticket className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-xs font-bold text-ink-light">{userData.balance.toLocaleString()}</span>
+                            <span className="text-[10px] text-ink-light/40">장</span>
+                        </Link>
                     </div>
                 </div>
+
+                {/* Right: Avatar */}
+                <Link href="/protected/profile">
+                    <Avatar className="h-10 w-10 border border-primary/30 shadow-[0_0_15px_rgba(236,182,19,0.1)]">
+                        <AvatarImage src={userData.avatarUrl} className="object-cover" />
+                        <AvatarFallback className="bg-surface text-primary font-bold text-xs">{masterName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                </Link>
+            </header>
+
+            {/* 2026 병오년 Hero Section */}
+            <section className="px-6 mb-8 relative z-20">
+                <Hero2026 isGuest={isGuest} masterName={masterName} />
             </section>
 
             <main className="px-6 space-y-8 relative z-20">
@@ -63,7 +81,7 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
                     </div>
 
                     {/* Cheonjiin Card */}
-                    <Link href={isGuest ? "/auth/sign-up" : "/protected/cheonjiin"} className="block">
+                    <Link href={isGuest ? "/auth/sign-up" : "/protected/analysis"} className="block">
                         <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <CloudMoon className="w-24 h-24 text-primary" strokeWidth={0.5} />
@@ -114,7 +132,7 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
                             <p className="text-[9px] text-ink-light/50">무엇이든 물어보세요</p>
                         </div>
                     </Link>
-                    <Link href={isGuest ? "/auth/sign-up" : "/protected/daily"} className="bg-surface border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors group flex flex-col justify-between h-28">
+                    <Link href={isGuest ? "/auth/sign-up" : "/protected/saju/today"} className="bg-surface border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors group flex flex-col justify-between h-28">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2">
                             <Bell className="w-4 h-4 text-primary" strokeWidth={1} />
                         </div>
@@ -153,7 +171,7 @@ export function MobileView({ isGuest, masterName }: MobileViewProps) {
                     <NavButton icon={Home} label="홈" href={isGuest ? "/auth/sign-up" : "/protected"} active />
                     <NavButton icon={BookOpen} label="소개" href={isGuest ? "/auth/sign-up" : "/protected/services"} />
                     <NavButton icon={Users} label="인연관리" href={isGuest ? "/auth/sign-up" : "/protected/family"} />
-                    <NavButton icon={CloudMoon} label="천지인" href={isGuest ? "/auth/sign-up" : "/protected/cheonjiin"} />
+                    <NavButton icon={CloudMoon} label="천지인" href={isGuest ? "/auth/sign-up" : "/protected/analysis"} />
                     <NavButton icon={User} label="MY" href={isGuest ? "/auth/sign-up" : "/protected/profile"} />
                 </div>
             </nav>

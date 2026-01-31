@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getMembershipPlans, getSubscriptionStatus } from "@/app/actions/subscription-actions";
+import { getActivePlans, getCurrentUserRole } from "@/app/actions/products";
 import { PricingCard } from "@/components/membership/pricing-card";
+import { TalismanPurchaseSection } from "@/components/membership/talisman-purchase-section";
 import { Crown, Check, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -10,17 +12,31 @@ export default async function MembershipPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        return redirect("/auth/login");
+    const isGuest = !user;
+    let isSubscribed = false;
+    let subscription = null;
+    let currentPlan = null;
+
+    // 로그인 사용자만 구독 상태 확인
+    if (user) {
+        const subscriptionData = await getSubscriptionStatus();
+        isSubscribed = subscriptionData.isSubscribed;
+        subscription = subscriptionData.subscription;
+        currentPlan = subscriptionData.plan;
+
+        // 구독 중이면 관리 페이지로 (업그레이드/다운그레이드는 관리 페이지에서)
+        if (isSubscribed && subscription) {
+            return redirect("/protected/membership/manage?tab=subscription");
+        }
     }
 
-    const { isSubscribed, subscription, plan: currentPlan } = await getSubscriptionStatus();
-    const plans = await getMembershipPlans();
+    const [plans, talismanPlans, userRoleData] = await Promise.all([
+        getMembershipPlans(),
+        getActivePlans(),
+        getCurrentUserRole()
+    ]);
 
-    // 구독 중이면 관리 페이지로 (업그레이드/다운그레이드는 관리 페이지에서)
-    if (isSubscribed && subscription) {
-        return redirect("/protected/membership/manage?tab=subscription");
-    }
+    const userRole = userRoleData.role;
 
     // 등급별로 정렬 (SINGLE -> FAMILY -> BUSINESS)
     const sortedPlans = plans.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
@@ -54,6 +70,18 @@ export default async function MembershipPage() {
                         언제든 업그레이드하거나 해지할 수 있습니다.
                     </p>
                 </div>
+
+                {/* Guest Notice */}
+                {isGuest && (
+                    <div className="bg-primary/10 border border-primary/30 p-6 mb-12 text-center">
+                        <p className="text-ink-light mb-3">
+                            <span className="font-serif font-bold text-lg">무료로 시작하세요!</span>
+                        </p>
+                        <p className="text-sm text-ink/70">
+                            회원가입 후 모든 플랜을 선택하실 수 있습니다. 가입은 무료이며, 원하는 플랜을 선택하여 업그레이드할 수 있습니다.
+                        </p>
+                    </div>
+                )}
 
                 {/* Pricing Table */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
@@ -118,10 +146,14 @@ export default async function MembershipPage() {
                                 features={tierFeatures}
                                 isRecommended={isRecommended}
                                 theme={tierTheme}
+                                isGuest={isGuest}
                             />
                         );
                     })}
                 </div>
+
+                {/* Talisman Top-up Section */}
+                <TalismanPurchaseSection initialPlans={talismanPlans} userRole={userRole} memberId={user?.id || ""} />
 
                 {/* Common Benefits */}
                 <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 p-8 md:p-12 mb-16 shadow-lg rounded-none">

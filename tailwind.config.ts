@@ -17,7 +17,8 @@ const config: Config = {
     extend: {
       colors: {
         // [New] Premium Champagne Gold Palette (Sophisticated Luxury)
-        background: "#0F0F0F", // Deep Ink Black
+        background: "hsl(var(--background))", // Deep Ink Black
+        foreground: "hsl(var(--foreground))", // Warm Off-White
         surface: "#1A1917",    // Warm Dark Grey
         primary: {
           DEFAULT: "#E2D5B5",  // Light Champagne Gold (Text, Icons, Thin Borders)

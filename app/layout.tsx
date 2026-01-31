@@ -18,7 +18,7 @@ const notoSerif = Noto_Serif_KR({
   variable: "--font-noto-serif",
   display: "swap",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "700", "900"],
+  weight: ["200", "300", "400", "500", "600", "700", "900"],
 });
 
 const nanumMyeongjo = Nanum_Myeongjo({
@@ -94,7 +94,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning translate="no">
-      <body className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-sans antialiased notranslate`} suppressHydrationWarning>
+      <body className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

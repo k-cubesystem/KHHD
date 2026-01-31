@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-// import { Users, DollarSign, Activity, FileText } from "lucide-react"; // Removed: Icons handled in client component
+import { createAdminClient } from "@/lib/supabase/admin";
 import { DashboardStats, AnimatedHeader } from "@/components/admin/dashboard-stats";
+import { Users, CreditCard, Package, Sparkles, Activity } from "lucide-react";
 
 async function getStats() {
-  const supabase = await createClient();
+  // Service Role을 사용하여 RLS 우회
+  const supabase = createAdminClient();
 
   // 1. 총 회원수
   const { count: userCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
@@ -75,12 +77,65 @@ export default async function AdminDashboardPage() {
 
       <DashboardStats cards={cards} />
 
-      {/* TODO: Recent Activity Chart or List */}
-      {/* TODO: Recent Activity Chart or List */}
-      <div className="rounded-2xl border border-zen-border bg-white p-12 text-center text-zen-muted border-dashed">
-        <div className="flex flex-col items-center gap-2">
-          <p className="font-serif text-lg">상세 통계 분석</p>
-          <p className="text-sm opacity-50">차트 및 주간 리포트 기능이 준비 중입니다.</p>
+      {/* Quick Actions & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Quick Actions */}
+        <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-6 bg-primary" />
+            <h2 className="text-xl font-serif font-bold text-ink-light">Quick Actions</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href="/admin/users"
+              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
+            >
+              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
+                <Users className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <div className="text-sm font-serif text-ink-light">회원 관리</div>
+            </a>
+            <a
+              href="/admin/payments"
+              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
+            >
+              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
+                <CreditCard className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <div className="text-sm font-serif text-ink-light">결제 내역</div>
+            </a>
+            <a
+              href="/admin/membership/plans"
+              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
+            >
+              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
+                <Package className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <div className="text-sm font-serif text-ink-light">스토어</div>
+            </a>
+            <a
+              href="/admin/prompts"
+              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
+            >
+              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
+                <Sparkles className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+              <div className="text-sm font-serif text-ink-light">AI 프롬프트</div>
+            </a>
+          </div>
+        </div>
+
+        {/* Recent Activity Placeholder */}
+        <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm border-dashed">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-1 h-6 bg-seal" />
+            <h2 className="text-xl font-serif font-bold text-ink-light">Recent Activity</h2>
+          </div>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Activity className="w-12 h-12 text-ink-light/20 mb-4" strokeWidth={1} />
+            <p className="text-sm text-ink-light/60 font-light">실시간 활동 로그</p>
+            <p className="text-xs text-ink-light/40 mt-2">곧 업데이트됩니다</p>
+          </div>
         </div>
       </div>
     </>

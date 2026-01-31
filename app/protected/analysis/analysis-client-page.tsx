@@ -1,15 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { AnalysisForm } from "@/components/analysis/analysis-form";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { Card } from "@/components/ui/card";
-import { BookOpen, Sparkles, Calendar, Loader2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSearchParams } from "next/navigation";
-import { DailyFortuneView } from "@/components/analysis/daily-fortune-view";
-import { createClient } from "@/lib/supabase/client";
+import { BookOpen } from "lucide-react";
 
 interface FamilyMember {
     id: string;
@@ -23,24 +18,6 @@ interface AnalysisClientPageProps {
 }
 
 export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
-    const searchParams = useSearchParams();
-    const defaultTab = searchParams.get('tab') === 'daily' ? 'daily' : 'analysis';
-    const [userId, setUserId] = useState<string | null>(null);
-    const [userName, setUserName] = useState<string>("");
-
-    useEffect(() => {
-        // Fetch current user for Daily Fortune
-        const supabase = createClient();
-        supabase.auth.getUser().then(async ({ data }) => {
-            if (data.user) {
-                setUserId(data.user.id);
-                // Get name from profile or metadata
-                const { data: profile } = await supabase.from('profiles').select('name').eq('id', data.user.id).single();
-                setUserName(profile?.name || "회원");
-            }
-        });
-    }, []);
-
     return (
         <motion.div
             variants={staggerContainer}
@@ -64,40 +41,12 @@ export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
                 </div>
             </motion.section>
 
-            <Tabs defaultValue={defaultTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-[400px] mx-auto mb-8 bg-surface/30 border border-primary/10 p-0 h-auto">
-                    <TabsTrigger value="analysis" className="data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-lg transition-all duration-300 py-3 border-r border-primary/10 last:border-0 rounded-none">
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        운명 분석
-                    </TabsTrigger>
-                    <TabsTrigger value="daily" className="data-[state=active]:bg-primary data-[state=active]:text-background data-[state=active]:shadow-lg transition-all duration-300 py-3 rounded-none">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        오늘의 운세
-                    </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="analysis">
-                    <motion.div variants={fadeInUp}>
-                        <Card className="relative bg-surface/30 backdrop-blur-md p-1 shadow-2xl border border-primary/20 rounded-none overflow-hidden">
-                            <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
-                            <AnalysisForm members={members} />
-                        </Card>
-                    </motion.div>
-                </TabsContent>
-
-                <TabsContent value="daily">
-                    <motion.div variants={fadeInUp}>
-                        {userId ? (
-                            <DailyFortuneView userId={userId} userName={userName} />
-                        ) : (
-                            <div className="text-center p-12 bg-surface/5 border border-primary/10">
-                                <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                                <p className="mt-4 text-ink-light/50">사용자 정보를 불러오고 있습니다...</p>
-                            </div>
-                        )}
-                    </motion.div>
-                </TabsContent>
-            </Tabs>
+            <motion.div variants={fadeInUp}>
+                <Card className="relative bg-surface/30 backdrop-blur-md p-1 shadow-2xl border border-primary/20 rounded-none overflow-hidden">
+                    <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
+                    <AnalysisForm members={members} />
+                </Card>
+            </motion.div>
 
             {/* Footer */}
             <motion.section variants={fadeInUp} className="text-center space-y-4 opacity-50 font-serif italic text-sm text-ink-light/40 mt-8">

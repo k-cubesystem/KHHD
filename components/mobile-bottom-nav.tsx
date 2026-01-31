@@ -13,7 +13,7 @@ export function MobileBottomNav() {
         { label: "천지인사주", href: "/protected/analysis", icon: Cloud },
         { label: "인연관리", href: "/protected/family", icon: Users },
         { label: "풍수지리", href: "/protected/saju/fengshui", icon: Compass },
-        { label: "내사주정보", href: "/protected/saju/detail", icon: User },
+        { label: "내 프로필", href: "/protected/profile", icon: User },
     ];
 
     return (

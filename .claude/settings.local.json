@@ -9,7 +9,8 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(tree:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(supabase db push:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { Menu, X, ChevronDown, Sun, BookOpen, ScanFace, Hand, Compass, Users, Clock, Ticket, Flower2, User, LogOut, Sparkles } from "lucide-react";
+import { Menu, X, ChevronDown, Sun, BookOpen, ScanFace, Hand, Compass, Users, Clock, Ticket, Flower2, User, LogOut, Sparkles, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentUserRole } from "@/app/actions/products";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,6 +24,7 @@ export function SiteHeader() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [user, setUser] = useState<any>(null);
+    const [userRole, setUserRole] = useState<string>("user");
     const supabase = createClient();
     const router = useRouter();
 
@@ -36,12 +38,25 @@ export function SiteHeader() {
         const checkUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
+            if (user) {
+                try {
+                    const { role } = await getCurrentUserRole();
+                    setUserRole(role);
+                } catch (e) {
+                    console.error("Failed to fetch role", e);
+                }
+            }
         };
         checkUser();
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
+            if (session?.user) {
+                getCurrentUserRole().then(res => setUserRole(res.role)).catch(err => console.error(err));
+            } else {
+                setUserRole("user");
+            }
         });
 
         return () => {
@@ -120,6 +135,14 @@ export function SiteHeader() {
                                         </div>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator className="bg-primary/10" />
+                                    {userRole === 'admin' && (
+                                        <DropdownMenuItem className="focus:bg-primary/10 focus:text-primary rounded-none cursor-pointer" asChild>
+                                            <Link href="/admin">
+                                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                                <span className="font-bold">관리자 대시보드</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem className="focus:bg-primary/10 focus:text-primary rounded-none cursor-pointer" asChild>
                                         <Link href="/protected/profile">
                                             <User className="mr-2 h-4 w-4" />

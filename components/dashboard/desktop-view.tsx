@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { User, CloudMoon, Settings, Bell, Zap, BookOpen, Sparkles, LayoutDashboard, ScrollText, Users, Compass, Fingerprint, Coins, Flower2 } from "lucide-react";
-import Image from "next/image";
+import { User, CloudMoon, Settings, Bell, Zap, BookOpen, Sparkles, LayoutDashboard, ScrollText, Users, Compass, Fingerprint, Coins, Flower2, Ticket } from "lucide-react";
+import { Hero2026 } from "./hero-2026";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface DesktopViewProps {
     isGuest: boolean;
     masterName: string;
+    userData: {
+        avatarUrl?: string;
+        email?: string;
+        balance: number;
+        tier: string | null;
+    };
 }
 
-export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
+export function DesktopView({ isGuest, masterName, userData }: DesktopViewProps) {
     const individualTools = [
         { label: "사주풀이", icon: BookOpen, href: "/protected/analysis", desc: "정통 명리학 분석" },
         { label: "관상", icon: User, href: "/protected/saju/face", desc: "얼굴에 담긴 운명" },
@@ -18,6 +26,14 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
         { label: "궁합", icon: Sparkles, href: "/protected/family", desc: "인연의 깊이 확인" },
         { label: "재물운", icon: Coins, href: "/protected/saju/wealth", desc: "부의 흐름 파악" },
     ];
+
+    const getTierLabel = (tier: string | null) => {
+        if (!tier) return "무료 회원";
+        if (tier === "SINGLE") return "싱글 멤버십";
+        if (tier === "FAMILY") return "패밀리 멤버십";
+        if (tier === "BUSINESS") return "비즈니스";
+        return tier;
+    };
 
     return (
         <div className="min-h-screen bg-background text-ink-light font-sans overflow-x-hidden relative flex flex-col">
@@ -32,16 +48,32 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
                             청담 <span className="text-primary">해화당</span>
                         </h2>
                     </Link>
-                    <nav className="flex items-center gap-6">
-                        <Link href="/protected/services" className="text-xs font-bold uppercase tracking-widest text-ink-light/60 hover:text-primary transition-colors">Service Intro</Link>
-                        <div className="h-4 w-px bg-white/10" />
-                        <div className="flex items-center gap-3">
-                            <Bell className="w-5 h-5 text-ink-light/60 hover:text-primary transition-colors cursor-pointer" strokeWidth={1} />
-                            <Link href="/protected/settings">
-                                <Settings className="w-5 h-5 text-ink-light/60 hover:text-primary transition-colors cursor-pointer" strokeWidth={1} />
-                            </Link>
-                        </div>
-                    </nav>
+
+                    {/* User Info & Stats (Replaces old Nav) */}
+                    <div className="flex items-center gap-6">
+                        {/* Talisman Count */}
+                        <Link href="/protected/membership" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface/50 border border-primary/20 hover:border-primary/50 transition-colors group">
+                            <Ticket className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-bold text-ink-light">{userData.balance}</span>
+                            <span className="text-[10px] text-ink-light/50 uppercase tracking-wider">부적</span>
+                        </Link>
+
+                        {/* Profile & Tier */}
+                        <Link href="/protected/profile" className="flex items-center gap-3 group">
+                            <div className="flex flex-col items-end">
+                                <span className="text-sm font-serif font-bold text-ink-light group-hover:text-primary transition-colors">{masterName}</span>
+                                <span className="text-[10px] text-primary/80 font-medium tracking-wide border border-primary/30 px-1.5 rounded-sm bg-primary/5">
+                                    {getTierLabel(userData.tier)}
+                                </span>
+                            </div>
+                            <Avatar className="h-9 w-9 border border-primary/30 group-hover:border-primary transition-colors">
+                                <AvatarImage src={userData.avatarUrl} alt={masterName} className="object-cover" />
+                                <AvatarFallback className="bg-surface text-primary font-bold text-xs">
+                                    {masterName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                        </Link>
+                    </div>
                 </div>
             </header>
 
@@ -52,28 +84,13 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
                     {/* Center & Right Content (Full Width No Sidebar) */}
                     <main className="col-span-12 space-y-8">
 
-                        {/* 1. Marketing Banner (Slim) */}
-                        <div className="relative w-full h-48 rounded-2xl overflow-hidden border border-primary/20 group cursor-pointer">
-                            <Image
-                                src="/images/intro-wealth-v2.jpg"
-                                alt="Banner"
-                                fill
-                                className="object-cover opacity-60 group-hover:scale-105 transition-transform duration-700"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent" />
-                            <div className="absolute inset-0 flex flex-col justify-center px-10">
-                                <span className="inline-block px-3 py-1 rounded-full border border-primary/40 bg-background/30 backdrop-blur-md text-primary text-[10px] font-bold tracking-widest mb-3 w-fit">
-                                    SEASONAL SPECIAL
-                                </span>
-                                <h2 className="text-3xl font-serif text-ink-light mb-2">당신의 귀인을 찾아서</h2>
-                                <p className="text-ink-light/70 font-light">인연관리 비법서 오픈 기념 프리미엄 분석 혜택</p>
-                            </div>
-                        </div>
+                        {/* 1. 2026 병오년 Hero Section */}
+                        <Hero2026 isGuest={isGuest} masterName={masterName} />
 
                         {/* 2. Main Features (Split) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Cheonjiin */}
-                            <Link href={isGuest ? "/auth/sign-up" : "/protected/cheonjiin"} className="group relative h-64 bg-surface/40 border border-primary/20 rounded-2xl p-8 overflow-hidden hover:border-primary/60 transition-all hover:shadow-[0_0_30px_rgba(236,182,19,0.1)]">
+                            <Link href={isGuest ? "/auth/sign-up" : "/protected/analysis"} className="group relative h-64 bg-surface/40 border border-primary/20 rounded-2xl p-8 overflow-hidden hover:border-primary/60 transition-all hover:shadow-[0_0_30px_rgba(236,182,19,0.1)]">
                                 <div className="relative z-10 flex flex-col h-full justify-between">
                                     <div>
                                         <div className="flex items-center gap-3 mb-4">
@@ -134,7 +151,7 @@ export function DesktopView({ isGuest, masterName }: DesktopViewProps) {
                                     <p className="text-xs text-ink-light/50">즉각적인 운세 Q&A</p>
                                 </Link>
 
-                                <Link href={isGuest ? "/auth/sign-up" : "/protected/daily"} className="block bg-gradient-to-br from-surface to-background border border-white/5 rounded-2xl p-6 hover:border-primary/50 transition-colors group">
+                                <Link href={isGuest ? "/auth/sign-up" : "/protected/saju/today"} className="block bg-gradient-to-br from-surface to-background border border-white/5 rounded-2xl p-6 hover:border-primary/50 transition-colors group">
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="p-2 rounded-full bg-primary/20 text-primary">
                                             <ScrollText className="w-5 h-5" strokeWidth={1} />
