@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowRight, Flower } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { SiteFooter } from "@/components/site-footer";
 
 const slides = [
   {
@@ -139,9 +138,6 @@ export default function Home() {
         </div>
 
       </main>
-
-      {/* Footer */}
-      <SiteFooter />
 
     </div>
   );

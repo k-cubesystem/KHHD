@@ -58,7 +58,8 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
                 </div>
 
                 {/* Right: Avatar */}
-                <Link href="/protected/profile">
+                <Link href={isGuest ? "/auth/login" : "/protected/profile"} className="flex items-center gap-2.5">
+                    <span className="text-xs font-bold text-ink-light font-serif">{isGuest ? "로그인" : masterName}</span>
                     <Avatar className="h-10 w-10 border border-primary/30 shadow-[0_0_15px_rgba(236,182,19,0.1)]">
                         <AvatarImage src={userData.avatarUrl} className="object-cover" />
                         <AvatarFallback className="bg-surface text-primary font-bold text-xs">{masterName.charAt(0).toUpperCase()}</AvatarFallback>
