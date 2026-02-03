@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Sparkles } from "lucide-react";
+import { Home, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -8,11 +8,8 @@ import { motion } from "framer-motion";
 export function FloatingActionButton() {
     const router = useRouter();
 
-    const handlePress = () => {
-        // Navigate to AI Chat or Consultation page
-        // If logic is needed, we can expand later
-        router.push("/protected");
-    };
+    const handleHomePress = () => router.push("/protected");
+    const handleProfilePress = () => router.push("/protected/profile");
 
     return (
         // Locked to the centered mobile column 
@@ -21,10 +18,20 @@ export function FloatingActionButton() {
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 1, type: "spring" }}
-                className="absolute bottom-24 right-5 pointer-events-auto"
+                className="absolute bottom-24 right-5 pointer-events-auto flex flex-col gap-4"
             >
+                {/* Profile Button */}
                 <Button
-                    onClick={handlePress}
+                    onClick={handleProfilePress}
+                    size="icon"
+                    className="w-14 h-14 rounded-full bg-surface/80 hover:bg-surface text-ink-light backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.3)] border border-primary/20 relative group overflow-hidden"
+                >
+                    <User className="w-7 h-7" strokeWidth={1.5} />
+                </Button>
+
+                {/* Home Button */}
+                <Button
+                    onClick={handleHomePress}
                     size="icon"
                     className="w-14 h-14 rounded-full bg-primary hover:bg-primary-dim text-background shadow-[0_0_20px_rgba(236,182,19,0.4)] border border-white/20 relative group overflow-hidden"
                 >
