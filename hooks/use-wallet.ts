@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getWalletBalance, deductTalisman, addTalisman } from "@/app/actions/wallet-actions";
+import { getWalletBalance, deductTalisman, addTalismans } from "@/app/actions/wallet-actions";
 
 export const WALLET_BALANCE_KEY = ["wallet", "balance"];
 
@@ -71,7 +71,7 @@ export function useAddTalisman() {
 
     return useMutation({
         mutationFn: async (amount: number) => {
-            return await addTalisman(amount);
+            return await addTalismans(amount);
         },
         onSuccess: () => {
             // 캐시 무효화하여 최신 잔액 가져오기
