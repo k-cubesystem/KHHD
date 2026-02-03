@@ -489,414 +489,451 @@ export default function MansePage() {
                             </div>
                         </Card>
 
-                        {/* Terminology Guide */}
-                        <Card className="p-8 bg-white/5 border-white/10">
-                            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4" />
-                                주요 용어 가이드
-                            </h3>
 
-                            <div className="space-y-6">
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-3">십신 (十神)</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {["비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인"].map((term) => (
-                                            <TermButton key={term} term={term} />
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-3">신살 (神殺)</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {["역마살", "도화살", "화개살"].map((term) => (
-                                            <TermButton key={term} term={term} />
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-3">용신론 (用神論)</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {["용신", "희신", "기신"].map((term) => (
-                                            <TermButton key={term} term={term} />
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
 
                         {/* 격국 분석 */}
                         <PremiumFeature title="격국 분석 (格局分析)" isSubscribed={isSubscribed}>
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-2">사주 격국</p>
-                                        <p className="text-xl font-bold text-primary">정관격</p>
-                                        <p className="text-xs text-muted-foreground/70 mt-2">正官格</p>
-                                    </div>
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-2">격국 강도</p>
-                                        <p className="text-xl font-bold">중격</p>
-                                        <div className="w-full h-2 bg-surface/50 rounded-full mt-2 overflow-hidden">
-                                            <div className="h-full bg-primary w-3/5" />
+                            {gekgukAnalysis ? (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-2">사주 격국</p>
+                                            <p className="text-xl font-bold text-primary">{gekgukAnalysis.gekguk}</p>
+                                            <p className="text-xs text-muted-foreground/70 mt-2">{gekgukAnalysis.hanja}</p>
+                                        </div>
+                                        <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-2">격국 강도</p>
+                                            <p className="text-xl font-bold">{gekgukAnalysis.strengthLabel}</p>
+                                            <div className="w-full h-2 bg-surface/50 rounded-full mt-2 overflow-hidden">
+                                                <div
+                                                    className="h-full bg-primary"
+                                                    style={{ width: `${(gekgukAnalysis.strength / 5) * 100}%` }}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-bold">격국 특징</p>
+                                        <p className="text-sm text-muted-foreground leading-relaxed">
+                                            {gekgukAnalysis.description}
+                                        </p>
+                                        <ul className="space-y-2 text-sm text-muted-foreground">
+                                            {gekgukAnalysis.characteristics.map((char, idx) => (
+                                                <li key={idx} className="flex items-start gap-2">
+                                                    <span className="text-primary mt-1">•</span>
+                                                    <span>{char}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <p className="text-sm font-bold">격국 특징</p>
-                                    <ul className="space-y-2 text-sm text-muted-foreground">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">•</span>
-                                            <span>정관이 일간을 적절히 통제하여 균형 잡힌 기운을 형성</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">•</span>
-                                            <span>명예와 직위를 중시하며, 사회적 지위 상승 가능성이 높음</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">•</span>
-                                            <span>성실하고 책임감이 강하여 조직 생활에 적합한 성향</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">사주 데이터를 불러오는 중...</p>
+                            )}
                         </PremiumFeature>
 
                         {/* 대운/세운 */}
                         <PremiumFeature title="대운·세운 (大運·歲運)" isSubscribed={isSubscribed}>
-                            <div className="space-y-6">
-                                <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <p className="text-xs text-muted-foreground">현재 대운</p>
-                                        <span className="px-2 py-1 rounded bg-primary/20 text-primary text-xs">2020-2029 (30대)</span>
+                            {daeunList.length > 0 ? (
+                                <div className="space-y-6">
+                                    {/* 현재 대운 */}
+                                    {(() => {
+                                        const currentYear = new Date().getFullYear();
+                                        const currentDaeun = daeunList.find(d =>
+                                            currentYear >= d.startYear && currentYear <= d.endYear
+                                        ) || daeunList[0];
+
+                                        return (
+                                            <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <p className="text-xs text-muted-foreground">현재 대운</p>
+                                                    <span className="px-2 py-1 rounded bg-primary/20 text-primary text-xs">
+                                                        {currentDaeun.startYear}-{currentDaeun.endYear} ({currentDaeun.age})
+                                                    </span>
+                                                </div>
+                                                <div className="text-center space-y-2">
+                                                    <div className="flex justify-center gap-3">
+                                                        <span className="text-3xl font-black text-primary">{currentDaeun.gan}</span>
+                                                        <span className="text-3xl font-black text-primary">{currentDaeun.zhi}</span>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground">{currentDaeun.ganjiKorean} ({currentDaeun.gan}{currentDaeun.zhi})</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* 연도별 세운 (최근 3년) */}
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[0, 1, 2].map(offset => {
+                                            const year = new Date().getFullYear() + offset;
+                                            const yearGanIdx = (year - 4) % 10;
+                                            const yearZhiIdx = (year - 4) % 12;
+                                            const ganList = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+                                            const zhiList = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+                                            const gan = ganList[yearGanIdx];
+                                            const zhi = zhiList[yearZhiIdx];
+
+                                            return (
+                                                <div key={year} className="bg-surface/20 p-3 rounded-lg text-center">
+                                                    <p className="text-xs text-muted-foreground mb-1">{year}년</p>
+                                                    <p className="text-sm font-bold">{gan}{zhi}</p>
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        {offset === 0 ? '현재' : offset === 1 ? '다음' : '후년'}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                    <div className="text-center space-y-2">
-                                        <div className="flex justify-center gap-3">
-                                            <span className="text-3xl font-black text-primary">甲</span>
-                                            <span className="text-3xl font-black text-primary">子</span>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground">갑자 (甲子)</p>
+
+                                    {/* 대운 흐름 */}
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-bold">대운 흐름</p>
+                                        {(() => {
+                                            const currentYear = new Date().getFullYear();
+                                            const currentDaeun = daeunList.find(d =>
+                                                currentYear >= d.startYear && currentYear <= d.endYear
+                                            ) || daeunList[0];
+                                            return (
+                                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                                    {currentDaeun.description}
+                                                </p>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <div className="bg-surface/20 p-3 rounded-lg text-center">
-                                        <p className="text-xs text-muted-foreground mb-1">2024년</p>
-                                        <p className="text-sm font-bold">甲辰</p>
-                                        <p className="text-[10px] text-primary">좋음</p>
-                                    </div>
-                                    <div className="bg-surface/20 p-3 rounded-lg text-center">
-                                        <p className="text-xs text-muted-foreground mb-1">2025년</p>
-                                        <p className="text-sm font-bold">乙巳</p>
-                                        <p className="text-[10px] text-muted-foreground">보통</p>
-                                    </div>
-                                    <div className="bg-surface/20 p-3 rounded-lg text-center">
-                                        <p className="text-xs text-muted-foreground mb-1">2026년</p>
-                                        <p className="text-sm font-bold">丙午</p>
-                                        <p className="text-[10px] text-seal">주의</p>
-                                    </div>
-                                </div>
-                                <div className="space-y-3">
-                                    <p className="text-sm font-bold">대운 흐름</p>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        현재 대운은 木水 기운이 강하여 지혜와 성장의 시기입니다. 학문이나 기술 습등에 유리하며, 인간관계가 확장되는 시기입니다.
-                                    </p>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">대운 데이터를 불러오는 중...</p>
+                            )}
                         </PremiumFeature>
 
                         {/* 육친 관계도 */}
                         <PremiumFeature title="육친 관계도 (六親關係圖)" isSubscribed={isSubscribed}>
-                            <div className="space-y-6">
-                                <div className="flex justify-center">
-                                    <div className="w-20 h-20 rounded-full border-2 border-primary bg-primary/20 flex items-center justify-center">
-                                        <div className="text-center">
-                                            <p className="text-2xl font-black text-primary">甲</p>
-                                            <p className="text-[8px] text-muted-foreground mt-1">일간</p>
+                            {yukchinAnalysis && Object.keys(yukchinAnalysis).length > 0 ? (
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {Object.entries(yukchinAnalysis).map(([key, data]) => (
+                                            <div key={key} className="bg-surface/20 p-4 rounded-lg">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-sm font-bold">{data.name}</p>
+                                                    <span className="text-xs text-muted-foreground">{data.hanja}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-lg font-black text-primary">{data.count}</span>
+                                                    <span className="text-xs text-muted-foreground">개</span>
+                                                    <span className={`ml-auto px-2 py-0.5 rounded text-[10px] ${data.strength === 'strong' ? 'bg-primary/20 text-primary' :
+                                                        data.strength === 'moderate' ? 'bg-blue-500/20 text-blue-400' :
+                                                            'bg-muted-foreground/20 text-muted-foreground'
+                                                        }`}>
+                                                        {data.strength === 'strong' ? '강' : data.strength === 'moderate' ? '중' : '약'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground/70">
+                                                    {data.pillars.join(', ')}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-bold">육친 해석</p>
+                                        <div className="space-y-2">
+                                            {Object.entries(yukchinAnalysis).slice(0, 3).map(([key, data]) => (
+                                                <p key={key} className="text-sm text-muted-foreground leading-relaxed">
+                                                    <span className="text-ink-light font-medium">{data.name}:</span> {data.interpretation}
+                                                </p>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {[
-                                        { name: "정인", hanja: "正印", relation: "어머니", element: "水", color: "#4A90E2" },
-                                        { name: "비견", hanja: "比肩", relation: "형제", element: "木", color: "#50C878" },
-                                        { name: "식신", hanja: "食神", relation: "자녀", element: "火", color: "#FF6B6B" },
-                                        { name: "정재", hanja: "正財", relation: "배우자", element: "土", color: "#F4A460" },
-                                        { name: "정관", hanja: "正官", relation: "직장", element: "金", color: "#FFD700" },
-                                        { name: "상관", hanja: "傷官", relation: "재능", element: "火", color: "#FF6B6B" },
-                                    ].map((item, idx) => (
-                                        <div key={idx} className="bg-surface/30 border border-white/10 p-3 rounded-lg text-center">
-                                            <p className="text-sm font-bold mb-1">{item.name}</p>
-                                            <p className="text-xs text-muted-foreground mb-2">{item.hanja}</p>
-                                            <div
-                                                className="w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-bold"
-                                                style={{ backgroundColor: `${item.color}20`, color: item.color }}
-                                            >
-                                                {item.element}
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground mt-2">{item.relation}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-sm font-bold">육친 해석</p>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        정인이 강하여 어머니의 영향이 크고, 정재가 적절하여 재물운이 안정적입니다. 정관의 기운이 있어 직장 생활이 순조로울 것으로 보입니다.
-                                    </p>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">육친 데이터를 불러오는 중...</p>
+                            )}
                         </PremiumFeature>
 
                         {/* 개운법 */}
                         <PremiumFeature title="개운법 (開運法)" isSubscribed={isSubscribed}>
-                            <div className="space-y-6">
-                                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-xl">
-                                    <p className="text-sm font-bold mb-3 flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-primary" />
-                                        행운의 오행
-                                    </p>
-                                    <div className="flex gap-2">
-                                        <span className="px-3 py-1 rounded-full bg-[#4A90E2]/20 text-[#4A90E2] text-sm">水 (수)</span>
-                                        <span className="px-3 py-1 rounded-full bg-[#50C878]/20 text-[#50C878] text-sm">木 (목)</span>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                                            <Palette className="w-3 h-3" />
-                                            행운의 색
+                            {gaeunbubRec ? (
+                                <div className="space-y-6">
+                                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-xl">
+                                        <p className="text-sm font-bold mb-3 flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-primary" />
+                                            행운의 오행
                                         </p>
                                         <div className="flex gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-blue-500" />
-                                            <div className="w-8 h-8 rounded-full bg-green-500" />
+                                            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-sm">
+                                                {gaeunbubRec.luckyElement} ({gaeunbubRec.luckyElement === '木' ? '목' :
+                                                    gaeunbubRec.luckyElement === '火' ? '화' :
+                                                        gaeunbubRec.luckyElement === '土' ? '토' :
+                                                            gaeunbubRec.luckyElement === '金' ? '금' : '수'})
+                                            </span>
                                         </div>
-                                        <p className="text-xs text-muted-foreground/70 mt-2">파랑, 초록</p>
                                     </div>
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                                            <Compass className="w-3 h-3" />
-                                            행운의 방위
-                                        </p>
-                                        <p className="text-2xl font-bold">북동</p>
-                                        <p className="text-xs text-muted-foreground/70 mt-1">水木 방향</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                                                <Palette className="w-3 h-3" />
+                                                행운의 색
+                                            </p>
+                                            <p className="text-xs font-medium">{gaeunbubRec.colors.join(', ')}</p>
+                                        </div>
+                                        <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                                                <Compass className="w-3 h-3" />
+                                                행운의 방위
+                                            </p>
+                                            <p className="text-xs font-medium">{gaeunbubRec.directions.join(', ')}</p>
+                                        </div>
+                                        <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-2">행운의 숫자</p>
+                                            <div className="flex gap-1">
+                                                {gaeunbubRec.numbers.map(num => (
+                                                    <span key={num} className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-bold">
+                                                        {num}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                                            <p className="text-xs text-muted-foreground mb-2">추천 직업</p>
+                                            <p className="text-xs font-medium">{gaeunbubRec.jobs.slice(0, 3).join(', ')}</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-2">행운의 숫자</p>
-                                        <div className="flex gap-1">
-                                            {[1, 3, 8].map(num => (
-                                                <span key={num} className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-bold">
-                                                    {num}
-                                                </span>
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-bold">일상 개운법</p>
+                                        <ul className="space-y-2 text-sm text-muted-foreground">
+                                            {gaeunbubRec.activities.map((activity, idx) => (
+                                                <li key={idx} className="flex items-start gap-2">
+                                                    <span className="text-primary mt-1">✓</span>
+                                                    <span>{activity}</span>
+                                                </li>
                                             ))}
-                                        </div>
-                                    </div>
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <p className="text-xs text-muted-foreground mb-2">추천 직업</p>
-                                        <p className="text-xs font-medium">교육, IT, 예술</p>
+                                        </ul>
                                     </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <p className="text-sm font-bold">일상 개운법</p>
-                                    <ul className="space-y-2 text-sm text-muted-foreground">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">✓</span>
-                                            <span>아침에 일어나서 동쪽 또는 북쪽을 바라보며 심호흡하기</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">✓</span>
-                                            <span>파란색이나 초록색 소품을 가까이 두기</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">✓</span>
-                                            <span>물가 산책이나 나무가 많은 공원 방문하기</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-primary mt-1">✓</span>
-                                            <span>독서나 학습을 통한 자기계발에 집중하기</span>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">개운법 데이터를 불러오는 중...</p>
+                            )}
                         </PremiumFeature>
+                    </div>
+            </div>
+        </PremiumFeature>
 
-                        {/* 신살 */}
-                        <PremiumFeature title="신살 (神殺)" isSubscribed={isSubscribed}>
-                            <div className="space-y-6">
-                                <div className="bg-gradient-to-r from-seal/10 to-seal/5 border border-seal/20 p-4 rounded-xl">
-                                    <p className="text-sm font-bold mb-3 flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-seal" />
-                                        보유 신살
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className="px-3 py-1.5 rounded-full bg-seal/20 text-seal text-sm font-medium">
-                                            역마살 (驛馬殺)
-                                        </span>
-                                        <span className="px-3 py-1.5 rounded-full bg-primary/20 text-primary text-sm font-medium">
-                                            천을귀인 (天乙貴人)
-                                        </span>
-                                        <span className="px-3 py-1.5 rounded-full bg-[#9370DB]/20 text-[#9370DB] text-sm font-medium">
-                                            화개살 (華蓋殺)
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {/* 역마살 */}
-                                    <div className="bg-surface/30 border border-seal/20 p-4 rounded-xl">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <p className="text-sm font-bold text-seal">역마살 (驛馬殺)</p>
-                                                <p className="text-xs text-muted-foreground mt-1">이동, 변화, 활동</p>
-                                            </div>
-                                            <span className="px-2 py-0.5 rounded bg-seal/20 text-seal text-[10px]">
-                                                움직임
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground leading-relaxed">
-                                            이동과 변화를 좋아하는 성향으로, 한 곳에 머무르기보다는 여러 곳을 다니며 활동하는 것을 선호합니다. 해외 활동이나 출장이 많을 수 있습니다.
-                                        </p>
-                                    </div>
-
-                                    {/* 천을귀인 */}
-                                    <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <p className="text-sm font-bold text-primary">천을귀인 (天乙貴人)</p>
-                                                <p className="text-xs text-muted-foreground mt-1">귀인, 도움, 행운</p>
-                                            </div>
-                                            <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px]">
-                                                길신
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground leading-relaxed">
-                                            어려움에 처했을 때 도움을 주는 귀인이 나타나는 길신입니다. 위기 상황에서 예상치 못한 도움을 받을 수 있으며, 인복이 좋습니다.
-                                        </p>
-                                    </div>
-
-                                    {/* 화개살 */}
-                                    <div className="bg-surface/30 border border-[#9370DB]/20 p-4 rounded-xl">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <p className="text-sm font-bold" style={{ color: '#9370DB' }}>화개살 (華蓋殺)</p>
-                                                <p className="text-xs text-muted-foreground mt-1">예술, 종교, 학문</p>
-                                            </div>
-                                            <span className="px-2 py-0.5 rounded bg-[#9370DB]/20 text-[10px]" style={{ color: '#9370DB' }}>
-                                                예술
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground leading-relaxed">
-                                            예술적 감각과 영적인 재능이 뛰어나며, 종교나 철학에 관심이 많습니다. 혼자만의 시간을 즐기며 창작 활동에 적합합니다.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <p className="text-sm font-bold">신살 종합</p>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        역마살로 인해 활동적이며, 천을귀인의 도움을 받아 어려움을 극복할 수 있습니다. 화개살의 예술적 감각을 활용하면 창작 분야에서 성공할 가능성이 높습니다.
-                                    </p>
-                                </div>
-                            </div>
-                        </PremiumFeature>
-
-                        {/* 용신론 */}
-                        <PremiumFeature title="용신론 (用神論)" isSubscribed={isSubscribed}>
-                            <div className="space-y-6">
-                                {/* 용신 */}
-                                <div className="bg-gradient-to-r from-[#50C878]/10 to-[#50C878]/5 border border-[#50C878]/20 p-4 rounded-xl">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <p className="text-sm font-bold flex items-center gap-2">
-                                            <Sparkles className="w-4 h-4" style={{ color: '#50C878' }} />
-                                            용신 (用神)
-                                        </p>
-                                        <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#50C87820', color: '#50C878' }}>
-                                            木 (목)
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        사주의 균형을 맞추고 부족한 기운을 보완하는 가장 중요한 오행입니다. 木 기운을 활용하면 운세가 상승합니다.
-                                    </p>
-                                </div>
-
-                                {/* 희신 */}
-                                <div className="bg-surface/30 border border-[#4A90E2]/20 p-4 rounded-xl">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <p className="text-sm font-bold" style={{ color: '#4A90E2' }}>
-                                            희신 (喜神)
-                                        </p>
-                                        <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#4A90E220', color: '#4A90E2' }}>
-                                            水 (수)
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        용신을 도와주는 오행으로, 水 기운이 木을 생하여 도움을 줍니다. 용신과 함께 활용하면 효과가 극대화됩니다.
-                                    </p>
-                                </div>
-
-                                {/* 기신 */}
-                                <div className="bg-surface/30 border border-[#FFD700]/20 p-4 rounded-xl">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <p className="text-sm font-bold" style={{ color: '#FFD700' }}>
-                                            기신 (忌神)
-                                        </p>
-                                        <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#FFD70020', color: '#FFD700' }}>
-                                            金 (금)
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        사주의 균형을 해치는 오행으로, 金 기운은 木을 극하여 부정적 영향을 줍니다. 가급적 피하는 것이 좋습니다.
-                                    </p>
-                                </div>
-
-                                {/* 용신 활용법 */}
-                                <div className="space-y-3">
-                                    <p className="text-sm font-bold">용신 활용법</p>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">직업</p>
-                                            <p className="text-sm font-medium">교육, 출판, 환경</p>
-                                        </div>
-                                        <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">방위</p>
-                                            <p className="text-sm font-medium">동쪽, 북동쪽</p>
-                                        </div>
-                                        <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">색상</p>
-                                            <p className="text-sm font-medium">초록, 파랑</p>
-                                        </div>
-                                        <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
-                                            <p className="text-xs text-muted-foreground mb-1">시간</p>
-                                            <p className="text-sm font-medium">새벽 3-7시</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <p className="text-sm font-bold">용신론 해석</p>
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        용신인 木과 희신인 水를 적극 활용하고, 기신인 金은 피하는 것이 운세 향상에 도움이 됩니다. 木 기운이 강한 환경과 직업을 선택하면 좋습니다.
-                                    </p>
-                                </div>
-                            </div>
-                        </PremiumFeature>
-                    </>
-                )}
+                        {/* 신살 */ }
+    <PremiumFeature title="신살 (神殺)" isSubscribed={isSubscribed}>
+        <div className="space-y-6">
+            <div className="bg-gradient-to-r from-seal/10 to-seal/5 border border-seal/20 p-4 rounded-xl">
+                <p className="text-sm font-bold mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-seal" />
+                    보유 신살
+                </p>
+                <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1.5 rounded-full bg-seal/20 text-seal text-sm font-medium">
+                        역마살 (驛馬殺)
+                    </span>
+                    <span className="px-3 py-1.5 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                        천을귀인 (天乙貴人)
+                    </span>
+                    <span className="px-3 py-1.5 rounded-full bg-[#9370DB]/20 text-[#9370DB] text-sm font-medium">
+                        화개살 (華蓋殺)
+                    </span>
+                </div>
             </div>
 
-            {/* Term Dialog */}
-            <Dialog open={termDialog.open} onOpenChange={(open) => setTermDialog({ ...termDialog, open })}>
-                <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
-                            <BookOpen className="w-5 h-5" />
-                            {termDialog.customContent?.title || TERMINOLOGY[termDialog.term]?.title}
-                        </DialogTitle>
-                    </DialogHeader>
-                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                        {termDialog.customContent?.description || TERMINOLOGY[termDialog.term]?.desc}
+            <div className="space-y-4">
+                {/* 역마살 */}
+                <div className="bg-surface/30 border border-seal/20 p-4 rounded-xl">
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <p className="text-sm font-bold text-seal">역마살 (驛馬殺)</p>
+                            <p className="text-xs text-muted-foreground mt-1">이동, 변화, 활동</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-seal/20 text-seal text-[10px]">
+                            움직임
+                        </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        이동과 변화를 좋아하는 성향으로, 한 곳에 머무르기보다는 여러 곳을 다니며 활동하는 것을 선호합니다. 해외 활동이나 출장이 많을 수 있습니다.
                     </p>
-                </DialogContent>
-            </Dialog>
+                </div>
+
+                {/* 천을귀인 */}
+                <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <p className="text-sm font-bold text-primary">천을귀인 (天乙貴人)</p>
+                            <p className="text-xs text-muted-foreground mt-1">귀인, 도움, 행운</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-primary/20 text-primary text-[10px]">
+                            길신
+                        </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        어려움에 처했을 때 도움을 주는 귀인이 나타나는 길신입니다. 위기 상황에서 예상치 못한 도움을 받을 수 있으며, 인복이 좋습니다.
+                    </p>
+                </div>
+
+                {/* 화개살 */}
+                <div className="bg-surface/30 border border-[#9370DB]/20 p-4 rounded-xl">
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <p className="text-sm font-bold" style={{ color: '#9370DB' }}>화개살 (華蓋殺)</p>
+                            <p className="text-xs text-muted-foreground mt-1">예술, 종교, 학문</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded bg-[#9370DB]/20 text-[10px]" style={{ color: '#9370DB' }}>
+                            예술
+                        </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                        예술적 감각과 영적인 재능이 뛰어나며, 종교나 철학에 관심이 많습니다. 혼자만의 시간을 즐기며 창작 활동에 적합합니다.
+                    </p>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <p className="text-sm font-bold">신살 종합</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                    역마살로 인해 활동적이며, 천을귀인의 도움을 받아 어려움을 극복할 수 있습니다. 화개살의 예술적 감각을 활용하면 창작 분야에서 성공할 가능성이 높습니다.
+                </p>
+            </div>
         </div>
+    </PremiumFeature>
+
+    {/* 용신론 */ }
+    <PremiumFeature title="용신론 (用神論)" isSubscribed={isSubscribed}>
+        <div className="space-y-6">
+            {/* 용신 */}
+            <div className="bg-gradient-to-r from-[#50C878]/10 to-[#50C878]/5 border border-[#50C878]/20 p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-bold flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" style={{ color: '#50C878' }} />
+                        용신 (用神)
+                    </p>
+                    <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#50C87820', color: '#50C878' }}>
+                        木 (목)
+                    </span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                    사주의 균형을 맞추고 부족한 기운을 보완하는 가장 중요한 오행입니다. 木 기운을 활용하면 운세가 상승합니다.
+                </p>
+            </div>
+
+            {/* 희신 */}
+            <div className="bg-surface/30 border border-[#4A90E2]/20 p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-bold" style={{ color: '#4A90E2' }}>
+                        희신 (喜神)
+                    </p>
+                    <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#4A90E220', color: '#4A90E2' }}>
+                        水 (수)
+                    </span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                    용신을 도와주는 오행으로, 水 기운이 木을 생하여 도움을 줍니다. 용신과 함께 활용하면 효과가 극대화됩니다.
+                </p>
+            </div>
+
+            {/* 기신 */}
+            <div className="bg-surface/30 border border-[#FFD700]/20 p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-bold" style={{ color: '#FFD700' }}>
+                        기신 (忌神)
+                    </p>
+                    <span className="px-3 py-1 rounded-full text-sm font-bold" style={{ backgroundColor: '#FFD70020', color: '#FFD700' }}>
+                        金 (금)
+                    </span>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                    사주의 균형을 해치는 오행으로, 金 기운은 木을 극하여 부정적 영향을 줍니다. 가급적 피하는 것이 좋습니다.
+                </p>
+            </div>
+
+            {/* 용신 활용법 */}
+            <div className="space-y-3">
+                <p className="text-sm font-bold">용신 활용법</p>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">직업</p>
+                        <p className="text-sm font-medium">교육, 출판, 환경</p>
+                    </div>
+                    <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">방위</p>
+                        <p className="text-sm font-medium">동쪽, 북동쪽</p>
+                    </div>
+                    <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">색상</p>
+                        <p className="text-sm font-medium">초록, 파랑</p>
+                    </div>
+                    <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">시간</p>
+                        <p className="text-sm font-medium">새벽 3-7시</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <p className="text-sm font-bold">용신론 해석</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                    용신인 木과 희신인 水를 적극 활용하고, 기신인 金은 피하는 것이 운세 향상에 도움이 됩니다. 木 기운이 강한 환경과 직업을 선택하면 좋습니다.
+                </p>
+            </div>
+        </div>
+    </PremiumFeature>
+
+    {/* 주요 용어 가이드 - 맨 아래로 이동 */ }
+    <Card className="p-8 bg-white/5 border-white/10">
+        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            주요 용어 가이드
+        </h3>
+
+        <div className="space-y-6">
+            <div>
+                <p className="text-xs text-muted-foreground mb-3">십신 (十神)</p>
+                <div className="flex flex-wrap gap-2">
+                    {["비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인"].map((term) => (
+                        <TermButton key={term} term={term} />
+                    ))}
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs text-muted-foreground mb-3">신살 (神殺)</p>
+                <div className="flex flex-wrap gap-2">
+                    {["역마살", "도화살", "화개살", "천을귀인"].map((term) => (
+                        <TermButton key={term} term={term} />
+                    ))}
+                </div>
+            </div>
+
+            <div>
+                <p className="text-xs text-muted-foreground mb-3">용신론 (用神論)</p>
+                <div className="flex flex-wrap gap-2">
+                    {["용신", "희신", "기신"].map((term) => (
+                        <TermButton key={term} term={term} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    </Card>
+                    </>
+                )
+}
+            </div >
+
+    {/* Term Dialog */ }
+    < Dialog open = { termDialog.open } onOpenChange = {(open) => setTermDialog({ ...termDialog, open })}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-sm">
+            <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+                    <BookOpen className="w-5 h-5" />
+                    {termDialog.customContent?.title || TERMINOLOGY[termDialog.term]?.title}
+                </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {termDialog.customContent?.description || TERMINOLOGY[termDialog.term]?.desc}
+            </p>
+        </DialogContent>
+            </Dialog >
+        </div >
     );
 }
