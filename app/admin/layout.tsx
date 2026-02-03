@@ -47,6 +47,7 @@ export default async function AdminLayout({
     { href: "/admin/membership/plans", label: "스토어 관리", icon: "Package" },
     { href: "/admin/notifications", label: "알림 및 자동화", icon: "Bell" },
     { href: "/admin/prompts", label: "AI 프롬프트 관리", icon: "Sparkles" },
+    { href: "/admin/service-control", label: "서비스 키/스위치", icon: "Power" },
   ];
 
   return <AdminLayoutClient menuItems={menuItems}>{children}</AdminLayoutClient>;

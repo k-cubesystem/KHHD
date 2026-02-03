@@ -15,7 +15,8 @@ import {
     Coins,
     BookOpen,
     Sparkles,
-    Users
+    Users,
+    ScrollText
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { getWalletBalance } from "@/app/actions/wallet-actions";
@@ -208,6 +209,13 @@ export default async function MyPage() {
                             </div>
                         </Link>
                     )}
+                    <Link href="/protected/profile/manse" className="group">
+                        <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
+                            <ScrollText className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
+                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">내 명식 보기</span>
+                        </div>
+                    </Link>
+
                     <Link href="/protected/settings" className="group">
                         <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
                             <UserIcon className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />

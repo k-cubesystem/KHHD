@@ -5,20 +5,14 @@ import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
 import { Card } from "@/components/ui/card";
 import { BookOpen } from "lucide-react";
-
-interface FamilyMember {
-    id: string;
-    name: string;
-    relationship: string;
-    birth_date: string;
-}
+import { DestinyTarget } from "@/app/actions/destiny-targets";
 
 interface AnalysisClientPageProps {
-    members: FamilyMember[];
-    initialMemberId?: string;
+    targets: DestinyTarget[];
+    initialTargetId?: string;
 }
 
-export function AnalysisClientPage({ members, initialMemberId }: AnalysisClientPageProps) {
+export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientPageProps) {
     return (
         <motion.div
             variants={staggerContainer}
@@ -45,7 +39,7 @@ export function AnalysisClientPage({ members, initialMemberId }: AnalysisClientP
             <motion.div variants={fadeInUp}>
                 <Card className="relative bg-surface/30 backdrop-blur-md p-1 shadow-2xl border border-primary/20 rounded-none overflow-hidden">
                     <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
-                    <AnalysisForm members={members} initialMemberId={initialMemberId} />
+                    <AnalysisForm targets={targets} initialTargetId={initialTargetId} />
                 </Card>
             </motion.div>
 

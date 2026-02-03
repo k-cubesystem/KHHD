@@ -280,7 +280,7 @@ export function PromptManagementClient() {
                     <div key={i} className="h-48 bg-zen-bg rounded-xl animate-pulse" />
                 ))
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+                <div className="grid grid-cols-1 gap-4 md:gap-6 pb-20">
                     {prompts.map(prompt => (
                         <PromptEditor
                             key={prompt.key}

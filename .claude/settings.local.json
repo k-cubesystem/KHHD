@@ -20,7 +20,10 @@
       "Bash(xargs kill -9)",
       "Bash(pkill:*)",
       "Bash(curl:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(node scripts/diagnose-destiny.js:*)",
+      "Bash(node scripts/test-destiny-action.js:*)",
+      "Bash(node:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

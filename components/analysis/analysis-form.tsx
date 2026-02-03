@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Sparkles, Upload, ChevronRight, Check, CreditCard, Loader2 } from "lucide-react";
+import { Sparkles, Upload, ChevronRight, Check, CreditCard, Loader2, User, Users, Heart, Briefcase, MapPin, Search } from "lucide-react";
 import Image from "next/image";
 import { PaymentWidget } from "@/components/payment/payment-widget";
 import { startFateAnalysis } from "@/app/actions/analysis-actions";
@@ -13,31 +13,33 @@ import { getWalletBalance } from "@/app/actions/wallet-actions";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-
-interface FamilyMember {
-    id: string;
-    name: string;
-    relationship: string;
-    birth_date: string;
-}
+import { DestinyTarget } from "@/app/actions/destiny-targets";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getTargetImageUrl } from "@/lib/destiny-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import DaumPostcode from "react-daum-postcode";
 
 interface AnalysisFormProps {
-    members: FamilyMember[];
-    initialMemberId?: string | null;
+    targets: DestinyTarget[];
+    initialTargetId?: string | null;
 }
 
-export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
+export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const [isGuest, setIsGuest] = useState(false);
-    const [step, setStep] = useState(1);
-    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(initialMemberId || null);
+    const [step, setStep] = useState(initialTargetId ? 2 : 1); // Skip Step 1 if targetId exists
+    const [selectedTargetId, setSelectedTargetId] = useState<string | null>(initialTargetId || null);
     const [facePreview, setFacePreview] = useState<string | null>(null);
     const [handPreview, setHandPreview] = useState<string | null>(null);
+    const [faceFile, setFaceFile] = useState<File | null>(null);
+    const [handFile, setHandFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [availableCredits, setAvailableCredits] = useState<number>(0);
     const [isLoadingCredits, setIsLoadingCredits] = useState(true);
+    const [showAddressSearch, setShowAddressSearch] = useState(false);
+    const [address, setAddress] = useState("");
 
     const faceInputRef = useRef<HTMLInputElement>(null);
     const handInputRef = useRef<HTMLInputElement>(null);
@@ -74,19 +76,44 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
         return <div className="w-full h-96 bg-white/5 animate-pulse rounded-2xl" />;
     }
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setPreview: (url: string | null) => void) => {
+    const handleFileChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        setPreview: (url: string | null) => void,
+        setFile: (file: File | null) => void
+    ) => {
         const file = e.target.files?.[0];
         if (file) {
             const url = URL.createObjectURL(file);
             setPreview(url);
+            setFile(file);
         } else {
             setPreview(null);
+            setFile(null);
         }
     };
 
     const handleNext = () => {
-        if (step === 1 && !selectedMemberId) return;
+        if (step === 1 && !selectedTargetId) return;
         setStep((prev) => prev + 1);
+    };
+
+    const handleAddressComplete = (data: any) => {
+        let fullAddress = data.address;
+        let extraAddress = "";
+
+        if (data.addressType === "R") {
+            if (data.bname !== "") {
+                extraAddress += data.bname;
+            }
+            if (data.buildingName !== "") {
+                extraAddress += extraAddress !== "" ? `, ${data.buildingName}` : data.buildingName;
+            }
+            fullAddress += extraAddress !== "" ? ` (${extraAddress})` : "";
+        }
+
+        setAddress(fullAddress);
+        setShowAddressSearch(false);
+        toast.success("주소가 입력되었습니다.");
     };
 
     const handleStartAnalysis = async () => {
@@ -96,7 +123,7 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
             return;
         }
 
-        if (!selectedMemberId) return;
+        if (!selectedTargetId) return;
 
         if (availableCredits <= 0) {
             setShowPayment(true);
@@ -106,13 +133,18 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
         setIsSubmitting(true);
         try {
             const formData = new FormData();
-            formData.append("memberId", selectedMemberId);
-            const homeAddress = (document.getElementById("address") as HTMLInputElement)?.value || "";
-            if (homeAddress) formData.append("homeAddress", homeAddress);
+            formData.append("memberId", selectedTargetId);
+            if (address) formData.append("homeAddress", address);
 
-            // Note: faceImage and handImage would normally be appended here if we were using actual File objects
-            // In a real app, we'd need to keep the File objects in state, not just previews.
-            // For this implementation, we proceed with current member info.
+            // 실제 File 객체 추가
+            if (faceFile) {
+                formData.append("faceImage", faceFile);
+                console.log("[Form] Face image added to FormData:", faceFile.name);
+            }
+            if (handFile) {
+                formData.append("handImage", handFile);
+                console.log("[Form] Hand image added to FormData:", handFile.name);
+            }
 
             await startFateAnalysis(formData);
             toast.success("분석이 시작되었습니다. 잠시 후 결과 페이지로 이동합니다.");
@@ -158,43 +190,67 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
             </div>
 
             <div className="relative min-h-[400px]">
-                {/* Step 1: Member Selection */}
+                {/* Step 1: Target Selection */}
                 <div className={cn("space-y-6 transition-all duration-500", step === 1 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10 fixed top-0 pointer-events-none")}>
                     <div className="text-center space-y-2 mb-8">
                         <h2 className="text-3xl font-serif font-bold text-stone-100">누구의 운명을 분석하시겠습니까?</h2>
-                        <p className="text-stone-400 text-sm font-light">등록된 가족 및 지인 목록에서 선택하세요.</p>
+                        <p className="text-stone-400 text-sm font-light">등록된 본인 및 가족/지인 목록에서 선택하세요.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {members.length > 0 ? (
-                            members.map((member) => (
-                                <div
-                                    key={member.id}
-                                    onClick={() => setSelectedMemberId(member.id)}
-                                    className={cn(
-                                        "cursor-pointer p-5 rounded-2xl border transition-all duration-300 flex items-center gap-4 group hover:scale-[1.02] glass-panel",
-                                        selectedMemberId === member.id
-                                            ? "bg-gold-500/10 border-gold-500/50 shadow-[0_0_20px_rgba(197,160,89,0.15)]"
-                                            : "bg-ink-900/40 border-white/5 hover:border-gold-500/30"
-                                    )}
-                                >
-                                    <div className={cn(
-                                        "w-12 h-12 rounded-full flex items-center justify-center text-lg font-serif font-bold transition-colors shadow-inner",
-                                        selectedMemberId === member.id ? "bg-gold-500 text-ink-950" : "bg-ink-950 text-stone-500 group-hover:text-gold-500"
-                                    )}>
-                                        {member.name.charAt(0)}
+                        {targets.length > 0 ? (
+                            targets.map((target) => {
+                                const imageUrl = getTargetImageUrl(target);
+                                const RelationIcon = target.target_type === "self" ? User :
+                                    target.relation_type.includes("가족") ? Users :
+                                        target.relation_type.includes("연인") || target.relation_type.includes("배우자") ? Heart :
+                                            target.relation_type.includes("직장") || target.relation_type.includes("동료") ? Briefcase : User;
+
+                                return (
+                                    <div
+                                        key={target.id}
+                                        onClick={() => setSelectedTargetId(target.id)}
+                                        className={cn(
+                                            "cursor-pointer p-5 rounded-2xl border transition-all duration-300 flex items-center gap-4 group hover:scale-[1.02] glass-panel",
+                                            selectedTargetId === target.id
+                                                ? "bg-gold-500/10 border-gold-500/50 shadow-[0_0_20px_rgba(197,160,89,0.15)]"
+                                                : "bg-ink-900/40 border-white/5 hover:border-gold-500/30"
+                                        )}
+                                    >
+                                        <Avatar className="w-12 h-12">
+                                            <AvatarImage src={imageUrl || undefined} alt={target.name} />
+                                            <AvatarFallback className={cn(
+                                                "text-lg font-serif font-bold transition-colors",
+                                                selectedTargetId === target.id ? "bg-gold-500 text-ink-950" : "bg-ink-950 text-stone-500 group-hover:text-gold-500"
+                                            )}>
+                                                {target.name.charAt(0)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <p className={cn("font-bold text-lg transition-colors", selectedTargetId === target.id ? "text-gold-400" : "text-stone-200 group-hover:text-stone-100")}>
+                                                    {target.name}
+                                                </p>
+                                                {target.target_type === "self" && (
+                                                    <span className="px-2 py-0.5 bg-gold-500/20 border border-gold-500/50 text-gold-400 text-[10px] font-bold rounded">
+                                                        본인
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <RelationIcon className="w-3 h-3 text-stone-500" />
+                                                <p className="text-xs text-stone-500">
+                                                    {target.relation_type}
+                                                    {target.birth_date && ` · ${target.birth_date}`}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className={cn("font-bold text-lg transition-colors", selectedMemberId === member.id ? "text-gold-400" : "text-stone-200 group-hover:text-stone-100")}>
-                                            {member.name}
-                                        </p>
-                                        <p className="text-xs text-stone-500">{member.relationship} · {member.birth_date}</p>
-                                    </div>
-                                </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="col-span-2 text-center py-12 rounded-2xl border border-dashed border-stone-800 bg-ink-900/20 text-stone-500">
-                                등록된 대상이 없습니다. <br /><span className="text-gold-500 underline cursor-pointer">가족 관리</span> 메뉴에서 먼저 등록해주세요.
+                                등록된 대상이 없습니다. <br /><span className="text-gold-500 underline cursor-pointer" onClick={() => router.push("/protected/family")}>가족 관리</span> 메뉴에서 먼저 등록해주세요.
                             </div>
                         )}
                     </div>
@@ -232,11 +288,11 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
                                 ref={faceInputRef}
                                 className="hidden"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, setFacePreview)}
+                                onChange={(e) => handleFileChange(e, setFacePreview, setFaceFile)}
                             />
                             {facePreview && (
                                 <div className="text-center">
-                                    <Button type="button" variant="ghost" size="sm" onClick={() => { setFacePreview(null); if (faceInputRef.current) faceInputRef.current.value = ""; }} className="text-xs text-rose-400 hover:text-rose-300 h-6 hover:bg-rose-950/20">사진 삭제</Button>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => { setFacePreview(null); setFaceFile(null); if (faceInputRef.current) faceInputRef.current.value = ""; }} className="text-xs text-rose-400 hover:text-rose-300 h-6 hover:bg-rose-950/20">사진 삭제</Button>
                                 </div>
                             )}
                         </div>
@@ -265,11 +321,11 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
                                 ref={handInputRef}
                                 className="hidden"
                                 accept="image/*"
-                                onChange={(e) => handleFileChange(e, setHandPreview)}
+                                onChange={(e) => handleFileChange(e, setHandPreview, setHandFile)}
                             />
                             {handPreview && (
                                 <div className="text-center">
-                                    <Button type="button" variant="ghost" size="sm" onClick={() => { setHandPreview(null); if (handInputRef.current) handInputRef.current.value = ""; }} className="text-xs text-rose-400 hover:text-rose-300 h-6 hover:bg-rose-950/20">사진 삭제</Button>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => { setHandPreview(null); setHandFile(null); if (handInputRef.current) handInputRef.current.value = ""; }} className="text-xs text-rose-400 hover:text-rose-300 h-6 hover:bg-rose-950/20">사진 삭제</Button>
                                 </div>
                             )}
                         </div>
@@ -282,24 +338,66 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
                         <>
                             <div className="text-center space-y-2 mb-8">
                                 <h2 className="text-3xl font-serif font-bold text-stone-100">마지막 단계: 지기(地氣) 보정</h2>
-                                <p className="text-stone-400 text-sm font-light">거주 공간의 에너지를 분석에 반영합니다.</p>
+                                <p className="text-stone-400 text-sm font-light">당신이 머무는 공간의 에너지를 분석에 반영합니다.</p>
+                            </div>
+
+                            {/* 스토리텔링 설명 */}
+                            <div className="glass-panel p-6 rounded-xl bg-gold-500/5 border border-gold-500/20 mb-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-gold-500/10 flex items-center justify-center">
+                                            <MapPin className="w-5 h-5 text-gold-400" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        <h3 className="text-sm font-bold text-gold-400 tracking-wide">왜 위치 정보가 필요한가요?</h3>
+                                        <p className="text-sm text-stone-300 leading-relaxed">
+                                            천지인(天地人) 분석에서 <span className="text-gold-400 font-medium">地(땅)</span>는 당신이 머무는 공간의 기운을 의미합니다.
+                                            집, 사무실, 출장지, 행사장... 장소가 바뀔 때마다 땅의 기운도 함께 변합니다.
+                                        </p>
+                                        <p className="text-sm text-stone-400 leading-relaxed">
+                                            지금 이 순간, <span className="text-stone-200 font-medium">당신이 서 있는 곳</span>이 운명의 흐름에 영향을 줍니다.
+                                            현재 위치를 입력하시면 더욱 정밀한 분석이 가능합니다.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="glass-panel p-8 rounded-2xl space-y-8 border-gold-500/10">
                                 <div className="space-y-3">
-                                    <Label htmlFor="address" className="text-xs font-bold uppercase text-gold-500 tracking-wider">거주지 주소 (선택)</Label>
-                                    <Input
-                                        id="address"
-                                        name="homeAddress"
-                                        placeholder="예: 서울시 강남구 청담동..."
-                                        className="bg-ink-950/50 border-white/10 focus:border-gold-500/50 h-14 text-base text-stone-200 placeholder:text-stone-600 rounded-lg shadow-inner"
-                                    />
+                                    <Label htmlFor="address" className="text-xs font-bold uppercase text-gold-500 tracking-wider flex items-center gap-2">
+                                        <MapPin className="w-4 h-4" />
+                                        현재 위치 / 거주지 / 사무실 주소 (선택)
+                                    </Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="address"
+                                            name="homeAddress"
+                                            value={address}
+                                            onChange={(e) => setAddress(e.target.value)}
+                                            placeholder="출장지, 행사장, 집, 사무실 등 현재 머무는 곳을 입력하세요"
+                                            className="bg-ink-950/50 border-white/10 focus:border-gold-500/50 h-14 text-base text-stone-200 placeholder:text-stone-600 rounded-lg shadow-inner pr-32"
+                                        />
+                                        <Button
+                                            type="button"
+                                            onClick={() => setShowAddressSearch(true)}
+                                            variant="ghost"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-4 bg-gold-500/10 hover:bg-gold-500/20 text-gold-400 border border-gold-500/30 hover:border-gold-500/50"
+                                        >
+                                            <Search className="w-4 h-4 mr-2" />
+                                            주소 찾기
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-stone-500 flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3" />
+                                        출장, 행사 등으로 위치가 바뀌면 다시 분석해보세요
+                                    </p>
                                 </div>
 
                                 <div className="pt-6 border-t border-white/5 space-y-4">
                                     <div className="flex justify-between text-sm items-center">
                                         <span className="text-stone-500 font-medium">분석 대상</span>
-                                        <span className="font-bold text-lg text-stone-200 font-serif">{members.find(m => m.id === selectedMemberId)?.name}</span>
+                                        <span className="font-bold text-lg text-stone-200 font-serif">{targets.find(t => t.id === selectedTargetId)?.name}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-stone-500 font-medium">보유 크레딧</span>
@@ -328,8 +426,8 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
                         </>
                     ) : (
                         <PaymentWidget
-                            memberId={selectedMemberId!}
-                            homeAddress={(document.getElementById("address") as HTMLInputElement)?.value}
+                            memberId={selectedTargetId!}
+                            homeAddress={address}
                             onCancel={() => setShowPayment(false)}
                         />
                     )}
@@ -355,7 +453,7 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
                                 <Button
                                     type="button"
                                     onClick={handleNext}
-                                    disabled={step === 1 && !selectedMemberId}
+                                    disabled={step === 1 && !selectedTargetId}
                                     className="bg-stone-200 text-ink-950 hover:bg-white font-bold px-8 rounded-full h-12 shadow-lg hover:shadow-xl transition-all"
                                 >
                                     다음 <ChevronRight className="w-4 h-4 ml-1" />
@@ -404,6 +502,25 @@ export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
                     <p className="text-sm text-stone-500 mt-3 font-light">약 10~20초 정도 소요됩니다.</p>
                 </div>
             )}
+
+            {/* Address Search Modal */}
+            <Dialog open={showAddressSearch} onOpenChange={setShowAddressSearch}>
+                <DialogContent className="max-w-2xl p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-4 border-b border-white/10">
+                        <DialogTitle className="text-xl font-serif flex items-center gap-2">
+                            <MapPin className="w-5 h-5 text-gold-500" />
+                            주소 검색
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="p-2">
+                        <DaumPostcode
+                            onComplete={handleAddressComplete}
+                            autoClose={false}
+                            style={{ height: "500px" }}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -5,6 +5,9 @@ import { User, ScrollText, Compass, Sparkles, BookOpen, Crown, Zap, CloudMoon, H
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Hero2026 } from "./hero-2026";
 
+import { FeatureGuard } from "@/components/feature-guard";
+import { FeatureKey } from "@/hooks/use-feature-flag";
+
 interface MobileViewProps {
     isGuest: boolean;
     masterName: string;
@@ -17,13 +20,13 @@ interface MobileViewProps {
 }
 
 export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
-    const individualTools = [
-        { label: "사주풀이", icon: BookOpen, href: "/protected/analysis" },
-        { label: "관상", icon: User, href: "/protected/saju/face" },
-        { label: "손금", icon: Fingerprint, href: "/protected/saju/palm" },
-        { label: "풍수", icon: Compass, href: "/protected/saju/fengshui" },
-        { label: "궁합", icon: Sparkles, href: "/protected/family" },
-        { label: "재물운", icon: Coins, href: "/protected/saju/wealth" },
+    const individualTools: { label: string; icon: any; href: string; featureKey?: FeatureKey }[] = [
+        { label: "사주풀이", icon: BookOpen, href: "/protected/analysis", featureKey: "feat_saju_today" },
+        { label: "관상", icon: User, href: "/protected/saju/face", featureKey: "feat_face_analysis" },
+        { label: "손금", icon: Fingerprint, href: "/protected/saju/palm", featureKey: "feat_face_analysis" },
+        { label: "풍수", icon: Compass, href: "/protected/saju/fengshui", featureKey: "feat_fengshui" },
+        { label: "궁합", icon: Sparkles, href: "/protected/family", featureKey: "feat_saju_compat" },
+        { label: "재물운", icon: Coins, href: "/protected/saju/wealth", featureKey: "feat_saju_today" },
     ];
 
     const getTierLabel = (tier: string | null) => {
@@ -101,24 +104,26 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
                     </Link>
 
                     {/* Relationship Management Card */}
-                    <Link href={isGuest ? "/auth/sign-up" : "/protected/family"} className="block">
-                        <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
-                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                                <Users className="w-24 h-24 text-seal" strokeWidth={0.5} />
-                            </div>
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Users className="w-5 h-5 text-seal" strokeWidth={1} />
-                                    <h3 className="text-lg font-serif font-bold text-ink-light">인연관리 비법서</h3>
+                    <FeatureGuard feature="feat_saju_compat">
+                        <Link href={isGuest ? "/auth/sign-up" : "/protected/family"} className="block">
+                            <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                    <Users className="w-24 h-24 text-seal" strokeWidth={0.5} />
                                 </div>
-                                <p className="text-xs text-ink-light/60 mb-4 font-light">
-                                    가족, 친구, 직장상사와의 궁합 및<br />
-                                    처세술 데이터를 체계적으로 관리합니다.
-                                </p>
-                                <span className="text-[10px] text-seal border-b border-seal/30 pb-0.5 group-hover:border-seal transition-colors">인연 관리하기 &rarr;</span>
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Users className="w-5 h-5 text-seal" strokeWidth={1} />
+                                        <h3 className="text-lg font-serif font-bold text-ink-light">인연관리 비법서</h3>
+                                    </div>
+                                    <p className="text-xs text-ink-light/60 mb-4 font-light">
+                                        가족, 친구, 직장상사와의 궁합 및<br />
+                                        처세술 데이터를 체계적으로 관리합니다.
+                                    </p>
+                                    <span className="text-[10px] text-seal border-b border-seal/30 pb-0.5 group-hover:border-seal transition-colors">인연 관리하기 &rarr;</span>
+                                </div>
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </FeatureGuard>
                 </section>
 
                 {/* 2. Sub Features */}
@@ -132,15 +137,18 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
                             <p className="text-[9px] text-ink-light/50">무엇이든 물어보세요</p>
                         </div>
                     </Link>
-                    <Link href={isGuest ? "/auth/sign-up" : "/protected/saju/today"} className="bg-surface border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors group flex flex-col justify-between h-28">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                            <Bell className="w-4 h-4 text-primary" strokeWidth={1} />
-                        </div>
-                        <div>
-                            <h4 className="font-serif text-sm text-ink-light mb-1">오늘의 운세</h4>
-                            <p className="text-[9px] text-ink-light/50">매일 아침 알림받기</p>
-                        </div>
-                    </Link>
+
+                    <FeatureGuard feature="feat_saju_today">
+                        <Link href={isGuest ? "/auth/sign-up" : "/protected/saju/today"} className="bg-surface border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors group flex flex-col justify-between h-28 h-full w-full block">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                                <Bell className="w-4 h-4 text-primary" strokeWidth={1} />
+                            </div>
+                            <div>
+                                <h4 className="font-serif text-sm text-ink-light mb-1">오늘의 운세</h4>
+                                <p className="text-[9px] text-ink-light/50">매일 아침 알림받기</p>
+                            </div>
+                        </Link>
+                    </FeatureGuard>
                 </section>
 
                 {/* 3. Individual Tools Grid */}
@@ -151,14 +159,15 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                         {individualTools.map((tool, idx) => (
-                            <Link
-                                key={idx}
-                                href={isGuest ? "/auth/sign-up" : tool.href}
-                                className="flex flex-col items-center justify-center aspect-square bg-surface/20 border border-white/5 rounded-lg hover:bg-surface/40 hover:border-primary/30 transition-all group"
-                            >
-                                <tool.icon className="w-6 h-6 text-ink-light/50 mb-2 group-hover:text-primary transition-colors stroke-[0.8]" />
-                                <span className="text-[10px] text-ink-light/70 group-hover:text-ink-light transition-colors">{tool.label}</span>
-                            </Link>
+                            <FeatureGuard key={idx} feature={tool.featureKey || 'feat_saju_today'} showLockIcon={false}>
+                                <Link
+                                    href={isGuest ? "/auth/sign-up" : tool.href}
+                                    className="flex flex-col items-center justify-center aspect-square bg-surface/20 border border-white/5 rounded-lg hover:bg-surface/40 hover:border-primary/30 transition-all group"
+                                >
+                                    <tool.icon className="w-6 h-6 text-ink-light/50 mb-2 group-hover:text-primary transition-colors stroke-[0.8]" />
+                                    <span className="text-[10px] text-ink-light/70 group-hover:text-ink-light transition-colors">{tool.label}</span>
+                                </Link>
+                            </FeatureGuard>
                         ))}
                     </div>
                 </section>

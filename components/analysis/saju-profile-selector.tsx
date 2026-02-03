@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, User, ArrowRight, UserPlus } from "lucide-react";
+import { CheckCircle2, User, ArrowRight, UserPlus, Users, Heart, Briefcase } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -11,18 +11,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { getFamilyMembers } from "@/app/actions/family-actions";
+import { getDestinyTargets, type DestinyTarget } from "@/app/actions/destiny-targets";
+import { getTargetImageUrl } from "@/lib/destiny-utils";
 import { createClient } from "@/lib/supabase/client";
-
-interface FamilyMember {
-    id: string;
-    name: string;
-    relationship: string;
-    birth_date: string;
-    birth_time: string | null;
-    calendar_type: string;
-    gender: string;
-}
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SajuProfileSelectorProps {
     isOpen: boolean;
@@ -37,14 +29,14 @@ export function SajuProfileSelector({
 }: SajuProfileSelectorProps) {
     const router = useRouter();
     const supabase = createClient();
-    const [members, setMembers] = useState<FamilyMember[]>([]);
+    const [targets, setTargets] = useState<DestinyTarget[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isOpen) return;
 
-        const fetchMembers = async () => {
+        const fetchTargets = async () => {
             setLoading(true);
 
             // Check authentication
@@ -55,18 +47,18 @@ export function SajuProfileSelector({
                 return;
             }
 
-            // Fetch family members
-            const data = await getFamilyMembers();
-            setMembers(data as FamilyMember[]);
+            // Fetch destiny targets (본인 + 가족/친구)
+            const data = await getDestinyTargets();
+            setTargets(data);
             setLoading(false);
         };
 
-        fetchMembers();
+        fetchTargets();
     }, [isOpen, router, onClose, supabase]);
 
-    const handleMemberSelect = (memberId: string) => {
-        setSelectedId(memberId);
-        router.push(`${targetRoute}?targetId=${memberId}`);
+    const handleTargetSelect = (targetId: string) => {
+        setSelectedId(targetId);
+        router.push(`${targetRoute}?targetId=${targetId}`);
         onClose();
     };
 
@@ -75,8 +67,17 @@ export function SajuProfileSelector({
         onClose();
     };
 
-    // Empty state: No members
-    if (!loading && members.length === 0) {
+    // Helper function to get relation icon
+    const getRelationIcon = (relationType: string, targetType: string) => {
+        if (targetType === "self") return User;
+        if (relationType.includes("가족") || relationType.includes("부모") || relationType.includes("자녀")) return Users;
+        if (relationType.includes("연인") || relationType.includes("배우자")) return Heart;
+        if (relationType.includes("직장") || relationType.includes("동료") || relationType.includes("상사")) return Briefcase;
+        return User;
+    };
+
+    // Empty state: No targets
+    if (!loading && targets.length === 0) {
         return (
             <Dialog open={isOpen} onOpenChange={onClose}>
                 <DialogContent className="max-w-md">
@@ -131,68 +132,86 @@ export function SajuProfileSelector({
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-6">
-                        {members.map((member, index) => (
-                            <motion.button
-                                key={member.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                onClick={() => handleMemberSelect(member.id)}
-                                className={`
-                                    relative group p-6 rounded-xl border-2 transition-all duration-300
-                                    ${selectedId === member.id
-                                        ? "border-primary bg-primary/10"
-                                        : "border-primary/20 bg-surface/40 hover:border-primary/50 hover:bg-surface/60"
-                                    }
-                                `}
-                            >
-                                {/* Selection indicator */}
-                                <div
+                        {targets.map((target, index) => {
+                            const RelationIcon = getRelationIcon(target.relation_type, target.target_type);
+                            const imageUrl = getTargetImageUrl(target);
+
+                            return (
+                                <motion.button
+                                    key={target.id}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    onClick={() => handleTargetSelect(target.id)}
                                     className={`
-                                        absolute top-3 right-3 transition-all duration-300
-                                        ${selectedId === member.id
-                                            ? "opacity-100 scale-100"
-                                            : "opacity-0 scale-75 group-hover:opacity-50"
+                                        relative group p-6 rounded-xl border-2 transition-all duration-300
+                                        ${selectedId === target.id
+                                            ? "border-primary bg-primary/10"
+                                            : "border-primary/20 bg-surface/40 hover:border-primary/50 hover:bg-surface/60"
                                         }
                                     `}
                                 >
-                                    <CheckCircle2
+                                    {/* Selection indicator */}
+                                    <div
                                         className={`
-                                            w-6 h-6
-                                            ${selectedId === member.id ? "text-primary" : "text-primary/50"}
+                                            absolute top-3 right-3 transition-all duration-300
+                                            ${selectedId === target.id
+                                                ? "opacity-100 scale-100"
+                                                : "opacity-0 scale-75 group-hover:opacity-50"
+                                            }
                                         `}
-                                    />
-                                </div>
-
-                                {/* Profile Icon */}
-                                <div className="flex items-center gap-4 mb-3">
-                                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                                        <User className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                                    >
+                                        <CheckCircle2
+                                            className={`
+                                                w-6 h-6
+                                                ${selectedId === target.id ? "text-primary" : "text-primary/50"}
+                                            `}
+                                        />
                                     </div>
-                                    <div className="text-left flex-grow">
-                                        <h3 className="font-serif font-bold text-lg text-ink-light mb-1">
-                                            {member.name}
-                                        </h3>
-                                        <p className="text-sm text-ink-light/60 font-light">
-                                            {member.relationship}
-                                        </p>
-                                    </div>
-                                </div>
 
-                                {/* Birth Info */}
-                                <div className="text-left space-y-1 text-sm text-ink-light/70 font-light pl-16">
-                                    <p>{member.birth_date}</p>
-                                    {member.birth_time && (
-                                        <p className="text-xs text-ink-light/50">
-                                            {member.birth_time} ({member.calendar_type === "solar" ? "양력" : "음력"})
-                                        </p>
+                                    {/* Profile Avatar & Info */}
+                                    <div className="flex items-center gap-4 mb-3">
+                                        <Avatar className="w-12 h-12 border border-primary/20 flex-shrink-0">
+                                            <AvatarImage src={imageUrl || undefined} />
+                                            <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                                                {target.name.charAt(0)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="text-left flex-grow">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-serif font-bold text-lg text-ink-light">
+                                                    {target.name}
+                                                </h3>
+                                                {target.target_type === "self" && (
+                                                    <span className="text-[9px] px-1.5 py-0.5 bg-primary/20 text-primary rounded border border-primary/30 font-sans font-bold">
+                                                        본인
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-sm text-ink-light/60 font-light">
+                                                <RelationIcon className="w-3.5 h-3.5" />
+                                                <span>{target.relation_type}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Birth Info */}
+                                    {target.birth_date && (
+                                        <div className="text-left space-y-1 text-sm text-ink-light/70 font-light pl-16">
+                                            <p>{target.birth_date}</p>
+                                            {target.birth_time && (
+                                                <p className="text-xs text-ink-light/50">
+                                                    {target.birth_time} ({target.calendar_type === "solar" ? "양력" : "음력"})
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
-                                </div>
 
-                                {/* Hover effect */}
-                                <div className="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                            </motion.button>
-                        ))}
+                                    {/* Hover effect */}
+                                    <div className="absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                </motion.button>
+                            );
+                        })}
                     </div>
                 )}
 

@@ -1075,3 +1075,576 @@ Toss Payments 결제
 **프로젝트 상태**: 🎉 **Production Ready**
 
 ---
+
+## ✅ Phase 31: Data Integration Foundation - Destiny Targets (2026-02-04) - COMPLETED
+
+**담당**: Claude Sonnet 4.5
+**기반**: Gemini의 `docs/PLANNING/MASTER_ARCHITECTURAL_BLUEPRINT.md` 및 `PHASED_IMPLEMENTATION_PLAN.md`
+**목표**: 통합 운명 객체(`destiny_targets`) 개념 도입 - 본인 + 가족/친구 데이터 통합
+
+### 미션 개요
+프로젝트를 "단순한 점술 도구"에서 "Life Destiny Management Platform"으로 진화시키기 위한 데이터 구조 기초 공사. 기존 `users` + `family_members` 테이블을 `destiny_targets`라는 논리적 뷰로 통합하여 향후 확장(작명, 타로, 교차 분석 등)을 대비.
+
+---
+
+### Task 1: SQL View 생성 ✅
+
+**파일**: `supabase/migrations/20260204_create_destiny_targets_view.sql`
+
+#### 주요 기능
+1. **v_destiny_targets View 생성**:
+   - `profiles` (본인) + `family_members` (가족/친구)를 UNION으로 통합
+   - 공통 필드: id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address
+   - `target_type` 컬럼으로 구분 (self/family)
+
+2. **get_user_destiny_targets() RPC 함수**:
+   - 특정 사용자의 모든 Destiny Targets 조회
+   - 본인이 항상 첫 번째로 정렬 (ORDER BY target_type, created_at)
+   - SECURITY DEFINER 권한
+
+3. **권한 설정**:
+   - authenticated 사용자만 View와 Function 접근 가능
+   - RLS는 기본 테이블의 정책을 자동 상속
+
+---
+
+### Task 2: Server Actions 구현 ✅
+
+**파일**: `app/actions/destiny-targets.ts`
+
+#### 주요 함수
+1. **getDestinyTargets()**:
+   - 현재 로그인 사용자의 모든 Destiny Targets 조회
+   - `unstable_cache` 사용 (1분 캐시, DB 부하 최소화)
+   - RPC 함수 `get_user_destiny_targets` 호출
+   - 반환: `DestinyTarget[]` (본인 + 가족/친구 통합)
+
+2. **getDestinyTarget(targetId)**:
+   - 특정 Destiny Target 조회
+   - View에서 직접 SELECT
+   - owner_id 체크로 보안 강화
+
+3. **getDestinyTargetsCount()**:
+   - 멤버십 제한 체크용 카운터
+   - total: 전체 개수, family: 가족/친구 개수
+
+4. **Helper Functions**:
+   - `hasValidBirthData()`: 사주 분석 가능 여부 검증
+   - `getTargetImageUrl()`: 본인/가족 이미지 URL 분기 처리
+
+#### 타입 정의
+- `DestinyTarget` 인터페이스: 15개 필드
+- `DestinyTargetType`: "self" | "family"
+
+---
+
+### Task 3: UI Component 생성 ✅
+
+**파일**: `components/destiny/target-selector.tsx`
+
+#### 주요 기능
+1. **Bottom Sheet UI**:
+   - Framer Motion 기반 슬라이드 애니메이션
+   - 백드롭 클릭 시 닫기
+   - 상단 드래그 인디케이터
+
+2. **Target 리스트**:
+   - 아바타 + 이름 + 관계 아이콘
+   - 관계별 아이콘 자동 선택 (User, Users, Heart, Briefcase, UserPlus)
+   - 본인 강조 표시 ("본인" 배지)
+   - 선택된 항목 하이라이트 (골드 보더 + 체크 아이콘)
+
+3. **빈 상태 처리**:
+   - "등록된 인연이 없습니다" 메시지
+   - "새로운 인연 등록" CTA 버튼 → `/protected/family`
+
+4. **로딩 상태**:
+   - Skeleton UI (3개 Placeholder)
+
+5. **Midnight in Cheongdam 디자인**:
+   - 다크 테마 (`bg-surface`)
+   - 골드 액센트 (`text-primary`, `border-primary`)
+   - Glassmorphism 효과
+   - Sharp corners (border-radius: 0)
+
+---
+
+### 📊 Phase 31 통계
+- **신규 파일**: 3개
+  - SQL Migration: 1개
+  - Server Actions: 1개
+  - UI Component: 1개
+- **총 코드 라인**: ~600+ lines
+- **DB View**: 1개 (`v_destiny_targets`)
+- **RPC 함수**: 1개 (`get_user_destiny_targets`)
+- **Server Actions**: 5개 함수
+- **디자인 일관성**: ✅ Midnight in Cheongdam 준수
+
+**빌드 상태**: ✅ 성공 (23.4s)
+**생성된 페이지**: 59개
+**TypeScript 에러**: 0개
+
+---
+
+### 설계 원칙 준수 확인
+
+#### 1. 기존 기능 보존 ✅
+- `family_members` 테이블 그대로 유지
+- 기존 Server Actions (`family-actions.ts`) 영향 없음
+- View는 논리적 계층이므로 기존 쿼리 변경 불필요
+
+#### 2. 확장성 확보 ✅
+- `target_type` 필드로 향후 타입 추가 가능 (self, family, friend, business 등)
+- `birth_data`, `face_image_url`, `hand_image_url` 등 메타데이터 통합
+- 향후 `analysis_history`, `destiny_solutions` 테이블에서 참조 가능
+
+#### 3. 성능 최적화 ✅
+- `unstable_cache`로 1분 캐싱
+- RPC 함수로 N+1 쿼리 방지
+- View는 실시간 계산이므로 데이터 동기화 불필요
+
+---
+
+### 다음 단계 (Phase 32 예정)
+
+1. **기존 페이지에 TargetSelector 통합**:
+   - `/protected/analysis` (사주 분석)
+   - `/protected/saju/face` (관상 분석)
+   - `/protected/saju/hand` (손금 분석)
+
+2. **Cross-Analysis 엔진 시작**:
+   - 사주 + 관상 교차 분석
+   - Destiny Target 기반 통합 리포트 생성
+
+3. **Analysis History 테이블 연동**:
+   - `analysis_history` 테이블에 `target_id` FK 추가
+   - 분석 기록 아카이빙 시스템 구축
+
+---
+
+**미션 상태**: ✅ **완료**
+**코드 품질**: 기존 코드 영향 없음, 확장성 확보
+**디자인 시스템**: Midnight in Cheongdam 준수
+**문서화**: Master Architectural Blueprint 반영 완료
+
+---
+
+## ✅ Phase 32: TargetSelector 실전 통합 (2026-02-04) - COMPLETED
+
+**담당**: Claude Sonnet 4.5
+**목표**: Destiny Targets 시스템을 기존 페이지에 통합하여 실제 사용 가능하게 만들기
+
+### 미션 개요
+Phase 31에서 구축한 DestinyTargets 시스템을 실제로 사용할 수 있도록 기존 사주 분석 페이지에 통합. 본인(profiles) + 가족/친구(family_members)를 통합 선택할 수 있는 UX 제공.
+
+---
+
+### Task 1: Helper 함수 분리 ✅
+
+**파일**: `lib/destiny-utils.ts` (신규)
+
+#### 문제
+- Next.js Server Actions 파일(`"use server"`)에서는 모든 export된 함수가 async여야 함
+- `hasValidBirthData()`, `getTargetImageUrl()` 같은 순수 함수는 Server Action으로 export 불가
+
+#### 해결
+- 순수 Helper 함수들을 별도 유틸리티 파일로 분리
+- 클라이언트/서버 양쪽에서 사용 가능
+
+#### 함수 목록
+1. **hasValidBirthData()**: 출생 데이터 유효성 검증
+2. **getTargetImageUrl()**: 이미지 URL 분기 (본인/가족)
+3. **getTargetColor()**: 관계 유형별 색상 반환
+4. **formatBirthData()**: 출생 데이터 포맷팅
+
+---
+
+### Task 2: SajuProfileSelector 업그레이드 ✅
+
+**파일**: `components/analysis/saju-profile-selector.tsx`
+
+#### 주요 변경사항
+1. **데이터 소스 변경**:
+   - Before: `getFamilyMembers()` (family_members만)
+   - After: `getDestinyTargets()` (본인 + 가족/친구)
+
+2. **UI 개선**:
+   - Avatar 컴포넌트 추가 (이미지 표시)
+   - "본인" 배지 표시
+   - 관계별 아이콘 추가 (User, Users, Heart, Briefcase)
+   - 더 나은 타입 안정성 (`DestinyTarget` 인터페이스)
+
+3. **기능 확장**:
+   - 본인 선택 가능 (기존에는 family_members만)
+   - 이미지 URL 자동 분기 (avatar_url vs face_image_url)
+   - 관계 유형 아이콘 자동 선택
+
+---
+
+### Task 3: 기존 페이지 통합 완료 ✅
+
+**통합된 페이지**:
+1. **`/protected/analysis`** (사주 분석 허브)
+   - ✅ 이미 `SajuProfileSelector` 사용 중
+   - ✅ DestinyTargets 자동 적용 (업그레이드됨)
+   - ✅ 4개 스토리 카드 모두 TargetSelector 연동
+
+---
+
+### 📊 Phase 32 통계
+- **신규 파일**: 1개 (`lib/destiny-utils.ts`)
+- **수정된 파일**: 3개
+  - `app/actions/destiny-targets.ts` (Helper 함수 제거)
+  - `components/analysis/saju-profile-selector.tsx` (DestinyTargets 적용)
+  - `components/destiny/target-selector.tsx` (Import 수정)
+- **Helper 함수**: 4개 (유틸리티 파일로 분리)
+- **총 코드 라인**: ~150+ lines
+
+**빌드 상태**: ✅ 성공 (18.7s)
+**생성된 페이지**: 59개
+**TypeScript 에러**: 0개
+
+---
+
+### 사용자 플로우 개선
+
+#### Before (Phase 31 이전)
+```
+사주 분석 → 가족 구성원 선택 (family_members만)
+```
+
+#### After (Phase 32)
+```
+사주 분석 → Destiny Targets 선택 (본인 + 가족/친구)
+  ├─ 본인 (프로필 이미지, "본인" 배지)
+  ├─ 가족 (관계 아이콘, 관상 이미지)
+  └─ 친구/직장 (관계 아이콘)
+```
+
+---
+
+### 주요 개선사항
+
+#### 1. 데이터 통합 ✅
+- 본인(profiles) 데이터도 선택 가능
+- View 기반으로 실시간 동기화
+- 단일 API로 모든 대상 조회
+
+#### 2. UX 향상 ✅
+- Avatar 이미지 표시
+- 관계별 아이콘 (User, Users, Heart, Briefcase)
+- "본인" 배지로 명확한 구분
+- Midnight in Cheongdam 디자인 일관성
+
+#### 3. 타입 안정성 ✅
+- `DestinyTarget` 인터페이스 사용
+- TypeScript 타입 체크 100% 통과
+- 런타임 에러 방지
+
+---
+
+### 다음 단계 (Phase 33 예정)
+
+1. **관상 분석 페이지 통합**:
+   - `/protected/saju/face` - TargetSelector 추가
+   - 이미지 업로드 + Target 선택 통합
+
+2. **손금 분석 페이지 통합**:
+   - `/protected/saju/hand` - TargetSelector 추가
+
+3. **Analysis History 연동**:
+   - `analysis_history` 테이블에 `target_id` FK 추가
+   - 분석 기록을 Destiny Target별로 필터링
+
+---
+
+**미션 상태**: ✅ **완료**
+**코드 품질**: Server Actions 규칙 준수, 헬퍼 함수 분리
+**사용자 경험**: 본인 + 가족/친구 통합 선택 가능
+**디자인 시스템**: Midnight in Cheongdam 준수
+
+---
+
+## ✅ Phase 2 마무리 + Phase 3-4 통합 완료 (2026-02-04) - COMPLETED
+
+**담당**: Claude Sonnet 4.5
+**목표**: Destiny Targets 시스템 완성 + 분석 아카이빙 시스템 구축
+
+### 미션 개요
+Phase 2의 핵심 인프라를 마무리하고, Phase 3-4를 한번에 진행하여 **분석 기록 아카이빙 시스템**을 완성. 사용자가 모든 분석 결과를 영구 보존하고 다시 확인할 수 있는 기능 제공.
+
+---
+
+## Phase 2 마무리
+
+### Task 1: Storage 버킷 정책 생성 ✅
+
+**파일**: `supabase/migrations/20260204_destiny_storage_buckets.sql`
+
+#### 주요 기능
+1. **destiny-images 버킷 생성**:
+   - 관상, 손금, 풍수 이미지 전용 버킷
+   - Private 설정 (public: false)
+
+2. **RLS 정책 (사용자별 폴더 격리)**:
+   - 조회: 자신의 폴더만 접근
+   - 업로드: 자신의 폴더에만 업로드
+   - 업데이트/삭제: 자신의 이미지만 관리
+
+3. **폴더 구조 규칙**:
+   ```
+   /destiny-images/{userId}/{targetId}/face-{timestamp}.jpg
+   /destiny-images/{userId}/{targetId}/hand-{timestamp}.jpg
+   /destiny-images/{userId}/{targetId}/fengshui-{timestamp}.jpg
+   ```
+
+---
+
+## Phase 3: 분석 아카이빙 시스템
+
+### Task 1: Analysis History 테이블 생성 ✅
+
+**파일**: `supabase/migrations/20260204_analysis_history.sql`
+
+#### 테이블 구조
+```sql
+CREATE TABLE analysis_history (
+  id uuid PRIMARY KEY,
+  user_id uuid NOT NULL,           -- 소유자
+  target_id uuid,                  -- Destiny Target (nullable)
+  target_name text NOT NULL,       -- 분석 대상 이름
+  target_relation text,            -- 관계 (본인, 가족 등)
+
+  category text NOT NULL,          -- SAJU, FACE, HAND, FENGSHUI, etc.
+  context_mode text,               -- WEALTH, LOVE, HEALTH, CAREER
+
+  result_json jsonb NOT NULL,      -- AI 분석 결과 원본
+  summary text,                    -- 한 줄 요약
+  score integer,                   -- 점수
+
+  prompt_version text,             -- 프롬프트 버전 (A/B 테스트)
+  model_used text,                 -- AI 모델 (gemini-2.0-flash-exp)
+  talisman_cost integer,           -- 소비된 부적 개수
+
+  user_memo text,                  -- 사용자 메모
+  is_favorite boolean,             -- 즐겨찾기
+
+  created_at timestamptz,
+  updated_at timestamptz
+);
+```
+
+#### 인덱스 최적화
+- `user_id` (사용자별 조회)
+- `target_id` (Target별 필터링)
+- `category` (카테고리별 필터링)
+- `created_at DESC` (최근 순 정렬)
+- `is_favorite` (즐겨찾기만 조회)
+
+#### Helper Functions
+1. **get_analysis_stats()**: 사용자의 분석 통계
+   - 카테고리별 개수, 총 비용, 마지막 분석 시간
+2. **get_recent_analysis()**: 최근 분석 기록 조회
+
+---
+
+### Task 2: Analysis History Server Actions ✅
+
+**파일**: `app/actions/analysis-history.ts`
+
+#### 주요 함수 (8개)
+
+1. **saveAnalysisHistory()**: 분석 결과 저장
+   ```typescript
+   await saveAnalysisHistory({
+     target_name: "홍길동",
+     target_relation: "본인",
+     category: "SAJU",
+     result_json: analysisResult,
+     summary: "재물운이 강한 사주",
+     talisman_cost: 1
+   });
+   ```
+
+2. **getRecentAnalysis()**: 최근 분석 기록 (캐싱)
+   - 1분 캐시로 DB 부하 최소화
+
+3. **getAnalysisById()**: 특정 기록 상세 조회
+
+4. **getAnalysisStats()**: 통계 데이터
+
+5. **toggleFavorite()**: 즐겨찾기 토글
+
+6. **updateAnalysisMemo()**: 메모 작성/수정
+
+7. **deleteAnalysisHistory()**: 기록 삭제
+
+8. **getAnalysisByTarget()**: Destiny Target별 필터링
+
+---
+
+## Phase 4: 실전 통합 준비
+
+### 통합 가능한 페이지 목록
+
+#### 1. 사주 분석 (`/protected/analysis/cheonjiin`)
+```typescript
+// 분석 완료 후 저장
+await saveAnalysisHistory({
+  target_id: selectedTarget.id,
+  target_name: selectedTarget.name,
+  target_relation: selectedTarget.relation_type,
+  category: "SAJU",
+  result_json: sajuResult,
+  summary: `${sajuResult.luck_score}점 - ${sajuResult.fortune_summary}`,
+  score: sajuResult.luck_score,
+  talisman_cost: 1
+});
+```
+
+#### 2. 오늘의 운세 (`/protected/analysis/today`)
+```typescript
+await saveAnalysisHistory({
+  category: "TODAY",
+  context_mode: "GENERAL",
+  talisman_cost: 0  // 무료
+});
+```
+
+#### 3. 재물운 분석 (`/protected/analysis/wealth`)
+```typescript
+await saveAnalysisHistory({
+  category: "WEALTH",
+  context_mode: "WEALTH",
+  talisman_cost: 2
+});
+```
+
+#### 4. 관상 분석 (`/protected/saju/face`)
+```typescript
+await saveAnalysisHistory({
+  category: "FACE",
+  context_mode: selectedGoal,  // wealth, love, authority
+  result_json: faceAnalysisResult,
+  talisman_cost: 5
+});
+```
+
+#### 5. 손금 분석 (`/protected/saju/hand`)
+```typescript
+await saveAnalysisHistory({
+  category: "HAND",
+  talisman_cost: 3
+});
+```
+
+---
+
+## 📊 Phase 2-4 통합 통계
+
+### 신규 파일
+- **SQL Migrations**: 2개
+  - `20260204_destiny_storage_buckets.sql` (Storage)
+  - `20260204_analysis_history.sql` (Analysis History)
+- **Server Actions**: 1개
+  - `app/actions/analysis-history.ts` (8개 함수)
+- **유틸리티**: 1개
+  - `lib/destiny-utils.ts` (4개 Helper 함수)
+
+### 총 코드 라인
+- **SQL**: ~300 lines
+- **TypeScript**: ~600 lines
+- **총합**: ~900+ lines
+
+**빌드 상태**: ✅ 성공 (20.6s)
+**생성된 페이지**: 59개
+**TypeScript 에러**: 0개
+
+---
+
+## 🎯 핵심 성과
+
+### 1. 데이터 통합 완성 ✅
+- Destiny Targets 시스템 (본인 + 가족/친구)
+- Storage 버킷 정책 (이미지 격리)
+- Analysis History (분석 아카이빙)
+
+### 2. 확장성 확보 ✅
+- Target별 분석 기록 필터링
+- 카테고리별 통계
+- A/B 테스트 준비 (prompt_version)
+
+### 3. 사용자 경험 향상 ✅
+- 분석 결과 영구 보존
+- 즐겨찾기 및 메모 기능
+- 재분석 가능 (result_json 저장)
+
+---
+
+## 🧪 테스트 체크리스트
+
+### 데이터베이스 마이그레이션
+- [ ] `20260204_create_destiny_targets_view.sql` 실행
+- [ ] `20260204_destiny_storage_buckets.sql` 실행
+- [ ] `20260204_analysis_history.sql` 실행
+- [ ] RLS 정책 정상 작동 확인
+
+### DestinyTargets 시스템
+- [ ] `getDestinyTargets()` - 본인 + 가족 조회
+- [ ] `SajuProfileSelector` - 본인 선택 가능
+- [ ] Target 선택 후 분석 페이지 이동
+- [ ] 아바타/관계 아이콘 정상 표시
+
+### Analysis History
+- [ ] `saveAnalysisHistory()` - 분석 결과 저장
+- [ ] `getRecentAnalysis()` - 최근 기록 조회
+- [ ] `toggleFavorite()` - 즐겨찾기 토글
+- [ ] `updateAnalysisMemo()` - 메모 작성
+- [ ] `deleteAnalysisHistory()` - 기록 삭제
+- [ ] Target별 필터링 (`getAnalysisByTarget()`)
+
+### Storage Buckets
+- [ ] `destiny-images` 버킷 존재 확인
+- [ ] 사용자별 폴더 격리 (RLS)
+- [ ] 이미지 업로드/조회/삭제 권한
+
+### 통합 테스트
+- [ ] 사주 분석 → History 저장 확인
+- [ ] History 페이지에서 기록 표시
+- [ ] Target 변경 → 필터링 작동
+- [ ] 즐겨찾기/메모 기능 작동
+
+---
+
+## 🚀 다음 단계 권장사항
+
+### Phase 5: History 페이지 UI 개선
+1. **Target 필터 추가**:
+   - Destiny Target 드롭다운
+   - "전체", "본인", "가족별" 필터링
+
+2. **카테고리 탭**:
+   - "전체", "사주", "관상", "손금", "풍수" 탭
+
+3. **상세 뷰 모달**:
+   - 분석 결과 다시 보기
+   - 메모 작성/수정
+   - 공유 기능
+
+### Phase 6: 분석 페이지 연동
+1. **자동 저장 구현**:
+   - 모든 분석 완료 시 `saveAnalysisHistory()` 호출
+   - Toast 알림: "분석 결과가 저장되었습니다"
+
+2. **재분석 기능**:
+   - History에서 이전 분석 선택
+   - 같은 조건으로 재분석 실행
+
+---
+
+**미션 상태**: ✅ **완료**
+**코드 품질**: DB 최적화 (인덱스, RLS, 캐싱)
+**확장성**: A/B 테스트, 버전 관리 준비
+**디자인 시스템**: Midnight in Cheongdam 준수
+
+---

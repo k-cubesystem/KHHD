@@ -91,49 +91,53 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
     const variables = extractVariables(editedTemplate);
 
     return (
-        <Card className="p-6 bg-white border-zen-border shadow-sm hover:shadow-md transition-shadow">
+        <Card className="relative p-4 md:p-5 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 shadow-lg hover:shadow-xl hover:border-gold-500/30 transition-all duration-300 overflow-hidden group">
+            {/* Noise Overlay */}
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+
             {/* Header */}
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
+            <div className="relative flex flex-col md:flex-row justify-between items-start mb-4 gap-3">
+                <div className="flex-1 w-full">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-lg font-bold text-zen-text">
+                        <h3 className="text-base md:text-lg font-bold text-stone-100 font-serif">
                             {prompt.label}
                         </h3>
-                        <Badge variant="outline" className="text-[10px] text-zen-muted border-zen-border bg-zen-bg">
+                        <Badge variant="outline" className="text-[9px] md:text-[10px] text-stone-500 border-stone-600/50 bg-stone-800/50">
                             {prompt.key}
                         </Badge>
-                        <Badge className={"text-[10px] bg-slate-100 text-slate-800 border-slate-300"}>
+                        <Badge className={"text-[9px] md:text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/30"}>
                             {prompt.category}
                         </Badge>
                     </div>
-                    <p className="text-sm text-zen-muted mt-1">{prompt.description}</p>
+                    <p className="text-xs md:text-sm text-stone-500 mt-1">{prompt.description}</p>
 
                     {/* Cost Input */}
                     <div className="mt-3 flex items-center gap-2">
-                        <div className="relative w-32">
-                            <Ticket className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gold-500" />
+                        <div className="relative w-24 md:w-32">
+                            <Ticket className="w-3 h-3 md:w-4 md:h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gold-500" />
                             <Input
                                 type="number"
                                 min="0"
                                 value={editedCost}
                                 onChange={(e) => setEditedCost(parseInt(e.target.value) || 0)}
-                                className="pl-8 h-8 text-sm"
+                                className="pl-7 md:pl-8 h-7 md:h-8 text-xs md:text-sm bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20"
                             />
                         </div>
-                        <span className="text-xs text-zen-muted">부적 소모량</span>
+                        <span className="text-[10px] md:text-xs text-stone-500 font-medium">부적 소모량</span>
                     </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-1 md:gap-2 flex-shrink-0">
                     {/* Preview Button */}
                     <Dialog open={showPreview} onOpenChange={setShowPreview}>
                         <DialogTrigger asChild>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-zen-border text-zen-text hover:bg-zen-bg"
+                                className="border-stone-700/50 text-stone-400 hover:bg-stone-800/50 hover:text-gold-400 hover:border-gold-500/30 h-7 md:h-8 px-2 md:px-3 text-xs"
                             >
-                                <Eye className="w-4 h-4 mr-1" /> 미리보기
+                                <Eye className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                                <span className="hidden md:inline">미리보기</span>
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
@@ -159,9 +163,9 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="border-red-300 text-red-600 hover:bg-red-50"
+                                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 h-7 md:h-8 px-2"
                             >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -200,9 +204,10 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                             variant="outline"
                             size="sm"
                             onClick={handleReset}
-                            className="border-zen-border text-zen-muted hover:text-zen-text"
+                            className="border-stone-700/50 text-stone-500 hover:text-stone-300 hover:bg-stone-800/50 h-7 md:h-8 px-2 md:px-3 text-xs"
                         >
-                            <RotateCcw className="w-4 h-4 mr-1" /> 되돌리기
+                            <RotateCcw className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                            <span className="hidden md:inline">되돌리기</span>
                         </Button>
                     )}
 
@@ -211,14 +216,14 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                         size="sm"
                         onClick={handleSave}
                         disabled={!isEdited || isSaving}
-                        className="bg-zen-wood text-white hover:bg-zen-wood/90"
+                        className="bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500 disabled:opacity-40 disabled:cursor-not-allowed h-7 md:h-8 px-2 md:px-3 text-xs font-bold shadow-lg shadow-gold-500/20"
                     >
                         {isSaving ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
                         ) : (
                             <>
-                                <Save className="w-4 h-4 mr-1" />
-                                저장
+                                <Save className="w-3 h-3 md:w-4 md:h-4 md:mr-1" />
+                                <span className="hidden md:inline">저장</span>
                             </>
                         )}
                     </Button>
@@ -227,13 +232,13 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
 
             {/* Variables Info */}
             {variables.length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-2 items-center">
-                    <span className="text-xs text-zen-muted">사용 중인 변수:</span>
+                <div className="relative mb-3 flex flex-wrap gap-1.5 md:gap-2 items-center">
+                    <span className="text-[10px] md:text-xs text-stone-500 font-medium">사용 중인 변수:</span>
                     {variables.map((variable, index) => (
                         <Badge
                             key={index}
                             variant="outline"
-                            className="text-xs bg-gold-50 text-gold-700 border-gold-300"
+                            className="text-[10px] md:text-xs bg-gold-500/10 text-gold-400 border-gold-500/30 font-mono"
                         >
                             {`{{${variable}}}`}
                         </Badge>
@@ -242,14 +247,14 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
             )}
 
             {/* Template Editor */}
-            <div className="space-y-2">
+            <div className="relative space-y-2">
                 <Textarea
                     value={editedTemplate}
                     onChange={(e) => setEditedTemplate(e.target.value)}
                     className={cn(
-                        "font-mono text-sm min-h-[250px] leading-relaxed transition-colors",
-                        "bg-zen-bg/30 text-zen-text border-zen-border",
-                        "focus:border-gold-500 focus:ring-1 focus:ring-gold-500/20"
+                        "font-mono text-xs md:text-sm min-h-[200px] md:min-h-[250px] leading-relaxed transition-colors",
+                        "bg-stone-900/50 text-stone-300 border-stone-700/50 placeholder:text-stone-600",
+                        "focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20"
                     )}
                     placeholder="프롬프트 템플릿을 입력하세요... ({{변수명}} 형식으로 동적 데이터 삽입)"
                 />

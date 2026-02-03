@@ -17,11 +17,17 @@ export interface SajuData {
         month: SajuPillar;
         day: SajuPillar;
         time: SajuPillar;
+        hour: SajuPillar; // time과 동일
     };
     ganjiList: string[]; // [년, 월, 일, 시] 간지 리스트
     elementsDistribution: Record<string, number>; // 오행 분포 (e.g., { "木": 2, "火": 1, ... })
     dayMaster: string; // 일간 (본인을 나타내는 천간)
     dayMasterElement: string; // 일간 오행
+    // 추가 필드 (saju-analysis.ts와 호환)
+    dayGan: string; // dayMaster와 동일
+    monthZhi: string; // 월지
+    yearZhi: string; // 연지
+    dayZhi: string; // 일지
 }
 
 export interface DaeunData {
@@ -218,11 +224,17 @@ export function getSajuData(
             month: createPillar(eightChar.getMonth()),
             day: dayPillar,
             time: createPillar(eightChar.getTime()),
+            hour: createPillar(eightChar.getTime()), // time과 동일
         },
         ganjiList,
         elementsDistribution: dist,
         dayMaster: dayPillar.gan, // 일간 (본인)
         dayMasterElement: dayPillar.ganElement, // 일간 오행
+        // 추가 필드
+        dayGan: dayPillar.gan,
+        monthZhi: createPillar(eightChar.getMonth()).zhi,
+        yearZhi: createPillar(eightChar.getYear()).zhi,
+        dayZhi: dayPillar.zhi,
     };
 }
 

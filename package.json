@@ -34,6 +34,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "framer-motion": "^12.27.5",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.511.0",
     "lunar-javascript": "^1.7.7",
     "nanoid": "^5.1.6",
