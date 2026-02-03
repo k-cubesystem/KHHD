@@ -22,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2, ChevronLeft, ChevronRight, UserCog, Trash2 } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, UserCog, Trash2, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
