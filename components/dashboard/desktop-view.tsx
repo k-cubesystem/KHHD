@@ -28,6 +28,7 @@ export function DesktopView({ isGuest, masterName, userData }: DesktopViewProps)
     ];
 
     const getTierLabel = (tier: string | null) => {
+        if (isGuest) return "비회원";
         if (!tier) return "무료 회원";
         if (tier === "SINGLE") return "싱글 멤버십";
         if (tier === "FAMILY") return "패밀리 멤버십";
@@ -38,44 +39,6 @@ export function DesktopView({ isGuest, masterName, userData }: DesktopViewProps)
     return (
         <div className="min-h-screen bg-background text-ink-light font-sans overflow-x-hidden relative flex flex-col">
             <div className="hanji-overlay" />
-
-            {/* Header */}
-            <header className="fixed top-0 w-full z-40 border-b border-primary/10 bg-background/90 backdrop-blur-md h-16 transition-all duration-300">
-                <div className="max-w-[1400px] mx-auto h-full flex items-center justify-between px-6">
-                    <Link href="/protected" className="flex items-center gap-3 group">
-                        <Flower2 className="text-primary w-6 h-6" strokeWidth={1} />
-                        <h2 className="text-ink-light text-lg font-bold tracking-widest font-serif group-hover:text-primary transition-colors">
-                            청담 <span className="text-primary">해화당</span>
-                        </h2>
-                    </Link>
-
-                    {/* User Info & Stats (Replaces old Nav) */}
-                    <div className="flex items-center gap-6">
-                        {/* Talisman Count */}
-                        <Link href="/protected/membership" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface/50 border border-primary/20 hover:border-primary/50 transition-colors group">
-                            <Ticket className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                            <span className="text-sm font-bold text-ink-light">{userData.balance}</span>
-                            <span className="text-[10px] text-ink-light/50 uppercase tracking-wider">부적</span>
-                        </Link>
-
-                        {/* Profile & Tier */}
-                        <Link href="/protected/profile" className="flex items-center gap-3 group">
-                            <div className="flex flex-col items-end">
-                                <span className="text-sm font-serif font-bold text-ink-light group-hover:text-primary transition-colors">{masterName}</span>
-                                <span className="text-[10px] text-primary/80 font-medium tracking-wide border border-primary/30 px-1.5 rounded-sm bg-primary/5">
-                                    {getTierLabel(userData.tier)}
-                                </span>
-                            </div>
-                            <Avatar className="h-9 w-9 border border-primary/30 group-hover:border-primary transition-colors">
-                                <AvatarImage src={userData.avatarUrl} alt={masterName} className="object-cover" />
-                                <AvatarFallback className="bg-surface text-primary font-bold text-xs">
-                                    {masterName.charAt(0).toUpperCase()}
-                                </AvatarFallback>
-                            </Avatar>
-                        </Link>
-                    </div>
-                </div>
-            </header>
 
             {/* Main Content Area */}
             <div className="flex-1 pt-24 pb-12 px-6">

@@ -24,7 +24,7 @@ const slides = [
   },
   {
     id: 3,
-    image: "/images/intro-relationship-v2.jpg",
+    image: "/landing-section-2.jpg",
     headline: <>다시, 내 인생에도<br />봄바람이 불어올까요?</>,
     subhead: <>메마른 가슴에 단비처럼 찾아올 귀한 인연.<br />당신을 아껴줄 그 사람이 지금 어디쯤 오고 있는지,<br />해화당이 미리 짚어드립니다.</>,
     buttonText: "새로운 인연이 있을까?",
@@ -56,7 +56,7 @@ export default function Home() {
 
 
       {/* Screen 1: Hanok Night Intro (Carousel) */}
-      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] md:pt-[35vh] text-center overflow-hidden">
+      <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] text-center overflow-hidden">
 
         {/* Background Layer (Transitioning) */}
         {slides.map((slide, index) => (
@@ -78,7 +78,7 @@ export default function Home() {
         ))}
 
         {/* Header Group (Fixed Top) */}
-        <div className="absolute top-14 md:top-24 lg:top-32 left-0 right-0 z-50 flex flex-col items-center gap-5 md:gap-8">
+        <div className="absolute top-14 left-0 right-0 z-50 flex flex-col items-center gap-5">
           {/* Welcome Label */}
           <span className="font-serif text-lg md:text-xl lg:text-2xl font-bold tracking-[0.5em] text-primary animate-in fade-in duration-1000 gold-glow">
             청담해화당
@@ -96,25 +96,25 @@ export default function Home() {
         <div className="relative z-10 flex flex-col items-center px-6 max-w-4xl pb-10">
 
           {/* Dynamic Content (Keyed for Re-animation) */}
-          <div key={currentSlide} className="flex flex-col items-center gap-6 md:gap-14 lg:gap-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div key={currentSlide} className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Headline */}
-            <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light leading-relaxed tracking-tight text-ink-light drop-shadow-sm break-keep">
+            <h1 className="font-serif text-2xl font-light leading-relaxed tracking-tight text-ink-light drop-shadow-sm break-keep">
               {slides[currentSlide].headline}
             </h1>
 
             {/* Subhead */}
-            <p className="font-sans text-ink-light/80 font-light text-sm sm:text-base md:text-lg tracking-wide leading-7 max-w-[85%] md:max-w-2xl break-keep opacity-90">
+            <p className="font-sans text-ink-light/80 font-light text-sm tracking-wide leading-7 max-w-[85%] break-keep opacity-90">
               {slides[currentSlide].subhead}
             </p>
 
             {/* CTA Button */}
-            <Link href={slides[currentSlide].link} className="pt-8 md:pt-10">
-              <button className="group relative px-10 py-3.5 md:px-14 md:py-4 bg-surface/10 backdrop-blur-[2px] rounded-xl border border-primary/30 shadow-[0_0_20px_rgba(236,182,19,0.1)] flex items-center gap-3 md:gap-5 transition-all duration-500 hover:bg-seal hover:border-seal hover:shadow-[0_0_30px_rgba(154,42,42,0.4)] hover:scale-[1.02]">
-                <span className="font-serif font-light text-sm md:text-lg tracking-[0.2em] pt-0.5 text-ink-light/90 group-hover:text-ink-light transition-colors">
+            <Link href={slides[currentSlide].link} className="pt-8">
+              <button className="group relative px-10 py-3.5 bg-surface/10 backdrop-blur-[2px] rounded-xl border border-primary/30 shadow-[0_0_20px_rgba(236,182,19,0.1)] flex items-center gap-3 transition-all duration-500 hover:bg-seal hover:border-seal hover:shadow-[0_0_30px_rgba(154,42,42,0.4)] hover:scale-[1.02]">
+                <span className="font-serif font-light text-sm tracking-[0.2em] pt-0.5 text-ink-light/90 group-hover:text-ink-light transition-colors">
                   {slides[currentSlide].buttonText}
                 </span>
-                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors shadow-inner">
-                  <ArrowRight className="w-3 h-3 md:w-4 md:h-4 text-ink-light/70 group-hover:text-ink-light transition-colors" />
+                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors shadow-inner">
+                  <ArrowRight className="w-3 h-3 text-ink-light/70 group-hover:text-ink-light transition-colors" />
                 </div>
               </button>
             </Link>

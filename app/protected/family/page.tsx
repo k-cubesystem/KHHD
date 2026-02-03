@@ -100,7 +100,7 @@ export default function FamilyPage() {
 
     if (isGuest) {
         return (
-            <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto py-12 px-6 pb-32">
+            <div className="flex flex-col gap-10 w-full max-w-[480px] mx-auto py-12 px-6 pb-32">
                 <section className="space-y-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="flex justify-center mb-2">
                         <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs backdrop-blur-md">
@@ -159,7 +159,7 @@ export default function FamilyPage() {
     }
 
     return (
-        <div className="flex flex-col gap-10 w-full max-w-7xl mx-auto py-12 px-6 pb-32">
+        <div className="flex flex-col gap-10 w-full max-w-[480px] mx-auto py-12 px-6 pb-32">
 
             {/* Header: Dark Luxury */}
             <section className="space-y-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -170,25 +170,25 @@ export default function FamilyPage() {
                     </div>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight text-ink-light">
-                    인연(因緣) <span className="text-primary-dim">관리부</span>
+                    가족/친구 <span className="text-primary-dim">사주관리</span>
                 </h1>
                 <p className="text-ink-light/60 text-lg max-w-2xl mx-auto leading-relaxed font-sans font-light">
-                    옷깃만 스쳐도 인연이라 했습니다.<br />
-                    소중한 이들의 명조를 등록하고, 서로의 합(合)을 확인해 보세요.
+                    나의 소중한 인연들의 사주를 등록하고 관리하세요.<br />
+                    등록된 사주로 궁합 분석 및 상세한 운세 풀이가 가능합니다.
                 </p>
             </section>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+            <div className="flex flex-col gap-6">
 
-                {/* Registration Form (Left Column on Desktop, Top on Mobile) */}
-                <div className="lg:col-span-4 h-fit order-1">
-                    <Card className="border-primary/20 bg-surface/30 backdrop-blur-md shadow-[0_0_20px_rgba(0,0,0,0.2)] rounded-2xl overflow-hidden lg:sticky lg:top-24">
-                        <div className="h-1 bg-gradient-to-r from-primary-dark via-primary to-primary-dark w-full" />
+                {/* Registration Form */}
+                <div>
+                    <Card className="border border-primary/30 bg-[#0A0A0A]/90 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden">
+                        <div className="h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent w-full" />
 
-                        {/* Collapsible Header for Mobile */}
+                        {/* Collapsible Header */}
                         <CardHeader
-                            className="pb-4 border-b border-white/5 bg-surface/50 cursor-pointer lg:cursor-default"
-                            onClick={() => window.innerWidth < 1024 && setIsFormOpen(!isFormOpen)}
+                            className="pb-4 border-b border-white/5 bg-surface/50 cursor-pointer"
+                            onClick={() => setIsFormOpen(!isFormOpen)}
                         >
                             <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center gap-2 text-xl font-serif font-bold text-ink-light">
@@ -196,7 +196,7 @@ export default function FamilyPage() {
                                     새 인연 맺기
                                 </CardTitle>
                                 <ChevronDown className={cn(
-                                    "w-5 h-5 text-ink-light/50 transition-transform lg:hidden",
+                                    "w-5 h-5 text-ink-light/50 transition-transform",
                                     isFormOpen ? "rotate-180" : ""
                                 )} />
                             </div>
@@ -205,12 +205,12 @@ export default function FamilyPage() {
                         {/* Form Content */}
                         <div className={cn(
                             "transition-all duration-300 overflow-hidden",
-                            isFormOpen ? "max-h-[1000px] opacity-100" : "max-h-0 lg:max-h-none opacity-0 lg:opacity-100"
+                            isFormOpen ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
                         )}>
                             <CardContent className="pt-6 space-y-5">
                                 <form action={async (formData) => {
                                     await handleAddMember(formData);
-                                    if (window.innerWidth < 1024) setIsFormOpen(false);
+                                    setIsFormOpen(false);
                                 }} className="flex flex-col gap-5">
 
                                     <div className="space-y-2">
@@ -267,8 +267,8 @@ export default function FamilyPage() {
                     </Card>
                 </div>
 
-                {/* Member List (Right Column) */}
-                <div className="lg:col-span-8 space-y-6">
+                {/* Member List */}
+                <div className="space-y-6">
                     <div className="flex items-center justify-between border-b border-white/10 pb-4">
                         <h3 className="text-lg font-serif font-bold text-ink-light flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-primary" />
@@ -278,13 +278,13 @@ export default function FamilyPage() {
                             <Badge variant="outline" className="border-primary/50 text-primary px-3 py-1 bg-surface/50 backdrop-blur-sm">
                                 Total {members.length}
                             </Badge>
-                            <span className="text-[10px] text-ink-light/40 md:hidden">
+                            <span className="text-[10px] text-ink-light/40">
                                 * 탭하여 선택
                             </span>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 gap-4">
                         {loading ? (
                             Array(4).fill(0).map((_, i) => (
                                 <Skeleton key={i} className="h-48 w-full rounded-2xl bg-surface/20 border border-white/5" />
@@ -301,10 +301,10 @@ export default function FamilyPage() {
                                 <Card
                                     key={member.id}
                                     className={cn(
-                                        "relative group overflow-hidden border transition-all duration-300 rounded-2xl cursor-pointer hover:-translate-y-1",
+                                        "relative group overflow-hidden border transition-all duration-500 rounded-lg cursor-pointer hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(236,182,19,0.15)]",
                                         isSelected
-                                            ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(226,213,181,0.15)]"
-                                            : "border-primary/10 bg-surface/30 backdrop-blur-sm hover:border-primary/40 hover:bg-surface/50"
+                                            ? "border-primary bg-primary/5 shadow-[0_0_20px_rgba(236,182,19,0.2)]"
+                                            : "border-white/10 bg-white/5 hover:border-primary/40 hover:bg-white/10"
                                     )}
                                     onClick={() => toggleSelection(member.id)}
                                 >
@@ -414,7 +414,7 @@ export default function FamilyPage() {
 
             {/* Floating Compatibility Action Bar */}
             {selectedMembers.length > 0 && (
-                <div className="fixed bottom-24 lg:bottom-12 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300 w-[90%] md:w-auto">
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-[480px] w-[90%] z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
                     <div className="bg-primary hover:bg-primary-dim transition-colors text-background px-4 py-3 md:px-6 md:py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.4)] flex items-center justify-between md:justify-center gap-4 border border-white/20 backdrop-blur-md">
 
                         <div className="flex items-center gap-3">

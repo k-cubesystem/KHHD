@@ -23,14 +23,15 @@ interface FamilyMember {
 
 interface AnalysisFormProps {
     members: FamilyMember[];
+    initialMemberId?: string | null;
 }
 
-export function AnalysisForm({ members }: AnalysisFormProps) {
+export function AnalysisForm({ members, initialMemberId }: AnalysisFormProps) {
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
     const [isGuest, setIsGuest] = useState(false);
     const [step, setStep] = useState(1);
-    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(initialMemberId || null);
     const [facePreview, setFacePreview] = useState<string | null>(null);
     const [handPreview, setHandPreview] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);

@@ -10,7 +10,17 @@
       "Bash(tree:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(supabase db push:*)"
+      "Bash(supabase db push:*)",
+      "Bash(move appprotectedanalysispage.tsx appprotectedanalysischeonjiinpage.tsx)",
+      "Bash(move:*)",
+      "Bash(if [ -d .next ])",
+      "Bash(then rm -rf .next)",
+      "Bash(fi)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)",
+      "Bash(done)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

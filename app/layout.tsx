@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { AgentationWrapper } from "@/components/agentation-wrapper";
+import { QueryProvider } from "@/components/providers/query-provider";
 import StitchesRegistry from "./stitches-registry";
 import "./globals.css";
 
@@ -94,19 +95,26 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning translate="no">
-      <body className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate`} suppressHydrationWarning>
+      <body className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#050505]`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
-          <StitchesRegistry>
-            {children}
-            <Toaster position="top-center" richColors />
-            <PWAInstallPrompt />
-            <AgentationWrapper />
-          </StitchesRegistry>
+          <QueryProvider>
+            {/* Mobile-Only Wrapper */}
+            <div className="flex justify-center w-full min-h-screen">
+              <div className="w-full max-w-[480px] min-h-screen bg-background relative shadow-2xl overflow-x-hidden border-x border-white/5 mx-auto">
+                <StitchesRegistry>
+                  {children}
+                  <Toaster position="top-center" richColors />
+                  <PWAInstallPrompt />
+                  <AgentationWrapper />
+                </StitchesRegistry>
+              </div>
+            </div>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -36,8 +36,7 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
 
     return (
         <div className="min-h-screen bg-background text-ink-light pb-28 font-sans relative overflow-hidden">
-            {/* Background Texture */}
-            <div className="hanji-overlay" />
+            {/* Background Texture Processed by Layout */}
 
             {/* Header */}
             <header className="px-6 pt-10 pb-4 flex items-center justify-between relative z-20">
@@ -166,16 +165,7 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
 
             </main>
 
-            {/* Bottom Nav */}
-            <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-primary/15 pb-safe">
-                <div className="max-w-md mx-auto flex items-center justify-around h-16 px-2">
-                    <NavButton icon={Home} label="홈" href={isGuest ? "/auth/sign-up" : "/protected"} active />
-                    <NavButton icon={BookOpen} label="소개" href={isGuest ? "/auth/sign-up" : "/protected/services"} />
-                    <NavButton icon={Users} label="인연관리" href={isGuest ? "/auth/sign-up" : "/protected/family"} />
-                    <NavButton icon={CloudMoon} label="천지인" href={isGuest ? "/auth/sign-up" : "/protected/analysis"} />
-                    <NavButton icon={User} label="MY" href={isGuest ? "/auth/sign-up" : "/protected/profile"} />
-                </div>
-            </nav>
+            {/* Bottom Nav Removed */}
         </div>
     );
 }

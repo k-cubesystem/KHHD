@@ -9,13 +9,10 @@ export function MobileHeader() {
     const pathname = usePathname();
     const router = useRouter();
 
-    // Hide on Dashboard (Home) page as it has its own header
-    if (pathname === "/protected") {
-        return null;
-    }
+
 
     return (
-        <header className="lg:hidden sticky top-0 left-0 right-0 z-50 h-14 bg-background/80 backdrop-blur-md border-b border-primary/10 px-4 flex items-center justify-between shrink-0">
+        <header className="sticky top-0 left-0 right-0 z-50 h-14 bg-background/80 backdrop-blur-md border-b border-primary/10 px-4 flex items-center justify-between shrink-0">
             {/* Back Button */}
             <button
                 onClick={() => router.back()}

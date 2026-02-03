@@ -2,22 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Cloud, History, User, BookOpen, Users, Compass } from "lucide-react";
+import { Home, Cloud, History, User, BookOpen, Users, Compass, ScanFace, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function MobileBottomNav() {
     const pathname = usePathname();
 
     const navItems = [
-        { label: "해화당설명", href: "/protected/services", icon: BookOpen },
-        { label: "천지인사주", href: "/protected/analysis", icon: Cloud },
+        { label: "사주풀이", href: "/protected/analysis", icon: Cloud },
         { label: "인연관리", href: "/protected/family", icon: Users },
         { label: "풍수지리", href: "/protected/saju/fengshui", icon: Compass },
-        { label: "내 프로필", href: "/protected/profile", icon: User },
+        { label: "관상/손금", href: "/protected/saju/face", icon: ScanFace },
+        { label: "궁합", href: "/protected/saju/compatibility", icon: Heart },
     ];
 
     return (
-        <div className="lg:hidden fixed bottom-0 left-0 w-full z-50 bg-background/80 backdrop-blur-md border-t border-primary/20 pb-safe">
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50 bg-background/80 backdrop-blur-md border-t border-primary/20 pb-safe">
             <div className="flex justify-around items-center h-16">
                 {navItems.map((item) => {
                     const isActive = pathname === item.href || (item.href !== "/protected" && pathname.startsWith(item.href));

@@ -140,7 +140,7 @@ export default function FaceDestinyPage() {
     };
 
     return (
-        <div className="flex flex-col gap-12 w-full max-w-5xl mx-auto py-12 px-6 pb-24 font-sans">
+        <div className="flex flex-col gap-12 w-full max-w-[480px] mx-auto py-12 px-6 pb-24 font-sans">
 
             {/* Header: Dark Luxury Style */}
             <div className="text-center space-y-4 animate-in fade-in duration-700">
@@ -148,7 +148,7 @@ export default function FaceDestinyPage() {
                     <Scan className="w-4 h-4 text-primary" />
                     <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">Face Destiny Simulation</span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight text-ink-light italic">
+                <h1 className="text-4xl font-serif font-bold tracking-tight text-ink-light italic">
                     AI <span className="text-primary-dim">관상 개운(開運)</span>
                 </h1>
                 <p className="text-ink-light/60 max-w-2xl mx-auto leading-relaxed">
@@ -163,7 +163,7 @@ export default function FaceDestinyPage() {
                     <Sparkles className="w-5 h-5 text-primary" />
                     추구하는 개운 목표
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6">
                     {GOAL_OPTIONS.map((option) => (
                         <button
                             key={option.value}
@@ -229,7 +229,7 @@ export default function FaceDestinyPage() {
                     </div>
                 ) : (
                     <div className="w-full p-8 flex flex-col items-center space-y-10">
-                        <div className="flex flex-col md:flex-row gap-12 items-center justify-center w-full">
+                        <div className="flex flex-col gap-12 items-center justify-center w-full">
                             {/* Original */}
                             <div className="relative group">
                                 <span className="absolute -top-4 left-0 text-[10px] font-bold text-ink-light/50 tracking-widest uppercase">Before</span>

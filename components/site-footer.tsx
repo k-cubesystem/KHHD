@@ -28,11 +28,11 @@ export function SiteFooter() {
                 <div className="space-y-4">
                     <h4 className="font-bold text-foreground">사업자 정보</h4>
                     <ul className="space-y-2 text-xs">
-                        <li>(주) 해화당</li>
-                        <li>대표: 홍길동</li>
-                        <li>사업자등록번호: 123-45-67890</li>
-                        <li>통신판매업신고: 제 2026-서울종로-1234호</li>
-                        <li>주소: 서울특별시 종로구 종로 1, 10층</li>
+                        <li>큐브시스템</li>
+                        <li>대표: 박대건</li>
+                        <li>사업자등록번호: 205-16-69546</li>
+                        <li>통신판매업신고: 제 2024-의정부흥선-0264호</li>
+                        <li>주소: 경기도 의정부시 신촌로 39번길 50-20</li>
                     </ul>
                 </div>
 
@@ -41,8 +41,8 @@ export function SiteFooter() {
                     <h4 className="font-bold text-foreground">고객센터</h4>
                     <ul className="space-y-2 text-xs">
                         <li>운영시간: 평일 10:00 - 18:00 (주말/공휴일 휴무)</li>
-                        <li>이메일: support@haehwadang.com</li>
-                        <li>전화: 1544-0000</li>
+                        <li>문의: 카카오톡채널문의</li>
+                        <li>전화: 010-2311-2010</li>
                         <li className="pt-2">
                             <Link href="/terms" className="mr-4 hover:text-foreground underline">이용약관</Link>
                             <Link href="/privacy" className="hover:text-foreground underline">개인정보처리방침</Link>
@@ -51,7 +51,7 @@ export function SiteFooter() {
                 </div>
             </div>
 
-            <div className="mt-12 text-center text-[10px] text-muted-foreground/60 border-t border-border pt-8">
+            <div className="mt-8 text-center text-[10px] text-muted-foreground/60 w-full">
                 Copyright © 2026 Haehwadang AI. All rights reserved.
             </div>
         </footer>

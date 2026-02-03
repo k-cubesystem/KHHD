@@ -140,7 +140,7 @@ export default function FengshuiPage() {
     };
 
     return (
-        <div className="flex flex-col gap-12 w-full max-w-5xl mx-auto py-12 px-6 pb-24 font-sans">
+        <div className="flex flex-col gap-12 w-full max-w-[480px] mx-auto py-12 px-6 pb-24 font-sans">
 
             {/* Header: Dark Luxury Style */}
             <div className="text-center space-y-4 animate-in fade-in duration-700">
@@ -148,7 +148,7 @@ export default function FengshuiPage() {
                     <Compass className="w-4 h-4 text-primary" />
                     <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">Feng Shui Spatial Intelligence</span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight text-ink-light italic">
+                <h1 className="text-4xl font-serif font-bold tracking-tight text-ink-light italic">
                     AI <span className="text-primary-dim">풍수 인테리어</span>
                 </h1>
                 <p className="text-ink-light/60 max-w-2xl mx-auto leading-relaxed">
@@ -157,9 +157,9 @@ export default function FengshuiPage() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            <div className="grid grid-cols-1 gap-8 items-stretch">
                 {/* Theme Selector: Dark Sidebar Style */}
-                <Card className="lg:col-span-8 bg-surface/30 backdrop-blur-md border border-primary/20 p-8 shadow-sm">
+                <Card className="bg-surface/30 backdrop-blur-md border border-primary/20 p-8 shadow-sm">
                     <h2 className="text-xl font-serif font-bold text-ink-light mb-6 flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-primary" />
                         개운(開運) 테마 설정
@@ -192,7 +192,7 @@ export default function FengshuiPage() {
                 </Card>
 
                 {/* Room Selector: Compact Box */}
-                <Card className="lg:col-span-4 bg-surface/30 backdrop-blur-md border border-primary/20 p-8 shadow-sm flex flex-col justify-center">
+                <Card className="bg-surface/30 backdrop-blur-md border border-primary/20 p-8 shadow-sm flex flex-col justify-center">
                     <h2 className="text-xl font-serif font-bold text-ink-light mb-4">분석할 공간 영역</h2>
                     <p className="text-xs text-ink-light/60 mb-6 leading-relaxed">
                         선택하신 영역의 특성을 고려하여 <br />

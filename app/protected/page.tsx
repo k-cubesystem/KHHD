@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { MobileView } from "@/components/dashboard/mobile-view";
-import { DesktopView } from "@/components/dashboard/desktop-view";
 import { getWalletBalance } from "@/app/actions/wallet-actions";
 import { getUserTierLimits } from "@/app/actions/membership-limits";
 
@@ -27,15 +26,7 @@ export default async function ProtectedPage() {
 
   return (
     <div className="w-full min-h-screen bg-background">
-      {/* Mobile Layout (Visible on < md) */}
-      <div className="block md:hidden">
-        <MobileView isGuest={isGuest} masterName={masterName} userData={userData} />
-      </div>
-
-      {/* Desktop Layout (Visible on >= md) */}
-      <div className="hidden md:block">
-        <DesktopView isGuest={isGuest} masterName={masterName} userData={userData} />
-      </div>
+      <MobileView isGuest={isGuest} masterName={masterName} userData={userData} />
     </div>
   );
 }

@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sun, Loader2, Sparkles } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Sun, Loader2 } from "lucide-react";
 import { DailyFortuneView } from "@/components/analysis/daily-fortune-view";
 import { createClient } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
 import { GuestCTACard } from "@/components/guest-cta-card";
 
-export default function TodayFortunePage() {
+export function TodayFortuneContent() {
+    const searchParams = useSearchParams();
+    const targetId = searchParams.get("targetId");
+
     const [userId, setUserId] = useState<string | null>(null);
     const [userName, setUserName] = useState<string>("");
     const [loading, setLoading] = useState(true);
@@ -15,16 +19,35 @@ export default function TodayFortunePage() {
     useEffect(() => {
         const fetchUser = async () => {
             const supabase = createClient();
-            const { data } = await supabase.auth.getUser();
-            if (data.user) {
-                setUserId(data.user.id);
-                const { data: profile } = await supabase.from('profiles').select('name').eq('id', data.user.id).single();
-                setUserName(profile?.name || "회원");
+
+            // If targetId is provided, use it; otherwise use current user
+            if (targetId) {
+                const { data: member } = await supabase
+                    .from('family_members')
+                    .select('name, user_id')
+                    .eq('id', targetId)
+                    .single();
+
+                if (member) {
+                    setUserId(member.user_id);
+                    setUserName(member.name || "회원");
+                }
+            } else {
+                const { data } = await supabase.auth.getUser();
+                if (data.user) {
+                    setUserId(data.user.id);
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('id', data.user.id)
+                        .single();
+                    setUserName(profile?.full_name || "회원");
+                }
             }
             setLoading(false);
         };
         fetchUser();
-    }, []);
+    }, [targetId]);
 
     if (loading) {
         return (
@@ -36,18 +59,22 @@ export default function TodayFortunePage() {
     }
 
     return (
-        <div className="flex flex-col gap-12 w-full max-w-[480px] mx-auto py-12 px-6 pb-24 font-sans relative z-10">
-            {/* Header: Dark Luxury Style */}
+        <div className="flex flex-col gap-12 w-full max-w-5xl mx-auto py-12 px-6 pb-24 font-sans relative z-10">
+            {/* Header: Daily Compass Concept */}
             <div className="text-center space-y-4 animate-in fade-in duration-700">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
                     <Sun className="w-4 h-4 text-primary" />
-                    <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">Daily Fortune Reading</span>
+                    <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">Daily Compass</span>
                 </div>
-                <h1 className="text-5xl font-serif font-bold tracking-tight text-ink-light italic">
-                    오늘의 <span className="text-primary-dim">천기(天氣)</span>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
+                    오늘의 <span className="text-primary">기상도</span>
                 </h1>
-                <div className="flex flex-col items-center gap-1">
-                    <p className="text-ink/60 font-serif text-lg">
+                <p className="text-ink-light/70 font-light text-lg max-w-2xl mx-auto leading-relaxed">
+                    매일 아침, 하루의 기상을 미리 확인하세요.<br />
+                    <span className="text-sm">때로는 멈추는 것이 나아가는 것보다 빠를 때가 있습니다.</span>
+                </p>
+                <div className="flex flex-col items-center gap-1 pt-2">
+                    <p className="text-ink-light/50 font-serif text-base">
                         {new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric", weekday: "long" })}
                     </p>
                 </div>

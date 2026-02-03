@@ -74,7 +74,7 @@ function CompatibilityContent() {
                     <Users className="w-12 h-12 text-primary-dim" />
                 </div>
                 <div className="space-y-4 max-w-lg">
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold text-ink-light">
+                    <h1 className="text-4xl font-serif font-bold text-ink-light">
                         궁합(宮合) 분석
                     </h1>
                     <p className="text-lg text-ink/60 font-sans font-light leading-relaxed">
@@ -95,7 +95,7 @@ function CompatibilityContent() {
     if (!result) return null;
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-12 animate-in slide-in-from-bottom-8 fade-in duration-700">
+        <div className="w-full max-w-[480px] mx-auto px-4 py-12 animate-in slide-in-from-bottom-8 fade-in duration-700">
             <Button
                 variant="ghost"
                 onClick={() => router.push("/protected/family")}
@@ -104,10 +104,10 @@ function CompatibilityContent() {
                 <ArrowLeft className="w-4 h-4" /> 다른 인연 선택하기
             </Button>
 
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-12">
+            <div className="grid gap-8 grid-cols-1">
 
                 {/* Result Card */}
-                <Card className="lg:col-span-12 bg-surface/40 backdrop-blur-md border-primary/20 shadow-lg p-8 md:p-12 text-center rounded-none relative overflow-hidden">
+                <Card className="bg-surface/40 backdrop-blur-md border-primary/20 shadow-lg p-8 text-center rounded-none relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-dark via-primary to-primary-dark" />
 
                     <div className="flex items-center justify-center gap-8 mb-8">

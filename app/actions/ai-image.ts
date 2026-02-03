@@ -51,8 +51,21 @@ interface FaceAnalysisResult {
     success: boolean;
     currentAnalysis?: string;
     currentScore?: number;
+    confidence?: number; // 신뢰도 점수 (0-100)
     improvementPrompt?: string;
     recommendations?: string[];
+    facialFeatures?: {
+        // 오관(五官) 분석
+        ears?: { score: number; description: string };
+        eyebrows?: { score: number; description: string };
+        eyes?: { score: number; description: string };
+        nose?: { score: number; description: string };
+        mouth?: { score: number; description: string };
+        // 삼정(三停) 분석
+        upperStop?: { score: number; description: string }; // 상정(이마)
+        middleStop?: { score: number; description: string }; // 중정(눈~코)
+        lowerStop?: { score: number; description: string }; // 하정(입~턱)
+    };
     error?: string;
 }
 
@@ -73,27 +86,83 @@ export async function analyzeFaceForDestiny(
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
     const goalConfig = GOAL_PROMPTS[goal];
 
-    const analysisPrompt = `당신은 전통 관상학과 현대 미용학을 겸비한 전문가입니다.
+    const analysisPrompt = `당신은 30년 경력의 관상학 전문가입니다.
+동양의 전통 명리학과 관상학을 깊이 연구했으며, 수천 명의 관상을 분석한 경험이 있습니다.
 
-이 얼굴 사진을 분석하고, "${goalConfig.name}"을 강화하기 위한 분석을 제공하세요.
+아래 얼굴 이미지를 전문가적 시각으로 정확히 분석하여 "${goalConfig.name}"에 대한 평가를 제공하세요.
 
-[분석 항목]
-1. **현재 관상 분석**: 이마, 눈썹, 눈, 코, 입, 턱, 귀의 특징을 각각 분석
-2. **현재 ${goalConfig.name} 점수**: 0-100점 사이로 평가
-3. **강점**: 현재 관상에서 좋은 특징 2-3가지
-4. **개선 가능 포인트**: ${goalConfig.traits}를 기준으로 개선하면 좋을 부분 3-5가지
-5. **구체적 개선 방법**: 메이크업, 헤어스타일, 표정 관리 등 실천 가능한 조언
+[1단계: 오관(五官) 분석]
+전통 관상학의 오관을 각각 10점 만점으로 평가하세요:
+
+1. **귀(耳)** - 지혜와 장수의 상징
+   - 형태, 크기, 위치, 색택 평가
+   - 점수와 특징 기술
+
+2. **눈썹(眉)** - 형제운과 사회성
+   - 형태, 굵기, 농도, 균형 평가
+   - 점수와 특징 기술
+
+3. **눈(目)** - 정신과 지혜의 창
+   - 크기, 형태, 눈빛, 쌍꺼풀 평가
+   - 점수와 특징 기술
+
+4. **코(鼻)** - 재물운과 권력운
+   - 콧대 높이, 코끝 모양, 콧방울 크기 평가
+   - 점수와 특징 기술
+
+5. **입(口)** - 식복과 언변
+   - 입술 두께, 입 크기, 치아 상태 평가
+   - 점수와 특징 기술
+
+[2단계: 삼정(三停) 분석]
+얼굴을 3등분하여 균형을 평가하세요:
+
+1. **상정(上停)** - 헤어라인부터 눈썹까지 (초년운 0-30세)
+   - 이마의 넓이, 높이, 주름, 빛깔 평가
+   - 점수: X/10
+
+2. **중정(中停)** - 눈썹부터 코끝까지 (중년운 30-60세)
+   - 눈, 코의 조화와 비율 평가
+   - 점수: X/10
+
+3. **하정(下停)** - 코끝부터 턱끝까지 (말년운 60세 이후)
+   - 입, 턱의 견고함과 형태 평가
+   - 점수: X/10
+
+[3단계: 피부 찰색(察色) - 기색과 혈색]
+- 현재 피부 광택, 혈색, 기운 상태 평가
+- 건강 상태 및 운기(運氣) 흐름 파악
+
+[4단계: ${goalConfig.name} 종합 평가]
+- 현재 ${goalConfig.name} 점수: 0-100점
+- 잠재력 점수: 0-100점
+- 강화할 핵심 특징: ${goalConfig.traits}
+
+[5단계: 구체적 개선 방법]
+- 메이크업 기법 3가지
+- 헤어스타일 조언
+- 표정 및 자세 관리
+- 일상 관리법 (수면, 운동, 식습관)
 
 [CRITICAL: 출력 형식]
-반드시 다음 태그를 포함하세요:
+반드시 다음 태그들을 모두 포함하세요:
 [[CURRENT_SCORE: 숫자]]
-[[POTENTIAL_SCORE: 숫자]]
+[[CONFIDENCE: 숫자]]
+[[EARS: 숫자, 설명]]
+[[EYEBROWS: 숫자, 설명]]
+[[EYES: 숫자, 설명]]
+[[NOSE: 숫자, 설명]]
+[[MOUTH: 숫자, 설명]]
+[[UPPER_STOP: 숫자, 설명]]
+[[MIDDLE_STOP: 숫자, 설명]]
+[[LOWER_STOP: 숫자, 설명]]
 
 목표: ${goalConfig.desc}
 강화할 특징: ${goalConfig.traits}
 
-긍정적이고 건설적인 톤으로, 구체적인 조언을 제공하세요.
-의학적/성형 관련 조언은 하지 마세요.`;
+※ 긍정적이고 건설적인 톤을 유지하세요.
+※ 의학적/성형 관련 조언은 절대 하지 마세요.
+※ 관상학적 전문 용어를 사용하되, 이해하기 쉽게 설명하세요.`;
 
     try {
         const result = await model.generateContent([
@@ -108,9 +177,33 @@ export async function analyzeFaceForDestiny(
 
         const analysisText = result.response.text();
 
-        // Extract scores
+        // Extract scores with improved parsing
         const currentScoreMatch = analysisText.match(/\[\[CURRENT_SCORE:\s*(\d+)\]\]/);
         const currentScore = currentScoreMatch ? parseInt(currentScoreMatch[1]) : 65;
+
+        const confidenceMatch = analysisText.match(/\[\[CONFIDENCE:\s*(\d+)\]\]/);
+        const confidence = confidenceMatch ? parseInt(confidenceMatch[1]) : 75;
+
+        // Extract 오관(五官) scores
+        const parseFeature = (tag: string) => {
+            const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`);
+            const match = analysisText.match(regex);
+            if (match) {
+                return { score: parseInt(match[1]), description: match[2].trim() };
+            }
+            return { score: 7, description: "분석 중" };
+        };
+
+        const facialFeatures = {
+            ears: parseFeature("EARS"),
+            eyebrows: parseFeature("EYEBROWS"),
+            eyes: parseFeature("EYES"),
+            nose: parseFeature("NOSE"),
+            mouth: parseFeature("MOUTH"),
+            upperStop: parseFeature("UPPER_STOP"),
+            middleStop: parseFeature("MIDDLE_STOP"),
+            lowerStop: parseFeature("LOWER_STOP"),
+        };
 
         // Generate image modification prompt for DALL-E style generation
         const improvementPrompt = `Portrait photo of the same person with enhanced features for ${goalConfig.name}: ${goalConfig.traits}.
@@ -128,6 +221,8 @@ Style: Professional headshot, warm lighting, confident expression.`;
             success: true,
             currentAnalysis: analysisText,
             currentScore,
+            confidence,
+            facialFeatures,
             improvementPrompt,
             recommendations,
         };

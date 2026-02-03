@@ -15,9 +15,10 @@ interface FamilyMember {
 
 interface AnalysisClientPageProps {
     members: FamilyMember[];
+    initialMemberId?: string;
 }
 
-export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
+export function AnalysisClientPage({ members, initialMemberId }: AnalysisClientPageProps) {
     return (
         <motion.div
             variants={staggerContainer}
@@ -44,7 +45,7 @@ export function AnalysisClientPage({ members }: AnalysisClientPageProps) {
             <motion.div variants={fadeInUp}>
                 <Card className="relative bg-surface/30 backdrop-blur-md p-1 shadow-2xl border border-primary/20 rounded-none overflow-hidden">
                     <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
-                    <AnalysisForm members={members} />
+                    <AnalysisForm members={members} initialMemberId={initialMemberId} />
                 </Card>
             </motion.div>
 

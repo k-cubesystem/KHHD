@@ -31,7 +31,7 @@ export default async function MyPage() {
     // Guest Preview
     if (isGuest) {
         return (
-            <div className="min-h-screen w-full bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
+            <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
                 <div className="hanji-overlay" />
 
                 {/* Header */}
@@ -148,7 +148,7 @@ export default async function MyPage() {
     const tier = isAdmin ? "Administrator" : (profile?.is_subscribed ? "Gold Member" : "Silver Member");
 
     return (
-        <div className="min-h-screen w-full bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
+        <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
             <div className="hanji-overlay" />
 
             {/* Header - Transparent on Mobile for minimalist look, or sticky as preferred. User wanted "No Top Menu" on mobile in global layout.
