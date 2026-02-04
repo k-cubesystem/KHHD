@@ -120,11 +120,27 @@ export default async function MyPage() {
         );
     }
 
-    // Parallel Data Fetching
-    const [profileData, walletBalance, recordsData, userRoleData] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        getWalletBalance(),
-        supabase.from('saju_records')
+    // Safe Data Fetching with Error Handling
+    let profile: any = null;
+    let walletBalance: any = null;
+    let records: any[] = [];
+    let userRoleData: any = { role: 'user' };
+
+    try {
+        const profileData = await supabase.from('profiles').select('*').eq('id', user.id).single();
+        profile = profileData.data;
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+    }
+
+    try {
+        walletBalance = await getWalletBalance();
+    } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+    }
+
+    try {
+        const recordsData = await supabase.from('saju_records')
             .select(`
                 id,
                 created_at,
@@ -136,14 +152,21 @@ export default async function MyPage() {
             `)
             .eq('family_members.user_id', user.id)
             .order('created_at', { ascending: false })
-            .limit(3),
-        getCurrentUserRole()
-    ]);
+            .limit(3);
+        records = recordsData.data || [];
+    } catch (error) {
+        console.error('Error fetching records:', error);
+        records = [];
+    }
 
-    const profile = profileData.data;
-    const records = recordsData.data || [];
+    try {
+        userRoleData = await getCurrentUserRole();
+    } catch (error) {
+        console.error('Error fetching user role:', error);
+    }
+
     const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split("@")[0] || "Guest";
-    const isAdmin = userRoleData.role === 'admin';
+    const isAdmin = userRoleData?.role === 'admin';
 
     // Calculate Tier (Simple logic for display)
     const tier = isAdmin ? "Administrator" : (profile?.is_subscribed ? "Gold Member" : "Silver Member");
