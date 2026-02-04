@@ -90,8 +90,8 @@ export default async function MembershipPage() {
                 </div>
 
                 {/* Common Benefits */}
-                <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 p-5 mb-6 shadow-lg rounded-none mt-8">
-                    <h2 className="text-base font-serif font-bold text-ink-light text-center mb-4">
+                <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 p-5 mb-6 shadow-lg rounded-none mt-8 luxury-card-glow paper-grain">
+                    <h2 className="text-base font-serif font-bold text-white text-center mb-4">
                         모든 플랜 공통 혜택
                     </h2>
                     <div className="space-y-3">
@@ -99,15 +99,20 @@ export default async function MembershipPage() {
                             { title: "언제든 해지 가능", desc: "위약금 없이 자유롭게" },
                             { title: "즉시 부적 지급", desc: "결제 완료 즉시 충전" },
                             { title: "자동 결제", desc: "매월 걱정 없이 충전" },
-                            { title: "부적 추가 증정", desc: `${sortedPlans[0]?.features?.bonus_rate || 10}% 보너스` }
+                            {
+                                title: "부적 추가 증정",
+                                desc: `${sortedPlans.length > 0 && sortedPlans[0]?.features
+                                    ? (sortedPlans[0].features as any).bonus_rate || 10
+                                    : 10}% 보너스`
+                            }
                         ].map((item, i) => (
                             <div key={i} className="flex items-start gap-3">
                                 <div className="w-7 h-7 bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20 rounded-none">
                                     <Check className="w-3.5 h-3.5 text-primary" />
                                 </div>
                                 <div className="flex-1">
-                                    <h3 className="font-bold text-ink-light text-xs mb-0.5">{item.title}</h3>
-                                    <p className="text-[10px] text-ink/60">{item.desc}</p>
+                                    <h3 className="font-bold text-white text-xs mb-0.5">{item.title}</h3>
+                                    <p className="text-[10px] text-white/70">{item.desc}</p>
                                 </div>
                             </div>
                         ))}

@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import { Flame, Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useState, useEffect } from "react";
 
 interface Hero2026Props {
