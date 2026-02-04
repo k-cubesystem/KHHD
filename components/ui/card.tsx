@@ -24,12 +24,12 @@ const cardVariants = cva(
 
 export interface CardProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof cardVariants> {
+  VariantProps<typeof cardVariants> {
   hoverable?: boolean;
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, depth, hoverable = false, children, ...props }, ref) => {
+  ({ className, depth, hoverable = false, children, onClick, ...props }, ref) => {
     // Remove conflicting props between React and Framer Motion
     const {
       onDrag,
@@ -41,13 +41,21 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       ...divProps
     } = props;
 
+    // Add cursor-pointer if clickable (onClick exists)
+    const isClickable = !!onClick;
+
     return (
       <motion.div
         ref={ref}
-        className={cn(cardVariants({ depth }), className)}
+        className={cn(
+          cardVariants({ depth }),
+          isClickable && "cursor-pointer",  // Mobile-design: clickable elements need cursor-pointer
+          className
+        )}
         whileHover={
           hoverable ? { y: -4, transition: { duration: 0.2 } } : undefined
         }
+        onClick={onClick}
         {...divProps}
       >
         {children}
