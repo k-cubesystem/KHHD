@@ -47,7 +47,7 @@ export const MobileView = memo(function MobileView({ isGuest, masterName, userDa
             <header className="px-6 pt-10 pb-4 flex items-center justify-between relative z-20">
                 {/* Left: Brand & Status */}
                 <div className="flex flex-col items-start gap-2">
-                    <span className="text-xs font-serif font-bold text-primary tracking-widest">청담 해화당</span>
+                    <span className="text-xs font-serif font-bold text-primary tracking-widest gold-glow">청담 해화당</span>
                     <div className="flex items-center gap-3">
                         <span className="text-[10px] text-ink-light/70 bg-surface/50 px-2 py-0.5 rounded border border-white/5 backdrop-blur-sm">
                             {getTierLabel(userData.tier)}
@@ -87,7 +87,7 @@ export const MobileView = memo(function MobileView({ isGuest, masterName, userDa
 
                     {/* Cheonjiin Card */}
                     <Link href={isGuest ? "/auth/sign-up" : "/protected/analysis"} className="block">
-                        <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
+                        <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors luxury-card-glow">
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <CloudMoon className="w-24 h-24 text-primary" strokeWidth={0.5} />
                             </div>
@@ -108,7 +108,7 @@ export const MobileView = memo(function MobileView({ isGuest, masterName, userDa
                     {/* Relationship Management Card */}
                     <FeatureGuard feature="feat_saju_compat">
                         <Link href={isGuest ? "/auth/sign-up" : "/protected/family"} className="block">
-                            <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors">
+                            <div className="bg-surface/40 border border-primary/20 rounded-xl p-5 relative overflow-hidden group hover:border-primary/50 transition-colors luxury-card-glow">
                                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                                     <Users className="w-24 h-24 text-seal" strokeWidth={0.5} />
                                 </div>

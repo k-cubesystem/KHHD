@@ -103,7 +103,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
             </div>
 
             {/* Selected Plan Card */}
-            <div className="bg-surface/30 border-2 border-primary/30 p-6 rounded-none shadow-lg">
+            <div className="bg-surface/30 border-2 border-primary/30 p-6 rounded-none shadow-lg luxury-card-glow">
                 {/* Price */}
                 <div className="text-center mb-6 pb-6 border-b border-primary/10">
                     <div className="text-3xl font-serif font-bold text-primary mb-1">
