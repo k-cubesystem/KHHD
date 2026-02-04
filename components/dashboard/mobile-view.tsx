@@ -4,6 +4,7 @@ import Link from "next/link";
 import { User, ScrollText, Compass, Sparkles, BookOpen, Crown, Zap, CloudMoon, Home, Users, Bell, Fingerprint, Coins, Flower2, Ticket } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Hero2026 } from "./hero-2026";
+import { useMemo, memo } from "react";  // mobile-design: Performance optimization
 
 import { FeatureGuard } from "@/components/feature-guard";
 import { FeatureKey } from "@/hooks/use-feature-flag";
@@ -19,15 +20,16 @@ interface MobileViewProps {
     };
 }
 
-export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
-    const individualTools: { label: string; icon: any; href: string; featureKey?: FeatureKey }[] = [
-        { label: "사주풀이", icon: BookOpen, href: "/protected/analysis", featureKey: "feat_saju_today" },
-        { label: "관상", icon: User, href: "/protected/saju/face", featureKey: "feat_face_analysis" },
-        { label: "손금", icon: Fingerprint, href: "/protected/saju/palm", featureKey: "feat_face_analysis" },
-        { label: "풍수", icon: Compass, href: "/protected/saju/fengshui", featureKey: "feat_fengshui" },
-        { label: "궁합", icon: Sparkles, href: "/protected/family", featureKey: "feat_saju_compat" },
-        { label: "재물운", icon: Coins, href: "/protected/saju/wealth", featureKey: "feat_saju_today" },
-    ];
+export const MobileView = memo(function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
+    // mobile-design: Memoize static arrays to prevent re-creation
+    const individualTools = useMemo(() => [
+        { label: "사주풀이", icon: BookOpen, href: "/protected/analysis", featureKey: "feat_saju_today" as FeatureKey },
+        { label: "관상", icon: User, href: "/protected/saju/face", featureKey: "feat_face_analysis" as FeatureKey },
+        { label: "손금", icon: Fingerprint, href: "/protected/saju/palm", featureKey: "feat_face_analysis" as FeatureKey },
+        { label: "풍수", icon: Compass, href: "/protected/saju/fengshui", featureKey: "feat_fengshui" as FeatureKey },
+        { label: "궁합", icon: Sparkles, href: "/protected/family", featureKey: "feat_saju_compat" as FeatureKey },
+        { label: "재물운", icon: Coins, href: "/protected/saju/wealth", featureKey: "feat_saju_today" as FeatureKey },
+    ], []);
 
     const getTierLabel = (tier: string | null) => {
         if (!tier) return "무료 회원";
@@ -162,7 +164,7 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
                             <FeatureGuard key={idx} feature={tool.featureKey || 'feat_saju_today'} showLockIcon={false}>
                                 <Link
                                     href={isGuest ? "/auth/sign-up" : tool.href}
-                                    className="flex flex-col items-center justify-center aspect-square bg-surface/20 border border-white/5 rounded-lg hover:bg-surface/40 hover:border-primary/30 transition-all group"
+                                    className="flex flex-col items-center justify-center aspect-square bg-surface/20 border border-white/5 rounded-lg hover:bg-surface/40 hover:border-primary/30 transition-all group min-h-[80px] p-4"
                                 >
                                     <tool.icon className="w-6 h-6 text-ink-light/50 mb-2 group-hover:text-primary transition-colors stroke-[0.8]" />
                                     <span className="text-[10px] text-ink-light/70 group-hover:text-ink-light transition-colors">{tool.label}</span>
@@ -174,10 +176,11 @@ export function MobileView({ isGuest, masterName, userData }: MobileViewProps) {
 
             </main>
 
+
             {/* Bottom Nav Removed */}
         </div>
     );
-}
+});  // memo closing parenthesis
 
 function NavButton({ icon: Icon, label, href, active }: { icon: any, label: string, href: string, active?: boolean }) {
     return (
