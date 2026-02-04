@@ -149,17 +149,53 @@ export default function MansePage() {
         )
         : null;
 
-    // 프리미엄 분석 계산
-    const gekgukAnalysis = saju ? analyzeGekguk(saju) : null;
-    const sinsalList = saju ? calculateSinsal(saju) : [];
-    const yongsinAnalysis = saju ? analyzeYongsin(saju) : null;
-    const yukchinAnalysis = saju ? analyzeYukchin(saju) : null;
-    const daeunList = saju && selectedMember ? calculateDaeun(
-        selectedMember.birth_date,
-        selectedMember.gender || 'male',
-        saju
-    ) : [];
-    const gaeunbubRec = yongsinAnalysis ? getGaeunbubRecommendation(yongsinAnalysis.yongsin) : null;
+    // 프리미엄 분석 계산 (에러 방지)
+    let gekgukAnalysis = null;
+    let sinsalList: any[] = [];
+    let yongsinAnalysis = null;
+    let yukchinAnalysis = null;
+    let daeunList: any[] = [];
+    let gaeunbubRec = null;
+
+    try {
+        gekgukAnalysis = saju ? analyzeGekguk(saju) : null;
+    } catch (error) {
+        console.error('Error in analyzeGekguk:', error);
+    }
+
+    try {
+        sinsalList = saju ? calculateSinsal(saju) : [];
+    } catch (error) {
+        console.error('Error in calculateSinsal:', error);
+    }
+
+    try {
+        yongsinAnalysis = saju ? analyzeYongsin(saju) : null;
+    } catch (error) {
+        console.error('Error in analyzeYongsin:', error);
+    }
+
+    try {
+        yukchinAnalysis = saju ? analyzeYukchin(saju) : null;
+    } catch (error) {
+        console.error('Error in analyzeYukchin:', error);
+    }
+
+    try {
+        daeunList = saju && selectedMember ? calculateDaeun(
+            selectedMember.birth_date,
+            selectedMember.gender || 'male',
+            saju
+        ) : [];
+    } catch (error) {
+        console.error('Error in calculateDaeun:', error);
+    }
+
+    try {
+        gaeunbubRec = yongsinAnalysis ? getGaeunbubRecommendation(yongsinAnalysis.yongsin) : null;
+    } catch (error) {
+        console.error('Error in getGaeunbubRecommendation:', error);
+    }
 
     const openTermDialog = (term: string) => {
         if (TERMINOLOGY[term]) {
