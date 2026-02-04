@@ -170,7 +170,8 @@ export function calculateSinsal(saju: SajuData): SinsalItem[] {
     };
 
     const yeokma = yeokmaMap[yearZhi];
-    if ([dayZhi, pillars.month.zhi, pillars.year.zhi, pillars.day.zhi].includes(yeokma)) {
+    const pillarZhis = [dayZhi, pillars?.month?.zhi, pillars?.year?.zhi, pillars?.day?.zhi].filter(Boolean);
+    if (pillarZhis.includes(yeokma)) {
         sinsalList.push({
             name: '역마살',
             hanja: '驛馬殺',
@@ -191,7 +192,8 @@ export function calculateSinsal(saju: SajuData): SinsalItem[] {
     };
 
     const cheonul = cheoneulMap[saju.dayGan] || [];
-    if (cheonul.some((z: string) => [dayZhi, pillars.month.zhi, pillars.year.zhi, pillars.day.zhi].includes(z))) {
+    const cheoneulPillarZhis = [dayZhi, pillars?.month?.zhi, pillars?.year?.zhi, pillars?.day?.zhi].filter(Boolean);
+    if (cheonul.some((z: string) => cheoneulPillarZhis.includes(z))) {
         sinsalList.push({
             name: '천을귀인',
             hanja: '天乙貴人',
@@ -211,7 +213,8 @@ export function calculateSinsal(saju: SajuData): SinsalItem[] {
     };
 
     const hwagae = hwagaeMap[yearZhi];
-    if ([dayZhi, pillars.month.zhi, pillars.year.zhi, pillars.day.zhi].includes(hwagae)) {
+    const hwagaePillarZhis = [dayZhi, pillars?.month?.zhi, pillars?.year?.zhi, pillars?.day?.zhi].filter(Boolean);
+    if (hwagaePillarZhis.includes(hwagae)) {
         sinsalList.push({
             name: '화개살',
             hanja: '華蓋殺',
@@ -231,7 +234,8 @@ export function calculateSinsal(saju: SajuData): SinsalItem[] {
     };
 
     const dohwa = dohwaMap[yearZhi];
-    if ([dayZhi, pillars.month.zhi].includes(dohwa)) {
+    const dohwaPillarZhis = [dayZhi, pillars?.month?.zhi].filter(Boolean);
+    if (dohwaPillarZhis.includes(dohwa)) {
         sinsalList.push({
             name: '도화살',
             hanja: '桃花殺',
@@ -315,10 +319,10 @@ export function analyzeYukchin(saju: SajuData): YukchinAnalysis {
 
     // 각 기둥의 천간/지지 확인
     const positions = [
-        { name: '년간', gan: pillars.year.gan },
-        { name: '월간', gan: pillars.month.gan },
-        { name: '일지', gan: getZhiMainElement(pillars.day.zhi) },
-        { name: '시간', gan: pillars.hour.gan }
+        { name: '년간', gan: pillars.year?.gan },
+        { name: '월간', gan: pillars.month?.gan },
+        { name: '일지', gan: pillars.day?.zhi ? getZhiMainElement(pillars.day.zhi) : undefined },
+        { name: '시간', gan: pillars.hour?.gan }
     ];
 
     positions.forEach(pos => {
@@ -354,61 +358,72 @@ export function analyzeYukchin(saju: SajuData): YukchinAnalysis {
 // ==================== 대운 계산 ====================
 
 export function calculateDaeun(birthDate: string, gender: string, saju: SajuData): DaeunPeriod[] {
-    const birthYear = new Date(birthDate).getFullYear();
-    const yearGan = saju.pillars.year.gan;
-    const isYangYear = ['甲', '丙', '戊', '庚', '壬'].includes(yearGan);
-
-    // 남자 양년생/여자 음년생: 순행, 남자 음년생/여자 양년생: 역행
-    const isForward = (gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear);
-
-    const monthGan = saju.pillars.month.gan;
-    const monthZhi = saju.pillars.month.zhi;
-
-    const ganList = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-    const zhiList = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-    let currentGanIdx = ganList.indexOf(monthGan);
-    let currentZhiIdx = zhiList.indexOf(monthZhi);
-
-    const daeunList: DaeunPeriod[] = [];
-
-    for (let i = 0; i < 8; i++) {
-        const startYear = birthYear + (i * 10);
-        const endYear = startYear + 9;
-        const startAge = i * 10;
-        const endAge = startAge + 9;
-
-        if (isForward) {
-            currentGanIdx = (currentGanIdx + 1) % 10;
-            currentZhiIdx = (currentZhiIdx + 1) % 12;
-        } else {
-            currentGanIdx = (currentGanIdx - 1 + 10) % 10;
-            currentZhiIdx = (currentZhiIdx - 1 + 12) % 12;
+    try {
+        // 안전한 날짜 파싱
+        const parsedDate = new Date(birthDate);
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error('Invalid birth date');
         }
 
-        const gan = ganList[currentGanIdx];
-        const zhi = zhiList[currentZhiIdx];
-        const ganjiKorean = `${GANZHI_KOREAN[gan]}${GANZHI_KOREAN[zhi]}`;
-        const element = getGanElement(gan);
+        const birthYear = parsedDate.getFullYear();
+        const yearGan = saju.pillars.year.gan;
+        const isYangYear = ['甲', '丙', '戊', '庚', '壬'].includes(yearGan);
 
-        // 용신과의 관계로 운세 평가 (간단 버전)
-        const fortune: 'good' | 'neutral' | 'bad' = 'neutral';
-        const description = `${gan}${zhi}(${ganjiKorean}) 대운으로 ${ELEMENT_KOREAN[element]} 기운이 강한 시기입니다.`;
+        // 남자 양년생/여자 음년생: 순행, 남자 음년생/여자 양년생: 역행
+        const isForward = (gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear);
 
-        daeunList.push({
-            startYear,
-            endYear,
-            age: `${startAge}-${endAge}세`,
-            gan,
-            zhi,
-            ganjiKorean,
-            element,
-            fortune,
-            description
-        });
+        const monthGan = saju.pillars.month.gan;
+        const monthZhi = saju.pillars.month.zhi;
+
+        const ganList = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+        const zhiList = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+
+        let currentGanIdx = ganList.indexOf(monthGan);
+        let currentZhiIdx = zhiList.indexOf(monthZhi);
+
+        const daeunList: DaeunPeriod[] = [];
+
+        for (let i = 0; i < 8; i++) {
+            const startYear = birthYear + (i * 10);
+            const endYear = startYear + 9;
+            const startAge = i * 10;
+            const endAge = startAge + 9;
+
+            if (isForward) {
+                currentGanIdx = (currentGanIdx + 1) % 10;
+                currentZhiIdx = (currentZhiIdx + 1) % 12;
+            } else {
+                currentGanIdx = (currentGanIdx - 1 + 10) % 10;
+                currentZhiIdx = (currentZhiIdx - 1 + 12) % 12;
+            }
+
+            const gan = ganList[currentGanIdx];
+            const zhi = zhiList[currentZhiIdx];
+            const ganjiKorean = `${GANZHI_KOREAN[gan] || ''}${GANZHI_KOREAN[zhi] || ''}`;
+            const element = getGanElement(gan);
+
+            // 용신과의 관계로 운세 평가 (간단 버전)
+            const fortune: 'good' | 'neutral' | 'bad' = 'neutral';
+            const description = `${gan}${zhi}(${ganjiKorean}) 대운으로 ${ELEMENT_KOREAN[element] || ''} 기운이 강한 시기입니다.`;
+
+            daeunList.push({
+                startYear,
+                endYear,
+                age: `${startAge}-${endAge}세`,
+                gan,
+                zhi,
+                ganjiKorean,
+                element,
+                fortune,
+                description
+            });
+        }
+
+        return daeunList;
+    } catch (error) {
+        console.error('Error in calculateDaeun:', error);
+        return []; // 에러 발생 시 빈 배열 반환
     }
-
-    return daeunList;
 }
 
 // ==================== 개운법 추천 ====================
