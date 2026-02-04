@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getFamilyMembers } from "@/app/actions/family-actions";
 import { getUserTierLimits } from "@/app/actions/membership-limits";
 import { getCurrentUserRole } from "@/app/actions/products";
-import { getSajuData, WU_XING_COLORS } from "@/lib/saju";
+import { getSajuData, WU_XING_COLORS, SajuData } from "@/lib/saju";
 import {
     analyzeGekguk,
     calculateSinsal,
@@ -141,13 +141,21 @@ export default function MansePage() {
     }, []);
 
     const selectedMember = members.find((m) => m.id === selectedMemberId);
-    const saju = selectedMember
-        ? getSajuData(
-            selectedMember.birth_date,
-            selectedMember.birth_time || "00:00",
-            selectedMember.calendar_type === "solar"
-        )
-        : null;
+
+    // 사주 데이터 안전하게 가져오기
+    let saju: SajuData | null = null;
+    try {
+        if (selectedMember) {
+            saju = getSajuData(
+                selectedMember.birth_date,
+                selectedMember.birth_time || "00:00",
+                selectedMember.calendar_type === "solar"
+            );
+        }
+    } catch (error) {
+        console.error('Error in getSajuData:', error);
+        saju = null;
+    }
 
     // 프리미엄 분석 계산 (에러 방지)
     let gekgukAnalysis = null;
@@ -481,7 +489,7 @@ export default function MansePage() {
                             </h3>
 
                             <div className="grid grid-cols-5 gap-4">
-                                {Object.entries(saju.elementsDistribution).map(([element, count]) => (
+                                {Object.entries(saju.elementsDistribution).map(([element, count]: [string, number]) => (
                                     <button
                                         key={element}
                                         onClick={() => openHanjaDialog(element, WUXING_KOREAN[element], { element }, 'wuxing')}
@@ -506,9 +514,9 @@ export default function MansePage() {
                             {/* Balance Bar */}
                             <div className="mt-6 pt-6 border-t border-white/5">
                                 <div className="flex h-4 rounded-full overflow-hidden bg-white/5">
-                                    {Object.entries(saju.elementsDistribution).map(([element, count]) => {
-                                        const total = Object.values(saju.elementsDistribution).reduce((a, b) => a + b, 0);
-                                        const percent = (count / total) * 100;
+                                    {Object.entries(saju.elementsDistribution).map(([element, count]: [string, number]) => {
+                                        const total = Object.values(saju.elementsDistribution).reduce((a: number, b: number) => a + b, 0);
+                                        const percent = ((count as number) / (total as number)) * 100;
                                         if (percent === 0) return null;
                                         return (
                                             <div
