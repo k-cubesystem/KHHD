@@ -24,9 +24,12 @@ export function MobileHeader() {
                 </button>
 
                 {/* Title or Logo styling (Optional, keeping it subtle) */}
-                <span className="text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80">
+                <Link
+                    href="/protected"
+                    className="text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80 hover:opacity-100 transition-opacity"
+                >
                     청담해화당
-                </span>
+                </Link>
 
                 {/* Profile Button */}
                 <Link
