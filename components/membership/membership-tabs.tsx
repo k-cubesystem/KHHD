@@ -25,9 +25,29 @@ interface MembershipTabsProps {
 
 export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
     const router = useRouter();
-    const [selectedPlan, setSelectedPlan] = useState(plans[1]?.tier || "FAMILY"); // 기본 FAMILY
+
+    // 플랜이 없으면 에러 방지
+    if (!plans || plans.length === 0) {
+        return (
+            <div className="text-center p-8 text-ink/60">
+                <p className="text-sm">멤버십 플랜을 불러오는 중입니다...</p>
+            </div>
+        );
+    }
+
+    const [selectedPlan, setSelectedPlan] = useState(plans[1]?.tier || plans[0]?.tier || "FAMILY");
 
     const currentPlan = plans.find(p => p.tier === selectedPlan) || plans[0];
+
+    // currentPlan이 없으면 에러 방지
+    if (!currentPlan) {
+        return (
+            <div className="text-center p-8 text-ink/60">
+                <p className="text-sm">플랜 정보를 찾을 수 없습니다.</p>
+            </div>
+        );
+    }
+
     const features = currentPlan.features as Record<string, boolean | number> || {};
 
     // 등급별 특징 정리
@@ -73,8 +93,8 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
                         key={plan.tier}
                         onClick={() => setSelectedPlan(plan.tier)}
                         className={`flex-1 py-2.5 px-3 text-xs font-serif font-bold transition-all rounded-none ${selectedPlan === plan.tier
-                                ? 'bg-primary text-background shadow-md'
-                                : 'text-ink/60 hover:text-ink-light'
+                            ? 'bg-primary text-background shadow-md'
+                            : 'text-ink/60 hover:text-ink-light'
                             }`}
                     >
                         {plan.name}
@@ -87,7 +107,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
                 {/* Price */}
                 <div className="text-center mb-6 pb-6 border-b border-primary/10">
                     <div className="text-3xl font-serif font-bold text-primary mb-1">
-                        월 {currentPlan.price_krw.toLocaleString()}원{" "}
+                        월 {(currentPlan.price_krw || 0).toLocaleString()}원{" "}
                         <span className="text-sm text-ink/50">결제</span>
                     </div>
                     <div className="flex items-center justify-center gap-2 mt-2">
