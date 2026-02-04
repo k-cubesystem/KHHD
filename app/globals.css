@@ -21,6 +21,7 @@
     font-feature-settings: "palt"; /* Proportional metrics */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color: #E5E5E5;  /* 기본 텍스트: 밝은 회색 */
   }
 
   /* Typography Hierarchy Override - Refined & Elegant */
@@ -140,38 +141,70 @@
     text-orientation: upright;
   }
 
-  /* 한지 질감 오버레이 (전역 적용) - Legacy but kept for compatibility */
+  /* 한지 질감 오버레이 (전역 적용) - Enhanced */
   .hanji-overlay {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    opacity: 0.08;
+    opacity: 0.15;  /* 0.08 → 0.15: 한지 질감 강화 */
     pointer-events: none;
     mix-blend-mode: overlay;
+    filter: contrast(1.3) brightness(1.1);  /* 텍스처 선명도 증가 */
     position: absolute;
     inset: 0;
     z-index: 10;
   }
 
-  /* 금빛 글로우 효과 (Dark Luxury) */
-  .gold-glow {
-    text-shadow: 0 0 20px rgba(236, 182, 19, 0.5),
-                 0 0 40px rgba(236, 182, 19, 0.3);
+  /* 종이 결 질감 (추가) */
+  .paper-grain {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.015) 2px,
+        rgba(255,255,255,0.015) 4px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(255,255,255,0.01) 2px,
+        rgba(255,255,255,0.01) 4px
+      );
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 11;
   }
 
-  /* 금빛 테두리 글로우 */
+  /* 금빛 글로우 효과 (Dark Luxury) - Enhanced */
+  .gold-glow {
+    text-shadow: 
+      0 0 10px rgba(236, 182, 19, 0.6),
+      0 0 20px rgba(236, 182, 19, 0.5),
+      0 0 30px rgba(236, 182, 19, 0.4),
+      0 0 40px rgba(236, 182, 19, 0.3);  /* 4 레이어 */
+  }
+
+  /* 금빛 테두리 글로우 - Enhanced */
   .gold-border-glow {
-    box-shadow: 0 0 15px rgba(236, 182, 19, 0.3),
-                inset 0 0 10px rgba(236, 182, 19, 0.1);
+    box-shadow: 
+      0 0 15px rgba(236, 182, 19, 0.4),
+      0 0 30px rgba(236, 182, 19, 0.3),
+      inset 0 0 15px rgba(236, 182, 19, 0.2);  /* 3 레이어 */
   }
 
   /* 도장 그림자 (Oriental Seal) */
   .dojang-shadow {
-    box-shadow: 4px 4px 0 0 rgba(154, 42, 42, 0.4);
+    box-shadow: 4px 4px 0 0 rgba(154, 42, 42, 0.5);  /* 0.4 → 0.5 */
   }
 
-  /* 고급스러운 카드 글로우 */
+  /* 고급스러운 카드 글로우 - Enhanced */
   .luxury-card-glow {
-    box-shadow: 0 4px 20px rgba(197, 160, 89, 0.15),
-                0 0 40px rgba(197, 160, 89, 0.05);
+    box-shadow: 
+      0 4px 20px rgba(197, 160, 89, 0.25),
+      0 8px 40px rgba(197, 160, 89, 0.2),
+      0 0 60px rgba(197, 160, 89, 0.15);  /* 3 레이어 */
   }
 
   /* 부드러운 Fade In 애니메이션 */

@@ -47,16 +47,16 @@ export const MobileView = memo(function MobileView({ isGuest, masterName, userDa
             <header className="px-6 pt-10 pb-4 flex items-center justify-between relative z-20">
                 {/* Left: Brand & Status */}
                 <div className="flex flex-col items-start gap-2">
-                    <span className="text-xs font-serif font-bold text-primary tracking-widest gold-glow">청담 해화당</span>
+                    <span className="text-sm font-serif font-semibold text-primary tracking-widest gold-glow">청담 해화당</span>
                     <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-ink-light/70 bg-surface/50 px-2 py-0.5 rounded border border-white/5 backdrop-blur-sm">
+                        <span className="text-[11px] text-white/90 bg-surface/60 px-2 py-0.5 rounded border border-primary/20 backdrop-blur-sm">
                             {getTierLabel(userData.tier)}
                         </span>
-                        <div className="h-2 w-px bg-white/10" />
+                        <div className="h-2 w-px bg-white/20" />
                         <Link href="/protected/membership" className="flex items-center gap-1.5 active:scale-95 transition-transform">
-                            <Ticket className="w-3.5 h-3.5 text-primary" />
-                            <span className="text-xs font-bold text-ink-light">{userData.balance.toLocaleString()}</span>
-                            <span className="text-[10px] text-ink-light/40">장</span>
+                            <Ticket className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-bold text-white">{userData.balance.toLocaleString()}</span>
+                            <span className="text-xs text-white/70">장</span>
                         </Link>
                     </div>
                 </div>
@@ -82,7 +82,7 @@ export const MobileView = memo(function MobileView({ isGuest, masterName, userDa
                 <section className="space-y-4">
                     <div className="flex items-center gap-2">
                         <div className="w-1 h-4 bg-primary rounded-full" />
-                        <h2 className="text-sm font-bold text-ink-light tracking-wide">메인 비법서</h2>
+                        <h2 className="text-base font-serif font-semibold text-white tracking-tight">메인 비법서</h2>
                     </div>
 
                     {/* Cheonjiin Card */}
@@ -94,13 +94,13 @@ export const MobileView = memo(function MobileView({ isGuest, masterName, userDa
                             <div className="relative z-10">
                                 <div className="flex items-center gap-2 mb-2">
                                     <CloudMoon className="w-5 h-5 text-primary" strokeWidth={1} />
-                                    <h3 className="text-lg font-serif font-bold text-ink-light">천지인(天地人) 사주풀이</h3>
+                                    <h3 className="text-lg font-serif font-semibold text-white">천지인(天地人) 사주풀이</h3>
                                 </div>
-                                <p className="text-xs text-ink-light/60 mb-4 font-light">
+                                <p className="text-sm text-white/80 mb-4 leading-relaxed">
                                     사주(天) + 풍수(地) + 관상/손금(人)<br />
                                     운명을 꿰뚫는 통합 분석 시스템
                                 </p>
-                                <span className="text-[10px] text-primary border-b border-primary/30 pb-0.5 group-hover:border-primary transition-colors">분석 시작하기 &rarr;</span>
+                                <span className="text-xs text-primary border-b border-primary/30 pb-0.5 group-hover:border-primary transition-colors">분석 시작하기 &rarr;</span>
                             </div>
                         </div>
                     </Link>
