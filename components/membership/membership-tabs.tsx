@@ -9,8 +9,8 @@ interface Plan {
     id: string;
     name: string;
     tier: string;
-    price_krw: number;
-    billing_period: string;
+    price: number;
+    interval: string;
     daily_talisman_limit: number;
     relationship_limit: number;
     storage_limit: number;
