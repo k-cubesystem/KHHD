@@ -107,7 +107,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
                 {/* Price */}
                 <div className="text-center mb-6 pb-6 border-b border-primary/10">
                     <div className="text-3xl font-serif font-bold text-primary mb-1">
-                        월 {(currentPlan.price_krw || 0).toLocaleString()}원{" "}
+                        월 {(currentPlan.price || 0).toLocaleString()}원{" "}
                         <span className="text-sm text-ink/50">결제</span>
                     </div>
                     <div className="flex items-center justify-center gap-2 mt-2">
