@@ -113,13 +113,25 @@ export function SettingsForm({ user, profile }: { user: any, profile: any }) {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="birthTime" className="text-sm font-serif text-ink-light">태어난 시간</Label>
-                    <Input
-                        id="birthTime"
-                        type="time"
-                        value={birthTime}
-                        onChange={(e) => setBirthTime(e.target.value)}
-                        className="bg-surface/50 border-primary/20 focus:border-primary font-sans"
-                    />
+                    <Select value={birthTime} onValueChange={setBirthTime}>
+                        <SelectTrigger className="bg-surface/50 border-primary/20">
+                            <SelectValue placeholder="시간 선택" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-surface border-primary/20">
+                            <SelectItem value="23:00">子時 (자시) 23:00-01:00</SelectItem>
+                            <SelectItem value="01:00">丑時 (축시) 01:00-03:00</SelectItem>
+                            <SelectItem value="03:00">寅時 (인시) 03:00-05:00</SelectItem>
+                            <SelectItem value="05:00">卯時 (묘시) 05:00-07:00</SelectItem>
+                            <SelectItem value="07:00">辰時 (진시) 07:00-09:00</SelectItem>
+                            <SelectItem value="09:00">巳時 (사시) 09:00-11:00</SelectItem>
+                            <SelectItem value="11:00">午時 (오시) 11:00-13:00</SelectItem>
+                            <SelectItem value="13:00">未時 (미시) 13:00-15:00</SelectItem>
+                            <SelectItem value="15:00">申時 (신시) 15:00-17:00</SelectItem>
+                            <SelectItem value="17:00">酉時 (유시) 17:00-19:00</SelectItem>
+                            <SelectItem value="19:00">戌時 (술시) 19:00-21:00</SelectItem>
+                            <SelectItem value="21:00">亥時 (해시) 21:00-23:00</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
