@@ -132,7 +132,7 @@ export async function generateDailyFortune(
         .replace('{{saju}}', sajuStr);
 
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
         const result = await model.generateContent(prompt);
         const text = result.response.text();
 

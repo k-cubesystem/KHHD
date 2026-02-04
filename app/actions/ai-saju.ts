@@ -5,14 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { type FaceDestinyGoal, type InteriorTheme } from "@/lib/constants";
 import { deductTalisman } from "./wallet-actions";
+import { saveAnalysisHistory } from "./analysis-history";
 
-// Helper: Get Model Instance Safely
 const getGeminiModel = () => {
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) throw new Error("Google Generative AI API Key is missing");
     const genAI = new GoogleGenerativeAI(apiKey);
-    // User requested "Gemini 2.5 Flash-Lite" (gemini-2.5-flash-lite)
-    return genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    return genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 };
 
 // Helper: Fetch System Prompt from Supabase
@@ -113,13 +112,18 @@ export async function analyzeSajuDetail(
 export async function getTodayFortune(birthDate: string) {
     try {
         const model = getGeminiModel();
+        const supabase = await createClient();
         const today = new Date().toISOString().split('T')[0];
+
+        // 사용자 인증 추가 (Phase 6)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return { success: false, error: "로그인이 필요합니다." };
 
         const systemPrompt = await getSystemPrompt('daily_fortune', { date: today, birthDate }) || `Provide a daily fortune for someone born on ${birthDate}. Today is ${today}.`;
 
         const prompt = `
         ${systemPrompt}
-        
+
         Focus on: Specific advice for today, lucky color, lucky time.
         Format: JSON.
         {
@@ -135,7 +139,37 @@ export async function getTodayFortune(birthDate: string) {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) return { success: false, error: "Parse Error" };
-        return { success: true, ...JSON.parse(jsonMatch[0]) };
+
+        const fortuneData = JSON.parse(jsonMatch[0]);
+
+        // Phase 6: 오늘의 운세를 analysis_history에 자동 저장
+        try {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", user.id)
+                .single();
+
+            if (profile) {
+                await saveAnalysisHistory({
+                    target_id: user.id,
+                    target_name: profile.full_name || "본인",
+                    target_relation: "본인",
+                    category: "TODAY",
+                    context_mode: "GENERAL",
+                    result_json: { ...fortuneData, date: today },
+                    summary: fortuneData.summary || `오늘의 운세 (${today})`,
+                    score: fortuneData.score,
+                    model_used: "gemini-3-flash-preview",
+                    talisman_cost: 0, // 무료
+                });
+                console.log("[Today Fortune] History saved successfully");
+            }
+        } catch (historyError) {
+            console.error("[Today Fortune] Failed to save history:", historyError);
+        }
+
+        return { success: true, ...fortuneData };
     } catch {
         return { success: false, error: "운세 조회 실패" };
     }
@@ -277,7 +311,44 @@ ${goal === 'wealth' ? '재물운' : goal === 'love' ? '도화운' : '관운'} �
         const text = result.response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("AI 응답 파싱 실패 (JSON 형식 아님)");
-        return { success: true, ...JSON.parse(jsonMatch[0]) };
+
+        const analysisData = JSON.parse(jsonMatch[0]);
+
+        // Phase 6: 분석 결과를 analysis_history에 자동 저장
+        try {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", user.id)
+                .single();
+
+            if (profile) {
+                const goalLabels = {
+                    wealth: "CEO의 상 (재물운)",
+                    love: "아이돌의 상 (도화운)",
+                    authority: "장군의 상 (권위운)",
+                };
+
+                await saveAnalysisHistory({
+                    target_id: user.id,
+                    target_name: profile.full_name || "본인",
+                    target_relation: "본인",
+                    category: "FACE",
+                    context_mode: goal === "wealth" ? "WEALTH" : goal === "love" ? "LOVE" : "CAREER",
+                    result_json: analysisData,
+                    summary: `${goalLabels[goal]} 분석 - 종합 점수 ${analysisData.currentScore}점`,
+                    score: analysisData.currentScore,
+                    model_used: "gemini-3-flash-preview",
+                    talisman_cost: 5,
+                });
+                console.log("[Face Analysis] History saved successfully");
+            }
+        } catch (historyError) {
+            console.error("[Face Analysis] Failed to save history:", historyError);
+            // 히스토리 저장 실패해도 분석 결과는 반환
+        }
+
+        return { success: true, ...analysisData };
 
     } catch (error: unknown) {
         console.error("Face Analysis Error:", error);
@@ -336,7 +407,37 @@ export async function analyzePalm(imageBase64: string) {
         const text = result.response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("AI 응답 파싱 실패 (JSON 형식 아님)");
-        return { success: true, ...JSON.parse(jsonMatch[0]) };
+
+        const analysisData = JSON.parse(jsonMatch[0]);
+
+        // Phase 6: 손금 분석 결과를 analysis_history에 자동 저장
+        try {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", user.id)
+                .single();
+
+            if (profile) {
+                await saveAnalysisHistory({
+                    target_id: user.id,
+                    target_name: profile.full_name || "본인",
+                    target_relation: "본인",
+                    category: "HAND",
+                    context_mode: "HEALTH",
+                    result_json: analysisData,
+                    summary: `손금 분석 - 종합 점수 ${analysisData.currentScore}점`,
+                    score: analysisData.currentScore,
+                    model_used: "gemini-3-flash-preview",
+                    talisman_cost: 3,
+                });
+                console.log("[Palm Analysis] History saved successfully");
+            }
+        } catch (historyError) {
+            console.error("[Palm Analysis] Failed to save history:", historyError);
+        }
+
+        return { success: true, ...analysisData };
 
     } catch (error: unknown) {
         console.error("Palm Analysis Error:", error);
@@ -377,7 +478,42 @@ export async function analyzeInteriorForFengshui(imageBase64: string, theme: Int
         const text = result.response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("JSON Parse Error");
-        return { success: true, ...JSON.parse(jsonMatch[0]) };
+
+        const analysisData = JSON.parse(jsonMatch[0]);
+
+        // Phase 6: 풍수 분석 결과를 analysis_history에 자동 저장
+        try {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", user.id)
+                .single();
+
+            if (profile) {
+                const themeLabels = {
+                    wealth: "재물 가득",
+                    romance: "사랑 가득",
+                    health: "건강/집중",
+                };
+
+                await saveAnalysisHistory({
+                    target_id: user.id,
+                    target_name: profile.full_name || "본인",
+                    target_relation: "본인",
+                    category: "FENGSHUI",
+                    context_mode: theme === "wealth" ? "WEALTH" : theme === "romance" ? "LOVE" : "HEALTH",
+                    result_json: { ...analysisData, roomType, theme },
+                    summary: `풍수 분석 (${roomType}) - ${themeLabels[theme]}`,
+                    model_used: "gemini-3-flash-preview",
+                    talisman_cost: 2,
+                });
+                console.log("[Feng Shui] History saved successfully");
+            }
+        } catch (historyError) {
+            console.error("[Feng Shui] Failed to save history:", historyError);
+        }
+
+        return { success: true, ...analysisData };
 
     } catch (error: unknown) {
         console.error("Feng Shui Error:", error);

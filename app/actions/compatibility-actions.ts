@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { nanoid } from "nanoid";
+import { saveAnalysisHistory } from "./analysis-history";
 
 interface InviteData {
     inviterId: string;
@@ -70,25 +71,31 @@ export async function getInviteData(_inviteCode: string): Promise<{ success: boo
 
 // 3. Calculate Compatibility
 export async function calculateCompatibility(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _person1: { birthDate: string; birthTime?: string; gender: string },
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _person2: { birthDate: string; birthTime?: string; gender: string }
+    person1: { name?: string; birthDate: string; birthTime?: string; gender: string },
+    person2: { name?: string; birthDate: string; birthTime?: string; gender: string }
 ): Promise<{ success: boolean; score?: number; analysis?: string; error?: string }> {
-    // This would integrate with your existing Saju analysis
-    // For now, return a placeholder
+    try {
+        const supabase = await createClient();
 
-    const score = Math.floor(Math.random() * 30) + 70; // 70-100
+        // 사용자 인증 확인 (Phase 6)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            return { success: false, error: "로그인이 필요합니다." };
+        }
 
-    const analysis = `
+        // This would integrate with your existing Saju analysis
+        // For now, return a placeholder
+        const score = Math.floor(Math.random() * 30) + 70; // 70-100
+
+        const analysis = `
 ## 궁합 분석 결과
 
 두 분의 사주를 분석한 결과, **${score}점**의 궁합을 보이고 있습니다.
 
 ### 종합 평가
 ${score >= 90 ? "매우 좋은 궁합입니다! 서로를 보완하며 발전할 수 있는 관계입니다." :
-            score >= 80 ? "좋은 궁합입니다. 서로 이해하고 노력한다면 행복한 관계를 유지할 수 있습니다." :
-                "평범한 궁합입니다. 서로의 차이를 인정하고 존중하는 것이 중요합니다."}
+                score >= 80 ? "좋은 궁합입니다. 서로 이해하고 노력한다면 행복한 관계를 유지할 수 있습니다." :
+                    "평범한 궁합입니다. 서로의 차이를 인정하고 존중하는 것이 중요합니다."}
 
 ### 강점
 - 서로의 부족한 오행을 보완해줍니다
@@ -101,11 +108,53 @@ ${score >= 90 ? "매우 좋은 궁합입니다! 서로를 보완하며 발전할
 - 작은 갈등도 대화로 풀어가세요
 
 전체 분석을 보시려면 회원가입 후 '천지인 분석'을 이용해주세요.
-    `;
+        `;
 
-    return {
-        success: true,
-        score,
-        analysis,
-    };
+        // Phase 6: 궁합 분석 결과를 analysis_history에 자동 저장
+        try {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, full_name")
+                .eq("id", user.id)
+                .single();
+
+            if (profile) {
+                const person1Name = person1.name || "대상1";
+                const person2Name = person2.name || "대상2";
+
+                await saveAnalysisHistory({
+                    target_id: user.id,
+                    target_name: profile.full_name || "본인",
+                    target_relation: "본인",
+                    category: "COMPATIBILITY",
+                    context_mode: "LOVE",
+                    result_json: {
+                        person1,
+                        person2,
+                        score,
+                        analysis,
+                    },
+                    summary: `${person1Name}님과 ${person2Name}님의 궁합 분석 - ${score}점`,
+                    score,
+                    model_used: "placeholder",
+                    talisman_cost: 2,
+                });
+                console.log("[Compatibility] History saved successfully");
+            }
+        } catch (historyError) {
+            console.error("[Compatibility] Failed to save history:", historyError);
+        }
+
+        return {
+            success: true,
+            score,
+            analysis,
+        };
+    } catch (error) {
+        console.error("[Compatibility] Error:", error);
+        return {
+            success: false,
+            error: "궁합 분석 중 오류가 발생했습니다.",
+        };
+    }
 }

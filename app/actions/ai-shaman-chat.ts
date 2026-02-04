@@ -11,7 +11,7 @@ const getGeminiModel = () => {
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) throw new Error("Google Generative AI API Key is missing");
     const genAI = new GoogleGenerativeAI(apiKey);
-    return genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    return genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 };
 
 // Helper: Fetch System Prompt from Supabase

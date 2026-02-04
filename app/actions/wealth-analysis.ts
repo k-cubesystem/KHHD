@@ -99,8 +99,8 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
 
 【현재 대운】
 ${daewoonData.find(d => d.isCurrent) ?
-  `${daewoonData.find(d => d.isCurrent)!.pillar.korean} (${daewoonData.find(d => d.isCurrent)!.startAge}-${daewoonData.find(d => d.isCurrent)!.endAge}세)` :
-  "정보 없음"}
+                `${daewoonData.find(d => d.isCurrent)!.pillar.korean} (${daewoonData.find(d => d.isCurrent)!.startAge}-${daewoonData.find(d => d.isCurrent)!.endAge}세)` :
+                "정보 없음"}
 
 【분석 요청사항】
 다음 형식으로 재물운을 분석해주세요:
@@ -165,7 +165,7 @@ ${daewoonData.find(d => d.isCurrent) ?
 `;
 
         // 6. Gemini AI 호출
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
         const result = await model.generateContent(prompt);
         const analysis = result.response.text();
 

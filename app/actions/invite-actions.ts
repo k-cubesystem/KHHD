@@ -123,7 +123,7 @@ export async function analyzeCompatibility(
     person1: { name: string; birthDate: string; gender: string },
     person2: { name: string; birthDate: string; gender: string }
 ): Promise<CompatibilityResult> {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     const prompt = `당신은 전통 명리학 기반의 궁합 전문가입니다.
 

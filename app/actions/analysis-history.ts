@@ -96,7 +96,7 @@ export async function saveAnalysisHistory(
         summary: params.summary || null,
         score: params.score || null,
         prompt_version: params.prompt_version || null,
-        model_used: params.model_used || "gemini-2.0-flash-exp",
+        model_used: params.model_used || "gemini-3-flash-preview",
         talisman_cost: params.talisman_cost || 0,
       })
       .select("id")

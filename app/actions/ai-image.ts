@@ -83,7 +83,7 @@ export async function analyzeFaceForDestiny(
     imageBase64: string,
     goal: FaceDestinyGoal
 ): Promise<FaceAnalysisResult> {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const goalConfig = GOAL_PROMPTS[goal];
 
     const analysisPrompt = `당신은 30년 경력의 관상학 전문가입니다.
@@ -242,7 +242,7 @@ export async function analyzeInteriorForFengshui(
     theme: InteriorTheme,
     roomType: string = "거실"
 ): Promise<InteriorAnalysisResult> {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     const themeConfig = INTERIOR_THEMES[theme];
 
     const analysisPrompt = `당신은 전통 풍수 인테리어 전문가입니다.

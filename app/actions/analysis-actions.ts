@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateFateReport } from "@/lib/gemini";
 import { getSajuData } from "@/lib/saju";
+import { saveAnalysisHistory } from "./analysis-history";
 
 export async function startFateAnalysis(formData: FormData): Promise<void> {
     const supabase = await createClient();
@@ -148,7 +149,7 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
                 analysis_data: {
                     report_type: "cheonjiin", // 천지인 분석
                     target_type: target.target_type, // self or family
-                    generated_by: "gemini-1.5-pro",
+                    generated_by: "gemini-3-flash-preview",
                     lucky_color: luckyColor,
                     lucky_number: luckyNumber,
                     timestamp: new Date().toISOString()
@@ -165,6 +166,34 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
                 happinessIndex
             });
             throw new Error(`분석 결과를 저장하는 중 오류가 발생했습니다: ${insertError.message}`);
+        }
+
+        console.log("[Analysis] Saving to analysis_history...");
+
+        // 7. analysis_history에도 저장 (Phase 6)
+        const historyResult = await saveAnalysisHistory({
+            target_id: targetId,
+            target_name: target.name,
+            target_relation: target.relation_type,
+            category: "SAJU",
+            context_mode: "GENERAL",
+            result_json: {
+                report_text: reportText,
+                saju_data: sajuData,
+                lucky_color: luckyColor,
+                lucky_number: luckyNumber,
+            },
+            summary: `성공확률 ${successProbability}%, 행복지수 ${happinessIndex}%`,
+            score: successProbability, // 성공확률을 점수로 사용
+            model_used: "gemini-3-flash-preview",
+            talisman_cost: 1,
+        });
+
+        if (historyResult.success) {
+            console.log("[Analysis] Analysis history saved successfully");
+        } else {
+            console.error("[Analysis] Failed to save analysis history:", historyResult.error);
+            // 메인 분석은 성공했으므로 에러를 던지지 않음
         }
 
         revalidatePath("/protected/analysis");
