@@ -2,56 +2,42 @@ import Link from "next/link";
 
 export function SiteFooter() {
     return (
-        <footer className="w-full border-t border-border bg-background py-12 text-sm text-muted-foreground">
-            <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-                {/* Brand */}
-                <div className="space-y-4">
-                    <h3 className="text-lg font-serif font-bold text-primary">해화당 (海華堂)</h3>
-                    <p className="text-xs leading-relaxed">
-                        전통 명리학과 현대 AI 기술의 만남.<br />
-                        당신의 운명을 공학적으로 분석하고 해답을 제시합니다.
-                    </p>
-                </div>
-
-                {/* Sitemap */}
-                <div className="space-y-4">
-                    <h4 className="font-bold text-foreground">서비스</h4>
-                    <ul className="space-y-2 text-xs">
-                        <li><Link href="/protected/saju/today" className="hover:text-primary">오늘의 운세</Link></li>
-                        <li><Link href="/protected/saju/detail" className="hover:text-primary">정통 사주 분석</Link></li>
-                        <li><Link href="/protected/saju/compatibility" className="hover:text-primary">AI 궁합 분석</Link></li>
-                        <li><Link href="/protected/saju/face" className="hover:text-primary">관상 성형 (개운)</Link></li>
-                    </ul>
-                </div>
-
-                {/* Company Info */}
-                <div className="space-y-4">
-                    <h4 className="font-bold text-foreground">사업자 정보</h4>
-                    <ul className="space-y-2 text-xs">
-                        <li>큐브시스템</li>
-                        <li>대표: 박대건</li>
-                        <li>사업자등록번호: 205-16-69546</li>
-                        <li>통신판매업신고: 제 2024-의정부흥선-0264호</li>
-                        <li>주소: 경기도 의정부시 신촌로 39번길 50-20</li>
-                    </ul>
-                </div>
-
-                {/* CS Center */}
-                <div className="space-y-4">
-                    <h4 className="font-bold text-foreground">고객센터</h4>
-                    <ul className="space-y-2 text-xs">
-                        <li>운영시간: 평일 10:00 - 18:00 (주말/공휴일 휴무)</li>
-                        <li>문의: 카카오톡채널문의</li>
-                        <li>전화: 010-2311-2010</li>
-                        <li className="pt-2">
-                            <Link href="/terms" className="mr-4 hover:text-foreground underline">이용약관</Link>
-                            <Link href="/privacy" className="hover:text-foreground underline">개인정보처리방침</Link>
-                        </li>
-                    </ul>
-                </div>
+        <footer className="w-full max-w-[480px] mx-auto border-t border-primary/10 bg-background py-8 text-sm text-ink-light/60">
+            {/* Brand */}
+            <div className="px-6 mb-6 text-center">
+                <h3 className="text-base font-serif font-bold text-primary mb-2">해화당 (海華堂)</h3>
+                <p className="text-xs leading-relaxed text-ink-light/50">
+                    전통 명리학과 AI 기술의 만남
+                </p>
             </div>
 
-            <div className="mt-8 text-center text-[10px] text-muted-foreground/60 w-full">
+            {/* Links */}
+            <div className="px-6 mb-6 flex justify-center gap-4 text-xs">
+                <Link href="/terms" className="hover:text-primary transition-colors">
+                    이용약관
+                </Link>
+                <span className="text-ink-light/30">|</span>
+                <Link href="/privacy" className="hover:text-primary transition-colors">
+                    개인정보처리방침
+                </Link>
+            </div>
+
+            {/* Company Info */}
+            <div className="px-6 mb-6 text-center space-y-1 text-[10px] text-ink-light/40">
+                <p>큐브시스템 | 대표: 박대건</p>
+                <p>사업자등록번호: 205-16-69546</p>
+                <p>통신판매업신고: 제 2024-의정부흥선-0264호</p>
+                <p className="pt-1">경기도 의정부시 신촌로 39번길 50-20</p>
+            </div>
+
+            {/* CS Center */}
+            <div className="px-6 mb-6 text-center space-y-1 text-[10px] text-ink-light/40">
+                <p>고객센터: 평일 10:00 - 18:00 (주말/공휴일 휴무)</p>
+                <p>문의: 카카오톡채널 | 전화: 010-2311-2010</p>
+            </div>
+
+            {/* Copyright */}
+            <div className="text-center text-[9px] text-ink-light/30 border-t border-primary/5 pt-6">
                 Copyright © 2026 Haehwadang AI. All rights reserved.
             </div>
         </footer>
