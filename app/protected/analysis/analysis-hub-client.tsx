@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CloudMoon, Sparkles, ScrollText, Coins } from "lucide-react";
+import { CloudMoon, Sparkles, ScrollText, Coins, Eye } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
@@ -81,6 +81,18 @@ export function AnalysisHubClient({ isGuest, userName }: AnalysisHubClientProps)
             requiresSelector: true,
             visual: {
                 gradient: "linear-gradient(135deg, rgba(192, 112, 85, 0.1) 0%, rgba(10, 10, 10, 0) 100%)",
+            },
+        },
+        {
+            id: "vision",
+            title: "AI 영안실 (관상/손금)",
+            story: "당신의 얼굴과 손에는 살아온 역사와 살아갈 미래가 새겨져 있습니다. AI가 그 신비로운 암호를 해독해 드립니다.",
+            tagline: "관상/손금/풍수 분석하기",
+            icon: Eye,
+            href: "/protected/analysis/vision",
+            requiresSelector: false,
+            visual: {
+                gradient: "linear-gradient(135deg, rgba(80, 50, 120, 0.15) 0%, rgba(10, 10, 10, 0) 100%)",
             },
         },
     ];
