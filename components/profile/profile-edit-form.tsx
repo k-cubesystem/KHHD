@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2, Calendar, Clock, User, Phone, MapPin, Heart, Briefcase, BookOpen, Star, PenTool, Search } from "lucide-react";
+import { Loader2, Calendar, Clock, User, Phone, MapPin, Heart, Briefcase, BookOpen, Star, PenTool, Search, Target } from "lucide-react";
 import { toast } from "sonner";
 import DaumPostcodeEmbed from 'react-daum-postcode';
 import {
@@ -77,6 +77,8 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
         hobbies: profileData?.hobbies || "",
         specialties: profileData?.specialties || "",
         life_philosophy: profileData?.life_philosophy || "",
+        focus_areas: profileData?.focus_areas || "",
+        activity_status: profileData?.activity_status || "moderate",
     });
 
     useEffect(() => {
@@ -104,6 +106,8 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 hobbies: profileData.hobbies || prev.hobbies,
                 specialties: profileData.specialties || prev.specialties,
                 life_philosophy: profileData.life_philosophy || prev.life_philosophy,
+                focus_areas: profileData.focus_areas || prev.focus_areas,
+                activity_status: profileData.activity_status || prev.activity_status,
             }));
             // Set initial avatar preview if exists
             if (profileData.avatar_url) {
@@ -521,6 +525,73 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                                     placeholder="인생에서 중요하게 생각하는 가치나 좌우명이 있다면 자유롭게 적어주세요."
                                 />
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-zen-border/50 my-6" />
+
+                    {/* 섹션 4: 초개인화 분석 설정 */}
+                    <div className="space-y-6">
+                        <h3 className="text-lg font-bold text-zen-text border-l-4 border-zen-gold pl-3 mb-4">
+                            초개인화 분석 설정 (선택)
+                        </h3>
+
+                        {/* 안내 박스 */}
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                            <p className="text-xs text-blue-900">
+                                AI가 당신의 상황을 더 정확히 이해하고, 맞춤형 조언을 제공합니다.
+                                입력한 정보는 우선순위에 따라 분석에 반영됩니다.
+                            </p>
+                        </div>
+
+                        {/* 중점 관심사 및 현재 고민 (통합) */}
+                        <div className="space-y-2">
+                            <Label htmlFor="focus_areas" className="flex items-center gap-1 text-zen-text font-bold">
+                                <Target className="w-4 h-4 text-blue-500" />
+                                중점 관심사 및 현재 고민
+                            </Label>
+                            <Input
+                                id="focus_areas"
+                                value={extraData.focus_areas}
+                                onChange={(e) => setExtraData({ ...extraData, focus_areas: e.target.value })}
+                                className="border-zen-border focus:border-zen-gold"
+                                placeholder="예: 취업, 건강, 재물운, 승진운 (콤마로 구분)"
+                            />
+                            <p className="text-xs text-zen-muted">
+                                현재 가장 궁금한 분야나 고민을 자유롭게 입력하세요. (우선순위 2위)
+                            </p>
+                        </div>
+
+                        {/* 활동 성향 */}
+                        <div className="space-y-2">
+                            <Label className="text-zen-text font-bold">활동 성향</Label>
+                            <RadioGroup
+                                value={extraData.activity_status}
+                                onValueChange={(value) => setExtraData({ ...extraData, activity_status: value })}
+                                className="space-y-3"
+                            >
+                                <div className="flex items-start space-x-3 p-3 border rounded hover:border-zen-gold transition-colors">
+                                    <RadioGroupItem value="active" id="active" className="mt-1" />
+                                    <div className="flex-1">
+                                        <Label htmlFor="active" className="cursor-pointer font-bold">적극적 실행형</Label>
+                                        <p className="text-xs text-zen-muted mt-1">구체적인 행동 지침과 실전 전략을 원합니다</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3 p-3 border rounded hover:border-zen-gold transition-colors">
+                                    <RadioGroupItem value="moderate" id="moderate" className="mt-1" />
+                                    <div className="flex-1">
+                                        <Label htmlFor="moderate" className="cursor-pointer font-bold">보통</Label>
+                                        <p className="text-xs text-zen-muted mt-1">균형잡힌 조언을 원합니다</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start space-x-3 p-3 border rounded hover:border-zen-gold transition-colors">
+                                    <RadioGroupItem value="passive" id="passive" className="mt-1" />
+                                    <div className="flex-1">
+                                        <Label htmlFor="passive" className="cursor-pointer font-bold">소극적 관망형</Label>
+                                        <p className="text-xs text-zen-muted mt-1">심리적 위로와 단계적 접근을 원합니다</p>
+                                    </div>
+                                </div>
+                            </RadioGroup>
                         </div>
                     </div>
 

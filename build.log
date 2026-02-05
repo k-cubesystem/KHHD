@@ -1,0 +1,26 @@
+
+> build
+> next build
+
+▲ Next.js 16.1.4 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · serverActions
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 23.9s
+  Running TypeScript ...
+Failed to compile.
+
+./components/history/detail-modal.tsx:50:28
+Type error: Expected 2 arguments, but got 1.
+
+[0m [90m 48 |[39m   [36mconst[39m handleToggleFavorite [33m=[39m [36masync[39m () [33m=>[39m {
+ [90m 49 |[39m     [36mtry[39m {
+[31m[1m>[22m[39m[90m 50 |[39m       [36mconst[39m result [33m=[39m [36mawait[39m toggleFavorite(record[33m.[39mid)[33m;[39m
+ [90m    |[39m                            [31m[1m^[22m[39m
+ [90m 51 |[39m       [36mif[39m (result[33m.[39msuccess) {
+ [90m 52 |[39m         setIsFavorite([33m![39misFavorite)[33m;[39m
+ [90m 53 |[39m         toast[33m.[39msuccess(isFavorite [33m?[39m [32m"즐겨찾기 해제"[39m [33m:[39m [32m"즐겨찾기 추가"[39m)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null

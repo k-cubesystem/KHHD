@@ -87,10 +87,10 @@
     @apply tracking-wide;
   }
   
-  /* Force Square Design Globally */
-  * {
+  /* Force Square Design Globally - REMOVED for Manse Style Compatibility */
+  /* * {
     border-radius: 0 !important;
-  }
+  } */
 
   /* 전체 화면에 노이즈 텍스처를 오버레이로 깝니다 */
   body::before {
@@ -135,6 +135,16 @@
 }
 
 @layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+
   /* 세로쓰기 유틸리티 */
   .writing-vertical-rl {
     writing-mode: vertical-rl;

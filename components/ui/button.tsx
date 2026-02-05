@@ -8,25 +8,22 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-none text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer",
   {
     variants: {
       variant: {
-        default: "bg-primary text-background hover:bg-primary-dark relative overflow-hidden group shadow-lg shadow-primary/20",
-        destructive:
-          "bg-seal text-white shadow-sm hover:bg-seal/90",
-        outline:
-          "border border-primary-dim bg-surface text-ink-light shadow-sm hover:bg-primary-dim/10 hover:border-primary",
-        secondary:
-          "bg-surface text-ink-light shadow-sm hover:bg-surface/80 border border-primary-dim/30",
+        default: "btn-manse",
+        destructive: "bg-seal text-white shadow-sm hover:bg-seal/90",
+        outline: "btn-manse-outline",
+        secondary: "bg-surface text-ink-light shadow-sm hover:bg-surface/80 border border-primary-dim/30",
         ghost: "text-ink-light hover:bg-surface hover:text-primary",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-11 px-4 py-2",  // 44px - Mobile touch target
-        sm: "h-11 rounded-none px-3",  // 44px - Mobile touch target
-        lg: "h-12 rounded-none px-8",  // 48px - Larger touch target
-        icon: "h-11 w-11",  // 44px x 44px - Mobile touch target
+        sm: "h-9 rounded-md px-3",
+        lg: "h-12 rounded-lg px-8",
+        icon: "h-11 w-11",
       },
     },
     defaultVariants: {

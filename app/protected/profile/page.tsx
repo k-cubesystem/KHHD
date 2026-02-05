@@ -140,17 +140,17 @@ export default async function MyPage() {
     }
 
     try {
-        const recordsData = await supabase.from('saju_records')
+        // Fetched from new analysis_history table instead of saju_records
+        const recordsData = await supabase.from('analysis_history')
             .select(`
                 id,
                 created_at,
-                luck_score,
-                family_members!inner (
-                    name,
-                    relationship
-                )
+                score,
+                summary,
+                target_name,
+                target_relation
             `)
-            .eq('family_members.user_id', user.id)
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(3);
         records = recordsData.data || [];
@@ -174,11 +174,6 @@ export default async function MyPage() {
     return (
         <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
             <div className="hanji-overlay" />
-
-            {/* Header - Transparent on Mobile for minimalist look, or sticky as preferred. User wanted "No Top Menu" on mobile in global layout.
-                But `MyPage` often needs a title. Layout handles Global Nav. This is a local header. 
-                I will style it strictly. */}
-
 
             {/* Profile Section */}
             <section className="flex flex-col items-center pt-10 pb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
@@ -207,11 +202,7 @@ export default async function MyPage() {
                     <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
                 </Link>
 
-                {/* Admin Button */}
-
             </section>
-
-
 
             {/* Dashboard Navigation Grid */}
             <section className="px-6 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
@@ -275,7 +266,6 @@ export default async function MyPage() {
                     <Link href="/protected/notifications" className="flex items-center justify-between p-4 hover:bg-surface/10 transition-colors cursor-pointer group">
                         <div className="flex items-center gap-4">
                             <div className="w-5 h-5 flex items-center justify-center">
-                                {/* Using Lucide icons directly */}
                             </div>
                             <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">알림 설정</span>
                         </div>

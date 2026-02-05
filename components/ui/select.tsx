@@ -37,13 +37,10 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "border-primary-dim/30 data-[placeholder]:text-ink-faint bg-surface text-ink-light",
-        "focus-visible:border-primary focus-visible:ring-primary focus-visible:ring-2",
+        "input-manse flex w-full items-center justify-between gap-2",
         "aria-invalid:ring-seal/20 aria-invalid:border-seal",
-        "hover:bg-surface/80 flex w-full items-center justify-between gap-2",
-        "rounded-lg border px-3 py-2 text-sm whitespace-nowrap",
+        "rounded-lg px-3 py-2 text-sm whitespace-nowrap",
         "shadow-sm transition-all outline-none",
-        "disabled:cursor-not-allowed disabled:opacity-50",
         "data-[size=default]:h-10 data-[size=sm]:h-9",
         "*:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -83,7 +80,7 @@ function SelectContent({
           "overflow-x-hidden overflow-y-auto rounded-lg border shadow-lg shadow-primary/10",
           "backdrop-blur-md font-sans",
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
         )}
         position={position}
@@ -95,7 +92,7 @@ function SelectContent({
           className={cn(
             "p-1",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
           )}
         >
           {children}
@@ -128,14 +125,14 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-primary-dim/10 focus:text-primary",
+        "focus:bg-[#D4AF37]/20 focus:text-[#D4AF37]",
         "[&_svg:not([class*='text-'])]:text-ink-faint",
         "relative flex w-full cursor-default items-center gap-2",
         "rounded-md py-2 pr-8 pl-2 text-sm outline-hidden select-none",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         "*:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        "transition-colors hover:bg-primary-dim/5",
+        "transition-colors hover:bg-[#D4AF37]/10",
         className
       )}
       {...props}

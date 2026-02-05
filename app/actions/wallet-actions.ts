@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { canUseTalisman, incrementDailyUsage } from "./membership-limits";
+import { canUseTalisman, incrementDailyUsage, getUserTierLimits } from "./membership-limits";
 
 /**
  * Get feature cost from database
@@ -71,7 +71,7 @@ export async function getWalletBalance(): Promise<number> {
 export async function deductTalisman(
     featureKey: string,
     customAmount?: number
-): Promise<{ success: boolean; error?: string; remainingBalance?: number }> {
+): Promise<{ success: boolean; error?: string; remainingBalance?: number; errorType?: string; currentTier?: string }> {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -91,7 +91,13 @@ export async function deductTalisman(
     // Check daily talisman usage limit (멤버십 일일 한도 체크)
     const dailyCheck = await canUseTalisman();
     if (!dailyCheck.allowed) {
-        return { success: false, error: dailyCheck.message };
+        const limits = await getUserTierLimits();
+        return {
+            success: false,
+            error: dailyCheck.message,
+            errorType: "DAILY_LIMIT",
+            currentTier: limits?.tier || "SINGLE",
+        };
     }
 
     // Get cost
@@ -109,7 +115,13 @@ export async function deductTalisman(
     }
 
     if (wallet.balance < cost) {
-        return { success: false, error: `부적이 부족합니다. (필요: ${cost}장, 보유: ${wallet.balance}장)` };
+        const limits = await getUserTierLimits();
+        return {
+            success: false,
+            error: `부적이 부족합니다. (필요: ${cost}장, 보유: ${wallet.balance}장)`,
+            errorType: "INSUFFICIENT_BALANCE",
+            currentTier: limits?.tier || "SINGLE",
+        };
     }
 
     // Deduct balance

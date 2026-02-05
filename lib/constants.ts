@@ -1,6 +1,7 @@
 // Feature Keys (for dynamic pricing from DB)
 export const FEATURE_KEYS = {
     SAJU_BASIC: 'SAJU_BASIC',
+    SAJU_PREMIUM: 'SAJU_PREMIUM',
     COMPATIBILITY: 'COMPATIBILITY',
     FACE_AI: 'FACE_AI',
     PALM_AI: 'PALM_AI',

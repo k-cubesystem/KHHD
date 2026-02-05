@@ -32,6 +32,7 @@ export const ZODIAC_TIMES: ZodiacTime[] = [
 
 interface ZodiacTimeSelectProps {
     value?: string;
+    defaultValue?: string;
     onValueChange?: (value: string) => void;
     name?: string;
     className?: string;
@@ -39,12 +40,13 @@ interface ZodiacTimeSelectProps {
 
 export function ZodiacTimeSelect({
     value,
+    defaultValue,
     onValueChange,
     name = "birth_time",
     className,
 }: ZodiacTimeSelectProps) {
     return (
-        <Select value={value} onValueChange={onValueChange} name={name}>
+        <Select value={value} defaultValue={defaultValue} onValueChange={onValueChange} name={name}>
             <SelectTrigger className={className}>
                 <SelectValue placeholder="태어난 시간 선택" />
             </SelectTrigger>

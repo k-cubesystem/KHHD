@@ -23,7 +23,9 @@
       "Bash(done)",
       "Bash(node scripts/diagnose-destiny.js:*)",
       "Bash(node scripts/test-destiny-action.js:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx tsx:*)",
+      "Bash(tee:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

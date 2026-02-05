@@ -21,9 +21,10 @@ const config: Config = {
         foreground: "hsl(var(--foreground))", // Warm Off-White
         surface: "#1A1917",    // Warm Dark Grey
         primary: {
-          DEFAULT: "#E2D5B5",  // Light Champagne Gold (Text, Icons, Thin Borders)
-          dim: "#C8B273",      // Muted Gold (Accents)
+          DEFAULT: "#D4AF37",  // Manse Gold (Standard)
+          dim: "#C4A030",      // Slightly dimmer
           dark: "#8C7B50",     // Darker Gold for depth
+          light: "#F4E4BA",    // Light Gold for gradients
         },
         secondary: {
           DEFAULT: "#C8B273",  // Muted Gold (Secondary Action / Hover)

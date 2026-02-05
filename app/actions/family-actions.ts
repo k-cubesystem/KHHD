@@ -84,12 +84,17 @@ export async function addFamilyMember(formData: FormData) {
     revalidatePath("/protected/family");
 }
 
-export async function updateFamilyMember(id: string, formData: FormData) {
+export async function updateFamilyMember(formData: FormData) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
         throw new Error("인증된 사용자가 아닙니다.");
+    }
+
+    const id = formData.get("id") as string;
+    if (!id) {
+        throw new Error("수정할 대상의 ID가 필요합니다.");
     }
 
     const birthTimeRaw = formData.get("birth_time") as string;

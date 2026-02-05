@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const cardVariants = cva(
-  "rounded-lg bg-surface border border-primary-dim/20 transition-all duration-300 backdrop-blur-sm",
+  "rounded-xl card-glass-manse transition-all duration-300",
   {
     variants: {
       depth: {
