@@ -247,4 +247,101 @@
       #0A0A0A 100%
     );
   }
+
+  /* ========== Manse Design System Utilities ========== */
+  
+  /* Manse Glass Card */
+  .card-glass-manse {
+    background: rgba(26, 25, 23, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+  }
+
+  .card-glass-manse:hover {
+    background: rgba(26, 25, 23, 0.6);
+    border-color: rgba(212, 175, 55, 0.25);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Manse Input Field */
+  .input-manse {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    height: 3rem;
+    padding: 0 1rem;
+    color: #FFFFFF;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  .input-manse::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+
+  .input-manse:focus {
+    border-color: #D4AF37;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .input-manse:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Manse Button */
+  .button-manse {
+    background: #D4AF37;
+    color: #0A0A0A;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .button-manse:hover {
+    background: #F4E4BA;
+    transform: scale(1.05);
+  }
+
+  .button-manse:active {
+    transform: scale(0.95);
+  }
+
+  .button-manse:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Manse Button Outline Variant */
+  .button-manse-outline {
+    background: transparent;
+    color: #D4AF37;
+    border: 1px solid #D4AF37;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .button-manse-outline:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: #F4E4BA;
+    color: #F4E4BA;
+  }
+
+  .button-manse-outline:active {
+    transform: scale(0.95);
+  }
 }

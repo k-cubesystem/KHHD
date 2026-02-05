@@ -12,9 +12,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "btn-manse",
+        default: "button-manse",
         destructive: "bg-seal text-white shadow-sm hover:bg-seal/90",
-        outline: "btn-manse-outline",
+        outline: "button-manse-outline",
         secondary: "bg-surface text-ink-light shadow-sm hover:bg-surface/80 border border-primary-dim/30",
         ghost: "text-ink-light hover:bg-surface hover:text-primary",
         link: "text-primary underline-offset-4 hover:underline",
