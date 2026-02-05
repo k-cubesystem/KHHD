@@ -84,14 +84,16 @@ export default async function PremiumDashboardPage() {
                     <h2 className="text-xl font-bold text-zen-text mb-4 text-center">
                         나의 오행 분포
                     </h2>
-                    {fiveElementsResult.success ? (
+                    {fiveElementsResult.success && fiveElementsResult.data ? (
                         <>
                             <FiveElementsRadar data={fiveElementsResult.data} />
-                            <div className="mt-6 text-center">
-                                <p className="text-sm text-zen-muted bg-blue-50 border border-blue-200 rounded-lg p-4 inline-block">
-                                    {fiveElementsResult.balance.advice}
-                                </p>
-                            </div>
+                            {fiveElementsResult.balance && (
+                                <div className="mt-6 text-center">
+                                    <p className="text-sm text-zen-muted bg-blue-50 border border-blue-200 rounded-lg p-4 inline-block">
+                                        {fiveElementsResult.balance.advice}
+                                    </p>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="text-center py-8">
