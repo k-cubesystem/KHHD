@@ -41,7 +41,7 @@ export default async function PremiumDashboardPage() {
         getUserFiveElements(),
     ]);
 
-    const tier = limits?.tier || "SINGLE";
+    const tier = (limits?.tier || "SINGLE") as keyof typeof tierColors;
 
     return (
         <div className="min-h-screen bg-background">
