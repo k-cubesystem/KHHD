@@ -6,7 +6,7 @@ import {
     analyzeFaceForDestiny,
     analyzePalm,
     analyzeInteriorForFengshui
-} from "@/app/actions/ai-saju.ts"; // Ensure this path is correct
+} from "@/app/actions/ai-saju";
 import { saveAnalysisHistory } from "@/app/actions/analysis-history";
 
 // Types
