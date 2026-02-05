@@ -42,8 +42,6 @@ export function ShamanChatInterface() {
             const result = await getShamanChatStarters();
             if (result.success && result.questions) {
                 setStarterQuestions(result.questions);
-            } else if (result.error) {
-                toast.error(result.error);
             }
         };
         loadStarters();
