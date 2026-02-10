@@ -5,15 +5,16 @@ export const WALLET_BALANCE_KEY = ["wallet", "balance"];
 
 /**
  * Wallet Balance 조회 훅
- * - 자동 캐싱 (30초)
- * - 백그라운드 리페치
+ * - 자동 캐싱 (2분)
+ * - 백그라운드 리페치 제거 (mutation으로 업데이트)
  */
 export function useWalletBalance() {
     return useQuery({
         queryKey: WALLET_BALANCE_KEY,
         queryFn: getWalletBalance,
-        staleTime: 30 * 1000, // 30 seconds
-        refetchInterval: 60 * 1000, // 1 minute background refetch
+        staleTime: 2 * 60 * 1000, // 2 minutes - balance checked via mutations
+        gcTime: 5 * 60 * 1000, // 5 minutes cache time
+        // refetchInterval removed - balance is updated via mutations
     });
 }
 

@@ -1,13 +1,31 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
-import { MasterpieceSection } from "./dashboard/MasterpieceSection";
-import { RelationshipSection } from "./dashboard/RelationshipSection";
-import { PeriodSection } from "./dashboard/PeriodSection";
-import { Year2026Section } from "./dashboard/Year2026Section";
-import { TrendSection } from "./dashboard/TrendSection";
 import { cn } from "@/lib/utils";
+
+// Dynamic imports for heavy dashboard sections to improve initial load
+const MasterpieceSection = dynamic(
+  () => import("./dashboard/MasterpieceSection").then((mod) => ({ default: mod.MasterpieceSection })),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-white/5 rounded-lg" /> }
+);
+const RelationshipSection = dynamic(
+  () => import("./dashboard/RelationshipSection").then((mod) => ({ default: mod.RelationshipSection })),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-lg" /> }
+);
+const PeriodSection = dynamic(
+  () => import("./dashboard/PeriodSection").then((mod) => ({ default: mod.PeriodSection })),
+  { ssr: false, loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-lg" /> }
+);
+const Year2026Section = dynamic(
+  () => import("./dashboard/Year2026Section").then((mod) => ({ default: mod.Year2026Section })),
+  { ssr: false, loading: () => <div className="h-40 animate-pulse bg-white/5 rounded-lg" /> }
+);
+const TrendSection = dynamic(
+  () => import("./dashboard/TrendSection").then((mod) => ({ default: mod.TrendSection })),
+  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-lg" /> }
+);
 
 interface AnalysisDashboardProps {
     userName?: string;
@@ -23,9 +41,9 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps) {
         >
             {/* Compact Hero */}
             <motion.section variants={fadeInUp} className="text-left space-y-2 pt-6">
-                <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug">
-                    <span className="text-manse-gold">Analysis Center</span>
-                    <span className="block text-sm font-sans font-light text-ink-light/50 mt-1">
+                <h1 className="text-2xl md:text-3xl font-serif font-bold text-white leading-snug">
+                    <span className="text-[#D4AF37]">Analysis Center</span>
+                    <span className="block text-sm font-sans font-light text-white/80 mt-1">
                         {userName ? `${userName}님, 오늘의 운명 리포트입니다.` : "당신의 운명을 분석합니다."}
                     </span>
                 </h1>

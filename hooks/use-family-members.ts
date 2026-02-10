@@ -5,14 +5,15 @@ export const FAMILY_MEMBERS_KEY = ["family", "members"];
 
 /**
  * Family Members 조회 훅
- * - 자동 캐싱 (1분)
+ * - 자동 캐싱 (10분) - 가족 구성원 정보는 자주 변경되지 않음
  * - 백그라운드 리페치
  */
 export function useFamilyMembers() {
     return useQuery({
         queryKey: FAMILY_MEMBERS_KEY,
         queryFn: getFamilyMembers,
-        staleTime: 60 * 1000, // 1 minute
+        staleTime: 10 * 60 * 1000, // 10 minutes - family data rarely changes
+        gcTime: 30 * 60 * 1000, // 30 minutes cache time
     });
 }
 
