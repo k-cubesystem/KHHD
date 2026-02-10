@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, Part } from "@google/generative-ai";
+import { logger } from "@/lib/utils/logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
 
@@ -83,7 +84,7 @@ export async function generateFateReport(params: FateReportParams) {
             // Check if it's a relative path (supabase storage) or absolute
             const fetchUrl = url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${url}`;
 
-            console.log(`[Gemini] Fetching image from: ${fetchUrl}`);
+            logger.log(`[Gemini] Fetching image from: ${fetchUrl}`);
             const response = await fetch(fetchUrl);
             if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
 
@@ -95,7 +96,7 @@ export async function generateFateReport(params: FateReportParams) {
                 },
             };
         } catch (error) {
-            console.error(`[Gemini] Image processing error (${url}):`, error);
+            logger.error(`[Gemini] Image processing error (${url}):`, error);
             return null;
         }
     };
@@ -110,12 +111,12 @@ export async function generateFateReport(params: FateReportParams) {
     }
 
     try {
-        console.log("[Gemini] Generating content...");
+        logger.log("[Gemini] Generating content...");
         const result = await model.generateContent([prompt, ...imageParts]);
         const response = await result.response;
         return response.text();
     } catch (error) {
-        console.error("[Gemini] Content generation failed:", error);
+        logger.error("[Gemini] Content generation failed:", error);
         throw new Error("운명 비록 생성 중 우주의 기운이 잠시 흩어졌습니다. 다시 시도해 주십시오.");
     }
 }

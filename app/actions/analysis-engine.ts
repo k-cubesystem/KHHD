@@ -82,9 +82,10 @@ async function runAnalysis(
 
         return { success: true, data };
 
-    } catch (error: any) {
+    } catch (error) {
         console.error(`[Analysis Engine] Error in ${analysisType}:`, error);
-        return { success: false, error: error.message || "분석 중 오류가 발생했습니다." };
+        const message = error instanceof Error ? error.message : "분석 중 오류가 발생했습니다.";
+        return { success: false, error: message };
     }
 }
 

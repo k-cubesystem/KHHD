@@ -1,8 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Wallet, Heart, GraduationCap, Building2, TrendingUp, ArrowRight } from "lucide-react";
-import { SnapCarousel } from "@/components/ui/snap-carousel";
+import { Wallet, Heart, GraduationCap, Building2, TrendingUp } from "lucide-react";
 
 const TRENDS = [
     { id: 'wealth', label: '재물운', desc: '투자·매매', icon: Wallet, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
@@ -16,34 +15,35 @@ export function TrendSection() {
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-serif font-bold text-ink-light/80 flex items-center gap-2 before:w-1 before:h-4 before:bg-primary before:block">
+                <h3 className="text-sm font-serif font-bold text-[#D4AF37] flex items-center gap-2 before:w-1 before:h-4 before:bg-primary before:block">
                     테마별 트렌드
                 </h3>
             </div>
 
-            <SnapCarousel itemWidth="w-[140px]" className="pb-2">
+            {/* 그리드 형식으로 변경 */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 {TRENDS.map((trend) => {
                     const Icon = trend.icon;
                     return (
                         <Card
                             key={trend.id}
-                            className="group cursor-pointer card-glass-manse transition-all p-4 flex flex-col items-center justify-center gap-2 text-center h-[120px] rounded-xl active:scale-95 duration-200"
+                            className="group cursor-pointer card-glass-manse transition-all p-4 flex flex-col items-center justify-center gap-2 text-center h-[120px] rounded-xl active:scale-95 duration-200 hover:border-primary/40"
                         >
                             <div className={`w-10 h-10 rounded-full ${trend.bg} flex items-center justify-center group-hover:scale-110 transition-transform mb-1`}>
                                 <Icon className={`w-5 h-5 ${trend.color}`} strokeWidth={1.5} />
                             </div>
                             <div>
-                                <span className="block text-sm font-bold text-ink-light">
+                                <span className="block text-sm font-bold text-white">
                                     {trend.label}
                                 </span>
-                                <span className="block text-[10px] text-ink-light/40 mt-0.5">
+                                <span className="block text-[10px] text-white/70 mt-0.5">
                                     {trend.desc}
                                 </span>
                             </div>
                         </Card>
                     )
                 })}
-            </SnapCarousel>
+            </div>
         </div>
     );
 }

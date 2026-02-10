@@ -41,31 +41,52 @@ export default function StudioPage() {
                     </div>
                 </Link>
 
-                {/* Face/Palm/Fengshui (Placeholders or Future Routes) */}
-                {CATEGORIES.map((cat) => (
-                    <div key={cat.id} className="relative opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                        <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 group">
-                            <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center">
-                                <cat.icon className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.5} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-serif font-bold text-ink-light mb-1">{cat.label}</h3>
-                                <p className="text-xs text-ink-light/50">{cat.desc}</p>
-                            </div>
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                <span className="text-[10px] bg-white/10 px-2 py-1 rounded-full text-white/50">준비중</span>
-                            </div>
+                {/* Palm Reading - ACTIVE */}
+                <Link href="/protected/studio/palm" className="block">
+                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
+                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
+                            <Fingerprint className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.5} />
                         </div>
+                        <div>
+                            <h3 className="text-lg font-serif font-bold text-ink-light mb-1">손금</h3>
+                            <p className="text-xs text-ink-light/50">손바닥에 새겨진 생명 정보</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" />
                     </div>
-                ))}
+                </Link>
+
+                {/* Face Reading - ACTIVE */}
+                <Link href="/protected/studio/face" className="block">
+                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
+                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
+                            <User className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-serif font-bold text-ink-light mb-1">관상학</h3>
+                            <p className="text-xs text-ink-light/50">얼굴에 담긴 인생의 길흉</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" />
+                    </div>
+                </Link>
+
+                {/* Feng Shui - ACTIVE */}
+                <Link href="/protected/studio/fengshui" className="block">
+                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
+                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
+                            <Compass className="w-6 h-6 text-[#D4AF37]" strokeWidth={1.5} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-serif font-bold text-ink-light mb-1">공간풍수</h3>
+                            <p className="text-xs text-ink-light/50">당신을 둘러싼 기의 흐름</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" />
+                    </div>
+                </Link>
             </main>
         </div>
     );
 }
 
 const CATEGORIES = [
-    // { id: "saju", label: "사주명리", icon: BookOpen, desc: "생년월일로 보는 운명의 지도" }, // Handled separately
-    { id: "face", label: "관상학", icon: User, desc: "얼굴에 담긴 인생의 길흉" },
-    { id: "palm", label: "손금", icon: Fingerprint, desc: "손바닥에 새겨진 생명 정보" },
-    { id: "fengshui", label: "공간풍수", icon: Compass, desc: "당신을 둘러싼 기의 흐름" },
+    // All analysis types are now active and handled separately above
 ] as const;

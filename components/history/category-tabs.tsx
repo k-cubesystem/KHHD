@@ -32,61 +32,62 @@ export function CategoryTabs({
   selectedCategory,
   onCategoryChange,
 }: CategoryTabsProps) {
-  // 각 카테고리별 개수 계산
   const getCategoryCount = (category: AnalysisCategory | "ALL"): number => {
     if (category === "ALL") return records.length;
     return records.filter((r) => r.category === category).length;
   };
 
+  const categories = [
+    { value: "ALL", label: "전체", icon: Sparkles },
+    { value: "SAJU", label: "사주", icon: Sun },
+    { value: "FACE", label: "관상", icon: User2 },
+    { value: "HAND", label: "손금", icon: Hand },
+    { value: "FENGSHUI", label: "풍수", icon: Home },
+    { value: "COMPATIBILITY", label: "궁합", icon: Heart },
+    { value: "WEALTH", label: "재물운", icon: Coins },
+    { value: "TODAY", label: "오늘의운세", icon: Sun },
+    { value: "NEW_YEAR", label: "신년운세", icon: Sparkles },
+  ] as const;
+
   return (
-    <div className="space-y-2">
-      <label className="text-xs text-ink-light/60 font-medium uppercase tracking-wide">
-        카테고리
-      </label>
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {tabs.map((tab) => {
-          const count = getCategoryCount(tab.value);
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs text-ink-light/60 font-medium uppercase tracking-wide">
+          카테고리
+        </label>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
+        {categories.map((tab) => {
+          const count = getCategoryCount(tab.value as AnalysisCategory | "ALL");
           const isActive = selectedCategory === tab.value;
           const Icon = tab.icon;
 
-          // 개수가 0인 탭은 숨김 (전체 제외)
           if (count === 0 && tab.value !== "ALL") return null;
 
           return (
             <button
               key={tab.value}
-              onClick={() => onCategoryChange(tab.value)}
-              className={`relative flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors
-                ${
-                  isActive
-                    ? "text-primary"
-                    : "text-ink-light/60 hover:text-ink-light"
+              onClick={() => onCategoryChange(tab.value as AnalysisCategory | "ALL")}
+              className={`
+                relative flex items-center gap-2 px-3 py-2 text-sm whitespace-nowrap transition-all duration-300 rounded-lg border
+                ${isActive
+                  ? "bg-primary/10 border-primary/40 text-primary font-medium shadow-[0_0_10px_rgba(236,182,19,0.1)]"
+                  : "bg-surface/30 border-white/5 text-ink-light/60 hover:text-ink-light hover:bg-surface/50 hover:border-white/10"
                 }
-                ${isActive ? "bg-primary/10" : "bg-surface/30"}
-                border ${isActive ? "border-primary/40" : "border-primary/20"}
-                rounded-lg
               `}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary" : "text-ink-light/40"}`} />
               <span>{tab.label}</span>
-              <span
-                className={`text-xs px-1.5 py-0.5 rounded-full
-                ${
-                  isActive
-                    ? "bg-primary/20 text-primary"
-                    : "bg-ink-light/10 text-ink-light/60"
+              <span className={`
+                text-[10px] px-1.5 py-0.5 rounded-full ml-0.5 min-w-[1.2em] text-center
+                ${isActive
+                  ? "bg-primary/20 text-primary"
+                  : "bg-black/20 text-ink-light/40"
                 }
-              `}
-              >
+              `}>
                 {count}
               </span>
-              {isActive && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 border-2 border-primary rounded-lg"
-                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                />
-              )}
             </button>
           );
         })}

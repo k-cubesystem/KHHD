@@ -241,13 +241,13 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
     };
 
     return (
-        <Card className="border-zen-border bg-white shadow-sm">
-            <CardHeader className="bg-zen-bg/30 border-b border-zen-border pb-4">
-                <CardTitle className="text-xl font-serif text-zen-text flex items-center gap-2">
-                    <User className="w-5 h-5 text-zen-gold" />
+        <Card className="card-glass-manse border-[#D4AF37]/20">
+            <CardHeader className="bg-[#0A192F]/30 border-b border-[#D4AF37]/20 pb-4">
+                <CardTitle className="text-xl font-serif text-[#D4AF37] flex items-center gap-2">
+                    <User className="w-5 h-5 text-[#D4AF37]" />
                     상세 정보 입력
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-[#D4AF37]/60">
                     사주 분석과 회원 서비스 이용을 위한 정보를 입력해주세요.
                 </CardDescription>
             </CardHeader>
@@ -256,16 +256,16 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
 
                     {/* 섹션 1: 기본 신상 정보 */}
                     <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-zen-text border-l-4 border-zen-gold pl-3 mb-4">
+                        <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">
                             기본 인적 사항
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Profile Image Upload */}
                             <div className="md:col-span-2 flex flex-col items-center justify-center space-y-4 pb-4">
-                                <Label className="text-zen-text font-bold">프로필 이미지</Label>
+                                <Label className="text-[#D4AF37] font-bold">프로필 이미지</Label>
                                 <div className="relative group">
-                                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-zen-border shadow-sm group-hover:border-zen-gold transition-colors">
+                                    <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-[#D4AF37]/30 shadow-lg group-hover:border-[#D4AF37] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all duration-300">
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img
                                             src={previewImage || "https://ui-avatars.com/api/?name=User&background=random"}
@@ -274,8 +274,8 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                                             onError={(e) => { e.currentTarget.src = "https://ui-avatars.com/api/?name=User&background=random"; }}
                                         />
                                     </div>
-                                    <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-white rounded-full p-1.5 shadow-md border border-gray-200 cursor-pointer hover:bg-zen-bg transition-colors">
-                                        <PenTool className="w-3 h-3 text-zen-text" />
+                                    <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-[#D4AF37] rounded-full p-2 shadow-md cursor-pointer hover:scale-110 transition-transform">
+                                        <PenTool className="w-4 h-4 text-[#0A192F]" />
                                         <input
                                             id="avatar-upload"
                                             type="file"
@@ -285,7 +285,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                                         />
                                     </label>
                                 </div>
-                                <p className="text-xs text-zen-muted">1장만 업로드 가능합니다.</p>
+                                <p className="text-xs text-[#D4AF37]/60">1장만 업로드 가능합니다.</p>
                             </div>
 
                             <div className="space-y-2">
@@ -387,7 +387,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
 
                     {/* 섹션 2: 사주 정보 (기존 내용) */}
                     <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-zen-text border-l-4 border-zen-gold pl-3 mb-4">
+                        <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">
                             사주 분석 정보
                         </h3>
                         {/* 생년월일 + 달력타입 */}
@@ -473,7 +473,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
 
                     {/* 섹션 3: 추가 정보 (직업, 취미 등) */}
                     <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-zen-text border-l-4 border-zen-gold pl-3 mb-4">
+                        <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">
                             추가 정보 (AI 정밀 분석용)
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -532,66 +532,90 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
 
                     {/* 섹션 4: 초개인화 분석 설정 */}
                     <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-zen-text border-l-4 border-zen-gold pl-3 mb-4">
+                        <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">
                             초개인화 분석 설정 (선택)
                         </h3>
 
                         {/* 안내 박스 */}
-                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                            <p className="text-xs text-blue-900">
+                        <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/30 p-4 rounded-lg">
+                            <p className="text-xs text-[#D4AF37]/90">
                                 AI가 당신의 상황을 더 정확히 이해하고, 맞춤형 조언을 제공합니다.
                                 입력한 정보는 우선순위에 따라 분석에 반영됩니다.
                             </p>
                         </div>
 
-                        {/* 중점 관심사 및 현재 고민 (통합) */}
+                        {/* 중점 관심사 및 현재 고민 (통합) - Gold Bordered Emphasis */}
                         <div className="space-y-2">
-                            <Label htmlFor="focus_areas" className="flex items-center gap-1 text-zen-text font-bold">
-                                <Target className="w-4 h-4 text-blue-500" />
+                            <Label htmlFor="focus_areas" className="flex items-center gap-1 text-[#D4AF37] font-bold">
+                                <Target className="w-4 h-4 text-[#D4AF37]" />
                                 중점 관심사 및 현재 고민
                             </Label>
-                            <Input
-                                id="focus_areas"
-                                value={extraData.focus_areas}
-                                onChange={(e) => setExtraData({ ...extraData, focus_areas: e.target.value })}
-                                className="border-zen-border focus:border-zen-gold"
-                                placeholder="예: 취업, 건강, 재물운, 승진운 (콤마로 구분)"
-                            />
-                            <p className="text-xs text-zen-muted">
-                                현재 가장 궁금한 분야나 고민을 자유롭게 입력하세요. (우선순위 2위)
+                            <div className="relative">
+                                <Input
+                                    id="focus_areas"
+                                    value={extraData.focus_areas}
+                                    onChange={(e) => setExtraData({ ...extraData, focus_areas: e.target.value })}
+                                    className="input-manse border-2 border-[#D4AF37]/40 focus:border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.15)]"
+                                    placeholder="예: 취업, 건강, 재물운, 승진운 (콤마로 구분)"
+                                />
+                                <div className="absolute -top-2 left-3 px-2 bg-[#0A192F]">
+                                    <span className="text-xs text-[#D4AF37] font-semibold">
+                                        ⭐ AI 우선 분석
+                                    </span>
+                                </div>
+                            </div>
+                            <p className="text-xs text-[#D4AF37]/60">
+                                현재 가장 공금한 분야나 고민을 자유롭게 입력하세요. (우선순위 2위)
                             </p>
                         </div>
 
-                        {/* 활동 성향 */}
+                        {/* 활동 성향 - Segmented Control UI */}
                         <div className="space-y-2">
-                            <Label className="text-zen-text font-bold">활동 성향</Label>
-                            <RadioGroup
-                                value={extraData.activity_status}
-                                onValueChange={(value) => setExtraData({ ...extraData, activity_status: value })}
-                                className="space-y-3"
-                            >
-                                <div className="flex items-start space-x-3 p-3 border rounded hover:border-zen-gold transition-colors">
-                                    <RadioGroupItem value="active" id="active" className="mt-1" />
-                                    <div className="flex-1">
-                                        <Label htmlFor="active" className="cursor-pointer font-bold">적극적 실행형</Label>
-                                        <p className="text-xs text-zen-muted mt-1">구체적인 행동 지침과 실전 전략을 원합니다</p>
+                            <Label className="text-[#D4AF37] font-bold">활동 성향</Label>
+                            <div className="flex gap-2 p-1 bg-[#0A192F]/50 rounded-lg border border-[#D4AF37]/20">
+                                <button
+                                    type="button"
+                                    onClick={() => setExtraData({ ...extraData, activity_status: 'active' })}
+                                    className={`flex-1 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${extraData.activity_status === 'active'
+                                        ? 'bg-[#D4AF37] text-[#0A192F] shadow-md'
+                                        : 'bg-transparent text-[#D4AF37]/60 hover:bg-[#D4AF37]/10'
+                                        }`}
+                                >
+                                    <div className="text-center">
+                                        <div className="font-bold">적극적</div>
+                                        <div className="text-xs opacity-80 mt-1">실행형</div>
                                     </div>
-                                </div>
-                                <div className="flex items-start space-x-3 p-3 border rounded hover:border-zen-gold transition-colors">
-                                    <RadioGroupItem value="moderate" id="moderate" className="mt-1" />
-                                    <div className="flex-1">
-                                        <Label htmlFor="moderate" className="cursor-pointer font-bold">보통</Label>
-                                        <p className="text-xs text-zen-muted mt-1">균형잡힌 조언을 원합니다</p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setExtraData({ ...extraData, activity_status: 'moderate' })}
+                                    className={`flex-1 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${extraData.activity_status === 'moderate'
+                                        ? 'bg-[#D4AF37] text-[#0A192F] shadow-md'
+                                        : 'bg-transparent text-[#D4AF37]/60 hover:bg-[#D4AF37]/10'
+                                        }`}
+                                >
+                                    <div className="text-center">
+                                        <div className="font-bold">보통</div>
+                                        <div className="text-xs opacity-80 mt-1">균형형</div>
                                     </div>
-                                </div>
-                                <div className="flex items-start space-x-3 p-3 border rounded hover:border-zen-gold transition-colors">
-                                    <RadioGroupItem value="passive" id="passive" className="mt-1" />
-                                    <div className="flex-1">
-                                        <Label htmlFor="passive" className="cursor-pointer font-bold">소극적 관망형</Label>
-                                        <p className="text-xs text-zen-muted mt-1">심리적 위로와 단계적 접근을 원합니다</p>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setExtraData({ ...extraData, activity_status: 'passive' })}
+                                    className={`flex-1 py-3 px-2 rounded-lg font-semibold transition-all text-sm ${extraData.activity_status === 'passive'
+                                        ? 'bg-[#D4AF37] text-[#0A192F] shadow-md'
+                                        : 'bg-transparent text-[#D4AF37]/60 hover:bg-[#D4AF37]/10'
+                                        }`}
+                                >
+                                    <div className="text-center">
+                                        <div className="font-bold">소극적</div>
+                                        <div className="text-xs opacity-80 mt-1">관망형</div>
                                     </div>
-                                </div>
-                            </RadioGroup>
+                                </button>
+                            </div>
+                            <p className="text-xs text-[#D4AF37]/60 mt-2">
+                                선호하는 조언 스타일을 선택하세요. AI가 맞춤형 분석을 제공합니다.
+                            </p>
                         </div>
                     </div>
 
@@ -600,14 +624,14 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                             type="button"
                             variant="outline"
                             onClick={() => router.back()}
-                            className="flex-1 h-12 text-base border-zen-border hover:bg-zen-bg"
+                            className="flex-1 h-12 text-base border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10"
                             disabled={loading}
                         >
                             취소
                         </Button>
                         <Button
                             type="submit"
-                            className="flex-1 h-12 text-base bg-zen-wood text-white hover:bg-[#7A604D] font-serif font-bold shadow-md"
+                            className="flex-1 h-12 text-base bg-[#D4AF37] text-[#0A192F] hover:bg-[#F4E4BA] font-serif font-bold shadow-lg hover:shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all"
                             disabled={loading}
                         >
                             {loading ? (

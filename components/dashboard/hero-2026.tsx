@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Flame, Sparkles, ArrowRight } from "lucide-react";
+import { Shield, Sparkles, ArrowRight, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -11,7 +11,6 @@ interface Hero2026Props {
 }
 
 export function Hero2026({ isGuest, masterName }: Hero2026Props) {
-
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -19,75 +18,156 @@ export function Hero2026({ isGuest, masterName }: Hero2026Props) {
   }, []);
 
   return (
-    <div className="relative w-full h-[300px] md:h-[400px] overflow-hidden border border-primary/20 group">
-      {/* Background: Animated Red Horse Silhouette */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1a0a0a] via-[#0a0a0a] to-[#1a0000]">
-        {/* Noise Texture */}
-        <div className="absolute inset-0 opacity-10 mix-blend-overlay">
-          <div className="w-full h-full" style={{
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' /%3E%3C/svg%3E")',
-            backgroundRepeat: 'repeat',
-          }} />
+    <div className="relative w-full min-h-[320px] md:min-h-[400px] overflow-hidden">
+      {/* Background: Dark Premium with Gold Glow */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0A0A0A] via-[#0A192F] to-[#0A0A0A]">
+        {/* Animated Gold Particles */}
+        <div className="absolute inset-0 overflow-hidden">
+          {mounted && [...Array(20)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-primary/30 rounded-full"
+              initial={{
+                x: Math.random() * 100 + "%",
+                y: "100%",
+                scale: Math.random() * 0.5 + 0.5
+              }}
+              animate={{
+                y: "-20%",
+                opacity: [0, 1, 0],
+              }}
+              transition={{
+                duration: Math.random() * 3 + 4,
+                repeat: Infinity,
+                delay: Math.random() * 5,
+                ease: "linear"
+              }}
+            />
+          ))}
         </div>
 
+        {/* Central Gold Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px]" />
 
-
-        {/* Content Overlay */}
-        <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-20">
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-16 py-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="max-w-2xl"
+            transition={{ duration: 0.8 }}
+            className="max-w-2xl mx-auto text-center"
           >
             {/* Badge */}
             <motion.div
-              className="inline-flex items-center gap-2 px-4 py-2 bg-seal/20 border border-seal/40 backdrop-blur-sm mb-6"
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/30 backdrop-blur-sm mb-4 rounded-full"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Sparkles className="w-4 h-4 text-seal" strokeWidth={1.5} />
-              <span className="text-xs font-bold tracking-[0.3em] text-seal uppercase">
-                2026 丙午年 Special
+              <Shield className="w-3 h-3 text-primary" strokeWidth={2} />
+              <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
+                Cheongdam Haehwadang
               </span>
             </motion.div>
 
-            {/* Main Title */}
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-ink-light mb-6 leading-tight">
-              <span className="text-seal">병오년</span>,<br />
-              가장 뜨거운 해가<br />
-              떠올랐습니다
-            </h1>
+            {/* Main Headline - Power Statement */}
+            <motion.h1
+              className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold mb-4 leading-tight"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <span className="text-white">남들이 안 하는 걸 해라.</span>
+              <br />
+              <span className="text-primary relative inline-block">
+                내 운명은 내가 지킨다
+                <motion.div
+                  className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary/30 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 0.8, delay: 0.8 }}
+                />
+              </span>
+            </motion.h1>
 
-            {/* Subtitle */}
-            <p className="text-base md:text-lg text-ink-light/70 font-light leading-relaxed mb-8 max-w-xl">
-              적토마가 달리듯, 당신의 운명도 그만큼 뜨겁게 타오를 준비가 되었습니까?
-              {!isGuest && (
-                <>
-                  <br />
-                  <span className="text-primary font-medium">{masterName}님</span>의 2026년 불의 기운을 확인하세요.
-                </>
-              )}
-            </p>
+            {/* Sub-headline - Value Proposition */}
+            <motion.p
+              className="text-sm md:text-base text-white/70 font-sans leading-relaxed mb-3 max-w-xl mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              매일, 매주, 매달 나의 운대를 알고 살아간다면
+              <br />
+              <span className="text-primary font-semibold">좋은 일은 더 좋게, 나쁜 일은 피하면서</span> 내 인생을 관리할 수 있습니다.
+            </motion.p>
 
-            {/* CTA */}
-            <Link href={isGuest ? "/auth/sign-up" : "/protected/analysis"}>
-              <motion.button
-                className="group flex items-center gap-3 px-8 py-4 bg-background/50 hover:bg-background/80 text-ink-light font-serif font-medium text-sm border border-primary/30 hover:border-primary shadow-sm transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+            {/* Personal Touch */}
+            {!isGuest && (
+              <motion.p
+                className="text-xs text-white/50 font-sans mb-5"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
               >
-                <Flame className="w-5 h-5" />
-                <span>나의 2026년 불의 운세 확인하기</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
-            </Link>
+                <span className="text-primary font-serif font-semibold">{masterName}님</span>과 가족의 운세를 지금 관리하세요
+              </motion.p>
+            )}
+
+            {/* CTA Buttons */}
+            <motion.div
+              className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-5"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+            >
+              <Link href={isGuest ? "/auth/sign-up" : "/protected/studio"}>
+                <motion.button
+                  className="group flex items-center gap-2 px-6 py-3 bg-primary text-[#0A0A0A] font-serif font-bold text-sm rounded-lg shadow-[0_0_30px_rgba(212,175,55,0.3)] hover:shadow-[0_0_40px_rgba(212,175,55,0.5)] transition-all"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span>나의 운대 올리기 시작</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+              </Link>
+
+              {isGuest && (
+                <Link href="/auth/login">
+                  <motion.button
+                    className="px-6 py-3 border border-primary/30 text-white font-sans text-xs rounded-lg hover:border-primary/60 hover:bg-primary/5 transition-all"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    이미 회원이신가요?
+                  </motion.button>
+                </Link>
+              )}
+            </motion.div>
+
+            {/* Social Proof / Trust Badge */}
+            <motion.div
+              className="flex items-center justify-center gap-4 mt-6 text-[10px] text-white/40 font-sans"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.9 }}
+            >
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-primary/60" />
+                <span>운세 전문가 검증</span>
+              </div>
+              <div className="w-px h-3 bg-white/20" />
+              <div className="flex items-center gap-1.5">
+                <Shield className="w-3 h-3 text-primary/60" />
+                <span>개인정보 안전 보호</span>
+              </div>
+            </motion.div>
           </motion.div>
         </div>
 
         {/* Bottom Gradient Fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
       </div>
     </div>
   );

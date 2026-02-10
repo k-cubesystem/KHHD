@@ -3,24 +3,38 @@ import { getWalletBalance } from "@/app/actions/wallet-actions";
 import { getUserTierLimits } from "@/app/actions/membership-limits";
 import { getDashboardContext } from "@/app/actions/dashboard-actions";
 import { getFamilyWithAnalysisSummary } from "@/app/actions/family-analysis-actions";
+import {
+  getMonthlyFamilyFortune,
+  getYearlyFortuneTrend,
+  getFamilyFortuneBreakdown,
+} from "@/app/actions/fortune-actions";
 import { Hero2026 } from "@/components/dashboard/hero-2026";
 import { DashboardGrid } from "@/components/dashboard/dashboard-grid";
+import { FortuneEnergyGauge } from "@/components/fortune/fortune-energy-gauge";
+import { MonthlyFortuneCycle } from "@/components/fortune/monthly-fortune-cycle";
+import { FamilyFortuneStatus } from "@/components/fortune/family-fortune-status";
+import { FortuneTimeline } from "@/components/fortune/fortune-timeline";
 
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Ticket, Bell, Zap, CloudMoon, Users, ArrowRight } from "lucide-react";
+import { Ticket, Bell, Zap, CloudMoon, Users, ArrowRight, MessagesSquare, CalendarDays, Calendar, CalendarRange } from "lucide-react";
 import { FeatureGuard } from "@/components/feature-guard";
+import { FORTUNE_MISSIONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   // 1. Data Fetching (Parallel)
-  const [walletBalance, limits, dashboardContext, familyMembers] = await Promise.all([
+  const [walletBalance, limits, dashboardContext, familyMembers, monthlyFortune, yearlyTrend, familyBreakdown] = await Promise.all([
     getWalletBalance(),
     getUserTierLimits(),
     getDashboardContext(),
     getFamilyWithAnalysisSummary(),
+    getMonthlyFamilyFortune(),
+    getYearlyFortuneTrend(),
+    getFamilyFortuneBreakdown(),
   ]);
 
   const isGuest = !user;
@@ -77,7 +91,7 @@ export default async function ProtectedPage() {
       </div>
 
       {/* Personalized Welcome Message */}
-      <section className="px-6 mb-8 relative z-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <section className="px-6 mb-4 relative z-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="relative">
           <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-primary to-transparent rounded-full opacity-50" />
           <div className="pl-4">
@@ -89,105 +103,139 @@ export default async function ProtectedPage() {
       </section>
 
       {/* Hero Banner (2026 Year Logic) */}
-      <section className="px-6 mb-8 relative z-20">
+      <section className="px-6 mb-6 relative z-20">
         <Hero2026 isGuest={isGuest} masterName={masterName} />
       </section>
 
-      <main className="px-6 space-y-8 relative z-20">
+      <main className="px-6 space-y-6 relative z-20">
 
-        {/* 1. Main Feature CTA */}
+        {/* 1. Fortune Flow Hub */}
         <section className="space-y-4">
-          <Link href="/protected/analysis" className="block">
-            <div className="bg-gradient-to-br from-surface/80 to-surface/40 border border-primary/20 rounded-2xl p-6 relative overflow-hidden group hover:border-primary/50 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <CloudMoon className="w-32 h-32 text-primary" strokeWidth={0.5} />
-              </div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded">BEST</span>
-                </div>
-                <h3 className="text-xl font-serif font-bold text-ink-light mb-1">천지인(天地人) 통합분석</h3>
-                <p className="text-sm text-ink-light/60 mb-6 leading-relaxed">
-                  사주와 관상, 풍수를 엮어<br />
-                  당신의 운명을 입체적으로 조명합니다.
-                </p>
-                <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                  <span>분석 시작하기</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </div>
-          </Link>
+          <FortuneEnergyGauge
+            currentFortune={monthlyFortune.currentFortune}
+            totalPossible={monthlyFortune.totalPossible}
+            percentage={monthlyFortune.percentage}
+            variant="monthly"
+          />
         </section>
 
-        {/* 2. Recent Family Status (Horizontal Scroll) */}
-        {recentFamily.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-ink-light/20 rounded-full" />
-                <h2 className="text-xs font-bold text-ink-light/50 tracking-wide uppercase">Family Updates</h2>
-              </div>
-              <Link href="/protected/family" className="text-[10px] text-primary hover:underline">
-                전체보기
-              </Link>
-            </div>
+        {/* 2. Monthly Cycle */}
+        <section>
+          <MonthlyFortuneCycle
+            currentMonth={new Date().getMonth() + 1}
+            completedMissions={monthlyFortune.completedCategories.length}
+            totalMissions={8}
+          />
+        </section>
 
-            <div className="flex gap-3 overflow-x-auto pb-4 snap-x -mx-6 px-6 scrollbar-hide">
-              {recentFamily.map((member) => (
-                <Link key={member.id} href={`/protected/history`} className="snap-center shrink-0 w-[200px]">
-                  <div className="bg-surface/30 border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors h-full flex flex-col justify-between">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-serif font-bold text-ink-light">{member.name}</h4>
-                        <span className="text-[10px] text-ink-light/50">{member.relationship}</span>
-                      </div>
-                      {member.last_analysis_score && (
-                        <span className="text-lg font-serif font-bold text-primary">{member.last_analysis_score}</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-primary mb-1 uppercase tracking-wider font-bold opacity-70">
-                        {member.last_analysis_category || "최근 분석"}
-                      </div>
-                      <p className="text-xs text-ink-light/80 line-clamp-2 leading-relaxed">
-                        {member.last_analysis_summary}
-                      </p>
-                    </div>
-                  </div>
+        {/* 3. 8 Fortune Missions Grid */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-4 bg-ink-light/20 rounded-full" />
+            <h2 className="text-xs font-bold text-ink-light/50 tracking-wide uppercase">
+              8가지 운세 채우기
+            </h2>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {FORTUNE_MISSIONS.map((mission, idx) => {
+              const isCompleted = monthlyFortune.completedCategories.includes(mission.category);
+              const Icon = mission.icon;
+              return (
+                <Link
+                  key={idx}
+                  href={mission.path}
+                  className={cn(
+                    "flex flex-col items-center justify-center aspect-square rounded-lg border transition-all p-2",
+                    isCompleted
+                      ? "bg-primary/10 border-primary/30 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                      : "bg-surface/20 border-white/5 hover:border-primary/20"
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "w-5 h-5 mb-2",
+                      isCompleted ? "text-primary" : "text-ink-light/40"
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-[10px] text-center leading-tight",
+                      isCompleted ? "text-primary font-bold" : "text-ink-light/60"
+                    )}
+                  >
+                    {mission.label}
+                  </span>
+                  {isCompleted && (
+                    <span className="text-[8px] text-primary/70 mt-1">운 상승 ↑</span>
+                  )}
                 </Link>
-              ))}
-            </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 4. Family Fortune Status */}
+        {familyBreakdown.length > 0 && (
+          <section>
+            <FamilyFortuneStatus members={familyBreakdown} />
           </section>
         )}
 
-        {/* 3. Dashboard Grid Tools */}
-        <DashboardGrid />
+        {/* 5. Fortune Timeline (Yearly Trend) */}
+        <section>
+          <FortuneTimeline
+            data={yearlyTrend}
+            year={new Date().getFullYear()}
+          />
+        </section>
 
-        {/* 4. Sub Features */}
-        <section className="grid grid-cols-2 gap-3 pb-8">
-          <Link href="/protected/ai-shaman" className="bg-surface border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors group flex flex-col justify-between h-28">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Zap className="w-4 h-4 text-primary" strokeWidth={1} />
-            </div>
-            <div>
-              <h4 className="font-serif text-sm text-ink-light mb-1">해화당 AI</h4>
-              <p className="text-[9px] text-ink-light/50">무엇이든 물어보세요</p>
-            </div>
+        {/* 6. Quick Actions Grid (4 columns unified) */}
+        <section className="grid grid-cols-2 gap-3 pb-4">
+          {/* 고민상담 (AI Shaman Chat) */}
+          <Link
+            href="/protected/ai-shaman"
+            className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/30 transition-all p-4"
+          >
+            <MessagesSquare className="w-8 h-8 text-primary mb-3" strokeWidth={1.5} />
+            <span className="text-sm font-serif font-bold text-ink-light mb-1">고민상담</span>
+            <span className="text-[10px] text-ink-light/50 text-center">AI 무당에게 물어보세요</span>
           </Link>
 
+          {/* 오늘의 운세 */}
           <FeatureGuard feature="feat_saju_today">
-            <Link href="/protected/saju/today" className="bg-surface border border-white/5 rounded-xl p-4 hover:border-primary/30 transition-colors group flex flex-col justify-between h-28 h-full w-full block">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                <Bell className="w-4 h-4 text-primary" strokeWidth={1} />
-              </div>
-              <div>
-                <h4 className="font-serif text-sm text-ink-light mb-1">오늘의 운세</h4>
-                <p className="text-[9px] text-ink-light/50">매일 아침 알림받기</p>
-              </div>
+            <Link
+              href="/protected/saju/today"
+              className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/30 transition-all p-4"
+            >
+              <CalendarDays className="w-8 h-8 text-primary mb-3" strokeWidth={1.5} />
+              <span className="text-sm font-serif font-bold text-ink-light mb-1">오늘의 운세</span>
+              <span className="text-[10px] text-ink-light/50 text-center">매일 아침 알림받기</span>
             </Link>
           </FeatureGuard>
+
+          {/* 한주의 운세 */}
+          <Link
+            href="/protected/fortune/weekly"
+            className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/30 transition-all p-4"
+          >
+            <Calendar className="w-8 h-8 text-primary mb-3" strokeWidth={1.5} />
+            <span className="text-sm font-serif font-bold text-ink-light mb-1">한주의 운세</span>
+            <span className="text-[10px] text-ink-light/50 text-center">주간 운세 확인</span>
+          </Link>
+
+          {/* 매월 운세 */}
+          <Link
+            href="/protected/fortune/monthly"
+            className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/30 transition-all p-4"
+          >
+            <CalendarRange className="w-8 h-8 text-primary mb-3" strokeWidth={1.5} />
+            <span className="text-sm font-serif font-bold text-ink-light mb-1">매월 운세</span>
+            <span className="text-[10px] text-ink-light/50 text-center">월간 운세 확인</span>
+          </Link>
         </section>
+
+        {/* Bottom Spacer */}
+        <div className="pb-8" />
 
       </main>
 

@@ -190,7 +190,7 @@ export function PlanManagementClient() {
                             FAMILY: { badge: "bg-gold-500/10 text-gold-400 border-gold-500/30", icon: "text-gold-500", bg: "from-gold-500/10 to-gold-600/5" },
                             BUSINESS: { badge: "bg-purple-500/10 text-purple-400 border-purple-500/30", icon: "text-purple-400", bg: "from-purple-500/10 to-purple-600/5" }
                         };
-                        const tierTheme = themeMap[plan.tier] || themeMap.SINGLE;
+                        const tierTheme = themeMap[plan.tier as keyof typeof themeMap] ?? themeMap.SINGLE;
 
                         return (
                             <Card key={plan.id} className={cn("relative p-4 md:p-6 lg:p-8 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 shadow-lg overflow-hidden group")}>

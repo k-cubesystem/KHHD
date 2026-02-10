@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { DestinyTarget } from "@/app/actions/destiny-targets";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getTargetImageUrl } from "@/lib/destiny-utils";
+import { getTargetImageUrl } from "@/lib/domain/destiny/destiny-utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import DaumPostcode from "react-daum-postcode";
 

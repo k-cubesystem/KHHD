@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from "@/app/actions/family-actions";
-import { getFamilyWithAnalysisSummary, type FamilyMemberWithAnalysis } from "@/app/actions/family-analysis-actions";
-import { getSajuData, WU_XING_COLORS } from "@/lib/saju";
+import { getFamilyWithMissions, type FamilyMemberWithMissions } from "@/app/actions/family-missions";
+import { MemberMissionCard } from "@/components/family/member-mission-card";
+import { MissionDetailSheet } from "@/components/family/mission-detail-sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,6 @@ import { GuestCTACard } from "@/components/guest-cta-card";
 import { Users } from "lucide-react";
 import Link from "next/link";
 import { cn, toConversationalTone } from "@/lib/utils";
-import { SnapCarousel } from "@/components/ui/snap-carousel";
 
 interface EditingMember {
     id: string;
@@ -32,12 +32,14 @@ interface EditingMember {
 }
 
 export default function FamilyPage() {
-    const [members, setMembers] = useState<FamilyMemberWithAnalysis[]>([]);
+    const [members, setMembers] = useState<FamilyMemberWithMissions[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isGuest, setIsGuest] = useState(false);
     const [editingMember, setEditingMember] = useState<EditingMember | null>(null);
+    const [selectedMember, setSelectedMember] = useState<FamilyMemberWithMissions | null>(null);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
 
     const fetchMembers = async () => {
         setLoading(true);
@@ -51,7 +53,7 @@ export default function FamilyPage() {
                 return;
             }
 
-            const data = await getFamilyWithAnalysisSummary();
+            const data = await getFamilyWithMissions();
             setMembers(data);
         } catch (error) {
             console.error("Fetch Error:", error);
@@ -108,7 +110,7 @@ export default function FamilyPage() {
         });
     };
 
-    const startEditing = (member: FamilyMemberWithAnalysis) => {
+    const startEditing = (member: FamilyMemberWithMissions) => {
         setEditingMember({
             id: member.id,
             name: member.name,
@@ -199,110 +201,27 @@ export default function FamilyPage() {
                 </Badge>
             </div>
 
-            {/* Member List (Snap Carousel) */}
+            {/* Member Cards */}
             <div className="min-h-[300px]">
                 {loading ? (
                     <div className="px-6 space-y-4">
-                        <Skeleton className="h-48 w-full rounded-2xl bg-surface/20 border border-white/5" />
-                        <Skeleton className="h-48 w-full rounded-2xl bg-surface/20 border border-white/5" />
+                        <Skeleton className="h-56 w-full rounded-2xl bg-surface/20 border border-white/5" />
+                        <Skeleton className="h-56 w-full rounded-2xl bg-surface/20 border border-white/5" />
                     </div>
                 ) : members.length > 0 ? (
-                    <SnapCarousel itemWidth="w-[90%] md:w-[320px]">
-                        {members.map((member) => {
-                            const saju = getSajuData(
-                                member.birth_date,
-                                member.birth_time || "00:00",
-                                member.calendar_type === "solar"
-                            );
-
-                            return (
-                                <Card
-                                    key={member.id}
-                                    className="relative group overflow-hidden card-glass-manse transition-transform duration-300 rounded-2xl shadow-lg h-full"
-                                >
-                                    {/* Texture Overlay */}
-                                    <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
-
-                                    {/* Action Buttons (Absolute Top Right) */}
-                                    <div className="absolute top-3 right-3 z-20 flex gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => startEditing(member)}
-                                            className="text-white/40 hover:text-primary hover:bg-black/20 rounded-full w-8 h-8"
-                                        >
-                                            <Edit3 className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleDeleteMember(member.id, member.name)}
-                                            className="text-white/40 hover:text-red-400 hover:bg-black/20 rounded-full w-8 h-8"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-
-                                    <CardContent className="p-6 relative z-10 flex flex-col gap-4">
-                                        {/* Header Info */}
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl flex items-center justify-center border bg-surface border-primary/20 text-primary-dim shrink-0 shadow-inner">
-                                                <User className="w-6 h-6" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h4 className="font-serif font-bold text-xl text-ink-light truncate">{member.name}</h4>
-                                                    <span className="text-[10px] uppercase font-bold text-primary-dim border border-primary/20 px-1.5 py-0.5 rounded bg-surface/50">{member.relationship}</span>
-                                                </div>
-                                                <p className="text-xs text-ink-light/50 font-medium font-sans truncate">
-                                                    {member.birth_date.slice(2).replace(/-/g, ". ")} • {member.gender === "male" ? "남" : "여"} • {member.calendar_type === "solar" ? "양력" : "음력"}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Saju Pillars */}
-                                        <div className="grid grid-cols-4 gap-2">
-                                            {[
-                                                { label: "시", data: saju.pillars.time },
-                                                { label: "일", data: saju.pillars.day },
-                                                { label: "월", data: saju.pillars.month },
-                                                { label: "년", data: saju.pillars.year },
-                                            ].map((p, i) => (
-                                                <div key={i} className="flex flex-col items-center py-2 rounded-lg bg-surface/50 border border-white/5">
-                                                    <span className="text-[8px] text-ink-light/40 mb-1 font-bold uppercase tracking-wider">{p.label}</span>
-                                                    <span className="font-serif font-bold text-ink-light text-sm">{p.data.ganji}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Recent History / Action */}
-                                        <div className="pt-2">
-                                            {member.last_analysis_summary ? (
-                                                <Link href={`/protected/history`} className="block">
-                                                    <div className="bg-surface/30 rounded-xl p-3 border border-white/5 flex items-center justify-between">
-                                                        <div className="flex items-center gap-2 truncate">
-                                                            <History className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-                                                            <span className="text-xs text-ink-light/80 truncate">
-                                                                "{toConversationalTone(member.last_analysis_summary)}"
-                                                            </span>
-                                                        </div>
-                                                        <ChevronRight className="w-3 h-3 text-white/20 shrink-0" />
-                                                    </div>
-                                                </Link>
-                                            ) : (
-                                                <Link href={`/protected/analysis?target=${member.id}`} className="block">
-                                                    <Button variant="outline" className="w-full border-primary/20 text-primary-dim hover:text-primary hover:bg-primary/5 h-10 text-xs gap-2">
-                                                        <Sparkles className="w-3.5 h-3.5" />
-                                                        운세 확인하기
-                                                    </Button>
-                                                </Link>
-                                            )}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </SnapCarousel>
+                    <div className="px-6 space-y-4">
+                        {members.map((member, idx) => (
+                            <MemberMissionCard
+                                key={member.id}
+                                member={member}
+                                index={idx}
+                                onClick={() => {
+                                    setSelectedMember(member);
+                                    setIsSheetOpen(true);
+                                }}
+                            />
+                        ))}
+                    </div>
                 ) : (
                     <div className="mx-6 py-12 text-center bg-surface/20 border border-dashed border-primary/20 rounded-2xl">
                         <div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 text-primary/40 border border-white/5">
@@ -384,6 +303,13 @@ export default function FamilyPage() {
                     </Card>
                 </div>
             )}
+
+            {/* Mission Detail Sheet */}
+            <MissionDetailSheet
+                isOpen={isSheetOpen}
+                onClose={() => setIsSheetOpen(false)}
+                member={selectedMember}
+            />
         </div>
     );
 }

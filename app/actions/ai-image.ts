@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/utils/logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
 
@@ -47,7 +48,7 @@ const INTERIOR_THEMES: Record<InteriorTheme, { name: string; colors: string; ele
     },
 };
 
-interface FaceAnalysisResult {
+export interface FaceAnalysisResult {
     success: boolean;
     currentAnalysis?: string;
     currentScore?: number;
@@ -69,7 +70,32 @@ interface FaceAnalysisResult {
     error?: string;
 }
 
-interface InteriorAnalysisResult {
+export interface PalmAnalysisResult {
+    success: boolean;
+    currentAnalysis?: string;
+    currentScore?: number;
+    confidence?: number; // 신뢰도 점수 (0-100)
+    palmLines?: {
+        // 삼대 주선 (Three Major Lines)
+        lifeLine?: { score: number; description: string }; // 생명선
+        intelligenceLine?: { score: number; description: string }; // 지능선
+        emotionLine?: { score: number; description: string }; // 감정선
+        // 특수 선
+        fateLine?: { score: number; description: string }; // 운명선
+        sunLine?: { score: number; description: string }; // 태양선
+        marriageLine?: { score: number; description: string }; // 결혼선
+    };
+    fortuneScores?: {
+        wealth: number; // 재물운 (0-100)
+        health: number; // 건강운 (0-100)
+        love: number; // 애정운 (0-100)
+        career: number; // 직업운 (0-100)
+    };
+    recommendations?: string[];
+    error?: string;
+}
+
+export interface InteriorAnalysisResult {
     success: boolean;
     currentAnalysis?: string;
     problems?: string[];
@@ -179,16 +205,16 @@ export async function analyzeFaceForDestiny(
 
         // Extract scores with improved parsing
         const currentScoreMatch = analysisText.match(/\[\[CURRENT_SCORE:\s*(\d+)\]\]/);
-        const currentScore = currentScoreMatch ? parseInt(currentScoreMatch[1]) : 65;
+        const currentScore = currentScoreMatch?.[1] ? parseInt(currentScoreMatch[1]) : 65;
 
         const confidenceMatch = analysisText.match(/\[\[CONFIDENCE:\s*(\d+)\]\]/);
-        const confidence = confidenceMatch ? parseInt(confidenceMatch[1]) : 75;
+        const confidence = confidenceMatch?.[1] ? parseInt(confidenceMatch[1]) : 75;
 
         // Extract 오관(五官) scores
         const parseFeature = (tag: string) => {
             const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`);
             const match = analysisText.match(regex);
-            if (match) {
+            if (match?.[1] && match?.[2]) {
                 return { score: parseInt(match[1]), description: match[2].trim() };
             }
             return { score: 7, description: "분석 중" };
@@ -227,7 +253,7 @@ Style: Professional headshot, warm lighting, confident expression.`;
             recommendations,
         };
     } catch (error: unknown) {
-        console.error("Face Destiny Analysis Error:", error);
+        logger.error("Face Destiny Analysis Error:", error);
         const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
         return {
             success: false,
@@ -284,11 +310,11 @@ export async function analyzeInteriorForFengshui(
 
         // Extract shopping list
         const shoppingMatch = analysisText.match(/\[\[SHOPPING_LIST\]\]([\s\S]*?)\[\[\/SHOPPING_LIST\]\]/);
-        const shoppingList = shoppingMatch
+        const shoppingList: string[] = shoppingMatch?.[1]
             ? shoppingMatch[1].split('\n').filter(line => line.trim().startsWith('-')).map(line => line.trim().substring(1).trim())
             : [
-                `${themeConfig.colors.split(',')[0]} 계열 쿠션`,
-                themeConfig.elements.split(',')[0],
+                `${themeConfig.colors.split(',')[0] ?? '골드'} 계열 쿠션`,
+                themeConfig.elements.split(',')[0] ?? '화분',
                 "조명 스탠드",
                 "벽면 액자",
                 "러그 또는 카펫",
@@ -316,7 +342,7 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
             shoppingList,
         };
     } catch (error: unknown) {
-        console.error("Interior Fengshui Analysis Error:", error);
+        logger.error("Interior Fengshui Analysis Error:", error);
         const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
         return {
             success: false,
@@ -325,7 +351,171 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
     }
 }
 
-// 3. Generate Image (Placeholder - 실제 이미지 생성 API 연동 필요)
+// 3. Palm Reading Analysis - 손금 분석
+export async function analyzePalmReading(
+    imageBase64: string
+): Promise<PalmAnalysisResult> {
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+    const analysisPrompt = `당신은 30년 경력의 수상학(手相學) 전문가입니다.
+동양의 전통 수상학과 서양 카이로맨시를 모두 연구했으며, 수천 명의 손금을 분석한 경험이 있습니다.
+
+아래 손바닥 이미지를 전문가적 시각으로 정확히 분석하여 손금 운세를 제공하세요.
+
+[1단계: 삼대 주선(三大主線) 분석]
+전통 수상학의 3대 주선을 각각 10점 만점으로 평가하세요:
+
+1. **생명선(生命線, Life Line)** - 건강과 생명력의 상징
+   - 시작점, 길이, 굵기, 깊이, 끊김 여부 평가
+   - 건강 상태, 체력, 장수 가능성 판단
+   - 점수와 특징 기술
+
+2. **지능선(知能線, Head Line)** - 사고방식과 재능
+   - 시작점, 방향, 길이, 형태 평가
+   - 사고방식(논리적/창의적), 학습 능력, 직업 적성 판단
+   - 점수와 특징 기술
+
+3. **감정선(感情線, Heart Line)** - 애정운과 성격
+   - 시작점, 끝점, 깊이, 곡선 형태 평가
+   - 애정 표현 방식, 감정 기복, 대인관계 성향 판단
+   - 점수와 특징 기술
+
+[2단계: 특수선(特殊線) 분석]
+주요 특수선을 10점 만점으로 평가하세요 (없으면 0점):
+
+1. **운명선(運命線, Fate Line)** - 인생 방향과 목표
+2. **태양선(太陽線, Sun Line)** - 성공과 명예
+3. **결혼선(結婚線, Marriage Line)** - 결혼운과 배우자 관계
+
+[3단계: 팔궁(八宮) 분석]
+손바닥 8개 구역의 발달 상태를 평가하세요:
+- 목성구(검지 아래): 리더십, 야망
+- 토성구(중지 아래): 책임감, 신중함
+- 태양구(약지 아래): 창의성, 예술성
+- 수성구(새끼손가락 아래): 소통 능력, 사업수완
+- 금성구(엄지 기저부): 애정, 생명력
+- 제1화성구(엄지와 검지 사이): 용기, 공격성
+- 제2화성구(손목 위 세로선): 인내력, 저항력
+- 월구(새끼손가락 아래 손목 근처): 상상력, 직관력
+
+[4단계: 특수 문양 분석]
+손바닥의 특수한 기호나 문양을 찾아 의미를 해석하세요:
+- 별(★): 행운과 성취
+- 십자(✛): 시련 또는 보호
+- 섬(島): 장애와 어려움
+- 격자(格子): 복합적 상황
+
+[5단계: 종합 운세 평가]
+다음 4가지 운세를 각각 0-100점으로 평가하세요:
+- **재물운**: 수성구, 태양선, 지능선 종합 판단
+- **건강운**: 생명선, 금성구 종합 판단
+- **애정운**: 감정선, 결혼선, 금성구 종합 판단
+- **직업운**: 운명선, 지능선, 목성구 종합 판단
+
+[6단계: 구체적 조언]
+- 강화할 손 관리법 (손가락 운동, 마사지 포인트)
+- 손금으로 본 적성 직업 3가지
+- 대인관계 조언
+- 일상 생활 개선 방법
+
+[CRITICAL: 출력 형식]
+반드시 다음 태그들을 모두 포함하세요:
+[[OVERALL_SCORE: 숫자]]
+[[CONFIDENCE: 숫자]]
+[[LIFE_LINE: 숫자, 설명]]
+[[INTELLIGENCE_LINE: 숫자, 설명]]
+[[EMOTION_LINE: 숫자, 설명]]
+[[FATE_LINE: 숫자, 설명]]
+[[SUN_LINE: 숫자, 설명]]
+[[MARRIAGE_LINE: 숫자, 설명]]
+[[WEALTH_SCORE: 숫자]]
+[[HEALTH_SCORE: 숫자]]
+[[LOVE_SCORE: 숫자]]
+[[CAREER_SCORE: 숫자]]
+
+※ 긍정적이고 건설적인 톤을 유지하세요.
+※ 의학적 진단이나 절대적 미래 예언은 하지 마세요.
+※ 수상학적 전문 용어를 사용하되, 이해하기 쉽게 설명하세요.`;
+
+    try {
+        const result = await model.generateContent([
+            analysisPrompt,
+            {
+                inlineData: {
+                    mimeType: "image/jpeg",
+                    data: imageBase64,
+                },
+            },
+        ]);
+
+        const analysisText = result.response.text();
+
+        // Extract scores
+        const overallScoreMatch = analysisText.match(/\[\[OVERALL_SCORE:\s*(\d+)\]\]/);
+        const currentScore = overallScoreMatch?.[1] ? parseInt(overallScoreMatch[1]) : 70;
+
+        const confidenceMatch = analysisText.match(/\[\[CONFIDENCE:\s*(\d+)\]\]/);
+        const confidence = confidenceMatch?.[1] ? parseInt(confidenceMatch[1]) : 75;
+
+        // Extract palm lines
+        const parseLine = (tag: string) => {
+            const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`);
+            const match = analysisText.match(regex);
+            if (match?.[1] && match?.[2]) {
+                return { score: parseInt(match[1]), description: match[2].trim() };
+            }
+            return { score: 7, description: "분석 중" };
+        };
+
+        const palmLines = {
+            lifeLine: parseLine("LIFE_LINE"),
+            intelligenceLine: parseLine("INTELLIGENCE_LINE"),
+            emotionLine: parseLine("EMOTION_LINE"),
+            fateLine: parseLine("FATE_LINE"),
+            sunLine: parseLine("SUN_LINE"),
+            marriageLine: parseLine("MARRIAGE_LINE"),
+        };
+
+        // Extract fortune scores
+        const extractScore = (tag: string): number => {
+            const match = analysisText.match(new RegExp(`\\[\\[${tag}:\\s*(\\d+)\\]\\]`));
+            return match?.[1] ? parseInt(match[1]) : 70;
+        };
+
+        const fortuneScores = {
+            wealth: extractScore("WEALTH_SCORE"),
+            health: extractScore("HEALTH_SCORE"),
+            love: extractScore("LOVE_SCORE"),
+            career: extractScore("CAREER_SCORE"),
+        };
+
+        // Extract recommendations
+        const recommendations = [
+            "손가락 관절 운동으로 순환 개선하기",
+            "강점을 살릴 수 있는 직업 분야 탐색",
+            "대인관계에서 감정선의 특성 활용하기",
+        ];
+
+        return {
+            success: true,
+            currentAnalysis: analysisText,
+            currentScore,
+            confidence,
+            palmLines,
+            fortuneScores,
+            recommendations,
+        };
+    } catch (error: unknown) {
+        logger.error("Palm Reading Analysis Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+        return {
+            success: false,
+            error: errorMessage,
+        };
+    }
+}
+
+// 4. Generate Image (Placeholder - 실제 이미지 생성 API 연동 필요)
 export async function generateDestinyImage(
     originalImageBase64: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -347,7 +537,7 @@ export async function generateDestinyImage(
             imageUrl: `data:image/jpeg;base64,${originalImageBase64}`,
         };
     } catch (error: unknown) {
-        console.error("Image Generation Error:", error);
+        logger.error("Image Generation Error:", error);
         return {
             success: false,
             error: "이미지 생성 기능은 현재 준비 중입니다.",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getTossPayments } from "@/lib/tosspayments";
+import { getTossPayments } from "@/lib/services/tosspayments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, Sparkles, Loader2, Zap, ShieldCheck, Crown, Gift, Calendar, MessageCircle, Ticket, Users, Clock } from "lucide-react";

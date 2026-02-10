@@ -35,7 +35,7 @@ const categoryConfig = {
 };
 
 export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
-  const config = categoryConfig[record.category];
+  const config = categoryConfig[record.category] || categoryConfig.TODAY; // Fallback to TODAY if category not found
   const Icon = config.icon;
 
   return (

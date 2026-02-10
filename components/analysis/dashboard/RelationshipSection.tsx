@@ -20,10 +20,10 @@ export function RelationshipSection() {
                     </div>
                 </div>
 
-                <h3 className="text-lg font-serif font-bold text-ink-light mb-1">
+                <h3 className="text-lg font-serif font-bold text-white mb-1">
                     관계의 매듭
                 </h3>
-                <p className="text-xs text-ink/50 leading-relaxed line-clamp-2">
+                <p className="text-xs text-white/80 leading-relaxed line-clamp-2">
                     갈등의 원인을 오행으로 풀어내는 관계 해법
                 </p>
             </div>

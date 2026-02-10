@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PricePlan } from "@/types/auth";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * Get all active price plans from the database
@@ -15,7 +16,7 @@ export async function getProducts(): Promise<PricePlan[]> {
     .order("price", { ascending: true });
 
   if (error) {
-    console.error("[Products] Error fetching price plans:", error);
+    logger.error("[Products] Error fetching price plans:", error);
     // Return hardcoded fallback if DB fails
     return getDefaultPlans();
   }

@@ -52,10 +52,11 @@ export async function sendKakaoNotification(userId: string, templateId: string, 
         await logNotification(userId, 'KAKAO', 'SENT', null);
         return { success: true, result };
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("[SOLAPI] Error:", error);
-        await logNotification(userId, 'KAKAO', 'FAILED', error.message);
-        return { success: false, error: error.message };
+        const message = error instanceof Error ? error.message : "알림 전송 실패";
+        await logNotification(userId, 'KAKAO', 'FAILED', message);
+        return { success: false, error: message };
     }
 }
 

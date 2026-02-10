@@ -9,7 +9,7 @@
   :root {
     --background: 0 0% 5%; /* #0D0D0D - Slightly lighter charcoal for warmth */
     --foreground: 60 5% 90%; /* #E8E8E3 - Warm Off-White (Creamy) for better readability */
-    --primary: 43 45% 80%; /* #E2D5B5 - Champagne Gold */
+    --primary: 43 55% 90%; /* #F4E4BA - Pastel Gold */
     --radius: 0px;
   }
 
@@ -344,4 +344,56 @@
   .button-manse-outline:active {
     transform: scale(0.95);
   }
+}
+/* Fortune Flow Animations */
+
+/* Fortune Energy Rise Animation */
+@keyframes fortune-rise {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fortune-rise-animation {
+  animation: fortune-rise 2s ease-out;
+}
+
+/* Fortune Glow Effect */
+@keyframes fortune-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.4),
+                0 0 40px rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(212, 175, 55, 0.6),
+                0 0 60px rgba(212, 175, 55, 0.3);
+  }
+}
+
+.fortune-glow {
+  animation: fortune-glow 2s ease-in-out infinite;
+}
+
+/* Particle Rise */
+@keyframes particle-rise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.fortune-particle {
+  animation: particle-rise 3s ease-out infinite;
 }

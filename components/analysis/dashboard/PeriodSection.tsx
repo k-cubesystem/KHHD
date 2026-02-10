@@ -28,10 +28,10 @@ export function PeriodSection() {
                     </div>
                 </div>
 
-                <h3 className="text-lg font-serif font-bold text-ink-light mb-1">
+                <h3 className="text-lg font-serif font-bold text-white mb-1">
                     길일 캘린더
                 </h3>
-                <p className="text-xs text-ink/50 leading-relaxed line-clamp-2">
+                <p className="text-xs text-white/80 leading-relaxed line-clamp-2">
                     주간/월간 흐름과 길흉일 미리보기
                 </p>
             </div>
@@ -40,7 +40,7 @@ export function PeriodSection() {
                 <Button
                     onClick={() => handleAnalyze("이번 주")}
                     variant="outline"
-                    className="h-8 border-white/10 text-ink-light hover:bg-white/5 text-[10px] px-0 bg-transparent"
+                    className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent"
                     disabled={loading}
                 >
                     <Sun className="w-3 h-3 mr-1 text-emerald-400" /> 주간
@@ -48,7 +48,7 @@ export function PeriodSection() {
                 <Button
                     onClick={() => handleAnalyze("이번 달")}
                     variant="outline"
-                    className="h-8 border-white/10 text-ink-light hover:bg-white/5 text-[10px] px-0 bg-transparent"
+                    className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent"
                     disabled={loading}
                 >
                     <Moon className="w-3 h-3 mr-1 text-emerald-400" /> 월간

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, ChevronRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { DaewoonPeriod } from "@/lib/saju/manse";
+import type { DaewoonPeriod } from "@/lib/domain/saju/manse";
 
 interface DaewoonTimelineProps {
     periods: DaewoonPeriod[];

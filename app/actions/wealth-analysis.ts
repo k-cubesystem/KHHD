@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getSajuData } from "@/lib/saju";
-import { calculateDaewoon } from "@/lib/saju/manse";
+import { getSajuData } from "@/lib/domain/saju/saju";
+import { calculateDaewoon } from "@/lib/domain/saju/manse";
 import { deductTalisman } from "./wallet-actions";
+import { logger } from "@/lib/utils/logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -177,11 +178,12 @@ ${daewoonData.find(d => d.isCurrent) ?
             analysis
         };
 
-    } catch (error: any) {
-        console.error("[WealthAnalysis] Error:", error);
+    } catch (error) {
+        logger.error("[WealthAnalysis] Error:", error);
+        const message = error instanceof Error ? error.message : "재물운 분석 중 오류가 발생했습니다.";
         return {
             success: false,
-            error: error.message || "재물운 분석 중 오류가 발생했습니다."
+            error: message
         };
     }
 }

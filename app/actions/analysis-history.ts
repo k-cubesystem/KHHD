@@ -1,8 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { unstable_cache } from "next/cache";
-import { revalidatePath } from "next/cache";
+import { unstable_cache, revalidatePath } from "next/cache";
 
 /**
  * 분석 카테고리 타입

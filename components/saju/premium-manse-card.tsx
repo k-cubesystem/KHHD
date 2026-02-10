@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ManseResult, SajuPillar } from "@/lib/saju/manse";
+import type { ManseResult, SajuPillar } from "@/lib/domain/saju/manse";
 
 interface PremiumManseCardProps {
     manse: ManseResult;

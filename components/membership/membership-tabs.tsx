@@ -29,7 +29,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
     // 플랜이 없으면 에러 방지
     if (!plans || plans.length === 0) {
         return (
-            <div className="text-center p-8 text-ink/60">
+            <div className="text-center p-8 text-white/60">
                 <p className="text-sm">멤버십 플랜을 불러오는 중입니다...</p>
             </div>
         );
@@ -42,7 +42,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
     // currentPlan이 없으면 에러 방지
     if (!currentPlan) {
         return (
-            <div className="text-center p-8 text-ink/60">
+            <div className="text-center p-8 text-white/60">
                 <p className="text-sm">플랜 정보를 찾을 수 없습니다.</p>
             </div>
         );
@@ -85,16 +85,16 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             {/* Tabs */}
-            <div className="flex gap-2 p-1 bg-surface/50 border border-primary/20 rounded-none">
+            <div className="flex gap-2 p-1.5 bg-surface/50 border border-primary/20 rounded-xl">
                 {plans.map((plan) => (
                     <button
                         key={plan.tier}
                         onClick={() => setSelectedPlan(plan.tier)}
-                        className={`flex-1 py-2.5 px-3 text-xs font-serif font-bold transition-all rounded-none ${selectedPlan === plan.tier
+                        className={`flex-1 py-3 px-4 text-sm font-serif font-bold transition-all rounded-lg ${selectedPlan === plan.tier
                             ? 'bg-primary text-background shadow-md'
-                            : 'text-ink/60 hover:text-ink-light'
+                            : 'text-white/60 hover:text-white'
                             }`}
                     >
                         {plan.name}
@@ -103,38 +103,39 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
             </div>
 
             {/* Selected Plan Card */}
-            <div className="bg-surface/30 border-2 border-primary/30 p-6 rounded-none shadow-lg luxury-card-glow">
+            <div className="bg-surface/30 border-2 border-primary/30 rounded-xl p-6 shadow-lg">
                 {/* Price */}
                 <div className="text-center mb-6 pb-6 border-b border-primary/10">
-                    <div className="text-3xl font-serif font-bold text-primary mb-1">
-                        월 {(currentPlan.price || 0).toLocaleString()}원{" "}
-                        <span className="text-sm text-ink/50">결제</span>
+                    <div className="text-4xl md:text-5xl font-serif font-bold text-primary mb-2">
+                        월 {(currentPlan.price || 0).toLocaleString()}원
                     </div>
-                    <div className="flex items-center justify-center gap-2 mt-2">
+                    <div className="flex items-center justify-center gap-2 mt-3">
                         <Check className="w-4 h-4 text-primary" />
-                        <span className="text-xs text-ink/60">
+                        <span className="text-sm text-white/60">
                             {currentPlan.tier === 'FAMILY' ? '가장 인기있는 플랜' : currentPlan.tier === 'BUSINESS' ? '프리미엄' : '기본 플랜'}
                         </span>
                     </div>
                 </div>
 
                 {/* Features */}
-                <div className="space-y-3 mb-6">
-                    <div className="text-xs font-serif font-bold text-primary mb-3">
+                <div className="space-y-4 mb-6">
+                    <div className="text-sm font-serif font-bold text-primary mb-4">
                         • 멤버십 회원만 누리는 특별 혜택!
                     </div>
-                    {tierFeatures.map((feature, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                            <div className="w-1 h-1 bg-primary/60 rounded-full mt-1.5 flex-shrink-0" />
-                            <span className="text-xs text-ink-light leading-relaxed">{feature}</span>
-                        </div>
-                    ))}
+                    <div className="space-y-3">
+                        {tierFeatures.map((feature, i) => (
+                            <div key={i} className="flex items-start gap-3">
+                                <div className="w-1.5 h-1.5 bg-primary/60 rounded-full mt-2 flex-shrink-0" />
+                                <span className="text-sm text-white/90 leading-relaxed flex-1 min-w-0">{feature}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 {/* CTA Button */}
                 <Button
                     onClick={handleSelectPlan}
-                    className="w-full bg-primary hover:bg-primary/90 text-background font-serif font-bold h-12 rounded-none"
+                    className="w-full bg-primary hover:bg-primary/90 text-background font-serif font-bold h-14 text-base rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all"
                 >
                     {isGuest ? '로그인하고 시작하기' : '지금 시작하기'}
                 </Button>
@@ -142,7 +143,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
                 {/* Additional Info */}
                 {currentPlan.tier === 'FAMILY' && (
                     <div className="mt-4 text-center">
-                        <p className="text-[10px] text-ink/50">
+                        <p className="text-xs text-white/50">
                             ⭐ 가족 구성원 관리와 궁합 분석에 최적화된 플랜
                         </p>
                     </div>

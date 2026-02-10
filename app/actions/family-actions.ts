@@ -30,13 +30,20 @@ export async function getFamilyMembers() {
     }
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError) {
+        console.error("Auth Error in getFamilyMembers:", userError);
+    }
 
     if (!user) {
+        console.warn("No authenticated user found in getFamilyMembers");
         // If no user, but we want the user to experience it, we could return demo data here too
         // but for now let's just return empty or error if we really need auth
         return [];
     }
+
+    console.log(`Fetching family members for user: ${user.id}`);
 
     const { data, error } = await supabase
         .from("family_members")
@@ -49,6 +56,7 @@ export async function getFamilyMembers() {
         return [];
     }
 
+    console.log(`Found ${data?.length || 0} family members for user ${user.id}`);
     return data || [];
 }
 

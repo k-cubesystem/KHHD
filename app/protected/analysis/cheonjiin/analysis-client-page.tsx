@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { getSajuData } from "@/lib/saju";
-import { calculateCompatibilityScore } from "@/lib/compatibility";
+import { getSajuData } from "@/lib/domain/saju/saju";
+import { calculateCompatibilityScore } from "@/lib/domain/compatibility/compatibility";
 
 interface AnalysisClientPageProps {
     targets: DestinyTarget[];

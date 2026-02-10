@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { getTossPayments } from "@/lib/tosspayments";
+import { getTossPayments } from "@/lib/services/tosspayments";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Sparkles, Loader2, Crown, Ticket, Zap } from "lucide-react";
+import { Check, Sparkles, Loader2, Ticket, Zap, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { addTestCredits } from "@/app/actions/products";
@@ -70,73 +70,105 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
     };
 
     return (
-        <div className="space-y-6 mb-24 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
-            {/* Divider Title */}
-            <div className="flex items-center gap-4 mb-8">
-                <div className="h-px bg-primary/20 flex-1" />
-                <div className="flex items-center gap-2 text-primary/80">
-                    <Sparkles className="w-5 h-5" strokeWidth={1} />
-                    <span className="text-lg font-serif font-bold tracking-widest">부적 개별 충전</span>
-                    <Sparkles className="w-5 h-5" strokeWidth={1} />
+        <div className="space-y-6">
+            {/* Section Header */}
+            <div className="text-center space-y-3">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-serif font-bold text-primary tracking-wide">부적 개별 충전</span>
                 </div>
-                <div className="h-px bg-primary/20 flex-1" />
+                <p className="text-sm text-white/60">
+                    필요한 만큼만 충전하고 사용하세요
+                </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {sortedPlans.map((plan: any) => (
+            {/* Cards Grid */}
+            <div className="grid grid-cols-1 gap-4">
+                {sortedPlans.map((plan: any, index: number) => (
                     <Card
                         key={plan.credits}
                         className={cn(
-                            "relative flex flex-col transition-all duration-300 overflow-hidden group border rounded-none bg-surface/10 hover:shadow-2xl hover:border-primary/50 border-primary/20 backdrop-blur-sm"
+                            "relative overflow-hidden border-2 transition-all duration-300",
+                            plan.badge_text === "가장 인기"
+                                ? "border-primary/50 bg-primary/5"
+                                : "border-white/10 bg-surface/30",
+                            "hover:border-primary/60 hover:shadow-[0_0_30px_rgba(212,175,55,0.2)]"
                         )}
                     >
+                        {/* Badge */}
                         {plan.badge_text && (
-                            <div className="absolute top-0 right-0 z-10">
-                                <div className={cn(
-                                    "text-[10px] font-bold px-3 py-1 uppercase tracking-wider",
-                                    plan.badge_text === "가장 인기" ? "bg-primary text-background" : "bg-seal text-white"
-                                )}>
-                                    {plan.badge_text}
+                            <div className="absolute top-4 right-4 z-10">
+                                <div className="flex items-center gap-1 px-3 py-1 bg-primary text-background rounded-full text-xs font-bold">
+                                    <Star className="w-3 h-3 fill-current" />
+                                    <span>{plan.badge_text}</span>
                                 </div>
                             </div>
                         )}
 
-                        <div className="p-6 flex-1 space-y-4">
-                            <div className="space-y-1">
-                                <h4 className="font-serif font-bold text-xl text-ink-light group-hover:text-primary transition-colors">{plan.name || plan.label}</h4>
-                                <p className="text-xs text-ink/60 font-sans line-clamp-2 min-h-[2.5em]">{plan.description}</p>
-                            </div>
-
-                            <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                                        <Ticket className="w-4 h-4" strokeWidth={1.5} />
-                                    </div>
-                                    <span className="font-bold text-ink-light">{plan.credits}장</span>
-                                </div>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-xl font-serif font-bold text-ink-light">{plan.price.toLocaleString()}</span>
-                                    <span className="text-xs text-ink/50">원</span>
-                                </div>
-                            </div>
-
+                        <div className="p-6 space-y-6">
+                            {/* Header */}
                             <div className="space-y-2">
-                                {(plan.features || []).slice(0, 3).map((feature: string, i: number) => (
-                                    <div key={i} className="flex items-center gap-2 text-[11px] text-ink/70">
-                                        <Check className="w-3 h-3 text-primary shrink-0" />
-                                        <span>{feature}</span>
+                                <h3 className="text-2xl font-serif font-bold text-white">
+                                    {plan.name || plan.label}
+                                </h3>
+                                <p className="text-sm text-white/70 leading-relaxed">
+                                    {plan.description}
+                                </p>
+                            </div>
+
+                            {/* Credits & Price */}
+                            <div className="flex items-center justify-between p-4 bg-black/20 rounded-xl border border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/30">
+                                        <Ticket className="w-6 h-6 text-primary" />
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-white/50 mb-1">부적</div>
+                                        <div className="text-xl font-bold text-white">{plan.credits}장</div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs text-white/50 mb-1">결제 금액</div>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-2xl font-serif font-bold text-primary">
+                                            {plan.price.toLocaleString()}
+                                        </span>
+                                        <span className="text-sm text-white/50">원</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Features */}
+                            <div className="space-y-3">
+                                {(plan.features || []).map((feature: string, i: number) => (
+                                    <div key={i} className="flex items-center gap-3">
+                                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-primary" />
+                                        </div>
+                                        <span className="text-sm text-white/90">{feature}</span>
                                     </div>
                                 ))}
                             </div>
-                        </div>
 
-                        <div className="p-4 bg-white/5">
+                            {/* CTA Button */}
                             <Button
                                 onClick={() => handleTalismanPayment(plan)}
                                 disabled={isLoading}
-                                className="w-full bg-surface border border-primary/30 text-ink-light hover:bg-primary hover:text-background hover:border-primary font-serif font-bold h-10 transition-all rounded-sm"
+                                className={cn(
+                                    "w-full h-14 text-base font-serif font-bold rounded-lg transition-all",
+                                    plan.badge_text === "가장 인기"
+                                        ? "bg-primary text-background hover:bg-primary/90 shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)]"
+                                        : "bg-white/10 text-white border-2 border-white/20 hover:bg-white/20 hover:border-primary/50"
+                                )}
                             >
-                                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "충전하기"}
+                                {isLoading ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-5 h-5 mr-2" />
+                                        지금 충전하기
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </Card>
@@ -145,8 +177,8 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
 
             {/* Tester/Admin Test Charge Button */}
             {(userRole === "admin" || userRole === "tester") && (
-                <div className="border-t border-dashed border-primary/20 pt-8 text-center bg-seal/5 p-4 rounded-sm border-seal/20">
-                    <p className="text-[10px] text-seal/70 mb-2 uppercase tracking-widest font-bold">Admin Zone</p>
+                <div className="border-2 border-dashed border-seal/30 bg-seal/5 rounded-xl p-6 text-center">
+                    <p className="text-xs text-seal/70 mb-4 uppercase tracking-widest font-bold">Admin Zone</p>
                     <Button
                         onClick={handleTestCharge}
                         disabled={isTestLoading}

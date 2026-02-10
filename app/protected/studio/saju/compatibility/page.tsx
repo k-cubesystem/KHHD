@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Heart, Sparkles, Share2, ArrowLeft, Loader2, Users } from "lucide-react";
 import { getFamilyMembers } from "@/app/actions/family-actions";
-import { getSajuData } from "@/lib/saju";
-import { calculateCompatibilityScore } from "@/lib/compatibility";
+import { getSajuData } from "@/lib/domain/saju/saju";
+import { calculateCompatibilityScore } from "@/lib/domain/compatibility/compatibility";
 
 function CompatibilityContent() {
     const searchParams = useSearchParams();

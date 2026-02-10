@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { type FaceDestinyGoal, type InteriorTheme } from "@/lib/constants";
 import { deductTalisman } from "./wallet-actions";
 import { saveAnalysisHistory } from "./analysis-history";
+import { rateLimit } from "@/lib/utils/rate-limit";
+import { sajuAnalysisSchema, faceAnalysisSchema, palmAnalysisSchema, fengshuiAnalysisSchema } from "@/lib/validations/analysis";
 
 // --- Helpers ---
 
@@ -93,11 +95,43 @@ export async function analyzeSajuDetail(
     saveToHistory: boolean = true // Added flag
 ) {
     console.log(`[AI Saju] Starting analysis for ${name} (${gender})`);
+
+    // Zod validation
+    const validation = sajuAnalysisSchema.safeParse({
+        name,
+        gender,
+        birthDate,
+        birthTime,
+        calendarType,
+        saveToHistory,
+    });
+
+    if (!validation.success) {
+        return {
+            success: false,
+            error: validation.error.errors[0]?.message ?? '입력 값이 올바르지 않습니다.',
+        };
+    }
+
     try {
         const model = getGeminiModel();
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+        // Rate limiting: 1분에 10회
+        const rateLimitResult = await rateLimit(`ai-saju:${user.id}`, {
+            interval: 60 * 1000,
+            uniqueTokenPerInterval: 10,
+        });
+
+        if (!rateLimitResult.success) {
+            const waitTime = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+            return {
+                success: false,
+                error: `요청 제한을 초과했습니다. ${waitTime}초 후에 다시 시도해주세요.`,
+            };
+        }
 
         const { context: userContext, profile } = await getUserProfileContext(supabase, user.id);
 
@@ -172,11 +206,39 @@ export async function analyzeFaceForDestiny(
     goal: FaceDestinyGoal,
     saveToHistory: boolean = true
 ) {
+    // Zod validation
+    const validation = faceAnalysisSchema.safeParse({
+        imageBase64,
+        goal,
+        saveToHistory,
+    });
+
+    if (!validation.success) {
+        return {
+            success: false,
+            error: validation.error.errors[0]?.message ?? '입력 값이 올바르지 않습니다.',
+        };
+    }
+
     try {
         const model = getGeminiModel();
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+        // Rate limiting: 1분에 5회 (이미지 분석은 더 제한적)
+        const rateLimitResult = await rateLimit(`ai-face:${user.id}`, {
+            interval: 60 * 1000,
+            uniqueTokenPerInterval: 5,
+        });
+
+        if (!rateLimitResult.success) {
+            const waitTime = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+            return {
+                success: false,
+                error: `요청 제한을 초과했습니다. ${waitTime}초 후에 다시 시도해주세요.`,
+            };
+        }
 
         const { context: userContext, profile } = await getUserProfileContext(supabase, user.id);
 
@@ -243,11 +305,38 @@ export async function analyzeFaceForDestiny(
 
 // 1.5 Palm Analysis
 export async function analyzePalm(imageBase64: string, saveToHistory: boolean = true) {
+    // Zod validation
+    const validation = palmAnalysisSchema.safeParse({
+        imageBase64,
+        saveToHistory,
+    });
+
+    if (!validation.success) {
+        return {
+            success: false,
+            error: validation.error.errors[0]?.message ?? '입력 값이 올바르지 않습니다.',
+        };
+    }
+
     try {
         const model = getGeminiModel();
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+        // Rate limiting: 1분에 5회
+        const rateLimitResult = await rateLimit(`ai-palm:${user.id}`, {
+            interval: 60 * 1000,
+            uniqueTokenPerInterval: 5,
+        });
+
+        if (!rateLimitResult.success) {
+            const waitTime = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+            return {
+                success: false,
+                error: `요청 제한을 초과했습니다. ${waitTime}초 후에 다시 시도해주세요.`,
+            };
+        }
 
         const { context: userContext, profile } = await getUserProfileContext(supabase, user.id);
 
@@ -311,11 +400,40 @@ export async function analyzeInteriorForFengshui(
     roomType: string,
     saveToHistory: boolean = true
 ) {
+    // Zod validation
+    const validation = fengshuiAnalysisSchema.safeParse({
+        imageBase64,
+        theme,
+        roomType,
+        saveToHistory,
+    });
+
+    if (!validation.success) {
+        return {
+            success: false,
+            error: validation.error.errors[0]?.message ?? '입력 값이 올바르지 않습니다.',
+        };
+    }
+
     try {
         const model = getGeminiModel();
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+        // Rate limiting: 1분에 5회
+        const rateLimitResult = await rateLimit(`ai-fengshui:${user.id}`, {
+            interval: 60 * 1000,
+            uniqueTokenPerInterval: 5,
+        });
+
+        if (!rateLimitResult.success) {
+            const waitTime = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+            return {
+                success: false,
+                error: `요청 제한을 초과했습니다. ${waitTime}초 후에 다시 시도해주세요.`,
+            };
+        }
 
         const { context: userContext, profile } = await getUserProfileContext(supabase, user.id);
 
@@ -388,6 +506,20 @@ export async function generateDestinyImage(prompt: string, context: string = 'in
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인이 필요합니다." };
+
+        // Rate limiting: 1분에 3회 (이미지 생성은 매우 제한적)
+        const rateLimitResult = await rateLimit(`ai-image-gen:${user.id}`, {
+            interval: 60 * 1000,
+            uniqueTokenPerInterval: 3,
+        });
+
+        if (!rateLimitResult.success) {
+            const waitTime = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+            return {
+                success: false,
+                error: `요청 제한을 초과했습니다. ${waitTime}초 후에 다시 시도해주세요.`,
+            };
+        }
 
         const deductResult = await deductTalisman("IMAGE_GEN");
         if (!deductResult.success) return deductResult;

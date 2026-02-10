@@ -36,14 +36,14 @@ export async function updateSession(request: NextRequest) {
     // 1. 사용자 정보 가져오기
     const { data: { user } } = await supabase.auth.getUser();
 
-    // 2. 보호된 경로(/protected) 접근 제어 (비회원 접근 허용으로 변경)
-    // 원래는 여기서 막았으나, 비회원도 페이지를 볼 수 있게 요청받음.
-    // 개별 페이지나 컴포넌트 레벨에서 데이터 접근을 제어해야 함.
-    /*
+    // 2. 보호된 경로(/protected) 접근 제어
+    // /protected 경로는 반드시 로그인이 필요합니다.
     if (request.nextUrl.pathname.startsWith("/protected") && !user) {
+        // 예외: /protected/public/* 경로는 로그인 없이 접근 가능하도록 설정할 수 있음
+        // if (!request.nextUrl.pathname.startsWith("/protected/public")) {
         return NextResponse.redirect(new URL("/auth/login", request.url));
+        // }
     }
-    */
 
     // 3. 관리자 경로(/admin) 접근 제어
     // TEMPORARY: Admin 체크 비활성화 (RLS 무한 재귀 문제로 인해)

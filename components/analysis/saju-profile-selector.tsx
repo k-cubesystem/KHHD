@@ -12,7 +12,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { getDestinyTargets, type DestinyTarget } from "@/app/actions/destiny-targets";
-import { getTargetImageUrl } from "@/lib/destiny-utils";
+import { getTargetImageUrl } from "@/lib/domain/destiny/destiny-utils";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 

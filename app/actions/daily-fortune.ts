@@ -3,7 +3,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { calculateManse } from "@/lib/saju/manse";
+import { calculateManse } from "@/lib/domain/saju/manse";
+import { saveAnalysisHistory } from "@/app/actions/analysis-history";
+import { logger } from "@/lib/utils/logger";
+import { rateLimit } from "@/lib/utils/rate-limit";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
 
@@ -16,6 +19,20 @@ export async function generateDailyFortune(
     dateStr?: string,
     force: boolean = false
 ) {
+    // Rate limiting: 1분에 20회 (일운은 자주 조회될 수 있으므로 여유있게)
+    const rateLimitResult = await rateLimit(`daily-fortune:${userId}`, {
+        interval: 60 * 1000,
+        uniqueTokenPerInterval: 20,
+    });
+
+    if (!rateLimitResult.success) {
+        const waitTime = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+        return {
+            success: false,
+            error: `요청 제한을 초과했습니다. ${waitTime}초 후에 다시 시도해주세요.`,
+        };
+    }
+
     const supabase = await createClient();
     const targetDate = dateStr || new Date().toISOString().split('T')[0];
 
@@ -87,9 +104,10 @@ export async function generateDailyFortune(
 
             if (error) throw error;
             if (data && data.length > 0) promptData = data[0];
-        } catch (e: any) {
-            console.error("Admin Client Fetch Error:", e);
-            fetchError = "Admin Error: " + e.message;
+        } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            logger.error("Admin Client Fetch Error:", e);
+            fetchError = "Admin Error: " + message;
         }
     } else {
         fetchError = "Server Config Error: Missing Service Role Key";
@@ -106,24 +124,25 @@ export async function generateDailyFortune(
 
             if (data) promptData = data;
             if (error) fetchError += " | Standard Error: " + error.message;
-        } catch (e: any) {
-            fetchError += " | Standard Exception: " + e.message;
+        } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            fetchError += " | Standard Exception: " + message;
         }
     }
 
     // STRICT ENFORCEMENT: No Fallback
     if (!promptData || !promptData.template) {
-        console.error("CRITICAL: Daily Fortune Prompt NOT FOUND in DB.");
+        logger.error("CRITICAL: Daily Fortune Prompt NOT FOUND in DB.");
         return {
             success: false,
             error: `시스템 설정 오류: 관리자 프롬프트를 불러올 수 없습니다. (관리자에게 문의하세요) \nDebug: ${fetchError}`
         };
     }
 
-    let promptTemplate = promptData.template;
+    const promptTemplate = promptData.template;
 
     // 5. Generate
-    let prompt = promptTemplate
+    const prompt = promptTemplate
         .replace('{{date}}', targetDate)
         .replace('{{name}}', name || '사용자')
         .replace('{{gender}}', gender === 'male' ? '남성' : '여성')
@@ -150,13 +169,31 @@ export async function generateDailyFortune(
             });
 
         if (saveError) {
-            console.error("Failed to save fortune:", saveError);
+            logger.error("Failed to save fortune:", saveError);
+        }
+
+
+        // 7. Save to Unified History
+        try {
+            await saveAnalysisHistory({
+                target_id: targetId,
+                target_name: name || "사용자",
+                target_relation: type === 'USER' ? '본인' : '가족/지인',
+                category: "TODAY",
+                context_mode: "GENERAL",
+                result_json: { content: text },
+                summary: text.substring(0, 30) + "...",
+                talisman_cost: 0,
+            });
+        } catch (e) {
+            logger.error("Failed to save history:", e);
         }
 
         return { success: true, content: text, cached: false };
 
-    } catch (error: any) {
-        console.error("AI Generation Error:", error);
-        return { success: false, error: error.message };
+    } catch (error) {
+        logger.error("AI Generation Error:", error);
+        const message = error instanceof Error ? error.message : "AI generation failed";
+        return { success: false, error: message };
     }
 }

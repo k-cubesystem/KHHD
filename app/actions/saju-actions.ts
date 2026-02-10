@@ -1,7 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getSajuData, analyzeElementBalance } from "@/lib/saju";
+import { getSajuData, analyzeElementBalance } from "@/lib/domain/saju/saju";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * 사용자의 오행 분포를 백분율로 계산하여 반환
@@ -41,11 +42,11 @@ export async function getUserFiveElements() {
         // 백분율 변환 (Recharts 형식)
         const total = Object.values(sajuData.elementsDistribution).reduce((a, b) => a + b, 0);
         const percentages = {
-            wood: Math.round((sajuData.elementsDistribution["木"] / total) * 100),
-            fire: Math.round((sajuData.elementsDistribution["火"] / total) * 100),
-            earth: Math.round((sajuData.elementsDistribution["土"] / total) * 100),
-            metal: Math.round((sajuData.elementsDistribution["金"] / total) * 100),
-            water: Math.round((sajuData.elementsDistribution["水"] / total) * 100),
+            wood: Math.round(((sajuData.elementsDistribution["木"] ?? 0) / total) * 100),
+            fire: Math.round(((sajuData.elementsDistribution["火"] ?? 0) / total) * 100),
+            earth: Math.round(((sajuData.elementsDistribution["土"] ?? 0) / total) * 100),
+            metal: Math.round(((sajuData.elementsDistribution["金"] ?? 0) / total) * 100),
+            water: Math.round(((sajuData.elementsDistribution["水"] ?? 0) / total) * 100),
         };
 
         return {
@@ -55,7 +56,7 @@ export async function getUserFiveElements() {
             raw: sajuData.elementsDistribution,
         };
     } catch (error: unknown) {
-        console.error("[Saju Actions] Error calculating five elements:", error);
+        logger.error("[Saju Actions] Error calculating five elements:", error);
         return {
             success: false,
             error: error instanceof Error ? error.message : "오행 계산 중 오류가 발생했습니다."

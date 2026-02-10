@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, X } from "lucide-react";
+import { Home, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -39,9 +39,9 @@ export function FloatingAnalysisButton() {
                 >
                     <Button
                         onClick={() => router.push("/protected/analysis")}
-                        className="w-14 h-14 rounded-full bg-primary text-background shadow-[0_4px_20px_rgba(236,182,19,0.4)] border border-white/20 hover:scale-105 transition-transform flex items-center justify-center p-0"
+                        className="w-10 h-10 bg-transparent hover:bg-primary/10 text-primary shadow-none border-0 hover:scale-110 transition-transform flex items-center justify-center p-0"
                     >
-                        <Sparkles className="w-6 h-6 animate-pulse" />
+                        <Home className="w-5 h-5" />
                     </Button>
                 </motion.div>
             )}

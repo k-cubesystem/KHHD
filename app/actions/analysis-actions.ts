@@ -2,9 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { generateFateReport } from "@/lib/gemini";
-import { getSajuData } from "@/lib/saju";
+import { generateFateReport } from "@/lib/services/gemini";
+import { getSajuData } from "@/lib/domain/saju/saju";
 import { saveAnalysisHistory } from "./analysis-history";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * [Legacy Support]
@@ -15,10 +16,10 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
     const supabase = await createClient();
     const targetId = formData.get("memberId") as string;
     const homeAddress = formData.get("homeAddress") as string;
-    const faceFile = formData.get("faceImage") as File;
-    const handFile = formData.get("handImage") as File;
+    const _faceFile = formData.get("faceImage") as File;
+    const _handFile = formData.get("handImage") as File;
 
-    console.log(`[Analysis Legacy] Starting analysis for target: ${targetId}`);
+    logger.log(`[Analysis Legacy] Starting analysis for target: ${targetId}`);
 
     // 1. Destiny Target 정보 가져오기
     const { data: target, error: targetError } = await supabase
@@ -39,8 +40,8 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
     );
 
     // 3. 이미지 업로드 (생략 가능, 기존 로직 유지)
-    let faceImageUrl = target.face_image_url;
-    let handImageUrl = target.hand_image_url;
+    const faceImageUrl = target.face_image_url;
+    const handImageUrl = target.hand_image_url;
 
     // ... (Image upload logic omitted for brevity in this cleanup, assuming URLs are fine or updated)
     // In a full migration, we'd preserve the upload logic here. 
@@ -70,7 +71,7 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
     // 6. 결과 파싱 및 저장 (analysis_history ONLY)
     const extractTag = (tag: string) => {
         const match = reportText.match(new RegExp(`\\[\\[${tag}:\\s*(.*?)\\]\\]`, "i"));
-        return match ? match[1].trim() : null;
+        return match?.[1]?.trim() ?? null;
     };
 
     const successProb = parseInt(extractTag("SUCCESS_PROBABILITY") || "70");
@@ -94,7 +95,7 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
     });
 
     if (!success) {
-        console.error("Failed to save history:", error);
+        logger.error("Failed to save history:", error);
         throw new Error("분석 결과 저장 실패");
     }
 
