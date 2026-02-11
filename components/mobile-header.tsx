@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronLeft, User } from "lucide-react";
+import { ChevronLeft, User, Home } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -31,13 +31,13 @@ export function MobileHeader() {
                     청담해화당
                 </Link>
 
-                {/* Profile Button */}
+                {/* Home Button (Replaces Profile) */}
                 <Link
-                    href="/protected/profile"
+                    href="/protected"
                     className="w-10 h-10 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
-                    aria-label="Go to profile"
+                    aria-label="Go to home"
                 >
-                    <User className="w-5 h-5" />
+                    <Home className="w-5 h-5" />
                 </Link>
             </header>
         </div>

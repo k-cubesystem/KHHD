@@ -1,162 +1,465 @@
-# 청담해화당 Dark Luxury Design System
+# 청담해화당 Minimalist Premium Design System
+
+> **기준 페이지**: `/protected/profile/manse` (만세력 페이지 - manse-client.tsx)
+> **디자인 철학**: "Less is More" - Minimalism × Premium × Elegant
+> **최종 업데이트**: 2026-02-11
 
 ## 디자인 철학
 
-**Mysterious × Premium × Traditional × Modern**
+**Minimalist × Premium × Elegant**
 
-어둡고 신비로운 배경에 금빛과 주홍색 액센트를 더한 고급스러운 동양적 럭셔리 디자인
-
----
-
-## 색상 팔레트
-
-### Primary Colors (주요 색상)
-
-```typescript
-background: "#0A0A0A"     // Deep Charcoal - 메인 배경
-surface: "#181611"        // Card/Panel 배경 (약간 밝은 검정)
-```
-
-### Gold Accents (금색 계열)
-
-```typescript
-primary: "#ECB613"        // 밝은 금색 (강조, CTA 버튼)
-primary-dim: "#C5A059"    // 차분한 금색 (테두리, 보조 텍스트)
-primary-dark: "#B8860B"   // 어두운 금색 (호버 상태)
-```
-
-### Seal Red (주홍색)
-
-```typescript
-seal: "#9A2A2A"          // 도장 색상 (경고, 삭제 버튼)
-```
-
-### Text Colors (텍스트)
-
-```typescript
-ink-light: "#E5E5E5"      // 밝은 텍스트 (다크모드 본문)
-ink-DEFAULT: "#1A1A1A"    // 어두운 텍스트 (라이트모드 - 미사용)
-ink-faint: "rgba(255, 255, 255, 0.4)" // 희미한 텍스트 (placeholder)
-```
+- **얇은 폰트 > 굵은 폰트** (font-light, font-normal > font-bold)
+- **적은 색상** (Gold #D4AF37, Black #0A0A0A, White + opacity)
+- **얇은 아이콘** (strokeWidth={1})
+- **여백을 통한 호흡**
+- **그라데이션은 최소화** (페이지 타이틀에만 사용)
 
 ---
 
-## Typography (타이포그래피)
+## 📐 타이포그래피 시스템 (Typography System)
 
 ### Font Families
 
 ```css
 /* 명조체 (제목, 고급스러운 텍스트) */
-font-serif: "Noto Serif KR", serif
+font-serif: "Noto Serif KR", serif  /* Weights: 200, 300, 400, 500, 600, 700, 900 */
 
 /* 고딕체 (본문, UI 요소) */
 font-sans: "Noto Sans KR", sans-serif
 ```
 
-### 사용 가이드
+### 1. 페이지 타이틀 (Page Titles)
+```tsx
+// 메인 타이틀 (h1) - 그라데이션 사용 가능
+className="text-4xl font-black bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent"
 
-- **제목/헤딩**: `font-serif` + `font-semibold` 또는 `font-bold`
-- **본문/설명**: `font-sans` + `font-normal`
-- **버튼**: `font-serif` + `font-medium` (강조)
-- **Label/Caption**: `font-sans` + `font-medium` (가독성)
+// 서브 타이틀 설명
+className="text-muted-foreground"  // 기본 14px, font-light
+```
+
+### 2. 섹션 헤더 (Section Headers)
+```tsx
+// 표준 섹션 헤더 (h3)
+className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2"
+
+// 아이콘 포함 예시
+<h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+  <BookOpen className="w-4 h-4" strokeWidth={1} />
+  사주팔자 (四柱八字)
+</h3>
+```
+
+### 3. 카드 타이틀 (Card Titles)
+```tsx
+// 작은 카드 헤더
+className="text-xs text-muted-foreground mb-2"
+
+// 카드 내부 강조 텍스트
+className="text-lg font-bold"  // 또는 text-xl font-bold
+```
+
+### 4. 본문 텍스트 (Body Text)
+```tsx
+// 표준 본문
+className="text-sm text-muted-foreground leading-relaxed"
+
+// 강조 본문
+className="text-sm font-bold"
+
+// 설명 본문
+className="text-xs text-muted-foreground/70"
+```
+
+### 5. 버튼 텍스트 (Button Labels)
+```tsx
+// 메인 버튼
+className="text-sm font-bold"  // 또는 font-medium
+
+// 보조 버튼/링크
+className="text-xs font-bold"
+```
+
+### 폰트 무게 사용 규칙 ⭐
+
+**✅ 사용 권장:**
+- `font-light` (300) - 본문, 설명
+- `font-normal` (400) - 일반 텍스트
+- `font-medium` (500) - 강조 버튼
+- `font-bold` (700) - 섹션 헤더만 (uppercase와 함께)
+- `font-black` (900) - 페이지 타이틀만 (gradient와 함께)
+
+**❌ 사용 지양:**
+- `font-semibold` (600) - 사용하지 않음
+- 일반 텍스트에 `font-bold` - 너무 무거움
 
 ---
 
-## Component Styles
+## 🎨 색상 시스템 (Color System)
 
-### Button
+### 주요 색상 (Primary Colors)
+```css
+/* Gold (Primary) */
+#D4AF37 - 메인 골드
+#F4E4BA - 라이트 골드 (호버)
+#ECB613 - 브라이트 골드 (강조, 이전 시스템)
 
-```typescript
-default: 금색 배경 (#ECB613) + 검정 텍스트
-  - Hover: 어두운 금색 (#B8860B)
-  - Shadow: 금색 글로우 (shadow-primary/20)
-  - Animation: Scale + Gold shimmer overlay
+/* Background */
+#0A0A0A - 메인 배경
+#050505 - 다크 배경
+rgba(26, 25, 23, 0.5) - 글래스 배경
 
-destructive: 주홍색 배경 (#9A2A2A) + 흰색 텍스트
-
-outline: 투명 배경 + 금색 테두리 (primary-dim/30)
-  - Hover: 금색 배경 10% 투명도
-
-secondary: Surface 배경 + 금색 테두리
-  - Hover: Surface 80% 투명도
-
-ghost: 투명 배경
-  - Hover: Surface 배경
+/* Text Colors */
+#FFFFFF - 화이트 (제목)
+#E5E5E5 - 라이트 그레이 (본문)
+rgba(255,255,255,0.6) - Muted (보조)
+rgba(255,255,255,0.4) - Dimmed (비활성)
 ```
 
-### Card
+### 색상 사용 규칙
+```tsx
+// 제목 텍스트
+text-ink-light       // #FFFFFF에 가까움
+text-primary         // #D4AF37
 
-```typescript
-배경: bg-surface (#181611)
-테두리: border-primary-dim/20 (금색 20% 투명도)
-그림자: shadow-primary/10 (금색 글로우)
-Backdrop: backdrop-blur-sm (유리 효과)
+// 본문 텍스트
+text-muted-foreground      // rgba(255,255,255,0.6)
+text-muted-foreground/70   // rgba(255,255,255,0.42)
 
-Hover:
-  - depth="low": shadow-md + shadow-primary/5
-  - depth="medium": shadow-lg + shadow-primary/10
-  - depth="high": shadow-xl + shadow-primary/20
+// 배경
+bg-white/5          // rgba(255,255,255,0.05)
+bg-white/10         // rgba(255,255,255,0.10)
+bg-surface/30       // 표면 30% 투명도
+bg-primary/10       // 골드 10% 투명도
+bg-primary/20       // 골드 20% 투명도
+
+// 테두리
+border-white/5      // 5% 투명도
+border-white/10     // 10% 투명도
+border-primary/20   // 골드 20% 투명도
 ```
 
-### Input / Textarea
+---
 
-```typescript
-배경: bg-surface (#181611)
-테두리: border-primary-dim/30 (금색 30% 투명도)
-텍스트: text-ink-light (#E5E5E5)
-Placeholder: placeholder:text-ink-faint (40% 투명도)
+## 🏗️ 레이아웃 시스템 (Layout System)
 
-Focus:
-  - Ring: ring-primary (금색 2px 링)
-  - Border: border-primary
-  - 배경: bg-surface/80 (약간 밝아짐)
+### 컨테이너
+```tsx
+// 메인 컨테이너 (중앙 정렬, 최대 너비)
+className="max-w-4xl mx-auto px-6 py-12 space-y-10"
 
-Hover: shadow-md + shadow-primary/5
+// 모바일 전용 (480px 제한)
+className="w-full max-w-[480px] min-h-screen"
 ```
 
-### Select
+### 간격 (Spacing)
+```tsx
+// 섹션 간 간격
+space-y-10   // 40px - 큰 섹션
+space-y-8    // 32px - 중간 섹션
+space-y-6    // 24px - 카드 내부
+space-y-4    // 16px - 작은 요소
+space-y-3    // 12px - 밀집된 요소
+space-y-2    // 8px - 리스트 아이템
 
-```typescript
-Trigger:
-  - 배경: bg-surface
-  - 테두리: border-primary-dim/30
-  - 높이: h-10 (default), h-9 (sm)
+// 패딩
+p-8          // 32px - 큰 카드
+p-6          // 24px - 중간 카드
+p-4          // 16px - 작은 카드
+p-3          // 12px - 콤팩트
 
-Content (Dropdown):
-  - 배경: bg-surface
-  - 테두리: border-primary-dim/30
-  - 그림자: shadow-lg + shadow-primary/10
-  - Backdrop: backdrop-blur-md
-
-Item:
-  - Hover: bg-primary-dim/10 (금색 10% 투명도)
-  - Focus: text-primary (금색 텍스트)
+// 마진
+mb-6         // 24px - 섹션 헤더 하단
+mb-4         // 16px - 표준 간격
+mb-3         // 12px - 작은 간격
+mb-2         // 8px - 최소 간격
 ```
 
-### Dialog / Modal
+### 그리드 레이아웃
+```tsx
+// 2열 그리드
+className="grid grid-cols-2 gap-4"
 
-```typescript
-Overlay:
-  - bg-black/80 (검정 80% 투명도)
-  - backdrop-blur-sm (블러 효과)
+// 4열 그리드 (사주팔자)
+className="grid grid-cols-4 gap-4"
 
-Content:
-  - 배경: bg-surface
-  - 테두리: border-primary-dim/30
-  - 그림자: shadow-xl + shadow-primary/10
-  - Backdrop: backdrop-blur-md
+// 5열 그리드 (오행)
+className="grid grid-cols-5 gap-4"
 
-Title: font-serif + text-lg + text-ink-light
-Description: font-sans + text-sm + text-ink-faint
+// 3열 그리드 (대운)
+className="grid grid-cols-3 gap-2"
 ```
 
-### Badge
+---
 
-```typescript
-default: 금색 배경 + 검정 텍스트
-secondary: Surface 배경 + 금색 테두리
-destructive: 주홍색 배경 + 흰색 텍스트
-outline: 투명 배경 + 금색 테두리
+## 🎴 카드 컴포넌트 (Card Components)
+
+### 1. 기본 카드 (Base Card)
+```tsx
+<Card className="p-8 bg-white/5 border-white/10">
+  {/* 내용 */}
+</Card>
+```
+
+### 2. 프리미엄 카드 (Premium Card with Blur)
+```tsx
+<Card className="p-8 bg-white/5 border-white/10 relative overflow-hidden">
+  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+    <Sparkles className="w-4 h-4" strokeWidth={1} />
+    {title}
+    {!isSubscribed && (
+      <span className="ml-2 px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-[10px]">
+        PREMIUM
+      </span>
+    )}
+  </h3>
+
+  {/* 잠금 상태 */}
+  <div className={cn(!isSubscribed && "blur-sm select-none pointer-events-none")}>
+    {children}
+  </div>
+
+  {/* 프리미엄 오버레이 */}
+  {!isSubscribed && (
+    <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="text-center space-y-4 p-6">
+        <div className="w-16 h-16 mx-auto rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
+          <Crown className="w-8 h-8 text-[#D4AF37]" strokeWidth={1} />
+        </div>
+        <h4 className="text-lg font-bold text-ink-light">프리미엄 회원 전용</h4>
+        <p className="text-sm text-muted-foreground max-w-xs">{description}</p>
+        <Link href="/protected/membership">
+          <Button className="bg-[#D4AF37] hover:bg-[#F4E4BA] text-background">
+            <Crown className="w-4 h-4 mr-2" strokeWidth={1} />
+            멤버십 가입하기
+          </Button>
+        </Link>
+      </div>
+    </div>
+  )}
+</Card>
+```
+
+### 3. 인포 카드 (Info Card)
+```tsx
+<div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
+  <p className="text-xs text-muted-foreground mb-2">라벨</p>
+  <p className="text-xl font-bold text-primary">값</p>
+</div>
+```
+
+### 4. 글래스 카드 (Glass Card with Gradient)
+```tsx
+<div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 p-4 rounded-xl">
+  <p className="text-sm font-bold mb-3 flex items-center gap-2">
+    <Sparkles className="w-4 h-4 text-primary" strokeWidth={1} />
+    강조 콘텐츠
+  </p>
+  {/* 내용 */}
+</div>
+```
+
+---
+
+## 🔘 버튼 시스템 (Button System)
+
+### 1. 메인 버튼 (Primary Button)
+```tsx
+<Button className="bg-[#D4AF37] hover:bg-[#F4E4BA] text-background">
+  <Crown className="w-4 h-4 mr-2" strokeWidth={1} />
+  버튼 텍스트
+</Button>
+```
+
+### 2. 아웃라인 버튼 (Outline Button)
+```tsx
+<button className="px-3 py-1.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-sm font-medium border border-[#D4AF37]/30 hover:bg-[#D4AF37]/30 transition-colors">
+  버튼 텍스트
+</button>
+```
+
+### 3. 용어 버튼 (Term Button with Icon)
+```tsx
+<button className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#D4AF37]/10 text-[#D4AF37] text-xs hover:bg-[#D4AF37]/20 transition-colors">
+  용어
+  <Info className="w-3 h-3" strokeWidth={1} />
+</button>
+```
+
+### 4. 인터랙티브 카드 버튼 (Interactive Card Button)
+```tsx
+<button className="group cursor-pointer w-full text-center">
+  <div className="flex flex-col items-center gap-1.5">
+    <span className="text-3xl font-black group-hover:scale-110 transition-transform" style={{ color: WU_XING_COLORS[element] }}>
+      {/* 아이콘/한자 */}
+    </span>
+    <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+      {/* 라벨 */}
+    </span>
+  </div>
+</button>
+```
+
+---
+
+## 🎯 아이콘 시스템 (Icon System)
+
+### 크기 규칙
+```tsx
+// 섹션 헤더 아이콘
+<Icon className="w-4 h-4" strokeWidth={1} />
+
+// 페이지 아이콘 (중간)
+<Icon className="w-5 h-5" strokeWidth={1} />
+
+// 큰 아이콘
+<Icon className="w-8 h-8" strokeWidth={1} />
+
+// 작은 아이콘
+<Icon className="w-3 h-3" strokeWidth={1} />
+```
+
+### 아이콘 색상
+```tsx
+// Primary
+text-primary       // #D4AF37
+text-[#D4AF37]     // 명시적
+
+// Muted
+text-muted-foreground
+text-ink-light/50
+
+// 호버
+group-hover:text-primary transition-colors
+```
+
+### ⭐ 중요 규칙: strokeWidth={1}
+**모든 lucide-react 아이콘에는 `strokeWidth={1}`을 필수로 적용합니다.**
+얇은 선이 프리미엄하고 미니멀한 느낌을 줍니다.
+
+```tsx
+// ✅ 올바른 사용
+<BookOpen className="w-4 h-4" strokeWidth={1} />
+<Sparkles className="w-5 h-5 text-primary" strokeWidth={1} />
+
+// ❌ 잘못된 사용
+<BookOpen className="w-4 h-4" />  // strokeWidth 없음 (너무 굵음)
+<Sparkles className="w-5 h-5" strokeWidth={2} />  // 너무 굵음
+```
+
+---
+
+## 📦 배지 시스템 (Badge System)
+
+### 1. 프리미엄 배지
+```tsx
+<span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-[10px]">
+  PREMIUM
+</span>
+```
+
+### 2. 상태 배지
+```tsx
+// 강 (Strong)
+<span className="px-2 py-0.5 rounded text-[10px] bg-primary/20 text-primary">
+  강
+</span>
+
+// 중 (Moderate)
+<span className="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-400">
+  중
+</span>
+
+// 약 (Weak)
+<span className="px-2 py-0.5 rounded text-[10px] bg-muted-foreground/20 text-muted-foreground">
+  약
+</span>
+```
+
+### 3. 카테고리 배지
+```tsx
+<span className="px-2 py-1 rounded bg-seal-500/20 border border-seal-500/30 text-xs font-bold text-seal-400">
+  카테고리
+</span>
+```
+
+### 4. 성별 배지
+```tsx
+// 남성
+<div className="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-400">
+  남명
+</div>
+
+// 여성
+<div className="px-3 py-1 rounded-full text-xs font-bold bg-pink-500/20 text-pink-400">
+  여명
+</div>
+```
+
+---
+
+## 🌟 특수 효과 (Special Effects)
+
+### 1. 그라데이션 텍스트
+```tsx
+// 페이지 타이틀에만 사용
+<h1 className="text-4xl font-black">
+  <span className="bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent">
+    만세력
+  </span>
+</h1>
+```
+
+### 2. 글로우 배경 (Subtle)
+```tsx
+<div className="fixed inset-0 pointer-events-none -z-10">
+  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[200px]" />
+</div>
+```
+
+### 3. 호버 효과
+```tsx
+// 스케일 호버
+group-hover:scale-110 transition-transform
+
+// 색상 호버
+group-hover:text-primary transition-colors
+hover:bg-primary/20 transition-all
+
+// 스케일 호버 (카드)
+hover:scale-105 transition-transform
+```
+
+### 4. Select 컴포넌트
+```tsx
+<Select value={selectedId} onValueChange={setSelectedId}>
+  <SelectTrigger className="w-64 bg-white/5 border-white/10">
+    <SelectValue placeholder="선택" />
+  </SelectTrigger>
+  <SelectContent>
+    {items.map((item) => (
+      <SelectItem key={item.id} value={item.id}>
+        {item.name}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+```
+
+### 5. Dialog (모달)
+```tsx
+<Dialog open={open} onOpenChange={setOpen}>
+  <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-sm">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+        <BookOpen className="w-5 h-5" strokeWidth={1} />
+        {title}
+      </DialogTitle>
+    </DialogHeader>
+    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+      {description}
+    </p>
+  </DialogContent>
+</Dialog>
 ```
 
 ---
