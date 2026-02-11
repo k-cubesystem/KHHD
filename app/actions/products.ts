@@ -7,9 +7,17 @@ import { createServerClient } from "@supabase/ssr";
 
 // Helper to create Admin Client (Service Role)
 function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.warn("[Products] Missing Supabase Admin credentials. Admin features will be disabled.");
+    return null;
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    serviceRoleKey,
     {
       cookies: {
         getAll() { return []; },
@@ -25,6 +33,15 @@ function createAdminClient() {
 export async function getActivePlans(): Promise<PricePlan[]> {
   // Use Admin Client to avoid RLS recursion issues since plans are public
   const supabase = createAdminClient();
+
+  // If admin client is not available, we can try using the anon client or return empty array
+  // Assuming price_plans is public read, we can use createClient() if we had it imported,
+  // but here let's just return empty array or try with anon key if critical.
+  // Ideally price_plans should be public readable.
+  if (!supabase) {
+    // Fallback: try using standard client if possible, or just fail gracefully
+    return [];
+  }
 
   const { data, error } = await supabase
     .from("price_plans")
@@ -51,6 +68,13 @@ export async function getCurrentUserRole(): Promise<{ role: UserRole, userId: st
 
   // Use Admin Client for profile fetch to safely bypass RLS recursion
   const adminSupabase = createAdminClient();
+
+  // If admin credentials are missing, we can't bypass RLS. 
+  // We fall back to standard 'user' role which is safe default.
+  if (!adminSupabase) {
+    return { role: "user", userId: user.id };
+  }
+
   const { data: profile } = await adminSupabase
     .from("profiles")
     .select("role")

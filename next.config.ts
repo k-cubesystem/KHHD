@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
               "img-src 'self' data: https: blob:",
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://api.openai.com https://images.unsplash.com",
+              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://api.openai.com https://images.unsplash.com https://cdn.jsdelivr.net",
               "frame-src 'self' https://js.tosspayments.com",
               "media-src 'self' blob: data:",
             ].join('; '),
