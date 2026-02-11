@@ -6,6 +6,8 @@ import { MembershipTabs } from "@/components/membership/membership-tabs";
 import { TalismanPurchaseSection } from "@/components/membership/talisman-purchase-section";
 import { Crown, Check, ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { BrandQuote } from "@/components/ui/BrandQuote";
+import { BRAND_QUOTES } from "@/lib/constants/brand-quotes";
 
 export default async function MembershipPage() {
     const supabase = await createClient();
@@ -49,22 +51,26 @@ export default async function MembershipPage() {
                     href="/protected"
                     className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors mb-8 text-sm"
                 >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4" strokeWidth={1} />
                     <span>대시보드로 돌아가기</span>
                 </Link>
 
                 {/* Header */}
                 <div className="text-center mb-8 space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full">
-                        <Crown className="w-4 h-4 text-primary" />
-                        <span className="text-primary font-serif font-bold text-xs tracking-wide">Premium Membership</span>
+                        <Crown className="w-4 h-4 text-primary" strokeWidth={1} />
+                        <span className="text-primary font-serif font-light text-xs tracking-wide">Premium Membership</span>
                     </div>
 
-                    <h1 className="text-2xl md:text-3xl font-serif font-bold text-white leading-tight">
+                    <h1 className="text-2xl md:text-3xl font-serif font-light text-white leading-tight">
                         지금 시작하고,<br />혜택을 받으세요!
                     </h1>
 
-                    <p className="text-white/60 text-sm leading-relaxed">
+                    <BrandQuote variant="hero" className="text-center">
+                        {BRAND_QUOTES.membership.hero}
+                    </BrandQuote>
+
+                    <p className="text-white/60 text-sm leading-relaxed font-light">
                         1분이면 가입 완료됩니다.
                     </p>
                 </div>
@@ -72,10 +78,10 @@ export default async function MembershipPage() {
                 {/* Guest Notice */}
                 {isGuest && (
                     <div className="bg-primary/10 border border-primary/30 rounded-xl p-6 mb-8 text-center">
-                        <p className="text-white font-serif font-bold text-base mb-2">
+                        <p className="text-white font-serif font-light text-base mb-2">
                             무료로 시작하세요!
                         </p>
-                        <p className="text-sm text-white/70 leading-relaxed">
+                        <p className="text-sm text-white/70 leading-relaxed font-light">
                             회원가입 후 모든 플랜을 선택하실 수 있습니다.
                         </p>
                     </div>
@@ -98,8 +104,8 @@ export default async function MembershipPage() {
                 {/* Common Benefits */}
                 <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 rounded-xl p-6 mb-8 shadow-lg">
                     <div className="flex items-center justify-center gap-2 mb-6">
-                        <Sparkles className="w-5 h-5 text-primary" />
-                        <h2 className="text-lg font-serif font-bold text-white">
+                        <Sparkles className="w-5 h-5 text-primary" strokeWidth={1} />
+                        <h2 className="text-lg font-serif font-light text-white">
                             모든 플랜 공통 혜택
                         </h2>
                     </div>
@@ -117,11 +123,11 @@ export default async function MembershipPage() {
                         ].map((item, i) => (
                             <div key={i} className="flex items-start gap-3">
                                 <div className="w-8 h-8 bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20 rounded-lg">
-                                    <Check className="w-4 h-4 text-primary" />
+                                    <Check className="w-4 h-4 text-primary" strokeWidth={1} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-white text-sm mb-1">{item.title}</h3>
-                                    <p className="text-xs text-white/70 leading-relaxed">{item.desc}</p>
+                                    <h3 className="font-light text-white text-sm mb-1">{item.title}</h3>
+                                    <p className="text-xs text-white/70 leading-relaxed font-light">{item.desc}</p>
                                 </div>
                             </div>
                         ))}
@@ -130,36 +136,36 @@ export default async function MembershipPage() {
 
                 {/* FAQ Section */}
                 <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 rounded-xl p-6">
-                    <h2 className="text-lg font-serif font-bold text-white mb-6">
+                    <h2 className="text-lg font-serif font-light text-white mb-6">
                         자주 묻는 질문
                     </h2>
                     <div className="space-y-6">
                         <div>
-                            <h3 className="font-bold text-white mb-2 flex items-center gap-2 text-sm">
-                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-lg flex-shrink-0">Q</span>
+                            <h3 className="font-light text-white mb-2 flex items-center gap-2 text-sm">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-medium rounded-lg flex-shrink-0">Q</span>
                                 <span className="flex-1 min-w-0">플랜 변경은 어떻게 하나요?</span>
                             </h3>
-                            <p className="text-white/60 text-sm pl-8 leading-relaxed">
+                            <p className="text-white/60 text-sm pl-8 leading-relaxed font-light">
                                 멤버십 관리 페이지에서 언제든 업그레이드하거나 다운그레이드할 수 있습니다.
                             </p>
                         </div>
 
                         <div>
-                            <h3 className="font-bold text-white mb-2 flex items-center gap-2 text-sm">
-                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-lg flex-shrink-0">Q</span>
+                            <h3 className="font-light text-white mb-2 flex items-center gap-2 text-sm">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-medium rounded-lg flex-shrink-0">Q</span>
                                 <span className="flex-1 min-w-0">일일 한도는 어떻게 계산되나요?</span>
                             </h3>
-                            <p className="text-white/60 text-sm pl-8 leading-relaxed">
+                            <p className="text-white/60 text-sm pl-8 leading-relaxed font-light">
                                 일일 부적 한도는 매일 자정(KST)에 리셋됩니다.
                             </p>
                         </div>
 
                         <div>
-                            <h3 className="font-bold text-white mb-2 flex items-center gap-2 text-sm">
-                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-bold rounded-lg flex-shrink-0">Q</span>
+                            <h3 className="font-light text-white mb-2 flex items-center gap-2 text-sm">
+                                <span className="w-6 h-6 bg-primary/20 text-primary flex items-center justify-center text-xs font-medium rounded-lg flex-shrink-0">Q</span>
                                 <span className="flex-1 min-w-0">해지 후 부적은 어떻게 되나요?</span>
                             </h3>
-                            <p className="text-white/60 text-sm pl-8 leading-relaxed">
+                            <p className="text-white/60 text-sm pl-8 leading-relaxed font-light">
                                 해지해도 이미 충전된 부적은 그대로 유지되며, 부적 잔액은 영구 보존됩니다.
                             </p>
                         </div>

@@ -12,6 +12,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { getSajuData } from "@/lib/domain/saju/saju";
 import { calculateCompatibilityScore } from "@/lib/domain/compatibility/compatibility";
+import { BrandQuote } from "@/components/ui/BrandQuote";
+import { BRAND_QUOTES } from "@/lib/constants/brand-quotes";
 
 interface AnalysisClientPageProps {
     targets: DestinyTarget[];
@@ -55,25 +57,28 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
             <motion.section variants={fadeInUp} className="space-y-6 text-center">
                 <div className="flex justify-center">
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-primary/20 backdrop-blur-sm mb-2">
-                        <BookOpen className="w-4 h-4 text-primary" />
-                        <span className="text-[10px] font-bold text-primary tracking-[0.2em] font-sans uppercase">Heaven Earth Man Analysis</span>
+                        <BookOpen className="w-4 h-4 text-primary" strokeWidth={1} />
+                        <span className="text-[10px] font-light text-primary tracking-[0.2em] font-sans uppercase">Heaven Earth Man Analysis</span>
                     </div>
                 </div>
                 <div className="space-y-4">
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light italic leading-tight">
+                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-light tracking-tight text-ink-light italic leading-tight">
                         천지인(天地人) <br />
                         <span className="text-primary-dim">심층 분석실</span>
                     </h1>
+                    <BrandQuote variant="hero">
+                        {BRAND_QUOTES.analysis.cheonjiin}
+                    </BrandQuote>
                 </div>
             </motion.section>
 
             <motion.div variants={fadeInUp}>
                 <Tabs defaultValue="saju" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 bg-surface/30 p-1 mb-8 border border-white/5 rounded-full">
-                        <TabsTrigger value="saju" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-bold py-3 transition-all">
+                        <TabsTrigger value="saju" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-light py-3 transition-all">
                             운명 분석 (Saju)
                         </TabsTrigger>
-                        <TabsTrigger value="compatibility" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-bold py-3 transition-all">
+                        <TabsTrigger value="compatibility" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-light py-3 transition-all">
                             궁합 분석 (Compatibility)
                         </TabsTrigger>
                     </TabsList>
@@ -92,14 +97,14 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
                             {!compResult ? (
                                 <div className="w-full max-w-md space-y-8 relative z-10">
                                     <div className="text-center space-y-2">
-                                        <Heart className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" />
-                                        <h2 className="text-2xl font-serif font-bold text-ink-light">두 사람의 인연을 확인하세요</h2>
-                                        <p className="text-ink-light/50 text-sm">등록된 인연 중 두 명을 선택하여 궁합을 분석합니다.</p>
+                                        <Heart className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" strokeWidth={1} />
+                                        <h2 className="text-2xl font-serif font-light text-ink-light">두 사람의 인연을 확인하세요</h2>
+                                        <p className="text-ink-light/50 text-sm font-light">등록된 인연 중 두 명을 선택하여 궁합을 분석합니다.</p>
                                     </div>
 
                                     <div className="space-y-4">
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-primary uppercase tracking-widest">본인 / 인연 A</label>
+                                            <label className="text-xs font-light text-primary uppercase tracking-widest">본인 / 인연 A</label>
                                             <Select onValueChange={setTarget1Id} value={target1Id}>
                                                 <SelectTrigger className="bg-surface/50 border-white/10 h-12 text-ink-light">
                                                     <SelectValue placeholder="인연 A 선택" />
@@ -112,7 +117,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
                                             </Select>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-xs font-bold text-primary uppercase tracking-widest">인연 B</label>
+                                            <label className="text-xs font-light text-primary uppercase tracking-widest">인연 B</label>
                                             <Select onValueChange={setTarget2Id} value={target2Id}>
                                                 <SelectTrigger className="bg-surface/50 border-white/10 h-12 text-ink-light">
                                                     <SelectValue placeholder="인연 B 선택" />
@@ -127,11 +132,11 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
                                     </div>
 
                                     <Button
-                                        className="w-full h-14 bg-primary text-background font-bold text-lg rounded-full mt-4 hover:bg-primary-dim transition-all"
+                                        className="w-full h-14 text-lg rounded-full mt-4"
                                         disabled={!target1Id || !target2Id || analyzing}
                                         onClick={handleAnalyzeCompatibility}
                                     >
-                                        {analyzing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                                        {analyzing ? <Loader2 className="w-5 h-5 animate-spin mr-2" strokeWidth={1} /> : <Sparkles className="w-5 h-5 mr-2" strokeWidth={1} />}
                                         {analyzing ? "분석 중..." : "궁합 분석 시작하기"}
                                     </Button>
 
@@ -146,39 +151,39 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
                                 <div className="w-full max-w-lg space-y-8 relative z-10 text-center animate-in fade-in slide-in-from-bottom-4">
                                     <div className="flex items-center justify-center gap-8 mb-8">
                                         <div className="text-center">
-                                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-bold text-2xl text-ink-light mx-auto mb-2 shadow-sm">
+                                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-light text-2xl text-ink-light mx-auto mb-2 shadow-sm">
                                                 {targets.find(t => t.id === target1Id)?.name[0]}
                                             </div>
-                                            <span className="text-sm font-bold text-ink/60">{targets.find(t => t.id === target1Id)?.name}</span>
+                                            <span className="text-sm font-light text-ink/60">{targets.find(t => t.id === target1Id)?.name}</span>
                                         </div>
-                                        <Heart className="w-8 h-8 text-primary fill-current animate-pulse" />
+                                        <Heart className="w-8 h-8 text-primary fill-current animate-pulse" strokeWidth={1} />
                                         <div className="text-center">
-                                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-bold text-2xl text-ink-light mx-auto mb-2 shadow-sm">
+                                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-light text-2xl text-ink-light mx-auto mb-2 shadow-sm">
                                                 {targets.find(t => t.id === target2Id)?.name[0]}
                                             </div>
-                                            <span className="text-sm font-bold text-ink/60">{targets.find(t => t.id === target2Id)?.name}</span>
+                                            <span className="text-sm font-light text-ink/60">{targets.find(t => t.id === target2Id)?.name}</span>
                                         </div>
                                     </div>
 
                                     <div className="mb-8">
-                                        <span className="text-sm font-bold text-primary uppercase tracking-widest border border-primary/30 px-3 py-1">Compatibility Score</span>
-                                        <div className="mt-4 text-7xl font-serif font-bold text-ink-light tracking-tight">
+                                        <span className="text-sm font-light text-primary uppercase tracking-widest border border-primary/30 px-3 py-1">Compatibility Score</span>
+                                        <div className="mt-4 text-7xl font-serif font-light text-ink-light tracking-tight">
                                             {compResult.score}<span className="text-4xl text-ink/40 ml-1 font-sans font-light">/100</span>
                                         </div>
                                     </div>
 
                                     <div className="space-y-4">
-                                        <h3 className="text-2xl font-serif font-bold text-ink-light leading-snug">
+                                        <h3 className="text-2xl font-serif font-light text-ink-light leading-snug">
                                             "{compResult.comment}"
                                         </h3>
-                                        <p className="text-ink/60 leading-relaxed font-sans">
+                                        <p className="text-ink/60 leading-relaxed font-sans font-light">
                                             두 분의 사주에서 나타나는 오행의 흐름과 간지의 조화를 분석한 결과입니다.
                                         </p>
                                     </div>
 
                                     <div className="pt-8 flex justify-center gap-4">
                                         <Button variant="outline" onClick={() => setCompResult(null)} className="border-primary/20 hover:bg-surface text-ink/60 font-sans h-12 px-6">
-                                            <ArrowRight className="w-4 h-4 mr-2" />
+                                            <ArrowRight className="w-4 h-4 mr-2" strokeWidth={1} />
                                             다른 궁합 보기
                                         </Button>
                                     </div>
@@ -191,8 +196,8 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
 
             {/* Footer */}
             <motion.section variants={fadeInUp} className="text-center space-y-4 opacity-50 font-serif italic text-sm text-ink-light/40 mt-8">
-                <p>※ 모든 분석은 명리학적 전통 가이드라인과 최신 데이터 알고리즘을 준수합니다.</p>
-                <div className="flex items-center justify-center gap-4 uppercase tracking-[0.2em] font-sans font-bold text-[10px] not-italic">
+                <p className="font-light">※ 모든 분석은 명리학적 전통 가이드라인과 최신 데이터 알고리즘을 준수합니다.</p>
+                <div className="flex items-center justify-center gap-4 uppercase tracking-[0.2em] font-sans font-light text-[10px] not-italic">
                     <span>Authentic</span>
                     <span className="w-1 h-1 bg-primary" />
                     <span>Precise</span>

@@ -22,6 +22,8 @@ import { Switch } from "@/components/ui/switch";
 import { getWalletBalance } from "@/app/actions/wallet-actions";
 import { getCurrentUserRole } from "@/app/actions/products";
 import { Button } from "@/components/ui/button";
+import { BrandQuote } from "@/components/ui/BrandQuote";
+import { BRAND_QUOTES } from "@/lib/constants/brand-quotes";
 
 export default async function MyPage() {
     const supabase = await createClient();
@@ -193,10 +195,13 @@ export default async function MyPage() {
                 </div>
 
                 {/* Name & Tier */}
-                <h2 className="text-2xl font-serif text-ink-light mb-3 tracking-wide">{displayName}</h2>
+                <h2 className="text-2xl font-serif font-light text-ink-light mb-2 tracking-wide">{displayName}</h2>
+                <BrandQuote variant="card" className="mb-4">
+                    {BRAND_QUOTES.profile.hero}
+                </BrandQuote>
                 <Link href="/protected/membership" className="flex items-center gap-3 mb-6 group cursor-pointer">
                     <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
-                    <span className="text-primary text-[10px] tracking-[0.3em] uppercase font-bold group-hover:text-primary-dim transition-colors">
+                    <span className="text-primary text-[10px] tracking-[0.3em] uppercase font-light group-hover:text-primary-dim transition-colors">
                         {tier} <span className="ml-1 text-[8px] opacity-70">(UPGRADE)</span>
                     </span>
                     <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
@@ -206,7 +211,7 @@ export default async function MyPage() {
 
             {/* Dashboard Navigation Grid */}
             <section className="px-6 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
-                <h3 className="text-xs font-bold tracking-widest text-ink-light/50 uppercase mb-6">Menu</h3>
+                <h3 className="text-xs font-light tracking-widest text-ink-light/50 uppercase mb-6">Menu</h3>
                 <div className="grid grid-cols-2 gap-4">
                     {isAdmin && (
                         <Link href="/admin" className="group col-span-2 mb-2">
@@ -215,46 +220,46 @@ export default async function MyPage() {
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-seal/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
                                 {/* Content */}
-                                <Shield className="w-6 h-6 text-seal group-hover:scale-110 transition-transform stroke-[1.5] relative z-10" />
-                                <span className="text-base font-serif font-bold text-seal tracking-widest relative z-10 uppercase">
+                                <Shield className="w-6 h-6 text-seal group-hover:scale-110 transition-transform stroke-[1] relative z-10" />
+                                <span className="text-base font-serif font-light text-seal tracking-widest relative z-10 uppercase">
                                     관리자 대시보드
                                 </span>
-                                <ArrowRight className="w-5 h-5 text-seal/60 group-hover:text-seal group-hover:translate-x-1 transition-all relative z-10" />
+                                <ArrowRight className="w-5 h-5 text-seal/60 group-hover:text-seal group-hover:translate-x-1 transition-all relative z-10" strokeWidth={1} />
                             </div>
                         </Link>
                     )}
                     <Link href="/protected/profile/manse" className="group">
                         <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-                            <ScrollText className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
-                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">내 명식 보기</span>
+                            <ScrollText className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
+                            <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">내 명식 보기</span>
                         </div>
                     </Link>
 
                     <Link href="/protected/settings" className="group">
                         <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-                            <UserIcon className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
-                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">내 정보 수정</span>
+                            <UserIcon className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
+                            <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">내 정보 수정</span>
                         </div>
                     </Link>
 
                     <Link href="/protected/family" className="group">
                         <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-                            <Users className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
-                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">인연 관리</span>
+                            <Users className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
+                            <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">인연 관리</span>
                         </div>
                     </Link>
 
                     <Link href="/protected/membership" className="group">
                         <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-                            <Crown className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
-                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">멤버십 안내</span>
+                            <Crown className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
+                            <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">멤버십 안내</span>
                         </div>
                     </Link>
 
                     <Link href="/protected/history" className="group">
                         <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-                            <BookOpen className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors stroke-1" />
-                            <span className="text-sm font-serif font-medium text-ink-light group-hover:text-primary transition-colors">사주 기록</span>
+                            <BookOpen className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
+                            <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">사주 기록</span>
                         </div>
                     </Link>
                 </div>
@@ -294,7 +299,7 @@ export default async function MyPage() {
             <div className="text-center animate-in fade-in duration-1000 delay-500 relative z-10 pb-10">
                 <LogoutButton
                     variant="ghost"
-                    className="text-ink-light/30 text-[10px] tracking-[0.2em] hover:text-ink-light hover:bg-transparent transition-colors uppercase font-serif"
+                    className="text-ink-light/30 text-[10px] tracking-[0.2em] hover:text-ink-light hover:bg-transparent transition-colors uppercase font-serif font-light"
                 >
                     Log Out
                 </LogoutButton>

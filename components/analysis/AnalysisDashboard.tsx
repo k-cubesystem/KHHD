@@ -39,14 +39,17 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps) {
             animate="animate"
             className="max-w-screen-sm mx-auto pb-40 px-4 space-y-8"
         >
-            {/* Compact Hero */}
-            <motion.section variants={fadeInUp} className="text-left space-y-2 pt-6">
-                <h1 className="text-2xl md:text-3xl font-serif font-bold text-white leading-snug">
-                    <span className="text-[#D4AF37]">Analysis Center</span>
-                    <span className="block text-sm font-sans font-light text-white/80 mt-1">
-                        {userName ? `${userName}님, 오늘의 운명 리포트입니다.` : "당신의 운명을 분석합니다."}
-                    </span>
+            {/* Compact Hero - Minimalist Premium */}
+            <motion.section variants={fadeInUp} className="text-left space-y-3 pt-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20">
+                    <span className="text-xs font-light text-[#D4AF37] uppercase tracking-wider">Analysis Center</span>
+                </div>
+                <h1 className="text-2xl font-serif font-light text-ink-light leading-tight tracking-wide">
+                    {userName ? `${userName}님의 운명 분석` : "당신의 운명을 분석합니다"}
                 </h1>
+                <p className="text-sm text-muted-foreground font-light">
+                    사주·궁합·운세를 한눈에 확인하세요
+                </p>
             </motion.section>
 
             {/* Main Grid: Bento Layout */}

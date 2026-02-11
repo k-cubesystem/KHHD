@@ -21,13 +21,13 @@ export function Year2026Section() {
             {/* Left Info */}
             <div className="flex items-center gap-4 relative z-10">
                 <div className="w-10 h-10 rounded-full bg-red-600/20 flex items-center justify-center border border-red-500/30 group-hover:bg-red-600/30 transition-colors">
-                    <Flame className="w-5 h-5 text-red-500" strokeWidth={1.5} />
+                    <Flame className="w-5 h-5 text-red-500" strokeWidth={1} />
                 </div>
                 <div>
                     <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] font-bold text-red-500 tracking-wider uppercase border border-red-900/50 px-1.5 rounded-sm bg-red-950/50">2026 Preview</span>
+                        <span className="text-[10px] font-light text-red-500 tracking-wider uppercase border border-red-900/50 px-1.5 rounded-sm bg-red-950/50">2026 Preview</span>
                     </div>
-                    <h3 className="text-sm font-serif font-bold text-red-50 group-hover:text-red-200 transition-colors">
+                    <h3 className="text-sm font-serif font-light text-red-50 group-hover:text-red-200 transition-colors">
                         병오년(丙午年) 미리보는 붉은 말의 해
                     </h3>
                 </div>
@@ -42,7 +42,7 @@ export function Year2026Section() {
                     size="sm"
                     className="text-red-400 hover:text-red-300 hover:bg-transparent p-0"
                 >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1} /> : <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={1} />}
                 </Button>
             </div>
         </Card>

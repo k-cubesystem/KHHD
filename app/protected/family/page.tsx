@@ -6,6 +6,7 @@ import { getFamilyWithMissions, type FamilyMemberWithMissions } from "@/app/acti
 import { MemberMissionCard } from "@/components/family/member-mission-card";
 import { MissionDetailSheet } from "@/components/family/mission-detail-sheet";
 import { Button } from "@/components/ui/button";
+import { BrandQuote } from "@/components/ui/BrandQuote";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ import { GuestCTACard } from "@/components/guest-cta-card";
 import { Users } from "lucide-react";
 import Link from "next/link";
 import { cn, toConversationalTone } from "@/lib/utils";
+import { BRAND_QUOTES } from "@/lib/constants/brand-quotes";
 
 interface EditingMember {
     id: string;
@@ -129,18 +131,17 @@ export default function FamilyPage() {
             <div className="flex flex-col gap-10 w-full max-w-[480px] mx-auto py-12 px-6 pb-32">
                 <section className="space-y-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
                     <div className="flex justify-center mb-2">
-                        <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs backdrop-blur-md">
-                            <Users className="w-3.5 h-3.5" />
+                        <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-light uppercase tracking-widest text-xs backdrop-blur-md">
+                            <Users className="w-3.5 h-3.5" strokeWidth={1} />
                             Family & Relationships
                         </div>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tight text-ink-light">
-                        인연(因緣) <span className="text-primary-dim">관리부</span>
+                    <h1 className="text-4xl md:text-5xl font-serif font-light tracking-tight text-ink-light">
+                        인연(因緣) <span className="text-[#D4AF37]">관리부</span>
                     </h1>
-                    <p className="text-ink-light/60 text-lg max-w-2xl mx-auto leading-relaxed font-sans font-light">
-                        <span className="block mb-1">옷깃만 스쳐도 인연이라 했어요.</span>
-                        소중한 분들의 명조를 등록하고 관리해보세요.
-                    </p>
+                    <BrandQuote variant="hero">
+                        {BRAND_QUOTES.family.subHero}
+                    </BrandQuote>
                 </section>
 
                 <GuestCTACard
@@ -177,26 +178,26 @@ export default function FamilyPage() {
             {/* Header */}
             <section className="space-y-4 text-center px-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="flex justify-center mb-2">
-                    <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs backdrop-blur-md">
-                        <Users className="w-3.5 h-3.5" />
+                    <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-light uppercase tracking-widest text-xs backdrop-blur-md">
+                        <Users className="w-3.5 h-3.5" strokeWidth={1} />
                         Family & Relationships
                     </div>
                 </div>
-                <h1 className="text-3xl md:text-4xl font-serif font-bold tracking-tight text-ink-light">
-                    <span className="text-manse-gold">인연 관리부</span>
+                <h1 className="text-3xl md:text-4xl font-serif font-light tracking-tight text-ink-light">
+                    <span className="text-[#D4AF37]">인연 관리부</span>
                 </h1>
-                <p className="text-ink-light/60 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-sans font-light">
-                    나의 소중한 인연들의 사주를<br /> 이곳에서 관리할 수 있어요.
-                </p>
+                <BrandQuote variant="hero">
+                    {BRAND_QUOTES.family.hero}
+                </BrandQuote>
             </section>
 
             {/* Stats Header */}
             <div className="px-6 flex items-center justify-between">
-                <h3 className="text-lg font-serif font-bold text-ink-light flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
+                <h3 className="text-lg font-serif font-light text-ink-light flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" strokeWidth={1} />
                     등록된 인연
                 </h3>
-                <Badge variant="outline" className="border-primary/50 text-primary px-3 py-1 bg-surface/50 backdrop-blur-sm">
+                <Badge variant="outline" className="border-primary/50 text-primary px-3 py-1 bg-surface/50 backdrop-blur-sm font-light">
                     {members.length}명
                 </Badge>
             </div>
@@ -225,10 +226,10 @@ export default function FamilyPage() {
                 ) : (
                     <div className="mx-6 py-12 text-center bg-surface/20 border border-dashed border-primary/20 rounded-2xl">
                         <div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 text-primary/40 border border-white/5">
-                            <UserPlus className="w-6 h-6" />
+                            <UserPlus className="w-6 h-6" strokeWidth={1} />
                         </div>
-                        <h4 className="text-base font-serif font-bold text-ink-light mb-1">아직 등록된 인연이 없네요.</h4>
-                        <p className="text-sm text-ink-light/50 font-sans">아래 버튼을 눌러 소중한 분을 등록해보세요.</p>
+                        <h4 className="text-base font-serif font-light text-ink-light mb-1">아직 등록된 인연이 없네요.</h4>
+                        <p className="text-sm text-ink-light/50 font-sans font-light">{BRAND_QUOTES.family.empty}</p>
                     </div>
                 )}
             </div>
@@ -238,9 +239,10 @@ export default function FamilyPage() {
                 {!isFormOpen && !editingMember && (
                     <Button
                         onClick={() => setIsFormOpen(true)}
-                        className="w-full bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 font-serif font-bold py-4 rounded-xl transition-all shadow-lg shadow-black/20"
+                        variant="outline"
+                        className="w-full py-4 rounded-xl"
                     >
-                        <Plus className="w-5 h-5 mr-2" />
+                        <Plus className="w-5 h-5 mr-2" strokeWidth={1} />
                         새로운 인연 등록하기
                     </Button>
                 )}
@@ -253,11 +255,11 @@ export default function FamilyPage() {
                         {/* ... Existing Form Logic ... */}
                         <CardHeader className="pb-4 border-b border-white/5 bg-surface/50">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2 text-lg font-serif font-bold text-ink-light">
+                                <CardTitle className="flex items-center gap-2 text-lg font-serif font-light text-ink-light">
                                     {editingMember ? "인연 정보 수정" : "새 인연 맺기"}
                                 </CardTitle>
                                 <Button variant="ghost" size="icon" onClick={() => { setIsFormOpen(false); setEditingMember(null); }}>
-                                    <X className="w-5 h-5" />
+                                    <X className="w-5 h-5" strokeWidth={1} />
                                 </Button>
                             </div>
                         </CardHeader>
@@ -295,7 +297,7 @@ export default function FamilyPage() {
                                     </Select>
                                 </div>
 
-                                <Button type="submit" disabled={isPending} className="bg-primary text-background font-bold h-12 mt-2">
+                                <Button type="submit" disabled={isPending} className="h-12 mt-2">
                                     {isPending ? "저장 중..." : "저장완료"}
                                 </Button>
                             </form>

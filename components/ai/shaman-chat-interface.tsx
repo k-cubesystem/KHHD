@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { BrandQuote } from '@/components/ui/BrandQuote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import { Loader2, Crown, Sparkles, Send, Volume2, VolumeX } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 
 export function ShamanChatInterface() {
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
@@ -235,16 +237,16 @@ export function ShamanChatInterface() {
             transition={{ duration: 0.6 }}
           >
             <div className="flex items-center justify-center gap-2 mb-3">
-              <Sparkles className="w-6 h-6 text-gold-400" />
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-gold-300">
+              <Sparkles className="w-6 h-6 text-gold-400" strokeWidth={1} />
+              <h1 className="text-3xl md:text-4xl font-serif font-light text-gold-300">
                 AI 신당(神堂)
               </h1>
-              <Sparkles className="w-6 h-6 text-gold-400" />
+              <Sparkles className="w-6 h-6 text-gold-400" strokeWidth={1} />
             </div>
 
-            <p className="text-gold-100/80 text-sm mb-4">
-              천지인(天地人)의 지혜로 당신의 고민을 풀어드립니다
-            </p>
+            <BrandQuote variant="section" className="text-gold-100/90">
+              {BRAND_QUOTES.aiShaman.hero}
+            </BrandQuote>
 
             <div className="flex items-center justify-center gap-3">
               {usageStatus?.isPro ? (

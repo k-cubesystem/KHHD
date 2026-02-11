@@ -24,14 +24,14 @@ export function PeriodSection() {
             <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3">
                     <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center">
-                        <Calendar className="w-4 h-4 text-emerald-400" strokeWidth={1.5} />
+                        <Calendar className="w-4 h-4 text-emerald-400" strokeWidth={1} />
                     </div>
                 </div>
 
-                <h3 className="text-lg font-serif font-bold text-white mb-1">
+                <h3 className="text-lg font-serif font-light text-white mb-1">
                     길일 캘린더
                 </h3>
-                <p className="text-xs text-white/80 leading-relaxed line-clamp-2">
+                <p className="text-xs text-white/70 font-light leading-relaxed line-clamp-2">
                     주간/월간 흐름과 길흉일 미리보기
                 </p>
             </div>
@@ -40,26 +40,26 @@ export function PeriodSection() {
                 <Button
                     onClick={() => handleAnalyze("이번 주")}
                     variant="outline"
-                    className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent"
+                    className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent font-light"
                     disabled={loading}
                 >
-                    <Sun className="w-3 h-3 mr-1 text-emerald-400" /> 주간
+                    <Sun className="w-3 h-3 mr-1 text-emerald-400" strokeWidth={1} /> 주간
                 </Button>
                 <Button
                     onClick={() => handleAnalyze("이번 달")}
                     variant="outline"
-                    className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent"
+                    className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent font-light"
                     disabled={loading}
                 >
-                    <Moon className="w-3 h-3 mr-1 text-emerald-400" /> 월간
+                    <Moon className="w-3 h-3 mr-1 text-emerald-400" strokeWidth={1} /> 월간
                 </Button>
             </div>
 
             {result && (
                 <div className="absolute inset-0 bg-[#0A0A0A]/95 backdrop-blur-sm p-4 flex flex-col items-center justify-center text-center animate-in fade-in z-20">
-                    <h4 className="font-bold text-emerald-400 text-sm mb-1">{result.type} 흐름</h4>
-                    <div className="text-2xl font-serif font-bold text-white mb-2">{result.score || 85}점</div>
-                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-400 hover:text-emerald-300 hover:bg-transparent" onClick={() => setResult(null)}>닫기</Button>
+                    <h4 className="font-light text-emerald-400 text-sm mb-1">{result.type} 흐름</h4>
+                    <div className="text-2xl font-serif font-normal text-white mb-2">{result.score || 85}점</div>
+                    <Button size="sm" variant="ghost" className="h-6 text-[10px] font-light text-emerald-400 hover:text-emerald-300 hover:bg-transparent" onClick={() => setResult(null)}>닫기</Button>
                 </div>
             )}
         </Card>

@@ -262,38 +262,222 @@ className="grid grid-cols-3 gap-2"
 
 ## 🔘 버튼 시스템 (Button System)
 
-### 1. 메인 버튼 (Primary Button)
+### Button Component (`components/ui/button.tsx`)
+
+**핵심 특징:**
+- Framer Motion 애니메이션 (scale on hover/tap)
+- Gold shimmer overlay (default variant)
+- 얇은 폰트 (`font-medium`)
+- 5가지 variant
+
+### 1. Default (Primary) Button
 ```tsx
-<Button className="bg-[#D4AF37] hover:bg-[#F4E4BA] text-background">
-  <Crown className="w-4 h-4 mr-2" strokeWidth={1} />
-  버튼 텍스트
+<Button>
+  <Sparkles className="w-4 h-4" strokeWidth={1} />
+  천지인 분석 시작
+</Button>
+
+// 렌더링 결과:
+// - 배경: #D4AF37 (Gold)
+// - 호버: #F4E4BA (Light Gold)
+// - 텍스트: #0A0A0A (Black)
+// - 효과: Gold shimmer overlay
+// - 애니메이션: scale 1.02 on hover, 0.98 on tap
+```
+
+### 2. Outline Button
+```tsx
+<Button variant="outline">
+  자세히 보기
+</Button>
+
+// 렌더링 결과:
+// - 배경: transparent
+// - 테두리: #D4AF37
+// - 텍스트: #D4AF37
+// - 호버: bg-[#D4AF37]/10
+```
+
+### 3. Ghost Button
+```tsx
+<Button variant="ghost" size="sm">
+  <ArrowRight className="w-4 h-4" strokeWidth={1} />
+  더보기
+</Button>
+
+// 렌더링 결과:
+// - 배경: transparent
+// - 텍스트: ink-light
+// - 호버: bg-surface, text-primary
+```
+
+### 4. Destructive Button
+```tsx
+<Button variant="destructive">
+  삭제하기
+</Button>
+
+// 렌더링 결과:
+// - 배경: #9A2A2A (seal red)
+// - 텍스트: white
+// - 호버: bg-seal/90
+```
+
+### 5. Secondary Button
+```tsx
+<Button variant="secondary">
+  취소
+</Button>
+
+// 렌더링 결과:
+// - 배경: surface
+// - 테두리: primary-dim/30
+// - 텍스트: ink-light
+// - 호버: bg-surface/80
+```
+
+### 6. Link Button
+```tsx
+<Button variant="link">
+  자세히 알아보기
+</Button>
+
+// 렌더링 결과:
+// - 배경: transparent
+// - 텍스트: primary (underline on hover)
+```
+
+---
+
+### Size Variants
+
+```tsx
+// Default (44px - Mobile touch target)
+<Button size="default">버튼</Button>
+
+// Small (36px)
+<Button size="sm">작은 버튼</Button>
+
+// Large (48px)
+<Button size="lg">큰 버튼</Button>
+
+// Icon Only (44px x 44px)
+<Button size="icon">
+  <Plus className="w-5 h-5" strokeWidth={1} />
 </Button>
 ```
 
-### 2. 아웃라인 버튼 (Outline Button)
+---
+
+### 사용 패턴 (Usage Patterns)
+
+#### CTA (Call to Action)
 ```tsx
-<button className="px-3 py-1.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-sm font-medium border border-[#D4AF37]/30 hover:bg-[#D4AF37]/30 transition-colors">
-  버튼 텍스트
-</button>
+// 메인 액션 - variant="default"
+<Button className="w-full">
+  <Crown className="w-4 h-4 mr-2" strokeWidth={1} />
+  프리미엄 시작하기
+</Button>
 ```
 
-### 3. 용어 버튼 (Term Button with Icon)
+#### 보조 액션 (Secondary Actions)
 ```tsx
+// 취소, 뒤로가기 - variant="outline" 또는 "ghost"
+<Button variant="outline">취소</Button>
+<Button variant="ghost">뒤로</Button>
+```
+
+#### 위험한 액션 (Destructive Actions)
+```tsx
+// 삭제, 탈퇴 - variant="destructive"
+<Button variant="destructive">
+  <Trash className="w-4 h-4 mr-2" strokeWidth={1} />
+  가족 구성원 삭제
+</Button>
+```
+
+#### 내비게이션 (Navigation)
+```tsx
+// 페이지 이동 - variant="ghost" with icon
+<Button variant="ghost" size="sm">
+  자세히 보기
+  <ArrowRight className="w-4 h-4 ml-1" strokeWidth={1} />
+</Button>
+```
+
+#### 로딩 상태 (Loading State)
+```tsx
+<Button disabled>
+  <Loader2 className="w-4 h-4 mr-2 animate-spin" strokeWidth={1} />
+  처리 중...
+</Button>
+```
+
+---
+
+### 커스텀 스타일링 (Custom Styling)
+
+```tsx
+// className으로 추가 스타일링 가능
+<Button
+  className="shadow-[0_4px_20px_rgba(212,175,55,0.3)]"
+  variant="default"
+>
+  강조 버튼
+</Button>
+
+// asChild로 Link 래핑
+<Button asChild>
+  <Link href="/protected/membership">
+    멤버십 보기
+  </Link>
+</Button>
+```
+
+---
+
+### 접근성 (Accessibility)
+
+```tsx
+// 아이콘 전용 버튼은 aria-label 필수
+<Button size="icon" aria-label="알림 확인">
+  <Bell className="w-5 h-5" strokeWidth={1} />
+</Button>
+
+// disabled 상태 자동 처리 (opacity-50, pointer-events-none)
+<Button disabled>비활성 버튼</Button>
+```
+
+---
+
+### 특수 버튼 패턴 (Special Button Patterns)
+
+#### 1. 용어 버튼 (Term Button)
+```tsx
+// 만세력 페이지 스타일
 <button className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#D4AF37]/10 text-[#D4AF37] text-xs hover:bg-[#D4AF37]/20 transition-colors">
-  용어
+  비견
   <Info className="w-3 h-3" strokeWidth={1} />
 </button>
 ```
 
-### 4. 인터랙티브 카드 버튼 (Interactive Card Button)
+#### 2. 배지 버튼 (Badge Button)
 ```tsx
-<button className="group cursor-pointer w-full text-center">
+// 프리미엄 표시
+<span className="px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-[10px] font-light">
+  PREMIUM
+</span>
+```
+
+#### 3. 인터랙티브 카드 버튼 (Interactive Card Button)
+```tsx
+<button className="group cursor-pointer w-full">
   <div className="flex flex-col items-center gap-1.5">
-    <span className="text-3xl font-black group-hover:scale-110 transition-transform" style={{ color: WU_XING_COLORS[element] }}>
-      {/* 아이콘/한자 */}
+    <span className="text-3xl font-black group-hover:scale-110 transition-transform">
+      甲
     </span>
     <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-      {/* 라벨 */}
+      갑목
     </span>
   </div>
 </button>
@@ -676,6 +860,59 @@ whileFocus: { scale: 1.01 }
 
 ---
 
-**디자인 시스템 작성일**: 2026-01-29
+## ✅ 구현 체크리스트 (Implementation Checklist)
+
+### 새로운 페이지/컴포넌트를 만들 때 확인:
+
+**타이포그래피:**
+- [ ] `font-bold` 대신 `font-light`, `font-normal`, `font-medium` 사용
+- [ ] 섹션 헤더는 `text-sm font-bold text-muted-foreground uppercase tracking-wider`
+- [ ] 본문은 `text-sm text-muted-foreground leading-relaxed`
+- [ ] 페이지 타이틀만 `font-black` + gradient 사용
+
+**아이콘:**
+- [ ] 모든 아이콘에 `strokeWidth={1}` 적용
+- [ ] 크기는 `w-4 h-4` (섹션), `w-5 h-5` (페이지), `w-3 h-3` (작은 것)
+
+**색상:**
+- [ ] 3가지 색상만 사용: Gold (#D4AF37), Black (#0A0A0A), White (opacity)
+- [ ] `text-primary` 또는 `text-[#D4AF37]` 사용
+- [ ] 배경은 `bg-white/5`, `bg-white/10` 패턴
+- [ ] 테두리는 `border-white/10`, `border-primary/20` 패턴
+
+**카드:**
+- [ ] 기본 카드: `p-8 bg-white/5 border-white/10`
+- [ ] 프리미엄 카드: blur + 오버레이 패턴 사용
+- [ ] 인포 카드: `bg-surface/30 border border-primary/20 p-4 rounded-xl`
+
+**레이아웃:**
+- [ ] 간격은 `space-y-10`, `space-y-6` 등 시스템 준수
+- [ ] 패딩은 `p-8` (큰 카드), `p-4` (작은 카드)
+- [ ] 그리드는 `grid grid-cols-2 gap-4` 패턴
+
+**효과:**
+- [ ] 호버는 `transition-colors` 또는 `transition-all` 추가
+- [ ] 그라데이션은 페이지 타이틀에만 사용
+- [ ] 배경 글로우는 `bg-[#D4AF37]/3 blur-[200px]` 패턴
+
+---
+
+## 📝 참고 페이지 (Reference Pages)
+
+**최고 참고 페이지:**
+- `/protected/profile/manse` - 만세력 페이지 (manse-client.tsx) ⭐
+
+**최근 리뉴얼 페이지:**
+- `/protected` - 메인 페이지 (page.tsx)
+
+**글로벌 스타일:**
+- `app/globals.css` - CSS 유틸리티 클래스
+- `tailwind.config.ts` - Tailwind 설정
+- `DESIGN_SYSTEM.md` - 이 문서
+
+---
+
+**디자인 시스템 최종 업데이트**: 2026-02-11
 **작성자**: Claude Code (Sonnet 4.5)
 **프로젝트**: 청담해화당 (Cheongdam Haehwadang)
+**기준 페이지**: 만세력 (manse-client.tsx)

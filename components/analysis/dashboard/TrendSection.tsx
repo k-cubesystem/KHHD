@@ -15,7 +15,7 @@ export function TrendSection() {
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-serif font-bold text-[#D4AF37] flex items-center gap-2 before:w-1 before:h-4 before:bg-primary before:block">
+                <h3 className="text-sm font-serif font-light text-[#D4AF37] flex items-center gap-2 before:w-1 before:h-4 before:bg-primary/20 before:block">
                     테마별 트렌드
                 </h3>
             </div>
@@ -30,13 +30,13 @@ export function TrendSection() {
                             className="group cursor-pointer card-glass-manse transition-all p-4 flex flex-col items-center justify-center gap-2 text-center h-[120px] rounded-xl active:scale-95 duration-200 hover:border-primary/40"
                         >
                             <div className={`w-10 h-10 rounded-full ${trend.bg} flex items-center justify-center group-hover:scale-110 transition-transform mb-1`}>
-                                <Icon className={`w-5 h-5 ${trend.color}`} strokeWidth={1.5} />
+                                <Icon className={`w-5 h-5 ${trend.color}`} strokeWidth={1} />
                             </div>
                             <div>
-                                <span className="block text-sm font-bold text-white">
+                                <span className="block text-sm font-light text-white">
                                     {trend.label}
                                 </span>
-                                <span className="block text-[10px] text-white/70 mt-0.5">
+                                <span className="block text-[10px] text-white/70 font-light mt-0.5">
                                     {trend.desc}
                                 </span>
                             </div>

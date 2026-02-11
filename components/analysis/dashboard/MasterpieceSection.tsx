@@ -25,15 +25,15 @@ export function MasterpieceSection() {
                 {/* Text Content */}
                 <div className="space-y-3 max-w-md">
                     <div className="inline-flex items-center gap-1.5 px-2 py-0.5 border border-primary/30 rounded-full w-fit bg-primary/5">
-                        <Sparkles className="w-3 h-3 text-primary" strokeWidth={1.5} />
-                        <span className="text-[10px] font-bold text-primary tracking-widest uppercase">The Masterpiece</span>
+                        <Sparkles className="w-3 h-3 text-primary" strokeWidth={1} />
+                        <span className="text-[10px] font-light text-primary tracking-widest uppercase">The Masterpiece</span>
                     </div>
 
                     <div>
-                        <h2 className="text-xl md:text-3xl font-serif font-bold text-white leading-tight mb-1" style={{ wordBreak: "keep-all" }}>
+                        <h2 className="text-xl md:text-2xl font-serif font-normal text-white leading-tight mb-1" style={{ wordBreak: "keep-all" }}>
                             <span className="text-[#D4AF37]">천지인(天地人)</span> 통합 분석
                         </h2>
-                        <p className="text-sm md:text-base text-white/80 font-sans leading-relaxed text-balance">
+                        <p className="text-sm md:text-sm text-white/70 font-sans font-light leading-relaxed text-balance">
                             하늘의 명, 땅의 기운, 의지의 조화를 하나의 서사로 엮어낸 시그니처 리포트
                         </p>
                     </div>
@@ -44,12 +44,12 @@ export function MasterpieceSection() {
                     <Button
                         onClick={handleAnalyze}
                         className={cn(
-                            "w-full md:w-auto bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#D4AF37]/90 h-12 px-6 rounded-lg font-serif text-sm shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition-all active:scale-[0.98] font-bold"
+                            "w-full md:w-auto bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#F4E4BA] h-12 px-6 rounded-lg font-serif text-sm shadow-[0_4px_20px_rgba(212,175,55,0.3)] transition-all active:scale-[0.98] font-medium"
                         )}
                     >
-                        <Sparkles className="w-4 h-4 mr-2" />
+                        <Sparkles className="w-4 h-4 mr-2" strokeWidth={1} />
                         천지인 분석 시작
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                        <ArrowRight className="w-4 h-4 ml-2" strokeWidth={1} />
                     </Button>
                 </div>
             </div>
