@@ -50,7 +50,9 @@
       "Bash(dir:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(git push:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"
