@@ -119,14 +119,29 @@ export default async function ProtectedPage() {
         </div>
       </div>
 
-      {/* Insight Slideshow (Replaces simple static text) */}
-      <section className="px-6 mb-6 relative z-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <InsightSlideshow />
-      </section>
-
-      {/* Hero Banner (2026 Year Logic) */}
+      {/* Hero Banner (2026 Year Logic) - Remains at Top */}
       <section className="px-6 mb-6 relative z-20">
         <Hero2026 isGuest={isGuest} masterName={masterName} />
+      </section>
+
+      {/* [REQ 3 & 4] Fortune Status & Monthly Cycle Moved to Top */}
+      <section className="px-6 mb-6 relative z-20 space-y-4">
+        {/* Fortune Energy Gauge */}
+        <div className="fortune-energy-gauge">
+          <FortuneEnergyGauge
+            currentFortune={monthlyFortune.currentFortune}
+            totalPossible={monthlyFortune.totalPossible}
+            percentage={monthlyFortune.percentage}
+            variant="monthly"
+          />
+        </div>
+
+        {/* Monthly Cycle */}
+        <MonthlyFortuneCycle
+          currentMonth={new Date().getMonth() + 1}
+          completedMissions={monthlyFortune.completedCategories.length}
+          totalMissions={8}
+        />
       </section>
 
       {/* Event Banners */}
@@ -138,42 +153,24 @@ export default async function ProtectedPage() {
 
       <main className="px-6 space-y-6 relative z-20">
 
-        {/* 이벤트 섹션: 출석 체크 & 행운의 룰렛 */}
-        <section className="grid grid-cols-1 gap-4">
-          <div className="daily-checkin-card">
+        {/* [REQ 2] Roulette & Daily Check-in Grid */}
+        <section className="grid grid-cols-2 gap-3">
+          {/* Daily Check-in */}
+          <div className="daily-checkin-card h-full">
             <DailyCheckIn
               initialChecked={attendanceStatus?.checked || false}
               initialConsecutiveDays={attendanceStatus?.consecutiveDays || 0}
             />
           </div>
+
+          {/* Lucky Roulette (Now a Popup Trigger) */}
           <LuckyRoulette
             canSpin={rouletteStatus?.canSpin || false}
             nextAvailableTime={rouletteStatus?.nextAvailableTime}
           />
         </section>
 
-        {/* 1. Fortune Flow Hub */}
-        <section className="space-y-4">
-          <div className="fortune-energy-gauge">
-            <FortuneEnergyGauge
-              currentFortune={monthlyFortune.currentFortune}
-              totalPossible={monthlyFortune.totalPossible}
-              percentage={monthlyFortune.percentage}
-              variant="monthly"
-            />
-          </div>
-        </section>
-
-        {/* 2. Monthly Cycle */}
-        <section>
-          <MonthlyFortuneCycle
-            currentMonth={new Date().getMonth() + 1}
-            completedMissions={monthlyFortune.completedCategories.length}
-            totalMissions={8}
-          />
-        </section>
-
-        {/* 3. 8 Fortune Missions Grid */}
+        {/* 8 Fortune Missions Grid */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1 h-4 bg-ink-light/20 rounded-full" />
@@ -219,14 +216,14 @@ export default async function ProtectedPage() {
           </div>
         </section>
 
-        {/* 4. Family Fortune Status */}
+        {/* Family Fortune Status */}
         {familyBreakdown.length > 0 && (
           <section>
             <FamilyFortuneStatus members={familyBreakdown} />
           </section>
         )}
 
-        {/* 5. Fortune Timeline (Yearly Trend) */}
+        {/* Fortune Timeline (Yearly Trend) */}
         <section>
           <FortuneTimeline
             data={yearlyTrend}

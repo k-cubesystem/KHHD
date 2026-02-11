@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS roulette_history (
 
 -- 인덱스
 CREATE INDEX idx_roulette_user ON roulette_history(user_id);
-CREATE INDEX idx_roulette_date ON roulette_history(user_id, DATE(spun_at));
+CREATE INDEX idx_roulette_date ON roulette_history(user_id, spun_at);
 
 -- RLS 정책
 ALTER TABLE roulette_history ENABLE ROW LEVEL SECURITY;
