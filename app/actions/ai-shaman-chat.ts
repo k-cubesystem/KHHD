@@ -42,6 +42,57 @@ export interface ShamanChatResponse {
     turnsRemaining?: number;
     error?: string;
     suggestedQuestions?: string[];
+    upgradeRequired?: boolean;
+    insufficientTalisman?: boolean;
+    isProUser?: boolean;
+    talismanUsed?: number;
+}
+
+// 무료/PRO 사용자 제한 설정
+const FREE_USER_LIMITS = {
+  dailySessions: 1,
+  turnsPerSession: 3,
+  talismanCost: 100,
+  responseDelay: 3000 // 3초
+};
+
+const PRO_USER_LIMITS = {
+  dailySessions: Infinity,
+  turnsPerSession: 3,
+  talismanCost: 50,
+  responseDelay: 0
+};
+
+// 일일 사용 횟수 체크
+async function checkDailyUsage(userId: string) {
+  const adminSupabase = createAdminClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await adminSupabase
+    .from('ai_chat_usage')
+    .select('session_count')
+    .eq('user_id', userId)
+    .eq('usage_date', today)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+    console.error(error);
+    return { count: 0 };
+  }
+
+  return { count: data?.session_count || 0 };
+}
+
+async function incrementDailyUsage(userId: string) {
+  const adminSupabase = createAdminClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const { error } = await adminSupabase.rpc('increment_ai_chat_usage', {
+    p_user_id: userId,
+    p_date: today
+  });
+
+  if (error) console.error(error);
 }
 
 export async function sendShamanChatMessage(
@@ -54,15 +105,48 @@ export async function sendShamanChatMessage(
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { success: false, error: "로그인 필요" };
 
-        // 1. Check Limits
+        // 1. 구독 상태 확인
         const { isSubscribed } = await getSubscriptionStatus();
-        if (!isSubscribed) return { success: false, error: "Pro 멤버십 전용 서비스입니다." };
-        if (turnCount >= 3) return { success: false, error: "대화 횟수 초과" };
+        const limits = isSubscribed ? PRO_USER_LIMITS : FREE_USER_LIMITS;
 
-        const deductResult = await deductTalisman("SHAMAN_CHAT");
-        if (!deductResult.success) return { success: false, error: deductResult.error };
+        // 2. 무료 사용자는 일일 사용 횟수 체크
+        if (!isSubscribed) {
+          const usage = await checkDailyUsage(user.id);
+          if (usage.count >= limits.dailySessions) {
+            return {
+              success: false,
+              error: "오늘의 무료 사용 횟수를 모두 사용했습니다. 프리미엄으로 업그레이드하시면 무제한 이용하실 수 있습니다.",
+              upgradeRequired: true
+            };
+          }
 
-        // 2. Fetch Context Data (Profile + Analysis History)
+          // 첫 메시지인 경우 세션 카운트 증가
+          if (turnCount === 0) {
+            await incrementDailyUsage(user.id);
+          }
+        }
+
+        // 3. 턴 수 제한 체크
+        if (turnCount >= limits.turnsPerSession) {
+          return { success: false, error: "대화 횟수 초과" };
+        }
+
+        // 4. 부적 차감 (차등 적용)
+        const deductResult = await deductTalisman("SHAMAN_CHAT", limits.talismanCost);
+        if (!deductResult.success) {
+          return {
+            success: false,
+            error: deductResult.error,
+            insufficientTalisman: true
+          };
+        }
+
+        // 5. 무료 사용자는 응답 지연 (남용 방지 + PRO 유도)
+        if (!isSubscribed && limits.responseDelay > 0) {
+          await new Promise(resolve => setTimeout(resolve, limits.responseDelay));
+        }
+
+        // 6. Fetch Context Data (Profile + Analysis History)
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
 
         // Fetch recent analysis (Saju, Face, Hand)
@@ -114,8 +198,10 @@ export async function sendShamanChatMessage(
         return {
             success: true,
             response: responseText,
-            turnsRemaining: 2 - turnCount, // 0, 1, 2 used -> 3 total
-            suggestedQuestions: questions.slice(0, 3)
+            turnsRemaining: limits.turnsPerSession - turnCount - 1,
+            suggestedQuestions: questions.slice(0, 3),
+            isProUser: isSubscribed,
+            talismanUsed: limits.talismanCost
         };
 
     } catch (e: any) {
@@ -127,4 +213,38 @@ export async function sendShamanChatMessage(
 export async function getShamanChatStarters() {
     // Simplified logic, similar to above but just returning questions
     return { success: true, questions: ["오늘의 운세는 어때요?", "제 사주의 특징을 알려주세요."] };
+}
+
+// 일일 사용 가능 횟수 조회
+export async function getAIChatUsageStatus() {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "로그인 필요" };
+
+    const { isSubscribed } = await getSubscriptionStatus();
+    const limits = isSubscribed ? PRO_USER_LIMITS : FREE_USER_LIMITS;
+
+    if (isSubscribed) {
+      return {
+        success: true,
+        isPro: true,
+        remaining: "무제한",
+        total: "무제한"
+      };
+    }
+
+    const usage = await checkDailyUsage(user.id);
+
+    return {
+      success: true,
+      isPro: false,
+      remaining: limits.dailySessions - usage.count,
+      total: limits.dailySessions,
+      used: usage.count
+    };
+
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
 }

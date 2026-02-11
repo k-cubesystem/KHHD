@@ -8,12 +8,19 @@ import {
   getYearlyFortuneTrend,
   getFamilyFortuneBreakdown,
 } from "@/app/actions/fortune-actions";
+import { checkDailyAttendance } from "@/app/actions/daily-check-actions";
+import { checkRouletteAvailability } from "@/app/actions/roulette-actions";
+import { InsightSlideshow } from "@/components/dashboard/insight-slideshow";
 import { Hero2026 } from "@/components/dashboard/hero-2026";
 import { DashboardGrid } from "@/components/dashboard/dashboard-grid";
 import { FortuneEnergyGauge } from "@/components/fortune/fortune-energy-gauge";
 import { MonthlyFortuneCycle } from "@/components/fortune/monthly-fortune-cycle";
 import { FamilyFortuneStatus } from "@/components/fortune/family-fortune-status";
 import { FortuneTimeline } from "@/components/fortune/fortune-timeline";
+import { EventBanners } from "@/components/events/event-banners";
+import { DailyCheckIn } from "@/components/events/daily-check-in";
+import { LuckyRoulette } from "@/components/events/lucky-roulette";
+import { OnboardingTourWrapper } from "@/components/onboarding/onboarding-tour-wrapper";
 
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,7 +34,17 @@ export default async function ProtectedPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   // 1. Data Fetching (Parallel)
-  const [walletBalance, limits, dashboardContext, familyMembers, monthlyFortune, yearlyTrend, familyBreakdown] = await Promise.all([
+  const [
+    walletBalance,
+    limits,
+    dashboardContext,
+    familyMembers,
+    monthlyFortune,
+    yearlyTrend,
+    familyBreakdown,
+    attendanceStatus,
+    rouletteStatus
+  ] = await Promise.all([
     getWalletBalance(),
     getUserTierLimits(),
     getDashboardContext(),
@@ -35,13 +52,23 @@ export default async function ProtectedPage() {
     getMonthlyFamilyFortune(),
     getYearlyFortuneTrend(),
     getFamilyFortuneBreakdown(),
+    checkDailyAttendance(),
+    checkRouletteAvailability(),
   ]);
+
+  // 2. 이벤트 배너 가져오기
+  const { data: eventBanners } = await supabase
+    .from('event_banners')
+    .select('*')
+    .eq('is_active', true)
+    .order('priority', { ascending: false })
+    .limit(3);
 
   const isGuest = !user;
   const masterName = dashboardContext?.profile?.full_name || user?.email?.split('@')[0] || "Guest";
   const tierLabel = limits?.tier === "FAMILY" ? "패밀리" : limits?.tier === "BUSINESS" ? "비즈니스" : limits?.tier === "SINGLE" ? "싱글" : "무료 회원";
 
-  // 2. Personalized Welcome Logic
+  // 3. Personalized Welcome Logic
   const welcomeMessage = dashboardContext?.welcomeMessage || "오늘도 평안한 하루 되세요.";
 
   // 3. Family Carousel Data (Filtering those with recent analysis)
@@ -72,9 +99,11 @@ export default async function ProtectedPage() {
         </Link>
       </header>
 
+
+
       {/* Wallet & Status Bar */}
       <div className="px-6 mb-6 relative z-20">
-        <div className="bg-surface/30 backdrop-blur-sm border border-white/5 rounded-lg p-3 flex items-center justify-between">
+        <div className="wallet-section bg-surface/30 backdrop-blur-sm border border-white/5 rounded-lg p-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-1.5 rounded-full">
               <Ticket className="w-4 h-4 text-primary" />
@@ -90,16 +119,9 @@ export default async function ProtectedPage() {
         </div>
       </div>
 
-      {/* Personalized Welcome Message */}
-      <section className="px-6 mb-4 relative z-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="relative">
-          <div className="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-primary to-transparent rounded-full opacity-50" />
-          <div className="pl-4">
-            <p className="text-sm text-ink-light/80 font-serif leading-relaxed italic">
-              "{welcomeMessage}"
-            </p>
-          </div>
-        </div>
+      {/* Insight Slideshow (Replaces simple static text) */}
+      <section className="px-6 mb-6 relative z-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <InsightSlideshow />
       </section>
 
       {/* Hero Banner (2026 Year Logic) */}
@@ -107,16 +129,39 @@ export default async function ProtectedPage() {
         <Hero2026 isGuest={isGuest} masterName={masterName} />
       </section>
 
+      {/* Event Banners */}
+      {eventBanners && eventBanners.length > 0 && (
+        <section className="px-6 mb-6 relative z-20">
+          <EventBanners banners={eventBanners} />
+        </section>
+      )}
+
       <main className="px-6 space-y-6 relative z-20">
+
+        {/* 이벤트 섹션: 출석 체크 & 행운의 룰렛 */}
+        <section className="grid grid-cols-1 gap-4">
+          <div className="daily-checkin-card">
+            <DailyCheckIn
+              initialChecked={attendanceStatus?.checked || false}
+              initialConsecutiveDays={attendanceStatus?.consecutiveDays || 0}
+            />
+          </div>
+          <LuckyRoulette
+            canSpin={rouletteStatus?.canSpin || false}
+            nextAvailableTime={rouletteStatus?.nextAvailableTime}
+          />
+        </section>
 
         {/* 1. Fortune Flow Hub */}
         <section className="space-y-4">
-          <FortuneEnergyGauge
-            currentFortune={monthlyFortune.currentFortune}
-            totalPossible={monthlyFortune.totalPossible}
-            percentage={monthlyFortune.percentage}
-            variant="monthly"
-          />
+          <div className="fortune-energy-gauge">
+            <FortuneEnergyGauge
+              currentFortune={monthlyFortune.currentFortune}
+              totalPossible={monthlyFortune.totalPossible}
+              percentage={monthlyFortune.percentage}
+              variant="monthly"
+            />
+          </div>
         </section>
 
         {/* 2. Monthly Cycle */}
@@ -194,7 +239,7 @@ export default async function ProtectedPage() {
           {/* 고민상담 (AI Shaman Chat) */}
           <Link
             href="/protected/ai-shaman"
-            className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/30 transition-all p-4"
+            className="ai-shaman-button flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/30 transition-all p-4"
           >
             <MessagesSquare className="w-8 h-8 text-primary mb-3" strokeWidth={1.5} />
             <span className="text-sm font-serif font-bold text-ink-light mb-1">고민상담</span>
@@ -239,6 +284,8 @@ export default async function ProtectedPage() {
 
       </main>
 
+      {/* Onboarding Tour */}
+      <OnboardingTourWrapper />
 
     </div>
   );

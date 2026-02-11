@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import {
     sendShamanChatMessage,
     getShamanChatStarters,
+    getAIChatUsageStatus,
     type ShamanChatMessage,
 } from "@/app/actions/ai-shaman-chat";
 import { Loader2, Crown, Sparkles, Send, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export function ShamanChatInterface() {
     const [messages, setMessages] = useState<ShamanChatMessage[]>([]);
@@ -23,6 +25,12 @@ export function ShamanChatInterface() {
     const [starterQuestions, setStarterQuestions] = useState<string[]>([]);
     const [isSoundEnabled, setIsSoundEnabled] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
+    const [usageStatus, setUsageStatus] = useState<{
+        isPro: boolean;
+        remaining: number | string;
+        total: number | string;
+        used?: number;
+    } | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -36,7 +44,7 @@ export function ShamanChatInterface() {
         scrollToBottom();
     }, [messages]);
 
-    // Load starter questions
+    // Load starter questions & usage status
     useEffect(() => {
         const loadStarters = async () => {
             const result = await getShamanChatStarters();
@@ -44,7 +52,21 @@ export function ShamanChatInterface() {
                 setStarterQuestions(result.questions);
             }
         };
+
+        const loadUsageStatus = async () => {
+            const result = await getAIChatUsageStatus();
+            if (result.success) {
+                setUsageStatus({
+                    isPro: result.isPro,
+                    remaining: result.remaining,
+                    total: result.total,
+                    used: result.used
+                });
+            }
+        };
+
         loadStarters();
+        loadUsageStatus();
     }, []);
 
     // Toggle background sound
@@ -114,9 +136,45 @@ export function ShamanChatInterface() {
                     setStarterQuestions(result.suggestedQuestions);
                 }
 
+                // 사용 횟수 업데이트 (무료 사용자의 경우)
+                if (turnCount === 0 && !result.isProUser) {
+                    const newUsageStatus = await getAIChatUsageStatus();
+                    if (newUsageStatus.success) {
+                        setUsageStatus({
+                            isPro: newUsageStatus.isPro,
+                            remaining: newUsageStatus.remaining,
+                            total: newUsageStatus.total,
+                            used: newUsageStatus.used
+                        });
+                    }
+                }
+
                 toast.success(`응답 완료 (남은 대화: ${result.turnsRemaining}회)`);
             } else {
-                toast.error(result.error || "메시지 전송에 실패했습니다.");
+                // 업그레이드 필요 에러
+                if (result.upgradeRequired) {
+                    toast.error(result.error || "무료 사용 횟수 초과", {
+                        action: {
+                            label: "업그레이드",
+                            onClick: () => window.location.href = "/protected/membership"
+                        },
+                        duration: 5000
+                    });
+                }
+                // 부적 부족 에러
+                else if (result.insufficientTalisman) {
+                    toast.error(result.error || "부적이 부족합니다", {
+                        action: {
+                            label: "충전하기",
+                            onClick: () => window.location.href = "/protected/membership"
+                        },
+                        duration: 5000
+                    });
+                }
+                // 일반 에러
+                else {
+                    toast.error(result.error || "메시지 전송 실패");
+                }
             }
         } catch (error) {
             console.error("Chat error:", error);
@@ -186,10 +244,16 @@ export function ShamanChatInterface() {
                         </p>
 
                         <div className="flex items-center justify-center gap-3">
-                            <Badge className="bg-gold-500/20 text-gold-300 border-gold-500/30 px-3 py-1">
-                                <Crown className="w-3 h-3 mr-1" />
-                                Pro 전용
-                            </Badge>
+                            {usageStatus?.isPro ? (
+                                <Badge className="bg-gold-500/20 text-gold-300 border-gold-500/30 px-3 py-1">
+                                    <Crown className="w-3 h-3 mr-1" />
+                                    Pro 무제한
+                                </Badge>
+                            ) : (
+                                <Badge className="bg-seal-500/20 text-seal-300 border-seal-500/30 px-3 py-1">
+                                    무료 {usageStatus?.remaining}/{usageStatus?.total}
+                                </Badge>
+                            )}
 
                             <Badge
                                 variant={turnCount >= 3 ? "destructive" : "default"}
@@ -228,6 +292,30 @@ export function ShamanChatInterface() {
                     </CardHeader>
 
                     <CardContent className="p-6">
+                        {/* 무료 사용자에게 업그레이드 유도 배너 */}
+                        {!usageStatus?.isPro && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="mb-4 p-4 bg-gradient-to-r from-gold-500/10 to-gold-600/10 border border-gold-500/30 rounded-lg"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Crown className="w-5 h-5 text-gold-400" />
+                                        <div>
+                                            <p className="text-sm font-bold text-gold-300">프리미엄으로 업그레이드하세요</p>
+                                            <p className="text-xs text-gold-100/70">무제한 대화 + 부적 50% 할인</p>
+                                        </div>
+                                    </div>
+                                    <Link href="/protected/membership">
+                                        <Button size="sm" className="bg-gold-500 hover:bg-gold-600 text-ink-900">
+                                            업그레이드
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </motion.div>
+                        )}
+
                         {/* Messages Area */}
                         <div className="h-[500px] overflow-y-auto mb-6 space-y-4 pr-2 custom-scrollbar">
                             <AnimatePresence mode="popLayout">

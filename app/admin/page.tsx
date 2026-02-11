@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DashboardStats, AnimatedHeader } from "@/components/admin/dashboard-stats";
-import { Users, CreditCard, Package, Sparkles, Activity } from "lucide-react";
+import { RecentActivityLive } from "@/components/admin/recent-activity-live";
+import { TrafficChart } from "@/components/admin/traffic-chart";
+import { Users, CreditCard, Package, Sparkles, Activity, TrendingUp } from "lucide-react";
 
 async function getStats() {
   // Service Role을 사용하여 RLS 우회
@@ -77,6 +79,15 @@ export default async function AdminDashboardPage() {
 
       <DashboardStats cards={cards} />
 
+      {/* Traffic Chart */}
+      <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-1 h-6 bg-primary" />
+          <h2 className="text-xl font-serif font-bold text-ink-light">시간대별 트래픽</h2>
+        </div>
+        <TrafficChart />
+      </div>
+
       {/* Quick Actions & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Quick Actions */}
@@ -125,17 +136,13 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Activity Placeholder */}
-        <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm border-dashed">
+        {/* Recent Activity Live */}
+        <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-6 bg-seal" />
+            <div className="w-1 h-6 bg-primary" />
             <h2 className="text-xl font-serif font-bold text-ink-light">Recent Activity</h2>
           </div>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Activity className="w-12 h-12 text-ink-light/20 mb-4" strokeWidth={1} />
-            <p className="text-sm text-ink-light/60 font-light">실시간 활동 로그</p>
-            <p className="text-xs text-ink-light/40 mt-2">곧 업데이트됩니다</p>
-          </div>
+          <RecentActivityLive />
         </div>
       </div>
     </>
