@@ -1,13 +1,10 @@
-import { SiteHeader } from "@/components/site-header";
-import { BottomNav } from "@/components/layout/bottom-nav";
-import { SiteFooter } from "@/components/site-footer";
-import { MobileHeader } from "@/components/mobile-header";
+import { SiteHeader } from '@/components/site-header'
+import { BottomNav } from '@/components/layout/bottom-nav'
+import { SiteFooter } from '@/components/site-footer'
+import { MobileHeader } from '@/components/mobile-header'
+import { FloatingAnalysisButton } from '@/components/analysis/FloatingAnalysisButton'
 
-export default function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-full bg-background text-foreground relative flex flex-col overflow-x-hidden">
       {/* Manse Global Background (Inline Style Revived) */}
@@ -19,14 +16,15 @@ export default function ProtectedLayout({
       <MobileHeader />
 
       {/* Content Container (Global Max Width) */}
-      <main className="w-full max-w-4xl mx-auto pb-24 pt-14 flex-grow px-6">
-        {children}
-      </main>
+      <main className="w-full max-w-4xl mx-auto pb-24 pt-14 flex-grow px-6">{children}</main>
 
       <SiteFooter />
+
+      {/* Floating Action Button */}
+      <FloatingAnalysisButton />
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
     </div>
-  );
+  )
 }
