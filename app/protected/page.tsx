@@ -20,7 +20,7 @@ import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
 import { OnboardingTourWrapper } from '@/components/onboarding/onboarding-tour-wrapper'
 
 import Link from 'next/link'
-import { Ticket, Bell, MessagesSquare, CalendarDays, Calendar, CalendarRange } from 'lucide-react'
+import { Ticket, Bell, MessagesSquare, CalendarDays, Calendar, CalendarRange, Home } from 'lucide-react'
 import { FeatureGuard } from '@/components/feature-guard'
 import { FORTUNE_MISSIONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
@@ -77,8 +77,8 @@ export default async function ProtectedPage() {
           </h1>
         </div>
 
-        <Link href="/protected/settings" className="flex items-center gap-3">
-          <Bell
+        <Link href="/protected" className="flex items-center gap-3">
+          <Home
             className="w-5 h-5 text-ink-light/50 hover:text-primary transition-colors"
             strokeWidth={1}
           />
