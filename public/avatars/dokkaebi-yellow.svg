@@ -1,0 +1,24 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- 얼굴 -->
+  <circle cx="50" cy="50" r="35" fill="#F9CA24"/>
+
+  <!-- 뿔 -->
+  <path d="M 35 25 Q 32 15 30 20 Q 28 25 32 28 Z" fill="#E58E26"/>
+  <path d="M 65 25 Q 68 15 70 20 Q 72 25 68 28 Z" fill="#E58E26"/>
+
+  <!-- 눈 (반짝이는) -->
+  <ellipse cx="40" cy="45" rx="5" ry="7" fill="#2C3E50"/>
+  <ellipse cx="60" cy="45" rx="5" ry="7" fill="#2C3E50"/>
+  <circle cx="42" cy="43" r="2" fill="white"/>
+  <circle cx="62" cy="43" r="2" fill="white"/>
+
+  <!-- 입 (환한 미소) -->
+  <path d="M 38 60 Q 50 68 62 60" stroke="#2C3E50" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- 볼 -->
+  <circle cx="32" cy="52" r="5" fill="#F39C12" opacity="0.5"/>
+  <circle cx="68" cy="52" r="5" fill="#F39C12" opacity="0.5"/>
+
+  <!-- 별 장식 -->
+  <path d="M 50 30 L 51 33 L 54 33 L 52 35 L 53 38 L 50 36 L 47 38 L 48 35 L 46 33 L 49 33 Z" fill="#FFF" opacity="0.8"/>
+</svg>

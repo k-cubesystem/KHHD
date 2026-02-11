@@ -245,6 +245,11 @@ export default async function ProtectedPage() {
               월간 운세 확인
             </span>
           </Link>
+          {/* Lucky Roulette - Grid Item */}
+          <LuckyRouletteButton
+            canSpin={rouletteStatus?.canSpin || false}
+            nextAvailableTime={rouletteStatus?.nextAvailableTime}
+          />
         </section>
 
         {/* 7. Fortune Timeline (Yearly Trend) */}
@@ -262,12 +267,6 @@ export default async function ProtectedPage() {
         {/* Bottom Spacer */}
         <div className="pb-8" />
       </main>
-
-      {/* Lucky Roulette - Floating Button */}
-      <LuckyRouletteButton
-        canSpin={rouletteStatus?.canSpin || false}
-        nextAvailableTime={rouletteStatus?.nextAvailableTime}
-      />
 
       {/* Onboarding Tour */}
       <OnboardingTourWrapper />

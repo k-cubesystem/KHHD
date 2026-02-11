@@ -31,13 +31,7 @@ CREATE POLICY "Users can view own usage"
 -- 관리자는 모든 사용 기록 조회 가능
 CREATE POLICY "Admins can view all usage"
   ON ai_chat_usage FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- 2. RPC 함수: 사용 횟수 증가
 CREATE OR REPLACE FUNCTION increment_ai_chat_usage(

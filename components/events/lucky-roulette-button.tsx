@@ -16,27 +16,23 @@ export function LuckyRouletteButton({ canSpin, nextAvailableTime }: LuckyRoulett
 
   return (
     <>
-      {/* Floating Button */}
-      <motion.button
+      {/* Grid Item Trigger */}
+      <button
         onClick={() => setShowModal(true)}
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1, duration: 0.3 }}
-        className={cn(
-          'fixed bottom-24 right-6 z-40',
-          'w-14 h-14 rounded-full',
-          'bg-gradient-to-br from-primary/90 to-primary/70',
-          'shadow-lg hover:shadow-xl',
-          'flex items-center justify-center',
-          'transition-all duration-300 hover:scale-110',
-          'border border-primary/30'
-        )}
+        className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/10 transition-all p-4 group"
       >
-        <Sparkles className="w-6 h-6 text-ink-900" strokeWidth={1.5} />
-        {canSpin && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-        )}
-      </motion.button>
+        <Sparkles className="w-7 h-7 text-primary mb-2 group-hover:scale-110 transition-transform" strokeWidth={1} />
+        <span className="text-sm font-serif font-normal text-ink-light mb-1">행운의 룰렛</span>
+        <span className="text-[10px] text-ink-light/50 text-center font-light relative">
+          매일 1회 무료
+          {canSpin && (
+            <span className="absolute -top-8 -right-8 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+            </span>
+          )}
+        </span>
+      </button>
 
       {/* Modal */}
       <AnimatePresence>
@@ -62,6 +58,7 @@ export function LuckyRouletteButton({ canSpin, nextAvailableTime }: LuckyRoulett
               <button
                 onClick={() => setShowModal(false)}
                 className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-ink-900/50 hover:bg-ink-900/70 flex items-center justify-center transition-colors"
+                aria-label="Close modal"
               >
                 <X className="w-5 h-5 text-ink-light/70" strokeWidth={1} />
               </button>

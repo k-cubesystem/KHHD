@@ -173,40 +173,66 @@ export default async function MyPage() {
     // Calculate Tier (Simple logic for display)
     const tier = isAdmin ? "Administrator" : (profile?.is_subscribed ? "Gold Member" : "Silver Member");
 
+    // Avatar: 소셜 이미지 또는 도깨비 아바타
+    const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null;
+    const isDokkaebiAvatar = avatarUrl?.startsWith('/avatars/dokkaebi-');
+
+    // 부적 수량
+    const talismanBalance = walletBalance?.balance || 0;
+
     return (
         <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
             <div className="hanji-overlay" />
 
             {/* Profile Section */}
-            <section className="flex flex-col items-center pt-10 pb-8 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
+            <section className="flex flex-col items-center pt-10 pb-6 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
                 {/* Avatar */}
-                <div className="relative mb-6 group cursor-pointer">
-                    <div className="w-28 h-28 border-2 border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-lg group-hover:border-primary/50 transition-colors">
-                        {profile?.avatar_url ? (
-                            <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+                <Link href="/protected/settings" className="relative mb-4 group cursor-pointer">
+                    <div className="w-28 h-28 rounded-full border-2 border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-lg group-hover:border-primary/50 transition-all group-hover:scale-105">
+                        {avatarUrl ? (
+                            isDokkaebiAvatar ? (
+                                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover p-3" />
+                            ) : (
+                                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                            )
                         ) : (
                             <span className="font-serif text-4xl text-primary">{displayName[0]}</span>
                         )}
                     </div>
                     {/* Tier Badge */}
-                    <div className="absolute bottom-1 right-1 bg-primary text-background p-1.5 shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
-                        {isAdmin ? <Crown className="w-3.5 h-3.5 fill-current" /> : <Star className="w-3.5 h-3.5 fill-current" />}
+                    <div className="absolute -bottom-1 -right-1 bg-primary text-background p-2 rounded-full shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
+                        {isAdmin ? <Crown className="w-4 h-4 fill-current" strokeWidth={1} /> : <Star className="w-4 h-4 fill-current" strokeWidth={1} />}
                     </div>
-                </div>
+                </Link>
 
-                {/* Name & Tier */}
+                {/* Name */}
                 <h2 className="text-2xl font-serif font-light text-ink-light mb-2 tracking-wide">{displayName}</h2>
                 <BrandQuote variant="card" className="mb-4">
                     {BRAND_QUOTES.profile.hero}
                 </BrandQuote>
-                <Link href="/protected/membership" className="flex items-center gap-3 mb-6 group cursor-pointer">
-                    <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
-                    <span className="text-primary text-[10px] tracking-[0.3em] uppercase font-light group-hover:text-primary-dim transition-colors">
-                        {tier} <span className="ml-1 text-[8px] opacity-70">(UPGRADE)</span>
-                    </span>
-                    <div className="h-px w-8 bg-primary/30 group-hover:w-12 transition-all" />
-                </Link>
+            </section>
 
+            {/* Stats Section - 부적 & 멤버십 */}
+            <section className="px-6 mb-6 animate-in fade-in slide-in-from-bottom-7 duration-700 delay-100 relative z-10">
+                <div className="bg-surface/30 border border-primary/20 rounded-xl p-6 grid grid-cols-2 gap-6">
+                    {/* 부적 수량 */}
+                    <div className="flex flex-col items-center gap-2">
+                        <Coins className="w-6 h-6 text-primary mb-1" strokeWidth={1} />
+                        <span className="text-2xl font-serif text-ink-light font-light">{talismanBalance}</span>
+                        <span className="text-[10px] text-ink-light/50 tracking-widest uppercase font-light">부적</span>
+                    </div>
+
+                    {/* 멤버십 등급 */}
+                    <Link href="/protected/membership" className="flex flex-col items-center gap-2 group cursor-pointer">
+                        <Crown className="w-6 h-6 text-primary mb-1 group-hover:scale-110 transition-transform" strokeWidth={1} />
+                        <span className="text-sm font-serif text-ink-light font-light text-center leading-tight group-hover:text-primary transition-colors">
+                            {tier}
+                        </span>
+                        <span className="text-[10px] text-primary/70 tracking-widest uppercase font-light group-hover:text-primary transition-colors">
+                            {profile?.is_subscribed ? "ACTIVE" : "UPGRADE"}
+                        </span>
+                    </Link>
+                </div>
             </section>
 
             {/* Dashboard Navigation Grid */}

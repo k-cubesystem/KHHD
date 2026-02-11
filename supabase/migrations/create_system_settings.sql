@@ -20,13 +20,7 @@ ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins can manage system settings"
     ON public.system_settings
     FOR ALL
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role = 'admin'
-        )
-    );
+    USING (is_admin());
 
 -- Create notification_logs table if not exists
 CREATE TABLE IF NOT EXISTS public.notification_logs (
@@ -46,13 +40,7 @@ ALTER TABLE public.notification_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admins can view notification logs"
     ON public.notification_logs
     FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role = 'admin'
-        )
-    );
+    USING (is_admin());
 
 -- Policy: System can insert notification logs
 CREATE POLICY "System can insert notification logs"

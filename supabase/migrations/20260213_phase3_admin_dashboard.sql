@@ -27,13 +27,7 @@ ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view all activity logs"
   ON activity_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- 2. UTM 파라미터 추적 테이블
 CREATE TABLE IF NOT EXISTS utm_tracking (
@@ -63,13 +57,7 @@ ALTER TABLE utm_tracking ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view utm tracking"
   ON utm_tracking FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- 3. 이탈 추적 테이블 (Funnel Analysis)
 CREATE TABLE IF NOT EXISTS funnel_events (
@@ -92,13 +80,7 @@ ALTER TABLE funnel_events ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view funnel events"
   ON funnel_events FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- 4. 시간대별 트래픽 집계 테이블 (매시간 업데이트)
 CREATE TABLE IF NOT EXISTS traffic_hourly (
@@ -121,13 +103,7 @@ ALTER TABLE traffic_hourly ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view traffic stats"
   ON traffic_hourly FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-      AND profiles.role = 'admin'
-    )
-  );
+  USING (is_admin());
 
 -- 5. RPC 함수: Recent Activity 조회 (최근 50건)
 CREATE OR REPLACE FUNCTION get_recent_activities(p_limit INT DEFAULT 50)

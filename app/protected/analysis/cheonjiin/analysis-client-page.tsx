@@ -1,19 +1,13 @@
 "use client";
 
-import { AnalysisForm } from "@/components/analysis/analysis-form";
 import { motion } from "framer-motion";
 import { fadeInUp, staggerContainer } from "@/lib/animations";
-import { Card } from "@/components/ui/card";
-import { BookOpen, Heart, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { BookOpen, User, Compass, Hand, Sparkles, ArrowRight } from "lucide-react";
 import { DestinyTarget } from "@/app/actions/destiny-targets";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { getSajuData } from "@/lib/domain/saju/saju";
-import { calculateCompatibilityScore } from "@/lib/domain/compatibility/compatibility";
 import { BrandQuote } from "@/components/ui/BrandQuote";
-import { BRAND_QUOTES } from "@/lib/constants/brand-quotes";
+import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
 
 interface AnalysisClientPageProps {
     targets: DestinyTarget[];
@@ -21,29 +15,11 @@ interface AnalysisClientPageProps {
 }
 
 export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientPageProps) {
-    const [target1Id, setTarget1Id] = useState<string>("");
-    const [target2Id, setTarget2Id] = useState<string>("");
-    const [compResult, setCompResult] = useState<{ score: number; comment: string } | null>(null);
-    const [analyzing, setAnalyzing] = useState(false);
+    const router = useRouter();
 
-    const handleAnalyzeCompatibility = () => {
-        if (!target1Id || !target2Id) return;
-        setAnalyzing(true);
-        setCompResult(null);
-
-        // Simulate analysis
-        setTimeout(() => {
-            const m1 = targets.find(t => t.id === target1Id);
-            const m2 = targets.find(t => t.id === target2Id);
-
-            if (m1 && m2 && m1.birth_date && m2.birth_date) {
-                const s1 = getSajuData(m1.birth_date, m1.birth_time || "00:00", m1.calendar_type === "solar");
-                const s2 = getSajuData(m2.birth_date, m2.birth_time || "00:00", m2.calendar_type === "solar");
-                const res = calculateCompatibilityScore(s1, s2);
-                setCompResult(res);
-            }
-            setAnalyzing(false);
-        }, 1500);
+    const handleSelectTarget = (targetId: string) => {
+        // 천지인 분석 시작 - 추후 분석 페이지로 이동
+        router.push(`/protected/analysis/cheonjiin/result?targetId=${targetId}`);
     };
 
     return (
@@ -51,158 +27,167 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
             variants={staggerContainer}
             initial="initial"
             animate="animate"
-            className="flex flex-col gap-8 w-full max-w-5xl mx-auto py-12 px-6 pb-32 font-sans"
+            className="flex flex-col gap-8 w-full max-w-2xl mx-auto py-12 px-6 pb-32 font-sans"
         >
             {/* Header */}
             <motion.section variants={fadeInUp} className="space-y-6 text-center">
                 <div className="flex justify-center">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-primary/20 backdrop-blur-sm mb-2">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-primary/20 backdrop-blur-sm mb-2 rounded-full">
                         <BookOpen className="w-4 h-4 text-primary" strokeWidth={1} />
-                        <span className="text-[10px] font-light text-primary tracking-[0.2em] font-sans uppercase">Heaven Earth Man Analysis</span>
+                        <span className="text-[10px] font-light text-primary tracking-[0.2em] font-sans uppercase">Cheonjiin Analysis</span>
                     </div>
                 </div>
                 <div className="space-y-4">
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-light tracking-tight text-ink-light italic leading-tight">
-                        천지인(天地人) <br />
-                        <span className="text-primary-dim">심층 분석실</span>
+                    <h1 className="text-4xl md:text-5xl font-serif font-light tracking-tight text-ink-light leading-tight">
+                        천지인사주풀이
                     </h1>
-                    <BrandQuote variant="hero">
-                        {BRAND_QUOTES.analysis.cheonjiin}
+                    <BrandQuote variant="hero" className="max-w-xl mx-auto">
+                        하늘이 정한 운명, 땅이 품은 기운, 사람에게 새겨진 표식.<br />
+                        천지인 삼재(三才)가 하나로 모여 당신의 진정한 운명을 밝힙니다.
                     </BrandQuote>
                 </div>
             </motion.section>
 
-            <motion.div variants={fadeInUp}>
-                <Tabs defaultValue="saju" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-surface/30 p-1 mb-8 border border-white/5 rounded-full">
-                        <TabsTrigger value="saju" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-light py-3 transition-all">
-                            운명 분석 (Saju)
-                        </TabsTrigger>
-                        <TabsTrigger value="compatibility" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary font-light py-3 transition-all">
-                            궁합 분석 (Compatibility)
-                        </TabsTrigger>
-                    </TabsList>
+            {/* Description */}
+            <motion.section variants={fadeInUp} className="bg-surface/20 border border-primary/20 rounded-xl p-6">
+                <p className="text-sm text-ink-light/70 leading-relaxed font-light text-center">
+                    운명은 하나의 관점만으로는 온전히 볼 수 없습니다. 천지인사주풀이는 하늘의 시간(사주), 땅의 공간(풍수), 사람의 표식(관상·손금)을 함께 살펴 입체적으로 운명을 해석하는 해화당만의 종합 풀이법입니다.
+                    태어난 순간 하늘이 새긴 운명의 설계도를 읽고, 당신이 서 있는 공간의 기운을 느끼며, 얼굴과 손에 드러난 삶의 이야기를 듣습니다.
+                </p>
+            </motion.section>
 
-                    <TabsContent value="saju">
-                        <Card className="relative bg-surface/30 backdrop-blur-md p-1 shadow-2xl border border-primary/20 rounded-none overflow-hidden">
-                            <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
-                            <AnalysisForm targets={targets} initialTargetId={initialTargetId} />
-                        </Card>
-                    </TabsContent>
+            {/* 천·지·인 설명 카드 */}
+            <motion.section variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 천(天) - 사주 */}
+                <Card className="bg-surface/20 border-primary/20 hover:bg-primary/5 transition-all">
+                    <CardContent className="p-6 text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                            <BookOpen className="w-6 h-6 text-primary" strokeWidth={1} />
+                        </div>
+                        <h3 className="text-lg font-serif font-light text-primary">천(天)</h3>
+                        <p className="text-xs font-light text-ink-light/60 leading-relaxed">
+                            태어난 시간에 담긴 하늘의 섭리, 당신 운명의 근원적 설계도를 읽습니다.
+                        </p>
+                        <Badge variant="outline" className="text-[10px] font-light border-primary/30">사주</Badge>
+                    </CardContent>
+                </Card>
 
-                    <TabsContent value="compatibility">
-                        <Card className="relative bg-surface/30 backdrop-blur-md p-8 shadow-2xl border border-primary/20 rounded-none overflow-hidden min-h-[500px] flex flex-col items-center justify-center">
-                            <div className="absolute inset-0 bg-primary/5 -m-1 pointer-events-none rounded-none" />
+                {/* 지(地) - 풍수 */}
+                <Card className="bg-surface/20 border-primary/20 hover:bg-primary/5 transition-all">
+                    <CardContent className="p-6 text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                            <Compass className="w-6 h-6 text-primary" strokeWidth={1} />
+                        </div>
+                        <h3 className="text-lg font-serif font-light text-primary">지(地)</h3>
+                        <p className="text-xs font-light text-ink-light/60 leading-relaxed">
+                            당신을 둘러싼 공간과 환경의 기운, 땅이 전하는 에너지의 흐름을 살핍니다.
+                        </p>
+                        <Badge variant="outline" className="text-[10px] font-light border-primary/30">풍수</Badge>
+                    </CardContent>
+                </Card>
 
-                            {!compResult ? (
-                                <div className="w-full max-w-md space-y-8 relative z-10">
-                                    <div className="text-center space-y-2">
-                                        <Heart className="w-12 h-12 text-primary mx-auto mb-4 animate-pulse" strokeWidth={1} />
-                                        <h2 className="text-2xl font-serif font-light text-ink-light">두 사람의 인연을 확인하세요</h2>
-                                        <p className="text-ink-light/50 text-sm font-light">등록된 인연 중 두 명을 선택하여 궁합을 분석합니다.</p>
-                                    </div>
+                {/* 인(人) - 관상·손금 */}
+                <Card className="bg-surface/20 border-primary/20 hover:bg-primary/5 transition-all">
+                    <CardContent className="p-6 text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                            <Hand className="w-6 h-6 text-primary" strokeWidth={1} />
+                        </div>
+                        <h3 className="text-lg font-serif font-light text-primary">인(人)</h3>
+                        <p className="text-xs font-light text-ink-light/60 leading-relaxed">
+                            얼굴과 손에 새겨진 삶의 궤적, 시간이 당신에게 남긴 운명의 표식을 봅니다.
+                        </p>
+                        <Badge variant="outline" className="text-[10px] font-light border-primary/30">관상·손금</Badge>
+                    </CardContent>
+                </Card>
+            </motion.section>
 
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-light text-primary uppercase tracking-widest">본인 / 인연 A</label>
-                                            <Select onValueChange={setTarget1Id} value={target1Id}>
-                                                <SelectTrigger className="bg-surface/50 border-white/10 h-12 text-ink-light">
-                                                    <SelectValue placeholder="인연 A 선택" />
-                                                </SelectTrigger>
-                                                <SelectContent className="bg-surface text-ink-light border-white/10">
-                                                    {targets.map(t => (
-                                                        <SelectItem key={t.id} value={t.id}>{t.name} ({t.relation_type})</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-light text-primary uppercase tracking-widest">인연 B</label>
-                                            <Select onValueChange={setTarget2Id} value={target2Id}>
-                                                <SelectTrigger className="bg-surface/50 border-white/10 h-12 text-ink-light">
-                                                    <SelectValue placeholder="인연 B 선택" />
-                                                </SelectTrigger>
-                                                <SelectContent className="bg-surface text-ink-light border-white/10">
-                                                    {targets.map(t => (
-                                                        <SelectItem key={t.id} value={t.id}>{t.name} ({t.relation_type})</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </div>
+            {/* 가족 리스트 섹션 */}
+            <motion.section variants={fadeInUp} className="space-y-6 mt-8">
+                <div className="text-center space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                        <Sparkles className="w-5 h-5 text-primary" strokeWidth={1} />
+                        <h2 className="text-2xl font-serif font-light text-ink-light">분석할 인연을 선택하세요</h2>
+                        <Sparkles className="w-5 h-5 text-primary" strokeWidth={1} />
+                    </div>
+                    <p className="text-sm text-ink-light/60 font-light">
+                        등록된 가족 구성원의 천지인사주를 종합 분석합니다
+                    </p>
+                </div>
 
-                                    <Button
-                                        className="w-full h-14 text-lg rounded-full mt-4"
-                                        disabled={!target1Id || !target2Id || analyzing}
-                                        onClick={handleAnalyzeCompatibility}
-                                    >
-                                        {analyzing ? <Loader2 className="w-5 h-5 animate-spin mr-2" strokeWidth={1} /> : <Sparkles className="w-5 h-5 mr-2" strokeWidth={1} />}
-                                        {analyzing ? "분석 중..." : "궁합 분석 시작하기"}
-                                    </Button>
-
-                                    {targets.length < 2 && (
-                                        <p className="text-xs text-rose-400 text-center mt-4">
-                                            * 궁합을 보려면 최소 2명의 인연이 등록되어 있어야 합니다.<br />
-                                            '인연관리' 메뉴에서 인연을 추가해주세요.
-                                        </p>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="w-full max-w-lg space-y-8 relative z-10 text-center animate-in fade-in slide-in-from-bottom-4">
-                                    <div className="flex items-center justify-center gap-8 mb-8">
-                                        <div className="text-center">
-                                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-light text-2xl text-ink-light mx-auto mb-2 shadow-sm">
-                                                {targets.find(t => t.id === target1Id)?.name[0]}
+                {targets.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-4">
+                        {targets.map((target, idx) => (
+                            <motion.div
+                                key={target.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                            >
+                                <Card
+                                    className="bg-surface/20 border-primary/20 hover:bg-primary/5 hover:border-primary/40 transition-all cursor-pointer group"
+                                    onClick={() => handleSelectTarget(target.id)}
+                                >
+                                    <CardContent className="p-5">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                                    <User className="w-7 h-7 text-primary" strokeWidth={1} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="text-lg font-serif font-light text-ink-light">
+                                                        {target.name}
+                                                    </h3>
+                                                    <div className="flex items-center gap-2 text-xs text-ink-light/50 font-light">
+                                                        <span>{target.relation_type || "가족"}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-ink-light/30" />
+                                                        <span>{target.birth_date}</span>
+                                                        {target.birth_time && (
+                                                            <>
+                                                                <span className="w-1 h-1 rounded-full bg-ink-light/30" />
+                                                                <span>{target.birth_time}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <span className="text-sm font-light text-ink/60">{targets.find(t => t.id === target1Id)?.name}</span>
+                                            <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={1} />
                                         </div>
-                                        <Heart className="w-8 h-8 text-primary fill-current animate-pulse" strokeWidth={1} />
-                                        <div className="text-center">
-                                            <div className="w-16 h-16 bg-surface border border-primary/20 flex items-center justify-center font-serif font-light text-2xl text-ink-light mx-auto mb-2 shadow-sm">
-                                                {targets.find(t => t.id === target2Id)?.name[0]}
-                                            </div>
-                                            <span className="text-sm font-light text-ink/60">{targets.find(t => t.id === target2Id)?.name}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="mb-8">
-                                        <span className="text-sm font-light text-primary uppercase tracking-widest border border-primary/30 px-3 py-1">Compatibility Score</span>
-                                        <div className="mt-4 text-7xl font-serif font-light text-ink-light tracking-tight">
-                                            {compResult.score}<span className="text-4xl text-ink/40 ml-1 font-sans font-light">/100</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <h3 className="text-2xl font-serif font-light text-ink-light leading-snug">
-                                            "{compResult.comment}"
-                                        </h3>
-                                        <p className="text-ink/60 leading-relaxed font-sans font-light">
-                                            두 분의 사주에서 나타나는 오행의 흐름과 간지의 조화를 분석한 결과입니다.
-                                        </p>
-                                    </div>
-
-                                    <div className="pt-8 flex justify-center gap-4">
-                                        <Button variant="outline" onClick={() => setCompResult(null)} className="border-primary/20 hover:bg-surface text-ink/60 font-sans h-12 px-6">
-                                            <ArrowRight className="w-4 h-4 mr-2" strokeWidth={1} />
-                                            다른 궁합 보기
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </motion.div>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </div>
+                ) : (
+                    <Card className="bg-surface/10 border-dashed border-primary/20">
+                        <CardContent className="p-12 text-center space-y-4">
+                            <div className="w-16 h-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="w-8 h-8 text-primary/40" strokeWidth={1} />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-serif font-light text-ink-light">
+                                    등록된 가족이 없습니다
+                                </h3>
+                                <p className="text-sm text-ink-light/50 font-light">
+                                    가족 관리 페이지에서 인연을 추가해주세요
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+            </motion.section>
 
             {/* Footer */}
-            <motion.section variants={fadeInUp} className="text-center space-y-4 opacity-50 font-serif italic text-sm text-ink-light/40 mt-8">
-                <p className="font-light">※ 모든 분석은 명리학적 전통 가이드라인과 최신 데이터 알고리즘을 준수합니다.</p>
-                <div className="flex items-center justify-center gap-4 uppercase tracking-[0.2em] font-sans font-light text-[10px] not-italic">
+            <motion.section variants={fadeInUp} className="text-center space-y-4 opacity-50 mt-8">
+                <p className="text-xs text-ink-light/40 font-light italic">
+                    ※ 세 가지 차원이 어우러질 때 비로소 온전한 그림이 완성되고,<br />
+                    그 속에서 당신만의 길이 선명하게 드러납니다
+                </p>
+                <div className="flex items-center justify-center gap-4 uppercase tracking-[0.2em] font-sans font-light text-[10px]">
                     <span>Authentic</span>
-                    <span className="w-1 h-1 bg-primary" />
-                    <span>Precise</span>
-                    <span className="w-1 h-1 bg-primary" />
-                    <span>Haehwadang Master Identity</span>
+                    <span className="w-1 h-1 bg-primary/50 rounded-full" />
+                    <span>Integrated</span>
+                    <span className="w-1 h-1 bg-primary/50 rounded-full" />
+                    <span>Haehwadang</span>
                 </div>
             </motion.section>
         </motion.div>
