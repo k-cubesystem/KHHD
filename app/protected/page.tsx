@@ -102,23 +102,11 @@ export default async function ProtectedPage() {
           <span className="text-xs font-serif font-bold text-primary tracking-widest uppercase">
             Cheongdam Haehwadang
           </span>
-          <h1 className="text-xl font-serif font-bold text-ink-light leading-none">
-            안녕하세요, {masterName}님
-          </h1>
+          <h1 className="text-xl font-serif font-bold text-ink-light leading-none">해화당</h1>
         </div>
 
-        <Link href="/protected/profile" className="flex items-center gap-2">
-          <div className="flex flex-col items-end mr-1">
-            <span className="text-[10px] text-ink-light/50 bg-surface/40 px-1.5 py-0.5 rounded border border-white/5">
-              {tierLabel}
-            </span>
-          </div>
-          <Avatar className="h-10 w-10 border border-primary/30 shadow-[0_0_15px_rgba(236,182,19,0.1)]">
-            <AvatarImage src={user?.user_metadata?.avatar_url} className="object-cover" />
-            <AvatarFallback className="bg-surface text-primary font-bold text-xs">
-              {masterName.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+        <Link href="/protected/settings" className="flex items-center gap-3">
+          <Bell className="w-5 h-5 text-ink-light/50 hover:text-primary transition-colors" />
         </Link>
       </header>
 
