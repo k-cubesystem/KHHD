@@ -1,75 +1,116 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { ArrowRight, Flower } from "lucide-react";
-import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import Link from 'next/link'
+import { ArrowRight, Flower } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 
 const slides = [
   {
     id: 1,
-    image: "/images/hanok-night-hero.jpg",
-    headline: <>모두가 부러워하는 당신의 삶,<br />하지만 정작 당신은 행복하십니까?</>,
-    subhead: <>시선에 맞춰 완벽해야 했던 지난날들.<br />화려한 조명이 꺼진 뒤 밀려오는 알 수 없는 공허함까지,<br />아무에게도 말 못한 당신의 그 깊은 외로움을<br />청담해화당이 안아드립니다.</>,
-    buttonText: "내 마음의 매듭 풀기",
-    link: "/protected"
+    image: '/images/hanok-night-hero.jpg',
+    headline: (
+      <>
+        모두가 부러워하는 당신의 삶,
+        <br />
+        하지만 정작 당신은 행복하십니까?
+      </>
+    ),
+    subhead: (
+      <>
+        시선에 맞춰 완벽해야 했던 지난날들.
+        <br />
+        화려한 조명이 꺼진 뒤 밀려오는 알 수 없는 공허함까지,
+        <br />
+        아무에게도 말 못한 당신의 그 깊은 외로움을
+        <br />
+        청담해화당이 안아드립니다.
+      </>
+    ),
+    buttonText: '내 마음의 매듭 풀기',
+    link: '/protected',
   },
   {
     id: 2,
-    image: "/images/intro-wealth-v2.jpg",
-    headline: <>그 집 아이가 유독 잘 풀리는 이유,<br />엄마들 사이의 '비밀'은 따로 있습니다.</>,
-    subhead: <>노력만으로는 닿을 수 없는 운의 영역이 있습니다.<br />알 만한 청담동 엄마들이 조용히 다녀간 그곳.<br />우리 아이가 가진 운명의 그릇을 가장 크게 키워줄<br />'결정적 시기'를 놓치지 마세요.</>,
-    buttonText: "합격운 & 재물운 확인하기",
-    link: "/protected"
+    image: '/images/intro-wealth-v2.jpg',
+    headline: (
+      <>
+        그 집 아이가 유독 잘 풀리는 이유,
+        <br />
+        엄마들 사이의 &apos;비밀&apos;은 따로 있습니다.
+      </>
+    ),
+    subhead: (
+      <>
+        노력만으로는 닿을 수 없는 운의 영역이 있습니다.
+        <br />알 만한 청담동 엄마들이 조용히 다녀간 그곳.
+        <br />
+        우리 아이가 가진 운명의 그릇을 가장 크게 키워줄
+        <br />
+        &apos;결정적 시기&apos;를 놓치지 마세요.
+      </>
+    ),
+    buttonText: '합격운 & 재물운 확인하기',
+    link: '/protected',
   },
   {
     id: 3,
-    image: "/landing-section-2.jpg",
-    headline: <>다시, 내 인생에도<br />봄바람이 불어올까요?</>,
-    subhead: <>메마른 가슴에 단비처럼 찾아올 귀한 인연.<br />당신을 아껴줄 그 사람이 지금 어디쯤 오고 있는지,<br />해화당이 미리 짚어드립니다.</>,
-    buttonText: "새로운 인연이 있을까?",
-    link: "/protected"
-  }
-];
+    image: '/landing-section-2.jpg',
+    headline: (
+      <>
+        다시, 내 인생에도
+        <br />
+        봄바람이 불어올까요?
+      </>
+    ),
+    subhead: (
+      <>
+        메마른 가슴에 단비처럼 찾아올 귀한 인연.
+        <br />
+        당신을 아껴줄 그 사람이 지금 어디쯤 오고 있는지,
+        <br />
+        해화당이 미리 짚어드립니다.
+      </>
+    ),
+    buttonText: '새로운 인연이 있을까?',
+    link: '/protected',
+  },
+]
 
 export default function Home() {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0)
 
   useEffect(() => {
     // Random start on client mount
-    setCurrentSlide(Math.floor(Math.random() * slides.length));
-  }, []);
+    setCurrentSlide(Math.floor(Math.random() * slides.length))
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 8000); // 8 seconds interval
-    return () => clearInterval(timer);
-  }, []);
+      setCurrentSlide((prev) => (prev + 1) % slides.length)
+    }, 8000) // 8 seconds interval
+    return () => clearInterval(timer)
+  }, [])
 
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-background text-ink-light overflow-x-hidden antialiased font-serif selection:bg-primary/30">
-
       {/* Texture Overlay */}
       <div className="hanji-overlay" />
 
-
-
       {/* Screen 1: Hanok Night Intro (Carousel) */}
       <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] text-center overflow-hidden">
-
         {/* Background Layer (Transitioning) */}
         {slides.map((slide, index) => (
           <div
             key={slide.id}
             className={cn(
-              "absolute inset-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out",
-              index === currentSlide ? "opacity-100" : "opacity-0"
+              'absolute inset-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out',
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
             )}
           >
             {/* Image */}
             <div
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] hover:scale-105"
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-[20000ms] hover:scale-105"
               style={{ backgroundImage: `url('${slide.image}')` }}
             />
             {/* Dark Overlay Gradient */}
@@ -94,9 +135,11 @@ export default function Home() {
 
         {/* Content Container (Centered) */}
         <div className="relative z-10 flex flex-col items-center px-6 max-w-4xl pb-10">
-
           {/* Dynamic Content (Keyed for Re-animation) */}
-          <div key={currentSlide} className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          <div
+            key={currentSlide}
+            className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700"
+          >
             {/* Headline */}
             <h1 className="font-serif text-2xl font-light leading-relaxed tracking-tight text-ink-light drop-shadow-sm break-keep">
               {slides[currentSlide].headline}
@@ -119,7 +162,6 @@ export default function Home() {
               </button>
             </Link>
           </div>
-
         </div>
 
         {/* Pagination Dots */}
@@ -129,16 +171,16 @@ export default function Home() {
               key={index}
               onClick={() => setCurrentSlide(index)}
               className={cn(
-                "w-2 h-2 rounded-full transition-all duration-300",
-                index === currentSlide ? "bg-primary w-6 gold-glow" : "bg-white/20 hover:bg-white/40"
+                'w-2 h-2 rounded-full transition-all duration-300',
+                index === currentSlide
+                  ? 'bg-primary w-6 gold-glow'
+                  : 'bg-white/20 hover:bg-white/40'
               )}
               aria-label={`Go to slide ${index + 1}`}
             />
           ))}
         </div>
-
       </main>
-
     </div>
-  );
+  )
 }
