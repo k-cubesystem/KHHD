@@ -177,113 +177,141 @@ export function PromptManagementClient() {
   const hasDailyFortune = prompts.some((p) => p.key.toLowerCase() === 'daily_fortune')
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4">
+      {/* Page Header */}
+      <div className="space-y-1">
+        <h1 className="text-xl font-serif font-bold text-stone-100">AI 프롬프트 관리</h1>
+        <p className="text-xs text-stone-500">AI 분석에 사용되는 프롬프트 템플릿을 관리합니다.</p>
+      </div>
+
+      <div className="flex justify-between items-center gap-3">
         {/* Quick Actions */}
         {!loading && !hasDailyFortune && (
           <Button
             variant="outline"
             onClick={handleQuickCreateDaily}
-            className="bg-gold-50 border-gold-200 text-gold-700 hover:bg-gold-100"
+            className="h-8 text-xs border-gold-500/30 text-gold-400 hover:bg-gold-500/10 hover:border-gold-500/50"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            &apos;오늘의 운세&apos; 프롬프트 자동 생성 (필수)
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            오늘의 운세 자동 생성
           </Button>
         )}
 
         {/* Create Button */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
-            <Button className="bg-zen-wood text-white hover:bg-zen-wood/90 ml-auto">
-              <Plus className="w-4 h-4 mr-2" /> 새 프롬프트 생성
+            <Button className="h-8 text-xs ml-auto bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500 shadow-lg shadow-gold-500/20">
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> 새 프롬프트
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-auto bg-stone-900 border-stone-700 text-stone-100">
             <DialogHeader>
-              <DialogTitle>새 AI 프롬프트 생성</DialogTitle>
+              <DialogTitle className="font-serif text-stone-100">새 AI 프롬프트 생성</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="key">키 (고유값) *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="key" className="text-xs text-stone-300 font-medium">
+                    키 (고유값) *
+                  </Label>
                   <Input
                     id="key"
                     value={newKey}
                     onChange={(e) => setNewKey(e.target.value)}
                     placeholder="daily_fortune"
-                    className="font-mono"
+                    className="h-8 font-mono text-xs bg-stone-800/50 border-stone-700/50 text-stone-200 placeholder:text-stone-600"
                   />
-                  <p className="text-xs text-zen-muted mt-1">영문, 숫자, 언더스코어만 사용</p>
+                  <p className="text-[10px] text-stone-600">영문, 숫자, 언더스코어만</p>
                 </div>
-                <div>
-                  <Label htmlFor="category">카테고리 *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="category" className="text-xs text-stone-300 font-medium">
+                    카테고리 *
+                  </Label>
                   <Select value={newCategory} onValueChange={setNewCategory}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-8 text-xs bg-stone-800/50 border-stone-700/50 text-stone-200">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ANALYSIS">ANALYSIS</SelectItem>
-                      <SelectItem value="CHAT">CHAT</SelectItem>
-                      <SelectItem value="SYSTEM">SYSTEM</SelectItem>
-                      <SelectItem value="IMAGE">IMAGE</SelectItem>
+                    <SelectContent className="bg-stone-900 border-stone-700">
+                      <SelectItem value="ANALYSIS" className="text-stone-300">
+                        ANALYSIS
+                      </SelectItem>
+                      <SelectItem value="CHAT" className="text-stone-300">
+                        CHAT
+                      </SelectItem>
+                      <SelectItem value="SYSTEM" className="text-stone-300">
+                        SYSTEM
+                      </SelectItem>
+                      <SelectItem value="IMAGE" className="text-stone-300">
+                        IMAGE
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="label">레이블 (표시명) *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="label" className="text-xs text-stone-300 font-medium">
+                    레이블 (표시명) *
+                  </Label>
                   <Input
                     id="label"
                     value={newLabel}
                     onChange={(e) => setNewLabel(e.target.value)}
                     placeholder="오늘의 운세"
+                    className="h-8 text-xs bg-stone-800/50 border-stone-700/50 text-stone-200 placeholder:text-stone-600"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="cost">차감 부적 개수</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cost" className="text-xs text-stone-300 font-medium">
+                    차감 부적 수
+                  </Label>
                   <div className="relative">
-                    <Ticket className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gold-500" />
+                    <Ticket className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gold-500" />
                     <Input
                       id="cost"
                       type="number"
                       min="0"
                       value={newTalismanCost}
                       onChange={(e) => setNewTalismanCost(parseInt(e.target.value) || 0)}
-                      className="pl-9"
+                      className="h-8 text-xs pl-8 bg-stone-800/50 border-stone-700/50 text-stone-200"
                     />
                   </div>
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="description">설명</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="text-xs text-stone-300 font-medium">
+                  설명
+                </Label>
                 <Input
                   id="description"
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="프롬프트에 대한 설명"
+                  className="h-8 text-xs bg-stone-800/50 border-stone-700/50 text-stone-200 placeholder:text-stone-600"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="template">템플릿 *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="template" className="text-xs text-stone-300 font-medium">
+                  템플릿 *
+                </Label>
 
                 {/* Variable Guide */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs space-y-2">
-                  <p className="font-bold flex items-center gap-1 text-slate-700">
+                <div className="p-2.5 bg-stone-800/50 border border-stone-700/30 rounded-lg text-xs space-y-2">
+                  <p className="font-bold flex items-center gap-1 text-stone-400">
                     <BookOpen className="w-3 h-3" /> 사용 가능한 변수 ({newCategory})
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {(VARIABLE_GUIDE[newCategory as keyof typeof VARIABLE_GUIDE] || []).map((v) => (
                       <div
                         key={v.name}
-                        className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-100 shadow-sm"
+                        className="flex items-center gap-1 bg-stone-900/50 px-1.5 py-0.5 rounded border border-stone-700/30"
                         title={v.desc}
                       >
-                        <code className="text-gold-600 font-bold">{v.name}</code>
-                        <span className="text-slate-500">{v.desc}</span>
+                        <code className="text-gold-400 font-bold text-[10px]">{v.name}</code>
+                        <span className="text-stone-500 text-[10px]">{v.desc}</span>
                       </div>
                     ))}
                   </div>
@@ -294,20 +322,24 @@ export function PromptManagementClient() {
                   value={newTemplate}
                   onChange={(e) => setNewTemplate(e.target.value)}
                   placeholder="프롬프트 템플릿을 입력하세요..."
-                  className="font-mono text-sm min-h-[200px]"
+                  className="font-mono text-xs min-h-[160px] bg-stone-800/50 border-stone-700/50 text-stone-200 placeholder:text-stone-600"
                 />
               </div>
 
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateDialog(false)}
+                  className="h-8 text-xs border-stone-700 text-stone-400 hover:bg-stone-800"
+                >
                   취소
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={saving === 'create'}
-                  className="bg-zen-wood text-white"
+                  className="h-8 text-xs bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500"
                 >
-                  {saving === 'create' ? <Loader2 className="w-4 h-4 animate-spin" /> : '생성'}
+                  {saving === 'create' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '생성'}
                 </Button>
               </div>
             </div>
@@ -315,13 +347,13 @@ export function PromptManagementClient() {
         </Dialog>
       </div>
 
-      {/* Prompts List Grid (No Tabs) */}
+      {/* Prompts List Grid */}
       {loading ? (
         Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-48 bg-zen-bg rounded-xl animate-pulse" />
+          <div key={i} className="h-32 bg-stone-800/30 rounded-xl animate-pulse" />
         ))
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:gap-6 pb-20">
+        <div className="grid grid-cols-1 gap-3 pb-20">
           {prompts.map((prompt) => (
             <PromptEditor
               key={prompt.key}
@@ -332,13 +364,13 @@ export function PromptManagementClient() {
             />
           ))}
           {prompts.length === 0 && !hasDailyFortune && (
-            <div className="col-span-full text-center py-20 bg-white border border-zen-border rounded-xl">
-              <p className="text-zen-muted">등록된 프롬프트가 없습니다.</p>
+            <div className="col-span-full text-center py-16 bg-stone-900/30 border border-stone-700/30 rounded-xl">
+              <p className="text-sm text-stone-500">등록된 프롬프트가 없습니다.</p>
               <Button
                 onClick={handleQuickCreateDaily}
-                className="mt-4 bg-gold-500 hover:bg-gold-600"
+                className="mt-4 h-8 text-xs bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500"
               >
-                <Sparkles className="w-4 h-4 mr-2" /> &apos;오늘의 운세&apos; 프롬프트 생성하기
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" /> 오늘의 운세 프롬프트 생성하기
               </Button>
             </div>
           )}
