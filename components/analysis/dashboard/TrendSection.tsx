@@ -65,6 +65,10 @@ export function TrendSection() {
           return (
             <Card
               key={trend.id}
+              onClick={() => {
+                if (trend.id === 'wealth') router.push('/protected/analysis/wealth')
+                else router.push(`/protected/analysis/trend/${trend.id}`)
+              }}
               className="group cursor-pointer card-glass-manse transition-all p-3 flex flex-col items-center justify-center gap-2 text-center h-[110px] rounded-xl active:scale-95 duration-200 hover:border-primary/40"
             >
               <div

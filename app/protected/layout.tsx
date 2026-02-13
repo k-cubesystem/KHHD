@@ -1,8 +1,6 @@
-import { SiteHeader } from '@/components/site-header'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { MobileHeader } from '@/components/mobile-header'
-import { FloatingAnalysisButton } from '@/components/analysis/FloatingAnalysisButton'
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,7 +19,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       <SiteFooter />
 
       {/* Floating Action Button */}
-      <FloatingAnalysisButton />
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />

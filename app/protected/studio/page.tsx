@@ -1,97 +1,96 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { BookOpen, User, Compass, Database, Fingerprint, Camera, Upload, ArrowRight, Share2, Download, RefreshCw, Sparkles, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { BrandQuote } from "@/components/ui/BrandQuote";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { BRAND_QUOTES } from "@/lib/constants/brand-quotes";
-
-// Types
-type StudioStep = "category" | "target" | "input" | "analyzing" | "result";
-type AnalysisType = "saju" | "face" | "palm" | "fengshui";
-type TargetType = "family" | "guest";
-
-// Unused constants removed or kept if planning to reuse later
+import { User, Compass, Fingerprint, ArrowRight, Layers } from 'lucide-react'
+import { BrandQuote } from '@/components/ui/BrandQuote'
+import Link from 'next/link'
+import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 
 export default function StudioPage() {
-    return (
-        <div className="min-h-screen bg-background text-ink-light font-sans relative pb-24 overflow-x-hidden">
-            {/* Header */}
-            <header className="px-6 pt-12 pb-6 relative z-10 text-center space-y-4">
-                <h1 className="text-3xl font-serif font-light">
-                    <span className="text-[#D4AF37]">해화당 스튜디오</span>
-                </h1>
-                <BrandQuote variant="hero">
-                    {BRAND_QUOTES.studio.hero}
-                </BrandQuote>
-            </header>
+  return (
+    <div className="min-h-screen bg-background text-ink-light font-sans relative pb-24 overflow-x-hidden">
+      {/* Header */}
+      <header className="px-6 pt-12 pb-6 relative z-10 text-center space-y-4">
+        <h1 className="text-3xl font-serif font-light">
+          <span className="text-[#D4AF37]">해화당 스튜디오</span>
+        </h1>
+        <BrandQuote variant="hero">{BRAND_QUOTES.studio.hero}</BrandQuote>
+      </header>
 
-            <main className="px-6 relative z-10 space-y-4">
-                <h2 className="text-sm text-ink-light/60 font-light mb-2">무엇을 분석하시겠습니까?</h2>
+      <main className="px-6 relative z-10 space-y-4">
+        <h2 className="text-sm text-ink-light/60 font-light mb-2">무엇을 분석하시겠습니까?</h2>
 
-                {/* Saju Category */}
-                <Link href="/protected/studio/saju/new" className="block">
-                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
-                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
-                            <BookOpen className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-serif font-light text-ink-light mb-1">사주명리 (Four Pillars)</h3>
-                            <p className="text-xs text-ink-light/50 font-light">생년월일로 보는 운명의 지도</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" strokeWidth={1} />
-                    </div>
-                </Link>
+        {/* 천지인 통합 분석 - FEATURED */}
+        <Link href="/protected/analysis/cheonjiin" className="block">
+          <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group border border-[#D4AF37]/20">
+            <div className="w-12 h-12 rounded-full bg-[#D4AF37]/20 flex items-center justify-center group-hover:bg-[#D4AF37]/30 transition-colors">
+              <Layers className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
+            </div>
+            <div>
+              <h3 className="text-lg font-serif font-light text-ink-light mb-1">
+                천지인 통합 분석
+              </h3>
+              <p className="text-xs text-ink-light/50 font-light">
+                사주·풍수·관상·손금 종합 운명 분석
+              </p>
+            </div>
+            <ArrowRight
+              className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors"
+              strokeWidth={1}
+            />
+          </div>
+        </Link>
 
-                {/* Palm Reading - ACTIVE */}
-                <Link href="/protected/studio/palm" className="block">
-                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
-                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
-                            <Fingerprint className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-serif font-light text-ink-light mb-1">손금</h3>
-                            <p className="text-xs text-ink-light/50 font-light">손바닥에 새겨진 생명 정보</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" strokeWidth={1} />
-                    </div>
-                </Link>
+        {/* Palm Reading - ACTIVE */}
+        <Link href="/protected/studio/palm" className="block">
+          <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
+            <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
+              <Fingerprint className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
+            </div>
+            <div>
+              <h3 className="text-lg font-serif font-light text-ink-light mb-1">손금</h3>
+              <p className="text-xs text-ink-light/50 font-light">손바닥에 새겨진 생명 정보</p>
+            </div>
+            <ArrowRight
+              className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors"
+              strokeWidth={1}
+            />
+          </div>
+        </Link>
 
-                {/* Face Reading - ACTIVE */}
-                <Link href="/protected/studio/face" className="block">
-                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
-                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
-                            <User className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-serif font-light text-ink-light mb-1">관상학</h3>
-                            <p className="text-xs text-ink-light/50 font-light">얼굴에 담긴 인생의 길흉</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" strokeWidth={1} />
-                    </div>
-                </Link>
+        {/* Face Reading - ACTIVE */}
+        <Link href="/protected/studio/face" className="block">
+          <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
+            <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
+              <User className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
+            </div>
+            <div>
+              <h3 className="text-lg font-serif font-light text-ink-light mb-1">관상학</h3>
+              <p className="text-xs text-ink-light/50 font-light">얼굴에 담긴 인생의 길흉</p>
+            </div>
+            <ArrowRight
+              className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors"
+              strokeWidth={1}
+            />
+          </div>
+        </Link>
 
-                {/* Feng Shui - ACTIVE */}
-                <Link href="/protected/studio/fengshui" className="block">
-                    <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
-                        <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
-                            <Compass className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-serif font-light text-ink-light mb-1">공간풍수</h3>
-                            <p className="text-xs text-ink-light/50 font-light">당신을 둘러싼 기의 흐름</p>
-                        </div>
-                        <ArrowRight className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors" strokeWidth={1} />
-                    </div>
-                </Link>
-            </main>
-        </div>
-    );
+        {/* Feng Shui - ACTIVE */}
+        <Link href="/protected/studio/fengshui" className="block">
+          <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group">
+            <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 flex items-center justify-center group-hover:bg-[#D4AF37]/20 transition-colors">
+              <Compass className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
+            </div>
+            <div>
+              <h3 className="text-lg font-serif font-light text-ink-light mb-1">공간풍수</h3>
+              <p className="text-xs text-ink-light/50 font-light">당신을 둘러싼 기의 흐름</p>
+            </div>
+            <ArrowRight
+              className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors"
+              strokeWidth={1}
+            />
+          </div>
+        </Link>
+      </main>
+    </div>
+  )
 }
-
-const CATEGORIES = [
-    // All analysis types are now active and handled separately above
-] as const;

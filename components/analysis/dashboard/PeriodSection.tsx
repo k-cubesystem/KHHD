@@ -26,21 +26,21 @@ export function PeriodSection() {
 
       <div className="relative z-10 pt-2 grid grid-cols-3 gap-1">
         <Button
-          onClick={() => router.push('/protected/analysis/fortune')}
+          onClick={() => router.push('/protected/analysis/today')}
           variant="outline"
           className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent font-light"
         >
           오늘
         </Button>
         <Button
-          onClick={() => router.push('/protected/analysis/fortune')}
+          onClick={() => router.push('/protected/fortune/weekly')}
           variant="outline"
           className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent font-light"
         >
           주간
         </Button>
         <Button
-          onClick={() => router.push('/protected/analysis/fortune')}
+          onClick={() => router.push('/protected/fortune/monthly')}
           variant="outline"
           className="h-8 border-white/20 text-white hover:bg-white/10 text-[10px] px-0 bg-transparent font-light"
         >

@@ -12,14 +12,14 @@ const notoSans = Noto_Sans_KR({
   variable: '--font-noto-sans',
   display: 'swap',
   subsets: ['latin'],
-  weight: ['100', '300', '400', '500', '700', '900'],
+  weight: ['300', '400', '700'],
 })
 
 const notoSerif = Noto_Serif_KR({
   variable: '--font-noto-serif',
   display: 'swap',
   subsets: ['latin'],
-  weight: ['200', '300', '400', '500', '600', '700', '900'],
+  weight: ['300', '400', '700'],
 })
 
 const nanumMyeongjo = Nanum_Myeongjo({

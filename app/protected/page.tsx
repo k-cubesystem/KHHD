@@ -1,8 +1,6 @@
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getWalletBalance } from '@/app/actions/wallet-actions'
-import { getUserTierLimits } from '@/app/actions/membership-limits'
-import { getDashboardContext } from '@/app/actions/dashboard-actions'
-import { getFamilyWithAnalysisSummary } from '@/app/actions/family-analysis-actions'
 import {
   getMonthlyFamilyFortune,
   getYearlyFortuneTrend,
@@ -20,53 +18,67 @@ import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
 import { OnboardingTourWrapper } from '@/components/onboarding/onboarding-tour-wrapper'
 
 import Link from 'next/link'
-import { Ticket, Bell, MessagesSquare, CalendarDays, Calendar, CalendarRange, Home } from 'lucide-react'
+import { Ticket, MessagesSquare, CalendarDays, Calendar, CalendarRange, Home } from 'lucide-react'
 import { FeatureGuard } from '@/components/feature-guard'
 import { FORTUNE_MISSIONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
-export default async function ProtectedPage() {
+// ── 느린 데이터 → 별도 비동기 컴포넌트 (Suspense로 스트리밍) ──
+
+async function FamilySection() {
+  const breakdown = await getFamilyFortuneBreakdown()
+  if (!breakdown || breakdown.length === 0) return null
+  return (
+    <section>
+      <FamilyFortuneStatus members={breakdown} />
+    </section>
+  )
+}
+
+async function TimelineSection() {
+  const yearlyTrend = await getYearlyFortuneTrend()
+  return (
+    <section>
+      <FortuneTimeline data={yearlyTrend} year={new Date().getFullYear()} />
+    </section>
+  )
+}
+
+async function EventBannersSection() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // 1. Data Fetching (Parallel)
-  const [
-    walletBalance,
-    limits,
-    dashboardContext,
-    familyMembers,
-    monthlyFortune,
-    yearlyTrend,
-    familyBreakdown,
-    attendanceStatus,
-    rouletteStatus,
-  ] = await Promise.all([
-    getWalletBalance(),
-    getUserTierLimits(),
-    getDashboardContext(),
-    getFamilyWithAnalysisSummary(),
-    getMonthlyFamilyFortune(),
-    getYearlyFortuneTrend(),
-    getFamilyFortuneBreakdown(),
-    checkDailyAttendance(),
-    checkRouletteAvailability(),
-  ])
-
-  // 2. 이벤트 배너 가져오기
   const { data: eventBanners } = await supabase
     .from('event_banners')
     .select('*')
     .eq('is_active', true)
     .order('priority', { ascending: false })
     .limit(3)
+  if (!eventBanners || eventBanners.length === 0) return null
+  return (
+    <section>
+      <EventBanners banners={eventBanners} />
+    </section>
+  )
+}
 
-  const isGuest = !user
+// ── 스켈레톤 폴백 ──
+function SectionSkeleton({ height = 'h-24' }: { height?: string }) {
+  return (
+    <div className={`${height} bg-surface/10 border border-white/5 rounded-xl animate-pulse`} />
+  )
+}
+
+export default async function ProtectedPage() {
+  // 빠른 쿼리만 인라인 (3개 → 병렬)
+  const [walletBalance, monthlyFortune, attendanceStatus, rouletteStatus] = await Promise.all([
+    getWalletBalance(),
+    getMonthlyFamilyFortune(),
+    checkDailyAttendance(),
+    checkRouletteAvailability(),
+  ])
 
   return (
     <div className="min-h-screen bg-background text-ink-light pb-28 font-sans relative overflow-hidden">
-      {/* Header - Minimalist */}
+      {/* Header */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between relative z-20">
         <div className="flex flex-col items-start gap-1">
           <span className="text-xs font-serif font-light text-primary tracking-widest uppercase">
@@ -76,7 +88,6 @@ export default async function ProtectedPage() {
             해화당
           </h1>
         </div>
-
         <Link href="/protected" className="flex items-center gap-3">
           <Home
             className="w-5 h-5 text-ink-light/50 hover:text-primary transition-colors"
@@ -109,7 +120,7 @@ export default async function ProtectedPage() {
       </div>
 
       <main className="px-6 space-y-8 relative z-20">
-        {/* 1. Daily Check-In - Priority #1 */}
+        {/* 1. Daily Check-In */}
         <section className="daily-checkin-card">
           <DailyCheckIn
             initialChecked={attendanceStatus?.checked || false}
@@ -117,7 +128,7 @@ export default async function ProtectedPage() {
           />
         </section>
 
-        {/* 2. Fortune Energy Gauge - Priority #2 */}
+        {/* 2. Fortune Energy Gauge */}
         <section className="space-y-4">
           <div className="fortune-energy-gauge">
             <FortuneEnergyGauge
@@ -129,7 +140,7 @@ export default async function ProtectedPage() {
           </div>
         </section>
 
-        {/* 3. 8 Fortune Missions Grid - Priority #3 */}
+        {/* 3. 8 Fortune Missions Grid */}
         <section>
           <div className="flex items-center gap-2 mb-4">
             <div className="w-1 h-4 bg-primary/20 rounded-full" />
@@ -185,16 +196,13 @@ export default async function ProtectedPage() {
           />
         </section>
 
-        {/* 5. Family Fortune Status */}
-        {familyBreakdown.length > 0 && (
-          <section>
-            <FamilyFortuneStatus members={familyBreakdown} />
-          </section>
-        )}
+        {/* 5. Family Fortune Status (스트리밍) */}
+        <Suspense fallback={<SectionSkeleton height="h-32" />}>
+          <FamilySection />
+        </Suspense>
 
-        {/* 6. Quick Actions Grid (2x2) */}
+        {/* 6. Quick Actions Grid */}
         <section className="grid grid-cols-2 gap-3">
-          {/* 고민상담 (AI Shaman Chat) */}
           <Link
             href="/protected/ai-shaman"
             className="ai-shaman-button flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/10 transition-all p-4"
@@ -206,7 +214,6 @@ export default async function ProtectedPage() {
             </span>
           </Link>
 
-          {/* 오늘의 운세 */}
           <FeatureGuard feature="feat_saju_today">
             <Link
               href="/protected/saju/today"
@@ -222,7 +229,6 @@ export default async function ProtectedPage() {
             </Link>
           </FeatureGuard>
 
-          {/* 한주의 운세 */}
           <Link
             href="/protected/fortune/weekly"
             className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/10 transition-all p-4"
@@ -234,7 +240,6 @@ export default async function ProtectedPage() {
             </span>
           </Link>
 
-          {/* 매월 운세 */}
           <Link
             href="/protected/fortune/monthly"
             className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/10 transition-all p-4"
@@ -245,30 +250,26 @@ export default async function ProtectedPage() {
               월간 운세 확인
             </span>
           </Link>
-          {/* Lucky Roulette - Grid Item */}
+
           <LuckyRouletteButton
             canSpin={rouletteStatus?.canSpin || false}
             nextAvailableTime={rouletteStatus?.nextAvailableTime}
           />
         </section>
 
-        {/* 7. Fortune Timeline (Yearly Trend) */}
-        <section>
-          <FortuneTimeline data={yearlyTrend} year={new Date().getFullYear()} />
-        </section>
+        {/* 7. Fortune Timeline (스트리밍) */}
+        <Suspense fallback={<SectionSkeleton height="h-40" />}>
+          <TimelineSection />
+        </Suspense>
 
-        {/* 8. Event Banners - Lower Priority */}
-        {eventBanners && eventBanners.length > 0 && (
-          <section>
-            <EventBanners banners={eventBanners} />
-          </section>
-        )}
+        {/* 8. Event Banners (스트리밍) */}
+        <Suspense fallback={null}>
+          <EventBannersSection />
+        </Suspense>
 
-        {/* Bottom Spacer */}
         <div className="pb-8" />
       </main>
 
-      {/* Onboarding Tour */}
       <OnboardingTourWrapper />
     </div>
   )
