@@ -1,13 +1,13 @@
 export default function NewYearLoading() {
   return (
     <div className="min-h-screen bg-background text-ink-light pb-20 animate-pulse">
-      <header className="px-6 pt-12 pb-6">
+      <header className="px-3 pt-12 pb-6">
         <div className="h-4 w-16 bg-white/5 rounded mb-4" />
         <div className="h-8 w-48 bg-white/5 rounded mb-3" />
         <div className="h-4 w-64 bg-white/5 rounded" />
       </header>
 
-      <div className="px-6 space-y-4">
+      <div className="px-3 space-y-4">
         {/* 점수 원형 */}
         <div className="bg-surface/20 border border-white/5 rounded-xl p-8 flex flex-col items-center gap-4">
           <div className="w-28 h-28 rounded-full bg-white/5" />

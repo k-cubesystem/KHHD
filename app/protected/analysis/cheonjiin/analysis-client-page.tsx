@@ -27,7 +27,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="flex flex-col gap-8 w-full max-w-2xl mx-auto py-12 px-6 pb-32 font-sans"
+      className="flex flex-col gap-8 w-full max-w-2xl mx-auto py-12 px-3 pb-32 font-sans"
     >
       {/* Header */}
       <motion.section variants={fadeInUp} className="space-y-6 text-center">

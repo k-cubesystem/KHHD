@@ -1,11 +1,10 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import * as React from 'react'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> { }
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement>
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, ...props }, ref) => {
@@ -18,24 +17,24 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       onAnimationEnd,
       onAnimationIteration,
       ...inputProps
-    } = props;
+    } = props
 
     return (
       <motion.input
         type={type}
         className={cn(
-          "flex h-12 w-full rounded-lg input-manse px-4 py-2 text-sm font-sans",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          "shadow-sm hover:shadow-md hover:shadow-primary/5",
+          'flex h-12 w-full rounded-lg input-manse px-4 py-2 text-sm font-sans',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          'shadow-sm hover:shadow-md hover:shadow-primary/5',
           className
         )}
         whileFocus={{ scale: 1.01 }}
         ref={ref}
         {...inputProps}
       />
-    );
+    )
   }
-);
-Input.displayName = "Input";
+)
+Input.displayName = 'Input'
 
-export { Input };
+export { Input }

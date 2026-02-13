@@ -54,7 +54,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
   return (
     <div className="min-h-screen bg-background text-ink-light pb-20">
       {/* Header */}
-      <header className="px-6 pt-12 pb-6">
+      <header className="px-3 pt-12 pb-6">
         <Link
           href="/protected"
           className="inline-flex items-center gap-2 text-ink-light/60 hover:text-primary transition-colors mb-4"
@@ -80,7 +80,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
 
       {/* 사주 정보 없음 */}
       {!data && (
-        <section className="px-6">
+        <section className="px-3">
           <Card className="bg-surface/30 border-primary/20">
             <CardContent className="p-12 text-center space-y-3">
               <Calendar className="w-12 h-12 text-primary/50 mx-auto" strokeWidth={1} />
@@ -105,7 +105,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
         <>
           {/* 이번 주 요약 */}
           {data.summary && (
-            <section className="px-6 mb-4">
+            <section className="px-3 mb-4">
               <Card className="bg-primary/5 border-primary/20">
                 <CardContent className="p-4 flex items-center gap-3">
                   <Sparkles className="w-5 h-5 text-primary flex-shrink-0" strokeWidth={1} />
@@ -144,7 +144,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
 
           {/* 행운 키워드 */}
           {data.lucky && (
-            <section className="px-6 mb-4">
+            <section className="px-3 mb-4">
               <div className="flex gap-2 flex-wrap">
                 <Badge className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20 font-light">
                   행운의 색 {data.lucky.color}
@@ -160,7 +160,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
           )}
 
           {/* Daily Timeline */}
-          <section className="px-6 space-y-3">
+          <section className="px-3 space-y-3">
             {data.days.map((day, idx) => {
               const isToday = idx === todayIndex
               return (
@@ -250,7 +250,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
 
           {/* 주의사항 */}
           {data.caution && (
-            <section className="px-6 mt-4">
+            <section className="px-3 mt-4">
               <Card className="bg-yellow-400/5 border-yellow-400/20">
                 <CardContent className="p-4 flex items-start gap-3">
                   <AlertCircle

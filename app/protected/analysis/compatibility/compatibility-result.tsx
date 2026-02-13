@@ -93,7 +93,7 @@ export function CompatibilityResult({
       </div>
 
       {/* Content */}
-      <div className="max-w-2xl mx-auto px-6 space-y-6">
+      <div className="max-w-2xl mx-auto px-3 space-y-6">
         {/* Strengths */}
         {strengths.length > 0 && (
           <motion.div

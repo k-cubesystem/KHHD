@@ -9,36 +9,15 @@ export default function StudioPage() {
   return (
     <div className="min-h-screen bg-background text-ink-light font-sans relative pb-24 overflow-x-hidden">
       {/* Header */}
-      <header className="px-6 pt-12 pb-6 relative z-10 text-center space-y-4">
+      <header className="px-3 pt-12 pb-6 relative z-10 text-center space-y-4">
         <h1 className="text-3xl font-serif font-light">
           <span className="text-[#D4AF37]">해화당 스튜디오</span>
         </h1>
         <BrandQuote variant="hero">{BRAND_QUOTES.studio.hero}</BrandQuote>
       </header>
 
-      <main className="px-6 relative z-10 space-y-4">
+      <main className="px-3 relative z-10 space-y-4">
         <h2 className="text-sm text-ink-light/60 font-light mb-2">무엇을 분석하시겠습니까?</h2>
-
-        {/* 천지인 통합 분석 - FEATURED */}
-        <Link href="/protected/analysis/cheonjiin" className="block">
-          <div className="flex items-center gap-4 card-glass-manse rounded-xl p-6 hover:bg-[#D4AF37]/5 transition-all group border border-[#D4AF37]/20">
-            <div className="w-12 h-12 rounded-full bg-[#D4AF37]/20 flex items-center justify-center group-hover:bg-[#D4AF37]/30 transition-colors">
-              <Layers className="w-6 h-6 text-[#D4AF37]" strokeWidth={1} />
-            </div>
-            <div>
-              <h3 className="text-lg font-serif font-light text-ink-light mb-1">
-                천지인 통합 분석
-              </h3>
-              <p className="text-xs text-ink-light/50 font-light">
-                사주·풍수·관상·손금 종합 운명 분석
-              </p>
-            </div>
-            <ArrowRight
-              className="w-5 h-5 text-ink-light/20 ml-auto group-hover:text-[#D4AF37] transition-colors"
-              strokeWidth={1}
-            />
-          </div>
-        </Link>
 
         {/* Palm Reading - ACTIVE */}
         <Link href="/protected/studio/palm" className="block">

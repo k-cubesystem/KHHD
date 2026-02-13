@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 
-export function ShamanChatInterface() {
+export function ShamanChatInterface({ children }: { children?: React.ReactNode }) {
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -458,6 +458,9 @@ export function ShamanChatInterface() {
           <p>의학적/법적 조언을 대체할 수 없습니다.</p>
         </motion.div>
       </div>
+
+      {/* Event Banners (Server Component passed as child) */}
+      <div className="relative z-10 container max-w-4xl mx-auto px-4 pb-8">{children}</div>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

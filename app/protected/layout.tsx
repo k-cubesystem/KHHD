@@ -14,7 +14,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       <MobileHeader />
 
       {/* Content Container (Global Max Width) */}
-      <main className="w-full max-w-4xl mx-auto pb-24 pt-14 flex-grow px-6">{children}</main>
+      <main className="w-full max-w-4xl mx-auto pb-24 pt-14 flex-grow px-2">{children}</main>
 
       <SiteFooter />
 

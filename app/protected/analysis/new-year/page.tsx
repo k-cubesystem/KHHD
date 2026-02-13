@@ -166,7 +166,7 @@ function NewYear2026Content() {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="flex flex-col gap-8 w-full max-w-4xl mx-auto py-12 px-6 pb-32"
+      className="flex flex-col gap-8 w-full max-w-4xl mx-auto py-12 px-3 pb-32"
     >
       {/* Back Button */}
       <motion.div variants={fadeInUp}>

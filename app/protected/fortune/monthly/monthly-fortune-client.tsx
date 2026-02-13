@@ -44,7 +44,7 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
   return (
     <div className="min-h-screen bg-background text-ink-light pb-20">
       {/* Header */}
-      <header className="px-6 pt-12 pb-6">
+      <header className="px-3 pt-12 pb-6">
         <Link
           href="/protected"
           className="inline-flex items-center gap-2 text-ink-light/60 hover:text-primary transition-colors mb-4"
@@ -68,7 +68,7 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
 
       {/* 사주 정보 없음 */}
       {!data && (
-        <section className="px-6">
+        <section className="px-3">
           <Card className="bg-surface/30 border-primary/20">
             <CardContent className="p-12 text-center space-y-3">
               <CalendarRange className="w-12 h-12 text-primary/50 mx-auto" strokeWidth={1} />
@@ -90,7 +90,7 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
       )}
 
       {data && (
-        <div className="px-6 space-y-4">
+        <div className="px-3 space-y-4">
           {/* 종합 점수 + 요약 */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="bg-surface/30 border-primary/20">

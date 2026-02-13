@@ -21,6 +21,8 @@ import {
   type FortuneType,
   type FortuneResult,
 } from '@/app/actions/fortune-analysis-action'
+import { FortuneCalendar } from './fortune-calendar'
+import { FortuneDetailModal } from './fortune-detail-modal'
 
 interface FortuneClientProps {
   selfTarget: DestinyTarget | null
@@ -207,6 +209,10 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
     | { status: 'error'; message: string }
   >({ status: 'idle' })
 
+  // Monthly Calendar Logic
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
   async function handleAnalyze() {
     if (!targetId) return
     setState({ status: 'loading' })
@@ -216,6 +222,32 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
     } else {
       setState({ status: 'error', message: res.error ?? '알 수 없는 오류가 발생했습니다.' })
     }
+  }
+
+  // Special Render for Monthly Calendar
+  if (type === 'monthly') {
+    return (
+      <div className="space-y-4">
+        <FortuneCalendar
+          selectedDate={selectedDate}
+          onDateSelect={(date) => {
+            setSelectedDate(date)
+            setIsModalOpen(true)
+          }}
+        />
+        <div className="bg-surface/20 border border-white/5 rounded-xl p-4">
+          <p className="text-xs text-ink-light/60 text-center font-light">
+            * 날짜를 클릭하면 상세 운세를 확인할 수 있습니다.
+          </p>
+        </div>
+
+        <FortuneDetailModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          date={selectedDate}
+        />
+      </div>
+    )
   }
 
   if (state.status === 'loading') {

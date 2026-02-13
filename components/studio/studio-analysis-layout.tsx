@@ -32,7 +32,7 @@ export function StudioAnalysisLayout({
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="px-6 py-8 relative z-10"
+        className="px-3 py-8 relative z-10"
       >
         <div className="flex items-center justify-between max-w-4xl mx-auto border-b border-white/5 pb-6">
           <div>
@@ -65,7 +65,7 @@ export function StudioAnalysisLayout({
       </motion.header>
 
       {/* Main Content */}
-      <main className="px-6 py-8 max-w-4xl mx-auto pb-24">{children}</main>
+      <main className="px-3 py-8 max-w-4xl mx-auto pb-24">{children}</main>
     </div>
   )
 }

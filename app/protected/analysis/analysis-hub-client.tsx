@@ -3,11 +3,6 @@
 import { ReactNode } from 'react'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 
-interface AttendanceStatus {
-  checked: boolean
-  consecutiveDays: number
-}
-
 interface RouletteStatus {
   canSpin: boolean
   nextAvailableTime?: string
@@ -22,18 +17,14 @@ interface MonthlyFortune {
 
 interface AnalysisHubClientProps {
   userName?: string
-  walletBalance: number
   monthlyFortune: MonthlyFortune
-  attendanceStatus: AttendanceStatus | null
   rouletteStatus: RouletteStatus | null
   children?: ReactNode
 }
 
 export function AnalysisHubClient({
   userName,
-  walletBalance,
   monthlyFortune,
-  attendanceStatus,
   rouletteStatus,
   children,
 }: AnalysisHubClientProps) {
@@ -50,9 +41,7 @@ export function AnalysisHubClient({
       <div className="relative z-10 w-full pt-6">
         <AnalysisDashboard
           userName={userName}
-          walletBalance={walletBalance}
           monthlyFortune={monthlyFortune}
-          attendanceStatus={attendanceStatus}
           rouletteStatus={rouletteStatus}
         >
           {children}

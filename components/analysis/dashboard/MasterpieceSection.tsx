@@ -20,7 +20,7 @@ export function MasterpieceSection() {
       <div className="absolute inset-0 bg-[url('/texture/hanji_pattern.png')] bg-repeat opacity-[0.03] mix-blend-overlay" />
       <div className="absolute top-[-50%] right-[-10%] w-[300px] h-[300px] bg-primary/10 rounded-full blur-[80px] pointer-events-none" />
 
-      <div className="relative z-10 px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="relative z-10 px-3 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
         {/* Text Content */}
         <div className="space-y-3 max-w-md">
           <div className="inline-flex items-center gap-1.5 px-2 py-0.5 border border-primary/30 rounded-full w-fit bg-primary/5">

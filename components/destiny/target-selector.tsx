@@ -1,33 +1,30 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, User, Users, Heart, Briefcase, UserPlus } from "lucide-react";
-import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  getDestinyTargets,
-  type DestinyTarget,
-} from "@/app/actions/destiny-targets";
-import { getTargetImageUrl } from "@/lib/domain/destiny/destiny-utils";
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Plus, User, Users, Heart, Briefcase, UserPlus } from 'lucide-react'
+import Link from 'next/link'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { getDestinyTargets, type DestinyTarget } from '@/app/actions/destiny-targets'
+import { getTargetImageUrl } from '@/lib/domain/destiny/destiny-utils'
 
 interface TargetSelectorProps {
   /**
    * Bottom Sheet 열림 상태
    */
-  isOpen: boolean;
+  isOpen: boolean
   /**
    * Bottom Sheet 닫기 콜백
    */
-  onClose: () => void;
+  onClose: () => void
   /**
    * Target 선택 콜백
    */
-  onSelect: (target: DestinyTarget) => void;
+  onSelect: (target: DestinyTarget) => void
   /**
    * 현재 선택된 Target ID (옵션)
    */
-  selectedTargetId?: string;
+  selectedTargetId?: string
 }
 
 /**
@@ -43,39 +40,49 @@ export function TargetSelector({
   onSelect,
   selectedTargetId,
 }: TargetSelectorProps) {
-  const [targets, setTargets] = useState<DestinyTarget[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [targets, setTargets] = useState<DestinyTarget[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (isOpen) {
-      loadTargets();
+      loadTargets()
     }
-  }, [isOpen]);
+  }, [isOpen])
 
   const loadTargets = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await getDestinyTargets();
-      setTargets(data);
+      const data = await getDestinyTargets()
+      setTargets(data)
     } catch (error) {
-      console.error("Failed to load destiny targets:", error);
+      console.error('Failed to load destiny targets:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleSelect = (target: DestinyTarget) => {
-    onSelect(target);
-    onClose();
-  };
+    onSelect(target)
+    onClose()
+  }
 
   const getRelationIcon = (relationType: string, targetType: string) => {
-    if (targetType === "self") return User;
-    if (relationType.includes("가족") || relationType.includes("부모") || relationType.includes("자녀")) return Users;
-    if (relationType.includes("연인") || relationType.includes("배우자")) return Heart;
-    if (relationType.includes("직장") || relationType.includes("동료") || relationType.includes("상사")) return Briefcase;
-    return UserPlus;
-  };
+    if (targetType === 'self') return User
+    if (
+      relationType.includes('가족') ||
+      relationType.includes('부모') ||
+      relationType.includes('자녀')
+    )
+      return Users
+    if (relationType.includes('연인') || relationType.includes('배우자')) return Heart
+    if (
+      relationType.includes('직장') ||
+      relationType.includes('동료') ||
+      relationType.includes('상사')
+    )
+      return Briefcase
+    return UserPlus
+  }
 
   return (
     <AnimatePresence>
@@ -93,14 +100,14 @@ export function TargetSelector({
 
           {/* Bottom Sheet */}
           <motion.div
-            initial={{ y: "100%" }}
+            initial={{ y: '100%' }}
             animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed bottom-0 left-0 right-0 z-50 bg-surface border-t border-primary/20 rounded-t-3xl shadow-[0_-4px_40px_rgba(0,0,0,0.5)] max-w-[480px] mx-auto"
           >
             {/* Header */}
-            <div className="relative px-6 py-5 border-b border-white/5">
+            <div className="relative px-3 py-5 border-b border-white/5">
               {/* Top Indicator */}
               <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-white/20 rounded-full" />
 
@@ -120,7 +127,7 @@ export function TargetSelector({
             </div>
 
             {/* Content */}
-            <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="px-3 py-4 max-h-[60vh] overflow-y-auto">
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
@@ -139,9 +146,7 @@ export function TargetSelector({
               ) : targets.length === 0 ? (
                 <div className="text-center py-8">
                   <UserPlus className="w-12 h-12 text-ink-light/30 mx-auto mb-3" />
-                  <p className="text-sm text-ink-light/60 mb-4">
-                    등록된 인연이 없습니다.
-                  </p>
+                  <p className="text-sm text-ink-light/60 mb-4">등록된 인연이 없습니다.</p>
                   <Link
                     href="/protected/family"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg transition-colors text-sm"
@@ -153,9 +158,9 @@ export function TargetSelector({
               ) : (
                 <div className="space-y-2">
                   {targets.map((target) => {
-                    const Icon = getRelationIcon(target.relation_type, target.target_type);
-                    const isSelected = target.id === selectedTargetId;
-                    const imageUrl = getTargetImageUrl(target);
+                    const Icon = getRelationIcon(target.relation_type, target.target_type)
+                    const isSelected = target.id === selectedTargetId
+                    const imageUrl = getTargetImageUrl(target)
 
                     return (
                       <button
@@ -163,8 +168,8 @@ export function TargetSelector({
                         onClick={() => handleSelect(target)}
                         className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all group ${
                           isSelected
-                            ? "bg-primary/10 border-2 border-primary"
-                            : "bg-surface/30 border-2 border-transparent hover:bg-surface/50 hover:border-primary/30"
+                            ? 'bg-primary/10 border-2 border-primary'
+                            : 'bg-surface/30 border-2 border-transparent hover:bg-surface/50 hover:border-primary/30'
                         }`}
                       >
                         {/* Avatar */}
@@ -181,7 +186,7 @@ export function TargetSelector({
                             <h3 className="font-serif font-bold text-ink-light group-hover:text-primary transition-colors">
                               {target.name}
                             </h3>
-                            {target.target_type === "self" && (
+                            {target.target_type === 'self' && (
                               <span className="text-[10px] px-2 py-0.5 bg-primary/20 text-primary rounded border border-primary/30">
                                 본인
                               </span>
@@ -218,7 +223,7 @@ export function TargetSelector({
                           </div>
                         )}
                       </button>
-                    );
+                    )
                   })}
 
                   {/* Add New Button */}
@@ -227,9 +232,7 @@ export function TargetSelector({
                     className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-surface/20 hover:bg-surface/40 border-2 border-dashed border-primary/30 hover:border-primary/50 rounded-xl transition-all group"
                   >
                     <Plus className="w-5 h-5 text-primary" />
-                    <span className="text-sm text-primary font-medium">
-                      새로운 인연 등록
-                    </span>
+                    <span className="text-sm text-primary font-medium">새로운 인연 등록</span>
                   </Link>
                 </div>
               )}
@@ -238,5 +241,5 @@ export function TargetSelector({
         </>
       )}
     </AnimatePresence>
-  );
+  )
 }

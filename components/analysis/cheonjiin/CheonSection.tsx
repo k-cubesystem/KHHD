@@ -17,7 +17,7 @@ export function CheonSection({ data }: CheonSectionProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-2xl mx-auto px-6 py-8"
+      className="max-w-2xl mx-auto px-3 py-8"
     >
       <div className="bg-card border border-[#D4AF37]/20 rounded-lg p-6 space-y-6">
         {/* 헤더 */}

@@ -1,13 +1,13 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getWalletBalance } from '@/app/actions/wallet-actions'
+
 import {
   getMonthlyFamilyFortune,
   getYearlyFortuneTrend,
   getFamilyFortuneBreakdown,
 } from '@/app/actions/fortune-actions'
-import { checkDailyAttendance } from '@/app/actions/daily-check-actions'
+
 import { checkRouletteAvailability } from '@/app/actions/roulette-actions'
 import { AnalysisHubClient } from './analysis-hub-client'
 import { FortuneTimeline } from '@/components/fortune/fortune-timeline'
@@ -55,34 +55,26 @@ export default async function AnalysisHubPage() {
   if (!user) redirect('/auth/sign-in')
 
   // 빠른 쿼리만 인라인 병렬 처리
-  const [profile, walletBalance, monthlyFortune, attendanceStatus, rouletteStatus] =
-    await Promise.all([
-      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
-      getWalletBalance(),
-      getMonthlyFamilyFortune(),
-      checkDailyAttendance(),
-      checkRouletteAvailability(),
-    ])
+  const [profile, monthlyFortune, rouletteStatus] = await Promise.all([
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    getMonthlyFamilyFortune(),
+    checkRouletteAvailability(),
+  ])
 
   const userName = profile.data?.full_name || undefined
 
   return (
     <AnalysisHubClient
       userName={userName}
-      walletBalance={walletBalance}
       monthlyFortune={monthlyFortune}
-      attendanceStatus={attendanceStatus}
       rouletteStatus={rouletteStatus}
     >
-      {/* 느린 섹션 — Suspense 스트리밍 */}
-      <Suspense fallback={<SectionSkeleton height="h-40" />}>
-        <TimelineSection />
-      </Suspense>
       <Suspense fallback={<SectionSkeleton height="h-32" />}>
         <FamilySection />
       </Suspense>
-      <Suspense fallback={null}>
-        <EventBannersSection />
+      {/* 2026 Fortune Timeline Moved to Bottom */}
+      <Suspense fallback={<SectionSkeleton height="h-40" />}>
+        <TimelineSection />
       </Suspense>
     </AnalysisHubClient>
   )

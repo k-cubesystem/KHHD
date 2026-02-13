@@ -164,15 +164,6 @@ function PalmAnalysisPageContent() {
             {loading ? '분석 중...' : '손금 분석 시작'}
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
-
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="w-full text-ink-light/60 hover:text-primary hover:bg-transparent"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            뒤로 가기
-          </Button>
         </motion.div>
       )}
 

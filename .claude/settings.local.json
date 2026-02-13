@@ -55,7 +55,9 @@
       "Bash(git push:*)",
       "Bash(git log:*)",
       "Bash(cd:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(python3:*)",
+      "Bash(git checkout:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"
