@@ -92,8 +92,10 @@ function createAdminClient() {
 // ============================================
 export async function getMembershipPlans(): Promise<MembershipPlan[]> {
   try {
-    const supabase = createAdminClient()
-    if (!supabase) return []
+    // membership_plans RLS: is_active=true 는 누구나 조회 가능
+    // admin client 실패 시 fallback으로 일반 client 사용
+    const adminSupabase = createAdminClient()
+    const supabase = adminSupabase ?? (await createClient())
 
     const { data, error } = await supabase
       .from('membership_plans')
