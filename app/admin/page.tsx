@@ -1,150 +1,131 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { DashboardStats, AnimatedHeader } from "@/components/admin/dashboard-stats";
-import { RecentActivityLive } from "@/components/admin/recent-activity-live";
-import { TrafficChart } from "@/components/admin/traffic-chart";
-import { Users, CreditCard, Package, Sparkles, Activity, TrendingUp } from "lucide-react";
+import { createAdminClient } from '@/lib/supabase/admin'
+import { DashboardStats, AnimatedHeader } from '@/components/admin/dashboard-stats'
+import { RecentActivityLive } from '@/components/admin/recent-activity-live'
+import { TrafficChart } from '@/components/admin/traffic-chart'
+import { Users, CreditCard, Package, Sparkles } from 'lucide-react'
+import Link from 'next/link'
 
 async function getStats() {
-  // Service Role을 사용하여 RLS 우회
-  const supabase = createAdminClient();
+  const supabase = createAdminClient()
 
-  // 1. 총 회원수
-  const { count: userCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
-
-  // 2. 총 매출 (완료된 결제)
+  const { count: userCount } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
   const { data: payments } = await supabase
-    .from("payments")
-    .select("amount")
-    .eq("status", "completed");
+    .from('payments')
+    .select('amount')
+    .eq('status', 'completed')
+  const totalRevenue = payments?.reduce((acc, curr) => acc + curr.amount, 0) || 0
+  const { count: recordCount } = await supabase
+    .from('saju_records')
+    .select('*', { count: 'exact', head: true })
 
-  const totalRevenue = payments?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
-
-  // 3. 총 분석 건수
-  const { count: recordCount } = await supabase.from("saju_records").select("*", { count: "exact", head: true });
-
-  // 4. 최근 가입자 (오늘)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
   const { count: newUsers } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .gte("created_at", today.toISOString());
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', today.toISOString())
 
   return {
     userCount: userCount || 0,
     totalRevenue: totalRevenue || 0,
     recordCount: recordCount || 0,
     newUsers: newUsers || 0,
-  };
+  }
 }
 
 export default async function AdminDashboardPage() {
-  const stats = await getStats();
+  const stats = await getStats()
 
   const cards = [
     {
-      label: "총 회원수",
+      label: '총 회원수',
       value: `${stats.userCount.toLocaleString()}명`,
       sub: `오늘 신규 ${stats.newUsers}명`,
-      iconKey: "users",
-      color: "text-blue-400",
+      iconKey: 'users',
+      color: 'text-blue-400',
     },
     {
-      label: "누적 매출",
+      label: '누적 매출',
       value: `₩${stats.totalRevenue.toLocaleString()}`,
-      sub: "결제 완료 기준",
-      iconKey: "revenue",
-      color: "text-[#D4AF37]",
+      sub: '결제 완료 기준',
+      iconKey: 'revenue',
+      color: 'text-gold-400',
     },
     {
-      label: "생성된 비록",
+      label: '생성된 비록',
       value: `${stats.recordCount.toLocaleString()}건`,
-      sub: "AI 분석 완료",
-      iconKey: "records",
-      color: "text-purple-400",
+      sub: 'AI 분석 완료',
+      iconKey: 'records',
+      color: 'text-purple-400',
     },
     {
-      label: "시스템 상태",
-      value: "정상",
-      sub: "All Systems Operational",
-      iconKey: "system",
-      color: "text-green-400",
+      label: '시스템 상태',
+      value: '정상',
+      sub: 'All Systems Operational',
+      iconKey: 'system',
+      color: 'text-emerald-400',
     },
-  ];
+  ]
+
+  const quickActions = [
+    { href: '/admin/users', label: '회원 관리', icon: Users, color: 'text-blue-400' },
+    { href: '/admin/payments', label: '결제 내역', icon: CreditCard, color: 'text-gold-400' },
+    { href: '/admin/products', label: '스토어 관리', icon: Package, color: 'text-purple-400' },
+    { href: '/admin/prompts', label: 'AI 프롬프트', icon: Sparkles, color: 'text-emerald-400' },
+  ]
 
   return (
-    <>
-      <AnimatedHeader title="Dashboard" subtitle="해화당 서비스 현황 개요" />
+    <div className="space-y-4">
+      <AnimatedHeader title="대시보드" subtitle="해화당 서비스 현황 개요" />
 
       <DashboardStats cards={cards} />
 
       {/* Traffic Chart */}
-      <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm mb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-1 h-6 bg-primary" />
-          <h2 className="text-xl font-serif font-bold text-ink-light">시간대별 트래픽</h2>
+      <div className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+        <div className="relative">
+          <h2 className="text-sm font-serif font-bold text-stone-100 mb-3">시간대별 트래픽</h2>
+          <TrafficChart />
         </div>
-        <TrafficChart />
       </div>
 
       {/* Quick Actions & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Quick Actions */}
-        <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-6 bg-primary" />
-            <h2 className="text-xl font-serif font-bold text-ink-light">Quick Actions</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <a
-              href="/admin/users"
-              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
-            >
-              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
-                <Users className="w-5 h-5" strokeWidth={1.5} />
-              </div>
-              <div className="text-sm font-serif text-ink-light">회원 관리</div>
-            </a>
-            <a
-              href="/admin/payments"
-              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
-            >
-              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
-                <CreditCard className="w-5 h-5" strokeWidth={1.5} />
-              </div>
-              <div className="text-sm font-serif text-ink-light">결제 내역</div>
-            </a>
-            <a
-              href="/admin/membership/plans"
-              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
-            >
-              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
-                <Package className="w-5 h-5" strokeWidth={1.5} />
-              </div>
-              <div className="text-sm font-serif text-ink-light">스토어</div>
-            </a>
-            <a
-              href="/admin/prompts"
-              className="p-4 bg-surface/50 border border-primary/10 hover:border-primary/30 transition-colors group"
-            >
-              <div className="text-primary/60 group-hover:text-primary transition-colors mb-2">
-                <Sparkles className="w-5 h-5" strokeWidth={1.5} />
-              </div>
-              <div className="text-sm font-serif text-ink-light">AI 프롬프트</div>
-            </a>
+        <div className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+          <div className="relative">
+            <h2 className="text-sm font-serif font-bold text-stone-100 mb-3">빠른 이동</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {quickActions.map(({ href, label, icon: Icon, color }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex items-center gap-2.5 p-3 bg-stone-900/40 rounded-lg border border-stone-700/30 hover:border-gold-500/30 hover:bg-stone-800/40 transition-all group"
+                >
+                  <div className={`${color} flex-shrink-0`}>
+                    <Icon className="w-4 h-4" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-xs text-stone-300 group-hover:text-stone-100 transition-colors font-medium">
+                    {label}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Recent Activity Live */}
-        <div className="bg-surface/30 border border-primary/20 p-6 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-1 h-6 bg-primary" />
-            <h2 className="text-xl font-serif font-bold text-ink-light">Recent Activity</h2>
+        {/* Recent Activity */}
+        <div className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+          <div className="relative">
+            <h2 className="text-sm font-serif font-bold text-stone-100 mb-3">최근 활동</h2>
+            <RecentActivityLive />
           </div>
-          <RecentActivityLive />
         </div>
       </div>
-    </>
-  );
+    </div>
+  )
 }

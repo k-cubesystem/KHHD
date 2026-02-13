@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { getPromptByKey } from '@/app/admin/prompts/actions'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -122,7 +123,14 @@ export async function analyzeFaceForDestiny(
   const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
   const goalConfig = GOAL_PROMPTS[goal]
 
-  const analysisPrompt = `당신은 30년 경력의 관상학 전문가입니다.
+  // Load prompt from DB, fallback to hardcoded
+  const dbPromptTemplate = await getPromptByKey('face_reading')
+  const analysisPrompt = dbPromptTemplate
+    ? dbPromptTemplate
+        .replace(/\{\{goal_name\}\}/g, goalConfig.name)
+        .replace(/\{\{goal_desc\}\}/g, goalConfig.desc)
+        .replace(/\{\{goal_traits\}\}/g, goalConfig.traits)
+    : `당신은 30년 경력의 관상학 전문가입니다.
 동양의 전통 명리학과 관상학을 깊이 연구했으며, 수천 명의 관상을 분석한 경험이 있습니다.
 
 아래 얼굴 이미지를 전문가적 시각으로 정확히 분석하여 "${goalConfig.name}"에 대한 평가를 제공하세요.
@@ -281,7 +289,15 @@ export async function analyzeInteriorForFengshui(
   const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
   const themeConfig = INTERIOR_THEMES[theme]
 
-  const analysisPrompt = `당신은 전통 풍수 인테리어 전문가입니다.
+  const dbPromptTemplate = await getPromptByKey('fengshui_analysis')
+  const analysisPrompt = dbPromptTemplate
+    ? dbPromptTemplate
+        .replace(/\{\{room_type\}\}/g, roomType)
+        .replace(/\{\{theme_name\}\}/g, themeConfig.name)
+        .replace(/\{\{theme_colors\}\}/g, themeConfig.colors)
+        .replace(/\{\{theme_elements\}\}/g, themeConfig.elements)
+        .replace(/\{\{theme\}\}/g, theme)
+    : `당신은 전통 풍수 인테리어 전문가입니다.
 
 이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 분석을 제공하세요.
 
@@ -370,7 +386,10 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 export async function analyzePalmReading(imageBase64: string): Promise<PalmAnalysisResult> {
   const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
-  const analysisPrompt = `당신은 30년 경력의 수상학(手相學) 전문가입니다.
+  const dbPromptTemplate = await getPromptByKey('palm_reading')
+  const analysisPrompt =
+    dbPromptTemplate ??
+    `당신은 30년 경력의 수상학(手相學) 전문가입니다.
 동양의 전통 수상학과 서양 카이로맨시를 모두 연구했으며, 수천 명의 손금을 분석한 경험이 있습니다.
 
 아래 손바닥 이미지를 전문가적 시각으로 정확히 분석하여 손금 운세를 제공하세요.
