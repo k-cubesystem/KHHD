@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/types/auth'
-import { updateUserRole, deleteUser } from '../actions'
+import { updateUserRole, deleteUser, updateUserBalance, updateUserSubscription } from '../actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,13 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Trash2, Users, FileText } from 'lucide-react'
+import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X } from 'lucide-react'
 
 interface UserDetailClientProps {
   user: any
   sajuRecords: any[]
   familyMembers: any[]
   payments: any[]
+  wallet?: any
+  subscription?: any
 }
 
 export function UserDetailClient({
@@ -32,9 +34,17 @@ export function UserDetailClient({
   sajuRecords,
   familyMembers,
   payments,
+  wallet,
+  subscription,
 }: UserDetailClientProps) {
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(user.role as UserRole)
+  const [balance, setBalance] = useState(wallet?.balance || 0)
+  const [isEditingBalance, setIsEditingBalance] = useState(false)
+  const [newBalance, setNewBalance] = useState(wallet?.balance || 0)
+
+  const [currentTier, setCurrentTier] = useState(subscription?.membership_plans?.tier || 'FREE')
+  const [isEditingTier, setIsEditingTier] = useState(false)
 
   const handleRoleChange = async (newRole: UserRole) => {
     setRole(newRole)
@@ -43,6 +53,29 @@ export function UserDetailClient({
       success: '권한이 변경되었습니다.',
       error: '권한 변경 실패',
     })
+  }
+
+  const handleBalanceUpdate = async () => {
+    const result = await updateUserBalance(user.id, Number(newBalance))
+    if (result.success) {
+      setBalance(newBalance)
+      setIsEditingBalance(false)
+      toast.success('부적 잔액이 수정되었습니다.')
+    } else {
+      toast.error('잔액 수정 실패: ' + result.error)
+    }
+  }
+
+  const handleTierUpdate = async (tier: string) => {
+    const result = await updateUserSubscription(user.id, tier === 'FREE' ? null : tier)
+    if (result.success) {
+      setCurrentTier(tier)
+      setIsEditingTier(false)
+      toast.success('멤버십 등급이 수정되었습니다.')
+      router.refresh()
+    } else {
+      toast.error('멤버십 수정 실패: ' + result.error)
+    }
   }
 
   const handleDelete = async () => {
@@ -124,6 +157,12 @@ export function UserDetailClient({
             className="text-xs text-stone-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
           >
             기본 정보
+          </TabsTrigger>
+          <TabsTrigger
+            value="wallet"
+            className="text-xs text-stone-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
+          >
+            지갑 & 멤버십
           </TabsTrigger>
           <TabsTrigger
             value="saju"
@@ -211,7 +250,151 @@ export function UserDetailClient({
           </Card>
         </TabsContent>
 
-        {/* 2. Saju Records Tab */}
+        {/* 2. Wallet & Membership Tab */}
+        <TabsContent value="wallet" className="mt-3">
+          <Card className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+            <div className="relative space-y-6">
+              {/* Talisman Wallet */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-serif font-bold text-stone-100 flex items-center gap-2">
+                    <Coins className="w-4 h-4 text-gold-400" />
+                    부적 지갑
+                  </h3>
+                  {!isEditingBalance && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-stone-500 hover:text-gold-400"
+                      onClick={() => {
+                        setIsEditingBalance(true)
+                        setNewBalance(balance)
+                      }}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="p-4 bg-stone-900/30 rounded-lg border border-stone-700/30">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
+                      <Coins className="w-6 h-6 text-gold-400" />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-[10px] text-stone-500 font-medium">보유 부적</Label>
+                      {isEditingBalance ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            type="number"
+                            value={newBalance}
+                            onChange={(e) => setNewBalance(Number(e.target.value))}
+                            className="h-8 text-sm bg-stone-800 border-stone-600 text-white w-24"
+                          />
+                          <Button
+                            size="sm"
+                            className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
+                            onClick={handleBalanceUpdate}
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-stone-400 hover:text-red-400"
+                            onClick={() => setIsEditingBalance(false)}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className="text-2xl font-serif font-bold text-stone-200">
+                          {balance.toLocaleString()}장
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Membership Tier */}
+              <div className="space-y-3 pt-4 border-t border-stone-700/30">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-serif font-bold text-stone-100 flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-gold-400" />
+                    멤버십 등급
+                  </h3>
+                  {!isEditingTier && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-stone-500 hover:text-gold-400"
+                      onClick={() => setIsEditingTier(true)}
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="p-4 bg-stone-900/30 rounded-lg border border-stone-700/30">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <Crown className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div className="flex-1">
+                      <Label className="text-[10px] text-stone-500 font-medium">현재 등급</Label>
+                      {isEditingTier ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Select value={currentTier} onValueChange={handleTierUpdate}>
+                            <SelectTrigger className="h-8 text-xs bg-stone-800 border-stone-600 text-stone-200 w-40">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-stone-900 border-stone-700">
+                              <SelectItem value="FREE" className="text-stone-300">
+                                FREE (무료)
+                              </SelectItem>
+                              <SelectItem value="SINGLE" className="text-purple-300">
+                                SINGLE (싱글)
+                              </SelectItem>
+                              <SelectItem value="FAMILY" className="text-pink-300">
+                                FAMILY (패밀리)
+                              </SelectItem>
+                              <SelectItem value="BUSINESS" className="text-gold-300 font-bold">
+                                BUSINESS (비즈니스)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-stone-400 hover:text-red-400"
+                            onClick={() => setIsEditingTier(false)}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-lg font-serif font-bold text-stone-200">
+                            {currentTier || 'FREE'}
+                          </p>
+                          <p className="text-[10px] text-stone-500">
+                            {subscription
+                              ? `만료일: ${new Date(subscription.end_date).toLocaleDateString()}`
+                              : '구독 중이 아닙니다'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* 3. Saju Records Tab */}
         <TabsContent value="saju" className="mt-3">
           <Card className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
@@ -256,7 +439,7 @@ export function UserDetailClient({
           </Card>
         </TabsContent>
 
-        {/* 3. Family Tab */}
+        {/* 4. Family Tab */}
         <TabsContent value="family" className="mt-3">
           <Card className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
@@ -291,7 +474,7 @@ export function UserDetailClient({
           </Card>
         </TabsContent>
 
-        {/* 4. Payments Tab */}
+        {/* 5. Payments Tab */}
         <TabsContent value="payments" className="mt-3">
           <Card className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />

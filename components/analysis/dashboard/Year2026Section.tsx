@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Flame, Loader2, ArrowRight } from 'lucide-react'
+import { Flame, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -41,17 +41,14 @@ export function Year2026Section() {
         <Button
           onClick={handleAnalyze}
           disabled={loading}
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="text-red-400 hover:text-red-300 hover:bg-transparent p-0"
+          className="border-red-500/30 bg-red-950/20 text-red-400 hover:text-red-300 hover:bg-red-900/40 hover:border-red-500/50 h-8 px-3 text-xs font-normal"
         >
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1} />
+            <Loader2 className="w-3 h-3 animate-spin" strokeWidth={1} />
           ) : (
-            <ArrowRight
-              className="w-5 h-5 group-hover:translate-x-1 transition-transform"
-              strokeWidth={1}
-            />
+            <span>운세보기</span>
           )}
         </Button>
       </div>

@@ -2,23 +2,12 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-import {
-  getMonthlyFamilyFortune,
-  getYearlyFortuneTrend,
-  getFamilyFortuneBreakdown,
-} from '@/app/actions/fortune-actions'
+import { getMonthlyFamilyFortune, getFamilyFortuneBreakdown } from '@/app/actions/fortune-actions'
 
 import { checkRouletteAvailability } from '@/app/actions/roulette-actions'
 import { AnalysisHubClient } from './analysis-hub-client'
-import { FortuneTimeline } from '@/components/fortune/fortune-timeline'
 import { FamilyFortuneStatus } from '@/components/fortune/family-fortune-status'
 import { EventBanners } from '@/components/events/event-banners'
-
-// ── 느린 섹션 → 별도 async 서버 컴포넌트 (스트리밍) ──
-async function TimelineSection() {
-  const yearlyTrend = await getYearlyFortuneTrend()
-  return <FortuneTimeline data={yearlyTrend} year={new Date().getFullYear()} />
-}
 
 async function FamilySection() {
   const breakdown = await getFamilyFortuneBreakdown()
@@ -41,7 +30,7 @@ async function EventBannersSection() {
 function SectionSkeleton({ height = 'h-24' }: { height?: string }) {
   return (
     <div
-      className={`${height} bg-surface/10 border border-white/5 rounded-xl animate-pulse mx-4`}
+      className={`${height} bg - surface / 10 border border - white / 5 rounded - xl animate - pulse mx - 4`}
     />
   )
 }
@@ -71,10 +60,6 @@ export default async function AnalysisHubPage() {
     >
       <Suspense fallback={<SectionSkeleton height="h-32" />}>
         <FamilySection />
-      </Suspense>
-      {/* 2026 Fortune Timeline Moved to Bottom */}
-      <Suspense fallback={<SectionSkeleton height="h-40" />}>
-        <TimelineSection />
       </Suspense>
     </AnalysisHubClient>
   )

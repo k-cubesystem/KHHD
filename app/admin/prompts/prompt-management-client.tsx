@@ -179,10 +179,6 @@ export function PromptManagementClient() {
   return (
     <div className="space-y-4">
       {/* Page Header */}
-      <div className="space-y-1">
-        <h1 className="text-xl font-serif font-bold text-stone-100">AI 프롬프트 관리</h1>
-        <p className="text-xs text-stone-500">AI 분석에 사용되는 프롬프트 템플릿을 관리합니다.</p>
-      </div>
 
       <div className="flex justify-between items-center gap-3">
         {/* Quick Actions */}

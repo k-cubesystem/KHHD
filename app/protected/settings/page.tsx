@@ -18,32 +18,39 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-  return (
-    <div className="min-h-screen bg-background text-ink-light font-sans relative pb-20 overflow-x-hidden">
-      <div className="hanji-overlay" />
+  // Fetch Saju data from family_members
+  const { data: familyMember } = await supabase
+    .from('family_members')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('relationship', '본인')
+    .maybeSingle()
 
-      <header className="px-3 py-5 flex items-center gap-4 bg-background/90 backdrop-blur-md sticky top-0 z-50 border-b border-primary/20">
-        <Link href="/protected/profile" className="p-1 -ml-1 hover:bg-surface/10 transition-colors">
+  return (
+    <>
+      <div className="px-1 py-4 flex items-center gap-4 border-b border-primary/10 mb-6">
+        <Link
+          href="/protected/profile"
+          className="p-1 -ml-1 hover:bg-surface/10 transition-colors rounded-full"
+        >
           <ArrowLeft className="w-5 h-5 text-ink-light/80" strokeWidth={1} />
         </Link>
         <h1 className="text-lg font-serif font-light text-ink-light">내 정보 수정</h1>
-      </header>
+      </div>
 
-      <main className="px-3 py-8 relative z-10 max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto">
         <BrandQuote variant="section" className="text-center mb-6">
           {BRAND_QUOTES.settings.hero}
         </BrandQuote>
 
-        <div className="bg-surface/30 border border-primary/20 p-6 rounded-sm">
-          <p className="text-sm text-ink/60 mb-6 font-light">
-            정확한 사주 분석을 위해 올바른 정보를 입력해주세요.
-            <br />
-            수정된 정보는 즉시 반영됩니다.
-          </p>
+        <p className="text-sm text-center text-ink-light/90 mb-8 font-light">
+          정확한 사주 분석을 위해 올바른 정보를 입력해주세요.
+          <br />
+          수정된 정보는 즉시 반영됩니다.
+        </p>
 
-          <SettingsForm user={user} profile={profile} />
-        </div>
-      </main>
-    </div>
+        <SettingsForm user={user} profile={profile} familyMember={familyMember} />
+      </div>
+    </>
   )
 }

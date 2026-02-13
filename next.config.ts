@@ -32,7 +32,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https: blob: http://t1.daumcdn.net https://t1.daumcdn.net http://map.daumcdn.net https://map.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
               "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://api.openai.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com",
-              "frame-src 'self' https://js.tosspayments.com",
+              "frame-src 'self' https://js.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net",
               "media-src 'self' blob: data:",
             ].join('; '),
           },

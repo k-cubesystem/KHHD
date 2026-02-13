@@ -744,7 +744,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[200px]" />
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-12 space-y-10">
+      <div className="w-full max-w-full mx-auto px-1 md:px-2 py-4 space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20">

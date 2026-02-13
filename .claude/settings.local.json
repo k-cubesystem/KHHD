@@ -57,7 +57,11 @@
       "Bash(cd:*)",
       "Bash(findstr:*)",
       "Bash(python3:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npx next build:*)",
+      "Bash(git -C \"D:/anti/haehwadang\" add app/actions/subscription-actions.ts supabase/migrations/20260214_ensure_membership_plans.sql)",
+      "Bash(git -C \"D:/anti/haehwadang\" commit -m \"fix: 멤버십 플랜 조회 실패 수정 - admin client fallback 및 플랜 데이터 보장 마이그레이션\n\n- getMembershipPlans\\(\\): admin client 실패 시 일반 client로 fallback\n- 20260214_ensure_membership_plans.sql 추가\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "Bash(git -C \"D:/anti/haehwadang\" push origin main)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

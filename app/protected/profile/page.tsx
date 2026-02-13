@@ -23,6 +23,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { getWalletBalance } from '@/app/actions/wallet-actions'
 import { getCurrentUserRole } from '@/app/actions/products'
+import { getUserLimitsSummary } from '@/app/actions/membership-limits'
 import { Button } from '@/components/ui/button'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
@@ -196,82 +197,100 @@ export default async function MyPage() {
     profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest'
   const isAdmin = userRoleData?.role === 'admin'
 
-  // Calculate Tier (Simple logic for display)
-  const tier = isAdmin ? 'Administrator' : profile?.is_subscribed ? 'Gold Member' : 'Silver Member'
+  // Calculate Tier Limits
+  const userLimits = await getUserLimitsSummary()
+  const tier = isAdmin ? 'Administrator' : userLimits.tier || '무료 회원'
+  const isSubscribed = userLimits.is_subscribed
 
   // Avatar: 소셜 이미지 또는 도깨비 아바타
   const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null
   const isDokkaebiAvatar = avatarUrl?.startsWith('/avatars/dokkaebi-')
 
-  // 부적 수량
-  const talismanBalance = walletBalance?.balance || 0
+  // 부적 수량 (Admin sees 999 but lets show real if possible or stick to limit logic)
+  const talismanBalance = typeof walletBalance === 'number' ? walletBalance : 0
 
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
       <div className="hanji-overlay" />
 
-      {/* Profile Section */}
-      <section className="flex flex-col items-center pt-10 pb-6 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
-        {/* ... (Avatar and Name code remains same, omitted here for brevity but assuming replace_file_content handles contextual match) ... */}
-        <Link href="/protected/settings" className="relative mb-4 group cursor-pointer">
-          <div className="w-28 h-28 rounded-full border-2 border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-lg group-hover:border-primary/50 transition-all group-hover:scale-105">
-            {avatarUrl ? (
-              isDokkaebiAvatar ? (
-                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover p-3" />
+      {/* Profile Section (Compact & Horizontal) */}
+      <section className="px-3 pt-6 pb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
+        <div className="flex items-center gap-4 bg-surface/30 border border-primary/20 rounded-xl p-4">
+          <Link href="/protected/settings" className="relative group cursor-pointer flex-shrink-0">
+            <div className="w-16 h-16 rounded-full border border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-md group-hover:border-primary/50 transition-all group-hover:scale-105">
+              {avatarUrl ? (
+                isDokkaebiAvatar ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-full h-full object-cover p-2"
+                  />
+                ) : (
+                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                )
               ) : (
-                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
-              )
-            ) : (
-              <span className="font-serif text-4xl text-primary">{displayName[0]}</span>
-            )}
-          </div>
-          {/* Tier Badge */}
-          <div className="absolute -bottom-1 -right-1 bg-primary text-background p-2 rounded-full shadow-lg border-2 border-background group-hover:scale-110 transition-transform">
-            {isAdmin ? (
-              <Crown className="w-4 h-4 fill-current" strokeWidth={1} />
-            ) : (
-              <Star className="w-4 h-4 fill-current" strokeWidth={1} />
-            )}
-          </div>
-        </Link>
+                <span className="font-serif text-2xl text-primary">{displayName[0]}</span>
+              )}
+            </div>
+            {/* Tier Badge */}
+            <div className="absolute -bottom-1 -right-1 bg-primary text-background p-1 rounded-full shadow-md border border-background group-hover:scale-110 transition-transform">
+              {isAdmin ? (
+                <Crown className="w-3 h-3 fill-current" strokeWidth={1} />
+              ) : (
+                <Star className="w-3 h-3 fill-current" strokeWidth={1} />
+              )}
+            </div>
+          </Link>
 
-        {/* Name */}
-        <h2 className="text-2xl font-serif font-light text-ink-light mb-2 tracking-wide">
-          {displayName}
-        </h2>
-        <BrandQuote variant="card" className="mb-4">
-          {BRAND_QUOTES.profile.hero}
-        </BrandQuote>
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-serif font-medium text-ink-light tracking-wide truncate">
+                {displayName}
+              </h2>
+            </div>
+            <p className="text-xs text-ink-light/50 font-light truncate mb-1.5 font-sans">
+              {user.email}
+            </p>
+            <BrandQuote variant="inline" className="text-[10px] text-ink-light/60 line-clamp-1">
+              {BRAND_QUOTES.profile.hero}
+            </BrandQuote>
+          </div>
+
+          <Link href="/protected/settings">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-ink-light/30 hover:text-primary hover:bg-primary/10"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
       </section>
 
-      {/* Daily Check-In (Moved from Dashboard) */}
-      <section className="px-3 mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75 relative z-10">
-        <DailyCheckIn
-          initialChecked={attendanceStatus?.checked || false}
-          initialConsecutiveDays={attendanceStatus?.consecutiveDays || 0}
-        />
-      </section>
-
-      {/* Stats Section - 부적 & 멤버십 */}
-      <section className="px-3 mb-6 animate-in fade-in slide-in-from-bottom-7 duration-700 delay-100 relative z-10">
-        <div className="bg-surface/30 border border-primary/20 rounded-xl p-6 grid grid-cols-2 gap-6">
+      {/* Stats Section - 부적 & 멤버십 (Moved Up) */}
+      <section className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75 relative z-10">
+        <div className="grid grid-cols-2 gap-2">
           {/* 부적 수량 (Click to Charge) */}
           <Link
             href="/protected/membership"
-            className="flex flex-col items-center gap-2 group cursor-pointer"
+            className="group relative overflow-hidden rounded-lg border border-primary/20 bg-surface/40 p-3 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
           >
-            <Coins
-              className="w-6 h-6 text-primary mb-1 group-hover:scale-110 transition-transform"
-              strokeWidth={1}
-            />
-            <span className="text-2xl font-serif text-ink-light font-light group-hover:text-primary transition-colors">
-              {talismanBalance}
-            </span>
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] text-ink-light/50 tracking-widest uppercase font-light group-hover:text-primary transition-colors">
-                부적
-              </span>
-              <span className="text-[9px] text-primary/70 font-light mt-0.5 group-hover:text-primary decoration-primary/50 underline underline-offset-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="relative flex flex-col items-center justify-center gap-0.5">
+              <div className="flex items-center gap-1.5 text-primary/80 mb-0.5">
+                <Coins className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">
+                  보유 부적
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-serif text-lg font-medium text-ink-light transition-colors group-hover:text-primary leading-none">
+                  {talismanBalance}
+                </span>
+                <span className="text-[9px] text-ink-light/40 font-light leading-none">장</span>
+              </div>
+              <span className="text-[9px] text-primary/50 underline decoration-primary/30 underline-offset-2 transition-colors group-hover:text-primary group-hover:decoration-primary/60 mt-0.5">
                 충전하기
               </span>
             </div>
@@ -280,20 +299,35 @@ export default async function MyPage() {
           {/* 멤버십 등급 */}
           <Link
             href="/protected/membership"
-            className="flex flex-col items-center gap-2 group cursor-pointer"
+            className="group relative overflow-hidden rounded-lg border border-primary/20 bg-surface/40 p-3 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
           >
-            <Crown
-              className="w-6 h-6 text-primary mb-1 group-hover:scale-110 transition-transform"
-              strokeWidth={1}
-            />
-            <span className="text-sm font-serif text-ink-light font-light text-center leading-tight group-hover:text-primary transition-colors">
-              {tier}
-            </span>
-            <span className="text-[10px] text-primary/70 tracking-widest uppercase font-light group-hover:text-primary transition-colors">
-              {profile?.is_subscribed ? 'ACTIVE' : 'UPGRADE'}
-            </span>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="relative flex flex-col items-center justify-center gap-0.5">
+              <div className="flex items-center gap-1.5 text-primary/80 mb-0.5">
+                <Crown className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">
+                  멤버십
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-serif text-sm font-medium text-ink-light transition-colors group-hover:text-primary leading-none mt-0.5">
+                  {tier}
+                </span>
+              </div>
+              <span className="text-[9px] text-primary/50 transition-colors group-hover:text-primary mt-0.5">
+                {isSubscribed ? '이용중' : '업그레이드'}
+              </span>
+            </div>
           </Link>
         </div>
+      </section>
+
+      {/* Daily Check-In (Moved Down) */}
+      <section className="px-3 mb-6 animate-in fade-in slide-in-from-bottom-7 duration-700 delay-100 relative z-10">
+        <DailyCheckIn
+          initialChecked={attendanceStatus?.checked || false}
+          initialConsecutiveDays={attendanceStatus?.consecutiveDays || 0}
+        />
       </section>
 
       {/* Dashboard Navigation Grid */}
