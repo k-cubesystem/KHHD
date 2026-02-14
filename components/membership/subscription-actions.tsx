@@ -146,7 +146,7 @@ export function SubscriptionActions({ subscriptionId, status, periodEnd }: Subsc
                                     해지 시 잃게 되는 혜택:
                                 </p>
                                 <ul className="list-disc list-inside text-sm space-y-1">
-                                    <li>매월 부적 10장 자동 지급</li>
+                                    <li>매월 복채 10만냥 자동 지급</li>
                                     <li>오늘의 운세 무제한 열람</li>
                                     <li>매일 카카오톡 알림</li>
                                     <li>분석 결과 PDF 보관</li>

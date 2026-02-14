@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { getMonthlyFamilyFortune, getFamilyFortuneBreakdown } from '@/app/actions/fortune-actions'
 
 import { checkRouletteAvailability } from '@/app/actions/roulette-actions'
+import { checkAttendanceAvailability, getWeeklyAttendance } from '@/app/actions/attendance-actions'
 import { AnalysisHubClient } from './analysis-hub-client'
 import { FamilyFortuneStatus } from '@/components/fortune/family-fortune-status'
 import { EventBanners } from '@/components/events/event-banners'
@@ -44,10 +45,12 @@ export default async function AnalysisHubPage() {
   if (!user) redirect('/auth/sign-in')
 
   // 빠른 쿼리만 인라인 병렬 처리
-  const [profile, monthlyFortune, rouletteStatus] = await Promise.all([
+  const [profile, monthlyFortune, rouletteStatus, attendanceStatus, weeklyAttendance] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     getMonthlyFamilyFortune(),
     checkRouletteAvailability(),
+    checkAttendanceAvailability().catch(() => ({ canCheckIn: false, alreadyChecked: false })),
+    getWeeklyAttendance().catch(() => ({ success: false as const, weekDays: [], weekCount: 0, totalBokchae: 0 })),
   ])
 
   const userName = profile.data?.full_name || undefined
@@ -57,6 +60,8 @@ export default async function AnalysisHubPage() {
       userName={userName}
       monthlyFortune={monthlyFortune}
       rouletteStatus={rouletteStatus}
+      attendanceStatus={attendanceStatus}
+      weeklyAttendance={weeklyAttendance}
     >
       <Suspense fallback={<SectionSkeleton height="h-32" />}>
         <FamilySection />

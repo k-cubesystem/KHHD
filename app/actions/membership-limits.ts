@@ -104,7 +104,7 @@ export async function canUseTalisman(): Promise<{ allowed: boolean; used: number
     const limits = await getUserTierLimits();
 
     if (!limits?.is_subscribed) {
-        return { allowed: false, used: 0, limit: 0, message: "멤버십에 가입하여 일일 부적 혜택을 받으세요." };
+        return { allowed: false, used: 0, limit: 0, message: "멤버십에 가입하여 일일 복채 혜택을 받으세요." };
     }
 
     const dailyLimit = limits.daily_talisman_limit;
@@ -124,7 +124,7 @@ export async function canUseTalisman(): Promise<{ allowed: boolean; used: number
             allowed: false,
             used: usedToday,
             limit: dailyLimit,
-            message: `오늘의 일일 부적 한도에 도달했습니다. (${usedToday}/${dailyLimit}) 자정에 리셋됩니다.`
+            message: `오늘의 일일 복채 한도에 도달했습니다. (${usedToday}/${dailyLimit}만냥) 자정에 리셋됩니다.`
         };
     }
 

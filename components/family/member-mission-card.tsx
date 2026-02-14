@@ -2,9 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { User } from "lucide-react";
-import { MISSION_CATEGORIES } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { User, Users } from "lucide-react";
 import type { FamilyMemberWithMissions } from "@/app/actions/family-missions";
 
 interface Props {
@@ -24,75 +22,46 @@ export function MemberMissionCard({ member, onClick, index }: Props) {
     >
       <Card
         onClick={onClick}
-        className="card-glass-manse cursor-pointer hover:border-primary/40 transition-all p-6 active:scale-[0.98]"
+        className="card-glass-manse cursor-pointer hover:border-primary/40 transition-all p-4 active:scale-[0.98] group"
       >
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-5">
-          <div className="w-14 h-14 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-            <User className="w-7 h-7 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-serif font-bold text-white text-xl truncate">
-              {member.name}
-            </h4>
-            <p className="text-sm text-white/60 mt-0.5">{member.relationship}</p>
-          </div>
-          {member.last_analysis_score && (
-            <div className="text-2xl font-serif font-bold text-[#D4AF37]">
-              {member.last_analysis_score}
+        <div className="flex items-center justify-between">
+          {/* Left: Avatar & Info */}
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+              <User className="w-5 h-5 text-primary" />
             </div>
-          )}
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-5">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-white/70 font-medium">이번 달 운세</span>
-            <span className="text-sm font-bold text-[#D4AF37]">
-              {progress}% ↑
-            </span>
-          </div>
-          <div className="relative h-2.5 bg-surface/30 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              className="h-full bg-gradient-to-r from-[#D4AF37]/60 to-[#D4AF37]"
-              transition={{ duration: 0.8, delay: 0.2 }}
-            />
-          </div>
-        </div>
-
-        {/* Badge Grid */}
-        <div className="grid grid-cols-4 gap-2.5">
-          {MISSION_CATEGORIES.map((cat, idx) => {
-            const isCompleted = member.completed_categories?.includes(cat.value);
-            const Icon = cat.icon;
-            return (
-              <motion.div
-                key={cat.value}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.3 + idx * 0.05 }}
-                className={cn(
-                  "aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border p-2",
-                  isCompleted
-                    ? "bg-[#D4AF37]/10 border-[#D4AF37]/30"
-                    : "bg-surface/20 border-white/5 opacity-30"
-                )}
-              >
-                <Icon className={cn(
-                  "w-5 h-5",
-                  isCompleted ? "text-[#D4AF37]" : "text-white/20"
-                )} />
-                <span className={cn(
-                  "text-[9px] font-bold",
-                  isCompleted ? "text-[#D4AF37]/80" : "text-white/20"
-                )}>
-                  {cat.label}
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-serif font-bold text-white text-lg leading-none">
+                  {member.name}
+                </h4>
+                <span className="text-xs text-white/50 bg-white/5 px-1.5 py-0.5 rounded">
+                  {member.relationship}
                 </span>
-              </motion.div>
-            );
-          })}
+              </div>
+
+              {/* Mini Progress Bar Inline */}
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className="w-20 h-1 bg-surface/40 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    className="h-full bg-primary"
+                    transition={{ duration: 0.8 }}
+                  />
+                </div>
+                <span className="text-[10px] text-primary/80 font-medium">{Math.round(progress)}% ↑</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: CTA */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[10px] text-white/40">미션 현황</span>
+            <div className="flex items-center text-xs text-primary font-medium group-hover:translate-x-1 transition-transform">
+              관리하기 <Users className="w-3 h-3 ml-1" />
+            </div>
+          </div>
         </div>
       </Card>
     </motion.div>

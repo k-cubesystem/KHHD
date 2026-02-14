@@ -301,7 +301,7 @@ export function PlanManagementClient() {
                         {getPlanVal(plan, 'interval') === 'YEAR' ? '년' : '월'}
                       </span>
                       <span className="text-[10px] text-stone-500">
-                        부적 {getPlanVal(plan, 'talismans_per_period') as number}장/월
+                        복채 일일 {getPlanVal(plan, 'daily_talisman_limit') as number}만냥
                       </span>
                       <span
                         className={cn(
@@ -438,7 +438,7 @@ export function PlanManagementClient() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="space-y-1">
                           <Label className="text-[10px] text-stone-400 flex items-center gap-1">
-                            <Ticket className="w-2.5 h-2.5 text-gold-500" />월 부적 지급
+                            <Ticket className="w-2.5 h-2.5 text-gold-500" />일일 복채 지급
                           </Label>
                           <Input
                             type="number"
@@ -568,7 +568,7 @@ export function PlanManagementClient() {
       <section className="space-y-3">
         <div className="flex items-center gap-2 pb-2 border-b border-stone-700/30">
           <Ticket className="w-4 h-4 text-gold-500" />
-          <h2 className="text-sm font-bold text-stone-100 font-serif">부적 상품 (단건 구매)</h2>
+          <h2 className="text-sm font-bold text-stone-100 font-serif">복채 상품 (단건 구매)</h2>
           <span className="text-[10px] text-stone-500 ml-auto">{products.length}개 상품</span>
         </div>
 
@@ -614,7 +614,7 @@ export function PlanManagementClient() {
                         {(getProdVal(prod, 'price') as number)?.toLocaleString()}원
                       </span>
                       <span className="text-[10px] text-stone-500">
-                        부적 {getProdVal(prod, 'credits') as number}장
+                        복채 {getProdVal(prod, 'credits') as number}만냥
                       </span>
                       <span
                         className={cn(
@@ -711,7 +711,7 @@ export function PlanManagementClient() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">부적 수량</Label>
+                          <Label className="text-[10px] text-stone-400">복채 수량 (만냥)</Label>
                           <Input
                             type="number"
                             value={getProdVal(prod, 'credits') as number}

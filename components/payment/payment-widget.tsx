@@ -98,25 +98,25 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         {
           credits: 3,
           price: 9900,
-          label: '액막이 부적',
-          description: '가장 기본적인 소원 성취 패키지',
-          features: ['부적 3장', '정밀 분석 리포트', '영구 소장'],
+          label: '소복 씨앗',
+          description: '가볍게 시작하는 입문 복채 패키지',
+          features: ['복채 3만냥', '정밀 분석 리포트', '영구 소장'],
         },
         {
           credits: 10,
-          price: 29900,
-          label: '소원 성취',
+          price: 99000,
+          label: '행운 꾸러미',
           description: '많은 분들이 선택하는 실속 패키지',
           badge: '가장 인기',
-          features: ['부적 10장', '정밀 분석 리포트', '영구 소장', '커플/궁합 분석'],
+          features: ['복채 10만냥', '정밀 분석 리포트', '영구 소장', '커플/궁합 분석'],
         },
         {
           credits: 30,
-          price: 79000,
-          label: '만사 형통',
+          price: 290000,
+          label: '대복 창고',
           description: '전문가 및 다인 분석 패키지',
           badge: '최저가',
-          features: ['부적 30장', 'VIP 우선 분석', 'PDF 리포트 제공', '무제한 가족 등록'],
+          features: ['복채 30만냥', 'VIP 우선 분석', 'PDF 리포트 제공', '무제한 가족 등록'],
         },
       ])
     }
@@ -175,7 +175,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
     try {
       const result = await addTestCredits(100)
       if (result.success) {
-        toast.success(`테스트 부적 100장 충전 완료!`)
+        toast.success(`테스트 복채 100만냥 충전 완료!`)
         window.location.reload()
       } else {
         toast.error(result.error || '충전 실패')
@@ -204,7 +204,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         </h2>
         <div className="text-zen-muted text-sm max-w-xl mx-auto leading-relaxed">
           <p>매달 전해지는 천기를 무제한으로 누리는 멤버십과</p>
-          <p>필요할 때마다 정성을 담아 사용하는 부적 패키지 중 선택해 주세요.</p>
+          <p>필요할 때마다 정성을 담아 사용하는 복채 패키지 중 선택해 주세요.</p>
           <p className="mt-2 text-zen-wood font-bold">
             * 무료 회원은 &apos;오늘의 운세&apos;만 이용 가능합니다.
           </p>
@@ -256,13 +256,13 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                     <div className="flex items-center gap-3">
                       <Gift className="w-4 h-4 text-zen-wood shrink-0" />
                       <span className="text-sm text-zen-text">
-                        매월 <strong>부적 {plan.talismans_per_period}장</strong> 지급
+                        매월 <strong>복채 {plan.talismans_per_period}만냥</strong> 지급
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <Clock className="w-4 h-4 text-zen-wood shrink-0" />
                       <span className="text-sm text-zen-text">
-                        하루 <strong>{plan.daily_talisman_limit}장</strong> 사용 가능
+                        하루 <strong>{plan.daily_talisman_limit}만냥</strong> 사용 가능
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
@@ -300,7 +300,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <Ticket className="w-6 h-6 text-zen-wood" />
-            <h3 className="text-2xl font-serif font-bold text-zen-text">부적 충전소 (One-time)</h3>
+            <h3 className="text-2xl font-serif font-bold text-zen-text">복채 충전소 (One-time)</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -59,68 +59,64 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="border-none bg-transparent shadow-none text-white overflow-hidden group relative">
-        <CardContent className="grid gap-6 p-0">
-          <form onSubmit={handleLogin}>
-            <div className="flex flex-col gap-5">
-              <div className="grid gap-2">
-                <Label htmlFor="email" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">이메일</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="name@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
-                />
+      <form onSubmit={handleLogin}>
+        <div className="flex flex-col gap-5 outline-none focus-visible:outline-none">
+          <div className="grid gap-2">
+            <Label htmlFor="email" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider">이메일</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-transparent border-0 border-b border-white/20 focus:border-gold-500 focus:ring-0 focus:outline-none transition-all h-12 text-white placeholder:text-white/30 rounded-none px-0 shadow-none hover:shadow-none"
+            />
+          </div>
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider">비밀번호</Label>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-transparent border-0 border-b border-white/20 focus:border-gold-500 focus:ring-0 focus:outline-none transition-all h-12 text-white rounded-none px-0 shadow-none hover:shadow-none"
+            />
+          </div>
+          {error && (
+            <div className="p-3 rounded-none bg-red-500/10 border border-red-500/20 text-xs text-red-400 animate-in fade-in slide-in-from-top-1 text-center">
+              {error}
+            </div>
+          )}
+          <Button
+            type="submit"
+            className="w-full h-12 font-bold bg-gold-500 text-ink-950 hover:bg-gold-400 active:scale-[0.98] transition-all rounded-none shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] mt-2 font-serif tracking-wide"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>운명의 문을 여는 중...</span>
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">비밀번호</Label>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-none"
-                />
-              </div>
-              {error && (
-                <div className="p-3 rounded-none bg-red-500/10 border border-red-500/20 text-xs text-red-400 animate-in fade-in slide-in-from-top-1 text-center">
-                  {error}
-                </div>
-              )}
-              <Button
-                type="submit"
-                className="w-full h-12 font-bold bg-gold-500 text-ink-950 hover:bg-gold-400 active:scale-[0.98] transition-all rounded-none shadow-[0_0_15px_rgba(234,179,8,0.2)] hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] mt-2 font-serif tracking-wide"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>운명의 문을 여는 중...</span>
-                  </div>
-                ) : "로그인"}
-              </Button>
+            ) : "로그인"}
+          </Button>
 
-              <SocialLoginButtons />
-            </div>
-            <div className="mt-8 text-center text-sm text-white/30 font-sans">
-              계정이 없으신가요?{" "}
-              <Link
-                href="/auth/sign-up"
-                className="text-gold-400 hover:text-gold-300 underline underline-offset-4 font-bold transition-colors"
-              >
-                회원가입
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          <SocialLoginButtons />
+        </div>
+        <div className="mt-8 text-center text-sm text-white/30 font-sans">
+          계정이 없으신가요?{" "}
+          <Link
+            href="/auth/sign-up"
+            className="text-gold-400 hover:text-gold-300 underline underline-offset-4 font-bold transition-colors"
+          >
+            회원가입
+          </Link>
+        </div>
+      </form>
     </div>
   );
 }

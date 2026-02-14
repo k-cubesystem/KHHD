@@ -206,7 +206,7 @@ export default async function MyPage() {
   const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url || null
   const isDokkaebiAvatar = avatarUrl?.startsWith('/avatars/dokkaebi-')
 
-  // 부적 수량 (Admin sees 999 but lets show real if possible or stick to limit logic)
+  // 복채 잔액 (1 복채 = 1만냥)
   const talismanBalance = typeof walletBalance === 'number' ? walletBalance : 0
 
   return (
@@ -268,10 +268,10 @@ export default async function MyPage() {
         </div>
       </section>
 
-      {/* Stats Section - 부적 & 멤버십 (Moved Up) */}
+      {/* Stats Section - 복채 & 멤버십 */}
       <section className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75 relative z-10">
         <div className="grid grid-cols-2 gap-2">
-          {/* 부적 수량 (Click to Charge) */}
+          {/* 복채 잔액 (Click to Charge) */}
           <Link
             href="/protected/membership"
             className="group relative overflow-hidden rounded-lg border border-primary/20 bg-surface/40 p-3 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
@@ -281,17 +281,17 @@ export default async function MyPage() {
               <div className="flex items-center gap-1.5 text-primary/80 mb-0.5">
                 <Coins className="h-3.5 w-3.5" strokeWidth={1.5} />
                 <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">
-                  보유 부적
+                  보유 복채
                 </span>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="font-serif text-lg font-medium text-ink-light transition-colors group-hover:text-primary leading-none">
                   {talismanBalance}
                 </span>
-                <span className="text-[9px] text-ink-light/40 font-light leading-none">장</span>
+                <span className="text-[9px] text-ink-light/40 font-light leading-none">만냥</span>
               </div>
               <span className="text-[9px] text-primary/50 underline decoration-primary/30 underline-offset-2 transition-colors group-hover:text-primary group-hover:decoration-primary/60 mt-0.5">
-                충전하기
+                복채 충전
               </span>
             </div>
           </Link>

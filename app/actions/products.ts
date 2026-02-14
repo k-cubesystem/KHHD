@@ -91,7 +91,7 @@ export async function getCurrentUserRole(): Promise<{ role: UserRole, userId: st
  * [테스터/관리자 전용] 무료로 크레딧을 추가합니다.
  * 결제 모듈을 거치지 않습니다.
  */
-export async function addTestCredits(amount: number = 100) {
+export async function addTestCredits(amount: number = 10) {
   const { role, userId } = await getCurrentUserRole();
 
   if (!userId) {
@@ -104,35 +104,49 @@ export async function addTestCredits(amount: number = 100) {
 
   const supabase = await createClient();
 
-  // 1. Payments 테이블에 'TEST' 타입으로 기록 (매출 집계 제외용)
+  // 1. payments 테이블에 test 기록
   const { error: logError } = await supabase.from("payments").insert({
     user_id: userId,
     payment_key: `TEST_${Date.now()}`,
-    order_id: `TEST_CHARGE_${Date.now()}`,
+    order_id: `TEST_BOKCHAE_${Date.now()}`,
     amount: 0,
     credits_purchased: amount,
     credits_remaining: amount,
-    status: "test_charge", // 'completed'가 아닌 별도 상태값
+    status: "test_charge",
+    bokchae_type: "test",
   });
 
   if (logError) {
     console.error("[TestCharge] Log failed:", logError);
-    return { success: false, error: "기록 저장 실패" };
+    // 로그 실패해도 지갑 충전 계속 진행
   }
 
-  // 2. Profile의 credits 업데이트 (Trigger가 없다면 수동 업데이트 필요할 수 있음)
-  // 현재 시스템에서는 payments 조회 기반으로 잔액 계산하나요? 
-  // -> CreditBalance 컴포넌트 로직 확인 필요. 
-  // -> getAvailableCredits 액션(payment-actions.ts)이 'credits_remaining' 합계라면 위 insert만으로 충분함.
+  // 2. wallets 테이블에 직접 복채 충전
+  const { data: wallet } = await supabase
+    .from("wallets")
+    .select("balance")
+    .eq("user_id", userId)
+    .single();
 
-  // 만약 profiles 테이블에 credits 컬럼을 직접 관리한다면 아래 로직 추가:
-  /*
-  const { error: updateError } = await supabase.rpc('increment_credits', { 
-      user_id: userId, 
-      amount: amount 
+  const currentBalance = wallet?.balance || 0;
+
+  const { error: walletError } = await supabase
+    .from("wallets")
+    .upsert({ user_id: userId, balance: currentBalance + amount });
+
+  if (walletError) {
+    console.error("[TestCharge] Wallet update failed:", walletError);
+    return { success: false, error: "복채 충전 실패" };
+  }
+
+  // 3. 트랜잭션 로그
+  await supabase.from("wallet_transactions").insert({
+    user_id: userId,
+    amount: amount,
+    type: "BONUS",
+    description: `[테스트] 복채 ${amount}만냥 충전`,
   });
-  */
 
   revalidatePath("/protected");
-  return { success: true, newBalance: amount }; // 실제 잔액은 아닐 수 있음, 메시지용
+  return { success: true, newBalance: currentBalance + amount };
 }

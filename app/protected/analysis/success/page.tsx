@@ -37,7 +37,7 @@ function PaymentProcessor() {
             try {
                 // 1. 결제 승인 (금액은 서버에서 검증)
                 await confirmPayment(paymentKey, orderId, credits);
-                toast.success(`결제가 승인되었습니다. (${credits}장 부적 충전)`);
+                toast.success(`결제 완료! 복채 ${credits}만냥이 지급되었습니다.`);
 
                 // 3. 분석 시작
                 const formData = new FormData();

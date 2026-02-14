@@ -15,10 +15,23 @@ interface MonthlyFortune {
   completedCategories: string[]
 }
 
+interface AttendanceStatus {
+  canCheckIn: boolean
+  alreadyChecked?: boolean
+}
+
+interface WeeklyAttendance {
+  weekDays: Array<{ date: string; dayLabel: string; checked: boolean; isToday: boolean; isFuture: boolean }>
+  weekCount: number
+  totalBokchae: number
+}
+
 interface AnalysisHubClientProps {
   userName?: string
   monthlyFortune: MonthlyFortune
   rouletteStatus: RouletteStatus | null
+  attendanceStatus?: AttendanceStatus
+  weeklyAttendance?: WeeklyAttendance
   children?: ReactNode
 }
 
@@ -26,6 +39,8 @@ export function AnalysisHubClient({
   userName,
   monthlyFortune,
   rouletteStatus,
+  attendanceStatus,
+  weeklyAttendance,
   children,
 }: AnalysisHubClientProps) {
   return (
@@ -43,6 +58,8 @@ export function AnalysisHubClient({
           userName={userName}
           monthlyFortune={monthlyFortune}
           rouletteStatus={rouletteStatus}
+          attendanceStatus={attendanceStatus}
+          weeklyAttendance={weeklyAttendance}
         >
           {children}
         </AnalysisDashboard>

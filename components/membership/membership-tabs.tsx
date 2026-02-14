@@ -51,12 +51,12 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
 
   // 등급별 특징 정리
   const tierFeatures: string[] = []
-  tierFeatures.push(`일일 부적 ${currentPlan.daily_talisman_limit}개`)
+  tierFeatures.push(`일일 복채 ${currentPlan.daily_talisman_limit}만냥 지급`)
   tierFeatures.push(`인연 ${currentPlan.relationship_limit}명 등록`)
   tierFeatures.push(
     `결과 ${currentPlan.storage_limit === 999 ? '무제한' : currentPlan.storage_limit + '개'} 저장`
   )
-  tierFeatures.push(`매월 부적 ${currentPlan.talismans_per_period}장 지급`)
+  tierFeatures.push(`출석 체크 시 추가 복채 지급`)
 
   if (features.daily_fortune) tierFeatures.push('오늘의 운세 무제한')
   if (features.ai_shaman) tierFeatures.push('AI 신당 채팅')

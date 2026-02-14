@@ -47,7 +47,7 @@ export function CreditBalance({ className, showLabel = true }: TalismanBalancePr
                 )}
                 {showLabel && (
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        부적
+                        만냥
                     </span>
                 )}
             </div>

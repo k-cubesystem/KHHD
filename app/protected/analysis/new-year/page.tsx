@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
   Loader2,
@@ -16,6 +16,10 @@ import {
   Briefcase,
   Activity,
   RotateCcw,
+  ChevronRight,
+  ScrollText,
+  Wind,
+  Sun
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,141 +28,334 @@ import { getDestinyTargets, type DestinyTarget } from '@/app/actions/destiny-tar
 import Link from 'next/link'
 import { analyzeYear2026Action, type Year2026Result } from '@/app/actions/year2026-analysis-action'
 
-function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
+// --- Internal Components ---
+
+function ScoreRing({ score, size = 100 }: { score: number; size?: number }) {
   const radius = (size - 8) / 2
   const circumference = 2 * Math.PI * radius
   const progress = (score / 100) * circumference
 
   return (
-    <div
-      className="relative inline-flex items-center justify-center"
-      style={{ width: size, height: size }}
-    >
-      <svg width={size} height={size} className="-rotate-90">
+    <div className="relative inline-flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-red-500/5 blur-2xl rounded-full animate-pulse" />
+      <svg width={size} height={size} className="-rotate-90 relative z-10">
+        {/* Background Circle */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(212,175,55,0.15)"
-          strokeWidth={4}
+          stroke="rgba(212,175,55,0.1)"
+          strokeWidth={2}
         />
-        <circle
+        {/* Progress Circle */}
+        <motion.circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
           stroke="#D4AF37"
-          strokeWidth={4}
+          strokeWidth={3}
           strokeDasharray={circumference}
-          strokeDashoffset={circumference - progress}
+          strokeDashoffset={circumference}
           strokeLinecap="round"
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference - progress }}
+          transition={{ duration: 1.5, ease: "easeOut", delay: 0.5 }}
+        />
+        {/* Inner Glow */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius - 6}
+          fill="none"
+          stroke="rgba(201, 42, 42, 0.2)" // Red inner ring
+          strokeWidth={1}
+          className="animate-pulse"
         />
       </svg>
-      <span
-        className="absolute font-serif font-bold text-primary"
-        style={{ fontSize: size * 0.22 }}
-      >
-        {score}
-      </span>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20">
+        <motion.span
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+          className="font-serif font-bold text-3xl text-primary drop-shadow-md"
+        >
+          {score}
+        </motion.span>
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2 }}
+          className="text-[10px] text-ink-light/50 font-sans tracking-widest uppercase mt-1"
+        >
+          종합점수
+        </motion.span>
+      </div>
     </div>
   )
 }
 
-function AreaCard({
+function ArtifactCard({
   icon: Icon,
-  label,
+  title,
   score,
   content,
-  color,
+  variant = 'default',
+  delay = 0
 }: {
   icon: React.ElementType
-  label: string
+  title: string
   score: number
   content: string
-  color: string
+  variant?: 'default' | 'gold' | 'red' | 'blue' | 'green'
+  delay?: number
 }) {
+  const colors = {
+    default: "text-ink-light",
+    gold: "text-yellow-400 border-yellow-500/20 bg-yellow-900/10",
+    red: "text-red-400 border-red-500/20 bg-red-900/10",
+    blue: "text-blue-400 border-blue-500/20 bg-blue-900/10",
+    green: "text-green-400 border-green-500/20 bg-green-900/10"
+  }
+
+  const colorClass = colors[variant]
+
   return (
-    <div className="bg-surface/20 border border-primary/10 rounded-lg p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Icon className={`w-4 h-4 ${color}`} strokeWidth={1.5} />
-          <span className="text-sm font-serif font-medium text-ink-light">{label}</span>
+    <motion.div
+      variants={{
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0, transition: { delay } }
+      }}
+      className={`relative overflow-hidden rounded-xl border p-5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${colorClass.split(" ")[1]} ${colorClass.split(" ")[2]}`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg bg-black/20 ${colorClass.split(" ")[1]} border`}>
+            <Icon className={`w-4 h-4 ${colorClass.split(" ")[0]}`} />
+          </div>
+          <h4 className="font-serif font-medium text-ink-light tracking-wide">{title}</h4>
         </div>
-        <span className={`text-sm font-bold ${color}`}>{score}점</span>
+        <div className="flex items-center gap-1">
+          <span className={`text-lg font-bold font-serif ${colorClass.split(" ")[0]}`}>{score}</span>
+          <span className="text-xs text-ink-light/30">점</span>
+        </div>
       </div>
-      <div className="w-full bg-primary/10 rounded-full h-1.5">
-        <div
-          className="h-1.5 rounded-full bg-gradient-to-r from-primary/60 to-primary transition-all"
-          style={{ width: `${score}%` }}
+
+      {/* Progress Bar */}
+      <div className="w-full h-1 bg-black/20 rounded-full mb-3 overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${score}%` }}
+          transition={{ duration: 1, delay: delay + 0.2 }}
+          className={`h-full rounded-full opacity-80 ${variant === 'gold' ? 'bg-yellow-400' : variant === 'red' ? 'bg-red-400' : variant === 'blue' ? 'bg-blue-400' : variant === 'green' ? 'bg-green-400' : 'bg-primary'}`}
         />
       </div>
-      <p className="text-xs text-ink-light/60 leading-relaxed">{content}</p>
+
+      <p className="text-sm text-ink-light/70 font-light leading-relaxed break-keep">
+        {content}
+      </p>
+    </motion.div>
+  )
+}
+
+function SeasonCard({
+  season,
+  months,
+  content,
+  icon: Icon,
+  index
+}: {
+  season: string
+  months: string
+  content: string
+  icon: React.ElementType
+  index: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.5 + (index * 0.1) }}
+      className="group relative border-l-2 border-primary/20 pl-6 py-2 hover:border-primary/60 transition-colors"
+    >
+      <div className="absolute -left-[9px] top-2 w-4 h-4 rounded-full bg-[#1a0505] border-2 border-primary/40 group-hover:border-primary group-hover:bg-primary/10 transition-colors flex items-center justify-center">
+        <div className="w-1.5 h-1.5 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-bold text-primary/80 uppercase tracking-widest font-sans">{season}</span>
+        <span className="text-[10px] text-ink-light/30 px-2 py-0.5 rounded-full border border-white/5 bg-white/5 font-sans">{months}</span>
+      </div>
+
+      <p className="text-sm text-ink-light/70 leading-relaxed font-light group-hover:text-ink-light/90 transition-colors">
+        {content}
+      </p>
+    </motion.div>
+  )
+}
+
+function LoadingOracle() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] relative z-10 w-full max-w-md mx-auto">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+        className="absolute w-64 h-64 border border-dashed border-red-500/20 rounded-full opacity-50"
+      />
+      <motion.div
+        animate={{ rotate: -180 }}
+        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        className="absolute w-48 h-48 border border-dotted border-primary/30 rounded-full opacity-50"
+      />
+
+      <div className="relative z-20 flex flex-col items-center gap-6 text-center">
+        <div className="w-20 h-20 bg-gradient-to-b from-red-900/40 to-black rounded-full flex items-center justify-center border border-red-500/30 shadow-[0_0_30px_rgba(220,38,38,0.2)]">
+          <Flame className="w-8 h-8 text-red-500 animate-pulse" />
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="font-serif text-xl text-ink-light font-medium tracking-wide">
+            천기의 흐름을 읽고 있습니다
+          </h3>
+          <p className="text-sm text-ink-light/50 font-light">
+            2026년 병오년의 기운을 분석 중...
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
+
+function TargetSelector({ targets, onSelect, selectedId }: { targets: DestinyTarget[], onSelect: (id: string) => void, selectedId: string | null }) {
+  if (targets.length === 0) return null
+
+  return (
+    <div className="w-full">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        {targets.map((target) => {
+          const isSelected = selectedId === target.id
+          return (
+            <motion.button
+              key={target.id}
+              onClick={() => onSelect(target.id)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`
+                 relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 w-full text-left
+                 ${isSelected
+                  ? 'bg-gradient-to-r from-red-900/80 to-red-950 border-red-500/50 shadow-[0_0_15px_rgba(220,38,38,0.3)]'
+                  : 'bg-surface/40 border-white/5 hover:border-white/20 hover:bg-surface/60'
+                }
+               `}
+            >
+              <div className={`
+                 w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold
+                 ${isSelected ? 'bg-red-500 text-white' : 'bg-white/10 text-ink-light/50'}
+               `}>
+                {target.name.slice(0, 1)}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className={`text-sm font-serif truncate ${isSelected ? 'text-white' : 'text-ink-light/80'}`}>
+                  {target.name}
+                </span>
+                <span className="text-[10px] text-ink-light/40 truncate">{target.relation_type}</span>
+              </div>
+              {isSelected && (
+                <motion.div layoutId="active-indicator" className="absolute inset-0 border-2 border-red-500/30 rounded-xl" />
+              )}
+            </motion.button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// --- Main Content ---
 
 function NewYear2026Content() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const targetId = searchParams.get('targetId')
+  const initialTargetId = searchParams.get('targetId')
 
-  const [loading, setLoading] = useState(true)
-  const [member, setMember] = useState<DestinyTarget | null>(null)
+  const [targets, setTargets] = useState<DestinyTarget[]>([])
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(initialTargetId)
   const [fortune, setFortune] = useState<Year2026Result | null>(null)
-  const [analyzing, setAnalyzing] = useState(false)
+  const [loading, setLoading] = useState(true) // Initial data load
+  const [analyzing, setAnalyzing] = useState(false) // Analysis process
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // Load targets
   useEffect(() => {
-    const init = async () => {
-      setLoading(true)
+    const loadTargets = async () => {
+      try {
+        const data = await getDestinyTargets()
+        setTargets(data)
 
-      if (!targetId) {
-        const targets = await getDestinyTargets()
-        const selfTarget = targets.find((t) => t.target_type === 'self')
-        if (selfTarget) {
-          router.replace(`/protected/analysis/new-year?targetId=${selfTarget.id}`)
-        } else {
-          router.push('/protected/analysis')
+        // If query param exists, verify it matches a target
+        if (initialTargetId) {
+          const exists = data.find(t => t.id === initialTargetId)
+          if (exists) setSelectedTargetId(initialTargetId)
+        } else if (data.length > 0) {
+          // Default select self
+          const self = data.find(t => t.target_type === 'self')
+          if (self) setSelectedTargetId(self.id)
+          else setSelectedTargetId(data[0].id)
         }
-        return
+      } catch (err) {
+        console.error("Failed to load targets", err)
+      } finally {
+        setLoading(false)
       }
-
-      const targets = await getDestinyTargets()
-      const selected = targets.find((t) => t.id === targetId)
-      if (selected) {
-        setMember(selected)
-      } else {
-        router.push('/protected/analysis')
-        return
-      }
-
-      setLoading(false)
     }
+    loadTargets()
+  }, [initialTargetId])
 
-    init()
-  }, [targetId, router])
+  // Function to run analysis
+  const handleGenerate = async () => {
+    if (!selectedTargetId) return
 
-  const handleGenerateFortune = async () => {
-    if (!member) return
     setAnalyzing(true)
     setErrorMsg(null)
-    const result = await analyzeYear2026Action(member.id)
-    if (result.success && result.data) {
-      setFortune(result.data)
-    } else {
-      setErrorMsg(result.error || '분석 중 오류가 발생했습니다.')
+    setFortune(null) // Reset previous result
+
+    try {
+      // Add minimum delay for dramatic effect (0.8s)
+      const startTime = Date.now()
+
+      const result = await analyzeYear2026Action(selectedTargetId)
+
+      const elapsed = Date.now() - startTime
+      if (elapsed < 800) {
+        await new Promise(r => setTimeout(r, 800 - elapsed))
+      }
+
+      if (result.success && result.data) {
+        setFortune(result.data)
+      } else {
+        setErrorMsg(result.error || '운명을 읽는 도중 방해를 받았습니다. 다시 시도해주세요.')
+      }
+    } catch (e) {
+      setErrorMsg('알 수 없는 오류가 발생했습니다.')
+    } finally {
+      setAnalyzing(false)
     }
-    setAnalyzing(false)
   }
 
+  // Handle target change
+  const handleTargetChange = (id: string) => {
+    setSelectedTargetId(id)
+    setFortune(null) // Reset fortune when target changes to encourage re-analysis
+    setErrorMsg(null)
+    // Optional: Update URL without refresh
+    router.replace(`/protected/analysis/new-year?targetId=${id}`, { scroll: false })
+  }
+
+  const selectedTarget = targets.find(t => t.id === selectedTargetId)
+
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] p-12">
-        <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-        <p className="text-ink-light/60 font-serif">사용자 정보를 불러오는 중...</p>
-      </div>
-    )
+    return <LoadingOracle />
   }
 
   return (
@@ -166,319 +363,253 @@ function NewYear2026Content() {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="flex flex-col gap-8 w-full max-w-4xl mx-auto py-12 px-3 pb-32"
+      className="max-w-4xl mx-auto py-6 md:py-12 px-4 pb-24 md:pb-32"
     >
-      {/* Back Button */}
-      <motion.div variants={fadeInUp}>
+      {/* Header and Back Link */}
+      <motion.div variants={fadeInUp} className="mb-6 md:mb-10">
         <Link
           href="/protected/analysis"
-          className="inline-flex items-center gap-2 text-primary/70 hover:text-primary transition-colors text-sm font-medium"
+          className="inline-flex items-center gap-2 text-ink-light/50 hover:text-primary transition-colors text-sm font-medium mb-6 group"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>분석 허브로 돌아가기</span>
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span>분석실로 돌아가기</span>
         </Link>
-      </motion.div>
 
-      {/* Header */}
-      <motion.section variants={fadeInUp} className="space-y-6 text-center">
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-seal/20 border border-seal/40 backdrop-blur-sm mb-2">
-            <Sparkles className="w-4 h-4 text-seal" strokeWidth={1.5} />
-            <span className="text-[10px] font-bold text-seal tracking-[0.2em] font-sans uppercase">
-              2026 丙午年 Special
-            </span>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 px-3 py-1 bg-red-950/40 border border-red-900/50 rounded-full"
+            >
+              <Flame className="w-3 h-3 text-red-500" />
+              <span className="text-[10px] font-bold text-red-300 tracking-wider">2026 RED HORSE YEAR</span>
+            </motion.div>
+            <h1 className="text-3xl md:text-5xl font-serif font-bold text-ink-light leading-tight md:leading-none">
+              병오년(丙午年)<br />
+              <span className="text-red-500/90 drop-shadow-[0_0_15px_rgba(220,38,38,0.4)]">붉은 말의 해</span>
+            </h1>
+            <p className="text-ink-light/60 font-light max-w-lg leading-relaxed">
+              활활 타오르는 불의 기운이 가득한 2026년.<br className="hidden md:block" />
+              당신의 운명은 이 거대한 흐름 속에서 어떻게 피어날까요?
+            </p>
           </div>
         </div>
-        <div className="space-y-4">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light italic leading-tight">
-            <span className="text-seal">병오년</span>,<br />
-            <span className="text-primary-dim">신년 종합운세</span>
-          </h1>
-          <p className="text-base md:text-lg text-ink-light/70 font-light leading-relaxed max-w-2xl mx-auto">
-            붉은 말이 달리는 2026년, 당신의 운명은 어떻게 펼쳐질까요?
-          </p>
-        </div>
-      </motion.section>
+      </motion.div>
 
-      {/* Profile Card */}
-      {member && (
-        <motion.div variants={fadeInUp}>
-          <Card className="bg-surface/40 border border-primary/20 p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <User className="w-8 h-8 text-primary" strokeWidth={1.5} />
-              </div>
-              <div className="flex-grow">
-                <h3 className="font-serif font-bold text-2xl text-ink-light mb-2">{member.name}</h3>
-                <div className="flex items-center gap-4 text-sm text-ink-light/60">
-                  <span className="flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {member.relation_type}
-                  </span>
-                  {member.birth_date && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {member.birth_date}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      )}
+      {/* Target Selection */}
+      <motion.div variants={fadeInUp} className="mb-8 md:mb-12 space-y-3">
+        <h3 className="text-sm font-serif text-ink-light/70 ml-1">누구의 운명을 보시겠습니까?</h3>
+        <TargetSelector
+          targets={targets}
+          selectedId={selectedTargetId}
+          onSelect={handleTargetChange}
+        />
+      </motion.div>
 
-      {/* Fortune Result or CTA */}
-      <motion.div variants={fadeInUp}>
-        {fortune ? (
-          <div className="space-y-6">
-            {/* 종합 점수 */}
-            <Card className="relative bg-surface/30 backdrop-blur-md p-8 shadow-2xl border border-primary/20 overflow-hidden">
-              <div className="absolute inset-0 opacity-5 mix-blend-overlay pointer-events-none">
-                <div
-                  className="w-full h-full"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E\")",
-                    backgroundRepeat: 'repeat',
-                  }}
-                />
-              </div>
-              <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                <div className="flex flex-col items-center gap-3">
-                  <ScoreRing score={fortune.score} size={120} />
-                  <span className="text-xs text-ink-light/40 font-sans tracking-widest uppercase">
-                    종합 운세
-                  </span>
+      {/* Main Action Area */}
+      <AnimatePresence mode="wait">
+        {analyzing ? (
+          <motion.div
+            key="analyzing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="py-20"
+          >
+            <LoadingOracle />
+          </motion.div>
+        ) : !fortune ? (
+          <motion.div
+            key="intro"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
+            <Card className="luxury-card-glow max-w-2xl mx-auto border-primary/20 bg-gradient-to-br from-[#1a1815] to-[#0A0A0A] overflow-hidden">
+              <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
+              <div className="p-6 md:p-12 text-center space-y-6 md:space-y-8 relative z-10">
+                <div className="w-24 h-24 mx-auto bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 shadow-[0_0_30px_rgba(220,38,38,0.1)]">
+                  <ScrollText className="w-10 h-10 text-red-400 opacity-80" strokeWidth={1} />
                 </div>
-                <div className="flex-1 text-center md:text-left space-y-3">
-                  <div className="flex items-center gap-2 justify-center md:justify-start">
-                    <Flame className="w-5 h-5 text-seal" />
-                    <h2 className="text-xl font-serif font-bold text-ink-light">
-                      {fortune.name}님의 2026년 병오년
-                    </h2>
+
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-serif text-ink-light">
+                    <span className="text-primary">{selectedTarget?.name}</span>님의 2026년 운명서
+                  </h2>
+                  <p className="text-sm text-ink-light/50 font-light leading-relaxed">
+                    병오년의 강렬한 화(火) 기운이 당신의 사주와 만나<br />
+                    어떤 조화를 이루는지, 그 길흉화복을 미리 짚어드립니다.
+                  </p>
+                </div>
+
+                {/* Analyze Button */}
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!selectedTargetId}
+                  className="w-full md:w-auto px-8 py-6 text-lg font-serif bg-gradient-to-r from-red-800 to-red-900 hover:from-red-700 hover:to-red-800 border border-red-500/30 text-red-50 shadow-[0_4px_20px_rgba(220,38,38,0.25)] transition-all hover:scale-[1.02]"
+                >
+                  <Sparkles className="w-5 h-5 mr-3 text-yellow-300 animate-pulse" />
+                  신년 운세 열어보기
+                </Button>
+
+                {errorMsg && (
+                  <p className="text-red-400 text-sm mt-4 bg-red-950/30 py-2 rounded-lg border border-red-900/50">{errorMsg}</p>
+                )}
+              </div>
+            </Card>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="result"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-6 md:space-y-10"
+          >
+            {/* 1. Summary Card */}
+            <Card className="card-glass-manse p-6 md:p-10 border-red-900/30 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none -mr-20 -mt-20" />
+
+              <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10 relative z-10">
+                <div className="flex-shrink-0">
+                  <ScoreRing score={fortune.score} size={140} />
+                </div>
+
+                <div className="text-center lg:text-left space-y-4 flex-1 w-full">
+                  <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 mb-2">
+                    <span className="text-xs font-serif text-primary tracking-wide">2026 병오년 총평</span>
                   </div>
-                  <p className="text-lg font-serif text-primary font-medium">{fortune.summary}</p>
-                  <p className="text-sm text-ink-light/70 leading-relaxed">
+                  <h2 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug break-keep">
+                    {fortune.summary}
+                  </h2>
+                  <p className="text-ink-light/70 font-light leading-relaxed break-keep">
                     {fortune.bingoh_meaning}
                   </p>
                 </div>
               </div>
             </Card>
 
-            {/* 분기별 흐름 */}
-            <div>
-              <h3 className="text-base font-serif font-bold text-ink-light mb-4 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                분기별 운세 흐름
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { label: '1분기 (1~3월)', content: fortune.quarterly.q1, badge: '봄' },
-                  { label: '2분기 (4~6월)', content: fortune.quarterly.q2, badge: '여름' },
-                  { label: '3분기 (7~9월)', content: fortune.quarterly.q3, badge: '가을' },
-                  { label: '4분기 (10~12월)', content: fortune.quarterly.q4, badge: '겨울' },
-                ].map((q) => (
-                  <Card
-                    key={q.label}
-                    className="bg-surface/20 border border-primary/10 p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-sans font-bold text-ink-light/50 tracking-wider uppercase">
-                        {q.label}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 border border-primary/20 text-primary/60 font-sans">
-                        {q.badge}
-                      </span>
+            {/* 2. Fate Seasons (Quarterly) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="card-glass-manse p-6 md:p-8 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+                    <Wind className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-serif text-xl text-ink-light">운명의 사계절</h3>
+                </div>
+                <div className="space-y-6 pl-2">
+                  <SeasonCard index={0} season="1분기" months="1~3월" content={fortune.quarterly.q1} icon={Wind} />
+                  <SeasonCard index={1} season="2분기" months="4~6월" content={fortune.quarterly.q2} icon={Sun} />
+                  <SeasonCard index={2} season="3분기" months="7~9월" content={fortune.quarterly.q3} icon={Wind} />
+                  <SeasonCard index={3} season="4분기" months="10~12월" content={fortune.quarterly.q4} icon={Flame} />
+                </div>
+              </Card>
+
+              <div className="space-y-6">
+                {/* Lucky Items */}
+                <Card className="card-glass-manse p-6 md:p-8 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
+                      <Sparkles className="w-5 h-5 text-yellow-400" />
                     </div>
-                    <p className="text-sm text-ink-light/70 leading-relaxed">{q.content}</p>
-                  </Card>
-                ))}
+                    <h3 className="font-serif text-xl text-ink-light">행운의 징표</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="text-center p-4 rounded-xl bg-surface/50 border border-white/5 space-y-2 flex flex-col items-center justify-center">
+                      <span className="text-xs text-ink-light/40 block">행운의 색</span>
+                      <div className="w-6 h-6 rounded-full mx-auto shadow-inner" style={{ backgroundColor: fortune.lucky.color === '레드' ? 'red' : 'gray' }} />
+                      <span className="text-sm font-medium text-ink-light break-keep">{fortune.lucky.color}</span>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-surface/50 border border-white/5 space-y-2 flex flex-col items-center justify-center">
+                      <span className="text-xs text-ink-light/40 block">행운의 방위</span>
+                      <span className="text-lg block pt-1">🧭</span>
+                      <span className="text-sm font-medium text-ink-light break-keep">{fortune.lucky.direction}</span>
+                    </div>
+                    <div className="text-center p-4 rounded-xl bg-surface/50 border border-white/5 space-y-2 flex flex-col items-center justify-center">
+                      <span className="text-xs text-ink-light/40 block">행운의 숫자</span>
+                      <span className="text-xl font-serif font-bold text-primary block">{fortune.lucky.number}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="bg-gradient-to-br from-yellow-900/20 to-black p-4 rounded-xl border border-yellow-700/20 flex flex-col items-center justify-center text-center">
+                      <span className="text-xs text-yellow-500/70 mb-1">최고의 달</span>
+                      <span className="text-xl font-serif font-bold text-yellow-400">{fortune.peak_month}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-900/20 to-black p-4 rounded-xl border border-red-700/20 flex flex-col items-center justify-center text-center">
+                      <span className="text-xs text-red-500/70 mb-1">주의할 달</span>
+                      <span className="text-xl font-serif font-bold text-red-400">{fortune.caution_month}</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Message */}
+                <Card className="card-glass-manse p-6 bg-gradient-to-r from-surface to-red-950/10 border-l-4 border-l-red-500/40">
+                  <p className="font-serif italic text-ink-light/80 text-center leading-loose">
+                    &ldquo; {fortune.message} &rdquo;
+                  </p>
+                </Card>
               </div>
             </div>
 
-            {/* 영역별 운세 */}
-            <div>
-              <h3 className="text-base font-serif font-bold text-ink-light mb-4 flex items-center gap-2">
-                <Star className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                영역별 운세
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <AreaCard
+            {/* 3. Detailed Areas */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-serif text-ink-light/60 pl-2 border-l-2 border-primary/30 ml-1">삶의 네 기둥</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <ArtifactCard
                   icon={TrendingUp}
-                  label="재물운"
+                  title="재물운"
                   score={fortune.areas.wealth.score}
                   content={fortune.areas.wealth.content}
-                  color="text-yellow-400"
+                  variant="gold"
+                  delay={0.1}
                 />
-                <AreaCard
-                  icon={Heart}
-                  label="애정운"
-                  score={fortune.areas.love.score}
-                  content={fortune.areas.love.content}
-                  color="text-pink-400"
-                />
-                <AreaCard
+                <ArtifactCard
                   icon={Briefcase}
-                  label="직업운"
+                  title="직업운"
                   score={fortune.areas.career.score}
                   content={fortune.areas.career.content}
-                  color="text-blue-400"
+                  variant="blue"
+                  delay={0.2}
                 />
-                <AreaCard
+                <ArtifactCard
+                  icon={Heart}
+                  title="애정운"
+                  score={fortune.areas.love.score}
+                  content={fortune.areas.love.content}
+                  variant="red"
+                  delay={0.3}
+                />
+                <ArtifactCard
                   icon={Activity}
-                  label="건강운"
+                  title="건강운"
                   score={fortune.areas.health.score}
                   content={fortune.areas.health.content}
-                  color="text-green-400"
+                  variant="green"
+                  delay={0.4}
                 />
               </div>
             </div>
 
-            {/* 행운 키워드 & 주요 달 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="bg-surface/20 border border-primary/10 p-5 space-y-4">
-                <h3 className="text-sm font-serif font-bold text-ink-light flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                  행운 키워드
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-ink-light/50">행운의 색</span>
-                    <span className="text-primary font-medium">{fortune.lucky.color}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-ink-light/50">행운의 방향</span>
-                    <span className="text-primary font-medium">{fortune.lucky.direction}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-ink-light/50">행운의 숫자</span>
-                    <span className="text-primary font-bold text-lg">{fortune.lucky.number}</span>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="bg-surface/20 border border-primary/10 p-5 space-y-4">
-                <h3 className="text-sm font-serif font-bold text-ink-light flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                  주목할 달
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-ink-light/50">최고 운의 달</span>
-                    <span className="text-yellow-400 font-medium">{fortune.peak_month} ↑</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-ink-light/50">주의해야 할 달</span>
-                    <span className="text-seal font-medium">{fortune.caution_month} !</span>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {/* 응원 메시지 */}
-            <Card className="bg-gradient-to-br from-primary/10 to-seal/5 border border-primary/20 p-6 text-center space-y-3">
-              <Flame className="w-8 h-8 text-seal mx-auto" strokeWidth={1} />
-              <p className="font-serif text-ink-light/80 leading-relaxed italic">
-                &ldquo;{fortune.message}&rdquo;
-              </p>
-            </Card>
-
-            <div className="pt-2">
-              <Button
-                onClick={() => setFortune(null)}
-                variant="outline"
-                className="w-full md:w-auto"
-              >
+            <div className="flex justify-center pt-8">
+              <Button onClick={() => setFortune(null)} variant="outline" className="opacity-50 hover:opacity-100 transition-opacity">
                 <RotateCcw className="w-4 h-4 mr-2" />
-                다시 생성하기
+                새로운 운세 보기
               </Button>
             </div>
-          </div>
-        ) : (
-          <Card className="relative bg-surface/30 backdrop-blur-md p-12 text-center shadow-2xl border border-primary/20 overflow-hidden">
-            <div className="absolute inset-0 opacity-5 mix-blend-overlay pointer-events-none">
-              <div
-                className="w-full h-full"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E\")",
-                  backgroundRepeat: 'repeat',
-                }}
-              />
-            </div>
 
-            <div className="relative z-10 space-y-6 max-w-md mx-auto">
-              <div className="w-20 h-20 mx-auto rounded-full bg-seal/20 flex items-center justify-center mb-4">
-                <Flame className="w-10 h-10 text-seal" />
-              </div>
-
-              <h3 className="text-2xl font-serif font-bold text-ink-light">
-                신년운세 분석 준비 완료
-              </h3>
-
-              <p className="text-ink-light/60 leading-relaxed">
-                붉은 말이 달리는 2026년,{' '}
-                <span className="text-primary font-medium">{member?.name}님</span>의
-                <br />한 해를 밝게 비춰줄 운세를 확인하세요.
-              </p>
-
-              {errorMsg && (
-                <p className="text-seal/80 text-sm bg-seal/10 border border-seal/20 rounded-md px-4 py-3">
-                  {errorMsg}
-                </p>
-              )}
-
-              <Button
-                onClick={handleGenerateFortune}
-                disabled={analyzing}
-                className="w-full md:w-auto bg-gradient-to-r from-seal to-seal/80 hover:from-seal/90 hover:to-seal/70 text-ink-light font-serif font-bold text-lg px-8 py-6 rounded-lg shadow-lg transition-all"
-              >
-                {analyzing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    분석 중...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5 mr-2" />
-                    2026년 신년운세 확인하기
-                  </>
-                )}
-              </Button>
-            </div>
-          </Card>
+          </motion.div>
         )}
-      </motion.div>
-
-      {/* Footer */}
-      <motion.section
-        variants={fadeInUp}
-        className="text-center space-y-4 opacity-50 font-serif italic text-sm text-ink-light/40 mt-8"
-      >
-        <p>※ 병오년(丙午年)은 불의 말의 해로, 강한 추진력과 변화의 기운이 특징입니다.</p>
-        <div className="flex items-center justify-center gap-4 uppercase tracking-[0.2em] font-sans font-bold text-[10px] not-italic">
-          <span>Authentic</span>
-          <span className="w-1 h-1 bg-seal" />
-          <span>Insightful</span>
-          <span className="w-1 h-1 bg-seal" />
-          <span>Haehwadang 2026</span>
-        </div>
-      </motion.section>
+      </AnimatePresence>
     </motion.div>
   )
 }
 
 export default function NewYear2026Page() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex flex-col items-center justify-center min-h-[60vh] p-12">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-          <p className="text-ink-light/60 font-serif">로딩 중...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingOracle />}>
       <NewYear2026Content />
     </Suspense>
   )

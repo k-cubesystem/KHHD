@@ -13,7 +13,7 @@ import {
   getAIChatUsageStatus,
   type ShamanChatMessage,
 } from '@/app/actions/ai-shaman-chat'
-import { Loader2, Crown, Sparkles, Send, Volume2, VolumeX } from 'lucide-react'
+import { Loader2, Send, Sparkles, MessageSquare, Coins, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -24,18 +24,31 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [turnCount, setTurnCount] = useState(0)
-  const [starterQuestions, setStarterQuestions] = useState<string[]>([])
-  const [isSoundEnabled, setIsSoundEnabled] = useState(false)
+  const [starterQuestions, setStarterQuestions] = useState<string[]>([
+    "오늘의 총운이 궁금해요",
+    "이번 달 재물운 흐름은?",
+    "이직하기 좋은 시기가 언제인가요?",
+    "올해 연애운과 결혼운 알려줘",
+    "건강상 주의해야 할 점은?",
+    "꿈해몽 부탁드려요"
+  ])
   const [hasStarted, setHasStarted] = useState(false)
+  // Mocking usage status based on user request "복채 1만냥 질문 10개"
   const [usageStatus, setUsageStatus] = useState<{
     isPro: boolean
     remaining: number | string
     total: number | string
     used?: number
-  } | null>(null)
+    bokchae?: string
+  }>({
+    isPro: true,
+    remaining: 10,
+    total: 10,
+    used: 0,
+    bokchae: "10,000"
+  })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -50,47 +63,17 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
   useEffect(() => {
     const loadStarters = async () => {
       const result = await getShamanChatStarters()
-      if (result.success && result.questions) {
-        setStarterQuestions(result.questions)
+      if (result.success && result.questions && result.questions.length > 0) {
+        // Merge with defaults or override, preserving at least 6
+        setStarterQuestions(prev => [...result.questions!.slice(0, 6), ...prev].slice(0, 8))
       }
     }
 
-    const loadUsageStatus = async () => {
-      const result = await getAIChatUsageStatus()
-      if (result.success) {
-        setUsageStatus({
-          isPro: result.isPro ?? false,
-          remaining: result.remaining ?? 0,
-          total: result.total ?? 0,
-          used: result.used ?? 0,
-        })
-      }
-    }
+    // In a real scenario we fetch this, but user asked to hardcode/mock specific values for now
+    // loadUsageStatus() 
 
     loadStarters()
-    loadUsageStatus()
   }, [])
-
-  // Toggle background sound
-  const toggleSound = () => {
-    if (!audioRef.current) {
-      // Initialize audio (Buddhist temple ambience or zen music)
-      audioRef.current = new Audio('/sounds/temple-ambience.mp3')
-      audioRef.current.loop = true
-      audioRef.current.volume = 0.3
-    }
-
-    if (isSoundEnabled) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play().catch((err) => {
-        console.warn('Audio play failed:', err)
-        toast.error('배경음악 재생에 실패했습니다.')
-      })
-    }
-
-    setIsSoundEnabled(!isSoundEnabled)
-  }
 
   // Send message
   const handleSendMessage = async (messageText?: string) => {
@@ -101,8 +84,8 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
       return
     }
 
-    if (turnCount >= 3) {
-      toast.error('대화 횟수가 초과되었습니다. (최대 3회)')
+    if (usageStatus.remaining !== 'unlimited' && typeof usageStatus.remaining === 'number' && usageStatus.remaining <= 0) {
+      toast.error('질문 횟수가 모두 소진되었습니다. 복채를 충전해주세요.')
       return
     }
 
@@ -133,48 +116,28 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
         setMessages((prev) => [...prev, assistantMessage])
         setTurnCount((prev) => prev + 1)
 
+        // Mock decrement
+        setUsageStatus(prev => ({
+          ...prev,
+          remaining: typeof prev.remaining === 'number' ? Math.max(0, prev.remaining - 1) : prev.remaining
+        }))
+
         // Update suggested questions
         if (result.suggestedQuestions) {
-          setStarterQuestions(result.suggestedQuestions)
+          setStarterQuestions(prev => result.suggestedQuestions ? [...result.suggestedQuestions, ...prev].slice(0, 6) : prev)
         }
 
-        // 사용 횟수 업데이트 (무료 사용자의 경우)
-        if (turnCount === 0 && !result.isProUser) {
-          const newUsageStatus = await getAIChatUsageStatus()
-          if (newUsageStatus.success) {
-            setUsageStatus({
-              isPro: newUsageStatus.isPro ?? false,
-              remaining: newUsageStatus.remaining ?? 0,
-              total: newUsageStatus.total ?? 0,
-              used: newUsageStatus.used ?? 0,
-            })
-          }
-        }
-
-        toast.success(`응답 완료 (남은 대화: ${result.turnsRemaining}회)`)
+        toast.success(`응답 완료`)
       } else {
-        // 업그레이드 필요 에러
-        if (result.upgradeRequired) {
-          toast.error(result.error || '무료 사용 횟수 초과', {
+        // 에러 처리
+        if (result.upgradeRequired || result.insufficientTalisman) {
+          toast.error('질문 횟수가 부족합니다. 복채를 충전해주세요.', {
             action: {
-              label: '업그레이드',
+              label: '충전',
               onClick: () => (window.location.href = '/protected/membership'),
             },
-            duration: 5000,
           })
-        }
-        // 부적 부족 에러
-        else if (result.insufficientTalisman) {
-          toast.error(result.error || '부적이 부족합니다', {
-            action: {
-              label: '충전하기',
-              onClick: () => (window.location.href = '/protected/membership'),
-            },
-            duration: 5000,
-          })
-        }
-        // 일반 에러
-        else {
+        } else {
           toast.error(result.error || '메시지 전송 실패')
         }
       }
@@ -191,167 +154,89 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
     handleSendMessage(question)
   }
 
+  const isLimitReached = typeof usageStatus.remaining === 'number' && usageStatus.remaining <= 0;
+
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-ink-900 via-ink-800 to-ink-900 overflow-hidden">
-      {/* Atmospheric Background Effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Incense Smoke Effect */}
-        <div className="absolute bottom-0 left-1/4 w-32 h-96 bg-gradient-to-t from-white/10 via-white/5 to-transparent blur-3xl animate-breathe" />
-        <div
-          className="absolute bottom-0 right-1/4 w-32 h-96 bg-gradient-to-t from-white/10 via-white/5 to-transparent blur-3xl animate-breathe"
-          style={{ animationDelay: '2s' }}
-        />
-
-        {/* Ambient Glow */}
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-96 h-96 bg-gold-500/20 rounded-full blur-[120px] animate-pulse" />
-
-        {/* Floating Particles */}
-        {[...Array(12)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-gold-300/40 rounded-full"
-            initial={{
-              x: Math.random() * 1200,
-              y: 800,
-            }}
-            animate={{
-              y: -100,
-              opacity: [0, 1, 0],
-            }}
-            transition={{
-              duration: 10 + Math.random() * 10,
-              repeat: Infinity,
-              delay: Math.random() * 5,
-            }}
-          />
-        ))}
-      </div>
+    <div className="relative min-h-screen bg-background text-ink-light overflow-hidden flex flex-col items-center">
 
       {/* Main Content */}
-      <div className="relative z-10 container max-w-4xl mx-auto px-4 py-8">
+      <div className="relative z-10 container max-w-2xl mx-auto px-4 py-6 flex-1 flex flex-col">
         {/* Header */}
-        <div className="text-center mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Sparkles className="w-6 h-6 text-gold-400" strokeWidth={1} />
-              <h1 className="text-3xl md:text-4xl font-serif font-light text-gold-300">
-                AI 신당(神堂)
-              </h1>
-              <Sparkles className="w-6 h-6 text-gold-400" strokeWidth={1} />
-            </div>
+        <header className="text-center mb-6 space-y-2">
+          <h1 className="text-xl md:text-2xl font-serif font-bold text-ink-light flex items-center justify-center gap-2">
+            해화당 고민 상담소
+          </h1>
+          <p className="text-xs text-ink-light/60 font-light">
+            당신의 깊은 고민을 듣고, 명리학적 관점에서 해답을 제안합니다.
+          </p>
+        </header>
 
-            <BrandQuote variant="section" className="text-gold-100/90">
-              {BRAND_QUOTES.aiShaman.hero}
-            </BrandQuote>
-
-            <div className="flex items-center justify-center gap-3">
-              {usageStatus?.isPro ? (
-                <Badge className="bg-gold-500/20 text-gold-300 border-gold-500/30 px-3 py-1">
-                  <Crown className="w-3 h-3 mr-1" />
-                  Pro 무제한
-                </Badge>
-              ) : (
-                <Badge className="bg-seal-500/20 text-seal-300 border-seal-500/30 px-3 py-1">
-                  무료 {usageStatus?.remaining}/{usageStatus?.total}
-                </Badge>
-              )}
-
-              <Badge
-                variant={turnCount >= 3 ? 'destructive' : 'default'}
-                className={cn(
-                  'px-3 py-1',
-                  turnCount >= 3
-                    ? 'bg-seal-500/20 text-seal-500 border-seal-500/30'
-                    : 'bg-ink-700 text-gold-300 border-gold-500/30'
-                )}
-              >
-                대화 {turnCount}/3
-              </Badge>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleSound}
-                className="text-gold-300 hover:text-gold-400 hover:bg-gold-500/10"
-              >
-                {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              </Button>
-            </div>
-          </motion.div>
+        {/* Stats Bar */}
+        <div className="flex items-center justify-center gap-4 mb-6 text-xs text-ink-light/50 bg-surface/30 py-2 pl-4 pr-2 rounded-full w-fit mx-auto border border-white/5 backdrop-blur-sm">
+          <div className="flex items-center gap-1.5">
+            <Coins className="w-3.5 h-3.5 text-primary" />
+            <span className="text-ink-light">보유 복채</span>
+            <span className="font-medium text-primary ml-1">
+              {usageStatus.bokchae}냥
+            </span>
+          </div>
+          <div className="w-px h-3 bg-white/10" />
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="w-3.5 h-3.5 text-ink-light/40" />
+            <span>남은 질문</span>
+            <span className="font-medium text-ink-light ml-1">
+              {usageStatus.remaining}회
+            </span>
+          </div>
+          <Link href="/protected/membership">
+            <Button size="sm" variant="ghost" className="h-6 px-2 ml-1 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-full">
+              충전 <Plus className="w-3 h-3 ml-0.5" />
+            </Button>
+          </Link>
         </div>
 
-        {/* Chat Container */}
-        <Card className="bg-ink-800/50 border-gold-500/20 backdrop-blur-sm shadow-2xl">
-          <CardHeader className="border-b border-gold-500/20">
-            <CardTitle className="text-gold-300 text-center font-serif">신당 상담실</CardTitle>
-          </CardHeader>
 
-          <CardContent className="p-6">
-            {/* 무료 사용자에게 업그레이드 유도 배너 */}
-            {!usageStatus?.isPro && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 p-4 bg-gradient-to-r from-gold-500/10 to-gold-600/10 border border-gold-500/30 rounded-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Crown className="w-5 h-5 text-gold-400" />
-                    <div>
-                      <p className="text-sm font-bold text-gold-300">
-                        프리미엄으로 업그레이드하세요
-                      </p>
-                      <p className="text-xs text-gold-100/70">무제한 대화 + 부적 50% 할인</p>
-                    </div>
-                  </div>
-                  <Link href="/protected/membership">
-                    <Button size="sm" className="bg-gold-500 hover:bg-gold-600 text-ink-900">
-                      업그레이드
-                    </Button>
-                  </Link>
-                </div>
-              </motion.div>
-            )}
+        {/* Chat Area */}
+        <Card className="flex-1 bg-surface/20 border border-white/5 shadow-inner rounded-2xl overflow-hidden flex flex-col">
+          <CardContent className="flex-1 p-0 flex flex-col">
 
-            {/* Messages Area */}
-            <div className="h-[500px] overflow-y-auto mb-6 space-y-4 pr-2 custom-scrollbar">
+            {/* Messages Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar min-h-[400px]">
               <AnimatePresence mode="popLayout">
                 {messages.length === 0 && !hasStarted && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-center text-gold-100/60 py-20"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="h-full flex flex-col items-center justify-center text-center p-6 opacity-70"
                   >
-                    <Sparkles className="w-12 h-12 mx-auto mb-4 text-gold-400/50" />
-                    <p className="text-lg font-serif">무엇이 궁금하신가요?</p>
-                    <p className="text-sm mt-2">아래 예시 질문을 선택하거나 직접 질문해보세요.</p>
+                    <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
+                      <MessageSquare className="w-6 h-6 text-primary/60" strokeWidth={1} />
+                    </div>
+                    <h3 className="text-lg font-serif text-ink-light mb-2">어떤 고민이 있으신가요?</h3>
+                    <p className="text-sm text-ink-light/50 max-w-xs leading-relaxed">
+                      누구에게도 말하지 못한 고민,<br />
+                      해화당이 지혜를 담아 들어드리겠습니다.
+                    </p>
                   </motion.div>
                 )}
 
                 {messages.map((msg, index) => (
                   <motion.div
                     key={index}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
                     className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}
                   >
                     <div
                       className={cn(
-                        'max-w-[80%] rounded-lg px-4 py-3',
+                        'max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm',
                         msg.role === 'user'
-                          ? 'bg-gold-500/20 text-gold-100 border border-gold-500/30'
-                          : 'bg-ink-700/50 text-gold-100/90 border border-gold-500/20'
+                          ? 'bg-primary text-black rounded-tr-none'
+                          : 'bg-surface border border-white/5 text-ink-light rounded-tl-none'
                       )}
                     >
-                      <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                      <p className="text-xs text-gold-100/50 mt-2">
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className={cn("text-[10px] mt-1.5 opacity-50", msg.role === 'user' ? "text-black" : "text-ink-light")}>
                         {new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
                           hour: '2-digit',
                           minute: '2-digit',
@@ -367,115 +252,88 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
                     animate={{ opacity: 1 }}
                     className="flex justify-start"
                   >
-                    <div className="bg-ink-700/50 text-gold-300 rounded-lg px-4 py-3 border border-gold-500/20">
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                    <div className="bg-surface/50 border border-white/5 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
+                      <span className="text-xs text-ink-light/50">답변을 준비하고 있습니다...</span>
+                      <Loader2 className="w-3 h-3 text-primary animate-spin" />
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Starter Questions (Show before conversation starts or after each turn) */}
-            {starterQuestions.length > 0 && turnCount < 3 && (
-              <div className="mb-4">
-                <p className="text-xs text-gold-100/60 mb-2">추천 질문:</p>
-                <div className="flex flex-wrap gap-2">
-                  {starterQuestions.map((question, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStarterClick(question)}
+            {/* Input Section */}
+            <div className="p-4 bg-surface/30 border-t border-white/5">
+              {/* Starters */}
+              {starterQuestions.length > 0 && messages.length < 2 && (
+                <div className="flex overflow-x-auto gap-2 pb-3 mb-1 no-scrollbar mask-grad-right">
+                  {starterQuestions.map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleStarterClick(q)}
                       disabled={isLoading}
-                      className="bg-ink-700/30 hover:bg-gold-500/20 text-gold-300 border-gold-500/30 hover:border-gold-500/50 text-xs"
+                      className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-ink-light/70 hover:bg-white/10 hover:text-primary transition-colors hover:border-primary/20"
                     >
-                      {question}
-                    </Button>
+                      {q}
+                    </button>
                   ))}
                 </div>
+              )}
+
+              <div className="relative">
+                <Textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder={isLimitReached ? "질문 한도가 초과되었습니다." : "고민을 자세히 적어주세요..."}
+                  disabled={isLoading || isLimitReached}
+                  className="w-full bg-black/20 border-white/10 focus:border-primary/50 min-h-[50px] pr-12 resize-none rounded-xl text-sm"
+                />
+                <Button
+                  size="icon"
+                  onClick={() => handleSendMessage()}
+                  disabled={isLoading || !inputMessage.trim() || isLimitReached}
+                  className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-primary text-black hover:bg-primary/90"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </Button>
               </div>
-            )}
-
-            {/* Input Area */}
-            <div className="flex gap-2">
-              <Textarea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }
-                }}
-                placeholder={
-                  turnCount >= 3
-                    ? '대화 횟수가 초과되었습니다.'
-                    : '무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)'
-                }
-                disabled={isLoading || turnCount >= 3}
-                className="flex-1 bg-ink-700/30 border-gold-500/30 text-gold-100 placeholder:text-gold-100/40 focus:border-gold-500/50 resize-none"
-                rows={3}
-              />
-
-              <Button
-                onClick={() => handleSendMessage()}
-                disabled={isLoading || turnCount >= 3 || !inputMessage.trim()}
-                className="bg-gold-500 hover:bg-gold-600 text-ink-900 font-semibold px-6"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </Button>
+              <div className="mt-2 text-center">
+                <p className="text-[10px] text-ink-light/30">
+                  AI 상담 결과는 참고용이며, 심층적인 분석은 전문가 상담을 권장합니다.
+                </p>
+              </div>
             </div>
 
-            {/* Info Notice */}
-            {turnCount >= 3 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-4 text-center"
-              >
-                <p className="text-sm text-seal-500">
-                  대화가 종료되었습니다. 새로운 상담을 원하시면 페이지를 새로고침해주세요.
-                </p>
-              </motion.div>
-            )}
           </CardContent>
         </Card>
-
-        {/* Footer Info */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 text-center text-gold-100/50 text-xs"
-        >
-          <p>AI 신당은 엔터테인먼트 목적으로 제공됩니다.</p>
-          <p>의학적/법적 조언을 대체할 수 없습니다.</p>
-        </motion.div>
       </div>
 
       {/* Event Banners (Server Component passed as child) */}
-      <div className="relative z-10 container max-w-4xl mx-auto px-4 pb-8">{children}</div>
+      {/* Removed children as per instruction */}
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(139, 110, 88, 0.1);
-          border-radius: 3px;
+          background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(197, 179, 88, 0.3);
-          border-radius: 3px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2px;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(197, 179, 88, 0.5);
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .mask-grad-right {
+            mask-image: linear-gradient(to right, black 90%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
         }
       `}</style>
     </div>

@@ -118,7 +118,7 @@ export async function deductTalisman(
         const limits = await getUserTierLimits();
         return {
             success: false,
-            error: `부적이 부족합니다. (필요: ${cost}장, 보유: ${wallet.balance}장)`,
+            error: `복채가 부족합니다. (필요: ${cost}만냥, 보유: ${wallet.balance}만냥)`,
             errorType: "INSUFFICIENT_BALANCE",
             currentTier: limits?.tier || "SINGLE",
         };
@@ -132,7 +132,7 @@ export async function deductTalisman(
         .eq("user_id", user.id);
 
     if (updateError) {
-        return { success: false, error: "부적 차감 중 오류가 발생했습니다." };
+        return { success: false, error: "복채 차감 중 오류가 발생했습니다." };
     }
 
     // Log transaction
@@ -147,7 +147,7 @@ export async function deductTalisman(
         amount: -cost,
         type: "USE",
         feature_key: featureKey,
-        description: `${featureCost?.label || featureKey} 사용`
+        description: `${featureCost?.label || featureKey} (${cost}만냥 복채 사용)`
     });
 
     // Increment daily usage counter
@@ -186,7 +186,7 @@ export async function addTalismans(
         .eq("user_id", user.id);
 
     if (updateError) {
-        return { success: false, error: "부적 충전 중 오류가 발생했습니다." };
+        return { success: false, error: "복채 충전 중 오류가 발생했습니다." };
     }
 
     // Log transaction
@@ -194,7 +194,7 @@ export async function addTalismans(
         user_id: user.id,
         amount: amount,
         type: type,
-        description: description || `부적 ${amount}장 충전`
+        description: description || `복채 ${amount}만냥 충전`
     });
 
     return { success: true };

@@ -27,6 +27,7 @@ interface UserDetailClientProps {
   payments: any[]
   wallet?: any
   subscription?: any
+  authCreatedAt?: string | null
 }
 
 export function UserDetailClient({
@@ -36,6 +37,7 @@ export function UserDetailClient({
   payments,
   wallet,
   subscription,
+  authCreatedAt,
 }: UserDetailClientProps) {
   const router = useRouter()
   const [role, setRole] = useState<UserRole>(user.role as UserRole)
@@ -218,7 +220,7 @@ export function UserDetailClient({
                 <div className="space-y-1">
                   <Label className="text-[10px] text-stone-500 font-medium">가입일</Label>
                   <Input
-                    value={new Date(user.updated_at || user.created_at).toLocaleString('ko-KR')}
+                    value={authCreatedAt ? new Date(authCreatedAt).toLocaleString('ko-KR') : (user.created_at ? new Date(user.created_at).toLocaleString('ko-KR') : '-')}
                     readOnly
                     className="h-7 text-xs bg-stone-900/50 border-stone-700/50 text-stone-400"
                   />

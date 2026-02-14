@@ -32,7 +32,7 @@ export default function FeatureCostManagement({
       const feature = features.find((f) => f.key === key)
       if (!feature) return
       await updateFeatureCost(key, feature.cost, feature.is_active)
-      toast.success('부적 소모량이 업데이트되었습니다.')
+      toast.success('복채 소모량이 업데이트되었습니다.')
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '업데이트 실패'
       toast.error(msg)
@@ -52,9 +52,9 @@ export default function FeatureCostManagement({
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <h1 className="text-xl font-serif font-bold text-stone-100">기능별 부적 비용</h1>
+        <h1 className="text-xl font-serif font-bold text-stone-100">기능별 복채 비용</h1>
         <p className="text-xs text-stone-500">
-          각 AI 분석 기능의 부적 소모량과 활성 여부를 관리합니다.
+          각 AI 분석 기능의 복채 소모량과 활성 여부를 관리합니다.
         </p>
       </div>
 
@@ -98,7 +98,7 @@ export default function FeatureCostManagement({
                       className="w-16 h-7 pl-6 text-xs text-center bg-stone-900/50 border-stone-700/50 text-stone-200 font-mono"
                     />
                   </div>
-                  <span className="text-[10px] text-stone-500">장</span>
+                  <span className="text-[10px] text-stone-500">만냥</span>
                 </div>
 
                 {/* Active Toggle */}

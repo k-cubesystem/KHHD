@@ -2,50 +2,48 @@ import Link from 'next/link'
 
 export function SiteFooter() {
   return (
-    <footer className="w-full max-w-[480px] mx-auto border-t border-primary/10 bg-background pt-6 pb-24 text-sm text-ink-light/60 px-5">
-      <div className="grid grid-cols-2 gap-4">
-        {/* Left Column: Brand & Company Info */}
-        <div className="flex flex-col justify-between gap-3 text-left">
-          {/* Brand */}
-          <div>
-            <h3 className="text-[14px] font-serif font-bold text-primary mb-0.5">
-              해화당 (海華堂)
-            </h3>
-            <p className="text-[8px] leading-tight text-ink-light/50">
-              전통 명리학과 AI 기술의 만남
-            </p>
-          </div>
+    <footer className="w-full max-w-[480px] mx-auto pb-28">
+      {/* 링크 바 */}
+      <div className="flex items-center justify-center gap-4 py-4 border-t border-primary/10 mb-4">
+        <Link
+          href="/terms"
+          className="text-[10px] text-ink-light/40 hover:text-primary transition-colors"
+        >
+          이용약관
+        </Link>
+        <span className="w-px h-3 bg-primary/20" />
+        <Link
+          href="/privacy"
+          className="text-[10px] text-ink-light/40 hover:text-primary transition-colors"
+        >
+          개인정보처리방침
+        </Link>
+        <span className="w-px h-3 bg-primary/20" />
+        <Link
+          href="/protected/support"
+          className="text-[10px] text-ink-light/40 hover:text-primary transition-colors"
+        >
+          고객센터
+        </Link>
+      </div>
 
-          {/* Company Info */}
-          <div className="space-y-0.5 text-[6px] text-ink-light/40 leading-tight">
-            <p>큐브시스템 | 대표: 박대건</p>
-            <p>사업자등록번호: 205-16-69546</p>
-            <p>통신판매업신고: 제 2024-의정부흥선-0264호</p>
-            <p>경기도 의정부시 신촌로 39번길 50-20</p>
-          </div>
+      {/* 브랜드 + 사업자 정보 */}
+      <div className="px-5 space-y-2">
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-[13px] font-serif text-primary/70">해화당 (海華堂)</h3>
+          <p className="text-[9px] text-ink-light/30">전통 명리학 × AI</p>
         </div>
 
-        {/* Right Column: CS & Links */}
-        <div className="flex flex-col justify-between items-end gap-3 text-right">
-          {/* CS Center */}
-          <div className="space-y-0.5 text-[6px] text-ink-light/40 leading-tight">
-            <p className="font-semibold text-ink-light/60 mb-0.5">고객센터</p>
-            <p>평일 10:00 - 18:00 (주말/공휴일 휴무)</p>
-            <p>문의: 카카오톡채널</p>
-            <p>전화: 010-2311-2010</p>
-          </div>
-
-          {/* Links */}
-          <div className="flex gap-2 text-[7px]">
-            <Link href="/terms" className="hover:text-primary transition-colors">
-              이용약관
-            </Link>
-            <span className="text-ink-light/30">|</span>
-            <Link href="/privacy" className="hover:text-primary transition-colors">
-              개인정보처리방침
-            </Link>
-          </div>
+        <div className="text-[9px] text-ink-light/25 leading-relaxed space-y-0.5">
+          <p>큐브시스템 · 대표 박대건 · 사업자 205-16-69546</p>
+          <p>통신판매업 제 2024-의정부흥선-0264호</p>
+          <p>경기도 의정부시 신촌로 39번길 50-20</p>
+          <p>📞 010-2311-2010 · 평일 10:00–18:00 (주말·공휴일 휴무)</p>
         </div>
+
+        <p className="text-[8px] text-ink-light/20 pt-1">
+          © 2026 해화당. All rights reserved.
+        </p>
       </div>
     </footer>
   )

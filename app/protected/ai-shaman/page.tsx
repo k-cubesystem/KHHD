@@ -2,16 +2,12 @@ import { ShamanChatInterface } from '@/components/ai/shaman-chat-interface'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'AI 신당 | 해화당',
-  description: '천지인의 지혜로 당신의 고민을 풀어드리는 AI 상담',
+  title: '해화당 고민 상담소',
+  description: '당신의 깊은 고민을 들어주는 명리학 기반 AI 상담소',
 }
-
-import { EventBannersSection } from '@/components/events/event-banners-section'
 
 export default function AIShamanPage() {
   return (
-    <ShamanChatInterface>
-      <EventBannersSection />
-    </ShamanChatInterface>
+    <ShamanChatInterface />
   )
 }

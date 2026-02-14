@@ -21,9 +21,9 @@ export function DashboardStats({ balance, summary, tier }: DashboardStatsProps) 
     const stats = [
         {
             icon: Ticket,
-            label: "보유 부적",
+            label: "보유 복채",
             value: balance.toLocaleString(),
-            unit: "장",
+            unit: "만냥",
             color: "text-yellow-400",
             bgColor: "bg-yellow-400/10",
             progress: undefined,

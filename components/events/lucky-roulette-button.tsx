@@ -19,18 +19,18 @@ export function LuckyRouletteButton({ canSpin, nextAvailableTime }: LuckyRoulett
       {/* Grid Item Trigger */}
       <button
         onClick={() => setShowModal(true)}
-        className="flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/10 transition-all p-4 group"
+        className="relative flex flex-col items-center justify-center aspect-square bg-surface/30 border border-white/5 rounded-xl hover:border-primary/10 transition-all p-4 group"
       >
+        {canSpin && (
+          <span className="absolute top-3 right-3 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+          </span>
+        )}
         <Sparkles className="w-7 h-7 text-primary mb-2 group-hover:scale-110 transition-transform" strokeWidth={1} />
         <span className="text-sm font-serif font-normal text-ink-light mb-1">행운의 룰렛</span>
-        <span className="text-[10px] text-ink-light/50 text-center font-light relative">
+        <span className="text-[10px] text-ink-light/50 text-center font-light">
           매일 1회 무료
-          {canSpin && (
-            <span className="absolute -top-8 -right-8 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-            </span>
-          )}
         </span>
       </button>
 

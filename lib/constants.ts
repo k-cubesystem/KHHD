@@ -51,13 +51,14 @@ export const TALISMAN_PACKAGES = [
 ] as const
 
 // Mission Categories for Family Management (Legacy - kept for compatibility)
+// Mission Categories with Updated Paths
 export const MISSION_CATEGORIES = [
   { value: 'SAJU', label: '사주', icon: Sun, cost: 1, path: '/protected/analysis/cheonjiin' },
-  { value: 'FACE', label: '관상', icon: User2, cost: 5, path: '/protected/saju/face' },
-  { value: 'HAND', label: '손금', icon: Hand, cost: 3, path: '/protected/saju/hand' },
-  { value: 'FENGSHUI', label: '풍수', icon: Home, cost: 2, path: '/protected/saju/fengshui' },
-  { value: 'COMPATIBILITY', label: '궁합', icon: Heart, cost: 2, path: '/protected/analysis' },
-  { value: 'TODAY', label: '오늘의운세', icon: Sun, cost: 0, path: '/protected/saju/today' },
+  { value: 'FACE', label: '관상', icon: User2, cost: 5, path: '/protected/studio/face' },
+  { value: 'HAND', label: '손금', icon: Hand, cost: 3, path: '/protected/studio/palm' },
+  { value: 'FENGSHUI', label: '풍수', icon: Home, cost: 2, path: '/protected/studio/fengshui' },
+  { value: 'COMPATIBILITY', label: '궁합', icon: Heart, cost: 2, path: '/protected/analysis/compatibility' },
+  { value: 'TODAY', label: '오늘의운세', icon: Sun, cost: 0, path: '/protected/analysis/today' },
   { value: 'WEALTH', label: '재물운', icon: Coins, cost: 5, path: '/protected/analysis/wealth' },
   {
     value: 'NEW_YEAR',

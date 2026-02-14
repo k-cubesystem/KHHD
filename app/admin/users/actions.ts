@@ -60,10 +60,23 @@ export async function getUsers(
       return { data: [], total: 0 }
     }
 
+    // Fetch real sign-up dates from auth.users
+    let authCreatedAtMap: Record<string, string> = {}
+    try {
+      const { data: authUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+      if (authUsers?.users) {
+        for (const u of authUsers.users) {
+          authCreatedAtMap[u.id] = u.created_at
+        }
+      }
+    } catch (e) {
+      console.warn('[getUsers] Failed to fetch auth users for created_at', e)
+    }
+
     const data =
       rawData?.map((p) => ({
         ...p,
-        created_at: p.updated_at, // Map updated_at to created_at for frontend compatibility
+        created_at: authCreatedAtMap[p.id] || p.updated_at, // Use real auth created_at
       })) || []
 
     console.log(`[getUsers] Success! Found ${data.length} profiles.`)
@@ -140,21 +153,19 @@ export async function getUserDetails(userId: string) {
           .single(),
       ])
 
-    // 3. Fallback for Profile Email (if missing)
+    // 3. Fetch auth user for email and real created_at (가입일)
     const profile = profileRes.data
-    if (profile && !profile.email) {
-      // Try to fetch email via admin client if available
-      try {
-        const adminClient = createAdminClient()
-        const {
-          data: { user: targetUser },
-        } = await adminClient.auth.admin.getUserById(userId)
-        if (targetUser) {
-          profile.email = targetUser.email
-        }
-      } catch (e) {
-        console.warn('getUserDetails: Failed to fetch email via admin client', e)
+    let authCreatedAt: string | null = null
+    try {
+      const {
+        data: { user: targetUser },
+      } = await adminClient.auth.admin.getUserById(userId)
+      if (targetUser) {
+        if (profile && !profile.email) profile.email = targetUser.email
+        authCreatedAt = targetUser.created_at || null
       }
+    } catch (e) {
+      console.warn('getUserDetails: Failed to fetch auth user', e)
     }
 
     return {
@@ -164,6 +175,7 @@ export async function getUserDetails(userId: string) {
       payments: paymentsRes.data || [],
       wallet: walletRes.data || { balance: 0 },
       subscription: subscriptionRes.data || null,
+      authCreatedAt,
       error: null,
     }
   } catch (e) {
@@ -176,17 +188,42 @@ export async function deleteUser(userId: string) {
   try {
     const supabase = await createClient()
 
-    // 1. Check Auth
+    // 1. Check Auth & Admin Role
     const {
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    // 2. Delete from Auth (Hard Delete) - Requires Admin Client
-    // This will trigger CASCADE delete for profile and related data
-    const adminClient = createAdminClient()
-    const { error } = await adminClient.auth.admin.deleteUser(userId)
+    const { data: callerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
 
+    if (!callerProfile || !['admin', 'tester'].includes(callerProfile.role)) {
+      return { success: false, error: 'Forbidden: Admin only' }
+    }
+
+    // 2. Prevent self-deletion
+    if (user.id === userId) {
+      return { success: false, error: '본인 계정은 삭제할 수 없습니다.' }
+    }
+
+    const adminClient = createAdminClient()
+
+    // 3. Delete related data first to avoid FK constraint issues
+    await adminClient.from('wallet_transactions').delete().eq('user_id', userId)
+    await adminClient.from('wallets').delete().eq('user_id', userId)
+    await adminClient.from('attendance_logs').delete().eq('user_id', userId)
+    await adminClient.from('roulette_history').delete().eq('user_id', userId)
+    await adminClient.from('analysis_history').delete().eq('user_id', userId)
+    await adminClient.from('family_members').delete().eq('user_id', userId)
+    await adminClient.from('subscriptions').delete().eq('user_id', userId)
+    await adminClient.from('payments').delete().eq('user_id', userId)
+    await adminClient.from('profiles').delete().eq('id', userId)
+
+    // 4. Delete from Auth (Hard Delete)
+    const { error } = await adminClient.auth.admin.deleteUser(userId)
     if (error) throw error
 
     revalidatePath('/admin/users')

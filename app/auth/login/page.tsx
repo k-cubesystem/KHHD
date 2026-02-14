@@ -36,7 +36,7 @@ export default function Page() {
         </div>
 
         {/* Login Form Card */}
-        <div className="w-full bg-surface/50 backdrop-blur-md border border-primary/20 p-8 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] luxury-card-glow">
+        <div className="w-full p-2">
           <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>}>
             <LoginForm />
           </Suspense>

@@ -14,14 +14,15 @@ interface DailyCheckInProps {
   initialConsecutiveDays: number;
 }
 
+// 복채 단위: 1만냥
 const REWARDS = [
-  { day: 1, talisman: 50 },
-  { day: 2, talisman: 50 },
-  { day: 3, talisman: 150 }, // +100 보너스
-  { day: 4, talisman: 50 },
-  { day: 5, talisman: 50 },
-  { day: 6, talisman: 50 },
-  { day: 7, talisman: 550 }, // +500 보너스
+  { day: 1, talisman: 1 },
+  { day: 2, talisman: 1 },
+  { day: 3, talisman: 1 },
+  { day: 4, talisman: 1 },
+  { day: 5, talisman: 1 },
+  { day: 6, talisman: 1 },
+  { day: 7, talisman: 4 }, // 기본 1 + 주간 보너스 3
 ];
 
 export function DailyCheckIn({ initialChecked, initialConsecutiveDays }: DailyCheckInProps) {
@@ -41,7 +42,7 @@ export function DailyCheckIn({ initialChecked, initialConsecutiveDays }: DailyCh
         setConsecutiveDays(result.consecutiveDays || 0);
         setShowConfetti(true);
 
-        toast.success(`🎉 출석 완료! 부적 ${result.reward}장 획득!`, {
+        toast.success(`🎉 출석 완료! 복채 ${result.reward}만냥 획득!`, {
           duration: 5000,
         });
 
@@ -110,7 +111,7 @@ export function DailyCheckIn({ initialChecked, initialConsecutiveDays }: DailyCh
                   "text-[9px] font-bold mt-0.5",
                   isCompleted || isToday ? "text-primary" : "text-ink-light/40"
                 )}>
-                  {reward.talisman}
+                  {reward.talisman}만
                 </span>
 
                 {/* Confetti effect on today's completed */}
@@ -154,7 +155,7 @@ export function DailyCheckIn({ initialChecked, initialConsecutiveDays }: DailyCh
         {/* Hint */}
         {!checked && (
           <p className="text-[10px] text-ink-light/50 text-center mt-2">
-            매일 출석하면 부적이 쌓여요! 7일 연속 시 특별 보너스 🎁
+            매일 출석하면 복채가 쌓여요! 7일 개근 시 +3만냥 보너스 🎁
           </p>
         )}
       </CardContent>

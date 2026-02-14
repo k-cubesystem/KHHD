@@ -5,11 +5,10 @@ import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import { FORTUNE_MISSIONS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import { FortuneEnergyGauge } from '@/components/fortune/fortune-energy-gauge'
-
+import { FortuneMissionBoard } from '@/components/fortune/fortune-mission-board'
 import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
+import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card'
 
 // Dynamic imports for heavy dashboard sections to improve initial load
 const MasterpieceSection = dynamic(
@@ -47,10 +46,23 @@ interface MonthlyFortune {
   completedCategories: string[]
 }
 
+interface AttendanceStatus {
+  canCheckIn: boolean
+  alreadyChecked?: boolean
+}
+
+interface WeeklyAttendance {
+  weekDays: Array<{ date: string; dayLabel: string; checked: boolean; isToday: boolean; isFuture: boolean }>
+  weekCount: number
+  totalBokchae: number
+}
+
 interface AnalysisDashboardProps {
   userName?: string
   monthlyFortune: MonthlyFortune
   rouletteStatus: RouletteStatus | null
+  attendanceStatus?: AttendanceStatus
+  weeklyAttendance?: WeeklyAttendance
   children?: ReactNode
 }
 
@@ -58,6 +70,8 @@ export function AnalysisDashboard({
   userName,
   monthlyFortune,
   rouletteStatus,
+  attendanceStatus,
+  weeklyAttendance,
   children,
 }: AnalysisDashboardProps) {
   return (
@@ -67,81 +81,51 @@ export function AnalysisDashboard({
       animate="animate"
       className="max-w-screen-sm mx-auto pb-40 px-2 space-y-6"
     >
-      {/* 1. Hero (Moved from #3) */}
-      <motion.section variants={fadeInUp} className="text-left space-y-2 pt-2">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20">
-          <span className="text-xs font-light text-[#D4AF37] uppercase tracking-wider">
-            Analysis Center
+      {/* 1. Hero */}
+      <motion.section variants={fadeInUp} className="text-left space-y-3 pt-4 px-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 backdrop-blur-sm">
+          <span className="text-[10px] font-medium text-[#D4AF37] tracking-widest uppercase">
+            DESTINY INSIGHT
           </span>
         </div>
-        <h1 className="text-2xl font-serif font-light text-ink-light leading-tight tracking-wide">
-          {userName ? `${userName}님의 운명 분석` : '당신의 운명을 분석합니다'}
+
+        <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug tracking-tight">
+          남들은 잘 되는데<br />
+          <span className="text-[#D4AF37]">나만 제자리</span>인 것 같다면?
         </h1>
-        <p className="text-sm text-muted-foreground font-light">
-          사주·궁합·운세를 한눈에 확인하세요
-        </p>
+
+        <div className="space-y-4">
+          <p className="text-sm text-ink-light/70 font-light leading-relaxed">
+            당신의 노력이 부족해서가 아닙니다.<br />
+            지금 바로 당신에게 들어온 <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을<br />
+            놓치고 있기 때문입니다.
+          </p>
+
+          <div className="flex items-center gap-2">
+            <div className="h-px w-8 bg-[#D4AF37]/50" />
+            <p className="text-xs font-serif text-[#D4AF37]/80">
+              {userName ? `${userName}님의 운명 해설서` : '당신을 위한 운명 해설서'}
+            </p>
+          </div>
+        </div>
       </motion.section>
 
-      {/* 2. Masterpiece (Moved from #7) */}
+      {/* 2. Masterpiece */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
       </motion.div>
 
-      {/* 5. Fortune Energy Gauge (Was #4) */}
+      {/* 3. 운세 미션 보드 (게이지 + 8미션 통합) */}
       <motion.div variants={fadeInUp}>
-        <FortuneEnergyGauge
+        <FortuneMissionBoard
           currentFortune={monthlyFortune.currentFortune}
           totalPossible={monthlyFortune.totalPossible}
           percentage={monthlyFortune.percentage}
-          variant="monthly"
+          completedCategories={monthlyFortune.completedCategories}
         />
       </motion.div>
 
-      {/* 6. 8가지 운세 미션 그리드 (Was #5) */}
-      <motion.div variants={fadeInUp}>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1 h-4 bg-primary/20 rounded-full" />
-          <h2 className="text-sm font-serif font-light text-ink-light tracking-wide">
-            8가지 운세 채우기
-          </h2>
-        </div>
-        <div className="grid grid-cols-4 gap-3">
-          {FORTUNE_MISSIONS.map((mission, idx) => {
-            const isCompleted = monthlyFortune.completedCategories.includes(mission.category)
-            const Icon = mission.icon
-            return (
-              <Link
-                key={idx}
-                href={mission.path}
-                className={cn(
-                  'flex flex-col items-center justify-center aspect-square rounded-lg border transition-all p-2',
-                  isCompleted
-                    ? 'bg-primary/5 border-primary/20'
-                    : 'bg-surface/20 border-white/5 hover:border-primary/10'
-                )}
-              >
-                <Icon
-                  className={cn('w-6 h-6 mb-2', isCompleted ? 'text-primary' : 'text-ink-light/40')}
-                  strokeWidth={1}
-                />
-                <span
-                  className={cn(
-                    'text-[10px] text-center leading-tight font-light',
-                    isCompleted ? 'text-primary' : 'text-ink-light/60'
-                  )}
-                >
-                  {mission.label}
-                </span>
-                {isCompleted && (
-                  <span className="text-[8px] text-primary/70 mt-1 font-light">✓</span>
-                )}
-              </Link>
-            )
-          })}
-        </div>
-      </motion.div>
-
-      {/* 7. Bento Grid (Remaining Items) */}
+      {/* 4. Bento Grid */}
       <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3">
         <motion.div variants={fadeInUp} className="col-span-1">
           <RelationshipSection />
@@ -154,18 +138,25 @@ export function AnalysisDashboard({
         </motion.div>
       </motion.div>
 
-      {/* 8. Trend + Roulette */}
-      <motion.section variants={fadeInUp} className="-mx-2 px-2 space-y-4">
+      {/* 5. Trend + 룰렛 & 출석 (2열 정사각 카드) */}
+      <motion.section variants={fadeInUp} className="-mx-2 px-2 space-y-3">
         <TrendSection />
-        <div className="px-0">
+
+        {/* 룰렛 + 출석체크 2열 */}
+        <div className="grid grid-cols-2 gap-3">
           <LuckyRouletteButton
             canSpin={rouletteStatus?.canSpin || false}
             nextAvailableTime={rouletteStatus?.nextAvailableTime}
           />
+          <AttendanceMiniCard
+            canCheckIn={attendanceStatus?.canCheckIn ?? false}
+            weekCount={weeklyAttendance?.weekCount ?? 0}
+            weekDays={weeklyAttendance?.weekDays}
+          />
         </div>
       </motion.section>
 
-      {/* 9~11. 느린 서버 섹션 — page.tsx에서 Suspense로 스트리밍 */}
+      {/* 6. 느린 서버 섹션 — page.tsx에서 Suspense로 스트리밍 */}
       {children && (
         <motion.div variants={fadeInUp} className="space-y-4">
           {children}

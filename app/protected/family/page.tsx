@@ -9,6 +9,7 @@ import {
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
+import { FamilyReviewSlide } from '@/components/family/family-review-slide'
 import { Button } from '@/components/ui/button'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -194,33 +195,38 @@ export default function FamilyPage() {
   // --- Authenticated View ---
   return (
     <div className="flex flex-col gap-6 w-full max-w-[480px] mx-auto py-8 px-0 pb-32 overflow-x-hidden">
-      {/* Header */}
-      <section className="space-y-4 text-center px-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <div className="flex justify-center mb-2">
-          <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-light uppercase tracking-widest text-xs backdrop-blur-md">
-            <Users className="w-3.5 h-3.5" strokeWidth={1} />
-            Family & Relationships
-          </div>
+      {/* Storytelling Header */}
+      <section className="relative px-4 pt-4 pb-8 text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-2">
+          <Sparkles className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
+          <span className="text-[11px] font-medium text-primary tracking-wide">
+            가족 운대 케어
+          </span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-serif font-light tracking-tight text-ink-light">
-          <span className="text-[#D4AF37]">인연 관리부</span>
-        </h1>
-        <BrandQuote variant="hero">{BRAND_QUOTES.family.hero}</BrandQuote>
-      </section>
 
-      {/* Stats Header */}
-      <div className="px-3 flex items-center justify-between">
-        <h3 className="text-lg font-serif font-light text-ink-light flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" strokeWidth={1} />
-          등록된 인연
-        </h3>
-        <Badge
-          variant="outline"
-          className="border-primary/50 text-primary px-3 py-1 bg-surface/50 backdrop-blur-sm font-light"
-        >
-          {members.length}명
-        </Badge>
-      </div>
+        <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug">
+          당신의 작은 관심이 <br />
+          <span className="text-primary relative inline-block">
+            가족의 운명
+            <svg className="absolute -bottom-1 left-0 w-full h-1 text-primary/30" viewBox="0 0 100 10" preserveAspectRatio="none">
+              <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
+          </span>
+          을 바꿉니다
+        </h1>
+
+        <p className="text-sm text-ink-light/60 font-light leading-relaxed max-w-[280px] mx-auto">
+          서로의 운을 챙겨줄 때, 집안의 기운은 <br />
+          비로소 완전해집니다.
+        </p>
+
+        {/* Stats Indicator */}
+        <div className="flex items-center justify-center gap-2 text-xs text-ink-light/40 mt-4">
+          <span className="w-1 h-1 rounded-full bg-primary/50" />
+          <span>현재 {members.length}명의 소중한 인연을 지키고 있어요</span>
+          <span className="w-1 h-1 rounded-full bg-primary/50" />
+        </div>
+      </section>
 
       {/* Member Cards */}
       <div className="min-h-[300px]">
@@ -271,6 +277,11 @@ export default function FamilyPage() {
           </Button>
         )}
       </div>
+
+      {/* Review Slide Section */}
+      <section className="px-3 mt-8 mb-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+        <FamilyReviewSlide />
+      </section>
 
       {/* Registration Form (Only shows when active) */}
       {(isFormOpen || editingMember) && (

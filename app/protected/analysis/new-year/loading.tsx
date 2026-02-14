@@ -1,32 +1,54 @@
+'use client'
+
+import { Flame } from 'lucide-react'
+
 export default function NewYearLoading() {
   return (
-    <div className="min-h-screen bg-background text-ink-light pb-20 animate-pulse">
-      <header className="px-3 pt-12 pb-6">
-        <div className="h-4 w-16 bg-white/5 rounded mb-4" />
-        <div className="h-8 w-48 bg-white/5 rounded mb-3" />
-        <div className="h-4 w-64 bg-white/5 rounded" />
-      </header>
+    <div className="min-h-screen bg-[#0A0A0A] text-ink-light flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
 
-      <div className="px-3 space-y-4">
-        {/* 점수 원형 */}
-        <div className="bg-surface/20 border border-white/5 rounded-xl p-8 flex flex-col items-center gap-4">
-          <div className="w-28 h-28 rounded-full bg-white/5" />
-          <div className="h-5 w-40 bg-white/5 rounded" />
-          <div className="h-4 w-56 bg-white/5 rounded" />
+      {/* Central Oracle */}
+      <div className="relative z-10 flex flex-col items-center gap-8">
+        {/* Rotating Rings (CSS Animation) */}
+        <div className="relative w-64 h-64 flex items-center justify-center">
+          <div className="absolute inset-0 border border-dashed border-red-500/20 rounded-full animate-spin-slow opacity-50" style={{ animationDuration: '15s' }} />
+          <div className="absolute inset-4 border border-dotted border-primary/30 rounded-full animate-spin-reverse-slow opacity-50" style={{ animationDuration: '12s' }} />
+          <div className="absolute inset-0 bg-red-900/5 blur-3xl rounded-full" />
+
+          {/* Center Icon */}
+          <div className="relative z-20 w-24 h-24 bg-gradient-to-b from-red-900/40 to-black rounded-full flex items-center justify-center border border-red-500/30 shadow-[0_0_40px_rgba(220,38,38,0.25)]">
+            <Flame className="w-10 h-10 text-red-500 animate-pulse" />
+          </div>
         </div>
 
-        {/* 분기별 */}
-        <div className="grid grid-cols-2 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-surface/20 border border-white/5 rounded-xl h-24" />
-          ))}
+        {/* Text */}
+        <div className="space-y-3 text-center">
+          <h3 className="font-serif text-xl text-ink-light font-medium tracking-wide animate-pulse">
+            천기의 흐름을 읽고 있습니다
+          </h3>
+          <p className="text-sm text-ink-light/50 font-light">
+            2026년 병오년의 기운을 불러오는 중...
+          </p>
         </div>
-
-        {/* 영역별 */}
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-surface/20 border border-white/5 rounded-xl h-16" />
-        ))}
       </div>
+
+      <style jsx global>{`
+         @keyframes spin-slow {
+           from { transform: rotate(0deg); }
+           to { transform: rotate(360deg); }
+         }
+         @keyframes spin-reverse-slow {
+           from { transform: rotate(360deg); }
+           to { transform: rotate(0deg); }
+         }
+         .animate-spin-slow {
+           animation: spin-slow linear infinite;
+         }
+         .animate-spin-reverse-slow {
+           animation: spin-reverse-slow linear infinite;
+         }
+       `}</style>
     </div>
   )
 }
