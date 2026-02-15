@@ -26,10 +26,14 @@ const DEFAULT_SEGMENTS: RouletteSegment[] = [
   { label: '3만냥', color: '#10b981' },
   { label: '5만냥', color: '#3b82f6' },
   { label: '10만냥', color: '#8b5cf6' },
-  { label: '꽝',    color: '#ef4444' },
+  { label: '꽝', color: '#ef4444' },
 ]
 
-export function LuckyRoulette({ canSpin: initialCanSpin, nextAvailableTime, segments = DEFAULT_SEGMENTS }: LuckyRouletteProps) {
+export function LuckyRoulette({
+  canSpin: initialCanSpin,
+  nextAvailableTime,
+  segments = DEFAULT_SEGMENTS,
+}: LuckyRouletteProps) {
   const [canSpin, setCanSpin] = useState(initialCanSpin)
   const [isSpinning, setIsSpinning] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -60,7 +64,11 @@ export function LuckyRoulette({ canSpin: initialCanSpin, nextAvailableTime, segm
         if (spinResult.reward.isMiss) {
           toast.error('아쉽게도 꽝! 내일 다시 도전하세요.', { duration: 3000 })
         } else {
-          toast.success(`🎉 축하합니다! 복채 ${spinResult.reward.value}만냥 당첨!`, {
+          const balanceInfo = spinResult.currentBalance
+            ? ` | 현재 잔액: ${spinResult.currentBalance}만냥`
+            : ''
+
+          toast.success(`🎉 축하합니다! 복채 ${spinResult.reward.value}만냥 당첨!${balanceInfo}`, {
             duration: 5000,
           })
           // 잔액 새로고침
@@ -166,15 +174,15 @@ export function LuckyRoulette({ canSpin: initialCanSpin, nextAvailableTime, segm
                       <Coins className="w-10 h-10 text-gold-400 mx-auto mb-1" />
                     )}
                   </motion.div>
-                  <p className={cn(
-                    "text-base font-bold",
-                    result.isMiss ? "text-muted-foreground" : "text-gold-400"
-                  )}>
+                  <p
+                    className={cn(
+                      'text-base font-bold',
+                      result.isMiss ? 'text-muted-foreground' : 'text-gold-400'
+                    )}
+                  >
                     {result.label}
                   </p>
-                  {!result.isMiss && (
-                    <p className="text-xs text-primary">복채 지급 완료!</p>
-                  )}
+                  {!result.isMiss && <p className="text-xs text-primary">복채 지급 완료!</p>}
                 </div>
               </motion.div>
             )}
@@ -219,7 +227,7 @@ export function LuckyRoulette({ canSpin: initialCanSpin, nextAvailableTime, segm
               { label: '꽝', color: 'text-red-400', prob: '5%' },
             ].map((item) => (
               <div key={item.label} className="text-center">
-                <p className={cn("text-[10px] font-bold", item.color)}>{item.label}</p>
+                <p className={cn('text-[10px] font-bold', item.color)}>{item.label}</p>
                 <p className="text-[8px] text-ink-light/40">{item.prob}</p>
               </div>
             ))}
