@@ -22,9 +22,9 @@ BEGIN
     new.raw_user_meta_data->>'full_name',
     new.email,
     new.raw_user_meta_data->>'gender',
-    (new.raw_user_meta_data->>'birth_date')::date,
-    (new.raw_user_meta_data->>'birth_time')::time,
-    COALESCE(new.raw_user_meta_data->>'calendar_type', 'solar')
+    (NULLIF(new.raw_user_meta_data->>'birth_date', ''))::date,
+    (NULLIF(new.raw_user_meta_data->>'birth_time', ''))::time,
+    COALESCE(NULLIF(new.raw_user_meta_data->>'calendar_type', ''), 'solar')
   )
   ON CONFLICT (id) DO UPDATE SET
     full_name = EXCLUDED.full_name,

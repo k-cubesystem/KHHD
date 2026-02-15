@@ -100,7 +100,7 @@ export function SettingsForm({
       console.log('Profile check error:', profileCheckError)
 
       if (!profileCheck) {
-        console.error('CRITICAL: User ID not found in profiles table!')
+        console.warn('WARN: User ID not found in profiles table - proceeding to auto-create.')
         console.log('Creating profile record automatically...')
 
         // Auto-create profile if missing
@@ -112,6 +112,10 @@ export function SettingsForm({
             avatar_url: finalAvatarUrl,
             home_address: homeAddress,
             work_address: workAddress,
+            gender: gender,
+            birth_date: birthDate || null,
+            birth_time: birthTime || null,
+            calendar_type: calendarType || 'solar',
           })
           .select()
           .single()
