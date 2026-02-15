@@ -1,63 +1,59 @@
-"use client";
+'use client'
 
-import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import SocialLoginButtons from "@/components/social-login-buttons";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import SocialLoginButtons from '@/components/social-login-buttons'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+} from '@/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
-export function SignUpForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [repeatPassword, setRepeatPassword] = useState("");
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState("female");
-  const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [calendarType, setCalendarType] = useState("solar");
+export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [repeatPassword, setRepeatPassword] = useState('')
+  const [name, setName] = useState('')
+  const [gender, setGender] = useState('female')
+  const [birthDate, setBirthDate] = useState('')
+  const [birthTime, setBirthTime] = useState('')
+  const [calendarType, setCalendarType] = useState('solar')
 
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
-    setError(null);
+    e.preventDefault()
+    const supabase = createClient()
+    setIsLoading(true)
+    setError(null)
 
     // Basic Validation
     if (!name.trim()) {
-      setError("이름을 입력해주세요.");
-      setIsLoading(false);
-      return;
+      setError('이름을 입력해주세요.')
+      setIsLoading(false)
+      return
     }
     if (!birthDate) {
-      setError("생년월일을 입력해주세요.");
-      setIsLoading(false);
-      return;
+      setError('생년월일을 입력해주세요.')
+      setIsLoading(false)
+      return
     }
     if (password !== repeatPassword) {
-      setError("비밀번호가 일치하지 않습니다.");
-      setIsLoading(false);
-      return;
+      setError('비밀번호가 일치하지 않습니다.')
+      setIsLoading(false)
+      return
     }
 
     try {
@@ -65,7 +61,7 @@ export function SignUpForm({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: name,
             gender,
@@ -74,27 +70,31 @@ export function SignUpForm({
             calendar_type: calendarType,
           },
         },
-      });
-      if (error) throw error;
-      router.push("/auth/sign-up-success");
+      })
+      if (error) throw error
+      router.push('/auth/sign-up-success')
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "회원가입 중 오류가 발생했습니다.");
+      setError(error instanceof Error ? error.message : '회원가입 중 오류가 발생했습니다.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="border-none bg-transparent shadow-none text-white overflow-hidden group relative">
         <CardContent className="grid gap-6 p-0">
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-5">
-
               {/* 이름 & 성별 */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">이름</Label>
+                  <Label
+                    htmlFor="name"
+                    className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1"
+                  >
+                    이름
+                  </Label>
                   <Input
                     id="name"
                     placeholder="홍길동"
@@ -105,7 +105,9 @@ export function SignUpForm({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">성별</Label>
+                  <Label className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">
+                    성별
+                  </Label>
                   <Select value={gender} onValueChange={setGender}>
                     <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-none">
                       <SelectValue placeholder="성별 선택" />
@@ -121,15 +123,42 @@ export function SignUpForm({
               {/* 생년월일 & 양력/음력 */}
               <div className="grid gap-2">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="birthdate" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">생년월일</Label>
-                  <RadioGroup value={calendarType} onValueChange={setCalendarType} className="flex gap-4">
+                  <Label
+                    htmlFor="birthdate"
+                    className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1"
+                  >
+                    생년월일
+                  </Label>
+                  <RadioGroup
+                    value={calendarType}
+                    onValueChange={setCalendarType}
+                    className="flex gap-4"
+                  >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="solar" id="solar" className="border-gold-400 text-gold-400 w-4 h-4" />
-                      <Label htmlFor="solar" className="text-white/70 text-xs cursor-pointer hover:text-white transition-colors">양력</Label>
+                      <RadioGroupItem
+                        value="solar"
+                        id="solar"
+                        className="border-gold-400 text-gold-400 w-4 h-4"
+                      />
+                      <Label
+                        htmlFor="solar"
+                        className="text-white/70 text-xs cursor-pointer hover:text-white transition-colors"
+                      >
+                        양력
+                      </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="lunar" id="lunar" className="border-gold-400 text-gold-400 w-4 h-4" />
-                      <Label htmlFor="lunar" className="text-white/70 text-xs cursor-pointer hover:text-white transition-colors">음력</Label>
+                      <RadioGroupItem
+                        value="lunar"
+                        id="lunar"
+                        className="border-gold-400 text-gold-400 w-4 h-4"
+                      />
+                      <Label
+                        htmlFor="lunar"
+                        className="text-white/70 text-xs cursor-pointer hover:text-white transition-colors"
+                      >
+                        음력
+                      </Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -167,7 +196,12 @@ export function SignUpForm({
 
               {/* 이메일 */}
               <div className="grid gap-2">
-                <Label htmlFor="email" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">이메일</Label>
+                <Label
+                  htmlFor="email"
+                  className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1"
+                >
+                  이메일
+                </Label>
                 <Input
                   id="email"
                   type="email"
@@ -181,7 +215,12 @@ export function SignUpForm({
 
               {/* 비밀번호 */}
               <div className="grid gap-2">
-                <Label htmlFor="password" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">비밀번호</Label>
+                <Label
+                  htmlFor="password"
+                  className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1"
+                >
+                  비밀번호
+                </Label>
                 <Input
                   id="password"
                   type="password"
@@ -194,7 +233,12 @@ export function SignUpForm({
 
               {/* 비밀번호 확인 */}
               <div className="grid gap-2">
-                <Label htmlFor="repeat-password" className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1">비밀번호 확인</Label>
+                <Label
+                  htmlFor="repeat-password"
+                  className="text-gold-100/60 text-xs font-bold uppercase tracking-wider pl-1"
+                >
+                  비밀번호 확인
+                </Label>
                 <Input
                   id="repeat-password"
                   type="password"
@@ -221,7 +265,9 @@ export function SignUpForm({
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>가입 처리 중...</span>
                   </div>
-                ) : "회원가입"}
+                ) : (
+                  '회원가입'
+                )}
               </Button>
 
               <SocialLoginButtons />
@@ -230,5 +276,5 @@ export function SignUpForm({
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

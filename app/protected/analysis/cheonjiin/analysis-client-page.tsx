@@ -4,10 +4,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { Card } from '@/components/ui/card'
-import { BookOpen, User, Compass, Hand, Sparkles, ArrowRight, CircleDot, Triangle } from 'lucide-react'
+import { BookOpen, User, Compass, Hand, Sparkles, ArrowRight } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/destiny-targets'
 import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
 
 interface AnalysisClientPageProps {
   targets: DestinyTarget[]
@@ -16,14 +15,14 @@ interface AnalysisClientPageProps {
 
 function TriadVisual() {
   return (
-    <div className="relative w-64 h-64 mx-auto my-8">
+    <div className="relative w-64 h-64 mx-auto my-6">
       {/* Background Glow */}
-      <div className="absolute inset-0 bg-primary/5 blur-[60px] rounded-full animate-pulse" />
+      <div className="absolute inset-0 bg-primary/5 blur-[50px] rounded-full animate-pulse" />
 
       {/* Rotating Ring */}
       <motion.div
         animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
         className="absolute inset-0 border border-dashed border-primary/20 rounded-full"
       />
 
@@ -35,37 +34,49 @@ function TriadVisual() {
           className="relative w-full h-full"
         >
           {/* Top: Heaven */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-              <span className="font-serif text-primary text-xl">天</span>
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
+            <div className="w-10 h-10 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+              <span className="font-serif text-primary text-base">天</span>
             </div>
-            <span className="text-[10px] text-ink-light/50 tracking-widest uppercase">Destiny</span>
+            <div className="text-center">
+              <span className="text-[10px] text-ink-light font-bold block">사주</span>
+              <span className="text-[9px] text-ink-light/50 block">타고난 운명</span>
+            </div>
           </div>
 
           {/* Bottom Left: Earth */}
-          <div className="absolute bottom-8 left-8 flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-              <span className="font-serif text-primary text-xl">地</span>
+          <div className="absolute bottom-8 left-6 flex flex-col items-center gap-1">
+            <div className="w-10 h-10 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+              <span className="font-serif text-primary text-base">地</span>
             </div>
-            <span className="text-[10px] text-ink-light/50 tracking-widest uppercase">Environment</span>
+            <div className="text-center">
+              <span className="text-[10px] text-ink-light font-bold block">풍수</span>
+              <span className="text-[9px] text-ink-light/50 block">공간의 기운</span>
+            </div>
           </div>
 
           {/* Bottom Right: Human */}
-          <div className="absolute bottom-8 right-8 flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-              <span className="font-serif text-primary text-xl">人</span>
+          <div className="absolute bottom-8 right-6 flex flex-col items-center gap-1">
+            <div className="w-10 h-10 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
+              <span className="font-serif text-primary text-base">人</span>
             </div>
-            <span className="text-[10px] text-ink-light/50 tracking-widest uppercase">Will</span>
+            <div className="text-center">
+              <span className="text-[10px] text-ink-light font-bold block">관상</span>
+              <span className="text-[9px] text-ink-light/50 block">삶의 의지</span>
+            </div>
           </div>
 
           {/* Connecting Lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: -1 }}>
+          <svg
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ zIndex: -1 }}
+          >
             <motion.path
               d="M128 60 L60 180 L196 180 Z"
               fill="none"
               stroke="url(#grad1)"
-              strokeWidth="1"
-              strokeDasharray="5,5"
+              strokeWidth="0.5"
+              strokeDasharray="4,4"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
               transition={{ duration: 2, delay: 0.5 }}
@@ -80,7 +91,7 @@ function TriadVisual() {
           </svg>
 
           {/* Center Core */}
-          <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-primary/10 rounded-full blur-xl animate-pulse" />
+          <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-primary/10 rounded-full blur-xl animate-pulse" />
         </motion.div>
       </div>
     </div>
@@ -89,6 +100,7 @@ function TriadVisual() {
 
 export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientPageProps) {
   const router = useRouter()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId || null)
 
   const handleStartAnalysis = (id: string) => {
@@ -101,47 +113,53 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="max-w-3xl mx-auto py-8 md:py-16 px-4 pb-32"
+      className="max-w-3xl mx-auto py-6 px-4 pb-20 overflow-x-hidden"
     >
       {/* 1. Header Area with Visual */}
-      <motion.section variants={fadeInUp} className="text-center space-y-6 mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full mb-4">
+      <motion.section variants={fadeInUp} className="text-center space-y-4 mb-8">
+        <div className="inline-flex items-center gap-2 px-3 py-0.5 bg-primary/10 border border-primary/20 rounded-full mb-2">
           <Sparkles className="w-3 h-3 text-primary" strokeWidth={1} />
-          <span className="text-[10px] font-medium text-primary tracking-[0.3em] uppercase">
+          <span className="text-[9px] font-medium text-primary tracking-[0.2em] uppercase">
             The Masterpiece
           </span>
         </div>
 
-        <h1 className="text-3xl md:text-5xl font-serif font-medium text-ink-light leading-snug">
-          천지인(天地人)<br />
-          <span className="text-primary/90 font-light">통합 운명 분석</span>
+        <h1 className="text-xl md:text-3xl font-serif font-medium text-ink-light tracking-tight">
+          천지인(天地人) 통합 운명 분석
         </h1>
 
-        <p className="text-sm md:text-base text-ink-light/60 font-light max-w-lg mx-auto leading-relaxed break-keep">
-          하늘이 정한 시기(天), 땅이 품은 기운(地), 사람이 빚어낸 흔적(人).<br className="hidden md:block" />
-          이 세 가지 차원을 입체적으로 조망하여 당신의 진정한 운명을 밝힙니다.
+        <p className="text-xs text-ink-light/60 font-light max-w-sm mx-auto leading-normal break-keep">
+          하늘의 시기(天), 땅의 기운(地), 사람의 흔적(人).
+          <br />세 가지 차원을 통해 당신의 운명을 비춥니다.
         </p>
 
         <TriadVisual />
       </motion.section>
 
-      {/* 2. Three Pillars Explanation */}
-      <motion.section variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
-        {[
-          { icon: BookOpen, title: "천(天): 사주", desc: "태어난 시간에 담긴\n하늘의 섭리와 설계도" },
-          { icon: Compass, title: "지(地): 풍수", desc: "당신을 둘러싼 공간과\n환경이 주는 에너지" },
-          { icon: Hand, title: "인(人): 관상", desc: "얼굴과 손에 새겨진\n삶의 궤적과 의지" }
-        ].map((item, i) => (
-          <div key={i} className="bg-surface/30 border border-white/5 p-6 rounded-xl text-center space-y-3 hover:bg-surface/50 transition-colors group">
-            <div className="w-10 h-10 mx-auto bg-[#1a0505] border border-primary/20 rounded-full flex items-center justify-center group-hover:border-primary/50 transition-colors">
-              <item.icon className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" strokeWidth={1} />
-            </div>
-            <h3 className="text-lg font-serif text-ink-light">{item.title}</h3>
-            <p className="text-xs text-ink-light/50 whitespace-pre-line font-light leading-relaxed">
-              {item.desc}
-            </p>
+      {/* 2. Three Pillars Explanation (Consolidated Card) */}
+      <motion.section variants={fadeInUp} className="mb-10 text-center md:text-left">
+        <Card className="bg-surface/30 border border-white/5 p-4 rounded-xl">
+          <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/10">
+            {[
+              { icon: BookOpen, title: '천(天): 사주', desc: '하늘의 섭리와 설계도' },
+              { icon: Compass, title: '지(地): 풍수', desc: '공간과 환경의 에너지' },
+              { icon: Hand, title: '인(人): 관상', desc: '삶의 궤적과 의지' },
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="flex-1 flex items-center md:flex-col md:items-center md:text-center gap-4 p-3 hover:bg-surface/50 transition-colors"
+              >
+                <div className="w-8 h-8 flex-shrink-0 bg-[#1a0505] border border-primary/20 rounded-full flex items-center justify-center">
+                  <item.icon className="w-3.5 h-3.5 text-primary opacity-70" strokeWidth={1} />
+                </div>
+                <div className="flex flex-col md:gap-1 text-left md:text-center">
+                  <h3 className="text-sm font-serif text-ink-light font-medium">{item.title}</h3>
+                  <p className="text-xs text-ink-light/50">{item.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </Card>
       </motion.section>
 
       {/* 3. Target Selection */}
@@ -154,11 +172,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         {targets.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {targets.map((target) => (
-              <motion.div
-                key={target.id}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-              >
+              <motion.div key={target.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                 <Card
                   onClick={() => handleStartAnalysis(target.id)}
                   className="bg-surface/20 border-white/10 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group p-4 flex items-center justify-between"
@@ -184,8 +198,21 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
             ))}
           </div>
         ) : (
-          <Card className="bg-surface/10 border-dashed border-primary/20 p-8 text-center text-ink-light/40 text-sm font-light">
-            등록된 분석 대상이 없습니다. 가족 관리에서 대상을 추가해주세요.
+          <Card
+            onClick={() => router.push('/protected/family')}
+            className="bg-surface/10 border-dashed border-primary/20 p-8 text-center cursor-pointer hover:bg-surface/20 transition-colors group"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <User className="w-8 h-8 text-ink-light/20 group-hover:text-primary/60 transition-colors" />
+              <div className="space-y-1">
+                <p className="text-sm text-ink-light/60 font-medium group-hover:text-primary transition-colors">
+                  등록된 분석 대상이 없습니다
+                </p>
+                <p className="text-xs text-ink-light/40 group-hover:text-primary/70 transition-colors">
+                  가족 관리에서 대상을 추가해주세요 <ArrowRight className="w-3 h-3 inline ml-1" />
+                </p>
+              </div>
+            </div>
           </Card>
         )}
       </motion.section>

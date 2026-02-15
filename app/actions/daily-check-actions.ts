@@ -1,149 +1,178 @@
-"use server";
+'use server'
 
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-const ATTENDANCE_REWARDS = {
-  base: 50,
-  consecutive_bonus: {
-    3: 100,  // 3일 연속 시 +100
-    7: 500,  // 7일 연속 시 +500
-    30: 2000 // 30일 연속 시 +2000
-  }
-};
+import { createClient } from '@/lib/supabase/server'
 
 export async function checkDailyAttendance() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: "로그인이 필요합니다.", checked: false, consecutiveDays: 0 };
+      return { success: false, error: '로그인이 필요합니다.', checked: false, consecutiveDays: 0 }
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0]
 
-    // 오늘 출석 여부 확인
     const { data: todayRecord } = await supabase
-      .from('daily_attendance')
-      .select('*')
+      .from('attendance_logs')
+      .select('bokchae_awarded')
       .eq('user_id', user.id)
-      .eq('checked_at', today)
-      .single();
+      .eq('checked_date', today)
+      .single()
 
     if (todayRecord) {
+      // 이번 주 연속 출석 수 계산
+      const dayOfWeek = new Date().getDay()
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+      const weekStart = new Date()
+      weekStart.setDate(weekStart.getDate() - daysFromMonday)
+      const weekStartStr = weekStart.toISOString().split('T')[0]
+
+      const { data: weekRecords } = await supabase
+        .from('attendance_logs')
+        .select('checked_date')
+        .eq('user_id', user.id)
+        .eq('week_start', weekStartStr)
+
       return {
         success: true,
         checked: true,
-        consecutiveDays: todayRecord.consecutive_days
-      };
+        consecutiveDays: weekRecords?.length || 1,
+      }
     }
 
-    // 어제 출석 여부로 연속 일수 계산
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const dayOfWeek = new Date().getDay()
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const weekStart = new Date()
+    weekStart.setDate(weekStart.getDate() - daysFromMonday)
+    const weekStartStr = weekStart.toISOString().split('T')[0]
 
-    const { data: yesterdayRecord } = await supabase
-      .from('daily_attendance')
-      .select('consecutive_days')
+    const { data: weekRecords } = await supabase
+      .from('attendance_logs')
+      .select('checked_date')
       .eq('user_id', user.id)
-      .eq('checked_at', yesterdayStr)
-      .single();
-
-    const consecutiveDays = yesterdayRecord ? yesterdayRecord.consecutive_days : 0;
+      .eq('week_start', weekStartStr)
 
     return {
       success: true,
       checked: false,
-      consecutiveDays
-    };
+      consecutiveDays: weekRecords?.length || 0,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error('checkDailyAttendance error:', error);
-    return {
-      success: false,
-      error: error.message || "출석 확인 중 오류가 발생했습니다.",
-      checked: false,
-      consecutiveDays: 0
-    };
+    return { success: false, error: error.message, checked: false, consecutiveDays: 0 }
   }
 }
 
 export async function recordDailyAttendance() {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
-      return { success: false, error: "로그인이 필요합니다." };
+      return { success: false, error: '로그인이 필요합니다.' }
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
 
-    // 중복 체크
+    // 이미 체크인했는지 확인
     const { data: existing } = await supabase
-      .from('daily_attendance')
-      .select('*')
+      .from('attendance_logs')
+      .select('id')
       .eq('user_id', user.id)
-      .eq('checked_at', today)
-      .single();
+      .eq('checked_date', todayStr)
+      .single()
 
     if (existing) {
-      return { success: false, error: "이미 출석하셨습니다." };
+      return { success: false, error: '오늘은 이미 출석 체크를 완료했습니다.' }
     }
 
-    // 연속 일수 계산
-    const checkResult = await checkDailyAttendance();
-    if (!checkResult.success) {
-      return { success: false, error: checkResult.error };
-    }
+    // 이번 주 월요일 계산
+    const dayOfWeek = today.getDay()
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const weekStart = new Date(today)
+    weekStart.setDate(today.getDate() - daysFromMonday)
+    const weekStartStr = weekStart.toISOString().split('T')[0]
 
-    const newConsecutiveDays = checkResult.consecutiveDays + 1;
+    // 이번 주 출석 횟수 확인
+    const { data: weekRecords } = await supabase
+      .from('attendance_logs')
+      .select('checked_date')
+      .eq('user_id', user.id)
+      .eq('week_start', weekStartStr)
 
-    // 보상 계산
-    let reward = ATTENDANCE_REWARDS.base;
-    if (ATTENDANCE_REWARDS.consecutive_bonus[newConsecutiveDays as keyof typeof ATTENDANCE_REWARDS.consecutive_bonus]) {
-      reward += ATTENDANCE_REWARDS.consecutive_bonus[newConsecutiveDays as keyof typeof ATTENDANCE_REWARDS.consecutive_bonus];
-    }
+    const weekCount = weekRecords?.length || 0
+    const isLastDayOfWeek = weekCount === 6 // 7번째 출석
+    const baseReward = 1
+    const weeklyBonus = isLastDayOfWeek ? 3 : 0
+    const totalReward = baseReward + weeklyBonus
+    const newConsecutiveDays = weekCount + 1
 
-    // DB 기록
-    const { error: insertError } = await supabase
-      .from('daily_attendance')
-      .insert({
-        user_id: user.id,
-        checked_at: today,
-        consecutive_days: newConsecutiveDays,
-        reward_talisman: reward
-      });
+    // 출석 기록 저장
+    const { error: insertError } = await supabase.from('attendance_logs').insert({
+      user_id: user.id,
+      checked_date: todayStr,
+      week_start: weekStartStr,
+      bokchae_awarded: totalReward,
+      is_weekly_bonus: isLastDayOfWeek,
+    })
 
     if (insertError) {
-      console.error('Insert error:', insertError);
-      return { success: false, error: insertError.message };
+      return { success: false, error: insertError.message }
     }
 
-    // 부적 지급 (wallet에 추가)
-    // wallet 테이블이 있다고 가정하고 업데이트
-    const { error: walletError } = await supabase.rpc('add_talisman', {
-      p_user_id: user.id,
-      p_amount: reward,
-      p_reason: `일일 출석 보상 (${newConsecutiveDays}일 연속)`
-    });
+    // 복채 지급 (add_bokchae RPC 우선 시도)
+    const reason = isLastDayOfWeek
+      ? `출석 체크 (기본 1만냥 + 주간 보너스 3만냥)`
+      : `출석 체크 (1만냥)`
 
-    if (walletError) {
-      console.error('Wallet error:', walletError);
-      // 출석은 기록되었으므로 계속 진행
+    const { error: rpcError } = await supabase.rpc('add_bokchae', {
+      p_user_id: user.id,
+      p_amount: totalReward,
+      p_reason: reason,
+    })
+
+    if (rpcError) {
+      // RPC 없으면 직접 업데이트
+      const { data: wallet } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single()
+
+      const currentBalance = wallet?.balance || 0
+
+      await supabase
+        .from('wallets')
+        .upsert(
+          { user_id: user.id, balance: currentBalance + totalReward },
+          { onConflict: 'user_id' }
+        )
+
+      await supabase.from('wallet_transactions').insert({
+        user_id: user.id,
+        amount: totalReward,
+        type: 'BONUS',
+        description: reason,
+      })
     }
 
     return {
       success: true,
-      reward,
-      consecutiveDays: newConsecutiveDays
-    };
+      reward: totalReward,
+      consecutiveDays: newConsecutiveDays,
+      isWeeklyBonus: isLastDayOfWeek,
+      message: isLastDayOfWeek
+        ? `주간 출석 완료! 복채 ${totalReward}만냥 입금되었습니다 🎉`
+        : `출석 체크 완료! 복채 1만냥 입금되었습니다`,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error('recordDailyAttendance error:', error);
-    return {
-      success: false,
-      error: error.message || "출석 체크 중 오류가 발생했습니다."
-    };
+    return { success: false, error: error.message || '출석 체크 중 오류가 발생했습니다.' }
   }
 }
