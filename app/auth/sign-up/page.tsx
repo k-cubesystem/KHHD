@@ -1,12 +1,11 @@
-import { SignUpForm } from "@/components/sign-up-form";
-import { Suspense } from "react";
-import { Loader2, Flower } from "lucide-react";
-import Link from "next/link";
+import { SignUpForm } from '@/components/sign-up-form'
+import { Suspense } from 'react'
+import { Loader2, Flower } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Page() {
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 overflow-hidden bg-background text-ink-light font-serif">
-
       {/* Texture Overlay */}
       <div className="hanji-overlay" />
 
@@ -19,7 +18,6 @@ export default function Page() {
 
       {/* 2. Content Container */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center gap-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-
         {/* Header: Logo & Title (Matched to Login Page) */}
         <div className="flex flex-col items-center gap-5 md:gap-8">
           {/* Welcome Label */}
@@ -35,9 +33,15 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Sign Up Form Card */}
-        <div className="w-full bg-surface/50 backdrop-blur-md border border-primary/20 p-8 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] luxury-card-glow">
-          <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin text-primary" /></div>}>
+        {/* Sign Up Form */}
+        <div className="w-full p-2">
+          <Suspense
+            fallback={
+              <div className="flex justify-center p-8">
+                <Loader2 className="animate-spin text-primary" />
+              </div>
+            }
+          >
             <SignUpForm />
           </Suspense>
         </div>
@@ -48,13 +52,16 @@ export default function Page() {
           <div className="w-full max-w-[200px] h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
           <div className="flex items-center justify-center gap-6 font-sans text-sm tracking-wide">
-            <Link href="/auth/login" className="text-ink-light/50 hover:text-ink-light transition-colors duration-300">
-              이미 계정이 있으신가요? <span className="text-primary hover:underline ml-1 font-bold">로그인</span>
+            <Link
+              href="/auth/login"
+              className="text-ink-light/50 hover:text-ink-light transition-colors duration-300"
+            >
+              이미 계정이 있으신가요?{' '}
+              <span className="text-primary hover:underline ml-1 font-bold">로그인</span>
             </Link>
           </div>
         </div>
-
       </div>
     </div>
-  );
+  )
 }
