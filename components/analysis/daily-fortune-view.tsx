@@ -29,6 +29,7 @@ import Link from 'next/link'
 interface DailyFortuneViewProps {
   userId: string
   userName: string
+  selectedDate?: string
 }
 
 interface ProfileOption {
@@ -37,7 +38,7 @@ interface ProfileOption {
   type: 'USER' | 'FAMILY'
 }
 
-export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
+export function DailyFortuneView({ userId, userName, selectedDate }: DailyFortuneViewProps) {
   const [fortune, setFortune] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -56,7 +57,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
     if (selectedProfileId) {
       loadFortune()
     }
-  }, [selectedProfileId])
+  }, [selectedProfileId, selectedDate])
 
   const loadProfiles = async () => {
     try {
@@ -83,7 +84,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
         userId,
         selected.id,
         selected.type,
-        undefined,
+        selectedDate,
         force
       )
 
@@ -147,7 +148,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
               오늘의 운세
             </h2>
             <p className="text-sm text-ink-light/60 mt-1">
-              {new Date().toLocaleDateString('ko-KR', {
+              {(selectedDate ? new Date(selectedDate) : new Date()).toLocaleDateString('ko-KR', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
