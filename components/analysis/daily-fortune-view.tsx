@@ -144,9 +144,9 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
           <div>
             <h2 className="text-2xl font-serif font-bold text-ink-light flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              <span className="text-primary-dim">{selectedProfile?.name}</span>님의 오늘의 운세
+              오늘의 운세
             </h2>
-            <p className="text-sm text-ink/60 mt-1">
+            <p className="text-sm text-ink-light/60 mt-1">
               {new Date().toLocaleDateString('ko-KR', {
                 year: 'numeric',
                 month: 'long',
@@ -159,7 +159,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
           <div className="flex items-center gap-2">
             <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
               <SelectTrigger className="w-[140px] bg-surface/50 border-primary/20 text-ink-light">
-                <Users className="w-4 h-4 mr-2 text-ink/60" />
+                <Users className="w-4 h-4 mr-2 text-ink-light/60" />
                 <SelectValue placeholder="대상 선택" />
               </SelectTrigger>
               <SelectContent className="bg-surface border-primary/20 text-ink-light">
@@ -179,7 +179,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
               variant="ghost"
               size="icon"
               onClick={() => loadFortune(true)}
-              className="text-ink/60 hover:text-ink-light hover:bg-white/10"
+              className="text-ink-light/60 hover:text-ink-light hover:bg-white/10"
               title="새로고침(다시 생성)"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -190,16 +190,16 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            <p className="text-ink/60 font-serif animate-pulse">
+            <p className="text-ink-light/60 font-serif animate-pulse">
               {selectedProfile?.name}님의 기운을 읽고 있습니다...
             </p>
           </div>
         ) : missingInfo ? (
           <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
-            <Sparkles className="w-12 h-12 text-ink/40" />
+            <Sparkles className="w-12 h-12 text-ink-light/40" />
             <div className="text-center space-y-2">
               <p className="text-ink-light font-serif text-lg">사주 정보를 찾을 수 없습니다</p>
-              <p className="text-ink/60 text-sm">
+              <p className="text-ink-light/60 text-sm">
                 정확한 운세 분석을 위해 생년월일시 정보가 필요합니다.
               </p>
             </div>
