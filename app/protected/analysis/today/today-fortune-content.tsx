@@ -7,7 +7,6 @@ import { DailyFortuneView } from '@/components/analysis/daily-fortune-view'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 import { GuestCTACard } from '@/components/guest-cta-card'
-import { cn } from '@/lib/utils'
 
 export function TodayFortuneContent() {
   const searchParams = useSearchParams()
@@ -16,19 +15,6 @@ export function TodayFortuneContent() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
-
-  // Get next 7 days starting from today
-  const weekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() + i)
-    return {
-      dateStr: d.toISOString().split('T')[0],
-      label: d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
-      dayName: d.toLocaleDateString('ko-KR', { weekday: 'short' }),
-      isToday: i === 0,
-    }
-  })
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -67,81 +53,38 @@ export function TodayFortuneContent() {
     return (
       <div className="flex flex-col items-center justify-center p-24 h-full min-h-[50vh]">
         <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="mt-4 text-ink/60 font-serif">사용자 정보를 확인 중입니다...</p>
+        <p className="mt-4 text-ink-light/60 font-serif">사용자 정보를 확인 중입니다...</p>
       </div>
     )
   }
 
-  const selectedDateObj = new Date(selectedDate)
-
   return (
     <div className="flex flex-col gap-12 w-full max-w-5xl mx-auto py-12 px-3 pb-24 font-sans relative z-10">
       {/* Header: Daily Compass Concept */}
-      <div className="text-center space-y-6 animate-in fade-in duration-700">
+      <div className="text-center space-y-4 animate-in fade-in duration-700">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
           <Sun className="w-4 h-4 text-primary" />
           <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">
             Daily Compass
           </span>
         </div>
-        <div className="space-y-2">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
-            오늘의 <span className="text-primary">기상도</span>
-          </h1>
-          <p className="text-ink-light/70 font-light text-lg max-w-2xl mx-auto leading-relaxed">
-            매일 아침, 하루의 기상을 미리 확인하세요.
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
+          오늘의 <span className="text-primary">기상도</span>
+        </h1>
+        <p className="text-ink-light/70 font-light text-lg max-w-2xl mx-auto leading-relaxed">
+          매일 아침, 하루의 기상을 미리 확인하세요.
+          <br />
+          <span className="text-sm">때로는 멈추는 것이 나아가는 것보다 빠를 때가 있습니다.</span>
+        </p>
+        <div className="flex flex-col items-center gap-1 pt-2">
+          <p className="text-ink-light/50 font-serif text-base">
+            {new Date().toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'long',
+            })}
           </p>
-        </div>
-
-        {/* Date Display Section */}
-        <div className="flex flex-col items-center gap-4 pt-4">
-          <div className="flex flex-col items-center gap-1 bg-surface/20 border border-primary/10 px-8 py-4 rounded-2xl backdrop-blur-md">
-            <span className="text-[10px] text-primary/60 font-medium tracking-widest uppercase mb-1">
-              Current & Saju Date
-            </span>
-            <p className="text-ink-light font-serif text-xl md:text-2xl">
-              {selectedDateObj.toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long',
-              })}
-            </p>
-            {selectedDate === new Date().toISOString().split('T')[0] && (
-              <span className="text-xs text-primary font-medium px-2 py-0.5 bg-primary/10 rounded-full mt-1">
-                실시간 기준
-              </span>
-            )}
-          </div>
-
-          {/* Week Selector */}
-          <div className="flex flex-wrap justify-center gap-2 pt-2">
-            {weekDates.map((date) => (
-              <button
-                key={date.dateStr}
-                onClick={() => setSelectedDate(date.dateStr)}
-                className={cn(
-                  'flex flex-col items-center justify-center w-14 h-16 rounded-xl transition-all duration-300 border',
-                  selectedDate === date.dateStr
-                    ? 'bg-primary border-primary text-background shadow-[0_0_15px_rgba(234,179,8,0.3)] scale-105'
-                    : 'bg-surface/30 border-primary/10 text-ink-light/60 hover:bg-surface/50 hover:border-primary/30'
-                )}
-              >
-                <span className="text-[10px] font-light leading-none mb-1 opacity-70">
-                  {date.dayName}
-                </span>
-                <span className="text-sm font-serif font-bold">{date.dateStr.split('-')[2]}</span>
-                {date.isToday && (
-                  <div
-                    className={cn(
-                      'w-1 h-1 rounded-full mt-1',
-                      selectedDate === date.dateStr ? 'bg-background' : 'bg-primary'
-                    )}
-                  />
-                )}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -153,7 +96,7 @@ export function TodayFortuneContent() {
         className="max-w-3xl mx-auto w-full"
       >
         {userId ? (
-          <DailyFortuneView userId={userId} userName={userName} selectedDate={selectedDate} />
+          <DailyFortuneView userId={userId} userName={userName} />
         ) : (
           <GuestCTACard
             title="가입하고 내 운세 보기"

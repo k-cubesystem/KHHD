@@ -29,7 +29,6 @@ import Link from 'next/link'
 interface DailyFortuneViewProps {
   userId: string
   userName: string
-  selectedDate?: string
 }
 
 interface ProfileOption {
@@ -38,7 +37,7 @@ interface ProfileOption {
   type: 'USER' | 'FAMILY'
 }
 
-export function DailyFortuneView({ userId, userName, selectedDate }: DailyFortuneViewProps) {
+export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
   const [fortune, setFortune] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -57,7 +56,7 @@ export function DailyFortuneView({ userId, userName, selectedDate }: DailyFortun
     if (selectedProfileId) {
       loadFortune()
     }
-  }, [selectedProfileId, selectedDate])
+  }, [selectedProfileId])
 
   const loadProfiles = async () => {
     try {
@@ -84,7 +83,7 @@ export function DailyFortuneView({ userId, userName, selectedDate }: DailyFortun
         userId,
         selected.id,
         selected.type,
-        selectedDate,
+        undefined,
         force
       )
 
@@ -145,10 +144,10 @@ export function DailyFortuneView({ userId, userName, selectedDate }: DailyFortun
           <div>
             <h2 className="text-2xl font-serif font-bold text-ink-light flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              오늘의 운세
+              오늘의 운명
             </h2>
             <p className="text-sm text-ink-light/60 mt-1">
-              {(selectedDate ? new Date(selectedDate) : new Date()).toLocaleDateString('ko-KR', {
+              {new Date().toLocaleDateString('ko-KR', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
