@@ -101,7 +101,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
+                    className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -109,7 +109,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                     성별
                   </Label>
                   <Select value={gender} onValueChange={setGender}>
-                    <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-none">
+                    <SelectTrigger className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 h-12 text-white rounded-none">
                       <SelectValue placeholder="성별 선택" />
                     </SelectTrigger>
                     <SelectContent className="bg-ink-900 border-white/10 text-white">
@@ -169,10 +169,10 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                     required
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none [color-scheme:dark]"
+                    className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 transition-all h-12 text-white placeholder:text-white/20 rounded-none [color-scheme:dark]"
                   />
                   <Select value={birthTime} onValueChange={setBirthTime}>
-                    <SelectTrigger className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 h-12 text-white rounded-none">
+                    <SelectTrigger className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 h-12 text-white rounded-none">
                       <SelectValue placeholder="태어난 시간 (자시~해시)" />
                     </SelectTrigger>
                     <SelectContent className="bg-ink-900 border-white/10 text-white max-h-[300px]">
@@ -209,7 +209,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
+                  className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 transition-all h-12 text-white placeholder:text-white/20 rounded-none"
                 />
               </div>
 
@@ -227,7 +227,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-none"
+                  className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 transition-all h-12 text-white rounded-none"
                 />
               </div>
 
@@ -245,7 +245,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
-                  className="bg-white/5 border-white/10 focus:border-gold-500/50 focus:ring-gold-500/20 transition-all h-12 text-white rounded-none"
+                  className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 transition-all h-12 text-white rounded-none"
                 />
               </div>
 
