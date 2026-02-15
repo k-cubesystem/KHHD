@@ -15,8 +15,8 @@ import {
 import { Loader2, Save, BookOpen, Compass, User as UserIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { saveProfile, saveSelfFamilyMember } from '@/app/actions/profile-actions'
 import { AvatarSelector } from './avatar-selector'
 import { KakaoAddressSearch } from './kakao-address-search'
 import type { DokkaebiAvatarId } from '@/lib/constants/dokkaebi-avatars'
@@ -61,191 +61,53 @@ export function SettingsForm({
     setIsLoading(true)
 
     try {
-      console.log('=== Save Process Started ===')
-      const supabase = createClient()
-
-      // 아바타가 선택되지 않았으면 소셜 아바타 사용
       const finalAvatarUrl = avatarUrl || socialAvatarUrl || ''
 
-      console.log('1. Updating profiles table...')
-      // 1. 프로필 정보 업데이트 (기본 정보 + 풍수 정보) - profiles 테이블
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: name,
-          home_address: homeAddress,
-          work_address: workAddress,
-          avatar_url: finalAvatarUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+      // 1. 프로필 저장 (서버 액션 - admin client로 RLS 우회)
+      const profileResult = await saveProfile({
+        fullName: name,
+        gender,
+        birthDate,
+        birthTime,
+        calendarType,
+        homeAddress,
+        workAddress,
+        avatarUrl: finalAvatarUrl,
+      })
 
-      if (profileError) {
-        console.error('Profile update error:', profileError)
-        throw profileError
-      }
-      console.log('✓ Profiles table updated successfully')
-
-      // DEBUG: Verify user_id exists in profiles
-      console.log('DEBUG: Verifying user_id in profiles table...')
-      console.log('User ID from auth:', user.id)
-
-      const { data: profileCheck, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      console.log('Profile check result:', profileCheck)
-      console.log('Profile check error:', profileCheckError)
-
-      if (!profileCheck) {
-        console.warn('WARN: User ID not found in profiles table - proceeding to auto-create.')
-        console.log('Creating profile record automatically...')
-
-        // Auto-create profile if missing
-        const { data: newProfile, error: createProfileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            full_name: name || user.email?.split('@')[0] || '사용자',
-            avatar_url: finalAvatarUrl,
-            home_address: homeAddress,
-            work_address: workAddress,
-            gender: gender,
-            birth_date: birthDate || null,
-            birth_time: birthTime || null,
-            calendar_type: calendarType || 'solar',
-          })
-          .select()
-          .single()
-
-        if (createProfileError) {
-          console.error('Failed to auto-create profile:', createProfileError)
-          toast.error('프로필 생성에 실패했습니다. 관리자에게 문의해주세요.')
-          throw createProfileError
-        }
-
-        console.log('✓ Profile auto-created:', newProfile)
-      }
-
-      // 2. 사주 정보 업데이트 - family_members 테이블 (relationship = '본인')
-      // birth_date is NOT NULL in the schema, so skip if empty
-      if (!birthDate) {
-        console.warn('⚠ Skipping family_members update: birth_date is required but empty')
-        toast.success(
-          '기본 정보가 저장되었습니다. (사주 정보를 저장하려면 생년월일을 입력해주세요)'
-        )
-        try {
-          router.refresh()
-        } catch (refreshError) {
-          console.error('Router refresh error:', refreshError)
-        }
+      if (!profileResult.success) {
+        toast.error('프로필 저장 실패: ' + profileResult.error)
         return
       }
 
-      console.log('2. Checking existing family_members record...')
-      // 먼저 본인 정보가 있는지 확인
-      const { data: existingMember, error: selectError } = await supabase
-        .from('family_members')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('relationship', '본인')
-        .maybeSingle()
-
-      if (selectError) {
-        console.error('Select error:', selectError)
-        throw selectError
+      // 2. 생년월일 없으면 기본 정보만 저장
+      if (!birthDate) {
+        toast.success(
+          '기본 정보가 저장되었습니다. (사주 정보를 저장하려면 생년월일을 입력해주세요)'
+        )
+        router.refresh()
+        return
       }
 
-      const sajuData = {
-        name: name || '이름 없음', // name은 NOT NULL이므로 기본값 제공
-        gender: gender && ['male', 'female'].includes(gender) ? gender : 'male', // CHECK 제약 조건 준수
-        birth_date: birthDate,
-        birth_time: birthTime || null,
-        calendar_type:
-          calendarType && ['solar', 'lunar'].includes(calendarType) ? calendarType : 'solar', // CHECK 제약 조건 준수
-      }
-      console.log('Saju data to save:', sajuData)
-      console.log('Validations:', {
-        nameValid: !!sajuData.name,
-        genderValid: ['male', 'female'].includes(sajuData.gender),
-        birthDateValid: !!sajuData.birth_date,
-        calendarTypeValid: ['solar', 'lunar'].includes(sajuData.calendar_type),
+      // 3. family_members 저장 (서버 액션 - admin client로 RLS 우회)
+      const familyResult = await saveSelfFamilyMember({
+        userId: user.id,
+        name,
+        gender,
+        birthDate,
+        birthTime,
+        calendarType,
       })
 
-      if (existingMember) {
-        console.log('3. Updating existing family_members record...', existingMember.id)
-        const { error: sajuError } = await supabase
-          .from('family_members')
-          .update(sajuData)
-          .eq('id', existingMember.id)
-
-        if (sajuError) {
-          console.error('Family members update error:', sajuError)
-          throw sajuError
-        }
-        console.log('✓ Family members updated successfully')
-      } else {
-        console.log('3. Inserting new family_members record...')
-        const insertData = {
-          user_id: user.id,
-          relationship: '본인',
-          ...sajuData,
-        }
-        console.log('Insert data:', JSON.stringify(insertData, null, 2))
-
-        const insertResponse = await supabase.from('family_members').insert(insertData)
-
-        console.log('Full insert response:', insertResponse)
-        console.log('Insert response keys:', Object.keys(insertResponse))
-        console.log('Insert error:', insertResponse.error)
-        console.log('Insert data:', insertResponse.data)
-        console.log('Insert status:', insertResponse.status)
-        console.log('Insert statusText:', insertResponse.statusText)
-
-        if (insertResponse.error) {
-          console.error('Family members insert error:', insertResponse.error)
-          console.error('Error object type:', typeof insertResponse.error)
-          console.error('Error object keys:', Object.keys(insertResponse.error))
-          console.error('Error stringified:', JSON.stringify(insertResponse.error, null, 2))
-          console.error('Error prototype:', Object.getPrototypeOf(insertResponse.error))
-          console.error('Error message:', insertResponse.error.message)
-          console.error('Error code:', insertResponse.error.code)
-          console.error('Error details:', insertResponse.error.details)
-          console.error('Error hint:', insertResponse.error.hint)
-          throw insertResponse.error
-        }
-        console.log('✓ Family members inserted successfully')
+      if (!familyResult.success) {
+        toast.error('사주 정보 저장 실패: ' + familyResult.error)
+        return
       }
 
-      console.log('4. Save completed successfully, showing success message...')
       toast.success('정보가 성공적으로 저장되었습니다.')
-
-      console.log('5. Refreshing router...')
-      try {
-        router.refresh()
-      } catch (refreshError) {
-        console.error('Router refresh error (non-critical):', refreshError)
-      }
-      console.log('=== Save Process Completed ===')
+      router.refresh()
     } catch (error: any) {
-      console.error('=== Save Process Failed ===')
-      console.error('Save error:', error)
-      console.error('Error type:', typeof error)
-      console.error('Error constructor:', error?.constructor?.name)
-      console.error('Error details:', JSON.stringify(error, null, 2))
-      console.error('Error keys:', Object.keys(error || {}))
-
-      // Extract meaningful error message
-      const errorMessage =
-        error?.message ||
-        error?.error_description ||
-        error?.details ||
-        error?.hint ||
-        '알 수 없는 오류가 발생했습니다. 콘솔을 확인해주세요.'
-
-      toast.error('저장 중 오류가 발생했습니다: ' + errorMessage)
+      toast.error('저장 중 오류가 발생했습니다: ' + (error?.message || '알 수 없는 오류'))
     } finally {
       setIsLoading(false)
     }

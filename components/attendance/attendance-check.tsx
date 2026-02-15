@@ -60,9 +60,15 @@ export function AttendanceCheck({
       const today = new Date().toISOString().split('T')[0]
       setWeekDays((prev) => prev.map((d) => (d.date === today ? { ...d, checked: true } : d)))
 
-      toast.success(result.message || `출석 체크 완료! 복채 1만냥 입금되었습니다`, {
-        duration: 4000,
-      })
+      // Enhanced toast message with current balance
+      const balanceInfo = result.currentBalance ? ` | 현재 잔액: ${result.currentBalance}만냥` : ''
+
+      toast.success(
+        result.message || `출석 체크 완료! 복채 ${result.reward}만냥 지급!${balanceInfo}`,
+        {
+          duration: 5000,
+        }
+      )
 
       setTimeout(() => setShowReward(false), 3000)
     } else {
