@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
@@ -120,7 +120,7 @@ export async function analyzeFaceForDestiny(
   imageBase64: string,
   goal: FaceDestinyGoal
 ): Promise<FaceAnalysisResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
   const goalConfig = GOAL_PROMPTS[goal]
 
   // Load prompt from DB, fallback to hardcoded
@@ -286,7 +286,7 @@ export async function analyzeInteriorForFengshui(
   theme: InteriorTheme,
   roomType: string = '거실'
 ): Promise<InteriorAnalysisResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
   const themeConfig = INTERIOR_THEMES[theme]
 
   const dbPromptTemplate = await getPromptByKey('fengshui_analysis')
@@ -384,7 +384,7 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 
 // 3. Palm Reading Analysis - 손금 분석
 export async function analyzePalmReading(imageBase64: string): Promise<PalmAnalysisResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
   const dbPromptTemplate = await getPromptByKey('palm_reading')
   const analysisPrompt =

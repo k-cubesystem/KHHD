@@ -47,16 +47,18 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
   ])
   const [selectedProfileId, setSelectedProfileId] = useState<string>(userId)
   const [missingInfo, setMissingInfo] = useState(false)
+  const [pendingLoad, setPendingLoad] = useState(false)
 
   useEffect(() => {
-    loadProfiles()
-  }, [])
+    loadProfiles().then(() => loadFortune()) // 최초 1회만 자동 로드
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (selectedProfileId) {
-      loadFortune()
-    }
-  }, [selectedProfileId])
+  // 프로필 변경 시 자동 로드 제거 → 버튼 클릭 대기 상태로만 전환
+  function handleProfileChange(id: string) {
+    setSelectedProfileId(id)
+    setFortune(null)
+    setPendingLoad(true)
+  }
 
   const loadProfiles = async () => {
     try {
@@ -157,7 +159,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
+            <Select value={selectedProfileId} onValueChange={handleProfileChange}>
               <SelectTrigger className="w-[140px] bg-surface/50 border-primary/20 text-ink-light">
                 <Users className="w-4 h-4 mr-2 text-ink-light/60" />
                 <SelectValue placeholder="대상 선택" />
@@ -187,7 +189,25 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
           </div>
         </div>
 
-        {loading ? (
+        {/* 프로필 변경 후 버튼 대기 상태 */}
+        {pendingLoad && !loading ? (
+          <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
+            <Sparkles className="w-10 h-10 text-primary/60" />
+            <p className="text-ink-light/70 font-serif text-sm">
+              {selectedProfile?.name}님의 운세를 확인하시겠습니까?
+            </p>
+            <Button
+              onClick={() => {
+                setPendingLoad(false)
+                loadFortune()
+              }}
+              className="bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              운세 보기
+            </Button>
+          </div>
+        ) : loading ? (
           <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
             <p className="text-ink-light/60 font-serif animate-pulse">

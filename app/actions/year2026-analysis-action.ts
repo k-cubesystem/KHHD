@@ -12,6 +12,8 @@ import {
 } from '@/lib/utils/manse-formatter'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from './analysis-history'
+import { recordFortuneEntry } from './fortune-actions'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 
 export interface Year2026Result {
@@ -158,12 +160,12 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
 {"name":"","summary":"","score":78,"bingoh_meaning":"","quarterly":{"q1":"","q2":"","q3":"","q4":""},"areas":{"wealth":{"score":80,"content":""},"love":{"score":75,"content":""},"career":{"score":85,"content":""},"health":{"score":70,"content":""}},"peak_month":"","caution_month":"","lucky":{"color":"","direction":"","number":6},"message":""}`
     }
 
-    const result = await model.generateContent(prompt)
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt))
     const text = result.response.text()
     const data = JSON.parse(text) as Year2026Result
 
     // 7. 기록 저장
-    await saveAnalysisHistory({
+    const saved = await saveAnalysisHistory({
       target_id: targetId,
       target_name: target.name,
       target_relation: target.relation_type,
@@ -174,7 +176,17 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       score: data.score,
       model_used: 'gemini-2.0-flash',
       talisman_cost: 0,
-    }).catch((e) => console.error('History Save Error:', e))
+    }).catch((e) => {
+      console.error('History Save Error:', e)
+      return { success: false }
+    })
+
+    // 8. 운세 기록 (가족 구성원인 경우)
+    if (target.target_type === 'family') {
+      await recordFortuneEntry(target.id, 'NEW_YEAR', (saved as any)?.id ?? target.id).catch(
+        () => {}
+      )
+    }
 
     return { success: true, data }
   } catch (error) {

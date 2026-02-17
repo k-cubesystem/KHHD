@@ -1,22 +1,23 @@
-"use server";
+﻿'use server'
 
-import { createClient } from "@/lib/supabase/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { getSajuData } from "@/lib/domain/saju/saju";
-import { calculateDaewoon } from "@/lib/domain/saju/manse";
-import { deductTalisman } from "./wallet-actions";
-import { logger } from "@/lib/utils/logger";
+import { createClient } from '@/lib/supabase/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getSajuData } from '@/lib/domain/saju/saju'
+import { calculateDaewoon } from '@/lib/domain/saju/manse'
+import { deductTalisman } from './wallet-actions'
+import { logger } from '@/lib/utils/logger'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 interface WealthAnalysisParams {
-    memberId: string;
+  memberId: string
 }
 
 interface WealthAnalysisResult {
-    success: boolean;
-    analysis?: string;
-    error?: string;
+  success: boolean
+  analysis?: string
+  error?: string
 }
 
 /**
@@ -24,65 +25,67 @@ interface WealthAnalysisResult {
  * 사주 기반으로 재물운의 흐름, 시기, 방향을 AI가 분석
  */
 export async function analyzeWealth(params: WealthAnalysisParams): Promise<WealthAnalysisResult> {
-    try {
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-        if (!user) {
-            return { success: false, error: "로그인이 필요합니다." };
-        }
+    if (!user) {
+      return { success: false, error: '로그인이 필요합니다.' }
+    }
 
-        // 1. 부적 차감 (재물운 분석 비용: 5 부적)
-        const WEALTH_ANALYSIS_COST = 5;
-        const deductResult = await deductTalisman("wealth_analysis", WEALTH_ANALYSIS_COST);
+    // 1. 부적 차감 (재물운 분석 비용: 5 부적)
+    const WEALTH_ANALYSIS_COST = 5
+    const deductResult = await deductTalisman('wealth_analysis', WEALTH_ANALYSIS_COST)
 
-        if (!deductResult.success) {
-            return {
-                success: false,
-                error: "부적이 부족합니다. 멤버십 페이지에서 충전해주세요."
-            };
-        }
+    if (!deductResult.success) {
+      return {
+        success: false,
+        error: '부적이 부족합니다. 멤버십 페이지에서 충전해주세요.',
+      }
+    }
 
-        // 2. 가족 구성원 정보 조회
-        const { data: member, error: memberError } = await supabase
-            .from("family_members")
-            .select("*")
-            .eq("id", params.memberId)
-            .single();
+    // 2. 가족 구성원 정보 조회
+    const { data: member, error: memberError } = await supabase
+      .from('family_members')
+      .select('*')
+      .eq('id', params.memberId)
+      .single()
 
-        if (memberError || !member) {
-            return { success: false, error: "대상 정보를 찾을 수 없습니다." };
-        }
+    if (memberError || !member) {
+      return { success: false, error: '대상 정보를 찾을 수 없습니다.' }
+    }
 
-        // 3. 사주 데이터 계산
-        const sajuData = getSajuData(
-            member.birth_date,
-            member.birth_time || "00:00",
-            member.calendar_type === "solar"
-        );
+    // 3. 사주 데이터 계산
+    const sajuData = getSajuData(
+      member.birth_date,
+      member.birth_time || '00:00',
+      member.calendar_type === 'solar'
+    )
 
-        // 4. 대운 계산 (현재 나이 추정)
-        const birthYear = new Date(member.birth_date).getFullYear();
-        const currentYear = new Date().getFullYear();
-        const currentAge = currentYear - birthYear;
+    // 4. 대운 계산 (현재 나이 추정)
+    const birthYear = new Date(member.birth_date).getFullYear()
+    const currentYear = new Date().getFullYear()
+    const currentAge = currentYear - birthYear
 
-        const daewoonData = calculateDaewoon(
-            member.birth_date,
-            member.birth_time || "00:00",
-            member.gender || "male",
-            currentAge
-        );
+    const daewoonData = calculateDaewoon(
+      member.birth_date,
+      member.birth_time || '00:00',
+      member.gender || 'male',
+      currentAge
+    )
 
-        // 5. AI 프롬프트 생성
-        const prompt = `
+    // 5. AI 프롬프트 생성
+    const prompt = `
 당신은 30년 경력의 사주명리 전문가이자 재물운 컨설턴트입니다.
 아래 사주 정보를 바탕으로 ${member.name}님의 재물운을 심층 분석해주세요.
 
 【기본 정보】
 - 이름: ${member.name}
 - 생년월일: ${member.birth_date}
-- 생시: ${member.birth_time || "미상"}
-- 성별: ${member.gender === "male" ? "남성" : "여성"}
+- 생시: ${member.birth_time || '미상'}
+- 성별: ${member.gender === 'male' ? '남성' : '여성'}
 - 현재 나이: 만 ${currentAge}세
 
 【사주팔자】
@@ -99,9 +102,11 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
 - 水: ${sajuData.elementsDistribution.水}
 
 【현재 대운】
-${daewoonData.find(d => d.isCurrent) ?
-                `${daewoonData.find(d => d.isCurrent)!.pillar.korean} (${daewoonData.find(d => d.isCurrent)!.startAge}-${daewoonData.find(d => d.isCurrent)!.endAge}세)` :
-                "정보 없음"}
+${
+  daewoonData.find((d) => d.isCurrent)
+    ? `${daewoonData.find((d) => d.isCurrent)!.pillar.korean} (${daewoonData.find((d) => d.isCurrent)!.startAge}-${daewoonData.find((d) => d.isCurrent)!.endAge}세)`
+    : '정보 없음'
+}
 
 【분석 요청사항】
 다음 형식으로 재물운을 분석해주세요:
@@ -163,27 +168,26 @@ ${daewoonData.find(d => d.isCurrent) ?
 - 긍정적이면서도 현실적인 톤 유지
 - 한국어 존댓말 사용
 - 명리학 용어는 한글과 한자를 병기
-`;
+`
 
-        // 6. Gemini AI 호출
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-        const result = await model.generateContent(prompt);
-        const analysis = result.response.text();
+    // 6. Gemini AI 호출
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+    const analysis = result.response.text()
 
-        // 7. 분석 결과 저장 (선택사항 - 향후 히스토리 기능)
-        // TODO: wealth_analysis 테이블에 저장
+    // 7. 분석 결과 저장 (선택사항 - 향후 히스토리 기능)
+    // TODO: wealth_analysis 테이블에 저장
 
-        return {
-            success: true,
-            analysis
-        };
-
-    } catch (error) {
-        logger.error("[WealthAnalysis] Error:", error);
-        const message = error instanceof Error ? error.message : "재물운 분석 중 오류가 발생했습니다.";
-        return {
-            success: false,
-            error: message
-        };
+    return {
+      success: true,
+      analysis,
     }
+  } catch (error) {
+    logger.error('[WealthAnalysis] Error:', error)
+    const message = error instanceof Error ? error.message : '재물운 분석 중 오류가 발생했습니다.'
+    return {
+      success: false,
+      error: message,
+    }
+  }
 }

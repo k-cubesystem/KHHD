@@ -9,16 +9,16 @@ interface InSectionProps {
 }
 
 export function InSection({ data }: InSectionProps) {
-  if (!data) return null;
+  if (!data) return null
 
-  const { title, content, relationship_advice, noble_person } = data;
+  const { title, content, relationship_advice, noble_person } = data
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4 }}
-      className="max-w-4xl mx-auto mb-12 px-1 pb-20"
+      className="max-w-4xl mx-auto mb-4 px-4 pb-20"
     >
       <Card className="relative overflow-hidden card-glass-manse p-6 md:p-8 border-rose-900/40 bg-[#0A0A0A]">
         {/* Background Decor - Human/Soul Theme */}
@@ -33,7 +33,8 @@ export function InSection({ data }: InSectionProps) {
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-serif font-medium text-ink-light flex items-center gap-2">
-                인(人) <span className="text-sm font-sans text-ink-light/40 font-light">• 관상/손금</span>
+                인(人){' '}
+                <span className="text-sm font-sans text-ink-light/40 font-light">• 관상/손금</span>
               </h2>
               <p className="text-xs text-rose-300/60 font-light tracking-wide">
                 스스로 빚어낸 삶의 궤적과 인연의 고리

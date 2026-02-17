@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from './destiny-targets'
@@ -6,6 +6,8 @@ import { getSajuData } from '@/lib/domain/saju/saju'
 import { calculateCompatibilityScore } from '@/lib/domain/compatibility/compatibility'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from './analysis-history'
+import { recordFortuneEntry } from './fortune-actions'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 /**
  * 궁합 분석 서버 액션
@@ -60,7 +62,7 @@ export async function analyzeCompatibilityAction(
     )
 
     // 6. 분석 결과 저장
-    await saveAnalysisHistory({
+    const saved = await saveAnalysisHistory({
       target_id: target1.id,
       target_name: target1.name,
       target_relation: target1.relation_type || '가족',
@@ -73,9 +75,14 @@ export async function analyzeCompatibilityAction(
       },
       summary: `${target1.name}님과 ${target2.name}님의 궁합 - ${aiResult.score || baseScore}점`,
       score: aiResult.score || baseScore,
-      model_used: 'gemini-3-flash-preview',
+      model_used: 'gemini-2.0-flash',
       talisman_cost: 2,
     })
+
+    // 운세 기록 (가족 구성원인 경우)
+    if (target1.target_type === 'family') {
+      await recordFortuneEntry(target1.id, 'COMPATIBILITY', saved.id ?? target1.id).catch(() => {})
+    }
 
     return { success: true, data: aiResult, cached: false }
   } catch (error) {
@@ -139,7 +146,7 @@ async function analyzeCompatibilityWithAI(
 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     generationConfig: { responseMimeType: 'application/json' },
   })
 
@@ -191,7 +198,7 @@ ${baseScore}점 (70-100점 범위)
 
   console.log('[CompatibilityAnalysis] AI 분석 시작...')
 
-  const result = await model.generateContent(prompt)
+  const result = await withGeminiRateLimit(() => model.generateContent(prompt))
   const text = result.response.text()
 
   // JSON 파싱

@@ -9,16 +9,16 @@ interface JiSectionProps {
 }
 
 export function JiSection({ data }: JiSectionProps) {
-  if (!data) return null;
+  if (!data) return null
 
-  const { title, content, daewoon_phase, lucky_direction } = data;
+  const { title, content, daewoon_phase, lucky_direction } = data
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="max-w-4xl mx-auto mb-6 px-1"
+      className="max-w-4xl mx-auto mb-4 px-4"
     >
       <Card className="relative overflow-hidden card-glass-manse p-6 md:p-8 border-emerald-900/40 bg-[#0A0A0A]">
         {/* Background Decor - Earth/Nature Theme */}
@@ -33,7 +33,8 @@ export function JiSection({ data }: JiSectionProps) {
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-serif font-medium text-ink-light flex items-center gap-2">
-                지(地) <span className="text-sm font-sans text-ink-light/40 font-light">• 풍수지리</span>
+                지(地){' '}
+                <span className="text-sm font-sans text-ink-light/40 font-light">• 풍수지리</span>
               </h2>
               <p className="text-xs text-emerald-400/60 font-light tracking-wide">
                 당신이 머무는 공간과 환경의 에너지 흐름
@@ -50,14 +51,16 @@ export function JiSection({ data }: JiSectionProps) {
               </p>
 
               {/* Right Side Cards */}
-              <div className="flex flex-col gap-3 min-w-[200px]">
+              <div className="flex flex-col gap-3 w-full md:w-[200px] md:flex-shrink-0">
                 {daewoon_phase && (
                   <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
                       <Mountain className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div>
-                      <span className="text-[10px] text-emerald-400/60 uppercase tracking-widest block">Current Phase</span>
+                      <span className="text-[10px] text-emerald-400/60 uppercase tracking-widest block">
+                        Current Phase
+                      </span>
                       <span className="text-sm font-serif text-emerald-100">{daewoon_phase}</span>
                     </div>
                   </div>
@@ -69,7 +72,9 @@ export function JiSection({ data }: JiSectionProps) {
                       <Compass className="w-4 h-4 text-amber-400" />
                     </div>
                     <div>
-                      <span className="text-[10px] text-amber-400/60 uppercase tracking-widest block">Lucky Direction</span>
+                      <span className="text-[10px] text-amber-400/60 uppercase tracking-widest block">
+                        Lucky Direction
+                      </span>
                       <span className="text-sm font-serif text-amber-100">{lucky_direction}</span>
                     </div>
                   </div>

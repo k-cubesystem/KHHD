@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from './destiny-targets'
@@ -13,6 +13,8 @@ import {
 import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from './analysis-history'
+import { recordFortuneEntry } from './fortune-actions'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 /**
  * 천지인 분석 서버 액션
@@ -94,6 +96,14 @@ export async function analyzeCheonjiinAction(
     // additionalData가 있으면 우선 사용, 없으면 target 데이터 사용
     const workAddress = await getWorkAddress(user.id)
 
+    // 이미지 raw URL (base64 or storage URL) - 텍스트 프롬프트에 직접 주입하지 않음
+    const rawFaceImageUrl = additionalData?.faceImageUrl || target.face_image_url || null
+    const rawHandImageUrl = additionalData?.handImageUrl || target.hand_image_url || null
+
+    // base64 이미지 데이터 추출 (멀티모달 API용)
+    const faceImagePart = extractBase64ImagePart(rawFaceImageUrl)
+    const handImagePart = extractBase64ImagePart(rawHandImageUrl)
+
     const variables = {
       // 기본 정보
       name: target.name,
@@ -112,9 +122,17 @@ export async function analyzeCheonjiinAction(
       homeAddress: additionalData?.homeAddress || target.home_address || '정보 없음',
       workAddress: additionalData?.workAddress || workAddress || '정보 없음',
 
-      // 인(人) - 관상·손금 데이터 (이미지)
-      faceImageUrl: additionalData?.faceImageUrl || target.face_image_url || '정보 없음',
-      handImageUrl: additionalData?.handImageUrl || target.hand_image_url || '정보 없음',
+      // 인(人) - 관상·손금 데이터 (이미지는 텍스트 대신 플래그만, 실제 이미지는 multimodal Part로 전달)
+      faceImageUrl: faceImagePart
+        ? '관상 이미지 첨부됨 (별도 이미지 참조)'
+        : rawFaceImageUrl
+          ? '이미지 URL 제공됨'
+          : '관상 이미지 없음',
+      handImageUrl: handImagePart
+        ? '손금 이미지 첨부됨 (별도 이미지 참조)'
+        : rawHandImageUrl
+          ? '이미지 URL 제공됨'
+          : '손금 이미지 없음',
     }
 
     // 8. DB 프롬프트 조회 및 AI 분석
@@ -127,7 +145,12 @@ export async function analyzeCheonjiinAction(
       prompt = getDefaultCheonjiinPrompt(variables)
     }
 
-    const result = await analyzeCheonjiinWithAI(prompt, target)
+    const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart)
+
+    // 운세 기록 (가족 구성원인 경우)
+    if (target.target_type === 'family') {
+      await recordFortuneEntry(target.id, 'SAJU', target.id).catch(() => {})
+    }
 
     return { success: true, data: result, cached: false }
   } catch (error) {
@@ -172,9 +195,27 @@ async function getRecentAnalysis(targetId: string): Promise<{ data: any; date: s
 }
 
 /**
- * AI를 사용한 천지인 분석
+ * base64 데이터 URL에서 Gemini inlineData Part 추출
+ * "data:image/jpeg;base64,..." → { mimeType, data } 또는 null
  */
-async function analyzeCheonjiinWithAI(promptText: string, target: any) {
+function extractBase64ImagePart(
+  imageUrl: string | null | undefined
+): { mimeType: string; data: string } | null {
+  if (!imageUrl) return null
+  const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (!match) return null
+  return { mimeType: match[1], data: match[2] }
+}
+
+/**
+ * AI를 사용한 천지인 분석 (멀티모달 지원)
+ */
+async function analyzeCheonjiinWithAI(
+  promptText: string,
+  target: any,
+  faceImagePart?: { mimeType: string; data: string } | null,
+  handImagePart?: { mimeType: string; data: string } | null
+) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) {
     throw new Error('Google Generative AI API Key is missing')
@@ -182,13 +223,26 @@ async function analyzeCheonjiinWithAI(promptText: string, target: any) {
 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash-preview',
+    model: 'gemini-2.0-flash',
     generationConfig: { responseMimeType: 'application/json' },
   })
 
   console.log('[CheonjiinAnalysis] AI 분석 시작...')
 
-  const result = await model.generateContent(promptText)
+  // 멀티모달 Parts 구성: 텍스트 + 이미지(있는 경우)
+  const parts: any[] = [{ text: promptText }]
+  if (faceImagePart) {
+    parts.push({ inlineData: faceImagePart })
+    console.log('[CheonjiinAnalysis] 관상 이미지 첨부됨')
+  }
+  if (handImagePart) {
+    parts.push({ inlineData: handImagePart })
+    console.log('[CheonjiinAnalysis] 손금 이미지 첨부됨')
+  }
+
+  const result = await withGeminiRateLimit(() =>
+    model.generateContent({ contents: [{ role: 'user', parts }] })
+  )
   const text = result.response.text()
 
   // JSON 파싱
@@ -203,7 +257,7 @@ async function analyzeCheonjiinWithAI(promptText: string, target: any) {
     result_json: data,
     summary: data.summary || '천지인 통합 분석 결과',
     score: data.score || 80,
-    model_used: 'gemini-3-flash-preview',
+    model_used: 'gemini-2.0-flash',
     talisman_cost: 3,
   })
 

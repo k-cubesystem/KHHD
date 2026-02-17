@@ -12,6 +12,8 @@ import {
 } from '@/lib/utils/manse-formatter'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from './analysis-history'
+import { recordFortuneEntry } from './fortune-actions'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
 
@@ -117,7 +119,7 @@ export async function analyzeFortuneAction(
     const result = await analyzeFortuneWithAI(prompt, fortuneType, periodLabel)
 
     // 7. 히스토리 저장
-    await saveAnalysisHistory({
+    const saved = await saveAnalysisHistory({
       target_id: target.id,
       target_name: target.name,
       target_relation: target.relation_type,
@@ -127,6 +129,11 @@ export async function analyzeFortuneAction(
       score: result.score,
       model_used: 'gemini-2.0-flash',
     })
+
+    // 8. 운세 기록 (가족 구성원인 경우)
+    if (target.target_type === 'family') {
+      await recordFortuneEntry(target.id, 'TODAY', saved.id ?? target.id).catch(() => {})
+    }
 
     return { success: true, data: result, cached: false }
   } catch (error) {
@@ -260,7 +267,7 @@ async function analyzeFortuneWithAI(
     generationConfig: { responseMimeType: 'application/json' },
   })
 
-  const result = await model.generateContent(prompt)
+  const result = await withGeminiRateLimit(() => model.generateContent(prompt))
   const text = result.response.text()
   const data = JSON.parse(text) as FortuneResult
 

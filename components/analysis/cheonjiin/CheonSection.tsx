@@ -10,16 +10,16 @@ interface CheonSectionProps {
 }
 
 export function CheonSection({ data }: CheonSectionProps) {
-  if (!data) return null;
+  if (!data) return null
 
-  const { title, content, strengths, weaknesses } = data;
+  const { title, content, strengths, weaknesses } = data
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="max-w-4xl mx-auto mb-6 px-1"
+      className="max-w-4xl mx-auto mb-4 px-4"
     >
       <Card className="relative overflow-hidden card-glass-manse p-6 md:p-8 border-primary/20 bg-[#0A0A0A]">
         {/* Background Decor - Heavenly/Cloud Theme */}
@@ -34,7 +34,8 @@ export function CheonSection({ data }: CheonSectionProps) {
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-serif font-medium text-ink-light flex items-center gap-2">
-                천(天) <span className="text-sm font-sans text-ink-light/40 font-light">• 사주명리</span>
+                천(天){' '}
+                <span className="text-sm font-sans text-ink-light/40 font-light">• 사주명리</span>
               </h2>
               <p className="text-xs text-blue-200/60 font-light tracking-wide">
                 하늘이 정한 타고난 운명의 설계도
@@ -61,7 +62,11 @@ export function CheonSection({ data }: CheonSectionProps) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {strengths.map((s: string, idx: number) => (
-                    <Badge key={idx} variant="secondary" className="bg-blue-500/10 text-blue-200 hover:bg-blue-500/20 border-blue-500/20 font-light">
+                    <Badge
+                      key={idx}
+                      variant="secondary"
+                      className="bg-blue-500/10 text-blue-200 hover:bg-blue-500/20 border-blue-500/20 font-light"
+                    >
                       {s}
                     </Badge>
                   ))}
@@ -78,7 +83,11 @@ export function CheonSection({ data }: CheonSectionProps) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {weaknesses.map((w: string, idx: number) => (
-                    <Badge key={idx} variant="outline" className="text-ink-light/60 border-white/10 font-light">
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className="text-ink-light/60 border-white/10 font-light"
+                    >
                       {w}
                     </Badge>
                   ))}

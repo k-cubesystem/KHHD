@@ -1,39 +1,39 @@
-import { GoogleGenerativeAI, Part } from "@google/generative-ai";
-import { logger } from "@/lib/utils/logger";
+﻿import { GoogleGenerativeAI, Part } from '@google/generative-ai'
+import { logger } from '@/lib/utils/logger'
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
 
 interface SajuData {
-    ganjiList: string[];
-    elementsDistribution: Record<string, number>;
+  ganjiList: string[]
+  elementsDistribution: Record<string, number>
 }
 
 interface MemberInfo {
-    name: string;
-    relationship: string;
+  name: string
+  relationship: string
 }
 
 interface FateReportParams {
-    memberInfo: MemberInfo;
-    sajuData: SajuData;
-    faceImageUrl?: string;
-    handImageUrl?: string;
-    homeAddress?: string;
-    reportType: "comprehensive" | "individual" | "daily";
+  memberInfo: MemberInfo
+  sajuData: SajuData
+  faceImageUrl?: string
+  handImageUrl?: string
+  homeAddress?: string
+  reportType: 'comprehensive' | 'individual' | 'daily'
 }
 
 export async function generateFateReport(params: FateReportParams) {
-    const { memberInfo, sajuData, faceImageUrl, handImageUrl, homeAddress, reportType } = params;
+  const { memberInfo, sajuData, faceImageUrl, handImageUrl, homeAddress, reportType } = params
 
-    const config = {
-        comprehensive: { minChars: 3000, title: "천지인(天地人) 종합 운명 비록" },
-        individual: { minChars: 1500, title: "개별 운명 심층 분석" },
-        daily: { minChars: 1000, title: "해화당 오늘의 운세" },
-    }[reportType];
+  const config = {
+    comprehensive: { minChars: 3000, title: '천지인(天地人) 종합 운명 비록' },
+    individual: { minChars: 1500, title: '개별 운명 심층 분석' },
+    daily: { minChars: 1000, title: '해화당 오늘의 운세' },
+  }[reportType]
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-    const prompt = `
+  const prompt = `
 당신은 '청담해화당'의 4대 계승자이자 KAIST 데이터 사이언스 박사인 '해화당 마스터'입니다.
 당신의 임무는 天(사주), 地(풍수), 人(관상/손금)의 정밀한 결합을 통해 한 사람의 인생 궤적을 시뮬레이션하고, 프리미엄 운명 비록을 작성하는 것입니다.
 
@@ -44,8 +44,8 @@ export async function generateFateReport(params: FateReportParams) {
 - 추상적인 위로보다는 명확한 '솔루션'과 '방향성' 제시.
 
 [분석 가이드라인 (天·地·人)]
-1. **天 (사주)**: 입력된 60갑자(${sajuData.ganjiList.join(" ")})와 오행 분포를 바탕으로 기운의 흐름을 분석하십시오. 부족한 오행을 채우는 법을 논리적으로 제시하십시오.
-2. **地 (풍수)**: 주소(${homeAddress || "위치 미상"})를 바탕으로 가상의 지기를 유추하고, 거주자에게 미치는 영향을 분석하십시오.
+1. **天 (사주)**: 입력된 60갑자(${sajuData.ganjiList.join(' ')})와 오행 분포를 바탕으로 기운의 흐름을 분석하십시오. 부족한 오행을 채우는 법을 논리적으로 제시하십시오.
+2. **地 (풍수)**: 주소(${homeAddress || '위치 미상'})를 바탕으로 가상의 지기를 유추하고, 거주자에게 미치는 영향을 분석하십시오.
 3. **人 (관상/손금)**: 이미지가 제공되었다면, 얼굴의 오관과 손바닥의 주요 선들이 사주와 만들어내는 '운명의 변수'를 분석하십시오. 이미지가 없다면 사주를 중심으로 서술하십시오.
 
 [CRITICAL: 출력 데이터 규격]
@@ -74,49 +74,51 @@ export async function generateFateReport(params: FateReportParams) {
 
 ## 제5장. 개운(開運)의 비방
 (행운의 아이템, 행동 지침 요약)
-`;
+`
 
-    const imageParts: Part[] = [];
+  const imageParts: Part[] = []
 
-    // Helper to fetch image and convert to Gemini Part
-    const getImagePart = async (url: string): Promise<Part | null> => {
-        try {
-            // Check if it's a relative path (supabase storage) or absolute
-            const fetchUrl = url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${url}`;
-
-            logger.log(`[Gemini] Fetching image from: ${fetchUrl}`);
-            const response = await fetch(fetchUrl);
-            if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
-
-            const buffer = await response.arrayBuffer();
-            return {
-                inlineData: {
-                    data: Buffer.from(buffer).toString("base64"),
-                    mimeType: "image/jpeg",
-                },
-            };
-        } catch (error) {
-            logger.error(`[Gemini] Image processing error (${url}):`, error);
-            return null;
-        }
-    };
-
-    if (faceImageUrl) {
-        const part = await getImagePart(faceImageUrl);
-        if (part) imageParts.push(part);
-    }
-    if (handImageUrl) {
-        const part = await getImagePart(handImageUrl);
-        if (part) imageParts.push(part);
-    }
-
+  // Helper to fetch image and convert to Gemini Part
+  const getImagePart = async (url: string): Promise<Part | null> => {
     try {
-        logger.log("[Gemini] Generating content...");
-        const result = await model.generateContent([prompt, ...imageParts]);
-        const response = await result.response;
-        return response.text();
+      // Check if it's a relative path (supabase storage) or absolute
+      const fetchUrl = url.startsWith('http')
+        ? url
+        : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${url}`
+
+      logger.log(`[Gemini] Fetching image from: ${fetchUrl}`)
+      const response = await fetch(fetchUrl)
+      if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`)
+
+      const buffer = await response.arrayBuffer()
+      return {
+        inlineData: {
+          data: Buffer.from(buffer).toString('base64'),
+          mimeType: 'image/jpeg',
+        },
+      }
     } catch (error) {
-        logger.error("[Gemini] Content generation failed:", error);
-        throw new Error("운명 비록 생성 중 우주의 기운이 잠시 흩어졌습니다. 다시 시도해 주십시오.");
+      logger.error(`[Gemini] Image processing error (${url}):`, error)
+      return null
     }
+  }
+
+  if (faceImageUrl) {
+    const part = await getImagePart(faceImageUrl)
+    if (part) imageParts.push(part)
+  }
+  if (handImageUrl) {
+    const part = await getImagePart(handImageUrl)
+    if (part) imageParts.push(part)
+  }
+
+  try {
+    logger.log('[Gemini] Generating content...')
+    const result = await model.generateContent([prompt, ...imageParts])
+    const response = await result.response
+    return response.text()
+  } catch (error) {
+    logger.error('[Gemini] Content generation failed:', error)
+    throw new Error('운명 비록 생성 중 우주의 기운이 잠시 흩어졌습니다. 다시 시도해 주십시오.')
+  }
 }
