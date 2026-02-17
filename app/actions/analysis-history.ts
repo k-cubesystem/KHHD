@@ -1,6 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createClientJS } from '@supabase/supabase-js'
 import { unstable_cache, revalidatePath } from 'next/cache'
 
 /**
@@ -413,26 +414,35 @@ export async function createShareLink(
  */
 export async function getSharedAnalysis(token: string): Promise<AnalysisHistory | null> {
   try {
-    // 일반 클라이언트로 RPC 호출 (RLS 우회는 DB 함수 내부에서 SECURITY DEFINER로 처리)
-    const supabase = await createClient()
+    // 1. Direct Client 생성 (쿠키/세션 의존성 제거)
+    // 공용 데이터 조회이므로 Service Role Key 없이 Anon Key로 충분함 (RPC 함수가 권한 처리)
+    const supabase = createClientJS(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    )
 
+    console.log(`[Share] Fetching analysis for token: ${token}`)
+
+    // 2. RPC 호출
     const { data, error } = await supabase.rpc('get_shared_analysis_record', {
       token_input: token,
     })
 
     if (error) {
-      console.error('Error fetching shared analysis via RPC:', error)
+      console.error('[Share] RPC Error:', error)
       return null
     }
 
     // RPC returns an array (SETOF), so get the first element
     if (!data || data.length === 0) {
+      console.warn('[Share] No data found for token')
       return null
     }
 
+    console.log(`[Share] Success! Found record for: ${data[0].target_name}`)
     return data[0] as AnalysisHistory
   } catch (error) {
-    console.error('Error in getSharedAnalysis:', error)
+    console.error('[Share] Unexpected Error in getSharedAnalysis:', error)
     return null
   }
 }
