@@ -65,7 +65,8 @@
       "Bash(git -C \"D:/anti/haehwadang\" status)",
       "Bash(git -C \"D:/anti/haehwadang\" diff --stat)",
       "Bash(\"D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\20260214_update_labels_manyang.sql\" << 'EOF'\n-- 룰렛 라벨 만냥 단위로 업데이트\nUPDATE roulette_config SET label = '1만냥'  WHERE reward_type = 'bokchae' AND reward_value = 1;\nUPDATE roulette_config SET label = '3만냥'  WHERE reward_type = 'bokchae' AND reward_value = 3;\nUPDATE roulette_config SET label = '5만냥'  WHERE reward_type = 'bokchae' AND reward_value = 5;\nUPDATE roulette_config SET label = '10만냥' WHERE reward_type = 'bokchae' AND reward_value = 10;\n\n-- price_plans features 만냥 업데이트\nUPDATE price_plans SET features = ARRAY['복채 5만냥', '테마운세 5회', '관상/손금/풍수 2회', '영구 지급'] WHERE name = '소복 씨앗';\nUPDATE price_plans SET features = ARRAY['복채 10만냥', '테마운세 10회', '관상/손금/풍수 5회', '천지인사주 2회', '영구 지급'] WHERE name = '행운 꾸러미';\nUPDATE price_plans SET features = ARRAY['복채 30만냥', '모든 서비스 자유 이용', '천지인사주 6회', '고민상담 300문', '영구 지급'] WHERE name = '대복 창고';\nEOF)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(xargs -I{} echo \" calls: {}\" fi done echo \"\" echo \"=== Protected files ===\" grep -l \"withGeminiRateLimit\" /d/anti/haehwadang/app/actions/*.ts)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"
