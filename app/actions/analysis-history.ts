@@ -424,10 +424,11 @@ export async function getSharedAnalysis(token: string): Promise<AnalysisHistory 
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_analysis_record`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8', // 명시적 charset 추가
         apikey: supabaseKey,
         Authorization: `Bearer ${supabaseKey}`,
       },
+      // PGRST202 에러 방지를 위해 body를 명확한 JSON 문자열로 전송
       body: JSON.stringify({ token_input: token }),
       cache: 'no-store', // 항상 최신 데이터 조회
     })
