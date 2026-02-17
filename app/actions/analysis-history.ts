@@ -414,22 +414,24 @@ export async function createShareLink(
  */
 export async function getSharedAnalysis(token: string): Promise<AnalysisHistory | null> {
   try {
-    // Admin Client를 사용하여 RLS 우회 (공유된 기록은 누구나 볼 수 있어야 함)
-    // 단, share_token이 일치하는 레코드만 조회 가능하므로 안전함.
-    const supabase = createAdminClient()
+    // 일반 클라이언트로 RPC 호출 (RLS 우회는 DB 함수 내부에서 SECURITY DEFINER로 처리)
+    const supabase = await createClient()
 
-    const { data, error } = await supabase
-      .from('analysis_history')
-      .select('*')
-      .eq('share_token', token)
-      .single()
+    const { data, error } = await supabase.rpc('get_shared_analysis_record', {
+      token_input: token,
+    })
 
-    if (error || !data) {
-      console.error('Error fetching shared analysis:', error)
+    if (error) {
+      console.error('Error fetching shared analysis via RPC:', error)
       return null
     }
 
-    return data as AnalysisHistory
+    // RPC returns an array (SETOF), so get the first element
+    if (!data || data.length === 0) {
+      return null
+    }
+
+    return data[0] as AnalysisHistory
   } catch (error) {
     console.error('Error in getSharedAnalysis:', error)
     return null
