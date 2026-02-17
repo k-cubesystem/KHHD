@@ -1,12 +1,15 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { BookOpen, Star, Crown } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Crown, Star } from 'lucide-react'
 
 interface CheonSectionProps {
-  data: any
+  data: {
+    title?: string
+    content?: string
+    strengths?: string[]
+    weaknesses?: string[]
+  } | null
 }
 
 export function CheonSection({ data }: CheonSectionProps) {
@@ -19,84 +22,86 @@ export function CheonSection({ data }: CheonSectionProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
-      className="max-w-4xl mx-auto mb-4 px-4"
+      className="w-full px-0 py-2 mb-2"
     >
-      <Card className="relative overflow-hidden card-glass-manse p-6 md:p-8 border-primary/20 bg-[#0A0A0A]">
-        {/* Background Decor - Heavenly/Cloud Theme */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-900/10 rounded-full blur-[80px] pointer-events-none -mr-20 -mt-20" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-[60px] pointer-events-none -ml-20 -mb-20" />
+      <div className="relative overflow-hidden bg-surface/20 backdrop-blur-sm border-t border-b border-white/5 py-8 md:py-10">
+        {/* Decorative Background */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
 
-        <div className="relative z-10 space-y-6">
-          {/* Section Header */}
-          <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1a1c2e] to-[#0A0A0A] border border-blue-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-              <span className="text-2xl font-serif text-blue-200">天</span>
-            </div>
-            <div>
-              <h2 className="text-xl md:text-2xl font-serif font-medium text-ink-light flex items-center gap-2">
-                천(天){' '}
-                <span className="text-sm font-sans text-ink-light/40 font-light">• 사주명리</span>
+        <div className="px-5 md:px-8 relative z-10">
+          {/* Header */}
+          <div className="flex flex-col gap-2 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                <span className="font-serif text-lg text-blue-300">天</span>
+              </div>
+              <h2 className="text-xl font-bold text-ink-light tracking-tight">
+                타고난 사주명리{' '}
+                <span className="text-blue-300/60 text-sm font-normal ml-1">Heavenly Fate</span>
               </h2>
-              <p className="text-xs text-blue-200/60 font-light tracking-wide">
-                하늘이 정한 타고난 운명의 설계도
-              </p>
             </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-serif text-ink-light">{title || '타고난 기운의 흐름'}</h3>
-            <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
-              {content}
+            <p className="text-sm text-ink-light/50 font-light pl-13">
+              하늘이 정해준 당신의 고유한 기질과 운명적 흐름입니다.
             </p>
           </div>
 
-          {/* Strengths & Weaknesses Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            {/* Strengths */}
-            {strengths && strengths.length > 0 && (
-              <div className="bg-blue-950/20 rounded-xl p-4 border border-blue-500/10 space-y-3">
-                <div className="flex items-center gap-2 text-blue-300">
-                  <Crown className="w-4 h-4" />
-                  <span className="text-sm font-serif font-medium">타고난 강점</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {strengths.map((s: string, idx: number) => (
-                    <Badge
-                      key={idx}
-                      variant="secondary"
-                      className="bg-blue-500/10 text-blue-200 hover:bg-blue-500/20 border-blue-500/20 font-light"
-                    >
-                      {s}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Core Content */}
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-serif text-blue-100 mb-3 leading-snug">
+                {title || '타고난 기운의 흐름'}
+              </h3>
+              <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
+                {content}
+              </p>
+            </div>
 
-            {/* Weaknesses */}
-            {weaknesses && weaknesses.length > 0 && (
-              <div className="bg-red-950/10 rounded-xl p-4 border border-red-500/10 space-y-3">
-                <div className="flex items-center gap-2 text-red-300/80">
-                  <Star className="w-4 h-4" />
-                  <span className="text-sm font-serif font-medium">보완할 점</span>
+            {/* Analysis Points Grid */}
+            <div className="grid grid-cols-1 gap-4 pt-2">
+              {/* Strengths */}
+              {strengths && strengths.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-blue-300">
+                    <Crown className="w-4 h-4" />
+                    <span className="text-sm font-bold tracking-wide uppercase">Strength</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Using simple text tags instead of badges for cleaner look on mobile */}
+                    {strengths.map((s: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="inline-block px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-200 text-sm font-medium border border-blue-500/20"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {weaknesses.map((w: string, idx: number) => (
-                    <Badge
-                      key={idx}
-                      variant="outline"
-                      className="text-ink-light/60 border-white/10 font-light"
-                    >
-                      {w}
-                    </Badge>
-                  ))}
+              )}
+
+              {/* Weaknesses */}
+              {weaknesses && weaknesses.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center gap-2 text-red-300/70">
+                    <Star className="w-4 h-4" />
+                    <span className="text-sm font-bold tracking-wide uppercase">Weakness</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {weaknesses.map((w: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="inline-block px-3 py-1.5 rounded-lg bg-red-500/5 text-red-200/80 text-sm font-light border border-red-500/10"
+                      >
+                        {w}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
     </motion.div>
   )
 }

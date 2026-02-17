@@ -58,7 +58,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
       } else {
         toast.error(result.error || '즐겨찾기 변경 실패')
       }
-    } catch (error) {
+    } catch {
       toast.error('즐겨찾기 변경 중 오류가 발생했습니다.')
     }
   }
@@ -74,7 +74,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
       } else {
         toast.error(result.error || '메모 저장 실패')
       }
-    } catch (error) {
+    } catch {
       toast.error('메모 저장 중 오류가 발생했습니다.')
     }
   }
@@ -91,7 +91,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
       } else {
         toast.error(result.error || '삭제 실패')
       }
-    } catch (error) {
+    } catch {
       toast.error('삭제 중 오류가 발생했습니다.')
     } finally {
       setIsDeleting(false)
@@ -119,7 +119,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
       try {
         await navigator.clipboard.writeText(shareText)
         toast.success('내용이 복사되었습니다!')
-      } catch (err) {
+      } catch {
         toast.error('공유에 실패했습니다.')
       }
     }
@@ -226,22 +226,25 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                   <div className="border border-primary/20 rounded-xl overflow-hidden bg-black/40">
                     <CheonjiinSummary
                       data={record.result_json}
-                      compact={true}
-                      target={{
-                        id: record.target_id,
-                        name: record.target_name || '이름 없음',
-                        birth_date: '1900-01-01', // Dummy
-                        birth_time: '00:00', // Dummy
-                        gender: 'male', // Dummy
-                        calendar_type: 'solar', // Dummy
-                        created_at: '', // Dummy
-                        user_id: '', // Dummy
-                      }}
+                      target={
+                        {
+                          id: record.target_id ?? '',
+                          name: record.target_name || '이름 없음',
+                          birth_date: '1900-01-01', // Dummy
+                          birth_time: '00:00', // Dummy
+                          gender: 'male', // Dummy
+                          calendar_type: 'solar', // Dummy
+                          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+                        } as any
+                      }
                     />
                   </div>
                   <div className="space-y-4">
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <CheonSection data={(record.result_json as any)?.cheon} />
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <JiSection data={(record.result_json as any)?.ji} />
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <InSection data={(record.result_json as any)?.in} />
                   </div>
                 </div>
