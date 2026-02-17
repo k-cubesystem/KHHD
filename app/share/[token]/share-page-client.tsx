@@ -1,20 +1,91 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 import { AnalysisHistory } from '@/app/actions/analysis-history'
 import { AnalysisResultView } from '@/components/history/analysis-result-view'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { ArrowRight, Clock, User, Sparkles } from 'lucide-react'
+import { ArrowRight, Clock, User, Sparkles, Loader2, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 interface SharePageClientProps {
-  record: AnalysisHistory
+  token: string
 }
 
-export function SharePageClient({ record }: SharePageClientProps) {
+export function SharePageClient({ token }: SharePageClientProps) {
+  const [record, setRecord] = useState<AnalysisHistory | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchRecord() {
+      try {
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+        )
+
+        const { data, error } = await supabase.rpc('get_shared_analysis_record', {
+          token_input: token,
+        })
+
+        if (error) {
+          console.error('RPC Error:', error)
+          setError('데이터를 불러오는 중 오류가 발생했습니다.')
+          return
+        }
+
+        if (!data || data.length === 0) {
+          setError('분석 기록을 찾을 수 없습니다.')
+          return
+        }
+
+        setRecord(data[0] as AnalysisHistory)
+      } catch (err) {
+        console.error('Unexpected error:', err)
+        setError('알 수 없는 오류가 발생했습니다.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    if (token) {
+      fetchRecord()
+    }
+  }, [token])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <p className="text-ink-light/60 font-serif">운명을 읽어오는 중...</p>
+      </div>
+    )
+  }
+
+  if (error || !record) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+          <AlertCircle className="w-8 h-8 text-red-500" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-serif font-bold text-ink-light">오류가 발생했습니다</h2>
+          <p className="text-ink-light/60">{error || '페이지를 찾을 수 없습니다.'}</p>
+        </div>
+        <Link href="/">
+          <Button variant="outline" className="border-primary/20">
+            메인으로 돌아가기
+          </Button>
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background text-ink-light font-sans selection:bg-primary/30 relative overflow-hidden flex flex-col items-center">
       <div className="hanji-overlay" />
