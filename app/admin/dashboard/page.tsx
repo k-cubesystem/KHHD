@@ -25,16 +25,22 @@ async function getStats() {
 
   // Use Admin Client if available
   let dbClient = supabase
+  const adminClient = createAdminClient()
   try {
-    dbClient = createAdminClient()
+    dbClient = adminClient
   } catch (e) {
     console.warn('getStats: Fallback to standard client')
   }
 
-  // Get total users count
-  const { count: totalUsers } = await dbClient
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
+  // auth.users 직접 카운트 — profiles 미생성 신규 유저도 포함
+  let totalUsers = 0
+  try {
+    const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+    totalUsers = authData?.users?.length ?? 0
+  } catch {
+    const { count } = await dbClient.from('profiles').select('*', { count: 'exact', head: true })
+    totalUsers = count ?? 0
+  }
 
   // Get total revenue
   const { data: payments } = await dbClient
