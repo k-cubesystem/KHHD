@@ -226,6 +226,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                   <div className="border border-primary/20 rounded-xl overflow-hidden bg-black/40">
                     <CheonjiinSummary
                       data={record.result_json}
+                      compact={true}
                       target={{
                         id: record.target_id,
                         name: record.target_name || '이름 없음',
