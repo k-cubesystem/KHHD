@@ -76,128 +76,138 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
   const circ = 2 * Math.PI * 52
 
   return (
-    <div className="relative w-full overflow-hidden mb-6">
+    <div className="relative w-full overflow-hidden mb-8">
       {/* Ambient glow */}
-      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute top-0 center w-64 h-64 bg-primary/10 rounded-full blur-[80px] pointer-events-none left-1/2 -translate-x-1/2" />
 
-      <div className="relative z-10 px-4 pt-6 pb-8 border-b border-white/5">
-        {/* Top badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center mb-5"
-        >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm">
-            <Sparkles className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-medium text-primary tracking-widest uppercase">
+      <div className="relative z-10 px-0 pt-2 pb-6">
+        {/* 1. Header Section */}
+        <div className="text-center mb-6 space-y-2 px-4">
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-2"
+          >
+            <Sparkles className="w-2.5 h-2.5 text-primary" />
+            <span className="text-[9px] font-bold text-primary tracking-widest uppercase">
               The Masterpiece Analysis
             </span>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Main layout: 모바일/태블릿 세로, PC 가로 */}
-        <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
-          {/* Score circle 섹션 */}
-          <div className="flex flex-col items-center gap-4 flex-shrink-0">
-            {/* Main circle */}
-            <div className="relative w-36 h-36 lg:w-44 lg:h-44 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-0 border border-dashed border-primary/15 rounded-full"
+          <h1 className="text-2xl font-serif font-light text-ink-light leading-tight">
+            <span className="block text-ink-light/80 text-lg mb-1">{target.name}님의</span>
+            <span className="font-bold text-primary text-3xl">천지인(天地人)</span> 조화
+          </h1>
+        </div>
+
+        {/* 2. Score Section (Centerpiece) */}
+        <div className="relative flex flex-col items-center justify-center mb-8">
+          {/* Main Score Circle */}
+          <div className="relative w-48 h-48 flex items-center justify-center mb-6">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
+              className="absolute inset-0 border border-dashed border-primary/10 rounded-full"
+            />
+
+            {/* SVG Ring */}
+            <svg
+              className="w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(236,182,19,0.2)]"
+              viewBox="0 0 144 144"
+            >
+              <circle
+                cx="72"
+                cy="72"
+                r="52"
+                fill="none"
+                stroke="rgba(255,255,255,0.03)"
+                strokeWidth="1.5"
               />
-              <svg
-                className="w-full h-full -rotate-90 drop-shadow-[0_0_12px_rgba(212,175,55,0.25)]"
-                viewBox="0 0 144 144"
-              >
-                <circle
-                  cx="72"
-                  cy="72"
-                  r="52"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.05)"
-                  strokeWidth="1.5"
-                />
-                <motion.circle
-                  cx="72"
-                  cy="72"
-                  r="52"
-                  fill="none"
-                  stroke="#D4AF37"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={circ}
-                  initial={{ strokeDashoffset: circ }}
-                  animate={{ strokeDashoffset: circ - (circ * score) / 100 }}
-                  transition={{ duration: 2, ease: 'easeOut' }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-[9px] text-primary/60 font-serif tracking-widest uppercase">
-                  Total
-                </span>
-                <span className="text-4xl font-serif font-bold text-ink-light leading-none">
-                  {score}
-                </span>
-                <span className="text-[9px] text-primary/60 font-serif tracking-widest">
-                  Harmony
-                </span>
-              </div>
-            </div>
+              <motion.circle
+                cx="72"
+                cy="72"
+                r="52"
+                fill="none"
+                stroke="#ECB613" // Primary Color
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={circ}
+                initial={{ strokeDashoffset: circ }}
+                animate={{ strokeDashoffset: circ - (circ * score) / 100 }}
+                transition={{ duration: 1.5, ease: 'easeOut' }}
+              />
+            </svg>
 
-            {/* Sub scores */}
-            <div className="flex items-center gap-3 lg:gap-5 bg-surface/60 backdrop-blur-md px-4 lg:px-5 py-2.5 rounded-full border border-white/8 shadow-lg">
-              <MiniScoreRing label="天(천)" value={cheonScore} color="#93c5fd" delay={0.8} />
-              <div className="w-px h-6 bg-white/10" />
-              <MiniScoreRing label="地(지)" value={jiScore} color="#6ee7b7" delay={1.0} />
-              <div className="w-px h-6 bg-white/10" />
-              <MiniScoreRing label="人(인)" value={inScore} color="#fca5a5" delay={1.2} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[10px] text-primary/60 font-serif tracking-[0.2em] uppercase mb-1">
+                Total Integrity
+              </span>
+              <span className="text-5xl font-serif font-bold text-ink-light leading-none tracking-tighter shadow-black">
+                {score}
+              </span>
+              <span className="text-[10px] text-primary/60 font-serif tracking-widest mt-1">
+                Point
+              </span>
             </div>
           </div>
 
-          {/* 텍스트 + Lucky 섹션 */}
-          <div className="flex-1 w-full space-y-4 text-center lg:text-left px-2 lg:px-0">
-            {/* Name & Summary */}
-            <div className="space-y-2">
-              <h1 className="text-xl lg:text-3xl font-serif font-light text-ink-light leading-snug">
-                {target.name}님의 <span className="font-medium text-primary">천지인(天地人)</span>{' '}
-                조화
-              </h1>
-              <p className="text-sm text-ink-light/65 font-light leading-relaxed break-keep px-1 lg:px-0">
-                {summary}
-              </p>
-            </div>
+          {/* Sub Scores (Pill Design) */}
+          <div className="flex items-center gap-6 bg-surface/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
+            <MiniScoreRing label="天 (천)" value={cheonScore} color="#93c5fd" delay={0.2} />
+            <div className="w-px h-8 bg-white/10" />
+            <MiniScoreRing label="地 (지)" value={jiScore} color="#6ee7b7" delay={0.3} />
+            <div className="w-px h-8 bg-white/10" />
+            <MiniScoreRing label="人 (인)" value={inScore} color="#fca5a5" delay={0.4} />
+          </div>
+        </div>
 
-            {/* Lucky Grid - 모바일 2x2, PC 4열 */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5">
-              {[
-                { icon: Palette, label: 'Lucky Color', value: lucky.color },
-                { icon: Compass, label: 'Direction', value: lucky.direction },
-                { icon: Hash, label: 'Number', value: lucky.number },
-                { icon: Star, label: 'Keyword', value: lucky.keyword || '조화' },
-              ].map(({ icon: Icon, label, value }) => (
-                <div
-                  key={label}
-                  className="bg-surface/30 rounded-xl p-2.5 border border-white/5 flex flex-col items-center justify-center gap-1 min-h-[60px] lg:min-h-[64px]"
-                >
-                  <Icon className="w-3.5 lg:w-3.5 h-3.5 lg:h-3.5 text-primary/60" />
-                  <span className="text-[9px] text-ink-light/35 leading-none">{label}</span>
-                  <span className="text-xs font-medium text-ink-light text-center leading-tight">
+        {/* 3. Content Section */}
+        <div className="px-4 space-y-5">
+          {/* Summary Text */}
+          <div className="bg-surface/30 rounded-2xl p-5 border border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-1 h-full bg-primary/30" />
+            <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep text-center">
+              {summary}
+            </p>
+          </div>
+
+          {/* Lucky Grid (2x2 but wide on mobile) */}
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { icon: Palette, label: 'Lucky Color', value: lucky.color },
+              { icon: Compass, label: 'Direction', value: lucky.direction },
+              { icon: Hash, label: 'Lucky Number', value: lucky.number },
+              { icon: Star, label: 'Keyword', value: lucky.keyword || '조화' },
+            ].map(({ icon: Icon, label, value }) => (
+              <div
+                key={label}
+                className="bg-surface/40 rounded-xl p-4 border border-white/5 flex flex-col items-start gap-2 relative overflow-hidden group"
+              >
+                <div className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Icon className="w-8 h-8" />
+                </div>
+                <span className="text-[10px] text-ink-light/40 uppercase tracking-wide font-bold">
+                  {label}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Icon className="w-4 h-4 text-primary/70" />
+                  <span className="text-sm font-bold text-ink-light leading-tight">
                     {value || '-'}
                   </span>
                 </div>
-              ))}
-            </div>
-
-            {/* Advice */}
-            {lucky.advice && (
-              <div className="relative px-4 py-3 bg-gradient-to-r from-surface/40 to-primary/5 rounded-xl border-l-2 border-primary/30">
-                <p className="text-xs md:text-sm font-serif text-ink-light/75 italic leading-relaxed break-keep">
-                  &ldquo;{lucky.advice}&rdquo;
-                </p>
               </div>
-            )}
+            ))}
           </div>
+
+          {/* Advice Quote */}
+          {lucky.advice && (
+            <div className="text-center py-4">
+              <p className="text-xs text-ink-light/50 font-serif italic mb-2">오늘의 조언</p>
+              <p className="text-sm font-serif text-ink-light/90 leading-relaxed break-keep">
+                &ldquo;{lucky.advice}&rdquo;
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

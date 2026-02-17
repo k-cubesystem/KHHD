@@ -267,7 +267,10 @@ async function analyzeFortuneWithAI(
     generationConfig: { responseMimeType: 'application/json' },
   })
 
-  const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+  const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+    model: 'gemini-2.0-flash',
+    actionType: 'fortune',
+  })
   const text = result.response.text()
   const data = JSON.parse(text) as FortuneResult
 

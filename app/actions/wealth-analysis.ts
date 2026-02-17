@@ -172,7 +172,11 @@ ${
 
     // 6. Gemini AI 호출
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: user.id,
+      model: 'gemini-2.0-flash',
+      actionType: 'wealth',
+    })
     const analysis = result.response.text()
 
     // 7. 분석 결과 저장 (선택사항 - 향후 히스토리 기능)

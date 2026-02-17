@@ -160,7 +160,11 @@ export async function generateDailyFortune(
 
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: userId,
+      model: 'gemini-2.0-flash',
+      actionType: 'daily_fortune',
+    })
     const text = result.response.text()
 
     // 6. Save

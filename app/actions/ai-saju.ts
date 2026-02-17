@@ -7,6 +7,7 @@ import { type FaceDestinyGoal, type InteriorTheme } from '@/lib/constants'
 import { deductTalisman } from './wallet-actions'
 import { saveAnalysisHistory } from './analysis-history'
 import { rateLimit } from '@/lib/utils/rate-limit'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import {
   sajuAnalysisSchema,
   faceAnalysisSchema,
@@ -175,7 +176,11 @@ export async function analyzeSajuDetail(
         }
         `
 
-    const result = await model.generateContent(prompt)
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: user.id,
+      model: 'gemini-2.0-flash',
+      actionType: 'saju_detail',
+    })
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('JSON Parse Error')
@@ -278,10 +283,14 @@ export async function analyzeFaceForDestiny(
         }
         `
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
-    ])
+    const result = await withGeminiRateLimit(
+      () =>
+        model.generateContent([
+          prompt,
+          { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
+        ]),
+      { userId: user.id, model: 'gemini-2.0-flash', actionType: 'face_analysis' }
+    )
 
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -371,10 +380,14 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
         }
         `
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
-    ])
+    const result = await withGeminiRateLimit(
+      () =>
+        model.generateContent([
+          prompt,
+          { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
+        ]),
+      { userId: user.id, model: 'gemini-2.0-flash', actionType: 'palm_analysis' }
+    )
 
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -472,10 +485,14 @@ export async function analyzeInteriorForFengshui(
         }
         `
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
-    ])
+    const result = await withGeminiRateLimit(
+      () =>
+        model.generateContent([
+          prompt,
+          { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
+        ]),
+      { userId: user.id, model: 'gemini-2.0-flash', actionType: 'fengshui_interior' }
+    )
 
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/)

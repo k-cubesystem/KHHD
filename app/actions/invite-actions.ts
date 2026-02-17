@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { nanoid } from 'nanoid'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -159,7 +160,10 @@ export async function analyzeCompatibility(
 점수는 객관적으로, 요약과 조언은 긍정적이면서도 현실적으로 작성해주세요.`
 
   try {
-    const result = await model.generateContent(prompt)
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      model: 'gemini-2.0-flash',
+      actionType: 'invite_compatibility',
+    })
     const text = result.response.text()
 
     // Extract JSON

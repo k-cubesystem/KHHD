@@ -67,7 +67,11 @@ async function runAnalysis(
     console.log(`[Analysis Engine] Running ${analysisType}...`)
 
     // Generate
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: user?.id,
+      model: 'gemini-2.0-flash',
+      actionType: `analysis_${analysisType.toLowerCase()}`,
+    })
     const text = result.response.text()
     const data = JSON.parse(text)
 

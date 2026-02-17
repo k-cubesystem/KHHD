@@ -145,7 +145,13 @@ export async function analyzeCheonjiinAction(
       prompt = getDefaultCheonjiinPrompt(variables)
     }
 
-    const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart)
+    const result = await analyzeCheonjiinWithAI(
+      prompt,
+      target,
+      faceImagePart,
+      handImagePart,
+      user.id
+    )
 
     // 운세 기록 (가족 구성원인 경우)
     if (target.target_type === 'family') {
@@ -214,7 +220,8 @@ async function analyzeCheonjiinWithAI(
   promptText: string,
   target: any,
   faceImagePart?: { mimeType: string; data: string } | null,
-  handImagePart?: { mimeType: string; data: string } | null
+  handImagePart?: { mimeType: string; data: string } | null,
+  userId?: string
 ) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) {
@@ -240,8 +247,9 @@ async function analyzeCheonjiinWithAI(
     console.log('[CheonjiinAnalysis] 손금 이미지 첨부됨')
   }
 
-  const result = await withGeminiRateLimit(() =>
-    model.generateContent({ contents: [{ role: 'user', parts }] })
+  const result = await withGeminiRateLimit(
+    () => model.generateContent({ contents: [{ role: 'user', parts }] }),
+    { userId, model: 'gemini-2.0-flash', actionType: 'cheonjiin' }
   )
   const text = result.response.text()
 

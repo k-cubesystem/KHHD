@@ -258,7 +258,11 @@ export async function analyzeTrendAction(
       generationConfig: { responseMimeType: 'application/json' },
     })
 
-    const aiResult = await withGeminiRateLimit(() => model.generateContent(prompt))
+    const aiResult = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: user?.id,
+      model: 'gemini-2.0-flash',
+      actionType: `trend_${trendType}`,
+    })
     const text = aiResult.response.text()
     const result = JSON.parse(text) as TrendResult
 

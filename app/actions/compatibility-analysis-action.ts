@@ -198,7 +198,11 @@ ${baseScore}점 (70-100점 범위)
 
   console.log('[CompatibilityAnalysis] AI 분석 시작...')
 
-  const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+  const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+    userId: undefined,
+    model: 'gemini-2.0-flash',
+    actionType: 'compatibility',
+  })
   const text = result.response.text()
 
   // JSON 파싱

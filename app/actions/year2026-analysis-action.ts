@@ -160,7 +160,11 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
 {"name":"","summary":"","score":78,"bingoh_meaning":"","quarterly":{"q1":"","q2":"","q3":"","q4":""},"areas":{"wealth":{"score":80,"content":""},"love":{"score":75,"content":""},"career":{"score":85,"content":""},"health":{"score":70,"content":""}},"peak_month":"","caution_month":"","lucky":{"color":"","direction":"","number":6},"message":""}`
     }
 
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt))
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: user.id,
+      model: 'gemini-2.0-flash',
+      actionType: 'year2026',
+    })
     const text = result.response.text()
     const data = JSON.parse(text) as Year2026Result
 

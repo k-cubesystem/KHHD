@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { getPromptByKey } from '@/app/admin/prompts/actions'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -209,15 +210,14 @@ export async function analyzeFaceForDestiny(
 ※ 관상학적 전문 용어를 사용하되, 이해하기 쉽게 설명하세요.`
 
   try {
-    const result = await model.generateContent([
-      analysisPrompt,
-      {
-        inlineData: {
-          mimeType: 'image/jpeg',
-          data: imageBase64,
-        },
-      },
-    ])
+    const result = await withGeminiRateLimit(
+      () =>
+        model.generateContent([
+          analysisPrompt,
+          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+        ]),
+      { model: 'gemini-2.0-flash', actionType: 'face_destiny' }
+    )
 
     const analysisText = result.response.text()
 
@@ -322,15 +322,14 @@ export async function analyzeInteriorForFengshui(
 실용적이고 구체적인 조언을 제공하세요.`
 
   try {
-    const result = await model.generateContent([
-      analysisPrompt,
-      {
-        inlineData: {
-          mimeType: 'image/jpeg',
-          data: imageBase64,
-        },
-      },
-    ])
+    const result = await withGeminiRateLimit(
+      () =>
+        model.generateContent([
+          analysisPrompt,
+          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+        ]),
+      { model: 'gemini-2.0-flash', actionType: 'fengshui_destiny' }
+    )
 
     const analysisText = result.response.text()
 
@@ -470,15 +469,14 @@ export async function analyzePalmReading(imageBase64: string): Promise<PalmAnaly
 ※ 수상학적 전문 용어를 사용하되, 이해하기 쉽게 설명하세요.`
 
   try {
-    const result = await model.generateContent([
-      analysisPrompt,
-      {
-        inlineData: {
-          mimeType: 'image/jpeg',
-          data: imageBase64,
-        },
-      },
-    ])
+    const result = await withGeminiRateLimit(
+      () =>
+        model.generateContent([
+          analysisPrompt,
+          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+        ]),
+      { model: 'gemini-2.0-flash', actionType: 'palm_destiny' }
+    )
 
     const analysisText = result.response.text()
 
