@@ -1,6 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { unstable_cache, revalidatePath } from 'next/cache'
 
 /**
@@ -40,6 +41,7 @@ export interface AnalysisHistory {
   talisman_cost: number
   user_memo: string | null
   is_favorite: boolean
+  share_token?: string | null
   created_at: string
   updated_at: string
 }
@@ -348,4 +350,88 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
   }
 
   return (data || []) as AnalysisHistory[]
+}
+
+/**
+ * 공유 링크 생성 (토큰 발급)
+ */
+export async function createShareLink(
+  id: string
+): Promise<{ success: boolean; token?: string; url?: string; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return { success: false, error: '인증이 필요합니다.' }
+    }
+
+    // 1. 이미 토큰이 있는지 확인
+    const { data: record } = await supabase
+      .from('analysis_history')
+      .select('share_token')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (record?.share_token) {
+      return {
+        success: true,
+        token: record.share_token,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL}/share/${record.share_token}`,
+      }
+    }
+
+    // 2. 새 토큰 생성 (UUID)
+    const token = crypto.randomUUID()
+
+    const { error } = await supabase
+      .from('analysis_history')
+      .update({ share_token: token })
+      .eq('id', id)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Error creating share token:', error)
+      return { success: false, error: '공유 링크 생성 실패' }
+    }
+
+    return {
+      success: true,
+      token,
+      url: `${process.env.NEXT_PUBLIC_SITE_URL}/share/${token}`,
+    }
+  } catch (error) {
+    console.error('Error in createShareLink:', error)
+    return { success: false, error: '공유 링크 생성 중 오류가 발생했습니다.' }
+  }
+}
+
+/**
+ * 공유된 분석 기록 조회 (Public Access)
+ */
+export async function getSharedAnalysis(token: string): Promise<AnalysisHistory | null> {
+  try {
+    // Admin Client를 사용하여 RLS 우회 (공유된 기록은 누구나 볼 수 있어야 함)
+    // 단, share_token이 일치하는 레코드만 조회 가능하므로 안전함.
+    const supabase = createAdminClient()
+
+    const { data, error } = await supabase
+      .from('analysis_history')
+      .select('*')
+      .eq('share_token', token)
+      .single()
+
+    if (error || !data) {
+      console.error('Error fetching shared analysis:', error)
+      return null
+    }
+
+    return data as AnalysisHistory
+  } catch (error) {
+    console.error('Error in getSharedAnalysis:', error)
+    return null
+  }
 }

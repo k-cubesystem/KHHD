@@ -14,10 +14,6 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react'
-import { CheonjiinSummary } from '@/components/analysis/cheonjiin/CheonjiinSummary'
-import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
-import { JiSection } from '@/components/analysis/cheonjiin/JiSection'
-import { InSection } from '@/components/analysis/cheonjiin/InSection'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
@@ -29,7 +25,9 @@ import {
   toggleFavorite,
   updateAnalysisMemo,
   deleteAnalysisHistory,
+  createShareLink,
 } from '@/app/actions/analysis-history'
+import { AnalysisResultView } from './analysis-result-view'
 
 interface DetailModalProps {
   isOpen: boolean
@@ -101,27 +99,38 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
 
   // Share
   const handleShare = async () => {
-    const shareText = `${record.target_name}님의 ${record.category} 분석 결과\n${record.summary || ''}`
+    try {
+      // 1. Get Share Token/URL
+      const result = await createShareLink(record.id)
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `해화당 운명 분석`,
-          text: shareText,
-        })
-        toast.success('공유되었습니다!')
-      } catch (err) {
-        if ((err as Error).name !== 'AbortError') {
-          console.error('Share failed:', err)
+      if (!result.success || !result.url) {
+        toast.error(result.error || '공유 링크 생성 실패')
+        return
+      }
+
+      const shareUrl = result.url
+      const shareText = `${record.target_name}님의 ${record.category} 분석 결과 | 청담 해화당\n${shareUrl}`
+
+      // 2. Web Share API
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `해화당 운명 분석`,
+            text: `${record.target_name}님의 ${record.category} 분석 결과를 확인해보세요.`,
+            url: shareUrl,
+          })
+          toast.success('공유되었습니다!')
+        } catch (err) {
+          // Dismissal allowed
         }
-      }
-    } else {
-      try {
+      } else {
+        // 3. Fallback: Copy to Clipboard
         await navigator.clipboard.writeText(shareText)
-        toast.success('내용이 복사되었습니다!')
-      } catch {
-        toast.error('공유에 실패했습니다.')
+        toast.success('공유 링크가 복사되었습니다!')
       }
+    } catch (err) {
+      console.error('Share failed:', err)
+      toast.error('공유 중 오류가 발생했습니다.')
     }
   }
 
@@ -220,64 +229,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
               </div>
 
               {/* Result Content */}
-              {record.category === 'SAJU' && typeof record.result_json === 'object' ? (
-                // Cheonjiin Special Rendering
-                <div className="space-y-6">
-                  <div className="border border-primary/20 rounded-xl overflow-hidden bg-black/40">
-                    <CheonjiinSummary
-                      data={record.result_json}
-                      target={
-                        {
-                          id: record.target_id ?? '',
-                          name: record.target_name || '이름 없음',
-                          birth_date: '1900-01-01', // Dummy
-                          birth_time: '00:00', // Dummy
-                          gender: 'male', // Dummy
-                          calendar_type: 'solar', // Dummy
-                          /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-                        } as any
-                      }
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <CheonSection data={(record.result_json as any)?.cheon} />
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <JiSection data={(record.result_json as any)?.ji} />
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <InSection data={(record.result_json as any)?.in} />
-                  </div>
-                </div>
-              ) : (
-                // Default Rendering (Summary + JSON)
-                <>
-                  {/* Summary */}
-                  {record.summary && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-bold text-primary uppercase tracking-wide">
-                        요약
-                      </h4>
-                      <p className="text-base text-ink-light/90 leading-relaxed">
-                        {record.summary}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Result JSON (Code View) */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-bold text-primary uppercase tracking-wide">
-                      분석 결과
-                    </h4>
-                    <div className="bg-background/50 border border-primary/10 rounded-lg p-4">
-                      <pre className="text-sm text-ink-light/80 whitespace-pre-wrap font-sans leading-relaxed">
-                        {typeof record.result_json === 'string'
-                          ? record.result_json
-                          : JSON.stringify(record.result_json, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </>
-              )}
+              <AnalysisResultView record={record} />
 
               {/* User Memo */}
               <div className="space-y-2">
