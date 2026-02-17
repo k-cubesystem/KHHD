@@ -439,7 +439,7 @@ export async function getSharedAnalysis(token: string): Promise<AnalysisHistory 
       return null
     }
 
-    console.log(`[Share] Success! Found record for: ${data[0].target_name}`)
+    console.log(`[Share] Success! Found record for target: ${data[0].target_name}`)
     return data[0] as AnalysisHistory
   } catch (error) {
     console.error('[Share] Unexpected Error in getSharedAnalysis:', error)
