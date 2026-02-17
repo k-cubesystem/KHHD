@@ -95,12 +95,12 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
           </div>
         </motion.div>
 
-        {/* Main layout: 모바일 세로, md 가로 */}
-        <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+        {/* Main layout: 모바일/태블릿 세로, PC 가로 */}
+        <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
           {/* Score circle 섹션 */}
           <div className="flex flex-col items-center gap-4 flex-shrink-0">
             {/* Main circle */}
-            <div className="relative w-36 h-36 md:w-44 md:h-44 flex items-center justify-center">
+            <div className="relative w-36 h-36 lg:w-44 lg:h-44 flex items-center justify-center">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
@@ -145,8 +145,8 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
               </div>
             </div>
 
-            {/* Sub scores - 절대좌표 제거, 자연 흐름으로 */}
-            <div className="flex items-center gap-3 md:gap-5 bg-surface/60 backdrop-blur-md px-4 md:px-5 py-2.5 rounded-full border border-white/8 shadow-lg">
+            {/* Sub scores */}
+            <div className="flex items-center gap-3 lg:gap-5 bg-surface/60 backdrop-blur-md px-4 lg:px-5 py-2.5 rounded-full border border-white/8 shadow-lg">
               <MiniScoreRing label="天(천)" value={cheonScore} color="#93c5fd" delay={0.8} />
               <div className="w-px h-6 bg-white/10" />
               <MiniScoreRing label="地(지)" value={jiScore} color="#6ee7b7" delay={1.0} />
@@ -156,22 +156,20 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
           </div>
 
           {/* 텍스트 + Lucky 섹션 */}
-          <div className="flex-1 w-full space-y-3 text-center md:text-left px-2 md:px-0">
+          <div className="flex-1 w-full space-y-4 text-center lg:text-left px-2 lg:px-0">
             {/* Name & Summary */}
             <div className="space-y-2">
-              <h1 className="text-lg md:text-3xl font-serif font-light text-ink-light leading-tight md:leading-snug">
-                <span className="block md:inline">{target.name}님의&nbsp;</span>
-                <span className="font-medium text-primary whitespace-nowrap">천지인(天地人)</span>
-                <span className="hidden md:inline">&nbsp;조화</span>
-                <span className="block md:hidden mt-1">조화</span>
+              <h1 className="text-xl lg:text-3xl font-serif font-light text-ink-light leading-snug">
+                {target.name}님의 <span className="font-medium text-primary">천지인(天地人)</span>{' '}
+                조화
               </h1>
-              <p className="text-xs md:text-sm text-ink-light/65 font-light leading-relaxed break-keep px-2 md:px-0">
+              <p className="text-sm text-ink-light/65 font-light leading-relaxed break-keep px-1 lg:px-0">
                 {summary}
               </p>
             </div>
 
-            {/* Lucky Grid - 모바일 2x2, md 4열 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2">
+            {/* Lucky Grid - 모바일 2x2, PC 4열 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5">
               {[
                 { icon: Palette, label: 'Lucky Color', value: lucky.color },
                 { icon: Compass, label: 'Direction', value: lucky.direction },
@@ -180,13 +178,11 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
               ].map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
-                  className="bg-surface/30 rounded-lg md:rounded-xl p-2 md:p-2.5 border border-white/5 flex flex-col items-center justify-center gap-0.5 md:gap-1 min-h-[56px] md:min-h-[64px]"
+                  className="bg-surface/30 rounded-xl p-2.5 border border-white/5 flex flex-col items-center justify-center gap-1 min-h-[60px] lg:min-h-[64px]"
                 >
-                  <Icon className="w-3 md:w-3.5 h-3 md:h-3.5 text-primary/60" />
-                  <span className="text-[8px] md:text-[9px] text-ink-light/35 leading-none">
-                    {label}
-                  </span>
-                  <span className="text-[11px] md:text-xs font-medium text-ink-light text-center leading-tight px-1">
+                  <Icon className="w-3.5 lg:w-3.5 h-3.5 lg:h-3.5 text-primary/60" />
+                  <span className="text-[9px] text-ink-light/35 leading-none">{label}</span>
+                  <span className="text-xs font-medium text-ink-light text-center leading-tight">
                     {value || '-'}
                   </span>
                 </div>
