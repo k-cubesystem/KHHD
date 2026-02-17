@@ -108,7 +108,8 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
         return
       }
 
-      const shareUrl = result.url
+      // 2. Client-side URL construction (Safe & Correct Domain)
+      const shareUrl = `${window.location.origin}/share/${result.token}`
       const shareText = `${record.target_name}님의 ${record.category} 분석 결과 | 청담 해화당\n${shareUrl}`
 
       // 2. Web Share API
