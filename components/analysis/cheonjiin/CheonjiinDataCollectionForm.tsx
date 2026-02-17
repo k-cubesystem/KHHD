@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Upload, MapPin, Camera, Hand, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useKakaoAddress } from '@/hooks/useKakaoAddress'
 
 interface CheonjiinDataCollectionFormProps {

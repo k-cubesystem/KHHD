@@ -34,7 +34,7 @@ import {
   type GeminiTodaySummary,
   type GeminiRecentLog,
   type GeminiRpmConfig,
-} from '@/app/actions/gemini-usage-actions'
+} from '@/app/actions/admin/gemini-usage'
 
 // ─────────────────────────────────────────
 // 비용 포맷 유틸

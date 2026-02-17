@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
-import { getDestinyTargets } from '@/app/actions/destiny-targets'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
 import { TrendClient } from './trend-client'
-import type { TrendType } from '@/app/actions/trend-analysis-action'
+import type { TrendType } from '@/app/actions/ai/trend'
 
 const VALID_TYPES: TrendType[] = ['love', 'career', 'exam', 'estate']
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Sparkles, Gift, Coins } from 'lucide-react'
-import { spinRoulette } from '@/app/actions/roulette-actions'
+import { spinRoulette } from '@/app/actions/payment/roulette'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 

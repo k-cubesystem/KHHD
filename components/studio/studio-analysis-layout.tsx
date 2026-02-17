@@ -1,6 +1,6 @@
 'use client'
 
-import type { FamilyMemberWithMissions } from '@/app/actions/family-missions'
+import type { FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MISSION_CATEGORIES } from '@/lib/constants'
 import { motion } from 'framer-motion'
 

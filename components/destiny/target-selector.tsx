@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, User, Users, Heart, Briefcase, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { getDestinyTargets, type DestinyTarget } from '@/app/actions/destiny-targets'
+import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import { getTargetImageUrl } from '@/lib/domain/destiny/destiny-utils'
 
 interface TargetSelectorProps {

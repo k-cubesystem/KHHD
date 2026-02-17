@@ -1,4 +1,4 @@
-import type { DestinyTarget } from "@/app/actions/destiny-targets";
+import type { DestinyTarget } from '@/app/actions/user/destiny'
 
 /**
  * Destiny Target 유틸리티 함수 모음
@@ -10,7 +10,7 @@ import type { DestinyTarget } from "@/app/actions/destiny-targets";
  * - 사주 분석을 위해서는 birth_date가 필수
  */
 export function hasValidBirthData(target: DestinyTarget): boolean {
-  return !!target.birth_date;
+  return !!target.birth_date
 }
 
 /**
@@ -19,10 +19,10 @@ export function hasValidBirthData(target: DestinyTarget): boolean {
  * - 가족/친구: face_image_url 사용
  */
 export function getTargetImageUrl(target: DestinyTarget): string | null {
-  if (target.target_type === "self") {
-    return target.avatar_url;
+  if (target.target_type === 'self') {
+    return target.avatar_url
   }
-  return target.face_image_url;
+  return target.face_image_url
 }
 
 /**
@@ -33,26 +33,22 @@ export function getTargetImageUrl(target: DestinyTarget): string | null {
  * - 직장: metal (silver)
  * - 기타: default
  */
-export function getTargetColor(
-  relationType: string,
-  targetType: string
-): string {
-  if (targetType === "self") return "primary";
+export function getTargetColor(relationType: string, targetType: string): string {
+  if (targetType === 'self') return 'primary'
   if (
-    relationType.includes("가족") ||
-    relationType.includes("부모") ||
-    relationType.includes("자녀")
+    relationType.includes('가족') ||
+    relationType.includes('부모') ||
+    relationType.includes('자녀')
   )
-    return "wood";
-  if (relationType.includes("연인") || relationType.includes("배우자"))
-    return "seal";
+    return 'wood'
+  if (relationType.includes('연인') || relationType.includes('배우자')) return 'seal'
   if (
-    relationType.includes("직장") ||
-    relationType.includes("동료") ||
-    relationType.includes("상사")
+    relationType.includes('직장') ||
+    relationType.includes('동료') ||
+    relationType.includes('상사')
   )
-    return "metal";
-  return "default";
+    return 'metal'
+  return 'default'
 }
 
 /**
@@ -60,17 +56,17 @@ export function getTargetColor(
  * - 생년월일 + 생시 + 양력/음력 표시
  */
 export function formatBirthData(target: DestinyTarget): string {
-  if (!target.birth_date) return "출생 정보 없음";
+  if (!target.birth_date) return '출생 정보 없음'
 
-  let formatted = target.birth_date;
+  let formatted = target.birth_date
 
   if (target.birth_time) {
-    formatted += ` ${target.birth_time}`;
+    formatted += ` ${target.birth_time}`
   }
 
   if (target.calendar_type) {
-    formatted += ` (${target.calendar_type === "solar" ? "양력" : "음력"})`;
+    formatted += ` (${target.calendar_type === 'solar' ? '양력' : '음력'})`
   }
 
-  return formatted;
+  return formatted
 }

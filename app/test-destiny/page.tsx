@@ -1,27 +1,26 @@
-import { createClient } from "@/lib/supabase/server";
-import { getDestinyTargets } from "@/app/actions/destiny-targets";
+import { createClient } from '@/lib/supabase/server'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
 
 export default async function TestDestinyPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
-    return <div className="p-8">Please login first</div>;
+    return <div className="p-8">Please login first</div>
   }
 
   // Test 1: Direct View Query
-  const { data: viewData, error: viewError } = await supabase
-    .from("v_destiny_targets")
-    .select("*");
+  const { data: viewData, error: viewError } = await supabase.from('v_destiny_targets').select('*')
 
   // Test 2: RPC Function
-  const { data: rpcData, error: rpcError } = await supabase
-    .rpc("get_user_destiny_targets", {
-      user_id_param: user.id,
-    });
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_user_destiny_targets', {
+    user_id_param: user.id,
+  })
 
   // Test 3: Server Action
-  const actionData = await getDestinyTargets();
+  const actionData = await getDestinyTargets()
 
   return (
     <div className="p-8 space-y-8 max-w-4xl mx-auto">
@@ -67,5 +66,5 @@ export default async function TestDestinyPage() {
         </pre>
       </div>
     </div>
-  );
+  )
 }

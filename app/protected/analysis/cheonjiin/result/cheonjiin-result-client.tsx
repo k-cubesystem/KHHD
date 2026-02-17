@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { analyzeCheonjiinAction } from '@/app/actions/cheonjiin-analysis-action'
+import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { CheonjiinLoadingState } from '@/components/analysis/cheonjiin/CheonjiinLoadingState'
 import { CheonjiinSummary } from '@/components/analysis/cheonjiin/CheonjiinSummary'
 import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
@@ -13,7 +13,7 @@ import {
 } from '@/components/analysis/cheonjiin/CheonjiinDataCollectionForm'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 
 interface CheonjiinResultClientProps {

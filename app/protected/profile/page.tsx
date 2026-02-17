@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { LogoutButton } from '@/components/logout-button'
-import { checkDailyAttendance } from '@/app/actions/daily-check-actions'
+import { checkDailyAttendance } from '@/app/actions/payment/daily-check'
 import { DailyCheckIn } from '@/components/events/daily-check-in'
 import {
   ChevronLeft,
@@ -21,9 +21,9 @@ import {
   ScrollText,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
-import { getWalletBalance } from '@/app/actions/wallet-actions'
+import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getCurrentUserRole } from '@/app/actions/products'
-import { getUserLimitsSummary } from '@/app/actions/membership-limits'
+import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'

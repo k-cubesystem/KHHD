@@ -16,7 +16,7 @@ import {
 import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
-import type { FortuneResult } from '@/app/actions/fortune-analysis-action'
+import type { FortuneResult } from '@/app/actions/ai/fortune-analysis'
 
 const AREA_ICONS = {
   재물운: Wallet,

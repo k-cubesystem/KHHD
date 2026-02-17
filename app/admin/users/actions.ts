@@ -60,13 +60,16 @@ export async function getUsers(
       return { data: [], total: 0 }
     }
 
-    // Fetch real sign-up dates from auth.users
-    let authCreatedAtMap: Record<string, string> = {}
+    // Fetch real sign-up dates and EMAIL from auth.users
+    const authUserMap: Record<string, { created_at: string; email?: string }> = {}
     try {
       const { data: authUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
       if (authUsers?.users) {
         for (const u of authUsers.users) {
-          authCreatedAtMap[u.id] = u.created_at
+          authUserMap[u.id] = {
+            created_at: u.created_at,
+            email: u.email,
+          }
         }
       }
     } catch (e) {
@@ -76,7 +79,8 @@ export async function getUsers(
     const data =
       rawData?.map((p) => ({
         ...p,
-        created_at: authCreatedAtMap[p.id] || p.updated_at, // Use real auth created_at
+        created_at: authUserMap[p.id]?.created_at || p.updated_at, // Use real auth created_at
+        email: p.email || authUserMap[p.id]?.email || null, // Backfill email if missing in profile
       })) || []
 
     console.log(`[getUsers] Success! Found ${data.length} profiles.`)

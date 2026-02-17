@@ -1,12 +1,11 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/actions/user/family'
 import {
-  addFamilyMember,
-  deleteFamilyMember,
-  updateFamilyMember,
-} from '@/app/actions/family-actions'
-import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/family-missions'
+  getFamilyWithMissions,
+  type FamilyMemberWithMissions,
+} from '@/app/actions/user/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
 import { FamilyReviewSlide } from '@/components/family/family-review-slide'
@@ -199,16 +198,18 @@ export default function FamilyPage() {
       <section className="relative px-4 pt-4 pb-8 text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-2">
           <Sparkles className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-          <span className="text-[11px] font-medium text-primary tracking-wide">
-            가족 운대 케어
-          </span>
+          <span className="text-[11px] font-medium text-primary tracking-wide">가족 운대 케어</span>
         </div>
 
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug">
           당신의 작은 관심이 <br />
           <span className="text-primary relative inline-block">
             가족의 운명
-            <svg className="absolute -bottom-1 left-0 w-full h-1 text-primary/30" viewBox="0 0 100 10" preserveAspectRatio="none">
+            <svg
+              className="absolute -bottom-1 left-0 w-full h-1 text-primary/30"
+              viewBox="0 0 100 10"
+              preserveAspectRatio="none"
+            >
               <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="none" />
             </svg>
           </span>

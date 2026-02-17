@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getDestinyTargets } from '@/app/actions/destiny-targets'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
 import { FortuneClient } from './fortune-client'
 
 export default async function FortunePage() {

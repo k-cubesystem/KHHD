@@ -12,7 +12,7 @@ import {
   getShamanChatStarters,
   getAIChatUsageStatus,
   type ShamanChatMessage,
-} from '@/app/actions/ai-shaman-chat'
+} from '@/app/actions/ai/shaman-chat'
 import { Loader2, Send, Sparkles, MessageSquare, Coins, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -25,12 +25,12 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
   const [isLoading, setIsLoading] = useState(false)
   const [turnCount, setTurnCount] = useState(0)
   const [starterQuestions, setStarterQuestions] = useState<string[]>([
-    "오늘의 총운이 궁금해요",
-    "이번 달 재물운 흐름은?",
-    "이직하기 좋은 시기가 언제인가요?",
-    "올해 연애운과 결혼운 알려줘",
-    "건강상 주의해야 할 점은?",
-    "꿈해몽 부탁드려요"
+    '오늘의 총운이 궁금해요',
+    '이번 달 재물운 흐름은?',
+    '이직하기 좋은 시기가 언제인가요?',
+    '올해 연애운과 결혼운 알려줘',
+    '건강상 주의해야 할 점은?',
+    '꿈해몽 부탁드려요',
   ])
   const [hasStarted, setHasStarted] = useState(false)
   // Mocking usage status based on user request "복채 1만냥 질문 10개"
@@ -45,7 +45,7 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
     remaining: 10,
     total: 10,
     used: 0,
-    bokchae: "10,000"
+    bokchae: '10,000',
   })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -65,12 +65,12 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
       const result = await getShamanChatStarters()
       if (result.success && result.questions && result.questions.length > 0) {
         // Merge with defaults or override, preserving at least 6
-        setStarterQuestions(prev => [...result.questions!.slice(0, 6), ...prev].slice(0, 8))
+        setStarterQuestions((prev) => [...result.questions!.slice(0, 6), ...prev].slice(0, 8))
       }
     }
 
     // In a real scenario we fetch this, but user asked to hardcode/mock specific values for now
-    // loadUsageStatus() 
+    // loadUsageStatus()
 
     loadStarters()
   }, [])
@@ -84,7 +84,11 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
       return
     }
 
-    if (usageStatus.remaining !== 'unlimited' && typeof usageStatus.remaining === 'number' && usageStatus.remaining <= 0) {
+    if (
+      usageStatus.remaining !== 'unlimited' &&
+      typeof usageStatus.remaining === 'number' &&
+      usageStatus.remaining <= 0
+    ) {
       toast.error('질문 횟수가 모두 소진되었습니다. 복채를 충전해주세요.')
       return
     }
@@ -117,14 +121,17 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
         setTurnCount((prev) => prev + 1)
 
         // Mock decrement
-        setUsageStatus(prev => ({
+        setUsageStatus((prev) => ({
           ...prev,
-          remaining: typeof prev.remaining === 'number' ? Math.max(0, prev.remaining - 1) : prev.remaining
+          remaining:
+            typeof prev.remaining === 'number' ? Math.max(0, prev.remaining - 1) : prev.remaining,
         }))
 
         // Update suggested questions
         if (result.suggestedQuestions) {
-          setStarterQuestions(prev => result.suggestedQuestions ? [...result.suggestedQuestions, ...prev].slice(0, 6) : prev)
+          setStarterQuestions((prev) =>
+            result.suggestedQuestions ? [...result.suggestedQuestions, ...prev].slice(0, 6) : prev
+          )
         }
 
         toast.success(`응답 완료`)
@@ -154,11 +161,10 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
     handleSendMessage(question)
   }
 
-  const isLimitReached = typeof usageStatus.remaining === 'number' && usageStatus.remaining <= 0;
+  const isLimitReached = typeof usageStatus.remaining === 'number' && usageStatus.remaining <= 0
 
   return (
     <div className="relative min-h-screen bg-background text-ink-light overflow-hidden flex flex-col items-center">
-
       {/* Main Content */}
       <div className="relative z-10 container max-w-2xl mx-auto px-4 py-6 flex-1 flex flex-col">
         {/* Header */}
@@ -176,30 +182,28 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
           <div className="flex items-center gap-1.5">
             <Coins className="w-3.5 h-3.5 text-primary" />
             <span className="text-ink-light">보유 복채</span>
-            <span className="font-medium text-primary ml-1">
-              {usageStatus.bokchae}냥
-            </span>
+            <span className="font-medium text-primary ml-1">{usageStatus.bokchae}냥</span>
           </div>
           <div className="w-px h-3 bg-white/10" />
           <div className="flex items-center gap-1.5">
             <MessageSquare className="w-3.5 h-3.5 text-ink-light/40" />
             <span>남은 질문</span>
-            <span className="font-medium text-ink-light ml-1">
-              {usageStatus.remaining}회
-            </span>
+            <span className="font-medium text-ink-light ml-1">{usageStatus.remaining}회</span>
           </div>
           <Link href="/protected/membership">
-            <Button size="sm" variant="ghost" className="h-6 px-2 ml-1 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-full">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 ml-1 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-full"
+            >
               충전 <Plus className="w-3 h-3 ml-0.5" />
             </Button>
           </Link>
         </div>
 
-
         {/* Chat Area */}
         <Card className="flex-1 bg-surface/20 border border-white/5 shadow-inner rounded-2xl overflow-hidden flex flex-col">
           <CardContent className="flex-1 p-0 flex flex-col">
-
             {/* Messages Scroll Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar min-h-[400px]">
               <AnimatePresence mode="popLayout">
@@ -212,9 +216,12 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
                     <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
                       <MessageSquare className="w-6 h-6 text-primary/60" strokeWidth={1} />
                     </div>
-                    <h3 className="text-lg font-serif text-ink-light mb-2">어떤 고민이 있으신가요?</h3>
+                    <h3 className="text-lg font-serif text-ink-light mb-2">
+                      어떤 고민이 있으신가요?
+                    </h3>
                     <p className="text-sm text-ink-light/50 max-w-xs leading-relaxed">
-                      누구에게도 말하지 못한 고민,<br />
+                      누구에게도 말하지 못한 고민,
+                      <br />
                       해화당이 지혜를 담아 들어드리겠습니다.
                     </p>
                   </motion.div>
@@ -236,7 +243,12 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
                       )}
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>
-                      <p className={cn("text-[10px] mt-1.5 opacity-50", msg.role === 'user' ? "text-black" : "text-ink-light")}>
+                      <p
+                        className={cn(
+                          'text-[10px] mt-1.5 opacity-50',
+                          msg.role === 'user' ? 'text-black' : 'text-ink-light'
+                        )}
+                      >
                         {new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
                           hour: '2-digit',
                           minute: '2-digit',
@@ -290,7 +302,9 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
                       handleSendMessage()
                     }
                   }}
-                  placeholder={isLimitReached ? "질문 한도가 초과되었습니다." : "고민을 자세히 적어주세요..."}
+                  placeholder={
+                    isLimitReached ? '질문 한도가 초과되었습니다.' : '고민을 자세히 적어주세요...'
+                  }
                   disabled={isLoading || isLimitReached}
                   className="w-full bg-black/20 border-white/10 focus:border-primary/50 min-h-[50px] pr-12 resize-none rounded-xl text-sm"
                 />
@@ -300,7 +314,11 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
                   disabled={isLoading || !inputMessage.trim() || isLimitReached}
                   className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-primary text-black hover:bg-primary/90"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </Button>
               </div>
               <div className="mt-2 text-center">
@@ -309,7 +327,6 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
                 </p>
               </div>
             </div>
-
           </CardContent>
         </Card>
       </div>
@@ -329,11 +346,11 @@ export function ShamanChatInterface({ children }: { children?: React.ReactNode }
           border-radius: 2px;
         }
         .no-scrollbar::-webkit-scrollbar {
-            display: none;
+          display: none;
         }
         .mask-grad-right {
-            mask-image: linear-gradient(to right, black 90%, transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+          mask-image: linear-gradient(to right, black 90%, transparent 100%);
+          -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
         }
       `}</style>
     </div>

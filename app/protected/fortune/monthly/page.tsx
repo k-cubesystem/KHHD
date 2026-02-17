@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getDestinyTargets } from '@/app/actions/destiny-targets'
-import { analyzeFortuneAction } from '@/app/actions/fortune-analysis-action'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
+import { analyzeFortuneAction } from '@/app/actions/ai/fortune-analysis'
 import { MonthlyFortuneClient } from './monthly-fortune-client'
 
 export const metadata: Metadata = {

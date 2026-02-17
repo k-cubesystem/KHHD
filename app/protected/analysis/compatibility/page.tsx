@@ -1,4 +1,4 @@
-import { getDestinyTargets } from '@/app/actions/destiny-targets'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
 import { CompatibilityClient } from './compatibility-client'
 
 export default async function CompatibilityPage() {

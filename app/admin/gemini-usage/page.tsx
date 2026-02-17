@@ -6,7 +6,7 @@ import {
   getGeminiRecentLogs,
   getGeminiRpmConfig,
   getUsdKrwRate,
-} from '@/app/actions/gemini-usage-actions'
+} from '@/app/actions/admin/gemini-usage'
 
 export const dynamic = 'force-dynamic'
 

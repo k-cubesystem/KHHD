@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getMembershipPlans, getSubscriptionStatus } from '@/app/actions/subscription-actions'
+import { getMembershipPlans, getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { getActivePlans, getCurrentUserRole } from '@/app/actions/products'
 import { MembershipTabs } from '@/components/membership/membership-tabs'
 import { TalismanPurchaseSection } from '@/components/membership/talisman-purchase-section'

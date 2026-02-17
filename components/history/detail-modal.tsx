@@ -26,7 +26,7 @@ import {
   updateAnalysisMemo,
   deleteAnalysisHistory,
   createShareLink,
-} from '@/app/actions/analysis-history'
+} from '@/app/actions/user/history'
 import { AnalysisResultView } from './analysis-result-view'
 
 interface DetailModalProps {

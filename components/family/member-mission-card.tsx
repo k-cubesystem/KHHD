@@ -1,18 +1,18 @@
-"use client";
+'use client'
 
-import { Card } from "@/components/ui/card";
-import { motion } from "framer-motion";
-import { User, Users } from "lucide-react";
-import type { FamilyMemberWithMissions } from "@/app/actions/family-missions";
+import { Card } from '@/components/ui/card'
+import { motion } from 'framer-motion'
+import { User, Users } from 'lucide-react'
+import type { FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 
 interface Props {
-  member: FamilyMemberWithMissions;
-  onClick: () => void;
-  index: number;
+  member: FamilyMemberWithMissions
+  onClick: () => void
+  index: number
 }
 
 export function MemberMissionCard({ member, onClick, index }: Props) {
-  const progress = (member.mission_completed / member.mission_total) * 100;
+  const progress = (member.mission_completed / member.mission_total) * 100
 
   return (
     <motion.div
@@ -50,7 +50,9 @@ export function MemberMissionCard({ member, onClick, index }: Props) {
                     transition={{ duration: 0.8 }}
                   />
                 </div>
-                <span className="text-[10px] text-primary/80 font-medium">{Math.round(progress)}% ↑</span>
+                <span className="text-[10px] text-primary/80 font-medium">
+                  {Math.round(progress)}% ↑
+                </span>
               </div>
             </div>
           </div>
@@ -65,5 +67,5 @@ export function MemberMissionCard({ member, onClick, index }: Props) {
         </div>
       </Card>
     </motion.div>
-  );
+  )
 }

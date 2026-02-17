@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Loader2, Heart } from 'lucide-react'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 
 interface CompatibilityLoadingProps {
   person1: DestinyTarget

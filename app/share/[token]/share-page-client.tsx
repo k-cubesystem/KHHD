@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { AnalysisHistory } from '@/app/actions/analysis-history'
+import { AnalysisHistory } from '@/app/actions/user/history'
 import { AnalysisResultView } from '@/components/history/analysis-result-view'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'

@@ -1,8 +1,8 @@
-import { getRouletteConfig } from "@/app/actions/roulette-actions";
-import RouletteConfigClient from "./roulette-config-client";
+import { getRouletteConfig } from '@/app/actions/payment/roulette'
+import RouletteConfigClient from './roulette-config-client'
 
 export default async function RouletteAdminPage() {
-  const { config } = await getRouletteConfig();
+  const { config } = await getRouletteConfig()
 
   return (
     <div className="space-y-6">
@@ -14,5 +14,5 @@ export default async function RouletteAdminPage() {
       </div>
       <RouletteConfigClient initialConfig={config} />
     </div>
-  );
+  )
 }

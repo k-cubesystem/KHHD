@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getHourlyTraffic } from '@/app/actions/admin-dashboard-actions'
+import { getHourlyTraffic } from '@/app/actions/admin/dashboard'
 import {
   LineChart,
   Line,

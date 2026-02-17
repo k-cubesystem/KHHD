@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { motion } from "framer-motion";
+import { motion } from 'framer-motion'
 import {
   Clock,
   Star,
@@ -12,31 +12,31 @@ import {
   Coins,
   Sparkles,
   ChevronRight,
-} from "lucide-react";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-import type { AnalysisHistory } from "@/app/actions/analysis-history";
+} from 'lucide-react'
+import { format } from 'date-fns'
+import { ko } from 'date-fns/locale'
+import type { AnalysisHistory } from '@/app/actions/user/history'
 
 interface AnalysisCardProps {
-  record: AnalysisHistory;
-  index: number;
-  onClick: () => void;
+  record: AnalysisHistory
+  index: number
+  onClick: () => void
 }
 
 const categoryConfig = {
-  SAJU: { icon: Sun, label: "사주", color: "text-amber-400" },
-  FACE: { icon: User2, label: "관상", color: "text-rose-400" },
-  HAND: { icon: Hand, label: "손금", color: "text-purple-400" },
-  FENGSHUI: { icon: Home, label: "풍수", color: "text-emerald-400" },
-  COMPATIBILITY: { icon: Heart, label: "궁합", color: "text-pink-400" },
-  WEALTH: { icon: Coins, label: "재물운", color: "text-yellow-400" },
-  TODAY: { icon: Sun, label: "오늘의운세", color: "text-orange-400" },
-  NEW_YEAR: { icon: Sparkles, label: "신년운세", color: "text-indigo-400" },
-};
+  SAJU: { icon: Sun, label: '사주', color: 'text-amber-400' },
+  FACE: { icon: User2, label: '관상', color: 'text-rose-400' },
+  HAND: { icon: Hand, label: '손금', color: 'text-purple-400' },
+  FENGSHUI: { icon: Home, label: '풍수', color: 'text-emerald-400' },
+  COMPATIBILITY: { icon: Heart, label: '궁합', color: 'text-pink-400' },
+  WEALTH: { icon: Coins, label: '재물운', color: 'text-yellow-400' },
+  TODAY: { icon: Sun, label: '오늘의운세', color: 'text-orange-400' },
+  NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-indigo-400' },
+}
 
 export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
-  const config = categoryConfig[record.category] || categoryConfig.TODAY; // Fallback to TODAY if category not found
-  const Icon = config.icon;
+  const config = categoryConfig[record.category] || categoryConfig.TODAY // Fallback to TODAY if category not found
+  const Icon = config.icon
 
   return (
     <motion.div
@@ -71,9 +71,7 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
                   {config.label}
                 </span>
                 {record.target_relation && (
-                  <span className="text-xs text-ink-light/40">
-                    · {record.target_relation}
-                  </span>
+                  <span className="text-xs text-ink-light/40">· {record.target_relation}</span>
                 )}
               </div>
               <h3 className="text-lg font-serif font-bold text-ink-light truncate">
@@ -95,7 +93,7 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
             <div className="flex items-center gap-2 text-xs text-ink-light/50">
               <Clock className="w-3.5 h-3.5" />
               <span>
-                {format(new Date(record.created_at), "yyyy.MM.dd HH:mm", {
+                {format(new Date(record.created_at), 'yyyy.MM.dd HH:mm', {
                   locale: ko,
                 })}
               </span>
@@ -111,13 +109,11 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
           {/* User Memo Preview */}
           {record.user_memo && (
             <div className="pt-2 border-t border-ink-light/10">
-              <p className="text-xs text-ink-light/60 italic line-clamp-1">
-                💭 {record.user_memo}
-              </p>
+              <p className="text-xs text-ink-light/60 italic line-clamp-1">💭 {record.user_memo}</p>
             </div>
           )}
         </div>
       </div>
     </motion.div>
-  );
+  )
 }

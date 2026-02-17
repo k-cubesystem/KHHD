@@ -63,7 +63,7 @@ export function WealthAnalysisContent() {
     setAnalyzing(true)
     try {
       // Import dynamically to avoid circular dependencies
-      const { analyzeWealth } = await import('@/app/actions/wealth-analysis')
+      const { analyzeWealth } = await import('@/app/actions/ai/wealth')
 
       const result = await analyzeWealth({ memberId: member.id })
 

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { Card } from '@/components/ui/card'
 import { BookOpen, User, Compass, Hand, Sparkles, ArrowRight } from 'lucide-react'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
 
 interface AnalysisClientPageProps {

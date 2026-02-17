@@ -12,9 +12,9 @@ import {
   Users,
   ArrowRight,
 } from 'lucide-react'
-import { generateDailyFortune } from '@/app/actions/daily-fortune'
-import { sendKakaoNotification } from '@/app/actions/notification'
-import { getFamilyMembers } from '@/app/actions/family-actions'
+import { generateDailyFortune } from '@/app/actions/fortune/daily'
+import { sendKakaoNotification } from '@/app/actions/fortune/notification'
+import { getFamilyMembers } from '@/app/actions/user/family'
 import {
   Select,
   SelectContent,

@@ -1,5 +1,5 @@
-import { getDestinyTarget } from '@/app/actions/destiny-targets'
-import { analyzeCheonjiinAction } from '@/app/actions/cheonjiin-analysis-action'
+import { getDestinyTarget } from '@/app/actions/user/destiny'
+import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { CheonjiinResultClient } from './cheonjiin-result-client'
 import { redirect } from 'next/navigation'
 

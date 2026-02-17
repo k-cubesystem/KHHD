@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Sparkles, Compass, Palette, Hash, Star } from 'lucide-react'
 
 interface CheonjiinSummaryProps {

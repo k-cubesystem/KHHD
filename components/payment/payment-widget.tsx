@@ -25,7 +25,7 @@ import {
   getMembershipPlans,
   createBillingAuthUrl,
   getSubscriptionStatus,
-} from '@/app/actions/subscription-actions'
+} from '@/app/actions/payment/subscription'
 import type { PricePlan, UserRole } from '@/types/auth'
 import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'

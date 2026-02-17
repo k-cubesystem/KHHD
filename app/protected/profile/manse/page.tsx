@@ -1,5 +1,5 @@
-import { getDestinyTargets } from '@/app/actions/destiny-targets'
-import { getUserTierLimits } from '@/app/actions/membership-limits'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
+import { getUserTierLimits } from '@/app/actions/payment/membership'
 import { getCurrentUserRole } from '@/app/actions/products'
 import ManseClient from './manse-client'
 

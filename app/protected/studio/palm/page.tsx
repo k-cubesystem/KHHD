@@ -11,9 +11,12 @@ import {
   analyzePalmReading,
   type PalmAnalysisResult,
   checkAndDeductCredits,
-} from '@/app/actions/ai-image'
-import { saveAnalysisSession } from '@/app/actions/analysis-session-actions'
-import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/family-missions'
+} from '@/app/actions/ai/image'
+import { saveAnalysisSession } from '@/app/actions/core/sessions'
+import {
+  getFamilyWithMissions,
+  type FamilyMemberWithMissions,
+} from '@/app/actions/user/family-missions'
 import { toast } from 'sonner'
 import { ArrowRight, ChevronLeft, Heart, TrendingUp, Activity, Briefcase } from 'lucide-react'
 import { motion } from 'framer-motion'

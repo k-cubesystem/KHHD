@@ -25,12 +25,8 @@ import {
   Zap,
 } from 'lucide-react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import type { DestinyTarget } from '@/app/actions/destiny-targets'
-import {
-  analyzeTrendAction,
-  type TrendType,
-  type TrendResult,
-} from '@/app/actions/trend-analysis-action'
+import type { DestinyTarget } from '@/app/actions/user/destiny'
+import { analyzeTrendAction, type TrendType, type TrendResult } from '@/app/actions/ai/trend'
 
 interface TrendClientProps {
   trendType: TrendType

@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/select'
 import { Sun, Star, Moon, Calendar, Sparkles, AlertCircle, RefreshCw, Zap } from 'lucide-react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import type { DestinyTarget } from '@/app/actions/destiny-targets'
+import type { DestinyTarget } from '@/app/actions/user/destiny'
 import {
   analyzeFortuneAction,
   type FortuneType,
   type FortuneResult,
-} from '@/app/actions/fortune-analysis-action'
+} from '@/app/actions/ai/fortune-analysis'
 import { FortuneCalendar } from './fortune-calendar'
 import { FortuneDetailModal } from './fortune-detail-modal'
 

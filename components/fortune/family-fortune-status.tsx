@@ -1,20 +1,20 @@
-"use client";
+'use client'
 
-import { motion } from "framer-motion";
-import { Users, ChevronRight, Sparkles } from "lucide-react";
-import Link from "next/link";
-import type { FamilyMemberFortune } from "@/app/actions/fortune-actions";
-import { cn } from "@/lib/utils";
+import { motion } from 'framer-motion'
+import { Users, ChevronRight, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import type { FamilyMemberFortune } from '@/app/actions/fortune/fortune'
+import { cn } from '@/lib/utils'
 
 interface FamilyFortuneStatusProps {
-  members: FamilyMemberFortune[];
+  members: FamilyMemberFortune[]
 }
 
 export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
-  const totalFortune = members.reduce((sum, m) => sum + m.fortune, 0);
-  const maxPossible = members.length * 800;
-  const percentage = maxPossible > 0 ? Math.round((totalFortune / maxPossible) * 100) : 0;
-  const memberCount = members.length;
+  const totalFortune = members.reduce((sum, m) => sum + m.fortune, 0)
+  const maxPossible = members.length * 800
+  const percentage = maxPossible > 0 ? Math.round((totalFortune / maxPossible) * 100) : 0
+  const memberCount = members.length
 
   return (
     <Link href="/protected/family" className="block group">
@@ -54,7 +54,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                   className="h-full bg-primary"
                   initial={{ width: 0 }}
                   animate={{ width: `${percentage}%` }}
-                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  transition={{ duration: 1.5, ease: 'easeOut' }}
                 />
               </div>
               <span className="text-[10px] text-primary/80 font-medium">{percentage}% 보호 중</span>
@@ -75,5 +75,5 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
         </div>
       </div>
     </Link>
-  );
+  )
 }

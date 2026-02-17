@@ -13,9 +13,12 @@ import {
   type FaceAnalysisResult,
   type FaceDestinyGoal,
   checkAndDeductCredits,
-} from '@/app/actions/ai-image'
-import { saveAnalysisSession } from '@/app/actions/analysis-session-actions'
-import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/family-missions'
+} from '@/app/actions/ai/image'
+import { saveAnalysisSession } from '@/app/actions/core/sessions'
+import {
+  getFamilyWithMissions,
+  type FamilyMemberWithMissions,
+} from '@/app/actions/user/family-missions'
 import { toast } from 'sonner'
 import { ArrowRight, ChevronLeft, Crown, Heart, Flame } from 'lucide-react'
 import { motion } from 'framer-motion'

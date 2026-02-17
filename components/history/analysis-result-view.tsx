@@ -4,7 +4,7 @@ import { CheonjiinSummary } from '@/components/analysis/cheonjiin/CheonjiinSumma
 import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
 import { JiSection } from '@/components/analysis/cheonjiin/JiSection'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
-import type { AnalysisHistory } from '@/app/actions/analysis-history'
+import type { AnalysisHistory } from '@/app/actions/user/history'
 
 interface AnalysisResultViewProps {
   record: AnalysisHistory

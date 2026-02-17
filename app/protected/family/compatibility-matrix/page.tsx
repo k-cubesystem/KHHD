@@ -1,76 +1,80 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Heart, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getFamilyMembers } from "@/app/actions/family-actions";
-import { fadeInUp, staggerContainer } from "@/lib/animations";
-import Link from "next/link";
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Heart, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { getFamilyMembers } from '@/app/actions/user/family'
+import { fadeInUp, staggerContainer } from '@/lib/animations'
+import Link from 'next/link'
 
 interface FamilyMember {
-  id: string;
-  name: string;
-  relationship: string;
+  id: string
+  name: string
+  relationship: string
 }
 
 interface CompatibilityScore {
-  person1: string;
-  person2: string;
-  score: number;
-  relation: string;
+  person1: string
+  person2: string
+  score: number
+  relation: string
 }
 
 export default function CompatibilityMatrixPage() {
-  const [members, setMembers] = useState<FamilyMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPair, setSelectedPair] = useState<CompatibilityScore | null>(null);
+  const [members, setMembers] = useState<FamilyMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedPair, setSelectedPair] = useState<CompatibilityScore | null>(null)
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const data = await getFamilyMembers();
-      setMembers(data as FamilyMember[]);
-      setLoading(false);
-    };
-    fetchMembers();
-  }, []);
+      const data = await getFamilyMembers()
+      setMembers(data as FamilyMember[])
+      setLoading(false)
+    }
+    fetchMembers()
+  }, [])
 
   // 궁합 점수 계산 (샘플 - 실제로는 AI 분석 필요)
   const getCompatibilityScore = (id1: string, id2: string): number => {
-    if (id1 === id2) return 100;
-    const hash = (id1 + id2).split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return 50 + (hash % 40);
-  };
+    if (id1 === id2) return 100
+    const hash = (id1 + id2).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    return 50 + (hash % 40)
+  }
 
   const getScoreColor = (score: number): string => {
-    if (score >= 90) return "bg-green-500/80";
-    if (score >= 70) return "bg-primary/80";
-    if (score >= 50) return "bg-yellow-500/80";
-    return "bg-red-500/80";
-  };
+    if (score >= 90) return 'bg-green-500/80'
+    if (score >= 70) return 'bg-primary/80'
+    if (score >= 50) return 'bg-yellow-500/80'
+    return 'bg-red-500/80'
+  }
 
   const getScoreText = (score: number): string => {
-    if (score >= 90) return "매우 좋음";
-    if (score >= 70) return "좋음";
-    if (score >= 50) return "보통";
-    return "주의";
-  };
+    if (score >= 90) return '매우 좋음'
+    if (score >= 70) return '좋음'
+    if (score >= 50) return '보통'
+    return '주의'
+  }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
       </div>
-    );
+    )
   }
 
   if (members.length < 2) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
         <Heart className="w-16 h-16 text-primary/50 mb-4" />
-        <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">가족 구성원이 부족합니다</h2>
-        <p className="text-ink-light/60 mb-6">궁합 매트릭스를 보려면 최소 2명의 구성원이 필요합니다.</p>
+        <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">
+          가족 구성원이 부족합니다
+        </h2>
+        <p className="text-ink-light/60 mb-6">
+          궁합 매트릭스를 보려면 최소 2명의 구성원이 필요합니다.
+        </p>
         <Link
           href="/protected/family"
           className="px-6 py-3 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-all"
@@ -78,7 +82,7 @@ export default function CompatibilityMatrixPage() {
           구성원 추가하기
         </Link>
       </div>
-    );
+    )
   }
 
   return (
@@ -106,15 +110,23 @@ export default function CompatibilityMatrixPage() {
       <motion.div variants={fadeInUp}>
         <Card className="bg-surface/50 backdrop-blur-md border border-primary/20 overflow-x-auto">
           <CardHeader>
-            <CardTitle className="text-xl font-serif font-bold text-ink-light">궁합 점수 매트릭스</CardTitle>
+            <CardTitle className="text-xl font-serif font-bold text-ink-light">
+              궁합 점수 매트릭스
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="min-w-[600px]">
               {/* Header Row */}
-              <div className="grid gap-2 mb-2" style={{ gridTemplateColumns: `150px repeat(${members.length}, 100px)` }}>
+              <div
+                className="grid gap-2 mb-2"
+                style={{ gridTemplateColumns: `150px repeat(${members.length}, 100px)` }}
+              >
                 <div></div>
                 {members.map((member) => (
-                  <div key={member.id} className="text-center font-serif text-sm font-bold text-primary truncate">
+                  <div
+                    key={member.id}
+                    className="text-center font-serif text-sm font-bold text-primary truncate"
+                  >
                     {member.name}
                   </div>
                 ))}
@@ -122,25 +134,32 @@ export default function CompatibilityMatrixPage() {
 
               {/* Matrix Rows */}
               {members.map((person1) => (
-                <div key={person1.id} className="grid gap-2 mb-2" style={{ gridTemplateColumns: `150px repeat(${members.length}, 100px)` }}>
+                <div
+                  key={person1.id}
+                  className="grid gap-2 mb-2"
+                  style={{ gridTemplateColumns: `150px repeat(${members.length}, 100px)` }}
+                >
                   <div className="flex items-center font-serif font-bold text-ink-light truncate pr-4">
                     {person1.name}
                   </div>
                   {members.map((person2) => {
-                    const score = getCompatibilityScore(person1.id, person2.id);
-                    const isself = person1.id === person2.id;
+                    const score = getCompatibilityScore(person1.id, person2.id)
+                    const isself = person1.id === person2.id
                     return (
                       <button
                         key={person2.id}
-                        onClick={() => !isself && setSelectedPair({
-                          person1: person1.name,
-                          person2: person2.name,
-                          score,
-                          relation: `${person1.relationship} - ${person2.relationship}`
-                        })}
+                        onClick={() =>
+                          !isself &&
+                          setSelectedPair({
+                            person1: person1.name,
+                            person2: person2.name,
+                            score,
+                            relation: `${person1.relationship} - ${person2.relationship}`,
+                          })
+                        }
                         className={`
                           h-20 rounded-lg flex flex-col items-center justify-center transition-all
-                          ${isself ? "bg-surface/30 cursor-default" : `${getScoreColor(score)} hover:scale-105 cursor-pointer`}
+                          ${isself ? 'bg-surface/30 cursor-default' : `${getScoreColor(score)} hover:scale-105 cursor-pointer`}
                         `}
                         disabled={isself}
                       >
@@ -152,7 +171,7 @@ export default function CompatibilityMatrixPage() {
                         )}
                         {isself && <div className="text-ink-light/40">-</div>}
                       </button>
-                    );
+                    )
                   })}
                 </div>
               ))}
@@ -191,9 +210,13 @@ export default function CompatibilityMatrixPage() {
             <div className="space-y-6">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-3 mb-4">
-                  <span className="text-xl font-serif font-bold text-ink-light">{selectedPair.person1}</span>
+                  <span className="text-xl font-serif font-bold text-ink-light">
+                    {selectedPair.person1}
+                  </span>
                   <Heart className="w-6 h-6 text-primary" />
-                  <span className="text-xl font-serif font-bold text-ink-light">{selectedPair.person2}</span>
+                  <span className="text-xl font-serif font-bold text-ink-light">
+                    {selectedPair.person2}
+                  </span>
                 </div>
                 <div className="text-sm text-ink-light/60">{selectedPair.relation}</div>
               </div>
@@ -216,7 +239,9 @@ export default function CompatibilityMatrixPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-ink-light mb-2">조언</h4>
-                  <p className="text-sm text-ink-light/70">함께 시간을 보내며 유대감을 강화하세요.</p>
+                  <p className="text-sm text-ink-light/70">
+                    함께 시간을 보내며 유대감을 강화하세요.
+                  </p>
                 </div>
               </div>
 
@@ -228,5 +253,5 @@ export default function CompatibilityMatrixPage() {
         </DialogContent>
       </Dialog>
     </motion.div>
-  );
+  )
 }

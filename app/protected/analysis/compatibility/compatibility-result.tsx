@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Button } from '@/components/ui/button'
 import { Heart, ArrowLeft, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'

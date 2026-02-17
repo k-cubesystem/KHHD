@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { DestinyTarget } from '@/app/actions/destiny-targets'
+import { DestinyTarget } from '@/app/actions/user/destiny'
 import { cn } from '@/lib/utils'
 
 interface CheonjiinLoadingStateProps {
@@ -13,10 +13,10 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
   const [stage, setStage] = useState(0)
 
   const loadingStages = [
-    { text: "천(天)의 기운을 읽고 있습니다...", sub: "사주와 천문 데이터를 분석 중" },
-    { text: "지(地)의 흐름을 살피고 있습니다...", sub: "거주 환경과 방위 에너지 계산 중" },
-    { text: "인(人)의 흔적을 쫓고 있습니다...", sub: "관상과 손금의 패턴 해석 중" },
-    { text: "천지인(天地人)을 통합하고 있습니다...", sub: "세 가지 차원의 운명을 하나로 연결 중" }
+    { text: '천(天)의 기운을 읽고 있습니다...', sub: '사주와 천문 데이터를 분석 중' },
+    { text: '지(地)의 흐름을 살피고 있습니다...', sub: '거주 환경과 방위 에너지 계산 중' },
+    { text: '인(人)의 흔적을 쫓고 있습니다...', sub: '관상과 손금의 패턴 해석 중' },
+    { text: '천지인(天地人)을 통합하고 있습니다...', sub: '세 가지 차원의 운명을 하나로 연결 중' },
   ]
 
   useEffect(() => {
@@ -42,12 +42,12 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
           {/* Outer Rings */}
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
             className="absolute inset-0 border border-dashed border-primary/20 rounded-full"
           />
           <motion.div
             animate={{ rotate: -360 }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
             className="absolute inset-4 border border-dotted border-primary/10 rounded-full"
           />
 
@@ -57,7 +57,7 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
             <motion.div
               animate={{
                 scale: stage === 0 ? [1, 1.2, 1] : 1,
-                opacity: stage === 0 ? 1 : 0.5
+                opacity: stage === 0 ? 1 : 0.5,
               }}
               transition={{ duration: 2, repeat: Infinity }}
               className="absolute top-4 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)]"
@@ -67,7 +67,7 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
             <motion.div
               animate={{
                 scale: stage === 1 ? [1, 1.2, 1] : 1,
-                opacity: stage === 1 ? 1 : 0.5
+                opacity: stage === 1 ? 1 : 0.5,
               }}
               transition={{ duration: 2, repeat: Infinity }}
               className="absolute bottom-10 left-10 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)]"
@@ -77,7 +77,7 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
             <motion.div
               animate={{
                 scale: stage === 2 ? [1, 1.2, 1] : 1,
-                opacity: stage === 2 ? 1 : 0.5
+                opacity: stage === 2 ? 1 : 0.5,
               }}
               transition={{ duration: 2, repeat: Infinity }}
               className="absolute bottom-10 right-10 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)]"

@@ -2,10 +2,10 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
-import { getMonthlyFamilyFortune, getFamilyFortuneBreakdown } from '@/app/actions/fortune-actions'
+import { getMonthlyFamilyFortune, getFamilyFortuneBreakdown } from '@/app/actions/fortune/fortune'
 
-import { checkRouletteAvailability } from '@/app/actions/roulette-actions'
-import { checkAttendanceAvailability, getWeeklyAttendance } from '@/app/actions/attendance-actions'
+import { checkRouletteAvailability } from '@/app/actions/payment/roulette'
+import { checkAttendanceAvailability, getWeeklyAttendance } from '@/app/actions/payment/attendance'
 import { AnalysisHubClient } from './analysis-hub-client'
 import { FamilyFortuneStatus } from '@/components/fortune/family-fortune-status'
 import { EventBanners } from '@/components/events/event-banners'

@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarCheck, Gift, Sparkles, Check } from 'lucide-react'
 import { toast } from 'sonner'
-import { checkInAttendance } from '@/app/actions/attendance-actions'
+import { checkInAttendance } from '@/app/actions/payment/attendance'
 import { cn } from '@/lib/utils'
 
 interface WeekDay {

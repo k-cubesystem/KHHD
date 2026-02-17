@@ -1,5 +1,5 @@
 import { SharePageClient } from './share-page-client'
-import { getSharedAnalysis } from '@/app/actions/analysis-history'
+import { getSharedAnalysis } from '@/app/actions/user/history'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 

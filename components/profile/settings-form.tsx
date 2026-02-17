@@ -16,7 +16,7 @@ import { Loader2, Save, BookOpen, Compass, User as UserIcon } from 'lucide-react
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { saveProfile, saveSelfFamilyMember } from '@/app/actions/profile-actions'
+import { saveProfile, saveSelfFamilyMember } from '@/app/actions/user/profile'
 import { AvatarSelector } from './avatar-selector'
 import { KakaoAddressSearch } from './kakao-address-search'
 import type { DokkaebiAvatarId } from '@/lib/constants/dokkaebi-avatars'

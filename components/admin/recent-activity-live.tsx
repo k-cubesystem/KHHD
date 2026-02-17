@@ -1,33 +1,33 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { getRecentActivities } from "@/app/actions/admin-dashboard-actions";
-import { motion, AnimatePresence } from "framer-motion";
-import { Activity, User, CreditCard, Sparkles, TrendingUp } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ko } from "date-fns/locale";
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { getRecentActivities } from '@/app/actions/admin/dashboard'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Activity, User, CreditCard, Sparkles, TrendingUp } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { ko } from 'date-fns/locale'
 
 interface ActivityItem {
-  id: string;
-  user_name: string;
-  user_email: string;
-  activity_type: string;
-  description: string;
-  metadata: any;
-  created_at: string;
+  id: string
+  user_name: string
+  user_email: string
+  activity_type: string
+  description: string
+  metadata: any
+  created_at: string
 }
 
 export function RecentActivityLive() {
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // 초기 로드
-    loadActivities();
+    loadActivities()
 
     // Supabase Realtime 구독
-    const supabase = createClient();
+    const supabase = createClient()
     const channel = supabase
       .channel('activity_logs_changes')
       .on(
@@ -35,51 +35,61 @@ export function RecentActivityLive() {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'activity_logs'
+          table: 'activity_logs',
         },
         (payload) => {
-          console.log('New activity:', payload);
+          console.log('New activity:', payload)
           // 새 활동 추가
-          loadActivities();
+          loadActivities()
         }
       )
-      .subscribe();
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   const loadActivities = async () => {
-    const result = await getRecentActivities(20);
+    const result = await getRecentActivities(20)
     if (result.success && result.activities) {
-      setActivities(result.activities);
+      setActivities(result.activities)
     }
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'signup': return <User className="w-4 h-4" />;
-      case 'purchase': return <CreditCard className="w-4 h-4" />;
-      case 'analysis': return <Sparkles className="w-4 h-4" />;
-      case 'upgrade': return <TrendingUp className="w-4 h-4" />;
-      default: return <Activity className="w-4 h-4" />;
+      case 'signup':
+        return <User className="w-4 h-4" />
+      case 'purchase':
+        return <CreditCard className="w-4 h-4" />
+      case 'analysis':
+        return <Sparkles className="w-4 h-4" />
+      case 'upgrade':
+        return <TrendingUp className="w-4 h-4" />
+      default:
+        return <Activity className="w-4 h-4" />
     }
-  };
+  }
 
   const getColor = (type: string) => {
     switch (type) {
-      case 'signup': return 'text-blue-400 bg-blue-500/10';
-      case 'purchase': return 'text-gold-400 bg-gold-500/10';
-      case 'analysis': return 'text-purple-400 bg-purple-500/10';
-      case 'upgrade': return 'text-green-400 bg-green-500/10';
-      default: return 'text-ink-light/60 bg-surface/30';
+      case 'signup':
+        return 'text-blue-400 bg-blue-500/10'
+      case 'purchase':
+        return 'text-gold-400 bg-gold-500/10'
+      case 'analysis':
+        return 'text-purple-400 bg-purple-500/10'
+      case 'upgrade':
+        return 'text-green-400 bg-green-500/10'
+      default:
+        return 'text-ink-light/60 bg-surface/30'
     }
-  };
+  }
 
   if (loading) {
-    return <div className="text-ink-light/50">Loading...</div>;
+    return <div className="text-ink-light/50">Loading...</div>
   }
 
   return (
@@ -98,12 +108,13 @@ export function RecentActivityLive() {
               {getIcon(activity.activity_type)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-ink-light font-medium truncate">
-                {activity.description}
-              </p>
+              <p className="text-sm text-ink-light font-medium truncate">{activity.description}</p>
               <p className="text-xs text-ink-light/50 mt-1">
-                {activity.user_name || activity.user_email || '시스템'} ·{" "}
-                {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true, locale: ko })}
+                {activity.user_name || activity.user_email || '시스템'} ·{' '}
+                {formatDistanceToNow(new Date(activity.created_at), {
+                  addSuffix: true,
+                  locale: ko,
+                })}
               </p>
               {activity.metadata?.amount && (
                 <p className="text-xs text-primary/70 mt-1">
@@ -115,5 +126,5 @@ export function RecentActivityLive() {
         ))}
       </AnimatePresence>
     </div>
-  );
+  )
 }
