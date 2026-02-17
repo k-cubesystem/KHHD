@@ -12,6 +12,24 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb', // 이미지 업로드를 위해 10MB로 증가
     },
   },
+
+  // 🚀 BOOSTER: Next.js Image 최적화 설정
+  images: {
+    // WebP → AVIF 순서로 최신 포맷 우선 제공 (파일 크기 30~50% 절감)
+    formats: ['image/avif', 'image/webp'],
+    // Supabase Storage 외부 이미지 허용 (관상/손금 업로드 이미지 등)
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+    // Vercel Hobby Plan 무료 이미지 최적화 한도(5000/월) 내에서 최대 효율
+    minimumCacheTTL: 2678400, // 31일 캐시 (재요청 최소화)
+  },
+
   // 정적 자산 캐싱 최적화
   async rewrites() {
     return []
@@ -20,6 +38,25 @@ const nextConfig: NextConfig = {
   // Security headers
   async headers() {
     return [
+      // 🚀 BOOSTER: 정적 자산 장기 캐시 (재방문 시 0ms 로드)
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=2678400, stale-while-revalidate=86400',
+          },
+        ],
+      },
       {
         source: '/:path*',
         headers: [

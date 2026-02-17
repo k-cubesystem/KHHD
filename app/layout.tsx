@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
 import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import StitchesRegistry from './stitches-registry'
 import './globals.css'
 
@@ -118,6 +119,8 @@ export default function RootLayout({
                   <PWAInstallPrompt />
                   <AgentationWrapper />
                 </StitchesRegistry>
+                {/* Vercel Speed Insights — Core Web Vitals 실측 모니터링 */}
+                <SpeedInsights />
               </div>
             </div>
           </QueryProvider>

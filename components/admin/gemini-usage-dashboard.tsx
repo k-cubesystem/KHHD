@@ -348,11 +348,11 @@ export function GeminiUsageDashboard({
       </div>
 
       {/* ── 일별 모델별 호출 차트 ─────────────── */}
-      {dailyRows.length > 0 && (
-        <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl p-4">
-          <h3 className="text-xs font-bold text-stone-300 mb-4">
-            일별 모델별 API 호출 ({PERIOD_LABELS[period]})
-          </h3>
+      <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl p-4">
+        <h3 className="text-xs font-bold text-stone-300 mb-4">
+          일별 모델별 API 호출 ({PERIOD_LABELS[period]})
+        </h3>
+        {dailyRows.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={dailyRows} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -385,15 +385,21 @@ export function GeminiUsageDashboard({
               ))}
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        ) : (
+          <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-stone-600">
+            <Activity className="w-8 h-8 opacity-40" />
+            <p className="text-xs">기간 내 API 호출 데이터가 없습니다.</p>
+            <p className="text-[10px] text-stone-700">DB: get_gemini_daily_stats RPC 확인 필요</p>
+          </div>
+        )}
+      </div>
 
       {/* ── 기능별 사용량 차트 ────────────────── */}
-      {actionChartData.length > 0 && (
-        <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl p-4">
-          <h3 className="text-xs font-bold text-stone-300 mb-4">
-            기능별 API 호출 ({PERIOD_LABELS[period]})
-          </h3>
+      <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl p-4">
+        <h3 className="text-xs font-bold text-stone-300 mb-4">
+          기능별 API 호출 ({PERIOD_LABELS[period]})
+        </h3>
+        {actionChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={actionChartData} margin={{ top: 0, right: 8, left: -20, bottom: 40 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -417,8 +423,14 @@ export function GeminiUsageDashboard({
               <Bar dataKey="calls" name="호출 수" fill="#f59e0b" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        ) : (
+          <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-stone-600">
+            <Zap className="w-8 h-8 opacity-40" />
+            <p className="text-xs">기간 내 기능별 사용 데이터가 없습니다.</p>
+            <p className="text-[10px] text-stone-700">DB: get_gemini_action_stats RPC 확인 필요</p>
+          </div>
+        )}
+      </div>
 
       {/* ── RPM 관리 ─────────────────────────── */}
       <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl p-4">
