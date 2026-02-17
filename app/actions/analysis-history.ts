@@ -1,7 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createClientJS } from '@supabase/supabase-js'
+// import { createClient as createClientJS } from '@supabase/supabase-js' // Removed to fix edge issues
 import { unstable_cache, revalidatePath } from 'next/cache'
 
 /**
@@ -414,27 +414,34 @@ export async function createShareLink(
  */
 export async function getSharedAnalysis(token: string): Promise<AnalysisHistory | null> {
   try {
-    // 1. Direct Client 생성 (쿠키/세션 의존성 제거)
-    // 공용 데이터 조회이므로 Service Role Key 없이 Anon Key로 충분함 (RPC 함수가 권한 처리)
-    const supabase = createClientJS(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
-    )
+    // 1. Raw Fetch 사용 (라이브러리 의존성 완전 제거)
+    // Edge/Serverless 환경 호환성 100% 보장
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 
-    console.log(`[Share] Fetching analysis for token: ${token}`)
+    console.log(`[Share] Fetching analysis via RAW FETCH for token: ${token}`)
 
-    // 2. RPC 호출
-    const { data, error } = await supabase.rpc('get_shared_analysis_record', {
-      token_input: token,
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_analysis_record`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({ token_input: token }),
+      cache: 'no-store', // 항상 최신 데이터 조회
     })
 
-    if (error) {
-      console.error('[Share] RPC Error:', error)
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[Share] Fetch Error: ${response.status} ${response.statusText}`, errorText)
       return null
     }
 
-    // RPC returns an array (SETOF), so get the first element
-    if (!data || data.length === 0) {
+    const data = await response.json()
+
+    // RPC returns an array (SETOF)
+    if (!Array.isArray(data) || data.length === 0) {
       console.warn('[Share] No data found for token')
       return null
     }
