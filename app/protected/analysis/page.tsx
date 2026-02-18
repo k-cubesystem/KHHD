@@ -69,10 +69,6 @@ export default async function AnalysisHubPage() {
       attendanceStatus={attendanceStatus}
       weeklyAttendance={weeklyAttendance}
     >
-      {/* 이벤트 배너 — 스트리밍으로 렌더링 블로킹 제거 */}
-      <Suspense fallback={<SectionSkeleton height="h-20" />}>
-        <EventBannersSection />
-      </Suspense>
       {/* 가족 운세 — 느린 집계 쿼리, 스트리밍 처리 */}
       <Suspense fallback={<SectionSkeleton height="h-32" />}>
         <FamilySection />

@@ -4,8 +4,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { type FaceDestinyGoal, type InteriorTheme } from '@/lib/constants'
-import { deductTalisman } from './wallet-actions'
-import { saveAnalysisHistory } from './analysis-history'
+import { deductTalisman } from '../payment/wallet'
+import { saveAnalysisHistory } from '../user/history'
+import { getSelfFamilyMemberId, recordFortuneEntry } from '../fortune/fortune'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import {
@@ -201,6 +202,8 @@ export async function analyzeSajuDetail(
           model_used: 'gemini-2.0-flash',
           talisman_cost: 1,
         })
+        const selfId = await getSelfFamilyMemberId().catch(() => null)
+        if (selfId) await recordFortuneEntry(selfId, 'SAJU', selfId).catch(() => {})
       } catch (saveError) {
         console.error('[AI Saju] Failed to save history:', saveError)
       }
@@ -312,6 +315,8 @@ export async function analyzeFaceForDestiny(
           model_used: 'gemini-2.0-flash',
           talisman_cost: 5,
         })
+        const selfId = await getSelfFamilyMemberId().catch(() => null)
+        if (selfId) await recordFortuneEntry(selfId, 'FACE', selfId).catch(() => {})
       } catch (e) {
         console.error(e)
       }
@@ -409,6 +414,8 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
           model_used: 'gemini-2.0-flash',
           talisman_cost: 3,
         })
+        const selfId = await getSelfFamilyMemberId().catch(() => null)
+        if (selfId) await recordFortuneEntry(selfId, 'HAND', selfId).catch(() => {})
       } catch (e) {
         console.error(e)
       }
@@ -514,6 +521,8 @@ export async function analyzeInteriorForFengshui(
           model_used: 'gemini-2.0-flash',
           talisman_cost: 2,
         })
+        const selfId = await getSelfFamilyMemberId().catch(() => null)
+        if (selfId) await recordFortuneEntry(selfId, 'FENGSHUI', selfId).catch(() => {})
       } catch (e) {
         console.error(e)
       }

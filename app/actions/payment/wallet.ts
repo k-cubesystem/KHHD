@@ -1,7 +1,60 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { canUseTalisman, incrementDailyUsage, getUserTierLimits } from './membership'
+
+const TESTER_DAILY_AMOUNT = 50 // 테스터 일일 자동충전 복채 (50만냥)
+
+/**
+ * 테스터 일일 복채 자동충전
+ * - 오늘 이미 충전했으면 스킵
+ * - 충전 기록은 wallet_transactions (feature_key='TESTER_DAILY')으로 관리
+ */
+async function grantTesterDailyBokchae(userId: string): Promise<void> {
+  const adminClient = createAdminClient()
+  const today = new Date().toISOString().split('T')[0]
+
+  // 오늘 이미 충전했는지 확인
+  const { data: existing } = await adminClient
+    .from('wallet_transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('feature_key', 'TESTER_DAILY')
+    .gte('created_at', `${today}T00:00:00.000Z`)
+    .maybeSingle()
+
+  if (existing) return // 오늘 이미 충전됨
+
+  // 트랜잭션 레코드를 먼저 삽입하여 동시 요청 방지
+  // (DB unique constraint: user_id + feature_key + DATE(created_at))
+  const { error: txError } = await adminClient.from('wallet_transactions').insert({
+    user_id: userId,
+    amount: TESTER_DAILY_AMOUNT,
+    type: 'BONUS',
+    feature_key: 'TESTER_DAILY',
+    description: `테스터 일일 복채 자동충전 (${TESTER_DAILY_AMOUNT}만냥)`,
+  })
+
+  // 중복 삽입(동시 요청)이면 조용히 종료
+  if (txError) return
+
+  // 지갑 잔액 조회 후 충전
+  const { data: wallet } = await adminClient
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  const currentBalance = wallet?.balance ?? 0
+  const newBalance = currentBalance + TESTER_DAILY_AMOUNT
+
+  if (wallet) {
+    await adminClient.from('wallets').update({ balance: newBalance }).eq('user_id', userId)
+  } else {
+    await adminClient.from('wallets').insert({ user_id: userId, balance: newBalance })
+  }
+}
 
 /**
  * Get feature cost from database
@@ -54,8 +107,13 @@ export async function getWalletBalance(): Promise<number> {
     .eq('id', user.id)
     .single()
 
-  if (profile?.role === 'admin' || profile?.role === 'tester') {
-    return 999 // Unlimited display
+  if (profile?.role === 'admin') {
+    return 999 // Unlimited display for admin
+  }
+
+  // 테스터: 매일 50만냥 자동충전 후 실제 잔액 반환
+  if (profile?.role === 'tester') {
+    await grantTesterDailyBokchae(user.id).catch(() => {})
   }
 
   const { data: wallet } = await supabase
@@ -87,14 +145,14 @@ export async function deductTalisman(
 
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
-  // Check if admin/tester (unlimited)
+  // Check if admin (unlimited)
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role === 'admin' || profile?.role === 'tester') {
+  if (profile?.role === 'admin') {
     return { success: true, remainingBalance: 999 }
   }
 

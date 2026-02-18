@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { generateFateReport } from '@/lib/services/gemini'
 import { getSajuData } from '@/lib/domain/saju/saju'
-import { saveAnalysisHistory } from './analysis-history'
+import { saveAnalysisHistory } from '../user/history'
 import { logger } from '@/lib/utils/logger'
 
 /**

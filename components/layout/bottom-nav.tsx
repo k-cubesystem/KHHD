@@ -12,7 +12,7 @@ export function BottomNav() {
     { label: '사주/궁합', icon: Home, href: '/protected/analysis' },
     { label: '가족관리', icon: Users, href: '/protected/family' },
     { label: '관상/풍수/손금', icon: Sparkles, href: '/protected/studio' },
-    { label: '고민상담', icon: MessageCircleHeart, href: '/protected/ai-shaman' },
+    { label: '인생상담', icon: MessageCircleHeart, href: '/protected/ai-shaman' },
     { label: '프로필', icon: UserCircle, href: '/protected/profile' },
   ]
 

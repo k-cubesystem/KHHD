@@ -250,17 +250,17 @@ export function SettingsForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <KakaoAddressSearch
-            label="집 주소"
+            label="사는곳 (선택사항)"
             value={homeAddress}
             onChange={setHomeAddress}
-            placeholder="집 주소를 검색하세요"
+            placeholder="거주하시는 곳의 주소를 검색하세요 (선택사항)"
           />
 
           <KakaoAddressSearch
-            label="직장 주소"
+            label="일하는곳 (선택사항)"
             value={workAddress}
             onChange={setWorkAddress}
-            placeholder="직장 주소를 검색하세요 (선택사항)"
+            placeholder="근무하시는 곳의 주소를 검색하세요 (선택사항)"
           />
 
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-4">
@@ -268,10 +268,12 @@ export function SettingsForm({
               <Compass className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" strokeWidth={1} />
               <div className="space-y-1">
                 <p className="text-xs font-light text-ink-light">
-                  집과 직장의 풍수를 각각 분석하여 공간별 기운의 흐름을 파악합니다.
+                  주소는 <strong className="text-primary">선택사항</strong>이지만, 입력하시면{' '}
+                  <strong className="text-primary">더 정확하고 풍부한 풍수 분석 결과</strong>를 얻을
+                  수 있습니다.
                 </p>
                 <p className="text-xs font-light text-primary/80">
-                  * 정확한 주소 입력이 풍수 분석의 정확도를 높입니다
+                  * 공간별 기운의 흐름을 파악하여 맞춤형 풍수 조언을 제공합니다
                 </p>
               </div>
             </div>

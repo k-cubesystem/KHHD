@@ -75,9 +75,6 @@ export function KakaoAddressSearch({
           검색
         </Button>
       </div>
-      <p className="text-xs text-ink-light/40 font-light">
-        카카오 주소 검색으로 정확한 주소를 입력하세요.
-      </p>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md bg-stone-900 border-primary/20 text-ink-light">

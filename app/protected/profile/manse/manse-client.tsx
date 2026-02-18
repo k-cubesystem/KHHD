@@ -520,7 +520,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   // 사주 데이터 안전하게 가져오기
   let saju: SajuData | null = null
   try {
-    if (selectedMember) {
+    if (selectedMember?.birth_date && selectedMember.birth_date.trim()) {
       saju = getSajuData(
         selectedMember.birth_date,
         selectedMember.birth_time || '00:00',
@@ -721,6 +721,48 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       )}
     </Card>
   )
+
+  // Check if self profile is complete
+  const selfMember = members.find((m) => m.relationship === '본인')
+  const needsProfileSetup = !selfMember || !selfMember.birth_date
+
+  if (needsProfileSetup) {
+    return (
+      <div className="max-w-2xl mx-auto px-6 py-12 text-center">
+        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 flex items-center justify-center mb-6 border border-[#D4AF37]/20">
+          <User className="w-10 h-10 text-[#D4AF37]" />
+        </div>
+        <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent">
+          내 정보를 먼저 등록해주세요
+        </h1>
+        <p className="text-muted-foreground mb-2 text-base">
+          만세력 분석을 받으시려면 먼저 본인의 생년월일 정보가 필요합니다.
+        </p>
+        <p className="text-sm text-muted-foreground/70 mb-8">
+          정확한 사주 풀이를 위해 생년월일과 출생 시간을 입력해주세요.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <Button
+            asChild
+            size="lg"
+            className="bg-[#D4AF37] text-black hover:bg-[#F4E4BA] shadow-lg"
+          >
+            <Link href="/protected/settings">
+              <User className="w-4 h-4 mr-2" />내 정보 입력하기
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10"
+          >
+            <Link href="/protected/family">인연 관리로 이동</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   if (members.length === 0) {
     return (

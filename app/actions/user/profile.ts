@@ -37,7 +37,6 @@ export async function saveProfile(data: SaveProfileData) {
       birth_date: data.birthDate || null,
       birth_time: data.birthTime || null,
       calendar_type: data.calendarType || 'solar',
-      updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' }
   )

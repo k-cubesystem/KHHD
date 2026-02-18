@@ -16,6 +16,23 @@ export async function getUserTierLimits() {
     return null
   }
 
+  // Check if user is tester - give special privileges
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role === 'tester') {
+    return {
+      tier: 'TESTER',
+      daily_talisman_limit: 100, // 100만냥/day
+      relationship_limit: 10, // 가족 10명
+      storage_limit: 10, // 기록 10개
+      is_subscribed: true,
+    }
+  }
+
   // Get active subscription and plan
   const { data: subscription } = await supabase
     .from('subscriptions')

@@ -13,12 +13,14 @@ const tierLabels = {
   SINGLE: '싱글 등급',
   FAMILY: '패밀리 등급',
   BUSINESS: '비즈니스 등급',
+  TESTER: '테스터',
 }
 
 const tierColors = {
   SINGLE: 'text-gray-400',
   FAMILY: 'text-zen-gold',
   BUSINESS: 'text-amber-500',
+  TESTER: 'text-purple-400',
 }
 
 /**
@@ -43,7 +45,7 @@ export default async function PremiumDashboardPage() {
     getUserFiveElements(),
   ])
 
-  const tier = (limits?.tier || 'SINGLE') as keyof typeof tierColors
+  const tier = (limits?.tier || 'SINGLE') as 'SINGLE' | 'FAMILY' | 'BUSINESS' | 'TESTER'
 
   return (
     <div className="min-h-screen bg-background">

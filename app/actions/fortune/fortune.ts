@@ -320,6 +320,28 @@ export async function recordFortuneEntry(
 }
 
 /**
+ * 현재 로그인 유저의 '본인' family_member ID 반환
+ * Used to record fortune entries for self-analysis
+ */
+export async function getSelfFamilyMemberId(): Promise<string | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return null
+
+  const { data } = await supabase
+    .from('family_members')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('relationship', '본인')
+    .maybeSingle()
+
+  return data?.id || null
+}
+
+/**
  * 특정 구성원의 이번 달 운세 조회
  * Get specific member's monthly fortune
  */

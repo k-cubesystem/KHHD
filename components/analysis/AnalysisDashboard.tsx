@@ -52,7 +52,13 @@ interface AttendanceStatus {
 }
 
 interface WeeklyAttendance {
-  weekDays: Array<{ date: string; dayLabel: string; checked: boolean; isToday: boolean; isFuture: boolean }>
+  weekDays: Array<{
+    date: string
+    dayLabel: string
+    checked: boolean
+    isToday: boolean
+    isFuture: boolean
+  }>
   weekCount: number
   totalBokchae: number
 }
@@ -90,14 +96,17 @@ export function AnalysisDashboard({
         </div>
 
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug tracking-tight">
-          남들은 잘 되는데<br />
+          남들은 잘 되는데
+          <br />
           <span className="text-[#D4AF37]">나만 제자리</span>인 것 같다면?
         </h1>
 
         <div className="space-y-4">
           <p className="text-sm text-ink-light/70 font-light leading-relaxed">
-            당신의 노력이 부족해서가 아닙니다.<br />
-            지금 바로 당신에게 들어온 <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을<br />
+            당신의 노력이 부족해서가 아닙니다.
+            <br />
+            지금 바로 당신에게 들어온{' '}
+            <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을<br />
             놓치고 있기 때문입니다.
           </p>
 
@@ -125,7 +134,14 @@ export function AnalysisDashboard({
         />
       </motion.div>
 
-      {/* 4. Bento Grid */}
+      {/* 4. 가족 운세 섹션 — page.tsx에서 Suspense로 스트리밍 */}
+      {children && (
+        <motion.div variants={fadeInUp} className="space-y-4">
+          {children}
+        </motion.div>
+      )}
+
+      {/* 5. Bento Grid */}
       <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3">
         <motion.div variants={fadeInUp} className="col-span-1">
           <RelationshipSection />
@@ -138,7 +154,7 @@ export function AnalysisDashboard({
         </motion.div>
       </motion.div>
 
-      {/* 5. Trend + 룰렛 & 출석 (2열 정사각 카드) */}
+      {/* 6. Trend + 룰렛 & 출석 (2열 정사각 카드) */}
       <motion.section variants={fadeInUp} className="-mx-2 px-2 space-y-3">
         <TrendSection />
 
@@ -155,13 +171,6 @@ export function AnalysisDashboard({
           />
         </div>
       </motion.section>
-
-      {/* 6. 느린 서버 섹션 — page.tsx에서 Suspense로 스트리밍 */}
-      {children && (
-        <motion.div variants={fadeInUp} className="space-y-4">
-          {children}
-        </motion.div>
-      )}
     </motion.div>
   )
 }

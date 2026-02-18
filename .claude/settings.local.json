@@ -70,7 +70,24 @@
       "Skill(keybindings-help)",
       "Bash(git rm:*)",
       "Bash(xargs sed:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(gh pr list:*)",
+      "Bash(exit:*)",
+      "Bash(cmd /c \"cd /d D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations && mkdir core auth payment ai fortune analysis family admin 2>nul && echo done\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\core\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\auth\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\payment\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\ai\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\fortune\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\analysis\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\family\")",
+      "Bash(cmd /c \"mkdir D:\\\\anti\\\\haehwadang\\\\supabase\\\\migrations\\\\admin\")",
+      "Bash(echo:*)",
+      "Bash(GIT_EDITOR=true git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(npx lint-staged)",
+      "Bash(npx lint-staged --verbose)",
+      "Bash(sh .husky/pre-commit)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"

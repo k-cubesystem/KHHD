@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { nanoid } from 'nanoid'
-import { saveAnalysisHistory } from './analysis-history'
+import { saveAnalysisHistory } from '../user/history'
 
 interface InviteData {
   inviterId: string

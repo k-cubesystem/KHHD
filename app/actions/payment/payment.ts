@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { addTalismans } from './wallet-actions'
+import { addTalismans } from './wallet'
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || 'test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb'
 

@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getDestinyTarget } from './destiny-targets'
+import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import {
@@ -11,8 +11,8 @@ import {
   calculateElements,
 } from '@/lib/utils/manse-formatter'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { saveAnalysisHistory } from './analysis-history'
-import { recordFortuneEntry } from './fortune-actions'
+import { saveAnalysisHistory } from '../user/history'
+import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
@@ -130,9 +130,13 @@ export async function analyzeFortuneAction(
       model_used: 'gemini-2.0-flash',
     })
 
-    // 8. 운세 기록 (가족 구성원인 경우)
-    if (target.target_type === 'family') {
-      await recordFortuneEntry(target.id, 'TODAY', saved.id ?? target.id).catch(() => {})
+    // 8. 운세 기록 (본인/가족 모두 미션 체크)
+    const fortuneMemberId =
+      target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
+    if (fortuneMemberId) {
+      await recordFortuneEntry(fortuneMemberId, 'TODAY', saved.id ?? fortuneMemberId).catch(
+        () => {}
+      )
     }
 
     return { success: true, data: result, cached: false }

@@ -4,12 +4,13 @@ import { CheonjiinResultClient } from './cheonjiin-result-client'
 import { redirect } from 'next/navigation'
 
 interface CheonjiinResultPageProps {
-  searchParams: Promise<{ targetId?: string }>
+  searchParams: Promise<{ targetId?: string; type?: string }>
 }
 
 export default async function CheonjiinResultPage({ searchParams }: CheonjiinResultPageProps) {
   const params = await searchParams
   const targetId = params.targetId
+  const analysisType = params.type || 'comprehensive' // 기본값은 comprehensive
 
   if (!targetId) {
     redirect('/protected/analysis/cheonjiin')
@@ -20,11 +21,13 @@ export default async function CheonjiinResultPage({ searchParams }: CheonjiinRes
     redirect('/protected/analysis/cheonjiin')
   }
 
-  // 필수 데이터 확인 (집 주소 + 얼굴 사진)
-  const hasRequiredData = !!target.home_address && !!target.face_image_url
+  // type=basic인 경우: 프로필 만세력 정보만으로 바로 분석 진행 (추가 정보 불필요)
+  // type=comprehensive인 경우: 집 주소 + 얼굴 사진 필요
+  const needsAdditionalData =
+    analysisType === 'comprehensive' && (!target.home_address || !target.face_image_url)
 
-  // 필수 데이터 없으면 클라이언트에서 수집
-  if (!hasRequiredData) {
+  // 추가 데이터 필요하면 클라이언트에서 수집
+  if (needsAdditionalData) {
     return <CheonjiinResultClient target={target} needsData />
   }
 

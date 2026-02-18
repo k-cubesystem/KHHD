@@ -1,7 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getDestinyTarget } from './destiny-targets'
+import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import {
@@ -12,8 +12,8 @@ import {
 } from '@/lib/utils/manse-formatter'
 import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { saveAnalysisHistory } from './analysis-history'
-import { recordFortuneEntry } from './fortune-actions'
+import { saveAnalysisHistory } from '../user/history'
+import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 /**
@@ -46,8 +46,16 @@ export async function analyzeCheonjiinAction(
   try {
     // 1. 대상 정보 조회
     const target = await getDestinyTarget(targetId)
-    if (!target || !target.birth_date) {
-      return { success: false, error: '생년월일 정보가 없습니다.' }
+
+    if (!target) {
+      return { success: false, error: '분석 대상을 찾을 수 없습니다.' }
+    }
+
+    if (!target.birth_date) {
+      return {
+        success: false,
+        error: `생년월일 정보가 없습니다. 프로필 설정에서 생년월일을 입력해주세요.`,
+      }
     }
 
     // 2. 최근 7일 이내 분석 결과 확인 (캐시)
@@ -153,9 +161,11 @@ export async function analyzeCheonjiinAction(
       user.id
     )
 
-    // 운세 기록 (가족 구성원인 경우)
-    if (target.target_type === 'family') {
-      await recordFortuneEntry(target.id, 'SAJU', target.id).catch(() => {})
+    // 운세 기록 (본인/가족 모두 미션 체크)
+    const fortuneMemberId =
+      target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
+    if (fortuneMemberId) {
+      await recordFortuneEntry(fortuneMemberId, 'SAJU', fortuneMemberId).catch(() => {})
     }
 
     return { success: true, data: result, cached: false }

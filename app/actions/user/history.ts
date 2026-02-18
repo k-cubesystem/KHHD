@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 // import { createClient as createClientJS } from '@supabase/supabase-js' // Removed to fix edge issues
 import { unstable_cache, revalidatePath } from 'next/cache'
+import { getUserTierLimits } from '../payment/membership'
 
 /**
  * 분석 카테고리 타입
@@ -103,9 +104,40 @@ export async function saveAnalysisHistory(
       return { success: false, error: error.message }
     }
 
-    // Revalidate history page
-    revalidatePath('/protected/history')
+    // 쿼터 관리: 한도 초과 시 오래된 비즐겨찾기 레코드 자동 삭제
+    try {
+      const limits = await getUserTierLimits()
+      const storageLimit = limits?.storage_limit ?? 10
+      if (storageLimit !== 999) {
+        const { count } = await supabase
+          .from('analysis_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        const excess = (count || 0) - storageLimit
+        if (excess > 0) {
+          const { data: toDelete } = await supabase
+            .from('analysis_history')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('is_favorite', false)
+            .order('created_at', { ascending: true })
+            .limit(excess)
+          if (toDelete?.length) {
+            await supabase
+              .from('analysis_history')
+              .delete()
+              .in(
+                'id',
+                toDelete.map((r) => r.id)
+              )
+          }
+        }
+      }
+    } catch (quotaError) {
+      console.error('Quota management error (non-fatal):', quotaError)
+    }
 
+    revalidatePath('/protected/history')
     return { success: true, id: data.id }
   } catch (error) {
     console.error('Error in saveAnalysisHistory:', error)

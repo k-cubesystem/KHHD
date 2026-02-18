@@ -4,7 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { calculateDaewoon } from '@/lib/domain/saju/manse'
-import { deductTalisman } from './wallet-actions'
+import { deductTalisman } from '../payment/wallet'
+import { saveAnalysisHistory } from '../user/history'
+import { recordFortuneEntry } from '@/app/actions/fortune/fortune'
 import { logger } from '@/lib/utils/logger'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
@@ -179,8 +181,22 @@ ${
     })
     const analysis = result.response.text()
 
-    // 7. 분석 결과 저장 (선택사항 - 향후 히스토리 기능)
-    // TODO: wealth_analysis 테이블에 저장
+    // 7. 분석 기록 저장 + 운세 미션 체크
+    try {
+      await saveAnalysisHistory({
+        target_id: params.memberId,
+        target_name: member.name,
+        target_relation: member.relationship || '본인',
+        category: 'WEALTH',
+        result_json: { analysis },
+        summary: '재물운 심층 분석 결과',
+        model_used: 'gemini-2.0-flash',
+        talisman_cost: WEALTH_ANALYSIS_COST,
+      })
+    } catch (e) {
+      console.error('[WealthAnalysis] Failed to save history:', e)
+    }
+    await recordFortuneEntry(params.memberId, 'WEALTH', params.memberId).catch(() => {})
 
     return {
       success: true,

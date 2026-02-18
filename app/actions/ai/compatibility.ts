@@ -1,12 +1,12 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { getDestinyTarget } from './destiny-targets'
+import { getDestinyTarget } from '../user/destiny'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { calculateCompatibilityScore } from '@/lib/domain/compatibility/compatibility'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { saveAnalysisHistory } from './analysis-history'
-import { recordFortuneEntry } from './fortune-actions'
+import { saveAnalysisHistory } from '../user/history'
+import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 /**
@@ -79,9 +79,15 @@ export async function analyzeCompatibilityAction(
       talisman_cost: 2,
     })
 
-    // 운세 기록 (가족 구성원인 경우)
-    if (target1.target_type === 'family') {
-      await recordFortuneEntry(target1.id, 'COMPATIBILITY', saved.id ?? target1.id).catch(() => {})
+    // 운세 기록 (본인/가족 모두 미션 체크)
+    const fortuneMemberId =
+      target1.target_type === 'family'
+        ? target1.id
+        : await getSelfFamilyMemberId().catch(() => null)
+    if (fortuneMemberId) {
+      await recordFortuneEntry(fortuneMemberId, 'COMPATIBILITY', saved.id ?? fortuneMemberId).catch(
+        () => {}
+      )
     }
 
     return { success: true, data: aiResult, cached: false }

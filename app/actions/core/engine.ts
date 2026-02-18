@@ -2,8 +2,8 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
-import { deductTalisman } from './wallet-actions'
-import { saveAnalysisHistory } from './analysis-history'
+import { deductTalisman } from '../payment/wallet'
+import { saveAnalysisHistory } from '../user/history'
 import { PROMPTS, injectContext } from '@/lib/prompts/storytelling'
 import { FEATURE_KEYS } from '@/lib/constants'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'

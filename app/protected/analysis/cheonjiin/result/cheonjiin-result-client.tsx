@@ -14,7 +14,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { DestinyTarget } from '@/app/actions/user/destiny'
-import { RefreshCw, AlertTriangle } from 'lucide-react'
+import { RefreshCw, AlertTriangle, Settings } from 'lucide-react'
+import Link from 'next/link'
 
 interface CheonjiinResultClientProps {
   target: DestinyTarget
@@ -78,20 +79,34 @@ export function CheonjiinResultClient({
 
   // 에러
   if (error && !analysisResult) {
+    const isBirthDateError = error.includes('생년월일')
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md space-y-4">
           <AlertTriangle className="w-14 h-14 mx-auto text-red-400/80" />
           <p className="text-red-400 font-medium text-sm">{error}</p>
-          <Button
-            onClick={() => runAnalysis(null, false)}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            다시 시도
-          </Button>
+
+          <div className="flex gap-2 justify-center">
+            {isBirthDateError ? (
+              <Link href="/protected/settings">
+                <Button variant="default" size="sm" className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  프로필 설정하기
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                onClick={() => runAnalysis(null, false)}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                다시 시도
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     )

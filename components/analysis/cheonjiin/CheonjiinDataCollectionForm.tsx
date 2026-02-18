@@ -258,13 +258,14 @@ export function CheonjiinDataCollectionForm({
                 </Button>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-[#D4AF37]/50 transition-colors">
+              <label
+                htmlFor="face-upload"
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-[#D4AF37]/50 transition-colors cursor-pointer block"
+              >
                 <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <Label htmlFor="face-upload" className="cursor-pointer">
-                  <span className="text-sm text-muted-foreground">
-                    클릭하여 사진 업로드 (정면 얼굴)
-                  </span>
-                </Label>
+                <span className="text-sm text-muted-foreground">
+                  클릭하여 사진 업로드 (정면 얼굴)
+                </span>
                 <Input
                   id="face-upload"
                   type="file"
@@ -276,7 +277,7 @@ export function CheonjiinDataCollectionForm({
                   }}
                   disabled={uploading.face}
                 />
-              </div>
+              </label>
             )}
 
             <p className="text-xs text-muted-foreground">
@@ -318,13 +319,12 @@ export function CheonjiinDataCollectionForm({
                 </Button>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-[#D4AF37]/50 transition-colors">
+              <label
+                htmlFor="hand-upload"
+                className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-[#D4AF37]/50 transition-colors cursor-pointer block"
+              >
                 <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <Label htmlFor="hand-upload" className="cursor-pointer">
-                  <span className="text-sm text-muted-foreground">
-                    클릭하여 사진 업로드 (손바닥)
-                  </span>
-                </Label>
+                <span className="text-sm text-muted-foreground">클릭하여 사진 업로드 (손바닥)</span>
                 <Input
                   id="hand-upload"
                   type="file"
@@ -336,7 +336,7 @@ export function CheonjiinDataCollectionForm({
                   }}
                   disabled={uploading.hand}
                 />
-              </div>
+              </label>
             )}
 
             <p className="text-xs text-muted-foreground">
