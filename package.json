@@ -19,11 +19,11 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
+      "eslint --fix --max-warnings=999",
+      "prettier --write --ignore-unknown"
     ],
     "*.{json,css,md}": [
-      "prettier --write"
+      "prettier --write --ignore-unknown"
     ]
   },
   "dependencies": {

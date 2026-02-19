@@ -1,13 +1,16 @@
-.next
-node_modules
-out
-build
-dist
-*.min.js
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
-.env
-.env.*
-public
-coverage
+# 빌드 아웃풋
+.next/
+out/
+dist/
+build/
+
+# 패키지
+node_modules/
+
+# 환경변수
+.env*
+
+# 디자인 컴포넌트 - 인라인 스타일 포맷 충돌 방지
+components/analysis/dashboard/MasterpieceSection.tsx
+components/fortune/family-fortune-status.tsx
+app/protected/analysis/cheonjiin/analysis-client-page.tsx
