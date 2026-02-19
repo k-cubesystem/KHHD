@@ -12,7 +12,7 @@ interface FamilyFortuneStatusProps {
 export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
   const memberCount = members.length
   // 최대 4명까지 이름 표시
-  const displayMembers = members.filter((m) => m?.name).slice(0, 4)
+  const displayMembers = members.filter((m) => m?.memberName).slice(0, 4)
   const remaining = memberCount > 4 ? memberCount - 4 : 0
 
   return (
@@ -121,7 +121,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
               <div className="flex flex-wrap gap-2">
                 {displayMembers.map((member, i) => (
                   <motion.div
-                    key={member.id ?? i}
+                    key={member.memberId ?? i}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.08, duration: 0.4 }}
@@ -139,13 +139,13 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                         color: '#0a0807',
                       }}
                     >
-                      {member.name?.slice(0, 1) ?? '?'}
+                      {member.memberName?.slice(0, 1) ?? '?'}
                     </div>
                     <span
                       className="text-[14px] font-serif font-medium"
                       style={{ color: 'rgba(244,228,186,0.85)' }}
                     >
-                      {member.name}
+                      {member.memberName}
                     </span>
                   </motion.div>
                 ))}
