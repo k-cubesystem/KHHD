@@ -2,15 +2,12 @@
 
 import { useState } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
-import { CheonjiinLoadingState } from '@/components/analysis/cheonjiin/CheonjiinLoadingState'
+import { SajuLoadingOverlay } from '@/components/shared/SajuLoadingOverlay'
 import { CheonjiinSummary } from '@/components/analysis/cheonjiin/CheonjiinSummary'
 import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
 import { JiSection } from '@/components/analysis/cheonjiin/JiSection'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
-import {
-  CheonjiinDataCollectionForm,
-  CollectedData,
-} from '@/components/analysis/cheonjiin/CheonjiinDataCollectionForm'
+import { CheonjiinDataCollectionForm, CollectedData } from '@/components/analysis/cheonjiin/CheonjiinDataCollectionForm'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { DestinyTarget } from '@/app/actions/user/destiny'
@@ -34,6 +31,7 @@ export function CheonjiinResultClient({
 }: CheonjiinResultClientProps) {
   const [analysisResult, setAnalysisResult] = useState<any>(initialData)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [apiComplete, setApiComplete] = useState(false)
   const [error, setError] = useState<string | null>(serverError ?? null)
   const [showDataForm, setShowDataForm] = useState(needsData && !initialData)
 
@@ -46,6 +44,7 @@ export function CheonjiinResultClient({
   // 다시 분석 (사용자가 명시적으로 클릭한 경우에만)
   async function runAnalysis(additionalData: CollectedData | null = null, skipCache = true) {
     setIsAnalyzing(true)
+    setApiComplete(false)
     setError(null)
 
     try {
@@ -53,18 +52,19 @@ export function CheonjiinResultClient({
 
       if (result.success) {
         setAnalysisResult(result.data)
-        toast.success('분석이 완료되었습니다!')
+        setApiComplete(true) // 로딩 오버레이에 완료 신호
       } else {
         setError(result.error || '분석 중 오류가 발생했습니다.')
         toast.error(result.error || '분석 중 오류가 발생했습니다.')
+        setIsAnalyzing(false)
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.'
       setError(message)
       toast.error(message)
-    } finally {
       setIsAnalyzing(false)
     }
+    // isAnalyzing은 로딩 오버레이 onComplete 후 해제
   }
 
   // 데이터 수집 폼
@@ -72,9 +72,16 @@ export function CheonjiinResultClient({
     return <CheonjiinDataCollectionForm target={target} onComplete={handleDataCollected} />
   }
 
-  // 분석 중 (재분석 시)
+  // 분석 중 — 감성 로딩 오버레이 (98% 정지 → API 완료 시 자동 진행)
   if (isAnalyzing) {
-    return <CheonjiinLoadingState target={target} />
+    return (
+      <SajuLoadingOverlay
+        targetName={target.name}
+        duration={12000}
+        isApiComplete={apiComplete}
+        onComplete={() => setIsAnalyzing(false)}
+      />
+    )
   }
 
   // 에러
@@ -96,12 +103,7 @@ export function CheonjiinResultClient({
                 </Button>
               </Link>
             ) : (
-              <Button
-                onClick={() => runAnalysis(null, false)}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
+              <Button onClick={() => runAnalysis(null, false)} variant="outline" size="sm" className="gap-2">
                 <RefreshCw className="w-4 h-4" />
                 다시 시도
               </Button>

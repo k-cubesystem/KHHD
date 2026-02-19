@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { Card } from '@/components/ui/card'
 import { BookOpen, User, Compass, Hand, Sparkles, ArrowRight } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
+import { SajuLoadingOverlay } from '@/components/shared/SajuLoadingOverlay'
 
-// ── 감성 명리 문구 20선 ──
+// ── 감성 명리 문구 20선 (하위호환용 — 실제 렌더는 SajuLoadingOverlay 사용) ──
 const SAJU_MESSAGES = [
   {
     headline: '재물의 문이 열리는 시기입니다',
@@ -345,8 +346,9 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
     <>
       <AnimatePresence>
         {showSajuLoading && (
-          <SajuLoadingScreen
+          <SajuLoadingOverlay
             targetName={selectedTarget?.name ?? ''}
+            duration={11000}
             onComplete={handleLoadingComplete}
           />
         )}
@@ -523,22 +525,24 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
                   <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" />
 
                   <div className="relative flex items-center gap-5">
-                    {/* 한자 아이콘 */}
-                    <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-[#110a06] border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.08)] group-hover:border-primary/40 group-hover:shadow-[0_0_30px_rgba(212,175,55,0.15)] transition-all duration-300">
-                      <span className="font-serif text-3xl text-primary/80 group-hover:text-primary transition-colors leading-none">
-                        天
+                    {/* 왼쪽: 배지 + 아이콘 */}
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded border border-white/10 text-ink-light/30 font-medium tracking-wide">
+                        기본
                       </span>
+                      <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-[#110a06] border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.08)] group-hover:border-primary/40 group-hover:shadow-[0_0_30px_rgba(212,175,55,0.15)] transition-all duration-300">
+                        <span className="font-serif text-3xl text-primary/80 group-hover:text-primary transition-colors leading-none">
+                          天
+                        </span>
+                      </div>
                     </div>
 
                     {/* 내용 */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <h4 className="text-lg font-serif text-ink-light group-hover:text-primary transition-colors">
+                        <h4 className="text-base font-serif text-ink-light group-hover:text-primary transition-colors">
                           해화당 사주풀이
                         </h4>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded border border-white/10 text-ink-light/30 font-medium tracking-wide">
-                          기본
-                        </span>
                       </div>
                       <p className="text-xs text-ink-light/50 font-light leading-relaxed break-keep mb-3">
                         태어난 사주 만세력을 바탕으로
@@ -580,42 +584,40 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
                 className="cursor-pointer group"
               >
                 <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-[#1c1508] via-[#120f07] to-[#0a0906] hover:border-primary/50 transition-all duration-300 p-6 shadow-[0_4px_30px_rgba(212,175,55,0.08)] hover:shadow-[0_8px_40px_rgba(212,175,55,0.18)]">
-                  {/* BEST 배지 */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <span className="px-2.5 py-1 bg-gradient-to-r from-primary to-primary/80 text-[#0A0A0A] text-[9px] font-bold rounded-full tracking-wider shadow-md">
-                      ✦ PREMIUM
-                    </span>
-                  </div>
-
                   {/* 배경 글로우 */}
                   <div className="absolute inset-0 opacity-[0.04] bg-[url('/texture/hanji_pattern.png')] bg-repeat pointer-events-none" />
                   <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-primary/10 rounded-full blur-[40px] pointer-events-none group-hover:bg-primary/20 transition-all duration-500" />
                   <div className="absolute -top-4 -left-4 w-24 h-24 bg-primary/5 rounded-full blur-[30px] pointer-events-none" />
 
                   <div className="relative flex items-center gap-5">
-                    {/* 天地人 트리플 아이콘 */}
-                    <div className="flex-shrink-0 relative w-16 h-16">
-                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/40 flex items-center justify-center shadow-[0_0_25px_rgba(212,175,55,0.2)] group-hover:shadow-[0_0_40px_rgba(212,175,55,0.35)] group-hover:border-primary/60 transition-all duration-300">
-                        <div className="flex flex-col items-center leading-none">
-                          <div className="flex gap-0.5">
-                            <span className="font-serif text-[11px] text-primary leading-tight">
-                              天
-                            </span>
-                            <span className="font-serif text-[11px] text-primary/70 leading-tight">
-                              地
+                    {/* 왼쪽: 배지 + 아이콘 */}
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="px-2.5 py-0.5 bg-gradient-to-r from-primary to-primary/80 text-[#0A0A0A] text-[9px] font-bold rounded-full tracking-wider shadow-md">
+                        ✦ PREMIUM
+                      </span>
+                      <div className="flex-shrink-0 relative w-16 h-16">
+                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/40 flex items-center justify-center shadow-[0_0_25px_rgba(212,175,55,0.2)] group-hover:shadow-[0_0_40px_rgba(212,175,55,0.35)] group-hover:border-primary/60 transition-all duration-300">
+                          <div className="flex flex-col items-center leading-none">
+                            <div className="flex gap-0.5">
+                              <span className="font-serif text-[11px] text-primary leading-tight">
+                                天
+                              </span>
+                              <span className="font-serif text-[11px] text-primary/70 leading-tight">
+                                地
+                              </span>
+                            </div>
+                            <span className="font-serif text-[11px] text-primary/50 leading-tight mt-0.5">
+                              人
                             </span>
                           </div>
-                          <span className="font-serif text-[11px] text-primary/50 leading-tight mt-0.5">
-                            人
-                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* 내용 */}
-                    <div className="flex-1 min-w-0 pr-8">
+                    <div className="flex-1 min-w-0 pr-2">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <h4 className="text-lg font-serif text-primary">천지인 종합 사주풀이</h4>
+                        <h4 className="text-base font-serif text-primary">천지인 종합 사주풀이</h4>
                       </div>
                       <p className="text-xs text-ink-light/60 font-light leading-relaxed break-keep mb-3">
                         사주에 풍수·관상·손금까지 더해
