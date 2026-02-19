@@ -38,7 +38,7 @@ export function CheonSection({ data }: CheonSectionProps) {
                 <span className="font-serif text-lg text-blue-300">天</span>
               </div>
               <h2 className="text-xl font-bold text-ink-light tracking-tight">
-                타고난 사주명리 <span className="text-blue-300/60 text-sm font-normal ml-1">Heavenly Fate</span>
+                타고난 사주명리 <span className="text-blue-300/60 text-sm font-normal ml-1">하늘의 기운</span>
               </h2>
             </div>
             <p className="text-sm text-ink-light/50 font-light pl-13">
@@ -61,8 +61,8 @@ export function CheonSection({ data }: CheonSectionProps) {
               {strengths && strengths.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-blue-300">
-                    <Crown className="w-4 h-4" />
-                    <span className="text-sm font-bold tracking-wide uppercase">Strength</span>
+                    <Crown className="w-4 h-4" aria-hidden="true" />
+                    <span className="text-sm font-bold tracking-wide">강점</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {/* Using simple text tags instead of badges for cleaner look on mobile */}
@@ -82,8 +82,8 @@ export function CheonSection({ data }: CheonSectionProps) {
               {weaknesses && weaknesses.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-2 text-red-300/70">
-                    <Star className="w-4 h-4" />
-                    <span className="text-sm font-bold tracking-wide uppercase">Weakness</span>
+                    <Star className="w-4 h-4" aria-hidden="true" />
+                    <span className="text-sm font-bold tracking-wide">보완점</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {weaknesses.map((w: string, idx: number) => (

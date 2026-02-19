@@ -49,7 +49,12 @@ function MiniScoreRing({
       className="flex flex-col items-center gap-1"
     >
       <div className="relative w-10 h-10 flex items-center justify-center">
-        <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 40 40">
+        <svg
+          className="absolute inset-0 w-full h-full -rotate-90"
+          viewBox="0 0 40 40"
+          role="img"
+          aria-label={`${label} ${value !== null ? `${value}점` : '미제공'}`}
+        >
           <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
           {value !== null && (
             <motion.circle
@@ -67,7 +72,11 @@ function MiniScoreRing({
             />
           )}
         </svg>
-        <span className="text-[11px] font-bold" style={{ color: value !== null ? color : 'rgba(255,255,255,0.2)' }}>
+        <span
+          className="text-[11px] font-bold"
+          style={{ color: value !== null ? color : 'rgba(255,255,255,0.2)' }}
+          aria-hidden="true"
+        >
           {value !== null ? value : '—'}
         </span>
       </div>
@@ -125,14 +134,19 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
             />
 
             {/* SVG Ring */}
-            <svg className="w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(236,182,19,0.2)]" viewBox="0 0 144 144">
+            <svg
+              className="w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(236,182,19,0.2)]"
+              viewBox="0 0 144 144"
+              role="img"
+              aria-label={`천지인 총합 조화 점수 ${score}점`}
+            >
               <circle cx="72" cy="72" r="52" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1.5" />
               <motion.circle
                 cx="72"
                 cy="72"
                 r="52"
                 fill="none"
-                stroke="#ECB613" // Primary Color
+                stroke="#ECB613"
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeDasharray={circ}
@@ -142,14 +156,12 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
               />
             </svg>
 
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[10px] text-primary/60 font-serif tracking-[0.2em] uppercase mb-1">
-                Total Integrity
-              </span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
+              <span className="text-[10px] text-primary/60 font-serif tracking-[0.2em] mb-1">종합 조화</span>
               <span className="text-5xl font-serif font-bold text-ink-light leading-none tracking-tighter shadow-black">
                 {score}
               </span>
-              <span className="text-[10px] text-primary/60 font-serif tracking-widest mt-1">Point</span>
+              <span className="text-[10px] text-primary/60 font-serif tracking-widest mt-1">점</span>
             </div>
           </div>
 
@@ -176,21 +188,24 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
           {/* Lucky Grid (2x2 but wide on mobile) */}
           <div className="grid grid-cols-2 gap-3">
             {[
-              { icon: Palette, label: 'Lucky Color', value: lucky.color },
-              { icon: Compass, label: 'Direction', value: lucky.direction },
-              { icon: Hash, label: 'Lucky Number', value: lucky.number },
-              { icon: Star, label: 'Keyword', value: lucky.keyword || '조화' },
+              { icon: Palette, label: '행운의 색', value: lucky.color },
+              { icon: Compass, label: '길한 방위', value: lucky.direction },
+              { icon: Hash, label: '행운의 숫자', value: lucky.number },
+              { icon: Star, label: '핵심 키워드', value: lucky.keyword || '조화' },
             ].map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
                 className="bg-surface/40 rounded-xl p-4 border border-white/5 flex flex-col items-start gap-2 relative overflow-hidden group"
               >
-                <div className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                <div
+                  className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity"
+                  aria-hidden="true"
+                >
                   <Icon className="w-8 h-8" />
                 </div>
-                <span className="text-[10px] text-ink-light/40 uppercase tracking-wide font-bold">{label}</span>
+                <span className="text-[10px] text-ink-light/40 tracking-wide font-bold">{label}</span>
                 <div className="flex items-center gap-2">
-                  <Icon className="w-4 h-4 text-primary/70" />
+                  <Icon className="w-4 h-4 text-primary/70" aria-hidden="true" />
                   <span className="text-sm font-bold text-ink-light leading-tight">{value || '-'}</span>
                 </div>
               </div>

@@ -36,21 +36,16 @@ export function JiSection({ data }: JiSectionProps) {
                 <span className="font-serif text-lg text-emerald-400">地</span>
               </div>
               <h2 className="text-xl font-bold text-ink-light tracking-tight">
-                지리적 환경과 흐름{' '}
-                <span className="text-emerald-400/60 text-sm font-normal ml-1">Earthing Flow</span>
+                지리적 환경과 흐름 <span className="text-emerald-400/60 text-sm font-normal ml-1">땅의 기운</span>
               </h2>
             </div>
-            <p className="text-sm text-ink-light/50 font-light pl-13">
-              당신이 머무는 공간과 환경의 에너지 흐름입니다.
-            </p>
+            <p className="text-sm text-ink-light/50 font-light pl-13">당신이 머무는 공간과 환경의 에너지 흐름입니다.</p>
           </div>
 
           {/* Core Content */}
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-serif text-emerald-100 mb-3 leading-snug">
-                {title || '현실적 기반과 환경'}
-              </h3>
+              <h3 className="text-lg font-serif text-emerald-100 mb-3 leading-snug">{title || '현실적 기반과 환경'}</h3>
               <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
                 {content}
               </p>
@@ -61,15 +56,13 @@ export function JiSection({ data }: JiSectionProps) {
               {daewoon_phase && (
                 <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <Mountain className="w-5 h-5 text-emerald-400" />
+                    <Mountain className="w-5 h-5 text-emerald-400" aria-hidden="true" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-emerald-400/60 uppercase tracking-widest font-bold block mb-1">
-                      Current Phase
+                    <span className="text-[10px] text-emerald-400/60 tracking-widest font-bold block mb-1">
+                      현재 대운 흐름
                     </span>
-                    <span className="text-base font-serif font-medium text-emerald-100">
-                      {daewoon_phase}
-                    </span>
+                    <span className="text-base font-serif font-medium text-emerald-100">{daewoon_phase}</span>
                   </div>
                 </div>
               )}
@@ -77,15 +70,13 @@ export function JiSection({ data }: JiSectionProps) {
               {lucky_direction && (
                 <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-4 flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Compass className="w-5 h-5 text-amber-400" />
+                    <Compass className="w-5 h-5 text-amber-400" aria-hidden="true" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-amber-400/60 uppercase tracking-widest font-bold block mb-1">
-                      Lucky Direction
+                    <span className="text-[10px] text-amber-400/60 tracking-widest font-bold block mb-1">
+                      길한 방위
                     </span>
-                    <span className="text-base font-serif font-medium text-amber-100">
-                      {lucky_direction}
-                    </span>
+                    <span className="text-base font-serif font-medium text-amber-100">{lucky_direction}</span>
                   </div>
                 </div>
               )}

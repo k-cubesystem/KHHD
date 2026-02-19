@@ -36,8 +36,7 @@ export function InSection({ data }: InSectionProps) {
                 <span className="font-serif text-lg text-rose-300">人</span>
               </div>
               <h2 className="text-xl font-bold text-ink-light tracking-tight">
-                인연과 내면의 조화{' '}
-                <span className="text-rose-300/60 text-sm font-normal ml-1">Inner Soul</span>
+                인연과 내면의 조화 <span className="text-rose-300/60 text-sm font-normal ml-1">사람의 기운</span>
               </h2>
             </div>
             <p className="text-sm text-ink-light/50 font-light pl-13">
@@ -48,9 +47,7 @@ export function InSection({ data }: InSectionProps) {
           {/* Core Content */}
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-serif text-rose-100 mb-3 leading-snug">
-                {title || '내면의 의지와 관계'}
-              </h3>
+              <h3 className="text-lg font-serif text-rose-100 mb-3 leading-snug">{title || '내면의 의지와 관계'}</h3>
               <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
                 {content}
               </p>
@@ -60,16 +57,17 @@ export function InSection({ data }: InSectionProps) {
             <div className="grid grid-cols-1 gap-4 pt-2">
               {relationship_advice && (
                 <div className="bg-rose-950/20 border border-rose-500/20 rounded-xl p-5 relative overflow-hidden group">
-                  <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12">
+                  <div
+                    className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12"
+                    aria-hidden="true"
+                  >
                     <Heart className="w-24 h-24 text-rose-500" />
                   </div>
 
                   <div className="relative z-10 space-y-2">
                     <div className="flex items-center gap-2 text-rose-300">
-                      <Fingerprint className="w-4 h-4" />
-                      <span className="text-sm font-bold tracking-wide uppercase">
-                        Relationship
-                      </span>
+                      <Fingerprint className="w-4 h-4" aria-hidden="true" />
+                      <span className="text-sm font-bold tracking-wide">인연과 관계</span>
                     </div>
                     <p className="text-sm text-ink-light/90 font-light leading-relaxed break-keep">
                       {relationship_advice}
@@ -80,20 +78,19 @@ export function InSection({ data }: InSectionProps) {
 
               {noble_person && (
                 <div className="bg-purple-950/20 border border-purple-500/20 rounded-xl p-5 relative overflow-hidden group">
-                  <div className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12">
+                  <div
+                    className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12"
+                    aria-hidden="true"
+                  >
                     <UserPlus className="w-24 h-24 text-purple-500" />
                   </div>
 
                   <div className="relative z-10 space-y-2">
                     <div className="flex items-center gap-2 text-purple-300">
-                      <UserPlus className="w-4 h-4" />
-                      <span className="text-sm font-bold tracking-wide uppercase">
-                        Noble Person
-                      </span>
+                      <UserPlus className="w-4 h-4" aria-hidden="true" />
+                      <span className="text-sm font-bold tracking-wide">귀인(貴人)</span>
                     </div>
-                    <p className="text-sm text-ink-light/90 font-light leading-relaxed break-keep">
-                      {noble_person}
-                    </p>
+                    <p className="text-sm text-ink-light/90 font-light leading-relaxed break-keep">{noble_person}</p>
                   </div>
                 </div>
               )}
