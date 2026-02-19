@@ -1,6 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
@@ -137,9 +138,10 @@ export async function analyzeCheonjiinAction(
       handImageUrl: imageFlags.hasHandImage ? '손금 이미지 첨부됨 (별도 이미지 참조)' : '손금 이미지 없음',
     }
 
-    // 8. 프롬프트 생성 — 이미지/주소 flags를 반드시 반영하는 코드 프롬프트 우선 사용
-    // DB 프롬프트는 imageFlags를 모르는 구버전일 수 있으므로 사용하지 않음
-    const prompt = getDefaultCheonjiinPrompt(variables, imageFlags)
+    // 8. 프롬프트 생성
+    // DB에서 시스템 역할 정의(스타일/원칙)를 로드하고, 동적 조건 섹션(imageFlags)은 코드에서 생성
+    const dbSystemPrompt = await getCheonjiinSystemPrompt()
+    const prompt = getDefaultCheonjiinPrompt(variables, imageFlags, dbSystemPrompt)
 
     const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
 
@@ -190,6 +192,20 @@ async function getRecentAnalysis(targetId: string): Promise<{ data: any; date: s
   return {
     data: data?.result_json || null,
     date: data?.created_at || null,
+  }
+}
+
+/**
+ * DB에서 천지인 시스템 프롬프트 조회 (관리자 페이지에서 편집 가능)
+ */
+async function getCheonjiinSystemPrompt(): Promise<string | null> {
+  try {
+    const adminSupabase = createAdminClient()
+    const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', 'cheonjiin_analysis').single()
+    return data?.template || null
+  } catch (e) {
+    console.warn('[CheonjiinAnalysis] DB 프롬프트 로드 실패:', e)
+    return null
   }
 }
 
@@ -317,19 +333,28 @@ async function analyzeCheonjiinWithAI(
 }
 
 /**
- * 기본 천지인 프롬프트 (DB 조회 실패 시 사용)
+ * 기본 천지인 프롬프트 생성
+ * @param dbSystemPrompt - DB에서 로드한 시스템 역할 정의 (없으면 기본값 사용)
  */
 function getDefaultCheonjiinPrompt(
   vars: Record<string, string>,
-  flags?: { hasFaceImage: boolean; hasHandImage: boolean; hasFengshui: boolean; hasWorkAddress: boolean }
+  flags?: { hasFaceImage: boolean; hasHandImage: boolean; hasFengshui: boolean; hasWorkAddress: boolean },
+  dbSystemPrompt?: string | null
 ): string {
-  // flags가 없으면 (DB 프롬프트 경로 등) 변수 텍스트로 fallback 판별
+  // flags가 없으면 변수 텍스트로 fallback 판별
   const hasFaceImage = flags?.hasFaceImage ?? vars.faceImageUrl !== '관상 이미지 없음'
   const hasHandImage = flags?.hasHandImage ?? vars.handImageUrl !== '손금 이미지 없음'
   const hasFengshui = flags?.hasFengshui ?? vars.homeAddress !== '정보 없음'
   const hasWorkAddress = flags?.hasWorkAddress ?? vars.workAddress !== '정보 없음'
 
-  return `당신은 해화당의 전문 명리학 AI입니다. 사주·풍수·관상·손금을 통합하는 천지인(天地人) 분석을 수행하세요.
+  // DB 시스템 프롬프트가 있으면 사용, 없으면 기본 역할 정의 사용
+  const systemRole =
+    dbSystemPrompt ||
+    `당신은 해화당의 전문 명리학 AI입니다. 사주·풍수·관상·손금을 통합하는 천지인(天地人) 분석을 수행하세요.`
+
+  return `${systemRole}
+
+---
 
 ## 분석 대상 정보
 - 이름: ${vars.name}
@@ -349,25 +374,6 @@ function getDefaultCheonjiinPrompt(
 ## 이미지 데이터
 - 관상(얼굴) 이미지: ${vars.faceImageUrl}
 - 손금(손) 이미지: ${vars.handImageUrl}
-
----
-
-## 서술 원칙 (반드시 준수)
-
-### 오행 비유 서술 (천(天) 섹션 필수)
-사주의 일간(日干) 오행을 기반으로 아래 비유 중 하나를 활용하여 감성적으로 서술하세요:
-- 木(목): "대나무처럼 유연하게 휘어지지만 꺾이지 않는 사람입니다."
-- 火(화): "타오르는 횃불 같은 사람입니다. 어두운 공간에 들어서면 주변이 밝아지고 사람들이 모여듭니다. 그러나 바람이 없으면 쉬 꺼지듯, 자극이 없으면 무기력해집니다."
-- 土(토): "넓은 대지 같은 사람입니다. 모든 것을 품지만 스스로는 자리를 옮기지 않습니다."
-- 金(금): "잘 벼려진 칼 같은 사람입니다. 한 번 방향을 정하면 거침없이 나아갑니다."
-- 水(수): "흐르는 강물 같은 사람입니다. 막히면 돌아가고, 낮은 곳을 채우며 결국 바다에 닿습니다."
-
-element_metaphor 필드에 위 비유를 확장하여 200자 이상 감성적으로 서술하세요.
-
-### 표현 원칙
-- "~합니다" 단정보다 "~같습니다", "~을 닮았습니다", "~처럼" 표현을 적극 활용
-- 구체적인 비유와 은유로 감성적으로 서술
-- 각 본문(content)은 최소 300자 이상
 
 ---
 
