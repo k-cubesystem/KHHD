@@ -5,7 +5,6 @@ import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import { formatManseDetails, formatSajuText, formatDaewoon, calculateElements } from '@/lib/utils/manse-formatter'
-import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
@@ -138,15 +137,9 @@ export async function analyzeCheonjiinAction(
       handImageUrl: imageFlags.hasHandImage ? '손금 이미지 첨부됨 (별도 이미지 참조)' : '손금 이미지 없음',
     }
 
-    // 8. DB 프롬프트 조회 및 AI 분석
-    let prompt: string
-    try {
-      prompt = await getPromptWithVariables('cheonjiin_analysis', variables)
-    } catch (error) {
-      // 프롬프트가 DB에 없으면 기본 프롬프트 사용
-      console.warn('DB 프롬프트 조회 실패, 기본 프롬프트 사용:', error)
-      prompt = getDefaultCheonjiinPrompt(variables, imageFlags)
-    }
+    // 8. 프롬프트 생성 — 이미지/주소 flags를 반드시 반영하는 코드 프롬프트 우선 사용
+    // DB 프롬프트는 imageFlags를 모르는 구버전일 수 있으므로 사용하지 않음
+    const prompt = getDefaultCheonjiinPrompt(variables, imageFlags)
 
     const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
 

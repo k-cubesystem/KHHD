@@ -36,10 +36,10 @@ export function CheonjiinResultClient({
   const [error, setError] = useState<string | null>(serverError ?? null)
   const [showDataForm, setShowDataForm] = useState(needsData && !initialData)
 
-  // 데이터 수집 완료 후 분석 실행 (사용자가 직접 제출한 경우에만)
+  // 데이터 수집 완료 후 분석 실행 — 이미지/주소 제출 시 반드시 새로 분석 (캐시 무시)
   async function handleDataCollected(data: CollectedData) {
     setShowDataForm(false)
-    await runAnalysis(data, false)
+    await runAnalysis(data, true)
   }
 
   // 다시 분석 (사용자가 명시적으로 클릭한 경우에만)
