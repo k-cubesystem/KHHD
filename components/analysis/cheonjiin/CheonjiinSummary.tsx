@@ -4,8 +4,26 @@ import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Sparkles, Compass, Palette, Hash, Star } from 'lucide-react'
 
+interface CheonjiinAnalysisResult {
+  score?: number
+  summary?: string
+  cheonScore?: number
+  jiScore?: number
+  inScore?: number
+  lucky?: {
+    color?: string
+    direction?: string
+    number?: number
+    keyword?: string
+    advice?: string
+  }
+  cheon?: { title?: string; content?: string; strengths?: string[]; weaknesses?: string[] }
+  ji?: { title?: string; content?: string; daewoon_phase?: string; lucky_direction?: string }
+  in?: { title?: string; content?: string; relationship_advice?: string; noble_person?: string }
+}
+
 interface CheonjiinSummaryProps {
-  data: any
+  data: CheonjiinAnalysisResult | null
   target: DestinyTarget
 }
 
@@ -16,12 +34,13 @@ function MiniScoreRing({
   delay,
 }: {
   label: string
-  value: number
+  value: number | null
   color: string
   delay: number
 }) {
   const r = 18
   const circ = 2 * Math.PI * r
+  const displayValue = value ?? 0
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -31,30 +50,25 @@ function MiniScoreRing({
     >
       <div className="relative w-10 h-10 flex items-center justify-center">
         <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 40 40">
-          <circle
-            cx="20"
-            cy="20"
-            r={r}
-            fill="none"
-            stroke="rgba(255,255,255,0.08)"
-            strokeWidth="2"
-          />
-          <motion.circle
-            cx="20"
-            cy="20"
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeDasharray={circ}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: circ - (circ * value) / 100 }}
-            transition={{ duration: 1.4, delay: delay + 0.3, ease: 'easeOut' }}
-          />
+          <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
+          {value !== null && (
+            <motion.circle
+              cx="20"
+              cy="20"
+              r={r}
+              fill="none"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray={circ}
+              initial={{ strokeDashoffset: circ }}
+              animate={{ strokeDashoffset: circ - (circ * displayValue) / 100 }}
+              transition={{ duration: 1.4, delay: delay + 0.3, ease: 'easeOut' }}
+            />
+          )}
         </svg>
-        <span className="text-[11px] font-bold" style={{ color }}>
-          {value}
+        <span className="text-[11px] font-bold" style={{ color: value !== null ? color : 'rgba(255,255,255,0.2)' }}>
+          {value !== null ? value : '—'}
         </span>
       </div>
       <span className="text-[10px] text-ink-light/40 font-serif tracking-wide">{label}</span>
@@ -65,13 +79,13 @@ function MiniScoreRing({
 export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
   if (!data) return null
 
-  const score = data.score || 85
+  const score = data.score ?? 0
   const summary = data.summary || '천지인의 기운이 조화롭게 흐르는 시기입니다.'
-  const lucky = data.lucky || {}
+  const lucky = data.lucky ?? {}
 
-  const cheonScore = data.cheonScore || Math.min(100, score + 5)
-  const jiScore = data.jiScore || Math.max(60, score - 5)
-  const inScore = data.inScore || score
+  const cheonScore = data.cheonScore ?? null
+  const jiScore = data.jiScore ?? null
+  const inScore = data.inScore ?? null
 
   const circ = 2 * Math.PI * 52
 
@@ -111,18 +125,8 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
             />
 
             {/* SVG Ring */}
-            <svg
-              className="w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(236,182,19,0.2)]"
-              viewBox="0 0 144 144"
-            >
-              <circle
-                cx="72"
-                cy="72"
-                r="52"
-                fill="none"
-                stroke="rgba(255,255,255,0.03)"
-                strokeWidth="1.5"
-              />
+            <svg className="w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(236,182,19,0.2)]" viewBox="0 0 144 144">
+              <circle cx="72" cy="72" r="52" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1.5" />
               <motion.circle
                 cx="72"
                 cy="72"
@@ -145,9 +149,7 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
               <span className="text-5xl font-serif font-bold text-ink-light leading-none tracking-tighter shadow-black">
                 {score}
               </span>
-              <span className="text-[10px] text-primary/60 font-serif tracking-widest mt-1">
-                Point
-              </span>
+              <span className="text-[10px] text-primary/60 font-serif tracking-widest mt-1">Point</span>
             </div>
           </div>
 
@@ -186,14 +188,10 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
                 <div className="absolute right-2 top-2 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Icon className="w-8 h-8" />
                 </div>
-                <span className="text-[10px] text-ink-light/40 uppercase tracking-wide font-bold">
-                  {label}
-                </span>
+                <span className="text-[10px] text-ink-light/40 uppercase tracking-wide font-bold">{label}</span>
                 <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-primary/70" />
-                  <span className="text-sm font-bold text-ink-light leading-tight">
-                    {value || '-'}
-                  </span>
+                  <span className="text-sm font-bold text-ink-light leading-tight">{value || '-'}</span>
                 </div>
               </div>
             ))}

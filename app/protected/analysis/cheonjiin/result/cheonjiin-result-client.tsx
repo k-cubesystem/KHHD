@@ -14,9 +14,21 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { RefreshCw, AlertTriangle, Settings } from 'lucide-react'
 import Link from 'next/link'
 
+interface CheonjiinAnalysisResult {
+  score?: number
+  summary?: string
+  cheonScore?: number
+  jiScore?: number
+  inScore?: number
+  lucky?: { color?: string; direction?: string; number?: number; keyword?: string; advice?: string }
+  cheon?: { title?: string; content?: string; strengths?: string[]; weaknesses?: string[] }
+  ji?: { title?: string; content?: string; daewoon_phase?: string; lucky_direction?: string }
+  in?: { title?: string; content?: string; relationship_advice?: string; noble_person?: string }
+}
+
 interface CheonjiinResultClientProps {
   target: DestinyTarget
-  initialData?: any
+  initialData?: CheonjiinAnalysisResult | null
   isCached?: boolean
   serverError?: string
   needsData?: boolean
@@ -29,7 +41,7 @@ export function CheonjiinResultClient({
   serverError,
   needsData = false,
 }: CheonjiinResultClientProps) {
-  const [analysisResult, setAnalysisResult] = useState<any>(initialData)
+  const [analysisResult, setAnalysisResult] = useState<CheonjiinAnalysisResult | null>(initialData ?? null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [apiComplete, setApiComplete] = useState(false)
   const [error, setError] = useState<string | null>(serverError ?? null)
