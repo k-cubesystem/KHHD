@@ -14,6 +14,31 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { RefreshCw, AlertTriangle, Settings } from 'lucide-react'
 import Link from 'next/link'
 
+interface FengshuiData {
+  home_energy?: string
+  work_energy?: string
+  advice?: string
+  lucky_color_for_home?: string
+}
+
+interface FaceReadingData {
+  overall?: string
+  forehead?: string
+  eyes?: string
+  nose?: string
+  mouth?: string
+  face_score?: number
+}
+
+interface PalmReadingData {
+  overall?: string
+  life_line?: string
+  head_line?: string
+  heart_line?: string
+  fate_line?: string
+  palm_score?: number
+}
+
 interface CheonjiinAnalysisResult {
   score?: number
   summary?: string
@@ -21,9 +46,22 @@ interface CheonjiinAnalysisResult {
   jiScore?: number
   inScore?: number
   lucky?: { color?: string; direction?: string; number?: number; keyword?: string; advice?: string }
-  cheon?: { title?: string; content?: string; strengths?: string[]; weaknesses?: string[] }
-  ji?: { title?: string; content?: string; daewoon_phase?: string; lucky_direction?: string }
-  in?: { title?: string; content?: string; relationship_advice?: string; noble_person?: string }
+  cheon?: { title?: string; content?: string; element_metaphor?: string; strengths?: string[]; weaknesses?: string[] }
+  ji?: {
+    title?: string
+    content?: string
+    daewoon_phase?: string
+    lucky_direction?: string
+    fengshui?: FengshuiData | null
+  }
+  in?: {
+    title?: string
+    content?: string
+    relationship_advice?: string
+    noble_person?: string
+    face_reading?: FaceReadingData | null
+    palm_reading?: PalmReadingData | null
+  }
 }
 
 interface CheonjiinResultClientProps {
@@ -164,13 +202,13 @@ export function CheonjiinResultClient({
 
       <div className="pt-2">
         <div id="cheon">
-          <CheonSection data={analysisResult?.cheon} />
+          <CheonSection data={analysisResult?.cheon ?? null} />
         </div>
         <div id="ji">
-          <JiSection data={analysisResult?.ji} />
+          <JiSection data={analysisResult?.ji ?? null} />
         </div>
         <div id="in">
-          <InSection data={analysisResult?.in} />
+          <InSection data={analysisResult?.in ?? null} />
         </div>
       </div>
     </div>

@@ -4,6 +4,31 @@ import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Sparkles, Compass, Palette, Hash, Star } from 'lucide-react'
 
+interface FengshuiData {
+  home_energy?: string
+  work_energy?: string
+  advice?: string
+  lucky_color_for_home?: string
+}
+
+interface FaceReadingData {
+  overall?: string
+  forehead?: string
+  eyes?: string
+  nose?: string
+  mouth?: string
+  face_score?: number
+}
+
+interface PalmReadingData {
+  overall?: string
+  life_line?: string
+  head_line?: string
+  heart_line?: string
+  fate_line?: string
+  palm_score?: number
+}
+
 interface CheonjiinAnalysisResult {
   score?: number
   summary?: string
@@ -17,9 +42,28 @@ interface CheonjiinAnalysisResult {
     keyword?: string
     advice?: string
   }
-  cheon?: { title?: string; content?: string; strengths?: string[]; weaknesses?: string[] }
-  ji?: { title?: string; content?: string; daewoon_phase?: string; lucky_direction?: string }
-  in?: { title?: string; content?: string; relationship_advice?: string; noble_person?: string }
+  cheon?: {
+    title?: string
+    content?: string
+    element_metaphor?: string
+    strengths?: string[]
+    weaknesses?: string[]
+  }
+  ji?: {
+    title?: string
+    content?: string
+    daewoon_phase?: string
+    lucky_direction?: string
+    fengshui?: FengshuiData | null
+  }
+  in?: {
+    title?: string
+    content?: string
+    relationship_advice?: string
+    noble_person?: string
+    face_reading?: FaceReadingData | null
+    palm_reading?: PalmReadingData | null
+  }
 }
 
 interface CheonjiinSummaryProps {

@@ -1,7 +1,14 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Compass, Mountain } from 'lucide-react'
+import { Compass, Mountain, Home, Briefcase, Lightbulb, Palette } from 'lucide-react'
+
+interface FengshuiData {
+  home_energy?: string
+  work_energy?: string
+  advice?: string
+  lucky_color_for_home?: string
+}
 
 interface JiSectionProps {
   data: {
@@ -9,13 +16,14 @@ interface JiSectionProps {
     content?: string
     daewoon_phase?: string
     lucky_direction?: string
+    fengshui?: FengshuiData | null
   } | null
 }
 
 export function JiSection({ data }: JiSectionProps) {
   if (!data) return null
 
-  const { title, content, daewoon_phase, lucky_direction } = data
+  const { title, content, daewoon_phase, lucky_direction, fengshui } = data
 
   return (
     <motion.div
@@ -81,6 +89,71 @@ export function JiSection({ data }: JiSectionProps) {
                 </div>
               )}
             </div>
+
+            {/* 풍수(風水) 분석 섹션 */}
+            {fengshui && (
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-px flex-1 bg-emerald-500/10" />
+                  <span className="text-[11px] text-emerald-400/60 font-bold tracking-widest px-2">風水 풍수 분석</span>
+                  <div className="h-px flex-1 bg-emerald-500/10" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {fengshui.home_energy && (
+                    <div className="bg-green-950/20 border border-green-500/20 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Home className="w-4 h-4 text-green-400" aria-hidden="true" />
+                        <span className="text-[11px] text-green-400/70 font-bold tracking-wide">집의 기운</span>
+                      </div>
+                      <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
+                        {fengshui.home_energy}
+                      </p>
+                    </div>
+                  )}
+
+                  {fengshui.work_energy && fengshui.work_energy !== '직장 주소 정보 없음' && (
+                    <div className="bg-blue-950/20 border border-blue-500/20 rounded-xl p-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-blue-400" aria-hidden="true" />
+                        <span className="text-[11px] text-blue-400/70 font-bold tracking-wide">직장의 기운</span>
+                      </div>
+                      <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
+                        {fengshui.work_energy}
+                      </p>
+                    </div>
+                  )}
+
+                  {fengshui.advice && (
+                    <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-4 space-y-2 md:col-span-2">
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4 text-amber-400" aria-hidden="true" />
+                        <span className="text-[11px] text-amber-400/70 font-bold tracking-wide">풍수 조언</span>
+                      </div>
+                      <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
+                        {fengshui.advice}
+                      </p>
+                    </div>
+                  )}
+
+                  {fengshui.lucky_color_for_home && (
+                    <div className="bg-surface/30 border border-white/10 rounded-xl p-4 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center shrink-0">
+                        <Palette className="w-5 h-5 text-white/60" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-white/40 tracking-widest font-bold block mb-1">
+                          집에 두면 좋은 색상
+                        </span>
+                        <span className="text-base font-serif font-medium text-ink-light">
+                          {fengshui.lucky_color_for_home}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -4,12 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import {
-  formatManseDetails,
-  formatSajuText,
-  formatDaewoon,
-  calculateElements,
-} from '@/lib/utils/manse-formatter'
+import { formatManseDetails, formatSajuText, formatDaewoon, calculateElements } from '@/lib/utils/manse-formatter'
 import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
@@ -78,12 +73,7 @@ export async function analyzeCheonjiinAction(
     }
 
     // 3. 만세력 계산
-    const manse = calculateManse(
-      target.birth_date,
-      target.birth_time || '00:00',
-      'Asia/Seoul',
-      true
-    )
+    const manse = calculateManse(target.birth_date, target.birth_time || '00:00', 'Asia/Seoul', true)
 
     // 4. 오행 분포 계산
     const elements = calculateElements(manse)
@@ -153,13 +143,7 @@ export async function analyzeCheonjiinAction(
       prompt = getDefaultCheonjiinPrompt(variables)
     }
 
-    const result = await analyzeCheonjiinWithAI(
-      prompt,
-      target,
-      faceImagePart,
-      handImagePart,
-      user.id
-    )
+    const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
 
     // 운세 기록 (본인/가족 모두 미션 체크)
     const fortuneMemberId =
@@ -189,6 +173,7 @@ async function getWorkAddress(userId: string): Promise<string | null> {
 /**
  * 최근 7일 이내 분석 결과 조회 (캐시)
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getRecentAnalysis(targetId: string): Promise<{ data: any; date: string | null }> {
   const supabase = await createClient()
   const sevenDaysAgo = new Date()
@@ -214,9 +199,7 @@ async function getRecentAnalysis(targetId: string): Promise<{ data: any; date: s
  * base64 데이터 URL에서 Gemini inlineData Part 추출
  * "data:image/jpeg;base64,..." → { mimeType, data } 또는 null
  */
-function extractBase64ImagePart(
-  imageUrl: string | null | undefined
-): { mimeType: string; data: string } | null {
+function extractBase64ImagePart(imageUrl: string | null | undefined): { mimeType: string; data: string } | null {
   if (!imageUrl) return null
   const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/)
   if (!match) return null
@@ -226,6 +209,7 @@ function extractBase64ImagePart(
 /**
  * AI를 사용한 천지인 분석 (멀티모달 지원)
  */
+
 async function analyzeCheonjiinWithAI(
   promptText: string,
   target: any,
@@ -247,6 +231,7 @@ async function analyzeCheonjiinWithAI(
   console.log('[CheonjiinAnalysis] AI 분석 시작...')
 
   // 멀티모달 Parts 구성: 텍스트 + 이미지(있는 경우)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parts: any[] = [{ text: promptText }]
   if (faceImagePart) {
     parts.push({ inlineData: faceImagePart })
@@ -257,10 +242,11 @@ async function analyzeCheonjiinWithAI(
     console.log('[CheonjiinAnalysis] 손금 이미지 첨부됨')
   }
 
-  const result = await withGeminiRateLimit(
-    () => model.generateContent({ contents: [{ role: 'user', parts }] }),
-    { userId, model: 'gemini-2.0-flash', actionType: 'cheonjiin' }
-  )
+  const result = await withGeminiRateLimit(() => model.generateContent({ contents: [{ role: 'user', parts }] }), {
+    userId,
+    model: 'gemini-2.0-flash',
+    actionType: 'cheonjiin',
+  })
   const text = result.response.text()
 
   // JSON 파싱
@@ -288,7 +274,13 @@ async function analyzeCheonjiinWithAI(
  * 기본 천지인 프롬프트 (DB 조회 실패 시 사용)
  */
 function getDefaultCheonjiinPrompt(vars: Record<string, string>): string {
-  return `당신은 해화당의 전문 명리학 AI입니다.
+  const hasFaceImage = vars.faceImageUrl !== '관상 이미지 없음'
+  const hasHandImage = vars.handImageUrl !== '손금 이미지 없음'
+  const hasHomeAddress = vars.homeAddress !== '정보 없음'
+  const hasWorkAddress = vars.workAddress !== '정보 없음'
+  const hasFengshui = hasHomeAddress || hasWorkAddress
+
+  return `당신은 해화당의 전문 명리학 AI입니다. 사주·풍수·관상·손금을 통합하는 천지인(天地人) 분석을 수행하세요.
 
 ## 분석 대상 정보
 - 이름: ${vars.name}
@@ -297,46 +289,152 @@ function getDefaultCheonjiinPrompt(vars: Record<string, string>): string {
 - 태어난 시간: ${vars.birthTime}
 - 사주 팔자: ${vars.saju}
 - 만세력 정보: ${vars.manse}
+- 오행 분포: ${vars.elements}
 - 현재 나이: ${vars.age}세
+- 대운 흐름: ${vars.daewoon}
 
-## 천지인(天地人) 분석 구조
+## 풍수 데이터
+- 집 주소: ${vars.homeAddress}
+- 직장 주소: ${vars.workAddress}
 
-### 1. 천(天) - 타고난 운명
-사주 원국 분석, 오행 균형, 십신 구조, 선천적 재능 분석
+## 이미지 데이터
+- 관상(얼굴) 이미지: ${vars.faceImageUrl}
+- 손금(손) 이미지: ${vars.handImageUrl}
 
-### 2. 지(地) - 현실과 환경
-대운 흐름, 현재 년운/월운, 재물운, 직업운, 풍수 방향 권장
+---
 
-### 3. 인(人) - 관계와 연결
-배우자운, 자녀운, 인간관계 패턴, 귀인 방향, 갈등 해소법
+## 서술 원칙 (반드시 준수)
 
-## 출력 형식 (JSON)
+### 오행 비유 서술 (천(天) 섹션 필수)
+사주의 일간(日干) 오행을 기반으로 아래 비유 중 하나를 활용하여 감성적으로 서술하세요:
+- 木(목): "대나무처럼 유연하게 휘어지지만 꺾이지 않는 사람입니다."
+- 火(화): "타오르는 횃불 같은 사람입니다. 어두운 공간에 들어서면 주변이 밝아지고 사람들이 모여듭니다. 그러나 바람이 없으면 쉬 꺼지듯, 자극이 없으면 무기력해집니다."
+- 土(토): "넓은 대지 같은 사람입니다. 모든 것을 품지만 스스로는 자리를 옮기지 않습니다."
+- 金(금): "잘 벼려진 칼 같은 사람입니다. 한 번 방향을 정하면 거침없이 나아갑니다."
+- 水(수): "흐르는 강물 같은 사람입니다. 막히면 돌아가고, 낮은 곳을 채우며 결국 바다에 닿습니다."
+
+element_metaphor 필드에 위 비유를 확장하여 200자 이상 감성적으로 서술하세요.
+
+### 표현 원칙
+- "~합니다" 단정보다 "~같습니다", "~을 닮았습니다", "~처럼" 표현을 적극 활용
+- 구체적인 비유와 은유로 감성적으로 서술
+- 각 본문(content)은 최소 300자 이상
+
+---
+
+## 분석 지침
+
+${
+  hasFengshui
+    ? `### 풍수(地) 분석
+집/직장 주소를 기반으로 방위와 오행 기운을 분석하세요.
+- 한국의 지리적 특성과 전통 풍수 원리(배산임수, 오방위)를 적용
+- "~가 위치한 지역은 ~의 기운을 품고 있어..." 형식으로 서술`
+    : `### 풍수(地) 분석
+주소 정보가 없으므로 fengshui 필드를 null로 설정하세요.`
+}
+
+${
+  hasFaceImage
+    ? `### 관상(人) 분석
+첨부된 얼굴 이미지를 실제로 분석하세요.
+- 이마(관록궁): 직업운·명예운
+- 눈(부처궁): 재물운·부부운
+- 코(재백궁): 현금운·재물 보관 능력
+- 입(처첩궁/식록궁): 인연운·식복
+- face_score: 0~100 사이 관상 점수
+각 부위는 "~하니 ~운이 ~합니다" 형식으로 구체적으로 서술하세요.`
+    : `### 관상(人) 분석
+관상 이미지가 없으므로 face_reading 필드를 null로 설정하세요.`
+}
+
+${
+  hasHandImage
+    ? `### 손금(人) 분석
+첨부된 손 이미지를 실제로 분석하세요.
+- 생명선: 체력·건강·생명력
+- 두뇌선: 사고방식·지적 능력
+- 감정선: 연애 패턴·감정 표현 방식
+- 운명선: 커리어 방향·40대 이후 운
+- palm_score: 0~100 사이 손금 점수
+각 선은 "~선이 ~하니 ~" 형식으로 구체적으로 서술하세요.`
+    : `### 손금(人) 분석
+손금 이미지가 없으므로 palm_reading 필드를 null로 설정하세요.`
+}
+
+---
+
+## 출력 형식 (반드시 아래 JSON 스키마를 정확히 준수)
+
+\`\`\`json
 {
-  "summary": "한 줄 종합 요약",
+  "summary": "감성적인 한 줄 종합 요약 (비유 포함)",
   "score": 85,
+  "cheonScore": 80,
+  "jiScore": 75,
+  "inScore": 82,
   "cheon": {
-    "title": "타고난 운명",
-    "content": "천(天) 분석 본문 500자",
-    "strengths": ["강점1", "강점2", "강점3"],
-    "weaknesses": ["약점1", "약점2"]
+    "title": "타고난 운명의 기운",
+    "content": "천(天) 분석 본문 (최소 300자, 비유 서술)",
+    "element_metaphor": "오행 비유 확장 서술 (200자 이상)",
+    "strengths": ["강점1 (구체적으로)", "강점2", "강점3"],
+    "weaknesses": ["약점1 (구체적으로)", "약점2"]
   },
   "ji": {
-    "title": "현실과 환경",
-    "content": "지(地) 분석 본문 500자",
-    "daewoon_phase": "현재 대운 단계",
-    "lucky_direction": "북쪽"
+    "title": "땅의 기운과 환경",
+    "content": "지(地) 분석 본문 (최소 300자)",
+    "daewoon_phase": "현재 대운 단계 설명",
+    "lucky_direction": "길한 방위",
+    "fengshui": ${
+      hasFengshui
+        ? `{
+      "home_energy": "집 주소 기반 방위 기운 분석 (최소 100자)",
+      "work_energy": "${hasWorkAddress ? '직장 주소 기반 방위 기운 분석 (최소 100자)' : '직장 주소 정보 없음'}",
+      "advice": "풍수 개선 조언 (인테리어, 방향 등 구체적으로)",
+      "lucky_color_for_home": "집에 두면 좋은 색상"
+    }`
+        : 'null'
+    }
   },
   "in": {
-    "title": "관계와 연결",
-    "content": "인(人) 분석 본문 500자",
-    "relationship_advice": "관계 조언",
-    "noble_person": "귀인의 특징"
+    "title": "사람의 기운과 인연",
+    "content": "인(人) 분석 본문 (최소 300자)",
+    "relationship_advice": "관계 조언 (구체적으로)",
+    "noble_person": "귀인의 특징과 만나는 방법",
+    "face_reading": ${
+      hasFaceImage
+        ? `{
+      "overall": "전체 관상 인상 (최소 100자)",
+      "forehead": "이마 분석 - 관록궁",
+      "eyes": "눈 분석 - 부처궁",
+      "nose": "코 분석 - 재백궁",
+      "mouth": "입 분석 - 처첩궁",
+      "face_score": 75
+    }`
+        : 'null'
+    },
+    "palm_reading": ${
+      hasHandImage
+        ? `{
+      "overall": "전체 손금 인상 (최소 100자)",
+      "life_line": "생명선 분석",
+      "head_line": "두뇌선 분석",
+      "heart_line": "감정선 분석",
+      "fate_line": "운명선 분석",
+      "palm_score": 78
+    }`
+        : 'null'
+    }
   },
   "lucky": {
-    "color": "푸른색",
-    "direction": "북쪽",
+    "color": "행운의 색상",
+    "direction": "길한 방위",
     "number": 7,
-    "advice": "핵심 조언 한 문장"
+    "keyword": "핵심 키워드",
+    "advice": "감성적인 핵심 조언 한 문장 (비유 포함)"
   }
-}`
+}
+\`\`\`
+
+위 JSON을 정확히 반환하세요. 마크다운 코드블록 없이 순수 JSON만 반환하세요.`
 }
