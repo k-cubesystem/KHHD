@@ -1,3 +1,4 @@
+/* V10-EMOTIONAL-PREMIUM */
 'use client'
 
 import { motion } from 'framer-motion'
@@ -7,7 +8,6 @@ import { Sparkles, ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-/* V7-GLASS-GOLD-BUTTON */
 export function MasterpieceSection() {
   const router = useRouter()
 
@@ -16,79 +16,180 @@ export function MasterpieceSection() {
   }
 
   return (
-    <Card className="relative overflow-hidden min-h-[240px] flex flex-col justify-center border-[#D4AF37]/20 shadow-lg bg-[#181611]/80 backdrop-blur-md">
-      {/* Background Texture & Decor */}
-      <div className="absolute inset-0 bg-[url('/texture/hanji_pattern.png')] bg-repeat opacity-[0.05] mix-blend-overlay" />
+    <div className="w-full max-w-[480px] mx-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className={cn(
+          'relative overflow-hidden rounded-2xl',
+          'bg-gradient-to-b from-[#0C0A07] via-[#131109] to-[#0C0A07]',
+          'border border-[#D4AF37]/15',
+          'shadow-[0_8px_48px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(212,175,55,0.08)]'
+        )}
+      >
+        {/* Watermark 命 character */}
+        <div
+          aria-hidden="true"
+          className="absolute right-[-0.5rem] top-1/2 -translate-y-1/2 select-none pointer-events-none"
+          style={{
+            fontSize: '22rem',
+            lineHeight: 1,
+            opacity: 0.03,
+            color: '#D4AF37',
+            fontFamily: 'serif',
+            fontWeight: 700,
+            letterSpacing: '-0.05em',
+          }}
+        >
+          命
+        </div>
 
-      {/* Subtler Ambient Glows */}
-      <div className="absolute top-[-20%] right-[-10%] w-[300px] h-[300px] bg-[#D4AF37]/10 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] left-[-10%] w-[250px] h-[250px] bg-[#D4AF37]/5 rounded-full blur-[60px] pointer-events-none" />
+        {/* Ambient glow — top right */}
+        <div
+          aria-hidden="true"
+          className="absolute top-[-30%] right-[-15%] w-[320px] h-[320px] rounded-full pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(212,175,55,0.18) 0%, transparent 70%)',
+            filter: 'blur(40px)',
+          }}
+        />
 
-      <div className="relative z-10 px-8 py-10 flex flex-col justify-between h-full gap-8">
-        {/* Top Badge & Title Group */}
-        <div className="space-y-6 w-full">
+        {/* Ambient glow — bottom left */}
+        <div
+          aria-hidden="true"
+          className="absolute bottom-[-20%] left-[-10%] w-[260px] h-[260px] rounded-full pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(212,175,55,0.10) 0%, transparent 70%)',
+            filter: 'blur(50px)',
+          }}
+        />
+
+        {/* Ambient glow — center subtle */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(244,228,186,0.05) 0%, transparent 100%)',
+          }}
+        />
+
+        {/* Hanji texture overlay */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-[0.04]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+            backgroundSize: '200px 200px',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 px-7 py-9 flex flex-col gap-7">
+          {/* Badge */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 border border-[#D4AF37]/30 rounded-full bg-[#D4AF37]/10 backdrop-blur-sm shadow-inner"
+            transition={{ delay: 0.15, duration: 0.5 }}
+            className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/08"
+            style={{ background: 'rgba(212,175,55,0.08)' }}
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#F4E4BA]" strokeWidth={1.5} />
-            <span className="text-[10px] font-semibold text-[#F4E4BA] tracking-[0.2em] uppercase font-serif">
+            <Sparkles className="w-3 h-3 text-[#F4E4BA]" strokeWidth={1.5} />
+            <span
+              className="text-[9px] font-semibold tracking-[0.28em] text-[#F4E4BA]/90"
+              style={{ fontVariant: 'small-caps', textTransform: 'uppercase' }}
+            >
               The Masterpiece
             </span>
           </motion.div>
 
-          <div className="w-full space-y-4">
+          {/* Headline group */}
+          <div className="space-y-3">
             <motion.h2
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-3xl md:text-[2.5rem] font-serif font-medium leading-[1.2] tracking-tight text-white"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="text-2xl font-serif font-medium leading-[1.35] text-white tracking-tight"
               style={{ wordBreak: 'keep-all' }}
             >
-              <span className="italic font-serif bg-gradient-to-br from-[#F4E4BA] via-[#D4AF37] to-[#B8860B] bg-clip-text text-transparent mr-2.5 drop-shadow-sm">
-                인생
+              지금 이 순간도 <br />
+              <span className="bg-gradient-to-r from-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent">
+                당신의 대운
               </span>
-              <span>사주풀이</span>
+              은 <br />
+              흐르고 있습니다
             </motion.h2>
-            <p className="text-[16px] text-white/70 font-sans font-light leading-relaxed break-keep w-full max-w-xl">
-              사주·관상·풍수·손금을 아우르는{' '}
-              <span className="text-white/95 underline underline-offset-4 decoration-[#D4AF37]/50">
-                천지인 통합 분석
-              </span>
-              입니다. 관상과 손금은 변해도{' '}
-              <strong className="text-[#F4E4BA] font-medium">태어난 시간</strong>은 절대 변하지
-              않기에, 당신을 설명하는 가장 완벽한 해답을 만나보세요.
-            </p>
+
+            {/* Accent quote */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="text-[11px] italic text-[#D4AF37]/55 tracking-wide font-serif"
+            >
+              &ldquo;태어난 시간은 절대 거짓말하지 않는다&rdquo;
+            </motion.p>
           </div>
-        </div>
 
-        {/* Action Area - High Emphasis Gold Button */}
-        <div className="w-full pt-1">
-          <Button
-            onClick={handleAnalyze}
-            className={cn(
-              'group relative overflow-hidden w-full h-[64px] rounded-xl transition-all duration-500',
-              'bg-gradient-to-r from-[#D4AF37] via-[#E2C768] to-[#B8860B]',
-              'border border-[#F4E4BA]/30',
-              'shadow-[0_4px_20px_rgba(212,175,55,0.3)] hover:shadow-[0_6px_30px_rgba(212,175,55,0.5)]',
-              'active:scale-[0.98]'
-            )}
+          {/* Gold divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
+
+          {/* Sub copy */}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.6 }}
+            className="text-[13.5px] leading-[1.7] text-white/55 font-light tracking-wide"
+            style={{ wordBreak: 'keep-all' }}
           >
-            {/* Shimmer Effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
+            사주·관상·풍수·손금.{' '}
+            <span className="text-white/75">네 가지 진실이 하나의 운명을 그립니다.</span>
+          </motion.p>
 
-            <div className="relative z-10 flex items-center justify-center gap-3">
-              <span className="text-[17px] font-serif font-bold tracking-widest text-[#0A0A0A] group-hover:text-black transition-colors">
-                분석 시작하기
-              </span>
-              <ArrowRight
-                className="w-5 h-5 text-[#0A0A0A] group-hover:translate-x-1 group-hover:text-black transition-all"
-                strokeWidth={2}
+          {/* CTA Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            whileTap={{ scale: 0.975 }}
+            whileHover={{ scale: 1.015 }}
+          >
+            <Button
+              onClick={handleAnalyze}
+              className={cn(
+                'group relative overflow-hidden w-full h-14 rounded-xl',
+                'bg-gradient-to-r from-[#C9A227] via-[#E2C96A] to-[#B8860B]',
+                'hover:from-[#D4AF37] hover:via-[#F0D97A] hover:to-[#C9A227]',
+                'border border-[#F4E4BA]/20',
+                'shadow-[0_4px_24px_rgba(212,175,55,0.28)] hover:shadow-[0_6px_36px_rgba(212,175,55,0.46)]',
+                'transition-all duration-400',
+                'text-[#0C0A07]'
+              )}
+            >
+              {/* Shimmer sweep */}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"
+                style={{
+                  background:
+                    'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.28) 50%, transparent 60%)',
+                }}
               />
-            </div>
-          </Button>
+
+              <span className="relative z-10 flex items-center justify-center gap-2.5">
+                <span className="text-[15px] font-serif font-bold tracking-[0.12em] text-[#0C0A07]">
+                  나의 운명 풀어보기
+                </span>
+                <ArrowRight
+                  className="w-4 h-4 text-[#0C0A07] group-hover:translate-x-0.5 transition-transform duration-300"
+                  strokeWidth={2.5}
+                />
+              </span>
+            </Button>
+          </motion.div>
         </div>
-      </div>
-    </Card>
+      </motion.div>
+    </div>
   )
 }
