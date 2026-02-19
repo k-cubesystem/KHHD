@@ -2,10 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/actions/user/family'
-import {
-  getFamilyWithMissions,
-  type FamilyMemberWithMissions,
-} from '@/app/actions/user/family-missions'
+import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
 import { FamilyReviewSlide } from '@/components/family/family-review-slide'
@@ -15,28 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Trash2,
-  UserPlus,
-  Plus,
-  Sparkles,
-  User,
-  Edit3,
-  X,
-  History,
-  ChevronRight,
-  Users,
-} from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Trash2, UserPlus, Plus, Sparkles, User, Edit3, X, History, ChevronRight, Users, Shield } from 'lucide-react'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ZodiacTimeSelect } from '@/components/zodiac-time-select'
+import { DokkaebiAvatarSelector } from '@/components/family/dokkaebi-avatar-selector'
 import { createClient } from '@/lib/supabase/client'
 import { GuestCTACard } from '@/components/guest-cta-card'
 import Link from 'next/link'
@@ -51,6 +32,9 @@ interface EditingMember {
   birth_time: string
   calendar_type: string
   gender: string
+  job?: string
+  hobby?: string
+  avatar_id?: string
 }
 
 export default function FamilyPage() {
@@ -62,6 +46,7 @@ export default function FamilyPage() {
   const [editingMember, setEditingMember] = useState<EditingMember | null>(null)
   const [selectedMember, setSelectedMember] = useState<FamilyMemberWithMissions | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string | undefined>(undefined)
 
   const fetchMembers = async () => {
     setLoading(true)
@@ -98,6 +83,7 @@ export default function FamilyPage() {
         toast.success('함께할 인연이 등록되었습니다.')
         fetchMembers()
         setIsFormOpen(false)
+        setSelectedAvatarId(undefined)
       } catch (error: any) {
         toast.error(error.message)
       }
@@ -114,6 +100,7 @@ export default function FamilyPage() {
         toast.success('인연 정보가 수정되었습니다.')
         fetchMembers()
         setEditingMember(null)
+        setSelectedAvatarId(undefined)
       } catch (error: any) {
         toast.error(error.message)
       }
@@ -143,7 +130,11 @@ export default function FamilyPage() {
       birth_time: member.birth_time || '00:00',
       calendar_type: member.calendar_type,
       gender: member.gender,
+      job: member.job,
+      hobby: member.hobby,
+      avatar_id: member.avatar_id,
     })
+    setSelectedAvatarId(member.avatar_id)
     setIsFormOpen(false)
   }
 
@@ -225,10 +216,30 @@ export default function FamilyPage() {
         </p>
 
         {/* Stats Indicator */}
-        <div className="flex items-center justify-center gap-2 text-xs text-ink-light/40 mt-4">
-          <span className="w-1 h-1 rounded-full bg-primary/50" />
-          <span>현재 {members.length}명의 소중한 인연을 지키고 있어요</span>
-          <span className="w-1 h-1 rounded-full bg-primary/50" />
+        {/* Stats Indicator (Guardian Animation) */}
+        <div className="flex justify-center mt-6">
+          <div className="relative group">
+            {/* Outer Glow/Border Effect - Fire Theme - Reduced Intensity */}
+            <div className="absolute -inset-2 bg-gradient-to-t from-red-600/40 via-orange-500/30 to-yellow-400/20 rounded-full opacity-40 blur-[4px] group-hover:opacity-60 group-hover:blur-[8px] transition-all duration-500 animate-pulse mix-blend-screen" />
+
+            {/* Content Container - Reduced Border/Shadow */}
+            <div className="relative z-10 flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-black/80 border border-orange-500/30 shadow-[0_0_15px_rgba(255,87,34,0.2)] overflow-hidden backdrop-blur-sm">
+              {/* Internal Fire Animation - Subtle */}
+              <div className="absolute inset-0 bg-gradient-to-t from-orange-600/10 via-orange-500/5 to-transparent animate-pulse delay-75 mix-blend-screen opacity-50" />
+
+              <div className="relative z-10">
+                <Shield className="w-4 h-4 text-[#FFD700] fill-orange-500/20" strokeWidth={2.5} />
+                <div className="absolute inset-0 bg-orange-500 blur-[8px] opacity-60 animate-ping duration-[3000ms]" />
+              </div>
+              <span className="relative z-10 text-xs text-[#FFD700] font-medium tracking-wide">
+                현재{' '}
+                <span className="font-bold text-base mx-0.5 text-white shadow-orange-500/50 drop-shadow-sm">
+                  {members.length}
+                </span>
+                명의 소중한 인연을 수호하고 있습니다
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -250,6 +261,8 @@ export default function FamilyPage() {
                   setSelectedMember(member)
                   setIsSheetOpen(true)
                 }}
+                onEdit={startEditing}
+                onDelete={handleDeleteMember}
               />
             ))}
           </div>
@@ -258,12 +271,8 @@ export default function FamilyPage() {
             <div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 text-primary/40 border border-white/5">
               <UserPlus className="w-6 h-6" strokeWidth={1} />
             </div>
-            <h4 className="text-base font-serif font-light text-ink-light mb-1">
-              아직 등록된 인연이 없네요.
-            </h4>
-            <p className="text-sm text-ink-light/50 font-sans font-light">
-              {BRAND_QUOTES.family.empty}
-            </p>
+            <h4 className="text-base font-serif font-light text-ink-light mb-1">아직 등록된 인연이 없네요.</h4>
+            <p className="text-sm text-ink-light/50 font-sans font-light">{BRAND_QUOTES.family.empty}</p>
           </div>
         )}
       </section>
@@ -271,11 +280,7 @@ export default function FamilyPage() {
       {/* Add Button Area */}
       <div className="px-3">
         {!isFormOpen && !editingMember && (
-          <Button
-            onClick={() => setIsFormOpen(true)}
-            variant="outline"
-            className="w-full py-4 rounded-xl"
-          >
+          <Button onClick={() => setIsFormOpen(true)} variant="outline" className="w-full py-4 rounded-xl">
             <Plus className="w-5 h-5 mr-2" strokeWidth={1} />
             새로운 인연 등록하기
           </Button>
@@ -289,10 +294,9 @@ export default function FamilyPage() {
 
       {/* Registration Form (Only shows when active) */}
       {(isFormOpen || editingMember) && (
-        <div className="px-6 fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <Card className="w-full max-w-sm border border-primary/30 bg-[#151515] shadow-2xl rounded-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-            {/* ... Existing Form Logic ... */}
-            <CardHeader className="pb-4 border-b border-white/5 bg-surface/50">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 pb-20 sm:pb-4">
+          <Card className="w-full max-w-sm rounded-2xl border border-primary/30 bg-[#151515] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col max-h-[65vh]">
+            <CardHeader className="py-4 border-b border-white/5 bg-surface/50 shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg font-serif font-light text-ink-light">
                   {editingMember ? '인연 정보 수정' : '새 인연 맺기'}
@@ -300,36 +304,72 @@ export default function FamilyPage() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-8 w-8"
                   onClick={() => {
                     setIsFormOpen(false)
                     setEditingMember(null)
+                    setSelectedAvatarId(undefined)
                   }}
                 >
                   <X className="w-5 h-5" strokeWidth={1} />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="pt-6">
-              <form
-                action={async (formData) => {
-                  if (editingMember) await handleUpdateMember(formData)
-                  else await handleAddMember(formData)
-                }}
-                className="flex flex-col gap-4"
-              >
+
+            <form
+              action={async (formData) => {
+                if (editingMember) await handleUpdateMember(formData)
+                else await handleAddMember(formData)
+              }}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
+              <CardContent className="flex-1 overflow-y-auto pt-6 px-6 pb-6 space-y-5">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-primary/80">이름</Label>
-                  <Input name="name" defaultValue={editingMember?.name} required />
+                  <Input name="name" defaultValue={editingMember?.name} required className="bg-black/20" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-primary/80">관계</Label>
-                  <Input
-                    name="relationship"
-                    defaultValue={editingMember?.relationship}
-                    placeholder="예: 배우자"
-                    required
-                  />
+                  <Select name="relationship" defaultValue={editingMember?.relationship || '자녀'}>
+                    <SelectTrigger className="bg-black/30 border-white/10">
+                      <SelectValue placeholder="관계 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="자녀">자녀</SelectItem>
+                      <SelectItem value="배우자">배우자</SelectItem>
+                      <SelectItem value="부">부 (아버지)</SelectItem>
+                      <SelectItem value="모">모 (어머니)</SelectItem>
+                      <SelectItem value="형제">형제</SelectItem>
+                      <SelectItem value="자매">자매</SelectItem>
+                      <SelectItem value="친구">친구/지인</SelectItem>
+                      <SelectItem value="연인">연인</SelectItem>
+                      <SelectItem value="동료">동료</SelectItem>
+                      <SelectItem value="기타">기타</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-primary/80">직업 (선택)</Label>
+                    <Input
+                      name="job"
+                      defaultValue={editingMember?.job}
+                      placeholder="예: 학생"
+                      className="bg-black/20"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-primary/80">취미 (선택)</Label>
+                    <Input
+                      name="hobby"
+                      defaultValue={editingMember?.hobby}
+                      placeholder="예: 독서"
+                      className="bg-black/20"
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs text-primary/80">생년월일</Label>
@@ -338,7 +378,7 @@ export default function FamilyPage() {
                       type="date"
                       defaultValue={editingMember?.birth_date}
                       required
-                      className="[color-scheme:dark]"
+                      className="[color-scheme:dark] bg-black/20"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -346,15 +386,13 @@ export default function FamilyPage() {
                     <ZodiacTimeSelect
                       name="birth_time"
                       defaultValue={editingMember?.birth_time}
-                      className="input-manse text-white"
+                      className="input-manse text-white bg-black/20"
                     />
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-3">
-                  <Select
-                    name="calendar_type"
-                    defaultValue={editingMember?.calendar_type || 'solar'}
-                  >
+                  <Select name="calendar_type" defaultValue={editingMember?.calendar_type || 'solar'}>
                     <SelectTrigger className="bg-black/30 border-white/10">
                       <SelectValue />
                     </SelectTrigger>
@@ -374,21 +412,31 @@ export default function FamilyPage() {
                   </Select>
                 </div>
 
-                <Button type="submit" disabled={isPending} className="h-12 mt-2">
-                  {isPending ? '저장 중...' : '저장완료'}
+                <div className="space-y-3 pt-2 border-t border-white/5">
+                  <Label className="text-xs text-primary/80 flex items-center justify-between">
+                    <span>수호 도깨비 (오행)</span>
+                    <span className="text-[10px] text-ink-light/40 font-normal">성향에 맞는 기운을 선택하세요</span>
+                  </Label>
+                  <DokkaebiAvatarSelector selectedId={selectedAvatarId} onSelect={setSelectedAvatarId} />
+                </div>
+              </CardContent>
+
+              <div className="p-4 border-t border-white/10 bg-[#121212] shrink-0">
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full h-10 text-sm font-medium bg-[#D4AF37] hover:bg-[#B8860B] text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                >
+                  {isPending ? '저장 중...' : '저장 완료'}
                 </Button>
-              </form>
-            </CardContent>
+              </div>
+            </form>
           </Card>
         </div>
       )}
 
       {/* Mission Detail Sheet */}
-      <MissionDetailSheet
-        isOpen={isSheetOpen}
-        onClose={() => setIsSheetOpen(false)}
-        member={selectedMember}
-      />
+      <MissionDetailSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} member={selectedMember} />
     </div>
   )
 }

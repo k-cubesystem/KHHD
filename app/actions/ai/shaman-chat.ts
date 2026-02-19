@@ -11,6 +11,56 @@ const DAILY_FREE_QUESTIONS = 10
 const PURCHASE_COST = 1 // 1만냥 (wallets.balance 단위: 1 = 1만냥)
 const PURCHASE_QUESTIONS = 20 // 회
 
+const HAEHWAJIGI_SYSTEM_PROMPT = `
+1. 페르소나 (Identity)
+이름: 해화지기 (解花지기)
+정체성: 청담해화당 소속의 수석 운명 가이드. 명리학 전문가, 청소년/부부 심리 상담가, 사업 전략 컨설턴트의 지능을 통합한 존재.
+말투 (Tone & Manner):
+- 관상가 박성준 스타일: 차분하고 담백하며, 단어 선택이 지적이고 우아함.
+- 감정적 동요 없이 현상을 관조하듯 말하되, 상대의 아픔을 깊이 이해하는 조력자의 태도.
+- 말끝은 "~하는 기운이 보입니다", "~의 흐름이 읽히는군요", "~가 필요한 시점입니다" 등 격조 있는 종결어미 사용.
+
+2. 상담의 핵심 원칙 (Consulting Rules)
+① 데이터 기반 상담 (Data-Driven)
+- 사용자의 질문이 입력되면, 반드시 제공된 만세력/사주 정보를 참조하여 분석한다.
+- 추측성 답변을 배제하고, 오행의 상생상극과 합충형해(合沖刑害)를 기반으로 논리적인 근거를 제시한다.
+② 상담의 구조 (Bitter-to-Sweet Strategy)
+- 쓴맛 선제시 (Weakness/Danger): 답변의 초반부에는 사주 원국의 취약점, 현재 운에서 주의해야 할 점, 고통의 원인을 직언한다.
+- 단맛 마무리 (Strength/Opportunity): 후반부에는 약점을 보완할 수 있는 장점, 개운(開運)법, 운이 풀리는 시기를 제시하며 희망차게 마무리한다.
+
+3. 실시간 컨텍스트 반영
+- 현재 날짜와 절기, 날씨를 고려하여 인사를 건넨다. (현재: {{date}})
+- 사회적 이슈나 계절적 특성을 사주적 관점으로 해석한다.
+
+4. 분야별 가이드
+- 인생사/재물: 운 흐름에 따른 공수 전환 타이밍 조언.
+- 자녀/청소년: 기질에 맞는 교육 및 진로.
+- 부부/가족: 상대방과의 합을 통한 갈등 분석.
+- 사업/이사: 방위와 택일의 이로움.
+
+5. 제약 사항
+- 이름은 반드시 '해화지기'로 유지.
+- 의학/법적 판단은 전문가 영역임을 명시하되 명리학적 가이드는 확실히 제공.
+`
+
+const RANDOM_STARTERS = [
+  '오늘의 총운이 궁금해요',
+  '이번 달 재물운 흐름은?',
+  '이직하기 좋은 시기가 언제인가요?',
+  '올해 연애운과 결혼운 알려줘',
+  '건강상 주의해야 할 점은?',
+  '꿈해몽 부탁드려요',
+  '나에게 맞는 행운의 색깔은?',
+  '시험 합격운이 있을까요?',
+  '이사 가기 좋은 방향은?',
+  '사업을 시작해도 될까요?',
+  '자녀 진로 상담 부탁해요',
+  '부부 갈등 해결책이 있을까요?',
+  '올해 삼재에 해당하나요?',
+  '귀인을 만날 수 있을까요?',
+  '재물운이 좋아지는 습관은?',
+]
+
 // --- Helpers ---
 
 const getGeminiModel = () => {
@@ -23,11 +73,7 @@ const getGeminiModel = () => {
 async function getSystemPromptFromDB(key: string, variables: Record<string, string> = {}) {
   try {
     const adminSupabase = createAdminClient()
-    const { data } = await adminSupabase
-      .from('ai_prompts')
-      .select('template')
-      .eq('key', key)
-      .single()
+    const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', key).single()
     if (data?.template) {
       let text = data.template
       for (const [k, v] of Object.entries(variables)) {
@@ -100,17 +146,8 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
     // 병렬 조회: 지갑 잔액(role 특수처리 포함) + 오늘 사용 횟수 + 구매 질문권
     const [walletBalance, usageResult, creditsResult] = await Promise.all([
       getWalletBalance(), // admin=999, tester=100, 일반=실제 잔액
-      supabase
-        .from('ai_chat_usage')
-        .select('total_turns')
-        .eq('user_id', user.id)
-        .eq('usage_date', today)
-        .maybeSingle(),
-      supabase
-        .from('shaman_question_credits')
-        .select('purchased_credits')
-        .eq('user_id', user.id)
-        .maybeSingle(),
+      supabase.from('ai_chat_usage').select('total_turns').eq('user_id', user.id).eq('usage_date', today).maybeSingle(),
+      supabase.from('shaman_question_credits').select('purchased_credits').eq('user_id', user.id).maybeSingle(),
     ])
     const dailyFreeUsed = usageResult.data?.total_turns ?? 0
     const dailyFreeRemaining = Math.max(0, DAILY_FREE_QUESTIONS - dailyFreeUsed)
@@ -151,22 +188,14 @@ export async function purchaseShamanQuestions(): Promise<{
     const adminClient = createAdminClient()
 
     // 0. role 확인 (admin/tester는 실제 복채 차감 없이 질문권 지급)
-    const { data: profileData } = await adminClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
+    const { data: profileData } = await adminClient.from('profiles').select('role').eq('id', user.id).maybeSingle()
 
     const isPrivileged = profileData?.role === 'admin'
     let finalBalance: number = isPrivileged ? 999 : 0
 
     if (!isPrivileged) {
       // 1. 일반 유저: 지갑 잔액 확인 및 차감
-      const { data: wallet } = await adminClient
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      const { data: wallet } = await adminClient.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
 
       const currentBalance = wallet?.balance ?? 0
       if (currentBalance < PURCHASE_COST) {
@@ -232,7 +261,7 @@ export async function purchaseShamanQuestions(): Promise<{
 export async function sendShamanChatMessage(
   message: string,
   conversationHistory: ShamanChatMessage[],
-  turnCount: number
+  _turnCount: number
 ): Promise<ShamanChatResponse> {
   try {
     const supabase = await createClient()
@@ -271,10 +300,7 @@ export async function sendShamanChatMessage(
     } else {
       // 구매 질문권 소비 (purchased_credits 감소)
       const newCredits = Math.max(0, status.purchasedCredits - 1)
-      await adminClient
-        .from('shaman_question_credits')
-        .update({ purchased_credits: newCredits })
-        .eq('user_id', user.id)
+      await adminClient.from('shaman_question_credits').update({ purchased_credits: newCredits }).eq('user_id', user.id)
     }
 
     // 3. 사용자 컨텍스트 조회
@@ -318,8 +344,8 @@ export async function sendShamanChatMessage(
       (await getSystemPromptFromDB('shaman_chat', {
         name: profile?.full_name || '내담자',
         context: userContext,
-      })) ||
-      '당신은 해화당의 AI 신당(神堂)을 지키는 멘토입니다. 사주명리학과 명상의 지혜로 내담자의 고민에 깊이 있는 조언을 드리세요. 따뜻하면서도 통찰력 있는 답변을 해주세요.'
+        date: today,
+      })) || HAEHWAJIGI_SYSTEM_PROMPT.replace('{{date}}', today)
 
     const model = getGeminiModel()
     const chat = model.startChat({
@@ -329,9 +355,7 @@ export async function sendShamanChatMessage(
       })),
     })
 
-    const result = await chat.sendMessage(
-      `${systemPrompt}\n\n[내담자 정보]\n${userContext}\n\n[질문]\n${message}`
-    )
+    const result = await chat.sendMessage(`${systemPrompt}\n\n[내담자 정보]\n${userContext}\n\n[질문]\n${message}`)
     const responseText = result.response.text()
 
     // 5. 추천 질문 생성
@@ -354,14 +378,7 @@ export async function sendShamanChatMessage(
 export async function getShamanChatStarters() {
   return {
     success: true,
-    questions: [
-      '오늘의 총운이 궁금해요',
-      '이번 달 재물운 흐름은?',
-      '이직하기 좋은 시기가 언제인가요?',
-      '올해 연애운과 결혼운 알려줘',
-      '건강상 주의해야 할 점은?',
-      '꿈해몽 부탁드려요',
-    ],
+    questions: RANDOM_STARTERS.sort(() => 0.5 - Math.random()).slice(0, 6),
   }
 }
 

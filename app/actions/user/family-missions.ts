@@ -10,6 +10,9 @@ export interface FamilyMemberWithMissions {
   birth_time: string | null
   calendar_type: string
   gender: string
+  job?: string
+  hobby?: string
+  avatar_id?: string
   face_image_url: string | null
   last_analysis_date: string | null
   last_analysis_summary: string | null
@@ -64,9 +67,7 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
           .order('created_at', { ascending: false })
 
         // Get unique categories
-        const completedCategories = analyses
-          ? Array.from(new Set(analyses.map((a) => a.category).filter(Boolean)))
-          : []
+        const completedCategories = analyses ? Array.from(new Set(analyses.map((a) => a.category).filter(Boolean))) : []
 
         // Get last analysis
         const lastAnalysis = analyses && analyses.length > 0 ? analyses[0] : null
@@ -79,6 +80,9 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
           birth_time: member.birth_time,
           calendar_type: member.calendar_type,
           gender: member.gender,
+          job: member.job,
+          hobby: member.hobby,
+          avatar_id: member.avatar_id,
           face_image_url: member.face_image_url,
           last_analysis_date: lastAnalysis?.created_at || null,
           last_analysis_summary: lastAnalysis?.summary || null,

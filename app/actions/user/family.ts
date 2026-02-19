@@ -85,6 +85,9 @@ export async function addFamilyMember(formData: FormData) {
     birth_time: birthTime,
     calendar_type: formData.get('calendar_type') as string, // 'solar' | 'lunar'
     gender: formData.get('gender') as string,
+    job: formData.get('job') as string,
+    hobby: formData.get('hobby') as string,
+    avatar_id: formData.get('avatar_id') as string,
   }
 
   const { error } = await supabase.from('family_members').insert([rawData])
@@ -122,13 +125,12 @@ export async function updateFamilyMember(formData: FormData) {
     birth_time: birthTime,
     calendar_type: formData.get('calendar_type') as string,
     gender: formData.get('gender') as string,
+    job: formData.get('job') as string,
+    hobby: formData.get('hobby') as string,
+    avatar_id: formData.get('avatar_id') as string,
   }
 
-  const { error } = await supabase
-    .from('family_members')
-    .update(rawData)
-    .eq('id', id)
-    .eq('user_id', user.id)
+  const { error } = await supabase.from('family_members').update(rawData).eq('id', id).eq('user_id', user.id)
 
   if (error) {
     console.error('Error updating family member:', error.message)
@@ -148,11 +150,7 @@ export async function deleteFamilyMember(id: string) {
     throw new Error('인증된 사용자가 아닙니다.')
   }
 
-  const { error } = await supabase
-    .from('family_members')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
+  const { error } = await supabase.from('family_members').delete().eq('id', id).eq('user_id', user.id)
 
   if (error) {
     console.error('Error deleting family member:', error.message)
@@ -160,4 +158,5 @@ export async function deleteFamilyMember(id: string) {
   }
 
   revalidatePath('/protected/family')
+  revalidatePath('/protected')
 }
