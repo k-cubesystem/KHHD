@@ -2,24 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Heart, UserPlus, Fingerprint, ScanFace, Hand, Activity } from 'lucide-react'
-
-interface FaceReadingData {
-  overall?: string
-  forehead?: string
-  eyes?: string
-  nose?: string
-  mouth?: string
-  face_score?: number
-}
-
-interface PalmReadingData {
-  overall?: string
-  life_line?: string
-  head_line?: string
-  heart_line?: string
-  fate_line?: string
-  palm_score?: number
-}
+import { FaceReadingData, PalmReadingData } from '@/types/cheonjiin'
 
 interface InSectionProps {
   data: {
@@ -39,7 +22,7 @@ function MiniScoreRing({ value, color }: { value: number; color: string }) {
     <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
       <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 32 32" aria-hidden="true">
         <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
-        <circle
+        <motion.circle
           cx="16"
           cy="16"
           r={r}
@@ -48,12 +31,20 @@ function MiniScoreRing({ value, color }: { value: number; color: string }) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeDasharray={circ}
-          strokeDashoffset={circ - (circ * value) / 100}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: circ - (circ * value) / 100 }}
+          transition={{ duration: 1.2, ease: 'easeOut' }}
         />
       </svg>
-      <span className="text-[9px] font-bold" style={{ color }}>
+      <motion.span
+        className="text-[9px] font-bold"
+        style={{ color }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+      >
         {value}
-      </span>
+      </motion.span>
     </div>
   )
 }

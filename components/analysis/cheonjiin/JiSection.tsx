@@ -2,13 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Compass, Mountain, Home, Briefcase, Lightbulb, Palette } from 'lucide-react'
-
-interface FengshuiData {
-  home_energy?: string
-  work_energy?: string
-  advice?: string
-  lucky_color_for_home?: string
-}
+import { FengshuiData } from '@/types/cheonjiin'
 
 interface JiSectionProps {
   data: {
@@ -112,7 +106,7 @@ export function JiSection({ data }: JiSectionProps) {
                     </div>
                   )}
 
-                  {fengshui.work_energy && fengshui.work_energy !== '직장 주소 정보 없음' && (
+                  {fengshui.work_energy && fengshui.work_energy.trim() && (
                     <div className="bg-blue-950/20 border border-blue-500/20 rounded-xl p-4 space-y-2">
                       <div className="flex items-center gap-2">
                         <Briefcase className="w-4 h-4 text-blue-400" aria-hidden="true" />

@@ -94,13 +94,26 @@ export async function analyzeCheonjiinAction(
     // additionalData가 있으면 우선 사용, 없으면 target 데이터 사용
     const workAddress = await getWorkAddress(user.id)
 
-    // 이미지 raw URL (base64 or storage URL) - 텍스트 프롬프트에 직접 주입하지 않음
+    // 이미지 raw URL (base64 or storage URL)
     const rawFaceImageUrl = additionalData?.faceImageUrl || target.face_image_url || null
     const rawHandImageUrl = additionalData?.handImageUrl || target.hand_image_url || null
 
-    // base64 이미지 데이터 추출 (멀티모달 API용)
-    const faceImagePart = extractBase64ImagePart(rawFaceImageUrl)
-    const handImagePart = extractBase64ImagePart(rawHandImageUrl)
+    // 멀티모달 API용 이미지 Part 변환 (base64 직접 or storage URL fetch)
+    const [faceImagePart, handImagePart] = await Promise.all([
+      resolveImagePart(rawFaceImageUrl),
+      resolveImagePart(rawHandImageUrl),
+    ])
+
+    const homeAddress = additionalData?.homeAddress || target.home_address || '정보 없음'
+    const resolvedWorkAddress = additionalData?.workAddress || workAddress || '정보 없음'
+
+    // 이미지/주소 플래그 (프롬프트 조건 분기용) — Part 존재 여부로만 판별
+    const imageFlags = {
+      hasFaceImage: faceImagePart !== null,
+      hasHandImage: handImagePart !== null,
+      hasFengshui: homeAddress !== '정보 없음' || resolvedWorkAddress !== '정보 없음',
+      hasWorkAddress: resolvedWorkAddress !== '정보 없음',
+    }
 
     const variables = {
       // 기본 정보
@@ -117,20 +130,12 @@ export async function analyzeCheonjiinAction(
       daewoon: formatDaewoon(daewoon),
 
       // 지(地) - 풍수 데이터 (주소)
-      homeAddress: additionalData?.homeAddress || target.home_address || '정보 없음',
-      workAddress: additionalData?.workAddress || workAddress || '정보 없음',
+      homeAddress,
+      workAddress: resolvedWorkAddress,
 
-      // 인(人) - 관상·손금 데이터 (이미지는 텍스트 대신 플래그만, 실제 이미지는 multimodal Part로 전달)
-      faceImageUrl: faceImagePart
-        ? '관상 이미지 첨부됨 (별도 이미지 참조)'
-        : rawFaceImageUrl
-          ? '이미지 URL 제공됨'
-          : '관상 이미지 없음',
-      handImageUrl: handImagePart
-        ? '손금 이미지 첨부됨 (별도 이미지 참조)'
-        : rawHandImageUrl
-          ? '이미지 URL 제공됨'
-          : '손금 이미지 없음',
+      // 인(人) - 이미지는 multimodal Part로 전달, 텍스트엔 첨부 여부만 표시
+      faceImageUrl: imageFlags.hasFaceImage ? '관상 이미지 첨부됨 (별도 이미지 참조)' : '관상 이미지 없음',
+      handImageUrl: imageFlags.hasHandImage ? '손금 이미지 첨부됨 (별도 이미지 참조)' : '손금 이미지 없음',
     }
 
     // 8. DB 프롬프트 조회 및 AI 분석
@@ -140,7 +145,7 @@ export async function analyzeCheonjiinAction(
     } catch (error) {
       // 프롬프트가 DB에 없으면 기본 프롬프트 사용
       console.warn('DB 프롬프트 조회 실패, 기본 프롬프트 사용:', error)
-      prompt = getDefaultCheonjiinPrompt(variables)
+      prompt = getDefaultCheonjiinPrompt(variables, imageFlags)
     }
 
     const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
@@ -196,14 +201,62 @@ async function getRecentAnalysis(targetId: string): Promise<{ data: any; date: s
 }
 
 /**
- * base64 데이터 URL에서 Gemini inlineData Part 추출
- * "data:image/jpeg;base64,..." → { mimeType, data } 또는 null
+ * AI 응답 텍스트에서 JSON 추출 (마크다운 코드블록 제거 포함)
  */
-function extractBase64ImagePart(imageUrl: string | null | undefined): { mimeType: string; data: string } | null {
+function extractJSON(text: string): Record<string, unknown> {
+  // ```json ... ``` 또는 ``` ... ``` 블록 제거 시도
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/)
+  const raw = codeBlockMatch ? codeBlockMatch[1] : text
+
+  // 첫 { 부터 마지막 } 까지 추출 (앞뒤 쓰레기 텍스트 제거)
+  const jsonMatch = raw.match(/\{[\s\S]+\}/)
+  if (!jsonMatch) {
+    throw new Error('AI 응답에서 JSON을 찾을 수 없습니다.')
+  }
+
+  try {
+    return JSON.parse(jsonMatch[0])
+  } catch {
+    throw new Error('AI 응답 JSON 파싱 실패: ' + jsonMatch[0].slice(0, 200))
+  }
+}
+
+/**
+ * 이미지 URL을 Gemini inlineData Part로 변환
+ * - base64 data URL: 직접 파싱
+ * - Supabase storage URL (https://...): fetch → base64 변환
+ * - null/undefined: null 반환
+ */
+async function resolveImagePart(
+  imageUrl: string | null | undefined
+): Promise<{ mimeType: string; data: string } | null> {
   if (!imageUrl) return null
-  const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/)
-  if (!match) return null
-  return { mimeType: match[1], data: match[2] }
+
+  // base64 data URL
+  const base64Match = imageUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (base64Match) {
+    return { mimeType: base64Match[1], data: base64Match[2] }
+  }
+
+  // storage URL (https://...) → 서버에서 fetch → base64
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    try {
+      const response = await fetch(imageUrl)
+      if (!response.ok) {
+        console.warn('[CheonjiinAnalysis] 이미지 fetch 실패:', response.status, imageUrl)
+        return null
+      }
+      const mimeType = response.headers.get('content-type') || 'image/jpeg'
+      const buffer = await response.arrayBuffer()
+      const data = Buffer.from(buffer).toString('base64')
+      return { mimeType, data }
+    } catch (err) {
+      console.warn('[CheonjiinAnalysis] 이미지 fetch 오류:', err)
+      return null
+    }
+  }
+
+  return null
 }
 
 /**
@@ -249,8 +302,8 @@ async function analyzeCheonjiinWithAI(
   })
   const text = result.response.text()
 
-  // JSON 파싱
-  const data = JSON.parse(text)
+  // JSON 파싱 (마크다운 코드블록 제거 후 안전하게 파싱)
+  const data = extractJSON(text)
 
   // analysis_history 저장
   await saveAnalysisHistory({
@@ -259,8 +312,8 @@ async function analyzeCheonjiinWithAI(
     target_relation: target.relation_type,
     category: 'SAJU',
     result_json: data,
-    summary: data.summary || '천지인 통합 분석 결과',
-    score: data.score || 80,
+    summary: (data.summary as string) || '천지인 통합 분석 결과',
+    score: (data.score as number) || 80,
     model_used: 'gemini-2.0-flash',
     talisman_cost: 3,
   })
@@ -273,12 +326,15 @@ async function analyzeCheonjiinWithAI(
 /**
  * 기본 천지인 프롬프트 (DB 조회 실패 시 사용)
  */
-function getDefaultCheonjiinPrompt(vars: Record<string, string>): string {
-  const hasFaceImage = vars.faceImageUrl !== '관상 이미지 없음'
-  const hasHandImage = vars.handImageUrl !== '손금 이미지 없음'
-  const hasHomeAddress = vars.homeAddress !== '정보 없음'
-  const hasWorkAddress = vars.workAddress !== '정보 없음'
-  const hasFengshui = hasHomeAddress || hasWorkAddress
+function getDefaultCheonjiinPrompt(
+  vars: Record<string, string>,
+  flags?: { hasFaceImage: boolean; hasHandImage: boolean; hasFengshui: boolean; hasWorkAddress: boolean }
+): string {
+  // flags가 없으면 (DB 프롬프트 경로 등) 변수 텍스트로 fallback 판별
+  const hasFaceImage = flags?.hasFaceImage ?? vars.faceImageUrl !== '관상 이미지 없음'
+  const hasHandImage = flags?.hasHandImage ?? vars.handImageUrl !== '손금 이미지 없음'
+  const hasFengshui = flags?.hasFengshui ?? vars.homeAddress !== '정보 없음'
+  const hasWorkAddress = flags?.hasWorkAddress ?? vars.workAddress !== '정보 없음'
 
   return `당신은 해화당의 전문 명리학 AI입니다. 사주·풍수·관상·손금을 통합하는 천지인(天地人) 분석을 수행하세요.
 
