@@ -12,7 +12,7 @@ interface FamilyFortuneStatusProps {
 export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
   const memberCount = members.length
   // 최대 4명까지 이름 표시
-  const displayMembers = members.slice(0, 4)
+  const displayMembers = members.filter((m) => m?.name).slice(0, 4)
   const remaining = memberCount > 4 ? memberCount - 4 : 0
 
   return (
@@ -139,7 +139,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                         color: '#0a0807',
                       }}
                     >
-                      {member.name.slice(0, 1)}
+                      {member.name?.slice(0, 1) ?? '?'}
                     </div>
                     <span
                       className="text-[12px] font-serif font-medium"
