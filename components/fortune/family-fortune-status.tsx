@@ -62,7 +62,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <h3
-                  className="text-[1.15rem] font-serif font-medium leading-[1.3] text-white"
+                  className="text-[1.3rem] font-serif font-medium leading-[1.3] text-white"
                   style={{ wordBreak: 'keep-all' }}
                 >
                   당신은 가족의{' '}
@@ -77,7 +77,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                   </span>
                 </h3>
                 <p
-                  className="text-[11.5px] font-light"
+                  className="text-[13px] font-light"
                   style={{ color: 'rgba(255,255,255,0.45)', wordBreak: 'keep-all' }}
                 >
                   소중한 인연들의 운을 함께 챙겨주세요
@@ -99,7 +99,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                   style={{ background: '#D4AF37', boxShadow: '0 0 6px rgba(212,175,55,0.8)' }}
                 />
                 <span
-                  className="text-[10px] font-medium tracking-wide"
+                  className="text-[11.5px] font-medium tracking-wide"
                   style={{ color: '#F4E4BA' }}
                 >
                   운이 들어오는 중
@@ -133,7 +133,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                   >
                     {/* 이니셜 원 */}
                     <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-serif font-bold flex-shrink-0"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-serif font-bold flex-shrink-0"
                       style={{
                         background: 'linear-gradient(135deg, #D4AF37, #8C6A20)',
                         color: '#0a0807',
@@ -142,7 +142,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                       {member.name?.slice(0, 1) ?? '?'}
                     </div>
                     <span
-                      className="text-[12px] font-serif font-medium"
+                      className="text-[14px] font-serif font-medium"
                       style={{ color: 'rgba(244,228,186,0.85)' }}
                     >
                       {member.name}
@@ -151,7 +151,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                 ))}
                 {remaining > 0 && (
                   <div
-                    className="flex items-center px-3 py-1.5 rounded-full text-[11px]"
+                    className="flex items-center px-3 py-1.5 rounded-full text-[13px]"
                     style={{
                       background: 'rgba(255,255,255,0.03)',
                       border: '1px dashed rgba(212,175,55,0.2)',
@@ -172,7 +172,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
             )}
 
             {/* ── 명언 ── */}
-            <p className="text-[11px] italic font-serif" style={{ color: 'rgba(212,175,55,0.4)' }}>
+            <p className="text-[12.5px] italic font-serif" style={{ color: 'rgba(212,175,55,0.4)' }}>
               &ldquo;가족의 운이 모이면 집안의 기운이 완성됩니다&rdquo;
             </p>
 
@@ -188,7 +188,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
             {/* ── 하단: 관리하러 가기 ── */}
             <div className="flex items-center justify-end">
               <div
-                className="flex items-center gap-1 text-[12px] font-medium group-hover:gap-1.5 transition-all duration-300"
+                className="flex items-center gap-1 text-[13.5px] font-medium group-hover:gap-1.5 transition-all duration-300"
                 style={{ color: 'rgba(212,175,55,0.7)' }}
               >
                 <span>가족 운 관리하러 가기</span>
