@@ -22,7 +22,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Search, Loader2, ChevronLeft, ChevronRight, UserCog, Trash2, Users } from 'lucide-react'
+import {
+  Search,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+  UserCog,
+  Trash2,
+  Users,
+  RefreshCw,
+  Save,
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -33,6 +43,8 @@ export function UserManagementClient() {
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const [pendingRoles, setPendingRoles] = useState<Record<string, UserRole>>({})
+  const [savingId, setSavingId] = useState<string | null>(null)
   const limit = 10
 
   // Debounce Search
@@ -79,19 +91,39 @@ export function UserManagementClient() {
     }
   }
 
-  const handleRoleChange = async (userId: string, newRole: UserRole) => {
-    const oldUsers = [...users]
+  // Role 선택만 (저장 X) — pendingRoles에 임시 저장
+  const handleRoleSelect = (userId: string, newRole: UserRole) => {
+    const currentUser = users.find((u) => u.id === userId)
+    if (currentUser?.role === newRole) {
+      // 원래 값으로 되돌리면 pending 제거
+      setPendingRoles((prev) => {
+        const next = { ...prev }
+        delete next[userId]
+        return next
+      })
+    } else {
+      setPendingRoles((prev) => ({ ...prev, [userId]: newRole }))
+    }
+  }
 
-    // Optimistic Update
-    setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
-    toast.info('권한을 변경 중입니다...')
+  // 저장 버튼 클릭 시 실제 저장
+  const handleRoleSave = async (userId: string) => {
+    const newRole = pendingRoles[userId]
+    if (!newRole) return
 
+    setSavingId(userId)
     const result = await updateUserRole(userId, newRole)
+    setSavingId(null)
 
     if (result.success) {
-      toast.success('사용자 권한이 변경되었습니다.')
+      setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
+      setPendingRoles((prev) => {
+        const next = { ...prev }
+        delete next[userId]
+        return next
+      })
+      toast.success('권한이 저장되었습니다.')
     } else {
-      setUsers(oldUsers) // Rollback
       toast.error('권한 변경 실패: ' + result.error)
     }
   }
@@ -112,8 +144,18 @@ export function UserManagementClient() {
           />
         </div>
 
-        {/* Pagination */}
+        {/* Refresh + Pagination */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={fetchUsers}
+            disabled={loading}
+            title="새로고침"
+            className="h-9 w-9 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
           <Button
             variant="outline"
             size="icon"
@@ -206,17 +248,19 @@ export function UserManagementClient() {
                     </TableCell>
                     <TableCell>
                       <Select
-                        defaultValue={user.role}
-                        onValueChange={(val) => handleRoleChange(user.id, val as UserRole)}
+                        value={pendingRoles[user.id] ?? user.role}
+                        onValueChange={(val) => handleRoleSelect(user.id, val as UserRole)}
                       >
                         <SelectTrigger
                           className={cn(
                             'w-[110px] h-8 border-none font-medium text-xs rounded-md shadow-sm transition-all',
-                            user.role === 'admin'
-                              ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/20'
-                              : user.role === 'tester'
-                                ? 'bg-yellow-500/10 text-yellow-400 ring-1 ring-yellow-500/20 hover:bg-yellow-500/20'
-                                : 'bg-stone-800 text-stone-400 ring-1 ring-stone-700 hover:bg-stone-700 hover:text-stone-300'
+                            pendingRoles[user.id]
+                              ? 'bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/30'
+                              : user.role === 'admin'
+                                ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/20'
+                                : user.role === 'tester'
+                                  ? 'bg-yellow-500/10 text-yellow-400 ring-1 ring-yellow-500/20 hover:bg-yellow-500/20'
+                                  : 'bg-stone-800 text-stone-400 ring-1 ring-stone-700 hover:bg-stone-700 hover:text-stone-300'
                           )}
                         >
                           <SelectValue />
@@ -245,6 +289,22 @@ export function UserManagementClient() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {pendingRoles[user.id] && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-400 hover:text-green-400 hover:bg-green-500/10 rounded-full transition-colors"
+                            onClick={() => handleRoleSave(user.id)}
+                            disabled={savingId === user.id}
+                            title="권한 저장"
+                          >
+                            {savingId === user.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
                         <Link href={`/admin/users/${user.id}`}>
                           <Button
                             variant="ghost"
@@ -319,17 +379,19 @@ export function UserManagementClient() {
                 {/* Role & Actions */}
                 <div className="relative flex items-center justify-between gap-2 pt-3 border-t border-stone-700/30">
                   <Select
-                    defaultValue={user.role}
-                    onValueChange={(val) => handleRoleChange(user.id, val as UserRole)}
+                    value={pendingRoles[user.id] ?? user.role}
+                    onValueChange={(val) => handleRoleSelect(user.id, val as UserRole)}
                   >
                     <SelectTrigger
                       className={cn(
                         'h-7 md:h-8 border font-medium text-xs flex-1 max-w-[110px]',
-                        user.role === 'admin'
-                          ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                          : user.role === 'tester'
-                            ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                            : 'bg-stone-700/30 text-stone-400 border-stone-600/30'
+                        pendingRoles[user.id]
+                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          : user.role === 'admin'
+                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                            : user.role === 'tester'
+                              ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                              : 'bg-stone-700/30 text-stone-400 border-stone-600/30'
                       )}
                     >
                       <SelectValue />
@@ -351,6 +413,22 @@ export function UserManagementClient() {
                   </Select>
 
                   <div className="flex items-center gap-1">
+                    {pendingRoles[user.id] && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-amber-400 hover:text-green-400 hover:bg-green-500/10"
+                        onClick={() => handleRoleSave(user.id)}
+                        disabled={savingId === user.id}
+                        title="권한 저장"
+                      >
+                        {savingId === user.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Save className="w-3.5 h-3.5" />
+                        )}
+                      </Button>
+                    )}
                     <Link href={`/admin/users/${user.id}`}>
                       <Button
                         variant="ghost"

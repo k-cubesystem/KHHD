@@ -26,7 +26,7 @@ export function CompatibilityResult({
   const advice = result.advice || ''
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="bg-gradient-to-b from-background to-muted/20 p-6 pb-12">
         <div className="max-w-2xl mx-auto space-y-8">

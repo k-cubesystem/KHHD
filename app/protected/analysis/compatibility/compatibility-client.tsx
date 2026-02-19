@@ -114,7 +114,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="min-h-screen bg-background relative overflow-hidden py-12 px-4 pb-32"
+      className="min-h-screen bg-background relative overflow-hidden py-12 px-4 pb-24"
     >
       {/* Hanji Texture */}
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />

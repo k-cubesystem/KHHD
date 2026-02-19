@@ -11,11 +11,7 @@ import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
 import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card'
 
 // Dynamic imports for heavy dashboard sections to improve initial load
-const MasterpieceSection = dynamic(
-  () =>
-    import('./dashboard/MasterpieceSection').then((mod) => ({ default: mod.MasterpieceSection })),
-  { ssr: false, loading: () => <div className="h-48 animate-pulse bg-white/5 rounded-lg" /> }
-)
+import { MasterpieceSection } from './dashboard/MasterpieceSection'
 const RelationshipSection = dynamic(
   () =>
     import('./dashboard/RelationshipSection').then((mod) => ({ default: mod.RelationshipSection })),

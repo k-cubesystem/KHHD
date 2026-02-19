@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { UserRole } from '@/types/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, unstable_noStore } from 'next/cache'
 
 export interface AdminUser {
   id: string
@@ -20,6 +20,9 @@ export async function getUsers(
   limit: number = 20,
   search: string = ''
 ): Promise<{ data: AdminUser[]; total: number }> {
+  // 캐시 비활성화 — 신규 가입자가 항상 최신 데이터로 표시되도록
+  unstable_noStore()
+
   try {
     const supabase = await createClient()
 
@@ -33,62 +36,61 @@ export async function getUsers(
       return { data: [], total: 0 }
     }
 
-    // TEMPORARY: Skip admin check due to RLS issue
-    console.log('getUsers: Bypassing admin check (temporary). Fetching profiles...')
-
-    // 2. Use Admin Client to bypass RLS
     const adminClient = createAdminClient()
-    const from = (page - 1) * limit
-    const to = from + limit - 1
 
-    let query = adminClient
-      .from('profiles')
-      .select('id, full_name, role, updated_at, email', { count: 'exact' })
+    // 2. auth.users를 1차 소스로 사용 (신규 가입자 누락 방지)
+    //    profiles trigger 실패 여부와 무관하게 모든 회원 조회 가능
+    const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({
+      perPage: 1000,
+    })
 
-    if (search) {
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`)
-    }
-
-    const {
-      data: rawData,
-      error,
-      count,
-    } = await query.order('updated_at', { ascending: false }).range(from, to)
-
-    if (error) {
-      console.error('[getUsers] Query Error:', error)
+    if (authErr || !authData) {
+      console.error('[getUsers] auth.admin.listUsers 실패:', authErr)
       return { data: [], total: 0 }
     }
 
-    // Fetch real sign-up dates and EMAIL from auth.users
-    const authUserMap: Record<string, { created_at: string; email?: string }> = {}
-    try {
-      const { data: authUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
-      if (authUsers?.users) {
-        for (const u of authUsers.users) {
-          authUserMap[u.id] = {
-            created_at: u.created_at,
-            email: u.email,
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[getUsers] Failed to fetch auth users for created_at', e)
+    // 3. profiles 테이블에서 보조 데이터 조회 (full_name, role)
+    const { data: profiles } = await adminClient
+      .from('profiles')
+      .select('id, full_name, role, email')
+
+    const profileMap: Record<
+      string,
+      { full_name: string | null; role: UserRole; email: string | null }
+    > = {}
+    for (const p of profiles ?? []) {
+      profileMap[p.id] = { full_name: p.full_name, role: p.role ?? 'user', email: p.email }
     }
 
-    const data =
-      rawData?.map((p) => ({
-        ...p,
-        created_at: authUserMap[p.id]?.created_at || p.updated_at, // Use real auth created_at
-        email: p.email || authUserMap[p.id]?.email || null, // Backfill email if missing in profile
-      })) || []
+    // 4. 병합 후 검색 필터 적용
+    let merged: AdminUser[] = authData.users.map((u) => ({
+      id: u.id,
+      email: profileMap[u.id]?.email || u.email || null,
+      full_name: profileMap[u.id]?.full_name || null,
+      role: (profileMap[u.id]?.role as UserRole) || 'user',
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at ?? undefined,
+    }))
 
-    console.log(`[getUsers] Success! Found ${data.length} profiles.`)
-
-    return {
-      data: (data as AdminUser[]) || [],
-      total: count || 0,
+    if (search) {
+      const s = search.toLowerCase()
+      merged = merged.filter(
+        (u) => u.email?.toLowerCase().includes(s) || u.full_name?.toLowerCase().includes(s)
+      )
     }
+
+    // 5. 최신 가입순 정렬 후 페이지네이션
+    merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    const total = merged.length
+    const from = (page - 1) * limit
+    const data = merged.slice(from, from + limit)
+
+    console.log(
+      `[getUsers] auth 기준 ${authData.users.length}명 중 ${data.length}명 반환 (page ${page})`
+    )
+
+    return { data, total }
   } catch (e) {
     console.error('getUsers Critical Error:', e)
     return { data: [], total: 0 }

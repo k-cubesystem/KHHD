@@ -39,7 +39,7 @@ export default async function MyPage() {
   // Guest Preview
   if (isGuest) {
     return (
-      <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
+      <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-24 overflow-x-hidden relative">
         <div className="hanji-overlay" />
 
         {/* Header */}
@@ -210,11 +210,14 @@ export default async function MyPage() {
   const talismanBalance = typeof walletBalance === 'number' ? walletBalance : 0
 
   return (
-    <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-20 overflow-x-hidden relative">
+    <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-24 overflow-x-hidden relative">
       <div className="hanji-overlay" />
 
       {/* Profile Section (Compact & Horizontal) */}
-      <section className="px-3 pt-6 pb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10">
+      <section
+        aria-label="프로필 정보"
+        className="px-3 pt-6 pb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10"
+      >
         <div className="flex items-center gap-4 bg-surface/30 border border-primary/20 rounded-xl p-4">
           <Link href="/protected/settings" className="relative group cursor-pointer flex-shrink-0">
             <div className="w-16 h-16 rounded-full border border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-md group-hover:border-primary/50 transition-all group-hover:scale-105">
@@ -269,7 +272,10 @@ export default async function MyPage() {
       </section>
 
       {/* Stats Section - 복채 & 멤버십 */}
-      <section className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75 relative z-10">
+      <section
+        aria-label="복채 및 멤버십 현황"
+        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-75 relative z-10"
+      >
         <div className="grid grid-cols-2 gap-2">
           {/* 복채 잔액 (Click to Charge) */}
           <Link

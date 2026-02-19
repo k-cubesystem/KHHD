@@ -150,7 +150,7 @@ export default function FamilyPage() {
   // --- Guest View ---
   if (isGuest) {
     return (
-      <div className="flex flex-col gap-10 w-full max-w-[480px] mx-auto py-12 px-3 pb-32">
+      <div className="flex flex-col gap-10 w-full max-w-[480px] mx-auto py-12 px-3 pb-24">
         <section className="space-y-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
           <div className="flex justify-center mb-2">
             <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-light uppercase tracking-widest text-xs backdrop-blur-md">
@@ -193,9 +193,12 @@ export default function FamilyPage() {
 
   // --- Authenticated View ---
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[480px] mx-auto py-8 px-0 pb-32 overflow-x-hidden">
+    <div className="flex flex-col gap-6 w-full max-w-[480px] mx-auto py-8 px-0 pb-24 overflow-x-hidden">
       {/* Storytelling Header */}
-      <section className="relative px-4 pt-4 pb-8 text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <section
+        aria-label="페이지 소개"
+        className="relative px-4 pt-4 pb-8 text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700"
+      >
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-2">
           <Sparkles className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
           <span className="text-[11px] font-medium text-primary tracking-wide">가족 운대 케어</span>
@@ -230,7 +233,7 @@ export default function FamilyPage() {
       </section>
 
       {/* Member Cards */}
-      <div className="min-h-[300px]">
+      <section aria-label="가족 구성원 목록" className="min-h-[300px]">
         {loading ? (
           <div className="px-3 space-y-4">
             <Skeleton className="h-56 w-full rounded-2xl bg-surface/20 border border-white/5" />
@@ -263,7 +266,7 @@ export default function FamilyPage() {
             </p>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Add Button Area */}
       <div className="px-3">
