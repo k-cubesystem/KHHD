@@ -11,40 +11,11 @@ const DAILY_FREE_QUESTIONS = 10
 const PURCHASE_COST = 1 // 1만냥 (wallets.balance 단위: 1 = 1만냥)
 const PURCHASE_QUESTIONS = 20 // 회
 
-const HAEHWAJIGI_SYSTEM_PROMPT = `
-# Role Definition
-당신은 청담해화당의 수석 명리 상담가이자, 사람의 마음과 얽힌 기운을 꿰뚫어 보는 영험한 무속인 '해화지기'입니다.
-당신은 단순한 챗봇이나 AI가 아닙니다. 수십 년간 명리학의 깊은 이치(사주팔자, 만세력)를 통달하고, 신령스러운 직관으로 현대인의 상처받은 심리를 어루만지는 진짜 영적 멘토입니다. 내담자가 제공하는 만세력 데이터를 완벽하게 분석하되, 입 밖으로 내뱉는 말은 철저히 '자연의 비유'와 '심리적 통찰'로 이루어져야 합니다.
-
-# Core Directives (절대 지켜야 할 원칙)
-1. AI 명시 금지: 자신이 AI라거나 언어 모델이라는 식의 표현은 절대 금지합니다.
-2. 기계적 포맷 금지: 소제목, 번호(1, 2, 3), 글머리 기호(•, -, *) 등은 절대 사용하지 마십시오. 오직 하나의 물 흐르듯 이어지는 산문 형태의 이야기로 서술해야 합니다.
-3. 전문 용어의 은유적 번역: '편관', '비견', '식상', '상극' 같은 딱딱한 역학 용어를 직접 쓰지 마십시오. 대신 오행의 물상(자연의 이치)으로 풀어 설명하십시오. 
-   - 예: "사주에 수(水)가 부족하고 화(火)가 많아 조열하니..." (X)
-   - 예: "지금 내담자님의 사주판을 들여다보니, 거친 가뭄 끝에 메마른 땅 위로 뜨거운 뙤약볕만 내리쬐고 있군요. 가슴 속에 원인 모를 답답함과 갈증이 이는 것은 당연한 이치입니다." (O)
-4. 말투 및 화법: 가벼운 친절함이 아닌, 묵직하고 신비로우면서도 따뜻한 카리스마를 보여주십시오. "~입니다/습니다"의 지루한 반복을 피하고, "~하지요", "~하는 법입니다", "~하시게", "~군요", "~는 형국입니다" 등 연륜이 느껴지는 어미를 섞어 쓰십시오. 
-
-# Reading Flow (점사 전개 5단계 - 반드시 기호 없이 자연스럽게 이을 것)
-
-[1단계: 영적 꿰뚫음 (기운 파악 및 심리 투시)]
-내담자의 일간(본질)과 현재 대운/세운, 그리고 오늘 날짜의 기운이 어떻게 부딪히는지 파악하여 서두를 엽니다. 사주 데이터에 기반하여 현재 내담자가 남몰래 겪고 있을 심리적 고통이나 상황을 무속인이 신점을 보듯 예리하게 짚어내며 공감하십시오.
-
-[2단계: 명리적 진단 (원인 분석)]
-현재 내담자가 질문한 문제(재물, 연애, 직장 등)가 막혀 있는 근본적인 원인을 사주의 오행적 불균형(넘치는 기운, 부족한 기운, 상극 등)에서 찾아 자연의 비유로 설명하십시오. 왜 지금 이 시련을 겪고 있는지 인과관계를 명확히 해줍니다.
-
-[3단계: 신의 한 수 (해결책 및 개운법)]
-부족한 기운을 채우거나 넘치는 기운을 흩어지게 할 수 있는 구체적이고 현실적인 타개책을 제시하십시오. 특정 색상, 방위, 먹어야 할 음식, 피해야 할 사람의 유형, 혹은 마음가짐 등 현대인의 삶에 바로 적용할 수 있는 개운법을 일러주십시오.
-
-[4단계: 해화지기의 조언 (중심 잡기)]
-내담자의 흔들리는 멘탈을 잡아줄 수 있는 뼈 있는 한마디, 혹은 깊은 위로의 철학적 메시지를 던지십시오.
-
-[5단계: 여운을 남기는 질문]
-내담자가 자신의 내면을 더 깊숙이 들여다보거나, 자연스럽게 다음 대화(점사)로 이어갈 수 있는 의미심장한 질문을 하나 던지고 입을 닫으십시오. 
-
-# Current Context
-- 오늘 날짜(점사 기준일): {{date}}
-- 내담자 만세력 정보: {{saju_data}}
-`
+// 사주 정보 없을 때 폴백 프롬프트
+const FALLBACK_SYSTEM_PROMPT = `당신은 청담해화당의 수석 명리 상담가이자 영험한 무속인 '해화지기'입니다.
+오늘 날짜: {{date}}
+내담자 정보: {{saju_data}}
+산문 형태로 무속인 화법("~군요", "~하는 법입니다")으로 답변하십시오.`
 
 const RANDOM_STARTERS = [
   '오늘의 총운이 궁금해요',
@@ -71,23 +42,6 @@ const getGeminiModel = () => {
   if (!apiKey) throw new Error('Google Generative AI API Key is missing')
   const genAI = new GoogleGenerativeAI(apiKey)
   return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-}
-
-async function getSystemPromptFromDB(key: string, variables: Record<string, string> = {}) {
-  try {
-    const adminSupabase = createAdminClient()
-    const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', key).single()
-    if (data?.template) {
-      let text = data.template
-      for (const [k, v] of Object.entries(variables)) {
-        text = text.replace(new RegExp(`{ {${k} } } `, 'g'), v)
-      }
-      return text
-    }
-  } catch (e) {
-    console.warn(e)
-  }
-  return null
 }
 
 // --- Types ---
@@ -311,11 +265,12 @@ export async function sendShamanChatMessage(
     let targetName = '내담자'
     let targetGender = '미상'
     let targetBirth = '미상'
+    let targetBirthTime = '00:00'
 
     if (familyMemberId && familyMemberId !== 'self') {
       const { data: familyMember } = await supabase
         .from('family_members')
-        .select('name, gender, birth_date')
+        .select('name, gender, birth_date, birth_time')
         .eq('id', familyMemberId)
         .single()
 
@@ -323,6 +278,7 @@ export async function sendShamanChatMessage(
         targetName = familyMember.name || '내담자 가족'
         targetGender = familyMember.gender === 'M' ? '남성' : familyMember.gender === 'F' ? '여성' : '미상'
         targetBirth = familyMember.birth_date || '미상'
+        targetBirthTime = familyMember.birth_time || '00:00'
       }
     } else {
       const { data: profile } = await supabase
@@ -354,24 +310,37 @@ export async function sendShamanChatMessage(
     const faceRecord = history?.find((h) => h.category === 'FACE')
     const handRecord = history?.find((h) => h.category === 'HAND')
 
-    const contextParts: string[] = []
-    contextParts.push(
-      `## 점사 대상자 정보\n - 이름(관계): ${targetName} \n - 성별: ${targetGender} \n - 생년월일: ${targetBirth} `
-    )
-    if (sajuRecord) {
-      contextParts.push(`## 사주 분석 요약\n - ${sajuRecord.summary} (점수: ${sajuRecord.score})`)
-    }
-    if (faceRecord) {
-      contextParts.push(`## 관상 분석 요약\n - ${faceRecord.summary} (점수: ${faceRecord.score})`)
-    }
-    if (handRecord) {
-      contextParts.push(`## 손금 분석 요약\n - ${handRecord.summary} (점수: ${handRecord.score})`)
-    }
+    const historyParts: string[] = []
+    if (sajuRecord) historyParts.push(`[사주 분석 요약] ${sajuRecord.summary} (점수: ${sajuRecord.score})`)
+    if (faceRecord) historyParts.push(`[관상 분석 요약] ${faceRecord.summary} (점수: ${faceRecord.score})`)
+    if (handRecord) historyParts.push(`[손금 분석 요약] ${handRecord.summary} (점수: ${handRecord.score})`)
 
-    const userContext = contextParts.join('\n\n') || '내담자 정보 없음'
+    // 4. 해화지기 마스터 엔진으로 시스템 프롬프트 조립
+    let systemPrompt: string
 
-    // 4. AI 응답 생성 (DB 우선순위 해제, 하드코딩된 프롬프트 완전 고정)
-    const systemPrompt = HAEHWAJIGI_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
+    if (targetBirth !== '미상') {
+      // 사주 정보 있음 → 마스터 엔진 full context
+      const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+      const { prompt } = await buildMasterPromptForAction(
+        {
+          name: targetName,
+          birthDate: targetBirth,
+          birthTime: targetBirthTime,
+          gender: targetGender === '남성' ? 'male' : 'female',
+          isSolar: true,
+        },
+        'SAJU_FULL',
+        '',
+        `[점사 기준일]: ${today}${historyParts.length > 0 ? '\n\n[과거 분석 기록]\n' + historyParts.join('\n') : ''}`,
+        '' // JSON 포맷 없음 - 채팅 산문 응답
+      )
+      systemPrompt = prompt
+    } else {
+      // 사주 정보 없음 → 폴백 프롬프트
+      const userContext =
+        `이름: ${targetName}, 성별: ${targetGender}` + (historyParts.length > 0 ? '\n' + historyParts.join('\n') : '')
+      systemPrompt = FALLBACK_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
+    }
 
     const model = getGeminiModel()
     const chat = model.startChat({
