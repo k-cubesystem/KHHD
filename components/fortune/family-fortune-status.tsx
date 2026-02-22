@@ -19,10 +19,10 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
     <Link href="/protected/family" className="block group">
       {/* 금빛 테두리 외곽 프레임 */}
       <div
-        className="relative p-[1.5px] rounded-2xl"
+        className="relative p-[1px] rounded-2xl transition-all duration-300"
         style={{
-          background: 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 30%, #8C6A20 60%, #D4AF37 100%)',
-          boxShadow: '0 0 24px rgba(212,175,55,0.25), 0 8px 40px rgba(0,0,0,0.6)',
+          background: 'linear-gradient(135deg, rgba(212,175,55,0.25) 0%, rgba(255,255,255,0.05) 50%, rgba(212,175,55,0.1) 100%)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
         }}
       >
         {/* 내부 카드 */}

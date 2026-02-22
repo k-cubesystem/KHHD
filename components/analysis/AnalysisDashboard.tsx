@@ -13,8 +13,7 @@ import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card
 // Dynamic imports for heavy dashboard sections to improve initial load
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 const RelationshipSection = dynamic(
-  () =>
-    import('./dashboard/RelationshipSection').then((mod) => ({ default: mod.RelationshipSection })),
+  () => import('./dashboard/RelationshipSection').then((mod) => ({ default: mod.RelationshipSection })),
   { ssr: false, loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-lg" /> }
 )
 const PeriodSection = dynamic(
@@ -25,10 +24,10 @@ const Year2026Section = dynamic(
   () => import('./dashboard/Year2026Section').then((mod) => ({ default: mod.Year2026Section })),
   { ssr: false, loading: () => <div className="h-40 animate-pulse bg-white/5 rounded-lg" /> }
 )
-const TrendSection = dynamic(
-  () => import('./dashboard/TrendSection').then((mod) => ({ default: mod.TrendSection })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-lg" /> }
-)
+const TrendSection = dynamic(() => import('./dashboard/TrendSection').then((mod) => ({ default: mod.TrendSection })), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-lg" />,
+})
 
 interface RouletteStatus {
   canSpin: boolean
@@ -86,9 +85,7 @@ export function AnalysisDashboard({
       {/* 1. Hero */}
       <motion.section variants={fadeInUp} className="text-left space-y-3 pt-4 px-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 backdrop-blur-sm">
-          <span className="text-[10px] font-medium text-[#D4AF37] tracking-widest uppercase">
-            DESTINY INSIGHT
-          </span>
+          <span className="text-[10px] font-medium text-[#D4AF37] tracking-widest uppercase">DESTINY INSIGHT</span>
         </div>
 
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug tracking-tight">
@@ -101,8 +98,7 @@ export function AnalysisDashboard({
           <p className="text-sm text-ink-light/70 font-light leading-relaxed">
             당신의 노력이 부족해서가 아닙니다.
             <br />
-            지금 바로 당신에게 들어온{' '}
-            <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을<br />
+            지금 바로 당신에게 들어온 <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을<br />
             놓치고 있기 때문입니다.
           </p>
 
@@ -120,6 +116,13 @@ export function AnalysisDashboard({
         <MasterpieceSection />
       </motion.div>
 
+      {/* 4. 가족 운세 섹션 — page.tsx에서 Suspense로 스트리밍 (위치 변경됨) */}
+      {children && (
+        <motion.div variants={fadeInUp} className="space-y-4">
+          {children}
+        </motion.div>
+      )}
+
       {/* 3. 운세 미션 보드 (게이지 + 8미션 통합) */}
       <motion.div variants={fadeInUp}>
         <FortuneMissionBoard
@@ -129,13 +132,6 @@ export function AnalysisDashboard({
           completedCategories={monthlyFortune.completedCategories}
         />
       </motion.div>
-
-      {/* 4. 가족 운세 섹션 — page.tsx에서 Suspense로 스트리밍 */}
-      {children && (
-        <motion.div variants={fadeInUp} className="space-y-4">
-          {children}
-        </motion.div>
-      )}
 
       {/* 5. Bento Grid */}
       <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3">

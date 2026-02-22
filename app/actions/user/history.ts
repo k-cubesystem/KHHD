@@ -4,19 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 // import { createClient as createClientJS } from '@supabase/supabase-js' // Removed to fix edge issues
 import { unstable_cache, revalidatePath } from 'next/cache'
 import { getUserTierLimits } from '../payment/membership'
+import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 
 /**
  * 분석 카테고리 타입
  */
-export type AnalysisCategory =
-  | 'SAJU'
-  | 'FACE'
-  | 'HAND'
-  | 'FENGSHUI'
-  | 'COMPATIBILITY'
-  | 'TODAY'
-  | 'WEALTH'
-  | 'NEW_YEAR'
+export type AnalysisCategory = 'SAJU' | 'FACE' | 'HAND' | 'FENGSHUI' | 'COMPATIBILITY' | 'TODAY' | 'WEALTH' | 'NEW_YEAR'
 
 /**
  * 분석 컨텍스트 모드
@@ -102,6 +95,22 @@ export async function saveAnalysisHistory(
     if (error) {
       console.error('Error saving analysis history:', error)
       return { success: false, error: error.message }
+    }
+
+    // 운세 미션 기록 자동 연동
+    try {
+      let familyMemberId = params.target_id
+      if (!familyMemberId) {
+        const selfId = await getSelfFamilyMemberId()
+        if (selfId) familyMemberId = selfId
+      }
+
+      if (familyMemberId) {
+        // 기본 100포인트 혹은 카테고리에 맞는 포인트 부여방식을 사용할 수 있습니다.
+        await recordFortuneEntry(familyMemberId, params.category, data.id, 100)
+      }
+    } catch (fortuneError) {
+      console.error('Error auto-recording fortune entry:', fortuneError)
     }
 
     // 쿼터 관리: 한도 초과 시 오래된 비즐겨찾기 레코드 자동 삭제
@@ -249,10 +258,7 @@ export async function getAnalysisStats(): Promise<
 /**
  * 즐겨찾기 토글
  */
-export async function toggleFavorite(
-  id: string,
-  isFavorite: boolean
-): Promise<{ success: boolean; error?: string }> {
+export async function toggleFavorite(id: string, isFavorite: boolean): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
     const {
@@ -286,10 +292,7 @@ export async function toggleFavorite(
 /**
  * 메모 업데이트
  */
-export async function updateAnalysisMemo(
-  id: string,
-  memo: string
-): Promise<{ success: boolean; error?: string }> {
+export async function updateAnalysisMemo(id: string, memo: string): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
     const {
@@ -323,9 +326,7 @@ export async function updateAnalysisMemo(
 /**
  * 분석 기록 삭제
  */
-export async function deleteAnalysisHistory(
-  id: string
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteAnalysisHistory(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createClient()
     const {
@@ -336,11 +337,7 @@ export async function deleteAnalysisHistory(
       return { success: false, error: '인증이 필요합니다.' }
     }
 
-    const { error } = await supabase
-      .from('analysis_history')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id)
+    const { error } = await supabase.from('analysis_history').delete().eq('id', id).eq('user_id', user.id)
 
     if (error) {
       console.error('Error deleting analysis history:', error)

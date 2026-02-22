@@ -11,11 +11,14 @@ const DAILY_FREE_QUESTIONS = 10
 const PURCHASE_COST = 1 // 1만냥 (wallets.balance 단위: 1 = 1만냥)
 const PURCHASE_QUESTIONS = 20 // 회
 
-// 사주 정보 없을 때 폴백 프롬프트
+// 사주 정보 없을 때 폴백 시스템 지시문
 const FALLBACK_SYSTEM_PROMPT = `당신은 청담해화당의 수석 명리 상담가이자 영험한 무속인 '해화지기'입니다.
 오늘 날짜: {{date}}
 내담자 정보: {{saju_data}}
-산문 형태로 무속인 화법("~군요", "~하는 법입니다")으로 답변하십시오.`
+
+내담자와 실시간 대화 중입니다. 질문에만 집중하여 200~400자로 간결하게 답하십시오.
+무속인 화법("~군요", "~하는 법입니다", "~이 보이는군요")을 유지하되, 끝에 짧은 질문 하나를 덧붙여 대화를 자연스럽게 이어가십시오.
+JSON 출력 금지. 번호 매기기·헤더 나열 금지. 분석 보고서 형식 금지.`
 
 const RANDOM_STARTERS = [
   '오늘의 총운이 궁금해요',
@@ -37,11 +40,14 @@ const RANDOM_STARTERS = [
 
 // --- Helpers ---
 
-const getGeminiModel = () => {
+const getGeminiModel = (systemInstruction?: string) => {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) throw new Error('Google Generative AI API Key is missing')
   const genAI = new GoogleGenerativeAI(apiKey)
-  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  return genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    ...(systemInstruction ? { systemInstruction } : {}),
+  })
 }
 
 // --- Types ---
@@ -315,12 +321,19 @@ export async function sendShamanChatMessage(
     if (faceRecord) historyParts.push(`[관상 분석 요약] ${faceRecord.summary} (점수: ${faceRecord.score})`)
     if (handRecord) historyParts.push(`[손금 분석 요약] ${handRecord.summary} (점수: ${handRecord.score})`)
 
-    // 4. 해화지기 마스터 엔진으로 시스템 프롬프트 조립
-    let systemPrompt: string
+    // 4. 해화지기 마스터 엔진으로 systemInstruction 조립
+    let systemInstruction: string
 
     if (targetBirth !== '미상') {
-      // 사주 정보 있음 → 마스터 엔진 full context
+      // 사주 정보 있음 → 마스터 엔진 full context (SHAMAN_CHAT 타입)
       const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+      const additionalCtx = [
+        `[점사 기준일]: ${today}`,
+        historyParts.length > 0 ? `[과거 분석 기록]\n${historyParts.join('\n')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       const { prompt } = await buildMasterPromptForAction(
         {
           name: targetName,
@@ -329,20 +342,21 @@ export async function sendShamanChatMessage(
           gender: targetGender === '남성' ? 'male' : 'female',
           isSolar: true,
         },
-        'SAJU_FULL',
+        'SHAMAN_CHAT',
         '',
-        `[점사 기준일]: ${today}${historyParts.length > 0 ? '\n\n[과거 분석 기록]\n' + historyParts.join('\n') : ''}`,
-        '' // JSON 포맷 없음 - 채팅 산문 응답
+        additionalCtx,
+        '' // 채팅은 JSON 출력 없음
       )
-      systemPrompt = prompt
+      systemInstruction = prompt
     } else {
-      // 사주 정보 없음 → 폴백 프롬프트
+      // 사주 정보 없음 → 폴백
       const userContext =
         `이름: ${targetName}, 성별: ${targetGender}` + (historyParts.length > 0 ? '\n' + historyParts.join('\n') : '')
-      systemPrompt = FALLBACK_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
+      systemInstruction = FALLBACK_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
     }
 
-    const model = getGeminiModel()
+    // 5. systemInstruction을 모델에 주입하고 대화 히스토리 복원
+    const model = getGeminiModel(systemInstruction)
     const chat = model.startChat({
       history: conversationHistory.map((msg) => ({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -350,20 +364,21 @@ export async function sendShamanChatMessage(
       })),
     })
 
-    // 프롬프트에 이미 사주 데이터가 포함되므로 내담자 정보 중복 전달 제거
-    const result = await chat.sendMessage(`${systemPrompt} \n\n[내담자 질문]\n${message} `)
+    // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨)
+    const result = await chat.sendMessage(message)
     const responseText = result.response.text()
 
-    // 5. 추천 질문 생성
+    // 6. 추천 질문 생성 (과거 분석 기록 기반)
     const suggestions: string[] = []
-    if (sajuRecord) suggestions.push('제 사주에 맞는 재물 관리법은?')
+    if (sajuRecord) suggestions.push('제 사주에서 가장 강한 기운은 무엇인가요?')
     if (faceRecord) suggestions.push('관상학적으로 부족한 부분을 어떻게 보완할까요?')
-    suggestions.push('올해 가장 조심해야 할 것은?', '이번 달 주요 운세 흐름은?')
+    if (handRecord) suggestions.push('손금에서 가장 주목해야 할 부분이 있나요?')
+    suggestions.push('올해 가장 조심해야 할 것은?', '이번 달 주요 운세 흐름은?', '저에게 맞는 개운법을 알려주세요')
 
     return {
       success: true,
       response: responseText,
-      suggestedQuestions: suggestions.slice(0, 3),
+      suggestedQuestions: suggestions.slice(0, 4),
     }
   } catch (e: unknown) {
     console.error('[sendShamanChatMessage] Error:', e)

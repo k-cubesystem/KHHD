@@ -138,10 +138,24 @@ export async function analyzeCheonjiinAction(
       handImageUrl: imageFlags.hasHandImage ? '손금 이미지 첨부됨 (별도 이미지 참조)' : '손금 이미지 없음',
     }
 
-    // 8. 프롬프트 생성
-    // DB에서 시스템 역할 정의(스타일/원칙)를 로드하고, 동적 조건 섹션(imageFlags)은 코드에서 생성
-    const dbSystemPrompt = await getCheonjiinSystemPrompt()
-    const prompt = getDefaultCheonjiinPrompt(variables, imageFlags, dbSystemPrompt)
+    // 8. 프롬프트 생성 (해화지기 마스터 엔진 연동)
+    // 마스터 엔진으로 사주 컨텍스트(신강신약, 십이운성, 신살, 합충형, 물상론) 생성
+    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+    const { prompt: engineSystemPrompt } = await buildMasterPromptForAction(
+      {
+        name: target.name,
+        birthDate: target.birth_date,
+        birthTime: target.birth_time || '00:00',
+        gender: (target.gender || 'male') as 'male' | 'female',
+        isSolar: target.calendar_type !== 'lunar',
+      },
+      'CHEONJIIN',
+      '',
+      '',
+      ''
+    )
+    // 엔진 프롬프트를 시스템 역할로 사용하고, 풍수/관상/손금 조건 섹션은 코드에서 추가
+    const prompt = getDefaultCheonjiinPrompt(variables, imageFlags, engineSystemPrompt)
 
     const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
 

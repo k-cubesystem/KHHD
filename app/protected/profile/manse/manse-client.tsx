@@ -839,40 +839,40 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
             {/* Tabs Layout */}
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-white/5 border-white/10 overflow-visible mb-6">
+              <TabsList className="grid w-full grid-cols-4 bg-white/5 border-white/10 mb-8 p-1 relative z-10">
                 <TabsTrigger
                   value="basic"
-                  className="group relative data-[state=active]:bg-[#D4AF37]/20 data-[state=active]:text-[#D4AF37]"
+                  className="group relative data-[state=active]:!bg-[#D4AF37]/20 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-none"
                 >
                   기본 정보
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-[#D4AF37] transition-opacity">
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-[#D4AF37] transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="advanced"
-                  className="group relative data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400"
+                  className="group relative data-[state=active]:!bg-blue-500/20 data-[state=active]:!text-blue-400 data-[state=active]:shadow-none"
                 >
                   고급 분석
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-blue-400 transition-opacity">
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-blue-400 transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="fortune"
-                  className="group relative data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400"
+                  className="group relative data-[state=active]:!bg-purple-500/20 data-[state=active]:!text-purple-400 data-[state=active]:shadow-none"
                 >
                   운세 흐름
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-purple-400 transition-opacity">
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-purple-400 transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="practical"
-                  className="group relative data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400"
+                  className="group relative data-[state=active]:!bg-emerald-500/20 data-[state=active]:!text-emerald-400 data-[state=active]:shadow-none"
                 >
                   실천 가이드
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-emerald-400 transition-opacity">
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-emerald-400 transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
