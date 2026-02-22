@@ -839,30 +839,42 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
             {/* Tabs Layout */}
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-white/5 border-white/10">
+              <TabsList className="grid w-full grid-cols-4 bg-white/5 border-white/10 overflow-visible mb-6">
                 <TabsTrigger
                   value="basic"
-                  className="data-[state=active]:bg-[#D4AF37]/20 data-[state=active]:text-[#D4AF37]"
+                  className="group relative data-[state=active]:bg-[#D4AF37]/20 data-[state=active]:text-[#D4AF37]"
                 >
                   기본 정보
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-[#D4AF37] transition-opacity">
+                    ▼
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="advanced"
-                  className="data-[state=active]:bg-[#D4AF37]/20 data-[state=active]:text-[#D4AF37]"
+                  className="group relative data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400"
                 >
                   고급 분석
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-blue-400 transition-opacity">
+                    ▼
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="fortune"
-                  className="data-[state=active]:bg-[#D4AF37]/20 data-[state=active]:text-[#D4AF37]"
+                  className="group relative data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400"
                 >
                   운세 흐름
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-purple-400 transition-opacity">
+                    ▼
+                  </span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="practical"
-                  className="data-[state=active]:bg-[#D4AF37]/20 data-[state=active]:text-[#D4AF37]"
+                  className="group relative data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400"
                 >
                   실천 가이드
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[12px] opacity-0 group-data-[state=active]:opacity-100 text-emerald-400 transition-opacity">
+                    ▼
+                  </span>
                 </TabsTrigger>
               </TabsList>
 
@@ -875,17 +887,16 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       <BookOpen className="w-4 h-4" />
                       사주팔자 (四柱八字)
                     </h3>
-                    <div className="flex flex-col items-end">
-                      <span className="text-lg tracking-widest font-bold text-ink-light">
-                        {saju.ganjiList.join(' ')}
-                      </span>
-                      <span className="text-xs tracking-widest text-[#D4AF37]">
-                        {saju.ganjiList
-                          .map(
-                            (ganji) => `${TIANGAN_INFO[ganji[0]]?.korean || ''}${DIZHI_INFO[ganji[1]]?.korean || ''}`
-                          )
-                          .join(' ')}
-                      </span>
+                    <div className="flex items-center gap-4">
+                      {saju.ganjiList.map((ganji, idx) => (
+                        <div key={idx} className="flex flex-col items-center justify-center">
+                          <span className="text-lg font-black text-ink-light mb-0.5">{ganji}</span>
+                          <span className="text-lg font-bold text-[#D4AF37]">
+                            {TIANGAN_INFO[ganji[0]]?.korean || ''}
+                            {DIZHI_INFO[ganji[1]]?.korean || ''}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -946,13 +957,95 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     })}
                   </div>
 
+                  {/* 8글자 개별 풀이 */}
+                  <div className="mt-6 pt-5 border-t border-white/5 space-y-3">
+                    <p className="text-xs text-muted-foreground/60 font-medium">✦ 사주 8글자 개별 풀이</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        {
+                          label: '년간',
+                          char: saju.pillars.year.gan,
+                          pos: '년주 천간',
+                          meaning: '조상·초년운·사회적 기운',
+                        },
+                        {
+                          label: '년지',
+                          char: saju.pillars.year.zhi,
+                          pos: '년주 지지',
+                          meaning: '뿌리·가문·타고난 환경',
+                        },
+                        {
+                          label: '월간',
+                          char: saju.pillars.month.gan,
+                          pos: '월주 천간',
+                          meaning: '부모·청년운·직업 기운',
+                        },
+                        {
+                          label: '월지',
+                          char: saju.pillars.month.zhi,
+                          pos: '월주 지지',
+                          meaning: '월령·핵심 기운·사회운',
+                        },
+                        {
+                          label: '일간',
+                          char: saju.pillars.day.gan,
+                          pos: '일주 천간 (나)',
+                          meaning: '나 자신·자아·배우자 인연',
+                        },
+                        {
+                          label: '일지',
+                          char: saju.pillars.day.zhi,
+                          pos: '일주 지지',
+                          meaning: '배우자궁·중년운·내면',
+                        },
+                        {
+                          label: '시간',
+                          char: saju.pillars.time.gan,
+                          pos: '시주 천간',
+                          meaning: '자녀·말년운·노력의 결실',
+                        },
+                        {
+                          label: '시지',
+                          char: saju.pillars.time.zhi,
+                          pos: '시주 지지',
+                          meaning: '노년·자녀궁·미래 에너지',
+                        },
+                      ].map(({ label, char, pos, meaning }) => {
+                        const ganInfo = TIANGAN_INFO[char]
+                        const zhiInfo = DIZHI_INFO[char]
+                        const info = ganInfo || zhiInfo
+                        return (
+                          <div key={label} className="bg-white/5 border border-white/10 p-3 rounded-xl">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[10px] text-muted-foreground/50">{label}</span>
+                              <span
+                                className="text-lg font-black"
+                                style={{ color: info?.element ? WU_XING_COLORS[info.element] : '#D4AF37' }}
+                              >
+                                {char}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-[#D4AF37]/70 mb-0.5">{pos}</p>
+                            <p className="text-[10px] text-muted-foreground/60 leading-relaxed">{meaning}</p>
+                            {info?.element && (
+                              <p className="text-[10px] text-white/30 mt-1">
+                                {WUXING_KOREAN[info.element]}({info.element}) ·{' '}
+                                {ganInfo ? ganInfo.yinyang : zhiInfo?.animal}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
                   {/* 풀이 버튼 */}
                   <div className="mt-8 flex justify-center border-t border-white/5 pt-6">
                     <button
                       onClick={() => setSajuInterpretOpen(true)}
-                      className="flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_15px_rgba(212,175,55,0.3)] hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
                     >
-                      <Sparkles className="w-4 h-4" />✦ 내 사주 종합 풀이 보기
+                      <Sparkles className="w-3.5 h-3.5" />✦ 내 사주 종합 풀이 보기
                     </button>
                   </div>
                 </Card>
@@ -1010,9 +1103,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     </div>
                     <button
                       onClick={() => setWuxingAnalysisOpen(true)}
-                      className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
                     >
-                      <Sparkles className="w-4 h-4" />✦ 내 오행 풀이 보기
+                      <Sparkles className="w-3.5 h-3.5" />✦ 내 오행 풀이 보기
                     </button>
                   </div>
                 </Card>
@@ -1021,12 +1114,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title="육친 관계도 (六親關係圖)" isSubscribed={isSubscribed}>
                   {yukchinAnalysis && Object.keys(yukchinAnalysis).length > 0 ? (
                     <div className="space-y-6">
-                      <button
-                        onClick={() => setYukchinAnalysisOpen(true)}
-                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
-                      >
-                        <Sparkles className="w-4 h-4" />✦ 내 육친 풀이 보기
-                      </button>
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(yukchinAnalysis).map(([key, data]) => (
                           <div key={key} className="bg-surface/20 p-4 rounded-lg">
@@ -1065,6 +1152,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               </p>
                             ))}
                         </div>
+                      </div>
+                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                        <button
+                          onClick={() => setYukchinAnalysisOpen(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />✦ 내 육친 풀이 보기
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -1186,110 +1281,53 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           <span className="text-white/80 font-bold">{engineData.sipseong.dominantSipseong}</span>
                         </div>
                       </div>
-                      {/* 십성 분포 바 */}
-                      {engineData.sipseong.distribution && Object.keys(engineData.sipseong.distribution).length > 0 && (
+                      {/* 십성별 현대적 해석 */}
+                      {engineData.sipseong.distribution && (
                         <div className="space-y-2">
-                          <p className="text-xs text-muted-foreground/60 font-medium">십성별 분포</p>
+                          <p className="text-xs text-muted-foreground/60 font-medium">
+                            내 사주에 담긴 십성 — 현대적 해석
+                          </p>
                           {Object.entries(engineData.sipseong.distribution)
                             .filter(([, v]) => (v as number) > 0)
                             .sort(([, a], [, b]) => (b as number) - (a as number))
-                            .map(([name, count]) => (
-                              <div key={name} className="flex items-center gap-3">
-                                <span className="text-xs text-white/70 w-12 shrink-0">{name}</span>
-                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] rounded-full"
-                                    style={{ width: `${((count as number) / 8) * 100}%` }}
-                                  />
+                            .map(([name, count]) => {
+                              const sipseongDesc: Record<string, string> = {
+                                비견: '독립심과 자기주장이 강합니다. 경쟁과 협업 모두 잘합니다.',
+                                겁재: '추진력과 승부욕이 넘칩니다. 재물 기복을 주의하세요.',
+                                식신: '표현력과 창의력이 풍부합니다. 예술·요식·엔터테인먼트에 재능이 있습니다.',
+                                상관: '재능이 출중하고 언변이 날카롭습니다. 기존 틀을 깨는 혁신가 기질입니다.',
+                                편재: '사교적이고 돈을 다루는 감각이 있습니다. 투자·영업·무역에 적합합니다.',
+                                정재: '성실하고 꾸준합니다. 재물을 안전하게 모으는 재주가 있습니다.',
+                                편관: '추진력과 리더십이 있습니다. 군·경·법·스포츠에서 강합니다.',
+                                정관: '명예와 책임감을 중시합니다. 공직·관리직·전문직에 어울립니다.',
+                                편인: '직관과 예술 감각이 뛰어납니다. 종교·철학·특수 기술 분야에 재능이 있습니다.',
+                                정인: '학문과 배움을 사랑합니다. 교육·연구·자격증 취득에 유리합니다.',
+                              }
+                              return (
+                                <div
+                                  key={name}
+                                  className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
+                                >
+                                  <div className="shrink-0 text-center w-10">
+                                    <span className="text-sm font-black text-[#D4AF37]">{name}</span>
+                                    <p className="text-[10px] text-muted-foreground/40">{count as number}개</p>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground leading-relaxed flex-1">
+                                    {sipseongDesc[name] || ''}
+                                  </p>
                                 </div>
-                                <span className="text-xs text-muted-foreground/50 w-4 text-right">
-                                  {count as number}
-                                </span>
-                              </div>
-                            ))}
+                              )
+                            })}
                         </div>
                       )}
                     </div>
-                  </Card>
-                )}
-
-                {/* 십이운성 에너지 흐름 — 새 엔진 */}
-                {engineData.sibjiunseong && (
-                  <Card className="p-8 bg-white/5 border-white/10">
-                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      십이운성 에너지 흐름
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[#D4AF37] font-bold text-sm">{engineData.sibjiunseong.overallEnergy}</p>
-                          <span className="text-xs text-muted-foreground/60">
-                            평균 {engineData.sibjiunseong.averageLevel.toFixed(1)}/12단계
-                          </span>
-                        </div>
-                        <p className="text-muted-foreground text-xs leading-relaxed">
-                          {engineData.sibjiunseong.waveDescription}
-                        </p>
-                      </div>
-                      {/* 기둥별 십이운성 */}
-                      <div className="grid grid-cols-4 gap-3">
-                        {engineData.sibjiunseong.items.map((item, i) => (
-                          <div key={i} className="bg-white/5 border border-white/10 p-3 rounded-xl text-center">
-                            <p className="text-[10px] text-muted-foreground/50 mb-1">{item.pillarName}</p>
-                            <p className="text-sm font-bold text-[#D4AF37]">{item.sibjiunseong}</p>
-                            <div className="w-full h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA]"
-                                style={{ width: `${(item.level / 12) * 100}%` }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-muted-foreground/40 mt-1">{item.level}/12</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </Card>
-                )}
-
-                {/* 합충형 관계 — 새 엔진 */}
-                {engineData.relations && (
-                  <Card className="p-8 bg-white/5 border-white/10">
-                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4" />
-                      합·충·형 관계
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20 mb-2">
-                        <p className="text-[#D4AF37] font-bold text-sm mb-1">{engineData.relations.dominantRelation}</p>
-                        <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {engineData.relations.hap.length > 0 && (
-                          <div className="bg-green-900/20 border border-green-500/20 p-3 rounded-xl">
-                            <p className="text-green-400 text-xs font-bold mb-1.5">합(合) — 당기는 기운</p>
-                            <p className="text-xs text-muted-foreground">{engineData.relations.hap.join(', ')}</p>
-                          </div>
-                        )}
-                        {engineData.relations.chung.length > 0 && (
-                          <div className="bg-red-900/20 border border-red-500/20 p-3 rounded-xl">
-                            <p className="text-red-400 text-xs font-bold mb-1.5">충(沖) — 부딪히는 기운</p>
-                            <p className="text-xs text-muted-foreground">{engineData.relations.chung.join(', ')}</p>
-                          </div>
-                        )}
-                        {engineData.relations.hyeong.length > 0 && (
-                          <div className="bg-orange-900/20 border border-orange-500/20 p-3 rounded-xl">
-                            <p className="text-orange-400 text-xs font-bold mb-1.5">형(刑) — 마찰</p>
-                            <p className="text-xs text-muted-foreground">{engineData.relations.hyeong.join(', ')}</p>
-                          </div>
-                        )}
-                        {engineData.relations.gongmang.length > 0 && (
-                          <div className="bg-white/5 border border-white/10 p-3 rounded-xl">
-                            <p className="text-white/50 text-xs font-bold mb-1.5">공망(空亡) — 빈자리</p>
-                            <p className="text-xs text-muted-foreground">{engineData.relations.gongmang.join(', ')}</p>
-                          </div>
-                        )}
-                      </div>
+                    <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                      <button
+                        onClick={() => setSajuInterpretOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />✦ 사주 종합 풀이 보기
+                      </button>
                     </div>
                   </Card>
                 )}
@@ -1308,9 +1346,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     <div className="mt-6 pt-4 border-t border-[#D4AF37]/10">
                       <button
                         onClick={() => setAdvancedExplainOpen(true)}
-                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
                       >
-                        <Sparkles className="w-4 h-4" />✦ 이 데이터가 뭔가요? 쉬운 풀이 보기
+                        <Sparkles className="w-3.5 h-3.5" />✦ 이 데이터가 뭔가요? 쉬운 풀이 보기
                       </button>
                     </div>
                   </Card>
@@ -1323,12 +1361,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title="대운·세운 (大運·歲運)" isSubscribed={isSubscribed}>
                   {daeunList.length > 0 ? (
                     <div className="space-y-6">
-                      <button
-                        onClick={() => setDaeunExplainOpen(true)}
-                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
-                      >
-                        <Sparkles className="w-4 h-4" />✦ 내 인생 흐름 풀이 보기
-                      </button>
                       {/* 현재 대운 */}
                       {(() => {
                         const currentYear = new Date().getFullYear()
@@ -1395,6 +1427,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             <p className="text-sm text-muted-foreground leading-relaxed">{currentDaeun.description}</p>
                           )
                         })()}
+                      </div>
+                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                        <button
+                          onClick={() => setDaeunExplainOpen(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />✦ 내 인생 흐름 풀이 보기
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -1557,12 +1597,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 {yongsinAnalysis && (
                   <PremiumFeature title={SECTION_DESCRIPTIONS.yongsin.title} isSubscribed={isSubscribed}>
                     <div className="space-y-6">
-                      <button
-                        onClick={() => setYongsinExplainOpen(true)}
-                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
-                      >
-                        <Sparkles className="w-4 h-4" />✦ 내 행운 키워드 풀이 보기
-                      </button>
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {SECTION_DESCRIPTIONS.yongsin.intro}
@@ -1689,6 +1723,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           </div>
                         </div>
                       )}
+                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                        <button
+                          onClick={() => setYongsinExplainOpen(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />✦ 내 행운 키워드 풀이 보기
+                        </button>
+                      </div>
                     </div>
                   </PremiumFeature>
                 )}
@@ -1697,12 +1739,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title={SECTION_DESCRIPTIONS.gekguk.title} isSubscribed={isSubscribed}>
                   {gekgukAnalysis ? (
                     <div className="space-y-6">
-                      <button
-                        onClick={() => setGekgukExplainOpen(true)}
-                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
-                      >
-                        <Sparkles className="w-4 h-4" />✦ 내 사주 그릇 풀이 보기
-                      </button>
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {SECTION_DESCRIPTIONS.gekguk.intro}
@@ -1737,6 +1773,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           ))}
                         </ul>
                       </div>
+                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                        <button
+                          onClick={() => setGekgukExplainOpen(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />✦ 내 사주 그릇 풀이 보기
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">사주 데이터를 불러오는 중...</p>
@@ -1747,12 +1791,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title={SECTION_DESCRIPTIONS.gaeunbub.title} isSubscribed={isSubscribed}>
                   {gaeunbubRec ? (
                     <div className="space-y-6">
-                      <button
-                        onClick={() => setGaeunbubExplainOpen(true)}
-                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
-                      >
-                        <Sparkles className="w-4 h-4" />✦ 오늘부터 실천하기
-                      </button>
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {SECTION_DESCRIPTIONS.gaeunbub.intro}
@@ -1822,6 +1860,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             </li>
                           ))}
                         </ul>
+                      </div>
+                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                        <button
+                          onClick={() => setGaeunbubExplainOpen(true)}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />✦ 오늘부터 실천하기
+                        </button>
                       </div>
                     </div>
                   ) : (
