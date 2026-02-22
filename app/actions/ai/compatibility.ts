@@ -40,15 +40,15 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       return { success: true, data: recentAnalysis, cached: true }
     }
 
-    // 3. 사주 데이터 계산
+    // 3. 사주 데이터 계산 (기본 점수용)
     const saju1 = getSajuData(target1.birth_date, target1.birth_time || '00:00', true)
     const saju2 = getSajuData(target2.birth_date, target2.birth_time || '00:00', true)
 
     // 4. 기본 궁합 점수 계산
-    const { score: baseScore, comment } = calculateCompatibilityScore(saju1, saju2)
+    const { score: baseScore } = calculateCompatibilityScore(saju1, saju2)
 
-    // 5. AI 분석 (관계 타입 포함)
-    const aiResult = await analyzeCompatibilityWithAI(target1, target2, saju1, saju2, baseScore, relationship)
+    // 5. AI 분석 (마스터 엔진 연동)
+    const aiResult = await analyzeCompatibilityWithAI(target1, target2, baseScore, relationship)
 
     // 6. 분석 결과 저장
     const saved = await saveAnalysisHistory({
@@ -117,20 +117,11 @@ async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: stri
 }
 
 /**
- * AI를 사용한 궁합 분석
+ * AI를 사용한 궁합 분석 (해화지기 마스터 엔진 연동)
  */
-async function analyzeCompatibilityWithAI(
-  target1: any,
-  target2: any,
-  saju1: any,
-  saju2: any,
-  baseScore: number,
-  relationship: string
-) {
+async function analyzeCompatibilityWithAI(target1: any, target2: any, baseScore: number, relationship: string) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  if (!apiKey) {
-    throw new Error('Google Generative AI API Key is missing')
-  }
+  if (!apiKey) throw new Error('Google Generative AI API Key is missing')
 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
@@ -138,30 +129,30 @@ async function analyzeCompatibilityWithAI(
     generationConfig: { responseMimeType: 'application/json' },
   })
 
-  // 관계별 분석 가이드라인
   const relationshipGuide = getRelationshipGuide(relationship)
 
-  // 프롬프트 생성
-  const prompt = `당신은 청담해화당의 수석 명리 상담가이자 영험한 무속인 '해화지기'입니다.
-당신은 단순한 AI가 아니며, 두 사람의 사주 기운이 어떻게 얽히고 부딪히는지를 꿰뚫어 보는 진짜 영적 멘토입니다.
-아래 두 사람의 사주 데이터를 바탕으로 궁합을 분석하되, 반드시 다음 원칙을 지켜 답변하십시오.
+  // 마스터 엔진으로 프롬프트 조립 (target1 기준, target2 + 관계 정보는 additionalContext)
+  const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+  const { prompt } = await buildMasterPromptForAction(
+    {
+      name: target1.name,
+      birthDate: target1.birth_date,
+      birthTime: target1.birth_time || '00:00',
+      gender: (target1.gender || 'male') as 'male' | 'female',
+      isSolar: target1.calendar_type !== 'lunar',
+    },
+    'COMPATIBILITY',
+    '',
+    `[상대방 정보]
+이름: ${target2.name}
+성별: ${target2.gender === 'male' ? '남성' : '여성'}
+생년월일: ${target2.birth_date}
+태어난 시각: ${target2.birth_time || '미상'}
 
-[절대 지켜야 할 원칙 (Core Directives)]
-1. 기계적 포맷 금지: 소제목, 번호(1, 2), 글머리 기호(•, -) 등은 절대 쓰지 마십시오.
-2. 전문 용어의 은유적 번역: '상극', '충', '합' 같은 역학 용어 대신, 오행의 물상(자연의 이치)으로 풀어 설명하십시오. (예: "메마른 땅을 적시는 단비 같은 인연이군요", "서로 불길을 키우는 형국이니...")
-3. 무속인 화법: "입니다" 대신 "~군요", "~하는 법입니다", "~하시게", "~는 형국이외다" 등 연륜과 무게감이 느껴지는 산문으로 서술하십시오.
-
-## [분석 대상]
-- ${target1.name}님: ${target1.gender === 'male' ? '남성' : '여성'}, ${target1.birth_date}, ${formatSaju(saju1)}
-- ${target2.name}님: ${target2.gender === 'male' ? '남성' : '여성'}, ${target2.birth_date}, ${formatSaju(saju2)}
-
-## [관계성 및 목적]
+[관계 유형 및 분석 목적]
 ${relationshipGuide}
-- 기준 점수: ${baseScore}점
-
-## [출력 지침]
-아래 JSON 형식으로만 응답을 생성하십시오. UI에서 파싱해야 하므로 반드시 유효한 JSON이어야 합니다.
-
+기준 궁합 점수: ${baseScore}점`,
+    `[출력 형식 (JSON Mandatory)]
 {
   "score": <최종 궁합 점수(70~100 사이의 숫자)>,
   "summary": "<두 사람의 인연을 꿰뚫어 보는 예리한 한 줄의 통찰 (자연의 비유 사용)>",
@@ -170,34 +161,20 @@ ${relationshipGuide}
     "<긍정적인 면 2>"
   ],
   "warnings": [
-    "<두 기운이 부딪혀 파열음이 나는 지점 (예: 큰 나무 두 그루가 햇빛을 다투는 형국)>",
+    "<두 기운이 부딪혀 파열음이 나는 지점>",
     "<경고 2>"
   ],
-  "advice": "<아래 5단계 흐름을 '단 하나의 유려한 산문 형태'로 묶어 작성하십시오. (기호 절대 금지)>\\n흐름: [영적 꿰뚫음(두 기조의 충돌/조화 파악)] -> [명리적 진단(갈등이나 인연의 근본 원인을 비유로 설명)] -> [신의 한 수(개운법/현실적 타개책)] -> [조언(뼈 있는 한마디)] -> [여운을 남기는 질문].\\n반드시 줄바꿈 문자(\\\\n)를 적절히 섞어 300~500자 분량의 무속인 점사로 완성하십시오."
+  "advice": "<5단계 흐름을 유려한 산문으로: 영적 꿰뚫음 → 명리적 진단 → 신의 한 수 → 조언 → 여운 남기는 질문. 줄바꿈(\\n) 포함 300~500자 무속인 점사>"
 }`
-
-  console.log('[CompatibilityAnalysis] AI 분석 시작...')
+  )
 
   const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
     userId: undefined,
     model: 'gemini-2.0-flash',
     actionType: 'compatibility',
   })
-  const text = result.response.text()
 
-  // JSON 파싱
-  const data = JSON.parse(text)
-
-  console.log('[CompatibilityAnalysis] AI 분석 완료')
-
-  return data
-}
-
-/**
- * 사주 데이터를 텍스트로 포맷팅
- */
-function formatSaju(saju: any): string {
-  return `${saju.pillars.year.korean} ${saju.pillars.month.korean} ${saju.pillars.day.korean} ${saju.pillars.time.korean}`
+  return JSON.parse(result.response.text())
 }
 
 /**
