@@ -486,6 +486,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   })
   const [termDialog, setTermDialog] = useState<TermDialogState>({ open: false, term: '' })
   const [sajuInterpretOpen, setSajuInterpretOpen] = useState(false)
+  const [wuxingAnalysisOpen, setWuxingAnalysisOpen] = useState(false)
+  const [yukchinAnalysisOpen, setYukchinAnalysisOpen] = useState(false)
 
   const selectedMember = members.find((m) => m.id === selectedMemberId)
 
@@ -868,15 +870,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       <BookOpen className="w-4 h-4" />
                       사주팔자 (四柱八字)
                     </h3>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs h-7 px-3"
+                    <button
                       onClick={() => setSajuInterpretOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black text-xs font-bold shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 hover:scale-105 transition-all"
                     >
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      해석
-                    </Button>
+                      <Sparkles className="w-3.5 h-3.5" />내 사주 풀이 보기
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-4 gap-4">
@@ -940,57 +939,22 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="mt-8 pt-6 border-t border-white/5">
                     <p className="text-center text-lg tracking-widest font-bold">{saju.ganjiList.join(' ')}</p>
                   </div>
-
-                  {/* 용어 해석 가이드 */}
-                  <div className="mt-6 pt-5 border-t border-white/5">
-                    <p className="text-[11px] text-muted-foreground/60 mb-4 flex items-center gap-1.5">
-                      <Info className="w-3 h-3 shrink-0" />각 용어를 누르면 해석을 볼 수 있어요
-                    </p>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/40 mb-1.5">십신 (十神)</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {['비견', '겁재', '식신', '상관', '편재', '정재', '편관', '정관', '편인', '정인'].map((t) => (
-                            <TermButton key={t} term={t} />
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/40 mb-1.5">신살 (神殺)</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[
-                            '역마살',
-                            '도화살',
-                            '화개살',
-                            '천을귀인',
-                            '월덕귀인',
-                            '천덕귀인',
-                            '문창귀인',
-                            '괴강살',
-                            '백호대살',
-                            '원진살',
-                          ].map((t) => (
-                            <TermButton key={t} term={t} />
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground/40 mb-1.5">십이운성 · 기타</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {['용신', '희신', '기신', '대운', '세운', '공망', '합', '충', '형', '해'].map((t) => (
-                            <TermButton key={t} term={t} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </Card>
 
                 {/* Wuxing Distribution */}
                 <Card className="p-8 bg-white/5 border-white/10">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6">
-                    오행 분포 (五行分布)
-                  </h3>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                      오행 분포 (五行分布)
+                    </h3>
+                    <button
+                      onClick={() => setWuxingAnalysisOpen(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black text-xs font-bold shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 hover:scale-105 transition-all"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      오행 풀이 보기
+                    </button>
+                  </div>
 
                   <div className="grid grid-cols-5 gap-4">
                     {Object.entries(saju.elementsDistribution).map(([element, count]: [string, number]) => (
@@ -1042,6 +1006,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title="육친 관계도 (六親關係圖)" isSubscribed={isSubscribed}>
                   {yukchinAnalysis && Object.keys(yukchinAnalysis).length > 0 ? (
                     <div className="space-y-6">
+                      <button
+                        onClick={() => setYukchinAnalysisOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black text-xs font-bold shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 hover:scale-105 transition-all"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        육친 풀이 보기
+                      </button>
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(yukchinAnalysis).map(([key, data]) => (
                           <div key={key} className="bg-surface/20 p-4 rounded-lg">
@@ -1086,6 +1057,56 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     <p className="text-sm text-muted-foreground">육친 데이터를 불러오는 중...</p>
                   )}
                 </PremiumFeature>
+
+                {/* 용어 사전 - 기본정보 탭 하단 */}
+                <Card className="p-6 bg-white/5 border-white/10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BookOpen className="w-4 h-4 text-[#D4AF37]" />
+                    <h3 className="text-sm font-bold text-[#D4AF37]">사주 용어 사전</h3>
+                    <span className="text-[10px] text-muted-foreground/50 ml-1">— 누르면 해석을 볼 수 있어요</span>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground/50 mb-2 font-medium">
+                        십신 (十神) — 사주의 인간관계·적성
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {['비견', '겁재', '식신', '상관', '편재', '정재', '편관', '정관', '편인', '정인'].map((t) => (
+                          <TermButton key={t} term={t} />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground/50 mb-2 font-medium">
+                        신살 (神殺) — 타고난 특별한 기운
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          '역마살',
+                          '도화살',
+                          '화개살',
+                          '천을귀인',
+                          '월덕귀인',
+                          '천덕귀인',
+                          '문창귀인',
+                          '괴강살',
+                          '백호대살',
+                          '원진살',
+                        ].map((t) => (
+                          <TermButton key={t} term={t} />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground/50 mb-2 font-medium">십이운성 · 핵심용어</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {['용신', '희신', '기신', '대운', '세운', '공망', '합', '충', '형', '해'].map((t) => (
+                          <TermButton key={t} term={t} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </TabsContent>
 
               {/* Tab: 고급 분석 */}
@@ -1548,6 +1569,166 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 오행 분포 풀이 Dialog */}
+      <Dialog open={wuxingAnalysisOpen} onOpenChange={setWuxingAnalysisOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />
+              오행 분포 풀이
+            </DialogTitle>
+          </DialogHeader>
+          {saju && (
+            <div className="space-y-4 text-sm">
+              <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                <p className="text-[#D4AF37] font-bold mb-2 text-xs">내 사주의 오행 구성</p>
+                <div className="flex gap-3 flex-wrap">
+                  {Object.entries(saju.elementsDistribution).map(([el, cnt]: [string, number]) => (
+                    <div key={el} className="flex items-center gap-1.5">
+                      <span className="text-base font-black" style={{ color: WU_XING_COLORS[el] }}>
+                        {el}
+                      </span>
+                      <span className="text-white/70 text-xs">
+                        {WUXING_KOREAN[el]} {cnt}개
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {[
+                {
+                  el: '木',
+                  ko: '목',
+                  meaning: '성장·발전·인자함',
+                  trait:
+                    '나무처럼 위를 향해 뻗어나가는 기운입니다. 창의력과 기획력이 있고, 사람을 이끄는 능력이 있습니다. 봄의 에너지로 새로운 시작을 잘 합니다.',
+                  lack: '목이 부족하면 결단력이 약해지고 우유부단해질 수 있습니다. 동쪽을 바라보거나 녹색을 활용하면 좋습니다.',
+                },
+                {
+                  el: '火',
+                  ko: '화',
+                  meaning: '열정·활동·예의',
+                  trait:
+                    '불처럼 밝고 강렬한 에너지입니다. 표현력과 카리스마가 있고, 사람들 앞에 나서는 것을 좋아합니다. 여름의 에너지로 활발하고 변화를 즐깁니다.',
+                  lack: '화가 부족하면 자신감이 떨어지고 표현이 서툴 수 있습니다. 붉은색을 활용하고 남쪽 방향이 도움이 됩니다.',
+                },
+                {
+                  el: '土',
+                  ko: '토',
+                  meaning: '안정·신뢰·중심',
+                  trait:
+                    '대지처럼 묵직하고 안정된 에너지입니다. 신뢰감을 주고 조율 능력이 뛰어납니다. 환절기의 에너지로 중간에서 균형을 잡습니다.',
+                  lack: '토가 부족하면 뿌리 없이 흔들릴 수 있습니다. 황토색·노란색 계열이나 산을 찾는 것이 도움이 됩니다.',
+                },
+                {
+                  el: '金',
+                  ko: '금',
+                  meaning: '결단·정의·수확',
+                  trait:
+                    '쇠처럼 강하고 날카로운 에너지입니다. 원칙을 중시하고 결단력이 있습니다. 가을의 에너지로 수확하고 정리하는 능력이 있습니다.',
+                  lack: '금이 부족하면 우유부단하고 마무리가 약할 수 있습니다. 흰색·금색 계열과 서쪽 방향이 도움이 됩니다.',
+                },
+                {
+                  el: '水',
+                  ko: '수',
+                  meaning: '지혜·유연·포용',
+                  trait:
+                    '물처럼 흐르고 채우는 에너지입니다. 지혜롭고 눈치가 빠르며 적응력이 강합니다. 겨울의 에너지로 깊이 생각하고 계획을 세웁니다.',
+                  lack: '수가 부족하면 융통성이 없고 고집스러워질 수 있습니다. 검은색·파란색 계열과 북쪽 방향이 도움이 됩니다.',
+                },
+              ].map(({ el, ko, meaning, trait, lack }) => {
+                const cnt = (saju.elementsDistribution as Record<string, number>)[el] ?? 0
+                const total = Object.values(saju.elementsDistribution).reduce((a: number, b: number) => a + b, 0)
+                const isStrong = cnt >= 3
+                const isWeak = cnt === 0
+                return (
+                  <div
+                    key={el}
+                    className={`p-4 rounded-xl border ${isStrong ? 'bg-[#D4AF37]/5 border-[#D4AF37]/30' : isWeak ? 'bg-white/3 border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl font-black" style={{ color: WU_XING_COLORS[el] }}>
+                        {el}
+                      </span>
+                      <span className="text-white/80 text-xs font-bold">
+                        {ko} — {meaning}
+                      </span>
+                      <span
+                        className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${isStrong ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : isWeak ? 'bg-white/10 text-white/40' : 'bg-white/10 text-white/60'}`}
+                      >
+                        {cnt}/{total} {isStrong ? '강함' : isWeak ? '없음' : '보통'}
+                      </span>
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{isWeak ? lack : trait}</p>
+                    {isWeak && (
+                      <p className="text-[#D4AF37]/70 text-[10px] mt-1.5">💡 {ko}(을)를 보충하면 운이 좋아집니다</p>
+                    )}
+                    {isStrong && (
+                      <p className="text-[#D4AF37]/70 text-[10px] mt-1.5">✨ 이 기운이 당신의 핵심 강점입니다</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 육친 관계도 풀이 Dialog */}
+      <Dialog open={yukchinAnalysisOpen} onOpenChange={setYukchinAnalysisOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />
+              육친 관계도 풀이
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="p-3 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] text-xs font-bold mb-1">육친이란?</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                사주 8글자에서 일간(나)을 기준으로 나머지 7글자가 나와 어떤 관계인지를 나타냅니다. 부모·형제·배우자·자녀
+                등 인생의 인연과 그 강약을 볼 수 있습니다.
+              </p>
+            </div>
+            {yukchinAnalysis &&
+              Object.entries(yukchinAnalysis).map(([key, data]) => {
+                const strengthLabel =
+                  data.strength === 'strong'
+                    ? '강함 — 이 인연이 인생에서 크게 작용합니다'
+                    : data.strength === 'moderate'
+                      ? '보통 — 적당히 영향을 줍니다'
+                      : '약함 — 이 인연의 영향이 적습니다'
+                const strengthColor =
+                  data.strength === 'strong'
+                    ? 'text-[#D4AF37]'
+                    : data.strength === 'moderate'
+                      ? 'text-blue-400'
+                      : 'text-white/40'
+                return (
+                  <div key={key} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-bold text-sm">{data.name}</span>
+                        <span className="text-muted-foreground text-xs">{data.hanja}</span>
+                      </div>
+                      <span className="text-[#D4AF37] font-black text-lg">{data.count}개</span>
+                    </div>
+                    <p className={`text-[10px] mb-2 ${strengthColor}`}>{strengthLabel}</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{data.interpretation}</p>
+                    {data.pillars?.length > 0 && (
+                      <p className="text-white/30 text-[10px] mt-2">위치: {data.pillars.join(', ')}</p>
+                    )}
+                  </div>
+                )
+              })}
+            {(!yukchinAnalysis || Object.keys(yukchinAnalysis).length === 0) && (
+              <p className="text-muted-foreground text-xs text-center py-4">육친 데이터를 불러올 수 없습니다.</p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
