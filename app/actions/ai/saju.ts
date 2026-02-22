@@ -25,27 +25,6 @@ const getGeminiModel = () => {
   return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 }
 
-async function getSystemPrompt(key: string, variables: Record<string, string> = {}) {
-  try {
-    const adminSupabase = createAdminClient()
-    const { data } = await adminSupabase
-      .from('ai_prompts')
-      .select('template')
-      .eq('key', key)
-      .single()
-    if (data?.template) {
-      let text = data.template
-      for (const [k, v] of Object.entries(variables)) {
-        text = text.replace(new RegExp(`{{${k}}}`, 'g'), v)
-      }
-      return text
-    }
-  } catch (e) {
-    console.warn(`Failed to fetch prompt for ${key}:`, e)
-  }
-  return null
-}
-
 // Global Context Injector for Hyper-Personalization
 async function getUserProfileContext(supabase: any, userId: string) {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single()
@@ -147,35 +126,34 @@ export async function analyzeSajuDetail(
     const deductResult = await deductTalisman('SAJU_BASIC')
     if (!deductResult.success) return deductResult
 
-    const systemPrompt =
-      (await getSystemPrompt('saju_analysis_v2')) ||
-      '당신은 30년 경력의 청담해화당 수석 사주 분석가입니다.'
-
-    const prompt = `
-        ${systemPrompt}
-        ${userContext}
-
-        [분석 대상 정보]
-        - 이름: ${name}
-        - 성별: ${gender}
-        - 생년월일시: ${birthDate} ${birthTime} (${calendarType})
-
-        [분석 요구사항]
-        1. **일간(Day Master)과 성격**: 핵심 기질을 분석하되, 프로필의 '인생 철학'과 연결하여 설명.
-        2. **재물운 & 직업운**: 내담자의 실제 '직업'과 연관 지어 구체적인 시기나 전략 제시.
-        3. **애정운 & 대인관계**: 현재 결혼 유무를 고려하여 실질적인 조언.
-        4. **개운법(Advice)**: 긍정적 행동 지침 제시.
-
-        [출력 데이터 구조 (JSON Mandatory)]
-        {
-            "summary": "한 줄 핵심 요약 (감성적 문구)",
-            "fortune_score": 85,
-            "advice": "현실적인 조언 한 문단",
-            "coreCharacter": "성격 분석 요약",
-            "fiveElements": {"wood": 20, "fire": 10, "earth": 30, "metal": 10, "water": 30},
-            "detailedAnalysis": "마크다운 형식의 상세 리포트."
-        }
-        `
+    // 해화지기 마스터 엔진으로 프롬프트 조립
+    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+    const { prompt } = await buildMasterPromptForAction(
+      {
+        name,
+        birthDate,
+        birthTime,
+        gender: gender === '남성' || gender === 'male' ? 'male' : 'female',
+        isSolar: calendarType !== 'lunar',
+        job: profile?.job || undefined,
+        focusAreas: profile?.focus_areas || undefined,
+        maritalStatus: profile?.marital_status || undefined,
+        lifePhilosophy: profile?.life_philosophy || undefined,
+        activityStatus: profile?.activity_status || undefined,
+      },
+      'SAJU_FULL',
+      userContext,
+      '',
+      `[출력 데이터 구조 (JSON Mandatory)]
+{
+  "summary": "한 줄 핵심 요약 (감성적 문구, 20자 이내)",
+  "fortune_score": 85,
+  "advice": "개운법을 포함한 현실적인 조언 한 문단",
+  "coreCharacter": "일간 물상론 기반 성격 분석 요약",
+  "fiveElements": {"wood": 20, "fire": 10, "earth": 30, "metal": 10, "water": 30},
+  "detailedAnalysis": "해화지기 화법의 상세 산문 리포트 (마크다운 형식)"
+}`
+    )
 
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,
@@ -217,11 +195,7 @@ export async function analyzeSajuDetail(
 }
 
 // 1. Face Analysis
-export async function analyzeFaceForDestiny(
-  imageBase64: string,
-  goal: FaceDestinyGoal,
-  saveToHistory: boolean = true
-) {
+export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDestinyGoal, saveToHistory: boolean = true) {
   // Zod validation
   const validation = faceAnalysisSchema.safeParse({
     imageBase64,
@@ -287,11 +261,7 @@ export async function analyzeFaceForDestiny(
         `
 
     const result = await withGeminiRateLimit(
-      () =>
-        model.generateContent([
-          prompt,
-          { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
-        ]),
+      () => model.generateContent([prompt, { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } }]),
       { userId: user.id, model: 'gemini-2.0-flash', actionType: 'face_analysis' }
     )
 
@@ -386,11 +356,7 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
         `
 
     const result = await withGeminiRateLimit(
-      () =>
-        model.generateContent([
-          prompt,
-          { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
-        ]),
+      () => model.generateContent([prompt, { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } }]),
       { userId: user.id, model: 'gemini-2.0-flash', actionType: 'palm_analysis' }
     )
 
@@ -493,11 +459,7 @@ export async function analyzeInteriorForFengshui(
         `
 
     const result = await withGeminiRateLimit(
-      () =>
-        model.generateContent([
-          prompt,
-          { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } },
-        ]),
+      () => model.generateContent([prompt, { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } }]),
       { userId: user.id, model: 'gemini-2.0-flash', actionType: 'fengshui_interior' }
     )
 

@@ -4,17 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import {
-  formatManseDetails,
-  formatSajuText,
-  formatDaewoon,
-  calculateElements,
-} from '@/lib/utils/manse-formatter'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
-import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 
 export interface Year2026Result {
   name: string
@@ -103,18 +96,6 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
     const manse = calculateManse(birthDate, birthTime)
     const age = calculateAge(birthDate)
     const daewoon = calculateDaewoon(birthDate, birthTime, gender, age)
-    const elements = calculateElements(manse)
-
-    const sajuText = formatSajuText(manse)
-    const manseDetails = formatManseDetails(manse)
-    const daewoonText = formatDaewoon(daewoon)
-
-    const elementsText = Object.entries(elements)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(', ')
-
-    const genderLabel = gender === 'male' ? '남성' : '여성'
-    const birthTimeLabel = target.birth_time || '시간 미상'
 
     // 5. Gemini 호출
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
@@ -128,37 +109,22 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       generationConfig: { responseMimeType: 'application/json' },
     })
 
-    const variables = {
-      name: target.name,
-      gender: genderLabel,
-      birthDate,
-      birthTime: birthTimeLabel,
-      age: age.toString(),
-      saju: sajuText,
-      manse: manseDetails,
-      elements: elementsText,
-      daewoon: daewoonText,
-    }
-
-    // DB 프롬프트 조회 → 없으면 하드코딩 fallback
-    let prompt: string
-    try {
-      prompt = await getPromptWithVariables('year2026_analysis', variables)
-    } catch {
-      prompt = `당신은 대한민국 최고의 사주명리학 전문가입니다.
-2026년 병오년(丙午年) - 붉은 말의 해 - 특별 운세를 분석해주세요.
-
-이름: ${target.name}, 성별: ${genderLabel}, 생년월일: ${birthDate}, 나이: ${age}세
-사주: ${sajuText}
-오행: ${elementsText}
-대운: ${daewoonText}
-
-병오년은 火氣가 왕성한 해로 추진력과 변화의 기운이 강합니다.
-분기별 흐름, 재물/애정/직업/건강 영역, 최고/주의 달, 행운 키워드, 응원 메시지를 포함하여 JSON으로 응답해주세요.
-
-출력 형식:
-{"name":"","summary":"","score":78,"bingoh_meaning":"","quarterly":{"q1":"","q2":"","q3":"","q4":""},"areas":{"wealth":{"score":80,"content":""},"love":{"score":75,"content":""},"career":{"score":85,"content":""},"health":{"score":70,"content":""}},"peak_month":"","caution_month":"","lucky":{"color":"","direction":"","number":6},"message":""}`
-    }
+    // 해화지기 마스터 엔진으로 프롬프트 조립
+    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+    const { prompt } = await buildMasterPromptForAction(
+      {
+        name: target.name,
+        birthDate,
+        birthTime: target.birth_time || '12:00',
+        gender: (gender || 'male') as 'male' | 'female',
+        isSolar: target.calendar_type !== 'lunar',
+      },
+      'YEARLY_FORTUNE',
+      '',
+      '2026년 병오년(丙午年) - 붉은 말의 해. 火氣가 왕성한 해로 추진력과 변화의 기운이 강합니다.',
+      `[출력 형식 (JSON Mandatory)]
+{"name":"${target.name}","summary":"한 줄 요약","score":78,"bingoh_meaning":"병오년의 기운 설명","quarterly":{"q1":"1분기 운세","q2":"2분기 운세","q3":"3분기 운세","q4":"4분기 운세"},"areas":{"wealth":{"score":80,"content":"재물운"},"love":{"score":75,"content":"애정운"},"career":{"score":85,"content":"직업운"},"health":{"score":70,"content":"건강운"}},"peak_month":"최고의 달","caution_month":"주의 달","lucky":{"color":"행운색","direction":"길한 방향","number":6},"message":"응원 메시지"}`
+    )
 
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,
@@ -189,11 +155,9 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
     const fortuneMemberId =
       target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
     if (fortuneMemberId) {
-      await recordFortuneEntry(
-        fortuneMemberId,
-        'NEW_YEAR',
-        (saved as { id?: string })?.id ?? fortuneMemberId
-      ).catch(() => {})
+      await recordFortuneEntry(fortuneMemberId, 'NEW_YEAR', (saved as { id?: string })?.id ?? fortuneMemberId).catch(
+        () => {}
+      )
     }
 
     return { success: true, data }

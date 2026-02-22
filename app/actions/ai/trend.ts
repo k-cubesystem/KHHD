@@ -4,17 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import {
-  formatManseDetails,
-  formatSajuText,
-  formatDaewoon,
-  calculateElements,
-} from '@/lib/utils/manse-formatter'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
-import { getPromptWithVariables } from '@/lib/utils/prompt-variables'
 
 export type TrendType = 'love' | 'career' | 'exam' | 'estate'
 
@@ -53,21 +46,6 @@ const TREND_AREAS: Record<TrendType, string[]> = {
   career: ['현재 직장 기운', '승진/이직 에너지', '인간관계 운', '사업/창업 운'],
   exam: ['학업 집중력', '합격 에너지', '최적 학습 시기', '약점 보완'],
   estate: ['매매 운', '전세/월세 운', '이사 방향', '계약 주의사항'],
-}
-
-const TREND_GUIDES: Record<TrendType, string> = {
-  love: `- 현재 연애/결혼 흐름과 인연이 오는 시기를 분석하세요
-- 이상형 방향과 현재 관계 개선 조언을 구체적으로 제시하세요
-- 감정 에너지의 흐름과 만남의 기회를 중심으로 서술하세요`,
-  career: `- 승진/이직 가능성과 직장 내 인간관계를 분석하세요
-- 새로운 기회가 열리는 시기와 업종/부서 조언을 제시하세요
-- 사업/창업 운과 현재 직장 기운을 중심으로 서술하세요`,
-  exam: `- 합격 가능성 에너지와 집중력 최적 시기를 분석하세요
-- 시험 운과 학습 방향, 강약점 조언을 구체적으로 제시하세요
-- 자격증/입시/취업 시험 등 성취 운을 중심으로 서술하세요`,
-  estate: `- 매매/전세 운과 이사 적합 시기를 분석하세요
-- 방향/위치 조언과 문서 계약 주의사항을 구체적으로 제시하세요
-- 부동산 취득/처분/임대차 운을 중심으로 서술하세요`,
 }
 
 async function getRecentTrendAnalysis(
@@ -111,68 +89,6 @@ async function getRecentTrendAnalysis(
   return null
 }
 
-function buildTrendPrompt(vars: {
-  trendType: TrendType
-  trendLabel: string
-  name: string
-  gender: string
-  birthDate: string
-  age: string
-  saju: string
-  manse: string
-  elements: string
-  daewoon: string
-  areaItems: string[]
-  guide: string
-}): string {
-  const areasJson = vars.areaItems
-    .map((title) => `    { "title": "${title}", "score": 75, "content": "설명 2~3문장" }`)
-    .join(',\n')
-
-  return `당신은 대한민국 최고의 사주명리 ${vars.trendLabel} 전문가입니다.
-아래 사주 정보를 바탕으로 ${vars.trendLabel}을 심층 분석해주세요.
-
-## 분석 대상
-- 이름: ${vars.name}
-- 성별: ${vars.gender}
-- 생년월일: ${vars.birthDate}
-- 나이: ${vars.age}세
-
-## 사주 정보
-${vars.saju}
-
-## 만세력 상세
-${vars.manse}
-
-## 오행 분포
-${vars.elements}
-
-## 현재 대운
-${vars.daewoon}
-
-## 분석 지침
-${vars.guide}
-- 점수는 0~100 사이로 현실적으로 부여하세요 (과도하게 높거나 낮지 않게)
-- 한국 전통 사주명리학 용어를 사용하되 현대적으로 해석하세요
-- 격려와 실용적 조언을 담아 긍정적이되 현실적으로 서술하세요
-
-## 출력 형식 (반드시 JSON으로만 응답)
-{
-  "trendType": "${vars.trendType}",
-  "name": "${vars.name}",
-  "summary": "한 줄 요약 (15자 이내)",
-  "score": 75,
-  "overview": "전체 설명 3~4문장",
-  "areas": [
-${areasJson}
-  ],
-  "timing": "좋은 시기 구체적으로 (예: 3월~5월이 최고점)",
-  "advice": "핵심 조언 2~3문장",
-  "caution": "주의사항 1~2문장",
-  "lucky": { "color": "색상", "direction": "방향", "number": 7 }
-}`
-}
-
 export async function analyzeTrendAction(
   targetId: string,
   trendType: TrendType
@@ -202,51 +118,47 @@ export async function analyzeTrendAction(
     }
 
     // 만세력 계산
-    const manse = calculateManse(
-      target.birth_date,
-      target.birth_time || '00:00',
-      'Asia/Seoul',
-      true
-    )
-    const elements = calculateElements(manse)
+    const manse = calculateManse(target.birth_date, target.birth_time || '00:00', 'Asia/Seoul', true)
     const age = calculateAge(target.birth_date)
-    const daewoon = calculateDaewoon(
-      target.birth_date,
-      target.birth_time || '00:00',
-      (target.gender || 'male') as 'male' | 'female',
-      age,
-      'Asia/Seoul'
-    )
 
     const trendLabel = TREND_LABELS[trendType]
     const areaItems = TREND_AREAS[trendType]
-    const guide = TREND_GUIDES[trendType]
 
-    const variables = {
-      name: target.name,
-      gender: target.gender === 'male' ? '남성' : '여성',
-      birthDate: target.birth_date,
-      birthTime: target.birth_time || '00:00',
-      age: age.toString(),
-      saju: formatSajuText(manse),
-      manse: formatManseDetails(manse),
-      elements: JSON.stringify(elements),
-      daewoon: formatDaewoon(daewoon),
-    }
-
-    // DB 프롬프트 조회 → 없으면 하드코딩 fallback
-    let prompt: string
-    try {
-      prompt = await getPromptWithVariables(`trend_${trendType}`, variables)
-    } catch {
-      prompt = buildTrendPrompt({
-        trendType,
-        trendLabel,
-        areaItems,
-        guide,
-        ...variables,
-      })
-    }
+    // 해화지기 마스터 엔진으로 프롬프트 조립
+    const trendTypeMap = {
+      love: 'TREND_LOVE',
+      career: 'TREND_CAREER',
+      exam: 'TREND_EXAM',
+      estate: 'TREND_WEALTH',
+    } as const
+    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+    const { prompt } = await buildMasterPromptForAction(
+      {
+        name: target.name,
+        birthDate: target.birth_date,
+        birthTime: target.birth_time || '00:00',
+        gender: (target.gender || 'male') as 'male' | 'female',
+        isSolar: target.calendar_type !== 'lunar',
+      },
+      trendTypeMap[trendType],
+      '',
+      '',
+      `[출력 형식 (JSON Mandatory)]
+{
+  "trendType": "${trendType}",
+  "name": "${target.name}",
+  "summary": "한 줄 핵심 요약",
+  "score": 75,
+  "overview": "${trendLabel} 전체 흐름 설명 (해화지기 화법, 3~4문장)",
+  "areas": [
+    ${areaItems.map((a) => `{ "title": "${a}", "score": 75, "content": "해당 영역 운세 (2~3문장)" }`).join(',\n    ')}
+  ],
+  "timing": "최적 행동 시기",
+  "advice": "핵심 조언",
+  "caution": "주의사항",
+  "lucky": { "color": "행운색", "direction": "길한 방향", "number": 7 }
+}`
+    )
 
     // AI 분석
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
@@ -286,9 +198,7 @@ export async function analyzeTrendAction(
     const fortuneMemberId =
       target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
     if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'TODAY', saved.id ?? fortuneMemberId).catch(
-        () => {}
-      )
+      await recordFortuneEntry(fortuneMemberId, 'TODAY', saved.id ?? fortuneMemberId).catch(() => {})
     }
 
     return { success: true, data: result, cached: false }

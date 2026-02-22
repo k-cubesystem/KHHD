@@ -4,12 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import {
-  formatManseDetails,
-  formatSajuText,
-  formatDaewoon,
-  calculateElements,
-} from '@/lib/utils/manse-formatter'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
@@ -70,21 +64,8 @@ export async function analyzeFortuneAction(
     }
 
     // 3. 만세력 계산
-    const manse = calculateManse(
-      target.birth_date,
-      target.birth_time || '00:00',
-      'Asia/Seoul',
-      true
-    )
-    const elements = calculateElements(manse)
+    const manse = calculateManse(target.birth_date, target.birth_time || '00:00', 'Asia/Seoul', true)
     const age = calculateAge(target.birth_date)
-    const daewoon = calculateDaewoon(
-      target.birth_date,
-      target.birth_time || '00:00',
-      (target.gender || 'male') as 'male' | 'female',
-      age,
-      'Asia/Seoul'
-    )
 
     // 4. 현재 날짜 정보
     const now = new Date()
@@ -97,26 +78,42 @@ export async function analyzeFortuneAction(
     const weekStartStr = getWeekRange(now)
     const monthStr = now.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
 
-    const periodLabel =
-      fortuneType === 'today' ? todayStr : fortuneType === 'weekly' ? weekStartStr : monthStr
+    const periodLabel = fortuneType === 'today' ? todayStr : fortuneType === 'weekly' ? weekStartStr : monthStr
 
-    // 5. 프롬프트 생성
-    const prompt = buildFortunePrompt({
-      fortuneType,
-      name: target.name,
-      gender: target.gender === 'male' ? '남성' : '여성',
-      birthDate: target.birth_date,
-      birthTime: target.birth_time || '00:00',
-      age: age.toString(),
-      saju: formatSajuText(manse),
-      manse: formatManseDetails(manse),
-      elements: JSON.stringify(elements),
-      daewoon: formatDaewoon(daewoon),
-      period: periodLabel,
-    })
+    // 5. 해화지기 마스터 엔진으로 프롬프트 조립
+    const typeMap = { today: 'DAILY_FORTUNE', weekly: 'WEEKLY_FORTUNE', monthly: 'MONTHLY_FORTUNE' } as const
+    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
+    const { prompt: masterPrompt } = await buildMasterPromptForAction(
+      {
+        name: target.name,
+        birthDate: target.birth_date,
+        birthTime: target.birth_time || '00:00',
+        gender: (target.gender || 'male') as 'male' | 'female',
+        isSolar: target.calendar_type !== 'lunar',
+      },
+      typeMap[fortuneType],
+      '',
+      `분석 기간: ${periodLabel}`,
+      `[출력 형식 (JSON Mandatory)]
+{
+  "type": "${fortuneType}",
+  "summary": "한 줄 핵심 요약 (20자 이내)",
+  "score": 75,
+  "overall": "전체 운세 흐름 (3~4문장, 해화지기 화법)",
+  "areas": [
+    { "name": "재물운", "score": 80, "content": "재물 관련 운세 (2~3문장)" },
+    { "name": "애정운", "score": 70, "content": "애정 관련 운세 (2~3문장)" },
+    { "name": "건강운", "score": 85, "content": "건강 관련 운세 (2~3문장)" },
+    { "name": "직업운", "score": 75, "content": "직업/사업 관련 운세 (2~3문장)" }
+  ],
+  "lucky": { "color": "행운의 색상", "number": 7, "direction": "길한 방향", "advice": "핵심 조언" },
+  "caution": "주의사항",
+  "period": "${periodLabel}"
+}`
+    )
 
     // 6. AI 분석
-    const result = await analyzeFortuneWithAI(prompt, fortuneType, periodLabel)
+    const result = await analyzeFortuneWithAI(masterPrompt, fortuneType, periodLabel)
 
     // 7. 히스토리 저장
     const saved = await saveAnalysisHistory({
@@ -134,9 +131,7 @@ export async function analyzeFortuneAction(
     const fortuneMemberId =
       target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
     if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'TODAY', saved.id ?? fortuneMemberId).catch(
-        () => {}
-      )
+      await recordFortuneEntry(fortuneMemberId, 'TODAY', saved.id ?? fortuneMemberId).catch(() => {})
     }
 
     return { success: true, data: result, cached: false }
@@ -184,84 +179,7 @@ async function getRecentFortuneAnalysis(
   return cached.type === fortuneType ? cached : null
 }
 
-function buildFortunePrompt(vars: {
-  fortuneType: FortuneType
-  name: string
-  gender: string
-  birthDate: string
-  birthTime: string
-  age: string
-  saju: string
-  manse: string
-  elements: string
-  daewoon: string
-  period: string
-}): string {
-  const typeLabel =
-    vars.fortuneType === 'today'
-      ? '오늘의 운세'
-      : vars.fortuneType === 'weekly'
-        ? '이번 주 주간 운세'
-        : '이번 달 월간 운세'
-
-  return `당신은 대한민국 최고의 사주명리 운세 전문가입니다.
-아래 사주 정보를 바탕으로 ${typeLabel}을 분석해주세요.
-
-## 분석 대상
-- 이름: ${vars.name}
-- 성별: ${vars.gender}
-- 생년월일: ${vars.birthDate}
-- 출생 시간: ${vars.birthTime}
-- 나이: ${vars.age}세
-- 분석 기간: ${vars.period}
-
-## 사주 정보
-${vars.saju}
-
-## 만세력 상세
-${vars.manse}
-
-## 오행 분포
-${vars.elements}
-
-## 현재 대운
-${vars.daewoon}
-
-## 분석 지침
-- ${typeLabel} 기준으로 해당 기간의 기운 흐름을 분석하세요
-- 재물운, 애정운, 건강운, 직업운 4가지 영역별로 분석하세요
-- 점수는 0~100 사이로 현실적으로 부여하세요 (과도하게 높거나 낮지 않게)
-- 한국 전통 사주명리학 용어를 사용하되 현대적으로 해석하세요
-- 격려와 실용적 조언을 담아 긍정적이되 현실적으로 서술하세요
-
-## 출력 형식 (반드시 JSON으로만 응답)
-{
-  "type": "${vars.fortuneType}",
-  "summary": "한 줄 핵심 요약 (20자 이내)",
-  "score": 75,
-  "overall": "전체 운세 흐름 설명 (3~4문장)",
-  "areas": [
-    { "name": "재물운", "score": 80, "content": "재물 관련 운세 (2~3문장)" },
-    { "name": "애정운", "score": 70, "content": "애정 관련 운세 (2~3문장)" },
-    { "name": "건강운", "score": 85, "content": "건강 관련 운세 (2~3문장)" },
-    { "name": "직업운", "score": 75, "content": "직업/사업 관련 운세 (2~3문장)" }
-  ],
-  "lucky": {
-    "color": "행운의 색상",
-    "number": 7,
-    "direction": "길한 방향",
-    "advice": "오늘/이번 주/이번 달 핵심 조언 (1~2문장)"
-  },
-  "caution": "주의해야 할 사항 (1~2문장)",
-  "period": "${vars.period}"
-}`
-}
-
-async function analyzeFortuneWithAI(
-  prompt: string,
-  fortuneType: FortuneType,
-  period: string
-): Promise<FortuneResult> {
+async function analyzeFortuneWithAI(prompt: string, fortuneType: FortuneType, period: string): Promise<FortuneResult> {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) throw new Error('Google AI API Key가 없습니다.')
 
