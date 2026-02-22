@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import {
   sendShamanChatMessage,
@@ -13,71 +12,191 @@ import {
   type ShamanChatMessage,
   type ShamanQuestionStatus,
 } from '@/app/actions/ai/shaman-chat'
-import { Loader2, Send, MessageSquare, Coins, Flame } from 'lucide-react'
+import { useFamilyMembers } from '@/hooks/use-family-members'
+import { Loader2, Send, Coins, Flame, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
+// ─── 타이핑 인디케이터 ────────────────────────────────
+function TypingDots() {
+  return (
+    <div className="flex items-end gap-2.5 px-1">
+      {/* 아바타 */}
+      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-600/30 to-gold-700/20 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
+        <span className="text-xs">👺</span>
+      </div>
+      {/* 점 */}
+      <div className="px-4 py-3 rounded-2xl rounded-bl-none bg-surface/70 border border-primary/10 backdrop-blur-md">
+        <div className="flex gap-1.5 items-center h-3.5">
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="block w-1.5 h-1.5 rounded-full bg-primary/50"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── 메시지 버블 ────────────────────────────────────────
+function Bubble({ msg, showAvatar }: { msg: ShamanChatMessage; showAvatar: boolean }) {
+  const isUser = msg.role === 'user'
+  const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+
+  if (isUser) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 6, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        className="flex justify-end items-end gap-2"
+      >
+        <span className="text-[10px] text-primary/30 self-end mb-0.5">{time}</span>
+        <div
+          className={cn(
+            'max-w-[72%] px-4 py-3 rounded-2xl rounded-br-none text-sm leading-relaxed',
+            'bg-gradient-to-br from-[#2a2318] to-[#1e1a10] text-primary/90',
+            'border border-gold-600/25',
+            'shadow-[0_2px_20px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(244,228,186,0.06)]',
+            'font-medium'
+          )}
+        >
+          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+        </div>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.28, ease: 'easeOut' }}
+      className="flex items-end gap-2.5 px-1"
+    >
+      {/* 아바타 - 연속 메시지면 투명 공간만 */}
+      {showAvatar ? (
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-600/30 to-gold-700/20 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
+          <span className="text-xs">👺</span>
+        </div>
+      ) : (
+        <div className="w-7 flex-shrink-0" />
+      )}
+
+      <div className="max-w-[76%] space-y-1">
+        <div
+          className={cn(
+            'px-4 py-3.5 rounded-2xl rounded-bl-none text-sm leading-[1.75]',
+            'bg-surface/60 border border-primary/8 backdrop-blur-md',
+            'text-foreground/85',
+            'shadow-[0_2px_24px_rgba(0,0,0,0.3)]'
+          )}
+        >
+          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+        </div>
+        <p className="text-[10px] text-primary/25 pl-1">{time}</p>
+      </div>
+    </motion.div>
+  )
+}
+
+// ─── 상태 칩 ─────────────────────────────────────────────
+function StatusChip({
+  icon,
+  value,
+  loading,
+  dimmed,
+}: {
+  icon: React.ReactNode
+  value: string
+  loading: boolean
+  dimmed?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-1.5 px-3 py-1.5 rounded-full',
+        'bg-surface/50 border backdrop-blur-sm',
+        dimmed ? 'border-red-500/20' : 'border-primary/10'
+      )}
+    >
+      {icon}
+      {loading ? (
+        <div className="w-8 h-3 rounded bg-primary/10 animate-pulse" />
+      ) : (
+        <span className={cn('text-[11px] font-medium', dimmed ? 'text-red-400' : 'text-primary/70')}>{value}</span>
+      )}
+    </div>
+  )
+}
+
+// ─── 메인 컴포넌트 ─────────────────────────────────────────
 export function ShamanChatInterface() {
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRecharging, setIsRecharging] = useState(false)
   const [turnCount, setTurnCount] = useState(0)
-  const [starterQuestions, setStarterQuestions] = useState<string[]>([
-    '오늘의 총운이 궁금해요',
-    '이번 달 재물운 흐름은?',
-    '이직하기 좋은 시기가 언제인가요?',
-    '올해 연애운과 결혼운 알려줘',
-    '건강상 주의해야 할 점은?',
-    '꿈해몽 부탁드려요',
+  const [starters, setStarters] = useState([
+    '올해 재물운 흐름 궁금해요',
+    '이직 시기가 맞을까요?',
+    '연애운 솔직하게 봐주세요',
+    '지금 제 사주 흐름은요?',
+    '건강 주의할 점 있나요?',
   ])
-  const [hasStarted, setHasStarted] = useState(false)
   const [questionStatus, setQuestionStatus] = useState<ShamanQuestionStatus | null>(null)
   const [isStatusLoading, setIsStatusLoading] = useState(true)
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string>('self')
+  const { data: familyMembers } = useFamilyMembers()
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const chatRef = useRef<HTMLDivElement>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // 사용자가 직접 스크롤을 올렸는지 추적
+  const isAtBottomRef = useRef(true)
 
-  useEffect(() => {
-    if (messages.length > 0) scrollToBottom()
-  }, [messages])
+  // 스크롤 위치 감지
+  const handleScroll = useCallback(() => {
+    const el = chatRef.current
+    if (!el) return
+    const threshold = 80
+    isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold
+  }, [])
 
-  // 초기 데이터 로드
+  // AI 응답 왔을 때만 부드럽게 스크롤
+  const scrollToBottomSmooth = useCallback(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [])
+
+  // 초기 로드
   useEffect(() => {
     const load = async () => {
       setIsStatusLoading(true)
-      const [statusResult, startersResult] = await Promise.all([
-        getShamanQuestionStatus(),
-        getShamanChatStarters(),
-      ])
-      if (statusResult.success) {
-        setQuestionStatus(statusResult)
-      }
+      const [statusResult, startersResult] = await Promise.all([getShamanQuestionStatus(), getShamanChatStarters()])
+      if (statusResult.success) setQuestionStatus(statusResult)
       if (startersResult.success && startersResult.questions.length > 0) {
-        setStarterQuestions(startersResult.questions.slice(0, 6))
+        setStarters(startersResult.questions.slice(0, 5))
       }
       setIsStatusLoading(false)
     }
     load()
   }, [])
 
-  // 질문권 충전
+  // 충전
   const handleRecharge = async () => {
     const balance = questionStatus?.walletBalance ?? 0
     if (balance < 1) {
-      toast.error(`복채가 부족합니다`, {
-        description: `현재 ${balance.toLocaleString()}만냥 보유 중. 1만냥이 필요합니다.`,
-        action: {
-          label: '복채 충전',
-          onClick: () => (window.location.href = '/protected/membership'),
-        },
+      toast.error('복채가 부족합니다', {
+        description: `${balance.toLocaleString()}만냥 보유 · 1만냥 필요`,
+        action: { label: '복채 충전', onClick: () => (window.location.href = '/protected/membership') },
       })
       return
     }
-
     setIsRecharging(true)
     try {
       const result = await purchaseShamanQuestions()
@@ -88,13 +207,12 @@ export function ShamanChatInterface() {
                 ...prev,
                 walletBalance: result.remainingBalance ?? prev.walletBalance,
                 purchasedCredits: result.newPurchasedCredits ?? prev.purchasedCredits,
-                totalRemaining:
-                  prev.dailyFreeRemaining + (result.newPurchasedCredits ?? prev.purchasedCredits),
+                totalRemaining: prev.dailyFreeRemaining + (result.newPurchasedCredits ?? prev.purchasedCredits),
               }
             : prev
         )
-        toast.success('질문권 20회 충전 완료!', {
-          description: `복채 1만냥이 차감되었습니다. 남은 복채: ${(result.remainingBalance ?? 0).toLocaleString()}만냥`,
+        toast.success('질문권 20회 충전 완료', {
+          description: `남은 복채: ${(result.remainingBalance ?? 0).toLocaleString()}만냥`,
         })
       } else {
         toast.error(result.error || '충전 실패')
@@ -105,43 +223,40 @@ export function ShamanChatInterface() {
   }
 
   // 메시지 전송
-  const handleSendMessage = async (messageText?: string) => {
-    const textToSend = messageText || inputMessage.trim()
-    if (!textToSend) return
+  const handleSend = async (text?: string) => {
+    const textToSend = (text || inputMessage).trim()
+    if (!textToSend || isLoading) return
 
-    const totalRemaining = questionStatus?.totalRemaining ?? 0
-    if (totalRemaining <= 0) {
-      toast.error('질문 횟수가 부족합니다.', {
-        description: '복채 1만냥으로 질문권 20회를 충전하세요.',
-        action: { label: '충전하기', onClick: handleRecharge },
-      })
+    if ((questionStatus?.totalRemaining ?? 0) <= 0) {
+      toast.error('질문 횟수가 소진되었습니다.', { action: { label: '충전하기', onClick: handleRecharge } })
       return
     }
 
     setIsLoading(true)
-    setHasStarted(true)
-
-    const userMessage: ShamanChatMessage = {
-      role: 'user',
-      content: textToSend,
-      timestamp: new Date().toISOString(),
-    }
-    setMessages((prev) => [...prev, userMessage])
+    const userMsg: ShamanChatMessage = { role: 'user', content: textToSend, timestamp: new Date().toISOString() }
+    setMessages((prev) => [...prev, userMsg])
     setInputMessage('')
 
-    try {
-      const result = await sendShamanChatMessage(textToSend, messages, turnCount)
+    // textarea 높이 리셋
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
+    // 사용자 메시지 후 바로 스크롤 (항상)
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50)
+
+    try {
+      const result = await sendShamanChatMessage(textToSend, messages, turnCount, selectedFamilyId)
       if (result.success && result.response) {
-        const assistantMessage: ShamanChatMessage = {
+        const aiMsg: ShamanChatMessage = {
           role: 'assistant',
           content: result.response,
           timestamp: new Date().toISOString(),
         }
-        setMessages((prev) => [...prev, assistantMessage])
+        setMessages((prev) => [...prev, aiMsg])
         setTurnCount((prev) => prev + 1)
 
-        // 질문권 1개 소비 반영
+        // AI 응답 후 스크롤 (항상)
+        setTimeout(scrollToBottomSmooth, 80)
+
         setQuestionStatus((prev) => {
           if (!prev) return prev
           if (prev.dailyFreeRemaining > 0) {
@@ -159,288 +274,309 @@ export function ShamanChatInterface() {
           }
         })
 
-        if (result.suggestedQuestions) {
-          setStarterQuestions((prev) =>
-            result.suggestedQuestions ? [...result.suggestedQuestions, ...prev].slice(0, 6) : prev
-          )
+        if (result.suggestedQuestions?.length) {
+          setStarters((prev) => [...(result.suggestedQuestions ?? []), ...prev].slice(0, 5))
         }
       } else {
-        if (result.noCredits) {
-          toast.error('질문 횟수가 모두 소진되었습니다.', {
-            action: { label: '충전하기', onClick: handleRecharge },
-          })
-        } else {
-          toast.error(result.error || '메시지 전송 실패')
-        }
+        if (result.noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
+        else toast.error(result.error || '전송 실패')
       }
-    } catch (error) {
-      console.error('Chat error:', error)
-      toast.error('예기치 않은 오류가 발생했습니다.')
+    } catch {
+      toast.error('오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleStarterClick = (question: string) => handleSendMessage(question)
-
   const isLimitReached = (questionStatus?.totalRemaining ?? 1) <= 0
   const totalRemaining = questionStatus?.totalRemaining ?? 0
+  const isLow = totalRemaining > 0 && totalRemaining <= 3
+  const showStarters = messages.length === 0
 
   return (
-    <div className="relative min-h-screen bg-background text-ink-light overflow-hidden flex flex-col items-center">
-      <div className="relative z-10 container max-w-2xl mx-auto px-4 py-6 flex-1 flex flex-col">
-        {/* Header */}
-        <header className="text-center mb-6 space-y-3">
-          <h1 className="text-xl md:text-2xl font-serif font-bold text-ink-light flex items-center justify-center gap-2">
-            해화당 고민 상담소
-          </h1>
-          <p className="text-xs text-ink-light/70 font-light leading-relaxed break-keep max-w-md mx-auto">
-            단순한 위로가 아닌, 귀하의{' '}
-            <strong className="text-primary font-medium">사주 명식</strong>을 정밀하게 분석하여
-            <br className="hidden md:block" />
-            나아갈 길과 피해야 할 길을 명확히 일러드립니다.
-            <br />
-            <span className="opacity-80 mt-1 block">
-              매일 <strong className="text-primary font-medium">10회 무료</strong> 제공 · 복채 1만
-              냥으로 <strong className="text-primary font-medium">+20회 추가 충전</strong>
-            </span>
-          </p>
-        </header>
+    <div className="flex flex-col bg-background" style={{ height: 'calc(100dvh - 60px)' /* 바텀 nav h-[60px] */ }}>
+      {/* 배경 ambient */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/3 blur-[100px]" />
+        <div className="absolute bottom-0 right-0 w-[250px] h-[250px] rounded-full bg-gold-600/4 blur-[80px]" />
+      </div>
 
-        {/* Status Bar */}
-        <div className="mb-6 flex flex-col gap-2">
-          {/* 3분할 현황 */}
-          <div className="grid grid-cols-3 gap-2">
-            {/* 보유 복채 */}
-            <div className="px-3 py-2 rounded-xl bg-surface/40 border border-white/10 text-center backdrop-blur-sm">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Coins className="w-3 h-3 text-yellow-400" />
-                <span className="text-[10px] text-ink-light/50">보유 복채</span>
+      {/* ── 헤더 (2단 · 고정) ── */}
+      <header
+        className="sticky top-0 z-20 flex-shrink-0 border-b border-primary/8"
+        style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(20px)' }}
+      >
+        {/* 1단: 정체성 */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2.5 border-b border-white/4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#2a2010] to-surface border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(244,228,186,0.08)]">
+                <span className="text-xl leading-none">👺</span>
               </div>
-              {isStatusLoading ? (
-                <div className="h-4 bg-white/5 rounded animate-pulse mx-2" />
-              ) : (
-                <p className="text-xs font-bold text-yellow-400">
-                  {(questionStatus?.walletBalance ?? 0).toLocaleString()}
-                  <span className="font-normal text-ink-light/40">만냥</span>
-                </p>
-              )}
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0d0d0d]" />
             </div>
-
-            {/* 일일 무료 */}
-            <div className="px-3 py-2 rounded-xl bg-surface/40 border border-white/10 text-center backdrop-blur-sm">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Flame className="w-3 h-3 text-primary" />
-                <span className="text-[10px] text-ink-light/50">일일 무료</span>
-              </div>
-              {isStatusLoading ? (
-                <div className="h-4 bg-white/5 rounded animate-pulse mx-2" />
-              ) : (
-                <p className="text-xs font-bold text-primary">
-                  {questionStatus?.dailyFreeRemaining ?? 0}
-                  <span className="font-normal text-ink-light/40">
-                    /{questionStatus?.dailyFreeTotal ?? 10}
-                  </span>
-                </p>
-              )}
-            </div>
-
-            {/* 구매 질문권 */}
-            <div className="px-3 py-2 rounded-xl bg-surface/40 border border-white/10 text-center backdrop-blur-sm">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <MessageSquare className="w-3 h-3 text-emerald-400" />
-                <span className="text-[10px] text-ink-light/50">구매 질문권</span>
-              </div>
-              {isStatusLoading ? (
-                <div className="h-4 bg-white/5 rounded animate-pulse mx-2" />
-              ) : (
-                <p className="text-xs font-bold text-emerald-400">
-                  {questionStatus?.purchasedCredits ?? 0}
-                  <span className="font-normal text-ink-light/40">회</span>
-                </p>
-              )}
+            <div>
+              <p className="text-sm font-semibold text-foreground/90 tracking-wide leading-tight">해화지기</p>
+              <p className="text-[10px] text-primary/45 tracking-widest mt-0.5">청담해화당 · 수석 명리 상담가</p>
             </div>
           </div>
 
-          {/* 총 잔여 + 충전 버튼 */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 px-4 py-1.5 rounded-full bg-surface/30 border border-white/10 text-xs text-ink-light/70 flex items-center gap-2 backdrop-blur-sm">
-              <span>
-                총 사용 가능:{' '}
-                <span
-                  className={cn('font-bold', totalRemaining <= 3 ? 'text-red-400' : 'text-primary')}
-                >
-                  {totalRemaining}
-                </span>
-                회
-              </span>
-              {totalRemaining <= 3 && totalRemaining > 0 && (
-                <span className="text-red-400/70 text-[10px]">· 곧 소진</span>
-              )}
-              {totalRemaining === 0 && (
-                <span className="text-red-400/70 text-[10px]">· 소진됨</span>
-              )}
-            </div>
-
-            <Button
-              size="sm"
-              onClick={handleRecharge}
-              disabled={isRecharging || isStatusLoading}
-              className="h-8 px-4 rounded-full bg-[#D4AF37] hover:bg-[#F4E4BA] text-[#0A0A0A] text-xs font-bold transition-all shadow-[0_2px_10px_rgba(212,175,55,0.15)] active:scale-95 disabled:opacity-50"
+          {/* 점사 대상 선택 */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[9px] text-primary/40 leading-none">점사 대상</span>
+            <select
+              value={selectedFamilyId}
+              onChange={(e) => setSelectedFamilyId(e.target.value)}
+              className="bg-surface/50 border border-primary/20 hover:border-primary/40 transition-colors rounded-lg pl-2 pr-6 py-1 text-xs text-primary/80 outline-none appearance-none cursor-pointer"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgb(244 228 186 / 0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 6px center',
+              }}
             >
-              {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : '충전 (1만냥→+20회)'}
-            </Button>
+              <option value="self">나 (본인)</option>
+              {familyMembers?.map((member) => (
+                <option key={member.id} value={member.id} className="bg-surface text-foreground">
+                  {member.name} ({member.relation})
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* Chat Area */}
-        <Card className="flex-1 bg-surface/20 border border-white/5 shadow-inner rounded-2xl overflow-hidden flex flex-col">
-          <CardContent className="flex-1 p-0 flex flex-col">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar min-h-[400px]">
-              <AnimatePresence mode="popLayout">
-                {messages.length === 0 && !hasStarted && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="h-full flex flex-col items-center justify-center text-center p-6 opacity-70"
-                  >
-                    <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
-                      <MessageSquare className="w-6 h-6 text-primary/60" strokeWidth={1} />
-                    </div>
-                    <h3 className="text-lg font-serif text-ink-light mb-2">
-                      어떤 고민이 있으신가요?
-                    </h3>
-                    <p className="text-sm text-ink-light/50 max-w-xs leading-relaxed">
-                      누구에게도 말하지 못한 고민,
-                      <br />
-                      해화당이 지혜를 담아 들어드리겠습니다.
-                    </p>
-                  </motion.div>
-                )}
-
-                {messages.map((msg, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-                  >
-                    <div
-                      className={cn(
-                        'max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm',
-                        msg.role === 'user'
-                          ? 'bg-primary text-black rounded-tr-none'
-                          : 'bg-surface border border-white/5 text-ink-light rounded-tl-none'
-                      )}
-                    >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      <p
-                        className={cn(
-                          'text-[10px] mt-1.5 opacity-50',
-                          msg.role === 'user' ? 'text-black' : 'text-ink-light'
-                        )}
-                      >
-                        {new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-
-                {isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex justify-start"
-                  >
-                    <div className="bg-surface/50 border border-white/5 rounded-2xl rounded-tl-none px-4 py-3 flex items-center gap-2">
-                      <span className="text-xs text-ink-light/50">답변을 준비하고 있습니다...</span>
-                      <Loader2 className="w-3 h-3 text-primary animate-spin" />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="p-4 bg-surface/30 border-t border-white/5">
-              {starterQuestions.length > 0 && messages.length < 2 && (
-                <div className="flex overflow-x-auto gap-2 pb-3 mb-1 no-scrollbar mask-grad-right">
-                  {starterQuestions.map((q, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleStarterClick(q)}
-                      disabled={isLoading || isLimitReached}
-                      className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-ink-light/70 hover:bg-white/10 hover:text-primary transition-colors hover:border-primary/20 disabled:opacity-40"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
+        {/* 2단: 복채 상태 + 충전 */}
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-3">
+            {/* 보유 복채 */}
+            <div className="flex items-center gap-1.5">
+              <Coins className="w-3 h-3 text-primary/40" />
+              {isStatusLoading ? (
+                <div className="w-12 h-3 rounded bg-primary/8 animate-pulse" />
+              ) : (
+                <span className="text-[11px] text-foreground/50">
+                  보유{' '}
+                  <span className="text-primary/70 font-medium">
+                    {(questionStatus?.walletBalance ?? 0).toLocaleString()}만냥
+                  </span>
+                </span>
               )}
+            </div>
+            {/* 구분선 */}
+            <span className="w-px h-3 bg-white/8" />
+            {/* 남은 질문 */}
+            <div className="flex items-center gap-1.5">
+              <Flame className={cn('w-3 h-3', isLow ? 'text-red-400/70' : 'text-primary/40')} />
+              {isStatusLoading ? (
+                <div className="w-10 h-3 rounded bg-primary/8 animate-pulse" />
+              ) : (
+                <span className={cn('text-[11px]', isLow ? 'text-red-400/80' : 'text-foreground/50')}>
+                  잔여{' '}
+                  <span className={cn('font-medium', isLow ? 'text-red-400' : 'text-primary/70')}>
+                    {totalRemaining}회
+                  </span>
+                </span>
+              )}
+            </div>
+          </div>
 
-              <div className="relative">
-                <Textarea
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSendMessage()
-                    }
-                  }}
-                  placeholder={
-                    isLimitReached
-                      ? '질문 한도가 소진되었습니다. 충전해주세요.'
-                      : '고민을 자세히 적어주세요...'
-                  }
-                  disabled={isLoading || isLimitReached}
-                  className="w-full bg-black/20 border-white/10 focus:border-primary/50 min-h-[50px] pr-12 resize-none rounded-xl text-sm"
-                />
-                <Button
-                  size="icon"
-                  onClick={() => handleSendMessage()}
-                  disabled={isLoading || !inputMessage.trim() || isLimitReached}
-                  className="absolute right-2 bottom-2 h-8 w-8 rounded-lg bg-primary text-black hover:bg-primary/90"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-              <div className="mt-2 text-center">
-                <p className="text-[10px] text-ink-light/30">
-                  AI 상담 결과는 참고용이며, 심층적인 분석은 전문가 상담을 권장합니다.
+          {/* 충전 버튼 */}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRecharge}
+            disabled={isRecharging || isStatusLoading}
+            className="h-6 px-3 rounded-full text-[10px] font-semibold border-primary/20 text-primary/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+          >
+            {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : '1만냥 → +20회 충전'}
+          </Button>
+        </div>
+      </header>
+
+      {/* ── 채팅 영역 ── */}
+      <div
+        ref={chatRef}
+        onScroll={handleScroll}
+        className="relative z-10 flex-1 overflow-y-auto px-4 py-5 space-y-3 custom-scrollbar"
+      >
+        <AnimatePresence mode="popLayout">
+          {/* 웰컴 화면 */}
+          {messages.length === 0 && (
+            <motion.div
+              key="welcome"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col items-center justify-center min-h-[50vh] text-center px-6 gap-5"
+            >
+              {/* 오브 */}
+              <motion.div
+                animate={{ scale: [1, 1.04, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/12 to-gold-600/6 border border-primary/15 flex items-center justify-center shadow-[0_0_40px_rgba(244,228,186,0.06)]"
+              >
+                <span className="text-4xl">👺</span>
+              </motion.div>
+
+              <div className="space-y-2">
+                <h2 className="text-base font-serif text-foreground/70 tracking-wide">어떤 이야기를 꺼내드릴까요</h2>
+                <p className="text-xs text-foreground/35 leading-relaxed">
+                  말 못 한 고민이 있다면,
+                  <br />
+                  이곳에서 편히 꺼내보세요.
                 </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {/* 스타터 질문 */}
+              <div className="flex flex-col gap-2 w-full max-w-xs mt-2">
+                {starters.map((q, i) => (
+                  <motion.button
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + i * 0.07 }}
+                    onClick={() => handleSend(q)}
+                    disabled={isLoading || isLimitReached}
+                    className={cn(
+                      'text-left px-4 py-2.5 rounded-xl text-xs',
+                      'bg-surface/40 border border-primary/10 backdrop-blur-sm',
+                      'text-foreground/55 hover:text-primary/80 hover:border-primary/25 hover:bg-surface/60',
+                      'transition-all duration-200 active:scale-[0.98]',
+                      'disabled:opacity-30'
+                    )}
+                  >
+                    <span className="text-primary/40 mr-2">✦</span>
+                    {q}
+                  </motion.button>
+                ))}
+              </div>
+
+              <p className="text-[10px] text-foreground/20 flex items-center gap-1.5 mt-2">
+                <Sparkles className="w-3 h-3 text-primary/30" />
+                매일 10회 무료 · 1만냥으로 +20회
+                <Sparkles className="w-3 h-3 text-primary/30" />
+              </p>
+            </motion.div>
+          )}
+
+          {/* 메시지 목록 */}
+          {messages.map((msg, i) => {
+            const prev = messages[i - 1]
+            const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant')
+            return <Bubble key={i} msg={msg} showAvatar={showAvatar} />
+          })}
+
+          {/* 타이핑 */}
+          {isLoading && (
+            <motion.div key="typing" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
+              <TypingDots />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 스크롤 앵커 */}
+        <div ref={bottomRef} className="h-1" />
+      </div>
+
+      {/* ── 입력 영역 ── */}
+      <div
+        className="relative z-10 flex-shrink-0 border-t border-primary/8 px-4 pt-2.5 pb-2.5"
+        style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)' }}
+      >
+        {/* 대화 중 추천 질문 (가로 스크롤) */}
+        {messages.length > 0 && !showStarters && starters.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 -mx-1 px-1">
+            {starters.map((q, i) => (
+              <button
+                key={i}
+                onClick={() => handleSend(q)}
+                disabled={isLoading || isLimitReached}
+                className={cn(
+                  'whitespace-nowrap flex-shrink-0 px-3.5 py-1.5 rounded-full text-[11px]',
+                  'bg-surface/50 border border-primary/12 text-primary/50',
+                  'hover:border-primary/30 hover:text-primary/80 hover:bg-surface/70',
+                  'transition-all duration-150 active:scale-95',
+                  'disabled:opacity-25'
+                )}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* 입력창 */}
+        <div className="flex items-end gap-2">
+          <div className="flex-1 relative">
+            <Textarea
+              ref={textareaRef}
+              value={inputMessage}
+              onChange={(e) => {
+                setInputMessage(e.target.value)
+                // 자동 높이 조절
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSend()
+                }
+              }}
+              placeholder={isLimitReached ? '질문 한도 소진 · 충전해주세요' : '고민을 편하게 적어주세요...'}
+              disabled={isLoading || isLimitReached}
+              rows={1}
+              className={cn(
+                'w-full resize-none overflow-hidden',
+                'bg-surface/40 border border-primary/15 rounded-2xl',
+                'px-4 py-3 pr-4 text-sm text-foreground/80 placeholder:text-foreground/25',
+                'focus:border-primary/35 focus:bg-surface/60',
+                'focus-visible:ring-0 focus-visible:ring-offset-0',
+                'transition-all duration-200',
+                'min-h-[46px] max-h-[120px]',
+                'backdrop-blur-sm'
+              )}
+            />
+          </div>
+
+          {/* 전송 버튼 */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => handleSend()}
+            disabled={isLoading || !inputMessage.trim() || isLimitReached}
+            className={cn(
+              'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
+              'transition-all duration-200',
+              inputMessage.trim() && !isLoading && !isLimitReached
+                ? 'bg-gradient-to-br from-primary to-primary-dim text-ink-950 shadow-[0_0_16px_rgba(244,228,186,0.2)]'
+                : 'bg-surface/40 border border-primary/10 text-primary/30'
+            )}
+          >
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          </motion.button>
+        </div>
       </div>
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+          width: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(244, 228, 186, 0.08);
           border-radius: 2px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(244, 228, 186, 0.15);
         }
         .no-scrollbar::-webkit-scrollbar {
           display: none;
         }
-        .mask-grad-right {
-          mask-image: linear-gradient(to right, black 90%, transparent 100%);
-          -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
     </div>

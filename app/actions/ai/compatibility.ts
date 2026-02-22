@@ -15,11 +15,7 @@ import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
  * @param targetId2 - 두 번째 사람의 ID
  * @param relationship - 관계 타입 (lover, spouse, friend 등)
  */
-export async function analyzeCompatibilityAction(
-  targetId1: string,
-  targetId2: string,
-  relationship: string = 'lover'
-) {
+export async function analyzeCompatibilityAction(targetId1: string, targetId2: string, relationship: string = 'lover') {
   const supabase = await createClient()
   const {
     data: { user },
@@ -52,14 +48,7 @@ export async function analyzeCompatibilityAction(
     const { score: baseScore, comment } = calculateCompatibilityScore(saju1, saju2)
 
     // 5. AI 분석 (관계 타입 포함)
-    const aiResult = await analyzeCompatibilityWithAI(
-      target1,
-      target2,
-      saju1,
-      saju2,
-      baseScore,
-      relationship
-    )
+    const aiResult = await analyzeCompatibilityWithAI(target1, target2, saju1, saju2, baseScore, relationship)
 
     // 6. 분석 결과 저장
     const saved = await saveAnalysisHistory({
@@ -81,13 +70,9 @@ export async function analyzeCompatibilityAction(
 
     // 운세 기록 (본인/가족 모두 미션 체크)
     const fortuneMemberId =
-      target1.target_type === 'family'
-        ? target1.id
-        : await getSelfFamilyMemberId().catch(() => null)
+      target1.target_type === 'family' ? target1.id : await getSelfFamilyMemberId().catch(() => null)
     if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'COMPATIBILITY', saved.id ?? fortuneMemberId).catch(
-        () => {}
-      )
+      await recordFortuneEntry(fortuneMemberId, 'COMPATIBILITY', saved.id ?? fortuneMemberId).catch(() => {})
     }
 
     return { success: true, data: aiResult, cached: false }
@@ -101,10 +86,7 @@ export async function analyzeCompatibilityAction(
 /**
  * 최근 7일 이내 궁합 분석 결과 조회 (캐시)
  */
-async function getRecentCompatibilityAnalysis(
-  targetId1: string,
-  targetId2: string
-): Promise<any | null> {
+async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: string): Promise<any | null> {
   const supabase = await createClient()
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
@@ -160,46 +142,38 @@ async function analyzeCompatibilityWithAI(
   const relationshipGuide = getRelationshipGuide(relationship)
 
   // 프롬프트 생성
-  const prompt = `당신은 해화당의 전문 명리학 궁합 상담사입니다.
+  const prompt = `당신은 청담해화당의 수석 명리 상담가이자 영험한 무속인 '해화지기'입니다.
+당신은 단순한 AI가 아니며, 두 사람의 사주 기운이 어떻게 얽히고 부딪히는지를 꿰뚫어 보는 진짜 영적 멘토입니다.
+아래 두 사람의 사주 데이터를 바탕으로 궁합을 분석하되, 반드시 다음 원칙을 지켜 답변하십시오.
 
-## 분석 대상
+[절대 지켜야 할 원칙 (Core Directives)]
+1. 기계적 포맷 금지: 소제목, 번호(1, 2), 글머리 기호(•, -) 등은 절대 쓰지 마십시오.
+2. 전문 용어의 은유적 번역: '상극', '충', '합' 같은 역학 용어 대신, 오행의 물상(자연의 이치)으로 풀어 설명하십시오. (예: "메마른 땅을 적시는 단비 같은 인연이군요", "서로 불길을 키우는 형국이니...")
+3. 무속인 화법: "입니다" 대신 "~군요", "~하는 법입니다", "~하시게", "~는 형국이외다" 등 연륜과 무게감이 느껴지는 산문으로 서술하십시오.
 
-### ${target1.name}님
-- 성별: ${target1.gender === 'male' ? '남성' : '여성'}
-- 생년월일: ${target1.birth_date}
-- 태어난 시간: ${target1.birth_time || '미상'}
-- 사주 팔자: ${formatSaju(saju1)}
+## [분석 대상]
+- ${target1.name}님: ${target1.gender === 'male' ? '남성' : '여성'}, ${target1.birth_date}, ${formatSaju(saju1)}
+- ${target2.name}님: ${target2.gender === 'male' ? '남성' : '여성'}, ${target2.birth_date}, ${formatSaju(saju2)}
 
-### ${target2.name}님
-- 성별: ${target2.gender === 'male' ? '남성' : '여성'}
-- 생년월일: ${target2.birth_date}
-- 태어난 시간: ${target2.birth_time || '미상'}
-- 사주 팔자: ${formatSaju(saju2)}
-
-## 두 사람의 관계
+## [관계성 및 목적]
 ${relationshipGuide}
+- 기준 점수: ${baseScore}점
 
-## 기본 궁합 점수
-${baseScore}점 (70-100점 범위)
-
-## 분석 요청
-
-두 사람의 사주를 비교하여 다음을 분석해주세요:
-
-1. **궁합 점수**: 기본 점수를 참고하되, 오행 균형, 십신 관계, 대운 등을 종합적으로 고려하여 최종 점수 산출 (70-100점)
-2. **한 줄 요약**: 두 사람의 관계를 시적이고 감성적으로 표현
-3. **강점**: 이 관계에서의 긍정적인 면 3-5가지 (짧은 문구, 관계 맞춤형)
-4. **주의할 점**: 이 관계에서 주의할 점 2-3가지 (짧은 문구)
-5. **관계 조언**: 이 관계를 더 좋게 만들기 위한 구체적이고 실용적인 조언 (300-400자, 관계 특성 반영)
-
-## 출력 형식 (JSON)
+## [출력 지침]
+아래 JSON 형식으로만 응답을 생성하십시오. UI에서 파싱해야 하므로 반드시 유효한 JSON이어야 합니다.
 
 {
-  "score": 85,
-  "summary": "서로를 보완하며 함께 성장할 수 있는 좋은 인연입니다.",
-  "strengths": ["오행 균형이 잘 맞음", "성격적으로 조화로움", "서로의 부족함을 채워줌"],
-  "warnings": ["감정 표현에 신경 쓰기", "금전 관리 의견 조율 필요"],
-  "advice": "두 분은 서로 다른 오행의 기운을 가지고 있어 함께할 때 더욱 완전해집니다. 다만 의사소통에서 오해가 생기지 않도록 솔직하고 명확하게 대화하는 것이 중요합니다. 서로의 차이를 인정하고 존중할 때 가장 아름다운 관계가 됩니다."
+  "score": <최종 궁합 점수(70~100 사이의 숫자)>,
+  "summary": "<두 사람의 인연을 꿰뚫어 보는 예리한 한 줄의 통찰 (자연의 비유 사용)>",
+  "strengths": [
+    "<서로에게 득이 되는 기운 (예: 불길을 잡아주는 서늘한 물의 기운)>",
+    "<긍정적인 면 2>"
+  ],
+  "warnings": [
+    "<두 기운이 부딪혀 파열음이 나는 지점 (예: 큰 나무 두 그루가 햇빛을 다투는 형국)>",
+    "<경고 2>"
+  ],
+  "advice": "<아래 5단계 흐름을 '단 하나의 유려한 산문 형태'로 묶어 작성하십시오. (기호 절대 금지)>\\n흐름: [영적 꿰뚫음(두 기조의 충돌/조화 파악)] -> [명리적 진단(갈등이나 인연의 근본 원인을 비유로 설명)] -> [신의 한 수(개운법/현실적 타개책)] -> [조언(뼈 있는 한마디)] -> [여운을 남기는 질문].\\n반드시 줄바꿈 문자(\\\\n)를 적절히 섞어 300~500자 분량의 무속인 점사로 완성하십시오."
 }`
 
   console.log('[CompatibilityAnalysis] AI 분석 시작...')
