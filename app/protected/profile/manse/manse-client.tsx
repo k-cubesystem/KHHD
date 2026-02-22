@@ -10,17 +10,22 @@ import {
   calculateDaeun,
   getGaeunbubRecommendation,
 } from '@/lib/domain/saju/saju-analysis'
+import {
+  analyzeSipseong,
+  GAN_MULSANG,
+  analyzeSibjiunseong,
+  analyzeRelations,
+  calculateExtendedSinsal,
+  type SipseongMap,
+  type SibjiunseongResult,
+  type RelationResult,
+  type SinsalResult,
+} from '@/lib/saju-engine'
 import { analyzeManseAdvanced } from '@/lib/domain/saju/manse-advanced'
 import { AdvancedManseDisplay } from '@/components/saju/advanced-manse-display'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollText, User, Info, Sparkles, BookOpen, Crown, Palette, Compass } from 'lucide-react'
@@ -277,12 +282,7 @@ const ELEMENT_BOOST: Record<
     direction: '중앙, 남서, 북동',
     season: '환절기 (계절의 끝 18일)',
     time: '오후 1-3시, 7-9시',
-    activities: [
-      '도자기, 도예 활동',
-      '텃밭 가꾸기, 흙 만지기',
-      '명상, 안정적인 루틴 유지',
-      '노란색 소품 사용',
-    ],
+    activities: ['도자기, 도예 활동', '텃밭 가꾸기, 흙 만지기', '명상, 안정적인 루틴 유지', '노란색 소품 사용'],
     foods: ['단맛 음식 (고구마, 단호박)', '곡물 (쌀, 옥수수)', '뿌리 채소 (감자, 당근)'],
     jobs: ['부동산, 건설, 인테리어', '농업, 식품업', '행정, 관리직'],
     advice:
@@ -293,12 +293,7 @@ const ELEMENT_BOOST: Record<
     direction: '서쪽',
     season: '가을',
     time: '오후 3-7시',
-    activities: [
-      '금속 악세사리 착용',
-      '서쪽에서 활동하기',
-      '정리 정돈, 단정한 외모 관리',
-      '음악 듣기, 악기 연주',
-    ],
+    activities: ['금속 악세사리 착용', '서쪽에서 활동하기', '정리 정돈, 단정한 외모 관리', '음악 듣기, 악기 연주'],
     foods: ['매운맛 음식 (마늘, 생강)', '흰 음식 (무, 배, 도라지)', '견과류 (호두, 아몬드)'],
     jobs: ['금융, 회계, 법조', '기계, 제조업', '음악, 보석업'],
     advice:
@@ -337,11 +332,7 @@ const SINSAL_ADVICE: Record<
       '해외 진출, 유학, 이민 고려해보기',
       '다양한 경험 쌓기, 새로운 장소 탐험',
     ],
-    caution: [
-      '한곳에 정착하지 못하는 성향 주의',
-      '중요한 결정 전 신중히 생각하기',
-      '가족과의 시간 소홀하지 않기',
-    ],
+    caution: ['한곳에 정착하지 못하는 성향 주의', '중요한 결정 전 신중히 생각하기', '가족과의 시간 소홀하지 않기'],
     solution:
       '정기적인 여행이나 출장을 통해 역마살 에너지를 긍정적으로 소화하세요. 1년에 2-3회 새로운 장소를 방문하는 것이 좋습니다.',
   },
@@ -352,32 +343,18 @@ const SINSAL_ADVICE: Record<
       '인맥을 잘 활용하면 성공 가능성 높음',
     ],
     caution: ['타인 의존이 너무 강해지지 않도록 주의', '스스로의 노력도 병행해야 함'],
-    solution:
-      '좋은 사람들과의 인연을 소중히 하고, 감사함을 표현하세요. 네트워킹 모임에 적극 참여하는 것이 좋습니다.',
+    solution: '좋은 사람들과의 인연을 소중히 하고, 감사함을 표현하세요. 네트워킹 모임에 적극 참여하는 것이 좋습니다.',
   },
   화개살: {
-    positive: [
-      '예술, 종교, 철학 분야에서 재능 발휘',
-      '작가, 화가, 음악가로 성공 가능',
-      '깊은 사색과 통찰력 소유',
-    ],
-    caution: [
-      '외로움을 느낄 수 있음',
-      '현실적인 일에 무관심할 수 있음',
-      '대인관계 소극적일 수 있음',
-    ],
+    positive: ['예술, 종교, 철학 분야에서 재능 발휘', '작가, 화가, 음악가로 성공 가능', '깊은 사색과 통찰력 소유'],
+    caution: ['외로움을 느낄 수 있음', '현실적인 일에 무관심할 수 있음', '대인관계 소극적일 수 있음'],
     solution:
       '혼자만의 시간을 즐기되, 의도적으로 사회 활동도 병행하세요. 창작 활동을 통해 내면의 에너지를 표현하는 것이 좋습니다.',
   },
   도화살: {
-    positive: [
-      '연예, 서비스업, 예술 분야에서 큰 성공',
-      '인간관계에서 호감 얻기 쉬움',
-      '대중과의 소통 능력 탁월',
-    ],
+    positive: ['연예, 서비스업, 예술 분야에서 큰 성공', '인간관계에서 호감 얻기 쉬움', '대중과의 소통 능력 탁월'],
     caution: ['이성 문제로 인한 갈등 주의', '표면적인 관계에 치우칠 수 있음'],
-    solution:
-      '매력을 긍정적으로 활용하되, 깊이 있는 관계를 만들기 위해 노력하세요. 예술적 재능을 개발하면 좋습니다.',
+    solution: '매력을 긍정적으로 활용하되, 깊이 있는 관계를 만들기 위해 노력하세요. 예술적 재능을 개발하면 좋습니다.',
   },
 }
 
@@ -438,10 +415,7 @@ const GONGMANG_SOLUTION = {
 }
 
 // 천간/지지 정보
-const TIANGAN_INFO: Record<
-  string,
-  { korean: string; element: string; yinyang: string; meaning: string }
-> = {
+const TIANGAN_INFO: Record<string, { korean: string; element: string; yinyang: string; meaning: string }> = {
   甲: { korean: '갑', element: '木', yinyang: '양', meaning: '큰 나무, 우두머리, 시작' },
   乙: { korean: '을', element: '木', yinyang: '음', meaning: '풀, 유연함, 예술' },
   丙: { korean: '병', element: '火', yinyang: '양', meaning: '태양, 밝음, 열정' },
@@ -454,10 +428,7 @@ const TIANGAN_INFO: Record<
   癸: { korean: '계', element: '水', yinyang: '음', meaning: '이슬, 직관, 침착' },
 }
 
-const DIZHI_INFO: Record<
-  string,
-  { korean: string; element: string; animal: string; season: string }
-> = {
+const DIZHI_INFO: Record<string, { korean: string; element: string; animal: string; season: string }> = {
   子: { korean: '자', element: '水', animal: '쥐', season: '한겨울' },
   丑: { korean: '축', element: '土', animal: '소', season: '늦겨울' },
   寅: { korean: '인', element: '木', animal: '호랑이', season: '초봄' },
@@ -514,6 +485,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     return ''
   })
   const [termDialog, setTermDialog] = useState<TermDialogState>({ open: false, term: '' })
+  const [sajuInterpretOpen, setSajuInterpretOpen] = useState(false)
 
   const selectedMember = members.find((m) => m.id === selectedMemberId)
 
@@ -566,9 +538,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
   try {
     daeunList =
-      saju && selectedMember
-        ? calculateDaeun(selectedMember.birth_date, selectedMember.gender || 'male', saju)
-        : []
+      saju && selectedMember ? calculateDaeun(selectedMember.birth_date, selectedMember.gender || 'male', saju) : []
   } catch (error) {
     console.error('Error in calculateDaeun:', error)
   }
@@ -593,18 +563,51 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     console.error('Error in analyzeManseAdvanced:', error)
   }
 
+  // 해화지기 마스터 엔진 데이터 계산
+  let engineData: {
+    sipseong: SipseongMap | null
+    sibjiunseong: SibjiunseongResult | null
+    sinsal: SinsalResult[]
+    relations: RelationResult | null
+    mulsang: (typeof GAN_MULSANG)[string] | null
+  } = { sipseong: null, sibjiunseong: null, sinsal: [], relations: null, mulsang: null }
+
+  if (saju) {
+    try {
+      const pillarsForSipseong = [
+        { position: '년주', gan: saju.pillars.year.gan, zhi: saju.pillars.year.zhi },
+        { position: '월주', gan: saju.pillars.month.gan, zhi: saju.pillars.month.zhi },
+        { position: '일간', gan: saju.pillars.day.gan, zhi: saju.pillars.day.zhi },
+        { position: '시주', gan: saju.pillars.time.gan, zhi: saju.pillars.time.zhi },
+      ]
+      const pillarsForSibj = [
+        { name: '년주', zhi: saju.pillars.year.zhi },
+        { name: '월주', zhi: saju.pillars.month.zhi },
+        { name: '일주', zhi: saju.pillars.day.zhi },
+        { name: '시주', zhi: saju.pillars.time.zhi },
+      ]
+      const pillarsForRel = [saju.pillars.year, saju.pillars.month, saju.pillars.day, saju.pillars.time]
+      const dayGanji = saju.pillars.day.gan + saju.pillars.day.zhi
+
+      engineData = {
+        sipseong: analyzeSipseong(saju.dayMaster, pillarsForSipseong),
+        sibjiunseong: analyzeSibjiunseong(saju.dayMaster, pillarsForSibj),
+        sinsal: calculateExtendedSinsal(saju),
+        relations: analyzeRelations(pillarsForRel, dayGanji),
+        mulsang: GAN_MULSANG[saju.dayMaster] || null,
+      }
+    } catch (e) {
+      console.error('[ManseEngine] Error:', e)
+    }
+  }
+
   const openTermDialog = (term: string) => {
     if (TERMINOLOGY[term]) {
       setTermDialog({ open: true, term })
     }
   }
 
-  const openHanjaDialog = (
-    hanja: string,
-    korean: string,
-    info: any,
-    type: 'tiangan' | 'dizhi' | 'wuxing'
-  ) => {
+  const openHanjaDialog = (hanja: string, korean: string, info: any, type: 'tiangan' | 'dizhi' | 'wuxing') => {
     let description = ''
     if (type === 'tiangan') {
       description = `오행: ${info.element} (${WUXING_KOREAN[info.element]})
@@ -646,10 +649,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     info: any
     type: 'tiangan' | 'dizhi'
   }) => (
-    <button
-      onClick={() => openHanjaDialog(hanja, korean, info, type)}
-      className="group cursor-pointer w-full"
-    >
+    <button onClick={() => openHanjaDialog(hanja, korean, info, type)} className="group cursor-pointer w-full">
       <div className="flex flex-col items-center gap-1.5">
         <span
           className="text-3xl font-black group-hover:scale-110 transition-transform"
@@ -657,9 +657,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         >
           {hanja}
         </span>
-        <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-          {korean}
-        </span>
+        <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">{korean}</span>
       </div>
     </button>
   )
@@ -688,16 +686,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <Sparkles className="w-4 h-4" />
         {title}
         {!isSubscribed && (
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-[10px]">
-            PREMIUM
-          </span>
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-[10px]">PREMIUM</span>
         )}
       </h3>
 
       {/* Content */}
-      <div className={cn(!isSubscribed && 'blur-sm select-none pointer-events-none')}>
-        {children}
-      </div>
+      <div className={cn(!isSubscribed && 'blur-sm select-none pointer-events-none')}>{children}</div>
 
       {/* Premium Overlay */}
       {!isSubscribed && (
@@ -742,11 +736,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
           정확한 사주 풀이를 위해 생년월일과 출생 시간을 입력해주세요.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <Button
-            asChild
-            size="lg"
-            className="bg-[#D4AF37] text-black hover:bg-[#F4E4BA] shadow-lg"
-          >
+          <Button asChild size="lg" className="bg-[#D4AF37] text-black hover:bg-[#F4E4BA] shadow-lg">
             <Link href="/protected/settings">
               <User className="w-4 h-4 mr-2" />내 정보 입력하기
             </Link>
@@ -791,18 +781,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20">
             <ScrollText className="w-4 h-4 text-[#D4AF37]" />
-            <span className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
-              Manse-ryok Pro
-            </span>
+            <span className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">Manse-ryok Pro</span>
           </div>
           <h1 className="text-4xl font-black">
             <span className="bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent">
               만세력
             </span>
           </h1>
-          <p className="text-muted-foreground">
-            사주팔자의 천간·지지·오행을 전문가 수준으로 분석합니다
-          </p>
+          <p className="text-muted-foreground">사주팔자의 천간·지지·오행을 전문가 수준으로 분석합니다</p>
         </div>
 
         {/* Member Selector */}
@@ -836,9 +822,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <div
                   className={cn(
                     'px-3 py-1 rounded-full text-xs font-bold',
-                    selectedMember.gender === 'male'
-                      ? 'bg-blue-500/20 text-blue-400'
-                      : 'bg-pink-500/20 text-pink-400'
+                    selectedMember.gender === 'male' ? 'bg-blue-500/20 text-blue-400' : 'bg-pink-500/20 text-pink-400'
                   )}
                 >
                   {selectedMember.gender === 'male' ? '남' : '여'}명
@@ -879,10 +863,21 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               <TabsContent value="basic" className="space-y-10 mt-10">
                 {/* Four Pillars - Main Display */}
                 <Card className="p-8 bg-white/5 border-white/10">
-                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    사주팔자 (四柱八字)
-                  </h3>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      사주팔자 (四柱八字)
+                    </h3>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 text-xs h-7 px-3"
+                      onClick={() => setSajuInterpretOpen(true)}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      해석
+                    </Button>
+                  </div>
 
                   <div className="grid grid-cols-4 gap-4">
                     {[
@@ -943,9 +938,51 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
                   {/* Ganji Full */}
                   <div className="mt-8 pt-6 border-t border-white/5">
-                    <p className="text-center text-lg tracking-widest font-bold">
-                      {saju.ganjiList.join(' ')}
+                    <p className="text-center text-lg tracking-widest font-bold">{saju.ganjiList.join(' ')}</p>
+                  </div>
+
+                  {/* 용어 해석 가이드 */}
+                  <div className="mt-6 pt-5 border-t border-white/5">
+                    <p className="text-[11px] text-muted-foreground/60 mb-4 flex items-center gap-1.5">
+                      <Info className="w-3 h-3 shrink-0" />각 용어를 누르면 해석을 볼 수 있어요
                     </p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-[10px] text-muted-foreground/40 mb-1.5">십신 (十神)</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['비견', '겁재', '식신', '상관', '편재', '정재', '편관', '정관', '편인', '정인'].map((t) => (
+                            <TermButton key={t} term={t} />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground/40 mb-1.5">신살 (神殺)</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            '역마살',
+                            '도화살',
+                            '화개살',
+                            '천을귀인',
+                            '월덕귀인',
+                            '천덕귀인',
+                            '문창귀인',
+                            '괴강살',
+                            '백호대살',
+                            '원진살',
+                          ].map((t) => (
+                            <TermButton key={t} term={t} />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground/40 mb-1.5">십이운성 · 기타</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {['용신', '희신', '기신', '대운', '세운', '공망', '합', '충', '형', '해'].map((t) => (
+                            <TermButton key={t} term={t} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </Card>
 
@@ -956,53 +993,47 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   </h3>
 
                   <div className="grid grid-cols-5 gap-4">
-                    {Object.entries(saju.elementsDistribution).map(
-                      ([element, count]: [string, number]) => (
-                        <button
-                          key={element}
-                          onClick={() =>
-                            openHanjaDialog(element, WUXING_KOREAN[element], { element }, 'wuxing')
-                          }
-                          className="text-center group cursor-pointer"
+                    {Object.entries(saju.elementsDistribution).map(([element, count]: [string, number]) => (
+                      <button
+                        key={element}
+                        onClick={() => openHanjaDialog(element, WUXING_KOREAN[element], { element }, 'wuxing')}
+                        className="text-center group cursor-pointer"
+                      >
+                        <div
+                          className="w-full aspect-square rounded-xl flex items-center justify-center text-2xl font-black mb-2 group-hover:scale-105 transition-transform"
+                          style={{ backgroundColor: `${WU_XING_COLORS[element]}20` }}
                         >
-                          <div
-                            className="w-full aspect-square rounded-xl flex items-center justify-center text-2xl font-black mb-2 group-hover:scale-105 transition-transform"
-                            style={{ backgroundColor: `${WU_XING_COLORS[element]}20` }}
-                          >
-                            <span style={{ color: WU_XING_COLORS[element] }}>{element}</span>
-                          </div>
-                          <p className="text-xl font-black">{count}</p>
-                          <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                            {WUXING_KOREAN[element]}
-                          </p>
-                        </button>
-                      )
-                    )}
+                          <span style={{ color: WU_XING_COLORS[element] }}>{element}</span>
+                        </div>
+                        <p className="text-xl font-black">{count}</p>
+                        <p className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
+                          {WUXING_KOREAN[element]}
+                        </p>
+                      </button>
+                    ))}
                   </div>
 
                   {/* Balance Bar */}
                   <div className="mt-6 pt-6 border-t border-white/5">
                     <div className="flex h-4 rounded-full overflow-hidden bg-white/5">
-                      {Object.entries(saju.elementsDistribution).map(
-                        ([element, count]: [string, number]) => {
-                          const total = Object.values(saju.elementsDistribution).reduce(
-                            (a: number, b: number) => a + b,
-                            0
-                          )
-                          const percent = ((count as number) / (total as number)) * 100
-                          if (percent === 0) return null
-                          return (
-                            <div
-                              key={element}
-                              style={{
-                                width: `${percent}%`,
-                                backgroundColor: WU_XING_COLORS[element],
-                              }}
-                              title={`${element}: ${count}`}
-                            />
-                          )
-                        }
-                      )}
+                      {Object.entries(saju.elementsDistribution).map(([element, count]: [string, number]) => {
+                        const total = Object.values(saju.elementsDistribution).reduce(
+                          (a: number, b: number) => a + b,
+                          0
+                        )
+                        const percent = ((count as number) / (total as number)) * 100
+                        if (percent === 0) return null
+                        return (
+                          <div
+                            key={element}
+                            style={{
+                              width: `${percent}%`,
+                              backgroundColor: WU_XING_COLORS[element],
+                            }}
+                            title={`${element}: ${count}`}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
                 </Card>
@@ -1030,16 +1061,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                       : 'bg-muted-foreground/20 text-muted-foreground'
                                 }`}
                               >
-                                {data.strength === 'strong'
-                                  ? '강'
-                                  : data.strength === 'moderate'
-                                    ? '중'
-                                    : '약'}
+                                {data.strength === 'strong' ? '강' : data.strength === 'moderate' ? '중' : '약'}
                               </span>
                             </div>
-                            <p className="text-xs text-muted-foreground/70">
-                              {data.pillars.join(', ')}
-                            </p>
+                            <p className="text-xs text-muted-foreground/70">{data.pillars.join(', ')}</p>
                           </div>
                         ))}
                       </div>
@@ -1050,12 +1075,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           {Object.entries(yukchinAnalysis)
                             .slice(0, 3)
                             .map(([key, data]) => (
-                              <p
-                                key={key}
-                                className="text-sm text-muted-foreground leading-relaxed"
-                              >
-                                <span className="text-ink-light font-medium">{data.name}:</span>{' '}
-                                {data.interpretation}
+                              <p key={key} className="text-sm text-muted-foreground leading-relaxed">
+                                <span className="text-ink-light font-medium">{data.name}:</span> {data.interpretation}
                               </p>
                             ))}
                         </div>
@@ -1094,9 +1115,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {(() => {
                         const currentYear = new Date().getFullYear()
                         const currentDaeun =
-                          daeunList.find(
-                            (d) => currentYear >= d.startYear && currentYear <= d.endYear
-                          ) || daeunList[0]
+                          daeunList.find((d) => currentYear >= d.startYear && currentYear <= d.endYear) || daeunList[0]
 
                         return (
                           <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
@@ -1108,12 +1127,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             </div>
                             <div className="text-center space-y-2">
                               <div className="flex justify-center gap-3">
-                                <span className="text-3xl font-black text-primary">
-                                  {currentDaeun.gan}
-                                </span>
-                                <span className="text-3xl font-black text-primary">
-                                  {currentDaeun.zhi}
-                                </span>
+                                <span className="text-3xl font-black text-primary">{currentDaeun.gan}</span>
+                                <span className="text-3xl font-black text-primary">{currentDaeun.zhi}</span>
                               </div>
                               <p className="text-sm text-muted-foreground">
                                 {currentDaeun.ganjiKorean} ({currentDaeun.gan}
@@ -1130,32 +1145,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           const year = new Date().getFullYear() + offset
                           const yearGanIdx = (year - 4) % 10
                           const yearZhiIdx = (year - 4) % 12
-                          const ganList = [
-                            '甲',
-                            '乙',
-                            '丙',
-                            '丁',
-                            '戊',
-                            '己',
-                            '庚',
-                            '辛',
-                            '壬',
-                            '癸',
-                          ]
-                          const zhiList = [
-                            '子',
-                            '丑',
-                            '寅',
-                            '卯',
-                            '辰',
-                            '巳',
-                            '午',
-                            '未',
-                            '申',
-                            '酉',
-                            '戌',
-                            '亥',
-                          ]
+                          const ganList = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
+                          const zhiList = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
                           const gan = ganList[yearGanIdx]
                           const zhi = zhiList[yearZhiIdx]
 
@@ -1180,13 +1171,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         {(() => {
                           const currentYear = new Date().getFullYear()
                           const currentDaeun =
-                            daeunList.find(
-                              (d) => currentYear >= d.startYear && currentYear <= d.endYear
-                            ) || daeunList[0]
+                            daeunList.find((d) => currentYear >= d.startYear && currentYear <= d.endYear) ||
+                            daeunList[0]
                           return (
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {currentDaeun.description}
-                            </p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{currentDaeun.description}</p>
                           )
                         })()}
                       </div>
@@ -1201,10 +1189,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               <TabsContent value="practical" className="space-y-10 mt-10">
                 {/* 용신론 - 동적 데이터 */}
                 {yongsinAnalysis && (
-                  <PremiumFeature
-                    title={SECTION_DESCRIPTIONS.yongsin.title}
-                    isSubscribed={isSubscribed}
-                  >
+                  <PremiumFeature title={SECTION_DESCRIPTIONS.yongsin.title} isSubscribed={isSubscribed}>
                     <div className="space-y-6">
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
@@ -1237,10 +1222,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {yongsinAnalysis.huisin && (
                         <div className="bg-surface/30 border border-[#4A90E2]/20 p-4 rounded-xl">
                           <div className="flex items-center justify-between mb-3">
-                            <p
-                              className="text-sm font-bold flex items-center gap-2"
-                              style={{ color: '#4A90E2' }}
-                            >
+                            <p className="text-sm font-bold flex items-center gap-2" style={{ color: '#4A90E2' }}>
                               <TermButton term="희신" /> (喜神)
                             </p>
                             <span
@@ -1263,10 +1245,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {yongsinAnalysis.gisin && (
                         <div className="bg-surface/30 border border-[#FFD700]/20 p-4 rounded-xl">
                           <div className="flex items-center justify-between mb-3">
-                            <p
-                              className="text-sm font-bold flex items-center gap-2"
-                              style={{ color: '#FFD700' }}
-                            >
+                            <p className="text-sm font-bold flex items-center gap-2" style={{ color: '#FFD700' }}>
                               <TermButton term="기신" /> (忌神)
                             </p>
                             <span
@@ -1292,27 +1271,19 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           <div className="grid grid-cols-2 gap-3">
                             <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
                               <p className="text-xs text-muted-foreground mb-1">색상</p>
-                              <p className="text-sm font-medium">
-                                {ELEMENT_BOOST[yongsinAnalysis.yongsin].color}
-                              </p>
+                              <p className="text-sm font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].color}</p>
                             </div>
                             <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
                               <p className="text-xs text-muted-foreground mb-1">방향</p>
-                              <p className="text-sm font-medium">
-                                {ELEMENT_BOOST[yongsinAnalysis.yongsin].direction}
-                              </p>
+                              <p className="text-sm font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].direction}</p>
                             </div>
                             <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
                               <p className="text-xs text-muted-foreground mb-1">시간</p>
-                              <p className="text-sm font-medium">
-                                {ELEMENT_BOOST[yongsinAnalysis.yongsin].time}
-                              </p>
+                              <p className="text-sm font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].time}</p>
                             </div>
                             <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
                               <p className="text-xs text-muted-foreground mb-1">계절</p>
-                              <p className="text-sm font-medium">
-                                {ELEMENT_BOOST[yongsinAnalysis.yongsin].season}
-                              </p>
+                              <p className="text-sm font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].season}</p>
                             </div>
                           </div>
 
@@ -1332,21 +1303,17 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
                             <p className="text-xs text-muted-foreground mb-2">추천 음식</p>
                             <ul className="list-disc list-inside space-y-1">
-                              {ELEMENT_BOOST[yongsinAnalysis.yongsin].foods.map(
-                                (food: string, idx: number) => (
-                                  <li key={idx} className="text-sm">
-                                    {food}
-                                  </li>
-                                )
-                              )}
+                              {ELEMENT_BOOST[yongsinAnalysis.yongsin].foods.map((food: string, idx: number) => (
+                                <li key={idx} className="text-sm">
+                                  {food}
+                                </li>
+                              ))}
                             </ul>
                           </div>
 
                           <div className="bg-surface/20 border border-primary/10 p-3 rounded-lg">
                             <p className="text-xs text-muted-foreground mb-2">적합한 직업</p>
-                            <p className="text-sm">
-                              {ELEMENT_BOOST[yongsinAnalysis.yongsin].jobs.join(', ')}
-                            </p>
+                            <p className="text-sm">{ELEMENT_BOOST[yongsinAnalysis.yongsin].jobs.join(', ')}</p>
                           </div>
                         </div>
                       )}
@@ -1355,10 +1322,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 )}
 
                 {/* 격국 분석 */}
-                <PremiumFeature
-                  title={SECTION_DESCRIPTIONS.gekguk.title}
-                  isSubscribed={isSubscribed}
-                >
+                <PremiumFeature title={SECTION_DESCRIPTIONS.gekguk.title} isSubscribed={isSubscribed}>
                   {gekgukAnalysis ? (
                     <div className="space-y-6">
                       {/* 섹션 설명 */}
@@ -1370,9 +1334,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
                           <p className="text-xs text-muted-foreground mb-2">사주 격국</p>
                           <p className="text-xl font-bold text-primary">{gekgukAnalysis.gekguk}</p>
-                          <p className="text-xs text-muted-foreground/70 mt-2">
-                            {gekgukAnalysis.hanja}
-                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-2">{gekgukAnalysis.hanja}</p>
                         </div>
                         <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
                           <p className="text-xs text-muted-foreground mb-2">격국 강도</p>
@@ -1387,9 +1349,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       </div>
                       <div className="space-y-3">
                         <p className="text-sm font-bold">격국 특징</p>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {gekgukAnalysis.description}
-                        </p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{gekgukAnalysis.description}</p>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                           {gekgukAnalysis.characteristics.map((char, idx) => (
                             <li key={idx} className="flex items-start gap-2">
@@ -1406,10 +1366,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 </PremiumFeature>
 
                 {/* 개운법 */}
-                <PremiumFeature
-                  title={SECTION_DESCRIPTIONS.gaeunbub.title}
-                  isSubscribed={isSubscribed}
-                >
+                <PremiumFeature title={SECTION_DESCRIPTIONS.gaeunbub.title} isSubscribed={isSubscribed}>
                   {gaeunbubRec ? (
                     <div className="space-y-6">
                       {/* 섹션 설명 */}
@@ -1468,9 +1425,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         </div>
                         <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
                           <p className="text-xs text-muted-foreground mb-2">추천 직업</p>
-                          <p className="text-xs font-medium">
-                            {gaeunbubRec.jobs.slice(0, 3).join(', ')}
-                          </p>
+                          <p className="text-xs font-medium">{gaeunbubRec.jobs.slice(0, 3).join(', ')}</p>
                         </div>
                       </div>
                       <div className="space-y-3">
@@ -1491,63 +1446,113 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 </PremiumFeature>
               </TabsContent>
             </Tabs>
-
-            {/* 주요 용어 가이드 - 모든 탭 밖에 배치 */}
-            <Card className="p-8 bg-white/5 border-white/10">
-              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                주요 용어 가이드
-              </h3>
-
-              <div className="space-y-6">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-3">십신 (十神)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      '비견',
-                      '겁재',
-                      '식신',
-                      '상관',
-                      '편재',
-                      '정재',
-                      '편관',
-                      '정관',
-                      '편인',
-                      '정인',
-                    ].map((term) => (
-                      <TermButton key={term} term={term} />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground mb-3">신살 (神殺)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {['역마살', '도화살', '화개살', '천을귀인'].map((term) => (
-                      <TermButton key={term} term={term} />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground mb-3">용신론 (用神論)</p>
-                  <div className="flex flex-wrap gap-2">
-                    {['용신', '희신', '기신'].map((term) => (
-                      <TermButton key={term} term={term} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
           </>
         )}
       </div>
 
+      {/* 사주 종합 해석 Dialog */}
+      <Dialog open={sajuInterpretOpen} onOpenChange={setSajuInterpretOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />
+              사주 종합 해석
+            </DialogTitle>
+          </DialogHeader>
+
+          {saju && (
+            <div className="space-y-4 text-sm">
+              {/* 일간 기질 */}
+              {engineData.mulsang && (
+                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                  <p className="text-[#D4AF37] font-bold mb-1.5 text-xs">
+                    일간의 기질 — {saju.dayMaster} ({TIANGAN_INFO[saju.dayMaster]?.korean})
+                  </p>
+                  <p className="text-[#F4E4BA]/90 text-xs mb-1.5 font-medium">{engineData.mulsang.symbol}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{engineData.mulsang.psychology}</p>
+                  {engineData.mulsang.modernJobs?.length > 0 && (
+                    <p className="text-muted-foreground/60 text-[10px] mt-2">
+                      적성 직업: {engineData.mulsang.modernJobs.slice(0, 4).join(' · ')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* 신강/신약 */}
+              {engineData.sipseong && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-1.5 text-xs">
+                    {engineData.sipseong.strengthAssessment} ({engineData.sipseong.bodyStrengthScore}점) — 지배 십성:{' '}
+                    {engineData.sipseong.dominantSipseong}
+                  </p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{engineData.sipseong.summary}</p>
+                </div>
+              )}
+
+              {/* 십이운성 에너지 */}
+              {engineData.sibjiunseong && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-2 text-xs">
+                    십이운성 에너지 — {engineData.sibjiunseong.overallEnergy} (평균{' '}
+                    {engineData.sibjiunseong.averageLevel.toFixed(1)}/12)
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {engineData.sibjiunseong.items.map((item, i) => (
+                      <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-[#D4AF37]/10 text-[#D4AF37]">
+                        {item.pillarName}: {item.sibjiunseong}({item.level})
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {engineData.sibjiunseong.waveDescription}
+                  </p>
+                </div>
+              )}
+
+              {/* 관계 역학 */}
+              {engineData.relations && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-1.5 text-xs">
+                    합·충·형 관계 — {engineData.relations.dominantRelation}
+                  </p>
+                  <div className="space-y-0.5 mb-2 text-[10px] text-muted-foreground">
+                    {engineData.relations.hap.length > 0 && <p>합(合): {engineData.relations.hap.join(', ')}</p>}
+                    {engineData.relations.chung.length > 0 && <p>충(沖): {engineData.relations.chung.join(', ')}</p>}
+                    {engineData.relations.hyeong.length > 0 && <p>형(刑): {engineData.relations.hyeong.join(', ')}</p>}
+                    {engineData.relations.gongmang.length > 0 && (
+                      <p>공망(空亡): {engineData.relations.gongmang.join(', ')}</p>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
+                </div>
+              )}
+
+              {/* 신살 스킬트리 */}
+              {engineData.sinsal.length > 0 && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-3 text-xs">신살 스킬트리</p>
+                  <div className="space-y-3">
+                    {engineData.sinsal.map((s, i) => (
+                      <div key={i}>
+                        <p className="text-[#D4AF37] text-xs font-semibold">
+                          {s.name} {s.hanja} — {s.category}
+                        </p>
+                        <p className="text-muted-foreground text-[11px] leading-relaxed mt-0.5">{s.poeticDesc}</p>
+                        {s.modernSkillTree && (
+                          <p className="text-white/40 text-[10px] mt-0.5">현대 스킬: {s.modernSkillTree}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Term Dialog */}
-      <Dialog
-        open={termDialog.open}
-        onOpenChange={(open) => setTermDialog({ ...termDialog, open })}
-      >
+      <Dialog open={termDialog.open} onOpenChange={(open) => setTermDialog({ ...termDialog, open })}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
