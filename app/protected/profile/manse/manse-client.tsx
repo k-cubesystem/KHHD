@@ -488,6 +488,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   const [sajuInterpretOpen, setSajuInterpretOpen] = useState(false)
   const [wuxingAnalysisOpen, setWuxingAnalysisOpen] = useState(false)
   const [yukchinAnalysisOpen, setYukchinAnalysisOpen] = useState(false)
+  const [advancedExplainOpen, setAdvancedExplainOpen] = useState(false)
+  const [daeunExplainOpen, setDaeunExplainOpen] = useState(false)
+  const [yongsinExplainOpen, setYongsinExplainOpen] = useState(false)
+  const [gekgukExplainOpen, setGekgukExplainOpen] = useState(false)
+  const [gaeunbubExplainOpen, setGaeunbubExplainOpen] = useState(false)
 
   const selectedMember = members.find((m) => m.id === selectedMemberId)
 
@@ -865,17 +870,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               <TabsContent value="basic" className="space-y-10 mt-10">
                 {/* Four Pillars - Main Display */}
                 <Card className="p-8 bg-white/5 border-white/10">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center mb-6">
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                       <BookOpen className="w-4 h-4" />
                       사주팔자 (四柱八字)
                     </h3>
-                    <button
-                      onClick={() => setSajuInterpretOpen(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black text-xs font-bold shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 hover:scale-105 transition-all"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />내 사주 풀이 보기
-                    </button>
                   </div>
 
                   <div className="grid grid-cols-4 gap-4">
@@ -939,21 +938,24 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="mt-8 pt-6 border-t border-white/5">
                     <p className="text-center text-lg tracking-widest font-bold">{saju.ganjiList.join(' ')}</p>
                   </div>
+
+                  {/* 풀이 버튼 */}
+                  <div className="mt-5">
+                    <button
+                      onClick={() => setSajuInterpretOpen(true)}
+                      className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                    >
+                      <Sparkles className="w-4 h-4" />✦ 내 사주 종합 풀이 보기
+                    </button>
+                  </div>
                 </Card>
 
                 {/* Wuxing Distribution */}
                 <Card className="p-8 bg-white/5 border-white/10">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center mb-6">
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
                       오행 분포 (五行分布)
                     </h3>
-                    <button
-                      onClick={() => setWuxingAnalysisOpen(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black text-xs font-bold shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 hover:scale-105 transition-all"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      오행 풀이 보기
-                    </button>
                   </div>
 
                   <div className="grid grid-cols-5 gap-4">
@@ -978,7 +980,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   </div>
 
                   {/* Balance Bar */}
-                  <div className="mt-6 pt-6 border-t border-white/5">
+                  <div className="mt-6 pt-6 border-t border-white/5 space-y-4">
                     <div className="flex h-4 rounded-full overflow-hidden bg-white/5">
                       {Object.entries(saju.elementsDistribution).map(([element, count]: [string, number]) => {
                         const total = Object.values(saju.elementsDistribution).reduce(
@@ -999,6 +1001,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         )
                       })}
                     </div>
+                    <button
+                      onClick={() => setWuxingAnalysisOpen(true)}
+                      className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                    >
+                      <Sparkles className="w-4 h-4" />✦ 내 오행 풀이 보기
+                    </button>
                   </div>
                 </Card>
 
@@ -1008,10 +1016,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     <div className="space-y-6">
                       <button
                         onClick={() => setYukchinAnalysisOpen(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] text-black text-xs font-bold shadow-lg shadow-[#D4AF37]/20 hover:shadow-[#D4AF37]/40 hover:scale-105 transition-all"
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
                       >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        육친 풀이 보기
+                        <Sparkles className="w-4 h-4" />✦ 내 육친 풀이 보기
                       </button>
                       <div className="grid grid-cols-2 gap-3">
                         {Object.entries(yukchinAnalysis).map(([key, data]) => (
@@ -1122,6 +1129,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {SECTION_DESCRIPTIONS.advancedManse.intro}
                     </p>
                     <AdvancedManseDisplay advanced={advancedManse} />
+                    <div className="mt-6 pt-4 border-t border-[#D4AF37]/10">
+                      <button
+                        onClick={() => setAdvancedExplainOpen(true)}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      >
+                        <Sparkles className="w-4 h-4" />✦ 이 데이터가 뭔가요? 쉬운 풀이 보기
+                      </button>
+                    </div>
                   </Card>
                 )}
               </TabsContent>
@@ -1132,6 +1147,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title="대운·세운 (大運·歲運)" isSubscribed={isSubscribed}>
                   {daeunList.length > 0 ? (
                     <div className="space-y-6">
+                      <button
+                        onClick={() => setDaeunExplainOpen(true)}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      >
+                        <Sparkles className="w-4 h-4" />✦ 내 인생 흐름 풀이 보기
+                      </button>
                       {/* 현재 대운 */}
                       {(() => {
                         const currentYear = new Date().getFullYear()
@@ -1212,6 +1233,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 {yongsinAnalysis && (
                   <PremiumFeature title={SECTION_DESCRIPTIONS.yongsin.title} isSubscribed={isSubscribed}>
                     <div className="space-y-6">
+                      <button
+                        onClick={() => setYongsinExplainOpen(true)}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      >
+                        <Sparkles className="w-4 h-4" />✦ 내 행운 키워드 풀이 보기
+                      </button>
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {SECTION_DESCRIPTIONS.yongsin.intro}
@@ -1346,6 +1373,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title={SECTION_DESCRIPTIONS.gekguk.title} isSubscribed={isSubscribed}>
                   {gekgukAnalysis ? (
                     <div className="space-y-6">
+                      <button
+                        onClick={() => setGekgukExplainOpen(true)}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      >
+                        <Sparkles className="w-4 h-4" />✦ 내 사주 그릇 풀이 보기
+                      </button>
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {SECTION_DESCRIPTIONS.gekguk.intro}
@@ -1390,6 +1423,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <PremiumFeature title={SECTION_DESCRIPTIONS.gaeunbub.title} isSubscribed={isSubscribed}>
                   {gaeunbubRec ? (
                     <div className="space-y-6">
+                      <button
+                        onClick={() => setGaeunbubExplainOpen(true)}
+                        className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      >
+                        <Sparkles className="w-4 h-4" />✦ 오늘부터 실천하기
+                      </button>
                       {/* 섹션 설명 */}
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {SECTION_DESCRIPTIONS.gaeunbub.intro}
@@ -1727,6 +1766,293 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               })}
             {(!yukchinAnalysis || Object.keys(yukchinAnalysis).length === 0) && (
               <p className="text-muted-foreground text-xs text-center py-4">육친 데이터를 불러올 수 없습니다.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 고급 만세력 풀이 Dialog */}
+      <Dialog open={advancedExplainOpen} onOpenChange={setAdvancedExplainOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />
+              고급 만세력이 뭔가요?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] font-bold mb-2 text-xs">쉽게 말하면</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                사주 8글자를 더 깊이 파고드는 분석입니다. 글자 사이에 숨겨진 특별한 에너지와 인연의 패턴을 찾아냅니다.
+                마치 DNA 검사처럼, 겉으로는 보이지 않는 당신만의 고유한 특성을 발견합니다.
+              </p>
+            </div>
+            {[
+              {
+                title: '✦ 납음오행 — 내 인생의 배경음악',
+                desc: '태어난 해의 간지(干支)가 가진 특별한 오행입니다. "이 사람은 바다 같은 사람이다", "이 사람은 큰 나무 같은 사람이다"처럼 당신 인생 전체의 분위기를 보여줍니다.',
+              },
+              {
+                title: '✦ 공망 — 인생에서 빈자리',
+                desc: '사주에서 "작동하지 않는" 글자입니다. 공망이 된 것은 열심히 해도 결실이 잘 안 맺혀지는 분야를 뜻합니다. 단, 공망이 있다고 나쁜 게 아니에요 — 오히려 그 분야에 욕심을 내려놓으면 편해집니다.',
+              },
+              {
+                title: '✦ 12신살 — 나의 특별한 재능 태그',
+                desc: '당신 사주에 붙어있는 특별한 별(신살)들입니다. 역마살이 있으면 여행·이동 운이 강하고, 천을귀인이 있으면 어려울 때 귀인이 나타납니다. 단순히 "살"이라고 무서운 게 아닙니다.',
+              },
+              {
+                title: '✦ 천간합 / 지지 합충 — 글자들의 관계',
+                desc: '사주 8글자가 서로 당기거나(합) 밀어내는(충) 관계입니다. 합이 많으면 인복이 좋고 사람을 잘 모읍니다. 충이 많으면 변화가 잦고 에너지가 강합니다.',
+              },
+            ].map(({ title, desc }) => (
+              <div key={title} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <p className="text-white/80 font-bold mb-1.5 text-xs">{title}</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 대운·세운 풀이 Dialog */}
+      <Dialog open={daeunExplainOpen} onOpenChange={setDaeunExplainOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />내 인생 흐름 풀이
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] font-bold mb-2 text-xs">대운이란?</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                대운(大運)은 10년마다 바뀌는 인생의 큰 계절입니다. 봄이 오면 씨를 뿌리고, 여름엔 키우고, 가을엔 거두고,
+                겨울엔 쉬듯이 — 사람의 인생에도 10년 단위로 큰 흐름이 있습니다. 지금 어떤 계절인지 알면, 언제 도전하고
+                언제 기다려야 하는지 알 수 있어요.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+              <p className="text-white/80 font-bold mb-1.5 text-xs">세운이란?</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                세운(歲運)은 올해(1년)의 분위기입니다. 대운이 큰 바다의 조류라면, 세운은 오늘의 파도입니다. 같은 대운
+                안에서도 해마다 조금씩 다른 흐름이 있습니다. 올해 간지(干支)가 내 사주와 맞으면 술술 풀리고, 충돌하면
+                조금 더 신경 써야 합니다.
+              </p>
+            </div>
+            {daeunList.length > 0 &&
+              (() => {
+                const currentYear = new Date().getFullYear()
+                const cur =
+                  daeunList.find((d) => currentYear >= d.startYear && currentYear <= d.endYear) || daeunList[0]
+                return (
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <p className="text-white/80 font-bold mb-2 text-xs">현재 대운 — 지금 당신의 인생 계절</p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl font-black text-[#D4AF37]">
+                        {cur.gan}
+                        {cur.zhi}
+                      </span>
+                      <div>
+                        <p className="text-white/70 text-xs">{cur.ganjiKorean}</p>
+                        <p className="text-muted-foreground text-[10px]">
+                          {cur.startYear}년 ~ {cur.endYear}년 ({cur.age})
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{cur.description}</p>
+                  </div>
+                )
+              })()}
+            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] text-xs font-bold mb-2">💡 이렇게 활용하세요</p>
+              <ul className="space-y-1.5 text-xs text-muted-foreground">
+                <li>• 좋은 대운: 크게 도전하고 투자하기 좋은 시기</li>
+                <li>• 어려운 대운: 안전하게 지키고 실력 쌓는 시기</li>
+                <li>• 좋은 세운: 새로운 시작, 계획 실행에 유리</li>
+                <li>• 어려운 세운: 건강과 관계에 신경 쓰고 신중하게</li>
+              </ul>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 용신 풀이 Dialog */}
+      <Dialog open={yongsinExplainOpen} onOpenChange={setYongsinExplainOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />내 행운 키워드 풀이
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] font-bold mb-2 text-xs">용신이란?</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                용신(用神)은 내 사주에서 부족하거나 꼭 필요한 기운입니다. 마치 몸에 부족한 영양소처럼 — 이걸 채워주면
+                건강해지듯, 용신을 가까이하면 운이 좋아집니다. 색깔·방향·음식·직업 등 일상에서 쉽게 보충할 수 있어요.
+              </p>
+            </div>
+            {yongsinAnalysis && (
+              <>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-2 text-xs">
+                    내 용신: {yongsinAnalysis.yongsin} ({WUXING_KOREAN[yongsinAnalysis.yongsin]})
+                  </p>
+                  <p className="text-muted-foreground text-xs leading-relaxed mb-3">
+                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '목' &&
+                      '나무의 기운입니다. 성장·발전·창의력의 에너지를 가까이하세요.'}
+                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '화' &&
+                      '불의 기운입니다. 열정·활기·표현력의 에너지를 가까이하세요.'}
+                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '토' &&
+                      '흙의 기운입니다. 안정·신뢰·중심의 에너지를 가까이하세요.'}
+                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '금' &&
+                      '쇠의 기운입니다. 결단·정의·수확의 에너지를 가까이하세요.'}
+                    {WUXING_KOREAN[yongsinAnalysis.yongsin] === '수' &&
+                      '물의 기운입니다. 지혜·유연·포용의 에너지를 가까이하세요.'}
+                  </p>
+                  {ELEMENT_BOOST[yongsinAnalysis.yongsin] && (
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white/5 p-2 rounded-lg">
+                        <p className="text-muted-foreground/60 mb-0.5">오늘 입을 색</p>
+                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].color}</p>
+                      </div>
+                      <div className="bg-white/5 p-2 rounded-lg">
+                        <p className="text-muted-foreground/60 mb-0.5">앉을 방향</p>
+                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].direction}</p>
+                      </div>
+                      <div className="bg-white/5 p-2 rounded-lg">
+                        <p className="text-muted-foreground/60 mb-0.5">활동 좋은 시간</p>
+                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].time}</p>
+                      </div>
+                      <div className="bg-white/5 p-2 rounded-lg">
+                        <p className="text-muted-foreground/60 mb-0.5">힘 나는 계절</p>
+                        <p className="text-white/80 font-medium">{ELEMENT_BOOST[yongsinAnalysis.yongsin].season}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                  <p className="text-[#D4AF37] text-xs font-bold mb-2">💡 오늘 당장 할 수 있는 것</p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.activities?.slice(0, 3).map((a: string, i: number) => (
+                      <li key={i}>✓ {a}</li>
+                    ))}
+                    {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.foods?.slice(0, 2).map((f: string, i: number) => (
+                      <li key={`f${i}`}>🍽 {f} 먹기</li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 격국 풀이 Dialog */}
+      <Dialog open={gekgukExplainOpen} onOpenChange={setGekgukExplainOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />내 사주 그릇 풀이
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] font-bold mb-2 text-xs">격국이란?</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                격국(格局)은 내 사주의 타입 또는 그릇입니다. MBTI처럼 &ldquo;이 사람은 어떤 유형이다&rdquo;를 알려주는
+                것인데, 사주 방식으로 판단합니다. 격국에 따라 잘 맞는 직업·환경·삶의 방식이 다릅니다.
+              </p>
+            </div>
+            {gekgukAnalysis && (
+              <>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-2 text-xs">내 격국: {gekgukAnalysis.gekguk}</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed mb-3">{gekgukAnalysis.description}</p>
+                  <div className="space-y-1.5">
+                    {gekgukAnalysis.characteristics?.map((char: string, i: number) => (
+                      <div key={i} className="flex items-start gap-2 text-xs">
+                        <span className="text-[#D4AF37] mt-0.5 shrink-0">✦</span>
+                        <span className="text-muted-foreground">{char}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                  <p className="text-[#D4AF37] text-xs font-bold mb-2">💡 이 격국의 인생 조언</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {`${gekgukAnalysis.gekguk}의 특성을 살려 자신에게 맞는 환경에서 능력을 발휘하세요. 격국의 특성에 맞는 환경에 있을 때 가장 빛납니다.`}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 개운법 풀이 Dialog */}
+      <Dialog open={gaeunbubExplainOpen} onOpenChange={setGaeunbubExplainOpen}>
+        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+              <Sparkles className="w-5 h-5" />
+              오늘부터 실천하는 개운법
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+              <p className="text-[#D4AF37] font-bold mb-2 text-xs">개운법이란?</p>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                개운법(開運法)은 말 그대로 &ldquo;운을 여는 방법&rdquo;입니다. 사주에서 부족한 기운을 일상에서 채워 운의
+                흐름을 좋게 만드는 실천법입니다. 거창한 게 아니에요 — 오늘 입는 옷 색깔, 앉는 방향, 먹는 음식도 모두
+                개운법이 됩니다.
+              </p>
+            </div>
+            {gaeunbubRec && (
+              <>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <p className="text-white/80 font-bold mb-3 text-xs">지금 당장 실천할 수 있는 것들</p>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg shrink-0">👗</span>
+                      <div>
+                        <p className="text-white/70 text-xs font-medium">오늘 입을 색</p>
+                        <p className="text-muted-foreground text-xs">{gaeunbubRec.colors.join(', ')} 계열을 입으세요</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg shrink-0">🧭</span>
+                      <div>
+                        <p className="text-white/70 text-xs font-medium">앉을 방향</p>
+                        <p className="text-muted-foreground text-xs">
+                          {gaeunbubRec.directions.join(', ')} 방향을 바라보고 일하면 집중력이 올라갑니다
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg shrink-0">🔢</span>
+                      <div>
+                        <p className="text-white/70 text-xs font-medium">행운의 숫자</p>
+                        <p className="text-muted-foreground text-xs">
+                          {gaeunbubRec.numbers.join(', ')} — 중요한 날짜나 번호를 고를 때 참고하세요
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                  <p className="text-[#D4AF37] text-xs font-bold mb-2">✦ 이번 주 실천 미션</p>
+                  <ul className="space-y-1.5 text-xs text-muted-foreground">
+                    {gaeunbubRec.activities.slice(0, 4).map((act: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-[#D4AF37] shrink-0">□</span>
+                        <span>{act}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </>
             )}
           </div>
         </DialogContent>
