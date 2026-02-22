@@ -1065,6 +1065,43 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   )}
                 </PremiumFeature>
 
+                {/* 신살 — 새 엔진 실제 데이터 */}
+                {engineData.sinsal.length > 0 && (
+                  <Card className="p-8 bg-white/5 border-white/10">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      신살 (神殺) — 내 사주에 깃든 특별한 별
+                    </h3>
+                    <div className="space-y-4">
+                      {engineData.sinsal.map((s, i) => (
+                        <div
+                          key={i}
+                          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/30 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#D4AF37] font-black text-sm">{s.name}</span>
+                              <span className="text-muted-foreground/50 text-xs">{s.hanja}</span>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37] shrink-0">
+                              {s.category}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-xs leading-relaxed mb-2">{s.poeticDesc}</p>
+                          {s.modernSkillTree && (
+                            <p className="text-[10px] text-white/30">현대 재능: {s.modernSkillTree}</p>
+                          )}
+                          {s.modernJobs && s.modernJobs.length > 0 && (
+                            <p className="text-[10px] text-white/30 mt-0.5">
+                              적합 직업: {s.modernJobs.slice(0, 3).join(' · ')}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
                 {/* 용어 사전 - 기본정보 탭 하단 */}
                 <Card className="p-6 bg-white/5 border-white/10">
                   <div className="flex items-center gap-2 mb-4">
@@ -1118,6 +1155,138 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
               {/* Tab: 고급 분석 */}
               <TabsContent value="advanced" className="space-y-10 mt-10">
+                {/* 신강신약 & 십성 분포 — 새 엔진 */}
+                {engineData.sipseong && (
+                  <Card className="p-8 bg-white/5 border-white/10">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      신강신약 & 십성 분포
+                    </h3>
+                    <div className="space-y-5">
+                      {/* 신강/신약 요약 */}
+                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-[#D4AF37] font-bold text-sm">{engineData.sipseong.strengthAssessment}</p>
+                          <span className="text-xs px-3 py-1 rounded-full bg-[#D4AF37]/15 text-[#D4AF37]">
+                            {engineData.sipseong.bodyStrengthScore}점
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-xs leading-relaxed mb-3">
+                          {engineData.sipseong.summary}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground/60">지배 십성</span>
+                          <span className="text-white/80 font-bold">{engineData.sipseong.dominantSipseong}</span>
+                        </div>
+                      </div>
+                      {/* 십성 분포 바 */}
+                      {engineData.sipseong.distribution && Object.keys(engineData.sipseong.distribution).length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground/60 font-medium">십성별 분포</p>
+                          {Object.entries(engineData.sipseong.distribution)
+                            .filter(([, v]) => (v as number) > 0)
+                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                            .map(([name, count]) => (
+                              <div key={name} className="flex items-center gap-3">
+                                <span className="text-xs text-white/70 w-12 shrink-0">{name}</span>
+                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA] rounded-full"
+                                    style={{ width: `${((count as number) / 8) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-muted-foreground/50 w-4 text-right">
+                                  {count as number}
+                                </span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+
+                {/* 십이운성 에너지 흐름 — 새 엔진 */}
+                {engineData.sibjiunseong && (
+                  <Card className="p-8 bg-white/5 border-white/10">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      십이운성 에너지 흐름
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[#D4AF37] font-bold text-sm">{engineData.sibjiunseong.overallEnergy}</p>
+                          <span className="text-xs text-muted-foreground/60">
+                            평균 {engineData.sibjiunseong.averageLevel.toFixed(1)}/12단계
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          {engineData.sibjiunseong.waveDescription}
+                        </p>
+                      </div>
+                      {/* 기둥별 십이운성 */}
+                      <div className="grid grid-cols-4 gap-3">
+                        {engineData.sibjiunseong.items.map((item, i) => (
+                          <div key={i} className="bg-white/5 border border-white/10 p-3 rounded-xl text-center">
+                            <p className="text-[10px] text-muted-foreground/50 mb-1">{item.pillarName}</p>
+                            <p className="text-sm font-bold text-[#D4AF37]">{item.sibjiunseong}</p>
+                            <div className="w-full h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA]"
+                                style={{ width: `${(item.level / 12) * 100}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground/40 mt-1">{item.level}/12</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {/* 합충형 관계 — 새 엔진 */}
+                {engineData.relations && (
+                  <Card className="p-8 bg-white/5 border-white/10">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      합·충·형 관계
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20 mb-2">
+                        <p className="text-[#D4AF37] font-bold text-sm mb-1">{engineData.relations.dominantRelation}</p>
+                        <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {engineData.relations.hap.length > 0 && (
+                          <div className="bg-green-900/20 border border-green-500/20 p-3 rounded-xl">
+                            <p className="text-green-400 text-xs font-bold mb-1.5">합(合) — 당기는 기운</p>
+                            <p className="text-xs text-muted-foreground">{engineData.relations.hap.join(', ')}</p>
+                          </div>
+                        )}
+                        {engineData.relations.chung.length > 0 && (
+                          <div className="bg-red-900/20 border border-red-500/20 p-3 rounded-xl">
+                            <p className="text-red-400 text-xs font-bold mb-1.5">충(沖) — 부딪히는 기운</p>
+                            <p className="text-xs text-muted-foreground">{engineData.relations.chung.join(', ')}</p>
+                          </div>
+                        )}
+                        {engineData.relations.hyeong.length > 0 && (
+                          <div className="bg-orange-900/20 border border-orange-500/20 p-3 rounded-xl">
+                            <p className="text-orange-400 text-xs font-bold mb-1.5">형(刑) — 마찰</p>
+                            <p className="text-xs text-muted-foreground">{engineData.relations.hyeong.join(', ')}</p>
+                          </div>
+                        )}
+                        {engineData.relations.gongmang.length > 0 && (
+                          <div className="bg-white/5 border border-white/10 p-3 rounded-xl">
+                            <p className="text-white/50 text-xs font-bold mb-1.5">공망(空亡) — 빈자리</p>
+                            <p className="text-xs text-muted-foreground">{engineData.relations.gongmang.join(', ')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
                 {/* 고급 만세력 분석 */}
                 {advancedManse && (
                   <Card className="p-8 bg-white/5 border-white/10">
