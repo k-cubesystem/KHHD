@@ -870,11 +870,23 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               <TabsContent value="basic" className="space-y-10 mt-10">
                 {/* Four Pillars - Main Display */}
                 <Card className="p-8 bg-white/5 border-white/10">
-                  <div className="flex items-center mb-6">
+                  <div className="flex items-center justify-between mb-6">
                     <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                       <BookOpen className="w-4 h-4" />
                       사주팔자 (四柱八字)
                     </h3>
+                    <div className="flex flex-col items-end">
+                      <span className="text-lg tracking-widest font-bold text-ink-light">
+                        {saju.ganjiList.join(' ')}
+                      </span>
+                      <span className="text-xs tracking-widest text-[#D4AF37]">
+                        {saju.ganjiList
+                          .map(
+                            (ganji) => `${TIANGAN_INFO[ganji[0]]?.korean || ''}${DIZHI_INFO[ganji[1]]?.korean || ''}`
+                          )
+                          .join(' ')}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-4 gap-4">
@@ -934,16 +946,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     })}
                   </div>
 
-                  {/* Ganji Full */}
-                  <div className="mt-8 pt-6 border-t border-white/5">
-                    <p className="text-center text-lg tracking-widest font-bold">{saju.ganjiList.join(' ')}</p>
-                  </div>
-
                   {/* 풀이 버튼 */}
-                  <div className="mt-5">
+                  <div className="mt-8 flex justify-center border-t border-white/5 pt-6">
                     <button
                       onClick={() => setSajuInterpretOpen(true)}
-                      className="w-full flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_20px_rgba(212,175,55,0.35)] hover:shadow-[0_0_30px_rgba(212,175,55,0.55)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
+                      className="flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-sm font-black tracking-wide shadow-[0_0_15px_rgba(212,175,55,0.3)] hover:shadow-[0_0_25px_rgba(212,175,55,0.5)] hover:scale-[1.015] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/60"
                     >
                       <Sparkles className="w-4 h-4" />✦ 내 사주 종합 풀이 보기
                     </button>
@@ -1394,6 +1401,154 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     <p className="text-sm text-muted-foreground">대운 데이터를 불러오는 중...</p>
                   )}
                 </PremiumFeature>
+
+                {/* 십이운성 — 내 사주의 생명력 흐름 (새 엔진) */}
+                {engineData.sibjiunseong && (
+                  <PremiumFeature title="십이운성 — 내 사주의 생명력 흐름" isSubscribed={isSubscribed}>
+                    <div className="space-y-5">
+                      {/* 전체 에너지 요약 */}
+                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[#D4AF37] font-bold text-sm">{engineData.sibjiunseong.overallEnergy}</p>
+                          <span className="text-xs text-muted-foreground/60 bg-white/5 px-2 py-0.5 rounded-full">
+                            평균 {engineData.sibjiunseong.averageLevel.toFixed(1)} / 12단계
+                          </span>
+                        </div>
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                          {engineData.sibjiunseong.waveDescription}
+                        </p>
+                      </div>
+
+                      {/* 기둥별 십이운성 카드 */}
+                      <div className="grid grid-cols-4 gap-3">
+                        {engineData.sibjiunseong.items.map((item, i) => {
+                          const isHigh = item.level >= 9
+                          const isLow = item.level <= 3
+                          return (
+                            <div
+                              key={i}
+                              className={`p-3 rounded-xl border text-center ${
+                                isHigh
+                                  ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30'
+                                  : isLow
+                                    ? 'bg-white/3 border-white/5 opacity-70'
+                                    : 'bg-white/5 border-white/10'
+                              }`}
+                            >
+                              <p className="text-[10px] text-muted-foreground/50 mb-1">{item.pillarName}</p>
+                              <p className={`text-sm font-black ${isHigh ? 'text-[#D4AF37]' : 'text-white/80'}`}>
+                                {item.sibjiunseong}
+                              </p>
+                              <div className="w-full h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${isHigh ? 'bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA]' : 'bg-white/30'}`}
+                                  style={{ width: `${(item.level / 12) * 100}%` }}
+                                />
+                              </div>
+                              <p className="text-[10px] text-muted-foreground/40 mt-1">{item.level}/12</p>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* 십이운성별 의미 설명 */}
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground/60 font-medium">각 기둥의 의미</p>
+                        {engineData.sibjiunseong.items.map((item, i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
+                          >
+                            <div className="shrink-0 text-center w-14">
+                              <span className="text-xs font-bold text-[#D4AF37]">{item.sibjiunseong}</span>
+                              <p className="text-[10px] text-muted-foreground/40">{item.pillarName}</p>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs text-muted-foreground leading-relaxed">{item.meaning}</p>
+                              {item.actionGuide && (
+                                <p className="text-[10px] text-[#D4AF37]/60 mt-1">→ {item.actionGuide}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PremiumFeature>
+                )}
+
+                {/* 합충형 — 운세 흐름에 영향 (새 엔진) */}
+                {engineData.relations && (
+                  <PremiumFeature title="합·충·형 — 내 사주 에너지의 충돌과 조화" isSubscribed={isSubscribed}>
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                        <p className="text-[#D4AF37] font-bold text-sm mb-2">{engineData.relations.dominantRelation}</p>
+                        <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {engineData.relations.hap.length > 0 && (
+                          <div className="p-4 rounded-xl bg-green-900/15 border border-green-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-green-400 font-bold text-xs">합(合) — 서로 당기는 기운</span>
+                            </div>
+                            <p className="text-green-300/80 text-xs mb-2">{engineData.relations.hap.join('  ·  ')}</p>
+                            <p className="text-muted-foreground text-xs leading-relaxed">
+                              합이 있으면 인연이 이어지고 일이 뭉쳐지는 힘이 있습니다. 팀워크, 협업, 인간관계에서
+                              에너지가 활성화됩니다.
+                            </p>
+                          </div>
+                        )}
+                        {engineData.relations.chung.length > 0 && (
+                          <div className="p-4 rounded-xl bg-red-900/15 border border-red-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-red-400 font-bold text-xs">충(沖) — 부딪히는 기운</span>
+                            </div>
+                            <p className="text-red-300/80 text-xs mb-2">{engineData.relations.chung.join('  ·  ')}</p>
+                            <p className="text-muted-foreground text-xs leading-relaxed">
+                              충이 있으면 변화와 이동이 잦습니다. 충돌 에너지를 잘 쓰면 강한 추진력이 되고, 잘못 쓰면
+                              갈등·사고로 이어집니다.
+                            </p>
+                          </div>
+                        )}
+                        {engineData.relations.hyeong.length > 0 && (
+                          <div className="p-4 rounded-xl bg-orange-900/15 border border-orange-500/20">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-orange-400 font-bold text-xs">형(刑) — 마찰·긴장</span>
+                            </div>
+                            <p className="text-orange-300/80 text-xs mb-2">
+                              {engineData.relations.hyeong.join('  ·  ')}
+                            </p>
+                            <p className="text-muted-foreground text-xs leading-relaxed">
+                              형은 내면의 긴장감과 자기 절제를 요구합니다. 법·규율·의료 분야에서 능력이 발휘되는 경우가
+                              많습니다.
+                            </p>
+                          </div>
+                        )}
+                        {engineData.relations.gongmang.length > 0 && (
+                          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-white/50 font-bold text-xs">공망(空亡) — 빈자리, 열린 가능성</span>
+                            </div>
+                            <p className="text-white/40 text-xs mb-2">{engineData.relations.gongmang.join('  ·  ')}</p>
+                            <p className="text-muted-foreground text-xs leading-relaxed">
+                              공망은 그 기운이 &ldquo;없어진&rdquo; 것이 아니라 &ldquo;잠시 비워진&rdquo; 상태입니다.
+                              오히려 욕심을 내려놓을 때 예상 밖의 행운이 옵니다.
+                            </p>
+                          </div>
+                        )}
+                        {engineData.relations.hap.length === 0 &&
+                          engineData.relations.chung.length === 0 &&
+                          engineData.relations.hyeong.length === 0 && (
+                            <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                              <p className="text-muted-foreground text-xs text-center">
+                                뚜렷한 합충형이 없는 안정된 구조입니다. 균형 잡힌 에너지가 특징입니다.
+                              </p>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                  </PremiumFeature>
+                )}
               </TabsContent>
 
               {/* Tab: 실천 가이드 */}
@@ -1673,6 +1828,107 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     <p className="text-sm text-muted-foreground">개운법 데이터를 불러오는 중...</p>
                   )}
                 </PremiumFeature>
+
+                {/* 일간 물상론 — 내 기질과 타고난 재능 (새 엔진) */}
+                {engineData.mulsang && saju && (
+                  <PremiumFeature title="일간 물상론 — 내가 타고난 기질과 재능" isSubscribed={isSubscribed}>
+                    <div className="space-y-5">
+                      {/* 일간 심볼 */}
+                      <div className="p-5 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20 text-center">
+                        <p className="text-4xl font-black text-[#D4AF37] mb-1">{saju.dayMaster}</p>
+                        <p className="text-[#F4E4BA] font-bold text-sm mb-3">{engineData.mulsang.symbol}</p>
+                        <p className="text-muted-foreground text-xs leading-relaxed italic">
+                          &ldquo;{engineData.mulsang.poeticDesc}&rdquo;
+                        </p>
+                      </div>
+
+                      {/* 심리 특성 */}
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                        <p className="text-white/80 font-bold text-xs mb-2">내면의 심리 특성</p>
+                        <p className="text-muted-foreground text-xs leading-relaxed">{engineData.mulsang.psychology}</p>
+                      </div>
+
+                      {/* 현대 직업 적성 */}
+                      {engineData.mulsang.modernJobs && engineData.mulsang.modernJobs.length > 0 && (
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                          <p className="text-white/80 font-bold text-xs mb-3">타고난 직업 적성</p>
+                          <div className="flex flex-wrap gap-2">
+                            {engineData.mulsang.modernJobs.map((job: string, i: number) => (
+                              <span
+                                key={i}
+                                className="px-2.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs"
+                              >
+                                {job}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 신강/신약에 따른 실천 조언 */}
+                      {engineData.sipseong && (
+                        <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                          <p className="text-[#D4AF37] font-bold text-xs mb-2">
+                            💡 {engineData.sipseong.strengthAssessment} 기질의 실천 조언
+                          </p>
+                          <p className="text-muted-foreground text-xs leading-relaxed">
+                            {engineData.sipseong.strengthAssessment.includes('신강') ||
+                            engineData.sipseong.strengthAssessment.includes('강')
+                              ? `일간의 기운이 강합니다. 주도적으로 나서는 것이 맞지만, 때론 타인의 의견을 경청하고 조율하는 연습이 필요합니다. ${engineData.mulsang.symbol}의 에너지를 과하지 않게, 바깥으로 향하게 하세요.`
+                              : `일간의 기운이 약합니다. 자신의 페이스를 지키면서 꾸준히 나아가는 것이 중요합니다. ${engineData.mulsang.symbol}의 섬세한 감각을 믿고, 서두르지 않는 것이 최고의 전략입니다.`}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </PremiumFeature>
+                )}
+
+                {/* 신살 개운 가이드 (새 엔진) */}
+                {engineData.sinsal.length > 0 && (
+                  <PremiumFeature title="신살 개운 가이드 — 내 별을 활용하는 법" isSubscribed={isSubscribed}>
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        당신의 사주에 깃든 신살(神殺)은 단순한 운명이 아닙니다. 각 신살이 가진 에너지를 이해하고
+                        올바르게 활용하면, 타고난 기운을 인생의 강점으로 바꿀 수 있습니다.
+                      </p>
+                      {engineData.sinsal.map((s, i) => (
+                        <div
+                          key={i}
+                          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/20 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#D4AF37] font-black">{s.name}</span>
+                              <span className="text-muted-foreground/40 text-xs">{s.hanja}</span>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">
+                              {s.category}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground text-xs leading-relaxed mb-3">{s.poeticDesc}</p>
+                          {s.modernSkillTree && (
+                            <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/15 p-3 rounded-lg">
+                              <p className="text-[#D4AF37] text-[10px] font-bold mb-1">✦ 현대적 활용법</p>
+                              <p className="text-muted-foreground text-xs">{s.modernSkillTree}</p>
+                            </div>
+                          )}
+                          {s.modernJobs && s.modernJobs.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {s.modernJobs.map((job: string, j: number) => (
+                                <span
+                                  key={j}
+                                  className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/5"
+                                >
+                                  {job}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </PremiumFeature>
+                )}
               </TabsContent>
             </Tabs>
           </>
