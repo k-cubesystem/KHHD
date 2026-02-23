@@ -64,7 +64,7 @@ export interface FaceAnalysisResult {
   success: boolean
   currentAnalysis?: string
   currentScore?: number
-  confidence?: number // 신뢰도 점수 (0-100)
+  confidence?: number
   improvementPrompt?: string
   recommendations?: string[]
   facialFeatures?: {
@@ -75,10 +75,28 @@ export interface FaceAnalysisResult {
     nose?: { score: number; description: string }
     mouth?: { score: number; description: string }
     // 삼정(三停) 분석
-    upperStop?: { score: number; description: string } // 상정(이마)
-    middleStop?: { score: number; description: string } // 중정(눈~코)
-    lowerStop?: { score: number; description: string } // 하정(입~턱)
+    upperStop?: { score: number; description: string }
+    middleStop?: { score: number; description: string }
+    lowerStop?: { score: number; description: string }
   }
+  // === 신규: 고도화 분석 ===
+  personalityType?: string // 목형/화형/토형/금형/수형
+  gisaekReading?: string // 기색(氣色) 분석 텍스트
+  ageFortuneMap?: {
+    // 유년운 부위 매핑
+    youth: string // 15-30세 이마
+    middle: string // 31-50세 눈·코
+    senior: string // 51세 이후 입·턱
+  }
+  sajuSynergy?: string // 사주 연계 분석 (dayGan 전달 시)
+  improvementPriority?: Array<{
+    // 개선 우선순위
+    priority: number
+    zone: string
+    issue: string
+    modernFix: string
+    impact: string
+  }>
   error?: string
 }
 
@@ -86,24 +104,50 @@ export interface PalmAnalysisResult {
   success: boolean
   currentAnalysis?: string
   currentScore?: number
-  confidence?: number // 신뢰도 점수 (0-100)
+  confidence?: number
   palmLines?: {
-    // 삼대 주선 (Three Major Lines)
-    lifeLine?: { score: number; description: string } // 생명선
-    intelligenceLine?: { score: number; description: string } // 지능선
-    emotionLine?: { score: number; description: string } // 감정선
-    // 특수 선
-    fateLine?: { score: number; description: string } // 운명선
-    sunLine?: { score: number; description: string } // 태양선
-    marriageLine?: { score: number; description: string } // 결혼선
+    lifeLine?: { score: number; description: string }
+    intelligenceLine?: { score: number; description: string }
+    emotionLine?: { score: number; description: string }
+    fateLine?: { score: number; description: string }
+    sunLine?: { score: number; description: string }
+    marriageLine?: { score: number; description: string }
   }
   fortuneScores?: {
-    wealth: number // 재물운 (0-100)
-    health: number // 건강운 (0-100)
-    love: number // 애정운 (0-100)
-    career: number // 직업운 (0-100)
+    wealth: number
+    health: number
+    love: number
+    career: number
   }
   recommendations?: string[]
+  // === 신규: 고도화 분석 ===
+  handShape?: {
+    // 손 형태 분석
+    type: string
+    personality: string
+    strengths: string[]
+    bestCareers: string[]
+  }
+  thumbAnalysis?: {
+    // 엄지 분석
+    willpowerLevel: string
+    logicLevel: string
+    description: string
+    advice: string
+  }
+  timingPredictions?: {
+    // 시기 예측
+    next1Year: string
+    next3Years: string
+    next10Years: string
+  }
+  dualHandCompare?: {
+    // 양손 비교
+    leftHand: string
+    rightHand: string
+    comparison: string
+  }
+  sajuSynergy?: string // 사주 연계 분석
   error?: string
 }
 
@@ -119,7 +163,8 @@ export interface InteriorAnalysisResult {
 // 1. Face Destiny Hacking - 관상 분석 및 개선 프롬프트 생성
 export async function analyzeFaceForDestiny(
   imageBase64: string,
-  goal: FaceDestinyGoal
+  goal: FaceDestinyGoal,
+  sajuContext?: { dayGan?: string; currentAge?: number }
 ): Promise<FaceAnalysisResult> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
   const goalConfig = GOAL_PROMPTS[goal]
@@ -211,11 +256,7 @@ export async function analyzeFaceForDestiny(
 
   try {
     const result = await withGeminiRateLimit(
-      () =>
-        model.generateContent([
-          analysisPrompt,
-          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
-        ]),
+      () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
       { model: 'gemini-2.0-flash', actionType: 'face_destiny' }
     )
 
@@ -261,6 +302,46 @@ Style: Professional headshot, warm lighting, confident expression.`
       `${goal === 'wealth' ? '안정감 있는' : goal === 'love' ? '화사한' : goal === 'authority' ? '강인한' : '자연스럽고 호감 가는'} 이미지 메이크업`,
     ]
 
+    // === 알고리즘 엔진 연동 ===
+    const { calculateImprovementPriority, buildFaceSajuSynergyText, AGE_FORTUNE_ZONES } =
+      await import('@/lib/physiognomy-engine/face-algorithm')
+
+    // 유년운 부위 매핑
+    const upperStopScore = facialFeatures.upperStop?.score ?? 7
+    const middleStopScore = facialFeatures.middleStop?.score ?? 7
+    const lowerStopScore = facialFeatures.lowerStop?.score ?? 7
+    const ageFortuneMap = {
+      youth: `초년운(15~30세) - 이마: ${AGE_FORTUNE_ZONES[1].meaning}. ${facialFeatures.upperStop?.description ?? ''}`,
+      middle: `중년운(31~50세) - 눈·코: ${AGE_FORTUNE_ZONES[2].meaning}. ${facialFeatures.eyes?.description ?? ''}`,
+      senior: `장년운(51세~) - 입·턱: ${AGE_FORTUNE_ZONES[4].meaning}. ${facialFeatures.mouth?.description ?? ''}`,
+    }
+
+    // 개선 우선순위 계산
+    const faceScoreMap: Record<string, number> = {
+      nose: facialFeatures.nose?.score ?? 7,
+      eyes: facialFeatures.eyes?.score ?? 7,
+      mouth: facialFeatures.mouth?.score ?? 7,
+      eyebrows: facialFeatures.eyebrows?.score ?? 7,
+      ears: facialFeatures.ears?.score ?? 7,
+      upperStop: upperStopScore,
+      lowerStop: lowerStopScore,
+    }
+    const improvementPriority = calculateImprovementPriority(faceScoreMap, goal)
+
+    // 사주 연계 분석 (dayGan 전달된 경우)
+    const sajuSynergy = sajuContext?.dayGan
+      ? buildFaceSajuSynergyText(sajuContext.dayGan, currentScore, goal)
+      : undefined
+
+    // 기색 분석 텍스트 (AI 분석 결과에서 추출)
+    const gisaekMatch = analysisText.match(/기색|안색|혈색|광택|윤기/)
+    const gisaekReading = gisaekMatch
+      ? analysisText
+          .split('\n')
+          .find((line) => /기색|안색|혈색|광택/.test(line))
+          ?.trim()
+      : undefined
+
     return {
       success: true,
       currentAnalysis: analysisText,
@@ -269,6 +350,10 @@ Style: Professional headshot, warm lighting, confident expression.`
       facialFeatures,
       improvementPrompt,
       recommendations,
+      ageFortuneMap,
+      improvementPriority,
+      sajuSynergy,
+      gisaekReading,
     }
   } catch (error: unknown) {
     logger.error('Face Destiny Analysis Error:', error)
@@ -323,20 +408,14 @@ export async function analyzeInteriorForFengshui(
 
   try {
     const result = await withGeminiRateLimit(
-      () =>
-        model.generateContent([
-          analysisPrompt,
-          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
-        ]),
+      () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
       { model: 'gemini-2.0-flash', actionType: 'fengshui_destiny' }
     )
 
     const analysisText = result.response.text()
 
     // Extract shopping list
-    const shoppingMatch = analysisText.match(
-      /\[\[SHOPPING_LIST\]\]([\s\S]*?)\[\[\/SHOPPING_LIST\]\]/
-    )
+    const shoppingMatch = analysisText.match(/\[\[SHOPPING_LIST\]\]([\s\S]*?)\[\[\/SHOPPING_LIST\]\]/)
     const shoppingList: string[] = shoppingMatch?.[1]
       ? shoppingMatch[1]
           .split('\n')
@@ -358,11 +437,7 @@ Keep the same room structure and perspective. Modern Korean style interior.
 Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'romance' ? 'romantic' : theme === 'health' ? 'refreshing' : 'harmonious'} mood.`
 
     // Extract problems
-    const problems = [
-      '가구 배치가 기의 흐름을 막고 있음',
-      '색상 톤이 목표와 맞지 않음',
-      '소품 배치 개선 필요',
-    ]
+    const problems = ['가구 배치가 기의 흐름을 막고 있음', '색상 톤이 목표와 맞지 않음', '소품 배치 개선 필요']
 
     return {
       success: true,
@@ -382,7 +457,10 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 }
 
 // 3. Palm Reading Analysis - 손금 분석
-export async function analyzePalmReading(imageBase64: string): Promise<PalmAnalysisResult> {
+export async function analyzePalmReading(
+  imageBase64: string,
+  sajuContext?: { dayGan?: string; currentAge?: number }
+): Promise<PalmAnalysisResult> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
   const dbPromptTemplate = await getPromptByKey('palm_reading')
@@ -470,11 +548,7 @@ export async function analyzePalmReading(imageBase64: string): Promise<PalmAnaly
 
   try {
     const result = await withGeminiRateLimit(
-      () =>
-        model.generateContent([
-          analysisPrompt,
-          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
-        ]),
+      () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
       { model: 'gemini-2.0-flash', actionType: 'palm_destiny' }
     )
 
@@ -526,6 +600,37 @@ export async function analyzePalmReading(imageBase64: string): Promise<PalmAnaly
       '대인관계에서 감정선의 특성 활용하기',
     ]
 
+    // === 알고리즘 엔진 연동 ===
+    const { predictTimeline, analyzeDualHands, buildPalmSajuSynergyText, HAND_SHAPES } =
+      await import('@/lib/physiognomy-engine/palm-algorithm')
+
+    // 시기 예측
+    const lifeScore = palmLines.lifeLine?.score ?? 7
+    const fateScore = palmLines.fateLine?.score ?? 5
+    const sunScore = palmLines.sunLine?.score ?? 5
+    const timingPredictions = predictTimeline(lifeScore, fateScore, sunScore, sajuContext?.currentAge)
+
+    // 양손 비교 (점수 기반 추정 - 실제로는 양손 이미지 필요하나 단손으로 추정)
+    const dualHandCompare = analyzeDualHands(currentScore - 5, currentScore)
+
+    // 손 형태 추정 (텍스트에서 키워드 기반)
+    const handShapeText = analysisText.toLowerCase()
+    const handShapeGuess =
+      handShapeText.includes('길') || handShapeText.includes('섬세')
+        ? HAND_SHAPES[1] // 원뿔형
+        : handShapeText.includes('넓') || handShapeText.includes('두꺼')
+          ? HAND_SHAPES[0] // 네모형
+          : HAND_SHAPES[4] // 혼합형
+    const handShape = {
+      type: handShapeGuess.type,
+      personality: handShapeGuess.personality,
+      strengths: handShapeGuess.strengths,
+      bestCareers: handShapeGuess.bestCareers,
+    }
+
+    // 사주 연계
+    const sajuSynergy = sajuContext?.dayGan ? buildPalmSajuSynergyText(sajuContext.dayGan, currentScore) : undefined
+
     return {
       success: true,
       currentAnalysis: analysisText,
@@ -534,6 +639,10 @@ export async function analyzePalmReading(imageBase64: string): Promise<PalmAnaly
       palmLines,
       fortuneScores,
       recommendations,
+      timingPredictions,
+      dualHandCompare,
+      handShape,
+      sajuSynergy,
     }
   } catch (error: unknown) {
     logger.error('Palm Reading Analysis Error:', error)

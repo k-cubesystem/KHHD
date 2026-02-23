@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getSajuData, WU_XING_COLORS, SajuData } from '@/lib/domain/saju/saju'
 import {
   analyzeGekguk,
@@ -42,11 +42,16 @@ import {
   ShieldAlert,
   AlertTriangle,
   TrendingDown,
+  TrendingUp,
   Skull,
   Activity,
+  Eye,
+  Hand,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { getLatestAnalysisSession } from '@/app/actions/core/sessions'
+import { type FaceAnalysisResult, type PalmAnalysisResult } from '@/app/actions/ai/image'
 
 // 전문 용어 사전 (45개 이상)
 const TERMINOLOGY: Record<string, { title: string; desc: string }> = {
@@ -509,8 +514,32 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   const [yongsinExplainOpen, setYongsinExplainOpen] = useState(false)
   const [gekgukExplainOpen, setGekgukExplainOpen] = useState(false)
   const [gaeunbubExplainOpen, setGaeunbubExplainOpen] = useState(false)
+  const [faceSession, setFaceSession] = useState<FaceAnalysisResult | null>(null)
+  const [palmSession, setPalmSession] = useState<PalmAnalysisResult | null>(null)
+  const [loadingFace, setLoadingFace] = useState(false)
+  const [loadingPalm, setLoadingPalm] = useState(false)
 
   const selectedMember = members.find((m) => m.id === selectedMemberId)
+
+  useEffect(() => {
+    if (!selectedMemberId) return
+    setFaceSession(null)
+    setPalmSession(null)
+
+    const loadSessions = async () => {
+      const [faceData, palmData] = await Promise.all([
+        getLatestAnalysisSession(selectedMemberId, 'FACE'),
+        getLatestAnalysisSession(selectedMemberId, 'HAND'),
+      ])
+      if (faceData?.result_data) {
+        setFaceSession(faceData.result_data as unknown as FaceAnalysisResult)
+      }
+      if (palmData?.result_data) {
+        setPalmSession(palmData.result_data as unknown as PalmAnalysisResult)
+      }
+    }
+    loadSessions()
+  }, [selectedMemberId])
 
   // 사주 데이터 안전하게 가져오기
   let saju: SajuData | null = null
@@ -857,57 +886,72 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             </Card>
 
             {/* Tabs Layout */}
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-white/5 border-white/10 mb-8 p-1 relative z-10">
+            <Tabs defaultValue="mysaju" className="w-full">
+              <TabsList className="flex w-full overflow-x-auto bg-white/5 border-white/10 mb-8 p-1 relative z-10 gap-1 scrollbar-hide">
                 <TabsTrigger
-                  value="basic"
-                  className="group relative data-[state=active]:!bg-[#D4AF37]/20 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-none"
+                  value="mysaju"
+                  className="group relative flex-shrink-0 data-[state=active]:!bg-[#D4AF37]/20 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
                 >
-                  기본 정보
+                  <ScrollText className="w-4 h-4" />
+                  <span className="text-[11px]">나의사주</span>
                   <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-[#D4AF37] transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="advanced"
-                  className="group relative data-[state=active]:!bg-blue-500/20 data-[state=active]:!text-blue-400 data-[state=active]:shadow-none"
+                  value="strengths"
+                  className="group relative flex-shrink-0 data-[state=active]:!bg-emerald-500/20 data-[state=active]:!text-emerald-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
                 >
-                  고급 분석
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-blue-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="fortune"
-                  className="group relative data-[state=active]:!bg-purple-500/20 data-[state=active]:!text-purple-400 data-[state=active]:shadow-none"
-                >
-                  운세 흐름
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-purple-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="practical"
-                  className="group relative data-[state=active]:!bg-emerald-500/20 data-[state=active]:!text-emerald-400 data-[state=active]:shadow-none"
-                >
-                  실천 가이드
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-[11px]">장점분석</span>
                   <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-emerald-400 transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
-                  value="warnings"
-                  className="group relative data-[state=active]:!bg-rose-500/20 data-[state=active]:!text-rose-400 data-[state=active]:shadow-none"
+                  value="weaknesses"
+                  className="group relative flex-shrink-0 data-[state=active]:!bg-rose-500/20 data-[state=active]:!text-rose-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
                 >
-                  경계 분석
+                  <ShieldAlert className="w-4 h-4" />
+                  <span className="text-[11px]">단점분석</span>
                   <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-rose-400 transition-all duration-300 pointer-events-none">
+                    ▼
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="fortune"
+                  className="group relative flex-shrink-0 data-[state=active]:!bg-purple-500/20 data-[state=active]:!text-purple-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  <span className="text-[11px]">운세흐름</span>
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-purple-400 transition-all duration-300 pointer-events-none">
+                    ▼
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="face"
+                  className="group relative flex-shrink-0 data-[state=active]:!bg-amber-500/20 data-[state=active]:!text-amber-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="text-[11px]">관상분석</span>
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-amber-400 transition-all duration-300 pointer-events-none">
+                    ▼
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="palm"
+                  className="group relative flex-shrink-0 data-[state=active]:!bg-cyan-500/20 data-[state=active]:!text-cyan-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                >
+                  <Hand className="w-4 h-4" />
+                  <span className="text-[11px]">손금분석</span>
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-cyan-400 transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
               </TabsList>
 
-              {/* Tab: 기본 정보 */}
-              <TabsContent value="basic" className="space-y-10 mt-10">
+              {/* Tab: 나의사주 */}
+              <TabsContent value="mysaju" className="space-y-10 mt-10">
                 {/* Four Pillars - Main Display */}
                 <Card className="p-8 bg-white/5 border-white/10">
                   <div className="flex items-center justify-between mb-6">
@@ -1283,8 +1327,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 </Card>
               </TabsContent>
 
-              {/* Tab: 고급 분석 */}
-              <TabsContent value="advanced" className="space-y-10 mt-10">
+              {/* Tab: 장점분석 */}
+              <TabsContent value="strengths" className="space-y-10 mt-10">
                 {/* 신강신약 & 십성 분포 — 새 엔진 */}
                 {engineData.sipseong && (
                   <Card className="p-8 bg-white/5 border-white/10">
@@ -1617,10 +1661,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     </div>
                   </PremiumFeature>
                 )}
-              </TabsContent>
 
-              {/* Tab: 실천 가이드 */}
-              <TabsContent value="practical" className="space-y-10 mt-10">
+                {/* 개운법 (구 실천 가이드 내용) */}
                 {/* 용신론 - 동적 데이터 */}
                 {yongsinAnalysis && (
                   <PremiumFeature title={SECTION_DESCRIPTIONS.yongsin.title} isSubscribed={isSubscribed}>
@@ -2005,8 +2047,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 )}
               </TabsContent>
 
-              {/* Tab: 경계 분석 */}
-              <TabsContent value="warnings" className="space-y-8 mt-10">
+              {/* Tab: 단점분석 */}
+              <TabsContent value="weaknesses" className="space-y-8 mt-10">
                 {engineData.warnings ? (
                   <>
                     {/* 통합 위험 지수 */}
@@ -2362,6 +2404,192 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <Card className="p-8 bg-white/5 border-white/10 text-center">
                     <p className="text-muted-foreground text-sm">경계 분석 데이터를 불러오는 중...</p>
                   </Card>
+                )}
+              </TabsContent>
+
+              {/* Tab: 관상분석 */}
+              <TabsContent value="face" className="space-y-6 mt-10">
+                <Card className="p-6 bg-amber-500/10 border-amber-500/20">
+                  <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2 mb-2">
+                    <Eye className="w-4 h-4" />
+                    관상 분석 (觀相分析)
+                  </h3>
+                  <p className="text-xs text-white/50">
+                    사주가 타고난 운명이라면, 관상은 현재 흘러가는 운의 모습입니다
+                  </p>
+                </Card>
+
+                {faceSession ? (
+                  <div className="space-y-4">
+                    <Card className="p-6 bg-white/5 border-amber-500/20 text-center">
+                      <p className="text-xs text-white/50 mb-1">관상 점수</p>
+                      <div className="text-5xl font-bold text-amber-400">{(faceSession as any).score ?? '--'}</div>
+                      <p className="text-xs text-white/40 mt-1">신뢰도: {(faceSession as any).confidence ?? '--'}%</p>
+                    </Card>
+
+                    {(faceSession as any).facialFeatures && (
+                      <Card className="p-6 bg-white/5 border-white/10">
+                        <h4 className="text-sm font-semibold text-amber-400 mb-4">오관(五官) 분석</h4>
+                        <div className="space-y-2">
+                          {Object.entries((faceSession as any).facialFeatures)
+                            .slice(0, 5)
+                            .map(([key, val]: [string, any]) => (
+                              <div key={key} className="flex items-center gap-3">
+                                <span className="text-xs text-white/50 w-16 shrink-0">
+                                  {key === 'ears'
+                                    ? '귀'
+                                    : key === 'eyebrows'
+                                      ? '눈썹'
+                                      : key === 'eyes'
+                                        ? '눈'
+                                        : key === 'nose'
+                                          ? '코'
+                                          : '입'}
+                                </span>
+                                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-amber-400/70 rounded-full"
+                                    style={{ width: `${(val.score / 10) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-amber-400 w-8 text-right">{val.score}/10</span>
+                              </div>
+                            ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    <Link href={`/protected/studio/face?target=${selectedMemberId}`}>
+                      <Button className="w-full bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30">
+                        <Eye className="w-4 h-4 mr-2" />
+                        다시 관상 분석하기
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Card className="p-8 bg-white/5 border-white/10 text-center">
+                      <Eye className="w-12 h-12 text-amber-400/50 mx-auto mb-4" />
+                      <p className="text-white/60 text-sm mb-2">아직 관상 분석 기록이 없습니다</p>
+                      <p className="text-white/40 text-xs">얼굴 사진으로 오관(五官)과 삼정(三停)을 분석합니다</p>
+                    </Card>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['재물운', '도화운', '권위운'].map((label, i) => (
+                        <Card key={i} className="p-3 bg-white/5 border-white/10 text-center">
+                          <p className="text-xs text-amber-400">{label}</p>
+                          <p className="text-[10px] text-white/40 mt-1">관상으로 보는</p>
+                        </Card>
+                      ))}
+                    </div>
+                    <Link href={`/protected/studio/face?target=${selectedMemberId}`}>
+                      <Button className="w-full h-12 bg-amber-500 text-black hover:bg-amber-400 font-bold">
+                        <Eye className="w-5 h-5 mr-2" />
+                        관상 분석 시작하기
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Tab: 손금분석 */}
+              <TabsContent value="palm" className="space-y-6 mt-10">
+                <Card className="p-6 bg-cyan-500/10 border-cyan-500/20">
+                  <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2 mb-2">
+                    <Hand className="w-4 h-4" />
+                    손금 분석 (手相分析)
+                  </h3>
+                  <p className="text-xs text-white/50">
+                    사주가 하늘의 설계도라면, 손금은 그 설계를 내 손으로 실천해온 기록입니다
+                  </p>
+                </Card>
+
+                {palmSession ? (
+                  <div className="space-y-4">
+                    <Card className="p-6 bg-white/5 border-cyan-500/20 text-center">
+                      <p className="text-xs text-white/50 mb-1">손금 점수</p>
+                      <div className="text-5xl font-bold text-cyan-400">{(palmSession as any).score ?? '--'}</div>
+                      <p className="text-xs text-white/40 mt-1">신뢰도: {(palmSession as any).confidence ?? '--'}%</p>
+                    </Card>
+
+                    {(palmSession as any).fortuneScores && (
+                      <Card className="p-6 bg-white/5 border-white/10">
+                        <h4 className="text-sm font-semibold text-cyan-400 mb-4">4대 운세</h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          {Object.entries((palmSession as any).fortuneScores).map(([key, val]: [string, any]) => (
+                            <div key={key} className="bg-white/5 rounded-lg p-3 text-center">
+                              <p className="text-xs text-white/50">
+                                {key === 'wealth'
+                                  ? '재물운'
+                                  : key === 'health'
+                                    ? '건강운'
+                                    : key === 'love'
+                                      ? '애정운'
+                                      : '직업운'}
+                              </p>
+                              <p className="text-2xl font-bold text-cyan-400">{val}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {(palmSession as any).palmLines && (
+                      <Card className="p-6 bg-white/5 border-white/10">
+                        <h4 className="text-sm font-semibold text-cyan-400 mb-3">삼대 주선</h4>
+                        <div className="space-y-2">
+                          {[
+                            { key: 'lifeLine', label: '생명선' },
+                            { key: 'intelligenceLine', label: '지능선' },
+                            { key: 'emotionLine', label: '감정선' },
+                          ].map(({ key, label }) => {
+                            const line = (palmSession as any).palmLines[key]
+                            if (!line) return null
+                            return (
+                              <div key={key} className="flex items-center gap-3">
+                                <span className="text-xs text-white/50 w-14 shrink-0">{label}</span>
+                                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-cyan-400/70 rounded-full"
+                                    style={{ width: `${(line.score / 10) * 100}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-cyan-400 w-8 text-right">{line.score}/10</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </Card>
+                    )}
+
+                    <Link href={`/protected/studio/palm?target=${selectedMemberId}`}>
+                      <Button className="w-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30">
+                        <Hand className="w-4 h-4 mr-2" />
+                        다시 손금 분석하기
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Card className="p-8 bg-white/5 border-white/10 text-center">
+                      <Hand className="w-12 h-12 text-cyan-400/50 mx-auto mb-4" />
+                      <p className="text-white/60 text-sm mb-2">아직 손금 분석 기록이 없습니다</p>
+                      <p className="text-white/40 text-xs">손바닥 사진으로 생명선·지능선·감정선을 분석합니다</p>
+                    </Card>
+                    <div className="grid grid-cols-3 gap-3">
+                      {['재물운', '건강운', '애정운'].map((label, i) => (
+                        <Card key={i} className="p-3 bg-white/5 border-white/10 text-center">
+                          <p className="text-xs text-cyan-400">{label}</p>
+                          <p className="text-[10px] text-white/40 mt-1">손금으로 보는</p>
+                        </Card>
+                      ))}
+                    </div>
+                    <Link href={`/protected/studio/palm?target=${selectedMemberId}`}>
+                      <Button className="w-full h-12 bg-cyan-500 text-black hover:bg-cyan-400 font-bold">
+                        <Hand className="w-5 h-5 mr-2" />
+                        손금 분석 시작하기
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>

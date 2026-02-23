@@ -2,15 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-export type AnalysisCategory =
-  | 'SAJU'
-  | 'FACE'
-  | 'HAND'
-  | 'FENGSHUI'
-  | 'COMPATIBILITY'
-  | 'TODAY'
-  | 'WEALTH'
-  | 'NEW_YEAR'
+export type AnalysisCategory = 'SAJU' | 'FACE' | 'HAND' | 'FENGSHUI' | 'COMPATIBILITY' | 'TODAY' | 'WEALTH' | 'NEW_YEAR'
 
 export interface AnalysisSession {
   id: string
@@ -87,10 +79,7 @@ export async function saveAnalysisSession(
 /**
  * Get analysis sessions for a specific family member
  */
-export async function getMemberAnalysisSessions(
-  memberId: string,
-  limit: number = 10
-): Promise<AnalysisSession[]> {
+export async function getMemberAnalysisSessions(memberId: string, limit: number = 10): Promise<AnalysisSession[]> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -143,10 +132,7 @@ export async function getAllAnalysisSessions(limit: number = 50): Promise<Analys
 /**
  * Mark session as shared and save share card URL
  */
-export async function markSessionAsShared(
-  sessionId: string,
-  shareCardUrl: string
-): Promise<{ success: boolean }> {
+export async function markSessionAsShared(sessionId: string, shareCardUrl: string): Promise<{ success: boolean }> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -214,8 +200,7 @@ export async function getMemberAnalysisStats(memberId: string): Promise<{
   // Get last analysis details
   const lastAnalysis = data[0]
   const lastAnalysisScore = (lastAnalysis?.result_data?.score as number) || null
-  const lastAnalysisSummary =
-    (lastAnalysis?.result_data?.analysis as string)?.substring(0, 100) || null
+  const lastAnalysisSummary = (lastAnalysis?.result_data?.analysis as string)?.substring(0, 100) || null
 
   return {
     totalAnalyses: data.length,
@@ -224,4 +209,32 @@ export async function getMemberAnalysisStats(memberId: string): Promise<{
     lastAnalysisSummary,
     lastAnalysisScore,
   }
+}
+
+/**
+ * Get the latest analysis session for a member by category (FACE or HAND)
+ */
+export async function getLatestAnalysisSession(
+  memberId: string,
+  category: AnalysisCategory
+): Promise<AnalysisSession | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from('analysis_sessions')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('target_member_id', memberId)
+    .eq('category', category)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) return null
+  return data
 }
