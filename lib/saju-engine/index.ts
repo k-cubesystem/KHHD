@@ -14,3 +14,14 @@ export type { SinsalResult } from './sinsal-extended'
 export { buildSajuContext, getAnalysisTypeGuide } from './context-builder'
 export type { SajuContext, PersonInfo, AnalysisType } from './context-builder'
 export { buildMasterPromptForAction, buildUserContextText } from './master-prompt-builder'
+export { analyzeWarnings } from './warnings'
+export type {
+  WarningsResult,
+  GigusinWarning,
+  GongmangResult,
+  SamjaeResult,
+  WonjinsalResult,
+  BaekhoResult,
+  DayMasterWeaknessResult,
+  SipseongExcessResult,
+} from './warnings'

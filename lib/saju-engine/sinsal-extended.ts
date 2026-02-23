@@ -199,7 +199,7 @@ const MUNCHANG_MAP: Record<string, string> = {
 const GOEGANG_ILJU = ['庚辰', '庚戌', '壬辰', '壬戌']
 
 /** 백호대살: 특정 일주 기준 */
-const BAEKHODA_ILJU = ['甲辰', '乙未', '丙戌', '丁丑', '戊辰', '己丑', '庚辰', '辛未', '壬戌', '癸丑']
+export const BAEKHODA_ILJU = ['甲辰', '乙未', '丙戌', '丁丑', '戊辰', '己丑', '庚辰', '辛未', '壬戌', '癸丑']
 
 /** 현침살: 甲·午·申·酉·辛이 포함된 경우 */
 const HYEONJIM_CHARS = ['甲', '午', '申', '酉', '辛']
@@ -215,7 +215,7 @@ const GWIMUN_PAIRS: Array<[string, string]> = [
 ]
 
 /** 원진살 쌍 */
-const WONJIN_PAIRS: Array<[string, string]> = [
+export const WONJIN_PAIRS: Array<[string, string]> = [
   ['子', '未'],
   ['丑', '午'],
   ['寅', '酉'],

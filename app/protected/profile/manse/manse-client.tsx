@@ -16,10 +16,12 @@ import {
   analyzeSibjiunseong,
   analyzeRelations,
   calculateExtendedSinsal,
+  analyzeWarnings,
   type SipseongMap,
   type SibjiunseongResult,
   type RelationResult,
   type SinsalResult,
+  type WarningsResult,
 } from '@/lib/saju-engine'
 import { analyzeManseAdvanced } from '@/lib/domain/saju/manse-advanced'
 import { AdvancedManseDisplay } from '@/components/saju/advanced-manse-display'
@@ -28,7 +30,21 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollText, User, Info, Sparkles, BookOpen, Crown, Palette, Compass } from 'lucide-react'
+import {
+  ScrollText,
+  User,
+  Info,
+  Sparkles,
+  BookOpen,
+  Crown,
+  Palette,
+  Compass,
+  ShieldAlert,
+  AlertTriangle,
+  TrendingDown,
+  Skull,
+  Activity,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -577,7 +593,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     sinsal: SinsalResult[]
     relations: RelationResult | null
     mulsang: (typeof GAN_MULSANG)[string] | null
-  } = { sipseong: null, sibjiunseong: null, sinsal: [], relations: null, mulsang: null }
+    warnings: WarningsResult | null
+  } = { sipseong: null, sibjiunseong: null, sinsal: [], relations: null, mulsang: null, warnings: null }
 
   if (saju) {
     try {
@@ -595,13 +612,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       ]
       const pillarsForRel = [saju.pillars.year, saju.pillars.month, saju.pillars.day, saju.pillars.time]
       const dayGanji = saju.pillars.day.gan + saju.pillars.day.zhi
+      const sipseongResult = analyzeSipseong(saju.dayMaster, pillarsForSipseong)
 
       engineData = {
-        sipseong: analyzeSipseong(saju.dayMaster, pillarsForSipseong),
+        sipseong: sipseongResult,
         sibjiunseong: analyzeSibjiunseong(saju.dayMaster, pillarsForSibj),
         sinsal: calculateExtendedSinsal(saju),
         relations: analyzeRelations(pillarsForRel, dayGanji),
         mulsang: GAN_MULSANG[saju.dayMaster] || null,
+        warnings: analyzeWarnings(saju, yongsinAnalysis, sipseongResult),
       }
     } catch (e) {
       console.error('[ManseEngine] Error:', e)
@@ -839,7 +858,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
             {/* Tabs Layout */}
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-white/5 border-white/10 mb-8 p-1 relative z-10">
+              <TabsList className="grid w-full grid-cols-5 bg-white/5 border-white/10 mb-8 p-1 relative z-10">
                 <TabsTrigger
                   value="basic"
                   className="group relative data-[state=active]:!bg-[#D4AF37]/20 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-none"
@@ -873,6 +892,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 >
                   실천 가이드
                   <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-emerald-400 transition-all duration-300 pointer-events-none">
+                    ▼
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="warnings"
+                  className="group relative data-[state=active]:!bg-rose-500/20 data-[state=active]:!text-rose-400 data-[state=active]:shadow-none"
+                >
+                  경계 분석
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-rose-400 transition-all duration-300 pointer-events-none">
                     ▼
                   </span>
                 </TabsTrigger>
@@ -1974,6 +2002,366 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       ))}
                     </div>
                   </PremiumFeature>
+                )}
+              </TabsContent>
+
+              {/* Tab: 경계 분석 */}
+              <TabsContent value="warnings" className="space-y-8 mt-10">
+                {engineData.warnings ? (
+                  <>
+                    {/* 통합 위험 지수 */}
+                    <Card className="p-6 bg-rose-950/20 border-rose-500/30">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                          <Activity className="w-4 h-4" />
+                          통합 위험 지수
+                        </h3>
+                        <span
+                          className={cn(
+                            'px-3 py-1 rounded-full text-xs font-bold',
+                            engineData.warnings.riskLevel === 'low' && 'bg-emerald-500/20 text-emerald-400',
+                            engineData.warnings.riskLevel === 'medium' && 'bg-yellow-500/20 text-yellow-400',
+                            engineData.warnings.riskLevel === 'high' && 'bg-orange-500/20 text-orange-400',
+                            engineData.warnings.riskLevel === 'critical' && 'bg-rose-500/20 text-rose-400'
+                          )}
+                        >
+                          {engineData.warnings.riskLabel}
+                        </span>
+                      </div>
+                      <div className="relative h-3 bg-white/10 rounded-full overflow-hidden mb-3">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-all duration-700',
+                            engineData.warnings.riskScore < 25 && 'bg-emerald-500',
+                            engineData.warnings.riskScore >= 25 &&
+                              engineData.warnings.riskScore < 50 &&
+                              'bg-yellow-500',
+                            engineData.warnings.riskScore >= 50 &&
+                              engineData.warnings.riskScore < 75 &&
+                              'bg-orange-500',
+                            engineData.warnings.riskScore >= 75 && 'bg-rose-500'
+                          )}
+                          style={{ width: `${engineData.warnings.riskScore}%` }}
+                        />
+                      </div>
+                      <p className="text-right text-xs text-muted-foreground">{engineData.warnings.riskScore} / 100</p>
+
+                      {/* 즉각 행동 지침 */}
+                      {engineData.warnings.urgentActions.length > 0 && (
+                        <div className="mt-5 space-y-2">
+                          <p className="text-xs font-bold text-rose-300 mb-3 flex items-center gap-1">
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                            즉각 행동 지침
+                          </p>
+                          {engineData.warnings.urgentActions.map((action, i) => (
+                            <div
+                              key={i}
+                              className="flex items-start gap-2 p-3 rounded-lg bg-rose-950/30 border border-rose-500/20"
+                            >
+                              <span className="text-rose-400 font-bold text-xs shrink-0 mt-0.5">{i + 1}.</span>
+                              <p className="text-xs text-rose-200 leading-relaxed">{action}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+
+                    {/* 일간 핵심 약점 */}
+                    {engineData.warnings.dayMasterWeakness.flaws.length > 0 && (
+                      <Card className="p-6 bg-white/5 border-white/10">
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
+                          <TrendingDown className="w-4 h-4 text-rose-400" />
+                          {saju?.dayMaster}일간 — 타고난 핵심 약점
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            {engineData.warnings.dayMasterWeakness.flaws.map((flaw, i) => (
+                              <div
+                                key={i}
+                                className="flex items-start gap-2 p-3 rounded-lg bg-rose-950/20 border border-rose-500/15"
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                <p className="text-xs text-white/80 leading-relaxed">{flaw}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 mt-4">
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                              <p className="text-[10px] text-muted-foreground mb-1">사각지대</p>
+                              {engineData.warnings.dayMasterWeakness.blindSpots.map((b, i) => (
+                                <p key={i} className="text-xs text-white/70">
+                                  • {b}
+                                </p>
+                              ))}
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                              <p className="text-[10px] text-muted-foreground mb-1">대인관계 약점</p>
+                              <p className="text-xs text-white/70">
+                                {engineData.warnings.dayMasterWeakness.relationshipIssue}
+                              </p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                              <p className="text-[10px] text-muted-foreground mb-1">건강 취약 부위</p>
+                              <p className="text-xs text-white/70">
+                                {engineData.warnings.dayMasterWeakness.healthRisks.join(', ')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* 기구신 회피 파라미터 */}
+                    {engineData.warnings.gigusin && (
+                      <Card className="p-6 bg-white/5 border-white/10">
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
+                          <Skull className="w-4 h-4 text-orange-400" />
+                          기구신(忌仇神) — 피해야 할 에너지
+                        </h3>
+                        <div className="mb-4 p-3 rounded-lg bg-orange-950/20 border border-orange-500/20">
+                          <p className="text-xs text-orange-300 leading-relaxed">
+                            {engineData.warnings.gigusin.description}
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+                              <Palette className="w-3 h-3" /> 회피 색상
+                            </p>
+                            <div className="flex gap-1 flex-wrap">
+                              {engineData.warnings.gigusin.avoidColorHexes.slice(0, 4).map((hex, i) => (
+                                <div
+                                  key={i}
+                                  className="w-6 h-6 rounded-full border border-white/20"
+                                  style={{ backgroundColor: hex }}
+                                  title={hex}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-[10px] text-white/50 mt-1">
+                              {engineData.warnings.gigusin.avoidColors.join(', ')}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
+                              <Compass className="w-3 h-3" /> 회피 방위
+                            </p>
+                            <p className="text-xs font-bold text-orange-300">
+                              {engineData.warnings.gigusin.avoidDirections.join(', ')}
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <p className="text-[10px] text-muted-foreground mb-2">회피 숫자</p>
+                            <div className="flex gap-1 flex-wrap">
+                              {engineData.warnings.gigusin.avoidNumbers.map((n) => (
+                                <span
+                                  key={n}
+                                  className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-300 flex items-center justify-center text-xs font-bold"
+                                >
+                                  {n}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <p className="text-[10px] text-muted-foreground mb-2">주의 관계</p>
+                            {engineData.warnings.gigusin.avoidRelationships.map((r, i) => (
+                              <p key={i} className="text-[10px] text-white/60">
+                                • {r}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* 공망 / 삼재 나란히 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 공망 */}
+                      <Card className="p-5 bg-white/5 border-white/10">
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+                          공망(空亡)
+                        </h4>
+                        <div className="flex gap-3 mb-3">
+                          {[engineData.warnings.gongmang.zhi1Kor, engineData.warnings.gongmang.zhi2Kor].map((z, i) => (
+                            <span
+                              key={i}
+                              className="px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-xs font-bold"
+                            >
+                              {z}
+                            </span>
+                          ))}
+                        </div>
+                        {engineData.warnings.gongmang.affectedPillars.length > 0 ? (
+                          <div className="mb-2">
+                            <div className="flex gap-1 flex-wrap mb-2">
+                              {engineData.warnings.gongmang.affectedPillars.map((p, i) => (
+                                <span
+                                  key={i}
+                                  className={cn(
+                                    'px-2 py-0.5 rounded text-[10px] font-bold',
+                                    engineData.warnings!.gongmang.hasSevere
+                                      ? 'bg-rose-500/20 text-rose-300'
+                                      : 'bg-yellow-500/20 text-yellow-300'
+                                  )}
+                                >
+                                  {p}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                          {engineData.warnings.gongmang.warning || engineData.warnings.gongmang.description}
+                        </p>
+                      </Card>
+
+                      {/* 삼재 */}
+                      <Card
+                        className={cn(
+                          'p-5 border',
+                          engineData.warnings.samjae.isActive
+                            ? 'bg-rose-950/20 border-rose-500/30'
+                            : 'bg-white/5 border-white/10'
+                        )}
+                      >
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <ShieldAlert
+                            className={cn(
+                              'w-3.5 h-3.5',
+                              engineData.warnings.samjae.isActive ? 'text-rose-400' : 'text-muted-foreground'
+                            )}
+                          />
+                          삼재(三災)
+                        </h4>
+                        {engineData.warnings.samjae.isActive ? (
+                          <>
+                            <span className="inline-block px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold mb-3">
+                              {engineData.warnings.samjae.phase}
+                            </span>
+                            <div className="flex gap-1 mb-3">
+                              {engineData.warnings.samjae.samjaeYears.map((y, i) => (
+                                <span
+                                  key={i}
+                                  className={cn(
+                                    'px-2 py-1 rounded text-[10px] font-bold border',
+                                    y === engineData.warnings!.samjae.currentYear
+                                      ? 'bg-rose-500/30 border-rose-500/50 text-rose-200'
+                                      : 'bg-white/5 border-white/10 text-white/50'
+                                  )}
+                                >
+                                  {y}년
+                                </span>
+                              ))}
+                            </div>
+                            <p className="text-[10px] text-rose-200 leading-relaxed">
+                              {engineData.warnings.samjae.warning}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-emerald-400 font-bold mb-2">미발동</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {engineData.warnings.samjae.description}
+                            </p>
+                          </>
+                        )}
+                      </Card>
+                    </div>
+
+                    {/* 원진살 / 백호대살 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card
+                        className={cn(
+                          'p-5 border',
+                          engineData.warnings.wonjinsal.found
+                            ? 'bg-purple-950/20 border-purple-500/30'
+                            : 'bg-white/5 border-white/10'
+                        )}
+                      >
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                          원진살(怨嗔殺)
+                        </h4>
+                        {engineData.warnings.wonjinsal.found ? (
+                          <>
+                            <div className="flex gap-2 flex-wrap mb-3">
+                              {engineData.warnings.wonjinsal.pairs.map((p, i) => (
+                                <span
+                                  key={i}
+                                  className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold"
+                                >
+                                  {p}
+                                </span>
+                              ))}
+                            </div>
+                            <p className="text-[10px] text-purple-200 leading-relaxed">
+                              {engineData.warnings.wonjinsal.warning}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-emerald-400">원진살 없음</p>
+                        )}
+                      </Card>
+
+                      <Card
+                        className={cn(
+                          'p-5 border',
+                          engineData.warnings.baekhosal.found
+                            ? 'bg-red-950/20 border-red-500/30'
+                            : 'bg-white/5 border-white/10'
+                        )}
+                      >
+                        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                          백호대살(白虎大殺)
+                        </h4>
+                        {engineData.warnings.baekhosal.found ? (
+                          <>
+                            <span className="inline-block px-3 py-1 rounded-full bg-red-500/20 text-red-300 text-xs font-bold mb-3">
+                              {engineData.warnings.baekhosal.dayPillar} 일주
+                            </span>
+                            <ul className="space-y-1">
+                              {engineData.warnings.baekhosal.cautions.map((c, i) => (
+                                <li key={i} className="text-[10px] text-red-200 flex items-start gap-1">
+                                  <span className="text-red-400 shrink-0">•</span>
+                                  {c}
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : (
+                          <p className="text-xs text-emerald-400">백호대살 없음</p>
+                        )}
+                      </Card>
+                    </div>
+
+                    {/* 십성 과다 단점 */}
+                    {engineData.warnings.sipseongExcess.hasExcess && (
+                      <Card className="p-6 bg-white/5 border-white/10">
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
+                          <TrendingDown className="w-4 h-4 text-orange-400" />
+                          십성 과다 — 심리적 약점
+                        </h3>
+                        <div className="space-y-3">
+                          {engineData.warnings.sipseongExcess.list.map((item, i) => (
+                            <div key={i} className="p-4 rounded-xl bg-orange-950/20 border border-orange-500/20">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 text-xs font-bold">
+                                  {item.sipseong} ×{item.count}
+                                </span>
+                              </div>
+                              <p className="text-xs text-white/80 mb-2 leading-relaxed">{item.weakness}</p>
+                              <p className="text-[10px] text-emerald-400">완화: {item.mitigation}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                  </>
+                ) : (
+                  <Card className="p-8 bg-white/5 border-white/10 text-center">
+                    <p className="text-muted-foreground text-sm">경계 분석 데이터를 불러오는 중...</p>
+                  </Card>
                 )}
               </TabsContent>
             </Tabs>

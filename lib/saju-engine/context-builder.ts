@@ -10,6 +10,7 @@ import { analyzeRelations } from './relations'
 import { analyzeSipseong, GAN_MULSANG } from './sipseong'
 import { analyzeSibjiunseong } from './sibjiunseong'
 import { calculateExtendedSinsal } from './sinsal-extended'
+import { analyzeWarnings, type WarningsResult } from './warnings'
 
 export type AnalysisType =
   | 'SAJU_FULL' // 종합 사주 분석
@@ -51,6 +52,7 @@ export interface SajuContext {
     gekguk: ReturnType<typeof analyzeGekguk>
     yongsin: YongsinAnalysis | null
     daeun: ReturnType<typeof calculateDaeun>
+    warnings: WarningsResult
   }
   mulsang: {
     dayMasterSymbol: string
@@ -112,6 +114,9 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
   // 대운
   const daeun = calculateDaeun(birthDate, birthTime, genderCode, isSolar)
 
+  // 경고/단점 분석 (engine02.md)
+  const warnings = analyzeWarnings(sajuData, yongsin, sipseong)
+
   // 일간 물상론 데이터
   const mulsangInfo = GAN_MULSANG[dayMaster]
   const mulsang = {
@@ -132,12 +137,13 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
     yongsin,
     daeun,
     mulsang,
+    warnings,
   })
 
   return {
     personInfo: person,
     sajuData,
-    analysis: { relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, daeun },
+    analysis: { relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, daeun, warnings },
     mulsang,
     promptContext,
   }
@@ -156,8 +162,10 @@ function buildPromptContextText(data: {
   yongsin: YongsinAnalysis | null
   daeun: ReturnType<typeof calculateDaeun>
   mulsang: { dayMasterSymbol: string; dayMasterPoetic: string; dayMasterPsychology: string }
+  warnings: WarningsResult
 }): string {
-  const { person, sajuData, relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, daeun, mulsang } = data
+  const { person, sajuData, relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, daeun, mulsang, warnings } =
+    data
   const { pillars, elementsDistribution, dayMaster } = sajuData
 
   const elementStr = Object.entries(elementsDistribution)
@@ -238,6 +246,8 @@ ${daeunStr}
 
 ### 현재 시점
 분석일: ${currentYear}년 ${currentMonth}월
+
+${warnings.warningContext}
 `.trim()
 }
 
