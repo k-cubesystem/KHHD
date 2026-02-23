@@ -847,19 +847,33 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         </div>
 
         {/* Member Selector */}
-        <div className="flex justify-center">
-          <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-            <SelectTrigger className="w-64 bg-white/5 border-white/10">
-              <SelectValue placeholder="분석 대상 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {members.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name} ({m.relationship})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="w-full">
+          <p className="text-center text-xs text-white/40 mb-3 uppercase tracking-widest">분석 대상 선택</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {members.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedMemberId(m.id)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-full border text-sm font-medium transition-all duration-200',
+                  selectedMemberId === m.id
+                    ? 'bg-[#D4AF37]/20 border-[#D4AF37]/60 text-[#D4AF37] shadow-[0_0_12px_rgba(212,175,55,0.2)]'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:border-white/30 hover:text-white/80'
+                )}
+              >
+                <span
+                  className={cn(
+                    'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
+                    m.gender === 'male' ? 'bg-blue-500/20 text-blue-400' : 'bg-pink-500/20 text-pink-400'
+                  )}
+                >
+                  {m.gender === 'male' ? '남' : '여'}
+                </span>
+                <span>{m.name}</span>
+                <span className="text-[10px] opacity-60">({m.relationship})</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {saju && selectedMember && (
@@ -887,66 +901,48 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
             {/* Tabs Layout */}
             <Tabs defaultValue="mysaju" className="w-full">
-              <TabsList className="flex w-full overflow-x-auto bg-white/5 border-white/10 mb-8 p-1 relative z-10 gap-1 scrollbar-hide">
+              <TabsList className="grid w-full grid-cols-3 grid-rows-2 bg-white/5 border border-white/10 rounded-2xl mb-8 p-1.5 relative z-10 gap-1 h-auto">
                 <TabsTrigger
                   value="mysaju"
-                  className="group relative flex-shrink-0 data-[state=active]:!bg-[#D4AF37]/20 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                  className="group relative data-[state=active]:!bg-[#D4AF37]/20 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-none data-[state=active]:border-[#D4AF37]/30 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-transparent text-white/40"
                 >
-                  <ScrollText className="w-4 h-4" />
-                  <span className="text-[11px]">나의사주</span>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-[#D4AF37] transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
+                  <ScrollText className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-medium">나의사주</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="strengths"
-                  className="group relative flex-shrink-0 data-[state=active]:!bg-emerald-500/20 data-[state=active]:!text-emerald-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                  className="group relative data-[state=active]:!bg-emerald-500/20 data-[state=active]:!text-emerald-400 data-[state=active]:shadow-none data-[state=active]:border-emerald-500/30 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-transparent text-white/40"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span className="text-[11px]">장점분석</span>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-emerald-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-medium">장점분석</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="weaknesses"
-                  className="group relative flex-shrink-0 data-[state=active]:!bg-rose-500/20 data-[state=active]:!text-rose-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                  className="group relative data-[state=active]:!bg-rose-500/20 data-[state=active]:!text-rose-400 data-[state=active]:shadow-none data-[state=active]:border-rose-500/30 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-transparent text-white/40"
                 >
-                  <ShieldAlert className="w-4 h-4" />
-                  <span className="text-[11px]">단점분석</span>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-rose-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-medium">단점분석</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="fortune"
-                  className="group relative flex-shrink-0 data-[state=active]:!bg-purple-500/20 data-[state=active]:!text-purple-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                  className="group relative data-[state=active]:!bg-purple-500/20 data-[state=active]:!text-purple-400 data-[state=active]:shadow-none data-[state=active]:border-purple-500/30 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-transparent text-white/40"
                 >
-                  <TrendingUp className="w-4 h-4" />
-                  <span className="text-[11px]">운세흐름</span>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-purple-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
+                  <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-medium">운세흐름</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="face"
-                  className="group relative flex-shrink-0 data-[state=active]:!bg-amber-500/20 data-[state=active]:!text-amber-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                  className="group relative data-[state=active]:!bg-amber-500/20 data-[state=active]:!text-amber-400 data-[state=active]:shadow-none data-[state=active]:border-amber-500/30 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-transparent text-white/40"
                 >
-                  <Eye className="w-4 h-4" />
-                  <span className="text-[11px]">관상분석</span>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-amber-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
+                  <Eye className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-medium">관상분석</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="palm"
-                  className="group relative flex-shrink-0 data-[state=active]:!bg-cyan-500/20 data-[state=active]:!text-cyan-400 data-[state=active]:shadow-none flex flex-col items-center gap-0.5 px-3 py-2 min-w-[72px]"
+                  className="group relative data-[state=active]:!bg-cyan-500/20 data-[state=active]:!text-cyan-400 data-[state=active]:shadow-none data-[state=active]:border-cyan-500/30 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-transparent text-white/40"
                 >
-                  <Hand className="w-4 h-4" />
-                  <span className="text-[11px]">손금분석</span>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] opacity-0 group-data-[state=active]:opacity-100 text-cyan-400 transition-all duration-300 pointer-events-none">
-                    ▼
-                  </span>
+                  <Hand className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-medium">손금분석</span>
                 </TabsTrigger>
               </TabsList>
 

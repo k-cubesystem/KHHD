@@ -19,7 +19,7 @@ export function BottomNav() {
     { label: '사주/궁합', icon: Home, href: '/protected/analysis' },
     { label: '가족관리', icon: Users, href: '/protected/family' },
     { label: '해화지기', icon: MessageCircleHeart, href: '/protected/ai-shaman', isMain: true },
-    { label: '만세력', icon: BookOpen, href: '/protected/profile/manse' },
+    { label: '사주팔자', icon: BookOpen, href: '/protected/profile/manse' },
     { label: '프로필', icon: UserCircle, href: '/protected/profile' },
   ]
 
