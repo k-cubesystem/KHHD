@@ -3,26 +3,22 @@
 import { StudioAnalysisLayout } from '@/components/studio/studio-analysis-layout'
 import { ImageCapture } from '@/components/studio/image-capture'
 import { AnalyzingAnimation } from '@/components/studio/analyzing-animation'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
-import {
-  analyzePalmReading,
-  type PalmAnalysisResult,
-  checkAndDeductCredits,
-} from '@/app/actions/ai/image'
+import { analyzePalmReading, type PalmAnalysisResult } from '@/app/actions/ai/image'
+import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
-import {
-  getFamilyWithMissions,
-  type FamilyMemberWithMissions,
-} from '@/app/actions/user/family-missions'
+import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { toast } from 'sonner'
-import { ArrowRight, ChevronLeft, Heart, TrendingUp, Activity, Briefcase } from 'lucide-react'
-import { motion } from 'framer-motion'
-import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ArrowRight, Coins, Hand, TrendingUp, Activity, Heart, Briefcase, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type StepType = 'upload' | 'analyzing' | 'result'
+
+const PALM_COST = 2 // 2만냥
 
 function PalmAnalysisPageContent() {
   const router = useRouter()
@@ -34,25 +30,20 @@ function PalmAnalysisPageContent() {
   const [imageBase64, setImageBase64] = useState<string>('')
   const [analysisResult, setAnalysisResult] = useState<PalmAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
 
-  // Load target member
   useEffect(() => {
+    getWalletBalance().then(setBalance)
     if (!targetId) return
-
     const loadMember = async () => {
       const members = await getFamilyWithMissions()
       const member = members.find((m) => m.id === targetId)
-      if (member) {
-        setTargetMember(member)
-      }
+      if (member) setTargetMember(member)
     }
-
     loadMember()
   }, [targetId])
 
-  const handleImageCapture = (base64: string) => {
-    setImageBase64(base64)
-  }
+  const handleImageCapture = (base64: string) => setImageBase64(base64)
 
   const handleStartAnalysis = async () => {
     if (!imageBase64) {
@@ -64,23 +55,14 @@ function PalmAnalysisPageContent() {
     setStep('analyzing')
 
     try {
-      // Check and deduct credits (3 credits for palm reading)
-      if (targetId) {
-        const {
-          data: { user },
-        } = await (await import('@/lib/supabase/client')).createClient().auth.getUser()
-        if (user) {
-          const creditResult = await checkAndDeductCredits(user.id, 3)
-          if (!creditResult.success) {
-            toast.error(creditResult.error || '크레딧이 부족합니다.')
-            setLoading(false)
-            setStep('upload')
-            return
-          }
-        }
+      const deductResult = await deductTalisman('HAND', PALM_COST)
+      if (!deductResult.success) {
+        toast.error(deductResult.error || '복채가 부족합니다.')
+        setLoading(false)
+        setStep('upload')
+        return
       }
 
-      // Analyze palm
       const result = await analyzePalmReading(imageBase64)
 
       if (!result.success) {
@@ -91,15 +73,13 @@ function PalmAnalysisPageContent() {
       }
 
       setAnalysisResult(result)
+      if (deductResult.remainingBalance !== undefined) setBalance(deductResult.remainingBalance)
 
-      // Save to DB (family members only)
       if (targetId) {
         await saveAnalysisSession({
           targetMemberId: targetId,
           category: 'HAND',
-          inputData: {
-            imageUrl: `data:image/jpeg;base64,${imageBase64}`,
-          },
+          inputData: { imageUrl: `data:image/jpeg;base64,${imageBase64}` },
           resultData: {
             score: result.currentScore,
             analysis: result.currentAnalysis,
@@ -107,7 +87,7 @@ function PalmAnalysisPageContent() {
             fortuneScores: result.fortuneScores,
             confidence: result.confidence,
           },
-          creditsUsed: 3,
+          creditsUsed: PALM_COST,
         })
       }
 
@@ -123,175 +103,280 @@ function PalmAnalysisPageContent() {
 
   return (
     <StudioAnalysisLayout category="HAND" targetMember={targetMember}>
-      {/* Step: Upload */}
-      {step === 'upload' && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          <Card className="card-glass-manse p-6 border-white/10">
-            <h3 className="text-lg font-serif font-light text-primary mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-primary inline-block rounded-sm" />
-              손바닥 사진 안내
-            </h3>
-            <ul className="space-y-3 text-sm text-ink-light/70 font-sans font-light">
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                손바닥이 펼쳐진 상태로 촬영해주세요
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                조명이 밝은 곳에서 촬영하면 더 정확합니다
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                손금이 잘 보이도록 손을 편하게 펼쳐주세요
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary mt-1">•</span>
-                왼손 또는 오른손 중 편한 손을 촬영하세요
-              </li>
-            </ul>
-          </Card>
-
-          <ImageCapture onImageCapture={handleImageCapture} maxSizeMB={10} />
-
-          <Button
-            onClick={handleStartAnalysis}
-            disabled={!imageBase64 || loading}
-            className="w-full h-14 text-lg bg-primary text-background 
-              hover:bg-primary/90 font-serif font-bold tracking-wide
-              disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+      <AnimatePresence mode="wait">
+        {step === 'upload' && (
+          <motion.div
+            key="upload"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -24 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-5"
           >
-            {loading ? '분석 중...' : '손금 분석 시작'}
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-        </motion.div>
-      )}
-
-      {/* Step: Analyzing */}
-      {step === 'analyzing' && (
-        <AnalyzingAnimation type="palmReading" message="손금을 판독하고 있습니다..." />
-      )}
-
-      {/* Step: Result */}
-      {step === 'result' && analysisResult && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-          {/* Result Container for Screenshot */}
-          <div id="palm-result-container" className="space-y-6">
-            {/* Overall Score */}
-            <Card className="card-glass-manse p-8 border-primary/20 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full transform scale-75 pointer-events-none" />
-              <p className="text-sm text-primary/80 mb-2 font-serif tracking-widest uppercase">
-                Total Score
-              </p>
-              <div className="text-7xl font-serif font-bold text-primary mb-2 gold-glow">
-                {analysisResult.currentScore}
+            {/* 복채 잔액 + 비용 배너 */}
+            <div className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#001A0F]/80 to-[#0A192F]/80 p-4 backdrop-blur-sm">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.12),transparent_60%)]" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-[#D4AF37]" />
+                  <span className="text-xs text-white/50 font-sans">보유 복채</span>
+                  <span className="text-sm font-bold text-[#D4AF37] font-serif">
+                    {balance !== null ? `${balance}만냥` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full px-3 py-1">
+                  <span className="text-xs text-[#D4AF37] font-medium">손금 분석</span>
+                  <span className="text-xs text-white/50">·</span>
+                  <span className="text-sm font-bold text-[#D4AF37] font-serif">{PALM_COST}만냥</span>
+                </div>
               </div>
-              <p className="text-xs text-ink-light/40 font-sans font-light">
-                신뢰도: {analysisResult.confidence}%
-              </p>
+            </div>
+
+            {/* 안내 */}
+            <Card className="card-glass-manse p-5 border-white/5">
+              <div className="flex items-center gap-2 mb-3">
+                <Hand className="w-4 h-4 text-[#D4AF37]" />
+                <p className="text-xs text-[#D4AF37]/70 font-medium tracking-widest uppercase">촬영 안내</p>
+              </div>
+              <ul className="space-y-2">
+                {[
+                  '손바닥이 펼쳐진 상태로 촬영해주세요',
+                  '조명이 밝은 곳에서 촬영하면 더 정확합니다',
+                  '손금이 잘 보이도록 손을 편하게 펼쳐주세요',
+                  '왼손 또는 오른손 중 편한 손을 선택하세요',
+                ].map((t, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-white/50 font-sans font-light">
+                    <span className="text-[#D4AF37]/60 mt-0.5 shrink-0">·</span>
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
             </Card>
 
-            {/* Fortune Scores */}
-            {analysisResult.fortuneScores && (
-              <Card className="card-glass-manse p-6 border-white/5">
-                <h3 className="text-lg font-serif font-light text-primary mb-4">4대 운세 점수</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <FortuneScoreCard
-                    icon={TrendingUp}
-                    label="재물운"
-                    score={analysisResult.fortuneScores.wealth}
-                    color="text-emerald-400"
-                  />
-                  <FortuneScoreCard
-                    icon={Activity}
-                    label="건강운"
-                    score={analysisResult.fortuneScores.health}
-                    color="text-blue-400"
-                  />
-                  <FortuneScoreCard
-                    icon={Heart}
-                    label="애정운"
-                    score={analysisResult.fortuneScores.love}
-                    color="text-rose-400"
-                  />
-                  <FortuneScoreCard
-                    icon={Briefcase}
-                    label="직업운"
-                    score={analysisResult.fortuneScores.career}
-                    color="text-purple-400"
-                  />
-                </div>
-              </Card>
-            )}
+            <ImageCapture onImageCapture={handleImageCapture} maxSizeMB={10} />
 
-            {/* Palm Lines */}
-            {analysisResult.palmLines && (
-              <Card className="card-glass-manse p-6 border-white/5">
-                <h3 className="text-lg font-serif font-light text-primary mb-4">삼대 주선 분석</h3>
-                <div className="space-y-4">
-                  <PalmLineCard
-                    label="생명선 (生命線)"
-                    score={analysisResult.palmLines.lifeLine?.score || 0}
-                    description={analysisResult.palmLines.lifeLine?.description || ''}
-                  />
-                  <PalmLineCard
-                    label="지능선 (知能線)"
-                    score={analysisResult.palmLines.intelligenceLine?.score || 0}
-                    description={analysisResult.palmLines.intelligenceLine?.description || ''}
-                  />
-                  <PalmLineCard
-                    label="감정선 (感情線)"
-                    score={analysisResult.palmLines.emotionLine?.score || 0}
-                    description={analysisResult.palmLines.emotionLine?.description || ''}
-                  />
-                </div>
-              </Card>
-            )}
+            <button
+              onClick={handleStartAnalysis}
+              disabled={!imageBase64 || loading}
+              className="w-full h-14 rounded-2xl font-serif font-bold text-base tracking-wide transition-all duration-300 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed group"
+              style={{
+                background: imageBase64
+                  ? 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 50%, #C9A227 100%)'
+                  : 'rgba(212,175,55,0.3)',
+              }}
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+              <span className="relative flex items-center justify-center gap-2 text-[#0A192F]">
+                {loading ? (
+                  '분석 준비 중...'
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    손금 분석 시작 · {PALM_COST}만냥
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </span>
+            </button>
+          </motion.div>
+        )}
 
-            {/* Full Analysis */}
-            <Card className="card-glass-manse p-6 border-white/5">
-              <h3 className="text-lg font-serif font-light text-primary mb-4">상세 분석</h3>
-              <div className="prose prose-invert prose-sm max-w-none">
-                <p className="text-ink-light/80 leading-loose whitespace-pre-wrap font-sans font-light tracking-wide">
+        {step === 'analyzing' && (
+          <motion.div key="analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <AnalyzingAnimation type="palmReading" message="삼대 주선(主線)을 판독하고 있습니다..." />
+          </motion.div>
+        )}
+
+        {step === 'result' && analysisResult && (
+          <motion.div
+            key="result"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-5"
+          >
+            <div id="palm-result-container" className="space-y-5">
+              {/* 스코어 헤더 */}
+              <div
+                className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 p-8 text-center"
+                style={{ background: 'linear-gradient(135deg, #000D06 0%, #001A0E 50%, #000A04 100%)' }}
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15),transparent_70%)]" />
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
+                <p className="relative text-[10px] tracking-[0.3em] text-[#D4AF37]/50 uppercase mb-3 font-sans">
+                  손금 분석 결과
+                </p>
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', delay: 0.2 }}
+                  className="relative text-7xl font-serif font-bold mb-2"
+                  style={{
+                    background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {analysisResult.currentScore}
+                </motion.div>
+                <p className="relative text-xs text-white/30 font-sans">신뢰도 {analysisResult.confidence}%</p>
+              </div>
+
+              {/* 4대 운세 */}
+              {analysisResult.fortuneScores && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <h3 className="text-sm font-serif font-bold text-[#D4AF37] mb-4 tracking-wide">사대운세(四大運勢)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      {
+                        icon: TrendingUp,
+                        label: '재물운',
+                        value: analysisResult.fortuneScores.wealth,
+                        color: '#4ade80',
+                      },
+                      { icon: Activity, label: '건강운', value: analysisResult.fortuneScores.health, color: '#60a5fa' },
+                      { icon: Heart, label: '애정운', value: analysisResult.fortuneScores.love, color: '#fb7185' },
+                      {
+                        icon: Briefcase,
+                        label: '직업운',
+                        value: analysisResult.fortuneScores.career,
+                        color: '#c084fc',
+                      },
+                    ].map((item, i) => (
+                      <motion.div
+                        key={item.label}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="rounded-xl p-4 border border-white/5 bg-white/3"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+                          <span className="text-xs text-white/50 font-sans">{item.label}</span>
+                        </div>
+                        <div className="text-3xl font-serif font-bold mb-2" style={{ color: item.color }}>
+                          {item.value}
+                        </div>
+                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.value}%` }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: item.color }}
+                            transition={{ duration: 1, delay: i * 0.1 + 0.3 }}
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* 삼대 주선 */}
+              {analysisResult.palmLines && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <h3 className="text-sm font-serif font-bold text-[#D4AF37] mb-4 tracking-wide">
+                    삼대 주선(主線) 분석
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      { label: '생명선 (生命線)', data: analysisResult.palmLines.lifeLine },
+                      { label: '지능선 (知能線)', data: analysisResult.palmLines.intelligenceLine },
+                      { label: '감정선 (感情線)', data: analysisResult.palmLines.emotionLine },
+                    ]
+                      .filter((l) => l.data)
+                      .map((line, i) => (
+                        <PalmLineCard
+                          key={line.label}
+                          label={line.label}
+                          score={line.data!.score}
+                          description={line.data!.description}
+                          index={i}
+                        />
+                      ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* 상세 분석 */}
+              <Card className="card-glass-manse p-5 border-white/5">
+                <h3 className="text-sm font-serif font-bold text-[#D4AF37] mb-3">상세 분석</h3>
+                <p className="text-sm text-white/60 leading-loose whitespace-pre-wrap font-sans font-light">
                   {analysisResult.currentAnalysis}
                 </p>
-              </div>
-            </Card>
-          </div>
+              </Card>
+            </div>
 
-          {/* Share/Save Buttons */}
-          <ShareSaveButtons
-            resultContainerId="palm-result-container"
-            analysisTitle="손금 분석"
-            memberName={targetMember?.name}
-          />
+            <ShareSaveButtons
+              resultContainerId="palm-result-container"
+              analysisTitle="손금 분석"
+              memberName={targetMember?.name}
+            />
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <Button
-              onClick={() => {
-                setStep('upload')
-                setImageBase64('')
-                setAnalysisResult(null)
-              }}
-              variant="outline"
-              className="flex-1 border-white/10 text-ink-light hover:bg-white/5 hover:text-primary h-12"
-            >
-              다시 분석하기
-            </Button>
-            <Button
-              onClick={() => router.push('/protected/family')}
-              className="flex-1 bg-primary text-background hover:bg-primary/90 font-semibold h-12"
-            >
-              완료
-            </Button>
-          </div>
-        </motion.div>
-      )}
+            <div className="flex gap-3">
+              <Button
+                onClick={() => {
+                  setStep('upload')
+                  setImageBase64('')
+                  setAnalysisResult(null)
+                }}
+                variant="outline"
+                className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-[#D4AF37] h-12"
+              >
+                다시 분석
+              </Button>
+              <Button
+                onClick={() => router.push('/protected/family')}
+                className="flex-1 h-12 font-serif font-bold text-[#0A192F]"
+                style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 100%)' }}
+              >
+                완료
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </StudioAnalysisLayout>
+  )
+}
+
+function PalmLineCard({
+  label,
+  score,
+  description,
+  index,
+}: {
+  label: string
+  score: number
+  description: string
+  index: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="rounded-xl p-4 border border-white/5 bg-white/3"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-serif font-bold text-[#D4AF37]">{label}</span>
+        <span className="text-sm font-bold text-white/80">
+          {score}
+          <span className="text-xs text-white/30">/10</span>
+        </span>
+      </div>
+      <p className="text-xs text-white/45 leading-relaxed font-sans font-light">{description}</p>
+      <div className="mt-2.5 h-1 bg-white/5 rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${(score / 10) * 100}%` }}
+          className="h-full rounded-full"
+          style={{ background: 'linear-gradient(90deg, #C9A227, #F4E4BA)' }}
+          transition={{ duration: 0.9, delay: index * 0.1 + 0.3 }}
+        />
+      </div>
+    </motion.div>
   )
 }
 
@@ -301,74 +386,13 @@ export default function PalmAnalysisPage() {
       fallback={
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="text-ink-light/60 font-sans font-light">손금 분석 준비 중...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37] mx-auto" />
+            <p className="text-white/40 font-sans text-sm">손금 분석 준비 중...</p>
           </div>
         </div>
       }
     >
       <PalmAnalysisPageContent />
     </Suspense>
-  )
-}
-
-// Helper Components
-function FortuneScoreCard({
-  icon: Icon,
-  label,
-  score,
-  color, // Keep color prop for specific fortune types, but maybe map them to theme if needed
-}: {
-  icon: any
-  label: string
-  score: number
-  color: string
-}) {
-  return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/5 backdrop-blur-sm">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className={`w-4 h-4 ${color}`} />
-        <span className="text-sm text-ink-light/70 font-sans">{label}</span>
-      </div>
-      <div className={`text-3xl font-serif font-bold ${color}`}>{score}</div>
-      <div className="mt-2 h-1.5 bg-white/5 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          className={`h-full ${color.replace('text-', 'bg-')}`}
-          transition={{ duration: 1, delay: 0.2 }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function PalmLineCard({
-  label,
-  score,
-  description,
-}: {
-  label: string
-  score: number
-  description: string
-}) {
-  return (
-    <div className="bg-white/5 rounded-xl p-5 border border-white/5 backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-base font-serif font-bold text-primary">{label}</span>
-        <span className="text-lg font-bold text-ink-light">{score}/10</span>
-      </div>
-      <p className="text-sm text-ink-light/60 leading-relaxed font-sans font-light">
-        {description}
-      </p>
-      <div className="mt-3 h-1.5 bg-white/5 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${(score / 10) * 100}%` }}
-          className="h-full bg-primary"
-          transition={{ duration: 0.8, delay: 0.2 }}
-        />
-      </div>
-    </div>
   )
 }
