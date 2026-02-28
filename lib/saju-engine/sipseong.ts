@@ -366,3 +366,31 @@ export function analyzeSipseong(
 
   return { items, distribution, dominantSipseong, strengthAssessment, bodyStrengthScore, summary }
 }
+
+/**
+ * 십성 상세 내러티브 생성 — 위치별 현대적 역량 매핑
+ * AI 프롬프트에 주입하여 풍부한 해석을 유도
+ */
+export function buildSipseongNarrative(sipseongMap: SipseongMap): string {
+  if (sipseongMap.items.length === 0) return ''
+
+  const lines: string[] = []
+
+  for (const item of sipseongMap.items) {
+    const info = SIPSEONG_MODERN[item.sipseong]
+    if (!info) continue
+    lines.push(
+      `- ${item.position} ${item.sipseong}(${info.hanja}): ${info.modernPower} → ${info.modernJobs.slice(0, 3).join(', ')}`
+    )
+  }
+
+  // 지배 십성 강조
+  const dominant = SIPSEONG_MODERN[sipseongMap.dominantSipseong]
+  if (dominant && sipseongMap.distribution[sipseongMap.dominantSipseong] >= 2) {
+    lines.push(
+      `★ 지배 십성 '${sipseongMap.dominantSipseong}'(${dominant.hanja})이 사주를 관통 — ${dominant.modernPower}`
+    )
+  }
+
+  return lines.join('\n')
+}

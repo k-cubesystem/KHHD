@@ -6,11 +6,14 @@
 
 import { getSajuData, calculateDaeun, type SajuData } from '@/lib/domain/saju/saju'
 import { analyzeGekguk, analyzeYongsin, type YongsinAnalysis } from '@/lib/domain/saju/saju-analysis'
+import { analyzeTripleYongsin, buildTripleYongsinText, type TripleYongsinResult } from './yongsin'
 import { analyzeRelations } from './relations'
-import { analyzeSipseong, GAN_MULSANG } from './sipseong'
+import { analyzeSipseong, buildSipseongNarrative, GAN_MULSANG } from './sipseong'
+import { buildMulsangLandscape } from './mulssangron'
 import { analyzeSibjiunseong } from './sibjiunseong'
 import { calculateExtendedSinsal } from './sinsal-extended'
 import { analyzeWarnings, type WarningsResult } from './warnings'
+import { evaluateAllRules } from './rule-base'
 
 export type AnalysisType =
   | 'SAJU_FULL' // 종합 사주 분석
@@ -51,6 +54,7 @@ export interface SajuContext {
     sinsal: ReturnType<typeof calculateExtendedSinsal>
     gekguk: ReturnType<typeof analyzeGekguk>
     yongsin: YongsinAnalysis | null
+    tripleYongsin: TripleYongsinResult | null
     daeun: ReturnType<typeof calculateDaeun>
     warnings: WarningsResult
   }
@@ -58,6 +62,8 @@ export interface SajuContext {
     dayMasterSymbol: string
     dayMasterPoetic: string
     dayMasterPsychology: string
+    dayMasterJobs: string[]
+    landscape: string
   }
   promptContext: string // AI에 주입할 최종 텍스트
 }
@@ -105,25 +111,37 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
   // 격국/용신
   const gekguk = analyzeGekguk(sajuData)
   let yongsin: YongsinAnalysis | null = null
+  let tripleYongsin: TripleYongsinResult | null = null
   try {
-    yongsin = analyzeYongsin(sajuData)
+    tripleYongsin = analyzeTripleYongsin(sajuData, sipseong)
+    yongsin = tripleYongsin.legacy
   } catch {
-    yongsin = null
+    try {
+      yongsin = analyzeYongsin(sajuData)
+    } catch {
+      yongsin = null
+    }
   }
 
   // 대운
   const daeun = calculateDaeun(birthDate, birthTime, genderCode, isSolar)
 
-  // 경고/단점 분석 (engine02.md)
+  // 경고/단점 분석 (engine02.md) — 삼중 용신 결과 사용
   const warnings = analyzeWarnings(sajuData, yongsin, sipseong)
 
-  // 일간 물상론 데이터
+  // 일간 물상론 데이터 + 사주 풍경화
   const mulsangInfo = GAN_MULSANG[dayMaster]
+  const landscape = buildMulsangLandscape(pillars)
   const mulsang = {
     dayMasterSymbol: mulsangInfo?.symbol || dayMaster,
     dayMasterPoetic: mulsangInfo?.poeticDesc || '',
     dayMasterPsychology: mulsangInfo?.psychology || '',
+    dayMasterJobs: mulsangInfo?.modernJobs || [],
+    landscape,
   }
+
+  // 사주첩경 룰베이스 평가
+  const ruleBaseResult = evaluateAllRules(sajuData, sipseong, warnings, sinsal)
 
   // 프롬프트 컨텍스트 텍스트 생성
   const promptContext = buildPromptContextText({
@@ -135,15 +153,17 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
     sinsal,
     gekguk,
     yongsin,
+    tripleYongsin,
     daeun,
     mulsang,
     warnings,
+    ruleBaseResult,
   })
 
   return {
     personInfo: person,
     sajuData,
-    analysis: { relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, daeun, warnings },
+    analysis: { relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, tripleYongsin, daeun, warnings },
     mulsang,
     promptContext,
   }
@@ -160,12 +180,33 @@ function buildPromptContextText(data: {
   sinsal: ReturnType<typeof calculateExtendedSinsal>
   gekguk: ReturnType<typeof analyzeGekguk>
   yongsin: YongsinAnalysis | null
+  tripleYongsin: TripleYongsinResult | null
   daeun: ReturnType<typeof calculateDaeun>
-  mulsang: { dayMasterSymbol: string; dayMasterPoetic: string; dayMasterPsychology: string }
+  mulsang: {
+    dayMasterSymbol: string
+    dayMasterPoetic: string
+    dayMasterPsychology: string
+    dayMasterJobs: string[]
+    landscape: string
+  }
   warnings: WarningsResult
+  ruleBaseResult: ReturnType<typeof evaluateAllRules>
 }): string {
-  const { person, sajuData, relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, daeun, mulsang, warnings } =
-    data
+  const {
+    person,
+    sajuData,
+    relations,
+    sipseong,
+    sibjiunseong,
+    sinsal,
+    gekguk,
+    yongsin,
+    tripleYongsin,
+    daeun,
+    mulsang,
+    warnings,
+    ruleBaseResult,
+  } = data
   const { pillars, elementsDistribution, dayMaster } = sajuData
 
   const elementStr = Object.entries(elementsDistribution)
@@ -218,10 +259,17 @@ ${sipseong.strengthAssessment} 사주 (신강/신약 스코어: ${sipseong.bodyS
 - 상징: ${mulsang.dayMasterSymbol}
 - 시적 묘사: ${mulsang.dayMasterPoetic}
 - 심리 발현: ${mulsang.dayMasterPsychology}
+- 적성 직업군: ${mulsang.dayMasterJobs.join(', ')}
+
+### 사주 풍경화 (四柱 物象 全景)
+${mulsang.landscape}
 
 ### 십성(十星) 분포 — 사회심리학적 파라미터
 ${sipseongDistStr}
 ${sipseong.summary}
+
+### 십성 상세 해석 — 현대적 역량 매핑
+${buildSipseongNarrative(sipseong)}
 
 ### 관계 역학 (합충형파해)
 ${relations.summary}
@@ -233,8 +281,7 @@ ${sibjiunseong.waveDescription}
 
 ### 격국(格局) & 용신(用神)
 격국: ${gekguk.hanja} (${gekguk.strengthLabel}) — ${gekguk.description}
-용신: ${yongsin ? `${yongsin.yongsinKorean}(${yongsin.yongsin}) — ${yongsin.yongsinReason}` : '분석 필요'}
-${yongsin ? `희신: ${yongsin.huisinKorean} | 기신: ${yongsin.gisinKorean}` : ''}
+${tripleYongsin ? buildTripleYongsinText(tripleYongsin) : yongsin ? `용신: ${yongsin.yongsinKorean}(${yongsin.yongsin}) — ${yongsin.yongsinReason}\n희신: ${yongsin.huisinKorean} | 기신: ${yongsin.gisinKorean}` : '용신: 분석 필요'}
 ${yongsin ? `개운법: ${yongsin.recommendation}` : ''}
 
 ### 신살(神殺) — 현대 스킬트리
@@ -248,6 +295,8 @@ ${daeunStr}
 분석일: ${currentYear}년 ${currentMonth}월
 
 ${warnings.warningContext}
+
+${ruleBaseResult.ruleContext}
 `.trim()
 }
 
