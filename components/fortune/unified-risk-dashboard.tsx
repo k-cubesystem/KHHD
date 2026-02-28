@@ -11,15 +11,20 @@ interface UnifiedRiskDashboardProps {
 
 const LEVEL_COLORS: Record<URSLevel, { ring: string; bg: string; text: string; glow: string }> = {
   safe: {
-    ring: 'stroke-emerald-400',
-    bg: 'bg-emerald-500/20',
-    text: 'text-emerald-400',
-    glow: 'shadow-emerald-500/20',
+    ring: 'stroke-primary-dim',
+    bg: 'bg-primary/10',
+    text: 'text-primary-dim',
+    glow: 'shadow-primary/10',
   },
-  caution: { ring: 'stroke-yellow-400', bg: 'bg-yellow-500/20', text: 'text-yellow-400', glow: 'shadow-yellow-500/20' },
-  warning: { ring: 'stroke-orange-400', bg: 'bg-orange-500/20', text: 'text-orange-400', glow: 'shadow-orange-500/20' },
-  danger: { ring: 'stroke-red-400', bg: 'bg-red-500/20', text: 'text-red-400', glow: 'shadow-red-500/20' },
-  critical: { ring: 'stroke-red-600', bg: 'bg-red-600/20', text: 'text-red-500', glow: 'shadow-red-600/30' },
+  caution: { ring: 'stroke-primary', bg: 'bg-primary/15', text: 'text-primary', glow: 'shadow-primary/15' },
+  warning: {
+    ring: 'stroke-primary-dark',
+    bg: 'bg-primary-dark/20',
+    text: 'text-primary-dark',
+    glow: 'shadow-primary-dark/20',
+  },
+  danger: { ring: 'stroke-gold-600', bg: 'bg-gold-600/20', text: 'text-gold-600', glow: 'shadow-gold-600/20' },
+  critical: { ring: 'stroke-gold-700', bg: 'bg-gold-700/25', text: 'text-gold-700', glow: 'shadow-gold-700/25' },
 }
 
 function ScoreRing({ score, level }: { score: number; level: URSLevel }) {
@@ -112,19 +117,19 @@ export default function UnifiedRiskDashboard({ urs, className = '' }: UnifiedRis
             label="원국 분석"
             score={urs.fusionBreakdown.staticScore}
             weight={urs.fusionBreakdown.staticWeight}
-            color="bg-blue-500"
+            color="bg-primary-dim"
           />
           <FusionBar
             label="시간축 동적"
             score={urs.fusionBreakdown.dynamicScore}
             weight={urs.fusionBreakdown.dynamicWeight}
-            color="bg-purple-500"
+            color="bg-primary"
           />
           <FusionBar
             label="첩경 룰베이스"
             score={urs.fusionBreakdown.ruleScore}
             weight={urs.fusionBreakdown.ruleWeight}
-            color="bg-amber-500"
+            color="bg-primary-dark"
           />
         </div>
       </div>
@@ -169,12 +174,12 @@ export default function UnifiedRiskDashboard({ urs, className = '' }: UnifiedRis
                       style={{
                         backgroundColor:
                           cat.level === 'critical' || cat.level === 'danger'
-                            ? '#ef4444'
+                            ? '#8B7332'
                             : cat.level === 'warning'
-                              ? '#f97316'
+                              ? '#C8B273'
                               : cat.level === 'caution'
-                                ? '#eab308'
-                                : '#10b981',
+                                ? '#D4AF37'
+                                : '#E2D5B5',
                       }}
                     />
                   </div>
@@ -189,7 +194,7 @@ export default function UnifiedRiskDashboard({ urs, className = '' }: UnifiedRis
       {/* 행동 지침 */}
       {urs.actionItems.length > 0 && (
         <div
-          className={`rounded-xl p-3 ${colors.bg} border ${urs.level === 'critical' ? 'border-red-600/30' : 'border-white/10'}`}
+          className={`rounded-xl p-3 ${colors.bg} border ${urs.level === 'critical' ? 'border-gold-700/30' : 'border-white/10'}`}
         >
           <div className="flex items-center gap-1.5 mb-2">
             <TrendingUp className="w-3.5 h-3.5 text-[#D4AF37]" />

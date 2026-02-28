@@ -24,11 +24,11 @@ interface LuckyRouletteProps {
 }
 
 const DEFAULT_SEGMENTS: RouletteSegment[] = [
-  { label: '1만냥', color: '#f59e0b' },
-  { label: '3만냥', color: '#10b981' },
-  { label: '5만냥', color: '#3b82f6' },
-  { label: '10만냥', color: '#8b5cf6' },
-  { label: '꽝', color: '#ef4444' },
+  { label: '1만냥', color: '#C8B273' },
+  { label: '3만냥', color: '#E2D5B5' },
+  { label: '5만냥', color: '#A89660' },
+  { label: '10만냥', color: '#F4E4BA' },
+  { label: '꽝', color: '#3D3A33' },
 ]
 
 // 코인 파티클 컴포넌트
@@ -178,9 +178,9 @@ export function LuckyRoulette({
           <motion.div
             animate={canSpin ? { scale: [1, 1.05, 1] } : {}}
             transition={{ duration: 1.5, repeat: Infinity }}
-            className="px-2 py-1 bg-seal-500/20 border border-seal-500/30 rounded-full"
+            className="px-2 py-1 bg-primary/10 border border-primary/20 rounded-full"
           >
-            <span className="text-xs font-bold text-seal-400">1일 1회 무료</span>
+            <span className="text-xs font-bold text-primary-dark">1일 1회 무료</span>
           </motion.div>
         </div>
 
@@ -205,7 +205,7 @@ export function LuckyRoulette({
             <motion.div
               animate={{ rotate: rotation }}
               transition={isSpinning ? { duration: 2.5, ease: [0.15, 0.85, 0.35, 1] } : { duration: 0 }}
-              className="w-full aspect-square rounded-full border-4 border-primary relative flex items-center justify-center shadow-lg"
+              className="w-full aspect-square rounded-full border-2 border-primary/40 relative flex items-center justify-center shadow-lg"
               style={{
                 background: `conic-gradient(from 0deg, ${conicParts})`,
               }}
@@ -265,7 +265,7 @@ export function LuckyRoulette({
                       : {}
                   }
                   transition={{ duration: 0.6, repeat: Infinity }}
-                  className="w-16 h-16 bg-background rounded-full border-4 border-primary flex items-center justify-center z-10 shadow-xl"
+                  className="w-16 h-16 bg-background rounded-full border-2 border-primary/40 flex items-center justify-center z-10 shadow-xl"
                 >
                   {isSpinning ? (
                     <motion.div
@@ -285,7 +285,7 @@ export function LuckyRoulette({
           {/* Pointer (고정) */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20">
             <motion.div animate={isSpinning ? { y: [0, -3, 0] } : {}} transition={{ duration: 0.15, repeat: Infinity }}>
-              <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[16px] border-l-transparent border-r-transparent border-b-gold-400 drop-shadow-lg" />
+              <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[16px] border-l-transparent border-r-transparent border-b-primary drop-shadow-lg" />
             </motion.div>
           </div>
 
@@ -316,13 +316,13 @@ export function LuckyRoulette({
                         animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       >
-                        <Gift className="w-12 h-12 text-gold-400 mx-auto mb-2" />
+                        <Gift className="w-12 h-12 text-primary mx-auto mb-2" />
                       </motion.div>
                       <motion.p
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-lg font-black text-gold-400"
+                        className="text-lg font-black text-primary"
                       >
                         {result.label} 당첨!
                       </motion.p>
@@ -360,8 +360,8 @@ export function LuckyRoulette({
             className={cn(
               'w-full h-11 font-bold transition-all text-sm',
               canSpin && !isSpinning
-                ? 'bg-gradient-to-r from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white shadow-lg shadow-gold-500/20'
-                : 'bg-surface border border-primary/30 text-ink-light/50 cursor-not-allowed'
+                ? 'bg-gradient-to-r from-primary/80 to-primary-dark hover:from-primary hover:to-gold-600 text-background shadow-md shadow-primary/10'
+                : 'bg-surface border border-primary/15 text-ink-light/40 cursor-not-allowed'
             )}
           >
             {isSpinning ? (
@@ -403,11 +403,11 @@ export function LuckyRoulette({
         <div className="mt-3 pt-3 border-t border-white/5">
           <div className="grid grid-cols-5 gap-1">
             {[
-              { label: '1만냥', color: 'text-gold-400', prob: '40%' },
-              { label: '3만냥', color: 'text-green-400', prob: '30%' },
-              { label: '5만냥', color: 'text-blue-400', prob: '15%' },
-              { label: '10만냥', color: 'text-purple-400', prob: '10%' },
-              { label: '꽝', color: 'text-red-400', prob: '5%' },
+              { label: '1만냥', color: 'text-primary-dark', prob: '40%' },
+              { label: '3만냥', color: 'text-primary', prob: '30%' },
+              { label: '5만냥', color: 'text-gold-600', prob: '15%' },
+              { label: '10만냥', color: 'text-primary-light', prob: '10%' },
+              { label: '꽝', color: 'text-ink-light/40', prob: '5%' },
             ].map((item, i) => (
               <motion.div
                 key={item.label}

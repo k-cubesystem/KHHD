@@ -20,31 +20,31 @@ const SEVERITY_CONFIG: Record<
   }
 > = {
   safe: {
-    bg: 'bg-emerald-500/20',
-    border: 'border-emerald-500/30',
-    text: 'text-emerald-400',
-    icon: '🟢',
+    bg: 'bg-primary/10',
+    border: 'border-primary/20',
+    text: 'text-primary-dim',
+    icon: '◇',
     pulse: false,
   },
   caution: {
-    bg: 'bg-yellow-500/20',
-    border: 'border-yellow-500/30',
-    text: 'text-yellow-400',
-    icon: '🟡',
+    bg: 'bg-primary/15',
+    border: 'border-primary/25',
+    text: 'text-primary',
+    icon: '◈',
     pulse: false,
   },
   warning: {
-    bg: 'bg-orange-500/20',
-    border: 'border-orange-500/30',
-    text: 'text-orange-400',
-    icon: '🟠',
+    bg: 'bg-primary-dark/20',
+    border: 'border-primary-dark/30',
+    text: 'text-primary-dark',
+    icon: '◆',
     pulse: true,
   },
   danger: {
-    bg: 'bg-red-500/20',
-    border: 'border-red-500/30',
-    text: 'text-red-400',
-    icon: '🔴',
+    bg: 'bg-primary-dark/25',
+    border: 'border-primary-dark/40',
+    text: 'text-gold-700',
+    icon: '⬥',
     pulse: true,
   },
 }
@@ -87,7 +87,7 @@ function MiniCompass({ avoidDirections }: { avoidDirections: string[] }) {
             y1={y1}
             x2={x2}
             y2={y2}
-            stroke="#ef4444"
+            stroke="#C8B273"
             strokeWidth="3"
             strokeLinecap="round"
             opacity="0.8"
@@ -105,14 +105,14 @@ function MiniCompass({ avoidDirections }: { avoidDirections: string[] }) {
             textAnchor="middle"
             fontSize="11"
             fontWeight="bold"
-            className={isDanger ? 'fill-red-400' : 'fill-white/60'}
+            className={isDanger ? 'fill-primary-dark' : 'fill-white/60'}
           >
             {d.label}
           </text>
         )
       })}
       {/* 중앙 */}
-      {avoidDirections.includes('중앙') && <circle cx="50" cy="50" r="6" fill="#ef4444" opacity="0.5" />}
+      {avoidDirections.includes('중앙') && <circle cx="50" cy="50" r="6" fill="#C8B273" opacity="0.5" />}
     </svg>
   )
 }
@@ -156,12 +156,12 @@ export default function DailyAvoidanceCard({ dailyAvoidance, className = '' }: D
             transition={{ duration: 1, ease: 'easeOut' }}
             className={`h-full rounded-full ${
               dailyAvoidance.severityScore >= 75
-                ? 'bg-red-500'
+                ? 'bg-gold-700'
                 : dailyAvoidance.severityScore >= 50
-                  ? 'bg-orange-500'
+                  ? 'bg-primary-dark'
                   : dailyAvoidance.severityScore >= 30
-                    ? 'bg-yellow-500'
-                    : 'bg-emerald-500'
+                    ? 'bg-primary'
+                    : 'bg-primary-dim'
             }`}
           />
         </div>
@@ -181,7 +181,7 @@ export default function DailyAvoidanceCard({ dailyAvoidance, className = '' }: D
                 <div className="w-7 h-7 rounded-full border border-white/20" style={{ backgroundColor: hex }} />
                 {(dailyAvoidance.severity === 'danger' || dailyAvoidance.severity === 'warning') && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-7 h-0.5 bg-red-500 rotate-45 rounded" />
+                    <div className="w-7 h-0.5 bg-primary-dark rotate-45 rounded" />
                   </div>
                 )}
               </div>
@@ -239,9 +239,9 @@ export default function DailyAvoidanceCard({ dailyAvoidance, className = '' }: D
       <div className={`rounded-xl p-3 ${config.bg} border ${config.border}`}>
         <div className="flex items-start gap-2">
           {dailyAvoidance.severity === 'safe' ? (
-            <CheckCircle className="w-4 h-4 mt-0.5 text-emerald-400 shrink-0" />
+            <CheckCircle className="w-4 h-4 mt-0.5 text-primary-dim shrink-0" />
           ) : (
-            <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-400 shrink-0" />
+            <AlertTriangle className="w-4 h-4 mt-0.5 text-primary-dark shrink-0" />
           )}
           <div className="space-y-1">
             {dailyAvoidance.dailyAdvice.map((advice, i) => (

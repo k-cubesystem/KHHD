@@ -68,7 +68,7 @@ function StampAnimation() {
       transition={{ type: 'spring', stiffness: 400, damping: 15, duration: 0.4 }}
       className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
     >
-      <div className="w-16 h-16 rounded-full bg-gold-500/90 flex items-center justify-center shadow-lg shadow-gold-500/30">
+      <div className="w-16 h-16 rounded-full bg-primary-dark/90 flex items-center justify-center shadow-lg shadow-primary/20">
         <Check className="w-8 h-8 text-white" strokeWidth={3} />
       </div>
     </motion.div>
@@ -173,13 +173,15 @@ export function AttendanceCheck({
             transition={{ duration: 2, repeat: Infinity }}
             className={cn(
               'flex items-center gap-1 px-2 py-1 rounded-full',
-              isComplete
-                ? 'bg-gradient-to-r from-purple-500/20 to-gold-500/20 border border-gold-500/30'
-                : 'bg-gold-500/20 border border-gold-500/30'
+              isComplete ? 'bg-primary/15 border border-primary/25' : 'bg-primary/10 border border-primary/20'
             )}
           >
-            {isComplete ? <Crown className="w-3 h-3 text-gold-400" /> : <Sparkles className="w-3 h-3 text-gold-400" />}
-            <span className="text-[10px] font-bold text-gold-400">{isComplete ? '주간 완료!' : '주 10만냥'}</span>
+            {isComplete ? (
+              <Crown className="w-3 h-3 text-primary-dark" />
+            ) : (
+              <Sparkles className="w-3 h-3 text-primary-dark" />
+            )}
+            <span className="text-[10px] font-bold text-primary-dark">{isComplete ? '주간 완료!' : '주 10만냥'}</span>
           </motion.div>
         </div>
 
@@ -191,7 +193,7 @@ export function AttendanceCheck({
               key={totalBokchae}
               initial={{ scale: 1.3, color: '#D4AF37' }}
               animate={{ scale: 1, color: 'rgba(212,175,55,1)' }}
-              className="text-[10px] font-bold text-gold-400"
+              className="text-[10px] font-bold text-primary-dark"
             >
               {totalBokchae}만냥 적립
             </motion.span>
@@ -201,8 +203,8 @@ export function AttendanceCheck({
               className={cn(
                 'h-full rounded-full',
                 isComplete
-                  ? 'bg-gradient-to-r from-purple-500 via-gold-400 to-gold-500'
-                  : 'bg-gradient-to-r from-gold-400 to-gold-500'
+                  ? 'bg-gradient-to-r from-primary-dark via-primary to-primary-dim'
+                  : 'bg-gradient-to-r from-primary-dark to-primary'
               )}
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
@@ -246,7 +248,7 @@ export function AttendanceCheck({
                 className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center border text-[9px] font-bold transition-all relative',
                   day.checked
-                    ? 'bg-gradient-to-br from-gold-400 to-gold-600 border-gold-400 text-white shadow-md shadow-gold-500/20'
+                    ? 'bg-gradient-to-br from-primary to-primary-dark border-primary/50 text-background shadow-md shadow-primary/10'
                     : day.isToday && canCheckIn
                       ? 'bg-primary/20 border-primary text-primary'
                       : day.isFuture
@@ -275,11 +277,11 @@ export function AttendanceCheck({
                   </div>
                 )}
               </motion.div>
-              <span className={cn('text-[8px]', day.checked ? 'text-gold-400 font-bold' : 'text-ink-light/40')}>
+              <span className={cn('text-[8px]', day.checked ? 'text-primary-dark font-bold' : 'text-ink-light/40')}>
                 {day.dayLabel}
               </span>
               {/* 날짜별 복채 표시 */}
-              <span className={cn('text-[7px]', day.checked ? 'text-gold-400/70' : 'text-ink-light/25')}>
+              <span className={cn('text-[7px]', day.checked ? 'text-primary/60' : 'text-ink-light/25')}>
                 {i === 6 ? '+4' : '+1'}
               </span>
             </motion.div>
@@ -295,8 +297,8 @@ export function AttendanceCheck({
               className={cn(
                 'w-full h-10 text-xs font-bold transition-all',
                 canCheckIn && !isChecking
-                  ? 'bg-gradient-to-r from-gold-400 to-gold-500 hover:from-gold-500 hover:to-gold-600 text-white shadow-lg shadow-gold-500/20'
-                  : 'bg-surface border border-white/10 text-ink-light/40 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-primary/80 to-primary-dark hover:from-primary hover:to-gold-600 text-background shadow-md shadow-primary/10'
+                  : 'bg-surface border border-primary/10 text-ink-light/40 cursor-not-allowed'
               )}
             >
               {isChecking ? (
@@ -337,8 +339,8 @@ export function AttendanceCheck({
                   className={cn(
                     'px-4 py-2 rounded-xl text-xs font-bold shadow-xl',
                     lastReward.isWeeklyBonus
-                      ? 'bg-gradient-to-r from-purple-500 to-gold-500 text-white'
-                      : 'bg-gradient-to-r from-gold-400 to-gold-500 text-white'
+                      ? 'bg-gradient-to-r from-primary-dark to-primary text-background'
+                      : 'bg-gradient-to-r from-primary/80 to-primary-dark text-background'
                   )}
                 >
                   <div className="flex items-center gap-1.5">
@@ -362,7 +364,7 @@ export function AttendanceCheck({
           <div className="flex justify-between items-center">
             <p className="text-[9px] text-ink-light/40">매일 1만냥 · 7일 완료 시 +3만냥 보너스</p>
             {lastReward?.currentBalance !== undefined && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-gold-400/60">
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-primary/50">
                 잔액 {lastReward.currentBalance}만냥
               </motion.p>
             )}
