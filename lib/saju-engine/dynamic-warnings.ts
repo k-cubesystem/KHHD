@@ -130,7 +130,7 @@ export function calculateIlwoon(date?: Date): FlowingPillar {
   const d = date || new Date()
   const solar = Solar.fromYmdHms(d.getFullYear(), d.getMonth() + 1, d.getDate(), 12, 0, 0)
   const lunar = solar.getLunar()
-  const ec = lunar.getEightChar() as { getDayGan(): string; getDayZhi(): string }
+  const ec = lunar.getEightChar() as unknown as { getDayGan(): string; getDayZhi(): string }
   return { gan: ec.getDayGan(), zhi: ec.getDayZhi() }
 }
 
@@ -139,13 +139,13 @@ export function calculateIlwoon(date?: Date): FlowingPillar {
  */
 function calcSaewoon(year: number): FlowingPillar {
   const solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
-  const ec = solar.getLunar().getEightChar() as { getYearGan(): string; getYearZhi(): string }
+  const ec = solar.getLunar().getEightChar() as unknown as { getYearGan(): string; getYearZhi(): string }
   return { gan: ec.getYearGan(), zhi: ec.getYearZhi() }
 }
 
 function calcWorwoon(year: number, month: number): FlowingPillar {
   const solar = Solar.fromYmdHms(year, month, 15, 12, 0, 0)
-  const ec = solar.getLunar().getEightChar() as { getMonthGan(): string; getMonthZhi(): string }
+  const ec = solar.getLunar().getEightChar() as unknown as { getMonthGan(): string; getMonthZhi(): string }
   return { gan: ec.getMonthGan(), zhi: ec.getMonthZhi() }
 }
 
