@@ -121,14 +121,14 @@ function StatusChip({
       className={cn(
         'flex items-center gap-1.5 px-3 py-1.5 rounded-full',
         'bg-surface/50 border backdrop-blur-sm',
-        dimmed ? 'border-red-500/20' : 'border-primary/10'
+        dimmed ? 'border-primary-dark/20' : 'border-primary/10'
       )}
     >
       {icon}
       {loading ? (
         <div className="w-8 h-3 rounded bg-primary/10 animate-pulse" />
       ) : (
-        <span className={cn('text-[11px] font-medium', dimmed ? 'text-red-400' : 'text-primary/70')}>{value}</span>
+        <span className={cn('text-[11px] font-medium', dimmed ? 'text-primary-dark' : 'text-primary/70')}>{value}</span>
       )}
     </div>
   )
@@ -313,7 +313,7 @@ export function ShamanChatInterface() {
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#2a2010] to-surface border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(244,228,186,0.08)]">
                 <span className="text-xl leading-none">👺</span>
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0d0d0d]" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary border-2 border-[#0d0d0d]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground/90 tracking-wide leading-tight">해화지기</p>
@@ -365,13 +365,13 @@ export function ShamanChatInterface() {
             <span className="w-px h-3 bg-white/8" />
             {/* 남은 질문 */}
             <div className="flex items-center gap-1.5">
-              <Flame className={cn('w-3 h-3', isLow ? 'text-red-400/70' : 'text-primary/40')} />
+              <Flame className={cn('w-3 h-3', isLow ? 'text-primary-dark/70' : 'text-primary/40')} />
               {isStatusLoading ? (
                 <div className="w-10 h-3 rounded bg-primary/8 animate-pulse" />
               ) : (
-                <span className={cn('text-[11px]', isLow ? 'text-red-400/80' : 'text-foreground/50')}>
+                <span className={cn('text-[11px]', isLow ? 'text-primary-dark/80' : 'text-foreground/50')}>
                   잔여{' '}
-                  <span className={cn('font-medium', isLow ? 'text-red-400' : 'text-primary/70')}>
+                  <span className={cn('font-medium', isLow ? 'text-primary-dark' : 'text-primary/70')}>
                     {totalRemaining}회
                   </span>
                 </span>

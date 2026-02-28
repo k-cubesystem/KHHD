@@ -63,17 +63,17 @@ export function InSection({ data }: InSectionProps) {
     >
       <div className="relative overflow-hidden bg-surface/20 backdrop-blur-sm border-t border-b border-white/5 py-8 md:py-10">
         {/* Background Decor */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-rose-500/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
 
         <div className="px-5 md:px-8 relative z-10">
           {/* Header */}
           <div className="flex flex-col gap-2 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
-                <span className="font-serif text-lg text-rose-300">人</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <span className="font-serif text-lg text-primary">人</span>
               </div>
               <h2 className="text-xl font-bold text-ink-light tracking-tight">
-                인연과 내면의 조화 <span className="text-rose-300/60 text-sm font-normal ml-1">사람의 기운</span>
+                인연과 내면의 조화 <span className="text-primary/60 text-sm font-normal ml-1">사람의 기운</span>
               </h2>
             </div>
             <p className="text-sm text-ink-light/50 font-light pl-13">
@@ -84,7 +84,7 @@ export function InSection({ data }: InSectionProps) {
           {/* Core Content */}
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-serif text-rose-100 mb-3 leading-snug">{title || '내면의 의지와 관계'}</h3>
+              <h3 className="text-lg font-serif text-ink-light mb-3 leading-snug">{title || '내면의 의지와 관계'}</h3>
               <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
                 {content}
               </p>
@@ -93,16 +93,16 @@ export function InSection({ data }: InSectionProps) {
             {/* Advice Grid */}
             <div className="grid grid-cols-1 gap-4 pt-2">
               {relationship_advice && (
-                <div className="bg-rose-950/20 border border-rose-500/20 rounded-xl p-5 relative overflow-hidden group">
+                <div className="bg-surface/20 border border-primary/20 rounded-xl p-5 relative overflow-hidden group">
                   <div
                     className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12"
                     aria-hidden="true"
                   >
-                    <Heart className="w-24 h-24 text-rose-500" />
+                    <Heart className="w-24 h-24 text-primary" />
                   </div>
 
                   <div className="relative z-10 space-y-2">
-                    <div className="flex items-center gap-2 text-rose-300">
+                    <div className="flex items-center gap-2 text-primary">
                       <Fingerprint className="w-4 h-4" aria-hidden="true" />
                       <span className="text-sm font-bold tracking-wide">인연과 관계</span>
                     </div>
@@ -114,16 +114,16 @@ export function InSection({ data }: InSectionProps) {
               )}
 
               {noble_person && (
-                <div className="bg-purple-950/20 border border-purple-500/20 rounded-xl p-5 relative overflow-hidden group">
+                <div className="bg-surface/20 border border-primary-dark/20 rounded-xl p-5 relative overflow-hidden group">
                   <div
                     className="absolute -right-4 -top-4 opacity-5 group-hover:opacity-10 transition-opacity rotate-12"
                     aria-hidden="true"
                   >
-                    <UserPlus className="w-24 h-24 text-purple-500" />
+                    <UserPlus className="w-24 h-24 text-primary-dark" />
                   </div>
 
                   <div className="relative z-10 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-300">
+                    <div className="flex items-center gap-2 text-primary-dark">
                       <UserPlus className="w-4 h-4" aria-hidden="true" />
                       <span className="text-sm font-bold tracking-wide">귀인(貴人)</span>
                     </div>
@@ -137,21 +137,21 @@ export function InSection({ data }: InSectionProps) {
             {face_reading && (
               <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="h-px flex-1 bg-rose-500/10" />
-                  <span className="text-[11px] text-rose-400/60 font-bold tracking-widest px-2">觀相 관상 분석</span>
-                  <div className="h-px flex-1 bg-rose-500/10" />
+                  <div className="h-px flex-1 bg-primary/10" />
+                  <span className="text-[11px] text-primary/60 font-bold tracking-widest px-2">觀相 관상 분석</span>
+                  <div className="h-px flex-1 bg-primary/10" />
                 </div>
 
                 {/* 관상 전체 + 점수 */}
                 {face_reading.overall && (
-                  <div className="bg-rose-950/20 border border-rose-500/20 rounded-xl p-4 space-y-3">
+                  <div className="bg-surface/20 border border-primary/20 rounded-xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <ScanFace className="w-4 h-4 text-rose-400" aria-hidden="true" />
-                        <span className="text-[11px] text-rose-400/70 font-bold tracking-wide">전체 인상</span>
+                        <ScanFace className="w-4 h-4 text-primary" aria-hidden="true" />
+                        <span className="text-[11px] text-primary/70 font-bold tracking-wide">전체 인상</span>
                       </div>
                       {face_reading.face_score !== null && face_reading.face_score !== undefined && (
-                        <MiniScoreRing value={face_reading.face_score} color="#fca5a5" />
+                        <MiniScoreRing value={face_reading.face_score} color="#D4AF37" />
                       )}
                     </div>
                     <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
@@ -173,11 +173,11 @@ export function InSection({ data }: InSectionProps) {
                       .map((item) => (
                         <div
                           key={item.label}
-                          className="bg-surface/30 border border-rose-500/10 rounded-xl p-3 space-y-1.5"
+                          className="bg-surface/30 border border-primary/10 rounded-xl p-3 space-y-1.5"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-rose-300/70 font-bold">{item.label}</span>
-                            <span className="text-[9px] text-rose-300/40">{item.sublabel}</span>
+                            <span className="text-[10px] text-primary/70 font-bold">{item.label}</span>
+                            <span className="text-[9px] text-primary/40">{item.sublabel}</span>
                           </div>
                           <p className="text-xs text-ink-light/70 font-light leading-relaxed break-keep">
                             {item.value}
@@ -193,21 +193,23 @@ export function InSection({ data }: InSectionProps) {
             {palm_reading && (
               <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="h-px flex-1 bg-purple-500/10" />
-                  <span className="text-[11px] text-purple-400/60 font-bold tracking-widest px-2">手相 손금 분석</span>
-                  <div className="h-px flex-1 bg-purple-500/10" />
+                  <div className="h-px flex-1 bg-primary-dark/10" />
+                  <span className="text-[11px] text-primary-dark/60 font-bold tracking-widest px-2">
+                    手相 손금 분석
+                  </span>
+                  <div className="h-px flex-1 bg-primary-dark/10" />
                 </div>
 
                 {/* 손금 전체 + 점수 */}
                 {palm_reading.overall && (
-                  <div className="bg-purple-950/20 border border-purple-500/20 rounded-xl p-4 space-y-3">
+                  <div className="bg-surface/20 border border-primary-dark/20 rounded-xl p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Hand className="w-4 h-4 text-purple-400" aria-hidden="true" />
-                        <span className="text-[11px] text-purple-400/70 font-bold tracking-wide">전체 인상</span>
+                        <Hand className="w-4 h-4 text-primary-dark" aria-hidden="true" />
+                        <span className="text-[11px] text-primary-dark/70 font-bold tracking-wide">전체 인상</span>
                       </div>
                       {palm_reading.palm_score !== null && palm_reading.palm_score !== undefined && (
-                        <MiniScoreRing value={palm_reading.palm_score} color="#c4b5fd" />
+                        <MiniScoreRing value={palm_reading.palm_score} color="#C8B273" />
                       )}
                     </div>
                     <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
@@ -232,15 +234,15 @@ export function InSection({ data }: InSectionProps) {
                       .map((item) => (
                         <div
                           key={item.label}
-                          className="bg-surface/20 border border-purple-500/10 rounded-xl p-3 flex items-start gap-3"
+                          className="bg-surface/20 border border-primary-dark/10 rounded-xl p-3 flex items-start gap-3"
                         >
                           <div className="shrink-0 flex flex-col items-center gap-0.5 pt-0.5">
-                            <Activity className="w-3.5 h-3.5 text-purple-400/60" aria-hidden="true" />
+                            <Activity className="w-3.5 h-3.5 text-primary-dark/60" aria-hidden="true" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[11px] text-purple-300/80 font-bold">{item.label}</span>
-                              <span className="text-[9px] text-purple-300/40">{item.desc}</span>
+                              <span className="text-[11px] text-primary-dark/80 font-bold">{item.label}</span>
+                              <span className="text-[9px] text-primary-dark/40">{item.desc}</span>
                             </div>
                             <p className="text-xs text-ink-light/70 font-light leading-relaxed break-keep">
                               {item.value}

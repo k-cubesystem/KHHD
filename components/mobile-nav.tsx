@@ -36,9 +36,7 @@ export function MobileNav() {
             aria-current={activeLink('/protected/saju/today') ? 'page' : undefined}
             className={cn(
               'flex flex-col items-center gap-1 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] rounded-lg',
-              activeLink('/protected/saju/today')
-                ? 'text-[#D4AF37]'
-                : 'text-muted-foreground hover:text-white'
+              activeLink('/protected/saju/today') ? 'text-[#D4AF37]' : 'text-muted-foreground hover:text-white'
             )}
           >
             <Sun className="w-5 h-5" aria-hidden="true" />
@@ -50,9 +48,7 @@ export function MobileNav() {
             aria-current={activeLink('/protected/analysis') ? 'page' : undefined}
             className={cn(
               'flex flex-col items-center gap-1 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] rounded-lg',
-              activeLink('/protected/analysis')
-                ? 'text-[#D4AF37]'
-                : 'text-muted-foreground hover:text-white'
+              activeLink('/protected/analysis') ? 'text-[#D4AF37]' : 'text-muted-foreground hover:text-white'
             )}
           >
             <Sparkles className="w-5 h-5" aria-hidden="true" />
@@ -64,9 +60,7 @@ export function MobileNav() {
             aria-current={activeLink('/protected/history') ? 'page' : undefined}
             className={cn(
               'flex flex-col items-center gap-1 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] rounded-lg',
-              activeLink('/protected/history')
-                ? 'text-[#D4AF37]'
-                : 'text-muted-foreground hover:text-white'
+              activeLink('/protected/history') ? 'text-[#D4AF37]' : 'text-muted-foreground hover:text-white'
             )}
           >
             <History className="w-5 h-5" aria-hidden="true" />
@@ -78,9 +72,7 @@ export function MobileNav() {
             aria-current={activeLink('/protected/profile') ? 'page' : undefined}
             className={cn(
               'flex flex-col items-center gap-1 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D4AF37] rounded-lg',
-              activeLink('/protected/profile')
-                ? 'text-[#D4AF37]'
-                : 'text-muted-foreground hover:text-white'
+              activeLink('/protected/profile') ? 'text-[#D4AF37]' : 'text-muted-foreground hover:text-white'
             )}
           >
             <User className="w-5 h-5" aria-hidden="true" />
@@ -116,9 +108,7 @@ export function MobileNav() {
             href="/protected/saju/today"
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-xl transition-all',
-              activeLink('/protected/saju/today')
-                ? 'bg-[#D4AF37] text-black'
-                : 'hover:bg-white/10 text-yellow-400'
+              activeLink('/protected/saju/today') ? 'bg-[#D4AF37] text-black' : 'hover:bg-white/10 text-primary'
             )}
           >
             <Sun className="w-4 h-4" />
@@ -128,9 +118,7 @@ export function MobileNav() {
             href="/protected/analysis"
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-xl transition-all',
-              activeLink('/protected/analysis')
-                ? 'bg-[#D4AF37] text-black'
-                : 'hover:bg-white/10 text-[#D4AF37]'
+              activeLink('/protected/analysis') ? 'bg-[#D4AF37] text-black' : 'hover:bg-white/10 text-[#D4AF37]'
             )}
           >
             <Sparkles className="w-4 h-4" />
@@ -140,9 +128,7 @@ export function MobileNav() {
             href="/protected/family"
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-xl transition-all',
-              activeLink('/protected/family')
-                ? 'bg-[#D4AF37] text-black'
-                : 'hover:bg-white/10 text-white'
+              activeLink('/protected/family') ? 'bg-[#D4AF37] text-black' : 'hover:bg-white/10 text-white'
             )}
           >
             <Users className="w-4 h-4" />
@@ -152,9 +138,7 @@ export function MobileNav() {
             href="/protected/history"
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-xl transition-all',
-              activeLink('/protected/history')
-                ? 'bg-[#D4AF37] text-black'
-                : 'hover:bg-white/10 text-white'
+              activeLink('/protected/history') ? 'bg-[#D4AF37] text-black' : 'hover:bg-white/10 text-white'
             )}
           >
             <History className="w-4 h-4" />
@@ -164,9 +148,7 @@ export function MobileNav() {
             href="/protected/profile"
             className={cn(
               'flex items-center gap-2 px-4 py-2 rounded-xl transition-all',
-              activeLink('/protected/profile')
-                ? 'bg-[#D4AF37] text-black'
-                : 'hover:bg-white/10 text-white'
+              activeLink('/protected/profile') ? 'bg-[#D4AF37] text-black' : 'hover:bg-white/10 text-white'
             )}
           >
             <User className="w-4 h-4" />

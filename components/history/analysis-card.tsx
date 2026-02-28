@@ -1,18 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import {
-  Clock,
-  Star,
-  User2,
-  Hand,
-  Home,
-  Heart,
-  Sun,
-  Coins,
-  Sparkles,
-  ChevronRight,
-} from 'lucide-react'
+import { Clock, Star, User2, Hand, Home, Heart, Sun, Coins, Sparkles, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { AnalysisHistory } from '@/app/actions/user/history'
@@ -24,14 +13,14 @@ interface AnalysisCardProps {
 }
 
 const categoryConfig = {
-  SAJU: { icon: Sun, label: '사주', color: 'text-amber-400' },
-  FACE: { icon: User2, label: '관상', color: 'text-rose-400' },
-  HAND: { icon: Hand, label: '손금', color: 'text-purple-400' },
-  FENGSHUI: { icon: Home, label: '풍수', color: 'text-emerald-400' },
-  COMPATIBILITY: { icon: Heart, label: '궁합', color: 'text-pink-400' },
-  WEALTH: { icon: Coins, label: '재물운', color: 'text-yellow-400' },
-  TODAY: { icon: Sun, label: '오늘의운세', color: 'text-orange-400' },
-  NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-indigo-400' },
+  SAJU: { icon: Sun, label: '사주', color: 'text-primary' },
+  FACE: { icon: User2, label: '관상', color: 'text-primary' },
+  HAND: { icon: Hand, label: '손금', color: 'text-primary-dark' },
+  FENGSHUI: { icon: Home, label: '풍수', color: 'text-primary-dim' },
+  COMPATIBILITY: { icon: Heart, label: '궁합', color: 'text-primary' },
+  WEALTH: { icon: Coins, label: '재물운', color: 'text-primary' },
+  TODAY: { icon: Sun, label: '오늘의운세', color: 'text-primary-dark' },
+  NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-primary-dark' },
 }
 
 export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
@@ -51,7 +40,7 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
       {/* Favorite Badge */}
       {record.is_favorite && (
         <div className="absolute top-3 right-3">
-          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+          <Star className="w-4 h-4 text-primary fill-primary" />
         </div>
       )}
 
@@ -67,9 +56,7 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                  {config.label}
-                </span>
+                <span className="text-xs font-medium text-primary uppercase tracking-wide">{config.label}</span>
                 {record.target_relation && (
                   <span className="text-xs text-ink-light/40">· {record.target_relation}</span>
                 )}
@@ -82,11 +69,7 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
           </div>
 
           {/* Summary */}
-          {record.summary && (
-            <p className="text-sm text-ink-light/70 line-clamp-2 leading-relaxed">
-              {record.summary}
-            </p>
-          )}
+          {record.summary && <p className="text-sm text-ink-light/70 line-clamp-2 leading-relaxed">{record.summary}</p>}
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-2">

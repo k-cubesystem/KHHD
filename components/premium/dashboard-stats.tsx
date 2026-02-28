@@ -24,8 +24,8 @@ export function DashboardStats({ balance, summary, tier }: DashboardStatsProps) 
       label: '보유 복채',
       value: balance.toLocaleString(),
       unit: '만냥',
-      color: 'text-yellow-400',
-      bgColor: 'bg-yellow-400/10',
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
       progress: undefined,
     },
     {
@@ -33,8 +33,8 @@ export function DashboardStats({ balance, summary, tier }: DashboardStatsProps) 
       label: '일일 한도 (오늘)',
       value: `${summary.daily_talismans.used} / ${summary.daily_talismans.limit}`,
       unit: '',
-      color: 'text-green-400',
-      bgColor: 'bg-green-400/10',
+      color: 'text-primary-dim',
+      bgColor: 'bg-primary-dim/10',
       progress: (summary.daily_talismans.used / summary.daily_talismans.limit) * 100,
     },
     {
@@ -42,22 +42,18 @@ export function DashboardStats({ balance, summary, tier }: DashboardStatsProps) 
       label: '등록 인연',
       value: `${summary.relationships.current} / ${summary.relationships.limit}`,
       unit: '',
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-400/10',
+      color: 'text-primary-dark',
+      bgColor: 'bg-primary-dark/10',
       progress: (summary.relationships.current / summary.relationships.limit) * 100,
     },
     {
       icon: Archive,
       label: '저장 공간',
-      value:
-        summary.storage.limit === 999
-          ? '무제한'
-          : `${summary.storage.current} / ${summary.storage.limit}`,
+      value: summary.storage.limit === 999 ? '무제한' : `${summary.storage.current} / ${summary.storage.limit}`,
       unit: '',
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-400/10',
-      progress:
-        summary.storage.limit === 999 ? 0 : (summary.storage.current / summary.storage.limit) * 100,
+      color: 'text-gold-600',
+      bgColor: 'bg-gold-600/10',
+      progress: summary.storage.limit === 999 ? 0 : (summary.storage.current / summary.storage.limit) * 100,
     },
   ]
 
@@ -87,7 +83,7 @@ export function DashboardStats({ balance, summary, tier }: DashboardStatsProps) 
 
             {/* Progress Bar */}
             {stat.progress !== undefined && stat.progress > 0 && (
-              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-surface/40 rounded-full h-2 overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(stat.progress, 100)}%` }}

@@ -5,27 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import {
-  Loader2,
-  Save,
-  RotateCcw,
-  Eye,
-  Trash2,
-  FileText,
-  Ticket,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react'
+import { Loader2, Save, RotateCcw, Eye, Trash2, FileText, Ticket, ChevronDown, ChevronUp } from 'lucide-react'
 import type { AIPrompt } from '@/app/admin/prompts/actions'
 import { cn } from '@/lib/utils'
 
@@ -37,10 +21,10 @@ interface PromptEditorProps {
 }
 
 const CATEGORY_STYLE: Record<string, string> = {
-  ANALYSIS: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-  CHAT: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
+  ANALYSIS: 'bg-primary/10 text-primary border-primary/30',
+  CHAT: 'bg-primary-dark/10 text-primary-dark border-primary-dark/30',
   SYSTEM: 'bg-stone-700/30 text-stone-400 border-stone-600/30',
-  IMAGE: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
+  IMAGE: 'bg-primary-dim/10 text-primary-dim border-primary-dim/30',
 }
 
 export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEditorProps) {
@@ -64,10 +48,7 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
     return parts.map((part, index) => {
       if (part.match(/\{\{[^}]+\}\}/)) {
         return (
-          <span
-            key={index}
-            className="bg-gold-500/20 text-gold-400 px-1 py-0.5 rounded font-semibold"
-          >
+          <span key={index} className="bg-gold-500/20 text-gold-400 px-1 py-0.5 rounded font-semibold">
             {part}
           </span>
         )
@@ -139,36 +120,23 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
         {/* 요약 정보 */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-stone-100 font-serif truncate">
-              {prompt.label}
-            </span>
+            <span className="text-sm font-bold text-stone-100 font-serif truncate">{prompt.label}</span>
             <Badge className={cn('text-[9px] border', categoryStyle)}>{prompt.category}</Badge>
-            <Badge
-              variant="outline"
-              className="text-[9px] text-stone-500 border-stone-600/50 font-mono"
-            >
+            <Badge variant="outline" className="text-[9px] text-stone-500 border-stone-600/50 font-mono">
               {prompt.key}
             </Badge>
             {isEdited && (
-              <Badge className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                수정됨
-              </Badge>
+              <Badge className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30">수정됨</Badge>
             )}
           </div>
           <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-            <span className="text-[10px] text-stone-500 truncate">
-              {prompt.description || '설명 없음'}
-            </span>
+            <span className="text-[10px] text-stone-500 truncate">{prompt.description || '설명 없음'}</span>
             <span className="text-[10px] text-gold-400 font-mono flex items-center gap-0.5 flex-shrink-0">
               <Ticket className="w-2.5 h-2.5" />
               {editedCost}장
             </span>
-            <span className="text-[10px] text-stone-600 flex-shrink-0">
-              {variables.length}개 변수
-            </span>
-            <span className="text-[10px] text-stone-600 flex-shrink-0">
-              {editedTemplate.length}자
-            </span>
+            <span className="text-[10px] text-stone-600 flex-shrink-0">{variables.length}개 변수</span>
+            <span className="text-[10px] text-stone-600 flex-shrink-0">{editedTemplate.length}자</span>
           </div>
         </div>
 
@@ -209,11 +177,7 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
             onClick={() => setExpanded(!expanded)}
             className="h-7 w-7 text-stone-500 hover:text-stone-300 hover:bg-stone-800/50"
           >
-            {expanded ? (
-              <ChevronUp className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
-            )}
+            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </Button>
         </div>
       </div>
@@ -224,9 +188,7 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
           {/* 부적 비용 + 미리보기/삭제 버튼 */}
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <Label className="text-[10px] text-stone-400 font-medium whitespace-nowrap">
-                부적 소모량
-              </Label>
+              <Label className="text-[10px] text-stone-400 font-medium whitespace-nowrap">부적 소모량</Label>
               <div className="relative w-24">
                 <Ticket className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gold-500" />
                 <Input
@@ -254,9 +216,7 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                 </DialogTrigger>
                 <DialogContent className="max-w-lg max-h-[80vh] overflow-auto bg-stone-900 border-stone-700 text-stone-100">
                   <DialogHeader>
-                    <DialogTitle className="font-serif text-stone-100">
-                      프롬프트 미리보기
-                    </DialogTitle>
+                    <DialogTitle className="font-serif text-stone-100">프롬프트 미리보기</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-3">
                     <div className="bg-stone-800/50 p-3 rounded-lg border border-stone-700/30">
@@ -264,9 +224,7 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                         {generatePreview()}
                       </p>
                     </div>
-                    <p className="text-[10px] text-stone-600">
-                      * 샘플 데이터로 치환된 미리보기입니다.
-                    </p>
+                    <p className="text-[10px] text-stone-600">* 샘플 데이터로 치환된 미리보기입니다.</p>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -288,8 +246,7 @@ export function PromptEditor({ prompt, onSave, onDelete, isSaving }: PromptEdito
                   </DialogHeader>
                   <div className="space-y-3">
                     <p className="text-sm text-stone-300">
-                      <strong className="text-stone-100">{prompt.label}</strong> 프롬프트를
-                      삭제하시겠습니까?
+                      <strong className="text-stone-100">{prompt.label}</strong> 프롬프트를 삭제하시겠습니까?
                     </p>
                     <p className="text-xs text-red-400">
                       이 작업은 되돌릴 수 없으며, AI 서비스에 영향을 줄 수 있습니다.

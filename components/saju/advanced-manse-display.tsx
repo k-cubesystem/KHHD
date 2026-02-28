@@ -142,9 +142,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
                   style={{ width: `${advanced.sibiWoonSung.strength}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                생명력: {advanced.sibiWoonSung.strength}%
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">생명력: {advanced.sibiWoonSung.strength}%</p>
             </div>
           </div>
         </CardContent>
@@ -164,7 +162,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               <div className="text-xs text-muted-foreground mb-1">합(合) - 조화</div>
               <div className="flex flex-wrap gap-2">
                 {advanced.jijiRelations.hap.map((h, i) => (
-                  <Badge key={i} variant="default" className="bg-green-600">
+                  <Badge key={i} variant="default" className="bg-primary">
                     {h}
                   </Badge>
                 ))}
@@ -188,7 +186,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               <div className="text-xs text-muted-foreground mb-1">형(刑) - 형벌</div>
               <div className="flex flex-wrap gap-2">
                 {advanced.jijiRelations.hyung.map((h, i) => (
-                  <Badge key={i} variant="outline" className="border-orange-500 text-orange-500">
+                  <Badge key={i} variant="outline" className="border-primary-dark text-primary-dark">
                     {h}
                   </Badge>
                 ))}
@@ -200,7 +198,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               <div className="text-xs text-muted-foreground mb-1">해(害) - 해로움</div>
               <div className="flex flex-wrap gap-2">
                 {advanced.jijiRelations.hae.map((h, i) => (
-                  <Badge key={i} variant="outline" className="border-red-500 text-red-500">
+                  <Badge key={i} variant="outline" className="border-gold-700 text-gold-700">
                     {h}
                   </Badge>
                 ))}
@@ -212,11 +210,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               <div className="text-xs text-muted-foreground mb-1">삼합(三合) - 강력한 조화</div>
               <div className="flex flex-wrap gap-2">
                 {advanced.jijiRelations.samhap.map((s, i) => (
-                  <Badge
-                    key={i}
-                    variant="default"
-                    className="bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3] text-black"
-                  >
+                  <Badge key={i} variant="default" className="bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3] text-black">
                     {s}
                   </Badge>
                 ))}
@@ -239,9 +233,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              공망은 기운이 작용하지 않는 빈 공간입니다.
-            </p>
+            <p className="text-sm text-muted-foreground">공망은 기운이 작용하지 않는 빈 공간입니다.</p>
             <div>
               <div className="text-xs text-muted-foreground mb-1">연주 공망</div>
               <div className="flex flex-wrap gap-2">
@@ -263,7 +255,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               </div>
             </div>
             {advanced.gongmang.affectedPillars.length > 0 && (
-              <p className="text-xs text-amber-600">
+              <p className="text-xs text-primary-dark">
                 ⚠️ 영향받는 지지: {advanced.gongmang.affectedPillars.join(', ')}
               </p>
             )}

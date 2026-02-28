@@ -76,13 +76,13 @@ export function RecentActivityLive() {
   const getColor = (type: string) => {
     switch (type) {
       case 'signup':
-        return 'text-blue-400 bg-blue-500/10'
+        return 'text-primary bg-primary/10'
       case 'purchase':
         return 'text-gold-400 bg-gold-500/10'
       case 'analysis':
-        return 'text-purple-400 bg-purple-500/10'
+        return 'text-primary-dark bg-primary-dark/10'
       case 'upgrade':
-        return 'text-green-400 bg-green-500/10'
+        return 'text-primary-dim bg-primary-dim/10'
       default:
         return 'text-ink-light/60 bg-surface/30'
     }
@@ -117,9 +117,7 @@ export function RecentActivityLive() {
                 })}
               </p>
               {activity.metadata?.amount && (
-                <p className="text-xs text-primary/70 mt-1">
-                  ₩{activity.metadata.amount.toLocaleString()}
-                </p>
+                <p className="text-xs text-primary/70 mt-1">₩{activity.metadata.amount.toLocaleString()}</p>
               )}
             </div>
           </motion.div>

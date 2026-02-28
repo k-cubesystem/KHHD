@@ -28,17 +28,17 @@ export function JiSection({ data }: JiSectionProps) {
     >
       <div className="relative overflow-hidden bg-surface/20 backdrop-blur-sm border-t border-b border-white/5 py-8 md:py-10">
         {/* Background Decor */}
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
 
         <div className="px-5 md:px-8 relative z-10">
           {/* Header */}
           <div className="flex flex-col gap-2 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                <span className="font-serif text-lg text-emerald-400">地</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                <span className="font-serif text-lg text-primary">地</span>
               </div>
               <h2 className="text-xl font-bold text-ink-light tracking-tight">
-                지리적 환경과 흐름 <span className="text-emerald-400/60 text-sm font-normal ml-1">땅의 기운</span>
+                지리적 환경과 흐름 <span className="text-primary/60 text-sm font-normal ml-1">땅의 기운</span>
               </h2>
             </div>
             <p className="text-sm text-ink-light/50 font-light pl-13">당신이 머무는 공간과 환경의 에너지 흐름입니다.</p>
@@ -47,7 +47,7 @@ export function JiSection({ data }: JiSectionProps) {
           {/* Core Content */}
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-serif text-emerald-100 mb-3 leading-snug">{title || '현실적 기반과 환경'}</h3>
+              <h3 className="text-lg font-serif text-ink-light mb-3 leading-snug">{title || '현실적 기반과 환경'}</h3>
               <p className="text-sm md:text-base text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
                 {content}
               </p>
@@ -56,29 +56,29 @@ export function JiSection({ data }: JiSectionProps) {
             {/* Lucky Items Grid (Vertical Stack on Mobile) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               {daewoon_phase && (
-                <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                    <Mountain className="w-5 h-5 text-emerald-400" aria-hidden="true" />
+                <div className="bg-surface/20 border border-primary/20 rounded-xl p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Mountain className="w-5 h-5 text-primary" aria-hidden="true" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-emerald-400/60 tracking-widest font-bold block mb-1">
+                    <span className="text-[10px] text-primary/60 tracking-widest font-bold block mb-1">
                       현재 대운 흐름
                     </span>
-                    <span className="text-base font-serif font-medium text-emerald-100">{daewoon_phase}</span>
+                    <span className="text-base font-serif font-medium text-ink-light">{daewoon_phase}</span>
                   </div>
                 </div>
               )}
 
               {lucky_direction && (
-                <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Compass className="w-5 h-5 text-amber-400" aria-hidden="true" />
+                <div className="bg-surface/20 border border-primary-dark/20 rounded-xl p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary-dark/10 flex items-center justify-center shrink-0">
+                    <Compass className="w-5 h-5 text-primary-dark" aria-hidden="true" />
                   </div>
                   <div>
-                    <span className="text-[10px] text-amber-400/60 tracking-widest font-bold block mb-1">
+                    <span className="text-[10px] text-primary-dark/60 tracking-widest font-bold block mb-1">
                       길한 방위
                     </span>
-                    <span className="text-base font-serif font-medium text-amber-100">{lucky_direction}</span>
+                    <span className="text-base font-serif font-medium text-ink-light">{lucky_direction}</span>
                   </div>
                 </div>
               )}
@@ -88,17 +88,17 @@ export function JiSection({ data }: JiSectionProps) {
             {fengshui && (
               <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="h-px flex-1 bg-emerald-500/10" />
-                  <span className="text-[11px] text-emerald-400/60 font-bold tracking-widest px-2">風水 풍수 분석</span>
-                  <div className="h-px flex-1 bg-emerald-500/10" />
+                  <div className="h-px flex-1 bg-primary/10" />
+                  <span className="text-[11px] text-primary/60 font-bold tracking-widest px-2">風水 풍수 분석</span>
+                  <div className="h-px flex-1 bg-primary/10" />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {fengshui.home_energy && (
-                    <div className="bg-green-950/20 border border-green-500/20 rounded-xl p-4 space-y-2">
+                    <div className="bg-surface/20 border border-primary/20 rounded-xl p-4 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Home className="w-4 h-4 text-green-400" aria-hidden="true" />
-                        <span className="text-[11px] text-green-400/70 font-bold tracking-wide">집의 기운</span>
+                        <Home className="w-4 h-4 text-primary" aria-hidden="true" />
+                        <span className="text-[11px] text-primary/70 font-bold tracking-wide">집의 기운</span>
                       </div>
                       <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
                         {fengshui.home_energy}
@@ -107,10 +107,10 @@ export function JiSection({ data }: JiSectionProps) {
                   )}
 
                   {fengshui.work_energy && fengshui.work_energy.trim() && (
-                    <div className="bg-blue-950/20 border border-blue-500/20 rounded-xl p-4 space-y-2">
+                    <div className="bg-surface/20 border border-primary/20 rounded-xl p-4 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Briefcase className="w-4 h-4 text-blue-400" aria-hidden="true" />
-                        <span className="text-[11px] text-blue-400/70 font-bold tracking-wide">직장의 기운</span>
+                        <Briefcase className="w-4 h-4 text-primary" aria-hidden="true" />
+                        <span className="text-[11px] text-primary/70 font-bold tracking-wide">직장의 기운</span>
                       </div>
                       <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
                         {fengshui.work_energy}
@@ -119,10 +119,10 @@ export function JiSection({ data }: JiSectionProps) {
                   )}
 
                   {fengshui.advice && (
-                    <div className="bg-amber-950/20 border border-amber-500/20 rounded-xl p-4 space-y-2 md:col-span-2">
+                    <div className="bg-surface/20 border border-primary-dark/20 rounded-xl p-4 space-y-2 md:col-span-2">
                       <div className="flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4 text-amber-400" aria-hidden="true" />
-                        <span className="text-[11px] text-amber-400/70 font-bold tracking-wide">풍수 조언</span>
+                        <Lightbulb className="w-4 h-4 text-primary-dark" aria-hidden="true" />
+                        <span className="text-[11px] text-primary-dark/70 font-bold tracking-wide">풍수 조언</span>
                       </div>
                       <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
                         {fengshui.advice}

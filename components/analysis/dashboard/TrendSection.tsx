@@ -10,40 +10,40 @@ const TRENDS = [
     label: '재물운',
     desc: '투자·매매',
     icon: Wallet,
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-400/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     id: 'love',
     label: '애정운',
     desc: '만남·결혼',
     icon: Heart,
-    color: 'text-pink-400',
-    bg: 'bg-pink-400/10',
+    color: 'text-primary',
+    bg: 'bg-primary/10',
   },
   {
     id: 'career',
     label: '직장운',
     desc: '승진·이직',
     icon: Building2,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
+    color: 'text-primary-dark',
+    bg: 'bg-primary-dark/10',
   },
   {
     id: 'exam',
     label: '학업운',
     desc: '합격·자격',
     icon: GraduationCap,
-    color: 'text-green-400',
-    bg: 'bg-green-400/10',
+    color: 'text-primary-dim',
+    bg: 'bg-primary-dim/10',
   },
   {
     id: 'estate',
     label: '부동산',
     desc: '문서·이사',
     icon: TrendingUp,
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10',
+    color: 'text-gold-600',
+    bg: 'bg-gold-600/10',
   },
 ]
 
@@ -79,9 +79,7 @@ export function TrendSection() {
               </div>
               <div>
                 <span className="block text-sm font-light text-white">{trend.label}</span>
-                <span className="block text-[10px] text-white/70 font-light mt-0.5">
-                  {trend.desc}
-                </span>
+                <span className="block text-[10px] text-white/70 font-light mt-0.5">{trend.desc}</span>
               </div>
             </Card>
           )
