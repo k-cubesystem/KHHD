@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { grantSignupBonus } from '@/app/actions/payment/wallet'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   if (token_hash && type) {
     // 이메일 인증 (회원가입 확인, 비밀번호 재설정 등)
-    const { error: verifyError } = await supabase.auth.verifyOtp({
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
       token_hash,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       type: type as any,
@@ -51,9 +52,12 @@ export async function GET(request: NextRequest) {
 
     if (verifyError) {
       console.error('[OTP Verify Error]', verifyError)
-      return NextResponse.redirect(
-        `${requestUrl.origin}/auth/login?error=${encodeURIComponent(verifyError.message)}`
-      )
+      return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=${encodeURIComponent(verifyError.message)}`)
+    }
+
+    // 회원가입 인증 완료 시 50만냥 지급
+    if (type === 'signup' && verifyData?.user?.id) {
+      await grantSignupBonus(verifyData.user.id).catch((e) => console.error('[SignupBonus Error]', e))
     }
   } else if (code) {
     // OAuth / Magic Link (PKCE 코드 교환)
@@ -61,9 +65,7 @@ export async function GET(request: NextRequest) {
 
     if (exchangeError) {
       console.error('[Session Exchange Error]', exchangeError)
-      return NextResponse.redirect(
-        `${requestUrl.origin}/auth/login?error=${encodeURIComponent(exchangeError.message)}`
-      )
+      return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=${encodeURIComponent(exchangeError.message)}`)
     }
 
     if (data.session) {

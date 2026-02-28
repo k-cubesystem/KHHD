@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, Flower } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { EventPopupWrapper } from '@/components/EventPopup'
 
 const slides = [
   {
@@ -161,6 +162,9 @@ export function HeroCarousel() {
           </Link>
         </div>
       </div>
+
+      {/* 이벤트 팝업 (비로그인 시 자동 표시) */}
+      <EventPopupWrapper />
 
       {/* Pagination Dots */}
       <div className="absolute bottom-12 flex gap-3 z-10">

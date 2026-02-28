@@ -40,11 +40,7 @@ async function grantTesterDailyBokchae(userId: string): Promise<void> {
   if (txError) return
 
   // 지갑 잔액 조회 후 충전
-  const { data: wallet } = await adminClient
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', userId)
-    .maybeSingle()
+  const { data: wallet } = await adminClient.from('wallets').select('balance').eq('user_id', userId).maybeSingle()
 
   const currentBalance = wallet?.balance ?? 0
   const newBalance = currentBalance + TESTER_DAILY_AMOUNT
@@ -63,11 +59,7 @@ export async function getFeatureCost(featureKey: string): Promise<number> {
   const supabase = await createClient()
 
   // 1. Try finding in AI Prompts (Preferred configuration source)
-  const { data: prompt } = await supabase
-    .from('ai_prompts')
-    .select('talisman_cost')
-    .eq('key', featureKey)
-    .single()
+  const { data: prompt } = await supabase.from('ai_prompts').select('talisman_cost').eq('key', featureKey).single()
 
   if (prompt && prompt.talisman_cost !== null) {
     return prompt.talisman_cost
@@ -101,11 +93,7 @@ export async function getWalletBalance(): Promise<number> {
   if (!user) return 0
 
   // Check if admin/tester
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
   if (profile?.role === 'admin') {
     return 999 // Unlimited display for admin
@@ -116,11 +104,7 @@ export async function getWalletBalance(): Promise<number> {
     await grantTesterDailyBokchae(user.id).catch(() => {})
   }
 
-  const { data: wallet } = await supabase
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', user.id)
-    .single()
+  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
   return wallet?.balance || 0
 }
@@ -146,11 +130,7 @@ export async function deductTalisman(
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
   // Check if admin (unlimited)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
   if (profile?.role === 'admin') {
     return { success: true, remainingBalance: 999 }
@@ -194,21 +174,14 @@ export async function deductTalisman(
 
   // Deduct balance
   const newBalance = wallet.balance - cost
-  const { error: updateError } = await supabase
-    .from('wallets')
-    .update({ balance: newBalance })
-    .eq('user_id', user.id)
+  const { error: updateError } = await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', user.id)
 
   if (updateError) {
     return { success: false, error: '복채 차감 중 오류가 발생했습니다.' }
   }
 
   // Log transaction
-  const { data: featureCost } = await supabase
-    .from('feature_costs')
-    .select('label')
-    .eq('key', featureKey)
-    .single()
+  const { data: featureCost } = await supabase.from('feature_costs').select('label').eq('key', featureKey).single()
 
   await supabase.from('wallet_transactions').insert({
     user_id: user.id,
@@ -240,20 +213,13 @@ export async function addTalismans(
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
   // Get current balance
-  const { data: wallet } = await supabase
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', user.id)
-    .single()
+  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
   const currentBalance = wallet?.balance || 0
   const newBalance = currentBalance + amount
 
   // Update balance
-  const { error: updateError } = await supabase
-    .from('wallets')
-    .update({ balance: newBalance })
-    .eq('user_id', user.id)
+  const { error: updateError } = await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', user.id)
 
   if (updateError) {
     return { success: false, error: '복채 충전 중 오류가 발생했습니다.' }
@@ -268,6 +234,49 @@ export async function addTalismans(
   })
 
   return { success: true }
+}
+
+/**
+ * 회원가입 축하 50만냥 지급 (관리자 권한으로 실행)
+ * - 중복 지급 방지: SIGNUP_BONUS feature_key로 체크
+ */
+export async function grantSignupBonus(userId: string): Promise<void> {
+  const adminClient = createAdminClient()
+
+  // 중복 지급 체크
+  const { data: existing } = await adminClient
+    .from('wallet_transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('feature_key', 'SIGNUP_BONUS')
+    .maybeSingle()
+
+  if (existing) return // 이미 지급됨
+
+  const SIGNUP_AMOUNT = 50 // 50만냥
+
+  // 트랜잭션 로그 먼저 삽입 (중복 방지)
+  const { error: txError } = await adminClient.from('wallet_transactions').insert({
+    user_id: userId,
+    amount: SIGNUP_AMOUNT,
+    type: 'BONUS',
+    feature_key: 'SIGNUP_BONUS',
+    description: `신규 회원 가입 축하 복채 ${SIGNUP_AMOUNT}만냥 증정 🎁`,
+  })
+
+  if (txError) return // 중복 삽입 시 조용히 종료
+
+  // 지갑 잔액 업데이트
+  const { data: wallet } = await adminClient.from('wallets').select('balance').eq('user_id', userId).maybeSingle()
+
+  const currentBalance = wallet?.balance ?? 0
+  const newBalance = currentBalance + SIGNUP_AMOUNT
+
+  if (wallet) {
+    await adminClient.from('wallets').update({ balance: newBalance }).eq('user_id', userId)
+  } else {
+    await adminClient.from('wallets').insert({ user_id: userId, balance: newBalance })
+  }
 }
 
 /**
