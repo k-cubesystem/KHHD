@@ -136,19 +136,10 @@ export async function spinRoulette() {
     }
 
     // 2. 기록 저장
-    // DB 제약: reward_type IN ('talisman', 'premium', 'discount')
-    // 코드 내부 타입 → DB 저장 타입 매핑
-    const rewardTypeForHistory = (() => {
-      const t = selectedReward.reward_type || selectedReward.type
-      if (t === 'bokchae') return 'talisman'
-      if (t === 'miss') return 'discount'
-      return t
-    })()
-
     console.log(`[Roulette] Inserting roulette history...`)
     const { error: insertError } = await supabase.from('roulette_history').insert({
       user_id: user.id,
-      reward_type: rewardTypeForHistory,
+      reward_type: selectedReward.reward_type || selectedReward.type,
       reward_value: selectedReward.reward_value || selectedReward.value || 0,
     })
 
