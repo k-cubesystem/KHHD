@@ -23,7 +23,10 @@ export async function GET(request: NextRequest) {
   }
 
   // CRITICAL: Create response FIRST, then inject cookies into it
-  const redirectResponse = NextResponse.redirect(`${requestUrl.origin}/protected`)
+  // signup 타입이면 welcome 파라미터 추가 (토스트 알림용)
+  const isSignup = type === 'signup'
+  const redirectUrl = isSignup ? `${requestUrl.origin}/protected/analysis?welcome=1` : `${requestUrl.origin}/protected`
+  const redirectResponse = NextResponse.redirect(redirectUrl)
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

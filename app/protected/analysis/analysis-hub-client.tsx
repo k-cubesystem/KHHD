@@ -1,6 +1,8 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 
 interface RouletteStatus {
@@ -43,6 +45,27 @@ export function AnalysisHubClient({
   weeklyAttendance,
   children,
 }: AnalysisHubClientProps) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (searchParams.get('welcome') === '1') {
+      setTimeout(() => {
+        toast.success('🎁 50만냥이 지급되었습니다!', {
+          description: '신규 회원 가입 축하 복채 50만냥이 지갑에 입금되었습니다.',
+          duration: 6000,
+          style: {
+            background: 'linear-gradient(135deg, #1A1200 0%, #0D0900 100%)',
+            border: '1px solid rgba(212,175,55,0.4)',
+            color: '#F4E4BA',
+          },
+        })
+      }, 600)
+      // URL에서 welcome 파라미터 제거
+      router.replace('/protected/analysis', { scroll: false })
+    }
+  }, [searchParams, router])
+
   return (
     <main className="min-h-screen bg-background relative overflow-hidden">
       {/* Hanji Texture Overlay */}
