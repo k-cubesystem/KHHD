@@ -3,38 +3,57 @@
 import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Button } from '@/components/ui/button'
-import { Heart, ArrowLeft, Sparkles } from 'lucide-react'
+import { Heart, ArrowLeft, Sparkles, Compass } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+
+interface CategoryBreakdown {
+  category: string
+  label: string
+  score: number
+  details: string[]
+}
+
+interface CompatibilityResultData {
+  score: number
+  summary: string
+  strengths: string[]
+  warnings: string[]
+  advice: string
+  categoryBreakdown?: CategoryBreakdown[]
+  mulsangNarrative?: string
+  luckyActions?: string[]
+}
 
 interface CompatibilityResultProps {
   person1: DestinyTarget
   person2: DestinyTarget
-  result: any
+  result: CompatibilityResultData
   onReset: () => void
 }
 
-export function CompatibilityResult({
-  person1,
-  person2,
-  result,
-  onReset,
-}: CompatibilityResultProps) {
+function getScoreColor(score: number): string {
+  if (score >= 80) return 'bg-pink-500'
+  if (score >= 60) return 'bg-[#D4AF37]'
+  if (score >= 40) return 'bg-orange-400'
+  return 'bg-muted-foreground'
+}
+
+export function CompatibilityResult({ person1, person2, result, onReset }: CompatibilityResultProps) {
   const score = result.score || 85
   const summary = result.summary || '궁합 분석 결과'
   const strengths = result.strengths || []
   const warnings = result.warnings || []
   const advice = result.advice || ''
+  const categoryBreakdown = result.categoryBreakdown || []
+  const mulsangNarrative = result.mulsangNarrative || ''
+  const luckyActions = result.luckyActions || []
 
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
       <div className="bg-gradient-to-b from-background to-muted/20 p-6 pb-12">
         <div className="max-w-2xl mx-auto space-y-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-4"
-          >
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-4">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 mx-auto flex items-center justify-center">
               <Heart className="w-10 h-10 text-pink-500 fill-current" />
             </div>
@@ -94,12 +113,61 @@ export function CompatibilityResult({
 
       {/* Content */}
       <div className="max-w-2xl mx-auto px-3 space-y-6">
+        {/* Mulsang Narrative */}
+        {mulsangNarrative && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-6 space-y-2"
+          >
+            <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <Compass className="w-5 h-5" />두 사람의 물상 풍경
+            </h3>
+            <p className="text-sm text-ink-light/80 leading-relaxed">{mulsangNarrative}</p>
+          </motion.div>
+        )}
+
+        {/* Category Breakdown */}
+        {categoryBreakdown.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-card border rounded-lg p-6 space-y-4"
+          >
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#D4AF37]" />
+              8대 궁합 분석
+            </h3>
+            <div className="space-y-3">
+              {categoryBreakdown.map((cat, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-ink-light">{cat.label}</span>
+                    <span className="font-semibold text-ink-light">{cat.score}점</span>
+                  </div>
+                  <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${cat.score}%` }}
+                      transition={{ delay: 0.4 + idx * 0.05, duration: 0.6 }}
+                      className={`h-full rounded-full ${getScoreColor(cat.score)}`}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{cat.details[0]}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
         {/* Strengths */}
         {strengths.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.5 }}
             className="bg-card border rounded-lg p-6 space-y-4"
           >
             <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -121,10 +189,10 @@ export function CompatibilityResult({
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: 0.55 }}
             className="bg-card border rounded-lg p-6 space-y-4"
           >
-            <h3 className="text-lg font-semibold text-muted-foreground">⚠️ 주의할 점</h3>
+            <h3 className="text-lg font-semibold text-muted-foreground">주의할 점</h3>
             <div className="flex flex-wrap gap-2">
               {warnings.map((warning: string, idx: number) => (
                 <Badge key={idx} variant="outline" className="bg-muted/50 border-muted">
@@ -135,27 +203,41 @@ export function CompatibilityResult({
           </motion.div>
         )}
 
+        {/* Lucky Actions */}
+        {luckyActions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-lg p-6 space-y-3"
+          >
+            <h3 className="text-lg font-semibold text-[#D4AF37]">개운 행동</h3>
+            <ul className="space-y-2">
+              {luckyActions.map((action: string, idx: number) => (
+                <li key={idx} className="text-sm text-ink-light/80 flex items-start gap-2">
+                  <span className="text-[#D4AF37] mt-0.5">*</span>
+                  {action}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
         {/* Advice */}
         {advice && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.65 }}
             className="bg-pink-500/10 border border-pink-500/20 rounded-lg p-6 space-y-2"
           >
-            <h3 className="text-lg font-semibold text-pink-500">💕 관계 조언</h3>
-            <p className="text-sm text-ink-light/80 leading-relaxed whitespace-pre-line">
-              {advice}
-            </p>
+            <h3 className="text-lg font-semibold text-pink-500">관계 조언</h3>
+            <p className="text-sm text-ink-light/80 leading-relaxed whitespace-pre-line">{advice}</p>
           </motion.div>
         )}
 
         {/* Reset Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
           <Button onClick={onReset} variant="outline" className="w-full">
             <ArrowLeft className="w-4 h-4 mr-2" />
             다른 궁합 분석하기

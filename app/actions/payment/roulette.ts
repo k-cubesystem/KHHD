@@ -127,9 +127,7 @@ export async function spinRoulette() {
 
     if (!existingWallet) {
       console.log(`[Roulette] Creating wallet for user ${user.id}`)
-      const { error: walletCreateError } = await supabase
-        .from('wallets')
-        .insert({ user_id: user.id, balance: 0 })
+      const { error: walletCreateError } = await supabase.from('wallets').insert({ user_id: user.id, balance: 0 })
 
       if (walletCreateError) {
         console.error('[Roulette] Failed to create wallet:', walletCreateError)
@@ -138,11 +136,20 @@ export async function spinRoulette() {
     }
 
     // 2. 기록 저장
+    // DB 제약: reward_type IN ('talisman', 'premium', 'discount')
+    // 코드 내부 타입 → DB 저장 타입 매핑
+    const rewardTypeForHistory = (() => {
+      const t = selectedReward.reward_type || selectedReward.type
+      if (t === 'bokchae') return 'talisman'
+      if (t === 'miss') return 'discount'
+      return t
+    })()
+
     console.log(`[Roulette] Inserting roulette history...`)
     const { error: insertError } = await supabase.from('roulette_history').insert({
       user_id: user.id,
-      reward_type: selectedReward.reward_type || selectedReward.type,
-      reward_value: selectedReward.reward_value || selectedReward.value,
+      reward_type: rewardTypeForHistory,
+      reward_value: selectedReward.reward_value || selectedReward.value || 0,
     })
 
     if (insertError) {
@@ -172,11 +179,7 @@ export async function spinRoulette() {
         console.warn('[Roulette] RPC add_bokchae failed, using direct method:', rpcError)
 
         // Fallback: 직접 처리
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', user.id)
-          .single()
+        const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
         const oldBalance = wallet?.balance || 0
         const newBalance = oldBalance + rewardValue
@@ -210,21 +213,13 @@ export async function spinRoulette() {
         console.log(`[Roulette] RPC add_bokchae succeeded:`, rpcResult)
 
         // Get updated balance
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', user.id)
-          .single()
+        const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
         currentBalance = wallet?.balance || 0
       }
     } else {
       // 꽝인 경우에도 현재 잔액 조회
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
 
       currentBalance = wallet?.balance || 0
     }

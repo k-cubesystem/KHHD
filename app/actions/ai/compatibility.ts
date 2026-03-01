@@ -1,19 +1,17 @@
-﻿'use server'
+'use server'
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { getSajuData } from '@/lib/domain/saju/saju'
-import { calculateCompatibilityScore } from '@/lib/domain/compatibility/compatibility'
+import { buildSajuContext } from '@/lib/saju-engine/context-builder'
+import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 
 /**
- * 궁합 분석 서버 액션
- * @param targetId1 - 첫 번째 사람의 ID
- * @param targetId2 - 두 번째 사람의 ID
- * @param relationship - 관계 타입 (lover, spouse, friend 등)
+ * 궁합 분석 서버 액션 v2
+ * 양쪽 모두 saju-engine을 거쳐 8개 카테고리 분석
  */
 export async function analyzeCompatibilityAction(targetId1: string, targetId2: string, relationship: string = 'lover') {
   const supabase = await createClient()
@@ -27,30 +25,62 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
 
   try {
     // 1. 대상 정보 조회
-    const target1 = await getDestinyTarget(targetId1)
-    const target2 = await getDestinyTarget(targetId2)
+    const [target1, target2] = await Promise.all([getDestinyTarget(targetId1), getDestinyTarget(targetId2)])
 
     if (!target1 || !target2 || !target1.birth_date || !target2.birth_date) {
       return { success: false, error: '생년월일 정보가 없습니다.' }
     }
 
-    // 2. 최근 7일 이내 분석 결과 확인 (캐시)
+    // 2. 최근 7일 이내 분석 결과 확인 (캐시) - v2 엔진 버전 구분
     const recentAnalysis = await getRecentCompatibilityAnalysis(targetId1, targetId2)
-    if (recentAnalysis) {
+    if (recentAnalysis && recentAnalysis.engineVersion === 'v2') {
       return { success: true, data: recentAnalysis, cached: true }
     }
 
-    // 3. 사주 데이터 계산 (기본 점수용)
-    const saju1 = getSajuData(target1.birth_date, target1.birth_time || '00:00', true)
-    const saju2 = getSajuData(target2.birth_date, target2.birth_time || '00:00', true)
+    // 3. 양쪽 모두 사주 컨텍스트 생성 (병렬)
+    const [ctx1, ctx2] = await Promise.all([
+      Promise.resolve(
+        buildSajuContext({
+          name: target1.name,
+          birthDate: target1.birth_date,
+          birthTime: target1.birth_time || '00:00',
+          gender: (target1.gender || 'male') as 'male' | 'female',
+          isSolar: target1.calendar_type !== 'lunar',
+        })
+      ),
+      Promise.resolve(
+        buildSajuContext({
+          name: target2.name,
+          birthDate: target2.birth_date,
+          birthTime: target2.birth_time || '00:00',
+          gender: (target2.gender || 'male') as 'male' | 'female',
+          isSolar: target2.calendar_type !== 'lunar',
+        })
+      ),
+    ])
 
-    // 4. 기본 궁합 점수 계산
-    const { score: baseScore } = calculateCompatibilityScore(saju1, saju2)
+    // 4. 엔진 궁합 계산
+    const engineResult = calculateCompatibility(ctx1, ctx2, relationship)
 
-    // 5. AI 분석 (마스터 엔진 연동)
-    const aiResult = await analyzeCompatibilityWithAI(target1, target2, baseScore, relationship)
+    // 5. AI 분석 (양쪽 promptContext + 엔진 결과 주입)
+    const aiResult = await analyzeCompatibilityWithAI(target1, target2, ctx1, ctx2, engineResult, relationship)
 
-    // 6. 분석 결과 저장
+    // 6. 최종 결과 조합
+    const finalResult = {
+      ...aiResult,
+      score: aiResult.score || engineResult.totalScore,
+      categoryBreakdown: engineResult.categories.map((c) => ({
+        category: c.category,
+        label: c.label,
+        score: c.score,
+        details: c.details,
+      })),
+      mulsangNarrative: engineResult.mulsangNarrative,
+      luckyActions: engineResult.luckyActions,
+      engineVersion: 'v2',
+    }
+
+    // 7. 분석 결과 저장
     const saved = await saveAnalysisHistory({
       target_id: target1.id,
       target_name: target1.name,
@@ -59,23 +89,22 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       result_json: {
         person1: target1,
         person2: target2,
-        score: aiResult.score || baseScore,
-        ...aiResult,
+        ...finalResult,
       },
-      summary: `${target1.name}님과 ${target2.name}님의 궁합 - ${aiResult.score || baseScore}점`,
-      score: aiResult.score || baseScore,
+      summary: `${target1.name}님과 ${target2.name}님의 궁합 - ${finalResult.score}점`,
+      score: finalResult.score,
       model_used: 'gemini-2.0-flash',
       talisman_cost: 2,
     })
 
-    // 운세 기록 (본인/가족 모두 미션 체크)
+    // 운세 기록
     const fortuneMemberId =
       target1.target_type === 'family' ? target1.id : await getSelfFamilyMemberId().catch(() => null)
     if (fortuneMemberId) {
       await recordFortuneEntry(fortuneMemberId, 'COMPATIBILITY', saved.id ?? fortuneMemberId).catch(() => {})
     }
 
-    return { success: true, data: aiResult, cached: false }
+    return { success: true, data: finalResult, cached: false }
   } catch (error) {
     console.error('[CompatibilityAnalysis] Error:', error)
     const message = error instanceof Error ? error.message : '궁합 분석 중 오류가 발생했습니다.'
@@ -91,7 +120,6 @@ async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: stri
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  // 양방향 검색 (person1-person2 또는 person2-person1)
   const { data } = await supabase
     .from('analysis_history')
     .select('*')
@@ -102,11 +130,9 @@ async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: stri
 
   if (!data || data.length === 0) return null
 
-  // result_json에서 person1.id와 person2.id 확인
   const match = data.find((item: any) => {
     const result = item.result_json
     if (!result?.person1?.id || !result?.person2?.id) return false
-
     return (
       (result.person1.id === targetId1 && result.person2.id === targetId2) ||
       (result.person1.id === targetId2 && result.person2.id === targetId1)
@@ -117,9 +143,16 @@ async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: stri
 }
 
 /**
- * AI를 사용한 궁합 분석 (해화지기 마스터 엔진 연동)
+ * AI를 사용한 궁합 분석 (양쪽 컨텍스트 + 엔진 결과 주입)
  */
-async function analyzeCompatibilityWithAI(target1: any, target2: any, baseScore: number, relationship: string) {
+async function analyzeCompatibilityWithAI(
+  target1: any,
+  target2: any,
+  ctx1: { promptContext: string },
+  ctx2: { promptContext: string },
+  engineResult: { totalScore: number; categories: any[]; mulsangNarrative: string },
+  relationship: string
+) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) throw new Error('Google Generative AI API Key is missing')
 
@@ -131,34 +164,41 @@ async function analyzeCompatibilityWithAI(target1: any, target2: any, baseScore:
 
   const relationshipGuide = getRelationshipGuide(relationship)
 
-  // 마스터 엔진으로 프롬프트 조립 (target1 기준, target2 + 관계 정보는 additionalContext)
-  const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
-  const { prompt } = await buildMasterPromptForAction(
-    {
-      name: target1.name,
-      birthDate: target1.birth_date,
-      birthTime: target1.birth_time || '00:00',
-      gender: (target1.gender || 'male') as 'male' | 'female',
-      isSolar: target1.calendar_type !== 'lunar',
-    },
-    'COMPATIBILITY',
-    '',
-    `[상대방 정보]
-이름: ${target2.name}
-성별: ${target2.gender === 'male' ? '남성' : '여성'}
-생년월일: ${target2.birth_date}
-태어난 시각: ${target2.birth_time || '미상'}
+  const categoryBreakdownText = engineResult.categories
+    .map((c) => `- ${c.label}: ${c.score}점 — ${c.details.join('; ')}`)
+    .join('\n')
 
-[관계 유형 및 분석 목적]
+  const prompt = `당신은 해화지기(解花智氣) — 전통 명리학과 현대 심리를 통합하는 궁합 분석 마스터입니다.
+
+[첫 번째 사람 - ${target1.name}의 사주 명식]
+${ctx1.promptContext}
+
+[두 번째 사람 - ${target2.name}의 사주 명식]
+${ctx2.promptContext}
+
+[엔진 궁합 분석 결과 (v2)]
+총점: ${engineResult.totalScore}점
+물상 내러티브: ${engineResult.mulsangNarrative}
+
+카테고리별 점수:
+${categoryBreakdownText}
+
+[관계 유형]
 ${relationshipGuide}
-기준 궁합 점수: ${baseScore}점`,
-    `[출력 형식 (JSON Mandatory)]
+
+[지시사항]
+위 두 사람의 명식 데이터와 엔진 분석 결과를 깊이 이해하여,
+자연의 물상으로 두 사람의 관계 화학을 풀어내십시오.
+엔진 점수를 기반으로 하되, 명리적 통찰을 덧입혀 최종 점수를 미세조정하십시오.
+
+[출력 형식 (JSON Mandatory)]
 {
-  "score": <최종 궁합 점수(70~100 사이의 숫자)>,
+  "score": <최종 궁합 점수 (엔진 점수 ±10 범위 내, 0~100)>,
   "summary": "<두 사람의 인연을 꿰뚫어 보는 예리한 한 줄의 통찰 (자연의 비유 사용)>",
   "strengths": [
     "<서로에게 득이 되는 기운 (예: 불길을 잡아주는 서늘한 물의 기운)>",
-    "<긍정적인 면 2>"
+    "<긍정적인 면 2>",
+    "<긍정적인 면 3>"
   ],
   "warnings": [
     "<두 기운이 부딪혀 파열음이 나는 지점>",
@@ -166,7 +206,6 @@ ${relationshipGuide}
   ],
   "advice": "<5단계 흐름을 유려한 산문으로: 영적 꿰뚫음 → 명리적 진단 → 신의 한 수 → 조언 → 여운 남기는 질문. 줄바꿈(\\n) 포함 300~500자 무속인 점사>"
 }`
-  )
 
   const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
     userId: undefined,
@@ -182,7 +221,6 @@ ${relationshipGuide}
  */
 function getRelationshipGuide(relationship: string): string {
   const guides: Record<string, string> = {
-    // 연인 관계
     lover: `**애인 관계** - 연애 궁합을 중점적으로 분석합니다.
 - 애정운, 로맨스 지속 가능성
 - 결혼으로 발전할 가능성
@@ -207,7 +245,6 @@ function getRelationshipGuide(relationship: string): string {
 - 장기적 안정성
 - 시댁/처가 관계 힌트`,
 
-    // 가족 관계
     spouse: `**부부 관계** - 부부로서의 조화와 갈등 해소를 다룹니다.
 - 부부 궁합 재평가
 - 갈등 패턴과 해결법
@@ -232,7 +269,6 @@ function getRelationshipGuide(relationship: string): string {
 - 좋은 관계 유지 비결
 - 가족 행사 조화`,
 
-    // 친구 관계
     friend: `**친구 관계** - 우정의 깊이와 지속성을 봅니다.
 - 우정 지속 가능성
 - 서로에게 주는 영향
@@ -251,7 +287,6 @@ function getRelationshipGuide(relationship: string): string {
 - 청결/소음 등 민감 사항
 - 편안한 동거 팁`,
 
-    // 직장 관계
     boss_employee: `**상사-부하 관계** - 상하 관계의 협업 효율을 분석합니다.
 - 지시-수행 궁합
 - 커뮤니케이션 스타일
@@ -276,7 +311,6 @@ function getRelationshipGuide(relationship: string): string {
 - 갈등 조기 해결
 - 좋은 평가 받는 법`,
 
-    // 비즈니스 관계
     business_partner: `**동업자 관계** - 사업 파트너로서의 시너지를 분석합니다.
 - 비즈니스 비전 일치도
 - 역할 분담 최적화

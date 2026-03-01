@@ -26,6 +26,8 @@ export { analyzeDynamicWarnings, calculateIlwoon, getFlowingLuckPillars } from '
 export { calculateDailyAvoidance } from './daily-avoidance'
 export type { DailyAvoidanceResult, DailySeverity } from './daily-avoidance'
 export type { DynamicWarningsResult, FlowingLuckPillars, FlowingPillar, TemporalActivation } from './dynamic-warnings'
+export { calculateCompatibility } from './compatibility-engine'
+export type { CompatibilityEngineResult, CategoryScore, CompatibilityRelationType } from './compatibility-engine'
 export type {
   WarningsResult,
   GigusinWarning,

@@ -122,7 +122,11 @@
       "Bash(printf:*)",
       "Bash(node_modules/.bin/tsc:*)",
       "Bash(npx vercel --prod)",
-      "Bash(npx vercel logs:*)"
+      "Bash(npx vercel logs:*)",
+      "WebSearch",
+      "Bash(netstat:*)",
+      "Bash(/tmp/screenshot2.ps1:*)",
+      "Bash(/tmp/screenshot3.ps1:*)"
     ]
   },
   "model": "claude-sonnet-4-5-20250514"
