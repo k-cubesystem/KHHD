@@ -3,11 +3,14 @@
 /**
  * 카카오 알림톡(Alimtalk) 서버 액션
  * Solapi를 통해 알림톡 발송 및 알림 설정 관리
+ * Edge Function 전환 지원: EDGE_NOTIFICATION=true 시 Edge Function 호출
  */
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getSolapiClient, ALIMTALK_TEMPLATES, SOLAPI_PFID, SOLAPI_SENDER } from '@/lib/services/solapi'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +139,10 @@ export async function getNotificationPreferences(): Promise<{
   data?: NotificationPreferences
   error?: string
 }> {
+  if (isEdgeEnabled('notification')) {
+    return invokeEdgeSafe('notification', { action: 'getPreferences' })
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -171,6 +178,10 @@ export async function getNotificationPreferences(): Promise<{
 export async function saveNotificationPreferences(
   prefs: Partial<NotificationPreferences>
 ): Promise<{ success: boolean; error?: string }> {
+  if (isEdgeEnabled('notification')) {
+    return invokeEdgeSafe('notification', { action: 'savePreferences', prefs })
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -205,6 +216,10 @@ export async function saveNotificationPreferences(
  * 설정 페이지에서 "테스트 발송" 버튼 클릭 시 사용
  */
 export async function sendTestAlimtalk(): Promise<SendAlimtalkResult> {
+  if (isEdgeEnabled('notification')) {
+    return invokeEdgeSafe('notification', { action: 'sendTest' })
+  }
+
   const supabase = await createClient()
   const {
     data: { user },

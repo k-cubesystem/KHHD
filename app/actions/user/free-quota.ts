@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 const FREE_ANALYSIS_LIMIT = 3
 
@@ -20,6 +22,9 @@ export interface FreeQuotaStatus {
  * - 일반 유저: analysis_history 총 개수 기준으로 무료 한도 체크
  */
 export async function getFreeQuotaStatus(): Promise<FreeQuotaStatus> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getFreeQuotaStatus' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -95,6 +100,9 @@ export async function canStartAnalysis(): Promise<{
   quota: FreeQuotaStatus
   error?: string
 }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'canStartAnalysis' })
+  }
   const quota = await getFreeQuotaStatus()
 
   if (!quota.isExhausted || quota.isPaid) {

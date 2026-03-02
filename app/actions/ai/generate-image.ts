@@ -3,6 +3,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -88,6 +90,9 @@ export async function generateFortuneImage(
   type: FortuneImageType,
   context: FortuneImageContext = {}
 ): Promise<GenerateFortuneImageResult> {
+  if (isEdgeEnabled('ai-image')) {
+    return invokeEdgeSafe('ai-image', { action: 'generateImage', type, context })
+  }
   try {
     const supabase = await createClient()
 

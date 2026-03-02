@@ -363,7 +363,7 @@ export function ShamanChatInterface() {
   const showStarters = messages.length === 0
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: 'calc(100dvh - 60px)' }}>
+    <div className="flex flex-col bg-background" style={{ height: 'calc(100dvh - 56px - 60px)' }}>
       {/* 배경 ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/3 blur-[100px]" />
@@ -424,7 +424,7 @@ export function ShamanChatInterface() {
                 }}
               >
                 <option value="self">나 (본인)</option>
-                {familyMembers?.map((member) => (
+                {familyMembers?.map((member: { id: string; name: string; relation: string }) => (
                   <option key={member.id} value={member.id} className="bg-surface text-foreground">
                     {member.name} ({member.relation})
                   </option>

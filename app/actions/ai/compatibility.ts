@@ -8,12 +8,18 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { MODEL_PRO } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 /**
  * 궁합 분석 서버 액션 v2
  * 양쪽 모두 saju-engine을 거쳐 8개 카테고리 분석
  */
 export async function analyzeCompatibilityAction(targetId1: string, targetId2: string, relationship: string = 'lover') {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', { action: 'analyzeCompatibility', targetId1, targetId2, relationship })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -93,7 +99,7 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       },
       summary: `${target1.name}님과 ${target2.name}님의 궁합 - ${finalResult.score}점`,
       score: finalResult.score,
-      model_used: 'gemini-2.0-flash',
+      model_used: MODEL_PRO,
       talisman_cost: 2,
     })
 
@@ -158,7 +164,7 @@ async function analyzeCompatibilityWithAI(
 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: MODEL_PRO,
     generationConfig: { responseMimeType: 'application/json' },
   })
 
@@ -227,7 +233,7 @@ ${relationshipGuide}
 
   const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
     userId: undefined,
-    model: 'gemini-2.0-flash',
+    model: MODEL_PRO,
     actionType: 'compatibility',
   })
 

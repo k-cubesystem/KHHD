@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 export interface BusinessInquiryFormData {
   company_name: string
@@ -17,6 +19,10 @@ export interface BusinessInquiryResult {
 }
 
 export async function submitBusinessInquiry(formData: BusinessInquiryFormData): Promise<BusinessInquiryResult> {
+  if (isEdgeEnabled('business')) {
+    return invokeEdgeSafe('business', { ...formData })
+  }
+
   // Basic validation
   if (!formData.company_name?.trim()) {
     return { success: false, error: '회사명을 입력해주세요.' }

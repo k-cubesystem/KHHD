@@ -12,6 +12,9 @@ import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
+import { MODEL_PRO } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 /**
  * 천지인 분석 서버 액션
@@ -32,6 +35,16 @@ export async function analyzeCheonjiinAction(
   skipCache: boolean = false,
   forceRefresh: boolean = false // alias for skipCache; pass true to bypass 24h cache
 ) {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', {
+      action: 'analyzeCheonjiin',
+      targetId,
+      additionalData,
+      checkOnly,
+      skipCache,
+      forceRefresh,
+    })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -302,7 +315,7 @@ async function analyzeCheonjiinWithAI(
 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: MODEL_PRO,
     generationConfig: { responseMimeType: 'application/json' },
   })
 
@@ -322,7 +335,7 @@ async function analyzeCheonjiinWithAI(
 
   const result = await withGeminiRateLimit(() => model.generateContent({ contents: [{ role: 'user', parts }] }), {
     userId,
-    model: 'gemini-2.0-flash',
+    model: MODEL_PRO,
     actionType: 'cheonjiin',
   })
   const text = result.response.text()
@@ -339,7 +352,7 @@ async function analyzeCheonjiinWithAI(
     result_json: data,
     summary: (data.summary as string) || '천지인 통합 분석 결과',
     score: (data.score as number) || 80,
-    model_used: 'gemini-2.0-flash',
+    model_used: MODEL_PRO,
     talisman_cost: 3,
   })
 

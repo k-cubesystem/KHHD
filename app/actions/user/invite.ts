@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { nanoid } from 'nanoid'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -28,9 +29,7 @@ interface CompatibilityResult {
 }
 
 // 초대 코드 생성
-export async function createInviteCode(
-  userId: string
-): Promise<{ success: boolean; code?: string; error?: string }> {
+export async function createInviteCode(userId: string): Promise<{ success: boolean; code?: string; error?: string }> {
   const supabase = await createClient()
 
   // Get user's profile (본인 정보 from family_members)
@@ -89,11 +88,7 @@ export async function getInviterByCode(
   const supabase = await createClient()
 
   // First try to get from invites table
-  const { data: invite, error } = await supabase
-    .from('invites')
-    .select('*')
-    .eq('code', code)
-    .single()
+  const { data: invite, error } = await supabase.from('invites').select('*').eq('code', code).single()
 
   if (!error && invite) {
     return {
@@ -129,7 +124,7 @@ export async function analyzeCompatibility(
   person1: { name: string; birthDate: string; gender: string },
   person2: { name: string; birthDate: string; gender: string }
 ): Promise<CompatibilityResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
 
   const prompt = `당신은 전통 명리학 기반의 궁합 전문가입니다.
 
@@ -161,7 +156,7 @@ export async function analyzeCompatibility(
 
   try {
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       actionType: 'invite_compatibility',
     })
     const text = result.response.text()
@@ -179,8 +174,7 @@ export async function analyzeCompatibility(
     return { success: false, error: '궁합 데이터 파싱 실패' }
   } catch (error: unknown) {
     console.error('Compatibility Analysis Error:', error)
-    const errorMessage =
-      error instanceof Error ? error.message : '궁합 분석 중 오류가 발생했습니다.'
+    const errorMessage = error instanceof Error ? error.message : '궁합 분석 중 오류가 발생했습니다.'
     return {
       success: false,
       error: errorMessage,
@@ -189,9 +183,7 @@ export async function analyzeCompatibility(
 }
 
 // 초대 링크 생성 (Full URL)
-export async function generateInviteLink(
-  userId: string
-): Promise<{ success: boolean; link?: string; error?: string }> {
+export async function generateInviteLink(userId: string): Promise<{ success: boolean; link?: string; error?: string }> {
   const result = await createInviteCode(userId)
 
   if (!result.success || !result.code) {

@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { unstable_cache } from 'next/cache'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 /**
  * Destiny Target 타입 정의
@@ -39,6 +41,9 @@ export interface DestinyTarget {
  * - unstable_cache를 사용하여 DB 부하 최소화 (1분 캐시)
  */
 export async function getDestinyTargets(): Promise<DestinyTarget[]> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getDestinyTargets' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -70,6 +75,9 @@ export async function getDestinyTargets(): Promise<DestinyTarget[]> {
  * @param targetId - Target ID
  */
 export async function getDestinyTarget(targetId: string): Promise<DestinyTarget | null> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getDestinyTarget', targetId })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -104,6 +112,9 @@ export async function getDestinyTargetsCount(): Promise<{
   total: number
   family: number
 }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getDestinyTargetsCount' })
+  }
   const targets = await getDestinyTargets()
 
   const familyTargets = targets.filter((t) => t.target_type === 'family')

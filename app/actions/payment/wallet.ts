@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { canUseTalisman, incrementDailyUsage, getUserTierLimits } from './membership'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 const TESTER_DAILY_AMOUNT = 50 // 테스터 일일 자동충전 복채 (50만냥)
 
@@ -85,6 +87,9 @@ export async function getFeatureCost(featureKey: string): Promise<number> {
  * Get user's wallet balance
  */
 export async function getWalletBalance(): Promise<number> {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'getWalletBalance' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -122,6 +127,9 @@ export async function deductTalisman(
   errorType?: string
   currentTier?: string
 }> {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'deductTalisman', featureKey, customAmount })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -205,6 +213,9 @@ export async function addTalismans(
   type: 'CHARGE' | 'BONUS' | 'SUBSCRIPTION' = 'CHARGE',
   description?: string
 ): Promise<{ success: boolean; error?: string }> {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'addTalismans', amount, type, description })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -283,6 +294,9 @@ export async function grantSignupBonus(userId: string): Promise<void> {
  * Get wallet transaction history
  */
 export async function getWalletTransactions(limit: number = 50) {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'getWalletTransactions', limit })
+  }
   const supabase = await createClient()
   const {
     data: { user },

@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 // Types
 export interface MonthlyFortune {
@@ -29,6 +31,9 @@ export interface FamilyMemberFortune {
  * Get current month's family fortune
  */
 export async function getMonthlyFamilyFortune(): Promise<MonthlyFortune> {
+  if (isEdgeEnabled('fortune')) {
+    return invokeEdgeSafe('fortune', { action: 'getMonthlyFamilyFortune' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -94,6 +99,9 @@ export async function getMonthlyFamilyFortune(): Promise<MonthlyFortune> {
  * Get yearly fortune trend
  */
 export async function getYearlyFortuneTrend(year?: number): Promise<YearlyFortuneMonth[]> {
+  if (isEdgeEnabled('fortune')) {
+    return invokeEdgeSafe('fortune', { action: 'getYearlyFortuneTrend', year })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -267,6 +275,15 @@ export async function recordFortuneEntry(
   analysisId: string,
   fortunePoints: number = 100
 ): Promise<{ success: boolean; error?: string }> {
+  if (isEdgeEnabled('fortune')) {
+    return invokeEdgeSafe('fortune', {
+      action: 'recordFortuneEntry',
+      familyMemberId,
+      category,
+      analysisId,
+      fortunePoints,
+    })
+  }
   const supabase = await createClient()
   const {
     data: { user },

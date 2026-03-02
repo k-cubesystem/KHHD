@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 async function checkAdminPermission() {
   const supabase = await createClient()
@@ -66,6 +68,9 @@ export interface MonitoringStats {
 }
 
 export async function getMonitoringStats(): Promise<{ success: boolean; data?: MonitoringStats; error?: string }> {
+  if (isEdgeEnabled('admin')) {
+    return invokeEdgeSafe('admin', { action: 'getMonitoringStats' })
+  }
   if (!(await checkAdminPermission())) {
     return { success: false, error: '권한 없음' }
   }

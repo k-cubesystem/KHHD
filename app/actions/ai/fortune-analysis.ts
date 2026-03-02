@@ -10,6 +10,9 @@ import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
 
@@ -43,6 +46,9 @@ export async function analyzeFortuneAction(
   fortuneType: FortuneType = 'today',
   forceRefresh: boolean = false // bypass cache when user explicitly wants a new analysis
 ): Promise<{ success: boolean; data?: FortuneResult; error?: string; cached?: boolean; cachedAt?: string }> {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', { action: 'analyzeFortune', targetId, fortuneType, forceRefresh })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -133,7 +139,7 @@ export async function analyzeFortuneAction(
       result_json: result,
       summary: result.summary,
       score: result.score,
-      model_used: 'gemini-2.0-flash',
+      model_used: MODEL_FLASH,
     })
 
     // 8. 운세 기록 (본인/가족 모두 미션 체크)
@@ -194,12 +200,12 @@ async function analyzeFortuneWithAI(prompt: string, fortuneType: FortuneType, pe
 
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: MODEL_FLASH,
     generationConfig: { responseMimeType: 'application/json' },
   })
 
   const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-    model: 'gemini-2.0-flash',
+    model: MODEL_FLASH,
     actionType: 'fortune',
   })
   const text = result.response.text()

@@ -2,8 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 export async function getFamilyMembers() {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getFamilyMembers' })
+  }
   // Demo Mode check
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
     console.warn('Supabase credentials missing. Running in Demo Mode.')
@@ -64,6 +69,10 @@ export async function getFamilyMembers() {
 }
 
 export async function addFamilyMember(formData: FormData) {
+  if (isEdgeEnabled('user')) {
+    await invokeEdgeSafe('user', { action: 'addFamilyMember', formData })
+    return
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -101,6 +110,10 @@ export async function addFamilyMember(formData: FormData) {
 }
 
 export async function updateFamilyMember(formData: FormData) {
+  if (isEdgeEnabled('user')) {
+    await invokeEdgeSafe('user', { action: 'updateFamilyMember', formData })
+    return
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -141,6 +154,10 @@ export async function updateFamilyMember(formData: FormData) {
 }
 
 export async function deleteFamilyMember(id: string) {
+  if (isEdgeEnabled('user')) {
+    await invokeEdgeSafe('user', { action: 'deleteFamilyMember', id })
+    return
+  }
   const supabase = await createClient()
   const {
     data: { user },

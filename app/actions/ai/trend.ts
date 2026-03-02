@@ -9,6 +9,9 @@ import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 export type TrendType = 'love' | 'career' | 'exam' | 'estate'
 
@@ -82,6 +85,9 @@ export async function analyzeTrendAction(
   targetId: string,
   trendType: TrendType
 ): Promise<{ success: boolean; data?: TrendResult; error?: string; cached?: boolean }> {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', { action: 'analyzeTrend', targetId, trendType })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -154,13 +160,13 @@ export async function analyzeTrendAction(
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       generationConfig: { responseMimeType: 'application/json' },
     })
 
     const aiResult = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user?.id,
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       actionType: `trend_${trendType}`,
     })
     const text = aiResult.response.text()
@@ -179,7 +185,7 @@ export async function analyzeTrendAction(
       result_json: result,
       summary: result.summary,
       score: result.score,
-      model_used: 'gemini-2.0-flash',
+      model_used: MODEL_FLASH,
     })
 
     // 운세 기록 (본인/가족 모두 미션 체크)

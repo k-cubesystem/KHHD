@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 // import { createClient as createClientJS } from '@supabase/supabase-js' // Removed to fix edge issues
 import { unstable_cache, revalidatePath } from 'next/cache'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserTierLimits } from '../payment/membership'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 
@@ -64,6 +66,9 @@ export interface CreateAnalysisHistoryParams {
 export async function saveAnalysisHistory(
   params: CreateAnalysisHistoryParams
 ): Promise<{ success: boolean; id?: string; error?: string }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'saveAnalysisHistory', params })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -87,7 +92,7 @@ export async function saveAnalysisHistory(
         summary: params.summary || null,
         score: params.score || null,
         prompt_version: params.prompt_version || null,
-        model_used: params.model_used || 'gemini-2.0-flash',
+        model_used: params.model_used || 'gemini-3-flash-preview',
         talisman_cost: params.talisman_cost || 0,
       })
       .select('id')
@@ -158,6 +163,9 @@ export async function saveAnalysisHistory(
  * 최근 분석 기록 조회
  */
 export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHistory[]> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getRecentAnalysis', limit })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -199,6 +207,9 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
  * 특정 분석 기록 조회
  */
 export async function getAnalysisById(id: string): Promise<AnalysisHistory | null> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getAnalysisById', id })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -259,6 +270,9 @@ export async function getAnalysisStats(): Promise<
  * 즐겨찾기 토글
  */
 export async function toggleFavorite(id: string, isFavorite: boolean): Promise<{ success: boolean; error?: string }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'toggleFavorite', id, isFavorite })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -327,6 +341,9 @@ export async function updateAnalysisMemo(id: string, memo: string): Promise<{ su
  * 분석 기록 삭제
  */
 export async function deleteAnalysisHistory(id: string): Promise<{ success: boolean; error?: string }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'deleteAnalysisHistory', id })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -387,6 +404,9 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
 export async function createShareLink(
   id: string
 ): Promise<{ success: boolean; token?: string; url?: string; error?: string }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'createShareLink', id })
+  }
   try {
     const supabase = await createClient()
     const {

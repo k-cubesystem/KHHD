@@ -1,8 +1,13 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 export async function getDashboardContext() {
+  if (isEdgeEnabled('fortune')) {
+    return invokeEdgeSafe('fortune', { action: 'getDashboardContext' })
+  }
   const supabase = await createClient()
   const {
     data: { user },

@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 /**
  * 현재 로그인 유저의 추천 코드를 가져오거나 생성합니다.
@@ -12,6 +14,9 @@ export async function getOrCreateReferralCode(): Promise<{
   referralLink?: string
   error?: string
 }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getOrCreateReferralCode' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -50,6 +55,9 @@ export async function getReferralStats(): Promise<{
   recentReferrals?: { date: string; bonus: number }[]
   error?: string
 }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'getReferralStats' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -87,6 +95,9 @@ export async function processReferralBonus(
   refereeId: string,
   code: string
 ): Promise<{ success: boolean; bonus?: number; error?: string }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'processReferralBonus', refereeId, code })
+  }
   const adminClient = createAdminClient()
 
   const { data, error } = await adminClient.rpc('process_referral_bonus', {
@@ -111,6 +122,9 @@ export async function validateReferralCode(code: string): Promise<{
   referrerName?: string
   error?: string
 }> {
+  if (isEdgeEnabled('user')) {
+    return invokeEdgeSafe('user', { action: 'validateReferralCode', code })
+  }
   const supabase = await createClient()
 
   const { data: rc, error } = await supabase

@@ -17,6 +17,9 @@ import {
 } from '@/lib/validations/analysis'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis } from '@/lib/utils/analysis-cache'
+import { MODEL_PRO } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 // --- Helpers ---
 
@@ -24,7 +27,7 @@ const getGeminiModel = () => {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) throw new Error('Google Generative AI API Key is missing')
   const genAI = new GoogleGenerativeAI(apiKey)
-  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  return genAI.getGenerativeModel({ model: MODEL_PRO })
 }
 
 // Global Context Injector for Hyper-Personalization
@@ -83,6 +86,18 @@ export async function analyzeSajuDetail(
   saveToHistory: boolean = true, // Added flag
   forceRefresh: boolean = false // bypass cache when user explicitly requests new analysis
 ) {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', {
+      action: 'analyzeSajuDetail',
+      name,
+      gender,
+      birthDate,
+      birthTime,
+      calendarType,
+      saveToHistory,
+      forceRefresh,
+    })
+  }
   console.log(`[AI Saju] Starting analysis for ${name} (${gender})`)
 
   // Zod validation
@@ -169,7 +184,7 @@ export async function analyzeSajuDetail(
 
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,
-      model: 'gemini-2.0-flash',
+      model: MODEL_PRO,
       actionType: 'saju_detail',
     })
     const text = result.response.text()
@@ -189,7 +204,7 @@ export async function analyzeSajuDetail(
           result_json: analysisData,
           summary: analysisData.summary,
           score: analysisData.fortune_score,
-          model_used: 'gemini-2.0-flash',
+          model_used: MODEL_PRO,
           talisman_cost: 1,
         })
         const selfId = await getSelfFamilyMemberId().catch(() => null)
@@ -275,7 +290,7 @@ export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDesti
 
     const result = await withGeminiRateLimit(
       () => model.generateContent([prompt, { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } }]),
-      { userId: user.id, model: 'gemini-2.0-flash', actionType: 'face_analysis' }
+      { userId: user.id, model: MODEL_PRO, actionType: 'face_analysis' }
     )
 
     const text = result.response.text()
@@ -295,7 +310,7 @@ export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDesti
           result_json: analysisData,
           summary: analysisData.summary || '관상 분석',
           score: analysisData.currentScore,
-          model_used: 'gemini-2.0-flash',
+          model_used: MODEL_PRO,
           talisman_cost: 5,
         })
         const selfId = await getSelfFamilyMemberId().catch(() => null)
@@ -371,7 +386,7 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
 
     const result = await withGeminiRateLimit(
       () => model.generateContent([prompt, { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } }]),
-      { userId: user.id, model: 'gemini-2.0-flash', actionType: 'palm_analysis' }
+      { userId: user.id, model: MODEL_PRO, actionType: 'palm_analysis' }
     )
 
     const text = result.response.text()
@@ -391,7 +406,7 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
           result_json: analysisData,
           summary: analysisData.summary || '손금 분석',
           score: analysisData.currentScore,
-          model_used: 'gemini-2.0-flash',
+          model_used: MODEL_PRO,
           talisman_cost: 3,
         })
         const selfId = await getSelfFamilyMemberId().catch(() => null)
@@ -475,7 +490,7 @@ export async function analyzeInteriorForFengshui(
 
     const result = await withGeminiRateLimit(
       () => model.generateContent([prompt, { inlineData: { data: imageBase64, mimeType: 'image/jpeg' } }]),
-      { userId: user.id, model: 'gemini-2.0-flash', actionType: 'fengshui_interior' }
+      { userId: user.id, model: MODEL_PRO, actionType: 'fengshui_interior' }
     )
 
     const text = result.response.text()
@@ -495,7 +510,7 @@ export async function analyzeInteriorForFengshui(
           result_json: { ...analysisData, roomType, theme },
           summary: analysisData.summary || '풍수 분석',
           score: analysisData.score || 80,
-          model_used: 'gemini-2.0-flash',
+          model_used: MODEL_PRO,
           talisman_cost: 2,
         })
         const selfId = await getSelfFamilyMemberId().catch(() => null)

@@ -1,11 +1,16 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 /**
  * 오늘 출석 체크 가능 여부 확인
  */
 export async function checkAttendanceAvailability() {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'checkAttendanceAvailability' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -37,6 +42,9 @@ export async function checkAttendanceAvailability() {
  * - 주 7일 완료 시 마지막날 +3 복채 보너스 (주당 총 10 복채)
  */
 export async function checkInAttendance() {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'checkInAttendance' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -190,6 +198,9 @@ export async function checkInAttendance() {
  * 이번 주 출석 현황 조회
  */
 export async function getWeeklyAttendance() {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'getWeeklyAttendance' })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -254,6 +265,9 @@ export async function getWeeklyAttendance() {
  * 이번 달 출석 현황 + 연속 출석 스트릭 조회
  */
 export async function getMonthlyAttendance() {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'getMonthlyAttendance' })
+  }
   const supabase = await createClient()
   const {
     data: { user },

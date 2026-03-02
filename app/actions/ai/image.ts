@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { getPromptByKey } from '@/app/admin/prompts/actions'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { MODEL_PRO } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -219,7 +222,10 @@ export async function analyzeFaceForDestiny(
   goal: FaceDestinyGoal,
   sajuContext?: { dayGan?: string; currentAge?: number }
 ): Promise<FaceAnalysisResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  if (isEdgeEnabled('ai-image')) {
+    return invokeEdgeSafe('ai-image', { action: 'analyzeFace', imageBase64, goal, sajuContext })
+  }
+  const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const goalConfig = GOAL_PROMPTS[goal]
 
   // Load prompt from DB, fallback to hardcoded
@@ -333,7 +339,7 @@ export async function analyzeFaceForDestiny(
   try {
     const result = await withGeminiRateLimit(
       () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
-      { model: 'gemini-2.0-flash', actionType: 'face_destiny' }
+      { model: MODEL_PRO, actionType: 'face_destiny' }
     )
 
     const analysisText = result.response.text()
@@ -491,7 +497,10 @@ export async function analyzeInteriorForFengshui(
   theme: InteriorTheme,
   roomType: string = '거실'
 ): Promise<InteriorAnalysisResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  if (isEdgeEnabled('ai-image')) {
+    return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType })
+  }
+  const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const themeConfig = INTERIOR_THEMES[theme]
 
   const dbPromptTemplate = await getPromptByKey('fengshui_analysis')
@@ -584,7 +593,7 @@ export async function analyzeInteriorForFengshui(
   try {
     const result = await withGeminiRateLimit(
       () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
-      { model: 'gemini-2.0-flash', actionType: 'fengshui_destiny' }
+      { model: MODEL_PRO, actionType: 'fengshui_destiny' }
     )
 
     const analysisText = result.response.text()
@@ -745,7 +754,10 @@ export async function analyzePalmReading(
   imageBase64: string,
   sajuContext?: { dayGan?: string; currentAge?: number }
 ): Promise<PalmAnalysisResult> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  if (isEdgeEnabled('ai-image')) {
+    return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, sajuContext })
+  }
+  const model = genAI.getGenerativeModel({ model: MODEL_PRO })
 
   const dbPromptTemplate = await getPromptByKey('palm_reading')
   const analysisPrompt =
@@ -833,7 +845,7 @@ export async function analyzePalmReading(
   try {
     const result = await withGeminiRateLimit(
       () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
-      { model: 'gemini-2.0-flash', actionType: 'palm_destiny' }
+      { model: MODEL_PRO, actionType: 'palm_destiny' }
     )
 
     const analysisText = result.response.text()
@@ -946,6 +958,9 @@ export async function generateDestinyImage(
 
   _type: 'face' | 'interior'
 ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+  if (isEdgeEnabled('ai-image')) {
+    return invokeEdgeSafe('ai-image', { action: 'generateImage', originalImageBase64, prompt: _prompt, type: _type })
+  }
   // NOTE: 실제 구현 시 DALL-E 3 또는 Stability AI API 연동 필요
   // 현재는 분석 결과만 제공하고, 이미지 생성은 준비 중 상태로 표시
 

@@ -8,6 +8,9 @@ import { recordFortuneEntry } from '@/app/actions/fortune/fortune'
 import { logger } from '@/lib/utils/logger'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 interface WealthAnalysisParams {
   memberId: string
@@ -24,6 +27,9 @@ interface WealthAnalysisResult {
  * 사주 기반으로 재물운의 흐름, 시기, 방향을 AI가 분석
  */
 export async function analyzeWealth(params: WealthAnalysisParams): Promise<WealthAnalysisResult> {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', { action: 'analyzeWealth', ...params })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -77,10 +83,10 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
     if (!apiKey) throw new Error('Google Generative AI API Key is missing')
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       actionType: 'wealth',
     })
     const analysis = result.response.text()
@@ -94,7 +100,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
         category: 'WEALTH',
         result_json: { analysis },
         summary: '재물운 심층 분석 결과',
-        model_used: 'gemini-2.0-flash',
+        model_used: MODEL_FLASH,
         talisman_cost: WEALTH_ANALYSIS_COST,
       })
     } catch (e) {

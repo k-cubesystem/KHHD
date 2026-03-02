@@ -9,6 +9,9 @@ import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 export interface Year2026Result {
   name: string
@@ -43,6 +46,9 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
   error?: string
   cached?: boolean
 }> {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', { action: 'analyzeYear2026', targetId })
+  }
   try {
     // 1. 인증 확인
     const supabase = await createClient()
@@ -106,7 +112,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
 
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       generationConfig: { responseMimeType: 'application/json' },
     })
 
@@ -128,7 +134,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
 
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       actionType: 'year2026',
     })
     const text = result.response.text()
@@ -144,7 +150,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       result_json: data,
       summary: data.summary || `2026년 병오년 신년운세`,
       score: data.score,
-      model_used: 'gemini-2.0-flash',
+      model_used: MODEL_FLASH,
       talisman_cost: 0,
     }).catch((e) => {
       console.error('History Save Error:', e)

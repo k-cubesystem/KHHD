@@ -2,12 +2,15 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { calculateManse } from '@/lib/domain/saju/manse'
 import { saveAnalysisHistory } from '@/app/actions/user/history'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
 
@@ -20,6 +23,9 @@ export async function generateDailyFortune(
   dateStr?: string,
   force: boolean = false
 ) {
+  if (isEdgeEnabled('fortune')) {
+    return invokeEdgeSafe('fortune', { action: 'generateDailyFortune', userId, targetId, type, dateStr, force })
+  }
   // Rate limiting: 1분에 20회 (일운은 자주 조회될 수 있으므로 여유있게)
   const rateLimitResult = await rateLimit(`daily-fortune:${userId}`, {
     interval: 60 * 1000,
@@ -67,25 +73,15 @@ export async function generateDailyFortune(
   let name, gender, birthDate, birthTime
 
   if (type === 'USER') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', targetId)
-      .single()
-    if (!profile || !profile.birth_date)
-      return { success: false, error: '생년월일 정보가 필요합니다.' }
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', targetId).single()
+    if (!profile || !profile.birth_date) return { success: false, error: '생년월일 정보가 필요합니다.' }
     name = profile.name
     gender = profile.gender
     birthDate = profile.birth_date
     birthTime = profile.birth_time
   } else {
-    const { data: member } = await supabase
-      .from('family_members')
-      .select('*')
-      .eq('id', targetId)
-      .single()
-    if (!member || !member.birth_date)
-      return { success: false, error: '가족의 생년월일 정보가 필요합니다.' }
+    const { data: member } = await supabase.from('family_members').select('*').eq('id', targetId).single()
+    if (!member || !member.birth_date) return { success: false, error: '가족의 생년월일 정보가 필요합니다.' }
     name = member.name
     gender = member.gender
     birthDate = member.birth_date
@@ -159,10 +155,10 @@ export async function generateDailyFortune(
     .replace('{{saju}}', sajuStr)
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: userId,
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       actionType: 'daily_fortune',
     })
     const text = result.response.text()

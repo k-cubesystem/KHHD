@@ -4,6 +4,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 // --- Constants ---
 
@@ -45,7 +48,7 @@ const getGeminiModel = (systemInstruction?: string) => {
   if (!apiKey) throw new Error('Google Generative AI API Key is missing')
   const genAI = new GoogleGenerativeAI(apiKey)
   return genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: MODEL_FLASH,
     ...(systemInstruction ? { systemInstruction } : {}),
   })
 }
@@ -227,6 +230,15 @@ export async function sendShamanChatMessage(
   _turnCount: number,
   familyMemberId?: string
 ): Promise<ShamanChatResponse> {
+  if (isEdgeEnabled('ai-chat')) {
+    return invokeEdgeSafe('ai-chat', {
+      action: 'sendMessage',
+      message,
+      conversationHistory,
+      turnCount: _turnCount,
+      familyMemberId,
+    })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -387,6 +399,9 @@ export async function sendShamanChatMessage(
 }
 
 export async function getShamanChatStarters() {
+  if (isEdgeEnabled('ai-chat')) {
+    return invokeEdgeSafe('ai-chat', { action: 'getChatStarters' })
+  }
   return {
     success: true,
     questions: RANDOM_STARTERS.sort(() => 0.5 - Math.random()).slice(0, 6),
@@ -414,6 +429,9 @@ export async function getOrCreateChatSession(familyMemberId?: string): Promise<{
   isNew?: boolean
   error?: string
 }> {
+  if (isEdgeEnabled('ai-chat')) {
+    return invokeEdgeSafe('ai-chat', { action: 'getOrCreateSession', familyMemberId })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -468,6 +486,9 @@ export async function loadChatSessionMessages(sessionId: string): Promise<{
   messages?: ShamanChatMessage[]
   error?: string
 }> {
+  if (isEdgeEnabled('ai-chat')) {
+    return invokeEdgeSafe('ai-chat', { action: 'loadMessages', sessionId })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -539,6 +560,9 @@ export async function endAndCreateNewSession(
   currentSessionId: string,
   familyMemberId?: string
 ): Promise<{ success: boolean; newSessionId?: string; error?: string }> {
+  if (isEdgeEnabled('ai-chat')) {
+    return invokeEdgeSafe('ai-chat', { action: 'endSession', currentSessionId, familyMemberId })
+  }
   try {
     const adminClient = createAdminClient()
     const supabase = await createClient()
@@ -569,6 +593,9 @@ export async function endAndCreateNewSession(
 
 /** @deprecated Use getShamanQuestionStatus instead */
 export async function getAIChatUsageStatus() {
+  if (isEdgeEnabled('ai-chat')) {
+    return invokeEdgeSafe('ai-chat', { action: 'getUsageStatus' })
+  }
   const status = await getShamanQuestionStatus()
   return {
     success: status.success,

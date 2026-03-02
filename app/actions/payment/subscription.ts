@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { addTalismans } from './wallet'
 import { createServerClient } from '@supabase/ssr'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || 'test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb'
 const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
@@ -91,6 +93,9 @@ function createAdminClient() {
 // 멤버십 플랜 조회
 // ============================================
 export async function getMembershipPlans(): Promise<MembershipPlan[]> {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'getMembershipPlans' })
+  }
   try {
     // membership_plans RLS: is_active=true 는 누구나 조회 가능
     // admin client 실패 시 fallback으로 일반 client 사용
@@ -120,11 +125,7 @@ export async function getMembershipPlan(planId: string): Promise<MembershipPlan 
     const supabase = createAdminClient()
     if (!supabase) return null
 
-    const { data, error } = await supabase
-      .from('membership_plans')
-      .select('*')
-      .eq('id', planId)
-      .single()
+    const { data, error } = await supabase.from('membership_plans').select('*').eq('id', planId).single()
 
     if (error) {
       console.error('[Subscription] Get plan error:', error)
@@ -146,6 +147,9 @@ export async function getSubscriptionStatus(): Promise<{
   subscription: Subscription | null
   plan: MembershipPlan | null
 }> {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'getSubscriptionStatus' })
+  }
   try {
     const supabase = await createClient()
     const {
@@ -255,8 +259,7 @@ export async function createBillingAuthUrl(planId: string): Promise<{
   const failUrl = `${baseUrl}/protected/membership/fail`
 
   // 빌링키 인증 창 URL 생성
-  const clientKey =
-    process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_z6OdyEPWpUpnLp90z608nM7XyVNb'
+  const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_z6OdyEPWpUpnLp90z608nM7XyVNb'
 
   const authUrl =
     `https://api.tosspayments.com/v1/billing/authorizations/widget?` +
@@ -371,22 +374,19 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   const orderId = `SUB_${user.id.slice(0, 8)}_${Date.now()}`
 
   // Toss API: 빌링 결제
-  const response = await fetch(
-    `https://api.tosspayments.com/v1/billing/${subscription.billing_key}`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${basicAuth}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        customerKey: subscription.customer_key,
-        amount: plan.price,
-        orderId,
-        orderName: `${plan.name} 구독`,
-      }),
-    }
-  )
+  const response = await fetch(`https://api.tosspayments.com/v1/billing/${subscription.billing_key}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basicAuth}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      customerKey: subscription.customer_key,
+      amount: plan.price,
+      orderId,
+      orderName: `${plan.name} 구독`,
+    }),
+  })
 
   const result = await response.json()
 
@@ -416,10 +416,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     })
 
     // 구독 상태 업데이트
-    await supabase
-      .from('subscriptions')
-      .update({ status: 'PAYMENT_FAILED' })
-      .eq('id', subscription.id)
+    await supabase.from('subscriptions').update({ status: 'PAYMENT_FAILED' }).eq('id', subscription.id)
 
     return {
       success: false,
@@ -506,22 +503,19 @@ export async function processRecurringPayments(): Promise<{
 
     try {
       // 빌링 결제
-      const response = await fetch(
-        `https://api.tosspayments.com/v1/billing/${subscription.billing_key}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${basicAuth}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            customerKey: subscription.customer_key,
-            amount: plan.price,
-            orderId,
-            orderName: `${plan.name} 구독 갱신`,
-          }),
-        }
-      )
+      const response = await fetch(`https://api.tosspayments.com/v1/billing/${subscription.billing_key}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customerKey: subscription.customer_key,
+          amount: plan.price,
+          orderId,
+          orderName: `${plan.name} 구독 갱신`,
+        }),
+      })
 
       const result = await response.json()
 
@@ -612,9 +606,7 @@ export async function processRecurringPayments(): Promise<{
       results.success++
     } catch (err) {
       results.failed++
-      results.errors.push(
-        `${subscription.user_id}: ${err instanceof Error ? err.message : 'Unknown error'}`
-      )
+      results.errors.push(`${subscription.user_id}: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }
 
@@ -628,6 +620,9 @@ export async function cancelSubscription(reason?: string): Promise<{
   success: boolean
   error?: string
 }> {
+  if (isEdgeEnabled('payment')) {
+    return invokeEdgeSafe('payment', { action: 'cancelSubscription', reason })
+  }
   const supabase = await createClient()
   const {
     data: { user },
@@ -787,8 +782,7 @@ export async function changeBillingMethod(): Promise<{
   const successUrl = `${baseUrl}/protected/membership/manage?changed=true&customerKey=${newCustomerKey}`
   const failUrl = `${baseUrl}/protected/membership/manage?changed=false`
 
-  const clientKey =
-    process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_z6OdyEPWpUpnLp90z608nM7XyVNb'
+  const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_z6OdyEPWpUpnLp90z608nM7XyVNb'
 
   const authUrl =
     `https://api.tosspayments.com/v1/billing/authorizations/widget?` +
@@ -798,10 +792,7 @@ export async function changeBillingMethod(): Promise<{
     `&failUrl=${encodeURIComponent(failUrl)}`
 
   // 임시로 새 customerKey 저장
-  await supabase
-    .from('subscriptions')
-    .update({ customer_key: newCustomerKey })
-    .eq('id', subscription.id)
+  await supabase.from('subscriptions').update({ customer_key: newCustomerKey }).eq('id', subscription.id)
 
   return { success: true, authUrl }
 }

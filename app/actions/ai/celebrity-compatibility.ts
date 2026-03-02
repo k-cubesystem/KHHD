@@ -4,6 +4,8 @@ import { searchCelebrities, getCelebrityById, type Celebrity, type CelebrityCate
 import { buildSajuContext } from '@/lib/saju-engine/context-builder'
 import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 /**
  * 유명인 검색
@@ -59,6 +61,9 @@ export async function calculateCelebrityCompatibilityAction(celebrityId: string)
   userInfo?: { name: string; birthDate: string }
   error?: string
 }> {
+  if (isEdgeEnabled('ai-analysis')) {
+    return invokeEdgeSafe('ai-analysis', { action: 'celebrityCompatibility', celebrityId })
+  }
   try {
     const supabase = await createClient()
     const {

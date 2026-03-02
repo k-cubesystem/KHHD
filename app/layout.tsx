@@ -7,6 +7,7 @@ import { SWRegister } from '@/components/sw-register'
 import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import './globals.css'
 
 const notoSans = Noto_Sans_KR({
@@ -116,6 +117,7 @@ export default function RootLayout({
                 <AgentationWrapper />
                 {/* Vercel Speed Insights — Core Web Vitals 실측 모니터링 */}
                 <SpeedInsights />
+                {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
               </div>
             </div>
           </QueryProvider>

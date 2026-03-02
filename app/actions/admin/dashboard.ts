@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { isEdgeEnabled } from '@/lib/supabase/edge-config'
+import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
 // 권한 체크 헬퍼
 async function checkAdminPermission() {
@@ -11,17 +13,16 @@ async function checkAdminPermission() {
   } = await supabase.auth.getUser()
   if (!user) return false
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
   return profile?.role === 'admin'
 }
 
 // 1. Recent Activity 조회
 export async function getRecentActivities(limit: number = 50) {
+  if (isEdgeEnabled('admin')) {
+    return invokeEdgeSafe('admin', { action: 'getRecentActivities', limit })
+  }
   if (!(await checkAdminPermission())) {
     return { success: false, error: '권한 없음' }
   }
@@ -202,11 +203,7 @@ export async function sendGlobalNotification(title: string, message: string) {
 }
 
 // 6. 빠른 액션: 쿠폰 일괄 발급
-export async function issueCouponToAll(
-  couponCode: string,
-  talismanAmount: number,
-  expiryDays: number = 30
-) {
+export async function issueCouponToAll(couponCode: string, talismanAmount: number, expiryDays: number = 30) {
   if (!(await checkAdminPermission())) {
     return { success: false, error: '권한 없음' }
   }

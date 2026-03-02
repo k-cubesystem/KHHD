@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     try {
       // A. Generate Fortune
       const genResult = await generateDailyFortune(sub.user_id, sub.user_id, 'USER')
-      if (!genResult.success) throw new Error(genResult.error)
+      if (!genResult.success) throw new Error('error' in genResult ? genResult.error : 'Fortune generation failed')
 
       // B. Send Notification
       if (genResult.content) {

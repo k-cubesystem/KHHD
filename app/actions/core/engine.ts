@@ -7,13 +7,14 @@ import { saveAnalysisHistory } from '../user/history'
 import { PROMPTS, injectContext } from '@/lib/prompts/storytelling'
 import { FEATURE_KEYS } from '@/lib/constants'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const getGeminiModel = () => {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) throw new Error('Google Generative AI API Key is missing')
   const genAI = new GoogleGenerativeAI(apiKey)
   return genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: MODEL_FLASH,
     generationConfig: { responseMimeType: 'application/json' },
   })
 }
@@ -22,8 +23,7 @@ async function getUserProfileAndContext(supabase: any) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user)
-    return { user: null, profileContext: '게스트 사용자입니다. 일반적인 관점에서 조언해주세요.' }
+  if (!user) return { user: null, profileContext: '게스트 사용자입니다. 일반적인 관점에서 조언해주세요.' }
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
   if (!profile) return { user, profileContext: '프로필 정보가 없습니다.' }
@@ -69,7 +69,7 @@ async function runAnalysis(
     // Generate
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user?.id,
-      model: 'gemini-2.0-flash',
+      model: MODEL_FLASH,
       actionType: `analysis_${analysisType.toLowerCase()}`,
     })
     const text = result.response.text()
@@ -86,7 +86,7 @@ async function runAnalysis(
         result_json: data,
         summary: historySummaryMapper(data),
         score: data.score || data.fortune_score || data.compatibility_score || 80,
-        model_used: 'gemini-2.0-flash',
+        model_used: MODEL_FLASH,
         talisman_cost: 0,
       }).catch((e) => console.error('History Save Error:', e))
     }
@@ -116,11 +116,7 @@ export async function analyzeChonjiin(
 }
 
 // 2. Relationship Analysis
-export async function analyzeRelationship(
-  myInfo: string,
-  partnerInfo: string,
-  relationType: string
-) {
+export async function analyzeRelationship(myInfo: string, partnerInfo: string, relationType: string) {
   return runAnalysis(
     'RELATIONSHIP',
     'RELATIONSHIP',
@@ -132,11 +128,7 @@ export async function analyzeRelationship(
 }
 
 // 3. Period Luck (Weekly/Monthly)
-export async function analyzePeriodLuck(
-  sajuInfo: string,
-  periodType: '이번 주' | '이번 달',
-  targetDate: string
-) {
+export async function analyzePeriodLuck(sajuInfo: string, periodType: '이번 주' | '이번 달', targetDate: string) {
   // Fixed: calling runAnalysis with string first argument
   const analysisTypeStr = periodType === '이번 주' ? 'PERIOD_WEEKLY' : 'PERIOD_MONTHLY'
   return runAnalysis(

@@ -213,9 +213,13 @@ function buildPromptContextText(data: {
     .map(([el, cnt]) => `${el}${cnt}`)
     .join(' ')
 
-  const today = new Date()
-  const currentYear = today.getFullYear()
-  const currentMonth = today.getMonth() + 1
+  // KST 기준 정확한 현재 시점
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const currentYear = kst.getUTCFullYear()
+  const currentMonth = kst.getUTCMonth() + 1
+  const currentDay = kst.getUTCDate()
+  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][kst.getUTCDay()]
 
   const currentDaeun = daeun.find((d) => {
     const birthYear = parseInt(person.birthDate.split('-')[0])
@@ -292,7 +296,7 @@ ${daeunStr}
 현재 대운: ${currentDaeun ? `${currentDaeun.ganji}(${currentDaeun.element}) — ${currentDaeun.description || ''}` : '계산 필요'}
 
 ### 현재 시점
-분석일: ${currentYear}년 ${currentMonth}월
+분석일: ${currentYear}년 ${currentMonth}월 ${currentDay}일 (${dayOfWeek}요일) [KST 기준]
 
 ${warnings.warningContext}
 
@@ -379,8 +383,10 @@ export function getAnalysisTypeGuide(type: AnalysisType): string {
 당신은 지금 내담자와 실시간으로 대화하고 있습니다. 위의 명식 데이터는 당신이 이미 꿰뚫어 본 내담자의 운명입니다.
 
 **대화 방식**
+- 오늘 날짜(위 '현재 시점' 참조)를 정확히 인지하고, 날짜·요일·시기를 언급할 때 반드시 실제 날짜를 사용하십시오
 - 내담자가 묻는 말에만 집중하여 짧고 명료하게 답하십시오 (200~400자)
 - 물음에 없는 분석을 길게 나열하지 마십시오
+- 추상적 조언("긍정적으로 생각하세요") 금지 — 구체적 시기·행동·방향을 제시하십시오
 - 대화가 자연스럽게 이어지도록 끝에 짧은 질문 하나를 덧붙이십시오
 - 예: "더 구체적으로 여쭤볼 것이 있으십니까?" / "언제쯤 결정하실 생각이신가요?"
 
