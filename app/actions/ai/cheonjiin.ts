@@ -10,6 +10,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 
 /**
  * 천지인 분석 서버 액션
@@ -27,7 +29,8 @@ export async function analyzeCheonjiinAction(
     handImageUrl?: string
   } | null,
   checkOnly: boolean = false,
-  skipCache: boolean = false
+  skipCache: boolean = false,
+  forceRefresh: boolean = false // alias for skipCache; pass true to bypass 24h cache
 ) {
   const supabase = await createClient()
   const {
@@ -39,8 +42,8 @@ export async function analyzeCheonjiinAction(
   }
 
   try {
-    // 1. 대상 정보 조회
-    const target = await getDestinyTarget(targetId)
+    // 1. 대상 정보 조회 + 주소 병렬 조회
+    const [target, workAddress] = await Promise.all([getDestinyTarget(targetId), getWorkAddress(user.id)])
 
     if (!target) {
       return { success: false, error: '분석 대상을 찾을 수 없습니다.' }
@@ -53,17 +56,18 @@ export async function analyzeCheonjiinAction(
       }
     }
 
-    // 2. 최근 7일 이내 분석 결과 확인 (캐시)
-    if (!skipCache) {
-      const { data: recentAnalysis, date: cacheDate } = await getRecentAnalysis(targetId)
+    // 2. 최근 캐시 확인 (skipCache 또는 forceRefresh가 아닐 때)
+    if (!skipCache && !forceRefresh) {
+      const cached = await getCachedAnalysis(user.id, targetId, 'SAJU', 24)
 
-      if (recentAnalysis) {
+      if (cached && isCacheValid(cached, 24)) {
+        console.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
         // checkOnly면 캐시 확인만 하고 반환
         if (checkOnly) {
-          return { success: true, data: recentAnalysis, cached: true, cacheDate }
+          return { success: true, data: cached.result_json, cached: true, cacheDate: cached.created_at }
         }
         // 일반 모드에서도 캐시 반환 (기존 동작)
-        return { success: true, data: recentAnalysis, cached: true, cacheDate }
+        return { success: true, data: cached.result_json, cached: true, cacheDate: cached.created_at }
       }
     }
 
@@ -92,7 +96,6 @@ export async function analyzeCheonjiinAction(
 
     // 7. 변수 준비 (천지인 초고도화 데이터 포함)
     // additionalData가 있으면 우선 사용, 없으면 target 데이터 사용
-    const workAddress = await getWorkAddress(user.id)
 
     // 이미지 raw URL (base64 or storage URL)
     const rawFaceImageUrl = additionalData?.faceImageUrl || target.face_image_url || null
@@ -140,7 +143,6 @@ export async function analyzeCheonjiinAction(
 
     // 8. 프롬프트 생성 (해화지기 마스터 엔진 연동)
     // 마스터 엔진으로 사주 컨텍스트(신강신약, 십이운성, 신살, 합충형, 물상론) 생성
-    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
     const { prompt: engineSystemPrompt } = await buildMasterPromptForAction(
       {
         name: target.name,

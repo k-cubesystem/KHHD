@@ -1,6 +1,5 @@
 import { SharePageClient } from './share-page-client'
 import { getSharedAnalysis } from '@/app/actions/user/history'
-import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
 interface SharePageProps {
@@ -23,17 +22,47 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       }
     }
 
-    const title = `${record.target_name}님의 ${record.category} 분석 결과 | 청담 해화당`
-    const description = record.summary || 'AI가 분석한 상세한 운명 분석 결과를 확인하세요.'
+    const personTitle = `${record.target_name}님의 ${record.category} 운명 분석`
+    const fullTitle = `${personTitle} | 청담 해화당`
+    const description = record.summary
+      ? record.summary.slice(0, 120)
+      : 'AI가 분석한 상세한 운명 분석 결과를 확인하세요.'
+
+    // Build dynamic OG image URL with analysis metadata
+    const ogParams = new URLSearchParams({
+      title: personTitle,
+      desc: description,
+      name: record.target_name,
+      category: record.category,
+    })
+    if (record.score != null) {
+      ogParams.set('score', String(record.score))
+    }
+    const ogImageUrl = `/api/og?${ogParams.toString()}`
 
     return {
-      title,
+      title: fullTitle,
       description,
       openGraph: {
-        title,
+        title: fullTitle,
         description,
         type: 'article',
-        // images: ... (Default or Dynamic)
+        siteName: '청담해화당',
+        locale: 'ko_KR',
+        images: [
+          {
+            url: ogImageUrl,
+            width: 1200,
+            height: 630,
+            alt: personTitle,
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: fullTitle,
+        description,
+        images: [ogImageUrl],
       },
     }
   } catch (error) {

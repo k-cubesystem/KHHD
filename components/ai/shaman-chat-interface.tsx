@@ -9,11 +9,15 @@ import {
   getShamanChatStarters,
   getShamanQuestionStatus,
   purchaseShamanQuestions,
+  getOrCreateChatSession,
+  loadChatSessionMessages,
+  saveChatMessages,
+  endAndCreateNewSession,
   type ShamanChatMessage,
   type ShamanQuestionStatus,
 } from '@/app/actions/ai/shaman-chat'
 import { useFamilyMembers } from '@/hooks/use-family-members'
-import { Loader2, Send, Coins, Flame, Sparkles } from 'lucide-react'
+import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -104,33 +108,31 @@ function Bubble({ msg, showAvatar }: { msg: ShamanChatMessage; showAvatar: boole
   )
 }
 
-// ─── 상태 칩 ─────────────────────────────────────────────
-function StatusChip({
-  icon,
-  value,
-  loading,
-  dimmed,
-}: {
-  icon: React.ReactNode
-  value: string
-  loading: boolean
-  dimmed?: boolean
-}) {
+// ─── 새 대화 시작 확인 다이얼로그 ──────────────────────────
+function NewChatConfirmBanner({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div
-      className={cn(
-        'flex items-center gap-1.5 px-3 py-1.5 rounded-full',
-        'bg-surface/50 border backdrop-blur-sm',
-        dimmed ? 'border-primary-dark/20' : 'border-primary/10'
-      )}
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      className="mx-4 mb-2 px-4 py-3 rounded-xl bg-surface/80 border border-primary/20 backdrop-blur-md flex items-center justify-between gap-3"
     >
-      {icon}
-      {loading ? (
-        <div className="w-8 h-3 rounded bg-primary/10 animate-pulse" />
-      ) : (
-        <span className={cn('text-[11px] font-medium', dimmed ? 'text-primary-dark' : 'text-primary/70')}>{value}</span>
-      )}
-    </div>
+      <p className="text-xs text-foreground/60 leading-snug">현재 대화를 마치고 새 대화를 시작할까요?</p>
+      <div className="flex gap-2 flex-shrink-0">
+        <button
+          onClick={onCancel}
+          className="text-[11px] px-2.5 py-1 rounded-lg border border-primary/15 text-primary/50 hover:text-primary/70 transition-colors"
+        >
+          취소
+        </button>
+        <button
+          onClick={onConfirm}
+          className="text-[11px] px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/30 text-primary/80 hover:bg-primary/20 transition-colors font-medium"
+        >
+          새 대화
+        </button>
+      </div>
+    </motion.div>
   )
 }
 
@@ -154,10 +156,14 @@ export function ShamanChatInterface() {
   const [selectedFamilyId, setSelectedFamilyId] = useState<string>('self')
   const { data: familyMembers } = useFamilyMembers()
 
+  // DB 세션 상태
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [isSessionLoading, setIsSessionLoading] = useState(true)
+  const [showNewChatConfirm, setShowNewChatConfirm] = useState(false)
+
   const chatRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  // 사용자가 직접 스크롤을 올렸는지 추적
   const isAtBottomRef = useRef(true)
 
   // 스크롤 위치 감지
@@ -173,6 +179,35 @@ export function ShamanChatInterface() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [])
 
+  // 세션 로드 및 메시지 복원
+  const loadSession = useCallback(async (familyMemberId: string) => {
+    setIsSessionLoading(true)
+    try {
+      const sessionResult = await getOrCreateChatSession(familyMemberId)
+      if (!sessionResult.success || !sessionResult.sessionId) {
+        setIsSessionLoading(false)
+        return
+      }
+      setSessionId(sessionResult.sessionId)
+
+      if (!sessionResult.isNew) {
+        // 기존 세션 메시지 복원
+        const msgResult = await loadChatSessionMessages(sessionResult.sessionId)
+        if (msgResult.success && msgResult.messages) {
+          setMessages(msgResult.messages)
+          setTurnCount(Math.floor(msgResult.messages.length / 2))
+          // 복원 후 스크롤 맨 아래로
+          setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' }), 100)
+        }
+      } else {
+        setMessages([])
+        setTurnCount(0)
+      }
+    } finally {
+      setIsSessionLoading(false)
+    }
+  }, [])
+
   // 초기 로드
   useEffect(() => {
     const load = async () => {
@@ -185,7 +220,31 @@ export function ShamanChatInterface() {
       setIsStatusLoading(false)
     }
     load()
-  }, [])
+    loadSession('self')
+  }, [loadSession])
+
+  // family 변경 시 해당 세션으로 전환
+  const handleFamilyChange = async (newFamilyId: string) => {
+    setSelectedFamilyId(newFamilyId)
+    setMessages([])
+    setTurnCount(0)
+    await loadSession(newFamilyId)
+  }
+
+  // 새 대화 시작
+  const handleNewChat = async () => {
+    if (!sessionId) return
+    setShowNewChatConfirm(false)
+    const result = await endAndCreateNewSession(sessionId, selectedFamilyId)
+    if (result.success && result.newSessionId) {
+      setSessionId(result.newSessionId)
+      setMessages([])
+      setTurnCount(0)
+      toast.success('새 대화가 시작되었습니다.')
+    } else {
+      toast.error(result.error || '새 대화 시작 실패')
+    }
+  }
 
   // 충전
   const handleRecharge = async () => {
@@ -240,7 +299,7 @@ export function ShamanChatInterface() {
     // textarea 높이 리셋
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
-    // 사용자 메시지 후 바로 스크롤 (항상)
+    // 사용자 메시지 후 바로 스크롤
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50)
 
     try {
@@ -254,7 +313,14 @@ export function ShamanChatInterface() {
         setMessages((prev) => [...prev, aiMsg])
         setTurnCount((prev) => prev + 1)
 
-        // AI 응답 후 스크롤 (항상)
+        // DB 저장 (비동기, 실패해도 UI에 영향 없음)
+        if (sessionId) {
+          saveChatMessages(sessionId, userMsg, aiMsg, messages.length === 0).catch((e) =>
+            console.error('[saveChatMessages]', e)
+          )
+        }
+
+        // AI 응답 후 스크롤
         setTimeout(scrollToBottomSmooth, 80)
 
         setQuestionStatus((prev) => {
@@ -280,9 +346,12 @@ export function ShamanChatInterface() {
       } else {
         if (result.noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
         else toast.error(result.error || '전송 실패')
+        // 실패 시 user 메시지 롤백
+        setMessages((prev) => prev.slice(0, -1))
       }
     } catch {
       toast.error('오류가 발생했습니다.')
+      setMessages((prev) => prev.slice(0, -1))
     } finally {
       setIsLoading(false)
     }
@@ -294,7 +363,7 @@ export function ShamanChatInterface() {
   const showStarters = messages.length === 0
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: 'calc(100dvh - 60px)' /* 바텀 nav h-[60px] */ }}>
+    <div className="flex flex-col bg-background" style={{ height: 'calc(100dvh - 60px)' }}>
       {/* 배경 ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/3 blur-[100px]" />
@@ -306,7 +375,7 @@ export function ShamanChatInterface() {
         className="sticky top-0 z-20 flex-shrink-0 border-b border-primary/8"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(20px)' }}
       >
-        {/* 1단: 정체성 */}
+        {/* 1단: 정체성 + 새 대화 버튼 */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2.5 border-b border-white/4">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -321,26 +390,47 @@ export function ShamanChatInterface() {
             </div>
           </div>
 
-          {/* 점사 대상 선택 */}
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-[9px] text-primary/40 leading-none">점사 대상</span>
-            <select
-              value={selectedFamilyId}
-              onChange={(e) => setSelectedFamilyId(e.target.value)}
-              className="bg-surface/50 border border-primary/20 hover:border-primary/40 transition-colors rounded-lg pl-2 pr-6 py-1 text-xs text-primary/80 outline-none appearance-none cursor-pointer"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgb(244 228 186 / 0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 6px center',
-              }}
-            >
-              <option value="self">나 (본인)</option>
-              {familyMembers?.map((member) => (
-                <option key={member.id} value={member.id} className="bg-surface text-foreground">
-                  {member.name} ({member.relation})
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2">
+            {/* 새 대화 시작 버튼 */}
+            {messages.length > 0 && (
+              <button
+                onClick={() => setShowNewChatConfirm(true)}
+                disabled={isLoading}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg',
+                  'text-[11px] text-primary/50 hover:text-primary/80',
+                  'border border-primary/15 hover:border-primary/35',
+                  'bg-transparent hover:bg-primary/5',
+                  'transition-all duration-150',
+                  'disabled:opacity-30'
+                )}
+              >
+                <RotateCcw className="w-3 h-3" />새 대화
+              </button>
+            )}
+
+            {/* 점사 대상 선택 */}
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] text-primary/40 leading-none">점사 대상</span>
+              <select
+                value={selectedFamilyId}
+                onChange={(e) => handleFamilyChange(e.target.value)}
+                disabled={isLoading || isSessionLoading}
+                className="bg-surface/50 border border-primary/20 hover:border-primary/40 transition-colors rounded-lg pl-2 pr-6 py-1 text-xs text-primary/80 outline-none appearance-none cursor-pointer disabled:opacity-50"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgb(244 228 186 / 0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 6px center',
+                }}
+              >
+                <option value="self">나 (본인)</option>
+                {familyMembers?.map((member) => (
+                  <option key={member.id} value={member.id} className="bg-surface text-foreground">
+                    {member.name} ({member.relation})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -392,15 +482,39 @@ export function ShamanChatInterface() {
         </div>
       </header>
 
+      {/* 새 대화 확인 배너 */}
+      <AnimatePresence>
+        {showNewChatConfirm && (
+          <NewChatConfirmBanner onConfirm={handleNewChat} onCancel={() => setShowNewChatConfirm(false)} />
+        )}
+      </AnimatePresence>
+
       {/* ── 채팅 영역 ── */}
       <div
         ref={chatRef}
         onScroll={handleScroll}
         className="relative z-10 flex-1 overflow-y-auto px-4 py-5 space-y-3 custom-scrollbar"
       >
+        {/* 세션 로딩 스켈레톤 */}
+        {isSessionLoading && (
+          <div className="flex flex-col gap-3 animate-pulse px-1 pt-2">
+            <div className="flex items-end gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-primary/8 flex-shrink-0" />
+              <div className="h-14 w-52 rounded-2xl rounded-bl-none bg-surface/50" />
+            </div>
+            <div className="flex justify-end">
+              <div className="h-9 w-36 rounded-2xl rounded-br-none bg-primary/5" />
+            </div>
+            <div className="flex items-end gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-primary/8 flex-shrink-0" />
+              <div className="h-20 w-60 rounded-2xl rounded-bl-none bg-surface/50" />
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="popLayout">
           {/* 웰컴 화면 */}
-          {messages.length === 0 && (
+          {!isSessionLoading && messages.length === 0 && (
             <motion.div
               key="welcome"
               initial={{ opacity: 0 }}
@@ -460,11 +574,12 @@ export function ShamanChatInterface() {
           )}
 
           {/* 메시지 목록 */}
-          {messages.map((msg, i) => {
-            const prev = messages[i - 1]
-            const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant')
-            return <Bubble key={i} msg={msg} showAvatar={showAvatar} />
-          })}
+          {!isSessionLoading &&
+            messages.map((msg, i) => {
+              const prev = messages[i - 1]
+              const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant')
+              return <Bubble key={`${msg.timestamp}-${i}`} msg={msg} showAvatar={showAvatar} />
+            })}
 
           {/* 타이핑 */}
           {isLoading && (
@@ -513,7 +628,6 @@ export function ShamanChatInterface() {
               value={inputMessage}
               onChange={(e) => {
                 setInputMessage(e.target.value)
-                // 자동 높이 조절
                 e.target.style.height = 'auto'
                 e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
               }}
@@ -524,7 +638,7 @@ export function ShamanChatInterface() {
                 }
               }}
               placeholder={isLimitReached ? '질문 한도 소진 · 충전해주세요' : '고민을 편하게 적어주세요...'}
-              disabled={isLoading || isLimitReached}
+              disabled={isLoading || isLimitReached || isSessionLoading}
               rows={1}
               className={cn(
                 'w-full resize-none overflow-hidden',
@@ -543,11 +657,11 @@ export function ShamanChatInterface() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => handleSend()}
-            disabled={isLoading || !inputMessage.trim() || isLimitReached}
+            disabled={isLoading || !inputMessage.trim() || isLimitReached || isSessionLoading}
             className={cn(
               'flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center',
               'transition-all duration-200',
-              inputMessage.trim() && !isLoading && !isLimitReached
+              inputMessage.trim() && !isLoading && !isLimitReached && !isSessionLoading
                 ? 'bg-gradient-to-br from-primary to-primary-dim text-ink-950 shadow-[0_0_16px_rgba(244,228,186,0.2)]'
                 : 'bg-surface/40 border border-primary/10 text-primary/30'
             )}

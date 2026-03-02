@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 
 export type TrendType = 'love' | 'career' | 'exam' | 'estate'
 
@@ -56,18 +57,6 @@ async function getRecentTrendAnalysis(
   const supabase = await createClient()
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - cacheDays)
-
-  const { data } = await supabase
-    .from('analysis_history')
-    .select('result_json')
-    .eq('target_id', targetId)
-    .eq('category', 'TODAY')
-    .gte('created_at', cutoff.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(20)
-    .maybeSingle()
-
-  if (!data?.result_json) return null
 
   // 여러 결과 중 trendType이 일치하는 것 찾기
   const { data: rows } = await supabase
@@ -131,7 +120,6 @@ export async function analyzeTrendAction(
       exam: 'TREND_EXAM',
       estate: 'TREND_WEALTH',
     } as const
-    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
     const { prompt } = await buildMasterPromptForAction(
       {
         name: target.name,

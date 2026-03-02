@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import html2canvas from 'html2canvas'
 import { Button } from '@/components/ui/button'
 import { Download, Share2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -29,6 +28,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
 
     try {
       await document.fonts.ready // Wait for fonts
+      const html2canvas = (await import('html2canvas')).default
       const canvas = await html2canvas(cardRef.current, {
         scale: 2, // Retina quality
         backgroundColor: '#0A0A0A', // Force background
@@ -74,9 +74,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
 
           {/* Header */}
           <div className="relative z-10 space-y-2">
-            <p className="text-[#D4AF37] font-serif text-lg tracking-[0.3em] uppercase opacity-80">
-              Haehwadang
-            </p>
+            <p className="text-[#D4AF37] font-serif text-lg tracking-[0.3em] uppercase opacity-80">Haehwadang</p>
             <h1 className="text-4xl font-serif font-bold text-white tracking-widest">청담해화당</h1>
           </div>
 
@@ -91,9 +89,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
                 <span className="text-[120px] font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-[#D4AF37] to-[#8C7B50] drop-shadow-2xl">
                   {data.score}
                 </span>
-                <span className="absolute top-4 -right-8 text-2xl font-bold text-[#D4AF37]/50">
-                  점
-                </span>
+                <span className="absolute top-4 -right-8 text-2xl font-bold text-[#D4AF37]/50">점</span>
               </div>
             ) : data.keyword ? (
               <h2 className="text-[80px] font-serif font-black text-[#D4AF37] leading-none my-8 drop-shadow-lg break-keep">
@@ -103,9 +99,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
 
             <div className="space-y-4 max-w-md">
               <p className="text-2xl text-white font-bold">&quot;{data.name}&quot;님의 운세</p>
-              <p className="text-lg text-white/70 leading-relaxed font-serif break-keep">
-                {data.description}
-              </p>
+              <p className="text-lg text-white/70 leading-relaxed font-serif break-keep">{data.description}</p>
             </div>
           </div>
 
@@ -113,9 +107,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
           <div className="relative z-10 w-full pt-8 border-t border-white/10 flex justify-between items-end">
             <div className="text-left">
               <p className="text-[#D4AF37]/60 text-sm font-serif">Premium Oriental Fortune</p>
-              <p className="text-white/30 text-xs mt-1">
-                {data.date || new Date().toLocaleDateString()}
-              </p>
+              <p className="text-white/30 text-xs mt-1">{data.date || new Date().toLocaleDateString()}</p>
             </div>
             <div className="w-16 h-16 rounded-full border border-[#D4AF37]/30 flex items-center justify-center bg-[#D4AF37]/5">
               <Sparkles className="w-8 h-8 text-[#D4AF37]" />

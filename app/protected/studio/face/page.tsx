@@ -13,8 +13,12 @@ import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Eye, Sparkles, Crown, Star } from 'lucide-react'
+import { ArrowRight, Coins, Eye, Sparkles, Crown, Star, TrendingUp } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
+import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -39,6 +43,8 @@ function FaceAnalysisPageContent() {
   const [analysisResult, setAnalysisResult] = useState<FaceAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
+  const { checkQuota, paywallProps } = useAnalysisQuota()
 
   useEffect(() => {
     getWalletBalance().then(setBalance)
@@ -59,15 +65,23 @@ function FaceAnalysisPageContent() {
       return
     }
 
+    const canProceed = await checkQuota()
+    if (!canProceed) return
+
     setLoading(true)
     setStep('analyzing')
 
     try {
       const deductResult = await deductTalisman('FACE', FACE_COST)
       if (!deductResult.success) {
-        toast.error(deductResult.error || '복채가 부족합니다.')
         setLoading(false)
         setStep('upload')
+        const handled = handleDeductResult(deductResult, {
+          currentBalance: balance ?? 0,
+          requiredAmount: FACE_COST,
+          featureLabel: '관상 분석',
+        })
+        if (!handled) toast.error(deductResult.error || '복채가 부족합니다.')
         return
       }
 
@@ -111,6 +125,8 @@ function FaceAnalysisPageContent() {
 
   return (
     <StudioAnalysisLayout category="FACE" targetMember={targetMember}>
+      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+      <PaywallModal {...paywallProps} />
       <AnimatePresence mode="wait">
         {step === 'upload' && (
           <motion.div
@@ -260,6 +276,109 @@ function FaceAnalysisPageContent() {
                 <p className="relative text-xs text-white/30 font-sans">신뢰도 {analysisResult.confidence}%</p>
               </div>
 
+              {/* 부위별 상세 분석 */}
+              {analysisResult.partAnalysis && Object.values(analysisResult.partAnalysis).some(Boolean) && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Eye className="w-4 h-4 text-[#D4AF37]" />
+                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">부위별 심층 분석</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      {
+                        key: 'forehead',
+                        label: '이마 (天庭)',
+                        subtitle: '초년운·지능·부모복',
+                        data: analysisResult.partAnalysis.forehead,
+                      },
+                      {
+                        key: 'eyes',
+                        label: '눈 (監察官)',
+                        subtitle: '인간관계·이성운',
+                        data: analysisResult.partAnalysis.eyes,
+                      },
+                      {
+                        key: 'nose',
+                        label: '코 (財帛宮)',
+                        subtitle: '재물운·건강·자존심',
+                        data: analysisResult.partAnalysis.nose,
+                      },
+                      {
+                        key: 'mouth',
+                        label: '입 (出納官)',
+                        subtitle: '식복·표현력·노년운',
+                        data: analysisResult.partAnalysis.mouth,
+                      },
+                      {
+                        key: 'ears',
+                        label: '귀 (採聽官)',
+                        subtitle: '명예·건강·장수',
+                        data: analysisResult.partAnalysis.ears,
+                      },
+                      {
+                        key: 'chin',
+                        label: '턱 (地閣)',
+                        subtitle: '만년운·부동산운',
+                        data: analysisResult.partAnalysis.chin,
+                      },
+                    ]
+                      .filter((f) => f.data)
+                      .map((f, i) => (
+                        <PartFeatureCard
+                          key={f.key}
+                          label={f.label}
+                          subtitle={f.subtitle}
+                          score={f.data!.score}
+                          description={f.data!.description}
+                          fortuneArea={f.data!.fortuneArea}
+                          advice={f.data!.advice}
+                          index={i}
+                        />
+                      ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* 운세별 종합 점수 */}
+              {analysisResult.overallFortuneScores && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
+                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">운세별 종합 점수</h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {[
+                      { label: '재물운', value: analysisResult.overallFortuneScores.wealth, icon: '💰' },
+                      { label: '직업·명예운', value: analysisResult.overallFortuneScores.career, icon: '👑' },
+                      { label: '연애운', value: analysisResult.overallFortuneScores.love, icon: '🌸' },
+                      { label: '건강운', value: analysisResult.overallFortuneScores.health, icon: '🌿' },
+                      { label: '가족·부모복', value: analysisResult.overallFortuneScores.family, icon: '🏠' },
+                    ].map((item, idx) => (
+                      <motion.div
+                        key={item.label}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.07 }}
+                        className="flex items-center gap-3"
+                      >
+                        <span className="text-base w-5 shrink-0">{item.icon}</span>
+                        <span className="text-xs text-white/50 font-sans w-20 shrink-0">{item.label}</span>
+                        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.value}%` }}
+                            transition={{ duration: 1, delay: idx * 0.1 + 0.3 }}
+                            className="h-full rounded-full"
+                            style={{ background: 'linear-gradient(90deg, #C9A227, #F4E4BA)' }}
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-[#D4AF37] font-serif w-8 text-right">{item.value}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
               {/* 오관 분석 */}
               {analysisResult.facialFeatures && (
                 <Card className="card-glass-manse p-5 border-white/5">
@@ -347,6 +466,90 @@ function FaceAnalysisPageContent() {
         )}
       </AnimatePresence>
     </StudioAnalysisLayout>
+  )
+}
+
+function PartFeatureCard({
+  label,
+  subtitle,
+  score,
+  description,
+  fortuneArea,
+  advice,
+  index,
+}: {
+  label: string
+  subtitle: string
+  score: number
+  description: string
+  fortuneArea: string
+  advice: string
+  index: number
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const color = score >= 8 ? '#D4AF37' : score >= 6 ? '#A8C5DA' : '#E8A0A0'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.08 }}
+      className="rounded-xl border border-white/5 bg-white/3 overflow-hidden"
+    >
+      <button onClick={() => setExpanded((v) => !v)} className="w-full p-3.5 text-left">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <span className="text-sm font-serif font-bold" style={{ color }}>
+              {label}
+            </span>
+            <span className="text-[10px] text-white/30 ml-2 font-sans">{subtitle}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-white/80">
+              {score}
+              <span className="text-xs text-white/30">/10</span>
+            </span>
+            <span className="text-[10px] text-white/30">{expanded ? '▲' : '▼'}</span>
+          </div>
+        </div>
+        <p className="text-xs text-white/45 leading-relaxed font-sans font-light line-clamp-2">{description}</p>
+        <div className="mt-2.5 h-1 bg-white/5 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${(score / 10) * 100}%` }}
+            className="h-full rounded-full"
+            style={{ background: `linear-gradient(90deg, ${color}80, ${color})` }}
+            transition={{ duration: 0.9, delay: index * 0.1 + 0.3 }}
+          />
+        </div>
+      </button>
+      <AnimatePresence>
+        {expanded && (fortuneArea || advice) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="border-t border-white/5 overflow-hidden"
+          >
+            <div className="p-3.5 space-y-2">
+              {fortuneArea && (
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-[#D4AF37]/60 font-sans shrink-0 mt-0.5">운세</span>
+                  <span className="text-xs text-white/50 font-sans font-light leading-relaxed">{fortuneArea}</span>
+                </div>
+              )}
+              {advice && (
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] text-[#D4AF37]/60 font-sans shrink-0 mt-0.5">개운</span>
+                  <span className="text-xs text-[#D4AF37]/70 font-sans font-light leading-relaxed">{advice}</span>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
 

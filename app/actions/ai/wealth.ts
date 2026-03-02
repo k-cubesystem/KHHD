@@ -7,8 +7,7 @@ import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry } from '@/app/actions/fortune/fortune'
 import { logger } from '@/lib/utils/logger'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 
 interface WealthAnalysisParams {
   memberId: string
@@ -58,7 +57,6 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     }
 
     // 5. 해화지기 마스터 엔진으로 프롬프트 조립 (재물 심층 - 산문 출력)
-    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
     const { prompt } = await buildMasterPromptForAction(
       {
         name: member.name,
@@ -76,6 +74,9 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     )
 
     // 6. Gemini AI 호출
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    if (!apiKey) throw new Error('Google Generative AI API Key is missing')
+    const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,

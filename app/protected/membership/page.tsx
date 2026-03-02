@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getMembershipPlans, getSubscriptionStatus } from '@/app/actions/payment/subscription'
-import { getActivePlans, getCurrentUserRole } from '@/app/actions/products'
+import { getActivePlans, getCurrentUserRole } from '@/app/actions/payment/products'
 import { MembershipTabs } from '@/components/membership/membership-tabs'
 import { TalismanPurchaseSection } from '@/components/membership/talisman-purchase-section'
 import { Crown, Check, ArrowLeft, Sparkles } from 'lucide-react'
@@ -60,9 +60,7 @@ export default async function MembershipPage() {
         <div className="text-center mb-8 space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full">
             <Crown className="w-4 h-4 text-primary" strokeWidth={1} />
-            <span className="text-primary font-serif font-light text-xs tracking-wide">
-              Premium Membership
-            </span>
+            <span className="text-primary font-serif font-light text-xs tracking-wide">Premium Membership</span>
           </div>
 
           <h1 className="text-2xl md:text-3xl font-serif font-light text-white leading-tight">
@@ -75,9 +73,7 @@ export default async function MembershipPage() {
             {BRAND_QUOTES.membership.hero}
           </BrandQuote>
 
-          <p className="text-white/60 text-sm leading-relaxed font-light">
-            1분이면 가입 완료됩니다.
-          </p>
+          <p className="text-white/60 text-sm leading-relaxed font-light">1분이면 가입 완료됩니다.</p>
         </div>
 
         {/* Guest Notice */}
@@ -97,11 +93,7 @@ export default async function MembershipPage() {
 
         {/* Talisman Top-up Section */}
         <div className="mb-12">
-          <TalismanPurchaseSection
-            initialPlans={talismanPlans}
-            userRole={userRole}
-            memberId={user?.id || ''}
-          />
+          <TalismanPurchaseSection initialPlans={talismanPlans} userRole={userRole} memberId={user?.id || ''} />
         </div>
 
         {/* Common Benefits */}

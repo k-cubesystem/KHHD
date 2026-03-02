@@ -7,7 +7,6 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'Supabase Service Role Key가 필요합니다').optional(),
 
   // AI Services
-  NEXT_PUBLIC_GEMINI_API_KEY: z.string().min(1, 'Gemini API Key가 필요합니다').optional(),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1, 'Google Generative AI API Key가 필요합니다').optional(),
   OPENAI_API_KEY: z.string().min(1, 'OpenAI API Key가 필요합니다').optional(),
 

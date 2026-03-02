@@ -8,7 +8,7 @@
  * 2. api-wait — 0→98% 에서 정지, isApiComplete=true 되면 98→100% 후 onComplete 호출 (천지인종합)
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SAJU_LOADING_MESSAGES } from '@/lib/constants/saju-messages'
 
@@ -32,6 +32,7 @@ export function SajuLoadingOverlay({
   const [msgVisible, setMsgVisible] = useState(true)
   const [progress, setProgress] = useState(0)
   const [finishing, setFinishing] = useState(false)
+  const progressBarRef = useRef<HTMLDivElement>(null)
 
   const handleComplete = useCallback(() => {
     if (finishing) return
@@ -53,7 +54,7 @@ export function SajuLoadingOverlay({
     return () => clearInterval(interval)
   }, [])
 
-  // 진행바: 0 → 98% (duration ms 동안)
+  // 진행바: 0 → 98% (duration ms 동안) — ref로 DOM 직접 조작해 리렌더 방지
   useEffect(() => {
     const start = Date.now()
     const target = 98
@@ -62,6 +63,9 @@ export function SajuLoadingOverlay({
     const frame = () => {
       const elapsed = Date.now() - start
       const p = Math.min((elapsed / duration) * target, target)
+      if (progressBarRef.current) {
+        progressBarRef.current.style.width = `${p}%`
+      }
       setProgress(p)
       if (p < target) {
         rafId = requestAnimationFrame(frame)
@@ -198,7 +202,8 @@ export function SajuLoadingOverlay({
         className="rounded-full overflow-hidden"
         style={{ width: '200px', height: '2px', background: 'rgba(255,255,255,0.06)' }}
       >
-        <motion.div
+        <div
+          ref={progressBarRef}
           className="h-full rounded-full"
           style={{
             width: `${displayProgress}%`,

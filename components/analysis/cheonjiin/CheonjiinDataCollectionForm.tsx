@@ -336,7 +336,17 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                   className="relative w-full h-52 rounded-xl overflow-hidden"
                   style={{ border: '1px solid rgba(212,175,55,0.3)' }}
                 >
-                  <img src={formData.faceImageUrl} alt="관상 사진" className="w-full h-full object-cover" />
+                  {/* base64 data: URI from FileReader — Next.js <Image> does not support data: URLs */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={formData.faceImageUrl}
+                    alt="관상 사진"
+                    width={600}
+                    height={208}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                   <div
                     className="absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-medium"
                     style={{ background: 'rgba(212,175,55,0.9)', color: '#0a0807' }}
@@ -396,7 +406,17 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                   className="relative w-full h-52 rounded-xl overflow-hidden"
                   style={{ border: '1px solid rgba(255,255,255,0.12)' }}
                 >
-                  <img src={formData.handImageUrl} alt="손금 사진" className="w-full h-full object-cover" />
+                  {/* base64 data: URI from FileReader — Next.js <Image> does not support data: URLs */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={formData.handImageUrl}
+                    alt="손금 사진"
+                    width={600}
+                    height={208}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                   <div
                     className="absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-medium"
                     style={{ background: 'rgba(255,255,255,0.8)', color: '#0a0807' }}

@@ -88,9 +88,7 @@ export async function checkInAttendance() {
 
     if (!existingWallet) {
       console.log(`[Attendance] Creating wallet for user ${user.id}`)
-      const { error: walletCreateError } = await supabase
-        .from('wallets')
-        .insert({ user_id: user.id, balance: 0 })
+      const { error: walletCreateError } = await supabase.from('wallets').insert({ user_id: user.id, balance: 0 })
 
       if (walletCreateError) {
         console.error('[Attendance] Failed to create wallet:', walletCreateError)
@@ -129,11 +127,7 @@ export async function checkInAttendance() {
       console.warn('[Attendance] RPC add_bokchae failed, using direct method:', rpcError)
 
       // RPC 실패 시 직접 처리
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .single()
+      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
       const currentBalance = wallet?.balance || 0
       const newBalance = currentBalance + totalReward
@@ -168,11 +162,7 @@ export async function checkInAttendance() {
     }
 
     // 4. 최종 검증: 복채가 실제로 지급되었는지 확인
-    const { data: finalWallet } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', user.id)
-      .single()
+    const { data: finalWallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
     console.log(`[Attendance] Final wallet balance: ${finalWallet?.balance}`)
 
@@ -257,5 +247,106 @@ export async function getWeeklyAttendance() {
     weekDays,
     weekCount: records?.length || 0,
     totalBokchae: records?.reduce((sum, r) => sum + r.bokchae_awarded, 0) || 0,
+  }
+}
+
+/**
+ * 이번 달 출석 현황 + 연속 출석 스트릭 조회
+ */
+export async function getMonthlyAttendance() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const emptyResult = {
+    success: false,
+    checkedDates: [] as string[],
+    monthTotal: 0,
+    consecutiveStreak: 0,
+    weekCount: 0,
+    totalBokchae: 0,
+    canCheckIn: false,
+  }
+
+  if (!user) return emptyResult
+
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+
+  const { data: monthRecords } = await supabase
+    .from('attendance_logs')
+    .select('checked_date, bokchae_awarded')
+    .eq('user_id', user.id)
+    .gte('checked_date', monthStart)
+    .lte('checked_date', monthEnd)
+    .order('checked_date', { ascending: true })
+
+  const checkedDates = monthRecords?.map((r) => r.checked_date) || []
+  const checkedSet = new Set(checkedDates)
+  const canCheckIn = !checkedSet.has(todayStr)
+
+  // 연속 출석 스트릭 계산 (오늘 또는 어제부터 역방향)
+  let streak = 0
+  const cursor = new Date(today)
+  // 오늘 아직 체크 안 했으면 어제부터 카운트
+  if (!checkedSet.has(todayStr)) {
+    cursor.setDate(cursor.getDate() - 1)
+  } else {
+    streak = 1
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  // 과거 최대 365일 탐색
+  for (let i = 0; i < 365; i++) {
+    const dateStr = cursor.toISOString().split('T')[0]
+    // 달이 바뀌어도 DB에서 모두 가져오려면 전체 조회 필요 — 이 함수에서는 월 범위 밖 날짜 처리를 위해
+    // 간단히 체크: 이번 달 범위 내라면 checkedSet 사용, 범위 밖이면 DB 추가 조회 없이 break
+    if (dateStr < monthStart) {
+      // 이전 달 날짜 — streak이 이미 월초까지 이어진 경우 추가 DB 조회
+      const { data: prevRecord } = await supabase
+        .from('attendance_logs')
+        .select('checked_date')
+        .eq('user_id', user.id)
+        .eq('checked_date', dateStr)
+        .maybeSingle()
+      if (prevRecord) {
+        streak++
+        cursor.setDate(cursor.getDate() - 1)
+      } else {
+        break
+      }
+    } else {
+      if (checkedSet.has(dateStr)) {
+        streak++
+        cursor.setDate(cursor.getDate() - 1)
+      } else {
+        break
+      }
+    }
+  }
+
+  // 이번 주 출석 수
+  const dayOfWeek = today.getDay()
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  const weekStart = new Date(today)
+  weekStart.setDate(today.getDate() - daysFromMonday)
+  const weekStartStr = weekStart.toISOString().split('T')[0]
+
+  const { data: weekRecords } = await supabase
+    .from('attendance_logs')
+    .select('checked_date')
+    .eq('user_id', user.id)
+    .eq('week_start', weekStartStr)
+
+  return {
+    success: true,
+    checkedDates,
+    monthTotal: checkedDates.length,
+    consecutiveStreak: streak,
+    weekCount: weekRecords?.length || 0,
+    totalBokchae: monthRecords?.reduce((sum, r) => sum + r.bokchae_awarded, 0) || 0,
+    canCheckIn,
   }
 }

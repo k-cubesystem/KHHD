@@ -1,8 +1,8 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
@@ -15,9 +15,10 @@ import {
   Menu,
   X,
   Shield,
-  Power
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+  Power,
+  Activity,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const ICON_MAP: Record<string, any> = {
   LayoutDashboard,
@@ -28,21 +29,22 @@ const ICON_MAP: Record<string, any> = {
   Bell,
   Sparkles,
   Power,
-};
+  Activity,
+}
 
 interface MenuItem {
-  href: string;
-  label: string;
-  icon: string;
+  href: string
+  label: string
+  icon: string
 }
 
 interface AdminLayoutClientProps {
-  children: React.ReactNode;
-  menuItems: MenuItem[];
+  children: React.ReactNode
+  menuItems: MenuItem[]
 }
 
 export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProps) {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950 text-stone-100 font-sans relative flex flex-col w-full max-w-[480px] mx-auto shadow-2xl overflow-hidden selection:bg-gold-500/30">
@@ -81,29 +83,40 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
         <div className="w-full overflow-x-auto no-scrollbar border-b border-gold-500/10 bg-ink-900/50">
           <div className="flex px-3 md:px-4 min-w-max pb-0.5">
             {menuItems.map((item) => {
-              const Icon = ICON_MAP[item.icon] || Sparkles;
-              const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+              const Icon = ICON_MAP[item.icon] || Sparkles
+              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-1 md:gap-1.5 px-3 md:px-4 py-2.5 md:py-3 min-w-[64px] md:min-w-[72px] relative group transition-all",
-                    isActive ? "opacity-100" : "opacity-60 hover:opacity-90"
+                    'flex flex-col items-center justify-center gap-1 md:gap-1.5 px-3 md:px-4 py-2.5 md:py-3 min-w-[64px] md:min-w-[72px] relative group transition-all',
+                    isActive ? 'opacity-100' : 'opacity-60 hover:opacity-90'
                   )}
                 >
-                  <div className={cn(
-                    "p-1.5 md:p-2 rounded-lg transition-all duration-300 relative overflow-hidden",
-                    isActive ? "bg-gradient-to-br from-gold-500 to-gold-600 text-ink-950 shadow-lg shadow-gold-500/30 scale-105" : "text-stone-400 bg-transparent group-hover:bg-stone-800/50"
-                  )}>
-                    {isActive && <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay" />}
-                    <Icon className={cn("w-4 h-4 md:w-5 md:h-5 relative", isActive && "drop-shadow-sm")} strokeWidth={isActive ? 2.5 : 2} />
+                  <div
+                    className={cn(
+                      'p-1.5 md:p-2 rounded-lg transition-all duration-300 relative overflow-hidden',
+                      isActive
+                        ? 'bg-gradient-to-br from-gold-500 to-gold-600 text-ink-950 shadow-lg shadow-gold-500/30 scale-105'
+                        : 'text-stone-400 bg-transparent group-hover:bg-stone-800/50'
+                    )}
+                  >
+                    {isActive && (
+                      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay" />
+                    )}
+                    <Icon
+                      className={cn('w-4 h-4 md:w-5 md:h-5 relative', isActive && 'drop-shadow-sm')}
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
                   </div>
-                  <span className={cn(
-                    "text-[9px] md:text-[10px] font-sans font-bold whitespace-nowrap transition-colors",
-                    isActive ? "text-gold-400" : "text-stone-500"
-                  )}>
+                  <span
+                    className={cn(
+                      'text-[9px] md:text-[10px] font-sans font-bold whitespace-nowrap transition-colors',
+                      isActive ? 'text-gold-400' : 'text-stone-500'
+                    )}
+                  >
                     {item.label}
                   </span>
 
@@ -112,7 +125,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-transparent via-gold-500 to-transparent rounded-t-full" />
                   )}
                 </Link>
-              );
+              )
             })}
           </div>
         </div>
@@ -120,11 +133,8 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 p-4 md:p-6 pb-20 md:pb-24">
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {children}
-        </div>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">{children}</div>
       </main>
-
     </div>
-  );
+  )
 }

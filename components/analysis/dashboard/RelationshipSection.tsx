@@ -25,13 +25,20 @@ export function RelationshipSection() {
         </p>
       </div>
 
-      <div className="relative z-10 pt-2 grid grid-cols-1">
+      <div className="relative z-10 pt-2 grid grid-cols-2 gap-2">
         <Button
           onClick={() => router.push('/protected/analysis/compatibility')}
           variant="outline"
           className="h-8 border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 bg-transparent text-xs font-light w-full"
         >
-          분석하기
+          인연 궁합
+        </Button>
+        <Button
+          onClick={() => router.push('/protected/analysis/celebrity-compatibility')}
+          variant="outline"
+          className="h-8 border-pink-400/30 text-pink-300 hover:bg-pink-400/10 bg-transparent text-xs font-light w-full"
+        >
+          ⭐ 스타 궁합
         </Button>
       </div>
     </Card>

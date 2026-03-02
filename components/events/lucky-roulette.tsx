@@ -31,34 +31,41 @@ const DEFAULT_SEGMENTS: RouletteSegment[] = [
   { label: '꽝', color: '#3D3A33' },
 ]
 
+// 파티클 랜덤값 — 모듈 레벨 상수 (렌더마다 재계산 방지)
+const COIN_PARTICLES = Array.from({ length: 24 }, () => ({
+  left: Math.random() * 100,
+  delay: Math.random() * 0.5,
+  duration: 1.5 + Math.random() * 1,
+  size: 12 + Math.random() * 14,
+  rotation: Math.random() * 360,
+}))
+
+const MISS_PARTICLES = Array.from({ length: 5 }, () => ({
+  y: -30 - Math.random() * 40,
+  x: (Math.random() - 0.5) * 80,
+}))
+
 // 코인 파티클 컴포넌트
 function CoinParticles({ count = 20 }: { count?: number }) {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-      {Array.from({ length: count }).map((_, i) => {
-        const left = Math.random() * 100
-        const delay = Math.random() * 0.5
-        const duration = 1.5 + Math.random() * 1
-        const size = 12 + Math.random() * 14
-        const rotation = Math.random() * 360
-        return (
-          <motion.div
-            key={i}
-            initial={{ y: '50%', x: `${left}%`, opacity: 1, scale: 0, rotate: 0 }}
-            animate={{
-              y: ['-10%', '110%'],
-              opacity: [0, 1, 1, 0],
-              scale: [0, 1.2, 1, 0.5],
-              rotate: [0, rotation, rotation * 2],
-            }}
-            transition={{ duration, delay, ease: 'easeOut' }}
-            className="absolute text-gold-400"
-            style={{ left: `${left}%`, fontSize: size }}
-          >
-            💰
-          </motion.div>
-        )
-      })}
+      {COIN_PARTICLES.slice(0, count).map((p, i) => (
+        <motion.div
+          key={i}
+          initial={{ y: '50%', x: `${p.left}%`, opacity: 1, scale: 0, rotate: 0 }}
+          animate={{
+            y: ['-10%', '110%'],
+            opacity: [0, 1, 1, 0],
+            scale: [0, 1.2, 1, 0.5],
+            rotate: [0, p.rotation, p.rotation * 2],
+          }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeOut' }}
+          className="absolute text-gold-400"
+          style={{ left: `${p.left}%`, fontSize: p.size }}
+        >
+          💰
+        </motion.div>
+      ))}
     </div>
   )
 }
@@ -67,15 +74,15 @@ function CoinParticles({ count = 20 }: { count?: number }) {
 function MissEffect() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-      {Array.from({ length: 5 }).map((_, i) => (
+      {MISS_PARTICLES.map((p, i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0, scale: 0 }}
           animate={{
             opacity: [0, 0.6, 0],
             scale: [0.5, 1.5],
-            y: [0, -30 - Math.random() * 40],
-            x: [0, (Math.random() - 0.5) * 80],
+            y: [0, p.y],
+            x: [0, p.x],
           }}
           transition={{ duration: 1.2, delay: i * 0.1 }}
           className="absolute top-1/2 left-1/2 text-2xl"

@@ -1,28 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sun, Star, Moon, Calendar, Sparkles, AlertCircle, RefreshCw, Zap } from 'lucide-react'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import type { DestinyTarget } from '@/app/actions/user/destiny'
-import {
-  analyzeFortuneAction,
-  type FortuneType,
-  type FortuneResult,
-} from '@/app/actions/ai/fortune-analysis'
+import { analyzeFortuneAction, type FortuneType, type FortuneResult } from '@/app/actions/ai/fortune-analysis'
 import { FortuneCalendar } from './fortune-calendar'
 import { FortuneDetailModal } from './fortune-detail-modal'
+import { FortuneImageGenerator } from '@/components/fortune/fortune-image-generator'
 
 interface FortuneClientProps {
   selfTarget: DestinyTarget | null
@@ -73,19 +66,12 @@ function ScoreBadge({ score }: { score: number }) {
 
 function FortuneResultView({ result }: { result: FortuneResult }) {
   return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      variants={staggerContainer}
-      className="space-y-4"
-    >
+    <motion.div initial="initial" animate="animate" variants={staggerContainer} className="space-y-4">
       {/* 점수 + 요약 */}
       <motion.div variants={fadeInUp}>
         <Card className="bg-surface/20 border-primary/20 card-glass-manse">
           <CardContent className="p-6 text-center space-y-3">
-            <p className="text-xs font-light text-ink-light/50 tracking-widest uppercase">
-              {result.period}
-            </p>
+            <p className="text-xs font-light text-ink-light/50 tracking-widest uppercase">{result.period}</p>
             <ScoreBadge score={result.score} />
             <p className="text-base font-serif font-light text-primary">{result.summary}</p>
           </CardContent>
@@ -98,9 +84,7 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-primary" strokeWidth={1} />
-              <span className="text-xs font-light text-primary tracking-widest uppercase">
-                전체 운세 흐름
-              </span>
+              <span className="text-xs font-light text-primary tracking-widest uppercase">전체 운세 흐름</span>
             </div>
             <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.overall}</p>
           </CardContent>
@@ -113,20 +97,14 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
           <CardContent className="p-5 space-y-5">
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 text-primary" strokeWidth={1} />
-              <span className="text-xs font-light text-primary tracking-widest uppercase">
-                영역별 분석
-              </span>
+              <span className="text-xs font-light text-primary tracking-widest uppercase">영역별 분석</span>
             </div>
             {result.areas.map((area) => (
               <div key={area.name} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    {AREA_ICONS[area.name] ?? (
-                      <Star className="w-4 h-4 text-primary" strokeWidth={1.5} />
-                    )}
-                    <span className="text-sm font-serif font-light text-ink-light">
-                      {area.name}
-                    </span>
+                    {AREA_ICONS[area.name] ?? <Star className="w-4 h-4 text-primary" strokeWidth={1.5} />}
+                    <span className="text-sm font-serif font-light text-ink-light">{area.name}</span>
                   </div>
                   <span className="text-sm font-light text-primary">{area.score}점</span>
                 </div>
@@ -136,9 +114,7 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
                     style={{ width: `${area.score}%` }}
                   />
                 </div>
-                <p className="text-xs font-light text-ink-light/60 leading-relaxed">
-                  {area.content}
-                </p>
+                <p className="text-xs font-light text-ink-light/60 leading-relaxed">{area.content}</p>
               </div>
             ))}
           </CardContent>
@@ -151,33 +127,20 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-primary" strokeWidth={1} />
-              <span className="text-xs font-light text-primary tracking-widest uppercase">
-                행운 키워드
-              </span>
+              <span className="text-xs font-light text-primary tracking-widest uppercase">행운 키워드</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge
-                variant="outline"
-                className="border-primary/30 text-primary font-light text-xs"
-              >
+              <Badge variant="outline" className="border-primary/30 text-primary font-light text-xs">
                 🎨 {result.lucky.color}
               </Badge>
-              <Badge
-                variant="outline"
-                className="border-primary/30 text-primary font-light text-xs"
-              >
+              <Badge variant="outline" className="border-primary/30 text-primary font-light text-xs">
                 🔢 {result.lucky.number}
               </Badge>
-              <Badge
-                variant="outline"
-                className="border-primary/30 text-primary font-light text-xs"
-              >
+              <Badge variant="outline" className="border-primary/30 text-primary font-light text-xs">
                 🧭 {result.lucky.direction}
               </Badge>
             </div>
-            <p className="text-xs font-light text-ink-light/70 leading-relaxed">
-              {result.lucky.advice}
-            </p>
+            <p className="text-xs font-light text-ink-light/70 leading-relaxed">{result.lucky.advice}</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -188,9 +151,7 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-yellow-400" strokeWidth={1} />
-              <span className="text-xs font-light text-yellow-400 tracking-widest uppercase">
-                주의사항
-              </span>
+              <span className="text-xs font-light text-yellow-400 tracking-widest uppercase">주의사항</span>
             </div>
             <p className="text-xs font-light text-ink-light/70 leading-relaxed">{result.caution}</p>
           </CardContent>
@@ -202,6 +163,7 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
 
 function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | null }) {
   const config = TAB_CONFIG.find((t) => t.value === type)!
+  const { checkQuota, paywallProps } = useAnalysisQuota()
   const [state, setState] = useState<
     | { status: 'idle' }
     | { status: 'loading' }
@@ -215,6 +177,8 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
 
   async function handleAnalyze() {
     if (!targetId) return
+    const canProceed = await checkQuota()
+    if (!canProceed) return
     setState({ status: 'loading' })
     const res = await analyzeFortuneAction(targetId, type)
     if (res.success && res.data) {
@@ -241,11 +205,7 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
           </p>
         </div>
 
-        <FortuneDetailModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          date={selectedDate}
-        />
+        <FortuneDetailModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} date={selectedDate} />
       </div>
     )
   }
@@ -289,9 +249,7 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
     return (
       <div className="space-y-3">
         {state.cached && (
-          <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">
-            캐시된 결과입니다
-          </p>
+          <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">캐시된 결과입니다</p>
         )}
         <FortuneResultView result={state.result} />
         <Button
@@ -309,31 +267,34 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
 
   // idle
   return (
-    <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-      <Card className="bg-surface/20 border-primary/20 card-glass-manse">
-        <CardContent className="p-8 flex flex-col items-center gap-5">
-          <div className="w-14 h-14 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-            {config.icon}
-          </div>
-          <div className="text-center space-y-1">
-            <h3 className="text-lg font-serif font-light text-ink-light">{config.emptyTitle}</h3>
-            <p className="text-sm text-ink-light/50 font-light">{config.emptyDesc}</p>
-          </div>
-          {!targetId ? (
-            <p className="text-xs text-ink-light/40 font-light">사주 정보를 먼저 입력해주세요.</p>
-          ) : (
-            <Button
-              onClick={handleAnalyze}
-              className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-light text-sm"
-              variant="outline"
-            >
-              <Sparkles className="w-4 h-4 mr-2" strokeWidth={1.5} />
-              분석하기
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
+    <>
+      <motion.div initial="initial" animate="animate" variants={fadeInUp}>
+        <Card className="bg-surface/20 border-primary/20 card-glass-manse">
+          <CardContent className="p-8 flex flex-col items-center gap-5">
+            <div className="w-14 h-14 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+              {config.icon}
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-serif font-light text-ink-light">{config.emptyTitle}</h3>
+              <p className="text-sm text-ink-light/50 font-light">{config.emptyDesc}</p>
+            </div>
+            {!targetId ? (
+              <p className="text-xs text-ink-light/40 font-light">사주 정보를 먼저 입력해주세요.</p>
+            ) : (
+              <Button
+                onClick={handleAnalyze}
+                className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-light text-sm"
+                variant="outline"
+              >
+                <Sparkles className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                분석하기
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+      <PaywallModal {...paywallProps} />
+    </>
   )
 }
 
@@ -379,6 +340,16 @@ export function FortuneClient({ selfTarget, targets }: FortuneClientProps) {
             </Select>
           </motion.div>
         )}
+
+        {/* 운세 이미지 생성 */}
+        <FortuneImageGenerator
+          context={{
+            mainFortune: '재물운',
+            year: new Date().getFullYear(),
+            month: new Date().getMonth() + 1,
+          }}
+          defaultType="card"
+        />
 
         {/* 탭 */}
         <Tabs defaultValue="today" className="w-full">

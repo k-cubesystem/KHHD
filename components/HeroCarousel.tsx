@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { BLUR_DATA_URL } from '@/lib/utils/image'
 import { ArrowRight, Flower } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -114,8 +115,11 @@ export function HeroCarousel() {
               fill
               // 첫 슬라이드(LCP)만 즉시 로드, 나머지는 지연 로드
               priority={index === 0}
+              loading={index === 0 ? 'eager' : 'lazy'}
               quality={75}
               sizes="100vw"
+              placeholder="blur"
+              blurDataURL={BLUR_DATA_URL}
               className="object-cover object-center transition-transform duration-[20000ms] hover:scale-105"
             />
           </div>

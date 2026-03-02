@@ -15,6 +15,8 @@ import {
   palmAnalysisSchema,
   fengshuiAnalysisSchema,
 } from '@/lib/validations/analysis'
+import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { getCachedAnalysis } from '@/lib/utils/analysis-cache'
 
 // --- Helpers ---
 
@@ -78,7 +80,8 @@ export async function analyzeSajuDetail(
   birthDate: string,
   birthTime: string,
   calendarType: string,
-  saveToHistory: boolean = true // Added flag
+  saveToHistory: boolean = true, // Added flag
+  forceRefresh: boolean = false // bypass cache when user explicitly requests new analysis
 ) {
   console.log(`[AI Saju] Starting analysis for ${name} (${gender})`)
 
@@ -107,6 +110,15 @@ export async function analyzeSajuDetail(
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
+    // --- 캐시 확인 (force_refresh가 아닐 때만) ---
+    if (!forceRefresh) {
+      const cached = await getCachedAnalysis(user.id, user.id, 'SAJU')
+      if (cached) {
+        console.log(`[AI Saju] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
+        return { success: true, ...cached.result_json, cached: true, cachedAt: cached.created_at }
+      }
+    }
+
     // Rate limiting: 1분에 10회
     const rateLimitResult = await rateLimit(`ai-saju:${user.id}`, {
       interval: 60 * 1000,
@@ -121,13 +133,13 @@ export async function analyzeSajuDetail(
       }
     }
 
-    const { context: userContext, profile } = await getUserProfileContext(supabase, user.id)
-
-    const deductResult = await deductTalisman('SAJU_BASIC')
+    const [{ context: userContext, profile }, deductResult] = await Promise.all([
+      getUserProfileContext(supabase, user.id),
+      deductTalisman('SAJU_BASIC'),
+    ])
     if (!deductResult.success) return deductResult
 
     // 해화지기 마스터 엔진으로 프롬프트 조립
-    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
     const { prompt } = await buildMasterPromptForAction(
       {
         name,
@@ -232,9 +244,10 @@ export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDesti
       }
     }
 
-    const { context: userContext, profile } = await getUserProfileContext(supabase, user.id)
-
-    const deductResult = await deductTalisman('FACE_AI')
+    const [{ context: userContext, profile }, deductResult] = await Promise.all([
+      getUserProfileContext(supabase, user.id),
+      deductTalisman('FACE_AI'),
+    ])
     if (!deductResult.success) return { success: false, error: deductResult.error }
 
     const goalPrompts = {
@@ -335,9 +348,10 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
       }
     }
 
-    const { context: userContext, profile } = await getUserProfileContext(supabase, user.id)
-
-    const deductResult = await deductTalisman('PALM_AI')
+    const [{ context: userContext, profile }, deductResult] = await Promise.all([
+      getUserProfileContext(supabase, user.id),
+      deductTalisman('PALM_AI'),
+    ])
     if (!deductResult.success) return deductResult
 
     const prompt = `
@@ -437,9 +451,10 @@ export async function analyzeInteriorForFengshui(
       }
     }
 
-    const { context: userContext, profile } = await getUserProfileContext(supabase, user.id)
-
-    const deductResult = await deductTalisman('FENGSHUI_AI')
+    const [{ context: userContext, profile }, deductResult] = await Promise.all([
+      getUserProfileContext(supabase, user.id),
+      deductTalisman('FENGSHUI_AI'),
+    ])
     if (!deductResult.success) return deductResult
 
     const prompt = `
@@ -504,9 +519,6 @@ export async function analyzeInteriorForFengshui(
  * This ensures the build passes and the feature works visually for the user.
  */
 export async function generateDestinyImage(prompt: string, context: string = 'interior') {
-  // 50% chance of success simulation (mocking API latency)
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
   try {
     const supabase = await createClient()
     const {

@@ -8,13 +8,35 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
-import { analyzeInteriorForFengshui, type InteriorAnalysisResult, type InteriorTheme } from '@/app/actions/ai/image'
+import {
+  analyzeInteriorForFengshui,
+  type InteriorAnalysisResult,
+  type InteriorTheme,
+  type DirectionAnalysis,
+  type RoomRecommendation,
+  type PlacementSuggestion,
+} from '@/app/actions/ai/image'
 import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Compass, AlertTriangle, ShoppingBag, Sparkles, Wind } from 'lucide-react'
+import {
+  ArrowRight,
+  Coins,
+  Compass,
+  AlertTriangle,
+  ShoppingBag,
+  Sparkles,
+  Wind,
+  MapPin,
+  Home,
+  Layers,
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
+import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -42,6 +64,8 @@ function FengShuiAnalysisPageContent() {
   const [analysisResult, setAnalysisResult] = useState<InteriorAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
+  const { checkQuota, paywallProps } = useAnalysisQuota()
 
   useEffect(() => {
     getWalletBalance().then(setBalance)
@@ -62,15 +86,23 @@ function FengShuiAnalysisPageContent() {
       return
     }
 
+    const canProceed = await checkQuota()
+    if (!canProceed) return
+
     setLoading(true)
     setStep('analyzing')
 
     try {
       const deductResult = await deductTalisman('FENGSHUI', FENGSHUI_COST)
       if (!deductResult.success) {
-        toast.error(deductResult.error || '복채가 부족합니다.')
         setLoading(false)
         setStep('upload')
+        const handled = handleDeductResult(deductResult, {
+          currentBalance: balance ?? 0,
+          requiredAmount: FENGSHUI_COST,
+          featureLabel: '풍수 분석',
+        })
+        if (!handled) toast.error(deductResult.error || '복채가 부족합니다.')
         return
       }
 
@@ -116,6 +148,8 @@ function FengShuiAnalysisPageContent() {
 
   return (
     <StudioAnalysisLayout category="FENGSHUI" targetMember={targetMember}>
+      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+      <PaywallModal {...paywallProps} />
       <AnimatePresence mode="wait">
         {step === 'upload' && (
           <motion.div
@@ -244,18 +278,104 @@ function FengShuiAnalysisPageContent() {
               >
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12),transparent_70%)]" />
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
-                <div className="relative flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-                    <Compass className="w-6 h-6 text-[#D4AF37]" />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
+                      <Compass className="w-6 h-6 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] tracking-[0.25em] text-[#D4AF37]/50 uppercase font-sans">
+                        공간 풍수 분석
+                      </p>
+                      <p className="text-lg font-serif font-bold text-[#D4AF37]">{selectedRoom} 풍수 진단</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] tracking-[0.25em] text-[#D4AF37]/50 uppercase font-sans">
-                      공간 풍수 분석
-                    </p>
-                    <p className="text-lg font-serif font-bold text-[#D4AF37]">{selectedRoom} 풍수 진단</p>
-                  </div>
+                  {analysisResult.overallQiScore !== undefined && (
+                    <div className="text-right">
+                      <p className="text-[10px] text-[#D4AF37]/40 font-sans">기운 점수</p>
+                      <p
+                        className="text-3xl font-serif font-bold"
+                        style={{
+                          background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                        }}
+                      >
+                        {analysisResult.overallQiScore}
+                      </p>
+                    </div>
+                  )}
                 </div>
+                {(analysisResult.dominantElement || analysisResult.luckyDirection) && (
+                  <div className="relative mt-4 flex gap-3">
+                    {analysisResult.dominantElement && (
+                      <div className="flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1">
+                        <span className="text-[10px] text-white/30 font-sans">지배오행</span>
+                        <span className="text-xs font-bold text-[#D4AF37] font-serif">
+                          {analysisResult.dominantElement}
+                        </span>
+                      </div>
+                    )}
+                    {analysisResult.luckyDirection && (
+                      <div className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full px-3 py-1">
+                        <span className="text-[10px] text-white/30 font-sans">길한 방위</span>
+                        <span className="text-xs font-bold text-[#D4AF37] font-serif">
+                          {analysisResult.luckyDirection}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {/* 8방위 길흉 분석 */}
+              {analysisResult.directionalAnalysis && analysisResult.directionalAnalysis.length > 0 && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MapPin className="w-4 h-4 text-[#D4AF37]" />
+                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">
+                      8방위(八方位) 길흉 분석
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {analysisResult.directionalAnalysis.map((dir, idx) => (
+                      <DirectionCard key={idx} dir={dir} index={idx} />
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* 공간별 맞춤 추천 */}
+              {analysisResult.roomRecommendations && analysisResult.roomRecommendations.length > 0 && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Home className="w-4 h-4 text-[#D4AF37]" />
+                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">공간별 맞춤 추천</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {analysisResult.roomRecommendations.map((room, idx) => (
+                      <RoomRecommendationCard key={idx} room={room} index={idx} />
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* 배치 제안 */}
+              {analysisResult.placementSuggestions && analysisResult.placementSuggestions.length > 0 && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Layers className="w-4 h-4 text-[#D4AF37]" />
+                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">
+                      가구·화분·수석 배치 제안
+                    </h3>
+                  </div>
+                  <div className="space-y-2.5">
+                    {analysisResult.placementSuggestions.map((p, idx) => (
+                      <PlacementCard key={idx} placement={p} index={idx} />
+                    ))}
+                  </div>
+                </Card>
+              )}
 
               {/* 풍수적 문제점 */}
               {analysisResult.problems && analysisResult.problems.length > 0 && (
@@ -345,6 +465,163 @@ function FengShuiAnalysisPageContent() {
         )}
       </AnimatePresence>
     </StudioAnalysisLayout>
+  )
+}
+
+function DirectionCard({ dir, index }: { dir: DirectionAnalysis; index: number }) {
+  const fortuneColor = dir.fortune === 'good' ? '#D4AF37' : dir.fortune === 'bad' ? '#E8A0A0' : '#A8C5DA'
+  const fortuneBg =
+    dir.fortune === 'good'
+      ? 'rgba(212,175,55,0.08)'
+      : dir.fortune === 'bad'
+        ? 'rgba(232,160,160,0.08)'
+        : 'rgba(168,197,218,0.08)'
+  const fortuneBorder =
+    dir.fortune === 'good'
+      ? 'rgba(212,175,55,0.2)'
+      : dir.fortune === 'bad'
+        ? 'rgba(232,160,160,0.2)'
+        : 'rgba(168,197,218,0.15)'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.06 }}
+      className="rounded-xl p-3 border"
+      style={{ background: fortuneBg, borderColor: fortuneBorder }}
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm font-serif font-bold" style={{ color: fortuneColor }}>
+          {dir.direction}
+        </span>
+        <div className="flex items-center gap-1">
+          <span
+            className="text-[10px] font-sans px-1.5 py-0.5 rounded-full"
+            style={{ background: fortuneBg, color: fortuneColor, border: `1px solid ${fortuneBorder}` }}
+          >
+            {dir.fortuneLabel}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 mb-2">
+        <span className="text-[10px] text-white/30 font-sans">오행</span>
+        <span className="text-[10px] font-bold font-serif" style={{ color: fortuneColor }}>
+          {dir.element}
+        </span>
+      </div>
+      {dir.recommendation && (
+        <p className="text-[10px] text-white/50 font-sans font-light leading-relaxed line-clamp-2">
+          추천: {dir.recommendation}
+        </p>
+      )}
+    </motion.div>
+  )
+}
+
+function RoomRecommendationCard({ room, index }: { room: RoomRecommendation; index: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const roomEmojis: Record<string, string> = { 거실: '🛋', 침실: '🛏', 주방: '🍳', 현관: '🚪' }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.08 }}
+      className="rounded-xl border border-white/5 bg-white/3 overflow-hidden"
+    >
+      <button onClick={() => setExpanded((v) => !v)} className="w-full p-3.5 text-left">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{roomEmojis[room.room] ?? '🏠'}</span>
+            <div>
+              <span className="text-sm font-serif font-bold text-[#D4AF37]">{room.room}</span>
+              {room.luckyColor && (
+                <span className="text-[10px] text-white/30 ml-2 font-sans">행운 색상: {room.luckyColor}</span>
+              )}
+            </div>
+          </div>
+          <span className="text-[10px] text-white/30">{expanded ? '▲' : '▼'}</span>
+        </div>
+        {room.chiFlow && <p className="text-xs text-white/40 mt-1.5 font-sans font-light">{room.chiFlow}</p>}
+        {room.mainIssue && <p className="text-xs text-amber-400/60 mt-1 font-sans font-light">▸ {room.mainIssue}</p>}
+      </button>
+      <AnimatePresence>
+        {expanded && (room.improvements.length > 0 || room.luckyItems.length > 0) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="border-t border-white/5 overflow-hidden"
+          >
+            <div className="p-3.5 space-y-3">
+              {room.improvements.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-[#D4AF37]/60 font-sans mb-1.5">개선 방법</p>
+                  <ul className="space-y-1">
+                    {room.improvements.map((imp, i) => (
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-white/50 font-sans font-light">
+                        <span className="text-[#D4AF37]/40 shrink-0">·</span>
+                        <span>{imp}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {room.luckyItems.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-[#D4AF37]/60 font-sans mb-1.5">행운 아이템</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {room.luckyItems.map((item, i) => (
+                      <span
+                        key={i}
+                        className="text-[10px] bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37]/80 rounded-full px-2 py-0.5 font-sans"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+function PlacementCard({ placement, index }: { placement: PlacementSuggestion; index: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.07 }}
+      className="rounded-xl p-3.5 border border-white/5 bg-white/3"
+    >
+      <div className="flex items-start gap-3">
+        <div className="w-6 h-6 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0 mt-0.5">
+          <span className="text-[10px] font-bold text-[#D4AF37] font-serif">{index + 1}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm font-serif font-bold text-[#D4AF37]">{placement.item}</span>
+            {placement.position && (
+              <span className="text-[10px] text-white/30 font-sans bg-white/5 rounded-full px-2 py-0.5">
+                {placement.position}
+              </span>
+            )}
+          </div>
+          {placement.reason && (
+            <p className="text-xs text-white/45 font-sans font-light leading-relaxed mb-1">{placement.reason}</p>
+          )}
+          {placement.expectedEffect && (
+            <p className="text-xs text-[#D4AF37]/60 font-sans font-light">효과: {placement.expectedEffect}</p>
+          )}
+        </div>
+      </div>
+    </motion.div>
   )
 }
 

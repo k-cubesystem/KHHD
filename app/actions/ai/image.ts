@@ -60,6 +60,13 @@ const INTERIOR_THEMES: Record<InteriorTheme, { name: string; colors: string; ele
   },
 }
 
+export interface FacePartAnalysis {
+  score: number // 0-10
+  description: string
+  fortuneArea: string // 관장하는 운세 영역
+  advice: string // 개운 조언
+}
+
 export interface FaceAnalysisResult {
   success: boolean
   currentAnalysis?: string
@@ -79,18 +86,32 @@ export interface FaceAnalysisResult {
     middleStop?: { score: number; description: string }
     lowerStop?: { score: number; description: string }
   }
-  // === 신규: 고도화 분석 ===
+  // === 고도화: 부위별 상세 분석 ===
+  partAnalysis?: {
+    forehead?: FacePartAnalysis // 이마(천정): 초년운, 지능, 부모복
+    eyes?: FacePartAnalysis // 눈(감찰관): 관찰력, 인간관계, 이성운
+    nose?: FacePartAnalysis // 코(재백궁): 재물운, 건강, 자존심
+    mouth?: FacePartAnalysis // 입(출납관): 식복, 표현력, 노년운
+    ears?: FacePartAnalysis // 귀(채청관): 명예, 건강, 장수
+    chin?: FacePartAnalysis // 턱(지각): 만년운, 부동산운, 의지력
+  }
+  overallFortuneScores?: {
+    // 운세별 종합 점수
+    wealth: number // 재물운
+    career: number // 직업·명예운
+    love: number // 연애운
+    health: number // 건강운
+    family: number // 가족·부모복
+  }
   personalityType?: string // 목형/화형/토형/금형/수형
   gisaekReading?: string // 기색(氣色) 분석 텍스트
   ageFortuneMap?: {
-    // 유년운 부위 매핑
     youth: string // 15-30세 이마
     middle: string // 31-50세 눈·코
     senior: string // 51세 이후 입·턱
   }
-  sajuSynergy?: string // 사주 연계 분석 (dayGan 전달 시)
+  sajuSynergy?: string
   improvementPriority?: Array<{
-    // 개선 우선순위
     priority: number
     zone: string
     issue: string
@@ -151,12 +172,44 @@ export interface PalmAnalysisResult {
   error?: string
 }
 
+export interface DirectionAnalysis {
+  direction: string // 동/서/남/북/동북/동남/서북/서남
+  element: string // 오행 (木/火/土/金/水)
+  fortune: 'good' | 'bad' | 'neutral'
+  fortuneLabel: string // 길/흉/보통
+  recommendation: string // 추천 물건/색상
+  avoidance: string // 피해야 할 것
+}
+
+export interface RoomRecommendation {
+  room: string // 거실/침실/주방/현관
+  chiFlow: string // 기(氣) 흐름 상태
+  mainIssue: string // 주요 문제점
+  improvements: string[] // 개선 방법
+  luckyItems: string[] // 행운 아이템
+  luckyColor: string // 행운 색상
+}
+
+export interface PlacementSuggestion {
+  item: string // 가구/화분/수석 등
+  position: string // 배치 위치
+  reason: string // 이유
+  expectedEffect: string // 기대 효과
+}
+
 export interface InteriorAnalysisResult {
   success: boolean
   currentAnalysis?: string
   problems?: string[]
   improvementPrompt?: string
   shoppingList?: string[]
+  // === 고도화: 8방위 + 공간별 + 배치 분석 ===
+  directionalAnalysis?: DirectionAnalysis[] // 8방위 길흉
+  roomRecommendations?: RoomRecommendation[] // 공간별 추천
+  placementSuggestions?: PlacementSuggestion[] // 배치 제안
+  overallQiScore?: number // 전체 기운 점수 0-100
+  dominantElement?: string // 지배 오행
+  luckyDirection?: string // 가장 길한 방위
   error?: string
 }
 
@@ -181,61 +234,73 @@ export async function analyzeFaceForDestiny(
 
 아래 얼굴 이미지를 전문가적 시각으로 정확히 분석하여 "${goalConfig.name}"에 대한 평가를 제공하세요.
 
-[1단계: 오관(五官) 분석]
+[1단계: 부위별(部位別) 심층 분석 - 6대 핵심 부위]
+각 부위를 10점 만점으로 평가하고, 관장하는 운세 영역과 개운 조언을 함께 제시하세요.
+
+1. **이마(천정, 天庭)** - 초년운(15~30세), 지능, 부모복, 관록
+   - 넓이, 높이, 광택, 주름, 상처 여부 평가
+   - 초년운과 부모덕 진단
+   - 구체적 개운법 제시
+
+2. **눈(감찰관, 監察官)** - 관찰력, 인간관계, 이성운, 총명함
+   - 크기, 형태, 눈빛의 맑음, 쌍꺼풀, 눈꼬리 방향 평가
+   - 인간관계·이성운 진단
+   - 구체적 개운법 제시
+
+3. **코(재백궁, 財帛宮)** - 재물운, 건강, 자존심, 중년운(40~50세)
+   - 콧대 높이, 코끝 모양, 콧방울 크기, 코의 살집 평가
+   - 재물운·건강 진단
+   - 구체적 개운법 제시
+
+4. **입(출납관, 出納官)** - 식복, 표현력, 노년운(60세 이후), 의식주
+   - 입술 두께, 입 크기, 모양, 다문 모습 평가
+   - 식복·노년운 진단
+   - 구체적 개운법 제시
+
+5. **귀(채청관, 採聽官)** - 명예, 건강, 장수, 선천적 복덕
+   - 귀의 크기, 두께, 위치, 귓불의 발달 정도 평가
+   - 명예·장수 진단
+   - 구체적 개운법 제시
+
+6. **턱(지각, 地閣)** - 만년운(60세 이후), 부동산운, 의지력, 부하복
+   - 턱의 넓이, 두께, 형태(둥근/각진), 살집 평가
+   - 만년운·부동산 진단
+   - 구체적 개운법 제시
+
+[2단계: 오관(五官) 분석]
 전통 관상학의 오관을 각각 10점 만점으로 평가하세요:
 
-1. **귀(耳)** - 지혜와 장수의 상징
-   - 형태, 크기, 위치, 색택 평가
-   - 점수와 특징 기술
-
+1. **귀(耳)** - 지혜와 장수
 2. **눈썹(眉)** - 형제운과 사회성
-   - 형태, 굵기, 농도, 균형 평가
-   - 점수와 특징 기술
-
 3. **눈(目)** - 정신과 지혜의 창
-   - 크기, 형태, 눈빛, 쌍꺼풀 평가
-   - 점수와 특징 기술
-
 4. **코(鼻)** - 재물운과 권력운
-   - 콧대 높이, 코끝 모양, 콧방울 크기 평가
-   - 점수와 특징 기술
-
 5. **입(口)** - 식복과 언변
-   - 입술 두께, 입 크기, 치아 상태 평가
-   - 점수와 특징 기술
 
-[2단계: 삼정(三停) 분석]
-얼굴을 3등분하여 균형을 평가하세요:
+[3단계: 삼정(三停) 분석]
+1. **상정(上停)** - 이마 (초년운 0-30세)
+2. **중정(中停)** - 눈·코 (중년운 30-60세)
+3. **하정(下停)** - 입·턱 (말년운 60세 이후)
 
-1. **상정(上停)** - 헤어라인부터 눈썹까지 (초년운 0-30세)
-   - 이마의 넓이, 높이, 주름, 빛깔 평가
-   - 점수: X/10
+[4단계: 운세별 종합 점수 (0-100)]
+- 재물운: 코·이마·귀를 종합 평가
+- 직업·명예운: 이마·눈썹·눈을 종합 평가
+- 연애운: 눈·입·눈썹을 종합 평가
+- 건강운: 귀·코·기색을 종합 평가
+- 가족·부모복: 이마·귀를 종합 평가
 
-2. **중정(中停)** - 눈썹부터 코끝까지 (중년운 30-60세)
-   - 눈, 코의 조화와 비율 평가
-   - 점수: X/10
-
-3. **하정(下停)** - 코끝부터 턱끝까지 (말년운 60세 이후)
-   - 입, 턱의 견고함과 형태 평가
-   - 점수: X/10
-
-[3단계: 피부 찰색(察色) - 기색과 혈색]
+[5단계: 피부 찰색(察色) - 기색과 혈색]
 - 현재 피부 광택, 혈색, 기운 상태 평가
-- 건강 상태 및 운기(運氣) 흐름 파악
 
-[4단계: ${goalConfig.name} 종합 평가]
+[6단계: ${goalConfig.name} 종합 평가]
 - 현재 ${goalConfig.name} 점수: 0-100점
-- 잠재력 점수: 0-100점
 - 강화할 핵심 특징: ${goalConfig.traits}
 
-[5단계: 구체적 개선 방법]
+[7단계: 구체적 개선 방법]
 - 메이크업 기법 3가지
 - 헤어스타일 조언
 - 표정 및 자세 관리
-- 일상 관리법 (수면, 운동, 식습관)
 
-[CRITICAL: 출력 형식]
-반드시 다음 태그들을 모두 포함하세요:
+[CRITICAL: 출력 형식 - 아래 모든 태그를 정확히 포함하세요]
 [[CURRENT_SCORE: 숫자]]
 [[CONFIDENCE: 숫자]]
 [[EARS: 숫자, 설명]]
@@ -246,6 +311,17 @@ export async function analyzeFaceForDestiny(
 [[UPPER_STOP: 숫자, 설명]]
 [[MIDDLE_STOP: 숫자, 설명]]
 [[LOWER_STOP: 숫자, 설명]]
+[[PART_FOREHEAD: 숫자, 설명, 운세영역, 개운조언]]
+[[PART_EYES: 숫자, 설명, 운세영역, 개운조언]]
+[[PART_NOSE: 숫자, 설명, 운세영역, 개운조언]]
+[[PART_MOUTH: 숫자, 설명, 운세영역, 개운조언]]
+[[PART_EARS: 숫자, 설명, 운세영역, 개운조언]]
+[[PART_CHIN: 숫자, 설명, 운세영역, 개운조언]]
+[[SCORE_WEALTH: 숫자]]
+[[SCORE_CAREER: 숫자]]
+[[SCORE_LOVE: 숫자]]
+[[SCORE_HEALTH: 숫자]]
+[[SCORE_FAMILY: 숫자]]
 
 목표: ${goalConfig.desc}
 강화할 특징: ${goalConfig.traits}
@@ -302,21 +378,65 @@ Style: Professional headshot, warm lighting, confident expression.`
       `${goal === 'wealth' ? '안정감 있는' : goal === 'love' ? '화사한' : goal === 'authority' ? '강인한' : '자연스럽고 호감 가는'} 이미지 메이크업`,
     ]
 
+    // === 부위별 상세 분석 파싱 ===
+    const parsePartFeature = (tag: string): FacePartAnalysis | undefined => {
+      // [[PART_XXX: score, description, fortuneArea, advice]]
+      const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*([^,\\]]+),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
+      const match = analysisText.match(regex)
+      if (match?.[1] && match?.[2] && match?.[3] && match?.[4]) {
+        return {
+          score: parseInt(match[1]),
+          description: match[2].trim(),
+          fortuneArea: match[3].trim(),
+          advice: match[4].trim(),
+        }
+      }
+      // Fallback: try simpler format
+      const simpleRegex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`)
+      const simpleMatch = analysisText.match(simpleRegex)
+      if (simpleMatch?.[1] && simpleMatch?.[2]) {
+        return { score: parseInt(simpleMatch[1]), description: simpleMatch[2].trim(), fortuneArea: '', advice: '' }
+      }
+      return undefined
+    }
+
+    const partAnalysis = {
+      forehead: parsePartFeature('PART_FOREHEAD'),
+      eyes: parsePartFeature('PART_EYES'),
+      nose: parsePartFeature('PART_NOSE'),
+      mouth: parsePartFeature('PART_MOUTH'),
+      ears: parsePartFeature('PART_EARS'),
+      chin: parsePartFeature('PART_CHIN'),
+    }
+
+    // === 운세별 종합 점수 파싱 ===
+    const extractScore = (tag: string): number => {
+      const match = analysisText.match(new RegExp(`\\[\\[${tag}:\\s*(\\d+)\\]\\]`))
+      return match?.[1] ? parseInt(match[1]) : 65
+    }
+
+    const overallFortuneScores = {
+      wealth: extractScore('SCORE_WEALTH'),
+      career: extractScore('SCORE_CAREER'),
+      love: extractScore('SCORE_LOVE'),
+      health: extractScore('SCORE_HEALTH'),
+      family: extractScore('SCORE_FAMILY'),
+    }
+
     // === 알고리즘 엔진 연동 ===
     const { calculateImprovementPriority, buildFaceSajuSynergyText, AGE_FORTUNE_ZONES } =
       await import('@/lib/physiognomy-engine/face-algorithm')
 
-    // 유년운 부위 매핑
     const upperStopScore = facialFeatures.upperStop?.score ?? 7
     const middleStopScore = facialFeatures.middleStop?.score ?? 7
     const lowerStopScore = facialFeatures.lowerStop?.score ?? 7
+    void middleStopScore // used via facialFeatures display
     const ageFortuneMap = {
-      youth: `초년운(15~30세) - 이마: ${AGE_FORTUNE_ZONES[1].meaning}. ${facialFeatures.upperStop?.description ?? ''}`,
-      middle: `중년운(31~50세) - 눈·코: ${AGE_FORTUNE_ZONES[2].meaning}. ${facialFeatures.eyes?.description ?? ''}`,
-      senior: `장년운(51세~) - 입·턱: ${AGE_FORTUNE_ZONES[4].meaning}. ${facialFeatures.mouth?.description ?? ''}`,
+      youth: `초년운(15~30세) - 이마: ${AGE_FORTUNE_ZONES[1].meaning}. ${partAnalysis.forehead?.description ?? facialFeatures.upperStop?.description ?? ''}`,
+      middle: `중년운(31~50세) - 눈·코: ${AGE_FORTUNE_ZONES[2].meaning}. ${partAnalysis.eyes?.description ?? facialFeatures.eyes?.description ?? ''}`,
+      senior: `장년운(51세~) - 입·턱: ${AGE_FORTUNE_ZONES[4].meaning}. ${partAnalysis.chin?.description ?? facialFeatures.mouth?.description ?? ''}`,
     }
 
-    // 개선 우선순위 계산
     const faceScoreMap: Record<string, number> = {
       nose: facialFeatures.nose?.score ?? 7,
       eyes: facialFeatures.eyes?.score ?? 7,
@@ -328,12 +448,10 @@ Style: Professional headshot, warm lighting, confident expression.`
     }
     const improvementPriority = calculateImprovementPriority(faceScoreMap, goal)
 
-    // 사주 연계 분석 (dayGan 전달된 경우)
     const sajuSynergy = sajuContext?.dayGan
       ? buildFaceSajuSynergyText(sajuContext.dayGan, currentScore, goal)
       : undefined
 
-    // 기색 분석 텍스트 (AI 분석 결과에서 추출)
     const gisaekMatch = analysisText.match(/기색|안색|혈색|광택|윤기/)
     const gisaekReading = gisaekMatch
       ? analysisText
@@ -348,6 +466,8 @@ Style: Professional headshot, warm lighting, confident expression.`
       currentScore,
       confidence,
       facialFeatures,
+      partAnalysis,
+      overallFortuneScores,
       improvementPrompt,
       recommendations,
       ageFortuneMap,
@@ -382,20 +502,73 @@ export async function analyzeInteriorForFengshui(
         .replace(/\{\{theme_colors\}\}/g, themeConfig.colors)
         .replace(/\{\{theme_elements\}\}/g, themeConfig.elements)
         .replace(/\{\{theme\}\}/g, theme)
-    : `당신은 전통 풍수 인테리어 전문가입니다.
+    : `당신은 30년 경력의 전통 풍수지리 인테리어 전문가입니다.
+음양오행(陰陽五行)과 팔괘(八卦)를 바탕으로 공간의 기(氣) 흐름을 분석하고, 거주자의 운을 향상시키는 인테리어 비법을 제시합니다.
 
-이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 분석을 제공하세요.
+이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 종합 풍수 분석을 제공하세요.
 
-[분석 항목]
-1. **현재 상태 진단**: 방의 레이아웃, 가구 배치, 색상 톤 분석
-2. **풍수적 문제점**: 기(氣)의 흐름을 방해하는 요소들 (최대 5개)
-3. **개선 방향**: ${themeConfig.name}을 위한 구체적인 변경 사항
-4. **추천 색상**: ${themeConfig.colors}
-5. **추천 소품**: ${themeConfig.elements}
-6. **쇼핑 리스트**: 구매하면 좋을 구체적인 아이템 5개
+[1단계: 공간 기운 진단]
+- 현재 기(氣) 흐름의 전반적 상태
+- 지배 오행 판단 (木/火/土/金/水)
+- 전체 풍수 기운 점수 (0-100)
 
-[CRITICAL: 출력 형식]
-반드시 다음 형식의 쇼핑 리스트를 포함하세요:
+[2단계: 8방위(八方位) 길흉 분석]
+사진과 공간 구조를 바탕으로 8방위의 기운을 분석하세요.
+각 방위별로: 해당 오행, 길흉 판단, 추천 물건/색상, 피해야 할 것을 제시하세요.
+
+- **동(東)**: 木 기운, 성장·발전·건강
+- **서(西)**: 金 기운, 재물·결실·수확
+- **남(南)**: 火 기운, 명예·인기·문서운
+- **북(北)**: 水 기운, 지혜·직업·저장
+- **동북(東北)**: 土 기운, 학업·지식·부동산
+- **동남(東南)**: 木 기운, 재물·인연·여행
+- **서북(西北)**: 金 기운, 귀인·리더십·이동
+- **서남(西南)**: 土 기운, 건강·모성·인내
+
+[3단계: 공간별 맞춤 추천]
+아래 공간들에 대해 각각 기 흐름 상태, 주요 문제점, 개선 방법(3가지), 행운 아이템(3가지), 행운 색상을 제시하세요:
+- 거실 (가족 화합, 재물운의 중심)
+- 침실 (건강·수면·애정운)
+- 주방 (식복·건강·재물 저장)
+- 현관 (기운의 입구, 외부 운 유입)
+
+[4단계: 가구·화분·수석 배치 제안]
+구체적인 배치 제안을 5가지 이상 제시하세요:
+- 배치할 아이템 (가구/화분/수석/소품)
+- 추천 위치 (방위 또는 공간 설명)
+- 이유 (풍수적 근거)
+- 기대 효과
+
+[5단계: 풍수 문제점 (최대 5개)]
+현재 공간의 기운을 방해하는 주요 문제점
+
+[6단계: 기운 전환 아이템 쇼핑 리스트]
+
+[CRITICAL: 출력 형식 - 아래 모든 태그를 정확히 포함하세요]
+[[QI_SCORE: 숫자]]
+[[DOMINANT_ELEMENT: 오행명]]
+[[LUCKY_DIRECTION: 방위명]]
+
+[[DIR_EAST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_WEST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_SOUTH: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_NORTH: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_NORTHEAST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_SOUTHEAST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_NORTHWEST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+[[DIR_SOUTHWEST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
+
+[[ROOM_LIVINGROOM: 기흐름상태|주요문제점|개선방법1/개선방법2/개선방법3|행운아이템1/행운아이템2/행운아이템3|행운색상]]
+[[ROOM_BEDROOM: 기흐름상태|주요문제점|개선방법1/개선방법2/개선방법3|행운아이템1/행운아이템2/행운아이템3|행운색상]]
+[[ROOM_KITCHEN: 기흐름상태|주요문제점|개선방법1/개선방법2/개선방법3|행운아이템1/행운아이템2/행운아이템3|행운색상]]
+[[ROOM_ENTRANCE: 기흐름상태|주요문제점|개선방법1/개선방법2/개선방법3|행운아이템1/행운아이템2/행운아이템3|행운색상]]
+
+[[PLACEMENT_1: 아이템|위치|이유|기대효과]]
+[[PLACEMENT_2: 아이템|위치|이유|기대효과]]
+[[PLACEMENT_3: 아이템|위치|이유|기대효과]]
+[[PLACEMENT_4: 아이템|위치|이유|기대효과]]
+[[PLACEMENT_5: 아이템|위치|이유|기대효과]]
+
 [[SHOPPING_LIST]]
 - 아이템1
 - 아이템2
@@ -404,6 +577,8 @@ export async function analyzeInteriorForFengshui(
 - 아이템5
 [[/SHOPPING_LIST]]
 
+추천 색상: ${themeConfig.colors}
+추천 소품: ${themeConfig.elements}
 실용적이고 구체적인 조언을 제공하세요.`
 
   try {
@@ -436,7 +611,110 @@ Must include: ${themeConfig.elements}.
 Keep the same room structure and perspective. Modern Korean style interior.
 Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'romance' ? 'romantic' : theme === 'health' ? 'refreshing' : 'harmonious'} mood.`
 
-    // Extract problems
+    // === 8방위 분석 파싱 ===
+    const parseDirection = (tag: string, direction: string, element: string): DirectionAnalysis | null => {
+      const regex = new RegExp(
+        `\\[\\[${tag}:\\s*([^,\\]]+),\\s*(good|bad|neutral),\\s*([^,\\]]+),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`
+      )
+      const match = analysisText.match(regex)
+      if (match) {
+        return {
+          direction,
+          element: match[1]?.trim() || element,
+          fortune: match[2] as 'good' | 'bad' | 'neutral',
+          fortuneLabel: match[3]?.trim() || '보통',
+          recommendation: match[4]?.trim() || '',
+          avoidance: match[5]?.trim() || '',
+        }
+      }
+      return null
+    }
+
+    const directionData: Array<{ tag: string; direction: string; element: string }> = [
+      { tag: 'DIR_EAST', direction: '동(東)', element: '木' },
+      { tag: 'DIR_WEST', direction: '서(西)', element: '金' },
+      { tag: 'DIR_SOUTH', direction: '남(南)', element: '火' },
+      { tag: 'DIR_NORTH', direction: '북(北)', element: '水' },
+      { tag: 'DIR_NORTHEAST', direction: '동북(東北)', element: '土' },
+      { tag: 'DIR_SOUTHEAST', direction: '동남(東南)', element: '木' },
+      { tag: 'DIR_NORTHWEST', direction: '서북(西北)', element: '金' },
+      { tag: 'DIR_SOUTHWEST', direction: '서남(西南)', element: '土' },
+    ]
+
+    const directionalAnalysis: DirectionAnalysis[] = directionData
+      .map((d) => parseDirection(d.tag, d.direction, d.element))
+      .filter((d): d is DirectionAnalysis => d !== null)
+
+    // === 공간별 추천 파싱 ===
+    const parseRoom = (tag: string, roomName: string): RoomRecommendation | null => {
+      const regex = new RegExp(`\\[\\[${tag}:\\s*([^|\\]]+)\\|([^|\\]]+)\\|([^|\\]]+)\\|([^|\\]]+)\\|([^\\]]+)\\]\\]`)
+      const match = analysisText.match(regex)
+      if (match) {
+        return {
+          room: roomName,
+          chiFlow: match[1]?.trim() || '',
+          mainIssue: match[2]?.trim() || '',
+          improvements: (match[3]?.trim() || '')
+            .split('/')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          luckyItems: (match[4]?.trim() || '')
+            .split('/')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          luckyColor: match[5]?.trim() || '',
+        }
+      }
+      return null
+    }
+
+    const roomData: Array<{ tag: string; name: string }> = [
+      { tag: 'ROOM_LIVINGROOM', name: '거실' },
+      { tag: 'ROOM_BEDROOM', name: '침실' },
+      { tag: 'ROOM_KITCHEN', name: '주방' },
+      { tag: 'ROOM_ENTRANCE', name: '현관' },
+    ]
+
+    const roomRecommendations: RoomRecommendation[] = roomData
+      .map((r) => parseRoom(r.tag, r.name))
+      .filter((r): r is RoomRecommendation => r !== null)
+
+    // === 배치 제안 파싱 ===
+    const parsePlacement = (tag: string): PlacementSuggestion | null => {
+      const regex = new RegExp(`\\[\\[${tag}:\\s*([^|\\]]+)\\|([^|\\]]+)\\|([^|\\]]+)\\|([^\\]]+)\\]\\]`)
+      const match = analysisText.match(regex)
+      if (match) {
+        return {
+          item: match[1]?.trim() || '',
+          position: match[2]?.trim() || '',
+          reason: match[3]?.trim() || '',
+          expectedEffect: match[4]?.trim() || '',
+        }
+      }
+      return null
+    }
+
+    const placementSuggestions: PlacementSuggestion[] = [
+      'PLACEMENT_1',
+      'PLACEMENT_2',
+      'PLACEMENT_3',
+      'PLACEMENT_4',
+      'PLACEMENT_5',
+    ]
+      .map((tag) => parsePlacement(tag))
+      .filter((p): p is PlacementSuggestion => p !== null)
+
+    // === 기타 점수 파싱 ===
+    const qiScoreMatch = analysisText.match(/\[\[QI_SCORE:\s*(\d+)\]\]/)
+    const overallQiScore = qiScoreMatch?.[1] ? parseInt(qiScoreMatch[1]) : 65
+
+    const dominantElementMatch = analysisText.match(/\[\[DOMINANT_ELEMENT:\s*([^\]]+)\]\]/)
+    const dominantElement = dominantElementMatch?.[1]?.trim()
+
+    const luckyDirectionMatch = analysisText.match(/\[\[LUCKY_DIRECTION:\s*([^\]]+)\]\]/)
+    const luckyDirection = luckyDirectionMatch?.[1]?.trim()
+
+    // Extract problems from text if not structured
     const problems = ['가구 배치가 기의 흐름을 막고 있음', '색상 톤이 목표와 맞지 않음', '소품 배치 개선 필요']
 
     return {
@@ -445,6 +723,12 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       problems,
       improvementPrompt,
       shoppingList,
+      directionalAnalysis,
+      roomRecommendations,
+      placementSuggestions,
+      overallQiScore,
+      dominantElement,
+      luckyDirection,
     }
   } catch (error: unknown) {
     logger.error('Interior Fengshui Analysis Error:', error)

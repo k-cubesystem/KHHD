@@ -8,6 +8,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
 
@@ -38,8 +40,9 @@ export interface FortuneResult {
  */
 export async function analyzeFortuneAction(
   targetId: string,
-  fortuneType: FortuneType = 'today'
-): Promise<{ success: boolean; data?: FortuneResult; error?: string; cached?: boolean }> {
+  fortuneType: FortuneType = 'today',
+  forceRefresh: boolean = false // bypass cache when user explicitly wants a new analysis
+): Promise<{ success: boolean; data?: FortuneResult; error?: string; cached?: boolean; cachedAt?: string }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -56,11 +59,18 @@ export async function analyzeFortuneAction(
       return { success: false, error: '생년월일 정보가 없습니다. 사주 정보를 먼저 입력해주세요.' }
     }
 
-    // 2. 캐시 확인 (오늘운: 1일, 주간운: 7일, 월간운: 30일)
-    const cacheDays = fortuneType === 'today' ? 1 : fortuneType === 'weekly' ? 7 : 30
-    const cached = await getRecentFortuneAnalysis(targetId, fortuneType, cacheDays)
-    if (cached) {
-      return { success: true, data: cached, cached: true }
+    // 2. 캐시 확인 (오늘운: 24h, 주간운: 168h, 월간운: 720h)
+    if (!forceRefresh) {
+      const ttlHours = fortuneType === 'today' ? 24 : fortuneType === 'weekly' ? 168 : 720
+      const cachedRecord = await getCachedAnalysis(user.id, targetId, 'TODAY', ttlHours)
+      if (cachedRecord && isCacheValid(cachedRecord, ttlHours)) {
+        const cachedResult = cachedRecord.result_json as FortuneResult
+        // fortuneType이 일치하는 캐시만 반환
+        if (cachedResult?.type === fortuneType) {
+          console.log(`[FortuneAnalysis] 캐시 적중 (${cachedRecord.created_at}) - Gemini 호출 생략`)
+          return { success: true, data: cachedResult, cached: true, cachedAt: cachedRecord.created_at }
+        }
+      }
     }
 
     // 3. 만세력 계산
@@ -82,7 +92,6 @@ export async function analyzeFortuneAction(
 
     // 5. 해화지기 마스터 엔진으로 프롬프트 조립
     const typeMap = { today: 'DAILY_FORTUNE', weekly: 'WEEKLY_FORTUNE', monthly: 'MONTHLY_FORTUNE' } as const
-    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
     const { prompt: masterPrompt } = await buildMasterPromptForAction(
       {
         name: target.name,

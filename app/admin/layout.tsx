@@ -12,24 +12,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // TEMPORARY: Admin 체크 비활성화 (RLS 무한 재귀 문제로 인해)
-  // TODO: Supabase RLS 정책 수정 후 다시 활성화
-  console.log('[ADMIN LAYOUT] Bypassing role check (temporary)', {
-    userId: user.id,
-    email: user.email,
-  })
-
-  /* 원래 코드 (RLS 정책 수정 후 복구)
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
+  // Middleware에서 이미 admin role을 검증하지만, Defense-in-depth로 한 번 더 확인
+  // is_admin() SECURITY DEFINER 함수를 사용하여 RLS 재귀 없이 안전하게 확인
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
   if (profile?.role !== 'admin') {
-    redirect("/protected");
+    redirect('/protected')
   }
-  */
 
   const menuItems = [
     { href: '/admin', label: '대시보드', icon: 'LayoutDashboard' },
@@ -42,6 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/prompts', label: 'AI 프롬프트 관리', icon: 'Sparkles' },
     { href: '/admin/saju-engine', label: '해화지기 사주 엔진', icon: 'Brain' },
     { href: '/admin/service-control', label: '서비스 키/스위치', icon: 'Power' },
+    { href: '/admin/monitoring', label: '모니터링', icon: 'Activity' },
   ]
 
   return <AdminLayoutClient menuItems={menuItems}>{children}</AdminLayoutClient>

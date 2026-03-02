@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { GuestCTACard } from '@/components/guest-cta-card'
 import { toast } from 'sonner'
+import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
+import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
 
 interface FamilyMember {
   id: string
@@ -27,6 +29,8 @@ export function WealthAnalysisContent() {
   const [analyzing, setAnalyzing] = useState(false)
   const [wealthAnalysis, setWealthAnalysis] = useState<string>('')
   const [isGuest, setIsGuest] = useState(false)
+
+  const { nudgeModal, closeNudge, handleDeductResult, trackAnalysis } = useUpgradeNudge()
 
   useEffect(() => {
     const fetchMember = async () => {
@@ -67,9 +71,15 @@ export function WealthAnalysisContent() {
 
       const result = await analyzeWealth({ memberId: member.id })
 
+      // Handle daily limit / premium errors → show upgrade nudge
+      if (!result.success && handleDeductResult(result as any, { featureLabel: '재물운 분석' })) {
+        return
+      }
+
       if (result.success && result.analysis) {
         setWealthAnalysis(result.analysis)
         toast.success('재물운 분석이 완료되었습니다!')
+        trackAnalysis()
       } else {
         throw new Error(result.error || '분석에 실패했습니다.')
       }
@@ -122,9 +132,7 @@ export function WealthAnalysisContent() {
       <motion.section variants={fadeInUp} className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
           <Coins className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">
-            The Wealth Flow
-          </span>
+          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">The Wealth Flow</span>
         </div>
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
           재물운 <span className="text-primary">심층 분석</span>
@@ -149,9 +157,7 @@ export function WealthAnalysisContent() {
                 <p className="text-sm text-ink-light/60 mt-1">
                   생년월일: {new Date(member.birth_date).toLocaleDateString('ko-KR')}
                 </p>
-                {member.birth_time && (
-                  <p className="text-sm text-ink-light/60">생시: {member.birth_time}</p>
-                )}
+                {member.birth_time && <p className="text-sm text-ink-light/60">생시: {member.birth_time}</p>}
               </div>
               <Button
                 onClick={handleAnalyze}
@@ -202,19 +208,13 @@ export function WealthAnalysisContent() {
                     )
                   } else if (line.startsWith('## ')) {
                     return (
-                      <h2
-                        key={index}
-                        className="text-2xl font-serif font-bold text-primary mt-8 mb-4"
-                      >
+                      <h2 key={index} className="text-2xl font-serif font-bold text-primary mt-8 mb-4">
                         {line.substring(3)}
                       </h2>
                     )
                   } else if (line.startsWith('### ')) {
                     return (
-                      <h3
-                        key={index}
-                        className="text-xl font-serif font-bold text-ink-light mt-6 mb-3"
-                      >
+                      <h3 key={index} className="text-xl font-serif font-bold text-ink-light mt-6 mb-3">
                         {line.substring(4)}
                       </h3>
                     )
@@ -254,6 +254,9 @@ export function WealthAnalysisContent() {
           <p className="text-ink-light/50 font-serif">위의 버튼을 눌러 재물운 분석을 시작하세요</p>
         </motion.div>
       )}
+
+      {/* Membership upgrade nudge */}
+      <MembershipNudgeModal {...nudgeModal} onClose={closeNudge} />
     </motion.div>
   )
 }

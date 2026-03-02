@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import Image from 'next/image'
 import Link from 'next/link'
+import { AVATAR_BLUR_DATA_URL } from '@/lib/utils/image'
 import { LogoutButton } from '@/components/logout-button'
-import { checkDailyAttendance } from '@/app/actions/payment/daily-check'
+import { getMonthlyAttendance } from '@/app/actions/payment/attendance'
 import { DailyCheckIn } from '@/components/events/daily-check-in'
 import {
   ChevronLeft,
@@ -22,7 +24,7 @@ import {
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
-import { getCurrentUserRole } from '@/app/actions/products'
+import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
 import { BrandQuote } from '@/components/ui/BrandQuote'
@@ -47,9 +49,7 @@ export default async function MyPage() {
           <Link href="/protected" className="p-1 -ml-1 hover:bg-surface/10 transition-colors">
             <ChevronLeft className="w-6 h-6 text-ink-light/90" />
           </Link>
-          <h1 className="text-sm font-serif tracking-[0.2em] text-ink-light/90 uppercase">
-            My Page
-          </h1>
+          <h1 className="text-sm font-serif tracking-[0.2em] text-ink-light/90 uppercase">My Page</h1>
           <div className="w-6 h-6" />
         </header>
 
@@ -69,16 +69,12 @@ export default async function MyPage() {
             <div className="flex flex-col items-center gap-1.5">
               <Coins className="w-5 h-5 text-primary mb-1" strokeWidth={1} />
               <span className="text-xl font-serif text-ink-light font-medium">100</span>
-              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">
-                Credits
-              </span>
+              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">Credits</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <BookOpen className="w-5 h-5 text-ink-light/60 mb-1" strokeWidth={1} />
               <span className="text-xl font-serif text-ink-light font-medium">5</span>
-              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">
-                History
-              </span>
+              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">History</span>
             </div>
           </div>
         </section>
@@ -123,10 +119,7 @@ export default async function MyPage() {
               <div className="pt-6 border-t border-primary/10 mt-8">
                 <p className="text-xs text-ink-light/50">
                   이미 계정이 있으신가요?{' '}
-                  <Link
-                    href="/auth/login"
-                    className="text-primary hover:text-primary-dim underline underline-offset-4"
-                  >
+                  <Link href="/auth/login" className="text-primary hover:text-primary-dim underline underline-offset-4">
                     로그인
                   </Link>
                 </p>
@@ -159,7 +152,7 @@ export default async function MyPage() {
   }
 
   try {
-    attendanceStatus = await checkDailyAttendance()
+    attendanceStatus = await getMonthlyAttendance()
   } catch (error) {
     console.error('Error fetching attendance:', error)
   }
@@ -193,8 +186,7 @@ export default async function MyPage() {
     console.error('Error fetching user role:', error)
   }
 
-  const displayName =
-    profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest'
+  const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest'
   const isAdmin = userRoleData?.role === 'admin'
 
   // Calculate Tier Limits
@@ -223,13 +215,25 @@ export default async function MyPage() {
             <div className="w-16 h-16 rounded-full border border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-md group-hover:border-primary/50 transition-all group-hover:scale-105">
               {avatarUrl ? (
                 isDokkaebiAvatar ? (
-                  <img
+                  <Image
                     src={avatarUrl}
                     alt={displayName}
+                    width={64}
+                    height={64}
+                    placeholder="blur"
+                    blurDataURL={AVATAR_BLUR_DATA_URL}
                     className="w-full h-full object-cover p-2"
                   />
                 ) : (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName}
+                    width={64}
+                    height={64}
+                    placeholder="blur"
+                    blurDataURL={AVATAR_BLUR_DATA_URL}
+                    className="w-full h-full object-cover"
+                  />
                 )
               ) : (
                 <span className="font-serif text-2xl text-primary">{displayName[0]}</span>
@@ -247,13 +251,9 @@ export default async function MyPage() {
 
           <div className="flex flex-col min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-serif font-medium text-ink-light tracking-wide truncate">
-                {displayName}
-              </h2>
+              <h2 className="text-xl font-serif font-medium text-ink-light tracking-wide truncate">{displayName}</h2>
             </div>
-            <p className="text-xs text-ink-light/50 font-light truncate mb-1.5 font-sans">
-              {user.email}
-            </p>
+            <p className="text-xs text-ink-light/50 font-light truncate mb-1.5 font-sans">{user.email}</p>
             <BrandQuote variant="inline" className="text-[10px] text-ink-light/60 line-clamp-1">
               {BRAND_QUOTES.profile.hero}
             </BrandQuote>
@@ -286,9 +286,7 @@ export default async function MyPage() {
             <div className="relative flex flex-col items-center justify-center gap-0.5">
               <div className="flex items-center gap-1.5 text-primary/80 mb-0.5">
                 <Coins className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">
-                  보유 복채
-                </span>
+                <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">보유 복채</span>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="font-serif text-lg font-medium text-ink-light transition-colors group-hover:text-primary leading-none">
@@ -311,9 +309,7 @@ export default async function MyPage() {
             <div className="relative flex flex-col items-center justify-center gap-0.5">
               <div className="flex items-center gap-1.5 text-primary/80 mb-0.5">
                 <Crown className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">
-                  멤버십
-                </span>
+                <span className="text-[10px] font-medium tracking-wide text-ink-light/70 uppercase">멤버십</span>
               </div>
               <div className="flex items-baseline gap-1">
                 <span className="font-serif text-sm font-medium text-ink-light transition-colors group-hover:text-primary leading-none mt-0.5">
@@ -331,16 +327,17 @@ export default async function MyPage() {
       {/* Daily Check-In (Moved Down) */}
       <section className="px-3 mb-6 animate-in fade-in slide-in-from-bottom-7 duration-700 delay-100 relative z-10">
         <DailyCheckIn
-          initialChecked={attendanceStatus?.checked || false}
-          initialConsecutiveDays={attendanceStatus?.consecutiveDays || 0}
+          canCheckIn={attendanceStatus?.canCheckIn ?? true}
+          checkedDates={attendanceStatus?.checkedDates || []}
+          weekCount={attendanceStatus?.weekCount || 0}
+          totalBokchae={attendanceStatus?.totalBokchae || 0}
+          consecutiveStreak={attendanceStatus?.consecutiveStreak || 0}
         />
       </section>
 
       {/* Dashboard Navigation Grid */}
       <section className="px-3 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
-        <h3 className="text-xs font-light tracking-widest text-ink-light/50 uppercase mb-6">
-          Menu
-        </h3>
+        <h3 className="text-xs font-light tracking-widest text-ink-light/50 uppercase mb-6">Menu</h3>
         <div className="grid grid-cols-2 gap-4">
           {isAdmin && (
             <Link href="/admin" className="group col-span-2 mb-2">
@@ -386,10 +383,7 @@ export default async function MyPage() {
 
           <Link href="/protected/family" className="group">
             <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-              <Users
-                className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors"
-                strokeWidth={1}
-              />
+              <Users className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
               <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">
                 인연 관리
               </span>
@@ -398,10 +392,7 @@ export default async function MyPage() {
 
           <Link href="/protected/membership" className="group">
             <div className="bg-surface/30 border border-primary/20 hover:border-primary/50 hover:bg-surface/50 p-6 flex flex-col items-center justify-center gap-3 transition-all duration-300 aspect-[4/3]">
-              <Crown
-                className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors"
-                strokeWidth={1}
-              />
+              <Crown className="w-8 h-8 text-ink-light/60 group-hover:text-primary transition-colors" strokeWidth={1} />
               <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">
                 멤버십 안내
               </span>
@@ -431,9 +422,7 @@ export default async function MyPage() {
           >
             <div className="flex items-center gap-4">
               <div className="w-5 h-5 flex items-center justify-center"></div>
-              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">
-                알림 설정
-              </span>
+              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">알림 설정</span>
             </div>
             <Switch id="notify" className="data-[state=checked]:bg-primary" />
           </Link>
@@ -447,9 +436,7 @@ export default async function MyPage() {
                 className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors"
                 strokeWidth={1}
               />
-              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">
-                개인정보 처리방침
-              </span>
+              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">개인정보 처리방침</span>
             </div>
             <ChevronLeft className="w-4 h-4 text-ink-light/30 rotate-180 group-hover:text-ink-light transition-colors" />
           </Link>
@@ -463,9 +450,7 @@ export default async function MyPage() {
                 className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors"
                 strokeWidth={1}
               />
-              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">
-                고객센터
-              </span>
+              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">고객센터</span>
             </div>
             <ChevronLeft className="w-4 h-4 text-ink-light/30 rotate-180 group-hover:text-ink-light transition-colors" />
           </Link>

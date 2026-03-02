@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BookOpen, Filter, Clock, User, Sparkles, Heart, Hexagon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,7 +16,6 @@ import type { AnalysisHistory, AnalysisCategory } from '@/app/actions/user/histo
 
 export default function HistoryPage() {
   const [records, setRecords] = useState<AnalysisHistory[]>([])
-  const [filteredRecords, setFilteredRecords] = useState<AnalysisHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [isGuest, setIsGuest] = useState(false)
 
@@ -32,8 +31,18 @@ export default function HistoryPage() {
     fetchRecords()
   }, [])
 
-  useEffect(() => {
-    applyFilters()
+  const filteredRecords = useMemo(() => {
+    let filtered = records
+
+    if (selectedTargetId) {
+      filtered = filtered.filter((r) => r.target_id === selectedTargetId)
+    }
+
+    if (selectedCategory !== 'ALL') {
+      filtered = filtered.filter((r) => r.category === selectedCategory)
+    }
+
+    return filtered
   }, [records, selectedTargetId, selectedCategory])
 
   const fetchRecords = async () => {
@@ -58,22 +67,6 @@ export default function HistoryPage() {
     }
 
     setLoading(false)
-  }
-
-  const applyFilters = () => {
-    let filtered = [...records]
-
-    // Target 필터
-    if (selectedTargetId) {
-      filtered = filtered.filter((r) => r.target_id === selectedTargetId)
-    }
-
-    // Category 필터
-    if (selectedCategory !== 'ALL') {
-      filtered = filtered.filter((r) => r.category === selectedCategory)
-    }
-
-    setFilteredRecords(filtered)
   }
 
   const handleRecordClick = (record: AnalysisHistory) => {
@@ -143,15 +136,11 @@ export default function HistoryPage() {
       <section className="px-4 py-8 space-y-4">
         <div className="flex items-center gap-2 px-4 py-1.5 border border-primary/30 bg-surface/80 backdrop-blur-md w-fit">
           <Hexagon className="w-3.5 h-3.5 text-primary" strokeWidth={2} />
-          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary">
-            분석 기록
-          </span>
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-primary">분석 기록</span>
         </div>
 
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-serif font-bold tracking-tight text-ink-light">
-            운명 아카이브
-          </h1>
+          <h1 className="text-3xl font-serif font-bold tracking-tight text-ink-light">운명 아카이브</h1>
           <div className="text-sm text-ink-light/60">
             총 <span className="text-primary font-bold">{records.length}</span>건
           </div>
@@ -164,11 +153,7 @@ export default function HistoryPage() {
         <TargetFilter selectedTargetId={selectedTargetId} onTargetChange={setSelectedTargetId} />
 
         {/* Category Tabs */}
-        <CategoryTabs
-          records={records}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-        />
+        <CategoryTabs records={records} selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
       </section>
 
       {/* Records List */}
@@ -186,12 +171,7 @@ export default function HistoryPage() {
             </motion.div>
           ) : (
             filteredRecords.map((record, index) => (
-              <AnalysisCard
-                key={record.id}
-                record={record}
-                index={index}
-                onClick={() => handleRecordClick(record)}
-              />
+              <AnalysisCard key={record.id} record={record} index={index} onClick={() => handleRecordClick(record)} />
             ))
           )}
         </AnimatePresence>

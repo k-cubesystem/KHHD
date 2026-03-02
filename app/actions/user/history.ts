@@ -36,6 +36,7 @@ export interface AnalysisHistory {
   user_memo: string | null
   is_favorite: boolean
   share_token?: string | null
+  share_view_count?: number
   created_at: string
   updated_at: string
 }
@@ -115,13 +116,12 @@ export async function saveAnalysisHistory(
 
     // 쿼터 관리: 한도 초과 시 오래된 비즐겨찾기 레코드 자동 삭제
     try {
-      const limits = await getUserTierLimits()
+      const [limits, { count }] = await Promise.all([
+        getUserTierLimits(),
+        supabase.from('analysis_history').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      ])
       const storageLimit = limits?.storage_limit ?? 10
       if (storageLimit !== 999) {
-        const { count } = await supabase
-          .from('analysis_history')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
         const excess = (count || 0) - storageLimit
         if (excess > 0) {
           const { data: toDelete } = await supabase

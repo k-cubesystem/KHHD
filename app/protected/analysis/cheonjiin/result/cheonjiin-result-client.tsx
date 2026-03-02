@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 import { SajuLoadingOverlay } from '@/components/shared/SajuLoadingOverlay'
 import { CheonjiinSummary } from '@/components/analysis/cheonjiin/CheonjiinSummary'
 import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
@@ -14,6 +16,7 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { RefreshCw, AlertTriangle, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { CheonjiinAnalysisResult } from '@/types/cheonjiin'
+import { FortuneImageGenerator } from '@/components/fortune/fortune-image-generator'
 
 interface CheonjiinResultClientProps {
   target: DestinyTarget
@@ -32,6 +35,7 @@ export function CheonjiinResultClient({
 }: CheonjiinResultClientProps) {
   const [analysisResult, setAnalysisResult] = useState<CheonjiinAnalysisResult | null>(initialData ?? null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const { checkQuota, paywallProps } = useAnalysisQuota()
   const [apiComplete, setApiComplete] = useState(false)
   const [error, setError] = useState<string | null>(serverError ?? null)
   const [showDataForm, setShowDataForm] = useState(needsData && !initialData)
@@ -44,6 +48,8 @@ export function CheonjiinResultClient({
 
   // 다시 분석 (사용자가 명시적으로 클릭한 경우에만)
   async function runAnalysis(additionalData: CollectedData | null = null, skipCache = true) {
+    const canProceed = await checkQuota()
+    if (!canProceed) return
     setIsAnalyzing(true)
     setApiComplete(false)
     setError(null)
@@ -117,6 +123,7 @@ export function CheonjiinResultClient({
 
   return (
     <div className="min-h-screen bg-background pb-24">
+      <PaywallModal {...paywallProps} />
       <CheonjiinSummary data={analysisResult} target={target} />
 
       {/* 섹션 탭 내비게이션 */}
@@ -160,6 +167,17 @@ export function CheonjiinResultClient({
         </div>
         <div id="in">
           <InSection data={analysisResult?.in ?? null} />
+        </div>
+
+        {/* 운세 이미지 생성 섹션 */}
+        <div className="px-4 pb-4 max-w-2xl mx-auto">
+          <FortuneImageGenerator
+            context={{
+              name: target.name,
+              keywords: analysisResult?.cheon?.strengths?.slice(0, 3),
+            }}
+            defaultType="illustration"
+          />
         </div>
       </div>
     </div>

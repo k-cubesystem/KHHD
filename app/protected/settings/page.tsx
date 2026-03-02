@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { SettingsForm } from '@/components/profile/settings-form'
-import { ArrowLeft } from 'lucide-react'
+import { NotificationSettingsForm } from '@/components/profile/notification-settings-form'
+import { ArrowLeft, Bell } from 'lucide-react'
 import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
+import type { NotificationPreferences } from '@/app/actions/core/notification'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -26,13 +29,26 @@ export default async function SettingsPage() {
     .eq('relationship', '본인')
     .maybeSingle()
 
+  // 알림 설정 조회 (admin client - RLS 우회)
+  const adminClient = createAdminClient()
+  const { data: notificationPrefs } = await adminClient
+    .from('notification_preferences')
+    .select('phone_number, alimtalk_enabled, daily_fortune_enabled, attendance_reward_enabled, payment_enabled')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  const initialNotificationPrefs: NotificationPreferences = notificationPrefs ?? {
+    phone_number: null,
+    alimtalk_enabled: false,
+    daily_fortune_enabled: false,
+    attendance_reward_enabled: false,
+    payment_enabled: false,
+  }
+
   return (
     <>
       <div className="px-1 py-4 flex items-center gap-4 border-b border-primary/10 mb-6">
-        <Link
-          href="/protected/profile"
-          className="p-1 -ml-1 hover:bg-surface/10 transition-colors rounded-full"
-        >
+        <Link href="/protected/profile" className="p-1 -ml-1 hover:bg-surface/10 transition-colors rounded-full">
           <ArrowLeft className="w-5 h-5 text-ink-light/80" strokeWidth={1} />
         </Link>
         <h1 className="text-lg font-serif font-light text-ink-light">내 정보 수정</h1>
@@ -50,6 +66,19 @@ export default async function SettingsPage() {
         </p>
 
         <SettingsForm user={user} profile={profile} familyMember={familyMember} />
+
+        {/* 알림 설정 섹션 구분선 */}
+        <div className="my-10 flex items-center gap-3">
+          <div className="flex-1 h-px bg-primary/15" />
+          <div className="flex items-center gap-2 text-primary/60">
+            <Bell className="w-3.5 h-3.5" strokeWidth={1} />
+            <span className="text-xs font-light font-serif">알림 설정</span>
+          </div>
+          <div className="flex-1 h-px bg-primary/15" />
+        </div>
+
+        {/* 카카오 알림톡 설정 */}
+        <NotificationSettingsForm initialPrefs={initialNotificationPrefs} />
       </div>
     </>
   )

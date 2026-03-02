@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { grantSignupBonus } from '@/app/actions/payment/wallet'
+import { processReferralBonus } from '@/app/actions/user/referral'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -58,9 +59,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=${encodeURIComponent(verifyError.message)}`)
     }
 
-    // 회원가입 인증 완료 시 50만냥 지급
+    // 회원가입 인증 완료 시 50만냥 지급 + 추천 보너스
     if (type === 'signup' && verifyData?.user?.id) {
       await grantSignupBonus(verifyData.user.id).catch((e) => console.error('[SignupBonus Error]', e))
+
+      // 추천 코드 쿠키 확인 및 보너스 처리
+      const referralCode = request.cookies.get('referral_code')?.value
+      if (referralCode) {
+        await processReferralBonus(verifyData.user.id, referralCode).catch((e) =>
+          console.error('[ReferralBonus Error]', e)
+        )
+        // 추천 보너스 지급 후 쿠키 삭제 (redirectResponse에 Set-Cookie 추가)
+        redirectResponse.cookies.set('referral_code', '', { maxAge: 0, path: '/' })
+      }
     }
   } else if (code) {
     // OAuth / Magic Link (PKCE 코드 교환)

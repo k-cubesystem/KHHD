@@ -10,13 +10,11 @@ import { Users, User, Heart, Check, ArrowRight } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { toast } from 'sonner'
 import { analyzeCompatibilityAction } from '@/app/actions/ai/compatibility'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 import { CompatibilityResult } from './compatibility-result'
 import { CompatibilityLoading } from './compatibility-loading'
-import {
-  RELATIONSHIP_TYPES,
-  RELATIONSHIP_CATEGORIES,
-  CATEGORY_LABELS,
-} from '@/lib/constants/relationship-types'
+import { RELATIONSHIP_TYPES, RELATIONSHIP_CATEGORIES, CATEGORY_LABELS } from '@/lib/constants/relationship-types'
 import {
   Select,
   SelectContent,
@@ -39,6 +37,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result, setResult] = useState<any>(null)
+  const { checkQuota, paywallProps } = useAnalysisQuota()
 
   const handleSelectPerson = (target: DestinyTarget, personNumber: 1 | 2) => {
     if (personNumber === 1) {
@@ -66,6 +65,9 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
       toast.error('관계를 선택해주세요.')
       return
     }
+
+    const canProceed = await checkQuota()
+    if (!canProceed) return
 
     setIsAnalyzing(true)
 
@@ -98,14 +100,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
 
   // 결과 표시
   if (result) {
-    return (
-      <CompatibilityResult
-        person1={person1!}
-        person2={person2!}
-        result={result}
-        onReset={handleReset}
-      />
-    )
+    return <CompatibilityResult person1={person1!} person2={person2!} result={result} onReset={handleReset} />
   }
 
   // 가족 선택 UI
@@ -116,6 +111,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
       animate="animate"
       className="min-h-screen bg-background relative overflow-hidden py-12 px-4 pb-24"
     >
+      <PaywallModal {...paywallProps} />
       {/* Hanji Texture */}
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
@@ -129,9 +125,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-serif font-light text-ink-light">궁합 분석</h1>
-          <p className="text-sm text-ink-light/60 font-light">
-            두 사람의 사주를 분석하여 관계의 조화를 살펴봅니다
-          </p>
+          <p className="text-sm text-ink-light/60 font-light">두 사람의 사주를 분석하여 관계의 조화를 살펴봅니다</p>
         </motion.div>
 
         {targets.length === 0 ? (
@@ -193,9 +187,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
                             </div>
                           </div>
                         </div>
-                        {person1?.id === target.id && (
-                          <Check className="w-5 h-5 text-primary" strokeWidth={2} />
-                        )}
+                        {person1?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
                       </div>
                     </CardContent>
                   </Card>
@@ -233,9 +225,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
                             </div>
                           </div>
                         </div>
-                        {person2?.id === target.id && (
-                          <Check className="w-5 h-5 text-primary" strokeWidth={2} />
-                        )}
+                        {person2?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
                       </div>
                     </CardContent>
                   </Card>
@@ -262,11 +252,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
                             {CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS]}
                           </SelectLabel>
                           {relations.map((rel) => (
-                            <SelectItem
-                              key={rel.value}
-                              value={rel.value}
-                              className="text-base py-3"
-                            >
+                            <SelectItem key={rel.value} value={rel.value} className="text-base py-3">
                               <div className="flex items-center gap-2">
                                 <span>{rel.emoji}</span>
                                 <span>{rel.label}</span>
@@ -306,9 +292,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
                 궁합 분석하기
               </Button>
               {(!person1 || !person2) && (
-                <p className="text-xs text-center text-muted-foreground mt-2">
-                  두 사람을 모두 선택해주세요
-                </p>
+                <p className="text-xs text-center text-muted-foreground mt-2">두 사람을 모두 선택해주세요</p>
               )}
             </motion.div>
           </>

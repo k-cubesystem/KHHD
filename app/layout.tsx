@@ -3,10 +3,10 @@ import { Noto_Sans_KR, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display } from 'n
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
+import { SWRegister } from '@/components/sw-register'
 import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
-import StitchesRegistry from './stitches-registry'
 import './globals.css'
 
 const notoSans = Noto_Sans_KR({
@@ -36,9 +36,7 @@ const playfair = Playfair_Display({
   subsets: ['latin'],
 })
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'
+const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
@@ -47,18 +45,7 @@ export const metadata: Metadata = {
     template: '%s | 청담해화당',
   },
   description: '전통 명리학과 현대 데이터 사이언스의 결합, AI 마스터의 정교한 운명 분석 리포트',
-  keywords: [
-    '사주',
-    '운세',
-    '신년운세',
-    '토정비결',
-    '궁합',
-    '관상',
-    '손금',
-    'AI 점술',
-    '해화당',
-    '청담해화당',
-  ],
+  keywords: ['사주', '운세', '신년운세', '토정비결', '궁합', '관상', '손금', 'AI 점술', '해화당', '청담해화당'],
   authors: [{ name: 'Haehwadang Team' }],
   openGraph: {
     type: 'website',
@@ -69,10 +56,10 @@ export const metadata: Metadata = {
     siteName: '청담해화당',
     images: [
       {
-        url: '/api/og',
+        url: '/api/og?title=청담해화당&desc=당신의 운명을 비춰주는 프리미엄 AI 사주 분석',
         width: 1200,
         height: 630,
-        alt: '청담해화당 미리보기',
+        alt: '청담해화당 - Premium 운명 공학 SaaS',
       },
     ],
   },
@@ -80,7 +67,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '청담해화당 - Premium 운명 공학 SaaS',
     description: '당신의 운명을 비춰주는 프리미엄 AI 사주 분석',
-    images: ['/api/og'],
+    images: ['/api/og?title=청담해화당&desc=당신의 운명을 비춰주는 프리미엄 AI 사주 분석'],
     creator: '@haehwadang',
   },
   manifest: '/manifest.json',
@@ -122,12 +109,11 @@ export default function RootLayout({
             {/* Mobile-Only Wrapper */}
             <div className="flex justify-center w-full min-h-screen">
               <div className="w-full max-w-[480px] min-h-screen bg-background relative shadow-2xl overflow-x-hidden border-x border-white/5 mx-auto">
-                <StitchesRegistry>
-                  {children}
-                  <Toaster position="top-center" richColors />
-                  <PWAInstallPrompt />
-                  <AgentationWrapper />
-                </StitchesRegistry>
+                {children}
+                <Toaster position="top-center" richColors />
+                <PWAInstallPrompt />
+                <SWRegister />
+                <AgentationWrapper />
                 {/* Vercel Speed Insights — Core Web Vitals 실측 모니터링 */}
                 <SpeedInsights />
               </div>

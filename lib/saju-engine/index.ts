@@ -28,6 +28,14 @@ export type { DailyAvoidanceResult, DailySeverity } from './daily-avoidance'
 export type { DynamicWarningsResult, FlowingLuckPillars, FlowingPillar, TemporalActivation } from './dynamic-warnings'
 export { calculateCompatibility } from './compatibility-engine'
 export type { CompatibilityEngineResult, CategoryScore, CompatibilityRelationType } from './compatibility-engine'
+export { calculateYearlyFortune, calculateMonthlyFortune, getYearPillar, getMonthPillar } from './woon-calculator'
+export type {
+  YearlyFortuneResult,
+  MonthlyFortuneResult,
+  FortuneCategory,
+  CategoryScore as WoonCategoryScore,
+  PillarInteraction,
+} from './woon-calculator'
 export type {
   WarningsResult,
   GigusinWarning,

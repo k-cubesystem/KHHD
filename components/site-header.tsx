@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { BLUR_DATA_URL } from '@/lib/utils/image'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
 import {
@@ -29,7 +30,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { getCurrentUserRole } from '@/app/actions/products'
+import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getUserTierLimits } from '@/app/actions/payment/membership'
 import {
@@ -118,10 +119,7 @@ export function SiteHeader() {
         {/* 1. Left: Navigation Action */}
         <div className="flex-1 flex justify-start">
           {pathname === '/' ? (
-            <Link
-              href="/"
-              className="p-2 -ml-2 text-ink-light/80 hover:text-primary transition-colors"
-            >
+            <Link href="/" className="p-2 -ml-2 text-ink-light/80 hover:text-primary transition-colors">
               <Home className="w-6 h-6" />
             </Link>
           ) : (
@@ -142,6 +140,9 @@ export function SiteHeader() {
               alt="Haehwadang"
               width={28}
               height={28}
+              priority
+              placeholder="blur"
+              blurDataURL={BLUR_DATA_URL}
               className="w-7 h-7 object-contain opacity-90"
             />
             <h1 className="font-serif text-lg font-bold text-ink-light tracking-tight flex items-center text-primary-dim">
@@ -165,9 +166,7 @@ export function SiteHeader() {
 
               {/* Name Only */}
               <div className="flex flex-col items-end leading-none">
-                <span className="text-xs font-bold text-ink-light">
-                  {user.user_metadata?.full_name || '회원'}님
-                </span>
+                <span className="text-xs font-bold text-ink-light">{user.user_metadata?.full_name || '회원'}님</span>
               </div>
             </div>
           ) : (

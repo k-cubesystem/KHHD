@@ -33,7 +33,7 @@ import {
   Activity,
   Sparkles,
 } from 'lucide-react'
-import { getCurrentUserRole } from '@/app/actions/products'
+import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { UserRole } from '@/types/auth'
 import { TalismanBalance } from '@/components/talisman-balance'

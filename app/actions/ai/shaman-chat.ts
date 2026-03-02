@@ -393,6 +393,180 @@ export async function getShamanChatStarters() {
   }
 }
 
+// ─── Chat Session Persistence ─────────────────────────────────────────────────
+
+export interface ChatSession {
+  id: string
+  title: string | null
+  family_member_id: string | null
+  created_at: string
+  updated_at: string
+  message_count?: number
+}
+
+/**
+ * 현재 유저의 가장 최근 활성 세션을 가져오거나 없으면 새로 만든다.
+ * ended_at IS NULL 인 세션을 '활성' 세션으로 본다.
+ */
+export async function getOrCreateChatSession(familyMemberId?: string): Promise<{
+  success: boolean
+  sessionId?: string
+  isNew?: boolean
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+    const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
+
+    // 기존 활성 세션 조회 (같은 family_member_id 기준)
+    const query = supabase
+      .from('chat_sessions')
+      .select('id')
+      .eq('user_id', user.id)
+      .is('ended_at', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+
+    if (fmId) {
+      query.eq('family_member_id', fmId)
+    } else {
+      query.is('family_member_id', null)
+    }
+
+    const { data: existing } = await query.maybeSingle()
+    if (existing) {
+      return { success: true, sessionId: existing.id, isNew: false }
+    }
+
+    // 새 세션 생성
+    const { data: newSession, error } = await supabase
+      .from('chat_sessions')
+      .insert({ user_id: user.id, family_member_id: fmId })
+      .select('id')
+      .single()
+
+    if (error || !newSession) {
+      return { success: false, error: '세션 생성 실패' }
+    }
+    return { success: true, sessionId: newSession.id, isNew: true }
+  } catch (e) {
+    console.error('[getOrCreateChatSession]', e)
+    return { success: false, error: '세션 조회 오류' }
+  }
+}
+
+/**
+ * 세션 메시지 목록 로드 (오름차순)
+ */
+export async function loadChatSessionMessages(sessionId: string): Promise<{
+  success: boolean
+  messages?: ShamanChatMessage[]
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('role, content, created_at')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+
+    if (error) return { success: false, error: error.message }
+
+    const messages: ShamanChatMessage[] = (data ?? []).map((row) => ({
+      role: row.role as 'user' | 'assistant',
+      content: row.content,
+      timestamp: row.created_at,
+    }))
+
+    return { success: true, messages }
+  } catch (e) {
+    console.error('[loadChatSessionMessages]', e)
+    return { success: false, error: '메시지 로드 오류' }
+  }
+}
+
+/**
+ * 메시지 2개(user + assistant)를 DB에 저장한다.
+ * 첫 user 메시지이면 세션 title도 업데이트.
+ */
+export async function saveChatMessages(
+  sessionId: string,
+  userMessage: ShamanChatMessage,
+  assistantMessage: ShamanChatMessage,
+  isFirstMessage: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const adminClient = createAdminClient()
+
+    const rows = [
+      { session_id: sessionId, role: userMessage.role, content: userMessage.content },
+      { session_id: sessionId, role: assistantMessage.role, content: assistantMessage.content },
+    ]
+
+    const { error } = await adminClient.from('chat_messages').insert(rows)
+    if (error) return { success: false, error: error.message }
+
+    // 첫 메시지면 세션 title 설정
+    if (isFirstMessage) {
+      const title = userMessage.content.slice(0, 30)
+      await adminClient.from('chat_sessions').update({ title }).eq('id', sessionId)
+    }
+
+    return { success: true }
+  } catch (e) {
+    console.error('[saveChatMessages]', e)
+    return { success: false, error: '메시지 저장 오류' }
+  }
+}
+
+/**
+ * 현재 활성 세션을 종료(ended_at 설정)하고 새 세션 ID를 반환.
+ * "새 대화 시작" 버튼 클릭 시 호출.
+ */
+export async function endAndCreateNewSession(
+  currentSessionId: string,
+  familyMemberId?: string
+): Promise<{ success: boolean; newSessionId?: string; error?: string }> {
+  try {
+    const adminClient = createAdminClient()
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+    // 현재 세션 종료
+    await adminClient.from('chat_sessions').update({ ended_at: new Date().toISOString() }).eq('id', currentSessionId)
+
+    // 새 세션 생성
+    const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
+    const { data: newSession, error } = await adminClient
+      .from('chat_sessions')
+      .insert({ user_id: user.id, family_member_id: fmId })
+      .select('id')
+      .single()
+
+    if (error || !newSession) return { success: false, error: '새 세션 생성 실패' }
+
+    return { success: true, newSessionId: newSession.id }
+  } catch (e) {
+    console.error('[endAndCreateNewSession]', e)
+    return { success: false, error: '세션 전환 오류' }
+  }
+}
+
 /** @deprecated Use getShamanQuestionStatus instead */
 export async function getAIChatUsageStatus() {
   const status = await getShamanQuestionStatus()

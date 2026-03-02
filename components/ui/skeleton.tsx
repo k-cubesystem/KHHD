@@ -1,43 +1,13 @@
-"use client";
+'use client'
 
-import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils'
 
-export function Skeleton({
-  className,
-  children,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  // Remove conflicting props between React and Framer Motion
-  const {
-    onDrag,
-    onDragStart,
-    onDragEnd,
-    onAnimationStart,
-    onAnimationEnd,
-    onAnimationIteration,
-    ...divProps
-  } = props;
-
+export function Skeleton({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <motion.div
-      animate={{
-        opacity: [0.5, 0.8, 0.5],
-      }}
-      transition={{
-        duration: 1.5,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
-      className={cn(
-        "bg-zen-border rounded-[var(--radius)]",
-        className
-      )}
-      {...divProps}
-    >
+    <div className={cn('animate-pulse bg-zen-border rounded-[var(--radius)]', className)} {...props}>
       {children}
-    </motion.div>
-  );
+    </div>
+  )
 }
 
 // Preset Skeletons
@@ -48,5 +18,5 @@ export function SkeletonCard() {
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-2/3" />
     </div>
-  );
+  )
 }

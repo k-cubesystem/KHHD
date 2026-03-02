@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { FortuneMissionBoard } from '@/components/fortune/fortune-mission-board'
 import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
 import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card'
+import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
 
 // Dynamic imports for heavy dashboard sections to improve initial load
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
@@ -111,7 +112,12 @@ export function AnalysisDashboard({
         </div>
       </motion.section>
 
-      {/* 2. Masterpiece */}
+      {/* 2. Seasonal Event Banner */}
+      <motion.div variants={fadeInUp}>
+        <SeasonalEventBanner />
+      </motion.div>
+
+      {/* 3. Masterpiece */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
       </motion.div>

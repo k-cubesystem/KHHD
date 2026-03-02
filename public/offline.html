@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오프라인 — 청담해화당</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #0A0A0A;
+      color: #F5F0E8;
+      font-family: 'Noto Serif KR', serif, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .emblem {
+      font-size: 3.5rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.85;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #D4AF37;
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    p {
+      font-size: 0.95rem;
+      color: #A09070;
+      line-height: 1.7;
+      max-width: 320px;
+      margin-bottom: 2rem;
+    }
+
+    .divider {
+      width: 60px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, #D4AF37, transparent);
+      margin: 1.5rem auto;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid #D4AF37;
+      color: #D4AF37;
+      padding: 0.65rem 1.75rem;
+      border-radius: 9999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    button:hover {
+      background: #D4AF37;
+      color: #0A0A0A;
+    }
+  </style>
+</head>
+<body>
+  <div class="emblem">☯</div>
+  <h1>인터넷 연결이 없습니다</h1>
+  <div class="divider"></div>
+  <p>
+    네트워크 연결을 확인한 후<br />
+    다시 시도해 주세요.<br /><br />
+    청담해화당은 연결이 복구되면<br />
+    자동으로 이어집니다.
+  </p>
+  <button onclick="window.location.reload()">다시 연결하기</button>
+
+  <script>
+    // Auto-reload when connection is restored
+    window.addEventListener('online', () => window.location.reload());
+  </script>
+</body>
+</html>

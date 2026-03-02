@@ -8,6 +8,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 
 export interface Year2026Result {
   name: string
@@ -110,7 +111,6 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
     })
 
     // 해화지기 마스터 엔진으로 프롬프트 조립
-    const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
     const { prompt } = await buildMasterPromptForAction(
       {
         name: target.name,

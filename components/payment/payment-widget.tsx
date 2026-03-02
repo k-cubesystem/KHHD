@@ -20,12 +20,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { getActivePlans, getCurrentUserRole, addTestCredits } from '@/app/actions/products'
-import {
-  getMembershipPlans,
-  createBillingAuthUrl,
-  getSubscriptionStatus,
-} from '@/app/actions/payment/subscription'
+import { getActivePlans, getCurrentUserRole, addTestCredits } from '@/app/actions/payment/products'
+import { getMembershipPlans, createBillingAuthUrl, getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import type { PricePlan, UserRole } from '@/types/auth'
 import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -133,9 +129,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
 
       if (process.env.NODE_ENV === 'development') {
         toast.info('개발 환경: 테스트 결제 페이지로 이동합니다.')
-        router.push(
-          `/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}&mock=true`
-        )
+        router.push(`/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}&mock=true`)
       } else {
         window.location.href = result.authUrl
       }
@@ -205,9 +199,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         <div className="text-zen-muted text-sm max-w-xl mx-auto leading-relaxed">
           <p>매달 전해지는 천기를 무제한으로 누리는 멤버십과</p>
           <p>필요할 때마다 정성을 담아 사용하는 복채 패키지 중 선택해 주세요.</p>
-          <p className="mt-2 text-zen-wood font-bold">
-            * 무료 회원은 &apos;오늘의 운세&apos;만 이용 가능합니다.
-          </p>
+          <p className="mt-2 text-zen-wood font-bold">* 무료 회원은 &apos;오늘의 운세&apos;만 이용 가능합니다.</p>
         </div>
       </div>
 
@@ -216,9 +208,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         <div className="space-y-6">
           <div className="flex items-center gap-3 mb-6">
             <Crown className="w-6 h-6 text-zen-gold" />
-            <h3 className="text-2xl font-serif font-bold text-zen-text">
-              해화 멤버십 (Subscription)
-            </h3>
+            <h3 className="text-2xl font-serif font-bold text-zen-text">해화 멤버십 (Subscription)</h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -242,14 +232,10 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
 
                   <div className="text-center pb-4 border-b border-zen-border/50">
                     <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-4xl font-serif font-bold text-zen-text">
-                        {plan.price.toLocaleString()}
-                      </span>
+                      <span className="text-4xl font-serif font-bold text-zen-text">{plan.price.toLocaleString()}</span>
                       <span className="text-base text-zen-muted">원</span>
                     </div>
-                    <p className="text-[10px] text-zen-muted uppercase tracking-widest mt-1">
-                      Per Month
-                    </p>
+                    <p className="text-[10px] text-zen-muted uppercase tracking-widest mt-1">Per Month</p>
                   </div>
 
                   <div className="space-y-3">
@@ -327,9 +313,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                 <div className="p-6 flex-1 space-y-4">
                   <div className="space-y-1">
                     <h4 className="font-serif font-bold text-xl text-zen-text">{plan.label}</h4>
-                    <p className="text-xs text-zen-muted font-sans line-clamp-2 min-h-[2.5em]">
-                      {plan.description}
-                    </p>
+                    <p className="text-xs text-zen-muted font-sans line-clamp-2 min-h-[2.5em]">{plan.description}</p>
                   </div>
 
                   <div className="flex items-center justify-between pb-4 border-b border-zen-border/50">
@@ -340,9 +324,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                       <span className="font-bold text-zen-text">{plan.credits}장</span>
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-xl font-serif font-bold text-zen-text">
-                        {plan.price.toLocaleString()}
-                      </span>
+                      <span className="text-xl font-serif font-bold text-zen-text">{plan.price.toLocaleString()}</span>
                       <span className="text-xs text-zen-muted">원</span>
                     </div>
                   </div>
@@ -401,11 +383,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
             variant="ghost"
             className="text-zen-muted hover:text-zen-wood hover:bg-zen-bg font-mono text-xs gap-2"
           >
-            {isTestLoading ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Zap className="w-3 h-3" />
-            )}
+            {isTestLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
             DEVELOPER: ADD TEST 100 TALISMANS
           </Button>
         </div>

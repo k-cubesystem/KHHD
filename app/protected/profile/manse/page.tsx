@@ -1,6 +1,6 @@
 import { getDestinyTargets } from '@/app/actions/user/destiny'
 import { getUserTierLimits } from '@/app/actions/payment/membership'
-import { getCurrentUserRole } from '@/app/actions/products'
+import { getCurrentUserRole } from '@/app/actions/payment/products'
 import ManseClient from './manse-client'
 
 export default async function MansePage() {

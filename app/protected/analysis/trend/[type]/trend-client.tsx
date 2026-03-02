@@ -5,13 +5,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Heart,
   Building2,
@@ -27,6 +21,8 @@ import {
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import type { DestinyTarget } from '@/app/actions/user/destiny'
 import { analyzeTrendAction, type TrendType, type TrendResult } from '@/app/actions/ai/trend'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 
 interface TrendClientProps {
   trendType: TrendType
@@ -75,34 +71,20 @@ const TREND_CONFIG: Record<
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color =
-    score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-[#D4AF37]' : 'text-orange-400'
+  const color = score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-[#D4AF37]' : 'text-orange-400'
   return <span className={`text-5xl font-serif font-light ${color}`}>{score}</span>
 }
 
-function TrendResultView({
-  result,
-  config,
-}: {
-  result: TrendResult
-  config: (typeof TREND_CONFIG)[TrendType]
-}) {
+function TrendResultView({ result, config }: { result: TrendResult; config: (typeof TREND_CONFIG)[TrendType] }) {
   const Icon = config.icon
 
   return (
-    <motion.div
-      initial="initial"
-      animate="animate"
-      variants={staggerContainer}
-      className="space-y-4"
-    >
+    <motion.div initial="initial" animate="animate" variants={staggerContainer} className="space-y-4">
       {/* 점수 + 요약 */}
       <motion.div variants={fadeInUp}>
         <Card className="bg-surface/20 border-primary/20 card-glass-manse">
           <CardContent className="p-6 text-center space-y-3">
-            <div
-              className={`w-12 h-12 mx-auto rounded-full ${config.bg} flex items-center justify-center`}
-            >
+            <div className={`w-12 h-12 mx-auto rounded-full ${config.bg} flex items-center justify-center`}>
               <Icon className={`w-6 h-6 ${config.color}`} strokeWidth={1} />
             </div>
             <ScoreBadge score={result.score} />
@@ -117,13 +99,9 @@ function TrendResultView({
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">
-                전체 흐름
-              </span>
+              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">전체 흐름</span>
             </div>
-            <p className="text-sm font-light text-ink-light/80 leading-relaxed">
-              {result.overview}
-            </p>
+            <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.overview}</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -134,9 +112,7 @@ function TrendResultView({
           <CardContent className="p-5 space-y-5">
             <div className="flex items-center gap-2">
               <Star className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">
-                영역별 분석
-              </span>
+              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">영역별 분석</span>
             </div>
             {result.areas.map((area) => (
               <div key={area.title} className="space-y-2">
@@ -150,9 +126,7 @@ function TrendResultView({
                     style={{ width: `${area.score}%` }}
                   />
                 </div>
-                <p className="text-xs font-light text-ink-light/60 leading-relaxed">
-                  {area.content}
-                </p>
+                <p className="text-xs font-light text-ink-light/60 leading-relaxed">{area.content}</p>
               </div>
             ))}
           </CardContent>
@@ -165,9 +139,7 @@ function TrendResultView({
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">
-                좋은 시기
-              </span>
+              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">좋은 시기</span>
             </div>
             <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.timing}</p>
           </CardContent>
@@ -180,27 +152,16 @@ function TrendResultView({
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">
-                행운 키워드
-              </span>
+              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">행운 키워드</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge
-                variant="outline"
-                className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs"
-              >
+              <Badge variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs">
                 색상 {result.lucky.color}
               </Badge>
-              <Badge
-                variant="outline"
-                className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs"
-              >
+              <Badge variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs">
                 숫자 {result.lucky.number}
               </Badge>
-              <Badge
-                variant="outline"
-                className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs"
-              >
+              <Badge variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs">
                 방향 {result.lucky.direction}
               </Badge>
             </div>
@@ -214,9 +175,7 @@ function TrendResultView({
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">
-                핵심 조언
-              </span>
+              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">핵심 조언</span>
             </div>
             <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.advice}</p>
           </CardContent>
@@ -229,9 +188,7 @@ function TrendResultView({
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-yellow-400" strokeWidth={1} />
-              <span className="text-xs font-light text-yellow-400 tracking-widest uppercase">
-                주의사항
-              </span>
+              <span className="text-xs font-light text-yellow-400 tracking-widest uppercase">주의사항</span>
             </div>
             <p className="text-sm font-light text-ink-light/70 leading-relaxed">{result.caution}</p>
           </CardContent>
@@ -255,9 +212,12 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
   >({ status: 'idle' })
 
   const showSelect = targets.length > 1
+  const { checkQuota, paywallProps } = useAnalysisQuota()
 
   async function handleAnalyze() {
     if (!selectedId) return
+    const canProceed = await checkQuota()
+    if (!canProceed) return
     setState({ status: 'loading' })
     const res = await analyzeTrendAction(selectedId, trendType)
     if (res.success && res.data) {
@@ -269,6 +229,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden py-12 px-4">
+      <PaywallModal {...paywallProps} />
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
       <div className="relative z-10 max-w-md mx-auto space-y-8">
@@ -280,12 +241,8 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
               {config.desc}
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-serif font-light text-ink-light">
-            {config.label}
-          </h1>
-          <p className="text-sm text-ink-light/60 font-light">
-            사주로 보는 {config.label} 심층 분석
-          </p>
+          <h1 className="text-3xl md:text-4xl font-serif font-light text-ink-light">{config.label}</h1>
+          <p className="text-sm text-ink-light/60 font-light">사주로 보는 {config.label} 심층 분석</p>
         </div>
 
         {/* 대상 선택 */}
@@ -319,9 +276,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
             <Card className="bg-surface/20 border-[#D4AF37]/20 card-glass-manse">
               <CardContent className="p-10 flex flex-col items-center gap-4">
                 <RefreshCw className="w-8 h-8 text-[#D4AF37] animate-spin" strokeWidth={1} />
-                <p className="text-sm font-light text-ink-light/60">
-                  AI가 {config.label}을 분석하고 있습니다...
-                </p>
+                <p className="text-sm font-light text-ink-light/60">AI가 {config.label}을 분석하고 있습니다...</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -352,9 +307,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
         {state.status === 'success' && (
           <div className="space-y-3">
             {state.cached && (
-              <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">
-                캐시된 결과입니다
-              </p>
+              <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">캐시된 결과입니다</p>
             )}
             <TrendResultView result={state.result} config={config} />
             <Button
@@ -374,23 +327,15 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
           <motion.div initial="initial" animate="animate" variants={fadeInUp}>
             <Card className="bg-surface/20 border-[#D4AF37]/20 card-glass-manse">
               <CardContent className="p-8 flex flex-col items-center gap-5">
-                <div
-                  className={`w-14 h-14 mx-auto rounded-full ${config.bg} flex items-center justify-center`}
-                >
+                <div className={`w-14 h-14 mx-auto rounded-full ${config.bg} flex items-center justify-center`}>
                   <Icon className={`w-7 h-7 ${config.color}`} strokeWidth={1} />
                 </div>
                 <div className="text-center space-y-1">
-                  <h3 className="text-lg font-serif font-light text-ink-light">
-                    {config.label} 분석
-                  </h3>
-                  <p className="text-sm text-ink-light/50 font-light">
-                    {config.desc}에 관한 사주 심층 분석
-                  </p>
+                  <h3 className="text-lg font-serif font-light text-ink-light">{config.label} 분석</h3>
+                  <p className="text-sm text-ink-light/50 font-light">{config.desc}에 관한 사주 심층 분석</p>
                 </div>
                 {!selectedId ? (
-                  <p className="text-xs text-ink-light/40 font-light">
-                    사주 정보를 먼저 입력해주세요.
-                  </p>
+                  <p className="text-xs text-ink-light/40 font-light">사주 정보를 먼저 입력해주세요.</p>
                 ) : (
                   <Button
                     onClick={handleAnalyze}

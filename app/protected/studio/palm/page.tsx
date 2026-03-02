@@ -15,6 +15,10 @@ import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/acti
 import { toast } from 'sonner'
 import { ArrowRight, Coins, Hand, TrendingUp, Activity, Heart, Briefcase, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
+import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
+import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { PaywallModal } from '@/components/shared/paywall-modal'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -31,6 +35,8 @@ function PalmAnalysisPageContent() {
   const [analysisResult, setAnalysisResult] = useState<PalmAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
+  const { checkQuota, paywallProps } = useAnalysisQuota()
 
   useEffect(() => {
     getWalletBalance().then(setBalance)
@@ -51,15 +57,23 @@ function PalmAnalysisPageContent() {
       return
     }
 
+    const canProceed = await checkQuota()
+    if (!canProceed) return
+
     setLoading(true)
     setStep('analyzing')
 
     try {
       const deductResult = await deductTalisman('HAND', PALM_COST)
       if (!deductResult.success) {
-        toast.error(deductResult.error || '복채가 부족합니다.')
         setLoading(false)
         setStep('upload')
+        const handled = handleDeductResult(deductResult, {
+          currentBalance: balance ?? 0,
+          requiredAmount: PALM_COST,
+          featureLabel: '손금 분석',
+        })
+        if (!handled) toast.error(deductResult.error || '복채가 부족합니다.')
         return
       }
 
@@ -103,6 +117,8 @@ function PalmAnalysisPageContent() {
 
   return (
     <StudioAnalysisLayout category="HAND" targetMember={targetMember}>
+      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+      <PaywallModal {...paywallProps} />
       <AnimatePresence mode="wait">
         {step === 'upload' && (
           <motion.div

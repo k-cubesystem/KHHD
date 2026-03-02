@@ -49,10 +49,7 @@ export async function getMonthlyFamilyFortune(): Promise<MonthlyFortune> {
 
   try {
     // Get all family members count
-    const { data: members } = await supabase
-      .from('family_members')
-      .select('id')
-      .eq('user_id', user.id)
+    const { data: members } = await supabase.from('family_members').select('id').eq('user_id', user.id)
 
     if (!members || members.length === 0) {
       return {
@@ -114,11 +111,7 @@ export async function getYearlyFortuneTrend(year?: number): Promise<YearlyFortun
 
     if (error) {
       // If RPC function doesn't exist, use fallback
-      if (
-        error.code === '42883' ||
-        error.message.includes('function') ||
-        error.message.includes('does not exist')
-      ) {
+      if (error.code === '42883' || error.message.includes('function') || error.message.includes('does not exist')) {
         console.log('RPC function not found, using fallback implementation for yearly trend')
         return getYearlyFortuneTrendFallback(user.id, targetYear)
       }
@@ -136,20 +129,13 @@ export async function getYearlyFortuneTrend(year?: number): Promise<YearlyFortun
 /**
  * Fallback implementation for yearly fortune trend
  */
-async function getYearlyFortuneTrendFallback(
-  userId: string,
-  year: number
-): Promise<YearlyFortuneMonth[]> {
+async function getYearlyFortuneTrendFallback(userId: string, year: number): Promise<YearlyFortuneMonth[]> {
   const supabase = await createClient()
 
   try {
     // 단일 쿼리로 전체 연도 데이터 + 가족 수 동시 조회
     const [{ data: fortuneData }, { data: members }] = await Promise.all([
-      supabase
-        .from('fortune_journal')
-        .select('month, fortune_points')
-        .eq('user_id', userId)
-        .eq('year', year),
+      supabase.from('fortune_journal').select('month, fortune_points').eq('user_id', userId).eq('year', year),
       supabase.from('family_members').select('id').eq('user_id', userId),
     ])
 
@@ -198,11 +184,7 @@ export async function getFamilyFortuneBreakdown(): Promise<FamilyMemberFortune[]
 
     if (error) {
       // If RPC function doesn't exist, use fallback
-      if (
-        error.code === '42883' ||
-        error.message.includes('function') ||
-        error.message.includes('does not exist')
-      ) {
+      if (error.code === '42883' || error.message.includes('function') || error.message.includes('does not exist')) {
         console.log('RPC function not found, using fallback implementation')
         return getFamilyFortuneBreakdownFallback(user.id, year, month)
       }
@@ -236,28 +218,37 @@ async function getFamilyFortuneBreakdownFallback(
 
     if (!members || members.length === 0) return []
 
-    // Get fortune data for each member
-    const results: FamilyMemberFortune[] = []
+    // Get fortune data for all members in a single query
+    const memberIds = members.map((m) => m.id)
+    const { data: allFortuneData } = await supabase
+      .from('fortune_journal')
+      .select('family_member_id, fortune_points, category')
+      .in('family_member_id', memberIds)
+      .eq('year', year)
+      .eq('month', month)
 
-    for (const member of members) {
-      const { data: fortuneData } = await supabase
-        .from('fortune_journal')
-        .select('fortune_points, category')
-        .eq('family_member_id', member.id)
-        .eq('year', year)
-        .eq('month', month)
+    // Aggregate in memory
+    const fortuneByMember = new Map<string, { totalFortune: number; missionsCompleted: number }>()
+    for (const row of allFortuneData || []) {
+      const existing = fortuneByMember.get(row.family_member_id) ?? {
+        totalFortune: 0,
+        missionsCompleted: 0,
+      }
+      existing.totalFortune += row.fortune_points || 0
+      existing.missionsCompleted += 1
+      fortuneByMember.set(row.family_member_id, existing)
+    }
 
-      const totalFortune = fortuneData?.reduce((sum, f) => sum + (f.fortune_points || 0), 0) || 0
-      const missionsCompleted = fortuneData?.length || 0
-
-      results.push({
+    const results: FamilyMemberFortune[] = members.map((member) => {
+      const agg = fortuneByMember.get(member.id) ?? { totalFortune: 0, missionsCompleted: 0 }
+      return {
         memberId: member.id,
         memberName: member.name,
         relationship: member.relationship || '가족',
-        fortune: totalFortune,
-        missionsCompleted,
-      })
-    }
+        fortune: agg.totalFortune,
+        missionsCompleted: agg.missionsCompleted,
+      }
+    })
 
     return results
   } catch (error) {

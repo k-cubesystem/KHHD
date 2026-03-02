@@ -1,42 +1,44 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CalendarCheck, Gift, Sparkles, Check, Crown } from 'lucide-react'
+import { CalendarCheck, Flame, Crown, Sparkles, Check, Gift, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { checkInAttendance } from '@/app/actions/payment/attendance'
 import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { WALLET_BALANCE_KEY } from '@/hooks/use-wallet'
 
-interface WeekDay {
-  date: string
-  dayLabel: string
-  checked: boolean
-  isToday: boolean
-  isFuture: boolean
-}
-
+/* ─────────────────────────────────────────
+   Types
+───────────────────────────────────────── */
 interface AttendanceCheckProps {
   canCheckIn: boolean
-  weekDays: WeekDay[]
+  /** ISO date strings that have been checked (from getMonthlyAttendance or getWeeklyAttendance) */
+  checkedDates?: string[]
+  /** Current week count (0-7) */
   weekCount: number
+  /** Total bokchae this week */
   totalBokchae: number
+  /** Consecutive day streak */
+  consecutiveStreak?: number
 }
 
-// 보상 파티클
+/* ─────────────────────────────────────────
+   Confetti Particles
+───────────────────────────────────────── */
 function RewardParticles({ isBonus }: { isBonus: boolean }) {
-  const count = isBonus ? 16 : 8
-  const emojis = isBonus ? ['💰', '🎉', '✨', '🌟', '💎'] : ['💰', '✨', '🪙']
+  const count = isBonus ? 20 : 12
+  const emojis = isBonus ? ['💰', '🎉', '✨', '🌟', '💎', '🪙'] : ['💰', '✨', '🪙', '⭐']
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
       {Array.from({ length: count }).map((_, i) => {
         const angle = (i / count) * 360
         const rad = (angle * Math.PI) / 180
-        const dist = 60 + Math.random() * 40
+        const dist = 70 + Math.random() * 60
         return (
           <motion.div
             key={i}
@@ -45,11 +47,11 @@ function RewardParticles({ isBonus }: { isBonus: boolean }) {
               x: Math.cos(rad) * dist,
               y: Math.sin(rad) * dist,
               opacity: [0, 1, 1, 0],
-              scale: [0, 1.2, 1, 0],
+              scale: [0, 1.3, 1, 0],
             }}
-            transition={{ duration: 1.2, delay: i * 0.04, ease: 'easeOut' }}
-            className="absolute top-1/2 left-1/2 text-sm"
-            style={{ fontSize: 14 + Math.random() * 8 }}
+            transition={{ duration: 1.4, delay: i * 0.04, ease: 'easeOut' }}
+            className="absolute top-1/2 left-1/2"
+            style={{ fontSize: 12 + Math.random() * 10 }}
           >
             {emojis[i % emojis.length]}
           </motion.div>
@@ -59,34 +61,228 @@ function RewardParticles({ isBonus }: { isBonus: boolean }) {
   )
 }
 
-// 스탬프 애니메이션
-function StampAnimation() {
+/* ─────────────────────────────────────────
+   Gold Stamp Animation (overlays the today cell)
+───────────────────────────────────────── */
+function GoldStamp() {
   return (
     <motion.div
-      initial={{ scale: 3, opacity: 0, rotate: -30 }}
+      initial={{ scale: 4, opacity: 0, rotate: -25 }}
       animate={{ scale: 1, opacity: 1, rotate: 0 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 15, duration: 0.4 }}
+      exit={{ scale: 0.5, opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 18 }}
       className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
     >
-      <div className="w-16 h-16 rounded-full bg-primary-dark/90 flex items-center justify-center shadow-lg shadow-primary/20">
-        <Check className="w-8 h-8 text-white" strokeWidth={3} />
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B6914] flex items-center justify-center shadow-xl shadow-[#D4AF37]/40 border-2 border-[#D4AF37]/60">
+        <Check className="w-6 h-6 text-black" strokeWidth={3.5} />
       </div>
     </motion.div>
   )
 }
 
+/* ─────────────────────────────────────────
+   Streak Badge
+───────────────────────────────────────── */
+function StreakBadge({ streak }: { streak: number }) {
+  if (streak < 2) return null
+  const isMilestone = streak % 7 === 0 && streak > 0
+
+  return (
+    <motion.div
+      key={streak}
+      initial={{ scale: 0.7, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 300 }}
+      className={cn(
+        'flex items-center gap-1 px-2.5 py-1 rounded-full border',
+        isMilestone
+          ? 'bg-gradient-to-r from-[#D4AF37]/20 to-[#8B6914]/20 border-[#D4AF37]/50'
+          : 'bg-[#D4AF37]/10 border-[#D4AF37]/25'
+      )}
+    >
+      <Flame className={cn('w-3 h-3', isMilestone ? 'text-[#D4AF37]' : 'text-[#D4AF37]/80')} />
+      <span className="text-[10px] font-bold text-[#D4AF37]">{streak}일 연속</span>
+      {isMilestone && <Crown className="w-3 h-3 text-[#D4AF37]" />}
+    </motion.div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Monthly Calendar
+───────────────────────────────────────── */
+function MonthlyCalendar({
+  year,
+  month,
+  checkedSet,
+  showStamp,
+}: {
+  year: number
+  month: number // 0-indexed
+  checkedSet: Set<string>
+  showStamp: boolean
+}) {
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  // Monday = 0 offset
+  const startOffset = (firstDay.getDay() + 6) % 7 // Mon=0, Tue=1, ..., Sun=6
+  const daysInMonth = lastDay.getDate()
+
+  const dayLabels = ['월', '화', '수', '목', '금', '토', '일']
+
+  const cells: (number | null)[] = [
+    ...Array(startOffset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+  // Pad to complete rows
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  return (
+    <div className="w-full">
+      {/* Day of week headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {dayLabels.map((d) => (
+          <div key={d} className="text-center text-[9px] font-medium text-ink-light/40 py-0.5">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar cells */}
+      <div className="grid grid-cols-7 gap-y-1 relative">
+        {cells.map((day, idx) => {
+          if (!day) return <div key={`empty-${idx}`} />
+
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const isChecked = checkedSet.has(dateStr)
+          const isToday = dateStr === todayStr
+          const isFuture = dateStr > todayStr
+
+          return (
+            <div key={dateStr} className="flex flex-col items-center gap-0.5 relative">
+              <motion.div
+                initial={false}
+                animate={
+                  isChecked
+                    ? { scale: [1.3, 1], opacity: 1 }
+                    : isToday
+                      ? { scale: [1, 1.08, 1] }
+                      : { scale: 1, opacity: 1 }
+                }
+                transition={
+                  isChecked
+                    ? { duration: 0.3, times: [0, 1] }
+                    : isToday
+                      ? { duration: 2, repeat: Infinity, repeatDelay: 1 }
+                      : {}
+                }
+                className={cn(
+                  'w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-medium relative',
+                  isChecked
+                    ? 'bg-gradient-to-br from-[#D4AF37] to-[#8B6914] text-black shadow-md shadow-[#D4AF37]/30'
+                    : isToday
+                      ? 'bg-[#D4AF37]/15 border border-[#D4AF37]/60 text-[#D4AF37]'
+                      : isFuture
+                        ? 'text-ink-light/25'
+                        : 'text-ink-light/50 hover:bg-white/5'
+                )}
+              >
+                {isChecked ? (
+                  // Show stamp animation over today when just checked in
+                  isToday && showStamp ? (
+                    <GoldStamp />
+                  ) : (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 400 }}
+                    >
+                      <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                    </motion.div>
+                  )
+                ) : (
+                  <span>{day}</span>
+                )}
+              </motion.div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Weekly Streak Progress Bar
+───────────────────────────────────────── */
+function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
+  const isComplete = weekCount >= 7
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-ink-light/50">이번 주 ({weekCount}/7일)</span>
+        <span className={cn('text-[10px] font-bold', isComplete ? 'text-[#D4AF37]' : 'text-[#D4AF37]/70')}>
+          {isComplete ? '🎉 주간 보너스 달성!' : `${7 - weekCount}일 남음 → +3만냥 보너스`}
+        </span>
+      </div>
+
+      {/* 7 segment bar */}
+      <div className="flex gap-0.5">
+        {Array.from({ length: 7 }).map((_, i) => {
+          const filled = i < weekCount
+          const isLast = i === 6
+          return (
+            <motion.div
+              key={i}
+              className={cn(
+                'h-2 flex-1 rounded-sm overflow-hidden relative',
+                filled ? (isLast ? 'bg-gradient-to-r from-[#D4AF37] to-[#F5D060]' : 'bg-[#D4AF37]') : 'bg-white/10'
+              )}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: i * 0.06, duration: 0.4, ease: 'easeOut' }}
+              style={{ transformOrigin: 'left' }}
+            >
+              {filled && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2 + i * 0.3 }}
+                />
+              )}
+              {isLast && !filled && (
+                <div className="absolute top-0 right-0 bottom-0 w-1 flex items-center justify-end pr-0.5">
+                  <span className="text-[6px]">🎁</span>
+                </div>
+              )}
+            </motion.div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────
+   Main Component
+───────────────────────────────────────── */
 export function AttendanceCheck({
   canCheckIn: initialCanCheckIn,
-  weekDays: initialWeekDays,
+  checkedDates: initialCheckedDates = [],
   weekCount: initialWeekCount,
   totalBokchae: initialTotalBokchae,
+  consecutiveStreak: initialStreak = 0,
 }: AttendanceCheckProps) {
+  const today = new Date()
   const [canCheckIn, setCanCheckIn] = useState(initialCanCheckIn)
-  const [weekDays, setWeekDays] = useState(initialWeekDays)
+  const [checkedDates, setCheckedDates] = useState<string[]>(initialCheckedDates)
   const [weekCount, setWeekCount] = useState(initialWeekCount)
   const [totalBokchae, setTotalBokchae] = useState(initialTotalBokchae)
+  const [streak, setStreak] = useState(initialStreak)
   const [isChecking, setIsChecking] = useState(false)
-  const [showReward, setShowReward] = useState(false)
   const [showStamp, setShowStamp] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
   const [lastReward, setLastReward] = useState<{
@@ -94,7 +290,26 @@ export function AttendanceCheck({
     isWeeklyBonus: boolean
     currentBalance?: number
   } | null>(null)
+  const [viewYear, setViewYear] = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+
   const queryClient = useQueryClient()
+
+  const checkedSet = useMemo(() => new Set(checkedDates), [checkedDates])
+
+  const monthLabel = useMemo(() => {
+    return new Date(viewYear, viewMonth, 1).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
+  }, [viewYear, viewMonth])
+
+  const canGoPrev = useMemo(() => {
+    const d = new Date(viewYear, viewMonth - 1, 1)
+    const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+    return d >= threeMonthsAgo
+  }, [viewYear, viewMonth, today])
+
+  const canGoNext = useMemo(() => {
+    return viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth())
+  }, [viewYear, viewMonth, today])
 
   const handleCheckIn = useCallback(async () => {
     if (!canCheckIn || isChecking) return
@@ -103,28 +318,28 @@ export function AttendanceCheck({
     setIsChecking(false)
 
     if (result.success) {
+      const todayStr = today.toISOString().split('T')[0]
       setCanCheckIn(false)
+      setCheckedDates((prev) => [...prev, todayStr])
       setWeekCount((prev) => prev + 1)
       setTotalBokchae((prev) => prev + (result.reward || 0))
+      setStreak((prev) => prev + 1)
       setLastReward({
         reward: result.reward || 1,
         isWeeklyBonus: result.isWeeklyBonus || false,
         currentBalance: result.currentBalance,
       })
 
-      // 스탬프 애니메이션 먼저
+      // Jump to current month so the stamp is visible
+      setViewYear(today.getFullYear())
+      setViewMonth(today.getMonth())
+
       setShowStamp(true)
       setTimeout(() => {
         setShowStamp(false)
-        setShowReward(true)
         setShowParticles(true)
-      }, 600)
+      }, 700)
 
-      // 오늘 날짜 체크 표시 업데이트
-      const today = new Date().toISOString().split('T')[0]
-      setWeekDays((prev) => prev.map((d) => (d.date === today ? { ...d, checked: true } : d)))
-
-      // 지갑 캐시 즉시 갱신
       if (result.currentBalance !== undefined) {
         queryClient.setQueryData(WALLET_BALANCE_KEY, result.currentBalance)
       }
@@ -137,238 +352,194 @@ export function AttendanceCheck({
         { duration: 5000 }
       )
 
-      setTimeout(() => {
-        setShowReward(false)
-        setShowParticles(false)
-      }, 3500)
+      setTimeout(() => setShowParticles(false), 3500)
     } else {
       toast.error(result.error || '출석 체크에 실패했습니다.')
     }
-  }, [canCheckIn, isChecking, queryClient])
+  }, [canCheckIn, isChecking, queryClient, today])
 
-  const progressPercent = Math.round((weekCount / 7) * 100)
-  const isComplete = weekCount >= 7
+  const isWeekComplete = weekCount >= 7
 
   return (
     <Card className="bg-surface/30 border-primary/20 overflow-hidden relative">
-      <CardContent className="p-4">
-        {/* 파티클 이펙트 */}
+      <CardContent className="p-4 space-y-4">
+        {/* ── Particles ── */}
         <AnimatePresence>
           {showParticles && lastReward && <RewardParticles isBonus={lastReward.isWeeklyBonus} />}
         </AnimatePresence>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <motion.div
               animate={canCheckIn ? { y: [0, -3, 0] } : {}}
               transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.5 }}
             >
-              <CalendarCheck className="w-5 h-5 text-primary" />
+              <CalendarCheck className="w-5 h-5 text-[#D4AF37]" />
             </motion.div>
-            <h3 className="text-sm font-bold text-ink-light">일일 출석 체크</h3>
+            <h3 className="text-sm font-bold text-ink-light tracking-wide">일일 출석 체크</h3>
           </div>
+          <StreakBadge streak={streak} />
+        </div>
+
+        {/* ── Streak Hero Number ── */}
+        {streak >= 1 && (
           <motion.div
-            animate={isComplete ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ duration: 2, repeat: Infinity }}
-            className={cn(
-              'flex items-center gap-1 px-2 py-1 rounded-full',
-              isComplete ? 'bg-primary/15 border border-primary/25' : 'bg-primary/10 border border-primary/20'
-            )}
+            key={streak}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex items-center justify-center gap-3 py-2 rounded-xl bg-gradient-to-r from-[#D4AF37]/5 via-[#D4AF37]/10 to-[#D4AF37]/5 border border-[#D4AF37]/20"
           >
-            {isComplete ? (
-              <Crown className="w-3 h-3 text-primary-dark" />
-            ) : (
-              <Sparkles className="w-3 h-3 text-primary-dark" />
-            )}
-            <span className="text-[10px] font-bold text-primary-dark">{isComplete ? '주간 완료!' : '주 10만냥'}</span>
-          </motion.div>
-        </div>
-
-        {/* Weekly Progress */}
-        <div className="mb-3">
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-[10px] text-ink-light/60">이번 주 출석 ({weekCount}/7일)</span>
-            <motion.span
-              key={totalBokchae}
-              initial={{ scale: 1.3, color: '#D4AF37' }}
-              animate={{ scale: 1, color: 'rgba(212,175,55,1)' }}
-              className="text-[10px] font-bold text-primary-dark"
-            >
-              {totalBokchae}만냥 적립
-            </motion.span>
-          </div>
-          <div className="h-2 bg-surface rounded-full overflow-hidden relative">
-            <motion.div
-              className={cn(
-                'h-full rounded-full',
-                isComplete
-                  ? 'bg-gradient-to-r from-primary-dark via-primary to-primary-dim'
-                  : 'bg-gradient-to-r from-primary-dark to-primary'
-              )}
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            />
-            {/* 발광 효과 */}
-            {progressPercent > 0 && (
-              <motion.div
-                className="absolute top-0 h-full w-8 bg-gradient-to-r from-transparent via-white/30 to-transparent rounded-full"
-                animate={{ left: ['-10%', `${progressPercent + 5}%`] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Day Indicators */}
-        <div className="grid grid-cols-7 gap-1.5 mb-3 relative">
-          {/* 스탬프 오버레이 */}
-          <AnimatePresence>{showStamp && <StampAnimation />}</AnimatePresence>
-
-          {weekDays.map((day, i) => (
-            <motion.div
-              key={day.date}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className="flex flex-col items-center gap-0.5"
-            >
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                animate={
-                  day.isToday && canCheckIn
-                    ? {
-                        scale: [1, 1.1, 1],
-                        borderColor: ['rgba(212,175,55,0.5)', 'rgba(212,175,55,1)', 'rgba(212,175,55,0.5)'],
-                      }
-                    : {}
-                }
-                transition={day.isToday && canCheckIn ? { duration: 1.5, repeat: Infinity } : {}}
-                className={cn(
-                  'w-8 h-8 rounded-full flex items-center justify-center border text-[9px] font-bold transition-all relative',
-                  day.checked
-                    ? 'bg-gradient-to-br from-primary to-primary-dark border-primary/50 text-background shadow-md shadow-primary/10'
-                    : day.isToday && canCheckIn
-                      ? 'bg-primary/20 border-primary text-primary'
-                      : day.isFuture
-                        ? 'bg-surface/50 border-white/10 text-ink-light/30'
-                        : 'bg-surface border-white/10 text-ink-light/50'
-                )}
+            <Flame className="w-5 h-5 text-[#D4AF37]" />
+            <div className="text-center">
+              <motion.p
+                key={streak}
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="text-2xl font-black text-[#D4AF37] leading-none"
               >
-                {day.checked ? (
-                  <motion.div
-                    initial={{ scale: 0, rotate: -90 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
-                  >
-                    <Check className="w-3.5 h-3.5" strokeWidth={3} />
-                  </motion.div>
-                ) : day.isToday && canCheckIn ? (
-                  <Gift className="w-3.5 h-3.5" />
-                ) : (
-                  day.dayLabel
-                )}
+                {streak}
+              </motion.p>
+              <p className="text-[10px] text-ink-light/50 mt-0.5">연속 출석일</p>
+            </div>
+            {streak >= 7 && <Crown className="w-5 h-5 text-[#D4AF37]" />}
+          </motion.div>
+        )}
 
-                {/* 7일차 보너스 마커 */}
-                {i === 6 && !day.checked && (
-                  <div className="absolute -top-1 -right-1">
-                    <span className="text-[8px]">🎁</span>
-                  </div>
-                )}
-              </motion.div>
-              <span className={cn('text-[8px]', day.checked ? 'text-primary-dark font-bold' : 'text-ink-light/40')}>
-                {day.dayLabel}
-              </span>
-              {/* 날짜별 복채 표시 */}
-              <span className={cn('text-[7px]', day.checked ? 'text-primary/60' : 'text-ink-light/25')}>
-                {i === 6 ? '+4' : '+1'}
-              </span>
-            </motion.div>
-          ))}
+        {/* ── Monthly Calendar ── */}
+        <div className="space-y-2">
+          {/* Calendar nav */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => {
+                const d = new Date(viewYear, viewMonth - 1, 1)
+                setViewYear(d.getFullYear())
+                setViewMonth(d.getMonth())
+              }}
+              disabled={!canGoPrev}
+              className={cn(
+                'w-6 h-6 rounded-full flex items-center justify-center transition-colors',
+                canGoPrev
+                  ? 'text-ink-light/60 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10'
+                  : 'text-ink-light/20 cursor-not-allowed'
+              )}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-[11px] font-medium text-ink-light/70">{monthLabel}</span>
+            <button
+              onClick={() => {
+                const d = new Date(viewYear, viewMonth + 1, 1)
+                setViewYear(d.getFullYear())
+                setViewMonth(d.getMonth())
+              }}
+              disabled={!canGoNext}
+              className={cn(
+                'w-6 h-6 rounded-full flex items-center justify-center transition-colors',
+                canGoNext
+                  ? 'text-ink-light/60 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10'
+                  : 'text-ink-light/20 cursor-not-allowed'
+              )}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <MonthlyCalendar year={viewYear} month={viewMonth} checkedSet={checkedSet} showStamp={showStamp} />
         </div>
 
-        {/* Check-in Button */}
+        {/* ── Weekly Bonus Progress ── */}
+        <WeeklyStreakBar weekCount={weekCount} />
+
+        {/* ── Check-in Button ── */}
         <div className="relative">
-          <motion.div whileTap={canCheckIn && !isChecking ? { scale: 0.95 } : {}}>
+          <motion.div whileTap={canCheckIn && !isChecking ? { scale: 0.96 } : {}}>
             <Button
               onClick={handleCheckIn}
               disabled={!canCheckIn || isChecking}
               className={cn(
-                'w-full h-10 text-xs font-bold transition-all',
+                'w-full h-12 text-sm font-bold transition-all relative overflow-hidden',
                 canCheckIn && !isChecking
-                  ? 'bg-gradient-to-r from-primary/80 to-primary-dark hover:from-primary hover:to-gold-600 text-background shadow-md shadow-primary/10'
-                  : 'bg-surface border border-primary/10 text-ink-light/40 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-[#8B6914] via-[#D4AF37] to-[#8B6914] hover:from-[#9A7A20] hover:via-[#E5C04D] hover:to-[#9A7A20] text-black shadow-lg shadow-[#D4AF37]/20'
+                  : 'bg-surface border border-[#D4AF37]/15 text-ink-light/35 cursor-not-allowed'
               )}
             >
-              {isChecking ? (
-                <span className="flex items-center gap-2">
-                  <motion.span
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </motion.span>
-                  출석 처리 중...
-                </span>
-              ) : canCheckIn ? (
-                <span className="flex items-center gap-2">
-                  <Gift className="w-3.5 h-3.5" />
-                  출석 체크하기 (+1만냥)
-                </span>
-              ) : (
-                <span className="flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5" />
-                  오늘 출석 완료
-                </span>
+              {/* shimmer on active */}
+              {canCheckIn && !isChecking && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1.5 }}
+                />
               )}
+              <span className="relative flex items-center justify-center gap-2">
+                {isChecking ? (
+                  <>
+                    <motion.span
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </motion.span>
+                    출석 처리 중...
+                  </>
+                ) : canCheckIn ? (
+                  <>
+                    <Gift className="w-4 h-4" />
+                    오늘 출석 체크하기 (+1만냥)
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    오늘 출석 완료
+                  </>
+                )}
+              </span>
             </Button>
           </motion.div>
 
-          {/* Reward Float Animation */}
+          {/* Reward Float */}
           <AnimatePresence>
-            {showReward && lastReward && (
+            {showParticles && lastReward && (
               <motion.div
                 initial={{ scale: 0, y: 0, opacity: 0 }}
-                animate={{ scale: 1, y: -50, opacity: 1 }}
-                exit={{ opacity: 0, y: -70, scale: 0.8 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                animate={{ scale: 1, y: -60, opacity: 1 }}
+                exit={{ opacity: 0, y: -80, scale: 0.8 }}
+                transition={{ type: 'spring', stiffness: 180, damping: 14 }}
                 className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10"
               >
                 <div
                   className={cn(
-                    'px-4 py-2 rounded-xl text-xs font-bold shadow-xl',
+                    'px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl border',
                     lastReward.isWeeklyBonus
-                      ? 'bg-gradient-to-r from-primary-dark to-primary text-background'
-                      : 'bg-gradient-to-r from-primary/80 to-primary-dark text-background'
+                      ? 'bg-gradient-to-r from-[#8B6914] to-[#D4AF37] text-black border-[#D4AF37]/50'
+                      : 'bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-[#D4AF37] border-[#D4AF37]/40'
                   )}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base">{lastReward.isWeeklyBonus ? '🎉' : '💰'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{lastReward.isWeeklyBonus ? '🎉' : '💰'}</span>
                     <div>
-                      <p className="text-sm font-black">+{lastReward.reward}만냥</p>
+                      <p className="text-base font-black">+{lastReward.reward}만냥</p>
                       {lastReward.isWeeklyBonus && <p className="text-[9px] opacity-80">주간 보너스 포함!</p>}
                     </div>
                   </div>
-                  {lastReward.currentBalance !== undefined && (
-                    <p className="text-[9px] opacity-70 text-center mt-0.5">잔액: {lastReward.currentBalance}만냥</p>
-                  )}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Info */}
-        <div className="mt-2.5 pt-2.5 border-t border-white/5">
-          <div className="flex justify-between items-center">
-            <p className="text-[9px] text-ink-light/40">매일 1만냥 · 7일 완료 시 +3만냥 보너스</p>
-            {lastReward?.currentBalance !== undefined && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-primary/50">
-                잔액 {lastReward.currentBalance}만냥
-              </motion.p>
-            )}
-          </div>
+        {/* ── Info Footer ── */}
+        <div className="flex items-center justify-between pt-1 border-t border-white/5">
+          <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
+          <motion.p
+            key={totalBokchae}
+            initial={{ color: '#D4AF37', scale: 1.2 }}
+            animate={{ scale: 1 }}
+            className="text-[9px] font-bold text-[#D4AF37]/60"
+          >
+            이달 {totalBokchae}만냥
+          </motion.p>
         </div>
       </CardContent>
     </Card>

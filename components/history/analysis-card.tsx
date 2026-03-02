@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { Clock, Star, User2, Hand, Home, Heart, Sun, Coins, Sparkles, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
@@ -23,7 +24,7 @@ const categoryConfig = {
   NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-primary-dark' },
 }
 
-export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
+export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
   const config = categoryConfig[record.category] || categoryConfig.TODAY // Fallback to TODAY if category not found
   const Icon = config.icon
 
@@ -99,4 +100,4 @@ export function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
       </div>
     </motion.div>
   )
-}
+})

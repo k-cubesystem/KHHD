@@ -1,9 +1,16 @@
 import { SignUpForm } from '@/components/sign-up-form'
 import { Suspense } from 'react'
-import { Loader2, Flower } from 'lucide-react'
+import { Loader2, Flower, Gift } from 'lucide-react'
 import Link from 'next/link'
 
-export default function Page() {
+interface Props {
+  searchParams: Promise<{ ref?: string; from?: string }>
+}
+
+export default async function Page({ searchParams }: Props) {
+  const { ref, from } = await searchParams
+  const isReferral = !!ref && from === 'invite'
+
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 overflow-hidden bg-background text-ink-light font-serif">
       {/* Texture Overlay */}
@@ -33,6 +40,20 @@ export default function Page() {
           </div>
         </div>
 
+        {/* 추천인 배너 */}
+        {isReferral && (
+          <div className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary/10 border border-primary/30 animate-in fade-in duration-700">
+            <Gift className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-bold text-primary">추천 혜택 적용 중</p>
+              <p className="text-xs text-ink-light/60">
+                가입 완료 시 <span className="text-primary font-bold">5만냥</span> 추가 지급 (코드:{' '}
+                <span className="font-mono text-primary">{ref}</span>)
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Sign Up Form */}
         <div className="w-full p-2">
           <Suspense
@@ -52,12 +73,8 @@ export default function Page() {
           <div className="w-full max-w-[200px] h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
 
           <div className="flex items-center justify-center gap-6 font-sans text-sm tracking-wide">
-            <Link
-              href="/auth/login"
-              className="text-ink-light/50 hover:text-ink-light transition-colors duration-300"
-            >
-              이미 계정이 있으신가요?{' '}
-              <span className="text-primary hover:underline ml-1 font-bold">로그인</span>
+            <Link href="/auth/login" className="text-ink-light/50 hover:text-ink-light transition-colors duration-300">
+              이미 계정이 있으신가요? <span className="text-primary hover:underline ml-1 font-bold">로그인</span>
             </Link>
           </div>
         </div>
