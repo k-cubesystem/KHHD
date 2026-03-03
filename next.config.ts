@@ -96,11 +96,16 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withSentryConfig(bundleAnalyzer(nextConfig), {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  disableLogger: true,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-})
+const baseConfig = bundleAnalyzer(nextConfig)
+
+// Sentry sourcemap 업로드는 SENTRY_AUTH_TOKEN이 있을 때만 활성화
+export default process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(baseConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      disableLogger: true,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    })
+  : baseConfig
