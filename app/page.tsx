@@ -1,6 +1,3 @@
-// Edge Runtime: Node.js Cold Start 제거 → 전 세계 Edge PoP에서 즉시 응답
-export const runtime = 'edge'
-
 import { HeroCarousel } from '@/components/HeroCarousel'
 
 export default function Home() {
