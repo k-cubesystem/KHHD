@@ -19,12 +19,10 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
 
   if (!member) return null
 
-  const completedMissions = MISSION_CATEGORIES.filter((m) =>
-    member.completed_categories?.includes(m.value)
-  )
+  const completedMissions = MISSION_CATEGORIES.filter((m) => member.completed_categories?.includes(m.value))
 
   const handleStartMission = (path: string) => {
-    router.push(`${path}?target=${member.id}`)
+    router.push(`${path}?targetId=${member.id}`)
     onClose()
   }
 
@@ -43,8 +41,7 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
               <span className="text-[#D4AF37]">8가지 지혜</span>
             </SheetTitle>
             <p className="text-xs text-white/50 font-light mt-1">
-              부족한 운을 메우면{' '}
-              <strong className="text-white/80 font-medium">소중한 사람을 지키는 힘</strong>이
+              부족한 운을 메우면 <strong className="text-white/80 font-medium">소중한 사람을 지키는 힘</strong>이
               됩니다.
             </p>
           </div>
@@ -54,8 +51,7 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
             <div className="flex justify-between text-[10px] font-medium">
               <span className="text-primary">운세 완성도</span>
               <span className="text-white/60">
-                <span className="text-primary">{completedMissions.length}</span> /{' '}
-                {MISSION_CATEGORIES.length}
+                <span className="text-primary">{completedMissions.length}</span> / {MISSION_CATEGORIES.length}
               </span>
             </div>
             <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
@@ -106,18 +102,14 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
                   <span
                     className={cn(
                       'text-[10px] font-medium relative z-10 transition-colors duration-300',
-                      isCompleted
-                        ? 'text-primary font-bold'
-                        : 'text-white/40 group-hover:text-white/70'
+                      isCompleted ? 'text-primary font-bold' : 'text-white/40 group-hover:text-white/70'
                     )}
                   >
                     {mission.label}
                   </span>
 
                   {/* Status Indicator */}
-                  {!isCompleted && (
-                    <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-white/10" />
-                  )}
+                  {!isCompleted && <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-white/10" />}
                 </Button>
               )
             })}

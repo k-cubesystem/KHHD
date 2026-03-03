@@ -36,11 +36,7 @@ export function TodayFortuneContent() {
         const { data } = await supabase.auth.getUser()
         if (data.user) {
           setUserId(data.user.id)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', data.user.id)
-            .single()
+          const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', data.user.id).single()
           setUserName(profile?.full_name || '회원')
         }
       }
@@ -64,9 +60,7 @@ export function TodayFortuneContent() {
       <div className="text-center space-y-4 animate-in fade-in duration-700">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
           <Sun className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">
-            Daily Compass
-          </span>
+          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">Daily Compass</span>
         </div>
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
           오늘의 <span className="text-primary">기상도</span>
@@ -96,7 +90,7 @@ export function TodayFortuneContent() {
         className="max-w-3xl mx-auto w-full"
       >
         {userId ? (
-          <DailyFortuneView userId={userId} userName={userName} />
+          <DailyFortuneView userId={userId} userName={userName} initialMemberId={targetId ?? undefined} />
         ) : (
           <GuestCTACard
             title="가입하고 내 운세 보기"
@@ -109,8 +103,7 @@ export function TodayFortuneContent() {
                   <span className="text-xl font-serif text-primary">★★★★☆</span>
                 </div>
                 <p className="text-sm text-ink-light/60 leading-relaxed">
-                  오늘은 새로운 시작을 알리는 길한 날입니다. 평소 미뤄왔던 일을 시작하기에 좋은
-                  시기...
+                  오늘은 새로운 시작을 알리는 길한 날입니다. 평소 미뤄왔던 일을 시작하기에 좋은 시기...
                 </p>
                 <div className="h-px bg-primary/10" />
                 <div className="grid grid-cols-3 gap-4">

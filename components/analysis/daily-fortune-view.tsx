@@ -3,25 +3,11 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-  Loader2,
-  MessageCircle,
-  Share2,
-  Sparkles,
-  RefreshCw,
-  Users,
-  ArrowRight,
-} from 'lucide-react'
+import { Loader2, MessageCircle, Share2, Sparkles, RefreshCw, Users, ArrowRight } from 'lucide-react'
 import { generateDailyFortune } from '@/app/actions/fortune/daily'
 import { sendKakaoNotification } from '@/app/actions/fortune/notification'
 import { getFamilyMembers } from '@/app/actions/user/family'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -29,6 +15,7 @@ import Link from 'next/link'
 interface DailyFortuneViewProps {
   userId: string
   userName: string
+  initialMemberId?: string
 }
 
 interface ProfileOption {
@@ -37,15 +24,13 @@ interface ProfileOption {
   type: 'USER' | 'FAMILY'
 }
 
-export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
+export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFortuneViewProps) {
   const [fortune, setFortune] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
 
-  const [profiles, setProfiles] = useState<ProfileOption[]>([
-    { id: userId, name: userName, type: 'USER' },
-  ])
-  const [selectedProfileId, setSelectedProfileId] = useState<string>(userId)
+  const [profiles, setProfiles] = useState<ProfileOption[]>([{ id: userId, name: userName, type: 'USER' }])
+  const [selectedProfileId, setSelectedProfileId] = useState<string>(initialMemberId ?? userId)
   const [missingInfo, setMissingInfo] = useState(false)
   const [pendingLoad, setPendingLoad] = useState(false)
 
@@ -81,21 +66,12 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
 
     try {
       const selected = profiles.find((p) => p.id === selectedProfileId) || profiles[0]
-      const result = await generateDailyFortune(
-        userId,
-        selected.id,
-        selected.type,
-        undefined,
-        force
-      )
+      const result = await generateDailyFortune(userId, selected.id, selected.type, undefined, force)
 
       if (result.success && result.content) {
         setFortune(result.content)
       } else {
-        if (
-          result.error &&
-          (result.error.includes('생년월일') || result.error.includes('가족의 생년월일'))
-        ) {
+        if (result.error && (result.error.includes('생년월일') || result.error.includes('가족의 생년월일'))) {
           setMissingInfo(true)
         } else {
           toast.error(result.error || '운세를 불러오지 못했습니다.')
@@ -166,11 +142,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
               </SelectTrigger>
               <SelectContent className="bg-surface border-primary/20 text-ink-light">
                 {profiles.map((profile) => (
-                  <SelectItem
-                    key={profile.id}
-                    value={profile.id}
-                    className="focus:bg-primary/20 focus:text-ink-light"
-                  >
+                  <SelectItem key={profile.id} value={profile.id} className="focus:bg-primary/20 focus:text-ink-light">
                     {profile.name}
                   </SelectItem>
                 ))}
@@ -193,9 +165,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
         {pendingLoad && !loading ? (
           <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
             <Sparkles className="w-10 h-10 text-primary/60" />
-            <p className="text-ink-light/70 font-serif text-sm">
-              {selectedProfile?.name}님의 운세를 확인하시겠습니까?
-            </p>
+            <p className="text-ink-light/70 font-serif text-sm">{selectedProfile?.name}님의 운세를 확인하시겠습니까?</p>
             <Button
               onClick={() => {
                 setPendingLoad(false)
@@ -219,9 +189,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
             <Sparkles className="w-12 h-12 text-ink-light/40" />
             <div className="text-center space-y-2">
               <p className="text-ink-light font-serif text-lg">사주 정보를 찾을 수 없습니다</p>
-              <p className="text-ink-light/60 text-sm">
-                정확한 운세 분석을 위해 생년월일시 정보가 필요합니다.
-              </p>
+              <p className="text-ink-light/60 text-sm">정확한 운세 분석을 위해 생년월일시 정보가 필요합니다.</p>
             </div>
             <Button asChild className="bg-primary-dark text-white hover:bg-primary-dark/90">
               <Link href="/protected/family">
@@ -246,11 +214,7 @@ export function DailyFortuneView({ userId, userName }: DailyFortuneViewProps) {
             disabled={sending || !fortune}
             className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary-dim"
           >
-            {sending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <MessageCircle className="w-4 h-4 mr-2" />
-            )}
+            {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageCircle className="w-4 h-4 mr-2" />}
             카카오톡으로 공유
           </Button>
         </div>
