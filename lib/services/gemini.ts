@@ -1,5 +1,6 @@
 ﻿import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { logger } from '@/lib/utils/logger'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
 
@@ -31,7 +32,7 @@ export async function generateFateReport(params: FateReportParams) {
     daily: { minChars: 1000, title: '해화당 오늘의 운세' },
   }[reportType]
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
 
   const prompt = `
 당신은 '청담해화당'의 4대 계승자이자 KAIST 데이터 사이언스 박사인 '해화당 마스터'입니다.

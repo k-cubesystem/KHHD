@@ -10,4 +10,4 @@ export const MODEL_PRO = 'gemini-3.1-pro-preview'
 export const MODEL_FLASH = 'gemini-3-flash-preview'
 
 /** 이미지 생성 (Imagen) */
-export const MODEL_IMAGE = 'gemini-2.0-flash-preview-image-generation'
+export const MODEL_IMAGE = 'gemini-3.1-flash-image-preview'

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { MODEL_IMAGE } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -110,7 +111,7 @@ export async function generateFortuneImage(
     // Use Gemini 2.0 Flash image generation model
     // responseModalities is supported by the API but not yet typed in SDK v0.24
     const modelConfig = {
-      model: 'gemini-2.0-flash-preview-image-generation',
+      model: MODEL_IMAGE,
       generationConfig: {
         responseModalities: ['TEXT', 'IMAGE'],
       } as object,
