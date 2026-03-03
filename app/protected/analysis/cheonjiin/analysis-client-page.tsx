@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { Card } from '@/components/ui/card'
-import { BookOpen, User, Compass, Hand, Sparkles, ArrowRight } from 'lucide-react'
+import { User, Sparkles, ArrowRight } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
 import { SajuLoadingOverlay } from '@/components/shared/SajuLoadingOverlay'
@@ -229,86 +229,64 @@ interface AnalysisClientPageProps {
 }
 
 function TriadVisual() {
+  const orbs = [
+    { char: '天', label: '사주', x: '50%', y: '8%', delay: 0 },
+    { char: '地', label: '풍수', x: '15%', y: '72%', delay: 0.6 },
+    { char: '人', label: '관상', x: '85%', y: '72%', delay: 1.2 },
+  ]
   return (
-    <div className="relative w-64 h-64 mx-auto my-6">
-      {/* Background Glow */}
-      <div className="absolute inset-0 bg-primary/5 blur-[50px] rounded-full animate-pulse" />
+    <div className="relative w-40 h-36 mx-auto my-3">
+      {/* 중심 글로우 */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-primary/8 rounded-full blur-xl" />
 
-      {/* Rotating Ring */}
+      {/* 회전 링 */}
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        className="absolute inset-0 border border-dashed border-primary/20 rounded-full"
+        className="absolute inset-2 border border-dashed border-primary/15 rounded-full"
       />
 
-      {/* Triangle Concept */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      {/* 연결선 */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        <motion.path
+          d="M80 14 L24 100 L136 100 Z"
+          fill="none"
+          stroke="rgba(212,175,55,0.15)"
+          strokeWidth="0.5"
+          strokeDasharray="3,3"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.5, delay: 0.3 }}
+        />
+      </svg>
+
+      {/* 구슬들 */}
+      {orbs.map((orb) => (
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          key={orb.char}
+          className="absolute flex flex-col items-center gap-0.5"
+          style={{ left: orb.x, top: orb.y, transform: 'translate(-50%, -50%)' }}
+          initial={{ opacity: 0, scale: 0 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative w-full h-full"
+          transition={{ delay: orb.delay, duration: 0.5, type: 'spring' }}
         >
-          {/* Top: Heaven */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1">
-            <div className="w-10 h-10 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-              <span className="font-serif text-primary text-base">天</span>
-            </div>
-            <div className="text-center">
-              <span className="text-[10px] text-ink-light font-bold block">사주</span>
-              <span className="text-[9px] text-ink-light/50 block">타고난 운명</span>
-            </div>
-          </div>
-
-          {/* Bottom Left: Earth */}
-          <div className="absolute bottom-8 left-6 flex flex-col items-center gap-1">
-            <div className="w-10 h-10 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-              <span className="font-serif text-primary text-base">地</span>
-            </div>
-            <div className="text-center">
-              <span className="text-[10px] text-ink-light font-bold block">풍수</span>
-              <span className="text-[9px] text-ink-light/50 block">공간의 기운</span>
-            </div>
-          </div>
-
-          {/* Bottom Right: Human */}
-          <div className="absolute bottom-8 right-6 flex flex-col items-center gap-1">
-            <div className="w-10 h-10 rounded-full bg-[#1a0505] border border-primary/40 flex items-center justify-center shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-              <span className="font-serif text-primary text-base">人</span>
-            </div>
-            <div className="text-center">
-              <span className="text-[10px] text-ink-light font-bold block">관상</span>
-              <span className="text-[9px] text-ink-light/50 block">삶의 의지</span>
-            </div>
-          </div>
-
-          {/* Connecting Lines */}
-          <svg
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            style={{ zIndex: -1 }}
+          <motion.div
+            animate={{
+              y: [0, -4, 0],
+              boxShadow: [
+                '0 0 10px rgba(212,175,55,0.15)',
+                '0 0 20px rgba(212,175,55,0.35)',
+                '0 0 10px rgba(212,175,55,0.15)',
+              ],
+            }}
+            transition={{ duration: 2.5, repeat: Infinity, delay: orb.delay * 0.5, ease: 'easeInOut' }}
+            className="w-9 h-9 rounded-full bg-[#1a0f05] border border-primary/40 flex items-center justify-center"
           >
-            <motion.path
-              d="M128 60 L60 180 L196 180 Z"
-              fill="none"
-              stroke="url(#grad1)"
-              strokeWidth="0.5"
-              strokeDasharray="4,4"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 2, delay: 0.5 }}
-            />
-            <defs>
-              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" style={{ stopColor: 'rgba(212,175,55,0.1)', stopOpacity: 1 }} />
-                <stop offset="50%" style={{ stopColor: 'rgba(212,175,55,0.5)', stopOpacity: 1 }} />
-                <stop offset="100%" style={{ stopColor: 'rgba(212,175,55,0.1)', stopOpacity: 1 }} />
-              </linearGradient>
-            </defs>
-          </svg>
-
-          {/* Center Core */}
-          <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-primary/10 rounded-full blur-xl animate-pulse" />
+            <span className="font-serif text-primary text-sm">{orb.char}</span>
+          </motion.div>
+          <span className="text-[9px] text-ink-light/50 font-medium">{orb.label}</span>
         </motion.div>
-      </div>
+      ))}
     </div>
   )
 }
@@ -316,7 +294,8 @@ function TriadVisual() {
 export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientPageProps) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId || null)
-  const [showAnalysisTypeSelection, setShowAnalysisTypeSelection] = useState(false)
+  // initialTargetId가 있으면 (가족관리에서 넘어온 경우) 바로 분석 타입 선택으로
+  const [showAnalysisTypeSelection, setShowAnalysisTypeSelection] = useState(!!initialTargetId)
   const [showSajuLoading, setShowSajuLoading] = useState(false)
 
   const handleTargetSelect = (id: string) => {
@@ -359,51 +338,24 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         animate="animate"
         className="max-w-3xl mx-auto py-6 px-4 pb-20 overflow-x-hidden"
       >
-        {/* 1. Header Area with Visual */}
-        <motion.section variants={fadeInUp} className="text-center space-y-4 mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-0.5 bg-primary/10 border border-primary/20 rounded-full mb-2">
-            <Sparkles className="w-3 h-3 text-primary" strokeWidth={1} />
-            <span className="text-[9px] font-medium text-primary tracking-[0.2em] uppercase">
+        {/* 1. Header Area with Visual — 컴팩트 */}
+        <motion.section variants={fadeInUp} className="text-center space-y-1 mb-6">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
+            <Sparkles className="w-2.5 h-2.5 text-primary" strokeWidth={1} />
+            <span className="text-[8px] font-medium text-primary tracking-[0.15em] uppercase">
               The Masterpiece
             </span>
           </div>
 
-          <h1 className="text-xl md:text-3xl font-serif font-medium text-ink-light tracking-tight">
+          <h1 className="text-lg font-serif font-medium text-ink-light tracking-tight">
             천지인(天地人) 통합 운명 분석
           </h1>
 
-          <p className="text-xs text-ink-light/60 font-light max-w-sm mx-auto leading-normal break-keep">
-            하늘의 시기(天), 땅의 기운(地), 사람의 흔적(人).
-            <br />세 가지 차원을 통해 당신의 운명을 비춥니다.
+          <p className="text-[11px] text-ink-light/50 font-light break-keep">
+            하늘의 시기 · 땅의 기운 · 사람의 흔적
           </p>
 
           <TriadVisual />
-        </motion.section>
-
-        {/* 2. Three Pillars Explanation (Consolidated Card) */}
-        <motion.section variants={fadeInUp} className="mb-10 text-center md:text-left">
-          <Card className="bg-surface/30 border border-white/5 p-4 rounded-xl">
-            <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/10">
-              {[
-                { icon: BookOpen, title: '천(天): 사주', desc: '하늘의 섭리와 설계도' },
-                { icon: Compass, title: '지(地): 풍수', desc: '공간과 환경의 에너지' },
-                { icon: Hand, title: '인(人): 관상', desc: '삶의 궤적과 의지' },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className="flex-1 flex items-center md:flex-col md:items-center md:text-center gap-4 p-3 hover:bg-surface/50 transition-colors"
-                >
-                  <div className="w-8 h-8 flex-shrink-0 bg-[#1a0505] border border-primary/20 rounded-full flex items-center justify-center">
-                    <item.icon className="w-3.5 h-3.5 text-primary opacity-70" strokeWidth={1} />
-                  </div>
-                  <div className="flex flex-col md:gap-1 text-left md:text-center">
-                    <h3 className="text-sm font-serif text-ink-light font-medium">{item.title}</h3>
-                    <p className="text-xs text-ink-light/50">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
         </motion.section>
 
         {/* 3. Target Selection OR Analysis Type Selection */}
