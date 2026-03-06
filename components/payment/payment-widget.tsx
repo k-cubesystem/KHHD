@@ -134,6 +134,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         customerKey: result.customerKey,
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
+        windowTarget: 'self',
       })
       // requestBillingAuth는 페이지를 이동시키므로 이후 실행 안 됨
     } catch (error) {

@@ -38,6 +38,12 @@ function CheckoutContent() {
     setError('')
 
     try {
+      if (!CLIENT_KEY) {
+        setError('결제 키가 설정되지 않았습니다. 관리자에게 문의해주세요.')
+        setPaying(false)
+        return
+      }
+
       const result = await createBillingAuthUrl(planId)
       if (!result.success || !result.customerKey) {
         setError(result.error || '결제 준비에 실패했습니다.')
@@ -50,11 +56,18 @@ function CheckoutContent() {
         customerKey: result.customerKey,
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
+        windowTarget: 'self',
       })
       // requestBillingAuth는 페이지를 이동시키므로 이후 코드 실행 안 됨
-    } catch (err: any) {
-      console.error('[Checkout] error:', err)
-      setError(err?.message || '결제 중 오류가 발생했습니다.')
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      console.error('[Checkout] error:', errMsg)
+      // Toss SDK 에러 메시지 한국어 변환
+      if (errMsg.includes('Request') || errMsg.includes('clientKey') || errMsg.includes('client_key')) {
+        setError('결제 모듈 초기화 실패: 환경변수(TOSS_CLIENT_KEY)를 확인해주세요.')
+      } else {
+        setError(errMsg || '결제 중 오류가 발생했습니다.')
+      }
       setPaying(false)
     }
   }

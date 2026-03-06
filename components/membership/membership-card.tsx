@@ -36,6 +36,7 @@ export function MembershipCard({ planId, planName, price }: MembershipCardProps)
         customerKey: result.customerKey,
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
+        windowTarget: 'self',
       })
     } catch (error) {
       console.error('Subscription error:', error)

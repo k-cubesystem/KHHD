@@ -62,6 +62,7 @@ export function PricingCard({ plan, features, isRecommended, isGuest = false, th
         customerKey: result.customerKey,
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${plan.id}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
+        windowTarget: 'self',
       })
     } catch (error) {
       console.error('Subscribe error:', error)
