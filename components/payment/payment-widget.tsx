@@ -122,20 +122,22 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
     setIsLoading(true)
     try {
       const result = await createBillingAuthUrl(planId)
-      if (!result.success || !result.authUrl) {
+      if (!result.success || !result.customerKey) {
         toast.error(result.error || '구독 준비에 실패했습니다.')
         return
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        toast.info('개발 환경: 테스트 결제 페이지로 이동합니다.')
-        router.push(`/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}&mock=true`)
-      } else {
-        window.location.href = result.authUrl
-      }
+      const tossPayments = await getTossPayments()
+      if (!tossPayments) throw new Error('결제 모듈 로드 실패')
+
+      await tossPayments.requestBillingAuth('카드', {
+        customerKey: result.customerKey,
+        successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}`,
+        failUrl: `${window.location.origin}/protected/membership/fail`,
+      })
+      // requestBillingAuth는 페이지를 이동시키므로 이후 실행 안 됨
     } catch (error) {
       toast.error('구독 처리 중 오류가 발생했습니다.')
-    } finally {
       setIsLoading(false)
     }
   }

@@ -6,7 +6,7 @@ import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 
-const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || 'test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb'
+const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
 
 // ============================================
@@ -198,9 +198,11 @@ export async function getSubscriptionStatus(): Promise<{
 // ============================================
 // 빌링키 발급 URL 생성
 // ============================================
+// alias used by checkout page
+export const createBillingAuthSession = (planId: string) => createBillingAuthUrl(planId)
+
 export async function createBillingAuthUrl(planId: string): Promise<{
   success: boolean
-  authUrl?: string
   customerKey?: string
   error?: string
 }> {
@@ -253,24 +255,8 @@ export async function createBillingAuthUrl(planId: string): Promise<{
     })
   }
 
-  // Toss Payments 빌링키 발급 URL
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const successUrl = `${baseUrl}/protected/membership/success?customerKey=${customerKey}&planId=${planId}`
-  const failUrl = `${baseUrl}/protected/membership/fail`
-
-  // 빌링키 인증 창 URL 생성
-  const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_z6OdyEPWpUpnLp90z608nM7XyVNb'
-
-  const authUrl =
-    `https://api.tosspayments.com/v1/billing/authorizations/widget?` +
-    `clientKey=${clientKey}` +
-    `&customerKey=${customerKey}` +
-    `&successUrl=${encodeURIComponent(successUrl)}` +
-    `&failUrl=${encodeURIComponent(failUrl)}`
-
   return {
     success: true,
-    authUrl,
     customerKey,
   }
 }
@@ -752,7 +738,7 @@ export async function getSubscriptionPayments(limit: number = 10): Promise<Subsc
 // ============================================
 export async function changeBillingMethod(): Promise<{
   success: boolean
-  authUrl?: string
+  customerKey?: string
   error?: string
 }> {
   const supabase = await createClient()
@@ -778,21 +764,8 @@ export async function changeBillingMethod(): Promise<{
   // 새 customerKey로 빌링키 재발급
   const newCustomerKey = `HHD_${user.id.slice(0, 8)}_${Date.now()}`
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-  const successUrl = `${baseUrl}/protected/membership/manage?changed=true&customerKey=${newCustomerKey}`
-  const failUrl = `${baseUrl}/protected/membership/manage?changed=false`
-
-  const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_z6OdyEPWpUpnLp90z608nM7XyVNb'
-
-  const authUrl =
-    `https://api.tosspayments.com/v1/billing/authorizations/widget?` +
-    `clientKey=${clientKey}` +
-    `&customerKey=${newCustomerKey}` +
-    `&successUrl=${encodeURIComponent(successUrl)}` +
-    `&failUrl=${encodeURIComponent(failUrl)}`
-
   // 임시로 새 customerKey 저장
   await supabase.from('subscriptions').update({ customer_key: newCustomerKey }).eq('id', subscription.id)
 
-  return { success: true, authUrl }
+  return { success: true, customerKey: newCustomerKey }
 }

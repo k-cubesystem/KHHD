@@ -14,11 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import {
-  cancelSubscription,
-  reactivateSubscription,
-  changeBillingMethod,
-} from '@/app/actions/payment/subscription'
+import { cancelSubscription, reactivateSubscription, changeBillingMethod } from '@/app/actions/payment/subscription'
 import { CreditCard, XCircle, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,11 +24,7 @@ interface SubscriptionActionsProps {
   periodEnd: string | null
 }
 
-export function SubscriptionActions({
-  subscriptionId,
-  status,
-  periodEnd,
-}: SubscriptionActionsProps) {
+export function SubscriptionActions({ subscriptionId, status, periodEnd }: SubscriptionActionsProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const router = useRouter()
 
@@ -81,14 +73,20 @@ export function SubscriptionActions({
     try {
       const result = await changeBillingMethod()
 
-      if (result.success && result.authUrl) {
-        window.location.href = result.authUrl
-      } else {
+      if (!result.success || !result.customerKey) {
         toast.error(result.error || '결제 수단 변경에 실패했습니다.')
+        return
       }
+
+      const { loadTossPayments } = await import('@tosspayments/payment-sdk')
+      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? '')
+      await tossPayments.requestBillingAuth('카드', {
+        customerKey: result.customerKey,
+        successUrl: `${window.location.origin}/protected/membership/manage?changed=true&customerKey=${result.customerKey}`,
+        failUrl: `${window.location.origin}/protected/membership/manage?changed=false`,
+      })
     } catch (error) {
       toast.error('오류가 발생했습니다.')
-    } finally {
       setIsLoading(null)
     }
   }
@@ -143,13 +141,9 @@ export function SubscriptionActions({
           </AlertDialogTrigger>
           <AlertDialogContent className="bg-white border-zen-border rounded-sm">
             <AlertDialogHeader>
-              <AlertDialogTitle className="font-serif text-zen-text">
-                정말 구독을 해지하시겠습니까?
-              </AlertDialogTitle>
+              <AlertDialogTitle className="font-serif text-zen-text">정말 구독을 해지하시겠습니까?</AlertDialogTitle>
               <AlertDialogDescription className="text-zen-muted space-y-2">
-                <p>
-                  해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.
-                </p>
+                <p>해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.</p>
                 <p className="font-medium text-zen-text">해지 시 잃게 되는 혜택:</p>
                 <ul className="list-disc list-inside text-sm space-y-1">
                   <li>매월 복채 10만냥 자동 지급</li>

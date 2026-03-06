@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createBillingAuthUrl } from '@/app/actions/payment/subscription'
+import { getTossPayments } from '@/lib/services/tosspayments'
 
 interface PricingCardProps {
   plan: {
@@ -32,13 +33,7 @@ interface PricingCardProps {
   }
 }
 
-export function PricingCard({
-  plan,
-  features,
-  isRecommended,
-  isGuest = false,
-  theme,
-}: PricingCardProps) {
+export function PricingCard({ plan, features, isRecommended, isGuest = false, theme }: PricingCardProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -55,22 +50,19 @@ export function PricingCard({
     try {
       const result = await createBillingAuthUrl(plan.id)
 
-      if (!result.success || !result.authUrl) {
+      if (!result.success || !result.customerKey) {
         toast.error(result.error || '결제 준비에 실패했습니다.')
         return
       }
 
-      // Toss Payments 빌링키 발급 페이지로 이동
-      if (process.env.NODE_ENV === 'development') {
-        // 개발 환경: Mock 처리
-        toast.info('개발 환경: 테스트 결제를 진행합니다.')
-        router.push(
-          `/protected/membership/success?customerKey=${result.customerKey}&planId=${plan.id}&mock=true`
-        )
-      } else {
-        // 프로덕션: Toss Payments로 이동
-        window.location.href = result.authUrl
-      }
+      const tossPayments = await getTossPayments()
+      if (!tossPayments) throw new Error('결제 모듈 로드 실패')
+
+      await tossPayments.requestBillingAuth('카드', {
+        customerKey: result.customerKey,
+        successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${plan.id}`,
+        failUrl: `${window.location.origin}/protected/membership/fail`,
+      })
     } catch (error) {
       console.error('Subscribe error:', error)
       toast.error('오류가 발생했습니다. 다시 시도해주세요.')
@@ -99,9 +91,7 @@ export function PricingCard({
       <div
         className={cn(
           'h-2',
-          isRecommended
-            ? 'bg-gradient-to-r from-primary via-primary-dark to-primary'
-            : 'bg-white/10'
+          isRecommended ? 'bg-gradient-to-r from-primary via-primary-dark to-primary' : 'bg-white/10'
         )}
       />
 
@@ -116,18 +106,12 @@ export function PricingCard({
         {/* Price */}
         <div className="mb-8">
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-serif font-bold text-ink-light">
-              {plan.price.toLocaleString()}
-            </span>
+            <span className="text-4xl font-serif font-bold text-ink-light">{plan.price.toLocaleString()}</span>
             <span className="text-lg text-ink/60">원</span>
             <span className="text-ink/60 ml-1">/ 월</span>
           </div>
-          {plan.tier === 'FAMILY' && (
-            <p className="text-xs text-primary mt-2">⭐ 가장 인기 있는 플랜</p>
-          )}
-          {plan.tier === 'BUSINESS' && (
-            <p className="text-xs text-ink/40 mt-2">💼 프로페셔널을 위한 선택</p>
-          )}
+          {plan.tier === 'FAMILY' && <p className="text-xs text-primary mt-2">⭐ 가장 인기 있는 플랜</p>}
+          {plan.tier === 'BUSINESS' && <p className="text-xs text-ink/40 mt-2">💼 프로페셔널을 위한 선택</p>}
         </div>
 
         {/* Features */}
@@ -163,11 +147,7 @@ export function PricingCard({
           ) : (
             <>
               {isRecommended && <Crown className="w-4 h-4 mr-2" />}
-              {plan.tier === 'SINGLE'
-                ? '시작하기'
-                : plan.tier === 'FAMILY'
-                  ? '가입하기'
-                  : '문의하기'}
+              {plan.tier === 'SINGLE' ? '시작하기' : plan.tier === 'FAMILY' ? '가입하기' : '문의하기'}
             </>
           )}
         </Button>
