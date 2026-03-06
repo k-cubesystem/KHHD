@@ -198,8 +198,6 @@ export async function getSubscriptionStatus(): Promise<{
 // ============================================
 // 빌링키 발급 URL 생성
 // ============================================
-// alias used by checkout page
-export const createBillingAuthSession = (planId: string) => createBillingAuthUrl(planId)
 
 export async function createBillingAuthUrl(planId: string): Promise<{
   success: boolean

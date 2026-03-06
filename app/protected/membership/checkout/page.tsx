@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { getMembershipPlan, createBillingAuthSession, type MembershipPlan } from '@/app/actions/payment/subscription'
+import { getMembershipPlan, createBillingAuthUrl, type MembershipPlan } from '@/app/actions/payment/subscription'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { Button } from '@/components/ui/button'
 import { Crown, Loader2, ArrowLeft, Check } from 'lucide-react'
@@ -38,7 +38,7 @@ function CheckoutContent() {
     setError('')
 
     try {
-      const result = await createBillingAuthSession(planId)
+      const result = await createBillingAuthUrl(planId)
       if (!result.success || !result.customerKey) {
         setError(result.error || '결제 준비에 실패했습니다.')
         setPaying(false)
