@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import { getDestinyTargets } from '@/app/actions/user/destiny'
 import { getUserTierLimits } from '@/app/actions/payment/membership'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import ManseClient from './manse-client'
+
+export const metadata: Metadata = {
+  title: '만세력',
+  description: '만세력 조회로 사주팔자의 기본 정보를 확인하세요.',
+}
 
 export default async function MansePage() {
   // Fetch data on server - getDestinyTargets는 본인 + 가족을 모두 반환

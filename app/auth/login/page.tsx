@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import { LoginForm } from "@/components/login-form";
 import { Suspense } from "react";
 import { Loader2, Flower } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: '로그인',
+  description: '청담해화당에 로그인하여 AI 사주 분석 서비스를 이용하세요.',
+}
 
 export default function Page() {
   return (

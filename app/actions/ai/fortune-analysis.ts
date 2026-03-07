@@ -209,7 +209,12 @@ async function analyzeFortuneWithAI(prompt: string, fortuneType: FortuneType, pe
     actionType: 'fortune',
   })
   const text = result.response.text()
-  const data = JSON.parse(text) as FortuneResult
+  let data: FortuneResult
+  try {
+    data = JSON.parse(text) as FortuneResult
+  } catch {
+    throw new Error('AI 응답 파싱 실패')
+  }
 
   // 필수 필드 보정
   if (!data.type) data.type = fortuneType

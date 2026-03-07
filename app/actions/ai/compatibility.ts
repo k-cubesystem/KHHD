@@ -237,7 +237,11 @@ ${relationshipGuide}
     actionType: 'compatibility',
   })
 
-  return JSON.parse(result.response.text())
+  try {
+    return JSON.parse(result.response.text())
+  } catch {
+    throw new Error('AI 응답 파싱 실패')
+  }
 }
 
 /**

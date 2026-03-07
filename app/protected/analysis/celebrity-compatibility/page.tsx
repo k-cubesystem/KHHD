@@ -1,10 +1,10 @@
-import { CelebrityCompatibilityClient } from './celebrity-compatibility-client'
+import { BusinessCompatibilityClient } from './business-compatibility-client'
 
 export const metadata = {
-  title: '스타 궁합 | 해화당',
-  description: '좋아하는 유명인과의 사주 궁합을 확인하세요',
+  title: '사업 궁합 | 해화당',
+  description: '사업 파트너와의 사주 궁합을 분석하여 협업 적합도를 확인하세요',
 }
 
-export default function CelebrityCompatibilityPage() {
-  return <CelebrityCompatibilityClient />
+export default function BusinessCompatibilityPage() {
+  return <BusinessCompatibilityClient />
 }

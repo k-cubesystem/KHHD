@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import { SignUpForm } from '@/components/sign-up-form'
 import { Suspense } from 'react'
 import { Loader2, Flower, Gift } from 'lucide-react'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: '회원가입',
+  description: '청담해화당 회원가입으로 AI 사주 분석 서비스를 시작하세요.',
+}
 
 interface Props {
   searchParams: Promise<{ ref?: string; from?: string }>

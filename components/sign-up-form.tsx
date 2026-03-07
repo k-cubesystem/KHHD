@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
+import Link from 'next/link'
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
@@ -27,6 +29,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [birthDate, setBirthDate] = useState('')
   const [birthTime, setBirthTime] = useState('')
   const [calendarType, setCalendarType] = useState('solar')
+
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [agreePrivacy, setAgreePrivacy] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -51,6 +56,11 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     }
     if (password !== repeatPassword) {
       setError('비밀번호가 일치하지 않습니다.')
+      setIsLoading(false)
+      return
+    }
+    if (!agreeTerms || !agreePrivacy) {
+      setError('이용약관 및 개인정보처리방침에 동의해주세요.')
       setIsLoading(false)
       return
     }
@@ -244,6 +254,32 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               onChange={(e) => setRepeatPassword(e.target.value)}
               className="bg-white/5 border-0 border-b border-b-white/10 focus:border-b-gold-500/50 focus:ring-0 transition-all h-12 text-white rounded-none"
             />
+          </div>
+
+          {/* 약관 동의 */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="agree-terms"
+                checked={agreeTerms}
+                onCheckedChange={(v) => setAgreeTerms(v === true)}
+                className="mt-0.5 border-white/30 data-[state=checked]:bg-gold-500 data-[state=checked]:border-gold-500"
+              />
+              <Label htmlFor="agree-terms" className="text-xs text-white/60 leading-relaxed cursor-pointer">
+                <Link href="/terms" target="_blank" className="text-primary underline">이용약관</Link>에 동의합니다 (필수)
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="agree-privacy"
+                checked={agreePrivacy}
+                onCheckedChange={(v) => setAgreePrivacy(v === true)}
+                className="mt-0.5 border-white/30 data-[state=checked]:bg-gold-500 data-[state=checked]:border-gold-500"
+              />
+              <Label htmlFor="agree-privacy" className="text-xs text-white/60 leading-relaxed cursor-pointer">
+                <Link href="/privacy" target="_blank" className="text-primary underline">개인정보처리방침</Link>에 동의합니다 (필수)
+              </Label>
+            </div>
           </div>
 
           {error && (

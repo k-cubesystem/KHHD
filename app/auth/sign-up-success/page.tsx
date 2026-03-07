@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,6 +8,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: '회원가입 완료',
+  description: '회원가입이 완료되었습니다. 이메일 인증 후 로그인하세요.',
+}
 
 export default function Page() {
   return (

@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { validateReferralCode } from '@/app/actions/user/referral'
+
+export const metadata: Metadata = {
+  title: '초대',
+  description: '친구의 초대로 청담해화당에 가입하세요.',
+}
 
 interface Props {
   searchParams: Promise<{ ref?: string }>

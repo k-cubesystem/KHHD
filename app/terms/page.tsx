@@ -68,7 +68,7 @@ export default function TermsOfServicePage() {
             <strong>무료 서비스</strong>: 오늘의 운세, 일부 기본 사주 분석, 출석체크 및 룰렛 이벤트
           </li>
           <li>
-            <strong>유료 서비스 (복채 차감)</strong>: 상세 사주팔자 분석, 천인지 분석, 궁합 분석, 유명인 궁합, 관상
+            <strong>유료 서비스 (복채 차감)</strong>: 상세 사주팔자 분석, 천인지 분석, 궁합 분석, 사업 궁합, 관상
             분석, 손금 분석, 풍수지리 분석, 재물운 분석, 2026년 운세, AI 이미지 생성
           </li>
           <li>

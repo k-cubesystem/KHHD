@@ -36,9 +36,9 @@ export function RelationshipSection() {
         <Button
           onClick={() => router.push('/protected/analysis/celebrity-compatibility')}
           variant="outline"
-          className="h-8 border-pink-400/30 text-pink-300 hover:bg-pink-400/10 bg-transparent text-xs font-light w-full"
+          className="h-8 border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/10 bg-transparent text-xs font-light w-full"
         >
-          ⭐ 스타 궁합
+          💼 사업 궁합
         </Button>
       </div>
     </Card>

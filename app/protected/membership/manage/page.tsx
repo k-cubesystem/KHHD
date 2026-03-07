@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getSubscriptionStatus, getSubscriptionPayments } from '@/app/actions/payment/subscription'
@@ -20,6 +21,11 @@ import Link from 'next/link'
 import { SubscriptionActions } from '@/components/membership/subscription-actions'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PaymentWidget } from '@/components/payment/payment-widget'
+
+export const metadata: Metadata = {
+  title: '멤버십 관리',
+  description: '멤버십 구독 상태를 확인하고 관리하세요.',
+}
 
 export default async function MembershipManagePage() {
   const supabase = await createClient()

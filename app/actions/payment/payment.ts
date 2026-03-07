@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { addTalismans } from './wallet'
 
-const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY || 'test_sk_z6OdyEPWpUpnLp90z608nM7XyVNb'
+const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 
 // 복채 충전 상품 가격 맵 (credits 단위 = 복채 수 = 만냥 단위)
 // 서버에서 금액 검증 (클라이언트 데이터 신뢰 안 함)

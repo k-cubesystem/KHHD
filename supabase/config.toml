@@ -1,0 +1,39 @@
+[project]
+id = "haehwadang"
+
+[functions]
+# Edge Functions 기본 설정
+verify_jwt = true
+
+[functions.notification]
+verify_jwt = true
+
+[functions.user]
+verify_jwt = true
+
+[functions.business]
+verify_jwt = false
+
+[functions.admin]
+verify_jwt = true
+
+[functions.payment]
+verify_jwt = true
+
+[functions.webhook-toss]
+verify_jwt = false
+
+[functions.ai-analysis]
+verify_jwt = true
+
+[functions.ai-image]
+verify_jwt = true
+
+[functions.ai-chat]
+verify_jwt = true
+
+[functions.fortune]
+verify_jwt = true
+
+[functions.cron-fortune]
+verify_jwt = false

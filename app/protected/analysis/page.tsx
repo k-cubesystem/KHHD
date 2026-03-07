@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+
+export const metadata: Metadata = {
+  title: '사주 분석',
+  description: '사주팔자 기반 AI 운세 분석 서비스',
+}
 
 import { getMonthlyFamilyFortune, getFamilyFortuneBreakdown } from '@/app/actions/fortune/fortune'
 
