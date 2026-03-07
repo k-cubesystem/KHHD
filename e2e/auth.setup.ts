@@ -8,7 +8,7 @@ setup('authenticate as user', async ({ page }) => {
   await page.goto('/auth/login')
   await page.getByLabel('이메일').fill(process.env.E2E_USER_EMAIL || 'test@example.com')
   await page.getByLabel('비밀번호').fill(process.env.E2E_USER_PASSWORD || 'test1234!')
-  await page.getByRole('button', { name: /로그인|sign in/i }).click()
+  await page.getByRole('button', { name: '로그인', exact: true }).click()
 
   // Wait for redirect to dashboard
   await expect(page).toHaveURL(/protected/, { timeout: 15_000 })
@@ -20,7 +20,7 @@ setup('authenticate as admin', async ({ page }) => {
   await page.goto('/auth/login')
   await page.getByLabel('이메일').fill(process.env.E2E_ADMIN_EMAIL || 'admin@example.com')
   await page.getByLabel('비밀번호').fill(process.env.E2E_ADMIN_PASSWORD || 'admin1234!')
-  await page.getByRole('button', { name: /로그인|sign in/i }).click()
+  await page.getByRole('button', { name: '로그인', exact: true }).click()
 
   await expect(page).toHaveURL(/protected|admin/, { timeout: 15_000 })
 
