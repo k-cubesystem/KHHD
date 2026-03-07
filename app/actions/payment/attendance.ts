@@ -1,8 +1,36 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+
+// RLS를 우회해 attendance_logs를 안전하게 조회하기 위한 admin client
+function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  return createServerClient(url, key, {
+    cookies: { getAll: () => [], setAll: () => {} },
+  })
+}
+
+// KST(UTC+9) 기준 오늘 날짜 문자열 반환
+function getKSTDateString(): string {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
+// KST 기준 이번 주 월요일 날짜 문자열 반환
+function getKSTWeekStartString(): string {
+  const now = new Date()
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const day = kst.getUTCDay() // 0=일
+  const daysFromMonday = day === 0 ? 6 : day - 1
+  kst.setUTCDate(kst.getUTCDate() - daysFromMonday)
+  return kst.toISOString().split('T')[0]
+}
 
 /**
  * 오늘 출석 체크 가능 여부 확인
@@ -12,6 +40,7 @@ export async function checkAttendanceAvailability() {
     return invokeEdgeSafe('payment', { action: 'checkAttendanceAvailability' })
   }
   const supabase = await createClient()
+  const admin = createAdminClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -20,14 +49,15 @@ export async function checkAttendanceAvailability() {
     return { success: false, error: '로그인이 필요합니다.', canCheckIn: false }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = getKSTDateString()
+  const db = admin ?? supabase
 
-  const { data: todayRecord } = await supabase
+  const { data: todayRecord } = await db
     .from('attendance_logs')
-    .select('*')
+    .select('id')
     .eq('user_id', user.id)
     .eq('checked_date', today)
-    .single()
+    .maybeSingle()
 
   if (todayRecord) {
     return { success: true, canCheckIn: false, alreadyChecked: true }
@@ -55,24 +85,26 @@ export async function checkInAttendance() {
   }
 
   try {
-    // 이미 체크인했는지 확인
-    const avail = await checkAttendanceAvailability()
-    if (!avail.canCheckIn) {
+    // 이미 체크인했는지 확인 (admin client로)
+    const admin = createAdminClient()
+    const db = admin ?? supabase
+
+    const todayStr = getKSTDateString()
+    const weekStartStr = getKSTWeekStartString()
+
+    const { data: todayRecord } = await db
+      .from('attendance_logs')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('checked_date', todayStr)
+      .maybeSingle()
+
+    if (todayRecord) {
       return { success: false, error: '오늘은 이미 출석 체크를 완료했습니다.' }
     }
 
-    const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
-
-    // 이번 주 월요일 계산 (ISO 주)
-    const dayOfWeek = today.getDay() // 0=일, 1=월, ..., 6=토
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() - daysFromMonday)
-    const weekStartStr = weekStart.toISOString().split('T')[0]
-
     // 이번 주 출석 횟수 확인
-    const { data: weekRecords } = await supabase
+    const { data: weekRecords } = await db
       .from('attendance_logs')
       .select('checked_date')
       .eq('user_id', user.id)
@@ -83,9 +115,6 @@ export async function checkInAttendance() {
     const baseReward = 1
     const weeklyBonus = isLastDayOfWeek ? 3 : 0
     const totalReward = baseReward + weeklyBonus
-
-    console.log(`[Attendance] User ${user.id} checking in for ${todayStr}`)
-    console.log(`[Attendance] Week ${weekStartStr}, count: ${weekCount}, reward: ${totalReward}`)
 
     // 1. 먼저 wallet이 존재하는지 확인하고 없으면 생성
     const { data: existingWallet } = await supabase
@@ -202,6 +231,8 @@ export async function getWeeklyAttendance() {
     return invokeEdgeSafe('payment', { action: 'getWeeklyAttendance' })
   }
   const supabase = await createClient()
+  const admin = createAdminClient()
+  const db = admin ?? supabase
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -221,27 +252,22 @@ export async function getWeeklyAttendance() {
       totalBokchae: 0,
     }
 
-  const today = new Date()
-  const dayOfWeek = today.getDay()
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-  const weekStart = new Date(today)
-  weekStart.setDate(today.getDate() - daysFromMonday)
-  const weekStartStr = weekStart.toISOString().split('T')[0]
+  const todayStr = getKSTDateString()
+  const weekStartStr = getKSTWeekStartString()
 
-  const { data: records } = await supabase
+  const { data: records } = await db
     .from('attendance_logs')
     .select('checked_date, bokchae_awarded, is_weekly_bonus')
     .eq('user_id', user.id)
     .eq('week_start', weekStartStr)
     .order('checked_date', { ascending: true })
 
-  const todayStr = today.toISOString().split('T')[0]
   const checkedDates = new Set(records?.map((r) => r.checked_date) || [])
 
-  // 이번 주 7일 배열 생성 (월~일)
+  // 이번 주 7일 배열 생성 (월~일, KST 기준)
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart)
-    d.setDate(weekStart.getDate() + i)
+    const d = new Date(weekStartStr + 'T00:00:00+09:00')
+    d.setDate(d.getDate() + i)
     const dateStr = d.toISOString().split('T')[0]
     return {
       date: dateStr,
@@ -269,6 +295,8 @@ export async function getMonthlyAttendance() {
     return invokeEdgeSafe('payment', { action: 'getMonthlyAttendance' })
   }
   const supabase = await createClient()
+  const admin = createAdminClient()
+  const db = admin ?? supabase
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -285,12 +313,14 @@ export async function getMonthlyAttendance() {
 
   if (!user) return emptyResult
 
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
-  const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+  // KST 기준 오늘 / 이번 달 범위
+  const todayStr = getKSTDateString()
+  const [year, month] = todayStr.split('-').map(Number)
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-  const { data: monthRecords } = await supabase
+  const { data: monthRecords } = await db
     .from('attendance_logs')
     .select('checked_date, bokchae_awarded')
     .eq('user_id', user.id)
@@ -304,7 +334,7 @@ export async function getMonthlyAttendance() {
 
   // 연속 출석 스트릭 계산 (오늘 또는 어제부터 역방향)
   let streak = 0
-  const cursor = new Date(today)
+  const cursor = new Date(todayStr + 'T00:00:00+09:00')
   // 오늘 아직 체크 안 했으면 어제부터 카운트
   if (!checkedSet.has(todayStr)) {
     cursor.setDate(cursor.getDate() - 1)
@@ -342,13 +372,8 @@ export async function getMonthlyAttendance() {
   }
 
   // 이번 주 출석 수
-  const dayOfWeek = today.getDay()
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-  const weekStart = new Date(today)
-  weekStart.setDate(today.getDate() - daysFromMonday)
-  const weekStartStr = weekStart.toISOString().split('T')[0]
-
-  const { data: weekRecords } = await supabase
+  const weekStartStr = getKSTWeekStartString()
+  const { data: weekRecords } = await db
     .from('attendance_logs')
     .select('checked_date')
     .eq('user_id', user.id)

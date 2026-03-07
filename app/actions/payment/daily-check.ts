@@ -1,6 +1,29 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+
+function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  return createServerClient(url, key, {
+    cookies: { getAll: () => [], setAll: () => {} },
+  })
+}
+
+function getKSTDateString(): string {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
+function getKSTWeekStartString(): string {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  const day = kst.getUTCDay()
+  const daysFromMonday = day === 0 ? 6 : day - 1
+  kst.setUTCDate(kst.getUTCDate() - daysFromMonday)
+  return kst.toISOString().split('T')[0]
+}
 
 export async function checkDailyAttendance() {
   try {
@@ -13,43 +36,19 @@ export async function checkDailyAttendance() {
       return { success: false, error: '로그인이 필요합니다.', checked: false, consecutiveDays: 0 }
     }
 
-    const today = new Date().toISOString().split('T')[0]
+    const admin = createAdminClient()
+    const db = admin ?? supabase
+    const todayStr = getKSTDateString()
+    const weekStartStr = getKSTWeekStartString()
 
-    const { data: todayRecord } = await supabase
+    const { data: todayRecord } = await db
       .from('attendance_logs')
-      .select('bokchae_awarded')
+      .select('id')
       .eq('user_id', user.id)
-      .eq('checked_date', today)
-      .single()
+      .eq('checked_date', todayStr)
+      .maybeSingle()
 
-    if (todayRecord) {
-      // 이번 주 연속 출석 수 계산
-      const dayOfWeek = new Date().getDay()
-      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-      const weekStart = new Date()
-      weekStart.setDate(weekStart.getDate() - daysFromMonday)
-      const weekStartStr = weekStart.toISOString().split('T')[0]
-
-      const { data: weekRecords } = await supabase
-        .from('attendance_logs')
-        .select('checked_date')
-        .eq('user_id', user.id)
-        .eq('week_start', weekStartStr)
-
-      return {
-        success: true,
-        checked: true,
-        consecutiveDays: weekRecords?.length || 1,
-      }
-    }
-
-    const dayOfWeek = new Date().getDay()
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const weekStart = new Date()
-    weekStart.setDate(weekStart.getDate() - daysFromMonday)
-    const weekStartStr = weekStart.toISOString().split('T')[0]
-
-    const { data: weekRecords } = await supabase
+    const { data: weekRecords } = await db
       .from('attendance_logs')
       .select('checked_date')
       .eq('user_id', user.id)
@@ -57,7 +56,7 @@ export async function checkDailyAttendance() {
 
     return {
       success: true,
-      checked: false,
+      checked: !!todayRecord,
       consecutiveDays: weekRecords?.length || 0,
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,30 +76,25 @@ export async function recordDailyAttendance() {
       return { success: false, error: '로그인이 필요합니다.' }
     }
 
-    const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
+    const admin = createAdminClient()
+    const db = admin ?? supabase
+    const todayStr = getKSTDateString()
+    const weekStartStr = getKSTWeekStartString()
 
-    // 이미 체크인했는지 확인
-    const { data: existing } = await supabase
+    // 이미 체크인했는지 확인 (admin client로 RLS 우회)
+    const { data: existing } = await db
       .from('attendance_logs')
       .select('id')
       .eq('user_id', user.id)
       .eq('checked_date', todayStr)
-      .single()
+      .maybeSingle()
 
     if (existing) {
       return { success: false, error: '오늘은 이미 출석 체크를 완료했습니다.' }
     }
 
-    // 이번 주 월요일 계산
-    const dayOfWeek = today.getDay()
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() - daysFromMonday)
-    const weekStartStr = weekStart.toISOString().split('T')[0]
-
     // 이번 주 출석 횟수 확인
-    const { data: weekRecords } = await supabase
+    const { data: weekRecords } = await db
       .from('attendance_logs')
       .select('checked_date')
       .eq('user_id', user.id)
@@ -127,9 +121,7 @@ export async function recordDailyAttendance() {
     }
 
     // 복채 지급 (add_bokchae RPC 우선 시도)
-    const reason = isLastDayOfWeek
-      ? `출석 체크 (기본 1만냥 + 주간 보너스 3만냥)`
-      : `출석 체크 (1만냥)`
+    const reason = isLastDayOfWeek ? `출석 체크 (기본 1만냥 + 주간 보너스 3만냥)` : `출석 체크 (1만냥)`
 
     const { error: rpcError } = await supabase.rpc('add_bokchae', {
       p_user_id: user.id,
@@ -139,20 +131,13 @@ export async function recordDailyAttendance() {
 
     if (rpcError) {
       // RPC 없으면 직접 업데이트
-      const { data: wallet } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .single()
+      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
       const currentBalance = wallet?.balance || 0
 
       await supabase
         .from('wallets')
-        .upsert(
-          { user_id: user.id, balance: currentBalance + totalReward },
-          { onConflict: 'user_id' }
-        )
+        .upsert({ user_id: user.id, balance: currentBalance + totalReward }, { onConflict: 'user_id' })
 
       await supabase.from('wallet_transactions').insert({
         user_id: user.id,
