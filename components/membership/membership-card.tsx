@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { createBillingAuthUrl } from '@/app/actions/payment/subscription'
-import { getTossPayments } from '@/lib/services/tosspayments'
+import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Crown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -29,11 +29,12 @@ export function MembershipCard({ planId, planName, price }: MembershipCardProps)
         return
       }
 
-      const tossPayments = await getTossPayments()
-      if (!tossPayments) throw new Error('결제 모듈 로드 실패')
+      const sdk = await getTossPaymentsSDK()
+      if (!sdk) throw new Error('결제 모듈 로드 실패')
 
-      await tossPayments.requestBillingAuth('카드', {
-        customerKey: result.customerKey,
+      const payment = sdk.payment({ customerKey: result.customerKey })
+      await payment.requestBillingAuth({
+        method: 'CARD',
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
         windowTarget: 'self',

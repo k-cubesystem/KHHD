@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getTossPayments } from '@/lib/services/tosspayments'
+import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -127,16 +127,16 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         return
       }
 
-      const tossPayments = await getTossPayments()
-      if (!tossPayments) throw new Error('결제 모듈 로드 실패')
+      const sdk = await getTossPaymentsSDK()
+      if (!sdk) throw new Error('결제 모듈 로드 실패')
 
-      await tossPayments.requestBillingAuth('카드', {
-        customerKey: result.customerKey,
+      const payment = sdk.payment({ customerKey: result.customerKey })
+      await payment.requestBillingAuth({
+        method: 'CARD',
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${planId}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
         windowTarget: 'self',
       })
-      // requestBillingAuth는 페이지를 이동시키므로 이후 실행 안 됨
     } catch (error) {
       toast.error('구독 처리 중 오류가 발생했습니다.')
       setIsLoading(false)
@@ -146,20 +146,24 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
   const handleTalismanPayment = async () => {
     setIsLoading(true)
     try {
-      const tossPayments = await getTossPayments()
-      if (!tossPayments) {
+      const sdk = await getTossPaymentsSDK()
+      if (!sdk) {
         toast.error('결제 모듈을 불러올 수 없습니다.')
         setIsLoading(false)
         return
       }
       const plan = pricePlans.find((p) => p.credits === selectedPlan)!
+      const orderId = `HHD_${Date.now()}_${memberId.slice(0, 4)}`
 
-      await tossPayments.requestPayment('카드', {
-        amount: plan.price,
-        orderId: `HHD_${Date.now()}_${memberId.slice(0, 4)}`,
+      const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
+      await payment.requestPayment({
+        method: 'CARD',
+        amount: { currency: 'KRW', value: plan.price },
+        orderId,
         orderName: plan.label,
         successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&homeAddress=${encodeURIComponent(homeAddress || '')}&credits=${plan.credits}`,
         failUrl: `${window.location.origin}/protected/analysis/fail`,
+        windowTarget: 'self',
       })
     } catch (error: any) {
       toast.error(error.message || '결제 준비 중 오류가 발생했습니다.')

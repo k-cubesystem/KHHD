@@ -1,12 +1,12 @@
-import { loadTossPayments, TossPaymentsInstance } from "@tosspayments/payment-sdk";
+import { loadTossPayments, type TossPaymentsSDK } from '@tosspayments/tosspayments-sdk'
 
-const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? '';
+const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? ''
 
-let tossPaymentsPromise: Promise<TossPaymentsInstance> | null = null;
+let sdkPromise: Promise<TossPaymentsSDK> | null = null
 
-export const getTossPayments = () => {
-    if (!tossPaymentsPromise && typeof window !== "undefined") {
-        tossPaymentsPromise = loadTossPayments(clientKey);
-    }
-    return tossPaymentsPromise;
-};
+export const getTossPaymentsSDK = () => {
+  if (!sdkPromise && typeof window !== 'undefined') {
+    sdkPromise = loadTossPayments(clientKey)
+  }
+  return sdkPromise
+}

@@ -78,10 +78,11 @@ export function SubscriptionActions({ subscriptionId, status, periodEnd }: Subsc
         return
       }
 
-      const { loadTossPayments } = await import('@tosspayments/payment-sdk')
-      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? '')
-      await tossPayments.requestBillingAuth('카드', {
-        customerKey: result.customerKey,
+      const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
+      const sdk = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? '')
+      const payment = sdk.payment({ customerKey: result.customerKey })
+      await payment.requestBillingAuth({
+        method: 'CARD',
         successUrl: `${window.location.origin}/protected/membership/manage?changed=true&customerKey=${result.customerKey}`,
         failUrl: `${window.location.origin}/protected/membership/manage?changed=false`,
       })

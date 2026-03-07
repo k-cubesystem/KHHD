@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { createBillingAuthUrl } from '@/app/actions/payment/subscription'
-import { getTossPayments } from '@/lib/services/tosspayments'
+import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 
 interface PricingCardProps {
   plan: {
@@ -55,11 +55,12 @@ export function PricingCard({ plan, features, isRecommended, isGuest = false, th
         return
       }
 
-      const tossPayments = await getTossPayments()
-      if (!tossPayments) throw new Error('결제 모듈 로드 실패')
+      const sdk = await getTossPaymentsSDK()
+      if (!sdk) throw new Error('결제 모듈 로드 실패')
 
-      await tossPayments.requestBillingAuth('카드', {
-        customerKey: result.customerKey,
+      const payment = sdk.payment({ customerKey: result.customerKey })
+      await payment.requestBillingAuth({
+        method: 'CARD',
         successUrl: `${window.location.origin}/protected/membership/success?customerKey=${result.customerKey}&planId=${plan.id}`,
         failUrl: `${window.location.origin}/protected/membership/fail`,
         windowTarget: 'self',

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { getTossPayments } from '@/lib/services/tosspayments'
+import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
 import { Check, Coins, Loader2, Zap, Star, Sparkles, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -64,19 +64,23 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
   const handleCharge = async (plan: any) => {
     setLoadingPlan(plan.credits)
     try {
-      const tossPayments = await getTossPayments()
-      if (!tossPayments) {
+      const sdk = await getTossPaymentsSDK()
+      if (!sdk) {
         toast.error('결제 모듈을 불러올 수 없습니다.')
         setLoadingPlan(null)
         return
       }
 
-      await tossPayments.requestPayment('카드', {
-        amount: plan.price,
-        orderId: `BOKCHAE_${Date.now()}_${memberId.slice(0, 6)}`,
+      const orderId = `BOKCHAE_${Date.now()}_${memberId.slice(0, 6)}`
+      const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
+      await payment.requestPayment({
+        method: 'CARD',
+        amount: { currency: 'KRW', value: plan.price },
+        orderId,
         orderName: `${plan.name} (복채 ${plan.credits}만냥)`,
         successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&credits=${plan.credits}`,
         failUrl: `${window.location.origin}/protected/analysis/fail`,
+        windowTarget: 'self',
       })
     } catch (error: any) {
       toast.error(error.message || '결제 준비 중 오류가 발생했습니다.')
