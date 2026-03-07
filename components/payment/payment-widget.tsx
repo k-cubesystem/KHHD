@@ -351,18 +351,22 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                     onClick={async () => {
                       setIsLoading(true)
                       try {
-                        const tossPayments = await getTossPayments()
-                        if (!tossPayments) {
+                        const sdk = await getTossPaymentsSDK()
+                        if (!sdk) {
                           toast.error('결제 모듈을 불러올 수 없습니다.')
                           setIsLoading(false)
                           return
                         }
-                        await tossPayments.requestPayment('카드', {
-                          amount: plan.price,
-                          orderId: `HHD_${Date.now()}_${memberId.slice(0, 4)}`,
+                        const orderId = `HHD_${Date.now()}_${memberId.slice(0, 4)}`
+                        const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
+                        await payment.requestPayment({
+                          method: 'CARD',
+                          amount: { currency: 'KRW', value: plan.price },
+                          orderId,
                           orderName: plan.label,
                           successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&homeAddress=${encodeURIComponent(homeAddress || '')}&credits=${plan.credits}`,
                           failUrl: `${window.location.origin}/protected/analysis/fail`,
+                          windowTarget: 'self',
                         })
                       } catch (error: any) {
                         toast.error(error.message || '결제 준비 중 오류가 발생했습니다.')
