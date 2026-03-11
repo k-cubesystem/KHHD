@@ -6,7 +6,7 @@ import { buildSajuContext } from '@/lib/saju-engine/context-builder'
 import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
-import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
+// recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
@@ -87,8 +87,8 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       engineVersion: 'v2',
     }
 
-    // 7. 분석 결과 저장
-    const saved = await saveAnalysisHistory({
+    // 7. 분석 결과 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
+    await saveAnalysisHistory({
       target_id: target1.id,
       target_name: target1.name,
       target_relation: target1.relation_type || '가족',
@@ -102,13 +102,6 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       model_used: MODEL_PRO,
       talisman_cost: 2,
     })
-
-    // 운세 기록
-    const fortuneMemberId =
-      target1.target_type === 'family' ? target1.id : await getSelfFamilyMemberId().catch(() => null)
-    if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'COMPATIBILITY', saved.id ?? fortuneMemberId).catch(() => {})
-    }
 
     return { success: true, data: finalResult, cached: false }
   } catch (error: unknown) {

@@ -6,7 +6,7 @@ import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
-import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
+// recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
@@ -182,8 +182,8 @@ export async function analyzeTrendAction(
     if (!result.trendType) result.trendType = trendType
     if (!result.name) result.name = target.name
 
-    // 히스토리 저장
-    const saved = await saveAnalysisHistory({
+    // 히스토리 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
+    await saveAnalysisHistory({
       target_id: target.id,
       target_name: target.name,
       target_relation: target.relation_type,
@@ -192,13 +192,6 @@ export async function analyzeTrendAction(
       summary: result.summary,
       model_used: MODEL_FLASH,
     })
-
-    // 운세 기록 (본인/가족 모두 미션 체크)
-    const fortuneMemberId =
-      target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
-    if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'TODAY', saved.id ?? fortuneMemberId).catch(() => {})
-    }
 
     return { success: true, data: result, cached: false }
   } catch (error) {

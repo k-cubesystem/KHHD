@@ -6,7 +6,7 @@ import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
-import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
+// recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
@@ -146,8 +146,8 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
     const text = result.response.text()
     const data = JSON.parse(text) as Year2026Result
 
-    // 7. 기록 저장
-    const saved = await saveAnalysisHistory({
+    // 7. 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
+    await saveAnalysisHistory({
       target_id: targetId,
       target_name: target.name,
       target_relation: target.relation_type,
@@ -159,17 +159,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       talisman_cost: 0,
     }).catch((e) => {
       logger.error('History Save Error:', e)
-      return { success: false }
     })
-
-    // 8. 운세 기록 (본인/가족 모두 미션 체크)
-    const fortuneMemberId =
-      target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
-    if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'NEW_YEAR', (saved as { id?: string })?.id ?? fortuneMemberId).catch(
-        () => {}
-      )
-    }
 
     return { success: true, data }
   } catch (error) {

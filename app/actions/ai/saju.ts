@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { type FaceDestinyGoal, type InteriorTheme } from '@/lib/constants'
 import { deductTalisman } from '../payment/wallet'
 import { saveAnalysisHistory } from '../user/history'
-import { getSelfFamilyMemberId, recordFortuneEntry } from '../fortune/fortune'
+// recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import {
@@ -212,7 +212,7 @@ export async function analyzeSajuDetail(
     if (saveToHistory) {
       try {
         await saveAnalysisHistory({
-          target_id: user.id, // Usually self in this context, or mapped properly by caller if needed
+          target_id: user.id,
           target_name: name,
           target_relation: name === profile?.full_name ? '본인' : '가족/지인',
           category: 'SAJU',
@@ -222,8 +222,7 @@ export async function analyzeSajuDetail(
           model_used: MODEL_PRO,
           talisman_cost: 1,
         })
-        const selfId = await getSelfFamilyMemberId().catch(() => null)
-        if (selfId) await recordFortuneEntry(selfId, 'SAJU', selfId).catch(() => {})
+        // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
       } catch (saveError) {
         logger.error('[AI Saju] Failed to save history:', saveError)
       }
@@ -328,8 +327,7 @@ export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDesti
           model_used: MODEL_PRO,
           talisman_cost: 5,
         })
-        const selfId = await getSelfFamilyMemberId().catch(() => null)
-        if (selfId) await recordFortuneEntry(selfId, 'FACE', selfId).catch(() => {})
+        // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
       } catch (e) {
         logger.error(e)
       }
@@ -424,8 +422,7 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
           model_used: MODEL_PRO,
           talisman_cost: 3,
         })
-        const selfId = await getSelfFamilyMemberId().catch(() => null)
-        if (selfId) await recordFortuneEntry(selfId, 'HAND', selfId).catch(() => {})
+        // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
       } catch (e) {
         logger.error(e)
       }
@@ -528,8 +525,7 @@ export async function analyzeInteriorForFengshui(
           model_used: MODEL_PRO,
           talisman_cost: 2,
         })
-        const selfId = await getSelfFamilyMemberId().catch(() => null)
-        if (selfId) await recordFortuneEntry(selfId, 'FENGSHUI', selfId).catch(() => {})
+        // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
       } catch (e) {
         logger.error(e)
       }

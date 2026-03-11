@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { deductTalisman } from '../payment/wallet'
 import { saveAnalysisHistory } from '../user/history'
-import { recordFortuneEntry } from '@/app/actions/fortune/fortune'
+// recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
@@ -118,7 +118,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     })
     const analysis: WealthAnalysisData = JSON.parse(result.response.text())
 
-    // 7. 분석 기록 저장 + 운세 미션 체크
+    // 7. 분석 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
     try {
       await saveAnalysisHistory({
         target_id: params.memberId,
@@ -133,7 +133,6 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     } catch (e) {
       logger.error('[WealthAnalysis] Failed to save history:', e)
     }
-    await recordFortuneEntry(params.memberId, 'WEALTH', params.memberId).catch(() => {})
 
     return {
       success: true,

@@ -331,6 +331,7 @@ export async function recordFortuneEntry(
 /**
  * 현재 로그인 유저의 '본인' family_member ID 반환
  * Used to record fortune entries for self-analysis
+ * 본인 레코드가 없으면 profiles에서 정보를 가져와 자동 생성
  */
 export async function getSelfFamilyMemberId(): Promise<string | null> {
   const supabase = await createClient()
@@ -340,14 +341,55 @@ export async function getSelfFamilyMemberId(): Promise<string | null> {
 
   if (!user) return null
 
+  // 1. '본인' 또는 'self' 관계로 검색
   const { data } = await supabase
     .from('family_members')
     .select('id')
     .eq('user_id', user.id)
-    .eq('relationship', '본인')
+    .in('relationship', ['본인', 'self', '나'])
+    .limit(1)
     .maybeSingle()
 
-  return data?.id || null
+  if (data?.id) return data.id
+
+  // 2. 본인 레코드가 없으면 profiles에서 정보 가져와 자동 생성
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, birth_date, birth_time, gender, calendar_type')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.full_name || !profile?.birth_date) {
+      logger.warn('[getSelfFamilyMemberId] 프로필에 이름/생년월일 없음, 자동 생성 불가')
+      return null
+    }
+
+    const { data: newMember, error: insertError } = await supabase
+      .from('family_members')
+      .insert({
+        user_id: user.id,
+        name: profile.full_name,
+        relationship: '본인',
+        birth_date: profile.birth_date,
+        birth_time: profile.birth_time || null,
+        gender: profile.gender || 'male',
+        calendar_type: profile.calendar_type || 'solar',
+      })
+      .select('id')
+      .single()
+
+    if (insertError) {
+      logger.error('[getSelfFamilyMemberId] 본인 레코드 자동 생성 실패:', insertError)
+      return null
+    }
+
+    logger.log(`[getSelfFamilyMemberId] 본인 레코드 자동 생성 완료: ${newMember.id}`)
+    return newMember.id
+  } catch (error) {
+    logger.error('[getSelfFamilyMemberId] 자동 생성 중 오류:', error)
+    return null
+  }
 }
 
 /**

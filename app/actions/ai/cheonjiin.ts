@@ -76,11 +76,22 @@ export async function analyzeCheonjiinAction(
 
       if (cached && isCacheValid(cached, 24)) {
         logger.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
-        // checkOnly면 캐시 확인만 하고 반환
+
+        // 캐시 반환 시에도 fortune_journal 업데이트 (UPSERT이므로 중복 안전)
+        const fortuneMemberId = targetId // target_type 판별 전이므로 targetId 사용
+        try {
+          const selfId = await getSelfFamilyMemberId()
+          const memberId = selfId || fortuneMemberId
+          if (memberId) {
+            await recordFortuneEntry(memberId, 'SAJU', cached.id || memberId, 100)
+          }
+        } catch (e) {
+          logger.error('[CheonjiinAnalysis] 캐시 fortune_journal 기록 실패:', e)
+        }
+
         if (checkOnly) {
           return { success: true, data: cached.result_json, cached: true, cacheDate: cached.created_at }
         }
-        // 일반 모드에서도 캐시 반환 (기존 동작)
         return { success: true, data: cached.result_json, cached: true, cacheDate: cached.created_at }
       }
     }
@@ -175,12 +186,7 @@ export async function analyzeCheonjiinAction(
 
     const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
 
-    // 운세 기록 (본인/가족 모두 미션 체크)
-    const fortuneMemberId =
-      target.target_type === 'family' ? target.id : await getSelfFamilyMemberId().catch(() => null)
-    if (fortuneMemberId) {
-      await recordFortuneEntry(fortuneMemberId, 'SAJU', fortuneMemberId).catch(() => {})
-    }
+    // 운세 기록은 saveAnalysisHistory 내부에서 자동 처리됨 (recordFortuneEntry 호출)
 
     return { success: true, data: result, cached: false }
   } catch (error: unknown) {
