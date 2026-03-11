@@ -2,6 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // auth/callback은 자체적으로 세션을 처리하므로 middleware에서 제외
+  // callback 실행 중 getUser() 호출 시 세션 미설정 상태에서 오류 발생 가능
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
