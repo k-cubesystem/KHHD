@@ -1,325 +1,88 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { fadeInUp, staggerContainer } from '@/lib/animations'
+import { useState, useCallback } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Card } from '@/components/ui/card'
-import { User, Sparkles, ArrowRight } from 'lucide-react'
+import { User, ArrowRight, BookOpen, Eye, Hand, Compass } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
 import { SajuLoadingOverlay } from '@/components/shared/SajuLoadingOverlay'
 
-// ── 감성 명리 문구 20선 (하위호환용 — 실제 렌더는 SajuLoadingOverlay 사용) ──
-const SAJU_MESSAGES = [
+const ANALYSIS_CARDS = [
   {
-    headline: '재물의 문이 열리는 시기입니다',
-    sub: '오행의 흐름이 당신의 재성(財星)을 향해 기울고 있습니다.',
+    type: 'saju' as const,
+    icon: BookOpen,
+    title: '사주풀이',
+    description: '사주팔자로 보는 타고난 성격과 운의 흐름',
+    tags: ['사주 팔자', '오행 균형', '대운 흐름', '월운 분석'],
+    needsPhoto: false,
   },
   {
-    headline: '지금 이 순간이 대운의 변곡점',
-    sub: '하늘이 당신에게 새로운 국면을 준비하고 있습니다.',
+    type: 'face' as const,
+    icon: Eye,
+    title: '관상',
+    description: '얼굴의 골격과 이목구비로 읽는 운명',
+    tags: ['얼굴 골격', '이목구비', '재물운', '인연운'],
+    needsPhoto: true,
   },
   {
-    headline: '기다리던 복이 드디어 들어옵니다',
-    sub: '씨앗을 뿌린 시간은 결코 사라지지 않습니다.',
+    type: 'palm' as const,
+    icon: Hand,
+    title: '손금',
+    description: '손금의 선과 구(丘)로 보는 인생의 길',
+    tags: ['생명선', '두뇌선', '감정선', '운명선'],
+    needsPhoto: true,
   },
   {
-    headline: '당신의 명(命)에는 숨겨진 보석이 있습니다',
-    sub: '아직 꺼내지 못한 재능과 운이 잠들어 있습니다.',
+    type: 'fengshui' as const,
+    icon: Compass,
+    title: '풍수',
+    description: '공간의 기운을 읽어 최적의 환경을 제안',
+    tags: ['8방위', '공간 배치', '기운 흐름', '인테리어'],
+    needsPhoto: true,
   },
-  {
-    headline: '흐름을 알면 두려움이 사라집니다',
-    sub: '명리학은 운명을 거스르는 학문이 아닌, 흐름을 읽는 지혜입니다.',
-  },
-  {
-    headline: '지금 당신 곁에 귀인이 있습니다',
-    sub: '관성(官星)의 기운이 든든한 후원자를 불러들이고 있습니다.',
-  },
-  {
-    headline: '막혔던 길이 뚫리는 계절입니다',
-    sub: '토(土)의 기운이 정화되며 새로운 시작을 알립니다.',
-  },
-  {
-    headline: '당신의 운명은 아직 쓰여지지 않았습니다',
-    sub: '사주는 지도입니다. 걷는 사람은 바로 당신입니다.',
-  },
-  {
-    headline: '재물운이 터지는 시기를 읽어드립니다',
-    sub: '식상(食傷)과 재성(財星)의 조화가 풍요를 예고합니다.',
-  },
-  {
-    headline: '올해 반드시 한 번 기회가 옵니다',
-    sub: '용신(用神)의 기운이 충만한 시절이 가까워지고 있습니다.',
-  },
-  {
-    headline: '사랑과 인연, 그 시기가 보입니다',
-    sub: '도화살(桃花殺)의 빛이 당신의 명식 위에서 반짝입니다.',
-  },
-  {
-    headline: '고난은 당신을 단련시키는 과정이었습니다',
-    sub: '역경을 넘긴 사람에게 하늘은 반드시 보상을 내립니다.',
-  },
-  { headline: '건강의 기운을 살펴드립니다', sub: '오행의 균형이 몸과 마음의 조화를 말해줍니다.' },
-  {
-    headline: '이제 멈출 때가 아니라 더 나아갈 때입니다',
-    sub: '목(木)의 상승 기운이 당신의 등을 밀고 있습니다.',
-  },
-  {
-    headline: '당신이 선택한 길이 맞는 방향입니다',
-    sub: '명식이 현재의 선택을 지지하고 있습니다.',
-  },
-  {
-    headline: '묵은 업이 풀리는 해입니다',
-    sub: '오랫동안 쌓인 것들이 비로소 해소될 시간이 찾아왔습니다.',
-  },
-  {
-    headline: '복(福)은 준비된 자에게 찾아옵니다',
-    sub: '지금 이 순간 사주를 살피는 것 자체가 준비입니다.',
-  },
-  {
-    headline: '당신 주변의 에너지가 바뀌고 있습니다',
-    sub: '삼합(三合)의 기운이 모여 새로운 국면을 만들어냅니다.',
-  },
-  {
-    headline: '10년 대운의 씨앗이 지금 심어집니다',
-    sub: '오늘의 작은 결단이 앞으로 10년을 결정합니다.',
-  },
-  {
-    headline: '당신만의 운명 지도가 펼쳐집니다',
-    sub: '천간(天干)과 지지(地支)가 오직 당신만을 위해 배열되어 있습니다.',
-  },
-]
+] as const
 
-// ── 해화당 사주풀이 로딩 화면 ──
-function SajuLoadingScreen({
-  targetName,
-  onComplete,
-}: {
-  targetName: string
-  onComplete: () => void
-}) {
-  const [msgIndex, setMsgIndex] = useState(() => Math.floor(Math.random() * SAJU_MESSAGES.length))
-  const [visible, setVisible] = useState(true)
-  const [progress, setProgress] = useState(0)
-
-  // 메시지 순환
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setMsgIndex((i) => (i + 1) % SAJU_MESSAGES.length)
-        setVisible(true)
-      }, 400)
-    }, 2800)
-    return () => clearInterval(interval)
-  }, [])
-
-  // 진행바 + 자동 완료
-  useEffect(() => {
-    const start = Date.now()
-    const duration = 5500
-    const frame = () => {
-      const elapsed = Date.now() - start
-      const p = Math.min(elapsed / duration, 1)
-      setProgress(p)
-      if (p < 1) requestAnimationFrame(frame)
-      else onComplete()
-    }
-    requestAnimationFrame(frame)
-  }, [onComplete])
-
-  const msg = SAJU_MESSAGES[msgIndex]
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[var(--z-modal)] bg-[#080604] flex flex-col items-center justify-center px-6"
-    >
-      {/* 배경 파티클 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 12 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/30"
-            style={{ left: `${10 + i * 7}%`, bottom: '-4px' }}
-            animate={{ y: [0, -(300 + i * 40)], opacity: [0, 0.6, 0] }}
-            transition={{
-              duration: 4 + i * 0.3,
-              repeat: Infinity,
-              delay: i * 0.4,
-              ease: 'easeOut',
-            }}
-          />
-        ))}
-      </div>
-
-      {/* 로딩 비주얼 */}
-      <div className="relative mb-10">
-        {/* 외부 회전 링 */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-          className="w-28 h-28 rounded-full border border-dashed border-primary/20"
-        />
-        {/* 내부 반대 회전 링 */}
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 5, repeat: Infinity, ease: 'linear' }}
-          className="absolute inset-3 rounded-full border border-primary/30"
-        />
-        {/* 코어 글로우 */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <motion.div
-            animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-14 h-14 rounded-full bg-primary/10 border border-primary/50 flex items-center justify-center shadow-[0_0_30px_rgba(212,175,55,0.4)]"
-          >
-            <span className="font-serif text-2xl text-primary">天</span>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* 대상 이름 */}
-      <p className="text-xs text-ink-light/30 tracking-[0.3em] uppercase mb-2 font-light">
-        {targetName} 님의 사주를 읽는 중
-      </p>
-
-      {/* 감성 문구 */}
-      <div className="min-h-[72px] flex flex-col items-center justify-center text-center mb-10 px-4">
-        <AnimatePresence mode="wait">
-          {visible && (
-            <motion.div
-              key={msgIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4 }}
-            >
-              <p className="text-lg font-serif text-primary/90 leading-snug mb-1.5 break-keep">
-                {msg.headline}
-              </p>
-              <p className="text-xs text-ink-light/40 font-light leading-relaxed break-keep max-w-[280px]">
-                {msg.sub}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* 진행바 */}
-      <div className="w-48 h-px bg-white/5 rounded-full overflow-hidden">
-        <motion.div
-          className="h-full bg-gradient-to-r from-primary/40 via-primary to-primary/40 rounded-full"
-          style={{ width: `${progress * 100}%` }}
-          transition={{ ease: 'linear' }}
-        />
-      </div>
-      <p className="text-[10px] text-ink-light/20 mt-3 tracking-widest font-light">
-        {Math.round(progress * 100)}%
-      </p>
-    </motion.div>
-  )
-}
+type AnalysisType = (typeof ANALYSIS_CARDS)[number]['type']
 
 interface AnalysisClientPageProps {
   targets: DestinyTarget[]
   initialTargetId?: string
 }
 
-function TriadVisual() {
-  const orbs = [
-    { char: '天', label: '사주', x: '50%', y: '8%', delay: 0 },
-    { char: '地', label: '풍수', x: '15%', y: '72%', delay: 0.6 },
-    { char: '人', label: '관상', x: '85%', y: '72%', delay: 1.2 },
-  ]
-  return (
-    <div className="relative w-40 h-36 mx-auto my-3">
-      {/* 중심 글로우 */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-primary/8 rounded-full blur-xl" />
-
-      {/* 회전 링 */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-        className="absolute inset-2 border border-dashed border-primary/15 rounded-full"
-      />
-
-      {/* 연결선 */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none">
-        <motion.path
-          d="M80 14 L24 100 L136 100 Z"
-          fill="none"
-          stroke="rgba(212,175,55,0.15)"
-          strokeWidth="0.5"
-          strokeDasharray="3,3"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.5, delay: 0.3 }}
-        />
-      </svg>
-
-      {/* 구슬들 */}
-      {orbs.map((orb) => (
-        <motion.div
-          key={orb.char}
-          className="absolute flex flex-col items-center gap-0.5"
-          style={{ left: orb.x, top: orb.y, transform: 'translate(-50%, -50%)' }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: orb.delay, duration: 0.5, type: 'spring' }}
-        >
-          <motion.div
-            animate={{
-              y: [0, -4, 0],
-              boxShadow: [
-                '0 0 10px rgba(212,175,55,0.15)',
-                '0 0 20px rgba(212,175,55,0.35)',
-                '0 0 10px rgba(212,175,55,0.15)',
-              ],
-            }}
-            transition={{ duration: 2.5, repeat: Infinity, delay: orb.delay * 0.5, ease: 'easeInOut' }}
-            className="w-9 h-9 rounded-full bg-[#1a0f05] border border-primary/40 flex items-center justify-center"
-          >
-            <span className="font-serif text-primary text-sm">{orb.char}</span>
-          </motion.div>
-          <span className="text-[9px] text-ink-light/50 font-medium">{orb.label}</span>
-        </motion.div>
-      ))}
-    </div>
-  )
-}
-
 export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientPageProps) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId || null)
-  // initialTargetId가 있으면 (가족관리에서 넘어온 경우) 바로 분석 타입 선택으로
-  const [showAnalysisTypeSelection, setShowAnalysisTypeSelection] = useState(!!initialTargetId)
   const [showSajuLoading, setShowSajuLoading] = useState(false)
+
+  const selectedTarget = targets.find((t) => t.id === selectedId)
 
   const handleTargetSelect = (id: string) => {
     setSelectedId(id)
-    setShowAnalysisTypeSelection(true)
   }
 
-  const handleAnalysisTypeSelect = (type: 'basic' | 'comprehensive') => {
+  const handleAnalysisSelect = (type: AnalysisType) => {
     if (!selectedId) return
 
-    if (type === 'basic') {
-      // 해화당사주풀이: 감성 로딩 화면 후 이동
-      setShowSajuLoading(true)
-    } else {
-      // 천지인종합사주풀이: 바로 이동
-      router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=comprehensive`)
+    switch (type) {
+      case 'saju':
+        setShowSajuLoading(true)
+        break
+      case 'face':
+        router.push(`/protected/studio/face?targetId=${selectedId}`)
+        break
+      case 'palm':
+        router.push(`/protected/studio/palm?targetId=${selectedId}`)
+        break
+      case 'fengshui':
+        router.push(`/protected/studio/fengshui?targetId=${selectedId}`)
+        break
     }
   }
 
   const handleLoadingComplete = useCallback(() => {
     router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
   }, [router, selectedId])
-
-  const selectedTarget = targets.find((t) => t.id === selectedId)
 
   return (
     <>
@@ -332,289 +95,150 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
           />
         )}
       </AnimatePresence>
-      <motion.div
-        variants={staggerContainer}
-        initial="initial"
-        animate="animate"
-        className="max-w-3xl mx-auto py-6 px-4 pb-20 overflow-x-hidden"
-      >
-        {/* 1. Header Area with Visual — 컴팩트 */}
-        <motion.section variants={fadeInUp} className="text-center space-y-1 mb-6">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
-            <Sparkles className="w-2.5 h-2.5 text-primary" strokeWidth={1} />
-            <span className="text-[8px] font-medium text-primary tracking-[0.15em] uppercase">
-              The Masterpiece
-            </span>
+
+      <div className="max-w-3xl mx-auto py-6 px-4 pb-20">
+        {/* Header */}
+        <section className="text-center space-y-2 mb-8">
+          <h1 className="text-xl font-serif font-medium text-ink-light tracking-tight">
+            청담해화당 사주풀이
+          </h1>
+          <p className="text-xs text-ink-light/50 font-light break-keep leading-relaxed max-w-sm mx-auto">
+            사주명리 기반으로 당신의 타고난 기질과 운의 흐름을 분석합니다.
+            <br />
+            원하는 분석을 선택해주세요.
+          </p>
+        </section>
+
+        {/* Target selector */}
+        <section className="mb-8">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-1 h-5 bg-primary/40 rounded-full" />
+            <h3 className="text-sm font-serif text-ink-light">분석 대상</h3>
           </div>
 
-          <h1 className="text-lg font-serif font-medium text-ink-light tracking-tight">
-            천지인(天地人) 통합 운명 분석
-          </h1>
-
-          <p className="text-[11px] text-ink-light/50 font-light break-keep">
-            하늘의 시기 · 땅의 기운 · 사람의 흔적
-          </p>
-
-          <TriadVisual />
-        </motion.section>
-
-        {/* 3. Target Selection OR Analysis Type Selection */}
-        {!showAnalysisTypeSelection ? (
-          <motion.section variants={fadeInUp} className="space-y-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-1 h-6 bg-primary/40 rounded-full" />
-              <h3 className="text-lg font-serif text-ink-light">누구의 운명을 보시겠습니까?</h3>
-            </div>
-
-            {targets.length > 0 ? (
-              <div className="flex flex-col gap-3">
-                {targets.map((target) => (
-                  <motion.div
+          {targets.length > 0 ? (
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {targets.map((target) => {
+                const isSelected = selectedId === target.id
+                return (
+                  <button
                     key={target.id}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
+                    onClick={() => handleTargetSelect(target.id)}
+                    className={`flex-shrink-0 flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-200 ${
+                      isSelected
+                        ? 'border-primary/50 bg-primary/10'
+                        : 'border-white/10 bg-surface/20 hover:border-white/20'
+                    }`}
                   >
-                    <Card
-                      onClick={() => handleTargetSelect(target.id)}
-                      className="bg-surface/20 border-white/10 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer group px-4 py-3 flex items-center justify-between min-h-[72px]"
+                    <div
+                      className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-serif transition-colors ${
+                        isSelected
+                          ? 'border-primary/50 text-primary bg-primary/10'
+                          : 'border-white/10 text-ink-light/50'
+                      }`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center text-base font-serif text-primary/80 group-hover:text-primary transition-colors flex-shrink-0">
-                          {target.name.slice(0, 1)}
-                        </div>
-                        <div className="flex flex-col">
-                          <h4 className="text-sm font-serif text-ink-light group-hover:text-primary transition-colors font-medium">
-                            {target.name}
-                          </h4>
-                          <div className="flex items-center gap-2 text-[11px] text-ink-light/40 font-light">
-                            <span>{target.relation_type}</span>
-                            <span className="w-0.5 h-0.5 bg-white/20 rounded-full" />
-                            <span>{target.birth_date}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="w-7 h-7 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all ml-4 flex-shrink-0">
-                        <ArrowRight className="w-3.5 h-3.5 text-ink-light/30 group-hover:text-[#0A0A0A] transition-colors" />
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <Card
-                onClick={() => router.push('/protected/family')}
-                className="bg-surface/10 border-dashed border-primary/20 p-8 text-center cursor-pointer hover:bg-surface/20 transition-colors group"
-              >
-                <div className="flex flex-col items-center gap-3">
-                  <User className="w-8 h-8 text-ink-light/20 group-hover:text-primary/60 transition-colors" />
-                  <div className="space-y-1">
-                    <p className="text-sm text-ink-light/60 font-medium group-hover:text-primary transition-colors">
-                      등록된 분석 대상이 없습니다
-                    </p>
-                    <p className="text-xs text-ink-light/40 group-hover:text-primary/70 transition-colors">
-                      가족 관리에서 대상을 추가해주세요{' '}
-                      <ArrowRight className="w-3 h-3 inline ml-1" />
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-          </motion.section>
-        ) : (
-          <motion.section variants={fadeInUp} className="space-y-8">
-            {/* 선택된 대상 + 뒤로가기 */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowAnalysisTypeSelection(false)}
-                className="flex items-center gap-1.5 text-xs text-ink-light/40 hover:text-primary transition-colors group"
-              >
-                <ArrowRight className="w-3 h-3 rotate-180 group-hover:-translate-x-0.5 transition-transform" />
-                뒤로
-              </button>
-              <div className="flex-1 h-px bg-white/5" />
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center text-sm font-serif text-primary">
-                  {selectedTarget?.name.slice(0, 1)}
-                </div>
-                <div>
-                  <p className="text-sm font-serif text-ink-light leading-none">
-                    {selectedTarget?.name}
-                  </p>
-                  <p className="text-[10px] text-ink-light/30 mt-0.5">
-                    {selectedTarget?.birth_date}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* 섹션 헤더 */}
-            <div className="text-center space-y-2">
-              <p className="text-[10px] tracking-[0.3em] text-primary/60 uppercase font-medium">
-                Select Your Path
-              </p>
-              <h3 className="text-2xl font-serif text-ink-light tracking-tight">
-                어떤 방식으로
-                <br />
-                <span className="text-primary">운명을 풀어드릴까요?</span>
-              </h3>
-              <p className="text-xs text-ink-light/40 font-light">
-                두 가지 분석 방식 중 하나를 선택하세요
-              </p>
-            </div>
-
-            {/* ── 두 운명의 문 ── */}
-            <div className="space-y-4">
-              {/* 문 1: 해화당 사주풀이 */}
-              <motion.div
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.985 }}
-                onClick={() => handleAnalysisTypeSelect('basic')}
-                className="cursor-pointer group"
-              >
-                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#1a1410] to-[#0f0d0a] hover:border-primary/30 transition-all duration-300 p-6">
-                  {/* 배경 무늬 */}
-                  <div className="absolute inset-0 opacity-[0.03] bg-[url('/texture/hanji_pattern.png')] bg-repeat pointer-events-none" />
-                  <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" />
-
-                  <div className="relative flex items-center gap-5">
-                    {/* 왼쪽: 배지 + 아이콘 */}
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-[9px] px-1.5 py-0.5 rounded border border-white/10 text-ink-light/30 font-medium tracking-wide">
-                        기본
-                      </span>
-                      <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-[#110a06] border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(212,175,55,0.08)] group-hover:border-primary/40 group-hover:shadow-[0_0_30px_rgba(212,175,55,0.15)] transition-all duration-300">
-                        <span className="font-serif text-3xl text-primary/80 group-hover:text-primary transition-colors leading-none">
-                          天
-                        </span>
-                      </div>
+                      {target.name.slice(0, 1)}
                     </div>
-
-                    {/* 내용 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <h4 className="text-base font-serif text-ink-light group-hover:text-primary transition-colors">
-                          해화당 사주풀이
-                        </h4>
-                      </div>
-                      <p className="text-xs text-ink-light/50 font-light leading-relaxed break-keep mb-3">
-                        태어난 사주 만세력을 바탕으로
-                        <br />
-                        타고난 운명·성격·대운의 흐름을 풀이합니다
+                    <div className="text-left">
+                      <p
+                        className={`text-xs font-medium transition-colors ${isSelected ? 'text-primary' : 'text-ink-light'}`}
+                      >
+                        {target.name}
                       </p>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-primary/50">
-                        {['사주 팔자', '오행 균형', '대운 흐름', '월운 분석'].map((t) => (
-                          <span key={t} className="flex items-center gap-1">
-                            <span className="w-1 h-1 rounded-full bg-primary/40 inline-block" />
-                            {t}
-                          </span>
-                        ))}
-                      </div>
+                      <p className="text-[10px] text-ink-light/30">{target.relation_type}</p>
                     </div>
-
-                    {/* 화살표 */}
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all duration-300">
-                      <ArrowRight className="w-3.5 h-3.5 text-ink-light/30 group-hover:text-[#0A0A0A] transition-colors" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* 구분선 */}
-              <div className="flex items-center gap-3 px-2">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                <span className="text-[10px] text-ink-light/20 tracking-[0.2em] font-serif">
-                  또는
-                </span>
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              </div>
-
-              {/* 문 2: 천지인 종합 사주풀이 */}
-              <motion.div
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.985 }}
-                onClick={() => handleAnalysisTypeSelect('comprehensive')}
-                className="cursor-pointer group"
-              >
-                <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-[#1c1508] via-[#120f07] to-[#0a0906] hover:border-primary/50 transition-all duration-300 p-6 shadow-[0_4px_30px_rgba(212,175,55,0.08)] hover:shadow-[0_8px_40px_rgba(212,175,55,0.18)]">
-                  {/* 배경 글로우 */}
-                  <div className="absolute inset-0 opacity-[0.04] bg-[url('/texture/hanji_pattern.png')] bg-repeat pointer-events-none" />
-                  <div className="absolute -bottom-8 -right-8 w-40 h-40 bg-primary/10 rounded-full blur-[40px] pointer-events-none group-hover:bg-primary/20 transition-all duration-500" />
-                  <div className="absolute -top-4 -left-4 w-24 h-24 bg-primary/5 rounded-full blur-[30px] pointer-events-none" />
-
-                  <div className="relative flex items-center gap-5">
-                    {/* 왼쪽: 배지 + 아이콘 */}
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="px-2.5 py-0.5 bg-gradient-to-r from-primary to-primary/80 text-[#0A0A0A] text-[9px] font-bold rounded-full tracking-wider shadow-md">
-                        ✦ PREMIUM
-                      </span>
-                      <div className="flex-shrink-0 relative w-16 h-16">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/25 to-primary/10 border border-primary/40 flex items-center justify-center shadow-[0_0_25px_rgba(212,175,55,0.2)] group-hover:shadow-[0_0_40px_rgba(212,175,55,0.35)] group-hover:border-primary/60 transition-all duration-300">
-                          <div className="flex flex-col items-center leading-none">
-                            <div className="flex gap-0.5">
-                              <span className="font-serif text-[11px] text-primary leading-tight">
-                                天
-                              </span>
-                              <span className="font-serif text-[11px] text-primary/70 leading-tight">
-                                地
-                              </span>
-                            </div>
-                            <span className="font-serif text-[11px] text-primary/50 leading-tight mt-0.5">
-                              人
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 내용 */}
-                    <div className="flex-1 min-w-0 pr-2">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <h4 className="text-base font-serif text-primary">천지인 종합 사주풀이</h4>
-                      </div>
-                      <p className="text-xs text-ink-light/60 font-light leading-relaxed break-keep mb-3">
-                        사주에 풍수·관상·손금까지 더해
-                        <br />
-                        입체적이고 완전한 운명을 풀이합니다
-                      </p>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] text-primary/60">
-                        {[
-                          ['天', '사주 만세력'],
-                          ['地', '풍수 (주소)'],
-                          ['人', '관상 (얼굴)'],
-                          ['人', '손금 (손 모양)'],
-                        ].map(([char, label]) => (
-                          <span key={label} className="flex items-center gap-1.5">
-                            <span className="font-serif text-[9px] text-primary/50 w-3 text-center">
-                              {char}
-                            </span>
-                            <span className="text-ink-light/50">{label}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 하단 CTA 바 */}
-                  <div className="relative mt-5 pt-4 border-t border-primary/10 flex items-center justify-between">
-                    <span className="text-[10px] text-primary/50 font-light">
-                      가장 정확한 운명 분석을 원하신다면
-                    </span>
-                    <div className="flex items-center gap-1.5 text-[11px] text-primary font-medium group-hover:gap-2.5 transition-all">
-                      지금 시작
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+                  </button>
+                )
+              })}
             </div>
+          ) : (
+            <Card
+              onClick={() => router.push('/protected/family')}
+              className="bg-surface/10 border-dashed border-primary/20 p-6 text-center cursor-pointer hover:bg-surface/20 transition-colors group"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <User className="w-6 h-6 text-ink-light/20 group-hover:text-primary/60 transition-colors" />
+                <p className="text-xs text-ink-light/50 group-hover:text-primary transition-colors">
+                  등록된 대상이 없습니다. 가족 관리에서 추가해주세요
+                  <ArrowRight className="w-3 h-3 inline ml-1" />
+                </p>
+              </div>
+            </Card>
+          )}
+        </section>
 
-            {/* 안내 문구 */}
-            <p className="text-center text-[10px] text-ink-light/20 font-light pt-2">
-              분석에는 약 30초~1분이 소요됩니다
+        {/* Analysis cards grid */}
+        <section>
+          <div className="grid grid-cols-2 gap-3">
+            {ANALYSIS_CARDS.map((card) => {
+              const Icon = card.icon
+              const disabled = !selectedId
+              return (
+                <button
+                  key={card.type}
+                  onClick={() => handleAnalysisSelect(card.type)}
+                  disabled={disabled}
+                  className={`text-left rounded-lg border p-4 transition-all duration-200 group ${
+                    disabled
+                      ? 'border-white/5 bg-surface/10 opacity-40 cursor-not-allowed'
+                      : 'border-white/10 bg-surface/20 hover:border-gold-500/50 hover:bg-primary/5 cursor-pointer'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ${
+                        disabled
+                          ? 'border-white/5 bg-surface/10'
+                          : 'border-primary/20 bg-primary/5 group-hover:border-primary/40'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-5 h-5 transition-colors ${disabled ? 'text-ink-light/20' : 'text-primary/70 group-hover:text-primary'}`}
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                    {!disabled && (
+                      <ArrowRight className="w-3.5 h-3.5 text-ink-light/20 group-hover:text-primary/60 transition-colors" />
+                    )}
+                  </div>
+
+                  <h4
+                    className={`text-sm font-serif mb-1 transition-colors ${
+                      disabled ? 'text-ink-light/30' : 'text-ink-light group-hover:text-primary'
+                    }`}
+                  >
+                    {card.title}
+                  </h4>
+                  <p className="text-[11px] text-ink-light/40 font-light leading-relaxed break-keep mb-3">
+                    {card.description}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1">
+                    {card.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-[9px] text-ink-light/30 px-1.5 py-0.5 bg-white/[0.03] rounded"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {!selectedId && targets.length > 0 && (
+            <p className="text-center text-[11px] text-ink-light/30 mt-4 font-light">
+              분석 대상을 먼저 선택해주세요
             </p>
-          </motion.section>
-        )}
-      </motion.div>
+          )}
+
+          <p className="text-center text-[10px] text-ink-light/20 font-light mt-6">
+            분석에는 약 30초~1분이 소요됩니다
+          </p>
+        </section>
+      </div>
     </>
   )
 }

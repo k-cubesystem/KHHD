@@ -16,7 +16,6 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { RefreshCw, AlertTriangle, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { CheonjiinAnalysisResult } from '@/types/cheonjiin'
-import { FortuneImageGenerator } from '@/components/fortune/fortune-image-generator'
 
 interface CheonjiinResultClientProps {
   target: DestinyTarget
@@ -167,17 +166,6 @@ export function CheonjiinResultClient({
         </div>
         <div id="in">
           <InSection data={analysisResult?.in ?? null} />
-        </div>
-
-        {/* 운세 이미지 생성 섹션 */}
-        <div className="px-4 pb-4 max-w-2xl mx-auto">
-          <FortuneImageGenerator
-            context={{
-              name: target.name,
-              keywords: analysisResult?.cheon?.strengths?.slice(0, 3),
-            }}
-            defaultType="illustration"
-          />
         </div>
       </div>
     </div>
