@@ -4,10 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
-import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
@@ -193,23 +192,15 @@ async function getRecentFortuneAnalysis(
 }
 
 async function analyzeFortuneWithAI(prompt: string, fortuneType: FortuneType, period: string): Promise<FortuneResult> {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  if (!apiKey) throw new Error('Google AI API Key가 없습니다.')
-
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
-    model: MODEL_FLASH,
-    generationConfig: { responseMimeType: 'application/json' },
+  const result = await generateAIContent({
+    featureKey: 'fortune',
+    systemPrompt: '당신은 사주 기반 운세 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
+    userPrompt: prompt,
   })
 
-  const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-    model: MODEL_FLASH,
-    actionType: 'fortune',
-  })
-  const text = result.response.text()
   let data: FortuneResult
   try {
-    data = JSON.parse(text) as FortuneResult
+    data = JSON.parse(result.text) as FortuneResult
   } catch {
     throw new Error('AI 응답 파싱 실패')
   }

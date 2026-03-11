@@ -16,6 +16,7 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { RefreshCw, AlertTriangle, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { CheonjiinAnalysisResult } from '@/types/cheonjiin'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 
 interface CheonjiinResultClientProps {
   target: DestinyTarget
@@ -123,50 +124,60 @@ export function CheonjiinResultClient({
   return (
     <div className="min-h-screen bg-background pb-24">
       <PaywallModal {...paywallProps} />
-      <CheonjiinSummary data={analysisResult} target={target} />
+      <div id="cheonjiin-result-capture">
+        <CheonjiinSummary data={analysisResult} target={target} />
 
-      {/* 섹션 탭 내비게이션 */}
-      <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-white/5 px-4 py-2">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div className="flex items-center gap-1 flex-1">
-            {[
-              { label: '天 사주', href: '#cheon', color: 'text-blue-300' },
-              { label: '地 풍수', href: '#ji', color: 'text-emerald-300' },
-              { label: '人 관상', href: '#in', color: 'text-rose-300' },
-            ].map(({ label, href, color }) => (
-              <a
-                key={href}
-                href={href}
-                className={`flex-1 text-center py-1.5 text-xs font-serif rounded-lg transition-colors ${color} hover:bg-white/5`}
+        {/* 섹션 탭 내비게이션 */}
+        <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-white/5 px-4 py-2">
+          <div className="flex items-center justify-between max-w-4xl mx-auto">
+            <div className="flex items-center gap-1 flex-1">
+              {[
+                { label: '天 사주', href: '#cheon', color: 'text-blue-300' },
+                { label: '地 풍수', href: '#ji', color: 'text-emerald-300' },
+                { label: '人 관상', href: '#in', color: 'text-rose-300' },
+              ].map(({ label, href, color }) => (
+                <a
+                  key={href}
+                  href={href}
+                  className={`flex-1 text-center py-1.5 text-xs font-serif rounded-lg transition-colors ${color} hover:bg-white/5`}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+
+            {/* 재분석 버튼 */}
+            {isCached && (
+              <button
+                onClick={() => runAnalysis(null, true)}
+                className="ml-3 flex items-center gap-1 text-[10px] text-ink-light/30 hover:text-primary/60 transition-colors"
               >
-                {label}
-              </a>
-            ))}
+                <RefreshCw className="w-3 h-3" />
+                새로 분석
+              </button>
+            )}
           </div>
+        </div>
 
-          {/* 재분석 버튼 */}
-          {isCached && (
-            <button
-              onClick={() => runAnalysis(null, true)}
-              className="ml-3 flex items-center gap-1 text-[10px] text-ink-light/30 hover:text-primary/60 transition-colors"
-            >
-              <RefreshCw className="w-3 h-3" />
-              새로 분석
-            </button>
-          )}
+        <div className="pt-2">
+          <div id="cheon">
+            <CheonSection data={analysisResult?.cheon ?? null} />
+          </div>
+          <div id="ji">
+            <JiSection data={analysisResult?.ji ?? null} />
+          </div>
+          <div id="in">
+            <InSection data={analysisResult?.in ?? null} />
+          </div>
         </div>
       </div>
-
-      <div className="pt-2">
-        <div id="cheon">
-          <CheonSection data={analysisResult?.cheon ?? null} />
-        </div>
-        <div id="ji">
-          <JiSection data={analysisResult?.ji ?? null} />
-        </div>
-        <div id="in">
-          <InSection data={analysisResult?.in ?? null} />
-        </div>
+      {/* Share & Save */}
+      <div className="max-w-4xl mx-auto px-4 mt-6">
+        <ShareSaveButtons
+          resultContainerId="cheonjiin-result-capture"
+          analysisTitle="천지인 분석"
+          memberName={target.name}
+        />
       </div>
     </div>
   )

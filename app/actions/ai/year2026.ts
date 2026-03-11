@@ -4,10 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
-import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
@@ -104,18 +103,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
     const age = calculateAge(birthDate)
     const daewoon = calculateDaewoon(birthDate, birthTime, gender, age)
 
-    // 5. Gemini 호출
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    if (!apiKey) {
-      return { success: false, error: 'AI 서비스 설정 오류입니다.' }
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: MODEL_FLASH,
-      generationConfig: { responseMimeType: 'application/json' },
-    })
-
+    // 5. AI 호출
     // 해화지기 마스터 엔진으로 프롬프트 조립
     const { prompt } = await buildMasterPromptForAction(
       {
@@ -138,13 +126,12 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
 {"name":"${target.name}","summary":"한 줄 요약 (명확한 현대 한국어)","bingoh_meaning":"병오년이 이 사주에 미치는 영향 설명","quarterly":{"q1":"1분기: 하면 좋은 것 + 피해야 할 것을 구체적으로","q2":"2분기: 구체적 행동 지침 포함","q3":"3분기: 구체적 행동 지침 포함","q4":"4분기: 구체적 행동 지침 포함"},"areas":{"wealth":{"outlook":"좋음|보통|주의","content":"재물운 분석 + 구체적 조언"},"love":{"outlook":"좋음|보통|주의","content":"애정운 분석 + 구체적 조언"},"career":{"outlook":"좋음|보통|주의","content":"직업운 분석 + 구체적 조언"},"health":{"outlook":"좋음|보통|주의","content":"건강운 분석 + 구체적 조언"}},"peak_month":"최고의 달","caution_month":"주의할 달","lucky":{"color":"행운색","direction":"길한 방향","number":6},"message":"현실적이고 격려가 되는 한마디"}`
     )
 
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-      userId: user.id,
-      model: MODEL_FLASH,
-      actionType: 'year2026',
+    const aiResult = await generateAIContent({
+      featureKey: 'year2026',
+      systemPrompt: '당신은 사주 기반 신년운세 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
+      userPrompt: prompt,
     })
-    const text = result.response.text()
-    const data = JSON.parse(text) as Year2026Result
+    const data = JSON.parse(aiResult.text) as Year2026Result
 
     // 7. 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
     await saveAnalysisHistory({

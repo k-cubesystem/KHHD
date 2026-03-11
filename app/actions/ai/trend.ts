@@ -4,10 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
-import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
@@ -161,22 +160,12 @@ export async function analyzeTrendAction(
     )
 
     // AI 분석
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    if (!apiKey) throw new Error('Google AI API Key가 없습니다.')
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: MODEL_FLASH,
-      generationConfig: { responseMimeType: 'application/json' },
+    const aiResult = await generateAIContent({
+      featureKey: `trend_${trendType}`,
+      systemPrompt: '당신은 사주 기반 운세 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
+      userPrompt: prompt,
     })
-
-    const aiResult = await withGeminiRateLimit(() => model.generateContent(prompt), {
-      userId: user?.id,
-      model: MODEL_FLASH,
-      actionType: `trend_${trendType}`,
-    })
-    const text = aiResult.response.text()
-    const result = JSON.parse(text) as TrendResult
+    const result = JSON.parse(aiResult.text) as TrendResult
 
     // 필수 필드 보정
     if (!result.trendType) result.trendType = trendType

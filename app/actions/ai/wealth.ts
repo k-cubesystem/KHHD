@@ -1,12 +1,11 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { deductTalisman } from '../payment/wallet'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
-import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
@@ -103,20 +102,13 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
 }`
     )
 
-    // 6. Gemini AI 호출
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-    if (!apiKey) throw new Error('Google Generative AI API Key is missing')
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: MODEL_FLASH,
-      generationConfig: { responseMimeType: 'application/json' },
+    // 6. AI 호출
+    const result = await generateAIContent({
+      featureKey: 'wealth',
+      systemPrompt: '당신은 사주 기반 재물운 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
+      userPrompt: prompt,
     })
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-      userId: user.id,
-      model: MODEL_FLASH,
-      actionType: 'wealth',
-    })
-    const analysis: WealthAnalysisData = JSON.parse(result.response.text())
+    const analysis: WealthAnalysisData = JSON.parse(result.text)
 
     // 7. 분석 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
     try {

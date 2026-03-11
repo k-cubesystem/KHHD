@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 
 interface DailyFortuneViewProps {
   userId: string
@@ -118,7 +119,10 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId)
 
   return (
-    <Card className="p-6 md:p-8 bg-surface/30 backdrop-blur-sm border-primary/20 relative overflow-hidden shadow-lg">
+    <Card
+      id="daily-fortune-capture"
+      className="p-6 md:p-8 bg-surface/30 backdrop-blur-sm border-primary/20 relative overflow-hidden shadow-lg"
+    >
       {/* Background Pattern */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
@@ -212,17 +216,13 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
           </motion.div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t border-white/10">
-          <Button
-            variant="outline"
-            onClick={handleSendKakao}
-            disabled={sending || !fortune}
-            className="border-primary/50 text-primary hover:bg-primary/10 hover:text-primary-dim"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageCircle className="w-4 h-4 mr-2" />}
-            카카오톡으로 공유
-          </Button>
-        </div>
+        {fortune && (
+          <ShareSaveButtons
+            resultContainerId="daily-fortune-capture"
+            analysisTitle="오늘의 운세"
+            memberName={selectedProfile?.name}
+          />
+        )}
       </div>
     </Card>
   )

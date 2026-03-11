@@ -17,6 +17,7 @@ import {
 } from '@/lib/validations/analysis'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis } from '@/lib/utils/analysis-cache'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
@@ -119,7 +120,6 @@ export async function analyzeSajuDetail(
   }
 
   try {
-    const model = getGeminiModel()
     const supabase = await createClient()
     const {
       data: { user },
@@ -198,13 +198,12 @@ export async function analyzeSajuDetail(
 - 과도한 미사여구를 줄이고 실용적인 조언을 제공하세요.`
     )
 
-    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-      userId: user.id,
-      model: MODEL_PRO,
-      actionType: 'saju_detail',
+    const aiResult = await generateAIContent({
+      featureKey: 'saju_detail',
+      systemPrompt: '당신은 사주명리학 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
+      userPrompt: prompt,
     })
-    const text = result.response.text()
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    const jsonMatch = aiResult.text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('JSON Parse Error')
 
     const analysisData = JSON.parse(jsonMatch[0])

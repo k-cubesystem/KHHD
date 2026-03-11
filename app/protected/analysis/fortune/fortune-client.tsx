@@ -16,6 +16,7 @@ import { analyzeFortuneAction, type FortuneType, type FortuneResult } from '@/ap
 import { FortuneCalendar } from './fortune-calendar'
 import { FortuneDetailModal } from './fortune-detail-modal'
 import { FortuneImageGenerator } from '@/components/fortune/fortune-image-generator'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 
 interface FortuneClientProps {
   selfTarget: DestinyTarget | null
@@ -253,7 +254,13 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
         {state.cached && (
           <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">캐시된 결과입니다</p>
         )}
-        <FortuneResultView result={state.result} />
+        <div id="fortune-result-capture">
+          <FortuneResultView result={state.result} />
+        </div>
+        <ShareSaveButtons
+          resultContainerId="fortune-result-capture"
+          analysisTitle={`${type === 'today' ? '오늘' : type === 'weekly' ? '주간' : '월간'} 운세`}
+        />
         <Button
           variant="ghost"
           size="sm"

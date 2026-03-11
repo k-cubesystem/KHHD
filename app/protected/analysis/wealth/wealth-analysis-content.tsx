@@ -13,6 +13,7 @@ import { GuestCTACard } from '@/components/guest-cta-card'
 import { toast } from 'sonner'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 
 interface FamilyMember {
   id: string
@@ -195,6 +196,7 @@ export function WealthAnalysisContent() {
       {/* Analysis Result */}
       {wealthAnalysis && (
         <motion.div
+          id="wealth-result-capture"
           variants={fadeInUp}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -300,6 +302,12 @@ export function WealthAnalysisContent() {
               </ul>
             </CardContent>
           </Card>
+
+          <ShareSaveButtons
+            resultContainerId="wealth-result-capture"
+            analysisTitle="재물운 분석"
+            memberName={member?.name}
+          />
         </motion.div>
       )}
 

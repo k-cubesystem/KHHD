@@ -3,11 +3,9 @@
 import { buildSajuContext } from '@/lib/saju-engine/context-builder'
 import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { createClient } from '@/lib/supabase/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { logger } from '@/lib/utils/logger'
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? '')
 
 interface FamilyMember {
   id: string
@@ -126,12 +124,7 @@ export async function calculateBusinessCompatibilityAction(partnerId: string): P
     // AI 심층 분석
     let aiAnalysis = ''
     try {
-      const model = genAI.getGenerativeModel({ model: MODEL_PRO })
-
-      const prompt = `당신은 30년 경력의 사주명리학 전문가이자 비즈니스 컨설턴트입니다.
-두 사람의 사주를 분석하여 사업 파트너로서의 궁합을 심층 분석해주세요.
-
-## 분석 대상
+      const prompt = `## 분석 대상
 - **${me.name ?? '의뢰인'}**: 일간 ${myCtx.sajuData.dayMaster}(${myCtx.sajuData.dayMasterElement}), 사주 ${myCtx.sajuData.ganjiList.join(' ')}
 - **${partner.name ?? '파트너'}**: 일간 ${partnerCtx.sajuData.dayMaster}(${partnerCtx.sajuData.dayMasterElement}), 사주 ${partnerCtx.sajuData.ganjiList.join(' ')}
 
@@ -164,8 +157,13 @@ export async function calculateBusinessCompatibilityAction(partnerId: string): P
 - 추상적 조언 금지. 오행/간지를 근거로 구체적으로 설명
 - 한국어로 작성`
 
-      const aiResult = await model.generateContent(prompt)
-      aiAnalysis = aiResult.response.text()
+      const aiResult = await generateAIContent({
+        featureKey: 'business_compatibility',
+        systemPrompt:
+          '당신은 30년 경력의 사주명리학 전문가이자 비즈니스 컨설턴트입니다. 두 사람의 사주를 분석하여 사업 파트너로서의 궁합을 심층 분석해주세요.',
+        userPrompt: prompt,
+      })
+      aiAnalysis = aiResult.text
     } catch (aiError) {
       logger.error('[BusinessCompatibility AI]', aiError)
       aiAnalysis = ''

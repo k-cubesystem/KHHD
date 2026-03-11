@@ -23,6 +23,7 @@ import type { DestinyTarget } from '@/app/actions/user/destiny'
 import { analyzeTrendAction, type TrendType, type TrendResult } from '@/app/actions/ai/trend'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 
 interface TrendClientProps {
   trendType: TrendType
@@ -311,7 +312,14 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
             {state.cached && (
               <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">캐시된 결과입니다</p>
             )}
-            <TrendResultView result={state.result} config={config} />
+            <div id="trend-result-capture">
+              <TrendResultView result={state.result} config={config} />
+            </div>
+            <ShareSaveButtons
+              resultContainerId="trend-result-capture"
+              analysisTitle={`${config.label} 분석`}
+              memberName={targets.find((t) => t.id === selectedId)?.name}
+            />
             <Button
               variant="ghost"
               size="sm"

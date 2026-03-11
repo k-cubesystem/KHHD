@@ -4,10 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { buildSajuContext } from '@/lib/saju-engine/context-builder'
 import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
-import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
@@ -162,24 +161,16 @@ async function analyzeCompatibilityWithAI(
   engineResult: { totalScore: number; categories: CompatibilityCategory[]; mulsangNarrative: string },
   relationship: string
 ) {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  if (!apiKey) throw new Error('Google Generative AI API Key is missing')
-
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
-    model: MODEL_PRO,
-    generationConfig: { responseMimeType: 'application/json' },
-  })
-
   const relationshipGuide = getRelationshipGuide(relationship)
 
   const categoryBreakdownText = engineResult.categories
     .map((c) => `- ${c.label}: ${c.score}점 — ${c.details.join('; ')}`)
     .join('\n')
 
-  const prompt = `당신은 전통 명리학과 현대 관계 심리를 통합하는 궁합 전문 상담가입니다.
+  const systemPrompt = `당신은 전통 명리학과 현대 관계 심리를 통합하는 궁합 전문 상담가입니다.
+반드시 유효한 JSON만 출력하십시오. 다른 텍스트는 포함하지 마십시오.`
 
-[첫 번째 사람 - ${target1.name}의 사주 명식]
+  const userPrompt = `[첫 번째 사람 - ${target1.name}의 사주 명식]
 ${ctx1.promptContext}
 
 [두 번째 사람 - ${target2.name}의 사주 명식]
@@ -234,14 +225,14 @@ ${relationshipGuide}
   "advice": "<솔직한 관계 조언. 핵심 문제 진단 → 구체적 해결책 또는 거리두기 권고 → 지금 바로 실천할 수 있는 행동지침. 줄바꿈(\\n) 포함 300~500자.>"
 }`
 
-  const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
-    userId: undefined,
-    model: MODEL_PRO,
-    actionType: 'compatibility',
+  const result = await generateAIContent({
+    featureKey: 'compatibility',
+    systemPrompt,
+    userPrompt,
   })
 
   try {
-    return JSON.parse(result.response.text())
+    return JSON.parse(result.text)
   } catch {
     throw new Error('AI 응답 파싱 실패')
   }

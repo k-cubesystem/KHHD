@@ -27,6 +27,7 @@ import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import Link from 'next/link'
 import { analyzeYear2026Action, type Year2026Result } from '@/app/actions/ai/year2026'
+import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 
 // --- Internal Components ---
 
@@ -408,6 +409,7 @@ function NewYear2026Content() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="space-y-6 md:space-y-10"
+            id="newyear-result-capture"
           >
             {/* 1. Summary Card */}
             <Card className="card-glass-manse p-6 md:p-10 border-red-900/30 relative overflow-hidden">
@@ -533,6 +535,14 @@ function NewYear2026Content() {
                   delay={0.4}
                 />
               </div>
+            </div>
+
+            <div className="max-w-2xl mx-auto">
+              <ShareSaveButtons
+                resultContainerId="newyear-result-capture"
+                analysisTitle="2026 신년운세"
+                memberName={selectedTarget?.name}
+              />
             </div>
 
             <div className="flex justify-center pt-8">
