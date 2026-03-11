@@ -18,7 +18,7 @@ export type TrendType = 'love' | 'career' | 'exam' | 'estate'
 
 export interface TrendArea {
   title: string
-  score: number
+  outlook: '좋음' | '보통' | '주의'
   content: string
 }
 
@@ -26,7 +26,6 @@ export interface TrendResult {
   trendType: TrendType
   name: string
   summary: string
-  score: number
   overview: string
   areas: TrendArea[]
   timing: string
@@ -47,9 +46,9 @@ const TREND_LABELS: Record<TrendType, string> = {
 }
 
 const TREND_AREAS: Record<TrendType, string[]> = {
-  love: ['현재 감정 에너지', '인연 시기', '이상형 방향', '관계 조언'],
-  career: ['현재 직장 기운', '승진/이직 에너지', '인간관계 운', '사업/창업 운'],
-  exam: ['학업 집중력', '합격 에너지', '최적 학습 시기', '약점 보완'],
+  love: ['현재 감정 상태', '인연 시기', '이상형 방향', '관계 조언'],
+  career: ['현재 직장 흐름', '승진/이직 전망', '직장 내 인간관계', '사업/창업 가능성'],
+  exam: ['학업 집중력', '합격 전망', '최적 학습 시기', '약점 보완'],
   estate: ['매매 운', '전세/월세 운', '이사 방향', '계약 주의사항'],
 }
 
@@ -142,17 +141,23 @@ export async function analyzeTrendAction(
 {
   "trendType": "${trendType}",
   "name": "${target.name}",
-  "summary": "한 줄 핵심 요약",
-  "score": 75,
-  "overview": "${trendLabel} 전체 흐름 설명 (해화지기 화법, 3~4문장)",
+  "summary": "한 줄 핵심 요약 (명확하고 구체적)",
+  "overview": "${trendLabel} 전체 흐름 분석 (~합니다/~입니다 체, 강점과 주의점 균형있게, 3~4문장)",
   "areas": [
-    ${areaItems.map((a) => `{ "title": "${a}", "score": 75, "content": "해당 영역 운세 (2~3문장)" }`).join(',\n    ')}
+    ${areaItems.map((a) => `{ "title": "${a}", "outlook": "좋음|보통|주의", "content": "해당 영역 분석 — 구체적 행동 조언과 주의사항 포함 (2~3문장)" }`).join(',\n    ')}
   ],
-  "timing": "최적 행동 시기",
-  "advice": "핵심 조언",
-  "caution": "주의사항",
+  "timing": "최적 행동 시기 (구체적 시기와 이유)",
+  "advice": "구체적 행동 조언 (예: '이번 달 셋째 주에 면접/미팅을 잡으세요')",
+  "caution": "주의사항 (구체적 상황과 대처법)",
   "lucky": { "color": "행운색", "direction": "길한 방향", "number": 7 }
-}`
+}
+
+[작성 원칙]
+- 점수(score)는 절대 포함하지 마세요. outlook은 반드시 "좋음", "보통", "주의" 중 하나만 사용하세요.
+- "~이 보이는군요", "운명의 기운", "에너지" 같은 시적/무속 표현 대신 "~합니다", "~입니다" 같은 명확한 현대 한국어를 사용하세요.
+- 좋은 점만 말하지 말고 기회와 리스크를 균형있게 분석하세요.
+- 사주 용어를 쓸 때는 괄호 안에 쉬운 설명을 추가하세요.
+- "기운이 좋습니다" 대신 "3월 중순에 이직 면접을 보면 유리합니다" 같은 구체적 조언을 제공하세요.`
     )
 
     // AI 분석
@@ -185,7 +190,6 @@ export async function analyzeTrendAction(
       category: 'TODAY',
       result_json: result,
       summary: result.summary,
-      score: result.score,
       model_used: MODEL_FLASH,
     })
 

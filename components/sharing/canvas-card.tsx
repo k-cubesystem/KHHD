@@ -86,14 +86,12 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
             </div>
 
             {data.score ? (
-              <div className="relative">
-                <span className="text-[120px] font-serif font-black text-transparent bg-clip-text bg-gradient-to-b from-[#D4AF37] to-[#8C7B50] drop-shadow-2xl">
-                  {data.score}
-                </span>
-                <span className="absolute top-4 -right-8 text-2xl font-bold text-[#D4AF37]/50">점</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-5xl font-serif font-bold text-[#D4AF37]">{data.score}</span>
+                <span className="text-xl text-[#D4AF37]/60">점</span>
               </div>
             ) : data.keyword ? (
-              <h2 className="text-[80px] font-serif font-black text-[#D4AF37] leading-none my-8 drop-shadow-lg break-keep">
+              <h2 className="text-4xl font-serif font-bold text-[#D4AF37] leading-tight my-4 break-keep">
                 {data.keyword}
               </h2>
             ) : null}

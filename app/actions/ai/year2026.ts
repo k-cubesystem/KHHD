@@ -17,7 +17,6 @@ import { logger } from '@/lib/utils/logger'
 export interface Year2026Result {
   name: string
   summary: string
-  score: number
   bingoh_meaning: string
   quarterly: {
     q1: string
@@ -26,10 +25,10 @@ export interface Year2026Result {
     q4: string
   }
   areas: {
-    wealth: { score: number; content: string }
-    love: { score: number; content: string }
-    career: { score: number; content: string }
-    health: { score: number; content: string }
+    wealth: { outlook: '좋음' | '보통' | '주의'; content: string }
+    love: { outlook: '좋음' | '보통' | '주의'; content: string }
+    career: { outlook: '좋음' | '보통' | '주의'; content: string }
+    health: { outlook: '좋음' | '보통' | '주의'; content: string }
   }
   peak_month: string
   caution_month: string
@@ -129,8 +128,14 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       'YEARLY_FORTUNE',
       '',
       '2026년 병오년(丙午年) - 붉은 말의 해. 火氣가 왕성한 해로 추진력과 변화의 기운이 강합니다.',
-      `[출력 형식 (JSON Mandatory)]
-{"name":"${target.name}","summary":"한 줄 요약","score":78,"bingoh_meaning":"병오년의 기운 설명","quarterly":{"q1":"1분기 운세","q2":"2분기 운세","q3":"3분기 운세","q4":"4분기 운세"},"areas":{"wealth":{"score":80,"content":"재물운"},"love":{"score":75,"content":"애정운"},"career":{"score":85,"content":"직업운"},"health":{"score":70,"content":"건강운"}},"peak_month":"최고의 달","caution_month":"주의 달","lucky":{"color":"행운색","direction":"길한 방향","number":6},"message":"응원 메시지"}`
+      `[지시사항]
+- 숫자 점수는 사용하지 마십시오. 대신 outlook 필드에 "좋음", "보통", "주의" 중 하나를 사용하십시오.
+- 사주 용어를 사용할 때는 괄호 안에 쉬운 설명을 추가하십시오.
+- 분기별 운세는 구체적으로 작성하십시오: 무엇을 하면 좋은지, 무엇을 피해야 하는지 명시하십시오.
+- 강점과 약점을 균형있게 다루십시오.
+
+[출력 형식 (JSON Mandatory)]
+{"name":"${target.name}","summary":"한 줄 요약 (명확한 현대 한국어)","bingoh_meaning":"병오년이 이 사주에 미치는 영향 설명","quarterly":{"q1":"1분기: 하면 좋은 것 + 피해야 할 것을 구체적으로","q2":"2분기: 구체적 행동 지침 포함","q3":"3분기: 구체적 행동 지침 포함","q4":"4분기: 구체적 행동 지침 포함"},"areas":{"wealth":{"outlook":"좋음|보통|주의","content":"재물운 분석 + 구체적 조언"},"love":{"outlook":"좋음|보통|주의","content":"애정운 분석 + 구체적 조언"},"career":{"outlook":"좋음|보통|주의","content":"직업운 분석 + 구체적 조언"},"health":{"outlook":"좋음|보통|주의","content":"건강운 분석 + 구체적 조언"}},"peak_month":"최고의 달","caution_month":"주의할 달","lucky":{"color":"행운색","direction":"길한 방향","number":6},"message":"현실적이고 격려가 되는 한마디"}`
     )
 
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
@@ -150,7 +155,6 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       context_mode: 'GENERAL',
       result_json: data,
       summary: data.summary || `2026년 병오년 신년운세`,
-      score: data.score,
       model_used: MODEL_FLASH,
       talisman_cost: 0,
     }).catch((e) => {

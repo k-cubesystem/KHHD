@@ -19,14 +19,13 @@ export type FortuneType = 'today' | 'weekly' | 'monthly'
 
 export interface FortuneArea {
   name: string
-  score: number
+  outlook: '좋음' | '보통' | '주의'
   content: string
 }
 
 export interface FortuneResult {
   type: FortuneType
   summary: string
-  score: number
   overall: string
   areas: FortuneArea[]
   lucky: {
@@ -113,19 +112,25 @@ export async function analyzeFortuneAction(
       `[출력 형식 (JSON Mandatory)]
 {
   "type": "${fortuneType}",
-  "summary": "한 줄 핵심 요약 (20자 이내)",
-  "score": 75,
-  "overall": "전체 운세 흐름 (3~4문장, 해화지기 화법)",
+  "summary": "한 줄 핵심 요약 (명확하고 구체적, 20자 이내)",
+  "overall": "전체 운세 흐름 (3~4문장, ~합니다/~입니다 체, 구체적 행동 조언 포함)",
   "areas": [
-    { "name": "재물운", "score": 80, "content": "재물 관련 운세 (2~3문장)" },
-    { "name": "애정운", "score": 70, "content": "애정 관련 운세 (2~3문장)" },
-    { "name": "건강운", "score": 85, "content": "건강 관련 운세 (2~3문장)" },
-    { "name": "직업운", "score": 75, "content": "직업/사업 관련 운세 (2~3문장)" }
+    { "name": "재물운", "outlook": "좋음|보통|주의", "content": "재물 관련 운세 — 하면 좋은 것과 피해야 할 것을 구체적으로 (2~3문장)" },
+    { "name": "애정운", "outlook": "좋음|보통|주의", "content": "애정 관련 운세 — 구체적 행동 조언 포함 (2~3문장)" },
+    { "name": "건강운", "outlook": "좋음|보통|주의", "content": "건강 관련 운세 — 주의할 부위와 생활습관 조언 (2~3문장)" },
+    { "name": "직업운", "outlook": "좋음|보통|주의", "content": "직업/사업 관련 운세 — 기회와 리스크 양면 분석 (2~3문장)" }
   ],
   "lucky": { "color": "행운의 색상", "number": 7, "direction": "길한 방향", "advice": "핵심 조언" },
-  "caution": "주의사항",
+  "caution": "주의사항 (구체적 상황 언급)",
   "period": "${periodLabel}"
-}`
+}
+
+[작성 원칙]
+- 점수(score)는 절대 포함하지 마세요. outlook은 반드시 "좋음", "보통", "주의" 중 하나만 사용하세요.
+- "~이 보이는군요", "운명의 기운" 같은 시적/무속 표현 대신 "~합니다", "~입니다" 같은 명확한 현대 한국어를 사용하세요.
+- 좋은 점만 말하지 말고 강점과 주의점을 균형있게 분석하세요.
+- 사주 용어를 쓸 때는 괄호 안에 쉬운 설명을 추가하세요.
+- "기운이 좋습니다" 대신 "이번 주는 거래처 미팅을 잡기 좋은 시기입니다" 같은 구체적 조언을 제공하세요.`
     )
 
     // 6. AI 분석
@@ -139,7 +144,6 @@ export async function analyzeFortuneAction(
       category: 'TODAY',
       result_json: result,
       summary: result.summary,
-      score: result.score,
       model_used: MODEL_FLASH,
     })
 

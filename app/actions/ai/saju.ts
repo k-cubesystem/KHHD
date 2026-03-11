@@ -174,13 +174,28 @@ export async function analyzeSajuDetail(
       '',
       `[출력 데이터 구조 (JSON Mandatory)]
 {
-  "summary": "한 줄 핵심 요약 (감성적 문구, 20자 이내)",
-  "fortune_score": 85,
-  "advice": "개운법을 포함한 현실적인 조언 한 문단",
-  "coreCharacter": "일간 물상론 기반 성격 분석 요약",
-  "fiveElements": {"wood": 20, "fire": 10, "earth": 30, "metal": 10, "water": 30},
-  "detailedAnalysis": "해화지기 화법의 상세 산문 리포트 (마크다운 형식)"
-}`
+  "summary": "한 줄 핵심 요약 (명확하고 구체적, 20자 이내)",
+  "coreCharacter": "일간 물상론 기반 성격 분석 요약 (사주 용어 사용 시 괄호 안에 쉬운 설명 추가)",
+  "fiveElements": {"wood": {"value": 20, "meaning": "성장과 창의성"}, "fire": {"value": 10, "meaning": "열정과 표현력"}, "earth": {"value": 30, "meaning": "안정과 신뢰"}, "metal": {"value": 10, "meaning": "결단력과 실행력"}, "water": {"value": 30, "meaning": "지혜와 유연성"}},
+  "detailedAnalysis": {
+    "personality": {
+      "strengths": ["강점1 — 구체적 설명", "강점2 — 구체적 설명"],
+      "weaknesses": ["약점1 — 보완 방법 포함", "약점2 — 보완 방법 포함"],
+      "summary": "성격 종합 요약 (2~3문장, ~합니다/~입니다 체)"
+    },
+    "career": "직업 적성과 커리어 방향 조언 (구체적 직종/역할 언급, 강점과 주의점 모두 포함)",
+    "relationships": "대인관계 특징 (잘하는 점과 갈등 요인 양면 분석)",
+    "health": "건강 주의사항 (취약 부위, 생활습관 조언 포함)",
+    "advice": "구체적 행동 조언 (예: '이번 달은 새로운 프로젝트를 시작하기 좋은 시기입니다')"
+  }
+}
+
+[작성 원칙]
+- 점수(score)는 절대 포함하지 마세요.
+- "~이 보이는군요", "운명의 기운" 같은 시적/무속 표현 대신 "~합니다", "~입니다" 같은 명확한 현대 한국어를 사용하세요.
+- 좋은 점만 말하지 말고 강점/약점, 주의할 점을 균형있게 분석하세요.
+- 사주 용어를 쓸 때는 바로 뒤에 쉬운 설명을 추가하세요 (예: "식신(食神) — 표현력과 창의성을 뜻합니다").
+- 과도한 미사여구를 줄이고 실용적인 조언을 제공하세요.`
     )
 
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
@@ -204,7 +219,6 @@ export async function analyzeSajuDetail(
           context_mode: 'GENERAL',
           result_json: analysisData,
           summary: analysisData.summary,
-          score: analysisData.fortune_score,
           model_used: MODEL_PRO,
           talisman_cost: 1,
         })

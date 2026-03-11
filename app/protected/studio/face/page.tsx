@@ -14,7 +14,7 @@ import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Eye, Sparkles, Crown, Star, TrendingUp } from 'lucide-react'
+import { ArrowRight, Coins, Eye, Sparkles, Crown, Star } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
@@ -104,10 +104,8 @@ function FaceAnalysisPageContent() {
           category: 'FACE',
           inputData: { goal: selectedGoal, imageUrl: `data:image/jpeg;base64,${imageBase64}` },
           resultData: {
-            score: result.currentScore,
             analysis: result.currentAnalysis,
             facialFeatures: result.facialFeatures,
-            confidence: result.confidence,
             recommendations: result.recommendations,
           },
           creditsUsed: FACE_COST,
@@ -265,16 +263,15 @@ function FaceAnalysisPageContent() {
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', delay: 0.2 }}
-                  className="relative text-7xl font-serif font-bold mb-2"
+                  className="relative text-2xl font-serif font-bold mb-2"
                   style={{
                     background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                   }}
                 >
-                  {analysisResult.currentScore}
+                  분석 완료
                 </motion.div>
-                <p className="relative text-xs text-white/30 font-sans">신뢰도 {analysisResult.confidence}%</p>
               </div>
 
               {/* 부위별 상세 분석 */}
@@ -329,53 +326,13 @@ function FaceAnalysisPageContent() {
                           key={f.key}
                           label={f.label}
                           subtitle={f.subtitle}
-                          score={f.data!.score}
+                          assessment={f.data!.assessment}
                           description={f.data!.description}
                           fortuneArea={f.data!.fortuneArea}
                           advice={f.data!.advice}
                           index={i}
                         />
                       ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* 운세별 종합 점수 */}
-              {analysisResult.overallFortuneScores && (
-                <Card className="card-glass-manse p-5 border-white/5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">운세별 종합 점수</h3>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2.5">
-                    {[
-                      { label: '재물운', value: analysisResult.overallFortuneScores.wealth, icon: '💰' },
-                      { label: '직업·명예운', value: analysisResult.overallFortuneScores.career, icon: '👑' },
-                      { label: '연애운', value: analysisResult.overallFortuneScores.love, icon: '🌸' },
-                      { label: '건강운', value: analysisResult.overallFortuneScores.health, icon: '🌿' },
-                      { label: '가족·부모복', value: analysisResult.overallFortuneScores.family, icon: '🏠' },
-                    ].map((item, idx) => (
-                      <motion.div
-                        key={item.label}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.07 }}
-                        className="flex items-center gap-3"
-                      >
-                        <span className="text-base w-5 shrink-0">{item.icon}</span>
-                        <span className="text-xs text-white/50 font-sans w-20 shrink-0">{item.label}</span>
-                        <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${item.value}%` }}
-                            transition={{ duration: 1, delay: idx * 0.1 + 0.3 }}
-                            className="h-full rounded-full"
-                            style={{ background: 'linear-gradient(90deg, #C9A227, #F4E4BA)' }}
-                          />
-                        </div>
-                        <span className="text-sm font-bold text-[#D4AF37] font-serif w-8 text-right">{item.value}</span>
-                      </motion.div>
-                    ))}
                   </div>
                 </Card>
               )}
@@ -400,7 +357,7 @@ function FaceAnalysisPageContent() {
                         <FeatureCard
                           key={f.key}
                           label={f.label}
-                          score={f.data!.score}
+                          assessment={f.data!.assessment}
                           description={f.data!.description}
                           index={i}
                         />
@@ -473,7 +430,7 @@ function FaceAnalysisPageContent() {
 function PartFeatureCard({
   label,
   subtitle,
-  score,
+  assessment,
   description,
   fortuneArea,
   advice,
@@ -481,14 +438,14 @@ function PartFeatureCard({
 }: {
   label: string
   subtitle: string
-  score: number
+  assessment: '좋음' | '보통' | '주의'
   description: string
   fortuneArea: string
   advice: string
   index: number
 }) {
   const [expanded, setExpanded] = useState(false)
-  const color = score >= 8 ? '#D4AF37' : score >= 6 ? '#A8C5DA' : '#E8A0A0'
+  const color = assessment === '좋음' ? '#D4AF37' : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
 
   return (
     <motion.div
@@ -506,23 +463,16 @@ function PartFeatureCard({
             <span className="text-[10px] text-white/30 ml-2 font-sans">{subtitle}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-white/80">
-              {score}
-              <span className="text-xs text-white/30">/10</span>
+            <span
+              className="text-xs font-bold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: `${color}20`, color }}
+            >
+              {assessment}
             </span>
             <span className="text-[10px] text-white/30">{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
         <p className="text-xs text-white/45 leading-relaxed font-sans font-light line-clamp-2">{description}</p>
-        <div className="mt-2.5 h-1 bg-white/5 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${(score / 10) * 100}%` }}
-            className="h-full rounded-full"
-            style={{ background: `linear-gradient(90deg, ${color}80, ${color})` }}
-            transition={{ duration: 0.9, delay: index * 0.1 + 0.3 }}
-          />
-        </div>
       </button>
       <AnimatePresence>
         {expanded && (fortuneArea || advice) && (
@@ -556,15 +506,16 @@ function PartFeatureCard({
 
 function FeatureCard({
   label,
-  score,
+  assessment,
   description,
   index,
 }: {
   label: string
-  score: number
+  assessment: '좋음' | '보통' | '주의'
   description: string
   index: number
 }) {
+  const color = assessment === '좋음' ? '#D4AF37' : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -574,21 +525,11 @@ function FeatureCard({
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-serif font-bold text-[#D4AF37]">{label}</span>
-        <span className="text-sm font-bold text-white/80">
-          {score}
-          <span className="text-xs text-white/30">/10</span>
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
+          {assessment}
         </span>
       </div>
       <p className="text-xs text-white/45 leading-relaxed font-sans font-light">{description}</p>
-      <div className="mt-2.5 h-1 bg-white/5 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${(score / 10) * 100}%` }}
-          className="h-full rounded-full"
-          style={{ background: 'linear-gradient(90deg, #C9A227, #F4E4BA)' }}
-          transition={{ duration: 0.9, delay: index * 0.1 + 0.3 }}
-        />
-      </div>
     </motion.div>
   )
 }

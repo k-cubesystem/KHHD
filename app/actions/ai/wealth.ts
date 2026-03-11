@@ -16,9 +16,19 @@ interface WealthAnalysisParams {
   memberId: string
 }
 
+export interface WealthAnalysisData {
+  currentSituation: string
+  strengths: string[]
+  risks: string[]
+  shortTerm: string
+  midTerm: string
+  longTerm: string
+  actionItems: string[]
+}
+
 interface WealthAnalysisResult {
   success: boolean
-  analysis?: string
+  analysis?: WealthAnalysisData
   error?: string
 }
 
@@ -62,7 +72,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       return { success: false, error: '대상 정보를 찾을 수 없습니다.' }
     }
 
-    // 5. 해화지기 마스터 엔진으로 프롬프트 조립 (재물 심층 - 산문 출력)
+    // 5. 해화지기 마스터 엔진으로 프롬프트 조립 (재물 심층 - 구조화 JSON)
     const { prompt } = await buildMasterPromptForAction(
       {
         name: member.name,
@@ -74,22 +84,39 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       'WEALTH_DEEP',
       '',
       '',
-      `재물의 길목을 짚어주듯 산문으로 서술하십시오.
-재성(正財·偏財)과 식상의 흐름, 대운에서의 재물 변화,
-단기·중기·장기 재물운과 최적 투자 방향을 포함하여 주십시오.`
+      `[지시사항]
+- 재성(正財, 정재 = 안정적 수입)과 偏財(편재 = 투자/횡재)의 흐름을 분석하십시오.
+- 사주 용어를 사용할 때는 반드시 괄호 안에 쉬운 설명을 추가하십시오.
+- 강점과 리스크를 균형있게 다루십시오.
+- 구체적인 행동 조언을 포함하십시오.
+- 숫자 점수는 사용하지 마십시오.
+
+[출력 형식 (JSON Mandatory)]
+{
+  "currentSituation": "현재 재물 상태 분석 (대운과 세운 기준, 2~3문장)",
+  "strengths": ["재물 관련 강점 1", "강점 2", "강점 3"],
+  "risks": ["주의해야 할 재물 리스크 1", "리스크 2", "리스크 3"],
+  "shortTerm": "단기 1-3개월 재물 조언 (구체적 행동 포함)",
+  "midTerm": "중기 6개월-1년 재물 조언 (구체적 전략 포함)",
+  "longTerm": "장기 1년 이상 재물 전략 (방향성 제시)",
+  "actionItems": ["지금 바로 할 수 있는 행동 1", "행동 2", "행동 3"]
+}`
     )
 
     // 6. Gemini AI 호출
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
     if (!apiKey) throw new Error('Google Generative AI API Key is missing')
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
+    const model = genAI.getGenerativeModel({
+      model: MODEL_FLASH,
+      generationConfig: { responseMimeType: 'application/json' },
+    })
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
       userId: user.id,
       model: MODEL_FLASH,
       actionType: 'wealth',
     })
-    const analysis = result.response.text()
+    const analysis: WealthAnalysisData = JSON.parse(result.response.text())
 
     // 7. 분석 기록 저장 + 운세 미션 체크
     try {
@@ -98,7 +125,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
         target_name: member.name,
         target_relation: member.relationship || '본인',
         category: 'WEALTH',
-        result_json: { analysis },
+        result_json: analysis,
         summary: '재물운 심층 분석 결과',
         model_used: MODEL_FLASH,
         talisman_cost: WEALTH_ANALYSIS_COST,

@@ -15,40 +15,6 @@ interface InSectionProps {
   } | null
 }
 
-function MiniScoreRing({ value, color }: { value: number; color: string }) {
-  const r = 14
-  const circ = 2 * Math.PI * r
-  return (
-    <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-      <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 32 32" aria-hidden="true">
-        <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
-        <motion.circle
-          cx="16"
-          cy="16"
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: circ - (circ * value) / 100 }}
-          transition={{ duration: 1.2, ease: 'easeOut' }}
-        />
-      </svg>
-      <motion.span
-        className="text-[9px] font-bold"
-        style={{ color }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-      >
-        {value}
-      </motion.span>
-    </div>
-  )
-}
-
 export function InSection({ data }: InSectionProps) {
   if (!data) return null
 
@@ -150,9 +116,6 @@ export function InSection({ data }: InSectionProps) {
                         <ScanFace className="w-4 h-4 text-primary" aria-hidden="true" />
                         <span className="text-[11px] text-primary/70 font-bold tracking-wide">전체 인상</span>
                       </div>
-                      {face_reading.face_score !== null && face_reading.face_score !== undefined && (
-                        <MiniScoreRing value={face_reading.face_score} color="#D4AF37" />
-                      )}
                     </div>
                     <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
                       {face_reading.overall}
@@ -208,9 +171,6 @@ export function InSection({ data }: InSectionProps) {
                         <Hand className="w-4 h-4 text-primary-dark" aria-hidden="true" />
                         <span className="text-[11px] text-primary-dark/70 font-bold tracking-wide">전체 인상</span>
                       </div>
-                      {palm_reading.palm_score !== null && palm_reading.palm_score !== undefined && (
-                        <MiniScoreRing value={palm_reading.palm_score} color="#C8B273" />
-                      )}
                     </div>
                     <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
                       {palm_reading.overall}

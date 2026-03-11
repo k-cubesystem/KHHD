@@ -3,7 +3,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ManseAdvancedResult } from '@/lib/domain/saju/manse-advanced'
-import { Sparkles, TrendingUp, Calendar, Zap, Link as LinkIcon, Ban } from 'lucide-react'
+import {
+  TrendingUp,
+  Calendar,
+  Zap,
+  Link as LinkIcon,
+  Ban,
+  Wind,
+  Star,
+  Flower2,
+  BookOpen,
+  GraduationCap,
+  Swords,
+  CircleDot,
+} from 'lucide-react'
 
 interface AdvancedManseDisplayProps {
   advanced: ManseAdvancedResult
@@ -16,7 +29,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
       <Card className="bg-surface/20 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
-            <Calendar className="w-5 h-5" />
+            <Calendar className="w-4 h-4" />
             세운(歲運) - 올해 운세
           </CardTitle>
         </CardHeader>
@@ -41,7 +54,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
       <Card className="bg-surface/20 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
-            <TrendingUp className="w-5 h-5" />
+            <TrendingUp className="w-4 h-4" />
             월운(月運) - 이번 달 운세
           </CardTitle>
         </CardHeader>
@@ -50,15 +63,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
             <span className="text-sm text-muted-foreground">
               {advanced.worwoon.month}월 ({advanced.worwoon.solarTerm})
             </span>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-32 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3]"
-                  style={{ width: `${advanced.worwoon.luck}%` }}
-                />
-              </div>
-              <span className="text-sm font-medium">{advanced.worwoon.luck}%</span>
-            </div>
+            <Badge variant="outline">{advanced.worwoon.luck}점</Badge>
           </div>
         </CardContent>
       </Card>
@@ -67,31 +72,64 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
       <Card className="bg-surface/20 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
-            <Sparkles className="w-5 h-5" />
+            <Star className="w-4 h-4" />
             신살(神殺) - 특수 기운
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {advanced.sinsal.yeokma && <Badge variant="outline">역마살 🐎</Badge>}
+            {advanced.sinsal.yeokma && (
+              <Badge variant="outline" className="gap-1">
+                <Wind className="w-3 h-3" />
+                역마살
+              </Badge>
+            )}
             {advanced.sinsal.cheonEulGwiin && (
-              <Badge variant="default" className="bg-[#D4AF37]">
-                천을귀인 ⭐
+              <Badge variant="default" className="bg-[#D4AF37] gap-1">
+                <Star className="w-3 h-3" />
+                천을귀인
               </Badge>
             )}
-            {advanced.sinsal.hwagae && <Badge variant="outline">화개살 🎨</Badge>}
-            {advanced.sinsal.dohwa && <Badge variant="outline">도화살 🌸</Badge>}
+            {advanced.sinsal.hwagae && (
+              <Badge variant="outline" className="gap-1">
+                <Flower2 className="w-3 h-3" />
+                화개살
+              </Badge>
+            )}
+            {advanced.sinsal.dohwa && (
+              <Badge variant="outline" className="gap-1">
+                <Flower2 className="w-3 h-3" />
+                도화살
+              </Badge>
+            )}
             {advanced.sinsal.woldeokGwiin && (
-              <Badge variant="default" className="bg-[#D4AF37]">
-                월덕귀인 ✨
+              <Badge variant="default" className="bg-[#D4AF37] gap-1">
+                <Star className="w-3 h-3" />
+                월덕귀인
               </Badge>
             )}
-            {advanced.sinsal.munchangGwiin && <Badge variant="outline">문창귀인 📚</Badge>}
-            {advanced.sinsal.hakdangGwiin && <Badge variant="outline">학당귀인 🎓</Badge>}
-            {advanced.sinsal.yangin && <Badge variant="outline">양인 ⚔️</Badge>}
+            {advanced.sinsal.munchangGwiin && (
+              <Badge variant="outline" className="gap-1">
+                <BookOpen className="w-3 h-3" />
+                문창귀인
+              </Badge>
+            )}
+            {advanced.sinsal.hakdangGwiin && (
+              <Badge variant="outline" className="gap-1">
+                <GraduationCap className="w-3 h-3" />
+                학당귀인
+              </Badge>
+            )}
+            {advanced.sinsal.yangin && (
+              <Badge variant="outline" className="gap-1">
+                <Swords className="w-3 h-3" />
+                양인
+              </Badge>
+            )}
             {advanced.sinsal.taiji && (
-              <Badge variant="default" className="bg-[#D4AF37]">
-                태극귀인 ☯️
+              <Badge variant="default" className="bg-[#D4AF37] gap-1">
+                <CircleDot className="w-3 h-3" />
+                태극귀인
               </Badge>
             )}
             {!hasAnySinsal(advanced.sinsal) && (
@@ -105,7 +143,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
       <Card className="bg-surface/20 border-primary/20">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-primary">
-            <Zap className="w-5 h-5" />
+            <Zap className="w-4 h-4" />
             십이운성 - 생명력
           </CardTitle>
         </CardHeader>
@@ -131,19 +169,9 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
           <div className="pt-3 border-t border-primary/10">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">종합 운성</span>
-              <Badge className="bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3] text-black">
-                {advanced.sibiWoonSung.overall}
-              </Badge>
+              <Badge className="bg-[#D4AF37] text-black">{advanced.sibiWoonSung.overall}</Badge>
             </div>
-            <div className="mt-2">
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3]"
-                  style={{ width: `${advanced.sibiWoonSung.strength}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">생명력: {advanced.sibiWoonSung.strength}%</p>
-            </div>
+            <p className="text-xs text-muted-foreground mt-2">생명력: {advanced.sibiWoonSung.strength}%</p>
           </div>
         </CardContent>
       </Card>
@@ -255,9 +283,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               </div>
             </div>
             {advanced.gongmang.affectedPillars.length > 0 && (
-              <p className="text-xs text-primary-dark">
-                ⚠️ 영향받는 지지: {advanced.gongmang.affectedPillars.join(', ')}
-              </p>
+              <p className="text-xs text-primary-dark">영향받는 지지: {advanced.gongmang.affectedPillars.join(', ')}</p>
             )}
           </CardContent>
         </Card>

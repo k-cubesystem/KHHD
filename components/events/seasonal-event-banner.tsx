@@ -51,67 +51,28 @@ function getTimeLeft(targetDate: Date) {
 
 const SEASON_THEMES = {
   spring: {
-    gradient: 'from-pink-500/20 via-rose-400/10 to-transparent',
-    border: 'border-pink-400/30',
-    badge: 'bg-pink-500/20 border-pink-400/40 text-pink-300',
-    glow: 'shadow-[0_0_30px_rgba(236,72,153,0.15)]',
-    particles: ['🌸', '🌺', '🌷', '🌼', '🍀'],
+    gradient: 'from-pink-500/10 via-transparent to-transparent',
+    border: 'border-pink-400/20',
+    badge: 'bg-pink-500/15 border-pink-400/30 text-pink-300',
   },
   summer: {
-    gradient: 'from-orange-500/20 via-yellow-400/10 to-transparent',
-    border: 'border-orange-400/30',
-    badge: 'bg-orange-500/20 border-orange-400/40 text-orange-300',
-    glow: 'shadow-[0_0_30px_rgba(249,115,22,0.15)]',
-    particles: ['☀️', '🌊', '🔥', '⚡', '🌻'],
+    gradient: 'from-orange-500/10 via-transparent to-transparent',
+    border: 'border-orange-400/20',
+    badge: 'bg-orange-500/15 border-orange-400/30 text-orange-300',
   },
   autumn: {
-    gradient: 'from-amber-600/20 via-orange-500/10 to-transparent',
-    border: 'border-amber-500/30',
-    badge: 'bg-amber-600/20 border-amber-500/40 text-amber-300',
-    glow: 'shadow-[0_0_30px_rgba(217,119,6,0.15)]',
-    particles: ['🍂', '🍁', '🌾', '🌰', '🍄'],
+    gradient: 'from-amber-600/10 via-transparent to-transparent',
+    border: 'border-amber-500/20',
+    badge: 'bg-amber-600/15 border-amber-500/30 text-amber-300',
   },
   winter: {
-    gradient: 'from-blue-500/20 via-cyan-400/10 to-transparent',
-    border: 'border-blue-400/30',
-    badge: 'bg-blue-500/20 border-blue-400/40 text-blue-300',
-    glow: 'shadow-[0_0_30px_rgba(59,130,246,0.15)]',
-    particles: ['❄️', '⛄', '🌨️', '✨', '🌟'],
+    gradient: 'from-blue-500/10 via-transparent to-transparent',
+    border: 'border-blue-400/20',
+    badge: 'bg-blue-500/15 border-blue-400/30 text-blue-300',
   },
 }
 
-function FloatingParticles({ season }: { season: string }) {
-  const theme = SEASON_THEMES[season as keyof typeof SEASON_THEMES] || SEASON_THEMES.spring
-  const particles = theme.particles.slice(0, 3)
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p, i) => (
-        <motion.span
-          key={i}
-          className="absolute text-lg select-none"
-          style={{
-            left: `${15 + i * 30}%`,
-            top: '10%',
-          }}
-          animate={{
-            y: [0, -12, 0],
-            opacity: [0.4, 0.8, 0.4],
-            rotate: [0, i % 2 === 0 ? 10 : -10, 0],
-          }}
-          transition={{
-            duration: 3 + i * 0.5,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: i * 0.8,
-          }}
-        >
-          {p}
-        </motion.span>
-      ))}
-    </div>
-  )
-}
+// Particles removed for minimal design
 
 function TimeUnit({ value, label }: { value: number; label: string }) {
   return (
@@ -184,12 +145,9 @@ export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerPro
           'bg-gradient-to-br',
           theme.gradient,
           theme.border,
-          theme.glow,
           'bg-[#0D0900]/80'
         )}
       >
-        <FloatingParticles season={event.season} />
-
         {/* Top accent line */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
 
@@ -275,7 +233,7 @@ export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerPro
               className={cn(
                 'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-[#0A0A0A] transition-all active:scale-95',
                 'bg-gradient-to-r from-[#D4AF37] to-[#F0C040] hover:from-[#E5C14A] hover:to-[#FFD452]',
-                'shadow-[0_0_15px_rgba(212,175,55,0.3)]'
+                'shadow-sm'
               )}
             >
               절기 특별 운세 보기

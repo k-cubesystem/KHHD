@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Coins, Loader2, TrendingUp, Calendar, AlertCircle } from 'lucide-react'
+import { Coins, Loader2, TrendingUp, AlertCircle, ShieldAlert, Zap, Clock, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +28,15 @@ export function WealthAnalysisContent() {
   const [member, setMember] = useState<FamilyMember | null>(null)
   const [loading, setLoading] = useState(true)
   const [analyzing, setAnalyzing] = useState(false)
-  const [wealthAnalysis, setWealthAnalysis] = useState<string>('')
+  const [wealthAnalysis, setWealthAnalysis] = useState<{
+    currentSituation: string
+    strengths: string[]
+    risks: string[]
+    shortTerm: string
+    midTerm: string
+    longTerm: string
+    actionItems: string[]
+  } | null>(null)
   const [isGuest, setIsGuest] = useState(false)
 
   const { nudgeModal, closeNudge, handleDeductResult, trackAnalysis } = useUpgradeNudge()
@@ -77,7 +85,7 @@ export function WealthAnalysisContent() {
         return
       }
 
-      if (result.success && result.analysis) {
+      if (result.success && result.analysis && typeof result.analysis === 'object') {
         setWealthAnalysis(result.analysis)
         toast.success('재물운 분석이 완료되었습니다!')
         trackAnalysis()
@@ -162,7 +170,7 @@ export function WealthAnalysisContent() {
               </div>
               <Button
                 onClick={handleAnalyze}
-                disabled={analyzing || !!wealthAnalysis}
+                disabled={analyzing || wealthAnalysis !== null}
                 className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
               >
                 {analyzing ? (
@@ -170,7 +178,7 @@ export function WealthAnalysisContent() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     분석 중...
                   </>
-                ) : wealthAnalysis ? (
+                ) : wealthAnalysis !== null ? (
                   '분석 완료'
                 ) : (
                   <>
@@ -191,58 +199,105 @@ export function WealthAnalysisContent() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
+          className="space-y-6"
         >
+          {/* 현재 상태 */}
           <Card className="bg-surface/50 backdrop-blur-md border border-primary/20">
-            <CardContent className="p-8">
-              <div
-                className="prose prose-invert max-w-none"
-                style={{
-                  color: 'var(--ink-light)',
-                }}
-              >
-                {wealthAnalysis.split('\n').map((line, index) => {
-                  if (line.startsWith('# ')) {
-                    return (
-                      <h1 key={index} className="text-3xl font-serif font-bold text-ink-light mb-6">
-                        {line.substring(2)}
-                      </h1>
-                    )
-                  } else if (line.startsWith('## ')) {
-                    return (
-                      <h2 key={index} className="text-2xl font-serif font-bold text-primary mt-8 mb-4">
-                        {line.substring(3)}
-                      </h2>
-                    )
-                  } else if (line.startsWith('### ')) {
-                    return (
-                      <h3 key={index} className="text-xl font-serif font-bold text-ink-light mt-6 mb-3">
-                        {line.substring(4)}
-                      </h3>
-                    )
-                  } else if (line.startsWith('**') && line.endsWith('**')) {
-                    return (
-                      <p key={index} className="font-bold text-primary my-3">
-                        {line.substring(2, line.length - 2)}
-                      </p>
-                    )
-                  } else if (line.startsWith('- ')) {
-                    return (
-                      <li key={index} className="text-ink-light/80 ml-4">
-                        {line.substring(2)}
-                      </li>
-                    )
-                  } else if (line.startsWith('---')) {
-                    return <hr key={index} className="my-6 border-primary/20" />
-                  } else if (line.trim()) {
-                    return (
-                      <p key={index} className="text-ink-light/80 leading-relaxed my-2">
-                        {line}
-                      </p>
-                    )
-                  }
-                  return <br key={index} />
-                })}
+            <CardHeader>
+              <CardTitle className="text-xl font-serif text-ink-light flex items-center gap-2">
+                <Coins className="w-5 h-5 text-primary" />
+                현재 재물 상태
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-ink-light/80 leading-relaxed">{wealthAnalysis.currentSituation}</p>
+            </CardContent>
+          </Card>
+
+          {/* 강점 & 리스크 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-surface/50 backdrop-blur-md border border-green-500/20">
+              <CardHeader>
+                <CardTitle className="text-lg font-serif text-green-400 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  재물 강점
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {wealthAnalysis.strengths.map((s, i) => (
+                    <li key={i} className="text-ink-light/80 text-sm flex items-start gap-2">
+                      <span className="text-green-400 mt-0.5 flex-shrink-0">+</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-surface/50 backdrop-blur-md border border-red-500/20">
+              <CardHeader>
+                <CardTitle className="text-lg font-serif text-red-400 flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5" />
+                  주의할 리스크
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {wealthAnalysis.risks.map((r, i) => (
+                    <li key={i} className="text-ink-light/80 text-sm flex items-start gap-2">
+                      <span className="text-red-400 mt-0.5 flex-shrink-0">!</span>
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 시기별 조언 */}
+          <Card className="bg-surface/50 backdrop-blur-md border border-primary/20">
+            <CardHeader>
+              <CardTitle className="text-xl font-serif text-ink-light flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                시기별 재물 전략
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-primary/80 uppercase tracking-wider">단기 (1-3개월)</h4>
+                <p className="text-ink-light/80 text-sm leading-relaxed">{wealthAnalysis.shortTerm}</p>
               </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-primary/80 uppercase tracking-wider">중기 (6개월-1년)</h4>
+                <p className="text-ink-light/80 text-sm leading-relaxed">{wealthAnalysis.midTerm}</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-primary/80 uppercase tracking-wider">장기 (1년 이상)</h4>
+                <p className="text-ink-light/80 text-sm leading-relaxed">{wealthAnalysis.longTerm}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 지금 바로 할 수 있는 행동 */}
+          <Card className="bg-surface/50 backdrop-blur-md border border-yellow-500/20">
+            <CardHeader>
+              <CardTitle className="text-xl font-serif text-yellow-400 flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                지금 바로 실천하기
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3">
+                {wealthAnalysis.actionItems.map((item, i) => (
+                  <li key={i} className="text-ink-light/80 text-sm flex items-start gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 text-xs font-bold">
+                      {i + 1}
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
         </motion.div>

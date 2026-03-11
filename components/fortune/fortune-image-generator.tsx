@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Download, Share2, Loader2, ImageIcon, RefreshCw } from 'lucide-react'
+import { Sparkles, Download, Share2, Loader2, ImageIcon, RefreshCw, Shield, CreditCard, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { generateFortuneImage, FortuneImageType, FortuneImageContext } from '@/app/actions/ai/generate-image'
@@ -14,10 +14,16 @@ interface FortuneImageGeneratorProps {
   variant?: 'inline' | 'compact'
 }
 
-const TYPE_LABELS: Record<FortuneImageType, { label: string; emoji: string; desc: string }> = {
-  talisman: { label: '나만의 부적', emoji: '🔴', desc: '재앙을 막고 복을 불러오는 전통 부적' },
-  card: { label: '운세 카드', emoji: '✨', desc: '이달의 운세를 담은 아름다운 카드' },
-  illustration: { label: '사주 일러스트', emoji: '🌌', desc: '팔자를 우주로 표현한 신비로운 그림' },
+const TYPE_ICONS: Record<FortuneImageType, typeof Shield> = {
+  talisman: Shield,
+  card: CreditCard,
+  illustration: Palette,
+}
+
+const TYPE_LABELS: Record<FortuneImageType, { label: string; desc: string }> = {
+  talisman: { label: '나만의 부적', desc: '재앙을 막고 복을 불러오는 전통 부적' },
+  card: { label: '운세 카드', desc: '이달의 운세를 담은 아름다운 카드' },
+  illustration: { label: '사주 일러스트', desc: '팔자를 우주로 표현한 신비로운 그림' },
 }
 
 export function FortuneImageGenerator({
@@ -153,7 +159,10 @@ export function FortuneImageGenerator({
                   : 'bg-white border-amber-100 hover:border-amber-300'
               }`}
             >
-              <div className="text-lg mb-0.5">{info.emoji}</div>
+              {(() => {
+                const Icon = TYPE_ICONS[type]
+                return <Icon className={`w-5 h-5 mx-auto mb-0.5 ${isSelected ? 'text-amber-700' : 'text-gray-500'}`} />
+              })()}
               <div className={`text-xs font-semibold ${isSelected ? 'text-amber-800' : 'text-gray-600'}`}>
                 {info.label}
               </div>

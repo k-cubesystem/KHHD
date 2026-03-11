@@ -10,12 +10,14 @@ import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 interface CategoryBreakdown {
   category: string
   label: string
-  score: number
+  assessment: string
   details: string[]
+  /** @deprecated v2 이전 캐시 호환 */
+  score?: number
 }
 
 interface CompatibilityResultData {
-  score: number
+  overallAssessment?: string
   summary: string
   strengths: string[]
   warnings: string[]
@@ -28,6 +30,8 @@ interface CompatibilityResultData {
   person2Weakness?: string
   conflictScenario?: string
   recommendedPlaces?: string[]
+  /** @deprecated v2 이전 캐시 호환 */
+  score?: number
 }
 
 interface CompatibilityResultProps {
@@ -37,15 +41,29 @@ interface CompatibilityResultProps {
   onReset: () => void
 }
 
-function getScoreColor(score: number): string {
-  if (score >= 80) return 'bg-pink-500'
-  if (score >= 60) return 'bg-[#D4AF37]'
-  if (score >= 40) return 'bg-orange-400'
-  return 'bg-muted-foreground'
+function getAssessmentColor(assessment: string): string {
+  if (assessment === '좋은 궁합') return 'bg-pink-500 text-pink-50'
+  if (assessment === '보통 궁합') return 'bg-[#D4AF37] text-yellow-50'
+  if (assessment === '어려운 궁합') return 'bg-orange-400 text-orange-50'
+  return 'bg-red-500 text-red-50'
+}
+
+function getAssessmentBorderColor(assessment: string): string {
+  if (assessment === '좋은 궁합') return 'border-pink-500/30'
+  if (assessment === '보통 궁합') return 'border-[#D4AF37]/30'
+  if (assessment === '어려운 궁합') return 'border-orange-400/30'
+  return 'border-red-500/30'
+}
+
+function getCategoryAssessmentStyle(assessment: string): string {
+  if (assessment === '좋은 궁합') return 'text-pink-400 bg-pink-500/10'
+  if (assessment === '보통 궁합') return 'text-[#D4AF37] bg-[#D4AF37]/10'
+  if (assessment === '어려운 궁합') return 'text-orange-400 bg-orange-400/10'
+  return 'text-red-400 bg-red-500/10'
 }
 
 export function CompatibilityResult({ person1, person2, result, onReset }: CompatibilityResultProps) {
-  const score = result.score || 85
+  const overallAssessment = result.overallAssessment || '보통 궁합'
   const summary = result.summary || '궁합 분석 결과'
   const strengths = result.strengths || []
   const warnings = result.warnings || []
@@ -81,55 +99,26 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
               </div>
               <p className="text-sm text-muted-foreground">{summary}</p>
               {honestVerdict && (
-                <p className={`text-sm font-semibold ${score >= 60 ? 'text-[#D4AF37]' : 'text-red-400'}`}>
+                <p
+                  className={`text-sm font-semibold ${overallAssessment === '좋은 궁합' || overallAssessment === '보통 궁합' ? 'text-[#D4AF37]' : 'text-red-400'}`}
+                >
                   {honestVerdict}
                 </p>
               )}
             </motion.div>
 
-            {/* Score Circle */}
+            {/* Assessment Badge */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="relative w-40 h-40 mx-auto"
+              className="flex justify-center"
             >
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  className="text-muted-foreground/20"
-                />
-                <circle
-                  cx="80"
-                  cy="80"
-                  r="70"
-                  fill="none"
-                  stroke="url(#gradient-compatibility)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(score / 100) * 440} 440`}
-                  className="transition-all duration-1000"
-                />
-                <defs>
-                  <linearGradient id="gradient-compatibility" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ec4899" />
-                    <stop offset="100%" stopColor="#a855f7" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div
-                    className={`text-4xl font-bold ${score >= 70 ? 'text-pink-500' : score >= 50 ? 'text-[#D4AF37]' : 'text-red-400'}`}
-                  >
-                    {score}
-                  </div>
-                  <div className="text-xs text-muted-foreground">궁합도</div>
+              <div className={`px-8 py-4 rounded-2xl border-2 ${getAssessmentBorderColor(overallAssessment)}`}>
+                <div
+                  className={`text-2xl font-bold font-serif text-center ${getAssessmentColor(overallAssessment).split(' ')[0].replace('bg-', 'text-')}`}
+                >
+                  {overallAssessment}
                 </div>
               </div>
             </motion.div>
@@ -170,15 +159,11 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-ink-light">{cat.label}</span>
-                      <span className="font-semibold text-ink-light">{cat.score}점</span>
-                    </div>
-                    <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${cat.score}%` }}
-                        transition={{ delay: 0.4 + idx * 0.05, duration: 0.6 }}
-                        className={`h-full rounded-full ${getScoreColor(cat.score)}`}
-                      />
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getCategoryAssessmentStyle(cat.assessment || '보통 궁합')}`}
+                      >
+                        {cat.assessment || '보통 궁합'}
+                      </span>
                     </div>
                     <p className="text-xs text-muted-foreground">{cat.details[0]}</p>
                   </div>

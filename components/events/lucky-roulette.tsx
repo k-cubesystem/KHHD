@@ -45,53 +45,31 @@ const MISS_PARTICLES = Array.from({ length: 5 }, () => ({
   x: (Math.random() - 0.5) * 80,
 }))
 
-// 코인 파티클 컴포넌트
-function CoinParticles({ count = 20 }: { count?: number }) {
+// Subtle coin particle effect
+function CoinParticles() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-      {COIN_PARTICLES.slice(0, count).map((p, i) => (
+      {COIN_PARTICLES.slice(0, 5).map((p, i) => (
         <motion.div
           key={i}
-          initial={{ y: '50%', x: `${p.left}%`, opacity: 1, scale: 0, rotate: 0 }}
+          initial={{ y: '50%', opacity: 0, scale: 0 }}
           animate={{
             y: ['-10%', '110%'],
-            opacity: [0, 1, 1, 0],
-            scale: [0, 1.2, 1, 0.5],
-            rotate: [0, p.rotation, p.rotation * 2],
+            opacity: [0, 0.7, 0],
+            scale: [0, 1, 0.5],
           }}
           transition={{ duration: p.duration, delay: p.delay, ease: 'easeOut' }}
-          className="absolute text-gold-400"
-          style={{ left: `${p.left}%`, fontSize: p.size }}
-        >
-          💰
-        </motion.div>
+          className="absolute w-2 h-2 rounded-full bg-[#D4AF37]"
+          style={{ left: `${p.left}%` }}
+        />
       ))}
     </div>
   )
 }
 
-// 꽝 이펙트
+// Miss effect - simple fade
 function MissEffect() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-      {MISS_PARTICLES.map((p, i) => (
-        <motion.div
-          key={i}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: [0, 0.6, 0],
-            scale: [0.5, 1.5],
-            y: [0, p.y],
-            x: [0, p.x],
-          }}
-          transition={{ duration: 1.2, delay: i * 0.1 }}
-          className="absolute top-1/2 left-1/2 text-2xl"
-        >
-          💨
-        </motion.div>
-      ))}
-    </div>
-  )
+  return null
 }
 
 export function LuckyRoulette({
@@ -167,7 +145,7 @@ export function LuckyRoulette({
       <CardContent className="p-4">
         {/* 코인 파티클 */}
         <AnimatePresence>
-          {showParticles && <CoinParticles count={24} />}
+          {showParticles && <CoinParticles />}
           {showMiss && <MissEffect />}
         </AnimatePresence>
 
@@ -308,11 +286,10 @@ export function LuckyRoulette({
               >
                 <div className="text-center">
                   {result.isMiss ? (
-                    <motion.div animate={{ rotate: [0, -10, 10, -5, 5, 0] }} transition={{ duration: 0.6 }}>
-                      <span className="text-4xl block mb-2">😅</span>
+                    <div>
                       <p className="text-sm font-bold text-muted-foreground">아쉽게도 꽝!</p>
                       <p className="text-[10px] text-ink-light/50 mt-1">내일 다시 도전하세요</p>
-                    </motion.div>
+                    </div>
                   ) : (
                     <motion.div
                       initial={{ scale: 0 }}

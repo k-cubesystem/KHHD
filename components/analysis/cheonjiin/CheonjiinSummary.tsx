@@ -10,76 +10,11 @@ interface CheonjiinSummaryProps {
   target: DestinyTarget
 }
 
-function MiniScoreRing({
-  label,
-  value,
-  color,
-  delay,
-}: {
-  label: string
-  value: number | null
-  color: string
-  delay: number
-}) {
-  const r = 18
-  const circ = 2 * Math.PI * r
-  const displayValue = value ?? 0
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="flex flex-col items-center gap-1"
-    >
-      <div className="relative w-10 h-10 flex items-center justify-center">
-        <svg
-          className="absolute inset-0 w-full h-full -rotate-90"
-          viewBox="0 0 40 40"
-          role="img"
-          aria-label={`${label} ${value !== null ? `${value}점` : '미제공'}`}
-        >
-          <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="2" />
-          {value !== null && (
-            <motion.circle
-              cx="20"
-              cy="20"
-              r={r}
-              fill="none"
-              stroke={color}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeDasharray={circ}
-              initial={{ strokeDashoffset: circ }}
-              animate={{ strokeDashoffset: circ - (circ * displayValue) / 100 }}
-              transition={{ duration: 1.4, delay: delay + 0.3, ease: 'easeOut' }}
-            />
-          )}
-        </svg>
-        <span
-          className="text-[11px] font-bold"
-          style={{ color: value !== null ? color : 'rgba(255,255,255,0.2)' }}
-          aria-hidden="true"
-        >
-          {value !== null ? value : '—'}
-        </span>
-      </div>
-      <span className="text-[10px] text-ink-light/40 font-serif tracking-wide">{label}</span>
-    </motion.div>
-  )
-}
-
 export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
   if (!data) return null
 
-  const score = data.score ?? 0
-  const summary = data.summary || '천지인의 기운이 조화롭게 흐르는 시기입니다.'
+  const summary = data.summary || '천지인 통합 분석이 완료되었습니다.'
   const lucky = data.lucky ?? {}
-
-  const cheonScore = data.cheonScore ?? null
-  const jiScore = data.jiScore ?? null
-  const inScore = data.inScore ?? null
-
-  const circ = 2 * Math.PI * 52
 
   return (
     <div className="relative w-full overflow-hidden mb-8">
@@ -106,56 +41,35 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
           </h1>
         </div>
 
-        {/* 2. Score Section (Centerpiece) */}
+        {/* 2. Analysis Complete Badge */}
         <div className="relative flex flex-col items-center justify-center mb-8">
-          {/* Main Score Circle */}
-          <div className="relative w-48 h-48 flex items-center justify-center mb-6">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-0 border border-dashed border-primary/10 rounded-full"
-            />
-
-            {/* SVG Ring */}
-            <svg
-              className="w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(236,182,19,0.2)]"
-              viewBox="0 0 144 144"
-              role="img"
-              aria-label={`천지인 총합 조화 점수 ${score}점`}
-            >
-              <circle cx="72" cy="72" r="52" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1.5" />
-              <motion.circle
-                cx="72"
-                cy="72"
-                r="52"
-                fill="none"
-                stroke="#ECB613"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray={circ}
-                initial={{ strokeDashoffset: circ }}
-                animate={{ strokeDashoffset: circ - (circ * score) / 100 }}
-                transition={{ duration: 1.5, ease: 'easeOut' }}
-              />
-            </svg>
-
-            <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
-              <span className="text-[10px] text-primary/60 font-serif tracking-[0.2em] mb-1">종합 조화</span>
-              <span className="text-5xl font-serif font-bold text-ink-light leading-none tracking-tighter shadow-black">
-                {score}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex items-center gap-6 bg-surface/40 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/5 shadow-xl"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-primary/60 font-serif tracking-widest">天 (천)</span>
+              <span className="text-lg font-serif font-bold" style={{ color: '#93c5fd' }}>
+                사주
               </span>
-              <span className="text-[10px] text-primary/60 font-serif tracking-widest mt-1">점</span>
             </div>
-          </div>
-
-          {/* Sub Scores (Pill Design) */}
-          <div className="flex items-center gap-6 bg-surface/40 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/5 shadow-xl">
-            <MiniScoreRing label="天 (천)" value={cheonScore} color="#93c5fd" delay={0.2} />
             <div className="w-px h-8 bg-white/10" />
-            <MiniScoreRing label="地 (지)" value={jiScore} color="#6ee7b7" delay={0.3} />
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-primary/60 font-serif tracking-widest">地 (지)</span>
+              <span className="text-lg font-serif font-bold" style={{ color: '#6ee7b7' }}>
+                환경
+              </span>
+            </div>
             <div className="w-px h-8 bg-white/10" />
-            <MiniScoreRing label="人 (인)" value={inScore} color="#fca5a5" delay={0.4} />
-          </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] text-primary/60 font-serif tracking-widest">人 (인)</span>
+              <span className="text-lg font-serif font-bold" style={{ color: '#fca5a5' }}>
+                인연
+              </span>
+            </div>
+          </motion.div>
         </div>
 
         {/* 3. Content Section */}

@@ -64,30 +64,28 @@ const INTERIOR_THEMES: Record<InteriorTheme, { name: string; colors: string; ele
 }
 
 export interface FacePartAnalysis {
-  score: number // 0-10
   description: string
   fortuneArea: string // 관장하는 운세 영역
   advice: string // 개운 조언
+  assessment: '좋음' | '보통' | '주의'
 }
 
 export interface FaceAnalysisResult {
   success: boolean
   currentAnalysis?: string
-  currentScore?: number
-  confidence?: number
   improvementPrompt?: string
   recommendations?: string[]
   facialFeatures?: {
     // 오관(五官) 분석
-    ears?: { score: number; description: string }
-    eyebrows?: { score: number; description: string }
-    eyes?: { score: number; description: string }
-    nose?: { score: number; description: string }
-    mouth?: { score: number; description: string }
+    ears?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    eyebrows?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    eyes?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    nose?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    mouth?: { description: string; assessment: '좋음' | '보통' | '주의' }
     // 삼정(三停) 분석
-    upperStop?: { score: number; description: string }
-    middleStop?: { score: number; description: string }
-    lowerStop?: { score: number; description: string }
+    upperStop?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    middleStop?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    lowerStop?: { description: string; assessment: '좋음' | '보통' | '주의' }
   }
   // === 고도화: 부위별 상세 분석 ===
   partAnalysis?: {
@@ -97,14 +95,6 @@ export interface FaceAnalysisResult {
     mouth?: FacePartAnalysis // 입(출납관): 식복, 표현력, 노년운
     ears?: FacePartAnalysis // 귀(채청관): 명예, 건강, 장수
     chin?: FacePartAnalysis // 턱(지각): 만년운, 부동산운, 의지력
-  }
-  overallFortuneScores?: {
-    // 운세별 종합 점수
-    wealth: number // 재물운
-    career: number // 직업·명예운
-    love: number // 연애운
-    health: number // 건강운
-    family: number // 가족·부모복
   }
   personalityType?: string // 목형/화형/토형/금형/수형
   gisaekReading?: string // 기색(氣色) 분석 텍스트
@@ -127,21 +117,19 @@ export interface FaceAnalysisResult {
 export interface PalmAnalysisResult {
   success: boolean
   currentAnalysis?: string
-  currentScore?: number
-  confidence?: number
   palmLines?: {
-    lifeLine?: { score: number; description: string }
-    intelligenceLine?: { score: number; description: string }
-    emotionLine?: { score: number; description: string }
-    fateLine?: { score: number; description: string }
-    sunLine?: { score: number; description: string }
-    marriageLine?: { score: number; description: string }
+    lifeLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
+    intelligenceLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
+    emotionLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
+    fateLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
+    sunLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
+    marriageLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
   }
-  fortuneScores?: {
-    wealth: number
-    health: number
-    love: number
-    career: number
+  fortuneOverview?: {
+    wealth: string
+    health: string
+    love: string
+    career: string
   }
   recommendations?: string[]
   // === 신규: 고도화 분석 ===
@@ -210,7 +198,6 @@ export interface InteriorAnalysisResult {
   directionalAnalysis?: DirectionAnalysis[] // 8방위 길흉
   roomRecommendations?: RoomRecommendation[] // 공간별 추천
   placementSuggestions?: PlacementSuggestion[] // 배치 제안
-  overallQiScore?: number // 전체 기운 점수 0-100
   dominantElement?: string // 지배 오행
   luckyDirection?: string // 가장 길한 방위
   error?: string
@@ -235,50 +222,51 @@ export async function analyzeFaceForDestiny(
         .replace(/\{\{goal_name\}\}/g, goalConfig.name)
         .replace(/\{\{goal_desc\}\}/g, goalConfig.desc)
         .replace(/\{\{goal_traits\}\}/g, goalConfig.traits)
-    : `당신은 30년 경력의 관상학 전문가입니다.
-동양의 전통 명리학과 관상학을 깊이 연구했으며, 수천 명의 관상을 분석한 경험이 있습니다.
+    : `당신은 30년 경력의 관상학 전문 상담가입니다.
+동양 전통 관상학을 깊이 연구했으며, 실용적이고 균형 잡힌 분석을 제공합니다.
 
-아래 얼굴 이미지를 전문가적 시각으로 정확히 분석하여 "${goalConfig.name}"에 대한 평가를 제공하세요.
+아래 얼굴 이미지를 분석하여 "${goalConfig.name}"에 대한 평가를 제공하세요.
+전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.
+강점과 약점을 균형 있게 분석하세요.
 
 [1단계: 부위별(部位別) 심층 분석 - 6대 핵심 부위]
-각 부위를 10점 만점으로 평가하고, 관장하는 운세 영역과 개운 조언을 함께 제시하세요.
+각 부위를 "좋음/보통/주의"로 평가하고, 관장하는 운세 영역과 개운 조언을 제시하세요.
 
-1. **이마(천정, 天庭)** - 초년운(15~30세), 지능, 부모복, 관록
-   - 넓이, 높이, 광택, 주름, 상처 여부 평가
-   - 초년운과 부모덕 진단
-   - 구체적 개운법 제시
+1. **이마(천정, 天庭)** - 초년운(15~30세), 지능, 부모복
+   - 넓이, 높이, 광택 등 특징 서술
+   - 강점과 주의점 모두 진단
+   - 실행 가능한 개운법 제시
 
-2. **눈(감찰관, 監察官)** - 관찰력, 인간관계, 이성운, 총명함
-   - 크기, 형태, 눈빛의 맑음, 쌍꺼풀, 눈꼬리 방향 평가
-   - 인간관계·이성운 진단
-   - 구체적 개운법 제시
+2. **눈(감찰관, 監察官)** - 관찰력, 인간관계, 이성운
+   - 형태, 눈빛 등 특징 서술
+   - 강점과 주의점 모두 진단
+   - 실행 가능한 개운법 제시
 
-3. **코(재백궁, 財帛宮)** - 재물운, 건강, 자존심, 중년운(40~50세)
-   - 콧대 높이, 코끝 모양, 콧방울 크기, 코의 살집 평가
-   - 재물운·건강 진단
-   - 구체적 개운법 제시
+3. **코(재백궁, 財帛宮)** - 재물운, 건강, 중년운(40~50세)
+   - 콧대, 코끝, 콧방울 등 특징 서술
+   - 강점과 주의점 모두 진단
+   - 실행 가능한 개운법 제시
 
-4. **입(출납관, 出納官)** - 식복, 표현력, 노년운(60세 이후), 의식주
-   - 입술 두께, 입 크기, 모양, 다문 모습 평가
-   - 식복·노년운 진단
-   - 구체적 개운법 제시
+4. **입(출납관, 出納官)** - 식복, 표현력, 노년운
+   - 입술, 입 크기 등 특징 서술
+   - 강점과 주의점 모두 진단
+   - 실행 가능한 개운법 제시
 
-5. **귀(채청관, 採聽官)** - 명예, 건강, 장수, 선천적 복덕
-   - 귀의 크기, 두께, 위치, 귓불의 발달 정도 평가
-   - 명예·장수 진단
-   - 구체적 개운법 제시
+5. **귀(채청관, 採聽官)** - 명예, 건강, 장수
+   - 크기, 두께, 귓불 등 특징 서술
+   - 강점과 주의점 모두 진단
+   - 실행 가능한 개운법 제시
 
-6. **턱(지각, 地閣)** - 만년운(60세 이후), 부동산운, 의지력, 부하복
-   - 턱의 넓이, 두께, 형태(둥근/각진), 살집 평가
-   - 만년운·부동산 진단
-   - 구체적 개운법 제시
+6. **턱(지각, 地閣)** - 만년운, 부동산운, 의지력
+   - 넓이, 형태 등 특징 서술
+   - 강점과 주의점 모두 진단
+   - 실행 가능한 개운법 제시
 
 [2단계: 오관(五官) 분석]
-전통 관상학의 오관을 각각 10점 만점으로 평가하세요:
-
+전통 관상학의 오관을 각각 "좋음/보통/주의"로 평가하세요:
 1. **귀(耳)** - 지혜와 장수
 2. **눈썹(眉)** - 형제운과 사회성
-3. **눈(目)** - 정신과 지혜의 창
+3. **눈(目)** - 정신과 지혜
 4. **코(鼻)** - 재물운과 권력운
 5. **입(口)** - 식복과 언변
 
@@ -287,54 +275,39 @@ export async function analyzeFaceForDestiny(
 2. **중정(中停)** - 눈·코 (중년운 30-60세)
 3. **하정(下停)** - 입·턱 (말년운 60세 이후)
 
-[4단계: 운세별 종합 점수 (0-100)]
-- 재물운: 코·이마·귀를 종합 평가
-- 직업·명예운: 이마·눈썹·눈을 종합 평가
-- 연애운: 눈·입·눈썹을 종합 평가
-- 건강운: 귀·코·기색을 종합 평가
-- 가족·부모복: 이마·귀를 종합 평가
-
-[5단계: 피부 찰색(察色) - 기색과 혈색]
+[4단계: 피부 기색(氣色) 분석]
 - 현재 피부 광택, 혈색, 기운 상태 평가
 
-[6단계: ${goalConfig.name} 종합 평가]
-- 현재 ${goalConfig.name} 점수: 0-100점
+[5단계: ${goalConfig.name} 종합 평가]
 - 강화할 핵심 특징: ${goalConfig.traits}
 
-[7단계: 구체적 개선 방법]
+[6단계: 구체적 개선 방법]
 - 메이크업 기법 3가지
 - 헤어스타일 조언
 - 표정 및 자세 관리
 
 [CRITICAL: 출력 형식 - 아래 모든 태그를 정확히 포함하세요]
-[[CURRENT_SCORE: 숫자]]
-[[CONFIDENCE: 숫자]]
-[[EARS: 숫자, 설명]]
-[[EYEBROWS: 숫자, 설명]]
-[[EYES: 숫자, 설명]]
-[[NOSE: 숫자, 설명]]
-[[MOUTH: 숫자, 설명]]
-[[UPPER_STOP: 숫자, 설명]]
-[[MIDDLE_STOP: 숫자, 설명]]
-[[LOWER_STOP: 숫자, 설명]]
-[[PART_FOREHEAD: 숫자, 설명, 운세영역, 개운조언]]
-[[PART_EYES: 숫자, 설명, 운세영역, 개운조언]]
-[[PART_NOSE: 숫자, 설명, 운세영역, 개운조언]]
-[[PART_MOUTH: 숫자, 설명, 운세영역, 개운조언]]
-[[PART_EARS: 숫자, 설명, 운세영역, 개운조언]]
-[[PART_CHIN: 숫자, 설명, 운세영역, 개운조언]]
-[[SCORE_WEALTH: 숫자]]
-[[SCORE_CAREER: 숫자]]
-[[SCORE_LOVE: 숫자]]
-[[SCORE_HEALTH: 숫자]]
-[[SCORE_FAMILY: 숫자]]
+[[EARS: 좋음/보통/주의, 설명]]
+[[EYEBROWS: 좋음/보통/주의, 설명]]
+[[EYES: 좋음/보통/주의, 설명]]
+[[NOSE: 좋음/보통/주의, 설명]]
+[[MOUTH: 좋음/보통/주의, 설명]]
+[[UPPER_STOP: 좋음/보통/주의, 설명]]
+[[MIDDLE_STOP: 좋음/보통/주의, 설명]]
+[[LOWER_STOP: 좋음/보통/주의, 설명]]
+[[PART_FOREHEAD: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
+[[PART_EYES: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
+[[PART_NOSE: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
+[[PART_MOUTH: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
+[[PART_EARS: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
+[[PART_CHIN: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
 
 목표: ${goalConfig.desc}
 강화할 특징: ${goalConfig.traits}
 
-※ 긍정적이고 건설적인 톤을 유지하세요.
+※ 강점과 약점을 균형 있게 서술하세요.
 ※ 의학적/성형 관련 조언은 절대 하지 마세요.
-※ 관상학적 전문 용어를 사용하되, 이해하기 쉽게 설명하세요.`
+※ 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.`
 
   try {
     const result = await withGeminiRateLimit(
@@ -344,21 +317,14 @@ export async function analyzeFaceForDestiny(
 
     const analysisText = result.response.text()
 
-    // Extract scores with improved parsing
-    const currentScoreMatch = analysisText.match(/\[\[CURRENT_SCORE:\s*(\d+)\]\]/)
-    const currentScore = currentScoreMatch?.[1] ? parseInt(currentScoreMatch[1]) : 65
-
-    const confidenceMatch = analysisText.match(/\[\[CONFIDENCE:\s*(\d+)\]\]/)
-    const confidence = confidenceMatch?.[1] ? parseInt(confidenceMatch[1]) : 75
-
-    // Extract 오관(五官) scores
+    // Extract 오관(五官) analysis with assessment
     const parseFeature = (tag: string) => {
-      const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`)
+      const regex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*(.+?)\\]\\]`)
       const match = analysisText.match(regex)
       if (match?.[1] && match?.[2]) {
-        return { score: parseInt(match[1]), description: match[2].trim() }
+        return { description: match[2].trim(), assessment: match[1] as '좋음' | '보통' | '주의' }
       }
-      return { score: 7, description: '분석 중' }
+      return { description: '분석 중', assessment: '보통' as const }
     }
 
     const facialFeatures = {
@@ -386,22 +352,27 @@ Style: Professional headshot, warm lighting, confident expression.`
 
     // === 부위별 상세 분석 파싱 ===
     const parsePartFeature = (tag: string): FacePartAnalysis | undefined => {
-      // [[PART_XXX: score, description, fortuneArea, advice]]
-      const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*([^,\\]]+),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
+      // [[PART_XXX: 좋음/보통/주의, description, fortuneArea, advice]]
+      const regex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*([^,\\]]+),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
       const match = analysisText.match(regex)
       if (match?.[1] && match?.[2] && match?.[3] && match?.[4]) {
         return {
-          score: parseInt(match[1]),
           description: match[2].trim(),
           fortuneArea: match[3].trim(),
           advice: match[4].trim(),
+          assessment: match[1] as '좋음' | '보통' | '주의',
         }
       }
       // Fallback: try simpler format
-      const simpleRegex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`)
+      const simpleRegex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*(.+?)\\]\\]`)
       const simpleMatch = analysisText.match(simpleRegex)
       if (simpleMatch?.[1] && simpleMatch?.[2]) {
-        return { score: parseInt(simpleMatch[1]), description: simpleMatch[2].trim(), fortuneArea: '', advice: '' }
+        return {
+          description: simpleMatch[2].trim(),
+          fortuneArea: '',
+          advice: '',
+          assessment: simpleMatch[1] as '좋음' | '보통' | '주의',
+        }
       }
       return undefined
     }
@@ -415,47 +386,35 @@ Style: Professional headshot, warm lighting, confident expression.`
       chin: parsePartFeature('PART_CHIN'),
     }
 
-    // === 운세별 종합 점수 파싱 ===
-    const extractScore = (tag: string): number => {
-      const match = analysisText.match(new RegExp(`\\[\\[${tag}:\\s*(\\d+)\\]\\]`))
-      return match?.[1] ? parseInt(match[1]) : 65
-    }
-
-    const overallFortuneScores = {
-      wealth: extractScore('SCORE_WEALTH'),
-      career: extractScore('SCORE_CAREER'),
-      love: extractScore('SCORE_LOVE'),
-      health: extractScore('SCORE_HEALTH'),
-      family: extractScore('SCORE_FAMILY'),
-    }
-
     // === 알고리즘 엔진 연동 ===
     const { calculateImprovementPriority, buildFaceSajuSynergyText, AGE_FORTUNE_ZONES } =
       await import('@/lib/physiognomy-engine/face-algorithm')
 
-    const upperStopScore = facialFeatures.upperStop?.score ?? 7
-    const middleStopScore = facialFeatures.middleStop?.score ?? 7
-    const lowerStopScore = facialFeatures.lowerStop?.score ?? 7
-    void middleStopScore // used via facialFeatures display
     const ageFortuneMap = {
       youth: `초년운(15~30세) - 이마: ${AGE_FORTUNE_ZONES[1].meaning}. ${partAnalysis.forehead?.description ?? facialFeatures.upperStop?.description ?? ''}`,
       middle: `중년운(31~50세) - 눈·코: ${AGE_FORTUNE_ZONES[2].meaning}. ${partAnalysis.eyes?.description ?? facialFeatures.eyes?.description ?? ''}`,
       senior: `장년운(51세~) - 입·턱: ${AGE_FORTUNE_ZONES[4].meaning}. ${partAnalysis.chin?.description ?? facialFeatures.mouth?.description ?? ''}`,
     }
 
+    // assessment를 점수로 변환하여 알고리즘 엔진에 전달
+    const assessmentToScore = (a: '좋음' | '보통' | '주의'): number => (a === '좋음' ? 8 : a === '보통' ? 6 : 4)
     const faceScoreMap: Record<string, number> = {
-      nose: facialFeatures.nose?.score ?? 7,
-      eyes: facialFeatures.eyes?.score ?? 7,
-      mouth: facialFeatures.mouth?.score ?? 7,
-      eyebrows: facialFeatures.eyebrows?.score ?? 7,
-      ears: facialFeatures.ears?.score ?? 7,
-      upperStop: upperStopScore,
-      lowerStop: lowerStopScore,
+      nose: assessmentToScore(facialFeatures.nose?.assessment ?? '보통'),
+      eyes: assessmentToScore(facialFeatures.eyes?.assessment ?? '보통'),
+      mouth: assessmentToScore(facialFeatures.mouth?.assessment ?? '보통'),
+      eyebrows: assessmentToScore(facialFeatures.eyebrows?.assessment ?? '보통'),
+      ears: assessmentToScore(facialFeatures.ears?.assessment ?? '보통'),
+      upperStop: assessmentToScore(facialFeatures.upperStop?.assessment ?? '보통'),
+      lowerStop: assessmentToScore(facialFeatures.lowerStop?.assessment ?? '보통'),
     }
     const improvementPriority = calculateImprovementPriority(faceScoreMap, goal)
 
+    // 종합 점수 추정 (알고리즘 엔진 호환용)
+    const estimatedScore = Math.round(
+      (Object.values(faceScoreMap).reduce((a, b) => a + b, 0) / Object.values(faceScoreMap).length) * 10
+    )
     const sajuSynergy = sajuContext?.dayGan
-      ? buildFaceSajuSynergyText(sajuContext.dayGan, currentScore, goal)
+      ? buildFaceSajuSynergyText(sajuContext.dayGan, estimatedScore, goal)
       : undefined
 
     const gisaekMatch = analysisText.match(/기색|안색|혈색|광택|윤기/)
@@ -469,11 +428,8 @@ Style: Professional headshot, warm lighting, confident expression.`
     return {
       success: true,
       currentAnalysis: analysisText,
-      currentScore,
-      confidence,
       facialFeatures,
       partAnalysis,
-      overallFortuneScores,
       improvementPrompt,
       recommendations,
       ageFortuneMap,
@@ -511,15 +467,15 @@ export async function analyzeInteriorForFengshui(
         .replace(/\{\{theme_colors\}\}/g, themeConfig.colors)
         .replace(/\{\{theme_elements\}\}/g, themeConfig.elements)
         .replace(/\{\{theme\}\}/g, theme)
-    : `당신은 30년 경력의 전통 풍수지리 인테리어 전문가입니다.
-음양오행(陰陽五行)과 팔괘(八卦)를 바탕으로 공간의 기(氣) 흐름을 분석하고, 거주자의 운을 향상시키는 인테리어 비법을 제시합니다.
+    : `당신은 전통 풍수지리 인테리어 전문 상담가입니다.
+음양오행(陰陽五行, 다섯 가지 자연 원소)과 팔괘(八卦, 여덟 방위)를 바탕으로 공간을 분석합니다.
+전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요. 실용적이고 실행 가능한 조언을 제공하세요.
 
-이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 종합 풍수 분석을 제공하세요.
+이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 풍수 분석을 제공하세요.
 
 [1단계: 공간 기운 진단]
-- 현재 기(氣) 흐름의 전반적 상태
+- 현재 기(氣, 공간의 에너지) 흐름 상태
 - 지배 오행 판단 (木/火/土/金/水)
-- 전체 풍수 기운 점수 (0-100)
 
 [2단계: 8방위(八方位) 길흉 분석]
 사진과 공간 구조를 바탕으로 8방위의 기운을 분석하세요.
@@ -554,7 +510,6 @@ export async function analyzeInteriorForFengshui(
 [6단계: 기운 전환 아이템 쇼핑 리스트]
 
 [CRITICAL: 출력 형식 - 아래 모든 태그를 정확히 포함하세요]
-[[QI_SCORE: 숫자]]
 [[DOMINANT_ELEMENT: 오행명]]
 [[LUCKY_DIRECTION: 방위명]]
 
@@ -713,10 +668,7 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       .map((tag) => parsePlacement(tag))
       .filter((p): p is PlacementSuggestion => p !== null)
 
-    // === 기타 점수 파싱 ===
-    const qiScoreMatch = analysisText.match(/\[\[QI_SCORE:\s*(\d+)\]\]/)
-    const overallQiScore = qiScoreMatch?.[1] ? parseInt(qiScoreMatch[1]) : 65
-
+    // === 기타 파싱 ===
     const dominantElementMatch = analysisText.match(/\[\[DOMINANT_ELEMENT:\s*([^\]]+)\]\]/)
     const dominantElement = dominantElementMatch?.[1]?.trim()
 
@@ -735,7 +687,6 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       directionalAnalysis,
       roomRecommendations,
       placementSuggestions,
-      overallQiScore,
       dominantElement,
       luckyDirection,
     }
@@ -762,85 +713,67 @@ export async function analyzePalmReading(
   const dbPromptTemplate = await getPromptByKey('palm_reading')
   const analysisPrompt =
     dbPromptTemplate ??
-    `당신은 30년 경력의 수상학(手相學) 전문가입니다.
-동양의 전통 수상학과 서양 카이로맨시를 모두 연구했으며, 수천 명의 손금을 분석한 경험이 있습니다.
+    `당신은 30년 경력의 수상학(手相學, 손금학) 전문 상담가입니다.
+실용적이고 균형 잡힌 분석을 제공합니다. 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.
 
-아래 손바닥 이미지를 전문가적 시각으로 정확히 분석하여 손금 운세를 제공하세요.
+아래 손바닥 이미지를 분석하여 손금 운세를 제공하세요.
+강점과 약점을 균형 있게 분석하세요.
 
 [1단계: 삼대 주선(三大主線) 분석]
-전통 수상학의 3대 주선을 각각 10점 만점으로 평가하세요:
+각 선을 "좋음/보통/주의"로 평가하고, 특징과 의미를 서술하세요:
 
-1. **생명선(生命線, Life Line)** - 건강과 생명력의 상징
-   - 시작점, 길이, 굵기, 깊이, 끊김 여부 평가
-   - 건강 상태, 체력, 장수 가능성 판단
-   - 점수와 특징 기술
+1. **생명선(生命線)** - 건강과 생명력
+   - 시작점, 길이, 굵기, 깊이, 끊김 여부
+   - 이 선이 의미하는 것 (건강, 체력, 생활력)
 
-2. **지능선(知能線, Head Line)** - 사고방식과 재능
-   - 시작점, 방향, 길이, 형태 평가
-   - 사고방식(논리적/창의적), 학습 능력, 직업 적성 판단
-   - 점수와 특징 기술
+2. **지능선(知能線)** - 사고방식과 재능
+   - 시작점, 방향, 길이, 형태
+   - 이 선이 의미하는 것 (사고 유형, 학습 능력)
 
-3. **감정선(感情線, Heart Line)** - 애정운과 성격
-   - 시작점, 끝점, 깊이, 곡선 형태 평가
-   - 애정 표현 방식, 감정 기복, 대인관계 성향 판단
-   - 점수와 특징 기술
+3. **감정선(感情線)** - 애정운과 성격
+   - 시작점, 끝점, 깊이, 곡선 형태
+   - 이 선이 의미하는 것 (감정 표현, 대인관계)
 
 [2단계: 특수선(特殊線) 분석]
-주요 특수선을 10점 만점으로 평가하세요 (없으면 0점):
+있는 경우만 분석하세요:
+1. **운명선(運命線)** - 인생 방향
+2. **태양선(太陽線)** - 성공과 명예
+3. **결혼선(結婚線)** - 결혼운
 
-1. **운명선(運命線, Fate Line)** - 인생 방향과 목표
-2. **태양선(太陽線, Sun Line)** - 성공과 명예
-3. **결혼선(結婚線, Marriage Line)** - 결혼운과 배우자 관계
-
-[3단계: 팔궁(八宮) 분석]
-손바닥 8개 구역의 발달 상태를 평가하세요:
-- 목성구(검지 아래): 리더십, 야망
-- 토성구(중지 아래): 책임감, 신중함
-- 태양구(약지 아래): 창의성, 예술성
-- 수성구(새끼손가락 아래): 소통 능력, 사업수완
-- 금성구(엄지 기저부): 애정, 생명력
-- 제1화성구(엄지와 검지 사이): 용기, 공격성
-- 제2화성구(손목 위 세로선): 인내력, 저항력
-- 월구(새끼손가락 아래 손목 근처): 상상력, 직관력
+[3단계: 팔궁(八宮, 손바닥 8개 구역) 분석]
+각 구역의 발달 상태와 의미를 서술하세요.
 
 [4단계: 특수 문양 분석]
-손바닥의 특수한 기호나 문양을 찾아 의미를 해석하세요:
-- 별(★): 행운과 성취
-- 십자(✛): 시련 또는 보호
-- 섬(島): 장애와 어려움
-- 격자(格子): 복합적 상황
+별, 십자, 섬 등 특수 문양이 있으면 의미를 해석하세요.
 
-[5단계: 종합 운세 평가]
-다음 4가지 운세를 각각 0-100점으로 평가하세요:
-- **재물운**: 수성구, 태양선, 지능선 종합 판단
-- **건강운**: 생명선, 금성구 종합 판단
-- **애정운**: 감정선, 결혼선, 금성구 종합 판단
-- **직업운**: 운명선, 지능선, 목성구 종합 판단
+[5단계: 종합 운세 텍스트 분석]
+다음 4가지 운세를 텍스트로 분석하세요 (점수 없이):
+- **재물운**: 수성구, 태양선, 지능선 종합
+- **건강운**: 생명선, 금성구 종합
+- **애정운**: 감정선, 결혼선, 금성구 종합
+- **직업운**: 운명선, 지능선, 목성구 종합
 
 [6단계: 구체적 조언]
-- 강화할 손 관리법 (손가락 운동, 마사지 포인트)
 - 손금으로 본 적성 직업 3가지
 - 대인관계 조언
-- 일상 생활 개선 방법
+- 실생활 개선 방법
 
 [CRITICAL: 출력 형식]
 반드시 다음 태그들을 모두 포함하세요:
-[[OVERALL_SCORE: 숫자]]
-[[CONFIDENCE: 숫자]]
-[[LIFE_LINE: 숫자, 설명]]
-[[INTELLIGENCE_LINE: 숫자, 설명]]
-[[EMOTION_LINE: 숫자, 설명]]
-[[FATE_LINE: 숫자, 설명]]
-[[SUN_LINE: 숫자, 설명]]
-[[MARRIAGE_LINE: 숫자, 설명]]
-[[WEALTH_SCORE: 숫자]]
-[[HEALTH_SCORE: 숫자]]
-[[LOVE_SCORE: 숫자]]
-[[CAREER_SCORE: 숫자]]
+[[LIFE_LINE: 좋음/보통/주의, 설명, 의미]]
+[[INTELLIGENCE_LINE: 좋음/보통/주의, 설명, 의미]]
+[[EMOTION_LINE: 좋음/보통/주의, 설명, 의미]]
+[[FATE_LINE: 좋음/보통/주의, 설명, 의미]]
+[[SUN_LINE: 좋음/보통/주의, 설명, 의미]]
+[[MARRIAGE_LINE: 좋음/보통/주의, 설명, 의미]]
+[[FORTUNE_WEALTH: 텍스트 분석]]
+[[FORTUNE_HEALTH: 텍스트 분석]]
+[[FORTUNE_LOVE: 텍스트 분석]]
+[[FORTUNE_CAREER: 텍스트 분석]]
 
-※ 긍정적이고 건설적인 톤을 유지하세요.
+※ 강점과 약점을 균형 있게 서술하세요.
 ※ 의학적 진단이나 절대적 미래 예언은 하지 마세요.
-※ 수상학적 전문 용어를 사용하되, 이해하기 쉽게 설명하세요.`
+※ 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.`
 
   try {
     const result = await withGeminiRateLimit(
@@ -850,21 +783,29 @@ export async function analyzePalmReading(
 
     const analysisText = result.response.text()
 
-    // Extract scores
-    const overallScoreMatch = analysisText.match(/\[\[OVERALL_SCORE:\s*(\d+)\]\]/)
-    const currentScore = overallScoreMatch?.[1] ? parseInt(overallScoreMatch[1]) : 70
-
-    const confidenceMatch = analysisText.match(/\[\[CONFIDENCE:\s*(\d+)\]\]/)
-    const confidence = confidenceMatch?.[1] ? parseInt(confidenceMatch[1]) : 75
-
-    // Extract palm lines
+    // Extract palm lines with assessment
     const parseLine = (tag: string) => {
-      const regex = new RegExp(`\\[\\[${tag}:\\s*(\\d+),\\s*(.+?)\\]\\]`)
+      // [[TAG: 좋음/보통/주의, 설명, 의미]]
+      const regex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
       const match = analysisText.match(regex)
-      if (match?.[1] && match?.[2]) {
-        return { score: parseInt(match[1]), description: match[2].trim() }
+      if (match?.[1] && match?.[2] && match?.[3]) {
+        return {
+          description: match[2].trim(),
+          meaning: match[3].trim(),
+          assessment: match[1] as '좋음' | '보통' | '주의',
+        }
       }
-      return { score: 7, description: '분석 중' }
+      // Fallback: simpler format
+      const simpleRegex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*(.+?)\\]\\]`)
+      const simpleMatch = analysisText.match(simpleRegex)
+      if (simpleMatch?.[1] && simpleMatch?.[2]) {
+        return {
+          description: simpleMatch[2].trim(),
+          meaning: '',
+          assessment: simpleMatch[1] as '좋음' | '보통' | '주의',
+        }
+      }
+      return { description: '분석 중', meaning: '', assessment: '보통' as const }
     }
 
     const palmLines = {
@@ -876,17 +817,17 @@ export async function analyzePalmReading(
       marriageLine: parseLine('MARRIAGE_LINE'),
     }
 
-    // Extract fortune scores
-    const extractScore = (tag: string): number => {
-      const match = analysisText.match(new RegExp(`\\[\\[${tag}:\\s*(\\d+)\\]\\]`))
-      return match?.[1] ? parseInt(match[1]) : 70
+    // Extract fortune overview (text-based)
+    const extractFortuneText = (tag: string): string => {
+      const match = analysisText.match(new RegExp(`\\[\\[${tag}:\\s*([^\\]]+)\\]\\]`))
+      return match?.[1]?.trim() || '분석 중'
     }
 
-    const fortuneScores = {
-      wealth: extractScore('WEALTH_SCORE'),
-      health: extractScore('HEALTH_SCORE'),
-      love: extractScore('LOVE_SCORE'),
-      career: extractScore('CAREER_SCORE'),
+    const fortuneOverview = {
+      wealth: extractFortuneText('FORTUNE_WEALTH'),
+      health: extractFortuneText('FORTUNE_HEALTH'),
+      love: extractFortuneText('FORTUNE_LOVE'),
+      career: extractFortuneText('FORTUNE_CAREER'),
     }
 
     // Extract recommendations
@@ -900,14 +841,16 @@ export async function analyzePalmReading(
     const { predictTimeline, analyzeDualHands, buildPalmSajuSynergyText, HAND_SHAPES } =
       await import('@/lib/physiognomy-engine/palm-algorithm')
 
-    // 시기 예측
-    const lifeScore = palmLines.lifeLine?.score ?? 7
-    const fateScore = palmLines.fateLine?.score ?? 5
-    const sunScore = palmLines.sunLine?.score ?? 5
+    // assessment를 점수로 변환하여 알고리즘 엔진에 전달
+    const palmAssessmentToScore = (a: '좋음' | '보통' | '주의'): number => (a === '좋음' ? 8 : a === '보통' ? 6 : 4)
+    const lifeScore = palmAssessmentToScore(palmLines.lifeLine?.assessment ?? '보통')
+    const fateScore = palmAssessmentToScore(palmLines.fateLine?.assessment ?? '보통')
+    const sunScore = palmAssessmentToScore(palmLines.sunLine?.assessment ?? '보통')
     const timingPredictions = predictTimeline(lifeScore, fateScore, sunScore, sajuContext?.currentAge)
 
-    // 양손 비교 (점수 기반 추정 - 실제로는 양손 이미지 필요하나 단손으로 추정)
-    const dualHandCompare = analyzeDualHands(currentScore - 5, currentScore)
+    // 양손 비교 (추정)
+    const estimatedPalmScore = Math.round(((lifeScore + fateScore + sunScore) / 3) * 10)
+    const dualHandCompare = analyzeDualHands(estimatedPalmScore - 5, estimatedPalmScore)
 
     // 손 형태 추정 (텍스트에서 키워드 기반)
     const handShapeText = analysisText.toLowerCase()
@@ -925,15 +868,15 @@ export async function analyzePalmReading(
     }
 
     // 사주 연계
-    const sajuSynergy = sajuContext?.dayGan ? buildPalmSajuSynergyText(sajuContext.dayGan, currentScore) : undefined
+    const sajuSynergy = sajuContext?.dayGan
+      ? buildPalmSajuSynergyText(sajuContext.dayGan, estimatedPalmScore)
+      : undefined
 
     return {
       success: true,
       currentAnalysis: analysisText,
-      currentScore,
-      confidence,
       palmLines,
-      fortuneScores,
+      fortuneOverview,
       recommendations,
       timingPredictions,
       dualHandCompare,

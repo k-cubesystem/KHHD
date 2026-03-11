@@ -11,7 +11,6 @@ import {
   User,
   Calendar,
   ArrowLeft,
-  Star,
   TrendingUp,
   Heart,
   Briefcase,
@@ -31,76 +30,25 @@ import { analyzeYear2026Action, type Year2026Result } from '@/app/actions/ai/yea
 
 // --- Internal Components ---
 
-function ScoreRing({ score, size = 100 }: { score: number; size?: number }) {
-  const radius = (size - 8) / 2
-  const circumference = 2 * Math.PI * radius
-  const progress = (score / 100) * circumference
+// ScoreRing removed — score system replaced with text-based outlook
 
-  return (
-    <div className="relative inline-flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-red-500/5 blur-2xl rounded-full animate-pulse" />
-      <svg width={size} height={size} className="-rotate-90 relative z-10">
-        {/* Background Circle */}
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(212,175,55,0.1)" strokeWidth={2} />
-        {/* Progress Circle */}
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#D4AF37"
-          strokeWidth={3}
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference}
-          strokeLinecap="round"
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset: circumference - progress }}
-          transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
-        />
-        {/* Inner Glow */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius - 6}
-          fill="none"
-          stroke="rgba(201, 42, 42, 0.2)" // Red inner ring
-          strokeWidth={1}
-          className="animate-pulse"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-20">
-        <motion.span
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1, duration: 0.5 }}
-          className="font-serif font-bold text-3xl text-primary drop-shadow-md"
-        >
-          {score}
-        </motion.span>
-        <motion.span
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="text-[10px] text-ink-light/50 font-sans tracking-widest uppercase mt-1"
-        >
-          종합점수
-        </motion.span>
-      </div>
-    </div>
-  )
+function getOutlookStyle(outlook: string): { label: string; color: string; bg: string } {
+  if (outlook === '좋음') return { label: '좋음', color: 'text-green-400', bg: 'bg-green-500/10' }
+  if (outlook === '주의') return { label: '주의', color: 'text-red-400', bg: 'bg-red-500/10' }
+  return { label: '보통', color: 'text-yellow-400', bg: 'bg-yellow-500/10' }
 }
 
 function ArtifactCard({
   icon: Icon,
   title,
-  score,
+  outlook,
   content,
   variant = 'default',
   delay = 0,
 }: {
   icon: React.ElementType
   title: string
-  score: number
+  outlook: string
   content: string
   variant?: 'default' | 'gold' | 'red' | 'blue' | 'green'
   delay?: number
@@ -114,6 +62,7 @@ function ArtifactCard({
   }
 
   const colorClass = colors[variant]
+  const outlookStyle = getOutlookStyle(outlook)
 
   return (
     <motion.div
@@ -130,20 +79,9 @@ function ArtifactCard({
           </div>
           <h4 className="font-serif font-medium text-ink-light tracking-wide">{title}</h4>
         </div>
-        <div className="flex items-center gap-1">
-          <span className={`text-lg font-bold font-serif ${colorClass.split(' ')[0]}`}>{score}</span>
-          <span className="text-xs text-ink-light/30">점</span>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full h-1 bg-black/20 rounded-full mb-3 overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          transition={{ duration: 1, delay: delay + 0.2 }}
-          className={`h-full rounded-full opacity-80 ${variant === 'gold' ? 'bg-yellow-400' : variant === 'red' ? 'bg-red-400' : variant === 'blue' ? 'bg-blue-400' : variant === 'green' ? 'bg-green-400' : 'bg-primary'}`}
-        />
+        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${outlookStyle.bg} ${outlookStyle.color}`}>
+          {outlookStyle.label}
+        </span>
       </div>
 
       <p className="text-sm text-ink-light/70 font-light leading-relaxed break-keep">{content}</p>
@@ -475,11 +413,7 @@ function NewYear2026Content() {
             <Card className="card-glass-manse p-6 md:p-10 border-red-900/30 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none -mr-20 -mt-20" />
 
-              <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10 relative z-10">
-                <div className="flex-shrink-0">
-                  <ScoreRing score={fortune.score} size={140} />
-                </div>
-
+              <div className="flex flex-col items-center lg:items-start gap-6 relative z-10">
                 <div className="text-center lg:text-left space-y-4 flex-1 w-full">
                   <div className="inline-block px-3 py-1 rounded-full border border-primary/20 bg-primary/5 mb-2">
                     <span className="text-xs font-serif text-primary tracking-wide">2026 병오년 총평</span>
@@ -569,7 +503,7 @@ function NewYear2026Content() {
                 <ArtifactCard
                   icon={TrendingUp}
                   title="재물운"
-                  score={fortune.areas.wealth.score}
+                  outlook={fortune.areas.wealth.outlook}
                   content={fortune.areas.wealth.content}
                   variant="gold"
                   delay={0.1}
@@ -577,7 +511,7 @@ function NewYear2026Content() {
                 <ArtifactCard
                   icon={Briefcase}
                   title="직업운"
-                  score={fortune.areas.career.score}
+                  outlook={fortune.areas.career.outlook}
                   content={fortune.areas.career.content}
                   variant="blue"
                   delay={0.2}
@@ -585,7 +519,7 @@ function NewYear2026Content() {
                 <ArtifactCard
                   icon={Heart}
                   title="애정운"
-                  score={fortune.areas.love.score}
+                  outlook={fortune.areas.love.outlook}
                   content={fortune.areas.love.content}
                   variant="red"
                   delay={0.3}
@@ -593,7 +527,7 @@ function NewYear2026Content() {
                 <ArtifactCard
                   icon={Activity}
                   title="건강운"
-                  score={fortune.areas.health.score}
+                  outlook={fortune.areas.health.outlook}
                   content={fortune.areas.health.content}
                   variant="green"
                   delay={0.4}

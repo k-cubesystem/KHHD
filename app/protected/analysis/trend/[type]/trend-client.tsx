@@ -70,9 +70,18 @@ const TREND_CONFIG: Record<
   },
 }
 
-function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-[#D4AF37]' : 'text-orange-400'
-  return <span className={`text-5xl font-serif font-light ${color}`}>{score}</span>
+function OutlookBadge({ outlook }: { outlook: string }) {
+  const config =
+    outlook === '좋음'
+      ? { color: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' }
+      : outlook === '주의'
+        ? { color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+        : { color: 'text-[#D4AF37] border-[#D4AF37]/30 bg-[#D4AF37]/10' }
+  return (
+    <Badge variant="outline" className={`${config.color} font-light text-xs`}>
+      {outlook}
+    </Badge>
+  )
 }
 
 function TrendResultView({ result, config }: { result: TrendResult; config: (typeof TREND_CONFIG)[TrendType] }) {
@@ -87,7 +96,6 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
             <div className={`w-12 h-12 mx-auto rounded-full ${config.bg} flex items-center justify-center`}>
               <Icon className={`w-6 h-6 ${config.color}`} strokeWidth={1} />
             </div>
-            <ScoreBadge score={result.score} />
             <p className="text-base font-serif font-light text-[#D4AF37]">{result.summary}</p>
           </CardContent>
         </Card>
@@ -118,13 +126,7 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
               <div key={area.title} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-serif font-light text-ink-light">{area.title}</span>
-                  <span className="text-sm font-light text-[#D4AF37]">{area.score}점</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-surface/40 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#D4AF37]/60 transition-all duration-700"
-                    style={{ width: `${area.score}%` }}
-                  />
+                  <OutlookBadge outlook={area.outlook} />
                 </div>
                 <p className="text-xs font-light text-ink-light/60 leading-relaxed">{area.content}</p>
               </div>

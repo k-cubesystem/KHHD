@@ -291,21 +291,6 @@ function FengShuiAnalysisPageContent() {
                       <p className="text-lg font-serif font-bold text-[#D4AF37]">{selectedRoom} 풍수 진단</p>
                     </div>
                   </div>
-                  {analysisResult.overallQiScore !== undefined && (
-                    <div className="text-right">
-                      <p className="text-[10px] text-[#D4AF37]/40 font-sans">기운 점수</p>
-                      <p
-                        className="text-3xl font-serif font-bold"
-                        style={{
-                          background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                        }}
-                      >
-                        {analysisResult.overallQiScore}
-                      </p>
-                    </div>
-                  )}
                 </div>
                 {(analysisResult.dominantElement || analysisResult.luckyDirection) && (
                   <div className="relative mt-4 flex gap-3">

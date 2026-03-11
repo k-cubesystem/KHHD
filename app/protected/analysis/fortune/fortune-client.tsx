@@ -59,9 +59,18 @@ const AREA_ICONS: Record<string, React.ReactNode> = {
   직업운: <Sun className="w-4 h-4 text-blue-400" strokeWidth={1.5} />,
 }
 
-function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 80 ? 'text-emerald-400' : score >= 60 ? 'text-primary' : 'text-orange-400'
-  return <span className={`text-5xl font-serif font-light ${color}`}>{score}</span>
+function OutlookBadge({ outlook }: { outlook: string }) {
+  const config =
+    outlook === '좋음'
+      ? { color: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' }
+      : outlook === '주의'
+        ? { color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
+        : { color: 'text-primary border-primary/30 bg-primary/10' }
+  return (
+    <Badge variant="outline" className={`${config.color} font-light text-xs`}>
+      {outlook}
+    </Badge>
+  )
 }
 
 function FortuneResultView({ result }: { result: FortuneResult }) {
@@ -72,7 +81,6 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
         <Card className="bg-surface/20 border-primary/20 card-glass-manse">
           <CardContent className="p-6 text-center space-y-3">
             <p className="text-xs font-light text-ink-light/50 tracking-widest uppercase">{result.period}</p>
-            <ScoreBadge score={result.score} />
             <p className="text-base font-serif font-light text-primary">{result.summary}</p>
           </CardContent>
         </Card>
@@ -106,13 +114,7 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
                     {AREA_ICONS[area.name] ?? <Star className="w-4 h-4 text-primary" strokeWidth={1.5} />}
                     <span className="text-sm font-serif font-light text-ink-light">{area.name}</span>
                   </div>
-                  <span className="text-sm font-light text-primary">{area.score}점</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-surface/40 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary/60 transition-all duration-700"
-                    style={{ width: `${area.score}%` }}
-                  />
+                  <OutlookBadge outlook={area.outlook} />
                 </div>
                 <p className="text-xs font-light text-ink-light/60 leading-relaxed">{area.content}</p>
               </div>

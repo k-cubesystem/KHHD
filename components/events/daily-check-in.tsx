@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { CalendarCheck, Gift, Sparkles, Check, Flame, Crown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarCheck, Gift, Sparkles, Check, Flame, Crown, ChevronLeft, ChevronRight, Coins } from 'lucide-react'
 import { recordDailyAttendance } from '@/app/actions/payment/daily-check'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -27,31 +27,25 @@ interface DailyCheckInProps {
 /* ─────────────────────────────────────────
    Confetti Particles
 ───────────────────────────────────────── */
-function RewardParticles({ isBonus }: { isBonus: boolean }) {
-  const count = isBonus ? 20 : 12
-  const emojis = isBonus ? ['💰', '🎉', '✨', '🌟', '💎', '🪙'] : ['💰', '✨', '🪙', '⭐']
+function RewardParticles() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-      {Array.from({ length: count }).map((_, i) => {
-        const angle = (i / count) * 360
+      {Array.from({ length: 5 }).map((_, i) => {
+        const angle = (i / 5) * 360
         const rad = (angle * Math.PI) / 180
-        const dist = 70 + Math.random() * 60
         return (
           <motion.div
             key={i}
             initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
             animate={{
-              x: Math.cos(rad) * dist,
-              y: Math.sin(rad) * dist,
-              opacity: [0, 1, 1, 0],
-              scale: [0, 1.3, 1, 0],
+              x: Math.cos(rad) * 50,
+              y: Math.sin(rad) * 50,
+              opacity: [0, 0.8, 0],
+              scale: [0, 1, 0],
             }}
-            transition={{ duration: 1.4, delay: i * 0.04, ease: 'easeOut' }}
-            className="absolute top-1/2 left-1/2"
-            style={{ fontSize: 12 + Math.random() * 10 }}
-          >
-            {emojis[i % emojis.length]}
-          </motion.div>
+            transition={{ duration: 1, delay: i * 0.05, ease: 'easeOut' }}
+            className="absolute top-1/2 left-1/2 w-1.5 h-1.5 rounded-full bg-[#D4AF37]"
+          />
         )
       })}
     </div>
@@ -173,7 +167,7 @@ function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-ink-light/50">이번 주 ({weekCount}/7일)</span>
         <span className={cn('text-[10px] font-bold', isComplete ? 'text-[#D4AF37]' : 'text-[#D4AF37]/70')}>
-          {isComplete ? '🎉 주간 보너스 달성!' : `${7 - weekCount}일 남음 → +3만냥`}
+          {isComplete ? '주간 보너스 달성!' : `${7 - weekCount}일 남음 → +3만냥`}
         </span>
       </div>
       <div className="flex gap-0.5">
@@ -197,7 +191,7 @@ function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
               )}
               {i === 6 && !filled && (
                 <div className="absolute inset-0 flex items-center justify-end pr-0.5">
-                  <span className="text-[6px]">🎁</span>
+                  <Gift className="w-2 h-2 text-[#D4AF37]/40" />
                 </div>
               )}
             </motion.div>
@@ -286,9 +280,7 @@ export function DailyCheckIn({
     <Card className="bg-surface/30 border-primary/20 overflow-hidden relative">
       <CardContent className="p-4 space-y-4">
         {/* Particles */}
-        <AnimatePresence>
-          {showParticles && lastReward && <RewardParticles isBonus={lastReward.isWeeklyBonus} />}
-        </AnimatePresence>
+        <AnimatePresence>{showParticles && lastReward && <RewardParticles />}</AnimatePresence>
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -456,7 +448,7 @@ export function DailyCheckIn({
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{lastReward.isWeeklyBonus ? '🎉' : '💰'}</span>
+                    <Coins className="w-5 h-5" />
                     <div>
                       <p className="text-base font-black">+{lastReward.reward}만냥</p>
                       {lastReward.isWeeklyBonus && <p className="text-[9px] opacity-80">주간 보너스 포함!</p>}

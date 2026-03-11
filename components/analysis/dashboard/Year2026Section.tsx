@@ -1,7 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { Flame, Sparkles, ChevronRight } from 'lucide-react'
+import { Flame, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -22,7 +22,6 @@ export function Year2026Section() {
         className="relative overflow-hidden bg-gradient-to-r from-[#1a1510] to-[#2b2010] border-primary-dark/30 hover:border-primary/50 transition-all duration-500 p-0 min-h-[90px] flex items-center justify-between group cursor-pointer luxury-card-glow"
       >
         <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
 
         {/* Left Info */}
         <div className="flex items-center gap-5 relative z-10 p-5">
@@ -33,9 +32,6 @@ export function Year2026Section() {
                 className="w-6 h-6 text-primary group-hover:text-primary-dim transition-colors duration-300"
                 strokeWidth={1.5}
               />
-            </div>
-            <div className="absolute -top-1 -right-1">
-              <Sparkles className="w-3 h-3 text-primary/80 animate-pulse" />
             </div>
           </div>
 

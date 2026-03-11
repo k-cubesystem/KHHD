@@ -96,11 +96,9 @@ function PalmAnalysisPageContent() {
           category: 'HAND',
           inputData: { imageUrl: `data:image/jpeg;base64,${imageBase64}` },
           resultData: {
-            score: result.currentScore,
             analysis: result.currentAnalysis,
             palmLines: result.palmLines,
-            fortuneScores: result.fortuneScores,
-            confidence: result.confidence,
+            fortuneOverview: result.fortuneOverview,
           },
           creditsUsed: PALM_COST,
         })
@@ -228,62 +226,57 @@ function PalmAnalysisPageContent() {
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: 'spring', delay: 0.2 }}
-                  className="relative text-7xl font-serif font-bold mb-2"
+                  className="relative text-2xl font-serif font-bold mb-2"
                   style={{
                     background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                   }}
                 >
-                  {analysisResult.currentScore}
+                  분석 완료
                 </motion.div>
-                <p className="relative text-xs text-white/30 font-sans">신뢰도 {analysisResult.confidence}%</p>
               </div>
 
-              {/* 4대 운세 */}
-              {analysisResult.fortuneScores && (
+              {/* 4대 운세 (텍스트 분석) */}
+              {analysisResult.fortuneOverview && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <h3 className="text-sm font-serif font-bold text-[#D4AF37] mb-4 tracking-wide">사대운세(四大運勢)</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     {[
                       {
                         icon: TrendingUp,
                         label: '재물운',
-                        value: analysisResult.fortuneScores.wealth,
+                        value: analysisResult.fortuneOverview.wealth,
                         color: '#4ade80',
                       },
-                      { icon: Activity, label: '건강운', value: analysisResult.fortuneScores.health, color: '#60a5fa' },
-                      { icon: Heart, label: '애정운', value: analysisResult.fortuneScores.love, color: '#fb7185' },
+                      {
+                        icon: Activity,
+                        label: '건강운',
+                        value: analysisResult.fortuneOverview.health,
+                        color: '#60a5fa',
+                      },
+                      { icon: Heart, label: '애정운', value: analysisResult.fortuneOverview.love, color: '#fb7185' },
                       {
                         icon: Briefcase,
                         label: '직업운',
-                        value: analysisResult.fortuneScores.career,
+                        value: analysisResult.fortuneOverview.career,
                         color: '#c084fc',
                       },
                     ].map((item, i) => (
                       <motion.div
                         key={item.label}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.1 }}
                         className="rounded-xl p-4 border border-white/5 bg-white/3"
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
-                          <span className="text-xs text-white/50 font-sans">{item.label}</span>
+                          <span className="text-xs font-sans font-bold" style={{ color: item.color }}>
+                            {item.label}
+                          </span>
                         </div>
-                        <div className="text-3xl font-serif font-bold mb-2" style={{ color: item.color }}>
-                          {item.value}
-                        </div>
-                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${item.value}%` }}
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: item.color }}
-                            transition={{ duration: 1, delay: i * 0.1 + 0.3 }}
-                          />
-                        </div>
+                        <p className="text-xs text-white/50 font-sans font-light leading-relaxed">{item.value}</p>
                       </motion.div>
                     ))}
                   </div>
@@ -307,8 +300,9 @@ function PalmAnalysisPageContent() {
                         <PalmLineCard
                           key={line.label}
                           label={line.label}
-                          score={line.data!.score}
+                          assessment={line.data!.assessment}
                           description={line.data!.description}
+                          meaning={line.data!.meaning}
                           index={i}
                         />
                       ))}
@@ -360,15 +354,18 @@ function PalmAnalysisPageContent() {
 
 function PalmLineCard({
   label,
-  score,
+  assessment,
   description,
+  meaning,
   index,
 }: {
   label: string
-  score: number
+  assessment: '좋음' | '보통' | '주의'
   description: string
+  meaning: string
   index: number
 }) {
+  const color = assessment === '좋음' ? '#D4AF37' : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -378,21 +375,12 @@ function PalmLineCard({
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-serif font-bold text-[#D4AF37]">{label}</span>
-        <span className="text-sm font-bold text-white/80">
-          {score}
-          <span className="text-xs text-white/30">/10</span>
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
+          {assessment}
         </span>
       </div>
       <p className="text-xs text-white/45 leading-relaxed font-sans font-light">{description}</p>
-      <div className="mt-2.5 h-1 bg-white/5 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${(score / 10) * 100}%` }}
-          className="h-full rounded-full"
-          style={{ background: 'linear-gradient(90deg, #C9A227, #F4E4BA)' }}
-          transition={{ duration: 0.9, delay: index * 0.1 + 0.3 }}
-        />
-      </div>
+      {meaning && <p className="text-xs text-white/35 leading-relaxed font-sans font-light mt-1.5 italic">{meaning}</p>}
     </motion.div>
   )
 }

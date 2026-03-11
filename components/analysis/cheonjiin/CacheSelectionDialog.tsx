@@ -11,12 +11,7 @@ interface CacheSelectionDialogProps {
   onNewAnalysis: () => void
 }
 
-export function CacheSelectionDialog({
-  targetName,
-  cacheDate,
-  onViewCache,
-  onNewAnalysis,
-}: CacheSelectionDialogProps) {
+export function CacheSelectionDialog({ targetName, cacheDate, onViewCache, onNewAnalysis }: CacheSelectionDialogProps) {
   // 날짜 포맷팅
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -50,8 +45,8 @@ export function CacheSelectionDialog({
           transition={{ delay: 0.1 }}
           className="text-center mb-6"
         >
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#F4E5C3]/20 mx-auto mb-4 flex items-center justify-center text-4xl">
-            🔮
+          <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 mx-auto mb-4 flex items-center justify-center">
+            <Sparkles className="w-7 h-7 text-[#D4AF37]" />
           </div>
           <h2 className="text-2xl font-bold mb-2">{targetName}님의 천지인 분석</h2>
           <p className="text-muted-foreground text-sm">이전에 분석한 결과가 있습니다</p>
@@ -90,7 +85,7 @@ export function CacheSelectionDialog({
           {/* 새 분석 권장 조건 */}
           <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-900">
             <div className="text-xs text-amber-900 dark:text-amber-100">
-              <strong>💡 새 분석을 권장하는 경우:</strong>
+              <strong>새 분석을 권장하는 경우:</strong>
               <ul className="mt-2 space-y-1 ml-4">
                 <li>• 이사를 했거나 주소가 바뀐 경우</li>
                 <li>• 새로운 사진으로 분석하고 싶은 경우</li>

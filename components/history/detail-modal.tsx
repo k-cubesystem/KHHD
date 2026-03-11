@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Star, Trash2, Share2, Edit3, Save, Clock, Sparkles, AlertTriangle, RefreshCw } from 'lucide-react'
+import { X, Star, Trash2, Share2, Edit3, Save, Clock, AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
@@ -200,12 +200,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                       })}
                     </span>
                   </div>
-                  {record.score !== null && (
-                    <div className="flex items-center gap-1">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      <span className="text-primary font-bold">{record.score}점</span>
-                    </div>
-                  )}
+                  {record.score !== null && <span className="text-primary font-bold">{record.score}점</span>}
                 </div>
               </div>
 

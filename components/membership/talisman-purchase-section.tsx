@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
-import { Check, Coins, Loader2, Zap, Star, Sparkles, TrendingUp } from 'lucide-react'
+import { Check, Coins, Loader2, Zap, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { addTestCredits } from '@/app/actions/payment/products'
@@ -120,12 +120,12 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
       {/* 서비스 이용 안내 */}
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { label: '테마운세', cost: '1만냥', icon: '🌙' },
-          { label: '관상·풍수', cost: '2만냥', icon: '🔮' },
-          { label: '천지인사주', cost: '5만냥', icon: '☯️' },
+          { label: '테마운세', cost: '1만냥', icon: 'theme' },
+          { label: '관상·풍수', cost: '2만냥', icon: 'studio' },
+          { label: '천지인사주', cost: '5만냥', icon: 'saju' },
         ].map((item) => (
           <div key={item.label} className="bg-white/3 border border-white/8 rounded-lg py-2 px-1">
-            <div className="text-base mb-0.5">{item.icon}</div>
+            <Sparkles className="w-4 h-4 mx-auto mb-0.5 text-gold-400/60" />
             <p className="text-[9px] text-white/50 mb-0.5">{item.label}</p>
             <p className="text-[10px] font-bold text-gold-400">{item.cost}</p>
           </div>
@@ -244,7 +244,7 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
 
       {/* 충전 안내 */}
       <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-1.5">
-        <p className="text-[10px] font-bold text-white/60 mb-2">💡 복채 충전 안내</p>
+        <p className="text-[10px] font-bold text-white/60 mb-2">복채 충전 안내</p>
         {[
           '충전된 복채는 만료 기간 없이 영구 사용 가능합니다',
           '결제 완료 즉시 복채가 지급됩니다',
