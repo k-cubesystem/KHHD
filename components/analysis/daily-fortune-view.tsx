@@ -36,7 +36,7 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
   const [pendingLoad, setPendingLoad] = useState(false)
 
   useEffect(() => {
-    loadProfiles().then(() => loadFortune()) // 최초 1회만 자동 로드
+    loadProfiles().then((loaded) => loadFortune(false, loaded))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 프로필 변경 시 자동 로드 제거 → 버튼 클릭 대기 상태로만 전환
@@ -46,7 +46,7 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
     setPendingLoad(true)
   }
 
-  const loadProfiles = async () => {
+  const loadProfiles = async (): Promise<ProfileOption[]> => {
     try {
       const family = await getFamilyMembers()
       const familyOptions = family.map((f: any) => ({
@@ -54,19 +54,23 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
         name: f.name,
         type: 'FAMILY' as const,
       }))
-      setProfiles([{ id: userId, name: userName, type: 'USER' }, ...familyOptions])
+      const all = [{ id: userId, name: userName, type: 'USER' as const }, ...familyOptions]
+      setProfiles(all)
+      return all
     } catch (e) {
       logger.error('Failed to load family:', e)
+      return profiles
     }
   }
 
-  const loadFortune = async (force: boolean = false) => {
+  const loadFortune = async (force: boolean = false, profileList?: ProfileOption[]) => {
     setLoading(true)
     setMissingInfo(false)
     setFortune(null)
 
     try {
-      const selected = profiles.find((p) => p.id === selectedProfileId) || profiles[0]
+      const list = profileList ?? profiles
+      const selected = list.find((p) => p.id === selectedProfileId) || list[0]
       const result = await generateDailyFortune(userId, selected.id, selected.type, undefined, force)
 
       if (result.success && result.content) {
