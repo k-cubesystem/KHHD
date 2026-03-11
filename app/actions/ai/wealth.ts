@@ -104,7 +104,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
         talisman_cost: WEALTH_ANALYSIS_COST,
       })
     } catch (e) {
-      console.error('[WealthAnalysis] Failed to save history:', e)
+      logger.error('[WealthAnalysis] Failed to save history:', e)
     }
     await recordFortuneEntry(params.memberId, 'WEALTH', params.memberId).catch(() => {})
 

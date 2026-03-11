@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Download, Share2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -42,7 +43,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
 
       toast.success('카드가 갤러리에 저장되었습니다.')
     } catch (error) {
-      console.error(error)
+      logger.error(error)
       toast.error('이미지 저장에 실패했습니다.')
     } finally {
       setIsGenerating(false)

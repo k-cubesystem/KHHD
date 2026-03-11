@@ -2,10 +2,11 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { logger } from '@/lib/utils/logger'
 
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    console.error('[해화당 관리자 에러]', error)
+    logger.error('[해화당 관리자 에러]', error)
   }, [error])
 
   return (

@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { logger } from '@/lib/utils/logger'
 import { Share2, Download, Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -37,7 +38,7 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
         }, 'image/png')
       })
     } catch (error) {
-      console.error('Screenshot error:', error)
+      logger.error('Screenshot error:', error)
       toast.error('이미지 생성 중 오류가 발생했습니다.')
       return null
     }
@@ -66,7 +67,7 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
 
       toast.success('이미지가 저장되었습니다!')
     } catch (error) {
-      console.error('Save error:', error)
+      logger.error('Save error:', error)
       toast.error('저장 중 오류가 발생했습니다.')
     } finally {
       setIsSaving(false)
@@ -104,12 +105,12 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
         await navigator.clipboard.write([item])
         toast.success('이미지가 클립보드에 복사되었습니다! 카카오톡에 붙여넣기 하세요.')
       } catch (clipboardError) {
-        console.error('Clipboard error:', clipboardError)
+        logger.error('Clipboard error:', clipboardError)
         // Final fallback: download
         handleSave()
       }
     } catch (error) {
-      console.error('Share error:', error)
+      logger.error('Share error:', error)
       toast.error('공유 중 오류가 발생했습니다.')
     } finally {
       setIsSharing(false)

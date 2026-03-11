@@ -5,13 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Save, BookOpen, Compass, User as UserIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -21,15 +15,7 @@ import { AvatarSelector } from './avatar-selector'
 import { KakaoAddressSearch } from './kakao-address-search'
 import type { DokkaebiAvatarId } from '@/lib/constants/dokkaebi-avatars'
 
-export function SettingsForm({
-  user,
-  profile,
-  familyMember,
-}: {
-  user: any
-  profile: any
-  familyMember?: any
-}) {
+export function SettingsForm({ user, profile, familyMember }: { user: any; profile: any; familyMember?: any }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -41,9 +27,7 @@ export function SettingsForm({
   // 천(天) - 사주 정보 (family_members 우선)
   const [birthDate, setBirthDate] = useState(familyMember?.birth_date || profile?.birth_date || '')
   const [birthTime, setBirthTime] = useState(familyMember?.birth_time || profile?.birth_time || '')
-  const [calendarType, setCalendarType] = useState(
-    familyMember?.calendar_type || profile?.calendar_type || 'solar'
-  )
+  const [calendarType, setCalendarType] = useState(familyMember?.calendar_type || profile?.calendar_type || 'solar')
 
   // 지(地) - 풍수 정보 (profiles)
   const [homeAddress, setHomeAddress] = useState(profile?.home_address || '')
@@ -82,9 +66,7 @@ export function SettingsForm({
 
       // 2. 생년월일 없으면 기본 정보만 저장
       if (!birthDate) {
-        toast.success(
-          '기본 정보가 저장되었습니다. (사주 정보를 저장하려면 생년월일을 입력해주세요)'
-        )
+        toast.success('기본 정보가 저장되었습니다. (사주 정보를 저장하려면 생년월일을 입력해주세요)')
         router.refresh()
         return
       }
@@ -106,8 +88,8 @@ export function SettingsForm({
 
       toast.success('정보가 성공적으로 저장되었습니다.')
       router.refresh()
-    } catch (error: any) {
-      toast.error('저장 중 오류가 발생했습니다: ' + (error?.message || '알 수 없는 오류'))
+    } catch (error: unknown) {
+      toast.error('저장 중 오류가 발생했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'))
     } finally {
       setIsLoading(false)
     }
@@ -148,11 +130,7 @@ export function SettingsForm({
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem
-                  value="female"
-                  id="female"
-                  className="border-primary text-primary"
-                />
+                <RadioGroupItem value="female" id="female" className="border-primary text-primary" />
                 <Label htmlFor="female" className="font-light cursor-pointer">
                   여성
                 </Label>
@@ -162,11 +140,7 @@ export function SettingsForm({
 
           {/* 아바타 선택 */}
           <div className="pt-2">
-            <AvatarSelector
-              currentAvatar={avatarUrl}
-              onSelect={handleAvatarSelect}
-              socialAvatarUrl={socialAvatarUrl}
-            />
+            <AvatarSelector currentAvatar={avatarUrl} onSelect={handleAvatarSelect} socialAvatarUrl={socialAvatarUrl} />
           </div>
         </CardContent>
       </Card>
@@ -178,9 +152,7 @@ export function SettingsForm({
             <BookOpen className="w-4 h-4 text-primary" strokeWidth={1} />
             천(天) - 사주 정보
           </CardTitle>
-          <p className="text-xs text-ink-light/50 font-light mt-1">
-            태어난 시간에 담긴 하늘의 섭리
-          </p>
+          <p className="text-xs text-ink-light/50 font-light mt-1">태어난 시간에 담긴 하늘의 섭리</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -244,9 +216,7 @@ export function SettingsForm({
             <Compass className="w-4 h-4 text-primary" strokeWidth={1} />
             지(地) - 풍수 정보
           </CardTitle>
-          <p className="text-xs text-ink-light/50 font-light mt-1">
-            당신을 둘러싼 공간과 환경의 기운
-          </p>
+          <p className="text-xs text-ink-light/50 font-light mt-1">당신을 둘러싼 공간과 환경의 기운</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <KakaoAddressSearch
@@ -269,8 +239,7 @@ export function SettingsForm({
               <div className="space-y-1">
                 <p className="text-xs font-light text-ink-light">
                   주소는 <strong className="text-primary">선택사항</strong>이지만, 입력하시면{' '}
-                  <strong className="text-primary">더 정확하고 풍부한 풍수 분석 결과</strong>를 얻을
-                  수 있습니다.
+                  <strong className="text-primary">더 정확하고 풍부한 풍수 분석 결과</strong>를 얻을 수 있습니다.
                 </p>
                 <p className="text-xs font-light text-primary/80">
                   * 공간별 기운의 흐름을 파악하여 맞춤형 풍수 조언을 제공합니다

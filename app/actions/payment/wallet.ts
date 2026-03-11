@@ -76,7 +76,6 @@ export async function getFeatureCost(featureKey: string): Promise<number> {
     .single()
 
   if (error || !data) {
-    // console.error(`Feature cost not found for ${featureKey}:`, error); // Suppress error for cleaner logs
     return 1 // Default fallback
   }
 

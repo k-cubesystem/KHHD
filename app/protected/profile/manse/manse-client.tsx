@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { getSajuData, WU_XING_COLORS, SajuData } from '@/lib/domain/saju/saju'
 import {
   analyzeGekguk,
@@ -552,7 +553,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       )
     }
   } catch (error) {
-    console.error('Error in getSajuData:', error)
+    logger.error('Error in getSajuData:', error)
     saju = null
   }
 
@@ -567,38 +568,38 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   try {
     gekgukAnalysis = saju ? analyzeGekguk(saju) : null
   } catch (error) {
-    console.error('Error in analyzeGekguk:', error)
+    logger.error('Error in analyzeGekguk:', error)
   }
 
   try {
     sinsalList = saju ? calculateSinsal(saju) : []
   } catch (error) {
-    console.error('Error in calculateSinsal:', error)
+    logger.error('Error in calculateSinsal:', error)
   }
 
   try {
     yongsinAnalysis = saju ? analyzeYongsin(saju) : null
   } catch (error) {
-    console.error('Error in analyzeYongsin:', error)
+    logger.error('Error in analyzeYongsin:', error)
   }
 
   try {
     yukchinAnalysis = saju ? analyzeYukchin(saju) : null
   } catch (error) {
-    console.error('Error in analyzeYukchin:', error)
+    logger.error('Error in analyzeYukchin:', error)
   }
 
   try {
     daeunList =
       saju && selectedMember ? calculateDaeun(selectedMember.birth_date, selectedMember.gender || 'male', saju) : []
   } catch (error) {
-    console.error('Error in calculateDaeun:', error)
+    logger.error('Error in calculateDaeun:', error)
   }
 
   try {
     gaeunbubRec = yongsinAnalysis ? getGaeunbubRecommendation(yongsinAnalysis.yongsin) : null
   } catch (error) {
-    console.error('Error in getGaeunbubRecommendation:', error)
+    logger.error('Error in getGaeunbubRecommendation:', error)
   }
 
   // 고급 만세력 분석
@@ -612,7 +613,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       )
     }
   } catch (error) {
-    console.error('Error in analyzeManseAdvanced:', error)
+    logger.error('Error in analyzeManseAdvanced:', error)
   }
 
   // 해화지기 마스터 엔진 데이터 계산
@@ -652,7 +653,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         warnings: analyzeWarnings(saju, yongsinAnalysis, sipseongResult),
       }
     } catch (e) {
-      console.error('[ManseEngine] Error:', e)
+      logger.error('[ManseEngine] Error:', e)
     }
   }
 
@@ -855,7 +856,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             </SelectTrigger>
             <SelectContent className="bg-[#1a1a2e] border-white/20 rounded-xl">
               {members.map((m) => (
-                <SelectItem key={m.id} value={m.id} className="text-white/80 focus:bg-[#D4AF37]/20 focus:text-[#D4AF37] rounded-lg cursor-pointer">
+                <SelectItem
+                  key={m.id}
+                  value={m.id}
+                  className="text-white/80 focus:bg-[#D4AF37]/20 focus:text-[#D4AF37] rounded-lg cursor-pointer"
+                >
                   <span className="flex items-center gap-2">
                     <span
                       className={cn(

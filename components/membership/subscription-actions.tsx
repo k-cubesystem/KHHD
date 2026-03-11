@@ -78,8 +78,9 @@ export function SubscriptionActions({ subscriptionId, status, periodEnd }: Subsc
         return
       }
 
-      const { loadTossPayments } = await import('@tosspayments/tosspayments-sdk')
-      const sdk = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY ?? '')
+      const { getTossPaymentsSDK } = await import('@/lib/services/tosspayments')
+      const sdk = await getTossPaymentsSDK()
+      if (!sdk) throw new Error('결제 모듈 로드 실패')
       const payment = sdk.payment({ customerKey: result.customerKey })
       await payment.requestBillingAuth({
         method: 'CARD',

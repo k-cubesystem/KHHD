@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { unstable_cache } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Destiny Target 타입 정의
@@ -50,7 +51,7 @@ export async function getDestinyTargets(): Promise<DestinyTarget[]> {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    console.warn('No authenticated user found')
+    logger.warn('No authenticated user found')
     return []
   }
 
@@ -63,7 +64,7 @@ export async function getDestinyTargets(): Promise<DestinyTarget[]> {
     .order('created_at', { ascending: true })
 
   if (error) {
-    console.error('Error fetching destiny targets:', error.message)
+    logger.error('Error fetching destiny targets:', error.message)
     return []
   }
 
@@ -84,7 +85,7 @@ export async function getDestinyTarget(targetId: string): Promise<DestinyTarget 
   } = await supabase.auth.getUser()
 
   if (!user) {
-    console.warn('No authenticated user found')
+    logger.warn('No authenticated user found')
     return null
   }
 
@@ -97,7 +98,7 @@ export async function getDestinyTarget(targetId: string): Promise<DestinyTarget 
     .single()
 
   if (error) {
-    console.error('Error fetching destiny target:', error.message)
+    logger.error('Error fetching destiny target:', error.message)
     return null
   }
 

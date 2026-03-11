@@ -13,6 +13,7 @@ import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
 
@@ -73,7 +74,7 @@ export async function analyzeFortuneAction(
         const cachedResult = cachedRecord.result_json as FortuneResult
         // fortuneType이 일치하는 캐시만 반환
         if (cachedResult?.type === fortuneType) {
-          console.log(`[FortuneAnalysis] 캐시 적중 (${cachedRecord.created_at}) - Gemini 호출 생략`)
+          logger.log(`[FortuneAnalysis] 캐시 적중 (${cachedRecord.created_at}) - Gemini 호출 생략`)
           return { success: true, data: cachedResult, cached: true, cachedAt: cachedRecord.created_at }
         }
       }
@@ -151,7 +152,7 @@ export async function analyzeFortuneAction(
 
     return { success: true, data: result, cached: false }
   } catch (error) {
-    console.error('[FortuneAnalysis] Error:', error)
+    logger.error('[FortuneAnalysis] Error:', error)
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }

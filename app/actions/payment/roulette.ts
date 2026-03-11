@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 // 복채 단위: 1 복채 = 1만냥
 const DEFAULT_ROULETTE_CONFIG = [
@@ -67,11 +68,12 @@ export async function checkRouletteAvailability() {
     }
 
     return { success: true, canSpin: true }
-  } catch (error: any) {
-    console.error('checkRouletteAvailability error:', error)
+  } catch (error: unknown) {
+    logger.error('checkRouletteAvailability error:', error)
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,
-      error: error.message || '룰렛 사용 가능 여부 확인 중 오류가 발생했습니다.',
+      error: msg,
       canSpin: false,
     }
   }
@@ -91,7 +93,7 @@ export async function spinRoulette() {
       return { success: false, error: '로그인이 필요합니다.' }
     }
 
-    console.log(`[Roulette] User ${user.id} attempting to spin...`)
+    logger.log(`[Roulette] User ${user.id} attempting to spin...`)
 
     // 사용 가능 여부 확인
     const availCheck = await checkRouletteAvailability()
@@ -103,7 +105,7 @@ export async function spinRoulette() {
     const { config } = await getRouletteConfig()
 
     // 확률 계산 (서버 사이드)
-    const totalProb = config.reduce((sum: number, c: any) => sum + Number(c.probability), 0)
+    const totalProb = config.reduce((sum: number, c: (typeof config)[number]) => sum + Number(c.probability), 0)
     const rand = Math.random() * totalProb
     let cumulative = 0
     let selectedReward = config[0]
@@ -116,7 +118,7 @@ export async function spinRoulette() {
       }
     }
 
-    console.log(`[Roulette] Selected reward:`, selectedReward)
+    logger.log(`[Roulette] Selected reward:`, selectedReward)
 
     // 1. 먼저 wallet이 존재하는지 확인하고 없으면 생성
     const { data: existingWallet } = await supabase
@@ -126,17 +128,17 @@ export async function spinRoulette() {
       .maybeSingle()
 
     if (!existingWallet) {
-      console.log(`[Roulette] Creating wallet for user ${user.id}`)
+      logger.log(`[Roulette] Creating wallet for user ${user.id}`)
       const { error: walletCreateError } = await supabase.from('wallets').insert({ user_id: user.id, balance: 0 })
 
       if (walletCreateError) {
-        console.error('[Roulette] Failed to create wallet:', walletCreateError)
+        logger.error('[Roulette] Failed to create wallet:', walletCreateError)
         throw new Error(`지갑 생성 실패: ${walletCreateError.message}`)
       }
     }
 
     // 2. 기록 저장
-    console.log(`[Roulette] Inserting roulette history...`)
+    logger.log(`[Roulette] Inserting roulette history...`)
     const { error: insertError } = await supabase.from('roulette_history').insert({
       user_id: user.id,
       reward_type: selectedReward.reward_type || selectedReward.type,
@@ -144,11 +146,11 @@ export async function spinRoulette() {
     })
 
     if (insertError) {
-      console.error('[Roulette] Insert error:', insertError)
+      logger.error('[Roulette] Insert error:', insertError)
       throw new Error(`룰렛 기록 저장 실패: ${insertError.message}`)
     }
 
-    console.log(`[Roulette] History saved successfully`)
+    logger.log(`[Roulette] History saved successfully`)
 
     // 3. 복채 지급 (꽝이 아닐 경우)
     const rewardValue = selectedReward.reward_value ?? selectedReward.value ?? 0
@@ -157,7 +159,7 @@ export async function spinRoulette() {
     let currentBalance = 0
 
     if (rewardType === 'bokchae' && rewardValue > 0) {
-      console.log(`[Roulette] Crediting ${rewardValue} bokchae via RPC...`)
+      logger.log(`[Roulette] Crediting ${rewardValue} bokchae via RPC...`)
 
       // add_bokchae RPC 시도
       const { data: rpcResult, error: rpcError } = await supabase.rpc('add_bokchae', {
@@ -167,7 +169,7 @@ export async function spinRoulette() {
       })
 
       if (rpcError) {
-        console.warn('[Roulette] RPC add_bokchae failed, using direct method:', rpcError)
+        logger.warn('[Roulette] RPC add_bokchae failed, using direct method:', rpcError)
 
         // Fallback: 직접 처리
         const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
@@ -175,7 +177,7 @@ export async function spinRoulette() {
         const oldBalance = wallet?.balance || 0
         const newBalance = oldBalance + rewardValue
 
-        console.log(`[Roulette] Direct credit: ${oldBalance} -> ${newBalance}`)
+        logger.log(`[Roulette] Direct credit: ${oldBalance} -> ${newBalance}`)
 
         const { error: updateError } = await supabase
           .from('wallets')
@@ -183,7 +185,7 @@ export async function spinRoulette() {
           .eq('user_id', user.id)
 
         if (updateError) {
-          console.error('[Roulette] Failed to update wallet:', updateError)
+          logger.error('[Roulette] Failed to update wallet:', updateError)
           throw new Error(`복채 지급 실패: ${updateError.message}`)
         }
 
@@ -195,13 +197,13 @@ export async function spinRoulette() {
         })
 
         if (txError) {
-          console.error('[Roulette] Failed to record transaction:', txError)
+          logger.error('[Roulette] Failed to record transaction:', txError)
           // 트랜잭션 기록 실패는 치명적이지 않으므로 warning만
         }
 
         currentBalance = newBalance
       } else {
-        console.log(`[Roulette] RPC add_bokchae succeeded:`, rpcResult)
+        logger.log(`[Roulette] RPC add_bokchae succeeded:`, rpcResult)
 
         // Get updated balance
         const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
@@ -215,7 +217,7 @@ export async function spinRoulette() {
       currentBalance = wallet?.balance || 0
     }
 
-    console.log(`[Roulette] Final wallet balance: ${currentBalance}`)
+    logger.log(`[Roulette] Final wallet balance: ${currentBalance}`)
 
     const nextAvailable = new Date()
     nextAvailable.setDate(nextAvailable.getDate() + 1)
@@ -232,11 +234,12 @@ export async function spinRoulette() {
       currentBalance,
       nextAvailableTime: nextAvailable.toISOString(),
     }
-  } catch (error: any) {
-    console.error('[Roulette] Critical error:', error)
+  } catch (error: unknown) {
+    logger.error('[Roulette] Critical error:', error)
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,
-      error: error.message || '룰렛 회전 중 오류가 발생했습니다.',
+      error: msg,
     }
   }
 }

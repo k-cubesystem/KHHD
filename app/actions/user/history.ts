@@ -1,12 +1,12 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
-// import { createClient as createClientJS } from '@supabase/supabase-js' // Removed to fix edge issues
 import { unstable_cache, revalidatePath } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserTierLimits } from '../payment/membership'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * 분석 카테고리 타입
@@ -99,7 +99,7 @@ export async function saveAnalysisHistory(
       .single()
 
     if (error) {
-      console.error('Error saving analysis history:', error)
+      logger.error('Error saving analysis history:', error)
       return { success: false, error: error.message }
     }
 
@@ -116,7 +116,7 @@ export async function saveAnalysisHistory(
         await recordFortuneEntry(familyMemberId, params.category, data.id, 100)
       }
     } catch (fortuneError) {
-      console.error('Error auto-recording fortune entry:', fortuneError)
+      logger.error('Error auto-recording fortune entry:', fortuneError)
     }
 
     // 쿼터 관리: 한도 초과 시 오래된 비즐겨찾기 레코드 자동 삭제
@@ -148,13 +148,13 @@ export async function saveAnalysisHistory(
         }
       }
     } catch (quotaError) {
-      console.error('Quota management error (non-fatal):', quotaError)
+      logger.error('Quota management error (non-fatal):', quotaError)
     }
 
     revalidatePath('/protected/history')
     return { success: true, id: data.id }
   } catch (error) {
-    console.error('Error in saveAnalysisHistory:', error)
+    logger.error('Error in saveAnalysisHistory:', error)
     return { success: false, error: '분석 기록 저장 중 오류가 발생했습니다.' }
   }
 }
@@ -187,7 +187,7 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
         .limit(limit)
 
       if (error) {
-        console.error('Error fetching recent analysis:', error)
+        logger.error('Error fetching recent analysis:', error)
         return []
       }
 
@@ -227,7 +227,7 @@ export async function getAnalysisById(id: string): Promise<AnalysisHistory | nul
     .single()
 
   if (error) {
-    console.error('Error fetching analysis:', error)
+    logger.error('Error fetching analysis:', error)
     return null
   }
 
@@ -259,7 +259,7 @@ export async function getAnalysisStats(): Promise<
   })
 
   if (error) {
-    console.error('Error fetching analysis stats:', error)
+    logger.error('Error fetching analysis stats:', error)
     return []
   }
 
@@ -290,7 +290,7 @@ export async function toggleFavorite(id: string, isFavorite: boolean): Promise<{
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Error toggling favorite:', error)
+      logger.error('Error toggling favorite:', error)
       return { success: false, error: error.message }
     }
 
@@ -298,7 +298,7 @@ export async function toggleFavorite(id: string, isFavorite: boolean): Promise<{
 
     return { success: true }
   } catch (error) {
-    console.error('Error in toggleFavorite:', error)
+    logger.error('Error in toggleFavorite:', error)
     return { success: false, error: '즐겨찾기 변경 중 오류가 발생했습니다.' }
   }
 }
@@ -324,7 +324,7 @@ export async function updateAnalysisMemo(id: string, memo: string): Promise<{ su
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Error updating memo:', error)
+      logger.error('Error updating memo:', error)
       return { success: false, error: error.message }
     }
 
@@ -332,7 +332,7 @@ export async function updateAnalysisMemo(id: string, memo: string): Promise<{ su
 
     return { success: true }
   } catch (error) {
-    console.error('Error in updateAnalysisMemo:', error)
+    logger.error('Error in updateAnalysisMemo:', error)
     return { success: false, error: '메모 업데이트 중 오류가 발생했습니다.' }
   }
 }
@@ -357,7 +357,7 @@ export async function deleteAnalysisHistory(id: string): Promise<{ success: bool
     const { error } = await supabase.from('analysis_history').delete().eq('id', id).eq('user_id', user.id)
 
     if (error) {
-      console.error('Error deleting analysis history:', error)
+      logger.error('Error deleting analysis history:', error)
       return { success: false, error: error.message }
     }
 
@@ -365,7 +365,7 @@ export async function deleteAnalysisHistory(id: string): Promise<{ success: bool
 
     return { success: true }
   } catch (error) {
-    console.error('Error in deleteAnalysisHistory:', error)
+    logger.error('Error in deleteAnalysisHistory:', error)
     return { success: false, error: '기록 삭제 중 오류가 발생했습니다.' }
   }
 }
@@ -391,7 +391,7 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching analysis by target:', error)
+    logger.error('Error fetching analysis by target:', error)
     return []
   }
 
@@ -443,7 +443,7 @@ export async function createShareLink(
       .eq('user_id', user.id)
 
     if (error) {
-      console.error('Error creating share token:', error)
+      logger.error('Error creating share token:', error)
       return { success: false, error: '공유 링크 생성 실패' }
     }
 
@@ -453,7 +453,7 @@ export async function createShareLink(
       url: `${process.env.NEXT_PUBLIC_SITE_URL}/share/${token}`,
     }
   } catch (error) {
-    console.error('Error in createShareLink:', error)
+    logger.error('Error in createShareLink:', error)
     return { success: false, error: '공유 링크 생성 중 오류가 발생했습니다.' }
   }
 }
@@ -468,7 +468,7 @@ export async function getSharedAnalysis(token: string): Promise<AnalysisHistory 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 
-    console.log(`[Share] Fetching analysis via RAW FETCH for token: ${token}`)
+    logger.log(`[Share] Fetching analysis via RAW FETCH for token: ${token}`)
 
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_analysis_record`, {
       method: 'POST',
@@ -484,7 +484,7 @@ export async function getSharedAnalysis(token: string): Promise<AnalysisHistory 
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error(`[Share] Fetch Error: ${response.status} ${response.statusText}`, errorText)
+      logger.error(`[Share] Fetch Error: ${response.status} ${response.statusText}`, errorText)
       return null
     }
 
@@ -492,14 +492,14 @@ export async function getSharedAnalysis(token: string): Promise<AnalysisHistory 
 
     // RPC returns an array (SETOF)
     if (!Array.isArray(data) || data.length === 0) {
-      console.warn('[Share] No data found for token')
+      logger.warn('[Share] No data found for token')
       return null
     }
 
-    console.log(`[Share] Success! Found record for target: ${data[0].target_name}`)
+    logger.log(`[Share] Success! Found record for target: ${data[0].target_name}`)
     return data[0] as AnalysisHistory
   } catch (error) {
-    console.error('[Share] Unexpected Error in getSharedAnalysis:', error)
+    logger.error('[Share] Unexpected Error in getSharedAnalysis:', error)
     return null
   }
 }

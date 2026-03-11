@@ -1,19 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  X,
-  Star,
-  Trash2,
-  Share2,
-  Edit3,
-  Save,
-  Clock,
-  Sparkles,
-  AlertTriangle,
-  RefreshCw,
-} from 'lucide-react'
+import { X, Star, Trash2, Share2, Edit3, Save, Clock, Sparkles, AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
@@ -130,7 +120,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
         toast.success('공유 링크가 복사되었습니다!')
       }
     } catch (err) {
-      console.error('Share failed:', err)
+      logger.error('Share failed:', err)
       toast.error('공유 중 오류가 발생했습니다.')
     }
   }
@@ -185,21 +175,11 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
             <div className="flex items-center justify-between p-4 border-b border-primary/20 bg-surface/80">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-serif font-bold text-ink-light">분석 상세</h2>
-                <button
-                  onClick={handleToggleFavorite}
-                  className="p-1 hover:bg-primary/10 rounded transition-colors"
-                >
-                  <Star
-                    className={`w-5 h-5 ${
-                      isFavorite ? 'text-amber-400 fill-amber-400' : 'text-ink-light/40'
-                    }`}
-                  />
+                <button onClick={handleToggleFavorite} className="p-1 hover:bg-primary/10 rounded transition-colors">
+                  <Star className={`w-5 h-5 ${isFavorite ? 'text-amber-400 fill-amber-400' : 'text-ink-light/40'}`} />
                 </button>
               </div>
-              <button
-                onClick={onClose}
-                className="p-1 hover:bg-primary/10 rounded transition-colors"
-              >
+              <button onClick={onClose} className="p-1 hover:bg-primary/10 rounded transition-colors">
                 <X className="w-5 h-5 text-ink-light/60" />
               </button>
             </div>
@@ -235,9 +215,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
               {/* User Memo */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-primary uppercase tracking-wide">
-                    내 메모
-                  </h4>
+                  <h4 className="text-sm font-bold text-primary uppercase tracking-wide">내 메모</h4>
                   {!isEditingMemo && (
                     <button
                       onClick={() => setIsEditingMemo(true)}
@@ -290,10 +268,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
             <div className="p-4 border-t border-primary/20 bg-surface/80 flex flex-col gap-2">
               {/* Top Row: Re-analyze & Share */}
               <div className="flex gap-2">
-                <Button
-                  onClick={handleReAnalyze}
-                  className="flex-1 bg-primary hover:bg-primary-dim text-background"
-                >
+                <Button onClick={handleReAnalyze} className="flex-1 bg-primary hover:bg-primary-dim text-background">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   재분석하기
                 </Button>

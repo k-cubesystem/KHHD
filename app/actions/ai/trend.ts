@@ -12,6 +12,7 @@ import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-buil
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 export type TrendType = 'love' | 'career' | 'exam' | 'estate'
 
@@ -197,7 +198,7 @@ export async function analyzeTrendAction(
 
     return { success: true, data: result, cached: false }
   } catch (error) {
-    console.error('[TrendAnalysis] Error:', error)
+    logger.error('[TrendAnalysis] Error:', error)
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }

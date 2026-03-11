@@ -59,9 +59,9 @@ export async function checkDailyAttendance() {
       checked: !!todayRecord,
       consecutiveDays: weekRecords?.length || 0,
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    return { success: false, error: error.message, checked: false, consecutiveDays: 0 }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    return { success: false, error: msg, checked: false, consecutiveDays: 0 }
   }
 }
 
@@ -156,8 +156,8 @@ export async function recordDailyAttendance() {
         ? `주간 출석 완료! 복채 ${totalReward}만냥 입금되었습니다 🎉`
         : `출석 체크 완료! 복채 1만냥 입금되었습니다`,
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    return { success: false, error: error.message || '출석 체크 중 오류가 발생했습니다.' }
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+    return { success: false, error: msg }
   }
 }

@@ -7,6 +7,7 @@ import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
 import { Crown, Loader2, ArrowLeft, Check } from 'lucide-react'
 import Link from 'next/link'
+import { logger } from '@/lib/utils/logger'
 
 function CheckoutContent() {
   const searchParams = useSearchParams()
@@ -59,7 +60,7 @@ function CheckoutContent() {
       })
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err)
-      console.error('[Checkout] error:', errMsg)
+      logger.error('[Checkout] error:', errMsg)
       if (errMsg.includes('UserCancel') || errMsg.includes('사용자')) {
         setError('결제가 취소되었습니다.')
       } else if (errMsg.includes('clientKey') || errMsg.includes('client_key')) {

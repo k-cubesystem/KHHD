@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { logger } from '@/lib/utils/logger'
 
 export interface AIPrompt {
   key: string
@@ -27,23 +28,17 @@ export async function getPrompts(): Promise<AIPrompt[]> {
   const dbClient = createAdminClient()
 
   // Fetch prompts
-  const { data, error } = await dbClient
-    .from('ai_prompts')
-    .select('*')
-    .order('category', { ascending: true })
+  const { data, error } = await dbClient.from('ai_prompts').select('*').order('category', { ascending: true })
 
   if (error) {
-    console.error('Error fetching prompts:', error)
+    logger.error('Error fetching prompts:', error)
     throw new Error('Failed to fetch prompts')
   }
 
   return data as AIPrompt[]
 }
 
-export async function updatePrompt(
-  key: string,
-  data: { template?: string; talisman_cost?: number }
-) {
+export async function updatePrompt(key: string, data: { template?: string; talisman_cost?: number }) {
   const supabase = await createClient()
 
   // Check Auth
@@ -62,7 +57,7 @@ export async function updatePrompt(
   const { error } = await dbClient.from('ai_prompts').update(updates).eq('key', key)
 
   if (error) {
-    console.error('Error updating prompt:', error)
+    logger.error('Error updating prompt:', error)
     return { success: false, error: error.message }
   }
 
@@ -94,7 +89,7 @@ export async function createPrompt(
     .insert({ key, label, category, template, description, talisman_cost: talismanCost })
 
   if (error) {
-    console.error('Error creating prompt:', error)
+    logger.error('Error creating prompt:', error)
     return { success: false, error: error.message }
   }
 
@@ -105,11 +100,7 @@ export async function createPrompt(
 export async function getPromptByKey(key: string): Promise<string | null> {
   try {
     const dbClient = createAdminClient()
-    const { data, error } = await dbClient
-      .from('ai_prompts')
-      .select('template')
-      .eq('key', key)
-      .single()
+    const { data, error } = await dbClient.from('ai_prompts').select('template').eq('key', key).single()
 
     if (error || !data) return null
     return data.template as string
@@ -133,7 +124,7 @@ export async function deletePrompt(key: string) {
   const { error } = await dbClient.from('ai_prompts').delete().eq('key', key)
 
   if (error) {
-    console.error('Error deleting prompt:', error)
+    logger.error('Error deleting prompt:', error)
     return { success: false, error: error.message }
   }
 

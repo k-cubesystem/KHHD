@@ -8,6 +8,7 @@ import {
   analyzeInteriorForFengshui,
 } from '@/app/actions/ai/saju'
 import { saveAnalysisHistory } from '@/app/actions/user/history'
+import { logger } from '@/lib/utils/logger'
 
 // Types
 export type StudioAnalysisType = 'saju' | 'face' | 'palm' | 'fengshui'
@@ -34,7 +35,7 @@ export async function analyzeDestinyStudio({ type, isGuest, data }: AnalyzeParam
   // Family mode = SAVE
   const saveToHistory = !isGuest
 
-  console.log(`[Studio] Analyzing ${type} (Guest: ${isGuest})`)
+  logger.log(`[Studio] Analyzing ${type} (Guest: ${isGuest})`)
 
   try {
     let result
@@ -86,7 +87,7 @@ export async function analyzeDestinyStudio({ type, isGuest, data }: AnalyzeParam
 
     return { success: true, data: result }
   } catch (error: unknown) {
-    console.error('[Studio] Analysis Failed:', error)
+    logger.error('[Studio] Analysis Failed:', error)
     return { success: false, error: error instanceof Error ? error.message : '알 수 없는 오류' }
   }
 }

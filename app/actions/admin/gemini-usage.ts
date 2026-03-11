@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export interface GeminiDailyStat {
   stat_date: string
@@ -63,7 +64,7 @@ export async function getGeminiDailyStats(daysBack: number = 30): Promise<Gemini
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_daily_stats', { days_back: daysBack })
   if (error) {
-    console.error('[gemini-usage] getGeminiDailyStats error:', error)
+    logger.error('[gemini-usage] getGeminiDailyStats error:', error)
     return []
   }
   return (data ?? []) as GeminiDailyStat[]
@@ -73,7 +74,7 @@ export async function getGeminiActionStats(daysBack: number = 30): Promise<Gemin
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_action_stats', { days_back: daysBack })
   if (error) {
-    console.error('[gemini-usage] getGeminiActionStats error:', error)
+    logger.error('[gemini-usage] getGeminiActionStats error:', error)
     return []
   }
   return (data ?? []) as GeminiActionStat[]
@@ -83,7 +84,7 @@ export async function getGeminiTodaySummary(): Promise<GeminiTodaySummary> {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_today_summary')
   if (error || !data) {
-    console.error('[gemini-usage] getGeminiTodaySummary error:', error)
+    logger.error('[gemini-usage] getGeminiTodaySummary error:', error)
     return {
       total_calls: 0,
       success_calls: 0,
@@ -104,7 +105,7 @@ export async function getGeminiRecentLogs(logLimit: number = 50): Promise<Gemini
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_recent_logs', { log_limit: logLimit })
   if (error) {
-    console.error('[gemini-usage] getGeminiRecentLogs error:', error)
+    logger.error('[gemini-usage] getGeminiRecentLogs error:', error)
     return []
   }
   return (data ?? []) as GeminiRecentLog[]
@@ -118,7 +119,7 @@ export async function getGeminiRpmConfig(): Promise<GeminiRpmConfig | null> {
     .eq('id', 1)
     .single()
   if (error) {
-    console.error('[gemini-usage] getGeminiRpmConfig error:', error)
+    logger.error('[gemini-usage] getGeminiRpmConfig error:', error)
     return null
   }
   return data as GeminiRpmConfig
@@ -141,10 +142,6 @@ export async function updateGeminiRpm(
 
 export async function getUsdKrwRate(): Promise<number> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('system_settings')
-    .select('value')
-    .eq('key', 'usd_krw_rate')
-    .single()
+  const { data } = await supabase.from('system_settings').select('value').eq('key', 'usd_krw_rate').single()
   return data?.value ? Number(data.value) : 1380
 }

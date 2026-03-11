@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 // Types
 export interface MonthlyFortune {
@@ -84,7 +85,7 @@ export async function getMonthlyFamilyFortune(): Promise<MonthlyFortune> {
       completedCategories,
     }
   } catch (error) {
-    console.error('Error fetching monthly fortune:', error)
+    logger.error('Error fetching monthly fortune:', error)
     return {
       totalPossible: 800,
       currentFortune: 0,
@@ -120,16 +121,16 @@ export async function getYearlyFortuneTrend(year?: number): Promise<YearlyFortun
     if (error) {
       // If RPC function doesn't exist, use fallback
       if (error.code === '42883' || error.message.includes('function') || error.message.includes('does not exist')) {
-        console.log('RPC function not found, using fallback implementation for yearly trend')
+        logger.log('RPC function not found, using fallback implementation for yearly trend')
         return getYearlyFortuneTrendFallback(user.id, targetYear)
       }
-      console.error('Error fetching yearly fortune:', error)
+      logger.error('Error fetching yearly fortune:', error)
       return []
     }
 
     return data || []
   } catch (error) {
-    console.error('Error in getYearlyFortuneTrend:', error)
+    logger.error('Error in getYearlyFortuneTrend:', error)
     return []
   }
 }
@@ -161,7 +162,7 @@ async function getYearlyFortuneTrendFallback(userId: string, year: number): Prom
       memberCount,
     }))
   } catch (error) {
-    console.error('Error in yearly trend fallback:', error)
+    logger.error('Error in yearly trend fallback:', error)
     return []
   }
 }
@@ -193,16 +194,16 @@ export async function getFamilyFortuneBreakdown(): Promise<FamilyMemberFortune[]
     if (error) {
       // If RPC function doesn't exist, use fallback
       if (error.code === '42883' || error.message.includes('function') || error.message.includes('does not exist')) {
-        console.log('RPC function not found, using fallback implementation')
+        logger.log('RPC function not found, using fallback implementation')
         return getFamilyFortuneBreakdownFallback(user.id, year, month)
       }
-      console.error('Error fetching family fortune:', error)
+      logger.error('Error fetching family fortune:', error)
       return []
     }
 
     return data || []
   } catch (error) {
-    console.error('Error in getFamilyFortuneBreakdown:', error)
+    logger.error('Error in getFamilyFortuneBreakdown:', error)
     return []
   }
 }
@@ -260,7 +261,7 @@ async function getFamilyFortuneBreakdownFallback(
 
     return results
   } catch (error) {
-    console.error('Error in fallback implementation:', error)
+    logger.error('Error in fallback implementation:', error)
     return []
   }
 }
@@ -315,13 +316,13 @@ export async function recordFortuneEntry(
     )
 
     if (error) {
-      console.error('Error recording fortune:', error)
+      logger.error('Error recording fortune:', error)
       return { success: false, error: error.message }
     }
 
     return { success: true }
   } catch (error) {
-    console.error('Error in recordFortuneEntry:', error)
+    logger.error('Error in recordFortuneEntry:', error)
     const message = error instanceof Error ? error.message : 'Unknown error occurred'
     return { success: false, error: message }
   }
@@ -396,7 +397,7 @@ export async function getMemberMonthlyFortune(memberId: string): Promise<Monthly
       completedCategories: result.completed_categories || [],
     }
   } catch (error) {
-    console.error('Error fetching member fortune:', error)
+    logger.error('Error fetching member fortune:', error)
     return {
       totalPossible: 800,
       currentFortune: 0,

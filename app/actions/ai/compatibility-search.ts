@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { nanoid } from 'nanoid'
 import { saveAnalysisHistory } from '../user/history'
+import { logger } from '@/lib/utils/logger'
 
 interface InviteData {
   inviterId: string
@@ -29,11 +30,7 @@ export async function createCompatibilityInvite(): Promise<{
   }
 
   // Get user's profile data
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
   if (profileError || !profile) {
     return { success: false, error: '프로필 정보를 찾을 수 없습니다.' }
@@ -126,11 +123,7 @@ ${
 
     // Phase 6: 궁합 분석 결과를 analysis_history에 자동 저장
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .eq('id', user.id)
-        .single()
+      const { data: profile } = await supabase.from('profiles').select('id, full_name').eq('id', user.id).single()
 
       if (profile) {
         const person1Name = person1.name || '대상1'
@@ -153,10 +146,10 @@ ${
           model_used: 'placeholder',
           talisman_cost: 2,
         })
-        console.log('[Compatibility] History saved successfully')
+        logger.log('[Compatibility] History saved successfully')
       }
     } catch (historyError) {
-      console.error('[Compatibility] Failed to save history:', historyError)
+      logger.error('[Compatibility] Failed to save history:', historyError)
     }
 
     return {
@@ -165,7 +158,7 @@ ${
       analysis,
     }
   } catch (error) {
-    console.error('[Compatibility] Error:', error)
+    logger.error('[Compatibility] Error:', error)
     return {
       success: false,
       error: '궁합 분석 중 오류가 발생했습니다.',

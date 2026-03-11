@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AVATAR_BLUR_DATA_URL } from '@/lib/utils/image'
+import { logger } from '@/lib/utils/logger'
 import { LogoutButton } from '@/components/logout-button'
 import { getMonthlyAttendance } from '@/app/actions/payment/attendance'
 import { DailyCheckIn } from '@/components/events/daily-check-in'
@@ -142,19 +143,19 @@ export default async function MyPage() {
     const profileData = await supabase.from('profiles').select('*').eq('id', user.id).single()
     profile = profileData.data
   } catch (error) {
-    console.error('Error fetching profile:', error)
+    logger.error('Error fetching profile:', error)
   }
 
   try {
     walletBalance = await getWalletBalance()
   } catch (error) {
-    console.error('Error fetching wallet balance:', error)
+    logger.error('Error fetching wallet balance:', error)
   }
 
   try {
     attendanceStatus = await getMonthlyAttendance()
   } catch (error) {
-    console.error('Error fetching attendance:', error)
+    logger.error('Error fetching attendance:', error)
   }
 
   try {
@@ -176,14 +177,14 @@ export default async function MyPage() {
       .limit(3)
     records = recordsData.data || []
   } catch (error) {
-    console.error('Error fetching records:', error)
+    logger.error('Error fetching records:', error)
     records = []
   }
 
   try {
     userRoleData = await getCurrentUserRole()
   } catch (error) {
-    console.error('Error fetching user role:', error)
+    logger.error('Error fetching user role:', error)
   }
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest'

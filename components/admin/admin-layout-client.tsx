@@ -32,11 +32,19 @@ const ICON_MAP: Record<string, any> = {
   Activity,
 }
 
-interface MenuItem {
+interface MenuLink {
+  type?: undefined
   href: string
   label: string
   icon: string
 }
+
+interface MenuDivider {
+  type: 'divider'
+  label: string
+}
+
+type MenuItem = MenuLink | MenuDivider
 
 interface AdminLayoutClientProps {
   children: React.ReactNode
@@ -81,8 +89,19 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
 
         {/* Horizontal Scrollable Menu */}
         <div className="w-full overflow-x-auto no-scrollbar border-b border-gold-500/10 bg-ink-900/50">
-          <div className="flex px-3 md:px-4 min-w-max pb-0.5">
-            {menuItems.map((item) => {
+          <div className="flex px-3 md:px-4 min-w-max pb-0.5 items-end">
+            {menuItems.map((item, index) => {
+              if (item.type === 'divider') {
+                return (
+                  <div key={`divider-${item.label}`} className="flex items-center self-stretch px-1 md:px-1.5">
+                    <div className="h-8 border-l border-stone-700/40" />
+                    <span className="text-[8px] md:text-[9px] text-stone-600 font-bold uppercase tracking-wider whitespace-nowrap pl-1.5 pr-0.5 self-end pb-2.5 md:pb-3">
+                      {item.label}
+                    </span>
+                  </div>
+                )
+              }
+
               const Icon = ICON_MAP[item.icon] || Sparkles
               const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href))
 

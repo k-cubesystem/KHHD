@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -81,7 +82,7 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
       const credits = await getWalletBalance()
       setAvailableCredits(credits)
     } catch (err) {
-      console.error('Failed to check credits', err)
+      logger.error('Failed to check credits', err)
     } finally {
       setIsLoadingCredits(false)
     }
@@ -112,7 +113,12 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
     setStep((prev) => prev + 1)
   }
 
-  const handleAddressComplete = (data: any) => {
+  const handleAddressComplete = (data: {
+    address: string
+    addressType: string
+    bname: string
+    buildingName: string
+  }) => {
     let fullAddress = data.address
     let extraAddress = ''
 
@@ -154,18 +160,18 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
       // 실제 File 객체 추가
       if (faceFile) {
         formData.append('faceImage', faceFile)
-        console.log('[Form] Face image added to FormData:', faceFile.name)
+        logger.log('[Form] Face image added to FormData:', faceFile.name)
       }
       if (handFile) {
         formData.append('handImage', handFile)
-        console.log('[Form] Hand image added to FormData:', handFile.name)
+        logger.log('[Form] Hand image added to FormData:', handFile.name)
       }
 
       await startFateAnalysis(formData)
       toast.success('분석이 시작되었습니다. 잠시 후 결과 페이지로 이동합니다.')
       window.location.href = '/protected/history'
-    } catch (error: any) {
-      toast.error(error.message || '분석 시작 중 오류가 발생했습니다.')
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '분석 시작 중 오류가 발생했습니다.')
       setIsSubmitting(false)
     }
   }
@@ -209,18 +215,12 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
         <div
           className={cn(
             'space-y-6 transition-all duration-500',
-            step === 1
-              ? 'opacity-100 translate-x-0'
-              : 'opacity-0 -translate-x-10 fixed top-0 pointer-events-none'
+            step === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 fixed top-0 pointer-events-none'
           )}
         >
           <div className="text-center space-y-2 mb-8">
-            <h2 className="text-3xl font-serif font-bold text-stone-100">
-              누구의 운명을 분석하시겠습니까?
-            </h2>
-            <p className="text-stone-400 text-sm font-light">
-              등록된 본인 및 가족/지인 목록에서 선택하세요.
-            </p>
+            <h2 className="text-3xl font-serif font-bold text-stone-100">누구의 운명을 분석하시겠습니까?</h2>
+            <p className="text-stone-400 text-sm font-light">등록된 본인 및 가족/지인 목록에서 선택하세요.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -232,11 +232,9 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
                     ? User
                     : target.relation_type.includes('가족')
                       ? Users
-                      : target.relation_type.includes('연인') ||
-                          target.relation_type.includes('배우자')
+                      : target.relation_type.includes('연인') || target.relation_type.includes('배우자')
                         ? Heart
-                        : target.relation_type.includes('직장') ||
-                            target.relation_type.includes('동료')
+                        : target.relation_type.includes('직장') || target.relation_type.includes('동료')
                           ? Briefcase
                           : User
 
@@ -312,16 +310,13 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
         <div
           className={cn(
             'space-y-6 transition-all duration-500',
-            step === 2
-              ? 'opacity-100 translate-x-0'
-              : 'opacity-0 translate-x-10 fixed top-0 pointer-events-none'
+            step === 2 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 fixed top-0 pointer-events-none'
           )}
         >
           <div className="text-center space-y-2 mb-8">
             <h2 className="text-3xl font-serif font-bold text-stone-100">천지인(天地人)의 완성</h2>
             <p className="text-stone-400 text-sm font-light">
-              관상과 손금을 분석하여 <span className="text-gold-400 font-bold">정확도 30%</span>를
-              높입니다.
+              관상과 손금을 분석하여 <span className="text-gold-400 font-bold">정확도 30%</span>를 높입니다.
             </p>
           </div>
 
@@ -436,20 +431,14 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
         <div
           className={cn(
             'space-y-6 transition-all duration-500',
-            step === 3
-              ? 'opacity-100 translate-x-0'
-              : 'opacity-0 translate-x-10 fixed top-0 pointer-events-none'
+            step === 3 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10 fixed top-0 pointer-events-none'
           )}
         >
           {!showPayment ? (
             <>
               <div className="text-center space-y-2 mb-8">
-                <h2 className="text-3xl font-serif font-bold text-stone-100">
-                  마지막 단계: 지기(地氣) 보정
-                </h2>
-                <p className="text-stone-400 text-sm font-light">
-                  당신이 머무는 공간의 에너지를 분석에 반영합니다.
-                </p>
+                <h2 className="text-3xl font-serif font-bold text-stone-100">마지막 단계: 지기(地氣) 보정</h2>
+                <p className="text-stone-400 text-sm font-light">당신이 머무는 공간의 에너지를 분석에 반영합니다.</p>
               </div>
 
               {/* 스토리텔링 설명 */}
@@ -461,18 +450,14 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
                     </div>
                   </div>
                   <div className="flex-1 space-y-2">
-                    <h3 className="text-sm font-bold text-gold-400 tracking-wide">
-                      왜 위치 정보가 필요한가요?
-                    </h3>
+                    <h3 className="text-sm font-bold text-gold-400 tracking-wide">왜 위치 정보가 필요한가요?</h3>
                     <p className="text-sm text-stone-300 leading-relaxed">
-                      천지인(天地人) 분석에서{' '}
-                      <span className="text-gold-400 font-medium">地(땅)</span>는 당신이 머무는
-                      공간의 기운을 의미합니다. 집, 사무실, 출장지, 행사장... 장소가 바뀔 때마다
-                      땅의 기운도 함께 변합니다.
+                      천지인(天地人) 분석에서 <span className="text-gold-400 font-medium">地(땅)</span>는 당신이 머무는
+                      공간의 기운을 의미합니다. 집, 사무실, 출장지, 행사장... 장소가 바뀔 때마다 땅의 기운도 함께
+                      변합니다.
                     </p>
                     <p className="text-sm text-stone-400 leading-relaxed">
-                      지금 이 순간,{' '}
-                      <span className="text-stone-200 font-medium">당신이 서 있는 곳</span>이 운명의
+                      지금 이 순간, <span className="text-stone-200 font-medium">당신이 서 있는 곳</span>이 운명의
                       흐름에 영향을 줍니다. 현재 위치를 입력하시면 더욱 정밀한 분석이 가능합니다.
                     </p>
                   </div>
@@ -532,8 +517,7 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
                             availableCredits > 0 ? 'text-gold-400' : 'text-rose-400'
                           )}
                         >
-                          {availableCredits}{' '}
-                          <span className="text-xs font-normal text-stone-500">Credits</span>
+                          {availableCredits} <span className="text-xs font-normal text-stone-500">Credits</span>
                         </span>
                       )}
                     </div>
@@ -560,11 +544,7 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
               </div>
             </>
           ) : (
-            <PaymentWidget
-              memberId={selectedTargetId!}
-              homeAddress={address}
-              onCancel={() => setShowPayment(false)}
-            />
+            <PaymentWidget memberId={selectedTargetId!} homeAddress={address} onCancel={() => setShowPayment(false)} />
           )}
         </div>
 
@@ -651,11 +631,7 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
             </DialogTitle>
           </DialogHeader>
           <div className="p-2">
-            <DaumPostcode
-              onComplete={handleAddressComplete}
-              autoClose={false}
-              style={{ height: '500px' }}
-            />
+            <DaumPostcode onComplete={handleAddressComplete} autoClose={false} style={{ height: '500px' }} />
           </div>
         </DialogContent>
       </Dialog>

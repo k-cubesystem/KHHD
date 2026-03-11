@@ -5,9 +5,10 @@ import {
   getAdminMembershipPlans,
   updateMembershipPlan,
   togglePlanStatus,
+  getAllProducts,
+  updateProduct,
   type MembershipPlanAdmin,
 } from './actions'
-import { getAllPlans as getAllProducts, updatePlan as updateProduct } from '../../products/actions'
 import { PricePlan } from '@/types/auth'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -16,13 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import {
   Loader2,
@@ -58,10 +53,7 @@ export function PlanManagementClient() {
   async function loadAllData() {
     setLoading(true)
     try {
-      const [plansData, productsData] = await Promise.all([
-        getAdminMembershipPlans(),
-        getAllProducts(),
-      ])
+      const [plansData, productsData] = await Promise.all([getAdminMembershipPlans(), getAllProducts()])
       setPlans(plansData)
       setProducts(productsData)
     } catch {
@@ -87,8 +79,7 @@ export function PlanManagementClient() {
   }
 
   const isPlanEdited = (id: string) => !!editedPlans[id] && Object.keys(editedPlans[id]).length > 0
-  const isProdEdited = (id: string) =>
-    !!editedProducts[id] && Object.keys(editedProducts[id]).length > 0
+  const isProdEdited = (id: string) => !!editedProducts[id] && Object.keys(editedProducts[id]).length > 0
 
   const toggleExpand = (id: string, set: Set<string>, setter: (s: Set<string>) => void) => {
     const next = new Set(set)
@@ -225,10 +216,7 @@ export function PlanManagementClient() {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="h-20 bg-stone-900/30 rounded-xl animate-pulse border border-stone-700/30"
-          />
+          <div key={i} className="h-20 bg-stone-900/30 rounded-xl animate-pulse border border-stone-700/30" />
         ))}
       </div>
     )
@@ -258,10 +246,7 @@ export function PlanManagementClient() {
             const theme = tierTheme[plan.tier] ?? tierTheme.SINGLE
             const edited = isPlanEdited(plan.id)
             const expanded = expandedPlans.has(plan.id)
-            const features = (editedPlans[plan.id]?.features ?? plan.features ?? {}) as Record<
-              string,
-              unknown
-            >
+            const features = (editedPlans[plan.id]?.features ?? plan.features ?? {}) as Record<string, unknown>
 
             return (
               <Card
@@ -304,10 +289,7 @@ export function PlanManagementClient() {
                         복채 일일 {getPlanVal(plan, 'daily_talisman_limit') as number}만냥
                       </span>
                       <span
-                        className={cn(
-                          'text-[9px] font-bold',
-                          plan.is_active ? 'text-emerald-400' : 'text-stone-600'
-                        )}
+                        className={cn('text-[9px] font-bold', plan.is_active ? 'text-emerald-400' : 'text-stone-600')}
                       >
                         {plan.is_active ? 'LIVE' : 'OFF'}
                       </span>
@@ -353,11 +335,7 @@ export function PlanManagementClient() {
                       className="h-7 w-7 text-stone-500 hover:text-stone-300"
                       onClick={() => toggleExpand(plan.id, expandedPlans, setExpandedPlans)}
                     >
-                      {expanded ? (
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      )}
+                      {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </Button>
                   </div>
                 </div>
@@ -367,9 +345,7 @@ export function PlanManagementClient() {
                   <div className="relative border-t border-stone-700/30 p-4 space-y-4">
                     {/* 기본 정보 */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">
-                        기본 정보
-                      </p>
+                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">기본 정보</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <Label className="text-[10px] text-stone-400">플랜 이름</Label>
@@ -412,9 +388,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'sort_order') as number}
-                            onChange={(e) =>
-                              changePlan(plan.id, 'sort_order', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changePlan(plan.id, 'sort_order', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -432,20 +406,17 @@ export function PlanManagementClient() {
 
                     {/* 사용 한도 */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">
-                        사용 한도
-                      </p>
+                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">사용 한도</p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="space-y-1">
                           <Label className="text-[10px] text-stone-400 flex items-center gap-1">
-                            <Ticket className="w-2.5 h-2.5 text-gold-500" />일일 복채 지급
+                            <Ticket className="w-2.5 h-2.5 text-gold-500" />
+                            일일 복채 지급
                           </Label>
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'talismans_per_period') as number}
-                            onChange={(e) =>
-                              changePlan(plan.id, 'talismans_per_period', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changePlan(plan.id, 'talismans_per_period', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-gold-500/10 border-gold-500/30 text-gold-300 focus:border-gold-500/50"
                           />
                         </div>
@@ -457,9 +428,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'daily_talisman_limit') as number}
-                            onChange={(e) =>
-                              changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -471,9 +440,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'relationship_limit') as number}
-                            onChange={(e) =>
-                              changePlan(plan.id, 'relationship_limit', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changePlan(plan.id, 'relationship_limit', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -485,9 +452,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'storage_limit') as number}
-                            onChange={(e) =>
-                              changePlan(plan.id, 'storage_limit', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changePlan(plan.id, 'storage_limit', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                           <p className="text-[9px] text-stone-600">999 = 무제한</p>
@@ -506,9 +471,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={(features.bonus_rate as number) ?? 0}
-                            onChange={(e) =>
-                              changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -516,9 +479,7 @@ export function PlanManagementClient() {
                           <Label className="text-[10px] text-stone-400">멀티 기기 허용</Label>
                           <Select
                             value={String(features.multi_device ?? false)}
-                            onValueChange={(v) =>
-                              changeFeature(plan.id, 'multi_device', v === 'true')
-                            }
+                            onValueChange={(v) => changeFeature(plan.id, 'multi_device', v === 'true')}
                           >
                             <SelectTrigger className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200">
                               <SelectValue />
@@ -537,9 +498,7 @@ export function PlanManagementClient() {
                           <Label className="text-[10px] text-stone-400">우선 지원</Label>
                           <Select
                             value={String(features.priority_support ?? false)}
-                            onValueChange={(v) =>
-                              changeFeature(plan.id, 'priority_support', v === 'true')
-                            }
+                            onValueChange={(v) => changeFeature(plan.id, 'priority_support', v === 'true')}
                           >
                             <SelectTrigger className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200">
                               <SelectValue />
@@ -617,10 +576,7 @@ export function PlanManagementClient() {
                         복채 {getProdVal(prod, 'credits') as number}만냥
                       </span>
                       <span
-                        className={cn(
-                          'text-[9px] font-bold',
-                          prod.is_active ? 'text-emerald-400' : 'text-stone-600'
-                        )}
+                        className={cn('text-[9px] font-bold', prod.is_active ? 'text-emerald-400' : 'text-stone-600')}
                       >
                         {prod.is_active ? '판매중' : '중지'}
                       </span>
@@ -666,11 +622,7 @@ export function PlanManagementClient() {
                       className="h-7 w-7 text-stone-500 hover:text-stone-300"
                       onClick={() => toggleExpand(prod.id, expandedProducts, setExpandedProducts)}
                     >
-                      {expanded ? (
-                        <ChevronUp className="w-3.5 h-3.5" />
-                      ) : (
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      )}
+                      {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                     </Button>
                   </div>
                 </div>
@@ -680,9 +632,7 @@ export function PlanManagementClient() {
                   <div className="relative border-t border-stone-700/30 p-4 space-y-4">
                     {/* 기본 필드 */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">
-                        상품 정보
-                      </p>
+                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">상품 정보</p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="sm:col-span-2 space-y-1">
                           <Label className="text-[10px] text-stone-400">상품명</Label>
@@ -715,9 +665,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getProdVal(prod, 'credits') as number}
-                            onChange={(e) =>
-                              changeProd(prod.id, 'credits', parseInt(e.target.value))
-                            }
+                            onChange={(e) => changeProd(prod.id, 'credits', parseInt(e.target.value))}
                             className="h-8 text-xs font-mono bg-gold-500/10 border-gold-500/30 text-gold-300 focus:border-gold-500/50"
                           />
                         </div>
@@ -749,9 +697,7 @@ export function PlanManagementClient() {
                       </div>
                       <div className="space-y-2">
                         {featureList.length === 0 ? (
-                          <p className="text-[10px] text-stone-600 py-2 text-center">
-                            기능 목록이 없습니다.
-                          </p>
+                          <p className="text-[10px] text-stone-600 py-2 text-center">기능 목록이 없습니다.</p>
                         ) : (
                           featureList.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-2">

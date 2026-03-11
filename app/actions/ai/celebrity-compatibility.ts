@@ -5,6 +5,7 @@ import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { createClient } from '@/lib/supabase/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MODEL_PRO } from '@/lib/config/ai-models'
+import { logger } from '@/lib/utils/logger'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? '')
 
@@ -54,7 +55,7 @@ export async function getBusinessPartnerCandidates(): Promise<{
 
     return { success: true, me, partners }
   } catch (e) {
-    console.error('[BusinessPartnerCandidates]', e)
+    logger.error('[BusinessPartnerCandidates]', e)
     return { success: false, error: '데이터 조회 중 오류가 발생했습니다.' }
   }
 }
@@ -166,7 +167,7 @@ export async function calculateBusinessCompatibilityAction(partnerId: string): P
       const aiResult = await model.generateContent(prompt)
       aiAnalysis = aiResult.response.text()
     } catch (aiError) {
-      console.error('[BusinessCompatibility AI]', aiError)
+      logger.error('[BusinessCompatibility AI]', aiError)
       aiAnalysis = ''
     }
 
@@ -179,7 +180,7 @@ export async function calculateBusinessCompatibilityAction(partnerId: string): P
       myName: me.name ?? '나',
     }
   } catch (e) {
-    console.error('[BusinessCompatibility]', e)
+    logger.error('[BusinessCompatibility]', e)
     return { success: false, error: '사업 궁합 계산 중 오류가 발생했습니다.' }
   }
 }

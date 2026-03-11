@@ -1,6 +1,7 @@
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { MobileHeader } from '@/components/mobile-header'
+import { OpenEventPopup } from '@/components/events/open-event-popup'
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,9 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
+
+      {/* Open Event Popup */}
+      <OpenEventPopup />
     </div>
   )
 }

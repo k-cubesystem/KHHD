@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
+import { logger } from '@/lib/utils/logger'
 import { GuestCTACard } from '@/components/guest-cta-card'
 import { toast } from 'sonner'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
@@ -83,9 +84,9 @@ export function WealthAnalysisContent() {
       } else {
         throw new Error(result.error || '분석에 실패했습니다.')
       }
-    } catch (error: any) {
-      console.error('Failed to analyze wealth:', error)
-      toast.error(error.message || '재물운 분석 중 오류가 발생했습니다.')
+    } catch (error: unknown) {
+      logger.error('Failed to analyze wealth:', error)
+      toast.error(error instanceof Error ? error.message : '재물운 분석 중 오류가 발생했습니다.')
     } finally {
       setAnalyzing(false)
     }

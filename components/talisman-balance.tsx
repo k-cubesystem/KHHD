@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { logger } from '@/lib/utils/logger'
 import Link from 'next/link'
 import { Loader2, Coins } from 'lucide-react'
 
@@ -18,7 +19,7 @@ export function TalismanBalance() {
       const bal = await getWalletBalance()
       setBalance(bal)
     } catch (error) {
-      console.error('Failed to load balance:', error)
+      logger.error('Failed to load balance:', error)
       setBalance(0)
     } finally {
       setLoading(false)

@@ -8,6 +8,7 @@ import { Heart, Sparkles, Share2, ArrowLeft, Loader2, Users } from 'lucide-react
 import { getFamilyMembers } from '@/app/actions/user/family'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { calculateCompatibilityScore } from '@/lib/domain/compatibility/compatibility'
+import { logger } from '@/lib/utils/logger'
 
 function CompatibilityContent() {
   const searchParams = useSearchParams()
@@ -30,16 +31,8 @@ function CompatibilityContent() {
           const m2 = data.find((m: any) => m.id === target2Id)
 
           if (m1 && m2) {
-            const s1 = getSajuData(
-              m1.birth_date,
-              m1.birth_time || '00:00',
-              m1.calendar_type === 'solar'
-            )
-            const s2 = getSajuData(
-              m2.birth_date,
-              m2.birth_time || '00:00',
-              m2.calendar_type === 'solar'
-            )
+            const s1 = getSajuData(m1.birth_date, m1.birth_time || '00:00', m1.calendar_type === 'solar')
+            const s2 = getSajuData(m2.birth_date, m2.birth_time || '00:00', m2.calendar_type === 'solar')
             const res = calculateCompatibilityScore(s1, s2)
 
             // Simulate analyzing delay for effect
@@ -47,7 +40,7 @@ function CompatibilityContent() {
           }
         }
       } catch (e) {
-        console.error(e)
+        logger.error(e)
       } finally {
         setLoading(false)
       }
@@ -65,9 +58,7 @@ function CompatibilityContent() {
           <Heart className="w-16 h-16 text-primary animate-pulse opacity-50" />
           <Loader2 className="absolute inset-0 w-16 h-16 text-primary-dim animate-spin m-auto" />
         </div>
-        <h2 className="text-2xl font-serif font-bold text-ink-light">
-          두 운명의 조화를 읽고 있습니다...
-        </h2>
+        <h2 className="text-2xl font-serif font-bold text-ink-light">두 운명의 조화를 읽고 있습니다...</h2>
         <p className="text-ink/60 font-sans">오행의 생극제화와 간지의 합충을 분석 중입니다.</p>
       </div>
     )
@@ -141,12 +132,10 @@ function CompatibilityContent() {
           </div>
 
           <div className="max-w-xl mx-auto space-y-4">
-            <h3 className="text-2xl font-serif font-bold text-ink-light">
-              &quot;{result.comment}&quot;
-            </h3>
+            <h3 className="text-2xl font-serif font-bold text-ink-light">&quot;{result.comment}&quot;</h3>
             <p className="text-ink/60 leading-relaxed font-sans">
-              두 분의 사주에서 나타나는 오행의 흐름이 위와 같은 조화를 이루고 있습니다. (더 상세한
-              분석 로직은 추후 업데이트될 예정입니다.)
+              두 분의 사주에서 나타나는 오행의 흐름이 위와 같은 조화를 이루고 있습니다. (더 상세한 분석 로직은 추후
+              업데이트될 예정입니다.)
             </p>
           </div>
 

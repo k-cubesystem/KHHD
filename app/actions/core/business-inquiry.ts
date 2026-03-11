@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 export interface BusinessInquiryFormData {
   company_name: string
@@ -55,13 +56,13 @@ export async function submitBusinessInquiry(formData: BusinessInquiryFormData): 
     })
 
     if (error) {
-      console.error('[business-inquiry] DB insert error:', error)
+      logger.error('[business-inquiry] DB insert error:', error)
       return { success: false, error: '문의 접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
     }
 
     return { success: true }
   } catch (err) {
-    console.error('[business-inquiry] Unexpected error:', err)
+    logger.error('[business-inquiry] Unexpected error:', err)
     return { success: false, error: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
   }
 }

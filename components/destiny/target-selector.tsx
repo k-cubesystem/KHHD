@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, User, Users, Heart, Briefcase, UserPlus } from 'lucide-react'
 import Link from 'next/link'
@@ -34,12 +35,7 @@ interface TargetSelectorProps {
  * - "새로운 인연 등록" 링크 제공
  * - Midnight in Cheongdam 디자인 시스템 준수
  */
-export function TargetSelector({
-  isOpen,
-  onClose,
-  onSelect,
-  selectedTargetId,
-}: TargetSelectorProps) {
+export function TargetSelector({ isOpen, onClose, onSelect, selectedTargetId }: TargetSelectorProps) {
   const [targets, setTargets] = useState<DestinyTarget[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -55,7 +51,7 @@ export function TargetSelector({
       const data = await getDestinyTargets()
       setTargets(data)
     } catch (error) {
-      console.error('Failed to load destiny targets:', error)
+      logger.error('Failed to load destiny targets:', error)
     } finally {
       setLoading(false)
     }
@@ -68,18 +64,9 @@ export function TargetSelector({
 
   const getRelationIcon = (relationType: string, targetType: string) => {
     if (targetType === 'self') return User
-    if (
-      relationType.includes('가족') ||
-      relationType.includes('부모') ||
-      relationType.includes('자녀')
-    )
-      return Users
+    if (relationType.includes('가족') || relationType.includes('부모') || relationType.includes('자녀')) return Users
     if (relationType.includes('연인') || relationType.includes('배우자')) return Heart
-    if (
-      relationType.includes('직장') ||
-      relationType.includes('동료') ||
-      relationType.includes('상사')
-    )
+    if (relationType.includes('직장') || relationType.includes('동료') || relationType.includes('상사'))
       return Briefcase
     return UserPlus
   }
@@ -113,9 +100,7 @@ export function TargetSelector({
 
               {/* Title */}
               <div className="flex items-center justify-between mt-2">
-                <h2 className="text-lg font-serif font-bold text-ink-light">
-                  누구의 운명을 보시겠습니까?
-                </h2>
+                <h2 className="text-lg font-serif font-bold text-ink-light">누구의 운명을 보시겠습니까?</h2>
                 <button
                   onClick={onClose}
                   className="w-8 h-8 rounded-full bg-surface/50 hover:bg-surface flex items-center justify-center transition-colors"
@@ -131,10 +116,7 @@ export function TargetSelector({
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 p-4 bg-surface/30 rounded-xl animate-pulse"
-                    >
+                    <div key={i} className="flex items-center gap-3 p-4 bg-surface/30 rounded-xl animate-pulse">
                       <div className="w-12 h-12 bg-surface rounded-full" />
                       <div className="flex-1 space-y-2">
                         <div className="h-4 bg-surface rounded w-1/3" />
@@ -213,12 +195,7 @@ export function TargetSelector({
                               viewBox="0 0 24 24"
                               stroke="currentColor"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
                         )}

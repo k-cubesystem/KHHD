@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 // RLS를 우회해 attendance_logs를 안전하게 조회하기 위한 admin client
 function createAdminClient() {
@@ -124,17 +125,17 @@ export async function checkInAttendance() {
       .maybeSingle()
 
     if (!existingWallet) {
-      console.log(`[Attendance] Creating wallet for user ${user.id}`)
+      logger.log(`[Attendance] Creating wallet for user ${user.id}`)
       const { error: walletCreateError } = await supabase.from('wallets').insert({ user_id: user.id, balance: 0 })
 
       if (walletCreateError) {
-        console.error('[Attendance] Failed to create wallet:', walletCreateError)
+        logger.error('[Attendance] Failed to create wallet:', walletCreateError)
         throw new Error(`지갑 생성 실패: ${walletCreateError.message}`)
       }
     }
 
     // 2. 출석 기록 저장
-    console.log(`[Attendance] Inserting attendance log...`)
+    logger.log(`[Attendance] Inserting attendance log...`)
     const { error: insertError } = await supabase.from('attendance_logs').insert({
       user_id: user.id,
       checked_date: todayStr,
@@ -144,14 +145,14 @@ export async function checkInAttendance() {
     })
 
     if (insertError) {
-      console.error('[Attendance] Failed to insert attendance log:', insertError)
+      logger.error('[Attendance] Failed to insert attendance log:', insertError)
       throw new Error(`출석 기록 실패: ${insertError.message}`)
     }
 
-    console.log(`[Attendance] Attendance log inserted successfully`)
+    logger.log(`[Attendance] Attendance log inserted successfully`)
 
     // 3. 복채 지급 - RPC 함수 사용
-    console.log(`[Attendance] Crediting ${totalReward} bokchae via RPC...`)
+    logger.log(`[Attendance] Crediting ${totalReward} bokchae via RPC...`)
     const { data: rpcResult, error: rpcError } = await supabase.rpc('add_bokchae', {
       p_user_id: user.id,
       p_amount: totalReward,
@@ -161,7 +162,7 @@ export async function checkInAttendance() {
     })
 
     if (rpcError) {
-      console.warn('[Attendance] RPC add_bokchae failed, using direct method:', rpcError)
+      logger.warn('[Attendance] RPC add_bokchae failed, using direct method:', rpcError)
 
       // RPC 실패 시 직접 처리
       const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
@@ -169,7 +170,7 @@ export async function checkInAttendance() {
       const currentBalance = wallet?.balance || 0
       const newBalance = currentBalance + totalReward
 
-      console.log(`[Attendance] Direct credit: ${currentBalance} -> ${newBalance}`)
+      logger.log(`[Attendance] Direct credit: ${currentBalance} -> ${newBalance}`)
 
       const { error: updateError } = await supabase
         .from('wallets')
@@ -177,7 +178,7 @@ export async function checkInAttendance() {
         .eq('user_id', user.id)
 
       if (updateError) {
-        console.error('[Attendance] Failed to update wallet:', updateError)
+        logger.error('[Attendance] Failed to update wallet:', updateError)
         throw new Error(`복채 지급 실패: ${updateError.message}`)
       }
 
@@ -191,17 +192,17 @@ export async function checkInAttendance() {
       })
 
       if (txError) {
-        console.error('[Attendance] Failed to record transaction:', txError)
+        logger.error('[Attendance] Failed to record transaction:', txError)
         // 트랜잭션 기록 실패는 치명적이지 않으므로 warning만
       }
     } else {
-      console.log(`[Attendance] RPC add_bokchae succeeded:`, rpcResult)
+      logger.log(`[Attendance] RPC add_bokchae succeeded:`, rpcResult)
     }
 
     // 4. 최종 검증: 복채가 실제로 지급되었는지 확인
     const { data: finalWallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
 
-    console.log(`[Attendance] Final wallet balance: ${finalWallet?.balance}`)
+    logger.log(`[Attendance] Final wallet balance: ${finalWallet?.balance}`)
 
     return {
       success: true,
@@ -214,11 +215,12 @@ export async function checkInAttendance() {
         ? `주간 출석 완료! 복채 ${totalReward}만냥 (보너스 포함) 지급! 💰`
         : `출석 체크 완료! 복채 ${totalReward}만냥 지급! 💰`,
     }
-  } catch (error: any) {
-    console.error('[Attendance] Critical error:', error)
+  } catch (error: unknown) {
+    logger.error('[Attendance] Critical error:', error)
+    const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,
-      error: error?.message || '출석 체크 중 오류가 발생했습니다.',
+      error: msg,
     }
   }
 }

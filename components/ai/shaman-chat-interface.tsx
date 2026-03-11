@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -316,7 +317,7 @@ export function ShamanChatInterface() {
         // DB 저장 (비동기, 실패해도 UI에 영향 없음)
         if (sessionId) {
           saveChatMessages(sessionId, userMsg, aiMsg, messages.length === 0).catch((e) =>
-            console.error('[saveChatMessages]', e)
+            logger.error('[saveChatMessages]', e)
           )
         }
 

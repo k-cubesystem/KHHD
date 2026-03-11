@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AdminLayoutClient } from '@/components/admin/admin-layout-client'
-import { LayoutDashboard, Users, CreditCard, Package, Bell, Sparkles } from 'lucide-react'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -21,17 +20,27 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   const menuItems = [
+    // 운영 관리
     { href: '/admin', label: '대시보드', icon: 'LayoutDashboard' },
+    { type: 'divider' as const, label: '운영 관리' },
     { href: '/admin/users', label: '회원 관리', icon: 'Users' },
     { href: '/admin/payments', label: '결제 내역', icon: 'CreditCard' },
-    { href: '/admin/membership/plans', label: '스토어/복채 관리', icon: 'Package' },
-    { href: '/admin/roulette', label: '룰렛 확률 관리', icon: 'Sparkles' },
-    { href: '/admin/features', label: '기능별 복채 소모량', icon: 'Sparkles' },
-    { href: '/admin/notifications', label: '알림 및 자동화', icon: 'Bell' },
-    { href: '/admin/prompts', label: 'AI 프롬프트 관리', icon: 'Sparkles' },
-    { href: '/admin/saju-engine', label: '해화지기 사주 엔진', icon: 'Brain' },
-    { href: '/admin/service-control', label: '서비스 키/스위치', icon: 'Power' },
+    { href: '/admin/subscriptions', label: '구독 관리', icon: 'CreditCard' },
+    { href: '/admin/membership/plans', label: '멤버십/스토어', icon: 'Package' },
+    // AI & 콘텐츠
+    { type: 'divider' as const, label: 'AI & 콘텐츠' },
+    { href: '/admin/prompts', label: 'AI 프롬프트', icon: 'Sparkles' },
+    { href: '/admin/saju-engine', label: '사주 엔진', icon: 'Brain' },
+    // 이벤트 & 마케팅
+    { type: 'divider' as const, label: '이벤트 & 마케팅' },
+    { href: '/admin/roulette', label: '룰렛 확률', icon: 'Sparkles' },
+    { href: '/admin/features', label: '기능별 복채', icon: 'Sparkles' },
+    { href: '/admin/notifications', label: '알림 자동화', icon: 'Bell' },
+    // 시스템
+    { type: 'divider' as const, label: '시스템' },
+    { href: '/admin/service-control', label: '서비스 제어', icon: 'Power' },
     { href: '/admin/monitoring', label: '모니터링', icon: 'Activity' },
+    { href: '/admin/gemini-usage', label: 'Gemini 사용량', icon: 'Activity' },
   ]
 
   return <AdminLayoutClient menuItems={menuItems}>{children}</AdminLayoutClient>

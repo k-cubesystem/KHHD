@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/actions/user/family'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
@@ -65,7 +66,7 @@ export default function FamilyPage() {
       const data = await getFamilyWithMissions()
       setMembers(data)
     } catch (error) {
-      console.error('Fetch Error:', error)
+      logger.error('Fetch Error:', error)
       toast.error('데이터를 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
@@ -84,8 +85,8 @@ export default function FamilyPage() {
         fetchMembers()
         setIsFormOpen(false)
         setSelectedAvatarId(undefined)
-      } catch (error: any) {
-        toast.error(error.message)
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : String(error))
       }
     })
   }
@@ -101,8 +102,8 @@ export default function FamilyPage() {
         fetchMembers()
         setEditingMember(null)
         setSelectedAvatarId(undefined)
-      } catch (error: any) {
-        toast.error(error.message)
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : String(error))
       }
     })
   }
@@ -115,8 +116,8 @@ export default function FamilyPage() {
         await deleteFamilyMember(id)
         toast.success('인연 정보가 삭제되었습니다.')
         fetchMembers()
-      } catch (error: any) {
-        toast.error(error.message)
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : String(error))
       }
     })
   }

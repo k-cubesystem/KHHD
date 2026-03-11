@@ -82,8 +82,9 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
         failUrl: `${window.location.origin}/protected/analysis/fail`,
         windowTarget: 'self',
       })
-    } catch (error: any) {
-      toast.error(error.message || '결제 준비 중 오류가 발생했습니다.')
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      toast.error(msg)
       setLoadingPlan(null)
     }
   }

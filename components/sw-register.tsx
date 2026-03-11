@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Registers the service worker (public/sw.js) once the page has loaded.
@@ -27,7 +28,7 @@ export function SWRegister() {
           })
         })
       } catch (err) {
-        console.warn('[SW] Registration failed:', err)
+        logger.warn('[SW] Registration failed:', err)
       }
     }
 

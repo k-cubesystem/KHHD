@@ -50,11 +50,7 @@ export function RevenueChart({ data }: { data: DailyRevenue[] }) {
           axisLine={false}
           tickFormatter={(v) => (v >= 10000 ? `${Math.round(v / 10000)}만` : String(v))}
         />
-        <Tooltip
-          contentStyle={tooltipStyle}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={((value: number) => [`${value.toLocaleString()}원`, '매출']) as any}
-        />
+        <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${Number(value).toLocaleString()}원`, '매출']} />
         <Bar dataKey="매출" fill="#c9a96e" radius={[3, 3, 0, 0]} maxBarSize={20} />
       </BarChart>
     </ResponsiveContainer>
@@ -111,8 +107,7 @@ export function CategoryPieChart({ data }: { data: CategoryStat[] }) {
           outerRadius={85}
           paddingAngle={3}
           dataKey="value"
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+          label={({ name, percent }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
           labelLine={false}
         >
           {chartData.map((_, idx) => (
@@ -121,8 +116,7 @@ export function CategoryPieChart({ data }: { data: CategoryStat[] }) {
         </Pie>
         <Tooltip
           contentStyle={tooltipStyle}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={((value: number) => [`${value.toLocaleString()}건`, '분석 수']) as any}
+          formatter={(value) => [`${Number(value).toLocaleString()}건`, '분석 수']}
         />
       </PieChart>
     </ResponsiveContainer>
@@ -166,11 +160,7 @@ export function LatencyChart({ data }: { data: GeminiStats['avgLatencyByType'] }
           axisLine={false}
           width={55}
         />
-        <Tooltip
-          contentStyle={tooltipStyle}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={((value: number) => [`${value}ms`, '평균 응답시간']) as any}
-        />
+        <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${value}ms`, '평균 응답시간']} />
         <Bar dataKey="ms" fill="#9b8fc2" radius={[0, 3, 3, 0]} maxBarSize={18} />
       </BarChart>
     </ResponsiveContainer>

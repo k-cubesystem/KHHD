@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Loader2, MessageCircle, Share2, Sparkles, RefreshCw, Users, ArrowRight } from 'lucide-react'
@@ -55,7 +56,7 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
       }))
       setProfiles([{ id: userId, name: userName, type: 'USER' }, ...familyOptions])
     } catch (e) {
-      console.error('Failed to load family:', e)
+      logger.error('Failed to load family:', e)
     }
   }
 
@@ -78,7 +79,7 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
         }
       }
     } catch (e) {
-      console.error(e)
+      logger.error(e)
       toast.error('오류가 발생했습니다.')
     } finally {
       setLoading(false)
@@ -103,8 +104,8 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
           toast.error('발송 실패: ' + result.error)
         }
       }
-    } catch (e: any) {
-      toast.error(e.message)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e))
     } finally {
       setSending(false)
     }

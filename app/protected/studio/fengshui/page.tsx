@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
+import { logger } from '@/lib/utils/logger'
 import {
   analyzeInteriorForFengshui,
   type InteriorAnalysisResult,
@@ -138,7 +139,7 @@ function FengShuiAnalysisPageContent() {
 
       setStep('result')
     } catch (error) {
-      console.error('Feng shui analysis error:', error)
+      logger.error('Feng shui analysis error:', error)
       toast.error('분석 중 예상치 못한 오류가 발생했습니다.')
       setStep('upload')
     } finally {

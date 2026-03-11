@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generateDailyFortune } from '@/app/actions/fortune/daily'
 import { sendKakaoNotification } from '@/app/actions/fortune/notification'
+import { logger } from '@/lib/utils/logger'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow 1 minute execution
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest) {
         // We'll assume the template takes #{content} variable.
         const sendResult = await sendKakaoNotification(sub.user_id, templateId, {
           content: genResult.content.substring(0, 100) + '...', // Truncate for preview
-          link: `https://haehwadang.com/protected/analysis?tab=daily`, // Deep link
+          link: `${SITE_URL}/protected/analysis?tab=daily`, // Deep link
         })
 
         if (sendResult.success) results.sent++
@@ -85,7 +88,7 @@ export async function GET(req: NextRequest) {
 
       results.generated++
     } catch (err) {
-      console.error(`Error processing user ${sub.user_id}:`, err)
+      logger.error(`Error processing user ${sub.user_id}:`, err)
       results.errors++
     }
   })

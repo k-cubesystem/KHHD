@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { nanoid } from 'nanoid'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { logger } from '@/lib/utils/logger'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -66,7 +67,7 @@ export async function createInviteCode(userId: string): Promise<{ success: boole
 
   // If invites table doesn't exist, just return the code with encoded data
   if (insertError) {
-    console.log('Invites table may not exist, using encoded method:', insertError.message)
+    logger.log('Invites table may not exist, using encoded method:', insertError.message)
     // Fallback: encode data in URL-safe base64
     const inviteData = {
       id: userId,
@@ -173,7 +174,7 @@ export async function analyzeCompatibility(
 
     return { success: false, error: '궁합 데이터 파싱 실패' }
   } catch (error: unknown) {
-    console.error('Compatibility Analysis Error:', error)
+    logger.error('Compatibility Analysis Error:', error)
     const errorMessage = error instanceof Error ? error.message : '궁합 분석 중 오류가 발생했습니다.'
     return {
       success: false,

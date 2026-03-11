@@ -5,6 +5,7 @@ import { addTalismans } from './wallet'
 import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
@@ -76,7 +77,7 @@ function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
-    console.error('[Subscription] Missing Supabase Admin credentials')
+    logger.error('[Subscription] Missing Supabase Admin credentials')
     return null
   }
   return createServerClient(url, key, {
@@ -109,13 +110,13 @@ export async function getMembershipPlans(): Promise<MembershipPlan[]> {
       .order('sort_order', { ascending: true })
 
     if (error) {
-      console.error('[Subscription] Get plans error:', error.message)
+      logger.error('[Subscription] Get plans error:', error.message)
       return []
     }
 
     return data || []
   } catch (e) {
-    console.error('[Subscription] getMembershipPlans exception:', e)
+    logger.error('[Subscription] getMembershipPlans exception:', e)
     return []
   }
 }
@@ -128,13 +129,13 @@ export async function getMembershipPlan(planId: string): Promise<MembershipPlan 
     const { data, error } = await supabase.from('membership_plans').select('*').eq('id', planId).single()
 
     if (error) {
-      console.error('[Subscription] Get plan error:', error)
+      logger.error('[Subscription] Get plan error:', error)
       return null
     }
 
     return data
   } catch (e) {
-    console.error('[Subscription] getMembershipPlan exception:', e)
+    logger.error('[Subscription] getMembershipPlan exception:', e)
     return null
   }
 }
@@ -190,7 +191,7 @@ export async function getSubscriptionStatus(): Promise<{
       plan: (subscription.plan ?? null) as MembershipPlan | null,
     }
   } catch (e) {
-    console.error('[Subscription] getSubscriptionStatus exception:', e)
+    logger.error('[Subscription] getSubscriptionStatus exception:', e)
     return { isSubscribed: false, subscription: null, plan: null }
   }
 }
@@ -295,7 +296,7 @@ export async function issueBillingKey(
   const result = await response.json()
 
   if (!response.ok) {
-    console.error('[Subscription] Issue billing key error:', result)
+    logger.error('[Subscription] Issue billing key error:', result)
     return {
       success: false,
       error: result.message || '빌링키 발급에 실패했습니다.',
@@ -314,7 +315,7 @@ export async function issueBillingKey(
     .eq('user_id', user.id)
 
   if (updateError) {
-    console.error('[Subscription] Update billing key error:', updateError)
+    logger.error('[Subscription] Update billing key error:', updateError)
     return { success: false, error: '빌링키 저장에 실패했습니다.' }
   }
 
@@ -386,7 +387,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   const nextBilling = new Date(periodEnd)
 
   if (!response.ok) {
-    console.error('[Subscription] First payment error:', result)
+    logger.error('[Subscription] First payment error:', result)
 
     // 결제 실패 기록
     await supabase.from('subscription_payments').insert({
@@ -443,7 +444,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     `${plan.name} 구독 - 부적 ${plan.talismans_per_period}장 지급`
   )
 
-  console.log('[Subscription] First payment success:', orderId)
+  logger.log('[Subscription] First payment success:', orderId)
 
   return {
     success: true,
@@ -638,11 +639,11 @@ export async function cancelSubscription(reason?: string): Promise<{
     .eq('id', subscription.id)
 
   if (updateError) {
-    console.error('[Subscription] Cancel error:', updateError)
+    logger.error('[Subscription] Cancel error:', updateError)
     return { success: false, error: '구독 해지에 실패했습니다.' }
   }
 
-  console.log('[Subscription] Cancelled:', subscription.id)
+  logger.log('[Subscription] Cancelled:', subscription.id)
 
   return { success: true }
 }
@@ -717,7 +718,7 @@ export async function getSubscriptionPayments(limit: number = 10): Promise<Subsc
     if (error) {
       // Only log in development mode
       if (process.env.NODE_ENV === 'development') {
-        console.warn(
+        logger.warn(
           "[Subscription] Could not fetch payment history. This is expected if migrations haven't been run yet."
         )
       }

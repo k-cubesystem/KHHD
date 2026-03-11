@@ -12,6 +12,7 @@ import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-buil
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 export interface Year2026Result {
   name: string
@@ -153,7 +154,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       model_used: MODEL_FLASH,
       talisman_cost: 0,
     }).catch((e) => {
-      console.error('History Save Error:', e)
+      logger.error('History Save Error:', e)
       return { success: false }
     })
 
@@ -168,7 +169,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
 
     return { success: true, data }
   } catch (error) {
-    console.error('[Year2026Action] Error:', error)
+    logger.error('[Year2026Action] Error:', error)
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }

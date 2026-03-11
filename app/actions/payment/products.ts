@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PricePlan, UserRole } from '@/types/auth'
 import { revalidatePath } from 'next/cache'
 import { createServerClient } from '@supabase/ssr'
+import { logger } from '@/lib/utils/logger'
 
 // Helper to create Admin Client (Service Role)
 function createAdminClient() {
@@ -11,7 +12,7 @@ function createAdminClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !serviceRoleKey) {
-    console.warn('[Products] Missing Supabase Admin credentials. Admin features will be disabled.')
+    logger.warn('[Products] Missing Supabase Admin credentials. Admin features will be disabled.')
     return null
   }
 
@@ -48,7 +49,7 @@ export async function getActivePlans(): Promise<PricePlan[]> {
     .order('price', { ascending: true })
 
   if (error) {
-    console.error('[Products] Fetch error:', error)
+    logger.error('[Products] Fetch error:', error)
     return []
   }
 
@@ -113,7 +114,7 @@ export async function addTestCredits(amount: number = 10) {
   })
 
   if (logError) {
-    console.error('[TestCharge] Log failed:', logError)
+    logger.error('[TestCharge] Log failed:', logError)
     // 로그 실패해도 지갑 충전 계속 진행
   }
 
@@ -127,7 +128,7 @@ export async function addTestCredits(amount: number = 10) {
     .upsert({ user_id: userId, balance: currentBalance + amount })
 
   if (walletError) {
-    console.error('[TestCharge] Wallet update failed:', walletError)
+    logger.error('[TestCharge] Wallet update failed:', walletError)
     return { success: false, error: '복채 충전 실패' }
   }
 

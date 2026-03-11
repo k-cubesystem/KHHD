@@ -15,6 +15,7 @@ import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * 천지인 분석 서버 액션
@@ -74,7 +75,7 @@ export async function analyzeCheonjiinAction(
       const cached = await getCachedAnalysis(user.id, targetId, 'SAJU', 24)
 
       if (cached && isCacheValid(cached, 24)) {
-        console.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
+        logger.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
         // checkOnly면 캐시 확인만 하고 반환
         if (checkOnly) {
           return { success: true, data: cached.result_json, cached: true, cacheDate: cached.created_at }
@@ -182,8 +183,8 @@ export async function analyzeCheonjiinAction(
     }
 
     return { success: true, data: result, cached: false }
-  } catch (error) {
-    console.error('[CheonjiinAnalysis] Error:', error)
+  } catch (error: unknown) {
+    logger.error('[CheonjiinAnalysis] Error:', error)
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }
@@ -202,8 +203,9 @@ async function getWorkAddress(userId: string): Promise<string | null> {
 /**
  * 최근 7일 이내 분석 결과 조회 (캐시)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getRecentAnalysis(targetId: string): Promise<{ data: any; date: string | null }> {
+async function getRecentAnalysis(
+  targetId: string
+): Promise<{ data: Record<string, unknown> | null; date: string | null }> {
   const supabase = await createClient()
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
@@ -233,7 +235,7 @@ async function getCheonjiinSystemPrompt(): Promise<string | null> {
     const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', 'cheonjiin_analysis').single()
     return data?.template || null
   } catch (e) {
-    console.warn('[CheonjiinAnalysis] DB 프롬프트 로드 실패:', e)
+    logger.warn('[CheonjiinAnalysis] DB 프롬프트 로드 실패:', e)
     return null
   }
 }
@@ -281,7 +283,7 @@ async function resolveImagePart(
     try {
       const response = await fetch(imageUrl)
       if (!response.ok) {
-        console.warn('[CheonjiinAnalysis] 이미지 fetch 실패:', response.status, imageUrl)
+        logger.warn('[CheonjiinAnalysis] 이미지 fetch 실패:', response.status, imageUrl)
         return null
       }
       const mimeType = response.headers.get('content-type') || 'image/jpeg'
@@ -289,7 +291,7 @@ async function resolveImagePart(
       const data = Buffer.from(buffer).toString('base64')
       return { mimeType, data }
     } catch (err) {
-      console.warn('[CheonjiinAnalysis] 이미지 fetch 오류:', err)
+      logger.warn('[CheonjiinAnalysis] 이미지 fetch 오류:', err)
       return null
     }
   }
@@ -303,7 +305,7 @@ async function resolveImagePart(
 
 async function analyzeCheonjiinWithAI(
   promptText: string,
-  target: any,
+  target: NonNullable<Awaited<ReturnType<typeof getDestinyTarget>>>,
   faceImagePart?: { mimeType: string; data: string } | null,
   handImagePart?: { mimeType: string; data: string } | null,
   userId?: string
@@ -319,18 +321,17 @@ async function analyzeCheonjiinWithAI(
     generationConfig: { responseMimeType: 'application/json' },
   })
 
-  console.log('[CheonjiinAnalysis] AI 분석 시작...')
+  logger.log('[CheonjiinAnalysis] AI 분석 시작...')
 
   // 멀티모달 Parts 구성: 텍스트 + 이미지(있는 경우)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parts: any[] = [{ text: promptText }]
+  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: promptText }]
   if (faceImagePart) {
     parts.push({ inlineData: faceImagePart })
-    console.log('[CheonjiinAnalysis] 관상 이미지 첨부됨')
+    logger.log('[CheonjiinAnalysis] 관상 이미지 첨부됨')
   }
   if (handImagePart) {
     parts.push({ inlineData: handImagePart })
-    console.log('[CheonjiinAnalysis] 손금 이미지 첨부됨')
+    logger.log('[CheonjiinAnalysis] 손금 이미지 첨부됨')
   }
 
   const result = await withGeminiRateLimit(() => model.generateContent({ contents: [{ role: 'user', parts }] }), {
@@ -356,7 +357,7 @@ async function analyzeCheonjiinWithAI(
     talisman_cost: 3,
   })
 
-  console.log('[CheonjiinAnalysis] AI 분석 완료')
+  logger.log('[CheonjiinAnalysis] AI 분석 완료')
 
   return data
 }

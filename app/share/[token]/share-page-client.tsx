@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { createBrowserClient } from '@supabase/ssr'
 import type { AnalysisHistory } from '@/app/actions/user/history'
 import { Button } from '@/components/ui/button'
@@ -516,7 +517,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
         })
 
         if (error) {
-          console.error('RPC Error:', error)
+          logger.error('RPC Error:', error)
           setError('데이터를 불러오는 중 오류가 발생했습니다.')
           return
         }
@@ -528,7 +529,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
 
         setRecord(data[0] as AnalysisHistory)
       } catch (err) {
-        console.error('Unexpected error:', err)
+        logger.error('Unexpected error:', err)
         setError('알 수 없는 오류가 발생했습니다.')
       } finally {
         setIsLoading(false)

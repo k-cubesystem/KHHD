@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { logger } from '@/lib/utils/logger'
 
 export interface MembershipPlanAdmin {
   id: string
@@ -51,7 +52,7 @@ export async function getAdminMembershipPlans(): Promise<MembershipPlanAdmin[]> 
     .order('sort_order', { ascending: true })
 
   if (error) {
-    console.error('Error fetching plans:', error)
+    logger.error('Error fetching plans:', error)
     throw new Error('Failed to fetch plans')
   }
 
@@ -90,7 +91,7 @@ export async function updateMembershipPlan(
     .eq('id', planId)
 
   if (error) {
-    console.error('Error updating plan:', error)
+    logger.error('Error updating plan:', error)
     return { success: false, error: error.message }
   }
 
@@ -109,11 +110,7 @@ export async function togglePlanStatus(planId: string) {
   const adminSupabase = createAdminClient()
 
   // Get current status
-  const { data: plan } = await adminSupabase
-    .from('membership_plans')
-    .select('is_active')
-    .eq('id', planId)
-    .single()
+  const { data: plan } = await adminSupabase.from('membership_plans').select('is_active').eq('id', planId).single()
 
   if (!plan) {
     return { success: false, error: 'Plan not found' }
@@ -126,7 +123,7 @@ export async function togglePlanStatus(planId: string) {
     .eq('id', planId)
 
   if (error) {
-    console.error('Error toggling plan status:', error)
+    logger.error('Error toggling plan status:', error)
     return { success: false, error: error.message }
   }
 
@@ -134,4 +131,25 @@ export async function togglePlanStatus(planId: string) {
   revalidatePath('/protected/membership')
 
   return { success: true, newStatus: !plan.is_active }
+}
+
+// ── Product (Price Plans) Actions ──────────────────────────
+
+export async function getAllProducts(): Promise<import('@/types/auth').PricePlan[]> {
+  await checkAdmin()
+  const dbClient = createAdminClient()
+  const { data, error } = await dbClient.from('price_plans').select('*').order('price', { ascending: true })
+  if (error) throw new Error(error.message)
+  return data as import('@/types/auth').PricePlan[]
+}
+
+export async function updateProduct(id: string, updates: Partial<import('@/types/auth').PricePlan>) {
+  await checkAdmin()
+  const dbClient = createAdminClient()
+  const { error } = await dbClient.from('price_plans').update(updates).eq('id', id)
+  if (error) return { success: false, error: error.message }
+  revalidatePath('/admin/membership/plans')
+  revalidatePath('/protected')
+  revalidatePath('/protected/membership')
+  return { success: true }
 }

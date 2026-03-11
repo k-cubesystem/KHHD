@@ -1,18 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  Heart,
-  Share2,
-  Copy,
-  Check,
-  Sparkles,
-  MessageCircle,
-  Link2,
-  Users,
-  QrCode,
-  Loader2,
-} from 'lucide-react'
+import { Heart, Share2, Copy, Check, Sparkles, MessageCircle, Link2, Users, QrCode, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -84,7 +73,7 @@ export default function InviteCreatePage() {
         content: {
           title: '우리 궁합 확인해볼래요? 💕',
           description: '해화당에서 나와 당신의 궁합을 확인해보세요!',
-          imageUrl: 'https://haehwadang.com/og-image.png',
+          imageUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'}/og-image.png`,
           link: {
             mobileWebUrl: inviteLink,
             webUrl: inviteLink,
@@ -128,18 +117,14 @@ export default function InviteCreatePage() {
       <div className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/20 border border-pink-500/30">
           <Heart className="w-4 h-4 text-pink-400" />
-          <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">
-            Viral Invite
-          </span>
+          <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">Viral Invite</span>
         </div>
         <h1 className="text-4xl font-black">
           <span className="bg-gradient-to-r from-pink-400 via-[#D4AF37] to-pink-400 bg-clip-text text-transparent">
             궁합 초대하기
           </span>
         </h1>
-        <p className="text-muted-foreground">
-          소중한 사람에게 초대 링크를 보내고, 함께 궁합을 확인해보세요
-        </p>
+        <p className="text-muted-foreground">소중한 사람에게 초대 링크를 보내고, 함께 궁합을 확인해보세요</p>
       </div>
 
       {/* Generate Link Card */}
@@ -189,11 +174,7 @@ export default function InviteCreatePage() {
                 <span className="font-bold">초대 링크가 생성되었습니다!</span>
               </div>
               <div className="flex gap-2">
-                <Input
-                  value={inviteLink}
-                  readOnly
-                  className="bg-black/30 border-white/10 text-sm"
-                />
+                <Input value={inviteLink} readOnly className="bg-black/30 border-white/10 text-sm" />
                 <Button
                   onClick={handleCopy}
                   variant="outline"
@@ -209,18 +190,11 @@ export default function InviteCreatePage() {
           <Card className="p-6 bg-white/5 border-white/10">
             <h3 className="font-bold mb-4">공유하기</h3>
             <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={handleShareKakao}
-                className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FDD800] font-bold"
-              >
+              <Button onClick={handleShareKakao} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FDD800] font-bold">
                 <MessageCircle className="w-4 h-4 mr-2" />
                 카카오톡
               </Button>
-              <Button
-                onClick={handleShareNative}
-                variant="outline"
-                className="border-white/10 hover:bg-white/5"
-              >
+              <Button onClick={handleShareNative} variant="outline" className="border-white/10 hover:bg-white/5">
                 <Share2 className="w-4 h-4 mr-2" />
                 다른 앱으로
               </Button>

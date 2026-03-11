@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { analyzeFaceForDestiny, type FaceAnalysisResult, type FaceDestinyGoal } from '@/app/actions/ai/image'
 import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
@@ -115,7 +116,7 @@ function FaceAnalysisPageContent() {
 
       setStep('result')
     } catch (error) {
-      console.error('Face analysis error:', error)
+      logger.error('Face analysis error:', error)
       toast.error('분석 중 예상치 못한 오류가 발생했습니다.')
       setStep('upload')
     } finally {

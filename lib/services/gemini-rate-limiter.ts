@@ -22,6 +22,9 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-3-flash-preview': { input: 0.075, output: 0.3 },
   'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
   'gemini-2.5-flash-preview': { input: 0.075, output: 0.3 },
+  // Claude models
+  'claude-opus-4-6': { input: 15.0, output: 75.0 },
+  'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
 }
 
 function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {

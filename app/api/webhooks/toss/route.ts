@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/utils/logger'
 
 const tossSecretKey = process.env.TOSS_SECRET_KEY
 
@@ -33,19 +34,19 @@ type TossWebhookEvent = {
 function verifyTossWebhookAuth(request: NextRequest): boolean {
   if (!tossSecretKey) {
     // 환경변수 미설정 시 경고만 출력하고 통과 (개발 환경 배려)
-    console.warn('[Toss Webhook] TOSS_SECRET_KEY not set — skipping auth verification')
+    logger.warn('[Toss Webhook] TOSS_SECRET_KEY not set — skipping auth verification')
     return true
   }
 
   const authHeader = request.headers.get('Authorization')
   if (!authHeader) {
-    console.error('[Toss Webhook] Missing Authorization header')
+    logger.error('[Toss Webhook] Missing Authorization header')
     return false
   }
 
   // Toss Payments webhook Authorization 형식: Basic base64(secretKey:)
   if (!authHeader.startsWith('Basic ')) {
-    console.error('[Toss Webhook] Authorization header is not Basic scheme')
+    logger.error('[Toss Webhook] Authorization header is not Basic scheme')
     return false
   }
 
@@ -60,7 +61,7 @@ function verifyTossWebhookAuth(request: NextRequest): boolean {
   const receivedBuf = Buffer.from(receivedToken)
 
   if (expectedBuf.length !== receivedBuf.length) {
-    console.error('[Toss Webhook] Authorization token length mismatch')
+    logger.error('[Toss Webhook] Authorization token length mismatch')
     return false
   }
 
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: TossWebhookEvent = await request.json()
-    console.log('[Toss Webhook] Received:', body.eventType)
+    logger.log('[Toss Webhook] Received:', body.eventType)
 
     switch (body.eventType) {
       case 'PAYMENT.DONE':
@@ -99,12 +100,12 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log('[Toss Webhook] Unhandled event:', body.eventType)
+        logger.log('[Toss Webhook] Unhandled event:', body.eventType)
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[Toss Webhook] Error:', error)
+    logger.error('[Toss Webhook] Error:', error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }
@@ -118,12 +119,12 @@ async function handlePaymentDone(data: TossWebhookEvent['data']) {
   if (orderId.startsWith('SUB_')) {
     await getSupabaseAdmin().from('subscription_payments').update({ status: 'SUCCESS' }).eq('order_id', orderId)
 
-    console.log('[Webhook] Subscription payment confirmed:', orderId)
+    logger.log('[Webhook] Subscription payment confirmed:', orderId)
   } else {
     // 일반 결제
     await getSupabaseAdmin().from('payments').update({ status: 'completed' }).eq('order_id', orderId)
 
-    console.log('[Webhook] Payment confirmed:', orderId)
+    logger.log('[Webhook] Payment confirmed:', orderId)
   }
 }
 
@@ -136,11 +137,11 @@ async function handlePaymentFailed(data: TossWebhookEvent['data']) {
     await getSupabaseAdmin().from('subscription_payments').update({ status: 'FAILED' }).eq('order_id', orderId)
 
     // 구독 상태 업데이트 필요 시 추가
-    console.log('[Webhook] Subscription payment failed:', orderId)
+    logger.log('[Webhook] Subscription payment failed:', orderId)
   } else {
     await getSupabaseAdmin().from('payments').update({ status: 'failed' }).eq('order_id', orderId)
 
-    console.log('[Webhook] Payment failed:', orderId)
+    logger.log('[Webhook] Payment failed:', orderId)
   }
 }
 
@@ -155,7 +156,7 @@ async function handlePaymentCanceled(data: TossWebhookEvent['data']) {
     await getSupabaseAdmin().from('payments').update({ status: 'cancelled' }).eq('order_id', orderId)
   }
 
-  console.log('[Webhook] Payment cancelled:', orderId)
+  logger.log('[Webhook] Payment cancelled:', orderId)
 }
 
 // 빌링키 삭제 처리 (카드 해지 등)
@@ -181,7 +182,7 @@ async function handleBillingKeyDeleted(data: TossWebhookEvent['data']) {
       })
       .eq('id', subscription.id)
 
-    console.log('[Webhook] Subscription cancelled due to billing key deletion:', customerKey)
+    logger.log('[Webhook] Subscription cancelled due to billing key deletion:', customerKey)
   }
 }
 
@@ -191,7 +192,7 @@ async function handleCardExpired(data: TossWebhookEvent['data']) {
   if (!customerKey) return
 
   // 해당 사용자에게 알림 발송 로직 추가 가능
-  console.log('[Webhook] Card expired for customer:', customerKey)
+  logger.log('[Webhook] Card expired for customer:', customerKey)
 
   // 구독 상태 업데이트
   await getSupabaseAdmin()

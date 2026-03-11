@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { logger } from '@/lib/utils/logger'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +21,7 @@ export function CreditBalance({ className, showLabel = true }: TalismanBalancePr
       const count = await getWalletBalance()
       setTalismans(count)
     } catch (error) {
-      console.error('[TalismanBalance] Fail:', error)
+      logger.error('[TalismanBalance] Fail:', error)
       setTalismans(0)
     } finally {
       setIsLoading(false)
@@ -32,12 +33,7 @@ export function CreditBalance({ className, showLabel = true }: TalismanBalancePr
   }, [])
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2 px-4 py-2 rounded-full glass border-primary/20',
-        className
-      )}
-    >
+    <div className={cn('flex items-center gap-2 px-4 py-2 rounded-full glass border-primary/20', className)}>
       <span className="text-xl">🧧</span>
       <div className="flex items-center gap-1.5">
         {isLoading ? (
@@ -46,9 +42,7 @@ export function CreditBalance({ className, showLabel = true }: TalismanBalancePr
           <span className="font-black text-[#D4AF37] tabular-nums text-sm">{talismans ?? 0}</span>
         )}
         {showLabel && (
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            만냥
-          </span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">만냥</span>
         )}
       </div>
     </div>

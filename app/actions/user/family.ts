@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 export async function getFamilyMembers() {
   if (isEdgeEnabled('user')) {
@@ -11,7 +12,7 @@ export async function getFamilyMembers() {
   }
   // Demo Mode check
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    console.warn('Supabase credentials missing. Running in Demo Mode.')
+    logger.warn('Supabase credentials missing. Running in Demo Mode.')
     return [
       {
         id: 'demo-1',
@@ -41,17 +42,17 @@ export async function getFamilyMembers() {
   } = await supabase.auth.getUser()
 
   if (userError) {
-    console.error('Auth Error in getFamilyMembers:', userError)
+    logger.error('Auth Error in getFamilyMembers:', userError)
   }
 
   if (!user) {
-    console.warn('No authenticated user found in getFamilyMembers')
+    logger.warn('No authenticated user found in getFamilyMembers')
     // If no user, but we want the user to experience it, we could return demo data here too
     // but for now let's just return empty or error if we really need auth
     return []
   }
 
-  console.log(`Fetching family members for user: ${user.id}`)
+  logger.log(`Fetching family members for user: ${user.id}`)
 
   const { data, error } = await supabase
     .from('family_members')
@@ -60,11 +61,11 @@ export async function getFamilyMembers() {
     .order('created_at', { ascending: true })
 
   if (error) {
-    console.error('Error fetching family members:', error.message)
+    logger.error('Error fetching family members:', error.message)
     return []
   }
 
-  console.log(`Found ${data?.length || 0} family members for user ${user.id}`)
+  logger.log(`Found ${data?.length || 0} family members for user ${user.id}`)
   return data || []
 }
 
@@ -102,7 +103,7 @@ export async function addFamilyMember(formData: FormData) {
   const { error } = await supabase.from('family_members').insert([rawData])
 
   if (error) {
-    console.error('Error adding family member:', error.message)
+    logger.error('Error adding family member:', error.message)
     throw new Error('가족 정보 등록 중 오류가 발생했습니다.')
   }
 
@@ -146,7 +147,7 @@ export async function updateFamilyMember(formData: FormData) {
   const { error } = await supabase.from('family_members').update(rawData).eq('id', id).eq('user_id', user.id)
 
   if (error) {
-    console.error('Error updating family member:', error.message)
+    logger.error('Error updating family member:', error.message)
     throw new Error('가족 정보 수정 중 오류가 발생했습니다.')
   }
 
@@ -170,7 +171,7 @@ export async function deleteFamilyMember(id: string) {
   const { error } = await supabase.from('family_members').delete().eq('id', id).eq('user_id', user.id)
 
   if (error) {
-    console.error('Error deleting family member:', error.message)
+    logger.error('Error deleting family member:', error.message)
     throw new Error('가족 정보 삭제 중 오류가 발생했습니다.')
   }
 

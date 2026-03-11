@@ -2,20 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { SolapiMessageService } from 'solapi'
+import { logger } from '@/lib/utils/logger'
 
-export async function sendKakaoNotification(
-  userId: string,
-  templateId: string,
-  variables: Record<string, string>
-) {
+export async function sendKakaoNotification(userId: string, templateId: string, variables: Record<string, string>) {
   const supabase = await createClient()
 
   // 1. Get User Phone Number
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('phone, name')
-    .eq('id', userId)
-    .single()
+  const { data: profile } = await supabase.from('profiles').select('phone, name').eq('id', userId).single()
 
   if (!profile) return { success: false, error: 'User not found' }
   if (!profile.phone) return { success: false, error: 'Phone number missing' }
@@ -27,8 +20,8 @@ export async function sendKakaoNotification(
 
   // Fallback for Dev/Missing Keys
   if (!apiKey || !apiSecret || !senderPhone) {
-    console.warn('[SOLAPI] Missing API Keys. Mocking send.')
-    console.log(`[MOCK KAKAO] To: ${profile.phone}, Template: ${templateId}, Vars:`, variables)
+    logger.warn('[SOLAPI] Missing API Keys. Mocking send.')
+    logger.log(`[MOCK KAKAO] To: ${profile.phone}, Template: ${templateId}, Vars:`, variables)
 
     await logNotification(userId, 'KAKAO', 'SENT_MOCK', null)
     return { success: true, mocked: true }
@@ -50,25 +43,20 @@ export async function sendKakaoNotification(
       },
     })
 
-    console.log('[SOLAPI] Sent:', result)
+    logger.log('[SOLAPI] Sent:', result)
 
     // 4. Log Success
     await logNotification(userId, 'KAKAO', 'SENT', null)
     return { success: true, result }
   } catch (error) {
-    console.error('[SOLAPI] Error:', error)
+    logger.error('[SOLAPI] Error:', error)
     const message = error instanceof Error ? error.message : '알림 전송 실패'
     await logNotification(userId, 'KAKAO', 'FAILED', message)
     return { success: false, error: message }
   }
 }
 
-async function logNotification(
-  userId: string,
-  type: string,
-  status: string,
-  errorMsg: string | null
-) {
+async function logNotification(userId: string, type: string, status: string, errorMsg: string | null) {
   const supabase = await createClient()
   await supabase.from('notification_logs').insert({
     user_id: userId,

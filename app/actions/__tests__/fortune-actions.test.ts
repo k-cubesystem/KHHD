@@ -15,7 +15,8 @@ jest.mock('@/lib/supabase/server', () => ({
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 
 describe('Fortune Actions', () => {
-  let mockSupabase: ReturnType<typeof jest.fn>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockSupabase: any
 
   beforeEach(() => {
     // Reset mock with proper chaining support
@@ -27,9 +28,7 @@ describe('Fortune Actions', () => {
       rpc: jest.fn(),
     }
 
-    mockCreateClient.mockResolvedValue(
-      mockSupabase as Parameters<typeof mockCreateClient.mockResolvedValue>[0]
-    )
+    mockCreateClient.mockResolvedValue(mockSupabase)
   })
 
   afterEach(() => {

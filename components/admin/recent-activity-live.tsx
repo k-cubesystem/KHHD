@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { getRecentActivities } from '@/app/actions/admin/dashboard'
+import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Activity, User, CreditCard, Sparkles, TrendingUp } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -38,7 +39,7 @@ export function RecentActivityLive() {
           table: 'activity_logs',
         },
         (payload) => {
-          console.log('New activity:', payload)
+          logger.log('New activity:', payload)
           // 새 활동 추가
           loadActivities()
         }

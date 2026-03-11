@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { logger } from '@/lib/utils/logger'
 import { BLUR_DATA_URL } from '@/lib/utils/image'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
@@ -73,7 +74,7 @@ export function SiteHeader() {
           getWalletBalance().then(setBalance)
           getUserTierLimits().then((res) => setTier(res?.tier || null))
         } catch (e) {
-          console.error('Failed to fetch role', e)
+          logger.error('Failed to fetch role', e)
         }
       }
     }
@@ -87,7 +88,7 @@ export function SiteHeader() {
       if (session?.user) {
         getCurrentUserRole()
           .then((res) => setUserRole(res.role))
-          .catch((err) => console.error(err))
+          .catch((err) => logger.error(err))
       } else {
         setUserRole('user')
       }

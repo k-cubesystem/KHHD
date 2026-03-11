@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 // 권한 체크 헬퍼
 async function checkAdminPermission() {
@@ -32,7 +33,7 @@ export async function getRecentActivities(limit: number = 50) {
   const { data, error } = await supabase.rpc('get_recent_activities', { p_limit: limit })
 
   if (error) {
-    console.error(error)
+    logger.error(error)
     return { success: false, error: error.message }
   }
 
@@ -53,7 +54,7 @@ export async function getUTMPerformance(startDate?: Date, endDate?: Date) {
   })
 
   if (error) {
-    console.error(error)
+    logger.error(error)
     return { success: false, error: error.message }
   }
 
@@ -74,7 +75,7 @@ export async function getFunnelAnalysis(startDate?: Date, endDate?: Date) {
   })
 
   if (error) {
-    console.error(error)
+    logger.error(error)
     return { success: false, error: error.message }
   }
 
@@ -120,7 +121,7 @@ export async function getHourlyTraffic(hours: number = 24) {
     .order('created_at', { ascending: true })
 
   if (actErr) {
-    console.error('[getHourlyTraffic] activity_logs error:', actErr)
+    logger.error('[getHourlyTraffic] activity_logs error:', actErr)
     return { success: false, error: actErr.message }
   }
 
@@ -187,7 +188,7 @@ export async function sendGlobalNotification(title: string, message: string) {
   const { error } = await supabase.from('notifications').insert(notifications)
 
   if (error) {
-    console.error(error)
+    logger.error(error)
     return { success: false, error: error.message }
   }
 
@@ -228,7 +229,7 @@ export async function issueCouponToAll(couponCode: string, talismanAmount: numbe
   const { error } = await supabase.from('coupons').insert(coupons)
 
   if (error) {
-    console.error(error)
+    logger.error(error)
     return { success: false, error: error.message }
   }
 
@@ -276,7 +277,7 @@ export async function createEvent(eventData: {
     .select()
 
   if (error) {
-    console.error(error)
+    logger.error(error)
     return { success: false, error: error.message }
   }
 

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/utils/logger'
 
 interface SaveProfileData {
   fullName: string
@@ -42,7 +43,7 @@ export async function saveProfile(data: SaveProfileData) {
   )
 
   if (profileError) {
-    console.error('Profile upsert error:', profileError)
+    logger.error('Profile upsert error:', profileError)
     return { success: false, error: profileError.message || '프로필 저장 실패' }
   }
 
@@ -92,10 +93,7 @@ export async function saveSelfFamilyMember(data: SaveFamilyMemberData) {
   }
 
   if (existing) {
-    const { error } = await adminClient
-      .from('family_members')
-      .update(memberData)
-      .eq('id', existing.id)
+    const { error } = await adminClient.from('family_members').update(memberData).eq('id', existing.id)
     if (error) return { success: false, error: error.message }
   } else {
     const { error } = await adminClient.from('family_members').insert(memberData)

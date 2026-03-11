@@ -6,7 +6,7 @@ import { Upload, Search, MapPin, Camera, Hand } from 'lucide-react'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
-import { useKakaoAddress } from '@/hooks/useKakaoAddress'
+import { useKakaoAddress } from '@/hooks/use-kakao-address'
 
 interface CheonjiinDataCollectionFormProps {
   target: DestinyTarget

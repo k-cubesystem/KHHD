@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -122,7 +123,7 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
 
       img.src = url
     } catch (error) {
-      console.error('Download error:', error)
+      logger.error('Download error:', error)
       toast.error('이미지 다운로드에 실패했습니다.')
     }
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
+import { logger } from '@/lib/utils/logger'
 import Link from 'next/link'
 import { Crown, Loader2 } from 'lucide-react'
 
@@ -18,7 +19,7 @@ export function SubscriptionBadge() {
       const { isSubscribed: subscribed } = await getSubscriptionStatus()
       setIsSubscribed(subscribed)
     } catch (error) {
-      console.error('Failed to load subscription status:', error)
+      logger.error('Failed to load subscription status:', error)
       setIsSubscribed(false)
     } finally {
       setLoading(false)
@@ -46,9 +47,7 @@ export function SubscriptionBadge() {
     <Link href="/protected/membership/manage">
       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gradient-to-r from-zen-gold/20 to-amber-100 border border-zen-gold/50 cursor-pointer transition-all shadow-sm hover:shadow-md">
         <Crown className="w-3.5 h-3.5 text-zen-gold" />
-        <span className="hidden sm:inline font-serif font-bold text-zen-gold text-xs tracking-wide">
-          MEMBER
-        </span>
+        <span className="hidden sm:inline font-serif font-bold text-zen-gold text-xs tracking-wide">MEMBER</span>
       </div>
     </Link>
   )

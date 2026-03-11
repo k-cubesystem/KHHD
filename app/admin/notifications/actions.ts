@@ -2,6 +2,9 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { logger } from '@/lib/utils/logger'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
 
 export interface SystemSetting {
   key: string
@@ -29,12 +32,10 @@ export async function getNotificationSettings() {
 
 export async function updateNotificationSetting(key: string, value: string) {
   const supabase = createAdminClient()
-  const { error } = await supabase
-    .from('system_settings')
-    .upsert({ key, value, updated_at: new Date().toISOString() })
+  const { error } = await supabase.from('system_settings').upsert({ key, value, updated_at: new Date().toISOString() })
 
   if (error) {
-    console.error('Error updating setting:', error)
+    logger.error('Error updating setting:', error)
     return { success: false, error: error.message }
   }
 
@@ -71,10 +72,7 @@ export async function runManualAutomation() {
     const templateId = tmplSetting?.value || 'DAILY_FORTUNE_V1'
 
     // 2. Fetch Active Subscribers
-    const { data: subscriptions } = await supabase
-      .from('subscriptions')
-      .select('user_id')
-      .eq('status', 'active')
+    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id').eq('status', 'active')
 
     if (!subscriptions || subscriptions.length === 0) {
       return { success: false, message: '활성 구독자가 없습니다.' }
@@ -94,14 +92,14 @@ export async function runManualAutomation() {
         if (genResult.success && genResult.content) {
           await sendKakaoNotification(sub.user_id, templateId, {
             content: genResult.content.substring(0, 50) + '...',
-            link: 'https://haehwadang.com/protected/analysis?tab=daily',
+            link: `${SITE_URL}/protected/analysis?tab=daily`,
           })
           sentCount++
         } else {
           errorCount++
         }
       } catch (e) {
-        console.error(e)
+        logger.error(e)
         errorCount++
       }
     })
@@ -112,7 +110,7 @@ export async function runManualAutomation() {
       success: true,
       message: `발송 완료: 성공 ${sentCount}건, 실패 ${errorCount}건`,
     }
-  } catch (e: any) {
-    return { success: false, message: e.message }
+  } catch (e: unknown) {
+    return { success: false, message: e instanceof Error ? e.message : String(e) }
   }
 }

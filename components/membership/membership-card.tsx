@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { createBillingAuthUrl } from '@/app/actions/payment/subscription'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
@@ -40,7 +41,7 @@ export function MembershipCard({ planId, planName, price }: MembershipCardProps)
         windowTarget: 'self',
       })
     } catch (error) {
-      console.error('Subscription error:', error)
+      logger.error('Subscription error:', error)
       toast.error('오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
       setIsLoading(false)

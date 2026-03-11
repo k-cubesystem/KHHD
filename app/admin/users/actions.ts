@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
+import { logger } from '@/lib/utils/logger'
 
 export interface AdminUser {
   id: string
@@ -32,7 +33,7 @@ export async function getUsers(
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) {
-      console.error('getUsers: Auth failed', authError)
+      logger.error('getUsers: Auth failed', authError)
       return { data: [], total: 0 }
     }
 
@@ -45,19 +46,14 @@ export async function getUsers(
     })
 
     if (authErr || !authData) {
-      console.error('[getUsers] auth.admin.listUsers 실패:', authErr)
+      logger.error('[getUsers] auth.admin.listUsers 실패:', authErr)
       return { data: [], total: 0 }
     }
 
     // 3. profiles 테이블에서 보조 데이터 조회 (full_name, role)
-    const { data: profiles } = await adminClient
-      .from('profiles')
-      .select('id, full_name, role, email')
+    const { data: profiles } = await adminClient.from('profiles').select('id, full_name, role, email')
 
-    const profileMap: Record<
-      string,
-      { full_name: string | null; role: UserRole; email: string | null }
-    > = {}
+    const profileMap: Record<string, { full_name: string | null; role: UserRole; email: string | null }> = {}
     for (const p of profiles ?? []) {
       profileMap[p.id] = { full_name: p.full_name, role: p.role ?? 'user', email: p.email }
     }
@@ -74,9 +70,7 @@ export async function getUsers(
 
     if (search) {
       const s = search.toLowerCase()
-      merged = merged.filter(
-        (u) => u.email?.toLowerCase().includes(s) || u.full_name?.toLowerCase().includes(s)
-      )
+      merged = merged.filter((u) => u.email?.toLowerCase().includes(s) || u.full_name?.toLowerCase().includes(s))
     }
 
     // 5. 최신 가입순 정렬 후 페이지네이션
@@ -86,13 +80,11 @@ export async function getUsers(
     const from = (page - 1) * limit
     const data = merged.slice(from, from + limit)
 
-    console.log(
-      `[getUsers] auth 기준 ${authData.users.length}명 중 ${data.length}명 반환 (page ${page})`
-    )
+    logger.log(`[getUsers] auth 기준 ${authData.users.length}명 중 ${data.length}명 반환 (page ${page})`)
 
     return { data, total }
   } catch (e) {
-    console.error('getUsers Critical Error:', e)
+    logger.error('getUsers Critical Error:', e)
     return { data: [], total: 0 }
   }
 }
@@ -108,13 +100,10 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole) {
 
   // TEMPORARY: Skip admin check, use admin client
   const adminClient = createAdminClient()
-  const { error } = await adminClient
-    .from('profiles')
-    .update({ role: newRole })
-    .eq('id', targetUserId)
+  const { error } = await adminClient.from('profiles').update({ role: newRole }).eq('id', targetUserId)
 
   if (error) {
-    console.error('Error updating role:', error)
+    logger.error('Error updating role:', error)
     return { success: false, error: error.message }
   }
 
@@ -136,28 +125,19 @@ export async function getUserDetails(userId: string) {
     const adminClient = createAdminClient()
 
     // 2. Fetch Data in Parallel
-    const [profileRes, sajuRes, familyRes, paymentsRes, walletRes, subscriptionRes] =
-      await Promise.all([
-        adminClient.from('profiles').select('*').eq('id', userId).single(),
-        adminClient
-          .from('saju_records')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false }),
-        adminClient.from('family_members').select('*').eq('user_id', userId),
-        adminClient
-          .from('payments')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false }),
-        adminClient.from('wallets').select('*').eq('user_id', userId).single(),
-        adminClient
-          .from('subscriptions')
-          .select('*, membership_plans(*)')
-          .eq('user_id', userId)
-          .eq('status', 'ACTIVE')
-          .single(),
-      ])
+    const [profileRes, sajuRes, familyRes, paymentsRes, walletRes, subscriptionRes] = await Promise.all([
+      adminClient.from('profiles').select('*').eq('id', userId).single(),
+      adminClient.from('saju_records').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      adminClient.from('family_members').select('*').eq('user_id', userId),
+      adminClient.from('payments').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      adminClient.from('wallets').select('*').eq('user_id', userId).single(),
+      adminClient
+        .from('subscriptions')
+        .select('*, membership_plans(*)')
+        .eq('user_id', userId)
+        .eq('status', 'ACTIVE')
+        .single(),
+    ])
 
     // 3. Fetch auth user for email and real created_at (가입일)
     const profile = profileRes.data
@@ -171,7 +151,7 @@ export async function getUserDetails(userId: string) {
         authCreatedAt = targetUser.created_at || null
       }
     } catch (e) {
-      console.warn('getUserDetails: Failed to fetch auth user', e)
+      logger.warn('getUserDetails: Failed to fetch auth user', e)
     }
 
     return {
@@ -185,7 +165,7 @@ export async function getUserDetails(userId: string) {
       error: null,
     }
   } catch (e) {
-    console.error('getUserDetails Error:', e)
+    logger.error('getUserDetails Error:', e)
     return { error: 'Failed to fetch user details' }
   }
 }
@@ -200,11 +180,7 @@ export async function deleteUser(userId: string) {
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    const { data: callerProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
     if (!callerProfile || !['admin', 'tester'].includes(callerProfile.role)) {
       return { success: false, error: 'Forbidden: Admin only' }
@@ -234,9 +210,9 @@ export async function deleteUser(userId: string) {
 
     revalidatePath('/admin/users')
     return { success: true }
-  } catch (e: any) {
-    console.error('deleteUser Error:', e)
-    return { success: false, error: e.message || 'Failed to delete user' }
+  } catch (e: unknown) {
+    logger.error('deleteUser Error:', e)
+    return { success: false, error: e instanceof Error ? e.message : 'Failed to delete user' }
   }
 }
 
@@ -282,11 +258,7 @@ export async function updateUserSubscription(targetUserId: string, planTier: str
   // 1. Get Plan ID if not null
   let planId = null
   if (planTier) {
-    const { data: plan } = await adminClient
-      .from('membership_plans')
-      .select('id')
-      .eq('tier', planTier)
-      .single()
+    const { data: plan } = await adminClient.from('membership_plans').select('id').eq('tier', planTier).single()
 
     if (!plan) return { success: false, error: 'Plan not found' }
     planId = plan.id

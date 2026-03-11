@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { addTalismans } from '@/app/actions/payment/wallet'
+import { logger } from '@/lib/utils/logger'
 
 export interface AdminSubscription {
   id: string
@@ -122,7 +123,7 @@ export async function getSubscriptions(
     .range((page - 1) * limit, page * limit - 1)
 
   if (error) {
-    console.error('[Admin] Get subscriptions error:', error)
+    logger.error('[Admin] Get subscriptions error:', error)
     return { subscriptions: [], total: 0, totalPages: 0 }
   }
 
@@ -156,7 +157,7 @@ export async function updateSubscriptionStatus(
   const { error } = await supabase.from('subscriptions').update(updateData).eq('id', subscriptionId)
 
   if (error) {
-    console.error('[Admin] Update subscription status error:', error)
+    logger.error('[Admin] Update subscription status error:', error)
     return { success: false, error: '상태 변경에 실패했습니다.' }
   }
 
@@ -179,11 +180,7 @@ export async function grantTalismans(
   const supabase = await createClient()
 
   // 먼저 wallet 존재 확인
-  const { data: wallet } = await supabase
-    .from('wallets')
-    .select('balance')
-    .eq('user_id', userId)
-    .single()
+  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', userId).single()
 
   if (!wallet) {
     // wallet이 없으면 생성
@@ -212,13 +209,10 @@ export async function getMembershipPlansAdmin() {
   await checkAdminRole()
   const supabase = await createClient()
 
-  const { data, error } = await supabase
-    .from('membership_plans')
-    .select('*')
-    .order('sort_order', { ascending: true })
+  const { data, error } = await supabase.from('membership_plans').select('*').order('sort_order', { ascending: true })
 
   if (error) {
-    console.error('[Admin] Get plans error:', error)
+    logger.error('[Admin] Get plans error:', error)
     return []
   }
 
@@ -241,7 +235,7 @@ export async function updateMembershipPlan(
   const { error } = await supabase.from('membership_plans').update(updates).eq('id', planId)
 
   if (error) {
-    console.error('[Admin] Update plan error:', error)
+    logger.error('[Admin] Update plan error:', error)
     return { success: false, error: '플랜 업데이트에 실패했습니다.' }
   }
 

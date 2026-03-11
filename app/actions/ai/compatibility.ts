@@ -11,6 +11,7 @@ import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * 궁합 분석 서버 액션 v2
@@ -111,8 +112,8 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
     }
 
     return { success: true, data: finalResult, cached: false }
-  } catch (error) {
-    console.error('[CompatibilityAnalysis] Error:', error)
+  } catch (error: unknown) {
+    logger.error('[CompatibilityAnalysis] Error:', error)
     const message = error instanceof Error ? error.message : '궁합 분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }
@@ -121,7 +122,10 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
 /**
  * 최근 7일 이내 궁합 분석 결과 조회 (캐시)
  */
-async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: string): Promise<any | null> {
+async function getRecentCompatibilityAnalysis(
+  targetId1: string,
+  targetId2: string
+): Promise<Record<string, unknown> | null> {
   const supabase = await createClient()
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
@@ -136,8 +140,8 @@ async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: stri
 
   if (!data || data.length === 0) return null
 
-  const match = data.find((item: any) => {
-    const result = item.result_json
+  const match = data.find((item: { result_json: Record<string, unknown> }) => {
+    const result = item.result_json as { person1?: { id?: string }; person2?: { id?: string } }
     if (!result?.person1?.id || !result?.person2?.id) return false
     return (
       (result.person1.id === targetId1 && result.person2.id === targetId2) ||
@@ -151,12 +155,19 @@ async function getRecentCompatibilityAnalysis(targetId1: string, targetId2: stri
 /**
  * AI를 사용한 궁합 분석 (양쪽 컨텍스트 + 엔진 결과 주입)
  */
+interface CompatibilityCategory {
+  category: string
+  label: string
+  score: number
+  details: string[]
+}
+
 async function analyzeCompatibilityWithAI(
-  target1: any,
-  target2: any,
+  target1: NonNullable<Awaited<ReturnType<typeof getDestinyTarget>>>,
+  target2: NonNullable<Awaited<ReturnType<typeof getDestinyTarget>>>,
   ctx1: { promptContext: string },
   ctx2: { promptContext: string },
-  engineResult: { totalScore: number; categories: any[]; mulsangNarrative: string },
+  engineResult: { totalScore: number; categories: CompatibilityCategory[]; mulsangNarrative: string },
   relationship: string
 ) {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY

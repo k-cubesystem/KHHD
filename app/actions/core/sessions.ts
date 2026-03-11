@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export type AnalysisCategory = 'SAJU' | 'FACE' | 'HAND' | 'FENGSHUI' | 'COMPATIBILITY' | 'TODAY' | 'WEALTH' | 'NEW_YEAR'
 
@@ -46,7 +47,7 @@ export async function saveAnalysisSession(
 
   // Skip DB save for guests (return success without session ID)
   if (!targetMemberId) {
-    console.log('[Studio] Guest analysis - skipping DB save')
+    logger.log('[Studio] Guest analysis - skipping DB save')
     return { success: true, sessionId: 'guest' }
   }
 
@@ -65,13 +66,13 @@ export async function saveAnalysisSession(
       .single()
 
     if (error) {
-      console.error('[Studio] Save session error:', error)
+      logger.error('[Studio] Save session error:', error)
       return { success: false, error: '분석 결과 저장 중 오류가 발생했습니다.' }
     }
 
     return { success: true, sessionId: data.id }
   } catch (err) {
-    console.error('[Studio] Unexpected error saving session:', err)
+    logger.error('[Studio] Unexpected error saving session:', err)
     return { success: false, error: '분석 결과 저장 중 예상치 못한 오류가 발생했습니다.' }
   }
 }
@@ -96,7 +97,7 @@ export async function getMemberAnalysisSessions(memberId: string, limit: number 
     .limit(limit)
 
   if (error) {
-    console.error('[Studio] Fetch sessions error:', error)
+    logger.error('[Studio] Fetch sessions error:', error)
     return []
   }
 
@@ -122,7 +123,7 @@ export async function getAllAnalysisSessions(limit: number = 50): Promise<Analys
     .limit(limit)
 
   if (error) {
-    console.error('[Studio] Fetch all sessions error:', error)
+    logger.error('[Studio] Fetch all sessions error:', error)
     return []
   }
 
@@ -144,7 +145,7 @@ export async function markSessionAsShared(sessionId: string, shareCardUrl: strin
     .eq('id', sessionId)
 
   if (error) {
-    console.error('[Studio] Mark shared error:', error)
+    logger.error('[Studio] Mark shared error:', error)
     return { success: false }
   }
 
@@ -184,7 +185,7 @@ export async function getMemberAnalysisStats(memberId: string): Promise<{
     .order('created_at', { ascending: false })
 
   if (error || !data) {
-    console.error('[Studio] Fetch stats error:', error)
+    logger.error('[Studio] Fetch stats error:', error)
     return {
       totalAnalyses: 0,
       completedCategories: [],

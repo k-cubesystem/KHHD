@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { addTalismans } from './wallet'
+import { logger } from '@/lib/utils/logger'
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 
@@ -48,7 +49,7 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
   }
 
   if (result.totalAmount !== expectedAmount) {
-    console.error('[Payment] Amount mismatch:', {
+    logger.error('[Payment] Amount mismatch:', {
       expected: expectedAmount,
       actual: result.totalAmount,
     })
@@ -72,22 +73,18 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
     .single()
 
   if (error) {
-    console.error('[Payment] DB Insert Error:', error)
+    logger.error('[Payment] DB Insert Error:', error)
     throw new Error(`결제는 성공했으나 기록 저장 실패: ${error.message}`)
   }
 
   // 지갑에 복채 충전
-  const walletResult = await addTalismans(
-    talismans,
-    'CHARGE',
-    `복채 ${talismans}만냥 충전 (주문번호: ${orderId})`
-  )
+  const walletResult = await addTalismans(talismans, 'CHARGE', `복채 ${talismans}만냥 충전 (주문번호: ${orderId})`)
 
   if (!walletResult.success) {
-    console.error('[Payment] Wallet charge failed:', walletResult.error)
+    logger.error('[Payment] Wallet charge failed:', walletResult.error)
     throw new Error('복채 충전에 실패했습니다.')
   }
 
-  console.log('[Payment] Bokchae charge completed:', insertedPayment)
+  logger.log('[Payment] Bokchae charge completed:', insertedPayment)
   return result
 }

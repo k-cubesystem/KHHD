@@ -2,17 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -35,10 +30,34 @@ import DaumPostcodeEmbed from 'react-daum-postcode'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+interface SajuInitialData {
+  name?: string
+  birth_date?: string
+  birth_time?: string
+  gender?: string
+  calendar_type?: string
+}
+
+interface ProfileData {
+  phone?: string
+  zipcode?: string
+  address?: string
+  address_detail?: string
+  marital_status?: string
+  religion?: string
+  job?: string
+  hobbies?: string
+  specialties?: string
+  life_philosophy?: string
+  focus_areas?: string
+  activity_status?: string
+  avatar_url?: string
+}
+
 interface ProfileEditFormProps {
   userId: string
-  initialData: any
-  profileData?: any // Added profile data from 'profiles' table
+  initialData: SajuInitialData | null
+  profileData?: ProfileData | null
 }
 
 // 12지지 시간 매핑
@@ -125,14 +144,19 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
     }
   }, [initialData, profileData])
 
-  const handleAddressComplete = (data: any) => {
+  const handleAddressComplete = (data: {
+    address: string
+    addressType: string
+    bname: string
+    buildingName: string
+    zonecode: string
+  }) => {
     let fullAddress = data.address
     let extraAddress = ''
 
     if (data.addressType === 'R') {
       if (data.bname !== '') extraAddress += data.bname
-      if (data.buildingName !== '')
-        extraAddress += extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName
+      if (data.buildingName !== '') extraAddress += extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName
       fullAddress += extraAddress !== '' ? ` (${extraAddress})` : ''
     }
 
@@ -175,9 +199,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
         const fileName = `${userId}-${Math.random()}.${fileExt}`
         const filePath = `${fileName}`
 
-        const { error: uploadError } = await supabase.storage
-          .from('profile-images')
-          .upload(filePath, imageFile)
+        const { error: uploadError } = await supabase.storage.from('profile-images').upload(filePath, imageFile)
 
         if (uploadError) throw uploadError
 
@@ -210,10 +232,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
       }
 
       if (existingMember) {
-        const { error } = await supabase
-          .from('family_members')
-          .update(sajuUpdateData)
-          .eq('id', existingMember.id)
+        const { error } = await supabase.from('family_members').update(sajuUpdateData).eq('id', existingMember.id)
         if (error) throw error
       } else {
         const { error } = await supabase.from('family_members').insert({
@@ -239,10 +258,9 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
       toast.success('회원 정보가 성공적으로 수정되었습니다.')
       router.push('/protected/profile')
       router.refresh()
-    } catch (error: any) {
-      console.error('Error saving profile details:', JSON.stringify(error, null, 2))
-      const errorMessage =
-        error?.message || error?.error_description || JSON.stringify(error) || '알 수 없는 오류'
+    } catch (error: unknown) {
+      logger.error('Error saving profile details:', error)
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
       toast.error('저장 실패: ' + errorMessage)
     } finally {
       setLoading(false)
@@ -264,9 +282,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
         <form onSubmit={handleSubmit} className="p-6 space-y-8">
           {/* 섹션 1: 기본 신상 정보 */}
           <div className="space-y-6">
-            <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">
-              기본 인적 사항
-            </h3>
+            <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">기본 인적 사항</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Profile Image Upload */}
@@ -276,14 +292,11 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                   <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-[#D4AF37]/30 shadow-lg group-hover:border-[#D4AF37] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.3)] transition-all duration-300">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={
-                        previewImage || 'https://ui-avatars.com/api/?name=User&background=random'
-                      }
+                      src={previewImage || 'https://ui-avatars.com/api/?name=User&background=random'}
                       alt="Profile Preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src =
-                          'https://ui-avatars.com/api/?name=User&background=random'
+                        e.currentTarget.src = 'https://ui-avatars.com/api/?name=User&background=random'
                       }}
                     />
                   </div>
@@ -407,16 +420,11 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
 
           {/* 섹션 2: 사주 정보 (기존 내용) */}
           <div className="space-y-6">
-            <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">
-              사주 분석 정보
-            </h3>
+            <h3 className="text-lg font-bold text-[#D4AF37] border-l-4 border-[#D4AF37] pl-3 mb-4">사주 분석 정보</h3>
             {/* 생년월일 + 달력타입 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label
-                  htmlFor="birth_date"
-                  className="flex items-center gap-2 text-base font-bold text-zen-text"
-                >
+                <Label htmlFor="birth_date" className="flex items-center gap-2 text-base font-bold text-zen-text">
                   <Calendar className="w-4 h-4 text-zen-gold" /> 생년월일
                 </Label>
                 <Input
@@ -454,10 +462,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
             {/* 생시 + 성별 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label
-                  htmlFor="birth_time"
-                  className="flex items-center gap-2 text-base font-bold text-zen-text"
-                >
+                <Label htmlFor="birth_time" className="flex items-center gap-2 text-base font-bold text-zen-text">
                   <Clock className="w-4 h-4 text-zen-gold" /> 생시 (태어난 시간)
                 </Label>
                 <Select
@@ -524,10 +529,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 />
               </div>
               <div className="space-y-2">
-                <Label
-                  htmlFor="hobbies"
-                  className="text-zen-text font-bold flex items-center gap-1"
-                >
+                <Label htmlFor="hobbies" className="text-zen-text font-bold flex items-center gap-1">
                   <Star className="w-4 h-4 text-zen-gold/70" /> 취미
                 </Label>
                 <Input
@@ -539,10 +541,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label
-                  htmlFor="specialties"
-                  className="text-zen-text font-bold flex items-center gap-1"
-                >
+                <Label htmlFor="specialties" className="text-zen-text font-bold flex items-center gap-1">
                   <PenTool className="w-4 h-4 text-zen-gold/70" /> 특기
                 </Label>
                 <Input
@@ -554,10 +553,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
-                <Label
-                  htmlFor="life_philosophy"
-                  className="text-zen-text font-bold flex items-center gap-1"
-                >
+                <Label htmlFor="life_philosophy" className="text-zen-text font-bold flex items-center gap-1">
                   <BookOpen className="w-4 h-4 text-zen-gold/70" /> 나의 인생 철학
                 </Label>
                 <Textarea
@@ -582,17 +578,14 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
             {/* 안내 박스 */}
             <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/30 p-4 rounded-lg">
               <p className="text-xs text-[#D4AF37]/90">
-                AI가 당신의 상황을 더 정확히 이해하고, 맞춤형 조언을 제공합니다. 입력한 정보는
-                우선순위에 따라 분석에 반영됩니다.
+                AI가 당신의 상황을 더 정확히 이해하고, 맞춤형 조언을 제공합니다. 입력한 정보는 우선순위에 따라 분석에
+                반영됩니다.
               </p>
             </div>
 
             {/* 중점 관심사 및 현재 고민 (통합) - Gold Bordered Emphasis */}
             <div className="space-y-2">
-              <Label
-                htmlFor="focus_areas"
-                className="flex items-center gap-1 text-[#D4AF37] font-bold"
-              >
+              <Label htmlFor="focus_areas" className="flex items-center gap-1 text-[#D4AF37] font-bold">
                 <Target className="w-4 h-4 text-[#D4AF37]" />
                 중점 관심사 및 현재 고민
               </Label>
@@ -701,11 +694,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
             <DialogTitle>주소 검색</DialogTitle>
           </DialogHeader>
           <div className="h-[400px] w-full border border-gray-200 rounded">
-            <DaumPostcodeEmbed
-              onComplete={handleAddressComplete}
-              style={{ height: '100%' }}
-              autoClose={false}
-            />
+            <DaumPostcodeEmbed onComplete={handleAddressComplete} style={{ height: '100%' }} autoClose={false} />
           </div>
         </DialogContent>
       </Dialog>

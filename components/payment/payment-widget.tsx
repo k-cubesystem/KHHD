@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
+import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -21,7 +22,12 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getActivePlans, getCurrentUserRole, addTestCredits } from '@/app/actions/payment/products'
-import { getMembershipPlans, createBillingAuthUrl, getSubscriptionStatus } from '@/app/actions/payment/subscription'
+import {
+  getMembershipPlans,
+  createBillingAuthUrl,
+  getSubscriptionStatus,
+  type MembershipPlan,
+} from '@/app/actions/payment/subscription'
 import type { PricePlan, UserRole } from '@/types/auth'
 import { useRouter } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -50,9 +56,11 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
   const [isTestLoading, setIsTestLoading] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [pricePlans, setPricePlans] = useState<DisplayPlan[]>([])
-  const [membershipPlans, setMembershipPlans] = useState<any[]>([])
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([])
   const [userRole, setUserRole] = useState<UserRole>('user')
-  const [subscriptionStatus, setSubscriptionStatus] = useState<any>(null)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<Awaited<
+    ReturnType<typeof getSubscriptionStatus>
+  > | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -88,7 +96,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         setActiveTab('talisman')
       }
     } catch (error) {
-      console.error('[PaymentWidget] Error loading data:', error)
+      logger.error('[PaymentWidget] Error loading data:', error)
       // Fallback plans if DB fails
       setPricePlans([
         {
@@ -165,8 +173,9 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         failUrl: `${window.location.origin}/protected/analysis/fail`,
         windowTarget: 'self',
       })
-    } catch (error: any) {
-      toast.error(error.message || '결제 준비 중 오류가 발생했습니다.')
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      toast.error(msg)
       setIsLoading(false)
     }
   }
@@ -368,8 +377,9 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                           failUrl: `${window.location.origin}/protected/analysis/fail`,
                           windowTarget: 'self',
                         })
-                      } catch (error: any) {
-                        toast.error(error.message || '결제 준비 중 오류가 발생했습니다.')
+                      } catch (error: unknown) {
+                        const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+                        toast.error(msg)
                         setIsLoading(false)
                       }
                     }}

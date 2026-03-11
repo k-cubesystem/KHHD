@@ -3,11 +3,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { deductTalisman } from '../payment/wallet'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistory, type AnalysisCategory, type AnalysisContextMode } from '../user/history'
 import { PROMPTS, injectContext } from '@/lib/prompts/storytelling'
 import { FEATURE_KEYS } from '@/lib/constants'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { logger } from '@/lib/utils/logger'
 
 const getGeminiModel = () => {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
@@ -19,7 +20,7 @@ const getGeminiModel = () => {
   })
 }
 
-async function getUserProfileAndContext(supabase: any) {
+async function getUserProfileAndContext(supabase: Awaited<ReturnType<typeof createClient>>) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -45,7 +46,7 @@ async function runAnalysis(
   variables: Record<string, string>,
   costKey: string,
   saveCategory: string,
-  historySummaryMapper: (data: any) => string
+  historySummaryMapper: (data: Record<string, unknown>) => string
 ) {
   try {
     const model = getGeminiModel()
@@ -54,7 +55,7 @@ async function runAnalysis(
 
     // Deduct Cost (Only if user exists)
     if (user) {
-      const deduct = await deductTalisman(costKey as any)
+      const deduct = await deductTalisman(costKey)
       if (!deduct.success) return deduct
     }
 
@@ -64,7 +65,7 @@ async function runAnalysis(
       USER_CONTEXT: profileContext,
     })
 
-    console.log(`[Analysis Engine] Running ${analysisType}...`)
+    logger.log(`[Analysis Engine] Running ${analysisType}...`)
 
     // Generate
     const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
@@ -73,7 +74,7 @@ async function runAnalysis(
       actionType: `analysis_${analysisType.toLowerCase()}`,
     })
     const text = result.response.text()
-    const data = JSON.parse(text)
+    const data: Record<string, unknown> = JSON.parse(text)
 
     // Save History
     if (user) {
@@ -81,19 +82,19 @@ async function runAnalysis(
         target_id: user.id,
         target_name: profile?.full_name || '본인',
         target_relation: '본인',
-        category: saveCategory as any,
-        context_mode: analysisType as any,
+        category: saveCategory as AnalysisCategory,
+        context_mode: analysisType as AnalysisContextMode,
         result_json: data,
         summary: historySummaryMapper(data),
-        score: data.score || data.fortune_score || data.compatibility_score || 80,
+        score: Number(data.score || data.fortune_score || data.compatibility_score || 80),
         model_used: MODEL_FLASH,
         talisman_cost: 0,
-      }).catch((e) => console.error('History Save Error:', e))
+      }).catch((e) => logger.error('History Save Error:', e))
     }
 
     return { success: true, data }
-  } catch (error) {
-    console.error(`[Analysis Engine] Error in ${analysisType}:`, error)
+  } catch (error: unknown) {
+    logger.error(`[Analysis Engine] Error in ${analysisType}:`, error)
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }
@@ -111,7 +112,7 @@ export async function analyzeChonjiin(
     { SAJU_INFO: sajuInfo, META_INFO: metaInfo, CURRENT_CONCERN: concern },
     FEATURE_KEYS.SAJU_PREMIUM,
     'SAJU',
-    (data) => data.summary || '천지인 통합 분석 결과'
+    (data) => String(data.summary || '천지인 통합 분석 결과')
   )
 }
 
@@ -123,7 +124,7 @@ export async function analyzeRelationship(myInfo: string, partnerInfo: string, r
     { MY_INFO: myInfo, PARTNER_INFO: partnerInfo, RELATION_TYPE: relationType },
     FEATURE_KEYS.COMPATIBILITY,
     'COMPATIBILITY',
-    (data) => `${relationType} 관계 분석: ${data.score}점`
+    (data) => `${relationType} 관계 분석: ${data.score ?? 0}점`
   )
 }
 
@@ -137,7 +138,7 @@ export async function analyzePeriodLuck(sajuInfo: string, periodType: '이번 �
     { SAJU_INFO: sajuInfo, PERIOD_TYPE: periodType, TARGET_DATE: targetDate },
     FEATURE_KEYS.SAJU_BASIC,
     'SAJU',
-    (data) => `${periodType} 운세: ${data.fortune_score || 85}점`
+    (data) => `${periodType} 운세: ${data.fortune_score ?? 85}점`
   )
 }
 

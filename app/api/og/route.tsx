@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import { logger } from '@/lib/utils/logger'
 
 export const runtime = 'edge'
 
@@ -321,7 +322,7 @@ export async function GET(request: NextRequest) {
     )
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
-    console.error('[OG Image Error]', msg)
+    logger.error('[OG Image Error]', msg)
     return new Response('Failed to generate OG image', { status: 500 })
   }
 }

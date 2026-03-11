@@ -1,6 +1,7 @@
 import { SharePageClient } from './share-page-client'
 import { getSharedAnalysis } from '@/app/actions/user/history'
 import type { Metadata } from 'next'
+import { logger } from '@/lib/utils/logger'
 
 interface SharePageProps {
   params: Promise<{
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       name: record.target_name,
       category: record.category,
     })
-    if (record.score != null) {
+    if (record.score !== null && record.score !== undefined) {
       ogParams.set('score', String(record.score))
     }
     const ogImageUrl = `/api/og?${ogParams.toString()}`
@@ -66,7 +67,7 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       },
     }
   } catch (error) {
-    console.warn('[Metadata] Failed to fetch shared record:', error)
+    logger.warn('[Metadata] Failed to fetch shared record:', error)
     return {
       title: '청담 해화당 - 운명 분석',
       description: '당신의 운명을 분석해보세요.',

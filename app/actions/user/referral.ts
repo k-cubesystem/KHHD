@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * 현재 로그인 유저의 추천 코드를 가져오거나 생성합니다.
@@ -29,7 +30,7 @@ export async function getOrCreateReferralCode(): Promise<{
   })
 
   if (error) {
-    console.error('[getOrCreateReferralCode]', error)
+    logger.error('[getOrCreateReferralCode]', error)
     return { success: false, error: '추천 코드 생성 중 오류가 발생했습니다.' }
   }
 
@@ -106,7 +107,7 @@ export async function processReferralBonus(
   })
 
   if (error) {
-    console.error('[processReferralBonus]', error)
+    logger.error('[processReferralBonus]', error)
     return { success: false, error: error.message }
   }
 

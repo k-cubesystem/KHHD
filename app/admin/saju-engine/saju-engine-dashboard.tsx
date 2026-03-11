@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Brain,
@@ -143,7 +144,7 @@ export function SajuEngineDashboard() {
       const result = buildSajuContext(testPerson)
       setTestResult(result)
     } catch (e) {
-      console.error(e)
+      logger.error(e)
     } finally {
       setIsLoading(false)
     }

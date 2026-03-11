@@ -965,10 +965,6 @@ export async function generateDestinyImage(
   // 현재는 분석 결과만 제공하고, 이미지 생성은 준비 중 상태로 표시
 
   try {
-    // 이미지 생성 API 호출 (플레이스홀더)
-    // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    // const response = await openai.images.edit({...});
-
     // 현재는 원본 이미지를 반환 (실제 구현 시 생성된 이미지 URL 반환)
     return {
       success: true,

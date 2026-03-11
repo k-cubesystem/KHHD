@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export interface FamilyMemberWithMissions {
   id: string
@@ -41,7 +42,7 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
     }
 
     // If RPC fails, use fallback query
-    console.warn('RPC not available, using fallback query')
+    logger.warn('RPC not available, using fallback query')
     throw error
   } catch (e) {
     // Fallback: Manual query without RPC
@@ -52,7 +53,7 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
       .order('created_at', { ascending: true })
 
     if (membersError || !members) {
-      console.error('Failed to fetch family members:', membersError)
+      logger.error('Failed to fetch family members:', membersError)
       return []
     }
 

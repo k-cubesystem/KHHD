@@ -7,6 +7,7 @@ import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 // --- Constants ---
 
@@ -130,7 +131,7 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
       totalRemaining,
     }
   } catch (error) {
-    console.error('[getShamanQuestionStatus] Error:', error)
+    logger.error('[getShamanQuestionStatus] Error:', error)
     return { ...defaultResult, error: '상태 조회 중 오류가 발생했습니다.' }
   }
 }
@@ -178,7 +179,7 @@ export async function purchaseShamanQuestions(): Promise<{
         .eq('user_id', user.id)
 
       if (walletError) {
-        console.error('[purchaseShamanQuestions] Wallet update error:', walletError)
+        logger.error('[purchaseShamanQuestions] Wallet update error:', walletError)
         return { success: false, error: '복채 차감 중 오류가 발생했습니다.' }
       }
 
@@ -213,7 +214,7 @@ export async function purchaseShamanQuestions(): Promise<{
       remainingBalance: finalBalance,
     }
   } catch (error) {
-    console.error('[purchaseShamanQuestions] Error:', error)
+    logger.error('[purchaseShamanQuestions] Error:', error)
     return { success: false, error: '질문권 구매 중 오류가 발생했습니다.' }
   }
 }
@@ -270,7 +271,7 @@ export async function sendShamanChatMessage(
         p_talisman_used: 0,
       })
       if (rpcError) {
-        console.error('[sendShamanChatMessage] RPC error:', rpcError)
+        logger.error('[sendShamanChatMessage] RPC error:', rpcError)
         // RPC 실패해도 AI 응답은 진행 (non-fatal)
       }
     } else {
@@ -393,7 +394,7 @@ export async function sendShamanChatMessage(
       suggestedQuestions: suggestions.slice(0, 4),
     }
   } catch (e: unknown) {
-    console.error('[sendShamanChatMessage] Error:', e)
+    logger.error('[sendShamanChatMessage] Error:', e)
     return { success: false, error: e instanceof Error ? e.message : '오류가 발생했습니다.' }
   }
 }
@@ -473,7 +474,7 @@ export async function getOrCreateChatSession(familyMemberId?: string): Promise<{
     }
     return { success: true, sessionId: newSession.id, isNew: true }
   } catch (e) {
-    console.error('[getOrCreateChatSession]', e)
+    logger.error('[getOrCreateChatSession]', e)
     return { success: false, error: '세션 조회 오류' }
   }
 }
@@ -512,7 +513,7 @@ export async function loadChatSessionMessages(sessionId: string): Promise<{
 
     return { success: true, messages }
   } catch (e) {
-    console.error('[loadChatSessionMessages]', e)
+    logger.error('[loadChatSessionMessages]', e)
     return { success: false, error: '메시지 로드 오류' }
   }
 }
@@ -547,7 +548,7 @@ export async function saveChatMessages(
 
     return { success: true }
   } catch (e) {
-    console.error('[saveChatMessages]', e)
+    logger.error('[saveChatMessages]', e)
     return { success: false, error: '메시지 저장 오류' }
   }
 }
@@ -586,7 +587,7 @@ export async function endAndCreateNewSession(
 
     return { success: true, newSessionId: newSession.id }
   } catch (e) {
-    console.error('[endAndCreateNewSession]', e)
+    logger.error('[endAndCreateNewSession]', e)
     return { success: false, error: '세션 전환 오류' }
   }
 }

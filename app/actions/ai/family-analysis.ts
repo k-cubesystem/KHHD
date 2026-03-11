@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 export interface FamilyMemberWithAnalysis {
   id: string
@@ -30,7 +31,7 @@ export async function getFamilyWithAnalysisSummary(): Promise<FamilyMemberWithAn
 
   if (!user) {
     // Demo Mode for unauthorized users (or just return empty)
-    console.warn('Unauthorized access to getFamilyWithAnalysisSummary. Returning demo data.')
+    logger.warn('Unauthorized access to getFamilyWithAnalysisSummary. Returning demo data.')
     return []
   }
 
@@ -42,7 +43,7 @@ export async function getFamilyWithAnalysisSummary(): Promise<FamilyMemberWithAn
 
     if (error) {
       // Function mismatch or missing implies migration not run
-      console.warn('RPC fetch failed (likely migration missing), using fallback:', error.message)
+      logger.warn('RPC fetch failed (likely migration missing), using fallback:', error.message)
       throw error
     }
 
@@ -56,7 +57,7 @@ export async function getFamilyWithAnalysisSummary(): Promise<FamilyMemberWithAn
       .order('created_at', { ascending: true })
 
     if (fallbackError) {
-      console.error('Critical: Failed to fetch family members even with fallback:', fallbackError)
+      logger.error('Critical: Failed to fetch family members even with fallback:', fallbackError)
       throw new Error('가족 정보를 불러올 수 없습니다.')
     }
 

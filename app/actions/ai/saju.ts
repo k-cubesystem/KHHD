@@ -20,6 +20,7 @@ import { getCachedAnalysis } from '@/lib/utils/analysis-cache'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { logger } from '@/lib/utils/logger'
 
 // --- Helpers ---
 
@@ -31,13 +32,13 @@ const getGeminiModel = () => {
 }
 
 // Global Context Injector for Hyper-Personalization
-async function getUserProfileContext(supabase: any, userId: string) {
+async function getUserProfileContext(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single()
 
   if (!profile) return { context: '', profile: null }
 
   // 활동 상태별 톤 조절 가이드
-  const activityGuide = {
+  const activityGuide: Record<string, string> = {
     active: '(적극적 실행형 - 구체적 행동 지침 제시)',
     passive: '(소극적 관망형 - 심리적 위로와 단계적 접근)',
     moderate: '(보통 - 균형잡힌 조언)',
@@ -98,7 +99,7 @@ export async function analyzeSajuDetail(
       forceRefresh,
     })
   }
-  console.log(`[AI Saju] Starting analysis for ${name} (${gender})`)
+  logger.log(`[AI Saju] Starting analysis for ${name} (${gender})`)
 
   // Zod validation
   const validation = sajuAnalysisSchema.safeParse({
@@ -129,7 +130,7 @@ export async function analyzeSajuDetail(
     if (!forceRefresh) {
       const cached = await getCachedAnalysis(user.id, user.id, 'SAJU')
       if (cached) {
-        console.log(`[AI Saju] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
+        logger.log(`[AI Saju] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
         return { success: true, ...cached.result_json, cached: true, cachedAt: cached.created_at }
       }
     }
@@ -210,13 +211,13 @@ export async function analyzeSajuDetail(
         const selfId = await getSelfFamilyMemberId().catch(() => null)
         if (selfId) await recordFortuneEntry(selfId, 'SAJU', selfId).catch(() => {})
       } catch (saveError) {
-        console.error('[AI Saju] Failed to save history:', saveError)
+        logger.error('[AI Saju] Failed to save history:', saveError)
       }
     }
 
     return { success: true, ...analysisData }
   } catch (error: unknown) {
-    console.error('[AI Saju] Critical Error:', error)
+    logger.error('[AI Saju] Critical Error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Error' }
   }
 }
@@ -316,7 +317,7 @@ export async function analyzeFaceForDestiny(imageBase64: string, goal: FaceDesti
         const selfId = await getSelfFamilyMemberId().catch(() => null)
         if (selfId) await recordFortuneEntry(selfId, 'FACE', selfId).catch(() => {})
       } catch (e) {
-        console.error(e)
+        logger.error(e)
       }
     }
 
@@ -412,7 +413,7 @@ export async function analyzePalm(imageBase64: string, saveToHistory: boolean = 
         const selfId = await getSelfFamilyMemberId().catch(() => null)
         if (selfId) await recordFortuneEntry(selfId, 'HAND', selfId).catch(() => {})
       } catch (e) {
-        console.error(e)
+        logger.error(e)
       }
     }
 
@@ -516,7 +517,7 @@ export async function analyzeInteriorForFengshui(
         const selfId = await getSelfFamilyMemberId().catch(() => null)
         if (selfId) await recordFortuneEntry(selfId, 'FENGSHUI', selfId).catch(() => {})
       } catch (e) {
-        console.error(e)
+        logger.error(e)
       }
     }
 
@@ -575,7 +576,7 @@ export async function generateDestinyImage(prompt: string, context: string = 'in
       success: true,
       imageData: mockImageUrl, // In a real app, this would be the DALL-E generated URL or Base64
     }
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: '이미지 생성 서비스가 일시적으로 지연되고 있습니다.' }
   }
 }

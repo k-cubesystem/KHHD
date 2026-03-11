@@ -8,9 +8,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/utils/logger'
 import { getSolapiClient, ALIMTALK_TEMPLATES, SOLAPI_PFID, SOLAPI_SENDER } from '@/lib/services/solapi'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 
@@ -72,11 +75,12 @@ export async function sendAlimtalk(
       success: true,
       messageId: (response as any)?.messageId,
     }
-  } catch (err: any) {
-    console.error('[Alimtalk] 발송 실패:', err)
+  } catch (err: unknown) {
+    logger.error('[Alimtalk] 발송 실패:', err)
+    const msg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,
-      error: err?.message || '알림톡 발송 중 오류가 발생했습니다.',
+      error: msg,
     }
   }
 }
@@ -125,7 +129,7 @@ export async function sendDailyFortuneNotification(userId: string): Promise<Send
   return sendAlimtalk(prefs.phone_number, ALIMTALK_TEMPLATES.DAILY_FORTUNE, {
     '#{이름}': profile?.full_name || '회원',
     '#{날짜}': dateStr,
-    '#{앱링크}': 'https://haehwadang.com/protected/fortune',
+    '#{앱링크}': `${SITE_URL}/protected/fortune`,
   })
 }
 
@@ -250,6 +254,6 @@ export async function sendTestAlimtalk(): Promise<SendAlimtalkResult> {
   return sendAlimtalk(prefs.phone_number, ALIMTALK_TEMPLATES.DAILY_FORTUNE, {
     '#{이름}': profile?.full_name || '회원',
     '#{날짜}': today,
-    '#{앱링크}': 'https://haehwadang.com/protected/fortune',
+    '#{앱링크}': `${SITE_URL}/protected/fortune`,
   })
 }
