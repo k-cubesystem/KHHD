@@ -83,11 +83,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=${encodeURIComponent(exchangeError.message)}`)
     }
 
-    if (data.session) {
-      await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      })
+    // exchangeCodeForSession이 이미 쿠키에 세션을 설정하므로
+    // 추가 setSession 호출은 불필요하며 오히려 세션 충돌을 유발할 수 있음
+    if (!data.session) {
+      logger.error('[Callback] No session after code exchange')
+      return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=session_failed`)
     }
   }
 

@@ -3,16 +3,40 @@
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+
+/** 카카오톡/라인/인스타 등 인앱 브라우저 감지 */
+function isInAppBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || navigator.vendor || ''
+  return /KAKAOTALK|NAVER|Line|Instagram|FBAN|FBAV|Twitter/i.test(ua)
+}
+
+/** 인앱 브라우저에서 외부 브라우저로 열기 (Android/iOS 공통) */
+function openInExternalBrowser(url: string) {
+  // 카카오톡 인앱: intent scheme으로 외부 브라우저 열기
+  const ua = navigator.userAgent || ''
+  if (/Android/i.test(ua)) {
+    // Android intent로 Chrome/기본 브라우저 열기
+    const intentUrl = `intent://${url.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`
+    window.location.href = intentUrl
+  } else {
+    // iOS: Safari로 열기 위해 window.open 사용
+    // 카카오톡 iOS에서는 target=_blank + location 조합 시도
+    window.open(url, '_system')
+  }
+}
 
 export default function SocialLoginButtons() {
   const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [inApp, setInApp] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
     setIsMounted(true)
+    setInApp(isInAppBrowser())
   }, [])
 
   const handleLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao') => {
@@ -20,6 +44,12 @@ export default function SocialLoginButtons() {
     e.stopPropagation()
 
     if (!isMounted || typeof window === 'undefined') return
+
+    // 인앱 브라우저 감지 시 현재 페이지를 외부 브라우저로 열기
+    if (isInAppBrowser()) {
+      openInExternalBrowser(window.location.href)
+      return
+    }
 
     logger.log(`[OAuth] Attempting ${provider} login...`)
 
@@ -52,6 +82,28 @@ export default function SocialLoginButtons() {
       <div className="flex flex-col gap-3">
         <div className="w-full h-12 bg-stone-800/50 animate-pulse rounded-lg" />
         <div className="w-full h-12 bg-stone-800/50 animate-pulse rounded-lg" />
+      </div>
+    )
+  }
+
+  // 인앱 브라우저 안내 배너
+  if (inApp) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 text-center leading-relaxed">
+          카카오톡 등 앱 내 브라우저에서는 소셜 로그인이 제한됩니다.
+          <br />
+          아래 버튼을 눌러 외부 브라우저에서 열어주세요.
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12 border-stone-600 rounded-lg text-stone-300 hover:text-white hover:border-stone-400 transition-all"
+          onClick={() => openInExternalBrowser(window.location.href)}
+        >
+          <ExternalLink className="w-4 h-4 mr-2" />
+          <span className="text-sm font-medium">외부 브라우저에서 열기</span>
+        </Button>
       </div>
     )
   }
