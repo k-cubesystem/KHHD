@@ -7,8 +7,13 @@ export const metadata: Metadata = {
   description: '두 사람의 사주를 비교하여 궁합을 분석합니다.',
 }
 
-export default async function CompatibilityPage() {
+interface Props {
+  searchParams: Promise<{ targetId?: string }>
+}
+
+export default async function CompatibilityPage({ searchParams }: Props) {
+  const { targetId } = await searchParams
   const targets = await getDestinyTargets()
 
-  return <CompatibilityClient targets={targets} />
+  return <CompatibilityClient targets={targets} fixedTargetId={targetId} />
 }

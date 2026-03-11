@@ -27,11 +27,13 @@ import {
 
 interface CompatibilityClientProps {
   targets: DestinyTarget[]
+  fixedTargetId?: string
 }
 
-export function CompatibilityClient({ targets }: CompatibilityClientProps) {
+export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityClientProps) {
   const router = useRouter()
-  const [person1, setPerson1] = useState<DestinyTarget | null>(null)
+  const fixedTarget = fixedTargetId ? (targets.find((t) => t.id === fixedTargetId) ?? null) : null
+  const [person1, setPerson1] = useState<DestinyTarget | null>(fixedTarget)
   const [person2, setPerson2] = useState<DestinyTarget | null>(null)
   const [relationship, setRelationship] = useState<string>('lover')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -88,7 +90,7 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
   }
 
   const handleReset = () => {
-    setPerson1(null)
+    setPerson1(fixedTarget)
     setPerson2(null)
     setResult(null)
   }
@@ -125,7 +127,11 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
             </span>
           </div>
           <h1 className="text-3xl md:text-4xl font-serif font-light text-ink-light">궁합 분석</h1>
-          <p className="text-sm text-ink-light/60 font-light">두 사람의 사주를 분석하여 관계의 조화를 살펴봅니다</p>
+          <p className="text-sm text-ink-light/60 font-light">
+            {fixedTarget
+              ? `${fixedTarget.name}님과 궁합을 볼 상대를 선택해주세요`
+              : '두 사람의 사주를 분석하여 관계의 조화를 살펴봅니다'}
+          </p>
         </motion.div>
 
         {targets.length === 0 ? (
@@ -163,73 +169,97 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
                 <User className="w-5 h-5 text-primary" strokeWidth={1} />첫 번째 사람
               </h2>
 
-              <div className="grid grid-cols-1 gap-3">
-                {targets.map((target) => (
-                  <Card
-                    key={target.id}
-                    className={`cursor-pointer transition-all ${
-                      person1?.id === target.id
-                        ? 'bg-primary/10 border-primary/40'
-                        : 'bg-surface/20 border-primary/20 hover:bg-primary/5'
-                    }`}
-                    onClick={() => handleSelectPerson(target, 1)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="w-5 h-5 text-primary" strokeWidth={1} />
-                          </div>
-                          <div>
-                            <div className="font-medium text-ink-light">{target.name}</div>
-                            <div className="text-xs text-ink-light/50">
-                              {target.birth_date} {target.birth_time && `• ${target.birth_time}`}
-                            </div>
+              {fixedTarget ? (
+                <Card className="bg-primary/10 border-primary/40">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-primary" strokeWidth={1} />
+                        </div>
+                        <div>
+                          <div className="font-medium text-ink-light">{fixedTarget.name}</div>
+                          <div className="text-xs text-ink-light/50">
+                            {fixedTarget.birth_date} {fixedTarget.birth_time && `• ${fixedTarget.birth_time}`}
                           </div>
                         </div>
-                        {person1?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      <Check className="w-5 h-5 text-primary" strokeWidth={2} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 gap-3">
+                  {targets.map((target) => (
+                    <Card
+                      key={target.id}
+                      className={`cursor-pointer transition-all ${
+                        person1?.id === target.id
+                          ? 'bg-primary/10 border-primary/40'
+                          : 'bg-surface/20 border-primary/20 hover:bg-primary/5'
+                      }`}
+                      onClick={() => handleSelectPerson(target, 1)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-5 h-5 text-primary" strokeWidth={1} />
+                            </div>
+                            <div>
+                              <div className="font-medium text-ink-light">{target.name}</div>
+                              <div className="text-xs text-ink-light/50">
+                                {target.birth_date} {target.birth_time && `• ${target.birth_time}`}
+                              </div>
+                            </div>
+                          </div>
+                          {person1?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             {/* Person 2 Selection */}
             <motion.div variants={fadeInUp} className="space-y-3">
               <h2 className="text-lg font-serif font-light text-ink-light flex items-center gap-2">
-                <User className="w-5 h-5 text-primary" strokeWidth={1} />두 번째 사람
+                <User className="w-5 h-5 text-primary" strokeWidth={1} />
+                {fixedTarget ? '궁합을 볼 상대' : '두 번째 사람'}
               </h2>
 
               <div className="grid grid-cols-1 gap-3">
-                {targets.map((target) => (
-                  <Card
-                    key={target.id}
-                    className={`cursor-pointer transition-all ${
-                      person2?.id === target.id
-                        ? 'bg-primary/10 border-primary/40'
-                        : 'bg-surface/20 border-primary/20 hover:bg-primary/5'
-                    }`}
-                    onClick={() => handleSelectPerson(target, 2)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="w-5 h-5 text-primary" strokeWidth={1} />
-                          </div>
-                          <div>
-                            <div className="font-medium text-ink-light">{target.name}</div>
-                            <div className="text-xs text-ink-light/50">
-                              {target.birth_date} {target.birth_time && `• ${target.birth_time}`}
+                {targets
+                  .filter((t) => !fixedTarget || t.id !== fixedTarget.id)
+                  .map((target) => (
+                    <Card
+                      key={target.id}
+                      className={`cursor-pointer transition-all ${
+                        person2?.id === target.id
+                          ? 'bg-primary/10 border-primary/40'
+                          : 'bg-surface/20 border-primary/20 hover:bg-primary/5'
+                      }`}
+                      onClick={() => handleSelectPerson(target, 2)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="w-5 h-5 text-primary" strokeWidth={1} />
+                            </div>
+                            <div>
+                              <div className="font-medium text-ink-light">{target.name}</div>
+                              <div className="text-xs text-ink-light/50">
+                                {target.birth_date} {target.birth_time && `• ${target.birth_time}`}
+                              </div>
                             </div>
                           </div>
+                          {person2?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
                         </div>
-                        {person2?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </motion.div>
 
@@ -292,7 +322,9 @@ export function CompatibilityClient({ targets }: CompatibilityClientProps) {
                 궁합 분석하기
               </Button>
               {(!person1 || !person2) && (
-                <p className="text-xs text-center text-muted-foreground mt-2">두 사람을 모두 선택해주세요</p>
+                <p className="text-xs text-center text-muted-foreground mt-2">
+                  {fixedTarget ? '궁합을 볼 상대를 선택해주세요' : '두 사람을 모두 선택해주세요'}
+                </p>
               )}
             </motion.div>
           </>
