@@ -1,13 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const apiKey = process.env.ANTHROPIC_API_KEY || ''
-
 let client: Anthropic | null = null
 
 function getClient(): Anthropic {
   if (!client) {
+    const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다.')
+      throw new Error(
+        'ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다. .env.local에 ANTHROPIC_API_KEY=sk-ant-... 를 추가해주세요.'
+      )
     }
     client = new Anthropic({ apiKey })
   }

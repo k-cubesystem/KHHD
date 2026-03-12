@@ -16,7 +16,7 @@ export default async function WeeklyFortunePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/auth/login')
 
   // 본인 대상 조회
   const targets = await getDestinyTargets()

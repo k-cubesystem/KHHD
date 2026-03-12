@@ -35,11 +35,7 @@ async function EventBannersSection() {
 }
 
 function SectionSkeleton({ height = 'h-24' }: { height?: string }) {
-  return (
-    <div
-      className={`${height} bg-surface/10 border border-white/5 rounded-xl animate-pulse mx-4`}
-    />
-  )
+  return <div className={`${height} bg-surface/10 border border-white/5 rounded-xl animate-pulse mx-4`} />
 }
 
 export default async function AnalysisHubPage() {
@@ -48,22 +44,21 @@ export default async function AnalysisHubPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/auth/login')
 
   // 빠른 쿼리만 인라인 병렬 처리
-  const [profile, monthlyFortune, rouletteStatus, attendanceStatus, weeklyAttendance] =
-    await Promise.all([
-      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
-      getMonthlyFamilyFortune(),
-      checkRouletteAvailability(),
-      checkAttendanceAvailability().catch(() => ({ canCheckIn: false, alreadyChecked: false })),
-      getWeeklyAttendance().catch(() => ({
-        success: false as const,
-        weekDays: [],
-        weekCount: 0,
-        totalBokchae: 0,
-      })),
-    ])
+  const [profile, monthlyFortune, rouletteStatus, attendanceStatus, weeklyAttendance] = await Promise.all([
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    getMonthlyFamilyFortune(),
+    checkRouletteAvailability(),
+    checkAttendanceAvailability().catch(() => ({ canCheckIn: false, alreadyChecked: false })),
+    getWeeklyAttendance().catch(() => ({
+      success: false as const,
+      weekDays: [],
+      weekCount: 0,
+      totalBokchae: 0,
+    })),
+  ])
 
   const userName = profile.data?.full_name || undefined
 

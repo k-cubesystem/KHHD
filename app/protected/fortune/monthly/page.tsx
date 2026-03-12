@@ -16,7 +16,7 @@ export default async function MonthlyFortunePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/auth/sign-in')
+  if (!user) redirect('/auth/login')
 
   const targets = await getDestinyTargets()
   const self = targets.find((t) => t.target_type === 'self') ?? targets[0] ?? null
