@@ -28,6 +28,12 @@ export interface PalmReadingData {
   palm_score?: number
 }
 
+export interface LifeTimelineData {
+  pastDecade?: string
+  currentDecade?: string
+  nextDecade?: string
+}
+
 export interface CheonjiinAnalysisResult {
   score?: number
   summary?: string
@@ -45,14 +51,23 @@ export interface CheonjiinAnalysisResult {
     title?: string
     content?: string
     element_metaphor?: string
+    geokguk?: string
+    yongsin?: string
     strengths?: string[]
     weaknesses?: string[]
+    lifeTimeline?: LifeTimelineData
+    career?: string
+    wealth?: string
+    love?: string
+    health?: string
   }
   ji?: {
     title?: string
     content?: string
     daewoon_phase?: string
     lucky_direction?: string
+    strengths?: string[]
+    weaknesses?: string[]
     fengshui?: FengshuiData | null
   }
   in?: {
@@ -60,6 +75,8 @@ export interface CheonjiinAnalysisResult {
     content?: string
     relationship_advice?: string
     noble_person?: string
+    strengths?: string[]
+    weaknesses?: string[]
     face_reading?: FaceReadingData | null
     palm_reading?: PalmReadingData | null
   }

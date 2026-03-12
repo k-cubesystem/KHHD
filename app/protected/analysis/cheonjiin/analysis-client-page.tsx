@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { User, ArrowRight, BookOpen, Eye, Hand, Compass } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
-import { SajuLoadingOverlay } from '@/components/shared/SajuLoadingOverlay'
 
 const ANALYSIS_CARDS = [
   {
@@ -53,9 +51,6 @@ interface AnalysisClientPageProps {
 export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientPageProps) {
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId || null)
-  const [showSajuLoading, setShowSajuLoading] = useState(false)
-
-  const selectedTarget = targets.find((t) => t.id === selectedId)
 
   const handleTargetSelect = (id: string) => {
     setSelectedId(id)
@@ -66,7 +61,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
 
     switch (type) {
       case 'saju':
-        setShowSajuLoading(true)
+        router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
         break
       case 'face':
         router.push(`/protected/studio/face?targetId=${selectedId}`)
@@ -80,22 +75,8 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
     }
   }
 
-  const handleLoadingComplete = useCallback(() => {
-    router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
-  }, [router, selectedId])
-
   return (
     <>
-      <AnimatePresence>
-        {showSajuLoading && (
-          <SajuLoadingOverlay
-            targetName={selectedTarget?.name ?? ''}
-            duration={11000}
-            onComplete={handleLoadingComplete}
-          />
-        )}
-      </AnimatePresence>
-
       <div className="max-w-3xl mx-auto py-6 px-4 pb-20">
         {/* Header */}
         <section className="text-center space-y-2 mb-8">

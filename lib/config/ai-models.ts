@@ -30,12 +30,16 @@ export const MODEL_FLASH = GEMINI_FLASH
 export const MODEL_IMAGE = GEMINI_IMAGE
 
 // Feature configs - which model each feature uses
+// 사주/천지인/궁합/관상/손금/풍수: Claude 고정
+// 이미지 생성: Gemini 고정
+// 나머지: DEFAULT_PROVIDER 따름
 export const FEATURE_MODELS: Record<string, AIModelConfig> = {
-  saju: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_OPUS : GEMINI_PRO },
-  cheonjiin: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_OPUS : GEMINI_PRO },
-  compatibility: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_OPUS : GEMINI_PRO },
-  image: { provider: 'gemini', model: GEMINI_PRO }, // Image analysis always Gemini (vision)
-  'generate-image': { provider: 'gemini', model: GEMINI_IMAGE }, // Image gen always Gemini
+  saju: { provider: 'claude', model: CLAUDE_OPUS },
+  saju_detail: { provider: 'claude', model: CLAUDE_OPUS },
+  cheonjiin: { provider: 'claude', model: CLAUDE_OPUS },
+  compatibility: { provider: 'claude', model: CLAUDE_OPUS },
+  image: { provider: 'claude', model: CLAUDE_OPUS }, // 관상/손금/풍수 이미지 분석
+  'generate-image': { provider: 'gemini', model: GEMINI_IMAGE }, // 이미지 생성만 Gemini
   'shaman-chat': { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
   'fortune-analysis': {
     provider: DEFAULT_PROVIDER,
@@ -47,10 +51,7 @@ export const FEATURE_MODELS: Record<string, AIModelConfig> = {
   daily: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
   invite: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
   engine: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  'celebrity-compatibility': {
-    provider: DEFAULT_PROVIDER,
-    model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_OPUS : GEMINI_PRO,
-  },
+  'celebrity-compatibility': { provider: 'claude', model: CLAUDE_OPUS },
 }
 
 export function getModelConfig(featureKey: string): AIModelConfig {

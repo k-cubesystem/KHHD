@@ -14,12 +14,18 @@ function getClient(): Anthropic {
   return client
 }
 
+export interface ImagePart {
+  mimeType: string
+  data: string // base64
+}
+
 export interface ClaudeGenerateOptions {
   model: string
   systemPrompt?: string
   userPrompt: string
   maxTokens?: number
   temperature?: number
+  images?: ImagePart[]
 }
 
 export async function generateWithClaude(options: ClaudeGenerateOptions): Promise<{
@@ -29,12 +35,30 @@ export async function generateWithClaude(options: ClaudeGenerateOptions): Promis
 }> {
   const anthropic = getClient()
 
+  // 멀티모달: 이미지 + 텍스트 조합
+  const contentParts: Anthropic.Messages.ContentBlockParam[] = []
+
+  if (options.images?.length) {
+    for (const img of options.images) {
+      contentParts.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: img.mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+          data: img.data,
+        },
+      })
+    }
+  }
+
+  contentParts.push({ type: 'text', text: options.userPrompt })
+
   const response = await anthropic.messages.create({
     model: options.model,
     max_tokens: options.maxTokens || 8192,
     temperature: options.temperature ?? 0.7,
     system: options.systemPrompt || '',
-    messages: [{ role: 'user', content: options.userPrompt }],
+    messages: [{ role: 'user', content: contentParts }],
   })
 
   const text = response.content

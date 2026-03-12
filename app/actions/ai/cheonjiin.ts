@@ -6,13 +6,12 @@ import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import { formatManseDetails, formatSajuText, formatDaewoon, calculateElements } from '@/lib/utils/manse-formatter'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
-import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
-import { MODEL_PRO } from '@/lib/config/ai-models'
+import { CLAUDE_OPUS } from '@/lib/config/ai-models'
+import { generateAIContent } from '@/lib/services/ai-client'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
@@ -75,7 +74,7 @@ export async function analyzeCheonjiinAction(
       const cached = await getCachedAnalysis(user.id, targetId, 'SAJU', 24)
 
       if (cached && isCacheValid(cached, 24)) {
-        logger.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - Gemini 호출 생략`)
+        logger.log(`[CheonjiinAnalysis] 캐시 적중 (${cached.created_at}) - AI 호출 생략`)
 
         // 캐시 반환 시에도 fortune_journal 업데이트 (UPSERT이므로 중복 안전)
         const fortuneMemberId = targetId // target_type 판별 전이므로 targetId 사용
@@ -314,38 +313,30 @@ async function analyzeCheonjiinWithAI(
   target: NonNullable<Awaited<ReturnType<typeof getDestinyTarget>>>,
   faceImagePart?: { mimeType: string; data: string } | null,
   handImagePart?: { mimeType: string; data: string } | null,
-  userId?: string
+  _userId?: string
 ) {
-  const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  if (!apiKey) {
-    throw new Error('Google Generative AI API Key is missing')
-  }
+  logger.log('[CheonjiinAnalysis] AI 분석 시작 (Claude)...')
 
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
-    model: MODEL_PRO,
-    generationConfig: { responseMimeType: 'application/json' },
-  })
-
-  logger.log('[CheonjiinAnalysis] AI 분석 시작...')
-
-  // 멀티모달 Parts 구성: 텍스트 + 이미지(있는 경우)
-  const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [{ text: promptText }]
+  // 멀티모달 이미지 구성
+  const images: Array<{ mimeType: string; data: string }> = []
   if (faceImagePart) {
-    parts.push({ inlineData: faceImagePart })
+    images.push(faceImagePart)
     logger.log('[CheonjiinAnalysis] 관상 이미지 첨부됨')
   }
   if (handImagePart) {
-    parts.push({ inlineData: handImagePart })
+    images.push(handImagePart)
     logger.log('[CheonjiinAnalysis] 손금 이미지 첨부됨')
   }
 
-  const result = await withGeminiRateLimit(() => model.generateContent({ contents: [{ role: 'user', parts }] }), {
-    userId,
-    model: MODEL_PRO,
-    actionType: 'cheonjiin',
+  const aiResult = await generateAIContent({
+    featureKey: 'cheonjiin',
+    systemPrompt:
+      '당신은 30년 경력의 사주명리학 전문가입니다. 백운산·강헌·도원 수준의 깊이 있는 인생 풀이를 제공합니다. 과거·현재·미래를 관통하며, 장단점을 솔직하고 구체적으로 짚어줍니다. 무속적 표현 대신 현대적 언어를 사용합니다. 반드시 유효한 JSON만 출력하십시오.',
+    userPrompt: promptText,
+    maxTokens: 16384,
+    images: images.length > 0 ? images : undefined,
   })
-  const text = result.response.text()
+  const text = aiResult.text
 
   // JSON 파싱 (마크다운 코드블록 제거 후 안전하게 파싱)
   const data = extractJSON(text)
@@ -359,7 +350,7 @@ async function analyzeCheonjiinWithAI(
     result_json: data,
     summary: (data.summary as string) || '천지인 통합 분석 결과',
     score: 0,
-    model_used: MODEL_PRO,
+    model_used: CLAUDE_OPUS,
     talisman_cost: 3,
   })
 
@@ -465,9 +456,20 @@ ${
   "summary": "한 줄 종합 요약 (핵심 특성 중심, 명확하게)",
   "cheon": {
     "title": "천(天) 분석 제목",
-    "content": "천(天) 분석 본문 (최소 300자, 사주 팔자에 근거한 명확한 분석)",
-    "strengths": ["강점1 (구체적으로)", "강점2", "강점3"],
-    "weaknesses": ["약점1 (구체적으로)", "약점2"]
+    "content": "천(天) 분석 본문 (최소 500자. 격국·용신·십성을 활용한 깊이 있는 분석. 이 사람의 타고난 그릇, 인생의 방향성, 핵심 재능과 한계를 현대적으로 풀이)",
+    "geokguk": "격국 이름과 의미 (예: 정관격 — 조직 안에서 성과를 내는 구조)",
+    "yongsin": "용신 오행과 실생활 활용법",
+    "strengths": ["강점1 — 어떤 상황에서 발현되는지 구체적으로", "강점2", "강점3", "강점4", "강점5"],
+    "weaknesses": ["약점1 — 실제 문제 상황과 보완법까지 포함", "약점2", "약점3", "약점4", "약점5"],
+    "lifeTimeline": {
+      "pastDecade": "10년 전 대운의 핵심 테마와 경험했을 사건들 (3~4문장, 구체적 연도 명시)",
+      "currentDecade": "현재 대운의 에너지와 지금 집중해야 할 것 (3~4문장)",
+      "nextDecade": "10년 후 대운 전환과 지금 준비해야 할 것 (3~4문장)"
+    },
+    "career": "직업 적성 — 구체적 직종 5개 이상, 사업 적성, 이직·승진 시기 판단",
+    "wealth": "재물 패턴 — 수입 유형, 투자 적성, 재물 유입·유출 시기",
+    "love": "연애·결혼운 — 연애 스타일, 이상적 배우자상, 결혼 적기, 주의 패턴",
+    "health": "건강 — 취약 장기 3~4개, 시기별 주의사항, 예방 생활습관"
   },
   "ji": {
     "title": "지(地) 분석 제목",

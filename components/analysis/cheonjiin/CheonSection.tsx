@@ -1,14 +1,27 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Crown, Star } from 'lucide-react'
+import { Crown, Star, Briefcase, Coins, Heart, Activity, Clock, Zap, Shield } from 'lucide-react'
+
+interface LifeTimelineData {
+  pastDecade?: string
+  currentDecade?: string
+  nextDecade?: string
+}
 
 interface CheonSectionProps {
   data: {
     title?: string
     content?: string
+    geokguk?: string
+    yongsin?: string
     strengths?: string[]
     weaknesses?: string[]
+    lifeTimeline?: LifeTimelineData
+    career?: string
+    wealth?: string
+    love?: string
+    health?: string
   } | null
 }
 
@@ -42,7 +55,7 @@ export function CheonSection({ data }: CheonSectionProps) {
               </h2>
             </div>
             <p className="text-sm text-ink-light/50 font-light pl-13">
-              하늘이 정해준 당신의 고유한 기질과 운명적 흐름입니다.
+              사주 팔자에 근거한 당신의 타고난 기질과 운명의 흐름입니다.
             </p>
           </div>
 
@@ -55,52 +68,178 @@ export function CheonSection({ data }: CheonSectionProps) {
               </p>
             </div>
 
-            {/* Analysis Points Grid */}
+            {/* 격국·용신 */}
+            {(data.geokguk || data.yongsin) && (
+              <div className="bg-primary/5 rounded-xl p-4 border border-primary/10 space-y-2">
+                <div className="flex items-center gap-2 text-primary mb-1">
+                  <Zap className="w-4 h-4" />
+                  <span className="text-sm font-bold">격국 · 용신</span>
+                </div>
+                {data.geokguk && (
+                  <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
+                    <span className="text-primary/70 font-medium">격국:</span> {data.geokguk}
+                  </p>
+                )}
+                {data.yongsin && (
+                  <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep">
+                    <span className="text-primary/70 font-medium">용신:</span> {data.yongsin}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* 강점/약점 */}
             <div className="grid grid-cols-1 gap-4 pt-2">
-              {/* Strengths */}
-              {strengths && strengths.length > 0 && (
+              {strengths.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-primary">
                     <Crown className="w-4 h-4" aria-hidden="true" />
                     <span className="text-sm font-bold tracking-wide">강점</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {/* Using simple text tags instead of badges for cleaner look on mobile */}
+                  <div className="space-y-2">
                     {strengths.map((s: string, idx: number) => (
-                      <span
+                      <div
                         key={idx}
-                        className="inline-block px-3 py-1.5 rounded-lg bg-primary/10 text-primary/80 text-sm font-medium border border-primary/20"
+                        className="px-3 py-2 rounded-lg bg-primary/10 text-primary/80 text-sm font-light border border-primary/20 leading-relaxed break-keep"
                       >
                         {s}
-                      </span>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Weaknesses */}
-              {weaknesses && weaknesses.length > 0 && (
+              {weaknesses.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-2 text-primary-dark/70">
-                    <Star className="w-4 h-4" aria-hidden="true" />
+                    <Shield className="w-4 h-4" aria-hidden="true" />
                     <span className="text-sm font-bold tracking-wide">보완점</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="space-y-2">
                     {weaknesses.map((w: string, idx: number) => (
-                      <span
+                      <div
                         key={idx}
-                        className="inline-block px-3 py-1.5 rounded-lg bg-primary-dark/5 text-primary-dark/80 text-sm font-light border border-primary-dark/10"
+                        className="px-3 py-2 rounded-lg bg-primary-dark/5 text-primary-dark/80 text-sm font-light border border-primary-dark/10 leading-relaxed break-keep"
                       >
                         {w}
-                      </span>
+                      </div>
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* 인생 타임라인 */}
+            {data.lifeTimeline && (
+              <div className="space-y-3 pt-4">
+                <div className="flex items-center gap-2 text-blue-300">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm font-bold">인생 타임라인</span>
+                </div>
+                <div className="space-y-3">
+                  {data.lifeTimeline.pastDecade && (
+                    <TimelineCard
+                      label="과거 10년"
+                      color="text-blue-300/70"
+                      borderColor="border-blue-300/20"
+                      bgColor="bg-blue-300/5"
+                    >
+                      {data.lifeTimeline.pastDecade}
+                    </TimelineCard>
+                  )}
+                  {data.lifeTimeline.currentDecade && (
+                    <TimelineCard
+                      label="현재"
+                      color="text-primary"
+                      borderColor="border-primary/30"
+                      bgColor="bg-primary/5"
+                    >
+                      {data.lifeTimeline.currentDecade}
+                    </TimelineCard>
+                  )}
+                  {data.lifeTimeline.nextDecade && (
+                    <TimelineCard
+                      label="미래 10년"
+                      color="text-emerald-300/70"
+                      borderColor="border-emerald-300/20"
+                      bgColor="bg-emerald-300/5"
+                    >
+                      {data.lifeTimeline.nextDecade}
+                    </TimelineCard>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 세부 분석: 직업·재물·연애·건강 */}
+            <div className="space-y-3 pt-4">
+              {data.career && (
+                <DetailCard icon={Briefcase} label="직업·사업" color="text-amber-300">
+                  {data.career}
+                </DetailCard>
+              )}
+              {data.wealth && (
+                <DetailCard icon={Coins} label="재물운" color="text-yellow-300">
+                  {data.wealth}
+                </DetailCard>
+              )}
+              {data.love && (
+                <DetailCard icon={Heart} label="연애·결혼" color="text-rose-300">
+                  {data.love}
+                </DetailCard>
+              )}
+              {data.health && (
+                <DetailCard icon={Activity} label="건강" color="text-emerald-300">
+                  {data.health}
+                </DetailCard>
               )}
             </div>
           </div>
         </div>
       </div>
     </motion.div>
+  )
+}
+
+function TimelineCard({
+  label,
+  color,
+  borderColor,
+  bgColor,
+  children,
+}: {
+  label: string
+  color: string
+  borderColor: string
+  bgColor: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className={`rounded-xl p-4 border ${borderColor} ${bgColor}`}>
+      <span className={`text-xs font-bold ${color} tracking-wide mb-1.5 block`}>{label}</span>
+      <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">{children}</p>
+    </div>
+  )
+}
+
+function DetailCard({
+  icon: Icon,
+  label,
+  color,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  color: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-xl p-4 border border-white/5 bg-surface/30">
+      <div className={`flex items-center gap-2 ${color} mb-2`}>
+        <Icon className="w-4 h-4" />
+        <span className="text-sm font-bold">{label}</span>
+      </div>
+      <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">{children}</p>
+    </div>
   )
 }

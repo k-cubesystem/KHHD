@@ -1,5 +1,5 @@
 import { getModelConfig, type AIProvider } from '@/lib/config/ai-models'
-import { generateWithClaude } from '@/lib/services/claude-client'
+import { generateWithClaude, type ImagePart } from '@/lib/services/claude-client'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const geminiApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || ''
@@ -12,6 +12,7 @@ export interface AIGenerateOptions {
   temperature?: number
   providerOverride?: AIProvider
   modelOverride?: string
+  images?: ImagePart[]
 }
 
 export interface AIGenerateResult {
@@ -34,6 +35,7 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
       userPrompt: options.userPrompt,
       maxTokens: options.maxTokens,
       temperature: options.temperature,
+      images: options.images,
     })
     return { ...result, provider: 'claude', model }
   }

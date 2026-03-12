@@ -20,6 +20,8 @@ interface SajuLoadingOverlayProps {
   isApiComplete?: boolean
   /** 로딩 완료 후 콜백 */
   onComplete: () => void
+  /** 진행바/퍼센트 표시 여부 (기본 false — 펄스 인디케이터 + 안내 문구) */
+  showProgress?: boolean
 }
 
 export function SajuLoadingOverlay({
@@ -27,6 +29,7 @@ export function SajuLoadingOverlay({
   duration = 10000,
   isApiComplete = false,
   onComplete,
+  showProgress = false,
 }: SajuLoadingOverlayProps) {
   const [msgIndex, setMsgIndex] = useState(() => Math.floor(Math.random() * SAJU_LOADING_MESSAGES.length))
   const [msgVisible, setMsgVisible] = useState(true)
@@ -197,27 +200,59 @@ export function SajuLoadingOverlay({
         </AnimatePresence>
       </div>
 
-      {/* 진행바 */}
-      <div
-        className="rounded-full overflow-hidden"
-        style={{ width: '200px', height: '2px', background: 'rgba(255,255,255,0.06)' }}
-      >
-        <div
-          ref={progressBarRef}
-          className="h-full rounded-full"
-          style={{
-            width: `${displayProgress}%`,
-            background: 'linear-gradient(90deg, rgba(212,175,55,0.5), #D4AF37, rgba(212,175,55,0.5))',
-            transition: finishing ? 'width 0.5s ease' : 'none',
-          }}
-        />
-      </div>
-      <p
-        className="mt-2.5 tracking-widest"
-        style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', fontWeight: 300 }}
-      >
-        {finishing ? '분석 완료' : `${displayProgress}%`}
-      </p>
+      {showProgress ? (
+        <>
+          {/* 진행바 */}
+          <div
+            className="rounded-full overflow-hidden"
+            style={{ width: '200px', height: '2px', background: 'rgba(255,255,255,0.06)' }}
+          >
+            <div
+              ref={progressBarRef}
+              className="h-full rounded-full"
+              style={{
+                width: `${displayProgress}%`,
+                background: 'linear-gradient(90deg, rgba(212,175,55,0.5), #D4AF37, rgba(212,175,55,0.5))',
+                transition: finishing ? 'width 0.5s ease' : 'none',
+              }}
+            />
+          </div>
+          <p
+            className="mt-2.5 tracking-widest"
+            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', fontWeight: 300 }}
+          >
+            {finishing ? '분석 완료' : `${displayProgress}%`}
+          </p>
+        </>
+      ) : (
+        <>
+          {/* 펄스 인디케이터 */}
+          <div className="flex items-center gap-1.5 mb-4">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: 'rgba(212,175,55,0.6)' }}
+                animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
+                transition={{
+                  duration: 1.4,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                  ease: 'easeInOut',
+                }}
+              />
+            ))}
+          </div>
+          <p
+            className="text-center tracking-wide leading-relaxed break-keep"
+            style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontWeight: 300, maxWidth: '260px' }}
+          >
+            청담해화당 사주풀이가 완료되면
+            <br />
+            결과페이지로 자동 이동합니다
+          </p>
+        </>
+      )}
     </div>
   )
 }
