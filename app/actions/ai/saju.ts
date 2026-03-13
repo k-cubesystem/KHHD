@@ -309,7 +309,7 @@ export async function analyzeSajuDetail(
       systemPrompt:
         '당신은 30년 경력의 사주명리학 전문가입니다. 백운산·강헌·도원 수준의 깊이 있는 인생 풀이를 제공합니다. 과거·현재·미래를 관통하는 실용적이고 구체적인 분석을 합니다. 무속적 표현 대신 현대적 언어로, 좋은 말만 하지 않고 장단점을 솔직하게 짚어줍니다. 반드시 유효한 JSON만 출력하십시오.',
       userPrompt: prompt,
-      maxTokens: 16384,
+      maxTokens: 8192,
     })
     const jsonMatch = aiResult.text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error('JSON Parse Error')

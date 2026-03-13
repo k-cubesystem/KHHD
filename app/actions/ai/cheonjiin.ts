@@ -333,7 +333,7 @@ async function analyzeCheonjiinWithAI(
     systemPrompt:
       '당신은 30년 경력의 사주명리학 전문가입니다. 백운산·강헌·도원 수준의 깊이 있는 인생 풀이를 제공합니다. 과거·현재·미래를 관통하며, 장단점을 솔직하고 구체적으로 짚어줍니다. 무속적 표현 대신 현대적 언어를 사용합니다. 반드시 유효한 JSON만 출력하십시오.',
     userPrompt: promptText,
-    maxTokens: 16384,
+    maxTokens: 8192,
     images: images.length > 0 ? images : undefined,
   })
   const text = aiResult.text

@@ -10,7 +10,7 @@ interface CheonjiinResultPageProps {
 export default async function CheonjiinResultPage({ searchParams }: CheonjiinResultPageProps) {
   const params = await searchParams
   const targetId = params.targetId
-  const analysisType = params.type || 'comprehensive' // 기본값은 comprehensive
+  const analysisType = params.type || 'comprehensive'
 
   if (!targetId) {
     redirect('/protected/analysis/cheonjiin')
@@ -21,25 +21,19 @@ export default async function CheonjiinResultPage({ searchParams }: CheonjiinRes
     redirect('/protected/analysis/cheonjiin')
   }
 
-  // type=basic인 경우: 프로필 만세력 정보만으로 바로 분석 진행 (추가 정보 불필요)
-  // type=comprehensive인 경우: 집 주소 + 얼굴 사진 필요
-  const needsAdditionalData =
-    analysisType === 'comprehensive' && (!target.home_address || !target.face_image_url)
+  const needsAdditionalData = analysisType === 'comprehensive' && (!target.home_address || !target.face_image_url)
 
-  // 추가 데이터 필요하면 클라이언트에서 수집
   if (needsAdditionalData) {
     return <CheonjiinResultClient target={target} needsData />
   }
 
-  // 서버사이드에서 캐시 확인 + 분석 실행 (Race Condition 원천 차단)
-  const result = await analyzeCheonjiinAction(targetId, null, false, false)
+  // 캐시만 먼저 확인 (빠름) — 캐시 있으면 서버에서 바로 렌더
+  const cacheCheck = await analyzeCheonjiinAction(targetId, null, true, false)
 
-  return (
-    <CheonjiinResultClient
-      target={target}
-      initialData={result.success ? result.data : null}
-      isCached={result.cached ?? false}
-      serverError={result.success ? undefined : result.error}
-    />
-  )
+  if (cacheCheck.success && cacheCheck.cached) {
+    return <CheonjiinResultClient target={target} initialData={cacheCheck.data} isCached />
+  }
+
+  // 캐시 없으면 클라이언트에서 AI 호출 (로딩 오버레이 표시)
+  return <CheonjiinResultClient target={target} needsAnalysis />
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
@@ -24,6 +24,8 @@ interface CheonjiinResultClientProps {
   isCached?: boolean
   serverError?: string
   needsData?: boolean
+  /** 캐시 없음 — 클라이언트에서 AI 분석 자동 시작 */
+  needsAnalysis?: boolean
 }
 
 export function CheonjiinResultClient({
@@ -32,21 +34,30 @@ export function CheonjiinResultClient({
   isCached = false,
   serverError,
   needsData = false,
+  needsAnalysis = false,
 }: CheonjiinResultClientProps) {
   const [analysisResult, setAnalysisResult] = useState<CheonjiinAnalysisResult | null>(initialData ?? null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(needsAnalysis)
   const { checkQuota, paywallProps } = useAnalysisQuota()
   const [apiComplete, setApiComplete] = useState(false)
   const [error, setError] = useState<string | null>(serverError ?? null)
   const [showDataForm, setShowDataForm] = useState(needsData && !initialData)
+  const autoAnalysisStarted = useRef(false)
 
-  // 데이터 수집 완료 후 분석 실행 — 이미지/주소 제출 시 반드시 새로 분석 (캐시 무시)
+  // needsAnalysis일 때 마운트 시 자동으로 분석 시작
+  useEffect(() => {
+    if (needsAnalysis && !autoAnalysisStarted.current) {
+      autoAnalysisStarted.current = true
+      runAnalysis(null, false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsAnalysis])
+
   async function handleDataCollected(data: CollectedData) {
     setShowDataForm(false)
     await runAnalysis(data, true)
   }
 
-  // 다시 분석 (사용자가 명시적으로 클릭한 경우에만)
   async function runAnalysis(additionalData: CollectedData | null = null, skipCache = true) {
     const canProceed = await checkQuota()
     if (!canProceed) return
@@ -59,7 +70,7 @@ export function CheonjiinResultClient({
 
       if (result.success) {
         setAnalysisResult(result.data)
-        setApiComplete(true) // 로딩 오버레이에 완료 신호
+        setApiComplete(true)
       } else {
         setError(result.error || '분석 중 오류가 발생했습니다.')
         toast.error(result.error || '분석 중 오류가 발생했습니다.')
@@ -71,15 +82,12 @@ export function CheonjiinResultClient({
       toast.error(message)
       setIsAnalyzing(false)
     }
-    // isAnalyzing은 로딩 오버레이 onComplete 후 해제
   }
 
-  // 데이터 수집 폼
   if (showDataForm) {
     return <CheonjiinDataCollectionForm target={target} onComplete={handleDataCollected} />
   }
 
-  // 분석 중 — 감성 로딩 오버레이 (98% 정지 → API 완료 시 자동 진행)
   if (isAnalyzing) {
     return (
       <SajuLoadingOverlay
@@ -91,7 +99,6 @@ export function CheonjiinResultClient({
     )
   }
 
-  // 에러
   if (error && !analysisResult) {
     const isBirthDateError = error.includes('생년월일')
 
@@ -127,7 +134,6 @@ export function CheonjiinResultClient({
       <div id="cheonjiin-result-capture">
         <CheonjiinSummary data={analysisResult} target={target} />
 
-        {/* 섹션 탭 내비게이션 */}
         <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-white/5 px-4 py-2">
           <div className="flex items-center justify-between max-w-4xl mx-auto">
             <div className="flex items-center gap-1 flex-1">
@@ -146,7 +152,6 @@ export function CheonjiinResultClient({
               ))}
             </div>
 
-            {/* 재분석 버튼 */}
             {isCached && (
               <button
                 onClick={() => runAnalysis(null, true)}
@@ -171,7 +176,6 @@ export function CheonjiinResultClient({
           </div>
         </div>
       </div>
-      {/* Share & Save */}
       <div className="max-w-4xl mx-auto px-4 mt-6">
         <ShareSaveButtons
           resultContainerId="cheonjiin-result-capture"
