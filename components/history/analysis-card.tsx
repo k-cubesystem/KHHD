@@ -1,16 +1,18 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Clock, Star, User2, Hand, Home, Heart, Sun, Coins, Sparkles, ChevronRight } from 'lucide-react'
+import { Clock, Star, User2, Hand, Home, Heart, Sun, Coins, Sparkles, ChevronRight, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import type { AnalysisHistory } from '@/app/actions/user/history'
+import { toast } from 'sonner'
+import { deleteAnalysisHistory, type AnalysisHistory } from '@/app/actions/user/history'
 
 interface AnalysisCardProps {
   record: AnalysisHistory
   index: number
   onClick: () => void
+  onDelete?: () => void
 }
 
 const categoryConfig = {
@@ -24,9 +26,39 @@ const categoryConfig = {
   NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-primary-dark' },
 }
 
-export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick }: AnalysisCardProps) {
-  const config = categoryConfig[record.category] || categoryConfig.TODAY // Fallback to TODAY if category not found
+export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick, onDelete }: AnalysisCardProps) {
+  const config = categoryConfig[record.category] || categoryConfig.TODAY
   const Icon = config.icon
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true)
+      return
+    }
+    setIsDeleting(true)
+    try {
+      const result = await deleteAnalysisHistory(record.id)
+      if (result.success) {
+        toast.success('분석 기록이 삭제되었습니다')
+        onDelete?.()
+      } else {
+        toast.error(result.error || '삭제 실패')
+      }
+    } catch {
+      toast.error('삭제 중 오류가 발생했습니다.')
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowDeleteConfirm(false)
+  }
 
   return (
     <motion.div
@@ -38,12 +70,35 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick 
       className="group relative bg-surface/30 border border-primary/20 hover:border-primary/40
         rounded-lg p-4 cursor-pointer transition-all hover:bg-surface/50"
     >
-      {/* Favorite Badge */}
-      {record.is_favorite && (
-        <div className="absolute top-3 right-3">
-          <Star className="w-4 h-4 text-primary fill-primary" />
-        </div>
-      )}
+      {/* Top-right actions */}
+      <div className="absolute top-3 right-3 flex items-center gap-1">
+        {record.is_favorite && <Star className="w-4 h-4 text-primary fill-primary" />}
+        {showDeleteConfirm ? (
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="px-2 py-1 text-[10px] bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            >
+              {isDeleting ? '삭제중...' : '확인'}
+            </button>
+            <button
+              onClick={handleCancelDelete}
+              className="px-2 py-1 text-[10px] bg-surface border border-primary/20 text-ink-light/60 rounded hover:bg-surface/80 transition-colors"
+            >
+              취소
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleDelete}
+            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded transition-all"
+            title="삭제"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400/60 hover:text-red-400" />
+          </button>
+        )}
+      </div>
 
       <div className="flex items-start gap-4">
         {/* Icon */}

@@ -171,7 +171,13 @@ export default function HistoryPage() {
             </motion.div>
           ) : (
             filteredRecords.map((record, index) => (
-              <AnalysisCard key={record.id} record={record} index={index} onClick={() => handleRecordClick(record)} />
+              <AnalysisCard
+                key={record.id}
+                record={record}
+                index={index}
+                onClick={() => handleRecordClick(record)}
+                onDelete={handleRecordUpdate}
+              />
             ))
           )}
         </AnimatePresence>

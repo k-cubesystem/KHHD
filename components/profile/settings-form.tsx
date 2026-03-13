@@ -26,7 +26,9 @@ export function SettingsForm({ user, profile, familyMember }: { user: any; profi
 
   // 천(天) - 사주 정보 (family_members 우선)
   const [birthDate, setBirthDate] = useState(familyMember?.birth_date || profile?.birth_date || '')
-  const [birthTime, setBirthTime] = useState(familyMember?.birth_time || profile?.birth_time || '')
+  const [birthTime, setBirthTime] = useState<string | undefined>(
+    familyMember?.birth_time || profile?.birth_time || undefined
+  )
   const [calendarType, setCalendarType] = useState(familyMember?.calendar_type || profile?.calendar_type || 'solar')
 
   // 지(地) - 풍수 정보 (profiles)
@@ -52,7 +54,7 @@ export function SettingsForm({ user, profile, familyMember }: { user: any; profi
         fullName: name,
         gender,
         birthDate,
-        birthTime,
+        birthTime: birthTime || '',
         calendarType,
         homeAddress,
         workAddress,
@@ -77,7 +79,7 @@ export function SettingsForm({ user, profile, familyMember }: { user: any; profi
         name,
         gender,
         birthDate,
-        birthTime,
+        birthTime: birthTime || '',
         calendarType,
       })
 
