@@ -1,48 +1,32 @@
 'use client'
 
-import { ReactNode } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import { cn } from '@/lib/utils'
-import { FortuneMissionBoard } from '@/components/fortune/fortune-mission-board'
 import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
 import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card'
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
+import { Card } from '@/components/ui/card'
+import {
+  Flame,
+  Wallet,
+  Heart,
+  Building2,
+  GraduationCap,
+  TrendingUp,
+  MessageCircle,
+  ChevronRight,
+} from 'lucide-react'
 
-// Dynamic imports for heavy dashboard sections to improve initial load
 const MasterpieceSection = dynamic(
   () => import('./dashboard/MasterpieceSection').then((mod) => ({ default: mod.MasterpieceSection })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> }
+  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> },
 )
-const RelationshipSection = dynamic(
-  () => import('./dashboard/RelationshipSection').then((mod) => ({ default: mod.RelationshipSection })),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-lg" /> }
-)
-const PeriodSection = dynamic(
-  () => import('./dashboard/PeriodSection').then((mod) => ({ default: mod.PeriodSection })),
-  { ssr: false, loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-lg" /> }
-)
-const Year2026Section = dynamic(
-  () => import('./dashboard/Year2026Section').then((mod) => ({ default: mod.Year2026Section })),
-  { ssr: false, loading: () => <div className="h-40 animate-pulse bg-white/5 rounded-lg" /> }
-)
-const TrendSection = dynamic(() => import('./dashboard/TrendSection').then((mod) => ({ default: mod.TrendSection })), {
-  ssr: false,
-  loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-lg" />,
-})
 
 interface RouletteStatus {
   canSpin: boolean
   nextAvailableTime?: string
-}
-
-interface MonthlyFortune {
-  currentFortune: number
-  totalPossible: number
-  percentage: number
-  completedCategories: string[]
 }
 
 interface AttendanceStatus {
@@ -64,21 +48,86 @@ interface WeeklyAttendance {
 
 interface AnalysisDashboardProps {
   userName?: string
-  monthlyFortune: MonthlyFortune
   rouletteStatus: RouletteStatus | null
   attendanceStatus?: AttendanceStatus
   weeklyAttendance?: WeeklyAttendance
-  children?: ReactNode
 }
+
+const MENU_CARDS = [
+  {
+    id: 'year2026',
+    label: '2026 병오년',
+    desc: '붉은 말의 해 운명 흐름',
+    icon: Flame,
+    color: 'text-red-400',
+    bg: 'bg-red-500/10',
+    href: '/protected/analysis/new-year',
+    badge: '2026',
+  },
+  {
+    id: 'ai-shaman',
+    label: '고민 상담',
+    desc: 'AI 해화지기',
+    icon: MessageCircle,
+    color: 'text-gold-500',
+    bg: 'bg-gold-500/15',
+    href: '/protected/ai-shaman',
+  },
+  {
+    id: 'wealth',
+    label: '재물운',
+    desc: '투자·매매 흐름',
+    icon: Wallet,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    href: '/protected/analysis/theme/wealth',
+  },
+  {
+    id: 'love',
+    label: '애정운',
+    desc: '만남·결혼 시기',
+    icon: Heart,
+    color: 'text-pink-400',
+    bg: 'bg-pink-500/10',
+    href: '/protected/analysis/theme/love',
+  },
+  {
+    id: 'career',
+    label: '직장운',
+    desc: '승진·이직 타이밍',
+    icon: Building2,
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/10',
+    href: '/protected/analysis/theme/career',
+  },
+  {
+    id: 'exam',
+    label: '학업운',
+    desc: '합격·자격 운',
+    icon: GraduationCap,
+    color: 'text-violet-400',
+    bg: 'bg-violet-500/10',
+    href: '/protected/analysis/theme/exam',
+  },
+  {
+    id: 'estate',
+    label: '부동산',
+    desc: '문서·이사 길일',
+    icon: TrendingUp,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+    href: '/protected/analysis/theme/estate',
+  },
+] as const
 
 export function AnalysisDashboard({
   userName,
-  monthlyFortune,
   rouletteStatus,
   attendanceStatus,
   weeklyAttendance,
-  children,
 }: AnalysisDashboardProps) {
+  const router = useRouter()
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -92,7 +141,7 @@ export function AnalysisDashboard({
           <span className="text-[10px] font-medium text-gold-500 tracking-widest uppercase">DESTINY INSIGHT</span>
         </div>
 
-        <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug tracking-tight">
+        <h1 className="text-2xl font-serif font-bold text-ink-light leading-snug tracking-tight">
           남들은 잘 되는데
           <br />
           <span className="text-gold-500">나만 제자리</span>인 것 같다면?
@@ -102,7 +151,8 @@ export function AnalysisDashboard({
           <p className="text-sm text-ink-light/70 font-light leading-relaxed">
             당신의 노력이 부족해서가 아닙니다.
             <br />
-            지금 바로 당신에게 들어온 <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을<br />
+            지금 바로 당신에게 들어온 <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을
+            <br />
             놓치고 있기 때문입니다.
           </p>
 
@@ -120,58 +170,62 @@ export function AnalysisDashboard({
         <SeasonalEventBanner />
       </motion.div>
 
-      {/* 3. Masterpiece */}
+      {/* 3. 나의 사주·운명 풀어보기 */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
       </motion.div>
 
-      {/* 4. 가족 운세 섹션 — page.tsx에서 Suspense로 스트리밍 (위치 변경됨) */}
-      {children && (
-        <motion.div variants={fadeInUp} className="space-y-4">
-          {children}
-        </motion.div>
-      )}
+      {/* 4. 메뉴 카드 그리드 (2열) */}
+      <motion.div variants={fadeInUp} className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <div className="h-px w-6 bg-gold-500/40" />
+          <h2 className="text-sm font-serif text-gold-500/80">더 깊이 들여다보기</h2>
+        </div>
 
-      {/* 3. 운세 미션 보드 (게이지 + 8미션 통합) */}
-      <motion.div variants={fadeInUp}>
-        <FortuneMissionBoard
-          currentFortune={monthlyFortune.currentFortune}
-          totalPossible={monthlyFortune.totalPossible}
-          percentage={monthlyFortune.percentage}
-          completedCategories={monthlyFortune.completedCategories}
+        <div className="grid grid-cols-2 gap-3">
+          {MENU_CARDS.map((card) => {
+            const Icon = card.icon
+            return (
+              <Card
+                key={card.id}
+                onClick={() => router.push(card.href)}
+                className="group cursor-pointer card-glass-manse transition-all duration-200 p-4 rounded-xl active:scale-[0.97] hover:border-gold-500/30 relative overflow-hidden"
+              >
+                {'badge' in card && card.badge && (
+                  <span className="absolute top-2 right-2 text-[9px] font-medium text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
+                    {card.badge}
+                  </span>
+                )}
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}
+                  >
+                    <Icon className={`w-5 h-5 ${card.color}`} strokeWidth={1.5} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-ink-light">{card.label}</span>
+                    <span className="block text-[11px] text-ink-light/50 font-light mt-0.5">{card.desc}</span>
+                  </div>
+                </div>
+                <ChevronRight className="absolute bottom-3 right-3 w-3.5 h-3.5 text-ink-light/20 group-hover:text-gold-500/50 transition-colors" />
+              </Card>
+            )
+          })}
+        </div>
+      </motion.div>
+
+      {/* 5. 룰렛 + 출석체크 (2열) */}
+      <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-3">
+        <LuckyRouletteButton
+          canSpin={rouletteStatus?.canSpin || false}
+          nextAvailableTime={rouletteStatus?.nextAvailableTime}
+        />
+        <AttendanceMiniCard
+          canCheckIn={attendanceStatus?.canCheckIn ?? false}
+          weekCount={weeklyAttendance?.weekCount ?? 0}
+          weekDays={weeklyAttendance?.weekDays}
         />
       </motion.div>
-
-      {/* 5. Bento Grid */}
-      <motion.div variants={staggerContainer} className="grid grid-cols-2 gap-3">
-        <motion.div variants={fadeInUp} className="col-span-1">
-          <RelationshipSection />
-        </motion.div>
-        <motion.div variants={fadeInUp} className="col-span-1">
-          <PeriodSection />
-        </motion.div>
-        <motion.div variants={fadeInUp} className="col-span-2">
-          <Year2026Section />
-        </motion.div>
-      </motion.div>
-
-      {/* 6. Trend + 룰렛 & 출석 (2열 정사각 카드) */}
-      <motion.section variants={fadeInUp} className="-mx-2 px-2 space-y-3">
-        <TrendSection />
-
-        {/* 룰렛 + 출석체크 2열 */}
-        <div className="grid grid-cols-2 gap-3">
-          <LuckyRouletteButton
-            canSpin={rouletteStatus?.canSpin || false}
-            nextAvailableTime={rouletteStatus?.nextAvailableTime}
-          />
-          <AttendanceMiniCard
-            canCheckIn={attendanceStatus?.canCheckIn ?? false}
-            weekCount={weeklyAttendance?.weekCount ?? 0}
-            weekDays={weeklyAttendance?.weekDays}
-          />
-        </div>
-      </motion.section>
     </motion.div>
   )
 }

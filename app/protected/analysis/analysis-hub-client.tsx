@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
@@ -8,13 +8,6 @@ import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 interface RouletteStatus {
   canSpin: boolean
   nextAvailableTime?: string
-}
-
-interface MonthlyFortune {
-  currentFortune: number
-  totalPossible: number
-  percentage: number
-  completedCategories: string[]
 }
 
 interface AttendanceStatus {
@@ -30,20 +23,16 @@ interface WeeklyAttendance {
 
 interface AnalysisHubClientProps {
   userName?: string
-  monthlyFortune: MonthlyFortune
   rouletteStatus: RouletteStatus | null
   attendanceStatus?: AttendanceStatus
   weeklyAttendance?: WeeklyAttendance
-  children?: ReactNode
 }
 
 export function AnalysisHubClient({
   userName,
-  monthlyFortune,
   rouletteStatus,
   attendanceStatus,
   weeklyAttendance,
-  children,
 }: AnalysisHubClientProps) {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -61,17 +50,14 @@ export function AnalysisHubClient({
           },
         })
       }, 600)
-      // URL에서 welcome 파라미터 제거
       router.replace('/protected/analysis', { scroll: false })
     }
   }, [searchParams, router])
 
   return (
     <main className="min-h-screen bg-background relative overflow-hidden">
-      {/* Hanji Texture Overlay */}
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
-      {/* Background Glow */}
       <div className="fixed inset-0 pointer-events-none -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gold-500/3 rounded-full blur-[200px]" />
       </div>
@@ -79,13 +65,10 @@ export function AnalysisHubClient({
       <div className="relative z-10 w-full pt-6">
         <AnalysisDashboard
           userName={userName}
-          monthlyFortune={monthlyFortune}
           rouletteStatus={rouletteStatus}
           attendanceStatus={attendanceStatus}
           weeklyAttendance={weeklyAttendance}
-        >
-          {children}
-        </AnalysisDashboard>
+        />
       </div>
     </main>
   )
