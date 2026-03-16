@@ -17,6 +17,10 @@ import {
   TrendingUp,
   MessageCircle,
   ChevronRight,
+  Users,
+  Hand,
+  ScanFace,
+  Compass,
 } from 'lucide-react'
 
 const MasterpieceSection = dynamic(
@@ -52,6 +56,45 @@ interface AnalysisDashboardProps {
   attendanceStatus?: AttendanceStatus
   weeklyAttendance?: WeeklyAttendance
 }
+
+const STUDIO_CARDS = [
+  {
+    id: 'compatibility',
+    label: '궁합',
+    desc: '두 사람의 오행 기운으로 관계의 해법을 찾습니다',
+    icon: Users,
+    color: 'text-rose-400',
+    bg: 'bg-rose-500/10',
+    href: '/protected/analysis/compatibility',
+  },
+  {
+    id: 'face',
+    label: '관상',
+    desc: '얼굴에 새겨진 운명의 지도를 읽어드립니다',
+    icon: ScanFace,
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+    href: '/protected/studio/face',
+  },
+  {
+    id: 'palm',
+    label: '손금',
+    desc: '손바닥 위의 생명선·지능선·감정선을 해석합니다',
+    icon: Hand,
+    color: 'text-sky-400',
+    bg: 'bg-sky-500/10',
+    href: '/protected/studio/palm',
+  },
+  {
+    id: 'fengshui',
+    label: '풍수',
+    desc: '공간의 기운을 분석하여 길한 배치를 제안합니다',
+    icon: Compass,
+    color: 'text-teal-400',
+    bg: 'bg-teal-500/10',
+    href: '/protected/studio/fengshui',
+  },
+] as const
 
 const MENU_CARDS = [
   {
@@ -175,7 +218,43 @@ export function AnalysisDashboard({
         <MasterpieceSection />
       </motion.div>
 
-      {/* 4. 메뉴 카드 그리드 (2열) */}
+      {/* 4. 궁합·관상·손금·풍수 (2열) */}
+      <motion.div variants={fadeInUp} className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <div className="h-px w-6 bg-gold-500/40" />
+          <h2 className="text-sm font-serif text-gold-500/80">천지인 통합 분석</h2>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {STUDIO_CARDS.map((card) => {
+            const Icon = card.icon
+            return (
+              <Card
+                key={card.id}
+                onClick={() => router.push(card.href)}
+                className="group cursor-pointer card-glass-manse transition-all duration-200 p-4 rounded-xl active:scale-[0.97] hover:border-gold-500/30 relative overflow-hidden"
+              >
+                <div className="flex flex-col gap-2.5">
+                  <div
+                    className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}
+                  >
+                    <Icon className={`w-5 h-5 ${card.color}`} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-medium text-ink-light">{card.label}</span>
+                    <span className="block text-[11px] text-ink-light/50 font-light mt-1 leading-relaxed">
+                      {card.desc}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight className="absolute bottom-3 right-3 w-3.5 h-3.5 text-ink-light/20 group-hover:text-gold-500/50 transition-colors" />
+              </Card>
+            )
+          })}
+        </div>
+      </motion.div>
+
+      {/* 5. 테마별 트렌드 (2열) */}
       <motion.div variants={fadeInUp} className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
@@ -214,7 +293,7 @@ export function AnalysisDashboard({
         </div>
       </motion.div>
 
-      {/* 5. 룰렛 + 출석체크 (2열) */}
+      {/* 6. 룰렛 + 출석체크 (2열) */}
       <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-3">
         <LuckyRouletteButton
           canSpin={rouletteStatus?.canSpin || false}
