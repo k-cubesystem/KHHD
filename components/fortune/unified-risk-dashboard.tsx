@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Shield, AlertTriangle, TrendingUp, Activity } from 'lucide-react'
 import type { UnifiedRiskResult, URSLevel } from '@/lib/saju-engine/unified-risk'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 interface UnifiedRiskDashboardProps {
   urs: UnifiedRiskResult
@@ -98,8 +99,8 @@ export default function UnifiedRiskDashboard({ urs, className = '' }: UnifiedRis
     >
       {/* 헤더 */}
       <div className="flex items-center gap-2 mb-4">
-        <Shield className="w-5 h-5 text-[#D4AF37]" />
-        <h3 className="text-[#D4AF37] font-bold text-sm">통합 위험 분석 (URS)</h3>
+        <Shield className="w-5 h-5 text-gold-500" />
+        <h3 className="text-gold-500 font-bold text-sm">통합 위험 분석 (URS)</h3>
         <motion.span
           animate={urs.level === 'critical' || urs.level === 'danger' ? { scale: [1, 1.1, 1] } : {}}
           transition={{ repeat: Infinity, duration: 1.5 }}
@@ -178,7 +179,7 @@ export default function UnifiedRiskDashboard({ urs, className = '' }: UnifiedRis
                             : cat.level === 'warning'
                               ? '#C8B273'
                               : cat.level === 'caution'
-                                ? '#D4AF37'
+                                ? GOLD_500
                                 : '#E2D5B5',
                       }}
                     />
@@ -197,8 +198,8 @@ export default function UnifiedRiskDashboard({ urs, className = '' }: UnifiedRis
           className={`rounded-xl p-3 ${colors.bg} border ${urs.level === 'critical' ? 'border-gold-700/30' : 'border-white/10'}`}
         >
           <div className="flex items-center gap-1.5 mb-2">
-            <TrendingUp className="w-3.5 h-3.5 text-[#D4AF37]" />
-            <span className="text-[#D4AF37] text-xs font-bold">행동 지침</span>
+            <TrendingUp className="w-3.5 h-3.5 text-gold-500" />
+            <span className="text-gold-500 text-xs font-bold">행동 지침</span>
           </div>
           <div className="space-y-1">
             {urs.actionItems.map((action, i) => (

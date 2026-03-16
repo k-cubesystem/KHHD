@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { getUserRole } from '@/lib/supabase/helpers'
 
 const FREE_ANALYSIS_LIMIT = 3
 
@@ -42,9 +43,9 @@ export async function getFreeQuotaStatus(): Promise<FreeQuotaStatus> {
   }
 
   // admin / tester → 무제한
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const role = await getUserRole(supabase, user.id)
 
-  if (profile?.role === 'admin' || profile?.role === 'tester') {
+  if (role === 'admin' || role === 'tester') {
     return {
       totalUsed: 0,
       remaining: 999,
@@ -55,25 +56,27 @@ export async function getFreeQuotaStatus(): Promise<FreeQuotaStatus> {
     }
   }
 
-  // 구독 여부 체크
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('status', 'ACTIVE')
-    .maybeSingle()
+  // 구독, 지갑, 분석 횟수를 병렬 조회
+  const [subscriptionResult, walletResult, countResult] = await Promise.all([
+    supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'ACTIVE')
+      .maybeSingle(),
+    supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
+    supabase
+      .from('analysis_history')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id),
+  ])
 
-  // 지갑 잔액 체크 (1만냥 이상이면 유료 사용 가능)
-  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
+  const subscription = subscriptionResult.data
+  const wallet = walletResult.data
+  const { count } = countResult
 
   const hasFunds = (wallet?.balance ?? 0) >= 1
   const isPaid = !!subscription || hasFunds
-
-  // 총 분석 횟수
-  const { count } = await supabase
-    .from('analysis_history')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
 
   const totalUsed = count ?? 0
   const remaining = Math.max(0, FREE_ANALYSIS_LIMIT - totalUsed)

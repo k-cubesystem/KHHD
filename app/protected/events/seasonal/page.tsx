@@ -20,10 +20,10 @@ import {
 import { cn } from '@/lib/utils'
 
 const SEASON_BG: Record<Season, string> = {
-  spring: 'from-pink-950/80 via-[#0D0900] to-[#0A0A0A]',
-  summer: 'from-orange-950/80 via-[#0D0900] to-[#0A0A0A]',
-  autumn: 'from-amber-950/80 via-[#0D0900] to-[#0A0A0A]',
-  winter: 'from-blue-950/80 via-[#0D0900] to-[#0A0A0A]',
+  spring: 'from-pink-950/80 via-[#0D0900] to-charcoal-deep',
+  summer: 'from-orange-950/80 via-[#0D0900] to-charcoal-deep',
+  autumn: 'from-amber-950/80 via-[#0D0900] to-charcoal-deep',
+  winter: 'from-blue-950/80 via-[#0D0900] to-charcoal-deep',
 }
 
 const SEASON_GLOW: Record<Season, string> = {
@@ -77,7 +77,7 @@ function EventCard({ event, isCurrent }: { event: SeasonalEvent; isCurrent: bool
       className={cn(
         'rounded-xl border p-3 transition-all',
         isCurrent
-          ? 'border-[#D4AF37]/50 bg-[#D4AF37]/5 shadow-[0_0_15px_rgba(212,175,55,0.1)]'
+          ? 'border-gold-500/50 bg-gold-500/5 shadow-[0_0_15px_rgba(212,175,55,0.1)]'
           : 'border-white/5 bg-white/[0.02]'
       )}
     >
@@ -85,12 +85,12 @@ function EventCard({ event, isCurrent }: { event: SeasonalEvent; isCurrent: bool
         <span className="text-xl">{event.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className={cn('text-sm font-bold', isCurrent ? 'text-[#D4AF37]' : 'text-white/80')}>
+            <span className={cn('text-sm font-bold', isCurrent ? 'text-gold-500' : 'text-white/80')}>
               {event.name}
             </span>
             <span className="text-xs text-white/40">{event.hanja}</span>
             {isCurrent && (
-              <span className="px-1.5 py-0.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[9px] font-bold text-[#D4AF37] tracking-wide">
+              <span className="px-1.5 py-0.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-[9px] font-bold text-gold-500 tracking-wide">
                 진행중
               </span>
             )}
@@ -161,15 +161,15 @@ export default function SeasonalEventPage() {
           transition={{ duration: 0.5 }}
           className="text-center space-y-3"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20">
-            <Sparkles className="w-3 h-3 text-[#D4AF37]" />
-            <span className="text-[10px] font-bold text-[#D4AF37] tracking-widest uppercase">24절기 특별 이벤트</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/20">
+            <Sparkles className="w-3 h-3 text-gold-500" />
+            <span className="text-[10px] font-bold text-gold-500 tracking-widest uppercase">24절기 특별 이벤트</span>
           </div>
 
           {displayEvent ? (
             <>
               <div className="text-6xl">{displayEvent.emoji}</div>
-              <h1 className="text-3xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#FFF8E1]">
+              <h1 className="text-3xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-gold-500 to-[#FFF8E1]">
                 {displayEvent.name}({displayEvent.hanja})
               </h1>
               <p className="text-white/60 text-sm font-light leading-relaxed">{displayEvent.description}</p>
@@ -209,12 +209,12 @@ export default function SeasonalEventPage() {
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="bg-[#D4AF37]/5 border border-[#D4AF37]/30 rounded-2xl p-5 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.08)]"
+            className="bg-gold-500/5 border border-gold-500/30 rounded-2xl p-5 space-y-4 shadow-[0_0_20px_rgba(212,175,55,0.08)]"
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-white/50 mb-0.5">이번 절기 특별 할인</p>
-                <p className="text-3xl font-bold text-[#D4AF37]">{displayEvent.discountPercent}% OFF</p>
+                <p className="text-3xl font-bold text-gold-500">{displayEvent.discountPercent}% OFF</p>
               </div>
               {timeLeft && (
                 <div className="text-right">
@@ -234,7 +234,7 @@ export default function SeasonalEventPage() {
             <div className="border-t border-white/5 pt-4">
               <p className="text-xs text-white/40 mb-2">이번 절기 특화 운세</p>
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-[#D4AF37]" />
+                <Zap className="w-4 h-4 text-gold-500" />
                 <span className="text-sm font-bold text-white">{displayEvent.fortuneType}</span>
               </div>
               <p className="text-xs text-white/50 mt-1 leading-relaxed">
@@ -263,7 +263,7 @@ export default function SeasonalEventPage() {
               className={cn(
                 'flex-1 py-2 rounded-lg text-xs font-bold transition-all',
                 activeTab === tab
-                  ? 'bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30'
+                  ? 'bg-gold-500/20 text-gold-500 border border-gold-500/30'
                   : 'text-white/40 hover:text-white/60'
               )}
             >
@@ -286,7 +286,7 @@ export default function SeasonalEventPage() {
                   <span className="text-sm text-white/80">{svc.label}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-white/30 line-through">{svc.base}만냥</span>
-                    <span className="text-sm font-bold text-[#D4AF37]">{discounted}만냥</span>
+                    <span className="text-sm font-bold text-gold-500">{discounted}만냥</span>
                   </div>
                 </div>
               )
@@ -295,7 +295,7 @@ export default function SeasonalEventPage() {
             <div className="mt-4 space-y-2">
               <Button
                 asChild
-                className="w-full h-12 text-sm font-bold bg-gradient-to-r from-[#D4AF37] to-[#F0C040] text-[#0A0A0A] hover:from-[#E5C14A] hover:to-[#FFD452] border-0 shadow-lg shadow-[#D4AF37]/20"
+                className="w-full h-12 text-sm font-bold bg-gradient-to-r from-gold-500 to-[#F0C040] text-charcoal-deep hover:from-[#E5C14A] hover:to-[#FFD452] border-0 shadow-lg shadow-gold-500/20"
               >
                 <Link href="/protected/analysis">
                   지금 운세 보러 가기 <ChevronRight className="w-4 h-4 ml-1" />
@@ -317,7 +317,7 @@ export default function SeasonalEventPage() {
           >
             <div className="text-3xl">{upcoming.emoji}</div>
             <p className="text-sm text-white/60">다음 절기 이벤트</p>
-            <p className="text-lg font-serif font-bold text-[#D4AF37]">
+            <p className="text-lg font-serif font-bold text-gold-500">
               {upcoming.name}({upcoming.hanja})
             </p>
             <p className="text-xs text-white/40">
@@ -330,7 +330,7 @@ export default function SeasonalEventPage() {
         {activeTab === 'calendar' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
             <div className="flex items-center gap-2 mb-3">
-              <CalendarDays className="w-4 h-4 text-[#D4AF37]" />
+              <CalendarDays className="w-4 h-4 text-gold-500" />
               <span className="text-sm font-bold text-white/80">2026년 24절기 이벤트 일정</span>
             </div>
             {SEASONAL_EVENTS_2026.map((event) => (

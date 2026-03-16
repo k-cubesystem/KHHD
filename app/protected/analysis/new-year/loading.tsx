@@ -4,7 +4,7 @@ import { Flame } from 'lucide-react'
 
 export default function NewYearLoading() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-ink-light flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-charcoal-deep text-ink-light flex flex-col items-center justify-center relative overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
 

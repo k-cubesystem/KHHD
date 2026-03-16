@@ -39,7 +39,7 @@ export function CreditBalance({ className, showLabel = true }: TalismanBalancePr
         {isLoading ? (
           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
         ) : (
-          <span className="font-black text-[#D4AF37] tabular-nums text-sm">{talismans ?? 0}</span>
+          <span className="font-black text-gold-500 tabular-nums text-sm">{talismans ?? 0}</span>
         )}
         {showLabel && (
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">만냥</span>

@@ -120,7 +120,7 @@ export default function InviteCreatePage() {
           <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">Viral Invite</span>
         </div>
         <h1 className="text-4xl font-black">
-          <span className="bg-gradient-to-r from-pink-400 via-[#D4AF37] to-pink-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-pink-400 via-gold-500 to-pink-400 bg-clip-text text-transparent">
             궁합 초대하기
           </span>
         </h1>
@@ -129,7 +129,7 @@ export default function InviteCreatePage() {
 
       {/* Generate Link Card */}
       {!inviteLink ? (
-        <Card className="p-8 bg-gradient-to-br from-pink-500/10 to-[#D4AF37]/10 border-pink-500/20">
+        <Card className="p-8 bg-gradient-to-br from-pink-500/10 to-gold-500/10 border-pink-500/20">
           <div className="text-center space-y-6">
             <div className="w-20 h-20 mx-auto rounded-full bg-pink-500/20 flex items-center justify-center">
               <Users className="w-10 h-10 text-pink-400" />
@@ -148,7 +148,7 @@ export default function InviteCreatePage() {
             <Button
               onClick={handleGenerateLink}
               disabled={loading}
-              className="bg-gradient-to-r from-pink-500 to-[#D4AF37] text-black font-bold px-8 hover:opacity-90"
+              className="bg-gradient-to-r from-pink-500 to-gold-500 text-black font-bold px-8 hover:opacity-90"
             >
               {loading ? (
                 <>
@@ -202,9 +202,9 @@ export default function InviteCreatePage() {
           </Card>
 
           {/* How It Works */}
-          <Card className="p-6 bg-[#D4AF37]/5 border-[#D4AF37]/20">
+          <Card className="p-6 bg-gold-500/5 border-gold-500/20">
             <h3 className="font-bold mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-[#D4AF37]" />
+              <Sparkles className="w-5 h-5 text-gold-500" />
               이렇게 진행됩니다
             </h3>
             <ol className="space-y-3">
@@ -215,7 +215,7 @@ export default function InviteCreatePage() {
                 '상대방이 회원가입하면 더 자세한 분석을 볼 수 있어요',
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  <span className="w-6 h-6 rounded-full bg-gold-500/20 text-gold-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {i + 1}
                   </span>
                   <span className="text-sm text-muted-foreground">{step}</span>

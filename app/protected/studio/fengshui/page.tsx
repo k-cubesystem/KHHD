@@ -20,6 +20,7 @@ import {
 import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
+import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
 import {
   ArrowRight,
@@ -162,20 +163,20 @@ function FengShuiAnalysisPageContent() {
             className="space-y-5"
           >
             {/* 복채 잔액 + 비용 배너 */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#000D1A]/80 to-[#0A0A1F]/80 p-4 backdrop-blur-sm">
+            <div className="relative overflow-hidden rounded-2xl border border-gold-500/30 bg-gradient-to-br from-[#000D1A]/80 to-[#0A0A1F]/80 p-4 backdrop-blur-sm">
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.12),transparent_60%)]" />
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-[#D4AF37]" />
+                  <Coins className="w-4 h-4 text-gold-500" />
                   <span className="text-xs text-white/50 font-sans">보유 복채</span>
-                  <span className="text-sm font-bold text-[#D4AF37] font-serif">
+                  <span className="text-sm font-bold text-gold-500 font-serif">
                     {balance !== null ? `${balance}만냥` : '—'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full px-3 py-1">
-                  <span className="text-xs text-[#D4AF37] font-medium">풍수 분석</span>
+                <div className="flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 rounded-full px-3 py-1">
+                  <span className="text-xs text-gold-500 font-medium">풍수 분석</span>
                   <span className="text-xs text-white/50">·</span>
-                  <span className="text-sm font-bold text-[#D4AF37] font-serif">{FENGSHUI_COST}만냥</span>
+                  <span className="text-sm font-bold text-gold-500 font-serif">{FENGSHUI_COST}만냥</span>
                 </div>
               </div>
             </div>
@@ -183,8 +184,8 @@ function FengShuiAnalysisPageContent() {
             {/* 공간 유형 선택 */}
             <Card className="card-glass-manse p-5 border-white/5">
               <div className="flex items-center gap-2 mb-3">
-                <Compass className="w-4 h-4 text-[#D4AF37]" />
-                <p className="text-xs text-[#D4AF37]/70 font-medium tracking-widest uppercase">공간 유형 선택</p>
+                <Compass className="w-4 h-4 text-gold-500" />
+                <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">공간 유형 선택</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {ROOM_TYPES.map((room) => (
@@ -193,13 +194,13 @@ function FengShuiAnalysisPageContent() {
                     onClick={() => setSelectedRoom(room.value)}
                     className={`p-3 rounded-xl text-center transition-all duration-200 border ${
                       selectedRoom === room.value
-                        ? 'border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                        ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
                         : 'border-white/5 bg-white/3 hover:border-white/15'
                     }`}
                   >
                     <div className="text-xl mb-1">{room.emoji}</div>
                     <p
-                      className={`text-xs font-sans ${selectedRoom === room.value ? 'text-[#D4AF37] font-semibold' : 'text-white/50'}`}
+                      className={`text-xs font-sans ${selectedRoom === room.value ? 'text-gold-500 font-semibold' : 'text-white/50'}`}
                     >
                       {room.value}
                     </p>
@@ -211,8 +212,8 @@ function FengShuiAnalysisPageContent() {
             {/* 촬영 안내 */}
             <Card className="card-glass-manse p-5 border-white/5">
               <div className="flex items-center gap-2 mb-3">
-                <Wind className="w-4 h-4 text-[#D4AF37]" />
-                <p className="text-xs text-[#D4AF37]/70 font-medium tracking-widest uppercase">촬영 안내</p>
+                <Wind className="w-4 h-4 text-gold-500" />
+                <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">촬영 안내</p>
               </div>
               <ul className="space-y-2">
                 {[
@@ -222,7 +223,7 @@ function FengShuiAnalysisPageContent() {
                   '여러 각도에서 찍으면 더 정확합니다',
                 ].map((t, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-white/50 font-sans font-light">
-                    <span className="text-[#D4AF37]/60 mt-0.5 shrink-0">·</span>
+                    <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
                     <span>{t}</span>
                   </li>
                 ))}
@@ -237,7 +238,7 @@ function FengShuiAnalysisPageContent() {
               className="w-full h-14 rounded-2xl font-serif font-bold text-base tracking-wide transition-all duration-300 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed group"
               style={{
                 background: imageBase64
-                  ? 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 50%, #C9A227 100%)'
+                  ? `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 50%, #C9A227 100%)`
                   : 'rgba(212,175,55,0.3)',
               }}
             >
@@ -274,21 +275,21 @@ function FengShuiAnalysisPageContent() {
             <div id="fengshui-result-container" className="space-y-5">
               {/* 헤더 배너 */}
               <div
-                className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 p-6"
+                className="relative overflow-hidden rounded-2xl border border-gold-500/30 p-6"
                 style={{ background: 'linear-gradient(135deg, #00050D 0%, #000D1A 50%, #000508 100%)' }}
               >
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12),transparent_70%)]" />
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-                      <Compass className="w-6 h-6 text-[#D4AF37]" />
+                    <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
+                      <Compass className="w-6 h-6 text-gold-500" />
                     </div>
                     <div>
-                      <p className="text-[10px] tracking-[0.25em] text-[#D4AF37]/50 uppercase font-sans">
+                      <p className="text-[10px] tracking-[0.25em] text-gold-500/50 uppercase font-sans">
                         공간 풍수 분석
                       </p>
-                      <p className="text-lg font-serif font-bold text-[#D4AF37]">{selectedRoom} 풍수 진단</p>
+                      <p className="text-lg font-serif font-bold text-gold-500">{selectedRoom} 풍수 진단</p>
                     </div>
                   </div>
                 </div>
@@ -297,15 +298,15 @@ function FengShuiAnalysisPageContent() {
                     {analysisResult.dominantElement && (
                       <div className="flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1">
                         <span className="text-[10px] text-white/30 font-sans">지배오행</span>
-                        <span className="text-xs font-bold text-[#D4AF37] font-serif">
+                        <span className="text-xs font-bold text-gold-500 font-serif">
                           {analysisResult.dominantElement}
                         </span>
                       </div>
                     )}
                     {analysisResult.luckyDirection && (
-                      <div className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full px-3 py-1">
+                      <div className="flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 rounded-full px-3 py-1">
                         <span className="text-[10px] text-white/30 font-sans">길한 방위</span>
-                        <span className="text-xs font-bold text-[#D4AF37] font-serif">
+                        <span className="text-xs font-bold text-gold-500 font-serif">
                           {analysisResult.luckyDirection}
                         </span>
                       </div>
@@ -318,8 +319,8 @@ function FengShuiAnalysisPageContent() {
               {analysisResult.directionalAnalysis && analysisResult.directionalAnalysis.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-4">
-                    <MapPin className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">
+                    <MapPin className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">
                       8방위(八方位) 길흉 분석
                     </h3>
                   </div>
@@ -335,8 +336,8 @@ function FengShuiAnalysisPageContent() {
               {analysisResult.roomRecommendations && analysisResult.roomRecommendations.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-4">
-                    <Home className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">공간별 맞춤 추천</h3>
+                    <Home className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">공간별 맞춤 추천</h3>
                   </div>
                   <div className="space-y-3">
                     {analysisResult.roomRecommendations.map((room, idx) => (
@@ -350,8 +351,8 @@ function FengShuiAnalysisPageContent() {
               {analysisResult.placementSuggestions && analysisResult.placementSuggestions.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-4">
-                    <Layers className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">
+                    <Layers className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">
                       가구·화분·수석 배치 제안
                     </h3>
                   </div>
@@ -391,8 +392,8 @@ function FengShuiAnalysisPageContent() {
               {analysisResult.shoppingList && analysisResult.shoppingList.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-3">
-                    <ShoppingBag className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37]">기운 전환 아이템</h3>
+                    <ShoppingBag className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500">기운 전환 아이템</h3>
                   </div>
                   <ul className="space-y-2">
                     {analysisResult.shoppingList.map((item, idx) => (
@@ -403,7 +404,7 @@ function FengShuiAnalysisPageContent() {
                         transition={{ delay: idx * 0.07 }}
                         className="flex items-start gap-2 text-sm text-white/60 font-sans font-light"
                       >
-                        <span className="text-[#D4AF37]/60 mt-0.5 shrink-0">✓</span>
+                        <span className="text-gold-500/60 mt-0.5 shrink-0">✓</span>
                         <span>{item}</span>
                       </motion.li>
                     ))}
@@ -413,7 +414,7 @@ function FengShuiAnalysisPageContent() {
 
               {/* 상세 분석 */}
               <Card className="card-glass-manse p-5 border-white/5">
-                <h3 className="text-sm font-serif font-bold text-[#D4AF37] mb-3">상세 분석 및 개선 방향</h3>
+                <h3 className="text-sm font-serif font-bold text-gold-500 mb-3">상세 분석 및 개선 방향</h3>
                 <p className="text-sm text-white/60 leading-loose whitespace-pre-wrap font-sans font-light">
                   {analysisResult.currentAnalysis}
                 </p>
@@ -435,14 +436,14 @@ function FengShuiAnalysisPageContent() {
                   setSelectedRoom('거실')
                 }}
                 variant="outline"
-                className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-[#D4AF37] h-12"
+                className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-gold-500 h-12"
               >
                 다시 분석
               </Button>
               <Button
                 onClick={() => router.push('/protected/family')}
                 className="flex-1 h-12 font-serif font-bold text-[#0A192F]"
-                style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 100%)' }}
+                style={{ background: `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 100%)` }}
               >
                 완료
               </Button>
@@ -455,7 +456,7 @@ function FengShuiAnalysisPageContent() {
 }
 
 function DirectionCard({ dir, index }: { dir: DirectionAnalysis; index: number }) {
-  const fortuneColor = dir.fortune === 'good' ? '#D4AF37' : dir.fortune === 'bad' ? '#E8A0A0' : '#A8C5DA'
+  const fortuneColor = dir.fortune === 'good' ? GOLD_500 : dir.fortune === 'bad' ? '#E8A0A0' : '#A8C5DA'
   const fortuneBg =
     dir.fortune === 'good'
       ? 'rgba(212,175,55,0.08)'
@@ -521,7 +522,7 @@ function RoomRecommendationCard({ room, index }: { room: RoomRecommendation; ind
           <div className="flex items-center gap-2">
             <span className="text-base">{roomEmojis[room.room] ?? '🏠'}</span>
             <div>
-              <span className="text-sm font-serif font-bold text-[#D4AF37]">{room.room}</span>
+              <span className="text-sm font-serif font-bold text-gold-500">{room.room}</span>
               {room.luckyColor && (
                 <span className="text-[10px] text-white/30 ml-2 font-sans">행운 색상: {room.luckyColor}</span>
               )}
@@ -544,11 +545,11 @@ function RoomRecommendationCard({ room, index }: { room: RoomRecommendation; ind
             <div className="p-3.5 space-y-3">
               {room.improvements.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-[#D4AF37]/60 font-sans mb-1.5">개선 방법</p>
+                  <p className="text-[10px] text-gold-500/60 font-sans mb-1.5">개선 방법</p>
                   <ul className="space-y-1">
                     {room.improvements.map((imp, i) => (
                       <li key={i} className="flex items-start gap-1.5 text-xs text-white/50 font-sans font-light">
-                        <span className="text-[#D4AF37]/40 shrink-0">·</span>
+                        <span className="text-gold-500/40 shrink-0">·</span>
                         <span>{imp}</span>
                       </li>
                     ))}
@@ -557,12 +558,12 @@ function RoomRecommendationCard({ room, index }: { room: RoomRecommendation; ind
               )}
               {room.luckyItems.length > 0 && (
                 <div>
-                  <p className="text-[10px] text-[#D4AF37]/60 font-sans mb-1.5">행운 아이템</p>
+                  <p className="text-[10px] text-gold-500/60 font-sans mb-1.5">행운 아이템</p>
                   <div className="flex flex-wrap gap-1.5">
                     {room.luckyItems.map((item, i) => (
                       <span
                         key={i}
-                        className="text-[10px] bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37]/80 rounded-full px-2 py-0.5 font-sans"
+                        className="text-[10px] bg-gold-500/10 border border-gold-500/20 text-gold-500/80 rounded-full px-2 py-0.5 font-sans"
                       >
                         {item}
                       </span>
@@ -587,12 +588,12 @@ function PlacementCard({ placement, index }: { placement: PlacementSuggestion; i
       className="rounded-xl p-3.5 border border-white/5 bg-white/3"
     >
       <div className="flex items-start gap-3">
-        <div className="w-6 h-6 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0 mt-0.5">
-          <span className="text-[10px] font-bold text-[#D4AF37] font-serif">{index + 1}</span>
+        <div className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0 mt-0.5">
+          <span className="text-[10px] font-bold text-gold-500 font-serif">{index + 1}</span>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-serif font-bold text-[#D4AF37]">{placement.item}</span>
+            <span className="text-sm font-serif font-bold text-gold-500">{placement.item}</span>
             {placement.position && (
               <span className="text-[10px] text-white/30 font-sans bg-white/5 rounded-full px-2 py-0.5">
                 {placement.position}
@@ -603,7 +604,7 @@ function PlacementCard({ placement, index }: { placement: PlacementSuggestion; i
             <p className="text-xs text-white/45 font-sans font-light leading-relaxed mb-1">{placement.reason}</p>
           )}
           {placement.expectedEffect && (
-            <p className="text-xs text-[#D4AF37]/60 font-sans font-light">효과: {placement.expectedEffect}</p>
+            <p className="text-xs text-gold-500/60 font-sans font-light">효과: {placement.expectedEffect}</p>
           )}
         </div>
       </div>
@@ -617,7 +618,7 @@ export default function FengShuiAnalysisPage() {
       fallback={
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37] mx-auto" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500 mx-auto" />
             <p className="text-white/40 font-sans text-sm">풍수 분석 준비 중...</p>
           </div>
         </div>

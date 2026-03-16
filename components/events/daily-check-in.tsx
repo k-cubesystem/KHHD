@@ -9,6 +9,7 @@ import { recordDailyAttendance } from '@/app/actions/payment/daily-check'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
+
 /* ─────────────────────────────────────────
    Types
 ───────────────────────────────────────── */
@@ -44,7 +45,7 @@ function RewardParticles() {
               scale: [0, 1, 0],
             }}
             transition={{ duration: 1, delay: i * 0.05, ease: 'easeOut' }}
-            className="absolute top-1/2 left-1/2 w-1.5 h-1.5 rounded-full bg-[#D4AF37]"
+            className="absolute top-1/2 left-1/2 w-1.5 h-1.5 rounded-full bg-gold-500"
           />
         )
       })}
@@ -64,7 +65,7 @@ function GoldStamp() {
       transition={{ type: 'spring', stiffness: 380, damping: 18 }}
       className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none"
     >
-      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#8B6914] flex items-center justify-center shadow-xl shadow-[#D4AF37]/40 border-2 border-[#D4AF37]/60">
+      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold-500 to-[#8B6914] flex items-center justify-center shadow-xl shadow-gold-500/40 border-2 border-gold-500/60">
         <Check className="w-6 h-6 text-black" strokeWidth={3.5} />
       </div>
     </motion.div>
@@ -117,21 +118,22 @@ function MonthlyCalendar({
 
           return (
             <div key={dateStr} className="flex flex-col items-center gap-0.5 relative">
-              <motion.div
-                animate={isChecked ? { scale: [1.2, 1] } : isToday ? { scale: [1, 1.08, 1] } : {}}
-                transition={
-                  isChecked ? { duration: 0.3 } : isToday ? { duration: 2, repeat: Infinity, repeatDelay: 1 } : {}
-                }
+              <div
                 className={cn(
                   'w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-medium relative',
                   isChecked
-                    ? 'bg-gradient-to-br from-[#D4AF37] to-[#8B6914] text-black shadow-md shadow-[#D4AF37]/30'
+                    ? 'bg-gradient-to-br from-gold-500 to-[#8B6914] text-black shadow-md shadow-gold-500/30'
                     : isToday
-                      ? 'bg-[#D4AF37]/15 border border-[#D4AF37]/60 text-[#D4AF37]'
+                      ? 'bg-gold-500/15 border border-gold-500/60 text-gold-500'
                       : isFuture
                         ? 'text-ink-light/20'
                         : 'text-ink-light/50'
                 )}
+                style={
+                  isToday && !isChecked
+                    ? { animation: 'scale-pulse 2s ease-in-out 1s infinite' }
+                    : undefined
+                }
               >
                 {isChecked ? (
                   isToday && showStamp ? (
@@ -148,7 +150,7 @@ function MonthlyCalendar({
                 ) : (
                   <span>{day}</span>
                 )}
-              </motion.div>
+              </div>
             </div>
           )
         })}
@@ -166,7 +168,7 @@ function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-ink-light/50">이번 주 ({weekCount}/7일)</span>
-        <span className={cn('text-[10px] font-bold', isComplete ? 'text-[#D4AF37]' : 'text-[#D4AF37]/70')}>
+        <span className={cn('text-[10px] font-bold', isComplete ? 'text-gold-500' : 'text-gold-500/70')}>
           {isComplete ? '주간 보너스 달성!' : `${7 - weekCount}일 남음 → +3만냥`}
         </span>
       </div>
@@ -174,27 +176,23 @@ function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
         {Array.from({ length: 7 }).map((_, i) => {
           const filled = i < weekCount
           return (
-            <motion.div
+            <div
               key={i}
-              className={cn('h-2 flex-1 rounded-sm overflow-hidden relative', filled ? 'bg-[#D4AF37]' : 'bg-white/10')}
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ delay: i * 0.06, duration: 0.4, ease: 'easeOut' }}
+              className={cn('h-2 flex-1 rounded-sm overflow-hidden relative', filled ? 'bg-gold-500' : 'bg-white/10')}
               style={{ transformOrigin: 'left' }}
             >
               {filled && (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2 + i * 0.3 }}
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent anim-bar-shimmer"
+                  style={{ animation: `bar-shimmer 2.5s ease-in-out ${2 + i * 0.3}s infinite` }}
                 />
               )}
               {i === 6 && !filled && (
                 <div className="absolute inset-0 flex items-center justify-end pr-0.5">
-                  <Gift className="w-2 h-2 text-[#D4AF37]/40" />
+                  <Gift className="w-2 h-2 text-gold-500/40" />
                 </div>
               )}
-            </motion.div>
+            </div>
           )
         })}
       </div>
@@ -285,33 +283,32 @@ export function DailyCheckIn({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <motion.div
-              animate={canCheckIn ? { y: [0, -3, 0] } : {}}
-              transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 0.5 }}
+            {/* CalendarCheck bounce — CSS infinite when canCheckIn */}
+            <div
+              className="anim-bounce-y"
+              style={canCheckIn ? { animation: 'bounce-y 1.5s ease-in-out 0.5s infinite' } : undefined}
             >
-              <CalendarCheck className="w-5 h-5 text-[#D4AF37]" />
-            </motion.div>
+              <CalendarCheck className="w-5 h-5 text-gold-500" />
+            </div>
             <h3 className="text-sm font-bold text-ink-light tracking-wide">일일 출석 체크</h3>
           </div>
 
-          {/* Streak badge */}
+          {/* Streak badge — one-shot fade-in */}
           {streak >= 2 && (
-            <motion.div
+            <div
               key={streak}
-              initial={{ scale: 0.7, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300 }}
               className={cn(
-                'flex items-center gap-1 px-2.5 py-1 rounded-full border',
+                'flex items-center gap-1 px-2.5 py-1 rounded-full border anim-fade-in-up',
                 streak % 7 === 0
-                  ? 'bg-gradient-to-r from-[#D4AF37]/20 to-[#8B6914]/20 border-[#D4AF37]/50'
-                  : 'bg-[#D4AF37]/10 border-[#D4AF37]/25'
+                  ? 'bg-gradient-to-r from-gold-500/20 to-[#8B6914]/20 border-gold-500/50'
+                  : 'bg-gold-500/10 border-gold-500/25'
               )}
+              style={{ '--fade-y': '5px', animation: 'fade-in-up 0.3s ease-out both' } as React.CSSProperties}
             >
-              <Flame className="w-3 h-3 text-[#D4AF37]/80" />
-              <span className="text-[10px] font-bold text-[#D4AF37]">{streak}일 연속</span>
-              {streak % 7 === 0 && <Crown className="w-3 h-3 text-[#D4AF37]" />}
-            </motion.div>
+              <Flame className="w-3 h-3 text-gold-500/80" />
+              <span className="text-[10px] font-bold text-gold-500">{streak}일 연속</span>
+              {streak % 7 === 0 && <Crown className="w-3 h-3 text-gold-500" />}
+            </div>
           )}
         </div>
 
@@ -321,21 +318,21 @@ export function DailyCheckIn({
             key={streak}
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex items-center justify-center gap-3 py-2.5 rounded-xl bg-gradient-to-r from-[#D4AF37]/5 via-[#D4AF37]/10 to-[#D4AF37]/5 border border-[#D4AF37]/20"
+            className="flex items-center justify-center gap-3 py-2.5 rounded-xl bg-gradient-to-r from-gold-500/5 via-gold-500/10 to-gold-500/5 border border-gold-500/20"
           >
-            <Flame className="w-5 h-5 text-[#D4AF37]" />
+            <Flame className="w-5 h-5 text-gold-500" />
             <div className="text-center">
               <motion.p
                 key={streak}
                 initial={{ y: -10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="text-2xl font-black text-[#D4AF37] leading-none"
+                className="text-2xl font-black text-gold-500 leading-none"
               >
                 {streak}
               </motion.p>
               <p className="text-[10px] text-ink-light/50 mt-0.5">연속 출석일</p>
             </div>
-            {streak >= 7 && <Crown className="w-5 h-5 text-[#D4AF37]" />}
+            {streak >= 7 && <Crown className="w-5 h-5 text-gold-500" />}
           </motion.div>
         )}
 
@@ -352,7 +349,7 @@ export function DailyCheckIn({
               className={cn(
                 'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
                 canGoPrev
-                  ? 'text-ink-light/60 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10'
+                  ? 'text-ink-light/60 hover:text-gold-500 hover:bg-gold-500/10'
                   : 'text-ink-light/20 cursor-not-allowed'
               )}
             >
@@ -369,7 +366,7 @@ export function DailyCheckIn({
               className={cn(
                 'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
                 canGoNext
-                  ? 'text-ink-light/60 hover:text-[#D4AF37] hover:bg-[#D4AF37]/10'
+                  ? 'text-ink-light/60 hover:text-gold-500 hover:bg-gold-500/10'
                   : 'text-ink-light/20 cursor-not-allowed'
               )}
             >
@@ -392,26 +389,25 @@ export function DailyCheckIn({
               className={cn(
                 'w-full h-12 text-sm font-bold transition-all relative overflow-hidden',
                 canCheckIn && !isLoading
-                  ? 'bg-gradient-to-r from-[#8B6914] via-[#D4AF37] to-[#8B6914] hover:from-[#9A7A20] hover:via-[#E5C04D] hover:to-[#9A7A20] text-black shadow-lg shadow-[#D4AF37]/20'
-                  : 'bg-surface border border-[#D4AF37]/15 text-ink-light/35 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-[#8B6914] via-gold-500 to-[#8B6914] hover:from-[#9A7A20] hover:via-[#E5C04D] hover:to-[#9A7A20] text-black shadow-lg shadow-gold-500/20'
+                  : 'bg-surface border border-gold-500/15 text-ink-light/35 cursor-not-allowed'
               )}
             >
               {canCheckIn && !isLoading && (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1.5 }}
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent anim-shimmer"
+                  style={{ animation: 'shimmer-slide 2s ease-in-out 1.5s infinite' }}
                 />
               )}
               <span className="relative flex items-center justify-center gap-2">
                 {isLoading ? (
                   <>
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    <span
+                      className="inline-flex anim-spin-loading"
+                      style={{ animation: 'spin-loading 0.8s linear infinite' }}
                     >
                       <Sparkles className="w-4 h-4" />
-                    </motion.span>
+                    </span>
                     출석 처리 중...
                   </>
                 ) : canCheckIn ? (
@@ -443,8 +439,8 @@ export function DailyCheckIn({
                   className={cn(
                     'px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl border',
                     lastReward.isWeeklyBonus
-                      ? 'bg-gradient-to-r from-[#8B6914] to-[#D4AF37] text-black border-[#D4AF37]/50'
-                      : 'bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-[#D4AF37] border-[#D4AF37]/40'
+                      ? 'bg-gradient-to-r from-[#8B6914] to-gold-500 text-black border-gold-500/50'
+                      : 'bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-gold-500 border-gold-500/40'
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -463,14 +459,9 @@ export function DailyCheckIn({
         {/* Info Footer */}
         <div className="flex items-center justify-between pt-1 border-t border-white/5">
           <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
-          <motion.p
-            key={totalBokchae}
-            initial={{ color: '#D4AF37', scale: 1.2 }}
-            animate={{ scale: 1 }}
-            className="text-[9px] font-bold text-[#D4AF37]/60"
-          >
+          <p className="text-[9px] font-bold text-gold-500/60">
             이달 {totalBokchae}만냥
-          </motion.p>
+          </p>
         </div>
       </CardContent>
     </Card>

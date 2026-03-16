@@ -1,9 +1,8 @@
 'use client'
 
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
-import { cn } from '@/lib/utils'
 
 interface CheonjiinLoadingStateProps {
   target: DestinyTarget
@@ -27,60 +26,54 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
   }, [loadingStages.length])
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-charcoal-deep flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Background Noise & Gradient */}
       <div className="absolute inset-0 bg-[url('/texture/hanji_noise.png')] opacity-10 pointer-events-none mix-blend-overlay" />
       <div className="absolute inset-0 bg-gradient-radial from-primary/5 via-transparent to-transparent opacity-50" />
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="relative z-10 flex flex-col items-center gap-12"
+      <div
+        className="relative z-10 flex flex-col items-center gap-12 anim-fade-in-up"
+        style={{ animation: 'fade-in-up 0.5s ease-out both' } as React.CSSProperties}
       >
         {/* Sacred Geometry Loader */}
         <div className="relative w-64 h-64 flex items-center justify-center">
-          {/* Outer Rings */}
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-            className="absolute inset-0 border border-dashed border-primary/20 rounded-full"
+          {/* Outer Rings — CSS rotate */}
+          <div
+            className="absolute inset-0 border border-dashed border-primary/20 rounded-full anim-rotate-cw"
+            style={{ animation: 'cheonjiin-rotate-cw 20s linear infinite' }}
           />
-          <motion.div
-            animate={{ rotate: -360 }}
-            transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-            className="absolute inset-4 border border-dotted border-primary/10 rounded-full"
+          <div
+            className="absolute inset-4 border border-dotted border-primary/10 rounded-full anim-rotate-ccw"
+            style={{ animation: 'cheonjiin-rotate-ccw 15s linear infinite' }}
           />
 
           {/* Triad Pulsing */}
           <div className="relative w-full h-full">
             {/* Heaven Node */}
-            <motion.div
-              animate={{
-                scale: stage === 0 ? [1, 1.2, 1] : 1,
+            <div
+              className="absolute top-4 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)] anim-node-pulse"
+              style={{
+                animation: stage === 0 ? 'node-pulse 2s ease-in-out infinite' : undefined,
                 opacity: stage === 0 ? 1 : 0.5,
               }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)]"
             />
 
             {/* Earth Node */}
-            <motion.div
-              animate={{
-                scale: stage === 1 ? [1, 1.2, 1] : 1,
+            <div
+              className="absolute bottom-10 left-10 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)] anim-node-pulse"
+              style={{
+                animation: stage === 1 ? 'node-pulse 2s ease-in-out infinite' : undefined,
                 opacity: stage === 1 ? 1 : 0.5,
               }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute bottom-10 left-10 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)]"
             />
 
             {/* Human Node */}
-            <motion.div
-              animate={{
-                scale: stage === 2 ? [1, 1.2, 1] : 1,
+            <div
+              className="absolute bottom-10 right-10 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)] anim-node-pulse"
+              style={{
+                animation: stage === 2 ? 'node-pulse 2s ease-in-out infinite' : undefined,
                 opacity: stage === 2 ? 1 : 0.5,
               }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute bottom-10 right-10 w-3 h-3 bg-primary rounded-full shadow-[0_0_20px_rgba(212,175,55,0.8)]"
             />
 
             {/* Connecting Lights */}
@@ -96,12 +89,11 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
               />
             </svg>
 
-            {/* Core Essence */}
+            {/* Core Essence — CSS pulse */}
             <div className="absolute top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
-              <motion.div
-                animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="w-20 h-20 bg-primary/10 rounded-full blur-xl absolute"
+              <div
+                className="w-20 h-20 bg-primary/10 rounded-full blur-xl absolute anim-core-pulse"
+                style={{ animation: 'cheonjiin-core-pulse 3s ease-in-out infinite' }}
               />
               <span className="font-serif text-3xl text-primary font-bold z-10">
                 {stage === 0 ? '天' : stage === 1 ? '地' : stage === 2 ? '人' : '合'}
@@ -110,7 +102,7 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
           </div>
         </div>
 
-        {/* Text Area */}
+        {/* Text Area — AnimatePresence for stage transitions (one-shot per stage) */}
         <div className="text-center space-y-3 h-20">
           <AnimatePresence mode="wait">
             <motion.div
@@ -129,7 +121,7 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
             </motion.div>
           </AnimatePresence>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

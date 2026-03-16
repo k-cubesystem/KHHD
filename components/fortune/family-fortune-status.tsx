@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import type { FamilyMemberFortune } from '@/app/actions/fortune/fortune'
+import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 
 interface FamilyFortuneStatusProps {
   members: FamilyMemberFortune[]
@@ -68,7 +69,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                   당신은 가족의{' '}
                   <span
                     style={{
-                      background: 'linear-gradient(90deg, #F4E4BA, #D4AF37)',
+                      background: `linear-gradient(90deg, ${GOLD_300}, ${GOLD_500})`,
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}
@@ -96,7 +97,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
               >
                 <span
                   className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: '#D4AF37', boxShadow: '0 0 6px rgba(212,175,55,0.8)' }}
+                  style={{ background: GOLD_500, boxShadow: '0 0 6px rgba(212,175,55,0.8)' }}
                 />
                 <span
                   className="text-[11.5px] font-medium tracking-wide"
@@ -135,7 +136,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                     <div
                       className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-serif font-bold flex-shrink-0"
                       style={{
-                        background: 'linear-gradient(135deg, #D4AF37, #8C6A20)',
+                        background: `linear-gradient(135deg, ${GOLD_500}, #8C6A20)`,
                         color: '#0a0807',
                       }}
                     >

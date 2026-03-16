@@ -367,7 +367,7 @@ function NewYear2026Content() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
           >
-            <Card className="luxury-card-glow max-w-2xl mx-auto border-primary/20 bg-gradient-to-br from-[#1a1815] to-[#0A0A0A] overflow-hidden">
+            <Card className="luxury-card-glow max-w-2xl mx-auto border-primary/20 bg-gradient-to-br from-[#1a1815] to-charcoal-deep overflow-hidden">
               <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
               <div className="p-6 md:p-12 text-center space-y-6 md:space-y-8 relative z-10">
                 <div className="w-24 h-24 mx-auto bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 shadow-[0_0_30px_rgba(220,38,38,0.1)]">

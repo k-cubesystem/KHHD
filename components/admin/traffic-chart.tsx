@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 import { getHourlyTraffic } from '@/app/actions/admin/dashboard'
 import {
   LineChart,
@@ -57,14 +58,14 @@ export function TrafficChart() {
         <Tooltip
           contentStyle={{
             backgroundColor: '#181611',
-            border: '1px solid #D4AF37',
+            border: `1px solid ${GOLD_500}`,
             borderRadius: '8px',
           }}
         />
         <Legend />
         <Line type="monotone" dataKey="방문수" stroke="#82ca9d" strokeWidth={2} />
         <Line type="monotone" dataKey="신규가입" stroke="#8884d8" strokeWidth={2} />
-        <Line type="monotone" dataKey="매출" stroke="#D4AF37" strokeWidth={2} />
+        <Line type="monotone" dataKey="매출" stroke={GOLD_500} strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   )

@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Card } from '@/components/ui/card'
 import { Wallet, Heart, GraduationCap, Building2, TrendingUp, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -47,13 +48,13 @@ const TRENDS = [
   },
 ]
 
-export function TrendSection() {
+export const TrendSection = memo(function TrendSection() {
   const router = useRouter()
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between px-1">
-        <h3 className="text-sm font-serif font-light text-[#D4AF37] flex items-center gap-2 before:w-1 before:h-4 before:bg-primary/20 before:block">
+        <h3 className="text-sm font-serif font-light text-gold-500 flex items-center gap-2 before:w-1 before:h-4 before:bg-primary/20 before:block">
           테마별 트렌드
         </h3>
       </div>
@@ -88,17 +89,17 @@ export function TrendSection() {
         {/* AI Chatbot Button (Grid Item) */}
         <Card
           onClick={() => router.push('/protected/ai-shaman')}
-          className="group cursor-pointer bg-[#D4AF37]/10 border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 transition-all p-3 flex flex-col items-center justify-center gap-2 text-center h-[110px] rounded-xl active:scale-95 duration-200"
+          className="group cursor-pointer bg-gold-500/10 border-gold-500/30 hover:bg-gold-500/20 transition-all p-3 flex flex-col items-center justify-center gap-2 text-center h-[110px] rounded-xl active:scale-95 duration-200"
         >
-          <div className="w-9 h-9 rounded-full bg-[#D4AF37]/20 flex items-center justify-center group-hover:scale-110 transition-transform mb-1">
-            <MessageCircle className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
+          <div className="w-9 h-9 rounded-full bg-gold-500/20 flex items-center justify-center group-hover:scale-110 transition-transform mb-1">
+            <MessageCircle className="w-4 h-4 text-gold-500" strokeWidth={1} />
           </div>
           <div>
-            <span className="block text-sm font-medium text-[#D4AF37]">고민해결</span>
-            <span className="block text-[10px] text-[#D4AF37]/70 font-light mt-0.5">AI 상담소</span>
+            <span className="block text-sm font-medium text-gold-500">고민해결</span>
+            <span className="block text-[10px] text-gold-500/70 font-light mt-0.5">AI 상담소</span>
           </div>
         </Card>
       </div>
     </div>
   )
-}
+})

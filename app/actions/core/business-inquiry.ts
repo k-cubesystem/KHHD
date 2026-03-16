@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit } from '@/lib/utils/rate-limit'
+import { headers } from 'next/headers'
 
 export interface BusinessInquiryFormData {
   company_name: string
@@ -19,9 +21,28 @@ export interface BusinessInquiryResult {
   error?: string
 }
 
+/**
+ * B2B 문의 제출
+ * - Rate limiting: IP 기반 5분당 3회
+ * - 동일 이메일 중복 제출 방지: 24시간 내 동일 이메일+회사명 차단
+ */
 export async function submitBusinessInquiry(formData: BusinessInquiryFormData): Promise<BusinessInquiryResult> {
   if (isEdgeEnabled('business')) {
     return invokeEdgeSafe('business', { ...formData })
+  }
+
+  // --- Rate limiting: IP 기반 5분당 3회 ---
+  const headersList = await headers()
+  const forwarded = headersList.get('x-forwarded-for')
+  const ip = forwarded?.split(',')[0]?.trim() || 'unknown'
+  const rateLimitResult = await rateLimit(`business-inquiry:${ip}`, {
+    interval: 5 * 60 * 1000, // 5분
+    uniqueTokenPerInterval: 3,
+  })
+
+  if (!rateLimitResult.success) {
+    logger.warn('[business-inquiry] Rate limit exceeded:', { ip })
+    return { success: false, error: '너무 많은 요청입니다. 5분 후에 다시 시도해주세요.' }
   }
 
   // Basic validation
@@ -44,6 +65,21 @@ export async function submitBusinessInquiry(formData: BusinessInquiryFormData): 
 
   try {
     const supabase = await createClient()
+
+    // --- 중복 제출 방지: 24시간 내 동일 이메일+회사명 체크 ---
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: duplicate } = await supabase
+      .from('business_inquiries')
+      .select('id')
+      .eq('email', formData.email.trim().toLowerCase())
+      .eq('company_name', formData.company_name.trim())
+      .gte('created_at', oneDayAgo)
+      .limit(1)
+      .maybeSingle()
+
+    if (duplicate) {
+      return { success: false, error: '동일한 문의가 이미 접수되어 있습니다. 24시간 후에 다시 시도해주세요.' }
+    }
 
     const { error } = await supabase.from('business_inquiries').insert({
       company_name: formData.company_name.trim(),

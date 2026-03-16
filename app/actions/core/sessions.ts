@@ -19,6 +19,9 @@ export interface AnalysisSession {
   updated_at: string
 }
 
+/** Lightweight type for list queries (excludes large JSON fields) */
+export type AnalysisSessionListItem = Omit<AnalysisSession, 'input_data' | 'result_data'>
+
 interface SaveSessionParams {
   targetMemberId: string | null // null = guest (not saved to DB)
   category: AnalysisCategory
@@ -80,7 +83,7 @@ export async function saveAnalysisSession(
 /**
  * Get analysis sessions for a specific family member
  */
-export async function getMemberAnalysisSessions(memberId: string, limit: number = 10): Promise<AnalysisSession[]> {
+export async function getMemberAnalysisSessions(memberId: string, limit: number = 10): Promise<AnalysisSessionListItem[]> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -90,7 +93,7 @@ export async function getMemberAnalysisSessions(memberId: string, limit: number 
 
   const { data, error } = await supabase
     .from('analysis_sessions')
-    .select('*')
+    .select('id, user_id, target_member_id, category, credits_used, shared, share_card_url, created_at, updated_at')
     .eq('user_id', user.id)
     .eq('target_member_id', memberId)
     .order('created_at', { ascending: false })
@@ -107,7 +110,7 @@ export async function getMemberAnalysisSessions(memberId: string, limit: number 
 /**
  * Get all analysis sessions for current user
  */
-export async function getAllAnalysisSessions(limit: number = 50): Promise<AnalysisSession[]> {
+export async function getAllAnalysisSessions(limit: number = 50): Promise<AnalysisSessionListItem[]> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -117,7 +120,7 @@ export async function getAllAnalysisSessions(limit: number = 50): Promise<Analys
 
   const { data, error } = await supabase
     .from('analysis_sessions')
-    .select('*')
+    .select('id, user_id, target_member_id, category, credits_used, shared, share_card_url, created_at, updated_at')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -132,17 +135,27 @@ export async function getAllAnalysisSessions(limit: number = 50): Promise<Analys
 
 /**
  * Mark session as shared and save share card URL
+ * Authorization: user_id 필터를 추가하여 자신의 세션만 수정 가능
  */
 export async function markSessionAsShared(sessionId: string, shareCardUrl: string): Promise<{ success: boolean }> {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const { error } = await supabase
+  if (!user) {
+    return { success: false }
+  }
+
+  // user_id 필터 추가 — 다른 사용자의 세션 수정 방지 (IDOR 방어)
+  const { error, count } = await supabase
     .from('analysis_sessions')
     .update({
       shared: true,
       share_card_url: shareCardUrl,
     })
     .eq('id', sessionId)
+    .eq('user_id', user.id)
 
   if (error) {
     logger.error('[Studio] Mark shared error:', error)

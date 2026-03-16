@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button'
 
 export default function ByeongOYearEventPage() {
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white overflow-x-hidden pb-24 relative">
+    <div className="min-h-screen bg-charcoal-deep text-white overflow-x-hidden pb-24 relative">
       {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 center w-full h-[500px] bg-gradient-to-b from-[#E53935]/20 to-transparent blur-[100px]" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#D4AF37]/10 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gold-500/10 rounded-full blur-[150px]" />
       </div>
 
       {/* Header */}
@@ -32,7 +32,7 @@ export default function ByeongOYearEventPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-4xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#FFF8E1] mb-2 drop-shadow-md"
+          className="text-4xl md:text-5xl font-serif font-bold text-transparent bg-clip-text bg-gradient-to-r from-gold-500 to-[#FFF8E1] mb-2 drop-shadow-md"
         >
           병오년(丙午年)
         </motion.h1>
@@ -58,7 +58,7 @@ export default function ByeongOYearEventPage() {
             className="w-full text-center"
           >
             {/* Placeholder for Horse Animation / Image */}
-            <div className="w-48 h-48 mx-auto bg-gradient-to-tr from-[#E53935] to-[#D4AF37] rounded-full blur-3xl opacity-40 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <div className="w-48 h-48 mx-auto bg-gradient-to-tr from-[#E53935] to-gold-500 rounded-full blur-3xl opacity-40 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
             <div className="relative z-10">
               <span className="text-9xl">🐎</span>
             </div>
@@ -68,14 +68,14 @@ export default function ByeongOYearEventPage() {
         {/* Saju Matching Section */}
         <section className="space-y-6">
           <div className="text-center space-y-2">
-            <h2 className="text-xl font-serif text-[#D4AF37]">당신과 병오년의 궁합</h2>
+            <h2 className="text-xl font-serif text-gold-500">당신과 병오년의 궁합</h2>
             <p className="text-sm text-white/60 font-light">
               뜨거운 불의 기운(丙午)이 당신에게 미칠 영향은?
             </p>
           </div>
 
           <div className="bg-white/5 border border-[#E53935]/30 rounded-2xl p-6 relative overflow-hidden group hover:border-[#E53935]/60 transition-colors">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E53935] via-[#D4AF37] to-[#E53935]" />
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#E53935] via-gold-500 to-[#E53935]" />
 
             <div className="flex items-center justify-between mb-6">
               <div className="text-center">
@@ -120,8 +120,8 @@ export default function ByeongOYearEventPage() {
             <KeywordCard
               icon={Wallet}
               label="재물 급상승"
-              color="text-[#D4AF37]"
-              bg="bg-[#D4AF37]/10"
+              color="text-gold-500"
+              bg="bg-gold-500/10"
             />
             <KeywordCard
               icon={Heart}

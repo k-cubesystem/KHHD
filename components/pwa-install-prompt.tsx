@@ -5,8 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Download, Monitor, Smartphone, X } from "lucide-react";
 import { toast } from "sonner";
 
+/** BeforeInstallPromptEvent -- not yet in lib.dom.d.ts */
+interface BeforeInstallPromptEvent extends Event {
+    readonly platforms: string[];
+    readonly userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+    prompt(): Promise<void>;
+}
+
 export function PWAInstallPrompt() {
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [isVisible, setIsVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const [isIOS, setIsIOS] = useState(false);
@@ -27,7 +34,7 @@ export function PWAInstallPrompt() {
         // Chrome/Android Install Prompt
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
-            setDeferredPrompt(e);
+            setDeferredPrompt(e as BeforeInstallPromptEvent);
             // Show prompt only if not dismissed recently (could use localStorage)
             setIsVisible(true);
         };
@@ -76,13 +83,13 @@ export function PWAInstallPrompt() {
 
     return (
         <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500">
-            <div className="mx-auto max-w-md bg-zinc-900/90 backdrop-blur-md border border-[#D4AF37]/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
+            <div className="mx-auto max-w-md bg-zinc-900/90 backdrop-blur-md border border-gold-500/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="bg-[#D4AF37]/20 p-2 rounded-lg">
+                    <div className="bg-gold-500/20 p-2 rounded-lg">
                         {isMobile ? (
-                            <Smartphone className="w-6 h-6 text-[#D4AF37]" />
+                            <Smartphone className="w-6 h-6 text-gold-500" />
                         ) : (
-                            <Monitor className="w-6 h-6 text-[#D4AF37]" />
+                            <Monitor className="w-6 h-6 text-gold-500" />
                         )}
                     </div>
                     <div>
@@ -101,7 +108,7 @@ export function PWAInstallPrompt() {
                     <Button
                         size="sm"
                         onClick={handleInstallClick}
-                        className="bg-[#D4AF37] hover:bg-[#F4E4BA] text-black font-bold h-9 px-4"
+                        className="bg-gold-500 hover:bg-gold-300 text-black font-bold h-9 px-4"
                     >
                         <Download className="w-4 h-4 mr-2" />
                         {isIOS ? "안내" : "설치"}

@@ -62,9 +62,9 @@ const TIER_INFO: Record<MembershipTier, TierInfo> = {
     dailyLimit: 30,
     relationshipLimit: 10,
     storageLimit: 50,
-    color: 'text-[#D4AF37]',
-    borderColor: 'border-[#D4AF37]/50',
-    badgeClass: 'bg-[#D4AF37]/20 text-[#D4AF37]',
+    color: 'text-gold-500',
+    borderColor: 'border-gold-500/50',
+    badgeClass: 'bg-gold-500/20 text-gold-500',
     icon: <Crown className="w-4 h-4" />,
     perks: [
       '일일 복채 30만냥',
@@ -165,11 +165,11 @@ export function MembershipNudgeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#1a1208] border border-[#D4AF37]/30 text-amber-50 max-w-md p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="bg-[#1a1208] border border-gold-500/30 text-amber-50 max-w-md p-0 overflow-hidden rounded-2xl">
         <DialogTitle className="sr-only">멤버십 업그레이드 안내</DialogTitle>
 
         {/* Header */}
-        <div className="relative bg-gradient-to-b from-[#2a1f08] to-[#1a1208] px-6 pt-6 pb-5 border-b border-[#D4AF37]/20">
+        <div className="relative bg-gradient-to-b from-[#2a1f08] to-[#1a1208] px-6 pt-6 pb-5 border-b border-gold-500/20">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-amber-400/60 hover:text-amber-400 transition-colors"
@@ -183,9 +183,9 @@ export function MembershipNudgeModal({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/30"
+              className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/30"
             >
-              <Crown size={24} className="text-[#D4AF37]" />
+              <Crown size={24} className="text-gold-500" />
             </motion.div>
 
             <div>
@@ -203,10 +203,10 @@ export function MembershipNudgeModal({
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="inline-flex items-center gap-1.5 bg-[#D4AF37]/20 border border-[#D4AF37]/40 rounded-full px-3 py-1"
+              className="inline-flex items-center gap-1.5 bg-gold-500/20 border border-gold-500/40 rounded-full px-3 py-1"
             >
-              <TrendingUp className="w-3.5 h-3.5 text-[#D4AF37]" />
-              <span className="text-xs font-semibold text-[#D4AF37]">지금 업그레이드하면 {discount}% 할인 혜택</span>
+              <TrendingUp className="w-3.5 h-3.5 text-gold-500" />
+              <span className="text-xs font-semibold text-gold-500">지금 업그레이드하면 {discount}% 할인 혜택</span>
             </motion.div>
           )}
         </div>
@@ -244,7 +244,7 @@ export function MembershipNudgeModal({
               )}
             >
               {/* Glow effect */}
-              <div className="absolute inset-0 bg-[#D4AF37]/5 pointer-events-none" />
+              <div className="absolute inset-0 bg-gold-500/5 pointer-events-none" />
 
               <div className="flex items-center gap-1.5 mb-2">
                 <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', nextInfo.badgeClass)}>추천</Badge>
@@ -252,9 +252,9 @@ export function MembershipNudgeModal({
               <p className={cn('text-sm font-semibold', nextInfo.color)}>{nextInfo.name}</p>
               <p className="text-xs text-amber-300/50 mt-1">{nextInfo.price.toLocaleString()}원/월</p>
               <ul className="mt-2 space-y-1">
-                <li className="text-xs text-[#D4AF37]/90 font-medium">복채 {nextInfo.dailyLimit}만냥/일</li>
-                <li className="text-xs text-[#D4AF37]/90 font-medium">인연 {nextInfo.relationshipLimit}명</li>
-                <li className="text-xs text-[#D4AF37]/90 font-medium">
+                <li className="text-xs text-gold-500/90 font-medium">복채 {nextInfo.dailyLimit}만냥/일</li>
+                <li className="text-xs text-gold-500/90 font-medium">인연 {nextInfo.relationshipLimit}명</li>
+                <li className="text-xs text-gold-500/90 font-medium">
                   기록 {nextInfo.storageLimit}
                   {typeof nextInfo.storageLimit === 'number' ? '개' : ''}
                 </li>
@@ -264,15 +264,15 @@ export function MembershipNudgeModal({
 
           {/* New perks list */}
           {newPerks.length > 0 && (
-            <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/20 rounded-xl px-4 py-3">
-              <p className="text-xs text-[#D4AF37] font-semibold mb-2 flex items-center gap-1">
+            <div className="bg-gold-500/5 border border-gold-500/20 rounded-xl px-4 py-3">
+              <p className="text-xs text-gold-500 font-semibold mb-2 flex items-center gap-1">
                 <Zap className="w-3.5 h-3.5" />
                 업그레이드 시 추가 혜택
               </p>
               <ul className="space-y-1.5">
                 {newPerks.map((perk, i) => (
                   <li key={i} className="flex items-center gap-2 text-xs text-amber-200/80">
-                    <Check className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-gold-500 flex-shrink-0" />
                     {perk}
                   </li>
                 ))}
@@ -285,7 +285,7 @@ export function MembershipNudgeModal({
         <div className="px-6 pb-6 space-y-2.5">
           <Button
             asChild
-            className="w-full h-11 bg-[#D4AF37] hover:bg-[#c9a62e] text-black font-semibold rounded-xl"
+            className="w-full h-11 bg-gold-500 hover:bg-[#c9a62e] text-black font-semibold rounded-xl"
             onClick={onClose}
           >
             <Link href="/protected/membership">

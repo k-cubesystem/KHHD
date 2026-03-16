@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ManseResult } from "@/lib/domain/saju/manse";
+import { GOLD_500 } from "@/lib/config/design-tokens";
 
 // Dynamic imports for Recharts components to reduce initial bundle size
 const RadarChart = dynamic(
@@ -150,8 +151,8 @@ export function FiveElementsChart({ manse, className }: FiveElementsChartProps) 
                             <Radar
                                 name="오행 분포"
                                 dataKey="value"
-                                stroke="#D4AF37"
-                                fill="#D4AF37"
+                                stroke={GOLD_500}
+                                fill={GOLD_500}
                                 fillOpacity={0.6}
                                 strokeWidth={3}
                             />

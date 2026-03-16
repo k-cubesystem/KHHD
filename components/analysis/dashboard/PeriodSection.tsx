@@ -17,7 +17,7 @@ export function PeriodSection() {
           <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
             <Calendar className="w-4 h-4 text-primary" strokeWidth={1} />
           </div>
-          <h3 className="text-lg font-serif font-light text-[#D4AF37]">운세 캘린더</h3>
+          <h3 className="text-lg font-serif font-light text-gold-500">운세 캘린더</h3>
         </div>
         <p className="text-xs text-white/70 font-light leading-relaxed line-clamp-2">오늘/주간/월간 흐름 미리보기</p>
       </div>

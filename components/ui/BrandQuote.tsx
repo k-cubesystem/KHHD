@@ -1,7 +1,6 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { motion } from 'framer-motion'
 
 interface BrandQuoteProps {
   children: React.ReactNode
@@ -17,22 +16,23 @@ export function BrandQuote({
   animate = true,
 }: BrandQuoteProps) {
   const variantStyles = {
-    hero: 'text-lg leading-relaxed text-[#D4AF37]/90 font-light tracking-wide mb-8',
-    section: 'text-[15px] leading-relaxed text-[#D4AF37]/80 font-light tracking-wide mb-6',
-    card: 'text-[13px] leading-relaxed text-[#D4AF37]/70 font-light tracking-wide mb-4',
-    inline: 'text-[11px] leading-relaxed text-[#D4AF37]/60 font-light tracking-wide',
+    hero: 'text-lg leading-relaxed text-gold-500/90 font-light tracking-wide mb-8',
+    section: 'text-[15px] leading-relaxed text-gold-500/80 font-light tracking-wide mb-6',
+    card: 'text-[13px] leading-relaxed text-gold-500/70 font-light tracking-wide mb-4',
+    inline: 'text-[11px] leading-relaxed text-gold-500/60 font-light tracking-wide',
   }
 
   if (animate) {
     return (
-      <motion.p
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
-        className={cn(variantStyles[variant], className)}
+      <p
+        className={cn(variantStyles[variant], 'anim-fade-in-up', className)}
+        style={{
+          '--fade-y': '8px',
+          animation: 'fade-in-up 0.7s ease-out both',
+        } as React.CSSProperties}
       >
         {children}
-      </motion.p>
+      </p>
     )
   }
 

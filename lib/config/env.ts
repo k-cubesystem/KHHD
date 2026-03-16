@@ -12,7 +12,7 @@ const envSchema = z.object({
 
   // Payments
   NEXT_PUBLIC_TOSS_CLIENT_KEY: z.string().min(1, 'Toss Client Key가 필요합니다').optional(),
-  TOSS_SECRET_KEY: z.string().min(1, 'Toss Secret Key가 필요합니다').optional(),
+  TOSS_PAYMENTS_SECRET_KEY: z.string().min(1, 'Toss Payments Secret Key가 필요합니다').optional(),
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url('올바른 App URL이 필요합니다').optional(),

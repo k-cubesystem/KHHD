@@ -116,7 +116,7 @@
     height: 100%;
     @apply bg-noise-pattern pointer-events-none;
     opacity: 0.05; /* 노이즈 강도 조절 (0.03 ~ 0.08 추천) */
-    z-index: var(--z-raised); /* 1 → raised(10): 모달/nav와 충돌 방지 */
+    z-index: 1; /* 노이즈는 z-1로 낮춰 모달/드롭다운 충돌 방지, pointer-events: none 이미 적용 */
     mix-blend-mode: overlay;
   }
 
@@ -231,22 +231,6 @@
       0 0 60px rgba(197, 160, 89, 0.15); /* 3 레이어 */
   }
 
-  /* 부드러운 Fade In 애니메이션 */
-  .animate-fade-in {
-    animation: fadeIn 0.8s ease-out forwards;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   /* 글자 간격 조정 (한글 가독성) */
   .letter-spacing-hangeul {
     letter-spacing: -0.02em;
@@ -303,56 +287,6 @@
     cursor: not-allowed;
   }
 
-  /* Manse Button — @deprecated: <Button variant="manse"> 사용 권장 */
-  .button-manse {
-    background: #d4af37;
-    color: #0a0a0a;
-    border-radius: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-  }
-
-  .button-manse:hover {
-    background: #f4e4ba;
-    transform: scale(1.05);
-  }
-
-  .button-manse:active {
-    transform: scale(0.95);
-  }
-
-  .button-manse:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  /* Manse Button Outline — @deprecated: <Button variant="manse-outline"> 사용 권장 */
-  .button-manse-outline {
-    background: transparent;
-    color: #d4af37;
-    border: 1px solid #d4af37;
-    border-radius: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    outline: none;
-  }
-
-  .button-manse-outline:hover {
-    background: rgba(212, 175, 55, 0.1);
-    border-color: #f4e4ba;
-    color: #f4e4ba;
-  }
-
-  .button-manse-outline:active {
-    transform: scale(0.95);
-  }
 }
 
 /* ========== Fortune Flow Animations ========== */
@@ -414,6 +348,218 @@
   }
 }
 
+/* ========== Particle & Orb CSS Animations (framer-motion 제거) ========== */
+
+/* SajuLoadingOverlay 파티클: 아래에서 위로 떠오르며 사라짐 */
+@keyframes particle-float-up {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(var(--particle-y));
+    opacity: 0;
+  }
+}
+
+/* SajuLoadingOverlay 회전 링 (시계 방향) */
+@keyframes rotate-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* SajuLoadingOverlay 회전 링 (반시계 방향) */
+@keyframes rotate-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* SajuLoadingOverlay 코어 펄스 */
+@keyframes core-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+/* SajuLoadingOverlay 펄스 인디케이터 도트 */
+@keyframes dot-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Hero-2026 / fortune-energy-gauge 파티클: 아래에서 위로 직선 이동 */
+@keyframes particle-rise-linear {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-120%);
+    opacity: 0;
+  }
+}
+
+/* Orb 배경: 골드 오브 펄스 */
+@keyframes orb-pulse-gold {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.5;
+  }
+}
+
+/* Orb 배경: 우드 오브 펄스 */
+@keyframes orb-pulse-wood {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.2;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.4;
+  }
+}
+
+/* CheonjiinLoadingState 회전 링 */
+@keyframes cheonjiin-rotate-cw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cheonjiin-rotate-ccw {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* CheonjiinLoadingState 노드 펄스 */
+@keyframes node-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* CheonjiinLoadingState 코어 에센스 펄스 */
+@keyframes cheonjiin-core-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* 단순 fadeInUp 애니메이션 (hero, BrandQuote, daily-quote, MasterpieceSection) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--fade-y, 20px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 시머 슬라이드 (daily-check-in, attendance-check 버튼) */
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+/* 바운스 아이콘 (daily-check-in CalendarCheck, lucky-roulette Sparkles) */
+@keyframes bounce-y {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* 스케일 펄스 (lucky-roulette 배지, daily-check-in 오늘 셀) */
+@keyframes scale-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* 로딩 스피너 회전 */
+@keyframes spin-loading {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Lucky-roulette 아이콘 흔들기 */
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(15deg);
+  }
+  75% {
+    transform: rotate(-15deg);
+  }
+}
+
+/* Lucky-roulette 결과 선물 바운스 */
+@keyframes gift-bounce {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(5deg);
+  }
+  75% {
+    transform: translateY(-8px) rotate(-5deg);
+  }
+}
+
+/* Weekly bar 시머 */
+@keyframes bar-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
 /* ========== Motion Accessibility ========== */
 /* 전정기관 장애 사용자 · 저사양 기기 배려 (WCAG 2.1 Success Criterion 2.3.3) */
 @media (prefers-reduced-motion: reduce) {
@@ -428,7 +574,24 @@
 
   .fortune-rise-animation,
   .fortune-glow,
-  .fortune-particle {
+  .fortune-particle,
+  .anim-particle-float,
+  .anim-rotate-cw,
+  .anim-rotate-ccw,
+  .anim-core-pulse,
+  .anim-dot-pulse,
+  .anim-orb-gold,
+  .anim-orb-wood,
+  .anim-fade-in-up,
+  .anim-shimmer,
+  .anim-bounce-y,
+  .anim-scale-pulse,
+  .anim-spin-loading,
+  .anim-wiggle,
+  .anim-gift-bounce,
+  .anim-bar-shimmer,
+  .anim-node-pulse,
+  .anim-particle-rise {
     animation: none !important;
   }
 

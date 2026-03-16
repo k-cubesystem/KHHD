@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 
 const DEFAULT_MESSAGES = [
     "당신의 가장 빛나는 계절을 찾습니다.",
@@ -23,8 +22,8 @@ export function SimpleTyping({
 
     useEffect(() => {
         const currentMessage = messages[textIndex % messages.length];
-        const typeSpeed = isDeleting ? 40 : 100; // 느리고 우아하게
-        const pauseTime = 3000; // 다 쓰고 나서 3초간 머무름 (집중 유도)
+        const typeSpeed = isDeleting ? 40 : 100;
+        const pauseTime = 3000;
 
         const timer = setTimeout(() => {
             if (!isDeleting && displayText === currentMessage) {
@@ -50,14 +49,13 @@ export function SimpleTyping({
 
     return (
         <div className="flex h-20 items-center justify-center">
-            <motion.span
-                className={className}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+            <span
+                className={`${className} anim-fade-in-up`}
+                style={{ animation: 'fade-in-up 0.5s ease-out both', '--fade-y': '0px' } as React.CSSProperties}
             >
                 {displayText}
                 <span className="animate-pulse ml-1 inline-block w-[2px] h-[1em] bg-zen-gold align-middle" />
-            </motion.span>
+            </span>
         </div>
     );
 }

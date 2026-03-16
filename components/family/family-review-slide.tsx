@@ -48,9 +48,9 @@ export function FamilyReviewSlide() {
   return (
     <div className="w-full relative py-8">
       <div className="flex items-center justify-center gap-2 mb-8 opacity-80">
-        <div className="h-px w-8 bg-gradient-to-r from-transparent to-[#D4AF37]/50" />
-        <span className="text-xs font-serif text-[#D4AF37] tracking-widest uppercase">Real Stories</span>
-        <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#D4AF37]/50" />
+        <div className="h-px w-8 bg-gradient-to-r from-transparent to-gold-500/50" />
+        <span className="text-xs font-serif text-gold-500 tracking-widest uppercase">Real Stories</span>
+        <div className="h-px w-8 bg-gradient-to-l from-transparent to-gold-500/50" />
       </div>
 
       <div className="relative h-[220px] w-full max-w-sm mx-auto overflow-hidden">
@@ -95,20 +95,20 @@ export function FamilyReviewSlide() {
                   className={cn(
                     'relative p-6 rounded-2xl transition-all duration-500 flex flex-col items-center text-center gap-3',
                     isActive
-                      ? 'bg-gradient-to-br from-[#1a1510] to-[#0f0d0a] border border-[#D4AF37]/20 shadow-[0_8px_30px_rgba(0,0,0,0.4)]'
+                      ? 'bg-gradient-to-br from-[#1a1510] to-[#0f0d0a] border border-gold-500/20 shadow-[0_8px_30px_rgba(0,0,0,0.4)]'
                       : 'bg-transparent border border-transparent'
                   )}
                 >
                   {isActive && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1a1510] px-2">
-                      <Quote className="w-6 h-6 text-[#D4AF37]/40 fill-[#D4AF37]/10" />
+                      <Quote className="w-6 h-6 text-gold-500/40 fill-gold-500/10" />
                     </div>
                   )}
 
                   <span
                     className={cn(
                       'text-[10px] px-2 py-0.5 rounded-full border mb-1',
-                      isActive ? 'text-[#D4AF37] border-[#D4AF37]/30 bg-[#D4AF37]/5' : 'text-white/20 border-white/10'
+                      isActive ? 'text-gold-500 border-gold-500/30 bg-gold-500/5' : 'text-white/20 border-white/10'
                     )}
                   >
                     {review.tag}

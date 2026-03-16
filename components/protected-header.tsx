@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,35 +16,18 @@ import {
   User,
   LogOut,
   LayoutDashboard,
-  Menu,
-  X,
-  ChevronDown,
-  Sun,
   BookOpen,
-  ScanFace,
-  Hand,
-  Compass,
   CreditCard,
-  Ticket,
-  Users,
-  Clock,
-  Crown,
-  Activity,
-  Sparkles,
 } from 'lucide-react'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { UserRole } from '@/types/auth'
 import { TalismanBalance } from '@/components/talisman-balance'
-import { SubscriptionBadge } from '@/components/membership/subscription-badge'
-import { motion, AnimatePresence } from 'framer-motion'
-import { fadeInUp, staggerContainer, mobileMenuVariants } from '@/lib/animations'
 
 export function ProtectedHeader({ user }: { user: any }) {
   const [isMounted, setIsMounted] = useState(false)
   const [userRole, setUserRole] = useState<UserRole>('user')
   const [planName, setPlanName] = useState<string>('')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -94,84 +76,6 @@ export function ProtectedHeader({ user }: { user: any }) {
             </h1>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8 font-gungseo">
-            {/* 해화사주 Dropdown */}
-            <div className="relative group h-16 flex items-center">
-              <Link
-                href="/protected"
-                className="flex items-center gap-1.5 text-sm font-bold text-ink/70 hover:text-cinnabar transition-colors"
-              >
-                해화사주 <ChevronDown className="w-3 h-3 opacity-50" />
-              </Link>
-
-              {/* Dropdown Panel */}
-              <div className="absolute top-16 left-0 w-48 bg-white border border-ink/10 rounded-sm shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 z-50">
-                <Link
-                  href="/protected/ai-shaman"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-ink/5 text-ink/80 hover:text-cinnabar transition-colors border-b border-ink/5 mb-1"
-                >
-                  <Sparkles className="w-4 h-4 text-gold-500" />
-                  <span className="text-sm font-bold">AI 신당</span>
-                  <Crown className="w-3 h-3 text-gold-500 ml-auto" />
-                </Link>
-                <Link
-                  href="/protected/saju/today"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-ink/5 text-ink/80 hover:text-cinnabar transition-colors"
-                >
-                  <Sun className="w-4 h-4 text-ink/40" />
-                  <span className="text-sm">오늘의 운세</span>
-                </Link>
-                <Link
-                  href="/protected/analysis"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-ink/5 text-ink/80 hover:text-cinnabar transition-colors"
-                >
-                  <BookOpen className="w-4 h-4 text-ink/40" />
-                  <span className="text-sm">사주 풀이</span>
-                </Link>
-                <Link
-                  href="/protected/saju/face"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-ink/5 text-ink/80 hover:text-cinnabar transition-colors"
-                >
-                  <ScanFace className="w-4 h-4 text-ink/40" />
-                  <span className="text-sm">관상</span>
-                </Link>
-                <Link
-                  href="/protected/saju/hand"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-ink/5 text-ink/80 hover:text-cinnabar transition-colors"
-                >
-                  <Hand className="w-4 h-4 text-ink/40" />
-                  <span className="text-sm">손금</span>
-                </Link>
-                <Link
-                  href="/protected/saju/fengshui"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm hover:bg-ink/5 text-ink/80 hover:text-cinnabar transition-colors"
-                >
-                  <Compass className="w-4 h-4 text-ink/40" />
-                  <span className="text-sm">풍수</span>
-                </Link>
-              </div>
-            </div>
-
-            <Link
-              href="/protected/analysis"
-              className="text-sm font-bold text-ink/70 hover:text-cinnabar transition-colors"
-            >
-              천지인 분석
-            </Link>
-            <Link
-              href="/protected/family"
-              className="text-sm font-bold text-ink/70 hover:text-cinnabar transition-colors"
-            >
-              인연 관리
-            </Link>
-            <Link
-              href="/protected/history"
-              className="text-sm font-bold text-ink/70 hover:text-cinnabar transition-colors"
-            >
-              비록함
-            </Link>
-          </nav>
         </div>
 
         {/* Right: Actions */}

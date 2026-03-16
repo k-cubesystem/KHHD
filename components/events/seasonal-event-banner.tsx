@@ -77,7 +77,7 @@ const SEASON_THEMES = {
 function TimeUnit({ value, label }: { value: number; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-base font-bold text-[#D4AF37] tabular-nums leading-none">
+      <span className="text-base font-bold text-gold-500 tabular-nums leading-none">
         {String(value).padStart(2, '0')}
       </span>
       <span className="text-[9px] text-white/40 mt-0.5">{label}</span>
@@ -86,7 +86,7 @@ function TimeUnit({ value, label }: { value: number; label: string }) {
 }
 
 function Separator() {
-  return <span className="text-[#D4AF37]/50 text-sm font-bold self-start mt-0.5">:</span>
+  return <span className="text-gold-500/50 text-sm font-bold self-start mt-0.5">:</span>
 }
 
 interface SeasonalEventBannerProps {
@@ -149,7 +149,7 @@ export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerPro
         )}
       >
         {/* Top accent line */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent" />
 
         <div className="relative z-10 p-4">
           {/* Header row */}
@@ -205,8 +205,8 @@ export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerPro
           <div className="mt-3 flex items-center justify-between gap-2">
             {/* Discount pill */}
             <div className="flex items-center gap-2">
-              <div className="px-2.5 py-1 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40">
-                <span className="text-sm font-bold text-[#D4AF37]">{event.discountPercent}% 할인</span>
+              <div className="px-2.5 py-1 rounded-lg bg-gold-500/20 border border-gold-500/40">
+                <span className="text-sm font-bold text-gold-500">{event.discountPercent}% 할인</span>
               </div>
 
               {/* Countdown */}
@@ -231,8 +231,8 @@ export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerPro
             <Link
               href="/protected/events/seasonal"
               className={cn(
-                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-[#0A0A0A] transition-all active:scale-95',
-                'bg-gradient-to-r from-[#D4AF37] to-[#F0C040] hover:from-[#E5C14A] hover:to-[#FFD452]',
+                'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-charcoal-deep transition-all active:scale-95',
+                'bg-gradient-to-r from-gold-500 to-[#F0C040] hover:from-[#E5C14A] hover:to-[#FFD452]',
                 'shadow-sm'
               )}
             >

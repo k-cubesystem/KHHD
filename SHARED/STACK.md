@@ -1,52 +1,57 @@
-# 해화당 기술 스택 상세
+# 🛠️ SHARED — 기술 스택 정의 v3.0
 
-## 프론트엔드
+> 관리: TEAM_A_PM (확정) | TEAM_E_MGMT (버전 관리)
+> PRIME 시스템 기본 스택 — 프로젝트별 수정 가능
 
-| 항목          | 버전/상세                   |
-| ------------- | --------------------------- |
-| Next.js       | 16.1.4 (App Router)         |
-| React         | 18.x                        |
-| TypeScript    | strict mode                 |
-| Tailwind CSS  | v3                          |
-| Shadcn/ui     | 컴포넌트 라이브러리         |
-| Framer Motion | 분석 페이지 애니메이션 전용 |
-| Recharts      | 모니터링 대시보드 차트      |
+---
 
-## 백엔드 / 인프라
+## 프론트엔드 (TEAM_B)
 
-| 항목                    | 상세                                     |
-| ----------------------- | ---------------------------------------- |
-| Supabase                | PostgreSQL + Auth + RLS + Edge Functions |
-| Vercel                  | 배포 (Edge Runtime 지원)                 |
-| Supabase Edge Functions | 11개 (Deno 런타임)                       |
+| 구분 | 기술 | 담당 에이전트 |
+|---|---|---|
+| 프레임워크 | Next.js 14 (App Router) | FE_LOGIC |
+| 언어 | TypeScript | FE_LOGIC |
+| 상태관리 | Zustand | FE_LOGIC |
+| 서버 상태 | React Query (TanStack) | FE_LOGIC |
+| 스타일링 | Tailwind CSS | FE_VISUAL |
+| 애니메이션 | Framer Motion | FE_VISUAL |
+| 이미지 최적화 | next/image + WebP/AVIF | PERF_HACKER |
+| 번들 분석 | @next/bundle-analyzer | PERF_HACKER |
 
-## AI
+## 백엔드 (TEAM_C)
 
-| 모델 상수         | 실제 모델                | 용도                           |
-| ----------------- | ------------------------ | ------------------------------ |
-| `AI_MODELS.PRO`   | `gemini-3.1-pro-preview` | 사주, 천지인, 이미지, 궁합     |
-| `AI_MODELS.FLASH` | `gemini-3-flash-preview` | 채팅, 운세, 트렌드, 재물, 일일 |
+| 구분 | 기술 | 담당 에이전트 |
+|---|---|---|
+| 프레임워크 | Next.js API Routes / Node.js | BE_SYSTEM |
+| 언어 | TypeScript | BE_SYSTEM |
+| 인증 | NextAuth.js / Supabase Auth | BE_SYSTEM |
+| 데이터베이스 | Supabase (PostgreSQL) | DB_MASTER |
+| ORM | Prisma | DB_MASTER |
+| 캐싱 | Redis (Upstash) | DB_MASTER + FIN_OPS |
+| 파일 스토리지 | Cloudflare R2 / AWS S3 | BE_SYSTEM |
+| 트래킹 | Mixpanel + GA4 | DATA_OPS |
 
-## 결제
+## 인프라 & 배포 (TEAM_D)
 
-- **Toss Payments SDK v2**: 카드사 선택 화면 + 간편결제
-- 웹훅 서명 검증: `timingSafeEqual`
-- 복채(포인트): SINGLE 10만 / FAMILY 30만 / BUSINESS 100만 (일일 한도)
+| 구분 | 기술 | 담당 에이전트 |
+|---|---|---|
+| 호스팅 | Vercel | SRE_MASTER |
+| CDN | Cloudflare | SRE_MASTER |
+| 모니터링 | Sentry | SHERLOCK |
+| CI/CD | GitHub Actions | SRE_MASTER |
+| 비밀 관리 | Vercel Env / Doppler | SRE_MASTER |
 
-## 외부 서비스
+## AI / LLM (TEAM_F)
 
-| 서비스           | 용도          | 환경변수                                      |
-| ---------------- | ------------- | --------------------------------------------- |
-| Solapi           | 카카오 알림톡 | `SOLAPI_*`                                    |
-| Sentry           | 에러 모니터링 | `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN` |
-| Google Analytics | 사용자 분석   | `NEXT_PUBLIC_GA_ID`                           |
+| 구분 | 기술 | 담당 에이전트 |
+|---|---|---|
+| LLM API | Anthropic Claude / OpenAI | ALCHEMIST |
+| 벡터 DB | Supabase pgvector | ALCHEMIST |
+| 스트리밍 | Vercel AI SDK | ALCHEMIST |
+| 임베딩 | OpenAI text-embedding-3 | ALCHEMIST |
 
-## 테스트
+---
 
-- **E2E**: Playwright (15개 스펙)
-- 스크립트: `npm run e2e`, `npm run e2e:ui`, `npm run e2e:headed`
+> 📌 프로젝트별 스택이 다를 경우 이 파일을 수정하고 TEAM_E에 변경 사항을 보고하세요.
 
-## PWA
-
-- `public/sw.js`: 서비스워커
-- `public/offline.html`: 오프라인 페이지
+*버전: v3.0 | 관리: TEAM_A_PM*

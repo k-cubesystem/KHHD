@@ -404,7 +404,7 @@ export const ELEMENT_LABELS: Record<Element, { label: string; color: string; bgC
   목: { label: '木 목', color: 'text-emerald-400', bgColor: 'bg-emerald-400/10 border-emerald-400/30' },
   화: { label: '火 화', color: 'text-red-400', bgColor: 'bg-red-400/10 border-red-400/30' },
   토: { label: '土 토', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10 border-yellow-500/30' },
-  금: { label: '金 금', color: 'text-[#D4AF37]', bgColor: 'bg-[#D4AF37]/10 border-[#D4AF37]/30' },
+  금: { label: '金 금', color: 'text-gold-500', bgColor: 'bg-gold-500/10 border-gold-500/30' },
   수: { label: '水 수', color: 'text-blue-400', bgColor: 'bg-blue-400/10 border-blue-400/30' },
 }
 

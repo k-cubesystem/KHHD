@@ -316,7 +316,7 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
                 onClick={handleAnalyze}
                 disabled={!person1 || !person2}
                 size="lg"
-                className="w-full bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3] hover:from-[#C5A028] hover:to-[#E5D6B4] text-black font-semibold"
+                className="w-full bg-gradient-to-r from-gold-500 to-gold-300 hover:from-[#C5A028] hover:to-[#E5D6B4] text-black font-semibold"
               >
                 <Heart className="w-5 h-5 mr-2" />
                 궁합 분석하기

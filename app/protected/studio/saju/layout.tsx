@@ -5,8 +5,8 @@ export default function SajuLayout({ children }: { children: ReactNode }) {
         <div className="relative min-h-screen">
             {/* Background Ambience */}
             <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-                <div className="absolute top-[10%] left-[5%] w-[400px] h-[400px] bg-[#D4AF37]/5 rounded-full blur-[150px]" />
-                <div className="absolute bottom-[20%] right-[5%] w-[500px] h-[500px] bg-[#D4AF37]/3 rounded-full blur-[180px]" />
+                <div className="absolute top-[10%] left-[5%] w-[400px] h-[400px] bg-gold-500/5 rounded-full blur-[150px]" />
+                <div className="absolute bottom-[20%] right-[5%] w-[500px] h-[500px] bg-gold-500/3 rounded-full blur-[180px]" />
             </div>
 
             {/* Content */}

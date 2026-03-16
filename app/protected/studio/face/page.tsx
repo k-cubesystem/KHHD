@@ -13,6 +13,7 @@ import { analyzeFaceForDestiny, type FaceAnalysisResult, type FaceDestinyGoal } 
 import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
+import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
 import { ArrowRight, Coins, Eye, Sparkles, Crown, Star } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -137,27 +138,27 @@ function FaceAnalysisPageContent() {
             className="space-y-5"
           >
             {/* 복채 잔액 + 비용 배너 */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 bg-gradient-to-br from-[#1A0F00]/80 to-[#0A192F]/80 p-4 backdrop-blur-sm">
+            <div className="relative overflow-hidden rounded-2xl border border-gold-500/30 bg-gradient-to-br from-[#1A0F00]/80 to-[#0A192F]/80 p-4 backdrop-blur-sm">
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.12),transparent_60%)]" />
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Coins className="w-4 h-4 text-[#D4AF37]" />
+                  <Coins className="w-4 h-4 text-gold-500" />
                   <span className="text-xs text-white/50 font-sans">보유 복채</span>
-                  <span className="text-sm font-bold text-[#D4AF37] font-serif">
+                  <span className="text-sm font-bold text-gold-500 font-serif">
                     {balance !== null ? `${balance}만냥` : '—'}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-full px-3 py-1">
-                  <span className="text-xs text-[#D4AF37] font-medium">관상 분석</span>
+                <div className="flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/20 rounded-full px-3 py-1">
+                  <span className="text-xs text-gold-500 font-medium">관상 분석</span>
                   <span className="text-xs text-white/50">·</span>
-                  <span className="text-sm font-bold text-[#D4AF37] font-serif">{FACE_COST}만냥</span>
+                  <span className="text-sm font-bold text-gold-500 font-serif">{FACE_COST}만냥</span>
                 </div>
               </div>
             </div>
 
             {/* 목적 선택 */}
             <Card className="card-glass-manse p-5 border-white/5">
-              <p className="text-xs text-[#D4AF37]/70 font-medium tracking-widest mb-3 uppercase">분석 목적 선택</p>
+              <p className="text-xs text-gold-500/70 font-medium tracking-widest mb-3 uppercase">분석 목적 선택</p>
               <div className="grid grid-cols-2 gap-2">
                 {GOAL_OPTIONS.map((g) => (
                   <button
@@ -165,19 +166,19 @@ function FaceAnalysisPageContent() {
                     onClick={() => setSelectedGoal(g.value)}
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 border ${
                       selectedGoal === g.value
-                        ? 'border-[#D4AF37]/60 bg-[#D4AF37]/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                        ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
                         : 'border-white/5 bg-white/3 hover:border-white/15'
                     }`}
                   >
                     <div className="text-lg mb-1">{g.icon}</div>
                     <p
-                      className={`text-sm font-serif font-bold ${selectedGoal === g.value ? 'text-[#D4AF37]' : 'text-white/80'}`}
+                      className={`text-sm font-serif font-bold ${selectedGoal === g.value ? 'text-gold-500' : 'text-white/80'}`}
                     >
                       {g.label}
                     </p>
                     <p className="text-[10px] text-white/40 mt-0.5">{g.desc}</p>
                     {selectedGoal === g.value && (
-                      <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#D4AF37] shadow-[0_0_6px_rgba(212,175,55,0.8)]" />
+                      <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gold-500 shadow-[0_0_6px_rgba(212,175,55,0.8)]" />
                     )}
                   </button>
                 ))}
@@ -187,8 +188,8 @@ function FaceAnalysisPageContent() {
             {/* 사진 안내 */}
             <Card className="card-glass-manse p-5 border-white/5">
               <div className="flex items-center gap-2 mb-3">
-                <Eye className="w-4 h-4 text-[#D4AF37]" />
-                <p className="text-xs text-[#D4AF37]/70 font-medium tracking-widest uppercase">촬영 안내</p>
+                <Eye className="w-4 h-4 text-gold-500" />
+                <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">촬영 안내</p>
               </div>
               <ul className="space-y-2">
                 {[
@@ -198,7 +199,7 @@ function FaceAnalysisPageContent() {
                   '선글라스나 마스크는 벗어주세요',
                 ].map((t, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-white/50 font-sans font-light">
-                    <span className="text-[#D4AF37]/60 mt-0.5 shrink-0">·</span>
+                    <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
                     <span>{t}</span>
                   </li>
                 ))}
@@ -213,7 +214,7 @@ function FaceAnalysisPageContent() {
               className="w-full h-14 rounded-2xl font-serif font-bold text-base tracking-wide transition-all duration-300 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed group"
               style={{
                 background: imageBase64
-                  ? 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 50%, #C9A227 100%)'
+                  ? `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 50%, #C9A227 100%)`
                   : 'rgba(212,175,55,0.3)',
               }}
             >
@@ -250,13 +251,13 @@ function FaceAnalysisPageContent() {
             <div id="face-result-container" className="space-y-5">
               {/* 스코어 헤더 */}
               <div
-                className="relative overflow-hidden rounded-2xl border border-[#D4AF37]/30 p-8 text-center"
+                className="relative overflow-hidden rounded-2xl border border-gold-500/30 p-8 text-center"
                 style={{ background: 'linear-gradient(135deg, #0D0A00 0%, #1A1200 50%, #0A0800 100%)' }}
               >
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15),transparent_70%)]" />
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-[#D4AF37]/40 to-transparent" />
-                <p className="relative text-[10px] tracking-[0.3em] text-[#D4AF37]/50 uppercase mb-3 font-sans">
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
+                <p className="relative text-[10px] tracking-[0.3em] text-gold-500/50 uppercase mb-3 font-sans">
                   관상 분석 결과
                 </p>
                 <motion.div
@@ -265,7 +266,7 @@ function FaceAnalysisPageContent() {
                   transition={{ type: 'spring', delay: 0.2 }}
                   className="relative text-2xl font-serif font-bold mb-2"
                   style={{
-                    background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 100%)',
+                    background: `linear-gradient(180deg, ${GOLD_300} 0%, ${GOLD_500} 100%)`,
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
                   }}
@@ -278,8 +279,8 @@ function FaceAnalysisPageContent() {
               {analysisResult.partAnalysis && Object.values(analysisResult.partAnalysis).some(Boolean) && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-4">
-                    <Eye className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">부위별 심층 분석</h3>
+                    <Eye className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">부위별 심층 분석</h3>
                   </div>
                   <div className="space-y-3">
                     {[
@@ -341,8 +342,8 @@ function FaceAnalysisPageContent() {
               {analysisResult.facialFeatures && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-4">
-                    <Crown className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37] tracking-wide">오관(五官) 분석</h3>
+                    <Crown className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">오관(五官) 분석</h3>
                   </div>
                   <div className="space-y-3">
                     {[
@@ -370,13 +371,13 @@ function FaceAnalysisPageContent() {
               {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
                   <div className="flex items-center gap-2 mb-3">
-                    <Star className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-serif font-bold text-[#D4AF37]">운기 상승 방법</h3>
+                    <Star className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500">운기 상승 방법</h3>
                   </div>
                   <ul className="space-y-2">
                     {analysisResult.recommendations.map((rec, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-sm text-white/60 font-sans font-light">
-                        <span className="text-[#D4AF37]/60 mt-0.5 shrink-0">·</span>
+                        <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
                         <span>{rec}</span>
                       </li>
                     ))}
@@ -386,7 +387,7 @@ function FaceAnalysisPageContent() {
 
               {/* 상세 분석 */}
               <Card className="card-glass-manse p-5 border-white/5">
-                <h3 className="text-sm font-serif font-bold text-[#D4AF37] mb-3">상세 분석</h3>
+                <h3 className="text-sm font-serif font-bold text-gold-500 mb-3">상세 분석</h3>
                 <p className="text-sm text-white/60 leading-loose whitespace-pre-wrap font-sans font-light">
                   {analysisResult.currentAnalysis}
                 </p>
@@ -408,14 +409,14 @@ function FaceAnalysisPageContent() {
                   setSelectedGoal('general')
                 }}
                 variant="outline"
-                className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-[#D4AF37] h-12"
+                className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-gold-500 h-12"
               >
                 다시 분석
               </Button>
               <Button
                 onClick={() => router.push('/protected/family')}
                 className="flex-1 h-12 font-serif font-bold text-[#0A192F]"
-                style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 100%)' }}
+                style={{ background: `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 100%)` }}
               >
                 완료
               </Button>
@@ -445,7 +446,7 @@ function PartFeatureCard({
   index: number
 }) {
   const [expanded, setExpanded] = useState(false)
-  const color = assessment === '좋음' ? '#D4AF37' : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
+  const color = assessment === '좋음' ? GOLD_500 : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
 
   return (
     <motion.div
@@ -486,14 +487,14 @@ function PartFeatureCard({
             <div className="p-3.5 space-y-2">
               {fortuneArea && (
                 <div className="flex items-start gap-2">
-                  <span className="text-[10px] text-[#D4AF37]/60 font-sans shrink-0 mt-0.5">운세</span>
+                  <span className="text-[10px] text-gold-500/60 font-sans shrink-0 mt-0.5">운세</span>
                   <span className="text-xs text-white/50 font-sans font-light leading-relaxed">{fortuneArea}</span>
                 </div>
               )}
               {advice && (
                 <div className="flex items-start gap-2">
-                  <span className="text-[10px] text-[#D4AF37]/60 font-sans shrink-0 mt-0.5">개운</span>
-                  <span className="text-xs text-[#D4AF37]/70 font-sans font-light leading-relaxed">{advice}</span>
+                  <span className="text-[10px] text-gold-500/60 font-sans shrink-0 mt-0.5">개운</span>
+                  <span className="text-xs text-gold-500/70 font-sans font-light leading-relaxed">{advice}</span>
                 </div>
               )}
             </div>
@@ -515,7 +516,7 @@ function FeatureCard({
   description: string
   index: number
 }) {
-  const color = assessment === '좋음' ? '#D4AF37' : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
+  const color = assessment === '좋음' ? GOLD_500 : assessment === '보통' ? '#A8C5DA' : '#E8A0A0'
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -524,7 +525,7 @@ function FeatureCard({
       className="rounded-xl p-3.5 border border-white/5 bg-white/3"
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-serif font-bold text-[#D4AF37]">{label}</span>
+        <span className="text-sm font-serif font-bold text-gold-500">{label}</span>
         <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${color}20`, color }}>
           {assessment}
         </span>
@@ -540,7 +541,7 @@ export default function FaceAnalysisPage() {
       fallback={
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37] mx-auto" />
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500 mx-auto" />
             <p className="text-white/40 font-sans text-sm">관상 분석 준비 중...</p>
           </div>
         </div>

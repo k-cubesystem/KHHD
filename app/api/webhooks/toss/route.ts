@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/utils/logger'
 
-const tossSecretKey = process.env.TOSS_SECRET_KEY
+const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY
 
 // Supabase Admin Client (Service Role) - lazy initialization
 function getSupabaseAdmin() {
@@ -33,9 +33,9 @@ type TossWebhookEvent = {
 
 function verifyTossWebhookAuth(request: NextRequest): boolean {
   if (!tossSecretKey) {
-    // 환경변수 미설정 시 경고만 출력하고 통과 (개발 환경 배려)
-    logger.warn('[Toss Webhook] TOSS_SECRET_KEY not set — skipping auth verification')
-    return true
+    // 환경변수 미설정 시 무조건 거부 — 프로덕션 보안 강제
+    logger.error('[Toss Webhook] TOSS_PAYMENTS_SECRET_KEY not set — rejecting request')
+    return false
   }
 
   const authHeader = request.headers.get('Authorization')

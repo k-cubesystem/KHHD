@@ -171,7 +171,7 @@ serve(async (req) => {
 
   if (action === 'confirmPayment') {
     // Forward to Toss confirm API
-    const tossSecretKey = Deno.env.get('TOSS_SECRET_KEY')
+    const tossSecretKey = Deno.env.get('TOSS_PAYMENTS_SECRET_KEY')
     if (!tossSecretKey) return errorResponse('결제 설정이 되어 있지 않습니다.')
 
     const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {

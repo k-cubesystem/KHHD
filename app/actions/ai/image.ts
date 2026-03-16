@@ -923,13 +923,14 @@ export async function generateDestinyImage(
 }
 
 // 4. Credit Check & Deduction
+// Race condition 방지: read-then-write 대신 .gte() 조건부 UPDATE 사용
 export async function checkAndDeductCredits(
   userId: string,
   amount: number
 ): Promise<{ success: boolean; remaining?: number; error?: string }> {
   const supabase = await createClient()
 
-  // Get current credits
+  // Step 1: Read current balance for user-facing error message
   const { data: profile, error: fetchError } = await supabase
     .from('profiles')
     .select('credits')
@@ -949,15 +950,21 @@ export async function checkAndDeductCredits(
     }
   }
 
-  // Deduct credits
-  const { error: updateError } = await supabase
+  // Step 2: Conditional UPDATE with .gte() guard
+  // Even if another request deducted between Step 1 and here,
+  // .gte('credits', amount) ensures we never go negative.
+  const { data: updated, error: updateError } = await supabase
     .from('profiles')
     .update({ credits: currentCredits - amount })
     .eq('id', userId)
+    .gte('credits', amount)
+    .select('credits')
+    .single()
 
-  if (updateError) {
-    return { success: false, error: '크레딧 차감 중 오류가 발생했습니다.' }
+  if (updateError || !updated) {
+    logger.warn('[Credits] Conditional update failed — possible race condition', { userId, amount })
+    return { success: false, error: '크레딧 차감 중 동시 요청이 감지되었습니다. 다시 시도해주세요.' }
   }
 
-  return { success: true, remaining: currentCredits - amount }
+  return { success: true, remaining: updated.credits }
 }

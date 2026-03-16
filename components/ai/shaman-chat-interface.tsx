@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import {
   type ShamanQuestionStatus,
 } from '@/app/actions/ai/shaman-chat'
 import { useFamilyMembers } from '@/hooks/use-family-members'
+import { useRouter } from 'next/navigation'
 import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -48,7 +49,7 @@ function TypingDots() {
 }
 
 // ─── 메시지 버블 ────────────────────────────────────────
-function Bubble({ msg, showAvatar }: { msg: ShamanChatMessage; showAvatar: boolean }) {
+const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessage; showAvatar: boolean }) {
   const isUser = msg.role === 'user'
   const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 
@@ -107,7 +108,7 @@ function Bubble({ msg, showAvatar }: { msg: ShamanChatMessage; showAvatar: boole
       </div>
     </motion.div>
   )
-}
+})
 
 // ─── 새 대화 시작 확인 다이얼로그 ──────────────────────────
 function NewChatConfirmBanner({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
@@ -139,6 +140,7 @@ function NewChatConfirmBanner({ onConfirm, onCancel }: { onConfirm: () => void; 
 
 // ─── 메인 컴포넌트 ─────────────────────────────────────────
 export function ShamanChatInterface() {
+  const router = useRouter()
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -253,7 +255,7 @@ export function ShamanChatInterface() {
     if (balance < 1) {
       toast.error('복채가 부족합니다', {
         description: `${balance.toLocaleString()}만냥 보유 · 1만냥 필요`,
-        action: { label: '복채 충전', onClick: () => (window.location.href = '/protected/membership') },
+        action: { label: '복채 충전', onClick: () => router.push('/protected/membership') },
       })
       return
     }
@@ -497,6 +499,8 @@ export function ShamanChatInterface() {
       <div
         ref={chatRef}
         onScroll={handleScroll}
+        aria-live="polite"
+        aria-label="채팅 메시지 영역"
         className="relative z-10 flex-1 overflow-y-auto px-4 py-5 space-y-3 custom-scrollbar"
       >
         {/* 세션 로딩 스켈레톤 */}

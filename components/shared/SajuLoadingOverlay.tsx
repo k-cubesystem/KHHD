@@ -6,11 +6,24 @@
  * 두 가지 모드:
  * 1. timed   — duration ms 동안 0→98%, 완료 후 자동으로 onComplete 호출 (해화당 사주풀이)
  * 2. api-wait — 0→98% 에서 정지, isApiComplete=true 되면 98→100% 후 onComplete 호출 (천지인종합)
+ *
+ * framer-motion 무한 파티클 → CSS @keyframes 전환 (GPU 오프로드)
+ * AnimatePresence는 메시지 전환에만 사용 (mount/unmount 한정)
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { SAJU_LOADING_MESSAGES } from '@/lib/constants/saju-messages'
+import { GOLD_500 } from '@/lib/config/design-tokens'
+
+/* ── 파티클 상수 (렌더마다 재생성 방지) ── */
+const PARTICLES = Array.from({ length: 14 }, (_, i) => ({
+  size: i % 3 === 0 ? 3 : 2,
+  left: `${6 + i * 6.5}%`,
+  y: -(280 + i * 35),
+  duration: 4.5 + i * 0.25,
+  delay: i * 0.35,
+}))
 
 interface SajuLoadingOverlayProps {
   targetName: string
@@ -40,7 +53,6 @@ export function SajuLoadingOverlay({
   const handleComplete = useCallback(() => {
     if (finishing) return
     setFinishing(true)
-    // 98→100% 빠르게 채우고 완료
     setProgress(100)
     setTimeout(() => onComplete(), 600)
   }, [finishing, onComplete])
@@ -73,14 +85,13 @@ export function SajuLoadingOverlay({
       if (p < target) {
         rafId = requestAnimationFrame(frame)
       }
-      // 98%에서 멈춤 — isApiComplete가 true일 때 handleComplete 호출됨
     }
 
     rafId = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(rafId)
   }, [duration])
 
-  // api-wait 모드: isApiComplete가 true가 되고 progress≥98이면 완료
+  // api-wait 모드: isApiComplete가 true가 되고 progress>=98이면 완료
   useEffect(() => {
     if (isApiComplete && progress >= 97 && !finishing) {
       handleComplete()
@@ -89,10 +100,10 @@ export function SajuLoadingOverlay({
 
   // timed 모드: isApiComplete가 항상 false일 때 — duration 경과 후 자동 완료
   useEffect(() => {
-    if (isApiComplete) return // api-wait 모드면 스킵
+    if (isApiComplete) return
     const timer = setTimeout(() => {
       handleComplete()
-    }, duration + 200) // 진행바가 98%에 도달한 직후
+    }, duration + 200)
     return () => clearTimeout(timer)
   }, [duration, isApiComplete, handleComplete])
 
@@ -102,64 +113,69 @@ export function SajuLoadingOverlay({
   return (
     <div
       className="fixed inset-0 flex flex-col items-center justify-center px-6"
+      role="progressbar"
+      aria-valuenow={displayProgress}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${targetName} 님의 운명 분석 진행중 ${displayProgress}%`}
+      aria-live="polite"
       style={{
         zIndex: 'var(--z-modal)' as string,
         background: 'linear-gradient(160deg, #080604 0%, #0f0c08 50%, #080604 100%)',
       }}
     >
-      {/* 파티클 */}
+      {/* 파티클 — CSS @keyframes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {Array.from({ length: 14 }).map((_, i) => (
-          <motion.div
+        {PARTICLES.map((p, i) => (
+          <div
             key={i}
-            className="absolute rounded-full"
+            className="absolute rounded-full anim-particle-float"
             style={{
-              width: i % 3 === 0 ? 3 : 2,
-              height: i % 3 === 0 ? 3 : 2,
-              left: `${6 + i * 6.5}%`,
+              width: p.size,
+              height: p.size,
+              left: p.left,
               bottom: '-6px',
               background: 'rgba(212,175,55,0.4)',
-            }}
-            animate={{ y: [0, -(280 + i * 35)], opacity: [0, 0.7, 0] }}
-            transition={{
-              duration: 4.5 + i * 0.25,
-              repeat: Infinity,
-              delay: i * 0.35,
-              ease: 'easeOut',
-            }}
+              '--particle-y': `${p.y}px`,
+              animation: `particle-float-up ${p.duration}s ease-out ${p.delay}s infinite`,
+            } as React.CSSProperties}
           />
         ))}
       </div>
 
       {/* 로딩 비주얼 */}
       <div className="relative mb-10">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-          className="w-32 h-32 rounded-full"
-          style={{ border: '1px dashed rgba(212,175,55,0.2)' }}
+        {/* 외부 점선 링 — CSS rotate */}
+        <div
+          className="w-32 h-32 rounded-full anim-rotate-cw"
+          style={{
+            border: '1px dashed rgba(212,175,55,0.2)',
+            animation: 'rotate-cw 10s linear infinite',
+          }}
         />
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
-          className="absolute inset-3 rounded-full"
-          style={{ border: '1px solid rgba(212,175,55,0.3)' }}
+        {/* 내부 실선 링 — CSS rotate (반대) */}
+        <div
+          className="absolute inset-3 rounded-full anim-rotate-ccw"
+          style={{
+            border: '1px solid rgba(212,175,55,0.3)',
+            animation: 'rotate-ccw 7s linear infinite',
+          }}
         />
+        {/* 코어 */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <motion.div
-            animate={{ scale: [1, 1.12, 1], opacity: [0.6, 1, 0.6] }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-            className="w-16 h-16 rounded-full flex items-center justify-center"
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center anim-core-pulse"
             style={{
               background: 'rgba(212,175,55,0.08)',
               border: '1px solid rgba(212,175,55,0.5)',
               boxShadow: '0 0 30px rgba(212,175,55,0.35)',
+              animation: 'core-pulse 2.5s ease-in-out infinite',
             }}
           >
-            <span style={{ fontFamily: 'serif', fontSize: '1.75rem', color: '#D4AF37' }}>
+            <span style={{ fontFamily: 'serif', fontSize: '1.75rem', color: GOLD_500 }}>
               {finishing ? '合' : '天'}
             </span>
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -171,7 +187,7 @@ export function SajuLoadingOverlay({
         {targetName} 님의 운명을 읽는 중
       </p>
 
-      {/* 감성 문구 */}
+      {/* 감성 문구 — AnimatePresence는 mount/unmount 전환에만 사용 */}
       <div className="min-h-[76px] flex flex-col items-center justify-center text-center mb-10 px-4 max-w-sm">
         <AnimatePresence mode="wait">
           {msgVisible && (
@@ -212,7 +228,7 @@ export function SajuLoadingOverlay({
               className="h-full rounded-full"
               style={{
                 width: `${displayProgress}%`,
-                background: 'linear-gradient(90deg, rgba(212,175,55,0.5), #D4AF37, rgba(212,175,55,0.5))',
+                background: `linear-gradient(90deg, rgba(212,175,55,0.5), ${GOLD_500}, rgba(212,175,55,0.5))`,
                 transition: finishing ? 'width 0.5s ease' : 'none',
               }}
             />
@@ -226,19 +242,15 @@ export function SajuLoadingOverlay({
         </>
       ) : (
         <>
-          {/* 펄스 인디케이터 */}
+          {/* 펄스 인디케이터 — CSS @keyframes */}
           <div className="flex items-center gap-1.5 mb-4">
             {[0, 1, 2].map((i) => (
-              <motion.div
+              <div
                 key={i}
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: 'rgba(212,175,55,0.6)' }}
-                animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
-                transition={{
-                  duration: 1.4,
-                  repeat: Infinity,
-                  delay: i * 0.2,
-                  ease: 'easeInOut',
+                className="w-1.5 h-1.5 rounded-full anim-dot-pulse"
+                style={{
+                  background: 'rgba(212,175,55,0.6)',
+                  animation: `dot-pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
                 }}
               />
             ))}

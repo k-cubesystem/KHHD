@@ -67,31 +67,31 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
         {/* <div className="fixed top-20 left-20 z-50">  Debug mode */}
         <div
           ref={cardRef}
-          className="w-[600px] h-[600px] bg-[#0A0A0A] relative flex flex-col items-center justify-between p-12 text-center overflow-hidden border-8 border-[#D4AF37]/20"
+          className="w-[600px] h-[600px] bg-charcoal-deep relative flex flex-col items-center justify-between p-12 text-center overflow-hidden border-8 border-gold-500/20"
         >
           {/* Background Texture */}
           <div className="absolute inset-0 bg-noise-pattern opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#D4AF37]/5 via-transparent to-[#D4AF37]/5" />
+          <div className="absolute inset-0 bg-gradient-to-br from-gold-500/5 via-transparent to-gold-500/5" />
 
           {/* Header */}
           <div className="relative z-10 space-y-2">
-            <p className="text-[#D4AF37] font-serif text-lg tracking-[0.3em] uppercase opacity-80">Haehwadang</p>
+            <p className="text-gold-500 font-serif text-lg tracking-[0.3em] uppercase opacity-80">Haehwadang</p>
             <h1 className="text-4xl font-serif font-bold text-white tracking-widest">청담해화당</h1>
           </div>
 
           {/* Main Content */}
           <div className="relative z-10 flex flex-col items-center gap-6">
-            <div className="px-6 py-2 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10">
-              <span className="text-[#D4AF37] font-bold tracking-widest text-xl">{data.title}</span>
+            <div className="px-6 py-2 rounded-full border border-gold-500/30 bg-gold-500/10">
+              <span className="text-gold-500 font-bold tracking-widest text-xl">{data.title}</span>
             </div>
 
             {data.score ? (
               <div className="flex items-baseline gap-1">
-                <span className="text-5xl font-serif font-bold text-[#D4AF37]">{data.score}</span>
-                <span className="text-xl text-[#D4AF37]/60">점</span>
+                <span className="text-5xl font-serif font-bold text-gold-500">{data.score}</span>
+                <span className="text-xl text-gold-500/60">점</span>
               </div>
             ) : data.keyword ? (
-              <h2 className="text-4xl font-serif font-bold text-[#D4AF37] leading-tight my-4 break-keep">
+              <h2 className="text-4xl font-serif font-bold text-gold-500 leading-tight my-4 break-keep">
                 {data.keyword}
               </h2>
             ) : null}
@@ -105,11 +105,11 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
           {/* Footer */}
           <div className="relative z-10 w-full pt-8 border-t border-white/10 flex justify-between items-end">
             <div className="text-left">
-              <p className="text-[#D4AF37]/60 text-sm font-serif">Premium Oriental Fortune</p>
+              <p className="text-gold-500/60 text-sm font-serif">Premium Oriental Fortune</p>
               <p className="text-white/30 text-xs mt-1">{data.date || new Date().toLocaleDateString()}</p>
             </div>
-            <div className="w-16 h-16 rounded-full border border-[#D4AF37]/30 flex items-center justify-center bg-[#D4AF37]/5">
-              <Sparkles className="w-8 h-8 text-[#D4AF37]" />
+            <div className="w-16 h-16 rounded-full border border-gold-500/30 flex items-center justify-center bg-gold-500/5">
+              <Sparkles className="w-8 h-8 text-gold-500" />
             </div>
           </div>
         </div>

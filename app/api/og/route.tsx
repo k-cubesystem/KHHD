@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 import { logger } from '@/lib/utils/logger'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 export const runtime = 'edge'
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       fonts.push({ name: 'NotoSerifKR', data: fontData, style: 'normal', weight: 700 })
     }
 
-    const GOLD = '#D4AF37'
+    const GOLD = GOLD_500
     const GOLD_DIM = 'rgba(212,175,55,0.15)'
     const DARK = '#0A0A0A'
     const DARK2 = '#111111'

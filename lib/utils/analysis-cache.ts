@@ -33,7 +33,8 @@ export const CACHE_TTL_HOURS: Record<AnalysisCategory, number> = {
 
 export interface CachedAnalysisRecord {
   id: string
-  result_json: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result_json: Record<string, any>
   summary: string | null
   score: number | null
   created_at: string

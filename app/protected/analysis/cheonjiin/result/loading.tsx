@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SAJU_LOADING_MESSAGES } from '@/lib/constants/saju-messages'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 export default function CheonjiinResultLoading() {
   const [msgIndex, setMsgIndex] = useState(() => Math.floor(Math.random() * SAJU_LOADING_MESSAGES.length))
@@ -78,7 +79,7 @@ export default function CheonjiinResultLoading() {
               boxShadow: '0 0 30px rgba(212,175,55,0.35)',
             }}
           >
-            <span style={{ fontFamily: 'serif', fontSize: '1.75rem', color: '#D4AF37' }}>天</span>
+            <span style={{ fontFamily: 'serif', fontSize: '1.75rem', color: GOLD_500 }}>天</span>
           </motion.div>
         </div>
       </div>

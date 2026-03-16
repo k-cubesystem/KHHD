@@ -12,7 +12,10 @@ import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
 
 // Dynamic imports for heavy dashboard sections to improve initial load
-import { MasterpieceSection } from './dashboard/MasterpieceSection'
+const MasterpieceSection = dynamic(
+  () => import('./dashboard/MasterpieceSection').then((mod) => ({ default: mod.MasterpieceSection })),
+  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> }
+)
 const RelationshipSection = dynamic(
   () => import('./dashboard/RelationshipSection').then((mod) => ({ default: mod.RelationshipSection })),
   { ssr: false, loading: () => <div className="h-32 animate-pulse bg-white/5 rounded-lg" /> }
@@ -85,14 +88,14 @@ export function AnalysisDashboard({
     >
       {/* 1. Hero */}
       <motion.section variants={fadeInUp} className="text-left space-y-3 pt-4 px-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 backdrop-blur-sm">
-          <span className="text-[10px] font-medium text-[#D4AF37] tracking-widest uppercase">DESTINY INSIGHT</span>
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 backdrop-blur-sm">
+          <span className="text-[10px] font-medium text-gold-500 tracking-widest uppercase">DESTINY INSIGHT</span>
         </div>
 
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug tracking-tight">
           남들은 잘 되는데
           <br />
-          <span className="text-[#D4AF37]">나만 제자리</span>인 것 같다면?
+          <span className="text-gold-500">나만 제자리</span>인 것 같다면?
         </h1>
 
         <div className="space-y-4">
@@ -104,8 +107,8 @@ export function AnalysisDashboard({
           </p>
 
           <div className="flex items-center gap-2">
-            <div className="h-px w-8 bg-[#D4AF37]/50" />
-            <p className="text-xs font-serif text-[#D4AF37]/80">
+            <div className="h-px w-8 bg-gold-500/50" />
+            <p className="text-xs font-serif text-gold-500/80">
               {userName ? `${userName}님의 운명 해설서` : '당신을 위한 운명 해설서'}
             </p>
           </div>

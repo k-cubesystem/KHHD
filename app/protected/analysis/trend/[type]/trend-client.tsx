@@ -77,7 +77,7 @@ function OutlookBadge({ outlook }: { outlook: string }) {
       ? { color: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' }
       : outlook === '주의'
         ? { color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
-        : { color: 'text-[#D4AF37] border-[#D4AF37]/30 bg-[#D4AF37]/10' }
+        : { color: 'text-gold-500 border-gold-500/30 bg-gold-500/10' }
   return (
     <Badge variant="outline" className={`${config.color} font-light text-xs`}>
       {outlook}
@@ -97,7 +97,7 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
             <div className={`w-12 h-12 mx-auto rounded-full ${config.bg} flex items-center justify-center`}>
               <Icon className={`w-6 h-6 ${config.color}`} strokeWidth={1} />
             </div>
-            <p className="text-base font-serif font-light text-[#D4AF37]">{result.summary}</p>
+            <p className="text-base font-serif font-light text-gold-500">{result.summary}</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -107,8 +107,8 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
         <Card className="bg-surface/20 border-white/5 card-glass-manse">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">전체 흐름</span>
+              <Sparkles className="w-4 h-4 text-gold-500" strokeWidth={1} />
+              <span className="text-xs font-light text-gold-500 tracking-widest uppercase">전체 흐름</span>
             </div>
             <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.overview}</p>
           </CardContent>
@@ -120,8 +120,8 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
         <Card className="bg-surface/20 border-white/5 card-glass-manse">
           <CardContent className="p-5 space-y-5">
             <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">영역별 분석</span>
+              <Star className="w-4 h-4 text-gold-500" strokeWidth={1} />
+              <span className="text-xs font-light text-gold-500 tracking-widest uppercase">영역별 분석</span>
             </div>
             {result.areas.map((area) => (
               <div key={area.title} className="space-y-2">
@@ -141,8 +141,8 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
         <Card className="bg-surface/20 border-white/5 card-glass-manse">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">좋은 시기</span>
+              <Clock className="w-4 h-4 text-gold-500" strokeWidth={1} />
+              <span className="text-xs font-light text-gold-500 tracking-widest uppercase">좋은 시기</span>
             </div>
             <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.timing}</p>
           </CardContent>
@@ -154,17 +154,17 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
         <Card className="bg-surface/20 border-white/5 card-glass-manse">
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">행운 키워드</span>
+              <Zap className="w-4 h-4 text-gold-500" strokeWidth={1} />
+              <span className="text-xs font-light text-gold-500 tracking-widest uppercase">행운 키워드</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs">
+              <Badge variant="outline" className="border-gold-500/30 text-gold-500 font-light text-xs">
                 색상 {result.lucky.color}
               </Badge>
-              <Badge variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs">
+              <Badge variant="outline" className="border-gold-500/30 text-gold-500 font-light text-xs">
                 숫자 {result.lucky.number}
               </Badge>
-              <Badge variant="outline" className="border-[#D4AF37]/30 text-[#D4AF37] font-light text-xs">
+              <Badge variant="outline" className="border-gold-500/30 text-gold-500 font-light text-xs">
                 방향 {result.lucky.direction}
               </Badge>
             </div>
@@ -174,11 +174,11 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
 
       {/* 핵심 조언 */}
       <motion.div variants={fadeInUp}>
-        <Card className="bg-surface/20 border-[#D4AF37]/20 card-glass-manse">
+        <Card className="bg-surface/20 border-gold-500/20 card-glass-manse">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
-              <span className="text-xs font-light text-[#D4AF37] tracking-widest uppercase">핵심 조언</span>
+              <Sparkles className="w-4 h-4 text-gold-500" strokeWidth={1} />
+              <span className="text-xs font-light text-gold-500 tracking-widest uppercase">핵심 조언</span>
             </div>
             <p className="text-sm font-light text-ink-light/80 leading-relaxed">{result.advice}</p>
           </CardContent>
@@ -238,9 +238,9 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
       <div className="relative z-10 max-w-md mx-auto space-y-8">
         {/* 헤더 */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-[#D4AF37]/20 backdrop-blur-sm mb-4 rounded-full">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-gold-500/20 backdrop-blur-sm mb-4 rounded-full">
             <Icon className={`w-4 h-4 ${config.color}`} strokeWidth={1} />
-            <span className="text-[10px] font-light text-[#D4AF37] tracking-[0.2em] font-sans uppercase">
+            <span className="text-[10px] font-light text-gold-500 tracking-[0.2em] font-sans uppercase">
               {config.desc}
             </span>
           </div>
@@ -258,10 +258,10 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
                 setState({ status: 'idle' })
               }}
             >
-              <SelectTrigger className="w-full bg-surface/20 border-[#D4AF37]/20 text-ink-light font-light text-sm">
+              <SelectTrigger className="w-full bg-surface/20 border-gold-500/20 text-ink-light font-light text-sm">
                 <SelectValue placeholder="분석 대상 선택" />
               </SelectTrigger>
-              <SelectContent className="bg-surface border-[#D4AF37]/20">
+              <SelectContent className="bg-surface border-gold-500/20">
                 {targets.map((t) => (
                   <SelectItem key={t.id} value={t.id} className="font-light text-ink-light">
                     {t.name}
@@ -276,9 +276,9 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
         {/* 로딩 */}
         {state.status === 'loading' && (
           <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-            <Card className="bg-surface/20 border-[#D4AF37]/20 card-glass-manse">
+            <Card className="bg-surface/20 border-gold-500/20 card-glass-manse">
               <CardContent className="p-10 flex flex-col items-center gap-4">
-                <RefreshCw className="w-8 h-8 text-[#D4AF37] animate-spin" strokeWidth={1} />
+                <RefreshCw className="w-8 h-8 text-gold-500 animate-spin" strokeWidth={1} />
                 <p className="text-sm font-light text-ink-light/60">AI가 {config.label}을 분석하고 있습니다...</p>
               </CardContent>
             </Card>
@@ -296,7 +296,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
                   variant="outline"
                   size="sm"
                   onClick={handleAnalyze}
-                  className="border-[#D4AF37]/30 text-[#D4AF37] font-light hover:bg-[#D4AF37]/10"
+                  className="border-gold-500/30 text-gold-500 font-light hover:bg-gold-500/10"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" strokeWidth={1.5} />
                   다시 시도
@@ -324,7 +324,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
               variant="ghost"
               size="sm"
               onClick={handleAnalyze}
-              className="w-full text-ink-light/40 font-light text-xs hover:text-[#D4AF37]/60"
+              className="w-full text-ink-light/40 font-light text-xs hover:text-gold-500/60"
             >
               <RefreshCw className="w-3 h-3 mr-1" strokeWidth={1.5} />
               다시 분석하기
@@ -335,7 +335,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
         {/* idle */}
         {state.status === 'idle' && (
           <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-            <Card className="bg-surface/20 border-[#D4AF37]/20 card-glass-manse">
+            <Card className="bg-surface/20 border-gold-500/20 card-glass-manse">
               <CardContent className="p-8 flex flex-col items-center gap-5">
                 <div className={`w-14 h-14 mx-auto rounded-full ${config.bg} flex items-center justify-center`}>
                   <Icon className={`w-7 h-7 ${config.color}`} strokeWidth={1} />
@@ -349,7 +349,7 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
                 ) : (
                   <Button
                     onClick={handleAnalyze}
-                    className="bg-[#D4AF37]/20 hover:bg-[#D4AF37]/30 text-[#D4AF37] border border-[#D4AF37]/30 font-light text-sm"
+                    className="bg-gold-500/20 hover:bg-gold-500/30 text-gold-500 border border-gold-500/30 font-light text-sm"
                     variant="outline"
                   >
                     <Sparkles className="w-4 h-4 mr-2" strokeWidth={1.5} />

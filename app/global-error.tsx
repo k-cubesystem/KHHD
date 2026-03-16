@@ -1,6 +1,13 @@
 'use client'
 
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+import * as Sentry from '@sentry/nextjs'
+import { useEffect } from 'react'
+
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error)
+  }, [error])
+
   return (
     <html lang="ko">
       <body className="bg-gray-950 text-white">

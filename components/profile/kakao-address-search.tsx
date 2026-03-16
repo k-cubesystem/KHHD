@@ -8,6 +8,7 @@ import { Search, MapPin } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import DaumPostcodeEmbed from 'react-daum-postcode'
 import { cn } from '@/lib/utils'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 interface KakaoAddressSearchProps {
   label: string
@@ -92,8 +93,8 @@ export function KakaoAddressSearch({
                 pageBgColor: '#0A0A0A',
                 textColor: '#E0E0E0',
                 queryTextColor: '#FFFFFF',
-                emphTextColor: '#D4AF37',
-                outlineColor: '#D4AF37',
+                emphTextColor: GOLD_500,
+                outlineColor: GOLD_500,
               }}
             />
           </div>

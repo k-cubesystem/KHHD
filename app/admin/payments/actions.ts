@@ -69,7 +69,13 @@ export async function getPayments(
     // 2. Manual Fetch Profiles
     const userIds = Array.from(new Set(paymentsData.map((p) => p.user_id).filter(Boolean)))
 
-    let profilesMap: Record<string, any> = {}
+    interface PaymentProfile {
+      id: string
+      full_name: string | null
+      email?: string | null
+    }
+
+    let profilesMap: Record<string, PaymentProfile> = {}
 
     if (userIds.length > 0) {
       // Try fetching with email
@@ -86,18 +92,19 @@ export async function getPayments(
           profilesError
         )
         const retryResult = await dbClient.from('profiles').select('id, full_name').in('id', userIds)
-        profiles = retryResult.data as any
+        // Map simplified result to include email as null
+        profiles = retryResult.data?.map((p) => ({ ...p, email: null })) ?? null
         profilesError = retryResult.error
       }
 
       if (!profilesError && profiles) {
-        profilesMap = profiles.reduce(
-          (acc: Record<string, any>, curr: any) => {
-            acc[curr.id] = curr
-            return acc
-          },
-          {} as Record<string, any>
-        )
+        for (const curr of profiles) {
+          profilesMap[curr.id] = {
+            id: curr.id,
+            full_name: curr.full_name,
+            email: ('email' in curr ? curr.email : null) as string | null,
+          }
+        }
       }
     }
 

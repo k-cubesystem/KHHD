@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getUserRole } from '@/lib/supabase/helpers'
 
 /**
  * Get user's membership tier and limits
@@ -17,13 +18,9 @@ export async function getUserTierLimits() {
   }
 
   // Check if user is tester - give special privileges
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  const role = await getUserRole(supabase, user.id)
 
-  if (profile?.role === 'tester') {
+  if (role === 'tester') {
     return {
       tier: 'TESTER',
       daily_talisman_limit: 100, // 100만냥/day

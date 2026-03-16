@@ -166,31 +166,6 @@ function getWeekRange(date: Date): string {
   return `${fmt(monday)} ~ ${fmt(sunday)}`
 }
 
-async function getRecentFortuneAnalysis(
-  targetId: string,
-  fortuneType: FortuneType,
-  cacheDays: number
-): Promise<FortuneResult | null> {
-  const supabase = await createClient()
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - cacheDays)
-
-  const { data } = await supabase
-    .from('analysis_history')
-    .select('result_json')
-    .eq('target_id', targetId)
-    .eq('category', 'TODAY')
-    .gte('created_at', cutoff.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (!data?.result_json) return null
-  const cached = data.result_json as FortuneResult
-  // type이 일치할 때만 캐시 반환
-  return cached.type === fortuneType ? cached : null
-}
-
 async function analyzeFortuneWithAI(prompt: string, fortuneType: FortuneType, period: string): Promise<FortuneResult> {
   const result = await generateAIContent({
     featureKey: 'fortune',

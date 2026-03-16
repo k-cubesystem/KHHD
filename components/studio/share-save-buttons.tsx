@@ -118,12 +118,12 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
   }
 
   return (
-    <Card className="card-glass-manse p-4 border-[#D4AF37]/20">
+    <Card className="card-glass-manse p-4 border-gold-500/20">
       <div className="flex gap-3">
         <Button
           onClick={handleShare}
           disabled={isSharing || isSaving}
-          className="flex-1 bg-[#D4AF37] text-[#0A192F] hover:bg-[#F4E4BA] font-semibold"
+          className="flex-1 bg-gold-500 text-[#0A192F] hover:bg-gold-300 font-semibold"
         >
           {isSharing ? (
             <>로딩 중...</>
@@ -139,7 +139,7 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
           onClick={handleSave}
           disabled={isSharing || isSaving}
           variant="outline"
-          className="flex-1 border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10"
+          className="flex-1 border-gold-500/30 text-gold-500 hover:bg-gold-500/10"
         >
           {isSaving ? (
             <>저장 중...</>

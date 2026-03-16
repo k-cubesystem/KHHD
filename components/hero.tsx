@@ -1,15 +1,14 @@
 'use client'
 
-import { motion } from 'framer-motion'
-
 export function Hero() {
   return (
     <div className="relative flex flex-col gap-12 items-center text-center px-4 pt-32 pb-20 z-10">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.0, ease: 'easeOut' }}
-        className="flex flex-col gap-6 items-center"
+      <div
+        className="flex flex-col gap-6 items-center anim-fade-in-up"
+        style={{
+          '--fade-y': '30px',
+          animation: 'fade-in-up 1.0s ease-out both',
+        } as React.CSSProperties}
       >
         <div className="relative">
           <div className="absolute -inset-4 bg-gold-500/20 blur-2xl rounded-full opacity-0 animate-breathe" />
@@ -30,13 +29,14 @@ export function Hero() {
           <span className="text-gold-400 font-medium">통찰</span>.<br />
           당신의 운명을 가장 정교하게 설계하는 프리미엄 컨설팅.
         </p>
-      </motion.div>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.8 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mt-8"
+      <div
+        className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mt-8 anim-fade-in-up"
+        style={{
+          '--fade-y': '20px',
+          animation: 'fade-in-up 0.8s ease-out 0.6s both',
+        } as React.CSSProperties}
       >
         {[
           {
@@ -58,11 +58,9 @@ export function Hero() {
             icon: '🌏',
           },
         ].map((item, i) => (
-          <motion.div
+          <div
             key={i}
-            whileHover={{ y: -5, transition: { duration: 0.2 } }}
-            viewport={{ once: true }}
-            className="group relative glass-panel p-8 rounded-2xl flex flex-col gap-3 text-left overflow-hidden"
+            className="group relative glass-panel p-8 rounded-2xl flex flex-col gap-3 text-left overflow-hidden hover:-translate-y-1 transition-transform duration-200"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-6xl grayscale group-hover:grayscale-0">
               {item.icon}
@@ -76,9 +74,9 @@ export function Hero() {
             </span>
             <div className="w-8 h-[1px] bg-white/10 my-2 group-hover:bg-gold-500/50 transition-colors" />
             <p className="text-sm text-stone-400 leading-relaxed z-10">{item.desc}</p>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
     </div>
   )
 }

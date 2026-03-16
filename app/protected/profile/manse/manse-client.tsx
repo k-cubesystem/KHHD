@@ -10,6 +10,8 @@ import {
   analyzeYukchin,
   calculateDaeun,
   getGaeunbubRecommendation,
+  type SinsalItem,
+  type DaeunPeriod,
 } from '@/lib/domain/saju/saju-analysis'
 import {
   analyzeSipseong,
@@ -53,6 +55,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { getLatestAnalysisSession } from '@/app/actions/core/sessions'
 import { type FaceAnalysisResult, type PalmAnalysisResult } from '@/app/actions/ai/image'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 // 전문 용어 사전 (45개 이상)
 const TERMINOLOGY: Record<string, { title: string; desc: string }> = {
@@ -559,10 +562,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
   // 프리미엄 분석 계산 (에러 방지)
   let gekgukAnalysis = null
-  let sinsalList: any[] = []
+  let sinsalList: SinsalItem[] = []
   let yongsinAnalysis = null
   let yukchinAnalysis = null
-  let daeunList: any[] = []
+  let daeunList: DaeunPeriod[] = []
   let gaeunbubRec = null
 
   try {
@@ -663,7 +666,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     }
   }
 
-  const openHanjaDialog = (hanja: string, korean: string, info: any, type: 'tiangan' | 'dizhi' | 'wuxing') => {
+  interface HanjaInfo {
+    element: string
+    yinyang?: string
+    meaning?: string
+    animal?: string
+    season?: string
+  }
+
+  const openHanjaDialog = (hanja: string, korean: string, info: HanjaInfo, type: 'tiangan' | 'dizhi' | 'wuxing') => {
     let description = ''
     if (type === 'tiangan') {
       description = `오행: ${info.element} (${WUXING_KOREAN[info.element]})
@@ -702,7 +713,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   }: {
     hanja: string
     korean: string
-    info: any
+    info: HanjaInfo
     type: 'tiangan' | 'dizhi'
   }) => (
     <button onClick={() => openHanjaDialog(hanja, korean, info, type)} className="group cursor-pointer w-full">
@@ -721,7 +732,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   const TermButton = ({ term }: { term: string }) => (
     <button
       onClick={() => openTermDialog(term)}
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#D4AF37]/10 text-[#D4AF37] text-xs hover:bg-[#D4AF37]/20 transition-colors"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-gold-500/10 text-gold-500 text-xs hover:bg-gold-500/20 transition-colors"
     >
       {term}
       <Info className="w-3 h-3" />
@@ -742,7 +753,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <Sparkles className="w-4 h-4" />
         {title}
         {!isSubscribed && (
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] text-[10px]">PREMIUM</span>
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-gold-500/20 text-gold-500 text-[10px]">PREMIUM</span>
         )}
       </h3>
 
@@ -753,15 +764,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       {!isSubscribed && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
           <div className="text-center space-y-4 p-6">
-            <div className="w-16 h-16 mx-auto rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
-              <Crown className="w-8 h-8 text-[#D4AF37]" />
+            <div className="w-16 h-16 mx-auto rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
+              <Crown className="w-8 h-8 text-gold-500" />
             </div>
             <h4 className="text-lg font-bold text-ink-light">프리미엄 회원 전용</h4>
             <p className="text-sm text-muted-foreground max-w-xs">
               {title} 기능은 프리미엄 회원만 이용하실 수 있습니다.
             </p>
             <Link href="/protected/membership">
-              <Button className="bg-[#D4AF37] hover:bg-[#F4E4BA] text-background">
+              <Button className="bg-gold-500 hover:bg-gold-300 text-background">
                 <Crown className="w-4 h-4 mr-2" />
                 멤버십 가입하기
               </Button>
@@ -779,10 +790,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   if (needsProfileSetup) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-12 text-center">
-        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 flex items-center justify-center mb-6 border border-[#D4AF37]/20">
-          <User className="w-10 h-10 text-[#D4AF37]" />
+        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-gold-500/20 to-gold-500/5 flex items-center justify-center mb-6 border border-gold-500/20">
+          <User className="w-10 h-10 text-gold-500" />
         </div>
-        <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold mb-3 bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 bg-clip-text text-transparent">
           내 정보를 먼저 등록해주세요
         </h1>
         <p className="text-muted-foreground mb-2 text-base">
@@ -792,7 +803,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
           정확한 사주 풀이를 위해 생년월일과 출생 시간을 입력해주세요.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <Button asChild size="lg" className="bg-[#D4AF37] text-black hover:bg-[#F4E4BA] shadow-lg">
+          <Button asChild size="lg" className="bg-gold-500 text-black hover:bg-gold-300 shadow-lg">
             <Link href="/protected/settings">
               <User className="w-4 h-4 mr-2" />내 정보 입력하기
             </Link>
@@ -801,7 +812,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             asChild
             variant="outline"
             size="lg"
-            className="border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10"
+            className="border-gold-500/30 text-gold-500 hover:bg-gold-500/10"
           >
             <Link href="/protected/family">인연 관리로 이동</Link>
           </Button>
@@ -818,7 +829,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         </div>
         <h1 className="text-2xl font-bold mb-2">등록된 정보가 없습니다</h1>
         <p className="text-muted-foreground mb-6">인연 관리에서 먼저 정보를 등록해주세요.</p>
-        <Button asChild className="bg-[#D4AF37] text-black hover:bg-[#F4E4BA]">
+        <Button asChild className="bg-gold-500 text-black hover:bg-gold-300">
           <Link href="/protected/family">인연 등록하기</Link>
         </Button>
       </div>
@@ -829,18 +840,18 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     <div className="relative min-h-screen">
       {/* Subtle Background */}
       <div className="fixed inset-0 pointer-events-none -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#D4AF37]/3 rounded-full blur-[200px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gold-500/3 rounded-full blur-[200px]" />
       </div>
 
       <div className="w-full max-w-full mx-auto px-1 md:px-2 py-4 space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20">
-            <ScrollText className="w-4 h-4 text-[#D4AF37]" />
-            <span className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">Manse-ryok Pro</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-500/10 border border-gold-500/20">
+            <ScrollText className="w-4 h-4 text-gold-500" />
+            <span className="text-xs font-bold text-gold-500 uppercase tracking-wider">Manse-ryok Pro</span>
           </div>
           <h1 className="text-4xl font-black">
-            <span className="bg-gradient-to-r from-[#D4AF37] via-[#F4E4BA] to-[#D4AF37] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 bg-clip-text text-transparent">
               만세력
             </span>
           </h1>
@@ -851,7 +862,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <div className="w-full max-w-xs mx-auto">
           <p className="text-center text-xs text-white/40 mb-3 uppercase tracking-widest">분석 대상 선택</p>
           <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-            <SelectTrigger className="w-full bg-white/5 border-[#D4AF37]/40 text-[#D4AF37] rounded-xl h-12 text-sm font-medium hover:border-[#D4AF37]/60 transition-colors">
+            <SelectTrigger className="w-full bg-white/5 border-gold-500/40 text-gold-500 rounded-xl h-12 text-sm font-medium hover:border-gold-500/60 transition-colors">
               <SelectValue placeholder="분석할 대상을 선택하세요" />
             </SelectTrigger>
             <SelectContent className="bg-[#1a1a2e] border-white/20 rounded-xl">
@@ -859,7 +870,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <SelectItem
                   key={m.id}
                   value={m.id}
-                  className="text-white/80 focus:bg-[#D4AF37]/20 focus:text-[#D4AF37] rounded-lg cursor-pointer"
+                  className="text-white/80 focus:bg-gold-500/20 focus:text-gold-500 rounded-lg cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
                     <span
@@ -907,7 +918,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               <TabsList className="grid w-full grid-cols-3 grid-rows-2 bg-white/[0.08] border border-white/20 rounded-2xl mb-8 p-2 relative z-10 gap-1.5 h-auto shadow-lg">
                 <TabsTrigger
                   value="mysaju"
-                  className="group relative data-[state=active]:!bg-[#D4AF37]/25 data-[state=active]:!text-[#D4AF37] data-[state=active]:shadow-[0_0_8px_rgba(212,175,55,0.15)] data-[state=active]:border-[#D4AF37]/40 flex items-center justify-center gap-1.5 px-2 py-3 rounded-xl border border-white/15 text-white/60 hover:text-white/80 hover:bg-white/10 transition-all duration-200"
+                  className="group relative data-[state=active]:!bg-gold-500/25 data-[state=active]:!text-gold-500 data-[state=active]:shadow-[0_0_8px_rgba(212,175,55,0.15)] data-[state=active]:border-gold-500/40 flex items-center justify-center gap-1.5 px-2 py-3 rounded-xl border border-white/15 text-white/60 hover:text-white/80 hover:bg-white/10 transition-all duration-200"
                 >
                   <ScrollText className="w-4 h-4 shrink-0" />
                   <span className="text-xs font-semibold">나의사주</span>
@@ -962,7 +973,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {saju.ganjiList.map((ganji, idx) => (
                         <div key={idx} className="flex flex-col items-center justify-center">
                           <span className="text-lg font-black text-ink-light mb-0.5">{ganji}</span>
-                          <span className="text-lg font-bold text-[#D4AF37]">
+                          <span className="text-lg font-bold text-gold-500">
                             {TIANGAN_INFO[ganji[0]]?.korean || ''}
                             {DIZHI_INFO[ganji[1]]?.korean || ''}
                           </span>
@@ -1091,12 +1102,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               <span className="text-[10px] text-muted-foreground/50">{label}</span>
                               <span
                                 className="text-lg font-black"
-                                style={{ color: info?.element ? WU_XING_COLORS[info.element] : '#D4AF37' }}
+                                style={{ color: info?.element ? WU_XING_COLORS[info.element] : GOLD_500 }}
                               >
                                 {char}
                               </span>
                             </div>
-                            <p className="text-[10px] text-[#D4AF37]/70 mb-0.5">{pos}</p>
+                            <p className="text-[10px] text-gold-500/70 mb-0.5">{pos}</p>
                             <p className="text-[10px] text-muted-foreground/60 leading-relaxed">{meaning}</p>
                             {info?.element && (
                               <p className="text-[10px] text-white/30 mt-1">
@@ -1114,7 +1125,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="mt-8 flex justify-center border-t border-white/5 pt-6">
                     <button
                       onClick={() => setSajuInterpretOpen(true)}
-                      className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                      className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                     >
                       <Sparkles className="w-3.5 h-3.5" />✦ 내 사주 종합 풀이 보기
                     </button>
@@ -1174,7 +1185,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     </div>
                     <button
                       onClick={() => setWuxingAnalysisOpen(true)}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                     >
                       <Sparkles className="w-3.5 h-3.5" />✦ 내 오행 풀이 보기
                     </button>
@@ -1224,10 +1235,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             ))}
                         </div>
                       </div>
-                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                      <div className="mt-5 pt-4 border-t border-gold-500/10">
                         <button
                           onClick={() => setYukchinAnalysisOpen(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                         >
                           <Sparkles className="w-3.5 h-3.5" />✦ 내 육친 풀이 보기
                         </button>
@@ -1249,14 +1260,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {engineData.sinsal.map((s, i) => (
                         <div
                           key={i}
-                          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/30 transition-colors"
+                          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-gold-500/30 transition-colors"
                         >
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <div className="flex items-center gap-2">
-                              <span className="text-[#D4AF37] font-black text-sm">{s.name}</span>
+                              <span className="text-gold-500 font-black text-sm">{s.name}</span>
                               <span className="text-muted-foreground/50 text-xs">{s.hanja}</span>
                             </div>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37] shrink-0">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/10 text-gold-500 shrink-0">
                               {s.category}
                             </span>
                           </div>
@@ -1278,8 +1289,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 {/* 용어 사전 - 기본정보 탭 하단 */}
                 <Card className="p-6 bg-white/5 border-white/10">
                   <div className="flex items-center gap-2 mb-4">
-                    <BookOpen className="w-4 h-4 text-[#D4AF37]" />
-                    <h3 className="text-sm font-bold text-[#D4AF37]">사주 용어 사전</h3>
+                    <BookOpen className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-bold text-gold-500">사주 용어 사전</h3>
                     <span className="text-[10px] text-muted-foreground/50 ml-1">— 누르면 해석을 볼 수 있어요</span>
                   </div>
                   <div className="space-y-4">
@@ -1337,10 +1348,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     </h3>
                     <div className="space-y-5">
                       {/* 신강/신약 요약 */}
-                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                      <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-[#D4AF37] font-bold text-sm">{engineData.sipseong.strengthAssessment}</p>
-                          <span className="text-xs px-3 py-1 rounded-full bg-[#D4AF37]/15 text-[#D4AF37]">
+                          <p className="text-gold-500 font-bold text-sm">{engineData.sipseong.strengthAssessment}</p>
+                          <span className="text-xs px-3 py-1 rounded-full bg-gold-500/15 text-gold-500">
                             {engineData.sipseong.bodyStrengthScore}점
                           </span>
                         </div>
@@ -1380,7 +1391,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                   className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
                                 >
                                   <div className="shrink-0 text-center w-10">
-                                    <span className="text-sm font-black text-[#D4AF37]">{name}</span>
+                                    <span className="text-sm font-black text-gold-500">{name}</span>
                                     <p className="text-[10px] text-muted-foreground/40">{count as number}개</p>
                                   </div>
                                   <p className="text-xs text-muted-foreground leading-relaxed flex-1">
@@ -1392,10 +1403,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         </div>
                       )}
                     </div>
-                    <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                    <div className="mt-5 pt-4 border-t border-gold-500/10">
                       <button
                         onClick={() => setSajuInterpretOpen(true)}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                       >
                         <Sparkles className="w-3.5 h-3.5" />✦ 사주 종합 풀이 보기
                       </button>
@@ -1414,10 +1425,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {SECTION_DESCRIPTIONS.advancedManse.intro}
                     </p>
                     <AdvancedManseDisplay advanced={advancedManse} />
-                    <div className="mt-6 pt-4 border-t border-[#D4AF37]/10">
+                    <div className="mt-6 pt-4 border-t border-gold-500/10">
                       <button
                         onClick={() => setAdvancedExplainOpen(true)}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                       >
                         <Sparkles className="w-3.5 h-3.5" />✦ 이 데이터가 뭔가요? 쉬운 풀이 보기
                       </button>
@@ -1499,10 +1510,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           )
                         })()}
                       </div>
-                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                      <div className="mt-5 pt-4 border-t border-gold-500/10">
                         <button
                           onClick={() => setDaeunExplainOpen(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                         >
                           <Sparkles className="w-3.5 h-3.5" />✦ 내 인생 흐름 풀이 보기
                         </button>
@@ -1518,9 +1529,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <PremiumFeature title="십이운성 — 내 사주의 생명력 흐름" isSubscribed={isSubscribed}>
                     <div className="space-y-5">
                       {/* 전체 에너지 요약 */}
-                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
+                      <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-[#D4AF37] font-bold text-sm">{engineData.sibjiunseong.overallEnergy}</p>
+                          <p className="text-gold-500 font-bold text-sm">{engineData.sibjiunseong.overallEnergy}</p>
                           <span className="text-xs text-muted-foreground/60 bg-white/5 px-2 py-0.5 rounded-full">
                             평균 {engineData.sibjiunseong.averageLevel.toFixed(1)} / 12단계
                           </span>
@@ -1540,19 +1551,19 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               key={i}
                               className={`p-3 rounded-xl border text-center ${
                                 isHigh
-                                  ? 'bg-[#D4AF37]/10 border-[#D4AF37]/30'
+                                  ? 'bg-gold-500/10 border-gold-500/30'
                                   : isLow
                                     ? 'bg-white/3 border-white/5 opacity-70'
                                     : 'bg-white/5 border-white/10'
                               }`}
                             >
                               <p className="text-[10px] text-muted-foreground/50 mb-1">{item.pillarName}</p>
-                              <p className={`text-sm font-black ${isHigh ? 'text-[#D4AF37]' : 'text-white/80'}`}>
+                              <p className={`text-sm font-black ${isHigh ? 'text-gold-500' : 'text-white/80'}`}>
                                 {item.sibjiunseong}
                               </p>
                               <div className="w-full h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
                                 <div
-                                  className={`h-full rounded-full ${isHigh ? 'bg-gradient-to-r from-[#D4AF37] to-[#F4E4BA]' : 'bg-white/30'}`}
+                                  className={`h-full rounded-full ${isHigh ? 'bg-gradient-to-r from-gold-500 to-gold-300' : 'bg-white/30'}`}
                                   style={{ width: `${(item.level / 12) * 100}%` }}
                                 />
                               </div>
@@ -1571,13 +1582,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
                           >
                             <div className="shrink-0 text-center w-14">
-                              <span className="text-xs font-bold text-[#D4AF37]">{item.sibjiunseong}</span>
+                              <span className="text-xs font-bold text-gold-500">{item.sibjiunseong}</span>
                               <p className="text-[10px] text-muted-foreground/40">{item.pillarName}</p>
                             </div>
                             <div className="flex-1">
                               <p className="text-xs text-muted-foreground leading-relaxed">{item.meaning}</p>
                               {item.actionGuide && (
-                                <p className="text-[10px] text-[#D4AF37]/60 mt-1">→ {item.actionGuide}</p>
+                                <p className="text-[10px] text-gold-500/60 mt-1">→ {item.actionGuide}</p>
                               )}
                             </div>
                           </div>
@@ -1591,8 +1602,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 {engineData.relations && (
                   <PremiumFeature title="합·충·형 — 내 사주 에너지의 충돌과 조화" isSubscribed={isSubscribed}>
                     <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                        <p className="text-[#D4AF37] font-bold text-sm mb-2">{engineData.relations.dominantRelation}</p>
+                      <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                        <p className="text-gold-500 font-bold text-sm mb-2">{engineData.relations.dominantRelation}</p>
                         <p className="text-muted-foreground text-xs leading-relaxed">{engineData.relations.summary}</p>
                       </div>
 
@@ -1792,10 +1803,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           </div>
                         </div>
                       )}
-                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                      <div className="mt-5 pt-4 border-t border-gold-500/10">
                         <button
                           onClick={() => setYongsinExplainOpen(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                         >
                           <Sparkles className="w-3.5 h-3.5" />✦ 내 행운 키워드 풀이 보기
                         </button>
@@ -1842,10 +1853,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           ))}
                         </ul>
                       </div>
-                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                      <div className="mt-5 pt-4 border-t border-gold-500/10">
                         <button
                           onClick={() => setGekgukExplainOpen(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                         >
                           <Sparkles className="w-3.5 h-3.5" />✦ 내 사주 그릇 풀이 보기
                         </button>
@@ -1930,10 +1941,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           ))}
                         </ul>
                       </div>
-                      <div className="mt-5 pt-4 border-t border-[#D4AF37]/10">
+                      <div className="mt-5 pt-4 border-t border-gold-500/10">
                         <button
                           onClick={() => setGaeunbubExplainOpen(true)}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-[#F4E4BA] to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-[#D4AF37]/40"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
                         >
                           <Sparkles className="w-3.5 h-3.5" />✦ 오늘부터 실천하기
                         </button>
@@ -1949,9 +1960,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <PremiumFeature title="일간 물상론 — 내가 타고난 기질과 재능" isSubscribed={isSubscribed}>
                     <div className="space-y-5">
                       {/* 일간 심볼 */}
-                      <div className="p-5 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20 text-center">
-                        <p className="text-4xl font-black text-[#D4AF37] mb-1">{saju.dayMaster}</p>
-                        <p className="text-[#F4E4BA] font-bold text-sm mb-3">{engineData.mulsang.symbol}</p>
+                      <div className="p-5 rounded-xl bg-gold-500/5 border border-gold-500/20 text-center">
+                        <p className="text-4xl font-black text-gold-500 mb-1">{saju.dayMaster}</p>
+                        <p className="text-gold-300 font-bold text-sm mb-3">{engineData.mulsang.symbol}</p>
                         <p className="text-muted-foreground text-xs leading-relaxed italic">
                           &ldquo;{engineData.mulsang.poeticDesc}&rdquo;
                         </p>
@@ -1971,7 +1982,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             {engineData.mulsang.modernJobs.map((job: string, i: number) => (
                               <span
                                 key={i}
-                                className="px-2.5 py-1 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 text-[#D4AF37] text-xs"
+                                className="px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 text-gold-500 text-xs"
                               >
                                 {job}
                               </span>
@@ -1982,8 +1993,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
                       {/* 신강/신약에 따른 실천 조언 */}
                       {engineData.sipseong && (
-                        <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                          <p className="text-[#D4AF37] font-bold text-xs mb-2">
+                        <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                          <p className="text-gold-500 font-bold text-xs mb-2">
                             💡 {engineData.sipseong.strengthAssessment} 기질의 실천 조언
                           </p>
                           <p className="text-muted-foreground text-xs leading-relaxed">
@@ -2009,21 +2020,21 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       {engineData.sinsal.map((s, i) => (
                         <div
                           key={i}
-                          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-[#D4AF37]/20 transition-colors"
+                          className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-gold-500/20 transition-colors"
                         >
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-[#D4AF37] font-black">{s.name}</span>
+                              <span className="text-gold-500 font-black">{s.name}</span>
                               <span className="text-muted-foreground/40 text-xs">{s.hanja}</span>
                             </div>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#D4AF37]/10 text-[#D4AF37]">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/10 text-gold-500">
                               {s.category}
                             </span>
                           </div>
                           <p className="text-muted-foreground text-xs leading-relaxed mb-3">{s.poeticDesc}</p>
                           {s.modernSkillTree && (
-                            <div className="bg-[#D4AF37]/5 border border-[#D4AF37]/15 p-3 rounded-lg">
-                              <p className="text-[#D4AF37] text-[10px] font-bold mb-1">✦ 현대적 활용법</p>
+                            <div className="bg-gold-500/5 border border-gold-500/15 p-3 rounded-lg">
+                              <p className="text-gold-500 text-[10px] font-bold mb-1">✦ 현대적 활용법</p>
                               <p className="text-muted-foreground text-xs">{s.modernSkillTree}</p>
                             </div>
                           )}
@@ -2600,7 +2611,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={sajuInterpretOpen} onOpenChange={setSajuInterpretOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               사주 종합 해석
             </DialogTitle>
@@ -2610,11 +2621,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             <div className="space-y-4 text-sm">
               {/* 일간 기질 */}
               {engineData.mulsang && (
-                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                  <p className="text-[#D4AF37] font-bold mb-1.5 text-xs">
+                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                  <p className="text-gold-500 font-bold mb-1.5 text-xs">
                     일간의 기질 — {saju.dayMaster} ({TIANGAN_INFO[saju.dayMaster]?.korean})
                   </p>
-                  <p className="text-[#F4E4BA]/90 text-xs mb-1.5 font-medium">{engineData.mulsang.symbol}</p>
+                  <p className="text-gold-300/90 text-xs mb-1.5 font-medium">{engineData.mulsang.symbol}</p>
                   <p className="text-muted-foreground text-xs leading-relaxed">{engineData.mulsang.psychology}</p>
                   {engineData.mulsang.modernJobs?.length > 0 && (
                     <p className="text-muted-foreground/60 text-[10px] mt-2">
@@ -2644,7 +2655,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   </p>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {engineData.sibjiunseong.items.map((item, i) => (
-                      <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-[#D4AF37]/10 text-[#D4AF37]">
+                      <span key={i} className="px-1.5 py-0.5 rounded text-[10px] bg-gold-500/10 text-gold-500">
                         {item.pillarName}: {item.sibjiunseong}({item.level})
                       </span>
                     ))}
@@ -2680,7 +2691,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="space-y-3">
                     {engineData.sinsal.map((s, i) => (
                       <div key={i}>
-                        <p className="text-[#D4AF37] text-xs font-semibold">
+                        <p className="text-gold-500 text-xs font-semibold">
                           {s.name} {s.hanja} — {s.category}
                         </p>
                         <p className="text-muted-foreground text-[11px] leading-relaxed mt-0.5">{s.poeticDesc}</p>
@@ -2701,15 +2712,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={wuxingAnalysisOpen} onOpenChange={setWuxingAnalysisOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               오행 분포 풀이
             </DialogTitle>
           </DialogHeader>
           {saju && (
             <div className="space-y-4 text-sm">
-              <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                <p className="text-[#D4AF37] font-bold mb-2 text-xs">내 사주의 오행 구성</p>
+              <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                <p className="text-gold-500 font-bold mb-2 text-xs">내 사주의 오행 구성</p>
                 <div className="flex gap-3 flex-wrap">
                   {Object.entries(saju.elementsDistribution).map(([el, cnt]: [string, number]) => (
                     <div key={el} className="flex items-center gap-1.5">
@@ -2772,7 +2783,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 return (
                   <div
                     key={el}
-                    className={`p-4 rounded-xl border ${isStrong ? 'bg-[#D4AF37]/5 border-[#D4AF37]/30' : isWeak ? 'bg-white/3 border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
+                    className={`p-4 rounded-xl border ${isStrong ? 'bg-gold-500/5 border-gold-500/30' : isWeak ? 'bg-white/3 border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xl font-black" style={{ color: WU_XING_COLORS[el] }}>
@@ -2782,17 +2793,17 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         {ko} — {meaning}
                       </span>
                       <span
-                        className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${isStrong ? 'bg-[#D4AF37]/20 text-[#D4AF37]' : isWeak ? 'bg-white/10 text-white/40' : 'bg-white/10 text-white/60'}`}
+                        className={`ml-auto text-[10px] px-2 py-0.5 rounded-full ${isStrong ? 'bg-gold-500/20 text-gold-500' : isWeak ? 'bg-white/10 text-white/40' : 'bg-white/10 text-white/60'}`}
                       >
                         {cnt}/{total} {isStrong ? '강함' : isWeak ? '없음' : '보통'}
                       </span>
                     </div>
                     <p className="text-muted-foreground text-xs leading-relaxed">{isWeak ? lack : trait}</p>
                     {isWeak && (
-                      <p className="text-[#D4AF37]/70 text-[10px] mt-1.5">💡 {ko}(을)를 보충하면 운이 좋아집니다</p>
+                      <p className="text-gold-500/70 text-[10px] mt-1.5">💡 {ko}(을)를 보충하면 운이 좋아집니다</p>
                     )}
                     {isStrong && (
-                      <p className="text-[#D4AF37]/70 text-[10px] mt-1.5">✨ 이 기운이 당신의 핵심 강점입니다</p>
+                      <p className="text-gold-500/70 text-[10px] mt-1.5">✨ 이 기운이 당신의 핵심 강점입니다</p>
                     )}
                   </div>
                 )
@@ -2806,14 +2817,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={yukchinAnalysisOpen} onOpenChange={setYukchinAnalysisOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               육친 관계도 풀이
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
-            <div className="p-3 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] text-xs font-bold mb-1">육친이란?</p>
+            <div className="p-3 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 text-xs font-bold mb-1">육친이란?</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 사주 8글자에서 일간(나)을 기준으로 나머지 7글자가 나와 어떤 관계인지를 나타냅니다. 부모·형제·배우자·자녀
                 등 인생의 인연과 그 강약을 볼 수 있습니다.
@@ -2829,7 +2840,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       : '약함 — 이 인연의 영향이 적습니다'
                 const strengthColor =
                   data.strength === 'strong'
-                    ? 'text-[#D4AF37]'
+                    ? 'text-gold-500'
                     : data.strength === 'moderate'
                       ? 'text-blue-400'
                       : 'text-white/40'
@@ -2840,7 +2851,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         <span className="text-white font-bold text-sm">{data.name}</span>
                         <span className="text-muted-foreground text-xs">{data.hanja}</span>
                       </div>
-                      <span className="text-[#D4AF37] font-black text-lg">{data.count}개</span>
+                      <span className="text-gold-500 font-black text-lg">{data.count}개</span>
                     </div>
                     <p className={`text-[10px] mb-2 ${strengthColor}`}>{strengthLabel}</p>
                     <p className="text-muted-foreground text-xs leading-relaxed">{data.interpretation}</p>
@@ -2861,14 +2872,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={advancedExplainOpen} onOpenChange={setAdvancedExplainOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               고급 만세력이 뭔가요?
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] font-bold mb-2 text-xs">쉽게 말하면</p>
+            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 font-bold mb-2 text-xs">쉽게 말하면</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 사주 8글자를 더 깊이 파고드는 분석입니다. 글자 사이에 숨겨진 특별한 에너지와 인연의 패턴을 찾아냅니다.
                 마치 DNA 검사처럼, 겉으로는 보이지 않는 당신만의 고유한 특성을 발견합니다.
@@ -2905,13 +2916,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={daeunExplainOpen} onOpenChange={setDaeunExplainOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />내 인생 흐름 풀이
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] font-bold mb-2 text-xs">대운이란?</p>
+            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 font-bold mb-2 text-xs">대운이란?</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 대운(大運)은 10년마다 바뀌는 인생의 큰 계절입니다. 봄이 오면 씨를 뿌리고, 여름엔 키우고, 가을엔 거두고,
                 겨울엔 쉬듯이 — 사람의 인생에도 10년 단위로 큰 흐름이 있습니다. 지금 어떤 계절인지 알면, 언제 도전하고
@@ -2935,7 +2946,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="p-4 rounded-xl bg-white/5 border border-white/10">
                     <p className="text-white/80 font-bold mb-2 text-xs">현재 대운 — 지금 당신의 인생 계절</p>
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="text-2xl font-black text-[#D4AF37]">
+                      <span className="text-2xl font-black text-gold-500">
                         {cur.gan}
                         {cur.zhi}
                       </span>
@@ -2950,8 +2961,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   </div>
                 )
               })()}
-            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] text-xs font-bold mb-2">💡 이렇게 활용하세요</p>
+            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 text-xs font-bold mb-2">💡 이렇게 활용하세요</p>
               <ul className="space-y-1.5 text-xs text-muted-foreground">
                 <li>• 좋은 대운: 크게 도전하고 투자하기 좋은 시기</li>
                 <li>• 어려운 대운: 안전하게 지키고 실력 쌓는 시기</li>
@@ -2967,13 +2978,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={yongsinExplainOpen} onOpenChange={setYongsinExplainOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />내 행운 키워드 풀이
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] font-bold mb-2 text-xs">용신이란?</p>
+            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 font-bold mb-2 text-xs">용신이란?</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 용신(用神)은 내 사주에서 부족하거나 꼭 필요한 기운입니다. 마치 몸에 부족한 영양소처럼 — 이걸 채워주면
                 건강해지듯, 용신을 가까이하면 운이 좋아집니다. 색깔·방향·음식·직업 등 일상에서 쉽게 보충할 수 있어요.
@@ -3018,8 +3029,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     </div>
                   )}
                 </div>
-                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                  <p className="text-[#D4AF37] text-xs font-bold mb-2">💡 오늘 당장 할 수 있는 것</p>
+                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                  <p className="text-gold-500 text-xs font-bold mb-2">💡 오늘 당장 할 수 있는 것</p>
                   <ul className="space-y-1 text-xs text-muted-foreground">
                     {ELEMENT_BOOST[yongsinAnalysis.yongsin]?.activities?.slice(0, 3).map((a: string, i: number) => (
                       <li key={i}>✓ {a}</li>
@@ -3039,13 +3050,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={gekgukExplainOpen} onOpenChange={setGekgukExplainOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />내 사주 그릇 풀이
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] font-bold mb-2 text-xs">격국이란?</p>
+            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 font-bold mb-2 text-xs">격국이란?</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 격국(格局)은 내 사주의 타입 또는 그릇입니다. MBTI처럼 &ldquo;이 사람은 어떤 유형이다&rdquo;를 알려주는
                 것인데, 사주 방식으로 판단합니다. 격국에 따라 잘 맞는 직업·환경·삶의 방식이 다릅니다.
@@ -3059,14 +3070,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="space-y-1.5">
                     {gekgukAnalysis.characteristics?.map((char: string, i: number) => (
                       <div key={i} className="flex items-start gap-2 text-xs">
-                        <span className="text-[#D4AF37] mt-0.5 shrink-0">✦</span>
+                        <span className="text-gold-500 mt-0.5 shrink-0">✦</span>
                         <span className="text-muted-foreground">{char}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                  <p className="text-[#D4AF37] text-xs font-bold mb-2">💡 이 격국의 인생 조언</p>
+                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                  <p className="text-gold-500 text-xs font-bold mb-2">💡 이 격국의 인생 조언</p>
                   <p className="text-muted-foreground text-xs leading-relaxed">
                     {`${gekgukAnalysis.gekguk}의 특성을 살려 자신에게 맞는 환경에서 능력을 발휘하세요. 격국의 특성에 맞는 환경에 있을 때 가장 빛납니다.`}
                   </p>
@@ -3081,14 +3092,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={gaeunbubExplainOpen} onOpenChange={setGaeunbubExplainOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <Sparkles className="w-5 h-5" />
               오늘부터 실천하는 개운법
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-              <p className="text-[#D4AF37] font-bold mb-2 text-xs">개운법이란?</p>
+            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+              <p className="text-gold-500 font-bold mb-2 text-xs">개운법이란?</p>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 개운법(開運法)은 말 그대로 &ldquo;운을 여는 방법&rdquo;입니다. 사주에서 부족한 기운을 일상에서 채워 운의
                 흐름을 좋게 만드는 실천법입니다. 거창한 게 아니에요 — 오늘 입는 옷 색깔, 앉는 방향, 먹는 음식도 모두
@@ -3127,12 +3138,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     </div>
                   </div>
                 </div>
-                <div className="p-4 rounded-xl bg-[#D4AF37]/5 border border-[#D4AF37]/20">
-                  <p className="text-[#D4AF37] text-xs font-bold mb-2">✦ 이번 주 실천 미션</p>
+                <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
+                  <p className="text-gold-500 text-xs font-bold mb-2">✦ 이번 주 실천 미션</p>
                   <ul className="space-y-1.5 text-xs text-muted-foreground">
                     {gaeunbubRec.activities.slice(0, 4).map((act: string, i: number) => (
                       <li key={i} className="flex items-start gap-2">
-                        <span className="text-[#D4AF37] shrink-0">□</span>
+                        <span className="text-gold-500 shrink-0">□</span>
                         <span>{act}</span>
                       </li>
                     ))}
@@ -3148,7 +3159,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       <Dialog open={termDialog.open} onOpenChange={(open) => setTermDialog({ ...termDialog, open })}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#D4AF37]">
+            <DialogTitle className="flex items-center gap-2 text-gold-500">
               <BookOpen className="w-5 h-5" />
               {termDialog.customContent?.title || TERMINOLOGY[termDialog.term]?.title}
             </DialogTitle>

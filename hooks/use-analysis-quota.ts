@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { getFreeQuotaStatus, type FreeQuotaStatus } from '@/app/actions/user/free-quota'
 import { toast } from 'sonner'
 
@@ -28,6 +29,7 @@ const DEFAULT_QUOTA: FreeQuotaStatus = {
  *   // ... 분석 실행
  */
 export function useAnalysisQuota() {
+  const router = useRouter()
   const [quota, setQuota] = useState<FreeQuotaStatus>(DEFAULT_QUOTA)
   const [loading, setLoading] = useState(true)
   const [paywallOpen, setPaywallOpen] = useState(false)
@@ -67,14 +69,14 @@ export function useAnalysisQuota() {
         action: {
           label: '멤버십 보기',
           onClick: () => {
-            window.location.href = '/protected/membership'
+            router.push('/protected/membership')
           },
         },
       })
     }
 
     return true
-  }, [quota])
+  }, [quota, router])
 
   const closePaywall = useCallback(() => setPaywallOpen(false), [])
 

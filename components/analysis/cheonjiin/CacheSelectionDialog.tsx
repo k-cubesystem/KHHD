@@ -45,8 +45,8 @@ export function CacheSelectionDialog({ targetName, cacheDate, onViewCache, onNew
           transition={{ delay: 0.1 }}
           className="text-center mb-6"
         >
-          <div className="w-16 h-16 rounded-full bg-[#D4AF37]/10 mx-auto mb-4 flex items-center justify-center">
-            <Sparkles className="w-7 h-7 text-[#D4AF37]" />
+          <div className="w-16 h-16 rounded-full bg-gold-500/10 mx-auto mb-4 flex items-center justify-center">
+            <Sparkles className="w-7 h-7 text-gold-500" />
           </div>
           <h2 className="text-2xl font-bold mb-2">{targetName}님의 천지인 분석</h2>
           <p className="text-muted-foreground text-sm">이전에 분석한 결과가 있습니다</p>
@@ -110,7 +110,7 @@ export function CacheSelectionDialog({ targetName, cacheDate, onViewCache, onNew
           <Button
             onClick={onNewAnalysis}
             size="lg"
-            className="w-full bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3] hover:from-[#C5A028] hover:to-[#E5D6B4] text-black font-semibold text-base"
+            className="w-full bg-gradient-to-r from-gold-500 to-gold-300 hover:from-[#C5A028] hover:to-[#E5D6B4] text-black font-semibold text-base"
           >
             <Sparkles className="w-5 h-5 mr-2" />
             새로 분석하기

@@ -1,60 +1,134 @@
-# 해화당 프로젝트 메모리 v6.0
+# 🧠 MEMORY — 프로젝트 컨텍스트 기억 시스템
 
-## 서비스 개요
+> **이 파일은 세션이 바뀌어도 프로젝트의 맥락이 유지되도록 합니다.**
+> 에이전트는 작업 전 이 파일을 읽고, 작업 후 내용을 업데이트합니다.
+> 버전: v4.1 | 관리: 전체 팀 (TEAM_E 총괄)
 
-- **해화당**: 사주/궁합/관상/풍수 AI SaaS
-- **배포**: Vercel (Next.js App Router)
-- **DB**: Supabase PostgreSQL + RLS
+---
 
-## 기술 스택
+## 🎯 프로젝트 정보
 
-- **프레임워크**: Next.js 16.1.4 App Router
-- **백엔드**: Supabase (Auth + DB + Edge Functions)
-- **AI**: Gemini PRO (`gemini-3.1-pro-preview`) / FLASH (`gemini-3-flash-preview`)
-  - PRO: saju, cheonjiin, image, compatibility
-  - FLASH: shaman-chat, fortune-analysis, trend, wealth, year2026, daily, invite, engine
-- **결제**: Toss Payments (SDK v2)
-- **UI**: Shadcn/ui + Tailwind + Framer Motion (분석 페이지만)
-- **모니터링**: Sentry + Google Analytics
-
-## 복채(포인트) 시스템
-
-| 플랜     | 일일 한도 |
-| -------- | --------- |
-| SINGLE   | 10만      |
-| FAMILY   | 30만      |
-| BUSINESS | 100만     |
-
-## 주요 경로
-
-```
-app/actions/
-  ai/        # saju, cheonjiin, compatibility, fortune-analysis, image, shaman-chat 등
-  admin/     # dashboard, monitoring
-  payment/   # wallet, subscription, attendance, products
-  user/      # destiny, family, history, referral, free-quota
-  fortune/   # fortune
-  core/      # notification, business-inquiry
-lib/saju-engine/   # 사주 엔진, 궁합 엔진, 운 계산기
-lib/config/        # ai-models.ts (AI 모델 상수)
-components/        # Shadcn 기반 UI 컴포넌트
-supabase/functions/ # Edge Functions (11개)
+```yaml
+프로젝트명: [프로젝트명 기입]
+서비스 설명: [한 줄 설명]
+타겟 사용자: [누구를 위한 서비스인가]
+현재 단계: [아이디어 / 설계 / 개발 / 테스트 / 런치 / 운영]
+런치 목표일: [YYYY-MM-DD]
 ```
 
-## 환경변수 (핵심)
+---
 
-- `GOOGLE_GENERATIVE_AI_API_KEY` — Gemini API (통일)
-- `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`
-- `NEXT_PUBLIC_GA_ID`
+## 📌 확정된 기술 스택
 
-## 완료된 Phase
+```yaml
+프론트엔드: []
+백엔드: []
+데이터베이스: []
+인증: []
+스토리지: []
+배포: []
+모니터링: []
+분석: []
+```
+> 확정 전: SHARED/STACK.md 초안 참고
 
-- **A** 안정화 (웹훅 서명, RLS, 환경변수 통일, Stitches 제거)
-- **B** 리텐션 (카카오 알림톡, OG 이미지, 레퍼럴, PWA)
-- **C** AI 고도화 (유명인 궁합, 샤먼 채팅 DB, 세운/월운, 관상/풍수 확장)
-- **D** 수익 최적화 (페이월, 복채 유도 모달, 멤버십 넛지, B2B 페이지)
-- **E** 스케일링 일부 (Gemini 캐싱, 이미지 최적화, 모니터링 대시보드, DB 인덱스 23개, E2E 테스트, Edge Functions)
+---
 
-## 남은 작업
+## ✅ 완료된 주요 작업
 
-- **E6**: 다국어 i18n (영어/일본어)
+| 날짜 | 팀 | 완료 내용 | 산출물 |
+|---|---|---|---|
+| — | — | — | — |
+
+---
+
+## 🚧 현재 진행 중
+
+| 팀 | 작업 내용 | 예상 완료 | 블로커 |
+|---|---|---|---|
+| — | — | — | — |
+
+---
+
+## 🧩 핵심 설계 결정 사항 (ADR)
+
+> ADR = Architecture Decision Record
+> "왜 이 기술/구조를 선택했는가"를 기록합니다.
+
+| # | 결정 | 이유 | 날짜 | 재검토 시점 |
+|---|---|---|---|---|
+| 001 | — | — | — | — |
+
+---
+
+## 🐛 알려진 이슈 & 기술 부채
+
+| # | 유형 | 내용 | 영향도 | 담당팀 | 상태 |
+|---|---|---|---|---|---|
+| — | — | — | — | — | 미착수 |
+
+---
+
+## 📋 반복되는 패턴 & 관례
+
+> 이 프로젝트에서 자주 쓰이는 패턴을 기록합니다.
+> 새 에이전트가 빠르게 컨텍스트를 잡는 데 사용합니다.
+
+```
+[예: API 응답 형식]
+{ success: boolean, data: T | null, error: string | null }
+
+[예: 에러 코드 체계]
+AUTH_001: 토큰 만료
+AUTH_002: 권한 없음
+...
+
+[예: 브랜치 전략]
+main → 프로덕션
+dev  → 통합 개발
+feat/[기능명] → 기능 개발
+```
+
+---
+
+## 💬 CEO 주요 결정 이력
+
+> CEO가 내린 중요한 의사결정을 기록합니다.
+> "왜 이렇게 됐는지"를 나중에 추적하기 위해.
+
+| 날짜 | 결정 내용 | 배경 |
+|---|---|---|
+| — | — | — |
+
+---
+
+## 📚 참고 문서 인덱스
+
+| 문서 | 경로 | 최종 수정 |
+|---|---|---|
+| 시스템 아키텍처 | TEAM_G_DESIGN/architecture/ | — |
+| PRD | TEAM_G_DESIGN/prd/ | — |
+| API 명세 | SHARED/ | — |
+| 보안 아키텍처 | TEAM_H_SECURITY/architecture/ | — |
+| 스킬 레지스트리 | TEAM_F_SKILLS/registry/ | — |
+
+---
+
+## 🔄 업데이트 규칙
+
+```
+언제 업데이트하는가:
+✅ 기술 스택 확정 시 → "확정된 기술 스택" 섹션
+✅ 주요 기능 완료 시 → "완료된 주요 작업" 섹션
+✅ 설계 결정 시      → "핵심 설계 결정 사항(ADR)" 섹션
+✅ 버그 발견 시      → "알려진 이슈 & 기술 부채" 섹션
+✅ CEO 결정 시       → "CEO 주요 결정 이력" 섹션
+
+누가 업데이트하는가:
+- 각 팀: 자신의 작업 결과를 완료 섹션에 추가
+- TEAM_E: 전체 현황 취합 및 관리
+```
+
+---
+
+*파일: MEMORY.md | 관리: TEAM_E(총괄) + 각팀(자신 영역) | 버전: v4.1*

@@ -71,7 +71,7 @@ export function ImageCapture({
     };
 
     return (
-        <Card className="card-glass-manse p-6 border-[#D4AF37]/20">
+        <Card className="card-glass-manse p-6 border-gold-500/20">
             <div className="space-y-4">
                 <AnimatePresence mode="wait">
                     {!preview ? (
@@ -86,11 +86,11 @@ export function ImageCapture({
                             <Button
                                 type="button"
                                 onClick={() => cameraInputRef.current?.click()}
-                                className="w-full h-32 border-2 border-dashed border-[#D4AF37]/30 
-                  bg-transparent hover:bg-[#D4AF37]/5 
+                                className="w-full h-32 border-2 border-dashed border-gold-500/30 
+                  bg-transparent hover:bg-gold-500/5 
                   flex flex-col gap-3 text-white"
                             >
-                                <Camera className="w-10 h-10 text-[#D4AF37]" />
+                                <Camera className="w-10 h-10 text-gold-500" />
                                 <span className="text-sm font-sans">사진 촬영하기</span>
                             </Button>
                             <input
@@ -107,8 +107,8 @@ export function ImageCapture({
                                 type="button"
                                 variant="outline"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-full border-[#D4AF37]/30 text-[#D4AF37] 
-                  hover:bg-[#D4AF37]/10"
+                                className="w-full border-gold-500/30 text-gold-500 
+                  hover:bg-gold-500/10"
                             >
                                 <Upload className="w-5 h-5 mr-2" />
                                 갤러리에서 선택
@@ -133,7 +133,7 @@ export function ImageCapture({
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="relative"
                         >
-                            <div className="relative rounded-lg overflow-hidden border-2 border-[#D4AF37]/30">
+                            <div className="relative rounded-lg overflow-hidden border-2 border-gold-500/30">
                                 <img
                                     src={preview}
                                     alt="Preview"
@@ -147,7 +147,7 @@ export function ImageCapture({
                                     <X className="w-5 h-5 text-white" />
                                 </Button>
                             </div>
-                            <p className="text-xs text-[#D4AF37] text-center mt-2 font-sans">
+                            <p className="text-xs text-gold-500 text-center mt-2 font-sans">
                                 ✓ 이미지가 선택되었습니다
                             </p>
                         </motion.div>
@@ -156,13 +156,15 @@ export function ImageCapture({
 
                 {/* Error Message */}
                 {error && (
-                    <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-sm text-red-400 text-center font-sans"
+                    <p
+                        className="text-sm text-red-400 text-center font-sans anim-fade-in-up"
+                        style={{
+                            '--fade-y': '-10px',
+                            animation: 'fade-in-up 0.3s ease-out both',
+                        } as React.CSSProperties}
                     >
                         {error}
-                    </motion.p>
+                    </p>
                 )}
             </div>
         </Card>

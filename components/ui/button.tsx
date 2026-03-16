@@ -11,16 +11,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#F4E4BA] shadow-[0_4px_20px_rgba(212,175,55,0.3)]',
+        default: 'bg-gold-500 text-charcoal-deep hover:bg-gold-300 shadow-[0_4px_20px_rgba(212,175,55,0.3)]',
         destructive: 'bg-seal text-white shadow-sm hover:bg-seal/90',
-        outline: 'bg-transparent text-[#D4AF37] border border-[#D4AF37] hover:bg-[#D4AF37]/10',
+        outline: 'bg-transparent text-gold-500 border border-gold-500 hover:bg-gold-500/10',
         secondary: 'bg-surface text-ink-light shadow-sm hover:bg-surface/80 border border-primary/20',
         ghost: 'text-ink-light hover:bg-surface hover:text-primary',
         link: 'text-primary underline-offset-4 hover:underline font-light',
         manse:
-          'bg-[#D4AF37] text-[#0A0A0A] hover:bg-[#F4E4BA] hover:scale-[1.05] active:scale-[0.95] font-semibold shadow-[0_4px_20px_rgba(212,175,55,0.3)]',
+          'bg-gold-500 text-charcoal-deep hover:bg-gold-300 hover:scale-[1.05] active:scale-[0.95] font-semibold shadow-[0_4px_20px_rgba(212,175,55,0.3)]',
         'manse-outline':
-          'bg-transparent text-[#D4AF37] border border-[#D4AF37] hover:bg-[#D4AF37]/10 hover:border-[#F4E4BA] hover:text-[#F4E4BA] font-semibold',
+          'bg-transparent text-gold-500 border border-gold-500 hover:bg-gold-500/10 hover:border-gold-300 hover:text-gold-300 font-semibold',
       },
       size: {
         default: 'h-11 px-4 py-2',

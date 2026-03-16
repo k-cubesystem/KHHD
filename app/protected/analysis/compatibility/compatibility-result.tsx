@@ -43,21 +43,21 @@ interface CompatibilityResultProps {
 
 function getAssessmentColor(assessment: string): string {
   if (assessment === '좋은 궁합') return 'bg-pink-500 text-pink-50'
-  if (assessment === '보통 궁합') return 'bg-[#D4AF37] text-yellow-50'
+  if (assessment === '보통 궁합') return 'bg-gold-500 text-yellow-50'
   if (assessment === '어려운 궁합') return 'bg-orange-400 text-orange-50'
   return 'bg-red-500 text-red-50'
 }
 
 function getAssessmentBorderColor(assessment: string): string {
   if (assessment === '좋은 궁합') return 'border-pink-500/30'
-  if (assessment === '보통 궁합') return 'border-[#D4AF37]/30'
+  if (assessment === '보통 궁합') return 'border-gold-500/30'
   if (assessment === '어려운 궁합') return 'border-orange-400/30'
   return 'border-red-500/30'
 }
 
 function getCategoryAssessmentStyle(assessment: string): string {
   if (assessment === '좋은 궁합') return 'text-pink-400 bg-pink-500/10'
-  if (assessment === '보통 궁합') return 'text-[#D4AF37] bg-[#D4AF37]/10'
+  if (assessment === '보통 궁합') return 'text-gold-500 bg-gold-500/10'
   if (assessment === '어려운 궁합') return 'text-orange-400 bg-orange-400/10'
   return 'text-red-400 bg-red-500/10'
 }
@@ -100,7 +100,7 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
               <p className="text-sm text-muted-foreground">{summary}</p>
               {honestVerdict && (
                 <p
-                  className={`text-sm font-semibold ${overallAssessment === '좋은 궁합' || overallAssessment === '보통 궁합' ? 'text-[#D4AF37]' : 'text-red-400'}`}
+                  className={`text-sm font-semibold ${overallAssessment === '좋은 궁합' || overallAssessment === '보통 궁합' ? 'text-gold-500' : 'text-red-400'}`}
                 >
                   {honestVerdict}
                 </p>
@@ -151,7 +151,7 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
               className="bg-card border rounded-lg p-6 space-y-4"
             >
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#D4AF37]" />
+                <Sparkles className="w-5 h-5 text-gold-500" />
                 8대 궁합 분석
               </h3>
               <div className="space-y-3">
@@ -224,12 +224,12 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
               className="bg-card border rounded-lg p-6 space-y-4"
             >
               <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#D4AF37]" />
+                <Sparkles className="w-5 h-5 text-gold-500" />
                 강점
               </h3>
               <div className="flex flex-wrap gap-2">
                 {strengths.map((strength: string, idx: number) => (
-                  <Badge key={idx} variant="outline" className="bg-[#D4AF37]/10 border-[#D4AF37]/30">
+                  <Badge key={idx} variant="outline" className="bg-gold-500/10 border-gold-500/30">
                     {strength}
                   </Badge>
                 ))}
@@ -262,13 +262,13 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="bg-[#D4AF37]/10 border border-[#D4AF37]/20 rounded-lg p-6 space-y-3"
+              className="bg-gold-500/10 border border-gold-500/20 rounded-lg p-6 space-y-3"
             >
-              <h3 className="text-lg font-semibold text-[#D4AF37]">개운 행동</h3>
+              <h3 className="text-lg font-semibold text-gold-500">개운 행동</h3>
               <ul className="space-y-2">
                 {luckyActions.map((action: string, idx: number) => (
                   <li key={idx} className="text-sm text-ink-light/80 flex items-start gap-2">
-                    <span className="text-[#D4AF37] mt-0.5">*</span>
+                    <span className="text-gold-500 mt-0.5">*</span>
                     {action}
                   </li>
                 ))}

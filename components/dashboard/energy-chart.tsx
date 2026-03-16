@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useMemo } from "react";
+import { GOLD_500 } from "@/lib/config/design-tokens";
 
 interface EnergyChartProps {
     data: {
@@ -101,15 +102,15 @@ export function EnergyChart({ data, className }: EnergyChartProps) {
                 <defs>
                     {/* 골드 그라데이션 */}
                     <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.6" />
+                        <stop offset="0%" stopColor={GOLD_500} stopOpacity="0.6" />
                         <stop offset="50%" stopColor="#F4E4BA" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.6" />
+                        <stop offset="100%" stopColor={GOLD_500} stopOpacity="0.6" />
                     </linearGradient>
 
                     {/* 데이터 영역 그라데이션 */}
                     <radialGradient id="dataGradient" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.8" />
-                        <stop offset="100%" stopColor="#D4AF37" stopOpacity="0.2" />
+                        <stop offset="0%" stopColor={GOLD_500} stopOpacity="0.8" />
+                        <stop offset="100%" stopColor={GOLD_500} stopOpacity="0.2" />
                     </radialGradient>
 
                     {/* 글로우 필터 */}
@@ -177,7 +178,7 @@ export function EnergyChart({ data, className }: EnergyChartProps) {
                 <motion.polygon
                     points={dataPoints}
                     fill="url(#dataGradient)"
-                    stroke="#D4AF37"
+                    stroke={GOLD_500}
                     strokeWidth="2"
                     filter="url(#glow)"
                     initial={{ scale: 0, opacity: 0 }}
@@ -189,7 +190,7 @@ export function EnergyChart({ data, className }: EnergyChartProps) {
                 <motion.polygon
                     points={dataPoints}
                     fill="none"
-                    stroke="#D4AF37"
+                    stroke={GOLD_500}
                     strokeWidth="1"
                     opacity="0.5"
                     initial={{ scale: 1 }}
@@ -271,7 +272,7 @@ export function EnergyChart({ data, className }: EnergyChartProps) {
                     cx={center}
                     cy={center}
                     r="3"
-                    fill="#D4AF37"
+                    fill={GOLD_500}
                     initial={{ scale: 0 }}
                     animate={{ scale: [1, 1.3, 1] }}
                     transition={{ delay: 1.5, duration: 2, repeat: Infinity }}

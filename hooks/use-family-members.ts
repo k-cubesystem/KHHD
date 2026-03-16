@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getFamilyMembers, addFamilyMember, deleteFamilyMember } from '@/app/actions/user/family'
+import type { FamilyMember } from '@/types/family'
 
 export const FAMILY_MEMBERS_KEY = ['family', 'members']
 
@@ -56,7 +57,7 @@ export function useDeleteFamilyMember() {
       const previousMembers = queryClient.getQueryData(FAMILY_MEMBERS_KEY)
 
       // 낙관적 업데이트
-      queryClient.setQueryData(FAMILY_MEMBERS_KEY, (old: any[]) => {
+      queryClient.setQueryData(FAMILY_MEMBERS_KEY, (old: FamilyMember[] | undefined) => {
         return old?.filter((member) => member.id !== deletedId) || []
       })
 

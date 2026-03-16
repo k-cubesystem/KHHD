@@ -206,32 +206,6 @@ async function getWorkAddress(userId: string): Promise<string | null> {
 }
 
 /**
- * 최근 7일 이내 분석 결과 조회 (캐시)
- */
-async function getRecentAnalysis(
-  targetId: string
-): Promise<{ data: Record<string, unknown> | null; date: string | null }> {
-  const supabase = await createClient()
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-  const { data } = await supabase
-    .from('analysis_history')
-    .select('*')
-    .eq('target_id', targetId)
-    .eq('category', 'SAJU')
-    .gte('created_at', sevenDaysAgo.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  return {
-    data: data?.result_json || null,
-    date: data?.created_at || null,
-  }
-}
-
-/**
  * DB에서 천지인 시스템 프롬프트 조회 (관리자 페이지에서 편집 가능)
  */
 async function getCheonjiinSystemPrompt(): Promise<string | null> {

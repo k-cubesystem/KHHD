@@ -1,25 +1,24 @@
 /* V11-SAJU-DESTINY */
 'use client'
 
-import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 
 export function MasterpieceSection() {
   const router = useRouter()
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+    <div
       onClick={() => router.push('/protected/analysis/cheonjiin')}
-      className="relative overflow-hidden rounded-2xl cursor-pointer group"
+      className="relative overflow-hidden rounded-2xl cursor-pointer group anim-fade-in-up"
       style={{
+        '--fade-y': '20px',
+        animation: 'fade-in-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
         background: 'linear-gradient(160deg, #0e0b07 0%, #17130d 50%, #0a0807 100%)',
         border: '1px solid rgba(212,175,55,0.18)',
         boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(212,175,55,0.07)',
-      }}
+      } as React.CSSProperties}
     >
       {/* 運 워터마크 */}
       <div
@@ -29,7 +28,7 @@ export function MasterpieceSection() {
           fontSize: '18rem',
           lineHeight: 1,
           opacity: 0.035,
-          color: '#D4AF37',
+          color: GOLD_500,
           fontFamily: 'serif',
           fontWeight: 700,
           transform: 'translate(20%, 20%)',
@@ -78,11 +77,12 @@ export function MasterpieceSection() {
       {/* 콘텐츠 */}
       <div className="relative z-10 px-7 py-8 flex flex-col gap-5">
         {/* 헤드라인 */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          className="space-y-2.5"
+        <div
+          className="space-y-2.5 anim-fade-in-up"
+          style={{
+            '--fade-y': '12px',
+            animation: 'fade-in-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both',
+          } as React.CSSProperties}
         >
           <h2
             className="text-[1.6rem] font-serif font-medium leading-[1.35] text-white tracking-tight"
@@ -91,7 +91,7 @@ export function MasterpieceSection() {
             내{' '}
             <span
               style={{
-                background: 'linear-gradient(90deg, #F4E4BA, #D4AF37)',
+                background: `linear-gradient(90deg, ${GOLD_300}, ${GOLD_500})`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -101,7 +101,7 @@ export function MasterpieceSection() {
             와{' '}
             <span
               style={{
-                background: 'linear-gradient(90deg, #F4E4BA, #D4AF37)',
+                background: `linear-gradient(90deg, ${GOLD_300}, ${GOLD_500})`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -121,7 +121,7 @@ export function MasterpieceSection() {
           >
             &ldquo;운명(運命)은 읽는 자만이 바꿀 수 있다&rdquo;
           </p>
-        </motion.div>
+        </div>
 
         {/* 골드 구분선 */}
         <div
@@ -132,35 +132,34 @@ export function MasterpieceSection() {
         />
 
         {/* 서브 카피 */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-          className="text-[13px] leading-[1.75] font-light"
-          style={{ color: 'rgba(255,255,255,0.55)', wordBreak: 'keep-all' }}
+        <p
+          className="text-[13px] leading-[1.75] font-light anim-fade-in-up"
+          style={{
+            color: 'rgba(255,255,255,0.55)',
+            wordBreak: 'keep-all',
+            '--fade-y': '0px',
+            animation: 'fade-in-up 0.6s ease-out 0.3s both',
+          } as React.CSSProperties}
         >
           사주 만세력부터 관상·풍수·손금까지 —{' '}
           <span style={{ color: 'rgba(255,255,255,0.8)' }}>천지인(天地人) 통합 분석으로 </span>
           당신의 진짜 <span style={{ color: 'rgba(244,228,186,0.75)' }}>운명</span>을 읽어드립니다.
-        </motion.p>
+        </p>
 
-        {/* CTA 버튼 1개 */}
-        <motion.button
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          whileHover={{ scale: 1.015 }}
-          whileTap={{ scale: 0.975 }}
+        {/* CTA 버튼 */}
+        <button
           onClick={(e) => {
             e.stopPropagation()
             router.push('/protected/analysis/cheonjiin')
           }}
-          className="relative overflow-hidden w-full h-14 rounded-xl group/btn"
+          className="relative overflow-hidden w-full h-14 rounded-xl group/btn hover:scale-[1.015] active:scale-[0.975] transition-transform duration-200 anim-fade-in-up"
           style={{
-            background: 'linear-gradient(105deg, #B8860B, #D4AF37 45%, #E2C55A 75%, #C9A227)',
+            '--fade-y': '8px',
+            animation: 'fade-in-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both',
+            background: `linear-gradient(105deg, #B8860B, ${GOLD_500} 45%, #E2C55A 75%, #C9A227)`,
             border: '1px solid rgba(244,228,186,0.2)',
             boxShadow: '0 4px 28px rgba(212,175,55,0.28)',
-          }}
+          } as React.CSSProperties}
         >
           {/* 시머 */}
           <div
@@ -194,8 +193,8 @@ export function MasterpieceSection() {
               style={{ color: '#0C0A07' }}
             />
           </span>
-        </motion.button>
+        </button>
       </div>
-    </motion.div>
+    </div>
   )
 }

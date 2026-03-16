@@ -130,8 +130,8 @@ export default function DailyAvoidanceCard({ dailyAvoidance, className = '' }: D
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-[#D4AF37]" />
-          <h3 className="text-[#D4AF37] font-bold text-sm">오늘의 회피 가이드</h3>
+          <Shield className="w-5 h-5 text-gold-500" />
+          <h3 className="text-gold-500 font-bold text-sm">오늘의 회피 가이드</h3>
           <span className="text-white/40 text-xs">{dailyAvoidance.date}</span>
         </div>
         <motion.div

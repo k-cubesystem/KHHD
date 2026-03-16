@@ -9,14 +9,40 @@ import {
 } from '@/app/actions/ai/saju'
 import { saveAnalysisHistory } from '@/app/actions/user/history'
 import { logger } from '@/lib/utils/logger'
+import type { FaceDestinyGoal, InteriorTheme } from '@/lib/constants'
 
 // Types
 export type StudioAnalysisType = 'saju' | 'face' | 'palm' | 'fengshui'
 
+interface StudioSajuData {
+  name: string
+  gender: string
+  birthDate: string
+  birthTime: string
+  calendarType: string
+}
+
+interface StudioFaceData {
+  imageBase64: string
+  goal?: FaceDestinyGoal
+}
+
+interface StudioPalmData {
+  imageBase64: string
+}
+
+interface StudioFengshuiData {
+  imageBase64: string
+  theme?: InteriorTheme
+  roomType?: string
+}
+
+type StudioData = StudioSajuData | StudioFaceData | StudioPalmData | StudioFengshuiData
+
 interface AnalyzeParams {
   type: StudioAnalysisType
   isGuest: boolean
-  data: any // Dynamic data bag
+  data: StudioData
 }
 
 export async function analyzeDestinyStudio({ type, isGuest, data }: AnalyzeParams) {
@@ -41,41 +67,45 @@ export async function analyzeDestinyStudio({ type, isGuest, data }: AnalyzeParam
     let result
 
     switch (type) {
-      case 'saju':
-        // data: { name, gender, birthDate, birthTime, calendarType }
+      case 'saju': {
+        const sajuData = data as StudioSajuData
         result = await analyzeSajuDetail(
-          data.name,
-          data.gender,
-          data.birthDate,
-          data.birthTime,
-          data.calendarType,
+          sajuData.name,
+          sajuData.gender,
+          sajuData.birthDate,
+          sajuData.birthTime,
+          sajuData.calendarType,
           saveToHistory
         )
         break
+      }
 
-      case 'face':
-        // data: { imageBase64, goal }
+      case 'face': {
+        const faceData = data as StudioFaceData
         result = await analyzeFaceForDestiny(
-          data.imageBase64,
-          data.goal || 'wealth', // Default goal
+          faceData.imageBase64,
+          faceData.goal || 'wealth',
           saveToHistory
         )
         break
+      }
 
-      case 'palm':
-        // data: { imageBase64 }
-        result = await analyzePalm(data.imageBase64, saveToHistory)
+      case 'palm': {
+        const palmData = data as StudioPalmData
+        result = await analyzePalm(palmData.imageBase64, saveToHistory)
         break
+      }
 
-      case 'fengshui':
-        // data: { imageBase64, theme, roomType }
+      case 'fengshui': {
+        const fengshuiData = data as StudioFengshuiData
         result = await analyzeInteriorForFengshui(
-          data.imageBase64,
-          data.theme || 'wealth',
-          data.roomType || 'living_room',
+          fengshuiData.imageBase64,
+          fengshuiData.theme || 'wealth',
+          fengshuiData.roomType || 'living_room',
           saveToHistory
         )
         break
+      }
 
       default:
         throw new Error('Invalid analysis type')

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useKakaoAddress } from '@/hooks/use-kakao-address'
+import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 
 interface CheonjiinDataCollectionFormProps {
   target: DestinyTarget
@@ -70,7 +71,7 @@ function FormSection({
             <Icon
               className="w-4 h-4"
               strokeWidth={1.5}
-              style={{ color: required ? '#D4AF37' : 'rgba(255,255,255,0.35)' }}
+              style={{ color: required ? GOLD_500 : 'rgba(255,255,255,0.35)' }}
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -86,7 +87,7 @@ function FormSection({
                 style={{
                   background: required ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.05)',
                   border: required ? '1px solid rgba(212,175,55,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                  color: required ? '#D4AF37' : 'rgba(255,255,255,0.3)',
+                  color: required ? GOLD_500 : 'rgba(255,255,255,0.3)',
                 }}
               >
                 {badge}
@@ -182,7 +183,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 boxShadow: '0 0 30px rgba(212,175,55,0.12)',
               }}
             >
-              <span style={{ fontFamily: 'serif', fontSize: '1.8rem', color: '#D4AF37' }}>命</span>
+              <span style={{ fontFamily: 'serif', fontSize: '1.8rem', color: GOLD_500 }}>命</span>
             </div>
           </div>
 
@@ -193,7 +194,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             {target.name}님의{' '}
             <span
               style={{
-                background: 'linear-gradient(90deg, #F4E4BA, #D4AF37)',
+                background: `linear-gradient(90deg, ${GOLD_300}, ${GOLD_500})`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -270,7 +271,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 style={{
                   background: 'rgba(212,175,55,0.12)',
                   border: '1px solid rgba(212,175,55,0.3)',
-                  color: '#D4AF37',
+                  color: GOLD_500,
                 }}
               >
                 <Search className="w-3.5 h-3.5" />
@@ -477,7 +478,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             className="relative overflow-hidden w-full h-14 rounded-xl font-serif font-bold tracking-[0.1em] text-[15px]"
             style={{
               background: isValid
-                ? 'linear-gradient(105deg, #B8860B, #D4AF37 45%, #E2C55A 75%, #C9A227)'
+                ? `linear-gradient(105deg, #B8860B, ${GOLD_500} 45%, #E2C55A 75%, #C9A227)`
                 : 'rgba(255,255,255,0.06)',
               border: isValid ? '1px solid rgba(244,228,186,0.2)' : '1px solid rgba(255,255,255,0.08)',
               color: isValid ? '#0C0A07' : 'rgba(255,255,255,0.25)',

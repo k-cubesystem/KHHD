@@ -1,95 +1,60 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run *)",
-      "Bash(npx *)",
-      "Bash(node *)",
-      "Bash(git status)",
-      "Bash(git diff *)",
-      "Bash(git log *)",
-      "Bash(git add *)",
-      "Bash(git commit *)",
-      "Bash(git push *)",
-      "Bash(git checkout *)",
-      "Bash(git branch *)",
-      "Bash(git stash *)",
-      "Bash(git merge *)",
-      "Bash(git rebase *)",
-      "Bash(cat *)",
-      "Bash(ls *)",
-      "Bash(ls -la *)",
-      "Bash(mkdir -p *)",
-      "Bash(cp *)",
-      "Bash(mv *)",
-      "Bash(grep *)",
-      "Bash(find *)",
-      "Bash(echo *)",
-      "Bash(touch *)",
-      "Bash(head *)",
-      "Bash(tail *)",
-      "Bash(wc *)",
-      "Bash(make *)",
-      "Bash(which *)"
+      "Bash(npm run *)", "Bash(npx *)", "Bash(node *)",
+      "Bash(git status)", "Bash(git status *)", "Bash(git diff *)", "Bash(git log *)",
+      "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)",
+      "Bash(git checkout *)", "Bash(git branch *)", "Bash(git stash *)",
+      "Bash(git merge *)", "Bash(git rebase *)", "Bash(git fetch *)",
+      "Bash(git pull *)", "Bash(git remote *)", "Bash(git tag *)",
+      "Bash(cat *)", "Bash(ls *)", "Bash(ls)",
+      "Bash(mkdir -p *)", "Bash(cp *)", "Bash(mv *)",
+      "Bash(grep *)", "Bash(find *)", "Bash(echo *)",
+      "Bash(touch *)", "Bash(head *)", "Bash(tail *)",
+      "Bash(wc *)", "Bash(make *)", "Bash(which *)",
+      "Bash(pwd)", "Bash(date *)", "Bash(sort *)", "Bash(uniq *)",
+      "Bash(gh *)"
     ],
     "deny": [
-      "Bash(rm -rf /)",
-      "Bash(rm -rf ~)",
-      "Bash(sudo rm *)",
-      "Bash(curl * | bash *)",
-      "Bash(wget * | bash *)",
-      "Read(.env)",
-      "Read(.env.local)",
-      "Read(.env.production)",
-      "Write(.env)",
-      "Write(.env.local)",
-      "Write(.env.production)"
+      "Bash(rm -rf /)", "Bash(rm -rf ~)", "Bash(sudo rm *)",
+      "Bash(curl * | bash *)", "Bash(wget * | bash *)",
+      "Read(.env)", "Read(.env.local)", "Read(.env.production)",
+      "Write(.env)", "Write(.env.local)", "Write(.env.production)"
     ]
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '🚀 멀티 에이전트 v5.2 | 11팀 25에이전트 | 토큰 최적화 내장' && echo '📖 GUIDE.md → AGENTS.md → PRIME.md → MEMORY/MEMORY.md' && echo '💡 /guide [요청]  으로 토큰 계획 먼저 받기' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && git status 2>/dev/null | head -4 || true",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
+    "SessionStart": [{
+      "hooks": [{
+        "type": "command",
+        "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '🚀 멀티 에이전트 v6.0 | 11팀 25에이전트 | 토큰 최적화 내장' && echo '📖 GUIDE.md → AGENTS.md → PRIME.md → MEMORY/MEMORY.md' && echo '💡 /guide [요청]  으로 토큰 계획 먼저 받기' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && git status 2>/dev/null | head -4 || true",
+        "timeout": 5
+      }]
+    }],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "FILE=\"${CLAUDE_FILE_PATHS:-}\"; if [[ \"$FILE\" =~ \\.(ts|tsx)$ ]]; then npx tsc --noEmit --skipLibCheck 2>&1 | grep -E '^.*error TS' | head -5 || echo '✅ TypeScript OK'; fi",
-            "timeout": 20
-          }
-        ]
+        "hooks": [{
+          "type": "command",
+          "command": "FILE=\"${CLAUDE_FILE_PATHS:-}\"; if [[ \"$FILE\" =~ \\.(ts|tsx)$ ]]; then npx tsc --noEmit --skipLibCheck 2>&1 | grep -E '^.*error TS' | head -5 || echo '✅ TypeScript OK'; fi",
+          "timeout": 30
+        }]
       },
       {
         "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "FILE=\"${CLAUDE_FILE_PATHS:-}\"; if [[ \"$FILE\" =~ \\.(ts|tsx|js|jsx)$ ]]; then npx prettier --write \"$FILE\" 2>/dev/null && echo \"✅ 포맷: $FILE\" || true; fi",
-            "timeout": 10
-          }
-        ]
+        "hooks": [{
+          "type": "command",
+          "command": "FILE=\"${CLAUDE_FILE_PATHS:-}\"; if [[ \"$FILE\" =~ \\.(ts|tsx|js|jsx)$ ]]; then npx prettier --write \"$FILE\" 2>/dev/null && echo \"✅ 포맷: $FILE\" || true; fi",
+          "timeout": 15
+        }]
       }
     ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "CMD=\"${CLAUDE_TOOL_INPUT:-}\"; if [[ \"$CMD\" == *\"rm -rf /\"* ]] || [[ \"$CMD\" == *\"rm -rf ~\"* ]] || [[ \"$CMD\" == *\"| bash\"* ]]; then echo '{\"block\": true, \"message\": \"🚫 위험한 명령어 차단\"}' >&2; exit 2; fi",
-            "timeout": 3
-          }
-        ]
-      }
-    ]
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{
+        "type": "command",
+        "command": "CMD=\"${CLAUDE_TOOL_INPUT:-}\"; if [[ \"$CMD\" == *\"rm -rf /\"* ]] || [[ \"$CMD\" == *\"rm -rf ~\"* ]] || [[ \"$CMD\" == *\"| bash\"* ]]; then echo '{\"block\": true, \"message\": \"🚫 위험한 명령어 차단\"}' >&2; exit 2; fi",
+        "timeout": 3
+      }]
+    }]
   }
 }

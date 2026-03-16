@@ -72,10 +72,10 @@ export function OpenEventPopup() {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="border-[#D4AF37]/40 bg-[#1a1a2e] max-w-md">
+      <DialogContent className="border-gold-500/40 bg-[#1a1a2e] max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl text-[#D4AF37]">오픈 이벤트</DialogTitle>
-          <DialogDescription className="text-center text-base text-[#D4AF37]/80">
+          <DialogTitle className="text-center text-2xl text-gold-500">오픈 이벤트</DialogTitle>
+          <DialogDescription className="text-center text-base text-gold-500/80">
             정식 오픈 전까지 매일 복채 20만냥 지급!
           </DialogDescription>
         </DialogHeader>
@@ -84,15 +84,15 @@ export function OpenEventPopup() {
           <p className="text-center text-sm text-ink-light/90">
             해화당 정식 오픈 전까지 모든 회원에게
             <br />
-            매일 복채 <span className="text-[#D4AF37] font-bold">20만냥</span>을 지급합니다!
+            매일 복채 <span className="text-gold-500 font-bold">20만냥</span>을 지급합니다!
           </p>
 
-          <div className="rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/5 p-4">
-            <p className="text-xs text-[#D4AF37]/70 mb-2 font-semibold">복채로 이용 가능한 서비스</p>
+          <div className="rounded-lg border border-gold-500/20 bg-gold-500/5 p-4">
+            <p className="text-xs text-gold-500/70 mb-2 font-semibold">복채로 이용 가능한 서비스</p>
             <ul className="grid grid-cols-2 gap-2">
               {benefits.map((b) => (
                 <li key={b} className="flex items-center gap-1.5 text-sm text-ink-light/80">
-                  <span className="text-[#D4AF37] text-xs">&#9670;</span>
+                  <span className="text-gold-500 text-xs">&#9670;</span>
                   {b}
                 </li>
               ))}
@@ -109,7 +109,7 @@ export function OpenEventPopup() {
             <button
               onClick={handleClaim}
               disabled={loading}
-              className="w-full rounded-lg bg-gradient-to-r from-[#D4AF37] to-[#B8960C] py-3 text-sm font-bold text-[#1a1a2e] transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="w-full rounded-lg bg-gradient-to-r from-gold-500 to-[#B8960C] py-3 text-sm font-bold text-[#1a1a2e] transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {loading ? '처리 중...' : '오늘의 복채 받기'}
             </button>

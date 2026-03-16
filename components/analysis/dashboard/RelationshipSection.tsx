@@ -15,10 +15,10 @@ export function RelationshipSection() {
 
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-8 h-8 bg-[#D4AF37]/10 rounded-lg flex items-center justify-center">
-            <Users className="w-4 h-4 text-[#D4AF37]" strokeWidth={1} />
+          <div className="w-8 h-8 bg-gold-500/10 rounded-lg flex items-center justify-center">
+            <Users className="w-4 h-4 text-gold-500" strokeWidth={1} />
           </div>
-          <h3 className="text-lg font-serif font-light text-[#D4AF37]">궁합</h3>
+          <h3 className="text-lg font-serif font-light text-gold-500">궁합</h3>
         </div>
         <p className="text-xs text-white/70 font-light leading-relaxed line-clamp-2">
           두 사람의 오행과 기운을 분석하여 관계의 해법을 제안합니다.
@@ -29,7 +29,7 @@ export function RelationshipSection() {
         <Button
           onClick={() => router.push('/protected/analysis/compatibility')}
           variant="outline"
-          className="h-8 border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10 bg-transparent text-xs font-light w-full"
+          className="h-8 border-gold-500/30 text-gold-500 hover:bg-gold-500/10 bg-transparent text-xs font-light w-full"
         >
           인연 궁합
         </Button>

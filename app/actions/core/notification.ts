@@ -73,7 +73,7 @@ export async function sendAlimtalk(
 
     return {
       success: true,
-      messageId: (response as any)?.messageId,
+      messageId: response.messageId,
     }
   } catch (err: unknown) {
     logger.error('[Alimtalk] 발송 실패:', err)

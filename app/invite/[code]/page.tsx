@@ -113,7 +113,7 @@ export default function InvitePage() {
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-400'
-    if (score >= 60) return 'text-[#D4AF37]'
+    if (score >= 60) return 'text-gold-500'
     if (score >= 40) return 'text-yellow-400'
     return 'text-orange-400'
   }
@@ -129,11 +129,11 @@ export default function InvitePage() {
   // Loading State
   if (step === 'loading') {
     return (
-      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+      <div className="min-h-screen bg-charcoal-deep flex items-center justify-center">
         <div className="text-center space-y-4">
           {loading ? (
             <>
-              <Loader2 className="w-12 h-12 text-[#D4AF37] animate-spin mx-auto" />
+              <Loader2 className="w-12 h-12 text-gold-500 animate-spin mx-auto" />
               <p className="text-muted-foreground">초대 정보를 불러오는 중...</p>
             </>
           ) : error ? (
@@ -155,7 +155,7 @@ export default function InvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] py-8 px-4">
+    <div className="min-h-screen bg-charcoal-deep py-8 px-4">
       <div className="max-w-lg mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
@@ -166,7 +166,7 @@ export default function InvitePage() {
             </span>
           </div>
           <h1 className="text-3xl font-black">
-            <span className="bg-gradient-to-r from-pink-400 via-[#D4AF37] to-pink-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-pink-400 via-gold-500 to-pink-400 bg-clip-text text-transparent">
               궁합 초대장
             </span>
           </h1>
@@ -176,7 +176,7 @@ export default function InvitePage() {
         {step === 'input' && inviter && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Inviter Card */}
-            <Card className="p-6 bg-gradient-to-br from-pink-500/10 to-[#D4AF37]/10 border-pink-500/20">
+            <Card className="p-6 bg-gradient-to-br from-pink-500/10 to-gold-500/10 border-pink-500/20">
               <div className="text-center space-y-3">
                 <div className="w-16 h-16 mx-auto rounded-full bg-pink-500/20 flex items-center justify-center">
                   <Users className="w-8 h-8 text-pink-400" />
@@ -246,7 +246,7 @@ export default function InvitePage() {
             <Button
               onClick={handleAnalyze}
               disabled={analyzing || !guestName || !guestBirthDate}
-              className="w-full bg-gradient-to-r from-pink-500 to-[#D4AF37] text-black font-bold py-6 hover:opacity-90"
+              className="w-full bg-gradient-to-r from-pink-500 to-gold-500 text-black font-bold py-6 hover:opacity-90"
             >
               {analyzing ? (
                 <>
@@ -267,7 +267,7 @@ export default function InvitePage() {
         {step === 'result' && compatibility && inviter && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Overall Score */}
-            <Card className="p-8 bg-gradient-to-br from-pink-500/20 via-[#D4AF37]/10 to-pink-500/20 border-pink-500/20 text-center">
+            <Card className="p-8 bg-gradient-to-br from-pink-500/20 via-gold-500/10 to-pink-500/20 border-pink-500/20 text-center">
               <div className="text-6xl mb-2">{getScoreEmoji(compatibility.overallScore)}</div>
               <div className={`text-7xl font-black ${getScoreColor(compatibility.overallScore)}`}>
                 {compatibility.overallScore}
@@ -335,18 +335,18 @@ export default function InvitePage() {
             </div>
 
             {/* Advice */}
-            <Card className="p-4 bg-[#D4AF37]/5 border-[#D4AF37]/20">
+            <Card className="p-4 bg-gold-500/5 border-gold-500/20">
               <div className="flex gap-3">
-                <Star className="w-5 h-5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
+                <Star className="w-5 h-5 text-gold-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-sm mb-1 text-[#D4AF37]">조언</h4>
+                  <h4 className="font-bold text-sm mb-1 text-gold-500">조언</h4>
                   <p className="text-xs text-muted-foreground">{compatibility.advice}</p>
                 </div>
               </div>
             </Card>
 
             {/* CTA */}
-            <Card className="p-6 bg-gradient-to-r from-[#D4AF37]/20 to-pink-500/20 border-[#D4AF37]/30">
+            <Card className="p-6 bg-gradient-to-r from-gold-500/20 to-pink-500/20 border-gold-500/30">
               <div className="text-center space-y-4">
                 <h3 className="font-bold">더 자세한 분석이 궁금하신가요?</h3>
                 <p className="text-sm text-muted-foreground">
@@ -355,7 +355,7 @@ export default function InvitePage() {
                   다양한 프리미엄 서비스를 이용하실 수 있습니다.
                 </p>
                 <Link href="/auth/sign-up">
-                  <Button className="bg-[#D4AF37] text-black font-bold hover:bg-[#F4E4BA]">
+                  <Button className="bg-gold-500 text-black font-bold hover:bg-gold-300">
                     <UserPlus className="w-4 h-4 mr-2" />
                     무료 회원가입
                     <ChevronRight className="w-4 h-4 ml-1" />

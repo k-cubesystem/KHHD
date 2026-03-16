@@ -28,16 +28,17 @@ export async function invokeEdge<T = Record<string, unknown>>(
 
 /**
  * Edge Function 호출 (에러를 throw하지 않고 result 객체 반환)
- * 반환 타입은 any로 설정하여 기존 서버 액션의 반환 타입과 호환
+ * 제네릭 타입으로 호출 측에서 반환 타입을 지정할 수 있음
  * Edge가 활성화되면 Edge Function이 동일한 형태의 응답을 반환함
  */
 
-export async function invokeEdgeSafe(functionName: string, body: Record<string, unknown>): Promise<any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function invokeEdgeSafe<T = any>(functionName: string, body: Record<string, unknown>): Promise<T> {
   try {
-    const result = await invokeEdge(functionName, body)
+    const result = await invokeEdge<T>(functionName, body)
     return result
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '서버 오류가 발생했습니다.'
-    return { success: false, error: message }
+    return { success: false, error: message } as T
   }
 }

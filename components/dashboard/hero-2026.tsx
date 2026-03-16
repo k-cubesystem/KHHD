@@ -1,45 +1,47 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Shield, Sparkles, ArrowRight, TrendingUp } from "lucide-react";
+import { Shield, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
 
 interface Hero2026Props {
   isGuest: boolean;
   masterName: string;
 }
 
+/* 파티클 좌표 상수 — useMemo로 hydration-safe (서버/클라이언트 동일 값) */
+const PARTICLE_SEEDS = [
+  { left: 12, dur: 7.2 , delay: 0.0  },
+  { left: 25, dur: 8.5 , delay: 1.3  },
+  { left: 38, dur: 6.8 , delay: 2.6  },
+  { left: 51, dur: 9.1 , delay: 0.7  },
+  { left: 64, dur: 7.9 , delay: 3.1  },
+  { left: 77, dur: 8.3 , delay: 1.8  },
+  { left: 90, dur: 6.5 , delay: 4.0  },
+  { left: 8 , dur: 9.5 , delay: 2.2  },
+  { left: 33, dur: 7.0 , delay: 3.5  },
+  { left: 46, dur: 8.8 , delay: 0.5  },
+  { left: 59, dur: 6.3 , delay: 4.5  },
+  { left: 72, dur: 9.2 , delay: 1.0  },
+  { left: 85, dur: 7.6 , delay: 2.8  },
+  { left: 18, dur: 8.1 , delay: 3.8  },
+  { left: 55, dur: 6.9 , delay: 1.5  },
+];
+
 export function Hero2026({ isGuest, masterName }: Hero2026Props) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <div className="relative w-full min-h-[320px] overflow-hidden rounded-2xl bg-surface/50 border border-white/5 backdrop-blur-sm">
       {/* Background Elements (Absolute) */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0A0A0A] via-[#1A1917] to-[#0A0A0A] z-0">
-        {/* Animated Particles */}
+      <div className="absolute inset-0 bg-gradient-to-br from-charcoal-deep via-[#1A1917] to-charcoal-deep z-0">
+        {/* Animated Particles — CSS animation (hydration-safe 상수 배열) */}
         <div className="absolute inset-0 overflow-hidden opacity-30">
-          {mounted && [...Array(15)].map((_, i) => (
-            <motion.div
+          {PARTICLE_SEEDS.map((p, i) => (
+            <div
               key={i}
-              className="absolute w-1 h-1 bg-primary/40 rounded-full"
-              initial={{
-                x: Math.random() * 100 + "%",
-                y: "100%",
-              }}
-              animate={{
-                y: "-20%",
-                opacity: [0, 1, 0],
-              }}
-              transition={{
-                duration: Math.random() * 5 + 5,
-                repeat: Infinity,
-                delay: Math.random() * 5,
-                ease: "linear"
+              className="absolute w-1 h-1 bg-primary/40 rounded-full anim-particle-rise"
+              style={{
+                left: `${p.left}%`,
+                bottom: 0,
+                animation: `particle-rise-linear ${p.dur}s linear ${p.delay}s infinite`,
               }}
             />
           ))}
@@ -51,24 +53,26 @@ export function Hero2026({ isGuest, masterName }: Hero2026Props) {
 
       {/* Content (Relative to push height) */}
       <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 py-12 md:px-12">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="max-w-xl mx-auto"
+        <div
+          className="max-w-xl mx-auto anim-fade-in-up"
+          style={{
+            '--fade-y': '30px',
+            animation: 'fade-in-up 0.8s ease-out both',
+          } as React.CSSProperties}
         >
           {/* Badge */}
-          <motion.div
-            className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/30 backdrop-blur-xl mb-6 rounded-full"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/30 backdrop-blur-xl mb-6 rounded-full anim-fade-in-up"
+            style={{
+              '--fade-y': '10px',
+              animation: 'fade-in-up 0.5s ease-out 0.2s both',
+            } as React.CSSProperties}
           >
             <Shield className="w-3 h-3 text-primary" strokeWidth={2} />
             <span className="text-[10px] font-bold tracking-[0.15em] text-primary uppercase">
               Haehwadang Premium
             </span>
-          </motion.div>
+          </div>
 
           {/* Headline - Smaller on Mobile */}
           <h1 className="text-xl md:text-3xl font-serif font-bold mb-4 leading-relaxed text-ink-light">
@@ -93,7 +97,7 @@ export function Hero2026({ isGuest, masterName }: Hero2026Props) {
           <div className="flex flex-col sm:flex-row gap-3 justify-center items-center w-full">
             <Link href={isGuest ? "/auth/sign-up" : "/protected/studio"} className="w-full sm:w-auto">
               <button
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary text-[#0A0A0A] font-serif font-bold text-sm rounded-lg shadow-[0_4px_20px_rgba(212,175,55,0.2)] hover:shadow-[0_6px_25px_rgba(212,175,55,0.3)] transition-all active:scale-95"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary text-charcoal-deep font-serif font-bold text-sm rounded-lg shadow-[0_4px_20px_rgba(212,175,55,0.2)] hover:shadow-[0_6px_25px_rgba(212,175,55,0.3)] transition-all active:scale-95"
               >
                 <TrendingUp className="w-4 h-4" />
                 <span>나의 운대 확인하기</span>
@@ -110,7 +114,7 @@ export function Hero2026({ isGuest, masterName }: Hero2026Props) {
               </Link>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

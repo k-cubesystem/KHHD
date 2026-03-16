@@ -1,23 +1,68 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { X, Coins, Sparkles, Gift } from 'lucide-react'
+import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 
 interface EventPopupProps {
   onClose: () => void
 }
 
 export function EventPopup({ onClose }: EventPopupProps) {
-  // ESC 키로 닫기
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
+
+  // Focus trap + ESC 키로 닫기
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        )
+        if (focusable.length === 0) return
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }
+    },
+    [onClose]
+  )
+
+  // 모달 열릴 때 focus 이동, 닫힐 때 복원
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    previousFocusRef.current = document.activeElement as HTMLElement | null
+    // 모달 내부로 focus 이동
+    const timer = setTimeout(() => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+        'a[href], button:not([disabled])'
+      )
+      firstFocusable?.focus()
+    }, 100)
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      clearTimeout(timer)
+      // focus 복원
+      previousFocusRef.current?.focus()
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [onClose])
+  }, [handleKeyDown])
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-5" onClick={onClose}>
@@ -31,6 +76,10 @@ export function EventPopup({ onClose }: EventPopupProps) {
 
       {/* 팝업 본체 */}
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="신규 회원 이벤트"
         initial={{ opacity: 0, scale: 0.88, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 20 }}
@@ -45,17 +94,18 @@ export function EventPopup({ onClose }: EventPopupProps) {
         {/* 닫기 버튼 */}
         <button
           onClick={onClose}
+          aria-label="팝업 닫기"
           className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
         >
           <X className="w-3.5 h-3.5 text-white/50" />
         </button>
 
         {/* 상단 골드 라인 */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-[#D4AF37]/60 to-transparent" />
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-gold-500/60 to-transparent" />
 
         {/* 배경 글로우 */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(212,175,55,0.18),transparent_60%)] pointer-events-none" />
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#D4AF37]/8 blur-[60px] rounded-full pointer-events-none" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 w-48 h-48 bg-gold-500/8 blur-[60px] rounded-full pointer-events-none" />
 
         {/* 콘텐츠 */}
         <div className="relative px-7 pt-10 pb-8 text-center">
@@ -64,10 +114,10 @@ export function EventPopup({ onClose }: EventPopupProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/8 mb-5"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold-500/30 bg-gold-500/8 mb-5"
           >
-            <Sparkles className="w-3 h-3 text-[#D4AF37]" />
-            <span className="text-[10px] text-[#D4AF37]/80 font-medium tracking-[0.2em] uppercase">
+            <Sparkles className="w-3 h-3 text-gold-500" />
+            <span className="text-[10px] text-gold-500/80 font-medium tracking-[0.2em] uppercase">
               신규 회원 이벤트
             </span>
           </motion.div>
@@ -77,9 +127,9 @@ export function EventPopup({ onClose }: EventPopupProps) {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', delay: 0.2, damping: 12 }}
-            className="mx-auto w-20 h-20 rounded-full border border-[#D4AF37]/25 bg-[#D4AF37]/8 flex items-center justify-center mb-5"
+            className="mx-auto w-20 h-20 rounded-full border border-gold-500/25 bg-gold-500/8 flex items-center justify-center mb-5"
           >
-            <Gift className="w-9 h-9 text-[#D4AF37]" strokeWidth={1.3} />
+            <Gift className="w-9 h-9 text-gold-500" strokeWidth={1.3} />
           </motion.div>
 
           {/* 메인 카피 */}
@@ -88,7 +138,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
             <h2
               className="font-serif text-3xl font-bold mb-1"
               style={{
-                background: 'linear-gradient(180deg, #F4E4BA 0%, #D4AF37 60%, #A07828 100%)',
+                background: `linear-gradient(180deg, ${GOLD_300} 0%, ${GOLD_500} 60%, #A07828 100%)`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -96,7 +146,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
               50만냥 즉시 지급
             </h2>
             <div className="flex items-center justify-center gap-1.5 mt-1 mb-5">
-              <Coins className="w-3.5 h-3.5 text-[#D4AF37]/60" />
+              <Coins className="w-3.5 h-3.5 text-gold-500/60" />
               <p className="text-xs text-white/35 font-sans">회원가입 완료 즉시 복채 50만냥 증정</p>
             </div>
 
@@ -126,7 +176,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
               href="/auth/sign-up"
               onClick={onClose}
               className="block w-full py-4 rounded-2xl font-serif font-bold text-base text-[#0A192F] transition-all duration-300 hover:opacity-90 active:scale-[0.98] relative overflow-hidden group"
-              style={{ background: 'linear-gradient(135deg, #D4AF37 0%, #F4E4BA 50%, #C9A227 100%)' }}
+              style={{ background: `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 50%, #C9A227 100%)` }}
             >
               <div className="absolute inset-0 bg-white/15 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
               <span className="relative flex items-center justify-center gap-2">
@@ -145,7 +195,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
         </div>
 
         {/* 하단 골드 라인 */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent" />
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
       </motion.div>
     </div>
   )

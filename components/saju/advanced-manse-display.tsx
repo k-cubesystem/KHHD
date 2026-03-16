@@ -85,7 +85,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               </Badge>
             )}
             {advanced.sinsal.cheonEulGwiin && (
-              <Badge variant="default" className="bg-[#D4AF37] gap-1">
+              <Badge variant="default" className="bg-gold-500 gap-1">
                 <Star className="w-3 h-3" />
                 천을귀인
               </Badge>
@@ -103,7 +103,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               </Badge>
             )}
             {advanced.sinsal.woldeokGwiin && (
-              <Badge variant="default" className="bg-[#D4AF37] gap-1">
+              <Badge variant="default" className="bg-gold-500 gap-1">
                 <Star className="w-3 h-3" />
                 월덕귀인
               </Badge>
@@ -127,7 +127,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               </Badge>
             )}
             {advanced.sinsal.taiji && (
-              <Badge variant="default" className="bg-[#D4AF37] gap-1">
+              <Badge variant="default" className="bg-gold-500 gap-1">
                 <CircleDot className="w-3 h-3" />
                 태극귀인
               </Badge>
@@ -169,7 +169,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
           <div className="pt-3 border-t border-primary/10">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">종합 운성</span>
-              <Badge className="bg-[#D4AF37] text-black">{advanced.sibiWoonSung.overall}</Badge>
+              <Badge className="bg-gold-500 text-black">{advanced.sibiWoonSung.overall}</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-2">생명력: {advanced.sibiWoonSung.strength}%</p>
           </div>
@@ -238,7 +238,7 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
               <div className="text-xs text-muted-foreground mb-1">삼합(三合) - 강력한 조화</div>
               <div className="flex flex-wrap gap-2">
                 {advanced.jijiRelations.samhap.map((s, i) => (
-                  <Badge key={i} variant="default" className="bg-gradient-to-r from-[#D4AF37] to-[#F4E5C3] text-black">
+                  <Badge key={i} variant="default" className="bg-gradient-to-r from-gold-500 to-gold-300 text-black">
                     {s}
                   </Badge>
                 ))}

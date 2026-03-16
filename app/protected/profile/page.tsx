@@ -133,11 +133,44 @@ export default async function MyPage() {
   }
 
   // Safe Data Fetching with Error Handling
-  let profile: any = null
-  let walletBalance: any = null
-  let records: any[] = []
-  let userRoleData: any = { role: 'user' }
-  let attendanceStatus: any = null
+  interface ProfileRecord {
+    id: string
+    full_name: string | null
+    avatar_url: string | null
+    gender: string | null
+    birth_date: string | null
+    birth_time: string | null
+    calendar_type: string | null
+    home_address: string | null
+    work_address: string | null
+    email: string | null
+    created_at: string | null
+  }
+
+  interface AnalysisRecord {
+    id: string
+    created_at: string
+    score: number | null
+    summary: string | null
+    target_name: string
+    target_relation: string | null
+  }
+
+  interface AttendanceStatus {
+    success: boolean
+    checkedDates: string[]
+    monthTotal: number
+    consecutiveStreak: number
+    weekCount: number
+    totalBokchae: number
+    canCheckIn: boolean
+  }
+
+  let profile: ProfileRecord | null = null
+  let walletBalance: number = 0
+  let records: AnalysisRecord[] = []
+  let userRoleData: { role: string; userId: string | null } = { role: 'user', userId: null }
+  let attendanceStatus: AttendanceStatus | null = null
 
   try {
     const profileData = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -150,10 +183,11 @@ export default async function MyPage() {
     walletBalance = await getWalletBalance()
   } catch (error) {
     logger.error('Error fetching wallet balance:', error)
+    walletBalance = 0
   }
 
   try {
-    attendanceStatus = await getMonthlyAttendance()
+    attendanceStatus = await getMonthlyAttendance() as AttendanceStatus
   } catch (error) {
     logger.error('Error fetching attendance:', error)
   }

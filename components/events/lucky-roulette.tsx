@@ -40,12 +40,7 @@ const COIN_PARTICLES = Array.from({ length: 24 }, () => ({
   rotation: Math.random() * 360,
 }))
 
-const MISS_PARTICLES = Array.from({ length: 5 }, () => ({
-  y: -30 - Math.random() * 40,
-  x: (Math.random() - 0.5) * 80,
-}))
-
-// Subtle coin particle effect
+// Subtle coin particle effect — one-shot이므로 framer-motion AnimatePresence 유지
 function CoinParticles() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
@@ -59,7 +54,7 @@ function CoinParticles() {
             scale: [0, 1, 0.5],
           }}
           transition={{ duration: p.duration, delay: p.delay, ease: 'easeOut' }}
-          className="absolute w-2 h-2 rounded-full bg-[#D4AF37]"
+          className="absolute w-2 h-2 rounded-full bg-gold-500"
           style={{ left: `${p.left}%` }}
         />
       ))}
@@ -96,10 +91,8 @@ export function LuckyRoulette({
     setResult(null)
     setEarnedBalance(null)
 
-    // 서버에서 결과 먼저 가져오기
     const spinResult = await spinRoulette()
 
-    // 룰렛 회전 애니메이션
     const spins = 5 + Math.random() * 3
     const targetRotation = rotation + spins * 360
     setRotation(targetRotation)
@@ -116,11 +109,9 @@ export function LuckyRoulette({
           setShowMiss(true)
           toast.error('아쉽게도 꽝! 내일 다시 도전하세요.', { duration: 3000 })
         } else {
-          // 당첨! 코인 파티클 + 잔액 갱신
           setShowParticles(true)
           setEarnedBalance(spinResult.currentBalance || null)
 
-          // 지갑 캐시 즉시 갱신
           if (spinResult.currentBalance !== undefined) {
             queryClient.setQueryData(WALLET_BALANCE_KEY, spinResult.currentBalance)
           }
@@ -136,14 +127,13 @@ export function LuckyRoulette({
     }, 2500)
   }, [canSpin, isSpinning, rotation, queryClient])
 
-  // 세그먼트 각도 계산
   const segmentAngle = 360 / segments.length
   const conicParts = segments.map((s, i) => `${s.color} ${i * segmentAngle}deg ${(i + 1) * segmentAngle}deg`).join(', ')
 
   return (
     <Card className="bg-surface/30 border-primary/20 overflow-hidden relative">
       <CardContent className="p-4">
-        {/* 코인 파티클 */}
+        {/* 코인 파티클 — one-shot AnimatePresence */}
         <AnimatePresence>
           {showParticles && <CoinParticles />}
           {showMiss && <MissEffect />}
@@ -152,47 +142,38 @@ export function LuckyRoulette({
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <motion.div
-              animate={canSpin ? { rotate: [0, 15, -15, 0] } : {}}
-              transition={{ duration: 2, repeat: Infinity, repeatDelay: 1 }}
+            {/* Sparkles wiggle — CSS infinite when canSpin */}
+            <div
+              className="anim-wiggle"
+              style={canSpin ? { animation: 'wiggle 2s ease-in-out 1s infinite' } : undefined}
             >
               <Sparkles className="w-5 h-5 text-primary" />
-            </motion.div>
+            </div>
             <h3 className="text-sm font-bold text-ink-light">행운의 룰렛</h3>
           </div>
-          <motion.div
-            animate={canSpin ? { scale: [1, 1.05, 1] } : {}}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="px-2 py-1 bg-primary/10 border border-primary/20 rounded-full"
+          {/* Badge scale pulse — CSS infinite when canSpin */}
+          <div
+            className="px-2 py-1 bg-primary/10 border border-primary/20 rounded-full anim-scale-pulse"
+            style={canSpin ? { animation: 'scale-pulse 1.5s ease-in-out infinite' } : undefined}
           >
             <span className="text-xs font-bold text-primary-dark">1일 1회 무료</span>
-          </motion.div>
+          </div>
         </div>
 
         {/* Roulette Visual */}
         <div className="relative mb-4">
-          {/* 외곽 발광 링 */}
-          <motion.div
-            animate={
-              isSpinning
-                ? {
-                    boxShadow: [
-                      '0 0 20px rgba(212,175,55,0.3)',
-                      '0 0 40px rgba(212,175,55,0.6)',
-                      '0 0 20px rgba(212,175,55,0.3)',
-                    ],
-                  }
-                : {}
-            }
-            transition={{ duration: 0.5, repeat: Infinity }}
+          {/* 외곽 발광 링 — isSpinning 시 CSS glow */}
+          <div
             className="rounded-full"
+            style={isSpinning ? { animation: 'fortune-glow 0.5s ease-in-out infinite' } : undefined}
           >
-            <motion.div
-              animate={{ rotate: rotation }}
-              transition={isSpinning ? { duration: 2.5, ease: [0.15, 0.85, 0.35, 1] } : { duration: 0 }}
+            {/* 룰렛 회전은 state-driven → CSS transition */}
+            <div
               className="w-full aspect-square rounded-full border-2 border-primary/40 relative flex items-center justify-center shadow-lg"
               style={{
                 background: `conic-gradient(from 0deg, ${conicParts})`,
+                transform: `rotate(${rotation}deg)`,
+                transition: isSpinning ? 'transform 2.5s cubic-bezier(0.15, 0.85, 0.35, 1)' : 'none',
               }}
             >
               {/* Segment Labels */}
@@ -236,45 +217,36 @@ export function LuckyRoulette({
 
               {/* Center */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div
-                  animate={
-                    isSpinning
-                      ? {
-                          scale: [1, 0.9, 1],
-                          boxShadow: [
-                            '0 0 10px rgba(212,175,55,0.3)',
-                            '0 0 25px rgba(212,175,55,0.6)',
-                            '0 0 10px rgba(212,175,55,0.3)',
-                          ],
-                        }
-                      : {}
-                  }
-                  transition={{ duration: 0.6, repeat: Infinity }}
+                <div
                   className="w-16 h-16 bg-background rounded-full border-2 border-primary/40 flex items-center justify-center z-10 shadow-xl"
+                  style={isSpinning ? {
+                    animation: 'scale-pulse 0.6s ease-in-out infinite',
+                    boxShadow: '0 0 25px rgba(212,175,55,0.6)',
+                  } : undefined}
                 >
                   {isSpinning ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 0.3, repeat: Infinity, ease: 'linear' }}
+                    <span
+                      className="inline-flex anim-spin-loading"
+                      style={{ animation: 'spin-loading 0.3s linear infinite' }}
                     >
                       <Sparkles className="w-6 h-6 text-primary" />
-                    </motion.div>
+                    </span>
                   ) : (
                     <Coins className="w-6 h-6 text-gold-400" />
                   )}
-                </motion.div>
+                </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
           {/* Pointer (고정) */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20">
-            <motion.div animate={isSpinning ? { y: [0, -3, 0] } : {}} transition={{ duration: 0.15, repeat: Infinity }}>
+            <div style={isSpinning ? { animation: 'bounce-y 0.15s ease-in-out infinite' } : undefined}>
               <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[16px] border-l-transparent border-r-transparent border-b-primary drop-shadow-lg" />
-            </motion.div>
+            </div>
           </div>
 
-          {/* Result Overlay */}
+          {/* Result Overlay — one-shot AnimatePresence */}
           <AnimatePresence>
             {showResult && result && (
               <motion.div
@@ -296,12 +268,13 @@ export function LuckyRoulette({
                       animate={{ scale: [0, 1.3, 1] }}
                       transition={{ duration: 0.5, ease: 'easeOut' }}
                     >
-                      <motion.div
-                        animate={{ y: [0, -8, 0], rotate: [0, 5, -5, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
+                      {/* Gift bounce — CSS infinite */}
+                      <div
+                        className="anim-gift-bounce"
+                        style={{ animation: 'gift-bounce 1.5s ease-in-out infinite' }}
                       >
                         <Gift className="w-12 h-12 text-primary mx-auto mb-2" />
-                      </motion.div>
+                      </div>
                       <motion.p
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -341,6 +314,7 @@ export function LuckyRoulette({
           <Button
             onClick={handleSpin}
             disabled={!canSpin || isSpinning}
+            aria-label={isSpinning ? '행운을 불러오는 중' : canSpin ? '룰렛 돌리기' : '내일 다시 도전'}
             className={cn(
               'w-full h-11 font-bold transition-all text-sm',
               canSpin && !isSpinning
@@ -350,9 +324,12 @@ export function LuckyRoulette({
           >
             {isSpinning ? (
               <span className="flex items-center gap-2">
-                <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.6, repeat: Infinity, ease: 'linear' }}>
+                <span
+                  className="inline-flex anim-spin-loading"
+                  style={{ animation: 'spin-loading 0.6s linear infinite' }}
+                >
                   <Sparkles className="w-4 h-4" />
-                </motion.span>
+                </span>
                 행운을 불러오는 중...
               </span>
             ) : canSpin ? (
@@ -368,10 +345,9 @@ export function LuckyRoulette({
 
         {/* Next Available Time */}
         {!canSpin && nextAvailableTime && !isSpinning && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-[10px] text-ink-light/50 text-center mt-2"
+          <p
+            className="text-[10px] text-ink-light/50 text-center mt-2 anim-fade-in-up"
+            style={{ animation: 'fade-in-up 0.4s ease-out both' }}
           >
             다음 도전:{' '}
             {new Date(nextAvailableTime).toLocaleString('ko-KR', {
@@ -380,7 +356,7 @@ export function LuckyRoulette({
               hour: '2-digit',
               minute: '2-digit',
             })}
-          </motion.p>
+          </p>
         )}
 
         {/* Prize Info */}
@@ -393,16 +369,17 @@ export function LuckyRoulette({
               { label: '10만냥', color: 'text-primary-light', prob: '10%' },
               { label: '꽝', color: 'text-ink-light/40', prob: '5%' },
             ].map((item, i) => (
-              <motion.div
+              <div
                 key={item.label}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="text-center"
+                className="text-center anim-fade-in-up"
+                style={{
+                  '--fade-y': '5px',
+                  animation: `fade-in-up 0.3s ease-out ${i * 0.05}s both`,
+                } as React.CSSProperties}
               >
                 <p className={cn('text-[10px] font-bold', item.color)}>{item.label}</p>
                 <p className="text-[8px] text-ink-light/40">{item.prob}</p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>

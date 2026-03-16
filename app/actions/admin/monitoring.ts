@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { getUserRole } from '@/lib/supabase/helpers'
 
 async function checkAdminPermission() {
   const supabase = await createClient()
@@ -11,8 +12,8 @@ async function checkAdminPermission() {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return false
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  return profile?.role === 'admin'
+  const role = await getUserRole(supabase, user.id)
+  return role === 'admin'
 }
 
 export interface RevenueStats {

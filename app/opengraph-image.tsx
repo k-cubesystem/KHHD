@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 export const runtime = 'edge'
 
@@ -7,7 +8,7 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
 export default async function Image() {
-  const GOLD = '#D4AF37'
+  const GOLD = GOLD_500
   const GOLD_DIM = 'rgba(212,175,55,0.12)'
   const DARK = '#0A0A0A'
   const INK = '#F0ECD8'

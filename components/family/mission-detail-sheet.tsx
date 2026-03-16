@@ -30,7 +30,7 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
         side="bottom"
-        className="bg-[#0A0A0A] border-t border-[#D4AF37]/20 w-full max-w-[480px] mx-auto rounded-t-3xl pb-safe px-6 h-auto"
+        className="bg-charcoal-deep border-t border-gold-500/20 w-full max-w-[480px] mx-auto rounded-t-3xl pb-safe px-6 h-auto"
       >
         <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-8 mt-4" />
 
@@ -38,7 +38,7 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
           <div>
             <SheetTitle className="text-xl font-serif font-bold text-white leading-snug">
               운명의 빈틈을 메우는 <br />
-              <span className="text-[#D4AF37]">8가지 지혜</span>
+              <span className="text-gold-500">8가지 지혜</span>
             </SheetTitle>
             <p className="text-xs text-white/50 font-light mt-1">
               부족한 운을 메우면 <strong className="text-white/80 font-medium">소중한 사람을 지키는 힘</strong>이

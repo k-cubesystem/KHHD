@@ -21,8 +21,8 @@ export function NotificationSettings() {
       {/* Daily Fortune Notification */}
       <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-full bg-[#D4AF37]/10">
-            <Sun className="w-5 h-5 text-[#D4AF37]" />
+          <div className="p-3 rounded-full bg-gold-500/10">
+            <Sun className="w-5 h-5 text-gold-500" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="daily-fortune" className="font-bold cursor-pointer">
@@ -35,7 +35,7 @@ export function NotificationSettings() {
           id="daily-fortune"
           checked={dailyFortune}
           onCheckedChange={(value) => handleToggle(setDailyFortune, value)}
-          className="data-[state=checked]:bg-[#D4AF37]"
+          className="data-[state=checked]:bg-gold-500"
         />
       </div>
 

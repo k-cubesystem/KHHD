@@ -15,7 +15,35 @@ import { AvatarSelector } from './avatar-selector'
 import { KakaoAddressSearch } from './kakao-address-search'
 import type { DokkaebiAvatarId } from '@/lib/constants/dokkaebi-avatars'
 
-export function SettingsForm({ user, profile, familyMember }: { user: any; profile: any; familyMember?: any }) {
+interface SettingsUser {
+  id: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+  }
+}
+
+interface SettingsProfile {
+  full_name: string | null
+  avatar_url: string | null
+  gender: string | null
+  birth_date: string | null
+  birth_time: string | null
+  calendar_type: string | null
+  home_address: string | null
+  work_address: string | null
+}
+
+interface SettingsFamilyMember {
+  name: string | null
+  gender: string | null
+  birth_date: string | null
+  birth_time: string | null
+  calendar_type: string | null
+}
+
+export function SettingsForm({ user, profile, familyMember }: { user: SettingsUser; profile: SettingsProfile | null; familyMember?: SettingsFamilyMember | null }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 

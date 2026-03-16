@@ -29,7 +29,8 @@ export interface AnalysisHistory {
   target_relation: string | null
   category: AnalysisCategory
   context_mode: AnalysisContextMode | null
-  result_json: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result_json: Record<string, any>
   summary: string | null
   score: number | null
   prompt_version: string | null
@@ -52,7 +53,8 @@ export interface CreateAnalysisHistoryParams {
   target_relation?: string
   category: AnalysisCategory
   context_mode?: AnalysisContextMode
-  result_json: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result_json: Record<string, any>
   summary?: string
   score?: number
   prompt_version?: string
@@ -123,7 +125,7 @@ export async function saveAnalysisHistory(
     try {
       const [limits, { count }] = await Promise.all([
         getUserTierLimits(),
-        supabase.from('analysis_history').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('analysis_history').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       ])
       const storageLimit = limits?.storage_limit ?? 10
       if (storageLimit !== 999) {
@@ -181,7 +183,7 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
 
       const { data, error } = await supabase
         .from('analysis_history')
-        .select('*')
+        .select('id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -385,7 +387,7 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
 
   const { data, error } = await supabase
     .from('analysis_history')
-    .select('*')
+    .select('id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at')
     .eq('user_id', user.id)
     .eq('target_id', targetId)
     .order('created_at', { ascending: false })

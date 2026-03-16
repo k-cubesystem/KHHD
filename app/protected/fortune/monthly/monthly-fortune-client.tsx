@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 import type { FortuneResult } from '@/app/actions/ai/fortune-analysis'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 
 const AREA_ICONS = {
   재물운: Wallet,
@@ -90,7 +91,7 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
                       cy="50"
                       r="42"
                       fill="none"
-                      stroke="#D4AF37"
+                      stroke={GOLD_500}
                       strokeWidth="8"
                       strokeLinecap="round"
                       strokeDasharray={`${2 * Math.PI * 42}`}

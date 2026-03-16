@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
@@ -11,6 +12,7 @@ export default function Error({
     error: Error & { digest?: string };
     reset: () => void;
 }) {
+    const router = useRouter();
     return (
         <div className="flex flex-col items-center justify-center min-h-screen p-6">
             <Card className="p-8 bg-white/5 border-white/10 max-w-md text-center">
@@ -35,12 +37,12 @@ export default function Error({
                 <div className="flex gap-3 justify-center">
                     <Button
                         onClick={reset}
-                        className="bg-[#D4AF37] hover:bg-[#F4E4BA] text-background"
+                        className="bg-gold-500 hover:bg-gold-300 text-background"
                     >
                         다시 시도
                     </Button>
                     <Button
-                        onClick={() => window.location.href = '/protected'}
+                        onClick={() => router.push('/protected')}
                         variant="outline"
                     >
                         홈으로

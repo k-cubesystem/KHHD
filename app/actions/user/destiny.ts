@@ -55,10 +55,10 @@ export async function getDestinyTargets(): Promise<DestinyTarget[]> {
     return []
   }
 
-  // View를 직접 쿼리 (RPC 함수 우회)
+  // View를 직접 쿼리 (RPC 함수 우회) — 필요 컬럼만 선택
   const { data, error } = await supabase
     .from('v_destiny_targets')
-    .select('*')
+    .select('id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at')
     .eq('owner_id', user.id)
     .order('target_type', { ascending: false }) // self가 먼저 (descending으로 'self' > 'family')
     .order('created_at', { ascending: true })
@@ -89,10 +89,10 @@ export async function getDestinyTarget(targetId: string): Promise<DestinyTarget 
     return null
   }
 
-  // View에서 직접 조회
+  // View에서 직접 조회 — 필요 컬럼만 선택
   const { data, error } = await supabase
     .from('v_destiny_targets')
-    .select('*')
+    .select('id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at')
     .eq('id', targetId)
     .eq('owner_id', user.id)
     .single()
@@ -116,13 +116,31 @@ export async function getDestinyTargetsCount(): Promise<{
   if (isEdgeEnabled('user')) {
     return invokeEdgeSafe('user', { action: 'getDestinyTargetsCount' })
   }
-  const targets = await getDestinyTargets()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const familyTargets = targets.filter((t) => t.target_type === 'family')
+  if (!user) {
+    return { total: 0, family: 0 }
+  }
+
+  // 두 카운트 쿼리를 병렬 실행 (전체 목록 로드 대신 head: true 카운트)
+  const [totalResult, familyResult] = await Promise.all([
+    supabase
+      .from('v_destiny_targets')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', user.id),
+    supabase
+      .from('v_destiny_targets')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', user.id)
+      .eq('target_type', 'family'),
+  ])
 
   return {
-    total: targets.length,
-    family: familyTargets.length,
+    total: totalResult.count ?? 0,
+    family: familyResult.count ?? 0,
   }
 }
 

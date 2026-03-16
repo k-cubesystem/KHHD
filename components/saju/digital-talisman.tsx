@@ -6,6 +6,7 @@ import confetti from "canvas-confetti";
 import { Card } from "@/components/ui/card";
 import { Sparkles, Scroll } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GOLD_500 } from "@/lib/config/design-tokens";
 
 interface DigitalTalismanProps {
     type?: "fortune" | "protection" | "wealth" | "health" | "love";
@@ -18,7 +19,7 @@ interface DigitalTalismanProps {
 const TALISMAN_CONFIG = {
     fortune: {
         title: "길운부(吉運符)",
-        color: "#D4AF37",
+        color: GOLD_500,
         bgGradient: "from-amber-50 via-yellow-50 to-amber-50",
         symbol: "吉",
         description: "행운과 길한 기운을 불러오는 부적",

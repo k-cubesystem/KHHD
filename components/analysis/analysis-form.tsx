@@ -169,7 +169,7 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
 
       await startFateAnalysis(formData)
       toast.success('분석이 시작되었습니다. 잠시 후 결과 페이지로 이동합니다.')
-      window.location.href = '/protected/history'
+      router.push('/protected/history')
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : '분석 시작 중 오류가 발생했습니다.')
       setIsSubmitting(false)

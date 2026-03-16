@@ -1,47 +1,39 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+
+/* 파티클 상수 (모듈 레벨 — hydration-safe) */
+const PARTICLE_SEEDS = [
+  { left: 10, dur: 3.2, delay: 0.0 },
+  { left: 25, dur: 4.1, delay: 0.5 },
+  { left: 40, dur: 3.5, delay: 1.0 },
+  { left: 55, dur: 4.8, delay: 1.5 },
+  { left: 70, dur: 3.0, delay: 2.0 },
+  { left: 85, dur: 4.3, delay: 2.5 },
+  { left: 15, dur: 3.7, delay: 3.0 },
+  { left: 60, dur: 4.5, delay: 3.5 },
+];
 
 function Particles() {
   const [mounted, setMounted] = useState(false);
-  const [particles, setParticles] = useState<Array<{ id: number; left: number; duration: number; delay: number }>>([]);
 
   useEffect(() => {
     setMounted(true);
-    setParticles(
-      Array.from({ length: 8 }).map((_, i) => ({
-        id: i,
-        left: Math.random() * 100,
-        duration: 3 + Math.random() * 2,
-        delay: i * 0.5,
-      }))
-    );
   }, []);
 
   if (!mounted) return null;
 
   return (
     <>
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute w-1 h-1 bg-primary rounded-full"
-          initial={{
+      {PARTICLE_SEEDS.map((p, i) => (
+        <div
+          key={i}
+          className="absolute w-1 h-1 bg-primary rounded-full anim-particle-rise"
+          style={{
             bottom: -10,
             left: `${p.left}%`,
-            opacity: 0,
-          }}
-          animate={{
-            bottom: "110%",
-            opacity: [0, 1, 0],
-          }}
-          transition={{
-            duration: p.duration,
-            repeat: Infinity,
-            delay: p.delay,
+            animation: `particle-rise-linear ${p.dur}s linear ${p.delay}s infinite`,
           }}
         />
       ))}
@@ -81,12 +73,10 @@ export function FortuneEnergyGauge({
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-surface/80 to-surface/40 p-6">
-      {/* Background Fortune Energy Effect */}
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-t from-primary/10 via-primary/5 to-transparent"
-        initial={{ y: "100%" }}
-        animate={{ y: `${100 - percentage}%` }}
-        transition={{ duration: 2, ease: "easeOut" }}
+      {/* Background Fortune Energy Effect — CSS transition으로 초기 슬라이드 */}
+      <div
+        className="absolute inset-0 bg-gradient-to-t from-primary/10 via-primary/5 to-transparent transition-transform duration-[2000ms] ease-out"
+        style={{ transform: `translateY(${100 - percentage}%)` }}
       />
 
       {/* Rising Particles */}
@@ -104,14 +94,15 @@ export function FortuneEnergyGauge({
         </div>
 
         <div className="flex items-baseline gap-2 mb-2">
-          <motion.span
-            className="text-4xl font-serif font-bold text-primary"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5 }}
+          <span
+            className="text-4xl font-serif font-bold text-primary anim-fade-in-up"
+            style={{
+              '--fade-y': '10px',
+              animation: 'fade-in-up 0.5s ease-out both',
+            } as React.CSSProperties}
           >
             {percentage}%
-          </motion.span>
+          </span>
           <span className="text-lg text-primary/70">↑</span>
         </div>
 
@@ -124,13 +115,11 @@ export function FortuneEnergyGauge({
           <span>{currentFortune} / {totalPossible}</span>
         </div>
 
-        {/* Fortune Flow Bar */}
+        {/* Fortune Flow Bar — CSS transition */}
         <div className="mt-3 h-2 bg-surface/50 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${percentage}%` }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
+          <div
+            className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full transition-all duration-[1500ms] ease-out"
+            style={{ width: `${percentage}%` }}
           />
         </div>
       </div>

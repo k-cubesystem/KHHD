@@ -20,13 +20,61 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X } from 'lucide-react'
 
+interface AdminUserProfile {
+  id: string
+  full_name: string | null
+  email: string | null
+  role: string
+  created_at: string | null
+}
+
+interface AdminSajuRecord {
+  id: string
+  name: string
+  birth_year: number
+  birth_month: number
+  birth_day: number
+  ganji_year: string
+  ganji_month: string
+  ganji_day: string
+  created_at: string
+}
+
+interface AdminFamilyMember {
+  id: string
+  name: string
+  relationship: string
+  birth_year: number
+  birth_month: number
+  birth_day: number
+}
+
+interface AdminPaymentRecord {
+  id: string
+  amount: number
+  order_id: string
+  status: string
+  created_at: string
+}
+
+interface AdminWallet {
+  balance: number
+}
+
+interface AdminSubscription {
+  end_date: string
+  membership_plans?: {
+    tier: string
+  }
+}
+
 interface UserDetailClientProps {
-  user: any
-  sajuRecords: any[]
-  familyMembers: any[]
-  payments: any[]
-  wallet?: any
-  subscription?: any
+  user: AdminUserProfile
+  sajuRecords: AdminSajuRecord[]
+  familyMembers: AdminFamilyMember[]
+  payments: AdminPaymentRecord[]
+  wallet?: AdminWallet | null
+  subscription?: AdminSubscription | null
   authCreatedAt?: string | null
 }
 

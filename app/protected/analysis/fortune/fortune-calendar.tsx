@@ -105,7 +105,7 @@ export function FortuneCalendar({ onDateSelect, selectedDate }: FortuneCalendarP
                 isToday && !isSelected && 'bg-white/5 border border-white/10'
               )}
             >
-              <span className={cn('text-xs z-10', isLucky ? 'font-bold text-[#D4AF37]' : '')}>
+              <span className={cn('text-xs z-10', isLucky ? 'font-bold text-gold-500' : '')}>
                 {format(date, 'd')}
               </span>
 
@@ -116,7 +116,7 @@ export function FortuneCalendar({ onDateSelect, selectedDate }: FortuneCalendarP
                   animate={{ scale: 1 }}
                   className="absolute bottom-1"
                 >
-                  <Sparkles className="w-1.5 h-1.5 text-[#D4AF37]" />
+                  <Sparkles className="w-1.5 h-1.5 text-gold-500" />
                 </motion.div>
               )}
 
