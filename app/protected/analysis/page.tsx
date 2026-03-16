@@ -18,8 +18,7 @@ export default async function AnalysisHubPage() {
 
   if (!user) redirect('/auth/login')
 
-  const [profile, rouletteStatus, attendanceStatus, weeklyAttendance] = await Promise.all([
-    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+  const [rouletteStatus, attendanceStatus, weeklyAttendance] = await Promise.all([
     checkRouletteAvailability(),
     checkAttendanceAvailability().catch(() => ({ canCheckIn: false, alreadyChecked: false })),
     getWeeklyAttendance().catch(() => ({
@@ -30,11 +29,8 @@ export default async function AnalysisHubPage() {
     })),
   ])
 
-  const userName = profile.data?.full_name || undefined
-
   return (
     <AnalysisHubClient
-      userName={userName}
       rouletteStatus={rouletteStatus}
       attendanceStatus={attendanceStatus}
       weeklyAttendance={weeklyAttendance}

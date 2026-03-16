@@ -22,14 +22,12 @@ interface WeeklyAttendance {
 }
 
 interface AnalysisHubClientProps {
-  userName?: string
   rouletteStatus: RouletteStatus | null
   attendanceStatus?: AttendanceStatus
   weeklyAttendance?: WeeklyAttendance
 }
 
 export function AnalysisHubClient({
-  userName,
   rouletteStatus,
   attendanceStatus,
   weeklyAttendance,
@@ -64,7 +62,6 @@ export function AnalysisHubClient({
 
       <div className="relative z-10 w-full pt-6">
         <AnalysisDashboard
-          userName={userName}
           rouletteStatus={rouletteStatus}
           attendanceStatus={attendanceStatus}
           weeklyAttendance={weeklyAttendance}

@@ -51,7 +51,6 @@ interface WeeklyAttendance {
 }
 
 interface AnalysisDashboardProps {
-  userName?: string
   rouletteStatus: RouletteStatus | null
   attendanceStatus?: AttendanceStatus
   weeklyAttendance?: WeeklyAttendance
@@ -164,7 +163,6 @@ const MENU_CARDS = [
 ] as const
 
 export function AnalysisDashboard({
-  userName,
   rouletteStatus,
   attendanceStatus,
   weeklyAttendance,
@@ -178,37 +176,7 @@ export function AnalysisDashboard({
       animate="animate"
       className="max-w-screen-sm mx-auto pb-40 px-2 space-y-6"
     >
-      {/* 1. Hero */}
-      <motion.section variants={fadeInUp} className="text-left space-y-3 pt-4 px-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 backdrop-blur-sm">
-          <span className="text-[10px] font-medium text-gold-500 tracking-widest uppercase">DESTINY INSIGHT</span>
-        </div>
-
-        <h1 className="text-2xl font-serif font-bold text-ink-light leading-snug tracking-tight">
-          남들은 잘 되는데
-          <br />
-          <span className="text-gold-500">나만 제자리</span>인 것 같다면?
-        </h1>
-
-        <div className="space-y-4">
-          <p className="text-sm text-ink-light/70 font-light leading-relaxed">
-            당신의 노력이 부족해서가 아닙니다.
-            <br />
-            지금 바로 당신에게 들어온 <strong className="text-ink-light font-medium">거대한 기회의 흐름</strong>을
-            <br />
-            놓치고 있기 때문입니다.
-          </p>
-
-          <div className="flex items-center gap-2">
-            <div className="h-px w-8 bg-gold-500/50" />
-            <p className="text-xs font-serif text-gold-500/80">
-              {userName ? `${userName}님의 운명 해설서` : '당신을 위한 운명 해설서'}
-            </p>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* 2. Seasonal Event Banner */}
+      {/* 1. Seasonal Event Banner */}
       <motion.div variants={fadeInUp}>
         <SeasonalEventBanner />
       </motion.div>
