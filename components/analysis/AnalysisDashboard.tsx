@@ -4,8 +4,6 @@ import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import { LuckyRouletteButton } from '@/components/events/lucky-roulette-button'
-import { AttendanceMiniCard } from '@/components/attendance/attendance-mini-card'
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
 import { Card } from '@/components/ui/card'
 import {
@@ -27,34 +25,6 @@ const MasterpieceSection = dynamic(
   () => import('./dashboard/MasterpieceSection').then((mod) => ({ default: mod.MasterpieceSection })),
   { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> },
 )
-
-interface RouletteStatus {
-  canSpin: boolean
-  nextAvailableTime?: string
-}
-
-interface AttendanceStatus {
-  canCheckIn: boolean
-  alreadyChecked?: boolean
-}
-
-interface WeeklyAttendance {
-  weekDays: Array<{
-    date: string
-    dayLabel: string
-    checked: boolean
-    isToday: boolean
-    isFuture: boolean
-  }>
-  weekCount: number
-  totalBokchae: number
-}
-
-interface AnalysisDashboardProps {
-  rouletteStatus: RouletteStatus | null
-  attendanceStatus?: AttendanceStatus
-  weeklyAttendance?: WeeklyAttendance
-}
 
 const STUDIO_CARDS = [
   {
@@ -162,11 +132,7 @@ const MENU_CARDS = [
   },
 ] as const
 
-export function AnalysisDashboard({
-  rouletteStatus,
-  attendanceStatus,
-  weeklyAttendance,
-}: AnalysisDashboardProps) {
+export function AnalysisDashboard() {
   const router = useRouter()
 
   return (
@@ -181,12 +147,12 @@ export function AnalysisDashboard({
         <SeasonalEventBanner />
       </motion.div>
 
-      {/* 3. 나의 사주·운명 풀어보기 */}
+      {/* 2. 나의 사주·운명 풀어보기 */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
       </motion.div>
 
-      {/* 4. 궁합·관상·손금·풍수 (2열) */}
+      {/* 3. 궁합·관상·손금·풍수 (2열) */}
       <motion.div variants={fadeInUp} className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
@@ -222,7 +188,7 @@ export function AnalysisDashboard({
         </div>
       </motion.div>
 
-      {/* 5. 테마별 트렌드 (2열) */}
+      {/* 4. 테마별 트렌드 (2열) */}
       <motion.div variants={fadeInUp} className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
@@ -259,19 +225,6 @@ export function AnalysisDashboard({
             )
           })}
         </div>
-      </motion.div>
-
-      {/* 6. 룰렛 + 출석체크 (2열) */}
-      <motion.div variants={fadeInUp} className="grid grid-cols-2 gap-3">
-        <LuckyRouletteButton
-          canSpin={rouletteStatus?.canSpin || false}
-          nextAvailableTime={rouletteStatus?.nextAvailableTime}
-        />
-        <AttendanceMiniCard
-          canCheckIn={attendanceStatus?.canCheckIn ?? false}
-          weekCount={weeklyAttendance?.weekCount ?? 0}
-          weekDays={weeklyAttendance?.weekDays}
-        />
       </motion.div>
     </motion.div>
   )

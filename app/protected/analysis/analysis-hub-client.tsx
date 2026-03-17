@@ -5,33 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 
-interface RouletteStatus {
-  canSpin: boolean
-  nextAvailableTime?: string
-}
-
-interface AttendanceStatus {
-  canCheckIn: boolean
-  alreadyChecked?: boolean
-}
-
-interface WeeklyAttendance {
-  weekDays: Array<{ date: string; dayLabel: string; checked: boolean; isToday: boolean; isFuture: boolean }>
-  weekCount: number
-  totalBokchae: number
-}
-
-interface AnalysisHubClientProps {
-  rouletteStatus: RouletteStatus | null
-  attendanceStatus?: AttendanceStatus
-  weeklyAttendance?: WeeklyAttendance
-}
-
-export function AnalysisHubClient({
-  rouletteStatus,
-  attendanceStatus,
-  weeklyAttendance,
-}: AnalysisHubClientProps) {
+export function AnalysisHubClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -61,11 +35,7 @@ export function AnalysisHubClient({
       </div>
 
       <div className="relative z-10 w-full pt-6">
-        <AnalysisDashboard
-          rouletteStatus={rouletteStatus}
-          attendanceStatus={attendanceStatus}
-          weeklyAttendance={weeklyAttendance}
-        />
+        <AnalysisDashboard />
       </div>
     </main>
   )
