@@ -70,6 +70,11 @@ export interface FacePartAnalysis {
   assessment: '좋음' | '보통' | '주의'
 }
 
+export interface FaceImprovementTip {
+  tip: string
+  basis: string
+}
+
 export interface FaceAnalysisResult {
   success: boolean
   currentAnalysis?: string
@@ -111,7 +116,15 @@ export interface FaceAnalysisResult {
     modernFix: string
     impact: string
   }>
+  firstImpression?: string // 첫인상 한줄 요약
+  improvementTips?: FaceImprovementTip[] // 관상 개운법
   error?: string
+}
+
+export interface PalmAgeTimeline {
+  age: string
+  description: string
+  advice: string
 }
 
 export interface PalmAnalysisResult {
@@ -159,6 +172,7 @@ export interface PalmAnalysisResult {
     rightHand: string
     comparison: string
   }
+  ageTimeline?: PalmAgeTimeline[] // 나이별 타임라인
   sajuSynergy?: string // 사주 연계 분석
   error?: string
 }
@@ -188,6 +202,12 @@ export interface PlacementSuggestion {
   expectedEffect: string // 기대 효과
 }
 
+export interface SpaceScore {
+  current: number
+  potential: number
+  description: string
+}
+
 export interface InteriorAnalysisResult {
   success: boolean
   currentAnalysis?: string
@@ -200,6 +220,8 @@ export interface InteriorAnalysisResult {
   placementSuggestions?: PlacementSuggestion[] // 배치 제안
   dominantElement?: string // 지배 오행
   luckyDirection?: string // 가장 길한 방위
+  spaceScore?: SpaceScore // 공간 점수 (현재/잠재력)
+  quickFixes?: string[] // 즉시 실행 가능한 개선안 3가지
   error?: string
 }
 
@@ -228,6 +250,11 @@ export async function analyzeFaceForDestiny(
 아래 얼굴 이미지를 분석하여 "${goalConfig.name}"에 대한 평가를 제공하세요.
 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.
 강점과 약점을 균형 있게 분석하세요.
+
+[0단계: 첫인상 한줄 요약]
+이 얼굴을 처음 마주한 사람이 받을 인상을 한 문장으로 작성하세요.
+예: "처음 만나는 사람에게 신뢰감을 주는 인상입니다. 속마음을 잘 드러내지 않는 타입이시죠."
+반드시 긍정적 인상 + 성격 특성 힌트를 조합하세요.
 
 [1단계: 부위별(部位別) 심층 분석 - 6대 핵심 부위]
 각 부위를 "좋음/보통/주의"로 평가하고, 관장하는 운세 영역과 개운 조언을 제시하세요.
@@ -278,15 +305,31 @@ export async function analyzeFaceForDestiny(
 [4단계: 피부 기색(氣色) 분석]
 - 현재 피부 광택, 혈색, 기운 상태 평가
 
-[5단계: ${goalConfig.name} 종합 평가]
+[5단계: 교차 분석 (해화당 특화)]
+사주 데이터가 함께 제공될 경우, 관상과 사주를 교차 검증하세요:
+- "사주에서 재물운이 강한데, 관상에서도 코가 풍만하여 이를 확인합니다"
+- "사주의 도화살과 관상의 눈매가 일치하여 이성에게 매력적입니다"
+여러 근거가 일치하면 반드시 언급하세요 -- 신뢰를 높입니다.
+사주 데이터가 없으면 이 단계는 생략하세요.
+
+[6단계: ${goalConfig.name} 종합 평가]
 - 강화할 핵심 특징: ${goalConfig.traits}
 
-[6단계: 구체적 개선 방법]
+[7단계: 관상 개운법 (실행 가능한 팁)]
+비수술적, 일상에서 즉시 적용 가능한 개운법을 3~5가지 제시하세요.
+각 팁에 관상학적 근거를 포함하세요.
+예:
+- "안경 착용이 관운(官運)을 높입니다" (근거: 눈 주변 기운 보강)
+- "입술 보습을 유지하세요" (근거: 출납관 기운 강화)
+- "이마를 드러내는 헤어스타일" (근거: 천정 기운 활성화)
+
+[8단계: 구체적 개선 방법]
 - 메이크업 기법 3가지
 - 헤어스타일 조언
 - 표정 및 자세 관리
 
 [CRITICAL: 출력 형식 - 아래 모든 태그를 정확히 포함하세요]
+[[FIRST_IMPRESSION: 첫인상 한줄 요약 텍스트]]
 [[EARS: 좋음/보통/주의, 설명]]
 [[EYEBROWS: 좋음/보통/주의, 설명]]
 [[EYES: 좋음/보통/주의, 설명]]
@@ -301,6 +344,9 @@ export async function analyzeFaceForDestiny(
 [[PART_MOUTH: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
 [[PART_EARS: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
 [[PART_CHIN: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
+[[IMPROVEMENT_TIP_1: 팁내용, 근거]]
+[[IMPROVEMENT_TIP_2: 팁내용, 근거]]
+[[IMPROVEMENT_TIP_3: 팁내용, 근거]]
 
 목표: ${goalConfig.desc}
 강화할 특징: ${goalConfig.traits}
@@ -425,6 +471,28 @@ Style: Professional headshot, warm lighting, confident expression.`
           ?.trim()
       : undefined
 
+    // === 첫인상 한줄 파싱 ===
+    const firstImpressionMatch = analysisText.match(/\[\[FIRST_IMPRESSION:\s*([^\]]+)\]\]/)
+    const firstImpression = firstImpressionMatch?.[1]?.trim() || undefined
+
+    // === 관상 개운법 파싱 ===
+    const parseImprovementTip = (tag: string): FaceImprovementTip | null => {
+      const regex = new RegExp(`\\[\\[${tag}:\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
+      const match = analysisText.match(regex)
+      if (match?.[1] && match?.[2]) {
+        return { tip: match[1].trim(), basis: match[2].trim() }
+      }
+      return null
+    }
+
+    const improvementTips: FaceImprovementTip[] = [
+      'IMPROVEMENT_TIP_1',
+      'IMPROVEMENT_TIP_2',
+      'IMPROVEMENT_TIP_3',
+    ]
+      .map((tag) => parseImprovementTip(tag))
+      .filter((t): t is FaceImprovementTip => t !== null)
+
     return {
       success: true,
       currentAnalysis: analysisText,
@@ -436,6 +504,8 @@ Style: Professional headshot, warm lighting, confident expression.`
       improvementPriority,
       sajuSynergy,
       gisaekReading,
+      firstImpression,
+      improvementTips: improvementTips.length > 0 ? improvementTips : undefined,
     }
   } catch (error: unknown) {
     logger.error('Face Destiny Analysis Error:', error)
@@ -473,11 +543,21 @@ export async function analyzeInteriorForFengshui(
 
 이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 풍수 분석을 제공하세요.
 
-[1단계: 공간 기운 진단]
+[1단계: 공간 기운 진단 + 점수]
 - 현재 기(氣, 공간의 에너지) 흐름 상태
 - 지배 오행 판단 (木/火/土/金/水)
+- 현재 공간 점수(0~100)와 개선 후 잠재 점수를 산출하세요
+- 점수 산출 기준: 기 흐름 원활도(30%), 오행 균형(25%), 방위 활용도(25%), 정리/정돈 상태(20%)
+- 한줄 요약: 이 공간이 어떤 기운이 부족/과잉인지 설명
 
-[2단계: 8방위(八方位) 길흉 분석]
+[2단계: 즉시 실행 가능한 개선안 3가지 (최우선)]
+반드시 오늘 당장 실행할 수 있는 개선안 3가지를 제시하세요:
+- 각 개선안에 구체적 위치 + 풍수적 이유를 포함
+- 비용이 적게 드는 것부터 제시 (무료 → 1만원 이내 → 5만원 이내)
+- 예: "현관 왼쪽에 조명을 추가하세요 (입구의 양기 보강, 재물 유입 촉진)"
+- 예: "침실 머리 방향을 동쪽으로 바꾸세요 (木 기운으로 건강운 상승)"
+
+[3단계: 8방위(八方位) 길흉 분석]
 사진과 공간 구조를 바탕으로 8방위의 기운을 분석하세요.
 각 방위별로: 해당 오행, 길흉 판단, 추천 물건/색상, 피해야 할 것을 제시하세요.
 
@@ -490,28 +570,32 @@ export async function analyzeInteriorForFengshui(
 - **서북(西北)**: 金 기운, 귀인·리더십·이동
 - **서남(西南)**: 土 기운, 건강·모성·인내
 
-[3단계: 공간별 맞춤 추천]
+[4단계: 공간별 맞춤 추천]
 아래 공간들에 대해 각각 기 흐름 상태, 주요 문제점, 개선 방법(3가지), 행운 아이템(3가지), 행운 색상을 제시하세요:
 - 거실 (가족 화합, 재물운의 중심)
 - 침실 (건강·수면·애정운)
 - 주방 (식복·건강·재물 저장)
 - 현관 (기운의 입구, 외부 운 유입)
 
-[4단계: 가구·화분·수석 배치 제안]
+[5단계: 가구·화분·수석 배치 제안]
 구체적인 배치 제안을 5가지 이상 제시하세요:
 - 배치할 아이템 (가구/화분/수석/소품)
 - 추천 위치 (방위 또는 공간 설명)
 - 이유 (풍수적 근거)
 - 기대 효과
 
-[5단계: 풍수 문제점 (최대 5개)]
+[6단계: 풍수 문제점 (최대 5개)]
 현재 공간의 기운을 방해하는 주요 문제점
 
-[6단계: 기운 전환 아이템 쇼핑 리스트]
+[7단계: 기운 전환 아이템 쇼핑 리스트]
 
 [CRITICAL: 출력 형식 - 아래 모든 태그를 정확히 포함하세요]
 [[DOMINANT_ELEMENT: 오행명]]
 [[LUCKY_DIRECTION: 방위명]]
+[[SPACE_SCORE: 현재점수, 잠재점수, 한줄설명]]
+[[QUICK_FIX_1: 개선안 설명 (위치 + 이유)]]
+[[QUICK_FIX_2: 개선안 설명 (위치 + 이유)]]
+[[QUICK_FIX_3: 개선안 설명 (위치 + 이유)]]
 
 [[DIR_EAST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
 [[DIR_WEST: 오행, 길흉(good/bad/neutral), 길흉한글, 추천물건색상, 피할것]]
@@ -675,6 +759,33 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
     const luckyDirectionMatch = analysisText.match(/\[\[LUCKY_DIRECTION:\s*([^\]]+)\]\]/)
     const luckyDirection = luckyDirectionMatch?.[1]?.trim()
 
+    // === 공간 점수 파싱 ===
+    const spaceScoreMatch = analysisText.match(
+      /\[\[SPACE_SCORE:\s*(\d+),\s*(\d+),\s*([^\]]+)\]\]/
+    )
+    const spaceScore: SpaceScore | undefined = spaceScoreMatch
+      ? {
+          current: parseInt(spaceScoreMatch[1] ?? '0', 10),
+          potential: parseInt(spaceScoreMatch[2] ?? '0', 10),
+          description: spaceScoreMatch[3]?.trim() || '',
+        }
+      : undefined
+
+    // === 즉시 실행 가능한 개선안 파싱 ===
+    const parseQuickFix = (tag: string): string | null => {
+      const regex = new RegExp(`\\[\\[${tag}:\\s*([^\\]]+)\\]\\]`)
+      const match = analysisText.match(regex)
+      return match?.[1]?.trim() || null
+    }
+
+    const quickFixes: string[] = [
+      'QUICK_FIX_1',
+      'QUICK_FIX_2',
+      'QUICK_FIX_3',
+    ]
+      .map((tag) => parseQuickFix(tag))
+      .filter((f): f is string => f !== null)
+
     // Extract problems from text if not structured
     const problems = ['가구 배치가 기의 흐름을 막고 있음', '색상 톤이 목표와 맞지 않음', '소품 배치 개선 필요']
 
@@ -689,6 +800,8 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       placementSuggestions,
       dominantElement,
       luckyDirection,
+      spaceScore,
+      quickFixes: quickFixes.length > 0 ? quickFixes : undefined,
     }
   } catch (error: unknown) {
     logger.error('Interior Fengshui Analysis Error:', error)
@@ -746,14 +859,26 @@ export async function analyzePalmReading(
 [4단계: 특수 문양 분석]
 별, 십자, 섬 등 특수 문양이 있으면 의미를 해석하세요.
 
-[5단계: 종합 운세 텍스트 분석]
+[5단계: 왼손/오른손 비교 분석]
+한 장만 촬영된 경우에도, 보이는 손이 왼손인지 오른손인지 판별하여 아래 원칙으로 분석하세요:
+- **왼손**: 타고난 운 (선천적 기질, 부모에게 물려받은 잠재력)
+- **오른손**: 만들어가는 운 (후천적 노력, 현재 상태, 스스로 개척한 운)
+- 한 손만 보이는 경우: 해당 손이 선천/후천 중 어느 쪽인지 명시하고, 반대쪽 손의 가능성도 추론하세요.
+- 양손 모두 보이는 경우: 두 손의 차이점을 부각하고, "타고난 운 vs 만들어간 운"의 변화를 설명하세요.
+
+[6단계: 나이별 타임라인]
+손금의 주요 선 위에 시간 눈금을 대입하여, 인생을 3~4구간으로 나누어 운세 흐름을 제시하세요.
+각 구간에 해당 시기의 핵심 설명과 행동 조언을 포함하세요.
+예: "현재~35세: 생명선이 강하여 활발한 시기 — 도전하세요"
+
+[7단계: 종합 운세 텍스트 분석]
 다음 4가지 운세를 텍스트로 분석하세요 (점수 없이):
 - **재물운**: 수성구, 태양선, 지능선 종합
 - **건강운**: 생명선, 금성구 종합
 - **애정운**: 감정선, 결혼선, 금성구 종합
 - **직업운**: 운명선, 지능선, 목성구 종합
 
-[6단계: 구체적 조언]
+[8단계: 구체적 조언]
 - 손금으로 본 적성 직업 3가지
 - 대인관계 조언
 - 실생활 개선 방법
@@ -770,6 +895,10 @@ export async function analyzePalmReading(
 [[FORTUNE_HEALTH: 텍스트 분석]]
 [[FORTUNE_LOVE: 텍스트 분석]]
 [[FORTUNE_CAREER: 텍스트 분석]]
+[[DUAL_HAND: 왼손 설명, 오른손 설명, 비교 시사점]]
+[[AGE_TIMELINE_1: 나이구간, 설명, 조언]]
+[[AGE_TIMELINE_2: 나이구간, 설명, 조언]]
+[[AGE_TIMELINE_3: 나이구간, 설명, 조언]]
 
 ※ 강점과 약점을 균형 있게 서술하세요.
 ※ 의학적 진단이나 절대적 미래 예언은 하지 마세요.
@@ -837,6 +966,40 @@ export async function analyzePalmReading(
       '대인관계에서 감정선의 특성 활용하기',
     ]
 
+    // === AI 출력에서 양손 비교 파싱 ===
+    const dualHandMatch = analysisText.match(
+      /\[\[DUAL_HAND:\s*([^,\]]+),\s*([^,\]]+),\s*([^\]]+)\]\]/
+    )
+    const aiDualHandCompare = dualHandMatch
+      ? {
+          leftHand: dualHandMatch[1]?.trim() || '',
+          rightHand: dualHandMatch[2]?.trim() || '',
+          comparison: dualHandMatch[3]?.trim() || '',
+        }
+      : undefined
+
+    // === AI 출력에서 나이별 타임라인 파싱 ===
+    const parseAgeTimeline = (tag: string): PalmAgeTimeline | null => {
+      const regex = new RegExp(`\\[\\[${tag}:\\s*([^,\\]]+),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
+      const match = analysisText.match(regex)
+      if (match?.[1] && match?.[2] && match?.[3]) {
+        return {
+          age: match[1].trim(),
+          description: match[2].trim(),
+          advice: match[3].trim(),
+        }
+      }
+      return null
+    }
+
+    const ageTimeline: PalmAgeTimeline[] = [
+      'AGE_TIMELINE_1',
+      'AGE_TIMELINE_2',
+      'AGE_TIMELINE_3',
+    ]
+      .map((tag) => parseAgeTimeline(tag))
+      .filter((t): t is PalmAgeTimeline => t !== null)
+
     // === 알고리즘 엔진 연동 ===
     const { predictTimeline, analyzeDualHands, buildPalmSajuSynergyText, HAND_SHAPES } =
       await import('@/lib/physiognomy-engine/palm-algorithm')
@@ -848,9 +1011,9 @@ export async function analyzePalmReading(
     const sunScore = palmAssessmentToScore(palmLines.sunLine?.assessment ?? '보통')
     const timingPredictions = predictTimeline(lifeScore, fateScore, sunScore, sajuContext?.currentAge)
 
-    // 양손 비교 (추정)
+    // 양손 비교: AI 파싱 우선, fallback으로 알고리즘 엔진
     const estimatedPalmScore = Math.round(((lifeScore + fateScore + sunScore) / 3) * 10)
-    const dualHandCompare = analyzeDualHands(estimatedPalmScore - 5, estimatedPalmScore)
+    const dualHandCompare = aiDualHandCompare ?? analyzeDualHands(estimatedPalmScore - 5, estimatedPalmScore)
 
     // 손 형태 추정 (텍스트에서 키워드 기반)
     const handShapeText = analysisText.toLowerCase()
@@ -882,6 +1045,7 @@ export async function analyzePalmReading(
       dualHandCompare,
       handShape,
       sajuSynergy,
+      ageTimeline: ageTimeline.length > 0 ? ageTimeline : undefined,
     }
   } catch (error: unknown) {
     logger.error('Palm Reading Analysis Error:', error)

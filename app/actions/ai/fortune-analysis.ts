@@ -29,12 +29,16 @@ export interface FortuneResult {
   areas: FortuneArea[]
   lucky: {
     color: string
+    colorReason: string
     number: number
     direction: string
+    directionReason: string
     advice: string
+    avoid: string
   }
   caution: string
   period: string
+  shareQuote: string
 }
 
 /**
@@ -119,17 +123,40 @@ export async function analyzeFortuneAction(
     { "name": "건강운", "outlook": "좋음|보통|주의", "content": "건강 관련 운세 — 주의할 부위와 생활습관 조언 (2~3문장)" },
     { "name": "직업운", "outlook": "좋음|보통|주의", "content": "직업/사업 관련 운세 — 기회와 리스크 양면 분석 (2~3문장)" }
   ],
-  "lucky": { "color": "행운의 색상", "number": 7, "direction": "길한 방향", "advice": "핵심 조언" },
+  "lucky": {
+    "color": "행운의 색상",
+    "colorReason": "색상 선정 이유 (오행 기반, 1문장)",
+    "number": 7,
+    "direction": "길한 방향",
+    "directionReason": "방향 선정 이유 (용신 기반, 1문장)",
+    "advice": "핵심 조언 (1문장)",
+    "avoid": "오늘 피해야 할 것 1가지 (구체적 행동이나 상황)"
+  },
   "caution": "주의사항 (구체적 상황 언급)",
-  "period": "${periodLabel}"
+  "period": "${periodLabel}",
+  "shareQuote": "SNS 공유용 한 줄 — 시적이고 짧은 문구 + ' — 해화당' (예: '봄비 뒤의 무지개처럼, 기다림 끝에 좋은 소식이 옵니다 — 해화당')"
 }
+
+## 시기 특정 원칙
+- 오늘 운세(today): 시간대별 조언을 포함하세요 ("오전에는 중요한 결정을 피하고, 오후 3시 이후에 행동하세요")
+- 주간 운세(weekly): 요일별 포인트를 포함하세요 ("수요일이 이번 주 최고의 날입니다")
+- 월간 운세(monthly): 주차별 포인트를 포함하세요 ("셋째 주에 재물운이 정점에 도달합니다")
+- overall 필드와 각 area의 content에 위 시기 정보를 자연스럽게 녹여내세요
+
+## 행동 처방 (매일 확인하게 만드는 핵심)
+각 운세에 반드시 포함할 것:
+- lucky.color + lucky.colorReason: 오행 기반 행운 컬러와 이유
+- lucky.direction + lucky.directionReason: 용신 기반 행운 방위와 이유
+- lucky.number: 행운의 숫자
+- lucky.avoid: 오늘 피해야 할 것 1가지
+- shareQuote: SNS 공유하고 싶게 만드는 시적인 한 줄 (반드시 ' — 해화당'으로 끝낼 것)
 
 [작성 원칙]
 - 점수(score)는 절대 포함하지 마세요. outlook은 반드시 "좋음", "보통", "주의" 중 하나만 사용하세요.
-- "~이 보이는군요", "운명의 기운" 같은 시적/무속 표현 대신 "~합니다", "~입니다" 같은 명확한 현대 한국어를 사용하세요.
-- 좋은 점만 말하지 말고 강점과 주의점을 균형있게 분석하세요.
-- 사주 용어를 쓸 때는 괄호 안에 쉬운 설명을 추가하세요.
-- "기운이 좋습니다" 대신 "이번 주는 거래처 미팅을 잡기 좋은 시기입니다" 같은 구체적 조언을 제공하세요.`
+- 긍정 70% + 주의 30% 비율로 균형 있게 분석하세요.
+- 사주 용어를 쓸 때는 괄호 안에 쉬운 설명을 추가하세요 (예: "정재(안정적 수입을 뜻하는 기운)").
+- "기운이 좋습니다" 대신 "이번 주 수요일에 거래처 미팅을 잡으면 좋은 결과가 있습니다" 같은 구체적 조언을 제공하세요.
+- "~이 보이는군요" 같은 무속 표현 대신 "~합니다", "~입니다" 같은 명확한 현대 한국어를 사용하되, shareQuote에서만 시적 표현을 허용하세요.`
     )
 
     // 6. AI 분석
