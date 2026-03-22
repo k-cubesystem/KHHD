@@ -1,21 +1,26 @@
 /**
  * 중앙 AI 모델 상수
  * 모든 AI 모델 참조는 이 파일의 상수를 사용할 것
+ *
+ * Claude로 전환하려면:
+ * 1. Anthropic 크레딧 충전
+ * 2. Vercel에 ANTHROPIC_API_KEY 추가
+ * 3. AI_PROVIDER=claude 환경변수 설정
  */
 
 // Provider types
 export type AIProvider = 'gemini' | 'claude'
 
-// Gemini models (existing)
+// Gemini models
 export const GEMINI_PRO = 'gemini-3.1-pro-preview'
 export const GEMINI_FLASH = 'gemini-3-flash-preview'
 export const GEMINI_IMAGE = 'gemini-3.1-flash-image-preview'
 
-// Claude models (new)
+// Claude models
 export const CLAUDE_OPUS = 'claude-opus-4-6'
 export const CLAUDE_SONNET = 'claude-sonnet-4-6'
 
-// Default provider (can be overridden per feature)
+// Provider 선택: 환경변수 AI_PROVIDER로 전환 가능 (기본: gemini)
 export const DEFAULT_PROVIDER: AIProvider = (process.env.AI_PROVIDER as AIProvider) || 'gemini'
 
 // Feature-to-model mapping
@@ -29,36 +34,43 @@ export const MODEL_PRO = GEMINI_PRO
 export const MODEL_FLASH = GEMINI_FLASH
 export const MODEL_IMAGE = GEMINI_IMAGE
 
-// Feature configs - which model each feature uses
-// 사주/천지인/궁합/관상/손금/풍수: Claude 고정
-// 이미지 생성: Gemini 고정
-// 나머지: DEFAULT_PROVIDER 따름
+function resolveModel(tier: 'pro' | 'flash'): AIModelConfig {
+  if (DEFAULT_PROVIDER === 'claude') {
+    return {
+      provider: 'claude',
+      model: tier === 'pro' ? CLAUDE_OPUS : CLAUDE_SONNET,
+    }
+  }
+  return {
+    provider: 'gemini',
+    model: tier === 'pro' ? GEMINI_PRO : GEMINI_FLASH,
+  }
+}
+
+// Feature configs — AI_PROVIDER 환경변수로 일괄 전환 가능
 export const FEATURE_MODELS: Record<string, AIModelConfig> = {
-  saju: { provider: 'claude', model: CLAUDE_OPUS },
-  saju_detail: { provider: 'claude', model: CLAUDE_OPUS },
-  cheonjiin: { provider: 'claude', model: CLAUDE_OPUS },
-  compatibility: { provider: 'claude', model: CLAUDE_OPUS },
-  image: { provider: 'claude', model: CLAUDE_OPUS }, // 관상/손금/풍수 이미지 분석
-  'generate-image': { provider: 'gemini', model: GEMINI_IMAGE }, // 이미지 생성만 Gemini
-  'shaman-chat': { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  'fortune-analysis': {
-    provider: DEFAULT_PROVIDER,
-    model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH,
-  },
-  trend: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  wealth: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  year2026: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  daily: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  invite: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  engine: { provider: DEFAULT_PROVIDER, model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH },
-  'celebrity-compatibility': { provider: 'claude', model: CLAUDE_OPUS },
+  // PRO 티어: 사주/천지인/궁합/관상/손금/풍수
+  saju: resolveModel('pro'),
+  saju_detail: resolveModel('pro'),
+  cheonjiin: resolveModel('pro'),
+  compatibility: resolveModel('pro'),
+  image: resolveModel('pro'),
+  'celebrity-compatibility': resolveModel('pro'),
+
+  // 이미지 생성: Gemini 고정 (Imagen)
+  'generate-image': { provider: 'gemini', model: GEMINI_IMAGE },
+
+  // FLASH 티어: 채팅/운세/트렌드
+  'shaman-chat': resolveModel('flash'),
+  'fortune-analysis': resolveModel('flash'),
+  trend: resolveModel('flash'),
+  wealth: resolveModel('flash'),
+  year2026: resolveModel('flash'),
+  daily: resolveModel('flash'),
+  invite: resolveModel('flash'),
+  engine: resolveModel('flash'),
 }
 
 export function getModelConfig(featureKey: string): AIModelConfig {
-  return (
-    FEATURE_MODELS[featureKey] || {
-      provider: DEFAULT_PROVIDER,
-      model: DEFAULT_PROVIDER === 'claude' ? CLAUDE_SONNET : GEMINI_FLASH,
-    }
-  )
+  return FEATURE_MODELS[featureKey] || resolveModel('flash')
 }
