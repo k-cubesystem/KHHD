@@ -26,7 +26,7 @@
     "SessionStart": [{
       "hooks": [{
         "type": "command",
-        "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '🚀 멀티 에이전트 v6.0 | 11팀 25에이전트 | 토큰 최적화 내장' && echo '📖 GUIDE.md → AGENTS.md → PRIME.md → MEMORY/MEMORY.md' && echo '💡 /guide [요청]  으로 토큰 계획 먼저 받기' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && git status 2>/dev/null | head -4 || true",
+        "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '🏮 해화당 v7.0 | /design /build /review /security /data /docs /status' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && git status 2>/dev/null | head -3 || true",
         "timeout": 5
       }]
     }],

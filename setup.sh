@@ -1,6 +1,6 @@
 #!/bin/bash
 # ================================================================
-# 🚀 Claude Code 멀티 에이전트 시스템 v6.0 — 자동 설치
+# 🚀 Claude Code 멀티 에이전트 시스템 v7.0 — 자동 설치
 # 사용법: bash setup.sh [프로젝트경로]
 # 예시:   bash setup.sh ~/my-project
 #         bash setup.sh        (현재 폴더에 설치)
@@ -21,7 +21,7 @@ DST="${1:-$(pwd)}"
 
 echo -e "${B}${W}"
 echo "╔═══════════════════════════════════════════════════╗"
-echo "║   🚀 Claude Code 멀티 에이전트 시스템 v6.0       ║"
+echo "║   🚀 Claude Code 멀티 에이전트 시스템 v7.0       ║"
 echo "║   11개 팀 / 25개 에이전트 / 토큰 최적화 내장     ║"
 echo "╚═══════════════════════════════════════════════════╝"
 echo -e "${N}"
@@ -107,7 +107,7 @@ step "STEP 3: CLAUDE.md (세션 자동 로드)"
 [ -f "$DST/CLAUDE.md" ] && cp "$DST/CLAUDE.md" "$DST/CLAUDE.md.backup" && warn "기존 CLAUDE.md 백업 → CLAUDE.md.backup"
 
 cat > "$DST/CLAUDE.md" << 'CLAUDE_EOF'
-# 🧭 멀티 에이전트 시스템 v6.0 — 세션 메모리
+# 🧭 멀티 에이전트 시스템 v7.0 — 세션 메모리
 
 ## ⚠️ 세션 시작 시 읽을 파일 순서
 
@@ -196,7 +196,7 @@ cat > "$DST/.claude/settings.json" << 'SETTINGS_EOF'
     "SessionStart": [{
       "hooks": [{
         "type": "command",
-        "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '🚀 멀티 에이전트 v6.0 | 11팀 25에이전트 | 토큰 최적화 내장' && echo '📖 GUIDE.md → AGENTS.md → PRIME.md → MEMORY/MEMORY.md' && echo '💡 /guide [요청]  으로 토큰 계획 먼저 받기' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && git status 2>/dev/null | head -4 || true",
+        "command": "echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && echo '🚀 멀티 에이전트 v7.0 | 11팀 25에이전트 | 토큰 최적화 내장' && echo '📖 GUIDE.md → AGENTS.md → PRIME.md → MEMORY/MEMORY.md' && echo '💡 /guide [요청]  으로 토큰 계획 먼저 받기' && echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━' && git status 2>/dev/null | head -4 || true",
         "timeout": 5
       }]
     }],
@@ -566,7 +566,7 @@ audit: lint type-check security ## 전체 품질 검사 (lint + type + security)
 
 agents: ## 팀 구조 출력
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "🤖 멀티 에이전트 시스템 v6.0  11팀 25에이전트"
+	@echo "🤖 멀티 에이전트 시스템 v7.0  11팀 25에이전트"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "T-7  🏗️  TEAM_G   설계 & PRD"
 	@echo "T-8  🔐  TEAM_H   보안 (배포 전 필수 게이트)"
@@ -590,7 +590,7 @@ fi
 echo ""
 echo -e "${G}${W}"
 echo "╔═══════════════════════════════════════════════════╗"
-echo "║              ✅ 설치 완료! v6.0                   ║"
+echo "║              ✅ 설치 완료! v7.0                   ║"
 echo "╚═══════════════════════════════════════════════════╝"
 echo -e "${N}"
 
