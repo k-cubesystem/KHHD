@@ -142,7 +142,7 @@ export function MasterpieceSection() {
           } as React.CSSProperties}
         >
           사주 만세력부터 관상·풍수·손금까지 —{' '}
-          <span style={{ color: 'rgba(255,255,255,0.8)' }}>천지인(天地人) 통합 분석으로 </span>
+          <span style={{ color: 'rgba(255,255,255,0.8)' }}>청담해화당 통합분석으로 </span>
           당신의 진짜 <span style={{ color: 'rgba(244,228,186,0.75)' }}>운명</span>을 읽어드립니다.
         </p>
 
