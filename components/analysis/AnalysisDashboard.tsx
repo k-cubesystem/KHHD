@@ -152,11 +152,11 @@ export function AnalysisDashboard() {
         <MasterpieceSection />
       </motion.div>
 
-      {/* 3. 궁합·관상·손금·풍수 (2열) */}
+      {/* 3. 개별 분석 (2열) */}
       <motion.div variants={fadeInUp} className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
-          <h2 className="text-sm font-serif text-gold-500/80">천지인 통합 분석</h2>
+          <h2 className="text-sm font-serif text-gold-500/80">청담해화당 통합분석</h2>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

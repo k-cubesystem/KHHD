@@ -2,46 +2,9 @@
 
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
-import { User, ArrowRight, BookOpen, Eye, Hand, Compass } from 'lucide-react'
+import { User, ArrowRight, Sparkles } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
-
-const ANALYSIS_CARDS = [
-  {
-    type: 'saju' as const,
-    icon: BookOpen,
-    title: '사주풀이',
-    description: '사주팔자로 보는 타고난 성격과 운의 흐름',
-    tags: ['사주 팔자', '오행 균형', '대운 흐름', '월운 분석'],
-    needsPhoto: false,
-  },
-  {
-    type: 'face' as const,
-    icon: Eye,
-    title: '관상',
-    description: '얼굴의 골격과 이목구비로 읽는 운명',
-    tags: ['얼굴 골격', '이목구비', '재물운', '인연운'],
-    needsPhoto: true,
-  },
-  {
-    type: 'palm' as const,
-    icon: Hand,
-    title: '손금',
-    description: '손금의 선과 구(丘)로 보는 인생의 길',
-    tags: ['생명선', '두뇌선', '감정선', '운명선'],
-    needsPhoto: true,
-  },
-  {
-    type: 'fengshui' as const,
-    icon: Compass,
-    title: '풍수',
-    description: '공간의 기운을 읽어 최적의 환경을 제안',
-    tags: ['8방위', '공간 배치', '기운 흐름', '인테리어'],
-    needsPhoto: true,
-  },
-] as const
-
-type AnalysisType = (typeof ANALYSIS_CARDS)[number]['type']
 
 interface AnalysisClientPageProps {
   targets: DestinyTarget[]
@@ -52,174 +15,157 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
   const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId || null)
 
-  const handleTargetSelect = (id: string) => {
-    setSelectedId(id)
-  }
-
-  const handleAnalysisSelect = (type: AnalysisType) => {
+  const handleAnalysis = () => {
     if (!selectedId) return
-
-    switch (type) {
-      case 'saju':
-        router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
-        break
-      case 'face':
-        router.push(`/protected/studio/face?targetId=${selectedId}`)
-        break
-      case 'palm':
-        router.push(`/protected/studio/palm?targetId=${selectedId}`)
-        break
-      case 'fengshui':
-        router.push(`/protected/studio/fengshui?targetId=${selectedId}`)
-        break
-    }
+    router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
   }
 
   return (
-    <>
-      <div className="max-w-3xl mx-auto py-6 px-4 pb-20">
-        {/* Header */}
-        <section className="text-center space-y-2 mb-8">
-          <h1 className="text-xl font-serif font-medium text-ink-light tracking-tight">
-            청담해화당 사주풀이
-          </h1>
-          <p className="text-xs text-ink-light/50 font-light break-keep leading-relaxed max-w-sm mx-auto">
-            사주명리 기반으로 당신의 타고난 기질과 운의 흐름을 분석합니다.
-            <br />
-            원하는 분석을 선택해주세요.
-          </p>
-        </section>
+    <div className="max-w-3xl mx-auto py-6 px-4 pb-20">
+      {/* Header */}
+      <section className="text-center space-y-2 mb-8">
+        <h1 className="text-xl font-serif font-medium text-ink-light tracking-tight">
+          청담해화당 통합분석
+        </h1>
+        <p className="text-xs text-ink-light/50 font-light break-keep leading-relaxed max-w-sm mx-auto">
+          30년 경력의 명리학 비법을 AI에 담았습니다.
+          <br />
+          분석 대상을 선택하고 사주풀이를 시작하세요.
+        </p>
+      </section>
 
-        {/* Target selector */}
-        <section className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-1 h-5 bg-primary/40 rounded-full" />
-            <h3 className="text-sm font-serif text-ink-light">분석 대상</h3>
-          </div>
+      {/* 분석 대상 선택 (라디오 버튼 스타일) */}
+      <section className="mb-6">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-1 h-5 bg-gold-500/40 rounded-full" />
+          <h3 className="text-sm font-serif text-ink-light">분석 대상 선택</h3>
+        </div>
 
-          {targets.length > 0 ? (
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {targets.map((target) => {
-                const isSelected = selectedId === target.id
-                return (
-                  <button
-                    key={target.id}
-                    onClick={() => handleTargetSelect(target.id)}
-                    className={`flex-shrink-0 flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all duration-200 ${
-                      isSelected
-                        ? 'border-primary/50 bg-primary/10'
-                        : 'border-white/10 bg-surface/20 hover:border-white/20'
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-serif transition-colors ${
-                        isSelected
-                          ? 'border-primary/50 text-primary bg-primary/10'
-                          : 'border-white/10 text-ink-light/50'
-                      }`}
-                    >
-                      {target.name.slice(0, 1)}
-                    </div>
-                    <div className="text-left">
-                      <p
-                        className={`text-xs font-medium transition-colors ${isSelected ? 'text-primary' : 'text-ink-light'}`}
-                      >
-                        {target.name}
-                      </p>
-                      <p className="text-[10px] text-ink-light/30">{target.relation_type}</p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <Card
-              onClick={() => router.push('/protected/family')}
-              className="bg-surface/10 border-dashed border-primary/20 p-6 text-center cursor-pointer hover:bg-surface/20 transition-colors group"
-            >
-              <div className="flex flex-col items-center gap-2">
-                <User className="w-6 h-6 text-ink-light/20 group-hover:text-primary/60 transition-colors" />
-                <p className="text-xs text-ink-light/50 group-hover:text-primary transition-colors">
-                  등록된 대상이 없습니다. 가족 관리에서 추가해주세요
-                  <ArrowRight className="w-3 h-3 inline ml-1" />
-                </p>
-              </div>
-            </Card>
-          )}
-        </section>
-
-        {/* Analysis cards grid */}
-        <section>
-          <div className="grid grid-cols-2 gap-3">
-            {ANALYSIS_CARDS.map((card) => {
-              const Icon = card.icon
-              const disabled = !selectedId
+        {targets.length > 0 ? (
+          <div className="space-y-2">
+            {targets.map((target) => {
+              const isSelected = selectedId === target.id
               return (
                 <button
-                  key={card.type}
-                  onClick={() => handleAnalysisSelect(card.type)}
-                  disabled={disabled}
-                  className={`text-left rounded-lg border p-4 transition-all duration-200 group ${
-                    disabled
-                      ? 'border-white/5 bg-surface/10 opacity-40 cursor-not-allowed'
-                      : 'border-white/10 bg-surface/20 hover:border-gold-500/50 hover:bg-primary/5 cursor-pointer'
+                  key={target.id}
+                  onClick={() => setSelectedId(target.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 text-left ${
+                    isSelected
+                      ? 'border-gold-500/50 bg-gold-500/10'
+                      : 'border-white/10 bg-surface/20 hover:border-white/20'
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div
-                      className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ${
-                        disabled
-                          ? 'border-white/5 bg-surface/10'
-                          : 'border-primary/20 bg-primary/5 group-hover:border-primary/40'
-                      }`}
-                    >
-                      <Icon
-                        className={`w-5 h-5 transition-colors ${disabled ? 'text-ink-light/20' : 'text-primary/70 group-hover:text-primary'}`}
-                        strokeWidth={1.5}
-                      />
-                    </div>
-                    {!disabled && (
-                      <ArrowRight className="w-3.5 h-3.5 text-ink-light/20 group-hover:text-primary/60 transition-colors" />
-                    )}
-                  </div>
-
-                  <h4
-                    className={`text-sm font-serif mb-1 transition-colors ${
-                      disabled ? 'text-ink-light/30' : 'text-ink-light group-hover:text-primary'
+                  {/* 라디오 인디케이터 */}
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected ? 'border-gold-500' : 'border-white/20'
                     }`}
                   >
-                    {card.title}
-                  </h4>
-                  <p className="text-[11px] text-ink-light/40 font-light leading-relaxed break-keep mb-3">
-                    {card.description}
-                  </p>
+                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-gold-500" />}
+                  </div>
 
-                  <div className="flex flex-wrap gap-1">
-                    {card.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[9px] text-ink-light/30 px-1.5 py-0.5 bg-white/[0.03] rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                  {/* 이니셜 */}
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-serif font-bold shrink-0 transition-colors ${
+                      isSelected
+                        ? 'bg-gold-500/20 text-gold-500 border border-gold-500/30'
+                        : 'bg-white/5 text-ink-light/50 border border-white/10'
+                    }`}
+                  >
+                    {target.name.slice(0, 1)}
+                  </div>
+
+                  {/* 이름 + 관계 */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium transition-colors ${isSelected ? 'text-gold-500' : 'text-ink-light'}`}>
+                      {target.name}
+                    </p>
+                    <p className="text-[11px] text-ink-light/30">{target.relation_type}</p>
                   </div>
                 </button>
               )
             })}
           </div>
+        ) : (
+          <Card
+            onClick={() => router.push('/protected/family')}
+            className="bg-surface/10 border-dashed border-gold-500/20 p-6 text-center cursor-pointer hover:bg-surface/20 transition-colors group"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <User className="w-6 h-6 text-ink-light/20 group-hover:text-gold-500/60 transition-colors" />
+              <p className="text-xs text-ink-light/50 group-hover:text-gold-500 transition-colors">
+                등록된 대상이 없습니다. 가족 관리에서 추가해주세요
+                <ArrowRight className="w-3 h-3 inline ml-1" />
+              </p>
+            </div>
+          </Card>
+        )}
+      </section>
 
-          {!selectedId && targets.length > 0 && (
-            <p className="text-center text-[11px] text-ink-light/30 mt-4 font-light">
-              분석 대상을 먼저 선택해주세요
-            </p>
+      {/* 사주분석 CTA 카드 */}
+      <section>
+        <button
+          onClick={handleAnalysis}
+          disabled={!selectedId}
+          className={`w-full text-left rounded-2xl border p-5 transition-all duration-300 relative overflow-hidden group ${
+            selectedId
+              ? 'border-gold-500/30 bg-gradient-to-br from-gold-500/10 via-transparent to-gold-500/5 cursor-pointer hover:border-gold-500/50 active:scale-[0.98]'
+              : 'border-white/5 bg-surface/10 opacity-40 cursor-not-allowed'
+          }`}
+        >
+          {/* 배경 글로우 */}
+          {selectedId && (
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/10 rounded-full blur-[60px] pointer-events-none" />
           )}
 
-          <p className="text-center text-[10px] text-ink-light/20 font-light mt-6">
-            분석에는 약 30초~1분이 소요됩니다
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
+                  selectedId ? 'bg-gold-500/15 border border-gold-500/30' : 'bg-white/5 border border-white/5'
+                }`}
+              >
+                <Sparkles
+                  className={`w-5 h-5 transition-colors ${selectedId ? 'text-gold-500' : 'text-ink-light/20'}`}
+                  strokeWidth={1.5}
+                />
+              </div>
+              <div className="flex-1">
+                <h3 className={`text-base font-serif font-medium ${selectedId ? 'text-ink-light' : 'text-ink-light/30'}`}>
+                  사주풀이 시작하기
+                </h3>
+                <p className={`text-[11px] font-light mt-0.5 ${selectedId ? 'text-ink-light/50' : 'text-ink-light/20'}`}>
+                  과거를 맞추고, 현재를 짚고, 미래를 처방합니다
+                </p>
+              </div>
+              {selectedId && (
+                <ArrowRight className="w-5 h-5 text-gold-500/50 group-hover:text-gold-500 group-hover:translate-x-0.5 transition-all" />
+              )}
+            </div>
+
+            <div
+              className={`rounded-lg px-4 py-3 ${
+                selectedId ? 'bg-black/20 border border-gold-500/10' : 'bg-white/[0.02]'
+              }`}
+            >
+              <p className={`text-[11px] leading-relaxed font-light ${selectedId ? 'text-gold-500/70' : 'text-ink-light/15'}`}>
+                청담해화당만의 분석 비법 — 사주 원국, 대운, 격국, 용신을 교차 분석하여
+                과거 사건을 역추산하고, 현재 상황을 짚어낸 뒤, 구체적 시기와 행동을 처방합니다.
+              </p>
+            </div>
+          </div>
+        </button>
+
+        {!selectedId && targets.length > 0 && (
+          <p className="text-center text-[11px] text-ink-light/30 mt-4 font-light">
+            분석 대상을 먼저 선택해주세요
           </p>
-        </section>
-      </div>
-    </>
+        )}
+
+        <p className="text-center text-[10px] text-ink-light/20 font-light mt-6">
+          분석에는 약 30초~1분이 소요됩니다
+        </p>
+      </section>
+    </div>
   )
 }
