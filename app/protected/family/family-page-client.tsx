@@ -6,20 +6,16 @@ import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/a
 import { type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
-import { FamilyReviewSlide } from '@/components/family/family-review-slide'
 import { Button } from '@/components/ui/button'
-import { BrandQuote } from '@/components/ui/BrandQuote'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { UserPlus, Plus, Sparkles, User, X, Users, Shield } from 'lucide-react'
+import { UserPlus, Plus, X, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { ZodiacTimeSelect } from '@/components/zodiac-time-select'
 import { DokkaebiAvatarSelector } from '@/components/family/dokkaebi-avatar-selector'
 import { GuestCTACard } from '@/components/guest-cta-card'
-import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 
 interface EditingMember {
   id: string
@@ -115,114 +111,46 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
     setIsFormOpen(false)
   }
 
-  // --- Guest View ---
   if (isGuest) {
     return (
       <div className="flex flex-col gap-10 w-full max-w-[480px] mx-auto py-12 px-3 pb-24">
-        <section className="space-y-4 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="flex justify-center mb-2">
-            <div className="bg-surface/50 border border-primary/20 px-4 py-1.5 rounded-full flex items-center gap-2 text-primary font-light uppercase tracking-widest text-xs backdrop-blur-md">
-              <Users className="w-3.5 h-3.5" strokeWidth={1} />
-              Family & Relationships
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-serif font-light tracking-tight text-ink-light">
-            인연(因緣) <span className="text-gold-500">관리부</span>
-          </h1>
-          <BrandQuote variant="hero">{BRAND_QUOTES.family.subHero}</BrandQuote>
-        </section>
-
         <GuestCTACard
           title="가입하고 인연 관리 시작하기"
           description="가족, 친구, 연인, 직장 상사까지 소중한 인연들의 사주를 체계적으로 관리하세요."
           icon={<Users className="w-8 h-8 text-primary" strokeWidth={1} />}
-          preview={
-            <div className="space-y-3">
-              <div className="bg-surface/20 border border-primary/20 p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                      <User className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-serif text-ink-light">홍길동</h3>
-                      <p className="text-xs text-ink-light/60">배우자 - 1990.03.15</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-primary/10 text-primary border-primary/30">목(木)</Badge>
-                </div>
-              </div>
-            </div>
-          }
         />
       </div>
     )
   }
 
-  // --- Authenticated View ---
   return (
-    <div className="flex flex-col gap-6 w-full max-w-[480px] mx-auto py-8 px-0 pb-24 overflow-x-hidden">
-      {/* Storytelling Header */}
-      <section
-        aria-label="페이지 소개"
-        className="relative px-4 pt-4 pb-8 text-center space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700"
-      >
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-2">
-          <Sparkles className="w-3.5 h-3.5 text-primary" strokeWidth={1.5} />
-          <span className="text-[11px] font-medium text-primary tracking-wide">가족 운대 케어</span>
+    <div className="flex flex-col gap-5 w-full max-w-[480px] mx-auto py-6 px-3 pb-24">
+      {/* 상단: 설명 + 추가 버튼 */}
+      <section className="flex items-center justify-between px-1">
+        <div>
+          <h1 className="text-lg font-serif font-medium text-ink-light">가족 관리</h1>
+          <p className="text-xs text-ink-light/50 font-light mt-0.5">
+            {members.length > 0
+              ? `${members.length}명의 소중한 인연을 관리하고 있습니다`
+              : '소중한 인연의 사주를 등록해보세요'}
+          </p>
         </div>
-
-        <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-light leading-snug">
-          당신의 작은 관심이 <br />
-          <span className="text-primary relative inline-block">
-            가족의 운명
-            <svg
-              className="absolute -bottom-1 left-0 w-full h-1 text-primary/30"
-              viewBox="0 0 100 10"
-              preserveAspectRatio="none"
-            >
-              <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
-          </span>
-          을 바꿉니다
-        </h1>
-
-        <p className="text-sm text-ink-light/60 font-light leading-relaxed max-w-[280px] mx-auto">
-          서로의 운을 챙겨줄 때, 집안의 기운은 <br />
-          비로소 완전해집니다.
-        </p>
-
-        {/* Stats Indicator (Guardian Animation) */}
-        <div className="flex justify-center mt-6">
-          <div className="relative group">
-            {/* Outer Glow/Border Effect - Fire Theme - Reduced Intensity */}
-            <div className="absolute -inset-2 bg-gradient-to-t from-red-600/40 via-orange-500/30 to-yellow-400/20 rounded-full opacity-40 blur-[4px] group-hover:opacity-60 group-hover:blur-[8px] transition-all duration-500 animate-pulse mix-blend-screen" />
-
-            {/* Content Container - Reduced Border/Shadow */}
-            <div className="relative z-10 flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-black/80 border border-orange-500/30 shadow-[0_0_15px_rgba(255,87,34,0.2)] overflow-hidden backdrop-blur-sm">
-              {/* Internal Fire Animation - Subtle */}
-              <div className="absolute inset-0 bg-gradient-to-t from-orange-600/10 via-orange-500/5 to-transparent animate-pulse delay-75 mix-blend-screen opacity-50" />
-
-              <div className="relative z-10">
-                <Shield className="w-4 h-4 text-[#FFD700] fill-orange-500/20" strokeWidth={2.5} />
-                <div className="absolute inset-0 bg-orange-500 blur-[8px] opacity-60 animate-ping duration-[3000ms]" />
-              </div>
-              <span className="relative z-10 text-xs text-[#FFD700] font-medium tracking-wide">
-                현재{' '}
-                <span className="font-bold text-base mx-0.5 text-white shadow-orange-500/50 drop-shadow-sm">
-                  {members.length}
-                </span>
-                명의 소중한 인연을 수호하고 있습니다
-              </span>
-            </div>
-          </div>
-        </div>
+        {!isFormOpen && !editingMember && (
+          <Button
+            onClick={() => setIsFormOpen(true)}
+            size="sm"
+            className="bg-gold-500 hover:bg-gold-500/80 text-black text-xs gap-1.5 rounded-lg"
+          >
+            <Plus className="w-4 h-4" strokeWidth={2} />
+            추가
+          </Button>
+        )}
       </section>
 
-      {/* Member Cards */}
-      <section aria-label="가족 구성원 목록" className="min-h-[300px]">
+      {/* 가족 목록 */}
+      <section aria-label="가족 구성원 목록">
         {members.length > 0 ? (
-          <div className="px-3 space-y-4">
+          <div className="space-y-3">
             {members.map((member, idx) => (
               <MemberMissionCard
                 key={member.id}
@@ -238,39 +166,28 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
             ))}
           </div>
         ) : (
-          <div className="mx-6 py-12 text-center bg-surface/20 border border-dashed border-primary/20 rounded-2xl">
-            <div className="w-14 h-14 bg-surface rounded-full flex items-center justify-center mx-auto mb-4 text-primary/40 border border-white/5">
-              <UserPlus className="w-6 h-6" strokeWidth={1} />
+          <div className="py-16 text-center bg-surface/10 border border-dashed border-white/10 rounded-xl">
+            <div className="w-12 h-12 bg-surface/30 rounded-full flex items-center justify-center mx-auto mb-3">
+              <UserPlus className="w-5 h-5 text-ink-light/30" strokeWidth={1.5} />
             </div>
-            <h4 className="text-base font-serif font-light text-ink-light mb-1">아직 등록된 인연이 없네요.</h4>
-            <p className="text-sm text-ink-light/50 font-sans font-light">{BRAND_QUOTES.family.empty}</p>
+            <p className="text-sm text-ink-light/40 font-light">
+              아직 등록된 인연이 없습니다
+            </p>
+            <p className="text-xs text-ink-light/25 font-light mt-1">
+              위의 추가 버튼으로 가족을 등록해보세요
+            </p>
           </div>
         )}
       </section>
 
-      {/* Add Button Area */}
-      <div className="px-3">
-        {!isFormOpen && !editingMember && (
-          <Button onClick={() => setIsFormOpen(true)} variant="outline" className="w-full py-4 rounded-xl">
-            <Plus className="w-5 h-5 mr-2" strokeWidth={1} />
-            새로운 인연 등록하기
-          </Button>
-        )}
-      </div>
-
-      {/* Review Slide Section */}
-      <section className="px-3 mt-8 mb-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-        <FamilyReviewSlide />
-      </section>
-
-      {/* Registration Form (Only shows when active) */}
+      {/* 등록/수정 폼 모달 */}
       {(isFormOpen || editingMember) && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 pb-20 sm:pb-4">
-          <Card className="w-full max-w-sm rounded-2xl border border-primary/30 bg-[#151515] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col max-h-[65vh]">
+          <Card className="w-full max-w-sm rounded-2xl border border-gold-500/30 bg-[#151515] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col max-h-[65vh]">
             <CardHeader className="py-4 border-b border-white/5 bg-surface/50 shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-lg font-serif font-light text-ink-light">
-                  {editingMember ? '인연 정보 수정' : '새 인연 맺기'}
+                  {editingMember ? '인연 정보 수정' : '새 인연 등록'}
                 </CardTitle>
                 <Button
                   variant="ghost"
@@ -296,11 +213,11 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
             >
               <CardContent className="flex-1 overflow-y-auto pt-6 px-6 pb-6 space-y-5">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-primary/80">이름</Label>
+                  <Label className="text-xs text-gold-500/80">이름</Label>
                   <Input name="name" defaultValue={editingMember?.name} required className="bg-black/20" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-primary/80">관계</Label>
+                  <Label className="text-xs text-gold-500/80">관계</Label>
                   <Select name="relationship" defaultValue={editingMember?.relationship || '자녀'}>
                     <SelectTrigger className="bg-black/30 border-white/10">
                       <SelectValue placeholder="관계 선택" />
@@ -322,7 +239,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-primary/80">직업 (선택)</Label>
+                    <Label className="text-xs text-gold-500/80">직업 (선택)</Label>
                     <Input
                       name="job"
                       defaultValue={editingMember?.job}
@@ -331,7 +248,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-primary/80">취미 (선택)</Label>
+                    <Label className="text-xs text-gold-500/80">취미 (선택)</Label>
                     <Input
                       name="hobby"
                       defaultValue={editingMember?.hobby}
@@ -343,7 +260,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-primary/80">생년월일</Label>
+                    <Label className="text-xs text-gold-500/80">생년월일</Label>
                     <Input
                       name="birth_date"
                       type="date"
@@ -353,7 +270,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-primary/80">생시</Label>
+                    <Label className="text-xs text-gold-500/80">생시</Label>
                     <ZodiacTimeSelect
                       name="birth_time"
                       defaultValue={editingMember?.birth_time}
@@ -384,7 +301,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
                 </div>
 
                 <div className="space-y-3 pt-2 border-t border-white/5">
-                  <Label className="text-xs text-primary/80 flex items-center justify-between">
+                  <Label className="text-xs text-gold-500/80 flex items-center justify-between">
                     <span>수호 도깨비 (오행)</span>
                     <span className="text-[10px] text-ink-light/40 font-normal">성향에 맞는 기운을 선택하세요</span>
                   </Label>
@@ -396,7 +313,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="w-full h-10 text-sm font-medium bg-gold-500 hover:bg-[#B8860B] text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                  className="w-full h-10 text-sm font-medium bg-gold-500 hover:bg-gold-500/80 text-black"
                 >
                   {isPending ? '저장 중...' : '저장 완료'}
                 </Button>
