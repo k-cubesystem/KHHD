@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { User, ArrowRight, Sparkles } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
@@ -20,6 +21,8 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
     router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
   }
 
+  const selectedTarget = targets.find((t) => t.id === selectedId)
+
   return (
     <div className="max-w-3xl mx-auto py-6 px-4 pb-20">
       {/* Header */}
@@ -34,7 +37,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         </p>
       </section>
 
-      {/* 분석 대상 선택 (라디오 버튼 스타일) */}
+      {/* 분석 대상 선택 (리스트박스) */}
       <section className="mb-6">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-1 h-5 bg-gold-500/40 rounded-full" />
@@ -42,50 +45,34 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         </div>
 
         {targets.length > 0 ? (
-          <div className="space-y-2">
-            {targets.map((target) => {
-              const isSelected = selectedId === target.id
-              return (
-                <button
-                  key={target.id}
-                  onClick={() => setSelectedId(target.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200 text-left ${
-                    isSelected
-                      ? 'border-gold-500/50 bg-gold-500/10'
-                      : 'border-white/10 bg-surface/20 hover:border-white/20'
-                  }`}
-                >
-                  {/* 라디오 인디케이터 */}
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      isSelected ? 'border-gold-500' : 'border-white/20'
-                    }`}
-                  >
-                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-gold-500" />}
+          <Select value={selectedId || undefined} onValueChange={(val) => setSelectedId(val)}>
+            <SelectTrigger className="w-full h-12 bg-surface/20 border-white/10 rounded-xl text-ink-light">
+              <SelectValue placeholder="분석할 대상을 선택하세요">
+                {selectedTarget && (
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-xs font-serif font-bold text-gold-500">
+                      {selectedTarget.name.slice(0, 1)}
+                    </div>
+                    <span className="text-sm">{selectedTarget.name}</span>
+                    <span className="text-[11px] text-ink-light/40">({selectedTarget.relation_type})</span>
                   </div>
-
-                  {/* 이니셜 */}
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-serif font-bold shrink-0 transition-colors ${
-                      isSelected
-                        ? 'bg-gold-500/20 text-gold-500 border border-gold-500/30'
-                        : 'bg-white/5 text-ink-light/50 border border-white/10'
-                    }`}
-                  >
-                    {target.name.slice(0, 1)}
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {targets.map((target) => (
+                <SelectItem key={target.id} value={target.id}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-serif text-ink-light/60">
+                      {target.name.slice(0, 1)}
+                    </div>
+                    <span>{target.name}</span>
+                    <span className="text-ink-light/40 text-xs">({target.relation_type})</span>
                   </div>
-
-                  {/* 이름 + 관계 */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium transition-colors ${isSelected ? 'text-gold-500' : 'text-ink-light'}`}>
-                      {target.name}
-                    </p>
-                    <p className="text-[11px] text-ink-light/30">{target.relation_type}</p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : (
           <Card
             onClick={() => router.push('/protected/family')}
@@ -113,7 +100,6 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
               : 'border-white/5 bg-surface/10 opacity-40 cursor-not-allowed'
           }`}
         >
-          {/* 배경 글로우 */}
           {selectedId && (
             <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/10 rounded-full blur-[60px] pointer-events-none" />
           )}

@@ -10,7 +10,7 @@ import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
-import { CLAUDE_OPUS } from '@/lib/config/ai-models'
+import { getModelConfig } from '@/lib/config/ai-models'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
@@ -322,9 +322,9 @@ async function analyzeCheonjiinWithAI(
     target_relation: target.relation_type,
     category: 'SAJU',
     result_json: data,
-    summary: (data.summary as string) || '천지인 통합 분석 결과',
+    summary: (data.summary as string) || '청담해화당 통합분석 결과',
     score: 0,
-    model_used: CLAUDE_OPUS,
+    model_used: getModelConfig('cheonjiin').model,
     talisman_cost: 3,
   })
 
