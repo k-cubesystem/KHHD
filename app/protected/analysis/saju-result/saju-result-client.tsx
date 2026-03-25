@@ -36,14 +36,30 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 로딩 프로그레스
+  const [apiDone, setApiDone] = useState(false)
+
+  // 로딩 프로그레스 — 느리게 올라가다가 API 완료되면 100%로 점프
   useEffect(() => {
     if (!isLoading) return
     const interval = setInterval(() => {
-      setProgress((p) => (p < 90 ? p + Math.random() * 8 : p))
-    }, 500)
+      setProgress((p) => {
+        if (apiDone) return p // API 완료되면 별도 처리
+        // 0~50%: 느리게 (1~2씩), 50~80%: 더 느리게 (0.5~1씩)
+        if (p < 50) return p + 0.8 + Math.random() * 1.2
+        if (p < 80) return p + 0.3 + Math.random() * 0.7
+        return p // 80%에서 멈춤 — API 완료 대기
+      })
+    }, 1000)
     return () => clearInterval(interval)
-  }, [isLoading])
+  }, [isLoading, apiDone])
+
+  // API 완료 시 80% 이상이면 바로 100%로
+  useEffect(() => {
+    if (apiDone && isLoading) {
+      setProgress(100)
+      setTimeout(() => setIsLoading(false), 800)
+    }
+  }, [apiDone, isLoading])
 
   async function runAnalysis() {
     const canProceed = await checkQuota()
@@ -53,14 +69,14 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     }
     setIsLoading(true)
     setProgress(0)
+    setApiDone(false)
     setError(null)
 
     try {
       const result = await analyzeCheonjiinAction(target.id, null, false, true)
       if (result.success && result.data) {
         setData(result.data as AnalysisData)
-        setProgress(100)
-        setTimeout(() => setIsLoading(false), 500)
+        setApiDone(true) // progress가 80% 미만이어도 완료 처리
       } else {
         setError(result.error || '분석 중 오류가 발생했습니다.')
         setIsLoading(false)
@@ -88,8 +104,8 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
             </div>
           </div>
           <div>
-            <p className="text-sm text-ink-light font-serif">{target.name}님의 사주를 풀어보고 있습니다</p>
-            <p className="text-xs text-ink-light/40 mt-1">약 10~30초 소요</p>
+            <p className="text-sm text-ink-light font-serif">{target.name}님의 사주를 풀어보고 있어요</p>
+            <p className="text-xs text-ink-light/40 mt-1">약 1~3분 소요</p>
           </div>
         </div>
       </div>
