@@ -1,6 +1,5 @@
 /**
- * 천지인(天地人) 분석 공유 타입
- * CheonSection, JiSection, InSection, CheonjiinSummary, cheonjiin-result-client 에서 공통 사용
+ * 청담해화당 통합분석 공유 타입
  */
 
 export interface FengshuiData {
@@ -34,12 +33,41 @@ export interface LifeTimelineData {
   nextDecade?: string
 }
 
+export interface PastRetrogradeEvent {
+  period?: string
+  description?: string
+  basis?: string
+}
+
+export interface PastRetrograde {
+  events?: PastRetrogradeEvent[]
+  accuracyHook?: string
+}
+
+export interface CurrentSituation {
+  description?: string
+  basis?: string
+  advice?: string
+}
+
+export interface CrossAnalysis {
+  sajuAndFace?: string | null
+  sajuAndPalm?: string | null
+  sajuAndFengshui?: string | null
+  convergenceInsight?: string | null
+}
+
 export interface CheonjiinAnalysisResult {
   score?: number
   summary?: string
   cheonScore?: number
   jiScore?: number
   inScore?: number
+
+  pastRetrograde?: PastRetrograde | null
+  currentSituation?: CurrentSituation | null
+  crossAnalysis?: CrossAnalysis | null
+
   lucky?: {
     color?: string
     direction?: string

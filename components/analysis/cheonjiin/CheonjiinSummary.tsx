@@ -13,7 +13,7 @@ interface CheonjiinSummaryProps {
 export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
   if (!data) return null
 
-  const summary = data.summary || '천지인 통합 분석이 완료되었습니다.'
+  const summary = data.summary || '청담해화당 통합분석이 완료되었습니다.'
   const lucky = data.lucky ?? {}
 
   return (
@@ -37,7 +37,7 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
 
           <h1 className="text-2xl font-serif font-light text-ink-light leading-tight">
             <span className="block text-ink-light/80 text-lg mb-1">{target.name}님의</span>
-            <span className="font-bold text-primary text-3xl">천지인(天地人)</span> 조화
+            <span className="font-bold text-primary text-3xl">청담해화당</span> 통합분석
           </h1>
         </div>
 
