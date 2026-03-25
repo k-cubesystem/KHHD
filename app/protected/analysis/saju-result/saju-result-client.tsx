@@ -210,6 +210,104 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       {/* 天 사주 */}
       <DetailSection title={data.cheon?.title || '타고난 성격과 재능이에요'} data={data.cheon} color="blue" />
 
+      {/* 직업 상세 */}
+      {data.cheon?.career && typeof data.cheon.career === 'object' && (
+        <ResultSection title="나한테 맞는 직업이에요" color="blue" show>
+          {data.cheon.career.summary && (
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/10 mb-2">
+              <p className="text-sm text-blue-400 font-medium">{data.cheon.career.summary as string}</p>
+            </div>
+          )}
+          {data.cheon.career.personality_match && (
+            <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.career.personality_match as string}</p>
+          )}
+          {(data.cheon.career.best_jobs as string[])?.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-ink-light/40">잘 맞는 직업</p>
+              {(data.cheon.career.best_jobs as string[]).map((job: string, i: number) => (
+                <p key={i} className="text-sm text-ink-light/70 flex gap-2">
+                  <span className="text-emerald-400/60 shrink-0">+</span> {job}
+                </p>
+              ))}
+            </div>
+          )}
+          {(data.cheon.career.worst_jobs as string[])?.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-ink-light/40">안 맞는 직업</p>
+              {(data.cheon.career.worst_jobs as string[]).map((job: string, i: number) => (
+                <p key={i} className="text-sm text-ink-light/70 flex gap-2">
+                  <span className="text-red-400/60 shrink-0">-</span> {job}
+                </p>
+              ))}
+            </div>
+          )}
+          {data.cheon.career.business_aptitude && (
+            <div className="space-y-1">
+              <p className="text-xs text-ink-light/40">사업 적성</p>
+              <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.career.business_aptitude as string}</p>
+            </div>
+          )}
+          {data.cheon.career.career_timing && (
+            <div className="space-y-1">
+              <p className="text-xs text-ink-light/40">이직·승진 타이밍</p>
+              <p className="text-sm text-ink-light/80">{data.cheon.career.career_timing as string}</p>
+            </div>
+          )}
+          {data.cheon.career.celebrity_comparison && (
+            <p className="text-sm text-blue-400/70 mt-3 pt-3 border-t border-blue-500/10 italic">
+              {data.cheon.career.celebrity_comparison as string}
+            </p>
+          )}
+        </ResultSection>
+      )}
+
+      {/* 나랑 맞는 사람 / 조심할 사람 */}
+      {data.cheon?.people && (
+        <ResultSection title="이런 사람을 만나면 좋아요" color="rose" show>
+          {data.cheon.people.good_match && (
+            <div className="space-y-2">
+              <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                <p className="text-xs text-emerald-400/60 mb-1">나랑 잘 맞는 사람</p>
+                <p className="text-sm text-ink-light/80 leading-relaxed">
+                  {(data.cheon.people.good_match as Record<string, unknown>).description as string}
+                </p>
+                {((data.cheon.people.good_match as Record<string, unknown>).examples as string[])?.map((ex: string, i: number) => (
+                  <p key={i} className="text-sm text-ink-light/60 flex gap-2 mt-1">
+                    <span className="text-emerald-400/60 shrink-0">+</span> {ex}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.cheon.people.bad_match && (
+            <div className="space-y-2">
+              <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+                <p className="text-xs text-red-400/60 mb-1">조심해야 하는 사람</p>
+                <p className="text-sm text-ink-light/80 leading-relaxed">
+                  {(data.cheon.people.bad_match as Record<string, unknown>).description as string}
+                </p>
+                {((data.cheon.people.bad_match as Record<string, unknown>).examples as string[])?.map((ex: string, i: number) => (
+                  <p key={i} className="text-sm text-ink-light/60 flex gap-2 mt-1">
+                    <span className="text-red-400/60 shrink-0">!</span> {ex}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.cheon.people.noble_person && (
+            <div className="space-y-1">
+              <p className="text-xs text-ink-light/40">나를 도와줄 귀인</p>
+              <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.people.noble_person as string}</p>
+            </div>
+          )}
+          {data.cheon.people.relationship_advice && (
+            <p className="text-sm text-rose-400/70 mt-3 pt-3 border-t border-rose-500/10">
+              {data.cheon.people.relationship_advice as string}
+            </p>
+          )}
+        </ResultSection>
+      )}
+
       {/* 투자 성향 */}
       {data.cheon?.investment && (
         <ResultSection title="나에게 맞는 투자 스타일이에요" color="emerald" show>
