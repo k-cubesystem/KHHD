@@ -45,7 +45,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         </div>
 
         {targets.length > 0 ? (
-          <Select value={selectedId || undefined} onValueChange={(val) => setSelectedId(val)}>
+          <Select value={selectedId ?? ''} onValueChange={(val) => setSelectedId(val)}>
             <SelectTrigger className="w-full h-12 bg-surface/20 border-white/10 rounded-xl text-ink-light">
               <SelectValue placeholder="분석할 대상을 선택하세요">
                 {selectedTarget && (
