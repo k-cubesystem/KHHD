@@ -1,5 +1,7 @@
 'use server'
 
+export const maxDuration = 60
+
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
