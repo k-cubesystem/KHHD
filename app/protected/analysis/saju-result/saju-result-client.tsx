@@ -176,7 +176,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       )}
 
       {/* 과거 역추산 */}
-      <ResultSection title="과거에 이런 일이 있으셨을 겁니다" color="amber" show={!!data.pastRetrograde?.events?.length}>
+      <ResultSection title="과거에 이런 일이 있으셨을 거예요" color="amber" show={!!data.pastRetrograde?.events?.length}>
         {(data.pastRetrograde?.events as Array<{ period?: string; description?: string; basis?: string }>)?.map(
           (event, i) => (
             <div key={i} className="space-y-1">
@@ -195,7 +195,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       </ResultSection>
 
       {/* 현재 공감 */}
-      <ResultSection title="지금 이런 상황이시죠" color="blue" show={!!data.currentSituation?.description}>
+      <ResultSection title="요즘 이런 상황이시죠?" color="blue" show={!!data.currentSituation?.description}>
         <p className="text-sm text-ink-light leading-relaxed">{data.currentSituation?.description as string}</p>
         {data.currentSituation?.basis && (
           <p className="text-[11px] text-ink-light/40 font-light mt-2">{data.currentSituation.basis as string}</p>
@@ -208,16 +208,16 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       </ResultSection>
 
       {/* 天 사주 */}
-      <DetailSection title={data.cheon?.title || '天 사주 분석'} data={data.cheon} color="blue" />
+      <DetailSection title={data.cheon?.title || '타고난 성격과 재능이에요'} data={data.cheon} color="blue" />
 
       {/* 地 풍수 */}
-      <DetailSection title={data.ji?.title || '地 대운/환경 분석'} data={data.ji} color="emerald" />
+      <DetailSection title={data.ji?.title || '지금 흐르는 운의 방향이에요'} data={data.ji} color="emerald" />
 
       {/* 人 관계 */}
-      <DetailSection title={data.in?.title || '人 관계/인연 분석'} data={data.in} color="rose" />
+      <DetailSection title={data.in?.title || '사람 관계와 인연이에요'} data={data.in} color="rose" />
 
       {/* 교차 분석 */}
-      <ResultSection title="청담해화당 교차 분석" color="gold" show={!!data.crossAnalysis?.convergenceInsight}>
+      <ResultSection title="여러 분석이 같은 결론을 가리키고 있어요" color="gold" show={!!data.crossAnalysis?.convergenceInsight}>
         {data.crossAnalysis?.sajuAndFace && (
           <p className="text-sm text-ink-light/80 leading-relaxed">{data.crossAnalysis.sajuAndFace as string}</p>
         )}
