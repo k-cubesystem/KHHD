@@ -18,7 +18,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
 
   const handleAnalysis = () => {
     if (!selectedId) return
-    router.push(`/protected/analysis/cheonjiin/result?targetId=${selectedId}&type=basic`)
+    router.push(`/protected/analysis/saju-result?targetId=${selectedId}`)
   }
 
   const selectedTarget = targets.find((t) => t.id === selectedId)
