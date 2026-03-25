@@ -489,10 +489,11 @@ function DetailSection({
   const content = data.content as string | undefined
   const strengths = data.strengths as string[] | undefined
   const weaknesses = data.weaknesses as string[] | undefined
-  const career = data.career as string | undefined
-  const wealth = data.wealth as string | undefined
-  const love = data.love as string | undefined
-  const health = data.health as string | undefined
+  // career/health가 객체일 수 있으므로 문자열만 추출
+  const career = typeof data.career === 'string' ? data.career : (data.career as Record<string, unknown>)?.summary as string | undefined
+  const wealth = typeof data.wealth === 'string' ? data.wealth : undefined
+  const love = typeof data.love === 'string' ? data.love : undefined
+  const health = typeof data.health === 'string' ? data.health : (data.health as Record<string, unknown>)?.overall as string | undefined
 
   const colorMap = {
     blue: { bg: 'bg-blue-500/5', border: 'border-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
