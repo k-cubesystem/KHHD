@@ -10,7 +10,7 @@ const bundleAnalyzer = withBundleAnalyzer({
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: '10mb', // 이미지 업로드를 위해 10MB로 증가
+      bodySizeLimit: '10mb',
     },
   },
 

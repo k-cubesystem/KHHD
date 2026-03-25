@@ -1,7 +1,5 @@
 ﻿'use server'
 
-export const maxDuration = 60
-
 import { createClient } from '@/lib/supabase/server'
 import { type FaceDestinyGoal, type InteriorTheme } from '@/lib/constants'
 import { deductTalisman } from '../payment/wallet'

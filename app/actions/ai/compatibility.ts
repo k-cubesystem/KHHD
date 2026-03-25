@@ -1,7 +1,5 @@
 'use server'
 
-export const maxDuration = 60
-
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { buildSajuContext } from '@/lib/saju-engine/context-builder'
