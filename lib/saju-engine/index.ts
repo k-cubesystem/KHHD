@@ -46,3 +46,17 @@ export type {
   DayMasterWeaknessResult,
   SipseongExcessResult,
 } from './warnings'
+export {
+  JIJANGGAN,
+  getJijanggan,
+  getJijangganGans,
+  getTouchuGans,
+  checkTonggeun,
+  analyzeAllJijanggan,
+  buildJijangganText,
+} from './jijanggan'
+export type { JijangganEntry, TouchuResult, JijangganAnalysis } from './jijanggan'
+export { calculateAdvancedStrength } from './strength-calculator'
+export type { AdvancedStrengthResult, StrengthGrade, DeukryeongScore, DeukjiScore, DeukseScore } from './strength-calculator'
+export { analyzeGyeokgukAdvanced, buildGyeokgukText } from './gyeokguk-advanced'
+export type { GyeokgukResult } from './gyeokguk-advanced'

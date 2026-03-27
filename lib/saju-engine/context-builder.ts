@@ -14,6 +14,11 @@ import { analyzeSibjiunseong } from './sibjiunseong'
 import { calculateExtendedSinsal } from './sinsal-extended'
 import { analyzeWarnings, type WarningsResult } from './warnings'
 import { evaluateAllRules } from './rule-base'
+import { analyzeAllJijanggan, buildJijangganText, checkTonggeun, type JijangganAnalysis } from './jijanggan'
+import { calculateAdvancedStrength, type AdvancedStrengthResult } from './strength-calculator'
+import { analyzeGyeokgukAdvanced, buildGyeokgukText, type GyeokgukResult } from './gyeokguk-advanced'
+import { analyzeYongsinAdvanced, buildAdvancedYongsinText, type YongsinResult } from './yongsin-advanced'
+import { ILJU_MULSANG } from './ilju-mulsang'
 
 export type AnalysisType =
   | 'SAJU_FULL' // 종합 사주 분석
@@ -57,6 +62,14 @@ export interface SajuContext {
     tripleYongsin: TripleYongsinResult | null
     daeun: ReturnType<typeof calculateDaeun>
     warnings: WarningsResult
+    /** 지장간 분석 결과 */
+    jijanggan: JijangganAnalysis | null
+    /** 신강/신약 정밀 점수제 결과 */
+    advancedStrength: AdvancedStrengthResult | null
+    /** 격국 정밀 판정 결과 */
+    advancedGyeokguk: GyeokgukResult | null
+    /** 5단계 용신 정밀 판정 결과 */
+    advancedYongsin: YongsinResult | null
   }
   mulsang: {
     dayMasterSymbol: string
@@ -64,6 +77,13 @@ export interface SajuContext {
     dayMasterPsychology: string
     dayMasterJobs: string[]
     landscape: string
+    /** 60갑자 일주 물상 (일주 단위 고유 특성) */
+    iljuSymbol: string
+    iljuPersonality: string
+    iljuStrengths: string[]
+    iljuWeaknesses: string[]
+    iljuCareer: string[]
+    iljuLovePattern: string
   }
   promptContext: string // AI에 주입할 최종 텍스트
 }
@@ -123,21 +143,51 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
     }
   }
 
+  // === 신규 엔진: 지장간 / 신강신약 정밀 / 격국 정밀 / 5단계 용신 ===
+  let jijanggan: JijangganAnalysis | null = null
+  let advancedStrength: AdvancedStrengthResult | null = null
+  let advancedGyeokguk: GyeokgukResult | null = null
+  let advancedYongsin: YongsinResult | null = null
+  try {
+    const jijangganPillars = [
+      { position: '년지', zhi: pillars.year.zhi },
+      { position: '월지', zhi: pillars.month.zhi },
+      { position: '일지', zhi: pillars.day.zhi },
+      { position: '시지', zhi: pillars.time.zhi },
+    ]
+    jijanggan = analyzeAllJijanggan(jijangganPillars)
+    advancedStrength = calculateAdvancedStrength(sajuData, sipseong)
+    advancedGyeokguk = analyzeGyeokgukAdvanced(sajuData, advancedStrength)
+    advancedYongsin = analyzeYongsinAdvanced(sajuData, sipseong)
+  } catch {
+    // 새 엔진 실패 시 기존 로직으로 fallback — 서비스 중단 방지
+  }
+
   // 대운
   const daeun = calculateDaeun(birthDate, birthTime, genderCode, isSolar)
 
   // 경고/단점 분석 (engine02.md) — 삼중 용신 결과 사용
   const warnings = analyzeWarnings(sajuData, yongsin, sipseong)
 
-  // 일간 물상론 데이터 + 사주 풍경화
+  // 일간 물상론 데이터 + 사주 풍경화 + 60갑자 일주 물상
   const mulsangInfo = GAN_MULSANG[dayMaster]
   const landscape = buildMulsangLandscape(pillars)
+  const iljuGanji = pillars.day.ganji // 일주 간지 (예: "甲子")
+  const iljuData = ILJU_MULSANG[iljuGanji]
   const mulsang = {
-    dayMasterSymbol: mulsangInfo?.symbol || dayMaster,
+    // 일주 물상이 있으면 천간 물상 대신 더 구체적인 일주 물상 사용
+    dayMasterSymbol: iljuData?.symbol || mulsangInfo?.symbol || dayMaster,
     dayMasterPoetic: mulsangInfo?.poeticDesc || '',
     dayMasterPsychology: mulsangInfo?.psychology || '',
     dayMasterJobs: mulsangInfo?.modernJobs || [],
     landscape,
+    // 60갑자 일주 물상 (일주 단위 고유 특성)
+    iljuSymbol: iljuData?.symbol || '',
+    iljuPersonality: iljuData?.personality || '',
+    iljuStrengths: iljuData?.strengths || [],
+    iljuWeaknesses: iljuData?.weaknesses || [],
+    iljuCareer: iljuData?.career || [],
+    iljuLovePattern: iljuData?.lovePattern || '',
   }
 
   // 사주첩경 룰베이스 평가
@@ -158,12 +208,20 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
     mulsang,
     warnings,
     ruleBaseResult,
+    jijanggan,
+    advancedStrength,
+    advancedGyeokguk,
+    advancedYongsin,
   })
 
   return {
     personInfo: person,
     sajuData,
-    analysis: { relations, sipseong, sibjiunseong, sinsal, gekguk, yongsin, tripleYongsin, daeun, warnings },
+    analysis: {
+      relations, sipseong, sibjiunseong, sinsal, gekguk,
+      yongsin, tripleYongsin, daeun, warnings,
+      jijanggan, advancedStrength, advancedGyeokguk, advancedYongsin,
+    },
     mulsang,
     promptContext,
   }
@@ -188,9 +246,19 @@ function buildPromptContextText(data: {
     dayMasterPsychology: string
     dayMasterJobs: string[]
     landscape: string
+    iljuSymbol: string
+    iljuPersonality: string
+    iljuStrengths: string[]
+    iljuWeaknesses: string[]
+    iljuCareer: string[]
+    iljuLovePattern: string
   }
   warnings: WarningsResult
   ruleBaseResult: ReturnType<typeof evaluateAllRules>
+  jijanggan: JijangganAnalysis | null
+  advancedStrength: AdvancedStrengthResult | null
+  advancedGyeokguk: GyeokgukResult | null
+  advancedYongsin: YongsinResult | null
 }): string {
   const {
     person,
@@ -206,6 +274,10 @@ function buildPromptContextText(data: {
     mulsang,
     warnings,
     ruleBaseResult,
+    jijanggan,
+    advancedStrength,
+    advancedGyeokguk,
+    advancedYongsin,
   } = data
   const { pillars, elementsDistribution, dayMaster } = sajuData
 
@@ -291,13 +363,21 @@ function buildPromptContextText(data: {
 
 ### 오행 분포
 ${elementStr}
-${sipseong.strengthAssessment} 사주 (신강/신약 스코어: ${sipseong.bodyStrengthScore}%)
+${advancedStrength ? `${advancedStrength.grade} 사주 (정밀 스코어: ${advancedStrength.totalScore}/100)` : `${sipseong.strengthAssessment} 사주 (신강/신약 스코어: ${sipseong.bodyStrengthScore}%)`}
 
 ### 일간 물상(物象) — NLG 핵심 데이터
 - 상징: ${mulsang.dayMasterSymbol}
 - 시적 묘사: ${mulsang.dayMasterPoetic}
 - 심리 발현: ${mulsang.dayMasterPsychology}
 - 적성 직업군: ${mulsang.dayMasterJobs.join(', ')}
+
+### 60갑자 일주 물상(日柱 物象) — ${pillars.day.ganji}
+${mulsang.iljuSymbol ? `- 일주 상징: ${mulsang.iljuSymbol}` : ''}
+${mulsang.iljuPersonality ? `- 핵심 성격: ${mulsang.iljuPersonality}` : ''}
+${mulsang.iljuStrengths.length > 0 ? `- 강점: ${mulsang.iljuStrengths.join(' / ')}` : ''}
+${mulsang.iljuWeaknesses.length > 0 ? `- 약점: ${mulsang.iljuWeaknesses.join(' / ')}` : ''}
+${mulsang.iljuCareer.length > 0 ? `- 일주 적성 직업: ${mulsang.iljuCareer.join(', ')}` : ''}
+${mulsang.iljuLovePattern ? `- 연애 스타일: ${mulsang.iljuLovePattern}` : ''}
 
 ### 사주 풍경화 (四柱 物象 全景)
 ${mulsang.landscape}
@@ -309,6 +389,10 @@ ${sipseong.summary}
 ### 십성 상세 해석 — 현대적 역량 매핑
 ${buildSipseongNarrative(sipseong)}
 
+${jijanggan ? buildJijangganText(jijanggan) : ''}
+
+${advancedStrength ? advancedStrength.summary : ''}
+
 ### 관계 역학 (합충형파해)
 ${relations.summary}
 지배 관계: ${relations.dominantRelation}
@@ -318,9 +402,9 @@ ${sibjiunseong.waveDescription}
 전체 에너지: ${sibjiunseong.overallEnergy} (평균 ${sibjiunseong.averageLevel}/12)
 
 ### 격국(格局) & 용신(用神)
-격국: ${gekguk.hanja} (${gekguk.strengthLabel}) — ${gekguk.description}
-${tripleYongsin ? buildTripleYongsinText(tripleYongsin) : yongsin ? `용신: ${yongsin.yongsinKorean}(${yongsin.yongsin}) — ${yongsin.yongsinReason}\n희신: ${yongsin.huisinKorean} | 기신: ${yongsin.gisinKorean}` : '용신: 분석 필요'}
-${yongsin ? `개운법: ${yongsin.recommendation}` : ''}
+${advancedGyeokguk ? buildGyeokgukText(advancedGyeokguk) : `격국: ${gekguk.hanja} (${gekguk.strengthLabel}) — ${gekguk.description}`}
+${advancedYongsin ? buildAdvancedYongsinText(advancedYongsin) : tripleYongsin ? buildTripleYongsinText(tripleYongsin) : yongsin ? `용신: ${yongsin.yongsinKorean}(${yongsin.yongsin}) — ${yongsin.yongsinReason}\n희신: ${yongsin.huisinKorean} | 기신: ${yongsin.gisinKorean}` : '용신: 분석 필요'}
+${!advancedYongsin && yongsin ? `개운법: ${yongsin.recommendation}` : ''}
 
 ### 신살(神殺) — 현대 스킬트리
 ${sinsalStr}
