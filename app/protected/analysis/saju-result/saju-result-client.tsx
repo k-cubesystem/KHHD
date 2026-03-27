@@ -90,28 +90,9 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     }
   }
 
-  // --- 로딩 ---
+  // --- 콘텐츠형 로딩 ---
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center space-y-6 max-w-xs">
-          <div className="relative w-20 h-20 mx-auto">
-            <div className="absolute inset-0 border-2 border-gold-500/20 rounded-full" />
-            <div
-              className="absolute inset-0 border-2 border-gold-500 rounded-full border-t-transparent animate-spin"
-              style={{ animationDuration: '1.5s' }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-serif text-gold-500">{Math.round(progress)}%</span>
-            </div>
-          </div>
-          <div>
-            <p className="text-sm text-ink-light font-serif">{target.name}님의 사주를 풀어보고 있어요</p>
-            <p className="text-xs text-ink-light/40 mt-1">약 1~3분 소요</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <SajuLoadingContent name={target.name} progress={progress} />
   }
 
   // --- 에러 ---
@@ -722,5 +703,184 @@ function SajuShareSection({
         )}
       </div>
     </section>
+  )
+}
+
+// --- 콘텐츠형 로딩 화면 ---
+
+const ANALYSIS_STEPS = [
+  { label: '사주 원국 계산', threshold: 10 },
+  { label: '격국·용신 판정', threshold: 25 },
+  { label: '60갑자 일주 물상 분석', threshold: 35 },
+  { label: '대운·세운 흐름 분석', threshold: 50 },
+  { label: '과거 사건 역추산', threshold: 65 },
+  { label: 'AI 심층 분석 중...', threshold: 80 },
+  { label: '결과 정리 중...', threshold: 95 },
+]
+
+const SAJU_TIPS = [
+  {
+    emoji: '🔮',
+    title: '사주팔자란?',
+    content: '태어난 연·월·일·시의 네 기둥(四柱)과 여덟 글자(八字)로 구성돼요. 이 8글자가 평생의 운명 지도를 담고 있어요.',
+  },
+  {
+    emoji: '🌳',
+    title: '일간이 뭐예요?',
+    content: '사주의 일간은 "나 자신"을 뜻해요. 예를 들어 갑목(甲木)이면 큰 나무처럼 곧고 정의로운 성격이에요.',
+  },
+  {
+    emoji: '⚖️',
+    title: '용신은 뭐예요?',
+    content: '사주에서 부족한 기운을 채워주는 오행이에요. 용신을 알면 나에게 도움이 되는 색상, 방향, 직업을 알 수 있어요.',
+  },
+  {
+    emoji: '🔄',
+    title: '대운이란?',
+    content: '10년마다 바뀌는 큰 운의 흐름이에요. 같은 사주라도 대운이 다르면 인생이 완전히 달라질 수 있어요.',
+  },
+  {
+    emoji: '💰',
+    title: '정재 vs 편재',
+    content: '정재는 월급처럼 안정적인 수입, 편재는 투자·부업 같은 돌아다니는 돈이에요. 둘 다 있으면 금상첨화!',
+  },
+  {
+    emoji: '💕',
+    title: '도화살이 있으면?',
+    content: '이성에게 매력적인 기운이에요. 연예인이나 인플루언서에게 많아요. SNS하면 인기 폭발할 수 있는 타입!',
+  },
+  {
+    emoji: '✈️',
+    title: '역마살이 있으면?',
+    content: '한 곳에 오래 못 있는 스타일이에요. 해외 관련 일이나 출장 많은 직업이 잘 맞아요. 여행 좋아하시죠?',
+  },
+  {
+    emoji: '🏔️',
+    title: '격국이 뭐예요?',
+    content: '사주의 그릇 크기예요. 정관격이면 조직형 리더, 식신격이면 창작형 프리랜서에 잘 맞아요.',
+  },
+  {
+    emoji: '🎯',
+    title: '신강 vs 신약',
+    content: '일간의 힘이 강하면 신강, 약하면 신약이에요. 신강하면 독립적이고 리더십이 강하고, 신약하면 협력형이에요.',
+  },
+  {
+    emoji: '🌊',
+    title: '오행의 상생',
+    content: '목→화→토→금→수 순서로 서로 도와요. 내 사주에 부족한 오행을 채워주면 운이 좋아져요.',
+  },
+  {
+    emoji: '📅',
+    title: '왜 태어난 시간이 중요해요?',
+    content: '같은 날 태어나도 시간이 다르면 사주가 달라져요. 시주(時柱)는 말년운과 자녀운을 결정해요.',
+  },
+  {
+    emoji: '🎨',
+    title: '행운의 색상',
+    content: '용신 오행에 따라 나에게 좋은 색이 달라요. 목=초록, 화=빨강, 토=노랑, 금=흰색, 수=검정이에요.',
+  },
+]
+
+function SajuLoadingContent({ name, progress }: { name: string; progress: number }) {
+  const [tipIndex, setTipIndex] = useState(0)
+  const [fadeIn, setFadeIn] = useState(true)
+
+  // 팁 자동 전환 (8초마다)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFadeIn(false)
+      setTimeout(() => {
+        setTipIndex((prev) => (prev + 1) % SAJU_TIPS.length)
+        setFadeIn(true)
+      }, 300)
+    }, 8000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const currentStep = ANALYSIS_STEPS.findIndex((s) => progress < s.threshold)
+  const tip = SAJU_TIPS[tipIndex]
+
+  return (
+    <div className="min-h-screen bg-background px-4 py-8">
+      <div className="max-w-sm mx-auto space-y-8">
+        {/* 상단: 이름 + 프로그레스 */}
+        <div className="text-center space-y-4 pt-8">
+          <p className="text-sm text-gold-500 font-serif">{name}님의 사주를 풀어보고 있어요</p>
+
+          {/* 프로그레스 바 */}
+          <div className="relative">
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-gold-500/80 to-gold-500 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${Math.min(progress, 100)}%` }}
+              />
+            </div>
+            <p className="text-right text-xs text-gold-500/60 mt-1">{Math.round(progress)}%</p>
+          </div>
+
+          <p className="text-xs text-ink-light/30">약 1~3분 소요</p>
+        </div>
+
+        {/* 분석 단계 체크리스트 */}
+        <div className="space-y-2">
+          {ANALYSIS_STEPS.map((step, i) => {
+            const isDone = i < currentStep
+            const isCurrent = i === currentStep
+            return (
+              <div key={step.label} className="flex items-center gap-3 px-1">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 transition-all duration-500 ${
+                  isDone
+                    ? 'bg-gold-500/20 text-gold-500'
+                    : isCurrent
+                      ? 'bg-gold-500/10 text-gold-500 border border-gold-500/30'
+                      : 'bg-white/5 text-ink-light/20'
+                }`}>
+                  {isDone ? '✓' : isCurrent ? (
+                    <div className="w-2 h-2 bg-gold-500 rounded-full animate-pulse" />
+                  ) : (
+                    <span className="text-[9px]">{i + 1}</span>
+                  )}
+                </div>
+                <p className={`text-sm transition-colors duration-500 ${
+                  isDone
+                    ? 'text-gold-500/60'
+                    : isCurrent
+                      ? 'text-ink-light font-medium'
+                      : 'text-ink-light/20'
+                }`}>
+                  {step.label}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* 사주 상식 카드 */}
+        <div className={`p-5 rounded-xl bg-surface/30 border border-white/5 transition-opacity duration-300 ${fadeIn ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl shrink-0">{tip.emoji}</span>
+            <div>
+              <p className="text-xs text-gold-500/60 mb-1">알고 계셨나요?</p>
+              <p className="text-sm text-ink-light font-medium mb-2">{tip.title}</p>
+              <p className="text-sm text-ink-light/60 leading-relaxed">{tip.content}</p>
+            </div>
+          </div>
+          {/* 팁 인디케이터 */}
+          <div className="flex justify-center gap-1 mt-4">
+            {SAJU_TIPS.map((_, i) => (
+              <div
+                key={i}
+                className={`w-1 h-1 rounded-full transition-colors ${i === tipIndex ? 'bg-gold-500/60' : 'bg-white/10'}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* 하단 안내 */}
+        <p className="text-center text-[11px] text-ink-light/20">
+          청담해화당 AI가 30년 경력의 명리학 비법으로 분석하고 있어요
+        </p>
+      </div>
+    </div>
   )
 }
