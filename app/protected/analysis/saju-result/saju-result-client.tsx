@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
+import { createSajuShareTokenByTarget } from '@/app/actions/ai/share-saju'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { DestinyTarget } from '@/app/actions/user/destiny'
-import { RefreshCw, AlertTriangle, Settings, Sparkles, ChevronDown } from 'lucide-react'
+import { RefreshCw, AlertTriangle, Settings, Sparkles, ChevronDown, Share2, Link2, Check, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { GOLD_500 } from '@/lib/config/design-tokens'
+import { logger } from '@/lib/utils/logger'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnalysisData = Record<string, any>
@@ -376,6 +378,9 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
           {data.crossAnalysis?.convergenceInsight as string}
         </p>
       </ResultSection>
+
+      {/* 카카오톡/SNS 공유 */}
+      <SajuShareSection targetId={target.id} targetName={target.name} summary={data.summary as string | undefined} />
     </div>
   )
 }
@@ -524,5 +529,197 @@ function MiniCard({ label, content }: { label: string; content: string }) {
       <p className="text-[10px] text-gold-500/60 mb-1">{label}</p>
       <p className="text-[12px] text-ink-light/70 leading-relaxed">{expanded ? content : preview}</p>
     </div>
+  )
+}
+
+// --- 카카오톡/SNS 공유 섹션 ---
+
+function SajuShareSection({
+  targetId,
+  targetName,
+  summary,
+}: {
+  targetId: string
+  targetName: string
+  summary?: string
+}) {
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const generateShareUrl = useCallback(async (): Promise<string | null> => {
+    // 이미 생성된 URL이 있으면 재사용
+    if (shareUrl) return shareUrl
+
+    setIsSharing(true)
+    try {
+      const result = await createSajuShareTokenByTarget(targetId)
+      if (result.success && result.shareUrl) {
+        setShareUrl(result.shareUrl)
+        return result.shareUrl
+      }
+      toast.error(result.error || '공유 링크 생성에 실패했습니다.')
+      return null
+    } catch (error) {
+      logger.error('[SajuShare] Error generating share URL:', error)
+      toast.error('공유 링크 생성 중 오류가 발생했습니다.')
+      return null
+    } finally {
+      setIsSharing(false)
+    }
+  }, [targetId, shareUrl])
+
+  // 카카오톡 공유 (Web Share API 우선, fallback: URL 복사)
+  async function handleKakaoShare() {
+    const url = await generateShareUrl()
+    if (!url) return
+
+    const shareTitle = `${targetName}님의 사주풀이 - 청담해화당`
+    const shareText = summary
+      ? `${summary.slice(0, 80)}... 나도 내 사주를 무료로 확인해보세요!`
+      : `${targetName}님의 사주풀이 결과를 확인해보세요. 나도 무료로 내 사주를 볼 수 있어요!`
+
+    // 카카오톡 URL scheme (모바일에서 카카오톡 앱으로 직접 공유)
+    const kakaoShareUrl = `https://story.kakao.com/share?url=${encodeURIComponent(url)}`
+
+    // 모바일이면 Web Share API 시도 (카카오톡 포함 네이티브 공유)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url,
+        })
+        toast.success('공유가 완료되었어요!')
+        return
+      } catch (err) {
+        // 사용자가 공유 취소한 경우 무시
+        if (err instanceof Error && err.name === 'AbortError') return
+        logger.error('[SajuShare] Web Share API error:', err)
+      }
+    }
+
+    // 데스크톱 fallback: 카카오스토리 공유 페이지 열기
+    window.open(kakaoShareUrl, '_blank', 'width=600,height=500,noopener,noreferrer')
+  }
+
+  // 링크 복사
+  async function handleCopyLink() {
+    const url = await generateShareUrl()
+    if (!url) return
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      toast.success('공유 링크가 복사되었어요!')
+      setTimeout(() => setCopied(false), 2500)
+    } catch (error) {
+      logger.error('[SajuShare] Clipboard error:', error)
+      // fallback: 직접 선택 방식
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopied(true)
+      toast.success('공유 링크가 복사되었어요!')
+      setTimeout(() => setCopied(false), 2500)
+    }
+  }
+
+  // 트위터 공유
+  async function handleTwitterShare() {
+    const url = await generateShareUrl()
+    if (!url) return
+
+    const text = `${targetName}님의 사주풀이 결과 - 청담해화당`
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+    window.open(twitterUrl, '_blank', 'width=600,height=400,noopener,noreferrer')
+  }
+
+  return (
+    <section className="mx-4 mb-4 mt-6 p-5 rounded-xl border border-gold-500/20 bg-gradient-to-b from-gold-500/5 to-transparent">
+      <div className="text-center space-y-4">
+        <div className="space-y-1">
+          <h3 className="text-sm font-serif font-medium text-gold-500 flex items-center justify-center gap-2">
+            <Share2 className="w-4 h-4" />
+            사주풀이 결과 공유하기
+          </h3>
+          <p className="text-xs text-ink-light/40">친구에게 내 사주풀이 결과를 공유해보세요</p>
+        </div>
+
+        <div className="flex gap-2 justify-center">
+          {/* 카카오톡 공유 */}
+          <Button
+            onClick={handleKakaoShare}
+            disabled={isSharing}
+            className="flex-1 max-w-[140px] gap-2 bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 border-none font-medium text-sm py-2.5"
+          >
+            {isSharing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3C6.48 3 2 6.58 2 10.9c0 2.78 1.86 5.22 4.65 6.6-.15.56-.96 3.56-.99 3.78 0 0-.02.17.09.24.11.06.24.01.24.01.32-.04 3.68-2.4 4.26-2.81.57.08 1.15.13 1.75.13 5.52 0 10-3.58 10-7.95C22 6.58 17.52 3 12 3z" />
+              </svg>
+            )}
+            카카오톡
+          </Button>
+
+          {/* 링크 복사 */}
+          <Button
+            onClick={handleCopyLink}
+            disabled={isSharing}
+            variant="outline"
+            className="flex-1 max-w-[140px] gap-2 border-gold-500/20 text-ink-light/70 hover:text-gold-500 hover:border-gold-500/40 text-sm py-2.5"
+          >
+            {isSharing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : copied ? (
+              <Check className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Link2 className="w-4 h-4" />
+            )}
+            {copied ? '복사됨' : '링크 복사'}
+          </Button>
+
+          {/* 트위터 */}
+          <Button
+            onClick={handleTwitterShare}
+            disabled={isSharing}
+            variant="outline"
+            className="gap-2 border-gold-500/20 text-ink-light/70 hover:text-[#1DA1F2] hover:border-[#1DA1F2]/40 text-sm py-2.5 px-3"
+          >
+            {isSharing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            )}
+          </Button>
+        </div>
+
+        {/* 생성된 공유 URL 표시 */}
+        {shareUrl && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-black/20 border border-white/5">
+            <input
+              type="text"
+              value={shareUrl}
+              readOnly
+              className="flex-1 bg-transparent text-xs text-ink-light/50 outline-none truncate"
+            />
+            <button
+              onClick={handleCopyLink}
+              className="text-gold-500/60 hover:text-gold-500 transition-colors shrink-0"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
   )
 }
