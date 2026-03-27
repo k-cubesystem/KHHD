@@ -13,6 +13,8 @@ export interface AIGenerateOptions {
   providerOverride?: AIProvider
   modelOverride?: string
   images?: ImagePart[]
+  /** JSON 응답 강제 모드 (Gemini responseMimeType 활용) */
+  jsonMode?: boolean
 }
 
 export interface AIGenerateResult {
@@ -40,11 +42,19 @@ export async function generateAIContent(options: AIGenerateOptions): Promise<AIG
     return { ...result, provider: 'claude', model }
   }
 
-  // Gemini
+  // Gemini — 고도화 설정
   const genAI = new GoogleGenerativeAI(geminiApiKey)
   const genModel = genAI.getGenerativeModel({
     model,
     systemInstruction: options.systemPrompt || undefined,
+    generationConfig: {
+      maxOutputTokens: options.maxTokens || 8192,
+      temperature: options.temperature ?? 0.8,
+      topP: 0.95,
+      topK: 40,
+      // JSON 모드: 스키마 준수율 대폭 향상
+      ...(options.jsonMode ? { responseMimeType: 'application/json' } : {}),
+    },
   })
 
   const result = await genModel.generateContent(options.userPrompt)
