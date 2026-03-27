@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: ShareSajuPageProps): Promise<
       ? record.summary.slice(0, 120)
       : 'AI가 사주팔자를 정밀하게 풀어드린 결과입니다. 나도 무료로 내 사주를 확인해보세요.'
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com').trim().replace(/\/+$/, '')
     const ogParams = new URLSearchParams({
       title: personTitle,
       desc: summary,

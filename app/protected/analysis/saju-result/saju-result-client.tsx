@@ -555,8 +555,9 @@ function SajuShareSection({
     try {
       const result = await createSajuShareTokenByTarget(targetId)
       if (result.success && result.shareUrl) {
-        setShareUrl(result.shareUrl)
-        return result.shareUrl
+        const cleanUrl = result.shareUrl.trim()
+        setShareUrl(cleanUrl)
+        return cleanUrl
       }
       toast.error(result.error || '공유 링크 생성에 실패했습니다.')
       return null
