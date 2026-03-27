@@ -340,7 +340,7 @@ async function analyzeCheonjiinWithAI(
     featureKey: 'cheonjiin',
     systemPrompt: CHEONJIIN_SYSTEM_PROMPT,
     userPrompt: promptText,
-    maxTokens: 8192,
+    maxTokens: 16384,
     temperature: 0.85,
     jsonMode: true,
     images: images.length > 0 ? images : undefined,
@@ -642,5 +642,9 @@ ${
 }
 \`\`\`
 
-위 JSON을 정확히 반환하세요. 마크다운 코드블록 없이 순수 JSON만 반환하세요.`
+## 중요: JSON 완성 규칙
+- 반드시 JSON을 끝까지 완성해요. 중간에 잘리면 안 돼요.
+- 각 content 필드는 200~400자로 핵심만 써요 (너무 길게 쓰지 마요)
+- strengths/weaknesses는 각각 3개까지만
+- 마크다운 코드블록 없이 순수 JSON만 반환해요`
 }
