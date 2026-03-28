@@ -630,21 +630,68 @@ ${
     "direction": "길한 방위",
     "number": 7,
     "keyword": "핵심 키워드",
-    "advice": "핵심 조언 한 문장 (구체적 행동 제안)"
+    "advice": "핵심 조언 한 문장"
+  },
+
+  "specialEnergy": {
+    "title": "이 사주만의 특별한 기운 한줄 (예: '불꽃 속에서 탄생한 다이아몬드')",
+    "description": "이 사람 사주에서 가장 독특한 점 (3~4문장, 60갑자+격국+용신+신살 종합)",
+    "rarity": "희소성 (예: '100명 중 5명 정도의 조합이에요')",
+    "hiddenTalent": "본인도 모르는 숨겨진 재능 (2문장)",
+    "destinyMission": "이 사주가 가진 인생 미션 (2문장)"
+  },
+
+  "sajuStructure": {
+    "geokgukName": "격국 이름",
+    "geokgukExplain": "이 격국이 뭔지 쉽게 (2~3문장)",
+    "yongsinElement": "용신 오행",
+    "yongsinExplain": "용신 실생활 활용법 (2~3문장)",
+    "elementBalance": {
+      "wood": { "count": 2, "status": "적정/부족/과다" },
+      "fire": { "count": 1, "status": "적정/부족/과다" },
+      "earth": { "count": 2, "status": "적정/부족/과다" },
+      "metal": { "count": 1, "status": "적정/부족/과다" },
+      "water": { "count": 2, "status": "적정/부족/과다" }
+    }
+  },
+
+  "yearlyMonthly": [
+    { "month": "1~2월", "keyword": "키워드", "content": "운세+조언 (2문장)", "rating": "상/중/하" },
+    { "month": "3~4월", "keyword": "키워드", "content": "운세+조언", "rating": "상/중/하" },
+    { "month": "5~6월", "keyword": "키워드", "content": "운세+조언", "rating": "상/중/하" },
+    { "month": "7~8월", "keyword": "키워드", "content": "운세+조언", "rating": "상/중/하" },
+    { "month": "9~10월", "keyword": "키워드", "content": "운세+조언", "rating": "상/중/하" },
+    { "month": "11~12월", "keyword": "키워드", "content": "운세+조언", "rating": "상/중/하" }
+  ],
+
+  "gaewoon": {
+    "luckyColor": { "color": "색상명", "reason": "이유 (1문장)", "items": "구체적 아이템" },
+    "luckyDirection": { "direction": "방위", "reason": "이유", "usage": "활용법" },
+    "luckyFood": { "foods": ["음식1", "음식2", "음식3"], "reason": "이유" },
+    "luckyNumber": { "numbers": [3, 8], "reason": "이유" },
+    "avoidItems": { "items": ["피할것1", "피할것2"], "reason": "이유" },
+    "dailyRoutine": "매일 실천하면 좋은 개운 루틴 (2~3문장)"
   },
 
   "crossAnalysis": {
-    "sajuAndFace": "사주 데이터와 관상 데이터가 교차 확인하는 포인트 (예: '사주에서 재물운이 강한데 관상에서도 코가 풍만합니다'). 관상 이미지가 없으면 null",
-    "sajuAndPalm": "사주와 손금이 교차 확인하는 포인트. 손금 이미지가 없으면 null",
-    "sajuAndFengshui": "사주 용신 방위와 풍수 분석이 교차하는 포인트. 주소 정보가 없으면 null",
-    "convergenceInsight": "모든 분석이 수렴하는 핵심 메시지 (천지인이 가리키는 하나의 방향, 2~3문장)"
+    "sajuAndFace": "관상 교차 확인 (이미지 없으면 null)",
+    "sajuAndPalm": "손금 교차 확인 (이미지 없으면 null)",
+    "sajuAndFengshui": "풍수 교차 확인 (주소 없으면 null)",
+    "convergenceInsight": "모든 분석이 수렴하는 핵심 (2문장)"
   }
 }
 \`\`\`
 
-## 중요: JSON 완성 규칙
+## 특별한 사주 기운 (specialEnergy) — 가장 중요한 차별화
+이 사람 사주에서 가장 독특한 조합을 찾아내요:
+- 60갑자 일주 물상 + 격국 + 용신 + 신살을 종합해요
+- "100명 중 N명" 같은 희소성을 표현해요
+- 숨겨진 재능과 인생 미션을 구체적으로 써요
+- 이 섹션이 "와, 나만 이런 게 있구나" 하는 감동을 만들어야 해요
+
+## JSON 완성 규칙
 - 반드시 JSON을 끝까지 완성해요. 중간에 잘리면 안 돼요.
-- 각 content 필드는 200~400자로 핵심만 써요 (너무 길게 쓰지 마요)
-- strengths/weaknesses는 각각 3개까지만
+- 각 content 필드는 100~200자로 핵심만 (너무 길게 X)
+- strengths/weaknesses 3개, yearlyMonthly 6개, gaewoon.foods 3개
 - 마크다운 코드블록 없이 순수 JSON만 반환해요`
 }

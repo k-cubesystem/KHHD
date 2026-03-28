@@ -174,6 +174,33 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         </section>
       )}
 
+      {/* ⭐ 특별한 사주 기운 */}
+      {data.specialEnergy?.title && (
+        <section className="mx-4 mb-6 p-5 rounded-2xl bg-gradient-to-br from-gold-500/15 via-gold-500/5 to-transparent border border-gold-500/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/20 rounded-full blur-[60px] pointer-events-none" />
+          <div className="relative z-10 space-y-3">
+            <p className="text-[10px] text-gold-500/60 tracking-wider">이 사주만의 특별한 기운</p>
+            <h3 className="text-lg font-serif font-bold text-gold-500">{data.specialEnergy.title as string}</h3>
+            <p className="text-sm text-ink-light/80 leading-relaxed">{data.specialEnergy.description as string}</p>
+            {data.specialEnergy.rarity && (
+              <span className="inline-block px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 text-[11px] text-gold-500">{data.specialEnergy.rarity as string}</span>
+            )}
+            {data.specialEnergy.hiddenTalent && (
+              <div className="pt-3 border-t border-gold-500/10">
+                <p className="text-[10px] text-gold-500/50 mb-1">숨겨진 재능</p>
+                <p className="text-sm text-ink-light/70 leading-relaxed">{data.specialEnergy.hiddenTalent as string}</p>
+              </div>
+            )}
+            {data.specialEnergy.destinyMission && (
+              <div className="pt-3 border-t border-gold-500/10">
+                <p className="text-[10px] text-gold-500/50 mb-1">인생 미션</p>
+                <p className="text-sm text-ink-light/70 leading-relaxed">{data.specialEnergy.destinyMission as string}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* 과거 역추산 */}
       <ResultSection title="과거에 이런 일이 있으셨을 거예요" color="amber" show={!!data.pastRetrograde?.events?.length}>
         {(data.pastRetrograde?.events as Array<{ period?: string; description?: string; basis?: string }>)?.map(
@@ -206,8 +233,74 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         )}
       </ResultSection>
 
-      {/* 타고난 성격 (content + strengths/weaknesses만) */}
+      {/* 타고난 성격 */}
       <DetailSection title={data.cheon?.title || '타고난 성격과 재능이에요'} data={data.cheon} color="blue" />
+
+      {/* 격국·용신 + 오행 밸런스 */}
+      {data.sajuStructure && (
+        <ResultSection title="내 사주의 구조예요" color="blue" show>
+          {data.sajuStructure.geokgukName && (
+            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/10 mb-2">
+              <p className="text-xs text-blue-400/60 mb-0.5">격국</p>
+              <p className="text-sm text-blue-400 font-medium">{data.sajuStructure.geokgukName as string}</p>
+            </div>
+          )}
+          {data.sajuStructure.geokgukExplain && (
+            <p className="text-sm text-ink-light/80 leading-relaxed">{data.sajuStructure.geokgukExplain as string}</p>
+          )}
+          {data.sajuStructure.yongsinElement && (
+            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/10 mt-2 mb-2">
+              <p className="text-xs text-emerald-400/60 mb-0.5">용신</p>
+              <p className="text-sm text-emerald-400 font-medium">{data.sajuStructure.yongsinElement as string}</p>
+            </div>
+          )}
+          {data.sajuStructure.yongsinExplain && (
+            <p className="text-sm text-ink-light/80 leading-relaxed">{data.sajuStructure.yongsinExplain as string}</p>
+          )}
+          {data.sajuStructure.elementBalance && (
+            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+              <p className="text-xs text-ink-light/40 mb-2">오행 밸런스</p>
+              {([
+                { key: 'wood', label: '목(木)', color: 'bg-emerald-500/60' },
+                { key: 'fire', label: '화(火)', color: 'bg-red-500/60' },
+                { key: 'earth', label: '토(土)', color: 'bg-yellow-500/60' },
+                { key: 'metal', label: '금(金)', color: 'bg-gray-300/60' },
+                { key: 'water', label: '수(水)', color: 'bg-blue-500/60' },
+              ] as const).map((el) => {
+                const bal = (data.sajuStructure.elementBalance as Record<string, { count?: number; status?: string }>)?.[el.key]
+                if (!bal) return null
+                return (
+                  <div key={el.key} className="flex items-center gap-2">
+                    <span className="w-12 text-[11px] text-ink-light/50">{el.label}</span>
+                    <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-full ${el.color} rounded-full transition-all`} style={{ width: `${Math.min((bal.count ?? 0) * 20, 100)}%` }} />
+                    </div>
+                    <span className={`text-[10px] w-10 text-right ${bal.status === '부족' ? 'text-red-400/60' : bal.status === '과다' ? 'text-amber-400/60' : 'text-ink-light/30'}`}>{bal.status}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </ResultSection>
+      )}
+
+      {/* 올해 월별 운세 */}
+      {(data.yearlyMonthly as Array<{ month?: string; keyword?: string; content?: string; rating?: string }>)?.length > 0 && (
+        <ResultSection title="올해 월별 운세예요" color="gold" show>
+          <div className="grid grid-cols-2 gap-2">
+            {(data.yearlyMonthly as Array<{ month?: string; keyword?: string; content?: string; rating?: string }>).map((m, i) => (
+              <div key={i} className="p-3 rounded-lg bg-surface/20 border border-white/5">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-medium text-ink-light">{m.month}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${m.rating === '상' ? 'bg-emerald-500/10 text-emerald-400' : m.rating === '하' ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-ink-light/40'}`}>{m.rating}</span>
+                </div>
+                <p className="text-[11px] text-gold-500/70 font-medium">{m.keyword}</p>
+                <p className="text-[11px] text-ink-light/50 mt-1 leading-relaxed">{m.content}</p>
+              </div>
+            ))}
+          </div>
+        </ResultSection>
+      )}
 
       {/* 신살 — 도화살, 역마살 등 */}
       {data.cheon?.sinsal && (
@@ -341,6 +434,86 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
             {data.cheon.health.dietAdvice && (<div className="p-3 rounded-lg bg-black/20 border border-white/5"><p className="text-[10px] text-gold-500/60 mb-1">음식 추천</p><p className="text-[12px] text-ink-light/70 leading-relaxed">{data.cheon.health.dietAdvice as string}</p></div>)}
           </div>
           {data.cheon.health.warningPeriod && (<p className="text-sm text-red-400/70 mt-2 pt-2 border-t border-red-500/10">{data.cheon.health.warningPeriod as string}</p>)}
+        </ResultSection>
+      )}
+
+      {/* 운의 흐름 */}
+      {/* 인생 타임라인 */}
+      {data.cheon?.lifeTimeline && (
+        <ResultSection title="인생 타임라인이에요" color="blue" show>
+          <div className="space-y-4">
+            {([
+              { label: '지난 10년', key: 'pastDecade', dotClass: 'border-white/20', textClass: 'text-ink-light/40' },
+              { label: '지금', key: 'currentDecade', dotClass: 'border-gold-500 bg-gold-500/30', textClass: 'text-gold-500' },
+              { label: '앞으로 10년', key: 'nextDecade', dotClass: 'border-blue-400', textClass: 'text-blue-400' },
+            ] as const).map((item, i) => {
+              const val = (data.cheon.lifeTimeline as Record<string, string>)?.[item.key]
+              if (!val) return null
+              return (
+                <div key={item.key} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3 h-3 rounded-full border-2 shrink-0 ${item.dotClass}`} />
+                    {i < 2 && <div className="w-px flex-1 bg-white/10 mt-1" />}
+                  </div>
+                  <div className="pb-2">
+                    <p className={`text-xs font-medium ${item.textClass}`}>{item.label}</p>
+                    <p className="text-sm text-ink-light/70 leading-relaxed mt-1">{val}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </ResultSection>
+      )}
+
+      {/* 개운법 상세 */}
+      {data.gaewoon && (
+        <ResultSection title="이렇게 하면 운이 좋아져요" color="gold" show>
+          <div className="grid grid-cols-2 gap-2">
+            {data.gaewoon.luckyColor && (
+              <div className="p-3 rounded-lg bg-surface/20 border border-white/5">
+                <p className="text-[10px] text-gold-500/50 mb-1">행운의 색상</p>
+                <p className="text-sm text-ink-light font-medium">{(data.gaewoon.luckyColor as Record<string, string>).color}</p>
+                <p className="text-[11px] text-ink-light/40 mt-0.5">{(data.gaewoon.luckyColor as Record<string, string>).reason}</p>
+                <p className="text-[10px] text-gold-500/40 mt-1">{(data.gaewoon.luckyColor as Record<string, string>).items}</p>
+              </div>
+            )}
+            {data.gaewoon.luckyDirection && (
+              <div className="p-3 rounded-lg bg-surface/20 border border-white/5">
+                <p className="text-[10px] text-gold-500/50 mb-1">행운의 방위</p>
+                <p className="text-sm text-ink-light font-medium">{(data.gaewoon.luckyDirection as Record<string, string>).direction}</p>
+                <p className="text-[11px] text-ink-light/40 mt-0.5">{(data.gaewoon.luckyDirection as Record<string, string>).reason}</p>
+                <p className="text-[10px] text-gold-500/40 mt-1">{(data.gaewoon.luckyDirection as Record<string, string>).usage}</p>
+              </div>
+            )}
+            {data.gaewoon.luckyFood && (
+              <div className="p-3 rounded-lg bg-surface/20 border border-white/5">
+                <p className="text-[10px] text-gold-500/50 mb-1">행운의 음식</p>
+                <p className="text-sm text-ink-light font-medium">{((data.gaewoon.luckyFood as Record<string, unknown>).foods as string[])?.join(', ')}</p>
+                <p className="text-[11px] text-ink-light/40 mt-0.5">{(data.gaewoon.luckyFood as Record<string, string>).reason}</p>
+              </div>
+            )}
+            {data.gaewoon.luckyNumber && (
+              <div className="p-3 rounded-lg bg-surface/20 border border-white/5">
+                <p className="text-[10px] text-gold-500/50 mb-1">행운의 숫자</p>
+                <p className="text-sm text-ink-light font-medium">{((data.gaewoon.luckyNumber as Record<string, unknown>).numbers as number[])?.join(', ')}</p>
+                <p className="text-[11px] text-ink-light/40 mt-0.5">{(data.gaewoon.luckyNumber as Record<string, string>).reason}</p>
+              </div>
+            )}
+          </div>
+          {data.gaewoon.avoidItems && (
+            <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 mt-2">
+              <p className="text-[10px] text-red-400/50 mb-1">피해야 할 것</p>
+              <p className="text-sm text-ink-light/70">{((data.gaewoon.avoidItems as Record<string, unknown>).items as string[])?.join(', ')}</p>
+              <p className="text-[11px] text-ink-light/40 mt-0.5">{(data.gaewoon.avoidItems as Record<string, string>).reason}</p>
+            </div>
+          )}
+          {data.gaewoon.dailyRoutine && (
+            <div className="p-3 rounded-lg bg-gold-500/5 border border-gold-500/10 mt-2">
+              <p className="text-[10px] text-gold-500/50 mb-1">매일 개운 루틴</p>
+              <p className="text-sm text-ink-light/80 leading-relaxed">{data.gaewoon.dailyRoutine as string}</p>
+            </div>
+          )}
         </ResultSection>
       )}
 
