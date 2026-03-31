@@ -20,10 +20,11 @@ import {
   ScanFace,
   Compass,
 } from 'lucide-react'
+import { DailyFortuneCard } from './daily-fortune-card'
 
 const MasterpieceSection = dynamic(
   () => import('./dashboard/MasterpieceSection').then((mod) => ({ default: mod.MasterpieceSection })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> },
+  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> }
 )
 
 const STUDIO_CARDS = [
@@ -132,7 +133,12 @@ const MENU_CARDS = [
   },
 ] as const
 
-export function AnalysisDashboard() {
+interface AnalysisDashboardProps {
+  userId?: string
+  userName?: string
+}
+
+export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps = {}) {
   const router = useRouter()
 
   return (
@@ -142,6 +148,9 @@ export function AnalysisDashboard() {
       animate="animate"
       className="max-w-screen-sm mx-auto pb-40 px-2 space-y-6"
     >
+      {/* 0. Daily Fortune Card — 매일 돌아올 이유 */}
+      {userId && userName && <DailyFortuneCard userId={userId} userName={userName} />}
+
       {/* 1. Seasonal Event Banner */}
       <motion.div variants={fadeInUp}>
         <SeasonalEventBanner />

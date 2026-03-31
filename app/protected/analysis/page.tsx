@@ -16,5 +16,7 @@ export default async function AnalysisHubPage() {
 
   if (!user) redirect('/auth/login')
 
-  return <AnalysisHubClient />
+  const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+
+  return <AnalysisHubClient userId={user.id} userName={profile?.full_name || '회원'} />
 }

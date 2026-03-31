@@ -5,7 +5,12 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 
-export function AnalysisHubClient() {
+interface AnalysisHubClientProps {
+  userId?: string
+  userName?: string
+}
+
+export function AnalysisHubClient({ userId, userName }: AnalysisHubClientProps = {}) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -35,7 +40,7 @@ export function AnalysisHubClient() {
       </div>
 
       <div className="relative z-10 w-full pt-6">
-        <AnalysisDashboard />
+        <AnalysisDashboard userId={userId} userName={userName} />
       </div>
     </main>
   )
