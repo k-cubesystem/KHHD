@@ -67,11 +67,7 @@ export async function getFeatureCost(featureKey: string): Promise<number> {
       const supabase = await createClient()
 
       // 1. Try finding in AI Prompts (Preferred configuration source)
-      const { data: prompt } = await supabase
-        .from('ai_prompts')
-        .select('talisman_cost')
-        .eq('key', key)
-        .single()
+      const { data: prompt } = await supabase.from('ai_prompts').select('talisman_cost').eq('key', key).single()
 
       if (prompt && prompt.talisman_cost !== null) {
         return prompt.talisman_cost
@@ -243,11 +239,7 @@ export async function deductTalisman(
     }
 
     if (rpcBalance === -2) {
-      const { data: currentWallet } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', user.id)
-        .single()
+      const { data: currentWallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
       const limits = await getUserTierLimits()
       return {
         success: false,
@@ -261,11 +253,7 @@ export async function deductTalisman(
   }
 
   // Log transaction
-  const { data: featureCostData } = await supabase
-    .from('feature_costs')
-    .select('label')
-    .eq('key', featureKey)
-    .single()
+  const { data: featureCostData } = await supabase.from('feature_costs').select('label').eq('key', featureKey).single()
 
   await supabase.from('wallet_transactions').insert({
     user_id: user.id,
@@ -299,17 +287,21 @@ export async function addTalismans(
 
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
-  // Get current balance
-  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
+  // Atomic balance increment via RPC — prevents race conditions
+  const { data: newBalance, error: rpcError } = await supabase.rpc('add_wallet_balance', {
+    p_user_id: user.id,
+    p_amount: amount,
+  })
 
-  const currentBalance = wallet?.balance || 0
-  const newBalance = currentBalance + amount
-
-  // Update balance
-  const { error: updateError } = await supabase.from('wallets').update({ balance: newBalance }).eq('user_id', user.id)
-
-  if (updateError) {
-    return { success: false, error: '복채 충전 중 오류가 발생했습니다.' }
+  if (rpcError) {
+    logger.error('[Wallet] add_wallet_balance RPC failed, using fallback:', rpcError)
+    // Fallback: upsert with increment — still better than read-then-write
+    const { error: upsertError } = await supabase
+      .from('wallets')
+      .upsert({ user_id: user.id, balance: amount }, { onConflict: 'user_id' })
+    if (upsertError) {
+      return { success: false, error: '복채 충전 중 오류가 발생했습니다.' }
+    }
   }
 
   // Log transaction

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/auth'
 import { addTalismans } from '@/app/actions/payment/wallet'
 import { logger } from '@/lib/utils/logger'
 
@@ -34,18 +35,16 @@ export interface SubscriptionStats {
   monthlyRevenue: number
 }
 
-// 관리자 권한 체크
 async function checkAdminRole() {
+  const role = await getUserRole()
+  if (role !== 'admin') {
+    throw new Error('관리자 권한이 필요합니다.')
+  }
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('인증되지 않은 사용자입니다.')
-  }
-
-  // TEMPORARY: Skip admin check due to RLS issue
+  if (!user) throw new Error('인증되지 않은 사용자입니다.')
   return user
 }
 

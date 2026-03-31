@@ -12,9 +12,11 @@ export const maxDuration = 60 // Allow 1 minute execution
 export async function GET(req: NextRequest) {
   // 1. Authorization
   const authHeader = req.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    // Allow local dev testing without secret if needed, or stick to strict
-    if (process.env.NODE_ENV !== 'development') {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    if (process.env.NODE_ENV === 'development') {
+      logger.warn('[Cron] Skipping auth in development mode')
+    } else {
       return new NextResponse('Unauthorized', { status: 401 })
     }
   }
@@ -64,36 +66,38 @@ export async function GET(req: NextRequest) {
     errors: 0,
   }
 
-  // Parallel processing limit could be applied here (e.g., p-limit)
-  // For now, standard Promise.allSettled
-  const promises = subscriptions.map(async (sub) => {
-    try {
-      // A. Generate Fortune
-      const genResult = await generateDailyFortune(sub.user_id, sub.user_id, 'USER')
-      if (!genResult.success) throw new Error('error' in genResult ? genResult.error : 'Fortune generation failed')
+  // 동시성 제한: 최대 5개 병렬 처리 (Gemini API 과부하 방지)
+  const CONCURRENCY_LIMIT = 5
+  const chunks: (typeof subscriptions)[] = []
+  for (let i = 0; i < subscriptions.length; i += CONCURRENCY_LIMIT) {
+    chunks.push(subscriptions.slice(i, i + CONCURRENCY_LIMIT))
+  }
 
-      // B. Send Notification
-      if (genResult.content) {
-        // Shorten content for Kakao? Or just send link?
-        // Typically Kakao Alimtalk has strict templates.
-        // We'll assume the template takes #{content} variable.
-        const sendResult = await sendKakaoNotification(sub.user_id, templateId, {
-          content: genResult.content.substring(0, 100) + '...', // Truncate for preview
-          link: `${SITE_URL}/protected/analysis?tab=daily`, // Deep link
-        })
+  for (const chunk of chunks) {
+    const promises = chunk.map(async (sub) => {
+      try {
+        const genResult = await generateDailyFortune(sub.user_id, sub.user_id, 'USER')
+        if (!genResult.success) throw new Error('error' in genResult ? genResult.error : 'Fortune generation failed')
 
-        if (sendResult.success) results.sent++
-        else throw new Error(sendResult.error)
+        if (genResult.content) {
+          const sendResult = await sendKakaoNotification(sub.user_id, templateId, {
+            content: genResult.content.substring(0, 100) + '...',
+            link: `${SITE_URL}/protected/analysis?tab=daily`,
+          })
+
+          if (sendResult.success) results.sent++
+          else throw new Error(sendResult.error)
+        }
+
+        results.generated++
+      } catch (err) {
+        logger.error(`Error processing user ${sub.user_id}:`, err)
+        results.errors++
       }
+    })
 
-      results.generated++
-    } catch (err) {
-      logger.error(`Error processing user ${sub.user_id}:`, err)
-      results.errors++
-    }
-  })
-
-  await Promise.allSettled(promises)
+    await Promise.allSettled(promises)
+  }
 
   return NextResponse.json({
     success: true,

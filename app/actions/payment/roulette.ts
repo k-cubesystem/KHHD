@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/auth'
 import { logger } from '@/lib/utils/logger'
 
 // 복채 단위: 1 복채 = 1만냥
@@ -266,6 +267,9 @@ export async function updateRouletteConfig(
     sort_order: number
   }>
 ) {
+  const role = await getUserRole()
+  if (role !== 'admin') return { success: false, error: '관리자 권한이 필요합니다.' }
+
   const supabase = await createClient()
   const {
     data: { user },

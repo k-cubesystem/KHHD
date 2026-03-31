@@ -1,9 +1,34 @@
 import * as Sentry from '@sentry/nextjs'
 
-/**
- * Sentry가 초기화되었는지 확인
- * DSN이 없는 개발환경에서는 false를 반환하여 Sentry 호출을 스킵
- */
+const PII_PATTERNS: Array<[RegExp, string]> = [
+  [/payment_key["']?\s*[:=]\s*["']?[\w-]+/gi, 'payment_key: [MASKED]'],
+  [/order_id["']?\s*[:=]\s*["']?[\w-]+/gi, 'order_id: [MASKED]'],
+  [/paymentKey["']?\s*[:=]\s*["']?[\w-]+/gi, 'paymentKey: [MASKED]'],
+  [/orderId["']?\s*[:=]\s*["']?[\w-]+/gi, 'orderId: [MASKED]'],
+  [/billing_key["']?\s*[:=]\s*["']?[\w-]+/gi, 'billing_key: [MASKED]'],
+  [/billingKey["']?\s*[:=]\s*["']?[\w-]+/gi, 'billingKey: [MASKED]'],
+  [/phone["']?\s*[:=]\s*["']?01\d{8,9}/gi, 'phone: [MASKED]'],
+]
+
+function maskPII(value: string): string {
+  let masked = value
+  for (const [pattern, replacement] of PII_PATTERNS) {
+    masked = masked.replace(pattern, replacement)
+  }
+  return masked
+}
+
+function sanitizeArg(arg: unknown): unknown {
+  if (typeof arg === 'string') return maskPII(arg)
+  if (arg instanceof Error) return arg
+  try {
+    const str = JSON.stringify(arg)
+    return JSON.parse(maskPII(str))
+  } catch {
+    return arg
+  }
+}
+
 function isSentryAvailable(): boolean {
   try {
     return !!Sentry.getClient()
@@ -29,23 +54,24 @@ export const logger = {
     }
 
     if (isSentryAvailable()) {
-      const message = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
+      const sanitized = args.map(sanitizeArg)
+      const message = sanitized.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
       Sentry.captureMessage(message, 'warning')
     }
   },
 
   error: (...args: unknown[]) => {
-    // 에러는 프로덕션에서도 콘솔 로깅
     console.error(...args)
 
     if (isSentryAvailable()) {
-      const firstArg = args[0]
+      const sanitized = args.map(sanitizeArg)
+      const firstArg = sanitized[0]
       if (firstArg instanceof Error) {
         Sentry.captureException(firstArg, {
-          extra: args.length > 1 ? { context: args.slice(1) } : undefined,
+          extra: sanitized.length > 1 ? { context: sanitized.slice(1) } : undefined,
         })
       } else {
-        const message = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
+        const message = sanitized.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')
         Sentry.captureMessage(message, 'error')
       }
     }

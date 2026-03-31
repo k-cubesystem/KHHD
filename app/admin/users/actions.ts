@@ -1,9 +1,19 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getUserRole } from '@/lib/auth'
 import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+
+async function requireAdmin(): Promise<{ authorized: true } | { authorized: false; error: string }> {
+  const role = await getUserRole()
+  if (role !== 'admin') {
+    return { authorized: false, error: '관리자 권한이 필요합니다.' }
+  }
+  return { authorized: true }
+}
 
 export interface AdminUser {
   id: string
@@ -13,8 +23,6 @@ export interface AdminUser {
   created_at: string
   last_sign_in_at?: string
 }
-
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function getUsers(
   page: number = 1,
@@ -90,15 +98,9 @@ export async function getUsers(
 }
 
 export async function updateUserRole(targetUserId: string, newRole: UserRole) {
-  const supabase = await createClient()
+  const adminCheck = await requireAdmin()
+  if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
-  // Check Auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
-
-  // TEMPORARY: Skip admin check, use admin client
   const adminClient = createAdminClient()
   const { error } = await adminClient.from('profiles').update({ role: newRole }).eq('id', targetUserId)
 
@@ -182,7 +184,7 @@ export async function deleteUser(userId: string) {
 
     const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
-    if (!callerProfile || !['admin', 'tester'].includes(callerProfile.role)) {
+    if (!callerProfile || callerProfile.role !== 'admin') {
       return { success: false, error: 'Forbidden: Admin only' }
     }
 
@@ -217,11 +219,8 @@ export async function deleteUser(userId: string) {
 }
 
 export async function updateUserBalance(targetUserId: string, newBalance: number) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
+  const adminCheck = await requireAdmin()
+  if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
   const adminClient = createAdminClient()
 
@@ -247,11 +246,8 @@ export async function updateUserBalance(targetUserId: string, newBalance: number
 }
 
 export async function updateUserSubscription(targetUserId: string, planTier: string | null) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
+  const adminCheck = await requireAdmin()
+  if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
   const adminClient = createAdminClient()
 

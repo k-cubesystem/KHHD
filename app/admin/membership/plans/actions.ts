@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { getUserRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 
@@ -23,18 +24,16 @@ export interface MembershipPlanAdmin {
   updated_at: string
 }
 
-// Check admin permission
 async function checkAdmin() {
+  const role = await getUserRole()
+  if (role !== 'admin') {
+    throw new Error('관리자 권한이 필요합니다.')
+  }
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  if (!user) {
-    throw new Error('Unauthorized')
-  }
-
-  // TEMPORARY: Skip admin check due to RLS issue
+  if (!user) throw new Error('Unauthorized')
   return user
 }
 

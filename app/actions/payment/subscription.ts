@@ -358,6 +358,20 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   const plan = subscription.plan as MembershipPlan
   const orderId = `SUB_${user.id.slice(0, 8)}_${Date.now()}`
 
+  // 멱등성 체크: 이미 성공한 결제가 있는지 확인 (재시도/이중 호출 방지)
+  const { data: existingPayment } = await supabase
+    .from('subscription_payments')
+    .select('id')
+    .eq('subscription_id', subscription.id)
+    .eq('status', 'SUCCESS')
+    .limit(1)
+    .maybeSingle()
+
+  if (existingPayment) {
+    logger.warn('[Subscription] Duplicate first payment attempt blocked:', subscription.id)
+    return { success: true, subscription: subscription as unknown as Subscription }
+  }
+
   // Toss API: 빌링 결제
   const response = await fetch(`https://api.tosspayments.com/v1/billing/${subscription.billing_key}`, {
     method: 'POST',
