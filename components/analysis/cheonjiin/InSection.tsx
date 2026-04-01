@@ -42,7 +42,7 @@ export function InSection({ data }: InSectionProps) {
                 인연과 내면의 조화 <span className="text-primary/60 text-sm font-normal ml-1">사람의 기운</span>
               </h2>
             </div>
-            <p className="text-sm text-ink-light/50 font-light pl-13">
+            <p className="text-sm text-ink-light/70 font-light pl-13">
               스스로 빚어낸 삶의 궤적과 귀한 인연의 연결고리입니다.
             </p>
           </div>

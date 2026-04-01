@@ -1,16 +1,16 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link'
+import { ArrowRight, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface GuestCTACardProps {
-  title: string;
-  description: string;
-  ctaText?: string;
-  ctaHref?: string;
-  preview?: React.ReactNode;
-  icon?: React.ReactNode;
+  title: string
+  description: string
+  ctaText?: string
+  ctaHref?: string
+  preview?: React.ReactNode
+  icon?: React.ReactNode
 }
 
 /**
@@ -20,8 +20,8 @@ interface GuestCTACardProps {
 export function GuestCTACard({
   title,
   description,
-  ctaText = "가입하고 시작하기",
-  ctaHref = "/auth/sign-up",
+  ctaText = '가입하고 시작하기',
+  ctaHref = '/auth/sign-up',
   preview,
   icon,
 }: GuestCTACardProps) {
@@ -31,9 +31,7 @@ export function GuestCTACard({
         {/* Preview Section (Optional) */}
         {preview && (
           <div className="mb-8 relative">
-            <div className="blur-sm opacity-50 pointer-events-none select-none">
-              {preview}
-            </div>
+            <div className="blur-sm opacity-50 pointer-events-none select-none">{preview}</div>
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
           </div>
         )}
@@ -60,9 +58,7 @@ export function GuestCTACard({
 
           {/* Text Content */}
           <div className="space-y-3 relative z-10">
-            <h2 className="text-3xl md:text-4xl font-serif text-ink-light">
-              {title}
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-serif text-ink-light">{title}</h2>
             <p className="text-sm md:text-base text-ink-light/70 font-light max-w-lg mx-auto leading-relaxed">
               {description}
             </p>
@@ -80,12 +76,10 @@ export function GuestCTACard({
 
           {/* Additional Info */}
           <div className="relative z-10 pt-6 border-t border-primary/10">
-            <p className="text-xs text-ink-light/50">
-              무료 가입 후 모든 기능을 즉시 사용할 수 있습니다
-            </p>
+            <p className="text-xs text-ink-light/70">무료 가입 후 모든 기능을 즉시 사용할 수 있습니다</p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

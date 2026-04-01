@@ -15,7 +15,7 @@ export default function FamilyError({ error, reset }: { error: Error & { digest?
       <div className="w-full max-w-md text-center space-y-4">
         <div className="text-5xl mb-2">👨‍👩‍👧‍👦</div>
         <h2 className="text-lg font-bold text-amber-200">가족 페이지에서 문제가 발생했어요</h2>
-        <p className="text-sm text-ink-light/60">잠시 후 다시 시도해주세요.</p>
+        <p className="text-sm text-ink-light/70">잠시 후 다시 시도해주세요.</p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={reset}

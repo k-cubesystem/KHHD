@@ -100,7 +100,7 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
                 >
                   <Icon className="w-8 h-8" />
                 </div>
-                <span className="text-[10px] text-ink-light/40 tracking-wide font-bold">{label}</span>
+                <span className="text-[10px] text-ink-light/60 tracking-wide font-bold">{label}</span>
                 <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-primary/70" aria-hidden="true" />
                   <span className="text-sm font-bold text-ink-light leading-tight">{value || '-'}</span>
@@ -112,7 +112,7 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
           {/* Advice Quote */}
           {lucky.advice && (
             <div className="text-center py-4">
-              <p className="text-xs text-ink-light/50 font-serif italic mb-2">오늘의 조언</p>
+              <p className="text-xs text-ink-light/70 font-serif italic mb-2">오늘의 조언</p>
               <p className="text-sm font-serif text-ink-light/90 leading-relaxed break-keep">
                 &ldquo;{lucky.advice}&rdquo;
               </p>

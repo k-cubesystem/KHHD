@@ -1,14 +1,14 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { LogIn, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from 'next/link'
+import { LogIn, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface GuestGateProps {
-  isGuest: boolean;
-  children: React.ReactNode;
-  featureName: string;
-  description?: string;
+  isGuest: boolean
+  children: React.ReactNode
+  featureName: string
+  description?: string
 }
 
 /**
@@ -18,15 +18,13 @@ interface GuestGateProps {
  */
 export function GuestGate({ isGuest, children, featureName, description }: GuestGateProps) {
   if (!isGuest) {
-    return <>{children}</>;
+    return <>{children}</>
   }
 
   return (
     <div className="relative">
       {/* Blurred Content Preview */}
-      <div className="blur-sm pointer-events-none select-none opacity-60">
-        {children}
-      </div>
+      <div className="blur-sm pointer-events-none select-none opacity-60">{children}</div>
 
       {/* Overlay CTA */}
       <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -38,11 +36,9 @@ export function GuestGate({ isGuest, children, featureName, description }: Guest
 
           {/* Title */}
           <div className="space-y-2">
-            <h3 className="text-2xl font-serif text-ink-light">
-              {featureName}
-            </h3>
+            <h3 className="text-2xl font-serif text-ink-light">{featureName}</h3>
             <p className="text-sm text-ink-light/70 font-light">
-              {description || "이 기능을 사용하려면 로그인이 필요합니다"}
+              {description || '이 기능을 사용하려면 로그인이 필요합니다'}
             </p>
           </div>
 
@@ -55,7 +51,10 @@ export function GuestGate({ isGuest, children, featureName, description }: Guest
               </Button>
             </Link>
             <Link href="/auth/login">
-              <Button variant="outline" className="w-full border-primary/30 text-ink-light hover:border-primary hover:bg-primary/10">
+              <Button
+                variant="outline"
+                className="w-full border-primary/30 text-ink-light hover:border-primary hover:bg-primary/10"
+              >
                 이미 계정이 있으신가요? 로그인
               </Button>
             </Link>
@@ -63,12 +62,10 @@ export function GuestGate({ isGuest, children, featureName, description }: Guest
 
           {/* Feature Highlight */}
           <div className="pt-4 border-t border-primary/10">
-            <p className="text-xs text-ink-light/50">
-              청담 해화당의 모든 AI 분석 기능을 무제한으로 이용하세요
-            </p>
+            <p className="text-xs text-ink-light/70">청담 해화당의 모든 AI 분석 기능을 무제한으로 이용하세요</p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

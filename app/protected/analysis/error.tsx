@@ -40,11 +40,11 @@ export default function AnalysisError({ error, reset }: { error: Error & { diges
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-md text-center space-y-4">
-        <div className="mx-auto w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-          <Icon className="w-7 h-7 text-red-400" />
+        <div className="mx-auto w-16 h-16 rounded-full bg-error-light border border-error-border flex items-center justify-center">
+          <Icon className="w-7 h-7 text-error-text" />
         </div>
         <h2 className="text-lg font-bold text-amber-200">{ui.title}</h2>
-        <p className="text-sm text-ink-light/60">{ui.desc}</p>
+        <p className="text-sm text-ink-light/70">{ui.desc}</p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={reset}

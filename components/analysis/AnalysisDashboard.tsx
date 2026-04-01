@@ -185,7 +185,7 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
                   </div>
                   <div>
                     <span className="block text-sm font-medium text-ink-light">{card.label}</span>
-                    <span className="block text-[11px] text-ink-light/50 font-light mt-1 leading-relaxed">
+                    <span className="block text-[11px] text-ink-light/70 font-light mt-1 leading-relaxed">
                       {card.desc}
                     </span>
                   </div>
@@ -226,7 +226,7 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-ink-light">{card.label}</span>
-                    <span className="block text-[11px] text-ink-light/50 font-light mt-0.5">{card.desc}</span>
+                    <span className="block text-[11px] text-ink-light/70 font-light mt-0.5">{card.desc}</span>
                   </div>
                 </div>
                 <ChevronRight className="absolute bottom-3 right-3 w-3.5 h-3.5 text-ink-light/20 group-hover:text-gold-500/50 transition-colors" />

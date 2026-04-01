@@ -50,7 +50,7 @@ export function MemberMissionCard({ member, onClick, onEdit, onDelete, index }: 
               </div>
 
               {/* Job & Hobby or Default Text */}
-              <div className="text-xs text-ink-light/50 font-light truncate mb-2 min-h-[1.5em]">
+              <div className="text-xs text-ink-light/70 font-light truncate mb-2 min-h-[1.5em]">
                 {member.job || member.hobby ? (
                   <span className="flex items-center gap-1.5">
                     {member.job && <span>{member.job}</span>}

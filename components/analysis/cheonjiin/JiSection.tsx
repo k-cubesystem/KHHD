@@ -41,7 +41,7 @@ export function JiSection({ data }: JiSectionProps) {
                 지리적 환경과 흐름 <span className="text-primary/60 text-sm font-normal ml-1">땅의 기운</span>
               </h2>
             </div>
-            <p className="text-sm text-ink-light/50 font-light pl-13">당신이 머무는 공간과 환경의 에너지 흐름입니다.</p>
+            <p className="text-sm text-ink-light/70 font-light pl-13">당신이 머무는 공간과 환경의 에너지 흐름입니다.</p>
           </div>
 
           {/* Core Content */}

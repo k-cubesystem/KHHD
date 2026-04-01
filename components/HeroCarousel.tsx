@@ -96,22 +96,32 @@ export function HeroCarousel() {
   }, [])
 
   return (
-    <main className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] text-center overflow-hidden">
+    <main
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="청담해화당 소개"
+      className="relative z-40 w-full min-h-[100dvh] flex flex-col items-center justify-start pt-[22vh] text-center overflow-hidden"
+    >
       {/* Background Layer (Transitioning) */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {`슬라이드 ${currentSlide + 1} / ${slides.length}`}
+      </div>
       {slides.map((slide, index) => (
         <div
           key={slide.id}
+          role="group"
+          aria-roledescription="slide"
+          aria-label={`슬라이드 ${index + 1} / ${slides.length}`}
+          aria-hidden={index !== currentSlide}
           className={cn(
             'absolute inset-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out',
             index === currentSlide ? 'opacity-100' : 'opacity-0'
           )}
         >
-          {/* Next.js Image — Vercel CDN 최적화 적용 */}
-          {/* overflow-hidden으로 Ken Burns scale 클리핑 */}
           <div className="absolute inset-0 overflow-hidden">
             <Image
               src={slide.image}
-              alt=""
+              alt={`청담해화당 배경 이미지 ${index + 1}`}
               fill
               // 첫 슬라이드(LCP)만 즉시 로드, 나머지는 지연 로드
               priority={index === 0}

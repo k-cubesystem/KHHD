@@ -1,6 +1,6 @@
 /**
  * Design Tokens — Tailwind config 값을 JS/TS에서 참조할 때 사용
- * tailwind.config.ts의 gold palette과 동기화 유지
+ * tailwind.config.ts 동기화 유지
  */
 export const COLORS = {
   gold: {
@@ -14,6 +14,17 @@ export const COLORS = {
   surface: '#1A1917',
   charcoalDeep: '#0F0F0F',
   seal: '#8E2828',
+  error: '#EF4444',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  info: '#3B82F6',
+} as const
+
+export const SEMANTIC = {
+  error: { bg: 'rgba(239,68,68,0.10)', border: 'rgba(239,68,68,0.20)', text: '#FCA5A5', solid: '#EF4444' },
+  success: { bg: 'rgba(34,197,94,0.10)', border: 'rgba(34,197,94,0.20)', text: '#86EFAC', solid: '#22C55E' },
+  warning: { bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.20)', text: '#FCD34D', solid: '#F59E0B' },
+  info: { bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.20)', text: '#93C5FD', solid: '#3B82F6' },
 } as const
 
 /** 가장 많이 쓰이는 메인 골드 hex — SVG, Chart, OG 이미지용 */

@@ -15,7 +15,7 @@ export default function MembershipError({ error, reset }: { error: Error & { dig
       <div className="w-full max-w-md text-center space-y-4">
         <div className="text-5xl mb-2">👑</div>
         <h2 className="text-lg font-bold text-amber-200">멤버십 페이지에서 문제가 발생했어요</h2>
-        <p className="text-sm text-ink-light/60">결제 진행 중이었다면 결제 내역을 확인해주세요.</p>
+        <p className="text-sm text-ink-light/70">결제 진행 중이었다면 결제 내역을 확인해주세요.</p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={reset}

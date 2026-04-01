@@ -115,7 +115,7 @@ export function CheonjiinLoadingState({ target }: CheonjiinLoadingStateProps) {
               <h2 className="text-xl md:text-2xl font-serif text-ink-light font-medium tracking-wide">
                 {loadingStages[stage].text}
               </h2>
-              <p className="text-sm font-sans text-ink-light/50 font-light">
+              <p className="text-sm font-sans text-ink-light/70 font-light">
                 {target.name}님의 {loadingStages[stage].sub}
               </p>
             </motion.div>

@@ -114,14 +114,14 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick,
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-xs font-medium text-primary uppercase tracking-wide">{config.label}</span>
                 {record.target_relation && (
-                  <span className="text-xs text-ink-light/40">· {record.target_relation}</span>
+                  <span className="text-xs text-ink-light/60">· {record.target_relation}</span>
                 )}
               </div>
               <h3 className="text-lg font-serif font-bold text-ink-light truncate">
                 {record.target_name}님의 {config.label} 분석
               </h3>
             </div>
-            <ChevronRight className="w-5 h-5 text-ink-light/40 group-hover:text-primary transition-colors" />
+            <ChevronRight className="w-5 h-5 text-ink-light/60 group-hover:text-primary transition-colors" />
           </div>
 
           {/* Summary */}
@@ -129,7 +129,7 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick,
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2 text-xs text-ink-light/50">
+            <div className="flex items-center gap-2 text-xs text-ink-light/70">
               <Clock className="w-3.5 h-3.5" />
               <span>
                 {format(new Date(record.created_at), 'yyyy.MM.dd HH:mm', {

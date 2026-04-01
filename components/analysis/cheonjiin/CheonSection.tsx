@@ -54,7 +54,7 @@ export function CheonSection({ data }: CheonSectionProps) {
                 타고난 사주명리 <span className="text-primary/60 text-sm font-normal ml-1">하늘의 기운</span>
               </h2>
             </div>
-            <p className="text-sm text-ink-light/50 font-light pl-13">
+            <p className="text-sm text-ink-light/70 font-light pl-13">
               사주 팔자에 근거한 당신의 타고난 기질과 운명의 흐름입니다.
             </p>
           </div>

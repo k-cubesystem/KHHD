@@ -11,6 +11,12 @@
     --primary: 43 55% 90%; /* #F4E4BA - Pastel Gold */
     --radius: 0.75rem;
 
+    /* ===== Semantic Colors ===== */
+    --color-error: #ef4444;
+    --color-success: #22c55e;
+    --color-warning: #f59e0b;
+    --color-info: #3b82f6;
+
     /* ===== Z-Index Scale ===== */
     --z-base: 0;
     --z-raised: 10; /* 카드 호버, 인라인 오버레이 */
@@ -85,9 +91,9 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Small Text */
+  /* Small Text — WCAG AA: /60→/70 for 4.5:1 contrast on dark bg */
   small {
-    @apply text-foreground/60;
+    @apply text-foreground/70;
     font-size: 0.75rem; /* 12px - Captions */
     line-height: 1.5;
   }
@@ -99,6 +105,23 @@
 
   button {
     @apply tracking-wide;
+  }
+
+  /* ===== 한글 타이포그래피 최적화 ===== */
+  p,
+  li,
+  dd,
+  blockquote {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-break: strict;
+  }
+
+  /* ===== 접근성: 포커스 링 ===== */
+  :focus-visible {
+    outline: 2px solid var(--color-info);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 
   /* Force Square Design Globally - REMOVED for Manse Style Compatibility */
@@ -286,7 +309,6 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-
 }
 
 /* ========== Fortune Flow Animations ========== */
@@ -367,19 +389,28 @@
 
 /* SajuLoadingOverlay 회전 링 (시계 방향) */
 @keyframes rotate-cw {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* SajuLoadingOverlay 회전 링 (반시계 방향) */
 @keyframes rotate-ccw {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 /* SajuLoadingOverlay 코어 펄스 */
 @keyframes core-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.6;
   }
@@ -391,7 +422,8 @@
 
 /* SajuLoadingOverlay 펄스 인디케이터 도트 */
 @keyframes dot-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
@@ -421,7 +453,8 @@
 
 /* Orb 배경: 골드 오브 펄스 */
 @keyframes orb-pulse-gold {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.3;
   }
@@ -433,7 +466,8 @@
 
 /* Orb 배경: 우드 오브 펄스 */
 @keyframes orb-pulse-wood {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.2;
   }
@@ -445,18 +479,27 @@
 
 /* CheonjiinLoadingState 회전 링 */
 @keyframes cheonjiin-rotate-cw {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes cheonjiin-rotate-ccw {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
 }
 
 /* CheonjiinLoadingState 노드 펄스 */
 @keyframes node-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -466,7 +509,8 @@
 
 /* CheonjiinLoadingState 코어 에센스 펄스 */
 @keyframes cheonjiin-core-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.5;
   }
@@ -500,7 +544,8 @@
 
 /* 바운스 아이콘 (daily-check-in CalendarCheck, lucky-roulette Sparkles) */
 @keyframes bounce-y {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -510,7 +555,8 @@
 
 /* 스케일 펄스 (lucky-roulette 배지, daily-check-in 오늘 셀) */
 @keyframes scale-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -520,13 +566,18 @@
 
 /* 로딩 스피너 회전 */
 @keyframes spin-loading {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Lucky-roulette 아이콘 흔들기 */
 @keyframes wiggle {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(0deg);
   }
   25% {
@@ -539,7 +590,8 @@
 
 /* Lucky-roulette 결과 선물 바운스 */
 @keyframes gift-bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   25% {
