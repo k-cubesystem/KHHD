@@ -8,6 +8,8 @@ import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages } from 'next-intl/server'
 import './globals.css'
 
 const notoSans = Noto_Sans_KR({
@@ -85,15 +87,17 @@ export const metadata: Metadata = {
 export const viewport = {
   themeColor: '#0f0f10',
 }
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   return (
-    <html lang="ko" suppressHydrationWarning translate="no">
+    <html lang={locale} suppressHydrationWarning translate="no">
       <head>
-        {/* Pretendard Variable Font — CSS @import 대비 렌더 블로킹 없음, variable font으로 용량 최소화 */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" />
         <link
           rel="stylesheet"
@@ -105,23 +109,23 @@ export default function RootLayout({
         className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#050505]`}
         suppressHydrationWarning
       >
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <QueryProvider>
-            {/* Mobile-Only Wrapper */}
-            <div className="flex justify-center w-full min-h-screen">
-              <div className="w-full max-w-[480px] min-h-screen bg-background relative shadow-2xl overflow-x-hidden border-x border-white/5 mx-auto">
-                {children}
-                <Toaster position="top-center" richColors />
-                <PWAInstallPrompt />
-                <SWRegister />
-                <AgentationWrapper />
-                {/* Vercel Speed Insights — Core Web Vitals 실측 모니터링 */}
-                <SpeedInsights />
-                {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
+        <NextIntlClientProvider messages={messages}>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            <QueryProvider>
+              <div className="flex justify-center w-full min-h-screen">
+                <div className="w-full max-w-[480px] min-h-screen bg-background relative shadow-2xl overflow-x-hidden border-x border-white/5 mx-auto">
+                  {children}
+                  <Toaster position="top-center" richColors />
+                  <PWAInstallPrompt />
+                  <SWRegister />
+                  <AgentationWrapper />
+                  <SpeedInsights />
+                  {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
+                </div>
               </div>
-            </div>
-          </QueryProvider>
-        </ThemeProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   )

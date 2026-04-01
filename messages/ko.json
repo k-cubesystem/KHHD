@@ -1,0 +1,184 @@
+{
+  "meta": {
+    "title": "청담해화당 - Premium 운명 공학 SaaS",
+    "titleTemplate": "{title} | 청담해화당",
+    "description": "전통 명리학과 현대 데이터 사이언스의 결합, AI 마스터의 정교한 운명 분석 리포트",
+    "ogDescription": "당신의 운명을 비춰주는 프리미엄 AI 사주 분석",
+    "siteName": "청담해화당"
+  },
+  "nav": {
+    "analysis": "사주/궁합",
+    "family": "가족관리",
+    "chat": "고민상담",
+    "manse": "사주팔자",
+    "profile": "프로필",
+    "settings": "설정",
+    "membership": "멤버십",
+    "history": "분석기록",
+    "home": "홈",
+    "back": "뒤로가기",
+    "dashboard": "대시보드로 돌아가기"
+  },
+  "brand": {
+    "name": "청담해화당",
+    "tagline": "모두가 부러워하는 당신의 삶, 하지만 정작 당신은 행복하십니까?",
+    "main": {
+      "hero": "오늘도 당신의 운명이 새롭게 펼쳐집니다",
+      "subHero": "당신만의 흐름을 따라, 운을 채워가세요"
+    },
+    "family": {
+      "hero": "함께하는 사람들의 운명을 살펴봅니다",
+      "subHero": "소중한 이들의 시간이 여기 모입니다",
+      "empty": "소중한 이들을 추가하고 함께 운의 흐름을 확인하세요"
+    },
+    "analysis": {
+      "hero": "당신의 운명을 깊이 들여다보는 시간",
+      "subHero": "오늘 어떤 진실을 마주하고 싶으신가요",
+      "cheonjiin": "천지인, 세 기운이 만나 당신의 진실을 밝힙니다"
+    },
+    "fortune": {
+      "today": "오늘 하루, 당신에게 흐르는 기운",
+      "yearly": "한 해의 흐름이 한눈에 펼쳐집니다",
+      "weekly": "일주일의 흐름을 미리 살펴봅니다",
+      "monthly": "한 달의 운세가 펼쳐집니다"
+    },
+    "membership": {
+      "hero": "더 깊은 통찰로 나아가는 문",
+      "upgrade": "당신의 운명을 더 선명하게 볼 시간입니다",
+      "premium": "프리미엄 회원만이 누리는 깊이 있는 분석"
+    },
+    "states": {
+      "loading": "당신의 운명을 불러오고 있습니다...",
+      "error": "잠시 길을 잃었습니다. 다시 시도해주세요",
+      "success": "당신의 운이 한 층 올랐습니다",
+      "empty": "아직 기록된 이야기가 없습니다"
+    }
+  },
+  "landing": {
+    "cta": "무료로 시작하기",
+    "miniReading": "내 사주 미리보기",
+    "miniReadingResult": "전체 사주풀이 보기",
+    "year": "연도",
+    "month": "월",
+    "day": "일"
+  },
+  "auth": {
+    "login": "로그인",
+    "signUp": "회원가입",
+    "logout": "로그아웃",
+    "email": "이메일",
+    "password": "비밀번호",
+    "forgotPassword": "비밀번호 찾기",
+    "alreadyMember": "이미 계정이 있으신가요?",
+    "notMember": "계정이 없으신가요?",
+    "loginRequired": "로그인이 필요합니다",
+    "sessionExpired": "세션이 만료되었습니다. 다시 로그인해주세요.",
+    "guestGate": "이 기능을 사용하려면 로그인이 필요합니다",
+    "startFree": "가입하고 시작하기",
+    "allFeatures": "무료 가입 후 모든 기능을 즉시 사용할 수 있습니다"
+  },
+  "analysis": {
+    "title": "사주 분석",
+    "description": "사주팔자 기반 AI 운세 분석 서비스",
+    "start": "분석 시작",
+    "retry": "다시 시도",
+    "complete": "분석 완료",
+    "processing": "기운을 결합하고 있습니다",
+    "processingDesc": "잠시만 기다려 주십시오. 결제 승인 및 비록 생성을 진행 중입니다."
+  },
+  "payment": {
+    "title": "운명을 여는 길(道)의 선택",
+    "subtitle": "매달 전해지는 천기를 무제한으로 누리는 멤버십과 필요할 때마다 정성을 담아 사용하는 복채 패키지 중 선택해 주세요.",
+    "freeNote": "무료 회원은 '오늘의 운세'만 이용 가능합니다.",
+    "membershipSection": "해화 멤버십 (Subscription)",
+    "bokchaeSection": "복채 충전소 (One-time)",
+    "subscribe": "구독하기",
+    "charge": "충전하기",
+    "perMonth": "월",
+    "monthly": "매월",
+    "bokchaeUnit": "만냥",
+    "dailyLimit": "하루 {limit}만냥 사용 가능",
+    "success": "결제 완료!",
+    "bokchaeCharged": "복채 {amount}만냥이 지급되었습니다.",
+    "fail": "결제 실패",
+    "failDesc": "결제가 취소되었거나 오류가 발생했습니다.",
+    "errorCode": "오류 코드",
+    "retryPayment": "다시 시도하기",
+    "goToDashboard": "대시보드로 이동",
+    "membershipSuccess": "멤버십 가입 완료!",
+    "membershipWelcome": "해화 멤버십에 오신 것을 환영합니다.",
+    "talismanGranted": "부적 10장이 지급되었습니다!",
+    "unlimitedFortune": "오늘의 운세도 이제 무제한으로 확인할 수 있어요.",
+    "checkFortune": "오늘의 운세 확인하기",
+    "issuingBilling": "결제 수단 등록 중...",
+    "firstPayment": "첫 결제 진행 중...",
+    "pleaseWait": "잠시만 기다려주세요.",
+    "processFail": "처리 실패",
+    "contactSupport": "문제가 지속되면 고객센터나 관리자에게 문의해 주세요."
+  },
+  "paywall": {
+    "unlock": "잠금 해제",
+    "exhausted": "더 깊은 사주풀이를 확인하시려면",
+    "unlockAction": "잠금을 해제해주세요.",
+    "lastChance": "이번 분석 후 무료 횟수가 소진됩니다.",
+    "unlockUnlimited": "잠금 해제로 무제한 분석을 이용하세요.",
+    "otherMethods": "다른 결제 방법 보기",
+    "premiumPreview": "프리미엄 분석 결과를 확인하세요",
+    "fullUnlock": "전체 분석 잠금 해제",
+    "continue": "이번만 계속하기"
+  },
+  "error": {
+    "network": "네트워크 연결을 확인해주세요",
+    "networkDesc": "인터넷 연결이 불안정합니다. 잠시 후 다시 시도해주세요.",
+    "server": "서버에 문제가 생겼어요",
+    "serverDesc": "잠시 후 다시 시도해주세요. 문제가 계속되면 고객센터로 문의하세요.",
+    "unknown": "문제가 발생했어요",
+    "unknownDesc": "잠시 후 다시 시도해주세요.",
+    "retry": "다시 시도",
+    "goHome": "홈으로"
+  },
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "confirm": "확인",
+    "delete": "삭제",
+    "edit": "수정",
+    "close": "닫기",
+    "more": "더보기",
+    "share": "공유하기",
+    "shareKakao": "카카오톡으로 공유하기",
+    "copyLink": "링크 복사",
+    "loading": "로딩 중...",
+    "search": "검색",
+    "name": "성명",
+    "birthDate": "생년월일",
+    "birthTime": "출생시간",
+    "gender": "성별",
+    "male": "남성",
+    "female": "여성",
+    "language": "언어",
+    "korean": "한국어",
+    "english": "English"
+  },
+  "fortune": {
+    "daily": "오늘의 운세",
+    "weekly": "주간 운세",
+    "monthly": "월간 운세",
+    "yearly": "연간 운세",
+    "streak": "{count}일 연속 접속!",
+    "viewDetail": "자세히 보기"
+  },
+  "settings": {
+    "title": "내 정보 수정",
+    "description": "정확한 사주 분석을 위해 올바른 정보를 입력해주세요",
+    "notifications": "알림 설정",
+    "kakaoAlert": "카카오 알림톡 설정"
+  },
+  "greetings": {
+    "morning": "좋은 아침입니다",
+    "afternoon": "좋은 오후입니다",
+    "evening": "좋은 저녁입니다",
+    "night": "좋은 밤입니다",
+    "member": "회원"
+  }
+}

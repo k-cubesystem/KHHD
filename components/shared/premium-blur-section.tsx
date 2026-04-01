@@ -3,6 +3,7 @@
 import { Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 interface PremiumBlurSectionProps {
   children: React.ReactNode
@@ -11,7 +12,9 @@ interface PremiumBlurSectionProps {
   ctaLabel?: string
 }
 
-export function PremiumBlurSection({ children, isPaid, ctaLabel = '전체 분석 잠금 해제' }: PremiumBlurSectionProps) {
+export function PremiumBlurSection({ children, isPaid, ctaLabel }: PremiumBlurSectionProps) {
+  const t = useTranslations('paywall')
+
   if (isPaid) return <>{children}</>
 
   return (
@@ -24,16 +27,16 @@ export function PremiumBlurSection({ children, isPaid, ctaLabel = '전체 분석
           <div className="mx-auto w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
             <Lock className="w-5 h-5 text-gold-500" />
           </div>
-          <p className="text-sm text-ink-light/60">프리미엄 분석 결과를 확인하세요</p>
+          <p className="text-sm text-ink-light/70">{t('premiumPreview')}</p>
           <Button asChild className="bg-gold-500 hover:bg-gold-400 text-stone-900 font-bold">
-            <Link href="/protected/membership">{ctaLabel}</Link>
+            <Link href="/protected/membership">{ctaLabel ?? t('fullUnlock')}</Link>
           </Button>
-          <p className="text-[11px] text-ink-light/30">
+          <p className="text-[11px] text-ink-light/60">
             <Link
               href="/protected/membership#bokchae"
               className="hover:text-ink-light/50 transition-colors underline underline-offset-2"
             >
-              다른 결제 방법 보기
+              {t('otherMethods')}
             </Link>
           </p>
         </div>

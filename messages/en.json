@@ -1,0 +1,184 @@
+{
+  "meta": {
+    "title": "Haehwadang - Premium Destiny Analysis SaaS",
+    "titleTemplate": "{title} | Haehwadang",
+    "description": "AI-powered destiny analysis combining traditional East Asian astrology with modern data science",
+    "ogDescription": "Premium AI fortune & destiny reading for your life journey",
+    "siteName": "Haehwadang"
+  },
+  "nav": {
+    "analysis": "Analysis",
+    "family": "Family",
+    "chat": "Counseling",
+    "manse": "Birth Chart",
+    "profile": "Profile",
+    "settings": "Settings",
+    "membership": "Membership",
+    "history": "History",
+    "home": "Home",
+    "back": "Go Back",
+    "dashboard": "Back to Dashboard"
+  },
+  "brand": {
+    "name": "Haehwadang",
+    "tagline": "Everyone envies your life, but are you truly happy?",
+    "main": {
+      "hero": "Your destiny unfolds anew today",
+      "subHero": "Follow your own flow, and fill your fortune"
+    },
+    "family": {
+      "hero": "Discover the destiny of those you cherish",
+      "subHero": "The precious moments of your loved ones gather here",
+      "empty": "Add your loved ones and explore the flow of fortune together"
+    },
+    "analysis": {
+      "hero": "A moment to look deep into your destiny",
+      "subHero": "What truth would you like to face today?",
+      "cheonjiin": "Heaven, Earth, and Humanity — three energies reveal your truth"
+    },
+    "fortune": {
+      "today": "Today's energy flowing through you",
+      "yearly": "Your year at a glance",
+      "weekly": "Preview your week ahead",
+      "monthly": "Your monthly fortune unfolds"
+    },
+    "membership": {
+      "hero": "A door to deeper insight",
+      "upgrade": "Time to see your destiny more clearly",
+      "premium": "In-depth analysis exclusively for premium members"
+    },
+    "states": {
+      "loading": "Reading your destiny...",
+      "error": "Something went wrong. Please try again.",
+      "success": "Your fortune has risen!",
+      "empty": "No stories recorded yet"
+    }
+  },
+  "landing": {
+    "cta": "Start for Free",
+    "miniReading": "Preview My Reading",
+    "miniReadingResult": "See Full Analysis",
+    "year": "Year",
+    "month": "Month",
+    "day": "Day"
+  },
+  "auth": {
+    "login": "Log In",
+    "signUp": "Sign Up",
+    "logout": "Log Out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password",
+    "alreadyMember": "Already have an account?",
+    "notMember": "Don't have an account?",
+    "loginRequired": "Login Required",
+    "sessionExpired": "Your session has expired. Please log in again.",
+    "guestGate": "Please log in to use this feature",
+    "startFree": "Sign Up & Start",
+    "allFeatures": "Access all features immediately after free sign-up"
+  },
+  "analysis": {
+    "title": "Destiny Analysis",
+    "description": "AI fortune analysis based on your birth chart",
+    "start": "Start Analysis",
+    "retry": "Try Again",
+    "complete": "Analysis Complete",
+    "processing": "Combining energies",
+    "processingDesc": "Please wait. Payment confirmation and report generation in progress."
+  },
+  "payment": {
+    "title": "Choose Your Path to Destiny",
+    "subtitle": "Choose between an unlimited monthly membership or a pay-as-you-go token package.",
+    "freeNote": "Free members can only access daily fortune readings.",
+    "membershipSection": "Membership (Subscription)",
+    "bokchaeSection": "Token Shop (One-time)",
+    "subscribe": "Subscribe",
+    "charge": "Purchase",
+    "perMonth": "/mo",
+    "monthly": "Monthly",
+    "bokchaeUnit": "tokens",
+    "dailyLimit": "Up to {limit} tokens per day",
+    "success": "Payment Complete!",
+    "bokchaeCharged": "{amount} tokens have been added.",
+    "fail": "Payment Failed",
+    "failDesc": "Payment was cancelled or an error occurred.",
+    "errorCode": "Error Code",
+    "retryPayment": "Try Again",
+    "goToDashboard": "Go to Dashboard",
+    "membershipSuccess": "Membership Activated!",
+    "membershipWelcome": "Welcome to Haehwadang Membership.",
+    "talismanGranted": "10 talismans have been granted!",
+    "unlimitedFortune": "You can now check daily fortunes unlimited.",
+    "checkFortune": "Check Today's Fortune",
+    "issuingBilling": "Registering payment method...",
+    "firstPayment": "Processing first payment...",
+    "pleaseWait": "Please wait a moment.",
+    "processFail": "Processing Failed",
+    "contactSupport": "If the problem persists, please contact support."
+  },
+  "paywall": {
+    "unlock": "Unlock",
+    "exhausted": "To see your full analysis,",
+    "unlockAction": "please unlock access.",
+    "lastChance": "Your free readings will be used up after this analysis.",
+    "unlockUnlimited": "Unlock for unlimited analysis.",
+    "otherMethods": "Other payment methods",
+    "premiumPreview": "See your premium analysis results",
+    "fullUnlock": "Unlock Full Analysis",
+    "continue": "Continue this time"
+  },
+  "error": {
+    "network": "Please check your network connection",
+    "networkDesc": "Your connection is unstable. Please try again shortly.",
+    "server": "Server error occurred",
+    "serverDesc": "Please try again later. Contact support if the issue persists.",
+    "unknown": "Something went wrong",
+    "unknownDesc": "Please try again shortly.",
+    "retry": "Try Again",
+    "goHome": "Go Home"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "more": "More",
+    "share": "Share",
+    "shareKakao": "Share via KakaoTalk",
+    "copyLink": "Copy Link",
+    "loading": "Loading...",
+    "search": "Search",
+    "name": "Name",
+    "birthDate": "Date of Birth",
+    "birthTime": "Time of Birth",
+    "gender": "Gender",
+    "male": "Male",
+    "female": "Female",
+    "language": "Language",
+    "korean": "한국어",
+    "english": "English"
+  },
+  "fortune": {
+    "daily": "Daily Fortune",
+    "weekly": "Weekly Fortune",
+    "monthly": "Monthly Fortune",
+    "yearly": "Yearly Fortune",
+    "streak": "{count}-day streak!",
+    "viewDetail": "View Details"
+  },
+  "settings": {
+    "title": "Edit Profile",
+    "description": "Enter accurate information for precise destiny analysis",
+    "notifications": "Notification Settings",
+    "kakaoAlert": "KakaoTalk Notification Settings"
+  },
+  "greetings": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening",
+    "night": "Good night",
+    "member": "Member"
+  }
+}

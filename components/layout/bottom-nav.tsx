@@ -5,9 +5,11 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Users, BookOpen, MessageCircle, UserCircle, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useTranslations } from 'next-intl'
 
 export const BottomNav = memo(function BottomNav() {
   const pathname = usePathname()
+  const t = useTranslations('nav')
 
   type NavItem = {
     label: string
@@ -16,11 +18,11 @@ export const BottomNav = memo(function BottomNav() {
   }
 
   const NAV_ITEMS: NavItem[] = [
-    { label: '사주/궁합', icon: Home, href: '/protected/analysis' },
-    { label: '가족관리', icon: Users, href: '/protected/family' },
-    { label: '고민상담', icon: MessageCircle, href: '/protected/ai-shaman' },
-    { label: '사주팔자', icon: BookOpen, href: '/protected/profile/manse' },
-    { label: '프로필', icon: UserCircle, href: '/protected/profile' },
+    { label: t('analysis'), icon: Home, href: '/protected/analysis' },
+    { label: t('family'), icon: Users, href: '/protected/family' },
+    { label: t('chat'), icon: MessageCircle, href: '/protected/ai-shaman' },
+    { label: t('manse'), icon: BookOpen, href: '/protected/profile/manse' },
+    { label: t('profile'), icon: UserCircle, href: '/protected/profile' },
   ]
 
   // Hidden on non-protected pages
@@ -55,10 +57,7 @@ export const BottomNav = memo(function BottomNav() {
               >
                 <Icon
                   aria-hidden="true"
-                  className={cn(
-                    'w-5 h-5 stroke-[1.5] transition-all',
-                    isActive && 'stroke-gold-500 fill-gold-500/20'
-                  )}
+                  className={cn('w-5 h-5 stroke-[1.5] transition-all', isActive && 'stroke-gold-500 fill-gold-500/20')}
                 />
               </div>
               <span

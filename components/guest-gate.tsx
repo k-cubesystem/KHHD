@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { LogIn, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useTranslations } from 'next-intl'
 
 interface GuestGateProps {
   isGuest: boolean
@@ -17,6 +18,7 @@ interface GuestGateProps {
  * - Shows blurred preview + login CTA for guests
  */
 export function GuestGate({ isGuest, children, featureName, description }: GuestGateProps) {
+  const t = useTranslations('auth')
   if (!isGuest) {
     return <>{children}</>
   }
@@ -37,9 +39,7 @@ export function GuestGate({ isGuest, children, featureName, description }: Guest
           {/* Title */}
           <div className="space-y-2">
             <h3 className="text-2xl font-serif text-ink-light">{featureName}</h3>
-            <p className="text-sm text-ink-light/70 font-light">
-              {description || '이 기능을 사용하려면 로그인이 필요합니다'}
-            </p>
+            <p className="text-sm text-ink-light/70 font-light">{description || t('guestGate')}</p>
           </div>
 
           {/* CTA Buttons */}
@@ -47,7 +47,7 @@ export function GuestGate({ isGuest, children, featureName, description }: Guest
             <Link href="/auth/sign-up">
               <Button className="w-full bg-primary hover:bg-primary-dim text-background font-serif">
                 <LogIn className="w-4 h-4 mr-2" />
-                가입하고 시작하기
+                {t('startFree')}
               </Button>
             </Link>
             <Link href="/auth/login">
@@ -55,14 +55,14 @@ export function GuestGate({ isGuest, children, featureName, description }: Guest
                 variant="outline"
                 className="w-full border-primary/30 text-ink-light hover:border-primary hover:bg-primary/10"
               >
-                이미 계정이 있으신가요? 로그인
+                {t('alreadyMember')} {t('login')}
               </Button>
             </Link>
           </div>
 
           {/* Feature Highlight */}
           <div className="pt-4 border-t border-primary/10">
-            <p className="text-xs text-ink-light/70">청담 해화당의 모든 AI 분석 기능을 무제한으로 이용하세요</p>
+            <p className="text-xs text-ink-light/70">{t('allFeatures')}</p>
           </div>
         </div>
       </div>

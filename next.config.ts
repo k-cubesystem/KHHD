@@ -2,6 +2,9 @@ import type { NextConfig } from 'next'
 
 import { withSentryConfig } from '@sentry/nextjs'
 import withBundleAnalyzer from '@next/bundle-analyzer'
+import createNextIntlPlugin from 'next-intl/plugin'
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
 const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -96,7 +99,7 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withSentryConfig(bundleAnalyzer(nextConfig), {
+export default withSentryConfig(withNextIntl(bundleAnalyzer(nextConfig)), {
   silent: true,
   sourcemaps: {
     disable: process.env.NODE_ENV !== 'production',

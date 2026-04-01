@@ -7,6 +7,7 @@ import { Sparkles, X } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { GA } from '@/lib/analytics/ga4'
+import { useTranslations } from 'next-intl'
 
 interface PaywallModalProps {
   open: boolean
@@ -17,6 +18,7 @@ interface PaywallModalProps {
 }
 
 export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3, limit = 3 }: PaywallModalProps) {
+  const t = useTranslations('paywall')
   useEffect(() => {
     if (open) GA.paywallView()
   }, [open])
@@ -71,15 +73,15 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
 
           {isExhausted ? (
             <p className="text-amber-100/80 text-sm text-center leading-relaxed">
-              더 깊은 사주풀이를 확인하시려면
+              {t('exhausted')}
               <br />
-              <span className="text-amber-400 font-semibold">잠금을 해제</span>해주세요.
+              <span className="text-amber-400 font-semibold">{t('unlockAction')}</span>
             </p>
           ) : (
             <p className="text-amber-100/80 text-sm text-center leading-relaxed">
-              이번 분석 후 무료 횟수가 소진됩니다.
+              {t('lastChance')}
               <br />
-              <span className="text-amber-400 font-semibold">잠금 해제</span>로 무제한 분석을 이용하세요.
+              <span className="text-amber-400 font-semibold">{t('unlockUnlimited')}</span>
             </p>
           )}
 
@@ -94,7 +96,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
             >
               <Link href="/protected/membership">
                 <Sparkles className="w-4 h-4 mr-2" />
-                잠금 해제
+                {t('unlock')}
               </Link>
             </Button>
 
@@ -107,7 +109,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
                 }}
                 className="text-amber-400/50 hover:text-amber-300 text-xs transition-colors underline underline-offset-2"
               >
-                다른 결제 방법 보기
+                {t('otherMethods')}
               </Link>
             </div>
 
@@ -116,7 +118,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
                 onClick={onClose}
                 className="w-full text-amber-500/60 hover:text-amber-400 text-xs py-1 transition-colors"
               >
-                이번 1회만 계속하기
+                {t('continue')}
               </button>
             )}
           </div>
