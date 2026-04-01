@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { GA } from '@/lib/analytics/ga4'
 import { getActivePlans, getCurrentUserRole, addTestCredits } from '@/app/actions/payment/products'
 import {
   getMembershipPlans,
@@ -138,6 +139,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
       const sdk = await getTossPaymentsSDK()
       if (!sdk) throw new Error('결제 모듈 로드 실패')
 
+      GA.paywallClick('membership_start')
       const payment = sdk.payment({ customerKey: result.customerKey })
       await payment.requestBillingAuth({
         method: 'CARD',
@@ -146,6 +148,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
         windowTarget: 'self',
       })
     } catch (error) {
+      logger.error('[멤버십 구독 오류]', error)
       toast.error('구독 처리 중 오류가 발생했습니다.')
       setIsLoading(false)
     }
@@ -366,6 +369,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                           setIsLoading(false)
                           return
                         }
+                        GA.paywallClick('bokchae_start')
                         const orderId = `HHD_${Date.now()}_${memberId.slice(0, 4)}`
                         const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
                         await payment.requestPayment({
@@ -378,6 +382,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                           windowTarget: 'self',
                         })
                       } catch (error: unknown) {
+                        logger.error('[복채 결제 오류]', error)
                         const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
                         toast.error(msg)
                         setIsLoading(false)

@@ -9,6 +9,7 @@ import { Crown, Loader2, XCircle, Gift } from 'lucide-react'
 import Link from 'next/link'
 import confetti from 'canvas-confetti'
 import { logger } from '@/lib/utils/logger'
+import { GA } from '@/lib/analytics/ga4'
 
 type Step = 'issuing' | 'paying' | 'success' | 'error'
 
@@ -83,6 +84,7 @@ function MembershipSuccessContent() {
 
       // Success!
       setStep('success')
+      GA.membershipPurchase(planId ?? 'unknown', 0)
       triggerConfetti()
     } catch (err) {
       logger.error('Subscription process error:', err)
@@ -136,7 +138,7 @@ function MembershipSuccessContent() {
                 <h2 className="text-xl font-serif font-bold text-ink-light mb-2">
                   {step === 'issuing' ? '결제 수단 등록 중...' : '첫 결제 진행 중...'}
                 </h2>
-                <p className="text-ink-light/60 text-sm">잠시만 기다려주세요.</p>
+                <p className="text-ink-light/70 text-sm">잠시만 기다려주세요.</p>
               </div>
 
               {/* Progress Steps */}
@@ -163,7 +165,7 @@ function MembershipSuccessContent() {
 
               <div>
                 <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">멤버십 가입 완료!</h2>
-                <p className="text-ink-light/60 text-sm">해화 멤버십에 오신 것을 환영합니다.</p>
+                <p className="text-ink-light/70 text-sm">해화 멤버십에 오신 것을 환영합니다.</p>
               </div>
 
               <div className="bg-surface/50 rounded-lg p-4 space-y-3 border border-primary/20">
@@ -171,7 +173,7 @@ function MembershipSuccessContent() {
                   <Gift className="w-5 h-5" strokeWidth={1} />
                   <span className="font-bold">부적 10장이 지급되었습니다!</span>
                 </div>
-                <p className="text-sm text-ink-light/60">오늘의 운세도 이제 무제한으로 확인할 수 있어요.</p>
+                <p className="text-sm text-ink-light/70">오늘의 운세도 이제 무제한으로 확인할 수 있어요.</p>
               </div>
 
               <div className="space-y-3 pt-4">

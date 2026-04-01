@@ -45,6 +45,7 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
   const result = await response.json()
 
   if (!response.ok) {
+    logger.error('[Payment] Toss confirm failed:', { code: result.code, message: result.message, orderId })
     throw new Error(result.message || '결제 승인에 실패했습니다.')
   }
 

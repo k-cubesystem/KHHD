@@ -6,6 +6,8 @@ import { confirmPayment } from '@/app/actions/payment/payment'
 import { startFateAnalysis } from '@/app/actions/core/analysis'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { GA } from '@/lib/analytics/ga4'
+import { logger } from '@/lib/utils/logger'
 
 function PaymentProcessor() {
   const [isMounted, setIsMounted] = useState(false)
@@ -37,6 +39,7 @@ function PaymentProcessor() {
       try {
         // 1. 결제 승인 (금액은 서버에서 검증)
         await confirmPayment(paymentKey, orderId, credits)
+        GA.bokchaeCharge(credits * 10000)
         toast.success(`결제 완료! 복채 ${credits}만냥이 지급되었습니다.`)
 
         // 3. 분석 시작
@@ -48,6 +51,7 @@ function PaymentProcessor() {
         toast.success('해화당 비록이 성공적으로 완성되었습니다.')
         router.push('/protected/history')
       } catch (err: unknown) {
+        logger.error('[결제 승인 실패]', err)
         toast.error(err instanceof Error ? err.message : String(err))
         router.push('/protected/analysis')
       }
