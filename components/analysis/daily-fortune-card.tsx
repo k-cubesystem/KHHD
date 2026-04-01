@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Flame, ChevronRight, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { fadeInUp } from '@/lib/animations'
+import { GA } from '@/lib/analytics/ga4'
 
 interface DailyFortuneCardProps {
   userId: string
@@ -42,6 +43,7 @@ export function DailyFortuneCard({ userId, userName }: DailyFortuneCardProps) {
         const streak = streakRes && 'streak' in streakRes ? (streakRes.streak as number) : 0
 
         setFortune({ content, streak })
+        GA.dailyFortuneView()
       } catch {
         setFortune({ content: '오늘의 운세를 확인해보세요', streak: 0 })
       } finally {

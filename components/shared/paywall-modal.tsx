@@ -1,27 +1,30 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Crown, Coins, X } from 'lucide-react'
+import { Sparkles, X } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { GA } from '@/lib/analytics/ga4'
 
 interface PaywallModalProps {
   open: boolean
   onClose: () => void
-  /** 이미 무료 횟수를 소진한 경우 true, 마지막 1회 남은 넛지의 경우 false */
   isExhausted?: boolean
   usedCount?: number
   limit?: number
 }
 
 export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3, limit = 3 }: PaywallModalProps) {
+  useEffect(() => {
+    if (open) GA.paywallView()
+  }, [open])
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm mx-auto p-0 overflow-hidden border border-amber-400/30 bg-[#1a1208]">
-        {/* 헤더 배경 */}
         <div className="relative bg-gradient-to-b from-amber-900/60 to-transparent px-6 pt-8 pb-4">
-          {/* 닫기 버튼 */}
           <button
             onClick={onClose}
             className="absolute top-3 right-3 text-amber-400/60 hover:text-amber-300 transition-colors"
@@ -29,7 +32,6 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
             <X className="w-4 h-4" />
           </button>
 
-          {/* 아이콘 */}
           <div className="flex justify-center mb-3">
             <div className="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
               <Sparkles className="w-8 h-8 text-amber-400" />
@@ -51,9 +53,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
           </DialogHeader>
         </div>
 
-        {/* 본문 */}
         <div className="px-6 pb-6 space-y-4">
-          {/* 진행 표시 */}
           <div className="flex items-center gap-1 justify-center">
             {Array.from({ length: limit }).map((_, i) => (
               <div
@@ -71,45 +71,45 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
 
           {isExhausted ? (
             <p className="text-amber-100/80 text-sm text-center leading-relaxed">
-              해화당의 AI 운세 분석을 계속 이용하시려면
+              더 깊은 사주풀이를 확인하시려면
               <br />
-              <span className="text-amber-400 font-semibold">복채를 충전</span>하거나
-              <span className="text-amber-400 font-semibold"> 멤버십</span>에 가입해주세요.
+              <span className="text-amber-400 font-semibold">잠금을 해제</span>해주세요.
             </p>
           ) : (
             <p className="text-amber-100/80 text-sm text-center leading-relaxed">
               이번 분석 후 무료 횟수가 소진됩니다.
               <br />
-              복채 충전 또는 멤버십 가입으로
-              <br />
-              <span className="text-amber-400 font-semibold">무제한 분석</span>을 이용하세요.
+              <span className="text-amber-400 font-semibold">잠금 해제</span>로 무제한 분석을 이용하세요.
             </p>
           )}
 
-          {/* 행동 버튼 */}
           <div className="space-y-2 pt-1">
             <Button
               asChild
-              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold"
-              onClick={onClose}
+              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold h-12 text-base"
+              onClick={() => {
+                GA.paywallClick('unlock')
+                onClose()
+              }}
             >
               <Link href="/protected/membership">
-                <Crown className="w-4 h-4 mr-2" />
-                멤버십 가입하기
+                <Sparkles className="w-4 h-4 mr-2" />
+                잠금 해제
               </Link>
             </Button>
 
-            <Button
-              asChild
-              variant="outline"
-              className="w-full border-amber-600/40 text-amber-300 hover:bg-amber-900/30"
-              onClick={onClose}
-            >
-              <Link href="/protected/membership#bokchae">
-                <Coins className="w-4 h-4 mr-2" />
-                복채 충전하기
+            <div className="text-center">
+              <Link
+                href="/protected/membership#bokchae"
+                onClick={() => {
+                  GA.paywallClick('bokchae')
+                  onClose()
+                }}
+                className="text-amber-400/50 hover:text-amber-300 text-xs transition-colors underline underline-offset-2"
+              >
+                다른 결제 방법 보기
               </Link>
-            </Button>
+            </div>
 
             {!isExhausted && (
               <button

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getSajuData, WU_XING_NAMES, WU_XING_COLORS } from '@/lib/domain/saju/saju'
+import { GA } from '@/lib/analytics/ga4'
 
 const ANIMALS: Record<string, string> = {
   子: '쥐',
@@ -86,6 +87,7 @@ export function MiniReadingSection() {
       const trait = DAY_MASTER_TRAITS[dayMaster] || '고유한 기운을 가진 사람'
 
       setResult({ animal, animalEmoji, element, elementColor, dayMaster, trait })
+      GA.miniReading()
     } catch {
       setResult(null)
     }

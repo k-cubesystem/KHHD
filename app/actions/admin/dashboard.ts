@@ -163,7 +163,118 @@ export async function getHourlyTraffic(hours: number = 24) {
   return { success: true, data }
 }
 
-// 5. 빠른 액션: 전체 공지 발송
+// 5. 리텐션 코호트 분석 (D1/D7/D30)
+export async function getRetentionCohort(days: number = 30) {
+  if (!(await checkAdminPermission())) {
+    return { success: false, error: '권한 없음' }
+  }
+
+  const supabase = createAdminClient()
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+  const { data: signups, error: signupErr } = await supabase
+    .from('profiles')
+    .select('id, created_at')
+    .gte('created_at', since)
+
+  if (signupErr || !signups) {
+    logger.error('[getRetentionCohort]', signupErr)
+    return { success: false, error: signupErr?.message ?? 'signups 조회 실패' }
+  }
+
+  const userIds = signups.map((u) => u.id)
+  if (userIds.length === 0) {
+    return { success: true, data: { totalSignups: 0, d1: 0, d7: 0, d30: 0, d1Rate: 0, d7Rate: 0, d30Rate: 0 } }
+  }
+
+  const { data: activities } = await supabase
+    .from('activity_logs')
+    .select('user_id, created_at')
+    .in('user_id', userIds)
+    .gte('created_at', since)
+
+  const userActivity = new Map<string, Set<string>>()
+  for (const a of activities ?? []) {
+    if (!a.user_id) continue
+    if (!userActivity.has(a.user_id)) userActivity.set(a.user_id, new Set())
+    userActivity.get(a.user_id)!.add(new Date(a.created_at).toISOString().split('T')[0])
+  }
+
+  let d1 = 0
+  let d7 = 0
+  let d30 = 0
+  for (const signup of signups) {
+    const signupDate = new Date(signup.created_at)
+    const dates = userActivity.get(signup.id)
+    if (!dates) continue
+
+    const dayOffset = (n: number) => {
+      const d = new Date(signupDate)
+      d.setDate(d.getDate() + n)
+      return d.toISOString().split('T')[0]
+    }
+
+    if (dates.has(dayOffset(1))) d1++
+    if (dates.has(dayOffset(7))) d7++
+    if (dates.has(dayOffset(30))) d30++
+  }
+
+  const total = signups.length
+  return {
+    success: true,
+    data: {
+      totalSignups: total,
+      d1,
+      d7,
+      d30,
+      d1Rate: total > 0 ? Math.round((d1 / total) * 100) : 0,
+      d7Rate: total > 0 ? Math.round((d7 / total) * 100) : 0,
+      d30Rate: total > 0 ? Math.round((d30 / total) * 100) : 0,
+    },
+  }
+}
+
+// 6. 전환율 분석 (가입→무료분석→결제)
+export async function getConversionMetrics() {
+  if (!(await checkAdminPermission())) {
+    return { success: false, error: '권한 없음' }
+  }
+
+  const supabase = createAdminClient()
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [profilesRes, analysisRes, paymentsRes] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', thirtyDaysAgo),
+    supabase
+      .from('activity_logs')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('activity_type', 'analysis')
+      .gte('created_at', thirtyDaysAgo),
+    supabase
+      .from('payments')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('status', 'completed')
+      .gte('created_at', thirtyDaysAgo),
+  ])
+
+  const signups = profilesRes.count ?? 0
+  const analyses = analysisRes.count ?? 0
+  const payments = paymentsRes.count ?? 0
+
+  return {
+    success: true,
+    data: {
+      signups,
+      analyses,
+      payments,
+      signupToAnalysis: signups > 0 ? Math.round((analyses / signups) * 100) : 0,
+      analysisToPaid: analyses > 0 ? Math.round((payments / analyses) * 100) : 0,
+      signupToPaid: signups > 0 ? Math.round((payments / signups) * 100) : 0,
+    },
+  }
+}
+
+// 7. 빠른 액션: 전체 공지 발송
 export async function sendGlobalNotification(title: string, message: string) {
   if (!(await checkAdminPermission())) {
     return { success: false, error: '권한 없음' }
@@ -203,7 +314,7 @@ export async function sendGlobalNotification(title: string, message: string) {
   return { success: true, count: users.length }
 }
 
-// 6. 빠른 액션: 쿠폰 일괄 발급
+// 8. 빠른 액션: 쿠폰 일괄 발급
 export async function issueCouponToAll(couponCode: string, talismanAmount: number, expiryDays: number = 30) {
   if (!(await checkAdminPermission())) {
     return { success: false, error: '권한 없음' }
@@ -244,7 +355,7 @@ export async function issueCouponToAll(couponCode: string, talismanAmount: numbe
   return { success: true, count: users.length }
 }
 
-// 7. 빠른 액션: 이벤트 생성
+// 9. 빠른 액션: 이벤트 생성
 export async function createEvent(eventData: {
   title: string
   description: string
