@@ -1,13 +1,17 @@
 {
-    "functions": {
-        "app/**/*.ts": {
-            "maxDuration": 60
-        }
+  "functions": {
+    "app/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/daily-fortune",
+      "schedule": "0 22 * * *"
     },
-    "crons": [
-        {
-            "path": "/api/cron/daily-fortune",
-            "schedule": "0 22 * * *"
-        }
-    ]
+    {
+      "path": "/api/cron/billing",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }
