@@ -202,5 +202,34 @@
     "evening": "Good evening",
     "night": "Good night",
     "member": "Member"
+  },
+  "bok": {
+    "hub": "Fortune Manager",
+    "points": "Fortune Points",
+    "tier": {
+      "seed": "Fortune Seed",
+      "sprout": "Fortune Sprout",
+      "flower": "Fortune Flower",
+      "tree": "Fortune Tree",
+      "forest": "Fortune Forest"
+    },
+    "mission": "Today's Fortune Missions",
+    "missionComplete": "+{points}p fortune points earned!",
+    "accumulated": "Total",
+    "nextTier": "{points}p to next tier",
+    "managing": "Managing",
+    "register": "Add New Connection",
+    "weeklyReport": "This Week's Fortune Status",
+    "shareMessage": "Someone is looking after your fortune on Haehwadang",
+    "upgrade": {
+      "title": "Manage More Connections",
+      "desc": "Upgrade to Fortune Keeper to add more connections",
+      "cta": "Start Fortune Keeper"
+    },
+    "tiers": {
+      "bokjigi": "Fortune Keeper",
+      "bokjangi": "Fortune Master",
+      "boksin": "Fortune Spirit"
+    }
   }
 }

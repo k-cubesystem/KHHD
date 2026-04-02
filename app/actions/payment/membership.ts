@@ -94,8 +94,8 @@ export async function canAddRelationship(): Promise<{
 
   if (currentCount >= relationshipLimit) {
     const upgradeMessage = limits?.is_subscribed
-      ? '업그레이드하여 더 많은 인연을 등록하세요.'
-      : '멤버십에 가입하여 더 많은 인연을 등록하세요.'
+      ? '더 높은 등급으로 업그레이드하여 더 많은 인연의 복을 관리하세요.'
+      : '복지기 멤버십에 가입하여 더 많은 인연의 복을 관리하세요.'
 
     return {
       allowed: false,
@@ -173,9 +173,7 @@ export async function canUseTalisman(): Promise<{
 /**
  * Increment daily talisman usage
  */
-export async function incrementDailyUsage(
-  amount: number = 1
-): Promise<{ success: boolean; error?: string }> {
+export async function incrementDailyUsage(amount: number = 1): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const {
     data: { user },

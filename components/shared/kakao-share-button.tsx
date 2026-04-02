@@ -5,6 +5,7 @@ import { MessageCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { shareKakao } from '@/lib/kakao-sdk'
 import { logger } from '@/lib/utils/logger'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { GA } from '@/lib/analytics/ga4'
 
 interface KakaoShareButtonProps {
@@ -34,7 +35,10 @@ export function KakaoShareButton({
     setSharing(true)
     try {
       const success = await shareKakao({ title, description, imageUrl, webUrl, buttonTitle })
-      if (success) GA.shareKakao('saju')
+      if (success) {
+        GA.shareKakao('saju')
+        addBokPoints(20, 'SHARE', undefined, '카카오톡 공유').catch(() => {})
+      }
 
       if (!success) {
         // SDK 로드 실패 시 Web Share API 폴백

@@ -10,6 +10,7 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -101,6 +102,8 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       model_used: MODEL_PRO,
       talisman_cost: 2,
     })
+
+    await addBokPoints(40, 'COMPATIBILITY', undefined, '궁합 분석 완료').catch(() => {})
 
     return { success: true, data: finalResult, cached: false }
   } catch (error: unknown) {

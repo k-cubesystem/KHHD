@@ -202,5 +202,34 @@
     "evening": "좋은 저녁입니다",
     "night": "좋은 밤입니다",
     "member": "회원"
+  },
+  "bok": {
+    "hub": "복 관리",
+    "points": "복 포인트",
+    "tier": {
+      "seed": "복의 씨앗",
+      "sprout": "복의 새싹",
+      "flower": "복의 꽃",
+      "tree": "복의 나무",
+      "forest": "복의 숲"
+    },
+    "mission": "오늘의 복 미션",
+    "missionComplete": "+{points}p 복 포인트 적립!",
+    "accumulated": "누적",
+    "nextTier": "다음 등급까지 {points}p",
+    "managing": "관리 중인 인연",
+    "register": "새 인연 등록하기",
+    "weeklyReport": "이번 주 복 현황",
+    "shareMessage": "해화당에서 당신의 복을 챙겨주는 사람이 있어요",
+    "upgrade": {
+      "title": "더 많은 인연을 관리하세요",
+      "desc": "복지기 등급으로 업그레이드하면 더 많은 인연을 등록할 수 있어요",
+      "cta": "복지기 시작하기"
+    },
+    "tiers": {
+      "bokjigi": "복지기",
+      "bokjangi": "복장이",
+      "boksin": "복신"
+    }
   }
 }
