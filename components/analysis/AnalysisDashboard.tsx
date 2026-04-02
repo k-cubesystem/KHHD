@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
+import { BokHubSection } from '@/components/analysis/bok-hub-section'
 import { Card } from '@/components/ui/card'
 import {
   Flame,
@@ -150,6 +151,11 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
     >
       {/* 0. Daily Fortune Card — 매일 돌아올 이유 */}
       {userId && userName && <DailyFortuneCard userId={userId} userName={userName} />}
+
+      {/* 0.5. 복 관리 허브 */}
+      <motion.div variants={fadeInUp}>
+        <BokHubSection />
+      </motion.div>
 
       {/* 1. Seasonal Event Banner */}
       <motion.div variants={fadeInUp}>
