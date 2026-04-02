@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
 import { HeroCarousel } from '@/components/HeroCarousel'
 import { MiniReadingSection } from '@/components/landing/mini-reading-section'
 import { ReviewMarquee } from '@/components/landing/review-marquee'
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
   description: '전통 명리학과 AI가 만나 당신의 운명을 분석합니다. 사주, 궁합, 관상, 손금, 풍수 분석.',
 }
 
-export default function Home() {
+export default async function Home() {
+  const t = await getTranslations('landing')
+
   return (
     <div className="relative min-h-screen w-full flex flex-col bg-background text-ink-light overflow-x-hidden antialiased font-serif selection:bg-primary/30">
       {/* Texture Overlay */}
@@ -35,7 +38,7 @@ export default function Home() {
             href="/auth/sign-up"
             className="block w-full py-3.5 text-center rounded-xl bg-gold-500/20 hover:bg-gold-500/30 border border-gold-500/30 text-gold-500 font-sans text-sm transition-colors"
           >
-            무료로 시작하기
+            {t('cta')}
           </Link>
         </div>
       </section>

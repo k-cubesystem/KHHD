@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { getSajuData, WU_XING_NAMES, WU_XING_COLORS } from '@/lib/domain/saju/saju'
 import { GA } from '@/lib/analytics/ga4'
@@ -61,6 +62,7 @@ interface MiniReadingResult {
 }
 
 export function MiniReadingSection() {
+  const t = useTranslations('landing')
   const router = useRouter()
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
@@ -98,14 +100,14 @@ export function MiniReadingSection() {
       <div className="max-w-[420px] mx-auto space-y-4">
         <div className="text-center space-y-1">
           <p className="text-gold-500/60 text-xs font-sans tracking-widest uppercase">Quick Fortune</p>
-          <h2 className="text-lg font-serif text-ink-light">내 사주, 30초 미리보기</h2>
+          <h2 className="text-lg font-serif text-ink-light">{t('miniReading')}</h2>
         </div>
 
         {/* Input */}
         <div className="flex gap-2 items-center justify-center">
           <input
             type="number"
-            placeholder="년"
+            placeholder={t('year')}
             value={year}
             onChange={(e) => setYear(e.target.value)}
             className="w-20 px-3 py-2.5 bg-white/5 border border-gold-500/20 rounded-lg text-center text-sm text-ink-light placeholder:text-ink-light/30 focus:border-gold-500/50 focus:outline-none font-sans"
@@ -114,7 +116,7 @@ export function MiniReadingSection() {
           />
           <input
             type="number"
-            placeholder="월"
+            placeholder={t('month')}
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             className="w-16 px-3 py-2.5 bg-white/5 border border-gold-500/20 rounded-lg text-center text-sm text-ink-light placeholder:text-ink-light/30 focus:border-gold-500/50 focus:outline-none font-sans"
@@ -123,7 +125,7 @@ export function MiniReadingSection() {
           />
           <input
             type="number"
-            placeholder="일"
+            placeholder={t('day')}
             value={day}
             onChange={(e) => setDay(e.target.value)}
             className="w-16 px-3 py-2.5 bg-white/5 border border-gold-500/20 rounded-lg text-center text-sm text-ink-light placeholder:text-ink-light/30 focus:border-gold-500/50 focus:outline-none font-sans"
@@ -177,7 +179,7 @@ export function MiniReadingSection() {
                 className="w-full bg-gold-500/20 hover:bg-gold-500/30 text-gold-500 border border-gold-500/30 gap-2 font-sans"
                 size="sm"
               >
-                전체 사주풀이 보기
+                {t('miniReadingResult')}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </motion.div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { confirmPayment } from '@/app/actions/payment/payment'
 import { startFateAnalysis } from '@/app/actions/core/analysis'
 import { toast } from 'sonner'
@@ -13,6 +14,7 @@ function PaymentProcessor() {
   const [isMounted, setIsMounted] = useState(false)
   const searchParams = useSearchParams()
   const router = useRouter()
+  const t = useTranslations('analysis')
   const processed = useRef(false)
 
   useEffect(() => {
@@ -64,8 +66,8 @@ function PaymentProcessor() {
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
       <Loader2 className="w-16 h-16 animate-spin text-primary" />
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-black text-gold">기운을 결합하고 있습니다</h2>
-        <p className="text-muted-foreground">잠시만 기다려 주십시오. 결제 승인 및 비록 생성을 진행 중입니다.</p>
+        <h2 className="text-3xl font-black text-gold">{t('processing')}</h2>
+        <p className="text-muted-foreground">{t('processingDesc')}</p>
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { BLUR_DATA_URL } from '@/lib/utils/image'
 import { ArrowRight, Flower } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 import { EventPopupWrapper } from '@/components/EventPopup'
 
@@ -81,6 +82,7 @@ const slides = [
 ]
 
 export function HeroCarousel() {
+  const t = useTranslations('brand')
   const [currentSlide, setCurrentSlide] = useState(0)
 
   useEffect(() => {
@@ -141,7 +143,7 @@ export function HeroCarousel() {
       {/* Header Group (Fixed Top) */}
       <div className="absolute top-14 left-0 right-0 z-50 flex flex-col items-center gap-5">
         <span className="font-serif text-lg md:text-xl lg:text-2xl font-bold tracking-[0.5em] text-primary animate-in fade-in duration-1000 gold-glow">
-          청담해화당
+          {t('name')}
         </span>
         <div className="flex items-center gap-3 md:gap-4 opacity-80 animate-in fade-in duration-1000 delay-100">
           <div className="h-px w-8 md:w-12 bg-primary/50" />

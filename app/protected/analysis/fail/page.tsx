@@ -1,6 +1,7 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -10,6 +11,7 @@ import { GA } from '@/lib/analytics/ga4'
 function PaymentFailContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const t = useTranslations()
 
   const code = searchParams.get('code')
   const message = searchParams.get('message')
@@ -24,9 +26,11 @@ function PaymentFailContent() {
       </div>
 
       <div className="text-center space-y-3 max-w-md">
-        <h2 className="text-3xl font-serif font-bold text-ink-light">결제에 실패했습니다</h2>
+        <h2 className="text-3xl font-serif font-bold text-ink-light">{t('payment.fail')}</h2>
         <div className="p-4 bg-surface rounded-xl border border-primary/20">
-          <p className="text-sm text-ink-light/70 mb-1">에러 코드: {code || 'UNKNOWN'}</p>
+          <p className="text-sm text-ink-light/70 mb-1">
+            {t('payment.errorCode')}: {code || 'UNKNOWN'}
+          </p>
           <p className="text-base text-seal font-medium font-serif">
             {message || '알 수 없는 오류가 발생했습니다. 다시 시도해 주세요.'}
           </p>
@@ -51,7 +55,7 @@ function PaymentFailContent() {
         </Button>
       </div>
 
-      <p className="text-xs text-ink-light/60">문제가 지속되면 고객센터나 관리자에게 문의해 주세요.</p>
+      <p className="text-xs text-ink-light/60">{t('payment.contactSupport')}</p>
     </div>
   )
 }

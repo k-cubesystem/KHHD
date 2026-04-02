@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { XCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -9,7 +10,8 @@ import { GA } from '@/lib/analytics/ga4'
 
 function FailContent() {
   const searchParams = useSearchParams()
-  const message = searchParams.get('message') || '결제가 취소되었거나 오류가 발생했습니다.'
+  const t = useTranslations('payment')
+  const message = searchParams.get('message') || t('failDesc')
   const code = searchParams.get('code')
 
   GA.paywallClick('payment_fail')
@@ -22,9 +24,13 @@ function FailContent() {
         </div>
 
         <div>
-          <h1 className="text-xl font-serif font-light text-ink-light mb-2">결제 실패</h1>
+          <h1 className="text-xl font-serif font-light text-ink-light mb-2">{t('fail')}</h1>
           <p className="text-ink-light/70 text-sm">{message}</p>
-          {code && <p className="text-ink-light/50 text-xs mt-1">오류 코드: {code}</p>}
+          {code && (
+            <p className="text-ink-light/50 text-xs mt-1">
+              {t('errorCode')}: {code}
+            </p>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -32,14 +38,14 @@ function FailContent() {
             asChild
             className="w-full h-12 bg-primary hover:bg-primary/90 text-background font-serif font-bold rounded-lg"
           >
-            <Link href="/protected/membership">다시 시도하기</Link>
+            <Link href="/protected/membership">{t('retryPayment')}</Link>
           </Button>
           <Button
             asChild
             variant="outline"
             className="w-full h-12 border-primary/20 text-white hover:bg-surface rounded-lg"
           >
-            <Link href="/protected">대시보드로 이동</Link>
+            <Link href="/protected">{t('goToDashboard')}</Link>
           </Button>
         </div>
       </div>

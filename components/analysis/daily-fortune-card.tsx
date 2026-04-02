@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Flame, ChevronRight, Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Card } from '@/components/ui/card'
 import { fadeInUp } from '@/lib/animations'
 import { GA } from '@/lib/analytics/ga4'
@@ -19,6 +20,7 @@ interface FortunePreview {
 }
 
 export function DailyFortuneCard({ userId, userName }: DailyFortuneCardProps) {
+  const t = useTranslations('fortune')
   const router = useRouter()
   const [fortune, setFortune] = useState<FortunePreview | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,14 +40,14 @@ export function DailyFortuneCard({ userId, userName }: DailyFortuneCardProps) {
         const content =
           fortuneRes.success && 'content' in fortuneRes && fortuneRes.content
             ? (fortuneRes.content as string).substring(0, 80)
-            : '오늘의 운세를 확인해보세요'
+            : t('daily')
 
         const streak = streakRes && 'streak' in streakRes ? (streakRes.streak as number) : 0
 
         setFortune({ content, streak })
         GA.dailyFortuneView()
       } catch {
-        setFortune({ content: '오늘의 운세를 확인해보세요', streak: 0 })
+        setFortune({ content: t('daily'), streak: 0 })
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -55,7 +57,7 @@ export function DailyFortuneCard({ userId, userName }: DailyFortuneCardProps) {
     return () => {
       cancelled = true
     }
-  }, [userId])
+  }, [userId, t])
 
   return (
     <motion.div variants={fadeInUp}>
@@ -72,7 +74,7 @@ export function DailyFortuneCard({ userId, userName }: DailyFortuneCardProps) {
               </div>
               <div>
                 <p className="text-xs text-gold-500/70 font-sans">{userName}님의 오늘</p>
-                <p className="text-sm font-serif text-ink-light">오늘의 운세</p>
+                <p className="text-sm font-serif text-ink-light">{t('daily')}</p>
               </div>
             </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { issueBillingKey, executeFirstPayment } from '@/app/actions/payment/subscription'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,6 +17,7 @@ type Step = 'issuing' | 'paying' | 'success' | 'error'
 function MembershipSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useTranslations('payment')
   const [step, setStep] = useState<Step>('issuing')
   const [error, setError] = useState<string>('')
 
@@ -136,9 +138,9 @@ function MembershipSuccessContent() {
               </div>
               <div>
                 <h2 className="text-xl font-serif font-bold text-ink-light mb-2">
-                  {step === 'issuing' ? '결제 수단 등록 중...' : '첫 결제 진행 중...'}
+                  {step === 'issuing' ? t('issuingBilling') : t('firstPayment')}
                 </h2>
-                <p className="text-ink-light/70 text-sm">잠시만 기다려주세요.</p>
+                <p className="text-ink-light/70 text-sm">{t('pleaseWait')}</p>
               </div>
 
               {/* Progress Steps */}
@@ -164,16 +166,16 @@ function MembershipSuccessContent() {
               </div>
 
               <div>
-                <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">멤버십 가입 완료!</h2>
-                <p className="text-ink-light/70 text-sm">해화 멤버십에 오신 것을 환영합니다.</p>
+                <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">{t('membershipSuccess')}</h2>
+                <p className="text-ink-light/70 text-sm">{t('membershipWelcome')}</p>
               </div>
 
               <div className="bg-surface/50 rounded-lg p-4 space-y-3 border border-primary/20">
                 <div className="flex items-center justify-center gap-2 text-primary">
                   <Gift className="w-5 h-5" strokeWidth={1} />
-                  <span className="font-bold">부적 10장이 지급되었습니다!</span>
+                  <span className="font-bold">{t('talismanGranted')}</span>
                 </div>
-                <p className="text-sm text-ink-light/70">오늘의 운세도 이제 무제한으로 확인할 수 있어요.</p>
+                <p className="text-sm text-ink-light/70">{t('unlimitedFortune')}</p>
               </div>
 
               <div className="space-y-3 pt-4">
@@ -181,14 +183,14 @@ function MembershipSuccessContent() {
                   asChild
                   className="w-full h-12 bg-primary hover:bg-primary/90 text-background font-serif font-bold rounded-lg"
                 >
-                  <Link href="/protected/saju/today">오늘의 운세 확인하기</Link>
+                  <Link href="/protected/saju/today">{t('checkFortune')}</Link>
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   className="w-full h-12 border-primary/20 text-ink-light hover:bg-surface rounded-lg"
                 >
-                  <Link href="/protected">대시보드로 이동</Link>
+                  <Link href="/protected">{t('goToDashboard')}</Link>
                 </Button>
               </div>
             </div>
@@ -202,7 +204,7 @@ function MembershipSuccessContent() {
               </div>
 
               <div>
-                <h2 className="text-xl font-serif font-bold text-ink-light mb-2">처리 실패</h2>
+                <h2 className="text-xl font-serif font-bold text-ink-light mb-2">{t('processFail')}</h2>
                 <p className="text-seal font-medium">{error}</p>
               </div>
 
@@ -211,14 +213,14 @@ function MembershipSuccessContent() {
                   onClick={() => router.push('/protected/membership')}
                   className="w-full h-12 bg-primary hover:bg-primary/90 text-background font-serif font-bold rounded-lg"
                 >
-                  다시 시도하기
+                  {t('retryPayment')}
                 </Button>
                 <Button
                   asChild
                   variant="outline"
                   className="w-full h-12 border-primary/20 text-ink-light hover:bg-surface rounded-lg"
                 >
-                  <Link href="/protected">대시보드로 이동</Link>
+                  <Link href="/protected">{t('goToDashboard')}</Link>
                 </Button>
               </div>
             </div>
