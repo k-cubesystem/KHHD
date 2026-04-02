@@ -1,240 +1,177 @@
-<h1 align="center">해화당 (海華堂) - AI 사주 명리 플랫폼</h1>
+# 청담해화당 (Haehwadang)
 
-<p align="center">
- Next.js 16 + Supabase + AI 기반 사주 운세 서비스
-</p>
+> AI 기반 프리미엄 사주/운세/궁합/관상/풍수 분석 SaaS
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## Tech Stack
+
+| Layer      | Technology                    |
+| ---------- | ----------------------------- |
+| Framework  | Next.js 16 (App Router)       |
+| Language   | TypeScript (strict)           |
+| Styling    | Tailwind CSS + Shadcn/ui      |
+| Database   | Supabase (PostgreSQL + RLS)   |
+| AI         | Gemini 3.1 Pro / Flash        |
+| Payments   | Toss Payments (위젯 + 빌링)   |
+| Auth       | Supabase Auth (OAuth + Email) |
+| Monitoring | Sentry + GA4                  |
+| i18n       | next-intl (ko/en)             |
+| Deploy     | Vercel                        |
+
+## Quick Start
+
+```bash
+git clone <repo-url>
+cd haehwadang
+npm install
+cp .env.example .env.local   # 환경변수 설정
+npm run dev                   # http://localhost:3000
+```
+
+## Commands
+
+```bash
+npm run dev       # 개발 서버
+npm run build     # 프로덕션 빌드
+npm run lint      # ESLint
+npm run test      # 테스트
+npm run e2e       # E2E 테스트
+```
 
 ## Features
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+### Core Analysis
 
-## Demo
+- **사주팔자** — 천지인(天地人) 3요소 AI 분석
+- **궁합** — 두 사람 오행 기반 궁합 분석
+- **관상/손금** — 이미지 AI 분석 (GPT-4 Vision)
+- **풍수** — 주소 기반 풍수 8방위 분석
+- **오늘의 운세** — 매일 개인화 운세 + 푸시 알림
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+### Monetization
 
-## Deploy to Vercel
+- **복채 시스템** — 가상 화폐 (1복채 = 1만냥)
+- **3-Tier 멤버십** — Single / Family / Business
+- **Toss 결제위젯** — 일반결제 + 자동결제(빌링)
+- **출석체크/룰렛** — 일일 복채 보상
 
-Vercel deployment will guide you through creating a Supabase account and project.
+### Engagement
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+- **카카오톡 공유** — JS SDK 리치 카드
+- **미니 리딩** — 가입 전 즉시 체험
+- **데일리 포춘 카드** — 연속 접속 스트릭
+- **AI 고민상담** — 실시간 채팅
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
-
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
-
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
-
-## 환경변수 설정
-
-### 1. 환경변수 파일 생성
-
-`.env.example` 파일을 `.env.local`로 복사합니다:
-
-```bash
-cp .env.example .env.local
-```
-
-### 2. 필수 환경변수 설정
-
-#### Supabase 설정
-1. [Supabase 대시보드](https://database.new)에서 새 프로젝트 생성
-2. Settings > API에서 다음 정보 확인:
-   - `NEXT_PUBLIC_SUPABASE_URL`: 프로젝트 URL
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Public Anon 키
-   - `SUPABASE_SERVICE_ROLE_KEY`: Service Role 키 (절대 클라이언트에 노출하지 마세요)
-
-#### AI 서비스
-1. **Gemini API** (필수)
-   - [Google AI Studio](https://ai.google.dev/)에서 API 키 발급
-   - `GOOGLE_GENERATIVE_AI_API_KEY` 및 `GEMINI_API_KEY`에 설정
-
-2. **OpenAI API** (선택사항)
-   - [OpenAI Platform](https://platform.openai.com/api-keys)에서 API 키 발급
-   - GPT-4 Vision API 사용 시 필요
-   - `OPENAI_API_KEY`에 설정
-
-#### Toss Payments (결제 기능 사용 시)
-1. [Toss Payments 개발자 센터](https://developers.tosspayments.com/)에서 가입
-2. 테스트/프로덕션 키 발급:
-   - `NEXT_PUBLIC_TOSS_CLIENT_KEY`: 클라이언트 키
-   - `TOSS_SECRET_KEY`: Secret 키 (서버 전용)
-
-### 3. 개발 서버 실행
-
-```bash
-npm install
-npm run dev
-```
-
-애플리케이션이 [localhost:3000](http://localhost:3000/)에서 실행됩니다.
-
-## 프로젝트 구조
+## Project Structure
 
 ```
 app/
-├── actions/          # Server Actions (도메인별 비즈니스 로직)
-├── protected/        # 인증 필요 페이지
-└── (auth)/           # 인증 관련 페이지
+  api/cron/          # Vercel Cron (billing, daily-fortune)
+  api/webhooks/      # Toss Payments webhook
+  api/og/            # Dynamic OG image (Edge)
+  protected/         # Auth-required pages
+    analysis/        # 사주 분석 허브
+    studio/          # 관상/손금/풍수
+    fortune/         # 주간/월간 운세
+    membership/      # 결제/구독
+    family/          # 가족 관리
+    ai-shaman/       # AI 상담
+  actions/           # Server Actions
+    ai/              # AI 분석 액션 (Gemini)
+    payment/         # 결제/구독/지갑
+    admin/           # 관리자 액션
+    core/            # 핵심 비즈니스 로직
+
+components/
+  analysis/          # 분석 결과 UI
+  payment/           # 결제 위젯
+  shared/            # 공유 컴포넌트 (paywall, blur, locale)
+  landing/           # 랜딩 페이지
+  events/            # 출석/룰렛/이벤트
 
 lib/
-├── domain/           # 도메인 로직 (사주, 궁합, 운명 등)
-│   ├── saju/        # 사주 계산 및 분석
-│   ├── compatibility/  # 궁합 분석
-│   └── destiny/     # 운명 분석
-├── services/         # 외부 서비스 (Gemini, Toss Payments 등)
-└── utils/            # 유틸리티 함수 (logger 등)
+  config/            # Design tokens, 설정
+  services/          # 외부 서비스 (Toss SDK)
+  analytics/         # GA4 이벤트 트래킹
+  domain/saju/       # 사주 계산 Pure functions
 
-components/           # UI 컴포넌트 (Shadcn/ui 기반)
-supabase/
-└── migrations/       # 데이터베이스 마이그레이션
+i18n/                # next-intl 설정
+messages/            # ko.json, en.json
+docs/                # API spec, Component catalog
 ```
 
-## 주요 기능
-
-- 사주팔자 계산 및 분석 (음력/양력 지원)
-- AI 기반 운세 분석 (Gemini API)
-- 가족 구성원 관리 및 인연 분석
-- 궁합 분석 (사주 기반)
-- 관상, 손금, 풍수 분석 (이미지 AI)
-- 멤버십 및 결제 시스템 (Toss Payments)
-- 부적(크레딧) 시스템
-
-## 개발 가이드
-
-### 로깅
-프로덕션 환경에서 불필요한 로그 출력을 방지하기 위해 `logger` 유틸리티를 사용합니다:
-
-```typescript
-import { logger } from "@/lib/utils/logger";
-
-// 개발 환경에서만 출력
-logger.log("디버그 정보");
-logger.info("정보 메시지");
-logger.warn("경고 메시지");
-
-// 프로덕션에서도 출력 (에러만)
-logger.error("에러 발생", error);
-```
-
-### 데이터베이스
-자세한 스키마 정보는 `Database.md` 파일을 참고하세요.
-
-### 코딩 규칙
-프로젝트 코딩 규칙은 `PROJECT_RULES.md` 파일을 참고하세요.
-
-## Clone and run locally
-
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
-
-2. Clone this repository:
-
-   ```bash
-   git clone <repository-url>
-   cd haehwadang
-   ```
-
-3. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-4. Set up environment variables (see "환경변수 설정" section above)
-
-5. Run database migrations:
-
-   ```bash
-   npx supabase db reset
-   ```
-
-6. Run the development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The application should now be running on [localhost:3000](http://localhost:3000/).
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## 배포 (Deployment)
-
-### 빠른 배포
+## Environment Variables
 
 ```bash
-# 1. 배포 전 자동 체크
-npm run predeploy
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-# 2. Vercel 프로덕션 배포
-npm run deploy
+# AI
+GOOGLE_GENERATIVE_AI_API_KEY=
 
-# 3. 미리보기 배포 (선택사항)
-npm run deploy:preview
+# Payments (Toss)
+NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY=   # 결제위젯 연동키
+TOSS_PAYMENTS_SECRET_KEY=               # 시크릿키
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_GA_ID=                       # Google Analytics 4
+CRON_SECRET=                             # Vercel Cron 인증
+
+# KakaoTalk (Solapi)
+SOLAPI_API_KEY=
+SOLAPI_API_SECRET=
 ```
 
-### 상세 배포 가이드
+## Payment System
 
-자세한 배포 절차는 다음 문서를 참고하세요:
+### One-time (복채 충전)
 
-- **DEPLOYMENT_GUIDE.md** - 단계별 배포 가이드 (환경변수, Vercel 설정, 보안)
-- **DEPLOYMENT_REPORT.md** - 배포 준비 상태 보고서 (빌드 결과, 체크리스트)
+Toss 결제위젯 → `widgets.renderPaymentMethods()` → `requestPayment()` → `/api/webhooks/toss`
 
-### 환경변수 설정 (프로덕션)
+### Subscription (멤버십)
 
-Vercel Dashboard 또는 CLI를 통해 다음 환경변수를 설정하세요:
+`payment.requestBillingAuth()` → 빌링키 발급 → 첫 결제 → `/api/cron/billing` (매일 09:00 자동 갱신)
+
+| Plan     | Price     | Daily Limit | Family |
+| -------- | --------- | ----------- | ------ |
+| Single   | 9,900/mo  | 10만냥      | 3명    |
+| Family   | 29,900/mo | 30만냥      | 10명   |
+| Business | 99,000/mo | 100만냥     | 50명   |
+
+## API Documentation
+
+See [docs/api-spec.md](docs/api-spec.md) for full API specification.
+
+## Design System
+
+See [docs/components.md](docs/components.md) for component catalog and design tokens.
+
+### Key Patterns
+
+- **4-Protocol**: Zero-Latency + Commercialization + Security + Code Quality
+- **Semantic Colors**: error/success/warning/info with light/border/text variants
+- **Typography**: 10-scale system (display → overline)
+- **Accessibility**: WCAG AA, `prefers-reduced-motion`, ARIA
+
+## Deployment
 
 ```bash
-# Vercel CLI를 통한 환경변수 설정
-vercel env add NEXT_PUBLIC_SUPABASE_URL production
-vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
-vercel env add SUPABASE_SERVICE_ROLE_KEY production
-vercel env add GOOGLE_GENERATIVE_AI_API_KEY production
-vercel env add NEXT_PUBLIC_TOSS_CLIENT_KEY production
-vercel env add TOSS_SECRET_KEY production
-vercel env add NEXT_PUBLIC_APP_URL production
+# Vercel (auto-deploy on push to main)
+git push origin main
+
+# Manual
+vercel --prod
 ```
 
-### 배포 후 확인
+### Cron Jobs (vercel.json)
 
-```bash
-# 실시간 로그 모니터링
-vercel logs --follow
+| Job                       | Schedule   | Description        |
+| ------------------------- | ---------- | ------------------ |
+| `/api/cron/billing`       | 매일 09:00 | 정기결제 자동 갱신 |
+| `/api/cron/daily-fortune` | 매일 22:00 | 운세 생성 + 알림톡 |
 
-# 배포 목록 확인
-vercel list
+## License
 
-# 환경변수 확인
-vercel env ls
-```
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+Private. All rights reserved.
