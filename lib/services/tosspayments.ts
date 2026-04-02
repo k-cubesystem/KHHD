@@ -14,3 +14,9 @@ export const getTossPaymentsSDK = () => {
   }
   return sdkPromise
 }
+
+export const getTossWidgets = async (customerKey: string) => {
+  const sdk = await getTossPaymentsSDK()
+  if (!sdk) return null
+  return sdk.widgets({ customerKey })
+}

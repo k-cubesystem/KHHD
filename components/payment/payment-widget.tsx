@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { getTossPaymentsSDK, getTossWidgets } from '@/lib/services/tosspayments'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -62,6 +62,9 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
   const [subscriptionStatus, setSubscriptionStatus] = useState<Awaited<
     ReturnType<typeof getSubscriptionStatus>
   > | null>(null)
+  const [widgetReady, setWidgetReady] = useState(false)
+  const [selectedBokchae, setSelectedBokchae] = useState<DisplayPlan | null>(null)
+  const widgetsRef = useRef<Awaited<ReturnType<typeof getTossWidgets>>>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -124,6 +127,52 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
           features: ['복채 30만냥', 'VIP 우선 분석', 'PDF 리포트 제공', '무제한 가족 등록'],
         },
       ])
+    }
+  }
+
+  const initBokchaeWidget = useCallback(
+    async (plan: DisplayPlan) => {
+      setSelectedBokchae(plan)
+      setWidgetReady(false)
+      try {
+        const customerKey = `HHD_${memberId.slice(0, 8)}`
+        const widgets = await getTossWidgets(customerKey)
+        if (!widgets) {
+          toast.error('결제 모듈을 불러올 수 없습니다.')
+          return
+        }
+        widgetsRef.current = widgets
+        await widgets.setAmount({ currency: 'KRW', value: plan.price })
+        await Promise.all([
+          widgets.renderPaymentMethods({ selector: '#toss-payment-method', variantKey: 'DEFAULT' }),
+          widgets.renderAgreement({ selector: '#toss-agreement', variantKey: 'AGREEMENT' }),
+        ])
+        setWidgetReady(true)
+      } catch (error) {
+        logger.error('[복채 위젯 초기화 오류]', error)
+        toast.error('결제 위젯을 불러오는데 실패했습니다.')
+      }
+    },
+    [memberId]
+  )
+
+  const handleBokchaeWidgetPayment = async () => {
+    if (!widgetsRef.current || !selectedBokchae) return
+    setIsLoading(true)
+    try {
+      GA.paywallClick('bokchae_start')
+      const orderId = `HHD_${Date.now()}_${memberId.slice(0, 4)}`
+      await widgetsRef.current.requestPayment({
+        orderId,
+        orderName: selectedBokchae.label,
+        successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&homeAddress=${encodeURIComponent(homeAddress || '')}&credits=${selectedBokchae.credits}`,
+        failUrl: `${window.location.origin}/protected/analysis/fail`,
+      })
+    } catch (error: unknown) {
+      logger.error('[복채 결제 오류]', error)
+      const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      toast.error(msg)
+      setIsLoading(false)
     }
   }
 
@@ -360,43 +409,59 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
 
                 <div className="p-4 bg-gray-50/50">
                   <Button
-                    onClick={async () => {
-                      setIsLoading(true)
-                      try {
-                        const sdk = await getTossPaymentsSDK()
-                        if (!sdk) {
-                          toast.error('결제 모듈을 불러올 수 없습니다.')
-                          setIsLoading(false)
-                          return
-                        }
-                        GA.paywallClick('bokchae_start')
-                        const orderId = `HHD_${Date.now()}_${memberId.slice(0, 4)}`
-                        const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
-                        await payment.requestPayment({
-                          method: 'CARD',
-                          amount: { currency: 'KRW', value: plan.price },
-                          orderId,
-                          orderName: plan.label,
-                          successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&homeAddress=${encodeURIComponent(homeAddress || '')}&credits=${plan.credits}`,
-                          failUrl: `${window.location.origin}/protected/analysis/fail`,
-                          windowTarget: 'self',
-                        })
-                      } catch (error: unknown) {
-                        logger.error('[복채 결제 오류]', error)
-                        const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
-                        toast.error(msg)
-                        setIsLoading(false)
-                      }
-                    }}
-                    disabled={isLoading}
-                    className="w-full bg-zen-bg text-zen-wood border border-zen-wood/20 hover:bg-zen-wood hover:text-white font-bold h-10 transition-colors"
+                    onClick={() => initBokchaeWidget(plan)}
+                    disabled={isLoading || selectedBokchae?.credits === plan.credits}
+                    className={cn(
+                      'w-full font-bold h-10 transition-colors',
+                      selectedBokchae?.credits === plan.credits
+                        ? 'bg-zen-wood text-white'
+                        : 'bg-zen-bg text-zen-wood border border-zen-wood/20 hover:bg-zen-wood hover:text-white'
+                    )}
                   >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '충전하기'}
+                    {selectedBokchae?.credits === plan.credits ? '선택됨' : '충전하기'}
                   </Button>
                 </div>
               </Card>
             ))}
           </div>
+
+          {/* 결제위젯 렌더링 영역 */}
+          {selectedBokchae && (
+            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="bg-white rounded-lg border border-zen-border p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-serif font-bold text-zen-text">
+                    {selectedBokchae.label} — {selectedBokchae.price.toLocaleString()}원
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setSelectedBokchae(null)
+                      setWidgetReady(false)
+                    }}
+                    className="text-xs text-zen-muted hover:text-zen-text transition-colors"
+                  >
+                    변경
+                  </button>
+                </div>
+                <div id="toss-payment-method" className="w-full" />
+                <div id="toss-agreement" className="w-full mt-2" />
+              </div>
+
+              {widgetReady && (
+                <Button
+                  onClick={handleBokchaeWidgetPayment}
+                  disabled={isLoading}
+                  className="w-full bg-zen-wood text-white hover:bg-[#7A604D] font-serif font-bold shadow-md h-14 text-lg"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    `${selectedBokchae.price.toLocaleString()}원 결제하기`
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
