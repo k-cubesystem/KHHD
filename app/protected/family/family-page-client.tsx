@@ -6,6 +6,8 @@ import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/a
 import { type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
+import { BokUpsellModal } from '@/components/shared/bok-upsell-modal'
+import { canAddRelationship } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -44,6 +46,11 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
   const [selectedMember, setSelectedMember] = useState<FamilyMemberWithMissions | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | undefined>(undefined)
+  const [upsellOpen, setUpsellOpen] = useState(false)
+  const [relationshipStatus, setRelationshipStatus] = useState<{ current: number; limit: number }>({
+    current: 0,
+    limit: 3,
+  })
 
   const refreshMembers = () => {
     router.refresh()
@@ -137,7 +144,15 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
         </div>
         {!isFormOpen && !editingMember && (
           <Button
-            onClick={() => setIsFormOpen(true)}
+            onClick={async () => {
+              const result = await canAddRelationship()
+              if (!result.allowed) {
+                setRelationshipStatus({ current: result.current, limit: result.limit })
+                setUpsellOpen(true)
+                return
+              }
+              setIsFormOpen(true)
+            }}
             size="sm"
             className="bg-gold-500 hover:bg-gold-500/80 text-black text-xs gap-1.5 rounded-lg"
           >
@@ -170,12 +185,8 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
             <div className="w-12 h-12 bg-surface/30 rounded-full flex items-center justify-center mx-auto mb-3">
               <UserPlus className="w-5 h-5 text-ink-light/30" strokeWidth={1.5} />
             </div>
-            <p className="text-sm text-ink-light/40 font-light">
-              아직 등록된 인연이 없습니다
-            </p>
-            <p className="text-xs text-ink-light/25 font-light mt-1">
-              위의 추가 버튼으로 가족을 등록해보세요
-            </p>
+            <p className="text-sm text-ink-light/40 font-light">아직 등록된 인연이 없습니다</p>
+            <p className="text-xs text-ink-light/25 font-light mt-1">위의 추가 버튼으로 가족을 등록해보세요</p>
           </div>
         )}
       </section>
@@ -325,6 +336,14 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
 
       {/* Mission Detail Sheet */}
       <MissionDetailSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} member={selectedMember} />
+
+      {/* Upsell Modal */}
+      <BokUpsellModal
+        open={upsellOpen}
+        onClose={() => setUpsellOpen(false)}
+        currentCount={relationshipStatus.current}
+        limit={relationshipStatus.limit}
+      />
     </div>
   )
 }

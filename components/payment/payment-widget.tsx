@@ -327,7 +327,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                       <MessageCircle className="w-4 h-4 text-zen-wood shrink-0" />
                       <span className="text-sm text-zen-text">알림톡 서비스</span>
                     </div>
-                    {plan.name === '패밀리 멤버십' && (
+                    {plan.tier === 'FAMILY' && (
                       <div className="flex items-center gap-3">
                         <Users className="w-4 h-4 text-zen-wood shrink-0" />
                         <span className="text-sm text-zen-text">가족 궁합 분석</span>

@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/bok-missions",
       "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/bok-report",
+      "schedule": "0 0 * * 1"
     }
   ]
 }
