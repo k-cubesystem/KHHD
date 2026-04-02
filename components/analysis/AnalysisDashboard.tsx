@@ -169,6 +169,7 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
 
       {/* 3. 개별 분석 (2열) */}
       <motion.div variants={fadeInUp} className="space-y-3">
+        <div className="dancheong-divider my-4" />
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
           <h2 className="text-sm font-serif text-gold-500/80">청담해화당 통합분석</h2>
@@ -205,6 +206,7 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
 
       {/* 4. 테마별 트렌드 (2열) */}
       <motion.div variants={fadeInUp} className="space-y-3">
+        <div className="dancheong-divider my-4" />
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
           <h2 className="text-sm font-serif text-gold-500/80">더 깊이 들여다보기</h2>

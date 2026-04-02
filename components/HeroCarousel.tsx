@@ -182,6 +182,9 @@ export function HeroCarousel() {
       {/* 이벤트 팝업 (비로그인 시 자동 표시) */}
       <EventPopupWrapper />
 
+      {/* Dancheong Divider */}
+      <div className="dancheong-divider absolute bottom-24 left-1/2 -translate-x-1/2 w-3/4 z-10" />
+
       {/* Pagination Dots */}
       <div className="absolute bottom-12 flex gap-3 z-10">
         {slides.map((_, index) => (

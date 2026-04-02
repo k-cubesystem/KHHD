@@ -58,15 +58,12 @@ export default async function MembershipPage() {
 
         {/* Header */}
         <div className="text-center mb-8 space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 rounded-full">
-            <Crown className="w-4 h-4 text-primary" strokeWidth={1} />
-            <span className="text-primary font-serif font-light text-xs tracking-wide">Premium Membership</span>
-          </div>
+          <div className="bok-badge">복 관리 멤버십</div>
 
           <h1 className="text-2xl md:text-3xl font-serif font-light text-white leading-tight">
-            지금 시작하고,
+            소중한 인연의 복을
             <br />
-            혜택을 받으세요!
+            함께 관리하세요
           </h1>
 
           <BrandQuote variant="hero" className="text-center">
@@ -97,7 +94,7 @@ export default async function MembershipPage() {
         </div>
 
         {/* Common Benefits */}
-        <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 rounded-xl p-6 mb-8 shadow-lg">
+        <div className="hanji-card dancheong-border-top p-6 mb-8 shadow-lg">
           <div className="flex items-center justify-center gap-2 mb-6">
             <Sparkles className="w-5 h-5 text-primary" strokeWidth={1} />
             <h2 className="text-lg font-serif font-light text-white">모든 플랜 공통 혜택</h2>
@@ -130,7 +127,7 @@ export default async function MembershipPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="bg-surface/30 backdrop-blur-sm border border-primary/20 rounded-xl p-6">
+        <div className="hanji-card p-6">
           <h2 className="text-lg font-serif font-light text-white mb-6">자주 묻는 질문</h2>
           <div className="space-y-6">
             <div>

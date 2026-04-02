@@ -127,6 +127,14 @@
     "fullUnlock": "Unlock Full Analysis",
     "continue": "Continue this time"
   },
+  "bok": {
+    "upgrade": {
+      "title": "Manage more relationship blessings",
+      "desc": "Upgrade to Bokjigi tier to expand your connection limit, unlock family compatibility analysis, and premium feng shui readings.",
+      "cta": "Start Bokjigi",
+      "later": "Later"
+    }
+  },
   "error": {
     "network": "Please check your network connection",
     "networkDesc": "Your connection is unstable. Please try again shortly.",

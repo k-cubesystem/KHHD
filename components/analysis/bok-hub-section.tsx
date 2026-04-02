@@ -13,6 +13,7 @@ import {
 import { getTierLabel, getNextTierThreshold, type BokTier } from '@/lib/config/bok-tiers'
 import { toast } from 'sonner'
 import { GA } from '@/lib/analytics/ga4'
+import { useTranslations } from 'next-intl'
 
 const TIER_ICONS: Record<BokTier, typeof Leaf> = {
   SEED: Leaf,
@@ -31,6 +32,7 @@ const TIER_COLORS: Record<BokTier, string> = {
 }
 
 export function BokHubSection() {
+  const t = useTranslations('bok')
   const [status, setStatus] = useState<BokPointsStatus | null>(null)
   const [missions, setMissions] = useState<BokMission[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,7 +88,7 @@ export function BokHubSection() {
   return (
     <div className="space-y-3">
       {/* 복 등급 + 포인트 */}
-      <div className="bg-surface/40 border border-gold-500/15 rounded-xl p-4 backdrop-blur-sm">
+      <div className="hanji-card p-4 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div
@@ -103,7 +105,7 @@ export function BokHubSection() {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-ink-light/40 font-sans">누적</p>
+            <p className="text-[10px] text-ink-light/40 font-sans">{t('accumulated')}</p>
             <p className="text-xs text-gold-500 font-medium">{status.lifetimeEarned.toLocaleString()}p</p>
           </div>
         </div>
@@ -124,11 +126,11 @@ export function BokHubSection() {
 
       {/* 오늘의 복 미션 */}
       {totalMissions > 0 && (
-        <div className="bg-surface/30 border border-gold-500/10 rounded-xl p-4">
+        <div className="hanji-card p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-gold-500" />
-              <h3 className="text-xs font-serif text-gold-500/80">오늘의 복 미션</h3>
+              <h3 className="text-xs font-serif text-gold-500/80">{t('mission')}</h3>
             </div>
             <span className="text-[10px] text-ink-light/40 font-sans">
               {completedCount}/{totalMissions}
