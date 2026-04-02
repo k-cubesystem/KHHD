@@ -30,6 +30,7 @@ import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
+import { LocaleSwitcher } from '@/components/shared/locale-switcher'
 
 export default async function MyPage() {
   const supabase = await createClient()
@@ -187,7 +188,7 @@ export default async function MyPage() {
   }
 
   try {
-    attendanceStatus = await getMonthlyAttendance() as AttendanceStatus
+    attendanceStatus = (await getMonthlyAttendance()) as AttendanceStatus
   } catch (error) {
     logger.error('Error fetching attendance:', error)
   }
@@ -451,6 +452,19 @@ export default async function MyPage() {
       {/* Settings Menu */}
       <section className="px-3 mb-16 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300 relative z-10">
         <div className="space-y-1">
+          {isAdmin && (
+            <div className="flex items-center justify-between p-4 hover:bg-surface/10 transition-colors group">
+              <div className="flex items-center gap-4">
+                <LayoutDashboard
+                  className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors"
+                  strokeWidth={1}
+                />
+                <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">Language</span>
+              </div>
+              <LocaleSwitcher />
+            </div>
+          )}
+
           <Link
             href="/protected/notifications"
             className="flex items-center justify-between p-4 hover:bg-surface/10 transition-colors cursor-pointer group"

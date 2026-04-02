@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, Home } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { LocaleSwitcher } from '@/components/shared/locale-switcher'
 
 export function MobileHeader() {
   const router = useRouter()
@@ -28,16 +27,13 @@ export function MobileHeader() {
           {t('brand.name')}
         </Link>
 
-        <div className="flex items-center gap-1">
-          <LocaleSwitcher />
-          <Link
-            href="/protected/analysis"
-            className="w-10 h-10 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
-            aria-label={t('nav.home')}
-          >
-            <Home className="w-5 h-5" />
-          </Link>
-        </div>
+        <Link
+          href="/protected/analysis"
+          className="w-10 h-10 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
+          aria-label={t('nav.home')}
+        >
+          <Home className="w-5 h-5" />
+        </Link>
       </header>
     </div>
   )
