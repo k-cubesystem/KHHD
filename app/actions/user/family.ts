@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 
 export async function getFamilyMembers() {
   if (isEdgeEnabled('user')) {
@@ -106,6 +107,10 @@ export async function addFamilyMember(formData: FormData) {
     logger.error('Error adding family member:', error.message)
     throw new Error('가족 정보 등록 중 오류가 발생했습니다.')
   }
+
+  // 복 포인트 적립 (인연 등록)
+  const name = formData.get('name') as string
+  await addBokPoints(50, 'REGISTER', undefined, `${name}님 인연 등록`).catch(() => {})
 
   revalidatePath('/protected/family')
 }

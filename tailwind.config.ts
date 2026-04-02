@@ -79,6 +79,24 @@ const config: Config = {
           border: 'rgba(59,130,246,0.20)',
           text: '#93C5FD',
         },
+
+        // 오방색 (五方色) — Korean Traditional Colors
+        obangsaek: {
+          red: '#C83232',
+          blue: '#2D5F8A',
+          yellow: '#D4A017',
+          white: '#F5F0E8',
+          black: '#1A1714',
+        },
+
+        // 복 등급 (Bok Tier)
+        bok: {
+          seed: '#8C7B50',
+          sprout: '#22C55E',
+          flower: '#F472B6',
+          tree: '#10B981',
+          forest: '#6EE7B7',
+        },
       },
       fontFamily: {
         serif: ['var(--font-noto-serif)', 'serif'],

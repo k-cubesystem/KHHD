@@ -15,6 +15,7 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 
 /**
  * Gemini 고도화 시스템 프롬프트
@@ -220,6 +221,9 @@ export async function analyzeCheonjiinAction(
     const result = await analyzeCheonjiinWithAI(prompt, target, faceImagePart, handImagePart, user.id)
 
     // 운세 기록은 saveAnalysisHistory 내부에서 자동 처리됨 (recordFortuneEntry 호출)
+
+    // 복 포인트 적립 (분석 완료)
+    await addBokPoints(30, 'ANALYSIS', targetId, `${target.name}님 사주 분석`).catch(() => {})
 
     return { success: true, data: result, cached: false }
   } catch (error: unknown) {
