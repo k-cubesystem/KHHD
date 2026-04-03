@@ -31,8 +31,10 @@ import { Button } from '@/components/ui/button'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 import { LocaleSwitcher } from '@/components/shared/locale-switcher'
+import { getTranslations } from 'next-intl/server'
 
 export default async function MyPage() {
+  const t = await getTranslations('settings')
   const supabase = await createClient()
   const {
     data: { user },
@@ -412,7 +414,7 @@ export default async function MyPage() {
                 strokeWidth={1}
               />
               <span className="text-sm font-serif font-light text-ink-light group-hover:text-primary transition-colors">
-                내 정보 수정
+                {t('title')}
               </span>
             </div>
           </Link>
@@ -471,7 +473,9 @@ export default async function MyPage() {
           >
             <div className="flex items-center gap-4">
               <div className="w-5 h-5 flex items-center justify-center"></div>
-              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">알림 설정</span>
+              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">
+                {t('notifications')}
+              </span>
             </div>
             <Switch id="notify" className="data-[state=checked]:bg-primary" />
           </Link>

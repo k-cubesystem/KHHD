@@ -11,6 +11,7 @@ import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-buil
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 
 export interface Year2026Result {
@@ -148,6 +149,7 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       logger.error('History Save Error:', e)
     })
 
+    await addBokPoints(20, 'ANALYSIS', undefined, '2026년 운세 분석').catch(() => {})
     return { success: true, data }
   } catch (error) {
     logger.error('[Year2026Action] Error:', error)

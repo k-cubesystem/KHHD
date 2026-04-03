@@ -18,6 +18,7 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { CLAUDE_OPUS } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 
 // Global Context Injector for Hyper-Personalization
@@ -393,6 +394,7 @@ export async function analyzeSajuDetail(
       }
     }
 
+    await addBokPoints(30, 'ANALYSIS', undefined, '사주 상세 분석').catch(() => {})
     return { success: true, ...analysisData }
   } catch (error: unknown) {
     logger.error('[AI Saju] Critical Error:', error)
@@ -495,6 +497,7 @@ ${userContext}
       }
     }
 
+    await addBokPoints(25, 'ANALYSIS', undefined, '관상 분석').catch(() => {})
     return { success: true, ...analysisData }
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'Error' }
@@ -587,6 +590,7 @@ ${userContext}
       }
     }
 
+    await addBokPoints(25, 'ANALYSIS', undefined, '손금 분석').catch(() => {})
     return { success: true, ...analysisData }
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'Error' }
@@ -687,6 +691,7 @@ ${userContext}
       }
     }
 
+    await addBokPoints(25, 'ANALYSIS', undefined, '풍수 분석').catch(() => {})
     return { success: true, ...analysisData }
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : 'Error' }

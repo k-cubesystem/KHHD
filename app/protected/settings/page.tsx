@@ -8,8 +8,10 @@ import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 import type { NotificationPreferences } from '@/app/actions/core/notification'
+import { getTranslations } from 'next-intl/server'
 
 export default async function SettingsPage() {
+  const t = await getTranslations('settings')
   const supabase = await createClient()
   const {
     data: { user },
@@ -51,7 +53,7 @@ export default async function SettingsPage() {
         <Link href="/protected/profile" className="p-1 -ml-1 hover:bg-surface/10 transition-colors rounded-full">
           <ArrowLeft className="w-5 h-5 text-ink-light/80" strokeWidth={1} />
         </Link>
-        <h1 className="text-lg font-serif font-light text-ink-light">내 정보 수정</h1>
+        <h1 className="text-lg font-serif font-light text-ink-light">{t('title')}</h1>
       </div>
 
       <div className="max-w-lg mx-auto">
@@ -60,7 +62,7 @@ export default async function SettingsPage() {
         </BrandQuote>
 
         <p className="text-sm text-center text-ink-light/90 mb-8 font-light">
-          정확한 사주 분석을 위해 올바른 정보를 입력해주세요.
+          {t('description')}
           <br />
           수정된 정보는 즉시 반영됩니다.
         </p>
@@ -72,7 +74,7 @@ export default async function SettingsPage() {
           <div className="flex-1 h-px bg-primary/15" />
           <div className="flex items-center gap-2 text-primary/60">
             <Bell className="w-3.5 h-3.5" strokeWidth={1} />
-            <span className="text-xs font-light font-serif">알림 설정</span>
+            <span className="text-xs font-light font-serif">{t('notifications')}</span>
           </div>
           <div className="flex-1 h-px bg-primary/15" />
         </div>

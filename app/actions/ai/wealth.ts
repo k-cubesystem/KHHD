@@ -5,6 +5,7 @@ import { deductTalisman } from '../payment/wallet'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
@@ -147,6 +148,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       logger.error('[WealthAnalysis] Failed to save history:', e)
     }
 
+    await addBokPoints(20, 'ANALYSIS', undefined, '재물운 분석').catch(() => {})
     return {
       success: true,
       analysis,

@@ -12,6 +12,7 @@ import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'
@@ -173,6 +174,7 @@ export async function analyzeFortuneAction(
       model_used: MODEL_FLASH,
     })
 
+    await addBokPoints(15, 'FORTUNE', undefined, '운세 분석').catch(() => {})
     return { success: true, data: result, cached: false }
   } catch (error) {
     logger.error('[FortuneAnalysis] Error:', error)

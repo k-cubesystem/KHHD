@@ -11,6 +11,7 @@ import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-buil
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 
 export type TrendType = 'love' | 'career' | 'exam' | 'estate'
@@ -205,6 +206,7 @@ export async function analyzeTrendAction(
       model_used: MODEL_FLASH,
     })
 
+    await addBokPoints(20, 'ANALYSIS', undefined, '대운 분석').catch(() => {})
     return { success: true, data: result, cached: false }
   } catch (error) {
     logger.error('[TrendAnalysis] Error:', error)

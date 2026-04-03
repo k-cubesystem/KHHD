@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { getPromptByKey } from '@/app/admin/prompts/actions'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_PRO } from '@/lib/config/ai-models'
@@ -485,14 +486,11 @@ Style: Professional headshot, warm lighting, confident expression.`
       return null
     }
 
-    const improvementTips: FaceImprovementTip[] = [
-      'IMPROVEMENT_TIP_1',
-      'IMPROVEMENT_TIP_2',
-      'IMPROVEMENT_TIP_3',
-    ]
+    const improvementTips: FaceImprovementTip[] = ['IMPROVEMENT_TIP_1', 'IMPROVEMENT_TIP_2', 'IMPROVEMENT_TIP_3']
       .map((tag) => parseImprovementTip(tag))
       .filter((t): t is FaceImprovementTip => t !== null)
 
+    await addBokPoints(25, 'ANALYSIS', undefined, '이미지 관상 분석').catch(() => {})
     return {
       success: true,
       currentAnalysis: analysisText,
@@ -760,9 +758,7 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
     const luckyDirection = luckyDirectionMatch?.[1]?.trim()
 
     // === 공간 점수 파싱 ===
-    const spaceScoreMatch = analysisText.match(
-      /\[\[SPACE_SCORE:\s*(\d+),\s*(\d+),\s*([^\]]+)\]\]/
-    )
+    const spaceScoreMatch = analysisText.match(/\[\[SPACE_SCORE:\s*(\d+),\s*(\d+),\s*([^\]]+)\]\]/)
     const spaceScore: SpaceScore | undefined = spaceScoreMatch
       ? {
           current: parseInt(spaceScoreMatch[1] ?? '0', 10),
@@ -778,17 +774,14 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       return match?.[1]?.trim() || null
     }
 
-    const quickFixes: string[] = [
-      'QUICK_FIX_1',
-      'QUICK_FIX_2',
-      'QUICK_FIX_3',
-    ]
+    const quickFixes: string[] = ['QUICK_FIX_1', 'QUICK_FIX_2', 'QUICK_FIX_3']
       .map((tag) => parseQuickFix(tag))
       .filter((f): f is string => f !== null)
 
     // Extract problems from text if not structured
     const problems = ['가구 배치가 기의 흐름을 막고 있음', '색상 톤이 목표와 맞지 않음', '소품 배치 개선 필요']
 
+    await addBokPoints(25, 'ANALYSIS', undefined, '이미지 풍수 분석').catch(() => {})
     return {
       success: true,
       currentAnalysis: analysisText,
@@ -967,9 +960,7 @@ export async function analyzePalmReading(
     ]
 
     // === AI 출력에서 양손 비교 파싱 ===
-    const dualHandMatch = analysisText.match(
-      /\[\[DUAL_HAND:\s*([^,\]]+),\s*([^,\]]+),\s*([^\]]+)\]\]/
-    )
+    const dualHandMatch = analysisText.match(/\[\[DUAL_HAND:\s*([^,\]]+),\s*([^,\]]+),\s*([^\]]+)\]\]/)
     const aiDualHandCompare = dualHandMatch
       ? {
           leftHand: dualHandMatch[1]?.trim() || '',
@@ -992,11 +983,7 @@ export async function analyzePalmReading(
       return null
     }
 
-    const ageTimeline: PalmAgeTimeline[] = [
-      'AGE_TIMELINE_1',
-      'AGE_TIMELINE_2',
-      'AGE_TIMELINE_3',
-    ]
+    const ageTimeline: PalmAgeTimeline[] = ['AGE_TIMELINE_1', 'AGE_TIMELINE_2', 'AGE_TIMELINE_3']
       .map((tag) => parseAgeTimeline(tag))
       .filter((t): t is PalmAgeTimeline => t !== null)
 
@@ -1035,6 +1022,7 @@ export async function analyzePalmReading(
       ? buildPalmSajuSynergyText(sajuContext.dayGan, estimatedPalmScore)
       : undefined
 
+    await addBokPoints(25, 'ANALYSIS', undefined, '이미지 손금 분석').catch(() => {})
     return {
       success: true,
       currentAnalysis: analysisText,
