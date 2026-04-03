@@ -114,7 +114,7 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
           <Coins className="w-4 h-4 text-gold-400" />
           <span className="text-sm font-serif font-bold text-gold-400 tracking-wide">복채 충전</span>
         </div>
-        <p className="text-xs text-white/50">1 복채 = 1만냥 · 충전한 복채는 영구 지급됩니다</p>
+        <p className="text-xs text-white/60">1 복채 = 1만냥 · 충전한 복채는 영구 지급됩니다</p>
       </div>
 
       {/* 서비스 이용 안내 */}
@@ -166,7 +166,7 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="text-base font-serif font-bold text-white">{plan.name}</h3>
-                    <p className="text-[11px] text-white/50 mt-0.5">{plan.description}</p>
+                    <p className="text-[11px] text-white/60 mt-0.5">{plan.description}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
                     {discount > 0 && (
@@ -178,7 +178,7 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
                       <span className={cn('text-xl font-serif font-bold', isPopular ? 'text-gold-400' : 'text-white')}>
                         {plan.price.toLocaleString()}
                       </span>
-                      <span className="text-xs text-white/50">원</span>
+                      <span className="text-xs text-white/60">원</span>
                     </div>
                     {discount > 0 && (
                       <div className="text-[9px] text-green-400 font-bold text-right">{discount}% 할인</div>

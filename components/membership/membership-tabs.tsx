@@ -53,9 +53,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
   const tierFeatures: string[] = []
   tierFeatures.push(`일일 복채 ${currentPlan.daily_talisman_limit}만냥 지급`)
   tierFeatures.push(`인연 ${currentPlan.relationship_limit}명 등록`)
-  tierFeatures.push(
-    `결과 ${currentPlan.storage_limit === 999 ? '무제한' : currentPlan.storage_limit + '개'} 저장`
-  )
+  tierFeatures.push(`결과 ${currentPlan.storage_limit === 999 ? '무제한' : currentPlan.storage_limit + '개'} 저장`)
   tierFeatures.push(`출석 체크 시 추가 복채 지급`)
 
   if (features.daily_fortune) tierFeatures.push('오늘의 운세 무제한')
@@ -88,15 +86,19 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2 p-1.5 bg-surface/50 border border-primary/20 rounded-xl">
+      <div
+        role="tablist"
+        aria-label="멤버십 플랜 선택"
+        className="flex gap-2 p-1.5 bg-surface/50 border border-primary/20 rounded-xl"
+      >
         {plans.map((plan) => (
           <button
             key={plan.tier}
+            role="tab"
+            aria-selected={selectedPlan === plan.tier}
             onClick={() => setSelectedPlan(plan.tier)}
             className={`flex-1 py-3 px-4 text-sm font-serif font-bold transition-all rounded-lg ${
-              selectedPlan === plan.tier
-                ? 'bg-primary text-background shadow-md'
-                : 'text-white/60 hover:text-white'
+              selectedPlan === plan.tier ? 'bg-primary text-background shadow-md' : 'text-white/60 hover:text-white'
             }`}
           >
             {plan.name}
@@ -105,7 +107,11 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
       </div>
 
       {/* Selected Plan Card */}
-      <div className="bg-surface/30 border-2 border-primary/30 rounded-xl p-6 shadow-lg">
+      <div
+        role="tabpanel"
+        aria-label={currentPlan.name + ' 플랜 상세'}
+        className="bg-surface/30 border-2 border-primary/30 rounded-xl p-6 shadow-lg dancheong-border-top"
+      >
         {/* Price */}
         <div className="text-center mb-6 pb-6 border-b border-primary/10">
           <div className="text-4xl md:text-5xl font-serif font-bold text-primary mb-2">
@@ -125,16 +131,12 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
 
         {/* Features */}
         <div className="space-y-4 mb-6">
-          <div className="text-sm font-serif font-bold text-primary mb-4">
-            • 멤버십 회원만 누리는 특별 혜택!
-          </div>
+          <div className="text-sm font-serif font-bold text-primary mb-4">• 멤버십 회원만 누리는 특별 혜택!</div>
           <div className="space-y-3">
             {tierFeatures.map((feature, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 bg-primary/60 rounded-full mt-2 flex-shrink-0" />
-                <span className="text-sm text-white/90 leading-relaxed flex-1 min-w-0">
-                  {feature}
-                </span>
+                <span className="text-sm text-white/90 leading-relaxed flex-1 min-w-0">{feature}</span>
               </div>
             ))}
           </div>
@@ -151,7 +153,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
         {/* Additional Info */}
         {currentPlan.tier === 'FAMILY' && (
           <div className="mt-4 text-center">
-            <p className="text-xs text-white/50">⭐ 가족 구성원 관리와 궁합 분석에 최적화된 플랜</p>
+            <p className="text-xs text-white/60">⭐ 가족 구성원 관리와 궁합 분석에 최적화된 플랜</p>
           </div>
         )}
       </div>

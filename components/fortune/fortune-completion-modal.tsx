@@ -50,7 +50,7 @@ export function FortuneCompletionModal({
           onClick={onClose}
         >
           <motion.div
-            className="relative bg-surface border border-primary/30 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(212,175,55,0.3)]"
+            className="relative hanji-card dancheong-border-top border border-primary/30 rounded-2xl p-8 max-w-sm w-full shadow-[0_0_50px_rgba(212,175,55,0.3)]"
             initial={{ scale: 0.8, y: 50 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.8, y: 50 }}

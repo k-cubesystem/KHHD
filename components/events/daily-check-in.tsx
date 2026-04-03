@@ -9,7 +9,6 @@ import { recordDailyAttendance } from '@/app/actions/payment/daily-check'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-
 /* ─────────────────────────────────────────
    Types
 ───────────────────────────────────────── */
@@ -129,11 +128,7 @@ function MonthlyCalendar({
                         ? 'text-ink-light/20'
                         : 'text-ink-light/50'
                 )}
-                style={
-                  isToday && !isChecked
-                    ? { animation: 'scale-pulse 2s ease-in-out 1s infinite' }
-                    : undefined
-                }
+                style={isToday && !isChecked ? { animation: 'scale-pulse 2s ease-in-out 1s infinite' } : undefined}
               >
                 {isChecked ? (
                   isToday && showStamp ? (
@@ -168,7 +163,7 @@ function WeeklyStreakBar({ weekCount }: { weekCount: number }) {
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-ink-light/50">이번 주 ({weekCount}/7일)</span>
-        <span className={cn('text-[10px] font-bold', isComplete ? 'text-gold-500' : 'text-gold-500/70')}>
+        <span className={cn('text-[10px] font-bold', isComplete ? 'text-gold-500 bok-badge' : 'text-gold-500/70')}>
           {isComplete ? '주간 보너스 달성!' : `${7 - weekCount}일 남음 → +3만냥`}
         </span>
       </div>
@@ -275,7 +270,7 @@ export function DailyCheckIn({
   const isWeekComplete = weekCount >= 7
 
   return (
-    <Card className="bg-surface/30 border-primary/20 overflow-hidden relative">
+    <Card className="hanji-card border-primary/20 overflow-hidden relative">
       <CardContent className="p-4 space-y-4">
         {/* Particles */}
         <AnimatePresence>{showParticles && lastReward && <RewardParticles />}</AnimatePresence>
@@ -459,9 +454,7 @@ export function DailyCheckIn({
         {/* Info Footer */}
         <div className="flex items-center justify-between pt-1 border-t border-white/5">
           <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
-          <p className="text-[9px] font-bold text-gold-500/60">
-            이달 {totalBokchae}만냥
-          </p>
+          <p className="text-[9px] font-bold text-gold-500/60">이달 {totalBokchae}만냥</p>
         </div>
       </CardContent>
     </Card>

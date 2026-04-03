@@ -41,11 +41,12 @@ export function KakaoShareButton({
       }
 
       if (!success) {
-        // SDK 로드 실패 시 Web Share API 폴백
         if (navigator.share) {
           await navigator.share({ title, text: description, url: webUrl })
+          GA.shareCopyLink('saju')
         } else {
           await navigator.clipboard.writeText(webUrl)
+          GA.shareCopyLink('saju')
         }
       }
     } catch (err) {

@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { ZodiacTimeSelect } from '@/components/zodiac-time-select'
 import { DokkaebiAvatarSelector } from '@/components/family/dokkaebi-avatar-selector'
 import { GuestCTACard } from '@/components/guest-cta-card'
+import { GA } from '@/lib/analytics/ga4'
 
 interface EditingMember {
   id: string
@@ -60,6 +61,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
     startTransition(async () => {
       try {
         await addFamilyMember(formData)
+        GA.familyAdd()
         toast.success('함께할 인연이 등록되었습니다.')
         refreshMembers()
         setIsFormOpen(false)

@@ -53,6 +53,7 @@ export function MembershipCard({ planId, planName, price }: MembershipCardProps)
       <Button
         onClick={handleSubscribe}
         disabled={isLoading}
+        aria-label={planName + ' 구독하기'}
         className="w-full md:w-auto min-w-[300px] h-14 bg-zen-wood hover:bg-[#7A604D] text-white font-serif font-bold text-lg rounded-sm shadow-md transition-all duration-300 hover:shadow-lg"
       >
         {isLoading ? (

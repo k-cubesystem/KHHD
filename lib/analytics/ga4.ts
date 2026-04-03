@@ -40,5 +40,9 @@ export const GA = {
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),
 
+  bokPointsEarn: (amount: number) => trackEvent({ action: 'bok_points_earn', category: 'engagement', value: amount }),
+  bokMissionComplete: () => trackEvent({ action: 'bok_mission_complete', category: 'engagement' }),
+  familyAdd: () => trackEvent({ action: 'family_add', category: 'engagement' }),
+
   pageView: (path: string) => trackEvent({ action: 'page_view', category: 'navigation', label: path }),
 } as const

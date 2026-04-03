@@ -175,13 +175,14 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
           <h2 className="text-sm font-serif text-gold-500/80">청담해화당 통합분석</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <nav role="navigation" aria-label="통합분석 메뉴" className="grid grid-cols-2 gap-3">
           {STUDIO_CARDS.map((card) => {
             const Icon = card.icon
             return (
               <Card
                 key={card.id}
                 onClick={() => router.push(card.href)}
+                aria-label={card.label}
                 className="group cursor-pointer card-glass-manse transition-all duration-200 p-4 rounded-xl active:scale-[0.97] hover:border-gold-500/30 relative overflow-hidden"
               >
                 <div className="flex flex-col gap-2.5">
@@ -201,7 +202,7 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
               </Card>
             )
           })}
-        </div>
+        </nav>
       </motion.div>
 
       {/* 4. 테마별 트렌드 (2열) */}
@@ -212,13 +213,14 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
           <h2 className="text-sm font-serif text-gold-500/80">더 깊이 들여다보기</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <nav role="navigation" aria-label="테마별 분석 메뉴" className="grid grid-cols-2 gap-3">
           {MENU_CARDS.map((card) => {
             const Icon = card.icon
             return (
               <Card
                 key={card.id}
                 onClick={() => router.push(card.href)}
+                aria-label={card.label}
                 className="group cursor-pointer card-glass-manse transition-all duration-200 p-4 rounded-xl active:scale-[0.97] hover:border-gold-500/30 relative overflow-hidden"
               >
                 {'badge' in card && card.badge && (
@@ -241,7 +243,7 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
               </Card>
             )
           })}
-        </div>
+        </nav>
       </motion.div>
     </motion.div>
   )

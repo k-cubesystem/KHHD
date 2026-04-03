@@ -111,7 +111,14 @@ export function BokHubSection() {
         </div>
 
         {/* 진행 바 */}
-        <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`복 등급 진행률 ${progress}%`}
+          className="relative h-1.5 bg-white/5 rounded-full overflow-hidden"
+        >
           <div
             className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold-500/60 to-gold-500 rounded-full transition-all duration-1000"
             style={{ width: `${progress}%` }}
@@ -137,12 +144,14 @@ export function BokHubSection() {
             </span>
           </div>
 
-          <div className="space-y-2">
+          <div role="list" aria-label="오늘의 복 미션 목록" className="space-y-2">
             {missions.slice(0, 5).map((mission) => (
               <button
                 key={mission.id}
+                role="listitem"
                 onClick={() => !mission.isCompleted && handleComplete(mission.id)}
                 disabled={mission.isCompleted || completing === mission.id}
+                aria-label={mission.missionTitle + (mission.isCompleted ? ' 완료' : '')}
                 className={cn(
                   'w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all',
                   mission.isCompleted ? 'bg-white/3 opacity-60' : 'bg-white/5 hover:bg-white/8 active:scale-[0.98]'

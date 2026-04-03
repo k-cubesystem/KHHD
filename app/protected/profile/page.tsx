@@ -248,7 +248,7 @@ export default async function MyPage() {
         aria-label="프로필 정보"
         className="px-3 pt-6 pb-2 animate-in fade-in slide-in-from-bottom-5 duration-700 relative z-10"
       >
-        <div className="flex items-center gap-4 bg-surface/30 border border-primary/20 rounded-xl p-4">
+        <div className="flex items-center gap-4 bg-surface/30 border border-primary/20 rounded-xl p-4 dancheong-border-top">
           <Link href="/protected/settings" className="relative group cursor-pointer flex-shrink-0">
             <div className="w-16 h-16 rounded-full border border-primary/20 overflow-hidden bg-surface flex items-center justify-center shadow-md group-hover:border-primary/50 transition-all group-hover:scale-105">
               {avatarUrl ? (
@@ -376,7 +376,7 @@ export default async function MyPage() {
       {/* Dashboard Navigation Grid */}
       <section className="px-3 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
         <h3 className="text-xs font-light tracking-widest text-ink-light/50 uppercase mb-6">Menu</h3>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 traditional-grid-bg rounded-lg p-2">
           {isAdmin && (
             <Link href="/admin" className="group col-span-2 mb-2">
               <div className="bg-gradient-to-r from-seal/20 via-seal/10 to-seal/20 border-2 border-seal/40 hover:border-seal hover:from-seal/30 hover:via-seal/20 hover:to-seal/30 p-6 flex items-center justify-center gap-3 transition-all duration-300 relative overflow-hidden shadow-lg">
