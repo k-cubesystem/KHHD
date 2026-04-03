@@ -28,6 +28,7 @@ import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
+import { BokHubSection } from '@/components/analysis/bok-hub-section'
 import { BrandQuote } from '@/components/ui/BrandQuote'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 import { LocaleSwitcher } from '@/components/shared/locale-switcher'
@@ -360,6 +361,11 @@ export default async function MyPage() {
             </div>
           </Link>
         </div>
+      </section>
+
+      {/* 복 관리 허브 */}
+      <section className="px-3 mb-4 relative z-10">
+        <BokHubSection />
       </section>
 
       {/* Daily Check-In (Moved Down) */}

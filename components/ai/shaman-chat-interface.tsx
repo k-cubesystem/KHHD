@@ -20,6 +20,7 @@ import {
 } from '@/app/actions/ai/shaman-chat'
 import { useFamilyMembers } from '@/hooks/use-family-members'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -30,7 +31,7 @@ function TypingDots() {
     <div className="flex items-end gap-2.5 px-1">
       {/* 아바타 */}
       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-600/30 to-gold-700/20 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
-        <span className="text-xs">👺</span>
+        <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={16} height={16} className="inline-block" />
       </div>
       {/* 점 */}
       <div className="px-4 py-3 rounded-2xl rounded-bl-none bg-surface/70 border border-primary/10 backdrop-blur-md">
@@ -88,7 +89,7 @@ const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessag
       {/* 아바타 - 연속 메시지면 투명 공간만 */}
       {showAvatar ? (
         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-600/30 to-gold-700/20 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
-          <span className="text-xs">👺</span>
+          <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={16} height={16} className="inline-block" />
         </div>
       ) : (
         <div className="w-7 flex-shrink-0" />
@@ -396,7 +397,7 @@ export function ShamanChatInterface() {
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#2a2010] to-surface border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(244,228,186,0.08)]">
-                <span className="text-xl leading-none">👺</span>
+                <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={24} height={24} className="inline-block" />
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary border-2 border-[#0d0d0d]" />
             </div>
@@ -551,7 +552,7 @@ export function ShamanChatInterface() {
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                 className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/12 to-gold-600/6 border border-primary/15 flex items-center justify-center shadow-[0_0_40px_rgba(244,228,186,0.06)]"
               >
-                <span className="text-4xl">👺</span>
+                <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={40} height={40} className="inline-block" />
               </motion.div>
 
               <div className="space-y-2">

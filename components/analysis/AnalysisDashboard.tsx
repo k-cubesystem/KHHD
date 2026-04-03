@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
-import { BokHubSection } from '@/components/analysis/bok-hub-section'
 import { Card } from '@/components/ui/card'
-import { Flame, Wallet, Heart, Building2, GraduationCap, TrendingUp, MessageCircle, ChevronRight } from 'lucide-react'
-import { IconGunghap, IconGwansang, IconSongeum, IconPungsu } from '@/components/icons/traditional-icons'
+import { Wallet, Building2, GraduationCap, TrendingUp, MessageCircle, ChevronRight } from 'lucide-react'
+import {
+  IconGunghap,
+  IconGwansang,
+  IconSongeum,
+  IconPungsu,
+  IconUnse,
+  IconInyon,
+} from '@/components/icons/traditional-icons'
 import { DailyFortuneCard } from './daily-fortune-card'
 
 const MasterpieceSection = dynamic(
@@ -60,7 +66,7 @@ const MENU_CARDS = [
     id: 'year2026',
     label: '2026 병오년',
     desc: '붉은 말의 해 운명 흐름',
-    icon: Flame,
+    icon: IconUnse,
     color: 'text-red-400',
     bg: 'bg-red-500/10',
     href: '/protected/analysis/new-year',
@@ -88,7 +94,7 @@ const MENU_CARDS = [
     id: 'love',
     label: '애정운',
     desc: '만남·결혼 시기',
-    icon: Heart,
+    icon: IconInyon,
     color: 'text-pink-400',
     bg: 'bg-pink-500/10',
     href: '/protected/analysis/theme/love',
@@ -139,11 +145,6 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
     >
       {/* 0. Daily Fortune Card — 매일 돌아올 이유 */}
       {userId && userName && <DailyFortuneCard userId={userId} userName={userName} />}
-
-      {/* 0.5. 복 관리 허브 */}
-      <motion.div variants={fadeInUp}>
-        <BokHubSection />
-      </motion.div>
 
       {/* 1. Seasonal Event Banner */}
       <motion.div variants={fadeInUp}>
