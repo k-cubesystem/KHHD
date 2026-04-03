@@ -808,12 +808,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
               <User className="w-4 h-4 mr-2" />내 정보 입력하기
             </Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="border-gold-500/30 text-gold-500 hover:bg-gold-500/10"
-          >
+          <Button asChild variant="outline" size="lg" className="border-gold-500/30 text-gold-500 hover:bg-gold-500/10">
             <Link href="/protected/family">인연 관리로 이동</Link>
           </Button>
         </div>
@@ -2433,17 +2428,18 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="space-y-4">
                     <Card className="p-6 bg-white/5 border-amber-500/20 text-center">
                       <p className="text-xs text-white/50 mb-1">관상 점수</p>
-                      <div className="text-5xl font-bold text-amber-400">{(faceSession as any).score ?? '--'}</div>
-                      <p className="text-xs text-white/40 mt-1">신뢰도: {(faceSession as any).confidence ?? '--'}%</p>
+                      <div className="text-5xl font-bold text-amber-400">{faceSession.score ?? '--'}</div>
+                      <p className="text-xs text-white/40 mt-1">신뢰도: {faceSession.confidence ?? '--'}%</p>
                     </Card>
 
-                    {(faceSession as any).facialFeatures && (
+                    {faceSession.facialFeatures && (
                       <Card className="p-6 bg-white/5 border-white/10">
                         <h4 className="text-sm font-semibold text-amber-400 mb-4">오관(五官) 분석</h4>
                         <div className="space-y-2">
-                          {Object.entries((faceSession as any).facialFeatures)
+                          {Object.entries(faceSession.facialFeatures)
+                            .filter((entry): entry is [string, NonNullable<(typeof entry)[1]>] => entry[1] != null)
                             .slice(0, 5)
-                            .map(([key, val]: [string, any]) => (
+                            .map(([key, val]) => (
                               <div key={key} className="flex items-center gap-3">
                                 <span className="text-xs text-white/50 w-16 shrink-0">
                                   {key === 'ears'
@@ -2459,10 +2455,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                 <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-amber-400/70 rounded-full"
-                                    style={{ width: `${(val.score / 10) * 100}%` }}
+                                    style={{ width: `${(((val.score as number | undefined) ?? 0) / 10) * 100}%` }}
                                   />
                                 </div>
-                                <span className="text-xs text-amber-400 w-8 text-right">{val.score}/10</span>
+                                <span className="text-xs text-amber-400 w-8 text-right">{val.score ?? 0}/10</span>
                               </div>
                             ))}
                         </div>
@@ -2517,15 +2513,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <div className="space-y-4">
                     <Card className="p-6 bg-white/5 border-cyan-500/20 text-center">
                       <p className="text-xs text-white/50 mb-1">손금 점수</p>
-                      <div className="text-5xl font-bold text-cyan-400">{(palmSession as any).score ?? '--'}</div>
-                      <p className="text-xs text-white/40 mt-1">신뢰도: {(palmSession as any).confidence ?? '--'}%</p>
+                      <div className="text-5xl font-bold text-cyan-400">{palmSession.score ?? '--'}</div>
+                      <p className="text-xs text-white/40 mt-1">신뢰도: {palmSession.confidence ?? '--'}%</p>
                     </Card>
 
-                    {(palmSession as any).fortuneScores && (
+                    {palmSession.fortuneScores && (
                       <Card className="p-6 bg-white/5 border-white/10">
                         <h4 className="text-sm font-semibold text-cyan-400 mb-4">4대 운세</h4>
                         <div className="grid grid-cols-2 gap-3">
-                          {Object.entries((palmSession as any).fortuneScores).map(([key, val]: [string, any]) => (
+                          {Object.entries(palmSession.fortuneScores).map(([key, val]) => (
                             <div key={key} className="bg-white/5 rounded-lg p-3 text-center">
                               <p className="text-xs text-white/50">
                                 {key === 'wealth'
@@ -2543,7 +2539,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       </Card>
                     )}
 
-                    {(palmSession as any).palmLines && (
+                    {palmSession.palmLines && (
                       <Card className="p-6 bg-white/5 border-white/10">
                         <h4 className="text-sm font-semibold text-cyan-400 mb-3">삼대 주선</h4>
                         <div className="space-y-2">
@@ -2552,7 +2548,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             { key: 'intelligenceLine', label: '지능선' },
                             { key: 'emotionLine', label: '감정선' },
                           ].map(({ key, label }) => {
-                            const line = (palmSession as any).palmLines[key]
+                            const line = palmSession.palmLines?.[key]
                             if (!line) return null
                             return (
                               <div key={key} className="flex items-center gap-3">
@@ -2560,10 +2556,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                 <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-cyan-400/70 rounded-full"
-                                    style={{ width: `${(line.score / 10) * 100}%` }}
+                                    style={{ width: `${(((line.score as number | undefined) ?? 0) / 10) * 100}%` }}
                                   />
                                 </div>
-                                <span className="text-xs text-cyan-400 w-8 text-right">{line.score}/10</span>
+                                <span className="text-xs text-cyan-400 w-8 text-right">{line.score ?? 0}/10</span>
                               </div>
                             )
                           })}

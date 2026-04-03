@@ -35,9 +35,9 @@ export function AnalysisResultView({ record }: AnalysisResultViewProps) {
           />
         </div>
         <div className="space-y-4">
-          <CheonSection data={result?.cheon} />
-          <JiSection data={result?.ji} />
-          <InSection data={result?.in} />
+          <CheonSection data={result?.cheon ?? null} />
+          <JiSection data={result?.ji ?? null} />
+          <InSection data={result?.in ?? null} />
         </div>
       </div>
     )

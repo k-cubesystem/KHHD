@@ -76,22 +76,31 @@ export interface FaceImprovementTip {
   basis: string
 }
 
+interface FaceFeatureDetail {
+  description: string
+  assessment: '좋음' | '보통' | '주의'
+  score?: number
+}
+
 export interface FaceAnalysisResult {
   success: boolean
+  score?: number
+  confidence?: number
   currentAnalysis?: string
   improvementPrompt?: string
   recommendations?: string[]
   facialFeatures?: {
     // 오관(五官) 분석
-    ears?: { description: string; assessment: '좋음' | '보통' | '주의' }
-    eyebrows?: { description: string; assessment: '좋음' | '보통' | '주의' }
-    eyes?: { description: string; assessment: '좋음' | '보통' | '주의' }
-    nose?: { description: string; assessment: '좋음' | '보통' | '주의' }
-    mouth?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    ears?: FaceFeatureDetail
+    eyebrows?: FaceFeatureDetail
+    eyes?: FaceFeatureDetail
+    nose?: FaceFeatureDetail
+    mouth?: FaceFeatureDetail
     // 삼정(三停) 분석
-    upperStop?: { description: string; assessment: '좋음' | '보통' | '주의' }
-    middleStop?: { description: string; assessment: '좋음' | '보통' | '주의' }
-    lowerStop?: { description: string; assessment: '좋음' | '보통' | '주의' }
+    upperStop?: FaceFeatureDetail
+    middleStop?: FaceFeatureDetail
+    lowerStop?: FaceFeatureDetail
+    [key: string]: FaceFeatureDetail | undefined
   }
   // === 고도화: 부위별 상세 분석 ===
   partAnalysis?: {
@@ -128,17 +137,28 @@ export interface PalmAgeTimeline {
   advice: string
 }
 
+interface PalmLineDetail {
+  description: string
+  meaning: string
+  assessment: '좋음' | '보통' | '주의'
+  score?: number
+}
+
 export interface PalmAnalysisResult {
   success: boolean
+  score?: number
+  confidence?: number
   currentAnalysis?: string
   palmLines?: {
-    lifeLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
-    intelligenceLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
-    emotionLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
-    fateLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
-    sunLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
-    marriageLine?: { description: string; meaning: string; assessment: '좋음' | '보통' | '주의' }
+    lifeLine?: PalmLineDetail
+    intelligenceLine?: PalmLineDetail
+    emotionLine?: PalmLineDetail
+    fateLine?: PalmLineDetail
+    sunLine?: PalmLineDetail
+    marriageLine?: PalmLineDetail
+    [key: string]: PalmLineDetail | undefined
   }
+  fortuneScores?: Record<string, number>
   fortuneOverview?: {
     wealth: string
     health: string
