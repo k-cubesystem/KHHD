@@ -168,13 +168,13 @@ export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: Gemi
     let inputTokens: number | null = null
     let outputTokens: number | null = null
 
-    const r = result as any
-    if (r?.response?.usageMetadata) {
-      inputTokens = r.response.usageMetadata.promptTokenCount ?? null
-      outputTokens = r.response.usageMetadata.candidatesTokenCount ?? null
-    } else if (r?.usageMetadata) {
-      inputTokens = r.usageMetadata.promptTokenCount ?? null
-      outputTokens = r.usageMetadata.candidatesTokenCount ?? null
+    const r = result as Record<string, unknown>
+    const responseUsage = (r?.response as Record<string, unknown>)?.usageMetadata as Record<string, unknown> | undefined
+    const directUsage = r?.usageMetadata as Record<string, unknown> | undefined
+    const usage = responseUsage ?? directUsage
+    if (usage) {
+      inputTokens = (usage.promptTokenCount as number) ?? null
+      outputTokens = (usage.candidatesTokenCount as number) ?? null
     }
 
     // 4. 성공 기록 (비동기, 결과 대기 없음)

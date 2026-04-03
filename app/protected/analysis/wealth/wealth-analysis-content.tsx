@@ -82,7 +82,12 @@ export function WealthAnalysisContent() {
       const result = await analyzeWealth({ memberId: member.id })
 
       // Handle daily limit / premium errors → show upgrade nudge
-      if (!result.success && handleDeductResult(result as any, { featureLabel: '재물운 분석' })) {
+      if (
+        !result.success &&
+        handleDeductResult(result as { success: boolean; error?: string; errorType?: string }, {
+          featureLabel: '재물운 분석',
+        })
+      ) {
         return
       }
 

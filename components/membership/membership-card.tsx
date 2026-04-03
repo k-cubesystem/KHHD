@@ -8,6 +8,7 @@ import { createBillingAuthUrl } from '@/app/actions/payment/subscription'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Crown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslations } from 'next-intl'
 
 interface MembershipCardProps {
   planId: string
@@ -18,6 +19,7 @@ interface MembershipCardProps {
 export function MembershipCard({ planId, planName, price }: MembershipCardProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const t = useTranslations('payment')
 
   const handleSubscribe = async () => {
     setIsLoading(true)
@@ -53,7 +55,7 @@ export function MembershipCard({ planId, planName, price }: MembershipCardProps)
       <Button
         onClick={handleSubscribe}
         disabled={isLoading}
-        aria-label={planName + ' 구독하기'}
+        aria-label={planName + ' ' + t('subscribe')}
         className="w-full md:w-auto min-w-[300px] h-14 bg-zen-wood hover:bg-[#7A604D] text-white font-serif font-bold text-lg rounded-sm shadow-md transition-all duration-300 hover:shadow-lg"
       >
         {isLoading ? (

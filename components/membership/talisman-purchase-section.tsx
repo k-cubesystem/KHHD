@@ -15,6 +15,16 @@ interface TalismanPurchaseSectionProps {
   memberId: string
 }
 
+interface DisplayPlan {
+  credits: number
+  price: number
+  name: string
+  description: string | null
+  badge_text?: string | null
+  features: string[] | null
+  sort_order?: number
+}
+
 // 복채 충전 상품 기본값 (DB 연동 실패 시 fallback)
 const DEFAULT_BOKCHAE_PLANS = [
   {
@@ -58,10 +68,10 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
   const [loadingPlan, setLoadingPlan] = useState<number | null>(null)
   const [isTestLoading, setIsTestLoading] = useState(false)
 
-  const displayPlans = (initialPlans.length > 0 ? initialPlans : DEFAULT_BOKCHAE_PLANS) as any[]
+  const displayPlans: DisplayPlan[] = initialPlans.length > 0 ? initialPlans : DEFAULT_BOKCHAE_PLANS
   const sortedPlans = [...displayPlans].sort((a, b) => (a.sort_order ?? a.price) - (b.sort_order ?? b.price))
 
-  const handleCharge = async (plan: any) => {
+  const handleCharge = async (plan: DisplayPlan) => {
     setLoadingPlan(plan.credits)
     try {
       const sdk = await getTossPaymentsSDK()

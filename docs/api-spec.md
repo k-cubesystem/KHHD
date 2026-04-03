@@ -126,6 +126,16 @@ Generate daily fortune for all active subscribers + send KakaoTalk notifications
 | `startFateAnalysis(formData)`           | Start comprehensive fate analysis |
 | `sendNotification(userId, title, body)` | Send push notification            |
 
+### Bok Points (`app/actions/payment/`)
+
+| Action                                               | Description                             |
+| ---------------------------------------------------- | --------------------------------------- |
+| `getBokPointsBalance()`                              | Get user's bok points balance and tier  |
+| `addBokPoints(amount, type, familyMemberId?, desc?)` | Add bok points (atomic via RPC)         |
+| `getBokMissions()`                                   | Get today's bok missions                |
+| `completeBokMission(missionId)`                      | Complete a bok mission and earn points  |
+| `generateDailyBokMissions(userId)`                   | Generate daily missions for user (cron) |
+
 ### Admin (`app/actions/admin/`)
 
 | Action                                       | Description                        |
@@ -136,6 +146,30 @@ Generate daily fortune for all active subscribers + send KakaoTalk notifications
 | `getConversionMetrics()`                     | Signup → Analysis → Payment funnel |
 | `sendGlobalNotification(title, message)`     | Broadcast notification             |
 | `issueCouponToAll(code, amount, expiryDays)` | Bulk coupon distribution           |
+
+### 5. Bok Missions Cron
+
+```
+GET /api/cron/bok-missions
+```
+
+Generate daily bok missions for all active users.
+
+**Authentication**: `Authorization: Bearer <CRON_SECRET>`
+**Schedule**: `0 15 * * *` (KST 00:00)
+
+---
+
+### 6. Bok Report Cron
+
+```
+GET /api/cron/bok-report
+```
+
+Generate weekly bok points summary report.
+
+**Authentication**: `Authorization: Bearer <CRON_SECRET>`
+**Schedule**: `0 0 * * 1` (Monday KST 09:00)
 
 ---
 

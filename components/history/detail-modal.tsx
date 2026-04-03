@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   type AnalysisHistory,
   toggleFavorite,
@@ -28,6 +29,7 @@ interface DetailModalProps {
 
 export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalProps) {
   const router = useRouter()
+  const t = useTranslations('common')
   const [isFavorite, setIsFavorite] = useState(record.is_favorite)
   const [memo, setMemo] = useState(record.user_memo || '')
   const [isEditingMemo, setIsEditingMemo] = useState(false)
@@ -217,7 +219,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                       className="text-xs text-ink-light/60 hover:text-primary flex items-center gap-1"
                     >
                       <Edit3 className="w-3 h-3" />
-                      편집
+                      {t('edit')}
                     </button>
                   )}
                 </div>
@@ -236,7 +238,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                         className="bg-primary hover:bg-primary-dim text-background"
                       >
                         <Save className="w-3 h-3 mr-1" />
-                        저장
+                        {t('save')}
                       </Button>
                       <Button
                         onClick={() => {
@@ -247,7 +249,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                         variant="outline"
                         className="border-primary/20"
                       >
-                        취소
+                        {t('cancel')}
                       </Button>
                     </div>
                   </div>
@@ -273,7 +275,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                   className="flex-1 border-primary/20 hover:border-primary/40"
                 >
                   <Share2 className="w-4 h-4 mr-2" />
-                  공유하기
+                  {t('share')}
                 </Button>
               </div>
 
@@ -285,7 +287,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                   className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  삭제
+                  {t('delete')}
                 </Button>
               ) : (
                 <div className="flex gap-2">
@@ -295,14 +297,14 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                     className="flex-1 bg-red-500 hover:bg-red-600 text-white"
                   >
                     <AlertTriangle className="w-4 h-4 mr-1" />
-                    {isDeleting ? '삭제 중...' : '확인'}
+                    {isDeleting ? '삭제 중...' : t('confirm')}
                   </Button>
                   <Button
                     onClick={() => setShowDeleteConfirm(false)}
                     variant="outline"
                     className="flex-1 border-primary/20"
                   >
-                    취소
+                    {t('cancel')}
                   </Button>
                 </div>
               )}

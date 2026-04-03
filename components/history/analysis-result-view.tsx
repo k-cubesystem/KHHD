@@ -5,6 +5,8 @@ import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
 import { JiSection } from '@/components/analysis/cheonjiin/JiSection'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
 import type { AnalysisHistory } from '@/app/actions/user/history'
+import type { CheonjiinAnalysisResult } from '@/types/cheonjiin'
+import type { DestinyTarget } from '@/app/actions/user/destiny'
 
 interface AnalysisResultViewProps {
   record: AnalysisHistory
@@ -13,7 +15,7 @@ interface AnalysisResultViewProps {
 export function AnalysisResultView({ record }: AnalysisResultViewProps) {
   // SAJU Category & Valid JSON
   if (record.category === 'SAJU' && typeof record.result_json === 'object') {
-    const result = record.result_json as any
+    const result = record.result_json as CheonjiinAnalysisResult
 
     return (
       <div className="space-y-6">
@@ -24,11 +26,11 @@ export function AnalysisResultView({ record }: AnalysisResultViewProps) {
               {
                 id: record.target_id || '',
                 name: record.target_name || '이름 없음',
-                birth_date: '1900-01-01', // Dummy for display
-                birth_time: '00:00', // Dummy
-                gender: 'male', // Dummy
-                calendar_type: 'solar', // Dummy
-              } as any
+                birth_date: '1900-01-01',
+                birth_time: '00:00',
+                gender: 'male',
+                calendar_type: 'solar',
+              } as unknown as DestinyTarget
             }
           />
         </div>
@@ -48,9 +50,7 @@ export function AnalysisResultView({ record }: AnalysisResultViewProps) {
       {record.summary && (
         <div className="space-y-2">
           <h4 className="text-sm font-bold text-primary uppercase tracking-wide">요약</h4>
-          <p className="text-base text-ink-light/90 leading-relaxed whitespace-pre-wrap">
-            {record.summary}
-          </p>
+          <p className="text-base text-ink-light/90 leading-relaxed whitespace-pre-wrap">{record.summary}</p>
         </div>
       )}
 
@@ -59,9 +59,7 @@ export function AnalysisResultView({ record }: AnalysisResultViewProps) {
         <h4 className="text-sm font-bold text-primary uppercase tracking-wide">분석 결과 원본</h4>
         <div className="bg-background/50 border border-primary/10 rounded-lg p-4 overflow-x-auto">
           <pre className="text-sm text-ink-light/80 font-sans leading-relaxed">
-            {typeof record.result_json === 'string'
-              ? record.result_json
-              : JSON.stringify(record.result_json, null, 2)}
+            {typeof record.result_json === 'string' ? record.result_json : JSON.stringify(record.result_json, null, 2)}
           </pre>
         </div>
       </div>

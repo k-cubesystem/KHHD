@@ -5,6 +5,7 @@ import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { useTranslations } from 'next-intl'
 import {
   sendShamanChatMessage,
   getShamanChatStarters,
@@ -111,7 +112,15 @@ const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessag
 })
 
 // ─── 새 대화 시작 확인 다이얼로그 ──────────────────────────
-function NewChatConfirmBanner({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+function NewChatConfirmBanner({
+  onConfirm,
+  onCancel,
+  cancelLabel,
+}: {
+  onConfirm: () => void
+  onCancel: () => void
+  cancelLabel: string
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -125,7 +134,7 @@ function NewChatConfirmBanner({ onConfirm, onCancel }: { onConfirm: () => void; 
           onClick={onCancel}
           className="text-[11px] px-2.5 py-1 rounded-lg border border-primary/15 text-primary/50 hover:text-primary/70 transition-colors"
         >
-          취소
+          {cancelLabel}
         </button>
         <button
           onClick={onConfirm}
@@ -141,6 +150,7 @@ function NewChatConfirmBanner({ onConfirm, onCancel }: { onConfirm: () => void; 
 // ─── 메인 컴포넌트 ─────────────────────────────────────────
 export function ShamanChatInterface() {
   const router = useRouter()
+  const tCommon = useTranslations('common')
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -491,7 +501,11 @@ export function ShamanChatInterface() {
       {/* 새 대화 확인 배너 */}
       <AnimatePresence>
         {showNewChatConfirm && (
-          <NewChatConfirmBanner onConfirm={handleNewChat} onCancel={() => setShowNewChatConfirm(false)} />
+          <NewChatConfirmBanner
+            onConfirm={handleNewChat}
+            onCancel={() => setShowNewChatConfirm(false)}
+            cancelLabel={tCommon('cancel')}
+          />
         )}
       </AnimatePresence>
 

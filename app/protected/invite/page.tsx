@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { generateInviteLink } from '@/app/actions/user/invite'
 import { createClient } from '@/lib/supabase/client'
+import '@/lib/kakao-sdk'
 
 export default function InviteCreatePage() {
   const [inviteLink, setInviteLink] = useState<string | null>(null)
@@ -62,8 +63,8 @@ export default function InviteCreatePage() {
   }
 
   const handleShareKakao = () => {
-    if (inviteLink && typeof window !== 'undefined' && (window as any).Kakao) {
-      const Kakao = (window as any).Kakao
+    if (inviteLink && typeof window !== 'undefined' && window.Kakao) {
+      const Kakao = window.Kakao
       if (!Kakao.isInitialized()) {
         // Initialize if not already
         // Kakao.init('YOUR_KAKAO_JS_KEY');

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 interface Plan {
   id: string
@@ -25,6 +26,7 @@ interface MembershipTabsProps {
 
 export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
   const router = useRouter()
+  const t = useTranslations('payment')
   const [selectedPlan, setSelectedPlan] = useState(plans?.[1]?.tier || plans?.[0]?.tier || 'FAMILY')
 
   // 플랜이 없으면 에러 방지
@@ -115,7 +117,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
         {/* Price */}
         <div className="text-center mb-6 pb-6 border-b border-primary/10">
           <div className="text-4xl md:text-5xl font-serif font-bold text-primary mb-2">
-            월 {(currentPlan.price || 0).toLocaleString()}원
+            {t('perMonth')} {(currentPlan.price || 0).toLocaleString()}원
           </div>
           <div className="flex items-center justify-center gap-2 mt-3">
             <Check className="w-4 h-4 text-primary" />

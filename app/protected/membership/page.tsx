@@ -107,9 +107,7 @@ export default async function MembershipPage() {
               {
                 title: '부적 추가 증정',
                 desc: `${
-                  sortedPlans.length > 0 && sortedPlans[0]?.features
-                    ? (sortedPlans[0].features as any).bonus_rate || 10
-                    : 10
+                  sortedPlans.length > 0 && sortedPlans[0]?.features ? sortedPlans[0].features.bonus_rate || 10 : 10
                 }% 보너스`,
               },
             ].map((item, i) => (

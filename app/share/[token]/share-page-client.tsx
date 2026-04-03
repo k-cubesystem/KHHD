@@ -547,7 +547,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
   const config = CATEGORY_CONFIG[record.category] || DEFAULT_CATEGORY
   const CategoryIcon = config.icon
   const dateStr = format(new Date(record.created_at), 'yyyy년 M월 d일', { locale: ko })
-  const viewCount = (record as any).share_view_count ?? null
+  const viewCount = record.share_view_count ?? null
 
   return (
     <div className="min-h-screen bg-background text-ink-light font-sans selection:bg-primary/30 relative overflow-hidden flex flex-col items-center">

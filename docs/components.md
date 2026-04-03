@@ -10,17 +10,18 @@
 
 ## Analysis Components
 
-| Component               | Path                                                        | Description                      |
-| ----------------------- | ----------------------------------------------------------- | -------------------------------- |
-| `AnalysisDashboard`     | `components/analysis/AnalysisDashboard.tsx`                 | 분석 메인 대시보드 (카드 그리드) |
-| `DailyFortuneCard`      | `components/analysis/daily-fortune-card.tsx`                | 오늘의 운세 요약 카드 (GA4)      |
-| `DailyFortuneView`      | `components/analysis/daily-fortune-view.tsx`                | 오늘의 운세 상세 뷰              |
-| `SajuResultClient`      | `app/protected/analysis/saju-result/saju-result-client.tsx` | 사주 분석 결과 (프리미엄 블러)   |
-| `CheonjiinSummary`      | `components/analysis/cheonjiin/CheonjiinSummary.tsx`        | 천지인 요약                      |
-| `CheonSection`          | `components/analysis/cheonjiin/CheonSection.tsx`            | 천(하늘) 섹션                    |
-| `InSection`             | `components/analysis/cheonjiin/InSection.tsx`               | 인(사람) 섹션                    |
-| `JiSection`             | `components/analysis/cheonjiin/JiSection.tsx`               | 지(땅) 섹션                      |
-| `CheonjiinLoadingState` | `components/analysis/cheonjiin/CheonjiinLoadingState.tsx`   | 분석 로딩 애니메이션             |
+| Component               | Path                                                        | Description                              |
+| ----------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| `AnalysisDashboard`     | `components/analysis/AnalysisDashboard.tsx`                 | 분석 메인 대시보드 (카드 그리드)         |
+| `DailyFortuneCard`      | `components/analysis/daily-fortune-card.tsx`                | 오늘의 운세 요약 카드 (GA4)              |
+| `DailyFortuneView`      | `components/analysis/daily-fortune-view.tsx`                | 오늘의 운세 상세 뷰                      |
+| `SajuResultClient`      | `app/protected/analysis/saju-result/saju-result-client.tsx` | 사주 분석 결과 (프리미엄 블러)           |
+| `CheonjiinSummary`      | `components/analysis/cheonjiin/CheonjiinSummary.tsx`        | 천지인 요약                              |
+| `CheonSection`          | `components/analysis/cheonjiin/CheonSection.tsx`            | 천(하늘) 섹션                            |
+| `InSection`             | `components/analysis/cheonjiin/InSection.tsx`               | 인(사람) 섹션                            |
+| `JiSection`             | `components/analysis/cheonjiin/JiSection.tsx`               | 지(땅) 섹션                              |
+| `CheonjiinLoadingState` | `components/analysis/cheonjiin/CheonjiinLoadingState.tsx`   | 분석 로딩 애니메이션                     |
+| `BokHubSection`         | `components/analysis/bok-hub-section.tsx`                   | 복 관리 허브 (등급 바 + 미션 체크리스트) |
 
 ## Payment & Membership
 
@@ -34,14 +35,15 @@
 
 ## Shared Components
 
-| Component            | Path                                       | Description                    |
-| -------------------- | ------------------------------------------ | ------------------------------ |
-| `LocaleSwitcher`     | `components/shared/locale-switcher.tsx`    | 언어 전환 (admin only, ko/en)  |
-| `KakaoShareButton`   | `components/shared/kakao-share-button.tsx` | 카카오톡 공유 (GA4)            |
-| `SajuLoadingOverlay` | `components/shared/SajuLoadingOverlay.tsx` | 분석 로딩 오버레이             |
-| `GuestGate`          | `components/guest-gate.tsx`                | 비회원 잠금 (블러 + CTA, i18n) |
-| `GuestCTACard`       | `components/guest-cta-card.tsx`            | 비회원 CTA 카드 (i18n)         |
-| `EventPopup`         | `components/EventPopup.tsx`                | 이벤트 팝업 (포커스 트랩)      |
+| Component            | Path                                       | Description                     |
+| -------------------- | ------------------------------------------ | ------------------------------- |
+| `LocaleSwitcher`     | `components/shared/locale-switcher.tsx`    | 언어 전환 (admin only, ko/en)   |
+| `KakaoShareButton`   | `components/shared/kakao-share-button.tsx` | 카카오톡 공유 (GA4)             |
+| `SajuLoadingOverlay` | `components/shared/SajuLoadingOverlay.tsx` | 분석 로딩 오버레이              |
+| `GuestGate`          | `components/guest-gate.tsx`                | 비회원 잠금 (블러 + CTA, i18n)  |
+| `GuestCTACard`       | `components/guest-cta-card.tsx`            | 비회원 CTA 카드 (i18n)          |
+| `EventPopup`         | `components/EventPopup.tsx`                | 이벤트 팝업 (포커스 트랩)       |
+| `BokUpsellModal`     | `components/shared/bok-upsell-modal.tsx`   | 인연 한도 업셀 모달 (한지+단청) |
 
 ## Landing Components
 
@@ -90,6 +92,22 @@ body       → 14px / 1.6 / -0.02em / 300
 body-sm    → 13px / 1.5 / -0.01em / 300
 caption    → 12px / 1.5 / 0em / 400
 overline   → 11px / 1.4 / 0.08em / 600
+```
+
+### Obangsaek (오방색)
+
+```
+red:    #C83232 (朱 — CTA, 강조)
+blue:   #2D5F8A (靑 — 정보, 링크)
+yellow: #D4A017 (黃 — 골드)
+white:  #F5F0E8 (白 — 한지 배경)
+black:  #1A1714 (玄 — 배경)
+```
+
+### Traditional CSS Utilities
+
+```
+.hanji-card, .dancheong-border-top, .dancheong-divider, .bok-badge, .traditional-grid-bg
 ```
 
 ### Accessibility

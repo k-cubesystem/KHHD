@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import type { EmailOtpType } from '@supabase/supabase-js'
 import { grantSignupBonus } from '@/app/actions/payment/wallet'
 import { processReferralBonus } from '@/app/actions/user/referral'
 import { logger } from '@/lib/utils/logger'
@@ -51,8 +52,7 @@ export async function GET(request: NextRequest) {
     // 이메일 인증 (회원가입 확인, 비밀번호 재설정 등)
     const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
       token_hash,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      type: type as any,
+      type: type as EmailOtpType,
     })
 
     if (verifyError) {
