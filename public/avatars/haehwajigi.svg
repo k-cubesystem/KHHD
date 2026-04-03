@@ -1,0 +1,35 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- 갓 (한국 전통 모자) -->
+  <ellipse cx="50" cy="22" rx="32" ry="5" fill="#1A1508"/>
+  <path d="M28 22 Q30 8 50 5 Q70 8 72 22" fill="#16140F" stroke="#C9A84C" stroke-width="1" stroke-linecap="round"/>
+  <ellipse cx="50" cy="22" rx="24" ry="3" fill="#1A1508" stroke="#C9A84C" stroke-width="0.5"/>
+  <!-- 갓끈 -->
+  <path d="M34 24 Q30 40 28 55" stroke="#C9A84C" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M66 24 Q70 40 72 55" stroke="#C9A84C" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <!-- 얼굴 -->
+  <rect x="30" y="24" width="40" height="42" rx="12" fill="#D4B896"/>
+  <rect x="33" y="27" width="34" height="37" rx="10" fill="#E0C9A6" opacity="0.5"/>
+  <!-- 눈썹 (지혜로운) -->
+  <path d="M36 36 Q40 33 44 35" stroke="#3D2A14" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M56 35 Q60 33 64 36" stroke="#3D2A14" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- 눈 (부드럽고 지혜로운) -->
+  <path d="M37 40 Q40 38 44 40" stroke="#1A1508" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M56 40 Q60 38 63 40" stroke="#1A1508" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="40" cy="40" r="1" fill="#1A1508"/>
+  <circle cx="60" cy="40" r="1" fill="#1A1508"/>
+  <!-- 코 -->
+  <path d="M48 44 Q50 48 52 44" stroke="#B8956A" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- 입 (온화한 미소) -->
+  <path d="M44 52 Q50 55 56 52" stroke="#8B6B4A" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <!-- 수염 -->
+  <path d="M40 54 Q38 62 34 70" stroke="#A8903F" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M44 56 Q43 64 40 72" stroke="#A8903F" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M50 57 Q50 66 50 75" stroke="#A8903F" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M56 56 Q57 64 60 72" stroke="#A8903F" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <path d="M60 54 Q62 62 66 70" stroke="#A8903F" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <!-- 도포 상단 (한복 깃) -->
+  <path d="M30 66 L40 60 L50 66 L60 60 L70 66 L70 85 Q50 92 30 85Z" fill="#16140F" stroke="#C9A84C" stroke-width="0.8" stroke-linejoin="round"/>
+  <!-- 도포 문양 -->
+  <circle cx="50" cy="76" r="4" stroke="#C9A84C" stroke-width="0.6" fill="none"/>
+  <circle cx="50" cy="76" r="1.5" fill="#C9A84C" opacity="0.6"/>
+</svg>

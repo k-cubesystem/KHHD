@@ -1,21 +1,27 @@
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <!-- 얼굴 -->
-  <circle cx="50" cy="50" r="35" fill="#FF6B6B"/>
-
-  <!-- 뿔 -->
-  <path d="M 35 25 Q 32 15 30 20 Q 28 25 32 28 Z" fill="#8B0000"/>
-  <path d="M 65 25 Q 68 15 70 20 Q 72 25 68 28 Z" fill="#8B0000"/>
-
-  <!-- 눈 -->
-  <ellipse cx="40" cy="45" rx="4" ry="6" fill="#2C3E50"/>
-  <ellipse cx="60" cy="45" rx="4" ry="6" fill="#2C3E50"/>
-  <circle cx="41" cy="43" r="1.5" fill="white"/>
-  <circle cx="61" cy="43" r="1.5" fill="white"/>
-
-  <!-- 입 -->
-  <path d="M 40 60 Q 50 65 60 60" stroke="#2C3E50" stroke-width="2" fill="none" stroke-linecap="round"/>
-
-  <!-- 볼 -->
-  <circle cx="32" cy="52" r="5" fill="#FF4757" opacity="0.5"/>
-  <circle cx="68" cy="52" r="5" fill="#FF4757" opacity="0.5"/>
+  <!-- 얼굴 (전통 도깨비 탈 형태) -->
+  <rect x="18" y="22" width="64" height="62" rx="18" fill="#9E2B2B"/>
+  <rect x="22" y="26" width="56" height="56" rx="14" fill="#B33434" opacity="0.4"/>
+  <!-- 뿔 (소용돌이 곡선) -->
+  <path d="M32 24 Q28 12 22 6 Q26 10 30 8 Q28 16 32 22" fill="#6B1D1D" stroke="#6B1D1D" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M68 24 Q72 12 78 6 Q74 10 70 8 Q72 16 68 22" fill="#6B1D1D" stroke="#6B1D1D" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 이마 문양 (전통 점) -->
+  <circle cx="50" cy="32" r="2.5" fill="#6B1D1D"/>
+  <path d="M44 32 Q47 29 50 32 Q53 29 56 32" stroke="#6B1D1D" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <!-- 눈 (치켜뜬 위엄 있는 눈) -->
+  <path d="M33 46 L39 42 Q42 41 45 44" stroke="#1A0A0A" stroke-width="2.5" fill="#1A0A0A" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M55 44 Q58 41 61 42 L67 46" stroke="#1A0A0A" stroke-width="2.5" fill="#1A0A0A" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="40" cy="44" r="1.5" fill="#E8D5A0"/>
+  <circle cx="60" cy="44" r="1.5" fill="#E8D5A0"/>
+  <!-- 코 -->
+  <path d="M48 50 Q50 53 52 50" stroke="#6B1D1D" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- 입 (벌어진 입 + 이빨) -->
+  <path d="M36 58 Q42 54 50 56 Q58 54 64 58 Q58 66 50 68 Q42 66 36 58Z" fill="#1A0A0A"/>
+  <path d="M40 58 L42 62 L44 58" fill="#E8E4DC"/>
+  <path d="M56 58 L58 62 L60 58" fill="#E8E4DC"/>
+  <!-- 볼 소용돌이 문양 -->
+  <circle cx="28" cy="52" r="6" fill="#C84040" opacity="0.45"/>
+  <path d="M26 52 Q28 50 30 52 Q28 54 26 52" stroke="#6B1D1D" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+  <circle cx="72" cy="52" r="6" fill="#C84040" opacity="0.45"/>
+  <path d="M70 52 Q72 50 74 52 Q72 54 70 52" stroke="#6B1D1D" stroke-width="0.8" fill="none" stroke-linecap="round"/>
 </svg>
