@@ -106,7 +106,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#050505]`}
+        className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#0A0A08]`}
         suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages}>

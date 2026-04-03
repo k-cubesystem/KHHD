@@ -84,7 +84,7 @@ export function MiniReadingSection() {
       const animal = ANIMALS[yearZhi] || '알 수 없음'
       const animalEmoji = ANIMAL_EMOJI[yearZhi] || ''
       const element = WU_XING_NAMES[saju.dayMasterElement] || saju.dayMasterElement
-      const elementColor = WU_XING_COLORS[saju.dayMasterElement] || '#D4AF37'
+      const elementColor = WU_XING_COLORS[saju.dayMasterElement] || '#C9A84C'
       const dayMaster = saju.dayMaster
       const trait = DAY_MASTER_TRAITS[dayMaster] || '고유한 기운을 가진 사람'
 

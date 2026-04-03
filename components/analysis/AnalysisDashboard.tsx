@@ -7,20 +7,8 @@ import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
 import { BokHubSection } from '@/components/analysis/bok-hub-section'
 import { Card } from '@/components/ui/card'
-import {
-  Flame,
-  Wallet,
-  Heart,
-  Building2,
-  GraduationCap,
-  TrendingUp,
-  MessageCircle,
-  ChevronRight,
-  Users,
-  Hand,
-  ScanFace,
-  Compass,
-} from 'lucide-react'
+import { Flame, Wallet, Heart, Building2, GraduationCap, TrendingUp, MessageCircle, ChevronRight } from 'lucide-react'
+import { IconGunghap, IconGwansang, IconSongeum, IconPungsu } from '@/components/icons/traditional-icons'
 import { DailyFortuneCard } from './daily-fortune-card'
 
 const MasterpieceSection = dynamic(
@@ -33,7 +21,7 @@ const STUDIO_CARDS = [
     id: 'compatibility',
     label: '궁합',
     desc: '두 사람의 오행 기운으로 관계의 해법을 찾습니다',
-    icon: Users,
+    icon: IconGunghap,
     color: 'text-rose-400',
     bg: 'bg-rose-500/10',
     href: '/protected/analysis/compatibility',
@@ -42,7 +30,7 @@ const STUDIO_CARDS = [
     id: 'face',
     label: '관상',
     desc: '얼굴에 새겨진 운명의 지도를 읽어드립니다',
-    icon: ScanFace,
+    icon: IconGwansang,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
     href: '/protected/studio/face',
@@ -51,7 +39,7 @@ const STUDIO_CARDS = [
     id: 'palm',
     label: '손금',
     desc: '손바닥 위의 생명선·지능선·감정선을 해석합니다',
-    icon: Hand,
+    icon: IconSongeum,
     color: 'text-sky-400',
     bg: 'bg-sky-500/10',
     href: '/protected/studio/palm',
@@ -60,7 +48,7 @@ const STUDIO_CARDS = [
     id: 'fengshui',
     label: '풍수',
     desc: '공간의 기운을 분석하여 길한 배치를 제안합니다',
-    icon: Compass,
+    icon: IconPungsu,
     color: 'text-teal-400',
     bg: 'bg-teal-500/10',
     href: '/protected/studio/fengshui',

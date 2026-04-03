@@ -14,18 +14,18 @@ const config: Config = {
         // [New] Premium Champagne Gold Palette (Sophisticated Luxury)
         background: 'hsl(var(--background))', // Deep Ink Black
         foreground: 'hsl(var(--foreground))', // Warm Off-White
-        surface: '#1A1917', // Warm Dark Grey
+        surface: '#16140F', // Warm Dark Grey
         primary: {
-          DEFAULT: '#F4E4BA', // Pastel Gold (Soft & Elegant)
-          dim: '#E2D5B5', // Slightly dimmer pastel
-          dark: '#C8B273', // Darker Gold for depth
+          DEFAULT: '#E8D5A0', // Muted Gold (Refined)
+          dim: '#C9A84C', // Rich Gold accent
+          dark: '#A8903F', // Deep Gold for depth
           light: '#FFF8E7', // Very Light Gold for gradients
         },
         secondary: {
           DEFAULT: '#C8B273', // Muted Gold (Secondary Action / Hover)
           foreground: '#1A1917',
         },
-        seal: '#8E2828', // Dojang Red
+        seal: '#9E2B2B', // Dojang Red
 
         // [Legacy/Compat] Mapping to new system
         ink: {
@@ -45,14 +45,14 @@ const config: Config = {
         gold: {
           300: '#F4E4BA', // 파스텔 골드
           400: '#E2D5B5', // 소프트 골드
-          500: '#D4AF37', // 메인 골드 (가장 많이 쓰이는 값)
-          600: '#C8B273', // 미디엄 골드
+          500: '#C9A84C', // 메인 골드 (가장 많이 쓰이는 값)
+          600: '#A8903F', // 미디엄 골드
           700: '#8C7B50', // 다크 골드
           metallic: '#E2D5B5',
           luxury: '#C8B273',
         },
-        cinnabar: '#8E2828',
-        'charcoal-deep': '#0F0F0F',
+        cinnabar: '#9E2B2B',
+        'charcoal-deep': '#0A0A08',
 
         // Semantic Status Colors
         error: {

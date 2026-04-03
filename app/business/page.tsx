@@ -310,9 +310,9 @@ function ContactForm() {
 
 export default function BusinessPage() {
   return (
-    <div className="min-h-screen bg-[#050505] text-amber-100">
+    <div className="min-h-screen bg-[#0A0A08] text-amber-100">
       {/* ── Navigation ── */}
-      <nav className="sticky top-0 z-50 border-b border-amber-900/20 bg-[#050505]/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-amber-900/20 bg-[#0A0A08]/90 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-amber-400 font-serif text-lg tracking-tight">해화당</span>

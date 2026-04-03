@@ -6,14 +6,14 @@ export const COLORS = {
   gold: {
     300: '#F4E4BA',
     400: '#E2D5B5',
-    500: '#D4AF37',
-    600: '#C8B273',
+    500: '#C9A84C',
+    600: '#A8903F',
     700: '#8C7B50',
   },
-  background: '#0D0D0D',
-  surface: '#1A1917',
-  charcoalDeep: '#0F0F0F',
-  seal: '#8E2828',
+  background: '#0A0A08',
+  surface: '#16140F',
+  charcoalDeep: '#0A0A08',
+  seal: '#9E2B2B',
   error: '#EF4444',
   success: '#22C55E',
   warning: '#F59E0B',
@@ -29,7 +29,7 @@ export const SEMANTIC = {
 
 /** 오방색 (五方色) — 한국 전통 컬러 시스템 */
 export const OBANGSAEK = {
-  red: '#C83232', // 朱 (주) — CTA, 강조, 복 포인트
+  red: '#9E2B2B', // 朱 (주) — CTA, 강조, 도장 레드 통일
   blue: '#2D5F8A', // 靑 (청) — 정보, 링크, 차분한 UI
   yellow: '#D4A017', // 黃 (황) — 골드 (기존 유지), 프리미엄
   white: '#F5F0E8', // 白 (백) — 한지 질감 배경
