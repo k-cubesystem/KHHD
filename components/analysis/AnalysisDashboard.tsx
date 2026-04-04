@@ -1,6 +1,5 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
@@ -16,11 +15,6 @@ import {
   IconInyon,
 } from '@/components/icons/traditional-icons'
 import { DailyFortuneCard } from './daily-fortune-card'
-
-const MasterpieceSection = dynamic(
-  () => import('./dashboard/MasterpieceSection').then((mod) => ({ default: mod.MasterpieceSection })),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse bg-white/5 rounded-2xl" /> }
-)
 
 const STUDIO_CARDS = [
   {
@@ -143,17 +137,69 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
       animate="animate"
       className="max-w-screen-sm mx-auto pb-40 px-2 space-y-6"
     >
-      {/* 0. Daily Fortune Card — 매일 돌아올 이유 */}
-      {userId && userName && <DailyFortuneCard userId={userId} userName={userName} />}
+      {/* 0. 사주 유도 슬라이드 카드 */}
+      <motion.div variants={fadeInUp}>
+        <div className="space-y-3">
+          {/* 슬라이드 카드 영역 */}
+          <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2 -mx-2 px-2">
+            {/* 카드 1: 천지인 분석 */}
+            <div
+              onClick={() => router.push('/protected/analysis/cheonjiin')}
+              className="hanji-card dancheong-border-top min-w-[280px] snap-center p-5 cursor-pointer group active:scale-[0.97] transition-transform"
+            >
+              <p className="text-[10px] text-gold-500/60 font-serif tracking-widest mb-2">天 地 人</p>
+              <h3 className="text-base font-serif font-bold text-ink-light mb-1">나의 사주를 풀어보세요</h3>
+              <p className="text-xs text-ink-light/60 font-light leading-relaxed mb-3">
+                태어난 순간 새겨진 운명의 지도.
+                <br />
+                하늘·땅·사람의 기운을 읽어드립니다.
+              </p>
+              <span className="text-xs text-gold-500 font-medium group-hover:underline">사주 분석 시작 →</span>
+            </div>
+
+            {/* 카드 2: 궁합 */}
+            <div
+              onClick={() => router.push('/protected/analysis/compatibility')}
+              className="hanji-card min-w-[280px] snap-center p-5 cursor-pointer group active:scale-[0.97] transition-transform"
+            >
+              <p className="text-[10px] text-obangsaek-red/60 font-serif tracking-widest mb-2">陰 陽 合</p>
+              <h3 className="text-base font-serif font-bold text-ink-light mb-1">소중한 인연의 궁합</h3>
+              <p className="text-xs text-ink-light/60 font-light leading-relaxed mb-3">
+                두 사람 사이 보이지 않는 기운의 흐름.
+                <br />
+                오행으로 관계의 해법을 찾습니다.
+              </p>
+              <span className="text-xs text-obangsaek-red font-medium group-hover:underline">궁합 보기 →</span>
+            </div>
+
+            {/* 카드 3: 오늘의 운세 */}
+            <div
+              onClick={() => router.push('/protected/analysis/today')}
+              className="hanji-card min-w-[280px] snap-center p-5 cursor-pointer group active:scale-[0.97] transition-transform"
+            >
+              <p className="text-[10px] text-obangsaek-blue/60 font-serif tracking-widest mb-2">今 日 運</p>
+              <h3 className="text-base font-serif font-bold text-ink-light mb-1">오늘의 기운을 확인하세요</h3>
+              <p className="text-xs text-ink-light/60 font-light leading-relaxed mb-3">
+                매일 달라지는 운의 흐름.
+                <br />
+                오늘 하루를 지혜롭게 보내는 비결.
+              </p>
+              <span className="text-xs text-obangsaek-blue font-medium group-hover:underline">운세 확인 →</span>
+            </div>
+          </div>
+
+          {/* 슬라이드 인디케이터 */}
+          <div className="flex justify-center gap-1.5">
+            <div className="w-6 h-1 rounded-full bg-gold-500/40" />
+            <div className="w-1.5 h-1 rounded-full bg-white/10" />
+            <div className="w-1.5 h-1 rounded-full bg-white/10" />
+          </div>
+        </div>
+      </motion.div>
 
       {/* 1. Seasonal Event Banner */}
       <motion.div variants={fadeInUp}>
         <SeasonalEventBanner />
-      </motion.div>
-
-      {/* 2. 나의 사주·운명 풀어보기 */}
-      <motion.div variants={fadeInUp}>
-        <MasterpieceSection />
       </motion.div>
 
       {/* 3. 개별 분석 (2열) */}
@@ -234,6 +280,14 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
           })}
         </nav>
       </motion.div>
+
+      {/* 5. 오늘의 운세 (하단) */}
+      {userId && userName && (
+        <motion.div variants={fadeInUp}>
+          <div className="dancheong-divider my-4" />
+          <DailyFortuneCard userId={userId} userName={userName} />
+        </motion.div>
+      )}
     </motion.div>
   )
 }
