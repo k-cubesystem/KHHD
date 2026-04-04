@@ -1,9 +1,7 @@
-/* V11-SAJU-DESTINY */
 'use client'
 
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 
 export function MasterpieceSection() {
   const router = useRouter()
@@ -11,186 +9,111 @@ export function MasterpieceSection() {
   return (
     <div
       onClick={() => router.push('/protected/analysis/cheonjiin')}
-      className="relative overflow-hidden rounded-2xl cursor-pointer group anim-fade-in-up"
+      className="relative overflow-hidden rounded-xl cursor-pointer group hanji-card dancheong-border-top"
       style={{
-        '--fade-y': '20px',
-        animation: 'fade-in-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
-        background: 'linear-gradient(160deg, #0e0b07 0%, #17130d 50%, #0a0807 100%)',
-        border: '1px solid rgba(212,175,55,0.18)',
-        boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(212,175,55,0.07)',
-      } as React.CSSProperties}
+        background: 'linear-gradient(160deg, #0e0b07 0%, #16140F 50%, #0a0807 100%)',
+        boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(201,168,76,0.07)',
+      }}
     >
-      {/* 運 워터마크 */}
+      {/* 命 워터마크 */}
       <div
         aria-hidden="true"
-        className="absolute right-0 bottom-0 select-none pointer-events-none"
+        className="absolute right-0 bottom-0 select-none pointer-events-none font-serif"
         style={{
-          fontSize: '18rem',
+          fontSize: '16rem',
           lineHeight: 1,
-          opacity: 0.035,
-          color: GOLD_500,
-          fontFamily: 'serif',
+          opacity: 0.03,
+          color: '#C9A84C',
           fontWeight: 700,
-          transform: 'translate(20%, 20%)',
+          transform: 'translate(15%, 15%)',
         }}
       >
-        運
+        命
       </div>
 
-      {/* 앰비언트 글로우 */}
+      {/* 앰비언트 글로우 (도장 레드) */}
       <div
         aria-hidden="true"
         className="absolute pointer-events-none"
         style={{
           top: '-40%',
           right: '-20%',
-          width: '360px',
-          height: '360px',
-          background: 'radial-gradient(circle, rgba(212,175,55,0.14) 0%, transparent 65%)',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(158,43,43,0.08) 0%, transparent 65%)',
           filter: 'blur(40px)',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="absolute pointer-events-none"
-        style={{
-          bottom: '-30%',
-          left: '-10%',
-          width: '280px',
-          height: '280px',
-          background: 'radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 65%)',
-          filter: 'blur(50px)',
-        }}
-      />
-
-      {/* 한지 노이즈 */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none mix-blend-overlay"
-        style={{
-          opacity: 0.04,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundSize: '200px 200px',
         }}
       />
 
       {/* 콘텐츠 */}
-      <div className="relative z-10 px-7 py-8 flex flex-col gap-5">
+      <div className="relative z-10 px-6 py-7 flex flex-col gap-4">
+        {/* 한자 라벨 */}
+        <p className="text-[10px] font-serif tracking-[0.5em] text-gold-500/50">
+          天 地 人 · 四 柱 八 字
+        </p>
+
         {/* 헤드라인 */}
-        <div
-          className="space-y-2.5 anim-fade-in-up"
-          style={{
-            '--fade-y': '12px',
-            animation: 'fade-in-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both',
-          } as React.CSSProperties}
+        <h2
+          className="text-[1.4rem] font-serif font-bold leading-[1.4] text-ink-light tracking-tight"
+          style={{ wordBreak: 'keep-all' }}
         >
-          <h2
-            className="text-[1.6rem] font-serif font-medium leading-[1.35] text-white tracking-tight"
-            style={{ wordBreak: 'keep-all' }}
-          >
-            내{' '}
-            <span
-              style={{
-                background: `linear-gradient(90deg, ${GOLD_300}, ${GOLD_500})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              사주
-            </span>
-            와{' '}
-            <span
-              style={{
-                background: `linear-gradient(90deg, ${GOLD_300}, ${GOLD_500})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              대운
-            </span>
-            이<br />
-            지금 이 순간에도
-            <br />
-            말을 걸고 있습니다
-          </h2>
+          태어난 순간 새겨진
+          <br />
+          당신만의{' '}
+          <span className="text-gold-500">운명의 지도</span>를
+          <br />
+          펼쳐드립니다
+        </h2>
 
-          {/* 이탤릭 명언 */}
-          <p
-            className="text-[11.5px] italic font-serif leading-relaxed"
-            style={{ color: 'rgba(212,175,55,0.55)' }}
-          >
-            &ldquo;운명(運命)은 읽는 자만이 바꿀 수 있다&rdquo;
-          </p>
-        </div>
+        {/* 명언 */}
+        <p className="text-[11px] italic font-serif text-gold-500/40 leading-relaxed">
+          &ldquo;하늘의 뜻을 알면, 땅 위의 길이 보인다&rdquo;
+        </p>
 
-        {/* 골드 구분선 */}
-        <div
-          className="h-px w-full"
-          style={{
-            background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.35), transparent)',
-          }}
-        />
+        {/* 단청 구분선 */}
+        <div className="dancheong-divider" />
 
         {/* 서브 카피 */}
         <p
-          className="text-[13px] leading-[1.75] font-light anim-fade-in-up"
-          style={{
-            color: 'rgba(255,255,255,0.55)',
-            wordBreak: 'keep-all',
-            '--fade-y': '0px',
-            animation: 'fade-in-up 0.6s ease-out 0.3s both',
-          } as React.CSSProperties}
+          className="text-[12.5px] leading-[1.8] font-light text-ink-light/50"
+          style={{ wordBreak: 'keep-all' }}
         >
-          사주 만세력부터 관상·풍수·손금까지 —{' '}
-          <span style={{ color: 'rgba(255,255,255,0.8)' }}>청담해화당 통합분석으로 </span>
-          당신의 진짜 <span style={{ color: 'rgba(244,228,186,0.75)' }}>운명</span>을 읽어드립니다.
+          천간·지지·오행의 흐름을 읽고,
+          <br />
+          <span className="text-ink-light/70">대운과 세운이 알려주는 인생의 전환점</span>을
+          <br />
+          청담해화당이 짚어드립니다.
         </p>
 
-        {/* CTA 버튼 */}
+        {/* CTA 버튼 (도장 스타일) */}
         <button
           onClick={(e) => {
             e.stopPropagation()
             router.push('/protected/analysis/cheonjiin')
           }}
-          className="relative overflow-hidden w-full h-14 rounded-xl group/btn hover:scale-[1.015] active:scale-[0.975] transition-transform duration-200 anim-fade-in-up"
+          className="relative overflow-hidden w-full h-13 rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200"
           style={{
-            '--fade-y': '8px',
-            animation: 'fade-in-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both',
-            background: `linear-gradient(105deg, #B8860B, ${GOLD_500} 45%, #E2C55A 75%, #C9A227)`,
-            border: '1px solid rgba(244,228,186,0.2)',
-            boxShadow: '0 4px 28px rgba(212,175,55,0.28)',
-          } as React.CSSProperties}
+            background: '#9E2B2B',
+            border: '1px solid rgba(158,43,43,0.5)',
+            boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
+          }}
         >
           {/* 시머 */}
           <div
             aria-hidden="true"
             className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out"
             style={{
-              background:
-                'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.3) 50%, transparent 65%)',
-            }}
-          />
-          {/* 상단 하이라이트 */}
-          <div
-            aria-hidden="true"
-            className="absolute top-0 inset-x-0 h-px"
-            style={{
-              background:
-                'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)',
+              background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 50%, transparent 65%)',
             }}
           />
 
-          <span className="relative z-10 flex items-center justify-center gap-2.5">
-            <span
-              className="text-[15px] font-serif font-bold tracking-[0.1em]"
-              style={{ color: '#0C0A07' }}
-            >
-              나의 사주·운명 풀어보기
+          <span className="relative z-10 flex items-center justify-center gap-2.5 py-3.5">
+            <span className="text-[14px] font-serif font-bold tracking-[0.15em] text-white">
+              나의 사주 · 운명 풀어보기
             </span>
             <ArrowRight
-              className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform duration-300"
-              strokeWidth={2.5}
-              style={{ color: '#0C0A07' }}
+              className="w-4 h-4 text-white/80 group-hover/btn:translate-x-0.5 transition-transform duration-300"
+              strokeWidth={2}
             />
           </span>
         </button>
