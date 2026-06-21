@@ -14,6 +14,9 @@ export type BokTransactionType =
   | 'BONUS'
   | 'REFERRAL'
   | 'MISSION'
+  | 'SHRINE_WISH_OWN'
+  | 'SHRINE_WISH_VISIT'
+  | 'SHRINE_ITEM_PURCHASE'
 
 export interface BokPointsStatus {
   balance: number

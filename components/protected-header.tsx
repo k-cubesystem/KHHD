@@ -12,13 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import {
-  User,
-  LogOut,
-  LayoutDashboard,
-  BookOpen,
-  CreditCard,
-} from 'lucide-react'
+import { User, LogOut, LayoutDashboard, BookOpen, CreditCard } from 'lucide-react'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { UserRole } from '@/types/auth'
@@ -29,7 +23,6 @@ export function ProtectedHeader({ user }: { user: any }) {
   const [userRole, setUserRole] = useState<UserRole>('user')
   const [planName, setPlanName] = useState<string>('')
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
     setIsMounted(true)
@@ -49,6 +42,7 @@ export function ProtectedHeader({ user }: { user: any }) {
   }, [])
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
     router.refresh()
@@ -75,7 +69,6 @@ export function ProtectedHeader({ user }: { user: any }) {
               청담해화당
             </h1>
           </Link>
-
         </div>
 
         {/* Right: Actions */}

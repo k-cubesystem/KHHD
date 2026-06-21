@@ -45,4 +45,11 @@ export const GA = {
   familyAdd: () => trackEvent({ action: 'family_add', category: 'engagement' }),
 
   pageView: (path: string) => trackEvent({ action: 'page_view', category: 'navigation', label: path }),
+
+  shrineCreate: (theme: string) => trackEvent({ action: 'shrine_create', category: 'shrine', label: theme }),
+  shrineWishAdd: (category: string) => trackEvent({ action: 'shrine_wish_add', category: 'shrine', label: category }),
+  shrineItemPurchase: (itemType: string, price: number) =>
+    trackEvent({ action: 'shrine_item_purchase', category: 'shrine', label: itemType, value: price }),
+  shrineVisit: () => trackEvent({ action: 'shrine_visit', category: 'shrine' }),
+  shrineShare: (platform: string) => trackEvent({ action: 'shrine_share', category: 'social', label: platform }),
 } as const

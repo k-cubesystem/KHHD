@@ -4,13 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircle2, User, ArrowRight, UserPlus, Users, Heart, Briefcase } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import { getTargetImageUrl } from '@/lib/domain/destiny/destiny-utils'
 import { createClient } from '@/lib/supabase/client'
@@ -24,7 +18,6 @@ interface SajuProfileSelectorProps {
 
 export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfileSelectorProps) {
   const router = useRouter()
-  const supabase = createClient()
   const [targets, setTargets] = useState<DestinyTarget[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -36,6 +29,7 @@ export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfil
       setLoading(true)
 
       // Check authentication
+      const supabase = createClient()
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -52,7 +46,7 @@ export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfil
     }
 
     fetchTargets()
-  }, [isOpen, router, onClose, supabase])
+  }, [isOpen, router, onClose])
 
   const handleTargetSelect = (targetId: string) => {
     setSelectedId(targetId)
@@ -68,18 +62,9 @@ export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfil
   // Helper function to get relation icon
   const getRelationIcon = (relationType: string, targetType: string) => {
     if (targetType === 'self') return User
-    if (
-      relationType.includes('가족') ||
-      relationType.includes('부모') ||
-      relationType.includes('자녀')
-    )
-      return Users
+    if (relationType.includes('가족') || relationType.includes('부모') || relationType.includes('자녀')) return Users
     if (relationType.includes('연인') || relationType.includes('배우자')) return Heart
-    if (
-      relationType.includes('직장') ||
-      relationType.includes('동료') ||
-      relationType.includes('상사')
-    )
+    if (relationType.includes('직장') || relationType.includes('동료') || relationType.includes('상사'))
       return Briefcase
     return User
   }
@@ -103,9 +88,7 @@ export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfil
 
             <div className="text-center space-y-2">
               <p className="text-ink-light/70 text-sm">본인 또는 가족의 사주 정보를 추가하시면</p>
-              <p className="text-ink-light/70 text-sm">
-                다양한 운세와 분석을 확인하실 수 있습니다.
-              </p>
+              <p className="text-ink-light/70 text-sm">다양한 운세와 분석을 확인하실 수 있습니다.</p>
             </div>
 
             <button
@@ -127,9 +110,7 @@ export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfil
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl text-center">프로필 선택</DialogTitle>
-          <DialogDescription className="text-center text-base pt-2">
-            운세를 확인할 분을 선택해주세요
-          </DialogDescription>
+          <DialogDescription className="text-center text-base pt-2">운세를 확인할 분을 선택해주세요</DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -187,9 +168,7 @@ export function SajuProfileSelector({ isOpen, onClose, targetRoute }: SajuProfil
                     </Avatar>
                     <div className="text-left flex-grow">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-serif font-bold text-lg text-ink-light">
-                          {target.name}
-                        </h3>
+                        <h3 className="font-serif font-bold text-lg text-ink-light">{target.name}</h3>
                         {target.target_type === 'self' && (
                           <span className="text-[9px] px-1.5 py-0.5 bg-primary/20 text-primary rounded border border-primary/30 font-sans font-bold">
                             본인

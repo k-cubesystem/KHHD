@@ -1,19 +1,12 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? ''
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error("[Supabase Client] CRITICAL: Missing environment variables!");
-    console.error("Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
-    throw new Error("Supabase configuration is missing. Please check your environment variables.");
+    console.error('[Supabase] Missing env: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY')
   }
 
-  if (!supabaseUrl.startsWith('http')) {
-    console.error("[Supabase Client] Invalid SUPABASE_URL:", supabaseUrl);
-    throw new Error("Invalid Supabase URL format");
-  }
-
-  return createBrowserClient(supabaseUrl, supabaseKey);
+  return createBrowserClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseKey || 'placeholder')
 }
