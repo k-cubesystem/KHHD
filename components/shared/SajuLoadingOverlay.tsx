@@ -130,15 +130,17 @@ export function SajuLoadingOverlay({
           <div
             key={i}
             className="absolute rounded-full anim-particle-float"
-            style={{
-              width: p.size,
-              height: p.size,
-              left: p.left,
-              bottom: '-6px',
-              background: 'rgba(212,175,55,0.4)',
-              '--particle-y': `${p.y}px`,
-              animation: `particle-float-up ${p.duration}s ease-out ${p.delay}s infinite`,
-            } as React.CSSProperties}
+            style={
+              {
+                width: p.size,
+                height: p.size,
+                left: p.left,
+                bottom: '-6px',
+                background: 'rgba(212,175,55,0.4)',
+                '--particle-y': `${p.y}px`,
+                animation: `particle-float-up ${p.duration}s ease-out ${p.delay}s infinite`,
+              } as React.CSSProperties
+            }
           />
         ))}
       </div>
@@ -172,18 +174,13 @@ export function SajuLoadingOverlay({
               animation: 'core-pulse 2.5s ease-in-out infinite',
             }}
           >
-            <span style={{ fontFamily: 'serif', fontSize: '1.75rem', color: GOLD_500 }}>
-              {finishing ? '合' : '天'}
-            </span>
+            <span style={{ fontFamily: 'serif', fontSize: '1.75rem', color: GOLD_500 }}>{finishing ? '合' : '天'}</span>
           </div>
         </div>
       </div>
 
       {/* 대상 이름 */}
-      <p
-        className="tracking-[0.3em] uppercase mb-3"
-        style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', fontWeight: 300 }}
-      >
+      <p className="tracking-[0.3em] uppercase mb-3 text-white/[0.25]" style={{ fontSize: '11px', fontWeight: 300 }}>
         {targetName} 님의 운명을 읽는 중
       </p>
 
@@ -205,10 +202,7 @@ export function SajuLoadingOverlay({
               >
                 {msg.headline}
               </p>
-              <p
-                className="font-light leading-relaxed break-keep"
-                style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}
-              >
+              <p className="font-light leading-relaxed break-keep text-white/[0.35]" style={{ fontSize: '12px' }}>
                 {msg.sub}
               </p>
             </motion.div>
@@ -219,10 +213,7 @@ export function SajuLoadingOverlay({
       {showProgress ? (
         <>
           {/* 진행바 */}
-          <div
-            className="rounded-full overflow-hidden"
-            style={{ width: '200px', height: '2px', background: 'rgba(255,255,255,0.06)' }}
-          >
+          <div className="rounded-full overflow-hidden bg-white/[0.06]" style={{ width: '200px', height: '2px' }}>
             <div
               ref={progressBarRef}
               className="h-full rounded-full"
@@ -233,10 +224,7 @@ export function SajuLoadingOverlay({
               }}
             />
           </div>
-          <p
-            className="mt-2.5 tracking-widest"
-            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.18)', fontWeight: 300 }}
-          >
+          <p className="mt-2.5 tracking-widest text-white/[0.18]" style={{ fontSize: '10px', fontWeight: 300 }}>
             {finishing ? '분석 완료' : `${displayProgress}%`}
           </p>
         </>
@@ -256,8 +244,8 @@ export function SajuLoadingOverlay({
             ))}
           </div>
           <p
-            className="text-center tracking-wide leading-relaxed break-keep"
-            style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', fontWeight: 300, maxWidth: '260px' }}
+            className="text-center tracking-wide leading-relaxed break-keep text-white/[0.3]"
+            style={{ fontSize: '11px', fontWeight: 300, maxWidth: '260px' }}
           >
             청담해화당 사주풀이가 완료되면
             <br />

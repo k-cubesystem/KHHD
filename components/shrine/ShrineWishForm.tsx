@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, Loader2 } from 'lucide-react'
 import { addWish } from '@/app/actions/shrine/shrine-wishes'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface ShrineWishFormProps {
@@ -64,7 +65,7 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
   }, [shrineId, wishText, category, visitorName])
 
   return (
-    <div className="rounded-2xl p-5 space-y-4 hanji-card" style={{ border: '1px solid rgba(201,168,76,0.12)' }}>
+    <div className="rounded-2xl p-5 space-y-4 hanji-card border border-gold-500/[0.12]">
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-gold-500/60" />
         <h3 className="text-ink-light font-serif text-sm font-bold">
@@ -78,12 +79,13 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
           <button
             key={cat.key}
             onClick={() => setCategory(category === cat.key ? '' : cat.key)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-sans transition-all"
-            style={{
-              background: category === cat.key ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${category === cat.key ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.08)'}`,
-              color: category === cat.key ? '#C9A84C' : 'rgba(232,228,220,0.5)',
-            }}
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-sans transition-all border',
+              category === cat.key
+                ? 'bg-gold-500/[0.2] border-gold-500/[0.5] text-gold-500'
+                : 'bg-white/[0.03] border-white/[0.08]'
+            )}
+            style={category === cat.key ? undefined : { color: 'rgba(232,228,220,0.5)' }}
           >
             <span>{cat.emoji}</span>
             <span>{cat.label}</span>
@@ -117,12 +119,7 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
         <button
           onClick={handleSubmit}
           disabled={isLoading || wishText.trim().length < 5}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-serif font-bold transition-all disabled:opacity-40"
-          style={{
-            background: 'rgba(201,168,76,0.15)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            color: '#C9A84C',
-          }}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-serif font-bold transition-all disabled:opacity-40 border bg-gold-500/[0.15] border-gold-500/[0.3] text-gold-500"
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />

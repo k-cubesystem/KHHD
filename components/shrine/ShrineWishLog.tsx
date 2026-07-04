@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquare, ChevronDown } from 'lucide-react'
 import type { ShrineWish } from '@/app/actions/shrine/shrine-wishes'
 import { getWishes } from '@/app/actions/shrine/shrine-wishes'
+import { cn } from '@/lib/utils'
 
 const CATEGORY_EMOJI: Record<string, string> = {
   health: '💪',
@@ -69,11 +70,10 @@ export function ShrineWishLog({ wishes: initialWishes, shrineId }: ShrineWishLog
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
-            className="rounded-xl p-4 space-y-2"
-            style={{
-              background: wish.is_owner_wish ? 'rgba(201,168,76,0.06)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${wish.is_owner_wish ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.05)'}`,
-            }}
+            className={cn(
+              'rounded-xl p-4 space-y-2 border',
+              wish.is_owner_wish ? 'bg-gold-500/[0.06] border-gold-500/[0.15]' : 'bg-white/[0.02] border-white/[0.05]'
+            )}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

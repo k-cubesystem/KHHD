@@ -109,10 +109,32 @@
 - TREE: #10B981 (emerald)
 - FOREST: #6EE7B7 (light emerald)
 
+## 토큰 사용 규칙 (v2 — 2026-07-05)
+
+**단일 소스 원칙:** 색상은 하드코딩 rgba 대신 Tailwind 토큰 + 투명도 modifier를 사용한다.
+`gold-500`(#C9A84C)만 바꾸면 전체 골드가 일괄 갱신되도록 한다.
+
+| 하드코딩 (금지)          | 토큰 (권장)                                                              |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `rgba(201,168,76,0.03)`  | `bg-gold-500/[0.03]` / `border-gold-500/[0.03]` / `text-gold-500/[0.03]` |
+| `rgba(158,43,43,0.4)`    | `bg-seal/[0.4]` (도장 레드)                                              |
+| `rgba(255,255,255,0.06)` | `bg-white/[0.06]`                                                        |
+| `rgba(0,0,0,0.4)`        | `bg-black/[0.4]`                                                         |
+| `#C9A84C` (solid)        | `text-gold-500` / `bg-gold-500`                                          |
+| `#9E2B2B` (solid)        | `seal`                                                                   |
+
+- **투명도**: 비표준 값은 arbitrary `/[0.12]` 형식, 표준 스텝(5/10/20/30…)은 `/10` 형식.
+- **그림자/글로우**: `shadow-gold-glow`, `shadow-dojang` (tailwind.config `boxShadow`).
+- **z-index**: `z-nav`, `z-modal`, `z-toast` 등 (tailwind.config `zIndex`).
+- **모션**: `lib/config/motion-tokens.ts`의 `DURATION`/`EASING`/`fadeInUp`/`stagger` 사용. CSS는 `duration-short`/`duration-medium`.
+- **예외(토큰 없음)**: `rgba(212,175,55,…)`(#D4AF37, 다른 골드), 그라디언트, 다중값 box-shadow는 inline 유지 가능.
+- **가드**: `scripts/check-design-tokens.mjs`가 커밋 시 `201,168,76`·`158,43,43` 하드코딩을 경고 (lint-staged). 전체 마이그레이션 후 차단(exit 1)으로 전환.
+
 ## Decisions Log
 
 | Date       | Decision                      | Rationale                                                                                            |
 | ---------- | ----------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 2026-07-05 | 디자인 토큰 v2 (rgba→토큰)    | inline rgba 274+건 → gold-500/seal 토큰 + 투명도 modifier. 단일 소스, 모션 토큰, 커밋 가드 도입.     |
 | 2026-04-03 | Initial design system created | /design-consultation 리서치 기반. 경쟁사(SAJUME, 척척포춘) 분석 후 한국 전통 프리미엄 포지셔닝 확정. |
 | 2026-04-03 | 오방색 팔레트 채택            | 서양 점성술 앱 컬러(보라/우주)를 피하고 한국 고유 색채 시스템으로 차별화                             |
 | 2026-04-03 | 도장 CTA 버튼                 | 둥근 버튼 대신 각진 도장 스타일로 브랜드 정체성 확보                                                 |

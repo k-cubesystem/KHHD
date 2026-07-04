@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useKakaoAddress } from '@/hooks/use-kakao-address'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
+import { cn } from '@/lib/utils'
 
 interface CheonjiinDataCollectionFormProps {
   target: DestinyTarget
@@ -93,7 +94,7 @@ function FormSection({
                 {badge}
               </span>
             </div>
-            <p className="text-[11.5px] font-light" style={{ color: 'rgba(255,255,255,0.35)', lineHeight: 1.6 }}>
+            <p className="text-[11.5px] font-light text-white/[0.35]" style={{ lineHeight: 1.6 }}>
               {sub}
             </p>
           </div>
@@ -188,8 +189,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
           </div>
 
           <h1
-            className="font-serif font-medium leading-tight"
-            style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.92)', wordBreak: 'keep-all' }}
+            className="font-serif font-medium leading-tight text-white/[0.92]"
+            style={{ fontSize: '1.5rem', wordBreak: 'keep-all' }}
           >
             {target.name}님의{' '}
             <span
@@ -205,8 +206,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             펼치기 전
           </h1>
           <p
-            className="font-light leading-relaxed"
-            style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', wordBreak: 'keep-all' }}
+            className="font-light leading-relaxed text-white/[0.4]"
+            style={{ fontSize: '13px', wordBreak: 'keep-all' }}
           >
             세 가지 진실이 하나로 모일 때,
             <br />
@@ -251,10 +252,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 readOnly
                 value={formData.homeAddress}
                 placeholder="주소 검색으로 입력해주세요"
-                className="flex-1 h-11 px-4 rounded-xl text-[13px] outline-none"
+                className="flex-1 h-11 px-4 rounded-xl text-[13px] outline-none bg-black/[0.3] border border-white/[0.1]"
                 style={{
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid rgba(255,255,255,0.1)',
                   color: formData.homeAddress ? 'rgba(244,228,186,0.8)' : 'rgba(255,255,255,0.25)',
                 }}
               />
@@ -293,12 +292,10 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 readOnly
                 value={formData.workAddress}
                 placeholder="직장·학교 주소 (선택)"
-                className="flex-1 h-11 px-4 rounded-xl text-[13px] outline-none"
-                style={{
-                  background: 'rgba(0,0,0,0.3)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: formData.workAddress ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)',
-                }}
+                className={cn(
+                  'flex-1 h-11 px-4 rounded-xl text-[13px] outline-none bg-black/[0.3] border border-white/[0.08]',
+                  formData.workAddress ? 'text-white/[0.7]' : 'text-white/[0.2]'
+                )}
               />
               <button
                 type="button"
@@ -309,12 +306,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                   })
                 }
                 disabled={kakaoLoading}
-                className="flex items-center gap-1.5 px-4 h-11 rounded-xl text-[12px] font-medium flex-shrink-0"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: 'rgba(255,255,255,0.4)',
-                }}
+                className="flex items-center gap-1.5 px-4 h-11 rounded-xl text-[12px] font-medium flex-shrink-0 bg-white/[0.04] border border-white/[0.1] text-white/[0.4]"
               >
                 <Search className="w-3.5 h-3.5" />
                 검색
@@ -358,8 +350,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 <button
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, faceImageUrl: '' }))}
-                  className="text-[11px]"
-                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                  className="text-[11px] text-white/[0.3]"
                 >
                   다시 선택하기
                 </button>
@@ -374,7 +365,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                   <p className="text-[13px] font-serif" style={{ color: 'rgba(244,228,186,0.6)' }}>
                     정면 얼굴 사진을 올려주세요
                   </p>
-                  <p className="text-[11px] mt-1 font-light" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                  <p className="text-[11px] mt-1 font-light text-white/[0.25]">
                     이마·눈·코·입이 선명하게 보이는 사진 · 최대 5MB
                   </p>
                 </div>
@@ -403,10 +394,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
           >
             {formData.handImageUrl ? (
               <div className="space-y-3">
-                <div
-                  className="relative w-full h-52 rounded-xl overflow-hidden"
-                  style={{ border: '1px solid rgba(255,255,255,0.12)' }}
-                >
+                <div className="relative w-full h-52 rounded-xl overflow-hidden border border-white/[0.12]">
                   {/* base64 data: URI from FileReader — Next.js <Image> does not support data: URLs */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -419,8 +407,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                     className="w-full h-full object-cover"
                   />
                   <div
-                    className="absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-medium"
-                    style={{ background: 'rgba(255,255,255,0.8)', color: '#0a0807' }}
+                    className="absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-medium bg-white/[0.8]"
+                    style={{ color: '#0a0807' }}
                   >
                     ✦ 담김 완료
                   </div>
@@ -428,8 +416,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 <button
                   type="button"
                   onClick={() => setFormData((p) => ({ ...p, handImageUrl: '' }))}
-                  className="text-[11px]"
-                  style={{ color: 'rgba(255,255,255,0.3)' }}
+                  className="text-[11px] text-white/[0.3]"
                 >
                   다시 선택하기
                 </button>
@@ -437,14 +424,12 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             ) : (
               <label htmlFor="hand-upload" className="block cursor-pointer">
                 <div
-                  className="w-full rounded-xl p-8 text-center"
-                  style={{ border: '1.5px dashed rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)' }}
+                  className="w-full rounded-xl p-8 text-center bg-white/[0.02]"
+                  style={{ border: '1.5px dashed rgba(255,255,255,0.1)' }}
                 >
-                  <Upload className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(255,255,255,0.2)' }} />
-                  <p className="text-[13px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    손바닥 사진을 올려주세요 (선택)
-                  </p>
-                  <p className="text-[11px] mt-1 font-light" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  <Upload className="w-8 h-8 mx-auto mb-3 text-white/[0.2]" />
+                  <p className="text-[13px] text-white/[0.4]">손바닥 사진을 올려주세요 (선택)</p>
+                  <p className="text-[11px] mt-1 font-light text-white/[0.2]">
                     오른손 권장 · 선이 선명하게 보이는 사진 · 최대 5MB
                   </p>
                 </div>
@@ -489,7 +474,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             {isValid ? '운명의 문을 열겠습니다 ✦' : '필수 정보를 모두 입력해주세요'}
           </motion.button>
 
-          <p className="text-center text-[11px] font-light" style={{ color: 'rgba(255,255,255,0.18)' }}>
+          <p className="text-center text-[11px] font-light text-white/[0.18]">
             입력하신 정보는 오직 운명 분석에만 사용되며 소중히 보호됩니다
           </p>
         </form>

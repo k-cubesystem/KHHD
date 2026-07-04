@@ -38,10 +38,9 @@ export function ShrineSlot({ slotIndex: _, item, isOwner, isLoading, onClick, on
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="relative aspect-square rounded-xl flex flex-col items-center justify-center gap-1 cursor-default select-none"
+        className="relative aspect-square rounded-xl flex flex-col items-center justify-center gap-1 cursor-default select-none border border-gold-500/[0.2]"
         style={{
           background: `radial-gradient(circle, ${glow} 0%, rgba(255,255,255,0.02) 100%)`,
-          border: '1px solid rgba(201,168,76,0.2)',
           boxShadow: item.shrine_item_catalog.rarity === 'legendary' ? '0 0 20px rgba(251,191,36,0.2)' : undefined,
         }}
         onTouchStart={() => isOwner && setShowRemove(true)}
@@ -76,10 +75,7 @@ export function ShrineSlot({ slotIndex: _, item, isOwner, isLoading, onClick, on
   // 빈 슬롯
   if (!isOwner) {
     return (
-      <div
-        className="aspect-square rounded-xl flex items-center justify-center"
-        style={{ border: '1px dashed rgba(201,168,76,0.08)', background: 'rgba(255,255,255,0.01)' }}
-      />
+      <div className="aspect-square rounded-xl flex items-center justify-center border border-dashed border-gold-500/[0.08] bg-white/[0.01]" />
     )
   }
 
@@ -88,11 +84,7 @@ export function ShrineSlot({ slotIndex: _, item, isOwner, isLoading, onClick, on
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
       disabled={isLoading}
-      className="aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-colors"
-      style={{
-        border: '1px dashed rgba(201,168,76,0.2)',
-        background: 'rgba(201,168,76,0.02)',
-      }}
+      className="aspect-square rounded-xl flex flex-col items-center justify-center gap-1 transition-colors border border-dashed border-gold-500/[0.2] bg-gold-500/[0.02]"
     >
       <span className="text-gold-500/20 text-2xl leading-none">+</span>
     </motion.button>

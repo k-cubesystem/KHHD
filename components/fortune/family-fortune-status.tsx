@@ -78,8 +78,8 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                   </span>
                 </h3>
                 <p
-                  className="text-[13px] font-light"
-                  style={{ color: 'rgba(255,255,255,0.45)', wordBreak: 'keep-all' }}
+                  className="text-[13px] font-light text-white/[0.45]"
+                  style={{ wordBreak: 'keep-all' }}
                 >
                   소중한 인연들의 운을 함께 챙겨주세요
                 </p>
@@ -126,9 +126,8 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.08, duration: 0.4 }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04]"
                     style={{
-                      background: 'rgba(255,255,255,0.04)',
                       border: '1px solid rgba(212,175,55,0.2)',
                     }}
                   >
@@ -152,9 +151,8 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                 ))}
                 {remaining > 0 && (
                   <div
-                    className="flex items-center px-3 py-1.5 rounded-full text-[13px]"
+                    className="flex items-center px-3 py-1.5 rounded-full text-[13px] bg-white/[0.03]"
                     style={{
-                      background: 'rgba(255,255,255,0.03)',
                       border: '1px dashed rgba(212,175,55,0.2)',
                       color: 'rgba(212,175,55,0.5)',
                     }}
@@ -164,10 +162,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                 )}
               </div>
             ) : (
-              <p
-                className="text-[12px] font-light italic"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
-              >
+              <p className="text-[12px] font-light italic text-white/[0.3]">
                 아직 등록된 인연이 없습니다
               </p>
             )}

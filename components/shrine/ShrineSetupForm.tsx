@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { createShrine } from '@/app/actions/shrine/shrine'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const THEMES = [
@@ -50,11 +51,10 @@ export function ShrineSetupForm() {
             <button
               key={t.key}
               onClick={() => setTheme(t.key)}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
-              style={{
-                background: theme === t.key ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${theme === t.key ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.06)'}`,
-              }}
+              className={cn(
+                'flex flex-col items-center gap-2 p-3 rounded-xl transition-all border',
+                theme === t.key ? 'bg-gold-500/[0.15] border-gold-500/[0.4]' : 'bg-white/[0.03] border-white/[0.06]'
+              )}
             >
               <span className="text-2xl">{t.emoji}</span>
               <span className="text-xs font-serif text-ink-light">{t.label}</span>
@@ -94,11 +94,9 @@ export function ShrineSetupForm() {
       <button
         onClick={handleCreate}
         disabled={isLoading || !name.trim()}
-        className="w-full py-4 rounded-xl font-serif font-bold text-base transition-all disabled:opacity-40"
+        className="w-full py-4 rounded-xl font-serif font-bold text-base transition-all disabled:opacity-40 border border-gold-500/[0.4] text-gold-500"
         style={{
           background: 'linear-gradient(135deg, rgba(201,168,76,0.3) 0%, rgba(201,168,76,0.15) 100%)',
-          border: '1px solid rgba(201,168,76,0.4)',
-          color: '#C9A84C',
           boxShadow: '0 0 20px rgba(201,168,76,0.1)',
         }}
       >

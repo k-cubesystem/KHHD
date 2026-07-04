@@ -7,6 +7,7 @@ import type { CatalogItem } from '@/app/actions/shrine/shrine-items'
 import type { ShrineWithItems } from '@/app/actions/shrine/shrine'
 import { placeItem } from '@/app/actions/shrine/shrine-items'
 import { GA } from '@/lib/analytics/ga4'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface ShrineShopClientProps {
@@ -66,12 +67,13 @@ export function ShrineShopClient({ catalogItems, shrine, bokPoints }: ShrineShop
               <button
                 key={slot}
                 onClick={() => setSelectedSlot(selectedSlot === slot ? null : slot)}
-                className="w-10 h-10 rounded-lg text-xs font-sans font-bold transition-all"
-                style={{
-                  background: selectedSlot === slot ? 'rgba(201,168,76,0.2)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${selectedSlot === slot ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.08)'}`,
-                  color: selectedSlot === slot ? '#C9A84C' : 'rgba(232,228,220,0.3)',
-                }}
+                className={cn(
+                  'w-10 h-10 rounded-lg text-xs font-sans font-bold transition-all border',
+                  selectedSlot === slot
+                    ? 'bg-gold-500/[0.2] border-gold-500/[0.5] text-gold-500'
+                    : 'bg-white/[0.03] border-white/[0.08]'
+                )}
+                style={selectedSlot === slot ? undefined : { color: 'rgba(232,228,220,0.3)' }}
               >
                 {slot}
               </button>
@@ -98,11 +100,7 @@ export function ShrineShopClient({ catalogItems, shrine, bokPoints }: ShrineShop
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.04 }}
-                className="rounded-xl p-4 space-y-3 flex flex-col"
-                style={{
-                  background: 'rgba(201,168,76,0.03)',
-                  border: '1px solid rgba(201,168,76,0.12)',
-                }}
+                className="rounded-xl p-4 space-y-3 flex flex-col bg-gold-500/[0.03] border border-gold-500/[0.12]"
               >
                 {/* 이모지 + 희귀도 */}
                 <div className="flex items-start justify-between">
@@ -141,12 +139,13 @@ export function ShrineShopClient({ catalogItems, shrine, bokPoints }: ShrineShop
                   <button
                     onClick={() => handleBuyAndPlace(item)}
                     disabled={isLoading || emptySlots.length === 0}
-                    className="w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-30"
-                    style={{
-                      background: canAfford ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${canAfford ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                      color: canAfford ? '#C9A84C' : 'rgba(232,228,220,0.2)',
-                    }}
+                    className={cn(
+                      'w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-30 border',
+                      canAfford
+                        ? 'bg-gold-500/[0.15] border-gold-500/[0.3] text-gold-500'
+                        : 'bg-white/[0.04] border-white/[0.06]'
+                    )}
+                    style={canAfford ? undefined : { color: 'rgba(232,228,220,0.2)' }}
                   >
                     {isLoading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />

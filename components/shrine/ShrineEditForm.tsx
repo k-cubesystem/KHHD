@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { updateShrine } from '@/app/actions/shrine/shrine'
 import type { Shrine } from '@/app/actions/shrine/shrine'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface ShrineEditFormProps {
@@ -62,12 +63,13 @@ export function ShrineEditForm({ shrine }: ShrineEditFormProps) {
             <button
               key={v}
               onClick={() => setVisibility(v)}
-              className="py-3 rounded-xl text-sm font-sans transition-all"
-              style={{
-                background: visibility === v ? 'rgba(201,168,76,0.15)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${visibility === v ? 'rgba(201,168,76,0.4)' : 'rgba(255,255,255,0.06)'}`,
-                color: visibility === v ? '#C9A84C' : 'rgba(232,228,220,0.4)',
-              }}
+              className={cn(
+                'py-3 rounded-xl text-sm font-sans transition-all border',
+                visibility === v
+                  ? 'bg-gold-500/[0.15] border-gold-500/[0.4] text-gold-500'
+                  : 'bg-white/[0.03] border-white/[0.06]'
+              )}
+              style={visibility === v ? undefined : { color: 'rgba(232,228,220,0.4)' }}
             >
               {v === 'public' ? '🌐 공개' : '🔒 비공개'}
             </button>
@@ -78,12 +80,7 @@ export function ShrineEditForm({ shrine }: ShrineEditFormProps) {
       <button
         onClick={handleSave}
         disabled={isLoading || !name.trim()}
-        className="w-full py-4 rounded-xl font-serif font-bold text-sm disabled:opacity-40 transition-all"
-        style={{
-          background: 'rgba(201,168,76,0.15)',
-          border: '1px solid rgba(201,168,76,0.35)',
-          color: '#C9A84C',
-        }}
+        className="w-full py-4 rounded-xl font-serif font-bold text-sm disabled:opacity-40 transition-all border bg-gold-500/[0.15] border-gold-500/[0.35] text-gold-500"
       >
         {isLoading ? (
           <span className="flex items-center justify-center gap-2">

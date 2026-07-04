@@ -120,6 +120,29 @@ const config: Config = {
         'hanji-texture': "url('/images/texture/cream-paper.png')", // Fallback
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       },
+      // 골드 글로우 + 도장 그림자 (globals.css → config 중앙화)
+      boxShadow: {
+        'gold-glow': '0 0 20px rgba(201,168,76,0.15)',
+        'gold-glow-lg': '0 0 40px rgba(201,168,76,0.20)',
+        dojang: '2px 2px 0 rgba(158,43,43,0.4)',
+      },
+      // z-index 스케일 (globals.css --z-* 와 동기화)
+      zIndex: {
+        base: '0',
+        raised: '10',
+        overlay: '20',
+        sticky: '30',
+        nav: '40',
+        modal: '50',
+        toast: '60',
+      },
+      // 모션 지속시간 (lib/config/motion-tokens.ts DURATION 과 동기화)
+      transitionDuration: {
+        micro: '75ms',
+        short: '200ms',
+        medium: '300ms',
+        long: '500ms',
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },

@@ -35,10 +35,9 @@ export function ShrineItemCatalog({ catalogItems, currentSlotIndex, onSelect, on
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 z-50 max-w-[480px] mx-auto rounded-t-2xl overflow-hidden"
+        className="fixed bottom-0 left-0 right-0 z-50 max-w-[480px] mx-auto rounded-t-2xl overflow-hidden border border-gold-500/[0.15]"
         style={{
           background: 'linear-gradient(180deg, #1a1409 0%, #120e06 100%)',
-          border: '1px solid rgba(201,168,76,0.15)',
           borderBottom: 'none',
           maxHeight: '70vh',
         }}
@@ -70,11 +69,7 @@ export function ShrineItemCatalog({ catalogItems, currentSlotIndex, onSelect, on
                 <button
                   key={item.id}
                   onClick={() => onSelect(item.id)}
-                  className="relative flex flex-col items-center gap-2 p-4 rounded-xl text-left transition-all active:scale-95"
-                  style={{
-                    background: 'rgba(201,168,76,0.04)',
-                    border: '1px solid rgba(201,168,76,0.15)',
-                  }}
+                  className="relative flex flex-col items-center gap-2 p-4 rounded-xl text-left transition-all active:scale-95 bg-gold-500/[0.04] border border-gold-500/[0.15]"
                 >
                   <span className="text-3xl">{item.emoji}</span>
                   <div className="w-full text-center">
