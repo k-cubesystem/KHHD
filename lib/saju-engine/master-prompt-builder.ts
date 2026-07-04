@@ -4,7 +4,9 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import { buildSajuContext, getAnalysisTypeGuide, type PersonInfo, type AnalysisType } from './context-builder'
+import { buildSajuContextTextCached } from './context-cache'
+import { getAnalysisTypeGuide, type PersonInfo, type AnalysisType } from './context-builder'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * DB에서 haehwajigi_master 프롬프트 로드
@@ -15,7 +17,7 @@ async function loadMasterPrompt(): Promise<string> {
     const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', 'haehwajigi_master').single()
     if (data?.template) return data.template
   } catch (e) {
-    console.warn('[MasterPromptBuilder] DB load failed, using fallback:', e)
+    logger.warn('[MasterPromptBuilder] DB load failed, using fallback:', e)
   }
   // Fallback
   return `당신은 청담해화당의 수석 명리 상담가 '해화지기'입니다.
@@ -46,11 +48,11 @@ export function buildUserContextText(profile: Record<string, string | null> | nu
 
 export interface MasterPromptResult {
   prompt: string
-  sajuContext: ReturnType<typeof buildSajuContext>
 }
 
 /**
  * 메인: 완성된 AI 프롬프트 조립
+ * 사주 컨텍스트는 context-cache를 통해 person·날짜 단위로 1회만 계산된다.
  * @param person 대상 인물 정보
  * @param analysisType 분석 유형
  * @param userContext 사용자 프로필 텍스트
@@ -64,16 +66,16 @@ export async function buildMasterPromptForAction(
   additionalContext: string = '',
   outputFormatGuide: string = ''
 ): Promise<MasterPromptResult> {
-  const [masterTemplate, sajuCtx] = await Promise.all([loadMasterPrompt(), Promise.resolve(buildSajuContext(person))])
+  const [masterTemplate, sajuContextText] = await Promise.all([loadMasterPrompt(), buildSajuContextTextCached(person)])
 
   const analysisGuide = getAnalysisTypeGuide(analysisType) + '\n\n' + outputFormatGuide
 
   const prompt = masterTemplate
     .replace(/{{analysisType}}/g, analysisType)
-    .replace(/{{sajuContext}}/g, sajuCtx.promptContext)
+    .replace(/{{sajuContext}}/g, sajuContextText)
     .replace(/{{userContext}}/g, userContext || '[프로필 없음]')
     .replace(/{{additionalContext}}/g, additionalContext || '')
     .replace(/{{analysisGuide}}/g, analysisGuide)
 
-  return { prompt, sajuContext: sajuCtx }
+  return { prompt }
 }

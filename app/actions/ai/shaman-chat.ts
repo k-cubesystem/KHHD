@@ -1,12 +1,15 @@
 'use server'
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { recallMemories, extractAndSaveMemories } from '@/lib/ai/memory'
+import { maybeSummarizeSession } from '@/lib/ai/summarizer'
 import { logger } from '@/lib/utils/logger'
 
 // --- Constants ---
@@ -14,6 +17,8 @@ import { logger } from '@/lib/utils/logger'
 const DAILY_FREE_QUESTIONS = 10
 const PURCHASE_COST = 1 // 1만냥 (wallets.balance 단위: 1 = 1만냥)
 const PURCHASE_QUESTIONS = 20 // 회
+const CHAT_HISTORY_WINDOW = 8 // Gemini에 전달할 최근 메시지 수 (슬라이딩 윈도우)
+const MEMORY_EXTRACT_INTERVAL = 6 // 메시지 N개마다 기억 추출 (2msg/턴 → 3턴마다)
 
 // 사주 정보 없을 때 폴백 시스템 지시문
 const FALLBACK_SYSTEM_PROMPT = `당신은 청담해화당의 사주 전문 상담가입니다.
@@ -60,6 +65,31 @@ const getGeminiModel = (systemInstruction?: string) => {
     model: MODEL_FLASH,
     ...(systemInstruction ? { systemInstruction } : {}),
   })
+}
+
+type ServerClient = Awaited<ReturnType<typeof createClient>>
+
+/** 백그라운드 작업 예약 — 응답 지연 없이 실행 (ZERO-LATENCY). after() 불가 시 폴백. */
+function scheduleBackground(fn: () => Promise<void>): void {
+  try {
+    after(fn)
+  } catch {
+    void fn().catch(() => {})
+  }
+}
+
+/** 현재 활성 세션(ended_at IS NULL)의 요약을 로드 */
+async function loadActiveSessionSummary(supabase: ServerClient, userId: string, fmId: string | null): Promise<string> {
+  let q = supabase
+    .from('chat_sessions')
+    .select('summary')
+    .eq('user_id', userId)
+    .is('ended_at', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+  q = fmId ? q.eq('family_member_id', fmId) : q.is('family_member_id', null)
+  const { data } = await q.maybeSingle()
+  return data?.summary ?? ''
 }
 
 // --- Types ---
@@ -342,6 +372,14 @@ export async function sendShamanChatMessage(
     if (faceRecord) historyParts.push(`[관상 분석 요약] ${faceRecord.summary} (점수: ${faceRecord.score})`)
     if (handRecord) historyParts.push(`[손금 분석 요약] ${handRecord.summary} (점수: ${handRecord.score})`)
 
+    // 3.5 세션 간 장기 기억 + 지난 대화 요약 로드 (병렬)
+    const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
+    const [recalledMemory, sessionSummary] = await Promise.all([
+      recallMemories(user.id, fmId, 5),
+      loadActiveSessionSummary(supabase, user.id, fmId),
+    ])
+    const summaryBlock = sessionSummary ? `[지난 대화 요약]\n${sessionSummary}` : ''
+
     // 4. 마스터 엔진으로 systemInstruction 조립
     let systemInstruction: string
 
@@ -350,6 +388,8 @@ export async function sendShamanChatMessage(
       const { buildMasterPromptForAction } = await import('@/lib/saju-engine/master-prompt-builder')
       const additionalCtx = [
         `[점사 기준일]: ${today}`,
+        recalledMemory,
+        summaryBlock,
         historyParts.length > 0 ? `[과거 분석 기록]\n${historyParts.join('\n')}` : '',
       ]
         .filter(Boolean)
@@ -371,15 +411,23 @@ export async function sendShamanChatMessage(
       systemInstruction = prompt
     } else {
       // 사주 정보 없음 → 폴백
-      const userContext =
-        `이름: ${targetName}, 성별: ${targetGender}` + (historyParts.length > 0 ? '\n' + historyParts.join('\n') : '')
+      const userContext = [
+        `이름: ${targetName}, 성별: ${targetGender}`,
+        historyParts.length > 0 ? historyParts.join('\n') : '',
+        recalledMemory,
+        summaryBlock,
+      ]
+        .filter(Boolean)
+        .join('\n')
       systemInstruction = FALLBACK_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
     }
 
     // 5. systemInstruction을 모델에 주입하고 대화 히스토리 복원
     const model = getGeminiModel(systemInstruction)
+    // 슬라이딩 윈도우: 최근 N개 메시지만 전달 (그 이전 맥락은 요약·기억으로 대체)
+    const windowedHistory = conversationHistory.slice(-CHAT_HISTORY_WINDOW)
     const chat = model.startChat({
-      history: conversationHistory.map((msg) => ({
+      history: windowedHistory.map((msg) => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }],
       })),
@@ -554,6 +602,18 @@ export async function saveChatMessages(
       await adminClient.from('chat_sessions').update({ title }).eq('id', sessionId)
     }
 
+    // 백그라운드: 요약 갱신 + 주기적 기억 추출 (응답 지연 없음)
+    scheduleBackground(async () => {
+      await maybeSummarizeSession(sessionId, CHAT_HISTORY_WINDOW)
+      const { count } = await adminClient
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+      if ((count ?? 0) % MEMORY_EXTRACT_INTERVAL === 0) {
+        await extractAndSaveMemories(sessionId)
+      }
+    })
+
     return { success: true }
   } catch (e) {
     logger.error('[saveChatMessages]', e)
@@ -582,6 +642,9 @@ export async function endAndCreateNewSession(
 
     // 현재 세션 종료
     await adminClient.from('chat_sessions').update({ ended_at: new Date().toISOString() }).eq('id', currentSessionId)
+
+    // 종료되는 세션에서 마지막 기억 추출 (백그라운드)
+    scheduleBackground(() => extractAndSaveMemories(currentSessionId))
 
     // 새 세션 생성
     const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
