@@ -47,10 +47,7 @@ export default async function PublicShrinePage({ params }: PageProps) {
     <div className="min-h-screen px-4 py-6 space-y-6">
       {/* 방문자 배너 */}
       {!isOwner && (
-        <div
-          className="rounded-xl px-4 py-3 flex items-center gap-3"
-          style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.12)' }}
-        >
+        <div className="rounded-xl px-4 py-3 flex items-center gap-3 border border-gold-500/[0.12] bg-gold-500/[0.06]">
           <span className="text-xl">🏮</span>
           <div>
             <p className="text-xs font-serif text-gold-500/80 font-bold">{shrine.name} 방문 중</p>

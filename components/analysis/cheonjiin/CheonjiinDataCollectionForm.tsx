@@ -78,8 +78,8 @@ function FormSection({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h3
-                className="font-serif font-medium"
-                style={{ fontSize: '15px', color: required ? 'rgba(244,228,186,0.9)' : 'rgba(255,255,255,0.6)' }}
+                className={cn('font-serif font-medium', required ? 'text-gold-300/[0.9]' : 'text-white/[0.6]')}
+                style={{ fontSize: '15px' }}
               >
                 {title}
               </h3>
@@ -252,10 +252,10 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                 readOnly
                 value={formData.homeAddress}
                 placeholder="주소 검색으로 입력해주세요"
-                className="flex-1 h-11 px-4 rounded-xl text-[13px] outline-none bg-black/[0.3] border border-white/[0.1]"
-                style={{
-                  color: formData.homeAddress ? 'rgba(244,228,186,0.8)' : 'rgba(255,255,255,0.25)',
-                }}
+                className={cn(
+                  'flex-1 h-11 px-4 rounded-xl text-[13px] outline-none bg-black/[0.3] border border-white/[0.1]',
+                  formData.homeAddress ? 'text-gold-300/[0.8]' : 'text-white/[0.25]'
+                )}
               />
               <button
                 type="button"
@@ -362,9 +362,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                   style={{ border: '1.5px dashed rgba(212,175,55,0.25)', background: 'rgba(212,175,55,0.03)' }}
                 >
                   <Upload className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(212,175,55,0.4)' }} />
-                  <p className="text-[13px] font-serif" style={{ color: 'rgba(244,228,186,0.6)' }}>
-                    정면 얼굴 사진을 올려주세요
-                  </p>
+                  <p className="text-[13px] font-serif text-gold-300/[0.6]">정면 얼굴 사진을 올려주세요</p>
                   <p className="text-[11px] mt-1 font-light text-white/[0.25]">
                     이마·눈·코·입이 선명하게 보이는 사진 · 최대 5MB
                   </p>
@@ -460,12 +458,14 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             whileHover={isValid ? { scale: 1.015 } : {}}
             whileTap={isValid ? { scale: 0.975 } : {}}
             disabled={!isValid}
-            className="relative overflow-hidden w-full h-14 rounded-xl font-serif font-bold tracking-[0.1em] text-[15px]"
+            className={cn(
+              'relative overflow-hidden w-full h-14 rounded-xl font-serif font-bold tracking-[0.1em] text-[15px]',
+              isValid ? 'border border-gold-300/[0.2]' : 'border border-white/[0.08]'
+            )}
             style={{
               background: isValid
                 ? `linear-gradient(105deg, #B8860B, ${GOLD_500} 45%, #E2C55A 75%, #C9A227)`
                 : 'rgba(255,255,255,0.06)',
-              border: isValid ? '1px solid rgba(244,228,186,0.2)' : '1px solid rgba(255,255,255,0.08)',
               color: isValid ? '#0C0A07' : 'rgba(255,255,255,0.25)',
               boxShadow: isValid ? '0 4px 28px rgba(212,175,55,0.25)' : 'none',
               cursor: isValid ? 'pointer' : 'not-allowed',

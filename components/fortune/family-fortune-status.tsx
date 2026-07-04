@@ -96,13 +96,10 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                 }}
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: GOLD_500, boxShadow: '0 0 6px rgba(212,175,55,0.8)' }}
+                  className="w-1.5 h-1.5 rounded-full bg-gold-500"
+                  style={{ boxShadow: '0 0 6px rgba(212,175,55,0.8)' }}
                 />
-                <span
-                  className="text-[11.5px] font-medium tracking-wide"
-                  style={{ color: '#F4E4BA' }}
-                >
+                <span className="text-[11.5px] font-medium tracking-wide text-gold-300">
                   운이 들어오는 중
                 </span>
               </motion.div>
@@ -141,10 +138,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                     >
                       {member.memberName?.slice(0, 1) ?? '?'}
                     </div>
-                    <span
-                      className="text-[14px] font-serif font-medium"
-                      style={{ color: 'rgba(244,228,186,0.85)' }}
-                    >
+                    <span className="text-[14px] font-serif font-medium text-gold-300/[0.85]">
                       {member.memberName}
                     </span>
                   </motion.div>

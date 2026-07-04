@@ -18,12 +18,11 @@ export function MasterpieceSection() {
       {/* 命 워터마크 */}
       <div
         aria-hidden="true"
-        className="absolute right-0 bottom-0 select-none pointer-events-none font-serif"
+        className="absolute right-0 bottom-0 select-none pointer-events-none font-serif text-gold-500"
         style={{
           fontSize: '16rem',
           lineHeight: 1,
           opacity: 0.03,
-          color: '#C9A84C',
           fontWeight: 700,
           transform: 'translate(15%, 15%)',
         }}
@@ -91,10 +90,8 @@ export function MasterpieceSection() {
             e.stopPropagation()
             router.push('/protected/analysis/cheonjiin')
           }}
-          className="relative overflow-hidden w-full h-13 rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200"
+          className="relative overflow-hidden w-full h-13 rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200 border border-seal/[0.5] bg-seal"
           style={{
-            background: '#9E2B2B',
-            border: '1px solid rgba(158,43,43,0.5)',
             boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
           }}
         >
