@@ -89,11 +89,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
               <motion.div
                 animate={{ opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-                className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full"
-                style={{
-                  background: 'rgba(212,175,55,0.1)',
-                  border: '1px solid rgba(212,175,55,0.3)',
-                }}
+                className="flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-gold-antique/[0.1] border border-gold-antique/[0.3]"
               >
                 <span
                   className="w-1.5 h-1.5 rounded-full bg-gold-500"
@@ -123,10 +119,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.08, duration: 0.4 }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04]"
-                    style={{
-                      border: '1px solid rgba(212,175,55,0.2)',
-                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-gold-antique/[0.2]"
                   >
                     {/* 이니셜 원 */}
                     <div
@@ -145,11 +138,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
                 ))}
                 {remaining > 0 && (
                   <div
-                    className="flex items-center px-3 py-1.5 rounded-full text-[13px] bg-white/[0.03]"
-                    style={{
-                      border: '1px dashed rgba(212,175,55,0.2)',
-                      color: 'rgba(212,175,55,0.5)',
-                    }}
+                    className="flex items-center px-3 py-1.5 rounded-full text-[13px] bg-white/[0.03] border border-dashed border-gold-antique/[0.2] text-gold-antique/[0.5]"
                   >
                     +{remaining}명
                   </div>
@@ -162,7 +151,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
             )}
 
             {/* ── 명언 ── */}
-            <p className="text-[12.5px] italic font-serif" style={{ color: 'rgba(212,175,55,0.4)' }}>
+            <p className="text-[12.5px] italic font-serif text-gold-antique/[0.4]">
               &ldquo;가족의 운이 모이면 집안의 기운이 완성됩니다&rdquo;
             </p>
 
@@ -178,8 +167,7 @@ export function FamilyFortuneStatus({ members }: FamilyFortuneStatusProps) {
             {/* ── 하단: 관리하러 가기 ── */}
             <div className="flex items-center justify-end">
               <div
-                className="flex items-center gap-1 text-[13.5px] font-medium group-hover:gap-1.5 transition-all duration-300"
-                style={{ color: 'rgba(212,175,55,0.7)' }}
+                className="flex items-center gap-1 text-[13.5px] font-medium group-hover:gap-1.5 transition-all duration-300 text-gold-antique/[0.7]"
               >
                 <span>가족 운 관리하러 가기</span>
                 <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />

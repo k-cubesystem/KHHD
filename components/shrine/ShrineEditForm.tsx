@@ -67,9 +67,8 @@ export function ShrineEditForm({ shrine }: ShrineEditFormProps) {
                 'py-3 rounded-xl text-sm font-sans transition-all border',
                 visibility === v
                   ? 'bg-gold-500/[0.15] border-gold-500/[0.4] text-gold-500'
-                  : 'bg-white/[0.03] border-white/[0.06]'
+                  : 'bg-white/[0.03] border-white/[0.06] text-ink-primary/[0.4]'
               )}
-              style={visibility === v ? undefined : { color: 'rgba(232,228,220,0.4)' }}
             >
               {v === 'public' ? '🌐 공개' : '🔒 비공개'}
             </button>

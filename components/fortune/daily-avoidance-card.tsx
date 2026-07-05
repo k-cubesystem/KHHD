@@ -132,7 +132,7 @@ export default function DailyAvoidanceCard({ dailyAvoidance, className = '' }: D
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-gold-500" />
           <h3 className="text-gold-500 font-bold text-sm">오늘의 회피 가이드</h3>
-          <span className="text-white/40 text-xs">{dailyAvoidance.date}</span>
+          <span className="text-white/65 text-xs">{dailyAvoidance.date}</span>
         </div>
         <motion.div
           animate={config.pulse ? { scale: [1, 1.1, 1] } : {}}
@@ -187,7 +187,7 @@ export default function DailyAvoidanceCard({ dailyAvoidance, className = '' }: D
               </div>
             ))}
           </div>
-          <p className="text-white/40 text-[10px] mt-1.5">{dailyAvoidance.avoidColors.join(', ')}</p>
+          <p className="text-white/65 text-[10px] mt-1.5">{dailyAvoidance.avoidColors.join(', ')}</p>
         </div>
 
         {/* 방위 */}

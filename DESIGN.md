@@ -120,6 +120,8 @@
 | `rgba(158,43,43,0.4)`    | `bg-seal/[0.4]` (도장 레드)                                              |
 | `rgba(255,255,255,0.06)` | `bg-white/[0.06]`                                                        |
 | `rgba(0,0,0,0.4)`        | `bg-black/[0.4]`                                                         |
+| `rgba(212,175,55,A)`     | `bg-gold-antique/[A]` (앤틱 골드 #D4AF37)                                |
+| `rgba(232,228,220,A)`    | `text-ink-primary/[A]` (본문 아이보리 #E8E4DC)                           |
 | `#C9A84C` (solid)        | `text-gold-500` / `bg-gold-500`                                          |
 | `#9E2B2B` (solid)        | `seal`                                                                   |
 
@@ -127,7 +129,8 @@
 - **그림자/글로우**: `shadow-gold-glow`, `shadow-dojang` (tailwind.config `boxShadow`).
 - **z-index**: `z-nav`, `z-modal`, `z-toast` 등 (tailwind.config `zIndex`).
 - **모션**: `lib/config/motion-tokens.ts`의 `DURATION`/`EASING`/`fadeInUp`/`stagger` 사용. CSS는 `duration-short`/`duration-medium`.
-- **예외(토큰 없음)**: `rgba(212,175,55,…)`(#D4AF37, 다른 골드), 그라디언트, 다중값 box-shadow는 inline 유지 가능.
+- **접근성(WCAG AA)**: 본문/라벨 텍스트 투명도는 `/55` 이상 유지 (다크 배경 4.5:1). `/40` 이하는 장식·비활성 상태에만 허용.
+- **예외(토큰 없음)**: 그라디언트, 다중값 box-shadow, SVG `stroke`/`fill`, styled-jsx CSS는 inline 유지 가능.
 - **가드**: `scripts/check-design-tokens.mjs`가 커밋 시 `201,168,76`·`158,43,43` 하드코딩을 경고 (lint-staged). 전체 마이그레이션 후 차단(exit 1)으로 전환.
 
 ## Decisions Log

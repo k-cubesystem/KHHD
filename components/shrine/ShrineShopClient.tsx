@@ -71,9 +71,8 @@ export function ShrineShopClient({ catalogItems, shrine, bokPoints }: ShrineShop
                   'w-10 h-10 rounded-lg text-xs font-sans font-bold transition-all border',
                   selectedSlot === slot
                     ? 'bg-gold-500/[0.2] border-gold-500/[0.5] text-gold-500'
-                    : 'bg-white/[0.03] border-white/[0.08]'
+                    : 'bg-white/[0.03] border-white/[0.08] text-ink-primary/[0.3]'
                 )}
-                style={selectedSlot === slot ? undefined : { color: 'rgba(232,228,220,0.3)' }}
               >
                 {slot}
               </button>
@@ -143,9 +142,8 @@ export function ShrineShopClient({ catalogItems, shrine, bokPoints }: ShrineShop
                       'w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-30 border',
                       canAfford
                         ? 'bg-gold-500/[0.15] border-gold-500/[0.3] text-gold-500'
-                        : 'bg-white/[0.04] border-white/[0.06]'
+                        : 'bg-white/[0.04] border-white/[0.06] text-ink-primary/[0.2]'
                     )}
-                    style={canAfford ? undefined : { color: 'rgba(232,228,220,0.2)' }}
                   >
                     {isLoading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />

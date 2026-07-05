@@ -83,9 +83,8 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
               'flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-sans transition-all border',
               category === cat.key
                 ? 'bg-gold-500/[0.2] border-gold-500/[0.5] text-gold-500'
-                : 'bg-white/[0.03] border-white/[0.08]'
+                : 'bg-white/[0.03] border-white/[0.08] text-ink-primary/[0.5]'
             )}
-            style={category === cat.key ? undefined : { color: 'rgba(232,228,220,0.5)' }}
           >
             <span>{cat.emoji}</span>
             <span>{cat.label}</span>

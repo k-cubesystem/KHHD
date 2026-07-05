@@ -32,6 +32,7 @@ const config: Config = {
           light: '#FFFFFF', // Pure White for Body Text
           DEFAULT: '#1A1A1A',
           faint: 'rgba(255, 255, 255, 0.4)',
+          primary: '#E8E4DC', // 워밍 오프화이트 (rgb 232,228,220)
           900: '#181611',
           950: '#0F0F0F',
         },
@@ -50,6 +51,7 @@ const config: Config = {
           700: '#8C7B50', // 다크 골드
           metallic: '#E2D5B5',
           luxury: '#C8B273',
+          antique: '#D4AF37', // 앤틱 골드 (rgb 212,175,55)
         },
         cinnabar: '#9E2B2B',
         'charcoal-deep': '#0A0A08',

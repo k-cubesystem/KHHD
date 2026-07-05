@@ -381,7 +381,7 @@ function PalmLineCard({
         </span>
       </div>
       <p className="text-xs text-white/45 leading-relaxed font-sans font-light">{description}</p>
-      {meaning && <p className="text-xs text-white/35 leading-relaxed font-sans font-light mt-1.5 italic">{meaning}</p>}
+      {meaning && <p className="text-xs text-white/65 leading-relaxed font-sans font-light mt-1.5 italic">{meaning}</p>}
     </motion.div>
   )
 }

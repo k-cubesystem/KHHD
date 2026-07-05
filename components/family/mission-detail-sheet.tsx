@@ -102,7 +102,7 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
                   <span
                     className={cn(
                       'text-[10px] font-medium relative z-10 transition-colors duration-300',
-                      isCompleted ? 'text-primary font-bold' : 'text-white/40 group-hover:text-white/70'
+                      isCompleted ? 'text-primary font-bold' : 'text-white/65 group-hover:text-white/70'
                     )}
                   >
                     {mission.label}
@@ -115,7 +115,7 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
             })}
           </div>
 
-          <p className="text-center text-[10px] text-white/20 mt-6 font-light">
+          <p className="text-center text-[10px] text-white/55 mt-6 font-light">
             * 모든 미션을 완료하면 특별한 운세 부적이 발급됩니다.
           </p>
         </div>

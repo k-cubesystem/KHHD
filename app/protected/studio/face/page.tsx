@@ -461,7 +461,7 @@ function PartFeatureCard({
             <span className="text-sm font-serif font-bold" style={{ color }}>
               {label}
             </span>
-            <span className="text-[10px] text-white/30 ml-2 font-sans">{subtitle}</span>
+            <span className="text-[10px] text-white/60 ml-2 font-sans">{subtitle}</span>
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -473,7 +473,7 @@ function PartFeatureCard({
             <span className="text-[10px] text-white/30">{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
-        <p className="text-xs text-white/45 leading-relaxed font-sans font-light line-clamp-2">{description}</p>
+        <p className="text-xs text-white/65 leading-relaxed font-sans font-light line-clamp-2">{description}</p>
       </button>
       <AnimatePresence>
         {expanded && (fortuneArea || advice) && (

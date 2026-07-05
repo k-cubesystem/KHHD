@@ -78,7 +78,7 @@ export function ShrineCanvas({ shrine, catalogItems, isOwner }: ShrineCanvasProp
 
         {/* 상단 신당 이름 */}
         <div className="relative z-10 pt-5 pb-3 px-5 text-center">
-          <p className="text-[10px] tracking-[0.5em] text-gold-500/40 font-serif mb-1">神 堂</p>
+          <p className="text-[10px] tracking-[0.5em] text-gold-500/65 font-serif mb-1">神 堂</p>
           <h3 className="text-gold-500 font-serif text-lg font-bold">{shrine.name}</h3>
           {shrine.description && <p className="text-ink-light/40 text-xs mt-1 font-sans">{shrine.description}</p>}
         </div>

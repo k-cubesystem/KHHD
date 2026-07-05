@@ -150,7 +150,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
                 </h3>
 
                 {/* 설명 */}
-                <p className="text-xs text-white/45 font-light leading-relaxed mb-3">{service.desc}</p>
+                <p className="text-xs text-white/65 font-light leading-relaxed mb-3">{service.desc}</p>
 
                 {/* 태그 */}
                 <div className="flex gap-1.5 flex-wrap">
@@ -178,7 +178,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
           transition={{ delay: 0.6 }}
           className="mt-2 p-4 rounded-xl border border-white/5 bg-white/2"
         >
-          <p className="text-[10px] text-white/25 text-center font-light leading-relaxed">
+          <p className="text-[10px] text-white/55 text-center font-light leading-relaxed">
             각 분석은 AI 기반으로 참고용으로만 활용하세요.
             <br />
             분석 결과는 저장되어 운세 기록에 반영됩니다.

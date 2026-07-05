@@ -94,7 +94,7 @@ function FormSection({
                 {badge}
               </span>
             </div>
-            <p className="text-[11.5px] font-light text-white/[0.35]" style={{ lineHeight: 1.6 }}>
+            <p className="text-[11.5px] font-light text-white/[0.65]" style={{ lineHeight: 1.6 }}>
               {sub}
             </p>
           </div>
@@ -177,10 +177,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
           {/* 한자 원형 */}
           <div className="flex justify-center mb-4">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center"
+              className="w-16 h-16 rounded-full flex items-center justify-center bg-gold-antique/[0.08] border border-gold-antique/[0.3]"
               style={{
-                background: 'rgba(212,175,55,0.08)',
-                border: '1px solid rgba(212,175,55,0.3)',
                 boxShadow: '0 0 30px rgba(212,175,55,0.12)',
               }}
             >
@@ -223,12 +221,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             ].map(({ char, label }) => (
               <div
                 key={char}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px]"
-                style={{
-                  background: 'rgba(212,175,55,0.07)',
-                  border: '1px solid rgba(212,175,55,0.18)',
-                  color: 'rgba(212,175,55,0.7)',
-                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] bg-gold-antique/[0.07] border border-gold-antique/[0.18] text-gold-antique/[0.7]"
               >
                 <span style={{ fontFamily: 'serif' }}>{char}</span>
                 <span>{label}</span>
@@ -266,10 +259,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                   })
                 }
                 disabled={kakaoLoading}
-                className="flex items-center gap-1.5 px-4 h-11 rounded-xl text-[12px] font-medium flex-shrink-0"
+                className="flex items-center gap-1.5 px-4 h-11 rounded-xl text-[12px] font-medium flex-shrink-0 bg-gold-antique/[0.12] border border-gold-antique/[0.3]"
                 style={{
-                  background: 'rgba(212,175,55,0.12)',
-                  border: '1px solid rgba(212,175,55,0.3)',
                   color: GOLD_500,
                 }}
               >
@@ -325,10 +316,7 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
           >
             {formData.faceImageUrl ? (
               <div className="space-y-3">
-                <div
-                  className="relative w-full h-52 rounded-xl overflow-hidden"
-                  style={{ border: '1px solid rgba(212,175,55,0.3)' }}
-                >
+                <div className="relative w-full h-52 rounded-xl overflow-hidden border border-gold-antique/[0.3]">
                   {/* base64 data: URI from FileReader — Next.js <Image> does not support data: URLs */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -341,8 +329,8 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
                     className="w-full h-full object-cover"
                   />
                   <div
-                    className="absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-medium"
-                    style={{ background: 'rgba(212,175,55,0.9)', color: '#0a0807' }}
+                    className="absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-medium bg-gold-antique/[0.9]"
+                    style={{ color: '#0a0807' }}
                   >
                     ✦ 담김 완료
                   </div>
@@ -358,10 +346,10 @@ export function CheonjiinDataCollectionForm({ target, onComplete }: CheonjiinDat
             ) : (
               <label htmlFor="face-upload" className="block cursor-pointer">
                 <div
-                  className="w-full rounded-xl p-8 text-center transition-all duration-300"
-                  style={{ border: '1.5px dashed rgba(212,175,55,0.25)', background: 'rgba(212,175,55,0.03)' }}
+                  className="w-full rounded-xl p-8 text-center transition-all duration-300 bg-gold-antique/[0.03]"
+                  style={{ border: '1.5px dashed rgba(212,175,55,0.25)' }}
                 >
-                  <Upload className="w-8 h-8 mx-auto mb-3" style={{ color: 'rgba(212,175,55,0.4)' }} />
+                  <Upload className="w-8 h-8 mx-auto mb-3 text-gold-antique/[0.4]" />
                   <p className="text-[13px] font-serif text-gold-300/[0.6]">정면 얼굴 사진을 올려주세요</p>
                   <p className="text-[11px] mt-1 font-light text-white/[0.25]">
                     이마·눈·코·입이 선명하게 보이는 사진 · 최대 5MB

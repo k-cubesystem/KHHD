@@ -63,7 +63,7 @@ const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessag
         transition={{ duration: 0.22, ease: 'easeOut' }}
         className="flex justify-end items-end gap-2"
       >
-        <span className="text-[10px] text-primary/30 self-end mb-0.5">{time}</span>
+        <span className="text-[10px] text-primary/60 self-end mb-0.5">{time}</span>
         <div
           className={cn(
             'max-w-[72%] px-4 py-3 rounded-2xl rounded-br-none text-sm leading-relaxed',
@@ -106,7 +106,7 @@ const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessag
         >
           <p className="whitespace-pre-wrap break-words">{msg.content}</p>
         </div>
-        <p className="text-[10px] text-primary/25 pl-1">{time}</p>
+        <p className="text-[10px] text-primary/60 pl-1">{time}</p>
       </div>
     </motion.div>
   )
@@ -428,7 +428,7 @@ export function ShamanChatInterface() {
 
             {/* 점사 대상 선택 */}
             <div className="flex flex-col items-end gap-1">
-              <span className="text-[9px] text-primary/40 leading-none">점사 대상</span>
+              <span className="text-[9px] text-primary/70 leading-none">점사 대상</span>
               <select
                 value={selectedFamilyId}
                 onChange={(e) => handleFamilyChange(e.target.value)}
@@ -557,7 +557,7 @@ export function ShamanChatInterface() {
 
               <div className="space-y-2">
                 <h2 className="text-base font-serif text-foreground/70 tracking-wide">어떤 이야기를 꺼내드릴까요</h2>
-                <p className="text-xs text-foreground/35 leading-relaxed">
+                <p className="text-xs text-foreground/65 leading-relaxed">
                   말 못 한 고민이 있다면,
                   <br />
                   이곳에서 편히 꺼내보세요.
@@ -588,7 +588,7 @@ export function ShamanChatInterface() {
                 ))}
               </div>
 
-              <p className="text-[10px] text-foreground/20 flex items-center gap-1.5 mt-2">
+              <p className="text-[10px] text-foreground/55 flex items-center gap-1.5 mt-2">
                 <Sparkles className="w-3 h-3 text-primary/30" />
                 매일 10회 무료 · 1만냥으로 +20회
                 <Sparkles className="w-3 h-3 text-primary/30" />

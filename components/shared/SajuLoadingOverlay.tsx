@@ -129,14 +129,13 @@ export function SajuLoadingOverlay({
         {PARTICLES.map((p, i) => (
           <div
             key={i}
-            className="absolute rounded-full anim-particle-float"
+            className="absolute rounded-full anim-particle-float bg-gold-antique/[0.4]"
             style={
               {
                 width: p.size,
                 height: p.size,
                 left: p.left,
                 bottom: '-6px',
-                background: 'rgba(212,175,55,0.4)',
                 '--particle-y': `${p.y}px`,
                 animation: `particle-float-up ${p.duration}s ease-out ${p.delay}s infinite`,
               } as React.CSSProperties
@@ -149,27 +148,23 @@ export function SajuLoadingOverlay({
       <div className="relative mb-10">
         {/* 외부 점선 링 — CSS rotate */}
         <div
-          className="w-32 h-32 rounded-full anim-rotate-cw"
+          className="w-32 h-32 rounded-full anim-rotate-cw border border-dashed border-gold-antique/[0.2]"
           style={{
-            border: '1px dashed rgba(212,175,55,0.2)',
             animation: 'rotate-cw 10s linear infinite',
           }}
         />
         {/* 내부 실선 링 — CSS rotate (반대) */}
         <div
-          className="absolute inset-3 rounded-full anim-rotate-ccw"
+          className="absolute inset-3 rounded-full anim-rotate-ccw border border-gold-antique/[0.3]"
           style={{
-            border: '1px solid rgba(212,175,55,0.3)',
             animation: 'rotate-ccw 7s linear infinite',
           }}
         />
         {/* 코어 */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div
-            className="w-16 h-16 rounded-full flex items-center justify-center anim-core-pulse"
+            className="w-16 h-16 rounded-full flex items-center justify-center anim-core-pulse bg-gold-antique/[0.08] border border-gold-antique/[0.5]"
             style={{
-              background: 'rgba(212,175,55,0.08)',
-              border: '1px solid rgba(212,175,55,0.5)',
               boxShadow: '0 0 30px rgba(212,175,55,0.35)',
               animation: 'core-pulse 2.5s ease-in-out infinite',
             }}
@@ -196,10 +191,7 @@ export function SajuLoadingOverlay({
               transition={{ duration: 0.4 }}
               className="flex flex-col items-center gap-2"
             >
-              <p
-                className="font-serif leading-snug break-keep"
-                style={{ fontSize: '1.1rem', color: 'rgba(212,175,55,0.9)' }}
-              >
+              <p className="font-serif leading-snug break-keep text-gold-antique/[0.9]" style={{ fontSize: '1.1rem' }}>
                 {msg.headline}
               </p>
               <p className="font-light leading-relaxed break-keep text-white/[0.35]" style={{ fontSize: '12px' }}>
@@ -235,9 +227,8 @@ export function SajuLoadingOverlay({
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-1.5 h-1.5 rounded-full anim-dot-pulse"
+                className="w-1.5 h-1.5 rounded-full anim-dot-pulse bg-gold-antique/[0.6]"
                 style={{
-                  background: 'rgba(212,175,55,0.6)',
                   animation: `dot-pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
                 }}
               />

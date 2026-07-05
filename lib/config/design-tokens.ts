@@ -9,7 +9,9 @@ export const COLORS = {
     500: '#C9A84C',
     600: '#A8903F',
     700: '#8C7B50',
+    antique: '#D4AF37',
   },
+  inkPrimary: '#E8E4DC',
   background: '#0A0A08',
   surface: '#16140F',
   charcoalDeep: '#0A0A08',
@@ -48,3 +50,5 @@ export const BOK_TIER_COLORS = {
 /** 가장 많이 쓰이는 메인 골드 hex — SVG, Chart, OG 이미지용 */
 export const GOLD_500 = COLORS.gold[500]
 export const GOLD_300 = COLORS.gold[300]
+export const GOLD_ANTIQUE = '#D4AF37'
+export const INK_PRIMARY = '#E8E4DC'

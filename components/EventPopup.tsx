@@ -49,9 +49,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
     previousFocusRef.current = document.activeElement as HTMLElement | null
     // 모달 내부로 focus 이동
     const timer = setTimeout(() => {
-      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
-        'a[href], button:not([disabled])'
-      )
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>('a[href], button:not([disabled])')
       firstFocusable?.focus()
     }, 100)
 
@@ -134,7 +132,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
 
           {/* 메인 카피 */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-            <p className="text-xs text-white/40 font-sans mb-2 tracking-wide">지금 가입하면</p>
+            <p className="text-xs text-white/65 font-sans mb-2 tracking-wide">지금 가입하면</p>
             <h2
               className="font-serif text-3xl font-bold mb-1"
               style={{
@@ -147,7 +145,7 @@ export function EventPopup({ onClose }: EventPopupProps) {
             </h2>
             <div className="flex items-center justify-center gap-1.5 mt-1 mb-5">
               <Coins className="w-3.5 h-3.5 text-gold-500/60" />
-              <p className="text-xs text-white/35 font-sans">회원가입 완료 즉시 복채 50만냥 증정</p>
+              <p className="text-xs text-white/65 font-sans">회원가입 완료 즉시 복채 50만냥 증정</p>
             </div>
 
             {/* 혜택 리스트 */}
