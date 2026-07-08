@@ -377,6 +377,17 @@ export async function saveShrineLayout(placements: PlacementInput[]): Promise<{ 
   return { success: true }
 }
 
+/** 보기 모드에서 촛불 점화 상태를 즉시 저장 (소유자). RLS가 소유권 보장. */
+export async function setPlacementLit(placementId: string, lit: boolean): Promise<{ success: boolean }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false }
+  const { error } = await supabase.from('shrine_placements').update({ state: { lit } }).eq('id', placementId)
+  return { success: !error }
+}
+
 /** 테마 팩 활성화 (무료거나 보유한 팩만) */
 export async function activateThemePack(packCode: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()

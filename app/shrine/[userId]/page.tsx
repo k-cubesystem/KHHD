@@ -41,11 +41,7 @@ export default async function PublicShrinePage({ params }: PageProps) {
 
   const isOwner = user?.id === userId
 
-  // 방문 카운트 증가 (비소유자, best-effort)
-  if (!isOwner) {
-    await supabase.rpc('increment_shrine_visitor', { p_shrine_id: scene.shrineId })
-  }
-
+  // 방문 카운트는 소원 기원 시(addWish)에만 증가 — 새로고침 인플레이션 방지
   const { wishes } = await getWishes(scene.shrineId, 0, 10)
 
   return (

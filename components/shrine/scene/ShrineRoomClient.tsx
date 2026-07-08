@@ -28,7 +28,7 @@ import {
 } from './keeper-lines'
 import { useShrineAudio } from './useShrineAudio'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
-import { saveShrineLayout, activateThemePack } from '@/app/actions/shrine/scene'
+import { saveShrineLayout, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { trackEvent } from '@/lib/analytics/ga4'
 
@@ -154,6 +154,8 @@ export function ShrineRoomClient({ scene }: Props) {
         const lit = !p.state.lit
         setPlacements((prev) => prev.map((q) => (q.id === p.id ? { ...q, state: { ...q.state, lit } } : q)))
         dirty.current = true
+        // 보기 모드 점화는 즉시 저장 (편집 저장을 거치지 않아도 유지)
+        if (isOwner && !p.id.startsWith('local-')) void setPlacementLit(p.id, lit)
         play(b.sound ?? 'crackle')
         effectsRef.current?.setFlame(p.id, p.x, p.y - FLAME_Y_OFFSET, lit)
         if (lit) {
@@ -167,7 +169,7 @@ export function ShrineRoomClient({ scene }: Props) {
       }
       trackEvent({ action: 'shrine_tap', category: 'shrine', label: item.type })
     },
-    [editing, catalogById, play, keeperSay]
+    [editing, catalogById, play, keeperSay, isOwner]
   )
 
   // ── 드래그 종료 (편집 모드) ──
