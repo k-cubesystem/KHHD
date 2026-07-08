@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getShrineByUserId } from '@/app/actions/shrine/shrine'
-import { getCatalogItems } from '@/app/actions/shrine/shrine-items'
+import { getPublicSceneData } from '@/app/actions/shrine/scene'
 import { getWishes } from '@/app/actions/shrine/shrine-wishes'
-import { ShrineCanvas } from '@/components/shrine/ShrineCanvas'
+import { ShrineRoomClient } from '@/components/shrine/scene/ShrineRoomClient'
 import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import type { Metadata } from 'next'
@@ -36,34 +36,39 @@ export default async function PublicShrinePage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [shrine, catalogItems] = await Promise.all([getShrineByUserId(userId), getCatalogItems()])
-
-  if (!shrine) notFound()
+  const scene = await getPublicSceneData(userId)
+  if (!scene) notFound()
 
   const isOwner = user?.id === userId
-  const { wishes } = await getWishes(shrine.id, 0, 10)
+
+  // 방문 카운트 증가 (비소유자, best-effort)
+  if (!isOwner) {
+    await supabase.rpc('increment_shrine_visitor', { p_shrine_id: scene.shrineId })
+  }
+
+  const { wishes } = await getWishes(scene.shrineId, 0, 10)
 
   return (
-    <div className="min-h-screen px-4 py-6 space-y-6">
+    <div className="min-h-screen px-4 py-5 space-y-5">
       {/* 방문자 배너 */}
       {!isOwner && (
-        <div className="rounded-xl px-4 py-3 flex items-center gap-3 border border-gold-500/[0.12] bg-gold-500/[0.06]">
+        <div className="max-w-[430px] mx-auto rounded-xl px-4 py-3 flex items-center gap-3 border border-gold-500/[0.12] bg-gold-500/[0.06]">
           <span className="text-xl">🏮</span>
           <div>
-            <p className="text-xs font-serif text-gold-500/80 font-bold">{shrine.name} 방문 중</p>
-            <p className="text-[10px] text-ink-light/30 font-sans">소원을 기원하면 복 포인트 +5 적립</p>
+            <p className="text-xs font-serif text-gold-500/80 font-bold">{scene.shrineName} 방문 중</p>
+            <p className="text-[10px] text-ink-light/30 font-sans">신물을 탭해보고, 소원을 기원해보세요 (+5 복)</p>
           </div>
         </div>
       )}
 
-      {/* 신당 캔버스 */}
-      <ShrineCanvas shrine={shrine} catalogItems={catalogItems} isOwner={isOwner} />
+      {/* 신당 미니룸 (읽기 전용) */}
+      <ShrineRoomClient scene={scene} />
 
-      {/* 소원 기원 폼 */}
-      <ShrineWishForm shrineId={shrine.id} isOwner={isOwner} />
-
-      {/* 소원 로그 */}
-      <ShrineWishLog wishes={wishes} shrineId={shrine.id} />
+      {/* 소원 기원 폼 + 로그 */}
+      <div className="max-w-[430px] mx-auto space-y-5">
+        <ShrineWishForm shrineId={scene.shrineId} isOwner={isOwner} />
+        <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} />
+      </div>
     </div>
   )
 }

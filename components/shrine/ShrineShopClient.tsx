@@ -1,170 +1,141 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2 } from 'lucide-react'
-import type { CatalogItem } from '@/app/actions/shrine/shrine-items'
-import type { ShrineWithItems } from '@/app/actions/shrine/shrine'
-import { placeItem } from '@/app/actions/shrine/shrine-items'
-import { GA } from '@/lib/analytics/ga4'
-import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
+import { Loader2, Check } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
+import type { ShopData } from '@/app/actions/shrine/inventory'
+import { purchaseToInventory } from '@/app/actions/shrine/inventory'
+import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
+import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
 
-interface ShrineShopClientProps {
-  catalogItems: CatalogItem[]
-  shrine: ShrineWithItems
-  bokPoints: number
+const RARITY: Record<string, { label: string; cls: string }> = {
+  common: { label: '일반', cls: 'text-ink-light/50 border-white/10 bg-white/[0.03]' },
+  rare: { label: '희귀', cls: 'text-sky-400 border-sky-500/20 bg-sky-900/20' },
+  legendary: { label: '전설', cls: 'text-gold-300 border-gold-500/30 bg-gold-500/[0.08]' },
 }
 
-const RARITY_INFO: Record<string, { label: string; color: string; badge: string }> = {
-  common: { label: '일반', color: 'text-ink-light/50', badge: 'bg-white/5 border-white/10' },
-  rare: { label: '희귀', color: 'text-sky-400', badge: 'bg-sky-900/20 border-sky-500/20' },
-  legendary: { label: '전설', color: 'text-amber-400', badge: 'bg-amber-900/20 border-amber-500/30' },
-}
-
-export function ShrineShopClient({ catalogItems, shrine, bokPoints }: ShrineShopClientProps) {
+export function ShrineShopClient({ data }: { data: ShopData }) {
+  const [owned, setOwned] = useState<Record<string, number>>(data.owned)
+  const [balance, setBalance] = useState(data.bokBalance)
   const [loadingId, setLoadingId] = useState<string | null>(null)
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
 
-  const usedSlots = shrine.shrine_items.map((i) => i.slot_index)
-  const emptySlots = Array.from({ length: 12 }, (_, i) => i + 1).filter((s) => !usedSlots.includes(s))
-
-  const handleBuyAndPlace = async (item: CatalogItem) => {
-    if (item.price_bok_points > bokPoints) {
-      toast.error(`복 포인트가 부족합니다 (필요: ${item.price_bok_points.toLocaleString()})`)
+  const buy = async (id: string, name: string, priceBok: number) => {
+    if (priceBok > balance) {
+      toast.error(`복이 부족합니다 (필요: ${priceBok.toLocaleString()})`)
       return
     }
-
-    const slot = selectedSlot ?? emptySlots[0]
-    if (!slot) {
-      toast.error('배치할 슬롯이 없습니다. 기존 아이템을 제거해주세요.')
-      return
-    }
-
-    setLoadingId(item.id)
-    const result = await placeItem({ catalogItemId: item.id, slotIndex: slot })
+    setLoadingId(id)
+    const res = await purchaseToInventory(id)
     setLoadingId(null)
-    setSelectedSlot(null)
-
-    if (result.success) {
-      GA.shrineItemPurchase(item.type, item.price_bok_points)
-      toast.success(`${item.emoji} ${item.name} 배치 완료!`)
-    } else if (result.error === 'INSUFFICIENT_POINTS') {
-      toast.error('복 포인트가 부족합니다')
+    if (res.success) {
+      setOwned((o) => ({ ...o, [id]: res.newQty ?? (o[id] ?? 0) + 1 }))
+      if (typeof res.newBalance === 'number') setBalance(res.newBalance)
+      toast.success(`${name} — 보관함에 담겼어요`, { description: '신당 꾸미기에서 배치하세요' })
+    } else if (res.error === 'INSUFFICIENT_POINTS') {
+      toast.error('복이 부족합니다')
     } else {
-      toast.error('배치 실패. 다시 시도해주세요.')
+      toast.error('구매 실패. 다시 시도해주세요.')
     }
   }
 
   return (
-    <div className="space-y-6">
-      {/* 슬롯 선택 (빈 슬롯이 있을 때) */}
-      {emptySlots.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs text-ink-light/50 font-sans">배치할 슬롯 선택</p>
-          <div className="flex gap-2 flex-wrap">
-            {emptySlots.map((slot) => (
-              <button
-                key={slot}
-                onClick={() => setSelectedSlot(selectedSlot === slot ? null : slot)}
-                className={cn(
-                  'w-10 h-10 rounded-lg text-xs font-sans font-bold transition-all border',
-                  selectedSlot === slot
-                    ? 'bg-gold-500/[0.2] border-gold-500/[0.5] text-gold-500'
-                    : 'bg-white/[0.03] border-white/[0.08] text-ink-primary/[0.3]'
-                )}
-              >
-                {slot}
-              </button>
-            ))}
-          </div>
-          {selectedSlot && <p className="text-[10px] text-gold-500/40 font-sans">슬롯 {selectedSlot}에 배치됩니다</p>}
-          {!selectedSlot && (
-            <p className="text-[10px] text-ink-light/20 font-sans">선택 안 하면 첫 번째 빈 슬롯에 자동 배치</p>
-          )}
-        </div>
-      )}
-
-      {/* 아이템 목록 */}
-      <div className="grid grid-cols-2 gap-3">
-        <AnimatePresence>
-          {catalogItems.map((item, idx) => {
-            const rarity = RARITY_INFO[item.rarity] ?? RARITY_INFO.common
-            const canAfford = item.price_bok_points <= bokPoints || item.price_bok_points === 0
-            const isLoading = loadingId === item.id
-
-            return (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.04 }}
-                className="rounded-xl p-4 space-y-3 flex flex-col bg-gold-500/[0.03] border border-gold-500/[0.12]"
-              >
-                {/* 이모지 + 희귀도 */}
-                <div className="flex items-start justify-between">
-                  <span className="text-4xl leading-none">{item.emoji}</span>
-                  <span
-                    className={`text-[9px] px-2 py-1 rounded-full border font-sans ${rarity.badge} ${rarity.color}`}
-                  >
-                    {rarity.label}
-                  </span>
-                </div>
-
-                {/* 이름 + 설명 */}
-                <div className="space-y-1 flex-1">
-                  <p className="text-ink-light font-serif text-sm font-bold">{item.name}</p>
-                  {item.description && (
-                    <p className="text-ink-light/30 text-[10px] font-sans leading-tight">{item.description}</p>
-                  )}
-                </div>
-
-                {/* 가격 + 구매 버튼 */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    {item.price_bok_points > 0 ? (
-                      <span className={`text-xs font-sans font-bold ${canAfford ? 'text-gold-500' : 'text-red-400'}`}>
-                        🌟 {item.price_bok_points.toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-sans font-bold text-emerald-400">무료</span>
-                    )}
-                    {item.price_krw > 0 && (
-                      <span className="text-[10px] text-ink-light/20 font-sans">
-                        / ₩{item.price_krw.toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleBuyAndPlace(item)}
-                    disabled={isLoading || emptySlots.length === 0}
-                    className={cn(
-                      'w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-30 border',
-                      canAfford
-                        ? 'bg-gold-500/[0.15] border-gold-500/[0.3] text-gold-500'
-                        : 'bg-white/[0.04] border-white/[0.06] text-ink-primary/[0.2]'
-                    )}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
-                    ) : emptySlots.length === 0 ? (
-                      '슬롯 없음'
-                    ) : (
-                      '배치하기'
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-ink-light/40 font-sans">
+          보유 복: <span className="text-gold-500 font-bold tabular-nums">✨ {balance.toLocaleString()}</span>
+        </p>
+        <Link
+          href="/protected/shrine"
+          className="text-[11px] text-gold-300 border border-gold-500/25 rounded-lg px-3 py-1.5"
+        >
+          신당으로 →
+        </Link>
       </div>
 
-      {emptySlots.length === 0 && (
-        <p className="text-center text-ink-light/30 text-xs font-sans py-4">
-          신당이 가득 찼습니다. 기존 아이템을 제거 후 배치하세요.
-        </p>
-      )}
+      <div className="grid grid-cols-2 gap-3">
+        {data.catalog.map((item, idx) => {
+          const rarity = RARITY[item.rarity] ?? RARITY.common
+          const have = owned[item.id] ?? 0
+          const free = item.priceBok === 0
+          const canAfford = free || item.priceBok <= balance
+          const loading = loadingId === item.id
+          return (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.04 }}
+              className="rounded-xl p-4 flex flex-col gap-3 bg-gold-500/[0.03] border border-gold-500/[0.12]"
+            >
+              <div className="flex items-start justify-between">
+                <span className="text-4xl leading-none">{item.emoji}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full border font-sans ${rarity.cls}`}>
+                    {rarity.label}
+                  </span>
+                  {have > 0 && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-900/20 text-emerald-300 tabular-nums">
+                      보유 {have}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-ink-primary font-serif text-sm font-bold">{item.name}</p>
+                  {item.element && (
+                    <span
+                      className="text-[9px] w-[15px] h-[15px] rounded-full grid place-items-center font-serif font-bold"
+                      style={{
+                        background: EL_COLOR[item.element],
+                        color: item.element === 'fire' || item.element === 'water' ? '#f2dcdc' : '#0a0a08',
+                      }}
+                    >
+                      {EL_KO[item.element]}
+                    </span>
+                  )}
+                  <span className="text-[9px] text-ink-light/40 border border-white/10 rounded px-1.5 py-px">
+                    {ZONE_LABEL[item.layer]}
+                  </span>
+                </div>
+                {item.description && (
+                  <p className="text-ink-light/30 text-[10px] font-sans leading-tight">{item.description}</p>
+                )}
+                {item.element && (
+                  <p className="text-[10px] text-gold-500/70 font-sans">
+                    {EL_KO[item.element]} 기운 +{item.energyPower}
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={() => buy(item.id, item.name, item.priceBok)}
+                disabled={loading || !canAfford}
+                className={`w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-40 ${
+                  free
+                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                    : canAfford
+                      ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
+                      : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
+                }`}
+              >
+                {loading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                ) : free ? (
+                  <span className="flex items-center justify-center gap-1">
+                    <Check className="w-3 h-3" /> 무료로 받기
+                  </span>
+                ) : (
+                  `✨ ${item.priceBok.toLocaleString()}`
+                )}
+              </button>
+            </motion.div>
+          )
+        })}
+      </div>
     </div>
   )
 }

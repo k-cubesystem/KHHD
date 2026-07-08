@@ -62,6 +62,7 @@ export function ShrineRoomClient({ scene }: Props) {
   const keeperTaps = useRef(0)
   const dirty = useRef(false)
 
+  const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
 
   // 기운 실시간 계산
@@ -171,6 +172,7 @@ export function ShrineRoomClient({ scene }: Props) {
 
   // ── 꾸미기 토글 + 저장 ──
   const toggleEdit = useCallback(async () => {
+    if (!isOwner) return
     if (editing) {
       // 완료 → 저장
       if (dirty.current) {
@@ -200,7 +202,7 @@ export function ShrineRoomClient({ scene }: Props) {
     } else {
       setEditing(true)
     }
-  }, [editing, placements, play])
+  }, [editing, placements, play, isOwner])
 
   // ── 신당지기 탭 ──
   const onTapKeeper = useCallback(() => {
@@ -253,13 +255,15 @@ export function ShrineRoomClient({ scene }: Props) {
           >
             {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
-          <Link
-            href="/protected/shrine/setup"
-            className="w-8 h-8 rounded-[10px] grid place-items-center bg-surface border border-gold-500/25 text-gold-300"
-            aria-label="설정"
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
+          {isOwner && (
+            <Link
+              href="/protected/shrine/setup"
+              className="w-8 h-8 rounded-[10px] grid place-items-center bg-surface border border-gold-500/25 text-gold-300"
+              aria-label="설정"
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -394,15 +398,17 @@ export function ShrineRoomClient({ scene }: Props) {
         ))}
 
         {/* 상단 컨트롤 */}
-        <button
-          onClick={toggleEdit}
-          disabled={saving}
-          className="absolute top-2.5 left-2.5 z-30 text-[10.5px] font-bold tracking-[0.05em] px-3 py-1.5 rounded-full flex items-center gap-1 disabled:opacity-50"
-          style={{ background: 'rgba(201,168,76,0.16)', border: '1px solid rgba(201,168,76,0.55)', color: '#f4e4ba' }}
-        >
-          {editing ? <Check className="w-3 h-3" /> : <Wrench className="w-3 h-3" />}
-          {editing ? (saving ? '저장 중…' : '완료') : '꾸미기'}
-        </button>
+        {isOwner && (
+          <button
+            onClick={toggleEdit}
+            disabled={saving}
+            className="absolute top-2.5 left-2.5 z-30 text-[10.5px] font-bold tracking-[0.05em] px-3 py-1.5 rounded-full flex items-center gap-1 disabled:opacity-50"
+            style={{ background: 'rgba(201,168,76,0.16)', border: '1px solid rgba(201,168,76,0.55)', color: '#f4e4ba' }}
+          >
+            {editing ? <Check className="w-3 h-3" /> : <Wrench className="w-3 h-3" />}
+            {editing ? (saving ? '저장 중…' : '완료') : '꾸미기'}
+          </button>
+        )}
         <div
           className="absolute top-2.5 right-2.5 z-30 text-[8.5px] tracking-[0.06em] px-2 py-[3px] rounded-full text-ink-primary/75 tabular-nums"
           style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
@@ -420,138 +426,159 @@ export function ShrineRoomClient({ scene }: Props) {
       </div>
 
       {/* 테마 칩 */}
-      <div className="flex gap-2 px-1 pt-3 overflow-x-auto no-scrollbar">
-        {scene.themes.map((t) => (
-          <button
-            key={t.code}
-            onClick={() => onSelectTheme(t)}
-            className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full font-sans transition-all ${
-              t.code === activeCode
-                ? 'bg-gold-500/[0.14] border border-gold-500 text-gold-300'
-                : 'bg-surface border border-white/10 text-ink-light/50'
-            }`}
-          >
-            {t.name}
-            <span className="text-[9.5px] opacity-70 ml-1 tabular-nums">
-              {t.owned ? '보유' : t.priceKrw > 0 ? `₩${t.priceKrw.toLocaleString()}` : '무료'}
-            </span>
-          </button>
-        ))}
-      </div>
+      {isOwner && (
+        <div className="flex gap-2 px-1 pt-3 overflow-x-auto no-scrollbar">
+          {scene.themes.map((t) => (
+            <button
+              key={t.code}
+              onClick={() => onSelectTheme(t)}
+              className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full font-sans transition-all ${
+                t.code === activeCode
+                  ? 'bg-gold-500/[0.14] border border-gold-500 text-gold-300'
+                  : 'bg-surface border border-white/10 text-ink-light/50'
+              }`}
+            >
+              {t.name}
+              <span className="text-[9.5px] opacity-70 ml-1 tabular-nums">
+                {t.owned ? '보유' : t.priceKrw > 0 ? `₩${t.priceKrw.toLocaleString()}` : '무료'}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 기운 게이지 */}
-      <div className="mt-3 px-1">
-        <div className="flex justify-between items-baseline mb-2">
-          <span className="font-serif text-[13px] font-bold tracking-[0.1em] text-ink-primary">氣運 균형</span>
-          <span className="text-[10.5px] px-2 py-[3px] rounded-sm bg-gold-500/[0.12] border border-gold-500/35 text-gold-300">
-            필요 기운 <b className="font-serif text-gold-500">{EL_KO[displayYongsin]}</b>
-          </span>
-        </div>
-        <div className="flex gap-1.5">
-          {ELEMENTS.map((el) => {
-            const low = el === displayYongsin
-            return (
-              <div key={el} className="flex-1 text-center">
-                <div
-                  className="h-[46px] rounded-md relative overflow-hidden"
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: low ? '1px solid rgba(201,168,76,0.55)' : '1px solid rgba(255,255,255,0.06)',
-                    boxShadow: low ? '0 0 10px rgba(201,168,76,0.15)' : 'none',
-                  }}
-                >
+      {isOwner && (
+        <div className="mt-3 px-1">
+          <div className="flex justify-between items-baseline mb-2">
+            <span className="font-serif text-[13px] font-bold tracking-[0.1em] text-ink-primary">氣運 균형</span>
+            <span className="text-[10.5px] px-2 py-[3px] rounded-sm bg-gold-500/[0.12] border border-gold-500/35 text-gold-300">
+              필요 기운 <b className="font-serif text-gold-500">{EL_KO[displayYongsin]}</b>
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            {ELEMENTS.map((el) => {
+              const low = el === displayYongsin
+              return (
+                <div key={el} className="flex-1 text-center">
                   <div
-                    className="absolute inset-x-0 bottom-0 rounded-t-md transition-[height] duration-500"
-                    style={{ height: `${energy[el]}%`, background: EL_COLOR[el] }}
-                  />
+                    className="h-[46px] rounded-md relative overflow-hidden"
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: low ? '1px solid rgba(201,168,76,0.55)' : '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: low ? '0 0 10px rgba(201,168,76,0.15)' : 'none',
+                    }}
+                  >
+                    <div
+                      className="absolute inset-x-0 bottom-0 rounded-t-md transition-[height] duration-500"
+                      style={{ height: `${energy[el]}%`, background: EL_COLOR[el] }}
+                    />
+                  </div>
+                  <div className="font-serif text-[12px] mt-1 text-ink-primary/75">{EL_KO[el]}</div>
+                  <div className="text-[10px] text-ink-light/40 tabular-nums">{energy[el]}</div>
                 </div>
-                <div className="font-serif text-[12px] mt-1 text-ink-primary/75">{EL_KO[el]}</div>
-                <div className="text-[10px] text-ink-light/40 tabular-nums">{energy[el]}</div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 하단 독 */}
-      <div className="mt-3 px-1 pb-6 relative min-h-[104px]">
-        {editing ? (
-          <div
-            className="rounded-[14px] p-3"
-            style={{ background: '#1e1b15', border: '1px solid rgba(201,168,76,0.4)' }}
-          >
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] tracking-[0.14em] text-gold-dim">보관함 — 탭하여 꺼내기</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1.5">
-              {available.length === 0 && (
-                <span className="text-[11px] text-ink-light/30 py-3">
-                  보관함이 비었어요 · 상점에서 신물을 구해보세요
-                </span>
-              )}
-              {available.map(({ item, qty }) => (
-                <button
-                  key={item.id}
-                  onClick={() => onPlaceFromTray(item)}
-                  className="relative flex-shrink-0 w-[46px] h-[46px] rounded-[10px] grid place-items-center text-[22px] bg-black/30 border border-gold-500/25"
-                  title={`${item.name} (${ZONE_LABEL[item.layer]})`}
-                >
-                  {item.emoji}
-                  {item.element && (
-                    <span
-                      className="absolute -top-1.5 -right-1.5 w-[13px] h-[13px] rounded-full text-[7.5px] font-serif grid place-items-center font-bold"
-                      style={{
-                        background: EL_COLOR[item.element],
-                        color: item.element === 'fire' || item.element === 'water' ? '#f2dcdc' : '#0a0a08',
-                      }}
-                    >
-                      {EL_KO[item.element]}
-                    </span>
-                  )}
-                  <span
-                    className="absolute -bottom-1 -right-1 text-[8.5px] font-bold min-w-[15px] text-center rounded-full px-1 tabular-nums text-[#f2dcdc]"
-                    style={{ background: '#9e2b2b' }}
-                  >
-                    ×{qty}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar">
-              {['오늘 조심할 것은?', '금 기운 올리는 법', '이번 주 재물운'].map((q) => (
-                <Link
-                  key={q}
-                  href="/protected/shrine/chat"
-                  className="flex-shrink-0 text-[10.5px] px-2.5 py-1 rounded-full whitespace-nowrap"
-                  style={{
-                    background: 'rgba(201,168,76,0.07)',
-                    border: '1px solid rgba(201,168,76,0.18)',
-                    color: 'rgba(201,168,76,0.85)',
-                  }}
-                >
-                  {q}
-                </Link>
-              ))}
-            </div>
-            <Link
-              href="/protected/shrine/chat"
-              className="flex gap-2 items-center rounded-[14px] px-3.5 py-3 bg-surface border border-gold-500/20"
+      {isOwner ? (
+        <div className="mt-3 px-1 pb-6 relative min-h-[104px]">
+          {editing ? (
+            <div
+              className="rounded-[14px] p-3"
+              style={{ background: '#1e1b15', border: '1px solid rgba(201,168,76,0.4)' }}
             >
-              <MessageCircle className="w-4 h-4 text-gold-500/60" />
-              <span className="flex-1 text-[12.5px] text-ink-light/35">신당지기에게 말을 건네보세요…</span>
-              <span
-                className="w-[30px] h-[30px] rounded-[9px] grid place-items-center text-gold-500 text-[13px]"
-                style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)' }}
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[10px] tracking-[0.14em] text-gold-dim">보관함 — 탭하여 꺼내기</span>
+                <Link
+                  href="/protected/shrine/shop"
+                  className="text-[10px] font-bold text-gold-300 border border-gold-500/40 rounded-full px-2.5 py-1"
+                >
+                  ＋ 신물 구하기
+                </Link>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1.5">
+                {available.length === 0 && (
+                  <span className="text-[11px] text-ink-light/30 py-3">
+                    보관함이 비었어요 · 상점에서 신물을 구해보세요
+                  </span>
+                )}
+                {available.map(({ item, qty }) => (
+                  <button
+                    key={item.id}
+                    onClick={() => onPlaceFromTray(item)}
+                    className="relative flex-shrink-0 w-[46px] h-[46px] rounded-[10px] grid place-items-center text-[22px] bg-black/30 border border-gold-500/25"
+                    title={`${item.name} (${ZONE_LABEL[item.layer]})`}
+                  >
+                    {item.emoji}
+                    {item.element && (
+                      <span
+                        className="absolute -top-1.5 -right-1.5 w-[13px] h-[13px] rounded-full text-[7.5px] font-serif grid place-items-center font-bold"
+                        style={{
+                          background: EL_COLOR[item.element],
+                          color: item.element === 'fire' || item.element === 'water' ? '#f2dcdc' : '#0a0a08',
+                        }}
+                      >
+                        {EL_KO[item.element]}
+                      </span>
+                    )}
+                    <span
+                      className="absolute -bottom-1 -right-1 text-[8.5px] font-bold min-w-[15px] text-center rounded-full px-1 tabular-nums text-[#f2dcdc]"
+                      style={{ background: '#9e2b2b' }}
+                    >
+                      ×{qty}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar">
+                {['오늘 조심할 것은?', '금 기운 올리는 법', '이번 주 재물운'].map((q) => (
+                  <Link
+                    key={q}
+                    href="/protected/shrine/chat"
+                    className="flex-shrink-0 text-[10.5px] px-2.5 py-1 rounded-full whitespace-nowrap"
+                    style={{
+                      background: 'rgba(201,168,76,0.07)',
+                      border: '1px solid rgba(201,168,76,0.18)',
+                      color: 'rgba(201,168,76,0.85)',
+                    }}
+                  >
+                    {q}
+                  </Link>
+                ))}
+              </div>
+              <Link
+                href="/protected/shrine/chat"
+                className="flex gap-2 items-center rounded-[14px] px-3.5 py-3 bg-surface border border-gold-500/20"
               >
-                ➤
-              </span>
-            </Link>
-          </>
-        )}
-      </div>
+                <MessageCircle className="w-4 h-4 text-gold-500/60" />
+                <span className="flex-1 text-[12.5px] text-ink-light/35">신당지기에게 말을 건네보세요…</span>
+                <span
+                  className="w-[30px] h-[30px] rounded-[9px] grid place-items-center text-gold-500 text-[13px]"
+                  style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)' }}
+                >
+                  ➤
+                </span>
+              </Link>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 px-1 pb-6">
+          <Link
+            href="/protected/shrine"
+            className="flex items-center justify-center gap-2 rounded-[14px] px-4 py-3.5 bg-gold-500/[0.1] border border-gold-500/30 text-gold-300 text-sm font-serif font-bold"
+          >
+            🏮 나만의 신당 만들기
+          </Link>
+        </div>
+      )}
 
       <style jsx>{`
         .shrine-keeper-orb {

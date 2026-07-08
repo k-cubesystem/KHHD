@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getCatalogItems } from '@/app/actions/shrine/shrine-items'
-import { getMyShrine } from '@/app/actions/shrine/shrine'
+import { getShopData } from '@/app/actions/shrine/inventory'
 import { ShrineShopClient } from '@/components/shrine/ShrineShopClient'
 
 export default async function ShrineShopPage() {
@@ -11,25 +10,22 @@ export default async function ShrineShopPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const [shrine, catalogItems] = await Promise.all([getMyShrine(), getCatalogItems()])
+  const { data: shrine } = await supabase.from('shrines').select('id').eq('user_id', user.id).maybeSingle()
   if (!shrine) redirect('/protected/shrine')
 
-  // 보유 복 포인트 조회
-  const { data: profile } = await supabase.from('user_profiles').select('bok_points').eq('id', user.id).single()
-
-  const bokPoints = profile?.bok_points ?? 0
+  const data = await getShopData()
 
   return (
-    <div className="min-h-screen px-4 py-6 space-y-6">
+    <div className="min-h-screen px-4 py-6 space-y-5">
       <div>
-        <p className="text-[10px] tracking-[0.4em] text-gold-500/40 font-serif">신당 아이템</p>
+        <p className="text-[10px] tracking-[0.4em] text-gold-500/40 font-serif">봉헌소</p>
         <h1 className="text-xl font-serif font-bold text-ink-light">신물 상점</h1>
         <p className="text-xs text-ink-light/40 font-sans mt-1">
-          보유 복 포인트: <span className="text-gold-500 font-bold">🌟 {bokPoints.toLocaleString()}</span>
+          신물을 보관함에 담고, 신당 꾸미기에서 방에 배치하세요
         </p>
       </div>
 
-      <ShrineShopClient catalogItems={catalogItems} shrine={shrine} bokPoints={bokPoints} />
+      <ShrineShopClient data={data} />
     </div>
   )
 }

@@ -252,6 +252,69 @@ export async function getSceneData(): Promise<SceneData | null> {
   }
 }
 
+/** 방문자용 공개 씬 데이터 (읽기 전용). 소유자의 방·테마만 노출, 인벤토리/프로필 비공개. */
+export async function getPublicSceneData(userId: string): Promise<SceneData | null> {
+  const supabase = await createClient()
+
+  const { data: shrine } = await supabase
+    .from('shrines')
+    .select('id, name, visibility, visitor_count, wish_count, active_pack_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!shrine || shrine.visibility !== 'public') return null
+
+  const [{ data: catRows }, { data: placeRows }, { data: packs }] = await Promise.all([
+    supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('shrine_placements').select('*').eq('shrine_id', shrine.id),
+    supabase
+      .from('shrine_theme_packs')
+      .select('id, code, name, price_bok, price_krw, element_affinity, assets')
+      .eq('is_active', true),
+  ])
+
+  const catalog: CatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
+  const placements: Placement[] = (placeRows ?? []).map((p) => ({
+    id: p.id,
+    catalogItemId: p.catalog_item_id,
+    layer: isLayer(p.layer) ? p.layer : 'floor',
+    x: Number(p.x),
+    y: Number(p.y),
+    flip: p.flip,
+    state: parsePlacementState(p.state),
+  }))
+  const activePack = (packs ?? []).find((p) => p.id === shrine.active_pack_id)
+  const themes: ThemePack[] = activePack
+    ? [
+        {
+          id: activePack.id,
+          code: activePack.code,
+          name: activePack.name,
+          priceBok: activePack.price_bok,
+          priceKrw: activePack.price_krw,
+          elementAffinity: isElement(activePack.element_affinity) ? activePack.element_affinity : null,
+          assets: (typeof activePack.assets === 'object' && activePack.assets !== null
+            ? activePack.assets
+            : {}) as ThemeAssets,
+          owned: true,
+        },
+      ]
+    : []
+
+  return {
+    shrineId: shrine.id,
+    shrineName: shrine.name,
+    isOwner: false,
+    catalog,
+    placements,
+    inventory: [],
+    profile: { base: { ...DEFAULT_BASE }, yongsin: null },
+    themes,
+    activePackCode: activePack?.code ?? 'banga',
+    visitorCount: shrine.visitor_count,
+    wishCount: shrine.wish_count,
+  }
+}
+
 interface PlacementInput {
   catalogItemId: string
   layer: Layer
