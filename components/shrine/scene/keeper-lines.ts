@@ -70,3 +70,15 @@ export function greetingFor(packCode: string): string {
 export function resonanceLine(element: Element): string {
   return `오호… 세 ${EL_KO[element]} 기운이 서로를 부르는구려. <em>공명</em>이 일어났소!`
 }
+
+/** 오래 가만히 있을 때 (idle) — 소리 없이 잔잔하게 */
+const IDLE = [
+  '향 내음이 은은하구려…',
+  '바람이 잦아드는구나.',
+  '오늘 하루도 무탈하시길.',
+  '제단의 불빛이 곱소.',
+  '가끔은 이렇게 앉아 쉬는 것도 좋은 법이오.',
+] as const
+export function idleLine(seed: number): string {
+  return pick(IDLE, seed)
+}

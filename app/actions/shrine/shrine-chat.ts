@@ -5,21 +5,30 @@ import { createClient } from '@/lib/supabase/server'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { recallMemories } from '@/lib/ai/memory'
 import { logger } from '@/lib/utils/logger'
-import { getMyShrine } from '@/app/actions/shrine/shrine'
+import { getSceneData } from '@/app/actions/shrine/scene'
+import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 
 const SHRINE_HISTORY_WINDOW = 8 // Gemini에 전달할 최근 메시지 수 (슬라이딩 윈도우)
 
-function buildShrineSystemPrompt(shrineName: string, itemNames: string[], memoryBlock: string): string {
+function buildShrineSystemPrompt(
+  shrineName: string,
+  itemNames: string[],
+  energyLine: string,
+  yongsinKo: string,
+  memoryBlock: string
+): string {
   const itemList = itemNames.length > 0 ? itemNames.join(', ') : '아직 아무것도 없음'
   const memorySection = memoryBlock ? `\n\n${memoryBlock}` : ''
-  return `당신은 ${shrineName}을 지키는 AI 신당 무당입니다.
+  return `당신은 ${shrineName}을 지키는 AI 신당 무당(신당지기)입니다.
 오늘 날짜: ${new Date().toLocaleDateString('ko-KR')}
-신당 봉헌물: ${itemList}
+방에 놓인 신물: ${itemList}
+신당의 기운 균형: ${energyLine}
+가장 부족한 기운(용신): ${yongsinKo} — 이 기운을 채우는 신물/행동을 자연스럽게 권하십시오.
 
 이 신당을 찾아온 사람과 대화하며 소원 성취와 복운에 대해 안내하십시오.
-봉헌물의 의미를 신당 기운과 연결해 설명하고, 300자 이내로 간결하게 답하십시오.
-어투는 무당 특유의 따뜻하고 신비로운 말투("~합니다", "~이옵니다")를 사용하십시오.
-소원 카테고리(건강/합격/인연/재물/가족/사업)와 연결된 조언을 자연스럽게 건네십시오.${memorySection}`
+방의 신물과 기운 상태를 근거로 구체적으로 조언하십시오 (예: "${yongsinKo} 기운이 얕으니 풍경을 하나 더 걸어보시게").
+300자 이내로 간결하게, 무당 특유의 따뜻하고 신비로운 말투("~합니다", "~하시게", "~이옵니다")로 답하십시오.
+소원 카테고리(건강/합격/인연/재물/가족/사업)와 연결된 조언을 건네십시오.${memorySection}`
 }
 
 export interface ShrineChatMessage {
@@ -39,13 +48,20 @@ export async function sendShrineChatMessage(
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
-    const shrine = await getMyShrine()
-    if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
+    const scene = await getSceneData()
+    if (!scene) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
-    const itemNames = shrine.shrine_items.map((i) => i.shrine_item_catalog.name)
+    const catalogById = indexCatalog(scene.catalog)
+    const { energy, yongsin } = computeEnergy(scene.profile.base, scene.placements, catalogById)
+    const itemNames = scene.placements
+      .map((p) => catalogById.get(p.catalogItemId)?.name)
+      .filter((n): n is string => !!n)
+    const energyLine = ELEMENTS.map((el) => `${EL_KO[el]}${energy[el]}`).join(' ')
+    const yongsinKo = EL_KO[scene.profile.yongsin ?? yongsin]
+
     // 신당 소유자의 장기 기억 top-3 주입 (본인 대상 기억)
     const memoryBlock = await recallMemories(user.id, null, 3)
-    const systemPrompt = buildShrineSystemPrompt(shrine.name, itemNames, memoryBlock)
+    const systemPrompt = buildShrineSystemPrompt(scene.shrineName, itemNames, energyLine, yongsinKo, memoryBlock)
 
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
     if (!apiKey) return { success: false, error: 'AI_NOT_CONFIGURED' }
@@ -66,7 +82,7 @@ export async function sendShrineChatMessage(
     const result = await chat.sendMessage(message)
     const response = result.response.text()
 
-    logger.log('[ShrineChat] message sent', { shrineId: shrine.id })
+    logger.log('[ShrineChat] message sent', { shrineId: scene.shrineId })
     return { success: true, response }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)

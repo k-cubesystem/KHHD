@@ -1,6 +1,14 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as RPointerEvent,
+} from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, MessageCircle } from 'lucide-react'
@@ -14,12 +22,18 @@ import {
   giveLine,
   keeperTapLine,
   resonanceLine,
+  idleLine,
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
 import { useShrineAudio } from './useShrineAudio'
+import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { saveShrineLayout, activateThemePack } from '@/app/actions/shrine/scene'
+import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { trackEvent } from '@/lib/analytics/ga4'
+
+/** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
+const FLAME_Y_OFFSET = 5
 
 interface Props {
   scene: SceneData
@@ -61,6 +75,15 @@ export function ShrineRoomClient({ scene }: Props) {
   const seenResonance = useRef<Set<Element>>(new Set())
   const keeperTaps = useRef(0)
   const dirty = useRef(false)
+  const effectsRef = useRef<EffectsHandle>(null)
+
+  // 저장된 점화 상태 → 불꽃 등록
+  useEffect(() => {
+    scene.placements.forEach((p) => {
+      if (p.state.lit) effectsRef.current?.setFlame(p.id, p.x, p.y - FLAME_Y_OFFSET, true)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
@@ -81,10 +104,24 @@ export function ShrineRoomClient({ scene }: Props) {
       .filter((e): e is { item: CatalogItem; qty: number } => !!e.item && e.qty > 0)
   }, [placements, scene.inventory, catalogById])
 
+  const lastActivity = useRef(Date.now())
   const keeperSay = useCallback((html: string, doBounce = true) => {
+    lastActivity.current = Date.now()
     setBubble(html)
     if (doBounce) setBounce((b) => b + 1)
   }, [])
+
+  // 신당지기 idle — 75초 무활동 시 잔잔한 혼잣말
+  useEffect(() => {
+    const iv = window.setInterval(() => {
+      if (editing) return
+      if (Date.now() - lastActivity.current > 75000) {
+        lastActivity.current = Date.now()
+        keeperSay(idleLine(Date.now()), true)
+      }
+    }, 15000)
+    return () => window.clearInterval(iv)
+  }, [editing, keeperSay])
 
   const spawnRing = useCallback((x: number, y: number, color: string) => {
     const id = ++localSeq
@@ -98,6 +135,7 @@ export function ShrineRoomClient({ scene }: Props) {
       if (seenResonance.current.has(hit.element)) return
       seenResonance.current.add(hit.element)
       spawnRing(hit.cx, hit.cy, EL_COLOR[hit.element])
+      effectsRef.current?.emit('sparkle', hit.cx, hit.cy)
       play('bara')
       toast.success(`⚡ 오행 공명! ${EL_KO[hit.element]} 기운 +5`)
       keeperSay(resonanceLine(hit.element))
@@ -117,9 +155,14 @@ export function ShrineRoomClient({ scene }: Props) {
         setPlacements((prev) => prev.map((q) => (q.id === p.id ? { ...q, state: { ...q.state, lit } } : q)))
         dirty.current = true
         play(b.sound ?? 'crackle')
-        if (lit && item.element) keeperSay(litLine(item.name, item.element))
+        effectsRef.current?.setFlame(p.id, p.x, p.y - FLAME_Y_OFFSET, lit)
+        if (lit) {
+          effectsRef.current?.emit('flame', p.x, p.y - FLAME_Y_OFFSET)
+          if (item.element) keeperSay(litLine(item.name, item.element))
+        }
       } else {
         play(b.sound ?? 'moktak')
+        if (b.tap === 'smoke') effectsRef.current?.emit('smoke', p.x, p.y - FLAME_Y_OFFSET)
         if (item.element) keeperSay(tapLine(item.element, Date.now()))
       }
       trackEvent({ action: 'shrine_tap', category: 'shrine', label: item.type })
@@ -136,13 +179,15 @@ export function ShrineRoomClient({ scene }: Props) {
       if (item?.behavior.give && Math.hypot(x - KEEPER_POS.x, y - KEEPER_POS.y) < KEEPER_GIVE_RADIUS) {
         play('bell')
         setBounce((b) => b + 1)
+        effectsRef.current?.emit('sparkle', KEEPER_POS.x, KEEPER_POS.y)
         toast(`🔮 신당지기가 ${item.name}을(를) 받았습니다`)
         keeperSay(giveLine(Date.now()))
+        if (isOwner) void recordKeeperGift(item.name)
         trackEvent({ action: 'keeper_give', category: 'shrine', label: item.type })
       }
       window.setTimeout(checkResonance, 0)
     },
-    [catalogById, play, keeperSay, checkResonance]
+    [catalogById, play, keeperSay, checkResonance, isOwner]
   )
 
   // ── 수납 (편집 모드) ──
@@ -150,6 +195,7 @@ export function ShrineRoomClient({ scene }: Props) {
     (p: Placement) => {
       setPlacements((prev) => prev.filter((q) => q.id !== p.id))
       dirty.current = true
+      effectsRef.current?.setFlame(p.id, 0, 0, false)
       play('moktak')
     },
     [play]
@@ -330,6 +376,9 @@ export function ShrineRoomClient({ scene }: Props) {
               </div>
             )
           })}
+
+        {/* 파티클 이펙트 */}
+        <EffectsCanvas ref={effectsRef} />
 
         {/* 신당지기 */}
         <button
