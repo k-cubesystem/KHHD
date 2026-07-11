@@ -75,7 +75,15 @@ const nextConfig: NextConfig = {
               "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com",
               "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net",
               "media-src 'self' blob: data:",
+              "base-uri 'self'",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
             ].join('; '),
+          },
+          // HTTPS 강제 (HTTP 다운그레이드/스트립 공격 방어). 프로덕션 HTTPS 전용, localhost(HTTP)는 브라우저가 무시.
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains',
           },
           {
             key: 'X-Frame-Options',

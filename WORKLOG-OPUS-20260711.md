@@ -89,6 +89,17 @@
 
 **⚠️ 사용자 액션 필요:** ①코드 배포 → ②프로덕션 재화기능 회귀확인(출석/룰렛/충전/구매/신당아이템) → ③S1b 마이그레이션 적용. 순서 엄수(뒤바뀌면 장애).
 
+### 🔵 S3 (부분) — 보안 헤더 보강
+
+기존 `next.config.ts`에 CSP·X-Frame-Options(DENY)·nosniff·Referrer-Policy·Permissions-Policy 이미 존재. 빠진 것 보강:
+
+- **HSTS 추가**: `Strict-Transport-Security: max-age=31536000; includeSubDomains` (preload은 되돌리기 어려워 제외).
+- CSP 강화: `base-uri 'self'`, `object-src 'none'`, `frame-ancestors 'none'` 추가.
+- 추가만(기존 로드 영향 없음). 결제 폼 고려해 `form-action`은 미추가.
+- ⚠️ **로컬 검증 불가**: 워크트리에 Supabase env 없어 dev 서버가 미들웨어에서 500(헤더 적용 전 단계). 기존 동작 헤더와 동일 문법이라 안전. **프로덕션 배포 후 securityheaders.com로 검증 필요.**
+
+**S3 남은 것**: rate limit 확장(AI·결제·로그인·가입), 업로드 매직바이트 검증 → 미착수(워크오더 권장순서상 A/D/F/C 이후).
+
 ### 사용자 승인/확인 필요 목록 (누적)
 
 - [ ] **S1b 마이그레이션 적용 순서**: ①코드(admin 클라이언트 전환) 배포 → ②S1b 마이그레이션 적용. 순서 뒤바뀌면 장애.
