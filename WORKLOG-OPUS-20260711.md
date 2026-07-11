@@ -12,7 +12,7 @@
 | ---------------------------------------------------- | ---------------------- | ---------------------- |
 | S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)         | get_advisors ERROR 0 ✓ |
 | S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | ✅ 코드완료·MIG대기    | 배포 후 적용           |
-| S2 — 앱 보안                                         | ⬜                     | —                      |
+| S2 — 앱 보안                                         | 🔵 점검클린·일부남음   | 시크릿·PII 통과        |
 | S3 — 인프라/헤더/rate limit                          | 🔵 헤더완료·나머지대기 | 배포후 검증            |
 | A — 이미지 에셋                                      | 🚫 차단(입력부재)      | 사용자 입력 필요       |
 | D — 신위 시스템                                      | 🔵 데이터·로직·서버    | 타입0·테스트24 ✓       |
@@ -142,6 +142,53 @@
 - (b) 복전=복채(wallets/만냥)로 차감 → `purchaseDeity` 1곳 통화 스위치 + 가격 재조정.
 - (c) 복전 신규 테이블 도입(2통화 UI, HANDOFF의 미래 항목) → 별도 스프린트.
 - 실 ₩ 결제(Toss)는 별도 confirmPayment 경로 — 미연동(승인 후).
+
+---
+
+## Track S2 — 앱 보안 🔵 (시크릿·PII 점검 통과 / AI·업로드 남음)
+
+### ✅ 점검 통과 (코드 변경 불필요)
+
+- **시크릿(S2-3)**: `.env`·`.env.local` gitignore 확인(내용 미열람) ✓ / 추적중 `.env` 없음 ✓ / `NEXT_PUBLIC_*SERVICE_ROLE` 오용 없음 ✓ / `createAdminClient`·`SUPABASE_SERVICE_ROLE_KEY`를 import하는 `'use client'` 파일 **없음**(서버 전용 유지) ✓ / 추적 파일에 하드코딩 JWT(`eyJ…`) 없음 ✓.
+- **PII(S2-2)**: 공개 신당 OG(`app/api/og/shrine/[userId]/route.tsx`)·공개 씬(`getPublicSceneData`)은 shrine.name/description(사용자 작성 공개콘텐츠)·아이템 이모지·방문/기원 수만 노출. **생년월일·본명·전화·이메일 등 프로필 PII select 없음** ✓.
+- **가격 서버검증(S2-1)**: 신규 신위/테마 구매(`purchaseDeity`/`purchaseThemePack`)는 가격을 서버 DB에서만 조회(클라값 무시) — Track D에서 반영 완료.
+
+### 🔲 남은 것 (미착수 — 위험/범위 사유)
+
+- **AI 프롬프트 인젝션 방어**(입력 길이 제한 + 시스템 프롬프트 격리): shaman-chat/신탁 입력 경로. Track C(대화)와 함께 하는 게 적절.
+- **업로드 매직바이트 검증**(관상 이미지): 삽입 지점이 `app/actions/ai/image.ts` — HANDOFF가 "분석 P0 버그 보류(사용자 승인 후)"로 지정한 파일. env 없이 블라인드 수정 위험 → **Track F와 함께 사용자 승인 후** 진행 권장.
+- **analysis_history/user_energy_profile/user_ai_memory RLS 전수**: S1a 점검 시 `auth.uid()=user_id` 정책 확인됨(양호). 추가 감사 여지.
+
+---
+
+## 📋 Fable 인계 요약 (오퍼스 → 페이블 검토용)
+
+### 오늘 완료 (커밋됨, 브랜치 `claude/determined-yonath`)
+
+| #   | 커밋               | 핵심                                                              | 검증                              |
+| --- | ------------------ | ----------------------------------------------------------------- | --------------------------------- |
+| 1   | `security(S1a)`    | anon 재화발행·PII열람 차단, kg RLS, 뷰 invoker, search_path, HIBP | **라이브 적용** / advisor ERROR 0 |
+| 2   | `security(S1b)`    | 재화 쓰기 service_role 전용화(코드) + 정책조임 마이그(미적용)     | tsc0 / 유닛51 / grep전수          |
+| 3   | `security(S3)`     | HSTS + CSP 강화                                                   | 배포후 검증필요                   |
+| 4   | `feat(shrine-3.0)` | 신위 17 시드+테이블(RLS), 배정 순수함수, 서버액션                 | **라이브 적용** / tsc0 / 테스트24 |
+
+### 🚨 사용자(승인) 없이는 못 넘어가는 게이트
+
+1. **S1b 적용 순서**: 코드 배포 → 프로덕션 재화기능 회귀확인 → S1b 마이그레이션 적용. (지금 라이브엔 authenticated 자가발행 구멍이 **아직 열려 있음** — anon만 닫힘.)
+2. **Track A 이미지**: style-refs 3장 + GEMINI_API_KEY 환경 필요. 그 전까지 신위는 이모지 폴백.
+3. **통화(복전 vs 복)**: 신위/테마 결제 통화 확정 필요(WORKLOG Track D 참조).
+
+### 다음 우선순위 제안 (env·승인 확보 후)
+
+- **[높음]** S1b 배포+적용(자가발행 완전 차단) → 실질 P0 마무리.
+- **[높음]** Track D UI(무료 좌정 화면·제단 렌더·강신 15초) + 인연 적립 로직 — 에셋(A) 후.
+- **[중]** Track F 분석 P0(파서↔스키마 일치, saveAnalysisHistory) + 업로드 매직바이트 — 승인 후.
+- **[중]** Track C 대화(SSE 스트리밍·감정→표정) — 신위 렌더 후.
+- **[낮음]** S3 rate limit 확장, S2 AI 인젝션 방어.
+
+### 로컬 환경 한계 (반복)
+
+워크트리에 `.env.local` 없음 → dev 서버 500(middleware Supabase 미초기화). 그래서 **모든 UI/e2e 검증 불가**. 타입체크·유닛테스트·DB(MCP)·advisor로만 검증함. UI 트랙(D-UI, C)은 env 있는 환경에서 이어가야 함.
 
 ---
 
