@@ -75,7 +75,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
             <Label htmlFor="password" className="text-stone-400 text-xs font-medium tracking-wide">
               비밀번호
             </Label>
-            <Link href="/auth/reset-password" className="text-xs text-stone-500 hover:text-gold-400 transition-colors">
+            <Link href="/auth/forgot-password" className="text-xs text-stone-500 hover:text-gold-400 transition-colors">
               비밀번호 찾기
             </Link>
           </div>
