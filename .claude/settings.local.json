@@ -1,6 +1,8 @@
 {
   "permissions": {
     "allow": [
+      "Bash(setx:*)",
+      "Bash(reg query:*)",
       "Bash(npm run build:*)",
       "Bash(ping:*)",
       "Bash(npm run dev:*)",
