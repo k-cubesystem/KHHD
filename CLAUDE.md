@@ -11,6 +11,15 @@ AI 모델: PRO(gemini-3.1-pro-preview) / FLASH(gemini-3-flash-preview)
 npm run dev | build | test | e2e | lint
 ```
 
+## 인프라 · 배포 (Deploy)
+
+- **프로덕션**: k-haehwadang.com (Vercel 프로젝트 `hhd` / cubesystems-projects). CLI 로그인 지속(pdkno1-cube).
+- **⚠️ 배포 브랜치**: 프로덕션은 `claude/determined-yonath` 브랜치에서 나감 — **main엔 신당 2.0이 없음**(브랜치가 main보다 12커밋 앞섬). 메인 체크아웃(main)에서 배포하면 신당 2.0 소실 주의.
+  - 배포법: 워크트리에서 메인의 `.vercel/project.json`을 `.vercel/`로 복사 후 `vercel deploy --prod --yes` (원격 빌드, 실패해도 프로덕션 무영향)
+- **Supabase**: 프로젝트 `plzvanxcxjkaazcfrtls`. DB·마이그레이션은 MCP(`mcp__supabase__*`). **인증/URL/provider 설정은 MCP에 없음 → Management API** 사용: 토큰은 사용자 환경변수 `SUPABASE_ACCESS_TOKEN`에 상주. 예) `curl -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" https://api.supabase.com/v1/projects/plzvanxcxjkaazcfrtls/config/auth`
+- **OAuth**: Google·Kakao provider 활성화됨. Site URL=`https://k-haehwadang.com`, Redirect URLs=`https://k-haehwadang.com/**`,`http://localhost:3000/**`. (OAuth 앱 최초 생성만 콘솔 전용, 이후 설정 변경은 API로 자동화)
+- **로컬 dev**: `.claude/launch.json`의 `dev`(npm run dev, 포트 3000). 로그인 등 로컬 확인 시 필요. 상시 확인은 프로덕션 권장.
+
 ## 슬래시 명령어
 
 /design /build /review /security /data /docs /status
