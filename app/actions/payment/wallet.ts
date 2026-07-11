@@ -177,10 +177,13 @@ export async function deductTalisman(
   // Get cost
   const cost = customAmount || (await getFeatureCost(featureKey))
 
+  // 복채 차감은 service_role 전용 — 인증·한도체크(위)를 통과한 본인 계정에만.
+  const admin = createAdminClient()
+
   // --- Atomic deduction via RPC ---
   // PostgreSQL function: deduct_wallet_balance(p_user_id UUID, p_amount INT)
   // Returns new balance on success, -1 if wallet not found, -2 if insufficient balance
-  const { data: rpcResult, error: rpcError } = await supabase.rpc('deduct_wallet_balance', {
+  const { data: rpcResult, error: rpcError } = await admin.rpc('deduct_wallet_balance', {
     p_user_id: user.id,
     p_amount: cost,
   })
@@ -192,7 +195,7 @@ export async function deductTalisman(
     logger.warn('[Wallet] RPC deduct_wallet_balance unavailable, using fallback:', rpcError.message)
 
     // Step 1: Read current balance
-    const { data: wallet, error: walletError } = await supabase
+    const { data: wallet, error: walletError } = await admin
       .from('wallets')
       .select('balance')
       .eq('user_id', user.id)
@@ -214,7 +217,7 @@ export async function deductTalisman(
 
     // Step 2: Conditional UPDATE — .gte('balance', cost) ensures no negative balance
     // even if another request deducted between read and write
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await admin
       .from('wallets')
       .update({ balance: wallet.balance - cost })
       .eq('user_id', user.id)
@@ -287,8 +290,11 @@ export async function addTalismans(
 
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
+  // 복채 발행(잔액 증액)은 service_role 전용 — 인증(위)을 통과한 본인 계정에만.
+  const admin = createAdminClient()
+
   // Atomic balance increment via RPC — prevents race conditions
-  const { data: newBalance, error: rpcError } = await supabase.rpc('add_wallet_balance', {
+  const { data: newBalance, error: rpcError } = await admin.rpc('add_wallet_balance', {
     p_user_id: user.id,
     p_amount: amount,
   })
@@ -296,7 +302,7 @@ export async function addTalismans(
   if (rpcError) {
     logger.error('[Wallet] add_wallet_balance RPC failed, using fallback:', rpcError)
     // Fallback: upsert with increment — still better than read-then-write
-    const { error: upsertError } = await supabase
+    const { error: upsertError } = await admin
       .from('wallets')
       .upsert({ user_id: user.id, balance: amount }, { onConflict: 'user_id' })
     if (upsertError) {

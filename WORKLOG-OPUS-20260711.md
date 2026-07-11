@@ -8,16 +8,16 @@
 
 ## 진행 요약 (라이브 갱신)
 
-| Track                                                | 상태                 | 게이트                 |
-| ---------------------------------------------------- | -------------------- | ---------------------- |
-| S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)       | get_advisors ERROR 0 ✓ |
-| S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | 🔵 진행중(코드+파일) | 배포 후 적용           |
-| S2 — 앱 보안                                         | ⬜                   | —                      |
-| S3 — 인프라/헤더/rate limit                          | ⬜                   | —                      |
-| A — 이미지 에셋                                      | ⬜                   | —                      |
-| D — 신위 시스템                                      | ⬜                   | —                      |
-| F — 분석 고도화                                      | ⬜                   | —                      |
-| C — 신과의 대화                                      | ⬜                   | —                      |
+| Track                                                | 상태                | 게이트                 |
+| ---------------------------------------------------- | ------------------- | ---------------------- |
+| S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)      | get_advisors ERROR 0 ✓ |
+| S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | ✅ 코드완료·MIG대기 | 배포 후 적용           |
+| S2 — 앱 보안                                         | ⬜                  | —                      |
+| S3 — 인프라/헤더/rate limit                          | ⬜                  | —                      |
+| A — 이미지 에셋                                      | ⬜                  | —                      |
+| D — 신위 시스템                                      | ⬜                  | —                      |
+| F — 분석 고도화                                      | ⬜                  | —                      |
+| C — 신과의 대화                                      | ⬜                  | —                      |
 
 ---
 
@@ -61,6 +61,33 @@
 - `add_wallet_balance`/`add_bok_points`/`get_family_*`: anon=**false**, authenticated=true, service_role=true ✓ → **비로그인 무한충전·타인PII열람 경로 차단됨**
 
 **남은 advisor 항목(계획대로):** authenticated-exec WARN 33(S1b, 배포 후), always-true INSERT 4(S1b/S2), anon-exec 3(의도적), INFO 2(rate_limit_entries·saju_context_cache = service 전용 테이블, 무해).
+
+### ✅ S1b 코드 완료 (마이그레이션 파일 대기 — 배포 후 적용)
+
+**문제 재확인:** 인증 사용자가 ①MINT RPC 직접호출 또는 ②재화 테이블 직접 UPDATE(자기 row)로 복채/복포인트/아이템/AI할당량을 **자가발행** 가능. RLS `wallets_update_own` 등이 `WITH CHECK` 없이 `auth.uid()=user_id`만 검사 → 잔액 임의변경 성공.
+
+**코드 변경(커밋됨, 배포 시 안전 — admin 클라이언트는 RLS 우회라 마이그레이션 적용 여부와 무관하게 동작):**
+재화 쓰기를 전부 `service_role`(admin) 클라이언트 경유로 전환. 인증·비즈니스검증은 유저 클라이언트 유지.
+
+- `wallet.ts`: `addTalismans`(add_wallet_balance)·`deductTalisman`(deduct_wallet_balance) RPC+폴백 → admin
+- `bok-points.ts`: `addBokPoints`(add_bok_points) → admin
+- `inventory.ts`: `purchaseToInventory`(grant_shrine_item) → admin
+- `scene.ts`: 스타터킷 인벤토리 insert → admin
+- `roulette.ts`·`attendance.ts`·`daily-check.ts`: 룰렛/출석 복채 지급 → admin(`db=admin ?? supabase`)
+- `products.ts`: 테스트충전 → admin (+null 가드)
+- `admin/subscriptions/actions.ts`: `grantTalismans`(타인 지갑 대상 — 기존엔 RLS에 막혀 사실상 깨져 있던 것) → admin 교체
+- `gemini-rate-limiter.ts`: `acquire_gemini_token`(공유 토큰버킷) → admin
+- 이미 admin이던 곳(shaman-chat 질문권차감, wallet confirmPayment/보너스, open-event, profile 지갑생성)은 변경 없음.
+
+**마이그레이션 파일(`20260711_security_s1b_wallet_integrity.sql`) — ⚠️ 적용 안 함:**
+
+- MINT/자산 함수 6종 `authenticated` EXECUTE 회수(add_wallet_balance/deduct_wallet_balance/add_bok_points/add_talisman/grant_shrine_item/acquire_gemini_token)
+- `wallets`·`bok_points`: 자가 UPDATE/INSERT 정책 제거(SELECT 본인만 유지)
+- `user_shrine_inventory`·`ai_chat_usage`: ALL→SELECT 본인만(쓰기는 SECURITY DEFINER RPC/service_role)
+
+**검증:** 타입 `tsc --noEmit` EXIT 0 ✓ / 유닛테스트 51 pass(실패16=e2e Playwright 수집오류, 무관) ✓ / 재화 4테이블 직접쓰기 경로 전수 admin 전환 확인(grep) ✓.
+
+**⚠️ 사용자 액션 필요:** ①코드 배포 → ②프로덕션 재화기능 회귀확인(출석/룰렛/충전/구매/신당아이템) → ③S1b 마이그레이션 적용. 순서 엄수(뒤바뀌면 장애).
 
 ### 사용자 승인/확인 필요 목록 (누적)
 

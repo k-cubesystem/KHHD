@@ -117,16 +117,14 @@ export async function checkInAttendance() {
     const weeklyBonus = isLastDayOfWeek ? 3 : 0
     const totalReward = baseReward + weeklyBonus
 
+    // 복채 지급(잔액 쓰기)은 service_role 전용 — 위에서 만든 db(admin ?? supabase) 재사용.
+
     // 1. 먼저 wallet이 존재하는지 확인하고 없으면 생성
-    const { data: existingWallet } = await supabase
-      .from('wallets')
-      .select('balance')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const { data: existingWallet } = await db.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
 
     if (!existingWallet) {
       logger.log(`[Attendance] Creating wallet for user ${user.id}`)
-      const { error: walletCreateError } = await supabase.from('wallets').insert({ user_id: user.id, balance: 0 })
+      const { error: walletCreateError } = await db.from('wallets').insert({ user_id: user.id, balance: 0 })
 
       if (walletCreateError) {
         logger.error('[Attendance] Failed to create wallet:', walletCreateError)
@@ -153,7 +151,7 @@ export async function checkInAttendance() {
 
     // 3. 복채 지급 - RPC 함수 사용
     logger.log(`[Attendance] Crediting ${totalReward} bokchae via RPC...`)
-    const { data: rpcResult, error: rpcError } = await supabase.rpc('add_bokchae', {
+    const { data: rpcResult, error: rpcError } = await db.rpc('add_bokchae', {
       p_user_id: user.id,
       p_amount: totalReward,
       p_reason: isLastDayOfWeek
@@ -172,10 +170,7 @@ export async function checkInAttendance() {
 
       logger.log(`[Attendance] Direct credit: ${currentBalance} -> ${newBalance}`)
 
-      const { error: updateError } = await supabase
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('user_id', user.id)
+      const { error: updateError } = await db.from('wallets').update({ balance: newBalance }).eq('user_id', user.id)
 
       if (updateError) {
         logger.error('[Attendance] Failed to update wallet:', updateError)

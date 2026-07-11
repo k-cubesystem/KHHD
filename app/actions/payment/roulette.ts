@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/auth'
 import { logger } from '@/lib/utils/logger'
 
@@ -121,6 +122,9 @@ export async function spinRoulette() {
 
     logger.log(`[Roulette] Selected reward:`, selectedReward)
 
+    // 복채 지급(잔액 쓰기)은 service_role 전용 — 인증(위)을 통과한 본인 계정에만.
+    const admin = createAdminClient()
+
     // 1. 먼저 wallet이 존재하는지 확인하고 없으면 생성
     const { data: existingWallet } = await supabase
       .from('wallets')
@@ -130,7 +134,7 @@ export async function spinRoulette() {
 
     if (!existingWallet) {
       logger.log(`[Roulette] Creating wallet for user ${user.id}`)
-      const { error: walletCreateError } = await supabase.from('wallets').insert({ user_id: user.id, balance: 0 })
+      const { error: walletCreateError } = await admin.from('wallets').insert({ user_id: user.id, balance: 0 })
 
       if (walletCreateError) {
         logger.error('[Roulette] Failed to create wallet:', walletCreateError)
@@ -162,8 +166,8 @@ export async function spinRoulette() {
     if (rewardType === 'bokchae' && rewardValue > 0) {
       logger.log(`[Roulette] Crediting ${rewardValue} bokchae via RPC...`)
 
-      // add_bokchae RPC 시도
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('add_bokchae', {
+      // add_bokchae RPC 시도 (재화 발행 → service_role)
+      const { data: rpcResult, error: rpcError } = await admin.rpc('add_bokchae', {
         p_user_id: user.id,
         p_amount: rewardValue,
         p_reason: `행운의 룰렛 당첨 (${selectedReward.label})`,
@@ -180,7 +184,7 @@ export async function spinRoulette() {
 
         logger.log(`[Roulette] Direct credit: ${oldBalance} -> ${newBalance}`)
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await admin
           .from('wallets')
           .update({ balance: newBalance })
           .eq('user_id', user.id)

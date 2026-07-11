@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/auth'
 import { addTalismans } from '@/app/actions/payment/wallet'
 import { logger } from '@/lib/utils/logger'
@@ -175,8 +176,8 @@ export async function grantTalismans(
     return { success: false, error: '부적 수량은 1~100 사이여야 합니다.' }
   }
 
-  // 직접 wallet 업데이트 (Service Role 필요)
-  const supabase = await createClient()
+  // 직접 wallet 업데이트 (Service Role 필요 — 타인 지갑 대상이므로 admin 클라이언트 필수)
+  const supabase = createAdminClient()
 
   // 먼저 wallet 존재 확인
   const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', userId).single()

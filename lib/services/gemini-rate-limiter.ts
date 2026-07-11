@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // ============================================================
 // 모델별 토큰 단가 (USD per 1M tokens, 2026년 기준)
@@ -55,7 +56,8 @@ async function acquireToken(): Promise<{
   model: string
 }> {
   try {
-    const supabase = await createClient()
+    // 공유 토큰 버킷은 service_role 전용(로그인 사용자의 토큰 고갈 그리핑 방어)
+    const supabase = createAdminClient()
     const { data, error } = await supabase.rpc('acquire_gemini_token')
     if (error) {
       // RPC 오류 시 허용 (DB 이슈로 API 차단하지 않음)

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints, getBokPointsBalance } from '@/app/actions/payment/bok-points'
@@ -97,7 +98,9 @@ export async function purchaseToInventory(
     newBalance = res.balance
   }
 
-  const { data: qty, error } = await supabase.rpc('grant_shrine_item', {
+  // 아이템 지급은 service_role 전용 RPC — 인증·차감(위)을 통과한 본인 계정에만.
+  const admin = createAdminClient()
+  const { data: qty, error } = await admin.rpc('grant_shrine_item', {
     p_user_id: user.id,
     p_item_id: catalogItemId,
     p_qty: 1,

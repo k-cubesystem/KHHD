@@ -120,10 +120,10 @@ export async function recordDailyAttendance() {
       return { success: false, error: insertError.message }
     }
 
-    // 복채 지급 (add_bokchae RPC 우선 시도)
+    // 복채 지급 (add_bokchae RPC 우선 시도) — 재화 발행은 service_role 전용(위 db=admin?? 재사용).
     const reason = isLastDayOfWeek ? `출석 체크 (기본 1만냥 + 주간 보너스 3만냥)` : `출석 체크 (1만냥)`
 
-    const { error: rpcError } = await supabase.rpc('add_bokchae', {
+    const { error: rpcError } = await db.rpc('add_bokchae', {
       p_user_id: user.id,
       p_amount: totalReward,
       p_reason: reason,
@@ -131,11 +131,11 @@ export async function recordDailyAttendance() {
 
     if (rpcError) {
       // RPC 없으면 직접 업데이트
-      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).single()
+      const { data: wallet } = await db.from('wallets').select('balance').eq('user_id', user.id).single()
 
       const currentBalance = wallet?.balance || 0
 
-      await supabase
+      await db
         .from('wallets')
         .upsert({ user_id: user.id, balance: currentBalance + totalReward }, { onConflict: 'user_id' })
 

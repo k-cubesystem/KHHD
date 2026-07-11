@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { getSajuData } from '@/lib/domain/saju/saju'
@@ -161,7 +162,8 @@ async function ensureStarterKit(supabase: SupabaseServer, userId: string, shrine
       return c ? { user_id: userId, catalog_item_id: c.id, qty } : null
     })
     .filter((r): r is { user_id: string; catalog_item_id: string; qty: number } => r !== null)
-  if (invRows.length) await supabase.from('user_shrine_inventory').insert(invRows)
+  // 인벤토리 지급은 service_role 전용(무료 아이템 자가발행 차단). 배치(placements)는 본인 소유라 유저 클라이언트 유지.
+  if (invRows.length) await createAdminClient().from('user_shrine_inventory').insert(invRows)
 
   // 기본 배치 (방을 살아있게)
   const defaults: Array<[string, number, number]> = [

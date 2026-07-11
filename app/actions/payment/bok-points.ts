@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import type { BokTier } from '@/lib/config/bok-tiers'
 
@@ -70,7 +71,9 @@ export async function addBokPoints(
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
   try {
-    const { data: newBalance, error: rpcError } = await supabase.rpc('add_bok_points', {
+    // 재화(bok_points) 발행은 service_role 전용 — 인증 검증(위)을 통과한 본인 계정에만 적립.
+    const admin = createAdminClient()
+    const { data: newBalance, error: rpcError } = await admin.rpc('add_bok_points', {
       p_user_id: user.id,
       p_amount: amount,
     })

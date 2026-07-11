@@ -118,12 +118,16 @@ export async function addTestCredits(amount: number = 10) {
     // 로그 실패해도 지갑 충전 계속 진행
   }
 
-  // 2. wallets 테이블에 직접 복채 충전
-  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', userId).single()
+  // 2. wallets 테이블에 직접 복채 충전 (재화 발행 → service_role 전용)
+  const admin = createAdminClient()
+  if (!admin) {
+    return { success: false, error: '서버 설정 오류로 충전할 수 없습니다.' }
+  }
+  const { data: wallet } = await admin.from('wallets').select('balance').eq('user_id', userId).single()
 
   const currentBalance = wallet?.balance || 0
 
-  const { error: walletError } = await supabase
+  const { error: walletError } = await admin
     .from('wallets')
     .upsert({ user_id: userId, balance: currentBalance + amount })
 
