@@ -140,7 +140,8 @@ export async function updateSubscriptionStatus(
   newStatus: string
 ): Promise<{ success: boolean; error?: string }> {
   await checkAdminRole()
-  const supabase = await createClient()
+  // 타인 구독 대상이므로 admin(service_role) 필수 — 유저클라는 RLS에 막힘 (Fable 검토 R9)
+  const supabase = createAdminClient()
 
   const validStatuses = ['ACTIVE', 'PAUSED', 'CANCELLED', 'EXPIRED']
   if (!validStatuses.includes(newStatus)) {

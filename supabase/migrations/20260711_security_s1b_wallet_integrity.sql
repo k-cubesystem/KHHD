@@ -47,3 +47,26 @@ CREATE POLICY inventory_select_own ON public.user_shrine_inventory
 DROP POLICY IF EXISTS ai_chat_usage_all_own ON public.ai_chat_usage;
 CREATE POLICY ai_chat_usage_select_own ON public.ai_chat_usage
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- ============================================================
+-- 3b. 추가 자가발행 벡터 차단 (Fable 검토 R1·R2·R4)
+--     S1b 최초본이 놓친 "유저 쓰기 가능 가치 테이블" — 같은 방식으로 조인다.
+--     정당한 쓰기는 전부 admin/웹훅/크론(service_role) 경유임을 확인함.
+-- ============================================================
+
+-- subscriptions: 결제 없이 유료 멤버십 자가발급 차단 (R1, mint급)
+--   정당 쓰기 = 웹훅(toss)/크론(billing)/admin 뿐. 유저클라 정당 insert 없음.
+DROP POLICY IF EXISTS subscriptions_insert_own ON public.subscriptions;
+DROP POLICY IF EXISTS subscriptions_update_own ON public.subscriptions;
+-- (subscriptions_select_own 유지: 본인 구독 조회)
+
+-- user_theme_packs: 유료 테마팩 자가지급 차단 (R2). 지급은 purchaseThemePack(admin) 경유.
+DROP POLICY IF EXISTS user_theme_packs_own ON public.user_theme_packs;
+CREATE POLICY user_theme_packs_select_own ON public.user_theme_packs
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+-- daily_usage_logs: 일일 소비한도 자가리셋 차단 (R4). 기록은 incrementDailyUsage(admin) 경유.
+--   ⚠️ 선행: incrementDailyUsage 를 admin 클라이언트로 전환한 코드가 배포돼 있어야 함(커밋 포함).
+DROP POLICY IF EXISTS daily_usage_logs_all_own ON public.daily_usage_logs;
+CREATE POLICY daily_usage_logs_select_own ON public.daily_usage_logs
+  FOR SELECT TO authenticated USING (auth.uid() = user_id);

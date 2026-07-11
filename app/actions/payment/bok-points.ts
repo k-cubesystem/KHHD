@@ -98,6 +98,45 @@ export async function addBokPoints(
   }
 }
 
+/**
+ * 복(bok_points) 원자적 차감 — service_role RPC `deduct_bok_points`(balance>=amount 가드).
+ * addBokPoints(-x)의 TOCTOU/음수 문제 대체(Fable 검토 R5). 부족 시 error='INSUFFICIENT_POINTS'.
+ */
+export async function deductBokPoints(
+  amount: number,
+  type: BokTransactionType,
+  familyMemberId?: string,
+  description?: string
+): Promise<{ success: boolean; balance?: number; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: '로그인이 필요합니다.' }
+  if (amount <= 0) return { success: false, error: 'INVALID_AMOUNT' }
+
+  const admin = createAdminClient()
+  const { data: newBalance, error: rpcError } = await admin.rpc('deduct_bok_points', {
+    p_user_id: user.id,
+    p_amount: amount,
+  })
+  if (rpcError) {
+    logger.error('[BokPoints] deduct RPC error:', rpcError)
+    return { success: false, error: '복 차감에 실패했습니다.' }
+  }
+  if ((newBalance as number) === -2) return { success: false, error: 'INSUFFICIENT_POINTS' }
+
+  await admin.from('bok_transactions').insert({
+    user_id: user.id,
+    family_member_id: familyMemberId || null,
+    amount: -amount,
+    type,
+    description: description || `${type} -${amount}p`,
+  })
+
+  return { success: true, balance: newBalance as number }
+}
+
 export async function getBokMissions(): Promise<BokMission[]> {
   const supabase = await createClient()
   const {

@@ -5,9 +5,17 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { trackEvent } from '@/lib/analytics/ga4'
-import { addBokPoints, getBokPointsBalance } from '@/app/actions/payment/bok-points'
+import { addBokPoints, deductBokPoints } from '@/app/actions/payment/bok-points'
 import { assignGuardian } from '@/lib/domain/shrine/deities'
 import { isElement } from '@/lib/domain/shrine/types'
+
+/**
+ * ⚠️ 통화 결정 대기 (Fable 검토 R3 / WORKLOG Track D).
+ * PRD는 신위/테마를 "복전(유료)"으로 규정했으나 현재 구현은 복(bok_points=무료 적립형) 차감.
+ * 무료 통화로 프리미엄을 팔면 매출 누수 → 통화(복채/복전) 확정 전까지 유료 구매를 막는다.
+ * (UI 미노출 상태라 앱 영향 없음. 확정 후 true 로 전환하며 차감 통화도 함께 결정.)
+ */
+const PREMIUM_CURRENCY_READY = false
 
 export interface DeityAura {
   accent: string | null
@@ -219,10 +227,9 @@ export async function seatDeity(deityId: string): Promise<{ success: boolean; er
 }
 
 /**
- * 신위 구매(복 결제). 가격은 **서버 DB 값만 신뢰**(클라 전송값 무시).
- * 영구 소장(upsert) + GA4. tier1(수호신)은 무료 좌정 경로이므로 구매 대상 아님.
- * ⚠️ 통화 결정 대기: 현재 기존 상점(아이템·테마)과 동일하게 price_bok=복(bok_points) 차감.
- *    "복전(유료)" 별도 통화로 갈지 사용자 확정 필요(WORKLOG).
+ * 신위 구매. 가격은 **서버 DB 값만 신뢰**(클라 전송값 무시). 차감은 원자적(deduct_bok_points).
+ * 영구 소장 + GA4. tier1(수호신)은 무료 좌정 경로이므로 구매 대상 아님.
+ * ⚠️ 유료 구매는 통화 확정(PREMIUM_CURRENCY_READY) 전까지 차단(R3).
  */
 export async function purchaseDeity(
   deityCode: string
@@ -242,6 +249,11 @@ export async function purchaseDeity(
   if (!deity || !deity.is_active) return { success: false, error: 'DEITY_NOT_FOUND' }
   if (deity.tier <= 1) return { success: false, error: 'FREE_GUARDIAN_NOT_PURCHASABLE' }
 
+  const price = deity.price_bok
+  if (price > 0 && !PREMIUM_CURRENCY_READY) {
+    return { success: false, error: 'PREMIUM_CURRENCY_NOT_CONFIGURED' }
+  }
+
   // 이미 보유 시 중복 결제 방지
   const { data: existing } = await supabase
     .from('user_shrine_deities')
@@ -251,22 +263,18 @@ export async function purchaseDeity(
     .maybeSingle()
   if (existing) return { success: false, error: 'ALREADY_OWNED' }
 
-  // 잔액 선검증 (음수 방지)
-  const price = deity.price_bok
+  let newBalance: number | undefined
   if (price > 0) {
-    const bal = await getBokPointsBalance()
-    if (bal.balance < price) return { success: false, error: 'INSUFFICIENT_POINTS' }
-
-    const res = await addBokPoints(-price, 'SHRINE_ITEM_PURCHASE', undefined, `신위 좌정 (${deityCode})`)
-    if (!res.success) return { success: false, error: 'PAYMENT_FAILED' }
+    const res = await deductBokPoints(price, 'SHRINE_ITEM_PURCHASE', undefined, `신위 좌정 (${deityCode})`)
+    if (!res.success) return { success: false, error: res.error ?? 'PAYMENT_FAILED' }
+    newBalance = res.balance
   }
 
   await grantDeity(user.id, deity.id, 'purchase')
 
   trackEvent({ action: 'deity_purchase', category: 'shrine', label: deityCode, value: price })
   revalidatePath('/protected/shrine')
-  const bal = await getBokPointsBalance()
-  return { success: true, newBalance: bal.balance }
+  return { success: true, newBalance }
 }
 
 /**
@@ -298,12 +306,15 @@ export async function purchaseThemePack(
   if (owned) return { success: false, error: 'ALREADY_OWNED' }
 
   const price = pack.price_bok
-  if (price > 0) {
-    const bal = await getBokPointsBalance()
-    if (bal.balance < price) return { success: false, error: 'INSUFFICIENT_POINTS' }
+  if (price > 0 && !PREMIUM_CURRENCY_READY) {
+    return { success: false, error: 'PREMIUM_CURRENCY_NOT_CONFIGURED' }
+  }
 
-    const res = await addBokPoints(-price, 'SHRINE_ITEM_PURCHASE', undefined, `테마팩 구매 (${packCode})`)
-    if (!res.success) return { success: false, error: 'PAYMENT_FAILED' }
+  let newBalance: number | undefined
+  if (price > 0) {
+    const res = await deductBokPoints(price, 'SHRINE_ITEM_PURCHASE', undefined, `테마팩 구매 (${packCode})`)
+    if (!res.success) return { success: false, error: res.error ?? 'PAYMENT_FAILED' }
+    newBalance = res.balance
   }
 
   const admin = createAdminClient()
@@ -317,6 +328,5 @@ export async function purchaseThemePack(
 
   trackEvent({ action: 'theme_pack_purchase', category: 'shrine', label: packCode, value: price })
   revalidatePath('/protected/shrine')
-  const bal = await getBokPointsBalance()
-  return { success: true, newBalance: bal.balance }
+  return { success: true, newBalance }
 }

@@ -185,8 +185,11 @@ export async function incrementDailyUsage(amount: number = 1): Promise<{ success
 
   const today = new Date().toISOString().split('T')[0]
 
+  // 일일 사용량 기록은 service_role 전용(유저가 자기 한도를 리셋하지 못하도록 — Fable 검토 R4).
+  const admin = createAdminClient()
+
   // Upsert usage log
-  const { error } = await supabase.from('daily_usage_logs').upsert(
+  const { error } = await admin.from('daily_usage_logs').upsert(
     {
       user_id: user.id,
       usage_date: today,
@@ -201,7 +204,7 @@ export async function incrementDailyUsage(amount: number = 1): Promise<{ success
   // If record exists, increment
   if (error && error.code === '23505') {
     // Unique constraint violation - record exists, increment it
-    const { data: existing } = await supabase
+    const { data: existing } = await admin
       .from('daily_usage_logs')
       .select('talismans_used')
       .eq('user_id', user.id)
@@ -209,7 +212,7 @@ export async function incrementDailyUsage(amount: number = 1): Promise<{ success
       .single()
 
     if (existing) {
-      const { error: updateError } = await supabase
+      const { error: updateError } = await admin
         .from('daily_usage_logs')
         .update({ talismans_used: existing.talismans_used + amount })
         .eq('user_id', user.id)
