@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints, getBokPointsBalance } from '@/app/actions/payment/bok-points'
+import { addBokPoints, deductBokPoints, getBokPointsBalance } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { parseBehavior, isElement, isLayer, type CatalogItem, type SizeGrade } from '@/lib/domain/shrine/types'
 
@@ -93,8 +93,9 @@ export async function purchaseToInventory(
 
   let newBalance: number | undefined
   if (item.price_bok_points > 0) {
-    const res = await addBokPoints(-item.price_bok_points, 'SHRINE_ITEM_PURCHASE', undefined, `${item.name} 구매`)
-    if (!res.success) return { success: false, error: 'INSUFFICIENT_POINTS' }
+    // 원자적 차감(잔액 가드) — 기존 addBokPoints(-x)는 잔액검증 없어 음수 가능 (Fable 검토 R5)
+    const res = await deductBokPoints(item.price_bok_points, 'SHRINE_ITEM_PURCHASE', undefined, `${item.name} 구매`)
+    if (!res.success) return { success: false, error: res.error ?? 'INSUFFICIENT_POINTS' }
     newBalance = res.balance
   }
 
