@@ -8,16 +8,16 @@
 
 ## 진행 요약 (라이브 갱신)
 
-| Track                                                | 상태                | 게이트                 |
-| ---------------------------------------------------- | ------------------- | ---------------------- |
-| S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)      | get_advisors ERROR 0 ✓ |
-| S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | ✅ 코드완료·MIG대기 | 배포 후 적용           |
-| S2 — 앱 보안                                         | ⬜                  | —                      |
-| S3 — 인프라/헤더/rate limit                          | ⬜                  | —                      |
-| A — 이미지 에셋                                      | ⬜                  | —                      |
-| D — 신위 시스템                                      | ⬜                  | —                      |
-| F — 분석 고도화                                      | ⬜                  | —                      |
-| C — 신과의 대화                                      | ⬜                  | —                      |
+| Track                                                | 상태                   | 게이트                 |
+| ---------------------------------------------------- | ---------------------- | ---------------------- |
+| S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)         | get_advisors ERROR 0 ✓ |
+| S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | ✅ 코드완료·MIG대기    | 배포 후 적용           |
+| S2 — 앱 보안                                         | ⬜                     | —                      |
+| S3 — 인프라/헤더/rate limit                          | 🔵 헤더완료·나머지대기 | 배포후 검증            |
+| A — 이미지 에셋                                      | 🚫 차단(입력부재)      | 사용자 입력 필요       |
+| D — 신위 시스템                                      | 🔵 데이터·로직·서버    | 타입0·테스트24 ✓       |
+| F — 분석 고도화                                      | ⬜                     | —                      |
+| C — 신과의 대화                                      | ⬜                     | —                      |
 
 ---
 
@@ -100,8 +100,53 @@
 
 **S3 남은 것**: rate limit 확장(AI·결제·로그인·가입), 업로드 매직바이트 검증 → 미착수(워크오더 권장순서상 A/D/F/C 이후).
 
+---
+
+## Track A — 이미지 에셋 🚫 실행 차단 (사용자 입력 필요)
+
+파이프라인(`scripts/shrine-assets/`)은 존재하나 **실행 불가**:
+
+1. **style-refs 부재**: `assets-src/shrine/style-refs/ref1~3.png`(「설빛 온기」 시안)는 사용자 첨부분 — 없음.
+2. **GEMINI_API_KEY 부재**: 워크트리에 `.env.local` 없음(규칙상 편집·읽기 금지). generate.mjs 실행 불가.
+3. **모델 ID 미검증**: `generate.mjs` 기본 `gemini-3.1-flash-image` — Gemini 이미지 모델 실사용 가능 여부를 문서/API로 확인 필요(앱 텍스트 모델 PRO=gemini-3.1-pro-preview/FLASH=gemini-3-flash-preview와 별개). 실행 환경 없이 확정 불가.
+
+→ **사용자 액션**: ①style-refs 3장 첨부 ②GEMINI_API_KEY 있는 환경에서 `node scripts/shrine-assets/generate.mjs base` 실행 ③산출물 `public/shrine/deities/{code}/`에 배치 시 코드변경 0(DB `shrine_deities.sprite_url` 채우면 됨). 게이트(수호신6 base+표정)는 이 입력 이후 가능.
+
+---
+
+## Track D — 신위 시스템 🔵 (데이터·로직·서버 완료 / UI·인연적립 남음)
+
+### ✅ 완료·검증
+
+1. **마이그레이션 `20260711_shrine_deities.sql` (라이브 적용됨)**:
+   - `shrine_deities`(17신위 카탈로그, 공개읽기 RLS), `user_shrine_deities`(보유, 본인SELECT), `user_deity_bonds`(인연4단계, 본인SELECT), `shrines.main_deity_id`, `profiles.focus_areas`(새 프로젝트 누락분 재추가).
+   - **처음부터 RLS 제대로**(S1 학습): 카탈로그=anon/authed SELECT·service_role쓰기, 유저테이블=본인SELECT·service_role쓰기.
+   - 17신위 시드(코드/등급/오행/domains/concern_key/aura{accent,particle,sound}/가격). 검증: 17개·수호신6·RLS전부활성·advisor **ERROR 0 유지**.
+2. **결정론 배정 순수함수 `lib/domain/shrine/deities.ts`** (AI 0): focus_areas 키워드 → 용신 오행 → 기본(삼신). 동점은 order로 확정. `assignGuardian()`.
+3. **단위테스트 `__tests__/deities.test.ts` 24개 전부 통과** (고민매칭/용신매칭/기본값/우선순위/결정론/시드정합성). = Track D 핵심 게이트 통과.
+4. **서버 액션 `app/actions/shrine/deities.ts`** (타입0):
+   - `listDeities` 카탈로그+보유+좌정 / `autoSeatGuardian` 무료 좌정(멱등, admin 지급+主神) / `seatDeity` 소유검증 후 좌정 / `purchaseDeity` **서버 가격검증**+잔액검증+중복방지+admin지급+GA4 / `purchaseThemePack` (기존 미구현분 구현).
+   - 모든 지급/좌정 쓰기 = service_role(admin), 인증·소유·가격은 서버 검증. (S1 원칙 적용)
+
+### 🔲 남은 것 (env 부재로 로컬 e2e 불가 → 미착수)
+
+- UI: 좌정 의식 화면, 제단 신위 렌더(스탠딩+표정, 에셋은 Track A 대기), 강신 15초 시퀀스(EffectsCanvas/Web Audio 재사용). → **에셋(Track A)·env 선행 필요**.
+- 인연(緣) 적립 로직(대화·출석 시 bond_points 증가→레벨업 해금). 서버 RPC/액션 추가 필요.
+- 무료 좌정 e2e(Playbook, 로컬 `npm run dev`) — **워크트리 Supabase env 부재로 실행 불가**(dev 서버 500). 로직·타입은 검증 완료.
+
+### ⚠️ 사용자 확인 필요 — 통화 결정
+
+신위/테마 구매를 현재 **기존 상점 관례대로 `price_bok`=복(bok_points, 무료 통화) 차감**으로 구현. 그러나 PRD는 "6만 복전"(복전=유료 통화)이라 표기 — CLAUDE.md도 "복전(유료)/복(무료) 2통화". **복전 별도 유료통화 도입 여부** 결정 필요:
+
+- (a) 현행 유지: 복(bok_points)로 구매 → 시드 가격(60000 등) 재조정 필요(복 잔액 스케일).
+- (b) 복전=복채(wallets/만냥)로 차감 → `purchaseDeity` 1곳 통화 스위치 + 가격 재조정.
+- (c) 복전 신규 테이블 도입(2통화 UI, HANDOFF의 미래 항목) → 별도 스프린트.
+- 실 ₩ 결제(Toss)는 별도 confirmPayment 경로 — 미연동(승인 후).
+
+---
+
 ### 사용자 승인/확인 필요 목록 (누적)
 
 - [ ] **S1b 마이그레이션 적용 순서**: ①코드(admin 클라이언트 전환) 배포 → ②S1b 마이그레이션 적용. 순서 뒤바뀌면 장애.
-- [ ] Auth 유출비밀번호 차단(HaveIBeenPwned) 활성화 — Management API(`SUPABASE_ACCESS_TOKEN`)로 시도 예정, 결과 기록.
+- [x] ~~Auth 유출비밀번호 차단(HaveIBeenPwned) 활성화~~ — **완료** (`password_hibp_enabled=true`).
 - [ ] (S3) DNS 레지스트라 잠금/DNSSEC, SPF/DKIM/DMARC, Cloudflare WAF, 관리자 2FA — 콘솔 전용, 미실행.
