@@ -38,7 +38,6 @@ function DeityMedallion({ deity, size }: { deity: Deity; size: number }) {
         <img
           src={img}
           alt={deity.name}
-          loading="lazy"
           className="absolute inset-0 w-full h-full object-contain p-[6%]"
           style={{ filter: `drop-shadow(0 ${size / 22}px ${size / 14}px rgba(0,0,0,0.35))` }}
         />
