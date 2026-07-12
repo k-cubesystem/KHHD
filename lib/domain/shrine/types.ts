@@ -83,6 +83,12 @@ export interface EnergyProfile {
 }
 
 /** 페이지 초기 로드에 필요한 전체 씬 데이터 */
+export interface MainDeity {
+  code: string
+  name: string
+  spriteUrl: string | null
+}
+
 export interface SceneData {
   shrineId: string
   shrineName: string
@@ -95,6 +101,7 @@ export interface SceneData {
   activePackCode: string
   visitorCount: number
   wishCount: number
+  mainDeity: MainDeity | null
 }
 
 // ─── 파싱 가드 (Supabase JSONB → 타입 안전) ──────────────────

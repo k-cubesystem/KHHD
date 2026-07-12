@@ -213,7 +213,7 @@ export async function getSceneData(): Promise<SceneData | null> {
 
   const { data: shrine } = await supabase
     .from('shrines')
-    .select('id, name, visitor_count, wish_count, active_pack_id')
+    .select('id, name, visitor_count, wish_count, active_pack_id, main_deity_id')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!shrine) return null
@@ -241,6 +241,7 @@ export async function getSceneData(): Promise<SceneData | null> {
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
   const activePack = themes.find((t) => t.id === shrine.active_pack_id)
+  const mainDeity = await loadMainDeity(supabase, shrine.main_deity_id)
 
   return {
     shrineId: shrine.id,
@@ -254,7 +255,23 @@ export async function getSceneData(): Promise<SceneData | null> {
     activePackCode: activePack?.code ?? 'banga',
     visitorCount: shrine.visitor_count,
     wishCount: shrine.wish_count,
+    mainDeity,
   }
+}
+
+/** 좌정한 主神(신위) 로드 — 없으면 null. */
+async function loadMainDeity(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  mainDeityId: string | null
+): Promise<import('@/lib/domain/shrine/types').MainDeity | null> {
+  if (!mainDeityId) return null
+  const { data } = await supabase
+    .from('shrine_deities')
+    .select('code, name, sprite_url')
+    .eq('id', mainDeityId)
+    .maybeSingle()
+  if (!data) return null
+  return { code: data.code, name: data.name, spriteUrl: data.sprite_url }
 }
 
 /** 방문자용 공개 씬 데이터 (읽기 전용). 소유자의 방·테마만 노출, 인벤토리/프로필 비공개. */
@@ -263,7 +280,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
 
   const { data: shrine } = await supabase
     .from('shrines')
-    .select('id, name, visibility, visitor_count, wish_count, active_pack_id')
+    .select('id, name, visibility, visitor_count, wish_count, active_pack_id, main_deity_id')
     .eq('user_id', userId)
     .maybeSingle()
   if (!shrine || shrine.visibility !== 'public') return null
@@ -306,6 +323,8 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
       ]
     : []
 
+  const mainDeity = await loadMainDeity(supabase, shrine.main_deity_id)
+
   return {
     shrineId: shrine.id,
     shrineName: shrine.name,
@@ -318,6 +337,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
     activePackCode: activePack?.code ?? 'banga',
     visitorCount: shrine.visitor_count,
     wishCount: shrine.wish_count,
+    mainDeity,
   }
 }
 

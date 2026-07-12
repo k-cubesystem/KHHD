@@ -342,6 +342,32 @@ export function ShrineRoomClient({ scene }: Props) {
           style={{ top: '77%', width: '64%', height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
         />
 
+        {/* 좌정한 主神 — 제단 위에 강림 */}
+        {scene.mainDeity?.spriteUrl && (
+          <div
+            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-[3] deity-stand"
+            style={{ bottom: '50%', height: '44%' }}
+          >
+            <div
+              className="absolute left-1/2 -translate-x-1/2 rounded-full"
+              style={{
+                bottom: '-6%',
+                width: '86%',
+                height: '20%',
+                background: 'var(--th-glow, rgba(201,168,76,0.28))',
+                filter: 'blur(9px)',
+              }}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={scene.mainDeity.spriteUrl}
+              alt={scene.mainDeity.name}
+              className="relative h-full w-auto object-contain"
+              style={{ filter: 'drop-shadow(0 5px 9px rgba(0,0,0,0.5))' }}
+            />
+          </div>
+        )}
+
         {/* 제단 */}
         <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '47%', width: '62%', height: '20%' }}>
           <div
@@ -642,6 +668,24 @@ export function ShrineRoomClient({ scene }: Props) {
       )}
 
       <style jsx>{`
+        .deity-stand {
+          animation: deityBreathe 4.2s ease-in-out infinite;
+          transform-origin: bottom center;
+        }
+        @keyframes deityBreathe {
+          0%,
+          100% {
+            transform: translateX(-50%) scaleY(1);
+          }
+          50% {
+            transform: translateX(-50%) scaleY(1.016);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .deity-stand {
+            animation: none;
+          }
+        }
         .shrine-keeper-orb {
           animation: shrineBounce 0.55s ease;
         }
