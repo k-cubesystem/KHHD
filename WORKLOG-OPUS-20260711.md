@@ -273,10 +273,45 @@
 
 ---
 
+## 🚀 배포 + R1 적용 + 결제 정교화 (2026-07-12, Fable 세션3 — 사용자 "다 진행" 승인)
+
+사용자가 "내가 할 것도 네가 다 진행"을 승인 → 배포·R1 적용·결제 정교화까지 실행.
+
+### 1) 배포 + R1(subscriptions) 적용 완료
+
+- 커밋 5개(a11y·R1코드·e2e·CSP·docs) 배포 → `k-haehwadang.com` HTTP 200, HSTS+CSP 라이브.
+- **R1 마이그레이션 라이브 적용**: `subscriptions_insert_own/update_own` 제거. 적용 후 subscriptions 쓰기정책 **0**(SELECT만).
+- **라이브 검증**: authenticated 롤 임퍼소네이션으로 `INSERT subscriptions(status=ACTIVE)` 시도 → **차단됨**(`self_issue_succeeded=false`). **로그인 유저 구독 자가발급 구멍 닫힘.**
+- **프로덕션 구독 플로우 회귀**(R1 전·후 둘 다): 로그인→멤버십→checkout→**Toss 샌드박스 결제창 도달** 통과. 빌링 admin 전환이 정상 동작.
+
+### 2) 결제 정교화 — 충전분 캡 무관 (사용자 결정)
+
+**질문→확정**: "충전분은 캡 무관, 무료분만 캡." 기존 버그: `deductTalisman`이 비구독자를 지갑잔액 무관 전면 차단 → 충전 복채가 있어도 AI 사용 불가(돈 받고 못 쓰게 함).
+
+- `computeSpendPlan` 순수함수(테스트 11): cost를 무료분(fromCap, 일일한도까지)+충전분(overCap, 충전잔여로만) 분할.
+- `get_charge_exempt_remaining` RPC(라이브, service_role): 충전총액−총사용액(충전분 우선소진 가정 → **비누수 하한**). 라이브 검증(충전30−사용6=24).
+- `deductTalisman` 하드차단 제거→spend-plan 게이트. 일일카운트는 무료분만 증가. `canUseTalisman`(UI)도 충전잔여 반영.
+- ⚠️ **보수적 설계 주석**: 구독 지급분(SUBSCRIPTION)은 무료분으로 취급(캡 대상). 충전(CHARGE)만 캡 무관. 구독 지급분도 캡 무관으로 할지는 추후 제품결정.
+
+### 3) 부수 개선
+
+- **오픈이벤트 팝업**: 상태체크 실패 시 fail-closed, 이미 수령시 미표시, 수령 후 자동닫힘+당일 재노출 방지(매일 클릭 가로채던 UX 문제 완화).
+- **CSP**: `va.vercel-scripts.com` 허용(Speed Insights 차단 해소).
+- **Track A(이미지) 확인**: Gemini 이미지 모델 ID 검증 시도 → **워크트리/메인 .env.local의 GEMINI 키가 401(무효)**. models API·generateContent 모두 실패. style-refs도 부재. → **Track A는 유효한 GEMINI_API_KEY + style-refs 3장 필요**(사용자 액션 유지).
+- **e2e**: `E2E_BASE_URL`로 프로덕션 대상 실행 지원. `e2e/prod/ai-smoke.spec.ts` 추가(배포 후 실제 로그인→해화지기 AI 응답, E2E_PROD_SMOKE 게이트).
+- 죽은 대시보드 뷰(mobile/desktop-view, import 0)는 삭제 대신 배경 태스크로 플래그.
+
+검증: tsc 0 / jest **137**(신규11) / R1·회계함수 라이브 SQL 검증 / 프로덕션 결제플로우 e2e 통과.
+
+---
+
 ### 사용자 승인/확인 필요 목록 (누적)
 
 - [x] ~~S1b 마이그레이션 적용 순서~~ — **완료** (2026-07-12 배포+적용, subscriptions만 연기).
-- [ ] **R1 마이그레이션 적용 순서**: ①이번 커밋(빌링 admin 전환) 배포 → ②프로덕션 구독 플로우 회귀확인 → ③`20260712_security_r1_subscriptions.sql` 적용. 순서 뒤바뀌면 구독 장애.
+- [x] ~~R1 마이그레이션 적용~~ — **완료** (2026-07-12 배포→회귀확인→적용→자가발급 차단 라이브검증). authenticated 자가발행 벡터(재화+멤버십+테마+한도+구독) **전부 종료**.
 - [x] ~~Auth 유출비밀번호 차단(HaveIBeenPwned) 활성화~~ — **완료** (`password_hibp_enabled=true`).
+- [ ] **Track A 이미지**: 유효한 `GEMINI_API_KEY`(현재 .env.local 키 401 무효) + 「설빛온기」 style-refs 3장 필요. 이후 `node scripts/shrine-assets/generate.mjs base` 실행.
+- [ ] **결제 정교화 후속(선택)**: 구독 지급분(SUBSCRIPTION)도 캡 무관으로 할지 제품결정. 현재는 충전(CHARGE)만 캡 무관, 구독 지급분은 무료분(캡 대상).
 - [ ] (S3) DNS 레지스트라 잠금/DNSSEC, SPF/DKIM/DMARC, Cloudflare WAF, 관리자 2FA — 콘솔 전용, 미실행.
 - [ ] e2e 테스트 계정 `test@example.com`이 프로덕션 auth에 생성됨(강력 랜덤 비밀번호). 유지 여부 결정 — 유지 시 CI/로컬 e2e 재사용 가능, 삭제 원하면 Supabase 대시보드에서 삭제.
+- [ ] 죽은 대시보드 뷰 컴포넌트 정리(배경 태스크로 플래그됨).
