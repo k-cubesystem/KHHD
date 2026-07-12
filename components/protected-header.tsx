@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { User, LogOut, LayoutDashboard, BookOpen, CreditCard } from 'lucide-react'
+import { User, LogOut, LayoutDashboard, BookOpen, CreditCard, Flame } from 'lucide-react'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { UserRole } from '@/types/auth'
@@ -124,6 +124,15 @@ export function ProtectedHeader({ user }: { user: any }) {
                 >
                   <User className="w-4 h-4 text-gold-500" />
                   <span className="text-sm">프로필 관리</span>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/protected/shrine"
+                  className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-ink/5 transition-colors"
+                >
+                  <Flame className="w-4 h-4 text-gold-500" />
+                  <span className="text-sm">나의 신당</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

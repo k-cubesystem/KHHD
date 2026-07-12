@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Users, BookOpen, MessageCircle, UserCircle, Home } from 'lucide-react'
+import { Users, Flame, MessageCircle, UserCircle, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 
@@ -21,7 +21,7 @@ export const BottomNav = memo(function BottomNav() {
     { label: t('analysis'), icon: Home, href: '/protected/analysis' },
     { label: t('family'), icon: Users, href: '/protected/family' },
     { label: t('chat'), icon: MessageCircle, href: '/protected/ai-shaman' },
-    { label: t('manse'), icon: BookOpen, href: '/protected/profile/manse' },
+    { label: t('shrine'), icon: Flame, href: '/protected/shrine' },
     { label: t('profile'), icon: UserCircle, href: '/protected/profile' },
   ]
 

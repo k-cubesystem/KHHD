@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { ChevronLeft } from 'lucide-react'
 import type { Deity, DeityCatalog } from '@/app/actions/shrine/deities'
 import { autoSeatGuardian, seatDeity, purchaseDeity } from '@/app/actions/shrine/deities'
 import { BOND_LEVEL_NAMES, BOND_THRESHOLDS, type BondProgress } from '@/lib/domain/shrine/deities'
@@ -106,6 +108,13 @@ export function DeityPantheon({ catalog, bonds }: Props) {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <Link
+        href="/protected/shrine"
+        className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif mb-3"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        신당으로
+      </Link>
       <header className="text-center space-y-1.5 mb-6">
         <p className="text-[10px] tracking-[0.5em] text-gold-500/50 font-serif">神 位</p>
         <h1 className="text-2xl font-serif font-bold text-ink-light">신위 · 판테온</h1>

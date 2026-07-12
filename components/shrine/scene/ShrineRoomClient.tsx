@@ -11,7 +11,7 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, MessageCircle } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, MessageCircle, Sparkles } from 'lucide-react'
 import type { CatalogItem, Element, Placement, SceneData, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
@@ -296,6 +296,16 @@ export function ShrineRoomClient({ scene }: Props) {
           <h1 className="text-base font-serif font-bold text-ink-primary">{scene.shrineName}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {isOwner && (
+            <Link
+              href="/protected/shrine/deities"
+              className="h-8 px-2.5 rounded-[10px] flex items-center gap-1.5 bg-gold-500/[0.12] border border-gold-500/40 text-gold-200 text-[11.5px] font-serif font-bold"
+              aria-label="신위 판테온"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              신위
+            </Link>
+          )}
           <button
             onClick={toggleMute}
             aria-label={muted ? '소리 켜기' : '소리 끄기'}
