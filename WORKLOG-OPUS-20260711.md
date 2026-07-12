@@ -8,16 +8,16 @@
 
 ## 진행 요약 (라이브 갱신)
 
-| Track                                                | 상태                   | 게이트                 |
-| ---------------------------------------------------- | ---------------------- | ---------------------- |
-| S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)         | get_advisors ERROR 0 ✓ |
-| S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | ✅ 코드완료·MIG대기    | 배포 후 적용           |
-| S2 — 앱 보안                                         | 🔵 점검클린·일부남음   | 시크릿·PII 통과        |
-| S3 — 인프라/헤더/rate limit                          | 🔵 헤더완료·나머지대기 | 배포후 검증            |
-| A — 이미지 에셋                                      | 🚫 차단(입력부재)      | 사용자 입력 필요       |
-| D — 신위 시스템                                      | 🔵 데이터·로직·서버    | 타입0·테스트24 ✓       |
-| F — 분석 고도화                                      | ⬜                     | —                      |
-| C — 신과의 대화                                      | ⬜                     | —                      |
+| Track                                                | 상태                   | 게이트                    |
+| ---------------------------------------------------- | ---------------------- | ------------------------- |
+| S1a — DB 권한(anon 차단, ERROR 0)                    | ✅ 완료 (커밋)         | get_advisors ERROR 0 ✓    |
+| S1b — 재화 무결성(authenticated 차단 + RLS 쓰기정책) | ✅ **배포+적용 완료**  | 라이브 검증 ✓ (subs 연기) |
+| S2 — 앱 보안                                         | 🔵 점검클린·일부남음   | 시크릿·PII 통과           |
+| S3 — 인프라/헤더/rate limit                          | 🔵 헤더완료·나머지대기 | 배포후 검증               |
+| A — 이미지 에셋                                      | 🚫 차단(입력부재)      | 사용자 입력 필요          |
+| D — 신위 시스템                                      | 🔵 데이터·로직·서버    | 타입0·테스트24 ✓          |
+| F — 분석 고도화                                      | ⬜                     | —                         |
+| C — 신과의 대화                                      | ⬜                     | —                         |
 
 ---
 
@@ -210,6 +210,26 @@
 - Track F 잔여(saveAnalysisHistory 축적, 죽은 파이프라인 정리): 관상결과 저장은 image.ts 흐름 e2e 확인이 필요해 보류(파서 P0만 선반영).
 - 통화(복채 vs 복전): 정확한 값/모델은 제품결정 → `PREMIUM_CURRENCY_READY=false`로 안전잠금 유지.
 - S1b 적용/프로덕션 배포: 사용자 배포권한 필요.
+
+---
+
+## 🚀 배포 + S1b 적용 완료 (2026-07-12, 사용자 배포 승인)
+
+사용자가 ①로컬 env pull ②배포 승인 → 순서대로 실행:
+
+1. **배포**: `vercel deploy --prod --yes` → 빌드 성공(2분), `k-haehwadang.com` 별칭 완료. 배포 전 로컬 dev 부팅 스모크 **HTTP 200**(에러 0) 확인 후 진행.
+2. **배포 전 안전점검**에서 놓쳤던 벡터 발견·수정: `payment/subscription.ts createSubscription`이 subscriptions 를 유저클라로 씀 → admin 전환. **subscriptions(R1)는 빌링 상태머신 다수가 유저클라 쓰기라 정책제거 연기**(별도 후속).
+3. **S1b 마이그레이션 적용**(subscriptions 제외): 라이브 검증 —
+   - wallets·bok_points 쓰기정책 **0**, inventory·ai_chat_usage·user_theme_packs·daily_usage_logs **SELECT 전용**
+   - `add_wallet_balance` authenticated=**false**/service_role=**true**
+   - **프로덕션 200 유지**(마이그 후 헬시)
+4. **S3 헤더 프로덕션 검증**: `k-haehwadang.com` 응답에 **HSTS + CSP(base-uri/object-src/frame-ancestors)** 라이브 확인.
+
+**결과: 로그인 유저 자가발행(복채·복포인트·아이템·AI할당량·유료테마·일일한도) 전부 차단.** 실질 보안 P0 종료. (subscriptions 자가발급만 후속 남음)
+
+**남은 보안 후속(코드 배포 후 별도):**
+
+- subscriptions 빌링 쓰기 전부 admin 전환 → `subscriptions_insert_own/update_own` 제거(R1 완결).
 
 ---
 
