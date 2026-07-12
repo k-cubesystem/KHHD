@@ -57,6 +57,13 @@ test.describe('신당 3.0 네비게이션', () => {
     }
     await expect(page).toHaveURL(/\/protected\/shrine\/deities/, { timeout: 15_000 })
     await expect(page.getByRole('heading', { name: '신위 · 판테온' })).toBeVisible({ timeout: 15_000 })
+    // 신위 이미지 전부 로드 대기(스크린샷 정확도)
+    await page.waitForLoadState('networkidle').catch(() => {})
+    await page
+      .waitForFunction(() => Array.from(document.images).every((im) => im.complete && im.naturalWidth > 0), {
+        timeout: 15_000,
+      })
+      .catch(() => {})
     await page.screenshot({ path: SHOT('3-deities'), fullPage: true })
     console.log('[PASS] 신위 판테온 도달')
 
