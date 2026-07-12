@@ -241,7 +241,7 @@ export async function getSceneData(): Promise<SceneData | null> {
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
   const activePack = themes.find((t) => t.id === shrine.active_pack_id)
-  const mainDeity = await loadMainDeity(supabase, shrine.main_deity_id)
+  const mainDeity = await loadMainDeity(supabase, user.id, shrine.main_deity_id)
 
   return {
     shrineId: shrine.id,
@@ -259,19 +259,29 @@ export async function getSceneData(): Promise<SceneData | null> {
   }
 }
 
-/** 좌정한 主神(신위) 로드 — 없으면 null. */
+/** 좌정한 主神(신위) 로드 — 없으면 null. bondPoints = ownerId의 이 신위 인연 누적. */
 async function loadMainDeity(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  ownerId: string,
   mainDeityId: string | null
 ): Promise<import('@/lib/domain/shrine/types').MainDeity | null> {
   if (!mainDeityId) return null
-  const { data } = await supabase
-    .from('shrine_deities')
-    .select('code, name, sprite_url')
-    .eq('id', mainDeityId)
-    .maybeSingle()
+  const [{ data }, { data: bond }] = await Promise.all([
+    supabase.from('shrine_deities').select('code, name, sprite_url').eq('id', mainDeityId).maybeSingle(),
+    supabase
+      .from('user_deity_bonds')
+      .select('bond_points')
+      .eq('user_id', ownerId)
+      .eq('deity_id', mainDeityId)
+      .maybeSingle(),
+  ])
   if (!data) return null
-  return { code: data.code, name: data.name, spriteUrl: data.sprite_url }
+  return {
+    code: data.code,
+    name: data.name,
+    spriteUrl: data.sprite_url,
+    bondPoints: typeof bond?.bond_points === 'number' ? bond.bond_points : 0,
+  }
 }
 
 /** 방문자용 공개 씬 데이터 (읽기 전용). 소유자의 방·테마만 노출, 인벤토리/프로필 비공개. */
@@ -323,7 +333,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
       ]
     : []
 
-  const mainDeity = await loadMainDeity(supabase, shrine.main_deity_id)
+  const mainDeity = await loadMainDeity(supabase, userId, shrine.main_deity_id)
 
   return {
     shrineId: shrine.id,

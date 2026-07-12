@@ -87,6 +87,8 @@ export interface MainDeity {
   code: string
   name: string
   spriteUrl: string | null
+  /** 이 신위와의 누적 인연(緣) 포인트 */
+  bondPoints: number
 }
 
 export interface SceneData {

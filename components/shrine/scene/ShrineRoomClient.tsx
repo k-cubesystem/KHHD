@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2 } from 'lucide-react'
 import type { CatalogItem, Element, Placement, SceneData, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
+import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   greetingFor,
@@ -352,6 +353,36 @@ export function ShrineRoomClient({ scene }: Props) {
           )}
         </div>
       </div>
+
+      {/* 主神 인연(緣) 스트립 — 대화로 쌓인 인연을 표시 */}
+      {scene.mainDeity &&
+        (() => {
+          const bp = bondProgress(scene.mainDeity.bondPoints)
+          const lower = BOND_THRESHOLDS[bp.level - 1] ?? 0
+          const ratio =
+            bp.nextThreshold === null
+              ? 1
+              : Math.max(0.04, Math.min(1, (bp.points - lower) / Math.max(1, bp.nextThreshold - lower)))
+          return (
+            <Link
+              href="/protected/shrine/deities"
+              className="flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-[10px] bg-surface/60 border border-gold-500/20"
+            >
+              <span className="text-[11px] font-serif text-gold-200 whitespace-nowrap">
+                主神 {scene.mainDeity.name}
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold-500/15 text-gold-300 font-serif whitespace-nowrap">
+                緣 {BOND_LEVEL_NAMES[bp.level]}
+              </span>
+              <div className="flex-1 h-1.5 rounded-full bg-ink-primary/15 overflow-hidden">
+                <div className="h-full rounded-full bg-gold-500 transition-all" style={{ width: `${ratio * 100}%` }} />
+              </div>
+              <span className="text-[9.5px] text-ink-primary/40 whitespace-nowrap tabular-nums">
+                {bp.nextThreshold === null ? '지음' : `다음 ${bp.toNext}`}
+              </span>
+            </Link>
+          )
+        })()}
 
       {/* 룸 */}
       <div
