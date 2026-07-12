@@ -305,6 +305,15 @@
 
 ---
 
+## ✅ P0 해소 — 프로덕션 Gemini 키 교체 + 모델 통일 (2026-07-12, Fable 세션4)
+
+- **키 교체 완료**: 사용자가 로컬 `.env.local` + Vercel `GOOGLE_GENERATIVE_AI_API_KEY`(Production) 새 키(신형 `AQ.A…` 형식)로 교체 → 재배포 → **프로덕션 해화지기 실제 AI 응답 확인**(ai-smoke 통과).
+- **모델 통일**: 사용자 지시로 텍스트 생성 모델을 **`gemini-3.5-flash`로 통일**(`lib/config/ai-models.ts` GEMINI_PRO·GEMINI_FLASH). 이미지 모델은 modality 달라 유지. `gemini-3.5-flash` 실재+generateContent 검증 후 배포 → 프로덕션 실제 응답 재확인. (요금맵·로그·엣지·어드민대시보드 라벨도 갱신, 구 모델은 하위호환 유지.) → 커밋 `fc61002`
+- **모델 ID 실재 확인**: `gemini-3-flash-preview`·`gemini-3.1-pro-preview`도 이 프로젝트에서 실재(프리뷰 접근권 보유). 교정 불필요였음.
+- **Track A 이미지**: 키는 이제 유효 → 남은 조건은 style-refs 3장 + 스크립트가 읽는 `GEMINI_API_KEY`도 새 키로 정렬.
+
+--- 이하 발견 당시 기록(참고) ---
+
 ## 🔴 P0 발견 — 프로덕션 Gemini API 키 무효 (2026-07-12)
 
 배포 후 프로덕션 AI 스모크(`e2e/prod/ai-smoke.spec.ts`)로 **해화지기 서버액션이 Gemini 호출에서 실패**함을 발견. 서버 응답 본문:
@@ -328,8 +337,10 @@
 - [x] ~~S1b 마이그레이션 적용 순서~~ — **완료** (2026-07-12 배포+적용, subscriptions만 연기).
 - [x] ~~R1 마이그레이션 적용~~ — **완료** (2026-07-12 배포→회귀확인→적용→자가발급 차단 라이브검증). authenticated 자가발행 벡터(재화+멤버십+테마+한도+구독) **전부 종료**.
 - [x] ~~Auth 유출비밀번호 차단(HaveIBeenPwned) 활성화~~ — **완료** (`password_hibp_enabled=true`).
-- [ ] **Track A 이미지**: 유효한 `GEMINI_API_KEY`(현재 .env.local 키 401 무효) + 「설빛온기」 style-refs 3장 필요. 이후 `node scripts/shrine-assets/generate.mjs base` 실행.
-- [ ] **결제 정교화 후속(선택)**: 구독 지급분(SUBSCRIPTION)도 캡 무관으로 할지 제품결정. 현재는 충전(CHARGE)만 캡 무관, 구독 지급분은 무료분(캡 대상).
+- [x] ~~프로덕션 Gemini 키 무효 P0~~ — **완료** (키 교체 + gemini-3.5-flash 통일 + 프로덕션 실제응답 검증).
+- [ ] **Track A 이미지**: 키는 유효해짐. 남은 것 = 「설빛온기」 style-refs 3장 + 워크트리 `.env.local`의 `GEMINI_API_KEY`를 새 키로 정렬 → `node scripts/shrine-assets/generate.mjs base`.
+- [ ] **워크트리 `.env.local` 구 키 잔존**: 메인/Vercel은 정상. 워크트리에서 `npm run dev` 실제 AI 쓸 때만 문제 → 새 키로 교체 권장(에이전트는 .env 못 건드림).
+- [ ] **결제 정교화 후속(선택)**: 구독 지급분(SUBSCRIPTION)도 캡 무관으로 할지 제품결정. 현재는 충전(CHARGE)만 캡 무관.
 - [ ] (S3) DNS 레지스트라 잠금/DNSSEC, SPF/DKIM/DMARC, Cloudflare WAF, 관리자 2FA — 콘솔 전용, 미실행.
-- [ ] e2e 테스트 계정 `test@example.com`이 프로덕션 auth에 생성됨(강력 랜덤 비밀번호). 유지 여부 결정 — 유지 시 CI/로컬 e2e 재사용 가능, 삭제 원하면 Supabase 대시보드에서 삭제.
-- [ ] 죽은 대시보드 뷰 컴포넌트 정리(배경 태스크로 플래그됨).
+- [ ] e2e 테스트 계정 `test@example.com` 프로덕션 유지/삭제 결정.
+- [ ] 죽은 대시보드 뷰 컴포넌트 정리(사용자가 별도 세션에서 진행 중 — task_807b61e8).
