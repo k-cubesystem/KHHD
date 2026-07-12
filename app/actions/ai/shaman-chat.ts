@@ -10,6 +10,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { recallMemories, extractAndSaveMemories } from '@/lib/ai/memory'
 import { maybeSummarizeSession } from '@/lib/ai/summarizer'
+import { guardAiInput } from '@/lib/ai/input-guard'
 import { logger } from '@/lib/utils/logger'
 
 // --- Constants ---
@@ -269,10 +270,18 @@ export async function sendShamanChatMessage(
   _turnCount: number,
   familyMemberId?: string
 ): Promise<ShamanChatResponse> {
+  // 입력 가드(S2): 길이 상한 + 프롬프트 인젝션 의심 플래그. 정제된 텍스트만 프롬프트로.
+  const guarded = guardAiInput(message)
+  if (!guarded.text) return { success: false, error: '메시지를 입력해주세요.' }
+  const safeMessage = guarded.text
+  if (guarded.suspicious) {
+    logger.warn('[sendShamanChatMessage] 프롬프트 인젝션 의심 입력 감지', { length: safeMessage.length })
+  }
+
   if (isEdgeEnabled('ai-chat')) {
     return invokeEdgeSafe('ai-chat', {
       action: 'sendMessage',
-      message,
+      message: safeMessage,
       conversationHistory,
       turnCount: _turnCount,
       familyMemberId,
@@ -427,14 +436,15 @@ export async function sendShamanChatMessage(
     // 슬라이딩 윈도우: 최근 N개 메시지만 전달 (그 이전 맥락은 요약·기억으로 대체)
     const windowedHistory = conversationHistory.slice(-CHAT_HISTORY_WINDOW)
     const chat = model.startChat({
+      // 클라이언트가 넘긴 히스토리도 길이 컷(토큰 폭탄/히스토리 경유 인젝션 방어).
       history: windowedHistory.map((msg) => ({
         role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }],
+        parts: [{ text: guardAiInput(msg.content).text }],
       })),
     })
 
-    // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨)
-    const result = await chat.sendMessage(message)
+    // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨). 가드 통과한 safeMessage 사용.
+    const result = await chat.sendMessage(safeMessage)
     const responseText = result.response.text()
 
     // 6. 추천 질문 생성 (과거 분석 기록 기반)
