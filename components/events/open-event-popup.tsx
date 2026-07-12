@@ -26,16 +26,17 @@ export function OpenEventPopup() {
 
     if (dismissed === today) return
 
-    // Check server-side status then show popup
+    // Check server-side status then show popup.
+    // 상태 확인 실패 시엔 열지 않는다(fail-closed) — 네트워크 흔들림에 팝업이 사용자 흐름을 끊는 것 방지.
     checkEventBonusStatus()
       .then(({ claimed: alreadyClaimed, eventActive }) => {
         if (!eventActive) return
+        if (alreadyClaimed) return
         setClaimed(alreadyClaimed)
         setOpen(true)
       })
       .catch((err) => {
         logger.error('[OpenEventPopup] Status check failed:', err)
-        setOpen(true)
       })
   }, [])
 
@@ -43,12 +44,12 @@ export function OpenEventPopup() {
     setLoading(true)
     try {
       const result = await claimDailyEventBonus()
-      if (result.success) {
+      if (result.success || result.alreadyClaimed) {
         setClaimed(true)
         setMessage(result.message)
-      } else if (result.alreadyClaimed) {
-        setClaimed(true)
-        setMessage(result.message)
+        // 수령 완료 = 오늘 볼일 끝 — X 안 눌러도 재노출 방지 + 잠시 후 자동 닫힘
+        localStorage.setItem(STORAGE_KEY, getTodayKST())
+        setTimeout(() => setOpen(false), 1800)
       } else {
         setMessage(result.message)
       }
