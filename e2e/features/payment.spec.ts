@@ -8,8 +8,8 @@ test.describe('결제 / 멤버십', () => {
 
   test('멤버십 플랜 카드 렌더링', async ({ page }) => {
     await page.goto('/protected/membership')
-    // Should show pricing/plan cards
-    const plans = page.getByText(/SINGLE|FAMILY|BUSINESS/i)
+    // 단일통화(복채) 전환 후 플랜 탭은 한국어 라벨로 노출됨
+    const plans = page.getByText(/싱글 멤버십|패밀리 멤버십|비즈니스 멤버십|SINGLE|FAMILY|BUSINESS/i)
     await expect(plans.first()).toBeVisible({ timeout: 10_000 })
   })
 

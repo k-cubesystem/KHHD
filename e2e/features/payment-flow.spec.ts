@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
 
-const TEST_EMAIL = 'e2e-test@haehwadang.com'
-const TEST_PASSWORD = 'TestPass1234!'
+const TEST_EMAIL = process.env.E2E_USER_EMAIL || 'e2e-test@haehwadang.com'
+const TEST_PASSWORD = process.env.E2E_USER_PASSWORD || 'TestPass1234!'
 
 test('결제 플로우: 로그인 → 멤버십 → checkout → Toss 결제창', async ({ browser }) => {
-  const context = await browser.newContext()
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } })
   const page = await context.newPage()
 
   const logs: string[] = []
@@ -27,6 +27,14 @@ test('결제 플로우: 로그인 → 멤버십 → checkout → Toss 결제창'
     console.log('[INFO] 이미 구독 중 — 테스트 종료')
     await context.close()
     return
+  }
+
+  // 오픈 이벤트(일일 복채) 팝업이 자동 오픈되어 클릭을 가로채면 닫는다
+  const eventDialog = page.getByRole('dialog', { name: '오픈 이벤트' })
+  if (await eventDialog.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await eventDialog.getByRole('button', { name: 'Close' }).click()
+    await expect(eventDialog).toBeHidden({ timeout: 5_000 })
+    console.log('[INFO] 오픈 이벤트 팝업 닫음')
   }
 
   const startButton = page.getByText('지금 시작하기')

@@ -17,6 +17,7 @@ setup('authenticate as user', async ({ page }) => {
 })
 
 setup('authenticate as admin', async ({ page }) => {
+  setup.skip(!process.env.E2E_ADMIN_EMAIL, 'E2E_ADMIN_EMAIL 미설정 — admin 인증 스킵')
   await page.goto('/auth/login')
   await page.getByLabel('이메일').fill(process.env.E2E_ADMIN_EMAIL || 'admin@example.com')
   await page.getByLabel('비밀번호').fill(process.env.E2E_ADMIN_PASSWORD || 'admin1234!')

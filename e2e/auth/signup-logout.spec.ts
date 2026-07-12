@@ -6,7 +6,7 @@ test.describe('회원가입', () => {
   test('회원가입 폼이 렌더링된다', async ({ page }) => {
     await page.goto('/auth/sign-up')
     await expect(page.getByLabel('이메일')).toBeVisible()
-    await expect(page.getByLabel('비밀번호')).toBeVisible()
+    await expect(page.getByLabel('비밀번호', { exact: true })).toBeVisible()
   })
 })
 
@@ -16,10 +16,7 @@ test.describe('로그아웃', () => {
     await expect(page).toHaveURL(/protected/)
 
     // Find and click logout button (may be in profile menu)
-    const logoutBtn =
-      page.getByRole('button', { name: /로그아웃|logout/i }).or(
-        page.getByText(/로그아웃|logout/i)
-      )
+    const logoutBtn = page.getByRole('button', { name: /로그아웃|logout/i }).or(page.getByText(/로그아웃|logout/i))
 
     // Try opening a dropdown/menu first if logout not visible
     if (!(await logoutBtn.isVisible().catch(() => false))) {
@@ -31,7 +28,7 @@ test.describe('로그아웃', () => {
 
     if (await logoutBtn.isVisible().catch(() => false)) {
       await logoutBtn.click()
-      await expect(page).toHaveURL(/login|\/$/,  { timeout: 10_000 })
+      await expect(page).toHaveURL(/login|\/$/, { timeout: 10_000 })
     }
   })
 })
