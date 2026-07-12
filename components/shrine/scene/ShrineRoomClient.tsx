@@ -365,8 +365,18 @@ export function ShrineRoomClient({ scene }: Props) {
         }}
       >
         <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
-        <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
         <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
+        {/* 테마 방 배경 이미지 (있으면 그라디언트 위에 덮음, 404면 그라디언트 폴백) */}
+        <div
+          className="absolute inset-0"
+          style={{ background: `center/cover no-repeat url('/shrine/themes/${activeCode}/room.webp')` }}
+        />
+        {/* 제단 영역 대비용 하단 암전 */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-[38%]"
+          style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
+        />
+        <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
         <div
           className="absolute left-1/2 -translate-x-1/2 rounded-full"
           style={{ top: '77%', width: '64%', height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
