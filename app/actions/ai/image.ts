@@ -9,6 +9,7 @@ import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { parseFeatureTag } from '@/lib/domain/analysis/feature-parse'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -384,14 +385,11 @@ export async function analyzeFaceForDestiny(
 
     const analysisText = result.response.text()
 
-    // Extract 오관(五官) analysis with assessment
+    // Extract 오관(五官) analysis. 프롬프트는 `[[EARS: 숫자, 설명]]`(숫자) 출력 →
+    // 숫자·등급 양쪽 허용 파서로 교체(기존 등급전용 파서는 전량 폐기 버그). Track F P0.
     const parseFeature = (tag: string) => {
-      const regex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*(.+?)\\]\\]`)
-      const match = analysisText.match(regex)
-      if (match?.[1] && match?.[2]) {
-        return { description: match[2].trim(), assessment: match[1] as '좋음' | '보통' | '주의' }
-      }
-      return { description: '분석 중', assessment: '보통' as const }
+      const r = parseFeatureTag(analysisText, tag)
+      return { description: r.description, assessment: r.assessment }
     }
 
     const facialFeatures = {
