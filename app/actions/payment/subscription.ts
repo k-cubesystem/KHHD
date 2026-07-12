@@ -235,9 +235,11 @@ export async function createBillingAuthUrl(planId: string): Promise<{
   // customerKey 생성 (사용자별 고유)
   const customerKey = `HHD_${user.id.slice(0, 8)}_${Date.now()}`
 
-  // PENDING 상태로 구독 레코드 생성 또는 업데이트
+  // PENDING 구독 레코드 쓰기는 service_role 전용(S1b: subscriptions 자가발급 차단).
+  // 인증(user.id)은 위에서 검증됨. admin 없으면(오설정) user 클라 폴백.
+  const dbWrite = createAdminClient() ?? supabase
   if (existingSub) {
-    await supabase
+    await dbWrite
       .from('subscriptions')
       .update({
         plan_id: planId,
@@ -246,7 +248,7 @@ export async function createBillingAuthUrl(planId: string): Promise<{
       })
       .eq('id', existingSub.id)
   } else {
-    await supabase.from('subscriptions').insert({
+    await dbWrite.from('subscriptions').insert({
       user_id: user.id,
       plan_id: planId,
       customer_key: customerKey,

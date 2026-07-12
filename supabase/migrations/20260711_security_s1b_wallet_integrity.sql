@@ -54,13 +54,15 @@ CREATE POLICY ai_chat_usage_select_own ON public.ai_chat_usage
 --     정당한 쓰기는 전부 admin/웹훅/크론(service_role) 경유임을 확인함.
 -- ============================================================
 
--- subscriptions: 결제 없이 유료 멤버십 자가발급 차단 (R1, mint급)
---   정당 쓰기 = 웹훅(toss)/크론(billing)/admin 뿐. 유저클라 정당 insert 없음.
-DROP POLICY IF EXISTS subscriptions_insert_own ON public.subscriptions;
-DROP POLICY IF EXISTS subscriptions_update_own ON public.subscriptions;
--- (subscriptions_select_own 유지: 본인 구독 조회)
+-- subscriptions (R1): ⛔ 이번 적용에서 제외(연기).
+--   이유: 빌링 상태머신(payment/subscription.ts)의 다수 함수가 subscriptions 를 유저 클라이언트로
+--   update/insert 한다(PENDING 생성/상태전이 등). 정책을 지금 제거하면 구독/결제 플로우가 깨진다.
+--   → 별도 후속: 그 쓰기들을 전부 admin(service_role)으로 전환 검증한 뒤 아래 두 줄을 적용할 것.
+--   (createSubscription 의 PENDING 쓰기는 이미 admin 전환함. 나머지 confirm/cancel/billing 전이 남음.)
+-- DROP POLICY IF EXISTS subscriptions_insert_own ON public.subscriptions;
+-- DROP POLICY IF EXISTS subscriptions_update_own ON public.subscriptions;
 
--- user_theme_packs: 유료 테마팩 자가지급 차단 (R2). 지급은 purchaseThemePack(admin) 경유.
+-- user_theme_packs: 유료 테마팩 자가지급 차단 (R2). 지급은 purchaseThemePack(admin) 경유 — 유저클라 쓰기 없음 확인.
 DROP POLICY IF EXISTS user_theme_packs_own ON public.user_theme_packs;
 CREATE POLICY user_theme_packs_select_own ON public.user_theme_packs
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
