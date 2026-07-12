@@ -13,6 +13,9 @@ import { maybeSummarizeSession } from '@/lib/ai/summarizer'
 import { guardAiInput } from '@/lib/ai/input-guard'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
+import { getSceneData } from '@/app/actions/shrine/scene'
+import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
+import { awardDeityBond } from '@/app/actions/shrine/deities'
 
 // --- Constants ---
 
@@ -38,6 +41,61 @@ const FALLBACK_SYSTEM_PROMPT = `당신은 청담해화당의 사주 전문 상�
 - 시기를 말할 때 "이번 달 셋째 주에 ~하세요"처럼 구체적으로 특정하십시오.
 
 JSON 출력 금지. 번호 매기기·헤더 나열 금지. 분석 보고서 형식 금지.`
+
+// 대화 1회당 좌정 主神에게 적립되는 인연(緣) 포인트
+const CHAT_BOND_POINTS = 2
+
+/**
+ * 신당 3.0 대화 컨텍스트 — 좌정 主神 페르소나 + 신당 기운/용신/신물.
+ * (구 shrine-chat 통합) 본인 대화일 때만, 신당이 있으면 시스템 프롬프트에 얹는다.
+ * 반환 mainDeityId 로 대화 후 인연 적립.
+ */
+async function buildShrineContext(): Promise<{ block: string; mainDeityId: string | null } | null> {
+  try {
+    const scene = await getSceneData()
+    if (!scene) return null
+
+    const catalogById = indexCatalog(scene.catalog)
+    const { energy, yongsin } = computeEnergy(scene.profile.base, scene.placements, catalogById)
+    const itemNames = scene.placements
+      .map((p) => catalogById.get(p.catalogItemId)?.name)
+      .filter((n): n is string => !!n)
+    const energyLine = ELEMENTS.map((el) => `${EL_KO[el]}${energy[el]}`).join(' ')
+    const yongsinKo = EL_KO[scene.profile.yongsin ?? yongsin]
+
+    let deityPersona = ''
+    let mainDeityId: string | null = null
+    if (scene.mainDeity) {
+      const supabase = await createClient()
+      const { data } = await supabase
+        .from('shrine_deities')
+        .select('id, name, personality, tone')
+        .eq('code', scene.mainDeity.code)
+        .maybeSingle()
+      if (data) {
+        mainDeityId = data.id
+        deityPersona =
+          `당신은 이 신당에 좌정한 수호신 "${data.name}"입니다. ` +
+          `${data.personality ? data.personality + ' ' : ''}` +
+          `말투: ${data.tone || '따뜻하고 신비로우며 정중한 존댓말'}. ` +
+          `신위로서 첫인칭으로 답하되, 아래 사주·신당 기운을 근거로 조언하십시오.`
+      }
+    }
+
+    const block = [
+      deityPersona,
+      `[신당] ${scene.shrineName} · 신물: ${itemNames.join(', ') || '아직 없음'} · 기운: ${energyLine} · 용신(부족한 기운): ${yongsinKo}`,
+      `가장 부족한 ${yongsinKo} 기운을 채우는 신물·행동을 자연스럽게 권하십시오.`,
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    return { block, mainDeityId }
+  } catch (e) {
+    logger.warn('[sendShamanChatMessage] shrine context skipped:', e)
+    return null
+  }
+}
 
 const RANDOM_STARTERS = [
   '오늘의 총운이 궁금해요',
@@ -436,6 +494,16 @@ export async function sendShamanChatMessage(
       systemInstruction = FALLBACK_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
     }
 
+    // 4.5 신당 3.0 통합: 본인 대화면 좌정 主神 페르소나 + 신당 기운을 얹는다.
+    let bondDeityId: string | null = null
+    if (!familyMemberId || familyMemberId === 'self') {
+      const shrineCtx = await buildShrineContext()
+      if (shrineCtx) {
+        systemInstruction += `\n\n${shrineCtx.block}`
+        bondDeityId = shrineCtx.mainDeityId
+      }
+    }
+
     // 5. systemInstruction을 모델에 주입하고 대화 히스토리 복원
     const model = getGeminiModel(systemInstruction)
     // 슬라이딩 윈도우: 최근 N개 메시지만 전달 (그 이전 맥락은 요약·기억으로 대체)
@@ -451,6 +519,11 @@ export async function sendShamanChatMessage(
     // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨). 가드 통과한 safeMessage 사용.
     const result = await chat.sendMessage(safeMessage)
     const responseText = result.response.text()
+
+    // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 (비차단)
+    if (bondDeityId) {
+      void awardDeityBond(bondDeityId, CHAT_BOND_POINTS).catch(() => {})
+    }
 
     // 6. 추천 질문 생성 (과거 분석 기록 기반)
     const suggestions: string[] = []

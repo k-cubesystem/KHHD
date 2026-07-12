@@ -8,7 +8,7 @@ const GIFT_MARKER = '봉헌'
 
 /**
  * 신당지기에게 공물을 건넸을 때 장기 기억으로 기록.
- * shrine-chat이 recallMemories로 주입하므로 다음 대화에서 회상된다.
+ * 해화지기(고민상담)가 recallMemories로 주입하므로 다음 대화에서 회상된다.
  * 중복 방지: 기존 봉헌 기억을 갱신(하나만 유지).
  */
 export async function recordKeeperGift(itemName: string): Promise<void> {
