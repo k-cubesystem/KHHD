@@ -386,7 +386,7 @@ export function ShrineRoomClient({ scene }: Props) {
         {scene.mainDeity?.spriteUrl && (
           <div
             className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-[3] deity-stand"
-            style={{ bottom: '51%', height: '34%' }}
+            style={{ bottom: '50%', height: '38%' }}
           >
             <div
               className="absolute left-1/2 -translate-x-1/2 rounded-full"
@@ -479,15 +479,15 @@ export function ShrineRoomClient({ scene }: Props) {
           <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
         </button>
 
-        {/* 말풍선 */}
+        {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게 */}
         {!editing && (
           <div
-            className="absolute z-[26] text-[11.5px] leading-relaxed px-3 py-2 rounded-[3px_12px_12px_12px] backdrop-blur-sm"
+            className="absolute z-[26] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm"
             style={{
-              left: '22%',
-              top: '24%',
-              right: '7%',
-              background: 'rgba(10,10,8,0.74)',
+              left: '20%',
+              top: '3%',
+              right: '5%',
+              background: 'rgba(10,10,8,0.8)',
               border: '1px solid var(--th-accent)',
             }}
           >
