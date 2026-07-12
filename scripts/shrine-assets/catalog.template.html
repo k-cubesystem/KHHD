@@ -1,0 +1,433 @@
+<style>
+  :root {
+    --bg: #17130e; --surface: #211a12; --surface-2: #2a2018; --raise: #322619;
+    --ink: #ece2d0; --ink-dim: #a99c86; --ink-faint: #77694f;
+    --gold: #d8b24a; --gold-soft: #c9a84c; --line: #3a2e20; --line-soft: #2c2318;
+    --t1: #7ba876; --t2: #cfa94a; --t3: #b3574f; --t4: #5a90bf;
+    --good: #7bbf7b;
+    --code-bg: #120e09;
+    --shadow: 0 1px 0 rgba(255,255,255,.03), 0 10px 30px -12px rgba(0,0,0,.6);
+    --serif: Georgia, 'Nanum Myeongjo', 'Batang', '바탕', serif;
+    --sans: system-ui, -apple-system, 'Malgun Gothic', '맑은 고딕', 'Apple SD Gothic Neo', sans-serif;
+    --mono: 'Cascadia Code', 'Consolas', ui-monospace, 'SFMono-Regular', monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f2ebda; --surface: #fbf6ec; --surface-2: #f0e7d5; --raise: #e9dec8;
+      --ink: #2c2317; --ink-dim: #6f6248; --ink-faint: #9a8c6e;
+      --gold: #9c7d23; --gold-soft: #a5852a; --line: #ddceb1; --line-soft: #e6dac1;
+      --t1: #4f7c52; --t2: #9c7d23; --t3: #9a453e; --t4: #3d6a97;
+      --good: #3f7d3f; --code-bg: #efe7d5;
+      --shadow: 0 1px 0 rgba(255,255,255,.5), 0 8px 24px -14px rgba(90,70,30,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17130e; --surface: #211a12; --surface-2: #2a2018; --raise: #322619;
+    --ink: #ece2d0; --ink-dim: #a99c86; --ink-faint: #77694f;
+    --gold: #d8b24a; --gold-soft: #c9a84c; --line: #3a2e20; --line-soft: #2c2318;
+    --t1: #7ba876; --t2: #cfa94a; --t3: #b3574f; --t4: #5a90bf;
+    --good: #7bbf7b; --code-bg: #120e09;
+    --shadow: 0 1px 0 rgba(255,255,255,.03), 0 10px 30px -12px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #f2ebda; --surface: #fbf6ec; --surface-2: #f0e7d5; --raise: #e9dec8;
+    --ink: #2c2317; --ink-dim: #6f6248; --ink-faint: #9a8c6e;
+    --gold: #9c7d23; --gold-soft: #a5852a; --line: #ddceb1; --line-soft: #e6dac1;
+    --t1: #4f7c52; --t2: #9c7d23; --t3: #9a453e; --t4: #3d6a97;
+    --good: #3f7d3f; --code-bg: #efe7d5;
+    --shadow: 0 1px 0 rgba(255,255,255,.5), 0 8px 24px -14px rgba(90,70,30,.35);
+  }
+
+  * { box-sizing: border-box; }
+  body, html { margin: 0; }
+  .wrap { background: var(--bg); color: var(--ink); font-family: var(--sans); min-height: 100vh;
+    font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+  /* Top bar */
+  header.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .top-inner { display: flex; align-items: center; gap: 16px; padding: 14px 20px; max-width: 1120px; margin: 0 auto; }
+  .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+  .brand .glyph { font-family: var(--serif); color: var(--gold); font-size: 22px; line-height: 1; }
+  .brand h1 { font-family: var(--serif); font-size: 18px; font-weight: 600; margin: 0; letter-spacing: .01em;
+    white-space: nowrap; }
+  .brand .sub { color: var(--ink-dim); font-size: 12.5px; white-space: nowrap; }
+  .top-spacer { flex: 1; }
+  .toggle { background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-dim);
+    border-radius: 8px; padding: 7px 11px; font-size: 12.5px; cursor: pointer; font-family: var(--sans);
+    display: inline-flex; align-items: center; gap: 6px; }
+  .toggle:hover { color: var(--ink); border-color: var(--gold-soft); }
+
+  /* Hero / intro */
+  .intro { padding: 34px 0 8px; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--gold-soft); margin: 0 0 12px; }
+  .intro h2 { font-family: var(--serif); font-weight: 600; font-size: clamp(26px, 4.6vw, 40px);
+    line-height: 1.12; margin: 0 0 12px; text-wrap: balance; letter-spacing: -.01em; }
+  .intro p { color: var(--ink-dim); max-width: 60ch; margin: 0 0 6px; }
+  .intro .style-note { margin-top: 16px; padding: 13px 16px; background: var(--surface); border: 1px solid var(--line-soft);
+    border-left: 3px solid var(--gold); border-radius: 8px; font-size: 13.5px; color: var(--ink-dim); max-width: 70ch; }
+  .intro .style-note b { color: var(--ink); font-weight: 600; }
+
+  /* Stat tiles */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 26px 0 6px; }
+  .stat { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 12px; padding: 15px 16px;
+    position: relative; overflow: hidden; }
+  .stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--sc, var(--gold)); }
+  .stat .num { font-family: var(--serif); font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .stat .lbl { color: var(--ink-dim); font-size: 12.5px; margin-top: 6px; }
+  .stat .tag { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--sc, var(--gold)); margin-top: 3px; }
+  @media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+  /* Controls */
+  .controls { position: sticky; top: 57px; z-index: 15; background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px); padding: 14px 0 12px; margin: 20px 0 8px; border-bottom: 1px solid var(--line-soft); }
+  .controls-inner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-dim); border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; cursor: pointer; font-family: var(--sans); white-space: nowrap; transition: .12s; }
+  .chip:hover { color: var(--ink); }
+  .chip[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #1a1408; font-weight: 600; }
+  :root[data-theme="light"] .chip[aria-pressed="true"], @media (prefers-color-scheme: light) { }
+  .search { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 8px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; }
+  .search input { flex: 1; background: transparent; border: 0; outline: none; color: var(--ink); font-size: 13.5px;
+    font-family: var(--sans); min-width: 0; }
+  .search input::placeholder { color: var(--ink-faint); }
+  .search .s-ico { color: var(--ink-faint); font-size: 14px; }
+  .count-live { color: var(--ink-dim); font-size: 12.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Tier section */
+  .tier { margin: 30px 0 8px; }
+  .tier-head { display: flex; align-items: baseline; gap: 12px; margin: 0 0 14px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line); }
+  .tier-head .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--tc); align-self: center; box-shadow: 0 0 10px var(--tc); }
+  .tier-head h3 { font-family: var(--serif); font-size: 20px; margin: 0; font-weight: 600; }
+  .tier-head .meta { color: var(--ink-dim); font-size: 12.5px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Deity card */
+  .card { background: var(--surface); border: 1px solid var(--line-soft); border-radius: 14px; overflow: hidden;
+    box-shadow: var(--shadow); display: flex; flex-direction: column; }
+  .card-head { padding: 15px 16px 13px; border-bottom: 1px solid var(--line-soft); border-top: 3px solid var(--tc);
+    display: flex; flex-direction: column; gap: 8px; }
+  .name-row { display: flex; align-items: center; gap: 10px; }
+  .swatch { width: 26px; height: 26px; border-radius: 7px; flex: none; border: 1px solid rgba(255,255,255,.14);
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--bg) 55%, transparent); }
+  .name-row .nm { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+  .name-row .hj { color: var(--ink-faint); font-size: 13px; font-family: var(--serif); }
+  .name-row .code { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); color: var(--ink-dim);
+    border: 1px solid var(--line); }
+  .badge.el { color: var(--tc); border-color: color-mix(in srgb, var(--tc) 40%, var(--line)); }
+  .badge.price { color: var(--gold-soft); }
+  .domains { color: var(--ink-dim); font-size: 12.5px; }
+
+  .card-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .imgrow { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 10px; overflow: hidden; }
+  .imgrow-head { display: flex; align-items: center; gap: 8px; padding: 9px 11px; }
+  .kindchip { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; white-space: nowrap; }
+  .kindchip.standing { background: color-mix(in srgb, var(--t2) 22%, transparent); color: var(--t2); }
+  .kindchip.portrait { background: color-mix(in srgb, var(--t4) 22%, transparent); color: var(--t4); }
+  .kindchip.expr { background: var(--raise); color: var(--ink-dim); }
+  .imgrow-head .path { font-family: var(--mono); font-size: 10.5px; color: var(--ink-faint); overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+  .copy { margin-left: auto; background: var(--raise); border: 1px solid var(--line); color: var(--ink-dim);
+    border-radius: 7px; padding: 5px 10px; font-size: 11.5px; cursor: pointer; font-family: var(--sans); white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 5px; transition: .12s; }
+  .copy:hover { color: var(--ink); border-color: var(--gold-soft); }
+  .copy.done { color: var(--good); border-color: var(--good); }
+  .prompt { font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--ink-dim); background: var(--code-bg);
+    border-top: 1px solid var(--line-soft); padding: 10px 11px; max-height: 82px; overflow-y: auto; white-space: pre-wrap;
+    word-break: break-word; }
+  .prompt::-webkit-scrollbar { width: 8px; } .prompt::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+
+  .expr-toggle { background: var(--surface-2); border: 1px dashed var(--line); color: var(--ink-dim); border-radius: 10px;
+    padding: 10px; font-size: 12.5px; cursor: pointer; font-family: var(--sans); display: flex; align-items: center;
+    justify-content: center; gap: 8px; }
+  .expr-toggle:hover { color: var(--ink); border-color: var(--gold-soft); }
+  .expr-wrap { display: none; flex-direction: column; gap: 10px; }
+  .expr-wrap.open { display: flex; }
+  .card-foot { padding: 10px 12px 13px; border-top: 1px solid var(--line-soft); display: flex; gap: 8px; }
+  .card-foot .copy { margin: 0; flex: 1; justify-content: center; }
+
+  /* Themes */
+  .themes .grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .theme-card .card-head { border-top-width: 3px; }
+  .theme-card .swatch { border-radius: 50%; }
+
+  footer.foot { border-top: 1px solid var(--line); margin-top: 40px; padding: 26px 0 60px; color: var(--ink-dim);
+    font-size: 13px; }
+  footer.foot ol { margin: 10px 0 0; padding-left: 20px; max-width: 74ch; }
+  footer.foot li { margin: 5px 0; }
+  footer.foot code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 1px 6px;
+    border-radius: 5px; border: 1px solid var(--line-soft); color: var(--ink); }
+  .hidden { display: none !important; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--gold); color: #1a1408; padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 10px 30px -8px rgba(0,0,0,.5); transition: .22s; pointer-events: none; z-index: 50; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <span class="glyph">神</span>
+        <h1>신위 이미지 제작소</h1>
+        <span class="sub">· 설빛 온기 · 외주 프롬프트 시트</span>
+      </div>
+      <div class="top-spacer"></div>
+      <button class="toggle" id="themeBtn" aria-label="테마 전환">◐ 테마</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <section class="intro">
+      <p class="eyebrow">Shrine 3.0 · Asset Production</p>
+      <h2>17 신위와 4 테마, 157장의 이미지 명세</h2>
+      <p>외부 제작용 프롬프트 시트입니다. 각 이미지의 <b>완성 프롬프트</b>를 버튼 하나로 복사해 그대로 생성 툴에 넣으면 됩니다. 먼저 <b>Phase 1 (스탠딩·초상 34장)</b>만 만들어도 앱의 이모지 폴백이 실제 신위 이미지로 바뀝니다.</p>
+      <div class="style-note">
+        <b>스타일 — 설빛 온기</b>: 따뜻한 수채 K-애니. 큰 갈색 눈망울·밝은 하이라이트, 홍조 볼, 골드 역광·림라이트, semi-deformed, 포근함(무섭지 않게). &nbsp;·&nbsp; <b>배경 규칙</b>: 캐릭터는 <b>크로마 그린 #00FF00</b> 단색(투명 키잉용), 초상만 소프트 보케 허용.
+      </div>
+
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <div class="controls">
+      <div class="controls-inner">
+        <div class="chips" id="phaseChips">
+          <button class="chip" data-phase="all" aria-pressed="true">전체 157</button>
+          <button class="chip" data-phase="1" aria-pressed="false">Phase 1 · 필수 34</button>
+          <button class="chip" data-phase="2" aria-pressed="false">Phase 2 · 표정 119</button>
+          <button class="chip" data-phase="theme" aria-pressed="false">테마 4</button>
+        </div>
+        <div class="search">
+          <span class="s-ico">⌕</span>
+          <input id="search" type="text" placeholder="신위 이름·관장으로 검색 (예: 재물, 삼신)" autocomplete="off">
+        </div>
+        <span class="count-live" id="countLive"></span>
+      </div>
+    </div>
+
+    <main id="content"></main>
+
+    <footer class="foot">
+      <div><b>제작 후 연동</b> (코드 변경 0 — 경로 규칙만 맞으면 즉시 반영)</div>
+      <ol>
+        <li>스탠딩·표정 원본을 <code>assets-src/shrine/raw/{code}/</code>에 두고 <code>node scripts/shrine-assets/chroma.mjs</code> 실행 → 그린스크린 제거 → <code>public/shrine/deities/{code}/*.webp</code> 투명 생성 (초상은 보케 배경이라 키잉 제외).</li>
+        <li>DB <code>shrine_deities.sprite_url</code> = base, <code>portrait_url</code> = portrait. 표정은 <code>{code}/{emotion}.webp</code> 규칙으로 코드가 참조.</li>
+        <li>테마: <code>shrine_theme_packs.assets.wall / .floor</code>를 이미지 URL로 교체.</li>
+      </ol>
+    </footer>
+  </div>
+  <div class="toast" id="toast">복사됨</div>
+</div>
+
+<script>
+  const DATA = __DATA__;
+  const TIERS = [
+    { t: 1, name: '수호신', color: 'var(--t1)', meta: '무료 · 사주 용신으로 자동 좌정' },
+    { t: 2, name: '명신', color: 'var(--t2)', meta: '1복채' },
+    { t: 3, name: '장군신', color: 'var(--t3)', meta: '2복채' },
+    { t: 4, name: '천신', color: 'var(--t4)', meta: '3~4복채' },
+  ];
+  const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const totalExpr = DATA.deities.reduce((s,d)=>s+d.images.filter(i=>i.phase===2).length,0);
+
+  // stats
+  const statData = [
+    { num: 17, lbl: '스탠딩 스프라이트', tag: 'Phase 1 · 필수', c: 'var(--t2)' },
+    { num: 17, lbl: '초상 bust', tag: 'Phase 1 · 필수', c: 'var(--t4)' },
+    { num: totalExpr, lbl: '표정 세트 (7종×17)', tag: 'Phase 2', c: 'var(--ink-dim)' },
+    { num: DATA.themes.length, lbl: '테마 배경', tag: '선택', c: 'var(--gold)' },
+  ];
+  document.getElementById('stats').innerHTML = statData.map(s =>
+    `<div class="stat" style="--sc:${s.c}"><div class="num">${s.num}</div><div class="lbl">${s.lbl}</div><div class="tag">${s.tag}</div></div>`
+  ).join('');
+
+  function imgRowHTML(img) {
+    return `<div class="imgrow" data-phase="${img.phase}">
+      <div class="imgrow-head">
+        <span class="kindchip ${img.kind}">${img.label}</span>
+        <span class="path" title="${esc(img.path)}">${esc(img.path)}</span>
+        <button class="copy" data-prompt="${esc(img.prompt)}"><span class="ci">⧉</span> 복사</button>
+      </div>
+      <div class="prompt">${esc(img.prompt)}</div>
+    </div>`;
+  }
+
+  function cardHTML(d) {
+    const p1 = d.images.filter(i => i.phase === 1);
+    const p2 = d.images.filter(i => i.phase === 2);
+    const search = (d.name + ' ' + d.domains + ' ' + d.code + ' ' + d.tierName).toLowerCase();
+    return `<article class="card" data-search="${esc(search)}" data-tier="${d.tier}" style="--tc:${d.accent}">
+      <div class="card-head">
+        <div class="name-row">
+          <span class="swatch" style="background:${d.accent}"></span>
+          <span class="nm">${d.name}</span>
+          ${d.hanja ? `<span class="hj">${d.hanja}</span>` : ''}
+          <span class="code">${d.code}</span>
+        </div>
+        <div class="badges">
+          <span class="badge el">${d.el}</span>
+          <span class="badge">${d.tierName}</span>
+          <span class="badge price">${d.price}</span>
+        </div>
+        <div class="domains">관장 · ${d.domains}</div>
+      </div>
+      <div class="card-body">
+        ${p1.map(imgRowHTML).join('')}
+        <button class="expr-toggle" data-phase="2">표정 7종 펼치기 ▾</button>
+        <div class="expr-wrap" data-phase="2">${p2.map(imgRowHTML).join('')}</div>
+      </div>
+      <div class="card-foot">
+        <button class="copy copy-p1" data-all="1"><span class="ci">⧉</span> Phase 1 복사 (2)</button>
+        <button class="copy copy-p2" data-all="2"><span class="ci">⧉</span> 표정 전체 복사 (${p2.length})</button>
+      </div>
+    </article>`;
+  }
+
+  function themeCardHTML(t) {
+    const search = (t.name + ' ' + t.code + ' 테마').toLowerCase();
+    return `<article class="card theme-card" data-search="${esc(search)}" data-tier="theme" style="--tc:${t.accent}">
+      <div class="card-head">
+        <div class="name-row">
+          <span class="swatch" style="background:${t.accent}"></span>
+          <span class="nm">${t.name}</span>
+          <span class="code">${t.code}</span>
+        </div>
+        <div class="badges"><span class="badge el">${t.el}</span><span class="badge">방 배경</span></div>
+        <div class="domains">인물 없음 · 중앙 여백에 신위가 좌정</div>
+      </div>
+      <div class="card-body">${imgRowHTML({ kind: 'expr', label: '배경', phase: 'theme', path: t.path, prompt: t.prompt })}</div>
+    </article>`;
+  }
+
+  // render tier sections
+  let html = '';
+  for (const tier of TIERS) {
+    const ds = DATA.deities.filter(d => d.tier === tier.t);
+    html += `<section class="tier" data-tier="${tier.t}">
+      <div class="tier-head" style="--tc:${tier.color}">
+        <span class="dot"></span><h3>${tier.name}</h3><span class="meta">${tier.meta} · ${ds.length}신위</span>
+      </div>
+      <div class="grid">${ds.map(cardHTML).join('')}</div>
+    </section>`;
+  }
+  html += `<section class="tier themes" data-tier="theme">
+    <div class="tier-head" style="--tc:var(--gold)"><span class="dot"></span><h3>테마 배경</h3>
+      <span class="meta">선택 · 현재 CSS 그라디언트 · ${DATA.themes.length}종</span></div>
+    <div class="grid">${DATA.themes.map(themeCardHTML).join('')}</div>
+  </section>`;
+  document.getElementById('content').innerHTML = html;
+
+  // toast + clipboard
+  const toast = document.getElementById('toast');
+  let toastTimer;
+  function showToast(msg) {
+    toast.textContent = msg; toast.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1400);
+  }
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); let ok=false; try{ok=document.execCommand('copy');}catch{} ta.remove(); return ok; }
+  }
+
+  document.getElementById('content').addEventListener('click', async (e) => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.classList.contains('expr-toggle')) {
+      const wrap = t.nextElementSibling; const open = wrap.classList.toggle('open');
+      t.textContent = open ? '표정 접기 ▴' : '표정 7종 펼치기 ▾';
+      return;
+    }
+    if (t.classList.contains('copy')) {
+      let text;
+      if (t.dataset.all) {
+        const card = t.closest('.card');
+        const rows = [...card.querySelectorAll(`.imgrow[data-phase="${t.dataset.all}"] .copy`)];
+        text = rows.map(r => r.dataset.prompt).join('\n\n');
+      } else { text = t.dataset.prompt; }
+      const ok = await copyText(text);
+      if (ok) {
+        const orig = t.innerHTML; t.classList.add('done'); t.innerHTML = '<span class="ci">✓</span> 복사됨';
+        showToast(t.dataset.all ? `${t.dataset.all==='1'?'Phase 1':'표정 전체'} 프롬프트 복사됨` : '프롬프트 복사됨');
+        setTimeout(() => { t.classList.remove('done'); t.innerHTML = orig; }, 1300);
+      } else showToast('복사 실패 — 수동 선택하세요');
+    }
+  });
+
+  // filters
+  let curPhase = 'all', curQuery = '';
+  const chips = document.getElementById('phaseChips');
+  const countLive = document.getElementById('countLive');
+
+  function applyFilter() {
+    const q = curQuery.trim().toLowerCase();
+    let shownImgs = 0, shownCards = 0;
+    document.querySelectorAll('.tier').forEach(sec => {
+      const isTheme = sec.dataset.tier === 'theme';
+      let tierHasVisible = false;
+      sec.querySelectorAll('.card').forEach(card => {
+        const matchQ = !q || card.dataset.search.includes(q);
+        const matchPhaseCard = curPhase === 'all' || (curPhase === 'theme' ? isTheme : !isTheme);
+        const visible = matchQ && matchPhaseCard;
+        card.classList.toggle('hidden', !visible);
+        if (visible) { tierHasVisible = true; shownCards++; }
+        // per-image phase visibility
+        if (visible) {
+          card.querySelectorAll('.imgrow').forEach(row => {
+            const rp = row.dataset.phase;
+            let show = true;
+            if (curPhase === '1') show = rp === '1';
+            else if (curPhase === '2') show = rp === '2';
+            else if (curPhase === 'theme') show = rp === 'theme';
+            row.classList.toggle('hidden', !show);
+            if (show) shownImgs++;
+          });
+          const et = card.querySelector('.expr-toggle');
+          const ew = card.querySelector('.expr-wrap');
+          if (et && ew) {
+            const showExpr = curPhase === 'all' || curPhase === '2';
+            et.classList.toggle('hidden', !showExpr);
+            if (curPhase === '2') { ew.classList.add('open'); et.textContent = '표정 접기 ▴'; }
+            const foot = card.querySelector('.card-foot');
+            if (foot) {
+              const c1 = foot.querySelector('.copy-p1'), c2 = foot.querySelector('.copy-p2');
+              if (c1) c1.classList.toggle('hidden', curPhase === '2');
+              if (c2) c2.classList.toggle('hidden', curPhase === '1');
+            }
+          }
+        }
+      });
+      sec.classList.toggle('hidden', !tierHasVisible);
+    });
+    countLive.textContent = `${shownCards}개 카드 · ${shownImgs}장 표시`;
+  }
+
+  chips.addEventListener('click', (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    curPhase = c.dataset.phase;
+    chips.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === c ? 'true' : 'false'));
+    applyFilter();
+  });
+  document.getElementById('search').addEventListener('input', (e) => { curQuery = e.target.value; applyFilter(); });
+
+  // theme toggle
+  const root = document.documentElement;
+  document.getElementById('themeBtn').addEventListener('click', () => {
+    const cur = root.getAttribute('data-theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+
+  applyFilter();
+</script>
