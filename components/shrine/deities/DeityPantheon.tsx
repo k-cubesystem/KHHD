@@ -18,12 +18,13 @@ const ELEMENT_GLYPH: Record<string, string> = {
 }
 const TIERS = [1, 2, 3, 4] as const
 
-/** 에셋(스프라이트) 없이 aura 색상 + 오행 글리프로 신위를 표현하는 폴백 메달리온. */
+/** 신위 메달리온 — 초상/스프라이트가 있으면 이미지, 없으면 aura 색상 + 오행 글리프 폴백. */
 function DeityMedallion({ deity, size }: { deity: Deity; size: number }) {
   const accent = deity.aura.accent ?? '#C9A84C'
+  const img = deity.portraitUrl ?? deity.spriteUrl
   return (
     <div
-      className="relative flex items-center justify-center rounded-full"
+      className="relative flex items-center justify-center rounded-full overflow-hidden"
       style={{
         width: size,
         height: size,
@@ -31,8 +32,19 @@ function DeityMedallion({ deity, size }: { deity: Deity; size: number }) {
         boxShadow: `0 0 ${size / 3}px ${accent}55, inset 0 0 ${size / 5}px ${accent}44`,
       }}
     >
-      <div className="absolute inset-[10%] rounded-full border" style={{ borderColor: `${accent}66` }} />
-      <span style={{ fontSize: size * 0.4, lineHeight: 1 }}>{ELEMENT_GLYPH[deity.element] ?? '神'}</span>
+      <div className="absolute inset-[10%] rounded-full border z-[1]" style={{ borderColor: `${accent}66` }} />
+      {img ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={img}
+          alt={deity.name}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-contain p-[6%]"
+          style={{ filter: `drop-shadow(0 ${size / 22}px ${size / 14}px rgba(0,0,0,0.35))` }}
+        />
+      ) : (
+        <span style={{ fontSize: size * 0.4, lineHeight: 1 }}>{ELEMENT_GLYPH[deity.element] ?? '神'}</span>
+      )}
     </div>
   )
 }
