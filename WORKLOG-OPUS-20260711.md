@@ -245,8 +245,38 @@
 
 ---
 
+## 🧪 e2e 가동 + R1(subscriptions) 코드 완결 (2026-07-12, Fable 세션2)
+
+로컬 env 확보로 **처음으로 Playwright e2e 전체 가동**. 테스트 계정(`test@example.com`, 강력 랜덤 비밀번호)을 admin API로 생성(리포 기본값 `test1234!`는 프로덕션 auth에 위험해서 미사용). admin 계정은 프로덕션에 만들지 않음 → admin 스펙 제외.
+
+**e2e 결과: 첫 실행 45통과/12실패 → 원인 수정 후 잔여 0** (플레이크 1건은 타임아웃 보정).
+
+| 실패 원인                                                                             | 분류                 | 조치                                                                                                                                                      |
+| ------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **중첩 `<main>`** — protected layout이 `<main>` 렌더 + 하위 6파일이 또 `<main>` (7건) | **앱 버그(접근성)**  | 내부 `<main>`→`<div>`: studio-page-client / studio-analysis-layout / analysis-hub-client / analysis/result / analysis/theme/[type] / events/2026-byeong-o |
+| 멤버십 플랜 카드 `/SINGLE\|FAMILY\|BUSINESS/` 미매칭                                  | 스펙 구식(복채 전환) | 한국어 라벨(싱글/패밀리/비즈니스 멤버십) 추가 매칭                                                                                                        |
+| signup `getByLabel('비밀번호')` strict 위반(비밀번호 확인과 중복)                     | 스펙 버그            | `{ exact: true }`                                                                                                                                         |
+| payment-flow 하드코딩 계정(e2e-test@haehwadang.com)                                   | 스펙 환경 의존       | `E2E_USER_EMAIL/PASSWORD` env 우선                                                                                                                        |
+| admin setup 실패 시 전체 57건 중단(의존 프로젝트는 grep 필터 무시)                    | 인프라               | `E2E_ADMIN_EMAIL` 미설정 시 skip                                                                                                                          |
+| 가족 추가 폼 — 병렬 실행시만 실패(dev 컴파일 지연)                                    | 플레이크             | 타임아웃 10s→20s                                                                                                                                          |
+| jest가 e2e 폴더 수집(16 스위트 가짜 실패)                                             | 설정                 | `testPathIgnorePatterns`(Windows 구분자 대응) → **7 스위트/126 전부 통과 클린**                                                                           |
+
+**R1(subscriptions 자가발급) 코드 완결** — `payment/subscription.ts` 빌링 상태머신 전부 admin(service_role) 전환:
+
+- `createBillingAuthUrl`(폴백 제거→하드실패+에러체크) / `issueBillingKey` / `executeFirstPayment`(4쓰기) / `cancelSubscription` / `reactivateSubscription` / `changeBillingMethod`. 소유권은 유저클라 조회+`.eq('user_id')` 이중 가드.
+- **실버그 발견·수정**: `subscription_payments`엔 SELECT 정책뿐 → 기존 유저클라 결제기록 INSERT가 **조용히 실패**(에러 미체크). 첫결제 성공기록 누락 → 멱등성(이중결제 방지) 무력화 상태였음. admin 전환+에러 로깅.
+- `processRecurringPayments` 삭제 — 호출처 0(죽은 코드), cron/billing/route.ts가 admin으로 동일기능 보유.
+- **마이그레이션 파일 `20260712_security_r1_subscriptions.sql` 준비(⚠️ 미적용)**: insert_own/update_own 제거. **이 커밋 배포 후에만 적용.**
+- **R10 종결**: `list_edge_functions` = 빈 배열(엣지 미배포 확인) → R1 적용에 영향 없음. (참고: 엣지 payment 코드는 상태값 소문자 등 스테일 — 활성화 전 재작업 필요)
+
+기타: `.gitignore` 중복(.vercel×3, .env\*.local×2) 정리. 검증: tsc 0 / jest 126 / e2e 서브셋 재실행 전부 통과.
+
+---
+
 ### 사용자 승인/확인 필요 목록 (누적)
 
-- [ ] **S1b 마이그레이션 적용 순서**: ①코드(admin 클라이언트 전환) 배포 → ②S1b 마이그레이션 적용. 순서 뒤바뀌면 장애.
+- [x] ~~S1b 마이그레이션 적용 순서~~ — **완료** (2026-07-12 배포+적용, subscriptions만 연기).
+- [ ] **R1 마이그레이션 적용 순서**: ①이번 커밋(빌링 admin 전환) 배포 → ②프로덕션 구독 플로우 회귀확인 → ③`20260712_security_r1_subscriptions.sql` 적용. 순서 뒤바뀌면 구독 장애.
 - [x] ~~Auth 유출비밀번호 차단(HaveIBeenPwned) 활성화~~ — **완료** (`password_hibp_enabled=true`).
 - [ ] (S3) DNS 레지스트라 잠금/DNSSEC, SPF/DKIM/DMARC, Cloudflare WAF, 관리자 2FA — 콘솔 전용, 미실행.
+- [ ] e2e 테스트 계정 `test@example.com`이 프로덕션 auth에 생성됨(강력 랜덤 비밀번호). 유지 여부 결정 — 유지 시 CI/로컬 e2e 재사용 가능, 삭제 원하면 Supabase 대시보드에서 삭제.
