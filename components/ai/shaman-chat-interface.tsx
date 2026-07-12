@@ -19,6 +19,7 @@ import {
   type ShamanQuestionStatus,
 } from '@/app/actions/ai/shaman-chat'
 import { useFamilyMembers } from '@/hooks/use-family-members'
+import { useTts } from '@/hooks/useTts'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw } from 'lucide-react'
@@ -51,7 +52,15 @@ function TypingDots() {
 }
 
 // ─── 메시지 버블 ────────────────────────────────────────
-const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessage; showAvatar: boolean }) {
+const Bubble = memo(function Bubble({
+  msg,
+  showAvatar,
+  onSpeak,
+}: {
+  msg: ShamanChatMessage
+  showAvatar: boolean
+  onSpeak?: (text: string) => void
+}) {
   const isUser = msg.role === 'user'
   const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 
@@ -106,7 +115,19 @@ const Bubble = memo(function Bubble({ msg, showAvatar }: { msg: ShamanChatMessag
         >
           <p className="whitespace-pre-wrap break-words">{msg.content}</p>
         </div>
-        <p className="text-[10px] text-primary/60 pl-1">{time}</p>
+        <div className="flex items-center gap-2 pl-1">
+          <p className="text-[10px] text-primary/60">{time}</p>
+          {onSpeak && msg.content ? (
+            <button
+              type="button"
+              onClick={() => onSpeak(msg.content)}
+              aria-label="음성으로 듣기"
+              className="text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
+            >
+              🔊 듣기
+            </button>
+          ) : null}
+        </div>
       </div>
     </motion.div>
   )
@@ -166,6 +187,32 @@ export function ShamanChatInterface() {
   ])
   const [questionStatus, setQuestionStatus] = useState<ShamanQuestionStatus | null>(null)
   const [isStatusLoading, setIsStatusLoading] = useState(true)
+
+  // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
+  const { supported: ttsSupported, speaking: ttsSpeaking, speak, stop: ttsStop } = useTts()
+  const [autoSpeak, setAutoSpeak] = useState(false)
+  useEffect(() => {
+    if (typeof window !== 'undefined') setAutoSpeak(window.localStorage.getItem('hhd_tts_auto') === '1')
+  }, [])
+  const toggleAutoSpeak = useCallback(() => {
+    setAutoSpeak((v) => {
+      const next = !v
+      if (typeof window !== 'undefined') window.localStorage.setItem('hhd_tts_auto', next ? '1' : '0')
+      if (!next) ttsStop()
+      return next
+    })
+  }, [ttsStop])
+  // 새 신위 응답 자동 발화(중복 방지)
+  const lastSpokenRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!autoSpeak || messages.length === 0) return
+    const last = messages[messages.length - 1]
+    if (last.role !== 'assistant' || !last.content) return
+    const key = last.timestamp + '|' + last.content.slice(0, 24)
+    if (lastSpokenRef.current === key) return
+    lastSpokenRef.current = key
+    speak(last.content)
+  }, [messages, autoSpeak, speak])
 
   const [selectedFamilyId, setSelectedFamilyId] = useState<string>('self')
   const { data: familyMembers } = useFamilyMembers()
@@ -408,6 +455,23 @@ export function ShamanChatInterface() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 신위 음성 자동읽기 토글 (TTS) */}
+            {ttsSupported && (
+              <button
+                onClick={toggleAutoSpeak}
+                aria-pressed={autoSpeak}
+                aria-label="신위 음성 자동 읽기"
+                title={autoSpeak ? '자동 읽기 켜짐' : '자동 읽기 꺼짐'}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] border transition',
+                  autoSpeak
+                    ? 'text-gold-300 border-gold-500/40 bg-gold-500/10'
+                    : 'text-primary/50 hover:text-primary/80 border-primary/15 hover:border-primary/35'
+                )}
+              >
+                {ttsSpeaking ? '🔊' : autoSpeak ? '🔈' : '🔇'} 음성
+              </button>
+            )}
             {/* 새 대화 시작 버튼 */}
             {messages.length > 0 && (
               <button
@@ -601,7 +665,14 @@ export function ShamanChatInterface() {
             messages.map((msg, i) => {
               const prev = messages[i - 1]
               const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant')
-              return <Bubble key={`${msg.timestamp}-${i}`} msg={msg} showAvatar={showAvatar} />
+              return (
+                <Bubble
+                  key={`${msg.timestamp}-${i}`}
+                  msg={msg}
+                  showAvatar={showAvatar}
+                  onSpeak={ttsSupported ? speak : undefined}
+                />
+              )
             })}
 
           {/* 타이핑 */}
