@@ -37,6 +37,17 @@ test.describe('신당 3.0 네비게이션', () => {
     await nav.getByText('신당', { exact: true }).click()
     await expect(page).toHaveURL(/\/protected\/shrine(\/|$|\?)/, { timeout: 15_000 })
     await expect(page.locator('main')).toBeVisible()
+    // 방 로드(getSceneData) 완료 대기 — '불러오는 중' 스피너 이후 실제 방/셋업 렌더
+    await page
+      .getByText(/나 의 신 당|수호신을 좌정|신당을 만들/)
+      .first()
+      .waitFor({ timeout: 15_000 })
+      .catch(() => {})
+    await page
+      .waitForFunction(() => Array.from(document.images).every((im) => im.complete && im.naturalWidth > 0), {
+        timeout: 10_000,
+      })
+      .catch(() => {})
     await page.screenshot({ path: SHOT('2-shrine'), fullPage: true })
     const hasRoom = await page
       .getByText('나 의 신 당')
