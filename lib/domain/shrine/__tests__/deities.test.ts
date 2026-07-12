@@ -1,4 +1,13 @@
-import { assignGuardian, GUARDIAN_RULES, DEFAULT_GUARDIAN } from '../deities'
+import {
+  assignGuardian,
+  GUARDIAN_RULES,
+  DEFAULT_GUARDIAN,
+  bondLevelForPoints,
+  bondProgress,
+  bondUnlocks,
+  BOND_THRESHOLDS,
+  BOND_MAX_LEVEL,
+} from '../deities'
 import type { Element } from '../types'
 
 describe('assignGuardian — 결정론적 수호신 자동 배정', () => {
@@ -90,6 +99,74 @@ describe('assignGuardian — 결정론적 수호신 자동 배정', () => {
       const codes = GUARDIAN_RULES.map((r) => r.code)
       expect(new Set(codes).size).toBe(6)
       expect(GUARDIAN_RULES.map((r) => r.order).sort()).toEqual([1, 2, 3, 4, 5, 6])
+    })
+  })
+})
+
+describe('인연(緣) 4단계', () => {
+  describe('bondLevelForPoints — 임계값 경계', () => {
+    const cases: Array<[number, number]> = [
+      [-50, 1],
+      [0, 1],
+      [99, 1],
+      [100, 2],
+      [299, 2],
+      [300, 3],
+      [699, 3],
+      [700, 4],
+      [99999, 4],
+    ]
+    it.each(cases)('points=%s → level %s', (points, expected) => {
+      expect(bondLevelForPoints(points)).toBe(expected)
+    })
+    it('임계값 배열은 4단계·오름차순', () => {
+      expect(BOND_THRESHOLDS).toHaveLength(BOND_MAX_LEVEL)
+      const sorted = [...BOND_THRESHOLDS].sort((a, b) => a - b)
+      expect([...BOND_THRESHOLDS]).toEqual(sorted)
+    })
+  })
+
+  describe('bondUnlocks — 단계별 해금', () => {
+    it('L1: 표정 2종, 애칭·심층주제 잠금', () => {
+      expect(bondUnlocks(1)).toEqual({ emotions: 2, nickname: false, deepTopics: false })
+    })
+    it('L2: 표정 7종 해금', () => {
+      expect(bondUnlocks(2).emotions).toBe(7)
+    })
+    it('L3: 애칭 해금', () => {
+      expect(bondUnlocks(3).nickname).toBe(true)
+      expect(bondUnlocks(3).deepTopics).toBe(false)
+    })
+    it('L4: 심층주제 해금', () => {
+      expect(bondUnlocks(4).deepTopics).toBe(true)
+    })
+  })
+
+  describe('bondProgress — 진행도', () => {
+    it('L1 초입: 다음 목표 100, 남은 100', () => {
+      const p = bondProgress(0)
+      expect(p.level).toBe(1)
+      expect(p.nextThreshold).toBe(100)
+      expect(p.toNext).toBe(100)
+    })
+    it('L2 중간(150): 다음 목표 300, 남은 150', () => {
+      const p = bondProgress(150)
+      expect(p.level).toBe(2)
+      expect(p.nextThreshold).toBe(300)
+      expect(p.toNext).toBe(150)
+    })
+    it('최고 단계(L4): nextThreshold null, toNext 0', () => {
+      const p = bondProgress(1000)
+      expect(p.level).toBe(4)
+      expect(p.nextThreshold).toBeNull()
+      expect(p.toNext).toBe(0)
+    })
+    it('소수/음수 입력 안전', () => {
+      expect(bondProgress(150.9).points).toBe(150)
+      expect(bondProgress(-10).level).toBe(1)
+    })
+    it('결정론: 같은 입력 같은 결과', () => {
+      expect(bondProgress(250)).toEqual(bondProgress(250))
     })
   })
 })

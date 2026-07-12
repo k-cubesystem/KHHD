@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { addBokPoints, deductBokPoints } from '@/app/actions/payment/bok-points'
-import { assignGuardian } from '@/lib/domain/shrine/deities'
+import { assignGuardian, bondProgress, type BondProgress } from '@/lib/domain/shrine/deities'
 import { isElement } from '@/lib/domain/shrine/types'
 
 /**
@@ -329,4 +329,68 @@ export async function purchaseThemePack(
   trackEvent({ action: 'theme_pack_purchase', category: 'shrine', label: packCode, value: price })
   revalidatePath('/protected/shrine')
   return { success: true, newBalance }
+}
+
+/**
+ * 인연(緣) 적립 — 대화/공물 등 이벤트에서 호출. 원자 RPC(award_deity_bond, service_role).
+ * 보유 신위에만 적립. leveledUp=true 면 UI에서 단계 상승 연출.
+ */
+export async function awardDeityBond(
+  deityId: string,
+  points: number
+): Promise<{ success: boolean; level?: number; points?: number; leveledUp?: boolean; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+  if (points <= 0) return { success: false, error: 'INVALID_POINTS' }
+
+  // 보유 신위에만 적립 (미보유 신위 적립 차단)
+  const { data: owned } = await supabase
+    .from('user_shrine_deities')
+    .select('deity_id')
+    .eq('user_id', user.id)
+    .eq('deity_id', deityId)
+    .maybeSingle()
+  if (!owned) return { success: false, error: 'NOT_OWNED' }
+
+  // 레벨업 감지용 이전 단계
+  const { data: before } = await supabase
+    .from('user_deity_bonds')
+    .select('bond_level')
+    .eq('user_id', user.id)
+    .eq('deity_id', deityId)
+    .maybeSingle()
+  const prevLevel = before?.bond_level ?? 0
+
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc('award_deity_bond', {
+    p_user_id: user.id,
+    p_deity_id: deityId,
+    p_points: points,
+  })
+  if (error) {
+    logger.error('[awardDeityBond] rpc error:', error)
+    return { success: false, error: 'AWARD_FAILED' }
+  }
+  const row = Array.isArray(data) ? data[0] : data
+  const level = typeof row?.bond_level === 'number' ? row.bond_level : undefined
+  const total = typeof row?.bond_points === 'number' ? row.bond_points : undefined
+
+  revalidatePath('/protected/shrine')
+  return { success: true, level, points: total, leveledUp: level !== undefined && level > prevLevel }
+}
+
+/** 보유 신위별 인연 진행도(단계·다음목표·해금) — UI용. */
+export async function getDeityBonds(): Promise<Array<{ deityId: string; progress: BondProgress }>> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data } = await supabase.from('user_deity_bonds').select('deity_id, bond_points').eq('user_id', user.id)
+
+  return (data ?? []).map((r) => ({ deityId: r.deity_id, progress: bondProgress(r.bond_points) }))
 }

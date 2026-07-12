@@ -119,3 +119,72 @@ export function assignGuardian(input: AssignGuardianInput): GuardianAssignment {
   }
   return best
 }
+
+// ─── 인연(緣) 4단계 ──────────────────────────────────────────
+// PRD-shrine-3.0 §신규 시스템: 대화/공물로 bond_points 상승 → 표정·호칭·심층주제 해금.
+// ⚠️ 임계값은 DB award_deity_bond RPC 의 CASE 와 동기화할 것(둘 다 아래 값 기준).
+
+export type BondLevel = 1 | 2 | 3 | 4
+export const BOND_MAX_LEVEL: BondLevel = 4
+
+/** 각 단계에 도달하기 위한 최소 누적 bond_points (index 0 = 1단계, 길이 = BOND_MAX_LEVEL). */
+export const BOND_THRESHOLDS: readonly number[] = [0, 100, 300, 700]
+
+/** 단계명 (연→정→신뢰→지음). */
+export const BOND_LEVEL_NAMES: Record<BondLevel, string> = {
+  1: '연(緣)',
+  2: '정(情)',
+  3: '신뢰(信賴)',
+  4: '지음(知音)',
+}
+
+/** 누적 포인트 → 인연 단계(1~4). 결정론. */
+export function bondLevelForPoints(points: number): BondLevel {
+  const p = Number.isFinite(points) && points > 0 ? points : 0
+  let level: BondLevel = 1
+  for (let i = BOND_THRESHOLDS.length - 1; i >= 0; i--) {
+    const threshold = BOND_THRESHOLDS[i] ?? 0
+    if (p >= threshold) {
+      level = (i + 1) as BondLevel
+      break
+    }
+  }
+  return level
+}
+
+export interface BondUnlocks {
+  /** 해금된 표정 수(7종 중). */
+  emotions: number
+  /** 애칭(특별 호칭) 해금. */
+  nickname: boolean
+  /** 심층 신탁 주제 해금. */
+  deepTopics: boolean
+}
+
+/** 단계별 해금 콘텐츠(표정/호칭/주제). */
+export function bondUnlocks(level: BondLevel): BondUnlocks {
+  return {
+    emotions: level >= 2 ? 7 : 2, // L1: neutral+smile, L2+: 전체 7종
+    nickname: level >= 3,
+    deepTopics: level >= 4,
+  }
+}
+
+export interface BondProgress {
+  level: BondLevel
+  points: number
+  /** 다음 단계 임계값(최고 단계면 null). */
+  nextThreshold: number | null
+  /** 다음 단계까지 남은 포인트(최고 단계면 0). */
+  toNext: number
+  unlocks: BondUnlocks
+}
+
+/** 누적 포인트로부터 단계·다음목표·해금을 한 번에 계산. */
+export function bondProgress(points: number): BondProgress {
+  const p = Number.isFinite(points) && points > 0 ? Math.floor(points) : 0
+  const level = bondLevelForPoints(p)
+  const nextThreshold = level < BOND_MAX_LEVEL ? (BOND_THRESHOLDS[level] ?? null) : null
+  const toNext = nextThreshold === null ? 0 : Math.max(0, nextThreshold - p)
+  return { level, points: p, nextThreshold, toNext, unlocks: bondUnlocks(level) }
+}
