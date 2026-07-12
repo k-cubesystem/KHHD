@@ -19,9 +19,10 @@ import { DEITIES, EMOTIONS, basePrompt, emotionPrompt } from './manifest.mjs'
 
 config({ path: path.resolve('D:/anti/haehwadang/.env.local') })
 
-const MODEL = process.env.SHRINE_IMAGE_MODEL || 'gemini-3.1-flash-image' // OPUS: 검증/조정
-const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-if (!KEY) { console.error('GEMINI_API_KEY 없음 (.env.local)'); process.exit(1) }
+const MODEL = process.env.SHRINE_IMAGE_MODEL || 'gemini-3.1-flash-image' // 이미지 생성 모델
+// 키 폴백: 앱은 GOOGLE_GENERATIVE_AI_API_KEY를 쓰므로 그것도 허용(둘 중 있는 것 사용).
+const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
+if (!KEY) { console.error('GEMINI 키 없음 (.env.local의 GEMINI_API_KEY 또는 GOOGLE_GENERATIVE_AI_API_KEY)'); process.exit(1) }
 
 const RAW = 'D:/anti/haehwadang/assets-src/shrine/raw'
 const genAI = new GoogleGenerativeAI(KEY)
