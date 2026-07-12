@@ -3,11 +3,34 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { unstable_cache } from 'next/cache'
-import { canUseTalisman, incrementDailyUsage, getUserTierLimits } from './membership'
+import { incrementDailyUsage, getUserTierLimits } from './membership'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserRole } from '@/lib/supabase/helpers'
+import { computeSpendPlan } from '@/lib/domain/payment/spend-plan'
 import { logger } from '@/lib/utils/logger'
+
+/** 오늘 일일 한도 소비량(무료분만 카운트) */
+async function getUsedToday(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<number> {
+  const today = new Date().toISOString().split('T')[0]
+  const { data } = await admin
+    .from('daily_usage_logs')
+    .select('talismans_used')
+    .eq('user_id', userId)
+    .eq('usage_date', today)
+    .maybeSingle()
+  return data?.talismans_used ?? 0
+}
+
+/** 충전(CHARGE) 잔여 복채 — 일일 한도 초과 소비의 재원. 실패 시 0(보수적). */
+async function getChargeExemptRemaining(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<number> {
+  const { data, error } = await admin.rpc('get_charge_exempt_remaining', { p_user_id: userId })
+  if (error) {
+    logger.error('[Wallet] get_charge_exempt_remaining error:', error.message)
+    return 0
+  }
+  return typeof data === 'number' ? data : 0
+}
 
 const TESTER_DAILY_AMOUNT = 50 // 테스터 일일 자동충전 복채 (50만냥)
 
@@ -162,23 +185,35 @@ export async function deductTalisman(
     return { success: true, remainingBalance: 999 }
   }
 
-  // Check daily talisman usage limit (멤버십 일일 한도 체크)
-  const dailyCheck = await canUseTalisman()
-  if (!dailyCheck.allowed) {
-    const limits = await getUserTierLimits()
+  // Get cost
+  const cost = customAmount || (await getFeatureCost(featureKey))
+
+  // 복채 차감은 service_role 전용 — 인증(위)을 통과한 본인 계정에만.
+  const admin = createAdminClient()
+
+  // 일일 한도 계획: 무료분은 티어 일일한도까지, 초과분은 충전(CHARGE) 잔여로만.
+  // (사용자 확정 2026-07-12: 충전분 캡 무관, 무료분만 캡)
+  const limits = await getUserTierLimits()
+  const dailyLimit = limits?.daily_talisman_limit ?? 0
+  const [usedToday, chargeExemptRemaining] = await Promise.all([
+    getUsedToday(admin, user.id),
+    getChargeExemptRemaining(admin, user.id),
+  ])
+  const plan = computeSpendPlan({ cost, dailyLimit, usedToday, chargeExemptRemaining })
+  if (!plan.allowed) {
+    const message =
+      plan.reason === 'INSUFFICIENT_CHARGED'
+        ? `오늘의 무료 복채 한도를 초과했습니다. 복채를 충전하면 계속 이용할 수 있어요. (충전 잔여 ${chargeExemptRemaining}만냥)`
+        : dailyLimit > 0
+          ? `오늘의 일일 복채 한도에 도달했습니다. (${usedToday}/${dailyLimit}만냥) 복채를 충전하거나 자정에 리셋됩니다.`
+          : '복채를 충전하면 이용할 수 있어요.'
     return {
       success: false,
-      error: dailyCheck.message,
+      error: message,
       errorType: 'DAILY_LIMIT',
       currentTier: limits?.tier || 'SINGLE',
     }
   }
-
-  // Get cost
-  const cost = customAmount || (await getFeatureCost(featureKey))
-
-  // 복채 차감은 service_role 전용 — 인증·한도체크(위)를 통과한 본인 계정에만.
-  const admin = createAdminClient()
 
   // --- Atomic deduction via RPC ---
   // PostgreSQL function: deduct_wallet_balance(p_user_id UUID, p_amount INT)
@@ -266,8 +301,10 @@ export async function deductTalisman(
     description: `${featureCostData?.label || featureKey} (${cost}만냥 복채 사용)`,
   })
 
-  // Increment daily usage counter
-  await incrementDailyUsage(cost)
+  // Increment daily usage counter — 무료분(fromCap)만 카운트. 충전분(overCap)은 한도 무관.
+  if (plan.fromCap > 0) {
+    await incrementDailyUsage(plan.fromCap)
+  }
 
   return { success: true, remainingBalance: newBalance }
 }

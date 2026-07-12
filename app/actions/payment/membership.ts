@@ -132,34 +132,33 @@ export async function canUseTalisman(): Promise<{
 
   // Get tier limits
   const limits = await getUserTierLimits()
+  const dailyLimit = limits?.daily_talisman_limit ?? 0
 
-  if (!limits?.is_subscribed) {
-    return {
-      allowed: false,
-      used: 0,
-      limit: 0,
-      message: '멤버십에 가입하여 일일 복채 혜택을 받으세요.',
-    }
-  }
-
-  const dailyLimit = limits.daily_talisman_limit
-
-  // Get today's usage
+  // Get today's usage (무료분 소비량)
   const { data: usageLog } = await supabase
     .from('daily_usage_logs')
     .select('talismans_used')
     .eq('user_id', user.id)
     .eq('usage_date', new Date().toISOString().split('T')[0]) // Today's date (YYYY-MM-DD)
-    .single()
+    .maybeSingle()
 
   const usedToday = usageLog?.talismans_used || 0
+  const capRemaining = Math.max(0, dailyLimit - usedToday)
 
-  if (usedToday >= dailyLimit) {
+  // 무료 한도가 남았거나, 충전 복채가 있으면 사용 가능(충전분 캡 무관 — 2026-07-12 정책)
+  const admin = createAdminClient()
+  const { data: charged } = await admin.rpc('get_charge_exempt_remaining', { p_user_id: user.id })
+  const chargeExemptRemaining = typeof charged === 'number' ? charged : 0
+
+  if (capRemaining <= 0 && chargeExemptRemaining <= 0) {
     return {
       allowed: false,
       used: usedToday,
       limit: dailyLimit,
-      message: `오늘의 일일 복채 한도에 도달했습니다. (${usedToday}/${dailyLimit}만냥) 자정에 리셋됩니다.`,
+      message:
+        dailyLimit > 0
+          ? `오늘의 일일 복채 한도에 도달했습니다. (${usedToday}/${dailyLimit}만냥) 복채를 충전하거나 자정에 리셋됩니다.`
+          : '복채를 충전하면 이용할 수 있어요.',
     }
   }
 
