@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { recallMemories } from '@/lib/ai/memory'
+import { guardAiInput } from '@/lib/ai/input-guard'
 import { logger } from '@/lib/utils/logger'
 import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
@@ -48,6 +49,12 @@ export async function sendShrineChatMessage(
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
+    // 입력 가드(S2): 길이 상한 + 인젝션 의심 플래그
+    const guarded = guardAiInput(message)
+    if (!guarded.text) return { success: false, error: '메시지를 입력해주세요.' }
+    const safeMessage = guarded.text
+    if (guarded.suspicious) logger.warn('[ShrineChat] 프롬프트 인젝션 의심 입력', { length: safeMessage.length })
+
     const scene = await getSceneData()
     if (!scene) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
@@ -75,11 +82,11 @@ export async function sendShrineChatMessage(
     // 슬라이딩 윈도우: 최근 N개 메시지만 전달
     const geminiHistory = history.slice(-SHRINE_HISTORY_WINDOW).map((m) => ({
       role: m.role === 'user' ? ('user' as const) : ('model' as const),
-      parts: [{ text: m.content }],
+      parts: [{ text: guardAiInput(m.content).text }],
     }))
 
     const chat = model.startChat({ history: geminiHistory })
-    const result = await chat.sendMessage(message)
+    const result = await chat.sendMessage(safeMessage)
     const response = result.response.text()
 
     logger.log('[ShrineChat] message sent', { shrineId: scene.shrineId })
