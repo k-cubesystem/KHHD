@@ -20,6 +20,7 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-2.0-flash-exp': { input: 0.075, output: 0.3 },
   'gemini-1.5-flash': { input: 0.075, output: 0.3 },
   'gemini-1.5-pro': { input: 1.25, output: 5.0 },
+  'gemini-3.5-flash': { input: 0.075, output: 0.3 },
   'gemini-3-flash-preview': { input: 0.075, output: 0.3 },
   'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
   'gemini-2.5-flash-preview': { input: 0.075, output: 0.3 },
@@ -68,7 +69,7 @@ async function acquireToken(): Promise<{
       allowed: data.allowed,
       remaining: data.remaining ?? 0,
       retryAfterSeconds: data.retry_after_seconds,
-      model: data.model ?? 'gemini-3-flash-preview',
+      model: data.model ?? 'gemini-3.5-flash',
     }
   } catch (e) {
     // 예외 시 허용 처리 (DB 연결 문제가 API를 막으면 안 됨)
@@ -142,7 +143,7 @@ export interface GeminiRateLimitOptions {
  * - 호출 결과(토큰, 비용, 지연시간)를 gemini_api_logs에 자동 기록
  */
 export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: GeminiRateLimitOptions = {}): Promise<T> {
-  const { userId = null, model = 'gemini-3-flash-preview', actionType = 'unknown', cached = false } = options
+  const { userId = null, model = 'gemini-3.5-flash', actionType = 'unknown', cached = false } = options
 
   // 1. 토큰 획득 시도
   const tokenResult = await acquireToken()

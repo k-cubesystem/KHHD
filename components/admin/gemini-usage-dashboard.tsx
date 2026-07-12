@@ -105,9 +105,10 @@ function aggregateDailyData(stats: GeminiDailyStat[]) {
 // 모델 색상
 // ─────────────────────────────────────────
 const MODEL_COLORS: Record<string, string> = {
+  'gemini-3.5-flash': '#f59e0b',
   'gemini-2.0-flash': '#60a5fa',
   'gemini-2.0-flash-lite': '#a78bfa',
-  'gemini-3-flash-preview': '#f59e0b',
+  'gemini-3-flash-preview': '#eab308',
   'gemini-2.5-flash-preview': '#34d399',
   'gemini-1.5-flash': '#f472b6',
   'gemini-1.5-pro': '#fb923c',
@@ -413,6 +414,7 @@ export function GeminiUsageDashboard({
             onChange={(e) => setModelInput(e.target.value)}
             className="flex-1 bg-ink-800 border border-stone-700/50 text-stone-200 text-xs rounded-lg px-2 py-2"
           >
+            <option value="gemini-3.5-flash">gemini-3.5-flash</option>
             <option value="gemini-2.0-flash">gemini-2.0-flash</option>
             <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
             <option value="gemini-2.5-flash-preview">gemini-2.5-flash-preview</option>

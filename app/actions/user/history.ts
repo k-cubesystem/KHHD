@@ -94,7 +94,7 @@ export async function saveAnalysisHistory(
         summary: params.summary || null,
         score: params.score || null,
         prompt_version: params.prompt_version || null,
-        model_used: params.model_used || 'gemini-3-flash-preview',
+        model_used: params.model_used || 'gemini-3.5-flash',
         talisman_cost: params.talisman_cost || 0,
       })
       .select('id')
@@ -183,7 +183,9 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
 
       const { data, error } = await supabase
         .from('analysis_history')
-        .select('id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at')
+        .select(
+          'id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at'
+        )
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -387,7 +389,9 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
 
   const { data, error } = await supabase
     .from('analysis_history')
-    .select('id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at')
+    .select(
+      'id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at'
+    )
     .eq('user_id', user.id)
     .eq('target_id', targetId)
     .order('created_at', { ascending: false })

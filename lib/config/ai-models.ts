@@ -11,9 +11,10 @@
 // Provider types
 export type AIProvider = 'gemini' | 'claude'
 
-// Gemini models
-export const GEMINI_PRO = 'gemini-3.1-pro-preview'
-export const GEMINI_FLASH = 'gemini-3-flash-preview'
+// Gemini models — 텍스트 생성은 gemini-3.5-flash로 통일(사용자 결정 2026-07-12).
+// 이미지 생성은 별도 modality라 이미지 전용 모델 유지.
+export const GEMINI_PRO = 'gemini-3.5-flash'
+export const GEMINI_FLASH = 'gemini-3.5-flash'
 export const GEMINI_IMAGE = 'gemini-3.1-flash-image-preview'
 
 // Claude models

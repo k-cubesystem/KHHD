@@ -53,7 +53,7 @@ export async function generateContent(
     systemInstruction?: string
   } = {}
 ): Promise<string> {
-  const { model = 'gemini-3-flash-preview', cacheKey, systemInstruction } = options
+  const { model = 'gemini-3.5-flash', cacheKey, systemInstruction } = options
 
   // Check cache
   if (cacheKey) {
@@ -81,14 +81,11 @@ export async function generateContent(
     body.systemInstruction = { parts: [{ text: systemInstruction }] }
   }
 
-  const response = await fetch(
-    `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
-  )
+  const response = await fetch(`${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 
   if (!response.ok) {
     const error = await response.text()

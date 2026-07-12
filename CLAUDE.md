@@ -3,7 +3,7 @@
 ## 스택
 
 Next.js 16 + TypeScript strict + Tailwind + Shadcn/ui + Supabase (RLS) + Gemini AI + Toss Payments + Sentry + GA4
-AI 모델: PRO(gemini-3.1-pro-preview) / FLASH(gemini-3-flash-preview)
+AI 모델: 텍스트 PRO/FLASH 모두 gemini-3.5-flash (통일, 2026-07-12) / 이미지 gemini-3.1-flash-image-preview
 
 ## 명령어
 
