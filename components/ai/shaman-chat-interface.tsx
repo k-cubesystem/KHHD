@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, memo, type ReactNode } from 'react'
 import { logger } from '@/lib/utils/logger'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useTranslations } from 'next-intl'
@@ -169,6 +169,58 @@ function NewChatConfirmBanner({
   )
 }
 
+// ─── 좌정 신위 표정 아바타 (감정 크로스페이드) ───────────────
+// 원형 컨테이너를 채우는 표정 이미지. emotion 변경 시 300ms fade,
+// prefers-reduced-motion 존중. 이미지 실패 시 portrait → fallback 노드로 폴백.
+function DeityFaceAvatar({
+  deityCode,
+  emotion,
+  fallback,
+}: {
+  deityCode: string
+  emotion: string
+  fallback: ReactNode
+}) {
+  const reduceMotion = useReducedMotion()
+  const emo = emotion || 'neutral'
+  const emoKey = `${deityCode}/${emo}`
+  const [brokenEmotions, setBrokenEmotions] = useState<Record<string, boolean>>({})
+  const [portraitBroken, setPortraitBroken] = useState(false)
+
+  const primarySrc = `/shrine/deities/${deityCode}/${emo}.webp`
+  const portraitSrc = `/shrine/deities/${deityCode}/portrait.webp`
+  const src = !brokenEmotions[emoKey] ? primarySrc : !portraitBroken ? portraitSrc : null
+
+  if (!src) return <>{fallback}</>
+
+  return (
+    <div className="absolute inset-0 overflow-hidden rounded-full">
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={src}
+          initial={{ opacity: reduceMotion ? 1 : 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.3, ease: 'easeInOut' }}
+          className="absolute inset-0"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt="좌정 신위"
+            draggable={false}
+            onError={() => {
+              if (src === primarySrc) setBrokenEmotions((prev) => ({ ...prev, [emoKey]: true }))
+              else setPortraitBroken(true)
+            }}
+            className="w-full h-full object-cover object-top"
+          />
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
 // ─── 메인 컴포넌트 ─────────────────────────────────────────
 export function ShamanChatInterface() {
   const router = useRouter()
@@ -187,6 +239,10 @@ export function ShamanChatInterface() {
   ])
   const [questionStatus, setQuestionStatus] = useState<ShamanQuestionStatus | null>(null)
   const [isStatusLoading, setIsStatusLoading] = useState(true)
+
+  // 좌정 主神 표정 아바타 (신당 3.0). 응답에서 받은 마지막 값 유지 — deityCode는 한번 정해지면 유지.
+  const [deityCode, setDeityCode] = useState<string | null>(null)
+  const [deityEmotion, setDeityEmotion] = useState<string>('neutral')
 
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
   const { supported: ttsSupported, speaking: ttsSpeaking, speak, stop: ttsStop } = useTts()
@@ -289,6 +345,9 @@ export function ShamanChatInterface() {
     setSelectedFamilyId(newFamilyId)
     setMessages([])
     setTurnCount(0)
+    // 대상 전환 = 다른 대화 맥락. 좌정 신위(본인 한정)는 초기화.
+    setDeityCode(null)
+    setDeityEmotion('neutral')
     await loadSession(newFamilyId)
   }
 
@@ -301,6 +360,8 @@ export function ShamanChatInterface() {
       setSessionId(result.newSessionId)
       setMessages([])
       setTurnCount(0)
+      setDeityCode(null)
+      setDeityEmotion('neutral')
       toast.success('새 대화가 시작되었습니다.')
     } else {
       toast.error(result.error || '새 대화 시작 실패')
@@ -374,6 +435,10 @@ export function ShamanChatInterface() {
         setMessages((prev) => [...prev, aiMsg])
         setTurnCount((prev) => prev + 1)
 
+        // 좌정 신위 표정 갱신 — deityCode는 한번 정해지면 유지, emotion은 마지막 값 유지
+        if (result.deityCode) setDeityCode(result.deityCode)
+        if (result.emotion) setDeityEmotion(result.emotion)
+
         // DB 저장 (비동기, 실패해도 UI에 영향 없음)
         if (sessionId) {
           saveChatMessages(sessionId, userMsg, aiMsg, messages.length === 0).catch((e) =>
@@ -443,8 +508,29 @@ export function ShamanChatInterface() {
         <div className="flex items-center justify-between px-4 pt-3 pb-2.5 border-b border-white/4">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#2a2010] to-surface border border-primary/20 flex items-center justify-center shadow-[0_0_20px_rgba(244,228,186,0.08)]">
-                <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={24} height={24} className="inline-block" />
+              <div
+                className={cn(
+                  'relative rounded-full bg-gradient-to-br from-[#2a2010] to-surface border border-primary/20 flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(244,228,186,0.08)] transition-all duration-300',
+                  deityCode ? 'w-16 h-16' : 'w-11 h-11'
+                )}
+              >
+                {deityCode ? (
+                  <DeityFaceAvatar
+                    deityCode={deityCode}
+                    emotion={deityEmotion}
+                    fallback={
+                      <Image
+                        src="/avatars/haehwajigi.svg"
+                        alt="해화지기"
+                        width={28}
+                        height={28}
+                        className="inline-block"
+                      />
+                    }
+                  />
+                ) : (
+                  <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={24} height={24} className="inline-block" />
+                )}
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary border-2 border-[#0d0d0d]" />
             </div>
