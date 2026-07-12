@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { recallMemories } from '@/lib/ai/memory'
 import { guardAiInput } from '@/lib/ai/input-guard'
+import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
 import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
@@ -48,6 +49,10 @@ export async function sendShrineChatMessage(
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+    // Rate limit(S3): 무료 대화라 버스트 방어 필요 — 분당 20회/유저.
+    const rl = await rateLimit(`ai-shrine:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 20 })
+    if (!rl.success) return { success: false, error: '요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
 
     // 입력 가드(S2): 길이 상한 + 인젝션 의심 플래그
     const guarded = guardAiInput(message)

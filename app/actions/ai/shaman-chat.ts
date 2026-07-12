@@ -11,6 +11,7 @@ import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { recallMemories, extractAndSaveMemories } from '@/lib/ai/memory'
 import { maybeSummarizeSession } from '@/lib/ai/summarizer'
 import { guardAiInput } from '@/lib/ai/input-guard'
+import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
 
 // --- Constants ---
@@ -293,6 +294,10 @@ export async function sendShamanChatMessage(
       data: { user },
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: '로그인 필요' }
+
+    // Rate limit(S3): 질문권과 별개의 버스트 방어 — 분당 20회/유저.
+    const rl = await rateLimit(`ai-shaman:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 20 })
+    if (!rl.success) return { success: false, error: '요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
 
     const adminClient = createAdminClient()
     const today = new Date().toISOString().split('T')[0]
