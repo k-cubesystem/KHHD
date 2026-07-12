@@ -50,7 +50,14 @@ const CHAT_BOND_POINTS = 2
  * (구 shrine-chat 통합) 본인 대화일 때만, 신당이 있으면 시스템 프롬프트에 얹는다.
  * 반환 mainDeityId 로 대화 후 인연 적립.
  */
-async function buildShrineContext(): Promise<{ block: string; mainDeityId: string | null } | null> {
+const DEITY_EMOTIONS = ['neutral', 'smile', 'stern', 'sad', 'surprised', 'bless', 'angry'] as const
+type DeityEmotion = (typeof DEITY_EMOTIONS)[number]
+
+async function buildShrineContext(): Promise<{
+  block: string
+  mainDeityId: string | null
+  deityCode: string | null
+} | null> {
   try {
     const scene = await getSceneData()
     if (!scene) return null
@@ -78,7 +85,9 @@ async function buildShrineContext(): Promise<{ block: string; mainDeityId: strin
           `당신은 이 신당에 좌정한 수호신 "${data.name}"입니다. ` +
           `${data.personality ? data.personality + ' ' : ''}` +
           `말투: ${data.tone || '따뜻하고 신비로우며 정중한 존댓말'}. ` +
-          `신위로서 첫인칭으로 답하되, 아래 사주·신당 기운을 근거로 조언하십시오.`
+          `신위로서 첫인칭으로 답하되, 아래 사주·신당 기운을 근거로 조언하십시오.\n` +
+          `응답 맨 앞에 당신의 표정을 [[감정]] 형식으로 한 번만 붙이십시오. ` +
+          `감정은 ${DEITY_EMOTIONS.join('/')} 중 내용에 맞는 하나. 예: "[[smile]] 어서 오시게…"`
       }
     }
 
@@ -90,7 +99,7 @@ async function buildShrineContext(): Promise<{ block: string; mainDeityId: strin
       .filter(Boolean)
       .join('\n')
 
-    return { block, mainDeityId }
+    return { block, mainDeityId, deityCode: scene.mainDeity?.code ?? null }
   } catch (e) {
     logger.warn('[sendShamanChatMessage] shrine context skipped:', e)
     return null
@@ -166,6 +175,10 @@ export interface ShamanChatResponse {
   error?: string
   suggestedQuestions?: string[]
   noCredits?: boolean
+  /** 좌정 主神 코드 (신당 3.0 대화 시 표정 세트 경로용) */
+  deityCode?: string
+  /** 신위 표정 (neutral/smile/stern/sad/surprised/bless/angry) */
+  emotion?: string
 }
 
 export interface ShamanQuestionStatus {
@@ -496,11 +509,13 @@ export async function sendShamanChatMessage(
 
     // 4.5 신당 3.0 통합: 본인 대화면 좌정 主神 페르소나 + 신당 기운을 얹는다.
     let bondDeityId: string | null = null
+    let deityCode: string | null = null
     if (!familyMemberId || familyMemberId === 'self') {
       const shrineCtx = await buildShrineContext()
       if (shrineCtx) {
         systemInstruction += `\n\n${shrineCtx.block}`
         bondDeityId = shrineCtx.mainDeityId
+        deityCode = shrineCtx.deityCode
       }
     }
 
@@ -518,7 +533,20 @@ export async function sendShamanChatMessage(
 
     // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨). 가드 통과한 safeMessage 사용.
     const result = await chat.sendMessage(safeMessage)
-    const responseText = result.response.text()
+    const rawText = result.response.text()
+
+    // 신위 감정 태그 파싱: 응답 앞 [[emotion]] → emotion 추출 후 본문에서 제거
+    let emotion: DeityEmotion | null = null
+    let responseText = rawText
+    if (deityCode) {
+      const m = rawText.match(/^\s*\[\[\s*(neutral|smile|stern|sad|surprised|bless|angry)\s*\]\]\s*/i)
+      if (m) {
+        emotion = m[1].toLowerCase() as DeityEmotion
+        responseText = rawText.slice(m[0].length)
+      }
+    }
+    // 태그 잔재(있을 수 있는 다른 [[...]]) 제거
+    responseText = responseText.replace(/\[\[[^\]]*\]\]/g, '').trim() || rawText.trim()
 
     // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 — 응답 후 백그라운드(freeze 방지)
     if (bondDeityId) {
@@ -544,6 +572,8 @@ export async function sendShamanChatMessage(
       success: true,
       response: responseText,
       suggestedQuestions: suggestions.slice(0, 4),
+      deityCode: deityCode ?? undefined,
+      emotion: emotion ?? undefined,
     }
   } catch (e: unknown) {
     logger.error('[sendShamanChatMessage] Error:', e)
