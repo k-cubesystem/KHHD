@@ -11,7 +11,7 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, MessageCircle, Sparkles } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2 } from 'lucide-react'
 import type { CatalogItem, Element, Placement, SceneData, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
@@ -76,6 +76,9 @@ export function ShrineRoomClient({ scene }: Props) {
   const keeperTaps = useRef(0)
   const dirty = useRef(false)
   const effectsRef = useRef<EffectsHandle>(null)
+  const roomRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [fallbackFull, setFallbackFull] = useState(false)
 
   // 저장된 점화 상태 → 불꽃 등록
   useEffect(() => {
@@ -287,8 +290,33 @@ export function ShrineRoomClient({ scene }: Props) {
     [activeCode, keeperSay, play]
   )
 
+  // ── 전체화면 토글 (Fullscreen API + 미지원 브라우저 폴백) ──
+  const toggleFullscreen = useCallback(() => {
+    const el = roomRef.current
+    if (!el) return
+    const canApi = typeof el.requestFullscreen === 'function'
+    if (!canApi) {
+      setFallbackFull((v) => !v)
+      return
+    }
+    if (document.fullscreenElement) {
+      void document.exitFullscreen()
+    } else {
+      void el.requestFullscreen()
+    }
+  }, [])
+
+  // 브라우저 ESC 등으로 전체화면이 풀릴 때 상태 동기화
+  useEffect(() => {
+    const sync = () => setIsFullscreen(document.fullscreenElement === roomRef.current)
+    document.addEventListener('fullscreenchange', sync)
+    return () => document.removeEventListener('fullscreenchange', sync)
+  }, [])
+
+  const fullActive = isFullscreen || fallbackFull
+
   return (
-    <div className="w-full max-w-[430px] mx-auto" style={themeVars(activePack)}>
+    <div className="w-full max-w-[520px] mx-auto" style={themeVars(activePack)}>
       {/* 헤더 */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div>
@@ -327,11 +355,13 @@ export function ShrineRoomClient({ scene }: Props) {
 
       {/* 룸 */}
       <div
+        ref={roomRef}
         className={`room relative rounded-[18px] overflow-hidden ${editing ? 'editing' : ''}`}
         style={{
-          height: 'min(46vh, 380px)',
+          height: fullActive ? '100vh' : 'min(64vh, 560px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
           touchAction: 'none',
+          ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
         }}
       >
         <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
@@ -496,11 +526,21 @@ export function ShrineRoomClient({ scene }: Props) {
             {editing ? (saving ? '저장 중…' : '완료') : '꾸미기'}
           </button>
         )}
-        <div
-          className="absolute top-2.5 right-2.5 z-30 text-[8.5px] tracking-[0.06em] px-2 py-[3px] rounded-full text-ink-primary/75 tabular-nums"
-          style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
-        >
-          TODAY <b style={{ color: 'var(--th-accent)' }}>{scene.visitorCount}</b>
+        <div className="absolute top-2.5 right-2.5 z-30 flex items-center gap-1.5">
+          <div
+            className="text-[8.5px] tracking-[0.06em] px-2 py-[3px] rounded-full text-ink-primary/75 tabular-nums"
+            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            TODAY <b style={{ color: 'var(--th-accent)' }}>{scene.visitorCount}</b>
+          </div>
+          <button
+            onClick={toggleFullscreen}
+            aria-label="전체화면"
+            className="w-7 h-7 rounded-full grid place-items-center text-ink-primary/75"
+            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            {fullActive ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          </button>
         </div>
         {editing && (
           <div
@@ -572,8 +612,8 @@ export function ShrineRoomClient({ scene }: Props) {
 
       {/* 하단 독 */}
       {isOwner ? (
-        <div className="mt-3 px-1 pb-6 relative min-h-[104px]">
-          {editing ? (
+        editing ? (
+          <div className="mt-3 px-1 pb-6 relative">
             <div
               className="rounded-[14px] p-3"
               style={{ background: '#1e1b15', border: '1px solid rgba(201,168,76,0.4)' }}
@@ -622,40 +662,8 @@ export function ShrineRoomClient({ scene }: Props) {
                 ))}
               </div>
             </div>
-          ) : (
-            <>
-              <div className="flex gap-1.5 mb-2 overflow-x-auto no-scrollbar">
-                {['오늘 조심할 것은?', '금 기운 올리는 법', '이번 주 재물운'].map((q) => (
-                  <Link
-                    key={q}
-                    href="/protected/shrine/chat"
-                    className="flex-shrink-0 text-[10.5px] px-2.5 py-1 rounded-full whitespace-nowrap"
-                    style={{
-                      background: 'rgba(201,168,76,0.07)',
-                      border: '1px solid rgba(201,168,76,0.18)',
-                      color: 'rgba(201,168,76,0.85)',
-                    }}
-                  >
-                    {q}
-                  </Link>
-                ))}
-              </div>
-              <Link
-                href="/protected/shrine/chat"
-                className="flex gap-2 items-center rounded-[14px] px-3.5 py-3 bg-surface border border-gold-500/20"
-              >
-                <MessageCircle className="w-4 h-4 text-gold-500/60" />
-                <span className="flex-1 text-[12.5px] text-ink-light/35">신당지기에게 말을 건네보세요…</span>
-                <span
-                  className="w-[30px] h-[30px] rounded-[9px] grid place-items-center text-gold-500 text-[13px]"
-                  style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)' }}
-                >
-                  ➤
-                </span>
-              </Link>
-            </>
-          )}
-        </div>
+          </div>
+        ) : null
       ) : (
         <div className="mt-3 px-1 pb-6">
           <Link

@@ -28,7 +28,7 @@ export default async function ShrinePage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-5">
+    <div className="min-h-screen px-1 py-4">
       <ShrineRoomClient scene={scene} />
     </div>
   )
