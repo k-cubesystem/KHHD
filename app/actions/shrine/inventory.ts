@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints, deductBokPoints, getBokPointsBalance } from '@/app/actions/payment/bok-points'
+import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { parseBehavior, isElement, isLayer, type CatalogItem, type SizeGrade } from '@/lib/domain/shrine/types'
 
@@ -23,6 +24,7 @@ interface CatalogRow {
   behavior: unknown
   price_bok_points: number
   price_krw: number
+  price_bokchae: number
 }
 
 function toCatalogItem(r: CatalogRow): CatalogItem {
@@ -41,6 +43,7 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     behavior: parseBehavior(r.behavior),
     priceBok: r.price_bok_points,
     priceKrw: r.price_krw,
+    priceBokchae: r.price_bokchae,
   }
 }
 
@@ -58,10 +61,10 @@ export async function getShopData(): Promise<ShopData> {
   } = await supabase.auth.getUser()
   if (!user) return { catalog: [], owned: {}, bokBalance: 0 }
 
-  const [{ data: catRows }, { data: invRows }, bok] = await Promise.all([
+  const [{ data: catRows }, { data: invRows }, bokchae] = await Promise.all([
     supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('user_shrine_inventory').select('catalog_item_id, qty').eq('user_id', user.id),
-    getBokPointsBalance(),
+    getWalletBalance(),
   ])
 
   const owned: Record<string, number> = {}
@@ -70,7 +73,7 @@ export async function getShopData(): Promise<ShopData> {
   return {
     catalog: (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow)),
     owned,
-    bokBalance: bok.balance,
+    bokBalance: bokchae, // 단일 통화: 복채 잔액
   }
 }
 
@@ -86,16 +89,17 @@ export async function purchaseToInventory(
 
   const { data: item } = await supabase
     .from('shrine_item_catalog')
-    .select('name, price_bok_points, is_active')
+    .select('name, price_bokchae, is_active')
     .eq('id', catalogItemId)
     .maybeSingle()
   if (!item || !item.is_active) return { success: false, error: 'ITEM_NOT_FOUND' }
 
+  const price = item.price_bokchae
   let newBalance: number | undefined
-  if (item.price_bok_points > 0) {
-    // 원자적 차감(잔액 가드) — 기존 addBokPoints(-x)는 잔액검증 없어 음수 가능 (Fable 검토 R5)
-    const res = await deductBokPoints(item.price_bok_points, 'SHRINE_ITEM_PURCHASE', undefined, `${item.name} 구매`)
-    if (!res.success) return { success: false, error: res.error ?? 'INSUFFICIENT_POINTS' }
+  if (price > 0) {
+    // 단일 통화: 복채 원자 차감(잔액 가드).
+    const res = await spendBokchae(price, `${item.name} 구매`)
+    if (!res.success) return { success: false, error: res.error ?? 'INSUFFICIENT_BOKCHAE' }
     newBalance = res.balance
   }
 
@@ -108,14 +112,12 @@ export async function purchaseToInventory(
   })
   if (error) {
     logger.error('[shrine/inventory] grant failed:', error)
-    // 포인트는 차감됐는데 지급 실패 → 롤백 시도 (best-effort)
-    if (item.price_bok_points > 0) {
-      await addBokPoints(item.price_bok_points, 'BONUS', undefined, `${item.name} 구매 취소 환불`)
-    }
+    // 복채는 차감됐는데 지급 실패 → 롤백(best-effort)
+    if (price > 0) await refundBokchae(user.id, price, `${item.name} 구매 취소 환불`)
     return { success: false, error: 'GRANT_FAILED' }
   }
 
-  trackEvent({ action: 'shrine_item_purchase', category: 'shrine', label: item.name, value: item.price_bok_points })
+  trackEvent({ action: 'shrine_item_purchase', category: 'shrine', label: item.name, value: price })
   revalidatePath('/protected/shrine/shop')
   revalidatePath('/protected/shrine')
   return { success: true, newQty: typeof qty === 'number' ? qty : undefined, newBalance }

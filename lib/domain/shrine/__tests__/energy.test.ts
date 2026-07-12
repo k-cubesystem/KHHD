@@ -17,6 +17,7 @@ function item(id: string, element: Element, energyPower = 10): CatalogItem {
     behavior: {},
     priceBok: 0,
     priceKrw: 0,
+    priceBokchae: 0,
   }
 }
 

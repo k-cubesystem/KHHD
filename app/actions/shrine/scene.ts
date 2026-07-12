@@ -40,6 +40,7 @@ interface CatalogRow {
   behavior: unknown
   price_bok_points: number
   price_krw: number
+  price_bokchae: number
 }
 
 function toCatalogItem(r: CatalogRow): CatalogItem {
@@ -58,6 +59,7 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     behavior: parseBehavior(r.behavior),
     priceBok: r.price_bok_points,
     priceKrw: r.price_krw,
+    priceBokchae: r.price_bokchae,
   }
 }
 
@@ -194,9 +196,10 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<The
     name: p.name,
     priceBok: p.price_bok,
     priceKrw: p.price_krw,
+    priceBokchae: p.price_bokchae ?? 0,
     elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
     assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
-    owned: p.price_krw === 0 && p.price_bok === 0 ? true : ownedSet.has(p.id),
+    owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
   }))
 }
 
@@ -270,7 +273,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
     supabase.from('shrine_placements').select('*').eq('shrine_id', shrine.id),
     supabase
       .from('shrine_theme_packs')
-      .select('id, code, name, price_bok, price_krw, element_affinity, assets')
+      .select('id, code, name, price_bok, price_krw, price_bokchae, element_affinity, assets')
       .eq('is_active', true),
   ])
 
@@ -293,6 +296,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
           name: activePack.name,
           priceBok: activePack.price_bok,
           priceKrw: activePack.price_krw,
+          priceBokchae: activePack.price_bokchae ?? 0,
           elementAffinity: isElement(activePack.element_affinity) ? activePack.element_affinity : null,
           assets: (typeof activePack.assets === 'object' && activePack.assets !== null
             ? activePack.assets

@@ -21,9 +21,9 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
   const [balance, setBalance] = useState(data.bokBalance)
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
-  const buy = async (id: string, name: string, priceBok: number) => {
-    if (priceBok > balance) {
-      toast.error(`복이 부족합니다 (필요: ${priceBok.toLocaleString()})`)
+  const buy = async (id: string, name: string, price: number) => {
+    if (price > balance) {
+      toast.error(`복채가 부족합니다 (필요: ${price.toLocaleString()}복채)`)
       return
     }
     setLoadingId(id)
@@ -33,8 +33,8 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
       setOwned((o) => ({ ...o, [id]: res.newQty ?? (o[id] ?? 0) + 1 }))
       if (typeof res.newBalance === 'number') setBalance(res.newBalance)
       toast.success(`${name} — 보관함에 담겼어요`, { description: '신당 꾸미기에서 배치하세요' })
-    } else if (res.error === 'INSUFFICIENT_POINTS') {
-      toast.error('복이 부족합니다')
+    } else if (res.error === 'INSUFFICIENT_BOKCHAE') {
+      toast.error('복채가 부족합니다')
     } else {
       toast.error('구매 실패. 다시 시도해주세요.')
     }
@@ -44,7 +44,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-ink-light/40 font-sans">
-          보유 복: <span className="text-gold-500 font-bold tabular-nums">✨ {balance.toLocaleString()}</span>
+          보유 복채: <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}복채</span>
         </p>
         <Link
           href="/protected/shrine"
@@ -58,8 +58,8 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
         {data.catalog.map((item, idx) => {
           const rarity = RARITY[item.rarity] ?? RARITY.common
           const have = owned[item.id] ?? 0
-          const free = item.priceBok === 0
-          const canAfford = free || item.priceBok <= balance
+          const free = item.priceBokchae === 0
+          const canAfford = free || item.priceBokchae <= balance
           const loading = loadingId === item.id
           return (
             <motion.div
@@ -112,7 +112,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
               </div>
 
               <button
-                onClick={() => buy(item.id, item.name, item.priceBok)}
+                onClick={() => buy(item.id, item.name, item.priceBokchae)}
                 disabled={loading || !canAfford}
                 className={`w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-40 ${
                   free
@@ -129,7 +129,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                     <Check className="w-3 h-3" /> 무료로 받기
                   </span>
                 ) : (
-                  `✨ ${item.priceBok.toLocaleString()}`
+                  `${item.priceBokchae.toLocaleString()}복채`
                 )}
               </button>
             </motion.div>

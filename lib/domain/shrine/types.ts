@@ -33,6 +33,8 @@ export interface CatalogItem {
   behavior: ItemBehavior
   priceBok: number
   priceKrw: number
+  /** 복채 가격(만냥, 단일 통화). 0=무료. */
+  priceBokchae: number
 }
 
 /** 방에 배치된 아이템 인스턴스 */
@@ -68,6 +70,8 @@ export interface ThemePack {
   name: string
   priceBok: number
   priceKrw: number
+  /** 복채 가격(만냥, 단일 통화). 0=무료. */
+  priceBokchae: number
   elementAffinity: Element | null
   assets: ThemeAssets
   owned: boolean

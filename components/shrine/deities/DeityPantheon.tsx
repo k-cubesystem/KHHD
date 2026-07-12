@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Deity, DeityCatalog } from '@/app/actions/shrine/deities'
-import { autoSeatGuardian, seatDeity } from '@/app/actions/shrine/deities'
+import { autoSeatGuardian, seatDeity, purchaseDeity } from '@/app/actions/shrine/deities'
 import { BOND_LEVEL_NAMES, BOND_THRESHOLDS, type BondProgress } from '@/lib/domain/shrine/deities'
 
 const ELEMENT_GLYPH: Record<string, string> = {
@@ -88,6 +88,19 @@ export function DeityPantheon({ catalog, bonds }: Props) {
       const r = await seatDeity(id)
       if (r.success) router.refresh()
       else setErr('좌정 변경에 실패했습니다.')
+    })
+  }
+
+  function onPurchase(deity: Deity) {
+    setErr(null)
+    start(async () => {
+      const r = await purchaseDeity(deity.code)
+      if (r.success) {
+        setReveal(deity)
+        router.refresh()
+      } else {
+        setErr(r.error === 'INSUFFICIENT_BOKCHAE' ? '복채가 부족합니다.' : '봉안에 실패했습니다.')
+      }
     })
   }
 
@@ -190,9 +203,13 @@ export function DeityPantheon({ catalog, bonds }: Props) {
                     ) : d.tier === 1 ? (
                       <span className="mt-1.5 text-[10px] text-ink-light/35">배정 대기</span>
                     ) : (
-                      <span className="mt-1.5 text-[10px] inline-flex items-center gap-0.5 text-zen-muted">
-                        🔒 {d.priceKrw > 0 ? `₩${d.priceKrw.toLocaleString()}` : '유료'}
-                      </span>
+                      <button
+                        onClick={() => onPurchase(d)}
+                        disabled={pending}
+                        className="mt-1.5 text-[11px] px-2.5 py-1 rounded-full bg-seal/15 text-seal disabled:opacity-50"
+                      >
+                        봉안 · {d.priceBokchae}복채
+                      </button>
                     )}
                   </div>
                 )

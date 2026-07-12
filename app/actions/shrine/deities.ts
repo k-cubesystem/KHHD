@@ -5,17 +5,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { trackEvent } from '@/lib/analytics/ga4'
-import { addBokPoints, deductBokPoints } from '@/app/actions/payment/bok-points'
+import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { assignGuardian, bondProgress, type BondProgress } from '@/lib/domain/shrine/deities'
 import { isElement } from '@/lib/domain/shrine/types'
-
-/**
- * ⚠️ 통화 결정 대기 (Fable 검토 R3 / WORKLOG Track D).
- * PRD는 신위/테마를 "복전(유료)"으로 규정했으나 현재 구현은 복(bok_points=무료 적립형) 차감.
- * 무료 통화로 프리미엄을 팔면 매출 누수 → 통화(복채/복전) 확정 전까지 유료 구매를 막는다.
- * (UI 미노출 상태라 앱 영향 없음. 확정 후 true 로 전환하며 차감 통화도 함께 결정.)
- */
-const PREMIUM_CURRENCY_READY = false
 
 export interface DeityAura {
   accent: string | null
@@ -38,6 +30,8 @@ export interface Deity {
   isSeasonLimited: boolean
   spriteUrl: string | null
   portraitUrl: string | null
+  /** 복채 가격(만냥). 0=무료(수호신). */
+  priceBokchae: number
 }
 
 interface DeityRow {
@@ -52,6 +46,7 @@ interface DeityRow {
   aura: unknown
   price_krw: number
   price_bok: number
+  price_bokchae: number
   is_season_limited: boolean
   sprite_url: string | null
   portrait_url: string | null
@@ -83,6 +78,7 @@ function toDeity(r: DeityRow): Deity {
     isSeasonLimited: r.is_season_limited,
     spriteUrl: r.sprite_url,
     portraitUrl: r.portrait_url,
+    priceBokchae: r.price_bokchae,
   }
 }
 
@@ -102,7 +98,7 @@ export async function listDeities(): Promise<DeityCatalog> {
   const { data: rows } = await supabase
     .from('shrine_deities')
     .select(
-      'id, code, name, name_hanja, tier, tier_name, element, domains, aura, price_krw, price_bok, is_season_limited, sprite_url, portrait_url'
+      'id, code, name, name_hanja, tier, tier_name, element, domains, aura, price_krw, price_bok, price_bokchae, is_season_limited, sprite_url, portrait_url'
     )
     .eq('is_active', true)
     .order('sort_order')
@@ -227,9 +223,8 @@ export async function seatDeity(deityId: string): Promise<{ success: boolean; er
 }
 
 /**
- * 신위 구매. 가격은 **서버 DB 값만 신뢰**(클라 전송값 무시). 차감은 원자적(deduct_bok_points).
+ * 신위 봉안(구매). 단일 통화 **복채** 차감(price_bokchae, 서버 DB 값만 신뢰).
  * 영구 소장 + GA4. tier1(수호신)은 무료 좌정 경로이므로 구매 대상 아님.
- * ⚠️ 유료 구매는 통화 확정(PREMIUM_CURRENCY_READY) 전까지 차단(R3).
  */
 export async function purchaseDeity(
   deityCode: string
@@ -243,16 +238,11 @@ export async function purchaseDeity(
   // 서버에서 가격·등급 조회 (클라 값 미신뢰)
   const { data: deity } = await supabase
     .from('shrine_deities')
-    .select('id, tier, price_bok, is_active')
+    .select('id, tier, price_bokchae, is_active')
     .eq('code', deityCode)
     .maybeSingle()
   if (!deity || !deity.is_active) return { success: false, error: 'DEITY_NOT_FOUND' }
   if (deity.tier <= 1) return { success: false, error: 'FREE_GUARDIAN_NOT_PURCHASABLE' }
-
-  const price = deity.price_bok
-  if (price > 0 && !PREMIUM_CURRENCY_READY) {
-    return { success: false, error: 'PREMIUM_CURRENCY_NOT_CONFIGURED' }
-  }
 
   // 이미 보유 시 중복 결제 방지
   const { data: existing } = await supabase
@@ -263,9 +253,10 @@ export async function purchaseDeity(
     .maybeSingle()
   if (existing) return { success: false, error: 'ALREADY_OWNED' }
 
+  const price = deity.price_bokchae
   let newBalance: number | undefined
   if (price > 0) {
-    const res = await deductBokPoints(price, 'SHRINE_ITEM_PURCHASE', undefined, `신위 좌정 (${deityCode})`)
+    const res = await spendBokchae(price, `신위 봉안 (${deityCode})`)
     if (!res.success) return { success: false, error: res.error ?? 'PAYMENT_FAILED' }
     newBalance = res.balance
   }
@@ -292,7 +283,7 @@ export async function purchaseThemePack(
 
   const { data: pack } = await supabase
     .from('shrine_theme_packs')
-    .select('id, price_bok, is_active')
+    .select('id, price_bokchae, is_active')
     .eq('code', packCode)
     .maybeSingle()
   if (!pack || !pack.is_active) return { success: false, error: 'PACK_NOT_FOUND' }
@@ -305,14 +296,10 @@ export async function purchaseThemePack(
     .maybeSingle()
   if (owned) return { success: false, error: 'ALREADY_OWNED' }
 
-  const price = pack.price_bok
-  if (price > 0 && !PREMIUM_CURRENCY_READY) {
-    return { success: false, error: 'PREMIUM_CURRENCY_NOT_CONFIGURED' }
-  }
-
+  const price = pack.price_bokchae
   let newBalance: number | undefined
   if (price > 0) {
-    const res = await deductBokPoints(price, 'SHRINE_ITEM_PURCHASE', undefined, `테마팩 구매 (${packCode})`)
+    const res = await spendBokchae(price, `테마팩 구매 (${packCode})`)
     if (!res.success) return { success: false, error: res.error ?? 'PAYMENT_FAILED' }
     newBalance = res.balance
   }
@@ -321,8 +308,8 @@ export async function purchaseThemePack(
   const { error } = await admin.from('user_theme_packs').insert({ user_id: user.id, pack_id: pack.id })
   if (error) {
     logger.error('[purchaseThemePack] grant failed:', error)
-    // 결제됐는데 지급 실패 → best-effort 환불
-    if (price > 0) await addBokPoints(price, 'BONUS', undefined, `테마팩 구매 취소 환불 (${packCode})`)
+    // 결제됐는데 지급 실패 → best-effort 복채 환불
+    if (price > 0) await refundBokchae(user.id, price, `테마팩 구매 취소 환불 (${packCode})`)
     return { success: false, error: 'GRANT_FAILED' }
   }
 

@@ -491,7 +491,7 @@ export function ShrineRoomClient({ scene }: Props) {
             >
               {t.name}
               <span className="text-[9.5px] opacity-70 ml-1 tabular-nums">
-                {t.owned ? '보유' : t.priceKrw > 0 ? `₩${t.priceKrw.toLocaleString()}` : '무료'}
+                {t.owned ? '보유' : t.priceBokchae > 0 ? `${t.priceBokchae}복채` : '무료'}
               </span>
             </button>
           ))}
