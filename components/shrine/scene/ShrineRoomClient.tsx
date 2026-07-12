@@ -346,7 +346,7 @@ export function ShrineRoomClient({ scene }: Props) {
         {scene.mainDeity?.spriteUrl && (
           <div
             className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-[3] deity-stand"
-            style={{ bottom: '50%', height: '44%' }}
+            style={{ bottom: '51%', height: '34%' }}
           >
             <div
               className="absolute left-1/2 -translate-x-1/2 rounded-full"
