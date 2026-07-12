@@ -235,11 +235,14 @@ export async function createBillingAuthUrl(planId: string): Promise<{
   // customerKey 생성 (사용자별 고유)
   const customerKey = `HHD_${user.id.slice(0, 8)}_${Date.now()}`
 
-  // PENDING 구독 레코드 쓰기는 service_role 전용(S1b: subscriptions 자가발급 차단).
-  // 인증(user.id)은 위에서 검증됨. admin 없으면(오설정) user 클라 폴백.
-  const dbWrite = createAdminClient() ?? supabase
+  // PENDING 구독 레코드 쓰기는 service_role 전용(S1b R1: subscriptions 자가발급 차단).
+  // 인증(user.id)은 위에서 검증됨. 돈 관련 쓰기는 admin 부재 시 하드 실패(폴백 금지).
+  const dbWrite = createAdminClient()
+  if (!dbWrite) {
+    return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
+  }
   if (existingSub) {
-    await dbWrite
+    const { error: pendingError } = await dbWrite
       .from('subscriptions')
       .update({
         plan_id: planId,
@@ -247,13 +250,22 @@ export async function createBillingAuthUrl(planId: string): Promise<{
         status: 'PENDING',
       })
       .eq('id', existingSub.id)
+      .eq('user_id', user.id)
+    if (pendingError) {
+      logger.error('[Subscription] Pending update error:', pendingError)
+      return { success: false, error: '구독 준비에 실패했습니다.' }
+    }
   } else {
-    await dbWrite.from('subscriptions').insert({
+    const { error: pendingError } = await dbWrite.from('subscriptions').insert({
       user_id: user.id,
       plan_id: planId,
       customer_key: customerKey,
       status: 'PENDING',
     })
+    if (pendingError) {
+      logger.error('[Subscription] Pending insert error:', pendingError)
+      return { success: false, error: '구독 준비에 실패했습니다.' }
+    }
   }
 
   return {
@@ -307,8 +319,12 @@ export async function issueBillingKey(
 
   const billingKey = result.billingKey
 
-  // 구독 레코드 업데이트
-  const { error: updateError } = await supabase
+  // 구독 레코드 업데이트 — subscriptions 쓰기는 service_role 전용(S1b R1)
+  const adminDb = createAdminClient()
+  if (!adminDb) {
+    return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
+  }
+  const { error: updateError } = await adminDb
     .from('subscriptions')
     .update({
       billing_key: billingKey,
@@ -355,6 +371,13 @@ export async function executeFirstPayment(customerKey: string): Promise<{
 
   if (!subscription.billing_key) {
     return { success: false, error: '빌링키가 없습니다.' }
+  }
+
+  // subscription_payments·subscriptions 쓰기는 service_role 전용(S1b R1).
+  // 유저 클라 insert는 RLS(SELECT 전용)에 조용히 막혀 결제기록 누락 + 멱등성 무력화됨.
+  const adminDb = createAdminClient()
+  if (!adminDb) {
+    return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
   }
 
   const plan = subscription.plan as MembershipPlan
@@ -406,7 +429,7 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     logger.error('[Subscription] First payment error:', result)
 
     // 결제 실패 기록
-    await supabase.from('subscription_payments').insert({
+    const { error: failLogError } = await adminDb.from('subscription_payments').insert({
       subscription_id: subscription.id,
       user_id: user.id,
       order_id: orderId,
@@ -415,9 +438,12 @@ export async function executeFirstPayment(customerKey: string): Promise<{
       failure_code: result.code,
       failure_reason: result.message,
     })
+    if (failLogError) {
+      logger.error('[Subscription] Failed-payment log insert error:', failLogError)
+    }
 
     // 구독 상태 업데이트
-    await supabase.from('subscriptions').update({ status: 'PAYMENT_FAILED' }).eq('id', subscription.id)
+    await adminDb.from('subscriptions').update({ status: 'PAYMENT_FAILED' }).eq('id', subscription.id)
 
     return {
       success: false,
@@ -426,8 +452,8 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   }
 
   // 결제 성공 처리
-  // 1. 결제 기록
-  await supabase.from('subscription_payments').insert({
+  // 1. 결제 기록 — 실패 시 멱등성(이중결제 방지)이 깨지므로 반드시 로깅
+  const { error: successLogError } = await adminDb.from('subscription_payments').insert({
     subscription_id: subscription.id,
     user_id: user.id,
     payment_key: result.paymentKey,
@@ -438,9 +464,12 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     billing_period_end: periodEnd.toISOString(),
     talismans_granted: plan.talismans_per_period,
   })
+  if (successLogError) {
+    logger.error('[Subscription] Success-payment log insert error:', successLogError)
+  }
 
   // 2. 구독 활성화
-  const { data: updatedSub } = await supabase
+  const { data: updatedSub } = await adminDb
     .from('subscriptions')
     .update({
       status: 'ACTIVE',
@@ -466,152 +495,6 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     success: true,
     subscription: updatedSub as Subscription,
   }
-}
-
-// ============================================
-// 자동 결제 처리 (크론잡용)
-// ============================================
-export async function processRecurringPayments(): Promise<{
-  processed: number
-  success: number
-  failed: number
-  errors: string[]
-}> {
-  const supabase = await createClient()
-
-  // 오늘 결제 대상 구독 조회
-  const now = new Date()
-  const { data: subscriptions, error } = await supabase
-    .from('subscriptions')
-    .select(`*, plan:membership_plans(*)`)
-    .eq('status', 'ACTIVE')
-    .lte('next_billing_date', now.toISOString())
-
-  if (error || !subscriptions) {
-    return { processed: 0, success: 0, failed: 0, errors: [error?.message || '조회 실패'] }
-  }
-
-  const results = {
-    processed: subscriptions.length,
-    success: 0,
-    failed: 0,
-    errors: [] as string[],
-  }
-
-  for (const subscription of subscriptions) {
-    const plan = subscription.plan as MembershipPlan
-    const orderId = `SUB_${subscription.user_id.slice(0, 8)}_${Date.now()}`
-
-    try {
-      // 빌링 결제
-      const response = await fetch(`https://api.tosspayments.com/v1/billing/${subscription.billing_key}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Basic ${basicAuth}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          customerKey: subscription.customer_key,
-          amount: plan.price,
-          orderId,
-          orderName: `${plan.name} 구독 갱신`,
-        }),
-      })
-
-      const result = await response.json()
-
-      // 기간 계산
-      const periodStart = new Date(subscription.current_period_end)
-      const periodEnd = new Date(periodStart)
-      if (plan.interval === 'MONTH') {
-        periodEnd.setMonth(periodEnd.getMonth() + 1)
-      } else {
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1)
-      }
-
-      if (!response.ok) {
-        // 결제 실패
-        const retryCount = (subscription.retry_count || 0) + 1
-
-        await supabase.from('subscription_payments').insert({
-          subscription_id: subscription.id,
-          user_id: subscription.user_id,
-          order_id: orderId,
-          amount: plan.price,
-          status: 'FAILED',
-          failure_code: result.code,
-          failure_reason: result.message,
-        })
-
-        // 3회 실패 시 일시정지
-        if (retryCount >= 3) {
-          await supabase
-            .from('subscriptions')
-            .update({
-              status: 'PAYMENT_FAILED',
-              retry_count: retryCount,
-            })
-            .eq('id', subscription.id)
-        } else {
-          // 다음날 재시도
-          const nextRetry = new Date()
-          nextRetry.setDate(nextRetry.getDate() + 1)
-
-          await supabase
-            .from('subscriptions')
-            .update({
-              retry_count: retryCount,
-              next_billing_date: nextRetry.toISOString(),
-            })
-            .eq('id', subscription.id)
-        }
-
-        results.failed++
-        results.errors.push(`${subscription.user_id}: ${result.message}`)
-        continue
-      }
-
-      // 결제 성공
-      await supabase.from('subscription_payments').insert({
-        subscription_id: subscription.id,
-        user_id: subscription.user_id,
-        payment_key: result.paymentKey,
-        order_id: orderId,
-        amount: plan.price,
-        status: 'SUCCESS',
-        billing_period_start: periodStart.toISOString(),
-        billing_period_end: periodEnd.toISOString(),
-        talismans_granted: plan.talismans_per_period,
-      })
-
-      // 구독 기간 연장
-      await supabase
-        .from('subscriptions')
-        .update({
-          current_period_start: periodStart.toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          next_billing_date: periodEnd.toISOString(),
-          last_payment_date: now.toISOString(),
-          retry_count: 0,
-        })
-        .eq('id', subscription.id)
-
-      // 부적 지급 (Service Role 필요 - 크론잡에서 호출)
-      await supabase.rpc('add_talismans_by_user', {
-        p_user_id: subscription.user_id,
-        p_amount: plan.talismans_per_period,
-        p_type: 'SUBSCRIPTION',
-        p_description: `${plan.name} 구독 갱신 - 부적 ${plan.talismans_per_period}장 지급`,
-      })
-
-      results.success++
-    } catch (err) {
-      results.failed++
-      results.errors.push(`${subscription.user_id}: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    }
-  }
-
-  return results
 }
 
 // ============================================
@@ -645,7 +528,12 @@ export async function cancelSubscription(reason?: string): Promise<{
   }
 
   // 즉시 해지가 아닌, 현재 기간 종료 후 해지 (Grace Period)
-  const { error: updateError } = await supabase
+  // subscriptions 쓰기는 service_role 전용(S1b R1) — 소유권은 위 조회(user_id)로 검증됨
+  const adminDb = createAdminClient()
+  if (!adminDb) {
+    return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
+  }
+  const { error: updateError } = await adminDb
     .from('subscriptions')
     .update({
       status: 'CANCELLED',
@@ -653,6 +541,7 @@ export async function cancelSubscription(reason?: string): Promise<{
       cancel_reason: reason || '사용자 요청',
     })
     .eq('id', subscription.id)
+    .eq('user_id', user.id)
 
   if (updateError) {
     logger.error('[Subscription] Cancel error:', updateError)
@@ -693,7 +582,11 @@ export async function reactivateSubscription(): Promise<{
 
   // 아직 기간이 남아있으면 재활성화
   if (subscription.current_period_end && new Date(subscription.current_period_end) > new Date()) {
-    const { error: updateError } = await supabase
+    const adminDb = createAdminClient()
+    if (!adminDb) {
+      return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
+    }
+    const { error: updateError } = await adminDb
       .from('subscriptions')
       .update({
         status: 'ACTIVE',
@@ -701,6 +594,7 @@ export async function reactivateSubscription(): Promise<{
         cancel_reason: null,
       })
       .eq('id', subscription.id)
+      .eq('user_id', user.id)
 
     if (updateError) {
       return { success: false, error: '구독 재활성화에 실패했습니다.' }
@@ -779,8 +673,20 @@ export async function changeBillingMethod(): Promise<{
   // 새 customerKey로 빌링키 재발급
   const newCustomerKey = `HHD_${user.id.slice(0, 8)}_${Date.now()}`
 
-  // 임시로 새 customerKey 저장
-  await supabase.from('subscriptions').update({ customer_key: newCustomerKey }).eq('id', subscription.id)
+  // 임시로 새 customerKey 저장 — subscriptions 쓰기는 service_role 전용(S1b R1)
+  const adminDb = createAdminClient()
+  if (!adminDb) {
+    return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
+  }
+  const { error: updateError } = await adminDb
+    .from('subscriptions')
+    .update({ customer_key: newCustomerKey })
+    .eq('id', subscription.id)
+    .eq('user_id', user.id)
+  if (updateError) {
+    logger.error('[Subscription] Change billing method error:', updateError)
+    return { success: false, error: '결제 수단 변경에 실패했습니다.' }
+  }
 
   return { success: true, customerKey: newCustomerKey }
 }
