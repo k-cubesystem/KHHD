@@ -520,9 +520,17 @@ export async function sendShamanChatMessage(
     const result = await chat.sendMessage(safeMessage)
     const responseText = result.response.text()
 
-    // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 (비차단)
+    // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 — 응답 후 백그라운드(freeze 방지)
     if (bondDeityId) {
-      void awardDeityBond(bondDeityId, CHAT_BOND_POINTS).catch(() => {})
+      const deityId = bondDeityId
+      scheduleBackground(async () => {
+        try {
+          const r = await awardDeityBond(deityId, CHAT_BOND_POINTS)
+          if (!r.success) logger.warn('[sendShamanChatMessage] bond award skipped:', r.error)
+        } catch (e) {
+          logger.warn('[sendShamanChatMessage] bond award error:', e)
+        }
+      })
     }
 
     // 6. 추천 질문 생성 (과거 분석 기록 기반)
