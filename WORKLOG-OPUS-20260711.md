@@ -305,6 +305,24 @@
 
 ---
 
+## 🔴 P0 발견 — 프로덕션 Gemini API 키 무효 (2026-07-12)
+
+배포 후 프로덕션 AI 스모크(`e2e/prod/ai-smoke.spec.ts`)로 **해화지기 서버액션이 Gemini 호출에서 실패**함을 발견. 서버 응답 본문:
+
+```
+{"success":false,"error":"[GoogleGenerativeAI Error]: [400 Bad Request]
+ gemini-3-flash-preview:generateContent: API key not valid. reason: API_KEY_INVALID"}
+```
+
+- **프로덕션 `GOOGLE_GENERATIVE_AI_API_KEY`가 무효** → **모든 AI 기능(사주/관상/손금/해화지기)이 프로덕션에서 실패.** 질문권/복채 차감은 정상 진행되나(dailyFreeUsed:1) Gemini 응답에서 깨짐 — 유저는 재화만 소모하고 답을 못 받는 상태.
+- 코드/배포 문제 아님(자격증명). **키 교체는 자격증명 작업이라 에이전트가 수행 불가.**
+- **부수 의심**: 모델 ID `gemini-3-flash-preview`/`gemini-3.1-pro-preview`(CLAUDE.md)가 실재 모델인지 미확인(키 무효라 models API 확인 불가). 키 교체 후 404(model not found) 나오면 모델 ID도 교정 필요.
+- **이 P0 때문에 Track A(신위 이미지 생성)도 동일 원인으로 차단**(같은 Gemini 키).
+
+**→ 사용자 액션(P0)**: ①Google AI Studio에서 유효한 API 키 발급 → ②Vercel `hhd` 프로젝트 env `GOOGLE_GENERATIVE_AI_API_KEY`(Production) 교체 + 재배포 → ③프로덕션 AI 스모크 재실행(`E2E_PROD_SMOKE=1 E2E_BASE_URL=https://k-haehwadang.com ... npx playwright test e2e/prod/ai-smoke.spec.ts`)로 실제 응답 확인 → ④404 나오면 모델 ID 교정.
+
+---
+
 ### 사용자 승인/확인 필요 목록 (누적)
 
 - [x] ~~S1b 마이그레이션 적용 순서~~ — **완료** (2026-07-12 배포+적용, subscriptions만 연기).
