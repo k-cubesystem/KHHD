@@ -131,5 +131,44 @@
       "Bash(/tmp/screenshot3.ps1:*)"
     ]
   },
-  "model": "claude-sonnet-4-5-20250514"
+  "model": "claude-sonnet-4-5-20250514",
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/hhd-checkpoint-save.sh\"",
+            "timeout": 20,
+            "statusMessage": "세션 체크포인트 저장 중…"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/hhd-checkpoint-save.sh\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/hhd-checkpoint-load.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
 }
