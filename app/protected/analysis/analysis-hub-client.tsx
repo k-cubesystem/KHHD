@@ -32,7 +32,7 @@ export function AnalysisHubClient({ userId, userName }: AnalysisHubClientProps =
   }, [searchParams, router])
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
       <div className="fixed inset-0 pointer-events-none -z-10">
@@ -42,6 +42,6 @@ export function AnalysisHubClient({ userId, userName }: AnalysisHubClientProps =
       <div className="relative z-10 w-full pt-6">
         <AnalysisDashboard userId={userId} userName={userName} />
       </div>
-    </main>
+    </div>
   )
 }

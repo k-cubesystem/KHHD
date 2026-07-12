@@ -2,16 +2,7 @@
 
 import { use } from 'react'
 import { motion } from 'framer-motion'
-import {
-  ArrowLeft,
-  Wallet,
-  Heart,
-  Building2,
-  GraduationCap,
-  TrendingUp,
-  Sparkles,
-  ChevronRight,
-} from 'lucide-react'
+import { ArrowLeft, Wallet, Heart, Building2, GraduationCap, TrendingUp, Sparkles, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -70,14 +61,9 @@ export default function ThemeAnalysisPage({ params }: { params: Promise<{ type: 
         <span className="text-sm font-serif text-ink-light/80">테마별 상세 분석</span>
       </header>
 
-      <main className="relative z-10 max-w-md mx-auto p-6 space-y-8">
+      <div className="relative z-10 max-w-md mx-auto p-6 space-y-8">
         {/* Intro */}
-        <motion.div
-          initial="initial"
-          animate="animate"
-          variants={fadeInUp}
-          className="text-center space-y-3"
-        >
+        <motion.div initial="initial" animate="animate" variants={fadeInUp} className="text-center space-y-3">
           <div
             className={`w-16 h-16 mx-auto rounded-full bg-surface/50 border border-white/10 flex items-center justify-center mb-4`}
           >
@@ -90,20 +76,13 @@ export default function ThemeAnalysisPage({ params }: { params: Promise<{ type: 
         </motion.div>
 
         {/* Mock Analysis Card */}
-        <motion.div
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-          className="space-y-4"
-        >
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-4">
           <motion.div variants={fadeInUp}>
             <Card className="bg-surface/20 border-primary/20 card-glass-manse">
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-bold text-primary tracking-widest uppercase">
-                    CURRENT STATUS
-                  </span>
+                  <span className="text-xs font-bold text-primary tracking-widest uppercase">CURRENT STATUS</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">
@@ -149,7 +128,7 @@ export default function ThemeAnalysisPage({ params }: { params: Promise<{ type: 
             </Card>
           </motion.div>
         </motion.div>
-      </main>
+      </div>
     </div>
   )
 }

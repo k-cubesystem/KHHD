@@ -23,9 +23,7 @@ export default function ByeongOYearEventPage() {
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E53935]/20 border border-[#E53935]/40 mb-4"
         >
           <Flame className="w-3 h-3 text-[#E53935]" />
-          <span className="text-[10px] font-bold text-[#FF5252] tracking-widest uppercase">
-            2026 SPECIAL EVENT
-          </span>
+          <span className="text-[10px] font-bold text-[#FF5252] tracking-widest uppercase">2026 SPECIAL EVENT</span>
         </motion.div>
 
         <motion.h1
@@ -48,7 +46,7 @@ export default function ByeongOYearEventPage() {
       </header>
 
       {/* Main Content */}
-      <main className="px-3 mt-12 space-y-16 relative z-10 max-w-md mx-auto">
+      <div className="px-3 mt-12 space-y-16 relative z-10 max-w-md mx-auto">
         {/* Intro Section with Moving Horse Concept */}
         <section className="relative h-64 flex items-center justify-center">
           <motion.div
@@ -69,9 +67,7 @@ export default function ByeongOYearEventPage() {
         <section className="space-y-6">
           <div className="text-center space-y-2">
             <h2 className="text-xl font-serif text-gold-500">당신과 병오년의 궁합</h2>
-            <p className="text-sm text-white/60 font-light">
-              뜨거운 불의 기운(丙午)이 당신에게 미칠 영향은?
-            </p>
+            <p className="text-sm text-white/60 font-light">뜨거운 불의 기운(丙午)이 당신에게 미칠 영향은?</p>
           </div>
 
           <div className="bg-white/5 border border-[#E53935]/30 rounded-2xl p-6 relative overflow-hidden group hover:border-[#E53935]/60 transition-colors">
@@ -100,8 +96,8 @@ export default function ByeongOYearEventPage() {
                 <span className="text-[#E53935]">&quot;폭발적인 성장&quot;</span>의 기운
               </h3>
               <p className="text-sm text-white/70 leading-relaxed font-light">
-                당신의 사주에 부족했던 <span className="text-[#E53935] font-medium">화(火)</span>{' '}
-                기운이 병오년에 채워지면서, 그동안 정체되었던 일들이 불처럼 일어날 것입니다.
+                당신의 사주에 부족했던 <span className="text-[#E53935] font-medium">화(火)</span> 기운이 병오년에
+                채워지면서, 그동안 정체되었던 일들이 불처럼 일어날 것입니다.
               </p>
             </div>
           </div>
@@ -111,30 +107,10 @@ export default function ByeongOYearEventPage() {
         <section className="space-y-4">
           <h2 className="text-lg font-serif text-white/90 px-2">🔑 2026년 핵심 키워드</h2>
           <div className="grid grid-cols-2 gap-3">
-            <KeywordCard
-              icon={TrendingUp}
-              label="이직/승진"
-              color="text-blue-400"
-              bg="bg-blue-400/10"
-            />
-            <KeywordCard
-              icon={Wallet}
-              label="재물 급상승"
-              color="text-gold-500"
-              bg="bg-gold-500/10"
-            />
-            <KeywordCard
-              icon={Heart}
-              label="열정적 사랑"
-              color="text-[#E53935]"
-              bg="bg-[#E53935]/10"
-            />
-            <KeywordCard
-              icon={Sparkles}
-              label="새로운 도전"
-              color="text-purple-400"
-              bg="bg-purple-400/10"
-            />
+            <KeywordCard icon={TrendingUp} label="이직/승진" color="text-blue-400" bg="bg-blue-400/10" />
+            <KeywordCard icon={Wallet} label="재물 급상승" color="text-gold-500" bg="bg-gold-500/10" />
+            <KeywordCard icon={Heart} label="열정적 사랑" color="text-[#E53935]" bg="bg-[#E53935]/10" />
+            <KeywordCard icon={Sparkles} label="새로운 도전" color="text-purple-400" bg="bg-purple-400/10" />
           </div>
         </section>
 
@@ -152,22 +128,12 @@ export default function ByeongOYearEventPage() {
             * 상세 운세 확인 시 1 크레딧이 소모됩니다.
           </p>
         </section>
-      </main>
+      </div>
     </div>
   )
 }
 
-function KeywordCard({
-  icon: Icon,
-  label,
-  color,
-  bg,
-}: {
-  icon: any
-  label: string
-  color: string
-  bg: string
-}) {
+function KeywordCard({ icon: Icon, label, color, bg }: { icon: any; label: string; color: string; bg: string }) {
   return (
     <div
       className={`flex flex-col items-center justify-center p-4 rounded-xl border border-white/5 ${bg} backdrop-blur-sm`}

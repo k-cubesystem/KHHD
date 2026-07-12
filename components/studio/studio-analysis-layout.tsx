@@ -10,11 +10,7 @@ interface StudioAnalysisLayoutProps {
   children: React.ReactNode
 }
 
-export function StudioAnalysisLayout({
-  category,
-  targetMember,
-  children,
-}: StudioAnalysisLayoutProps) {
+export function StudioAnalysisLayout({ category, targetMember, children }: StudioAnalysisLayoutProps) {
   const categoryInfo = MISSION_CATEGORIES.find((c) => c.value === category)
 
   return (
@@ -40,9 +36,7 @@ export function StudioAnalysisLayout({
               {categoryInfo?.label}
             </h1>
             {targetMember && (
-              <p className="text-sm text-ink-light/60 mt-1 font-sans font-light">
-                {targetMember.name}님의 분석
-              </p>
+              <p className="text-sm text-ink-light/60 mt-1 font-sans font-light">{targetMember.name}님의 분석</p>
             )}
           </div>
 
@@ -53,9 +47,7 @@ export function StudioAnalysisLayout({
               </div>
               {categoryInfo.cost > 0 && (
                 <div className="text-right hidden sm:block">
-                  <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">
-                    Credits
-                  </p>
+                  <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">Credits</p>
                   <p className="text-lg font-serif font-light text-primary">{categoryInfo.cost}</p>
                 </div>
               )}
@@ -65,7 +57,7 @@ export function StudioAnalysisLayout({
       </motion.header>
 
       {/* Main Content */}
-      <main className="px-3 py-8 max-w-4xl mx-auto pb-24">{children}</main>
+      <div className="px-3 py-8 max-w-4xl mx-auto pb-24">{children}</div>
     </div>
   )
 }

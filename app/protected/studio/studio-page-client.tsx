@@ -108,7 +108,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
         </motion.div>
       </header>
 
-      <main className="px-5 relative z-10 space-y-3 pb-20">
+      <div className="px-5 relative z-10 space-y-3 pb-20">
         {SERVICES.map((service, i) => (
           <motion.div
             key={service.id}
@@ -184,7 +184,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
             분석 결과는 저장되어 운세 기록에 반영됩니다.
           </p>
         </motion.div>
-      </main>
+      </div>
     </div>
   )
 }
