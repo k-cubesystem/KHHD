@@ -435,10 +435,21 @@ export function ShrineRoomClient({ scene }: Props) {
       >
         <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
         <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
-        {/* 테마 방 배경 이미지 (있으면 그라디언트 위에 덮음, 404면 그라디언트 폴백) */}
-        <div
-          className="absolute inset-0"
-          style={{ background: `center/cover no-repeat url('/shrine/themes/${activeCode}/room.webp')` }}
+        {/* 테마 방 배경 이미지 — <img>로 렌더.
+            고DPR(deviceScaleFactor≥2, 실기기) 모바일에서 CSS background-image가 흰 화면으로
+            페인트 실패하는 Chromium 문제를 회피(이미지 파이프라인은 고DPR에서 안정적).
+            404 시 onError로 숨김 → 아래 그라디언트 벽/바닥으로 폴백. */}
+        <img
+          key={activeCode}
+          src={`/shrine/themes/${activeCode}/room.webp`}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+          style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none'
+          }}
         />
         {/* 제단 영역 대비용 하단 암전 */}
         <div
