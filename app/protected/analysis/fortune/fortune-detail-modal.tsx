@@ -14,11 +14,9 @@ interface FortuneDetailModalProps {
 }
 
 export function FortuneDetailModal({ isOpen, onClose, date }: FortuneDetailModalProps) {
-  // @ts-expect-error -- Solar library lacks TypeScript types
   const solar = Solar.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
   const lunar = solar.getLunar()
-  const ganji =
-    lunar.getYearInGanji() + '년 ' + lunar.getMonthInGanji() + '월 ' + lunar.getDayInGanji() + '일'
+  const ganji = lunar.getYearInGanZhi() + '년 ' + lunar.getMonthInGanZhi() + '월 ' + lunar.getDayInGanZhi() + '일'
 
   // Mock Data for Detail
   const luckScore = ((date.getDate() * 7 + date.getMonth() * 3) % 30) + 70 // 70-100 range
@@ -85,8 +83,7 @@ export function FortuneDetailModal({ isOpen, onClose, date }: FortuneDetailModal
               <div>
                 <h4 className="text-xs font-bold text-primary mb-1">오늘의 조언</h4>
                 <p className="text-xs text-ink-light/70 leading-relaxed font-light">
-                  남쪽에서 귀인이 찾아올 수 있으니 대인관계를 원만히 하세요. 무리한 투자는 피하는
-                  것이 좋습니다.
+                  남쪽에서 귀인이 찾아올 수 있으니 대인관계를 원만히 하세요. 무리한 투자는 피하는 것이 좋습니다.
                 </p>
               </div>
             </div>

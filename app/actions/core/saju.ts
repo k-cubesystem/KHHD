@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getSajuData, analyzeElementBalance } from '@/lib/domain/saju/saju'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -35,7 +36,7 @@ export async function getUserFiveElements() {
     const sajuData = getSajuData(
       profile.birth_date,
       profile.birth_time || '12:00',
-      profile.calendar_type === 'solar'
+      isSolarCalendar(profile.calendar_type)
     )
 
     // 오행 분석

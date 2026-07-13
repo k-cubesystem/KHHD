@@ -7,8 +7,18 @@ import { Card } from '@/components/ui/card'
 import { Heart, Sparkles, Share2, ArrowLeft, Loader2, Users } from 'lucide-react'
 import { getFamilyMembers } from '@/app/actions/user/family'
 import { getSajuData } from '@/lib/domain/saju/saju'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import { calculateCompatibilityScore } from '@/lib/domain/compatibility/compatibility'
 import { logger } from '@/lib/utils/logger'
+
+interface FamilyMember {
+  id: string
+  name: string
+  birth_date: string
+  birth_time: string | null
+  calendar_type: string | null
+  [key: string]: unknown
+}
 
 function CompatibilityContent() {
   const searchParams = useSearchParams()
@@ -16,23 +26,23 @@ function CompatibilityContent() {
   const target1Id = searchParams.get('target1')
   const target2Id = searchParams.get('target2')
 
-  const [members, setMembers] = useState<any[]>([])
+  const [members, setMembers] = useState<FamilyMember[]>([])
   const [loading, setLoading] = useState(true)
   const [result, setResult] = useState<{ score: number; comment: string } | null>(null)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getFamilyMembers()
+        const data = (await getFamilyMembers()) as FamilyMember[]
         setMembers(data)
 
         if (target1Id && target2Id) {
-          const m1 = data.find((m: any) => m.id === target1Id)
-          const m2 = data.find((m: any) => m.id === target2Id)
+          const m1 = data.find((m) => m.id === target1Id)
+          const m2 = data.find((m) => m.id === target2Id)
 
           if (m1 && m2) {
-            const s1 = getSajuData(m1.birth_date, m1.birth_time || '00:00', m1.calendar_type === 'solar')
-            const s2 = getSajuData(m2.birth_date, m2.birth_time || '00:00', m2.calendar_type === 'solar')
+            const s1 = getSajuData(m1.birth_date, m1.birth_time || '00:00', isSolarCalendar(m1.calendar_type))
+            const s2 = getSajuData(m2.birth_date, m2.birth_time || '00:00', isSolarCalendar(m2.calendar_type))
             const res = calculateCompatibilityScore(s1, s2)
 
             // Simulate analyzing delay for effect

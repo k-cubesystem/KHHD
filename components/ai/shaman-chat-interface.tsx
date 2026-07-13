@@ -222,7 +222,12 @@ function DeityFaceAvatar({
 }
 
 // ─── 메인 컴포넌트 ─────────────────────────────────────────
-export function ShamanChatInterface() {
+export interface SeatedDeityInfo {
+  code: string
+  name: string
+}
+
+export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: SeatedDeityInfo | null } = {}) {
   const router = useRouter()
   const tCommon = useTranslations('common')
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
@@ -240,8 +245,9 @@ export function ShamanChatInterface() {
   const [questionStatus, setQuestionStatus] = useState<ShamanQuestionStatus | null>(null)
   const [isStatusLoading, setIsStatusLoading] = useState(true)
 
-  // 좌정 主神 표정 아바타 (신당 3.0). 응답에서 받은 마지막 값 유지 — deityCode는 한번 정해지면 유지.
-  const [deityCode, setDeityCode] = useState<string | null>(null)
+  // 좌정 主神 표정 아바타 (신당 3.0). 서버 시딩(initialDeity)으로 첫 로드부터 신위 표시,
+  // 이후 응답에서 받은 마지막 값 유지 — deityCode는 한번 정해지면 유지.
+  const [deityCode, setDeityCode] = useState<string | null>(initialDeity?.code ?? null)
   const [deityEmotion, setDeityEmotion] = useState<string>('neutral')
 
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
@@ -535,8 +541,14 @@ export function ShamanChatInterface() {
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-primary border-2 border-[#0d0d0d]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground/90 tracking-wide leading-tight">해화지기</p>
-              <p className="text-[10px] text-primary/45 tracking-widest mt-0.5">청담해화당 · 수석 명리 상담가</p>
+              <p className="text-sm font-semibold text-foreground/90 tracking-wide leading-tight">
+                {deityCode && initialDeity && deityCode === initialDeity.code ? initialDeity.name : '해화지기'}
+              </p>
+              <p className="text-[10px] text-primary/45 tracking-widest mt-0.5">
+                {deityCode && initialDeity && deityCode === initialDeity.code
+                  ? '청담해화당 · 좌정 主神'
+                  : '청담해화당 · 수석 명리 상담가'}
+              </p>
             </div>
           </div>
 

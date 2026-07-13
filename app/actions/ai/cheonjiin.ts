@@ -3,9 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getDestinyTarget } from '../user/destiny'
-import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import { formatManseDetails, formatSajuText, formatDaewoon, calculateElements } from '@/lib/utils/manse-formatter'
 import { saveAnalysisHistory } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
@@ -135,25 +133,12 @@ export async function analyzeCheonjiinAction(
       return { success: true, cached: false }
     }
 
-    // 3. 만세력 계산
-    const manse = calculateManse(target.birth_date, target.birth_time || '00:00', 'Asia/Seoul', true)
-
-    // 4. 오행 분포 계산
-    const elements = calculateElements(manse)
-
-    // 5. 나이 계산
+    // 3. 나이 계산
+    // 명식·오행·대운 데이터는 아래 해화지기 마스터 엔진 프롬프트에서 단일 공급한다
+    // (별도 만세력 계산 주입 시 대운 등이 이중·상충되므로 제거)
     const age = calculateAge(target.birth_date)
 
-    // 6. 대운 계산
-    const daewoon = calculateDaewoon(
-      target.birth_date,
-      target.birth_time || '00:00',
-      (target.gender || 'male') as 'male' | 'female',
-      age,
-      'Asia/Seoul'
-    )
-
-    // 7. 변수 준비 (천지인 초고도화 데이터 포함)
+    // 4. 변수 준비 (천지인 초고도화 데이터 포함)
     // additionalData가 있으면 우선 사용, 없으면 target 데이터 사용
 
     // 이미지 raw URL (base64 or storage URL)
@@ -184,12 +169,6 @@ export async function analyzeCheonjiinAction(
       birthDate: target.birth_date,
       birthTime: target.birth_time || '00:00',
       age: age.toString(),
-
-      // 천(天) - 사주 데이터
-      saju: formatSajuText(manse),
-      manse: formatManseDetails(manse),
-      elements: JSON.stringify(elements),
-      daewoon: formatDaewoon(daewoon),
 
       // 지(地) - 풍수 데이터 (주소)
       homeAddress,
@@ -401,11 +380,8 @@ function getDefaultCheonjiinPrompt(
 - 성별: ${vars.gender}
 - 생년월일: ${vars.birthDate}
 - 태어난 시간: ${vars.birthTime}
-- 사주 팔자: ${vars.saju}
-- 만세력 정보: ${vars.manse}
-- 오행 분포: ${vars.elements}
 - 현재 나이: ${vars.age}세
-- 대운 흐름: ${vars.daewoon}
+- 사주 명식·오행·대운: 위 시스템 역할의 [내담자 명식 데이터] 참조 (단일 출처)
 
 ## 풍수 데이터
 - 집 주소: ${vars.homeAddress}

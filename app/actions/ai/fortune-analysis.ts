@@ -2,8 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
-import { calculateAge } from '@/lib/domain/saju/saju'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { generateAIContent } from '@/lib/services/ai-client'
@@ -83,11 +81,7 @@ export async function analyzeFortuneAction(
       }
     }
 
-    // 3. 만세력 계산
-    const manse = calculateManse(target.birth_date, target.birth_time || '00:00', 'Asia/Seoul', true)
-    const age = calculateAge(target.birth_date)
-
-    // 4. 현재 날짜 정보
+    // 3. 현재 날짜 정보
     const now = new Date()
     const todayStr = now.toLocaleDateString('ko-KR', {
       year: 'numeric',

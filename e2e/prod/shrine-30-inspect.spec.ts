@@ -57,8 +57,8 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
       .waitFor({ timeout: 20_000 })
       .catch(() => {})
 
-    // 방 로드는 비동기 — 즉시 검사 대신 대기 기반 단언(플레이크 방지)
-    await expect(page.getByRole('img', { name: '삼신할매' }).first()).toBeVisible({ timeout: 20_000 })
+    // 방 로드는 비동기 — 즉시 검사 대신 대기 기반 단언. 콜드 런은 씬 로드가 20초를 넘길 수 있음
+    await expect(page.getByRole('img', { name: '삼신할매' }).first()).toBeVisible({ timeout: 45_000 })
     console.log('[CHECK] 제단 主神(삼신할매) 렌더: true')
 
     await expect(page.getByText(/緣|인연/).first()).toBeVisible({ timeout: 10_000 })
@@ -97,7 +97,8 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
 
     // ── 3) 대화: 감정 아바타 + 태그 누수 + 페르소나 ──
     await page.goto('/protected/ai-shaman')
-    const input = page.getByPlaceholder(/고민을 편하게 적어주세요/)
+    // 스트리밍 중 페이지 이중 마운트가 일시 관찰됨(strict 위반) — first()로 판정
+    const input = page.getByPlaceholder(/고민을 편하게 적어주세요/).first()
     await expect(input).toBeVisible({ timeout: 20_000 })
 
     // 팝업 명시 닫기(force 클릭은 locator handler 미트리거) + 세션 히스토리 로딩 완료 대기
@@ -137,10 +138,11 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
     }).toPass({ timeout: 90_000 })
     console.log('[PASS] 새 AI 응답 수신 (히스토리 제외)')
 
+    // 감정 크로스페이드 중엔 같은 alt 이미지가 2장 공존(AnimatePresence) — 개수 기반으로 판정
     const deityAvatarAfter = page.getByRole('img', { name: '좌정 신위' })
-    const avatarVisible = await deityAvatarAfter.isVisible().catch(() => false)
-    const avatarSrc = avatarVisible ? await deityAvatarAfter.getAttribute('src') : null
-    console.log(`[CHECK] 응답 후 신위 표정 아바타: ${avatarVisible} src=${avatarSrc}`)
+    const avatarCount = await deityAvatarAfter.count()
+    const avatarSrc = avatarCount > 0 ? await deityAvatarAfter.last().getAttribute('src') : null
+    console.log(`[CHECK] 응답 후 신위 표정 아바타: count=${avatarCount} src=${avatarSrc}`)
 
     const bodyText = (await page.locator('body').innerText()).slice(0, 20_000)
     const tagLeak = /\[\[|\]\]/.test(bodyText)

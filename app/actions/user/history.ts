@@ -108,9 +108,10 @@ export async function saveAnalysisHistory(
     // 운세 미션 기록 자동 연동
     try {
       let familyMemberId = params.target_id
-      if (!familyMemberId) {
+      // 본인 분석은 target_id가 profiles.id(다형) — 미션 연동은 self family_member 행으로 매핑
+      if (!familyMemberId || familyMemberId === user.id) {
         const selfId = await getSelfFamilyMemberId()
-        if (selfId) familyMemberId = selfId
+        familyMemberId = selfId || undefined
       }
 
       if (familyMemberId) {

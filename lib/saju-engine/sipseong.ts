@@ -48,15 +48,15 @@ const GAN_YINYANG: Record<string, number> = {
   癸: 1,
 }
 
-/** 지지 음양 */
+/** 지지 음양 — 지장간 본기 기준 (子→癸 음, 巳→丙 양, 午→丁 음, 亥→壬 양) */
 const ZHI_YINYANG: Record<string, number> = {
   子: 1,
   丑: 1,
   寅: 0,
   卯: 1,
   辰: 0,
-  巳: 1,
-  午: 0,
+  巳: 0,
+  午: 1,
   未: 1,
   申: 0,
   酉: 1,

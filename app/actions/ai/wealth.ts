@@ -8,6 +8,7 @@ import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
@@ -88,7 +89,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
         birthDate: member.birth_date,
         birthTime: member.birth_time || '00:00',
         gender: (member.gender || 'male') as 'male' | 'female',
-        isSolar: member.calendar_type === 'solar',
+        isSolar: isSolarCalendar(member.calendar_type),
       },
       'WEALTH_DEEP',
       '',

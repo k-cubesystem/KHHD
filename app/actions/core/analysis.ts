@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { generateFateReport } from '@/lib/services/gemini'
 import { getSajuData } from '@/lib/domain/saju/saju'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import { saveAnalysisHistory } from '../user/history'
 import { logger } from '@/lib/utils/logger'
 
@@ -33,11 +34,7 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
   }
 
   // 2. 사주 데이터 생성
-  const sajuData = getSajuData(
-    target.birth_date,
-    target.birth_time || '00:00',
-    target.calendar_type === 'solar'
-  )
+  const sajuData = getSajuData(target.birth_date, target.birth_time || '00:00', isSolarCalendar(target.calendar_type))
 
   // 3. 이미지 업로드 (생략 가능, 기존 로직 유지)
   const faceImageUrl = target.face_image_url

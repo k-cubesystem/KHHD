@@ -39,7 +39,6 @@ export function FortuneCalendar({ onDateSelect, selectedDate }: FortuneCalendarP
 
   // Determine "Gil-il" (Lucky Day) mock logic or simple lunar logic
   const getDayStatus = (date: Date) => {
-    // @ts-expect-error -- Solar library lacks TypeScript types
     const solar = Solar.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
     const lunar = solar.getLunar()
 
@@ -72,10 +71,7 @@ export function FortuneCalendar({ onDateSelect, selectedDate }: FortuneCalendarP
         {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
           <div
             key={day}
-            className={cn(
-              'text-center text-xs font-light py-2',
-              i === 0 ? 'text-red-400/70' : 'text-ink-light/40'
-            )}
+            className={cn('text-center text-xs font-light py-2', i === 0 ? 'text-red-400/70' : 'text-ink-light/40')}
           >
             {day}
           </div>
@@ -105,25 +101,17 @@ export function FortuneCalendar({ onDateSelect, selectedDate }: FortuneCalendarP
                 isToday && !isSelected && 'bg-white/5 border border-white/10'
               )}
             >
-              <span className={cn('text-xs z-10', isLucky ? 'font-bold text-gold-500' : '')}>
-                {format(date, 'd')}
-              </span>
+              <span className={cn('text-xs z-10', isLucky ? 'font-bold text-gold-500' : '')}>{format(date, 'd')}</span>
 
               {/* Lucky Day Indicator */}
               {isLucky && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute bottom-1"
-                >
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute bottom-1">
                   <Sparkles className="w-1.5 h-1.5 text-gold-500" />
                 </motion.div>
               )}
 
               {/* Lunar 1/15 Indicator */}
-              {isMajor && !isLucky && (
-                <div className="absolute top-1 right-1 w-1 h-1 rounded-full bg-primary/40" />
-              )}
+              {isMajor && !isLucky && <div className="absolute top-1 right-1 w-1 h-1 rounded-full bg-primary/40" />}
             </motion.button>
           )
         })}

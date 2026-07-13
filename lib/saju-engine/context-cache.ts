@@ -15,7 +15,8 @@ import { logger } from '@/lib/utils/logger'
 import { buildSajuContext, type PersonInfo } from './context-builder'
 
 /** 사주 엔진 로직이 바뀌면 이 버전을 올려 전체 캐시를 자연 무효화한다. */
-const ENGINE_VERSION = 'v1'
+// v2 (2026-07-13): 야자시 이중시프트 제거 + 대운 getYun 단일화(랜덤 점수 제거) + 巳/午 음양 교정
+const ENGINE_VERSION = 'v2'
 
 /** KST 기준 오늘 날짜 (YYYY-MM-DD). context-builder의 '현재 시점' 기준과 동일. */
 function getKstDate(): string {
@@ -73,8 +74,20 @@ export async function buildSajuContextTextCached(person: PersonInfo): Promise<st
     logger.warn('[SajuContextCache] read failed, computing fresh:', e)
   }
 
-  // MISS → 계산
-  const contextText = buildSajuContext(person).promptContext
+  // MISS → 계산 (잘못된 생년월일 입력 1건이 AI 기능 전체를 죽이지 않도록 폴백)
+  let contextText: string
+  try {
+    contextText = buildSajuContext(person).promptContext
+  } catch (e) {
+    logger.error('[SajuContextCache] buildSajuContext failed, returning minimal context:', e)
+    return [
+      '## [내담자 기본 정보 — 명식 계산 실패]',
+      `- 이름: ${person.name} | 성별: ${person.gender === 'male' ? '남' : '여'}`,
+      `- 생년월일시: ${person.birthDate} ${person.birthTime || '00:00'} (${person.isSolar === false ? '음력' : '양력'})`,
+      '- 주의: 입력된 생년월일이 유효하지 않아 사주 명식을 계산하지 못했습니다.',
+      '  명식 데이터 없이 일반적인 조언만 제공하고, 생년월일 확인을 정중히 권유하세요.',
+    ].join('\n')
+  }
 
   try {
     const admin = createAdminClient()

@@ -2,8 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
-import { calculateAge } from '@/lib/domain/saju/saju'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { generateAIContent } from '@/lib/services/ai-client'
@@ -118,10 +116,6 @@ export async function analyzeTrendAction(
     if (cached) {
       return { success: true, data: cached, cached: true }
     }
-
-    // 만세력 계산
-    const manse = calculateManse(target.birth_date, target.birth_time || '00:00', 'Asia/Seoul', true)
-    const age = calculateAge(target.birth_date)
 
     const trendLabel = TREND_LABELS[trendType]
     const areaItems = TREND_AREAS[trendType]

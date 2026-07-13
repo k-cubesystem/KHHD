@@ -440,3 +440,45 @@ Gemini 키 복구로 Track A 차단 해소 → **신위 이미지 실제 생성�
 
 - §2 가격 현행화(복채 단일통화: 명신1/장군2/천신3/옥황4복채, 원안 ₩표기는 앵커 참고), §3 구현현황 마킹(3.1 ✅ / 3.2·3.4 🔶 / 3.3 🔲), **§5 신당 3.1 개선 계획 신설**: 5.1 정산·신뢰 하드닝 P1 7건 → 5.2 실재감(아바타 시딩·레벨업 루프·강신 정합·팝업 제한) → 5.3 성능 → 5.4 백로그(파티클→깜빡임→티저→SSE→선톡/신탁카드→Live2D) → 5.5 사용자 결정(가격 재결정·옥황 시즌한정).
 - 테스트 계정 비밀번호 재설정(admin API, 세션 관례) 후 검수 수행. 질문권 5회 소모.
+
+---
+
+## 🚑 사주 P0 3건 수복 + 신당 3.1 하드닝 + 사주엔진 교정 (2026-07-13, 세션11 — "추천대로 진행" 승인)
+
+### A) 사주명식·분석 고장 — 근본원인 3건 전부 **7/4 DB 재구축 소실** (라이브 수복 완료)
+
+| #   | 원인                                                                                                                                                                      | 조치 (마이그레이션, 라이브 적용)                                                                                                                                           |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `v_destiny_targets` 뷰가 구세대 스키마(user_id/relationship/is_self)로 복구 → `.eq('owner_id')` 전량 실패 → **만세력·분석 대상조회 전멸** ("내 정보를 등록해주세요" 폴백) | `20260713_fix_v_destiny_targets_schema.sql` — 누락컬럼(family_members.hand_image_url/home_address) 보강 + 코드 계약(20260211 정의)대로 재생성 + invoker 유지 + 권한 최소화 |
+| 2   | `ai_prompts.daily_fortune` 행(구 DB 어드민 작성분) + `daily_fortunes` 캐시 테이블 소실 → **오늘의운세 "관리자 프롬프트" 하드 실패**                                       | `20260713_restore_daily_fortune.sql` — 테이블+RLS+프롬프트 시드(ON CONFLICT DO NOTHING). +코드: profile.name→full_name, single→maybeSingle                                 |
+| 3   | `analysis_history.target_id`가 family_members FK → 본인 분석(target=profiles.id) **전량 무음 저장 실패** = 내역 미축적 + 천지인 캐시 부재로 재방문마다 재과금             | `20260713_fix_analysis_history_target_fk.sql` — 다형 ID 계약대로 FK 제거. +코드: self 미션연동 매핑                                                                        |
+
+검증: 만세력 명식 프로덕션 렌더(庚午/己卯/己卯/戊辰 — 골든 일치), 오늘의운세 실생성+캐시 저장(daily_fortunes 1행), 천지인 분석 진입·실행 확인. 상시 검수 스펙 `e2e/prod/saju-core.spec.ts` 신설.
+
+### B) 신당 3.1 §5.1 하드닝 7건 + §5.2 일부 (코드 완결)
+
+1. `awardDeityBond` 공개액션 삭제 → `lib/services/deity-bond.ts`(server-only) 내부화 — 인연 조작 벡터 제거
+2. `purchaseDeity` 지급실패 시 복채 환불(테마팩 패턴 정합) + `grantDeity` 에러 전파
+3. `saveShrineLayout` 재발급 placements 반환→클라 교체(점화 무음실패 해소) + layer 검증 + `setPlacementLit` state 병합
+4. 질문권 원자화 — `add_shaman_credits`/`consume_shaman_credit` RPC(라이브, service_role 전용, `20260713_shaman_credit_rpcs.sql`) + `spendBokchae(featureKey)` 재사용, 지급실패 환불
+5. `[[emotion]]`-only 응답 태그 노출 폴백 수정 6. 방문자 인연바 게이트(bondPoints null=비공개) 7. EDGE_AI_CHAT 패리티 가드(로컬 강제)
+   §5.2: **채팅 입장 즉시 主神 아바타·이름 서버 시딩**(ai-shaman page → initialDeity). §5.2-4(팝업)는 일단위 dismiss가 이미 구현돼 있었음 — 검수 때 재등장은 e2e 프레시 컨텍스트 아티팩트로 정정.
+   +shaman-chat 본인 대화 birth_time/calendar_type 로드 + isSolar 하드코딩 제거(음력 유저 명식 오답 수정).
+
+### C) 사주엔진 교정 (검수 → 구현. 에이전트 세션한도 중단분 이어서 완결)
+
+- **야자시 이중시프트 제거**: 수동 +1일 폐지 → `EightChar.setSect(1)` 위임. 23시대 출생 時干 오류 + 입춘 경계 년/월주 오염 해소 (골든: 2024-02-03 23:30 → 癸卯년 乙丑월 戊戌일 壬子시)
+- **대운 단일화**: `EightChar.getYun()` 기반 기운나이·간지, **Math.random 점수 폐지**(십성 카테고리 결정론 점수). 3중 구현 통일, `daewoon-advanced.ts`(데드코드) 삭제
+- **calendar_type 판정 통일**: `lib/domain/saju/calendar.ts` `isSolarCalendar()`(null→양력) 전 호출부 적용 — null이 음력으로 새던 폭주 경로 차단. 음력 경로 견고화(31일생 throw→명확 에러), `context-cache` buildSajuContext try 내부화(1명 입력이상→전 AI 기능 마비 방지)
+- **巳/午 지지 음양 교정**(본기 丙양/丁음 — 십성 편·정 정상화), **만세력 UI 오답원 수정**: 공망 순중공망 정식(庚午→戌亥), 세운 입춘 기준(1/1 밀림 해소), 신살 지지/천간 혼동 수정, 절기 근사고정일→실계산치
+- cheonjiin 이중 컨텍스트(고정 startAge5 대운) 제거 — 마스터 엔진 단일 공급. fortune-analysis/trend/year2026 데드 호출 삭제. dynamic-warnings 일운 KST 고정. `eightChar:any` 제거(`types/lunar-javascript.d.ts`), console→logger
+- **ENGINE_VERSION v1→v2** (랜덤 대운이 박힌 saju_context_cache 즉시 무효화)
+- 미적용(정책 결정 필요, PRD 표기): 진태양시 -30분·서머타임·KST↔CST 절입 1시간 보정 — 명식 경계 이동이라 제품 결정 후
+- **골든 테스트 신설** `lib/domain/saju/__tests__/saju-golden.test.ts` 24건: 4주 골든 10케이스(getSajuData·calculateManse 양 구현 정합) + 야자시/입춘/경칩/시경계 + 대운 3케이스 + 랜덤 회귀 방지. lunar-javascript 직접 실행값을 오라클로 사용.
+
+### D) 검증·배포 (완료)
+
+- tsc 0 / jest **161**(137→161, 골든 24 신설) / 배포 `hhd-cd3d1t3j1`(14:17, Aliased 확인)
+- 프로덕션 e2e: `saju-core.spec.ts` ✅(만세력 명식·오늘의운세 본문·천지인 대상로드, 에러 0) + `shrine-30-inspect.spec.ts` ✅(방/판테온/대화 — **첫 로드부터 신위 아바타+신위명 헤더(시딩)**, 새 응답 후 표정 크로스페이드 실포착 samsin/smile, 태그 무누수, HTTP 에러 0)
+- FK 수복 검증: 본인 분석 insert 임퍼소네이션 통과(rollback). 오늘의운세 캐시 daily_fortunes 적재 확인.
+- 참고: 엔진수정 에이전트가 세션한도로 중단 → 잔여(골든 테스트·ENGINE_VERSION 범프)는 본 세션이 완결. 콜드 런에서 방 로드 20초+ 플레이크 → 스펙 대기 45s로 보정. 채팅 페이지 스트리밍 중 이중 마운트 1회 관찰(비지속, first() 판정으로 견고화 — 재발 시 조사 권장.

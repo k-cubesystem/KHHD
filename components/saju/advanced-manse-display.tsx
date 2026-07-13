@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ManseAdvancedResult } from '@/lib/domain/saju/manse-advanced'
+import { ManseAdvancedResult, SinsalAdvanced, Relations } from '@/lib/domain/saju/manse-advanced'
 import {
   TrendingUp,
   Calendar,
@@ -292,10 +292,10 @@ export function AdvancedManseDisplay({ advanced }: AdvancedManseDisplayProps) {
   )
 }
 
-function hasAnySinsal(sinsal: any): boolean {
+function hasAnySinsal(sinsal: SinsalAdvanced): boolean {
   return Object.values(sinsal).some((v) => v === true)
 }
 
-function hasAnyRelations(relations: any): boolean {
-  return Object.values(relations).some((v: any) => Array.isArray(v) && v.length > 0)
+function hasAnyRelations(relations: Relations): boolean {
+  return Object.values(relations).some((v) => Array.isArray(v) && v.length > 0)
 }

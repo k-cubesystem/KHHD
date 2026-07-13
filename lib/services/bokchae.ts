@@ -11,7 +11,8 @@ import { logger } from '@/lib/utils/logger'
  */
 export async function spendBokchae(
   amount: number,
-  description: string
+  description: string,
+  featureKey?: string
 ): Promise<{ success: boolean; balance?: number; error?: string }> {
   if (amount <= 0) return { success: true }
   const supabase = await createClient()
@@ -29,7 +30,9 @@ export async function spendBokchae(
   const bal = data as number
   if (bal === -1 || bal === -2) return { success: false, error: 'INSUFFICIENT_BOKCHAE' }
 
-  await admin.from('wallet_transactions').insert({ user_id: user.id, amount: -amount, type: 'USE', description })
+  await admin
+    .from('wallet_transactions')
+    .insert({ user_id: user.id, amount: -amount, type: 'USE', description, feature_key: featureKey ?? null })
   return { success: true, balance: bal }
 }
 

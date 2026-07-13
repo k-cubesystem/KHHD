@@ -118,18 +118,27 @@ export async function listDeities(): Promise<DeityCatalog> {
   return { deities, ownedCodes, seatedDeityId: shrine?.main_deity_id ?? null }
 }
 
-/** service_role 로 신위 지급 + 인연 1단계 초기화 (멱등) */
-async function grantDeity(userId: string, deityId: string, source: string): Promise<void> {
+/** service_role 로 신위 지급 + 인연 1단계 초기화 (멱등). 실패 시 error 반환 — 결제 경로는 환불 필요. */
+async function grantDeity(userId: string, deityId: string, source: string): Promise<{ error: string | null }> {
   const admin = createAdminClient()
-  await admin
+  const { error: grantError } = await admin
     .from('user_shrine_deities')
     .upsert({ user_id: userId, deity_id: deityId, source }, { onConflict: 'user_id,deity_id', ignoreDuplicates: true })
-  await admin
+  if (grantError) {
+    logger.error('[grantDeity] grant failed:', grantError)
+    return { error: grantError.message }
+  }
+  const { error: bondError } = await admin
     .from('user_deity_bonds')
     .upsert(
       { user_id: userId, deity_id: deityId, bond_level: 1, bond_points: 0 },
       { onConflict: 'user_id,deity_id', ignoreDuplicates: true }
     )
+  if (bondError) {
+    // 인연 행은 부가 데이터 — 지급 자체는 성공으로 취급(적립 시 upsert로 재생성됨)
+    logger.warn('[grantDeity] bond init failed (non-fatal):', bondError)
+  }
+  return { error: null }
 }
 
 /**
@@ -179,7 +188,8 @@ export async function autoSeatGuardian(): Promise<{ success: boolean; deityCode?
     return { success: false, error: 'DEITY_NOT_FOUND' }
   }
 
-  await grantDeity(user.id, deity.id, 'free_guardian')
+  const { error: grantError } = await grantDeity(user.id, deity.id, 'free_guardian')
+  if (grantError) return { success: false, error: 'GRANT_FAILED' }
 
   // 主神 좌정 (shrine 없으면 생성)
   const admin = createAdminClient()
@@ -261,7 +271,12 @@ export async function purchaseDeity(
     newBalance = res.balance
   }
 
-  await grantDeity(user.id, deity.id, 'purchase')
+  const { error: grantError } = await grantDeity(user.id, deity.id, 'purchase')
+  if (grantError) {
+    // 결제됐는데 지급 실패 → 복채 환불 (테마팩과 동일 패턴)
+    if (price > 0) await refundBokchae(user.id, price, `신위 봉안 취소 환불 (${deityCode})`)
+    return { success: false, error: 'GRANT_FAILED' }
+  }
 
   trackEvent({ action: 'deity_purchase', category: 'shrine', label: deityCode, value: price })
   revalidatePath('/protected/shrine')
@@ -318,56 +333,8 @@ export async function purchaseThemePack(
   return { success: true, newBalance }
 }
 
-/**
- * 인연(緣) 적립 — 대화/공물 등 이벤트에서 호출. 원자 RPC(award_deity_bond, service_role).
- * 보유 신위에만 적립. leveledUp=true 면 UI에서 단계 상승 연출.
- */
-export async function awardDeityBond(
-  deityId: string,
-  points: number
-): Promise<{ success: boolean; level?: number; points?: number; leveledUp?: boolean; error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'UNAUTHORIZED' }
-  if (points <= 0) return { success: false, error: 'INVALID_POINTS' }
-
-  // 보유 신위에만 적립 (미보유 신위 적립 차단)
-  const { data: owned } = await supabase
-    .from('user_shrine_deities')
-    .select('deity_id')
-    .eq('user_id', user.id)
-    .eq('deity_id', deityId)
-    .maybeSingle()
-  if (!owned) return { success: false, error: 'NOT_OWNED' }
-
-  // 레벨업 감지용 이전 단계
-  const { data: before } = await supabase
-    .from('user_deity_bonds')
-    .select('bond_level')
-    .eq('user_id', user.id)
-    .eq('deity_id', deityId)
-    .maybeSingle()
-  const prevLevel = before?.bond_level ?? 0
-
-  const admin = createAdminClient()
-  const { data, error } = await admin.rpc('award_deity_bond', {
-    p_user_id: user.id,
-    p_deity_id: deityId,
-    p_points: points,
-  })
-  if (error) {
-    logger.error('[awardDeityBond] rpc error:', error)
-    return { success: false, error: 'AWARD_FAILED' }
-  }
-  const row = Array.isArray(data) ? data[0] : data
-  const level = typeof row?.bond_level === 'number' ? row.bond_level : undefined
-  const total = typeof row?.bond_points === 'number' ? row.bond_points : undefined
-
-  revalidatePath('/protected/shrine')
-  return { success: true, level, points: total, leveledUp: level !== undefined && level > prevLevel }
-}
+// 인연(緣) 적립은 lib/services/deity-bond.ts(서버 내부 전용)로 이동 —
+// 공개 서버액션이면 클라이언트가 임의 포인트로 호출 가능해 조작 벡터가 된다.
 
 /** 보유 신위별 인연 진행도(단계·다음목표·해금) — UI용. */
 export async function getDeityBonds(): Promise<Array<{ deityId: string; progress: BondProgress }>> {

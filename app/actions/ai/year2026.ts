@@ -2,8 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { calculateManse, calculateDaewoon } from '@/lib/domain/saju/manse'
-import { calculateAge } from '@/lib/domain/saju/saju'
 import { saveAnalysisHistory } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { generateAIContent } from '@/lib/services/ai-client'
@@ -95,14 +93,9 @@ export async function analyzeYear2026Action(targetId: string): Promise<{
       }
     }
 
-    // 4. 사주 계산
+    // 4. 사주 계산 데이터는 마스터 엔진 프롬프트에서 단일 공급
     const birthDate = target.birth_date
-    const birthTime = target.birth_time || '12:00'
     const gender = target.gender || 'male'
-
-    const manse = calculateManse(birthDate, birthTime)
-    const age = calculateAge(birthDate)
-    const daewoon = calculateDaewoon(birthDate, birthTime, gender, age)
 
     // 5. AI 호출
     // 해화지기 마스터 엔진으로 프롬프트 조립

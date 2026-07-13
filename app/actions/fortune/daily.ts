@@ -59,7 +59,7 @@ export async function generateDailyFortune(
     .eq('user_id', userId)
     .eq('target_id', targetId) // migration needed
     .eq('date', targetDate)
-    .single()
+    .maybeSingle()
 
   const { data: existing } = await query
 
@@ -76,7 +76,7 @@ export async function generateDailyFortune(
   if (type === 'USER') {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', targetId).single()
     if (!profile || !profile.birth_date) return { success: false, error: '생년월일 정보가 필요합니다.' }
-    name = profile.name
+    name = profile.full_name
     gender = profile.gender
     birthDate = profile.birth_date
     birthTime = profile.birth_time

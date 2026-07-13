@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { getSajuData, WU_XING_COLORS, SajuData } from '@/lib/domain/saju/saju'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import {
   analyzeGekguk,
   calculateSinsal,
@@ -326,7 +327,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       saju = getSajuData(
         selectedMember.birth_date,
         selectedMember.birth_time || '00:00',
-        selectedMember.calendar_type === 'solar'
+        isSolarCalendar(selectedMember.calendar_type)
       )
     }
   } catch (error) {
@@ -368,7 +369,15 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
   try {
     daeunList =
-      saju && selectedMember ? calculateDaeun(selectedMember.birth_date, selectedMember.gender || 'male', saju) : []
+      saju && selectedMember
+        ? calculateDaeun(
+            selectedMember.birth_date,
+            selectedMember.gender || 'male',
+            saju,
+            selectedMember.birth_time || '00:00',
+            isSolarCalendar(selectedMember.calendar_type)
+          )
+        : []
   } catch (error) {
     logger.error('Error in calculateDaeun:', error)
   }
@@ -386,7 +395,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       advancedManse = analyzeManseAdvanced(
         selectedMember.birth_date,
         selectedMember.birth_time || '00:00',
-        (selectedMember.gender as 'male' | 'female') || 'male'
+        (selectedMember.gender as 'male' | 'female') || 'male',
+        isSolarCalendar(selectedMember.calendar_type)
       )
     }
   } catch (error) {
@@ -668,7 +678,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   <h2 className="text-lg font-bold">{selectedMember.name}</h2>
                   <p className="text-sm text-muted-foreground">
                     {selectedMember.birth_date} {selectedMember.birth_time || ''} (
-                    {selectedMember.calendar_type === 'solar' ? '양력' : '음력'})
+                    {isSolarCalendar(selectedMember.calendar_type) ? '양력' : '음력'})
                   </p>
                 </div>
                 <div

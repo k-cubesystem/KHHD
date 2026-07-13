@@ -14,6 +14,7 @@
 import { Solar } from 'lunar-javascript'
 import { SajuPillar } from './manse'
 import { getSajuData, SajuData } from './saju'
+import { calculateSipseong } from '@/lib/saju-engine/sipseong'
 
 // ========== Helper Functions ==========
 
@@ -147,29 +148,41 @@ export interface SaewoonInfo {
   description: string
 }
 
+/** 십성별 세운 길흉 판정 (결정론적 간이 기준) */
+const FORTUNE_BY_SIPSEONG: Record<string, SaewoonInfo['fortune']> = {
+  정인: 'great',
+  정관: 'good',
+  정재: 'good',
+  식신: 'good',
+  비견: 'normal',
+  편재: 'normal',
+  편인: 'normal',
+  겁재: 'bad',
+  상관: 'bad',
+  편관: 'bad',
+}
+
 /**
  * 세운(년운) 계산
+ * 년간지는 1월 1일이 아니라 입춘(立春) 기준으로 바뀐다 —
+ * 연중(6/15) 시점의 절기 기반 년주 조회로 해당 연도 간지를 확정한다.
+ * @param dayGan 일간 — 전달 시 일간 대비 십성 관계·길흉을 결정론적으로 산출
  */
-export function calculateSaewoon(birthYear: number, targetYear: number): SaewoonInfo {
-  // 해당 연도의 간지 계산
-  const yearDiff = targetYear - birthYear
-  const solar = Solar.fromYmdHms(targetYear, 1, 1, 0, 0, 0)
-  const lunar = solar.getLunar()
-
-  const eightChar: any = lunar.getEightChar()
+export function calculateSaewoon(_birthYear: number, targetYear: number, dayGan?: string): SaewoonInfo {
+  const solar = Solar.fromYmdHms(targetYear, 6, 15, 12, 0, 0)
+  const eightChar = solar.getLunar().getEightChar()
   const yearGan = eightChar.getYearGan()
   const yearJi = eightChar.getYearZhi()
 
-  // 간단한 길흉 판단 (실제로는 더 복잡)
-  const ganIndex = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'].indexOf(yearGan)
-  const fortune = ganIndex % 3 === 0 ? 'good' : ganIndex % 3 === 1 ? 'normal' : 'bad'
+  const relation = dayGan ? calculateSipseong(dayGan, yearGan, false) : '미정'
+  const fortune: SaewoonInfo['fortune'] = FORTUNE_BY_SIPSEONG[relation] ?? 'normal'
 
   return {
     year: targetYear,
     pillar: createPillar(yearGan, yearJi),
-    relation: '비견', // 간단화
+    relation,
     fortune,
-    description: `${targetYear}년의 기운`,
+    description: `${targetYear}년 ${yearGan}${yearJi}년의 기운${relation !== '미정' ? ` — 일간 기준 ${relation}運` : ''}`,
   }
 }
 
@@ -183,38 +196,54 @@ export interface WorwoonInfo {
   luck: number // 0-100
 }
 
+/** 십성별 월운 점수 (결정론적 간이 기준, 0-100) */
+const LUCK_BY_SIPSEONG: Record<string, number> = {
+  정인: 85,
+  정관: 78,
+  식신: 76,
+  정재: 75,
+  비견: 70,
+  편인: 70,
+  편재: 68,
+  상관: 62,
+  겁재: 60,
+  편관: 58,
+}
+
 /**
  * 월운 계산
+ * @param dayGan 일간 — 전달 시 월간 대비 십성 관계로 점수를 결정론적으로 산출
  */
-export function calculateWorwoon(year: number, month: number): WorwoonInfo {
+export function calculateWorwoon(year: number, month: number, dayGan?: string): WorwoonInfo {
   const solar = Solar.fromYmdHms(year, month, 15, 12, 0, 0)
-  const lunar = solar.getLunar()
-
-  const eightChar: any = lunar.getEightChar()
+  const eightChar = solar.getLunar().getEightChar()
   const monthGan = eightChar.getMonthGan()
   const monthJi = eightChar.getMonthZhi()
 
   const solarTerms: Record<number, string> = {
-    1: '입춘',
-    2: '경칩',
-    3: '청명',
-    4: '입하',
-    5: '망종',
-    6: '소서',
-    7: '입추',
-    8: '백로',
-    9: '한로',
-    10: '입동',
-    11: '대설',
-    12: '소한',
+    1: '소한',
+    2: '입춘',
+    3: '경칩',
+    4: '청명',
+    5: '입하',
+    6: '망종',
+    7: '소서',
+    8: '입추',
+    9: '백로',
+    10: '한로',
+    11: '입동',
+    12: '대설',
   }
+
+  const relation = dayGan ? calculateSipseong(dayGan, monthGan, false) : ''
+  const luck = LUCK_BY_SIPSEONG[relation] ?? 65
 
   return {
     year,
     month,
     pillar: createPillar(monthGan, monthJi),
     solarTerm: solarTerms[month] || '입춘',
-    luck: 50 + Math.floor(Math.random() * 30), // 50-80 범위
+    luck,
   }
 }
 
@@ -234,65 +263,213 @@ export interface SinsalAdvanced {
   hakdangGwiin: boolean // 학당귀인
   yukhae: boolean // 육해
   yangin: boolean // 양인
-  golanGwasu: boolean // 고란과숙
+  golanGwasu: boolean // 고란살
   jangseong: boolean // 장성
-  hyugye: boolean // 휴계
   taiji: boolean // 태극귀인
   wongjin: boolean // 원진살
 }
 
+// ----- 신살 조견표 (표준 정의) -----
+
+/** 삼합 기준 역마: 申子辰→寅, 寅午戌→申, 巳酉丑→亥, 亥卯未→巳 */
+const YEOKMA_MAP: Record<string, string> = {
+  申: '寅',
+  子: '寅',
+  辰: '寅',
+  寅: '申',
+  午: '申',
+  戌: '申',
+  巳: '亥',
+  酉: '亥',
+  丑: '亥',
+  亥: '巳',
+  卯: '巳',
+  未: '巳',
+}
+
+/** 삼합 기준 화개: 寅午戌→戌, 申子辰→辰, 巳酉丑→丑, 亥卯未→未 */
+const HWAGAE_MAP: Record<string, string> = {
+  寅: '戌',
+  午: '戌',
+  戌: '戌',
+  申: '辰',
+  子: '辰',
+  辰: '辰',
+  巳: '丑',
+  酉: '丑',
+  丑: '丑',
+  亥: '未',
+  卯: '未',
+  未: '未',
+}
+
+/** 삼합 기준 도화: 申子辰→酉, 寅午戌→卯, 巳酉丑→午, 亥卯未→子 */
+const DOHWA_MAP: Record<string, string> = {
+  申: '酉',
+  子: '酉',
+  辰: '酉',
+  寅: '卯',
+  午: '卯',
+  戌: '卯',
+  巳: '午',
+  酉: '午',
+  丑: '午',
+  亥: '子',
+  卯: '子',
+  未: '子',
+}
+
+/** 천을귀인: 일간 → 귀인 지지 */
+const CHEONEUL_MAP: Record<string, string[]> = {
+  甲: ['丑', '未'],
+  戊: ['丑', '未'],
+  庚: ['丑', '未'],
+  乙: ['子', '申'],
+  己: ['子', '申'],
+  丙: ['亥', '酉'],
+  丁: ['亥', '酉'],
+  辛: ['寅', '午'],
+  壬: ['巳', '卯'],
+  癸: ['巳', '卯'],
+}
+
+/** 월덕귀인: 월지 삼합국 → 해당 천간이 원국 천간에 존재 */
+const WOLDEOK_MAP: Record<string, string> = {
+  寅: '丙',
+  午: '丙',
+  戌: '丙',
+  申: '壬',
+  子: '壬',
+  辰: '壬',
+  亥: '甲',
+  卯: '甲',
+  未: '甲',
+  巳: '庚',
+  酉: '庚',
+  丑: '庚',
+}
+
+/** 일덕: 특정 일주(간지) */
+const ILDEOK_DAYS = ['甲寅', '丙辰', '戊辰', '庚辰', '壬戌']
+
+/** 문창귀인: 일간 → 지지 */
+const MUNCHANG_MAP: Record<string, string> = {
+  甲: '巳',
+  乙: '午',
+  丙: '申',
+  丁: '酉',
+  戊: '申',
+  己: '酉',
+  庚: '亥',
+  辛: '子',
+  壬: '寅',
+  癸: '卯',
+}
+
+/** 학당귀인: 일간 → 장생 지지 */
+const HAKDANG_MAP: Record<string, string> = {
+  甲: '亥',
+  乙: '午',
+  丙: '寅',
+  丁: '酉',
+  戊: '寅',
+  己: '酉',
+  庚: '巳',
+  辛: '子',
+  壬: '申',
+  癸: '卯',
+}
+
+/** 양인: 양간(陽干)만 해당, 일간 → 겁재 왕지 */
+const YANGIN_MAP: Record<string, string> = {
+  甲: '卯',
+  丙: '午',
+  戊: '午',
+  庚: '酉',
+  壬: '子',
+}
+
+/** 장성: 년지/일지 삼합국 → 왕지 */
+const JANGSEONG_MAP: Record<string, string> = {
+  寅: '午',
+  午: '午',
+  戌: '午',
+  巳: '酉',
+  酉: '酉',
+  丑: '酉',
+  申: '子',
+  子: '子',
+  辰: '子',
+  亥: '卯',
+  卯: '卯',
+  未: '卯',
+}
+
+/** 태극귀인: 일간 → 지지 */
+const TAIJI_MAP: Record<string, string[]> = {
+  甲: ['子', '午'],
+  乙: ['子', '午'],
+  丙: ['卯', '酉'],
+  丁: ['卯', '酉'],
+  戊: ['辰', '戌', '丑', '未'],
+  己: ['辰', '戌', '丑', '未'],
+  庚: ['寅', '亥'],
+  辛: ['寅', '亥'],
+  壬: ['巳', '申'],
+  癸: ['巳', '申'],
+}
+
+/** 고란살: 특정 일주(간지), 전통적으로 여성 명식에 적용 */
+const GORAN_DAYS = ['甲寅', '乙巳', '丁巳', '戊申', '辛亥']
+
+function allBranches(saju: SajuData): string[] {
+  return [saju.pillars.year.zhi, saju.pillars.month.zhi, saju.pillars.day.zhi, saju.pillars.time.zhi]
+}
+
+function allStems(saju: SajuData): string[] {
+  return [saju.pillars.year.gan, saju.pillars.month.gan, saju.pillars.day.gan, saju.pillars.time.gan]
+}
+
 /**
- * 고급 신살 계산
+ * 고급 신살 계산 — 년지/일지 기준 삼합 신살 + 일간 기준 귀인 (표준 조견표)
  */
 export function calculateAdvancedSinsal(saju: SajuData, gender: 'male' | 'female'): SinsalAdvanced {
+  const dayGan = saju.pillars.day.gan
   const dayJi = saju.pillars.day.zhi
   const yearJi = saju.pillars.year.zhi
+  const monthJi = saju.pillars.month.zhi
+  const dayGanji = saju.pillars.day.ganji
+  const branches = allBranches(saju)
+  const stems = allStems(saju)
+
+  const hasTrineSinsal = (map: Record<string, string>): boolean => {
+    const targets = [map[yearJi], map[dayJi]].filter((t): t is string => Boolean(t))
+    return targets.some((t) => branches.includes(t))
+  }
+
+  const woldeokGan = WOLDEOK_MAP[monthJi]
+  const cheoneulJis = CHEONEUL_MAP[dayGan] ?? []
+  const munchangJi = MUNCHANG_MAP[dayGan]
+  const hakdangJi = HAKDANG_MAP[dayGan]
+  const yanginJi = YANGIN_MAP[dayGan]
+  const taijiJis = TAIJI_MAP[dayGan] ?? []
 
   return {
-    yeokma: hasYeokma(saju),
-    cheonEulGwiin: hasCheonEulGwiin(saju),
-    hwagae: hasHwagae(saju),
-    dohwa: hasDohwa(saju),
-    woldeokGwiin: dayJi === '甲' || dayJi === '庚',
-    ildeokGwiin: yearJi === '甲' || yearJi === '庚',
-    munchangGwiin: dayJi === '巳' || dayJi === '午',
-    hakdangGwiin: dayJi === '亥' || dayJi === '子',
+    yeokma: hasTrineSinsal(YEOKMA_MAP),
+    cheonEulGwiin: cheoneulJis.some((ji) => branches.includes(ji)),
+    hwagae: hasTrineSinsal(HWAGAE_MAP),
+    dohwa: hasTrineSinsal(DOHWA_MAP),
+    woldeokGwiin: woldeokGan !== undefined && stems.includes(woldeokGan),
+    ildeokGwiin: ILDEOK_DAYS.includes(dayGanji),
+    munchangGwiin: munchangJi !== undefined && branches.includes(munchangJi),
+    hakdangGwiin: hakdangJi !== undefined && branches.includes(hakdangJi),
     yukhae: hasYukhae(saju),
-    yangin: dayJi === '子' || dayJi === '午',
-    golanGwasu: gender === 'female' && (dayJi === '寅' || dayJi === '申'),
-    jangseong: yearJi === '巳' || yearJi === '亥',
-    hyugye: dayJi === '辰' || dayJi === '戌',
-    taiji: dayJi === '子' || dayJi === '午' || dayJi === '卯' || dayJi === '酉',
+    yangin: yanginJi !== undefined && branches.includes(yanginJi),
+    golanGwasu: gender === 'female' && GORAN_DAYS.includes(dayGanji),
+    jangseong: hasTrineSinsal(JANGSEONG_MAP),
+    taiji: taijiJis.some((ji) => branches.includes(ji)),
     wongjin: hasWongjin(saju),
   }
-}
-
-function hasYeokma(saju: SajuData): boolean {
-  const ji = saju.pillars.day.zhi
-  return ['寅', '申', '巳', '亥'].includes(ji)
-}
-
-function hasCheonEulGwiin(saju: SajuData): boolean {
-  const gan = saju.pillars.day.gan
-  const ji = saju.pillars.day.zhi
-  const pairs: Record<string, string[]> = {
-    甲: ['丑', '未'],
-    乙: ['子', '申'],
-    丙: ['亥', '酉'],
-    丁: ['亥', '酉'],
-    戊: ['丑', '未'],
-  }
-  return pairs[gan]?.includes(ji) || false
-}
-
-function hasHwagae(saju: SajuData): boolean {
-  const ji = saju.pillars.day.zhi
-  return ['辰', '戌', '丑', '未'].includes(ji)
-}
-
-function hasDohwa(saju: SajuData): boolean {
-  const ji = saju.pillars.day.zhi
-  return ['子', '午', '卯', '酉'].includes(ji)
 }
 
 function hasYukhae(saju: SajuData): boolean {
@@ -304,12 +481,7 @@ function hasYukhae(saju: SajuData): boolean {
     ['申', '亥'],
     ['酉', '戌'],
   ]
-  const jis = [
-    saju.pillars.year.zhi,
-    saju.pillars.month.zhi,
-    saju.pillars.day.zhi,
-    saju.pillars.time.zhi,
-  ]
+  const jis = [saju.pillars.year.zhi, saju.pillars.month.zhi, saju.pillars.day.zhi, saju.pillars.time.zhi]
 
   for (const pair of pairs) {
     if (jis.includes(pair[0]) && jis.includes(pair[1])) {
@@ -328,12 +500,7 @@ function hasWongjin(saju: SajuData): boolean {
     ['辰', '戌'],
     ['巳', '亥'],
   ]
-  const jis = [
-    saju.pillars.year.zhi,
-    saju.pillars.month.zhi,
-    saju.pillars.day.zhi,
-    saju.pillars.time.zhi,
-  ]
+  const jis = [saju.pillars.year.zhi, saju.pillars.month.zhi, saju.pillars.day.zhi, saju.pillars.time.zhi]
 
   for (const pair of pairs) {
     if (jis.includes(pair[0]) && jis.includes(pair[1])) {
@@ -345,19 +512,7 @@ function hasWongjin(saju: SajuData): boolean {
 
 // ========== 십이운성(十二運星) ==========
 
-export type WoonSung =
-  | '장생'
-  | '목욕'
-  | '관대'
-  | '건록'
-  | '제왕'
-  | '쇠'
-  | '병'
-  | '사'
-  | '묘'
-  | '절'
-  | '태'
-  | '양'
+export type WoonSung = '장생' | '목욕' | '관대' | '건록' | '제왕' | '쇠' | '병' | '사' | '묘' | '절' | '태' | '양'
 
 export interface SibiWoonSungInfo {
   year: WoonSung
@@ -393,27 +548,32 @@ export function calculateSibiWoonSung(saju: SajuData): SibiWoonSungInfo {
   }
 }
 
-function getWoonSung(gan: string, ji: string): WoonSung {
-  // 간단화된 십이운성 매핑
-  const mapping: Record<string, Record<string, WoonSung>> = {
-    甲: {
-      亥: '장생',
-      子: '목욕',
-      丑: '관대',
-      寅: '건록',
-      卯: '제왕',
-      辰: '쇠',
-      巳: '병',
-      午: '사',
-      未: '묘',
-      申: '절',
-      酉: '태',
-      戌: '양',
-    },
-    // 다른 천간들도 유사하게 매핑 (간소화)
-  }
+const ZHI_ORDER = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 
-  return mapping[gan]?.[ji] || '양'
+const WOONSUNG_ORDER: WoonSung[] = ['장생', '목욕', '관대', '건록', '제왕', '쇠', '병', '사', '묘', '절', '태', '양']
+
+/** 십이운성 장생 시작 지지: 양간 순행, 음간 역행 (표준 60갑자 조견표와 동치) */
+const CHANGSAENG_START: Record<string, { start: string; forward: boolean }> = {
+  甲: { start: '亥', forward: true },
+  乙: { start: '午', forward: false },
+  丙: { start: '寅', forward: true },
+  丁: { start: '酉', forward: false },
+  戊: { start: '寅', forward: true },
+  己: { start: '酉', forward: false },
+  庚: { start: '巳', forward: true },
+  辛: { start: '子', forward: false },
+  壬: { start: '申', forward: true },
+  癸: { start: '卯', forward: false },
+}
+
+function getWoonSung(gan: string, ji: string): WoonSung {
+  const rule = CHANGSAENG_START[gan]
+  const jiIdx = ZHI_ORDER.indexOf(ji)
+  if (!rule || jiIdx < 0) return '양'
+
+  const startIdx = ZHI_ORDER.indexOf(rule.start)
+  const offset = rule.forward ? (jiIdx - startIdx + 12) % 12 : (startIdx - jiIdx + 12) % 12
+  return WOONSUNG_ORDER[offset]
 }
 
 function determineStrongestWoonSung(wsList: WoonSung[]): WoonSung {
@@ -479,12 +639,7 @@ export interface Relations {
  * 지지 합충형해 계산
  */
 export function analyzeJijiRelations(saju: SajuData): Relations {
-  const jis = [
-    saju.pillars.year.zhi,
-    saju.pillars.month.zhi,
-    saju.pillars.day.zhi,
-    saju.pillars.time.zhi,
-  ]
+  const jis = [saju.pillars.year.zhi, saju.pillars.month.zhi, saju.pillars.day.zhi, saju.pillars.time.zhi]
 
   return {
     hap: findHap(jis),
@@ -600,18 +755,10 @@ export interface GongmangInfo {
  * 공망 계산
  */
 export function calculateGongmang(saju: SajuData): GongmangInfo {
-  const yearPair = getGapjaPair(saju.pillars.year.gan, saju.pillars.year.zhi)
-  const dayPair = getGapjaPair(saju.pillars.day.gan, saju.pillars.day.zhi)
+  const yearGongmang = findGongmang(saju.pillars.year.gan, saju.pillars.year.zhi)
+  const dayGongmang = findGongmang(saju.pillars.day.gan, saju.pillars.day.zhi)
 
-  const yearGongmang = findGongmang(yearPair)
-  const dayGongmang = findGongmang(dayPair)
-
-  const allJis = [
-    saju.pillars.year.zhi,
-    saju.pillars.month.zhi,
-    saju.pillars.day.zhi,
-    saju.pillars.time.zhi,
-  ]
+  const allJis = [saju.pillars.year.zhi, saju.pillars.month.zhi, saju.pillars.day.zhi, saju.pillars.time.zhi]
 
   const affected = allJis.filter((ji) => yearGongmang.includes(ji) || dayGongmang.includes(ji))
 
@@ -623,26 +770,19 @@ export function calculateGongmang(saju: SajuData): GongmangInfo {
   }
 }
 
-function getGapjaPair(gan: string, ji: string): number {
+/**
+ * 순중공망(旬中空亡) — 해당 순(旬)의 시작 지지에서 10·11번째 지지가 공망
+ * (예: 庚午일 → 甲子旬이 아닌 甲寅旬... 순 시작 = (지지 - 천간) mod 12 → 戌亥 공망)
+ */
+function findGongmang(gan: string, ji: string): string[] {
   const gans = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
-  const jis = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
 
   const ganIdx = gans.indexOf(gan)
-  const jiIdx = jis.indexOf(ji)
+  const jiIdx = ZHI_ORDER.indexOf(ji)
+  if (ganIdx < 0 || jiIdx < 0) return []
 
-  // 60갑자 중 몇 번째인지 계산
-  return ganIdx * 6 + Math.floor(jiIdx / 2)
-}
-
-function findGongmang(pairIndex: number): string[] {
-  const jis = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
-
-  // 공망은 60갑자 중 마지막 2개 지지
-  const startIdx = (pairIndex * 2) % 12
-  const gongmangIdx1 = (startIdx + 10) % 12
-  const gongmangIdx2 = (startIdx + 11) % 12
-
-  return [jis[gongmangIdx1], jis[gongmangIdx2]]
+  const sunStartZhiIdx = (((jiIdx - ganIdx) % 12) + 12) % 12
+  return [ZHI_ORDER[(sunStartZhiIdx + 10) % 12], ZHI_ORDER[(sunStartZhiIdx + 11) % 12]]
 }
 
 // ========== 통합 분석 결과 ==========
@@ -662,16 +802,17 @@ export interface ManseAdvancedResult {
 export function analyzeManseAdvanced(
   birthDate: string,
   birthTime: string,
-  gender: 'male' | 'female'
+  gender: 'male' | 'female',
+  isSolar: boolean = true
 ): ManseAdvancedResult {
-  const saju = getSajuData(birthDate, birthTime, true)
+  const saju = getSajuData(birthDate, birthTime, isSolar)
   const [year] = birthDate.split('-').map(Number)
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth() + 1
 
   return {
-    saewoon: calculateSaewoon(year, currentYear),
-    worwoon: calculateWorwoon(currentYear, currentMonth),
+    saewoon: calculateSaewoon(year, currentYear, saju.dayGan),
+    worwoon: calculateWorwoon(currentYear, currentMonth, saju.dayGan),
     sinsal: calculateAdvancedSinsal(saju, gender),
     sibiWoonSung: calculateSibiWoonSung(saju),
     jijiRelations: analyzeJijiRelations(saju),

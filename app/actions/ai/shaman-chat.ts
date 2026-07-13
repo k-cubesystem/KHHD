@@ -15,7 +15,8 @@ import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
 import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
-import { awardDeityBond } from '@/app/actions/shrine/deities'
+import { awardDeityBondForUser } from '@/lib/services/deity-bond'
+import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 
 // --- Constants ---
 
@@ -265,59 +266,39 @@ export async function purchaseShamanQuestions(): Promise<{
 
     const adminClient = createAdminClient()
 
-    // 0. role 확인 (admin/tester는 실제 복채 차감 없이 질문권 지급)
+    // 0. role 확인 (admin은 실제 복채 차감 없이 질문권 지급)
     const { data: profileData } = await adminClient.from('profiles').select('role').eq('id', user.id).maybeSingle()
 
     const isPrivileged = profileData?.role === 'admin'
     let finalBalance: number = isPrivileged ? 999 : 0
 
     if (!isPrivileged) {
-      // 1. 일반 유저: 지갑 잔액 확인 및 차감
-      const { data: wallet } = await adminClient.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
-
-      const currentBalance = wallet?.balance ?? 0
-      if (currentBalance < PURCHASE_COST) {
-        return {
-          success: false,
-          error: `복채가 부족합니다. (현재 ${currentBalance.toLocaleString()}만냥, 필요 1만냥)`,
+      // 1. 복채 차감 — 원자 RPC(deduct_wallet_balance) 경유. read-then-write 레이스 제거.
+      const res = await spendBokchae(
+        PURCHASE_COST,
+        `신당 질문권 ${PURCHASE_QUESTIONS}회 구매(1만냥)`,
+        'SHAMAN_QUESTIONS'
+      )
+      if (!res.success) {
+        if (res.error === 'INSUFFICIENT_BOKCHAE') {
+          return { success: false, error: '복채가 부족합니다. (질문권 20회 = 1만냥)' }
         }
-      }
-
-      const newBalance = currentBalance - PURCHASE_COST
-      const { error: walletError } = await adminClient
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('user_id', user.id)
-
-      if (walletError) {
-        logger.error('[purchaseShamanQuestions] Wallet update error:', walletError)
         return { success: false, error: '복채 차감 중 오류가 발생했습니다.' }
       }
-
-      await adminClient.from('wallet_transactions').insert({
-        user_id: user.id,
-        amount: -PURCHASE_COST,
-        type: 'USE',
-        feature_key: 'SHAMAN_QUESTIONS',
-        description: `신당 질문권 ${PURCHASE_QUESTIONS}회 구매(1만냥)`,
-      })
-
-      finalBalance = newBalance
+      finalBalance = res.balance ?? 0
     }
 
-    // 2. 질문권 UPSERT (purchased_credits += 20)
-    const { data: existing } = await adminClient
-      .from('shaman_question_credits')
-      .select('purchased_credits')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    const currentCredits = existing?.purchased_credits ?? 0
-    const newCredits = currentCredits + PURCHASE_QUESTIONS
-
-    await adminClient
-      .from('shaman_question_credits')
-      .upsert({ user_id: user.id, purchased_credits: newCredits }, { onConflict: 'user_id' })
+    // 2. 질문권 적립 — 원자 RPC (증분 UPSERT)
+    const { data: newCredits, error: creditError } = await adminClient.rpc('add_shaman_credits', {
+      p_user_id: user.id,
+      p_amount: PURCHASE_QUESTIONS,
+    })
+    if (creditError || typeof newCredits !== 'number' || newCredits < 0) {
+      logger.error('[purchaseShamanQuestions] credit grant failed:', creditError)
+      // 차감됐는데 지급 실패 → 환불
+      if (!isPrivileged) await refundBokchae(user.id, PURCHASE_COST, '신당 질문권 구매 취소 환불')
+      return { success: false, error: '질문권 지급 중 오류가 발생했습니다.' }
+    }
 
     return {
       success: true,
@@ -351,13 +332,9 @@ export async function sendShamanChatMessage(
   }
 
   if (isEdgeEnabled('ai-chat')) {
-    return invokeEdgeSafe('ai-chat', {
-      action: 'sendMessage',
-      message: safeMessage,
-      conversationHistory,
-      turnCount: _turnCount,
-      familyMemberId,
-    })
+    // 엣지 ai-chat엔 신당 3.0(主神 페르소나·감정·인연 적립)이 없다 — 패리티 확보 전까지 로컬 경로 강제.
+    // 엣지로 보내면 신당 통합이 조용히 전부 사라지므로 위임하지 않는다.
+    logger.warn('[sendShamanChatMessage] EDGE_AI_CHAT 활성 상태지만 신당 3.0 패리티 부재 — 로컬 경로로 처리')
   }
   try {
     const supabase = await createClient()
@@ -398,9 +375,9 @@ export async function sendShamanChatMessage(
         // RPC 실패해도 AI 응답은 진행 (non-fatal)
       }
     } else {
-      // 구매 질문권 소비 (purchased_credits 감소)
-      const newCredits = Math.max(0, status.purchasedCredits - 1)
-      await adminClient.from('shaman_question_credits').update({ purchased_credits: newCredits }).eq('user_id', user.id)
+      // 구매 질문권 소비 — 원자 RPC (동시 요청 시 단일 차감 레이스 제거)
+      const { error: consumeError } = await adminClient.rpc('consume_shaman_credit', { p_user_id: user.id })
+      if (consumeError) logger.error('[sendShamanChatMessage] credit consume error:', consumeError)
     }
 
     // 3. 사용자 및 가족 컨텍스트 조회
@@ -408,11 +385,12 @@ export async function sendShamanChatMessage(
     let targetGender = '미상'
     let targetBirth = '미상'
     let targetBirthTime = '00:00'
+    let targetIsSolar = true
 
     if (familyMemberId && familyMemberId !== 'self') {
       const { data: familyMember } = await supabase
         .from('family_members')
-        .select('name, gender, birth_date, birth_time')
+        .select('name, gender, birth_date, birth_time, calendar_type')
         .eq('id', familyMemberId)
         .single()
 
@@ -421,17 +399,20 @@ export async function sendShamanChatMessage(
         targetGender = familyMember.gender === 'M' ? '남성' : familyMember.gender === 'F' ? '여성' : '미상'
         targetBirth = familyMember.birth_date || '미상'
         targetBirthTime = familyMember.birth_time || '00:00'
+        targetIsSolar = familyMember.calendar_type !== 'lunar'
       }
     } else {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, gender, birth_date')
+        .select('full_name, gender, birth_date, birth_time, calendar_type')
         .eq('id', user.id)
         .single()
       if (profile) {
         targetName = profile.full_name || '내담자'
         targetGender = profile.gender || '미상'
         targetBirth = profile.birth_date || '미상'
+        targetBirthTime = profile.birth_time || '00:00'
+        targetIsSolar = profile.calendar_type !== 'lunar'
       }
     }
 
@@ -486,7 +467,7 @@ export async function sendShamanChatMessage(
           birthDate: targetBirth,
           birthTime: targetBirthTime,
           gender: targetGender === '남성' ? 'male' : 'female',
-          isSolar: true,
+          isSolar: targetIsSolar,
         },
         'SHAMAN_CHAT',
         '',
@@ -545,15 +526,19 @@ export async function sendShamanChatMessage(
         responseText = rawText.slice(m[0].length)
       }
     }
-    // 태그 잔재(있을 수 있는 다른 [[...]]) 제거
-    responseText = responseText.replace(/\[\[[^\]]*\]\]/g, '').trim() || rawText.trim()
+    // 태그 잔재(있을 수 있는 다른 [[...]]) 제거 — 폴백도 태그 제거본 기준(원문 폴백이면 태그가 노출됨)
+    responseText =
+      responseText.replace(/\[\[[^\]]*\]\]/g, '').trim() ||
+      rawText.replace(/\[\[[^\]]*\]\]/g, '').trim() ||
+      '신탁이 흐릿하게 전해졌습니다. 조금 다르게 다시 여쭤봐 주시겠어요?'
 
     // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 — 응답 후 백그라운드(freeze 방지)
     if (bondDeityId) {
       const deityId = bondDeityId
+      const bondUserId = user.id
       scheduleBackground(async () => {
         try {
-          const r = await awardDeityBond(deityId, CHAT_BOND_POINTS)
+          const r = await awardDeityBondForUser(bondUserId, deityId, CHAT_BOND_POINTS)
           if (!r.success) logger.warn('[sendShamanChatMessage] bond award skipped:', r.error)
         } catch (e) {
           logger.warn('[sendShamanChatMessage] bond award error:', e)

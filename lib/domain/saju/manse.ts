@@ -19,7 +19,8 @@
  *
  * @packageDocumentation
  */
-import { Solar, Lunar } from 'lunar-javascript'
+import { Solar } from 'lunar-javascript'
+import { logger } from '@/lib/utils/logger'
 
 export interface SajuPillar {
   gan: string
@@ -151,91 +152,62 @@ function createPillar(gan: string, ji: string): SajuPillar {
  * @param year 연도
  * @returns 24절기 정보 배열
  */
+const SOLAR_TERM_KEYS: Array<{ korean: string; key: string }> = [
+  { korean: '소한', key: '小寒' },
+  { korean: '대한', key: '大寒' },
+  { korean: '입춘', key: '立春' },
+  { korean: '우수', key: '雨水' },
+  { korean: '경칩', key: '惊蛰' },
+  { korean: '춘분', key: '春分' },
+  { korean: '청명', key: '清明' },
+  { korean: '곡우', key: '谷雨' },
+  { korean: '입하', key: '立夏' },
+  { korean: '소만', key: '小满' },
+  { korean: '망종', key: '芒种' },
+  { korean: '하지', key: '夏至' },
+  { korean: '소서', key: '小暑' },
+  { korean: '대서', key: '大暑' },
+  { korean: '입추', key: '立秋' },
+  { korean: '처서', key: '处暑' },
+  { korean: '백로', key: '白露' },
+  { korean: '추분', key: '秋分' },
+  { korean: '한로', key: '寒露' },
+  { korean: '상강', key: '霜降' },
+  { korean: '입동', key: '立冬' },
+  { korean: '소설', key: '小雪' },
+  { korean: '대설', key: '大雪' },
+  // 당해 12월 동지는 절기표에서 상수 키로 노출된다 (한자 '冬至' 키는 전년도분)
+  { korean: '동지', key: 'DONG_ZHI' },
+]
+
 export function getSolarTermsForYear(year: number): SolarTermInfo[] {
   const solarTerms: SolarTermInfo[] = []
-  const solarTermData: Array<{ name: string; month: number; approxDay: number }> = [
-    { name: '소한', month: 1, approxDay: 5 },
-    { name: '대한', month: 1, approxDay: 20 },
-    { name: '입춘', month: 2, approxDay: 4 },
-    { name: '우수', month: 2, approxDay: 19 },
-    { name: '경칩', month: 3, approxDay: 6 },
-    { name: '춘분', month: 3, approxDay: 21 },
-    { name: '청명', month: 4, approxDay: 5 },
-    { name: '곡우', month: 4, approxDay: 20 },
-    { name: '입하', month: 5, approxDay: 6 },
-    { name: '소만', month: 5, approxDay: 21 },
-    { name: '망종', month: 6, approxDay: 6 },
-    { name: '하지', month: 6, approxDay: 21 },
-    { name: '소서', month: 7, approxDay: 7 },
-    { name: '대서', month: 7, approxDay: 23 },
-    { name: '입추', month: 8, approxDay: 8 },
-    { name: '처서', month: 8, approxDay: 23 },
-    { name: '백로', month: 9, approxDay: 8 },
-    { name: '추분', month: 9, approxDay: 23 },
-    { name: '한로', month: 10, approxDay: 8 },
-    { name: '상강', month: 10, approxDay: 24 },
-    { name: '입동', month: 11, approxDay: 7 },
-    { name: '소설', month: 11, approxDay: 22 },
-    { name: '대설', month: 12, approxDay: 7 },
-    { name: '동지', month: 12, approxDay: 22 },
-  ]
 
-  // Calculate precise times using lunar-javascript
   try {
-    for (const term of solarTermData) {
-      // Use Solar.fromYmdHms which is confirmed to work
-      const solar = Solar.fromYmdHms(year, term.month, term.approxDay, 0, 0, 0)
-      const lunar = solar.getLunar()
+    // 연중(6/15) 기준 음력 연도의 절기표는 해당 양력 연도의 24절기 정밀 시각을 모두 포함한다
+    const table = Solar.fromYmdHms(year, 6, 15, 12, 0, 0).getLunar().getJieQiTable()
 
-      // lunar-javascript's Lunar class has getJieQi() method for current solar term
-      const lunarObj = lunar as unknown as { getJieQi?: () => string }
-      const jieQi = lunarObj.getJieQi ? lunarObj.getJieQi() : term.name
+    for (const { korean, key } of SOLAR_TERM_KEYS) {
+      const termSolar = table[key]
+      if (!termSolar || termSolar.getYear() !== year) continue
 
-      // Store the solar term with its approximate time
-      // The lunar-javascript library handles exact timing internally in getEightChar()
       solarTerms.push({
-        name: term.name,
-        time: new Date(year, term.month - 1, term.approxDay, 0, 0, 0),
+        name: korean,
+        time: new Date(
+          termSolar.getYear(),
+          termSolar.getMonth() - 1,
+          termSolar.getDay(),
+          termSolar.getHour(),
+          termSolar.getMinute(),
+          termSolar.getSecond()
+        ),
       })
     }
   } catch (error) {
-    console.warn(`Failed to calculate solar terms for year ${year}:`, error)
+    logger.warn(`Failed to calculate solar terms for year ${year}:`, error)
   }
 
   return solarTerms
-}
-
-/**
- * 2. 자시(子時) 경계 처리 - 23:00-01:00
- * Adjusts time for midnight boundary (Ja-Si spans 23:00-01:00)
- * In traditional Saju, 23:00-24:00 belongs to the next day
- * @param hour 시 (0-23)
- * @param minute 분 (0-59)
- * @returns { adjustedHour, adjustedMinute, dayOffset }
- */
-export function adjustMidnightBoundary(
-  hour: number,
-  minute: number
-): {
-  adjustedHour: number
-  adjustedMinute: number
-  dayOffset: number // 1 if day should be incremented, 0 otherwise
-} {
-  // 자시(子時): 23:00-01:00
-  // Traditional interpretation: 23:00-24:00 is considered the start of the next day
-  if (hour === 23) {
-    return {
-      adjustedHour: hour,
-      adjustedMinute: minute,
-      dayOffset: 1, // Move to next day
-    }
-  }
-
-  return {
-    adjustedHour: hour,
-    adjustedMinute: minute,
-    dayOffset: 0,
-  }
 }
 
 /**
@@ -275,7 +247,7 @@ export function adjustForDST(date: Date, timezone: string = 'Asia/Seoul'): Date 
 
     return adjustedDate
   } catch (error) {
-    console.warn(`Failed to adjust for DST in timezone ${timezone}:`, error)
+    logger.warn(`Failed to adjust for DST in timezone ${timezone}:`, error)
     return date // Return original date if timezone conversion fails
   }
 }
@@ -287,6 +259,8 @@ export function adjustForDST(date: Date, timezone: string = 'Asia/Seoul'): Date 
  * @returns Name of the closest solar term
  */
 function findClosestSolarTerm(birthDate: Date, solarTerms: SolarTermInfo[]): string {
+  if (solarTerms.length === 0) return ''
+
   let closest = solarTerms[0]
   let minDiff = Math.abs(birthDate.getTime() - solarTerms[0].time.getTime())
 
@@ -317,38 +291,22 @@ export function calculateManse(
 ): EnhancedManseResult {
   // Parse input
   const [year, month, day] = dateStr.split('-').map(Number)
-  let [hour, minute] = timeStr.split(':').map(Number)
+  const [hour, minute] = timeStr.split(':').map(Number)
 
-  // Create initial date
-  let birthDate = new Date(year, month - 1, day, hour, minute, 0)
+  // 3. DST Adjustment (birthSolarTerm 판정용)
+  const birthDate = adjustForDST(new Date(year, month - 1, day, hour, minute, 0), timezone)
 
-  // 3. DST Adjustment
-  birthDate = adjustForDST(birthDate, timezone)
-
-  // 2. Midnight Boundary Adjustment (자시 처리)
-  let timeBoundaryAdjusted = false
-  let adjustedDay = day
-  let adjustedMonth = month
-  let adjustedYear = year
-
-  if (useTraditionalMidnight) {
-    const { dayOffset } = adjustMidnightBoundary(hour, minute)
-    if (dayOffset === 1) {
-      timeBoundaryAdjusted = true
-      // Increment day (handle month/year rollover)
-      const nextDay = new Date(year, month - 1, day + 1)
-      adjustedYear = nextDay.getFullYear()
-      adjustedMonth = nextDay.getMonth() + 1
-      adjustedDay = nextDay.getDate()
-    }
-  }
-
-  // Create Solar object with adjusted date
-  const solar = Solar.fromYmdHms(adjustedYear, adjustedMonth, adjustedDay, hour, minute, 0)
+  // 야자시(23:00~)·절입 경계는 lunar-javascript EightChar가 내부 처리한다.
+  // 수동 +1일 시프트는 년주·월주·시간(時干)을 오염시키므로 사용하지 않는다.
+  // NOTE: 진태양시·KST절입 보정 미적용 — 정책 결정 필요 (PRD)
+  const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0)
   const lunar = solar.getLunar()
 
   // Get Eight Characters (사주팔자)
-  const eightChar: any = lunar.getEightChar()
+  // setSect(1) = 야자시 출생의 일주를 다음 날로 계산 (기존 제품 규약 유지)
+  const eightChar = lunar.getEightChar()
+  eightChar.setSect(useTraditionalMidnight ? 1 : 2)
+  const timeBoundaryAdjusted = useTraditionalMidnight && hour === 23
 
   // 1. Get accurate solar terms for the birth year
   const solarTerms = getSolarTermsForYear(year)
@@ -409,62 +367,34 @@ export function calculateDaewoon(
   birthTime: string,
   gender: 'male' | 'female',
   currentAge: number,
-  timezone: string = 'Asia/Seoul'
+  _timezone: string = 'Asia/Seoul'
 ): DaewoonPeriod[] {
-  const [birthYear] = birthDate.split('-').map(Number)
-  const manse = calculateManse(birthDate, birthTime, timezone)
+  const [birthYear, birthMonth, birthDay] = birthDate.split('-').map(Number)
+  const [hour, minute] = birthTime.split(':').map(Number)
 
-  // 대운 순행/역행 결정
-  // 양년생(陽年生): 갑, 병, 무, 경, 임년 (천간이 양)
-  // 음년생(陰年生): 을, 정, 기, 신, 계년 (천간이 음)
-  const yearGan = manse.year.gan
-  const yangGans = ['甲', '丙', '戊', '庚', '壬']
-  const isYangYear = yangGans.includes(yearGan)
+  // 기운(起運) 나이·순행/역행은 lunar-javascript getYun()이 절기 거리 기반으로 계산한다
+  const solar = Solar.fromYmdHms(birthYear, birthMonth, birthDay, hour, minute, 0)
+  const eightChar = solar.getLunar().getEightChar()
+  eightChar.setSect(1)
 
-  // 남자 양년생/여자 음년생은 순행, 반대는 역행
-  const isForward = (gender === 'male' && isYangYear) || (gender === 'female' && !isYangYear)
+  const yun = eightChar.getYun(gender === 'male' ? 1 : 0)
 
-  // 대운 시작 나이 계산 (입춘 기준으로 정확한 계산 가능)
-  // 여기서는 간소화하여 평균값 사용
-  const startAge = 5
+  // index 0은 대운 시작 전(원국) 구간이므로 제외하고 10개 대운 사용
+  return yun
+    .getDaYun(11)
+    .slice(1)
+    .map((daYun) => {
+      const ganji = daYun.getGanZhi()
+      const startAge = daYun.getStartYear() - birthYear
+      const endAge = startAge + 9
 
-  // 월주 기준으로 대운 계산
-  const monthGanIndex = Object.keys(KOREAN_GAN).indexOf(manse.month.gan)
-  const monthJiIndex = Object.keys(KOREAN_JI).indexOf(manse.month.ji)
-
-  const daewoonPeriods: DaewoonPeriod[] = []
-  const ganKeys = Object.keys(KOREAN_GAN)
-  const jiKeys = Object.keys(KOREAN_JI)
-
-  // 10개의 대운 주기 생성 (100년)
-  for (let i = 0; i < 10; i++) {
-    const periodStartAge = startAge + i * 10
-    const periodEndAge = periodStartAge + 9
-    const periodStartYear = birthYear + periodStartAge
-    const periodEndYear = birthYear + periodEndAge
-
-    // 순행/역행에 따라 천간지지 계산
-    let ganIdx, jiIdx
-    if (isForward) {
-      ganIdx = (monthGanIndex + i + 1) % 10
-      jiIdx = (monthJiIndex + i + 1) % 12
-    } else {
-      ganIdx = (monthGanIndex - i - 1 + 10) % 10
-      jiIdx = (monthJiIndex - i - 1 + 12) % 12
-    }
-
-    const pillar = createPillar(ganKeys[ganIdx], jiKeys[jiIdx])
-    const isCurrent = currentAge >= periodStartAge && currentAge <= periodEndAge
-
-    daewoonPeriods.push({
-      pillar,
-      startAge: periodStartAge,
-      endAge: periodEndAge,
-      startYear: periodStartYear,
-      endYear: periodEndYear,
-      isCurrent,
+      return {
+        pillar: createPillar(ganji.charAt(0), ganji.charAt(1)),
+        startAge,
+        endAge,
+        startYear: daYun.getStartYear(),
+        endYear: daYun.getEndYear(),
+        isCurrent: currentAge >= startAge && currentAge <= endAge,
+      }
     })
-  }
-
-  return daewoonPeriods
 }

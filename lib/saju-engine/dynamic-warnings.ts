@@ -124,13 +124,23 @@ const SOURCE_KR: Record<string, string> = {
 // ===================== 일운 계산 =====================
 
 /**
- * 특정 날짜의 일주(日柱) 계산
+ * KST 기준 연/월/일 추출 — 서버 로컬 시간대(UTC 등)에 좌우되지 않는다.
+ * (UTC 서버에서 KST 00~09시에 일운이 하루 밀리는 문제 방지)
+ */
+function getKstYmd(date?: Date): { year: number; month: number; day: number } {
+  const base = date ?? new Date()
+  const kst = new Date(base.getTime() + 9 * 60 * 60 * 1000)
+  return { year: kst.getUTCFullYear(), month: kst.getUTCMonth() + 1, day: kst.getUTCDate() }
+}
+
+/**
+ * 특정 날짜의 일주(日柱) 계산 (KST 기준)
  */
 export function calculateIlwoon(date?: Date): FlowingPillar {
-  const d = date || new Date()
-  const solar = Solar.fromYmdHms(d.getFullYear(), d.getMonth() + 1, d.getDate(), 12, 0, 0)
+  const { year, month, day } = getKstYmd(date)
+  const solar = Solar.fromYmdHms(year, month, day, 12, 0, 0)
   const lunar = solar.getLunar()
-  const ec = lunar.getEightChar() as unknown as { getDayGan(): string; getDayZhi(): string }
+  const ec = lunar.getEightChar()
   return { gan: ec.getDayGan(), zhi: ec.getDayZhi() }
 }
 
@@ -139,29 +149,27 @@ export function calculateIlwoon(date?: Date): FlowingPillar {
  */
 function calcSaewoon(year: number): FlowingPillar {
   const solar = Solar.fromYmdHms(year, 6, 15, 12, 0, 0)
-  const ec = solar.getLunar().getEightChar() as unknown as { getYearGan(): string; getYearZhi(): string }
+  const ec = solar.getLunar().getEightChar()
   return { gan: ec.getYearGan(), zhi: ec.getYearZhi() }
 }
 
 function calcWorwoon(year: number, month: number): FlowingPillar {
   const solar = Solar.fromYmdHms(year, month, 15, 12, 0, 0)
-  const ec = solar.getLunar().getEightChar() as unknown as { getMonthGan(): string; getMonthZhi(): string }
+  const ec = solar.getLunar().getEightChar()
   return { gan: ec.getMonthGan(), zhi: ec.getMonthZhi() }
 }
 
 /**
- * 현재 시점의 유동 기둥 조합
+ * 현재 시점의 유동 기둥 조합 (KST 기준)
  */
 export function getFlowingLuckPillars(date?: Date): FlowingLuckPillars {
-  const d = date || new Date()
-  const year = d.getFullYear()
-  const month = d.getMonth() + 1
+  const { year, month } = getKstYmd(date)
 
   return {
     daewoon: null, // 대운은 개인 사주에 따라 다르므로 외부에서 주입
     saewoon: calcSaewoon(year),
     worwoon: calcWorwoon(year, month),
-    ilwoon: calculateIlwoon(d),
+    ilwoon: calculateIlwoon(date),
   }
 }
 

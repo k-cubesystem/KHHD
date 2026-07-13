@@ -241,7 +241,7 @@ export async function getSceneData(): Promise<SceneData | null> {
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
   const activePack = themes.find((t) => t.id === shrine.active_pack_id)
-  const mainDeity = await loadMainDeity(supabase, user.id, shrine.main_deity_id)
+  const mainDeity = await loadMainDeity(supabase, user.id, shrine.main_deity_id, true)
 
   return {
     shrineId: shrine.id,
@@ -259,28 +259,41 @@ export async function getSceneData(): Promise<SceneData | null> {
   }
 }
 
-/** 좌정한 主神(신위) 로드 — 없으면 null. bondPoints = ownerId의 이 신위 인연 누적. */
+/**
+ * 좌정한 主神(신위) 로드 — 없으면 null.
+ * includeBond=false(방문자 뷰): user_deity_bonds는 RLS select-own이라 방문자 조회가 항상 빈 값 →
+ * "0점" 오표시 대신 bondPoints=null로 비공개 처리.
+ */
 async function loadMainDeity(
   supabase: Awaited<ReturnType<typeof createClient>>,
   ownerId: string,
-  mainDeityId: string | null
+  mainDeityId: string | null,
+  includeBond: boolean
 ): Promise<import('@/lib/domain/shrine/types').MainDeity | null> {
   if (!mainDeityId) return null
-  const [{ data }, { data: bond }] = await Promise.all([
-    supabase.from('shrine_deities').select('code, name, sprite_url').eq('id', mainDeityId).maybeSingle(),
-    supabase
+  const { data } = await supabase
+    .from('shrine_deities')
+    .select('code, name, sprite_url')
+    .eq('id', mainDeityId)
+    .maybeSingle()
+  if (!data) return null
+
+  let bondPoints: number | null = null
+  if (includeBond) {
+    const { data: bond } = await supabase
       .from('user_deity_bonds')
       .select('bond_points')
       .eq('user_id', ownerId)
       .eq('deity_id', mainDeityId)
-      .maybeSingle(),
-  ])
-  if (!data) return null
+      .maybeSingle()
+    bondPoints = typeof bond?.bond_points === 'number' ? bond.bond_points : 0
+  }
+
   return {
     code: data.code,
     name: data.name,
     spriteUrl: data.sprite_url,
-    bondPoints: typeof bond?.bond_points === 'number' ? bond.bond_points : 0,
+    bondPoints,
   }
 }
 
@@ -333,7 +346,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
       ]
     : []
 
-  const mainDeity = await loadMainDeity(supabase, userId, shrine.main_deity_id)
+  const mainDeity = await loadMainDeity(supabase, userId, shrine.main_deity_id, false)
 
   return {
     shrineId: shrine.id,
@@ -360,8 +373,10 @@ interface PlacementInput {
   state?: { lit?: boolean }
 }
 
-/** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지) */
-export async function saveShrineLayout(placements: PlacementInput[]): Promise<{ success: boolean; error?: string }> {
+/** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
+export async function saveShrineLayout(
+  placements: PlacementInput[]
+): Promise<{ success: boolean; error?: string; placements?: Placement[] }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -387,13 +402,14 @@ export async function saveShrineLayout(placements: PlacementInput[]): Promise<{ 
     if (cnt > (owned.get(itemId) ?? 0)) return { success: false, error: 'NOT_ENOUGH_OWNED' }
   }
 
-  // 좌표 클램프 (서버 방어)
+  // 좌표 클램프 (서버 방어) — layer도 검증값 사용(원시값이 CHECK 위반으로 delete 후 insert 실패 → 배치 유실 방지)
   const rows = placements.map((p) => {
-    const zone = ZONES[isLayer(p.layer) ? p.layer : 'floor']
+    const layer = isLayer(p.layer) ? p.layer : 'floor'
+    const zone = ZONES[layer]
     return {
       shrine_id: shrine.id,
       catalog_item_id: p.catalogItemId,
-      layer: p.layer,
+      layer,
       x: clampPct(p.x, zone.x),
       y: clampPct(p.y, zone.y),
       flip: p.flip ?? false,
@@ -401,26 +417,41 @@ export async function saveShrineLayout(placements: PlacementInput[]): Promise<{ 
     }
   })
 
-  // 전체 교체 (delete + insert)
+  // 전체 교체 (delete + insert) — 새 id가 재발급되므로 반드시 반환해 클라 상태를 교체시킨다
+  // (클라가 옛 id를 유지하면 이후 점화 저장(setPlacementLit)이 존재하지 않는 row에 무음 no-op)
   const { error: delErr } = await supabase.from('shrine_placements').delete().eq('shrine_id', shrine.id)
   if (delErr) return { success: false, error: delErr.message }
+
+  let saved: Placement[] = []
   if (rows.length) {
-    const { error: insErr } = await supabase.from('shrine_placements').insert(rows)
+    const { data: inserted, error: insErr } = await supabase.from('shrine_placements').insert(rows).select('*')
     if (insErr) return { success: false, error: insErr.message }
+    saved = (inserted ?? []).map((p) => ({
+      id: p.id,
+      catalogItemId: p.catalog_item_id,
+      layer: isLayer(p.layer) ? p.layer : 'floor',
+      x: Number(p.x),
+      y: Number(p.y),
+      flip: p.flip,
+      state: parsePlacementState(p.state),
+    }))
   }
 
   revalidatePath('/protected/shrine')
-  return { success: true }
+  return { success: true, placements: saved }
 }
 
-/** 보기 모드에서 촛불 점화 상태를 즉시 저장 (소유자). RLS가 소유권 보장. */
+/** 보기 모드에서 촛불 점화 상태를 즉시 저장 (소유자). RLS가 소유권 보장. state는 병합(통째 교체 시 다른 필드 유실). */
 export async function setPlacementLit(placementId: string, lit: boolean): Promise<{ success: boolean }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false }
-  const { error } = await supabase.from('shrine_placements').update({ state: { lit } }).eq('id', placementId)
+  const { data: row } = await supabase.from('shrine_placements').select('state').eq('id', placementId).maybeSingle()
+  if (!row) return { success: false }
+  const merged = { ...parsePlacementState(row.state), lit }
+  const { error } = await supabase.from('shrine_placements').update({ state: merged }).eq('id', placementId)
   return { success: !error }
 }
 

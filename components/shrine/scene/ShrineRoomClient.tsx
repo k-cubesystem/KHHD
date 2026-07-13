@@ -242,6 +242,8 @@ export function ShrineRoomClient({ scene }: Props) {
         setSaving(false)
         if (res.success) {
           dirty.current = false
+          // 저장 시 placement id가 재발급됨 — 서버 반환값으로 교체해야 이후 점화 저장이 유효
+          if (res.placements) setPlacements(res.placements)
           play('bell')
           toast.success('신당이 저장되었습니다')
           trackEvent({ action: 'placement_save', category: 'shrine' })
@@ -354,10 +356,12 @@ export function ShrineRoomClient({ scene }: Props) {
         </div>
       </div>
 
-      {/* 主神 인연(緣) 스트립 — 대화로 쌓인 인연을 표시 */}
+      {/* 主神 인연(緣) 스트립 — 소유자 전용 (방문자는 RLS로 인연 조회 불가 → 0점 오표시 방지) */}
       {scene.mainDeity &&
         (() => {
-          const bp = bondProgress(scene.mainDeity.bondPoints)
+          const deity = scene.mainDeity
+          if (deity.bondPoints === null) return null
+          const bp = bondProgress(deity.bondPoints)
           const lower = BOND_THRESHOLDS[bp.level - 1] ?? 0
           const ratio =
             bp.nextThreshold === null
@@ -368,9 +372,7 @@ export function ShrineRoomClient({ scene }: Props) {
               href="/protected/shrine/deities"
               className="flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-[10px] bg-surface/60 border border-gold-500/20"
             >
-              <span className="text-[11px] font-serif text-gold-200 whitespace-nowrap">
-                主神 {scene.mainDeity.name}
-              </span>
+              <span className="text-[11px] font-serif text-gold-200 whitespace-nowrap">主神 {deity.name}</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold-500/15 text-gold-300 font-serif whitespace-nowrap">
                 緣 {BOND_LEVEL_NAMES[bp.level]}
               </span>

@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { getSajuData } from '@/lib/domain/saju/saju'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import { KnowledgeGraphClient } from './knowledge-graph-client'
 
 export const metadata = {
@@ -24,7 +25,7 @@ async function getUserSajuNodes(): Promise<Set<string> | null> {
 
     if (!profile?.birth_date) return null
 
-    const saju = getSajuData(profile.birth_date, profile.birth_time || '12:00', profile.calendar_type === 'solar')
+    const saju = getSajuData(profile.birth_date, profile.birth_time || '12:00', isSolarCalendar(profile.calendar_type))
 
     const nodes = new Set<string>()
 
