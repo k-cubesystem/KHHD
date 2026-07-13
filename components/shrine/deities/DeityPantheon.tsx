@@ -226,6 +226,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
               {list.map((d) => {
                 const owned = ownedCodes.has(d.code)
                 const isSeated = d.id === catalog.seatedDeityId
+                const locked = !owned && d.tier > 1
                 return (
                   <div
                     key={d.id}
@@ -233,11 +234,25 @@ export function DeityPantheon({ catalog, bonds }: Props) {
                       isSeated ? 'border-seal/50 bg-seal/[0.06]' : 'border-gold-500/15 bg-ink-primary/[0.02]'
                     }`}
                   >
-                    <div className={owned ? '' : 'opacity-45 grayscale'}>
+                    {/* 잠금 신위: 색은 살려 「설빛온기」 매력을 보이되(그레이스케일 제거), 잠금 배지 오버레이 */}
+                    <div className={`relative ${owned ? '' : locked ? 'opacity-80' : 'opacity-40 grayscale'}`}>
                       <DeityMedallion deity={d} size={56} />
+                      {locked && (
+                        <span
+                          className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full grid place-items-center text-[9px] bg-ink-primary/80 border border-gold-500/40 text-gold-300"
+                          aria-hidden
+                        >
+                          🔒
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 text-[13px] font-serif font-bold text-ink-light leading-tight">{d.name}</div>
                     <div className="text-[10px] text-ink-light/40">{d.domains[0]}</div>
+                    {locked && (
+                      <p className="mt-1 text-[9.5px] text-gold-300/55 font-serif leading-tight">
+                        「{d.domains.join(' · ')}」의 {d.tierName}
+                      </p>
+                    )}
 
                     {isSeated ? (
                       <span className="mt-1.5 text-[10px] text-seal font-serif">主神 좌정중</span>

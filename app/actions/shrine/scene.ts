@@ -281,6 +281,10 @@ async function loadMainDeity(
   const aura = typeof data.aura === 'object' && data.aura !== null ? (data.aura as Record<string, unknown>) : {}
   const particle = typeof aura.particle === 'string' ? aura.particle : null
   const accent = typeof aura.accent === 'string' ? aura.accent : null
+  const SOUND_KEYS = ['moktak', 'chime', 'bell', 'water', 'crackle', 'bara'] as const
+  const sound = SOUND_KEYS.includes(aura.sound as (typeof SOUND_KEYS)[number])
+    ? (aura.sound as import('@/lib/domain/shrine/types').SoundKey)
+    : null
 
   let bondPoints: number | null = null
   if (includeBond) {
@@ -300,6 +304,7 @@ async function loadMainDeity(
     portraitUrl: data.portrait_url,
     particle,
     accent,
+    sound,
     bondPoints,
   }
 }

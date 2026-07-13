@@ -1,0 +1,143 @@
+'use server'
+
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { logger } from '@/lib/utils/logger'
+
+export interface DeityOracle {
+  id: string
+  message: string
+  emotion: string | null
+  deityCode: string
+  deityName: string
+}
+
+const DEITY_EMOTIONS = ['neutral', 'smile', 'stern', 'sad', 'surprised', 'bless', 'angry'] as const
+
+// 빈도 상한: 최근 2일 내 없음 + 최근 7일 내 3건 미만일 때만 새 신탁 발행 (주 2~3회)
+const MIN_GAP_MS = 2 * 24 * 60 * 60 * 1000
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+const WEEKLY_CAP = 3
+
+/**
+ * 방 진입 시 호출 — 미확인 신탁이 있으면 반환, 없고 빈도가 허용되면 새로 발행.
+ * 좌정 主神이 없으면 null. 생성 실패는 조용히 null(방 흐름 비차단).
+ */
+export async function getRoomOracle(): Promise<DeityOracle | null> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return null
+
+    // 1) 미확인 신탁 우선 반환
+    const { data: unseen } = await supabase
+      .from('deity_oracles')
+      .select('id, message, emotion, deity_id')
+      .eq('user_id', user.id)
+      .is('seen_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const admin = createAdminClient()
+    if (unseen) {
+      const { data: d } = await admin
+        .from('shrine_deities')
+        .select('code, name')
+        .eq('id', unseen.deity_id)
+        .maybeSingle()
+      if (!d) return null
+      return { id: unseen.id, message: unseen.message, emotion: unseen.emotion, deityCode: d.code, deityName: d.name }
+    }
+
+    // 2) 좌정 主神 확인
+    const { data: shrine } = await supabase.from('shrines').select('main_deity_id').eq('user_id', user.id).maybeSingle()
+    if (!shrine?.main_deity_id) return null
+
+    // 3) 빈도 상한 판정 (최근 7일 이력)
+    const { data: recent } = await supabase
+      .from('deity_oracles')
+      .select('created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - WEEK_MS).toISOString())
+      .order('created_at', { ascending: false })
+    const history = recent ?? []
+    if (history.length >= WEEKLY_CAP) return null
+    if (history[0] && Date.now() - new Date(history[0].created_at).getTime() < MIN_GAP_MS) return null
+
+    // 4) 신위 페르소나 로드 + 신탁 생성
+    const { data: deity } = await admin
+      .from('shrine_deities')
+      .select('code, name, personality, tone')
+      .eq('id', shrine.main_deity_id)
+      .maybeSingle()
+    if (!deity) return null
+
+    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
+    if (!apiKey) return null
+    const today = new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })
+    const prompt =
+      `당신은 신당에 좌정한 수호신 "${deity.name}"입니다. ` +
+      `${deity.personality ? deity.personality + ' ' : ''}말투: ${deity.tone || '따뜻하고 신비로우며 정중한 존댓말'}.\n` +
+      `오늘(${today}) 신도가 오랜만에 신당을 찾았습니다. 먼저 다정하게 말을 건네십시오. ` +
+      `한두 문장(60자 내외), 오늘 하루를 살피는 따뜻한 안부·격려. 질문 금지, 조언은 은근하게.\n` +
+      `응답 맨 앞에 표정을 [[감정]] 형식으로 한 번 붙이십시오(${DEITY_EMOTIONS.join('/')} 중 하나).`
+
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
+    const result = await withGeminiRateLimit(() => model.generateContent(prompt), {
+      userId: user.id,
+      model: MODEL_FLASH,
+      actionType: 'deity_oracle',
+    })
+    const raw = result.response.text()
+
+    let emotion: string | null = null
+    let message = raw
+    const m = raw.match(/^\s*\[\[\s*(neutral|smile|stern|sad|surprised|bless|angry)\s*\]\]\s*/i)
+    if (m) {
+      emotion = m[1].toLowerCase()
+      message = raw.slice(m[0].length)
+    }
+    message = message.replace(/\[\[[^\]]*\]\]/g, '').trim()
+    if (!message) return null
+
+    const { data: inserted, error } = await admin
+      .from('deity_oracles')
+      .insert({ user_id: user.id, deity_id: shrine.main_deity_id, message, emotion })
+      .select('id')
+      .single()
+    if (error || !inserted) {
+      logger.warn('[getRoomOracle] insert failed:', error)
+      return null
+    }
+
+    return { id: inserted.id, message, emotion, deityCode: deity.code, deityName: deity.name }
+  } catch (e) {
+    logger.warn('[getRoomOracle] skipped:', e)
+    return null
+  }
+}
+
+/** 신탁 확인 표시 (본인, seen_at 갱신) */
+export async function markOracleSeen(oracleId: string): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+    await supabase
+      .from('deity_oracles')
+      .update({ seen_at: new Date().toISOString() })
+      .eq('id', oracleId)
+      .eq('user_id', user.id)
+  } catch (e) {
+    logger.warn('[markOracleSeen] skipped:', e)
+  }
+}

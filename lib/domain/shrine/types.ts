@@ -93,6 +93,8 @@ export interface MainDeity {
   particle: string | null
   /** 신위 액센트 색 (파티클·글로우 색상) */
   accent: string | null
+  /** 시그니처 사운드 키 (탭 반응용) */
+  sound: SoundKey | null
   /** 소유자의 누적 인연(緣) 포인트. null = 방문자 뷰(비공개 — RLS로 조회 불가, 오표시 방지) */
   bondPoints: number | null
 }

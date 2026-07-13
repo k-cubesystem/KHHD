@@ -18,6 +18,8 @@ export interface EffectsHandle {
   setFlame: (id: string, xPct: number, yPct: number, on: boolean) => void
   /** 좌정 主神 시그니처 aura 상시 방출 (§3.3). particle 키 → 모션 아키타입. */
   setAura: (particle: string | null, accent: string | null, xPct: number, yPct: number, on: boolean) => void
+  /** 시그니처 aura 순간 버스트 (탭 반응 §3.2). */
+  burstAura: (particle: string | null, accent: string | null, xPct: number, yPct: number) => void
 }
 
 /** 신위 파티클 키(17종) → 상시 aura 모션 아키타입. 미매핑은 'rise' 폴백. */
@@ -282,6 +284,12 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
       } else {
         auraRef.current = null
       }
+    },
+    burstAura: (particle, accent, x, y) => {
+      if (!particle || !accent) return
+      const motion = AURA_MOTION[particle] ?? 'rise'
+      const n = reducedRef.current ? 3 : 12
+      for (let i = 0; i < n; i++) spawnAura(motion, accent, x, y)
     },
   }))
 

@@ -31,6 +31,7 @@ import { useShrineAudio } from './useShrineAudio'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { saveShrineLayout, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
+import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
@@ -80,6 +81,8 @@ export function ShrineRoomClient({ scene }: Props) {
   const roomRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fallbackFull, setFallbackFull] = useState(false)
+  // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
+  const [oracle, setOracle] = useState<{ message: string } | null>(null)
 
   // 저장된 점화 상태 → 불꽃 등록
   useEffect(() => {
@@ -95,6 +98,25 @@ export function ShrineRoomClient({ scene }: Props) {
     effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, 50, 42, !!d)
     return () => effectsRef.current?.setAura(null, null, 0, 0, false)
   }, [scene.mainDeity])
+
+  // 신탁 선톡 — 방 진입 시 좌정 主神의 선제적 신탁을 불러와 말풍선에 표시(있을 때만, 즉시 확인처리)
+  useEffect(() => {
+    if (!isOwner || !scene.mainDeity) return
+    let alive = true
+    getRoomOracle()
+      .then((o) => {
+        if (!alive || !o) return
+        setOracle({ message: o.message })
+        setBubble(o.message)
+        setBounce((b) => b + 1)
+        void markOracleSeen(o.id)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
@@ -265,10 +287,16 @@ export function ShrineRoomClient({ scene }: Props) {
     }
   }, [editing, placements, play, isOwner])
 
-  // ── 신당지기 탭 ──
+  // ── 신당지기(=좌정 主神) 탭 — 시그니처 사운드+파티클 버스트 반응 (§3.2) ──
   const onTapKeeper = useCallback(() => {
     if (editing) return
-    play('moktak')
+    const deity = scene.mainDeity
+    // 좌정 主神이 있으면 신위 고유 사운드+파티클, 없으면 기본 목탁
+    play(deity?.sound ?? 'moktak')
+    if (deity?.particle && deity.accent) {
+      effectsRef.current?.burstAura(deity.particle, deity.accent, KEEPER_POS.x, KEEPER_POS.y)
+    }
+    setBounce((b) => b + 1)
     keeperTaps.current += 1
     if (keeperTaps.current >= KEEPER_TAP_LIMIT) {
       keeperSay(KEEPER_SNEEZE)
@@ -276,7 +304,7 @@ export function ShrineRoomClient({ scene }: Props) {
       return
     }
     keeperSay(keeperTapLine(keeperTaps.current))
-  }, [editing, play, keeperSay])
+  }, [editing, play, keeperSay, scene.mainDeity])
 
   // ── 테마 전환 ──
   const onSelectTheme = useCallback(
@@ -529,19 +557,24 @@ export function ShrineRoomClient({ scene }: Props) {
           <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
         </button>
 
-        {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게 */}
+        {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조 */}
         {!editing && (
           <div
-            className="absolute z-[26] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm"
+            className="absolute z-[26] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
             style={{
               left: '20%',
               top: '3%',
               right: '5%',
-              background: 'rgba(10,10,8,0.8)',
-              border: '1px solid var(--th-accent)',
+              background: oracle ? 'rgba(26,18,6,0.92)' : 'rgba(10,10,8,0.8)',
+              border: oracle ? '1px solid rgba(212,175,55,0.65)' : '1px solid var(--th-accent)',
+              boxShadow: oracle ? '0 0 16px rgba(212,175,55,0.25)' : undefined,
             }}
           >
-            <div className="text-[9px] tracking-[0.24em] mb-0.5" style={{ color: 'var(--th-accent)' }}>
+            <div
+              className="text-[9px] tracking-[0.24em] mb-0.5 flex items-center gap-1"
+              style={{ color: oracle ? '#E8D5A0' : 'var(--th-accent)' }}
+            >
+              {oracle && <span className="text-[8px]">✦ 신탁 ✦</span>}
               {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
             </div>
             <span dangerouslySetInnerHTML={{ __html: bubble }} />
