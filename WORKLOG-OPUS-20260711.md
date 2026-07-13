@@ -511,3 +511,24 @@ Gemini 키 복구로 Track A 차단 해소 → **신위 이미지 실제 생성�
 - **67장 생성·배포** (NB2 Lite, `generate-icons.mjs` 신설): 아이템12·오행6·소원6·테마3·허브11·네비5·절기24 (~1.5MB).
 - **연동**: 방 스프라이트(em 크기·이모지 폴백)+보관함+상점 / **신당지기=좌정 主神**(초상 오브+말풍선 라벨, 🔮 폴백) / 허브 카드(traditional-icons 대체) / 하단 네비(활성 골드글로우·비활성 grayscale) / 소원·테마 폼 / 절기 배너 / 판테온 오행 폴백. DB `shrine_item_catalog.sprite_url/image_url` 12종 연결.
 - **⚠️ 제작 사고·교훈**: 1차 생성에서 화풍 앵커로 첨부한 삼신할매 base가 프롬프트를 압도 → 다수 산출물이 삼신할매 변형으로 오염(샘플 확인 즉시 발견). **전량 폐기 후 참조 없이 재생성** — 「설빛온기」는 프롬프트 문구만으로 재현됨. 샘플 6종(초롱·궁합 태극·오행 火 단청·원앙·소서·가족) 검수 합격.
+
+---
+
+## 🈁 UI 한글화 + 레거시 정리 + 파티클(§3.3) (2026-07-13, 세션13 · 사용자 "남은작업 + 외국어 한글화")
+
+### A) UI 외국어 전면 한글화
+
+- 신위 판테온 → **신위전(神位殿)**, 메달리온(주석)→원형 초상. e2e 스펙 명칭 동기화.
+- 장식 영문: Manse-ryok Pro→만세력·전문, PREMIUM→유료, Credits→회/이용권, History→분석 기록, Menu→메뉴, Language→언어, My Page→내 정보, CURRENT STATUS→현재 상태, Daily Compass→오늘의 길잡이, The Wealth Flow→재물의 흐름, Quick Fortune→간편 운세, Real Stories→실제 후기, MEMBER→회원, Per Month→월 요금, Current→현재.
+- 인증: 비밀번호 재설정 폼 전면 한글화, 로그인/회원가입, 테마(밝게/어둡게/시스템). 공유카드 'Premium Oriental Fortune'→해화당 전통 명리 운세.
+- (유지) sr-only 'Close'는 e2e 클릭 의존성 있어 보존. 관리자/튜토리얼/배포 스캐폴딩 영문은 대상 외.
+
+### B) 레거시 정리
+
+- 죽은 체인 삭제: ShrineCanvas/ShrineSlot/ShrineItemCatalog (상위 사용처 0, 현 ShrineRoomClient로 대체).
+
+### C) §3.3 파티클 — 좌정 主神 시그니처 aura 상시 방출
+
+- EffectsCanvas.setAura: 17 파티클 키→4 모션 아키타입(rise/fall/float/glint), 신위 accent 색, glint 삼각파 반짝임. 방에서 신위 몸 주변(50%,42%) 저빈도 상시 방출. reduced-motion 비활성, 도형 기반(에셋 0).
+
+검증: tsc 0 / jest 161 / 배포+프로덕션 재검.

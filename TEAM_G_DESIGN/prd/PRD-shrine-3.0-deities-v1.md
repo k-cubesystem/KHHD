@@ -214,7 +214,9 @@ solid chroma green background (#00FF00), no text, no watermark
 | 등장      | fadeInUp + 글로우 펄스                        | motion-tokens 기존 값            |
 | 탭 반응   | 살짝 기울기+바운스                            | 기존 shrineBounce 재활용         |
 
-### 3.3 파티클 (기존 EffectsCanvas 확장) — 🔲 미구현 (DB aura 시드만 존재, 렌더 연결 없음)
+### 3.3 파티클 (기존 EffectsCanvas 확장) — ✅ 상시 aura 방출 구현 (2026-07-13, 도형 기반)
+
+> 좌정 主神의 `aura.particle`(17키)을 4개 모션 아키타입(rise/fall/float/glint)에 매핑해 방에서 신위 주변에 은은히 상시 방출. 신위 accent 색상 사용. `prefers-reduced-motion` 시 비활성. 이미지 스프라이트(`public/shrine/fx/`)는 미사용 — 도형 폴백으로 충분(추후 시트 추가 시 교체 가능).
 
 기존 4종(flame/smoke/petals/sparkle)에 추가할 신위 전용 키:
 `coin_rain`(대감), `dokkaebi_fire`(도깨비), `heal_drop`(바리), `star_trail`(칠성), `pearl_bubble`(용왕), `mist`(산신), `gold_rain`(옥황), `talisman_shield`(백마), `slash_light`(최영), `dragon_aura`(관성), `seed_bloom`(삼신), `ember`(조왕), `leaf`(성주), `coin_glint`(터주), `paper_crane`(동자), `firefly`(선녀), `scale_glint`(업신)
