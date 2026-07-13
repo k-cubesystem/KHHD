@@ -27,10 +27,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/payments', label: '결제 내역', icon: 'CreditCard' },
     { href: '/admin/subscriptions', label: '구독 관리', icon: 'CreditCard' },
     { href: '/admin/membership/plans', label: '멤버십/스토어', icon: 'Package' },
-    // AI & 콘텐츠
-    { type: 'divider' as const, label: 'AI & 콘텐츠' },
-    { href: '/admin/prompts', label: 'AI 프롬프트', icon: 'Sparkles' },
-    { href: '/admin/saju-engine', label: '사주 엔진', icon: 'Brain' },
     // 이벤트 & 마케팅
     { type: 'divider' as const, label: '이벤트 & 마케팅' },
     { href: '/admin/roulette', label: '룰렛 확률', icon: 'Sparkles' },
