@@ -19,7 +19,7 @@ const ELEMENT_GLYPH: Record<string, string> = {
 }
 const TIERS = [1, 2, 3, 4] as const
 
-/** 신위 메달리온 — 초상/스프라이트가 있으면 이미지, 없으면 aura 색상 + 오행 글리프 폴백. */
+/** 신위 원형 초상 — 초상/스프라이트가 있으면 이미지, 없으면 aura 색상 + 오행 상징 폴백. */
 function DeityMedallion({ deity, size }: { deity: Deity; size: number }) {
   const accent = deity.aura.accent ?? '#C9A84C'
   const img = deity.portraitUrl ?? deity.spriteUrl
@@ -157,7 +157,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
       </Link>
       <header className="text-center space-y-1.5 mb-6">
         <p className="text-[10px] tracking-[0.5em] text-gold-500/50 font-serif">神 位</p>
-        <h1 className="text-2xl font-serif font-bold text-ink-light">신위 · 판테온</h1>
+        <h1 className="text-2xl font-serif font-bold text-ink-light">신위전(神位殿)</h1>
         <p className="text-sm text-ink-light/50 font-sans">
           고민과 사주 용신으로 맺어진 수호신을 좌정하고, 인연을 쌓으세요
         </p>
@@ -207,7 +207,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
         {err ? <p className="text-xs text-seal mt-3">{err}</p> : null}
       </section>
 
-      {/* 판테온 — 등급별 */}
+      {/* 신위전 — 등급별 */}
       {TIERS.map((tier) => {
         const list = catalog.deities.filter((d) => d.tier === tier)
         if (list.length === 0) return null

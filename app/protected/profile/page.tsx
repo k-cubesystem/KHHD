@@ -54,7 +54,7 @@ export default async function MyPage() {
           <Link href="/protected" className="p-1 -ml-1 hover:bg-surface/10 transition-colors">
             <ChevronLeft className="w-6 h-6 text-ink-light/90" />
           </Link>
-          <h1 className="text-sm font-serif tracking-[0.2em] text-ink-light/90 uppercase">My Page</h1>
+          <h1 className="text-sm font-serif tracking-[0.2em] text-ink-light/90 uppercase">내 정보</h1>
           <div className="w-6 h-6" />
         </header>
 
@@ -74,12 +74,12 @@ export default async function MyPage() {
             <div className="flex flex-col items-center gap-1.5">
               <Coins className="w-5 h-5 text-primary mb-1" strokeWidth={1} />
               <span className="text-xl font-serif text-ink-light font-medium">100</span>
-              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">Credits</span>
+              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">이용권</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <BookOpen className="w-5 h-5 text-ink-light/60 mb-1" strokeWidth={1} />
               <span className="text-xl font-serif text-ink-light font-medium">5</span>
-              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">History</span>
+              <span className="text-[9px] text-ink-light/40 tracking-widest uppercase font-bold">분석 기록</span>
             </div>
           </div>
         </section>
@@ -381,7 +381,7 @@ export default async function MyPage() {
 
       {/* Dashboard Navigation Grid */}
       <section className="px-3 mb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
-        <h3 className="text-xs font-light tracking-widest text-ink-light/50 uppercase mb-6">Menu</h3>
+        <h3 className="text-xs font-light tracking-widest text-ink-light/50 uppercase mb-6">메뉴</h3>
         <div className="grid grid-cols-2 gap-4 traditional-grid-bg rounded-lg p-2">
           {isAdmin && (
             <Link href="/admin" className="group col-span-2 mb-2">
@@ -467,7 +467,7 @@ export default async function MyPage() {
                   className="w-5 h-5 text-ink-light/50 group-hover:text-ink-light transition-colors"
                   strokeWidth={1}
                 />
-                <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">Language</span>
+                <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">언어</span>
               </div>
               <LocaleSwitcher />
             </div>

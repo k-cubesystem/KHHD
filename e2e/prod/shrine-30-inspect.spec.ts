@@ -88,7 +88,7 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
 
     // ── 2) 판테온 ──
     await page.goto('/protected/shrine/deities')
-    await expect(page.getByRole('heading', { name: '신위 · 판테온' })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: '신위전(神位殿)' })).toBeVisible({ timeout: 15_000 })
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {})
     const deityImgCount = await page.locator('img[src*="/shrine/deities/"]').count()
     console.log(`[CHECK] 판테온 신위 이미지 수: ${deityImgCount}`)

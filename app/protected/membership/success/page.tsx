@@ -233,7 +233,9 @@ function MembershipSuccessContent() {
 
 export default function MembershipSuccessPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-primary">Loading...</div>}>
+    <Suspense
+      fallback={<div className="min-h-screen flex items-center justify-center text-primary">불러오는 중...</div>}
+    >
       <MembershipSuccessContent />
     </Suspense>
   )

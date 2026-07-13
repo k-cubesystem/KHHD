@@ -99,7 +99,7 @@ export function MiniReadingSection() {
     <section className="w-full px-4 py-8">
       <div className="max-w-[420px] mx-auto space-y-4">
         <div className="text-center space-y-1">
-          <p className="text-gold-500/60 text-xs font-sans tracking-widest uppercase">Quick Fortune</p>
+          <p className="text-gold-500/60 text-xs font-sans tracking-widest uppercase">간편 운세</p>
           <h2 className="text-lg font-serif text-ink-light">{t('miniReading')}</h2>
         </div>
 

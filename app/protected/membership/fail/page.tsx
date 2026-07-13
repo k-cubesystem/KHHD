@@ -55,7 +55,9 @@ function FailContent() {
 
 export default function MembershipFailPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-primary">Loading...</div>}>
+    <Suspense
+      fallback={<div className="min-h-screen flex items-center justify-center text-primary">불러오는 중...</div>}
+    >
       <FailContent />
     </Suspense>
   )

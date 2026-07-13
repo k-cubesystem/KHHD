@@ -82,7 +82,7 @@ export default function ThemeAnalysisPage({ params }: { params: Promise<{ type: 
               <CardContent className="p-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-bold text-primary tracking-widest uppercase">CURRENT STATUS</span>
+                  <span className="text-xs font-bold text-primary tracking-widest uppercase">현재 상태</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between items-end">

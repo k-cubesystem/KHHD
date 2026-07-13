@@ -62,12 +62,12 @@ test.describe('신당 3.0 네비게이션', () => {
 
     // 3) 신위 판테온 도달 (방이면 헤더 '신위' 버튼, 아니면 직접 이동)
     if (hasRoom) {
-      await page.getByRole('link', { name: '신위 판테온' }).click()
+      await page.getByRole('link', { name: '신위전' }).click()
     } else {
       await page.goto('/protected/shrine/deities')
     }
     await expect(page).toHaveURL(/\/protected\/shrine\/deities/, { timeout: 15_000 })
-    await expect(page.getByRole('heading', { name: '신위 · 판테온' })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: '신위전(神位殿)' })).toBeVisible({ timeout: 15_000 })
     // 신위 이미지 전부 로드 대기(스크린샷 정확도)
     await page.waitForLoadState('networkidle').catch(() => {})
     await page

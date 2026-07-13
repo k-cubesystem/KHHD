@@ -537,7 +537,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <Sparkles className="w-4 h-4" />
         {title}
         {!isSubscribed && (
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-gold-500/20 text-gold-500 text-[10px]">PREMIUM</span>
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-gold-500/20 text-gold-500 text-[10px]">유료</span>
         )}
       </h3>
 
@@ -627,7 +627,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-500/10 border border-gold-500/20">
             <ScrollText className="w-4 h-4 text-gold-500" />
-            <span className="text-xs font-bold text-gold-500 uppercase tracking-wider">Manse-ryok Pro</span>
+            <span className="text-xs font-bold text-gold-500 tracking-wider">만세력 · 전문</span>
           </div>
           <h1 className="text-4xl font-black">
             <span className="bg-gradient-to-r from-gold-500 via-gold-300 to-gold-500 bg-clip-text text-transparent">

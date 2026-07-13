@@ -147,7 +147,7 @@ export function WealthAnalysisContent() {
       <motion.section variants={fadeInUp} className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
           <Coins className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">The Wealth Flow</span>
+          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">재물의 흐름</span>
         </div>
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
           재물운 <span className="text-primary">심층 분석</span>

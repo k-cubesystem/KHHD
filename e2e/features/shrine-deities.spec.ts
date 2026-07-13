@@ -3,7 +3,7 @@ import { test, expect } from '../fixtures'
 test.describe('신위 판테온 (shrine 3.0)', () => {
   test('판테온 페이지 로드', async ({ page }) => {
     await page.goto('/protected/shrine/deities')
-    await expect(page.getByRole('heading', { name: '신위 · 판테온' })).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByRole('heading', { name: '신위전(神位殿)' })).toBeVisible({ timeout: 20_000 })
   })
 
   test('수호신 좌정 CTA 또는 主神 노출', async ({ page }) => {

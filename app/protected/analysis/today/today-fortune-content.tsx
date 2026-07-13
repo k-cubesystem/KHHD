@@ -60,7 +60,7 @@ export function TodayFortuneContent() {
       <div className="text-center space-y-4 animate-in fade-in duration-700">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
           <Sun className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">Daily Compass</span>
+          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">오늘의 길잡이</span>
         </div>
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
           오늘의 <span className="text-primary">기상도</span>

@@ -47,7 +47,7 @@ export function StudioAnalysisLayout({ category, targetMember, children }: Studi
               </div>
               {categoryInfo.cost > 0 && (
                 <div className="text-right hidden sm:block">
-                  <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">Credits</p>
+                  <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">이용권</p>
                   <p className="text-lg font-serif font-light text-primary">{categoryInfo.cost}</p>
                 </div>
               )}

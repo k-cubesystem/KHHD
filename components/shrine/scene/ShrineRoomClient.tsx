@@ -331,7 +331,7 @@ export function ShrineRoomClient({ scene }: Props) {
             <Link
               href="/protected/shrine/deities"
               className="h-8 px-2.5 rounded-[10px] flex items-center gap-1.5 bg-gold-500/[0.12] border border-gold-500/40 text-gold-200 text-[11.5px] font-serif font-bold"
-              aria-label="신위 판테온"
+              aria-label="신위전"
             >
               <Sparkles className="w-3.5 h-3.5" />
               신위

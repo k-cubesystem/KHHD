@@ -105,7 +105,7 @@ export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
           {/* Footer */}
           <div className="relative z-10 w-full pt-8 border-t border-white/10 flex justify-between items-end">
             <div className="text-left">
-              <p className="text-gold-500/60 text-sm font-serif">Premium Oriental Fortune</p>
+              <p className="text-gold-500/60 text-sm font-serif">해화당 · 전통 명리 운세</p>
               <p className="text-white/30 text-xs mt-1">{data.date || new Date().toLocaleDateString()}</p>
             </div>
             <div className="w-16 h-16 rounded-full border border-gold-500/30 flex items-center justify-center bg-gold-500/5">

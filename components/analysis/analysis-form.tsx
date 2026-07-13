@@ -517,7 +517,7 @@ export function AnalysisForm({ targets, initialTargetId }: AnalysisFormProps) {
                             availableCredits > 0 ? 'text-gold-400' : 'text-rose-400'
                           )}
                         >
-                          {availableCredits} <span className="text-xs font-normal text-stone-500">Credits</span>
+                          {availableCredits} <span className="text-xs font-normal text-stone-500">회</span>
                         </span>
                       )}
                     </div>

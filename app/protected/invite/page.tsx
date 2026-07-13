@@ -118,7 +118,7 @@ export default function InviteCreatePage() {
       <div className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/20 border border-pink-500/30">
           <Heart className="w-4 h-4 text-pink-400" />
-          <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">Viral Invite</span>
+          <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">친구 초대</span>
         </div>
         <h1 className="text-4xl font-black">
           <span className="bg-gradient-to-r from-pink-400 via-gold-500 to-pink-400 bg-clip-text text-transparent">

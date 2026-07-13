@@ -303,7 +303,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
                       <span className="text-4xl font-serif font-bold text-zen-text">{plan.price.toLocaleString()}</span>
                       <span className="text-base text-zen-muted">원</span>
                     </div>
-                    <p className="text-[10px] text-zen-muted uppercase tracking-widest mt-1">Per Month</p>
+                    <p className="text-[10px] text-zen-muted uppercase tracking-widest mt-1">월 요금</p>
                   </div>
 
                   <div className="space-y-3">

@@ -49,7 +49,7 @@ export function FamilyReviewSlide() {
     <div className="w-full relative py-8">
       <div className="flex items-center justify-center gap-2 mb-8 opacity-80">
         <div className="h-px w-8 bg-gradient-to-r from-transparent to-gold-500/50" />
-        <span className="text-xs font-serif text-gold-500 tracking-widest uppercase">Real Stories</span>
+        <span className="text-xs font-serif text-gold-500 tracking-widest uppercase">실제 후기</span>
         <div className="h-px w-8 bg-gradient-to-l from-transparent to-gold-500/50" />
       </div>
 
