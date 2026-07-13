@@ -43,7 +43,16 @@ function DeityMedallion({ deity, size }: { deity: Deity; size: number }) {
           style={{ filter: `drop-shadow(0 ${size / 22}px ${size / 14}px rgba(0,0,0,0.35))` }}
         />
       ) : (
-        <span style={{ fontSize: size * 0.4, lineHeight: 1 }}>{ELEMENT_GLYPH[deity.element] ?? '神'}</span>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/shrine/elements/${deity.element}.webp`}
+          alt=""
+          style={{ width: size * 0.62, height: size * 0.62, objectFit: 'contain' }}
+          onError={(e) => {
+            e.currentTarget.outerHTML = `<span style="font-size:${size * 0.4}px;line-height:1">${ELEMENT_GLYPH[deity.element] ?? '神'}</span>`
+          }}
+          draggable={false}
+        />
       )}
     </div>
   )

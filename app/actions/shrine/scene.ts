@@ -273,7 +273,7 @@ async function loadMainDeity(
   if (!mainDeityId) return null
   const { data } = await supabase
     .from('shrine_deities')
-    .select('code, name, sprite_url')
+    .select('code, name, sprite_url, portrait_url')
     .eq('id', mainDeityId)
     .maybeSingle()
   if (!data) return null
@@ -293,6 +293,7 @@ async function loadMainDeity(
     code: data.code,
     name: data.name,
     spriteUrl: data.sprite_url,
+    portraitUrl: data.portrait_url,
     bondPoints,
   }
 }

@@ -87,6 +87,8 @@ export interface MainDeity {
   code: string
   name: string
   spriteUrl: string | null
+  /** 초상(제단·신당지기 오브용). 없으면 🔮 폴백 */
+  portraitUrl: string | null
   /** 소유자의 누적 인연(緣) 포인트. null = 방문자 뷰(비공개 — RLS로 조회 불가, 오표시 방지) */
   bondPoints: number | null
 }

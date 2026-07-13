@@ -491,23 +491,33 @@ export function ShrineRoomClient({ scene }: Props) {
         {/* 파티클 이펙트 */}
         <EffectsCanvas ref={effectsRef} />
 
-        {/* 신당지기 */}
+        {/* 신당지기 — 좌정한 主神이 겸한다 (초상 오브, 없으면 🔮 폴백) */}
         <button
           onClick={onTapKeeper}
           className="absolute z-[12] text-center"
           style={{ left: `${KEEPER_POS.x}%`, top: `${KEEPER_POS.y}%` }}
-          aria-label="신당지기"
+          aria-label={scene.mainDeity ? `신당지기 ${scene.mainDeity.name}` : '신당지기'}
         >
           <div
             key={bounce}
-            className="w-[38px] h-[38px] rounded-full grid place-items-center text-[19px] shrine-keeper-orb"
+            className="w-[38px] h-[38px] rounded-full grid place-items-center text-[19px] shrine-keeper-orb overflow-hidden"
             style={{
               background: 'radial-gradient(circle at 35% 30%, var(--th-glow), rgba(0,0,0,0.45))',
               border: '1px solid var(--th-accent)',
               boxShadow: '0 0 16px var(--th-glow)',
             }}
           >
-            🔮
+            {scene.mainDeity?.portraitUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={scene.mainDeity.portraitUrl}
+                alt=""
+                className="w-full h-full object-cover object-top"
+                draggable={false}
+              />
+            ) : (
+              '🔮'
+            )}
           </div>
           <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
         </button>
@@ -525,7 +535,7 @@ export function ShrineRoomClient({ scene }: Props) {
             }}
           >
             <div className="text-[9px] tracking-[0.24em] mb-0.5" style={{ color: 'var(--th-accent)' }}>
-              신당지기
+              {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
             </div>
             <span dangerouslySetInnerHTML={{ __html: bubble }} />
           </div>
@@ -683,7 +693,12 @@ export function ShrineRoomClient({ scene }: Props) {
                     className="relative flex-shrink-0 w-[46px] h-[46px] rounded-[10px] grid place-items-center text-[22px] bg-black/30 border border-gold-500/25"
                     title={`${item.name} (${ZONE_LABEL[item.layer]})`}
                   >
-                    {item.emoji}
+                    {item.spriteUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.spriteUrl} alt="" className="w-[34px] h-[34px] object-contain" draggable={false} />
+                    ) : (
+                      item.emoji
+                    )}
                     {item.element && (
                       <span
                         className="absolute -top-1.5 -right-1.5 w-[13px] h-[13px] rounded-full text-[7.5px] font-serif grid place-items-center font-bold"
@@ -861,7 +876,17 @@ function Sprite({ placement, item, editing, onTap, onRemove, onDragEnd }: Sprite
           : 'drop-shadow(0 3px 3px rgba(0,0,0,0.55))',
       }}
     >
-      <span style={{ display: 'inline-block' }}>{item.emoji}</span>
+      {item.spriteUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={item.spriteUrl}
+          alt={item.name}
+          draggable={false}
+          style={{ display: 'inline-block', width: '1.55em', height: '1.55em', objectFit: 'contain' }}
+        />
+      ) : (
+        <span style={{ display: 'inline-block' }}>{item.emoji}</span>
+      )}
       {item.layer !== 'wall' && item.layer !== 'hanging' && (
         <span
           className="absolute left-1/2 -translate-x-1/2 rounded-full"

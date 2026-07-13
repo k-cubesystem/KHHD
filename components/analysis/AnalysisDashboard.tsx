@@ -5,25 +5,17 @@ import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
 import { Card } from '@/components/ui/card'
-import { Wallet, Building2, GraduationCap, TrendingUp, MessageCircle, ChevronRight } from 'lucide-react'
-import {
-  IconGunghap,
-  IconGwansang,
-  IconSongeum,
-  IconPungsu,
-  IconUnse,
-  IconInyon,
-} from '@/components/icons/traditional-icons'
+import { ChevronRight } from 'lucide-react'
 import { DailyFortuneCard } from './daily-fortune-card'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 
+// 아이콘 → 「설빛 온기」 일러스트 (PRD §7, public/icons/hub)
 const STUDIO_CARDS = [
   {
     id: 'compatibility',
     label: '궁합',
     desc: '두 사람의 오행 기운으로 관계의 해법을 찾습니다',
-    icon: IconGunghap,
-    color: 'text-rose-400',
+    img: '/icons/hub/gunghap.webp',
     bg: 'bg-rose-500/10',
     href: '/protected/analysis/compatibility',
   },
@@ -31,8 +23,7 @@ const STUDIO_CARDS = [
     id: 'face',
     label: '관상',
     desc: '얼굴에 새겨진 운명의 지도를 읽어드립니다',
-    icon: IconGwansang,
-    color: 'text-amber-400',
+    img: '/icons/hub/gwansang.webp',
     bg: 'bg-amber-500/10',
     href: '/protected/studio/face',
   },
@@ -40,8 +31,7 @@ const STUDIO_CARDS = [
     id: 'palm',
     label: '손금',
     desc: '손바닥 위의 생명선·지능선·감정선을 해석합니다',
-    icon: IconSongeum,
-    color: 'text-sky-400',
+    img: '/icons/hub/songeum.webp',
     bg: 'bg-sky-500/10',
     href: '/protected/studio/palm',
   },
@@ -49,8 +39,7 @@ const STUDIO_CARDS = [
     id: 'fengshui',
     label: '풍수',
     desc: '공간의 기운을 분석하여 길한 배치를 제안합니다',
-    icon: IconPungsu,
-    color: 'text-teal-400',
+    img: '/icons/hub/pungsu.webp',
     bg: 'bg-teal-500/10',
     href: '/protected/studio/fengshui',
   },
@@ -61,8 +50,7 @@ const MENU_CARDS = [
     id: 'year2026',
     label: '2026 병오년',
     desc: '붉은 말의 해 운명 흐름',
-    icon: IconUnse,
-    color: 'text-red-400',
+    img: '/icons/hub/unse.webp',
     bg: 'bg-red-500/10',
     href: '/protected/analysis/new-year',
     badge: '2026',
@@ -71,8 +59,7 @@ const MENU_CARDS = [
     id: 'ai-shaman',
     label: '고민 상담',
     desc: 'AI 해화지기',
-    icon: MessageCircle,
-    color: 'text-gold-500',
+    img: '/icons/hub/sangdam.webp',
     bg: 'bg-gold-500/15',
     href: '/protected/ai-shaman',
   },
@@ -80,8 +67,7 @@ const MENU_CARDS = [
     id: 'wealth',
     label: '재물운',
     desc: '투자·매매 흐름',
-    icon: Wallet,
-    color: 'text-emerald-400',
+    img: '/icons/hub/jaemul.webp',
     bg: 'bg-emerald-500/10',
     href: '/protected/analysis/theme/wealth',
   },
@@ -89,8 +75,7 @@ const MENU_CARDS = [
     id: 'love',
     label: '애정운',
     desc: '만남·결혼 시기',
-    icon: IconInyon,
-    color: 'text-pink-400',
+    img: '/icons/hub/aejeong.webp',
     bg: 'bg-pink-500/10',
     href: '/protected/analysis/theme/love',
   },
@@ -98,8 +83,7 @@ const MENU_CARDS = [
     id: 'career',
     label: '직장운',
     desc: '승진·이직 타이밍',
-    icon: Building2,
-    color: 'text-blue-400',
+    img: '/icons/hub/jikjang.webp',
     bg: 'bg-blue-500/10',
     href: '/protected/analysis/theme/career',
   },
@@ -107,8 +91,7 @@ const MENU_CARDS = [
     id: 'exam',
     label: '학업운',
     desc: '합격·자격 운',
-    icon: GraduationCap,
-    color: 'text-violet-400',
+    img: '/icons/hub/hakeop.webp',
     bg: 'bg-violet-500/10',
     href: '/protected/analysis/theme/exam',
   },
@@ -116,8 +99,7 @@ const MENU_CARDS = [
     id: 'estate',
     label: '부동산',
     desc: '문서·이사 길일',
-    icon: TrendingUp,
-    color: 'text-amber-400',
+    img: '/icons/hub/budongsan.webp',
     bg: 'bg-amber-500/10',
     href: '/protected/analysis/theme/estate',
   },
@@ -158,7 +140,6 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
 
         <nav role="navigation" aria-label="통합분석 메뉴" className="grid grid-cols-2 gap-3">
           {STUDIO_CARDS.map((card) => {
-            const Icon = card.icon
             return (
               <Card
                 key={card.id}
@@ -168,9 +149,10 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
               >
                 <div className="flex flex-col gap-2.5">
                   <div
-                    className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}
+                    className={`w-11 h-11 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform overflow-hidden`}
                   >
-                    <Icon className={`w-5 h-5 ${card.color}`} strokeWidth={1.5} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={card.img} alt="" className="w-9 h-9 object-contain" draggable={false} />
                   </div>
                   <div>
                     <span className="block text-sm font-medium text-ink-light">{card.label}</span>
@@ -196,7 +178,6 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
 
         <nav role="navigation" aria-label="테마별 분석 메뉴" className="grid grid-cols-2 gap-3">
           {MENU_CARDS.map((card) => {
-            const Icon = card.icon
             return (
               <Card
                 key={card.id}
@@ -211,9 +192,10 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
                 )}
                 <div className="flex items-start gap-3">
                   <div
-                    className={`w-10 h-10 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}
+                    className={`w-11 h-11 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform overflow-hidden`}
                   >
-                    <Icon className={`w-5 h-5 ${card.color}`} strokeWidth={1.5} />
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={card.img} alt="" className="w-9 h-9 object-contain" draggable={false} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-ink-light">{card.label}</span>

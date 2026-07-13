@@ -188,7 +188,16 @@ export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerPro
 
           {/* Main content */}
           <div className="flex items-center gap-3">
-            <span className="text-3xl flex-shrink-0">{event.emoji}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/icons/season/${event.id}.webp`}
+              alt=""
+              className="w-11 h-11 flex-shrink-0 object-contain"
+              onError={(e) => {
+                e.currentTarget.outerHTML = `<span class="text-3xl flex-shrink-0">${event.emoji}</span>`
+              }}
+              draggable={false}
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-1.5 mb-0.5">

@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Users, Flame, MessageCircle, UserCircle, Home } from 'lucide-react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { useTranslations } from 'next-intl'
 
@@ -13,16 +13,17 @@ export const BottomNav = memo(function BottomNav() {
 
   type NavItem = {
     label: string
-    icon: typeof Home
+    /** 「설빛 온기」 일러스트 아이콘 (public/icons/nav) */
+    icon: string
     href: string
   }
 
   const NAV_ITEMS: NavItem[] = [
-    { label: t('analysis'), icon: Home, href: '/protected/analysis' },
-    { label: t('family'), icon: Users, href: '/protected/family' },
-    { label: t('chat'), icon: MessageCircle, href: '/protected/ai-shaman' },
-    { label: t('shrine'), icon: Flame, href: '/protected/shrine' },
-    { label: t('profile'), icon: UserCircle, href: '/protected/profile' },
+    { label: t('analysis'), icon: '/icons/nav/analysis.webp', href: '/protected/analysis' },
+    { label: t('family'), icon: '/icons/nav/family.webp', href: '/protected/family' },
+    { label: t('chat'), icon: '/icons/nav/chat.webp', href: '/protected/ai-shaman' },
+    { label: t('shrine'), icon: '/icons/nav/shrine.webp', href: '/protected/shrine' },
+    { label: t('profile'), icon: '/icons/nav/profile.webp', href: '/protected/profile' },
   ]
 
   // Hidden on non-protected pages
@@ -36,7 +37,6 @@ export const BottomNav = memo(function BottomNav() {
       <div className="flex justify-around items-center h-[60px] px-2">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-          const Icon = item.icon
 
           return (
             <Link
@@ -51,13 +51,22 @@ export const BottomNav = memo(function BottomNav() {
             >
               <div
                 className={cn(
-                  'p-1.5 rounded-xl transition-all duration-300',
+                  'p-1 rounded-xl transition-all duration-300',
                   isActive && 'bg-gold-500/10 shadow-[0_0_15px_rgba(212,175,55,0.2)]'
                 )}
               >
-                <Icon
+                <Image
+                  src={item.icon}
+                  alt=""
                   aria-hidden="true"
-                  className={cn('w-5 h-5 stroke-[1.5] transition-all', isActive && 'stroke-gold-500 fill-gold-500/20')}
+                  width={26}
+                  height={26}
+                  className={cn(
+                    'w-[26px] h-[26px] object-contain transition-all duration-300',
+                    isActive
+                      ? 'opacity-100 scale-110 drop-shadow-[0_0_6px_rgba(212,175,55,0.45)]'
+                      : 'opacity-55 grayscale-[35%]'
+                  )}
                 />
               </div>
               <span

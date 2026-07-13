@@ -70,7 +70,12 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
               className="rounded-xl p-4 flex flex-col gap-3 bg-gold-500/[0.03] border border-gold-500/[0.12]"
             >
               <div className="flex items-start justify-between">
-                <span className="text-4xl leading-none">{item.emoji}</span>
+                {item.spriteUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.spriteUrl} alt={item.name} className="w-12 h-12 object-contain" draggable={false} />
+                ) : (
+                  <span className="text-4xl leading-none">{item.emoji}</span>
+                )}
                 <div className="flex flex-col items-end gap-1">
                   <span className={`text-[9px] px-2 py-0.5 rounded-full border font-sans ${rarity.cls}`}>
                     {rarity.label}

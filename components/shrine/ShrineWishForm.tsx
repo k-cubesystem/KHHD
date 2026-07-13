@@ -86,7 +86,16 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
                 : 'bg-white/[0.03] border-white/[0.08] text-ink-primary/[0.5]'
             )}
           >
-            <span>{cat.emoji}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/shrine/wish/${cat.key}.webp`}
+              alt=""
+              className="w-[18px] h-[18px] object-contain"
+              onError={(e) => {
+                e.currentTarget.outerHTML = `<span>${cat.emoji}</span>`
+              }}
+              draggable={false}
+            />
             <span>{cat.label}</span>
           </button>
         ))}

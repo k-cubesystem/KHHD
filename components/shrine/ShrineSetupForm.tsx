@@ -56,7 +56,16 @@ export function ShrineSetupForm() {
                 theme === t.key ? 'bg-gold-500/[0.15] border-gold-500/[0.4]' : 'bg-white/[0.03] border-white/[0.06]'
               )}
             >
-              <span className="text-2xl">{t.emoji}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/shrine/themes/badge/${t.key}.webp`}
+                alt=""
+                className="w-9 h-9 object-contain"
+                onError={(e) => {
+                  e.currentTarget.outerHTML = `<span class="text-2xl">${t.emoji}</span>`
+                }}
+                draggable={false}
+              />
               <span className="text-xs font-serif text-ink-light">{t.label}</span>
               <span className="text-[10px] text-ink-light/30 font-sans text-center leading-tight">{t.desc}</span>
             </button>
