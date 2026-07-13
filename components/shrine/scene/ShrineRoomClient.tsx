@@ -426,9 +426,10 @@ export function ShrineRoomClient({ scene }: Props) {
         ref={roomRef}
         className={`room relative rounded-[18px] overflow-hidden ${editing ? 'editing' : ''}`}
         style={{
-          height: fullActive ? '100vh' : 'min(64vh, 560px)',
+          height: fullActive ? '100vh' : 'min(56vh, 480px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
-          touchAction: 'none',
+          // 편집 중에만 드래그 배치를 위해 스크롤 차단. 평소엔 세로 스크롤 허용(방 위 스와이프로 페이지 이동).
+          touchAction: editing ? 'none' : 'pan-y',
           ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
         }}
       >

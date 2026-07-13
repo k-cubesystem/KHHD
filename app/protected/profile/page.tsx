@@ -27,7 +27,7 @@ import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
-import { BokHubSection } from '@/components/analysis/bok-hub-section'
+import { DailyFortuneCard } from '@/components/analysis/daily-fortune-card'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 
@@ -318,10 +318,18 @@ export default async function MyPage() {
         </div>
       </section>
 
-      {/* ── 2. 지표 스트립: 복채 · 멤버십 · 기록 ── */}
+      {/* ── 2. 오늘의 운세 (매일 확인 유도 — 최상단) ── */}
+      <section
+        aria-label="오늘의 운세"
+        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-75 relative z-10"
+      >
+        <DailyFortuneCard userId={user.id} userName={displayName} />
+      </section>
+
+      {/* ── 3. 지표 스트립: 복채 · 멤버십 · 기록 ── */}
       <section
         aria-label="현황"
-        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-75 relative z-10"
+        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100 relative z-10"
       >
         <div className="grid grid-cols-3 gap-2">
           <Link
@@ -366,11 +374,6 @@ export default async function MyPage() {
           totalBokchae={attendanceStatus?.totalBokchae || 0}
           consecutiveStreak={attendanceStatus?.consecutiveStreak || 0}
         />
-      </section>
-
-      {/* ── 4. 복 관리 허브 ── */}
-      <section className="px-3 mb-6 relative z-10">
-        <BokHubSection />
       </section>
 
       {/* ── 5. 바로가기 ── */}
