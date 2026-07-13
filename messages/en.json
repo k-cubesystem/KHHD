@@ -233,7 +233,8 @@
     "upgrade": {
       "title": "Manage More Connections",
       "desc": "Upgrade to Fortune Keeper to add more connections",
-      "cta": "Start Fortune Keeper"
+      "cta": "Start Fortune Keeper",
+      "later": "Maybe later"
     },
     "tiers": {
       "bokjigi": "Fortune Keeper",
