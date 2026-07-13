@@ -487,7 +487,7 @@ export default async function MyPage() {
           </Link>
 
           <Link
-            href="/protected/policy/privacy"
+            href="/privacy"
             className="flex items-center justify-between p-4 hover:bg-surface/10 transition-colors cursor-pointer group"
           >
             <div className="flex items-center gap-4">
