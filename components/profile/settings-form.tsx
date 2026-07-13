@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Save, BookOpen, Compass, User as UserIcon } from 'lucide-react'
+import { Loader2, Save, BookOpen, Compass, User as UserIcon, Sparkles, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { FIVE_AVATARS } from '@/components/family/five-avatar-selector'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -56,9 +59,15 @@ export function SettingsForm({
   // 기본 정보 (family_members 우선, 없으면 profile)
   const [name, setName] = useState(familyMember?.name || profile?.full_name || '')
   const [gender, setGender] = useState(familyMember?.gender || profile?.gender || 'male')
-  // 도깨비 아바타 폐지 — 소셜 로그인 이미지가 있으면 그대로 사용(변경 UI 없음)
-  const avatarUrl =
+
+  // 프로필 아바타 선택: 자동(신당 연동) / 오행 정령 직접 선택 / 소셜 사진
+  const savedAvatar =
     profile?.avatar_url && !profile.avatar_url.startsWith('/avatars/dokkaebi-') ? profile.avatar_url : ''
+  const isFiveSaved = savedAvatar.startsWith('/avatars/five/')
+  const [avatarChoice, setAvatarChoice] = useState<'auto' | 'five' | 'social'>(
+    isFiveSaved ? 'five' : savedAvatar ? 'social' : 'auto'
+  )
+  const [fiveSrc, setFiveSrc] = useState(isFiveSaved ? savedAvatar : FIVE_AVATARS[0].src)
 
   // 천(天) - 사주 정보 (family_members 우선)
   const [birthDate, setBirthDate] = useState(familyMember?.birth_date || profile?.birth_date || '')
@@ -79,7 +88,7 @@ export function SettingsForm({
     setIsLoading(true)
 
     try {
-      const finalAvatarUrl = avatarUrl || socialAvatarUrl || ''
+      const finalAvatarUrl = avatarChoice === 'five' ? fiveSrc : avatarChoice === 'social' ? socialAvatarUrl || '' : ''
 
       // 1. 프로필 저장 (서버 액션 - admin client로 RLS 우회)
       const profileResult = await saveProfile({
@@ -131,6 +140,116 @@ export function SettingsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* 프로필 아바타 */}
+      <Card className="bg-surface/30 border-primary/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-serif font-light text-ink-light flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" strokeWidth={1} />
+            프로필 아바타
+          </CardTitle>
+          <p className="text-xs text-ink-light/50 font-light mt-1">나를 대신할 얼굴을 고르세요</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <RadioGroup
+            value={avatarChoice}
+            onValueChange={(v) => setAvatarChoice(v as 'auto' | 'five' | 'social')}
+            className="flex flex-wrap gap-4 pt-1"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="auto" id="avatar-auto" className="border-primary text-primary" />
+              <Label htmlFor="avatar-auto" className="font-light cursor-pointer">
+                자동 (신당 연동)
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="five" id="avatar-five" className="border-primary text-primary" />
+              <Label htmlFor="avatar-five" className="font-light cursor-pointer">
+                오행 정령
+              </Label>
+            </div>
+            {socialAvatarUrl && (
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="social" id="avatar-social" className="border-primary text-primary" />
+                <Label htmlFor="avatar-social" className="font-light cursor-pointer">
+                  소셜 사진
+                </Label>
+              </div>
+            )}
+          </RadioGroup>
+
+          {avatarChoice === 'auto' && (
+            <p className="text-xs text-ink-light/50 font-light">
+              좌정 主神 초상 → 일간 오행 엠블럼 → 소셜 사진 순으로 자동 반영됩니다.
+            </p>
+          )}
+
+          {avatarChoice === 'five' && (
+            <div className="grid grid-cols-5 gap-2">
+              {FIVE_AVATARS.map((avatar) => {
+                const isSelected = fiveSrc === avatar.src
+                return (
+                  <button
+                    key={avatar.id}
+                    type="button"
+                    onClick={() => setFiveSrc(avatar.src)}
+                    className={cn(
+                      'relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-300 group',
+                      isSelected
+                        ? 'bg-primary/10 border border-primary/40 shadow-[0_0_15px_rgba(212,175,55,0.15)]'
+                        : 'bg-surface/30 border border-white/5 hover:bg-surface/50 hover:border-white/10'
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        'w-11 h-11 rounded-full overflow-hidden border transition-transform duration-300',
+                        isSelected ? 'scale-110 border-primary/40' : 'border-white/10 group-hover:scale-105'
+                      )}
+                      style={{ backgroundColor: avatar.color + '18' }}
+                    >
+                      <Image
+                        src={avatar.src}
+                        alt={avatar.label}
+                        width={44}
+                        height={44}
+                        className="w-full h-full object-cover object-top"
+                      />
+                    </div>
+                    <span
+                      className={cn(
+                        'text-[9.5px] font-medium whitespace-nowrap',
+                        isSelected ? 'text-primary' : 'text-ink-light/50'
+                      )}
+                    >
+                      {avatar.label}
+                    </span>
+                    {isSelected && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-background flex items-center justify-center shadow-sm">
+                        <Check className="w-2.5 h-2.5" strokeWidth={3} />
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {avatarChoice === 'social' && socialAvatarUrl && (
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full overflow-hidden border border-white/10">
+                <Image
+                  src={socialAvatarUrl}
+                  alt="소셜 프로필"
+                  width={44}
+                  height={44}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <p className="text-xs text-ink-light/50 font-light">로그인한 소셜 계정의 사진을 사용합니다.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* 기본 정보 */}
       <Card className="bg-surface/30 border-primary/20">
         <CardHeader className="pb-3">

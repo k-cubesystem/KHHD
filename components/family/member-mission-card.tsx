@@ -4,7 +4,8 @@ import { Card } from '@/components/ui/card'
 import { motion } from 'framer-motion'
 import { MoreHorizontal, Edit2, Trash2, User } from 'lucide-react'
 import type { FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
-import { DOKKAEBI_AVATARS } from '@/components/family/dokkaebi-avatar-selector'
+import Image from 'next/image'
+import { findFiveAvatar } from '@/components/family/five-avatar-selector'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 
@@ -18,7 +19,7 @@ interface Props {
 
 export function MemberMissionCard({ member, onClick, onEdit, onDelete, index }: Props) {
   const progress = (member.mission_completed / member.mission_total) * 100
-  const avatar = DOKKAEBI_AVATARS.find((a) => a.id === member.avatar_id)
+  const avatar = findFiveAvatar(member.avatar_id)
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
@@ -36,8 +37,18 @@ export function MemberMissionCard({ member, onClick, onEdit, onDelete, index }: 
                 border: `1px solid ${avatar ? `${avatar.color}30` : 'rgba(212,175,55,0.2)'}`,
               }}
             >
-              <div className="w-full h-full p-2 flex items-center justify-center">
-                {avatar?.icon || <User className="w-6 h-6 text-primary" />}
+              <div className="w-full h-full flex items-center justify-center">
+                {avatar ? (
+                  <Image
+                    src={avatar.src}
+                    alt={avatar.label}
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover object-top"
+                  />
+                ) : (
+                  <User className="w-6 h-6 text-primary" />
+                )}
               </div>
             </div>
 

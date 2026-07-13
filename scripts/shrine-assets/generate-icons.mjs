@@ -36,6 +36,8 @@ const tilePrompt = (desc) =>
   `Miniature Korean fortune-telling motif illustration: ${desc}. ${STYLE}, single clear subject centered, storybook charm, ${BG}`
 const navPrompt = (desc) =>
   `Small app emblem, bold readable silhouette at tiny size: ${desc}. ${STYLE}, strong simple shape with warm gold accent, centered, generous margins, ${BG}`
+const portraitPrompt = (desc) =>
+  `Korean traditional character bust portrait for a circular avatar: ${desc}. ${STYLE}, head and shoulders framing centered with generous headroom, face clearly visible, gentle warm expression, looking slightly toward viewer, ${BG}`
 
 /** @type {Record<string, Array<{slug:string,out:string,size:number,prompt:string}>>} */
 const SETS = {
@@ -82,6 +84,15 @@ const SETS = {
     size: 256,
     prompt: tilePrompt(d),
   })),
+
+  // G. 오행 인물 아바타 5 (가족 선택기 + 프로필 직접선택 공용)
+  avatars: [
+    ['water', '청수 도령 水 — calm young boy in indigo-blue durumagi robe, moonlit water wave motif on collar, serene wise eyes'],
+    ['fire', '단화 낭자 火 — cheerful young girl in crimson chima-jeogori hanbok, small flame-blossom hairpin, bright lively smile'],
+    ['metal', '백금 검사 金 — dignified middle-aged man in silver-white dopo robe with neat topknot (상투), frost-like calm expression'],
+    ['wood', '청목 선비 木 — gentle young scholar in jade-green dopo robe holding a bamboo book scroll, fresh sprout motif'],
+    ['earth', '온토 부인 土 — warm motherly woman in ochre-gold hanbok, soft embracing smile, ripe grain motif on binyeo hairpin'],
+  ].map(([slug, d]) => ({ slug, out: `avatars/five/${slug}.webp`, size: 256, prompt: portraitPrompt(d) })),
 
   // E. 분석 허브 타일 11
   hub: [

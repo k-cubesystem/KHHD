@@ -212,9 +212,10 @@ export default async function MyPage() {
     }
   }
 
-  // 소셜 아바타(도깨비 폐지 — 도깨비 URL은 무시)
+  // 아바타: 직접 선택(오행 정령) > 자동(主神 > 엠블럼 > 소셜 > 모노그램). 레거시 도깨비 URL은 무시.
   const rawAvatar = profile?.avatar_url || user.user_metadata?.avatar_url || null
-  const socialAvatar = rawAvatar && !rawAvatar.startsWith('/avatars/dokkaebi-') ? rawAvatar : null
+  const chosenAvatar = rawAvatar?.startsWith('/avatars/five/') ? rawAvatar : null
+  const socialAvatar = rawAvatar && !rawAvatar.startsWith('/avatars/dokkaebi-') && !chosenAvatar ? rawAvatar : null
 
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto bg-background text-ink-light font-sans selection:bg-primary/30 pb-24 overflow-x-hidden relative">
@@ -239,10 +240,18 @@ export default async function MyPage() {
         </div>
 
         <div className="flex items-center gap-4 bg-surface/30 border border-primary/20 rounded-2xl p-4 dancheong-border-top">
-          {/* 아바타: 좌정 主神 초상 > 오행 엠블럼 > 소셜 이미지 > 모노그램 */}
+          {/* 아바타: 직접 선택 > 좌정 主神 초상 > 오행 엠블럼 > 소셜 이미지 > 모노그램 */}
           <Link href="/protected/settings" className="relative group cursor-pointer flex-shrink-0">
             <div className="w-[68px] h-[68px] rounded-full border border-primary/25 overflow-hidden bg-surface flex items-center justify-center shadow-md group-hover:border-primary/50 transition-all group-hover:scale-105">
-              {seatedDeity?.portraitUrl ? (
+              {chosenAvatar ? (
+                <Image
+                  src={chosenAvatar}
+                  alt={displayName}
+                  width={68}
+                  height={68}
+                  className="w-full h-full object-cover object-top"
+                />
+              ) : seatedDeity?.portraitUrl ? (
                 <Image
                   src={seatedDeity.portraitUrl}
                   alt={seatedDeity.name}

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus, Plus, X, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { ZodiacTimeSelect } from '@/components/zodiac-time-select'
-import { DokkaebiAvatarSelector } from '@/components/family/dokkaebi-avatar-selector'
+import { FiveAvatarSelector } from '@/components/family/five-avatar-selector'
 import { GuestCTACard } from '@/components/guest-cta-card'
 import { GA } from '@/lib/analytics/ga4'
 
@@ -315,10 +315,10 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
 
                 <div className="space-y-3 pt-2 border-t border-white/5">
                   <Label className="text-xs text-gold-500/80 flex items-center justify-between">
-                    <span>수호 도깨비 (오행)</span>
+                    <span>수호 정령 (오행)</span>
                     <span className="text-[10px] text-ink-light/40 font-normal">성향에 맞는 기운을 선택하세요</span>
                   </Label>
-                  <DokkaebiAvatarSelector selectedId={selectedAvatarId} onSelect={setSelectedAvatarId} />
+                  <FiveAvatarSelector selectedId={selectedAvatarId} onSelect={setSelectedAvatarId} />
                 </div>
               </CardContent>
 
