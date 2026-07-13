@@ -39,10 +39,15 @@ function PaymentProcessor() {
 
     const processAll = async () => {
       try {
-        // 1. 결제 승인 (금액은 서버에서 검증)
-        await confirmPayment(paymentKey, orderId, credits)
+        // 1. 결제 승인 (금액·보너스·첫구매2배는 서버에서 검증·계산)
+        const confirmRes = await confirmPayment(paymentKey, orderId, credits)
+        const credited = confirmRes && typeof confirmRes.creditedTotal === 'number' ? confirmRes.creditedTotal : credits
         GA.bokchaeCharge(credits * 10000)
-        toast.success(`결제 완료! 복채 ${credits}만냥이 지급되었습니다.`)
+        toast.success(
+          confirmRes?.isFirstPurchase
+            ? `첫 충전 2배! 복채 ${credited}만냥이 지급되었습니다.`
+            : `결제 완료! 복채 ${credited}만냥이 지급되었습니다.`
+        )
 
         // 3. 분석 시작
         const formData = new FormData()

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
-import { Check, Coins, Loader2, Zap, Sparkles } from 'lucide-react'
+import { Check, Coins, Loader2, Zap, Sparkles, Gift } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { addTestCredits } from '@/app/actions/payment/products'
@@ -13,11 +13,14 @@ interface TalismanPurchaseSectionProps {
   initialPlans: PricePlan[]
   userRole: UserRole | string
   memberId: string
+  /** 이 사용자가 이미 복채를 충전한 적 있는지 — false면 첫 충전 2배 노출 */
+  hasCharged?: boolean
 }
 
 interface DisplayPlan {
   credits: number
   price: number
+  bonus_credits?: number
   name: string
   description: string | null
   badge_text?: string | null
@@ -25,46 +28,52 @@ interface DisplayPlan {
   sort_order?: number
 }
 
-// 복채 충전 상품 기본값 (DB 연동 실패 시 fallback)
-const DEFAULT_BOKCHAE_PLANS = [
+// 복채 충전 상품 기본값 (DB 연동 실패 시 fallback — price_plans 시드와 동일)
+const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
   {
     credits: 5,
     price: 50000,
+    bonus_credits: 0,
     name: '소복 씨앗',
-    description: '가볍게 시작하는 입문 복채 패키지',
+    description: '가볍게 시작하는 입문 복채',
     badge_text: null,
-    features: ['복채 5만냥', '테마운세 5회', '관상/손금/풍수 2회', '영구 지급'],
+    features: ['복채 5만냥', '테마운세 5회', '관상·손금·풍수 2회', '영구 지급'],
   },
   {
     credits: 10,
-    price: 99000,
+    price: 100000,
+    bonus_credits: 1,
     name: '행운 꾸러미',
-    description: '가장 많이 선택하는 실속 복채 패키지',
+    description: '가장 많이 선택하는 실속 복채',
     badge_text: '가장 인기',
-    features: ['복채 10만냥', '테마운세 10회', '관상/손금/풍수 5회', '천지인사주 2회', '영구 지급'],
+    features: ['복채 10만냥 + 보너스 1만냥', '천지인사주 2회', '관상·손금·풍수 5회', '영구 지급'],
+  },
+  {
+    credits: 20,
+    price: 200000,
+    bonus_credits: 3,
+    name: '대복 상자',
+    description: '든든하게 채우는 고급 복채',
+    badge_text: null,
+    features: ['복채 20만냥 + 보너스 3만냥', '천지인사주 4회', '모든 서비스 자유 이용', '영구 지급'],
   },
   {
     credits: 30,
-    price: 290000,
+    price: 300000,
+    bonus_credits: 6,
     name: '대복 창고',
-    description: '넉넉하게 채우는 고급 복채 패키지',
-    badge_text: '최대 할인',
-    features: ['복채 30만냥', '모든 서비스 자유 이용', '천지인사주 6회', '고민상담 300문', '영구 지급'],
+    description: '넉넉하게 채우는 최고 혜택 복채',
+    badge_text: '최대 혜택',
+    features: ['복채 30만냥 + 보너스 6만냥', '천지인사주 7회', '모든 서비스 자유 이용', '영구 지급'],
   },
 ]
 
-// 복채 단가 계산 (만냥 기준)
-function getUnitPrice(credits: number, price: number) {
-  return Math.round(price / credits / 1000) / 10 // 만냥/복채
-}
-
-// 할인율 계산
-function getDiscountRate(credits: number, price: number) {
-  const basePrice = credits * 10000 // 정가 (1복채=1만냥)
-  return Math.round((1 - price / basePrice) * 100)
-}
-
-export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: TalismanPurchaseSectionProps) {
+export function TalismanPurchaseSection({
+  initialPlans,
+  userRole,
+  memberId,
+  hasCharged = true,
+}: TalismanPurchaseSectionProps) {
   const [loadingPlan, setLoadingPlan] = useState<number | null>(null)
   const [isTestLoading, setIsTestLoading] = useState(false)
 
@@ -127,6 +136,25 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
         <p className="text-xs text-white/60">1 복채 = 1만냥 · 충전한 복채는 영구 지급됩니다</p>
       </div>
 
+      {/* 첫 충전 2배 배너 */}
+      {!hasCharged && (
+        <div className="relative overflow-hidden rounded-xl border border-gold-500/50 bg-gradient-to-r from-gold-500/15 via-gold-500/8 to-transparent p-4">
+          <div className="absolute -top-8 -right-6 w-24 h-24 bg-gold-500/10 rounded-full blur-2xl" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-gold-500/20 flex items-center justify-center shrink-0">
+              <Gift className="w-5 h-5 text-gold-400" />
+            </div>
+            <div>
+              <p className="text-sm font-serif font-bold text-gold-300">첫 충전 한정 · 복채 2배 지급</p>
+              <p className="text-[11px] text-white/60 mt-0.5">
+                지금 처음 충전하시면 보너스 포함 복채가 <span className="text-gold-300 font-bold">2배</span>로
+                지급됩니다
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 서비스 이용 안내 */}
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
@@ -145,7 +173,9 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
       {/* 충전 상품 카드 */}
       <div className="space-y-3">
         {sortedPlans.map((plan: any) => {
-          const discount = getDiscountRate(plan.credits, plan.price)
+          const bonus = plan.bonus_credits ?? 0
+          const total = plan.credits + bonus // 기본 + 팩 보너스
+          const firstTotal = total * 2 // 첫 충전 2배
           const isPopular = plan.badge_text === '가장 인기'
           const isLoading = loadingPlan === plan.credits
 
@@ -179,19 +209,14 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
                     <p className="text-[11px] text-white/60 mt-0.5">{plan.description}</p>
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
-                    {discount > 0 && (
-                      <div className="text-[9px] text-red-400 line-through text-right mb-0.5">
-                        {(plan.credits * 10000).toLocaleString()}원
-                      </div>
-                    )}
                     <div className="flex items-baseline gap-1 justify-end">
                       <span className={cn('text-xl font-serif font-bold', isPopular ? 'text-gold-400' : 'text-white')}>
                         {plan.price.toLocaleString()}
                       </span>
                       <span className="text-xs text-white/60">원</span>
                     </div>
-                    {discount > 0 && (
-                      <div className="text-[9px] text-green-400 font-bold text-right">{discount}% 할인</div>
+                    {bonus > 0 && (
+                      <div className="text-[9px] text-green-400 font-bold text-right mt-0.5">보너스 +{bonus}만냥</div>
                     )}
                   </div>
                 </div>
@@ -203,17 +228,26 @@ export function TalismanPurchaseSection({ initialPlans, userRole, memberId }: Ta
                     isPopular ? 'bg-gold-500/10 border border-gold-500/20' : 'bg-white/5'
                   )}
                 >
-                  <Coins className={cn('w-4 h-4', isPopular ? 'text-gold-400' : 'text-white/60')} />
-                  <span className={cn('text-sm font-bold', isPopular ? 'text-gold-300' : 'text-white/80')}>
-                    복채 {plan.credits}만냥 지급
-                  </span>
-                  <span className="ml-auto text-[9px] text-white/40">
-                    단가{' '}
-                    {(plan.price / plan.credits / 1000) % 1 === 0
-                      ? plan.price / plan.credits / 1000
-                      : (plan.price / plan.credits / 1000).toFixed(1)}
-                    천원/복채
-                  </span>
+                  <Coins className={cn('w-4 h-4 shrink-0', isPopular ? 'text-gold-400' : 'text-white/60')} />
+                  {!hasCharged ? (
+                    <span className="text-sm font-bold flex items-baseline gap-1.5 flex-wrap">
+                      <span className="text-white/40 line-through text-xs">{total}만냥</span>
+                      <span className={cn(isPopular ? 'text-gold-300' : 'text-gold-400')}>복채 {firstTotal}만냥</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gold-500/20 text-gold-300">
+                        첫충전 2배
+                      </span>
+                    </span>
+                  ) : (
+                    <span className={cn('text-sm font-bold', isPopular ? 'text-gold-300' : 'text-white/80')}>
+                      복채 {total}만냥 지급
+                      {bonus > 0 && (
+                        <span className="text-gold-400/80 font-normal">
+                          {' '}
+                          (기본 {plan.credits} + 보너스 {bonus})
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 {/* 혜택 목록 */}

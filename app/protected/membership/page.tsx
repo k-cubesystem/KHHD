@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getMembershipPlans, getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { getActivePlans, getCurrentUserRole } from '@/app/actions/payment/products'
+import { hasChargedBefore } from '@/app/actions/payment/payment'
 import { MembershipTabs } from '@/components/membership/membership-tabs'
 import { TalismanPurchaseSection } from '@/components/membership/talisman-purchase-section'
 import { Crown, Check, ArrowLeft, Sparkles } from 'lucide-react'
@@ -33,10 +34,11 @@ export default async function MembershipPage() {
     }
   }
 
-  const [plans, talismanPlans, userRoleData] = await Promise.all([
+  const [plans, talismanPlans, userRoleData, alreadyCharged] = await Promise.all([
     getMembershipPlans(),
     getActivePlans(),
     getCurrentUserRole(),
+    user ? hasChargedBefore() : Promise.resolve(true),
   ])
 
   const userRole = userRoleData.role
@@ -90,7 +92,12 @@ export default async function MembershipPage() {
 
         {/* Talisman Top-up Section */}
         <div className="mb-12">
-          <TalismanPurchaseSection initialPlans={talismanPlans} userRole={userRole} memberId={user?.id || ''} />
+          <TalismanPurchaseSection
+            initialPlans={talismanPlans}
+            userRole={userRole}
+            memberId={user?.id || ''}
+            hasCharged={alreadyCharged}
+          />
         </div>
 
         {/* Common Benefits */}
