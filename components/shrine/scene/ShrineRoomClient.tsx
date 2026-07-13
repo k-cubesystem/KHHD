@@ -89,6 +89,13 @@ export function ShrineRoomClient({ scene }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 좌정 主神 시그니처 aura 상시 방출 (§3.3) — 신위 몸 주변에서 은은하게
+  useEffect(() => {
+    const d = scene.mainDeity
+    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, 50, 42, !!d)
+    return () => effectsRef.current?.setAura(null, null, 0, 0, false)
+  }, [scene.mainDeity])
+
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
 

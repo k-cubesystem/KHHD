@@ -16,11 +16,37 @@ export interface EffectsHandle {
   emit: (kind: EffectKind, xPct: number, yPct: number) => void
   /** 지속 불꽃 등록/해제 (촛불 lit 상태) */
   setFlame: (id: string, xPct: number, yPct: number, on: boolean) => void
+  /** 좌정 主神 시그니처 aura 상시 방출 (§3.3). particle 키 → 모션 아키타입. */
+  setAura: (particle: string | null, accent: string | null, xPct: number, yPct: number, on: boolean) => void
+}
+
+/** 신위 파티클 키(17종) → 상시 aura 모션 아키타입. 미매핑은 'rise' 폴백. */
+type AuraMotion = 'rise' | 'fall' | 'float' | 'glint'
+const AURA_MOTION: Record<string, AuraMotion> = {
+  ember: 'rise',
+  dokkaebi_fire: 'rise',
+  slash_light: 'glint',
+  dragon_aura: 'rise',
+  talisman_shield: 'glint',
+  star_trail: 'glint',
+  coin_glint: 'glint',
+  scale_glint: 'glint',
+  firefly: 'float',
+  pearl_bubble: 'float',
+  mist: 'float',
+  seed_bloom: 'fall',
+  leaf: 'fall',
+  heal_drop: 'fall',
+  paper_crane: 'fall',
+  coin_rain: 'fall',
+  gold_rain: 'fall',
 }
 
 interface Particle {
   active: boolean
-  kind: EffectKind
+  kind: EffectKind | 'aura'
+  /** aura 파티클의 반짝임 여부 (glint 모션) */
+  twinkle: boolean
   x: number
   y: number
   vx: number
@@ -48,15 +74,18 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
   const poolRef = useRef<Particle[]>([])
   const rafRef = useRef<number | null>(null)
   const flamesRef = useRef<Map<string, { x: number; y: number }>>(new Map())
+  const auraRef = useRef<{ motion: AuraMotion; accent: string; x: number; y: number } | null>(null)
   const reducedRef = useRef(false)
   const flameTickRef = useRef(0)
+  const auraTickRef = useRef(0)
 
   useEffect(() => {
     reducedRef.current =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
     poolRef.current = Array.from({ length: POOL_SIZE }, () => ({
       active: false,
-      kind: 'flame' as EffectKind,
+      kind: 'flame' as EffectKind | 'aura',
+      twinkle: false,
       x: 0,
       y: 0,
       vx: 0,
@@ -117,8 +146,61 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
         p.size = 1.5 + Math.random() * 1.5
         p.drift = 0
       }
+      p.twinkle = false
       p.life = p.maxLife
     }
+    ensureLoop()
+  }
+
+  /** 좌정 主神 aura 파티클 1개 방출 — 모션 아키타입별 물리, 신위 accent 색. */
+  const spawnAura = (motion: AuraMotion, accent: string, px: number, py: number) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const p = poolRef.current.find((q) => !q.active)
+    if (!p) return
+    const w = rect.width
+    const x = (px / 100) * w + (Math.random() - 0.5) * w * 0.28
+    const y = (py / 100) * rect.height
+    p.active = true
+    p.kind = 'aura'
+    p.color = accent
+    p.twinkle = motion === 'glint'
+    if (motion === 'rise') {
+      p.x = x
+      p.y = y + 8
+      p.vx = (Math.random() - 0.5) * 0.15
+      p.vy = -0.35 - Math.random() * 0.3
+      p.maxLife = 90
+      p.size = 1.6 + Math.random() * 1.6
+      p.drift = (Math.random() - 0.5) * 0.015
+    } else if (motion === 'fall') {
+      p.x = x
+      p.y = y - rect.height * 0.28
+      p.vx = (Math.random() - 0.5) * 0.25
+      p.vy = 0.28 + Math.random() * 0.28
+      p.maxLife = 130
+      p.size = 2 + Math.random() * 1.8
+      p.drift = (Math.random() - 0.5) * 0.04
+    } else if (motion === 'float') {
+      p.x = x
+      p.y = y - Math.random() * rect.height * 0.2
+      p.vx = (Math.random() - 0.5) * 0.3
+      p.vy = (Math.random() - 0.5) * 0.18
+      p.maxLife = 150
+      p.size = 1.8 + Math.random() * 1.8
+      p.drift = (Math.random() - 0.5) * 0.02
+    } else {
+      // glint — 제자리 반짝임
+      p.x = x
+      p.y = y - Math.random() * rect.height * 0.24
+      p.vx = 0
+      p.vy = -0.05
+      p.maxLife = 52
+      p.size = 1.4 + Math.random() * 1.6
+      p.drift = 0
+    }
+    p.life = p.maxLife
     ensureLoop()
   }
 
@@ -145,6 +227,12 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
         if (flameTickRef.current === 0) {
           flamesRef.current.forEach(({ x, y }) => spawn('flame', x, y))
         }
+        // 좌정 主神 시그니처 aura 방출 (저빈도 — 은은한 상시 연출)
+        const aura = auraRef.current
+        if (aura) {
+          auraTickRef.current = (auraTickRef.current + 1) % 14
+          if (auraTickRef.current === 0) spawnAura(aura.motion, aura.accent, aura.x, aura.y)
+        }
       }
 
       let alive = 0
@@ -160,7 +248,9 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
         p.x += p.vx
         p.y += p.vy
         const t = p.life / p.maxLife
-        ctx.globalAlpha = p.kind === 'smoke' ? t * 0.4 : t
+        // aura glint는 삼각파로 반짝, 그 외는 수명 비례 페이드
+        const twk = p.twinkle ? Math.sin((1 - t) * Math.PI) : t
+        ctx.globalAlpha = p.kind === 'smoke' ? t * 0.4 : p.kind === 'aura' ? twk * 0.7 : t
         ctx.fillStyle = p.color
         ctx.beginPath()
         const size = p.kind === 'smoke' ? p.size * (2 - t) : p.size
@@ -169,7 +259,7 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
       }
       ctx.globalAlpha = 1
 
-      if (alive > 0 || flamesRef.current.size > 0) {
+      if (alive > 0 || flamesRef.current.size > 0 || auraRef.current) {
         rafRef.current = requestAnimationFrame(step)
       } else {
         rafRef.current = null
@@ -184,6 +274,14 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
       if (on) flamesRef.current.set(id, { x, y })
       else flamesRef.current.delete(id)
       if (on) ensureLoop()
+    },
+    setAura: (particle, accent, x, y, on) => {
+      if (on && particle && accent && !reducedRef.current) {
+        auraRef.current = { motion: AURA_MOTION[particle] ?? 'rise', accent, x, y }
+        ensureLoop()
+      } else {
+        auraRef.current = null
+      }
     },
   }))
 

@@ -273,10 +273,14 @@ async function loadMainDeity(
   if (!mainDeityId) return null
   const { data } = await supabase
     .from('shrine_deities')
-    .select('code, name, sprite_url, portrait_url')
+    .select('code, name, sprite_url, portrait_url, aura')
     .eq('id', mainDeityId)
     .maybeSingle()
   if (!data) return null
+
+  const aura = typeof data.aura === 'object' && data.aura !== null ? (data.aura as Record<string, unknown>) : {}
+  const particle = typeof aura.particle === 'string' ? aura.particle : null
+  const accent = typeof aura.accent === 'string' ? aura.accent : null
 
   let bondPoints: number | null = null
   if (includeBond) {
@@ -294,6 +298,8 @@ async function loadMainDeity(
     name: data.name,
     spriteUrl: data.sprite_url,
     portraitUrl: data.portrait_url,
+    particle,
+    accent,
     bondPoints,
   }
 }

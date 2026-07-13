@@ -89,6 +89,10 @@ export interface MainDeity {
   spriteUrl: string | null
   /** 초상(제단·신당지기 오브용). 없으면 🔮 폴백 */
   portraitUrl: string | null
+  /** 시그니처 이펙트 키 (§3.3, 예: seed_bloom). 방에 상시 방출. */
+  particle: string | null
+  /** 신위 액센트 색 (파티클·글로우 색상) */
+  accent: string | null
   /** 소유자의 누적 인연(緣) 포인트. null = 방문자 뷰(비공개 — RLS로 조회 불가, 오표시 방지) */
   bondPoints: number | null
 }
