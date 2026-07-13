@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, X } from 'lucide-react'
 import type { Deity, DeityCatalog } from '@/app/actions/shrine/deities'
 import { autoSeatGuardian, seatDeity, purchaseDeity } from '@/app/actions/shrine/deities'
 import { BOND_LEVEL_NAMES, BOND_THRESHOLDS, type BondProgress } from '@/lib/domain/shrine/deities'
+import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 
 const ELEMENT_GLYPH: Record<string, string> = {
   wood: '🌿',
@@ -71,15 +72,25 @@ interface Props {
   bonds: Array<{ deityId: string; progress: BondProgress }>
 }
 
+/** 연출 모드 — 강신(降神)=실제 좌정 시점, 봉안(奉安)=구매 완료(좌정 CTA 제공) */
+type RevealState = { deity: Deity; mode: 'gangshin' | 'bongan' } | null
+
 export function DeityPantheon({ catalog, bonds }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
-  const [reveal, setReveal] = useState<Deity | null>(null)
+  const [reveal, setReveal] = useState<RevealState>(null)
   const [err, setErr] = useState<string | null>(null)
+  const { play } = useShrineAudio()
 
   const bondMap = new Map(bonds.map((b) => [b.deityId, b.progress]))
   const seated = catalog.deities.find((d) => d.id === catalog.seatedDeityId) ?? null
   const ownedCodes = new Set(catalog.ownedCodes)
+
+  // 강신 의식 사운드 — 방울(bell) 점화 후 신위 강림 타이밍에 바라(bara)
+  const playGangshinSound = useCallback(() => {
+    play('bell')
+    window.setTimeout(() => play('bara'), 800)
+  }, [play])
 
   function onAutoSeat() {
     setErr(null)
@@ -90,17 +101,25 @@ export function DeityPantheon({ catalog, bonds }: Props) {
         return
       }
       const d = catalog.deities.find((x) => x.code === r.deityCode)
-      if (d) setReveal(d)
+      if (d) {
+        setReveal({ deity: d, mode: 'gangshin' })
+        playGangshinSound()
+      }
       router.refresh()
     })
   }
 
-  function onSeat(id: string) {
+  function onSeat(deity: Deity) {
     setErr(null)
     start(async () => {
-      const r = await seatDeity(id)
-      if (r.success) router.refresh()
-      else setErr('좌정 변경에 실패했습니다.')
+      const r = await seatDeity(deity.id)
+      if (r.success) {
+        setReveal({ deity, mode: 'gangshin' })
+        playGangshinSound()
+        router.refresh()
+      } else {
+        setErr('좌정 변경에 실패했습니다.')
+      }
     })
   }
 
@@ -109,7 +128,8 @@ export function DeityPantheon({ catalog, bonds }: Props) {
     start(async () => {
       const r = await purchaseDeity(deity.code)
       if (r.success) {
-        setReveal(deity)
+        setReveal({ deity, mode: 'bongan' })
+        play('chime')
         router.refresh()
       } else {
         setErr(r.error === 'INSUFFICIENT_BOKCHAE' ? '복채가 부족합니다.' : '봉안에 실패했습니다.')
@@ -214,7 +234,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
                       <span className="mt-1.5 text-[10px] text-seal font-serif">主神 좌정중</span>
                     ) : owned ? (
                       <button
-                        onClick={() => onSeat(d.id)}
+                        onClick={() => onSeat(d)}
                         disabled={pending}
                         className="mt-1.5 text-[11px] px-2.5 py-1 rounded-full bg-gold-500/15 text-gold-300 disabled:opacity-50"
                       >
@@ -239,20 +259,32 @@ export function DeityPantheon({ catalog, bonds }: Props) {
         )
       })}
 
-      {/* 좌정 연출 — 강신(降神) 의식 */}
+      {/* 연출 오버레이 — 강신(降神, 좌정) / 봉안(奉安, 구매) */}
       {reveal ? (
         <div
           className="gangshin-overlay fixed inset-0 z-50 flex flex-col items-center justify-center px-6 cursor-pointer overflow-hidden"
           style={{ background: 'radial-gradient(circle at 50% 44%, #1a140a, #000 70%)' }}
           onClick={() => setReveal(null)}
         >
-          {/* 강신 아우라 링 (확산 파티클) */}
+          {/* 스킵 — 시퀀스 시작부터 즉시 노출 */}
+          <button
+            aria-label="연출 건너뛰기"
+            onClick={(e) => {
+              e.stopPropagation()
+              setReveal(null)
+            }}
+            className="absolute top-5 right-5 z-10 flex items-center gap-1 px-3 py-1.5 rounded-full border border-ink-light/15 text-[11px] text-ink-light/50 hover:text-ink-light/80 transition"
+          >
+            건너뛰기 <X className="w-3.5 h-3.5" />
+          </button>
+
+          {/* 아우라 링 (확산 파티클) */}
           {[0, 1, 2].map((i) => (
             <span
               key={i}
               className="gangshin-ring absolute rounded-full"
               style={{
-                borderColor: reveal.aura.accent ?? '#c9a84c',
+                borderColor: reveal.deity.aura.accent ?? '#c9a84c',
                 animationDelay: `${0.4 + i * 0.55}s`,
               }}
             />
@@ -260,23 +292,44 @@ export function DeityPantheon({ catalog, bonds }: Props) {
           {/* 강림 발광 */}
           <div
             className="gangshin-glow absolute rounded-full"
-            style={{ background: reveal.aura.accent ?? '#c9a84c' }}
+            style={{ background: reveal.deity.aura.accent ?? '#c9a84c' }}
           />
 
           <div className="gangshin-deity relative deity-breathe">
-            <DeityMedallion deity={reveal} size={188} />
+            <DeityMedallion deity={reveal.deity} size={188} />
           </div>
-          <p className="gangshin-t1 mt-6 text-[11px] tracking-[0.55em] text-gold-500/70 font-serif">降 神</p>
+          <p className="gangshin-t1 mt-6 text-[11px] tracking-[0.55em] text-gold-500/70 font-serif">
+            {reveal.mode === 'gangshin' ? '降 神' : '奉 安'}
+          </p>
           <h2 className="gangshin-t2 mt-1 text-2xl font-serif font-bold text-ink-light">
-            {reveal.name}
-            {reveal.nameHanja ? <span className="text-ink-light/40 text-base ml-1">{reveal.nameHanja}</span> : null}
+            {reveal.deity.name}
+            {reveal.deity.nameHanja ? (
+              <span className="text-ink-light/40 text-base ml-1">{reveal.deity.nameHanja}</span>
+            ) : null}
           </h2>
           <p className="gangshin-t3 text-sm text-ink-light/60 mt-1 font-serif">
-            「{reveal.domains.join(' · ')}」의 신위가 좌정하였습니다
+            {reveal.mode === 'gangshin'
+              ? `「${reveal.deity.domains.join(' · ')}」의 신위가 좌정하였습니다`
+              : `「${reveal.deity.domains.join(' · ')}」의 신위를 봉안하였습니다`}
           </p>
-          <p className="gangshin-t4 mt-4 text-[13px] text-gold-200/85 font-serif italic max-w-xs text-center leading-relaxed">
-            “{reveal.domains[0]}, 이제 내가 그대와 함께하리라.”
-          </p>
+          {reveal.mode === 'gangshin' ? (
+            <p className="gangshin-t4 mt-4 text-[13px] text-gold-200/85 font-serif italic max-w-xs text-center leading-relaxed">
+              “{reveal.deity.domains[0]}, 이제 내가 그대와 함께하리라.”
+            </p>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                const d = reveal.deity
+                setReveal(null)
+                onSeat(d)
+              }}
+              disabled={pending}
+              className="gangshin-t4 mt-5 px-6 py-2.5 rounded-full bg-seal text-white font-serif text-sm shadow-lg shadow-seal/20 disabled:opacity-60 transition active:scale-95"
+            >
+              지금 主神으로 좌정하기
+            </button>
+          )}
           <button className="gangshin-t4 mt-6 text-xs text-ink-light/45 underline underline-offset-4">닫기</button>
         </div>
       ) : null}

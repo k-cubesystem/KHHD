@@ -248,6 +248,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   // 좌정 主神 표정 아바타 (신당 3.0). 서버 시딩(initialDeity)으로 첫 로드부터 신위 표시,
   // 이후 응답에서 받은 마지막 값 유지 — deityCode는 한번 정해지면 유지.
   const [deityCode, setDeityCode] = useState<string | null>(initialDeity?.code ?? null)
+  // 인연(緣) 레벨업 순간의 아바타 발광 연출
+  const [bondFx, setBondFx] = useState(false)
   const [deityEmotion, setDeityEmotion] = useState<string>('neutral')
 
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
@@ -445,6 +447,21 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         if (result.deityCode) setDeityCode(result.deityCode)
         if (result.emotion) setDeityEmotion(result.emotion)
 
+        // 인연(緣) 레벨업 — 아바타 발광 + 골드 토스트
+        if (result.bondLeveledUp) {
+          setBondFx(true)
+          window.setTimeout(() => setBondFx(false), 3200)
+          toast.success(`緣이 깊어졌습니다 — 「${result.bondLevelName ?? ''}」`, {
+            description: `${initialDeity?.name ?? '主神'}과의 인연이 새로운 단계에 이르렀습니다`,
+            duration: 6000,
+            style: {
+              background: 'linear-gradient(135deg, #1A1200 0%, #0D0900 100%)',
+              border: '1px solid rgba(212,175,55,0.4)',
+              color: '#F4E4BA',
+            },
+          })
+        }
+
         // DB 저장 (비동기, 실패해도 UI에 영향 없음)
         if (sessionId) {
           saveChatMessages(sessionId, userMsg, aiMsg, messages.length === 0).catch((e) =>
@@ -517,7 +534,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
               <div
                 className={cn(
                   'relative rounded-full bg-gradient-to-br from-[#2a2010] to-surface border border-primary/20 flex items-center justify-center overflow-hidden shadow-[0_0_20px_rgba(244,228,186,0.08)] transition-all duration-300',
-                  deityCode ? 'w-16 h-16' : 'w-11 h-11'
+                  deityCode ? 'w-16 h-16' : 'w-11 h-11',
+                  bondFx && 'ring-2 ring-gold-500/70 shadow-[0_0_26px_rgba(212,175,55,0.55)] scale-105'
                 )}
               >
                 {deityCode ? (

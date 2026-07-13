@@ -17,6 +17,7 @@ import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
+import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
 
 // --- Constants ---
 
@@ -82,13 +83,33 @@ async function buildShrineContext(): Promise<{
         .maybeSingle()
       if (data) {
         mainDeityId = data.id
+
+        // 인연(緣) 해금 — 단계에 따라 표정 폭·호칭·심층 주제가 열린다 (bondUnlocks)
+        const bond = bondProgress(scene.mainDeity.bondPoints ?? 0)
+        const allowedEmotions =
+          bond.unlocks.emotions >= 7
+            ? DEITY_EMOTIONS
+            : (['neutral', 'smile'] as const satisfies readonly DeityEmotion[])
+        const bondLines = [
+          `이 내담자와의 인연(緣): ${BOND_LEVEL_NAMES[bond.level]} 단계.`,
+          bond.unlocks.nickname
+            ? '오래 알고 지낸 사이처럼 당신의 말투에 맞는 다정한 호칭으로 내담자를 부르십시오.'
+            : '아직 서로를 알아가는 사이 — 호칭은 정중하게 유지하십시오.',
+          bond.unlocks.deepTopics
+            ? '인연이 깊으니 타고난 근원 기질·평생의 큰 흐름 같은 심층 주제도 먼저 꺼낼 수 있습니다.'
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+
         deityPersona =
           `당신은 이 신당에 좌정한 수호신 "${data.name}"입니다. ` +
           `${data.personality ? data.personality + ' ' : ''}` +
           `말투: ${data.tone || '따뜻하고 신비로우며 정중한 존댓말'}. ` +
+          `${bondLines}\n` +
           `신위로서 첫인칭으로 답하되, 아래 사주·신당 기운을 근거로 조언하십시오.\n` +
           `응답 맨 앞에 당신의 표정을 [[감정]] 형식으로 한 번만 붙이십시오. ` +
-          `감정은 ${DEITY_EMOTIONS.join('/')} 중 내용에 맞는 하나. 예: "[[smile]] 어서 오시게…"`
+          `감정은 ${allowedEmotions.join('/')} 중 내용에 맞는 하나. 예: "[[smile]] 어서 오시게…"`
       }
     }
 
@@ -180,6 +201,10 @@ export interface ShamanChatResponse {
   deityCode?: string
   /** 신위 표정 (neutral/smile/stern/sad/surprised/bless/angry) */
   emotion?: string
+  /** 이번 대화로 인연(緣) 단계가 올랐는지 — true면 클라 레벨업 연출 */
+  bondLeveledUp?: boolean
+  /** 현재 인연 단계명 (레벨업 연출용) */
+  bondLevelName?: string
 }
 
 export interface ShamanQuestionStatus {
@@ -533,17 +558,21 @@ export async function sendShamanChatMessage(
       '신탁이 흐릿하게 전해졌습니다. 조금 다르게 다시 여쭤봐 주시겠어요?'
 
     // 신당 3.0: 좌정 主神과의 대화면 인연(緣) 적립 — 응답 후 백그라운드(freeze 방지)
+    // 인연(緣) 적립 — 레벨업 여부를 응답에 실어야 하므로 동기 수행(원자 RPC ~수십ms, 응답 대비 미미)
+    let bondLeveledUp = false
+    let bondLevelName: string | undefined
     if (bondDeityId) {
-      const deityId = bondDeityId
-      const bondUserId = user.id
-      scheduleBackground(async () => {
-        try {
-          const r = await awardDeityBondForUser(bondUserId, deityId, CHAT_BOND_POINTS)
-          if (!r.success) logger.warn('[sendShamanChatMessage] bond award skipped:', r.error)
-        } catch (e) {
-          logger.warn('[sendShamanChatMessage] bond award error:', e)
+      try {
+        const r = await awardDeityBondForUser(user.id, bondDeityId, CHAT_BOND_POINTS)
+        if (!r.success) {
+          logger.warn('[sendShamanChatMessage] bond award skipped:', r.error)
+        } else if (r.leveledUp && typeof r.level === 'number') {
+          bondLeveledUp = true
+          bondLevelName = BOND_LEVEL_NAMES[r.level as BondLevel]
         }
-      })
+      } catch (e) {
+        logger.warn('[sendShamanChatMessage] bond award error:', e)
+      }
     }
 
     // 6. 추천 질문 생성 (과거 분석 기록 기반)
@@ -559,6 +588,8 @@ export async function sendShamanChatMessage(
       suggestedQuestions: suggestions.slice(0, 4),
       deityCode: deityCode ?? undefined,
       emotion: emotion ?? undefined,
+      bondLeveledUp: bondLeveledUp || undefined,
+      bondLevelName,
     }
   } catch (e: unknown) {
     logger.error('[sendShamanChatMessage] Error:', e)
