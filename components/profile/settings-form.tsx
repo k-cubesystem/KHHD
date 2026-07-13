@@ -11,9 +11,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { saveProfile, saveSelfFamilyMember } from '@/app/actions/user/profile'
-import { AvatarSelector } from './avatar-selector'
 import { KakaoAddressSearch } from './kakao-address-search'
-import type { DokkaebiAvatarId } from '@/lib/constants/dokkaebi-avatars'
 
 interface SettingsUser {
   id: string
@@ -43,14 +41,24 @@ interface SettingsFamilyMember {
   calendar_type: string | null
 }
 
-export function SettingsForm({ user, profile, familyMember }: { user: SettingsUser; profile: SettingsProfile | null; familyMember?: SettingsFamilyMember | null }) {
+export function SettingsForm({
+  user,
+  profile,
+  familyMember,
+}: {
+  user: SettingsUser
+  profile: SettingsProfile | null
+  familyMember?: SettingsFamilyMember | null
+}) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   // 기본 정보 (family_members 우선, 없으면 profile)
   const [name, setName] = useState(familyMember?.name || profile?.full_name || '')
   const [gender, setGender] = useState(familyMember?.gender || profile?.gender || 'male')
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '')
+  // 도깨비 아바타 폐지 — 소셜 로그인 이미지가 있으면 그대로 사용(변경 UI 없음)
+  const avatarUrl =
+    profile?.avatar_url && !profile.avatar_url.startsWith('/avatars/dokkaebi-') ? profile.avatar_url : ''
 
   // 천(天) - 사주 정보 (family_members 우선)
   const [birthDate, setBirthDate] = useState(familyMember?.birth_date || profile?.birth_date || '')
@@ -65,10 +73,6 @@ export function SettingsForm({ user, profile, familyMember }: { user: SettingsUs
 
   // 소셜 아바타 URL (변경 불가, 표시용)
   const socialAvatarUrl = user?.user_metadata?.avatar_url || null
-
-  const handleAvatarSelect = (avatarId: DokkaebiAvatarId) => {
-    setAvatarUrl(`/avatars/${avatarId}.svg`)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -166,11 +170,6 @@ export function SettingsForm({ user, profile, familyMember }: { user: SettingsUs
                 </Label>
               </div>
             </RadioGroup>
-          </div>
-
-          {/* 아바타 선택 */}
-          <div className="pt-2">
-            <AvatarSelector currentAvatar={avatarUrl} onSelect={handleAvatarSelect} socialAvatarUrl={socialAvatarUrl} />
           </div>
         </CardContent>
       </Card>
