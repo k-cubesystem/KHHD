@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { CalendarCheck, Gift, Sparkles, Check, Flame, Crown, ChevronLeft, ChevronRight, Coins } from 'lucide-react'
 import { recordDailyAttendance } from '@/app/actions/payment/daily-check'
 import { toast } from 'sonner'
@@ -206,6 +206,7 @@ export function DailyCheckIn({
   consecutiveStreak: initialStreak = 0,
 }: DailyCheckInProps) {
   const today = new Date()
+  const [open, setOpen] = useState(false)
   const [canCheckIn, setCanCheckIn] = useState(initialCanCheckIn)
   const [checkedDates, setCheckedDates] = useState<string[]>(initialCheckedDates)
   const [weekCount, setWeekCount] = useState(initialWeekCount)
@@ -267,196 +268,245 @@ export function DailyCheckIn({
     }
   }, [canCheckIn, isLoading, today])
 
-  const isWeekComplete = weekCount >= 7
-
   return (
-    <Card className="hanji-card border-primary/20 overflow-hidden relative">
-      <CardContent className="p-4 space-y-4">
-        {/* Particles */}
-        <AnimatePresence>{showParticles && lastReward && <RewardParticles />}</AnimatePresence>
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {/* CalendarCheck bounce — CSS infinite when canCheckIn */}
-            <div
-              className="anim-bounce-y"
-              style={canCheckIn ? { animation: 'bounce-y 1.5s ease-in-out 0.5s infinite' } : undefined}
-            >
-              <CalendarCheck className="w-5 h-5 text-gold-500" />
-            </div>
-            <h3 className="text-sm font-bold text-ink-light tracking-wide">일일 출석 체크</h3>
-          </div>
-
-          {/* Streak badge — one-shot fade-in */}
-          {streak >= 2 && (
-            <div
-              key={streak}
-              className={cn(
-                'flex items-center gap-1 px-2.5 py-1 rounded-full border anim-fade-in-up',
-                streak % 7 === 0
-                  ? 'bg-gradient-to-r from-gold-500/20 to-[#8B6914]/20 border-gold-500/50'
-                  : 'bg-gold-500/10 border-gold-500/25'
-              )}
-              style={{ '--fade-y': '5px', animation: 'fade-in-up 0.3s ease-out both' } as React.CSSProperties}
-            >
-              <Flame className="w-3 h-3 text-gold-500/80" />
-              <span className="text-[10px] font-bold text-gold-500">{streak}일 연속</span>
-              {streak % 7 === 0 && <Crown className="w-3 h-3 text-gold-500" />}
-            </div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      {/* ── 작은 배너 (트리거) ── */}
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          aria-label="일일 출석 체크 열기"
+          className={cn(
+            'w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all active:scale-[0.98]',
+            canCheckIn
+              ? 'bg-gradient-to-r from-gold-500/12 via-gold-500/5 to-transparent border-gold-500/40 hover:border-gold-500/60'
+              : 'bg-surface/40 border-primary/20 hover:border-primary/40'
           )}
-        </div>
-
-        {/* Streak Hero Number */}
-        {streak >= 1 && (
-          <motion.div
-            key={streak}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="flex items-center justify-center gap-3 py-2.5 rounded-xl bg-gradient-to-r from-gold-500/5 via-gold-500/10 to-gold-500/5 border border-gold-500/20"
+        >
+          <div
+            className={cn(
+              'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
+              canCheckIn ? 'bg-gold-500/15 text-gold-500' : 'bg-surface/60 text-ink-light/50'
+            )}
+            style={canCheckIn ? { animation: 'bounce-y 1.5s ease-in-out 0.5s infinite' } : undefined}
           >
-            <Flame className="w-5 h-5 text-gold-500" />
-            <div className="text-center">
-              <motion.p
-                key={streak}
-                initial={{ y: -10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="text-2xl font-black text-gold-500 leading-none"
-              >
-                {streak}
-              </motion.p>
-              <p className="text-[10px] text-ink-light/50 mt-0.5">연속 출석일</p>
-            </div>
-            {streak >= 7 && <Crown className="w-5 h-5 text-gold-500" />}
-          </motion.div>
-        )}
-
-        {/* Monthly Calendar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => {
-                const d = new Date(viewYear, viewMonth - 1, 1)
-                setViewYear(d.getFullYear())
-                setViewMonth(d.getMonth())
-              }}
-              disabled={!canGoPrev}
-              className={cn(
-                'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
-                canGoPrev
-                  ? 'text-ink-light/60 hover:text-gold-500 hover:bg-gold-500/10'
-                  : 'text-ink-light/20 cursor-not-allowed'
-              )}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-[11px] font-medium text-ink-light/70">{monthLabel}</span>
-            <button
-              onClick={() => {
-                const d = new Date(viewYear, viewMonth + 1, 1)
-                setViewYear(d.getFullYear())
-                setViewMonth(d.getMonth())
-              }}
-              disabled={!canGoNext}
-              className={cn(
-                'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
-                canGoNext
-                  ? 'text-ink-light/60 hover:text-gold-500 hover:bg-gold-500/10'
-                  : 'text-ink-light/20 cursor-not-allowed'
-              )}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <CalendarCheck className="w-5 h-5" />
           </div>
 
-          <MonthlyCalendar year={viewYear} month={viewMonth} checkedSet={checkedSet} showStamp={showStamp} />
-        </div>
-
-        {/* Weekly Bonus Bar */}
-        <WeeklyStreakBar weekCount={weekCount} />
-
-        {/* Check-in Button */}
-        <div className="relative">
-          <motion.div whileTap={canCheckIn && !isLoading ? { scale: 0.96 } : {}}>
-            <Button
-              onClick={handleCheckIn}
-              disabled={!canCheckIn || isLoading}
-              className={cn(
-                'w-full h-12 text-sm font-bold transition-all relative overflow-hidden',
-                canCheckIn && !isLoading
-                  ? 'bg-gradient-to-r from-[#8B6914] via-gold-500 to-[#8B6914] hover:from-[#9A7A20] hover:via-[#E5C04D] hover:to-[#9A7A20] text-black shadow-lg shadow-gold-500/20'
-                  : 'bg-surface border border-gold-500/15 text-ink-light/35 cursor-not-allowed'
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold text-ink-light tracking-wide">일일 출석 체크</span>
+              {streak >= 2 && (
+                <span className="flex items-center gap-0.5 text-[10px] font-bold text-gold-500">
+                  <Flame className="w-3 h-3" />
+                  {streak}일{streak % 7 === 0 && <Crown className="w-3 h-3" />}
+                </span>
               )}
-            >
-              {canCheckIn && !isLoading && (
-                <div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent anim-shimmer"
-                  style={{ animation: 'shimmer-slide 2s ease-in-out 1.5s infinite' }}
-                />
-              )}
-              <span className="relative flex items-center justify-center gap-2">
-                {isLoading ? (
-                  <>
-                    <span
-                      className="inline-flex anim-spin-loading"
-                      style={{ animation: 'spin-loading 0.8s linear infinite' }}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                    </span>
-                    출석 처리 중...
-                  </>
-                ) : canCheckIn ? (
-                  <>
-                    <Gift className="w-4 h-4" />
-                    오늘 출석 체크하기 (+1만냥)
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4" />
-                    오늘 출석 완료
-                  </>
-                )}
-              </span>
-            </Button>
-          </motion.div>
+            </div>
+            <p className="text-[11px] text-ink-light/50 mt-0.5 truncate">
+              {canCheckIn
+                ? `오늘의 복채가 기다려요 · 이번 주 ${weekCount}/7`
+                : `오늘 출석 완료 · 이번 주 ${weekCount}/7`}
+            </p>
+          </div>
 
-          {/* Reward float */}
-          <AnimatePresence>
-            {showParticles && lastReward && (
-              <motion.div
-                initial={{ scale: 0, y: 0, opacity: 0 }}
-                animate={{ scale: 1, y: -60, opacity: 1 }}
-                exit={{ opacity: 0, y: -80, scale: 0.8 }}
-                transition={{ type: 'spring', stiffness: 180, damping: 14 }}
-                className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10"
+          {canCheckIn ? (
+            <span className="shrink-0 text-[11px] font-bold text-black bg-gradient-to-r from-[#8B6914] via-gold-500 to-[#8B6914] px-2.5 py-1.5 rounded-full">
+              +1만냥
+            </span>
+          ) : (
+            <ChevronRight className="w-4 h-4 text-ink-light/40 shrink-0" />
+          )}
+        </button>
+      </DialogTrigger>
+
+      {/* ── 팝업: 달력 ── */}
+      <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden">
+        <div className="hanji-card border-0 p-4 space-y-4 relative">
+          {/* Particles */}
+          <AnimatePresence>{showParticles && lastReward && <RewardParticles />}</AnimatePresence>
+
+          {/* Header */}
+          <div className="flex items-center justify-between pr-6">
+            <div className="flex items-center gap-2">
+              <div
+                className="anim-bounce-y"
+                style={canCheckIn ? { animation: 'bounce-y 1.5s ease-in-out 0.5s infinite' } : undefined}
               >
-                <div
-                  className={cn(
-                    'px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl border',
-                    lastReward.isWeeklyBonus
-                      ? 'bg-gradient-to-r from-[#8B6914] to-gold-500 text-black border-gold-500/50'
-                      : 'bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-gold-500 border-gold-500/40'
-                  )}
+                <CalendarCheck className="w-5 h-5 text-gold-500" />
+              </div>
+              <DialogTitle className="text-sm font-bold text-ink-light tracking-wide">일일 출석 체크</DialogTitle>
+            </div>
+
+            {/* Streak badge — one-shot fade-in */}
+            {streak >= 2 && (
+              <div
+                key={streak}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1 rounded-full border anim-fade-in-up',
+                  streak % 7 === 0
+                    ? 'bg-gradient-to-r from-gold-500/20 to-[#8B6914]/20 border-gold-500/50'
+                    : 'bg-gold-500/10 border-gold-500/25'
+                )}
+                style={{ '--fade-y': '5px', animation: 'fade-in-up 0.3s ease-out both' } as React.CSSProperties}
+              >
+                <Flame className="w-3 h-3 text-gold-500/80" />
+                <span className="text-[10px] font-bold text-gold-500">{streak}일 연속</span>
+                {streak % 7 === 0 && <Crown className="w-3 h-3 text-gold-500" />}
+              </div>
+            )}
+          </div>
+
+          {/* Streak Hero Number */}
+          {streak >= 1 && (
+            <motion.div
+              key={streak}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex items-center justify-center gap-3 py-2.5 rounded-xl bg-gradient-to-r from-gold-500/5 via-gold-500/10 to-gold-500/5 border border-gold-500/20"
+            >
+              <Flame className="w-5 h-5 text-gold-500" />
+              <div className="text-center">
+                <motion.p
+                  key={streak}
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="text-2xl font-black text-gold-500 leading-none"
                 >
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-5 h-5" />
-                    <div>
-                      <p className="text-base font-black">+{lastReward.reward}만냥</p>
-                      {lastReward.isWeeklyBonus && <p className="text-[9px] opacity-80">주간 보너스 포함!</p>}
+                  {streak}
+                </motion.p>
+                <p className="text-[10px] text-ink-light/50 mt-0.5">연속 출석일</p>
+              </div>
+              {streak >= 7 && <Crown className="w-5 h-5 text-gold-500" />}
+            </motion.div>
+          )}
+
+          {/* Monthly Calendar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => {
+                  const d = new Date(viewYear, viewMonth - 1, 1)
+                  setViewYear(d.getFullYear())
+                  setViewMonth(d.getMonth())
+                }}
+                disabled={!canGoPrev}
+                className={cn(
+                  'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
+                  canGoPrev
+                    ? 'text-ink-light/60 hover:text-gold-500 hover:bg-gold-500/10'
+                    : 'text-ink-light/20 cursor-not-allowed'
+                )}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="text-[11px] font-medium text-ink-light/70">{monthLabel}</span>
+              <button
+                onClick={() => {
+                  const d = new Date(viewYear, viewMonth + 1, 1)
+                  setViewYear(d.getFullYear())
+                  setViewMonth(d.getMonth())
+                }}
+                disabled={!canGoNext}
+                className={cn(
+                  'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
+                  canGoNext
+                    ? 'text-ink-light/60 hover:text-gold-500 hover:bg-gold-500/10'
+                    : 'text-ink-light/20 cursor-not-allowed'
+                )}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <MonthlyCalendar year={viewYear} month={viewMonth} checkedSet={checkedSet} showStamp={showStamp} />
+          </div>
+
+          {/* Weekly Bonus Bar */}
+          <WeeklyStreakBar weekCount={weekCount} />
+
+          {/* Check-in Button */}
+          <div className="relative">
+            <motion.div whileTap={canCheckIn && !isLoading ? { scale: 0.96 } : {}}>
+              <Button
+                onClick={handleCheckIn}
+                disabled={!canCheckIn || isLoading}
+                className={cn(
+                  'w-full h-12 text-sm font-bold transition-all relative overflow-hidden',
+                  canCheckIn && !isLoading
+                    ? 'bg-gradient-to-r from-[#8B6914] via-gold-500 to-[#8B6914] hover:from-[#9A7A20] hover:via-[#E5C04D] hover:to-[#9A7A20] text-black shadow-lg shadow-gold-500/20'
+                    : 'bg-surface border border-gold-500/15 text-ink-light/35 cursor-not-allowed'
+                )}
+              >
+                {canCheckIn && !isLoading && (
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent anim-shimmer"
+                    style={{ animation: 'shimmer-slide 2s ease-in-out 1.5s infinite' }}
+                  />
+                )}
+                <span className="relative flex items-center justify-center gap-2">
+                  {isLoading ? (
+                    <>
+                      <span
+                        className="inline-flex anim-spin-loading"
+                        style={{ animation: 'spin-loading 0.8s linear infinite' }}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                      </span>
+                      출석 처리 중...
+                    </>
+                  ) : canCheckIn ? (
+                    <>
+                      <Gift className="w-4 h-4" />
+                      오늘 출석 체크하기 (+1만냥)
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      오늘 출석 완료
+                    </>
+                  )}
+                </span>
+              </Button>
+            </motion.div>
+
+            {/* Reward float */}
+            <AnimatePresence>
+              {showParticles && lastReward && (
+                <motion.div
+                  initial={{ scale: 0, y: 0, opacity: 0 }}
+                  animate={{ scale: 1, y: -60, opacity: 1 }}
+                  exit={{ opacity: 0, y: -80, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 180, damping: 14 }}
+                  className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none z-10"
+                >
+                  <div
+                    className={cn(
+                      'px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl border',
+                      lastReward.isWeeklyBonus
+                        ? 'bg-gradient-to-r from-[#8B6914] to-gold-500 text-black border-gold-500/50'
+                        : 'bg-gradient-to-r from-[#1A1200] to-[#2A1F00] text-gold-500 border-gold-500/40'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Coins className="w-5 h-5" />
+                      <div>
+                        <p className="text-base font-black">+{lastReward.reward}만냥</p>
+                        {lastReward.isWeeklyBonus && <p className="text-[9px] opacity-80">주간 보너스 포함!</p>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-        {/* Info Footer */}
-        <div className="flex items-center justify-between pt-1 border-t border-white/5">
-          <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
-          <p className="text-[9px] font-bold text-gold-500/60">이달 {totalBokchae}만냥</p>
+          {/* Info Footer */}
+          <div className="flex items-center justify-between pt-1 border-t border-white/5">
+            <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
+            <p className="text-[9px] font-bold text-gold-500/60">이달 {totalBokchae}만냥</p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
