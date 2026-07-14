@@ -439,21 +439,29 @@ export function ShrineRoomClient({ scene }: Props) {
       {/* 룸 */}
       <div
         ref={roomRef}
-        className={`room relative rounded-[18px] overflow-hidden ${editing ? 'editing' : ''}`}
+        className={`room relative rounded-[18px] ${editing ? 'editing' : ''}`}
         style={{
           height: fullActive ? '100vh' : 'min(56vh, 480px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
+          // ⚠️ overflow:hidden 미사용(고의): 둥근 클립+overflow-hidden이 내부 <canvas>·큰 이미지를 GPU 마스크로
+          //    합성하다 고DPR 실기기에서 실패→흰 화면이 되던 근본 원인. 대신 다크 배경색으로 폴백을 안전하게
+          //    (이미지 실패 시에도 흰색이 아닌 다크 방) + 전면 레이어를 개별 라운딩해 모서리 유지.
+          backgroundColor: '#1a1308',
           // 편집 중에만 드래그 배치를 위해 스크롤 차단. 평소엔 세로 스크롤 허용(방 위 스와이프로 페이지 이동).
           touchAction: editing ? 'none' : 'pan-y',
           ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
         }}
       >
-        <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
-        <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
-        {/* 테마 방 배경 이미지 — <img>로 렌더(CSS background보다 디코드 파이프라인 안정적).
-            고DPR 실기기에서 큰 이미지가 흰 화면으로 페인트 실패하던 문제 대응:
-            이미지 자체를 저해상도(512w)로 다운스케일해 디코드 메모리를 대폭 낮춤(별도 GPU 레이어 강제 안 함).
-            404 시 onError로 숨김 → 아래 그라디언트 벽/바닥으로 폴백. */}
+        <div
+          className="absolute inset-x-0 top-0 bottom-[40%] rounded-t-[17px]"
+          style={{ background: 'var(--th-wall)' }}
+        />
+        <div
+          className="absolute inset-x-0 top-[60%] bottom-0 rounded-b-[17px]"
+          style={{ background: 'var(--th-floor)' }}
+        />
+        {/* 테마 방 배경 이미지 — <img>로 렌더. 둥근 클립 제거로 GPU 마스크 실패(흰화면) 회피.
+            저해상도(512w) 다운스케일 유지, 이미지 자체를 라운딩. 404 시 onError로 숨김 → 그라디언트 폴백. */}
         <img
           key={activeCode}
           src={`/shrine/themes/${activeCode}/room.webp`}
@@ -461,14 +469,14 @@ export function ShrineRoomClient({ scene }: Props) {
           aria-hidden
           draggable={false}
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none rounded-[17px]"
           onError={(e) => {
             e.currentTarget.style.display = 'none'
           }}
         />
         {/* 제단 영역 대비용 하단 암전 */}
         <div
-          className="absolute inset-x-0 bottom-0 h-[38%]"
+          className="absolute inset-x-0 bottom-0 h-[38%] rounded-b-[17px]"
           style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
         />
         <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
