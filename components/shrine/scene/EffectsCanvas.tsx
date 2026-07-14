@@ -216,12 +216,16 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
     const step = () => {
       const rect = canvas.getBoundingClientRect()
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
-        canvas.width = Math.round(rect.width * dpr)
-        canvas.height = Math.round(rect.height * dpr)
+      // 방어적 클램프: 캔버스 버퍼가 비정상적으로 커지는 피드백 폭주 차단
+      // (과거 방 크기 측정 이상으로 canvas.width가 2^25까지 폭주 → 빈 흰 캔버스가 방을 덮던 버그).
+      const w = Math.max(1, Math.min(Math.round(rect.width), 1400))
+      const h = Math.max(1, Math.min(Math.round(rect.height), 1400))
+      if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+        canvas.width = Math.round(w * dpr)
+        canvas.height = Math.round(h * dpr)
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, rect.width, rect.height)
+      ctx.clearRect(0, 0, w, h)
 
       // 지속 불꽃 방출 (촛불)
       if (!reducedRef.current) {
@@ -297,7 +301,8 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
     <canvas
       ref={canvasRef}
       className={className}
-      style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 11 }}
+      // width/height 100% 명시 — 캔버스 CSS 표시 크기를 방에 고정(속성값 기반 레이아웃 폭주 방지).
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 11 }}
       aria-hidden
     />
   )
