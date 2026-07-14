@@ -29,6 +29,7 @@ import {
 } from './keeper-lines'
 import { useShrineAudio } from './useShrineAudio'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
+import { ShrineGuideBar } from './ShrineGuideBar'
 import { saveShrineLayout, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
@@ -65,7 +66,7 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
 
 export function ShrineRoomClient({ scene }: Props) {
   const catalogById = useMemo(() => indexCatalog(scene.catalog), [scene.catalog])
-  const { play, muted, toggleMute } = useShrineAudio()
+  const { play, muted, toggleMute, startBgm } = useShrineAudio()
 
   const [placements, setPlacements] = useState<Placement[]>(scene.placements)
   const [editing, setEditing] = useState(false)
@@ -89,6 +90,15 @@ export function ShrineRoomClient({ scene }: Props) {
     scene.placements.forEach((p) => {
       if (p.state.lit) effectsRef.current?.setFlame(p.id, p.x, p.y - FLAME_Y_OFFSET, true)
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 배경음(BGM) 자동 재생 — 진입 시 on. 모바일 autoplay 정책상 첫 제스처에서 확실히 시작.
+  useEffect(() => {
+    startBgm(scene.activePackCode)
+    const kick = () => startBgm(scene.activePackCode)
+    window.addEventListener('pointerdown', kick, { once: true })
+    return () => window.removeEventListener('pointerdown', kick)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -127,6 +137,11 @@ export function ShrineRoomClient({ scene }: Props) {
     [scene.profile.base, placements, catalogById]
   )
   const displayYongsin: Element = scene.profile.yongsin ?? yongsin
+  // 가이드바용: 필요 기운(용신)에 해당하는 신물이 이미 배치돼 있는지
+  const neededElementPlaced = useMemo(
+    () => placements.some((p) => catalogById.get(p.catalogItemId)?.element === displayYongsin),
+    [placements, catalogById, displayYongsin]
+  )
 
   // 보관함 가용 수량 = 보유 - 배치
   const available = useMemo(() => {
@@ -784,6 +799,19 @@ export function ShrineRoomClient({ scene }: Props) {
           </Link>
         </div>
       )}
+
+      {/* 하이브리드 가이드 — 우하단 主神 말풍선 + 할 일 슬림 바 */}
+      <ShrineGuideBar
+        deity={
+          scene.mainDeity
+            ? { name: scene.mainDeity.name, portraitUrl: scene.mainDeity.portraitUrl, accent: scene.mainDeity.accent }
+            : null
+        }
+        neededElementKo={EL_KO[displayYongsin]}
+        neededElementPlaced={neededElementPlaced}
+        mainDeitySeated={!!scene.mainDeity}
+        isOwner={isOwner}
+      />
 
       <style jsx>{`
         .deity-stand {
