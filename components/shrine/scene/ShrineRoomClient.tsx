@@ -435,9 +435,9 @@ export function ShrineRoomClient({ scene }: Props) {
       >
         <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
         <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
-        {/* 테마 방 배경 이미지 — <img>로 렌더.
-            고DPR(deviceScaleFactor≥2, 실기기) 모바일에서 CSS background-image가 흰 화면으로
-            페인트 실패하는 Chromium 문제를 회피(이미지 파이프라인은 고DPR에서 안정적).
+        {/* 테마 방 배경 이미지 — <img>로 렌더(CSS background보다 디코드 파이프라인 안정적).
+            고DPR 실기기에서 큰 이미지가 흰 화면으로 페인트 실패하던 문제 대응:
+            이미지 자체를 저해상도(512w)로 다운스케일해 디코드 메모리를 대폭 낮춤(별도 GPU 레이어 강제 안 함).
             404 시 onError로 숨김 → 아래 그라디언트 벽/바닥으로 폴백. */}
         <img
           key={activeCode}
@@ -445,8 +445,8 @@ export function ShrineRoomClient({ scene }: Props) {
           alt=""
           aria-hidden
           draggable={false}
+          decoding="async"
           className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
-          style={{ transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
           onError={(e) => {
             e.currentTarget.style.display = 'none'
           }}
