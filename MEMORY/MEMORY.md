@@ -42,6 +42,8 @@
 | 2026-07-13 | 세션16 | 상담포맷 조사(4분야)→풀이 프롬프트 v2 8종 재작성·DB 적용 (파서 정합 수복 포함)             | docs/REPORTS/RESEARCH-counseling-formats-20260713.md, supabase/migrations/ai/20260713_prompts_v2_counseling.sql |
 | 2026-07-13 | 세션16 | 오행 수호 정령 5인 아바타 (가족 선택기 교체 + 프로필 직접선택 3모드)                       | components/family/five-avatar-selector.tsx, public/avatars/five/                                                |
 | 2026-07-13 | 세션16 | 어드민 내부용 3종 제거(prompts·saju-engine·ai-models), getPromptByKey→lib/ai/prompt-loader | lib/ai/prompt-loader.ts                                                                                         |
+| 2026-07-17 | 세션19 | 가족별 신당 P1 (대상 탭·가족 자동좌정 강신·인연 신당별 스코프·고민상담 가족 페르소나)      | supabase/migrations/20260717_family_shrines.sql, components/shrine/ShrineTargetTabs.tsx·FamilySummonGate.tsx    |
+| 2026-07-17 | 세션19 | 채팅 보존 정책 (무료30/S90/F180/B365, 원문만 삭제·요약/기억 영구, 일일 cron)               | supabase/migrations/20260717_chat_retention.sql, app/api/cron/chat-retention/route.ts                           |
 
 ---
 
