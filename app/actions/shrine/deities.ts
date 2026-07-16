@@ -7,7 +7,9 @@ import { logger } from '@/lib/utils/logger'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { assignGuardian, bondProgress, type BondProgress } from '@/lib/domain/shrine/deities'
-import { isElement } from '@/lib/domain/shrine/types'
+import { deriveBaseFromDistribution } from '@/lib/domain/shrine/energy'
+import { isElement, type Element } from '@/lib/domain/shrine/types'
+import { getSajuData } from '@/lib/domain/saju/saju'
 
 export interface DeityAura {
   accent: string | null
@@ -88,8 +90,8 @@ export interface DeityCatalog {
   seatedDeityId: string | null
 }
 
-/** 신위 카탈로그 + 보유 목록 + 좌정(主神) 상태 */
-export async function listDeities(): Promise<DeityCatalog> {
+/** 신위 카탈로그 + 보유 목록 + 좌정(主神) 상태. familyMemberId 지정 시 그 가족 신당의 좌정 기준. */
+export async function listDeities(familyMemberId?: string | null): Promise<DeityCatalog> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -107,9 +109,13 @@ export async function listDeities(): Promise<DeityCatalog> {
 
   if (!user) return { deities, ownedCodes: [], seatedDeityId: null }
 
+  const shrineQuery = supabase.from('shrines').select('main_deity_id').eq('user_id', user.id)
   const [{ data: owned }, { data: shrine }] = await Promise.all([
     supabase.from('user_shrine_deities').select('deity_id').eq('user_id', user.id),
-    supabase.from('shrines').select('main_deity_id').eq('user_id', user.id).maybeSingle(),
+    (familyMemberId
+      ? shrineQuery.eq('family_member_id', familyMemberId)
+      : shrineQuery.is('family_member_id', null)
+    ).maybeSingle(),
   ])
 
   const ownedIds = new Set((owned ?? []).map((o) => o.deity_id))
@@ -118,8 +124,16 @@ export async function listDeities(): Promise<DeityCatalog> {
   return { deities, ownedCodes, seatedDeityId: shrine?.main_deity_id ?? null }
 }
 
-/** service_role 로 신위 지급 + 인연 1단계 초기화 (멱등). 실패 시 error 반환 — 결제 경로는 환불 필요. */
-async function grantDeity(userId: string, deityId: string, source: string): Promise<{ error: string | null }> {
+/**
+ * service_role 로 신위 지급 + 인연 1단계 초기화 (멱등). 실패 시 error 반환 — 결제 경로는 환불 필요.
+ * 신위 보유는 계정 단위(모든 신당 공유), 인연(緣)은 familyMemberId 스코프(신당별).
+ */
+async function grantDeity(
+  userId: string,
+  deityId: string,
+  source: string,
+  familyMemberId: string | null = null
+): Promise<{ error: string | null }> {
   const admin = createAdminClient()
   const { error: grantError } = await admin
     .from('user_shrine_deities')
@@ -131,8 +145,8 @@ async function grantDeity(userId: string, deityId: string, source: string): Prom
   const { error: bondError } = await admin
     .from('user_deity_bonds')
     .upsert(
-      { user_id: userId, deity_id: deityId, bond_level: 1, bond_points: 0 },
-      { onConflict: 'user_id,deity_id', ignoreDuplicates: true }
+      { user_id: userId, deity_id: deityId, family_member_id: familyMemberId, bond_level: 1, bond_points: 0 },
+      { onConflict: 'user_id,deity_id,family_member_id', ignoreDuplicates: true }
     )
   if (bondError) {
     // 인연 행은 부가 데이터 — 지급 자체는 성공으로 취급(적립 시 upsert로 재생성됨)
@@ -141,46 +155,84 @@ async function grantDeity(userId: string, deityId: string, source: string): Prom
   return { error: null }
 }
 
+const DEITY_ROW_COLUMNS =
+  'id, code, name, name_hanja, tier, tier_name, element, domains, aura, price_krw, price_bok, price_bokchae, is_season_limited, sprite_url, portrait_url'
+
 /**
  * 무료 수호신 자동 좌정 (결정론, AI 0).
- * user_energy_profile.yongsin_element + profiles.focus_areas → assignGuardian → 지급·좌정.
- * 이미 主神이 있으면 그대로 반환(멱등).
+ * 본인: user_energy_profile.yongsin_element + profiles.focus_areas → assignGuardian.
+ * 가족(familyMemberId): 가족 사주로 용신 계산 → assignGuardian → 그 가족 신당에 좌정(없으면 비공개 생성).
+ * 이미 主神이 있으면 그대로 반환(멱등). deity 는 강신 연출용 전체 정보.
  */
-export async function autoSeatGuardian(): Promise<{ success: boolean; deityCode?: string; error?: string }> {
+export async function autoSeatGuardian(
+  familyMemberId?: string | null
+): Promise<{ success: boolean; deityCode?: string; deity?: Deity; error?: string }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
+  const fmId = familyMemberId ?? null
+
+  // 가족 대상이면 소유 검증 + 사주 입력 로드
+  let family: {
+    name: string
+    birth_date: string | null
+    birth_time: string | null
+    calendar_type: string | null
+  } | null = null
+  if (fmId) {
+    const { data } = await supabase
+      .from('family_members')
+      .select('name, birth_date, birth_time, calendar_type')
+      .eq('id', fmId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!data) return { success: false, error: 'FAMILY_NOT_FOUND' }
+    family = data
+  }
+
   // 이미 좌정된 主神이 있으면 멱등 반환
-  const { data: shrine } = await supabase
-    .from('shrines')
-    .select('id, main_deity_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const shrineQuery = supabase.from('shrines').select('id, main_deity_id').eq('user_id', user.id)
+  const { data: shrine } = await (
+    fmId ? shrineQuery.eq('family_member_id', fmId) : shrineQuery.is('family_member_id', null)
+  ).maybeSingle()
   if (shrine?.main_deity_id) {
     const { data: cur } = await supabase
       .from('shrine_deities')
-      .select('code')
+      .select(DEITY_ROW_COLUMNS)
       .eq('id', shrine.main_deity_id)
       .maybeSingle()
-    return { success: true, deityCode: cur?.code }
+    return { success: true, deityCode: cur?.code, deity: cur ? toDeity(cur as DeityRow) : undefined }
   }
 
-  // 배정 입력 수집
-  const [{ data: energy }, { data: profile }] = await Promise.all([
-    supabase.from('user_energy_profile').select('yongsin_element').eq('user_id', user.id).maybeSingle(),
-    supabase.from('profiles').select('focus_areas').eq('id', user.id).maybeSingle(),
-  ])
+  // 배정 입력 수집 — 본인은 저장된 프로필, 가족은 사주에서 즉시 유도
+  let yongsin: Element | null = null
+  let focusAreas: string | null = null
+  if (fmId && family) {
+    if (family.birth_date) {
+      try {
+        const saju = getSajuData(family.birth_date, family.birth_time || '12:00', family.calendar_type !== 'lunar')
+        yongsin = deriveBaseFromDistribution(saju.elementsDistribution).yongsin
+      } catch (e) {
+        logger.warn('[autoSeatGuardian] family yongsin derive failed:', e)
+      }
+    }
+  } else {
+    const [{ data: energy }, { data: profile }] = await Promise.all([
+      supabase.from('user_energy_profile').select('yongsin_element').eq('user_id', user.id).maybeSingle(),
+      supabase.from('profiles').select('focus_areas').eq('id', user.id).maybeSingle(),
+    ])
+    yongsin = isElement(energy?.yongsin_element) ? energy.yongsin_element : null
+    focusAreas = profile?.focus_areas ?? null
+  }
 
-  const yongsin = isElement(energy?.yongsin_element) ? energy.yongsin_element : null
-  const assignment = assignGuardian({ yongsin, focusAreas: profile?.focus_areas ?? null })
+  const assignment = assignGuardian({ yongsin, focusAreas })
 
-  // 코드 → deity id
   const { data: deity } = await supabase
     .from('shrine_deities')
-    .select('id, code')
+    .select(DEITY_ROW_COLUMNS)
     .eq('code', assignment.code)
     .maybeSingle()
   if (!deity) {
@@ -188,29 +240,42 @@ export async function autoSeatGuardian(): Promise<{ success: boolean; deityCode?
     return { success: false, error: 'DEITY_NOT_FOUND' }
   }
 
-  const { error: grantError } = await grantDeity(user.id, deity.id, 'free_guardian')
+  const { error: grantError } = await grantDeity(user.id, deity.id, 'free_guardian', fmId)
   if (grantError) return { success: false, error: 'GRANT_FAILED' }
 
-  // 主神 좌정 (shrine 없으면 생성)
+  // 主神 좌정 (shrine 없으면 생성 — 가족 신당은 비공개로, 가족 이름 노출 방지)
   const admin = createAdminClient()
   if (shrine?.id) {
     await admin.from('shrines').update({ main_deity_id: deity.id }).eq('id', shrine.id)
+  } else if (fmId && family) {
+    await admin.from('shrines').insert({
+      user_id: user.id,
+      family_member_id: fmId,
+      name: `${family.name}의 신당`.slice(0, 20),
+      visibility: 'private',
+      main_deity_id: deity.id,
+    })
   } else {
     await admin.from('shrines').insert({ user_id: user.id, name: '나의 신당', main_deity_id: deity.id })
   }
 
   trackEvent({ action: 'deity_auto_seat', category: 'shrine', label: assignment.code, value: 0 })
   revalidatePath('/protected/shrine')
-  return { success: true, deityCode: assignment.code }
+  return { success: true, deityCode: assignment.code, deity: toDeity(deity as DeityRow) }
 }
 
-/** 보유한 신위를 主神으로 좌정 (소유 검증 후 admin 으로 반영) */
-export async function seatDeity(deityId: string): Promise<{ success: boolean; error?: string }> {
+/** 보유한 신위를 主神으로 좌정 (소유 검증 후 admin 으로 반영). familyMemberId 지정 시 그 가족 신당에 좌정. */
+export async function seatDeity(
+  deityId: string,
+  familyMemberId?: string | null
+): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const fmId = familyMemberId ?? null
 
   const { data: owned } = await supabase
     .from('user_shrine_deities')
@@ -220,10 +285,33 @@ export async function seatDeity(deityId: string): Promise<{ success: boolean; er
     .maybeSingle()
   if (!owned) return { success: false, error: 'NOT_OWNED' }
 
+  let familyName: string | null = null
+  if (fmId) {
+    const { data: family } = await supabase
+      .from('family_members')
+      .select('name')
+      .eq('id', fmId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!family) return { success: false, error: 'FAMILY_NOT_FOUND' }
+    familyName = family.name
+  }
+
   const admin = createAdminClient()
-  const { data: shrine } = await supabase.from('shrines').select('id').eq('user_id', user.id).maybeSingle()
+  const shrineQuery = supabase.from('shrines').select('id').eq('user_id', user.id)
+  const { data: shrine } = await (
+    fmId ? shrineQuery.eq('family_member_id', fmId) : shrineQuery.is('family_member_id', null)
+  ).maybeSingle()
   if (shrine?.id) {
     await admin.from('shrines').update({ main_deity_id: deityId }).eq('id', shrine.id)
+  } else if (fmId && familyName) {
+    await admin.from('shrines').insert({
+      user_id: user.id,
+      family_member_id: fmId,
+      name: `${familyName}의 신당`.slice(0, 20),
+      visibility: 'private',
+      main_deity_id: deityId,
+    })
   } else {
     await admin.from('shrines').insert({ user_id: user.id, name: '나의 신당', main_deity_id: deityId })
   }
@@ -336,15 +424,20 @@ export async function purchaseThemePack(
 // 인연(緣) 적립은 lib/services/deity-bond.ts(서버 내부 전용)로 이동 —
 // 공개 서버액션이면 클라이언트가 임의 포인트로 호출 가능해 조작 벡터가 된다.
 
-/** 보유 신위별 인연 진행도(단계·다음목표·해금) — UI용. */
-export async function getDeityBonds(): Promise<Array<{ deityId: string; progress: BondProgress }>> {
+/** 보유 신위별 인연 진행도(단계·다음목표·해금) — UI용. familyMemberId 스코프(신당별 인연). */
+export async function getDeityBonds(
+  familyMemberId?: string | null
+): Promise<Array<{ deityId: string; progress: BondProgress }>> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data } = await supabase.from('user_deity_bonds').select('deity_id, bond_points').eq('user_id', user.id)
+  const bondQuery = supabase.from('user_deity_bonds').select('deity_id, bond_points').eq('user_id', user.id)
+  const { data } = await (familyMemberId
+    ? bondQuery.eq('family_member_id', familyMemberId)
+    : bondQuery.is('family_member_id', null))
 
   return (data ?? []).map((r) => ({ deityId: r.deity_id, progress: bondProgress(r.bond_points) }))
 }

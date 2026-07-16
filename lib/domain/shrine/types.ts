@@ -102,6 +102,8 @@ export interface MainDeity {
 export interface SceneData {
   shrineId: string
   shrineName: string
+  /** 이 신당의 점사 대상 가족 (null=본인 신당) */
+  familyMemberId: string | null
   isOwner: boolean
   catalog: CatalogItem[]
   placements: Placement[]

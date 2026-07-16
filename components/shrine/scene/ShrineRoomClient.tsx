@@ -110,8 +110,9 @@ export function ShrineRoomClient({ scene }: Props) {
   }, [scene.mainDeity])
 
   // 신탁 선톡 — 방 진입 시 좌정 主神의 선제적 신탁을 불러와 말풍선에 표시(있을 때만, 즉시 확인처리)
+  // 가족 신당에서는 미표시(신탁은 본인 신당 스코프)
   useEffect(() => {
-    if (!isOwner || !scene.mainDeity) return
+    if (!isOwner || !scene.mainDeity || scene.familyMemberId) return
     let alive = true
     getRoomOracle()
       .then((o) => {
@@ -130,6 +131,9 @@ export function ShrineRoomClient({ scene }: Props) {
 
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
+  const deitiesHref = scene.familyMemberId
+    ? `/protected/shrine/deities?member=${scene.familyMemberId}`
+    : '/protected/shrine/deities'
 
   // 기운 실시간 계산
   const { energy, yongsin, resonant } = useMemo(
@@ -281,7 +285,8 @@ export function ShrineRoomClient({ scene }: Props) {
             y: p.y,
             flip: p.flip,
             state: p.state,
-          }))
+          })),
+          scene.familyMemberId
         )
         setSaving(false)
         if (res.success) {
@@ -300,7 +305,7 @@ export function ShrineRoomClient({ scene }: Props) {
     } else {
       setEditing(true)
     }
-  }, [editing, placements, play, isOwner])
+  }, [editing, placements, play, isOwner, scene.familyMemberId])
 
   // ── 신당지기(=좌정 主神) 탭 — 시그니처 사운드+파티클 버스트 반응 (§3.2) ──
   const onTapKeeper = useCallback(() => {
@@ -332,7 +337,7 @@ export function ShrineRoomClient({ scene }: Props) {
       setActiveCode(pack.code)
       keeperSay(greetingFor(pack.code))
       play('chime')
-      const res = await activateThemePack(pack.code)
+      const res = await activateThemePack(pack.code, scene.familyMemberId)
       if (!res.success) {
         setActiveCode(prev)
         toast.error('테마 변경 실패')
@@ -340,7 +345,7 @@ export function ShrineRoomClient({ scene }: Props) {
         trackEvent({ action: 'pack_activate', category: 'shrine', label: pack.code })
       }
     },
-    [activeCode, keeperSay, play]
+    [activeCode, keeperSay, play, scene.familyMemberId]
   )
 
   // ── 전체화면 토글 (Fullscreen API + 미지원 브라우저 폴백) ──
@@ -373,13 +378,15 @@ export function ShrineRoomClient({ scene }: Props) {
       {/* 헤더 */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div>
-          <p className="text-[9px] tracking-[0.32em] text-gold-dim font-serif">나 의 신 당</p>
+          <p className="text-[9px] tracking-[0.32em] text-gold-dim font-serif">
+            {scene.familyMemberId ? '가 족 신 당' : '나 의 신 당'}
+          </p>
           <h1 className="text-base font-serif font-bold text-ink-primary">{scene.shrineName}</h1>
         </div>
         <div className="flex items-center gap-2">
           {isOwner && (
             <Link
-              href="/protected/shrine/deities"
+              href={deitiesHref}
               className="h-8 px-2.5 rounded-[10px] flex items-center gap-1.5 bg-gold-500/[0.12] border border-gold-500/40 text-gold-200 text-[11.5px] font-serif font-bold"
               aria-label="신위전"
             >
@@ -419,7 +426,7 @@ export function ShrineRoomClient({ scene }: Props) {
               : Math.max(0.04, Math.min(1, (bp.points - lower) / Math.max(1, bp.nextThreshold - lower)))
           return (
             <Link
-              href="/protected/shrine/deities"
+              href={deitiesHref}
               className="flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-[10px] bg-surface/60 border border-gold-500/20"
             >
               <span className="text-[11px] font-serif text-gold-200 whitespace-nowrap">主神 {deity.name}</span>

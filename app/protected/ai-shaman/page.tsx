@@ -17,7 +17,12 @@ async function loadSeatedDeity(): Promise<SeatedDeityInfo | null> {
     } = await supabase.auth.getUser()
     if (!user) return null
 
-    const { data: shrine } = await supabase.from('shrines').select('main_deity_id').eq('user_id', user.id).maybeSingle()
+    const { data: shrine } = await supabase
+      .from('shrines')
+      .select('main_deity_id')
+      .eq('user_id', user.id)
+      .is('family_member_id', null)
+      .maybeSingle()
     if (!shrine?.main_deity_id) return null
 
     const { data: deity } = await supabase

@@ -21,9 +21,7 @@ import {
   type ThemePack,
 } from '@/lib/domain/shrine/types'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
-
-const HANJA_TO_EL: Record<string, Element> = { 木: 'wood', 火: 'fire', 土: 'earth', 金: 'metal', 水: 'water' }
-const DEFAULT_BASE: Record<Element, number> = { wood: 40, fire: 40, earth: 40, metal: 40, water: 40 }
+import { DEFAULT_BASE, deriveBaseFromDistribution } from '@/lib/domain/shrine/energy'
 
 interface CatalogRow {
   id: string
@@ -63,20 +61,53 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
   }
 }
 
-function deriveBase(dist: Record<string, number>): { base: Record<Element, number>; yongsin: Element } {
-  const base: Record<Element, number> = { ...DEFAULT_BASE }
-  for (const [k, v] of Object.entries(dist)) {
-    const el = HANJA_TO_EL[k]
-    if (el) base[el] = Math.max(5, Math.min(90, 20 + v * 15))
-  }
-  let yongsin: Element = 'wood'
-  ;(['wood', 'fire', 'earth', 'metal', 'water'] as Element[]).forEach((el) => {
-    if (base[el] < base[yongsin]) yongsin = el
-  })
-  return { base, yongsin }
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+interface FamilyTarget {
+  id: string
+  name: string
+  birthDate: string | null
+  birthTime: string | null
+  isSolar: boolean
 }
 
-type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+/** 점사 대상 가족 로드 — 본인 소유 가족만 (아니면 null). */
+async function loadFamilyTarget(
+  supabase: SupabaseServer,
+  userId: string,
+  familyMemberId: string
+): Promise<FamilyTarget | null> {
+  const { data } = await supabase
+    .from('family_members')
+    .select('id, name, birth_date, birth_time, calendar_type')
+    .eq('id', familyMemberId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!data) return null
+  return {
+    id: data.id,
+    name: data.name,
+    birthDate: data.birth_date,
+    birthTime: data.birth_time,
+    isSolar: data.calendar_type !== 'lunar',
+  }
+}
+
+/** 가족 사주 기반 기운 프로필 — 저장 없이 즉시 계산 (user_energy_profile 은 본인 전용 PK). */
+function profileFromBirth(
+  birthDate: string | null,
+  birthTime: string | null,
+  isSolar: boolean
+): { base: Record<Element, number>; yongsin: Element | null } {
+  if (!birthDate) return { base: { ...DEFAULT_BASE }, yongsin: null }
+  try {
+    const saju = getSajuData(birthDate, birthTime || '12:00', isSolar)
+    return deriveBaseFromDistribution(saju.elementsDistribution)
+  } catch (e) {
+    logger.warn('[shrine/scene] family profile derive failed:', e)
+    return { base: { ...DEFAULT_BASE }, yongsin: null }
+  }
+}
 
 /** 사주 기반 기운 프로필을 계산·저장하거나 기존 것을 반환 */
 async function loadOrComputeProfile(
@@ -112,7 +143,7 @@ async function loadOrComputeProfile(
 
     if (profile?.birth_date) {
       const saju = getSajuData(profile.birth_date, profile.birth_time || '12:00', profile.calendar_type !== 'lunar')
-      const { base, yongsin } = deriveBase(saju.elementsDistribution)
+      const { base, yongsin } = deriveBaseFromDistribution(saju.elementsDistribution)
       await supabase.from('user_energy_profile').insert({
         user_id: userId,
         base_wood: base.wood,
@@ -203,28 +234,66 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<The
   }))
 }
 
-/** 소유자용 씬 데이터 로드 */
-export async function getSceneData(): Promise<SceneData | null> {
+const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, main_deity_id'
+
+/**
+ * 소유자용 씬 데이터 로드.
+ * familyMemberId 지정 시 그 가족의 신당(없으면 자동 생성 — 비공개, 가족 이름 노출 방지).
+ * 본인 신당(생략/null)은 기존과 동일하게 없으면 null(생성 폼 유도).
+ */
+export async function getSceneData(familyMemberId?: string | null): Promise<SceneData | null> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: shrine } = await supabase
-    .from('shrines')
-    .select('id, name, visitor_count, wish_count, active_pack_id, main_deity_id')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const fmId = familyMemberId ?? null
+  let family: FamilyTarget | null = null
+  if (fmId) {
+    family = await loadFamilyTarget(supabase, user.id, fmId)
+    if (!family) return null
+  }
+
+  const shrineQuery = supabase.from('shrines').select(SHRINE_COLUMNS).eq('user_id', user.id)
+  let { data: shrine } = await (
+    fmId ? shrineQuery.eq('family_member_id', fmId) : shrineQuery.is('family_member_id', null)
+  ).maybeSingle()
+
+  if (!shrine && fmId && family) {
+    const { data: created } = await supabase
+      .from('shrines')
+      .insert({
+        user_id: user.id,
+        family_member_id: fmId,
+        name: `${family.name}의 신당`.slice(0, 20),
+        visibility: 'private',
+      })
+      .select(SHRINE_COLUMNS)
+      .maybeSingle()
+    shrine = created
+    if (!shrine) {
+      // 동시 첫 진입 레이스(UNIQUE 충돌) — 이미 생성된 행을 재조회
+      const { data: existing } = await supabase
+        .from('shrines')
+        .select(SHRINE_COLUMNS)
+        .eq('user_id', user.id)
+        .eq('family_member_id', fmId)
+        .maybeSingle()
+      shrine = existing
+    }
+  }
   if (!shrine) return null
 
-  await ensureStarterKit(supabase, user.id, shrine.id)
+  if (!fmId) await ensureStarterKit(supabase, user.id, shrine.id)
 
   const [{ data: catRows }, { data: placeRows }, { data: invRows }, profile, themes] = await Promise.all([
     supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('shrine_placements').select('*').eq('shrine_id', shrine.id),
     supabase.from('user_shrine_inventory').select('catalog_item_id, qty').eq('user_id', user.id),
-    loadOrComputeProfile(supabase, user.id),
+    family
+      ? Promise.resolve(profileFromBirth(family.birthDate, family.birthTime, family.isSolar))
+      : loadOrComputeProfile(supabase, user.id),
     loadThemes(supabase, user.id),
   ])
 
@@ -241,11 +310,12 @@ export async function getSceneData(): Promise<SceneData | null> {
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
   const activePack = themes.find((t) => t.id === shrine.active_pack_id)
-  const mainDeity = await loadMainDeity(supabase, user.id, shrine.main_deity_id, true)
+  const mainDeity = await loadMainDeity(supabase, user.id, shrine.main_deity_id, true, fmId)
 
   return {
     shrineId: shrine.id,
     shrineName: shrine.name,
+    familyMemberId: fmId,
     isOwner: true,
     catalog,
     placements,
@@ -268,7 +338,8 @@ async function loadMainDeity(
   supabase: Awaited<ReturnType<typeof createClient>>,
   ownerId: string,
   mainDeityId: string | null,
-  includeBond: boolean
+  includeBond: boolean,
+  familyMemberId: string | null = null
 ): Promise<import('@/lib/domain/shrine/types').MainDeity | null> {
   if (!mainDeityId) return null
   const { data } = await supabase
@@ -288,12 +359,14 @@ async function loadMainDeity(
 
   let bondPoints: number | null = null
   if (includeBond) {
-    const { data: bond } = await supabase
+    const bondQuery = supabase
       .from('user_deity_bonds')
       .select('bond_points')
       .eq('user_id', ownerId)
       .eq('deity_id', mainDeityId)
-      .maybeSingle()
+    const { data: bond } = await (
+      familyMemberId ? bondQuery.eq('family_member_id', familyMemberId) : bondQuery.is('family_member_id', null)
+    ).maybeSingle()
     bondPoints = typeof bond?.bond_points === 'number' ? bond.bond_points : 0
   }
 
@@ -317,6 +390,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
     .from('shrines')
     .select('id, name, visibility, visitor_count, wish_count, active_pack_id, main_deity_id')
     .eq('user_id', userId)
+    .is('family_member_id', null)
     .maybeSingle()
   if (!shrine || shrine.visibility !== 'public') return null
 
@@ -363,6 +437,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
   return {
     shrineId: shrine.id,
     shrineName: shrine.name,
+    familyMemberId: null,
     isOwner: false,
     catalog,
     placements,
@@ -387,7 +462,8 @@ interface PlacementInput {
 
 /** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
 export async function saveShrineLayout(
-  placements: PlacementInput[]
+  placements: PlacementInput[],
+  familyMemberId?: string | null
 ): Promise<{ success: boolean; error?: string; placements?: Placement[] }> {
   const supabase = await createClient()
   const {
@@ -395,7 +471,10 @@ export async function saveShrineLayout(
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
-  const { data: shrine } = await supabase.from('shrines').select('id').eq('user_id', user.id).maybeSingle()
+  const shrineQuery = supabase.from('shrines').select('id').eq('user_id', user.id)
+  const { data: shrine } = await (
+    familyMemberId ? shrineQuery.eq('family_member_id', familyMemberId) : shrineQuery.is('family_member_id', null)
+  ).maybeSingle()
   if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
   if (placements.length > 40) return { success: false, error: 'TOO_MANY_ITEMS' }
@@ -467,8 +546,11 @@ export async function setPlacementLit(placementId: string, lit: boolean): Promis
   return { success: !error }
 }
 
-/** 테마 팩 활성화 (무료거나 보유한 팩만) */
-export async function activateThemePack(packCode: string): Promise<{ success: boolean; error?: string }> {
+/** 테마 팩 활성화 (무료거나 보유한 팩만). familyMemberId 지정 시 그 가족 신당에 적용. */
+export async function activateThemePack(
+  packCode: string,
+  familyMemberId?: string | null
+): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -493,7 +575,10 @@ export async function activateThemePack(packCode: string): Promise<{ success: bo
     if (!owned) return { success: false, error: 'NOT_OWNED' }
   }
 
-  const { error } = await supabase.from('shrines').update({ active_pack_id: pack.id }).eq('user_id', user.id)
+  const updateQuery = supabase.from('shrines').update({ active_pack_id: pack.id }).eq('user_id', user.id)
+  const { error } = await (familyMemberId
+    ? updateQuery.eq('family_member_id', familyMemberId)
+    : updateQuery.is('family_member_id', null))
   if (error) return { success: false, error: error.message }
 
   revalidatePath('/protected/shrine')

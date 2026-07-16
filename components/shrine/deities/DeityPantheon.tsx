@@ -3,60 +3,15 @@
 import { useCallback, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, X } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import type { Deity, DeityCatalog } from '@/app/actions/shrine/deities'
 import { autoSeatGuardian, seatDeity, purchaseDeity } from '@/app/actions/shrine/deities'
 import { BOND_LEVEL_NAMES, BOND_THRESHOLDS, type BondProgress } from '@/lib/domain/shrine/deities'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
+import { DeityMedallion } from './DeityMedallion'
+import { GangshinOverlay } from './GangshinOverlay'
 
-const ELEMENT_GLYPH: Record<string, string> = {
-  wood: '🌿',
-  fire: '🔥',
-  earth: '⛰️',
-  metal: '⚔️',
-  water: '💧',
-  all: '✨',
-}
 const TIERS = [1, 2, 3, 4] as const
-
-/** 신위 원형 초상 — 초상/스프라이트가 있으면 이미지, 없으면 aura 색상 + 오행 상징 폴백. */
-function DeityMedallion({ deity, size }: { deity: Deity; size: number }) {
-  const accent = deity.aura.accent ?? '#C9A84C'
-  const img = deity.portraitUrl ?? deity.spriteUrl
-  return (
-    <div
-      className="relative flex items-center justify-center rounded-full overflow-hidden"
-      style={{
-        width: size,
-        height: size,
-        background: `radial-gradient(circle at 50% 38%, ${accent}66, ${accent}18 62%, transparent 78%)`,
-        boxShadow: `0 0 ${size / 3}px ${accent}55, inset 0 0 ${size / 5}px ${accent}44`,
-      }}
-    >
-      <div className="absolute inset-[10%] rounded-full border z-[1]" style={{ borderColor: `${accent}66` }} />
-      {img ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={img}
-          alt={deity.name}
-          className="absolute inset-0 w-full h-full object-contain p-[6%]"
-          style={{ filter: `drop-shadow(0 ${size / 22}px ${size / 14}px rgba(0,0,0,0.35))` }}
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/shrine/elements/${deity.element}.webp`}
-          alt=""
-          style={{ width: size * 0.62, height: size * 0.62, objectFit: 'contain' }}
-          onError={(e) => {
-            e.currentTarget.outerHTML = `<span style="font-size:${size * 0.4}px;line-height:1">${ELEMENT_GLYPH[deity.element] ?? '神'}</span>`
-          }}
-          draggable={false}
-        />
-      )}
-    </div>
-  )
-}
 
 function BondBar({ progress }: { progress: BondProgress }) {
   const lower = BOND_THRESHOLDS[progress.level - 1] ?? 0
@@ -79,18 +34,22 @@ function BondBar({ progress }: { progress: BondProgress }) {
 interface Props {
   catalog: DeityCatalog
   bonds: Array<{ deityId: string; progress: BondProgress }>
+  /** 점사 대상 가족 (null/생략=본인 신당) — 좌정·인연이 이 신당 스코프로 적용 */
+  familyMemberId?: string | null
 }
 
 /** 연출 모드 — 강신(降神)=실제 좌정 시점, 봉안(奉安)=구매 완료(좌정 CTA 제공) */
 type RevealState = { deity: Deity; mode: 'gangshin' | 'bongan' } | null
 
-export function DeityPantheon({ catalog, bonds }: Props) {
+export function DeityPantheon({ catalog, bonds, familyMemberId }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [reveal, setReveal] = useState<RevealState>(null)
   const [err, setErr] = useState<string | null>(null)
   const { play } = useShrineAudio()
 
+  const fmId = familyMemberId ?? null
+  const shrineHref = fmId ? `/protected/shrine?member=${fmId}` : '/protected/shrine'
   const bondMap = new Map(bonds.map((b) => [b.deityId, b.progress]))
   const seated = catalog.deities.find((d) => d.id === catalog.seatedDeityId) ?? null
   const ownedCodes = new Set(catalog.ownedCodes)
@@ -104,7 +63,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
   function onAutoSeat() {
     setErr(null)
     start(async () => {
-      const r = await autoSeatGuardian()
+      const r = await autoSeatGuardian(fmId)
       if (!r.success) {
         setErr('좌정에 실패했습니다. 잠시 후 다시 시도해주세요.')
         return
@@ -121,7 +80,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
   function onSeat(deity: Deity) {
     setErr(null)
     start(async () => {
-      const r = await seatDeity(deity.id)
+      const r = await seatDeity(deity.id, fmId)
       if (r.success) {
         setReveal({ deity, mode: 'gangshin' })
         playGangshinSound()
@@ -149,7 +108,7 @@ export function DeityPantheon({ catalog, bonds }: Props) {
   return (
     <div className="mx-auto max-w-2xl">
       <Link
-        href="/protected/shrine"
+        href={shrineHref}
         className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif mb-3"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -285,113 +244,21 @@ export function DeityPantheon({ catalog, bonds }: Props) {
 
       {/* 연출 오버레이 — 강신(降神, 좌정) / 봉안(奉安, 구매) */}
       {reveal ? (
-        <div
-          className="gangshin-overlay fixed inset-0 z-50 flex flex-col items-center justify-center px-6 cursor-pointer overflow-hidden"
-          style={{ background: 'radial-gradient(circle at 50% 44%, #1a140a, #000 70%)' }}
-          onClick={() => setReveal(null)}
-        >
-          {/* 스킵 — 시퀀스 시작부터 즉시 노출 */}
-          <button
-            aria-label="연출 건너뛰기"
-            onClick={(e) => {
-              e.stopPropagation()
-              setReveal(null)
-            }}
-            className="absolute top-5 right-5 z-10 flex items-center gap-1 px-3 py-1.5 rounded-full border border-ink-light/15 text-[11px] text-ink-light/50 hover:text-ink-light/80 transition"
-          >
-            건너뛰기 <X className="w-3.5 h-3.5" />
-          </button>
-
-          {/* 아우라 링 (확산 파티클) */}
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="gangshin-ring absolute rounded-full"
-              style={{
-                borderColor: reveal.deity.aura.accent ?? '#c9a84c',
-                animationDelay: `${0.4 + i * 0.55}s`,
-              }}
-            />
-          ))}
-          {/* 강림 발광 */}
-          <div
-            className="gangshin-glow absolute rounded-full"
-            style={{ background: reveal.deity.aura.accent ?? '#c9a84c' }}
-          />
-
-          <div className="gangshin-deity relative deity-breathe">
-            <DeityMedallion deity={reveal.deity} size={188} />
-          </div>
-          <p className="gangshin-t1 mt-6 text-[11px] tracking-[0.55em] text-gold-500/70 font-serif">
-            {reveal.mode === 'gangshin' ? '降 神' : '奉 安'}
-          </p>
-          <h2 className="gangshin-t2 mt-1 text-2xl font-serif font-bold text-ink-light">
-            {reveal.deity.name}
-            {reveal.deity.nameHanja ? (
-              <span className="text-ink-light/40 text-base ml-1">{reveal.deity.nameHanja}</span>
-            ) : null}
-          </h2>
-          <p className="gangshin-t3 text-sm text-ink-light/60 mt-1 font-serif">
-            {reveal.mode === 'gangshin'
-              ? `「${reveal.deity.domains.join(' · ')}」의 신위가 좌정하였습니다`
-              : `「${reveal.deity.domains.join(' · ')}」의 신위를 봉안하였습니다`}
-          </p>
-          {reveal.mode === 'gangshin' ? (
-            <p className="gangshin-t4 mt-4 text-[13px] text-gold-200/85 font-serif italic max-w-xs text-center leading-relaxed">
-              “{reveal.deity.domains[0]}, 이제 내가 그대와 함께하리라.”
-            </p>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                const d = reveal.deity
-                setReveal(null)
-                onSeat(d)
-              }}
-              disabled={pending}
-              className="gangshin-t4 mt-5 px-6 py-2.5 rounded-full bg-seal text-white font-serif text-sm shadow-lg shadow-seal/20 disabled:opacity-60 transition active:scale-95"
-            >
-              지금 主神으로 좌정하기
-            </button>
-          )}
-          <button className="gangshin-t4 mt-6 text-xs text-ink-light/45 underline underline-offset-4">닫기</button>
-        </div>
+        <GangshinOverlay
+          deity={reveal.deity}
+          mode={reveal.mode}
+          pending={pending}
+          onClose={() => setReveal(null)}
+          onSeatNow={(d) => {
+            setReveal(null)
+            onSeat(d)
+          }}
+        />
       ) : null}
 
       <style>{`
         @keyframes deity-breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.016); } }
         .deity-breathe { animation: deity-breathe 4s ease-in-out infinite; }
-        /* 강신 의식 시퀀스 */
-        .gangshin-overlay { animation: gangshin-fade 0.5s ease-out; }
-        @keyframes gangshin-fade { from { opacity: 0; } to { opacity: 1; } }
-        .gangshin-ring {
-          width: 60px; height: 60px; top: 44%; border-width: 1.5px; border-style: solid; opacity: 0;
-          transform: translateY(-50%); animation: gangshin-ring 2.4s ease-out infinite;
-        }
-        @keyframes gangshin-ring {
-          0% { width: 40px; height: 40px; opacity: 0.7; }
-          100% { width: 460px; height: 460px; opacity: 0; }
-        }
-        .gangshin-glow {
-          width: 260px; height: 260px; top: 44%; transform: translateY(-50%);
-          filter: blur(60px); opacity: 0; animation: gangshin-glow 3s ease-out forwards;
-        }
-        @keyframes gangshin-glow { 0% { opacity: 0; } 30% { opacity: 0.4; } 100% { opacity: 0.18; } }
-        .gangshin-deity { opacity: 0; animation: gangshin-descend 1.6s cubic-bezier(0.16,1,0.3,1) 0.6s forwards; }
-        @keyframes gangshin-descend {
-          0% { opacity: 0; transform: translateY(-40px) scale(0.82); filter: brightness(3) blur(6px); }
-          60% { opacity: 1; filter: brightness(1.4) blur(0); }
-          100% { opacity: 1; transform: translateY(0) scale(1); filter: brightness(1); }
-        }
-        .gangshin-t1 { opacity: 0; animation: gangshin-rise 0.7s ease-out 1.9s forwards; }
-        .gangshin-t2 { opacity: 0; animation: gangshin-rise 0.7s ease-out 2.3s forwards; }
-        .gangshin-t3 { opacity: 0; animation: gangshin-rise 0.7s ease-out 2.8s forwards; }
-        .gangshin-t4 { opacity: 0; animation: gangshin-rise 0.9s ease-out 3.5s forwards; }
-        @keyframes gangshin-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @media (prefers-reduced-motion: reduce) {
-          .deity-breathe, .gangshin-overlay, .gangshin-ring, .gangshin-glow, .gangshin-deity,
-          .gangshin-t1, .gangshin-t2, .gangshin-t3, .gangshin-t4 { animation: none !important; opacity: 1 !important; }
-        }
       `}</style>
     </div>
   )

@@ -51,6 +51,7 @@ export async function getMyShrine(): Promise<ShrineWithItems | null> {
     `
     )
     .eq('user_id', user.id)
+    .is('family_member_id', null)
     .single()
 
   return data ?? null
@@ -71,6 +72,7 @@ export async function getShrineByUserId(userId: string): Promise<ShrineWithItems
     `
     )
     .eq('user_id', userId)
+    .is('family_member_id', null)
     .eq('visibility', 'public')
     .single()
 
@@ -128,7 +130,7 @@ export async function updateShrine(input: {
   if (input.theme !== undefined) updates.theme = input.theme
   if (input.visibility !== undefined) updates.visibility = input.visibility
 
-  const { error } = await supabase.from('shrines').update(updates).eq('user_id', user.id)
+  const { error } = await supabase.from('shrines').update(updates).eq('user_id', user.id).is('family_member_id', null)
 
   if (error) return { success: false, error: error.message }
 
@@ -143,6 +145,7 @@ export async function getPublicShrines(limit = 20): Promise<Shrine[]> {
     .from('shrines')
     .select('id, user_id, name, description, theme, visibility, visitor_count, wish_count, created_at, updated_at')
     .eq('visibility', 'public')
+    .is('family_member_id', null)
     .order('visitor_count', { ascending: false })
     .limit(limit)
 

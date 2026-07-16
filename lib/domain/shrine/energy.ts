@@ -103,3 +103,26 @@ export function computeEnergy(
 export function indexCatalog(catalog: CatalogItem[]): Map<string, CatalogItem> {
   return new Map(catalog.map((c) => [c.id, c]))
 }
+
+// ─── 사주 → 기본 기운 프로필 (scene 로드·수호신 자동배정 공용) ──────────────
+
+const HANJA_TO_EL: Record<string, Element> = { 木: 'wood', 火: 'fire', 土: 'earth', 金: 'metal', 水: 'water' }
+
+export const DEFAULT_BASE: Record<Element, number> = { wood: 40, fire: 40, earth: 40, metal: 40, water: 40 }
+
+/** 사주 오행 분포(한자 키) → 기본 기운 + 용신(가장 부족한 기운). 결정론 순수 함수. */
+export function deriveBaseFromDistribution(dist: Record<string, number>): {
+  base: Record<Element, number>
+  yongsin: Element
+} {
+  const base: Record<Element, number> = { ...DEFAULT_BASE }
+  for (const [k, v] of Object.entries(dist)) {
+    const el = HANJA_TO_EL[k]
+    if (el) base[el] = Math.max(5, Math.min(90, 20 + v * 15))
+  }
+  let yongsin: Element = 'wood'
+  for (const el of ELEMENTS) {
+    if (base[el] < base[yongsin]) yongsin = el
+  }
+  return { base, yongsin }
+}

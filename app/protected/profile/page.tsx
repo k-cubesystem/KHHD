@@ -168,7 +168,12 @@ export default async function MyPage() {
   }
   // 좌정 主神 (프로필 아바타·정체성 연동)
   try {
-    const { data: shrine } = await supabase.from('shrines').select('main_deity_id').eq('user_id', user.id).maybeSingle()
+    const { data: shrine } = await supabase
+      .from('shrines')
+      .select('main_deity_id')
+      .eq('user_id', user.id)
+      .is('family_member_id', null)
+      .maybeSingle()
     if (shrine?.main_deity_id) {
       const { data: d } = await supabase
         .from('shrine_deities')

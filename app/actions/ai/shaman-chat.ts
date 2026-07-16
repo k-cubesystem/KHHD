@@ -49,19 +49,19 @@ const CHAT_BOND_POINTS = 2
 
 /**
  * 신당 3.0 대화 컨텍스트 — 좌정 主神 페르소나 + 신당 기운/용신/신물.
- * (구 shrine-chat 통합) 본인 대화일 때만, 신당이 있으면 시스템 프롬프트에 얹는다.
- * 반환 mainDeityId 로 대화 후 인연 적립.
+ * (구 shrine-chat 통합) 대상(본인/가족) 신당이 있으면 시스템 프롬프트에 얹는다.
+ * 가족 대화면 그 가족 신당의 主神·인연 스코프 적용. 반환 mainDeityId 로 대화 후 인연 적립.
  */
 const DEITY_EMOTIONS = ['neutral', 'smile', 'stern', 'sad', 'surprised', 'bless', 'angry'] as const
 type DeityEmotion = (typeof DEITY_EMOTIONS)[number]
 
-async function buildShrineContext(): Promise<{
+async function buildShrineContext(familyMemberId: string | null): Promise<{
   block: string
   mainDeityId: string | null
   deityCode: string | null
 } | null> {
   try {
-    const scene = await getSceneData()
+    const scene = await getSceneData(familyMemberId)
     if (!scene) return null
 
     const catalogById = indexCatalog(scene.catalog)
@@ -513,16 +513,15 @@ export async function sendShamanChatMessage(
       systemInstruction = FALLBACK_SYSTEM_PROMPT.replace(/{{date}}/g, today).replace(/{{saju_data}}/g, userContext)
     }
 
-    // 4.5 신당 3.0 통합: 본인 대화면 좌정 主神 페르소나 + 신당 기운을 얹는다.
+    // 4.5 신당 3.0 통합: 대상(본인/가족) 신당의 좌정 主神 페르소나 + 신당 기운을 얹는다.
+    //     가족 신당이 아직 없으면(주신 미좌정) 컨텍스트 없이 진행 — 신당 첫 진입 시 강신으로 생성됨.
     let bondDeityId: string | null = null
     let deityCode: string | null = null
-    if (!familyMemberId || familyMemberId === 'self') {
-      const shrineCtx = await buildShrineContext()
-      if (shrineCtx) {
-        systemInstruction += `\n\n${shrineCtx.block}`
-        bondDeityId = shrineCtx.mainDeityId
-        deityCode = shrineCtx.deityCode
-      }
+    const shrineCtx = await buildShrineContext(fmId)
+    if (shrineCtx) {
+      systemInstruction += `\n\n${shrineCtx.block}`
+      bondDeityId = shrineCtx.mainDeityId
+      deityCode = shrineCtx.deityCode
     }
 
     // 5. systemInstruction을 모델에 주입하고 대화 히스토리 복원
@@ -563,7 +562,7 @@ export async function sendShamanChatMessage(
     let bondLevelName: string | undefined
     if (bondDeityId) {
       try {
-        const r = await awardDeityBondForUser(user.id, bondDeityId, CHAT_BOND_POINTS)
+        const r = await awardDeityBondForUser(user.id, bondDeityId, CHAT_BOND_POINTS, fmId)
         if (!r.success) {
           logger.warn('[sendShamanChatMessage] bond award skipped:', r.error)
         } else if (r.leveledUp && typeof r.level === 'number') {

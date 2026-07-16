@@ -10,7 +10,12 @@ export default async function ShrineShopPage() {
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: shrine } = await supabase.from('shrines').select('id').eq('user_id', user.id).maybeSingle()
+  const { data: shrine } = await supabase
+    .from('shrines')
+    .select('id')
+    .eq('user_id', user.id)
+    .is('family_member_id', null)
+    .maybeSingle()
   if (!shrine) redirect('/protected/shrine')
 
   const data = await getShopData()

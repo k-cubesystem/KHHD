@@ -55,8 +55,13 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
       return { id: unseen.id, message: unseen.message, emotion: unseen.emotion, deityCode: d.code, deityName: d.name }
     }
 
-    // 2) 좌정 主神 확인
-    const { data: shrine } = await supabase.from('shrines').select('main_deity_id').eq('user_id', user.id).maybeSingle()
+    // 2) 좌정 主神 확인 (신탁은 본인 신당 스코프)
+    const { data: shrine } = await supabase
+      .from('shrines')
+      .select('main_deity_id')
+      .eq('user_id', user.id)
+      .is('family_member_id', null)
+      .maybeSingle()
     if (!shrine?.main_deity_id) return null
 
     // 3) 빈도 상한 판정 (최근 7일 이력)

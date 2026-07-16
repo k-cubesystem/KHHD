@@ -15,13 +15,19 @@ export interface BondAwardResult {
  * 인연(緣) 적립 — 서버 내부 전용. 포인트는 호출측 이벤트 로직이 서버에서 결정한다.
  * (공개 서버액션이었을 때 클라이언트가 임의 포인트로 호출 가능했던 취약점의 대체 —
  *  'use server' 파일로 옮기지 말 것.)
+ * familyMemberId 스코프: 인연은 신당(점사 대상)별로 쌓인다 (null=본인 신당).
  */
-export async function awardDeityBondForUser(userId: string, deityId: string, points: number): Promise<BondAwardResult> {
+export async function awardDeityBondForUser(
+  userId: string,
+  deityId: string,
+  points: number,
+  familyMemberId: string | null = null
+): Promise<BondAwardResult> {
   if (points <= 0) return { success: false, error: 'INVALID_POINTS' }
 
   const admin = createAdminClient()
 
-  // 보유 신위에만 적립
+  // 보유 신위에만 적립 (보유는 계정 단위 — 모든 신당 공유)
   const { data: owned } = await admin
     .from('user_shrine_deities')
     .select('deity_id')
@@ -30,18 +36,17 @@ export async function awardDeityBondForUser(userId: string, deityId: string, poi
     .maybeSingle()
   if (!owned) return { success: false, error: 'NOT_OWNED' }
 
-  const { data: before } = await admin
-    .from('user_deity_bonds')
-    .select('bond_level')
-    .eq('user_id', userId)
-    .eq('deity_id', deityId)
-    .maybeSingle()
+  const beforeQuery = admin.from('user_deity_bonds').select('bond_level').eq('user_id', userId).eq('deity_id', deityId)
+  const { data: before } = await (
+    familyMemberId ? beforeQuery.eq('family_member_id', familyMemberId) : beforeQuery.is('family_member_id', null)
+  ).maybeSingle()
   const prevLevel = before?.bond_level ?? 0
 
   const { data, error } = await admin.rpc('award_deity_bond', {
     p_user_id: userId,
     p_deity_id: deityId,
     p_points: points,
+    p_family_member_id: familyMemberId,
   })
   if (error) {
     logger.error('[awardDeityBondForUser] rpc error:', error)

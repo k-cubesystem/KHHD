@@ -34,8 +34,13 @@ export async function placeItem(input: {
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
-  // 내 신당 ID 조회
-  const { data: shrine } = await supabase.from('shrines').select('id').eq('user_id', user.id).single()
+  // 내 신당 ID 조회 (본인 신당 스코프)
+  const { data: shrine } = await supabase
+    .from('shrines')
+    .select('id')
+    .eq('user_id', user.id)
+    .is('family_member_id', null)
+    .single()
 
   if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
@@ -85,7 +90,12 @@ export async function removeItem(slotIndex: number): Promise<{ success: boolean;
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
-  const { data: shrine } = await supabase.from('shrines').select('id').eq('user_id', user.id).single()
+  const { data: shrine } = await supabase
+    .from('shrines')
+    .select('id')
+    .eq('user_id', user.id)
+    .is('family_member_id', null)
+    .single()
 
   if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
