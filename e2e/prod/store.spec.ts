@@ -84,6 +84,17 @@ test.describe('통합 상점', () => {
     await expect(page).toHaveURL(/\/protected\/store\?tab=membership/, { timeout: 15_000 })
     console.log('[PASS] 멤버십 구 링크 → 상점 리다이렉트')
 
+    // 7.5) 테스트 충전 (admin/tester 전용) — wallets 원자 RPC 경로 검증 (테스트 계정 role=tester)
+    await page.goto('/protected/store?tab=bokchae')
+    const testChargeBtn = page.getByRole('button', { name: /TEST: 복채 10만냥 무료 충전/ })
+    if (await testChargeBtn.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await testChargeBtn.click()
+      await expect(page.getByText('테스트 복채 10만냥 충전 완료!').first()).toBeVisible({ timeout: 15_000 })
+      console.log('[PASS] 테스트 충전 (add_wallet_balance RPC) 성공')
+    } else {
+      console.log('[SKIP] 테스트 충전 버튼 미노출 (tester 권한 아님)')
+    }
+
     // 8) 고민상담 — 지난 대화 패널
     await page.goto('/protected/ai-shaman')
     const historyBtn = page.getByRole('button', { name: '지난 대화 열람' })

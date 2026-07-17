@@ -114,7 +114,8 @@ export function TalismanPurchaseSection({
       const result = await addTestCredits(10)
       if (result.success) {
         toast.success('테스트 복채 10만냥 충전 완료!')
-        window.location.reload()
+        // 토스트가 보일 시간을 준 뒤 잔액 갱신 (즉시 reload 는 토스트를 지워버림)
+        window.setTimeout(() => window.location.reload(), 1200)
       } else {
         toast.error(result.error || '충전 실패')
       }

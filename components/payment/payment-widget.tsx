@@ -238,7 +238,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
       const result = await addTestCredits(100)
       if (result.success) {
         toast.success(`테스트 복채 100만냥 충전 완료!`)
-        window.location.reload()
+        window.setTimeout(() => window.location.reload(), 1200)
       } else {
         toast.error(result.error || '충전 실패')
       }
