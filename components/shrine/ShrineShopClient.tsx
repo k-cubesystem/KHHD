@@ -114,6 +114,12 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                     {EL_KO[item.element]} 기운 +{item.energyPower}
                   </p>
                 )}
+                {item.unlockEffect?.type === 'chat_retention' && (
+                  <p className="text-[10px] text-sky-300/80 font-sans">
+                    ✦ 배치 효험: 대화 보존 +{item.unlockEffect.days ?? 90}일
+                    {item.unlockEffect.maxStack ? ` (최대 ${item.unlockEffect.maxStack}개)` : ''}
+                  </p>
+                )}
               </div>
 
               <button

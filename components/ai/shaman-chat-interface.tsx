@@ -13,16 +13,18 @@ import {
   purchaseShamanQuestions,
   getOrCreateChatSession,
   loadChatSessionMessages,
+  listPastChatSessions,
   saveChatMessages,
   endAndCreateNewSession,
   type ShamanChatMessage,
   type ShamanQuestionStatus,
+  type PastChatSession,
 } from '@/app/actions/ai/shaman-chat'
 import { useFamilyMembers } from '@/hooks/use-family-members'
 import { useTts } from '@/hooks/useTts'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw } from 'lucide-react'
+import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw, History, X, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -132,6 +134,150 @@ const Bubble = memo(function Bubble({
     </motion.div>
   )
 })
+
+// ─── 지난 대화 열람 패널 (종료 세션 · 읽기 전용) ──────────────
+function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: () => void }) {
+  const [sessions, setSessions] = useState<PastChatSession[] | null>(null)
+  const [viewing, setViewing] = useState<{ session: PastChatSession; messages: ShamanChatMessage[] | null } | null>(
+    null
+  )
+
+  useEffect(() => {
+    let alive = true
+    listPastChatSessions(familyId).then((r) => {
+      if (alive) setSessions(r.success ? (r.sessions ?? []) : [])
+    })
+    return () => {
+      alive = false
+    }
+  }, [familyId])
+
+  const openSession = async (session: PastChatSession) => {
+    if (session.purged) {
+      setViewing({ session, messages: [] })
+      return
+    }
+    setViewing({ session, messages: null })
+    const r = await loadChatSessionMessages(session.id)
+    setViewing({ session, messages: r.success ? (r.messages ?? []) : [] })
+  }
+
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-label="지난 대화">
+      <button aria-label="닫기" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ y: 60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative w-full max-w-[480px] max-h-[78vh] rounded-t-2xl border border-b-0 border-primary/20 bg-[#12100a] flex flex-col overflow-hidden"
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-primary/10">
+          <div className="flex items-center gap-2">
+            {viewing && (
+              <button
+                onClick={() => setViewing(null)}
+                aria-label="목록으로"
+                className="p-1 -ml-1 text-primary/60 hover:text-primary"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            )}
+            <p className="text-sm font-serif text-gold-200">
+              {viewing ? viewing.session.title || '지난 문답' : '지난 대화'}
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="닫기" className="p-1 text-primary/50 hover:text-primary">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {!viewing ? (
+            // 세션 목록
+            <div className="divide-y divide-primary/8">
+              {sessions === null && (
+                <div className="p-6 text-center text-xs text-ink-light/40">
+                  <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+                  지난 대화를 불러오는 중…
+                </div>
+              )}
+              {sessions?.length === 0 && (
+                <p className="p-8 text-center text-xs text-ink-light/40">
+                  아직 종료된 대화가 없습니다.
+                  <br />
+                  「새 대화」로 마친 문답이 이곳에 보관됩니다.
+                </p>
+              )}
+              {sessions?.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => void openSession(s)}
+                  className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[13px] text-foreground/85 truncate">{s.title || '(첫 질문 없음)'}</p>
+                    {s.purged && (
+                      <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-full border border-primary/20 text-primary/50">
+                        연기로 흩어짐
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10.5px] text-ink-light/35 mt-0.5">{fmtDate(s.endedAt)} 종료</p>
+                </button>
+              ))}
+            </div>
+          ) : viewing.messages === null ? (
+            <div className="p-6 text-center text-xs text-ink-light/40">
+              <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+              문답을 여는 중…
+            </div>
+          ) : viewing.session.purged ? (
+            // 원문 정리된 세션 — 요약만 보존
+            <div className="p-6 space-y-4 text-center">
+              <p className="text-2xl">🕯️</p>
+              <p className="text-[12.5px] text-gold-200/80 font-serif leading-relaxed">
+                오래된 문답은 연기로 흩어졌으나,
+                <br />
+                신은 그 뜻을 기억합니다.
+              </p>
+              {viewing.session.summary && (
+                <div className="text-left rounded-xl border border-primary/15 bg-surface/40 p-4">
+                  <p className="text-[10px] tracking-[0.2em] text-primary/50 font-serif mb-2">신이 기억하는 요지</p>
+                  <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">
+                    {viewing.session.summary}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            // 원문 열람 (읽기 전용)
+            <div className="p-4 space-y-3">
+              {viewing.messages.length === 0 && (
+                <p className="p-4 text-center text-xs text-ink-light/40">이 대화에는 남은 문답이 없습니다.</p>
+              )}
+              {viewing.messages.map((m, i) => (
+                <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  <div
+                    className={cn(
+                      'max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap break-words',
+                      m.role === 'user'
+                        ? 'rounded-br-none bg-gradient-to-br from-[#2a2318] to-[#1e1a10] text-primary/90 border border-gold-600/25'
+                        : 'rounded-bl-none bg-surface/60 border border-primary/8 text-foreground/85'
+                    )}
+                  >
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
 
 // ─── 새 대화 시작 확인 다이얼로그 ──────────────────────────
 function NewChatConfirmBanner({
@@ -285,6 +431,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isSessionLoading, setIsSessionLoading] = useState(true)
   const [showNewChatConfirm, setShowNewChatConfirm] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
 
   const chatRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -588,6 +735,21 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
                 {ttsSpeaking ? '🔊' : autoSpeak ? '🔈' : '🔇'} 음성
               </button>
             )}
+            {/* 지난 대화 열람 */}
+            <button
+              onClick={() => setShowHistory(true)}
+              aria-label="지난 대화 열람"
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg',
+                'text-[11px] text-primary/50 hover:text-primary/80',
+                'border border-primary/15 hover:border-primary/35',
+                'bg-transparent hover:bg-primary/5',
+                'transition-all duration-150'
+              )}
+            >
+              <History className="w-3 h-3" />
+              지난 대화
+            </button>
             {/* 새 대화 시작 버튼 */}
             {messages.length > 0 && (
               <button
@@ -688,6 +850,11 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
             cancelLabel={tCommon('cancel')}
           />
         )}
+      </AnimatePresence>
+
+      {/* 지난 대화 열람 패널 */}
+      <AnimatePresence>
+        {showHistory && <PastSessionsPanel familyId={selectedFamilyId} onClose={() => setShowHistory(false)} />}
       </AnimatePresence>
 
       {/* ── 채팅 영역 ── */}

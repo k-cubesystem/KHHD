@@ -7,7 +7,14 @@ import { logger } from '@/lib/utils/logger'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { trackEvent } from '@/lib/analytics/ga4'
-import { parseBehavior, isElement, isLayer, type CatalogItem, type SizeGrade } from '@/lib/domain/shrine/types'
+import {
+  parseBehavior,
+  parseUnlockEffect,
+  isElement,
+  isLayer,
+  type CatalogItem,
+  type SizeGrade,
+} from '@/lib/domain/shrine/types'
 
 interface CatalogRow {
   id: string
@@ -25,6 +32,7 @@ interface CatalogRow {
   price_bok_points: number
   price_krw: number
   price_bokchae: number
+  unlock_effect: unknown
 }
 
 function toCatalogItem(r: CatalogRow): CatalogItem {
@@ -44,6 +52,7 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     priceBok: r.price_bok_points,
     priceKrw: r.price_krw,
     priceBokchae: r.price_bokchae,
+    unlockEffect: parseUnlockEffect(r.unlock_effect),
   }
 }
 

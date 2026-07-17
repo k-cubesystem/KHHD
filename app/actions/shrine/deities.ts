@@ -8,7 +8,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { assignGuardian, bondProgress, type BondProgress } from '@/lib/domain/shrine/deities'
 import { deriveBaseFromDistribution } from '@/lib/domain/shrine/energy'
-import { isElement, type Element } from '@/lib/domain/shrine/types'
+import { isElement, type Element, type ThemeAssets, type ThemePack } from '@/lib/domain/shrine/types'
 import { getSajuData } from '@/lib/domain/saju/saju'
 
 export interface DeityAura {
@@ -369,6 +369,34 @@ export async function purchaseDeity(
   trackEvent({ action: 'deity_purchase', category: 'shrine', label: deityCode, value: price })
   revalidatePath('/protected/shrine')
   return { success: true, newBalance }
+}
+
+/** 테마팩 카탈로그 + 보유 여부 — 상점(신당 테마 탭)용. */
+export async function listThemePacks(): Promise<ThemePack[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const [{ data: packs }, ownedRes] = await Promise.all([
+    supabase.from('shrine_theme_packs').select('*').eq('is_active', true).order('sort_order'),
+    user
+      ? supabase.from('user_theme_packs').select('pack_id').eq('user_id', user.id)
+      : Promise.resolve({ data: [] as Array<{ pack_id: string }> }),
+  ])
+  const ownedSet = new Set((ownedRes.data ?? []).map((o) => o.pack_id))
+
+  return (packs ?? []).map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    priceBok: p.price_bok,
+    priceKrw: p.price_krw,
+    priceBokchae: p.price_bokchae ?? 0,
+    elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
+    assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
+    owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
+  }))
 }
 
 /**

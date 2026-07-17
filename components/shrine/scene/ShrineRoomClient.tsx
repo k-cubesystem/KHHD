@@ -31,6 +31,7 @@ import { useShrineAudio } from './useShrineAudio'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { saveShrineLayout, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
+import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import { trackEvent } from '@/lib/analytics/ga4'
@@ -82,6 +83,8 @@ export function ShrineRoomClient({ scene }: Props) {
   const roomRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fallbackFull, setFallbackFull] = useState(false)
+  // 이 세션에서 방금 구매한 테마 코드 (서버 owned 플래그 재로드 없이 즉시 반영)
+  const [purchasedCodes, setPurchasedCodes] = useState<Set<string>>(new Set())
   // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
   const [oracle, setOracle] = useState<{ message: string } | null>(null)
 
@@ -327,12 +330,8 @@ export function ShrineRoomClient({ scene }: Props) {
   }, [editing, play, keeperSay, scene.mainDeity])
 
   // ── 테마 전환 ──
-  const onSelectTheme = useCallback(
+  const applyTheme = useCallback(
     async (pack: ThemePack) => {
-      if (!pack.owned) {
-        toast(`${pack.name} — 상점에서 구매 후 사용할 수 있어요`)
-        return
-      }
       const prev = activeCode
       setActiveCode(pack.code)
       keeperSay(greetingFor(pack.code))
@@ -346,6 +345,39 @@ export function ShrineRoomClient({ scene }: Props) {
       }
     },
     [activeCode, keeperSay, play, scene.familyMemberId]
+  )
+
+  // 미보유 유료 테마 — 그 자리에서 복채 구매 후 즉시 적용
+  const buyAndApplyTheme = useCallback(
+    async (pack: ThemePack) => {
+      const r = await purchaseThemePack(pack.code)
+      if (!r.success && r.error !== 'ALREADY_OWNED') {
+        toast.error(
+          r.error === 'INSUFFICIENT_BOKCHAE'
+            ? '복채가 부족합니다 — 상점에서 충전할 수 있어요'
+            : '구매에 실패했습니다. 다시 시도해주세요.'
+        )
+        return
+      }
+      setPurchasedCodes((prevSet) => new Set(prevSet).add(pack.code))
+      if (r.success) toast.success(`${pack.name} 봉헌 완료 — 신당에 적용합니다`)
+      await applyTheme(pack)
+    },
+    [applyTheme]
+  )
+
+  const onSelectTheme = useCallback(
+    async (pack: ThemePack) => {
+      if (!pack.owned && !purchasedCodes.has(pack.code)) {
+        toast(`${pack.name} — ${pack.priceBokchae}복채로 봉헌할까요?`, {
+          description: '구매 즉시 이 신당에 적용됩니다',
+          action: { label: `${pack.priceBokchae}복채 구매`, onClick: () => void buyAndApplyTheme(pack) },
+        })
+        return
+      }
+      await applyTheme(pack)
+    },
+    [applyTheme, buyAndApplyTheme, purchasedCodes]
   )
 
   // ── 전체화면 토글 (Fullscreen API + 미지원 브라우저 폴백) ──
@@ -702,7 +734,7 @@ export function ShrineRoomClient({ scene }: Props) {
             >
               {t.name}
               <span className="text-[9.5px] opacity-70 ml-1 tabular-nums">
-                {t.owned ? '보유' : t.priceBokchae > 0 ? `${t.priceBokchae}복채` : '무료'}
+                {t.owned || purchasedCodes.has(t.code) ? '보유' : t.priceBokchae > 0 ? `${t.priceBokchae}복채` : '무료'}
               </span>
             </button>
           ))}
@@ -756,7 +788,7 @@ export function ShrineRoomClient({ scene }: Props) {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] tracking-[0.14em] text-gold-dim">보관함 — 탭하여 꺼내기</span>
                 <Link
-                  href="/protected/shrine/shop"
+                  href="/protected/store?tab=items"
                   className="text-[10px] font-bold text-gold-300 border border-gold-500/40 rounded-full px-2.5 py-1"
                 >
                   ＋ 신물 구하기

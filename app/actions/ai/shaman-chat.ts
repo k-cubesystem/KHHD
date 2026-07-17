@@ -676,6 +676,58 @@ export async function getOrCreateChatSession(familyMemberId?: string): Promise<{
   }
 }
 
+export interface PastChatSession {
+  id: string
+  title: string | null
+  summary: string | null
+  endedAt: string
+  /** true = 보존기간 경과로 원문 정리됨(요약만 보존) */
+  purged: boolean
+}
+
+/**
+ * 종료된 과거 세션 목록 (최신순, 대상별). purged 세션도 목록엔 남는다 — 요약은 영구 보존.
+ */
+export async function listPastChatSessions(familyMemberId?: string): Promise<{
+  success: boolean
+  sessions?: PastChatSession[]
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+    const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
+    const query = supabase
+      .from('chat_sessions')
+      .select('id, title, summary, ended_at, purged_at')
+      .eq('user_id', user.id)
+      .not('ended_at', 'is', null)
+      .order('ended_at', { ascending: false })
+      .limit(30)
+
+    const { data, error } = await (fmId ? query.eq('family_member_id', fmId) : query.is('family_member_id', null))
+    if (error) return { success: false, error: error.message }
+
+    return {
+      success: true,
+      sessions: (data ?? []).map((s) => ({
+        id: s.id,
+        title: s.title,
+        summary: s.summary,
+        endedAt: s.ended_at as string,
+        purged: s.purged_at !== null,
+      })),
+    }
+  } catch (e) {
+    logger.error('[listPastChatSessions]', e)
+    return { success: false, error: '지난 대화 조회 오류' }
+  }
+}
+
 /**
  * 세션 메시지 목록 로드 (오름차순)
  */

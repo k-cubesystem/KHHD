@@ -8,6 +8,7 @@ import { getSajuData } from '@/lib/domain/saju/saju'
 import {
   parseBehavior,
   parsePlacementState,
+  parseUnlockEffect,
   isLayer,
   isElement,
   type CatalogItem,
@@ -39,6 +40,7 @@ interface CatalogRow {
   price_bok_points: number
   price_krw: number
   price_bokchae: number
+  unlock_effect: unknown
 }
 
 function toCatalogItem(r: CatalogRow): CatalogItem {
@@ -58,6 +60,7 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     priceBok: r.price_bok_points,
     priceKrw: r.price_krw,
     priceBokchae: r.price_bokchae,
+    unlockEffect: parseUnlockEffect(r.unlock_effect),
   }
 }
 

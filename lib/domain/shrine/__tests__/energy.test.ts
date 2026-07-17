@@ -18,6 +18,7 @@ function item(id: string, element: Element, energyPower = 10): CatalogItem {
     priceBok: 0,
     priceKrw: 0,
     priceBokchae: 0,
+    unlockEffect: null,
   }
 }
 

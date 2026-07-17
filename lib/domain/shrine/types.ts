@@ -18,6 +18,16 @@ export interface ItemBehavior {
   litEffect?: EffectKey
 }
 
+/** 배치 시 발동하는 기능 해금 (카탈로그 unlock_effect JSONB) */
+export interface UnlockEffect {
+  /** 효과 종류 (예: chat_retention) */
+  type: string
+  /** 배치 1개당 연장 일수 */
+  days?: number
+  /** 효과가 중첩되는 최대 배치 수 */
+  maxStack?: number
+}
+
 export interface CatalogItem {
   id: string
   name: string
@@ -35,6 +45,8 @@ export interface CatalogItem {
   priceKrw: number
   /** 복채 가격(만냥, 단일 통화). 0=무료. */
   priceBokchae: number
+  /** 배치 효험 (없으면 null) */
+  unlockEffect: UnlockEffect | null
 }
 
 /** 방에 배치된 아이템 인스턴스 */
@@ -147,4 +159,15 @@ export function parsePlacementState(raw: unknown): PlacementState {
   if (typeof raw !== 'object' || raw === null) return {}
   const r = raw as Record<string, unknown>
   return { lit: r.lit === true }
+}
+
+/** DB unlock_effect JSONB(unknown)를 UnlockEffect로 변환 */
+export function parseUnlockEffect(raw: unknown): UnlockEffect | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const r = raw as Record<string, unknown>
+  if (typeof r.type !== 'string' || r.type.length === 0) return null
+  const out: UnlockEffect = { type: r.type }
+  if (typeof r.days === 'number' && Number.isFinite(r.days)) out.days = r.days
+  if (typeof r.max_stack === 'number' && Number.isFinite(r.max_stack)) out.maxStack = r.max_stack
+  return out
 }

@@ -22,6 +22,7 @@ import {
   ScrollText,
   Flame,
   Bell,
+  Store,
 } from 'lucide-react'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
@@ -338,7 +339,7 @@ export default async function MyPage() {
       >
         <div className="grid grid-cols-3 gap-2">
           <Link
-            href="/protected/membership"
+            href="/protected/store"
             className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
           >
             <Coins className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
@@ -348,7 +349,7 @@ export default async function MyPage() {
             <span className="text-[9.5px] text-ink-light/45">복채 만냥</span>
           </Link>
           <Link
-            href="/protected/membership"
+            href="/protected/store?tab=membership"
             className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
           >
             <Crown className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
@@ -407,7 +408,7 @@ export default async function MyPage() {
             { href: '/protected/profile/manse', icon: ScrollText, label: '내 명식' },
             { href: '/protected/family', icon: Users, label: '인연 관리' },
             { href: '/protected/history', icon: BookOpen, label: '사주 기록' },
-            { href: '/protected/membership', icon: Crown, label: '멤버십' },
+            { href: '/protected/store', icon: Store, label: '상점' },
             { href: '/protected/settings', icon: UserIcon, label: '내 정보 설정' },
           ].map(({ href, icon: Icon, label, accent }) => (
             <Link key={href} href={href} className="group">

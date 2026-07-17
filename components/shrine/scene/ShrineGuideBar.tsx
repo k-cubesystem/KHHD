@@ -75,7 +75,7 @@ export function ShrineGuideBar({ deity, neededElementKo, neededElementPlaced, ma
         id: 'element',
         text: `사주에 ${neededElementKo} 기운이 필요해요. 어울리는 신물을 놓아 기운을 채워보세요.`,
         cta: '신물 보러가기',
-        href: '/protected/shrine/shop',
+        href: '/protected/store?tab=items',
       })
     return t
   }, [isOwner, mainDeitySeated, canCheckIn, neededElementPlaced, neededElementKo])
