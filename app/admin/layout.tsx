@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/roulette', label: '룰렛 확률', icon: 'Sparkles' },
     { href: '/admin/features', label: '기능별 복채', icon: 'Sparkles' },
     { href: '/admin/notifications', label: '알림 자동화', icon: 'Bell' },
+    { href: '/admin/announcements', label: '공지사항', icon: 'Bell' },
     // 시스템
     { type: 'divider' as const, label: '시스템' },
     { href: '/admin/service-control', label: '서비스 제어', icon: 'Power' },

@@ -130,13 +130,21 @@ export async function GET(req: NextRequest) {
         })
         .eq('id', subscription.id)
 
-      // 복채 지급
-      await supabase.rpc('add_talismans_by_user', {
+      // 복채 지급 — 원자 RPC (구 add_talismans_by_user 는 DB에 없음 → 갱신 복채 미지급 버그였음)
+      const { error: grantError } = await supabase.rpc('add_wallet_balance', {
         p_user_id: subscription.user_id,
         p_amount: plan.talismans_per_period,
-        p_type: 'SUBSCRIPTION',
-        p_description: `${plan.name} 구독 갱신 — 복채 ${plan.talismans_per_period}만냥 지급`,
       })
+      if (grantError) {
+        logger.error('[Billing Cron] bokchae grant failed:', { userId: subscription.user_id, grantError })
+      } else {
+        await supabase.from('wallet_transactions').insert({
+          user_id: subscription.user_id,
+          amount: plan.talismans_per_period,
+          type: 'SUBSCRIPTION',
+          description: `${plan.name} 구독 갱신 — 복채 ${plan.talismans_per_period}만냥 지급`,
+        })
+      }
 
       results.success++
       logger.log('[Billing Cron] Success:', { userId: subscription.user_id, orderId })

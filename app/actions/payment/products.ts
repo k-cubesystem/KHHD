@@ -99,10 +99,13 @@ export async function addTestCredits(amount: number = 10) {
     return { success: false, error: '권한이 없습니다. (Tester Only)' }
   }
 
-  const supabase = await createClient()
+  const admin = createAdminClient()
+  if (!admin) {
+    return { success: false, error: '서버 설정 오류로 충전할 수 없습니다.' }
+  }
 
-  // 1. payments 테이블에 test 기록
-  const { error: logError } = await supabase.from('payments').insert({
+  // 1. payments 테이블에 test 기록 (실패해도 충전은 계속)
+  const { error: logError } = await admin.from('payments').insert({
     user_id: userId,
     payment_key: `TEST_${Date.now()}`,
     order_id: `TEST_BOKCHAE_${Date.now()}`,
@@ -112,32 +115,23 @@ export async function addTestCredits(amount: number = 10) {
     status: 'test_charge',
     bokchae_type: 'test',
   })
-
   if (logError) {
     logger.error('[TestCharge] Log failed:', logError)
-    // 로그 실패해도 지갑 충전 계속 진행
   }
 
-  // 2. wallets 테이블에 직접 복채 충전 (재화 발행 → service_role 전용)
-  const admin = createAdminClient()
-  if (!admin) {
-    return { success: false, error: '서버 설정 오류로 충전할 수 없습니다.' }
-  }
-  const { data: wallet } = await admin.from('wallets').select('balance').eq('user_id', userId).single()
-
-  const currentBalance = wallet?.balance || 0
-
-  const { error: walletError } = await admin
-    .from('wallets')
-    .upsert({ user_id: userId, balance: currentBalance + amount })
-
+  // 2. 원자 충전 RPC — 지갑 없으면 생성, 있으면 증가.
+  //    (직접 upsert는 wallets PK가 id라 기존 지갑에서 UNIQUE(user_id) 위반으로 항상 실패하던 버그)
+  const { data: newBalance, error: walletError } = await admin.rpc('add_wallet_balance', {
+    p_user_id: userId,
+    p_amount: amount,
+  })
   if (walletError) {
     logger.error('[TestCharge] Wallet update failed:', walletError)
     return { success: false, error: '복채 충전 실패' }
   }
 
   // 3. 트랜잭션 로그
-  await supabase.from('wallet_transactions').insert({
+  await admin.from('wallet_transactions').insert({
     user_id: userId,
     amount: amount,
     type: 'BONUS',
@@ -145,5 +139,5 @@ export async function addTestCredits(amount: number = 10) {
   })
 
   revalidatePath('/protected')
-  return { success: true, newBalance: currentBalance + amount }
+  return { success: true, newBalance: typeof newBalance === 'number' ? newBalance : undefined }
 }

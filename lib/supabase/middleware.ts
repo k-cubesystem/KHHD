@@ -49,6 +49,12 @@ export async function updateSession(request: NextRequest) {
     // }
   }
 
+  // 2.5 /protected 허브 → 분석 홈. RSC 페이지의 redirect()는 로그인 직후 클라이언트 전환과 겹치면
+  //     Next Router 내부 훅 순서 오류(React #310, "Application error" 화면)를 유발 — HTTP 레이어에서 선처리.
+  if (request.nextUrl.pathname === '/protected' && user) {
+    return NextResponse.redirect(new URL('/protected/analysis', request.url))
+  }
+
   // 3. 관리자 경로(/admin) 접근 제어
   // Service role key로 profiles를 조회하여 RLS 재귀 문제 없이 role 확인
   if (request.nextUrl.pathname.startsWith('/admin')) {
