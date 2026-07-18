@@ -41,6 +41,9 @@ jobs:
       - name: Playwright 브라우저 설치
         run: npx playwright install --with-deps chromium
 
+      # ⚠️ --workers=1 필수: 스펙 전부가 **같은 테스트 계정 하나**를 조작한다.
+      #    병렬로 돌리면 서로의 상태(테마 적용·충전·가이드 진행률)를 밟아 플레이크가 난다(실측).
+      #    --retries=1 은 네트워크 흔들림 대비.
       - name: 프로덕션 스모크 실행
         env:
           E2E_PROD_SMOKE: '1'
@@ -55,7 +58,7 @@ jobs:
             e2e/prod/store.spec.ts \
             e2e/prod/notifications.spec.ts \
             e2e/prod/shrine-effects.spec.ts \
-            --project=chromium --reporter=line --workers=2
+            --project=chromium --reporter=line --workers=1 --retries=1
 
       - name: 실패 아티팩트 업로드
         if: failure()
