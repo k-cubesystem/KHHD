@@ -52,6 +52,7 @@
 | 2026-07-18 | 세션21 | 어드민 A4·A5·A7 — 회원상세 복채내역·신당 탭, 공지→전회원 알림 발송, 룰렛 죽은코드 3종 삭제       | app/admin/users/, app/actions/guide.ts, app/admin/announcements/                                                             |
 | 2026-07-18 | 세션21 | P2-10 가이드 진행률 서버저장·온보딩 + P2-11 배치효험 4종(향로·초롱·놋방울·복부적)                | lib/services/shrine-effects.ts, supabase/migrations/20260718_guide_progress.sql·unlock_effects_2to4.sql                      |
 | 2026-07-18 | 세션21 | P0-1 헬스체크 Sentry 경보(필수 RPC 22종 대조) + P0-2 프로덕션 스모크 자동화(GitHub Actions)      | app/api/cron/health/route.ts, .github/workflows/prod-smoke.yml, supabase/migrations/20260718_check_missing_rpcs.sql          |
+| 2026-07-19 | 세션22 | 로드맵 7·8 일괄 — 세션검색·기운보정배선·무료신패키지·가족신당공개·결제퍼널·언어전환배선          | lib/services/membership-deity.ts, lib/domain/chat/constants.ts, supabase/migrations/20260719\_\*.sql                         |
 
 ---
 

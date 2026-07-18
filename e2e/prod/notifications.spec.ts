@@ -32,8 +32,13 @@ test.describe('알림 센터 · 테마 이미지', () => {
       await dlg.getByRole('button', { name: 'Close' }).click()
     })
 
-    // 프로필 → 알림 링크가 404가 아닌 실제 센터로
+    // 프로필 → 언어 전환 배선 확인 (P3-14 — 이전엔 어디서도 렌더되지 않았음)
     await page.goto('/protected/profile')
+    await expect(page.getByText('언어 / Language')).toBeVisible({ timeout: 25_000 })
+    await expect(page.getByRole('button', { name: /Switch to English|한국어로 전환/ })).toBeVisible()
+    console.log('[PASS] 언어 전환 UI 배선 (프로필 설정)')
+
+    // 프로필 → 알림 링크가 404가 아닌 실제 센터로
     await page.getByRole('link', { name: '알림' }).first().click()
     await expect(page).toHaveURL(/\/protected\/notifications/, { timeout: 15_000 })
     await expect(page.getByRole('heading', { name: '알림' })).toBeVisible({ timeout: 15_000 })
