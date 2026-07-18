@@ -10,6 +10,15 @@ export interface GuideAnnouncement {
   body: string
 }
 
+export interface GuidePersonalNotice {
+  id: string
+  title: string
+  message: string
+  /** 행동 유도 링크 (알림 종류별) */
+  ctaLabel: string | null
+  ctaHref: string | null
+}
+
 export interface GuideData {
   /** 좌정 主神 (없으면 해화지기 폴백) */
   deityName: string | null
@@ -17,11 +26,24 @@ export interface GuideData {
   accent: string | null
   /** 최신 활성 공지 (없으면 null) */
   announcement: GuideAnnouncement | null
+  /** 안 읽은 개인 알림 1건 (공지보다 우선 — 만료 예고 등) */
+  personalNotice: GuidePersonalNotice | null
+}
+
+/** 알림 종류 → 가이드 말풍선 CTA */
+const NOTICE_CTA: Record<string, { label: string; href: string }> = {
+  chat_expiry_notice: { label: '기억의 함 보러가기', href: '/protected/store?tab=items' },
 }
 
 /** 전 페이지 신 가이드 초기 데이터 — 마운트 시 1회 로드. */
 export async function getGuideData(): Promise<GuideData> {
-  const empty: GuideData = { deityName: null, portraitUrl: null, accent: null, announcement: null }
+  const empty: GuideData = {
+    deityName: null,
+    portraitUrl: null,
+    accent: null,
+    announcement: null,
+    personalNotice: null,
+  }
   try {
     const supabase = await createClient()
     const {
@@ -29,7 +51,7 @@ export async function getGuideData(): Promise<GuideData> {
     } = await supabase.auth.getUser()
     if (!user) return empty
 
-    const [{ data: shrine }, { data: notice }] = await Promise.all([
+    const [{ data: shrine }, { data: notice }, { data: personal }] = await Promise.all([
       supabase
         .from('shrines')
         .select('main_deity_id')
@@ -42,6 +64,13 @@ export async function getGuideData(): Promise<GuideData> {
         .eq('is_active', true)
         .lte('starts_at', new Date().toISOString())
         .order('starts_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('notifications')
+        .select('id, title, message, type')
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
     ])
@@ -64,11 +93,22 @@ export async function getGuideData(): Promise<GuideData> {
       }
     }
 
+    const cta = personal ? NOTICE_CTA[personal.type] : undefined
+
     return {
       deityName,
       portraitUrl,
       accent,
       announcement: notice ? { id: notice.id, title: notice.title, body: notice.body } : null,
+      personalNotice: personal
+        ? {
+            id: personal.id,
+            title: personal.title,
+            message: personal.message,
+            ctaLabel: cta?.label ?? null,
+            ctaHref: cta?.href ?? null,
+          }
+        : null,
     }
   } catch (e) {
     logger.warn('[guide] getGuideData skipped:', e)

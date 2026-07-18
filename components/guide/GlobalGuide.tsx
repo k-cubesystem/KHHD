@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Megaphone, X } from 'lucide-react'
+import { Megaphone, X, Archive } from 'lucide-react'
 import { getGuideData, type GuideData } from '@/app/actions/guide'
+import { markNotificationRead } from '@/app/actions/core/user-notifications'
 
 // ─── 페이지별 기능 소개 스크립트 (경로 정확 매칭) ───────────────
 const TOURS: Record<string, readonly string[]> = {
@@ -55,7 +57,7 @@ function saveProgress(p: Record<string, number>) {
   } catch {}
 }
 
-type Bubble = { kind: 'notice' } | { kind: 'tour'; step: number } | null
+type Bubble = { kind: 'personal' } | { kind: 'notice' } | { kind: 'tour'; step: number } | null
 
 /**
  * 전 페이지 신 가이드 — 우하단 主神 아바타가 페이지 기능을 하나씩 소개.
@@ -80,9 +82,13 @@ export function GlobalGuide() {
   const tour = useMemo(() => TOURS[pathname] ?? null, [pathname])
   const hidden = pathname.startsWith('/protected/shrine')
 
-  // 경로 진입 시 자동 노출 — 공지(미확인) 우선, 그 다음 미완료 투어 스텝
+  // 경로 진입 시 자동 노출 — 개인 알림(만료 예고 등) > 공지(미확인) > 미완료 투어
   useEffect(() => {
     if (!data || hidden) return
+    if (data.personalNotice) {
+      setBubble({ kind: 'personal' })
+      return
+    }
     if (data.announcement && localStorage.getItem(NOTICE_KEY) !== data.announcement.id) {
       setBubble({ kind: 'notice' })
       return
@@ -96,6 +102,14 @@ export function GlobalGuide() {
     }
     setBubble(null)
   }, [data, pathname, tour, hidden])
+
+  /** 개인 알림 확인 — 읽음 처리 후 로컬 상태에서 제거(재노출 방지) */
+  const dismissPersonal = useCallback(() => {
+    const notice = data?.personalNotice
+    if (notice) void markNotificationRead(notice.id)
+    setData((prev) => (prev ? { ...prev, personalNotice: null } : prev))
+    setBubble(null)
+  }, [data])
 
   const dismissNotice = useCallback(() => {
     if (data?.announcement) {
@@ -135,10 +149,14 @@ export function GlobalGuide() {
     setBubble(null)
   }, [tour, pathname])
 
-  // 아바타 탭 — 닫혀 있으면 공지(있으면) 또는 투어 처음부터 다시 안내
+  // 아바타 탭 — 닫혀 있으면 개인 알림 > 공지 > 투어 처음부터 다시 안내
   const onTapAvatar = useCallback(() => {
     if (bubble) {
       setBubble(null)
+      return
+    }
+    if (data?.personalNotice) {
+      setBubble({ kind: 'personal' })
       return
     }
     if (data?.announcement) {
@@ -149,7 +167,7 @@ export function GlobalGuide() {
   }, [bubble, data, tour])
 
   if (!data || hidden) return null
-  if (!tour && !data.announcement) return null
+  if (!tour && !data.announcement && !data.personalNotice) return null
 
   const accent = data.accent ?? '#c9a84c'
   const speaker = data.deityName ?? '해화지기'
@@ -165,7 +183,33 @@ export function GlobalGuide() {
             exit={{ opacity: 0, scale: 0.9, y: 6 }}
             className="absolute bottom-[60px] right-0 w-[236px] rounded-2xl rounded-br-md border border-gold-500/40 bg-[#120d07] p-3 shadow-2xl"
           >
-            {bubble.kind === 'notice' && data.announcement ? (
+            {bubble.kind === 'personal' && data.personalNotice ? (
+              <>
+                <p className="flex items-center gap-1 text-[9px] text-seal/90 font-serif mb-1">
+                  <Archive className="w-3 h-3" /> {speaker}의 전갈
+                </p>
+                <p className="text-[12px] font-bold text-gold-200 leading-snug mb-1">{data.personalNotice.title}</p>
+                <p className="text-[11.5px] text-ink-light/85 leading-snug mb-2 whitespace-pre-wrap">
+                  {data.personalNotice.message}
+                </p>
+                <div className="flex items-center justify-between">
+                  {data.personalNotice.ctaHref ? (
+                    <Link
+                      href={data.personalNotice.ctaHref}
+                      onClick={dismissPersonal}
+                      className="text-[11px] font-bold text-gold-400"
+                    >
+                      {data.personalNotice.ctaLabel} →
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
+                  <button onClick={dismissPersonal} className="text-[10px] text-ink-light/40 hover:text-ink-light/70">
+                    확인했어요
+                  </button>
+                </div>
+              </>
+            ) : bubble.kind === 'notice' && data.announcement ? (
               <>
                 <p className="flex items-center gap-1 text-[9px] text-gold-500/80 font-serif mb-1">
                   <Megaphone className="w-3 h-3" /> 해화당 공지
@@ -224,14 +268,15 @@ export function GlobalGuide() {
         ) : (
           <span className="w-full h-full flex items-center justify-center text-lg bg-surface">🔮</span>
         )}
-        {/* 미확인 공지 배지 */}
-        {data.announcement &&
-          typeof window !== 'undefined' &&
-          localStorage.getItem(NOTICE_KEY) !== data.announcement.id && (
-            <span className="absolute -top-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-seal text-[8px] text-white font-bold flex items-center justify-center border border-background">
-              !
-            </span>
-          )}
+        {/* 미확인 알림·공지 배지 */}
+        {(data.personalNotice ||
+          (data.announcement &&
+            typeof window !== 'undefined' &&
+            localStorage.getItem(NOTICE_KEY) !== data.announcement.id)) && (
+          <span className="absolute -top-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-seal text-[8px] text-white font-bold flex items-center justify-center border border-background">
+            !
+          </span>
+        )}
       </button>
     </div>
   )

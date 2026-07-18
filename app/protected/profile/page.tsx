@@ -446,7 +446,7 @@ export default async function MyPage() {
                 className="w-[18px] h-[18px] text-ink-light/50 group-hover:text-primary transition-colors"
                 strokeWidth={1}
               />
-              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">알림 설정</span>
+              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">알림</span>
             </div>
             <ChevronLeft className="w-4 h-4 text-ink-light/30 rotate-180 group-hover:text-ink-light transition-colors" />
           </Link>
