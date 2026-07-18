@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP: Record<string, typeof LayoutDashboard> = {
   LayoutDashboard,
   Users,
   CreditCard,
@@ -30,6 +30,7 @@ const ICON_MAP: Record<string, any> = {
   Sparkles,
   Power,
   Activity,
+  Shield,
 }
 
 interface MenuLink {

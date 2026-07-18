@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/types/auth'
-import { updateUserRole, deleteUser, updateUserBalance, updateUserSubscription } from '../actions'
+import { updateUserRole, deleteUser, adjustUserBalance, updateUserSubscription } from '../actions'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,13 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X } from 'lucide-react'
 
 interface AdminUserProfile {
@@ -91,7 +85,9 @@ export function UserDetailClient({
   const [role, setRole] = useState<UserRole>(user.role as UserRole)
   const [balance, setBalance] = useState(wallet?.balance || 0)
   const [isEditingBalance, setIsEditingBalance] = useState(false)
-  const [newBalance, setNewBalance] = useState(wallet?.balance || 0)
+  const [delta, setDelta] = useState('')
+  const [reason, setReason] = useState('')
+  const [balanceSaving, setBalanceSaving] = useState(false)
 
   const [currentTier, setCurrentTier] = useState(subscription?.membership_plans?.tier || 'FREE')
   const [isEditingTier, setIsEditingTier] = useState(false)
@@ -105,14 +101,27 @@ export function UserDetailClient({
     })
   }
 
-  const handleBalanceUpdate = async () => {
-    const result = await updateUserBalance(user.id, Number(newBalance))
+  const handleBalanceAdjust = async () => {
+    const amount = Number(delta)
+    if (!Number.isFinite(amount) || amount === 0) {
+      toast.error('증감액은 0이 아닌 정수여야 합니다.')
+      return
+    }
+    if (!reason.trim()) {
+      toast.error('조정 사유를 입력하세요.')
+      return
+    }
+    setBalanceSaving(true)
+    const result = await adjustUserBalance(user.id, amount, reason)
+    setBalanceSaving(false)
     if (result.success) {
-      setBalance(newBalance)
+      setBalance(result.newBalance ?? balance + amount)
       setIsEditingBalance(false)
-      toast.success('부적 잔액이 수정되었습니다.')
+      setDelta('')
+      setReason('')
+      toast.success(`복채를 ${amount > 0 ? '+' : ''}${amount.toLocaleString()}만냥 조정했습니다.`)
     } else {
-      toast.error('잔액 수정 실패: ' + result.error)
+      toast.error('잔액 조정 실패: ' + result.error)
     }
   }
 
@@ -129,11 +138,7 @@ export function UserDetailClient({
   }
 
   const handleDelete = async () => {
-    if (
-      !confirm(
-        '⚠️ 경고: 정말로 이 사용자를 영구 삭제하시겠습니까?\n모든 데이터가 사라지며 복구할 수 없습니다.'
-      )
-    )
+    if (!confirm('⚠️ 경고: 정말로 이 사용자를 영구 삭제하시겠습니까?\n모든 데이터가 사라지며 복구할 수 없습니다.'))
       return
 
     const toastId = toast.loading('사용자 삭제 처리 중...')
@@ -149,22 +154,10 @@ export function UserDetailClient({
 
   const roleBadge = () => {
     if (role === 'admin')
-      return (
-        <Badge className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20">
-          ADMIN
-        </Badge>
-      )
+      return <Badge className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20">ADMIN</Badge>
     if (role === 'tester')
-      return (
-        <Badge className="text-[9px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-          TESTER
-        </Badge>
-      )
-    return (
-      <Badge className="text-[9px] bg-stone-700/30 text-stone-500 border border-stone-600/30">
-        USER
-      </Badge>
-    )
+      return <Badge className="text-[9px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">TESTER</Badge>
+    return <Badge className="text-[9px] bg-stone-700/30 text-stone-500 border border-stone-600/30">USER</Badge>
   }
 
   return (
@@ -182,9 +175,7 @@ export function UserDetailClient({
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-serif font-bold text-stone-100">
-                {user.full_name || '이름 없음'}
-              </h1>
+              <h1 className="text-lg font-serif font-bold text-stone-100">{user.full_name || '이름 없음'}</h1>
               {roleBadge()}
             </div>
             <p className="text-xs text-stone-500 font-mono">{user.email}</p>
@@ -268,7 +259,13 @@ export function UserDetailClient({
                 <div className="space-y-1">
                   <Label className="text-[10px] text-stone-500 font-medium">가입일</Label>
                   <Input
-                    value={authCreatedAt ? new Date(authCreatedAt).toLocaleString('ko-KR') : (user.created_at ? new Date(user.created_at).toLocaleString('ko-KR') : '-')}
+                    value={
+                      authCreatedAt
+                        ? new Date(authCreatedAt).toLocaleString('ko-KR')
+                        : user.created_at
+                          ? new Date(user.created_at).toLocaleString('ko-KR')
+                          : '-'
+                    }
                     readOnly
                     className="h-7 text-xs bg-stone-900/50 border-stone-700/50 text-stone-400"
                   />
@@ -310,61 +307,100 @@ export function UserDetailClient({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-serif font-bold text-stone-100 flex items-center gap-2">
                     <Coins className="w-4 h-4 text-gold-400" />
-                    부적 지갑
+                    복채 지갑
                   </h3>
-                  {!isEditingBalance && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0 text-stone-500 hover:text-gold-400"
-                      onClick={() => {
-                        setIsEditingBalance(true)
-                        setNewBalance(balance)
-                      }}
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
                 </div>
 
-                <div className="p-4 bg-stone-900/30 rounded-lg border border-stone-700/30">
+                <div className="p-4 bg-stone-900/30 rounded-lg border border-stone-700/30 space-y-3">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
                       <Coins className="w-6 h-6 text-gold-400" />
                     </div>
                     <div className="flex-1">
-                      <Label className="text-[10px] text-stone-500 font-medium">보유 부적</Label>
-                      {isEditingBalance ? (
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input
-                            type="number"
-                            value={newBalance}
-                            onChange={(e) => setNewBalance(Number(e.target.value))}
-                            className="h-8 text-sm bg-stone-800 border-stone-600 text-white w-24"
-                          />
-                          <Button
-                            size="sm"
-                            className="h-8 w-8 p-0 bg-green-600 hover:bg-green-700"
-                            onClick={handleBalanceUpdate}
-                          >
-                            <Save className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-stone-400 hover:text-red-400"
-                            onClick={() => setIsEditingBalance(false)}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-2xl font-serif font-bold text-stone-200">
-                          {balance.toLocaleString()}장
-                        </p>
-                      )}
+                      <Label className="text-[10px] text-stone-500 font-medium">보유 복채</Label>
+                      <p className="text-2xl font-serif font-bold text-stone-200">{balance.toLocaleString()}만냥</p>
                     </div>
                   </div>
+
+                  {isEditingBalance ? (
+                    <div className="space-y-2 pt-2 border-t border-stone-700/30">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-stone-500">증감액 (양수=지급, 음수=차감)</Label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setDelta((d) => String((Number(d) || 0) - 10))}
+                            className="h-8 px-2 rounded bg-stone-800 border border-stone-600 text-stone-300 text-xs"
+                          >
+                            −10
+                          </button>
+                          <Input
+                            type="number"
+                            value={delta}
+                            onChange={(e) => setDelta(e.target.value)}
+                            placeholder="예: 100 또는 -50"
+                            className="h-8 text-sm bg-stone-800 border-stone-600 text-white flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setDelta((d) => String((Number(d) || 0) + 10))}
+                            className="h-8 px-2 rounded bg-stone-800 border border-stone-600 text-stone-300 text-xs"
+                          >
+                            +10
+                          </button>
+                        </div>
+                        {Number(delta) !== 0 && delta !== '' && (
+                          <p className="text-[10px] text-stone-500">
+                            변경 후:{' '}
+                            <span className="text-gold-400 font-bold">
+                              {(balance + Number(delta)).toLocaleString()}만냥
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-stone-500">조정 사유 (필수)</Label>
+                        <Input
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                          placeholder="예: CS 보상, 이벤트 지급, 오류 정정"
+                          maxLength={200}
+                          className="h-8 text-sm bg-stone-800 border-stone-600 text-white"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          disabled={balanceSaving}
+                          className="h-8 bg-green-600 hover:bg-green-700 text-xs gap-1.5"
+                          onClick={handleBalanceAdjust}
+                        >
+                          <Save className="w-3.5 h-3.5" /> 적용
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 text-stone-400 hover:text-red-400 text-xs"
+                          onClick={() => {
+                            setIsEditingBalance(false)
+                            setDelta('')
+                            setReason('')
+                          }}
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" /> 취소
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs border-stone-700/50 text-stone-300 hover:text-gold-400 hover:border-gold-500/30"
+                      onClick={() => setIsEditingBalance(true)}
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-1.5" /> 복채 조정
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -426,9 +462,7 @@ export function UserDetailClient({
                         </div>
                       ) : (
                         <div>
-                          <p className="text-lg font-serif font-bold text-stone-200">
-                            {currentTier || 'FREE'}
-                          </p>
+                          <p className="text-lg font-serif font-bold text-stone-200">{currentTier || 'FREE'}</p>
                           <p className="text-[10px] text-stone-500">
                             {subscription
                               ? `만료일: ${new Date(subscription.end_date).toLocaleDateString()}`
@@ -451,9 +485,7 @@ export function UserDetailClient({
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-stone-100 mb-3">저장된 사주 풀이</h3>
               {sajuRecords.length === 0 ? (
-                <div className="text-center py-8 text-stone-500 text-sm">
-                  저장된 기록이 없습니다.
-                </div>
+                <div className="text-center py-8 text-stone-500 text-sm">저장된 기록이 없습니다.</div>
               ) : (
                 <div className="space-y-2">
                   {sajuRecords.map((record) => (
@@ -496,9 +528,7 @@ export function UserDetailClient({
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-stone-100 mb-3">가족 관계</h3>
               {familyMembers.length === 0 ? (
-                <div className="text-center py-8 text-stone-500 text-sm">
-                  등록된 가족이 없습니다.
-                </div>
+                <div className="text-center py-8 text-stone-500 text-sm">등록된 가족이 없습니다.</div>
               ) : (
                 <div className="grid grid-cols-1 gap-2">
                   {familyMembers.map((member) => (
@@ -543,9 +573,7 @@ export function UserDetailClient({
                         <p className="text-sm font-bold text-stone-100 font-mono">
                           {payment.amount.toLocaleString()}원
                         </p>
-                        <p className="text-[10px] text-stone-600 font-mono mt-0.5">
-                          {payment.order_id}
-                        </p>
+                        <p className="text-[10px] text-stone-600 font-mono mt-0.5">{payment.order_id}</p>
                       </div>
                       <div className="text-right">
                         <Badge

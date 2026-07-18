@@ -6,13 +6,22 @@ import { getUserRole } from '@/lib/auth'
 import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+import { logAdminAction } from '@/lib/admin/audit'
 
-async function requireAdmin(): Promise<{ authorized: true } | { authorized: false; error: string }> {
+async function requireAdmin(): Promise<
+  { authorized: true; actorId: string; actorEmail: string | null } | { authorized: false; error: string }
+> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { authorized: false, error: '로그인이 필요합니다.' }
+
   const role = await getUserRole()
   if (role !== 'admin') {
     return { authorized: false, error: '관리자 권한이 필요합니다.' }
   }
-  return { authorized: true }
+  return { authorized: true, actorId: user.id, actorEmail: user.email ?? null }
 }
 
 export interface AdminUser {
@@ -102,12 +111,23 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole) {
   if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
   const adminClient = createAdminClient()
+  // 감사용 전 역할 스냅샷
+  const { data: prev } = await adminClient.from('profiles').select('role').eq('id', targetUserId).single()
+
   const { error } = await adminClient.from('profiles').update({ role: newRole }).eq('id', targetUserId)
 
   if (error) {
     logger.error('Error updating role:', error)
     return { success: false, error: error.message }
   }
+
+  await logAdminAction({
+    actorId: adminCheck.actorId,
+    actorEmail: adminCheck.actorEmail,
+    action: 'role_change',
+    targetUser: targetUserId,
+    detail: { before: prev?.role ?? null, after: newRole },
+  })
 
   revalidatePath('/admin/users')
   return { success: true }
@@ -195,6 +215,24 @@ export async function deleteUser(userId: string) {
 
     const adminClient = createAdminClient()
 
+    // 감사: 삭제 전 대상 스냅샷 (감사 로그는 FK 없어 삭제 후에도 보존)
+    const { data: targetProfile } = await adminClient
+      .from('profiles')
+      .select('email, full_name, role')
+      .eq('id', userId)
+      .maybeSingle()
+    await logAdminAction({
+      actorId: user.id,
+      actorEmail: user.email ?? null,
+      action: 'user_delete',
+      targetUser: userId,
+      detail: {
+        email: targetProfile?.email ?? null,
+        fullName: targetProfile?.full_name ?? null,
+        role: targetProfile?.role ?? null,
+      },
+    })
+
     // 3. Delete related data first to avoid FK constraint issues
     await adminClient.from('wallet_transactions').delete().eq('user_id', userId)
     await adminClient.from('wallets').delete().eq('user_id', userId)
@@ -218,31 +256,71 @@ export async function deleteUser(userId: string) {
   }
 }
 
-export async function updateUserBalance(targetUserId: string, newBalance: number) {
+/**
+ * 회원 복채 잔액 조정 — 절대값 덮어쓰기가 아닌 **증감(delta) + 사유**.
+ * 원자 RPC(add/deduct_wallet_balance) 경유로 레이스·음수 방지, 감사 로그에 전/후 기록.
+ */
+export async function adjustUserBalance(targetUserId: string, delta: number, reason: string) {
   const adminCheck = await requireAdmin()
   if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
-  const adminClient = createAdminClient()
-
-  // Upsert wallet
-  const { error } = await adminClient
-    .from('wallets')
-    .upsert({ user_id: targetUserId, balance: newBalance }, { onConflict: 'user_id' })
-
-  if (error) {
-    return { success: false, error: error.message }
+  const amount = Math.trunc(delta)
+  if (!Number.isFinite(amount) || amount === 0) {
+    return { success: false, error: '증감액은 0이 아닌 정수여야 합니다.' }
+  }
+  if (Math.abs(amount) > 1_000_000) {
+    return { success: false, error: '한 번에 최대 100만냥까지 조정할 수 있습니다.' }
+  }
+  const trimmedReason = reason.trim().slice(0, 200)
+  if (!trimmedReason) {
+    return { success: false, error: '조정 사유를 입력하세요.' }
   }
 
-  // Log transaction
+  const adminClient = createAdminClient()
+  const { data: before } = await adminClient.from('wallets').select('balance').eq('user_id', targetUserId).maybeSingle()
+  const beforeBalance = before?.balance ?? 0
+
+  // 원자 증감 — 지급/차감 각각 전용 RPC
+  let newBalance: number
+  if (amount > 0) {
+    const { data, error } = await adminClient.rpc('add_wallet_balance', { p_user_id: targetUserId, p_amount: amount })
+    if (error || typeof data !== 'number') {
+      logger.error('[adjustUserBalance] add failed:', error)
+      return { success: false, error: '잔액 충전 실패' }
+    }
+    newBalance = data
+  } else {
+    const { data, error } = await adminClient.rpc('deduct_wallet_balance', {
+      p_user_id: targetUserId,
+      p_amount: -amount,
+    })
+    if (error || typeof data !== 'number') {
+      logger.error('[adjustUserBalance] deduct failed:', error)
+      return { success: false, error: '잔액 차감 실패' }
+    }
+    if (data === -1) return { success: false, error: '해당 회원의 지갑이 없습니다.' }
+    if (data === -2) return { success: false, error: `잔액이 부족합니다 (현재 ${beforeBalance.toLocaleString()}만냥).` }
+    newBalance = data
+  }
+
+  // 트랜잭션 로그 (실 증감액 기록)
   await adminClient.from('wallet_transactions').insert({
     user_id: targetUserId,
-    amount: 0, // Admin adjustment doesn't necessarily track amount change here easily without reading first, showing 0 for "Reset" or similar
-    type: 'BONUS',
-    description: `관리자에 의한 잔액 변경: ${newBalance}`,
+    amount,
+    type: amount > 0 ? 'BONUS' : 'USE',
+    description: `[관리자 조정] ${trimmedReason}`,
+  })
+
+  await logAdminAction({
+    actorId: adminCheck.actorId,
+    actorEmail: adminCheck.actorEmail,
+    action: 'balance_adjust',
+    targetUser: targetUserId,
+    detail: { before: beforeBalance, after: newBalance, delta: amount, reason: trimmedReason },
   })
 
   revalidatePath(`/admin/users/${targetUserId}`)
-  return { success: true }
+  return { success: true, newBalance }
 }
 
 export async function updateUserSubscription(targetUserId: string, planTier: string | null) {
@@ -301,6 +379,14 @@ export async function updateUserSubscription(targetUserId: string, planTier: str
 
   // Update Profile is_subscribed flag for easier frontend check
   await adminClient.from('profiles').update({ is_subscribed: !!planId }).eq('id', targetUserId)
+
+  await logAdminAction({
+    actorId: adminCheck.actorId,
+    actorEmail: adminCheck.actorEmail,
+    action: 'subscription_change',
+    targetUser: targetUserId,
+    detail: { tier: planTier ?? 'FREE' },
+  })
 
   revalidatePath(`/admin/users/${targetUserId}`)
   return { success: true }

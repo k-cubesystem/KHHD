@@ -1,65 +1,65 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/card'
-import { Users, CreditCard, TrendingUp, Activity } from 'lucide-react'
+import { Users, CreditCard, TrendingUp, Activity, Crown, UserPlus } from 'lucide-react'
 import { TrafficChart } from '@/components/admin/traffic-chart'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 
-async function getStats() {
-  const supabase = await createClient()
+interface DashboardStats {
+  totalUsers: number
+  todaySignups: number
+  totalRevenue: number
+  todayRevenue: number
+  monthRevenue: number
+  activeSubscriptions: number
+  mrr: number
+  totalAnalyses: number
+}
 
-  // Check Admin
+const EMPTY_STATS: DashboardStats = {
+  totalUsers: 0,
+  todaySignups: 0,
+  totalRevenue: 0,
+  todayRevenue: 0,
+  monthRevenue: 0,
+  activeSubscriptions: 0,
+  mrr: 0,
+  totalAnalyses: 0,
+}
+
+async function getStats(): Promise<DashboardStats & { recentPayments: Payment[] }> {
+  const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { totalUsers: 0, totalRevenue: 0, todayRevenue: 0, totalAnalyses: 0, recentPayments: [] }
+  if (!user) return { ...EMPTY_STATS, recentPayments: [] }
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin')
-    return { totalUsers: 0, totalRevenue: 0, todayRevenue: 0, totalAnalyses: 0, recentPayments: [] }
+  if (profile?.role !== 'admin') return { ...EMPTY_STATS, recentPayments: [] }
 
-  // Use Admin Client if available
-  let dbClient = supabase
   const adminClient = createAdminClient()
-  try {
-    dbClient = adminClient
-  } catch (e) {
-    logger.warn('getStats: Fallback to standard client')
+
+  // DB 집계 1콜 — 총회원 1000캡 제거, 매출 SUM, 활성구독·MRR·오늘가입
+  let stats: DashboardStats = EMPTY_STATS
+  const { data: rpcData, error: rpcError } = await adminClient.rpc('get_admin_dashboard_stats')
+  if (rpcError) {
+    logger.error('[admin/dashboard] stats rpc failed:', rpcError)
+  } else if (rpcData && typeof rpcData === 'object') {
+    const r = rpcData as Record<string, unknown>
+    stats = {
+      totalUsers: Number(r.totalUsers) || 0,
+      todaySignups: Number(r.todaySignups) || 0,
+      totalRevenue: Number(r.totalRevenue) || 0,
+      todayRevenue: Number(r.todayRevenue) || 0,
+      monthRevenue: Number(r.monthRevenue) || 0,
+      activeSubscriptions: Number(r.activeSubscriptions) || 0,
+      mrr: Number(r.mrr) || 0,
+      totalAnalyses: Number(r.totalAnalyses) || 0,
+    }
   }
 
-  // auth.users 직접 카운트 — profiles 미생성 신규 유저도 포함
-  let totalUsers = 0
-  try {
-    const { data: authData } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
-    totalUsers = authData?.users?.length ?? 0
-  } catch {
-    const { count } = await dbClient.from('profiles').select('*', { count: 'exact', head: true })
-    totalUsers = count ?? 0
-  }
-
-  // Get total revenue
-  const { data: payments } = await dbClient.from('payments').select('amount').eq('status', 'completed')
-
-  const totalRevenue = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-
-  // Get today's payments
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const { data: todayPayments } = await dbClient
-    .from('payments')
-    .select('amount')
-    .eq('status', 'completed')
-    .gte('created_at', today.toISOString())
-
-  const todayRevenue = todayPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-
-  // Get total analyses
-  const { count: totalAnalyses } = await dbClient.from('saju_records').select('*', { count: 'exact', head: true })
-
-  // Get recent payments
-  const { data: recentPayments } = await dbClient
+  const { data: recentPayments } = await adminClient
     .from('payments')
     .select(
       `
@@ -73,13 +73,7 @@ async function getStats() {
     .order('created_at', { ascending: false })
     .limit(5)
 
-  return {
-    totalUsers: totalUsers || 0,
-    totalRevenue,
-    todayRevenue,
-    totalAnalyses: totalAnalyses || 0,
-    recentPayments: (recentPayments as Payment[]) || [],
-  }
+  return { ...stats, recentPayments: (recentPayments as Payment[]) || [] }
 }
 
 interface Payment {
@@ -104,6 +98,15 @@ export default async function AdminDashboardPage() {
       border: 'border-blue-500/20',
     },
     {
+      label: '오늘 가입',
+      value: `+${stats.todaySignups.toLocaleString()}`,
+      icon: UserPlus,
+      color: 'text-sky-400',
+      bgGradient: 'from-sky-500/20 to-sky-600/5',
+      iconBg: 'bg-sky-500/10',
+      border: 'border-sky-500/20',
+    },
+    {
       label: '총 매출',
       value: `${stats.totalRevenue.toLocaleString()}원`,
       icon: TrendingUp,
@@ -120,6 +123,33 @@ export default async function AdminDashboardPage() {
       bgGradient: 'from-gold-500/20 to-gold-600/5',
       iconBg: 'bg-gold-500/10',
       border: 'border-gold-500/20',
+    },
+    {
+      label: '이번 달 매출',
+      value: `${stats.monthRevenue.toLocaleString()}원`,
+      icon: TrendingUp,
+      color: 'text-teal-400',
+      bgGradient: 'from-teal-500/20 to-teal-600/5',
+      iconBg: 'bg-teal-500/10',
+      border: 'border-teal-500/20',
+    },
+    {
+      label: '활성 구독',
+      value: stats.activeSubscriptions.toLocaleString(),
+      icon: Crown,
+      color: 'text-pink-400',
+      bgGradient: 'from-pink-500/20 to-pink-600/5',
+      iconBg: 'bg-pink-500/10',
+      border: 'border-pink-500/20',
+    },
+    {
+      label: 'MRR (월 반복매출)',
+      value: `${stats.mrr.toLocaleString()}원`,
+      icon: TrendingUp,
+      color: 'text-amber-400',
+      bgGradient: 'from-amber-500/20 to-amber-600/5',
+      iconBg: 'bg-amber-500/10',
+      border: 'border-amber-500/20',
     },
     {
       label: '총 분석 횟수',
@@ -140,8 +170,8 @@ export default async function AdminDashboardPage() {
         <p className="text-xs md:text-sm text-stone-500">해화당 서비스 현황을 한눈에 확인하세요.</p>
       </div>
 
-      {/* Stats Grid - 모바일 2칸 */}
-      <div className="grid grid-cols-2 gap-2.5 md:gap-4">
+      {/* Stats Grid - 모바일 2칸 / 데스크톱 4칸 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
         {statCards.map((stat) => (
           <Card
             key={stat.label}

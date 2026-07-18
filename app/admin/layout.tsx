@@ -36,6 +36,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/service-control', label: '서비스 제어', icon: 'Power' },
     { href: '/admin/monitoring', label: '모니터링', icon: 'Activity' },
     { href: '/admin/gemini-usage', label: 'Gemini 사용량', icon: 'Activity' },
+    { href: '/admin/audit', label: '감사 로그', icon: 'Shield' },
   ]
 
   return <AdminLayoutClient menuItems={menuItems}>{children}</AdminLayoutClient>
