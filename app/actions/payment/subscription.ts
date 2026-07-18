@@ -5,6 +5,7 @@ import { addTalismans } from './wallet'
 import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { grantMembershipDeity } from '@/lib/services/membership-deity'
 import { logger } from '@/lib/utils/logger'
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
@@ -488,6 +489,9 @@ export async function executeFirstPayment(customerKey: string): Promise<{
     'SUBSCRIPTION',
     `${plan.name} 구독 - 부적 ${plan.talismans_per_period}장 지급`
   )
+
+  // 4. 멤버십 무료신 증정 (등급당 1위, 멱등·해지해도 보유 유지). 실패해도 구독은 성공.
+  await grantMembershipDeity(subscription.user_id, plan.tier)
 
   logger.log('[Subscription] First payment success:', orderId)
 

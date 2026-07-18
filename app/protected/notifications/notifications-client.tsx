@@ -17,6 +17,10 @@ const KIND: Record<string, { icon: typeof Bell; cta?: { label: string; href: str
     cta: { label: '기억의 함 보러가기', href: '/protected/store?tab=items' },
   },
   admin_announcement: { icon: Megaphone },
+  membership_deity_gift: {
+    icon: Sparkles,
+    cta: { label: '신위전에서 좌정하기', href: '/protected/shrine/deities' },
+  },
 }
 
 export function NotificationsClient({ initialItems }: { initialItems: UserNotification[] }) {

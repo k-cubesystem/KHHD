@@ -141,16 +141,40 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
   const [viewing, setViewing] = useState<{ session: PastChatSession; messages: ShamanChatMessage[] | null } | null>(
     null
   )
+  const [search, setSearch] = useState('')
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
 
+  // 검색어 변경 시 디바운스 후 첫 페이지 재조회
   useEffect(() => {
     let alive = true
-    listPastChatSessions(familyId).then((r) => {
-      if (alive) setSessions(r.success ? (r.sessions ?? []) : [])
-    })
+    const id = window.setTimeout(
+      () => {
+        setSessions(null)
+        listPastChatSessions({ familyMemberId: familyId, search }).then((r) => {
+          if (!alive) return
+          setSessions(r.success ? (r.sessions ?? []) : [])
+          setHasMore(r.hasMore ?? false)
+        })
+      },
+      search ? 300 : 0
+    )
     return () => {
       alive = false
+      window.clearTimeout(id)
     }
-  }, [familyId])
+  }, [familyId, search])
+
+  const loadMore = async () => {
+    if (!sessions) return
+    setLoadingMore(true)
+    const r = await listPastChatSessions({ familyMemberId: familyId, search, offset: sessions.length })
+    setLoadingMore(false)
+    if (r.success) {
+      setSessions((prev) => [...(prev ?? []), ...(r.sessions ?? [])])
+      setHasMore(r.hasMore ?? false)
+    }
+  }
 
   const openSession = async (session: PastChatSession) => {
     if (session.purged) {
@@ -193,6 +217,18 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
           </button>
         </div>
 
+        {/* 검색 — 목록 화면에서만 */}
+        {!viewing && (
+          <div className="px-4 py-2 border-b border-primary/8">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="지난 문답 검색 (제목·요지)"
+              className="w-full h-8 rounded-lg bg-surface/50 border border-primary/15 px-2.5 text-[12px] text-foreground/85 outline-none focus:border-primary/40 placeholder:text-ink-light/30"
+            />
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {!viewing ? (
             // 세션 목록
@@ -205,9 +241,15 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
               )}
               {sessions?.length === 0 && (
                 <p className="p-8 text-center text-xs text-ink-light/40">
-                  아직 종료된 대화가 없습니다.
-                  <br />
-                  「새 대화」로 마친 문답이 이곳에 보관됩니다.
+                  {search ? (
+                    <>「{search}」에 해당하는 문답이 없습니다.</>
+                  ) : (
+                    <>
+                      아직 종료된 대화가 없습니다.
+                      <br />
+                      「새 대화」로 마친 문답이 이곳에 보관됩니다.
+                    </>
+                  )}
                 </p>
               )}
               {sessions?.map((s) => (
@@ -227,6 +269,15 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
                   <p className="text-[10.5px] text-ink-light/35 mt-0.5">{fmtDate(s.endedAt)} 종료</p>
                 </button>
               ))}
+              {hasMore && (
+                <button
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                  className="w-full py-3 text-[11.5px] text-gold-400 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                >
+                  {loadingMore ? '불러오는 중…' : '더 보기'}
+                </button>
+              )}
             </div>
           ) : viewing.messages === null ? (
             <div className="p-6 text-center text-xs text-ink-light/40">

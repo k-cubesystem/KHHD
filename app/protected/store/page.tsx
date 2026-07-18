@@ -11,6 +11,7 @@ import { MembershipTabs } from '@/components/membership/membership-tabs'
 import { TalismanPurchaseSection } from '@/components/membership/talisman-purchase-section'
 import { ShrineShopClient } from '@/components/shrine/ShrineShopClient'
 import { ThemeShopGrid } from '@/components/store/ThemeShopGrid'
+import { StoreFunnelTracker } from '@/components/store/StoreFunnelTracker'
 import { ChevronLeft, Coins, Crown, Palette, Flame, ArrowRight } from 'lucide-react'
 
 const TAB_KEYS = ['bokchae', 'membership', 'theme', 'items'] as const
@@ -40,6 +41,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto px-3 py-6 pb-24">
+      <StoreFunnelTracker tab={tab} />
       <div className="flex items-center justify-between mb-4">
         <Link
           href="/protected/profile"

@@ -7,6 +7,7 @@ import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
+import { grantMembershipDeity } from '@/lib/services/membership-deity'
 
 async function requireAdmin(): Promise<
   { authorized: true; actorId: string; actorEmail: string | null } | { authorized: false; error: string }
@@ -438,6 +439,9 @@ export async function updateUserSubscription(targetUserId: string, planTier: str
 
   // Update Profile is_subscribed flag for easier frontend check
   await adminClient.from('profiles').update({ is_subscribed: !!planId }).eq('id', targetUserId)
+
+  // 어드민이 등급을 부여한 경우도 무료신 증정 대상 (멱등)
+  if (planTier) await grantMembershipDeity(targetUserId, planTier)
 
   await logAdminAction({
     actorId: adminCheck.actorId,

@@ -23,7 +23,9 @@ import {
   Flame,
   Bell,
   Store,
+  Globe,
 } from 'lucide-react'
+import { LocaleSwitcher } from '@/components/shared/locale-switcher'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getUserLimitsSummary } from '@/app/actions/payment/membership'
@@ -437,6 +439,14 @@ export default async function MyPage() {
       {/* ── 6. 설정·지원 ── */}
       <section className="px-3 mb-10 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300 relative z-10">
         <div className="rounded-xl border border-primary/15 bg-surface/20 divide-y divide-primary/10 overflow-hidden">
+          {/* 언어 전환 — next-intl 로케일 쿠키 토글 */}
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <Globe className="w-[18px] h-[18px] text-ink-light/50" strokeWidth={1} />
+              <span className="text-sm text-ink-light/80 font-light">언어 / Language</span>
+            </div>
+            <LocaleSwitcher className="border border-primary/20 rounded-lg" />
+          </div>
           <Link
             href="/protected/notifications"
             className="flex items-center justify-between p-4 hover:bg-surface/30 transition-colors group"

@@ -7,6 +7,7 @@ import { Check, Coins, Loader2, Zap, Sparkles, Gift } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { addTestCredits } from '@/app/actions/payment/products'
+import { GA } from '@/lib/analytics/ga4'
 import type { PricePlan, UserRole } from '@/types/auth'
 
 interface TalismanPurchaseSectionProps {
@@ -82,9 +83,12 @@ export function TalismanPurchaseSection({
 
   const handleCharge = async (plan: DisplayPlan) => {
     setLoadingPlan(plan.credits)
+    // 퍼널: 결제 시도 (성공은 successUrl 페이지에서 bokchaeCharge 로 기록됨)
+    GA.checkoutStart(plan.name, plan.price)
     try {
       const sdk = await getTossPaymentsSDK()
       if (!sdk) {
+        GA.checkoutFail(plan.name, 'sdk_unavailable')
         toast.error('결제 모듈을 불러올 수 없습니다.')
         setLoadingPlan(null)
         return
@@ -103,6 +107,7 @@ export function TalismanPurchaseSection({
       })
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
+      GA.checkoutFail(plan.name, error instanceof Error ? error.message.slice(0, 40) : 'unknown')
       toast.error(msg)
       setLoadingPlan(null)
     }

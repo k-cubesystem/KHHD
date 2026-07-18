@@ -22,7 +22,7 @@ import {
   type ThemePack,
 } from '@/lib/domain/shrine/types'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
-import { DEFAULT_BASE, deriveBaseFromDistribution } from '@/lib/domain/shrine/energy'
+import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 
 interface CatalogRow {
@@ -97,20 +97,49 @@ async function loadFamilyTarget(
   }
 }
 
-/** 가족 사주 기반 기운 프로필 — 저장 없이 즉시 계산 (user_energy_profile 은 본인 전용 PK). */
-function profileFromBirth(
-  birthDate: string | null,
-  birthTime: string | null,
-  isSolar: boolean
-): { base: Record<Element, number>; yongsin: Element | null } {
-  if (!birthDate) return { base: { ...DEFAULT_BASE }, yongsin: null }
-  try {
-    const saju = getSajuData(birthDate, birthTime || '12:00', isSolar)
-    return deriveBaseFromDistribution(saju.elementsDistribution)
-  } catch (e) {
-    logger.warn('[shrine/scene] family profile derive failed:', e)
-    return { base: { ...DEFAULT_BASE }, yongsin: null }
+/**
+ * 가족 사주 기반 기운 프로필 + 저장된 관상·손금 보정 합산.
+ * user_energy_profile 이 가족 스코프를 지원하므로(20260719 마이그레이션) 보정도 대상별로 적용된다.
+ */
+async function familyProfile(
+  supabase: SupabaseServer,
+  userId: string,
+  family: FamilyTarget
+): Promise<{ base: Record<Element, number>; yongsin: Element | null }> {
+  let base = { ...DEFAULT_BASE }
+  let yongsin: Element | null = null
+
+  if (family.birthDate) {
+    try {
+      const saju = getSajuData(family.birthDate, family.birthTime || '12:00', family.isSolar)
+      const derived = deriveBaseFromDistribution(saju.elementsDistribution)
+      base = derived.base
+      yongsin = derived.yongsin
+    } catch (e) {
+      logger.warn('[shrine/scene] family profile derive failed:', e)
+    }
   }
+
+  // 관상·손금 보정 (있으면 반영 — 없으면 사주만)
+  const { data: stored } = await supabase
+    .from('user_energy_profile')
+    .select('face_modifier, palm_modifier')
+    .eq('user_id', userId)
+    .eq('family_member_id', family.id)
+    .maybeSingle()
+  if (stored) {
+    base = applyModifiers(
+      base,
+      stored.face_modifier as Record<string, unknown>,
+      stored.palm_modifier as Record<string, unknown>
+    )
+    // 보정 후 가장 낮은 기운으로 용신 재판정
+    let lowest: Element = 'wood'
+    for (const el of ELEMENTS) if (base[el] < base[lowest]) lowest = el
+    yongsin = lowest
+  }
+
+  return { base, yongsin }
 }
 
 /** 사주 기반 기운 프로필을 계산·저장하거나 기존 것을 반환 */
@@ -120,21 +149,34 @@ async function loadOrComputeProfile(
 ): Promise<{ base: Record<Element, number>; yongsin: Element | null }> {
   const { data: existing } = await supabase
     .from('user_energy_profile')
-    .select('base_wood, base_fire, base_earth, base_metal, base_water, yongsin_element')
+    .select('base_wood, base_fire, base_earth, base_metal, base_water, yongsin_element, face_modifier, palm_modifier')
     .eq('user_id', userId)
+    .is('family_member_id', null)
     .maybeSingle()
 
   if (existing) {
-    return {
-      base: {
+    // 관상·손금 보정 반영 (설계돼 있었으나 여태 적용되지 않던 컬럼)
+    const base = applyModifiers(
+      {
         wood: existing.base_wood,
         fire: existing.base_fire,
         earth: existing.base_earth,
         metal: existing.base_metal,
         water: existing.base_water,
       },
-      yongsin: isElement(existing.yongsin_element) ? existing.yongsin_element : null,
+      existing.face_modifier as Record<string, unknown>,
+      existing.palm_modifier as Record<string, unknown>
+    )
+    let yongsin = isElement(existing.yongsin_element) ? existing.yongsin_element : null
+    const hasModifier =
+      Object.keys((existing.face_modifier as object) ?? {}).length > 0 ||
+      Object.keys((existing.palm_modifier as object) ?? {}).length > 0
+    if (hasModifier) {
+      let lowest: Element = 'wood'
+      for (const el of ELEMENTS) if (base[el] < base[lowest]) lowest = el
+      yongsin = lowest
     }
+    return { base, yongsin }
   }
 
   // 사주에서 유도 (생년월일 있을 때). 실패 시 기본값.
@@ -238,7 +280,7 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<The
   }))
 }
 
-const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, main_deity_id'
+const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, main_deity_id, visibility'
 
 /**
  * 소유자용 씬 데이터 로드.
@@ -295,9 +337,7 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Scen
     supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('shrine_placements').select('*').eq('shrine_id', shrine.id),
     supabase.from('user_shrine_inventory').select('catalog_item_id, qty').eq('user_id', user.id),
-    family
-      ? Promise.resolve(profileFromBirth(family.birthDate, family.birthTime, family.isSolar))
-      : loadOrComputeProfile(supabase, user.id),
+    family ? familyProfile(supabase, user.id, family) : loadOrComputeProfile(supabase, user.id),
     loadThemes(supabase, user.id),
   ])
 
@@ -335,6 +375,7 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Scen
     shrineName: shrine.name,
     familyMemberId: fmId,
     greetingName,
+    visibility: shrine.visibility === 'public' ? 'public' : 'private',
     isOwner: true,
     catalog,
     placements,
@@ -458,6 +499,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
     shrineName: shrine.name,
     familyMemberId: null,
     greetingName: null, // 방문자 뷰는 효험 미적용
+    visibility: 'public', // 방문자에게 보이는 시점에서 이미 공개 신당
     isOwner: false,
     catalog,
     placements,
@@ -564,6 +606,29 @@ export async function setPlacementLit(placementId: string, lit: boolean): Promis
   const merged = { ...parsePlacementState(row.state), lit }
   const { error } = await supabase.from('shrine_placements').update({ state: merged }).eq('id', placementId)
   return { success: !error }
+}
+
+/**
+ * 신당 공개/비공개 전환 (P3-16). 가족 신당은 기본 비공개이며 소유자가 명시적으로 공개할 때만 열린다.
+ * ⚠️ 공개 시 신당 이름("○○의 신당")으로 가족 이름이 드러난다 — 호출부에서 반드시 고지할 것.
+ */
+export async function setShrineVisibility(
+  visibility: 'public' | 'private',
+  familyMemberId?: string | null
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+  if (visibility !== 'public' && visibility !== 'private') return { success: false, error: 'INVALID_VISIBILITY' }
+
+  const q = supabase.from('shrines').update({ visibility }).eq('user_id', user.id)
+  const { error } = await (familyMemberId ? q.eq('family_member_id', familyMemberId) : q.is('family_member_id', null))
+  if (error) return { success: false, error: error.message }
+
+  revalidatePath('/protected/shrine')
+  return { success: true }
 }
 
 /** 테마 팩 활성화 (무료거나 보유한 팩만). familyMemberId 지정 시 그 가족 신당에 적용. */

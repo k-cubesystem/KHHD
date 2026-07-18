@@ -110,6 +110,28 @@ const HANJA_TO_EL: Record<string, Element> = { 木: 'wood', 火: 'fire', 土: 'e
 
 export const DEFAULT_BASE: Record<Element, number> = { wood: 40, fire: 40, earth: 40, metal: 40, water: 40 }
 
+/**
+ * 관상·손금 오행 보정을 기본 기운에 합산 (5~90 클램프).
+ * 보정은 { wood: +5, fire: -3 } 형태의 부분 객체 — 없는 키는 0으로 본다.
+ * ⚠️ 지금은 생산자(프롬프트 오행형 출력)가 없어 대부분 빈 객체다. 값이 들어오면 즉시 반영된다.
+ */
+export function applyModifiers(
+  base: Record<Element, number>,
+  ...modifiers: Array<Record<string, unknown> | null | undefined>
+): Record<Element, number> {
+  const out: Record<Element, number> = { ...base }
+  for (const mod of modifiers) {
+    if (typeof mod !== 'object' || mod === null) continue
+    for (const el of ELEMENTS) {
+      const v = (mod as Record<string, unknown>)[el]
+      if (typeof v === 'number' && Number.isFinite(v)) {
+        out[el] = Math.max(5, Math.min(90, out[el] + v))
+      }
+    }
+  }
+  return out
+}
+
 /** 사주 오행 분포(한자 키) → 기본 기운 + 용신(가장 부족한 기운). 결정론 순수 함수. */
 export function deriveBaseFromDistribution(dist: Record<string, number>): {
   base: Record<Element, number>

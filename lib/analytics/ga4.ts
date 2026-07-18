@@ -33,6 +33,15 @@ export const GA = {
     trackEvent({ action: 'purchase', category: 'membership', label: plan, value }),
   bokchaeCharge: (amount: number) => trackEvent({ action: 'bokchae_charge', category: 'payment', value: amount }),
 
+  // ── 결제 퍼널 (로드맵 P1-5) — 상점 진입 → 탭 → 결제 시도 → 성공/실패 ──
+  // 이탈 지점을 보려면 네 단계가 모두 찍혀야 한다. GA4 에서 storeView→checkoutStart 전환율로 확인.
+  storeView: (tab: string) => trackEvent({ action: 'store_view', category: 'funnel', label: tab }),
+  storeTab: (tab: string) => trackEvent({ action: 'store_tab', category: 'funnel', label: tab }),
+  checkoutStart: (plan: string, value: number) =>
+    trackEvent({ action: 'checkout_start', category: 'funnel', label: plan, value }),
+  checkoutFail: (plan: string, reason: string) =>
+    trackEvent({ action: 'checkout_fail', category: 'funnel', label: `${plan}:${reason}` }),
+
   shareKakao: (contentType: string) => trackEvent({ action: 'share_kakao', category: 'social', label: contentType }),
   shareCopyLink: (contentType: string) =>
     trackEvent({ action: 'share_copy_link', category: 'social', label: contentType }),

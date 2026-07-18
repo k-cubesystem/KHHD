@@ -31,7 +31,7 @@ import {
 import { useShrineAudio } from './useShrineAudio'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { ShrineGuideBar } from './ShrineGuideBar'
-import { saveShrineLayout, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
+import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
@@ -91,6 +91,8 @@ export function ShrineRoomClient({ scene }: Props) {
   const [fallbackFull, setFallbackFull] = useState(false)
   // 이 세션에서 방금 구매한 테마 코드 (서버 owned 플래그 재로드 없이 즉시 반영)
   const [purchasedCodes, setPurchasedCodes] = useState<Set<string>>(new Set())
+  const [visibility, setVisibility] = useState<'public' | 'private'>(scene.visibility)
+  const [visibilitySaving, setVisibilitySaving] = useState(false)
   // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
   const [oracle, setOracle] = useState<{ message: string } | null>(null)
 
@@ -386,6 +388,28 @@ export function ShrineRoomClient({ scene }: Props) {
     [applyTheme, buyAndApplyTheme, purchasedCodes]
   )
 
+  // ── 공개/비공개 전환 — 가족 신당은 이름이 드러나므로 공개 전에 확인을 받는다 ──
+  const toggleVisibility = useCallback(async () => {
+    const next = visibility === 'public' ? 'private' : 'public'
+    if (next === 'public' && scene.familyMemberId) {
+      const ok = window.confirm(
+        '이 신당을 공개하면 신당 이름(“○○의 신당”)으로 가족의 이름이 다른 사람에게 보일 수 있습니다.\n공개할까요?'
+      )
+      if (!ok) return
+    }
+    setVisibilitySaving(true)
+    const prev = visibility
+    setVisibility(next)
+    const res = await setShrineVisibility(next, scene.familyMemberId)
+    setVisibilitySaving(false)
+    if (!res.success) {
+      setVisibility(prev)
+      toast.error('공개 설정 변경 실패')
+    } else {
+      toast.success(next === 'public' ? '이 신당이 공개되었습니다' : '이 신당을 비공개로 바꾸었습니다')
+    }
+  }, [visibility, scene.familyMemberId])
+
   // ── 전체화면 토글 (Fullscreen API + 미지원 브라우저 폴백) ──
   const toggleFullscreen = useCallback(() => {
     const el = roomRef.current
@@ -431,6 +455,17 @@ export function ShrineRoomClient({ scene }: Props) {
               <Sparkles className="w-3.5 h-3.5" />
               신위
             </Link>
+          )}
+          {isOwner && (
+            <button
+              onClick={() => void toggleVisibility()}
+              disabled={visibilitySaving}
+              aria-label={visibility === 'public' ? '신당 비공개로 전환' : '신당 공개로 전환'}
+              title={visibility === 'public' ? '공개 중 — 눌러서 비공개' : '비공개 — 눌러서 공개'}
+              className="h-8 px-2 rounded-[10px] flex items-center gap-1 bg-surface border border-gold-500/25 text-gold-300 text-[10px] disabled:opacity-50"
+            >
+              {visibility === 'public' ? '공개' : '비공개'}
+            </button>
           )}
           <button
             onClick={toggleMute}

@@ -118,6 +118,8 @@ export interface SceneData {
   familyMemberId: string | null
   /** 놋방울(deity_greeting) 배치 시 主神이 부를 이름. 미배치면 null */
   greetingName: string | null
+  /** 공개 여부 — 가족 신당은 기본 비공개(opt-in 공개) */
+  visibility: 'public' | 'private'
   isOwner: boolean
   catalog: CatalogItem[]
   placements: Placement[]

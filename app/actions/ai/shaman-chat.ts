@@ -18,6 +18,7 @@ import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrin
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
+import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
 
 // --- Constants ---
 
@@ -687,10 +688,16 @@ export interface PastChatSession {
 
 /**
  * 종료된 과거 세션 목록 (최신순, 대상별). purged 세션도 목록엔 남는다 — 요약은 영구 보존.
+ * search: 제목·요약 부분일치(대소문자 무시). offset: 더보기 페이지네이션.
  */
-export async function listPastChatSessions(familyMemberId?: string): Promise<{
+export async function listPastChatSessions(options?: {
+  familyMemberId?: string
+  search?: string
+  offset?: number
+}): Promise<{
   success: boolean
   sessions?: PastChatSession[]
+  hasMore?: boolean
   error?: string
 }> {
   try {
@@ -700,21 +707,38 @@ export async function listPastChatSessions(familyMemberId?: string): Promise<{
     } = await supabase.auth.getUser()
     if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
+    const familyMemberId = options?.familyMemberId
     const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
-    const query = supabase
+    const offset = Math.max(0, options?.offset ?? 0)
+    const search = options?.search?.trim() ?? ''
+
+    let query = supabase
       .from('chat_sessions')
       .select('id, title, summary, ended_at, purged_at')
       .eq('user_id', user.id)
       .not('ended_at', 'is', null)
-      .order('ended_at', { ascending: false })
-      .limit(30)
 
-    const { data, error } = await (fmId ? query.eq('family_member_id', fmId) : query.is('family_member_id', null))
+    query = fmId ? query.eq('family_member_id', fmId) : query.is('family_member_id', null)
+
+    if (search) {
+      // PostgREST or 필터 — 쉼표/괄호가 문법 문자라 제거해야 파싱이 깨지지 않는다.
+      const safe = search.replace(/[,()*]/g, ' ').trim()
+      if (safe) query = query.or(`title.ilike.%${safe}%,summary.ilike.%${safe}%`)
+    }
+
+    // 한 건 더 받아서 다음 페이지 존재 여부 판정
+    const { data, error } = await query
+      .order('ended_at', { ascending: false })
+      .range(offset, offset + PAST_SESSIONS_PAGE_SIZE)
+
     if (error) return { success: false, error: error.message }
 
+    const rows = data ?? []
+    const hasMore = rows.length > PAST_SESSIONS_PAGE_SIZE
     return {
       success: true,
-      sessions: (data ?? []).map((s) => ({
+      hasMore,
+      sessions: rows.slice(0, PAST_SESSIONS_PAGE_SIZE).map((s) => ({
         id: s.id,
         title: s.title,
         summary: s.summary,
