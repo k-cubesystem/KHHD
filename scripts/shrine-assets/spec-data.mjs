@@ -54,6 +54,10 @@ const themes = [
   { code: 'banga', name: '조선 반가', el: '목(wood)', accent: '#e8d5a0', mood: 'noble Joseon hanok interior, dark wood beams, folk-painting (minhwa) accents, dignified' },
   { code: 'yonggung', name: '용궁', el: '수(water)', accent: '#7fd4c1', mood: 'underwater dragon palace, teal and jade, pearl light, flowing water and coral' },
   { code: 'dokkaebi', name: '도깨비 불', el: '화(fire)', accent: '#c84040', mood: 'eerie-yet-playful dokkaebi realm, deep violet dark, green goblin-fire glow' },
+  { code: 'seolbit', name: '설빛 서고', el: '금(metal)', accent: '#c8d4dc', mood: 'snow-lit dawn scholar library, silver-white stillness, hanji scrolls and frost on the lattice window, quiet and pure' },
+  { code: 'daljip', name: '달집 마당', el: '토(earth)', accent: '#e6c37a', mood: 'full-moon night courtyard of an ochre earthen house, warm moonlight on clay walls, bundled straw and gentle amber glow' },
+  { code: 'hongsal', name: '홍살문 안뜰', el: '화(fire)', accent: '#d96c5f', mood: 'inner court behind a crimson hongsalmun gate, red dancheong pillars, solemn ward-against-evil dignity, deep vermilion' },
+  { code: 'byeolbat', name: '별밭 천문각', el: '무속성(프리미엄)', accent: '#8fa8e8', mood: 'celestial observatory pavilion under a field of stars, deep indigo night, constellation charts and starlight spilling in' },
 ].map((t) => ({ ...t, path: `public/shrine/themes/${t.code}/room.webp`, prompt: `${THEME_STYLE}, ${t.mood}, accent color ${t.accent}` }))
 
 process.stdout.write(JSON.stringify({ deities, themes, emotions: EMOTIONS.length }, null, 0))
