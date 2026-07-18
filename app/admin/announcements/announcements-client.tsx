@@ -16,6 +16,7 @@ export function AnnouncementsClient({ initialItems }: { initialItems: Announceme
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [alsoNotify, setAlsoNotify] = useState(false)
   const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
 
@@ -25,12 +26,19 @@ export function AnnouncementsClient({ initialItems }: { initialItems: Announceme
       return
     }
     setSaving(true)
-    const res = await createAnnouncement({ title, body })
+    const res = await createAnnouncement({ title, body, alsoNotify })
     setSaving(false)
     if (res.success) {
-      toast.success('공지가 등록되었습니다 — 신 가이드로 전달됩니다')
+      if (res.error === 'NOTIFY_FAILED') {
+        toast.warning('공지는 등록됐지만 알림 발송에 실패했습니다', { description: '가이드 말풍선으로는 전달됩니다' })
+      } else if (typeof res.notifiedCount === 'number') {
+        toast.success(`공지 등록 + 알림 ${res.notifiedCount.toLocaleString()}명 발송 완료`)
+      } else {
+        toast.success('공지가 등록되었습니다 — 신 가이드로 전달됩니다')
+      }
       setTitle('')
       setBody('')
+      setAlsoNotify(false)
       router.refresh()
     } else {
       toast.error(`등록 실패: ${res.error ?? '알 수 없는 오류'}`)
@@ -80,8 +88,22 @@ export function AnnouncementsClient({ initialItems }: { initialItems: Announceme
           placeholder="내용 (500자 이내) — 신 가이드 말풍선에 그대로 표시됩니다"
           className="w-full rounded-lg bg-background/60 border border-primary/20 px-3 py-2 text-sm text-ink-light outline-none focus:border-primary/50 resize-none"
         />
-        <div className="flex justify-end">
-          <Button onClick={submit} disabled={saving} className="bg-primary text-background">
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-start gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={alsoNotify}
+              onChange={(e) => setAlsoNotify(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-gold-500"
+            />
+            <span className="text-[11px] text-ink-light/70 leading-snug">
+              전 회원 알림함에도 발송
+              <span className="block text-[10px] text-ink-light/40">
+                체크 안 하면 가이드 말풍선으로만 노출됩니다. 발송한 알림은 회수할 수 없습니다.
+              </span>
+            </span>
+          </label>
+          <Button onClick={submit} disabled={saving} className="bg-primary text-background shrink-0">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : '공지 등록'}
           </Button>
         </div>

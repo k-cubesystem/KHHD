@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 
@@ -153,7 +154,9 @@ export async function listAnnouncements(): Promise<{ success: boolean; items?: A
 export async function createAnnouncement(input: {
   title: string
   body: string
-}): Promise<{ success: boolean; error?: string }> {
+  /** true면 전 회원 알림함에도 발송 (알림 센터 + 가이드 말풍선 노출) */
+  alsoNotify?: boolean
+}): Promise<{ success: boolean; error?: string; notifiedCount?: number }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -164,10 +167,38 @@ export async function createAnnouncement(input: {
   const body = input.body.trim().slice(0, 500)
   if (!title || !body) return { success: false, error: 'EMPTY' }
 
+  // RLS(is_admin) 가 권한 최종 방어 — 실패 시 여기서 끊긴다.
   const { error } = await supabase.from('announcements').insert({ title, body, created_by: user.id })
   if (error) return { success: false, error: error.message }
+
+  let notifiedCount: number | undefined
+  if (input.alsoNotify) {
+    // 공지 insert 가 통과 = admin 확인됨. 전 회원 알림 발행은 service_role.
+    const admin = createAdminClient()
+    const { data: profiles } = await admin.from('profiles').select('id')
+    const rows = (profiles ?? []).map((p) => ({
+      user_id: p.id,
+      title,
+      message: body,
+      type: 'admin_announcement',
+      is_read: false,
+    }))
+    if (rows.length > 0) {
+      const { error: notifyError } = await admin.from('notifications').insert(rows)
+      if (notifyError) {
+        // 공지 자체는 이미 등록됨 — 알림 실패는 부분 실패로 알린다.
+        logger.error('[announcement] notify failed:', notifyError)
+        revalidatePath('/admin/announcements')
+        return { success: true, error: 'NOTIFY_FAILED', notifiedCount: 0 }
+      }
+      notifiedCount = rows.length
+    } else {
+      notifiedCount = 0
+    }
+  }
+
   revalidatePath('/admin/announcements')
-  return { success: true }
+  return { success: true, notifiedCount }
 }
 
 export async function setAnnouncementActive(

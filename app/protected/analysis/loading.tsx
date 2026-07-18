@@ -7,7 +7,7 @@ export default function AnalysisLoading() {
         <div className="h-8 w-64 bg-surface/20 rounded mx-auto" />
         <div className="h-4 w-48 bg-surface/15 rounded mx-auto" />
       </div>
-      {/* Attendance / Roulette area */}
+      {/* Attendance area */}
       <div className="grid grid-cols-2 gap-3">
         <div className="h-28 bg-surface/10 rounded-xl border border-white/5" />
         <div className="h-28 bg-surface/10 rounded-xl border border-white/5" />

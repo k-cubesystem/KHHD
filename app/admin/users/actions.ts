@@ -147,19 +147,53 @@ export async function getUserDetails(userId: string) {
     const adminClient = createAdminClient()
 
     // 2. Fetch Data in Parallel
-    const [profileRes, sajuRes, familyRes, paymentsRes, walletRes, subscriptionRes] = await Promise.all([
-      adminClient.from('profiles').select('*').eq('id', userId).single(),
-      adminClient.from('saju_records').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-      adminClient.from('family_members').select('*').eq('user_id', userId),
-      adminClient.from('payments').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-      adminClient.from('wallets').select('*').eq('user_id', userId).single(),
-      adminClient
-        .from('subscriptions')
-        .select('*, membership_plans(*)')
-        .eq('user_id', userId)
-        .eq('status', 'ACTIVE')
-        .single(),
-    ])
+    const [profileRes, sajuRes, familyRes, paymentsRes, walletRes, subscriptionRes, txRes, shrinesRes] =
+      await Promise.all([
+        adminClient.from('profiles').select('*').eq('id', userId).single(),
+        adminClient.from('saju_records').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        adminClient.from('family_members').select('*').eq('user_id', userId),
+        adminClient.from('payments').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        adminClient.from('wallets').select('*').eq('user_id', userId).single(),
+        adminClient
+          .from('subscriptions')
+          .select('*, membership_plans(*)')
+          .eq('user_id', userId)
+          .eq('status', 'ACTIVE')
+          .single(),
+        // 복채 트랜잭션 이력 (CS 대응 — 잔액이 왜 이렇게 됐는지 추적)
+        adminClient
+          .from('wallet_transactions')
+          .select('id, amount, type, description, created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(50),
+        // 신당 현황 (본인 + 가족별) — 主神·테마·배치 신물 수
+        adminClient
+          .from('shrines')
+          .select(
+            'id, name, family_member_id, visibility, visitor_count, shrine_deities:main_deity_id(name, code), shrine_theme_packs:active_pack_id(name, code)'
+          )
+          .eq('user_id', userId),
+      ])
+
+    // 신당별 배치 신물 수 (한 번에 집계)
+    const shrineRows = shrinesRes.data ?? []
+    const placementCounts: Record<string, number> = {}
+    if (shrineRows.length > 0) {
+      const { data: placements } = await adminClient
+        .from('shrine_placements')
+        .select('shrine_id')
+        .in(
+          'shrine_id',
+          shrineRows.map((s) => s.id)
+        )
+      for (const p of placements ?? []) {
+        placementCounts[p.shrine_id] = (placementCounts[p.shrine_id] ?? 0) + 1
+      }
+    }
+
+    const familyNameById: Record<string, string> = {}
+    for (const f of familyRes.data ?? []) familyNameById[f.id] = f.name
 
     // 3. Fetch auth user for email and real created_at (가입일)
     const profile = profileRes.data
@@ -176,6 +210,28 @@ export async function getUserDetails(userId: string) {
       logger.warn('getUserDetails: Failed to fetch auth user', e)
     }
 
+    interface ShrineJoinRow {
+      id: string
+      name: string
+      family_member_id: string | null
+      visibility: string
+      visitor_count: number
+      shrine_deities: { name: string; code: string } | null
+      shrine_theme_packs: { name: string; code: string } | null
+    }
+
+    const shrines = (shrineRows as unknown as ShrineJoinRow[]).map((s) => ({
+      id: s.id,
+      name: s.name,
+      targetName: s.family_member_id ? (familyNameById[s.family_member_id] ?? '삭제된 가족') : '본인',
+      isFamily: s.family_member_id !== null,
+      deityName: s.shrine_deities?.name ?? null,
+      themeName: s.shrine_theme_packs?.name ?? null,
+      visibility: s.visibility,
+      visitorCount: s.visitor_count,
+      placedItems: placementCounts[s.id] ?? 0,
+    }))
+
     return {
       profile: profile,
       sajuRecords: sajuRes.data || [],
@@ -183,6 +239,8 @@ export async function getUserDetails(userId: string) {
       payments: paymentsRes.data || [],
       wallet: walletRes.data || { balance: 0 },
       subscription: subscriptionRes.data || null,
+      transactions: txRes.data || [],
+      shrines,
       authCreatedAt,
       error: null,
     }
@@ -237,6 +295,7 @@ export async function deleteUser(userId: string) {
     await adminClient.from('wallet_transactions').delete().eq('user_id', userId)
     await adminClient.from('wallets').delete().eq('user_id', userId)
     await adminClient.from('attendance_logs').delete().eq('user_id', userId)
+    // roulette_* 는 폐지된 기능의 잔존 테이블(0행). 테이블은 남아 있으므로 정리 대상에 유지.
     await adminClient.from('roulette_history').delete().eq('user_id', userId)
     await adminClient.from('analysis_history').delete().eq('user_id', userId)
     await adminClient.from('family_members').delete().eq('user_id', userId)

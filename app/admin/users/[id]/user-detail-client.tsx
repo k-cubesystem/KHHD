@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X } from 'lucide-react'
+import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X, Flame, ArrowUpDown } from 'lucide-react'
 
 interface AdminUserProfile {
   id: string
@@ -62,6 +62,26 @@ interface AdminSubscription {
   }
 }
 
+interface AdminTransaction {
+  id: string
+  amount: number
+  type: string
+  description: string | null
+  created_at: string
+}
+
+interface AdminShrine {
+  id: string
+  name: string
+  targetName: string
+  isFamily: boolean
+  deityName: string | null
+  themeName: string | null
+  visibility: string
+  visitorCount: number
+  placedItems: number
+}
+
 interface UserDetailClientProps {
   user: AdminUserProfile
   sajuRecords: AdminSajuRecord[]
@@ -69,6 +89,8 @@ interface UserDetailClientProps {
   payments: AdminPaymentRecord[]
   wallet?: AdminWallet | null
   subscription?: AdminSubscription | null
+  transactions: AdminTransaction[]
+  shrines: AdminShrine[]
   authCreatedAt?: string | null
 }
 
@@ -79,6 +101,8 @@ export function UserDetailClient({
   payments,
   wallet,
   subscription,
+  transactions,
+  shrines,
   authCreatedAt,
 }: UserDetailClientProps) {
   const router = useRouter()
@@ -222,6 +246,18 @@ export function UserDetailClient({
             className="text-xs text-stone-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
           >
             결제 ({payments.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="transactions"
+            className="text-xs text-stone-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
+          >
+            복채 내역 ({transactions.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="shrines"
+            className="text-xs text-stone-500 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
+          >
+            신당 ({shrines.length})
           </TabsTrigger>
         </TabsList>
 
@@ -591,6 +627,101 @@ export function UserDetailClient({
                             day: 'numeric',
                           })}
                         </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* 6. 복채 트랜잭션 이력 — 잔액이 왜 이렇게 됐는지 추적 (CS 대응) */}
+        <TabsContent value="transactions" className="mt-3">
+          <Card className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+            <div className="relative">
+              <h3 className="text-sm font-serif font-bold text-stone-100 mb-1 flex items-center gap-2">
+                <ArrowUpDown className="w-4 h-4 text-gold-400" />
+                복채 증감 내역
+              </h3>
+              <p className="text-[10px] text-stone-500 mb-3">최근 50건 · 현재 잔액 {balance.toLocaleString()}만냥</p>
+              {transactions.length === 0 ? (
+                <div className="text-center py-8 text-stone-500 text-sm">복채 내역이 없습니다.</div>
+              ) : (
+                <div className="divide-y divide-stone-700/30">
+                  {transactions.map((tx) => {
+                    const plus = tx.amount > 0
+                    return (
+                      <div key={tx.id} className="flex items-start justify-between gap-3 py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-stone-300 truncate">{tx.description || tx.type}</p>
+                          <p className="text-[10px] text-stone-600 mt-0.5">
+                            {tx.type} · {new Date(tx.created_at).toLocaleString('ko-KR')}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-xs font-bold font-mono whitespace-nowrap tabular-nums ${
+                            plus ? 'text-emerald-400' : 'text-red-400'
+                          }`}
+                        >
+                          {plus ? '+' : ''}
+                          {tx.amount.toLocaleString()}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* 7. 신당 현황 — 본인 + 가족별 (主神·테마·배치) */}
+        <TabsContent value="shrines" className="mt-3">
+          <Card className="relative p-4 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+            <div className="relative">
+              <h3 className="text-sm font-serif font-bold text-stone-100 mb-3 flex items-center gap-2">
+                <Flame className="w-4 h-4 text-gold-400" />
+                신당 현황
+              </h3>
+              {shrines.length === 0 ? (
+                <div className="text-center py-8 text-stone-500 text-sm">개설한 신당이 없습니다.</div>
+              ) : (
+                <div className="space-y-2">
+                  {shrines.map((s) => (
+                    <div key={s.id} className="p-3 bg-stone-900/30 rounded-lg border border-stone-700/30">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-stone-200">{s.name}</p>
+                        <Badge
+                          className={`text-[9px] border ${
+                            s.isFamily
+                              ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                              : 'bg-gold-500/10 text-gold-300 border-gold-500/20'
+                          }`}
+                        >
+                          {s.targetName}
+                        </Badge>
+                        {s.visibility === 'public' && (
+                          <Badge className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            공개
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mt-2 text-[10px]">
+                        <div>
+                          <span className="text-stone-600">主神</span>
+                          <p className="text-stone-300 mt-0.5">{s.deityName ?? '미좌정'}</p>
+                        </div>
+                        <div>
+                          <span className="text-stone-600">테마</span>
+                          <p className="text-stone-300 mt-0.5">{s.themeName ?? '기본'}</p>
+                        </div>
+                        <div>
+                          <span className="text-stone-600">배치 신물</span>
+                          <p className="text-stone-300 mt-0.5 tabular-nums">{s.placedItems}개</p>
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -13,7 +13,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
     notFound()
   }
 
-  const { profile, sajuRecords, familyMembers, payments, wallet, subscription, authCreatedAt } = result
+  const { profile, sajuRecords, familyMembers, payments, wallet, subscription, transactions, shrines, authCreatedAt } =
+    result
 
   return (
     <UserDetailClient
@@ -23,6 +24,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
       payments={payments || []}
       wallet={wallet}
       subscription={subscription}
+      transactions={transactions || []}
+      shrines={shrines || []}
       authCreatedAt={authCreatedAt}
     />
   )
