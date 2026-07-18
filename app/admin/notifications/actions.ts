@@ -71,8 +71,8 @@ export async function runManualAutomation() {
       .single()
     const templateId = tmplSetting?.value || 'DAILY_FORTUNE_V1'
 
-    // 2. Fetch Active Subscribers
-    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id').eq('status', 'active')
+    // 2. Fetch Active Subscribers — status 규약은 대문자(ACTIVE). 소문자 매칭이면 항상 0명.
+    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id').eq('status', 'ACTIVE')
 
     if (!subscriptions || subscriptions.length === 0) {
       return { success: false, message: '활성 구독자가 없습니다.' }

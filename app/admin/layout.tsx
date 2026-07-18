@@ -29,8 +29,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/membership/plans', label: '멤버십/스토어', icon: 'Package' },
     // 이벤트 & 마케팅
     { type: 'divider' as const, label: '이벤트 & 마케팅' },
-    { href: '/admin/roulette', label: '룰렛 확률', icon: 'Sparkles' },
-    { href: '/admin/features', label: '기능별 복채', icon: 'Sparkles' },
     { href: '/admin/notifications', label: '알림 자동화', icon: 'Bell' },
     { href: '/admin/announcements', label: '공지사항', icon: 'Bell' },
     // 시스템
