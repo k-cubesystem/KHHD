@@ -49,6 +49,7 @@
 | 2026-07-18 | 세션20 | 어드민 콘솔 전수 분석(12메뉴) — 룰렛·기능별복채 삭제, 알림 status 버그 수정, 로드맵 v1.1         | TEAM_G_DESIGN/prd/PLAN-improvement-roadmap-v1.md §A                                                                          |
 | 2026-07-18 | 세션20 | 어드민 A2/A3/A6 — 대시보드 집계 RPC·잔액 증감+사유+감사·admin_audit_log 뷰어 + 회원상세 404 수정 | app/admin/page.tsx, app/admin/audit/, lib/admin/audit.ts, supabase/migrations/20260718*admin*\*.sql                          |
 | 2026-07-18 | 세션21 | P1-7 만료 D-7 예고→기억함 업셀 + 알림 센터(구 404 링크 수복) + P2-9 테마 방 이미지 4종           | supabase/migrations/20260718_chat_expiry_notice.sql, app/protected/notifications/, scripts/shrine-assets/generate-themes.mjs |
+| 2026-07-18 | 세션21 | 어드민 A4·A5·A7 — 회원상세 복채내역·신당 탭, 공지→전회원 알림 발송, 룰렛 죽은코드 3종 삭제       | app/admin/users/, app/actions/guide.ts, app/admin/announcements/                                                             |
 
 ---
 

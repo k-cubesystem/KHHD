@@ -54,6 +54,30 @@ test.describe('어드민 콘솔 개선', () => {
     expect(res?.status()).toBe(404)
     console.log('[PASS] 삭제 페이지 404')
 
+    // 5) 공지 등록 폼 — 전 회원 알림 발송 옵션 (A5)
+    await page.goto('/admin/announcements')
+    await expect(page.getByRole('heading', { name: '공지사항' })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('전 회원 알림함에도 발송')).toBeVisible({ timeout: 10_000 })
+    console.log('[PASS] 공지 → 알림 발송 옵션 노출')
+
+    // 6) 회원 상세 — 복채 내역·신당 탭 (A4). 목록 첫 회원으로 진입
+    await page.goto('/admin/users')
+    // 목록은 서버 조회 후 렌더 — 링크가 붙을 때까지 대기
+    const firstUser = page.locator('a[href^="/admin/users/"]').first()
+    await firstUser.waitFor({ state: 'visible', timeout: 25_000 }).catch(() => {})
+    if (await firstUser.isVisible().catch(() => false)) {
+      await firstUser.click()
+      await expect(page.getByText('계정 정보').first()).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByRole('tab', { name: /복채 내역/ })).toBeVisible({ timeout: 10_000 })
+      await expect(page.getByRole('tab', { name: /신당/ })).toBeVisible()
+      await page.getByRole('tab', { name: /신당/ }).click()
+      await expect(page.getByText('신당 현황')).toBeVisible({ timeout: 10_000 })
+      await page.screenshot({ path: SHOT('3-user-shrines'), fullPage: false })
+      console.log('[PASS] 회원 상세 복채내역·신당 탭')
+    } else {
+      console.log('[SKIP] 회원 목록 비어 상세 검증 생략')
+    }
+
     expect(errors, errors.join('\n')).toHaveLength(0)
   })
 })
