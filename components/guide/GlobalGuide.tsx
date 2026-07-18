@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Megaphone, X, Archive } from 'lucide-react'
-import { getGuideData, type GuideData } from '@/app/actions/guide'
+import { Megaphone, X, Archive, Footprints } from 'lucide-react'
+import { getGuideData, saveGuideProgress, type GuideData } from '@/app/actions/guide'
 import { markNotificationRead } from '@/app/actions/core/user-notifications'
 
 // ─── 페이지별 기능 소개 스크립트 (경로 정확 매칭) ───────────────
@@ -38,12 +38,14 @@ const TOURS: Record<string, readonly string[]> = {
   '/protected/history': ['지난 분석 기록이 이곳에 쌓입니다. 언제든 다시 꺼내 볼 수 있어요.'],
 }
 
-const PROGRESS_KEY = 'hhd_guide_progress'
-const NOTICE_KEY = 'hhd_notice_seen'
+// 진행률은 서버(profiles.guide_progress)가 정본. localStorage 는 구버전 사용자의
+// 기존 진행을 이어받기 위한 읽기 전용 폴백으로만 남긴다(기기 바뀌면 초기화되던 문제 해소).
+const LEGACY_PROGRESS_KEY = 'hhd_guide_progress'
+const LEGACY_NOTICE_KEY = 'hhd_notice_seen'
 
-function loadProgress(): Record<string, number> {
+function legacyProgress(): Record<string, number> {
   try {
-    const raw = localStorage.getItem(PROGRESS_KEY)
+    const raw = localStorage.getItem(LEGACY_PROGRESS_KEY)
     const parsed: unknown = raw ? JSON.parse(raw) : {}
     return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, number>) : {}
   } catch {
@@ -51,13 +53,15 @@ function loadProgress(): Record<string, number> {
   }
 }
 
-function saveProgress(p: Record<string, number>) {
+function legacyNoticeId(): string | null {
   try {
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(p))
-  } catch {}
+    return localStorage.getItem(LEGACY_NOTICE_KEY)
+  } catch {
+    return null
+  }
 }
 
-type Bubble = { kind: 'personal' } | { kind: 'notice' } | { kind: 'tour'; step: number } | null
+type Bubble = { kind: 'onboarding' } | { kind: 'personal' } | { kind: 'notice' } | { kind: 'tour'; step: number } | null
 
 /**
  * 전 페이지 신 가이드 — 우하단 主神 아바타가 페이지 기능을 하나씩 소개.
@@ -68,11 +72,21 @@ export function GlobalGuide() {
   const pathname = usePathname()
   const [data, setData] = useState<GuideData | null>(null)
   const [bubble, setBubble] = useState<Bubble>(null)
+  // 서버 진행률 + 구버전 localStorage 병합본 (세션 내 즉시 반영용)
+  const [progress, setProgress] = useState<Record<string, number>>({})
+  const [seenNotice, setSeenNotice] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
     getGuideData().then((d) => {
-      if (alive) setData(d)
+      if (!alive) return
+      setData(d)
+      // 서버 값과 구버전 로컬 값을 max 병합 — 이미 본 안내가 다시 뜨지 않게
+      const legacy = legacyProgress()
+      const merged: Record<string, number> = { ...legacy }
+      for (const [k, v] of Object.entries(d.progress)) merged[k] = Math.max(merged[k] ?? 0, v)
+      setProgress(merged)
+      setSeenNotice(d.seenNoticeId ?? legacyNoticeId())
     })
     return () => {
       alive = false
@@ -82,26 +96,30 @@ export function GlobalGuide() {
   const tour = useMemo(() => TOURS[pathname] ?? null, [pathname])
   const hidden = pathname.startsWith('/protected/shrine')
 
-  // 경로 진입 시 자동 노출 — 개인 알림(만료 예고 등) > 공지(미확인) > 미완료 투어
+  // 경로 진입 시 자동 노출 — 개인 알림 > 공지(미확인) > 온보딩(미완료) > 투어(미완료)
   useEffect(() => {
     if (!data || hidden) return
     if (data.personalNotice) {
       setBubble({ kind: 'personal' })
       return
     }
-    if (data.announcement && localStorage.getItem(NOTICE_KEY) !== data.announcement.id) {
+    if (data.announcement && seenNotice !== data.announcement.id) {
       setBubble({ kind: 'notice' })
       return
     }
+    if (data.onboarding) {
+      setBubble({ kind: 'onboarding' })
+      return
+    }
     if (tour) {
-      const seen = loadProgress()[pathname] ?? 0
+      const seen = progress[pathname] ?? 0
       if (seen < tour.length) {
         setBubble({ kind: 'tour', step: seen })
         return
       }
     }
     setBubble(null)
-  }, [data, pathname, tour, hidden])
+  }, [data, pathname, tour, hidden, progress, seenNotice])
 
   /** 개인 알림 확인 — 읽음 처리 후 로컬 상태에서 제거(재노출 방지) */
   const dismissPersonal = useCallback(() => {
@@ -112,44 +130,51 @@ export function GlobalGuide() {
   }, [data])
 
   const dismissNotice = useCallback(() => {
-    if (data?.announcement) {
-      try {
-        localStorage.setItem(NOTICE_KEY, data.announcement.id)
-      } catch {}
+    const id = data?.announcement?.id
+    if (id) {
+      setSeenNotice(id)
+      void saveGuideProgress({ seenNoticeId: id })
     }
-    // 공지 확인 후 이 페이지의 미완료 투어가 있으면 이어서
+    // 공지 확인 후 온보딩·투어가 남았으면 이어서
+    if (data?.onboarding) {
+      setBubble({ kind: 'onboarding' })
+      return
+    }
     if (tour) {
-      const seen = loadProgress()[pathname] ?? 0
+      const seen = progress[pathname] ?? 0
       if (seen < tour.length) {
         setBubble({ kind: 'tour', step: seen })
         return
       }
     }
     setBubble(null)
-  }, [data, tour, pathname])
+  }, [data, tour, pathname, progress])
+
+  /** 진행률 갱신 — 서버 저장(정본) + 로컬 상태 즉시 반영 */
+  const commitProgress = useCallback(
+    (step: number) => {
+      setProgress((prev) => ({ ...prev, [pathname]: Math.max(prev[pathname] ?? 0, step) }))
+      void saveGuideProgress({ path: pathname, step })
+    },
+    [pathname]
+  )
 
   const advanceTour = useCallback(
     (step: number) => {
       if (!tour) return
-      const progress = loadProgress()
-      progress[pathname] = Math.max(progress[pathname] ?? 0, step + 1)
-      saveProgress(progress)
+      commitProgress(step + 1)
       if (step + 1 < tour.length) setBubble({ kind: 'tour', step: step + 1 })
       else setBubble(null)
     },
-    [tour, pathname]
+    [tour, commitProgress]
   )
 
   const skipTour = useCallback(() => {
-    if (tour) {
-      const progress = loadProgress()
-      progress[pathname] = tour.length
-      saveProgress(progress)
-    }
+    if (tour) commitProgress(tour.length)
     setBubble(null)
-  }, [tour, pathname])
+  }, [tour, commitProgress])
 
-  // 아바타 탭 — 닫혀 있으면 개인 알림 > 공지 > 투어 처음부터 다시 안내
+  // 아바타 탭 — 닫혀 있으면 개인 알림 > 공지 > 온보딩 > 투어 처음부터 다시 안내
   const onTapAvatar = useCallback(() => {
     if (bubble) {
       setBubble(null)
@@ -163,11 +188,15 @@ export function GlobalGuide() {
       setBubble({ kind: 'notice' })
       return
     }
+    if (data?.onboarding) {
+      setBubble({ kind: 'onboarding' })
+      return
+    }
     if (tour) setBubble({ kind: 'tour', step: 0 })
   }, [bubble, data, tour])
 
   if (!data || hidden) return null
-  if (!tour && !data.announcement && !data.personalNotice) return null
+  if (!tour && !data.announcement && !data.personalNotice && !data.onboarding) return null
 
   const accent = data.accent ?? '#c9a84c'
   const speaker = data.deityName ?? '해화지기'
@@ -183,7 +212,29 @@ export function GlobalGuide() {
             exit={{ opacity: 0, scale: 0.9, y: 6 }}
             className="absolute bottom-[60px] right-0 w-[236px] rounded-2xl rounded-br-md border border-gold-500/40 bg-[#120d07] p-3 shadow-2xl"
           >
-            {bubble.kind === 'personal' && data.personalNotice ? (
+            {bubble.kind === 'onboarding' && data.onboarding ? (
+              <>
+                <p className="flex items-center gap-1 text-[9px] text-gold-500/80 font-serif mb-1">
+                  <Footprints className="w-3 h-3" /> 첫걸음 {data.onboarding.done}/{data.onboarding.total}
+                </p>
+                <p className="text-[11.5px] text-ink-light/90 leading-snug mb-2">{data.onboarding.text}</p>
+                <div className="flex items-center justify-between">
+                  <Link
+                    href={data.onboarding.ctaHref}
+                    onClick={() => setBubble(null)}
+                    className="text-[11px] font-bold text-gold-400"
+                  >
+                    {data.onboarding.ctaLabel} →
+                  </Link>
+                  <button
+                    onClick={() => setBubble(null)}
+                    className="text-[10px] text-ink-light/40 hover:text-ink-light/70"
+                  >
+                    나중에
+                  </button>
+                </div>
+              </>
+            ) : bubble.kind === 'personal' && data.personalNotice ? (
               <>
                 <p className="flex items-center gap-1 text-[9px] text-seal/90 font-serif mb-1">
                   <Archive className="w-3 h-3" /> {speaker}의 전갈
@@ -268,11 +319,8 @@ export function GlobalGuide() {
         ) : (
           <span className="w-full h-full flex items-center justify-center text-lg bg-surface">🔮</span>
         )}
-        {/* 미확인 알림·공지 배지 */}
-        {(data.personalNotice ||
-          (data.announcement &&
-            typeof window !== 'undefined' &&
-            localStorage.getItem(NOTICE_KEY) !== data.announcement.id)) && (
+        {/* 미확인 알림·공지·온보딩 배지 */}
+        {(data.personalNotice || data.onboarding || (data.announcement && seenNotice !== data.announcement.id)) && (
           <span className="absolute -top-0.5 -right-0.5 w-[14px] h-[14px] rounded-full bg-seal text-[8px] text-white font-bold flex items-center justify-center border border-background">
             !
           </span>

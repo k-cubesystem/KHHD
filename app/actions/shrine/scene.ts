@@ -23,6 +23,7 @@ import {
 } from '@/lib/domain/shrine/types'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
 import { DEFAULT_BASE, deriveBaseFromDistribution } from '@/lib/domain/shrine/energy'
+import { getShrineEffects } from '@/lib/services/shrine-effects'
 
 interface CatalogRow {
   id: string
@@ -313,12 +314,27 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Scen
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
   const activePack = themes.find((t) => t.id === shrine.active_pack_id)
-  const mainDeity = await loadMainDeity(supabase, user.id, shrine.main_deity_id, true, fmId)
+  const [mainDeity, effects] = await Promise.all([
+    loadMainDeity(supabase, user.id, shrine.main_deity_id, true, fmId),
+    getShrineEffects(user.id),
+  ])
+
+  // ⚡ 배치 효험: 놋방울(deity_greeting) — 입장 시 이름을 불러 맞이한다.
+  let greetingName: string | null = null
+  if (effects.deityGreeting) {
+    if (family) {
+      greetingName = family.name
+    } else {
+      const { data: prof } = await supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle()
+      greetingName = prof?.full_name ?? null
+    }
+  }
 
   return {
     shrineId: shrine.id,
     shrineName: shrine.name,
     familyMemberId: fmId,
+    greetingName,
     isOwner: true,
     catalog,
     placements,
@@ -441,6 +457,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
     shrineId: shrine.id,
     shrineName: shrine.name,
     familyMemberId: null,
+    greetingName: null, // 방문자 뷰는 효험 미적용
     isOwner: false,
     catalog,
     placements,

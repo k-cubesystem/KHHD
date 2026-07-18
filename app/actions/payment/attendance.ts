@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { getShrineEffects } from '@/lib/services/shrine-effects'
 import { logger } from '@/lib/utils/logger'
 
 // RLS를 우회해 attendance_logs를 안전하게 조회하기 위한 admin client
@@ -115,7 +116,20 @@ export async function checkInAttendance() {
     const isLastDayOfWeek = weekCount === 6 // 이번이 7번째(마지막)
     const baseReward = 1
     const weeklyBonus = isLastDayOfWeek ? 3 : 0
-    const totalReward = baseReward + weeklyBonus
+    const subtotal = baseReward + weeklyBonus
+
+    // ⚡ 배치 효험: 복 부적(attendance_bonus)을 신당에 모시면 출석 보상 +N%(반올림)
+    const effects = await getShrineEffects(user.id)
+    const charmBonus =
+      effects.attendanceBonusPercent > 0 ? Math.round((subtotal * effects.attendanceBonusPercent) / 100) : 0
+    const totalReward = subtotal + charmBonus
+
+    const rewardReason = [
+      `출석 체크 (${totalReward}만냥`,
+      isLastDayOfWeek ? ` = 기본 ${baseReward} + 주간 보너스 ${weeklyBonus}` : '',
+      charmBonus > 0 ? `${isLastDayOfWeek ? '' : ' = 기본 1'} + 복 부적 ${charmBonus}` : '',
+      ')',
+    ].join('')
 
     // 복채 지급(잔액 쓰기)은 service_role 전용 — 위에서 만든 db(admin ?? supabase) 재사용.
 
@@ -154,9 +168,7 @@ export async function checkInAttendance() {
     const { data: rpcResult, error: rpcError } = await db.rpc('add_bokchae', {
       p_user_id: user.id,
       p_amount: totalReward,
-      p_reason: isLastDayOfWeek
-        ? `출석 체크 (${totalReward}만냥 = 기본 1 + 주간 보너스 3)`
-        : `출석 체크 (${totalReward}만냥)`,
+      p_reason: rewardReason,
     })
 
     if (rpcError) {
@@ -181,9 +193,7 @@ export async function checkInAttendance() {
         user_id: user.id,
         amount: totalReward,
         type: 'BONUS',
-        description: isLastDayOfWeek
-          ? `출석 체크 (${totalReward}만냥 = 기본 1 + 주간 보너스 3)`
-          : `출석 체크 (${totalReward}만냥)`,
+        description: rewardReason,
       })
 
       if (txError) {

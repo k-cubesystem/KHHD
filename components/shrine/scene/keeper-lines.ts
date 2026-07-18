@@ -61,9 +61,23 @@ export const GREETINGS: Record<string, string> = {
   banga: '어서 오시게. 오늘 일진은 <em>병오(丙午)</em> — 부족한 기운을 아껴 쓰시게.',
   yonggung: '깊은 물의 궁에 잘 오셨소. <em>수(水)</em>가 그대의 화기를 식혀주는구려.',
   dokkaebi: '밤 숲의 불빛이 그대를 반기오. 도깨비도 <em>金</em> 없는 자에겐 방망이를 빌려주지 않는 법.',
+  seolbit: '눈빛 어린 새벽 서고요. <em>金</em>의 고요가 마음을 씻어주는 자리니, 천천히 머무시게.',
+  daljip: '보름달이 마당을 데우는구려. <em>土</em>의 온기가 두터우니 오늘은 마음이 놓이겠소.',
+  hongsal: '홍살문을 지나 드셨구려. <em>火</em>의 붉은 기둥이 삿된 것을 물리치니 염려 놓으시게.',
+  byeolbat: '별밭이 내려앉은 천문각이오. 하늘의 이치를 읽는 자리니, 큰 뜻을 물으시게.',
 }
 export function greetingFor(packCode: string): string {
   return GREETINGS[packCode] ?? GREETINGS.choga
+}
+
+/**
+ * 놋방울(deity_greeting) 배치 시 — 主神이 이름을 불러 맞이한다.
+ * name 이 없으면 일반 인사로 폴백.
+ */
+export function personalGreeting(packCode: string, name: string | null, deityName: string | null): string {
+  if (!name) return greetingFor(packCode)
+  const who = deityName ? `<em>${deityName}</em>이(가) ` : ''
+  return `${who}놋방울 소리에 고개를 드오. <em>${name}</em>님, 어서 오시게 — 기다리고 있었소.`
 }
 
 /** 공명 발동 시 */

@@ -18,6 +18,7 @@ import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/sh
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   greetingFor,
+  personalGreeting,
   litLine,
   tapLine,
   giveLine,
@@ -73,7 +74,12 @@ export function ShrineRoomClient({ scene }: Props) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activeCode, setActiveCode] = useState(scene.activePackCode)
-  const [bubble, setBubble] = useState<string>(greetingFor(scene.activePackCode))
+  // 놋방울 배치 시 主神이 이름을 불러 맞이한다 (미배치면 테마 기본 인사)
+  const [bubble, setBubble] = useState<string>(
+    scene.greetingName
+      ? personalGreeting(scene.activePackCode, scene.greetingName, scene.mainDeity?.name ?? null)
+      : greetingFor(scene.activePackCode)
+  )
   const [bounce, setBounce] = useState(0)
   const [rings, setRings] = useState<Ring[]>([])
   const seenResonance = useRef<Set<Element>>(new Set())

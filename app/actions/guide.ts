@@ -20,6 +20,17 @@ export interface GuidePersonalNotice {
   ctaHref: string | null
 }
 
+/** 신규 가입자 온보딩 — 다음에 할 일 1건 (전부 마치면 null) */
+export interface GuideOnboarding {
+  key: 'saju' | 'shrine' | 'chat'
+  text: string
+  ctaLabel: string
+  ctaHref: string
+  /** 완료 수 / 전체 (진행 표시용) */
+  done: number
+  total: number
+}
+
 export interface GuideData {
   /** 좌정 主神 (없으면 해화지기 폴백) */
   deityName: string | null
@@ -29,6 +40,12 @@ export interface GuideData {
   announcement: GuideAnnouncement | null
   /** 안 읽은 개인 알림 1건 (공지보다 우선 — 만료 예고 등) */
   personalNotice: GuidePersonalNotice | null
+  /** 서버 저장 투어 진행률 (경로→완료 스텝). 기기 바뀌어도 유지 */
+  progress: Record<string, number>
+  /** 확인한 공지 id (서버 저장) */
+  seenNoticeId: string | null
+  /** 다음 온보딩 단계 (전부 마쳤으면 null) */
+  onboarding: GuideOnboarding | null
 }
 
 /** 알림 종류 → 가이드 말풍선 CTA */
@@ -44,6 +61,9 @@ export async function getGuideData(): Promise<GuideData> {
     accent: null,
     announcement: null,
     personalNotice: null,
+    progress: {},
+    seenNoticeId: null,
+    onboarding: null,
   }
   try {
     const supabase = await createClient()
@@ -52,29 +72,32 @@ export async function getGuideData(): Promise<GuideData> {
     } = await supabase.auth.getUser()
     if (!user) return empty
 
-    const [{ data: shrine }, { data: notice }, { data: personal }] = await Promise.all([
-      supabase
-        .from('shrines')
-        .select('main_deity_id')
-        .eq('user_id', user.id)
-        .is('family_member_id', null)
-        .maybeSingle(),
-      supabase
-        .from('announcements')
-        .select('id, title, body')
-        .eq('is_active', true)
-        .lte('starts_at', new Date().toISOString())
-        .order('starts_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('notifications')
-        .select('id, title, message, type')
-        .eq('is_read', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ])
+    const [{ data: shrine }, { data: notice }, { data: personal }, { data: profile }, { count: chatCount }] =
+      await Promise.all([
+        supabase
+          .from('shrines')
+          .select('main_deity_id')
+          .eq('user_id', user.id)
+          .is('family_member_id', null)
+          .maybeSingle(),
+        supabase
+          .from('announcements')
+          .select('id, title, body')
+          .eq('is_active', true)
+          .lte('starts_at', new Date().toISOString())
+          .order('starts_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('notifications')
+          .select('id, title, message, type')
+          .eq('is_read', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from('profiles').select('birth_date, guide_progress').eq('id', user.id).maybeSingle(),
+        supabase.from('chat_sessions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+      ])
 
     let deityName: string | null = null
     let portraitUrl: string | null = null
@@ -96,6 +119,53 @@ export async function getGuideData(): Promise<GuideData> {
 
     const cta = personal ? NOTICE_CTA[personal.type] : undefined
 
+    // 서버 저장 진행률 파싱
+    const rawProgress = profile?.guide_progress
+    const stored: Record<string, unknown> =
+      typeof rawProgress === 'object' && rawProgress !== null ? (rawProgress as Record<string, unknown>) : {}
+    const progress: Record<string, number> = {}
+    for (const [k, v] of Object.entries(stored)) {
+      if (k !== '_notice' && typeof v === 'number') progress[k] = v
+    }
+    const seenNoticeId = typeof stored._notice === 'string' ? stored._notice : null
+
+    // 온보딩: 사주 입력 → 신당 강신 → 첫 상담. 다음 미완료 1건만 안내.
+    const steps = [
+      {
+        key: 'saju' as const,
+        done: !!profile?.birth_date,
+        text: '먼저 생년월일을 알려주시면, 그대의 사주로 모든 풀이가 시작됩니다.',
+        ctaLabel: '사주 입력하기',
+        ctaHref: '/protected/settings',
+      },
+      {
+        key: 'shrine' as const,
+        done: !!shrine?.main_deity_id,
+        text: '신당을 열면 그대 사주에 맞는 수호신이 강림합니다.',
+        ctaLabel: '신당 열러 가기',
+        ctaHref: '/protected/shrine',
+      },
+      {
+        key: 'chat' as const,
+        done: (chatCount ?? 0) > 0,
+        text: '이제 고민을 여쭤보세요. 좌정하신 神이 사주를 근거로 답해드립니다.',
+        ctaLabel: '고민 여쭤보기',
+        ctaHref: '/protected/ai-shaman',
+      },
+    ]
+    const doneCount = steps.filter((s) => s.done).length
+    const next = steps.find((s) => !s.done)
+    const onboarding: GuideOnboarding | null = next
+      ? {
+          key: next.key,
+          text: next.text,
+          ctaLabel: next.ctaLabel,
+          ctaHref: next.ctaHref,
+          done: doneCount,
+          total: steps.length,
+        }
+      : null
+
     return {
       deityName,
       portraitUrl,
@@ -110,10 +180,52 @@ export async function getGuideData(): Promise<GuideData> {
             ctaHref: cta?.href ?? null,
           }
         : null,
+      progress,
+      seenNoticeId,
+      onboarding,
     }
   } catch (e) {
     logger.warn('[guide] getGuideData skipped:', e)
     return empty
+  }
+}
+
+/**
+ * 투어 진행률·공지 확인 저장 — 기기가 바뀌어도 유지되도록 서버에 기록.
+ * 진행률은 **되돌아가지 않게** 기존값과 max 병합(다른 기기의 진행을 덮어쓰지 않음).
+ */
+export async function saveGuideProgress(input: {
+  path?: string
+  step?: number
+  seenNoticeId?: string
+}): Promise<{ success: boolean }> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false }
+
+    const { data: profile } = await supabase.from('profiles').select('guide_progress').eq('id', user.id).maybeSingle()
+    const raw = profile?.guide_progress
+    const merged: Record<string, unknown> =
+      typeof raw === 'object' && raw !== null ? { ...(raw as Record<string, unknown>) } : {}
+
+    if (input.path && typeof input.step === 'number') {
+      const prev = typeof merged[input.path] === 'number' ? (merged[input.path] as number) : 0
+      merged[input.path] = Math.max(prev, input.step)
+    }
+    if (input.seenNoticeId) merged._notice = input.seenNoticeId
+
+    const { error } = await supabase.from('profiles').update({ guide_progress: merged }).eq('id', user.id)
+    if (error) {
+      logger.warn('[guide] progress save failed:', error)
+      return { success: false }
+    }
+    return { success: true }
+  } catch (e) {
+    logger.warn('[guide] progress save exception:', e)
+    return { success: false }
   }
 }
 

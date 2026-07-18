@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { getShrineEffects } from '@/lib/services/shrine-effects'
 import { logger } from '@/lib/utils/logger'
 
 export interface DeityOracle {
@@ -18,7 +19,7 @@ export interface DeityOracle {
 const DEITY_EMOTIONS = ['neutral', 'smile', 'stern', 'sad', 'surprised', 'bless', 'angry'] as const
 
 // 빈도 상한: 최근 2일 내 없음 + 최근 7일 내 3건 미만일 때만 새 신탁 발행 (주 2~3회)
-const MIN_GAP_MS = 2 * 24 * 60 * 60 * 1000
+// ⚡ 배치 효험: 향로(oracle_freq)를 신당에 모시면 간격 24h·주간 상한 +2 로 완화된다.
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 const WEEKLY_CAP = 3
 
@@ -64,16 +65,20 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
       .maybeSingle()
     if (!shrine?.main_deity_id) return null
 
-    // 3) 빈도 상한 판정 (최근 7일 이력)
-    const { data: recent } = await supabase
-      .from('deity_oracles')
-      .select('created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', new Date(Date.now() - WEEK_MS).toISOString())
-      .order('created_at', { ascending: false })
+    // 3) 빈도 상한 판정 (최근 7일 이력) — 향로 배치 시 완화
+    const [{ data: recent }, effects] = await Promise.all([
+      supabase
+        .from('deity_oracles')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', new Date(Date.now() - WEEK_MS).toISOString())
+        .order('created_at', { ascending: false }),
+      getShrineEffects(user.id),
+    ])
     const history = recent ?? []
-    if (history.length >= WEEKLY_CAP) return null
-    if (history[0] && Date.now() - new Date(history[0].created_at).getTime() < MIN_GAP_MS) return null
+    const minGapMs = effects.oracleMinGapHours * 60 * 60 * 1000
+    if (history.length >= WEEKLY_CAP + effects.oracleWeeklyCapBonus) return null
+    if (history[0] && Date.now() - new Date(history[0].created_at).getTime() < minGapMs) return null
 
     // 4) 신위 페르소나 로드 + 신탁 생성
     const { data: deity } = await admin

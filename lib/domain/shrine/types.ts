@@ -116,6 +116,8 @@ export interface SceneData {
   shrineName: string
   /** 이 신당의 점사 대상 가족 (null=본인 신당) */
   familyMemberId: string | null
+  /** 놋방울(deity_greeting) 배치 시 主神이 부를 이름. 미배치면 null */
+  greetingName: string | null
   isOwner: boolean
   catalog: CatalogItem[]
   placements: Placement[]

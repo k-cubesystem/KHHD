@@ -11,6 +11,7 @@ import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
+import { getShrineEffects } from '@/lib/services/shrine-effects'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
@@ -147,13 +148,20 @@ export async function generateDailyFortune(
   const promptTemplate = promptData.template
 
   // 5. Generate
-  const prompt = promptTemplate
+  let prompt = promptTemplate
     .replace('{{date}}', targetDate)
     .replace('{{name}}', name || '사용자')
     .replace('{{gender}}', gender === 'male' ? '남성' : '여성')
     .replace('{{birthDate}}', birthDate)
     .replace('{{birthTime}}', birthTime || '알 수 없음')
     .replace('{{saju}}', sajuStr)
+
+  // ⚡ 배치 효험: 초롱(lucky_hour)을 신당에 모시면 '행운의 시간' 한 줄이 더해진다.
+  const effects = await getShrineEffects(userId)
+  if (effects.luckyHour) {
+    prompt +=
+      '\n\n[초롱의 효험] 마지막에 "🏮 행운의 시간: HH시~HH시" 형식으로 오늘 가장 길한 시간대 한 줄을 덧붙이십시오. 사주의 용신·일진과 어울리는 시간대로 고르고, 왜 그 시간인지 짧게 한 문장 덧붙이십시오.'
+  }
 
   try {
     const model = genAI.getGenerativeModel({ model: MODEL_FLASH })
