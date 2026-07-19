@@ -712,7 +712,15 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   return (
     <div
       className="fixed flex flex-col bg-background"
-      style={{ top: '56px', bottom: '60px', left: 0, right: 0, zIndex: 10 }}
+      // bottom = 하단 메뉴(60px) + 가이드 공지 바 높이. 바가 없거나 접히면 변수가 0/작은 값이라
+      // 자동으로 되돌아온다. (GlobalGuide 가 --guide-bar-h 를 실측해 세팅)
+      style={{
+        top: '56px',
+        bottom: 'calc(60px + var(--guide-bar-h, 0px))',
+        left: 0,
+        right: 0,
+        zIndex: 10,
+      }}
     >
       {/* 배경 ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
