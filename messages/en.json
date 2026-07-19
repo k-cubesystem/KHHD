@@ -129,11 +129,33 @@
     "continue": "Continue this time"
   },
   "bok": {
+    "hub": "Fortune Manager",
+    "points": "Fortune Points",
+    "tier": {
+      "seed": "Fortune Seed",
+      "sprout": "Fortune Sprout",
+      "flower": "Fortune Flower",
+      "tree": "Fortune Tree",
+      "forest": "Fortune Forest"
+    },
+    "mission": "Today's Fortune Missions",
+    "missionComplete": "+{points}p fortune points earned!",
+    "accumulated": "Total",
+    "nextTier": "{points}p to next tier",
+    "managing": "Managing",
+    "register": "Add New Connection",
+    "weeklyReport": "This Week's Fortune Status",
+    "shareMessage": "Someone is looking after your fortune on Haehwadang",
     "upgrade": {
-      "title": "Manage more relationship blessings",
-      "desc": "Upgrade to Bokjigi tier to expand your connection limit, unlock family compatibility analysis, and premium feng shui readings.",
-      "cta": "Start Bokjigi",
-      "later": "Later"
+      "title": "Manage More Connections",
+      "desc": "Upgrade to Fortune Keeper to add more connections",
+      "cta": "Start Fortune Keeper",
+      "later": "Maybe later"
+    },
+    "tiers": {
+      "bokjigi": "Fortune Keeper",
+      "bokjangi": "Fortune Master",
+      "boksin": "Fortune Spirit"
     }
   },
   "error": {
@@ -212,34 +234,29 @@
     "night": "Good night",
     "member": "Member"
   },
-  "bok": {
-    "hub": "Fortune Manager",
-    "points": "Fortune Points",
-    "tier": {
-      "seed": "Fortune Seed",
-      "sprout": "Fortune Sprout",
-      "flower": "Fortune Flower",
-      "tree": "Fortune Tree",
-      "forest": "Fortune Forest"
-    },
-    "mission": "Today's Fortune Missions",
-    "missionComplete": "+{points}p fortune points earned!",
-    "accumulated": "Total",
-    "nextTier": "{points}p to next tier",
-    "managing": "Managing",
-    "register": "Add New Connection",
-    "weeklyReport": "This Week's Fortune Status",
-    "shareMessage": "Someone is looking after your fortune on Haehwadang",
-    "upgrade": {
-      "title": "Manage More Connections",
-      "desc": "Upgrade to Fortune Keeper to add more connections",
-      "cta": "Start Fortune Keeper",
-      "later": "Maybe later"
-    },
-    "tiers": {
-      "bokjigi": "Fortune Keeper",
-      "bokjangi": "Fortune Master",
-      "boksin": "Fortune Spirit"
-    }
+  "store": {
+    "backToLibrary": "Back to library",
+    "balance": "Bokchae",
+    "balanceUnit": "0k KRW",
+    "eyebrow": "OFFERING HALL",
+    "title": "Store",
+    "subtitle": "Top up bokchae, membership, shrine themes and relics — all in one place",
+    "tabsAria": "Store categories",
+    "tabBokchae": "Top up",
+    "tabMembership": "Membership",
+    "tabTheme": "Shrine themes",
+    "tabItems": "Relics",
+    "membershipActive": "{plan} active",
+    "membershipManageHint": "Change plan, cancel or view receipts in membership settings",
+    "membershipManageCta": "Manage membership",
+    "themeHint": "Themes you offer are yours forever — usable in your own and family shrines",
+    "themeOwned": "Owned · apply in shrine",
+    "themeFree": "Included · apply in shrine",
+    "themeBuy": "Offer · {price} bokchae",
+    "themeBought": "{name} offered",
+    "themeBoughtDesc": "Apply it from the theme chips in your shrine",
+    "insufficientBokchae": "Not enough bokchae — top up in the Top up tab",
+    "purchaseFailed": "Purchase failed. Please try again.",
+    "itemsHint": "Add relics to your inventory, then place them while decorating your shrine"
   }
 }

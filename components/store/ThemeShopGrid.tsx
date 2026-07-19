@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ThemePack } from '@/lib/domain/shrine/types'
@@ -10,6 +11,7 @@ import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 
 /** 상점 신당 테마 탭 — 그라디언트 프리뷰 + 복채 구매. 적용은 신당 테마칩에서. */
 export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
+  const t = useTranslations('store')
   const [ownedExtra, setOwnedExtra] = useState<Set<string>>(new Set())
   const [loadingCode, setLoadingCode] = useState<string | null>(null)
 
@@ -19,19 +21,17 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
     setLoadingCode(null)
     if (res.success || res.error === 'ALREADY_OWNED') {
       setOwnedExtra((prev) => new Set(prev).add(pack.code))
-      toast.success(`${pack.name} 봉헌 완료`, { description: '신당의 테마칩에서 바로 적용할 수 있어요' })
+      toast.success(t('themeBought', { name: pack.name }), { description: t('themeBoughtDesc') })
     } else if (res.error === 'INSUFFICIENT_BOKCHAE') {
-      toast.error('복채가 부족합니다 — 복채 충전 탭에서 충전하세요')
+      toast.error(t('insufficientBokchae'))
     } else {
-      toast.error('구매 실패. 다시 시도해주세요.')
+      toast.error(t('purchaseFailed'))
     }
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-ink-light/40 font-sans">
-        봉헌한 테마는 영구 소장 — 본인·가족 신당 어디든 적용할 수 있어요
-      </p>
+      <p className="text-xs text-ink-light/40 font-sans">{t('themeHint')}</p>
       <div className="grid grid-cols-2 gap-3">
         {themes.map((pack) => {
           const owned = pack.owned || ownedExtra.has(pack.code)
@@ -88,7 +88,7 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
                     className="mt-auto flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-gold-500/[0.12] border border-gold-500/35 text-gold-300"
                   >
                     <Check className="w-3 h-3" />
-                    {free ? '기본 제공 · 신당에서 적용' : '보유중 · 신당에서 적용'}
+                    {free ? t('themeFree') : t('themeOwned')}
                   </Link>
                 ) : (
                   <button
@@ -96,7 +96,11 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
                     disabled={loading}
                     className="mt-auto flex items-center justify-center gap-1 text-[11px] py-1.5 rounded-lg bg-seal/15 border border-seal/40 text-seal disabled:opacity-50"
                   >
-                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : `봉헌 · ${pack.priceBokchae}복채`}
+                    {loading ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      t('themeBuy', { price: pack.priceBokchae })
+                    )}
                   </button>
                 )}
               </div>

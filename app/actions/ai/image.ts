@@ -10,6 +10,7 @@ import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { parseFeatureTag } from '@/lib/domain/analysis/feature-parse'
+import { saveElementFormModifier } from '@/lib/services/element-profile'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -384,6 +385,19 @@ export async function analyzeFaceForDestiny(
     )
 
     const analysisText = result.response.text()
+
+    // 오행형(五行形) → 신당 기운 보정 저장 (P2-13). 태그가 없으면 아무 일도 안 한다.
+    try {
+      const supabaseForElement = await createClient()
+      const {
+        data: { user: elementUser },
+      } = await supabaseForElement.auth.getUser()
+      if (elementUser) {
+        await saveElementFormModifier({ userId: elementUser.id, analysisText, kind: 'face' })
+      }
+    } catch (e) {
+      logger.warn('[analyzeFaceForDestiny] element form skipped:', e)
+    }
 
     // Extract 오관(五官) analysis. 프롬프트는 `[[EARS: 숫자, 설명]]`(숫자) 출력 →
     // 숫자·등급 양쪽 허용 파서로 교체(기존 등급전용 파서는 전량 폐기 버그). Track F P0.
@@ -922,6 +936,19 @@ export async function analyzePalmReading(
     )
 
     const analysisText = result.response.text()
+
+    // 오행형(五行形) → 신당 기운 보정 저장 (P2-13). 태그가 없으면 아무 일도 안 한다.
+    try {
+      const supabaseForElement = await createClient()
+      const {
+        data: { user: elementUser },
+      } = await supabaseForElement.auth.getUser()
+      if (elementUser) {
+        await saveElementFormModifier({ userId: elementUser.id, analysisText, kind: 'palm' })
+      }
+    } catch (e) {
+      logger.warn('[analyzePalmReading] element form skipped:', e)
+    }
 
     // Extract palm lines with assessment
     const parseLine = (tag: string) => {

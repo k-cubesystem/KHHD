@@ -129,11 +129,33 @@
     "continue": "이번만 계속하기"
   },
   "bok": {
+    "hub": "복 관리",
+    "points": "복 포인트",
+    "tier": {
+      "seed": "복의 씨앗",
+      "sprout": "복의 새싹",
+      "flower": "복의 꽃",
+      "tree": "복의 나무",
+      "forest": "복의 숲"
+    },
+    "mission": "오늘의 복 미션",
+    "missionComplete": "+{points}p 복 포인트 적립!",
+    "accumulated": "누적",
+    "nextTier": "다음 등급까지 {points}p",
+    "managing": "관리 중인 인연",
+    "register": "새 인연 등록하기",
+    "weeklyReport": "이번 주 복 현황",
+    "shareMessage": "해화당에서 당신의 복을 챙겨주는 사람이 있어요",
     "upgrade": {
-      "title": "더 많은 인연의 복을 관리하세요",
-      "desc": "복지기 등급으로 업그레이드하면 인연 한도가 확장되고, 가족 궁합 분석과 프리미엄 풍수 진단까지 이용할 수 있습니다.",
+      "title": "더 많은 인연을 관리하세요",
+      "desc": "복지기 등급으로 업그레이드하면 더 많은 인연을 등록할 수 있어요",
       "cta": "복지기 시작하기",
-      "later": "나중에"
+      "later": "다음에 할게요"
+    },
+    "tiers": {
+      "bokjigi": "복지기",
+      "bokjangi": "복장이",
+      "boksin": "복신"
     }
   },
   "error": {
@@ -212,34 +234,29 @@
     "night": "좋은 밤입니다",
     "member": "회원"
   },
-  "bok": {
-    "hub": "복 관리",
-    "points": "복 포인트",
-    "tier": {
-      "seed": "복의 씨앗",
-      "sprout": "복의 새싹",
-      "flower": "복의 꽃",
-      "tree": "복의 나무",
-      "forest": "복의 숲"
-    },
-    "mission": "오늘의 복 미션",
-    "missionComplete": "+{points}p 복 포인트 적립!",
-    "accumulated": "누적",
-    "nextTier": "다음 등급까지 {points}p",
-    "managing": "관리 중인 인연",
-    "register": "새 인연 등록하기",
-    "weeklyReport": "이번 주 복 현황",
-    "shareMessage": "해화당에서 당신의 복을 챙겨주는 사람이 있어요",
-    "upgrade": {
-      "title": "더 많은 인연을 관리하세요",
-      "desc": "복지기 등급으로 업그레이드하면 더 많은 인연을 등록할 수 있어요",
-      "cta": "복지기 시작하기",
-      "later": "다음에 할게요"
-    },
-    "tiers": {
-      "bokjigi": "복지기",
-      "bokjangi": "복장이",
-      "boksin": "복신"
-    }
+  "store": {
+    "backToLibrary": "내 서재로",
+    "balance": "보유 복채",
+    "balanceUnit": "만냥",
+    "eyebrow": "奉 獻 所",
+    "title": "상점",
+    "subtitle": "복채 충전부터 멤버십·신당 테마·신물까지 한 곳에서",
+    "tabsAria": "상점 분류",
+    "tabBokchae": "복채 충전",
+    "tabMembership": "멤버십",
+    "tabTheme": "신당 테마",
+    "tabItems": "신물",
+    "membershipActive": "{plan} 이용중",
+    "membershipManageHint": "플랜 변경·해지·결제 내역은 멤버십 관리에서",
+    "membershipManageCta": "멤버십 관리",
+    "themeHint": "봉헌한 테마는 영구 소장 — 본인·가족 신당 어디든 적용할 수 있어요",
+    "themeOwned": "보유중 · 신당에서 적용",
+    "themeFree": "기본 제공 · 신당에서 적용",
+    "themeBuy": "봉헌 · {price}복채",
+    "themeBought": "{name} 봉헌 완료",
+    "themeBoughtDesc": "신당의 테마칩에서 바로 적용할 수 있어요",
+    "insufficientBokchae": "복채가 부족합니다 — 복채 충전 탭에서 충전하세요",
+    "purchaseFailed": "구매 실패. 다시 시도해주세요.",
+    "itemsHint": "신물을 보관함에 담고, 신당 꾸미기에서 배치하세요"
   }
 }
