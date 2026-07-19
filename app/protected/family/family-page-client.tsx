@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { UserPlus, Plus, X, Users } from 'lucide-react'
+import Link from 'next/link'
+import { UserPlus, Plus, X, Users, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { ZodiacTimeSelect } from '@/components/zodiac-time-select'
 import { FiveAvatarSelector } from '@/components/family/five-avatar-selector'
@@ -163,6 +164,25 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
           </Button>
         )}
       </section>
+
+      {/* 기운 지도 입구 — 2명 이상(본인+가족)이어야 견줄 것이 생긴다 */}
+      {members.length > 0 && (
+        <Link
+          href="/protected/family/map"
+          className="flex items-center gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.05] px-3.5 py-3 hover:bg-gold-500/[0.09] transition-colors"
+        >
+          <span className="w-9 h-9 rounded-full bg-gold-500/10 border border-gold-500/25 grid place-items-center text-[15px] shrink-0">
+            🗺️
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-serif text-[13.5px] font-bold text-ink-light">우리 가족 기운 지도</span>
+            <span className="block text-[11px] text-ink-light/50 mt-0.5">
+              오행을 나란히 두고 서로 메울 기운을 봅니다
+            </span>
+          </span>
+          <ChevronRight className="w-4 h-4 text-gold-500/60 shrink-0" />
+        </Link>
+      )}
 
       {/* 가족 목록 */}
       <section aria-label="가족 구성원 목록">
