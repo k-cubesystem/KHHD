@@ -19,6 +19,8 @@ import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
 import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
+import { getUserRole } from '@/lib/supabase/helpers'
+import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 
 // --- Constants ---
 
@@ -255,8 +257,23 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
       supabase.from('shaman_question_credits').select('purchased_credits').eq('user_id', user.id).maybeSingle(),
     ])
     const dailyFreeUsed = usageResult.data?.total_turns ?? 0
-    const dailyFreeRemaining = Math.max(0, DAILY_FREE_QUESTIONS - dailyFreeUsed)
     const purchasedCredits = creditsResult.data?.purchased_credits ?? 0
+
+    // 마스터: 일일 10회 제한도 개방 (잔액만 무한이고 질문은 막히던 비대칭 해소)
+    const role = await getUserRole(supabase, user.id)
+    if (hasUnlimitedAccess(role)) {
+      return {
+        success: true,
+        walletBalance,
+        dailyFreeUsed,
+        dailyFreeTotal: UNLIMITED_BALANCE,
+        dailyFreeRemaining: UNLIMITED_BALANCE,
+        purchasedCredits,
+        totalRemaining: UNLIMITED_BALANCE,
+      }
+    }
+
+    const dailyFreeRemaining = Math.max(0, DAILY_FREE_QUESTIONS - dailyFreeUsed)
     const totalRemaining = dailyFreeRemaining + purchasedCredits
 
     return {
@@ -447,11 +464,9 @@ export async function sendShamanChatMessage(
       .select('category, result_json, summary, score')
       .eq('user_id', user.id)
 
-    if (familyMemberId && familyMemberId !== 'self') {
-      historyQuery = historyQuery.eq('family_member_id', familyMemberId)
-    } else {
-      historyQuery = historyQuery.is('family_member_id', null)
-    }
+    // analysis_history 의 대상 키는 target_id — 가족은 family_members.id, **본인은 user_id**(NULL 아님).
+    // family_member_id 컬럼은 이 테이블에 없어 42703 으로 매번 실패했었다.
+    historyQuery = historyQuery.eq('target_id', familyMemberId && familyMemberId !== 'self' ? familyMemberId : user.id)
 
     const { data: history } = await historyQuery.order('created_at', { ascending: false }).limit(10)
 

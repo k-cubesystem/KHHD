@@ -42,6 +42,9 @@ const REQUIRED_RPCS = [
   'check_missing_rpcs',
 ] as const
 
+/** 스모크 호출용 더미 대상 — 실제 유저를 건드리지 않으려고 nil UUID 를 쓴다. */
+const NIL_UUID = '00000000-0000-0000-0000-000000000000'
+
 /** 존재해야 하는 핵심 테이블 (재구축 소실 감지) */
 const REQUIRED_TABLES = [
   'profiles',
@@ -58,8 +61,31 @@ const REQUIRED_TABLES = [
   'membership_plans',
 ] as const
 
+/**
+ * 실제로 **호출해 보는** 읽기 전용 RPC — 부작용이 없는 것만.
+ *
+ * 왜 실재 확인만으로 부족한가: get_family_with_missions·get_recent_activities·get_hourly_traffic 은
+ * 함수가 멀쩡히 존재했는데도 RETURNS TABLE 선언 타입이 실제 컬럼과 어긋나 호출할 때마다
+ * 42804 로 죽고 있었다(2026-07-19 발견, 가족 미션·어드민 대시보드 무음 실패).
+ * 존재 검사는 이걸 절대 못 잡는다 — 그래서 한 번씩 실행해 본다.
+ * 행이 0건이어도 반환 타입 불일치는 그대로 드러난다.
+ */
+const SMOKE_RPCS: ReadonlyArray<{ name: string; args: Record<string, unknown> }> = [
+  { name: 'get_family_with_missions', args: { user_id_param: NIL_UUID } },
+  { name: 'get_family_with_analysis_summary', args: { user_id_param: NIL_UUID } },
+  { name: 'get_analysis_stats', args: { user_id_param: NIL_UUID } },
+  { name: 'calculate_family_fortune', args: { user_id_param: NIL_UUID, year_param: 2026, month_param: 1 } },
+  { name: 'calculate_yearly_fortune', args: { user_id_param: NIL_UUID, year_param: 2026 } },
+  { name: 'get_today_fortune', args: { p_user_id: NIL_UUID } },
+  { name: 'get_recent_activities', args: { p_limit: 1 } },
+  { name: 'get_hourly_traffic', args: { p_hours: 24 } },
+  { name: 'get_gemini_daily_stats', args: { days_back: 1 } },
+  { name: 'get_gemini_action_stats', args: { days_back: 1 } },
+  { name: 'get_gemini_recent_logs', args: { log_limit: 1 } },
+]
+
 interface HealthIssue {
-  kind: 'missing_rpc' | 'unreachable_table' | 'stale_cron' | 'config'
+  kind: 'missing_rpc' | 'broken_rpc' | 'unreachable_table' | 'stale_cron' | 'config'
   detail: string
 }
 
@@ -86,6 +112,14 @@ export async function GET(req: NextRequest) {
     issues.push({ kind: 'missing_rpc', detail: `소실된 RPC ${missing.length}종: ${missing.join(', ')}` })
   }
 
+  // 1-b) 읽기 전용 RPC 실제 호출 — "존재하지만 호출하면 터지는" 계약 파손 감지
+  await Promise.all(
+    SMOKE_RPCS.map(async ({ name, args }) => {
+      const { error } = await supabase.rpc(name, args)
+      if (error) issues.push({ kind: 'broken_rpc', detail: `${name}: ${error.message}` })
+    })
+  )
+
   // 2) 핵심 테이블 접근성 (RLS 우회 admin 기준 — 존재/권한 문제만 잡는다)
   for (const table of REQUIRED_TABLES) {
     const { error } = await supabase.from(table).select('*', { count: 'exact', head: true })
@@ -111,6 +145,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(summary, { status: 500 })
   }
 
-  logger.log('[Health Cron] 정상:', { rpcs: REQUIRED_RPCS.length, tables: REQUIRED_TABLES.length })
+  logger.log('[Health Cron] 정상:', {
+    rpcs: REQUIRED_RPCS.length,
+    smoked: SMOKE_RPCS.length,
+    tables: REQUIRED_TABLES.length,
+  })
   return NextResponse.json(summary)
 }

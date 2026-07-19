@@ -8,6 +8,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { computeSpendPlan } from '@/lib/domain/payment/spend-plan'
+import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
 
 /** 오늘 일일 한도 소비량(무료분만 카운트) */
@@ -137,8 +138,8 @@ export async function getWalletBalance(): Promise<number> {
   // Check if admin/tester
   const role = await getUserRole(supabase, user.id)
 
-  if (role === 'admin') {
-    return 999 // Unlimited display for admin
+  if (hasUnlimitedAccess(role)) {
+    return UNLIMITED_BALANCE
   }
 
   // 테스터: 매일 50만냥 자동충전 후 실제 잔액 반환
@@ -181,8 +182,8 @@ export async function deductTalisman(
   // Check if admin (unlimited)
   const role = await getUserRole(supabase, user.id)
 
-  if (role === 'admin') {
-    return { success: true, remainingBalance: 999 }
+  if (hasUnlimitedAccess(role)) {
+    return { success: true, remainingBalance: UNLIMITED_BALANCE }
   }
 
   // Get cost

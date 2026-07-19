@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/helpers'
+import { hasUnlimitedAccess, UNLIMITED_TIER_LIMITS } from '@/lib/auth/privileges'
 
 /**
  * Get user's membership tier and limits
@@ -19,6 +20,11 @@ export async function getUserTierLimits() {
 
   // Check if user is tester - give special privileges
   const role = await getUserRole(supabase, user.id)
+
+  // 마스터: 가족·기록·일일한도 전부 개방 (구독 여부 무관)
+  if (hasUnlimitedAccess(role)) {
+    return { ...UNLIMITED_TIER_LIMITS }
+  }
 
   if (role === 'tester') {
     return {
