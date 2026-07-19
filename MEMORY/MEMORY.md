@@ -55,6 +55,7 @@
 | 2026-07-19 | 세션22 | 로드맵 7·8 일괄 — 세션검색·기운보정배선·무료신패키지·가족신당공개·결제퍼널·언어전환배선          | lib/services/membership-deity.ts, lib/domain/chat/constants.ts, supabase/migrations/20260719\_\*.sql                         |
 | 2026-07-19 | 세션23 | P2-13 완결 — 관상·손금 오행형 태그 → 기운 보정 저장·적용 + i18n 상점 화면 완결(22키 ko/en)       | lib/domain/shrine/element-form.ts, lib/services/element-profile.ts, supabase/migrations/20260719_element_form_tag.sql        |
 | 2026-07-19 | 세션23 | 마스터 무제한 권한 통합(privileges.ts) + 깨진 RPC 3종 수복 + 헬스체크 실호출 스모크 11종 추가    | lib/auth/privileges.ts, supabase/migrations/20260719_fix_family_missions_types.sql·fix_admin_dashboard_rpcs.sql              |
+| 2026-07-20 | 세션24 | 가이드 우하단 아바타 → 하단 공지 바(채팅 입력창 겹침 해소) + 우리 가족 기운 지도(로드맵 13 완결) | components/guide/GlobalGuide.tsx, app/protected/family/map/, lib/domain/shrine/energy-map.ts                                 |
 
 ---
 

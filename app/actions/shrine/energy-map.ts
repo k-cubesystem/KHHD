@@ -150,7 +150,9 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
     {
       id: 'self',
       name: me?.full_name || '나',
-      relation: '본인',
+      // 계정 본인. 가족으로 자기 자신을 relationship='본인' 으로 등록해 둔 사용자가 흔해
+      // 같은 이름이 두 줄 나올 수 있다 — 어느 쪽이 계정인지 구분되게 '내 계정' 으로 표기.
+      relation: '내 계정',
       avatarId: null,
       birthDate: me?.birth_date ?? null,
       birthTime: me?.birth_time ?? null,
