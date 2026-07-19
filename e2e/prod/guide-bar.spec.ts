@@ -19,7 +19,8 @@ async function login(page: Page) {
 
 test.describe('가이드 공지 바', () => {
   test.skip(!process.env.E2E_PROD_SMOKE, 'E2E_PROD_SMOKE 미설정')
-  test.use({ storageState: { cookies: [], origins: [] } })
+  // 앱은 max-w-480 모바일 셸이다 — 겹침은 좁은 폭에서 터지므로 모바일 뷰포트로 본다.
+  test.use({ storageState: { cookies: [], origins: [] }, viewport: { width: 390, height: 844 } })
 
   test('고민상담: 우하단 아바타 없음 + 바가 입력창을 덮지 않음', async ({ page }) => {
     test.setTimeout(120_000)
@@ -85,12 +86,18 @@ test.describe('가이드 공지 바', () => {
     const bar = page.locator('[data-guide-bar]')
     await expect(bar).toBeVisible({ timeout: 30_000 })
 
-    // 펼쳐져 있으면 접고, 접힌 줄을 눌러 다시 펼친다
     const close = page.getByRole('button', { name: '안내 접기' })
+    const collapsed = page.getByRole('button', { name: /안내 펼치기$/ })
+
+    // 바가 보인 직후엔 자동 노출(useEffect)이 아직 안 돌았을 수 있다. 둘 중 하나로
+    // 확정될 때까지 기다린 뒤 판단해야 "접힘인 줄 알았는데 곧 펼쳐지는" 레이스를 안 탄다.
+    await expect(close.or(collapsed).first()).toBeVisible({ timeout: 30_000 })
+    await page.waitForTimeout(800) // 펼침 애니메이션(0.18s)과 우선순위 재평가가 끝날 여유
+
+    // 펼쳐져 있으면 접고, 접힌 줄을 눌러 다시 펼친다
     if (await close.isVisible().catch(() => false)) {
       await close.click()
     }
-    const collapsed = page.getByRole('button', { name: /안내 펼치기$/ })
     await expect(collapsed).toBeVisible({ timeout: 10_000 })
     console.log('[PASS] 접힌 줄 노출')
 
