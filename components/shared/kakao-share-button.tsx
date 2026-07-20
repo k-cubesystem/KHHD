@@ -56,6 +56,9 @@ export function KakaoShareButton({
     }
   }
 
+  // NEXT_PUBLIC_KAKAO_JS_KEY 미설정 시 버튼 자체를 숨김 (공유 SDK 키 없으면 무의미 — 사용자 설정 대기)
+  if (!process.env.NEXT_PUBLIC_KAKAO_JS_KEY) return null
+
   return (
     <Button
       onClick={handleShare}

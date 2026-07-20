@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Star, Trash2, Share2, Edit3, Save, Clock, AlertTriangle, RefreshCw } from 'lucide-react'
@@ -20,6 +20,7 @@ import {
 } from '@/app/actions/user/history'
 import { AnalysisResultView } from './analysis-result-view'
 import { buildReanalyzeRoute } from '@/lib/domain/analysis/reanalyze-routes'
+import { KakaoShareButton } from '@/components/shared/kakao-share-button'
 
 interface DetailModalProps {
   isOpen: boolean
@@ -36,6 +37,20 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
   const [isEditingMemo, setIsEditingMemo] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [kakaoUrl, setKakaoUrl] = useState<string | null>(null)
+
+  // 카카오 JS 키가 설정된 경우에만 공유 링크를 미리 확보(멱등) → KakaoShareButton 노출.
+  // 키 미설정 시 effect 조기 종료 → 토큰 생성/버튼 렌더 없음.
+  useEffect(() => {
+    if (!isOpen || !process.env.NEXT_PUBLIC_KAKAO_JS_KEY) return
+    let active = true
+    createShareLink(record.id).then((r) => {
+      if (active && r.success && r.url) setKakaoUrl(r.url)
+    })
+    return () => {
+      active = false
+    }
+  }, [isOpen, record.id])
 
   // Toggle Favorite
   const handleToggleFavorite = async () => {
@@ -268,6 +283,18 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                   {t('share')}
                 </Button>
               </div>
+
+              {/* 카카오톡 공유 (NEXT_PUBLIC_KAKAO_JS_KEY 설정 시에만 노출) */}
+              {kakaoUrl && (
+                <KakaoShareButton
+                  title={`${record.target_name}님의 ${record.category} 분석`}
+                  description={record.summary || '청담 해화당 운명 분석 결과'}
+                  imageUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/images/hanok-night-hero.jpg`}
+                  webUrl={kakaoUrl}
+                  size="sm"
+                  className="w-full"
+                />
+              )}
 
               {/* Bottom Row: Delete */}
               {!showDeleteConfirm ? (
