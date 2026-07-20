@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { Card, CardContent } from '@/components/ui/card'
@@ -15,6 +15,7 @@ import { PaywallModal } from '@/components/shared/paywall-modal'
 import { CompatibilityResult } from './compatibility-result'
 import { CompatibilityLoading } from './compatibility-loading'
 import { RELATIONSHIP_TYPES, RELATIONSHIP_CATEGORIES, CATEGORY_LABELS } from '@/lib/constants/relationship-types'
+import { getFocusGroupSpec } from '@/lib/domain/compatibility/focus-groups'
 import {
   Select,
   SelectContent,
@@ -30,16 +31,53 @@ interface CompatibilityClientProps {
   fixedTargetId?: string
 }
 
+// 가족 등록 관계값(한글) → 궁합 관계 셀렉트 값 추정 규칙 (§7 자동 프리셋)
+const RELATION_TYPE_RULES: Array<{ match: (rt: string) => boolean; value: string }> = [
+  { match: (rt) => rt.includes('배우자') || rt.includes('부부'), value: 'spouse' },
+  {
+    match: (rt) => ['자녀', '아들', '딸', '부모', '아버지', '어머니'].some((k) => rt.includes(k)),
+    value: 'parent_child',
+  },
+  { match: (rt) => rt.includes('형제') || rt.includes('자매') || rt.includes('남매'), value: 'siblings' },
+  { match: (rt) => rt.includes('연인') || rt.includes('애인'), value: 'lover' },
+  { match: (rt) => rt.includes('친구'), value: 'friend' },
+  { match: (rt) => rt.includes('동료') || rt.includes('직장'), value: 'coworker' },
+]
+
+function relationTypeToValue(rt?: string | null): string | null {
+  if (!rt) return null
+  for (const rule of RELATION_TYPE_RULES) {
+    if (rule.match(rt)) return rule.value
+  }
+  return null
+}
+
+// 두 대상의 관계 자동 추정 (본인 기준 상대의 관계, 매핑 불가 시 null)
+function inferRelationship(p1: DestinyTarget, p2: DestinyTarget): string | null {
+  const rt1 = p1.relation_type
+  const rt2 = p2.relation_type
+  const other = rt1 === '본인' ? rt2 : rt2 === '본인' ? rt1 : rt2
+  return relationTypeToValue(other)
+}
+
 export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityClientProps) {
   const router = useRouter()
   const fixedTarget = fixedTargetId ? (targets.find((t) => t.id === fixedTargetId) ?? null) : null
   const [person1, setPerson1] = useState<DestinyTarget | null>(fixedTarget)
   const [person2, setPerson2] = useState<DestinyTarget | null>(null)
   const [relationship, setRelationship] = useState<string>('lover')
+  const [relationshipTouched, setRelationshipTouched] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result, setResult] = useState<any>(null)
   const { checkQuota, paywallProps } = useAnalysisQuota()
+
+  // 관계 자동 프리셋(§7): 두 대상이 정해지고 사용자가 수동으로 안 바꿨을 때만 추정값 적용. 수동 변경 항상 가능.
+  useEffect(() => {
+    if (relationshipTouched || !person1 || !person2) return
+    const inferred = inferRelationship(person1, person2)
+    if (inferred) setRelationship(inferred)
+  }, [person1, person2, relationshipTouched])
 
   const handleSelectPerson = (target: DestinyTarget, personNumber: 1 | 2) => {
     if (personNumber === 1) {
@@ -271,7 +309,13 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
 
               <Card className="bg-surface/20 border-primary/20">
                 <CardContent className="p-6">
-                  <Select value={relationship} onValueChange={setRelationship}>
+                  <Select
+                    value={relationship}
+                    onValueChange={(v) => {
+                      setRelationship(v)
+                      setRelationshipTouched(true)
+                    }}
+                  >
                     <SelectTrigger className="w-full h-12 text-base bg-background/50 border-primary/20">
                       <SelectValue placeholder="관계를 선택하세요" />
                     </SelectTrigger>
@@ -305,6 +349,25 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
                         {RELATIONSHIP_TYPES.find((r) => r.value === relationship)?.description}
                       </p>
                     </motion.div>
+                  )}
+
+                  {/* 질문 미리보기 칩(§7) — 이 관계에서 실제 궁금한 것 3개, 기대 설정 */}
+                  {relationship && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs font-medium text-primary/80">이런 게 궁금하시죠?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {getFocusGroupSpec(relationship)
+                          .questions.slice(0, 3)
+                          .map((q, i) => (
+                            <span
+                              key={i}
+                              className="text-xs bg-primary/10 border border-primary/20 rounded-full px-3 py-1.5 text-ink-light/80"
+                            >
+                              {q}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
