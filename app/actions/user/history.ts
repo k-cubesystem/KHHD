@@ -163,6 +163,29 @@ export async function saveAnalysisHistory(
 }
 
 /**
+ * 분석 기록 저장 (관측 래퍼)
+ *
+ * saveAnalysisHistory 의 soft-fail({ success: false })을 무음으로 흘리지 않고
+ * Error 를 첫 인자로 logger.error 에 실어 Sentry captureException 으로 잇는다.
+ * 부가 저장 원칙: 저장이 실패해도 throw 하지 않아 사용자 분석 흐름은 막지 않는다.
+ */
+export async function saveAnalysisHistoryObserved(
+  params: CreateAnalysisHistoryParams,
+  context?: Record<string, unknown>
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  const result = await saveAnalysisHistory(params)
+  if (!result.success) {
+    logger.error(new Error('analysis_history 저장 실패'), {
+      category: params.category,
+      target_name: params.target_name,
+      cause: result.error,
+      ...context,
+    })
+  }
+  return result
+}
+
+/**
  * 최근 분석 기록 조회
  */
 export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHistory[]> {

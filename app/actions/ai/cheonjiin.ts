@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateAge } from '@/lib/domain/saju/saju'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistoryObserved } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
@@ -334,7 +334,7 @@ async function analyzeCheonjiinWithAI(
   const data = extractJSON(text)
 
   // analysis_history 저장
-  await saveAnalysisHistory({
+  await saveAnalysisHistoryObserved({
     target_id: target.id,
     target_name: target.name,
     target_relation: target.relation_type,

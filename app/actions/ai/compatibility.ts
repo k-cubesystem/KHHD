@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { buildSajuContext } from '@/lib/saju-engine/context-builder'
 import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
@@ -88,7 +88,7 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
     }
 
     // 7. 분석 결과 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
-    await saveAnalysisHistory({
+    await saveAnalysisHistoryObserved({
       target_id: target1.id,
       target_name: target1.name,
       target_relation: target1.relation_type || '가족',

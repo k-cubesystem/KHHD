@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
@@ -190,7 +190,7 @@ export async function analyzeTrendAction(
     if (!result.name) result.name = target.name
 
     // 히스토리 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
-    await saveAnalysisHistory({
+    await saveAnalysisHistoryObserved({
       target_id: target.id,
       target_name: target.name,
       target_relation: target.relation_type,

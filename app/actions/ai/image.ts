@@ -11,8 +11,52 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { parseFeatureTag } from '@/lib/domain/analysis/feature-parse'
 import { saveElementFormModifier } from '@/lib/services/element-profile'
+import {
+  saveAnalysisHistoryObserved,
+  type AnalysisContextMode,
+  type CreateAnalysisHistoryParams,
+} from '@/app/actions/user/history'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
+
+/**
+ * 이미지 분석(관상·손금·풍수) 결과를 analysis_history 에 저장한다 (부가 단계).
+ * 스튜디오는 로그인 사용자 본인 이미지 분석이므로 본인 대상으로 기록한다.
+ * 저장이 실패해도 분석 반환은 성공으로 둔다 — 관측 래퍼가 Sentry 로 남긴다(오행형 태그와 동일 철학).
+ */
+async function persistImageAnalysisHistory(params: {
+  category: 'FACE' | 'HAND' | 'FENGSHUI'
+  contextMode: AnalysisContextMode
+  resultJson: CreateAnalysisHistoryParams['result_json']
+  summary: string
+  score?: number
+}): Promise<void> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+    await saveAnalysisHistoryObserved(
+      {
+        target_id: user.id,
+        target_name: profile?.full_name || '본인',
+        target_relation: '본인',
+        category: params.category,
+        context_mode: params.contextMode,
+        result_json: params.resultJson,
+        summary: params.summary,
+        score: params.score,
+        model_used: MODEL_PRO,
+        talisman_cost: 0,
+      },
+      { source: `image:${params.category}` }
+    )
+  } catch (e) {
+    logger.warn(`[persistImageAnalysisHistory] ${params.category} 저장 건너뜀:`, e)
+  }
+}
 
 // Face Destiny Goals
 export type FaceDestinyGoal = 'wealth' | 'love' | 'authority' | 'general'
@@ -523,7 +567,8 @@ Style: Professional headshot, warm lighting, confident expression.`
       .filter((t): t is FaceImprovementTip => t !== null)
 
     await addBokPoints(25, 'ANALYSIS', undefined, '이미지 관상 분석').catch(() => {})
-    return {
+
+    const faceResult: FaceAnalysisResult = {
       success: true,
       currentAnalysis: analysisText,
       facialFeatures,
@@ -537,6 +582,17 @@ Style: Professional headshot, warm lighting, confident expression.`
       firstImpression,
       improvementTips: improvementTips.length > 0 ? improvementTips : undefined,
     }
+
+    await persistImageAnalysisHistory({
+      category: 'FACE',
+      contextMode:
+        goal === 'wealth' ? 'WEALTH' : goal === 'love' ? 'LOVE' : goal === 'authority' ? 'CAREER' : 'GENERAL',
+      resultJson: faceResult,
+      summary: firstImpression || `${goalConfig.name} 관상 분석`,
+      score: estimatedScore,
+    })
+
+    return faceResult
   } catch (error: unknown) {
     logger.error('Face Destiny Analysis Error:', error)
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
@@ -814,7 +870,8 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
     const problems = ['가구 배치가 기의 흐름을 막고 있음', '색상 톤이 목표와 맞지 않음', '소품 배치 개선 필요']
 
     await addBokPoints(25, 'ANALYSIS', undefined, '이미지 풍수 분석').catch(() => {})
-    return {
+
+    const fengshuiResult: InteriorAnalysisResult = {
       success: true,
       currentAnalysis: analysisText,
       problems,
@@ -828,6 +885,17 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       spaceScore,
       quickFixes: quickFixes.length > 0 ? quickFixes : undefined,
     }
+
+    await persistImageAnalysisHistory({
+      category: 'FENGSHUI',
+      contextMode:
+        theme === 'wealth' ? 'WEALTH' : theme === 'romance' ? 'LOVE' : theme === 'health' ? 'HEALTH' : 'GENERAL',
+      resultJson: { ...fengshuiResult, roomType, theme },
+      summary: spaceScore?.description || `${themeConfig.name} 풍수 분석`,
+      score: spaceScore?.current,
+    })
+
+    return fengshuiResult
   } catch (error: unknown) {
     logger.error('Interior Fengshui Analysis Error:', error)
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
@@ -1068,7 +1136,8 @@ export async function analyzePalmReading(
       : undefined
 
     await addBokPoints(25, 'ANALYSIS', undefined, '이미지 손금 분석').catch(() => {})
-    return {
+
+    const palmResult: PalmAnalysisResult = {
       success: true,
       currentAnalysis: analysisText,
       palmLines,
@@ -1080,6 +1149,16 @@ export async function analyzePalmReading(
       sajuSynergy,
       ageTimeline: ageTimeline.length > 0 ? ageTimeline : undefined,
     }
+
+    await persistImageAnalysisHistory({
+      category: 'HAND',
+      contextMode: 'HEALTH',
+      resultJson: palmResult,
+      summary: '손금 분석 결과',
+      score: estimatedPalmScore,
+    })
+
+    return palmResult
   } catch (error: unknown) {
     logger.error('Palm Reading Analysis Error:', error)
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'

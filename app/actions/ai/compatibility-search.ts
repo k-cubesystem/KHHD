@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { nanoid } from 'nanoid'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistoryObserved } from '../user/history'
 import { logger } from '@/lib/utils/logger'
 
 interface InviteData {
@@ -129,7 +129,7 @@ ${
         const person1Name = person1.name || '대상1'
         const person2Name = person2.name || '대상2'
 
-        await saveAnalysisHistory({
+        await saveAnalysisHistoryObserved({
           target_id: user.id,
           target_name: profile.full_name || '본인',
           target_relation: '본인',

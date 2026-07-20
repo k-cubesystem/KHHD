@@ -6,7 +6,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { calculateManse } from '@/lib/domain/saju/manse'
-import { saveAnalysisHistory } from '@/app/actions/user/history'
+import { saveAnalysisHistoryObserved } from '@/app/actions/user/history'
 import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
@@ -189,7 +189,7 @@ export async function generateDailyFortune(
 
     // 7. Save to Unified History
     try {
-      await saveAnalysisHistory({
+      await saveAnalysisHistoryObserved({
         target_id: targetId,
         target_name: name || '사용자',
         target_relation: type === 'USER' ? '본인' : '가족/지인',

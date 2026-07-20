@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { type FaceDestinyGoal, type InteriorTheme } from '@/lib/constants'
 import { deductTalisman } from '../payment/wallet'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistory, saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { rateLimit } from '@/lib/utils/rate-limit'
 import {
@@ -377,7 +377,7 @@ export async function analyzeSajuDetail(
 
     if (saveToHistory) {
       try {
-        await saveAnalysisHistory({
+        await saveAnalysisHistoryObserved({
           target_id: user.id,
           target_name: name,
           target_relation: name === profile?.full_name ? '본인' : '가족/지인',

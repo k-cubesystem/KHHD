@@ -5,7 +5,15 @@ import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { createClient } from '@/lib/supabase/server'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
+import { saveAnalysisHistoryObserved } from '@/app/actions/user/history'
 import { logger } from '@/lib/utils/logger'
+
+function assessmentFromScore(score: number): string {
+  if (score >= 75) return '좋은 궁합'
+  if (score >= 55) return '보통 궁합'
+  if (score >= 40) return '어려운 궁합'
+  return '주의가 필요한 궁합'
+}
 
 interface FamilyMember {
   id: string
@@ -168,6 +176,42 @@ export async function calculateBusinessCompatibilityAction(partnerId: string): P
       logger.error('[BusinessCompatibility AI]', aiError)
       aiAnalysis = ''
     }
+
+    // 분석 기록 저장 (부가 단계 — 히스토리/재조회용, 실패해도 결과 반환은 성공)
+    const overallAssessment = assessmentFromScore(result.totalScore)
+    await saveAnalysisHistoryObserved(
+      {
+        target_id: partnerId,
+        target_name: partner.name ?? '파트너',
+        target_relation: '사업 파트너',
+        category: 'COMPATIBILITY',
+        context_mode: 'CAREER',
+        result_json: {
+          person1: { name: me.name ?? '나' },
+          person2: { name: partner.name ?? '파트너' },
+          kind: 'business',
+          overallAssessment,
+          summary: `${me.name ?? '나'}님과 ${partner.name ?? '파트너'}님의 사업 궁합`,
+          advice: aiAnalysis,
+          strengths: [],
+          warnings: [],
+          categoryBreakdown: result.categories.map((c) => ({
+            category: c.category,
+            label: c.label,
+            assessment: assessmentFromScore(c.score),
+            details: c.details,
+          })),
+          mulsangNarrative: result.mulsangNarrative,
+          luckyActions: result.luckyActions,
+          engineVersion: 'v2',
+        },
+        summary: `${me.name ?? '나'}님과 ${partner.name ?? '파트너'}님의 사업 궁합 - ${overallAssessment}`,
+        score: result.totalScore,
+        model_used: MODEL_PRO,
+        talisman_cost: 0,
+      },
+      { source: 'businessCompatibility' }
+    )
 
     return {
       success: true,

@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { deductTalisman } from '../payment/wallet'
-import { saveAnalysisHistory } from '../user/history'
+import { saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/app/actions/payment/bok-points'
@@ -135,7 +135,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
 
     // 7. 분석 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
     try {
-      await saveAnalysisHistory({
+      await saveAnalysisHistoryObserved({
         target_id: params.memberId,
         target_name: member.name,
         target_relation: member.relationship || '본인',
