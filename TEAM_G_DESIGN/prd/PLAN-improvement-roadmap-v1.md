@@ -115,9 +115,12 @@
 - ⛔ **결제 전략 §4 법무** — 복채가 선불전자지급수단 등록 대상인지(폐쇄형 예외 가능성). 변호사 자문 영역.
 - ⚙️ **운영 설정 2건** — GitHub 시크릿(E2E_USER_EMAIL/PASSWORD), Sentry alert rule.
 
-**신규 기획 (세션25, 실행 대기 — Opus 발주)**
+**신규 기획 (세션25) — ✅완료·배포 (2026-07-21)**
 
-- 📐 **궁합 관계별 맞춤 분석 개편** → `PLAN-compatibility-relationship-v1.md`. 관계군 8종(소개팅/연인/부부/부모자식/형제/친구/직장/사업)별 단골 질문 5개에 직접 답하는 `focusAnswers` 신설 + 8대 궁합 쉬운 풀이(라벨 이중화·3줄 카드·엔진 문장 리라이트) + 결함 4건 수복(히스토리 JSON 덤프·재분석 404·죽은 시드·레거시 스튜디오). 실측: 관계 선택 19종·엔진 가중치는 이미 있고, **프롬프트 출력이 관계 불문 동일 + 연애 편향**인 것이 진짜 갭.
+- ✅ **궁합 관계별 맞춤 분석 + 분석 기록 신뢰성 개편** → `PLAN-compatibility-relationship-v1.md` (Part B→A 순 전 단계 실행).
+  - **Part B(기록 신뢰성)**: image.ts 관상·손금·풍수 + 사업궁합에 `analysis_history` 저장 배선(재방문마다 재분석·재과금되던 문제 해소 — 프로덕션 FACE 행 0→생성 확인), 저장 실패 관측화(`saveAnalysisHistoryObserved` 래퍼, 라이브 9곳), 히스토리 상세 raw JSON 덤프 제거 → 공용 `CategoryResultBody`(공유 화면과 동일 렌더)·궁합은 `compatibility-result` 읽기전용 재사용, 재분석 404 5건 교정(`reanalyze-routes` 단일화 + 실존 라우트 테스트), 목업/고아 코드 정리, 카카오 공유 배선(JS키 미설정 시 자동 숨김).
+  - **Part A(궁합 개편)**: 8 FocusGroup 관계군 분기 + 군별 단골 질문 5개에 직접 답하는 `focusAnswers`, 8대 궁합 쉬운 풀이(라벨 이중화·"이게 뭐냐" 3줄 카드·엔진 details 문장 리라이트), `siblings` 가중치 신설(합=1), 프롬프트 코드 빌더 분리(§9), `engineVersion v3` 캐시(focusGroup 포함 — 같은 두 사람 다른 관계 오재사용 버그 수정), 죽은 시드(R3)·레거시 스튜디오(R4) 삭제, 질문 미리보기 칩 + 관계 자동 프리셋.
+  - **대기**: 카카오 JS 키(`NEXT_PUBLIC_KAKAO_JS_KEY`) 설정, 관계별 유료화 여부(§13).
 
 **코드 잔여**
 
