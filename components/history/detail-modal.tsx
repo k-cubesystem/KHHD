@@ -19,6 +19,7 @@ import {
   createShareLink,
 } from '@/app/actions/user/history'
 import { AnalysisResultView } from './analysis-result-view'
+import { buildReanalyzeRoute } from '@/lib/domain/analysis/reanalyze-routes'
 
 interface DetailModalProps {
   isOpen: boolean
@@ -127,20 +128,9 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
     }
   }
 
-  // Re-analyze: 재분석 기능
+  // Re-analyze: 재분석 기능 (라우트 테이블은 reanalyze-routes 로 단일화 — 실존 라우트 테스트로 404 방지)
   const handleReAnalyze = () => {
-    const categoryRoutes: Record<string, string> = {
-      SAJU: `/protected/analysis/cheonjiin?targetId=${record.target_id}`,
-      FACE: '/protected/saju/face',
-      HAND: '/protected/saju/hand',
-      FENGSHUI: '/protected/saju/fengshui',
-      COMPATIBILITY: '/protected/compatibility',
-      TODAY: '/protected/saju/today',
-      WEALTH: '/protected/analysis/wealth',
-      NEW_YEAR: '/protected/analysis/new-year',
-    }
-
-    const route = categoryRoutes[record.category]
+    const route = buildReanalyzeRoute(record.category, record.target_id)
     if (route) {
       toast.info('분석 페이지로 이동합니다...')
       router.push(route)

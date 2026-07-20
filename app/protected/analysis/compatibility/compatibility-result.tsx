@@ -16,7 +16,7 @@ interface CategoryBreakdown {
   score?: number
 }
 
-interface CompatibilityResultData {
+export interface CompatibilityResultData {
   overallAssessment?: string
   summary: string
   strengths: string[]
@@ -39,6 +39,8 @@ interface CompatibilityResultProps {
   person2: DestinyTarget
   result: CompatibilityResultData
   onReset: () => void
+  /** 읽기전용(히스토리 상세 재사용): 공유·저장·리셋 푸터 숨김 */
+  readOnly?: boolean
 }
 
 function getAssessmentColor(assessment: string): string {
@@ -62,7 +64,7 @@ function getCategoryAssessmentStyle(assessment: string): string {
   return 'text-red-400 bg-red-500/10'
 }
 
-export function CompatibilityResult({ person1, person2, result, onReset }: CompatibilityResultProps) {
+export function CompatibilityResult({ person1, person2, result, onReset, readOnly = false }: CompatibilityResultProps) {
   const overallAssessment = result.overallAssessment || '보통 궁합'
   const summary = result.summary || '궁합 분석 결과'
   const strengths = result.strengths || []
@@ -325,24 +327,26 @@ export function CompatibilityResult({ person1, person2, result, onReset }: Compa
       </div>
       {/* end capture */}
 
-      {/* Share & Save (outside capture area) */}
-      <div className="max-w-2xl mx-auto px-3 mt-6 space-y-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-          <ShareSaveButtons
-            resultContainerId="compatibility-result-capture"
-            analysisTitle="궁합 분석"
-            memberName={`${person1.name} & ${person2.name}`}
-          />
-        </motion.div>
+      {/* Share & Save (outside capture area) — 읽기전용에선 숨김 */}
+      {!readOnly && (
+        <div className="max-w-2xl mx-auto px-3 mt-6 space-y-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+            <ShareSaveButtons
+              resultContainerId="compatibility-result-capture"
+              analysisTitle="궁합 분석"
+              memberName={`${person1.name} & ${person2.name}`}
+            />
+          </motion.div>
 
-        {/* Reset Button */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}>
-          <Button onClick={onReset} variant="outline" className="w-full">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            다른 궁합 분석하기
-          </Button>
-        </motion.div>
-      </div>
+          {/* Reset Button */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}>
+            <Button onClick={onReset} variant="outline" className="w-full">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              다른 궁합 분석하기
+            </Button>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

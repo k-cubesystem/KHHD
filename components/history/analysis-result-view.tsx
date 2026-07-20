@@ -4,6 +4,11 @@ import { CheonjiinSummary } from '@/components/analysis/cheonjiin/CheonjiinSumma
 import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
 import { JiSection } from '@/components/analysis/cheonjiin/JiSection'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
+import { CategoryResultBody } from '@/components/analysis/CategoryResultBody'
+import {
+  CompatibilityResult,
+  type CompatibilityResultData,
+} from '@/app/protected/analysis/compatibility/compatibility-result'
 import type { AnalysisHistory } from '@/app/actions/user/history'
 import type { CheonjiinAnalysisResult } from '@/types/cheonjiin'
 import type { DestinyTarget } from '@/app/actions/user/destiny'
@@ -13,7 +18,7 @@ interface AnalysisResultViewProps {
 }
 
 export function AnalysisResultView({ record }: AnalysisResultViewProps) {
-  // SAJU Category & Valid JSON
+  // SAJU — 천지인 전용 렌더 (기존 유지)
   if (record.category === 'SAJU' && typeof record.result_json === 'object') {
     const result = record.result_json as CheonjiinAnalysisResult
 
@@ -43,26 +48,25 @@ export function AnalysisResultView({ record }: AnalysisResultViewProps) {
     )
   }
 
-  // Default Rendering (Summary + JSON Code View)
-  return (
-    <div className="space-y-6">
-      {/* Summary */}
-      {record.summary && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-bold text-primary uppercase tracking-wide">요약</h4>
-          <p className="text-base text-ink-light/90 leading-relaxed whitespace-pre-wrap">{record.summary}</p>
-        </div>
-      )}
+  // COMPATIBILITY — 궁합 전용 결과 뷰를 읽기전용으로 재사용.
+  // result_json 에 person1/person2 원본이 포함돼 완전 복원 가능(사업궁합은 { name } 최소형).
+  if (record.category === 'COMPATIBILITY' && record.result_json && typeof record.result_json === 'object') {
+    const json = record.result_json as Record<string, unknown>
+    const person1 =
+      (json.person1 as DestinyTarget | undefined) ??
+      ({ name: record.target_name || '본인' } as unknown as DestinyTarget)
+    const person2 = (json.person2 as DestinyTarget | undefined) ?? ({ name: '상대' } as unknown as DestinyTarget)
+    return (
+      <CompatibilityResult
+        person1={person1}
+        person2={person2}
+        result={record.result_json as unknown as CompatibilityResultData}
+        onReset={() => {}}
+        readOnly
+      />
+    )
+  }
 
-      {/* Result JSON (Code View) */}
-      <div className="space-y-2">
-        <h4 className="text-sm font-bold text-primary uppercase tracking-wide">분석 결과 원본</h4>
-        <div className="bg-background/50 border border-primary/10 rounded-lg p-4 overflow-x-auto">
-          <pre className="text-sm text-ink-light/80 font-sans leading-relaxed">
-            {typeof record.result_json === 'string' ? record.result_json : JSON.stringify(record.result_json, null, 2)}
-          </pre>
-        </div>
-      </div>
-    </div>
-  )
+  // 그 외(FACE/HAND/FENGSHUI/TODAY/WEALTH/NEW_YEAR) — 공용 뷰로 전문 렌더 (raw JSON 덤프 제거)
+  return <CategoryResultBody record={record} full />
 }

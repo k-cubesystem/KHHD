@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { createBrowserClient } from '@supabase/ssr'
 import type { AnalysisHistory } from '@/app/actions/user/history'
+import { CategoryResultBody } from '@/components/analysis/CategoryResultBody'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -22,7 +23,6 @@ import {
   Heart,
   Coins,
   Star,
-  TrendingUp,
   BookOpen,
   Share2,
 } from 'lucide-react'
@@ -148,222 +148,10 @@ function ScoreRing({ score }: { score: number }) {
   )
 }
 
-// ─── Result Body: renders parsed result_json per category ─────────────────────
+// ─── Result Body: 공용 CategoryResultBody 위임 (히스토리 상세와 동일 렌더) ──────────
 
 function ResultBody({ record }: { record: AnalysisHistory }) {
-  const json = record.result_json
-  if (!json || typeof json !== 'object') {
-    return record.summary ? (
-      <p className="text-base text-ink-light/85 leading-relaxed whitespace-pre-wrap">{record.summary}</p>
-    ) : null
-  }
-
-  // Helper: render a section with a label
-  const Section = ({
-    icon: Icon,
-    title,
-    children,
-  }: {
-    icon?: React.ElementType
-    title: string
-    children: React.ReactNode
-  }) => (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="w-4 h-4 text-primary/70" />}
-        <h4 className="text-xs font-bold text-primary/70 uppercase tracking-widest">{title}</h4>
-      </div>
-      <div className="pl-0">{children}</div>
-    </div>
-  )
-
-  const Divider = () => <div className="border-t border-primary/10" />
-
-  // SAJU – has cheon/ji/in structure OR fortune_score/detailedAnalysis
-  if (record.category === 'SAJU') {
-    const hasCheonjiin = json.cheon || json.ji || json.in
-    if (hasCheonjiin) {
-      const cheon = json.cheon || {}
-      const ji = json.ji || {}
-      const inData = json.in || {}
-      return (
-        <div className="space-y-4">
-          {json.summary && (
-            <>
-              <Section icon={BookOpen} title="핵심 요약">
-                <p className="text-sm text-ink-light/85 leading-relaxed">{json.summary}</p>
-              </Section>
-              <Divider />
-            </>
-          )}
-          {cheon.title && (
-            <Section icon={Sun} title="천(天) · 선천운">
-              <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-4">
-                {cheon.description || cheon.content || ''}
-              </p>
-            </Section>
-          )}
-          {ji.title && (
-            <>
-              <Divider />
-              <Section icon={Home} title="지(地) · 현실운">
-                <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-4">
-                  {ji.description || ji.content || ''}
-                </p>
-              </Section>
-            </>
-          )}
-          {inData.title && (
-            <>
-              <Divider />
-              <Section icon={User} title="인(人) · 대인운">
-                <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-4">
-                  {inData.description || inData.content || ''}
-                </p>
-              </Section>
-            </>
-          )}
-        </div>
-      )
-    }
-
-    // Standard SAJU structure
-    return (
-      <div className="space-y-4">
-        {json.summary && (
-          <Section icon={BookOpen} title="핵심 요약">
-            <p className="text-sm text-ink-light/85 leading-relaxed">{json.summary}</p>
-          </Section>
-        )}
-        {json.coreCharacter && (
-          <>
-            <Divider />
-            <Section icon={User} title="타고난 성격">
-              <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-4">{json.coreCharacter}</p>
-            </Section>
-          </>
-        )}
-        {json.advice && (
-          <>
-            <Divider />
-            <Section icon={TrendingUp} title="개운 조언">
-              <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-4">{json.advice}</p>
-            </Section>
-          </>
-        )}
-        {json.detailedAnalysis && (
-          <>
-            <Divider />
-            <Section icon={BookOpen} title="상세 분석">
-              <p className="text-sm text-ink-light/75 leading-relaxed line-clamp-6 whitespace-pre-wrap">
-                {json.detailedAnalysis}
-              </p>
-            </Section>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  // FACE
-  if (record.category === 'FACE') {
-    return (
-      <div className="space-y-4">
-        {(json.summary || json.overallAssessment) && (
-          <Section icon={BookOpen} title="관상 요약">
-            <p className="text-sm text-ink-light/85 leading-relaxed">{json.summary || json.overallAssessment}</p>
-          </Section>
-        )}
-        {json.currentAnalysis && (
-          <>
-            <Divider />
-            <Section icon={TrendingUp} title="현재 운기">
-              <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-5 whitespace-pre-wrap">
-                {json.currentAnalysis}
-              </p>
-            </Section>
-          </>
-        )}
-        {json.recommendations?.length > 0 && (
-          <>
-            <Divider />
-            <Section icon={Sparkles} title="개운 추천">
-              <ul className="space-y-1.5">
-                {(json.recommendations as string[]).slice(0, 3).map((r: string, i: number) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-ink-light/80">
-                    <span className="text-primary mt-0.5">·</span>
-                    <span>{r}</span>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  // COMPATIBILITY
-  if (record.category === 'COMPATIBILITY') {
-    return (
-      <div className="space-y-4">
-        {json.summary && (
-          <Section icon={Heart} title="궁합 요약">
-            <p className="text-sm text-ink-light/85 leading-relaxed">{json.summary}</p>
-          </Section>
-        )}
-        {json.overallAssessment && (
-          <>
-            <Divider />
-            <Section icon={BookOpen} title="종합 평가">
-              <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-5">{json.overallAssessment}</p>
-            </Section>
-          </>
-        )}
-        {json.advice && (
-          <>
-            <Divider />
-            <Section icon={TrendingUp} title="관계 조언">
-              <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-4">{json.advice}</p>
-            </Section>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  // TODAY / WEALTH / NEW_YEAR / HAND / FENGSHUI — generic rendering
-  return (
-    <div className="space-y-4">
-      {(json.summary || record.summary) && (
-        <Section icon={BookOpen} title="요약">
-          <p className="text-sm text-ink-light/85 leading-relaxed">{json.summary || record.summary}</p>
-        </Section>
-      )}
-      {json.advice && (
-        <>
-          <Divider />
-          <Section icon={TrendingUp} title="조언">
-            <p className="text-sm text-ink-light/80 leading-relaxed line-clamp-5">{json.advice}</p>
-          </Section>
-        </>
-      )}
-      {json.detailedAnalysis && (
-        <>
-          <Divider />
-          <Section icon={BookOpen} title="상세 내용">
-            <p className="text-sm text-ink-light/75 leading-relaxed line-clamp-6 whitespace-pre-wrap">
-              {json.detailedAnalysis}
-            </p>
-          </Section>
-        </>
-      )}
-      {/* Fallback: show raw summary if nothing else matched */}
-      {!json.summary && !json.advice && !json.detailedAnalysis && record.summary && (
-        <p className="text-sm text-ink-light/85 leading-relaxed whitespace-pre-wrap">{record.summary}</p>
-      )}
-    </div>
-  )
+  return <CategoryResultBody record={record} />
 }
 
 // ─── Loading Skeleton ─────────────────────────────────────────────────────────
