@@ -66,7 +66,7 @@ const GWIMUN_PAIRS: [string, string][] = [
 
 // ===================== 타입 =====================
 
-export type CompatibilityRelationType = 'lover' | 'spouse' | 'friend' | 'business' | 'parent_child'
+export type CompatibilityRelationType = 'lover' | 'spouse' | 'friend' | 'business' | 'parent_child' | 'siblings'
 
 export interface CategoryScore {
   category: string
@@ -87,13 +87,15 @@ export interface CompatibilityEngineResult {
 
 // ===================== 관계별 가중치 =====================
 
-const CATEGORY_WEIGHTS: Record<CompatibilityRelationType, number[]> = {
+export const CATEGORY_WEIGHTS: Record<CompatibilityRelationType, number[]> = {
   //          일간  일지  오행  용신  십성  원진  신살  대운
   lover: [0.18, 0.18, 0.12, 0.12, 0.15, 0.1, 0.08, 0.07],
   spouse: [0.15, 0.2, 0.15, 0.1, 0.15, 0.1, 0.05, 0.1],
   friend: [0.15, 0.12, 0.15, 0.08, 0.2, 0.1, 0.1, 0.1],
   business: [0.12, 0.08, 0.1, 0.18, 0.25, 0.08, 0.1, 0.09],
   parent_child: [0.2, 0.15, 0.18, 0.1, 0.18, 0.08, 0.06, 0.05],
+  // 형제: 십성(비견·겁재=형제 별)과 재물 축이 중요 (합=1.00)
+  siblings: [0.15, 0.12, 0.15, 0.08, 0.22, 0.1, 0.08, 0.1],
 }
 
 // 관계 타입 매핑 (다양한 입력 → 5개 핵심 타입)
@@ -107,7 +109,7 @@ function normalizeRelationType(rel: string): CompatibilityRelationType {
     friend: 'friend',
     best_friend: 'friend',
     roommate: 'friend',
-    siblings: 'friend',
+    siblings: 'siblings',
     business_partner: 'business',
     coworker: 'business',
     boss_employee: 'business',
@@ -134,38 +136,42 @@ function scoreDayMaster(dm1: string, dm2: string): CategoryScore {
   // 천간합
   if (CHEONGAN_HAP[dm1]?.partner === dm2) {
     score += 35
-    details.push(`${CHEONGAN_HAP[dm1].label} — 천생의 합`)
+    details.push(`겉성격이 자석처럼 끌리는 조합이에요 (천간합·${CHEONGAN_HAP[dm1].label})`)
   }
   // 천간충
   if (CHEONGAN_CHUNG[dm1] === dm2) {
     score -= 30
-    details.push(`${dm1}${dm2}충 — 일간이 정면 충돌`)
+    details.push(`처음엔 성격이 정반대라 부딪힐 수 있어요. 알고 대비하면 오히려 서로를 채웁니다 (천간충)`)
   }
   // 상생
   if (SAENG[el1] === el2) {
     score += 20
-    details.push(`${ELEMENT_KR[el1]}→${ELEMENT_KR[el2]} 상생 — 기운을 나눠주는 관계`)
+    details.push(`한 사람이 다른 사람에게 기운을 북돋아 주는 조합이에요 (${ELEMENT_KR[el1]}→${ELEMENT_KR[el2]} 상생)`)
   } else if (SAENG[el2] === el1) {
     score += 20
-    details.push(`${ELEMENT_KR[el2]}→${ELEMENT_KR[el1]} 상생 — 기운을 받는 관계`)
+    details.push(`서로 기운을 주고받아 힘이 되는 조합이에요 (${ELEMENT_KR[el2]}→${ELEMENT_KR[el1]} 상생)`)
   }
   // 상극
   if (GEUK[el1] === el2) {
     score -= 15
-    details.push(`${ELEMENT_KR[el1]}→${ELEMENT_KR[el2]} 상극 — 한쪽이 제압`)
+    details.push(
+      `한쪽이 다른 쪽을 누르기 쉬운 기운이 있어요. 서로 존중하면 괜찮아요 (${ELEMENT_KR[el1]}→${ELEMENT_KR[el2]} 상극)`
+    )
   } else if (GEUK[el2] === el1) {
     score -= 15
-    details.push(`${ELEMENT_KR[el2]}→${ELEMENT_KR[el1]} 상극 — 한쪽이 제압`)
+    details.push(
+      `한쪽이 다른 쪽을 누르기 쉬운 기운이 있어요. 서로 존중하면 괜찮아요 (${ELEMENT_KR[el2]}→${ELEMENT_KR[el1]} 상극)`
+    )
   }
   // 비화
   if (el1 === el2) {
     score += 10
-    details.push(`같은 ${ELEMENT_KR[el1]} 오행 — 동질감이 강한 관계`)
+    details.push(`같은 기운이라 말이 잘 통하고 편안한 사이예요 (같은 ${ELEMENT_KR[el1]} 오행)`)
   }
 
-  if (details.length === 0) details.push('특별한 천간 관계 없음')
+  if (details.length === 0) details.push('겉성격은 특별히 끌리거나 부딪히지 않는 무난한 사이예요')
 
-  return { category: 'dayMaster', label: '일간 궁합', score: clamp(score), maxScore: 100, details }
+  return { category: 'dayMaster', label: '겉성격 합 (일간)', score: clamp(score), maxScore: 100, details }
 }
 
 /** 2. 일지 궁합 */
@@ -177,7 +183,7 @@ function scoreDayBranch(dz1: string, dz2: string): CategoryScore {
   for (const yh of JIJI_YUKHAP) {
     if ((yh.zhis[0] === dz1 && yh.zhis[1] === dz2) || (yh.zhis[0] === dz2 && yh.zhis[1] === dz1)) {
       score += 35
-      details.push(`${yh.label} — 은밀하고 끈끈한 결합`)
+      details.push(`오래 같이 있어도 편안한, 속궁합이 좋은 짝이에요 (육합·${yh.label})`)
       break
     }
   }
@@ -186,7 +192,7 @@ function scoreDayBranch(dz1: string, dz2: string): CategoryScore {
   for (const sh of JIJI_SAMHAP) {
     if (sh.zhis.includes(dz1) && sh.zhis.includes(dz2)) {
       score += 25
-      details.push(`${sh.label} (반합) — 같은 국(局)의 에너지`)
+      details.push(`같은 목표를 향할 때 손발이 척척 맞아요 (반합·${sh.label})`)
       break
     }
   }
@@ -194,21 +200,21 @@ function scoreDayBranch(dz1: string, dz2: string): CategoryScore {
   // 충
   if (JIJI_CHUNG[dz1] === dz2) {
     score -= 35
-    details.push(`${dz1}${dz2}충 — 일지 정면충돌 (배우자궁 갈등)`)
+    details.push(`속마음의 결이 달라 가끔 크게 부딪힐 수 있어요. 미리 알면 큰 싸움을 피합니다 (일지충)`)
   }
 
   // 형
   for (const h of JIJI_HYEONG) {
     if (h.zhis.includes(dz1) && h.zhis.includes(dz2) && h.zhis.length === 2) {
       score -= 20
-      details.push(`${h.label} — 서로를 다치게 할 수 있는 관계`)
+      details.push(`무심코 서로 아픈 곳을 건드릴 수 있어요. 말투만 조심하면 됩니다 (형·${h.label})`)
       break
     }
   }
 
-  if (details.length === 0) details.push('일지 간 특별한 합충 관계 없음')
+  if (details.length === 0) details.push('속마음은 특별한 끌림도 갈등도 없는 담백한 사이예요')
 
-  return { category: 'dayBranch', label: '일지 궁합', score: clamp(score), maxScore: 100, details }
+  return { category: 'dayBranch', label: '속마음 합 (일지)', score: clamp(score), maxScore: 100, details }
 }
 
 /** 3. 오행 보완 */
@@ -224,21 +230,25 @@ function scoreElementBalance(ctx1: SajuContext, ctx2: SajuContext): CategoryScor
     // 한쪽이 부족(0-1)한데 다른 쪽이 충분(2+)하면 보완
     if (c1 <= 1 && c2 >= 2) {
       score += 12
-      details.push(`${ctx1.personInfo.name}의 부족한 ${ELEMENT_KR[el]}을 ${ctx2.personInfo.name}이 채워줌`)
+      details.push(
+        `${ctx1.personInfo.name}에게 부족한 ${ELEMENT_KR[el]} 기운을 ${ctx2.personInfo.name}이 채워줘요 (오행 보완)`
+      )
     } else if (c2 <= 1 && c1 >= 2) {
       score += 12
-      details.push(`${ctx2.personInfo.name}의 부족한 ${ELEMENT_KR[el]}을 ${ctx1.personInfo.name}이 채워줌`)
+      details.push(
+        `${ctx2.personInfo.name}에게 부족한 ${ELEMENT_KR[el]} 기운을 ${ctx1.personInfo.name}이 채워줘요 (오행 보완)`
+      )
     }
     // 양쪽 다 과잉(3+)이면 공명 과잉
     if (c1 >= 3 && c2 >= 3) {
       score -= 8
-      details.push(`양쪽 모두 ${ELEMENT_KR[el]} 과잉 — 에너지 쏠림 주의`)
+      details.push(`둘 다 ${ELEMENT_KR[el]} 기운이 강해 한쪽으로 쏠리기 쉬워요. 균형을 의식하면 좋아요 (오행 과다)`)
     }
   }
 
-  if (details.length === 0) details.push('오행 보완 관계가 뚜렷하지 않음')
+  if (details.length === 0) details.push('서로 채워주는 기운은 뚜렷하지 않지만, 그만큼 각자 독립적인 사이예요')
 
-  return { category: 'elementBalance', label: '오행 보완', score: clamp(score), maxScore: 100, details }
+  return { category: 'elementBalance', label: '서로 채움 (오행)', score: clamp(score), maxScore: 100, details }
 }
 
 /** 4. 용신 시너지 */
@@ -256,30 +266,30 @@ function scoreYongsinSynergy(ctx1: SajuContext, ctx2: SajuContext): CategoryScor
   // 상대 일간이 내 용신 오행
   if (y1 && dm2El === y1) {
     score += 25
-    details.push(
-      `${ctx2.personInfo.name}의 일간(${ELEMENT_KR[dm2El]})이 ${ctx1.personInfo.name}의 용신 — 천운의 조력자`
-    )
+    details.push(`${ctx2.personInfo.name}이 곁에 있으면 ${ctx1.personInfo.name}의 일이 잘 풀려요 (용신 조력자)`)
   }
   if (y2 && dm1El === y2) {
     score += 25
-    details.push(
-      `${ctx1.personInfo.name}의 일간(${ELEMENT_KR[dm1El]})이 ${ctx2.personInfo.name}의 용신 — 천운의 조력자`
-    )
+    details.push(`${ctx1.personInfo.name}이 곁에 있으면 ${ctx2.personInfo.name}의 일이 잘 풀려요 (용신 조력자)`)
   }
 
   // 기신 충돌
   if (g1 && dm2El === g1) {
     score -= 20
-    details.push(`${ctx2.personInfo.name}의 일간이 ${ctx1.personInfo.name}의 기신 — 기운 충돌`)
+    details.push(
+      `${ctx2.personInfo.name}과 너무 오래 붙어 있으면 ${ctx1.personInfo.name}이 지칠 수 있어요. 적당한 거리가 약이에요 (기신 주의)`
+    )
   }
   if (g2 && dm1El === g2) {
     score -= 20
-    details.push(`${ctx1.personInfo.name}의 일간이 ${ctx2.personInfo.name}의 기신 — 기운 충돌`)
+    details.push(
+      `${ctx1.personInfo.name}과 너무 오래 붙어 있으면 ${ctx2.personInfo.name}이 지칠 수 있어요. 적당한 거리가 약이에요 (기신 주의)`
+    )
   }
 
-  if (details.length === 0) details.push('용신 관계가 뚜렷하지 않음')
+  if (details.length === 0) details.push('운을 크게 밀어주거나 빼앗는 기운은 뚜렷하지 않아요')
 
-  return { category: 'yongsinSynergy', label: '용신 시너지', score: clamp(score), maxScore: 100, details }
+  return { category: 'yongsinSynergy', label: '행운 상생 (용신)', score: clamp(score), maxScore: 100, details }
 }
 
 /** 5. 십성 관계 */
@@ -316,13 +326,13 @@ function scoreSipseongRelation(ctx1: SajuContext, ctx2: SajuContext): CategorySc
   const modernAB = SIPSEONG_MODERN[sipseongAB]
   const modernBA = SIPSEONG_MODERN[sipseongBA]
   details.push(
-    `${ctx1.personInfo.name}에게 ${ctx2.personInfo.name}은 ${sipseongAB}${modernAB ? ` (${modernAB.relationshipType})` : ''}`
+    `${ctx1.personInfo.name}에게 ${ctx2.personInfo.name}은 ${modernAB ? modernAB.relationshipType : sipseongAB} 같은 존재예요 (십성·${sipseongAB})`
   )
   details.push(
-    `${ctx2.personInfo.name}에게 ${ctx1.personInfo.name}은 ${sipseongBA}${modernBA ? ` (${modernBA.relationshipType})` : ''}`
+    `${ctx2.personInfo.name}에게 ${ctx1.personInfo.name}은 ${modernBA ? modernBA.relationshipType : sipseongBA} 같은 존재예요 (십성·${sipseongBA})`
   )
 
-  return { category: 'sipseongRelation', label: '십성 관계', score: clamp(score), maxScore: 100, details }
+  return { category: 'sipseongRelation', label: '관계 속 역할 (십성)', score: clamp(score), maxScore: 100, details }
 }
 
 /** 6. 원진·귀문 */
@@ -333,7 +343,7 @@ function scoreWonjinGwimun(dz1: string, dz2: string): CategoryScore {
   for (const [a, b] of WONJIN_PAIRS) {
     if ((a === dz1 && b === dz2) || (a === dz2 && b === dz1)) {
       score -= 30
-      details.push(`${dz1}${dz2} 원진 — 근본적으로 서로 미워하는 기운`)
+      details.push(`가끔 이유 없이 서로 거슬릴 수 있는 기운이 있어요. 알고 있으면 절반은 피해 갑니다 (원진)`)
       break
     }
   }
@@ -341,14 +351,20 @@ function scoreWonjinGwimun(dz1: string, dz2: string): CategoryScore {
   for (const [a, b] of GWIMUN_PAIRS) {
     if ((a === dz1 && b === dz2) || (a === dz2 && b === dz1)) {
       score -= 20
-      details.push(`${dz1}${dz2} 귀문 — 정신적 불안과 의심이 생기는 관계`)
+      details.push(`서로에게 괜히 예민해지고 의심이 들 때가 있어요. 원인을 알면 넘길 수 있어요 (귀문)`)
       break
     }
   }
 
-  if (details.length === 0) details.push('원진·귀문 관계 없음 — 기본적으로 안정적')
+  if (details.length === 0) details.push('까닭 없이 거슬리는 기운은 없어요. 마음이 편한 사이예요')
 
-  return { category: 'wonjinGwimun', label: '원진·귀문', score: clamp(score), maxScore: 100, details }
+  return {
+    category: 'wonjinGwimun',
+    label: '까닭 없는 거슬림 (원진·귀문)',
+    score: clamp(score),
+    maxScore: 100,
+    details,
+  }
 }
 
 /** 7. 신살 호환 */
@@ -362,30 +378,30 @@ function scoreSinsalCompat(ctx1: SajuContext, ctx2: SajuContext): CategoryScore 
   // 도화 + 화개 조합 (한쪽 매력 + 한쪽 깊이)
   if ((names1.has('도화살') && names2.has('화개살')) || (names2.has('도화살') && names1.has('화개살'))) {
     score += 20
-    details.push('도화살 + 화개살 — 매력과 깊이가 어우러지는 시너지')
+    details.push('한 사람의 매력과 다른 사람의 깊이가 어우러지는 특별한 끌림이 있어요 (도화·화개)')
   }
 
   // 양쪽 백호대살
   if (names1.has('백호대살') && names2.has('백호대살')) {
     score -= 15
-    details.push('쌍방 백호대살 — 강한 에너지 충돌 위험')
+    details.push('둘 다 기가 세서 부딪히면 불꽃이 튀어요. 서로 한 발씩 물러서면 됩니다 (백호대살)')
   }
 
   // 천을귀인 쌍방 (sinsal-extended에서 이름으로 판별)
   if (names1.has('천을귀인') && names2.has('천을귀인')) {
     score += 25
-    details.push('쌍방 천을귀인 — 서로에게 귀인이 되어주는 행운의 관계')
+    details.push('서로에게 귀인이 되어주는, 보기 드문 행운의 인연이에요 (천을귀인)')
   }
 
   // 양쪽 역마살 — 함께 움직이는 관계
   if (names1.has('역마살') && names2.has('역마살')) {
     score += 10
-    details.push('쌍방 역마살 — 함께 세계를 누비는 동반자')
+    details.push('함께 여행하고 움직일 때 신나는 동반자예요 (역마살)')
   }
 
-  if (details.length === 0) details.push('특별한 신살 시너지 없음')
+  if (details.length === 0) details.push('특별한 끌림이나 귀인 기운은 두드러지지 않아요')
 
-  return { category: 'sinsalCompat', label: '신살 호환', score: clamp(score), maxScore: 100, details }
+  return { category: 'sinsalCompat', label: '끌림과 귀인 (신살)', score: clamp(score), maxScore: 100, details }
 }
 
 /** 8. 대운 동기화 */
@@ -402,13 +418,15 @@ function scoreDaeunSync(ctx1: SajuContext, ctx2: SajuContext): CategoryScore {
 
     if (el1 === el2) {
       score += 20
-      details.push(`같은 ${ELEMENT_KR[el1]} 대운 — 에너지 리듬이 일치`)
+      details.push(`지금 두 사람의 인생 흐름이 같은 결이라 잘 맞물려요 (같은 ${ELEMENT_KR[el1]} 대운)`)
     } else if (SAENG[el1] === el2 || SAENG[el2] === el1) {
       score += 15
-      details.push(`대운 ${ELEMENT_KR[el1]}↔${ELEMENT_KR[el2]} 상생 — 함께 성장하는 시기`)
+      details.push(`요즘 서로의 흐름이 힘을 보태주는 시기예요 (대운 ${ELEMENT_KR[el1]}↔${ELEMENT_KR[el2]} 상생)`)
     } else if (GEUK[el1] === el2 || GEUK[el2] === el1) {
       score -= 15
-      details.push(`대운 ${ELEMENT_KR[el1]}↔${ELEMENT_KR[el2]} 상극 — 인생 리듬 충돌기`)
+      details.push(
+        `지금은 두 사람의 인생 속도가 어긋나는 시기예요. 조금 기다리면 나아집니다 (대운 ${ELEMENT_KR[el1]}↔${ELEMENT_KR[el2]} 상극)`
+      )
     }
 
     // 에너지 레벨 유사도 (십이운성 평균 비교)
@@ -417,18 +435,18 @@ function scoreDaeunSync(ctx1: SajuContext, ctx2: SajuContext): CategoryScore {
     const diff = Math.abs(avg1 - avg2)
     if (diff <= 2) {
       score += 15
-      details.push('에너지 레벨 유사 — 삶의 템포가 비슷')
+      details.push('삶의 템포가 비슷해 함께 있으면 편해요 (에너지 레벨 유사)')
     } else if (diff >= 5) {
       score -= 10
-      details.push('에너지 레벨 차이 큼 — 삶의 속도 조절 필요')
+      details.push('삶의 속도가 달라 한쪽이 답답할 수 있어요. 서로 배려하면 됩니다 (에너지 레벨 차이)')
     }
   } else {
-    details.push('대운 정보 부족으로 동기화 분석 제한')
+    details.push('인생 흐름 정보가 부족해 시기 합은 참고만 하세요')
   }
 
-  if (details.length === 0) details.push('대운 동기화 보통')
+  if (details.length === 0) details.push('인생 흐름은 무난하게 흘러가요')
 
-  return { category: 'daeunSync', label: '대운 동기화', score: clamp(score), maxScore: 100, details }
+  return { category: 'daeunSync', label: '시기 합 (대운)', score: clamp(score), maxScore: 100, details }
 }
 
 // ===================== 유틸리티 =====================

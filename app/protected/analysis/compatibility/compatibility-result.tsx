@@ -81,6 +81,18 @@ function getCategoryAssessmentStyle(assessment: string): string {
   return 'text-red-400 bg-red-500/10'
 }
 
+// "이게 뭐냐" 한 줄 정의 (§5-1 — AI 아닌 UI 고정 상수, category 키 기준)
+const CATEGORY_DEFINITIONS: Record<string, string> = {
+  dayMaster: '처음 만나 대화할 때 통하는 정도예요',
+  dayBranch: '오래 같이 있어도 편안한지를 봐요',
+  elementBalance: '내게 부족한 기운을 상대가 채워주는지 봐요',
+  yongsinSynergy: '만날수록 서로 운이 트이는지 봐요',
+  sipseongRelation: '서로에게 어떤 존재(돕는 이·이끄는 이)가 되는지 봐요',
+  wonjinGwimun: '이유 없이 밉고 예민해지는 기운이 있는지 봐요',
+  sinsalCompat: '강한 끌림, 귀인이 되어주는 특별한 기운을 봐요',
+  daeunSync: '지금 두 사람의 인생 흐름이 맞물리는지 봐요',
+}
+
 export function CompatibilityResult({ person1, person2, result, onReset, readOnly = false }: CompatibilityResultProps) {
   const overallAssessment = result.overallAssessment || '보통 궁합'
   const summary = result.summary || '궁합 분석 결과'
@@ -196,22 +208,36 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               transition={{ delay: 0.3 }}
               className="bg-card border rounded-lg p-6 space-y-4"
             >
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-gold-500" />
-                8대 궁합 분석
-              </h3>
-              <div className="space-y-3">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-gold-500" />
+                  여덟 가지로 본 우리 궁합
+                </h3>
+                <p className="text-xs text-muted-foreground">어려운 말은 괄호에 담았어요</p>
+              </div>
+              <div className="space-y-4">
                 {categoryBreakdown.map((cat, idx) => (
-                  <div key={idx} className="space-y-1">
+                  <div key={idx} className="space-y-1 pb-3 border-b border-primary/5 last:border-0 last:pb-0">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-ink-light">{cat.label}</span>
+                      <span className="text-ink-light font-medium">{cat.label}</span>
                       <span
                         className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getCategoryAssessmentStyle(cat.assessment || '보통 궁합')}`}
                       >
                         {cat.assessment || '보통 궁합'}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground">{cat.details[0]}</p>
+                    {/* ① 이게 뭐냐 (고정 정의) */}
+                    {CATEGORY_DEFINITIONS[cat.category] && (
+                      <p className="text-[11px] text-muted-foreground/70">{CATEGORY_DEFINITIONS[cat.category]}</p>
+                    )}
+                    {/* ② 우리 둘은 어떤가 (엔진 details[0]) */}
+                    {cat.details[0] && <p className="text-xs text-ink-light/80 leading-relaxed">{cat.details[0]}</p>}
+                    {/* ③ 그래서 어떻게 (details 마지막 요소가 별도로 있으면) */}
+                    {cat.details.length > 1 && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {cat.details[cat.details.length - 1]}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
