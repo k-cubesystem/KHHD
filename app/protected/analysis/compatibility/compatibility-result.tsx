@@ -3,9 +3,10 @@
 import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Button } from '@/components/ui/button'
-import { Heart, ArrowLeft, Sparkles, Compass, MapPin, AlertTriangle, UserX, Swords } from 'lucide-react'
+import { Heart, ArrowLeft, Sparkles, Compass, MapPin, AlertTriangle, UserX, Swords, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { FOCUS_GROUPS, type FocusGroup } from '@/lib/domain/compatibility/focus-groups'
 
 interface CategoryBreakdown {
   category: string
@@ -14,6 +15,18 @@ interface CategoryBreakdown {
   details: string[]
   /** @deprecated v2 이전 캐시 호환 */
   score?: number
+}
+
+interface FocusAnswer {
+  question: string
+  answer: string
+  basis?: string
+}
+
+interface PastRetrogradeEvent {
+  period?: string
+  description?: string
+  basis?: string
 }
 
 export interface CompatibilityResultData {
@@ -30,6 +43,10 @@ export interface CompatibilityResultData {
   person2Weakness?: string
   conflictScenario?: string
   recommendedPlaces?: string[]
+  // ── v3 신설 (관계군 맞춤) ──
+  focusGroup?: string
+  focusAnswers?: FocusAnswer[]
+  pastRetrograde?: { events?: PastRetrogradeEvent[] }
   /** @deprecated v2 이전 캐시 호환 */
   score?: number
 }
@@ -78,6 +95,10 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
   const person2Weakness = result.person2Weakness || ''
   const conflictScenario = result.conflictScenario || ''
   const recommendedPlaces = result.recommendedPlaces || []
+  const focusAnswers = result.focusAnswers || []
+  const pastEvents = result.pastRetrograde?.events || []
+  const placesTitle =
+    (result.focusGroup && FOCUS_GROUPS[result.focusGroup as FocusGroup]?.placesLabel) || '함께 가면 좋은 장소'
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -129,6 +150,29 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
 
         {/* Content */}
         <div className="max-w-2xl mx-auto px-3 space-y-6">
+          {/* ── 이 관계에서 가장 궁금한 것들 (focusAnswers) — 개편의 얼굴 ── */}
+          {focusAnswers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.22 }}
+              className="bg-card border rounded-lg p-6 space-y-4"
+            >
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-gold-500" />이 관계에서 가장 궁금한 것들
+              </h3>
+              <div className="space-y-4">
+                {focusAnswers.map((fa, idx) => (
+                  <div key={idx} className="space-y-1 border-l-2 border-gold-500/30 pl-3">
+                    <p className="text-sm font-bold text-ink-light">{fa.question}</p>
+                    <p className="text-sm text-ink-light/80 leading-relaxed whitespace-pre-line">{fa.answer}</p>
+                    {fa.basis && <p className="text-xs text-muted-foreground">근거 · {fa.basis}</p>}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
           {/* Mulsang Narrative */}
           {mulsangNarrative && (
             <motion.div
@@ -217,6 +261,28 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
             </motion.div>
           )}
 
+          {/* 지난 시간 돌아보기 (pastRetrograde — COUPLE/MARRIAGE 만 생성) */}
+          {pastEvents.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.48 }}
+              className="bg-card border rounded-lg p-6 space-y-3"
+            >
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-400">
+                <Clock className="w-5 h-5" />
+                지난 시간 돌아보기
+              </h3>
+              {pastEvents.map((ev, i) => (
+                <div key={i} className="space-y-1">
+                  {ev.period && <p className="text-sm font-medium text-ink-light">{ev.period}</p>}
+                  {ev.description && <p className="text-sm text-muted-foreground leading-relaxed">{ev.description}</p>}
+                  {ev.basis && <p className="text-xs text-muted-foreground/70">{ev.basis}</p>}
+                </div>
+              ))}
+            </motion.div>
+          )}
+
           {/* Strengths */}
           {strengths.length > 0 && (
             <motion.div
@@ -288,7 +354,7 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
             >
               <h3 className="text-lg font-semibold text-emerald-400 flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
-                함께 가면 좋은 장소
+                {placesTitle}
               </h3>
               <ul className="space-y-2">
                 {recommendedPlaces.map((place: string, idx: number) => (
