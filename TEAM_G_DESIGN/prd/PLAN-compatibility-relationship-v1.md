@@ -1,7 +1,9 @@
-# 궁합 관계별 맞춤 분석 개편 기획 v1 (2026-07-21)
+# 궁합 관계별 맞춤 분석 + 분석 기록 신뢰성 개편 기획 v1.1 (2026-07-21)
 
 > 작성: Fable(기획) → 실행: Opus. 코드 실측 기반 — 모든 경로·라인은 2026-07-21 현재 기준.
-> 발주 배경(사용자 요구): ①관계(부부/소개팅/연인/직장/부모자식/형제)마다 궁금한 점이 다르니 분석 내용이 달라야 한다 ②각 관계에서 사람들이 실제 궁금해하는 점을 반영하라 ③"8대 궁합 분석"이 어려우니 쉽게 풀어라.
+> 발주 배경(사용자 요구): ①관계(부부/소개팅/연인/직장/부모자식/형제)마다 궁금한 점이 다르니 분석 내용이 달라야 한다 ②각 관계에서 사람들이 실제 궁금해하는 점을 반영하라 ③"8대 궁합 분석"이 어려우니 쉽게 풀어라 ④(v1.1 추가) **사주 기록이 제대로 남지 않고, 오류가 나며 재분석을 요구한다 — 기록이 잘 남아 재확인·공유가 편하게.**
+>
+> **실행 순서: Part B(기록 신뢰성, §14~)가 먼저다** — 지금 터지고 있는 사용자 체감 버그. Part A(궁합)는 그다음.
 
 ---
 
@@ -315,3 +317,77 @@ UI 제목도 변경: `compatibility-result.tsx:155` "8대 궁합 분석" → **"
 1. **관계별 심화 유료화 여부** — focusAnswers 를 무료 포함할지, 복채 상품(예: 2만냥)으로 뗄지. 이번 구현은 무료 포함으로 진행하고 결정 시 게이트만 추가.
 2. **관계군 문구 톤** — §3 질문 문구는 확정안이나, 서비스 톤에 맞춰 사용자가 수정 원하면 상수 파일 한 곳만 고치면 됨.
 3. (참고) 8군이 부담이면 MEETING+COUPLE 통합으로 7군 축소 가능 — 단, "소개팅"을 명시 요구했으므로 8군 권장.
+
+---
+
+---
+
+# Part B — 분석 기록 신뢰성 · 재확인 · 공유 (v1.1 추가, 2026-07-21)
+
+> 사용자 신고: "사주기록에 제대로 된 기록이 남지 않아, 오류가 생기고 재분석하라고 하며, 버그가 있는 것 같아."
+> 조사 결과 신고 전부가 실재하는 결함이다. **프로덕션 DB 실측: analysis_history 전체에 TODAY 21·SAJU 5·COMPATIBILITY 2건뿐 — FACE/HAND/FENGSHUI/WEALTH/NEW_YEAR 는 0건.** 관상·손금·풍수는 저장 경로 자체가 없다.
+
+## 14. 근본 원인 3개 (실측)
+
+**원인 A — 관상·손금·풍수·사업궁합은 저장 코드가 아예 안 탄다.**
+실제 스튜디오 UI(`app/protected/studio/{face,palm,fengshui}/page.tsx:90/82/111`)는 `app/actions/ai/image.ts`의 분석 함수(`analyzeFaceForDestiny:252`, `analyzePalmReading:842`, `analyzeInteriorForFengshui:551`)를 호출하는데, **image.ts 전체에 `saveAnalysisHistory` 호출이 0건**이다. 저장하는 버전은 `app/actions/ai/saju.ts:406/508/601`에 중복 정의돼 있으나 그 호출자인 `app/actions/core/studio.ts`를 **어떤 파일도 import 하지 않는다**(고아 코드). 사업 궁합(`app/actions/ai/celebrity-compatibility.ts:64`)도 저장 호출 없음.
+→ 결과: 관상·손금·풍수를 아무리 분석해도 기록 0건 + 캐시 미스 → **재방문마다 재분석(재과금)**.
+
+**원인 B — 저장 실패가 전면 무음(fire-and-forget).**
+`saveAnalysisHistory`(`app/actions/user/history.ts:68-163`)는 insert 실패를 `{success:false}` 반환으로만 알리는데, 라이브 호출부 9곳 전부(`cheonjiin.ts:337`, `fortune-analysis.ts:161`, `wealth.ts:138`, `year2026.ts:131`, `trend.ts:193`, `daily.ts:192`, `compatibility.ts:91`, `compatibility-search.ts:132`, `saju.ts:380`)가 반환값을 무시하거나 try/catch 로 삼킨다. 유일한 확인처는 레거시 `core/analysis.ts:77-97`.
+→ 결과: 저장이 실패해도 사용자는 결과를 정상으로 보고, 기록·캐시만 조용히 빈다.
+
+**원인 C — 재조회·재분석 경로가 깨져 있다.**
+
+- 히스토리 상세의 "재분석하기" 라우트 테이블(`components/history/detail-modal.tsx:132-141`) 8개 중 **5개가 404**: FACE→`/protected/saju/face`, HAND→`/protected/saju/hand`, FENGSHUI→`/protected/saju/fengshui`, TODAY→`/protected/saju/today`, COMPATIBILITY→`/protected/compatibility`. `app/protected/saju/` 디렉터리는 존재하지 않는다.
+- 비-SAJU 기록 재조회는 전부 **raw JSON 덤프**(`components/history/analysis-result-view.tsx:46-67` — `<pre>{JSON.stringify}`). TODAY 는 `{content: 마크다운}`이 통째로 노출된다.
+- `app/protected/analysis/result/page.tsx`는 정적 가짜 데이터 하드코딩 목업이며 "다시 분석하기"가 `/protected/saju/new`(404)로 간다.
+
+**공유 실측:** 공유 화면(`/share/[token]` → `share-page-client.tsx:153-367`)은 카테고리 8종 리치 렌더를 **이미 갖췄다** — 히스토리 상세보다 낫다. 카카오 SDK(`lib/kakao-sdk.ts` + `components/shared/kakao-share-button.tsx`)도 구현돼 있으나 **어디서도 import 되지 않는다**. 공유 버튼은 히스토리 상세에만 있고 결과 직후엔 SAJU 전용(`/share/saju/`)뿐. `get_shared_analysis_record` RPC 정상, 단 조회수 증가 없음.
+
+## 15. 수복 스펙
+
+### B1. 저장 커버리지 (원인 A)
+
+- `image.ts`의 관상·손금·풍수 3함수 끝(성공 반환 직전)에 `saveAnalysisHistory` 배선 — category FACE/HAND/FENGSHUI, `result_json`은 파싱된 구조체(파서 태그 계약 불변), `target_id`·`target_name`은 기존 함수가 받는 대상 정보 사용. **부가 저장 원칙**: 저장 실패해도 분석 결과 반환은 성공(오행형 태그와 동일 철학) — 단 B2 관측은 남긴다.
+- `celebrity-compatibility.ts`(사업 궁합)에도 동일 배선(category COMPATIBILITY).
+- 고아 코드 정리: `app/actions/core/engine.ts`(배선 시 context_mode CHECK 위반 잠재버그), `app/actions/core/studio.ts`, `saju.ts`의 중복 3함수(`:406/508/601`) — **삭제 전 각각 grep 으로 참조 0 재확인** 후 삭제. engine.ts 는 로드맵 P0-4 죽은코드 원칙과 합치.
+
+### B2. 저장 실패 관측화 (원인 B)
+
+- `saveAnalysisHistory` 실패 시 `logger.error(new Error('analysis_history 저장 실패'), {...})` — **Error 첫 인자**(Sentry captureException 규약, 헬스체크에서 확립).
+- 라이브 호출부 9곳: 반환 `success` 확인해 실패 시 위 로깅 경유(사용자 흐름은 막지 않음). 새 헬퍼 `saveAnalysisHistoryObserved()` 하나로 감싸 9곳 중복 제거.
+
+### B3. 재조회 품질 (원인 C)
+
+- **공용 결과 뷰 추출**: `share-page-client.tsx`의 카테고리 렌더(`CATEGORY_CONFIG`+`ResultBody`)를 `components/analysis/CategoryResultBody.tsx`(가칭)로 추출 → **히스토리 상세(`analysis-result-view.tsx`)와 공유 화면이 같은 컴포넌트를 쓴다**(직후/기록/공유 삼단 단절 해소의 핵심). TODAY 의 `{content}` 마크다운 렌더 포함. COMPATIBILITY 는 Part A §8 R1(compatibility-result 재사용)과 합류.
+- **재분석 라우트 테이블 교정**(`detail-modal.tsx:132-141`): FACE→`/protected/studio/face`, HAND→`/protected/studio/palm`, FENGSHUI→`/protected/studio/fengshui`, TODAY→`/protected/analysis/today`, COMPATIBILITY→`/protected/analysis/compatibility`(+`?targetId=` 프리셋 가능한 곳은 프리셋).
+- 목업 페이지 `app/protected/analysis/result/page.tsx` 삭제(참조 grep 후) — 가짜 데이터 화면이 실화면으로 오인될 여지 제거.
+
+### B4. 공유 편의
+
+- **결과 직후 공유**: 범용 `createShareLink` 기반 공유 버튼을 결과 직후 화면에도 노출(현재 SAJU 전용 → 전 카테고리). 기존 `ShareSaveButtons` 확장 또는 공용 버튼.
+- **카카오 공유 배선**: 이미 구현된 `KakaoShareButton`을 공유 UI(결과 직후 + 히스토리 상세)에 연결. `NEXT_PUBLIC_KAKAO_JS_KEY` 미설정 시 버튼 자동 숨김(런타임 가드) — 키 설정 여부는 코드에서 확인하고, 미설정이면 "사용자 설정 대기"로 보고만.
+- (경미·선택) 공유 조회수 증가를 RPC 에 추가.
+
+## 16. Part B 검증 게이트
+
+- 단위: `saveAnalysisHistoryObserved` 실패 경로 로깅 / 재분석 라우트 테이블의 모든 href 가 실존 라우트(파일 존재) — 테이블 → 라우트 존재를 검사하는 테스트.
+- 수동 1회: 스튜디오 관상 분석 → **DB 에 FACE 행 생성 확인**(프로덕션 execute_sql) → 히스토리에서 열어 리치 렌더 확인.
+- e2e prod 확장(`e2e/prod/history.spec.ts` 신설): 히스토리 목록 → 상세 모달 → ①JSON 덤프 부재(`<pre>` 원문 노출 없음) ②재분석 버튼 href 실존 검증 ③공유 버튼 노출. 기존 계정의 TODAY 기록으로 검증 가능(분석 실행 불필요).
+- 회귀: 기존 SAJU 천지인 렌더 불변, `/share/[token]` 기존 공유 링크 렌더 불변.
+
+## 17. 통합 실행 순서 (Opus — 이 순서대로 전부 자동 진행)
+
+| 단계     | 내용                                                                     | 게이트                                                                |
+| -------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| **B-1**  | B1 저장 배선(image.ts 3종 + 사업궁합) + B2 관측화                        | tsc·jest·build → 커밋                                                 |
+| **B-2**  | B3 공용 뷰 추출 + 재분석 라우트 교정 + 목업 삭제 + 고아 코드 삭제        | tsc·jest·build → 커밋 → **배포 → 수동 FACE 저장 확인 + e2e(history)** |
+| **B-3**  | B4 공유(직후 공유 + 카카오 배선)                                         | tsc·build → 커밋 → 배포 → e2e                                         |
+| **A-1**  | Part A Phase 1 (focus-groups + 프롬프트 빌더 + focusAnswers + 결과 섹션) | 단위·스냅샷 → 커밋                                                    |
+| **A-2**  | Part A Phase 2 (8대 쉬운 풀이 + siblings 가중치)                         | 단위(가중치 합=1) → 커밋                                              |
+| **A-3**  | Part A Phase 3 (궁합 잔여 결함 R3·R4 — R1·R2 는 B 단계에서 선반영)       | tsc·build → 커밋 → **배포 → e2e(compatibility)**                      |
+| **A-4**  | Part A Phase 4 (질문 미리보기 칩 + 관계 자동 프리셋)                     | tsc·build → 커밋 → 배포 → e2e                                         |
+| **마감** | 로드맵·MEMORY 갱신, 전체 prod 회귀(기존 스펙 + 신설 스펙 직렬)           | `--workers=1` 필수                                                    |
+
+**공통 규율**: 각 단계 실패 시 원인 수정 후 재시도(다음 단계로 건너뛰지 않음). 커밋은 단계별 분리, `git add` 는 **명시 파일만**.
