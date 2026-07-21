@@ -131,6 +131,15 @@
   - **V(영상)**: `AmbientVideo`(영상 없어도 폴백) + 배치 2곳(강신·분석로딩) + `scripts/media-assets` 생성 파이프라인(Veo 3.1 단가 상수화, dry-run 예상 $1.00, higgsfield 스텁).
   - **대기**: 신당 BGM 선곡(국립국악원), 영상 실생성(`--run`) 승인, `HIGGSFIELD_API_KEY`, TTS 유료 업그레이드 여부.
 
+**신규 기획 (세션28) — ✅완료·배포 (2026-07-22)**
+
+- ✅ **디테일: 탄탄함(신뢰)·재미** → `PLAN-detail-trust-fun-v1.md` (R1→R2→R3→F1→F2 전 단계 실행·배포, prod 회귀 0실패).
+  - **R1 복채 정합**: `lib/domain/payment/feature-costs.ts` 단일 소스(표시=실차감) — MISSION_CATEGORIES·FORTUNE_MISSIONS·TALISMAN_COSTS_DISPLAY·스튜디오 하드코딩 전부 참조로 교체(관상 목록 5만냥→2만냥). 무료 기능 "무료" 배지, "N복채"→"복채 N만냥" 통일, 신당·상점 "구매"→"봉헌". ai_prompts.talisman_cost 시드 정정(face/palm/fengshui→2, 무료군→0, wealth·image=5) + ACTION_TO_PROMPT_KEY 로 어드민 원가vs복채 '—' 제거. **AI 실패 시 복채 환불**: wealth refundBokchae(마스터 제외)·JSON 파싱 보강, 스튜디오 3종 refundStudioCost(5분 차감검증·멱등).
+  - **R2 음력 윤달**: profiles·family_members `is_leap_month` 컬럼 + v_destiny_targets 뷰. getSajuData/calculateDaeun 에 isLeapMonth → `Lunar` 음(-)월(month<0=闰月, lunar.js 소스로 확정). 골든 테스트(2020 윤4월·2023 윤2월, 만세력 교차검증 — 윤달이 월주 교정 단언). 엔진(PersonInfo) 전파(cheonjiin·wealth·core·manse). 출생시간 모름 옵션 + 프롬프트 시주 보류 고지, 서버 기본값 '00:00'→'12:00' 통일. ⚠️가족 등록 폼 윤달 저장은 보호파일(family.ts) 충돌로 보류(폼·컬럼·계산은 완료).
+  - **R3 근거·면책**: PillarsStrip(명식 4주, 사주·오늘운세 상단), ServiceDisclaimer(전 결과 하단). 정합: 스튜디오 이미지 이력 실대상 귀속, gemini-rate-limiter console.error→logger, destiny-utils 달력 라벨 isSolarCalendar. 오펀 삭제(app/actions/ai/saju.ts·image.ts checkAndDeductCredits·onboarding-tour). #418 e2e 마스킹 필터 제거(prod 회귀 통과 확인).
+  - **F 재미**: 신탁 도착 알림(oracle→notifications deity_oracle) · 오너 신당 소원/방명록/wishCount · 강신 Veo 영상(summon-ritual) · 보상 연출(출석 chime·충전 컨페티·레벨업 bara) · 미사용 파티클 3종(petals/ripple/resonance). 오늘의 정성 대시보드 허브(getDailyRitualStatus 1액션 3상태) · 오늘의 운세 구조화(daily-lucky.ts 결정적 파생 + 단위테스트, AI 계약 불변) · 테마 N/8 수집 표시.
+  - **대기**: 무료 기능(사주·궁합·신년) 유료 전환 시점, F-6 카드명 "오늘의 정성", 가족 윤달 저장(family.ts 보호 해제 시), 분석 '合' 로더 미사용(활성 시 sparkle+bell).
+
 **코드 잔여**
 
 - i18n 문자열 추출 약 1,200곳 — 화면 단위 완결(✅상점 → 신당 → 고민상담).
@@ -141,3 +150,5 @@
 - 결제 전략 4건 (P1-8)
 - 무료신 패키지 구성(tier별 어떤 신위) (P1-6)
 - 가족 신당 공개/초대 정책 (P3-16)
+- 무료 기능(사주·궁합·신년) 유료 전환 시점 (세션28 — 현재 "무료" 정직 표기로 진행)
+- F-6 대시보드 허브 카드 명칭 "오늘의 정성" 확정 (세션28)
