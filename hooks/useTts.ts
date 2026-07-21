@@ -8,6 +8,28 @@ export interface TtsOptions {
   /** 0~2, 음높이 */
   pitch?: number
   lang?: string
+  /** 성별 힌트 — 보이스 목록에서 이름 휴리스틱 선택 시도(실패 시 기본 한국어 보이스) */
+  voiceHint?: 'male' | 'female' | null
+}
+
+// 한국어 보이스 성별 휴리스틱(플랫폼별 이름 파편). 단일 보이스 환경이면 매칭 실패 → 폴백.
+const MALE_VOICE_HINTS = ['injoon', 'male', '남성', '남자', 'minsu', 'hyunsu', 'sangjun']
+const FEMALE_VOICE_HINTS = ['heami', 'yuna', 'female', '여성', '여자', 'sora', 'nari', 'jimin', 'sunhi']
+
+function pickKoreanVoiceByHint(
+  voices: SpeechSynthesisVoice[],
+  hint: 'male' | 'female' | null | undefined,
+  fallback: SpeechSynthesisVoice | null
+): SpeechSynthesisVoice | null {
+  if (!hint) return fallback
+  const ko = voices.filter((v) => v.lang?.toLowerCase().startsWith('ko'))
+  if (ko.length <= 1) return fallback // 단일(또는 0) 보이스면 힌트 무의미 — 폴백
+  const needles = hint === 'male' ? MALE_VOICE_HINTS : FEMALE_VOICE_HINTS
+  const match = ko.find((v) => {
+    const name = v.name.toLowerCase()
+    return needles.some((n) => name.includes(n))
+  })
+  return match ?? fallback
 }
 
 /**
@@ -91,7 +113,9 @@ export function useTts() {
       if (!('speechSynthesis' in window)) return
       const u = new SpeechSynthesisUtterance(say)
       u.lang = lang
-      if (voiceRef.current) u.voice = voiceRef.current
+      // 신위 성별 힌트로 보이스 선택 시도(다중 보이스 환경만) → 실패 시 기본 한국어 보이스
+      const chosen = pickKoreanVoiceByHint(window.speechSynthesis.getVoices(), opts?.voiceHint, voiceRef.current)
+      if (chosen) u.voice = chosen
       u.rate = opts?.rate ?? 0.98
       u.pitch = opts?.pitch ?? 1.0
       u.onend = () => setSpeaking(false)
