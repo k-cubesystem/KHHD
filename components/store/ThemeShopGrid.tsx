@@ -29,9 +29,16 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
     }
   }
 
+  const ownedCount = themes.filter((p) => p.owned || ownedExtra.has(p.code)).length
+
   return (
     <div className="space-y-4">
-      <p className="text-xs text-ink-light/40 font-sans">{t('themeHint')}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-sans text-xs text-ink-light/40">{t('themeHint')}</p>
+        <span className="shrink-0 font-serif text-[11px] font-bold tabular-nums text-gold-500">
+          {ownedCount}/{themes.length} 수집
+        </span>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         {themes.map((pack) => {
           const owned = pack.owned || ownedExtra.has(pack.code)

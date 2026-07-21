@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -16,6 +16,8 @@ import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { createClient } from '@/lib/supabase/client'
 import { PillarsStrip } from '@/components/analysis/PillarsStrip'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { getSajuData } from '@/lib/domain/saju/saju'
+import { deriveDailyLucky } from '@/lib/domain/fortune/daily-lucky'
 
 interface DailyFortuneViewProps {
   userId: string
@@ -143,6 +145,25 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
 
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId)
 
+  // 오늘의 운세 구조 요소(별점·행운 카드) — 결정적 파생(F-7, AI 계약 불변)
+  const lucky = useMemo(() => {
+    if (!birthInfo?.birth_date) return null
+    try {
+      const now = new Date()
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const person = getSajuData(
+        birthInfo.birth_date,
+        birthInfo.birth_time || '12:00',
+        birthInfo.calendar_type !== 'lunar',
+        birthInfo.is_leap_month ?? false
+      )
+      const todaySaju = getSajuData(todayStr, '12:00', true)
+      return deriveDailyLucky(todayStr, person.dayMasterElement, todaySaju.dayMasterElement)
+    } catch {
+      return null
+    }
+  }, [birthInfo])
+
   return (
     <Card
       id="daily-fortune-capture"
@@ -243,13 +264,53 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
             </Button>
           </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-surface/40 p-6 rounded-xl border border-primary/10 leading-relaxed text-ink-light/90 font-serif text-lg whitespace-pre-wrap shadow-inner"
-          >
-            {fortune}
-          </motion.div>
+          <div className="space-y-4">
+            {/* 총운 별점 + 행운 카드 3칩 — 결정적 파생(F-7) */}
+            {lucky && (
+              <div className="rounded-xl border border-primary/10 bg-surface/40 p-4 space-y-3">
+                <div className="flex items-center justify-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span
+                      key={n}
+                      className={n <= lucky.stars ? 'text-gold-500' : 'text-white/15'}
+                      style={{ fontSize: '1.35rem', lineHeight: 1 }}
+                    >
+                      ★
+                    </span>
+                  ))}
+                  <span className="ml-2 text-xs text-ink-light/50 font-sans">오늘의 총운</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center rounded-lg bg-black/20 border border-white/5 py-2.5">
+                    <p className="text-[10px] text-ink-light/40">행운의 색</p>
+                    <div className="flex items-center justify-center gap-1.5 mt-1">
+                      <span
+                        className="w-3 h-3 rounded-full border border-white/20"
+                        style={{ background: lucky.color.hex }}
+                      />
+                      <span className="text-xs text-ink-light font-medium">{lucky.color.name}</span>
+                    </div>
+                  </div>
+                  <div className="text-center rounded-lg bg-black/20 border border-white/5 py-2.5">
+                    <p className="text-[10px] text-ink-light/40">행운의 숫자</p>
+                    <p className="text-base font-serif font-bold text-gold-500 mt-0.5 tabular-nums">{lucky.number}</p>
+                  </div>
+                  <div className="text-center rounded-lg bg-black/20 border border-white/5 py-2.5">
+                    <p className="text-[10px] text-ink-light/40">행운의 시간</p>
+                    <p className="text-[11px] text-ink-light font-medium mt-1">{lucky.timeRange}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-surface/40 p-6 rounded-xl border border-primary/10 leading-relaxed text-ink-light/90 font-serif text-lg whitespace-pre-wrap shadow-inner"
+            >
+              {fortune}
+            </motion.div>
+          </div>
         )}
 
         {fortune && (

@@ -11,7 +11,7 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2 } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2, Lock } from 'lucide-react'
 import type { CatalogItem, Element, Placement, SceneData, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
@@ -142,6 +142,7 @@ export function ShrineRoomClient({ scene }: Props) {
 
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
+  const ownedThemeCount = scene.themes.filter((t) => t.owned || purchasedCodes.has(t.code)).length
   const deitiesHref = scene.familyMemberId
     ? `/protected/shrine/deities?member=${scene.familyMemberId}`
     : '/protected/shrine/deities'
@@ -768,29 +769,39 @@ export function ShrineRoomClient({ scene }: Props) {
         )}
       </div>
 
-      {/* 테마 칩 */}
+      {/* 테마 칩 + 수집 진행(F-8) */}
       {isOwner && (
-        <div className="flex gap-2 px-1 pt-3 overflow-x-auto no-scrollbar">
-          {scene.themes.map((t) => (
-            <button
-              key={t.code}
-              onClick={() => onSelectTheme(t)}
-              className={`flex-shrink-0 text-[11px] px-3 py-1.5 rounded-full font-sans transition-all ${
-                t.code === activeCode
-                  ? 'bg-gold-500/[0.14] border border-gold-500 text-gold-300'
-                  : 'bg-surface border border-white/10 text-ink-light/50'
-              }`}
-            >
-              {t.name}
-              <span className="text-[9.5px] opacity-70 ml-1 tabular-nums">
-                {t.owned || purchasedCodes.has(t.code)
-                  ? '보유'
-                  : t.priceBokchae > 0
-                    ? `복채 ${t.priceBokchae}만냥`
-                    : '무료'}
-              </span>
-            </button>
-          ))}
+        <div className="px-1 pt-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="font-sans text-[10px] text-ink-light/40">테마 수집</span>
+            <span className="font-serif text-[10px] font-bold text-gold-500 tabular-nums">
+              {ownedThemeCount}/{scene.themes.length}
+            </span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+            {scene.themes.map((t) => {
+              const owned = t.owned || purchasedCodes.has(t.code)
+              return (
+                <button
+                  key={t.code}
+                  onClick={() => onSelectTheme(t)}
+                  className={`flex-shrink-0 rounded-full px-3 py-1.5 font-sans text-[11px] transition-all ${
+                    t.code === activeCode
+                      ? 'border border-gold-500 bg-gold-500/[0.14] text-gold-300'
+                      : owned
+                        ? 'border border-white/10 bg-surface text-ink-light/50'
+                        : 'border border-white/5 bg-surface/50 text-ink-light/30 opacity-60'
+                  }`}
+                >
+                  {!owned && <Lock className="mr-1 -mt-0.5 inline h-2.5 w-2.5" />}
+                  {t.name}
+                  <span className="ml-1 text-[9.5px] tabular-nums opacity-70">
+                    {owned ? '보유' : t.priceBokchae > 0 ? `복채 ${t.priceBokchae}만냥` : '무료'}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 

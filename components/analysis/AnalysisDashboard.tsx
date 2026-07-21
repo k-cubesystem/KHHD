@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { ChevronRight } from 'lucide-react'
 import { DailyFortuneCard } from './daily-fortune-card'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
+import { DailyRitualCard } from './dashboard/DailyRitualCard'
 
 // 아이콘 → 「설빛 온기」 일러스트 (PRD §7, public/icons/hub)
 const STUDIO_CARDS = [
@@ -123,6 +124,11 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
       {/* 0. 사주 유도 카드 (1장 — 한국 전통풍) */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
+      </motion.div>
+
+      {/* 0-1. 오늘의 정성 — 데일리 루프 허브(F-6) */}
+      <motion.div variants={fadeInUp}>
+        <DailyRitualCard />
       </motion.div>
 
       {/* 1. Seasonal Event Banner */}
