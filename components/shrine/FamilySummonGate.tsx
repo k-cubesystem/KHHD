@@ -52,6 +52,7 @@ export function FamilySummonGate({ familyMemberId, memberName, yongsinKo }: Prop
       deity={reveal}
       mode="gangshin"
       flavorText={flavorText}
+      backgroundVideoId="summon-ritual"
       onClose={() => {
         setReveal(null)
         router.refresh()

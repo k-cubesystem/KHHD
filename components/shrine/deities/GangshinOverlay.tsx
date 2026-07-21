@@ -3,6 +3,7 @@
 import { X } from 'lucide-react'
 import type { Deity } from '@/app/actions/shrine/deities'
 import { DeityMedallion } from './DeityMedallion'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 interface GangshinOverlayProps {
   deity: Deity
@@ -14,16 +15,34 @@ interface GangshinOverlayProps {
   onClose: () => void
   /** 봉안 모드 「지금 좌정하기」 CTA */
   onSeatNow?: (deity: Deity) => void
+  /** 배경 앰비언트 영상 id(public/videos/{id}). 없으면 기존 CSS 연출만(폴백). */
+  backgroundVideoId?: string
 }
 
 /** 강신(降神)/봉안(奉安) 연출 오버레이 — 신위전·가족 신당 첫 진입 공용. */
-export function GangshinOverlay({ deity, mode, flavorText, pending, onClose, onSeatNow }: GangshinOverlayProps) {
+export function GangshinOverlay({
+  deity,
+  mode,
+  flavorText,
+  pending,
+  onClose,
+  onSeatNow,
+  backgroundVideoId,
+}: GangshinOverlayProps) {
   return (
     <div
       className="gangshin-overlay fixed inset-0 z-50 flex flex-col items-center justify-center px-6 cursor-pointer overflow-hidden"
       style={{ background: 'radial-gradient(circle at 50% 44%, #1a140a, #000 70%)' }}
       onClick={onClose}
     >
+      {/* 강신 배경 영상(있을 때만) — 기존 CSS 연출 위에 은은히. 없으면 렌더 안 함(폴백) */}
+      {backgroundVideoId ? (
+        <AmbientVideo
+          id={backgroundVideoId}
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          style={{ opacity: 0.5, mixBlendMode: 'screen' }}
+        />
+      ) : null}
       {/* 스킵 — 시퀀스 시작부터 즉시 노출 */}
       <button
         aria-label="연출 건너뛰기"

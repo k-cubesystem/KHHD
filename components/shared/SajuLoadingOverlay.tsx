@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SAJU_LOADING_MESSAGES } from '@/lib/constants/saju-messages'
 import { GOLD_500 } from '@/lib/config/design-tokens'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 /* ── 파티클 상수 (렌더마다 재생성 방지) ── */
 const PARTICLES = Array.from({ length: 14 }, (_, i) => ({
@@ -124,6 +125,13 @@ export function SajuLoadingOverlay({
         background: 'linear-gradient(160deg, #080604 0%, #0f0c08 50%, #080604 100%)',
       }}
     >
+      {/* 앰비언트 배경 영상(있을 때만) — 기존 core-pulse/파티클 위에 은은히. 없으면 폴백(렌더 안 함) */}
+      <AmbientVideo
+        id="analysis-ambient"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 0.28, mixBlendMode: 'screen' }}
+      />
+
       {/* 파티클 — CSS @keyframes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {PARTICLES.map((p, i) => (
