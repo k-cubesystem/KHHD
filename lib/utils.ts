@@ -1,31 +1,40 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 // This check can be removed, it is just for tutorial purposes
-export const hasEnvVars =
-  process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+export const hasEnvVars = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+
+// SSR(UTC)·클라이언트(로컬) 어디서 실행해도 동일 출력 — 하이드레이션 일치를 위해 KST(UTC+9) 고정
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+
+export function formatKstDateTime(value: string | Date): string {
+  const time = new Date(value).getTime()
+  if (Number.isNaN(time)) return ''
+  const kst = new Date(time + KST_OFFSET_MS)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`
+}
 
 export function toConversationalTone(text: string): string {
   // Simple heuristic mapping for now, can be expanded with AI later
   const endings = {
-    "합니다.": "해요.",
-    "입니다.": "이에요.",
-    "하십시오.": "해보세요.",
-    "않습니다.": "않아요.",
-    "됩니다.": "돼요.",
-    "없습니다.": "없어요.",
-    "있습니다.": "있어요.",
-  };
+    '합니다.': '해요.',
+    '입니다.': '이에요.',
+    '하십시오.': '해보세요.',
+    '않습니다.': '않아요.',
+    '됩니다.': '돼요.',
+    '없습니다.': '없어요.',
+    '있습니다.': '있어요.',
+  }
 
-  let newText = text;
+  let newText = text
   Object.entries(endings).forEach(([formal, casual]) => {
-    newText = newText.replace(new RegExp(formal, 'g'), casual);
-  });
+    newText = newText.replace(new RegExp(formal, 'g'), casual)
+  })
 
-  return newText;
+  return newText
 }

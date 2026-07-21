@@ -3,9 +3,8 @@
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Clock, Star, User2, Hand, Home, Heart, Sun, Coins, Sparkles, ChevronRight, Trash2 } from 'lucide-react'
-import { format } from 'date-fns'
-import { ko } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { formatKstDateTime } from '@/lib/utils'
 import { deleteAnalysisHistory, type AnalysisHistory } from '@/app/actions/user/history'
 
 interface AnalysisCardProps {
@@ -131,11 +130,7 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick,
           <div className="flex items-center justify-between pt-2">
             <div className="flex items-center gap-2 text-xs text-ink-light/70">
               <Clock className="w-3.5 h-3.5" />
-              <span>
-                {format(new Date(record.created_at), 'yyyy.MM.dd HH:mm', {
-                  locale: ko,
-                })}
-              </span>
+              <span>{formatKstDateTime(record.created_at)}</span>
             </div>
             {record.score !== null && (
               <div className="flex items-center gap-1 text-xs font-bold">

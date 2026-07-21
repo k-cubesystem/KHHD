@@ -7,8 +7,7 @@ import { X, Star, Trash2, Share2, Edit3, Save, Clock, AlertTriangle, RefreshCw }
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { ko } from 'date-fns/locale'
+import { formatKstDateTime } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
@@ -201,11 +200,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                 <div className="flex items-center gap-4 text-sm text-ink-light/60">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>
-                      {format(new Date(record.created_at), 'yyyy.MM.dd HH:mm', {
-                        locale: ko,
-                      })}
-                    </span>
+                    <span>{formatKstDateTime(record.created_at)}</span>
                   </div>
                   {record.score !== null && <span className="text-primary font-bold">{record.score}점</span>}
                 </div>
