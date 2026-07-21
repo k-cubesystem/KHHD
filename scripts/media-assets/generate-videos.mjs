@@ -81,29 +81,147 @@ if (adapter === 'higgsfield') {
   process.exit(1)
 }
 
+// REST 형식 출처: https://ai.google.dev/gemini-api/docs/veo (확인일 2026-07-21)
+//   POST {BASE}/models/{model}:predictLongRunning  { instances:[{prompt}], parameters:{aspectRatio,resolution,durationSeconds} }
+//   → { name: "operations/..." } 폴링 → done 시 응답에서 video uri → x-goog-api-key 로 다운로드.
+//   durationSeconds 지원값: 4 | 6 | 8 (5초 불가 — 스펙은 4초로 운용).
+// (함수 선언 — 최상위 await 이후에 정의돼도 호이스팅으로 안전)
+function veoBase() {
+  return 'https://generativelanguage.googleapis.com/v1beta'
+}
+
+function findVideoUri(obj) {
+  // 응답 스키마 방어: response 트리에서 첫 번째 http(s) uri 필드를 찾는다.
+  if (obj == null) return null
+  if (typeof obj === 'string') return /^https?:\/\//.test(obj) ? obj : null
+  if (Array.isArray(obj)) {
+    for (const v of obj) {
+      const hit = findVideoUri(v)
+      if (hit) return hit
+    }
+    return null
+  }
+  if (typeof obj === 'object') {
+    for (const [k, v] of Object.entries(obj)) {
+      if ((k === 'uri' || k === 'videoUri' || k === 'url') && typeof v === 'string' && /^https?:\/\//.test(v)) return v
+      const hit = findVideoUri(v)
+      if (hit) return hit
+    }
+  }
+  return null
+}
+
 async function runVeo(list) {
   const { config } = await import('dotenv')
   const path = await import('node:path')
+  const { mkdirSync, writeFileSync, copyFileSync } = await import('node:fs')
+  const { execSync } = await import('node:child_process')
   config({ path: path.resolve('D:/anti/haehwadang/.env.local') })
   const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!KEY) {
     console.error('GEMINI 키 없음 (.env.local의 GEMINI_API_KEY 또는 GOOGLE_GENERATIVE_AI_API_KEY)')
     process.exit(1)
   }
+
+  let hasFfmpeg = false
+  try {
+    execSync('ffmpeg -version', { stdio: 'ignore' })
+    hasFfmpeg = true
+  } catch {
+    console.log('ffmpeg 없음 → webm 트랜스코드 생략, mp4 그대로 배포(public/videos/{id}.mp4)')
+  }
+
+  mkdirSync('assets-src/video/raw', { recursive: true })
+  mkdirSync('public/videos', { recursive: true })
+
   for (const s of list) {
-    const out = `public/videos/${s.id}.webm`
-    if (existsSync(out)) {
-      console.log('skip', out)
+    const outWebm = `public/videos/${s.id}.webm`
+    const outMp4 = `public/videos/${s.id}.mp4`
+    if (existsSync(outWebm) || existsSync(outMp4)) {
+      console.log('skip(존재)', s.id)
       continue
     }
-    console.log('gen(veo)', s.id, `— ${s.durationSec}s @ ${s.resolution}`)
-    // Veo 는 long-running operation(생성 요청 → 폴링 → 다운로드). SDK 메서드·응답 형식은
-    // 버전 의존 → 활성화 시 공식 문서로 확정: https://ai.google.dev/gemini-api/docs/video
-    // 이후 assets-src/video/raw/{id}.mp4 저장 → ffmpeg 있으면 webm 트랜스코드 → public/videos/{id}.webm.
+
+    const durationSeconds = [4, 6, 8].includes(s.durationSec) ? s.durationSec : 4
+    console.log(`gen(veo) ${s.id} — ${durationSeconds}s @ ${s.resolution} (${DEFAULT_VEO_MODEL})`)
+
+    const startRes = await fetch(`${veoBase()}/models/${DEFAULT_VEO_MODEL}:predictLongRunning`, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instances: [{ prompt: s.prompt }],
+        parameters: { aspectRatio: '16:9', resolution: s.resolution, durationSeconds },
+      }),
+    })
+    if (!startRes.ok) {
+      console.error(`  생성 요청 실패 ${startRes.status}:`, (await startRes.text()).slice(0, 500))
+      process.exitCode = 1
+      continue
+    }
+    const op = await startRes.json()
+    if (!op.name) {
+      console.error('  operation name 없음:', JSON.stringify(op).slice(0, 300))
+      process.exitCode = 1
+      continue
+    }
+    console.log('  operation:', op.name)
+
+    // 폴링 — 10초 간격, 최대 12분
+    let finalOp = null
+    for (let i = 0; i < 72; i++) {
+      await new Promise((r) => setTimeout(r, 10_000))
+      const poll = await fetch(`${veoBase()}/${op.name}`, { headers: { 'x-goog-api-key': KEY } })
+      if (!poll.ok) {
+        console.error(`  폴링 실패 ${poll.status}`)
+        continue
+      }
+      const j = await poll.json()
+      if (j.done) {
+        finalOp = j
+        break
+      }
+      if (i % 3 === 2) console.log(`  ...생성 중 (${(i + 1) * 10}s)`)
+    }
+    if (!finalOp) {
+      console.error('  시간 초과(12분) — operation 은 서버에 남아 있음:', op.name)
+      process.exitCode = 1
+      continue
+    }
+    if (finalOp.error) {
+      console.error('  생성 오류:', JSON.stringify(finalOp.error).slice(0, 500))
+      process.exitCode = 1
+      continue
+    }
+
+    const uri = findVideoUri(finalOp.response)
+    if (!uri) {
+      console.error('  응답에서 video uri 를 못 찾음:', JSON.stringify(finalOp.response).slice(0, 600))
+      process.exitCode = 1
+      continue
+    }
+
+    const dl = await fetch(uri, { headers: { 'x-goog-api-key': KEY }, redirect: 'follow' })
+    if (!dl.ok) {
+      console.error(`  다운로드 실패 ${dl.status}`)
+      process.exitCode = 1
+      continue
+    }
+    const buf = Buffer.from(await dl.arrayBuffer())
+    const raw = `assets-src/video/raw/${s.id}.mp4`
+    writeFileSync(raw, buf)
+    console.log(`  저장 ${raw} (${(buf.length / 1024 / 1024).toFixed(2)}MB)`)
+
+    if (hasFfmpeg) {
+      execSync(
+        `ffmpeg -y -i "${raw}" -an -c:v libvpx-vp9 -b:v 0 -crf 36 -vf scale=720:-2 -loglevel error "${outWebm}"`,
+        { stdio: 'inherit' }
+      )
+      console.log('  →', outWebm)
+    } else {
+      copyFileSync(raw, outMp4)
+      console.log('  →', outMp4)
+    }
   }
-  console.error('\nveo 실호출부 미구현 — 모델/단가는 확정(위 상수)이나 SDK 영상 API 는 활성화 시 공식 문서로 확정.')
-  console.error('현재는 dry-run 만 지원(설계 의도: 파이프라인 준비 + 안전한 미설정 처리).')
-  process.exit(2)
 }
 
 async function runHiggsfield() {

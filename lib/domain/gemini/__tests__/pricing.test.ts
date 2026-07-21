@@ -21,6 +21,10 @@ describe('Gemini 비용 추정', () => {
   })
 
   describe('텍스트 모델 (토큰 기반)', () => {
+    it('주력 모델 단가는 공식 확인값 고정 — 회귀 방지 (ai.google.dev/gemini-api/docs/pricing, 2026-07-21)', () => {
+      expect(MODEL_PRICING['gemini-3.5-flash']).toEqual({ input: 1.5, output: 9.0 })
+    })
+
     it('입력 100만 토큰 = input 단가', () => {
       const p = MODEL_PRICING['gemini-3.5-flash']
       expect(estimateCostUsd('gemini-3.5-flash', 1_000_000, 0)).toBeCloseTo(p.input, 6)

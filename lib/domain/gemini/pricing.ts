@@ -6,7 +6,12 @@
 
 // ============================================================
 // 텍스트 모델 토큰 단가 (USD per 1M tokens)
-// (기존 값 유지 — 텍스트 단가 재검증은 이번 범위 밖. 세션26 보고서에 검증 필요 항목으로 기록)
+//
+// 주력 모델 검증: Google 공식 https://ai.google.dev/gemini-api/docs/pricing (확인일 2026-07-21)
+//   - gemini-3.5-flash: input $1.50 / output $9.00  ← 구값(0.075/0.3)이 실제의 1/20 이었음.
+//     세션26 원가율 표를 본 값으로 재해석할 것(과거 로그의 estimated_cost_usd 는 과소계상).
+//   - gemini-2.5-flash: input $0.30 / output $2.50
+// 미검증 레거시(1.5/2.0 계열)는 현재 코드가 사용하지 않아 구값 유지.
 // ============================================================
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'gemini-2.0-flash': { input: 0.075, output: 0.3 },
@@ -14,10 +19,10 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   'gemini-2.0-flash-exp': { input: 0.075, output: 0.3 },
   'gemini-1.5-flash': { input: 0.075, output: 0.3 },
   'gemini-1.5-pro': { input: 1.25, output: 5.0 },
-  'gemini-3.5-flash': { input: 0.075, output: 0.3 },
-  'gemini-3-flash-preview': { input: 0.075, output: 0.3 },
+  'gemini-3.5-flash': { input: 1.5, output: 9.0 },
+  'gemini-3-flash-preview': { input: 1.5, output: 9.0 },
   'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
-  'gemini-2.5-flash-preview': { input: 0.075, output: 0.3 },
+  'gemini-2.5-flash-preview': { input: 0.3, output: 2.5 },
   // Claude models
   'claude-opus-4-6': { input: 15.0, output: 75.0 },
   'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
@@ -40,8 +45,8 @@ export const IMAGE_MODEL_PRICE_USD: Record<string, number> = {
 /** 기본 이미지 단가(등록 안 된 image 모델 폴백) — 위 3.1 Flash Image 1K 기준 */
 export const DEFAULT_IMAGE_PRICE_USD = 0.067
 
-/** 폴백 텍스트 단가(등록 안 된 텍스트 모델) — flash 계열 보수적 값 */
-const FALLBACK_TEXT_PRICING = { input: 0.075, output: 0.3 }
+/** 폴백 텍스트 단가(등록 안 된 텍스트 모델) — 주력 3.5-flash 와 동일(과소계상보다 과대계상이 안전) */
+const FALLBACK_TEXT_PRICING = { input: 1.5, output: 9.0 }
 
 export function isImageModel(model: string): boolean {
   return model in IMAGE_MODEL_PRICE_USD || model.includes('image')

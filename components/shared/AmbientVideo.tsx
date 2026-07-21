@@ -40,9 +40,18 @@ export function AmbientVideo({ id, className, style, poster, fallback = null }: 
 
   useEffect(() => {
     let alive = true
+    // webm → mp4 순 HEAD — mp4 만 배포된 환경(ffmpeg 부재 파이프라인)에서도 재생돼야 한다
     fetch(`/videos/${id}.webm`, { method: 'HEAD' })
       .then((r) => {
-        if (alive) setStatus(r.ok ? 'ok' : 'missing')
+        if (!alive) return null
+        if (r.ok) {
+          setStatus('ok')
+          return null
+        }
+        return fetch(`/videos/${id}.mp4`, { method: 'HEAD' })
+      })
+      .then((r2) => {
+        if (alive && r2) setStatus(r2.ok ? 'ok' : 'missing')
       })
       .catch(() => {
         if (alive) setStatus('missing')

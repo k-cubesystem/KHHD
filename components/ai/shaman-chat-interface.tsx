@@ -453,7 +453,10 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
   const { supported: ttsSupported, speaking: ttsSpeaking, speak, stop: ttsStop } = useTts()
   // 좌정 신위별 목소리 — deityCode 로 프로파일(rate/pitch/voiceHint) 조회 후 발화. 미좌정이면 기본.
-  const speakDeity = useCallback((text: string) => speak(text, voiceProfileFor(deityCode)), [speak, deityCode])
+  const speakDeity = useCallback(
+    (text: string) => speak(text, { ...voiceProfileFor(deityCode), deityCode }),
+    [speak, deityCode]
+  )
   const [autoSpeak, setAutoSpeak] = useState(false)
   useEffect(() => {
     if (typeof window !== 'undefined') setAutoSpeak(window.localStorage.getItem('hhd_tts_auto') === '1')

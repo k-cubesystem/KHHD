@@ -10,6 +10,8 @@ export interface TtsOptions {
   lang?: string
   /** 성별 힌트 — 보이스 목록에서 이름 휴리스틱 선택 시도(실패 시 기본 한국어 보이스) */
   voiceHint?: 'male' | 'female' | null
+  /** 좌정 신위 코드 — 서버 뉴럴 TTS 가 실제 보이스(SunHi/InJoon/Hyunsu)를 고르는 키 */
+  deityCode?: string | null
 }
 
 // 한국어 보이스 성별 휴리스틱(플랫폼별 이름 파편). 단일 보이스 환경이면 매칭 실패 → 폴백.
@@ -34,17 +36,17 @@ function pickKoreanVoiceByHint(
 
 /**
  * 신과의 대화 TTS (무료·즉시 동작 + 교체 가능).
- * 제공자 추상화:
- *  - `NEXT_PUBLIC_TTS_ENDPOINT` 설정 시 → 그 엔드포인트에 POST(text,lang) → audio 재생.
- *    (추후 GitHub 뉴럴TTS: Piper/Coqui/XTTS 등을 서버로 띄우고 이 env만 지정하면 됨)
- *  - 미설정 시 → 브라우저 표준 Web Speech API(무료, 한국어 ko-KR). 기본값.
+ * 제공자 추상화 — 2단 폴백:
+ *  1) 서버 뉴럴 TTS `/api/tts`(edge-tts, 무료·신위별 실제 다른 보이스) — 기본.
+ *     `NEXT_PUBLIC_TTS_ENDPOINT` 로 다른 서버로 교체 가능.
+ *  2) 서버 실패(비공식 엔드포인트 다운 등) 시 → 브라우저 Web Speech API 폴백.
  */
 export function useTts() {
   const [supported, setSupported] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  const endpoint = process.env.NEXT_PUBLIC_TTS_ENDPOINT
+  const endpoint = process.env.NEXT_PUBLIC_TTS_ENDPOINT ?? '/api/tts'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -92,7 +94,13 @@ export function useTts() {
           const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: say, lang, rate: opts?.rate, pitch: opts?.pitch }),
+            body: JSON.stringify({
+              text: say,
+              lang,
+              rate: opts?.rate,
+              pitch: opts?.pitch,
+              deityCode: opts?.deityCode ?? null,
+            }),
           })
           if (res.ok) {
             const blob = await res.blob()
