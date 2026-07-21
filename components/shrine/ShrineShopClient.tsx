@@ -23,7 +23,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
 
   const buy = async (id: string, name: string, price: number) => {
     if (price > balance) {
-      toast.error(`복채가 부족합니다 (필요: ${price.toLocaleString()}복채)`)
+      toast.error(`복채가 부족합니다 (필요: 복채 ${price.toLocaleString()}만냥)`)
       return
     }
     setLoadingId(id)
@@ -36,7 +36,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
     } else if (res.error === 'INSUFFICIENT_BOKCHAE') {
       toast.error('복채가 부족합니다')
     } else {
-      toast.error('구매 실패. 다시 시도해주세요.')
+      toast.error('봉헌이 이루어지지 않았습니다. 다시 시도해주세요.')
     }
   }
 
@@ -44,7 +44,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-ink-light/40 font-sans">
-          보유 복채: <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}복채</span>
+          보유 복채: <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}만냥</span>
         </p>
         <Link
           href="/protected/shrine"
@@ -140,7 +140,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                     <Check className="w-3 h-3" /> 무료로 받기
                   </span>
                 ) : (
-                  `${item.priceBokchae.toLocaleString()}복채`
+                  `복채 ${item.priceBokchae.toLocaleString()}만냥`
                 )}
               </button>
             </motion.div>

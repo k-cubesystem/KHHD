@@ -311,6 +311,68 @@ export async function deductTalisman(
 }
 
 /**
+ * 스튜디오(관상·손금·풍수) AI 실패 시 복채 환불.
+ *
+ * 스튜디오는 차감이 클라에서 일어나므로(deductTalisman 직접 호출), 서버는
+ * 최근 5분 내 동일 featureKey 차감(USE) 트랜잭션을 확인한 뒤에만 환불한다
+ * — 무차감 환불 어뷰즈 방지. 마스터(무제한)는 차감 트랜잭션이 남지 않으므로 자연히 제외된다.
+ * 멱등: 동일 차감에 대한 중복 환불(featureKey_REFUND)을 방지한다.
+ */
+export async function refundStudioCost(featureKey: string): Promise<{ refunded: boolean; amount?: number }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { refunded: false }
+
+  const admin = createAdminClient()
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
+  // 최근 5분 내 동일 featureKey 차감(USE) 트랜잭션 확인
+  const { data: useTx } = await admin
+    .from('wallet_transactions')
+    .select('id, amount, created_at')
+    .eq('user_id', user.id)
+    .eq('feature_key', featureKey)
+    .eq('type', 'USE')
+    .gte('created_at', fiveMinAgo)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!useTx) return { refunded: false } // 차감 기록 없음(마스터·어뷰즈)
+
+  const refundKey = `${featureKey}_REFUND`
+  // 멱등: 해당 차감 이후 이미 환불했는지
+  const { data: existingRefund } = await admin
+    .from('wallet_transactions')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('feature_key', refundKey)
+    .gte('created_at', useTx.created_at)
+    .maybeSingle()
+
+  if (existingRefund) return { refunded: false } // 이미 환불됨
+
+  const amount = Math.abs(useTx.amount)
+  if (amount <= 0) return { refunded: false }
+
+  const { error: refundError } = await admin.rpc('add_wallet_balance', { p_user_id: user.id, p_amount: amount })
+  if (refundError) {
+    logger.error('[Wallet] refundStudioCost add_wallet_balance error:', refundError)
+    return { refunded: false }
+  }
+  await admin.from('wallet_transactions').insert({
+    user_id: user.id,
+    amount,
+    type: 'BONUS',
+    feature_key: refundKey,
+    description: `${featureKey} 분석 실패 환불 (${amount}만냥)`,
+  })
+  return { refunded: true, amount }
+}
+
+/**
  * Add talismans to user wallet (for payments)
  */
 export async function addTalismans(

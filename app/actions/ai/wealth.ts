@@ -2,6 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { deductTalisman } from '../payment/wallet'
+import { refundBokchae } from '@/lib/services/bokchae'
+import { UNLIMITED_BALANCE } from '@/lib/auth/privileges'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
@@ -50,6 +53,8 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
   if (isEdgeEnabled('ai-analysis')) {
     return invokeEdgeSafe('ai-analysis', { action: 'analyzeWealth', ...params })
   }
+  const WEALTH_ANALYSIS_COST = FEATURE_COST.wealth.display // 단일 소스 — 표시 = 실차감(5만냥)
+  let refundOnFailure: (() => Promise<void>) | null = null
   try {
     const supabase = await createClient()
     const {
@@ -60,8 +65,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       return { success: false, error: '로그인이 필요합니다.' }
     }
 
-    // 1. 부적 차감 (재물운 분석 비용: 5 부적)
-    const WEALTH_ANALYSIS_COST = 5
+    // 1. 복채 차감 (재물운 분석 비용)
     const deductResult = await deductTalisman('wealth_analysis', WEALTH_ANALYSIS_COST)
 
     if (!deductResult.success) {
@@ -69,6 +73,11 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
         success: false,
         error: '부적이 부족합니다. 멤버십 페이지에서 충전해주세요.',
       }
+    }
+
+    // AI 실패 시 환불 준비 — 마스터(무제한)는 실차감이 없으므로 제외
+    if (deductResult.remainingBalance !== UNLIMITED_BALANCE) {
+      refundOnFailure = () => refundBokchae(user.id, WEALTH_ANALYSIS_COST, '재물운 분석 실패 환불')
     }
 
     // 2. 가족 구성원 정보 조회
@@ -79,6 +88,7 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       .single()
 
     if (memberError || !member) {
+      if (refundOnFailure) await refundOnFailure()
       return { success: false, error: '대상 정보를 찾을 수 없습니다.' }
     }
 
@@ -131,7 +141,10 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       systemPrompt: '당신은 사주 기반 재물운 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
       userPrompt: prompt,
     })
-    const analysis: WealthAnalysisData = JSON.parse(result.text)
+    // JSON 추출 — 코드펜스/잡텍스트 방어(saju.ts 와 동일한 방식). 파싱 실패 자체를 줄인다.
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('재물운 분석 결과를 해석하지 못했습니다.')
+    const analysis: WealthAnalysisData = JSON.parse(jsonMatch[0])
 
     // 7. 분석 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
     try {
@@ -156,6 +169,10 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     }
   } catch (error) {
     logger.error('[WealthAnalysis] Error:', error)
+    if (refundOnFailure) {
+      await refundOnFailure().catch((e) => logger.error('[WealthAnalysis] 환불 실패:', e))
+      return { success: false, error: '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.' }
+    }
     const message = error instanceof Error ? error.message : '재물운 분석 중 오류가 발생했습니다.'
     return {
       success: false,

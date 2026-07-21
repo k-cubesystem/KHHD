@@ -46,3 +46,6 @@ next-env.d.ts
 nul
 
 .gstack/
+
+# Veo 원본 영상 (재생성 가능 — 리포 제외)
+assets-src/video/

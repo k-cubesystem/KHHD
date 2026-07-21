@@ -231,7 +231,7 @@ export function DeityPantheon({ catalog, bonds, familyMemberId }: Props) {
                         disabled={pending}
                         className="mt-1.5 text-[11px] px-2.5 py-1 rounded-full bg-seal/15 text-seal disabled:opacity-50"
                       >
-                        봉안 · {d.priceBokchae}복채
+                        봉안 · 복채 {d.priceBokchae}만냥
                       </button>
                     )}
                   </div>

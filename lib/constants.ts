@@ -1,4 +1,5 @@
 import { Sun, User2, Hand, Home, Heart, Coins, Sparkles } from 'lucide-react'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 
 // Feature Keys (for dynamic pricing from DB)
 export const FEATURE_KEYS = {
@@ -11,13 +12,13 @@ export const FEATURE_KEYS = {
   IMAGE_GEN: 'IMAGE_GEN',
 } as const
 
-// Approximate costs for UI display (actual costs are fetched from DB)
+// UI 표시 비용 — 단일 소스(feature-costs.ts)에서 파생. 표시 = 실차감.
 export const TALISMAN_COSTS_DISPLAY = {
-  sajuAnalysis: 1,
-  faceAnalysis: 2,
-  palmAnalysis: 2,
-  interiorAnalysis: 3,
-  imageGeneration: 5,
+  sajuAnalysis: FEATURE_COST.saju.display,
+  faceAnalysis: FEATURE_COST.face.display,
+  palmAnalysis: FEATURE_COST.palm.display,
+  interiorAnalysis: FEATURE_COST.fengshui.display,
+  imageGeneration: FEATURE_COST.imageGeneration.display,
 } as const
 
 export type FaceDestinyGoal = 'wealth' | 'love' | 'authority'
@@ -57,19 +58,44 @@ export const KRW_PER_TALISMAN = Math.round(BEST_TALISMAN_PACK.price / BEST_TALIS
 
 // Mission Categories for Family Management (Legacy - kept for compatibility)
 // Mission Categories with Updated Paths
+// cost 는 단일 소스(feature-costs.ts)에서 파생 — 표시 = 실차감. 하드코딩 금지.
 export const MISSION_CATEGORIES = [
-  { value: 'SAJU', label: '사주', icon: Sun, cost: 1, path: '/protected/analysis/cheonjiin' },
-  { value: 'FACE', label: '관상', icon: User2, cost: 5, path: '/protected/studio/face' },
-  { value: 'HAND', label: '손금', icon: Hand, cost: 3, path: '/protected/studio/palm' },
-  { value: 'FENGSHUI', label: '풍수', icon: Home, cost: 2, path: '/protected/studio/fengshui' },
-  { value: 'COMPATIBILITY', label: '궁합', icon: Heart, cost: 2, path: '/protected/analysis/compatibility' },
-  { value: 'TODAY', label: '오늘의운세', icon: Sun, cost: 0, path: '/protected/analysis/today' },
-  { value: 'WEALTH', label: '재물운', icon: Coins, cost: 5, path: '/protected/analysis/wealth' },
+  { value: 'SAJU', label: '사주', icon: Sun, cost: FEATURE_COST.saju.display, path: '/protected/analysis/cheonjiin' },
+  { value: 'FACE', label: '관상', icon: User2, cost: FEATURE_COST.face.display, path: '/protected/studio/face' },
+  { value: 'HAND', label: '손금', icon: Hand, cost: FEATURE_COST.palm.display, path: '/protected/studio/palm' },
+  {
+    value: 'FENGSHUI',
+    label: '풍수',
+    icon: Home,
+    cost: FEATURE_COST.fengshui.display,
+    path: '/protected/studio/fengshui',
+  },
+  {
+    value: 'COMPATIBILITY',
+    label: '궁합',
+    icon: Heart,
+    cost: FEATURE_COST.compatibility.display,
+    path: '/protected/analysis/compatibility',
+  },
+  {
+    value: 'TODAY',
+    label: '오늘의운세',
+    icon: Sun,
+    cost: FEATURE_COST.today.display,
+    path: '/protected/analysis/today',
+  },
+  {
+    value: 'WEALTH',
+    label: '재물운',
+    icon: Coins,
+    cost: FEATURE_COST.wealth.display,
+    path: '/protected/analysis/wealth',
+  },
   {
     value: 'NEW_YEAR',
     label: '신년운세',
     icon: Sparkles,
-    cost: 1,
+    cost: FEATURE_COST.newYear.display,
     path: '/protected/analysis/new-year',
   },
 ] as const
@@ -82,7 +108,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '운명의 기초',
     description: '운명의 기초를 다지는 사주 분석',
     icon: Sun,
-    cost: 1,
+    cost: FEATURE_COST.saju.display,
     path: '/protected/analysis/cheonjiin',
   },
   {
@@ -91,7 +117,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '얼굴의 복',
     description: '얼굴에 담긴 복을 읽어내는 관상 분석',
     icon: User2,
-    cost: 5,
+    cost: FEATURE_COST.face.display,
     path: '/protected/studio/face',
   },
   {
@@ -100,7 +126,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '미래의 실마리',
     description: '손금으로 미래를 엿보는 수상 분석',
     icon: Hand,
-    cost: 3,
+    cost: FEATURE_COST.palm.display,
     path: '/protected/studio/palm',
   },
   {
@@ -109,7 +135,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '공간의 기운',
     description: '공간에 기운을 채우는 풍수 분석',
     icon: Home,
-    cost: 2,
+    cost: FEATURE_COST.fengshui.display,
     path: '/protected/studio/fengshui',
   },
   {
@@ -118,7 +144,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '인연의 조화',
     description: '인연의 조화를 확인하는 궁합 분석',
     icon: Heart,
-    cost: 2,
+    cost: FEATURE_COST.compatibility.display,
     path: '/protected/analysis/compatibility',
   },
   {
@@ -127,7 +153,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '하루의 흐름',
     description: '하루의 흐름을 읽는 일진 분석',
     icon: Sun,
-    cost: 0,
+    cost: FEATURE_COST.today.display,
     path: '/protected/analysis/fortune',
   },
   {
@@ -136,7 +162,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '재물의 기운',
     description: '재물의 기운을 끌어오는 재운 분석',
     icon: Coins,
-    cost: 5,
+    cost: FEATURE_COST.wealth.display,
     path: '/protected/analysis/wealth',
   },
   {
@@ -145,7 +171,7 @@ export const FORTUNE_MISSIONS = [
     fortuneLabel: '새해의 운',
     description: '새해의 운을 미리 보는 연운 분석',
     icon: Sparkles,
-    cost: 1,
+    cost: FEATURE_COST.newYear.display,
     path: '/protected/analysis/new-year',
   },
 ] as const

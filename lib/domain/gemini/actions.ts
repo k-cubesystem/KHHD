@@ -71,11 +71,11 @@ export type EmittedActionType = (typeof EMITTED_ACTION_TYPES)[number]
 
 /**
  * action_type → ai_prompts.key (복채 단가 조회용).
- * null = 사용자 복채 없음(내부 유틸·무료·shrine 기능) 또는 ai_prompts 미등록.
+ * null = 사용자 복채 없음(내부 유틸·무료·shrine 기능).
  * 어드민 "원가 vs 복채" 테이블이 이 맵으로 talisman_cost 를 조인한다.
  *
- * ※ wealth·fortune·image_generation 은 ai_prompts 에 항목이 없어 null 처리.
- *   (feature_costs 폴백을 쓰는 기능 — 데이터 정합 필요, 세션26 보고서에 기록)
+ * ※ wealth·image_generation 은 20260722_feature_cost_seed 로 ai_prompts 행을 추가해
+ *   실차감(5만냥)을 노출한다('—' 제거). fortune(테마운세)은 무료라 null 유지.
  */
 export const ACTION_TO_PROMPT_KEY: Record<string, string | null> = {
   daily_fortune: 'daily_fortune',
@@ -91,11 +91,11 @@ export const ACTION_TO_PROMPT_KEY: Record<string, string | null> = {
   face_destiny: 'face_reading',
   palm_destiny: 'palm_reading',
   fengshui_destiny: 'fengshui_analysis',
-  // 사용자 복채 없음(내부·무료·shrine) 또는 ai_prompts 미등록
+  wealth: 'wealth',
+  image_generation: 'image_generation',
+  // 사용자 복채 없음(내부·무료·shrine)
   fortune: null,
-  wealth: null,
   deity_oracle: null,
-  image_generation: null,
   summarizer: null,
   memory: null,
 }

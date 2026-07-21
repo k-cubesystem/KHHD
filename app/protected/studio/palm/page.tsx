@@ -10,7 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { analyzePalmReading, type PalmAnalysisResult } from '@/app/actions/ai/image'
-import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
+import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
@@ -24,7 +25,7 @@ import { PaywallModal } from '@/components/shared/paywall-modal'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
-const PALM_COST = 2 // 2만냥
+const PALM_COST = FEATURE_COST.palm.display // 단일 소스 — 표시 = 실차감
 
 function PalmAnalysisPageContent() {
   const router = useRouter()
@@ -82,9 +83,14 @@ function PalmAnalysisPageContent() {
       const result = await analyzePalmReading(imageBase64)
 
       if (!result.success) {
-        toast.error(result.error || '분석 중 오류가 발생했습니다.')
+        const refund = await refundStudioCost('HAND')
         setLoading(false)
         setStep('upload')
+        toast.error(
+          refund.refunded
+            ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
+            : result.error || '분석 중 오류가 발생했습니다.'
+        )
         return
       }
 
@@ -108,7 +114,12 @@ function PalmAnalysisPageContent() {
       setStep('result')
     } catch (error) {
       logger.error('Palm analysis error:', error)
-      toast.error('분석 중 예상치 못한 오류가 발생했습니다.')
+      const refund = await refundStudioCost('HAND').catch(() => ({ refunded: false }))
+      toast.error(
+        refund.refunded
+          ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
+          : '분석 중 예상치 못한 오류가 발생했습니다.'
+      )
       setStep('upload')
     } finally {
       setLoading(false)

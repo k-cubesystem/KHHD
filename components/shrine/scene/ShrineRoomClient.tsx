@@ -363,7 +363,7 @@ export function ShrineRoomClient({ scene }: Props) {
         toast.error(
           r.error === 'INSUFFICIENT_BOKCHAE'
             ? '복채가 부족합니다 — 상점에서 충전할 수 있어요'
-            : '구매에 실패했습니다. 다시 시도해주세요.'
+            : '봉헌이 이루어지지 않았습니다. 다시 시도해주세요.'
         )
         return
       }
@@ -377,9 +377,9 @@ export function ShrineRoomClient({ scene }: Props) {
   const onSelectTheme = useCallback(
     async (pack: ThemePack) => {
       if (!pack.owned && !purchasedCodes.has(pack.code)) {
-        toast(`${pack.name} — ${pack.priceBokchae}복채로 봉헌할까요?`, {
-          description: '구매 즉시 이 신당에 적용됩니다',
-          action: { label: `${pack.priceBokchae}복채 구매`, onClick: () => void buyAndApplyTheme(pack) },
+        toast(`${pack.name} — 복채 ${pack.priceBokchae}만냥으로 봉헌할까요?`, {
+          description: '봉헌 즉시 이 신당에 적용됩니다',
+          action: { label: `복채 ${pack.priceBokchae}만냥 봉헌`, onClick: () => void buyAndApplyTheme(pack) },
         })
         return
       }
@@ -775,7 +775,11 @@ export function ShrineRoomClient({ scene }: Props) {
             >
               {t.name}
               <span className="text-[9.5px] opacity-70 ml-1 tabular-nums">
-                {t.owned || purchasedCodes.has(t.code) ? '보유' : t.priceBokchae > 0 ? `${t.priceBokchae}복채` : '무료'}
+                {t.owned || purchasedCodes.has(t.code)
+                  ? '보유'
+                  : t.priceBokchae > 0
+                    ? `복채 ${t.priceBokchae}만냥`
+                    : '무료'}
               </span>
             </button>
           ))}

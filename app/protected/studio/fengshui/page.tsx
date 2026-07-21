@@ -17,7 +17,8 @@ import {
   type RoomRecommendation,
   type PlacementSuggestion,
 } from '@/app/actions/ai/image'
-import { deductTalisman, getWalletBalance } from '@/app/actions/payment/wallet'
+import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
@@ -42,7 +43,7 @@ import { PaywallModal } from '@/components/shared/paywall-modal'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
-const FENGSHUI_COST = 2 // 2만냥
+const FENGSHUI_COST = FEATURE_COST.fengshui.display // 단일 소스 — 표시 = 실차감
 
 const ROOM_TYPES = [
   { value: '거실', emoji: '🛋' },
@@ -111,9 +112,14 @@ function FengShuiAnalysisPageContent() {
       const result = await analyzeInteriorForFengshui(imageBase64, selectedTheme, selectedRoom)
 
       if (!result.success) {
-        toast.error(result.error || '분석 중 오류가 발생했습니다.')
+        const refund = await refundStudioCost('FENGSHUI')
         setLoading(false)
         setStep('upload')
+        toast.error(
+          refund.refunded
+            ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
+            : result.error || '분석 중 오류가 발생했습니다.'
+        )
         return
       }
 
@@ -141,7 +147,12 @@ function FengShuiAnalysisPageContent() {
       setStep('result')
     } catch (error) {
       logger.error('Feng shui analysis error:', error)
-      toast.error('분석 중 예상치 못한 오류가 발생했습니다.')
+      const refund = await refundStudioCost('FENGSHUI').catch(() => ({ refunded: false }))
+      toast.error(
+        refund.refunded
+          ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
+          : '분석 중 예상치 못한 오류가 발생했습니다.'
+      )
       setStep('upload')
     } finally {
       setLoading(false)

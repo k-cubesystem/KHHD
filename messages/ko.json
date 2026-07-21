@@ -252,7 +252,7 @@
     "themeHint": "봉헌한 테마는 영구 소장 — 본인·가족 신당 어디든 적용할 수 있어요",
     "themeOwned": "보유중 · 신당에서 적용",
     "themeFree": "기본 제공 · 신당에서 적용",
-    "themeBuy": "봉헌 · {price}복채",
+    "themeBuy": "봉헌 · 복채 {price}만냥",
     "themeBought": "{name} 봉헌 완료",
     "themeBoughtDesc": "신당의 테마칩에서 바로 적용할 수 있어요",
     "insufficientBokchae": "복채가 부족합니다 — 복채 충전 탭에서 충전하세요",

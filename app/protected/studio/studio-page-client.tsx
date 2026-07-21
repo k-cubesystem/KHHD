@@ -4,6 +4,7 @@ import { User, Compass, Fingerprint, ArrowRight, Coins } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 
 const SERVICES = [
   {
@@ -13,7 +14,7 @@ const SERVICES = [
     eng: 'Palmistry',
     badge: 'Secret 01',
     icon: Fingerprint,
-    cost: 2,
+    cost: FEATURE_COST.palm.display,
     desc: '내 손안에 쥐고 있던 재물과 생명의 지도를 읽어드립니다. 놓치고 있던 타고난 재능을 발견하세요.',
     tags: ['재물운', '생명선', '숨겨진재능'],
     gradient: 'from-emerald-950/40 to-transparent',
@@ -26,7 +27,7 @@ const SERVICES = [
     eng: 'Physiognomy',
     badge: 'Secret 02',
     icon: User,
-    cost: 2,
+    cost: FEATURE_COST.face.display,
     desc: '성공하는 사람들의 얼굴에는 공통점이 있습니다. 당신의 부와 명예를 부르는 징조를 찾아보세요.',
     tags: ['성공운', '인복', '리더십'],
     gradient: 'from-amber-950/40 to-transparent',
@@ -39,7 +40,7 @@ const SERVICES = [
     eng: 'Feng Shui',
     badge: 'Secret 03',
     icon: Compass,
-    cost: 2,
+    cost: FEATURE_COST.fengshui.display,
     desc: '머무는 곳이 당신의 기운을 결정합니다. 나쁜 기운은 막고 좋은 기운을 부르는 공간의 비밀.',
     tags: ['가구배치', '양택풍수', '기운전환'],
     gradient: 'from-blue-950/40 to-transparent',

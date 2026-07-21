@@ -45,12 +45,12 @@ export function StudioAnalysisLayout({ category, targetMember, children }: Studi
               <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
                 <categoryInfo.icon className="w-6 h-6 text-primary" strokeWidth={1} />
               </div>
-              {categoryInfo.cost > 0 && (
-                <div className="text-right hidden sm:block">
-                  <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">이용권</p>
-                  <p className="text-lg font-serif font-light text-primary">{categoryInfo.cost}</p>
-                </div>
-              )}
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] text-ink-light/40 font-light uppercase tracking-wider">이용권</p>
+                <p className="text-lg font-serif font-light text-primary">
+                  {categoryInfo.cost > 0 ? `${categoryInfo.cost}만냥` : '무료'}
+                </p>
+              </div>
             </div>
           )}
         </div>
