@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { Button } from '@/components/ui/button'
@@ -7,6 +8,7 @@ import { Heart, ArrowLeft, Sparkles, Compass, MapPin, AlertTriangle, UserX, Swor
 import { Badge } from '@/components/ui/badge'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { FOCUS_GROUPS, type FocusGroup } from '@/lib/domain/compatibility/focus-groups'
+import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 
 interface CategoryBreakdown {
   category: string
@@ -109,6 +111,16 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
   const recommendedPlaces = result.recommendedPlaces || []
   const focusAnswers = result.focusAnswers || []
   const pastEvents = result.pastRetrograde?.events || []
+
+  // focusAnswers(개편의 얼굴) 섹션 등장 시 바라 효과음 1회 — 전역 음소거·제스처 정책 존중
+  const { play: playShrineFx } = useShrineAudio()
+  const focusSoundRef = useRef(false)
+  useEffect(() => {
+    if (focusAnswers.length > 0 && !focusSoundRef.current) {
+      focusSoundRef.current = true
+      playShrineFx('bara')
+    }
+  }, [focusAnswers.length, playShrineFx])
   const placesTitle =
     (result.focusGroup && FOCUS_GROUPS[result.focusGroup as FocusGroup]?.placesLabel) || '함께 가면 좋은 장소'
 

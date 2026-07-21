@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { GOLD_500 } from '@/lib/config/design-tokens'
 import { logger } from '@/lib/utils/logger'
 import { GA } from '@/lib/analytics/ga4'
+import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnalysisData = Record<string, any>
@@ -31,6 +32,15 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
   const [error, setError] = useState<string | null>(null)
   const { checkQuota, paywallProps, quota } = useAnalysisQuota()
   const started = useRef(false)
+  // 분석 결과 공개 순간 효과음(풍경) 1회 — 전역 음소거·최초 제스처 정책 존중(useShrineAudio 내부)
+  const { play: playShrineFx } = useShrineAudio()
+  const revealSoundRef = useRef(false)
+  useEffect(() => {
+    if (data && !isLoading && !revealSoundRef.current) {
+      revealSoundRef.current = true
+      playShrineFx('chime')
+    }
+  }, [data, isLoading, playShrineFx])
 
   useEffect(() => {
     if (!initialData && !started.current) {
