@@ -1,4 +1,5 @@
 import type { DestinyTarget } from '@/app/actions/user/destiny'
+import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 
 /**
  * Destiny Target 유틸리티 함수 모음
@@ -35,19 +36,9 @@ export function getTargetImageUrl(target: DestinyTarget): string | null {
  */
 export function getTargetColor(relationType: string, targetType: string): string {
   if (targetType === 'self') return 'primary'
-  if (
-    relationType.includes('가족') ||
-    relationType.includes('부모') ||
-    relationType.includes('자녀')
-  )
-    return 'wood'
+  if (relationType.includes('가족') || relationType.includes('부모') || relationType.includes('자녀')) return 'wood'
   if (relationType.includes('연인') || relationType.includes('배우자')) return 'seal'
-  if (
-    relationType.includes('직장') ||
-    relationType.includes('동료') ||
-    relationType.includes('상사')
-  )
-    return 'metal'
+  if (relationType.includes('직장') || relationType.includes('동료') || relationType.includes('상사')) return 'metal'
   return 'default'
 }
 
@@ -64,9 +55,8 @@ export function formatBirthData(target: DestinyTarget): string {
     formatted += ` ${target.birth_time}`
   }
 
-  if (target.calendar_type) {
-    formatted += ` (${target.calendar_type === 'solar' ? '양력' : '음력'})`
-  }
+  // calendar_type null/미상은 양력으로 간주(앱 전역 규약) — '음력' 오표기 방지
+  formatted += ` (${isSolarCalendar(target.calendar_type) ? '양력' : '음력'})`
 
   return formatted
 }

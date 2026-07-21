@@ -21,7 +21,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
 
 /**
  * 이미지 분석(관상·손금·풍수) 결과를 analysis_history 에 저장한다 (부가 단계).
- * 스튜디오는 로그인 사용자 본인 이미지 분석이므로 본인 대상으로 기록한다.
+ * 대상(target)이 전달되면 그 대상으로, 없으면 로그인 사용자 본인으로 귀속한다(기본값 = 현행 호환).
  * 저장이 실패해도 분석 반환은 성공으로 둔다 — 관측 래퍼가 Sentry 로 남긴다(오행형 태그와 동일 철학).
  */
 async function persistImageAnalysisHistory(params: {
@@ -30,6 +30,9 @@ async function persistImageAnalysisHistory(params: {
   resultJson: CreateAnalysisHistoryParams['result_json']
   summary: string
   score?: number
+  targetId?: string
+  targetName?: string
+  targetRelation?: string
 }): Promise<void> {
   try {
     const supabase = await createClient()
@@ -40,9 +43,9 @@ async function persistImageAnalysisHistory(params: {
     const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
     await saveAnalysisHistoryObserved(
       {
-        target_id: user.id,
-        target_name: profile?.full_name || '본인',
-        target_relation: '본인',
+        target_id: params.targetId ?? user.id,
+        target_name: params.targetName ?? profile?.full_name ?? '본인',
+        target_relation: params.targetRelation ?? '본인',
         category: params.category,
         context_mode: params.contextMode,
         result_json: params.resultJson,
@@ -296,10 +299,11 @@ export interface InteriorAnalysisResult {
 export async function analyzeFaceForDestiny(
   imageBase64: string,
   goal: FaceDestinyGoal,
-  sajuContext?: { dayGan?: string; currentAge?: number }
+  sajuContext?: { dayGan?: string; currentAge?: number },
+  target?: { id: string; name: string; relation: string }
 ): Promise<FaceAnalysisResult> {
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzeFace', imageBase64, goal, sajuContext })
+    return invokeEdgeSafe('ai-image', { action: 'analyzeFace', imageBase64, goal, sajuContext, target })
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const goalConfig = GOAL_PROMPTS[goal]
@@ -590,6 +594,9 @@ Style: Professional headshot, warm lighting, confident expression.`
       resultJson: faceResult,
       summary: firstImpression || `${goalConfig.name} 관상 분석`,
       score: estimatedScore,
+      targetId: target?.id,
+      targetName: target?.name,
+      targetRelation: target?.relation,
     })
 
     return faceResult
@@ -607,10 +614,11 @@ Style: Professional headshot, warm lighting, confident expression.`
 export async function analyzeInteriorForFengshui(
   imageBase64: string,
   theme: InteriorTheme,
-  roomType: string = '거실'
+  roomType: string = '거실',
+  target?: { id: string; name: string; relation: string }
 ): Promise<InteriorAnalysisResult> {
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType })
+    return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType, target })
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const themeConfig = INTERIOR_THEMES[theme]
@@ -893,6 +901,9 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       resultJson: { ...fengshuiResult, roomType, theme },
       summary: spaceScore?.description || `${themeConfig.name} 풍수 분석`,
       score: spaceScore?.current,
+      targetId: target?.id,
+      targetName: target?.name,
+      targetRelation: target?.relation,
     })
 
     return fengshuiResult
@@ -909,10 +920,11 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 // 3. Palm Reading Analysis - 손금 분석
 export async function analyzePalmReading(
   imageBase64: string,
-  sajuContext?: { dayGan?: string; currentAge?: number }
+  sajuContext?: { dayGan?: string; currentAge?: number },
+  target?: { id: string; name: string; relation: string }
 ): Promise<PalmAnalysisResult> {
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, sajuContext })
+    return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, sajuContext, target })
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
 
@@ -1156,6 +1168,9 @@ export async function analyzePalmReading(
       resultJson: palmResult,
       summary: '손금 분석 결과',
       score: estimatedPalmScore,
+      targetId: target?.id,
+      targetName: target?.name,
+      targetRelation: target?.relation,
     })
 
     return palmResult
@@ -1198,49 +1213,5 @@ export async function generateDestinyImage(
   }
 }
 
-// 4. Credit Check & Deduction
-// Race condition 방지: read-then-write 대신 .gte() 조건부 UPDATE 사용
-export async function checkAndDeductCredits(
-  userId: string,
-  amount: number
-): Promise<{ success: boolean; remaining?: number; error?: string }> {
-  const supabase = await createClient()
-
-  // Step 1: Read current balance for user-facing error message
-  const { data: profile, error: fetchError } = await supabase
-    .from('profiles')
-    .select('credits')
-    .eq('id', userId)
-    .single()
-
-  if (fetchError || !profile) {
-    return { success: false, error: '프로필을 찾을 수 없습니다.' }
-  }
-
-  const currentCredits = profile.credits || 0
-
-  if (currentCredits < amount) {
-    return {
-      success: false,
-      error: `크레딧이 부족합니다. (현재: ${currentCredits}, 필요: ${amount})`,
-    }
-  }
-
-  // Step 2: Conditional UPDATE with .gte() guard
-  // Even if another request deducted between Step 1 and here,
-  // .gte('credits', amount) ensures we never go negative.
-  const { data: updated, error: updateError } = await supabase
-    .from('profiles')
-    .update({ credits: currentCredits - amount })
-    .eq('id', userId)
-    .gte('credits', amount)
-    .select('credits')
-    .single()
-
-  if (updateError || !updated) {
-    logger.warn('[Credits] Conditional update failed — possible race condition', { userId, amount })
-    return { success: false, error: '크레딧 차감 중 동시 요청이 감지되었습니다. 다시 시도해주세요.' }
-  }
-
-  return { success: true, remaining: updated.credits }
-}
+// checkAndDeductCredits 제거(R-P1-7): profiles.credits 컬럼이 프로덕션에 부재(7/4 재구축) + 참조 0.
+// 실제 복채 차감은 wallets.balance(deductTalisman)로 일원화됨.

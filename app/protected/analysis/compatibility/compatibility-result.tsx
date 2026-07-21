@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Heart, ArrowLeft, Sparkles, Compass, MapPin, AlertTriangle, UserX, Swords, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { FOCUS_GROUPS, type FocusGroup } from '@/lib/domain/compatibility/focus-groups'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 
@@ -451,6 +452,8 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
           </motion.div>
         </div>
       )}
+
+      <ServiceDisclaimer className="mt-6 mb-2" />
     </div>
   )
 }

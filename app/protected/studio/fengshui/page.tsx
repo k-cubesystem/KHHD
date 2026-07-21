@@ -109,7 +109,12 @@ function FengShuiAnalysisPageContent() {
         return
       }
 
-      const result = await analyzeInteriorForFengshui(imageBase64, selectedTheme, selectedRoom)
+      const result = await analyzeInteriorForFengshui(
+        imageBase64,
+        selectedTheme,
+        selectedRoom,
+        targetMember ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship } : undefined
+      )
 
       if (!result.success) {
         const refund = await refundStudioCost('FENGSHUI')

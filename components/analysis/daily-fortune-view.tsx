@@ -13,6 +13,9 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { createClient } from '@/lib/supabase/client'
+import { PillarsStrip } from '@/components/analysis/PillarsStrip'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 interface DailyFortuneViewProps {
   userId: string
@@ -35,10 +38,32 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
   const [selectedProfileId, setSelectedProfileId] = useState<string>(initialMemberId ?? userId)
   const [missingInfo, setMissingInfo] = useState(false)
   const [pendingLoad, setPendingLoad] = useState(false)
+  const [birthInfo, setBirthInfo] = useState<{
+    birth_date: string | null
+    birth_time: string | null
+    calendar_type: string | null
+    is_leap_month: boolean | null
+  } | null>(null)
 
   useEffect(() => {
     loadProfiles().then((loaded) => loadFortune(false, loaded))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 선택 프로필의 생년월일 — 명식 스트립(PillarsStrip)용
+  useEffect(() => {
+    const sel = profiles.find((p) => p.id === selectedProfileId)
+    if (!sel) return
+    const supabase = createClient()
+    const table = sel.type === 'USER' ? 'profiles' : 'family_members'
+    void (async () => {
+      const { data } = await supabase
+        .from(table)
+        .select('birth_date, birth_time, calendar_type, is_leap_month')
+        .eq('id', sel.id)
+        .single()
+      setBirthInfo(data ?? null)
+    })()
+  }, [selectedProfileId, profiles])
 
   // 프로필 변경 시 자동 로드 제거 → 버튼 클릭 대기 상태로만 전환
   function handleProfileChange(id: string) {
@@ -170,6 +195,17 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
           </div>
         </div>
 
+        {/* 명식 4주 스트립 — 오늘의 운세 근거(원국) */}
+        {birthInfo?.birth_date && (
+          <PillarsStrip
+            birthDate={birthInfo.birth_date}
+            birthTime={birthInfo.birth_time}
+            isSolar={birthInfo.calendar_type !== 'lunar'}
+            isLeapMonth={birthInfo.is_leap_month ?? false}
+            birthTimeUnknown={!birthInfo.birth_time}
+          />
+        )}
+
         {/* 프로필 변경 후 버튼 대기 상태 */}
         {pendingLoad && !loading ? (
           <div className="flex flex-col items-center justify-center p-12 space-y-4 min-h-[200px] border border-primary/20 rounded-xl bg-surface/30">
@@ -223,6 +259,8 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
             memberName={selectedProfile?.name}
           />
         )}
+
+        {fortune && <ServiceDisclaimer className="mt-2" />}
       </div>
     </Card>
   )

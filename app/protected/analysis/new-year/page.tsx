@@ -28,6 +28,7 @@ import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destin
 import Link from 'next/link'
 import { analyzeYear2026Action, type Year2026Result } from '@/app/actions/ai/year2026'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 // --- Internal Components ---
 
@@ -555,6 +556,8 @@ function NewYear2026Content() {
                 새로운 운세 보기
               </Button>
             </div>
+
+            <ServiceDisclaimer className="mt-2" />
           </motion.div>
         )}
       </AnimatePresence>

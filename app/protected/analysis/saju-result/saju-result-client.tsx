@@ -15,6 +15,8 @@ import { GOLD_500 } from '@/lib/config/design-tokens'
 import { logger } from '@/lib/utils/logger'
 import { GA } from '@/lib/analytics/ga4'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
+import { PillarsStrip } from '@/components/analysis/PillarsStrip'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnalysisData = Record<string, any>
@@ -167,6 +169,17 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
           </button>
         )}
       </header>
+
+      {/* 명식 4주 스트립 — AI 풀이의 근거(원국) 노출 */}
+      <div className="mx-4 mb-6">
+        <PillarsStrip
+          birthDate={target.birth_date}
+          birthTime={target.birth_time}
+          isSolar={target.calendar_type !== 'lunar'}
+          isLeapMonth={target.is_leap_month ?? false}
+          birthTimeUnknown={!target.birth_time}
+        />
+      </div>
 
       {/* 행운 정보 */}
       {data.lucky && (
@@ -697,6 +710,8 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
 
       {/* 카카오톡/SNS 공유 */}
       <SajuShareSection targetId={target.id} targetName={target.name} summary={data.summary as string | undefined} />
+
+      <ServiceDisclaimer className="mt-6" />
     </div>
   )
 }

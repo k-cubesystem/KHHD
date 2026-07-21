@@ -80,7 +80,11 @@ function PalmAnalysisPageContent() {
         return
       }
 
-      const result = await analyzePalmReading(imageBase64)
+      const result = await analyzePalmReading(
+        imageBase64,
+        undefined,
+        targetMember ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship } : undefined
+      )
 
       if (!result.success) {
         const refund = await refundStudioCost('HAND')

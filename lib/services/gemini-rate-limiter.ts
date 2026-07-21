@@ -37,7 +37,7 @@ async function acquireToken(): Promise<{
     const { data, error } = await supabase.rpc('acquire_gemini_token')
     if (error) {
       // RPC 오류 시 허용 (DB 이슈로 API 차단하지 않음)
-      console.error('[Gemini RateLimit] RPC 오류, 통과 처리:', error.message)
+      logger.error('[Gemini RateLimit] RPC 오류, 통과 처리:', error.message)
       return { allowed: true, remaining: -1, model: 'unknown' }
     }
     return {
@@ -48,7 +48,7 @@ async function acquireToken(): Promise<{
     }
   } catch (e) {
     // 예외 시 허용 처리 (DB 연결 문제가 API를 막으면 안 됨)
-    console.error('[Gemini RateLimit] 예외, 통과 처리:', e)
+    logger.error('[Gemini RateLimit] 예외, 통과 처리:', e)
     return { allowed: true, remaining: -1, model: 'unknown' }
   }
 }

@@ -88,7 +88,12 @@ function FaceAnalysisPageContent() {
         return
       }
 
-      const result = await analyzeFaceForDestiny(imageBase64, selectedGoal)
+      const result = await analyzeFaceForDestiny(
+        imageBase64,
+        selectedGoal,
+        undefined,
+        targetMember ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship } : undefined
+      )
 
       if (!result.success) {
         const refund = await refundStudioCost('FACE')

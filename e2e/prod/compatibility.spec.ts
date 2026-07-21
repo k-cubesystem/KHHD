@@ -43,7 +43,7 @@ test.describe('궁합 관계 선택 · 입력 UX', () => {
     await expect(page.getByText('이 사람과 일하면 시너지가 나나요, 소모가 되나요?')).toBeVisible()
     console.log('[PASS] 질문 미리보기 칩(WORK 군) 노출')
 
-    const realErrors = errors.filter((e) => !/Minified React error #(418|423|425)/.test(e))
-    expect(realErrors, realErrors.join('\n')).toHaveLength(0)
+    // #418/#423/#425 마스킹 필터 제거(R-P1-7) — 페이지 에러를 직접 단언한다.
+    expect(errors, errors.join('\n')).toHaveLength(0)
   })
 })

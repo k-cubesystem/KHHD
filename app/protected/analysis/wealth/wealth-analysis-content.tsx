@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 interface FamilyMember {
   id: string
@@ -313,6 +314,8 @@ export function WealthAnalysisContent() {
             analysisTitle="재물운 분석"
             memberName={member?.name}
           />
+
+          <ServiceDisclaimer className="mt-2" />
         </motion.div>
       )}
 
