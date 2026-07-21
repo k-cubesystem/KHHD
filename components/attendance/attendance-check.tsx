@@ -10,7 +10,7 @@ import { checkInAttendance } from '@/app/actions/payment/attendance'
 import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { WALLET_BALANCE_KEY } from '@/hooks/use-wallet'
-
+import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 
 /* ─────────────────────────────────────────
    Types
@@ -172,11 +172,7 @@ function MonthlyCalendar({
                         ? 'text-ink-light/25'
                         : 'text-ink-light/50 hover:bg-white/5'
                 )}
-                style={
-                  isToday && !isChecked
-                    ? { animation: 'scale-pulse 2s ease-in-out 1s infinite' }
-                    : undefined
-                }
+                style={isToday && !isChecked ? { animation: 'scale-pulse 2s ease-in-out 1s infinite' } : undefined}
               >
                 {isChecked ? (
                   isToday && showStamp ? (
@@ -295,6 +291,8 @@ export function AttendanceCheck({
     return viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth())
   }, [viewYear, viewMonth, today])
 
+  const { play } = useShrineAudio()
+
   const handleCheckIn = useCallback(async () => {
     if (!canCheckIn || isChecking) return
     setIsChecking(true)
@@ -319,6 +317,7 @@ export function AttendanceCheck({
       setViewMonth(today.getMonth())
 
       setShowStamp(true)
+      play('chime') // 출석 도장 순간 효과음(F-4, 전역 음소거 존중)
       setTimeout(() => {
         setShowStamp(false)
         setShowParticles(true)
@@ -340,7 +339,7 @@ export function AttendanceCheck({
     } else {
       toast.error(result.error || '출석 체크에 실패했습니다.')
     }
-  }, [canCheckIn, isChecking, queryClient, today])
+  }, [canCheckIn, isChecking, queryClient, today, play])
 
   const isWeekComplete = weekCount >= 7
 
@@ -515,9 +514,7 @@ export function AttendanceCheck({
         {/* ── Info Footer ── */}
         <div className="flex items-center justify-between pt-1 border-t border-white/5">
           <p className="text-[9px] text-ink-light/35">매일 1만냥 · 7일 개근 시 +3만냥 보너스</p>
-          <p className="text-[9px] font-bold text-gold-500/60">
-            이달 {totalBokchae}만냥
-          </p>
+          <p className="text-[9px] font-bold text-gold-500/60">이달 {totalBokchae}만냥</p>
         </div>
       </CardContent>
     </Card>

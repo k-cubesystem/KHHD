@@ -248,6 +248,7 @@ export function DeityPantheon({ catalog, bonds, familyMemberId }: Props) {
           deity={reveal.deity}
           mode={reveal.mode}
           pending={pending}
+          backgroundVideoId="summon-ritual"
           onClose={() => setReveal(null)}
           onSeatNow={(d) => {
             setReveal(null)

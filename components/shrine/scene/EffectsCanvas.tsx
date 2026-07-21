@@ -10,7 +10,7 @@
 
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react'
 
-export type EffectKind = 'flame' | 'smoke' | 'petals' | 'sparkle'
+export type EffectKind = 'flame' | 'smoke' | 'petals' | 'sparkle' | 'ripple' | 'resonance'
 
 export interface EffectsHandle {
   emit: (kind: EffectKind, xPct: number, yPct: number) => void
@@ -66,6 +66,10 @@ const COLORS = {
   smoke: ['#c8bfa8', '#8c8478'],
   petals: ['#f4b8d0', '#f4e4ba', '#e8a0c0'],
   sparkle: ['#f4e4ba', '#c9a84c', '#ffffff'],
+  // 소원 빌기 — 물결처럼 은은히 퍼지는 청백
+  ripple: ['#a8c5da', '#dbeafe', '#ffffff'],
+  // 오행 공명 — 오방색이 섞여 방사되는 공명
+  resonance: ['#f4e4ba', '#c9a84c', '#4A7C59', '#C07055', '#4A5D7C'],
 }
 
 export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(function EffectsCanvas(
@@ -110,7 +114,17 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
     const x = (px / 100) * rect.width
     const y = (py / 100) * rect.height
     const pool = poolRef.current
-    const count = reducedRef.current ? 1 : kind === 'flame' ? 2 : kind === 'sparkle' ? 8 : 4
+    const count = reducedRef.current
+      ? 1
+      : kind === 'flame'
+        ? 2
+        : kind === 'sparkle'
+          ? 8
+          : kind === 'resonance'
+            ? 10
+            : kind === 'ripple'
+              ? 6
+              : 4
     const palette = COLORS[kind]
     for (let n = 0; n < count; n++) {
       const p = pool.find((q) => !q.active)
@@ -138,6 +152,24 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
         p.maxLife = 90
         p.size = 3 + Math.random() * 2
         p.drift = (Math.random() - 0.5) * 0.05
+      } else if (kind === 'ripple') {
+        // 소원 빌기 — 방사상으로 느리게 퍼지는 물결
+        const ang = Math.random() * Math.PI * 2
+        const spd = 0.3 + Math.random() * 0.35
+        p.vx = Math.cos(ang) * spd
+        p.vy = Math.sin(ang) * spd
+        p.maxLife = 60
+        p.size = 2 + Math.random() * 2.5
+        p.drift = 0
+      } else if (kind === 'resonance') {
+        // 오행 공명 — 방사상 강한 버스트
+        const ang = Math.random() * Math.PI * 2
+        const spd = 0.7 + Math.random() * 1.0
+        p.vx = Math.cos(ang) * spd
+        p.vy = Math.sin(ang) * spd
+        p.maxLife = 44
+        p.size = 1.8 + Math.random() * 2
+        p.drift = 0
       } else {
         // sparkle
         const ang = Math.random() * Math.PI * 2

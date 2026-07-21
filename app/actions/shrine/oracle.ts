@@ -127,6 +127,17 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
       return null
     }
 
+    // 신탁 도착 알림 — 신당 미방문 시 영영 모르는 재방문 루프의 구멍 보완.
+    // 새 신탁 생성 시에만 삽입되며(미확인 신탁이 있으면 위에서 조기 반환), oracle 당 1회로 자연 멱등.
+    const { error: notifyErr } = await admin.from('notifications').insert({
+      user_id: user.id,
+      title: `「${deity.name}」이 신탁을 내렸습니다`,
+      message: message.length > 60 ? message.slice(0, 60) + '…' : message,
+      type: 'deity_oracle',
+      is_read: false,
+    })
+    if (notifyErr) logger.warn('[getRoomOracle] oracle notification insert failed:', notifyErr)
+
     return { id: inserted.id, message, emotion, deityCode: deity.code, deityName: deity.name }
   } catch (e) {
     logger.warn('[getRoomOracle] skipped:', e)

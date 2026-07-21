@@ -52,6 +52,7 @@ export interface GuideData {
 const NOTICE_CTA: Record<string, { label: string; href: string }> = {
   chat_expiry_notice: { label: '기억의 함 보러가기', href: '/protected/store?tab=items' },
   membership_deity_gift: { label: '신위전에서 좌정하기', href: '/protected/shrine/deities' },
+  deity_oracle: { label: '신당 가기', href: '/protected/shrine' },
 }
 
 /** 전 페이지 신 가이드 초기 데이터 — 마운트 시 1회 로드. */

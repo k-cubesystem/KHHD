@@ -22,6 +22,7 @@ import {
 } from '@/app/actions/ai/shaman-chat'
 import { useFamilyMembers } from '@/hooks/use-family-members'
 import { useTts } from '@/hooks/useTts'
+import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -449,6 +450,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   // 인연(緣) 레벨업 순간의 아바타 발광 연출
   const [bondFx, setBondFx] = useState(false)
   const [deityEmotion, setDeityEmotion] = useState<string>('neutral')
+  const { play: playFx } = useShrineAudio()
 
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
   const { supported: ttsSupported, speaking: ttsSpeaking, speak, stop: ttsStop } = useTts()
@@ -651,9 +653,10 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         if (result.deityCode) setDeityCode(result.deityCode)
         if (result.emotion) setDeityEmotion(result.emotion)
 
-        // 인연(緣) 레벨업 — 아바타 발광 + 골드 토스트
+        // 인연(緣) 레벨업 — 아바타 발광 + 골드 토스트 + 바라 효과음(F-4)
         if (result.bondLeveledUp) {
           setBondFx(true)
+          playFx('bara')
           window.setTimeout(() => setBondFx(false), 3200)
           toast.success(`緣이 깊어졌습니다 — 「${result.bondLevelName ?? ''}」`, {
             description: `${initialDeity?.name ?? '主神'}과의 인연이 새로운 단계에 이르렀습니다`,

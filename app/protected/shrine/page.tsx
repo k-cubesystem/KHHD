@@ -5,6 +5,9 @@ import { ShrineRoomClient } from '@/components/shrine/scene/ShrineRoomClient'
 import { ShrineSetupForm } from '@/components/shrine/ShrineSetupForm'
 import { ShrineTargetTabs, type ShrineTargetTab } from '@/components/shrine/ShrineTargetTabs'
 import { FamilySummonGate } from '@/components/shrine/FamilySummonGate'
+import { getWishes } from '@/app/actions/shrine/shrine-wishes'
+import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
+import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import { EL_KO } from '@/lib/domain/shrine/energy'
 
 export default async function ShrinePage({ searchParams }: { searchParams: Promise<{ member?: string }> }) {
@@ -49,6 +52,9 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
     )
   }
 
+  // 오너도 자기 신당의 소원·방명록을 볼 수 있게(F-2). wishCount 는 ShrineRoomClient 배지에 표시.
+  const { wishes } = await getWishes(scene.shrineId, 0, 10)
+
   return (
     <div className="min-h-screen px-1 py-4">
       <div className="w-full max-w-[520px] mx-auto">{targetTabs}</div>
@@ -61,6 +67,12 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
           yongsinKo={scene.profile.yongsin ? EL_KO[scene.profile.yongsin] : null}
         />
       )}
+
+      {/* 오너 소원 기원 + 방명록 열람 (F-2) */}
+      <div className="w-full max-w-[430px] mx-auto mt-5 space-y-5">
+        <ShrineWishForm shrineId={scene.shrineId} isOwner />
+        <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} />
+      </div>
     </div>
   )
 }

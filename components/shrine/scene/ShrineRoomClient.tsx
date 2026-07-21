@@ -199,6 +199,7 @@ export function ShrineRoomClient({ scene }: Props) {
       seenResonance.current.add(hit.element)
       spawnRing(hit.cx, hit.cy, EL_COLOR[hit.element])
       effectsRef.current?.emit('sparkle', hit.cx, hit.cy)
+      effectsRef.current?.emit('resonance', hit.cx, hit.cy) // 오행 공명 파티클(F-5)
       play('bara')
       toast.success(`⚡ 오행 공명! ${EL_KO[hit.element]} 기운 +5`)
       keeperSay(resonanceLine(hit.element))
@@ -245,6 +246,7 @@ export function ShrineRoomClient({ scene }: Props) {
         play('bell')
         setBounce((b) => b + 1)
         effectsRef.current?.emit('sparkle', KEEPER_POS.x, KEEPER_POS.y)
+        effectsRef.current?.emit('petals', KEEPER_POS.x, KEEPER_POS.y) // 공물 헌납 파티클(F-5)
         toast(`🔮 신당지기가 ${item.name}을(를) 받았습니다`)
         keeperSay(giveLine(Date.now()))
         if (isOwner) void recordKeeperGift(item.name)
@@ -740,6 +742,12 @@ export function ShrineRoomClient({ scene }: Props) {
             style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
           >
             TODAY <b style={{ color: 'var(--th-accent)' }}>{scene.visitorCount}</b>
+          </div>
+          <div
+            className="text-[8.5px] tracking-[0.06em] px-2 py-[3px] rounded-full text-ink-primary/75 tabular-nums"
+            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
+          >
+            소원 <b style={{ color: 'var(--th-accent)' }}>{scene.wishCount}</b>
           </div>
           <button
             onClick={toggleFullscreen}

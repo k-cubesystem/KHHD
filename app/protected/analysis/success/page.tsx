@@ -7,6 +7,7 @@ import { confirmPayment } from '@/app/actions/payment/payment'
 import { startFateAnalysis } from '@/app/actions/core/analysis'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
 
@@ -43,10 +44,17 @@ function PaymentProcessor() {
         const confirmRes = await confirmPayment(paymentKey, orderId, credits)
         const credited = confirmRes && typeof confirmRes.creditedTotal === 'number' ? confirmRes.creditedTotal : credits
         GA.bokchaeCharge(credits * 10000)
+        // 충전 완료 연출 — 컨페티(F-4)
+        confetti({
+          particleCount: 120,
+          spread: 72,
+          origin: { y: 0.6 },
+          colors: ['#C9A84C', '#E8D5A0', '#9E2B2B', '#ffffff'],
+        })
         toast.success(
           confirmRes?.isFirstPurchase
-            ? `첫 충전 2배! 복채 ${credited}만냥이 지급되었습니다.`
-            : `결제 완료! 복채 ${credited}만냥이 지급되었습니다.`
+            ? `첫 충전 2배! 복채 ${credited}만냥이 들어왔습니다 🎉`
+            : `복채 ${credited}만냥이 들어왔습니다 🎉`
         )
 
         // 3. 분석 시작

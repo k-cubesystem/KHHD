@@ -37,6 +37,7 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
   const [wishText, setWishText] = useState('')
   const [visitorName, setVisitorName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [ripple, setRipple] = useState(0) // 소원 빌기 성공 시 물결 파문(F-5)
 
   const handleSubmit = useCallback(async () => {
     if (wishText.trim().length < 5) {
@@ -56,6 +57,7 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
 
     if (result.success) {
       toast.success('소원을 기원했습니다 🙏')
+      setRipple((r) => r + 1)
       setWishText('')
       setCategory('')
       setVisitorName('')
@@ -65,7 +67,17 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
   }, [shrineId, wishText, category, visitorName])
 
   return (
-    <div className="rounded-2xl p-5 space-y-4 hanji-card border border-gold-500/[0.12]">
+    <div className="relative overflow-hidden rounded-2xl p-5 space-y-4 hanji-card border border-gold-500/[0.12]">
+      {ripple > 0 && (
+        <motion.span
+          key={ripple}
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-gold-500/40"
+          initial={{ scale: 0, opacity: 0.7 }}
+          animate={{ scale: 5, opacity: 0 }}
+          transition={{ duration: 1.1, ease: 'easeOut' }}
+        />
+      )}
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-gold-500/60" />
         <h3 className="text-ink-light font-serif text-sm font-bold">
