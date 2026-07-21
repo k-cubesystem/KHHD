@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { ACTION_TO_PROMPT_KEY } from '@/lib/domain/gemini/actions'
+import { KRW_PER_TALISMAN } from '@/lib/constants'
 
 export interface GeminiDailyStat {
   stat_date: string
@@ -58,6 +60,68 @@ export interface GeminiRpmConfig {
   window_seconds: number
   model: string
   refill_at: string
+}
+
+export interface GeminiCostVsPrice {
+  action_type: string
+  call_count: number
+  total_cost_usd: number
+  /** 호출당 평균 원가(₩, 반올림) */
+  avg_cost_krw: number
+  /** 현재 복채 가격(만냥) — ai_prompts.talisman_cost. null = 미설정/내부기능 */
+  bokchae_cost: number | null
+  /** 복채 가격 원화 환산(₩) */
+  bokchae_krw: number | null
+  /** 원가율(%) = 호출당 원가 ÷ 복채 매출. null = 무료/미설정 */
+  cost_ratio_pct: number | null
+}
+
+/**
+ * 기능별 "원가 vs 복채" — 가격 책정 근거.
+ * get_gemini_action_stats(원가) 를 ai_prompts.talisman_cost(복채)와 조인한다.
+ */
+export async function getGeminiCostVsPrice(daysBack: number = 30): Promise<GeminiCostVsPrice[]> {
+  const supabase = await createClient()
+  const [statsRes, promptsRes, usdKrwRate] = await Promise.all([
+    supabase.rpc('get_gemini_action_stats', { days_back: daysBack }),
+    supabase.from('ai_prompts').select('key, talisman_cost'),
+    getUsdKrwRate(),
+  ])
+
+  if (statsRes.error) {
+    logger.error('[gemini-usage] getGeminiCostVsPrice stats error:', statsRes.error)
+    return []
+  }
+
+  const priceByKey = new Map<string, number>()
+  for (const row of (promptsRes.data ?? []) as Array<{ key: string; talisman_cost: number | null }>) {
+    if (row.talisman_cost !== null) priceByKey.set(row.key, row.talisman_cost)
+  }
+
+  const stats = (statsRes.data ?? []) as GeminiActionStat[]
+  return stats.map((s): GeminiCostVsPrice => {
+    const calls = Number(s.call_count) || 0
+    const totalUsd = Number(s.total_cost_usd) || 0
+    const avgCostKrw = calls > 0 ? Math.round((totalUsd / calls) * usdKrwRate) : 0
+
+    const promptKey = ACTION_TO_PROMPT_KEY[s.action_type] ?? null
+    const bokchaeCost = promptKey ? (priceByKey.get(promptKey) ?? null) : null
+    const bokchaeKrw = bokchaeCost !== null ? bokchaeCost * KRW_PER_TALISMAN : null
+
+    // 원가율: 복채 매출 대비 원가. 무료(0)·미설정(null)은 산정 불가 → null
+    const costRatioPct =
+      bokchaeKrw !== null && bokchaeKrw > 0 ? Math.round((avgCostKrw / bokchaeKrw) * 1000) / 10 : null
+
+    return {
+      action_type: s.action_type,
+      call_count: calls,
+      total_cost_usd: totalUsd,
+      avg_cost_krw: avgCostKrw,
+      bokchae_cost: bokchaeCost,
+      bokchae_krw: bokchaeKrw,
+      cost_ratio_pct: costRatioPct,
+    }
+  })
 }
 
 export async function getGeminiDailyStats(daysBack: number = 30): Promise<GeminiDailyStat[]> {

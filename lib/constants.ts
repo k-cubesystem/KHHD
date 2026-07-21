@@ -50,6 +50,11 @@ export const TALISMAN_PACKAGES = [
   },
 ] as const
 
+// 복채 1만냥의 대표 원화가 (BEST 팩 기준) — 원가율 계산용.
+// medium(BEST): 10만냥 = 29,900원 → 2,990원/만냥. 가격 개편 시 위 팩만 바꾸면 동기화.
+const BEST_TALISMAN_PACK = TALISMAN_PACKAGES.find((p) => 'badge' in p && p.badge === 'BEST') ?? TALISMAN_PACKAGES[1]
+export const KRW_PER_TALISMAN = Math.round(BEST_TALISMAN_PACK.price / BEST_TALISMAN_PACK.talismans)
+
 // Mission Categories for Family Management (Legacy - kept for compatibility)
 // Mission Categories with Updated Paths
 export const MISSION_CATEGORIES = [

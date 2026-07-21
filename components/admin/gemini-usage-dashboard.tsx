@@ -16,17 +16,20 @@ import {
 import { Zap, TrendingUp, AlertTriangle, CheckCircle, RefreshCw, Save, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getActionLabel } from '@/lib/domain/gemini/actions'
+import { KRW_PER_TALISMAN } from '@/lib/constants'
 import {
   getGeminiDailyStats,
   getGeminiActionStats,
   getGeminiTodaySummary,
   getGeminiRecentLogs,
+  getGeminiCostVsPrice,
   updateGeminiRpm,
   type GeminiDailyStat,
   type GeminiActionStat,
   type GeminiTodaySummary,
   type GeminiRecentLog,
   type GeminiRpmConfig,
+  type GeminiCostVsPrice,
 } from '@/app/actions/admin/gemini-usage'
 
 // ─────────────────────────────────────────
@@ -102,6 +105,7 @@ interface Props {
   initialActionStats: GeminiActionStat[]
   initialLogs: GeminiRecentLog[]
   initialRpmConfig: GeminiRpmConfig | null
+  initialCostVsPrice: GeminiCostVsPrice[]
   usdKrwRate: number
 }
 
@@ -114,12 +118,14 @@ export function GeminiUsageDashboard({
   initialActionStats,
   initialLogs,
   initialRpmConfig,
+  initialCostVsPrice,
   usdKrwRate,
 }: Props) {
   const [period, setPeriod] = useState<7 | 30 | 90>(30)
   const [summary, setSummary] = useState(initialSummary)
   const [dailyStats, setDailyStats] = useState(initialDailyStats)
   const [actionStats, setActionStats] = useState(initialActionStats)
+  const [costVsPrice, setCostVsPrice] = useState(initialCostVsPrice)
   const [logs, setLogs] = useState(initialLogs)
   const [rpmConfig, setRpmConfig] = useState(initialRpmConfig)
   const [rpmInput, setRpmInput] = useState(String(initialRpmConfig?.max_tokens ?? 15))
@@ -132,16 +138,18 @@ export function GeminiUsageDashboard({
   // ── 데이터 새로고침 ──────────────────────
   function refresh() {
     startRefresh(async () => {
-      const [newSummary, newDaily, newAction, newLogs] = await Promise.all([
+      const [newSummary, newDaily, newAction, newLogs, newCvp] = await Promise.all([
         getGeminiTodaySummary(),
         getGeminiDailyStats(period),
         getGeminiActionStats(period),
         getGeminiRecentLogs(50),
+        getGeminiCostVsPrice(period),
       ])
       setSummary(newSummary)
       setDailyStats(newDaily)
       setActionStats(newAction)
       setLogs(newLogs)
+      setCostVsPrice(newCvp)
     })
   }
 
@@ -149,9 +157,14 @@ export function GeminiUsageDashboard({
   function changePeriod(p: 7 | 30 | 90) {
     setPeriod(p)
     startRefresh(async () => {
-      const [newDaily, newAction] = await Promise.all([getGeminiDailyStats(p), getGeminiActionStats(p)])
+      const [newDaily, newAction, newCvp] = await Promise.all([
+        getGeminiDailyStats(p),
+        getGeminiActionStats(p),
+        getGeminiCostVsPrice(p),
+      ])
       setDailyStats(newDaily)
       setActionStats(newAction)
+      setCostVsPrice(newCvp)
     })
   }
 
@@ -181,7 +194,15 @@ export function GeminiUsageDashboard({
     name: getActionLabel(s.action_type),
     calls: Number(s.call_count),
     tokens: Number(s.total_tokens),
+    costKrw: Math.round(Number(s.total_cost_usd) * usdKrwRate),
   }))
+
+  // 원가 큰 순 정렬(비용 차트·테이블용)
+  const costRows = [...costVsPrice].sort((a, b) => b.total_cost_usd - a.total_cost_usd)
+  const costChartData = costRows
+    .slice(0, 10)
+    .map((s) => ({ name: getActionLabel(s.action_type), costKrw: Math.round(s.total_cost_usd * usdKrwRate) }))
+    .filter((r) => r.costKrw > 0)
 
   // ── 요약 카드 데이터 ──────────────────────
   const errorRate = summary.total_calls > 0 ? ((summary.error_calls / summary.total_calls) * 100).toFixed(1) : '0.0'
@@ -360,6 +381,92 @@ export function GeminiUsageDashboard({
             <p className="text-[10px] text-stone-700">DB: get_gemini_action_stats RPC 확인 필요</p>
           </div>
         )}
+      </div>
+
+      {/* ── 기능별 비용 차트 (₩) ──────────────── */}
+      <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl p-4">
+        <h3 className="text-xs font-bold text-stone-300 mb-4">기능별 예상 비용 ({PERIOD_LABELS[period]}) · ₩</h3>
+        {costChartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={costChartData} margin={{ top: 0, right: 8, left: -20, bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 9, fill: '#6b7280' }} tickFormatter={(v) => `₩${Number(v).toLocaleString()}`} />
+              <Tooltip
+                contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8 }}
+                labelStyle={{ color: '#9ca3af', fontSize: 10 }}
+                itemStyle={{ fontSize: 10 }}
+                formatter={(v) => [`₩${Number(v ?? 0).toLocaleString()}`, '예상 비용']}
+              />
+              <Bar dataKey="costKrw" name="예상 비용(₩)" fill="#fbbf24" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-stone-600">
+            <CheckCircle className="w-8 h-8 opacity-40" />
+            <p className="text-xs">기간 내 비용 데이터가 없습니다.</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── 원가 vs 복채 테이블 (가격 책정 근거) ── */}
+      <div className="bg-ink-900/60 border border-stone-700/40 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-stone-700/40">
+          <h3 className="text-xs font-bold text-stone-300">원가 vs 복채 ({PERIOD_LABELS[period]})</h3>
+          <p className="text-[10px] text-stone-500 mt-0.5">
+            호출당 AI 원가와 현재 복채 가격 대비 원가율 · 1만냥 ≈ ₩{KRW_PER_TALISMAN.toLocaleString()}
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[10px]">
+            <thead>
+              <tr className="border-b border-stone-700/40 text-stone-500">
+                <th className="text-left px-3 py-2 whitespace-nowrap">기능</th>
+                <th className="text-right px-3 py-2 whitespace-nowrap">호출 수</th>
+                <th className="text-right px-3 py-2 whitespace-nowrap">호출당 원가</th>
+                <th className="text-right px-3 py-2 whitespace-nowrap">복채</th>
+                <th className="text-right px-3 py-2 whitespace-nowrap">원가율</th>
+              </tr>
+            </thead>
+            <tbody>
+              {costRows.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-stone-600">
+                    데이터 없음
+                  </td>
+                </tr>
+              )}
+              {costRows.map((r) => (
+                <tr key={r.action_type} className="border-b border-stone-800/50 hover:bg-ink-800/30 transition-colors">
+                  <td className="px-3 py-1.5 text-stone-300 whitespace-nowrap">{getActionLabel(r.action_type)}</td>
+                  <td className="px-3 py-1.5 text-right text-stone-400">{r.call_count.toLocaleString()}</td>
+                  <td className="px-3 py-1.5 text-right text-gold-500">₩{r.avg_cost_krw.toLocaleString()}</td>
+                  <td className="px-3 py-1.5 text-right text-stone-400 whitespace-nowrap">
+                    {r.bokchae_cost === null ? '—' : r.bokchae_cost === 0 ? '무료' : `${r.bokchae_cost}만냥`}
+                  </td>
+                  <td className="px-3 py-1.5 text-right whitespace-nowrap">
+                    {r.cost_ratio_pct === null ? (
+                      <span className="text-stone-600">—</span>
+                    ) : (
+                      <span
+                        className={cn(
+                          'font-bold',
+                          r.cost_ratio_pct > 50
+                            ? 'text-red-400'
+                            : r.cost_ratio_pct > 20
+                              ? 'text-amber-400'
+                              : 'text-primary-dim'
+                        )}
+                      >
+                        {r.cost_ratio_pct}%
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ── RPM 관리 ─────────────────────────── */}

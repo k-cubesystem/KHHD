@@ -10,32 +10,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
-
-// ============================================================
-// 모델별 토큰 단가 (USD per 1M tokens, 2026년 기준)
-// ============================================================
-const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  'gemini-2.0-flash': { input: 0.075, output: 0.3 },
-  'gemini-2.0-flash-lite': { input: 0.0375, output: 0.15 },
-  'gemini-2.0-flash-exp': { input: 0.075, output: 0.3 },
-  'gemini-1.5-flash': { input: 0.075, output: 0.3 },
-  'gemini-1.5-pro': { input: 1.25, output: 5.0 },
-  'gemini-3.5-flash': { input: 0.075, output: 0.3 },
-  'gemini-3-flash-preview': { input: 0.075, output: 0.3 },
-  'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
-  'gemini-2.5-flash-preview': { input: 0.075, output: 0.3 },
-  // Claude models
-  'claude-opus-4-6': { input: 15.0, output: 75.0 },
-  'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
-}
-
-function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
-  const pricing = MODEL_PRICING[model as keyof typeof MODEL_PRICING] ?? {
-    input: 0.075,
-    output: 0.3,
-  }
-  return (inputTokens * pricing.input + outputTokens * pricing.output) / 1_000_000
-}
+import { estimateCostUsd, isImageModel } from '@/lib/domain/gemini/pricing'
 
 // ============================================================
 // RateLimitError: sleep 없이 즉시 throw (Vercel 타임아웃 방지)
@@ -103,12 +78,16 @@ export async function logUsage(params: LogUsageParams): Promise<void> {
   try {
     const supabase = createAdminClient()
     const totalTokens = (params.inputTokens ?? 0) + (params.outputTokens ?? 0)
-    const estimatedCostUsd =
+    // 이미지 모델은 장당 고정 과금이라 토큰이 없어도(0/null) 비용을 산정한다.
+    // 텍스트 모델은 입력·출력 토큰이 모두 있을 때만 산정(rate_limited/error 등은 null).
+    const hasTokens =
       params.inputTokens !== null &&
       params.inputTokens !== undefined &&
       params.outputTokens !== null &&
       params.outputTokens !== undefined
-        ? estimateCostUsd(params.model, params.inputTokens, params.outputTokens)
+    const estimatedCostUsd =
+      isImageModel(params.model) || hasTokens
+        ? estimateCostUsd(params.model, params.inputTokens ?? 0, params.outputTokens ?? 0)
         : null
 
     await supabase.from('gemini_api_logs').insert({

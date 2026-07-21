@@ -5,18 +5,20 @@ import {
   getGeminiActionStats,
   getGeminiRecentLogs,
   getGeminiRpmConfig,
+  getGeminiCostVsPrice,
   getUsdKrwRate,
 } from '@/app/actions/admin/gemini-usage'
 
 export const dynamic = 'force-dynamic'
 
 export default async function GeminiUsagePage() {
-  const [summary, dailyStats, actionStats, logs, rpmConfig, usdKrwRate] = await Promise.all([
+  const [summary, dailyStats, actionStats, logs, rpmConfig, costVsPrice, usdKrwRate] = await Promise.all([
     getGeminiTodaySummary(),
     getGeminiDailyStats(30),
     getGeminiActionStats(30),
     getGeminiRecentLogs(50),
     getGeminiRpmConfig(),
+    getGeminiCostVsPrice(30),
     getUsdKrwRate(),
   ])
 
@@ -27,6 +29,7 @@ export default async function GeminiUsagePage() {
       initialActionStats={actionStats}
       initialLogs={logs}
       initialRpmConfig={rpmConfig}
+      initialCostVsPrice={costVsPrice}
       usdKrwRate={usdKrwRate}
     />
   )
