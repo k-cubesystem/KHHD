@@ -167,7 +167,7 @@ export async function analyzeCheonjiinAction(
       name: target.name,
       gender: target.gender === 'male' ? '남성' : '여성',
       birthDate: target.birth_date,
-      birthTime: target.birth_time || '00:00',
+      birthTime: target.birth_time || '시간 미상 (정오 기준 계산)',
       age: age.toString(),
 
       // 지(地) - 풍수 데이터 (주소)
@@ -185,9 +185,11 @@ export async function analyzeCheonjiinAction(
       {
         name: target.name,
         birthDate: target.birth_date,
-        birthTime: target.birth_time || '00:00',
+        birthTime: target.birth_time || '12:00',
         gender: (target.gender || 'male') as 'male' | 'female',
         isSolar: target.calendar_type !== 'lunar',
+        isLeapMonth: target.is_leap_month ?? false,
+        birthTimeUnknown: !target.birth_time,
       },
       'CHEONJIIN',
       '',

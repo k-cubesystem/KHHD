@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Save, BookOpen, Compass, User as UserIcon, Sparkles, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ interface SettingsProfile {
   birth_date: string | null
   birth_time: string | null
   calendar_type: string | null
+  is_leap_month?: boolean | null
   home_address: string | null
   work_address: string | null
 }
@@ -42,6 +44,7 @@ interface SettingsFamilyMember {
   birth_date: string | null
   birth_time: string | null
   calendar_type: string | null
+  is_leap_month?: boolean | null
 }
 
 export function SettingsForm({
@@ -71,10 +74,15 @@ export function SettingsForm({
 
   // 천(天) - 사주 정보 (family_members 우선)
   const [birthDate, setBirthDate] = useState(familyMember?.birth_date || profile?.birth_date || '')
-  const [birthTime, setBirthTime] = useState<string | undefined>(
-    familyMember?.birth_time || profile?.birth_time || undefined
+  // 생시: 저장값이 없으면 '시간 모름'(unknown)으로 명시 — 조용한 12:00 강제 대신 정직한 표시
+  const savedBirthTime = familyMember?.birth_time || profile?.birth_time || ''
+  const [birthTime, setBirthTime] = useState<string>(savedBirthTime || 'unknown')
+  // 달력: 레거시 'lunar_leap' → 'lunar' + 윤달 true 로 정규화(calendar_type 은 solar|lunar 로 통일)
+  const rawCalendar = familyMember?.calendar_type || profile?.calendar_type || 'solar'
+  const [calendarType, setCalendarType] = useState(rawCalendar === 'lunar_leap' ? 'lunar' : rawCalendar)
+  const [isLeapMonth, setIsLeapMonth] = useState<boolean>(
+    rawCalendar === 'lunar_leap' || familyMember?.is_leap_month === true || profile?.is_leap_month === true
   )
-  const [calendarType, setCalendarType] = useState(familyMember?.calendar_type || profile?.calendar_type || 'solar')
 
   // 지(地) - 풍수 정보 (profiles)
   const [homeAddress, setHomeAddress] = useState(profile?.home_address || '')
@@ -89,14 +97,18 @@ export function SettingsForm({
 
     try {
       const finalAvatarUrl = avatarChoice === 'five' ? fiveSrc : avatarChoice === 'social' ? socialAvatarUrl || '' : ''
+      // 시간 모름(unknown) → 빈 값(서버에서 null 저장). 윤달은 음력일 때만 유효.
+      const resolvedBirthTime = birthTime === 'unknown' ? '' : birthTime
+      const resolvedLeap = calendarType === 'lunar' ? isLeapMonth : false
 
       // 1. 프로필 저장 (서버 액션 - admin client로 RLS 우회)
       const profileResult = await saveProfile({
         fullName: name,
         gender,
         birthDate,
-        birthTime: birthTime || '',
+        birthTime: resolvedBirthTime,
         calendarType,
+        isLeapMonth: resolvedLeap,
         homeAddress,
         workAddress,
         avatarUrl: finalAvatarUrl,
@@ -120,8 +132,9 @@ export function SettingsForm({
         name,
         gender,
         birthDate,
-        birthTime: birthTime || '',
+        birthTime: resolvedBirthTime,
         calendarType,
+        isLeapMonth: resolvedLeap,
       })
 
       if (!familyResult.success) {
@@ -324,6 +337,7 @@ export function SettingsForm({
                   <SelectValue placeholder="시간 선택" />
                 </SelectTrigger>
                 <SelectContent className="bg-surface border-primary/20">
+                  <SelectItem value="unknown">시간 모름 (정오 기준 계산)</SelectItem>
                   <SelectItem value="23:00">子時 (자시) 23:00-01:00</SelectItem>
                   <SelectItem value="01:00">丑時 (축시) 01:00-03:00</SelectItem>
                   <SelectItem value="03:00">寅時 (인시) 03:00-05:00</SelectItem>
@@ -350,9 +364,18 @@ export function SettingsForm({
               <SelectContent className="bg-surface border-primary/20">
                 <SelectItem value="solar">양력</SelectItem>
                 <SelectItem value="lunar">음력</SelectItem>
-                <SelectItem value="lunar_leap">음력(윤달)</SelectItem>
               </SelectContent>
             </Select>
+            {calendarType === 'lunar' && (
+              <label className="flex items-center gap-2 pt-1.5 cursor-pointer">
+                <Checkbox
+                  checked={isLeapMonth}
+                  onCheckedChange={(v) => setIsLeapMonth(v === true)}
+                  className="border-primary"
+                />
+                <span className="text-sm font-light text-ink-light">윤달(閏月)에 태어났어요</span>
+              </label>
+            )}
           </div>
         </CardContent>
       </Card>

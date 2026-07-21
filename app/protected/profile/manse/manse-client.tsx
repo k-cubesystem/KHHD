@@ -285,6 +285,7 @@ interface Member {
   birth_time: string | null
   calendar_type: string
   gender: string
+  is_leap_month?: boolean | null
 }
 
 interface TermDialogState {
@@ -326,8 +327,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     if (selectedMember?.birth_date && selectedMember.birth_date.trim()) {
       saju = getSajuData(
         selectedMember.birth_date,
-        selectedMember.birth_time || '00:00',
-        isSolarCalendar(selectedMember.calendar_type)
+        selectedMember.birth_time || '12:00',
+        isSolarCalendar(selectedMember.calendar_type),
+        selectedMember.is_leap_month ?? false
       )
     }
   } catch (error) {
@@ -374,7 +376,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             selectedMember.birth_date,
             selectedMember.gender || 'male',
             saju,
-            selectedMember.birth_time || '00:00',
+            selectedMember.birth_time || '12:00',
             isSolarCalendar(selectedMember.calendar_type)
           )
         : []
@@ -394,7 +396,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     if (selectedMember && selectedMember.birth_date) {
       advancedManse = analyzeManseAdvanced(
         selectedMember.birth_date,
-        selectedMember.birth_time || '00:00',
+        selectedMember.birth_time || '12:00',
         (selectedMember.gender as 'male' | 'female') || 'male',
         isSolarCalendar(selectedMember.calendar_type)
       )

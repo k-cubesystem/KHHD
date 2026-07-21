@@ -33,6 +33,7 @@ export interface DestinyTarget {
   target_type: DestinyTargetType
   created_at: string
   updated_at: string
+  is_leap_month: boolean | null
 }
 
 /**
@@ -58,7 +59,9 @@ export async function getDestinyTargets(): Promise<DestinyTarget[]> {
   // View를 직접 쿼리 (RPC 함수 우회) — 필요 컬럼만 선택
   const { data, error } = await supabase
     .from('v_destiny_targets')
-    .select('id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at')
+    .select(
+      'id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at, is_leap_month'
+    )
     .eq('owner_id', user.id)
     .order('target_type', { ascending: false }) // self가 먼저 (descending으로 'self' > 'family')
     .order('created_at', { ascending: true })
@@ -92,7 +95,9 @@ export async function getDestinyTarget(targetId: string): Promise<DestinyTarget 
   // View에서 직접 조회 — 필요 컬럼만 선택
   const { data, error } = await supabase
     .from('v_destiny_targets')
-    .select('id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at')
+    .select(
+      'id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at, is_leap_month'
+    )
     .eq('id', targetId)
     .eq('owner_id', user.id)
     .single()
@@ -127,10 +132,7 @@ export async function getDestinyTargetsCount(): Promise<{
 
   // 두 카운트 쿼리를 병렬 실행 (전체 목록 로드 대신 head: true 카운트)
   const [totalResult, familyResult] = await Promise.all([
-    supabase
-      .from('v_destiny_targets')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_id', user.id),
+    supabase.from('v_destiny_targets').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
     supabase
       .from('v_destiny_targets')
       .select('id', { count: 'exact', head: true })

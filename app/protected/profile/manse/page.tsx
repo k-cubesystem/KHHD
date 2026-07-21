@@ -26,6 +26,7 @@ export default async function MansePage() {
     birth_time: target.birth_time || null,
     calendar_type: target.calendar_type || 'solar',
     gender: target.gender || 'male',
+    is_leap_month: target.is_leap_month ?? false,
   }))
 
   // 관리자는 구독 여부와 무관하게 모든 프리미엄 기능 접근 가능

@@ -110,7 +110,7 @@ export const WU_XING_NAMES: Record<string, string> = {
  * 음력 입력은 존재하지 않는 날짜(예: 31일, 없는 30일)일 수 있으므로
  * InvalidBirthInputError로 감싸 명확한 메시지를 전달한다.
  */
-export function toLunar(date: string, time: string, isSolar: boolean): Lunar {
+export function toLunar(date: string, time: string, isSolar: boolean, isLeapMonth: boolean = false): Lunar {
   const [y, m, d] = date.split('-').map(Number)
   const [hh, mm] = time.split(':').map(Number)
 
@@ -122,7 +122,11 @@ export function toLunar(date: string, time: string, isSolar: boolean): Lunar {
     if (isSolar) {
       return Solar.fromYmdHms(y, m, d, hh, mm, 0).getLunar()
     }
-    return Lunar.fromYmdHms(y, m, d, hh, mm, 0)
+    // 음력 윤달은 음(-)월로 전달한다.
+    // lunar-javascript 규약(node_modules/lunar-javascript/lunar.js): month<0 = 闰月(윤달).
+    //   L974 `(month<0?'闰':'')`, L2826 `isLeap:function(){return this._p.month<0;}`.
+    // 윤달 미전달 시 평달로 계산되어 월주(月柱)가 틀린다.
+    return Lunar.fromYmdHms(y, isLeapMonth ? -m : m, d, hh, mm, 0)
   } catch (e) {
     throw new InvalidBirthInputError(
       `${isSolar ? '양력' : '음력'} ${date}은(는) 유효하지 않은 날짜입니다: ${
@@ -139,9 +143,15 @@ export function toLunar(date: string, time: string, isSolar: boolean): Lunar {
  * @param date - 'YYYY-MM-DD' 형식
  * @param time - 'HH:mm' 형식
  * @param isSolar - true면 양력, false면 음력
+ * @param isLeapMonth - 음력 윤달 여부(isSolar=false일 때만 유효). 기본 false → 기존 호출부 무수정 호환.
  */
-export function getSajuData(date: string, time: string, isSolar: boolean = true): SajuData {
-  const lunar = toLunar(date, time, isSolar)
+export function getSajuData(
+  date: string,
+  time: string,
+  isSolar: boolean = true,
+  isLeapMonth: boolean = false
+): SajuData {
+  const lunar = toLunar(date, time, isSolar, isLeapMonth)
   const eightChar = lunar.getEightChar()
   eightChar.setSect(1)
 
@@ -229,9 +239,10 @@ export function calculateDaeun(
   birthDate: string,
   birthTime: string,
   gender: 'M' | 'F',
-  isSolar: boolean = true
+  isSolar: boolean = true,
+  isLeapMonth: boolean = false
 ): DaeunData[] {
-  const lunar = toLunar(birthDate, birthTime, isSolar)
+  const lunar = toLunar(birthDate, birthTime, isSolar, isLeapMonth)
   const eightChar = lunar.getEightChar()
   eightChar.setSect(1)
 

@@ -41,6 +41,8 @@ export interface PersonInfo {
   birthTime: string // 'HH:mm' or '00:00' for unknown
   gender: 'male' | 'female'
   isSolar?: boolean
+  isLeapMonth?: boolean // 음력 윤달 여부(isSolar=false일 때만 유효). 기본 false.
+  birthTimeUnknown?: boolean // 출생 시간 미상 여부. true면 시주 해석 보류 고지를 프롬프트에 주입.
   relationship?: string
   job?: string
   focusAreas?: string
@@ -92,10 +94,10 @@ export interface SajuContext {
  * 메인 함수: 생년월일시 → 완전한 사주 컨텍스트 생성
  */
 export function buildSajuContext(person: PersonInfo): SajuContext {
-  const { birthDate, birthTime, gender, isSolar = true } = person
+  const { birthDate, birthTime, gender, isSolar = true, isLeapMonth = false } = person
   const genderCode = gender === 'male' ? 'M' : 'F'
 
-  const sajuData = getSajuData(birthDate, birthTime, isSolar)
+  const sajuData = getSajuData(birthDate, birthTime, isSolar, isLeapMonth)
   const { pillars, dayMaster } = sajuData
 
   // 관계 역학 분석
@@ -164,7 +166,7 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
   }
 
   // 대운
-  const daeun = calculateDaeun(birthDate, birthTime, genderCode, isSolar)
+  const daeun = calculateDaeun(birthDate, birthTime, genderCode, isSolar, isLeapMonth)
 
   // 경고/단점 분석 (engine02.md) — 삼중 용신 결과 사용
   const warnings = analyzeWarnings(sajuData, yongsin, sipseong)
@@ -194,7 +196,7 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
   const ruleBaseResult = evaluateAllRules(sajuData, sipseong, warnings, sinsal)
 
   // 프롬프트 컨텍스트 텍스트 생성
-  const promptContext = buildPromptContextText({
+  let promptContext = buildPromptContextText({
     person,
     sajuData,
     relations,
@@ -214,13 +216,29 @@ export function buildSajuContext(person: PersonInfo): SajuContext {
     advancedYongsin,
   })
 
+  // 출생 시간 미상: 시주(時柱) 의존 해석 보류 고지(계산은 12:00 기준으로 이미 수행됨)
+  if (person.birthTimeUnknown) {
+    promptContext +=
+      '\n\n[출생 시간 미상] 출생 시간이 확인되지 않았습니다(정오 12:00 기준 계산). 시주(時柱)에 의존하는 해석은 보류적으로 다루고, 연·월·일주 중심으로 분석하세요.'
+  }
+
   return {
     personInfo: person,
     sajuData,
     analysis: {
-      relations, sipseong, sibjiunseong, sinsal, gekguk,
-      yongsin, tripleYongsin, daeun, warnings,
-      jijanggan, advancedStrength, advancedGyeokguk, advancedYongsin,
+      relations,
+      sipseong,
+      sibjiunseong,
+      sinsal,
+      gekguk,
+      yongsin,
+      tripleYongsin,
+      daeun,
+      warnings,
+      jijanggan,
+      advancedStrength,
+      advancedGyeokguk,
+      advancedYongsin,
     },
     mulsang,
     promptContext,

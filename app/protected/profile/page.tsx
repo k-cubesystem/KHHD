@@ -123,6 +123,7 @@ export default async function MyPage() {
     birth_date: string | null
     birth_time: string | null
     calendar_type: string | null
+    is_leap_month: boolean | null
     email: string | null
   }
   interface AttendanceStatus {
@@ -204,7 +205,8 @@ export default async function MyPage() {
       const saju = getSajuData(
         profile.birth_date,
         profile.birth_time || '12:00',
-        isSolarCalendar(profile.calendar_type)
+        isSolarCalendar(profile.calendar_type),
+        profile.is_leap_month ?? false
       )
       const el = ELEMENT_MAP[saju.dayMasterElement]
       if (el) {

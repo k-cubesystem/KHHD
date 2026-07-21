@@ -41,8 +41,11 @@ function makeCacheKey(person: PersonInfo): string {
     person.maritalStatus || '',
     person.lifePhilosophy || '',
     ENGINE_VERSION,
-  ].join('|')
-  return createHash('sha256').update(normalized).digest('hex')
+  ]
+  // 윤달·시간미상일 때만 마커 추가 — 기존 키(대다수)는 그대로 유지(캐시 대량 무효화 방지).
+  if (person.isLeapMonth) normalized.push('leap')
+  if (person.birthTimeUnknown) normalized.push('notime')
+  return createHash('sha256').update(normalized.join('|')).digest('hex')
 }
 
 /**

@@ -34,7 +34,12 @@ export async function startFateAnalysis(formData: FormData): Promise<void> {
   }
 
   // 2. 사주 데이터 생성
-  const sajuData = getSajuData(target.birth_date, target.birth_time || '00:00', isSolarCalendar(target.calendar_type))
+  const sajuData = getSajuData(
+    target.birth_date,
+    target.birth_time || '12:00',
+    isSolarCalendar(target.calendar_type),
+    target.is_leap_month ?? false
+  )
 
   // 3. 이미지 업로드 (생략 가능, 기존 로직 유지)
   const faceImageUrl = target.face_image_url

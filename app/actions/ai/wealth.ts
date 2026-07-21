@@ -97,9 +97,11 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       {
         name: member.name,
         birthDate: member.birth_date,
-        birthTime: member.birth_time || '00:00',
+        birthTime: member.birth_time || '12:00',
         gender: (member.gender || 'male') as 'male' | 'female',
         isSolar: isSolarCalendar(member.calendar_type),
+        isLeapMonth: member.is_leap_month ?? false,
+        birthTimeUnknown: !member.birth_time,
       },
       'WEALTH_DEEP',
       '',

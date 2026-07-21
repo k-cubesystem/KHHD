@@ -20,7 +20,7 @@ export async function getUserFiveElements() {
   // 프로필에서 생년월일 조회
   const { data: profile } = await supabase
     .from('profiles')
-    .select('birth_date, birth_time, calendar_type')
+    .select('birth_date, birth_time, calendar_type, is_leap_month')
     .eq('id', user.id)
     .single()
 
@@ -36,7 +36,8 @@ export async function getUserFiveElements() {
     const sajuData = getSajuData(
       profile.birth_date,
       profile.birth_time || '12:00',
-      isSolarCalendar(profile.calendar_type)
+      isSolarCalendar(profile.calendar_type),
+      profile.is_leap_month ?? false
     )
 
     // 오행 분석

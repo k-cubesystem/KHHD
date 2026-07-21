@@ -10,6 +10,7 @@ interface SaveProfileData {
   birthDate: string
   birthTime: string
   calendarType: string
+  isLeapMonth?: boolean
   homeAddress: string
   workAddress: string
   avatarUrl: string
@@ -38,6 +39,7 @@ export async function saveProfile(data: SaveProfileData) {
       birth_date: data.birthDate || null,
       birth_time: data.birthTime || null,
       calendar_type: data.calendarType || 'solar',
+      is_leap_month: data.calendarType === 'lunar' ? (data.isLeapMonth ?? false) : false,
     },
     { onConflict: 'id' }
   )
@@ -62,6 +64,7 @@ interface SaveFamilyMemberData {
   birthDate: string
   birthTime: string
   calendarType: string
+  isLeapMonth?: boolean
 }
 
 export async function saveSelfFamilyMember(data: SaveFamilyMemberData) {
@@ -90,6 +93,7 @@ export async function saveSelfFamilyMember(data: SaveFamilyMemberData) {
     birth_date: data.birthDate,
     birth_time: data.birthTime || null,
     calendar_type: ['solar', 'lunar'].includes(data.calendarType) ? data.calendarType : 'solar',
+    is_leap_month: data.calendarType === 'lunar' ? (data.isLeapMonth ?? false) : false,
   }
 
   if (existing) {
