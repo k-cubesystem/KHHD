@@ -15,6 +15,7 @@ import {
 } from 'recharts'
 import { Zap, TrendingUp, AlertTriangle, CheckCircle, RefreshCw, Save, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getActionLabel } from '@/lib/domain/gemini/actions'
 import {
   getGeminiDailyStats,
   getGeminiActionStats,
@@ -39,33 +40,8 @@ function formatCostShort(usd: number, krwRate: number): string {
   return `₩${krw.toLocaleString()}`
 }
 
-// ─────────────────────────────────────────
-// 기능 레이블 매핑
-// ─────────────────────────────────────────
-const ACTION_LABELS: Record<string, string> = {
-  cheonjiin: '천지인 사주',
-  compatibility: '궁합',
-  fortune: '테마운세',
-  daily_fortune: '오늘운세',
-  wealth: '재물운',
-  year2026: '2026 년운',
-  face_analysis: '관상 분석',
-  palm_analysis: '손금 분석',
-  fengshui_interior: '풍수 인테리어',
-  face_destiny: '관상 운명',
-  palm_destiny: '손금 운명',
-  fengshui_destiny: '풍수 운명',
-  saju_detail: '사주 상세',
-  invite_compatibility: '초대 궁합',
-  unknown: '기타',
-}
-
-function getActionLabel(type: string): string {
-  if (ACTION_LABELS[type]) return ACTION_LABELS[type]
-  if (type.startsWith('analysis_')) return `분석: ${type.replace('analysis_', '')}`
-  if (type.startsWith('trend_')) return `트렌드: ${type.replace('trend_', '')}`
-  return type
-}
+// 기능 레이블 매핑은 lib/domain/gemini/actions 의 getActionLabel 단일 소스 사용
+// (방출 action_type ↔ 라벨 정합성은 actions.test.ts 로 게이팅)
 
 // ─────────────────────────────────────────
 // 상태별 배지

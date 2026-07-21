@@ -180,6 +180,7 @@ export async function analyzeTrendAction(
     // AI 분석
     const aiResult = await generateAIContent({
       featureKey: `trend_${trendType}`,
+      actionType: 'trend',
       systemPrompt: '당신은 사주 기반 운세 전문가입니다. 반드시 유효한 JSON만 출력하십시오.',
       userPrompt: prompt,
     })

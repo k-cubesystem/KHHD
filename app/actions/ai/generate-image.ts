@@ -3,6 +3,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { MODEL_IMAGE } from '@/lib/config/ai-models'
@@ -118,8 +119,22 @@ export async function generateFortuneImage(
     }
     const model = genAI.getGenerativeModel(modelConfig as Parameters<typeof genAI.getGenerativeModel>[0])
 
+    const imgStartedAt = Date.now()
     const result = await model.generateContent(prompt)
     const response = result.response
+
+    // 사용량·비용 계측 (부가 기능 — fire-and-forget). 이미지는 장당 과금 →
+    // output_tokens=0 으로 기록하고 cost 는 이미지 단가 분기(estimateCostUsd)로 산정.
+    const imgUsage = response.usageMetadata
+    void logUsage({
+      userId: user.id,
+      model: MODEL_IMAGE,
+      actionType: 'image_generation',
+      inputTokens: imgUsage?.promptTokenCount ?? null,
+      outputTokens: 0,
+      latencyMs: Date.now() - imgStartedAt,
+      status: 'success',
+    }).catch(() => {})
 
     // Extract image from response parts
     const candidates = response.candidates

@@ -57,6 +57,7 @@ export async function maybeSummarizeSession(sessionId: string, windowSize: numbe
 
     const result = await generateAIContent({
       featureKey: 'shaman-chat',
+      actionType: 'summarizer',
       systemPrompt,
       userPrompt: `${prior}[새 대화]\n${newChunk}`,
       maxTokens: 400,

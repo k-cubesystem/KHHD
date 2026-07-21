@@ -122,6 +122,7 @@ export async function extractAndSaveMemories(sessionId: string): Promise<void> {
 
     const result = await generateAIContent({
       featureKey: 'shaman-chat',
+      actionType: 'memory',
       systemPrompt,
       userPrompt: transcript,
       jsonMode: true,

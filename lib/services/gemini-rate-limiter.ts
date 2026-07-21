@@ -8,8 +8,8 @@
  * - 모델별 비용 추정 (USD + KRW)
  */
 
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/utils/logger'
 
 // ============================================================
 // 모델별 토큰 단가 (USD per 1M tokens, 2026년 기준)
@@ -79,9 +79,15 @@ async function acquireToken(): Promise<{
 }
 
 // ============================================================
-// 내부: 사용량 비동기 기록 (호출 결과를 기다리지 않음)
+// 사용량 비동기 기록 (호출 결과를 기다리지 않음)
+//
+// ⚠️ P0 수복(2026-07-21): 이전엔 유저 세션 클라이언트(createClient)로 insert →
+//    gemini_api_logs 의 RLS 에 INSERT 정책이 없어(관리자 ALL + 유저 SELECT 뿐)
+//    일반 유저 호출은 전부 "new row violates row-level security" 로 실패,
+//    사실상 관리자 호출만 기록됐다. service_role(admin) 클라이언트로 우회한다.
+//    로깅은 부가 기능이므로 실패해도 본 흐름을 막지 않는다(logger.warn).
 // ============================================================
-async function logUsage(params: {
+export interface LogUsageParams {
   userId?: string | null
   model: string
   actionType: string
@@ -91,9 +97,11 @@ async function logUsage(params: {
   status: string
   errorCode?: string | null
   cached?: boolean
-}): Promise<void> {
+}
+
+export async function logUsage(params: LogUsageParams): Promise<void> {
   try {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const totalTokens = (params.inputTokens ?? 0) + (params.outputTokens ?? 0)
     const estimatedCostUsd =
       params.inputTokens !== null &&
@@ -117,8 +125,8 @@ async function logUsage(params: {
       cached: params.cached ?? false,
     })
   } catch (e) {
-    // 로깅 실패는 무시 (분석 기능을 막으면 안 됨)
-    console.error('[Gemini Usage Log] 기록 실패:', e)
+    // 로깅 실패는 무시 (분석 기능을 막으면 안 됨). logger.warn 은 Sentry 로 경보.
+    logger.warn('[Gemini Usage Log] 기록 실패(무시):', e instanceof Error ? e.message : String(e))
   }
 }
 

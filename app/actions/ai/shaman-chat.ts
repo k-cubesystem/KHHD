@@ -16,6 +16,7 @@ import { logger } from '@/lib/utils/logger'
 import { getSceneData } from '@/app/actions/shrine/scene'
 import { computeEnergy, indexCatalog, ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 import { awardDeityBondForUser } from '@/lib/services/deity-bond'
+import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
 import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
@@ -553,8 +554,21 @@ export async function sendShamanChatMessage(
     })
 
     // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨). 가드 통과한 safeMessage 사용.
+    const chatStartedAt = Date.now()
     const result = await chat.sendMessage(safeMessage)
     const rawText = result.response.text()
+
+    // 사용량·비용 계측 (부가 기능 — fire-and-forget)
+    const chatUsage = result.response.usageMetadata
+    void logUsage({
+      userId: user.id,
+      model: MODEL_FLASH,
+      actionType: 'shaman_chat',
+      inputTokens: chatUsage?.promptTokenCount ?? null,
+      outputTokens: chatUsage?.candidatesTokenCount ?? null,
+      latencyMs: Date.now() - chatStartedAt,
+      status: 'success',
+    }).catch(() => {})
 
     // 신위 감정 태그 파싱: 응답 앞 [[emotion]] → emotion 추출 후 본문에서 제거
     let emotion: DeityEmotion | null = null

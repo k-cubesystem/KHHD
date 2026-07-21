@@ -1,5 +1,6 @@
 ﻿import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { logger } from '@/lib/utils/logger'
+import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!)
@@ -115,8 +116,22 @@ export async function generateFateReport(params: FateReportParams) {
 
   try {
     logger.log('[Gemini] Generating content...')
+    const startedAt = Date.now()
     const result = await model.generateContent([prompt, ...imageParts])
     const response = await result.response
+
+    // 사용량·비용 계측 (부가 기능 — fire-and-forget). 천지인 종합비록 경로.
+    const usage = response.usageMetadata
+    void logUsage({
+      userId: null,
+      model: MODEL_FLASH,
+      actionType: 'cheonjiin_report',
+      inputTokens: usage?.promptTokenCount ?? null,
+      outputTokens: usage?.candidatesTokenCount ?? null,
+      latencyMs: Date.now() - startedAt,
+      status: 'success',
+    }).catch(() => {})
+
     return response.text()
   } catch (error) {
     logger.error('[Gemini] Content generation failed:', error)
