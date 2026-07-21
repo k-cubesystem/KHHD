@@ -122,9 +122,14 @@
   - **Part A(궁합 개편)**: 8 FocusGroup 관계군 분기 + 군별 단골 질문 5개에 직접 답하는 `focusAnswers`, 8대 궁합 쉬운 풀이(라벨 이중화·"이게 뭐냐" 3줄 카드·엔진 details 문장 리라이트), `siblings` 가중치 신설(합=1), 프롬프트 코드 빌더 분리(§9), `engineVersion v3` 캐시(focusGroup 포함 — 같은 두 사람 다른 관계 오재사용 버그 수정), 죽은 시드(R3)·레거시 스튜디오(R4) 삭제, 질문 미리보기 칩 + 관계 자동 프리셋.
   - **대기**: 카카오 JS 키(`NEXT_PUBLIC_KAKAO_JS_KEY`) 설정, 관계별 유료화 여부(§13).
 
-**신규 기획 (세션26, 실행 대기 — Opus 발주)**
+**신규 기획 (세션26) — ✅완료·배포 (2026-07-21)**
 
-- 📐 **미디어·TTS·비용계측** → `PLAN-media-tts-cost-v1.md`. ①Gemini 비용 계측 수복(P0: logUsage 가 유저세션 클라이언트로 insert → RLS 위반, 프로덕션 로그 전체 14행뿐) + 전 기능 계측 + 어드민 기능별 원가 vs 복채 뷰 ②신위별 TTS 프로파일(Web Speech 무료 유지) ③무료 음원 소스 조사(국립국악원 공공누리 1순위) + 실음원 레이어(합성 폴백) ④영상 파이프라인(Veo/힉스필드 어댑터, 1회 생성 에셋 원칙, 실생성은 dry-run 후 사용자 승인).
+- ✅ **미디어·TTS·비용계측** → `PLAN-media-tts-cost-v1.md` (C-1→C-2→T-1→M-1→V-1 순 전 단계 실행·배포).
+  - **C(비용 계측)**: P0 수복 — `logUsage` 를 `createAdminClient`(service_role)로 전환(유저세션 insert → RLS 위반 해소), 실호출 검증(gemini_api_logs **14→15**, 신규 `shaman_chat` 행 토큰·비용·유저 채워짐). `generateAIContent` 중앙 계측 + 직접 호출 3곳(shaman_chat·cheonjiin_report·image_generation) + actionType 표준화(`lib/domain/gemini/actions`). 이미지 장당 단가($0.067, Google 공식 확인) + estimateCostUsd 이미지 분기(`lib/domain/gemini/pricing`). 어드민: 기능별 비용(₩) 차트 + **원가 vs 복채** 테이블(가격 책정 근거). RLS 정책 주석 마이그레이션.
+  - **T(TTS)**: 17신위 원형 5군 음성 프로파일(rate/pitch/voiceHint, `lib/domain/shrine/voice-profiles`) + 채팅 배선. Web Speech 무료 유지.
+  - **M(음원)**: 실음원 레이어(파일 있으면 실음원, 없으면 오실레이터 합성 폴백) + 전역 음소거(localStorage) + 효과음 배치 2곳(사주결과 chime·궁합 focusAnswers bara) + `public/sounds/shrine/CREDITS.md`.
+  - **V(영상)**: `AmbientVideo`(영상 없어도 폴백) + 배치 2곳(강신·분석로딩) + `scripts/media-assets` 생성 파이프라인(Veo 3.1 단가 상수화, dry-run 예상 $1.00, higgsfield 스텁).
+  - **대기**: 신당 BGM 선곡(국립국악원), 영상 실생성(`--run`) 승인, `HIGGSFIELD_API_KEY`, TTS 유료 업그레이드 여부.
 
 **코드 잔여**
 
