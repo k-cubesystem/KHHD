@@ -140,6 +140,16 @@
   - **F 재미**: 신탁 도착 알림(oracle→notifications deity_oracle) · 오너 신당 소원/방명록/wishCount · 강신 Veo 영상(summon-ritual) · 보상 연출(출석 chime·충전 컨페티·레벨업 bara) · 미사용 파티클 3종(petals/ripple/resonance). 오늘의 정성 대시보드 허브(getDailyRitualStatus 1액션 3상태) · 오늘의 운세 구조화(daily-lucky.ts 결정적 파생 + 단위테스트, AI 계약 불변) · 테마 N/8 수집 표시.
   - **대기**: 무료 기능(사주·궁합·신년) 유료 전환 시점, F-6 카드명 "오늘의 정성", 가족 윤달 저장(family.ts 보호 해제 시), 분석 '合' 로더 미사용(활성 시 sparkle+bell).
 
+**신규 기획 (세션29) — ✅완료·배포 (2026-07-22)**
+
+- ✅ **디테일 v2: 사주영상·명식개편·가족관리·지식가이드** → `PLAN-detail-v2-manse-family-knowledge.md` (V1→V2→V3→V4 전 단계 실행, 단계별 tsc·jest·build 게이트 통과, prod 배포).
+  - **V1 가족관리 4종**: 본인 레코드(relationship='본인') 목록·카운트·기운지도 입구에서 숨김(DB 삭제 없음), 기운지도 targets 에서 본인 가족행 제외(profiles self 이중계상 방지). 프로필 라벨 "인연 관리"→"가족·인연 관리". `lib/domain/family/avatars.ts` 신설(오행정령5+신위17=22종 통합 카탈로그, findFamilyAvatar) + FiveAvatarSelector 2구획 UI(기존 avatar_id 하위호환 재노출). 기운지도 진입카드 채도↑·N명 배지, 「오행이란?」 접이식 설명(saju-knowledge-graph 재사용), 막대 오행 한글 병기. 단위테스트 avatars.test(정령·신위·하위호환).
+  - **V2 지식 팁**: `lib/domain/guide/knowledge-tips.ts` 신설(오행 그래프 재사용 + 십성·신살·운흐름·용신·궁합·풍수 평문 풀 44개, todayTipIndex 날짜 결정적). GlobalGuide 'knowledge' Bubble 추가 → hasContent 포함(전 페이지 접힌 바 유지), 자동노출 최하위(투어 없는 페이지), 접힌 바 탭 시 (idx+1)%len 회전. 단위테스트 knowledge-tips.test.
+  - **V3 사주영상**: 유휴 `analysis-ambient` 영상을 SajuLoadingContent 배경 + 天→地 시네마틱 디바이더에 배선(AmbientVideo, 폴백 유지), 로딩→결과 framer-motion 크로스페이드(0.5s). 신규 영상 생성 없음($0).
+  - **V4 명식개편(大)**: 13개 엔진 useMemo(다이얼로그 토글마다 전체 재계산 제거, 계산값 불변). report 탭 AdvancedManseDisplay 제거로 상시노출 중복 5종(신살·십이운성·합충형·공망·세운) 일소 + 운세흐름 신살·개운법 색방위직업 중복 제거. 지장간(藏干) 섹션 신설, 신살·대운·십이운성 SECTION_DESCRIPTIONS 노출, 신강신약 한 줄 해설. 죽은코드 삭제(SINSAL_ADVICE·GONGMANG_SOLUTION·sinsalList·고급만세력 dialog). golden 253/253 통과.
+  - **보류(보호파일)**: S3-a 관계 한도 count 정정(`membership.ts`)은 타 세션 보호파일이라 미적용. **판단유지**: 종합 dialog 요약·물상론 실천조언·warnings 공망은 opt-in/가치부가로 유지.
+  - **대기**: 신위 아바타 프로필(본인) 확장 여부, 풍수 지식 팁 톤/범위 조정.
+
 **코드 잔여**
 
 - i18n 문자열 추출 약 1,200곳 — 화면 단위 완결(✅상점 → 신당 → 고민상담).
