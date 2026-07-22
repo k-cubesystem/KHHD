@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Megaphone, X, Archive, Footprints, ChevronUp } from 'lucide-react'
+import { Megaphone, X, Archive, Footprints, ChevronUp, Lightbulb } from 'lucide-react'
 import { getGuideData, saveGuideProgress, type GuideData } from '@/app/actions/guide'
 import { markNotificationRead } from '@/app/actions/core/user-notifications'
+import { KNOWLEDGE_TIPS, todayTipIndex } from '@/lib/domain/guide/knowledge-tips'
 
 // ─── 페이지별 기능 소개 스크립트 (경로 정확 매칭) ───────────────
 const TOURS: Record<string, readonly string[]> = {
@@ -61,7 +62,13 @@ function legacyNoticeId(): string | null {
   }
 }
 
-type Bubble = { kind: 'onboarding' } | { kind: 'personal' } | { kind: 'notice' } | { kind: 'tour'; step: number } | null
+type Bubble =
+  | { kind: 'onboarding' }
+  | { kind: 'personal' }
+  | { kind: 'notice' }
+  | { kind: 'tour'; step: number }
+  | { kind: 'knowledge'; idx: number }
+  | null
 
 /**
  * 전 페이지 신 가이드 — 하단 메뉴 바로 위의 **공지 바** 형태로 페이지 기능을 하나씩 소개.
@@ -100,8 +107,10 @@ export function GlobalGuide() {
 
   const tour = useMemo(() => TOURS[pathname] ?? null, [pathname])
   const hidden = pathname.startsWith('/protected/shrine')
+  // 오늘의 상식 — 날짜 기반 결정적 인덱스(마운트 시 1회 고정)
+  const todayIdx = useMemo(() => todayTipIndex(), [])
 
-  // 경로 진입 시 자동 노출 — 개인 알림 > 공지(미확인) > 온보딩(미완료) > 투어(미완료)
+  // 경로 진입 시 자동 노출 — 개인 알림 > 공지(미확인) > 온보딩(미완료) > 투어(미완료) > 오늘의 상식
   useEffect(() => {
     if (!data || hidden) return
     if (data.personalNotice) {
@@ -122,9 +131,13 @@ export function GlobalGuide() {
         setBubble({ kind: 'tour', step: seen })
         return
       }
+      // 투어를 다 본 페이지는 접힌 채로 둔다 — 지식은 탭으로 펼친다(바쁜 허브에서 조용히)
+      setBubble(null)
+      return
     }
-    setBubble(null)
-  }, [data, pathname, tour, hidden, progress, seenNotice])
+    // 투어가 없는 페이지: 오늘의 상식을 최하위로 자동 노출(바가 사라지지 않게)
+    setBubble(KNOWLEDGE_TIPS.length ? { kind: 'knowledge', idx: todayIdx } : null)
+  }, [data, pathname, tour, hidden, progress, seenNotice, todayIdx])
 
   /** 개인 알림 확인 — 읽음 처리 후 로컬 상태에서 제거(재노출 방지) */
   const dismissPersonal = useCallback(() => {
@@ -179,7 +192,13 @@ export function GlobalGuide() {
     setBubble(null)
   }, [tour, commitProgress])
 
-  // 접힌 줄 탭 — 개인 알림 > 공지 > 온보딩 > 투어 처음부터 다시 안내
+  /** 지식 팁 회전 — (idx+1)%len 회전 인덱스(소진형 아님) */
+  const rotateKnowledge = useCallback((idx: number) => {
+    if (!KNOWLEDGE_TIPS.length) return
+    setBubble({ kind: 'knowledge', idx: (idx + 1) % KNOWLEDGE_TIPS.length })
+  }, [])
+
+  // 접힌 줄 탭 — 개인 알림 > 공지 > 온보딩 > 투어 처음부터 > 오늘의 상식
   const onTapCollapsed = useCallback(() => {
     if (data?.personalNotice) {
       setBubble({ kind: 'personal' })
@@ -193,10 +212,16 @@ export function GlobalGuide() {
       setBubble({ kind: 'onboarding' })
       return
     }
-    if (tour) setBubble({ kind: 'tour', step: 0 })
-  }, [data, tour])
+    if (tour) {
+      setBubble({ kind: 'tour', step: 0 })
+      return
+    }
+    if (KNOWLEDGE_TIPS.length) setBubble({ kind: 'knowledge', idx: todayIdx })
+  }, [data, tour, todayIdx])
 
-  const hasContent = !!(tour || data?.announcement || data?.personalNotice || data?.onboarding)
+  // 지식 팁이 상시 존재하므로 바는 신당 외 모든 페이지에서 유지된다(접힌 바가 사라지지 않음).
+  const hasContent =
+    KNOWLEDGE_TIPS.length > 0 || !!(tour || data?.announcement || data?.personalNotice || data?.onboarding)
   const visible = !!data && !hidden && hasContent
 
   // 바가 차지하는 높이를 CSS 변수로 알린다 — 뷰포트 고정 레이아웃이 이만큼 비켜준다.
@@ -250,7 +275,13 @@ export function GlobalGuide() {
       <AnimatePresence mode="wait" initial={false}>
         {bubble ? (
           <motion.div
-            key={bubble.kind === 'tour' ? `tour-${bubble.step}` : bubble.kind}
+            key={
+              bubble.kind === 'tour'
+                ? `tour-${bubble.step}`
+                : bubble.kind === 'knowledge'
+                  ? `knowledge-${bubble.idx}`
+                  : bubble.kind
+            }
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
@@ -334,6 +365,26 @@ export function GlobalGuide() {
                     </button>
                     <button onClick={() => advanceTour(bubble.step)} className="text-[11px] font-bold text-gold-400">
                       {bubble.step + 1 < tour.length ? '다음 →' : '알겠어요'}
+                    </button>
+                  </div>
+                </>
+              ) : bubble.kind === 'knowledge' && KNOWLEDGE_TIPS.length ? (
+                <>
+                  <p className="flex items-center gap-1 text-[9px] text-gold-500/80 font-serif mb-1">
+                    <Lightbulb className="w-3 h-3" /> 오늘의 사주 상식
+                  </p>
+                  <p className="text-[12px] font-bold text-gold-200 leading-snug mb-1">
+                    {KNOWLEDGE_TIPS[bubble.idx % KNOWLEDGE_TIPS.length]?.term}
+                  </p>
+                  <p className="text-[11.5px] text-ink-light/85 leading-snug mb-2">
+                    {KNOWLEDGE_TIPS[bubble.idx % KNOWLEDGE_TIPS.length]?.plain}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-ink-light/35 font-serif">
+                      {KNOWLEDGE_TIPS[bubble.idx % KNOWLEDGE_TIPS.length]?.category}
+                    </span>
+                    <button onClick={() => rotateKnowledge(bubble.idx)} className="text-[11px] font-bold text-gold-400">
+                      다른 상식 보기 →
                     </button>
                   </div>
                 </>
