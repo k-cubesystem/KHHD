@@ -19,14 +19,14 @@ import {
   analyzeRelations,
   calculateExtendedSinsal,
   analyzeWarnings,
+  analyzeAllJijanggan,
   type SipseongMap,
   type SibjiunseongResult,
   type RelationResult,
   type SinsalResult,
   type WarningsResult,
+  type JijangganAnalysis,
 } from '@/lib/saju-engine'
-import { analyzeManseAdvanced } from '@/lib/domain/saju/manse-advanced'
-import { AdvancedManseDisplay } from '@/components/saju/advanced-manse-display'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -142,11 +142,6 @@ const ELEMENT_BOOST: Record<
 
 // 섹션 설명 (작가 톤)
 const SECTION_DESCRIPTIONS = {
-  advancedManse: {
-    title: '고급 만세력 분석',
-    intro:
-      '당신의 사주를 더 깊이 들여다보는 시간입니다. 세운(歲運)은 올해의 운을, 월운(月運)은 이번 달의 흐름을 보여줍니다. 신살, 십이운성, 합충형해, 공망까지 모든 정보가 모여 당신만의 운명 지도를 완성합니다. 각각의 정보가 퍼즐 조각처럼 맞춰지면, 인생의 큰 그림이 보이기 시작합니다.',
-  },
   sinsal: {
     title: '신살 - 하늘이 준 특별한 별들',
     intro:
@@ -176,11 +171,6 @@ const SECTION_DESCRIPTIONS = {
     title: '십이운성 - 생명의 12단계',
     intro:
       '십이운성(十二運星)은 생명이 태어나서 성장하고 쇠퇴하는 12가지 단계를 나타냅니다. 지금 당신은 어느 단계에 있나요? 장생처럼 왕성한 시기일 수도, 절처럼 기다림이 필요한 시기일 수도 있습니다. 현재 단계를 알면 어떻게 행동해야 할지 지혜가 생깁니다.',
-  },
-  gongmang: {
-    title: '공망 - 비어있는 자리의 의미',
-    intro:
-      '공망(空亡)은 육십갑자에서 비어있는 자리입니다. 운이 작용하지 않는 공간으로, 때로는 아무리 노력해도 결실을 얻기 어려운 분야를 나타냅니다. 하지만 공망을 잘 이해하면 헛수고를 피하고 에너지를 효율적으로 사용할 수 있습니다.',
   },
 }
 
@@ -259,7 +249,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   const [sajuInterpretOpen, setSajuInterpretOpen] = useState(false)
   const [wuxingAnalysisOpen, setWuxingAnalysisOpen] = useState(false)
   const [yukchinAnalysisOpen, setYukchinAnalysisOpen] = useState(false)
-  const [advancedExplainOpen, setAdvancedExplainOpen] = useState(false)
   const [daeunExplainOpen, setDaeunExplainOpen] = useState(false)
   const [yongsinExplainOpen, setYongsinExplainOpen] = useState(false)
   const [gekgukExplainOpen, setGekgukExplainOpen] = useState(false)
@@ -268,7 +257,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
   // 13개 사주 엔진을 한 번에 계산 — 다이얼로그 토글·리렌더마다 전체 재계산하던 것을 메모이즈.
   // ⚠️ 전부 순수 결정론 엔진이라 메모이즈해도 계산값은 완전히 동일하다(값 회귀 없음).
-  const { saju, gekgukAnalysis, yongsinAnalysis, yukchinAnalysis, daeunList, gaeunbubRec, advancedManse, engineData } =
+  const { saju, gekgukAnalysis, yongsinAnalysis, yukchinAnalysis, daeunList, gaeunbubRec, jijanggan, engineData } =
     useMemo(() => {
       // 사주 데이터 안전하게 가져오기
       let saju: SajuData | null = null
@@ -332,19 +321,19 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         logger.error('Error in getGaeunbubRecommendation:', error)
       }
 
-      // 고급 만세력 분석
-      let advancedManse = null
+      // 지장간(藏干) — 지지 속에 숨은 천간의 기운
+      let jijanggan: JijangganAnalysis | null = null
       try {
-        if (selectedMember && selectedMember.birth_date) {
-          advancedManse = analyzeManseAdvanced(
-            selectedMember.birth_date,
-            selectedMember.birth_time || '12:00',
-            (selectedMember.gender as 'male' | 'female') || 'male',
-            isSolarCalendar(selectedMember.calendar_type)
-          )
+        if (saju) {
+          jijanggan = analyzeAllJijanggan([
+            { position: '년주', zhi: saju.pillars.year.zhi },
+            { position: '월주', zhi: saju.pillars.month.zhi },
+            { position: '일주', zhi: saju.pillars.day.zhi },
+            { position: '시주', zhi: saju.pillars.time.zhi },
+          ])
         }
       } catch (error) {
-        logger.error('Error in analyzeManseAdvanced:', error)
+        logger.error('Error in analyzeAllJijanggan:', error)
       }
 
       // 해화지기 마스터 엔진 데이터 계산
@@ -395,7 +384,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
         yukchinAnalysis,
         daeunList,
         gaeunbubRec,
-        advancedManse,
+        jijanggan,
         engineData,
       }
     }, [selectedMember])
@@ -970,10 +959,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 {/* 신살 — 새 엔진 실제 데이터 */}
                 {engineData.sinsal.length > 0 && (
                   <Card className="p-8 bg-white/5 border-white/10">
-                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                       <Sparkles className="w-4 h-4" />
                       신살 (神殺) — 내 사주에 깃든 특별한 별
                     </h3>
+                    <p className="text-xs text-muted-foreground/70 leading-relaxed mb-6">
+                      {SECTION_DESCRIPTIONS.sinsal.intro}
+                    </p>
                     <div className="space-y-4">
                       {engineData.sinsal.map((s, i) => (
                         <div
@@ -1070,10 +1062,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     {/* 신강신약 & 십성 분포 — 새 엔진 */}
                     {engineData.sipseong && (
                       <Card className="p-8 bg-white/5 border-white/10">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                           <Sparkles className="w-4 h-4" />
                           신강신약 & 십성 분포
                         </h3>
+                        <p className="text-xs text-muted-foreground/70 leading-relaxed mb-6">
+                          일간(나)의 힘이 강한지 약한지(신강·신약), 그리고 사주에 어떤 십성(十星 — 관계·적성의 기운)이
+                          많은지를 봅니다.
+                        </p>
                         <div className="space-y-5">
                           {/* 신강/신약 요약 */}
                           <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
@@ -1144,24 +1140,61 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       </Card>
                     )}
 
-                    {/* 고급 만세력 분석 */}
-                    {advancedManse && (
+                    {/* 지장간(藏干) — 지지 속에 숨은 천간의 기운 (신규) */}
+                    {jijanggan && jijanggan.entries.length > 0 && (
                       <Card className="p-8 bg-white/5 border-white/10">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
                           <Sparkles className="w-4 h-4" />
-                          {SECTION_DESCRIPTIONS.advancedManse.title}
+                          지장간 (藏干) — 지지 속에 숨은 기운
                         </h3>
                         <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                          {SECTION_DESCRIPTIONS.advancedManse.intro}
+                          각 지지(地支) 안에는 천간(天干)의 기운이 숨어 있습니다. 여기(餘氣)·중기(中氣)·본기(本氣)
+                          순으로 담기며, 본기가 그 지지의 주인입니다. 겉으로 드러난 팔자 아래 흐르는 &lsquo;숨은
+                          뿌리&rsquo;예요.
                         </p>
-                        <AdvancedManseDisplay advanced={advancedManse} />
-                        <div className="mt-6 pt-4 border-t border-gold-500/10">
-                          <button
-                            onClick={() => setAdvancedExplainOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227] via-gold-300 to-[#C9A227] text-[#1a0e00] text-xs font-bold tracking-wide shadow-[0_0_12px_rgba(212,175,55,0.25)] hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border border-gold-500/40"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />✦ 이 데이터가 뭔가요? 쉬운 풀이 보기
-                          </button>
+                        <div className="space-y-3">
+                          {jijanggan.entries.map((e) => (
+                            <div key={e.position} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="text-gold-500 font-black text-sm">{e.position}</span>
+                                <span className="text-muted-foreground/50 text-xs">
+                                  {e.zhi} ({DIZHI_INFO[e.zhi]?.korean ?? ''})
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {(
+                                  [
+                                    { gan: e.jijanggan.yeogi, days: e.jijanggan.yeogiDays, label: '여기' },
+                                    { gan: e.jijanggan.junggi, days: e.jijanggan.junggiDays, label: '중기' },
+                                    { gan: e.jijanggan.bongi, days: e.jijanggan.bongiDays, label: '본기' },
+                                  ] as const
+                                )
+                                  .filter((h) => h.gan)
+                                  .map((h) => {
+                                    const info = h.gan ? TIANGAN_INFO[h.gan] : undefined
+                                    const el = info?.element ?? ''
+                                    return (
+                                      <div
+                                        key={h.label}
+                                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/20 border border-white/5"
+                                      >
+                                        <span className="text-[10px] text-muted-foreground/50">{h.label}</span>
+                                        <span
+                                          className="font-bold text-sm"
+                                          style={{ color: WU_XING_COLORS[el] ?? GOLD_500 }}
+                                        >
+                                          {h.gan}
+                                        </span>
+                                        <span className="text-[11px] text-white/60">
+                                          {info?.korean}·{WUXING_KOREAN[el] ?? el}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground/40">{h.days}일</span>
+                                      </div>
+                                    )
+                                  })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </Card>
                     )}
@@ -1179,6 +1212,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         <Sparkles className="w-4 h-4" />
                         대운·세운 (大運·歲運)
                       </h3>
+                      <p className="text-xs text-muted-foreground/70 leading-relaxed mb-6">
+                        {SECTION_DESCRIPTIONS.daewoon.intro}
+                      </p>
                       {daeunList.length > 0 ? (
                         <div className="space-y-6">
                           {/* 현재 대운 */}
@@ -1272,6 +1308,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           <Sparkles className="w-4 h-4" />
                           십이운성 — 내 사주의 생명력 흐름
                         </h3>
+                        <p className="text-xs text-muted-foreground/70 leading-relaxed mb-5">
+                          {SECTION_DESCRIPTIONS.sibiWoonSung.intro}
+                        </p>
                         <div className="space-y-5">
                           {/* 전체 에너지 요약 */}
                           <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
@@ -1674,39 +1713,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               </span>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                                <Palette className="w-3 h-3" />
-                                행운의 색
-                              </p>
-                              <p className="text-xs font-medium">{gaeunbubRec.colors.join(', ')}</p>
-                            </div>
-                            <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                              <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                                <Compass className="w-3 h-3" />
-                                행운의 방위
-                              </p>
-                              <p className="text-xs font-medium">{gaeunbubRec.directions.join(', ')}</p>
-                            </div>
-                            <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                              <p className="text-xs text-muted-foreground mb-2">행운의 숫자</p>
-                              <div className="flex gap-1">
-                                {gaeunbubRec.numbers.map((num) => (
-                                  <span
-                                    key={num}
-                                    className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-bold"
-                                  >
-                                    {num}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="bg-surface/30 border border-primary/20 p-4 rounded-xl">
-                              <p className="text-xs text-muted-foreground mb-2">추천 직업</p>
-                              <p className="text-xs font-medium">{gaeunbubRec.jobs.slice(0, 3).join(', ')}</p>
-                            </div>
-                          </div>
+                          {/* 색·방위·직업 용신 활용정보는 「용신론」이 정본 — 개운법은 '행동'만 남긴다(중복 정리) */}
                           <div className="space-y-3">
                             <p className="text-sm font-bold">일상 개운법</p>
                             <ul className="space-y-2 text-sm text-muted-foreground">
@@ -1792,56 +1799,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                       </Card>
                     )}
 
-                    {/* 신살 개운 가이드 (새 엔진) */}
-                    {engineData.sinsal.length > 0 && (
-                      <Card className="p-8 bg-white/5 border-white/10">
-                        <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6 flex items-center gap-2">
-                          <Sparkles className="w-4 h-4" />
-                          신살 개운 가이드 — 내 별을 활용하는 법
-                        </h3>
-                        <div className="space-y-4">
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            당신의 사주에 깃든 신살(神殺)은 단순한 운명이 아닙니다. 각 신살이 가진 에너지를 이해하고
-                            올바르게 활용하면, 타고난 기운을 인생의 강점으로 바꿀 수 있습니다.
-                          </p>
-                          {engineData.sinsal.map((s, i) => (
-                            <div
-                              key={i}
-                              className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-gold-500/20 transition-colors"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gold-500 font-black">{s.name}</span>
-                                  <span className="text-muted-foreground/40 text-xs">{s.hanja}</span>
-                                </div>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/10 text-gold-500">
-                                  {s.category}
-                                </span>
-                              </div>
-                              <p className="text-muted-foreground text-xs leading-relaxed mb-3">{s.poeticDesc}</p>
-                              {s.modernSkillTree && (
-                                <div className="bg-gold-500/5 border border-gold-500/15 p-3 rounded-lg">
-                                  <p className="text-gold-500 text-[10px] font-bold mb-1">✦ 현대적 활용법</p>
-                                  <p className="text-muted-foreground text-xs">{s.modernSkillTree}</p>
-                                </div>
-                              )}
-                              {s.modernJobs && s.modernJobs.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                  {s.modernJobs.map((job: string, j: number) => (
-                                    <span
-                                      key={j}
-                                      className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/5"
-                                    >
-                                      {job}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
+                    {/* 신살 정본은 「나의 사주」 탭 1곳에만 노출 — 운세흐름 재노출 제거(중복 정리) */}
 
                     {/* dancheong-divider */}
                     <div className="dancheong-divider my-10" />
@@ -2476,49 +2434,6 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
       </Dialog>
 
       {/* 고급 만세력 풀이 Dialog */}
-      <Dialog open={advancedExplainOpen} onOpenChange={setAdvancedExplainOpen}>
-        <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-gold-500">
-              <Sparkles className="w-5 h-5" />
-              고급 만세력이 뭔가요?
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/20">
-              <p className="text-gold-500 font-bold mb-2 text-xs">쉽게 말하면</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                사주 8글자를 더 깊이 파고드는 분석입니다. 글자 사이에 숨겨진 특별한 에너지와 인연의 패턴을 찾아냅니다.
-                마치 DNA 검사처럼, 겉으로는 보이지 않는 당신만의 고유한 특성을 발견합니다.
-              </p>
-            </div>
-            {[
-              {
-                title: '✦ 납음오행 — 내 인생의 배경음악',
-                desc: '태어난 해의 간지(干支)가 가진 특별한 오행입니다. "이 사람은 바다 같은 사람이다", "이 사람은 큰 나무 같은 사람이다"처럼 당신 인생 전체의 분위기를 보여줍니다.',
-              },
-              {
-                title: '✦ 공망 — 인생에서 빈자리',
-                desc: '사주에서 "작동하지 않는" 글자입니다. 공망이 된 것은 열심히 해도 결실이 잘 안 맺혀지는 분야를 뜻합니다. 단, 공망이 있다고 나쁜 게 아니에요 — 오히려 그 분야에 욕심을 내려놓으면 편해집니다.',
-              },
-              {
-                title: '✦ 12신살 — 나의 특별한 재능 태그',
-                desc: '당신 사주에 붙어있는 특별한 별(신살)들입니다. 역마살이 있으면 여행·이동 운이 강하고, 천을귀인이 있으면 어려울 때 귀인이 나타납니다. 단순히 "살"이라고 무서운 게 아닙니다.',
-              },
-              {
-                title: '✦ 천간합 / 지지 합충 — 글자들의 관계',
-                desc: '사주 8글자가 서로 당기거나(합) 밀어내는(충) 관계입니다. 합이 많으면 인복이 좋고 사람을 잘 모읍니다. 충이 많으면 변화가 잦고 에너지가 강합니다.',
-              },
-            ].map(({ title, desc }) => (
-              <div key={title} className="p-4 rounded-xl bg-white/5 border border-white/10">
-                <p className="text-white/80 font-bold mb-1.5 text-xs">{title}</p>
-                <p className="text-muted-foreground text-xs leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* 대운·세운 풀이 Dialog */}
       <Dialog open={daeunExplainOpen} onOpenChange={setDaeunExplainOpen}>
         <DialogContent className="bg-[#0f0f0f] border-white/10 max-w-lg max-h-[80vh] overflow-y-auto">
