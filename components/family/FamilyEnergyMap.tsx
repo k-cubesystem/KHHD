@@ -2,12 +2,62 @@
 
 // 순수 표시용. findFiveAvatar 가 'use client' 모듈(five-avatar-selector)에서 오므로
 // 서버 컴포넌트에서 호출하면 클라이언트 레퍼런스라 터진다 — 이 파일이 클라이언트여야 한다.
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
-import { ChevronLeft, Sparkles, ArrowRight, Home } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-react'
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
+import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 import type { EnergyMapEntry, FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
+
+/** 오행이 무엇인지 처음 보는 사람을 위한 접이식 설명 — saju-knowledge-graph 오행 노드 재사용. */
+function ElementPrimer() {
+  const [open, setOpen] = useState(false)
+  return (
+    <section className="mb-5 rounded-xl border border-white/8 bg-surface/20 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 font-serif text-[12.5px] text-ink-light/80">
+          <span className="text-gold-400">☯</span> 오행(五行)이란?
+        </span>
+        <ChevronDown className={`w-4 h-4 text-ink-light/40 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 pt-1 space-y-2 border-t border-white/5">
+          <p className="text-[11px] text-ink-light/50 leading-relaxed">
+            세상의 기운을 나무·불·흙·쇠·물 다섯으로 나눈 것이에요. 서로 살리고(相生) 누르며(相剋) 균형을 이룹니다.
+          </p>
+          {ELEMENTS.map((el) => {
+            const node = NODE_MAP.get(EL_KO[el])
+            return (
+              <div key={el} className="flex items-start gap-2.5">
+                <span
+                  className="mt-0.5 w-6 h-6 rounded-md grid place-items-center font-serif text-[12px] shrink-0"
+                  style={{
+                    background: `${EL_COLOR[el]}22`,
+                    color: EL_COLOR[el],
+                    border: `1px solid ${EL_COLOR[el]}55`,
+                  }}
+                >
+                  {EL_KO[el]}
+                </span>
+                <p className="text-[11px] text-ink-light/60 leading-snug">
+                  <b className="text-ink-light/80 font-serif">{EL_LABEL[el]}</b> · {node?.description}
+                  {node?.detail ? <span className="text-ink-light/40"> — {node.detail}</span> : null}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
 
 /** 신당 방의 「氣運 균형」 바와 같은 언어를 쓴다 — 두 화면이 같은 것을 말하고 있어야 한다. */
 function ElementBars({ entry }: { entry: EnergyMapEntry }) {
@@ -35,7 +85,9 @@ function ElementBars({ entry }: { entry: EnergyMapEntry }) {
                 style={{ height: `${entry.energy[el]}%`, background: EL_COLOR[el] }}
               />
             </div>
-            <div className="font-serif text-[11px] mt-0.5 text-ink-primary/75">{EL_KO[el]}</div>
+            <div className="font-serif text-[11px] mt-0.5 text-ink-primary/75">
+              {EL_KO[el]} <span className="text-ink-light/45 font-sans">{EL_LABEL[el]}</span>
+            </div>
             <div className="text-[9.5px] text-ink-light/40 tabular-nums">{entry.energy[el]}</div>
           </div>
         )
@@ -128,6 +180,8 @@ export function FamilyEnergyMapView({ data }: { data: MapData }) {
         </p>
       </header>
 
+      <ElementPrimer />
+
       {/* 가족 전체 평균 */}
       <section className="rounded-xl border border-gold-500/30 bg-gold-500/[0.06] p-4 mb-5 space-y-3">
         <div className="flex justify-between items-baseline">
@@ -154,7 +208,9 @@ export function FamilyEnergyMapView({ data }: { data: MapData }) {
                     style={{ height: `${average[el]}%`, background: EL_COLOR[el] }}
                   />
                 </div>
-                <div className="font-serif text-[12px] mt-1 text-ink-primary/75">{EL_KO[el]}</div>
+                <div className="font-serif text-[12px] mt-1 text-ink-primary/75">
+                  {EL_KO[el]} <span className="text-ink-light/45 font-sans">{EL_LABEL[el]}</span>
+                </div>
                 <div className="text-[10px] text-ink-light/40 tabular-nums">{average[el]}</div>
               </div>
             )

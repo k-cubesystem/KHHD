@@ -410,7 +410,7 @@ export default async function MyPage() {
           {[
             { href: '/protected/shrine', icon: Flame, label: '나의 신당', accent: true },
             { href: '/protected/profile/manse', icon: ScrollText, label: '내 명식' },
-            { href: '/protected/family', icon: Users, label: '인연 관리' },
+            { href: '/protected/family', icon: Users, label: '가족·인연 관리' },
             { href: '/protected/history', icon: BookOpen, label: '사주 기록' },
             { href: '/protected/store', icon: Store, label: '상점' },
             { href: '/protected/settings', icon: UserIcon, label: '내 정보 설정' },

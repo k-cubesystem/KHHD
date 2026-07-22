@@ -41,7 +41,9 @@ interface FamilyPageClientProps {
 
 export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientProps) {
   const router = useRouter()
-  const [members] = useState<FamilyMemberWithMissions[]>(initialMembers)
+  // 사주 계산용으로 자동 생성되는 relationship='본인' 레코드는 목록·카운트·지도 입구에서 숨긴다.
+  // (DB 행은 삭제하지 않는다 — 사주 계산 소비처가 재생성에 의존)
+  const [members] = useState<FamilyMemberWithMissions[]>(initialMembers.filter((m) => m.relationship !== '본인'))
   const [isPending, startTransition] = useTransition()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<EditingMember | null>(null)
@@ -165,22 +167,27 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
         )}
       </section>
 
-      {/* 기운 지도 입구 — 2명 이상(본인+가족)이어야 견줄 것이 생긴다 */}
+      {/* 기운 지도 입구 — 본인은 항상 포함되므로 가족 1명만 있어도 견줄 것이 생긴다 */}
       {members.length > 0 && (
         <Link
           href="/protected/family/map"
-          className="flex items-center gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.05] px-3.5 py-3 hover:bg-gold-500/[0.09] transition-colors"
+          className="group flex items-center gap-3 rounded-xl border border-gold-500/45 bg-gold-500/[0.10] px-3.5 py-3.5 shadow-[0_0_18px_rgba(201,168,76,0.10)] hover:bg-gold-500/[0.16] hover:border-gold-500/60 transition-colors"
         >
-          <span className="w-9 h-9 rounded-full bg-gold-500/10 border border-gold-500/25 grid place-items-center text-[15px] shrink-0">
+          <span className="w-10 h-10 rounded-full bg-gold-500/20 border border-gold-500/40 grid place-items-center text-[17px] shrink-0">
             🗺️
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block font-serif text-[13.5px] font-bold text-ink-light">우리 가족 기운 지도</span>
-            <span className="block text-[11px] text-ink-light/50 mt-0.5">
-              오행을 나란히 두고 서로 메울 기운을 봅니다
+            <span className="flex items-center gap-1.5">
+              <span className="font-serif text-[14px] font-bold text-ink-light">우리 가족 기운 지도</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-200 shrink-0 tabular-nums">
+                {members.length + 1}명
+              </span>
+            </span>
+            <span className="block text-[11px] text-gold-200/60 mt-0.5">
+              {members.length + 1}명의 기운을 한눈에 · 서로 메울 오행을 봅니다
             </span>
           </span>
-          <ChevronRight className="w-4 h-4 text-gold-500/60 shrink-0" />
+          <ChevronRight className="w-4 h-4 text-gold-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       )}
 

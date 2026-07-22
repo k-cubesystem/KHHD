@@ -150,23 +150,25 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
     {
       id: 'self',
       name: me?.full_name || '나',
-      // 계정 본인. 가족으로 자기 자신을 relationship='본인' 으로 등록해 둔 사용자가 흔해
-      // 같은 이름이 두 줄 나올 수 있다 — 어느 쪽이 계정인지 구분되게 '내 계정' 으로 표기.
+      // 계정 본인 — profiles 기준 정본. 아래에서 relationship='본인' 가족행은 제외하므로 중복 없다.
       relation: '내 계정',
       avatarId: null,
       birthDate: me?.birth_date ?? null,
       birthTime: me?.birth_time ?? null,
       isSolar: me?.calendar_type !== 'lunar',
     },
-    ...(members ?? []).map((m) => ({
-      id: m.id as string,
-      name: (m.name as string) || '이름 없음',
-      relation: (m.relationship as string) || '가족',
-      avatarId: (m.avatar_id as string) ?? null,
-      birthDate: (m.birth_date as string) ?? null,
-      birthTime: (m.birth_time as string) ?? null,
-      isSolar: m.calendar_type !== 'lunar',
-    })),
+    // 사주 계산용 relationship='본인' 자동 레코드는 profiles 의 self 와 이중 계상되므로 제외
+    ...(members ?? [])
+      .filter((m) => m.relationship !== '본인')
+      .map((m) => ({
+        id: m.id as string,
+        name: (m.name as string) || '이름 없음',
+        relation: (m.relationship as string) || '가족',
+        avatarId: (m.avatar_id as string) ?? null,
+        birthDate: (m.birth_date as string) ?? null,
+        birthTime: (m.birth_time as string) ?? null,
+        isSolar: m.calendar_type !== 'lunar',
+      })),
   ]
 
   const entries: EnergyMapEntry[] = targets.map((t) => {
