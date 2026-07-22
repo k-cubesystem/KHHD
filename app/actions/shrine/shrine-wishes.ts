@@ -12,6 +12,8 @@ export interface ShrineWish {
   wish_text: string
   category: string | null
   is_owner_wish: boolean
+  /** 소원이 향한 가족 신당 대상(NULL=본인). shrineId 스코프의 표기 보강. */
+  family_member_id: string | null
   created_at: string
 }
 
@@ -21,6 +23,8 @@ export async function addWish(input: {
   category?: string
   visitorName?: string
   visitorSessionId?: string
+  /** 대상 가족(본인 신당이면 null). 소원 로그 대상명 표기용 — shrineId 로 이미 분리됨. */
+  familyMemberId?: string | null
 }): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const {
@@ -45,6 +49,7 @@ export async function addWish(input: {
     wish_text: input.wishText.trim().slice(0, 100),
     category: input.category ?? null,
     is_owner_wish: isOwner,
+    family_member_id: input.familyMemberId ?? null,
   })
 
   if (error) return { success: false, error: error.message }

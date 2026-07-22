@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 interface ShrineWishFormProps {
   shrineId: string
   isOwner: boolean
+  /** 대상 가족(본인 신당이면 null·미전달). 소원에 대상 식별자를 새겨 로그 표기에 쓴다. */
+  familyMemberId?: string | null
 }
 
 const CATEGORIES = [
@@ -32,7 +34,7 @@ function getOrCreateSessionId(): string {
   return id
 }
 
-export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
+export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null }: ShrineWishFormProps) {
   const [category, setCategory] = useState<string>('')
   const [wishText, setWishText] = useState('')
   const [visitorName, setVisitorName] = useState('')
@@ -52,6 +54,7 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
       category: category || undefined,
       visitorName: visitorName.trim() || undefined,
       visitorSessionId: getOrCreateSessionId(),
+      familyMemberId,
     })
     setIsLoading(false)
 
@@ -64,7 +67,7 @@ export function ShrineWishForm({ shrineId, isOwner }: ShrineWishFormProps) {
     } else {
       toast.error('기원 실패. 다시 시도해주세요.')
     }
-  }, [shrineId, wishText, category, visitorName])
+  }, [shrineId, wishText, category, visitorName, familyMemberId])
 
   return (
     <div className="relative overflow-hidden rounded-2xl p-5 space-y-4 hanji-card border border-gold-500/[0.12]">

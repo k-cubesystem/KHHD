@@ -28,9 +28,11 @@ function timeAgo(dateStr: string): string {
 interface ShrineWishLogProps {
   wishes: ShrineWish[]
   shrineId: string
+  /** 이 신당 소원의 대상명('나' 또는 가족명). 있으면 소원마다 대상 태그를 표기(W2-c). */
+  targetName?: string
 }
 
-export function ShrineWishLog({ wishes: initialWishes, shrineId }: ShrineWishLogProps) {
+export function ShrineWishLog({ wishes: initialWishes, shrineId, targetName }: ShrineWishLogProps) {
   const [wishes, setWishes] = useState(initialWishes)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(initialWishes.length >= 10)
@@ -84,6 +86,11 @@ export function ShrineWishLog({ wishes: initialWishes, shrineId }: ShrineWishLog
                 {wish.is_owner_wish && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gold-500/10 text-gold-500/60 font-sans border border-gold-500/15">
                     주인
+                  </span>
+                )}
+                {targetName && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-ink-light/40 font-sans border border-white/[0.06]">
+                    {targetName}
                   </span>
                 )}
               </div>

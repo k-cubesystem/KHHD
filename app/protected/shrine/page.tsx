@@ -74,10 +74,10 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
         />
       )}
 
-      {/* 오너 소원 기원 + 방명록 열람 (F-2) */}
+      {/* 오너 소원 기원 + 방명록 열람 (F-2) — 대상(본인/가족)을 소원에 새기고 로그에 표기(W2-b/c) */}
       <div className="w-full max-w-[430px] mx-auto mt-5 space-y-5">
-        <ShrineWishForm shrineId={scene.shrineId} isOwner />
-        <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} />
+        <ShrineWishForm shrineId={scene.shrineId} isOwner familyMemberId={target?.id ?? null} />
+        <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} targetName={target?.name ?? '나'} />
       </div>
     </div>
   )
