@@ -143,14 +143,26 @@ async function runVeo(list) {
     }
 
     const durationSeconds = [4, 6, 8].includes(s.durationSec) ? s.durationSec : 4
-    console.log(`gen(veo) ${s.id} — ${durationSeconds}s @ ${s.resolution} (${DEFAULT_VEO_MODEL})`)
+    const aspectRatio = s.aspectRatio === '9:16' ? '9:16' : '16:9'
+    console.log(`gen(veo) ${s.id} — ${durationSeconds}s @ ${s.resolution} ${aspectRatio} (${DEFAULT_VEO_MODEL})`)
+
+    // 이미지-투-비디오: imageInput(webp 등)을 PNG 로 변환해 첫 프레임으로 전달.
+    // predictLongRunning(predict 계열)의 이미지 필드는 bytesBase64Encoded — inlineData 는
+    // Gemini generateContent 형식이라 400 거부됨(2026-07-22 실측).
+    const instance = { prompt: s.prompt }
+    if (s.imageInput) {
+      const sharp = (await import('sharp')).default
+      const png = await sharp(s.imageInput).png().toBuffer()
+      instance.image = { bytesBase64Encoded: png.toString('base64'), mimeType: 'image/png' }
+      console.log(`  첫 프레임: ${s.imageInput} (png ${(png.length / 1024).toFixed(0)}KB)`)
+    }
 
     const startRes = await fetch(`${veoBase()}/models/${DEFAULT_VEO_MODEL}:predictLongRunning`, {
       method: 'POST',
       headers: { 'x-goog-api-key': KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt: s.prompt }],
-        parameters: { aspectRatio: '16:9', resolution: s.resolution, durationSeconds },
+        instances: [instance],
+        parameters: { aspectRatio, resolution: s.resolution, durationSeconds },
       }),
     })
     if (!startRes.ok) {

@@ -29,6 +29,7 @@ import {
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
 import { useShrineAudio } from './useShrineAudio'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
@@ -557,6 +558,16 @@ export function ShrineRoomClient({ scene }: Props) {
             e.currentTarget.style.display = 'none'
           }}
         />
+        {/* 살아있는 방 — 테마별 시네마그래프(있는 테마만, 이미지의 미세 모션 버전이라 풀오퍼시티).
+            편집 중엔 성능 위해 숨김. 영상 자체를 라운딩(부모 클립 의존 금지 — 흰화면 사고 교훈).
+            파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다. */}
+        {!editing && (
+          <AmbientVideo
+            key={`vid-${activeCode}`}
+            id={`shrine-theme-${activeCode}`}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none rounded-[17px]"
+          />
+        )}
         {/* 제단 영역 대비용 하단 암전 */}
         <div
           className="absolute inset-x-0 bottom-0 h-[38%] rounded-b-[17px]"

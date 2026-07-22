@@ -25,6 +25,21 @@ export const VIDEO_SPECS = [
       'meditative and quiet, minimal elegant motion, no text, seamless loop, premium dark aesthetic.',
   },
   {
+    id: 'shrine-theme-banga',
+    title: '신당 테마 배경(반가) — 방이 살아난다 [파일럿]',
+    placement: 'ShrineRoomClient 방 배경 (room.webp 위 오버레이, 편집 중 숨김)',
+    durationSec: 4,
+    resolution: '720p',
+    // 이미지-투-비디오: 기존 room.webp 를 첫 프레임으로 — 방 구조·가구·색 완전 불변, 미세 모션만.
+    aspectRatio: '9:16', // 방 이미지가 512×917 세로형
+    imageInput: 'public/shrine/themes/banga/room.webp',
+    prompt:
+      'Subtle cinemagraph of this exact Korean traditional shrine room. Keep the room, furniture, colors and ' +
+      'composition COMPLETELY unchanged and static camera. Only add minimal living motion: candle flames gently ' +
+      'flickering, thin incense smoke slowly rising, faint dust motes drifting in the light, soft breathing glow ' +
+      'on the altar. No new objects, no people, no text, seamless loop, very subtle motion.',
+  },
+  {
     id: 'compatibility-ambient',
     title: '궁합 앰비언트 — 두 기운의 어우러짐',
     placement: 'compatibility-result 헤더 배경 (AmbientVideo)',
