@@ -19,6 +19,15 @@ export function formatKstDateTime(value: string | Date): string {
   return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`
 }
 
+/** 짧은 KST 포맷 "M.D HH:mm" — 알림 등 연도 생략. 하이드레이션 안전(위와 동일 오프셋 계산). */
+export function formatKstShort(value: string | Date): string {
+  const time = new Date(value).getTime()
+  if (Number.isNaN(time)) return ''
+  const kst = new Date(time + KST_OFFSET_MS)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${kst.getUTCMonth() + 1}.${kst.getUTCDate()} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`
+}
+
 export function toConversationalTone(text: string): string {
   // Simple heuristic mapping for now, can be expanded with AI later
   const endings = {

@@ -9,6 +9,7 @@ import {
   markNotificationRead,
   type UserNotification,
 } from '@/app/actions/core/user-notifications'
+import { formatKstShort } from '@/lib/utils'
 
 /** 알림 종류별 아이콘·CTA (기억함 업셀 등 행동 유도) */
 const KIND: Record<string, { icon: typeof Bell; cta?: { label: string; href: string } }> = {
@@ -105,14 +106,7 @@ export function NotificationsClient({ initialItems }: { initialItems: UserNotifi
                     </div>
                     <p className="text-[11.5px] text-ink-light/70 leading-snug mt-1 whitespace-pre-wrap">{n.message}</p>
                     <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[10px] text-ink-light/35">
-                        {new Date(n.createdAt).toLocaleString('ko-KR', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
+                      <span className="text-[10px] text-ink-light/35">{formatKstShort(n.createdAt)}</span>
                       {kind.cta && (
                         <Link href={kind.cta.href} className="text-[11px] font-bold text-gold-400">
                           {kind.cta.label} →
