@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card'
 import { motion } from 'framer-motion'
-import { MoreHorizontal, Edit2, Trash2, User } from 'lucide-react'
+import { MoreHorizontal, Edit2, Trash2, User, Camera } from 'lucide-react'
 import type { FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
@@ -30,14 +30,22 @@ export function MemberMissionCard({ member, onClick, onEdit, onDelete, index }: 
         <div className="flex items-center justify-between">
           {/* Left: Avatar & Info */}
           <div className="flex items-center gap-4 flex-1">
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 transition-transform hover:scale-105 overflow-hidden"
-              style={{
-                backgroundColor: avatar ? `${avatar.color}15` : 'rgba(212,175,55,0.1)',
-                border: `1px solid ${avatar ? `${avatar.color}30` : 'rgba(212,175,55,0.2)'}`,
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(member)
               }}
+              aria-label={`${member.name} 아바타 변경`}
+              className="relative w-14 h-14 shrink-0 transition-transform hover:scale-105"
             >
-              <div className="w-full h-full flex items-center justify-center">
+              <div
+                className="w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+                style={{
+                  backgroundColor: avatar ? `${avatar.color}15` : 'rgba(212,175,55,0.1)',
+                  border: `1px solid ${avatar ? `${avatar.color}30` : 'rgba(212,175,55,0.2)'}`,
+                }}
+              >
                 {avatar ? (
                   <Image
                     src={avatar.src}
@@ -50,7 +58,11 @@ export function MemberMissionCard({ member, onClick, onEdit, onDelete, index }: 
                   <User className="w-6 h-6 text-primary" />
                 )}
               </div>
-            </div>
+              {/* 아바타 탭 = 변경 가능 시각화 (실측: 지금은 카드 전체가 미션 시트를 열어 변경 불가) */}
+              <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary border-2 border-[#1a1510] grid place-items-center">
+                <Camera className="w-2.5 h-2.5 text-black" strokeWidth={2.5} />
+              </span>
+            </button>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">

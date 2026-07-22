@@ -21,7 +21,13 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
   const memberId = typeof member === 'string' && member.length > 0 ? member : null
 
   const [{ data: familyRows }, { data: profile }] = await Promise.all([
-    supabase.from('family_members').select('id, name, avatar_id').eq('user_id', user.id).order('created_at'),
+    // relationship='본인' 레코드는 '나' 탭(id=null)과 중복되므로 가족 탭에서 제외(family-page-client.tsx:46 동일 패턴)
+    supabase
+      .from('family_members')
+      .select('id, name, avatar_id')
+      .eq('user_id', user.id)
+      .neq('relationship', '본인')
+      .order('created_at'),
     supabase.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle(),
   ])
   const family = familyRows ?? []
