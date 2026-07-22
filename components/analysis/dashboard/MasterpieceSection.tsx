@@ -2,6 +2,7 @@
 
 import { ArrowRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 export function MasterpieceSection() {
   const router = useRouter()
@@ -15,6 +16,13 @@ export function MasterpieceSection() {
         boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(201,168,76,0.07)',
       }}
     >
+      {/* 앰비언트 배경 영상 — 흐르는 먹·금가루. 없으면 폴백(기존 그라디언트 유지), reduced-motion 존중 */}
+      <AmbientVideo
+        id="analysis-ambient"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 0.16, mixBlendMode: 'screen' }}
+      />
+
       {/* 命 워터마크 */}
       <div
         aria-hidden="true"
