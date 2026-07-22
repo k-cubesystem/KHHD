@@ -167,8 +167,8 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
         )}
       </section>
 
-      {/* 기운 지도 입구 — 본인은 항상 포함되므로 가족 1명만 있어도 견줄 것이 생긴다 */}
-      {members.length > 0 && (
+      {/* 기운 지도 입구 — 본인(profiles)이 항상 지도에 오르므로 레코드가 하나라도 있으면 진입 가능(지도가 self-only 빈 상태를 처리) */}
+      {initialMembers.length > 0 && (
         <Link
           href="/protected/family/map"
           className="group flex items-center gap-3 rounded-xl border border-gold-500/45 bg-gold-500/[0.10] px-3.5 py-3.5 shadow-[0_0_18px_rgba(201,168,76,0.10)] hover:bg-gold-500/[0.16] hover:border-gold-500/60 transition-colors"
