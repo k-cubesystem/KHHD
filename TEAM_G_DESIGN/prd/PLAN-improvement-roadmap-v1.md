@@ -150,6 +150,17 @@
   - **보류(보호파일)**: S3-a 관계 한도 count 정정(`membership.ts`)은 타 세션 보호파일이라 미적용. **판단유지**: 종합 dialog 요약·물상론 실천조언·warnings 공망은 opt-in/가치부가로 유지.
   - **대기**: 신위 아바타 프로필(본인) 확장 여부, 풍수 지식 팁 톤/범위 조정.
 
+**신규 기획 (세션30) — ✅완료·배포 (2026-07-22)**
+
+- ✅ **디테일 v3: 프로필·소원·아바타·가이드마퀴·영상확장** → `PLAN-detail-v3-profile-wish-guide.md` (W-A→W-E 전 단계, prod 배포·회귀 0실패). 세션 한도로 W-E 커밋 직전 중단된 것을 Fable 이 이어받아 완주.
+  - **W-A(즉효)**: 가족 카드 아바타 직접 클릭 → 편집 진입(기존엔 카드 전체가 8종 서비스 시트만 열어 아바타 변경 불가·⋯메뉴에만 숨겨짐). 신당 `page.tsx` 가족 탭 쿼리에 `.neq('relationship','본인')` — '나'와 '박대건'(본인 레코드) 중복 탭 제거(family-page-client·energy-map 이미 필터, 신당만 누락됐던 것).
+  - **W-B 프로필 재구성**: DailyFortuneCard(오늘의운세) 제거(대시보드 「오늘의 정성」과 중복), 바로가기 6버튼 그리드를 히어로 직후로 상향, 지표스트립·출석·설정지원 축소 재디자인(기능·데이터 불변).
+  - **W-C 가이드 마퀴**: 접힘 바를 정적 "안내 보기"에서 **흐르는 상식 마퀴**(오늘의 상식 term+plain, review-marquee infinite-scroll 패턴, `guide-marquee` keyframes, reduced-motion 정지)로. 자동노출 기본을 펼침→접힘(setBubble null)으로, 탭 시 펼침은 기존 onTapCollapsed 로 충족.
+  - **W-D 소원 가족별 분리**: `shrine_wishes.family_member_id` 컬럼(멱등, 기존행 NULL=본인, ON DELETE SET NULL·부분인덱스) + ShrineWishForm/getWishes/addWish/ShrineWishLog 에 대상 배선·표기.
+  - **W-E 영상 확장**: 유휴 `analysis-ambient` 재사용($0)으로 studio 공용 analyzing-animation(1수정=관상·손금·풍수 3화면)·신년운세 Summary 헤더·재물운 히어로에 저opacity(0.12~0.18)·screen·폴백 배경 배선.
+  - **덤(스펙 밖 결함 즉시수정)**: notifications 알림 시각이 `toLocaleString`(timeZone 미지정)이라 서버(UTC)/클라(KST) 미스매치로 **React #418** 유발 — 세션28 history 수정의 자매버그가 F-1 신탁 알림으로 데이터 쌓이며 드러남. `formatKstShort`(오프셋 직접계산)로 교체(lib/utils.ts). detail-v2 회귀로 검출→수정→재검증 통과.
+  - **대기**: 궁합 화면 영상(로맨스 톤 신규 에셋 $0.4~0.5), 신위 아바타 프로필 확장.
+
 **코드 잔여**
 
 - i18n 문자열 추출 약 1,200곳 — 화면 단위 완결(✅상점 → 신당 → 고민상담).
