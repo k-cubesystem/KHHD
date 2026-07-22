@@ -30,7 +30,6 @@ import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getUserLimitsSummary } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
-import { DailyFortuneCard } from '@/components/analysis/daily-fortune-card'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 
@@ -328,66 +327,11 @@ export default async function MyPage() {
         </div>
       </section>
 
-      {/* ── 2. 오늘의 운세 (매일 확인 유도 — 최상단) ── */}
+      {/* ── 2. 바로가기 (이름 바로 아래로 상향 — 발주 ④) ── */}
       <section
-        aria-label="오늘의 운세"
+        aria-label="바로가기"
         className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-75 relative z-10"
       >
-        <DailyFortuneCard userId={user.id} userName={displayName} />
-      </section>
-
-      {/* ── 3. 지표 스트립: 복채 · 멤버십 · 기록 ── */}
-      <section
-        aria-label="현황"
-        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100 relative z-10"
-      >
-        <div className="grid grid-cols-3 gap-2">
-          <Link
-            href="/protected/store"
-            className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
-          >
-            <Coins className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
-            <span className="font-serif text-lg font-medium text-ink-light leading-none group-hover:text-primary">
-              {talismanBalance}
-            </span>
-            <span className="text-[9.5px] text-ink-light/45">복채 만냥</span>
-          </Link>
-          <Link
-            href="/protected/store?tab=membership"
-            className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
-          >
-            <Crown className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
-            <span className="font-serif text-[13px] font-medium text-ink-light leading-tight text-center mt-1 group-hover:text-primary">
-              {tier}
-            </span>
-            <span className="text-[9.5px] text-primary/55">{isSubscribed ? '이용중' : '업그레이드'}</span>
-          </Link>
-          <Link
-            href="/protected/history"
-            className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
-          >
-            <BookOpen className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
-            <span className="font-serif text-lg font-medium text-ink-light leading-none group-hover:text-primary">
-              {recordCount}
-            </span>
-            <span className="text-[9.5px] text-ink-light/45">분석 기록</span>
-          </Link>
-        </div>
-      </section>
-
-      {/* ── 3. 오늘: 출석 ── */}
-      <section className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 relative z-10">
-        <DailyCheckIn
-          canCheckIn={attendanceStatus?.canCheckIn ?? true}
-          checkedDates={attendanceStatus?.checkedDates || []}
-          weekCount={attendanceStatus?.weekCount || 0}
-          totalBokchae={attendanceStatus?.totalBokchae || 0}
-          consecutiveStreak={attendanceStatus?.consecutiveStreak || 0}
-        />
-      </section>
-
-      {/* ── 5. 바로가기 ── */}
-      <section className="px-3 mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200 relative z-10">
         <div className="flex items-center gap-2 mb-3">
           <div className="h-px w-6 bg-gold-500/40" />
           <h3 className="text-xs font-serif text-gold-500/80 tracking-wider">바로가기</h3>
@@ -438,8 +382,58 @@ export default async function MyPage() {
         </div>
       </section>
 
-      {/* ── 6. 설정·지원 ── */}
-      <section className="px-3 mb-10 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-300 relative z-10">
+      {/* ── 3. 지표 스트립: 복채 · 멤버십 · 기록 ── */}
+      <section
+        aria-label="현황"
+        className="px-3 mb-3.5 animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100 relative z-10"
+      >
+        <div className="grid grid-cols-3 gap-2">
+          <Link
+            href="/protected/store"
+            className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
+          >
+            <Coins className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
+            <span className="font-serif text-lg font-medium text-ink-light leading-none group-hover:text-primary">
+              {talismanBalance}
+            </span>
+            <span className="text-[9.5px] text-ink-light/45">복채 만냥</span>
+          </Link>
+          <Link
+            href="/protected/store?tab=membership"
+            className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
+          >
+            <Crown className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
+            <span className="font-serif text-[13px] font-medium text-ink-light leading-tight text-center mt-1 group-hover:text-primary">
+              {tier}
+            </span>
+            <span className="text-[9.5px] text-primary/55">{isSubscribed ? '이용중' : '업그레이드'}</span>
+          </Link>
+          <Link
+            href="/protected/history"
+            className="group rounded-xl border border-primary/20 bg-surface/40 p-3 flex flex-col items-center gap-1 transition-all hover:border-primary/50 hover:bg-surface/60 active:scale-95"
+          >
+            <BookOpen className="h-4 w-4 text-primary/80" strokeWidth={1.5} />
+            <span className="font-serif text-lg font-medium text-ink-light leading-none group-hover:text-primary">
+              {recordCount}
+            </span>
+            <span className="text-[9.5px] text-ink-light/45">분석 기록</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ── 4. 오늘: 출석 (기능·데이터 불변, 배너만 컴팩트) ── */}
+      <section className="px-3 mb-3.5 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 relative z-10">
+        <DailyCheckIn
+          canCheckIn={attendanceStatus?.canCheckIn ?? true}
+          checkedDates={attendanceStatus?.checkedDates || []}
+          weekCount={attendanceStatus?.weekCount || 0}
+          totalBokchae={attendanceStatus?.totalBokchae || 0}
+          consecutiveStreak={attendanceStatus?.consecutiveStreak || 0}
+        />
+      </section>
+
+      {/* ── 5. 설정·지원 ── */}
+      <section className="px-3 mb-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-200 relative z-10">
         <div className="rounded-xl border border-primary/15 bg-surface/20 divide-y divide-primary/10 overflow-hidden">
           {/* 언어 전환 — next-intl 로케일 쿠키 토글 */}
           <div className="flex items-center justify-between p-4">

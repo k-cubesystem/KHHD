@@ -276,7 +276,7 @@ export function DailyCheckIn({
           type="button"
           aria-label="일일 출석 체크 열기"
           className={cn(
-            'w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all active:scale-[0.98]',
+            'w-full flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all active:scale-[0.98]',
             canCheckIn
               ? 'bg-gradient-to-r from-gold-500/12 via-gold-500/5 to-transparent border-gold-500/40 hover:border-gold-500/60'
               : 'bg-surface/40 border-primary/20 hover:border-primary/40'
@@ -284,12 +284,12 @@ export function DailyCheckIn({
         >
           <div
             className={cn(
-              'w-10 h-10 rounded-full flex items-center justify-center shrink-0',
+              'w-9 h-9 rounded-full flex items-center justify-center shrink-0',
               canCheckIn ? 'bg-gold-500/15 text-gold-500' : 'bg-surface/60 text-ink-light/50'
             )}
             style={canCheckIn ? { animation: 'bounce-y 1.5s ease-in-out 0.5s infinite' } : undefined}
           >
-            <CalendarCheck className="w-5 h-5" />
+            <CalendarCheck className="w-[18px] h-[18px]" />
           </div>
 
           <div className="flex-1 min-w-0">
