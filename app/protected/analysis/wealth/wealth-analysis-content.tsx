@@ -15,6 +15,7 @@ import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 interface FamilyMember {
   id: string
@@ -145,19 +146,27 @@ export function WealthAnalysisContent() {
       className="flex flex-col gap-12 w-full max-w-5xl mx-auto py-12 px-3 pb-24"
     >
       {/* Header - The Wealth Flow */}
-      <motion.section variants={fadeInUp} className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
-          <Coins className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">재물의 흐름</span>
+      <motion.section variants={fadeInUp} className="relative overflow-hidden rounded-3xl text-center">
+        {/* 앰비언트 배경 영상 — 재물운 히어로 은은히. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
+        <AmbientVideo
+          id="analysis-ambient"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          style={{ opacity: 0.12, mixBlendMode: 'screen' }}
+        />
+        <div className="relative z-10 space-y-4 py-4">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/30 border border-primary/20 shadow-sm mb-2 backdrop-blur-sm">
+            <Coins className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-bold text-primary-dim uppercase tracking-[0.2em]">재물의 흐름</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
+            재물운 <span className="text-primary">심층 분석</span>
+          </h1>
+          <p className="text-ink-light/70 font-light text-lg max-w-2xl mx-auto leading-relaxed">
+            재물은 쫓는 것이 아니라, 길목을 지키는 것입니다.
+            <br />
+            <span className="text-sm">당신의 인생에서 재물이 모이는 시기와 방향을 알려드립니다.</span>
+          </p>
         </div>
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold tracking-tight text-ink-light leading-tight">
-          재물운 <span className="text-primary">심층 분석</span>
-        </h1>
-        <p className="text-ink-light/70 font-light text-lg max-w-2xl mx-auto leading-relaxed">
-          재물은 쫓는 것이 아니라, 길목을 지키는 것입니다.
-          <br />
-          <span className="text-sm">당신의 인생에서 재물이 모이는 시기와 방향을 알려드립니다.</span>
-        </p>
       </motion.section>
 
       {/* Member Info */}

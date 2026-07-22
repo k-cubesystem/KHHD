@@ -29,6 +29,7 @@ import Link from 'next/link'
 import { analyzeYear2026Action, type Year2026Result } from '@/app/actions/ai/year2026'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 // --- Internal Components ---
 
@@ -414,6 +415,12 @@ function NewYear2026Content() {
           >
             {/* 1. Summary Card */}
             <Card className="card-glass-manse p-6 md:p-10 border-red-900/30 relative overflow-hidden">
+              {/* 앰비언트 배경 영상 — 신년 의식 테마. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
+              <AmbientVideo
+                id="analysis-ambient"
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                style={{ opacity: 0.14, mixBlendMode: 'screen' }}
+              />
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none -mr-20 -mt-20" />
 
               <div className="flex flex-col items-center lg:items-start gap-6 relative z-10">
