@@ -17,6 +17,8 @@ import { GA } from '@/lib/analytics/ga4'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { PillarsStrip } from '@/components/analysis/PillarsStrip'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
+import { motion } from 'framer-motion'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnalysisData = Record<string, any>
@@ -141,8 +143,14 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
   if (!data) return null
 
   // --- 결과 ---
+  // 로딩→결과 하드 스왑을 부드러운 크로스페이드로(로더가 사라지고 결과가 떠오른다)
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <motion.div
+      className="min-h-screen bg-background pb-24"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    >
       <PaywallModal {...paywallProps} />
 
       {/* 헤더 */}
@@ -687,7 +695,10 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
           </ResultSection>
         )}
 
-        {/* 운의 흐름 */}
+        {/* 天 → 地 시네마틱 전환 구분자 */}
+        <CheonToJiDivider />
+
+        {/* 운의 흐름 (地) */}
         <DetailSection title={data.ji?.title || '지금 흐르는 운의 방향이에요'} data={data.ji} color="emerald" />
 
         {/* 교차 분석 */}
@@ -712,6 +723,35 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       <SajuShareSection targetId={target.id} targetName={target.name} summary={data.summary as string | undefined} />
 
       <ServiceDisclaimer className="mt-6" />
+    </motion.div>
+  )
+}
+
+/**
+ * 天 → 地 전환 구분자 — 타고난 성격/구조(天)에서 삶의 터전·운의 흐름(地)으로 넘어가는 챕터 경계.
+ * 유휴 analysis-ambient 영상을 얇은 시네마틱 배경으로 배선. 영상 없으면 단청풍 그라디언트로 폴백.
+ */
+function CheonToJiDivider() {
+  return (
+    <div className="relative mx-4 my-6 h-[120px] rounded-2xl overflow-hidden border border-gold-500/20">
+      <AmbientVideo
+        id="analysis-ambient"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ opacity: 0.55 }}
+        fallback={
+          <div
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(100deg, #0d0a06 0%, #1a130a 50%, #0d0a06 100%)' }}
+          />
+        }
+      />
+      {/* 캡션 가독성용 어둠막 */}
+      <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/35 to-background/65" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-center px-4">
+        <span className="text-[10px] tracking-[0.5em] text-gold-500/60 font-serif">天 · 地</span>
+        <span className="font-serif text-lg font-bold text-gold-200">地 · 삶의 터전</span>
+        <span className="text-[11px] text-ink-light/50">타고난 것에서, 살아갈 자리로</span>
+      </div>
     </div>
   )
 }
@@ -1154,8 +1194,14 @@ function SajuLoadingContent({ name, progress }: { name: string; progress: number
   const tip = SAJU_TIPS[tipIndex]
 
   return (
-    <div className="min-h-screen bg-background px-4 py-8">
-      <div className="max-w-sm mx-auto space-y-8">
+    <div className="min-h-screen bg-background px-4 py-8 relative overflow-hidden">
+      {/* 앰비언트 배경 영상 — 프로그레스·상식카드 뒤 레이어. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
+      <AmbientVideo
+        id="analysis-ambient"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 0.16, mixBlendMode: 'screen' }}
+      />
+      <div className="max-w-sm mx-auto space-y-8 relative z-10">
         {/* 상단: 이름 + 프로그레스 */}
         <div className="text-center space-y-4 pt-8">
           <p className="text-sm text-gold-500 font-serif">{name}님의 사주를 풀어보고 있어요</p>
