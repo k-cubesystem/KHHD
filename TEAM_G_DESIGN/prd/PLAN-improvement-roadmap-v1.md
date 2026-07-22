@@ -159,7 +159,7 @@
   - **W-D 소원 가족별 분리**: `shrine_wishes.family_member_id` 컬럼(멱등, 기존행 NULL=본인, ON DELETE SET NULL·부분인덱스) + ShrineWishForm/getWishes/addWish/ShrineWishLog 에 대상 배선·표기.
   - **W-E 영상 확장**: 유휴 `analysis-ambient` 재사용($0)으로 studio 공용 analyzing-animation(1수정=관상·손금·풍수 3화면)·신년운세 Summary 헤더·재물운 히어로에 저opacity(0.12~0.18)·screen·폴백 배경 배선.
   - **덤(스펙 밖 결함 즉시수정)**: notifications 알림 시각이 `toLocaleString`(timeZone 미지정)이라 서버(UTC)/클라(KST) 미스매치로 **React #418** 유발 — 세션28 history 수정의 자매버그가 F-1 신탁 알림으로 데이터 쌓이며 드러남. `formatKstShort`(오프셋 직접계산)로 교체(lib/utils.ts). detail-v2 회귀로 검출→수정→재검증 통과.
-  - **대기**: 궁합 화면 영상(로맨스 톤 신규 에셋 $0.4~0.5), 신위 아바타 프로필 확장.
+  - **✅후속 완료(2026-07-22)**: 궁합 전용 영상 생성(Veo 금·홍조 두 기운, compatibility-ambient webm 955KB/mp4 553KB, $0.40)→궁합 결과 헤더 배경 배선 + 프로필 아바타 신위 17종 확장(경로형 유지, settings-form 정령5+신위17 2구획·profile/page 게이트 /shrine/deities/ 추가). 회귀 무실패(OpenEventPopup fetch 플레이크 1건은 무관·재실행 통과).
 
 **코드 잔여**
 
