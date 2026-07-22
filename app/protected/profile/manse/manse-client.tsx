@@ -1,17 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { getSajuData, WU_XING_COLORS, SajuData } from '@/lib/domain/saju/saju'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import {
   analyzeGekguk,
-  calculateSinsal,
   analyzeYongsin,
   analyzeYukchin,
   calculateDaeun,
   getGaeunbubRecommendation,
-  type SinsalItem,
   type DaeunPeriod,
 } from '@/lib/domain/saju/saju-analysis'
 import {
@@ -142,47 +140,6 @@ const ELEMENT_BOOST: Record<
   },
 }
 
-// 신살별 활용법
-const SINSAL_ADVICE: Record<
-  string,
-  {
-    positive: string[]
-    caution?: string[]
-    solution: string
-  }
-> = {
-  역마살: {
-    positive: [
-      '여행업, 무역업, 운수업에서 강점 발휘',
-      '해외 진출, 유학, 이민 고려해보기',
-      '다양한 경험 쌓기, 새로운 장소 탐험',
-    ],
-    caution: ['한곳에 정착하지 못하는 성향 주의', '중요한 결정 전 신중히 생각하기', '가족과의 시간 소홀하지 않기'],
-    solution:
-      '정기적인 여행이나 출장을 통해 역마살 에너지를 긍정적으로 소화하세요. 1년에 2-3회 새로운 장소를 방문하는 것이 좋습니다.',
-  },
-  천을귀인: {
-    positive: [
-      '어려울 때 반드시 도움의 손길이 나타남',
-      '멘토, 스승을 만나면 크게 발전',
-      '인맥을 잘 활용하면 성공 가능성 높음',
-    ],
-    caution: ['타인 의존이 너무 강해지지 않도록 주의', '스스로의 노력도 병행해야 함'],
-    solution: '좋은 사람들과의 인연을 소중히 하고, 감사함을 표현하세요. 네트워킹 모임에 적극 참여하는 것이 좋습니다.',
-  },
-  화개살: {
-    positive: ['예술, 종교, 철학 분야에서 재능 발휘', '작가, 화가, 음악가로 성공 가능', '깊은 사색과 통찰력 소유'],
-    caution: ['외로움을 느낄 수 있음', '현실적인 일에 무관심할 수 있음', '대인관계 소극적일 수 있음'],
-    solution:
-      '혼자만의 시간을 즐기되, 의도적으로 사회 활동도 병행하세요. 창작 활동을 통해 내면의 에너지를 표현하는 것이 좋습니다.',
-  },
-  도화살: {
-    positive: ['연예, 서비스업, 예술 분야에서 큰 성공', '인간관계에서 호감 얻기 쉬움', '대중과의 소통 능력 탁월'],
-    caution: ['이성 문제로 인한 갈등 주의', '표면적인 관계에 치우칠 수 있음'],
-    solution: '매력을 긍정적으로 활용하되, 깊이 있는 관계를 만들기 위해 노력하세요. 예술적 재능을 개발하면 좋습니다.',
-  },
-}
-
 // 섹션 설명 (작가 톤)
 const SECTION_DESCRIPTIONS = {
   advancedManse: {
@@ -225,18 +182,6 @@ const SECTION_DESCRIPTIONS = {
     intro:
       '공망(空亡)은 육십갑자에서 비어있는 자리입니다. 운이 작용하지 않는 공간으로, 때로는 아무리 노력해도 결실을 얻기 어려운 분야를 나타냅니다. 하지만 공망을 잘 이해하면 헛수고를 피하고 에너지를 효율적으로 사용할 수 있습니다.',
   },
-}
-
-// 공망 해결책
-const GONGMANG_SOLUTION = {
-  understanding:
-    "공망은 '비어있다'는 뜻으로, 운이 제대로 작용하지 않는 영역입니다. 하지만 두려워할 필요는 없습니다. 공망을 이해하고 대처하면 오히려 에너지 낭비를 막고 효율적으로 살 수 있습니다.",
-  dailyPractices: [
-    '공망 시간대에는 중요한 결정 피하기',
-    '공망 방향으로는 장거리 여행 자제',
-    '공망 색상보다 용신 색상 활용하기',
-    '공망을 인정하고 집착하지 않기',
-  ],
 }
 
 // 천간/지지 정보
@@ -321,130 +266,139 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
   const [gaeunbubExplainOpen, setGaeunbubExplainOpen] = useState(false)
   const selectedMember = members.find((m) => m.id === selectedMemberId)
 
-  // 사주 데이터 안전하게 가져오기
-  let saju: SajuData | null = null
-  try {
-    if (selectedMember?.birth_date && selectedMember.birth_date.trim()) {
-      saju = getSajuData(
-        selectedMember.birth_date,
-        selectedMember.birth_time || '12:00',
-        isSolarCalendar(selectedMember.calendar_type),
-        selectedMember.is_leap_month ?? false
-      )
-    }
-  } catch (error) {
-    logger.error('Error in getSajuData:', error)
-    saju = null
-  }
-
-  // 프리미엄 분석 계산 (에러 방지)
-  let gekgukAnalysis = null
-  let sinsalList: SinsalItem[] = []
-  let yongsinAnalysis = null
-  let yukchinAnalysis = null
-  let daeunList: DaeunPeriod[] = []
-  let gaeunbubRec = null
-
-  try {
-    gekgukAnalysis = saju ? analyzeGekguk(saju) : null
-  } catch (error) {
-    logger.error('Error in analyzeGekguk:', error)
-  }
-
-  try {
-    sinsalList = saju ? calculateSinsal(saju) : []
-  } catch (error) {
-    logger.error('Error in calculateSinsal:', error)
-  }
-
-  try {
-    yongsinAnalysis = saju ? analyzeYongsin(saju) : null
-  } catch (error) {
-    logger.error('Error in analyzeYongsin:', error)
-  }
-
-  try {
-    yukchinAnalysis = saju ? analyzeYukchin(saju) : null
-  } catch (error) {
-    logger.error('Error in analyzeYukchin:', error)
-  }
-
-  try {
-    daeunList =
-      saju && selectedMember
-        ? calculateDaeun(
+  // 13개 사주 엔진을 한 번에 계산 — 다이얼로그 토글·리렌더마다 전체 재계산하던 것을 메모이즈.
+  // ⚠️ 전부 순수 결정론 엔진이라 메모이즈해도 계산값은 완전히 동일하다(값 회귀 없음).
+  const { saju, gekgukAnalysis, yongsinAnalysis, yukchinAnalysis, daeunList, gaeunbubRec, advancedManse, engineData } =
+    useMemo(() => {
+      // 사주 데이터 안전하게 가져오기
+      let saju: SajuData | null = null
+      try {
+        if (selectedMember?.birth_date && selectedMember.birth_date.trim()) {
+          saju = getSajuData(
             selectedMember.birth_date,
-            selectedMember.gender || 'male',
-            saju,
             selectedMember.birth_time || '12:00',
+            isSolarCalendar(selectedMember.calendar_type),
+            selectedMember.is_leap_month ?? false
+          )
+        }
+      } catch (error) {
+        logger.error('Error in getSajuData:', error)
+        saju = null
+      }
+
+      // 프리미엄 분석 계산 (에러 방지)
+      let gekgukAnalysis = null
+      let yongsinAnalysis = null
+      let yukchinAnalysis = null
+      let daeunList: DaeunPeriod[] = []
+      let gaeunbubRec = null
+
+      try {
+        gekgukAnalysis = saju ? analyzeGekguk(saju) : null
+      } catch (error) {
+        logger.error('Error in analyzeGekguk:', error)
+      }
+
+      try {
+        yongsinAnalysis = saju ? analyzeYongsin(saju) : null
+      } catch (error) {
+        logger.error('Error in analyzeYongsin:', error)
+      }
+
+      try {
+        yukchinAnalysis = saju ? analyzeYukchin(saju) : null
+      } catch (error) {
+        logger.error('Error in analyzeYukchin:', error)
+      }
+
+      try {
+        daeunList =
+          saju && selectedMember
+            ? calculateDaeun(
+                selectedMember.birth_date,
+                selectedMember.gender || 'male',
+                saju,
+                selectedMember.birth_time || '12:00',
+                isSolarCalendar(selectedMember.calendar_type)
+              )
+            : []
+      } catch (error) {
+        logger.error('Error in calculateDaeun:', error)
+      }
+
+      try {
+        gaeunbubRec = yongsinAnalysis ? getGaeunbubRecommendation(yongsinAnalysis.yongsin) : null
+      } catch (error) {
+        logger.error('Error in getGaeunbubRecommendation:', error)
+      }
+
+      // 고급 만세력 분석
+      let advancedManse = null
+      try {
+        if (selectedMember && selectedMember.birth_date) {
+          advancedManse = analyzeManseAdvanced(
+            selectedMember.birth_date,
+            selectedMember.birth_time || '12:00',
+            (selectedMember.gender as 'male' | 'female') || 'male',
             isSolarCalendar(selectedMember.calendar_type)
           )
-        : []
-  } catch (error) {
-    logger.error('Error in calculateDaeun:', error)
-  }
-
-  try {
-    gaeunbubRec = yongsinAnalysis ? getGaeunbubRecommendation(yongsinAnalysis.yongsin) : null
-  } catch (error) {
-    logger.error('Error in getGaeunbubRecommendation:', error)
-  }
-
-  // 고급 만세력 분석
-  let advancedManse = null
-  try {
-    if (selectedMember && selectedMember.birth_date) {
-      advancedManse = analyzeManseAdvanced(
-        selectedMember.birth_date,
-        selectedMember.birth_time || '12:00',
-        (selectedMember.gender as 'male' | 'female') || 'male',
-        isSolarCalendar(selectedMember.calendar_type)
-      )
-    }
-  } catch (error) {
-    logger.error('Error in analyzeManseAdvanced:', error)
-  }
-
-  // 해화지기 마스터 엔진 데이터 계산
-  let engineData: {
-    sipseong: SipseongMap | null
-    sibjiunseong: SibjiunseongResult | null
-    sinsal: SinsalResult[]
-    relations: RelationResult | null
-    mulsang: (typeof GAN_MULSANG)[string] | null
-    warnings: WarningsResult | null
-  } = { sipseong: null, sibjiunseong: null, sinsal: [], relations: null, mulsang: null, warnings: null }
-
-  if (saju) {
-    try {
-      const pillarsForSipseong = [
-        { position: '년주', gan: saju.pillars.year.gan, zhi: saju.pillars.year.zhi },
-        { position: '월주', gan: saju.pillars.month.gan, zhi: saju.pillars.month.zhi },
-        { position: '일간', gan: saju.pillars.day.gan, zhi: saju.pillars.day.zhi },
-        { position: '시주', gan: saju.pillars.time.gan, zhi: saju.pillars.time.zhi },
-      ]
-      const pillarsForSibj = [
-        { name: '년주', zhi: saju.pillars.year.zhi },
-        { name: '월주', zhi: saju.pillars.month.zhi },
-        { name: '일주', zhi: saju.pillars.day.zhi },
-        { name: '시주', zhi: saju.pillars.time.zhi },
-      ]
-      const pillarsForRel = [saju.pillars.year, saju.pillars.month, saju.pillars.day, saju.pillars.time]
-      const dayGanji = saju.pillars.day.gan + saju.pillars.day.zhi
-      const sipseongResult = analyzeSipseong(saju.dayMaster, pillarsForSipseong)
-
-      engineData = {
-        sipseong: sipseongResult,
-        sibjiunseong: analyzeSibjiunseong(saju.dayMaster, pillarsForSibj),
-        sinsal: calculateExtendedSinsal(saju),
-        relations: analyzeRelations(pillarsForRel, dayGanji),
-        mulsang: GAN_MULSANG[saju.dayMaster] || null,
-        warnings: analyzeWarnings(saju, yongsinAnalysis, sipseongResult),
+        }
+      } catch (error) {
+        logger.error('Error in analyzeManseAdvanced:', error)
       }
-    } catch (e) {
-      logger.error('[ManseEngine] Error:', e)
-    }
-  }
+
+      // 해화지기 마스터 엔진 데이터 계산
+      let engineData: {
+        sipseong: SipseongMap | null
+        sibjiunseong: SibjiunseongResult | null
+        sinsal: SinsalResult[]
+        relations: RelationResult | null
+        mulsang: (typeof GAN_MULSANG)[string] | null
+        warnings: WarningsResult | null
+      } = { sipseong: null, sibjiunseong: null, sinsal: [], relations: null, mulsang: null, warnings: null }
+
+      if (saju) {
+        try {
+          const pillarsForSipseong = [
+            { position: '년주', gan: saju.pillars.year.gan, zhi: saju.pillars.year.zhi },
+            { position: '월주', gan: saju.pillars.month.gan, zhi: saju.pillars.month.zhi },
+            { position: '일간', gan: saju.pillars.day.gan, zhi: saju.pillars.day.zhi },
+            { position: '시주', gan: saju.pillars.time.gan, zhi: saju.pillars.time.zhi },
+          ]
+          const pillarsForSibj = [
+            { name: '년주', zhi: saju.pillars.year.zhi },
+            { name: '월주', zhi: saju.pillars.month.zhi },
+            { name: '일주', zhi: saju.pillars.day.zhi },
+            { name: '시주', zhi: saju.pillars.time.zhi },
+          ]
+          const pillarsForRel = [saju.pillars.year, saju.pillars.month, saju.pillars.day, saju.pillars.time]
+          const dayGanji = saju.pillars.day.gan + saju.pillars.day.zhi
+          const sipseongResult = analyzeSipseong(saju.dayMaster, pillarsForSipseong)
+
+          engineData = {
+            sipseong: sipseongResult,
+            sibjiunseong: analyzeSibjiunseong(saju.dayMaster, pillarsForSibj),
+            sinsal: calculateExtendedSinsal(saju),
+            relations: analyzeRelations(pillarsForRel, dayGanji),
+            mulsang: GAN_MULSANG[saju.dayMaster] || null,
+            warnings: analyzeWarnings(saju, yongsinAnalysis, sipseongResult),
+          }
+        } catch (e) {
+          logger.error('[ManseEngine] Error:', e)
+        }
+      }
+
+      return {
+        saju,
+        gekgukAnalysis,
+        yongsinAnalysis,
+        yukchinAnalysis,
+        daeunList,
+        gaeunbubRec,
+        advancedManse,
+        engineData,
+      }
+    }, [selectedMember])
 
   const openTermDialog = (term: string) => {
     if (TERMINOLOGY[term]) {
