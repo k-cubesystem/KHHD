@@ -8,6 +8,7 @@ import { Heart, ArrowLeft, Sparkles, Compass, MapPin, AlertTriangle, UserX, Swor
 import { Badge } from '@/components/ui/badge'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { FOCUS_GROUPS, type FocusGroup } from '@/lib/domain/compatibility/focus-groups'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 
@@ -129,8 +130,14 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
     <div className="min-h-screen bg-background pb-24">
       <div id="compatibility-result-capture">
         {/* Header */}
-        <div className="bg-gradient-to-b from-background to-muted/20 p-6 pb-12">
-          <div className="max-w-2xl mx-auto space-y-8">
+        <div className="relative overflow-hidden bg-gradient-to-b from-background to-muted/20 p-6 pb-12">
+          {/* 궁합 전용 앰비언트 배경 — 두 기운(금·홍조)의 어우러짐. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
+          <AmbientVideo
+            id="compatibility-ambient"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            style={{ opacity: 0.16, mixBlendMode: 'screen' }}
+          />
+          <div className="relative z-10 max-w-2xl mx-auto space-y-8">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}

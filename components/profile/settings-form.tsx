@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Save, BookOpen, Compass, User as UserIcon, Sparkles, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FIVE_AVATARS } from '@/components/family/five-avatar-selector'
+import { DEITY_AVATARS } from '@/lib/domain/family/avatars'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,10 +64,11 @@ export function SettingsForm({
   const [name, setName] = useState(familyMember?.name || profile?.full_name || '')
   const [gender, setGender] = useState(familyMember?.gender || profile?.gender || 'male')
 
-  // 프로필 아바타 선택: 자동(신당 연동) / 오행 정령 직접 선택 / 소셜 사진
+  // 프로필 아바타 선택: 자동(신당 연동) / 정령·신위 직접 선택(경로 저장) / 소셜 사진
   const savedAvatar =
     profile?.avatar_url && !profile.avatar_url.startsWith('/avatars/dokkaebi-') ? profile.avatar_url : ''
-  const isFiveSaved = savedAvatar.startsWith('/avatars/five/')
+  // 오행 정령(/avatars/five/) + 신위(/shrine/deities/) 둘 다 '직접 선택' 모드로 인정
+  const isFiveSaved = savedAvatar.startsWith('/avatars/five/') || savedAvatar.startsWith('/shrine/deities/')
   const [avatarChoice, setAvatarChoice] = useState<'auto' | 'five' | 'social'>(
     isFiveSaved ? 'five' : savedAvatar ? 'social' : 'auto'
   )
@@ -177,7 +179,7 @@ export function SettingsForm({
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="five" id="avatar-five" className="border-primary text-primary" />
               <Label htmlFor="avatar-five" className="font-light cursor-pointer">
-                오행 정령
+                정령 · 신위
               </Label>
             </div>
             {socialAvatarUrl && (
@@ -197,52 +199,39 @@ export function SettingsForm({
           )}
 
           {avatarChoice === 'five' && (
-            <div className="grid grid-cols-5 gap-2">
-              {FIVE_AVATARS.map((avatar) => {
-                const isSelected = fiveSrc === avatar.src
-                return (
-                  <button
-                    key={avatar.id}
-                    type="button"
-                    onClick={() => setFiveSrc(avatar.src)}
-                    className={cn(
-                      'relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-300 group',
-                      isSelected
-                        ? 'bg-primary/10 border border-primary/40 shadow-[0_0_15px_rgba(212,175,55,0.15)]'
-                        : 'bg-surface/30 border border-white/5 hover:bg-surface/50 hover:border-white/10'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'w-11 h-11 rounded-full overflow-hidden border transition-transform duration-300',
-                        isSelected ? 'scale-110 border-primary/40' : 'border-white/10 group-hover:scale-105'
-                      )}
-                      style={{ backgroundColor: avatar.color + '18' }}
-                    >
-                      <Image
-                        src={avatar.src}
-                        alt={avatar.label}
-                        width={44}
-                        height={44}
-                        className="w-full h-full object-cover object-top"
-                      />
-                    </div>
-                    <span
-                      className={cn(
-                        'text-[9.5px] font-medium whitespace-nowrap',
-                        isSelected ? 'text-primary' : 'text-ink-light/50'
-                      )}
-                    >
-                      {avatar.label}
-                    </span>
-                    {isSelected && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-background flex items-center justify-center shadow-sm">
-                        <Check className="w-2.5 h-2.5" strokeWidth={3} />
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
+            <div className="space-y-3">
+              {/* 오행 정령 5종 */}
+              <div>
+                <p className="text-[10px] text-ink-light/40 font-serif mb-1.5">오행 정령</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {FIVE_AVATARS.map((avatar) => (
+                    <AvatarTile
+                      key={avatar.id}
+                      src={avatar.src}
+                      label={avatar.label}
+                      color={avatar.color}
+                      selected={fiveSrc === avatar.src}
+                      onSelect={() => setFiveSrc(avatar.src)}
+                    />
+                  ))}
+                </div>
+              </div>
+              {/* 신위 17종 — 가족 아바타와 동일 카탈로그 재사용(경로 저장) */}
+              <div>
+                <p className="text-[10px] text-ink-light/40 font-serif mb-1.5">신위 (神位)</p>
+                <div className="grid grid-cols-5 gap-2">
+                  {DEITY_AVATARS.map((avatar) => (
+                    <AvatarTile
+                      key={avatar.id}
+                      src={avatar.src}
+                      label={avatar.label}
+                      color={avatar.color}
+                      selected={fiveSrc === avatar.src}
+                      onSelect={() => setFiveSrc(avatar.src)}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -438,5 +427,53 @@ export function SettingsForm({
         </Button>
       </div>
     </form>
+  )
+}
+
+/** 아바타 선택 타일 — 정령·신위 공용(경로 저장). */
+function AvatarTile({
+  src,
+  label,
+  color,
+  selected,
+  onSelect,
+}: {
+  src: string
+  label: string
+  color: string
+  selected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'relative flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-300 group',
+        selected
+          ? 'bg-primary/10 border border-primary/40 shadow-[0_0_15px_rgba(212,175,55,0.15)]'
+          : 'bg-surface/30 border border-white/5 hover:bg-surface/50 hover:border-white/10'
+      )}
+    >
+      <div
+        className={cn(
+          'w-11 h-11 rounded-full overflow-hidden border transition-transform duration-300',
+          selected ? 'scale-110 border-primary/40' : 'border-white/10 group-hover:scale-105'
+        )}
+        style={{ backgroundColor: color + '18' }}
+      >
+        <Image src={src} alt={label} width={44} height={44} className="w-full h-full object-cover object-top" />
+      </div>
+      <span
+        className={cn('text-[9.5px] font-medium whitespace-nowrap', selected ? 'text-primary' : 'text-ink-light/50')}
+      >
+        {label}
+      </span>
+      {selected && (
+        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-background flex items-center justify-center shadow-sm">
+          <Check className="w-2.5 h-2.5" strokeWidth={3} />
+        </div>
+      )}
+    </button>
   )
 }

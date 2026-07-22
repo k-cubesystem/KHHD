@@ -24,4 +24,18 @@ export const VIDEO_SPECS = [
       'Deep 玄 black background. Slow flowing black ink tendrils and drifting gold powder forming a calm liquid-gold nebula, ' +
       'meditative and quiet, minimal elegant motion, no text, seamless loop, premium dark aesthetic.',
   },
+  {
+    id: 'compatibility-ambient',
+    title: '궁합 앰비언트 — 두 기운의 어우러짐',
+    placement: 'compatibility-result 헤더 배경 (AmbientVideo)',
+    durationSec: 4,
+    resolution: '720p',
+    // 궁합 전용: 금색 베이스에 은은한 홍조(로맨스) — 두 갈래 빛 실이 서로 얽히며 하나로.
+    // DESIGN.md 玄 배경 유지하되 seal(도장 레드) 계열을 은은히 섞어 금색 일변도 탈피.
+    prompt:
+      'Deep 玄 black background. Two elegant flowing threads of light — one warm gold, one soft rose-crimson — ' +
+      'slowly intertwining and weaving toward each other like two destinies meeting, drifting gold and rose particles, ' +
+      'aged hanji paper texture, tender and auspicious, no text, no characters, seamless loop, ' +
+      'subtle graceful motion, luxurious dark palette with gold and muted rose accents.',
+  },
 ]

@@ -221,9 +221,10 @@ export default async function MyPage() {
     }
   }
 
-  // 아바타: 직접 선택(오행 정령) > 자동(主神 > 엠블럼 > 소셜 > 모노그램). 레거시 도깨비 URL은 무시.
+  // 아바타: 직접 선택(오행 정령·신위) > 자동(主神 > 엠블럼 > 소셜 > 모노그램). 레거시 도깨비 URL은 무시.
   const rawAvatar = profile?.avatar_url || user.user_metadata?.avatar_url || null
-  const chosenAvatar = rawAvatar?.startsWith('/avatars/five/') ? rawAvatar : null
+  const chosenAvatar =
+    rawAvatar?.startsWith('/avatars/five/') || rawAvatar?.startsWith('/shrine/deities/') ? rawAvatar : null
   const socialAvatar = rawAvatar && !rawAvatar.startsWith('/avatars/dokkaebi-') && !chosenAvatar ? rawAvatar : null
 
   return (
