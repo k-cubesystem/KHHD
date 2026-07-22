@@ -135,9 +135,9 @@ export function GlobalGuide() {
       setBubble(null)
       return
     }
-    // 투어가 없는 페이지: 오늘의 상식을 최하위로 자동 노출(바가 사라지지 않게)
-    setBubble(KNOWLEDGE_TIPS.length ? { kind: 'knowledge', idx: todayIdx } : null)
-  }, [data, pathname, tour, hidden, progress, seenNotice, todayIdx])
+    // 투어가 없는 페이지: 알릴 게 없으면 접힘 — 흐르는 상식 마퀴가 기본. 탭하면 펼쳐진다(W3).
+    setBubble(null)
+  }, [data, pathname, tour, hidden, progress, seenNotice])
 
   /** 개인 알림 확인 — 읽음 처리 후 로컬 상태에서 제거(재노출 방지) */
   const dismissPersonal = useCallback(() => {
@@ -252,6 +252,8 @@ export function GlobalGuide() {
     data.onboarding ||
     (data.announcement && seenNotice !== data.announcement.id)
   )
+  // 접힘 바 마퀴용 오늘의 상식(없으면 정적 안내문으로 폴백)
+  const todayTip = KNOWLEDGE_TIPS.length ? KNOWLEDGE_TIPS[todayIdx % KNOWLEDGE_TIPS.length] : null
 
   const portrait = data.portraitUrl ? (
     <Image
@@ -411,9 +413,29 @@ export function GlobalGuide() {
             className="w-full flex items-center gap-2 rounded-xl border border-gold-500/25 bg-[#120d07]/92 backdrop-blur-md px-3 py-1.5 shadow-lg active:scale-[0.99] transition-transform"
           >
             {portrait}
-            <span className="flex-1 text-left text-[11px] text-ink-light/60 font-serif truncate">
-              {speaker}의 안내 보기
-            </span>
+            {todayTip ? (
+              <>
+                <Lightbulb className="w-3.5 h-3.5 text-gold-500/70 shrink-0" />
+                {/* 흐르는 상식 마퀴 — review-marquee infinite-scroll 패턴(2배 복제+translateX -50%). reduced-motion 시 전역 규칙이 정지 */}
+                <div className="flex-1 min-w-0 overflow-hidden guide-marquee-mask">
+                  <div className="flex w-max guide-marquee-track">
+                    {[0, 1].map((dup) => (
+                      <span
+                        key={dup}
+                        aria-hidden={dup === 1}
+                        className="text-[11px] text-ink-light/65 font-serif whitespace-nowrap pr-16"
+                      >
+                        {todayTip.term} — {todayTip.plain}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <span className="flex-1 text-left text-[11px] text-ink-light/60 font-serif truncate">
+                {speaker}의 안내 보기
+              </span>
+            )}
             {unread && <span className="w-1.5 h-1.5 rounded-full bg-seal shrink-0" />}
             <ChevronUp className="w-3.5 h-3.5 text-gold-500/60 shrink-0" />
           </motion.button>

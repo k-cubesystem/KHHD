@@ -680,6 +680,23 @@
   }
 }
 
+/* 하단 가이드 접힘 바 — 흐르는 상식 글귀 마퀴(콘텐츠 2배 복제 + translateX -50% 무한) */
+@keyframes guide-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.guide-marquee-track {
+  animation: guide-marquee 25s linear infinite;
+}
+.guide-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+}
+
 /* ========== Motion Accessibility ========== */
 /* 전정기관 장애 사용자 · 저사양 기기 배려 (WCAG 2.1 Success Criterion 2.3.3) */
 @media (prefers-reduced-motion: reduce) {
@@ -711,7 +728,8 @@
   .anim-gift-bounce,
   .anim-bar-shimmer,
   .anim-node-pulse,
-  .anim-particle-rise {
+  .anim-particle-rise,
+  .guide-marquee-track {
     animation: none !important;
   }
 
