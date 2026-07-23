@@ -12,7 +12,7 @@
  * 배치 가이드: 모바일 480px 셸 기준 720px 폭·5초 내외·2MB 이하(scripts/media-assets 참고).
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface AmbientVideoProps {
   /** public/videos/{id}.webm (+ {id}.mp4 폴백) */
@@ -23,11 +23,20 @@ interface AmbientVideoProps {
   poster?: string
   /** 영상 미존재/에러/reduced-motion 시 대체 렌더. 기본 null(기존 연출 유지) */
   fallback?: React.ReactNode
+  /** 재생 속도(1=원속). 배경 앰비언트를 더 차분하게 늦출 때 0.5 등. */
+  rate?: number
 }
 
-export function AmbientVideo({ id, className, style, poster, fallback = null }: AmbientVideoProps) {
+export function AmbientVideo({ id, className, style, poster, fallback = null, rate }: AmbientVideoProps) {
   const [status, setStatus] = useState<'checking' | 'ok' | 'missing'>('checking')
   const [reduced, setReduced] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  // 재생 속도 반영 — 요소 마운트(status ok) 후 playbackRate 설정(느린 앰비언트)
+  useEffect(() => {
+    const v = videoRef.current
+    if (v && rate != null) v.playbackRate = rate
+  }, [rate, status])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
@@ -72,6 +81,7 @@ export function AmbientVideo({ id, className, style, poster, fallback = null }: 
 
   return (
     <video
+      ref={videoRef}
       className={className}
       style={style}
       autoPlay
@@ -80,6 +90,9 @@ export function AmbientVideo({ id, className, style, poster, fallback = null }: 
       playsInline
       poster={poster}
       aria-hidden
+      onLoadedMetadata={(e) => {
+        if (rate != null) e.currentTarget.playbackRate = rate
+      }}
       onError={() => setStatus('missing')}
     >
       <source src={`/videos/${id}.webm`} type="video/webm" />

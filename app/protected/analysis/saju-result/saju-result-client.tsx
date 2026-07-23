@@ -736,6 +736,7 @@ function CheonToJiDivider() {
     <div className="relative mx-4 my-6 h-[120px] rounded-2xl overflow-hidden border border-gold-500/20">
       <AmbientVideo
         id="analysis-ambient"
+        rate={0.5}
         className="absolute inset-0 w-full h-full object-cover"
         style={{ opacity: 0.55 }}
         fallback={
@@ -1198,6 +1199,7 @@ function SajuLoadingContent({ name, progress }: { name: string; progress: number
       {/* 앰비언트 배경 영상 — 프로그레스·상식카드 뒤 레이어. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
       <AmbientVideo
         id="analysis-ambient"
+        rate={0.5}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         style={{ opacity: 0.16, mixBlendMode: 'screen' }}
       />

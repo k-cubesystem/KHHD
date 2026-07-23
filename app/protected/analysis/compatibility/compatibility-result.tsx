@@ -134,6 +134,7 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
           {/* 궁합 전용 앰비언트 배경 — 두 기운(금·홍조)의 어우러짐. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
           <AmbientVideo
             id="compatibility-ambient"
+            rate={0.5}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none"
             style={{ opacity: 0.16, mixBlendMode: 'screen' }}
           />

@@ -19,6 +19,7 @@ export function MasterpieceSection() {
       {/* 앰비언트 배경 영상 — 흐르는 먹·금가루. 없으면 폴백(기존 그라디언트 유지), reduced-motion 존중 */}
       <AmbientVideo
         id="analysis-ambient"
+        rate={0.5}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         style={{ opacity: 0.16, mixBlendMode: 'screen' }}
       />
