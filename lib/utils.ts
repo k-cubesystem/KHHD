@@ -19,6 +19,16 @@ export function formatKstDateTime(value: string | Date): string {
   return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`
 }
 
+/**
+ * KST(UTC+9) 기준 날짜 문자열 "YYYY-MM-DD". 서버·클라 동일 출력.
+ * 출석·정성 등 '일(day)' 단위 판정 공용(attendance.ts getKSTDateString 미러).
+ */
+export function formatKstDate(value: string | number | Date = Date.now()): string {
+  const time = new Date(value).getTime()
+  if (Number.isNaN(time)) return ''
+  return new Date(time + KST_OFFSET_MS).toISOString().split('T')[0]
+}
+
 /** 짧은 KST 포맷 "M.D HH:mm" — 알림 등 연도 생략. 하이드레이션 안전(위와 동일 오프셋 계산). */
 export function formatKstShort(value: string | Date): string {
   const time = new Date(value).getTime()
