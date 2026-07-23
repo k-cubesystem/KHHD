@@ -651,6 +651,9 @@ function FaceAnalysisPageContent() {
                   setImageBase64('')
                   setAnalysisResult(null)
                   setSelectedGoal('general')
+                  setResemblance(null)
+                  // 방금 저장된 분석이 다음 회차의 "이전"이 되도록 비교 기준 갱신 (연속 재분석 시 최초 로드 기준 고착 방지)
+                  getLatestFaceMeta(targetId ?? undefined).then(setPrevReading)
                 }}
                 variant="outline"
                 className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-gold-500 h-12"
