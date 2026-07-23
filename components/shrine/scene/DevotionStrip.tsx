@@ -12,7 +12,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
 const CLAIM_ERROR_MSG: Record<string, string> = {
   ALREADY_OWNED: '이미 지닌 보상입니다',
   ALREADY_CLAIMED: '이미 수령한 보상입니다',
-  LEVEL_NOT_REACHED: '아직 정성이 닿지 않았습니다',
+  LEVEL_NOT_REACHED: '아직 기원이 닿지 않았습니다',
   REWARD_NOT_FOUND: '보상을 찾을 수 없습니다',
   UNAUTHORIZED: '로그인이 필요합니다',
 }
@@ -43,7 +43,7 @@ function RewardBadge({ status }: { status: DevotionRewardStatus['status'] }) {
 }
 
 /**
- * 신당 정성(精誠) 스트립 + 보상 트랙 시트.
+ * 신당 기원(祈願) 스트립 + 보상 트랙 시트.
  * 소유자 전용. devotion 은 서버에서 주입(SSR 즉시 렌더), 수령/적립 후 router.refresh 로 갱신.
  * 연출은 CSS/SVG만(EffectsCanvas·캔버스 금지 — 과거 흰화면 사고).
  */
@@ -64,7 +64,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
       const res = await claimDevotionReward(r.level)
       setClaiming(null)
       if (res.success) {
-        toast.success(`${r.name} — 정성으로 받았습니다`, {
+        toast.success(`${r.name} — 기원으로 받았습니다`, {
           description: r.kind === 'theme' ? '신당 테마에서 적용하세요' : '보관함에 담겼어요 · 꾸미기에서 배치',
         })
         trackEvent({ action: 'devotion_claim', category: 'shrine', label: `${r.kind}:${r.code}`, value: r.level })
@@ -84,7 +84,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="정성 보상 트랙 열기"
+        aria-label="기원 보상 트랙 열기"
         className="flex w-full items-center gap-2 px-2.5 py-1.5 mb-2 rounded-[10px] bg-surface/60 border border-gold-500/20"
       >
         <span
@@ -102,7 +102,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
           />
         </span>
         <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
-          정성 <b className="text-gold-300">{level}</b>단<span className="text-gold-500/60"> 壇</span>
+          기원 <b className="text-gold-300">{level}</b>단<span className="text-gold-500/60"> 壇</span>
         </span>
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink-primary/15">
           <div className="h-full rounded-full bg-gold-500 transition-all" style={{ width: `${ratio * 100}%` }} />
@@ -124,7 +124,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
           onClick={() => setOpen(false)}
           role="dialog"
           aria-modal="true"
-          aria-label="정성 보상 트랙"
+          aria-label="기원 보상 트랙"
         >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
           <div
@@ -134,9 +134,9 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
           >
             <div className="mb-3 flex items-start justify-between">
               <div>
-                <p className="font-serif text-[10px] tracking-[0.3em] text-gold-500/60">精 誠</p>
+                <p className="font-serif text-[10px] tracking-[0.3em] text-gold-500/60">祈 願</p>
                 <h2 className="font-serif text-lg font-bold text-ink-primary">
-                  정성 <span className="text-gold-300">{level}</span>단
+                  기원 <span className="text-gold-300">{level}</span>단
                   <span className="ml-2 text-[11px] font-normal text-ink-primary/45">
                     {atMax ? '· 최고 경지' : `· ${nextLevel}단까지 ${daysToNext}일`}
                   </span>
@@ -153,7 +153,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
             </div>
 
             <p className="mb-4 rounded-lg bg-gold-500/[0.06] border border-gold-500/15 px-3 py-2 font-sans text-[11px] leading-relaxed text-ink-primary/70">
-              매일 기도 한 번이면 충분합니다 — 정성은 끊겨도 사라지지 않습니다.
+              매일 기도 한 번이면 충분합니다 — 기원은 끊겨도 사라지지 않습니다.
             </p>
 
             <ol className="space-y-2">
@@ -203,7 +203,7 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
                         ) : (
                           <span>무료 신물</span>
                         )}
-                        <span className="text-gold-500/50">· 정성 {r.level}단 무료</span>
+                        <span className="text-gold-500/50">· 기원 {r.level}단 무료</span>
                       </div>
                     </div>
 

@@ -41,22 +41,22 @@ const DB_ITEM_NAMES = new Set([
 // 최초 방문 시 자동 지급되는 스타터킷(scene.ts ensureStarterKit) — 보상으로 쓰면 즉시 '보유 중'이라 제외해야 함
 const STARTER_ITEM_NAMES = new Set(['기본 촛불', '초롱', '공물 꽃', '청죽', '은풍경', '놋방울', '물항아리'])
 
-describe('정성 레벨 곡선', () => {
+describe('기원 레벨 곡선', () => {
   describe('DEVOTION_THRESHOLDS — 누적 임계값', () => {
     it('길이는 상한 단(20)과 같다', () => {
       expect(DEVOTION_THRESHOLDS).toHaveLength(DEVOTION_MAX_LEVEL)
     })
-    it('확정 곡선 [1,2,4,6,9,12,16,20,25,30,36,42,49,56,64,72,81,90,100,110]', () => {
+    it('확정 곡선(2026-07-24 조정): 1단=7일, 이후 30일 간격 [7,30,60,…,570]', () => {
       expect([...DEVOTION_THRESHOLDS]).toEqual([
-        1, 2, 4, 6, 9, 12, 16, 20, 25, 30, 36, 42, 49, 56, 64, 72, 81, 90, 100, 110,
+        7, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 510, 540, 570,
       ])
     })
-    it('발주서 표본: 1단=1일·2단=2일·3단=4일·4단=6일·5단=9일', () => {
-      expect(DEVOTION_THRESHOLDS[0]).toBe(1)
-      expect(DEVOTION_THRESHOLDS[1]).toBe(2)
-      expect(DEVOTION_THRESHOLDS[2]).toBe(4)
-      expect(DEVOTION_THRESHOLDS[3]).toBe(6)
-      expect(DEVOTION_THRESHOLDS[4]).toBe(9)
+    it('사용자 확정 표본: 1단=7일·2단=30일·3단=60일·4단=90일·5단=120일', () => {
+      expect(DEVOTION_THRESHOLDS[0]).toBe(7)
+      expect(DEVOTION_THRESHOLDS[1]).toBe(30)
+      expect(DEVOTION_THRESHOLDS[2]).toBe(60)
+      expect(DEVOTION_THRESHOLDS[3]).toBe(90)
+      expect(DEVOTION_THRESHOLDS[4]).toBe(120)
     })
     it('엄격한 오름차순 (승급은 갈수록 완만)', () => {
       for (let i = 1; i < DEVOTION_THRESHOLDS.length; i++) {
@@ -68,24 +68,17 @@ describe('정성 레벨 곡선', () => {
   describe('levelFromDays — 경계값', () => {
     const cases: Array<[number, number]> = [
       [0, 0],
-      [1, 1],
-      [2, 2],
-      [3, 2],
-      [4, 3],
-      [5, 3],
-      [6, 4],
-      [8, 4],
-      [9, 5],
-      [11, 5],
-      [12, 6],
-      [16, 7],
-      [20, 8],
-      [25, 9],
-      [30, 10],
-      [42, 12],
-      [56, 14],
-      [110, 20],
-      [200, 20], // 상한 클램프
+      [6, 0], // 7일 미만은 0단
+      [7, 1],
+      [29, 1],
+      [30, 2],
+      [59, 2],
+      [60, 3],
+      [90, 4],
+      [120, 5],
+      [270, 10], // 최종 보상(기억의 함) 단
+      [570, 20],
+      [999, 20], // 상한 클램프
     ]
     it.each(cases)('days=%s → %s단', (days, expected) => {
       expect(levelFromDays(days)).toBe(expected)
@@ -94,7 +87,7 @@ describe('정성 레벨 곡선', () => {
     it('0·음수·소수·비유한 방어', () => {
       expect(levelFromDays(0)).toBe(0)
       expect(levelFromDays(-10)).toBe(0)
-      expect(levelFromDays(1.9)).toBe(1) // floor
+      expect(levelFromDays(7.9)).toBe(1) // floor
       expect(levelFromDays(Number.NaN)).toBe(0)
       expect(levelFromDays(Infinity)).toBe(0)
     })
@@ -102,35 +95,35 @@ describe('정성 레벨 곡선', () => {
 
   describe('daysToNextLevel — 역산', () => {
     const cases: Array<[number, number]> = [
-      [0, 1], // 0일 → 1단까지 1일
-      [1, 1], // 1단(1일) → 2단까지 1일
-      [2, 2], // 2단(2일) → 3단(4일)까지 2일
-      [6, 3], // 4단(6일) → 5단(9일)까지 3일
-      [110, 0], // 최고 단 → 0
+      [0, 7], // 0일 → 1단까지 7일
+      [7, 23], // 1단(7일) → 2단(30일)까지 23일
+      [30, 30], // 2단(30일) → 3단(60일)까지 30일
+      [90, 30], // 4단(90일) → 5단(120일)까지 30일
+      [570, 0], // 최고 단 → 0
       [999, 0],
     ]
     it.each(cases)('days=%s → 남은 %s일', (days, expected) => {
       expect(daysToNextLevel(days)).toBe(expected)
     })
     it('음수 방어', () => {
-      expect(daysToNextLevel(-5)).toBe(1)
+      expect(daysToNextLevel(-5)).toBe(7)
     })
   })
 
   describe('devotionProgress — 통합', () => {
-    it('0일: 0단, 다음 1단까지 1일', () => {
+    it('0일: 0단, 다음 1단까지 7일', () => {
       const p = devotionProgress(0)
-      expect(p).toEqual({ totalDays: 0, level: 0, nextLevel: 1, nextThreshold: 1, daysToNext: 1 })
+      expect(p).toEqual({ totalDays: 0, level: 0, nextLevel: 1, nextThreshold: 7, daysToNext: 7 })
     })
-    it('중간(7일): 4단, 다음 5단(9일)까지 2일', () => {
-      const p = devotionProgress(7)
-      expect(p.level).toBe(4)
-      expect(p.nextLevel).toBe(5)
-      expect(p.nextThreshold).toBe(9)
-      expect(p.daysToNext).toBe(2)
+    it('중간(45일): 2단, 다음 3단(60일)까지 15일', () => {
+      const p = devotionProgress(45)
+      expect(p.level).toBe(2)
+      expect(p.nextLevel).toBe(3)
+      expect(p.nextThreshold).toBe(60)
+      expect(p.daysToNext).toBe(15)
     })
-    it('최고 단(110일): nextLevel null, daysToNext 0', () => {
-      const p = devotionProgress(110)
+    it('최고 단(570일): nextLevel null, daysToNext 0', () => {
+      const p = devotionProgress(570)
       expect(p.level).toBe(20)
       expect(p.nextLevel).toBeNull()
       expect(p.nextThreshold).toBeNull()
@@ -141,12 +134,12 @@ describe('정성 레벨 곡선', () => {
     })
     it('소수 입력 정규화', () => {
       expect(devotionProgress(9.9).totalDays).toBe(9)
-      expect(devotionProgress(9.9).level).toBe(5)
+      expect(devotionProgress(9.9).level).toBe(1)
     })
   })
 })
 
-describe('정성 보상 트랙', () => {
+describe('기원 보상 트랙', () => {
   it('보상 단은 유일하고 오름차순', () => {
     const levels = DEVOTION_REWARDS.map((r) => r.level)
     expect(new Set(levels).size).toBe(levels.length)

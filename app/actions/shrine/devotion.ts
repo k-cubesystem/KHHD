@@ -22,7 +22,7 @@ export interface DevotionRewardStatus {
   code: string
   /** 표시용 이름 (DB name). 조회 실패 시 code 폴백. */
   name: string
-  /** 복채 정가(만냥). 0=무료. "정성 N단 무료"의 대비가격. */
+  /** 복채 정가(만냥). 0=무료. "기원 N단 무료"의 대비가격. */
   priceBokchae: number
   status: DevotionRewardUiStatus
 }
@@ -39,7 +39,7 @@ export interface DevotionStatus {
   rewards: DevotionRewardStatus[]
 }
 
-/** 정성 현황 — 누적일·단·오늘 기도 여부 + 보상 트랙(수령/보유 상태). 비로그인 null. */
+/** 기원 현황 — 누적일·단·오늘 기도 여부 + 보상 트랙(수령/보유 상태). 비로그인 null. */
 export async function getDevotionStatus(): Promise<DevotionStatus | null> {
   const supabase = await createClient()
   const {
@@ -116,7 +116,7 @@ export interface ClaimResult {
 }
 
 /**
- * 정성 보상 수령 — 무료 지급(복채 차감 없음).
+ * 기원 보상 수령 — 무료 지급(복채 차감 없음).
  * 검증: 단 도달(서버 신뢰) → 이미 보유면 안내(수령 불필요) → 수령 기록 선점(PK 멱등) → 지급.
  * 테마는 user_theme_packs, 신물은 grant_shrine_item RPC(구매 경로와 동일한 지급 함수 재사용).
  */

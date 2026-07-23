@@ -29,9 +29,9 @@ export async function addWish(input: {
 }): Promise<{
   success: boolean
   error?: string
-  /** 오늘(KST) 첫 기도로 정성이 적립됐는지 — UI 토스트 강조용. 본인·가족 신당 소원만 적립. */
+  /** 오늘(KST) 첫 기도로 기원이 적립됐는지 — UI 토스트 강조용. 본인·가족 신당 소원만 적립. */
   devotionGained?: boolean
-  /** 적립 후 누적 기도일(정성 단·다음목표 계산용). */
+  /** 적립 후 누적 기도일(기원 단·다음목표 계산용). */
   devotionTotalDays?: number
 }> {
   const supabase = await createClient()
@@ -78,7 +78,7 @@ export async function addWish(input: {
     await supabase.rpc('increment_shrine_visitor', { p_shrine_id: input.shrineId })
   }
 
-  // 정성 적립 — 본인·가족 신당(=오너) 소원만, 유저 기준 하루(KST) 1회 멱등(서버에서).
+  // 기원 적립 — 본인·가족 신당(=오너) 소원만, 유저 기준 하루(KST) 1회 멱등(서버에서).
   // 방문자(타인 신당) 기원은 적립 대상 아님. 적립은 소원 저장 성공 이후에만 수행.
   let devotionGained = false
   let devotionTotalDays: number | undefined

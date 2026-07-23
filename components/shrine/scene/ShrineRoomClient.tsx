@@ -46,7 +46,7 @@ const FLAME_Y_OFFSET = 5
 
 interface Props {
   scene: SceneData
-  /** 정성 현황(소유자 뷰에서만 주입). 방문자 뷰는 null → 정성 스트립 미표시. */
+  /** 기원 현황(소유자 뷰에서만 주입). 방문자 뷰는 null → 기원 스트립 미표시. */
   devotion?: DevotionStatus | null
 }
 
@@ -525,7 +525,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           )
         })()}
 
-      {/* 정성(精誠) 스트립 — 매일 기도로 단 상승 → 테마·신물 해금 (소유자 전용) */}
+      {/* 기원(祈願) 스트립 — 매일 기도로 단 상승 → 테마·신물 해금 (소유자 전용) */}
       {isOwner && devotion && <DevotionStrip devotion={devotion} />}
 
       {/* 룸 */}
@@ -824,7 +824,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
                   </span>
                   {rewardLvl != null && (
                     <span className={`ml-1 text-[9px] ${reached ? 'text-seal font-bold' : 'text-gold-500/70'}`}>
-                      · 정성 {rewardLvl}단{reached ? ' 수령가능' : ' 무료'}
+                      · 기원 {rewardLvl}단{reached ? ' 수령가능' : ' 무료'}
                     </span>
                   )}
                 </button>

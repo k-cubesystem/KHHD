@@ -79,7 +79,7 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
   }
 
   // 오너도 자기 신당의 소원·방명록을 볼 수 있게(F-2). wishCount 는 ShrineRoomClient 배지에 표시.
-  // 정성 현황은 유저 단위(신당 무관) — 스트립·보상 트랙·소원 폼 뉘앙스에 공용.
+  // 기원 현황은 유저 단위(신당 무관) — 스트립·보상 트랙·소원 폼 뉘앙스에 공용.
   const [{ wishes }, devotion] = await Promise.all([getWishes(scene.shrineId, 0, 10), getDevotionStatus()])
 
   return (

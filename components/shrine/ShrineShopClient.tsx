@@ -123,7 +123,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                   </p>
                 )}
                 {devotionLvl != null && (
-                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 정성 {devotionLvl}단 무료</p>
+                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
                 )}
               </div>
 

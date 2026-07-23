@@ -15,7 +15,7 @@ interface ShrineWishFormProps {
   isOwner: boolean
   /** 대상 가족(본인 신당이면 null·미전달). 소원에 대상 식별자를 새겨 로그 표기에 쓴다. */
   familyMemberId?: string | null
-  /** 오늘(KST) 이미 기도(정성 적립)했는지 — 본인·가족 신당에서 '정성 +1' 뉘앙스 표시용. */
+  /** 오늘(KST) 이미 기도(기원 적립)했는지 — 본인·가족 신당에서 '기원 +1' 뉘앙스 표시용. */
   prayedToday?: boolean
 }
 
@@ -70,14 +70,14 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
       setCategory('')
       setVisitorName('')
       if (result.devotionGained) {
-        // 오늘 첫 기도 → 정성 적립. 단·다음목표는 순수 모듈로 클라에서 계산.
+        // 오늘 첫 기도 → 기원 적립. 단·다음목표는 순수 모듈로 클라에서 계산.
         const p = devotionProgress(result.devotionTotalDays ?? 0)
         toast.success(
-          p.nextLevel ? `정성이 쌓였습니다 · ${p.nextLevel}단까지 ${p.daysToNext}일` : '정성이 지극합니다 · 최고 경지',
-          { description: `정성 ${p.level}단 · 오늘의 기도 🙏` }
+          p.nextLevel ? `기원이 쌓였습니다 · ${p.nextLevel}단까지 ${p.daysToNext}일` : '기원이 지극합니다 · 최고 경지',
+          { description: `기원 ${p.level}단 · 오늘의 기도 🙏` }
         )
         trackEvent({ action: 'devotion_gain', category: 'shrine', label: `L${p.level}`, value: p.totalDays })
-        router.refresh() // 정성 스트립·버튼 뉘앙스 갱신 (하루 최대 1회)
+        router.refresh() // 기원 스트립·버튼 뉘앙스 갱신 (하루 최대 1회)
       } else {
         toast.success('소원을 기원했습니다 🙏')
       }
@@ -144,7 +144,7 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
       />
 
       <div className="flex items-center justify-between">
-        {/* 방문자 이름 (비오너만) · 오너는 오늘 첫 기도면 '정성 +1' 뉘앙스 */}
+        {/* 방문자 이름 (비오너만) · 오너는 오늘 첫 기도면 '기원 +1' 뉘앙스 */}
         {!isOwner ? (
           <input
             type="text"
@@ -156,7 +156,7 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
           />
         ) : !prayedToday ? (
           <span className="flex items-center gap-1 font-serif text-[11px] text-gold-300/90">
-            <Flame className="h-3.5 w-3.5" style={{ color: '#C9A84C' }} /> 오늘 첫 기도 · 정성 +1
+            <Flame className="h-3.5 w-3.5" style={{ color: '#C9A84C' }} /> 오늘 첫 기도 · 기원 +1
           </span>
         ) : (
           <span aria-hidden />

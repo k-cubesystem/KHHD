@@ -1,37 +1,30 @@
 /**
- * 신당 정성(精誠) 도메인 — 기도(소원) 누적일 → 단(壇/레벨) → 보상 트랙.
+ * 신당 기원(祈願) 도메인 — 기도(소원) 누적일 → 단(壇/레벨) → 보상 트랙.
  * 클라이언트·서버 공용 순수 로직 (side-effect 없음). DB 시드(테마 code·신물 name)와 일치.
- * 근거: 발주서 5차 — 신당 정성 레벨 시스템 (기도로 테마·신물 해금).
+ * 근거: 발주서 5차 + 사용자 조정(2026-07-24): 기간 대폭 연장·명칭 기원→기원.
  *
- * 곡선: 단 승급에 '추가로' 필요한 기도일수 = ceil(level/2) → [1,1,2,2,3,3,4,4,5,5,…].
- * 누적 임계값(그 단 도달 최소 누적 기도일): 1단=1, 2단=2, 3단=4, 4단=6, 5단=9 … 20단=110.
+ * 곡선(사용자 확정): 1단 = 누적 7일, 2단 = 30일, 이후 단마다 +30일.
+ * 누적 임계값: 1단=7, 2단=30, 3단=60, 4단=90 … N단(N≥2)=30×(N-1) … 20단=570.
  */
 
-/** 정성 최고 단(상한). */
+/** 기원 최고 단(상한). */
 export const DEVOTION_MAX_LEVEL = 20
 
-/** level 도달에 필요한 '추가' 기도일수 = ceil(level/2). level<=0 → 0. */
-function stepDays(level: number): number {
+/** level 도달 최소 누적 기도일: 1단=7, N단(N≥2)=30×(N-1). level<=0 → 0. */
+function thresholdFor(level: number): number {
   if (level <= 0) return 0
-  return Math.ceil(level / 2)
-}
-
-/** 0단(정성 없음)부터 level 까지 누적 기도일. level<=0 → 0. */
-function cumulativeDays(level: number): number {
-  let sum = 0
-  for (let i = 1; i <= level; i++) sum += stepDays(i)
-  return sum
+  return level === 1 ? 7 : 30 * (level - 1)
 }
 
 /**
  * 각 단 도달 최소 누적 기도일 (index 0 = 1단, 길이 = DEVOTION_MAX_LEVEL).
- * [1,2,4,6,9,12,16,20,25,30,36,42,49,56,64,72,81,90,100,110]
+ * [7,30,60,90,120,150,180,210,240,270,300,330,360,390,420,450,480,510,540,570]
  */
 export const DEVOTION_THRESHOLDS: readonly number[] = Object.freeze(
-  Array.from({ length: DEVOTION_MAX_LEVEL }, (_, i) => cumulativeDays(i + 1))
+  Array.from({ length: DEVOTION_MAX_LEVEL }, (_, i) => thresholdFor(i + 1))
 )
 
-/** 누적 기도일 → 정성 단(0~20). 0일=0단, 1일=1단. 음수/소수/비유한 방어. */
+/** 누적 기도일 → 기원 단(0~20). 0일=0단, 1일=1단. 음수/소수/비유한 방어. */
 export function levelFromDays(totalDays: number): number {
   const n = Number.isFinite(totalDays) ? Math.floor(totalDays) : 0
   if (n < DEVOTION_THRESHOLDS[0]) return 0
@@ -54,7 +47,7 @@ export function daysToNextLevel(totalDays: number): number {
 export interface DevotionProgress {
   /** 정규화된 누적 기도일(소수/음수 제거). */
   totalDays: number
-  /** 현재 정성 단(0~20). */
+  /** 현재 기원 단(0~20). */
   level: number
   /** 다음 단(최고 단이면 null). */
   nextLevel: number | null
@@ -88,7 +81,7 @@ export function devotionProgress(totalDays: number): DevotionProgress {
 export type DevotionRewardKind = 'theme' | 'item'
 
 export interface DevotionReward {
-  /** 이 보상을 여는 정성 단(1~20). */
+  /** 이 보상을 여는 기원 단(1~20). */
   level: number
   kind: DevotionRewardKind
   /** theme: shrine_theme_packs.code · item: shrine_item_catalog.name (아이템은 code 컬럼 없음 → 이름 키) */
@@ -115,12 +108,12 @@ export function rewardForLevel(level: number): DevotionReward | null {
   return DEVOTION_REWARDS.find((r) => r.level === level) ?? null
 }
 
-/** 테마 code 를 여는 정성 단(트랙에 없으면 null). 구매처 "정성 N단 무료" 병기용. */
+/** 테마 code 를 여는 기원 단(트랙에 없으면 null). 구매처 "기원 N단 무료" 병기용. */
 export function devotionLevelForTheme(code: string): number | null {
   return DEVOTION_REWARDS.find((r) => r.kind === 'theme' && r.code === code)?.level ?? null
 }
 
-/** 신물 name 을 여는 정성 단(트랙에 없으면 null). 구매처 "정성 N단 무료" 병기용. */
+/** 신물 name 을 여는 기원 단(트랙에 없으면 null). 구매처 "기원 N단 무료" 병기용. */
 export function devotionLevelForItem(name: string): number | null {
   return DEVOTION_REWARDS.find((r) => r.kind === 'item' && r.code === name)?.level ?? null
 }

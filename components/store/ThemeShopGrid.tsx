@@ -92,7 +92,7 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
               <div className="p-3 flex flex-col gap-2 flex-1">
                 <div className="text-[13px] font-serif font-bold text-ink-light leading-tight">{pack.name}</div>
                 {devotionLvl != null && (
-                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 정성 {devotionLvl}단 무료</p>
+                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
                 )}
                 {owned ? (
                   <Link
