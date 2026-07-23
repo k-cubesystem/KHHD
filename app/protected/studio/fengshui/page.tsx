@@ -1,7 +1,7 @@
 'use client'
 
 import { StudioAnalysisLayout } from '@/components/studio/studio-analysis-layout'
-import { ImageCapture } from '@/components/studio/image-capture'
+import { FengshuiSlotGrid, type SlotImageValue } from '@/components/studio/fengshui-slot-grid'
 import { AnalyzingAnimation } from '@/components/studio/analyzing-animation'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { Card } from '@/components/ui/card'
@@ -18,6 +18,7 @@ import {
   type PlacementSuggestion,
   type FengshuiSubjectType,
 } from '@/app/actions/ai/image'
+import { getSlotSpec, isWithinUploadBudget } from '@/lib/domain/analysis/fengshui-slots'
 import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
@@ -52,15 +53,6 @@ import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-acc
 type StepType = 'upload' | 'analyzing' | 'result'
 
 const FENGSHUI_COST = FEATURE_COST.fengshui.display // 단일 소스 — 표시 = 실차감
-
-const ROOM_TYPES = [
-  { value: '거실', emoji: '🛋' },
-  { value: '침실', emoji: '🛏' },
-  { value: '서재', emoji: '📚' },
-  { value: '주방', emoji: '🍳' },
-  { value: '화장실', emoji: '🚿' },
-  { value: '현관', emoji: '🚪' },
-]
 
 // 분석 대상 3택 — 시스템이 "무엇을 찍을지"를 정해준다(A-1)
 const SUBJECT_TYPES: { value: FengshuiSubjectType; label: string; icon: typeof Home }[] = [
@@ -104,16 +96,21 @@ function FengShuiAnalysisPageContent() {
 
   const [step, setStep] = useState<StepType>('upload')
   const [selectedTheme] = useState<InteriorTheme>('general')
-  const [selectedRoom, setSelectedRoom] = useState<string>('거실')
   const [subjectType, setSubjectType] = useState<FengshuiSubjectType>('interior')
   const [facing, setFacing] = useState<string>('모름')
   const [address, setAddress] = useState<string>('')
   const [showContext, setShowContext] = useState<boolean>(false)
   const [targetMember, setTargetMember] = useState<FamilyMemberWithMissions | null>(null)
-  const [imageBase64, setImageBase64] = useState<string>('')
+  // 슬롯 이미지 — slotId → 압축 이미지(라벨 슬롯). 대상 전환 시 초기화.
+  const [slotImages, setSlotImages] = useState<Record<string, SlotImageValue>>({})
+  // 결과 표시용 대표 라벨(예: "현관 외 3곳" / "사무실·가게 2곳") — 분석 시점 확정.
+  const [analyzedLabel, setAnalyzedLabel] = useState<string>('')
   const [analysisResult, setAnalysisResult] = useState<InteriorAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+
+  const slotSpec = getSlotSpec(subjectType)
+  const filledSlotCount = Object.keys(slotImages).length
   const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
   const { checkQuota, paywallProps } = useAnalysisQuota()
 
@@ -128,16 +125,44 @@ function FengShuiAnalysisPageContent() {
     loadMember()
   }, [targetId])
 
-  const handleImageCapture = (base64: string) => setImageBase64(base64)
-
   const handleStartAnalysis = async () => {
-    if (!imageBase64) {
-      toast.error('공간 사진을 먼저 업로드해주세요.')
+    // 채워진 슬롯을 스펙 순서대로 라벨/base64 배열로. 최소 slotSpec.min 장 필요.
+    const filledSlots = slotSpec.slots.filter((s) => slotImages[s.id])
+    const orderedImages = filledSlots.map((s) => ({ label: s.label, base64: slotImages[s.id]!.base64 }))
+
+    if (orderedImages.length < slotSpec.min) {
+      toast.error(`공간 사진을 최소 ${slotSpec.min}장 넣어주세요.`)
+      return
+    }
+
+    // 총 용량 가드(합산 3.5MB) — 압축 경유 시 사실상 도달 불가하지만 방어한다.
+    if (!isWithinUploadBudget(filledSlots.map((s) => slotImages[s.id]!.bytes))) {
+      toast.error('사진 용량이 너무 큽니다. 장수를 줄이거나 다른 사진으로 시도해주세요.')
       return
     }
 
     const canProceed = await checkQuota()
     if (!canProceed) return
+
+    // 대표/표시 라벨 — 대표 슬롯 라벨(roomType 하위호환) + 여러 장이면 "외 N곳".
+    const primaryImageLabel = orderedImages[0]!.label
+    const extraCount = orderedImages.length - 1
+    const displayLabel =
+      subjectType === 'interior'
+        ? extraCount > 0
+          ? `${primaryImageLabel} 외 ${extraCount}곳`
+          : primaryImageLabel
+        : extraCount > 0
+          ? `${SUBJECT_LABEL[subjectType]} ${orderedImages.length}곳`
+          : SUBJECT_LABEL[subjectType]
+    setAnalyzedLabel(displayLabel)
+
+    trackEvent({
+      action: 'fengshui_analyze_start',
+      category: 'analysis',
+      label: subjectType,
+      value: orderedImages.length,
+    })
 
     setLoading(true)
     setStep('analyzing')
@@ -156,17 +181,17 @@ function FengShuiAnalysisPageContent() {
         return
       }
 
-      // interior 는 방 유형, 그 외는 대상 라벨을 room_type 자리에 넣어 프롬프트 문맥을 맞춘다
-      const roomTypeForAnalysis = subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]
+      // roomType 자리에 대표 슬롯 라벨을 넣어 프롬프트 문맥을 맞춘다(하위호환)
+      const roomTypeForAnalysis = primaryImageLabel
 
       const result = await analyzeInteriorForFengshui(
-        imageBase64,
+        orderedImages[0]!.base64,
         selectedTheme,
         roomTypeForAnalysis,
         targetMember
           ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship }
           : undefined,
-        { subjectType, facing, address }
+        { subjectType, facing, address, images: orderedImages }
       )
 
       if (!result.success) {
@@ -193,7 +218,9 @@ function FengShuiAnalysisPageContent() {
             roomType: roomTypeForAnalysis,
             subjectType,
             facing,
-            imageUrl: `data:image/jpeg;base64,${imageBase64}`,
+            slotLabels: orderedImages.map((img) => img.label),
+            // 대표 사진 1장만 미리보기용으로 보관(다중 원본은 저장하지 않음)
+            imageUrl: `data:image/jpeg;base64,${orderedImages[0]!.base64}`,
           },
           resultData: {
             analysis: result.currentAnalysis,
@@ -267,6 +294,7 @@ function FengShuiAnalysisPageContent() {
                       key={s.value}
                       onClick={() => {
                         setSubjectType(s.value)
+                        setSlotImages({}) // 대상별 슬롯이 다르므로 전환 시 초기화
                         trackEvent({ action: 'fengshui_subject_select', category: 'analysis', label: s.value })
                       }}
                       className={`p-3 rounded-xl text-center transition-all duration-200 border ${
@@ -289,47 +317,6 @@ function FengShuiAnalysisPageContent() {
                 })}
               </div>
             </Card>
-
-            {/* 공간 유형 선택 — 집 안 공간일 때만 노출 (A-1) */}
-            <AnimatePresence initial={false}>
-              {subjectType === 'interior' && (
-                <motion.div
-                  key="room-select"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="overflow-hidden"
-                >
-                  <Card className="card-glass-manse p-5 border-white/5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Home className="w-4 h-4 text-gold-500" />
-                      <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">공간 유형 선택</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {ROOM_TYPES.map((room) => (
-                        <button
-                          key={room.value}
-                          onClick={() => setSelectedRoom(room.value)}
-                          className={`p-3 rounded-xl text-center transition-all duration-200 border ${
-                            selectedRoom === room.value
-                              ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
-                              : 'border-white/5 bg-white/3 hover:border-white/15'
-                          }`}
-                        >
-                          <div className="text-xl mb-1">{room.emoji}</div>
-                          <p
-                            className={`text-xs font-sans ${selectedRoom === room.value ? 'text-gold-500 font-semibold' : 'text-white/50'}`}
-                          >
-                            {room.value}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* 촬영 안내 — 대상별 문구 전환 (A-1) */}
             <Card className="card-glass-manse p-5 border-white/5">
@@ -421,16 +408,20 @@ function FengShuiAnalysisPageContent() {
               </AnimatePresence>
             </Card>
 
-            <ImageCapture onImageCapture={handleImageCapture} maxSizeMB={10} />
+            {/* 라벨 슬롯 그리드 — 대상별 여러 공간 사진을 한 번에(태스크 B) */}
+            <Card className="card-glass-manse p-5 border-gold-500/20">
+              <FengshuiSlotGrid spec={slotSpec} value={slotImages} onChange={setSlotImages} />
+            </Card>
 
             <button
               onClick={handleStartAnalysis}
-              disabled={!imageBase64 || loading}
+              disabled={filledSlotCount < slotSpec.min || loading}
               className="w-full h-14 rounded-2xl font-serif font-bold text-base tracking-wide transition-all duration-300 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed group"
               style={{
-                background: imageBase64
-                  ? `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 50%, #C9A227 100%)`
-                  : 'rgba(212,175,55,0.3)',
+                background:
+                  filledSlotCount >= slotSpec.min
+                    ? `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 50%, #C9A227 100%)`
+                    : 'rgba(212,175,55,0.3)',
               }}
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -477,7 +468,7 @@ function FengShuiAnalysisPageContent() {
                   공간 풍수 진단
                 </p>
                 <p className="relative text-lg font-serif font-bold text-gold-500 mb-4">
-                  {subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]} 풍수 진단
+                  {analyzedLabel || SUBJECT_LABEL[subjectType]} 풍수 진단
                 </p>
 
                 {analysisResult.spaceScore ? (
@@ -635,7 +626,7 @@ function FengShuiAnalysisPageContent() {
 
             <ShareSaveButtons
               resultContainerId="fengshui-result-container"
-              analysisTitle={`풍수 분석 (${subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]})`}
+              analysisTitle={`풍수 분석 (${analyzedLabel || SUBJECT_LABEL[subjectType]})`}
               memberName={targetMember?.name}
             />
 
@@ -646,9 +637,9 @@ function FengShuiAnalysisPageContent() {
               <Button
                 onClick={() => {
                   setStep('upload')
-                  setImageBase64('')
+                  setSlotImages({})
+                  setAnalyzedLabel('')
                   setAnalysisResult(null)
-                  setSelectedRoom('거실')
                   setSubjectType('interior')
                   setFacing('모름')
                   setAddress('')

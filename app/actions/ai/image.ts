@@ -709,10 +709,19 @@ Style: Professional headshot, warm lighting, confident expression.`
 
 /** 풍수 분석 대상·맥락(선택 입력). 값이 있으면 프롬프트에 주입, 없으면 기존 동작과 동일(하위호환). */
 export type FengshuiSubjectType = 'interior' | 'exterior' | 'office'
+
+/** 라벨된 풍수 사진 1장 — label 은 슬롯 라벨(예: '현관'), base64 는 압축본(data: 접두어 없음). */
+export interface FengshuiImage {
+  label: string
+  base64: string
+}
+
 export interface FengshuiSubjectOptions {
   subjectType?: FengshuiSubjectType
   facing?: string
   address?: string
+  /** 다중 라벨 사진. 1장 이상이면 멀티파트 분석, 없으면 단일 imageBase64 경로(하위호환). */
+  images?: FengshuiImage[]
 }
 
 // interior 는 기존 프롬프트의 기본 관점이므로 별도 문단을 넣지 않는다(하위호환). exterior·office 만 관점 전환.
@@ -744,6 +753,20 @@ function buildFengshuiSubjectContext(options?: FengshuiSubjectOptions): string {
   }
   if (lines.length === 0) return ''
   return `\n[분석 맥락 — 사용자 입력, 최우선 반영]\n${lines.join('\n')}\n`
+}
+
+/**
+ * 다중 사진 매핑 블록 — 이번 분석에 제공된 라벨 사진을 "사진N=라벨" 로 명시하고,
+ * 공간(사진)별 개별 진단 → 종합 통합 진단을 지시한다. 사진이 없으면 빈 문자열(하위호환).
+ * 태그 스키마는 그대로 유지(파서 무변경) — 공간별 진단은 ROOM_* 태그 활용도를 높인다.
+ */
+function buildFengshuiMultiImageContext(images?: FengshuiImage[]): string {
+  if (!images || images.length === 0) return ''
+  const mapping = images.map((img, i) => `- 사진${i + 1} = ${img.label}`).join('\n')
+  if (images.length === 1) {
+    return `\n[사진 라벨 — 이번 분석 입력]\n${mapping}\n이 사진이 어떤 공간인지 위 라벨을 반영해 진단하라.\n`
+  }
+  return `\n[다중 사진 매핑 — 이번 분석 입력, 최우선 반영]\n이번 분석에는 라벨이 지정된 사진 ${images.length}장이 순서대로 제공되었다:\n${mapping}\n각 사진(공간)을 먼저 개별 진단한 뒤(공간별 진단은 ROOM_* 태그를 적극 활용하라), 전체를 통합한 종합 진단으로 마무리하라. 서로 다른 공간의 기운이 상충·보완하는 관계를 반드시 짚어라.\n`
 }
 
 // 2. Interior Feng Shui Analysis - 풍수 인테리어 분석 및 개선 프롬프트 생성
@@ -862,11 +885,19 @@ ${subjectContext}
 추천 소품: ${themeConfig.elements}
 실용적이고 구체적인 조언을 제공하세요.`
 
+  // 다중 라벨 사진(슬롯)이 있으면 멀티파트로, 없으면 단일 imageBase64(하위호환).
+  const images = options?.images
+  const finalPrompt = analysisPrompt + buildFengshuiMultiImageContext(images)
+  const imageParts =
+    images && images.length > 0
+      ? images.map((img) => ({ inlineData: { mimeType: 'image/jpeg', data: img.base64 } }))
+      : [{ inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]
+
   try {
-    const result = await withGeminiRateLimit(
-      () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
-      { model: MODEL_PRO, actionType: 'fengshui_destiny' }
-    )
+    const result = await withGeminiRateLimit(() => model.generateContent([finalPrompt, ...imageParts]), {
+      model: MODEL_PRO,
+      actionType: 'fengshui_destiny',
+    })
 
     const analysisText = result.response.text()
 
@@ -1037,8 +1068,15 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       category: 'FENGSHUI',
       contextMode:
         theme === 'wealth' ? 'WEALTH' : theme === 'romance' ? 'LOVE' : theme === 'health' ? 'HEALTH' : 'GENERAL',
-      // 히스토리엔 subjectType·facing 만 포함(주소는 개인정보 최소화 — 저장 안 함)
-      resultJson: { ...fengshuiResult, roomType, theme, subjectType: options?.subjectType, facing: options?.facing },
+      // 히스토리엔 subjectType·facing·슬롯 라벨만 포함(이미지 자체·주소는 저장 안 함 — 개인정보 최소화)
+      resultJson: {
+        ...fengshuiResult,
+        roomType,
+        theme,
+        subjectType: options?.subjectType,
+        facing: options?.facing,
+        slotLabels: images?.map((img) => img.label),
+      },
       summary: spaceScore?.description || `${themeConfig.name} 풍수 분석`,
       score: spaceScore?.current,
       targetId: target?.id,
