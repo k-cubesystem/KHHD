@@ -8,7 +8,7 @@ import { cleanAnalysisText } from '@/lib/domain/analysis/clean-analysis-text'
 import type { SamhapResult } from '@/app/actions/ai/samhap'
 
 /**
- * 삼합 리포트 결과 뷰 — 프리미엄 무드(玄·골드). 1차 카드 문법 재사용.
+ * 종합사주풀이 결과 뷰 — 프리미엄 무드(玄·골드). 1차 카드 문법 재사용.
  * parsed 있으면 구조화 카드, 없으면 원문(raw) 폴백. 캡처 컨테이너 안에 위치.
  */
 export function SamhapResultView({ result, targetName }: { result: SamhapResult; targetName?: string }) {
@@ -25,7 +25,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.16),transparent_70%)]" />
         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-40 h-px bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
         <p className="relative text-[10px] tracking-[0.3em] text-gold-500/60 uppercase mb-4 font-sans">
-          삼합 종합 리포트 · Premium
+          종합사주풀이 · Premium
         </p>
         {typeof result.score === 'number' && (
           <motion.div
@@ -45,10 +45,10 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
             WebkitTextFillColor: 'transparent',
           }}
         >
-          三合
+          綜合
         </h2>
         <p className="relative mt-2 text-sm font-serif text-ink-primary/85">
-          {targetName ? `${targetName}님의 ` : ''}사주·관상·손금 종합
+          {targetName ? `${targetName}님의 ` : ''}사주·관상·손금·풍수 종합
         </p>
         {p?.summary && (
           <p className="relative mt-4 pt-4 border-t border-gold-500/15 text-sm text-ink-primary/80 font-serif font-light leading-relaxed">
@@ -77,8 +77,10 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
                   <Link2 className="w-3.5 h-3.5 text-gold-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-serif font-bold text-gold-500 tracking-wide">세 기운의 합치점</p>
-                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">사주 × 관상 × 손금</p>
+                  <p className="text-sm font-serif font-bold text-gold-500 tracking-wide">네 기운의 합치점</p>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
+                    사주 × 관상 × 손금 × 풍수
+                  </p>
                 </div>
               </div>
               <div className="space-y-3">
@@ -160,7 +162,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
       )}
 
       {/* 전문 보기 — 항상 원문 접근 가능 */}
-      {p && <DetailAnalysisAccordion raw={raw} title="삼합 전문 보기" />}
+      {p && <DetailAnalysisAccordion raw={raw} title="종합사주풀이 전문 보기" />}
     </div>
   )
 }

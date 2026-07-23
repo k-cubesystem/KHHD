@@ -5,7 +5,19 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Check, X, Sparkles, Layers, User2, Hand, Calendar, ChevronLeft } from 'lucide-react'
+import {
+  ArrowRight,
+  Coins,
+  Check,
+  X,
+  Sparkles,
+  Layers,
+  User2,
+  Hand,
+  Compass,
+  Calendar,
+  ChevronLeft,
+} from 'lucide-react'
 import { logger } from '@/lib/utils/logger'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
@@ -28,8 +40,9 @@ const SAMHAP_COST = FEATURE_COST.samhap.display
 const LOADING_STEPS = [
   '사주(天)의 기운을 불러옵니다...',
   '관상·손금(人)의 결을 겹쳐 봅니다...',
-  '세 기운의 합치점을 찾고 있습니다...',
-  '삼합(三合)의 처방을 정리합니다...',
+  '풍수(地)의 터 기운을 더합니다...',
+  '네 기운의 합치점을 찾고 있습니다...',
+  '종합사주풀이 처방을 정리합니다...',
 ]
 
 function SamhapPageContent() {
@@ -64,7 +77,7 @@ function SamhapPageContent() {
       const res = await generateSamhapReport(targetId ?? undefined)
       if (!res.success) {
         setStep('check')
-        toast.error(res.error || '삼합 리포트 생성에 실패했습니다.')
+        toast.error(res.error || '종합사주풀이 생성에 실패했습니다.')
         return
       }
       setResult(res)
@@ -73,7 +86,7 @@ function SamhapPageContent() {
       GA.analysisComplete('samhap')
     } catch (error) {
       logger.error('Samhap generate error:', error)
-      toast.error('삼합 리포트 생성 중 예상치 못한 오류가 발생했습니다.')
+      toast.error('종합사주풀이 생성 중 예상치 못한 오류가 발생했습니다.')
       setStep('check')
     } finally {
       setLoading(false)
@@ -100,12 +113,12 @@ function SamhapPageContent() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-serif font-bold text-ink-light">삼합 리포트</h1>
+              <h1 className="text-2xl font-serif font-bold text-ink-light">종합사주풀이</h1>
               <span className="text-[9px] font-bold text-gold-500 tracking-[0.2em] uppercase border border-gold-500/30 rounded-full px-2 py-0.5">
                 Premium
               </span>
             </div>
-            <p className="text-xs text-white/40 font-sans mt-0.5">사주·관상·손금을 하나로 — 三合</p>
+            <p className="text-xs text-white/40 font-sans mt-0.5">사주·관상·손금·풍수 四柱 종합</p>
           </div>
         </div>
       </header>
@@ -155,7 +168,7 @@ function SamhapPageContent() {
               </div>
               <ShareSaveButtons
                 resultContainerId="samhap-result-container"
-                analysisTitle="삼합 리포트"
+                analysisTitle="종합사주풀이"
                 memberName={result.targetName}
               />
               <button
@@ -200,6 +213,13 @@ function SamhapCheck({
       icon: Hand,
       href: `/protected/studio/palm${targetQuery}`,
     },
+    {
+      key: 'fengshui',
+      label: '풍수 분석',
+      ok: readiness.hasFengshui,
+      icon: Compass,
+      href: `/protected/studio/fengshui${targetQuery}`,
+    },
     { key: 'birth', label: '생년월일 등록', ok: readiness.hasBirth, icon: Calendar, href: '/protected/family' },
   ]
 
@@ -212,8 +232,8 @@ function SamhapCheck({
       >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.12),transparent_65%)]" />
         <p className="relative text-sm text-ink-primary/85 font-serif font-light leading-relaxed">
-          하늘의 기운(사주), 사람의 기운(관상·손금)이 이미 당신 안에 모였습니다. 세 기운이{' '}
-          <b className="text-gold-500 font-bold">같은 말을 하는 지점</b>을 찾아, 하나의 종합 리포트로 엮어 드립니다.
+          하늘의 기운(사주), 사람의 기운(관상·손금), 터의 기운(풍수)이 이미 당신 안에 모였습니다. 네 기운이{' '}
+          <b className="text-gold-500 font-bold">같은 말을 하는 지점</b>을 찾아, 하나의 종합사주풀이로 엮어 드립니다.
         </p>
       </div>
 
@@ -252,7 +272,7 @@ function SamhapCheck({
                 {balance !== null ? `${balance}만냥` : '—'}
               </span>
             </div>
-            <span className="text-sm font-bold text-gold-500 font-serif">삼합 · {SAMHAP_COST}만냥</span>
+            <span className="text-sm font-bold text-gold-500 font-serif">종합 · {SAMHAP_COST}만냥</span>
           </div>
 
           <button
@@ -264,18 +284,18 @@ function SamhapCheck({
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
             <span className="relative flex items-center justify-center gap-2 text-[#0A0A08]">
               <Sparkles className="w-4 h-4" />
-              삼합 리포트 열람 · {SAMHAP_COST}만냥
+              종합사주풀이 열람 · {SAMHAP_COST}만냥
               <ArrowRight className="w-4 h-4" />
             </span>
           </button>
           <p className="text-[10px] text-white/35 text-center font-sans">
-            새 사진 촬영 없이, 저장된 관상·손금과 사주를 종합합니다.
+            새 사진 촬영 없이, 저장된 사주·관상·손금·풍수를 종합합니다.
           </p>
         </>
       ) : (
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 text-center">
           <p className="text-sm text-white/55 font-sans font-light leading-relaxed">
-            위 재료가 모두 준비되면 삼합 리포트를 열람할 수 있습니다.
+            위 재료가 모두 준비되면 종합사주풀이를 열람할 수 있습니다.
             <br />
             부족한 항목을 먼저 준비해 주세요. (준비 단계에서는 복채가 차감되지 않습니다.)
           </p>
@@ -292,7 +312,7 @@ export default function SamhapPage() {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500 mx-auto" />
-            <p className="text-white/40 font-sans text-sm">삼합 리포트 준비 중...</p>
+            <p className="text-white/40 font-sans text-sm">종합사주풀이 준비 중...</p>
           </div>
         </div>
       }

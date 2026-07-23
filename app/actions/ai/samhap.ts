@@ -20,6 +20,7 @@ export interface SamhapReadiness {
   ready: boolean
   hasFace: boolean
   hasHand: boolean
+  hasFengshui: boolean
   hasBirth: boolean
   faceScore: number | null
   handScore: number | null
@@ -61,7 +62,7 @@ type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 async function latestReading(
   supabase: SupabaseClient,
   userId: string,
-  category: 'FACE' | 'HAND',
+  category: 'FACE' | 'HAND' | 'FENGSHUI',
   targetId: string
 ): Promise<ReadingRow | null> {
   const { data, error } = await supabase
@@ -81,6 +82,7 @@ async function latestReading(
 interface SamhapInputs {
   face: ReadingRow | null
   hand: ReadingRow | null
+  fengshui: ReadingRow | null
   birthDate: string | null
   birthTime: string | null
   calendarType: string | null
@@ -89,12 +91,13 @@ interface SamhapInputs {
   targetRelation: string
 }
 
-/** 삼합 입력(관상·손금 이력 + 생년월일)을 대상(본인/가족)별로 모은다. RLS: 본인 소유만. */
+/** 종합사주풀이 입력(관상·손금·풍수 이력 + 생년월일)을 대상(본인/가족)별로 모은다. RLS: 본인 소유만. */
 async function gatherSamhapInputs(supabase: SupabaseClient, userId: string, targetId?: string): Promise<SamhapInputs> {
   const effectiveTarget = targetId ?? userId
-  const [face, hand] = await Promise.all([
+  const [face, hand, fengshui] = await Promise.all([
     latestReading(supabase, userId, 'FACE', effectiveTarget),
     latestReading(supabase, userId, 'HAND', effectiveTarget),
+    latestReading(supabase, userId, 'FENGSHUI', effectiveTarget),
   ])
 
   let birthDate: string | null = null
@@ -129,7 +132,7 @@ async function gatherSamhapInputs(supabase: SupabaseClient, userId: string, targ
     targetName = data?.full_name ?? '본인'
   }
 
-  return { face, hand, birthDate, birthTime, calendarType, isLeapMonth, targetName, targetRelation }
+  return { face, hand, fengshui, birthDate, birthTime, calendarType, isLeapMonth, targetName, targetRelation }
 }
 
 interface SajuBasic {
@@ -240,13 +243,41 @@ function summarizeHand(rj: unknown): string {
   return lines.length > 0 ? lines.join('\n') : '손금 요약 없음'
 }
 
+function summarizeFengshui(rj: unknown): string {
+  const o = obj(rj)
+  if (!o) return '풍수 데이터 없음'
+  const lines: string[] = []
+  const subjectType = str(o.subjectType)
+  const roomType = str(o.roomType)
+  const label =
+    subjectType === 'exterior' ? '집·건물 외관' : subjectType === 'office' ? '사무실·가게' : roomType || '실내 공간'
+  lines.push(`분석 대상: ${label}`)
+  const facing = str(o.facing)
+  if (facing && facing !== '모름') lines.push(`실측 좌향: ${facing}향`)
+  const de = str(o.dominantElement)
+  if (de) lines.push(`지배 오행: ${de}`)
+  const ld = str(o.luckyDirection)
+  if (ld) lines.push(`길한 방위: ${ld}`)
+  const ss = obj(o.spaceScore)
+  if (ss) {
+    const cur = typeof ss.current === 'number' ? ss.current : undefined
+    const pot = typeof ss.potential === 'number' ? ss.potential : undefined
+    if (cur !== undefined) lines.push(`공간 점수: 현재 ${cur}${pot !== undefined ? ` → 잠재 ${pot}` : ''}`)
+    const desc = str(ss.description)
+    if (desc) lines.push(`총평: ${clip(desc, 120)}`)
+  }
+  const problems = Array.isArray(o.problems) ? o.problems.filter((p): p is string => typeof p === 'string') : []
+  if (problems.length) lines.push(`주요 문제점: ${problems.slice(0, 2).join(', ')}`)
+  return lines.length > 0 ? lines.join('\n') : '풍수 요약 없음'
+}
+
 function buildSamhapPrompt(inputs: SamhapInputs, saju: SajuBasic): string {
   const dist = saju.distribution
     ? Object.entries(saju.distribution)
         .map(([k, v]) => `${k}${v}`)
         .join(' ')
     : '미상'
-  return `당신은 청담해화당의 대가 '해화지기(解化之機)'입니다. 한 사람의 사주(天)·관상·손금(人)을 하나로 꿰어 삼합(三合) 종합 리포트를 씁니다.
+  return `당신은 청담해화당의 대가 '해화지기(解化之機)'입니다. 한 사람의 사주(天)·관상·손금(人)·풍수(地)를 하나로 꿰어 종합사주풀이 리포트를 씁니다.
 새로운 이미지 분석은 하지 않습니다 — 아래 이미 도출된 결과만 근거로 삼으세요.
 
 [대상] ${inputs.targetName}${saju.age ? ` (${saju.age}세)` : ''}
@@ -255,9 +286,11 @@ function buildSamhapPrompt(inputs: SamhapInputs, saju: SajuBasic): string {
 ${summarizeFace(inputs.face?.result)}
 [손금 요약]
 ${summarizeHand(inputs.hand?.result)}
+[풍수 요약]
+${summarizeFengshui(inputs.fengshui?.result)}
 
 [집필 원칙 — 반드시 준수]
-1. 세 근거(사주·관상·손금)가 같은 방향을 가리키는 지점을 찾아 '합치점'으로 제시하세요. 여러 근거가 일치할수록 신뢰가 높아집니다. 서로 다른 근거를 반드시 함께 엮으세요(예: "사주의 재성 + 관상의 코 + 손금의 재물선").
+1. 네 근거(사주·관상·손금·풍수)가 같은 방향을 가리키는 지점을 찾아 '합치점'으로 제시하세요. 여러 근거가 일치할수록 신뢰가 높아집니다. 서로 다른 근거를 반드시 함께 엮으세요(예: "사주의 재성 + 관상의 코 + 손금의 재물선 + 풍수의 재물 방위"). 사람의 상(사주·관상·손금)과 터의 기운(풍수)이 어떻게 서로를 돕거나 보완하는지 반드시 한 번 이상 짚으세요.
 2. 단정·공포 금지. 긴장점은 '나쁨'이 아니라 '완급이 필요한 결'로 재구성하고, 반드시 대응 행동과 함께 제시하세요.
 3. 시기는 가능하면 구체적인 연도로 특정하세요. "언젠가" 같은 모호한 표현은 피하세요.
 4. 개운 처방은 오늘부터 실행 가능한 행동 + 기대 효과로. 물상론적 비유로 따뜻하게 서술하고, 마무리는 희망으로 닫으세요.
@@ -281,7 +314,7 @@ ${summarizeHand(inputs.hand?.result)}
 // ─── 공개 액션 ─────────────────────────────────────────────────────────────
 
 /**
- * 삼합 요건 점검(관상·손금 이력 + 생년월일). 차감 없음 — 페이지에서 안내용.
+ * 종합사주풀이 요건 점검(관상·손금·풍수 이력 + 생년월일). 차감 없음 — 페이지에서 안내용.
  * targetId 미지정 시 본인 기준. RLS: 본인 소유 데이터만.
  */
 export async function getSamhapReadiness(targetId?: string): Promise<SamhapReadiness> {
@@ -294,6 +327,7 @@ export async function getSamhapReadiness(targetId?: string): Promise<SamhapReadi
       ready: false,
       hasFace: false,
       hasHand: false,
+      hasFengshui: false,
       hasBirth: false,
       faceScore: null,
       handScore: null,
@@ -303,11 +337,13 @@ export async function getSamhapReadiness(targetId?: string): Promise<SamhapReadi
   const inputs = await gatherSamhapInputs(supabase, user.id, targetId)
   const hasFace = !!inputs.face
   const hasHand = !!inputs.hand
+  const hasFengshui = !!inputs.fengshui
   const hasBirth = !!inputs.birthDate
   return {
-    ready: hasFace && hasHand && hasBirth,
+    ready: hasFace && hasHand && hasFengshui && hasBirth,
     hasFace,
     hasHand,
+    hasFengshui,
     hasBirth,
     faceScore: inputs.face?.score ?? null,
     handScore: inputs.hand?.score ?? null,
@@ -316,7 +352,7 @@ export async function getSamhapReadiness(targetId?: string): Promise<SamhapReadi
 }
 
 /**
- * 삼합 종합 리포트 생성 — 저장된 관상·손금 + 사주 기본 재활용, Gemini 텍스트 1콜(새 이미지 없음).
+ * 종합사주풀이 리포트 생성 — 저장된 관상·손금·풍수 + 사주 기본 재활용, Gemini 텍스트 1콜(새 이미지 없음).
  * 요건 미달이면 차감 없이 반환. 차감 후 AI 실패 시 환불(1차 패턴). 파싱 실패해도 원문 폴백.
  */
 export async function generateSamhapReport(targetId?: string): Promise<SamhapResult> {
@@ -327,10 +363,10 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
   if (!user) return { success: false, error: '로그인이 필요합니다.', errorType: 'AUTH' }
 
   const inputs = await gatherSamhapInputs(supabase, user.id, targetId)
-  if (!inputs.face || !inputs.hand || !inputs.birthDate) {
+  if (!inputs.face || !inputs.hand || !inputs.fengshui || !inputs.birthDate) {
     return {
       success: false,
-      error: '삼합 리포트에는 관상·손금 분석과 생년월일이 모두 필요합니다.',
+      error: '종합사주풀이에는 관상·손금·풍수 분석과 생년월일이 모두 필요합니다.',
       errorType: 'REQUIREMENTS',
     }
   }
@@ -355,7 +391,7 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
 
     const score = Math.round(((inputs.face.score ?? 60) + (inputs.hand.score ?? 60)) / 2)
 
-    await addBokPoints(30, 'ANALYSIS', undefined, '삼합 종합 리포트').catch(() => {})
+    await addBokPoints(30, 'ANALYSIS', undefined, '종합사주풀이 리포트').catch(() => {})
 
     const samhapResult: SamhapResult = {
       success: true,
@@ -373,7 +409,7 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
         category: 'SAMHAP',
         context_mode: 'GENERAL',
         result_json: samhapResult,
-        summary: parsed.summary || '삼합 종합 리포트',
+        summary: parsed.summary || '종합사주풀이 리포트',
         score,
         model_used: MODEL_PRO,
         talisman_cost: SAMHAP_COST,
@@ -389,7 +425,7 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
       success: false,
       error: refund.refunded
         ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
-        : '삼합 분석 중 오류가 발생했습니다.',
+        : '종합사주풀이 분석 중 오류가 발생했습니다.',
       errorType: 'AI',
     }
   }

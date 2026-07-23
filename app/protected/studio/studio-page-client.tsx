@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { JourneyCard } from '@/components/analysis/journey-card'
 
 const SERVICES = [
   {
@@ -49,13 +50,13 @@ const SERVICES = [
   {
     id: 'samhap',
     href: '/protected/studio/samhap',
-    label: '삼합 리포트',
-    eng: 'Samhap · Premium',
+    label: '종합사주풀이',
+    eng: 'Comprehensive · Premium',
     badge: 'Secret 04',
     icon: Layers,
     cost: FEATURE_COST.samhap.display,
-    desc: '사주·관상·손금 세 기운을 하나로. 이미 분석한 결과를 종합해 합치점과 시기·개운 처방을 밝힙니다.',
-    tags: ['종합운', '삼합', '프리미엄'],
+    desc: '사주·관상·손금·풍수 네 기운을 하나로. 이미 분석한 결과를 종합해 합치점과 시기·개운 처방을 밝힙니다.',
+    tags: ['종합운', '四柱 종합', '프리미엄'],
     gradient: 'from-amber-950/40 to-transparent',
     accent: 'rgba(201,168,76,0.08)',
   },
@@ -123,6 +124,9 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
       </header>
 
       <div className="px-5 relative z-10 space-y-3 pb-20">
+        {/* 종합사주풀이 여정 — 스튜디오 허브 상단 */}
+        <JourneyCard variant="full" className="mb-1" />
+
         {SERVICES.map((service, i) => (
           <motion.div
             key={service.id}

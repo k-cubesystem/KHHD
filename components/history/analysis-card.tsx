@@ -23,7 +23,7 @@ const categoryConfig = {
   WEALTH: { icon: Coins, label: '재물운', color: 'text-primary' },
   TODAY: { icon: Sun, label: '오늘의운세', color: 'text-primary-dark' },
   NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-primary-dark' },
-  SAMHAP: { icon: Star, label: '삼합', color: 'text-primary' },
+  SAMHAP: { icon: Star, label: '종합사주풀이', color: 'text-primary' },
 }
 
 export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick, onDelete }: AnalysisCardProps) {
