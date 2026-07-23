@@ -2,25 +2,31 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, X } from "lucide-react";
+import { Camera, Upload, X, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { compressImageForUpload } from "@/lib/utils/compress-image";
+import { logger } from "@/lib/utils/logger";
 
 interface ImageCaptureProps {
     onImageCapture: (base64: string, file: File) => void;
     acceptedFormats?: string;
     maxSizeMB?: number;
+    /** 카메라 방향 — 관상(셀피)은 "user", 손금·풍수는 후면 "environment" */
+    cameraFacing?: "user" | "environment";
 }
 
 export function ImageCapture({
     onImageCapture,
     acceptedFormats = "image/*",
     maxSizeMB = 10,
+    cameraFacing = "environment",
 }: ImageCaptureProps) {
     const cameraInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [compressing, setCompressing] = useState(false);
 
     const handleFileSelect = async (file: File) => {
         setError(null);
@@ -38,15 +44,23 @@ export function ImageCapture({
             return;
         }
 
-        // Read file and convert to base64
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const base64 = e.target?.result as string;
-            const base64Data = base64.split(",")[1]; // Remove data:image/...;base64, prefix
-            setPreview(base64);
-            onImageCapture(base64Data, file);
-        };
-        reader.readAsDataURL(file);
+        // 클라이언트 압축(1280px·JPEG) — 원본 그대로 보내면 Vercel 페이로드 한도(4.5MB)에
+        // 걸려 413으로 분석이 튕긴다(2026-07-23 실측). 압축 실패 시 안전 폴백은 util 담당.
+        setCompressing(true);
+        try {
+            const compressed = await compressImageForUpload(file);
+            setPreview(compressed.dataUrl);
+            onImageCapture(compressed.base64, file);
+        } catch (e: unknown) {
+            logger.warn("[ImageCapture] compress failed:", e);
+            setError(
+                e instanceof Error && e.message === "IMAGE_TOO_LARGE_FOR_UPLOAD"
+                    ? "이 형식의 사진은 크기가 너무 큽니다. 다른 사진을 선택하거나 스크린샷으로 시도해주세요."
+                    : "사진을 처리하지 못했습니다. 다른 사진으로 시도해주세요."
+            );
+        } finally {
+            setCompressing(false);
+        }
     };
 
     const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,19 +99,26 @@ export function ImageCapture({
                             {/* Camera Capture (Mobile) */}
                             <Button
                                 type="button"
+                                disabled={compressing}
                                 onClick={() => cameraInputRef.current?.click()}
-                                className="w-full h-32 border-2 border-dashed border-gold-500/30 
-                  bg-transparent hover:bg-gold-500/5 
+                                className="w-full h-32 border-2 border-dashed border-gold-500/30
+                  bg-transparent hover:bg-gold-500/5
                   flex flex-col gap-3 text-white"
                             >
-                                <Camera className="w-10 h-10 text-gold-500" />
-                                <span className="text-sm font-sans">사진 촬영하기</span>
+                                {compressing ? (
+                                    <Loader2 className="w-10 h-10 text-gold-500 animate-spin" />
+                                ) : (
+                                    <Camera className="w-10 h-10 text-gold-500" />
+                                )}
+                                <span className="text-sm font-sans">
+                                    {compressing ? "사진 준비 중..." : "사진 촬영하기"}
+                                </span>
                             </Button>
                             <input
                                 ref={cameraInputRef}
                                 type="file"
                                 accept={acceptedFormats}
-                                capture="environment"
+                                capture={cameraFacing}
                                 onChange={handleCameraCapture}
                                 className="hidden"
                             />

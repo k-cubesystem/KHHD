@@ -280,7 +280,7 @@ function FaceAnalysisPageContent() {
               </ul>
             </Card>
 
-            <ImageCapture onImageCapture={handleImageCapture} maxSizeMB={10} />
+            <ImageCapture onImageCapture={handleImageCapture} maxSizeMB={10} cameraFacing="user" />
 
             <button
               onClick={handleStartAnalysis}
