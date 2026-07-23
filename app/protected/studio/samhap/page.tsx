@@ -312,12 +312,21 @@ function SamhapCheck({
           </p>
         </>
       ) : (
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 text-center">
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 text-center space-y-2.5">
           <p className="text-sm text-white/55 font-sans font-light leading-relaxed">
             위 재료가 모두 준비되면 종합사주풀이를 열람할 수 있습니다.
             <br />
             부족한 항목을 먼저 준비해 주세요. (준비 단계에서는 복채가 차감되지 않습니다.)
           </p>
+          {SAMHAP_DISCOUNT_PCT > 0 && (
+            <p className="text-[11px] font-sans">
+              <span className="text-white/30 line-through">개별 4가지 합 {INDIVIDUAL_TOTAL}만냥</span>{' '}
+              <span className="text-gold-400 font-bold">→ 종합 {SAMHAP_COST}만냥</span>{' '}
+              <span className="text-[10px] font-bold text-red-200 bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
+                {SAMHAP_DISCOUNT_PCT}% 할인
+              </span>
+            </p>
+          )}
         </div>
       )}
     </div>

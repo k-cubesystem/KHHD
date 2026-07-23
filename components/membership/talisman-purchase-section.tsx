@@ -47,7 +47,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '행운 꾸러미',
     description: '가장 많이 선택하는 실속 복채',
     badge_text: '가장 인기',
-    features: ['복채 10만냥 + 보너스 1만냥', '천지인사주 2회', '관상·손금·풍수 5회', '영구 지급'],
+    features: ['복채 10만냥 + 보너스 1만냥', '사주·풀이 5회분 (회당 2만냥)', '종합사주풀이 2회분', '영구 지급'],
   },
   {
     credits: 20,
@@ -56,7 +56,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '대복 상자',
     description: '든든하게 채우는 고급 복채',
     badge_text: null,
-    features: ['복채 20만냥 + 보너스 3만냥', '천지인사주 4회', '모든 서비스 자유 이용', '영구 지급'],
+    features: ['복채 20만냥 + 보너스 3만냥', '사주·풀이 10회분 · 종합 4회분', '모든 서비스 자유 이용', '영구 지급'],
   },
   {
     credits: 30,
@@ -65,7 +65,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '대복 창고',
     description: '넉넉하게 채우는 최고 혜택 복채',
     badge_text: '최대 혜택',
-    features: ['복채 30만냥 + 보너스 6만냥', '천지인사주 7회', '모든 서비스 자유 이용', '영구 지급'],
+    features: ['복채 30만냥 + 보너스 6만냥', '사주·풀이 15회분 · 종합 6회분', '모든 서비스 자유 이용', '영구 지급'],
   },
 ]
 
@@ -164,9 +164,9 @@ export function TalismanPurchaseSection({
       {/* 서비스 이용 안내 */}
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { label: '테마운세', cost: '1만냥', icon: 'theme' },
-          { label: '관상·풍수', cost: '2만냥', icon: 'studio' },
-          { label: '천지인사주', cost: '5만냥', icon: 'saju' },
+          { label: '사주·궁합', cost: '2만냥', icon: 'saju' },
+          { label: '관상·손금·풍수', cost: '2만냥', icon: 'studio' },
+          { label: '종합사주풀이', cost: '5만냥', icon: 'theme' },
         ].map((item) => (
           <div key={item.label} className="bg-white/3 border border-white/8 rounded-lg py-2 px-1">
             <Sparkles className="w-4 h-4 mx-auto mb-0.5 text-gold-400/60" />
