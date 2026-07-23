@@ -31,6 +31,8 @@ export const GA = {
 
   membershipPurchase: (plan: string, value: number) =>
     trackEvent({ action: 'purchase', category: 'membership', label: plan, value }),
+  voucherPurchase: (kind: string, value: number) =>
+    trackEvent({ action: 'purchase', category: 'voucher', label: kind, value }),
   bokchaeCharge: (amount: number) => trackEvent({ action: 'bokchae_charge', category: 'payment', value: amount }),
 
   // ── 결제 퍼널 (로드맵 P1-5) — 상점 진입 → 탭 → 결제 시도 → 성공/실패 ──

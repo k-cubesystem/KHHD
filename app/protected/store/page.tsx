@@ -12,16 +12,20 @@ import { TalismanPurchaseSection } from '@/components/membership/talisman-purcha
 import { ShrineShopClient } from '@/components/shrine/ShrineShopClient'
 import { ThemeShopGrid } from '@/components/store/ThemeShopGrid'
 import { StoreFunnelTracker } from '@/components/store/StoreFunnelTracker'
+import { VoucherShop } from '@/components/store/voucher-shop'
+import { getMyVouchers } from '@/app/actions/payment/vouchers'
+import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { getTranslations } from 'next-intl/server'
-import { ChevronLeft, Coins, Crown, Palette, Flame, ArrowRight } from 'lucide-react'
+import { ChevronLeft, Coins, Crown, Palette, Flame, Ticket, ArrowRight } from 'lucide-react'
 
-const TAB_KEYS = ['bokchae', 'membership', 'theme', 'items'] as const
+const TAB_KEYS = ['bokchae', 'membership', 'voucher', 'theme', 'items'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 
 /** 라벨은 messages/{locale}.json 의 store.tab* 에서 온다 */
 const TABS: Array<{ key: TabKey; labelKey: string; icon: typeof Coins }> = [
   { key: 'bokchae', labelKey: 'tabBokchae', icon: Coins },
   { key: 'membership', labelKey: 'tabMembership', icon: Crown },
+  { key: 'voucher', labelKey: 'tabVoucher', icon: Ticket },
   { key: 'theme', labelKey: 'tabTheme', icon: Palette },
   { key: 'items', labelKey: 'tabItems', icon: Flame },
 ]
@@ -65,7 +69,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
       </header>
 
       {/* 탭 바 */}
-      <nav className="grid grid-cols-4 gap-1.5 mb-6" aria-label={t('tabsAria')}>
+      <nav className="grid grid-cols-5 gap-1.5 mb-6" aria-label={t('tabsAria')}>
         {TABS.map(({ key, labelKey, icon: Icon }) => {
           const active = key === tab
           return (
@@ -88,10 +92,16 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
 
       {tab === 'bokchae' && <BokchaeTab userId={user.id} />}
       {tab === 'membership' && <MembershipTab />}
+      {tab === 'voucher' && <VoucherTab />}
       {tab === 'theme' && <ThemeTab />}
       {tab === 'items' && <ItemsTab />}
     </div>
   )
+}
+
+async function VoucherTab() {
+  const [vouchers, membership] = await Promise.all([getMyVouchers(), getCurrentUserMembership()])
+  return <VoucherShop initialVouchers={vouchers} isMember={membership !== null} />
 }
 
 async function BokchaeTab({ userId }: { userId: string }) {
