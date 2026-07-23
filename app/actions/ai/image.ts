@@ -61,8 +61,78 @@ async function persistImageAnalysisHistory(params: {
   }
 }
 
+/**
+ * 관상·손금 사주 교차분석용 컨텍스트(일간·나이)를 서버에서 해석한다.
+ * - 대상(target)이 있으면 그 가족 구성원의 생년월일(RLS로 소유권 보장),
+ *   없으면 로그인 사용자 본인의 profiles 생년월일을 사용한다.
+ * - 생년월일이 없거나 계산 실패 시 undefined → 호출부는 교차분석을 생략(크래시 없음).
+ * - 일간(dayGan)은 기존 사주 엔진(getSajuData) 재사용, 나이는 calculateAge.
+ *   무거운 만세력 의존성은 동적 import로 지연 로드(클라이언트 번들 영향 0).
+ */
+async function resolveSajuForImageAnalysis(target?: {
+  id: string
+  name: string
+  relation: string
+}): Promise<{ dayGan?: string; currentAge?: number } | undefined> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return undefined
+
+    let birthDate: string | null = null
+    let birthTime: string | null = null
+    let calendarType: string | null = null
+    let isLeapMonth = false
+
+    if (target?.id) {
+      // 소유권 방어: id + user_id 동시 필터(RLS 이중화)
+      const { data } = await supabase
+        .from('family_members')
+        .select('birth_date, birth_time, calendar_type')
+        .eq('id', target.id)
+        .eq('user_id', user.id)
+        .single()
+      birthDate = data?.birth_date ?? null
+      birthTime = data?.birth_time ?? null
+      calendarType = data?.calendar_type ?? null
+    } else {
+      const { data } = await supabase
+        .from('profiles')
+        .select('birth_date, birth_time, calendar_type, is_leap_month')
+        .eq('id', user.id)
+        .single()
+      birthDate = data?.birth_date ?? null
+      birthTime = data?.birth_time ?? null
+      calendarType = data?.calendar_type ?? null
+      isLeapMonth = data?.is_leap_month ?? false
+    }
+
+    if (!birthDate) return undefined
+
+    const { getSajuData, calculateAge } = await import('@/lib/domain/saju/saju')
+    const { isSolarCalendar } = await import('@/lib/domain/saju/calendar')
+    const saju = getSajuData(birthDate, birthTime || '12:00', isSolarCalendar(calendarType), isLeapMonth)
+    return { dayGan: saju.dayGan, currentAge: calculateAge(birthDate) }
+  } catch (e) {
+    logger.warn('[resolveSajuForImageAnalysis] 사주 컨텍스트 생략:', e)
+    return undefined
+  }
+}
+
 // Face Destiny Goals
 export type FaceDestinyGoal = 'wealth' | 'love' | 'authority' | 'general'
+
+// Palm Reading Goals — 관상과 대칭(종합/재물/도화/권위). 하위호환 위해 기본 'general'.
+export type PalmReadingGoal = FaceDestinyGoal
+
+const PALM_GOAL_FOCUS: Record<PalmReadingGoal, string> = {
+  general: '전반적인 운세 흐름을 균형 있게 짚어주세요.',
+  wealth: '특히 재물운(수성구·태양선·지능선)에 초점을 맞춰 더 깊이 분석하세요.',
+  love: '특히 애정운(감정선·결혼선·금성구)에 초점을 맞춰 더 깊이 분석하세요.',
+  authority: '특히 직업·권위운(운명선·지능선·목성구)에 초점을 맞춰 더 깊이 분석하세요.',
+}
 
 const GOAL_PROMPTS: Record<FaceDestinyGoal, { name: string; desc: string; traits: string }> = {
   wealth: {
@@ -540,8 +610,10 @@ Style: Professional headshot, warm lighting, confident expression.`
     const estimatedScore = Math.round(
       (Object.values(faceScoreMap).reduce((a, b) => a + b, 0) / Object.values(faceScoreMap).length) * 10
     )
-    const sajuSynergy = sajuContext?.dayGan
-      ? buildFaceSajuSynergyText(sajuContext.dayGan, estimatedScore, goal)
+    // 사주 교차분석: 명시적 sajuContext 우선, 없으면 서버에서 대상/본인 생년월일로 해석.
+    const effectiveSaju = sajuContext ?? (await resolveSajuForImageAnalysis(target))
+    const sajuSynergy = effectiveSaju?.dayGan
+      ? buildFaceSajuSynergyText(effectiveSaju.dayGan, estimatedScore, goal)
       : undefined
 
     const gisaekMatch = analysisText.match(/기색|안색|혈색|광택|윤기/)
@@ -574,6 +646,7 @@ Style: Professional headshot, warm lighting, confident expression.`
 
     const faceResult: FaceAnalysisResult = {
       success: true,
+      score: estimatedScore, // 종합 점수를 결과 객체로 반환 (기존엔 히스토리에만 저장됨)
       currentAnalysis: analysisText,
       facialFeatures,
       partAnalysis,
@@ -920,16 +993,19 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 // 3. Palm Reading Analysis - 손금 분석
 export async function analyzePalmReading(
   imageBase64: string,
+  goal: PalmReadingGoal = 'general',
   sajuContext?: { dayGan?: string; currentAge?: number },
   target?: { id: string; name: string; relation: string }
 ): Promise<PalmAnalysisResult> {
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, sajuContext, target })
+    return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, goal, sajuContext, target })
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
 
   const dbPromptTemplate = await getPromptByKey('palm_reading')
-  const analysisPrompt =
+  // 목적(goal) 강조 문단은 DB 템플릿 유무와 무관하게 프롬프트 뒤에 append(플레이스홀더 의존 X).
+  const goalFocusBlock = `\n\n[분석 초점]\n${PALM_GOAL_FOCUS[goal] ?? PALM_GOAL_FOCUS.general}`
+  const basePrompt =
     dbPromptTemplate ??
     `당신은 30년 경력의 수상학(手相學, 손금학) 전문 상담가입니다.
 실용적이고 균형 잡힌 분석을 제공합니다. 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.
@@ -1009,6 +1085,8 @@ export async function analyzePalmReading(
 ※ 의학적 진단이나 절대적 미래 예언은 하지 마세요.
 ※ 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요.`
 
+  const analysisPrompt = basePrompt + goalFocusBlock
+
   try {
     const result = await withGeminiRateLimit(
       () => model.generateContent([analysisPrompt, { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } }]),
@@ -1030,8 +1108,9 @@ export async function analyzePalmReading(
       logger.warn('[analyzePalmReading] element form skipped:', e)
     }
 
-    // Extract palm lines with assessment
-    const parseLine = (tag: string) => {
+    // Extract palm lines with assessment.
+    // 파싱 실패 시 유령 문구('분석 중') 대신 undefined 반환 → UI는 있는 선만 렌더(.filter(l => l.data)).
+    const parseLine = (tag: string): PalmLineDetail | undefined => {
       // [[TAG: 좋음/보통/주의, 설명, 의미]]
       const regex = new RegExp(`\\[\\[${tag}:\\s*(좋음|보통|주의),\\s*([^,\\]]+),\\s*([^\\]]+)\\]\\]`)
       const match = analysisText.match(regex)
@@ -1052,7 +1131,7 @@ export async function analyzePalmReading(
           assessment: simpleMatch[1] as '좋음' | '보통' | '주의',
         }
       }
-      return { description: '분석 중', meaning: '', assessment: '보통' as const }
+      return undefined
     }
 
     const palmLines = {
@@ -1064,10 +1143,10 @@ export async function analyzePalmReading(
       marriageLine: parseLine('MARRIAGE_LINE'),
     }
 
-    // Extract fortune overview (text-based)
+    // Extract fortune overview (text-based). 실패 시 빈 문자열 → UI에서 빈 항목은 렌더 제외(유령 문구 방지).
     const extractFortuneText = (tag: string): string => {
       const match = analysisText.match(new RegExp(`\\[\\[${tag}:\\s*([^\\]]+)\\]\\]`))
-      return match?.[1]?.trim() || '분석 중'
+      return match?.[1]?.trim() || ''
     }
 
     const fortuneOverview = {
@@ -1076,13 +1155,6 @@ export async function analyzePalmReading(
       love: extractFortuneText('FORTUNE_LOVE'),
       career: extractFortuneText('FORTUNE_CAREER'),
     }
-
-    // Extract recommendations
-    const recommendations = [
-      '손가락 관절 운동으로 순환 개선하기',
-      '강점을 살릴 수 있는 직업 분야 탐색',
-      '대인관계에서 감정선의 특성 활용하기',
-    ]
 
     // === AI 출력에서 양손 비교 파싱 ===
     const dualHandMatch = analysisText.match(/\[\[DUAL_HAND:\s*([^,\]]+),\s*([^,\]]+),\s*([^\]]+)\]\]/)
@@ -1121,7 +1193,9 @@ export async function analyzePalmReading(
     const lifeScore = palmAssessmentToScore(palmLines.lifeLine?.assessment ?? '보통')
     const fateScore = palmAssessmentToScore(palmLines.fateLine?.assessment ?? '보통')
     const sunScore = palmAssessmentToScore(palmLines.sunLine?.assessment ?? '보통')
-    const timingPredictions = predictTimeline(lifeScore, fateScore, sunScore, sajuContext?.currentAge)
+    // 사주 교차분석: 명시적 sajuContext 우선, 없으면 서버에서 대상/본인 생년월일로 해석.
+    const effectiveSaju = sajuContext ?? (await resolveSajuForImageAnalysis(target))
+    const timingPredictions = predictTimeline(lifeScore, fateScore, sunScore, effectiveSaju?.currentAge)
 
     // 양손 비교: AI 파싱 우선, fallback으로 알고리즘 엔진
     const estimatedPalmScore = Math.round(((lifeScore + fateScore + sunScore) / 3) * 10)
@@ -1142,15 +1216,27 @@ export async function analyzePalmReading(
       bestCareers: handShapeGuess.bestCareers,
     }
 
+    // 생활 조언 — 하드코딩 대신 AI 파생 데이터(손 형태 적성·감정선 유무) 기반으로 구성.
+    const recommendations = [
+      handShape.bestCareers.length > 0
+        ? `손 형태로 본 적성 분야: ${handShape.bestCareers.slice(0, 3).join(' · ')}`
+        : '강점을 살릴 수 있는 직업 분야 탐색',
+      palmLines.emotionLine
+        ? '감정선의 특성을 대인관계에 적극 활용하기'
+        : '자신의 감정 표현 방식을 이해하고 관계에 활용하기',
+      '손가락 관절 운동으로 기혈 순환을 개선하기',
+    ]
+
     // 사주 연계
-    const sajuSynergy = sajuContext?.dayGan
-      ? buildPalmSajuSynergyText(sajuContext.dayGan, estimatedPalmScore)
+    const sajuSynergy = effectiveSaju?.dayGan
+      ? buildPalmSajuSynergyText(effectiveSaju.dayGan, estimatedPalmScore)
       : undefined
 
     await addBokPoints(25, 'ANALYSIS', undefined, '이미지 손금 분석').catch(() => {})
 
     const palmResult: PalmAnalysisResult = {
       success: true,
+      score: estimatedPalmScore, // 종합 점수를 결과 객체로 반환
       currentAnalysis: analysisText,
       palmLines,
       fortuneOverview,

@@ -16,12 +16,17 @@ import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Eye, Sparkles, Crown, Star } from 'lucide-react'
+import { ArrowRight, Coins, Eye, Sparkles, Crown, Star, Layers, Clock, Droplets, Target } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
+import { ReadingResultHero } from '@/components/studio/reading-result-hero'
+import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
+import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
+import { getAnalysisTitle } from '@/lib/domain/analysis/titles'
+import { GA } from '@/lib/analytics/ga4'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -33,6 +38,17 @@ const GOAL_OPTIONS: { value: FaceDestinyGoal; label: string; desc: string; icon:
   { value: 'love', label: '도화운', desc: '연애·인연운', icon: '🌸' },
   { value: 'authority', label: '권위운', desc: '직업·명예운', icon: '👑' },
 ]
+
+// 개선 우선순위 zone 키 → 한글 라벨
+const ZONE_LABELS: Record<string, string> = {
+  nose: '코 (財帛宮)',
+  eyes: '눈 (監察官)',
+  mouth: '입 (出納官)',
+  eyebrows: '눈썹 (兄弟宮)',
+  ears: '귀 (採聽官)',
+  upperStop: '이마 (上停)',
+  lowerStop: '턱 (下停)',
+}
 
 function FaceAnalysisPageContent() {
   const router = useRouter()
@@ -73,6 +89,7 @@ function FaceAnalysisPageContent() {
 
     setLoading(true)
     setStep('analyzing')
+    GA.analysisStart(`face:${selectedGoal}`)
 
     try {
       const deductResult = await deductTalisman('FACE', FACE_COST)
@@ -125,6 +142,7 @@ function FaceAnalysisPageContent() {
       }
 
       setStep('result')
+      GA.analysisComplete(`face:${selectedGoal}`)
     } catch (error) {
       logger.error('Face analysis error:', error)
       const refund = await refundStudioCost('FACE').catch(() => ({ refunded: false }))
@@ -138,6 +156,9 @@ function FaceAnalysisPageContent() {
       setLoading(false)
     }
   }
+
+  const faceScore = analysisResult?.score ?? 0
+  const faceTitle = getAnalysisTitle('face', selectedGoal, faceScore)
 
   return (
     <StudioAnalysisLayout category="FACE" targetMember={targetMember}>
@@ -252,7 +273,7 @@ function FaceAnalysisPageContent() {
 
         {step === 'analyzing' && (
           <motion.div key="analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <AnalyzingAnimation type="faceScanning" message="오관(五官)을 판독하고 있습니다..." />
+            <AnalyzingAnimation type="faceScanning" />
           </motion.div>
         )}
 
@@ -265,31 +286,17 @@ function FaceAnalysisPageContent() {
             className="space-y-5"
           >
             <div id="face-result-container" className="space-y-5">
-              {/* 스코어 헤더 */}
-              <div
-                className="relative overflow-hidden rounded-2xl border border-gold-500/30 p-8 text-center"
-                style={{ background: 'linear-gradient(135deg, #0D0A00 0%, #1A1200 50%, #0A0800 100%)' }}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15),transparent_70%)]" />
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
-                <p className="relative text-[10px] tracking-[0.3em] text-gold-500/50 uppercase mb-3 font-sans">
-                  관상 분석 결과
-                </p>
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', delay: 0.2 }}
-                  className="relative text-2xl font-serif font-bold mb-2"
-                  style={{
-                    background: `linear-gradient(180deg, ${GOLD_300} 0%, ${GOLD_500} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  분석 완료
-                </motion.div>
-              </div>
+              {/* 결과 히어로 — 종합 점수 링 + 상(相) 칭호 + 첫인상 */}
+              <ReadingResultHero
+                category="face"
+                score={faceScore}
+                title={faceTitle}
+                subtitleLabel="관상 분석 결과"
+                firstImpression={analysisResult.firstImpression}
+              />
+
+              {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}
+              {analysisResult.sajuSynergy && <SajuSynergyCard text={analysisResult.sajuSynergy} category="face" />}
 
               {/* 부위별 상세 분석 */}
               {analysisResult.partAnalysis && Object.values(analysisResult.partAnalysis).some(Boolean) && (
@@ -383,31 +390,171 @@ function FaceAnalysisPageContent() {
                 </Card>
               )}
 
-              {/* 개선 방법 */}
-              {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
+              {/* 삼정(三停) 분석 */}
+              {analysisResult.facialFeatures &&
+                (analysisResult.facialFeatures.upperStop ||
+                  analysisResult.facialFeatures.middleStop ||
+                  analysisResult.facialFeatures.lowerStop) && (
+                  <Card className="card-glass-manse p-5 border-white/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Layers className="w-4 h-4 text-gold-500" />
+                      <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">삼정(三停) 분석</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {[
+                        {
+                          key: 'upper',
+                          label: '상정 (上停) · 초년 0~30세',
+                          data: analysisResult.facialFeatures.upperStop,
+                        },
+                        {
+                          key: 'middle',
+                          label: '중정 (中停) · 중년 30~60세',
+                          data: analysisResult.facialFeatures.middleStop,
+                        },
+                        {
+                          key: 'lower',
+                          label: '하정 (下停) · 말년 60세~',
+                          data: analysisResult.facialFeatures.lowerStop,
+                        },
+                      ]
+                        .filter((s) => s.data)
+                        .map((s, i) => (
+                          <FeatureCard
+                            key={s.key}
+                            label={s.label}
+                            assessment={s.data!.assessment}
+                            description={s.data!.description}
+                            index={i}
+                          />
+                        ))}
+                    </div>
+                  </Card>
+                )}
+
+              {/* 연령대 운세 지도 */}
+              {analysisResult.ageFortuneMap && (
                 <Card className="card-glass-manse p-5 border-white/5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Star className="w-4 h-4 text-gold-500" />
-                    <h3 className="text-sm font-serif font-bold text-gold-500">운기 상승 방법</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Clock className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">연령대 운세 지도</h3>
                   </div>
-                  <ul className="space-y-2">
-                    {analysisResult.recommendations.map((rec, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-white/60 font-sans font-light">
-                        <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
-                        <span>{rec}</span>
-                      </li>
+                  <div className="space-y-4">
+                    {[
+                      { key: 'youth', label: '초년', range: '15~30세', text: analysisResult.ageFortuneMap.youth },
+                      { key: 'middle', label: '중년', range: '31~50세', text: analysisResult.ageFortuneMap.middle },
+                      { key: 'senior', label: '장년', range: '51세~', text: analysisResult.ageFortuneMap.senior },
+                    ].map((a, i) => (
+                      <motion.div
+                        key={a.key}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.08 }}
+                        className="relative pl-4 border-l-2 border-gold-500/25"
+                      >
+                        <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-gold-500" />
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-sm font-serif font-bold text-gold-500">{a.label}</span>
+                          <span className="text-[10px] text-white/40 font-sans">{a.range}</span>
+                        </div>
+                        <p className="text-xs text-white/55 leading-relaxed font-sans font-light mt-1">{a.text}</p>
+                      </motion.div>
                     ))}
-                  </ul>
+                  </div>
                 </Card>
               )}
 
-              {/* 상세 분석 */}
-              <Card className="card-glass-manse p-5 border-white/5">
-                <h3 className="text-sm font-serif font-bold text-gold-500 mb-3">상세 분석</h3>
-                <p className="text-sm text-white/60 leading-loose whitespace-pre-wrap font-sans font-light">
-                  {analysisResult.currentAnalysis}
-                </p>
-              </Card>
+              {/* 기색(氣色) */}
+              {analysisResult.gisaekReading && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Droplets className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">
+                      기색(氣色) · 오늘의 운기
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-white/40 font-sans font-light mb-3">
+                    기색은 흐르는 것이라 때에 따라 변합니다.
+                  </p>
+                  <p className="text-sm text-white/65 leading-relaxed font-sans font-light">
+                    {analysisResult.gisaekReading}
+                  </p>
+                </Card>
+              )}
+
+              {/* 개선 우선순위 Top3 */}
+              {analysisResult.improvementPriority && analysisResult.improvementPriority.length > 0 && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Target className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">개선 우선순위</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {analysisResult.improvementPriority.map((p, i) => (
+                      <motion.div
+                        key={p.priority}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.08 }}
+                        className="rounded-xl p-4 border border-white/5 bg-white/3"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gold-500/15 text-gold-500 text-xs font-bold shrink-0">
+                            {p.priority}
+                          </span>
+                          <span className="text-sm font-serif font-bold text-gold-500">
+                            {ZONE_LABELS[p.zone] ?? p.zone}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gold-500/10 text-gold-500/80 ml-auto">
+                            {p.impact}
+                          </span>
+                        </div>
+                        <p className="text-xs text-white/50 font-sans font-light mb-1">{p.issue}</p>
+                        <p className="text-xs text-gold-500/70 font-sans font-light leading-relaxed">→ {p.modernFix}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* AI 개운법 (없으면 recommendations 폴백) */}
+              {analysisResult.improvementTips && analysisResult.improvementTips.length > 0 ? (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500">관상 개운법</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {analysisResult.improvementTips.map((t, idx) => (
+                      <div key={idx} className="rounded-xl p-3.5 border border-white/5 bg-white/3">
+                        <p className="text-sm text-white/75 font-sans leading-relaxed">{t.tip}</p>
+                        <p className="text-xs text-gold-500/60 font-sans font-light mt-1.5">근거 · {t.basis}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              ) : (
+                analysisResult.recommendations &&
+                analysisResult.recommendations.length > 0 && (
+                  <Card className="card-glass-manse p-5 border-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star className="w-4 h-4 text-gold-500" />
+                      <h3 className="text-sm font-serif font-bold text-gold-500">운기 상승 방법</h3>
+                    </div>
+                    <ul className="space-y-2">
+                      {analysisResult.recommendations.map((rec, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-white/60 font-sans font-light">
+                          <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
+                          <span>{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                )
+              )}
+
+              {/* 상세 분석 — 전문 보기(접힘) */}
+              <DetailAnalysisAccordion raw={analysisResult.currentAnalysis} />
             </div>
 
             <ShareSaveButtons

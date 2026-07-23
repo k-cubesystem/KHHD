@@ -9,19 +9,44 @@ import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, Suspense } from 'react'
 import { logger } from '@/lib/utils/logger'
-import { analyzePalmReading, type PalmAnalysisResult } from '@/app/actions/ai/image'
+import { analyzePalmReading, type PalmAnalysisResult, type PalmReadingGoal } from '@/app/actions/ai/image'
 import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Hand, TrendingUp, Activity, Heart, Briefcase, Sparkles } from 'lucide-react'
+import {
+  ArrowRight,
+  Coins,
+  Hand,
+  TrendingUp,
+  Activity,
+  Heart,
+  Briefcase,
+  Sparkles,
+  Clock,
+  GitCompare,
+  Fingerprint,
+  Layers,
+} from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
+import { ReadingResultHero } from '@/components/studio/reading-result-hero'
+import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
+import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
+import { getAnalysisTitle } from '@/lib/domain/analysis/titles'
+import { GA } from '@/lib/analytics/ga4'
+
+const PALM_GOAL_OPTIONS: { value: PalmReadingGoal; label: string; desc: string; icon: string }[] = [
+  { value: 'general', label: '종합 손금', desc: '전체 운세 흐름', icon: '🖐' },
+  { value: 'wealth', label: '재물운', desc: '재물·사업운', icon: '💰' },
+  { value: 'love', label: '애정운', desc: '연애·결혼운', icon: '💕' },
+  { value: 'authority', label: '직업운', desc: '직업·성취운', icon: '📈' },
+]
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -33,6 +58,7 @@ function PalmAnalysisPageContent() {
   const targetId = searchParams.get('target')
 
   const [step, setStep] = useState<StepType>('upload')
+  const [selectedGoal, setSelectedGoal] = useState<PalmReadingGoal>('general')
   const [targetMember, setTargetMember] = useState<FamilyMemberWithMissions | null>(null)
   const [imageBase64, setImageBase64] = useState<string>('')
   const [analysisResult, setAnalysisResult] = useState<PalmAnalysisResult | null>(null)
@@ -65,6 +91,7 @@ function PalmAnalysisPageContent() {
 
     setLoading(true)
     setStep('analyzing')
+    GA.analysisStart(`palm:${selectedGoal}`)
 
     try {
       const deductResult = await deductTalisman('HAND', PALM_COST)
@@ -82,6 +109,7 @@ function PalmAnalysisPageContent() {
 
       const result = await analyzePalmReading(
         imageBase64,
+        selectedGoal,
         undefined,
         targetMember ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship } : undefined
       )
@@ -116,6 +144,7 @@ function PalmAnalysisPageContent() {
       }
 
       setStep('result')
+      GA.analysisComplete(`palm:${selectedGoal}`)
     } catch (error) {
       logger.error('Palm analysis error:', error)
       const refund = await refundStudioCost('HAND').catch(() => ({ refunded: false }))
@@ -129,6 +158,9 @@ function PalmAnalysisPageContent() {
       setLoading(false)
     }
   }
+
+  const palmScore = analysisResult?.score ?? 0
+  const palmTitle = getAnalysisTitle('palm', selectedGoal, palmScore)
 
   return (
     <StudioAnalysisLayout category="HAND" targetMember={targetMember}>
@@ -162,6 +194,35 @@ function PalmAnalysisPageContent() {
                 </div>
               </div>
             </div>
+
+            {/* 목적 선택 */}
+            <Card className="card-glass-manse p-5 border-white/5">
+              <p className="text-xs text-gold-500/70 font-medium tracking-widest mb-3 uppercase">분석 목적 선택</p>
+              <div className="grid grid-cols-2 gap-2">
+                {PALM_GOAL_OPTIONS.map((g) => (
+                  <button
+                    key={g.value}
+                    onClick={() => setSelectedGoal(g.value)}
+                    className={`relative p-3 rounded-xl text-left transition-all duration-200 border ${
+                      selectedGoal === g.value
+                        ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                        : 'border-white/5 bg-white/3 hover:border-white/15'
+                    }`}
+                  >
+                    <div className="text-lg mb-1">{g.icon}</div>
+                    <p
+                      className={`text-sm font-serif font-bold ${selectedGoal === g.value ? 'text-gold-500' : 'text-white/80'}`}
+                    >
+                      {g.label}
+                    </p>
+                    <p className="text-[10px] text-white/40 mt-0.5">{g.desc}</p>
+                    {selectedGoal === g.value && (
+                      <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-gold-500 shadow-[0_0_6px_rgba(212,175,55,0.8)]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </Card>
 
             {/* 안내 */}
             <Card className="card-glass-manse p-5 border-white/5">
@@ -214,7 +275,7 @@ function PalmAnalysisPageContent() {
 
         {step === 'analyzing' && (
           <motion.div key="analyzing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <AnalyzingAnimation type="palmReading" message="삼대 주선(主線)을 판독하고 있습니다..." />
+            <AnalyzingAnimation type="palmReading" />
           </motion.div>
         )}
 
@@ -227,112 +288,275 @@ function PalmAnalysisPageContent() {
             className="space-y-5"
           >
             <div id="palm-result-container" className="space-y-5">
-              {/* 스코어 헤더 */}
-              <div
-                className="relative overflow-hidden rounded-2xl border border-gold-500/30 p-8 text-center"
-                style={{ background: 'linear-gradient(135deg, #000D06 0%, #001A0E 50%, #000A04 100%)' }}
-              >
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.15),transparent_70%)]" />
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
-                <p className="relative text-[10px] tracking-[0.3em] text-gold-500/50 uppercase mb-3 font-sans">
-                  손금 분석 결과
-                </p>
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', delay: 0.2 }}
-                  className="relative text-2xl font-serif font-bold mb-2"
-                  style={{
-                    background: `linear-gradient(180deg, ${GOLD_300} 0%, ${GOLD_500} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  분석 완료
-                </motion.div>
-              </div>
+              {/* 결과 히어로 — 종합 점수 링 + 상(相) 칭호 */}
+              <ReadingResultHero category="palm" score={palmScore} title={palmTitle} subtitleLabel="손금 분석 결과" />
 
-              {/* 4대 운세 (텍스트 분석) */}
-              {analysisResult.fortuneOverview && (
+              {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}
+              {analysisResult.sajuSynergy && <SajuSynergyCard text={analysisResult.sajuSynergy} category="palm" />}
+
+              {/* 4대 운세 (텍스트 분석) — 빈 항목은 렌더 제외(유령 문구 방지) */}
+              {analysisResult.fortuneOverview &&
+                (() => {
+                  const fortunes = [
+                    {
+                      icon: TrendingUp,
+                      label: '재물운',
+                      value: analysisResult.fortuneOverview.wealth,
+                      color: '#4ade80',
+                    },
+                    { icon: Activity, label: '건강운', value: analysisResult.fortuneOverview.health, color: '#60a5fa' },
+                    { icon: Heart, label: '애정운', value: analysisResult.fortuneOverview.love, color: '#fb7185' },
+                    {
+                      icon: Briefcase,
+                      label: '직업운',
+                      value: analysisResult.fortuneOverview.career,
+                      color: '#c084fc',
+                    },
+                  ].filter((f) => f.value && f.value.trim().length > 0)
+                  if (fortunes.length === 0) return null
+                  return (
+                    <Card className="card-glass-manse p-5 border-white/5">
+                      <h3 className="text-sm font-serif font-bold text-gold-500 mb-4 tracking-wide">
+                        사대운세(四大運勢)
+                      </h3>
+                      <div className="space-y-3">
+                        {fortunes.map((item, i) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="rounded-xl p-4 border border-white/5 bg-white/3"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+                              <span className="text-xs font-sans font-bold" style={{ color: item.color }}>
+                                {item.label}
+                              </span>
+                            </div>
+                            <p className="text-xs text-white/50 font-sans font-light leading-relaxed">{item.value}</p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </Card>
+                  )
+                })()}
+
+              {/* 삼대 주선 — 셋 다 파싱 실패면 섹션 숨김(유령 카드 방지) */}
+              {analysisResult.palmLines &&
+                (analysisResult.palmLines.lifeLine ||
+                  analysisResult.palmLines.intelligenceLine ||
+                  analysisResult.palmLines.emotionLine) && (
+                  <Card className="card-glass-manse p-5 border-white/5">
+                    <h3 className="text-sm font-serif font-bold text-gold-500 mb-4 tracking-wide">
+                      삼대 주선(主線) 분석
+                    </h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: '생명선 (生命線)', data: analysisResult.palmLines.lifeLine },
+                        { label: '지능선 (知能線)', data: analysisResult.palmLines.intelligenceLine },
+                        { label: '감정선 (感情線)', data: analysisResult.palmLines.emotionLine },
+                      ]
+                        .filter((l) => l.data)
+                        .map((line, i) => (
+                          <PalmLineCard
+                            key={line.label}
+                            label={line.label}
+                            assessment={line.data!.assessment}
+                            description={line.data!.description}
+                            meaning={line.data!.meaning}
+                            index={i}
+                          />
+                        ))}
+                    </div>
+                  </Card>
+                )}
+
+              {/* 특수선 — 운명선·태양선·결혼선 */}
+              {analysisResult.palmLines &&
+                (analysisResult.palmLines.fateLine ||
+                  analysisResult.palmLines.sunLine ||
+                  analysisResult.palmLines.marriageLine) && (
+                  <Card className="card-glass-manse p-5 border-white/5">
+                    <h3 className="text-sm font-serif font-bold text-gold-500 mb-4 tracking-wide">
+                      특수선(特殊線) 분석
+                    </h3>
+                    <div className="space-y-3">
+                      {[
+                        { label: '운명선 (運命線)', data: analysisResult.palmLines.fateLine },
+                        { label: '태양선 (太陽線)', data: analysisResult.palmLines.sunLine },
+                        { label: '결혼선 (結婚線)', data: analysisResult.palmLines.marriageLine },
+                      ]
+                        .filter((l) => l.data)
+                        .map((line, i) => (
+                          <PalmLineCard
+                            key={line.label}
+                            label={line.label}
+                            assessment={line.data!.assessment}
+                            description={line.data!.description}
+                            meaning={line.data!.meaning}
+                            index={i}
+                          />
+                        ))}
+                    </div>
+                  </Card>
+                )}
+
+              {/* 손 형태 · 적성 */}
+              {analysisResult.handShape && (
                 <Card className="card-glass-manse p-5 border-white/5">
-                  <h3 className="text-sm font-serif font-bold text-gold-500 mb-4 tracking-wide">사대운세(四大運勢)</h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Fingerprint className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">손 형태 · 적성</h3>
+                  </div>
+                  <p className="text-sm font-serif font-bold text-gold-300 mb-1">{analysisResult.handShape.type}</p>
+                  <p className="text-xs text-white/55 font-sans font-light leading-relaxed mb-3">
+                    {analysisResult.handShape.personality}
+                  </p>
+                  {analysisResult.handShape.strengths.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {analysisResult.handShape.strengths.map((s) => (
+                        <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-white/5 text-white/60">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {analysisResult.handShape.bestCareers.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-gold-500/60 font-sans tracking-widest uppercase mb-1.5">
+                        적성 직업
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {analysisResult.handShape.bestCareers.map((c) => (
+                          <span
+                            key={c}
+                            className="text-[11px] px-2 py-0.5 rounded-full bg-gold-500/10 border border-gold-500/20 text-gold-500/90"
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* 시기(時期) 예측 */}
+              {analysisResult.timingPredictions && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Clock className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">시기(時期) 예측</h3>
+                  </div>
                   <div className="space-y-3">
                     {[
-                      {
-                        icon: TrendingUp,
-                        label: '재물운',
-                        value: analysisResult.fortuneOverview.wealth,
-                        color: '#4ade80',
-                      },
-                      {
-                        icon: Activity,
-                        label: '건강운',
-                        value: analysisResult.fortuneOverview.health,
-                        color: '#60a5fa',
-                      },
-                      { icon: Heart, label: '애정운', value: analysisResult.fortuneOverview.love, color: '#fb7185' },
-                      {
-                        icon: Briefcase,
-                        label: '직업운',
-                        value: analysisResult.fortuneOverview.career,
-                        color: '#c084fc',
-                      },
-                    ].map((item, i) => (
+                      { label: '1년 내', text: analysisResult.timingPredictions.next1Year },
+                      { label: '3년 내', text: analysisResult.timingPredictions.next3Years },
+                      { label: '10년 내', text: analysisResult.timingPredictions.next10Years },
+                    ].map((t, i) => (
                       <motion.div
-                        key={item.label}
+                        key={t.label}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.1 }}
+                        transition={{ delay: i * 0.08 }}
                         className="rounded-xl p-4 border border-white/5 bg-white/3"
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
-                          <span className="text-xs font-sans font-bold" style={{ color: item.color }}>
-                            {item.label}
-                          </span>
-                        </div>
-                        <p className="text-xs text-white/50 font-sans font-light leading-relaxed">{item.value}</p>
+                        <span className="text-xs font-serif font-bold text-gold-500">{t.label}</span>
+                        <p className="text-xs text-white/55 font-sans font-light leading-relaxed mt-1.5">{t.text}</p>
                       </motion.div>
                     ))}
                   </div>
                 </Card>
               )}
 
-              {/* 삼대 주선 */}
-              {analysisResult.palmLines && (
+              {/* 나이별 흐름 */}
+              {analysisResult.ageTimeline && analysisResult.ageTimeline.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
-                  <h3 className="text-sm font-serif font-bold text-gold-500 mb-4 tracking-wide">
-                    삼대 주선(主線) 분석
-                  </h3>
-                  <div className="space-y-3">
-                    {[
-                      { label: '생명선 (生命線)', data: analysisResult.palmLines.lifeLine },
-                      { label: '지능선 (知能線)', data: analysisResult.palmLines.intelligenceLine },
-                      { label: '감정선 (感情線)', data: analysisResult.palmLines.emotionLine },
-                    ]
-                      .filter((l) => l.data)
-                      .map((line, i) => (
-                        <PalmLineCard
-                          key={line.label}
-                          label={line.label}
-                          assessment={line.data!.assessment}
-                          description={line.data!.description}
-                          meaning={line.data!.meaning}
-                          index={i}
-                        />
-                      ))}
+                  <div className="flex items-center gap-2 mb-4">
+                    <Layers className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">나이별 흐름</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {analysisResult.ageTimeline.map((a, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.08 }}
+                        className="relative pl-4 border-l-2 border-gold-500/25"
+                      >
+                        <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-gold-500" />
+                        <span className="text-sm font-serif font-bold text-gold-500">{a.age}</span>
+                        <p className="text-xs text-white/55 leading-relaxed font-sans font-light mt-1">
+                          {a.description}
+                        </p>
+                        <p className="text-xs text-gold-500/70 leading-relaxed font-sans font-light mt-1">
+                          → {a.advice}
+                        </p>
+                      </motion.div>
+                    ))}
                   </div>
                 </Card>
               )}
 
-              {/* 상세 분석 */}
-              <Card className="card-glass-manse p-5 border-white/5">
-                <h3 className="text-sm font-serif font-bold text-gold-500 mb-3">상세 분석</h3>
-                <p className="text-sm text-white/60 leading-loose whitespace-pre-wrap font-sans font-light">
-                  {analysisResult.currentAnalysis}
-                </p>
-              </Card>
+              {/* 왼손/오른손 — 타고난 운 vs 만들어가는 운 */}
+              {analysisResult.dualHandCompare && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <GitCompare className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">
+                      타고난 운 vs 만들어가는 운
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="rounded-xl p-3.5 border border-white/5 bg-white/3">
+                      <p className="text-[10px] text-gold-500/60 font-sans tracking-widest uppercase mb-1.5">
+                        왼손 · 타고난 운
+                      </p>
+                      <p className="text-xs text-white/60 font-sans font-light leading-relaxed">
+                        {analysisResult.dualHandCompare.leftHand}
+                      </p>
+                    </div>
+                    <div className="rounded-xl p-3.5 border border-white/5 bg-white/3">
+                      <p className="text-[10px] text-gold-500/60 font-sans tracking-widest uppercase mb-1.5">
+                        오른손 · 만들어가는 운
+                      </p>
+                      <p className="text-xs text-white/60 font-sans font-light leading-relaxed">
+                        {analysisResult.dualHandCompare.rightHand}
+                      </p>
+                    </div>
+                  </div>
+                  {analysisResult.dualHandCompare.comparison && (
+                    <div className="rounded-xl p-3.5 border border-gold-500/20 bg-gold-500/5">
+                      <p className="text-xs text-gold-500/80 font-sans font-light leading-relaxed">
+                        {analysisResult.dualHandCompare.comparison}
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* 생활 조언 */}
+              {analysisResult.recommendations && analysisResult.recommendations.length > 0 && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500">생활 조언</h3>
+                  </div>
+                  <ul className="space-y-2">
+                    {analysisResult.recommendations.map((rec, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-white/60 font-sans font-light">
+                        <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+
+              {/* 상세 분석 — 전문 보기(접힘) */}
+              <DetailAnalysisAccordion raw={analysisResult.currentAnalysis} />
             </div>
 
             <ShareSaveButtons
@@ -347,6 +571,7 @@ function PalmAnalysisPageContent() {
                   setStep('upload')
                   setImageBase64('')
                   setAnalysisResult(null)
+                  setSelectedGoal('general')
                 }}
                 variant="outline"
                 className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-gold-500 h-12"
