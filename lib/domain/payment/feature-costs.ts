@@ -25,6 +25,7 @@ export type FeatureCostKey =
   | 'fengshui'
   | 'wealth'
   | 'imageGeneration'
+  | 'samhap'
 
 export interface FeatureCost {
   /** 표시 복채(만냥). 실차감과 동일. */
@@ -43,6 +44,8 @@ export const FEATURE_COST = {
   fengshui: { display: 2, free: false },
   wealth: { display: 5, free: false },
   imageGeneration: { display: 5, free: false },
+  // 삼합(三合) 종합 리포트 — 신규 프리미엄 기능(사주+관상+손금 종합). 표시=실차감 5만냥.
+  samhap: { display: 5, free: false },
 } as const satisfies Record<FeatureCostKey, FeatureCost>
 
 /** MISSION_CATEGORIES / FORTUNE_MISSIONS 의 category 값 → FeatureCostKey */
@@ -55,6 +58,7 @@ export const MISSION_CATEGORY_TO_COST_KEY: Record<string, FeatureCostKey> = {
   TODAY: 'today',
   WEALTH: 'wealth',
   NEW_YEAR: 'newYear',
+  SAMHAP: 'samhap',
 }
 
 /** category 값으로 표시 복채(만냥) 조회. 미매핑은 0. */

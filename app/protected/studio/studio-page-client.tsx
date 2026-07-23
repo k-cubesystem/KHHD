@@ -1,6 +1,6 @@
 'use client'
 
-import { User, Compass, Fingerprint, ArrowRight, Coins } from 'lucide-react'
+import { User, Compass, Fingerprint, ArrowRight, Coins, Layers } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
@@ -45,6 +45,19 @@ const SERVICES = [
     tags: ['가구배치', '양택풍수', '기운전환'],
     gradient: 'from-blue-950/40 to-transparent',
     accent: 'rgba(96,165,250,0.06)',
+  },
+  {
+    id: 'samhap',
+    href: '/protected/studio/samhap',
+    label: '삼합 리포트',
+    eng: 'Samhap · Premium',
+    badge: 'Secret 04',
+    icon: Layers,
+    cost: FEATURE_COST.samhap.display,
+    desc: '사주·관상·손금 세 기운을 하나로. 이미 분석한 결과를 종합해 합치점과 시기·개운 처방을 밝힙니다.',
+    tags: ['종합운', '삼합', '프리미엄'],
+    gradient: 'from-amber-950/40 to-transparent',
+    accent: 'rgba(201,168,76,0.08)',
   },
 ]
 

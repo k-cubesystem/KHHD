@@ -29,6 +29,7 @@ export const CACHE_TTL_HOURS: Record<AnalysisCategory, number> = {
   COMPATIBILITY: 24,
   WEALTH: 72,
   NEW_YEAR: 72,
+  SAMHAP: 24,
 }
 
 export interface CachedAnalysisRecord {

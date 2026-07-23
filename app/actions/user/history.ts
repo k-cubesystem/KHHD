@@ -11,7 +11,16 @@ import { logger } from '@/lib/utils/logger'
 /**
  * 분석 카테고리 타입
  */
-export type AnalysisCategory = 'SAJU' | 'FACE' | 'HAND' | 'FENGSHUI' | 'COMPATIBILITY' | 'TODAY' | 'WEALTH' | 'NEW_YEAR'
+export type AnalysisCategory =
+  | 'SAJU'
+  | 'FACE'
+  | 'HAND'
+  | 'FENGSHUI'
+  | 'COMPATIBILITY'
+  | 'TODAY'
+  | 'WEALTH'
+  | 'NEW_YEAR'
+  | 'SAMHAP'
 
 /**
  * 분석 컨텍스트 모드

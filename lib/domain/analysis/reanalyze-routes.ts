@@ -13,6 +13,7 @@ export const REANALYZE_ROUTES: Record<AnalysisCategory, string> = {
   TODAY: '/protected/analysis/today',
   WEALTH: '/protected/analysis/wealth',
   NEW_YEAR: '/protected/analysis/new-year',
+  SAMHAP: '/protected/studio/samhap',
 }
 
 /**

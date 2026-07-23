@@ -27,6 +27,7 @@ import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
 import { FaceDiagram } from '@/components/studio/face-diagram'
 import { GisaekRemeasureBanner, ReadingCompareCard, FamilyResemblanceCard } from '@/components/studio/reading-revisit'
 import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
+import { SamhapUpsellBanner } from '@/components/studio/samhap-upsell'
 import {
   getLatestFaceMeta,
   getFamilyResemblance,
@@ -639,6 +640,9 @@ function FaceAnalysisPageContent() {
               analysisTitle="관상 분석 결과"
               memberName={targetMember?.name}
             />
+
+            {/* 삼합 업셀 (B-4) — 관상·손금·생년월일 모두 준비됐을 때만 */}
+            <SamhapUpsellBanner targetId={targetId ?? undefined} />
 
             <div className="flex gap-3">
               <Button
