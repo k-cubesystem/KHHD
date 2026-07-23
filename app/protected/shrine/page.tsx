@@ -9,6 +9,8 @@ import { getWishes } from '@/app/actions/shrine/shrine-wishes'
 import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import { EL_KO } from '@/lib/domain/shrine/energy'
+import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { MembershipGate } from '@/components/shared/membership-gate'
 
 export default async function ShrinePage({ searchParams }: { searchParams: Promise<{ member?: string }> }) {
   const supabase = await createClient()
@@ -16,6 +18,23 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
+
+  // 게이트: 신당은 멤버십 전용. 비멤버는 업셀(데이터는 보존 — 가입 시 그대로). 마스터는 통과.
+  const membership = await getCurrentUserMembership()
+  if (!membership) {
+    return (
+      <MembershipGate
+        feature="shrine"
+        title="나만의 신당"
+        description="사주·관상·손금이 깃든 나만의 신당을 만들고, 신위를 모셔 매일의 기운을 돌봅니다. 멤버십 회원 전용 공간입니다."
+        benefits={[
+          '나·가족별 신당과 신위 모시기',
+          '소원 기원 · 방명록 · 배치 효험',
+          '매일 복채 정액 + 고민상담 무제한 + 전체 기록 평생 보관',
+        ]}
+      />
+    )
+  }
 
   const { member } = await searchParams
   const memberId = typeof member === 'string' && member.length > 0 ? member : null

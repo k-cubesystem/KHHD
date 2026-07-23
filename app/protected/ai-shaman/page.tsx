@@ -1,5 +1,8 @@
 import { ShamanChatInterface, type SeatedDeityInfo } from '@/components/ai/shaman-chat-interface'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { hasActiveChatPass } from '@/app/actions/payment/vouchers'
+import { MembershipGate } from '@/components/shared/membership-gate'
 import { logger } from '@/lib/utils/logger'
 import { Metadata } from 'next'
 
@@ -38,6 +41,20 @@ async function loadSeatedDeity(): Promise<SeatedDeityInfo | null> {
 }
 
 export default async function AIShamanPage() {
+  // 게이트: 멤버십 or 활성 1일 이용권. 마스터는 subscription 내부에서 통과.
+  const [membership, chatPass] = await Promise.all([getCurrentUserMembership(), hasActiveChatPass()])
+  if (!membership && !chatPass) {
+    return (
+      <MembershipGate
+        feature="counsel"
+        title="고민상담 · 해화지기와의 대화"
+        description="명리학에 뿌리를 둔 AI 상담사가 당신의 고민을 깊이 들어드립니다. 멤버십 회원은 언제든 무제한, 또는 1일 이용권으로 지금 바로 시작하세요."
+        benefits={['해화지기 고민상담 무제한', '매일 복채 정액 지급', '신당 · 가족관리 · 전체 기록 평생 보관']}
+        dayPassType="CHAT_DAY_PASS"
+      />
+    )
+  }
+
   const seated = await loadSeatedDeity()
   return <ShamanChatInterface initialDeity={seated} />
 }

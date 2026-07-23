@@ -51,15 +51,19 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
 
   const features = (currentPlan.features as Record<string, boolean | number>) || {}
 
-  // 등급별 특징 정리
+  // 등급별 특징 — 멤버십 핵심 가치 5종을 앞세운다(2026-07-23 개별 과금·게이팅 개편).
+  // 금액/수량은 plan 필드에서 오며(불변), 문구만 새 가치로 재구성한다.
   const tierFeatures: string[] = []
-  tierFeatures.push(`일일 복채 ${currentPlan.daily_talisman_limit}만냥 지급`)
-  tierFeatures.push(`인연 ${currentPlan.relationship_limit}명 등록`)
-  tierFeatures.push(`결과 ${currentPlan.storage_limit === 999 ? '무제한' : currentPlan.storage_limit + '개'} 저장`)
-  tierFeatures.push(`출석 체크 시 추가 복채 지급`)
+  tierFeatures.push(`매일 복채 ${currentPlan.daily_talisman_limit}만냥 정액 지급`)
+  tierFeatures.push('신당 · 신위 모시기 전용 이용')
+  tierFeatures.push('고민상담(해화지기) 무제한')
+  tierFeatures.push(`가족관리 — 인연 ${currentPlan.relationship_limit}명 등록`)
+  tierFeatures.push(
+    `전체 기록 평생 보관${currentPlan.storage_limit === 999 ? '' : ` (최대 ${currentPlan.storage_limit}개)`}`
+  )
+  tierFeatures.push('출석 체크 시 추가 복채 지급')
 
   if (features.daily_fortune) tierFeatures.push('오늘의 운세 무제한')
-  if (features.ai_shaman) tierFeatures.push('AI 신당 채팅')
   if (features.kakao_daily) tierFeatures.push('카카오톡 매일 운세 알림')
   if (features.pdf_archive) tierFeatures.push('PDF 결과 영구 보관')
 
