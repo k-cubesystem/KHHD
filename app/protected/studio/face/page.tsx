@@ -27,7 +27,7 @@ import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
 import { FaceDiagram } from '@/components/studio/face-diagram'
 import { GisaekRemeasureBanner, ReadingCompareCard, FamilyResemblanceCard } from '@/components/studio/reading-revisit'
 import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
-import { SamhapUpsellBanner } from '@/components/studio/samhap-upsell'
+import { JourneyCard } from '@/components/analysis/journey-card'
 import {
   getLatestFaceMeta,
   getFamilyResemblance,
@@ -674,8 +674,8 @@ function FaceAnalysisPageContent() {
               memberName={targetMember?.name}
             />
 
-            {/* 삼합 업셀 (B-4) — 관상·손금·생년월일 모두 준비됐을 때만 */}
-            <SamhapUpsellBanner targetId={targetId ?? undefined} />
+            {/* 종합사주풀이 여정 (컴팩트) — 미완료 단계 CTA 또는 4상 완료 시 종합 CTA */}
+            <JourneyCard variant="compact" targetId={targetId ?? undefined} />
 
             <div className="flex gap-3">
               <Button

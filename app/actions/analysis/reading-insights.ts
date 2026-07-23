@@ -148,3 +148,34 @@ export async function getFamilyResemblance(input: {
   if (!resemblance) return null
   return { ...resemblance, otherLabel }
 }
+
+/**
+ * 종합사주풀이 여정 진행 조회 — 특정 대상(없으면 본인)의 analysis_history DISTINCT category.
+ * RLS: 본인(user_id) 소유만. 본인 이력의 target_id 는 user.id 로 저장되므로(실측 확인)
+ * getSamhapReadiness·getLatestFaceMeta 와 동일한 `target_id = targetId ?? user.id` 규약을 따른다.
+ * 반환값(문자열 배열)은 lib/domain/analysis/journey.ts 의 buildJourney 입력으로 사용.
+ */
+export async function getJourneyProgress(targetId?: string): Promise<string[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const target = targetId ?? user.id
+  const { data, error } = await supabase
+    .from('analysis_history')
+    .select('category')
+    .eq('user_id', user.id)
+    .eq('target_id', target)
+
+  if (error) {
+    logger.error('[getJourneyProgress] 조회 실패:', error)
+    return []
+  }
+
+  const categories = (data ?? [])
+    .map((row) => (row as { category: string | null }).category)
+    .filter((c): c is string => typeof c === 'string' && c.length > 0)
+  return Array.from(new Set(categories))
+}

@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
+import { JourneyCard } from '@/components/analysis/journey-card'
 
 interface AnalysisHubClientProps {
   userId?: string
@@ -40,6 +41,10 @@ export function AnalysisHubClient({ userId, userName }: AnalysisHubClientProps =
       </div>
 
       <div className="relative z-10 w-full pt-6">
+        {/* 종합사주풀이 여정 — 사주/궁합 허브 상단부 (사용자 지정 위치) */}
+        <div className="max-w-screen-sm mx-auto px-4 mb-6">
+          <JourneyCard variant="full" />
+        </div>
         <AnalysisDashboard userId={userId} userName={userName} />
       </div>
     </div>

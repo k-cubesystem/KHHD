@@ -46,6 +46,10 @@ export const GA = {
   shareCopyLink: (contentType: string) =>
     trackEvent({ action: 'share_copy_link', category: 'social', label: contentType }),
 
+  // 종합사주풀이 여정(Journey) — 노출·단계 클릭
+  journeyView: (variant: string) => trackEvent({ action: 'journey_view', category: 'engagement', label: variant }),
+  journeyStep: (stage: string) => trackEvent({ action: 'journey_step_click', category: 'engagement', label: stage }),
+
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),
 
