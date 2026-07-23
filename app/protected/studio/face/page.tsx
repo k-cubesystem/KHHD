@@ -24,6 +24,7 @@ import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ReadingResultHero } from '@/components/studio/reading-result-hero'
 import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
+import { FaceDiagram } from '@/components/studio/face-diagram'
 import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
 import { getAnalysisTitle } from '@/lib/domain/analysis/titles'
 import { GA } from '@/lib/analytics/ga4'
@@ -293,6 +294,18 @@ function FaceAnalysisPageContent() {
                 title={faceTitle}
                 subtitleLabel="관상 분석 결과"
                 firstImpression={analysisResult.firstImpression}
+              />
+
+              {/* 부위 진단도 — 히어로 바로 아래(캡처 포함) */}
+              <FaceDiagram
+                parts={{
+                  forehead: analysisResult.partAnalysis?.forehead?.assessment,
+                  eyes: analysisResult.partAnalysis?.eyes?.assessment,
+                  nose: analysisResult.partAnalysis?.nose?.assessment,
+                  mouth: analysisResult.partAnalysis?.mouth?.assessment,
+                  ears: analysisResult.partAnalysis?.ears?.assessment,
+                  chin: analysisResult.partAnalysis?.chin?.assessment,
+                }}
               />
 
               {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}

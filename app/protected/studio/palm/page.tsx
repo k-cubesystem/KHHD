@@ -37,6 +37,7 @@ import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ReadingResultHero } from '@/components/studio/reading-result-hero'
 import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
+import { PalmDiagram } from '@/components/studio/palm-diagram'
 import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
 import { getAnalysisTitle } from '@/lib/domain/analysis/titles'
 import { GA } from '@/lib/analytics/ga4'
@@ -290,6 +291,18 @@ function PalmAnalysisPageContent() {
             <div id="palm-result-container" className="space-y-5">
               {/* 결과 히어로 — 종합 점수 링 + 상(相) 칭호 */}
               <ReadingResultHero category="palm" score={palmScore} title={palmTitle} subtitleLabel="손금 분석 결과" />
+
+              {/* 손금 진단도 — 히어로 바로 아래(캡처 포함) */}
+              <PalmDiagram
+                lines={{
+                  lifeLine: analysisResult.palmLines?.lifeLine?.assessment,
+                  intelligenceLine: analysisResult.palmLines?.intelligenceLine?.assessment,
+                  emotionLine: analysisResult.palmLines?.emotionLine?.assessment,
+                  fateLine: analysisResult.palmLines?.fateLine?.assessment,
+                  sunLine: analysisResult.palmLines?.sunLine?.assessment,
+                  marriageLine: analysisResult.palmLines?.marriageLine?.assessment,
+                }}
+              />
 
               {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}
               {analysisResult.sajuSynergy && <SajuSynergyCard text={analysisResult.sajuSynergy} category="palm" />}
