@@ -10,6 +10,8 @@ import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { parseFeatureTag } from '@/lib/domain/analysis/feature-parse'
+import { parseGisaek } from '@/lib/domain/analysis/gisaek-parse'
+import { computeFaceScore, computePalmScore } from '@/lib/domain/analysis/scoring'
 import { saveElementFormModifier } from '@/lib/services/element-profile'
 import {
   saveAnalysisHistoryObserved,
@@ -231,7 +233,8 @@ export interface FaceAnalysisResult {
     chin?: FacePartAnalysis // 턱(지각): 만년운, 부동산운, 의지력
   }
   personalityType?: string // 목형/화형/토형/금형/수형
-  gisaekReading?: string // 기색(氣色) 분석 텍스트
+  gisaekReading?: string // 기색(氣色) 한줄평 ([[GISAEK]] 첫 값 또는 휴리스틱)
+  gisaekAdvice?: string // 기색 관리 조언 ([[GISAEK]] 둘째 값, 있을 때만)
   ageFortuneMap?: {
     youth: string // 15-30세 이마
     middle: string // 31-50세 눈·코
@@ -479,6 +482,7 @@ export async function analyzeFaceForDestiny(
 [[UPPER_STOP: 좋음/보통/주의, 설명]]
 [[MIDDLE_STOP: 좋음/보통/주의, 설명]]
 [[LOWER_STOP: 좋음/보통/주의, 설명]]
+[[GISAEK: 현재 기색 한줄평, 관리 조언]]
 [[PART_FOREHEAD: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
 [[PART_EYES: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
 [[PART_NOSE: 좋음/보통/주의, 설명, 운세영역, 개운조언]]
@@ -519,9 +523,11 @@ export async function analyzeFaceForDestiny(
 
     // Extract 오관(五官) analysis. 프롬프트는 `[[EARS: 숫자, 설명]]`(숫자) 출력 →
     // 숫자·등급 양쪽 허용 파서로 교체(기존 등급전용 파서는 전량 폐기 버그). Track F P0.
-    const parseFeature = (tag: string) => {
+    // 파싱 실패(found:false)면 undefined 반환 → UI는 있는 항목만 렌더(유령 문구 제거, 관상판 P0-5).
+    const parseFeature = (tag: string): FaceFeatureDetail | undefined => {
       const r = parseFeatureTag(analysisText, tag)
-      return { description: r.description, assessment: r.assessment }
+      if (!r.found) return undefined
+      return { description: r.description, assessment: r.assessment, score: r.score ?? undefined }
     }
 
     const facialFeatures = {
@@ -606,23 +612,40 @@ Style: Professional headshot, warm lighting, confident expression.`
     }
     const improvementPriority = calculateImprovementPriority(faceScoreMap, goal)
 
-    // 종합 점수 추정 (알고리즘 엔진 호환용)
-    const estimatedScore = Math.round(
-      (Object.values(faceScoreMap).reduce((a, b) => a + b, 0) / Object.values(faceScoreMap).length) * 10
-    )
+    // 종합 점수 — 부위(6)>오관(5)>삼정(3) assessment 가중 합산으로 0~100 자연 분포(A-3).
+    // 미스 항목은 undefined 로 제외되어 있는 데이터만 반영된다.
+    const overallScore = computeFaceScore({
+      fiveFeatures: [
+        facialFeatures.ears?.assessment,
+        facialFeatures.eyebrows?.assessment,
+        facialFeatures.eyes?.assessment,
+        facialFeatures.nose?.assessment,
+        facialFeatures.mouth?.assessment,
+      ],
+      threeStops: [
+        facialFeatures.upperStop?.assessment,
+        facialFeatures.middleStop?.assessment,
+        facialFeatures.lowerStop?.assessment,
+      ],
+      sixParts: [
+        partAnalysis.forehead?.assessment,
+        partAnalysis.eyes?.assessment,
+        partAnalysis.nose?.assessment,
+        partAnalysis.mouth?.assessment,
+        partAnalysis.ears?.assessment,
+        partAnalysis.chin?.assessment,
+      ],
+    })
     // 사주 교차분석: 명시적 sajuContext 우선, 없으면 서버에서 대상/본인 생년월일로 해석.
     const effectiveSaju = sajuContext ?? (await resolveSajuForImageAnalysis(target))
     const sajuSynergy = effectiveSaju?.dayGan
-      ? buildFaceSajuSynergyText(effectiveSaju.dayGan, estimatedScore, goal)
+      ? buildFaceSajuSynergyText(effectiveSaju.dayGan, overallScore, goal)
       : undefined
 
-    const gisaekMatch = analysisText.match(/기색|안색|혈색|광택|윤기/)
-    const gisaekReading = gisaekMatch
-      ? analysisText
-          .split('\n')
-          .find((line) => /기색|안색|혈색|광택/.test(line))
-          ?.trim()
-      : undefined
+    // 기색(氣色) — 전용 [[GISAEK]] 태그 우선, 없으면 키워드 라인 휴리스틱(구프롬프트 호환). A-2.
+    const gisaek = parseGisaek(analysisText)
+    const gisaekReading = gisaek?.reading
+    const gisaekAdvice = gisaek?.advice
 
     // === 첫인상 한줄 파싱 ===
     const firstImpressionMatch = analysisText.match(/\[\[FIRST_IMPRESSION:\s*([^\]]+)\]\]/)
@@ -646,7 +669,7 @@ Style: Professional headshot, warm lighting, confident expression.`
 
     const faceResult: FaceAnalysisResult = {
       success: true,
-      score: estimatedScore, // 종합 점수를 결과 객체로 반환 (기존엔 히스토리에만 저장됨)
+      score: overallScore, // 종합 점수를 결과 객체로 반환 (기존엔 히스토리에만 저장됨)
       currentAnalysis: analysisText,
       facialFeatures,
       partAnalysis,
@@ -656,6 +679,7 @@ Style: Professional headshot, warm lighting, confident expression.`
       improvementPriority,
       sajuSynergy,
       gisaekReading,
+      gisaekAdvice,
       firstImpression,
       improvementTips: improvementTips.length > 0 ? improvementTips : undefined,
     }
@@ -666,7 +690,7 @@ Style: Professional headshot, warm lighting, confident expression.`
         goal === 'wealth' ? 'WEALTH' : goal === 'love' ? 'LOVE' : goal === 'authority' ? 'CAREER' : 'GENERAL',
       resultJson: faceResult,
       summary: firstImpression || `${goalConfig.name} 관상 분석`,
-      score: estimatedScore,
+      score: overallScore,
       targetId: target?.id,
       targetName: target?.name,
       targetRelation: target?.relation,
@@ -1197,9 +1221,25 @@ export async function analyzePalmReading(
     const effectiveSaju = sajuContext ?? (await resolveSajuForImageAnalysis(target))
     const timingPredictions = predictTimeline(lifeScore, fateScore, sunScore, effectiveSaju?.currentAge)
 
+    // 종합 점수 — 삼대주선(3)>특수선(1.5) + fortuneOverview 완성도 보너스로 0~100 자연 분포(A-3).
+    // 미스 선은 undefined 로 제외되어 있는 데이터만 반영된다.
+    const overallPalmScore = computePalmScore({
+      majorLines: [
+        palmLines.lifeLine?.assessment,
+        palmLines.intelligenceLine?.assessment,
+        palmLines.emotionLine?.assessment,
+      ],
+      specialLines: [palmLines.fateLine?.assessment, palmLines.sunLine?.assessment, palmLines.marriageLine?.assessment],
+      fortunePresentCount: [
+        fortuneOverview.wealth,
+        fortuneOverview.health,
+        fortuneOverview.love,
+        fortuneOverview.career,
+      ].filter((t) => t && t.trim().length > 0).length,
+    })
+
     // 양손 비교: AI 파싱 우선, fallback으로 알고리즘 엔진
-    const estimatedPalmScore = Math.round(((lifeScore + fateScore + sunScore) / 3) * 10)
-    const dualHandCompare = aiDualHandCompare ?? analyzeDualHands(estimatedPalmScore - 5, estimatedPalmScore)
+    const dualHandCompare = aiDualHandCompare ?? analyzeDualHands(overallPalmScore - 5, overallPalmScore)
 
     // 손 형태 추정 (텍스트에서 키워드 기반)
     const handShapeText = analysisText.toLowerCase()
@@ -1229,14 +1269,14 @@ export async function analyzePalmReading(
 
     // 사주 연계
     const sajuSynergy = effectiveSaju?.dayGan
-      ? buildPalmSajuSynergyText(effectiveSaju.dayGan, estimatedPalmScore)
+      ? buildPalmSajuSynergyText(effectiveSaju.dayGan, overallPalmScore)
       : undefined
 
     await addBokPoints(25, 'ANALYSIS', undefined, '이미지 손금 분석').catch(() => {})
 
     const palmResult: PalmAnalysisResult = {
       success: true,
-      score: estimatedPalmScore, // 종합 점수를 결과 객체로 반환
+      score: overallPalmScore, // 종합 점수를 결과 객체로 반환
       currentAnalysis: analysisText,
       palmLines,
       fortuneOverview,
@@ -1253,7 +1293,7 @@ export async function analyzePalmReading(
       contextMode: 'HEALTH',
       resultJson: palmResult,
       summary: '손금 분석 결과',
-      score: estimatedPalmScore,
+      score: overallPalmScore,
       targetId: target?.id,
       targetName: target?.name,
       targetRelation: target?.relation,

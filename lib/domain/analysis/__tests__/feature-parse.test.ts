@@ -21,6 +21,7 @@ describe('parseFeatureTag — 숫자·등급 양쪽 허용', () => {
     expect(r.assessment).toBe('좋음')
     expect(r.description).toBe('귀가 크고 복스럽다')
     expect(r.score).toBe(8)
+    expect(r.found).toBe(true)
   })
 
   it('100점 스케일 숫자: [[EYES: 45, 설명]] → 보통', () => {
@@ -46,15 +47,16 @@ describe('parseFeatureTag — 숫자·등급 양쪽 허용', () => {
     expect(parseFeatureTag(text, 'EARS').assessment).toBe('좋음')
   })
 
-  it('태그 없으면 fallback', () => {
+  it('태그 없으면 명시적 미스 신호(found:false, 빈 설명)', () => {
     const r = parseFeatureTag('아무 태그 없음', 'EARS')
-    expect(r).toEqual({ description: '분석 중', assessment: '보통', score: null })
+    expect(r).toEqual({ description: '', assessment: '보통', score: null, found: false })
   })
 
-  it('값 형식이 예상 밖이어도 설명은 보존', () => {
+  it('값 형식이 예상 밖이어도 태그는 찾았고 설명은 보존(found:true)', () => {
     const r = parseFeatureTag('[[EARS: 아주좋음, 귀 설명]]', 'EARS')
     expect(r.description).toBe('귀 설명')
     expect(r.assessment).toBe('보통')
+    expect(r.found).toBe(true)
   })
 
   it('소수점 점수: [[EYEBROWS: 7.5, 설명]]', () => {

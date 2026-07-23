@@ -361,34 +361,39 @@ function FaceAnalysisPageContent() {
                 </Card>
               )}
 
-              {/* 오관 분석 */}
-              {analysisResult.facialFeatures && (
-                <Card className="card-glass-manse p-5 border-white/5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Crown className="w-4 h-4 text-gold-500" />
-                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">오관(五官) 분석</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'ears', label: '귀 (耳)', data: analysisResult.facialFeatures.ears },
-                      { key: 'eyebrows', label: '눈썹 (眉)', data: analysisResult.facialFeatures.eyebrows },
-                      { key: 'eyes', label: '눈 (目)', data: analysisResult.facialFeatures.eyes },
-                      { key: 'nose', label: '코 (鼻)', data: analysisResult.facialFeatures.nose },
-                      { key: 'mouth', label: '입 (口)', data: analysisResult.facialFeatures.mouth },
-                    ]
-                      .filter((f) => f.data)
-                      .map((f, i) => (
-                        <FeatureCard
-                          key={f.key}
-                          label={f.label}
-                          assessment={f.data!.assessment}
-                          description={f.data!.description}
-                          index={i}
-                        />
-                      ))}
-                  </div>
-                </Card>
-              )}
+              {/* 오관 분석 — 다섯 항목이 모두 미스면 섹션 숨김(유령 카드 방지) */}
+              {analysisResult.facialFeatures &&
+                (analysisResult.facialFeatures.ears ||
+                  analysisResult.facialFeatures.eyebrows ||
+                  analysisResult.facialFeatures.eyes ||
+                  analysisResult.facialFeatures.nose ||
+                  analysisResult.facialFeatures.mouth) && (
+                  <Card className="card-glass-manse p-5 border-white/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Crown className="w-4 h-4 text-gold-500" />
+                      <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">오관(五官) 분석</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {[
+                        { key: 'ears', label: '귀 (耳)', data: analysisResult.facialFeatures.ears },
+                        { key: 'eyebrows', label: '눈썹 (眉)', data: analysisResult.facialFeatures.eyebrows },
+                        { key: 'eyes', label: '눈 (目)', data: analysisResult.facialFeatures.eyes },
+                        { key: 'nose', label: '코 (鼻)', data: analysisResult.facialFeatures.nose },
+                        { key: 'mouth', label: '입 (口)', data: analysisResult.facialFeatures.mouth },
+                      ]
+                        .filter((f) => f.data)
+                        .map((f, i) => (
+                          <FeatureCard
+                            key={f.key}
+                            label={f.label}
+                            assessment={f.data!.assessment}
+                            description={f.data!.description}
+                            index={i}
+                          />
+                        ))}
+                    </div>
+                  </Card>
+                )}
 
               {/* 삼정(三停) 분석 */}
               {analysisResult.facialFeatures &&
@@ -479,6 +484,16 @@ function FaceAnalysisPageContent() {
                   <p className="text-sm text-white/65 leading-relaxed font-sans font-light">
                     {analysisResult.gisaekReading}
                   </p>
+                  {analysisResult.gisaekAdvice && (
+                    <div className="mt-3 flex items-start gap-2 pt-3 border-t border-white/5">
+                      <span className="text-[10px] text-gold-500/60 font-sans shrink-0 mt-0.5 tracking-wider uppercase">
+                        관리
+                      </span>
+                      <span className="text-xs text-gold-500/75 font-sans font-light leading-relaxed">
+                        {analysisResult.gisaekAdvice}
+                      </span>
+                    </div>
+                  )}
                 </Card>
               )}
 
