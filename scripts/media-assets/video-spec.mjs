@@ -26,18 +26,25 @@ export const VIDEO_SPECS = [
   },
   {
     id: 'shrine-theme-banga',
-    title: '신당 테마 배경(반가) — 방이 살아난다 [파일럿]',
-    placement: 'ShrineRoomClient 방 배경 (room.webp 위 오버레이, 편집 중 숨김)',
+    title: '신당 테마 배경(반가) — 나비·벚꽃 오버레이 [v5: 가지 밀착·나비1·깜빡X]',
+    placement: 'ShrineRoomClient 방 배경 (room.webp 위 lighten 오버레이, 편집 중 숨김)',
     durationSec: 4,
     resolution: '720p',
-    // 이미지-투-비디오: 기존 room.webp 를 첫 프레임으로 — 방 구조·가구·색 완전 불변, 미세 모션만.
-    aspectRatio: '9:16', // 방 이미지가 512×917 세로형
-    imageInput: 'public/shrine/themes/banga/room.webp',
+    aspectRatio: '9:16', // 세로형 방 위에 얹는 오버레이
+    // v1(room.webp image-to-video 전체 시네마그래프)은 방 전체가 움직여 반려됨.
+    // v2~v5: 순수 검정 위 요소만 생성 → 검정 crush + 무이음(xfade) 루프 후 mixBlendMode:lighten 으로 얹어 room.webp 정지 유지.
+    // v5 피드백: 가지를 상·하단 끝에 바짝, 나비 1마리·더 작게, 깜빡임 금지(생성 후 seamless 루프 트랜스코드).
     prompt:
-      'Subtle cinemagraph of this exact Korean traditional shrine room. Keep the room, furniture, colors and ' +
-      'composition COMPLETELY unchanged and static camera. Only add minimal living motion: candle flames gently ' +
-      'flickering, thin incense smoke slowly rising, faint dust motes drifting in the light, soft breathing glow ' +
-      'on the altar. No new objects, no people, no text, seamless loop, very subtle motion.',
+      'Pure solid black background (#000000), completely empty. Slender cherry blossom branches hug tightly along ' +
+      'the very top edge and the very bottom edge of the vertical frame, only peeking in a little from those edges, ' +
+      'gently swaying in a soft breeze. Very small, tiny, fine pale-pink cherry blossom petals slowly drift and ' +
+      'fall. A SINGLE small butterfly flutters and playfully hovers only around the blossoms near the top edge, ' +
+      'staying up at the top and never crossing the middle or lower area. Everything is small, delicate and ' +
+      'understated. Smooth continuous steady motion — no flickering, no blinking, no strobing, nothing suddenly ' +
+      'appearing or disappearing, consistent steady lighting throughout. Shallow depth of field, soft bokeh, ' +
+      'realistic cinematic lighting. Only the petals, the single butterfly and the blossom branches move — the ' +
+      'background stays perfectly black and empty, static camera. No room, no walls, no floor, no people, no text. ' +
+      'Seamless loop, subtle graceful motion.',
   },
   {
     id: 'compatibility-ambient',

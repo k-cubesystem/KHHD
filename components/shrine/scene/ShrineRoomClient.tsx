@@ -558,7 +558,9 @@ export function ShrineRoomClient({ scene }: Props) {
             e.currentTarget.style.display = 'none'
           }}
         />
-        {/* 살아있는 방 — 테마별 시네마그래프(있는 테마만, 이미지의 미세 모션 버전이라 풀오퍼시티).
+        {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
+            mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
+            (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
             편집 중엔 성능 위해 숨김. 영상 자체를 라운딩(부모 클립 의존 금지 — 흰화면 사고 교훈).
             파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다. */}
         {!editing && (
@@ -566,6 +568,7 @@ export function ShrineRoomClient({ scene }: Props) {
             key={`vid-${activeCode}`}
             id={`shrine-theme-${activeCode}`}
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none rounded-[17px]"
+            style={{ mixBlendMode: 'lighten', opacity: 0.9 }}
           />
         )}
         {/* 제단 영역 대비용 하단 암전 */}
