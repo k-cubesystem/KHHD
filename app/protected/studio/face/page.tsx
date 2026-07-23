@@ -36,6 +36,7 @@ import {
 } from '@/app/actions/analysis/reading-insights'
 import { getAnalysisTitle } from '@/lib/domain/analysis/titles'
 import { GA } from '@/lib/analytics/ga4'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -208,6 +209,38 @@ function FaceAnalysisPageContent() {
             transition={{ duration: 0.4 }}
             className="space-y-5"
           >
+            {/* 觀相 히어로 — 전용 앰비언트 영상(금빛 선묘 얼굴) 위 서예 타이포. 영상 없으면 玄 그라디언트만 */}
+            <div
+              className="relative overflow-hidden rounded-2xl border border-gold-500/25"
+              style={{
+                background: 'linear-gradient(160deg, #0e0b07 0%, #17130d 55%, #0a0807 100%)',
+                boxShadow: '0 10px 44px rgba(0,0,0,0.55), inset 0 1px 0 rgba(212,175,55,0.08)',
+              }}
+            >
+              <AmbientVideo
+                id="physiognomy-ambient"
+                rate={0.6}
+                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                style={{ opacity: 0.55, mixBlendMode: 'screen' }}
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 h-14 pointer-events-none"
+                style={{ background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.45))' }}
+              />
+              <div className="relative z-10 px-5 py-8 text-center space-y-2.5">
+                <p className="text-[10px] tracking-[0.55em] text-gold-500/60 font-serif">觀 相</p>
+                <h2
+                  className="text-[1.35rem] font-serif font-bold text-white leading-snug"
+                  style={{ wordBreak: 'keep-all' }}
+                >
+                  얼굴에 새겨진 <span className="text-gold-500">운의 지도</span>를 읽습니다
+                </h2>
+                <p className="text-[11.5px] text-white/45 font-light leading-relaxed" style={{ wordBreak: 'keep-all' }}>
+                  오관(五官)과 삼정(三停), 그리고 오늘의 기색(氣色)까지 — 지금의 당신을 비춥니다
+                </p>
+              </div>
+            </div>
+
             {/* 기색 재측정 안내 (B-2) — 이전 관상 이력 있을 때 */}
             {prevReading && <GisaekRemeasureBanner daysSince={prevReading.daysSince} />}
 

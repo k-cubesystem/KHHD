@@ -47,6 +47,20 @@ export const VIDEO_SPECS = [
       'Seamless loop, subtle graceful motion.',
   },
   {
+    id: 'physiognomy-ambient',
+    title: '관상 스튜디오 히어로 — 금빛 선묘 얼굴',
+    placement: 'studio/face 업로드 히어로 (screen-blend 오버레이)',
+    durationSec: 4,
+    resolution: '720p',
+    // 관상 전용: 검정 위 금빛 라인만 → 玄 히어로 카드에 screen 블렌드로 얹는다(방식은 신당 오버레이 계보).
+    prompt:
+      'Pure solid black background, completely empty. An elegant continuous thin golden line slowly draws the ' +
+      'serene side-profile silhouette of a human face, like master calligraphy brush strokes in liquid gold ink. ' +
+      'Fine golden dust particles drift softly, and a subtle warm glow breathes along the drawn line. Minimal, ' +
+      'luxurious, mystical, premium dark aesthetic. Only the golden lines and particles are visible on pure black. ' +
+      'Abstract line art, not a realistic person, no text, static camera, seamless loop, very subtle motion.',
+  },
+  {
     id: 'compatibility-ambient',
     title: '궁합 앰비언트 — 두 기운의 어우러짐',
     placement: 'compatibility-result 헤더 배경 (AmbientVideo)',
