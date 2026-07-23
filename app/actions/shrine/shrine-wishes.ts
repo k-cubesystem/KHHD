@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { accrueDevotion } from '@/lib/services/devotion'
 
 export interface ShrineWish {
   id: string
@@ -25,7 +26,14 @@ export async function addWish(input: {
   visitorSessionId?: string
   /** 대상 가족(본인 신당이면 null). 소원 로그 대상명 표기용 — shrineId 로 이미 분리됨. */
   familyMemberId?: string | null
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{
+  success: boolean
+  error?: string
+  /** 오늘(KST) 첫 기도로 정성이 적립됐는지 — UI 토스트 강조용. 본인·가족 신당 소원만 적립. */
+  devotionGained?: boolean
+  /** 적립 후 누적 기도일(정성 단·다음목표 계산용). */
+  devotionTotalDays?: number
+}> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -70,8 +78,18 @@ export async function addWish(input: {
     await supabase.rpc('increment_shrine_visitor', { p_shrine_id: input.shrineId })
   }
 
+  // 정성 적립 — 본인·가족 신당(=오너) 소원만, 유저 기준 하루(KST) 1회 멱등(서버에서).
+  // 방문자(타인 신당) 기원은 적립 대상 아님. 적립은 소원 저장 성공 이후에만 수행.
+  let devotionGained = false
+  let devotionTotalDays: number | undefined
+  if (user && isOwner) {
+    const accrual = await accrueDevotion(user.id)
+    devotionGained = accrual.gained
+    devotionTotalDays = accrual.totalDays
+  }
+
   revalidatePath(`/shrine/${shrine.user_id}`)
-  return { success: true }
+  return { success: true, devotionGained, devotionTotalDays }
 }
 
 export async function getWishes(
