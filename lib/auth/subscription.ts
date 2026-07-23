@@ -1,0 +1,129 @@
+/**
+ * 활성 멤버십 판정 · 기록 보관 정책 단일 기준 (서버 전용).
+ *
+ * 게이팅(신당·가족·고민상담)과 기록 보관(무료 30일 / 멤버십 무기한)이 모두 이 파일을 경유한다.
+ * - 마스터(admin)는 privileges.ts(hasUnlimitedAccess) 기준으로 **항상 통과**한다(단일 기준 준수).
+ * - 활성 멤버십 = subscriptions.status='ACTIVE' 이고 기간(current_period_end/end_date) 미만료.
+ *
+ * ⚠️ 보호파일 membership.ts 는 열지 않는다 — 필요한 판정 로직은 여기서 독립 구현한다(조회만).
+ */
+
+import { createClient } from '@/lib/supabase/server'
+import { hasUnlimitedAccess } from '@/lib/auth/privileges'
+
+/** 무료 사용자 기록 보관 기간(일). 이 기간 이전 기록은 삭제하지 않고 잠근다(멤버십 가입 시 복원). */
+export const FREE_RETENTION_DAYS = 30
+
+export interface ActiveMembership {
+  /** SINGLE | FAMILY | BUSINESS | MASTER (마스터) | MEMBER (tier 조회 실패 폴백). */
+  tier: string
+  planId: string | null
+  status: string
+  /** 만료 기준 시각 ISO. 마스터·무기한이면 null. */
+  currentPeriodEnd: string | null
+  /** 마스터(admin) 무제한 여부. */
+  isMaster: boolean
+}
+
+interface ActiveSubscriptionCore {
+  isMaster: boolean
+  planId: string | null
+  status: string
+  currentPeriodEnd: string | null
+}
+
+interface SubscriptionRow {
+  plan_id: string | null
+  status: string | null
+  current_period_end: string | null
+  end_date: string | null
+}
+
+/**
+ * 활성 구독 핵심 판정 — 마스터 우선, 없으면 ACTIVE + 미만료 구독을 찾는다(tier 미조회, 경량).
+ * 어떤 이유로든 조회 실패 시 null(비회원 취급) — 게이트/보관은 안전 측 실패.
+ */
+async function resolveActiveSubscription(userId: string): Promise<ActiveSubscriptionCore | null> {
+  const supabase = await createClient()
+
+  // 1) 마스터(admin) 무제한 — privileges 단일 기준. 항상 통과.
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
+  if (hasUnlimitedAccess((profile as { role?: string } | null)?.role)) {
+    return { isMaster: true, planId: null, status: 'ACTIVE', currentPeriodEnd: null }
+  }
+
+  // 2) 활성 구독 — status ACTIVE 이고 기간 미만료(기간 미설정이면 유효로 간주).
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('plan_id, status, current_period_end, end_date')
+    .eq('user_id', userId)
+    .eq('status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const row = data as SubscriptionRow | null
+  if (!row) return null
+
+  const periodEnd = row.current_period_end ?? row.end_date ?? null
+  if (periodEnd && new Date(periodEnd).getTime() < Date.now()) return null
+
+  return { isMaster: false, planId: row.plan_id ?? null, status: row.status ?? 'ACTIVE', currentPeriodEnd: periodEnd }
+}
+
+/** 활성 멤버십 여부(boolean). 마스터 포함. 게이트 판정용. */
+export async function hasActiveMembership(userId: string): Promise<boolean> {
+  return (await resolveActiveSubscription(userId)) !== null
+}
+
+/** 활성 멤버십 상세(tier 포함) 또는 null. 카피/티어 표시용. */
+export async function getActiveMembership(userId: string): Promise<ActiveMembership | null> {
+  const core = await resolveActiveSubscription(userId)
+  if (!core) return null
+  if (core.isMaster) {
+    return { tier: 'MASTER', planId: null, status: 'ACTIVE', currentPeriodEnd: null, isMaster: true }
+  }
+
+  let tier = 'MEMBER'
+  if (core.planId) {
+    const supabase = await createClient()
+    const { data: plan } = await supabase.from('membership_plans').select('tier').eq('id', core.planId).maybeSingle()
+    const planTier = (plan as { tier?: string } | null)?.tier
+    if (planTier) tier = planTier
+  }
+
+  return {
+    tier,
+    planId: core.planId,
+    status: core.status,
+    currentPeriodEnd: core.currentPeriodEnd,
+    isMaster: false,
+  }
+}
+
+/** 로그인 사용자의 활성 멤버십. 미로그인/비회원이면 null. 페이지 게이트에서 사용. */
+export async function getCurrentUserMembership(): Promise<ActiveMembership | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+  return getActiveMembership(user.id)
+}
+
+/** 기록 보관 제한 대상 여부 — 비회원(=멤버십 없음)이면 true(최근 30일만). 마스터/멤버는 false. */
+export async function isRetentionLimited(userId: string): Promise<boolean> {
+  return !(await hasActiveMembership(userId))
+}
+
+/**
+ * 무료 보관 경계(ISO) — '오늘 - N일'의 UTC 자정으로 고정한다.
+ * 일 단위 고정 → 무한 캐시 키 안정 + 경계 깜빡임 없음(밀리초 경계보다 UX·성능 우수).
+ * gte(cutoff) 로 필터하면 이 시각 이후 기록만 노출되고, lt(cutoff) 로 잠긴 건수를 센다.
+ */
+export function retentionCutoffISO(days: number = FREE_RETENTION_DAYS): string {
+  const d = new Date()
+  d.setUTCHours(0, 0, 0, 0)
+  d.setUTCDate(d.getUTCDate() - days)
+  return d.toISOString()
+}

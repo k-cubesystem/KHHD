@@ -3,20 +3,23 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, Filter, Hexagon } from 'lucide-react'
+import { BookOpen, Filter, Hexagon, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TargetFilter } from '@/components/history/target-filter'
 import { CategoryTabs } from '@/components/history/category-tabs'
 import { AnalysisCard } from '@/components/history/analysis-card'
 import { DetailModal } from '@/components/history/detail-modal'
+import { GA } from '@/lib/analytics/ga4'
 import type { AnalysisHistory, AnalysisCategory } from '@/app/actions/user/history'
 
 interface HistoryPageClientProps {
   initialRecords: AnalysisHistory[]
   isGuest: boolean
+  /** 30일 이전 잠긴 기록 수(무료 사용자). 멤버는 0. */
+  lockedCount?: number
 }
 
-export function HistoryPageClient({ initialRecords, isGuest }: HistoryPageClientProps) {
+export function HistoryPageClient({ initialRecords, isGuest, lockedCount = 0 }: HistoryPageClientProps) {
   const router = useRouter()
   const [records] = useState<AnalysisHistory[]>(initialRecords)
 
@@ -71,8 +74,13 @@ export function HistoryPageClient({ initialRecords, isGuest }: HistoryPageClient
     )
   }
 
-  // Empty State
-  if (records.length === 0) {
+  const goRestore = () => {
+    GA.paywallClick('history_locked')
+    router.push('/protected/store?tab=membership')
+  }
+
+  // Empty State — 진짜로 기록이 하나도 없을 때만(잠긴 기록이 있으면 아래 배너를 보여준다)
+  if (records.length === 0 && lockedCount === 0) {
     return (
       <div className="w-full max-w-[480px] mx-auto px-4 py-16">
         <div className="text-center space-y-6 border border-dashed border-primary/20 bg-surface/20 p-12">
@@ -115,6 +123,29 @@ export function HistoryPageClient({ initialRecords, isGuest }: HistoryPageClient
         {/* Category Tabs */}
         <CategoryTabs records={records} selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
       </section>
+
+      {/* 잠긴 기록 배너 — 무료 사용자의 30일 이전 기록(삭제 아님, 멤버십으로 복원) */}
+      {lockedCount > 0 && (
+        <section className="px-4 mb-6">
+          <button
+            onClick={goRestore}
+            className="w-full flex items-center gap-3 text-left border border-primary/30 bg-gradient-to-r from-primary/10 to-transparent p-4 hover:border-primary/50 transition-colors"
+          >
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/15 border border-primary/30 shrink-0">
+              <Lock className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-serif font-bold text-ink-light">
+                지난 기록 <span className="text-primary">{lockedCount}건</span>이 잠들어 있습니다
+              </p>
+              <p className="text-xs text-ink-light/55 mt-0.5 font-light">
+                멤버십으로 30일 이전 기록까지 언제든 복원하세요
+              </p>
+            </div>
+            <span className="text-primary text-xs font-bold shrink-0">복원 →</span>
+          </button>
+        </section>
+      )}
 
       {/* Records List */}
       <section className="px-4 space-y-3">

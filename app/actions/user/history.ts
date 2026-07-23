@@ -6,6 +6,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserTierLimits } from '../payment/membership'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
+import { isRetentionLimited, retentionCutoffISO } from '@/lib/auth/subscription'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -210,11 +211,14 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
     return []
   }
 
+  // 무료(비회원)는 최근 N일만 — 삭제가 아닌 보관 정책 필터. 일 단위 cutoff 로 캐시 키 안정.
+  const cutoffISO = (await isRetentionLimited(user.id)) ? retentionCutoffISO() : null
+
   const getCachedRecent = unstable_cache(
-    async (userId: string) => {
+    async (userId: string, cutoff: string | null) => {
       const supabase = await createClient()
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('analysis_history')
         .select(
           'id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at'
@@ -222,6 +226,10 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(limit)
+
+      if (cutoff) query = query.gte('created_at', cutoff)
+
+      const { data, error } = await query
 
       if (error) {
         logger.error('Error fetching recent analysis:', error)
@@ -237,7 +245,7 @@ export async function getRecentAnalysis(limit: number = 10): Promise<AnalysisHis
     }
   )
 
-  return getCachedRecent(user.id)
+  return getCachedRecent(user.id, cutoffISO)
 }
 
 /**
@@ -420,7 +428,10 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
     return []
   }
 
-  const { data, error } = await supabase
+  // 무료(비회원)는 최근 30일만 — 삭제가 아닌 보관 정책 필터(멤버십 가입 시 전체 복원).
+  const cutoffISO = (await isRetentionLimited(user.id)) ? retentionCutoffISO() : null
+
+  let query = supabase
     .from('analysis_history')
     .select(
       'id, user_id, target_id, target_name, target_relation, category, context_mode, summary, score, prompt_version, model_used, talisman_cost, user_memo, is_favorite, share_token, share_view_count, created_at, updated_at'
@@ -428,6 +439,10 @@ export async function getAnalysisByTarget(targetId: string): Promise<AnalysisHis
     .eq('user_id', user.id)
     .eq('target_id', targetId)
     .order('created_at', { ascending: false })
+
+  if (cutoffISO) query = query.gte('created_at', cutoffISO)
+
+  const { data, error } = await query
 
   if (error) {
     logger.error('Error fetching analysis by target:', error)
