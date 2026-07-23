@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, Flame } from 'lucide-react'
 import { addWish } from '@/app/actions/shrine/shrine-wishes'
+import { devotionProgress } from '@/lib/domain/shrine/devotion'
+import { trackEvent } from '@/lib/analytics/ga4'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -12,6 +15,8 @@ interface ShrineWishFormProps {
   isOwner: boolean
   /** 대상 가족(본인 신당이면 null·미전달). 소원에 대상 식별자를 새겨 로그 표기에 쓴다. */
   familyMemberId?: string | null
+  /** 오늘(KST) 이미 기도(정성 적립)했는지 — 본인·가족 신당에서 '정성 +1' 뉘앙스 표시용. */
+  prayedToday?: boolean
 }
 
 const CATEGORIES = [
@@ -34,7 +39,8 @@ function getOrCreateSessionId(): string {
   return id
 }
 
-export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null }: ShrineWishFormProps) {
+export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, prayedToday = false }: ShrineWishFormProps) {
+  const router = useRouter()
   const [category, setCategory] = useState<string>('')
   const [wishText, setWishText] = useState('')
   const [visitorName, setVisitorName] = useState('')
@@ -59,15 +65,26 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null }: Shr
     setIsLoading(false)
 
     if (result.success) {
-      toast.success('소원을 기원했습니다 🙏')
       setRipple((r) => r + 1)
       setWishText('')
       setCategory('')
       setVisitorName('')
+      if (result.devotionGained) {
+        // 오늘 첫 기도 → 정성 적립. 단·다음목표는 순수 모듈로 클라에서 계산.
+        const p = devotionProgress(result.devotionTotalDays ?? 0)
+        toast.success(
+          p.nextLevel ? `정성이 쌓였습니다 · ${p.nextLevel}단까지 ${p.daysToNext}일` : '정성이 지극합니다 · 최고 경지',
+          { description: `정성 ${p.level}단 · 오늘의 기도 🙏` }
+        )
+        trackEvent({ action: 'devotion_gain', category: 'shrine', label: `L${p.level}`, value: p.totalDays })
+        router.refresh() // 정성 스트립·버튼 뉘앙스 갱신 (하루 최대 1회)
+      } else {
+        toast.success('소원을 기원했습니다 🙏')
+      }
     } else {
       toast.error('기원 실패. 다시 시도해주세요.')
     }
-  }, [shrineId, wishText, category, visitorName, familyMemberId])
+  }, [shrineId, wishText, category, visitorName, familyMemberId, router])
 
   return (
     <div className="relative overflow-hidden rounded-2xl p-5 space-y-4 hanji-card border border-gold-500/[0.12]">
@@ -127,8 +144,8 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null }: Shr
       />
 
       <div className="flex items-center justify-between">
-        {/* 방문자 이름 (비오너만) */}
-        {!isOwner && (
+        {/* 방문자 이름 (비오너만) · 오너는 오늘 첫 기도면 '정성 +1' 뉘앙스 */}
+        {!isOwner ? (
           <input
             type="text"
             value={visitorName}
@@ -137,6 +154,12 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null }: Shr
             maxLength={10}
             className="w-24 bg-white/3 border border-gold-500/10 rounded-lg px-3 py-2 text-xs text-ink-light placeholder:text-ink-light/20 focus:outline-none focus:border-gold-500/30 font-sans"
           />
+        ) : !prayedToday ? (
+          <span className="flex items-center gap-1 font-serif text-[11px] text-gold-300/90">
+            <Flame className="h-3.5 w-3.5" style={{ color: '#C9A84C' }} /> 오늘 첫 기도 · 정성 +1
+          </span>
+        ) : (
+          <span aria-hidden />
         )}
 
         <button

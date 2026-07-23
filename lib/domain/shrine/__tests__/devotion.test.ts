@@ -7,6 +7,8 @@ import {
   daysToNextLevel,
   devotionProgress,
   rewardForLevel,
+  devotionLevelForTheme,
+  devotionLevelForItem,
 } from '../devotion'
 
 // ── DB 카탈로그 고정 픽스처 (실측 2026-07-24, plzvanxcxjkaazcfrtls) ──
@@ -207,5 +209,27 @@ describe('정성 보상 트랙', () => {
     expect(rewardForLevel(9)?.code).toBe('byeolbat')
     expect(rewardForLevel(DEVOTION_LAST_REWARD_LEVEL + 1)).toBeNull()
     expect(rewardForLevel(0)).toBeNull()
+  })
+
+  describe('구매처 병기 헬퍼 (devotionLevelFor…)', () => {
+    it('테마 code → 단, 트랙 밖/무료 choga·신물 이름은 null', () => {
+      expect(devotionLevelForTheme('banga')).toBe(1)
+      expect(devotionLevelForTheme('byeolbat')).toBe(9)
+      expect(devotionLevelForTheme('choga')).toBeNull() // 무료 테마는 보상 아님
+      expect(devotionLevelForTheme('복 부적')).toBeNull() // 신물 이름은 테마 아님
+      expect(devotionLevelForTheme('없는코드')).toBeNull()
+    })
+    it('신물 name → 단, 트랙 밖/테마 code 는 null', () => {
+      expect(devotionLevelForItem('복 부적')).toBe(2)
+      expect(devotionLevelForItem('기억의 함')).toBe(DEVOTION_LAST_REWARD_LEVEL)
+      expect(devotionLevelForItem('놋방울')).toBeNull() // 스타터킷 지급분은 보상 아님
+      expect(devotionLevelForItem('banga')).toBeNull() // 테마 code 는 신물 아님
+    })
+    it('트랙의 모든 보상은 해당 헬퍼로 역조회 가능', () => {
+      for (const r of DEVOTION_REWARDS) {
+        const lvl = r.kind === 'theme' ? devotionLevelForTheme(r.code) : devotionLevelForItem(r.code)
+        expect(lvl).toBe(r.level)
+      }
+    })
   })
 })

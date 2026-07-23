@@ -6,6 +6,7 @@ import { ShrineSetupForm } from '@/components/shrine/ShrineSetupForm'
 import { ShrineTargetTabs, type ShrineTargetTab } from '@/components/shrine/ShrineTargetTabs'
 import { FamilySummonGate } from '@/components/shrine/FamilySummonGate'
 import { getWishes } from '@/app/actions/shrine/shrine-wishes'
+import { getDevotionStatus } from '@/app/actions/shrine/devotion'
 import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import { EL_KO } from '@/lib/domain/shrine/energy'
@@ -78,12 +79,13 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
   }
 
   // 오너도 자기 신당의 소원·방명록을 볼 수 있게(F-2). wishCount 는 ShrineRoomClient 배지에 표시.
-  const { wishes } = await getWishes(scene.shrineId, 0, 10)
+  // 정성 현황은 유저 단위(신당 무관) — 스트립·보상 트랙·소원 폼 뉘앙스에 공용.
+  const [{ wishes }, devotion] = await Promise.all([getWishes(scene.shrineId, 0, 10), getDevotionStatus()])
 
   return (
     <div className="min-h-screen px-1 py-4">
       <div className="w-full max-w-[520px] mx-auto">{targetTabs}</div>
-      <ShrineRoomClient scene={scene} />
+      <ShrineRoomClient scene={scene} devotion={devotion} />
       {/* 가족 신당 첫 진입 — 主神이 없으면 그 가족 사주로 강신 의식 */}
       {target && !scene.mainDeity && (
         <FamilySummonGate
@@ -95,7 +97,12 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
 
       {/* 오너 소원 기원 + 방명록 열람 (F-2) — 대상(본인/가족)을 소원에 새기고 로그에 표기(W2-b/c) */}
       <div className="w-full max-w-[430px] mx-auto mt-5 space-y-5">
-        <ShrineWishForm shrineId={scene.shrineId} isOwner familyMemberId={target?.id ?? null} />
+        <ShrineWishForm
+          shrineId={scene.shrineId}
+          isOwner
+          familyMemberId={target?.id ?? null}
+          prayedToday={devotion?.prayedToday ?? false}
+        />
         <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} targetName={target?.name ?? '나'} />
       </div>
     </div>

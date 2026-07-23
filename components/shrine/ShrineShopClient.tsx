@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import type { ShopData } from '@/app/actions/shrine/inventory'
 import { purchaseToInventory } from '@/app/actions/shrine/inventory'
+import { devotionLevelForItem } from '@/lib/domain/shrine/devotion'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
 
@@ -61,6 +62,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
           const free = item.priceBokchae === 0
           const canAfford = free || item.priceBokchae <= balance
           const loading = loadingId === item.id
+          const devotionLvl = have === 0 ? devotionLevelForItem(item.name) : null
           return (
             <motion.div
               key={item.id}
@@ -119,6 +121,9 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                     ✦ 배치 효험: 대화 보존 +{item.unlockEffect.days ?? 90}일
                     {item.unlockEffect.maxStack ? ` (최대 ${item.unlockEffect.maxStack}개)` : ''}
                   </p>
+                )}
+                {devotionLvl != null && (
+                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 정성 {devotionLvl}단 무료</p>
                 )}
               </div>
 

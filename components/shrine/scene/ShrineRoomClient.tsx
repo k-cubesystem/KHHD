@@ -32,10 +32,13 @@ import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { ShrineGuideBar } from './ShrineGuideBar'
+import { DevotionStrip } from './DevotionStrip'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
+import type { DevotionStatus } from '@/app/actions/shrine/devotion'
+import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
@@ -43,6 +46,8 @@ const FLAME_Y_OFFSET = 5
 
 interface Props {
   scene: SceneData
+  /** 정성 현황(소유자 뷰에서만 주입). 방문자 뷰는 null → 정성 스트립 미표시. */
+  devotion?: DevotionStatus | null
 }
 
 interface Ring {
@@ -67,7 +72,7 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
   } as CSSProperties
 }
 
-export function ShrineRoomClient({ scene }: Props) {
+export function ShrineRoomClient({ scene, devotion = null }: Props) {
   const catalogById = useMemo(() => indexCatalog(scene.catalog), [scene.catalog])
   const { play, muted, toggleMute, startBgm } = useShrineAudio()
 
@@ -520,6 +525,9 @@ export function ShrineRoomClient({ scene }: Props) {
           )
         })()}
 
+      {/* 정성(精誠) 스트립 — 매일 기도로 단 상승 → 테마·신물 해금 (소유자 전용) */}
+      {isOwner && devotion && <DevotionStrip devotion={devotion} />}
+
       {/* 룸 */}
       <div
         ref={roomRef}
@@ -795,6 +803,8 @@ export function ShrineRoomClient({ scene }: Props) {
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {scene.themes.map((t) => {
               const owned = t.owned || purchasedCodes.has(t.code)
+              const rewardLvl = !owned ? devotionLevelForTheme(t.code) : null
+              const reached = rewardLvl != null && devotion != null && devotion.level >= rewardLvl
               return (
                 <button
                   key={t.code}
@@ -812,6 +822,11 @@ export function ShrineRoomClient({ scene }: Props) {
                   <span className="ml-1 text-[9.5px] tabular-nums opacity-70">
                     {owned ? '보유' : t.priceBokchae > 0 ? `복채 ${t.priceBokchae}만냥` : '무료'}
                   </span>
+                  {rewardLvl != null && (
+                    <span className={`ml-1 text-[9px] ${reached ? 'text-seal font-bold' : 'text-gold-500/70'}`}>
+                      · 정성 {rewardLvl}단{reached ? ' 수령가능' : ' 무료'}
+                    </span>
+                  )}
                 </button>
               )
             })}

@@ -115,5 +115,15 @@ export function rewardForLevel(level: number): DevotionReward | null {
   return DEVOTION_REWARDS.find((r) => r.level === level) ?? null
 }
 
+/** 테마 code 를 여는 정성 단(트랙에 없으면 null). 구매처 "정성 N단 무료" 병기용. */
+export function devotionLevelForTheme(code: string): number | null {
+  return DEVOTION_REWARDS.find((r) => r.kind === 'theme' && r.code === code)?.level ?? null
+}
+
+/** 신물 name 을 여는 정성 단(트랙에 없으면 null). 구매처 "정성 N단 무료" 병기용. */
+export function devotionLevelForItem(name: string): number | null {
+  return DEVOTION_REWARDS.find((r) => r.kind === 'item' && r.code === name)?.level ?? null
+}
+
 /** 마지막 보상이 걸린 단(이후는 정진 구간, 새 보상 없음). */
 export const DEVOTION_LAST_REWARD_LEVEL: number = DEVOTION_REWARDS[DEVOTION_REWARDS.length - 1]?.level ?? 0

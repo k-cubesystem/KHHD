@@ -7,6 +7,7 @@ import { Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { ThemePack } from '@/lib/domain/shrine/types'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
+import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 
 /** 상점 신당 테마 탭 — 그라디언트 프리뷰 + 복채 구매. 적용은 신당 테마칩에서. */
@@ -45,6 +46,7 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
           const free = pack.priceBokchae === 0
           const loading = loadingCode === pack.code
           const accent = pack.assets.accent ?? '#c9a84c'
+          const devotionLvl = !owned ? devotionLevelForTheme(pack.code) : null
           return (
             <div
               key={pack.id}
@@ -89,6 +91,9 @@ export function ThemeShopGrid({ themes }: { themes: ThemePack[] }) {
 
               <div className="p-3 flex flex-col gap-2 flex-1">
                 <div className="text-[13px] font-serif font-bold text-ink-light leading-tight">{pack.name}</div>
+                {devotionLvl != null && (
+                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 정성 {devotionLvl}단 무료</p>
+                )}
                 {owned ? (
                   <Link
                     href="/protected/shrine"
