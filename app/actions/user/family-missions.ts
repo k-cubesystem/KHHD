@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { countFamilyMissions, FAMILY_MISSION_TOTAL } from '@/lib/domain/analysis/family-missions'
 
 export interface FamilyMemberWithMissions {
   id: string
@@ -23,6 +24,19 @@ export interface FamilyMemberWithMissions {
   completed_categories: string[]
 }
 
+/**
+ * 미션 카운트를 TS에서 재계산한다(정예화: 5종 = 사주·관상·손금·풍수·궁합).
+ * RPC(DB)는 건드리지 않고 반환값만 보정 — 배포 리스크 0. completed_categories 원본은 유지.
+ */
+function withFamilyMissionCount(member: FamilyMemberWithMissions): FamilyMemberWithMissions {
+  const categories = Array.isArray(member.completed_categories) ? member.completed_categories : []
+  return {
+    ...member,
+    mission_completed: countFamilyMissions(categories),
+    mission_total: FAMILY_MISSION_TOTAL,
+  }
+}
+
 export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[]> {
   const supabase = await createClient()
   const {
@@ -38,7 +52,7 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
     })
 
     if (!error && data) {
-      return data as FamilyMemberWithMissions[]
+      return (data as FamilyMemberWithMissions[]).map(withFamilyMissionCount)
     }
 
     // If RPC fails, use fallback query
@@ -88,8 +102,8 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
           last_analysis_date: lastAnalysis?.created_at || null,
           last_analysis_summary: lastAnalysis?.summary || null,
           last_analysis_score: lastAnalysis?.score || null,
-          mission_completed: completedCategories.length,
-          mission_total: 8,
+          mission_completed: countFamilyMissions(completedCategories as string[]),
+          mission_total: FAMILY_MISSION_TOTAL,
           completed_categories: completedCategories as string[],
         }
       })
