@@ -69,7 +69,7 @@ export function OpenEventPopup() {
     }
   }, [])
 
-  const benefits = ['무료 사주 분석', '궁합 확인', '관상/손금 분석', 'AI 샤먼 상담']
+  const benefits = ['매일 복채 20만냥 지급', '사주·궁합 풀이', '관상·손금·풍수 분석', '종합사주풀이']
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
