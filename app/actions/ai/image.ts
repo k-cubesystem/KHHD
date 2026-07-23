@@ -707,18 +707,59 @@ Style: Professional headshot, warm lighting, confident expression.`
   }
 }
 
+/** 풍수 분석 대상·맥락(선택 입력). 값이 있으면 프롬프트에 주입, 없으면 기존 동작과 동일(하위호환). */
+export type FengshuiSubjectType = 'interior' | 'exterior' | 'office'
+export interface FengshuiSubjectOptions {
+  subjectType?: FengshuiSubjectType
+  facing?: string
+  address?: string
+}
+
+// interior 는 기존 프롬프트의 기본 관점이므로 별도 문단을 넣지 않는다(하위호환). exterior·office 만 관점 전환.
+const FENGSHUI_SUBJECT_PERSPECTIVE: Partial<Record<FengshuiSubjectType, string>> = {
+  exterior:
+    '분석 대상은 집·건물 외관이다. 대문·현관·도로와의 관계, 주변 건물·지형과의 형세(形勢)를 중심으로 외부 기운의 진입과 흐름을 분석하라. 실내 가구 배치가 아니라 건물의 좌향과 주변 환경이 핵심이다.',
+  office:
+    '분석 대상은 사무실·가게다. 입구에서 이어지는 동선, 책상·계산대·금고 등 자리 배치와 재물이 들고 나는 동선(財動線)을 중심으로 분석하라.',
+}
+
+/** subjectType·facing·address 를 프롬프트 주입용 [분석 맥락] 블록으로 조립. 값이 없으면 빈 문자열(하위호환). */
+function buildFengshuiSubjectContext(options?: FengshuiSubjectOptions): string {
+  if (!options) return ''
+  const lines: string[] = []
+  const subjectType = options.subjectType
+  const perspective = subjectType ? FENGSHUI_SUBJECT_PERSPECTIVE[subjectType] : undefined
+  if (perspective) {
+    lines.push(`- 대상 관점: ${perspective}`)
+  }
+  const facing = options.facing?.trim()
+  if (facing && facing !== '모름') {
+    lines.push(
+      `- 실측 좌향: 이 공간/건물의 실제 좌향은 ${facing}향이다. 8방위 분석은 이 실측 향을 기준으로 하라(임의 추측 금지).`
+    )
+  }
+  const address = options.address?.trim()
+  if (address) {
+    lines.push(`- 위치: ${address} — 지역 지세(산·강·도로)를 아는 범위에서만 참고하고, 모르면 언급하지 마라.`)
+  }
+  if (lines.length === 0) return ''
+  return `\n[분석 맥락 — 사용자 입력, 최우선 반영]\n${lines.join('\n')}\n`
+}
+
 // 2. Interior Feng Shui Analysis - 풍수 인테리어 분석 및 개선 프롬프트 생성
 export async function analyzeInteriorForFengshui(
   imageBase64: string,
   theme: InteriorTheme,
   roomType: string = '거실',
-  target?: { id: string; name: string; relation: string }
+  target?: { id: string; name: string; relation: string },
+  options?: FengshuiSubjectOptions
 ): Promise<InteriorAnalysisResult> {
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType, target })
+    return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType, target, options })
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const themeConfig = INTERIOR_THEMES[theme]
+  const subjectContext = buildFengshuiSubjectContext(options)
 
   const dbPromptTemplate = await getPromptByKey('fengshui_analysis')
   const analysisPrompt = dbPromptTemplate
@@ -728,12 +769,13 @@ export async function analyzeInteriorForFengshui(
         .replace(/\{\{theme_colors\}\}/g, themeConfig.colors)
         .replace(/\{\{theme_elements\}\}/g, themeConfig.elements)
         .replace(/\{\{theme\}\}/g, theme)
+        .replace(/\{\{subject_context\}\}/g, subjectContext)
     : `당신은 전통 풍수지리 인테리어 전문 상담가입니다.
 음양오행(陰陽五行, 다섯 가지 자연 원소)과 팔괘(八卦, 여덟 방위)를 바탕으로 공간을 분석합니다.
 전문 용어 사용 시 괄호 안에 쉬운 설명을 추가하세요. 실용적이고 실행 가능한 조언을 제공하세요.
 
 이 ${roomType} 사진을 분석하고, "${themeConfig.name}" 테마로 개선하기 위한 풍수 분석을 제공하세요.
-
+${subjectContext}
 [1단계: 공간 기운 진단 + 점수]
 - 현재 기(氣, 공간의 에너지) 흐름 상태
 - 지배 오행 판단 (木/火/土/金/水)
@@ -995,7 +1037,8 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       category: 'FENGSHUI',
       contextMode:
         theme === 'wealth' ? 'WEALTH' : theme === 'romance' ? 'LOVE' : theme === 'health' ? 'HEALTH' : 'GENERAL',
-      resultJson: { ...fengshuiResult, roomType, theme },
+      // 히스토리엔 subjectType·facing 만 포함(주소는 개인정보 최소화 — 저장 안 함)
+      resultJson: { ...fengshuiResult, roomType, theme, subjectType: options?.subjectType, facing: options?.facing },
       summary: spaceScore?.description || `${themeConfig.name} 풍수 분석`,
       score: spaceScore?.current,
       targetId: target?.id,

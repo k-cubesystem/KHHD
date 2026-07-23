@@ -16,6 +16,7 @@ import {
   type DirectionAnalysis,
   type RoomRecommendation,
   type PlacementSuggestion,
+  type FengshuiSubjectType,
 } from '@/app/actions/ai/image'
 import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
@@ -33,13 +34,18 @@ import {
   Wind,
   MapPin,
   Home,
+  Building2,
+  Store,
   Layers,
+  ChevronDown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
+import { trackEvent } from '@/lib/analytics/ga4'
+import { JourneyCard } from '@/components/analysis/journey-card'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -54,6 +60,41 @@ const ROOM_TYPES = [
   { value: '현관', emoji: '🚪' },
 ]
 
+// 분석 대상 3택 — 시스템이 "무엇을 찍을지"를 정해준다(A-1)
+const SUBJECT_TYPES: { value: FengshuiSubjectType; label: string; icon: typeof Home }[] = [
+  { value: 'interior', label: '집 안 공간', icon: Home },
+  { value: 'exterior', label: '집·건물 외관', icon: Building2 },
+  { value: 'office', label: '사무실·가게', icon: Store },
+]
+
+// 대상별 촬영 가이드 문구 전환(A-1)
+const CAPTURE_GUIDES: Record<FengshuiSubjectType, string[]> = {
+  interior: [
+    '📷 카메라 파노라마 모드로 방 전체를 왼쪽→오른쪽 한 바퀴 담으면 가장 정확합니다',
+    '일반 사진도 가능 — 가구 배치와 레이아웃이 잘 보이게 넓게 촬영하세요',
+    '자연광이 있는 낮 시간대에 촬영하면 좋습니다',
+  ],
+  exterior: [
+    '길 건너편에서 건물 정면 전체가 들어오게 촬영하세요',
+    '대문·현관이 보이면 좋습니다',
+    '주변 도로·이웃 건물과의 관계가 드러나게 여유 있게 담으세요',
+  ],
+  office: [
+    '📷 입구에서 안쪽을 향해 전체가 보이게 촬영하세요 (파노라마 권장)',
+    '책상·계산대 등 자리 배치가 드러나게 담으세요',
+    '자연광이 있는 시간대면 더 좋습니다',
+  ],
+}
+
+// 집의 향(向) — 8방위 + 모름(기본). 실측 향이 있으면 방위 분석의 기준이 된다.
+const FACING_OPTIONS = ['모름', '남', '동', '서', '북', '남동', '남서', '북동', '북서'] as const
+
+const SUBJECT_LABEL: Record<FengshuiSubjectType, string> = {
+  interior: '실내',
+  exterior: '집·건물 외관',
+  office: '사무실·가게',
+}
+
 function FengShuiAnalysisPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -62,6 +103,10 @@ function FengShuiAnalysisPageContent() {
   const [step, setStep] = useState<StepType>('upload')
   const [selectedTheme] = useState<InteriorTheme>('general')
   const [selectedRoom, setSelectedRoom] = useState<string>('거실')
+  const [subjectType, setSubjectType] = useState<FengshuiSubjectType>('interior')
+  const [facing, setFacing] = useState<string>('모름')
+  const [address, setAddress] = useState<string>('')
+  const [showContext, setShowContext] = useState<boolean>(false)
   const [targetMember, setTargetMember] = useState<FamilyMemberWithMissions | null>(null)
   const [imageBase64, setImageBase64] = useState<string>('')
   const [analysisResult, setAnalysisResult] = useState<InteriorAnalysisResult | null>(null)
@@ -109,11 +154,17 @@ function FengShuiAnalysisPageContent() {
         return
       }
 
+      // interior 는 방 유형, 그 외는 대상 라벨을 room_type 자리에 넣어 프롬프트 문맥을 맞춘다
+      const roomTypeForAnalysis = subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]
+
       const result = await analyzeInteriorForFengshui(
         imageBase64,
         selectedTheme,
-        selectedRoom,
-        targetMember ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship } : undefined
+        roomTypeForAnalysis,
+        targetMember
+          ? { id: targetMember.id, name: targetMember.name, relation: targetMember.relationship }
+          : undefined,
+        { subjectType, facing, address }
       )
 
       if (!result.success) {
@@ -137,7 +188,9 @@ function FengShuiAnalysisPageContent() {
           category: 'FENGSHUI',
           inputData: {
             theme: selectedTheme,
-            roomType: selectedRoom,
+            roomType: roomTypeForAnalysis,
+            subjectType,
+            facing,
             imageUrl: `data:image/jpeg;base64,${imageBase64}`,
           },
           resultData: {
@@ -197,53 +250,173 @@ function FengShuiAnalysisPageContent() {
               </div>
             </div>
 
-            {/* 공간 유형 선택 */}
+            {/* 분석 대상 선택 (A-1) — 무엇을 찍을지 시스템이 정해준다 */}
             <Card className="card-glass-manse p-5 border-white/5">
               <div className="flex items-center gap-2 mb-3">
                 <Compass className="w-4 h-4 text-gold-500" />
-                <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">공간 유형 선택</p>
+                <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">무엇을 볼까요</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {ROOM_TYPES.map((room) => (
-                  <button
-                    key={room.value}
-                    onClick={() => setSelectedRoom(room.value)}
-                    className={`p-3 rounded-xl text-center transition-all duration-200 border ${
-                      selectedRoom === room.value
-                        ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
-                        : 'border-white/5 bg-white/3 hover:border-white/15'
-                    }`}
-                  >
-                    <div className="text-xl mb-1">{room.emoji}</div>
-                    <p
-                      className={`text-xs font-sans ${selectedRoom === room.value ? 'text-gold-500 font-semibold' : 'text-white/50'}`}
+                {SUBJECT_TYPES.map((s) => {
+                  const Icon = s.icon
+                  const active = subjectType === s.value
+                  return (
+                    <button
+                      key={s.value}
+                      onClick={() => {
+                        setSubjectType(s.value)
+                        trackEvent({ action: 'fengshui_subject_select', category: 'analysis', label: s.value })
+                      }}
+                      className={`p-3 rounded-xl text-center transition-all duration-200 border ${
+                        active
+                          ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                          : 'border-white/5 bg-white/3 hover:border-white/15'
+                      }`}
                     >
-                      {room.value}
-                    </p>
-                  </button>
-                ))}
+                      <Icon
+                        className={`w-5 h-5 mx-auto mb-1.5 ${active ? 'text-gold-500' : 'text-white/40'}`}
+                        strokeWidth={1.5}
+                      />
+                      <p
+                        className={`text-[11px] font-sans ${active ? 'text-gold-500 font-semibold' : 'text-white/50'}`}
+                      >
+                        {s.label}
+                      </p>
+                    </button>
+                  )
+                })}
               </div>
             </Card>
 
-            {/* 촬영 안내 */}
+            {/* 공간 유형 선택 — 집 안 공간일 때만 노출 (A-1) */}
+            <AnimatePresence initial={false}>
+              {subjectType === 'interior' && (
+                <motion.div
+                  key="room-select"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden"
+                >
+                  <Card className="card-glass-manse p-5 border-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Home className="w-4 h-4 text-gold-500" />
+                      <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">공간 유형 선택</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {ROOM_TYPES.map((room) => (
+                        <button
+                          key={room.value}
+                          onClick={() => setSelectedRoom(room.value)}
+                          className={`p-3 rounded-xl text-center transition-all duration-200 border ${
+                            selectedRoom === room.value
+                              ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
+                              : 'border-white/5 bg-white/3 hover:border-white/15'
+                          }`}
+                        >
+                          <div className="text-xl mb-1">{room.emoji}</div>
+                          <p
+                            className={`text-xs font-sans ${selectedRoom === room.value ? 'text-gold-500 font-semibold' : 'text-white/50'}`}
+                          >
+                            {room.value}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* 촬영 안내 — 대상별 문구 전환 (A-1) */}
             <Card className="card-glass-manse p-5 border-white/5">
               <div className="flex items-center gap-2 mb-3">
                 <Wind className="w-4 h-4 text-gold-500" />
                 <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">촬영 안내</p>
               </div>
               <ul className="space-y-2">
-                {[
-                  '방 전체가 잘 보이도록 넓게 촬영하세요',
-                  '가구 배치와 레이아웃이 명확하게 보여야 합니다',
-                  '자연광이 있는 낮 시간대에 촬영하면 좋습니다',
-                  '여러 각도에서 찍으면 더 정확합니다',
-                ].map((t, i) => (
+                {CAPTURE_GUIDES[subjectType].map((t, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-white/50 font-sans font-light">
                     <span className="text-gold-500/60 mt-0.5 shrink-0">·</span>
                     <span>{t}</span>
                   </li>
                 ))}
               </ul>
+            </Card>
+
+            {/* 향·위치 선택 입력 (A-2) — 접이식, 선택 사항 */}
+            <Card className="card-glass-manse p-0 border-white/5 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowContext((v) => !v)}
+                className="w-full flex items-center justify-between p-5"
+              >
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gold-500" />
+                  <p className="text-xs text-gold-500/70 font-medium tracking-widest uppercase">향·위치 (선택)</p>
+                  {(facing !== '모름' || address.trim().length > 0) && (
+                    <span className="text-[10px] text-gold-500 bg-gold-500/10 border border-gold-500/20 rounded-full px-2 py-0.5">
+                      입력됨
+                    </span>
+                  )}
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-white/30 transition-transform ${showContext ? 'rotate-180' : ''}`}
+                />
+              </button>
+              <AnimatePresence initial={false}>
+                {showContext && (
+                  <motion.div
+                    key="context-body"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-5 pb-5 space-y-4">
+                      <p className="text-[11px] text-white/40 font-sans font-light leading-relaxed">
+                        실제 향을 알면 8방위 분석이 더 정확해집니다. 몰라도 괜찮아요.
+                      </p>
+                      {/* 집의 향 */}
+                      <div>
+                        <p className="text-[11px] text-white/50 font-sans mb-2">집의 향(向)</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {FACING_OPTIONS.map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => setFacing(f)}
+                              className={`text-[11px] rounded-full px-3 py-1.5 border transition-all ${
+                                facing === f
+                                  ? 'border-gold-500/60 bg-gold-500/10 text-gold-500 font-semibold'
+                                  : 'border-white/8 bg-white/3 text-white/50 hover:border-white/20'
+                              }`}
+                            >
+                              {f !== '모름' ? `${f}향` : f}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* 위치 (시·구 수준) */}
+                      <div>
+                        <p className="text-[11px] text-white/50 font-sans mb-2">위치 (시·구까지만)</p>
+                        <input
+                          type="text"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          maxLength={30}
+                          placeholder="예: 서울 강남구 (상세 주소는 입력하지 마세요)"
+                          className="w-full h-11 rounded-xl bg-black/20 border border-white/10 px-3.5 text-sm text-white/80 placeholder:text-white/25 font-sans focus:border-gold-500/40 focus:outline-none"
+                        />
+                        <p className="text-[10px] text-white/30 mt-1.5 font-sans">
+                          지역 지세 참고용 — 개인정보 보호를 위해 시·구 수준까지만 입력하세요.
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Card>
 
             <ImageCapture onImageCapture={handleImageCapture} maxSizeMB={10} />
@@ -305,7 +478,9 @@ function FengShuiAnalysisPageContent() {
                       <p className="text-[10px] tracking-[0.25em] text-gold-500/50 uppercase font-sans">
                         공간 풍수 분석
                       </p>
-                      <p className="text-lg font-serif font-bold text-gold-500">{selectedRoom} 풍수 진단</p>
+                      <p className="text-lg font-serif font-bold text-gold-500">
+                        {subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]} 풍수 진단
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -439,9 +614,12 @@ function FengShuiAnalysisPageContent() {
 
             <ShareSaveButtons
               resultContainerId="fengshui-result-container"
-              analysisTitle={`풍수 분석 (${selectedRoom})`}
+              analysisTitle={`풍수 분석 (${subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]})`}
               memberName={targetMember?.name}
             />
+
+            {/* 종합사주풀이 여정 (컴팩트) — 4상 완료 시 종합 CTA */}
+            <JourneyCard variant="compact" targetId={targetId ?? undefined} />
 
             <div className="flex gap-3">
               <Button
@@ -450,6 +628,10 @@ function FengShuiAnalysisPageContent() {
                   setImageBase64('')
                   setAnalysisResult(null)
                   setSelectedRoom('거실')
+                  setSubjectType('interior')
+                  setFacing('모름')
+                  setAddress('')
+                  setShowContext(false)
                 }}
                 variant="outline"
                 className="flex-1 border-white/10 text-white/60 hover:bg-white/5 hover:text-gold-500 h-12"
