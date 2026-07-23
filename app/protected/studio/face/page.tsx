@@ -25,7 +25,14 @@ import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ReadingResultHero } from '@/components/studio/reading-result-hero'
 import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
 import { FaceDiagram } from '@/components/studio/face-diagram'
+import { GisaekRemeasureBanner, ReadingCompareCard, FamilyResemblanceCard } from '@/components/studio/reading-revisit'
 import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
+import {
+  getLatestFaceMeta,
+  getFamilyResemblance,
+  type LatestFaceMeta,
+  type FamilyResemblanceResult,
+} from '@/app/actions/analysis/reading-insights'
 import { getAnalysisTitle } from '@/lib/domain/analysis/titles'
 import { GA } from '@/lib/analytics/ga4'
 
@@ -63,11 +70,16 @@ function FaceAnalysisPageContent() {
   const [analysisResult, setAnalysisResult] = useState<FaceAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
+  // B-2: 직전 FACE 이력(재측정 배너 + 전/후 비교). 페이지 로드 시점의 최신 = "이전".
+  const [prevReading, setPrevReading] = useState<LatestFaceMeta | null>(null)
+  // B-3: 가족 닮은꼴(분석 완료 후 서버 계산).
+  const [resemblance, setResemblance] = useState<FamilyResemblanceResult | null>(null)
   const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
   const { checkQuota, paywallProps } = useAnalysisQuota()
 
   useEffect(() => {
     getWalletBalance().then(setBalance)
+    getLatestFaceMeta(targetId ?? undefined).then(setPrevReading)
     if (!targetId) return
     const loadMember = async () => {
       const members = await getFamilyWithMissions()
@@ -76,6 +88,26 @@ function FaceAnalysisPageContent() {
     }
     loadMember()
   }, [targetId])
+
+  // B-3: 결과가 준비되면 상대(본인↔가족) 최신 FACE 와 부위 비교(AI 호출 없음, RLS).
+  useEffect(() => {
+    if (step !== 'result' || !analysisResult?.partAnalysis) {
+      setResemblance(null)
+      return
+    }
+    const pa = analysisResult.partAnalysis
+    getFamilyResemblance({
+      currentTargetId: targetId ?? undefined,
+      currentParts: {
+        forehead: pa.forehead?.assessment,
+        eyes: pa.eyes?.assessment,
+        nose: pa.nose?.assessment,
+        mouth: pa.mouth?.assessment,
+        ears: pa.ears?.assessment,
+        chin: pa.chin?.assessment,
+      },
+    }).then(setResemblance)
+  }, [step, analysisResult, targetId])
 
   const handleImageCapture = (base64: string) => setImageBase64(base64)
 
@@ -175,6 +207,9 @@ function FaceAnalysisPageContent() {
             transition={{ duration: 0.4 }}
             className="space-y-5"
           >
+            {/* 기색 재측정 안내 (B-2) — 이전 관상 이력 있을 때 */}
+            {prevReading && <GisaekRemeasureBanner daysSince={prevReading.daysSince} />}
+
             {/* 복채 잔액 + 비용 배너 */}
             <div className="relative overflow-hidden rounded-2xl border border-gold-500/30 bg-gradient-to-br from-[#1A0F00]/80 to-[#0A192F]/80 p-4 backdrop-blur-sm">
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(212,175,55,0.12),transparent_60%)]" />
@@ -310,6 +345,20 @@ function FaceAnalysisPageContent() {
 
               {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}
               {analysisResult.sajuSynergy && <SajuSynergyCard text={analysisResult.sajuSynergy} category="face" />}
+
+              {/* 전/후 비교 (B-2) — 페이지 로드 시점에 이전 관상 이력이 있을 때만 */}
+              {prevReading && (
+                <ReadingCompareCard
+                  prevScore={prevReading.score}
+                  currentScore={faceScore}
+                  prevGisaek={prevReading.gisaek}
+                  currentGisaek={analysisResult.gisaekReading}
+                  daysSince={prevReading.daysSince}
+                />
+              )}
+
+              {/* 가족 닮은꼴 (B-3) — 상대(본인↔가족) 이력이 있을 때 자동 표시 */}
+              {resemblance && <FamilyResemblanceCard data={resemblance} />}
 
               {/* 부위별 상세 분석 */}
               {analysisResult.partAnalysis && Object.values(analysisResult.partAnalysis).some(Boolean) && (
