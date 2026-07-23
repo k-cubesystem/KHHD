@@ -6,13 +6,15 @@
  * 관상은 목록 5만냥 / 실차감 2만냥, 사주·궁합·신년은 1~2만냥으로 표시되지만 실제론 무료였다.
  * 이 모듈이 표시의 단일 소스이며, 값은 각 액션의 실차감과 일치한다(표시 = 실차감).
  *
- * ⚠️ 가격 인상 금지: display 값은 실차감을 반영할 뿐이다. 여기서 값을 올리지 않는다.
- *    실차감(각 액션의 deductTalisman customAmount)을 이 소스로부터 끌어와 표시와 강제 일치시킨다.
+ * 표시 = 실차감 원칙 유지: display 값은 각 액션의 실차감과 일치한다. deductTalisman customAmount 를
+ *    이 소스에서 끌어와 표시와 강제 일치시킨다(표시만 부풀리지 않는다).
  *
- * 실차감 실측(2026-07-22):
- *  - 사주(cheonjiin)·궁합(compatibility)·신년(year2026)·오늘(daily) = 차감 없음(무료)
+ * 2026-07-23 사용자 결정: 전 기능 개별 과금(무료 배지 제거). 사주·궁합을 2만냥 유료로 전환.
+ * 실차감 실측(2026-07-23):
+ *  - 사주(cheonjiin)·궁합(compatibility) = 2만냥 (신규 유료 — saju-result·compatibility 클라이언트 deductTalisman)
+ *  - 신년(year2026)·오늘(daily) = 차감 없음(무료)
  *  - 관상(FACE)·손금(HAND)·풍수(FENGSHUI) = 2만냥
- *  - 재물(wealth_analysis) = 5만냥 / 이미지생성(IMAGE_GEN) = 5만냥
+ *  - 재물(wealth_analysis) = 5만냥 / 이미지생성(IMAGE_GEN) = 5만냥 / 종합사주풀이(samhap) = 5만냥
  */
 
 export type FeatureCostKey =
@@ -35,8 +37,8 @@ export interface FeatureCost {
 }
 
 export const FEATURE_COST = {
-  saju: { display: 0, free: true },
-  compatibility: { display: 0, free: true },
+  saju: { display: 2, free: false },
+  compatibility: { display: 2, free: false },
   newYear: { display: 0, free: true },
   today: { display: 0, free: true },
   face: { display: 2, free: false },

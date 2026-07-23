@@ -36,6 +36,10 @@ import { GA, trackEvent } from '@/lib/analytics/ga4'
 type StepType = 'check' | 'loading' | 'result'
 
 const SAMHAP_COST = FEATURE_COST.samhap.display
+// 할인 포지셔닝 — 개별 4상(사주·관상·손금·풍수)을 따로 보면 합계, 종합은 5만냥.
+const INDIVIDUAL_TOTAL =
+  FEATURE_COST.saju.display + FEATURE_COST.face.display + FEATURE_COST.palm.display + FEATURE_COST.fengshui.display
+const SAMHAP_DISCOUNT_PCT = INDIVIDUAL_TOTAL > 0 ? Math.round((1 - SAMHAP_COST / INDIVIDUAL_TOTAL) * 100) : 0
 
 const LOADING_STEPS = [
   '사주(天)의 기운을 불러옵니다...',
@@ -272,7 +276,17 @@ function SamhapCheck({
                 {balance !== null ? `${balance}만냥` : '—'}
               </span>
             </div>
-            <span className="text-sm font-bold text-gold-500 font-serif">종합 · {SAMHAP_COST}만냥</span>
+            <div className="flex items-center gap-2">
+              {SAMHAP_DISCOUNT_PCT > 0 && (
+                <span className="text-[11px] text-white/30 line-through font-sans">개별 {INDIVIDUAL_TOTAL}만냥</span>
+              )}
+              <span className="text-sm font-bold text-gold-500 font-serif">종합 {SAMHAP_COST}만냥</span>
+              {SAMHAP_DISCOUNT_PCT > 0 && (
+                <span className="text-[10px] font-bold text-red-200 bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
+                  {SAMHAP_DISCOUNT_PCT}% 할인
+                </span>
+              )}
+            </div>
           </div>
 
           <button
@@ -289,6 +303,11 @@ function SamhapCheck({
             </span>
           </button>
           <p className="text-[10px] text-white/35 text-center font-sans">
+            {SAMHAP_DISCOUNT_PCT > 0 && (
+              <>
+                개별 4가지 합 {INDIVIDUAL_TOTAL}만냥 → {SAMHAP_COST}만냥 ({SAMHAP_DISCOUNT_PCT}% 할인) ·{' '}
+              </>
+            )}
             새 사진 촬영 없이, 저장된 사주·관상·손금·풍수를 종합합니다.
           </p>
         </>

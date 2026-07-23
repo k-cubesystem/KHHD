@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { createSajuShareTokenByTarget } from '@/app/actions/ai/share-saju'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
+import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { PremiumBlurSection } from '@/components/shared/premium-blur-section'
 import { Button } from '@/components/ui/button'
@@ -23,6 +27,8 @@ import { motion } from 'framer-motion'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnalysisData = Record<string, any>
 
+const SAJU_COST = FEATURE_COST.saju.display // 단일 소스 — 표시 = 실차감(2만냥)
+
 interface SajuResultClientProps {
   target: DestinyTarget
   initialData?: AnalysisData | null
@@ -35,6 +41,11 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const { checkQuota, paywallProps, quota } = useAnalysisQuota()
+  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  useEffect(() => {
+    getWalletBalance().then(setWalletBalance)
+  }, [])
   const started = useRef(false)
   // 분석 결과 공개 순간 효과음(풍경) 1회 — 전역 음소거·최초 제스처 정책 존중(useShrineAudio 내부)
   const { play: playShrineFx } = useShrineAudio()
@@ -91,17 +102,35 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     setError(null)
     GA.analysisStart('saju')
 
+    // 복채 차감(2만냥) — 마스터/무제한은 wallet 내부에서 면제. 부족 시 업셀 모달.
+    const deduct = await deductTalisman('SAJU', SAJU_COST)
+    if (!deduct.success) {
+      setIsLoading(false)
+      const handled = handleDeductResult(deduct, {
+        currentBalance: walletBalance ?? 0,
+        requiredAmount: SAJU_COST,
+        featureLabel: '사주 분석',
+      })
+      if (!handled) toast.error(deduct.error || '복채가 부족합니다.')
+      return
+    }
+    if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)
+
     try {
       const result = await analyzeCheonjiinAction(target.id, null, false, true)
       if (result.success && result.data) {
+        // 캐시 히트(신규 연산 아님)면 환불 — 신규 분석만 과금(표시=실차감)
+        if (result.cached) await refundStudioCost('SAJU').catch(() => {})
         setData(result.data as AnalysisData)
         GA.analysisComplete('saju')
         setApiDone(true) // progress가 80% 미만이어도 완료 처리
       } else {
+        await refundStudioCost('SAJU').catch(() => {})
         setError(result.error || '분석 중 오류가 발생했습니다.')
         setIsLoading(false)
       }
     } catch (err) {
+      await refundStudioCost('SAJU').catch(() => {})
       setError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.')
       toast.error('분석 중 오류가 발생했습니다.')
       setIsLoading(false)
@@ -140,7 +169,27 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     )
   }
 
-  if (!data) return null
+  // 데이터 없음 — 차감 실패(잔액 부족)/할당 초과 등. 업셀·페이월 모달 + 복구 CTA.
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <PaywallModal {...paywallProps} />
+        <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
+        <div className="text-center space-y-4">
+          <p className="text-ink-light/60 text-sm">분석을 시작하려면 복채가 필요합니다.</p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={runAnalysis} variant="outline" size="sm" className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              다시 시도
+            </Button>
+            <Link href="/protected/store?tab=bokchae">
+              <Button size="sm">복채 충전</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // --- 결과 ---
   // 로딩→결과 하드 스왑을 부드러운 크로스페이드로(로더가 사라지고 결과가 떠오른다)
@@ -152,6 +201,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
       <PaywallModal {...paywallProps} />
+      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
 
       {/* 헤더 */}
       <header className="text-center pt-8 pb-6 px-4">

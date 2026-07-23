@@ -11,6 +11,10 @@ import { DestinyTarget } from '@/app/actions/user/destiny'
 import { toast } from 'sonner'
 import { analyzeCompatibilityAction } from '@/app/actions/ai/compatibility'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
+import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
+import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { CompatibilityResult } from './compatibility-result'
 import { CompatibilityLoading } from './compatibility-loading'
@@ -30,6 +34,8 @@ interface CompatibilityClientProps {
   targets: DestinyTarget[]
   fixedTargetId?: string
 }
+
+const COMPATIBILITY_COST = FEATURE_COST.compatibility.display // 단일 소스 — 표시 = 실차감(2만냥)
 
 // 가족 등록 관계값(한글) → 궁합 관계 셀렉트 값 추정 규칙 (§7 자동 프리셋)
 const RELATION_TYPE_RULES: Array<{ match: (rt: string) => boolean; value: string }> = [
@@ -71,6 +77,11 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [result, setResult] = useState<any>(null)
   const { checkQuota, paywallProps } = useAnalysisQuota()
+  const { bokchaeModal, closeBokchaeModal, handleDeductResult } = useInsufficientBokchae()
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  useEffect(() => {
+    getWalletBalance().then(setWalletBalance)
+  }, [])
 
   // 관계 자동 프리셋(§7): 두 대상이 정해지고 사용자가 수동으로 안 바꿨을 때만 추정값 적용. 수동 변경 항상 가능.
   useEffect(() => {
@@ -109,18 +120,35 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
     const canProceed = await checkQuota()
     if (!canProceed) return
 
+    // 복채 차감(2만냥) — 마스터/무제한은 wallet 내부 면제. 부족 시 업셀 모달.
+    const deduct = await deductTalisman('COMPATIBILITY', COMPATIBILITY_COST)
+    if (!deduct.success) {
+      const handled = handleDeductResult(deduct, {
+        currentBalance: walletBalance ?? 0,
+        requiredAmount: COMPATIBILITY_COST,
+        featureLabel: '궁합 분석',
+      })
+      if (!handled) toast.error(deduct.error || '복채가 부족합니다.')
+      return
+    }
+    if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)
+
     setIsAnalyzing(true)
 
     try {
       const response = await analyzeCompatibilityAction(person1.id, person2.id, relationship)
 
       if (response.success) {
+        // 캐시 히트(신규 연산 아님)면 환불 — 신규 분석만 과금(표시=실차감)
+        if (response.cached) await refundStudioCost('COMPATIBILITY').catch(() => {})
         setResult(response.data)
         toast.success('궁합 분석이 완료되었습니다!')
       } else {
+        await refundStudioCost('COMPATIBILITY').catch(() => {})
         toast.error(response.error || '분석 중 오류가 발생했습니다.')
       }
     } catch {
+      await refundStudioCost('COMPATIBILITY').catch(() => {})
       toast.error('분석 중 오류가 발생했습니다.')
     } finally {
       setIsAnalyzing(false)
@@ -152,6 +180,7 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
       className="min-h-screen bg-background relative overflow-hidden py-12 px-4 pb-24"
     >
       <PaywallModal {...paywallProps} />
+      <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
       {/* Hanji Texture */}
       <div className="absolute inset-0 z-[1] pointer-events-none opacity-[0.03] mix-blend-multiply bg-[url('/texture/hanji_noise.png')] bg-repeat" />
 
