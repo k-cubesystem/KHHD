@@ -28,7 +28,7 @@ import {
   ArrowRight,
   Coins,
   Compass,
-  AlertTriangle,
+  Zap,
   ShoppingBag,
   Sparkles,
   Wind,
@@ -46,6 +46,8 @@ import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { JourneyCard } from '@/components/analysis/journey-card'
+import { ScoreRing } from '@/components/studio/score-ring'
+import { DetailAnalysisAccordion } from '@/components/studio/detail-analysis-accordion'
 
 type StepType = 'upload' | 'analyzing' | 'result'
 
@@ -462,30 +464,50 @@ function FengShuiAnalysisPageContent() {
             className="space-y-5"
           >
             <div id="fengshui-result-container" className="space-y-5">
-              {/* 헤더 배너 */}
+              {/* 결과 히어로 — 점수 링(현재/잠재) + 지배오행·길방 칩 (관상·손금 수준) */}
               <div
-                className="relative overflow-hidden rounded-2xl border border-gold-500/30 p-6"
+                className="relative overflow-hidden rounded-2xl border border-gold-500/30 p-6 text-center"
                 style={{ background: 'linear-gradient(135deg, #00050D 0%, #000D1A 50%, #000508 100%)' }}
               >
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.12),transparent_70%)]" />
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
-                      <Compass className="w-6 h-6 text-gold-500" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] tracking-[0.25em] text-gold-500/50 uppercase font-sans">
-                        공간 풍수 분석
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 w-24 h-px bg-gradient-to-r from-transparent via-gold-500/40 to-transparent" />
+
+                <p className="relative text-[10px] tracking-[0.25em] text-gold-500/50 uppercase font-sans mb-1">
+                  공간 풍수 진단
+                </p>
+                <p className="relative text-lg font-serif font-bold text-gold-500 mb-4">
+                  {subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]} 풍수 진단
+                </p>
+
+                {analysisResult.spaceScore ? (
+                  <div className="relative flex flex-col items-center">
+                    <ScoreRing score={analysisResult.spaceScore.current} label="현재 점수" />
+                    {analysisResult.spaceScore.potential > analysisResult.spaceScore.current && (
+                      <div className="mt-3 inline-flex items-center gap-1.5 bg-gold-500/10 border border-gold-500/25 rounded-full px-3.5 py-1">
+                        <Sparkles className="w-3.5 h-3.5 text-gold-500" />
+                        <span className="text-xs text-white/60 font-sans">개선 시 잠재</span>
+                        <span className="text-sm font-bold text-gold-500 font-serif tabular-nums">
+                          {analysisResult.spaceScore.potential}점
+                        </span>
+                      </div>
+                    )}
+                    {analysisResult.spaceScore.description && (
+                      <p className="mt-3 text-sm text-ink-primary/80 font-serif font-light leading-relaxed max-w-[22rem]">
+                        {analysisResult.spaceScore.description}
                       </p>
-                      <p className="text-lg font-serif font-bold text-gold-500">
-                        {subjectType === 'interior' ? selectedRoom : SUBJECT_LABEL[subjectType]} 풍수 진단
-                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative flex justify-center mb-1">
+                    <div className="w-14 h-14 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center">
+                      <Compass className="w-7 h-7 text-gold-500" />
                     </div>
                   </div>
-                </div>
+                )}
+
                 {(analysisResult.dominantElement || analysisResult.luckyDirection) && (
-                  <div className="relative mt-4 flex gap-3">
+                  <div className="relative mt-4 flex gap-2 justify-center flex-wrap">
                     {analysisResult.dominantElement && (
                       <div className="flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1">
                         <span className="text-[10px] text-white/30 font-sans">지배오행</span>
@@ -505,6 +527,34 @@ function FengShuiAnalysisPageContent() {
                   </div>
                 )}
               </div>
+
+              {/* 즉시 개선 3종 (quickFixes) — 오늘 당장 실행 */}
+              {analysisResult.quickFixes && analysisResult.quickFixes.length > 0 && (
+                <Card className="card-glass-manse p-5 border-white/5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Zap className="w-4 h-4 text-gold-500" />
+                    <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">
+                      오늘 당장 · 즉시 개선 {analysisResult.quickFixes.length}종
+                    </h3>
+                  </div>
+                  <div className="space-y-2.5">
+                    {analysisResult.quickFixes.map((fix, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.08 }}
+                        className="flex items-start gap-3 rounded-xl border border-gold-500/15 bg-gold-500/[0.04] p-3"
+                      >
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gold-500/15 border border-gold-500/30 shrink-0 text-[11px] font-bold text-gold-500 font-serif">
+                          {idx + 1}
+                        </span>
+                        <p className="text-sm text-white/70 font-sans font-light leading-relaxed">{fix}</p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </Card>
+              )}
 
               {/* 8방위 길흉 분석 */}
               {analysisResult.directionalAnalysis && analysisResult.directionalAnalysis.length > 0 && (
@@ -555,30 +605,6 @@ function FengShuiAnalysisPageContent() {
                 </Card>
               )}
 
-              {/* 풍수적 문제점 */}
-              {analysisResult.problems && analysisResult.problems.length > 0 && (
-                <Card className="card-glass-manse p-5 border-red-900/20">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="w-4 h-4 text-amber-400" />
-                    <h3 className="text-sm font-serif font-bold text-amber-400">풍수 문제점</h3>
-                  </div>
-                  <ul className="space-y-2">
-                    {analysisResult.problems.map((problem, idx) => (
-                      <motion.li
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.07 }}
-                        className="flex items-start gap-2 text-sm text-white/60 font-sans font-light"
-                      >
-                        <span className="text-amber-400/60 mt-0.5 shrink-0">▸</span>
-                        <span>{problem}</span>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </Card>
-              )}
-
               {/* 필요 아이템 */}
               {analysisResult.shoppingList && analysisResult.shoppingList.length > 0 && (
                 <Card className="card-glass-manse p-5 border-white/5">
@@ -603,13 +629,8 @@ function FengShuiAnalysisPageContent() {
                 </Card>
               )}
 
-              {/* 상세 분석 */}
-              <Card className="card-glass-manse p-5 border-white/5">
-                <h3 className="text-sm font-serif font-bold text-gold-500 mb-3">상세 분석 및 개선 방향</h3>
-                <p className="text-sm text-white/60 leading-loose whitespace-pre-wrap font-sans font-light">
-                  {analysisResult.currentAnalysis}
-                </p>
-              </Card>
+              {/* 상세 분석 — AI 원문은 [[태그]]·마크다운 정돈 후 "전문 보기"로 강등(유령 태그 노출 차단) */}
+              <DetailAnalysisAccordion raw={analysisResult.currentAnalysis} title="풍수 상세 · 전문 보기" />
             </div>
 
             <ShareSaveButtons
