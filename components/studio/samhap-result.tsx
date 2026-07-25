@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Link2, Waves, Clock, Sparkles, Compass, Scale } from 'lucide-react'
+import { Link2, Waves, Clock, Sparkles, Compass, Scale, Sprout, HeartHandshake, Briefcase } from 'lucide-react'
 import { ScoreRing } from './score-ring'
 import { DetailAnalysisAccordion } from './detail-analysis-accordion'
 import { cleanAnalysisText } from '@/lib/domain/analysis/clean-analysis-text'
@@ -15,6 +15,14 @@ function verdictStyle(verdict: string): { color: string; bg: string; border: str
   return { color: '#E4A0A0', bg: 'rgba(158,43,43,0.16)', border: 'rgba(158,43,43,0.40)' }
 }
 
+/** 판정을 일반인 말로 — 용어(합/반합/충)는 뱃지에, 뜻은 캡션에. */
+function verdictEasy(verdict: string): string {
+  const v = verdict.trim()
+  if (v.startsWith('합')) return '세 군데가 같은 말을 해요'
+  if (v.startsWith('반')) return '둘은 맞고 하나는 다른 말이에요'
+  return '서로 다른 말 — 바꿀 수 있는 자리예요'
+}
+
 /**
  * 종합사주풀이 결과 뷰 — 프리미엄 무드(玄·골드). 1차 카드 문법 재사용.
  * parsed 있으면 구조화 카드, 없으면 원문(raw) 폴백. 캡처 컨테이너 안에 위치.
@@ -25,6 +33,9 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
   const raw = result.raw ?? ''
   const crosses = p?.crosses ?? []
   const now = p?.now
+  const nature = p?.nature
+  const matchPeople = p?.matchPeople
+  const matchJob = p?.matchJob
   const coherence = result.coherence
 
   return (
@@ -97,15 +108,36 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
             </motion.div>
           )}
 
+          {/* 타고난 그릇 — 일간 물상 비유 (v3) */}
+          {nature && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-gold-500/25 bg-white/[0.02] p-5"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Sprout className="w-4 h-4 text-gold-500" />
+                <div>
+                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">타고난 나의 그릇</h3>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
+                    어떤 사람으로 태어났나
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm font-serif font-bold text-ink-primary/90 mb-1.5">{nature.title}</p>
+              <p className="text-xs text-ink-primary/70 font-sans font-light leading-relaxed">{nature.detail}</p>
+            </motion.div>
+          )}
+
           {/* 교차 검증 4주제 — 궁위-십성 대응 (v2) */}
           {crosses.length > 0 && (
             <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Scale className="w-4 h-4 text-gold-500" />
                 <div>
-                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">삼재 교차 검증</h3>
+                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">겹쳐서 본 네 가지 운</h3>
                   <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
-                    십성 × 궁위 × 선 — 합·반합·충
+                    재물 · 일 · 인연 · 건강 — 사주×얼굴×손
                   </p>
                 </div>
               </div>
@@ -120,7 +152,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
                       transition={{ delay: i * 0.07 }}
                       className="rounded-xl p-4 border border-white/8 bg-black/20"
                     >
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
                         <p className="text-sm font-serif font-bold text-ink-primary/90">{c.label}</p>
                         <span
                           className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-serif font-bold border"
@@ -129,12 +161,67 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
                           {c.verdict}
                         </span>
                       </div>
+                      <p className="text-[10px] font-sans mb-1.5" style={{ color: vs.color, opacity: 0.75 }}>
+                        {verdictEasy(c.verdict)}
+                      </p>
                       <p className="text-xs text-ink-primary/70 font-sans font-light leading-relaxed">{c.detail}</p>
                     </motion.div>
                   )
                 })}
               </div>
             </div>
+          )}
+
+          {/* 나랑 잘 맞는 사람 (v3) */}
+          {matchPeople && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden rounded-2xl border border-gold-500/40 p-5"
+              style={{
+                background: 'linear-gradient(135deg, rgba(201,168,76,0.09) 0%, rgba(158,43,43,0.05) 100%)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gold-500/15 border border-gold-500/40">
+                  <HeartHandshake className="w-3.5 h-3.5 text-gold-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">나랑 잘 맞는 사람</h3>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
+                    부족한 기운을 채워주는 인연
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm font-serif font-bold text-gold-300 mb-1.5">{matchPeople.title}</p>
+              <p className="text-xs text-ink-primary/75 font-sans font-light leading-relaxed">{matchPeople.detail}</p>
+            </motion.div>
+          )}
+
+          {/* 나랑 잘 맞는 직업 (v3) */}
+          {matchJob && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden rounded-2xl border border-gold-500/40 p-5"
+              style={{
+                background: 'linear-gradient(135deg, rgba(201,168,76,0.09) 0%, rgba(45,95,138,0.06) 100%)',
+              }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gold-500/15 border border-gold-500/40">
+                  <Briefcase className="w-3.5 h-3.5 text-gold-500" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">나랑 잘 맞는 직업</h3>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
+                    타고난 기운을 쓰는 무대
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm font-serif font-bold text-gold-300 mb-1.5">{matchJob.title}</p>
+              <p className="text-xs text-ink-primary/75 font-sans font-light leading-relaxed">{matchJob.detail}</p>
+            </motion.div>
           )}
 
           {/* 정합 근거 — 코드 결정론 판정 (v2) */}
@@ -176,9 +263,9 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
                   <Link2 className="w-3.5 h-3.5 text-gold-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-serif font-bold text-gold-500 tracking-wide">네 기운의 합치점</p>
+                  <p className="text-sm font-serif font-bold text-gold-500 tracking-wide">여러 군데서 겹친 이야기</p>
                   <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
-                    사주 × 관상 × 손금 × 풍수
+                    겹치면 우연이 아니에요
                   </p>
                 </div>
               </div>
@@ -199,7 +286,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
               <div className="flex items-center gap-2 mb-3">
                 <Waves className="w-4 h-4" style={{ color: '#A8C5DA' }} />
                 <h3 className="text-sm font-serif font-bold tracking-wide" style={{ color: '#A8C5DA' }}>
-                  완급이 필요한 결
+                  어긋난 자리, 그래서 바꿀 수 있는 자리
                 </h3>
               </div>
               <p className="text-sm font-serif font-bold text-ink-primary/85 mb-1">{p.tension.title}</p>
@@ -237,7 +324,12 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
             <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="w-4 h-4 text-gold-500" />
-                <h3 className="text-sm font-serif font-bold text-gold-500">개운 처방</h3>
+                <div>
+                  <h3 className="text-sm font-serif font-bold text-gold-500">개운 처방</h3>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
+                    오늘부터 할 수 있는 것
+                  </p>
+                </div>
               </div>
               <ul className="space-y-2">
                 {p.remedies.map((r, i) => (

@@ -112,3 +112,34 @@ describe('parseSamhap v2 — 삼재교차법 태그', () => {
     expect(p.crosses[0].key).toBe('love')
   })
 })
+
+describe('parseSamhap v3 — 쉬운 언어·매치 태그', () => {
+  const v3 = `
+[[NATURE: 우뚝 선 소나무 | 큰 나무처럼 곧게 자라는 분이에요. 쉽게 휘지 않지만, 그래서 바람을 정면으로 맞기도 해요(이런 기둥을 갑목이라고 불러요).]]
+[[MATCH_PEOPLE: 물처럼 스며드는 사람 | 당신을 몰아붙이지 않고 곁에서 채워주는 사람이 힘이 돼요. 둥글고 부드러운 인상, 잘 들어주는 사람이요.]]
+[[MATCH_JOB: 키우고 가르치는 일 | 교육, 기획, 콘텐츠처럼 무언가를 자라게 하는 일이 잘 맞아요. 이마(관록궁)가 훤하고 두뇌선이 길어 오래 파는 일에 강해요.]]
+`
+
+  it('NATURE·MATCH_PEOPLE·MATCH_JOB 파이프 파싱', () => {
+    const p = parseSamhap(v3)
+    expect(p.nature?.title).toBe('우뚝 선 소나무')
+    expect(p.nature?.detail).toContain('갑목')
+    expect(p.matchPeople?.title).toBe('물처럼 스며드는 사람')
+    expect(p.matchJob?.title).toBe('키우고 가르치는 일')
+    expect(p.matchJob?.detail).toContain('관록궁')
+    expect(isSamhapEmpty(p)).toBe(false)
+  })
+
+  it('v3 태그 하나만 있어도 empty 아님', () => {
+    const p = parseSamhap('[[MATCH_JOB: 흐름을 다루는 일 | IT나 데이터처럼요]]')
+    expect(isSamhapEmpty(p)).toBe(false)
+    expect(p.matchJob?.detail).toBe('IT나 데이터처럼요')
+  })
+
+  it('v2 이전 응답 — v3 필드 전부 undefined (하위호환)', () => {
+    const p = parseSamhap('[[SUMMARY: 요약]]')
+    expect(p.nature).toBeUndefined()
+    expect(p.matchPeople).toBeUndefined()
+    expect(p.matchJob).toBeUndefined()
+  })
+})

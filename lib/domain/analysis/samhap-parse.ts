@@ -1,9 +1,12 @@
 /**
  * 삼합(三合) 리포트 파서 — Gemini 텍스트 1콜 응답의 `[[태그]]` 구조를 파싱한다(B-4).
  *
- * 태그 스키마 v2 (PLAN-samhap-synthesis-v2 §5 — v1 태그는 전부 유지, 구 리포트 재열람 호환):
+ * 태그 스키마 v3 (PLAN-samhap-synthesis-v2 §5·§8 — 구 태그 전부 유지, 구 리포트 재열람 호환):
  *   [[SUMMARY: 종합 한줄]]
  *   [[NOW: 현재 대운·구간 | 삼정·손금과 겹쳐 본 현재 국면]]            (v2, 파이프 구분)
+ *   [[NATURE: 비유 제목 | 타고난 그릇 — 일간 물상 비유 풀이]]           (v3)
+ *   [[MATCH_PEOPLE: 한줄 | 나랑 잘 맞는 사람 상세]]                     (v3)
+ *   [[MATCH_JOB: 한줄 | 나랑 잘 맞는 직업 상세]]                        (v3)
  *   [[CROSS_WEALTH: 합|반합|충 | 사주·관상·손금 근거를 엮은 해석]]      (v2 — CAREER/LOVE/HEALTH 동일)
  *   [[HARMONY_1: 합치점 제목, 설명]]  (HARMONY_1~3)
  *   [[TENSION: 긴장점 제목, 해석]]   (v2 에선 체용 상충으로 재정의 — 태그는 동일)
@@ -39,6 +42,12 @@ export interface SamhapParsed {
   summary?: string
   /** 현재 국면 (대운 × 삼정 × 손금 시간축 정렬) — v2 */
   now?: { phase: string; detail: string }
+  /** 타고난 그릇 — 일간 물상 비유 중심 (v3) */
+  nature?: { title: string; detail: string }
+  /** 나랑 잘 맞는 사람 (v3) */
+  matchPeople?: { title: string; detail: string }
+  /** 나랑 잘 맞는 직업 (v3) */
+  matchJob?: { title: string; detail: string }
   /** 주제별 교차 검증 (재물·일·인연·건강) — v2 */
   crosses: SamhapCross[]
   /** 합치점 3 (사주·관상·손금의 일치) */
@@ -106,11 +115,18 @@ export function parseSamhap(raw: string): SamhapParsed {
   const np = pipe(raw, 'NOW')
   const now = np ? { phase: np[0], detail: np[1] } : undefined
 
+  const nat = pipe(raw, 'NATURE')
+  const nature = nat ? { title: nat[0], detail: nat[1] } : undefined
+  const mp = pipe(raw, 'MATCH_PEOPLE')
+  const matchPeople = mp ? { title: mp[0], detail: mp[1] } : undefined
+  const mj = pipe(raw, 'MATCH_JOB')
+  const matchJob = mj ? { title: mj[0], detail: mj[1] } : undefined
+
   const tp = two(raw, 'TENSION')
   const tension = tp ? { title: tp[0], interpretation: tp[1] } : undefined
   const summary = one(raw, 'SUMMARY') ?? undefined
 
-  return { summary, now, crosses, harmonies, tension, timings, remedies }
+  return { summary, now, nature, matchPeople, matchJob, crosses, harmonies, tension, timings, remedies }
 }
 
 /** 구조화된 값이 하나도 없으면 true → 호출부는 원문(raw) 폴백을 노출한다. */
@@ -121,6 +137,9 @@ export function isSamhapEmpty(p: SamhapParsed): boolean {
     p.remedies.length === 0 &&
     p.crosses.length === 0 &&
     !p.now &&
+    !p.nature &&
+    !p.matchPeople &&
+    !p.matchJob &&
     !p.tension &&
     !p.summary
   )
