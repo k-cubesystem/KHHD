@@ -161,6 +161,42 @@ describe('buildGreeting — 오랜만 / 이어서', () => {
   })
 })
 
+describe('buildGreeting — 새 대화(new_chat)', () => {
+  it('새 대화면 방문 간격과 무관하게 new_chat', () => {
+    expect(resolveVisitKind({ now: NOW, lastVisitAt: '2026-07-25T01:00:00.000Z', forceNewChat: true })).toBe('new_chat')
+    expect(resolveVisitKind({ now: NOW, lastVisitAt: '2026-06-01T01:00:00.000Z', forceNewChat: true })).toBe('new_chat')
+  })
+
+  it('첫 만남이 새 대화보다 우선 — 처음 온 사람에게 "새로 폈다"고 하지 않는다', () => {
+    expect(resolveVisitKind({ now: NOW, lastVisitAt: null, forceNewChat: true })).toBe('first')
+  })
+
+  it('간략하다 — 2줄 이하이고 지난 고민을 끌고 오지 않는다', () => {
+    const g = buildGreeting({
+      now: NOW,
+      lastVisitAt: '2026-07-25T01:00:00.000Z',
+      forceNewChat: true,
+      memories: [concern],
+      userName: '민수',
+    })
+    expect(g.visitKind).toBe('new_chat')
+    expect(g.lines.length).toBeLessThanOrEqual(2)
+    const joined = g.lines.map((l) => l.text).join('\n')
+    expect(joined).not.toContain('이직')
+    expect(g.lines.at(-1)?.text).toBe(g.question)
+  })
+
+  it('새 대화엔 대상 고지를 넣지 않는다 (짧게 유지)', () => {
+    const g = buildGreeting({
+      now: NOW,
+      lastVisitAt: '2026-07-25T01:00:00.000Z',
+      forceNewChat: true,
+      targetName: '어머니',
+    })
+    expect(g.lines.length).toBeLessThanOrEqual(2)
+  })
+})
+
 describe('buildGreeting — 점사 대상(가족)', () => {
   it('가족 대상이면 질문 바로 앞에 대상 고지를 넣는다', () => {
     const g = buildGreeting({ now: NOW, lastVisitAt: null, targetName: '어머니' })

@@ -19,9 +19,10 @@ import {
   type ShamanQuestionStatus,
   type PastChatSession,
 } from '@/app/actions/ai/shaman-chat'
-import type { Greeting } from '@/lib/domain/chat/greeting'
+import { greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
 import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
 import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'
+import { OverlayPortal } from '@/components/ai/chat/overlay-portal'
 import { useFamilyMembers } from '@/hooks/use-family-members'
 import { useTts } from '@/hooks/useTts'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
@@ -223,143 +224,150 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
     new Date(iso).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-label="지난 대화">
-      <button aria-label="닫기" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ y: 60, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="relative w-full max-w-[480px] max-h-[78vh] rounded-t-2xl border border-b-0 border-primary/20 bg-[#12100a] flex flex-col overflow-hidden"
+    // 포털 — 채팅 루트(zIndex:10)가 만든 스택 컨텍스트를 벗어나야 하단 네비(z-nav:40) 위로 뜬다.
+    <OverlayPortal>
+      <div
+        className="fixed inset-0 z-[var(--z-modal)] flex items-end justify-center"
+        role="dialog"
+        aria-label="지난 대화"
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-primary/10">
-          <div className="flex items-center gap-2">
-            {viewing && (
-              <button
-                onClick={() => setViewing(null)}
-                aria-label="목록으로"
-                className="p-1 -ml-1 text-primary/60 hover:text-primary"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-            )}
-            <p className="text-sm font-serif text-gold-200">
-              {viewing ? viewing.session.title || '지난 문답' : '지난 대화'}
-            </p>
-          </div>
-          <button onClick={onClose} aria-label="닫기" className="p-1 text-primary/50 hover:text-primary">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* 검색 — 목록 화면에서만 */}
-        {!viewing && (
-          <div className="px-4 py-2 border-b border-primary/8">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="지난 문답 검색 (제목·요지)"
-              className="w-full h-8 rounded-lg bg-surface/50 border border-primary/15 px-2.5 text-[12px] text-foreground/85 outline-none focus:border-primary/40 placeholder:text-ink-light/30"
-            />
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {!viewing ? (
-            // 세션 목록
-            <div className="divide-y divide-primary/8">
-              {sessions === null && (
-                <div className="p-6 text-center text-xs text-ink-light/40">
-                  <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-                  지난 대화를 불러오는 중…
-                </div>
-              )}
-              {sessions?.length === 0 && (
-                <p className="p-8 text-center text-xs text-ink-light/40">
-                  {search ? (
-                    <>「{search}」에 해당하는 문답이 없습니다.</>
-                  ) : (
-                    <>
-                      아직 종료된 대화가 없습니다.
-                      <br />
-                      「새 대화」로 마친 문답이 이곳에 보관됩니다.
-                    </>
-                  )}
-                </p>
-              )}
-              {sessions?.map((s) => (
+        <button aria-label="닫기" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <motion.div
+          initial={{ y: 60, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="relative w-full max-w-[480px] max-h-[78vh] rounded-t-2xl border border-b-0 border-primary/20 bg-[#12100a] flex flex-col overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-primary/10">
+            <div className="flex items-center gap-2">
+              {viewing && (
                 <button
-                  key={s.id}
-                  onClick={() => void openSession(s)}
-                  className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors"
+                  onClick={() => setViewing(null)}
+                  aria-label="목록으로"
+                  className="p-1 -ml-1 text-primary/60 hover:text-primary"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[13px] text-foreground/85 truncate">{s.title || '(첫 질문 없음)'}</p>
-                    {s.purged && (
-                      <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-full border border-primary/20 text-primary/50">
-                        연기로 흩어짐
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10.5px] text-ink-light/35 mt-0.5">{fmtDate(s.endedAt)} 종료</p>
-                </button>
-              ))}
-              {hasMore && (
-                <button
-                  onClick={() => void loadMore()}
-                  disabled={loadingMore}
-                  className="w-full py-3 text-[11.5px] text-gold-400 hover:bg-primary/5 transition-colors disabled:opacity-50"
-                >
-                  {loadingMore ? '불러오는 중…' : '더 보기'}
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
               )}
-            </div>
-          ) : viewing.messages === null ? (
-            <div className="p-6 text-center text-xs text-ink-light/40">
-              <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-              문답을 여는 중…
-            </div>
-          ) : viewing.session.purged ? (
-            // 원문 정리된 세션 — 요약만 보존
-            <div className="p-6 space-y-4 text-center">
-              <p className="text-2xl">🕯️</p>
-              <p className="text-[12.5px] text-gold-200/80 font-serif leading-relaxed">
-                오래된 문답은 연기로 흩어졌으나,
-                <br />
-                신은 그 뜻을 기억합니다.
+              <p className="text-sm font-serif text-gold-200">
+                {viewing ? viewing.session.title || '지난 문답' : '지난 대화'}
               </p>
-              {viewing.session.summary && (
-                <div className="text-left rounded-xl border border-primary/15 bg-surface/40 p-4">
-                  <p className="text-[10px] tracking-[0.2em] text-primary/50 font-serif mb-2">신이 기억하는 요지</p>
-                  <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">
-                    {viewing.session.summary}
-                  </p>
-                </div>
-              )}
             </div>
-          ) : (
-            // 원문 열람 (읽기 전용)
-            <div className="p-4 space-y-3">
-              {viewing.messages.length === 0 && (
-                <p className="p-4 text-center text-xs text-ink-light/40">이 대화에는 남은 문답이 없습니다.</p>
-              )}
-              {viewing.messages.map((m, i) => (
-                <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  <div
-                    className={cn(
-                      'max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap break-words',
-                      m.role === 'user'
-                        ? 'rounded-br-none bg-gradient-to-br from-[#2a2318] to-[#1e1a10] text-primary/90 border border-gold-600/25'
-                        : 'rounded-bl-none bg-surface/60 border border-primary/8 text-foreground/85'
-                    )}
-                  >
-                    {m.content}
-                  </div>
-                </div>
-              ))}
+            <button onClick={onClose} aria-label="닫기" className="p-1 text-primary/50 hover:text-primary">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* 검색 — 목록 화면에서만 */}
+          {!viewing && (
+            <div className="px-4 py-2 border-b border-primary/8">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="지난 문답 검색 (제목·요지)"
+                className="w-full h-8 rounded-lg bg-surface/50 border border-primary/15 px-2.5 text-[12px] text-foreground/85 outline-none focus:border-primary/40 placeholder:text-ink-light/30"
+              />
             </div>
           )}
-        </div>
-      </motion.div>
-    </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {!viewing ? (
+              // 세션 목록
+              <div className="divide-y divide-primary/8">
+                {sessions === null && (
+                  <div className="p-6 text-center text-xs text-ink-light/40">
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+                    지난 대화를 불러오는 중…
+                  </div>
+                )}
+                {sessions?.length === 0 && (
+                  <p className="p-8 text-center text-xs text-ink-light/40">
+                    {search ? (
+                      <>「{search}」에 해당하는 문답이 없습니다.</>
+                    ) : (
+                      <>
+                        아직 종료된 대화가 없습니다.
+                        <br />
+                        「새 대화」로 마친 문답이 이곳에 보관됩니다.
+                      </>
+                    )}
+                  </p>
+                )}
+                {sessions?.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => void openSession(s)}
+                    className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[13px] text-foreground/85 truncate">{s.title || '(첫 질문 없음)'}</p>
+                      {s.purged && (
+                        <span className="flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded-full border border-primary/20 text-primary/50">
+                          연기로 흩어짐
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10.5px] text-ink-light/35 mt-0.5">{fmtDate(s.endedAt)} 종료</p>
+                  </button>
+                ))}
+                {hasMore && (
+                  <button
+                    onClick={() => void loadMore()}
+                    disabled={loadingMore}
+                    className="w-full py-3 text-[11.5px] text-gold-400 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore ? '불러오는 중…' : '더 보기'}
+                  </button>
+                )}
+              </div>
+            ) : viewing.messages === null ? (
+              <div className="p-6 text-center text-xs text-ink-light/40">
+                <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+                문답을 여는 중…
+              </div>
+            ) : viewing.session.purged ? (
+              // 원문 정리된 세션 — 요약만 보존
+              <div className="p-6 space-y-4 text-center">
+                <p className="text-2xl">🕯️</p>
+                <p className="text-[12.5px] text-gold-200/80 font-serif leading-relaxed">
+                  오래된 문답은 연기로 흩어졌으나,
+                  <br />
+                  신은 그 뜻을 기억합니다.
+                </p>
+                {viewing.session.summary && (
+                  <div className="text-left rounded-xl border border-primary/15 bg-surface/40 p-4">
+                    <p className="text-[10px] tracking-[0.2em] text-primary/50 font-serif mb-2">신이 기억하는 요지</p>
+                    <p className="text-[12px] text-foreground/75 leading-relaxed whitespace-pre-wrap">
+                      {viewing.session.summary}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // 원문 열람 (읽기 전용)
+              <div className="p-4 space-y-3">
+                {viewing.messages.length === 0 && (
+                  <p className="p-4 text-center text-xs text-ink-light/40">이 대화에는 남은 문답이 없습니다.</p>
+                )}
+                {viewing.messages.map((m, i) => (
+                  <div key={i} className={cn('flex', m.role === 'user' ? 'justify-end' : 'justify-start')}>
+                    <div
+                      className={cn(
+                        'max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap break-words',
+                        m.role === 'user'
+                          ? 'rounded-br-none bg-gradient-to-br from-[#2a2318] to-[#1e1a10] text-primary/90 border border-gold-600/25'
+                          : 'rounded-bl-none bg-surface/60 border border-primary/8 text-foreground/85'
+                      )}
+                    >
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </OverlayPortal>
   )
 }
 
@@ -550,14 +558,12 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       }
       setSessionId(sessionResult.sessionId)
 
-      let restored: ShamanChatMessage[] = []
       if (!sessionResult.isNew) {
         // 기존 세션 메시지 복원
         const msgResult = await loadChatSessionMessages(sessionResult.sessionId)
         if (msgResult.success && msgResult.messages) {
-          restored = msgResult.messages
-          setMessages(restored)
-          setTurnCount(Math.floor(restored.length / 2))
+          setMessages(msgResult.messages)
+          setTurnCount(Math.floor(msgResult.messages.length / 2))
           // 복원 후 스크롤 맨 아래로
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' }), 100)
         }
@@ -566,10 +572,11 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         setTurnCount(0)
       }
 
-      // 빈 대화일 때만 오프닝. 서버가 저장까지 하므로 재입장 시엔 일반 메시지로 복원된다.
-      if (restored.length === 0) {
-        const opening = await getChatOpening(familyMemberId)
-        if (opening.success && opening.greeting) setGreeting(opening.greeting)
+      // 열 때마다 오프닝을 새로 받는다(휘발성). 지난 대화가 있으면 그 아래에 붙는다.
+      const opening = await getChatOpening(familyMemberId)
+      if (opening.success && opening.greeting) {
+        setGreeting(opening.greeting)
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 250)
       }
     } finally {
       setIsSessionLoading(false)
@@ -610,7 +617,11 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       setTurnCount(0)
       setDeityCode(null)
       setDeityEmotion('neutral')
+      setGreeting(null)
       toast.success('새 대화가 시작되었습니다.')
+      // 빈 화면으로 두지 않는다 — 자리를 새로 편 만큼 짧게 먼저 말을 건다.
+      const opening = await getChatOpening(selectedFamilyId, { newChat: true })
+      if (opening.success && opening.greeting) setGreeting(opening.greeting)
     } else {
       toast.error(result.error || '새 대화 시작 실패')
     }
@@ -663,7 +674,17 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
 
     setIsLoading(true)
     const userMsg: ShamanChatMessage = { role: 'user', content: textToSend, timestamp: new Date().toISOString() }
-    setMessages((prev) => [...prev, userMsg])
+
+    // 선문안은 저장하지 않는 휘발성 인사지만, 사용자가 그 질문에 답한 순간부터는 대화의 일부다.
+    // 로컬 메시지로 접어 넣고 AI 히스토리에도 실어 보낸다 — 안 그러면 "아직 그대로예요" 같은
+    // 답을 신위가 무슨 말인지 모른 채 받는다.
+    const greetingMsg: ShamanChatMessage | null = greeting
+      ? { role: 'assistant', content: greetingToContent(greeting), timestamp: new Date().toISOString() }
+      : null
+    const history = greetingMsg ? [...messages, greetingMsg] : messages
+
+    setMessages((prev) => (greetingMsg ? [...prev, greetingMsg, userMsg] : [...prev, userMsg]))
+    setGreeting(null)
     setInputMessage('')
 
     // textarea 높이 리셋
@@ -673,7 +694,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50)
 
     try {
-      const result = await sendShamanChatMessage(textToSend, messages, turnCount, selectedFamilyId)
+      const result = await sendShamanChatMessage(textToSend, history, turnCount, selectedFamilyId)
       if (result.success && result.response) {
         const aiMsg: ShamanChatMessage = {
           role: 'assistant',
@@ -738,14 +759,19 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       } else {
         if (result.noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
         else toast.error(result.error || '전송 실패')
-        // 실패 시 user 메시지 롤백
-        setMessages((prev) => prev.slice(0, -1))
+        rollbackSend()
       }
     } catch {
       toast.error('오류가 발생했습니다.')
-      setMessages((prev) => prev.slice(0, -1))
+      rollbackSend()
     } finally {
       setIsLoading(false)
+    }
+
+    /** 전송 실패 되돌리기 — 접어 넣었던 선문안까지 함께 걷어내고 인사를 다시 세운다. */
+    function rollbackSend() {
+      setMessages((prev) => prev.slice(0, greetingMsg ? -2 : -1))
+      if (greetingMsg && greeting) setGreeting(greeting)
     }
   }
 
@@ -892,7 +918,31 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
           </div>
         )}
 
-        {/* 선문안 — 신위가 먼저 건네는 오프닝. 사용자가 답하면 그 위로 대화가 이어진다. */}
+        <AnimatePresence mode="popLayout">
+          {/* 메시지 목록 */}
+          {!isSessionLoading &&
+            messages.map((msg, i) => {
+              const prev = messages[i - 1]
+              const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant')
+              return (
+                <Bubble
+                  key={`${msg.timestamp}-${i}`}
+                  msg={msg}
+                  showAvatar={showAvatar}
+                  onSpeak={ttsSupported ? speakDeity : undefined}
+                />
+              )
+            })}
+
+          {/* 타이핑 */}
+          {isLoading && (
+            <motion.div key="typing" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
+              <TypingDots />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 선문안 — 지금 막 건네는 말이므로 지난 대화 '아래'에 붙는다. */}
         {!isSessionLoading && greeting && (
           <GreetingIntro
             lines={greeting.lines}
@@ -917,30 +967,6 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
             }
           />
         )}
-
-        <AnimatePresence mode="popLayout">
-          {/* 메시지 목록 */}
-          {!isSessionLoading &&
-            messages.map((msg, i) => {
-              const prev = messages[i - 1]
-              const showAvatar = msg.role === 'assistant' && (!prev || prev.role !== 'assistant')
-              return (
-                <Bubble
-                  key={`${msg.timestamp}-${i}`}
-                  msg={msg}
-                  showAvatar={showAvatar}
-                  onSpeak={ttsSupported ? speakDeity : undefined}
-                />
-              )
-            })}
-
-          {/* 타이핑 */}
-          {isLoading && (
-            <motion.div key="typing" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
-              <TypingDots />
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* 스크롤 앵커 */}
         <div ref={bottomRef} className="h-1" />

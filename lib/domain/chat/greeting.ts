@@ -14,8 +14,8 @@
 
 import type { MemoryType } from '@/lib/ai/memory'
 
-/** 방문 유형 — 오프닝의 톤을 가른다. */
-export type VisitKind = 'first' | 'today_first' | 'long_absence' | 'resume'
+/** 방문 유형 — 오프닝의 톤을 가른다. new_chat 은 사용자가 의도적으로 대화를 새로 편 경우. */
+export type VisitKind = 'first' | 'today_first' | 'long_absence' | 'resume' | 'new_chat'
 
 /** 오프닝 한 줄. narration 은 말풍선이 아니라 중앙 이탤릭으로 렌더된다(ZETA 내레이션 UI). */
 export interface GreetingLine {
@@ -43,6 +43,8 @@ export interface GreetingInput {
   memories?: GreetingMemory[]
   /** 기원 단(祈願). 관계의 깊이 표현에 쓴다. */
   devotionLevel?: number | null
+  /** 사용자가 '새 대화'를 눌러 자리를 새로 편 경우 — 방문 간격과 무관하게 짧게 연다. */
+  forceNewChat?: boolean
 }
 
 export interface Greeting {
@@ -67,9 +69,13 @@ function kstDayKey(iso: string): string {
 }
 
 /** 방문 유형 판정. 기억도 없고 방문 기록도 없으면 첫 만남. */
-export function resolveVisitKind(input: Pick<GreetingInput, 'lastVisitAt' | 'now' | 'memories'>): VisitKind {
+export function resolveVisitKind(
+  input: Pick<GreetingInput, 'lastVisitAt' | 'now' | 'memories' | 'forceNewChat'>
+): VisitKind {
   const { lastVisitAt, now } = input
   const hasMemory = (input.memories?.length ?? 0) > 0
+  // 첫 만남은 새 대화보다 우선 — 처음 온 사람에게 "새로 폈다"고 하면 말이 안 된다.
+  if (input.forceNewChat && (lastVisitAt || hasMemory)) return 'new_chat'
   if (!lastVisitAt) return hasMemory ? 'today_first' : 'first'
 
   const last = new Date(lastVisitAt).getTime()
@@ -202,6 +208,24 @@ function buildLongAbsence(input: GreetingInput): { lines: GreetingLine[]; questi
   }
 }
 
+/** 새 대화 — 사용자가 자리를 새로 폈다. 지난 이야기를 끌고 오지 않고 짧게 연다. */
+function buildNewChat(input: GreetingInput): { lines: GreetingLine[]; question: string; quickReplies: string[] } {
+  const variants = [
+    '새로 자리를 폈어요. 어떤 이야기부터 꺼내볼까요?',
+    '깨끗한 자리예요. 지금 마음에 걸리는 게 뭔가요?',
+    '처음부터 다시 들을게요. 무엇이 궁금하세요?',
+  ]
+  const question = variants[variantIndex(input.now, variants.length)]
+  return {
+    lines: [
+      { kind: 'narration', text: '자리를 고쳐 앉습니다.' },
+      { kind: 'speech', text: question },
+    ],
+    question,
+    quickReplies: ['운의 흐름이요', '고민이 있어요', '사람 문제요'],
+  }
+}
+
 /** 이어서 — 같은 날 재입장. 인사 반복 없이 짧게 잇는다. */
 function buildResume(input: GreetingInput): { lines: GreetingLine[]; question: string; quickReplies: string[] } {
   const variants = [
@@ -226,15 +250,17 @@ export function buildGreeting(input: GreetingInput): Greeting {
   const built =
     visitKind === 'first'
       ? buildFirst(input)
-      : visitKind === 'long_absence'
-        ? buildLongAbsence(input)
-        : visitKind === 'resume'
-          ? buildResume(input)
-          : buildTodayFirst(input)
+      : visitKind === 'new_chat'
+        ? buildNewChat(input)
+        : visitKind === 'long_absence'
+          ? buildLongAbsence(input)
+          : visitKind === 'resume'
+            ? buildResume(input)
+            : buildTodayFirst(input)
 
   const lines = [...built.lines]
   const target = input.targetName?.trim()
-  if (target && visitKind !== 'resume') {
+  if (target && visitKind !== 'resume' && visitKind !== 'new_chat') {
     // 질문 앞에 대상 고지를 끼운다 — 질문은 항상 마지막 줄이어야 한다.
     lines.splice(lines.length - 1, 0, { kind: 'speech', text: `오늘은 ${target}님을 함께 살펴보는 자리네요.` })
   }
