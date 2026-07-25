@@ -106,7 +106,9 @@ export function GlobalGuide() {
   }, [])
 
   const tour = useMemo(() => TOURS[pathname] ?? null, [pathname])
-  const hidden = pathname.startsWith('/protected/shrine')
+  // 몰입 화면에서는 하단 바를 띄우지 않는다.
+  // 신당: 전체화면 연출을 가림 / 고민상담: 대화에 집중해야 하는 화면이라 공지·안내가 방해된다.
+  const hidden = pathname.startsWith('/protected/shrine') || pathname.startsWith('/protected/ai-shaman')
   // 오늘의 상식 — 날짜 기반 결정적 인덱스(마운트 시 1회 고정)
   const todayIdx = useMemo(() => todayTipIndex(), [])
 

@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { useTranslations } from 'next-intl'
 import {
   sendShamanChatMessage,
-  getShamanChatStarters,
   getShamanQuestionStatus,
   purchaseShamanQuestions,
   getOrCreateChatSession,
@@ -467,13 +466,6 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const [isLoading, setIsLoading] = useState(false)
   const [isRecharging, setIsRecharging] = useState(false)
   const [turnCount, setTurnCount] = useState(0)
-  const [starters, setStarters] = useState([
-    '올해 재물운 흐름 궁금해요',
-    '이직 시기가 맞을까요?',
-    '연애운 솔직하게 봐주세요',
-    '지금 제 사주 흐름은요?',
-    '건강 주의할 점 있나요?',
-  ])
   const [questionStatus, setQuestionStatus] = useState<ShamanQuestionStatus | null>(null)
   const [isStatusLoading, setIsStatusLoading] = useState(true)
   /** 선문안 — 신위가 먼저 건넨 오프닝. 대화가 시작되면 메시지 목록으로 자연히 밀려난다. */
@@ -588,11 +580,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   useEffect(() => {
     const load = async () => {
       setIsStatusLoading(true)
-      const [statusResult, startersResult] = await Promise.all([getShamanQuestionStatus(), getShamanChatStarters()])
+      const statusResult = await getShamanQuestionStatus()
       if (statusResult.success) setQuestionStatus(statusResult)
-      if (startersResult.success && startersResult.questions.length > 0) {
-        setStarters(startersResult.questions.slice(0, 5))
-      }
       setIsStatusLoading(false)
     }
     load()
@@ -744,9 +733,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
           }
         })
 
-        if (result.suggestedQuestions?.length) {
-          setStarters((prev) => [...(result.suggestedQuestions ?? []), ...prev].slice(0, 5))
-        }
+        // 추천 질문(result.suggestedQuestions)은 화면에 노출하지 않는다 —
+        // 예상질문 칩을 걷어내고 입력창에 집중하도록 바꾼 UI 결정.
       } else {
         if (result.noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
         else toast.error(result.error || '전송 실패')
@@ -764,17 +752,16 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const isLimitReached = (questionStatus?.totalRemaining ?? 1) <= 0
   const totalRemaining = questionStatus?.totalRemaining ?? 0
   const isLow = totalRemaining > 0 && totalRemaining <= 3
-  // 대화 전엔 신위 질문에 대한 '빠른 답', 대화 중엔 이어갈 추천 질문.
-  const quickChips = messages.length === 0 ? (greeting?.quickReplies ?? starters.slice(0, 4)) : starters
 
   return (
     <div
       className="fixed flex flex-col bg-background"
-      // bottom = 하단 메뉴(60px) + 가이드 공지 바 높이. 바가 없거나 접히면 변수가 0/작은 값이라
-      // 자동으로 되돌아온다. (GlobalGuide 가 --guide-bar-h 를 실측해 세팅)
+      // bottom = 하단 메뉴(60px)만. 이 화면에서는 가이드 공지 바를 띄우지 않으므로
+      // (GlobalGuide 의 hidden 경로) --guide-bar-h 는 0 이지만, 변수를 남겨두면
+      // 다른 화면에서 세팅된 잔여값이 전환 직후 한 프레임 남을 수 있어 아예 뺀다.
       style={{
         top: '56px',
-        bottom: 'calc(60px + var(--guide-bar-h, 0px))',
+        bottom: '60px',
         left: 0,
         right: 0,
         zIndex: 10,
@@ -964,28 +951,6 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         className="relative z-10 flex-shrink-0 border-t border-primary/8 px-4 pt-2.5 pb-2.5"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)' }}
       >
-        {/* 빠른 답 — 대화 전이면 신위 질문에 대한 답, 대화 중이면 이어갈 질문 */}
-        {quickChips.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2.5 -mx-1 px-1">
-            {quickChips.map((q, i) => (
-              <button
-                key={`${q}-${i}`}
-                onClick={() => handleSend(q)}
-                disabled={isLoading || isLimitReached}
-                className={cn(
-                  'whitespace-nowrap flex-shrink-0 px-3.5 py-1.5 rounded-full text-[11px]',
-                  'bg-surface/50 border border-primary/12 text-primary/50',
-                  'hover:border-primary/30 hover:text-primary/80 hover:bg-surface/70',
-                  'transition-all duration-150 active:scale-95',
-                  'disabled:opacity-25'
-                )}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* 잔여·충전 인라인 한 줄 — 헤더 2단을 대체한다. 한도 임박일 때만 강조. */}
         <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
           {isStatusLoading ? (
