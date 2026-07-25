@@ -1,8 +1,14 @@
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
-export function SiteFooter() {
+interface SiteFooterProps {
+  /** 기본 pb-28은 로그인 후 하단 네비 여백. 네비가 없는 공개 페이지에서는 좁혀 쓴다. */
+  className?: string
+}
+
+export function SiteFooter({ className }: SiteFooterProps) {
   return (
-    <footer className="w-full max-w-[480px] mx-auto pb-28">
+    <footer className={cn('w-full max-w-[480px] mx-auto pb-28', className)}>
       {/* 링크 바 */}
       <div className="flex items-center justify-center gap-4 py-4 border-t border-primary/10 mb-4">
         <Link href="/terms" className="text-[10px] text-ink-light/40 hover:text-primary transition-colors">
