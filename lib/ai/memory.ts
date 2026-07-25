@@ -15,12 +15,19 @@ const MAX_MEMORIES_PER_TARGET = 30
 const RECALL_LIMIT = 5
 const MAX_EXTRACT_PER_RUN = 3
 
-type MemoryType = 'profile_fact' | 'concern' | 'consultation_summary'
+export type MemoryType = 'profile_fact' | 'concern' | 'consultation_summary'
 
 const TYPE_LABEL: Record<MemoryType, string> = {
   profile_fact: '프로필',
   concern: '고민',
   consultation_summary: '지난 상담',
+}
+
+/** 구조화 기억 한 건 — 선문안(오프닝)이 문장을 직접 인용할 때 쓴다. */
+export interface RecalledMemory {
+  type: MemoryType
+  content: string
+  importance: number
 }
 
 interface ExtractedMemory {
@@ -74,6 +81,41 @@ export async function recallMemories(
   } catch (e) {
     logger.warn('[recallMemories] failed:', e)
     return ''
+  }
+}
+
+/**
+ * 기억을 구조화된 배열로 반환 (선문안 오프닝 전용).
+ * recallMemories 와 달리 프롬프트 문자열이 아니라 원문을 그대로 준다 — 오프닝이 인용해야 하므로.
+ * 참조 시각은 갱신하지 않는다(사용자 발화 없이 조회되는 경로라 최근성 신호를 오염시키지 않기 위함).
+ */
+export async function recallMemoryList(
+  userId: string,
+  familyMemberId: string | null,
+  limit: number = RECALL_LIMIT
+): Promise<RecalledMemory[]> {
+  try {
+    const admin = createAdminClient()
+    let query = admin
+      .from('user_ai_memory')
+      .select('memory_type, content, importance')
+      .eq('user_id', userId)
+      .order('importance', { ascending: false })
+      .order('last_referenced_at', { ascending: false })
+      .limit(limit)
+
+    query = familyMemberId ? query.eq('family_member_id', familyMemberId) : query.is('family_member_id', null)
+
+    const { data } = await query
+    if (!data) return []
+    return data.map((m) => ({
+      type: m.memory_type as MemoryType,
+      content: String(m.content ?? ''),
+      importance: typeof m.importance === 'number' ? m.importance : 0,
+    }))
+  } catch (e) {
+    logger.warn('[recallMemoryList] failed:', e)
+    return []
   }
 }
 

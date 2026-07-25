@@ -8,7 +8,8 @@ import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
-import { recallMemories, extractAndSaveMemories } from '@/lib/ai/memory'
+import { recallMemories, recallMemoryList, extractAndSaveMemories } from '@/lib/ai/memory'
+import { buildGreeting, greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
 import { maybeSummarizeSession } from '@/lib/ai/summarizer'
 import { guardAiInput } from '@/lib/ai/input-guard'
 import { rateLimit } from '@/lib/utils/rate-limit'
@@ -703,6 +704,128 @@ export async function getOrCreateChatSession(familyMemberId?: string): Promise<{
   } catch (e) {
     logger.error('[getOrCreateChatSession]', e)
     return { success: false, error: '세션 조회 오류' }
+  }
+}
+
+export interface ChatOpening {
+  success: boolean
+  /** 화면에 시차 출력할 오프닝. 실패·비대상이면 undefined. */
+  greeting?: Greeting
+  error?: string
+}
+
+/**
+ * 선문안(先問安) — 채팅 입장 시 신위가 먼저 건네는 오프닝을 조립한다.
+ *
+ * AI 호출 없음(결정론) · 질문 횟수/복채 미차감 — 사용자 발화 없이 소비되는 경로이기 때문이다.
+ * 이미 대화가 있는 세션이면 undefined 를 돌려 중복 생성을 막는다.
+ * 조립된 오프닝은 assistant 메시지로 저장해 재입장 시 그대로 복원된다.
+ */
+export async function getChatOpening(familyMemberId?: string): Promise<ChatOpening> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+    const fmId = familyMemberId && familyMemberId !== 'self' ? familyMemberId : null
+
+    // 현재 활성 세션에 이미 메시지가 있으면 오프닝을 만들지 않는다.
+    const sessionQuery = supabase
+      .from('chat_sessions')
+      .select('id')
+      .eq('user_id', user.id)
+      .is('ended_at', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    if (fmId) sessionQuery.eq('family_member_id', fmId)
+    else sessionQuery.is('family_member_id', null)
+    const { data: activeSession } = await sessionQuery.maybeSingle()
+
+    if (activeSession) {
+      const { count } = await supabase
+        .from('chat_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', activeSession.id)
+      if ((count ?? 0) > 0) return { success: true }
+    }
+
+    // 마지막 대화 시각 — 종료 세션 포함 전체 기준(방문 간격 판정용)
+    const lastQuery = supabase
+      .from('chat_sessions')
+      .select('updated_at')
+      .eq('user_id', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+    if (fmId) lastQuery.eq('family_member_id', fmId)
+    else lastQuery.is('family_member_id', null)
+
+    const [{ data: lastSession }, memories, profileRes, targetRes] = await Promise.all([
+      lastQuery.maybeSingle(),
+      recallMemoryList(user.id, fmId, 5),
+      supabase.from('profiles').select('full_name').eq('id', user.id).maybeSingle(),
+      fmId
+        ? supabase.from('family_members').select('name').eq('id', fmId).eq('user_id', user.id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+
+    // 좌정 主神 + 기원 단 (실패해도 오프닝은 나와야 하므로 개별 방어)
+    let deityName: string | null = null
+    let devotionLevel: number | null = null
+    try {
+      const { data: shrine } = await supabase
+        .from('shrines')
+        .select('main_deity_id')
+        .eq('user_id', user.id)
+        .is('family_member_id', null)
+        .maybeSingle()
+      if (shrine?.main_deity_id) {
+        const { data: deity } = await supabase
+          .from('shrine_deities')
+          .select('name')
+          .eq('id', shrine.main_deity_id)
+          .maybeSingle()
+        deityName = deity?.name ?? null
+      }
+    } catch (e) {
+      logger.warn('[getChatOpening] deity skipped:', e)
+    }
+    try {
+      const { getDevotionStatus } = await import('@/app/actions/shrine/devotion')
+      const devotion = await getDevotionStatus()
+      devotionLevel = devotion?.level ?? null
+    } catch (e) {
+      logger.warn('[getChatOpening] devotion skipped:', e)
+    }
+
+    const greeting = buildGreeting({
+      deityName,
+      userName: profileRes.data?.full_name ?? null,
+      targetName: targetRes.data?.name ?? null,
+      lastVisitAt: lastSession?.updated_at ?? null,
+      now: new Date().toISOString(),
+      memories: memories.map((m) => ({ type: m.type, content: m.content })),
+      devotionLevel,
+    })
+
+    // 오프닝을 세션에 저장 — 재입장 시 중복 생성 방지 + 대화 맥락으로 이어짐.
+    // 저장 실패해도 화면에는 띄운다(관측만 남긴다).
+    if (activeSession) {
+      try {
+        const admin = createAdminClient()
+        await admin
+          .from('chat_messages')
+          .insert({ session_id: activeSession.id, role: 'assistant', content: greetingToContent(greeting) })
+      } catch (e) {
+        logger.warn('[getChatOpening] 오프닝 저장 실패(표시는 유지):', e)
+      }
+    }
+
+    return { success: true, greeting }
+  } catch (e) {
+    logger.error('[getChatOpening]', e)
+    return { success: false, error: '오프닝 생성 오류' }
   }
 }
 

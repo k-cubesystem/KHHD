@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback, memo, type ReactNode } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useTranslations } from 'next-intl'
 import {
@@ -16,17 +15,21 @@ import {
   listPastChatSessions,
   saveChatMessages,
   endAndCreateNewSession,
+  getChatOpening,
   type ShamanChatMessage,
   type ShamanQuestionStatus,
   type PastChatSession,
 } from '@/app/actions/ai/shaman-chat'
+import type { Greeting } from '@/lib/domain/chat/greeting'
+import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
+import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'
 import { useFamilyMembers } from '@/hooks/use-family-members'
 import { useTts } from '@/hooks/useTts'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Loader2, Send, Coins, Flame, Sparkles, RotateCcw, History, X, ChevronLeft } from 'lucide-react'
+import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -53,6 +56,25 @@ function TypingDots() {
       </div>
     </div>
   )
+}
+
+/**
+ * 본문을 내레이션/대사로 쪼갠다 — 통째로 괄호에 싸인 문단만 내레이션으로 본다.
+ * 저장된 선문안(내레이션을 괄호로 보존)이 재입장 시에도 같은 모양으로 복원되고,
+ * 신위 응답 중 "(향이 흔들립니다)" 같은 지문도 말풍선 안에서 톤이 낮게 렌더된다.
+ */
+function splitNarration(content: string): Array<{ kind: 'narration' | 'speech'; text: string }> {
+  return content
+    .split(/\n{2,}/)
+    .map((raw) => raw.trim())
+    .filter((t) => t.length > 0)
+    .map((t) => {
+      // dotAll(s) 플래그는 이 tsconfig target 에서 못 쓴다 — [\s\S] 로 여러 줄을 받는다.
+      const m = t.match(/^\(([\s\S]+)\)$/)
+      // 중첩 괄호가 섞인 문장은 대사로 둔다(잘못 삼키지 않도록).
+      if (m && !m[1].includes('(') && !m[1].includes(')')) return { kind: 'narration' as const, text: m[1].trim() }
+      return { kind: 'speech' as const, text: t }
+    })
 }
 
 // ─── 메시지 버블 ────────────────────────────────────────
@@ -117,7 +139,17 @@ const Bubble = memo(function Bubble({
             'shadow-[0_2px_24px_rgba(0,0,0,0.3)]'
           )}
         >
-          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+          {splitNarration(msg.content).map((part, i) =>
+            part.kind === 'narration' ? (
+              <p key={i} className="text-[11px] italic text-foreground/50 leading-relaxed my-1 first:mt-0 last:mb-0">
+                {part.text}
+              </p>
+            ) : (
+              <p key={i} className="whitespace-pre-wrap break-words my-1 first:mt-0 last:mb-0">
+                {part.text}
+              </p>
+            )
+          )}
         </div>
         <div className="flex items-center gap-2 pl-1">
           <p className="text-[10px] text-primary/60">{time}</p>
@@ -429,6 +461,7 @@ export interface SeatedDeityInfo {
 export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: SeatedDeityInfo | null } = {}) {
   const router = useRouter()
   const tCommon = useTranslations('common')
+  const reduceMotion = useReducedMotion()
   const [messages, setMessages] = useState<ShamanChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -443,6 +476,9 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   ])
   const [questionStatus, setQuestionStatus] = useState<ShamanQuestionStatus | null>(null)
   const [isStatusLoading, setIsStatusLoading] = useState(true)
+  /** 선문안 — 신위가 먼저 건넨 오프닝. 대화가 시작되면 메시지 목록으로 자연히 밀려난다. */
+  const [greeting, setGreeting] = useState<Greeting | null>(null)
+  const [showMore, setShowMore] = useState(false)
 
   // 좌정 主神 표정 아바타 (신당 3.0). 서버 시딩(initialDeity)으로 첫 로드부터 신위 표시,
   // 이후 응답에서 받은 마지막 값 유지 — deityCode는 한번 정해지면 유지.
@@ -453,7 +489,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const { play: playFx } = useShrineAudio()
 
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
-  const { supported: ttsSupported, speaking: ttsSpeaking, speak, stop: ttsStop } = useTts()
+  const { supported: ttsSupported, speak, stop: ttsStop } = useTts()
   // 좌정 신위별 목소리 — deityCode 로 프로파일(rate/pitch/voiceHint) 조회 후 발화. 미좌정이면 기본.
   const speakDeity = useCallback(
     (text: string) => speak(text, { ...voiceProfileFor(deityCode), deityCode }),
@@ -510,9 +546,10 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [])
 
-  // 세션 로드 및 메시지 복원
+  // 세션 로드 및 메시지 복원. 대화가 비어 있으면 선문안(오프닝)을 받아 신위가 먼저 말을 건다.
   const loadSession = useCallback(async (familyMemberId: string) => {
     setIsSessionLoading(true)
+    setGreeting(null)
     try {
       const sessionResult = await getOrCreateChatSession(familyMemberId)
       if (!sessionResult.success || !sessionResult.sessionId) {
@@ -521,18 +558,26 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       }
       setSessionId(sessionResult.sessionId)
 
+      let restored: ShamanChatMessage[] = []
       if (!sessionResult.isNew) {
         // 기존 세션 메시지 복원
         const msgResult = await loadChatSessionMessages(sessionResult.sessionId)
         if (msgResult.success && msgResult.messages) {
-          setMessages(msgResult.messages)
-          setTurnCount(Math.floor(msgResult.messages.length / 2))
+          restored = msgResult.messages
+          setMessages(restored)
+          setTurnCount(Math.floor(restored.length / 2))
           // 복원 후 스크롤 맨 아래로
           setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' }), 100)
         }
       } else {
         setMessages([])
         setTurnCount(0)
+      }
+
+      // 빈 대화일 때만 오프닝. 서버가 저장까지 하므로 재입장 시엔 일반 메시지로 복원된다.
+      if (restored.length === 0) {
+        const opening = await getChatOpening(familyMemberId)
+        if (opening.success && opening.greeting) setGreeting(opening.greeting)
       }
     } finally {
       setIsSessionLoading(false)
@@ -670,8 +715,11 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         }
 
         // DB 저장 (비동기, 실패해도 UI에 영향 없음)
+        // 세션 제목은 '첫 사용자 발화' 기준 — 선문안(assistant)이 먼저 저장되므로
+        // messages.length 로 판단하면 제목이 영영 안 붙는다.
         if (sessionId) {
-          saveChatMessages(sessionId, userMsg, aiMsg, messages.length === 0).catch((e) =>
+          const isFirstUserTurn = !messages.some((m) => m.role === 'user')
+          saveChatMessages(sessionId, userMsg, aiMsg, isFirstUserTurn).catch((e) =>
             logger.error('[saveChatMessages]', e)
           )
         }
@@ -716,7 +764,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const isLimitReached = (questionStatus?.totalRemaining ?? 1) <= 0
   const totalRemaining = questionStatus?.totalRemaining ?? 0
   const isLow = totalRemaining > 0 && totalRemaining <= 3
-  const showStarters = messages.length === 0
+  // 대화 전엔 신위 질문에 대한 '빠른 답', 대화 중엔 이어갈 추천 질문.
+  const quickChips = messages.length === 0 ? (greeting?.quickReplies ?? starters.slice(0, 4)) : starters
 
   return (
     <div
@@ -737,13 +786,12 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         <div className="absolute bottom-0 right-0 w-[250px] h-[250px] rounded-full bg-gold-600/4 blur-[80px]" />
       </div>
 
-      {/* ── 헤더 (2단 · 고정) ── */}
+      {/* ── 헤더 (1단 · 정체성 + 더보기) ── */}
       <header
         className="sticky top-0 z-20 flex-shrink-0 border-b border-primary/8"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(20px)' }}
       >
-        {/* 1단: 정체성 + 새 대화 버튼 */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2.5 border-b border-white/4">
+        <div className="flex items-center justify-between px-4 py-2.5">
           <div className="flex items-center gap-3">
             <div className="relative">
               <div
@@ -785,127 +833,14 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* 신위 음성 자동읽기 토글 (TTS) */}
-            {ttsSupported && (
-              <button
-                onClick={toggleAutoSpeak}
-                aria-pressed={autoSpeak}
-                aria-label="신위 음성 자동 읽기"
-                title={autoSpeak ? '자동 읽기 켜짐' : '자동 읽기 꺼짐'}
-                className={cn(
-                  'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] border transition',
-                  autoSpeak
-                    ? 'text-gold-300 border-gold-500/40 bg-gold-500/10'
-                    : 'text-primary/50 hover:text-primary/80 border-primary/15 hover:border-primary/35'
-                )}
-              >
-                {ttsSpeaking ? '🔊' : autoSpeak ? '🔈' : '🔇'} 음성
-              </button>
-            )}
-            {/* 지난 대화 열람 */}
-            <button
-              onClick={() => setShowHistory(true)}
-              aria-label="지난 대화 열람"
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg',
-                'text-[11px] text-primary/50 hover:text-primary/80',
-                'border border-primary/15 hover:border-primary/35',
-                'bg-transparent hover:bg-primary/5',
-                'transition-all duration-150'
-              )}
-            >
-              <History className="w-3 h-3" />
-              지난 대화
-            </button>
-            {/* 새 대화 시작 버튼 */}
-            {messages.length > 0 && (
-              <button
-                onClick={() => setShowNewChatConfirm(true)}
-                disabled={isLoading}
-                className={cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg',
-                  'text-[11px] text-primary/50 hover:text-primary/80',
-                  'border border-primary/15 hover:border-primary/35',
-                  'bg-transparent hover:bg-primary/5',
-                  'transition-all duration-150',
-                  'disabled:opacity-30'
-                )}
-              >
-                <RotateCcw className="w-3 h-3" />새 대화
-              </button>
-            )}
-
-            {/* 점사 대상 선택 */}
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-[9px] text-primary/70 leading-none">점사 대상</span>
-              <select
-                value={selectedFamilyId}
-                onChange={(e) => handleFamilyChange(e.target.value)}
-                disabled={isLoading || isSessionLoading}
-                className="bg-surface/50 border border-primary/20 hover:border-primary/40 transition-colors rounded-lg pl-2 pr-6 py-1 text-xs text-primary/80 outline-none appearance-none cursor-pointer disabled:opacity-50"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgb(244 228 186 / 0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 6px center',
-                }}
-              >
-                <option value="self">나 (본인)</option>
-                {familyMembers?.map((member: { id: string; name: string; relation: string }) => (
-                  <option key={member.id} value={member.id} className="bg-surface text-foreground">
-                    {member.name} ({member.relation})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* 2단: 복채 상태 + 충전 */}
-        <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-3">
-            {/* 보유 복채 */}
-            <div className="flex items-center gap-1.5">
-              <Coins className="w-3 h-3 text-primary/40" />
-              {isStatusLoading ? (
-                <div className="w-12 h-3 rounded bg-primary/8 animate-pulse" />
-              ) : (
-                <span className="text-[11px] text-foreground/50">
-                  보유{' '}
-                  <span className="text-primary/70 font-medium">
-                    {(questionStatus?.walletBalance ?? 0).toLocaleString()}만냥
-                  </span>
-                </span>
-              )}
-            </div>
-            {/* 구분선 */}
-            <span className="w-px h-3 bg-white/8" />
-            {/* 남은 질문 */}
-            <div className="flex items-center gap-1.5">
-              <Flame className={cn('w-3 h-3', isLow ? 'text-primary-dark/70' : 'text-primary/40')} />
-              {isStatusLoading ? (
-                <div className="w-10 h-3 rounded bg-primary/8 animate-pulse" />
-              ) : (
-                <span className={cn('text-[11px]', isLow ? 'text-primary-dark/80' : 'text-foreground/50')}>
-                  잔여{' '}
-                  <span className={cn('font-medium', isLow ? 'text-primary-dark' : 'text-primary/70')}>
-                    {totalRemaining}회
-                  </span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* 충전 버튼 */}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleRecharge}
-            disabled={isRecharging || isStatusLoading}
-            className="h-6 px-3 rounded-full text-[10px] font-semibold border-primary/20 text-primary/60 hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+          {/* 더보기 — 음성·지난대화·새대화·점사대상은 전부 시트로 내렸다(크롬 최소화) */}
+          <button
+            onClick={() => setShowMore(true)}
+            aria-label="대화 설정 열기"
+            className="p-2 -mr-1 rounded-lg text-primary/55 hover:text-primary hover:bg-primary/5 transition-colors"
           >
-            {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : '1만냥 → +20회 충전'}
-          </Button>
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
@@ -923,6 +858,26 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       {/* 지난 대화 열람 패널 */}
       <AnimatePresence>
         {showHistory && <PastSessionsPanel familyId={selectedFamilyId} onClose={() => setShowHistory(false)} />}
+      </AnimatePresence>
+
+      {/* 더보기 시트 — 음성·지난대화·새대화·점사대상 */}
+      <AnimatePresence>
+        {showMore && (
+          <ChatMoreSheet
+            open={showMore}
+            onClose={() => setShowMore(false)}
+            ttsSupported={ttsSupported}
+            autoSpeak={autoSpeak}
+            onToggleAutoSpeak={toggleAutoSpeak}
+            onOpenHistory={() => setShowHistory(true)}
+            onNewChat={() => setShowNewChatConfirm(true)}
+            canStartNewChat={messages.length > 0 && !isLoading}
+            familyOptions={familyMembers ?? []}
+            selectedFamilyId={selectedFamilyId}
+            onFamilyChange={handleFamilyChange}
+            disabled={isLoading || isSessionLoading}
+          />
+        )}
       </AnimatePresence>
 
       {/* ── 채팅 영역 ── */}
@@ -950,67 +905,33 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
           </div>
         )}
 
+        {/* 선문안 — 신위가 먼저 건네는 오프닝. 사용자가 답하면 그 위로 대화가 이어진다. */}
+        {!isSessionLoading && greeting && (
+          <GreetingIntro
+            lines={greeting.lines}
+            reduceMotion={reduceMotion ?? false}
+            onSpeak={ttsSupported ? speakDeity : undefined}
+            avatar={
+              deityCode ? (
+                <DeityFaceAvatar
+                  deityCode={deityCode}
+                  emotion={deityEmotion}
+                  fallback={
+                    <Image
+                      src="/avatars/haehwajigi.svg"
+                      alt="해화지기"
+                      width={16}
+                      height={16}
+                      className="inline-block"
+                    />
+                  }
+                />
+              ) : undefined
+            }
+          />
+        )}
+
         <AnimatePresence mode="popLayout">
-          {/* 웰컴 화면 */}
-          {!isSessionLoading && messages.length === 0 && (
-            <motion.div
-              key="welcome"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-center justify-center min-h-[50vh] text-center px-6 gap-5"
-            >
-              {/* 오브 */}
-              <motion.div
-                animate={{ scale: [1, 1.04, 1], opacity: [0.7, 1, 0.7] }}
-                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/12 to-gold-600/6 border border-primary/15 flex items-center justify-center shadow-[0_0_40px_rgba(244,228,186,0.06)]"
-              >
-                <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={40} height={40} className="inline-block" />
-              </motion.div>
-
-              <div className="space-y-2">
-                <h2 className="text-base font-serif text-foreground/70 tracking-wide">어떤 이야기를 꺼내드릴까요</h2>
-                <p className="text-xs text-foreground/65 leading-relaxed">
-                  말 못 한 고민이 있다면,
-                  <br />
-                  이곳에서 편히 꺼내보세요.
-                </p>
-              </div>
-
-              {/* 스타터 질문 */}
-              <div className="flex flex-col gap-2 w-full max-w-xs mt-2">
-                {starters.map((q, i) => (
-                  <motion.button
-                    key={i}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + i * 0.07 }}
-                    onClick={() => handleSend(q)}
-                    disabled={isLoading || isLimitReached}
-                    className={cn(
-                      'text-left px-4 py-2.5 rounded-xl text-xs',
-                      'bg-surface/40 border border-primary/10 backdrop-blur-sm',
-                      'text-foreground/55 hover:text-primary/80 hover:border-primary/25 hover:bg-surface/60',
-                      'transition-all duration-200 active:scale-[0.98]',
-                      'disabled:opacity-30'
-                    )}
-                  >
-                    <span className="text-primary/40 mr-2">✦</span>
-                    {q}
-                  </motion.button>
-                ))}
-              </div>
-
-              <p className="text-[10px] text-foreground/55 flex items-center gap-1.5 mt-2">
-                <Sparkles className="w-3 h-3 text-primary/30" />
-                매일 10회 무료 · 1만냥으로 +20회
-                <Sparkles className="w-3 h-3 text-primary/30" />
-              </p>
-            </motion.div>
-          )}
-
           {/* 메시지 목록 */}
           {!isSessionLoading &&
             messages.map((msg, i) => {
@@ -1043,12 +964,12 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         className="relative z-10 flex-shrink-0 border-t border-primary/8 px-4 pt-2.5 pb-2.5"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)' }}
       >
-        {/* 대화 중 추천 질문 (가로 스크롤) */}
-        {messages.length > 0 && !showStarters && starters.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 -mx-1 px-1">
-            {starters.map((q, i) => (
+        {/* 빠른 답 — 대화 전이면 신위 질문에 대한 답, 대화 중이면 이어갈 질문 */}
+        {quickChips.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2.5 -mx-1 px-1">
+            {quickChips.map((q, i) => (
               <button
-                key={i}
+                key={`${q}-${i}`}
                 onClick={() => handleSend(q)}
                 disabled={isLoading || isLimitReached}
                 className={cn(
@@ -1064,6 +985,29 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
             ))}
           </div>
         )}
+
+        {/* 잔여·충전 인라인 한 줄 — 헤더 2단을 대체한다. 한도 임박일 때만 강조. */}
+        <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
+          {isStatusLoading ? (
+            <div className="w-24 h-3 rounded bg-primary/8 animate-pulse" />
+          ) : (
+            <span className={cn('text-[10.5px]', isLow ? 'text-primary-dark' : 'text-foreground/45')}>
+              오늘 남은 질문 <span className="font-medium">{totalRemaining}회</span>
+              <span className="text-foreground/25">
+                {' '}
+                · 보유 {(questionStatus?.walletBalance ?? 0).toLocaleString()}만냥
+              </span>
+            </span>
+          )}
+          <button
+            onClick={handleRecharge}
+            disabled={isRecharging || isStatusLoading}
+            className="flex items-center gap-1 text-[10.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40"
+          >
+            {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Coins className="w-3 h-3" />}
+            1만냥 → +20회
+          </button>
+        </div>
 
         {/* 입력창 */}
         <div className="flex items-end gap-2">
