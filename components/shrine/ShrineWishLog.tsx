@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageSquare, ChevronDown } from 'lucide-react'
-import type { ShrineWish } from '@/app/actions/shrine/shrine-wishes'
-import { getWishes } from '@/app/actions/shrine/shrine-wishes'
+import { getWishes, type ShrineWish } from '@/app/actions/shrine/shrine-wishes'
 import { cn } from '@/lib/utils'
 
 const CATEGORY_EMOJI: Record<string, string> = {

@@ -1,25 +1,8 @@
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { getSubscriptionStatus, getSubscriptionPayments } from '@/app/actions/payment/subscription'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  Crown,
-  Calendar,
-  CreditCard,
-  Clock,
-  History,
-  Gift,
-  AlertTriangle,
-  Coins,
-  Sparkles,
-  ShieldCheck,
-  Zap,
-} from 'lucide-react'
+import { Sparkles, ShieldCheck, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { SubscriptionActions } from '@/components/membership/subscription-actions'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PaymentWidget } from '@/components/payment/payment-widget'
 
 export const metadata: Metadata = {
@@ -42,9 +25,7 @@ export default async function MembershipManagePage() {
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4 mb-12">
-          <h1 className="text-3xl md:text-4xl font-serif font-bold text-zen-text">
-            멤버십 & 부적 결제
-          </h1>
+          <h1 className="text-3xl md:text-4xl font-serif font-bold text-zen-text">멤버십 & 부적 결제</h1>
           <p className="text-zen-muted font-sans text-sm md:text-base max-w-2xl mx-auto">
             매달 전해지는 천기를 무제한으로 누리는 멤버십과
             <br className="hidden md:block" />

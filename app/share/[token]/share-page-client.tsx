@@ -13,7 +13,6 @@ import {
   Clock,
   User,
   Sparkles,
-  Loader2,
   AlertCircle,
   Eye,
   Sun,

@@ -1,7 +1,6 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { getDestinyTarget } from '../user/destiny'
 import { calculateAge } from '@/lib/domain/saju/saju'
 import { saveAnalysisHistoryObserved } from '../user/history'
@@ -222,20 +221,6 @@ async function getWorkAddress(userId: string): Promise<string | null> {
   const { data } = await supabase.from('profiles').select('work_address').eq('id', userId).single()
 
   return data?.work_address || null
-}
-
-/**
- * DB에서 천지인 시스템 프롬프트 조회 (관리자 페이지에서 편집 가능)
- */
-async function getCheonjiinSystemPrompt(): Promise<string | null> {
-  try {
-    const adminSupabase = createAdminClient()
-    const { data } = await adminSupabase.from('ai_prompts').select('template').eq('key', 'cheonjiin_analysis').single()
-    return data?.template || null
-  } catch (e) {
-    logger.warn('[CheonjiinAnalysis] DB 프롬프트 로드 실패:', e)
-    return null
-  }
 }
 
 /**

@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Quote } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 const REVIEWS = [

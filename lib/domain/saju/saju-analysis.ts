@@ -121,13 +121,12 @@ const YUKCHEN_MAP: Record<string, { name: string; hanja: string }> = {
 // ==================== 격국 분석 ====================
 
 export function analyzeGekguk(saju: SajuData): GekgukAnalysis {
-  const { dayGan, monthZhi, elementsDistribution } = saju
+  const { dayGan, elementsDistribution } = saju
 
   // 간단한 격국 판단 로직 (실제로는 더 복잡)
   // 월지의 지장간을 보고 일간과의 관계를 판단
 
   // 오행 강도 계산
-  const totalElements = Object.values(elementsDistribution).reduce((a, b) => a + b, 0)
   const dayElement = getGanElement(dayGan)
   const dayElementCount = elementsDistribution[dayElement] || 0
   const strength = dayElementCount >= 4 ? 4 : dayElementCount >= 3 ? 3 : dayElementCount >= 2 ? 2 : 1
@@ -313,13 +312,11 @@ export function analyzeYongsin(saju: SajuData): YongsinAnalysis {
 
   // 오행 분포 분석
   const elementCounts = { ...elementsDistribution }
-  const total = Object.values(elementCounts).reduce((a, b) => a + b, 0)
 
   // 가장 약한 오행 찾기
   const sortedElements = Object.entries(elementCounts).sort((a, b) => a[1] - b[1])
 
   const weakest = sortedElements[0][0]
-  const strongest = sortedElements[sortedElements.length - 1][0]
 
   // 용신: 부족한 오행 또는 일간을 돕는 오행
   let yongsin = weakest
@@ -357,7 +354,6 @@ export function analyzeYongsin(saju: SajuData): YongsinAnalysis {
 
 export function analyzeYukchin(saju: SajuData): YukchinAnalysis {
   const { dayGan, pillars } = saju
-  const dayElement = getGanElement(dayGan)
 
   const yukchinCounts: Record<string, { count: number; pillars: string[]; elements: string[] }> = {
     비견: { count: 0, pillars: [], elements: [] },

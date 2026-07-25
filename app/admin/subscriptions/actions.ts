@@ -3,7 +3,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/auth'
-import { addTalismans } from '@/app/actions/payment/wallet'
 import { logger } from '@/lib/utils/logger'
 
 export interface AdminSubscription {

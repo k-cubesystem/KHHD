@@ -628,7 +628,7 @@ function trendLabel(trend: CategoryScore['trend']): string {
   return map[trend]
 }
 
-function buildAdvice(cat: FortuneCategory, trend: CategoryScore['trend'], sipseong: string): string {
+function buildAdvice(cat: FortuneCategory, trend: CategoryScore['trend'], _sipseong: string): string {
   const adviceMap: Record<FortuneCategory, Record<CategoryScore['trend'], string>> = {
     재물운: {
       excellent: '투자·확장에 유리한 시기. 과감한 결단이 결실을 맺습니다.',

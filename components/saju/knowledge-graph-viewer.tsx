@@ -12,7 +12,6 @@ import {
   EDGE_STYLES,
   ALL_EDGE_TYPES,
   type KnowledgeNode,
-  type KnowledgeEdge,
   type EdgeType,
   type NodeType,
 } from '@/lib/data/saju-knowledge-graph'
@@ -55,13 +54,7 @@ function buildLayout(width: number, height: number): Map<string, NodePosition> {
     positions.set(n.id, { id: n.id, x: cx + zhiR * Math.cos(angle), y: cy + zhiR * Math.sin(angle), r: 18 })
   })
 
-  // 십성: 오른쪽 하단 소군집
-  const shipseongNodes = NODES.filter((n) => n.type === '십성')
-  // 십성은 패널에서 표시 (SVG 위치 없음) - 빈 상태로 처리
-  // 레이아웃 미포함 (노드 타입 필터로 대응)
-
-  // 신살: 왼쪽 하단 소군집
-  const sinsalNodes = NODES.filter((n) => n.type === '신살')
+  // 십성/신살은 SVG 좌표 없이 패널에서만 표시 — 레이아웃 미포함 (노드 타입 필터로 대응)
 
   return positions
 }
@@ -134,7 +127,8 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
   const toggleEdgeType = useCallback((type: EdgeType) => {
     setActiveEdgeTypes((prev) => {
       const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
       return next
     })
   }, [])
@@ -142,7 +136,8 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
   const toggleNodeType = useCallback((type: NodeType) => {
     setVisibleNodeTypes((prev) => {
       const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
       return next
     })
   }, [])
@@ -262,7 +257,7 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                   e.stopPropagation()
                   handleNodeClick(node.id)
                 }}
-                onMouseEnter={(e) => handleNodeHover(node.id, pos.x, pos.y)}
+                onMouseEnter={(_e) => handleNodeHover(node.id, pos.x, pos.y)}
                 onMouseLeave={() => handleNodeHover(null)}
               >
                 <circle
@@ -448,7 +443,6 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                     {selectedEdges.map((edge) => {
                       const style = EDGE_STYLES[edge.type]
                       const otherId = edge.source === selectedNode ? edge.target : edge.source
-                      const other = NODE_MAP.get(otherId)
                       return (
                         <button
                           key={edge.id}

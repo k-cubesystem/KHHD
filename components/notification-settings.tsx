@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Sun, Moon, Bell, Clock, Check } from 'lucide-react'
+import { Sun, Moon, Clock, Check } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 

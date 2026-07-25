@@ -35,7 +35,7 @@ export function FortuneImageGenerator({
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedImage, setGeneratedImage] = useState<string | null>(null)
   const [imageSource, setImageSource] = useState<'url' | 'base64'>('url')
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [_isExpanded, setIsExpanded] = useState(false)
 
   async function handleGenerate() {
     setIsGenerating(true)

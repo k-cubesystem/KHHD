@@ -48,7 +48,7 @@ export async function getFamilyWithAnalysisSummary(): Promise<FamilyMemberWithAn
     }
 
     return data as FamilyMemberWithAnalysis[]
-  } catch (e) {
+  } catch {
     // 2. Fallback: Standard Select (No Analysis Summary)
     const { data: members, error: fallbackError } = await supabase
       .from('family_members')

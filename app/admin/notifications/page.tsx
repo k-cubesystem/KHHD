@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { logger } from '@/lib/utils/logger'
-import { Bell, Clock, Save, Loader2, Send, Play } from 'lucide-react'
+import { Bell, Clock, Save, Loader2, Play } from 'lucide-react'
 import { getNotificationSettings, updateNotificationSetting, getNotificationLogs, runManualAutomation } from './actions'
 
 export default function NotificationAdminPage() {

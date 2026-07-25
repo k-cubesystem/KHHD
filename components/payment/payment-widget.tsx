@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getTossPaymentsSDK, getTossWidgets } from '@/lib/services/tosspayments'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import {
   Check,
   Sparkles,
@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   Crown,
   Gift,
-  Calendar,
   MessageCircle,
   Ticket,
   Users,
@@ -30,8 +29,6 @@ import {
   type MembershipPlan,
 } from '@/app/actions/payment/subscription'
 import type { PricePlan, UserRole } from '@/types/auth'
-import { useRouter } from 'next/navigation'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface PaymentWidgetProps {
   memberId: string
@@ -50,22 +47,20 @@ interface DisplayPlan {
   popular?: boolean
 }
 
-export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidgetProps) {
-  const [activeTab, setActiveTab] = useState<string>('membership')
-  const [selectedPlan, setSelectedPlan] = useState<number>(1)
+export function PaymentWidget({ memberId, homeAddress }: PaymentWidgetProps) {
+  const [_activeTab, setActiveTab] = useState<string>('membership')
   const [isLoading, setIsLoading] = useState(false)
   const [isTestLoading, setIsTestLoading] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [pricePlans, setPricePlans] = useState<DisplayPlan[]>([])
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([])
   const [userRole, setUserRole] = useState<UserRole>('user')
-  const [subscriptionStatus, setSubscriptionStatus] = useState<Awaited<
+  const [_subscriptionStatus, setSubscriptionStatus] = useState<Awaited<
     ReturnType<typeof getSubscriptionStatus>
   > | null>(null)
   const [widgetReady, setWidgetReady] = useState(false)
   const [selectedBokchae, setSelectedBokchae] = useState<DisplayPlan | null>(null)
   const widgetsRef = useRef<Awaited<ReturnType<typeof getTossWidgets>>>(null)
-  const router = useRouter()
 
   useEffect(() => {
     setIsMounted(true)
@@ -203,35 +198,6 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
     }
   }
 
-  const handleTalismanPayment = async () => {
-    setIsLoading(true)
-    try {
-      const sdk = await getTossPaymentsSDK()
-      if (!sdk) {
-        toast.error('결제 모듈을 불러올 수 없습니다.')
-        setIsLoading(false)
-        return
-      }
-      const plan = pricePlans.find((p) => p.credits === selectedPlan)!
-      const orderId = `HHD_${Date.now()}_${memberId.slice(0, 4)}`
-
-      const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
-      await payment.requestPayment({
-        method: 'CARD',
-        amount: { currency: 'KRW', value: plan.price },
-        orderId,
-        orderName: plan.label,
-        successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&homeAddress=${encodeURIComponent(homeAddress || '')}&credits=${plan.credits}`,
-        failUrl: `${window.location.origin}/protected/analysis/fail`,
-        windowTarget: 'self',
-      })
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
-      toast.error(msg)
-      setIsLoading(false)
-    }
-  }
-
   const handleTestCharge = async () => {
     setIsTestLoading(true)
     try {
@@ -242,7 +208,7 @@ export function PaymentWidget({ memberId, homeAddress, onCancel }: PaymentWidget
       } else {
         toast.error(result.error || '충전 실패')
       }
-    } catch (error) {
+    } catch {
       toast.error('시스템 오류')
     } finally {
       setIsTestLoading(false)

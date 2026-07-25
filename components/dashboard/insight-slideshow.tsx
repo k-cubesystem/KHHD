@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sun, Sparkles, ScrollText, Crown, ChevronRight } from 'lucide-react'
+import { Sun, ScrollText, Crown, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 const SLIDES = [

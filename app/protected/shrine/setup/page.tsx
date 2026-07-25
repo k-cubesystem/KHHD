@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getMyShrine, updateShrine } from '@/app/actions/shrine/shrine'
+import { getMyShrine } from '@/app/actions/shrine/shrine'
 import { ShrineEditForm } from '@/components/shrine/ShrineEditForm'
 
 export default async function ShrineSetupPage() {

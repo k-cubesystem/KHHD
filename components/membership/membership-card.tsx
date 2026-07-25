@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { createBillingAuthUrl } from '@/app/actions/payment/subscription'
@@ -16,9 +15,8 @@ interface MembershipCardProps {
   price: number
 }
 
-export function MembershipCard({ planId, planName, price }: MembershipCardProps) {
+export function MembershipCard({ planId, planName, price: _price }: MembershipCardProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const t = useTranslations('payment')
 
   const handleSubscribe = async () => {

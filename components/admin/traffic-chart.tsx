@@ -3,27 +3,12 @@
 import { useEffect, useState } from 'react'
 import { GOLD_500 } from '@/lib/config/design-tokens'
 import { getHourlyTraffic } from '@/app/actions/admin/dashboard'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { format } from 'date-fns'
 
 export function TrafficChart() {
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadData()
-    const interval = setInterval(loadData, 60000) // 1분마다 갱신
-    return () => clearInterval(interval)
-  }, [])
 
   const loadData = async () => {
     const result = await getHourlyTraffic(24)
@@ -38,6 +23,12 @@ export function TrafficChart() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadData()
+    const interval = setInterval(loadData, 60000) // 1분마다 갱신
+    return () => clearInterval(interval)
+  }, [])
 
   if (loading) return <div className="text-ink-light/50">Loading...</div>
 

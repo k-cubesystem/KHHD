@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Loader2, Save, AlertTriangle, Power } from 'lucide-react'
+import { Loader2, AlertTriangle, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { logger } from '@/lib/utils/logger'
 import { FeatureKey, FeatureConfig } from '@/lib/feature-flags'
@@ -24,7 +23,6 @@ const FEATURES: { key: FeatureKey; label: string; desc: string }[] = [
 export default function ServiceControlPage() {
   const [configs, setConfigs] = useState<Record<string, FeatureConfig>>({})
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
 
   const supabase = createClient()
 

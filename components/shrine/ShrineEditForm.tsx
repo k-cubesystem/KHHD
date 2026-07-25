@@ -3,8 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { updateShrine } from '@/app/actions/shrine/shrine'
-import type { Shrine } from '@/app/actions/shrine/shrine'
+import { updateShrine, type Shrine } from '@/app/actions/shrine/shrine'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 

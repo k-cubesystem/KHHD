@@ -6,17 +6,13 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
-  Loader2,
   Flame,
-  User,
-  Calendar,
   ArrowLeft,
   TrendingUp,
   Heart,
   Briefcase,
   Activity,
   RotateCcw,
-  ChevronRight,
   ScrollText,
   Wind,
   Sun,
@@ -96,7 +92,7 @@ function SeasonCard({
   season,
   months,
   content,
-  icon: Icon,
+  icon: _Icon,
   index,
 }: {
   season: string
@@ -281,7 +277,7 @@ function NewYear2026Content() {
       } else {
         setErrorMsg(result.error || '운명을 읽는 도중 방해를 받았습니다. 다시 시도해주세요.')
       }
-    } catch (e) {
+    } catch {
       setErrorMsg('알 수 없는 오류가 발생했습니다.')
     } finally {
       setAnalyzing(false)

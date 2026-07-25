@@ -3,8 +3,7 @@
 import { useRef, useState } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
-import { Download, Share2, Sparkles } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Download, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface CanvasCardProps {
@@ -21,7 +20,7 @@ interface CanvasCardProps {
 
 export function CanvasCardGenerator({ data, trigger }: CanvasCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
+  const [_isGenerating, setIsGenerating] = useState(false)
 
   const handleDownload = async () => {
     if (!cardRef.current) return

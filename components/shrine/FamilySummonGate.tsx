@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Deity } from '@/app/actions/shrine/deities'
-import { autoSeatGuardian } from '@/app/actions/shrine/deities'
+import { autoSeatGuardian, type Deity } from '@/app/actions/shrine/deities'
 import { GangshinOverlay } from '@/components/shrine/deities/GangshinOverlay'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 

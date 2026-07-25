@@ -1,7 +1,7 @@
 // 신위/테마 이미지 제작 스펙 문서 생성기 (외부 제작 핸드오프용).
 // manifest.mjs의 실제 프롬프트 로직을 그대로 사용 → 파이프라인과 정합.
 // 실행: node scripts/shrine-assets/spec.mjs > TEAM_G_DESIGN/shrine-image-production-spec.md
-import { DEITIES, EMOTIONS, STYLE_PREFIX, STYLE_SUFFIX, basePrompt } from './manifest.mjs'
+import { DEITIES, EMOTIONS, STYLE_PREFIX, basePrompt } from './manifest.mjs'
 
 // DB shrine_deities에서 확보한 한글명/한자/등급/도메인/accent
 const META = {

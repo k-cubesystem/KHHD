@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
 // 결제 완료 처리
 async function handlePaymentDone(data: TossWebhookEvent['data']) {
-  const { paymentKey, orderId } = data
+  const { orderId } = data
   if (!orderId) return
 
   // 구독 결제인지 확인 (orderId가 SUB_로 시작)

@@ -130,7 +130,8 @@ export interface GeminiRateLimitOptions {
  * - 호출 결과(토큰, 비용, 지연시간)를 gemini_api_logs에 자동 기록
  */
 export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: GeminiRateLimitOptions = {}): Promise<T> {
-  const { userId = null, model = 'gemini-3.5-flash', actionType = 'unknown', cached = false } = options
+  // cached: 호출자가 넘기지만 아래 로그 insert 는 cached: false 를 하드코딩 중 — 별도 확인 필요
+  const { userId = null, model = 'gemini-3.5-flash', actionType = 'unknown', cached: _cached = false } = options
 
   // 1. 토큰 획득 시도
   const tokenResult = await acquireToken()

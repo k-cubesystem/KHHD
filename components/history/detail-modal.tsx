@@ -128,7 +128,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
             url: shareUrl,
           })
           toast.success('공유되었습니다!')
-        } catch (err) {
+        } catch {
           // Dismissal allowed
         }
       } else {

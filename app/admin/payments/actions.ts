@@ -75,7 +75,7 @@ export async function getPayments(
       email?: string | null
     }
 
-    let profilesMap: Record<string, PaymentProfile> = {}
+    const profilesMap: Record<string, PaymentProfile> = {}
 
     if (userIds.length > 0) {
       // Try fetching with email

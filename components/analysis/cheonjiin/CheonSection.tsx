@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Crown, Star, Briefcase, Coins, Heart, Activity, Clock, Zap, Shield } from 'lucide-react'
+import { Crown, Briefcase, Coins, Heart, Activity, Clock, Zap, Shield } from 'lucide-react'
 
 interface LifeTimelineData {
   pastDecade?: string

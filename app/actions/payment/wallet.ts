@@ -394,7 +394,7 @@ export async function addTalismans(
   const admin = createAdminClient()
 
   // Atomic balance increment via RPC — prevents race conditions
-  const { data: newBalance, error: rpcError } = await admin.rpc('add_wallet_balance', {
+  const { error: rpcError } = await admin.rpc('add_wallet_balance', {
     p_user_id: user.id,
     p_amount: amount,
   })

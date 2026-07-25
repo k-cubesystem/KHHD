@@ -15,18 +15,18 @@ import type { SipseongMap } from './sipseong'
 // ===================== 타입 정의 =====================
 
 export interface YongsinResult {
-  finalYongsin: string      // 최종 용신 오행 (예: '木')
-  priority: string          // 어떤 용신이 적용됐는지 (예: '조후용신')
+  finalYongsin: string // 최종 용신 오행 (예: '木')
+  priority: string // 어떤 용신이 적용됐는지 (예: '조후용신')
   johuYongsin: JohuDetail | null
   eokbuYongsin: EokbuDetail
   tonggwanYongsin: TonggwanDetail | null
   byeongyakYongsin: ByeongyakDetail | null
-  huisin: string            // 희신 오행
-  gisin: string             // 기신 오행
-  gusin: string             // 구신 오행
-  hansin: string            // 한신 오행
-  recommendation: string    // 개운법 (색상, 방위, 음식)
-  detailReason: string      // AI에 전달할 상세 판정 근거
+  huisin: string // 희신 오행
+  gisin: string // 기신 오행
+  gusin: string // 구신 오행
+  hansin: string // 한신 오행
+  recommendation: string // 개운법 (색상, 방위, 음식)
+  detailReason: string // AI에 전달할 상세 판정 근거
 }
 
 export interface JohuDetail {
@@ -51,21 +51,23 @@ export interface TonggwanDetail {
 export interface ByeongyakDetail {
   element: string
   disease: string // 병의 정체
-  cure: string    // 약의 역할
+  cure: string // 약의 역할
   reason: string
 }
 
 // ===================== 오행 기본 상수 =====================
 
 const GAN_ELEMENT: Record<string, string> = {
-  甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土',
-  己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水',
-}
-
-const ZHI_ELEMENT: Record<string, string> = {
-  子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土',
-  巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金',
-  戌: '土', 亥: '水',
+  甲: '木',
+  乙: '木',
+  丙: '火',
+  丁: '火',
+  戊: '土',
+  己: '土',
+  庚: '金',
+  辛: '金',
+  壬: '水',
+  癸: '水',
 }
 
 const SAENG: Record<string, string> = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' }
@@ -78,14 +80,24 @@ const ALL_ELEMENTS = ['木', '火', '土', '金', '水'] as const
 // ===================== 오행별 색상/방위/음식 =====================
 
 const ELEMENT_COLOR: Record<string, string> = {
-  木: '초록색·청색', 火: '빨간색·주황색', 土: '노란색·갈색', 金: '흰색·금색·은색', 水: '검정색·남색',
+  木: '초록색·청색',
+  火: '빨간색·주황색',
+  土: '노란색·갈색',
+  金: '흰색·금색·은색',
+  水: '검정색·남색',
 }
 const ELEMENT_DIRECTION: Record<string, string> = {
-  木: '동쪽', 火: '남쪽', 土: '중앙', 金: '서쪽', 水: '북쪽',
+  木: '동쪽',
+  火: '남쪽',
+  土: '중앙',
+  金: '서쪽',
+  水: '북쪽',
 }
 const ELEMENT_FOOD: Record<string, string> = {
-  木: '푸른 잎채소·신맛(식초, 매실)', 火: '쓴맛 식품(커피, 다크초콜릿)',
-  土: '단맛·곡류(현미, 고구마)', 金: '매운맛·흰색 식품(무, 배, 도라지)',
+  木: '푸른 잎채소·신맛(식초, 매실)',
+  火: '쓴맛 식품(커피, 다크초콜릿)',
+  土: '단맛·곡류(현미, 고구마)',
+  金: '매운맛·흰색 식품(무, 배, 도라지)',
   水: '짠맛·해산물(미역, 다시마, 조개)',
 }
 
@@ -94,64 +106,144 @@ const ELEMENT_FOOD: Record<string, string> = {
 
 const GUNGTONG_TABLE: Record<string, Record<string, string[]>> = {
   甲: {
-    子: ['丙', '庚', '丁'], 丑: ['丙', '庚', '丁'], 寅: ['丙', '癸'],
-    卯: ['丙', '癸', '庚'], 辰: ['壬', '庚'], 巳: ['癸', '丁', '庚'],
-    午: ['癸', '丁', '庚'], 未: ['癸', '丁', '庚'], 申: ['丁', '甲', '丙'],
-    酉: ['丁', '甲', '丙'], 戌: ['甲', '壬', '丁'], 亥: ['庚', '丁', '丙'],
+    子: ['丙', '庚', '丁'],
+    丑: ['丙', '庚', '丁'],
+    寅: ['丙', '癸'],
+    卯: ['丙', '癸', '庚'],
+    辰: ['壬', '庚'],
+    巳: ['癸', '丁', '庚'],
+    午: ['癸', '丁', '庚'],
+    未: ['癸', '丁', '庚'],
+    申: ['丁', '甲', '丙'],
+    酉: ['丁', '甲', '丙'],
+    戌: ['甲', '壬', '丁'],
+    亥: ['庚', '丁', '丙'],
   },
   乙: {
-    子: ['丙'], 丑: ['丙'], 寅: ['丙', '癸'],
-    卯: ['丙', '癸'], 辰: ['癸', '丙'], 巳: ['癸', '丙'],
-    午: ['癸', '丙'], 未: ['癸', '丙'], 申: ['丙', '癸'],
-    酉: ['丙', '癸'], 戌: ['丙', '癸'], 亥: ['丙'],
+    子: ['丙'],
+    丑: ['丙'],
+    寅: ['丙', '癸'],
+    卯: ['丙', '癸'],
+    辰: ['癸', '丙'],
+    巳: ['癸', '丙'],
+    午: ['癸', '丙'],
+    未: ['癸', '丙'],
+    申: ['丙', '癸'],
+    酉: ['丙', '癸'],
+    戌: ['丙', '癸'],
+    亥: ['丙'],
   },
   丙: {
-    子: ['壬', '甲'], 丑: ['壬', '甲'], 寅: ['壬', '庚'],
-    卯: ['壬', '庚'], 辰: ['壬', '甲'], 巳: ['壬', '庚'],
-    午: ['壬', '庚'], 未: ['壬', '庚'], 申: ['壬', '甲'],
-    酉: ['壬', '甲'], 戌: ['甲', '壬'], 亥: ['甲', '壬'],
+    子: ['壬', '甲'],
+    丑: ['壬', '甲'],
+    寅: ['壬', '庚'],
+    卯: ['壬', '庚'],
+    辰: ['壬', '甲'],
+    巳: ['壬', '庚'],
+    午: ['壬', '庚'],
+    未: ['壬', '庚'],
+    申: ['壬', '甲'],
+    酉: ['壬', '甲'],
+    戌: ['甲', '壬'],
+    亥: ['甲', '壬'],
   },
   丁: {
-    子: ['甲', '庚'], 丑: ['甲', '庚'], 寅: ['甲', '庚'],
-    卯: ['甲', '庚'], 辰: ['甲', '庚'], 巳: ['甲', '庚'],
-    午: ['甲', '壬'], 未: ['甲', '壬'], 申: ['甲', '庚'],
-    酉: ['甲', '庚'], 戌: ['甲', '庚'], 亥: ['甲', '庚'],
+    子: ['甲', '庚'],
+    丑: ['甲', '庚'],
+    寅: ['甲', '庚'],
+    卯: ['甲', '庚'],
+    辰: ['甲', '庚'],
+    巳: ['甲', '庚'],
+    午: ['甲', '壬'],
+    未: ['甲', '壬'],
+    申: ['甲', '庚'],
+    酉: ['甲', '庚'],
+    戌: ['甲', '庚'],
+    亥: ['甲', '庚'],
   },
   戊: {
-    子: ['丙', '甲'], 丑: ['丙', '甲'], 寅: ['丙', '甲', '癸'],
-    卯: ['丙', '甲', '癸'], 辰: ['甲', '癸', '丙'], 巳: ['甲', '癸'],
-    午: ['壬', '甲', '癸'], 未: ['癸', '丙', '甲'], 申: ['丙', '癸'],
-    酉: ['丙', '癸'], 戌: ['甲', '癸', '丙'], 亥: ['甲', '丙'],
+    子: ['丙', '甲'],
+    丑: ['丙', '甲'],
+    寅: ['丙', '甲', '癸'],
+    卯: ['丙', '甲', '癸'],
+    辰: ['甲', '癸', '丙'],
+    巳: ['甲', '癸'],
+    午: ['壬', '甲', '癸'],
+    未: ['癸', '丙', '甲'],
+    申: ['丙', '癸'],
+    酉: ['丙', '癸'],
+    戌: ['甲', '癸', '丙'],
+    亥: ['甲', '丙'],
   },
   己: {
-    子: ['丙', '甲'], 丑: ['丙', '甲'], 寅: ['甲', '丙', '癸'],
-    卯: ['甲', '丙', '癸'], 辰: ['甲', '癸', '丙'], 巳: ['癸', '丙'],
-    午: ['癸', '丙'], 未: ['癸', '丙'], 申: ['丙', '癸'],
-    酉: ['丙', '癸'], 戌: ['甲', '癸', '丙'], 亥: ['甲', '丙', '壬'],
+    子: ['丙', '甲'],
+    丑: ['丙', '甲'],
+    寅: ['甲', '丙', '癸'],
+    卯: ['甲', '丙', '癸'],
+    辰: ['甲', '癸', '丙'],
+    巳: ['癸', '丙'],
+    午: ['癸', '丙'],
+    未: ['癸', '丙'],
+    申: ['丙', '癸'],
+    酉: ['丙', '癸'],
+    戌: ['甲', '癸', '丙'],
+    亥: ['甲', '丙', '壬'],
   },
   庚: {
-    子: ['丁', '甲'], 丑: ['丁', '甲', '丙'], 寅: ['丁', '甲', '丙'],
-    卯: ['丁', '甲'], 辰: ['甲', '丁', '壬'], 巳: ['壬', '丁', '甲'],
-    午: ['壬', '癸'], 未: ['壬', '丁'], 申: ['丁', '甲'],
-    酉: ['壬', '甲', '丁'], 戌: ['甲', '壬', '丁'], 亥: ['丁', '甲', '丙'],
+    子: ['丁', '甲'],
+    丑: ['丁', '甲', '丙'],
+    寅: ['丁', '甲', '丙'],
+    卯: ['丁', '甲'],
+    辰: ['甲', '丁', '壬'],
+    巳: ['壬', '丁', '甲'],
+    午: ['壬', '癸'],
+    未: ['壬', '丁'],
+    申: ['丁', '甲'],
+    酉: ['壬', '甲', '丁'],
+    戌: ['甲', '壬', '丁'],
+    亥: ['丁', '甲', '丙'],
   },
   辛: {
-    子: ['壬', '丙'], 丑: ['壬', '丙', '戊'], 寅: ['壬', '甲', '丙'],
-    卯: ['壬', '甲'], 辰: ['壬', '甲'], 巳: ['壬', '甲', '癸'],
-    午: ['壬', '癸', '庚'], 未: ['壬', '庚', '癸'], 申: ['壬', '甲'],
-    酉: ['壬', '甲'], 戌: ['壬', '甲'], 亥: ['壬', '丙'],
+    子: ['壬', '丙'],
+    丑: ['壬', '丙', '戊'],
+    寅: ['壬', '甲', '丙'],
+    卯: ['壬', '甲'],
+    辰: ['壬', '甲'],
+    巳: ['壬', '甲', '癸'],
+    午: ['壬', '癸', '庚'],
+    未: ['壬', '庚', '癸'],
+    申: ['壬', '甲'],
+    酉: ['壬', '甲'],
+    戌: ['壬', '甲'],
+    亥: ['壬', '丙'],
   },
   壬: {
-    子: ['戊', '丙'], 丑: ['丙', '甲'], 寅: ['戊', '丙', '庚'],
-    卯: ['戊', '辛'], 辰: ['甲', '庚'], 巳: ['壬', '辛', '庚'],
-    午: ['壬', '庚', '辛'], 未: ['辛', '甲'], 申: ['戊', '丁'],
-    酉: ['甲', '戊'], 戌: ['甲', '丙'], 亥: ['戊', '丙', '庚'],
+    子: ['戊', '丙'],
+    丑: ['丙', '甲'],
+    寅: ['戊', '丙', '庚'],
+    卯: ['戊', '辛'],
+    辰: ['甲', '庚'],
+    巳: ['壬', '辛', '庚'],
+    午: ['壬', '庚', '辛'],
+    未: ['辛', '甲'],
+    申: ['戊', '丁'],
+    酉: ['甲', '戊'],
+    戌: ['甲', '丙'],
+    亥: ['戊', '丙', '庚'],
   },
   癸: {
-    子: ['丙', '辛'], 丑: ['丙', '辛', '甲'], 寅: ['辛', '壬'],
-    卯: ['庚', '辛'], 辰: ['丙', '辛', '甲'], 巳: ['辛', '甲'],
-    午: ['庚', '辛', '壬'], 未: ['庚', '辛', '壬'], 申: ['丁', '丙'],
-    酉: ['辛', '丙'], 戌: ['辛', '甲', '丙'], 亥: ['丙', '辛', '戊'],
+    子: ['丙', '辛'],
+    丑: ['丙', '辛', '甲'],
+    寅: ['辛', '壬'],
+    卯: ['庚', '辛'],
+    辰: ['丙', '辛', '甲'],
+    巳: ['辛', '甲'],
+    午: ['庚', '辛', '壬'],
+    未: ['庚', '辛', '壬'],
+    申: ['丁', '丙'],
+    酉: ['辛', '丙'],
+    戌: ['辛', '甲', '丙'],
+    亥: ['丙', '辛', '戊'],
   },
 }
 
@@ -222,17 +314,12 @@ function judgeSpecialGekguk(sajuData: SajuData, sipseong: SipseongMap): GekgukJu
   const dist = sajuData.elementsDistribution
   const { bodyStrengthScore, distribution } = sipseong
 
-  const allZhis = [
-    sajuData.pillars.year.zhi,
-    sajuData.pillars.month.zhi,
-    sajuData.pillars.day.zhi,
-    sajuData.pillars.time.zhi,
-  ]
-
   // 비겁+인성 합계
   const myForce =
-    (distribution['비견'] || 0) + (distribution['겁재'] || 0) +
-    (distribution['편인'] || 0) + (distribution['정인'] || 0)
+    (distribution['비견'] || 0) +
+    (distribution['겁재'] || 0) +
+    (distribution['편인'] || 0) +
+    (distribution['정인'] || 0)
   // 식상 합계
   const sikForce = (distribution['식신'] || 0) + (distribution['상관'] || 0)
   // 재성 합계
@@ -306,10 +393,7 @@ function judgeSpecialGekguk(sajuData: SajuData, sipseong: SipseongMap): GekgukJu
 
 // ===================== 1단계: 격국용신 =====================
 
-function calcGekgukYongsin(
-  sajuData: SajuData,
-  sipseong: SipseongMap
-): { element: string; reason: string } | null {
+function calcGekgukYongsin(sajuData: SajuData, sipseong: SipseongMap): { element: string; reason: string } | null {
   const judgment = judgeSpecialGekguk(sajuData, sipseong)
   if (!judgment.isSpecial || !judgment.followElement) return null
 
@@ -402,7 +486,11 @@ function calcEokbuYongsinAdvanced(sajuData: SajuData, sipseong: SipseongMap): Eo
 // ===================== 4단계: 통관용신 =====================
 
 const TONGGWAN_MAP: Record<string, Record<string, string>> = {
-  木: { 土: '火' }, 火: { 金: '土' }, 土: { 水: '金' }, 金: { 木: '水' }, 水: { 火: '木' },
+  木: { 土: '火' },
+  火: { 金: '土' },
+  土: { 水: '金' },
+  金: { 木: '水' },
+  水: { 火: '木' },
 }
 
 function calcTonggwanYongsinAdvanced(sajuData: SajuData): TonggwanDetail | null {
@@ -587,10 +675,14 @@ function fusePriority(
 function buildRecommendation(finalEl: string, huisin: string, gisin: string): string {
   const parts: string[] = []
 
-  parts.push(`[색상] ${ELEMENT_COLOR[finalEl] || ''} 계열을 주로 사용하고, 희신인 ${ELEMENT_COLOR[huisin] || ''}도 활용하세요.`)
+  parts.push(
+    `[색상] ${ELEMENT_COLOR[finalEl] || ''} 계열을 주로 사용하고, 희신인 ${ELEMENT_COLOR[huisin] || ''}도 활용하세요.`
+  )
   parts.push(`[방위] ${ELEMENT_DIRECTION[finalEl] || ''} 방향이 길방(吉方)입니다. 책상·침대를 이 방위에 배치하세요.`)
   parts.push(`[음식] ${ELEMENT_FOOD[finalEl] || ''}을 자주 섭취하세요.`)
-  parts.push(`[피할 것] ${ELEMENT_COLOR[gisin] || ''} 계열과 ${ELEMENT_DIRECTION[gisin] || ''} 방위는 기신이므로 과도한 노출을 피하세요.`)
+  parts.push(
+    `[피할 것] ${ELEMENT_COLOR[gisin] || ''} 계열과 ${ELEMENT_DIRECTION[gisin] || ''} 방위는 기신이므로 과도한 노출을 피하세요.`
+  )
 
   return parts.join(' ')
 }
@@ -601,10 +693,7 @@ function buildRecommendation(finalEl: string, huisin: string, gisin: string): st
  * 5단계 용신 정밀 판정
  * 격국 → 조후 → 억부 → 통관 → 병약 순서로 평가하여 최종 용신 결정
  */
-export function analyzeYongsinAdvanced(
-  sajuData: SajuData,
-  sipseong: SipseongMap
-): YongsinResult {
+export function analyzeYongsinAdvanced(sajuData: SajuData, sipseong: SipseongMap): YongsinResult {
   const dayElement = GAN_ELEMENT[sajuData.dayMaster] || '木'
 
   // 5단계 개별 분석
@@ -628,9 +717,7 @@ export function analyzeYongsinAdvanced(
   const huisin = SAENG_BY[finalElement] || '水'
   const gisin = GEUK_BY[finalElement] || '金'
   const gusin = SAENG_BY[gisin] || '土'
-  const remaining = ALL_ELEMENTS.filter(
-    (e) => e !== finalElement && e !== huisin && e !== gisin && e !== gusin
-  )
+  const remaining = ALL_ELEMENTS.filter((e) => e !== finalElement && e !== huisin && e !== gisin && e !== gusin)
   const hansin = remaining[0] || '土'
 
   const recommendation = buildRecommendation(finalElement, huisin, gisin)
@@ -708,10 +795,7 @@ export function lookupGungtongTable(dayMaster: string, monthZhi: string): string
 /**
  * 특수격국 판별 (외부에서 직접 사용 가능)
  */
-export function judgeSpecialGekgukExternal(
-  sajuData: SajuData,
-  sipseong: SipseongMap
-): GekgukJudgment {
+export function judgeSpecialGekgukExternal(sajuData: SajuData, sipseong: SipseongMap): GekgukJudgment {
   return judgeSpecialGekguk(sajuData, sipseong)
 }
 

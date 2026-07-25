@@ -341,8 +341,6 @@ export function AttendanceCheck({
     }
   }, [canCheckIn, isChecking, queryClient, today, play])
 
-  const isWeekComplete = weekCount >= 7
-
   return (
     <Card className="bg-surface/30 border-primary/20 overflow-hidden relative">
       <CardContent className="p-4 space-y-4">

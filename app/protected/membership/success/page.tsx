@@ -26,16 +26,6 @@ function MembershipSuccessContent() {
   const planId = searchParams.get('planId')
   const isMock = searchParams.get('mock') === 'true'
 
-  useEffect(() => {
-    if (!customerKey || !planId) {
-      setError('잘못된 접근입니다.')
-      setStep('error')
-      return
-    }
-
-    processSubscription()
-  }, [])
-
   const processSubscription = async () => {
     try {
       // Mock 모드 (개발 환경)
@@ -121,6 +111,16 @@ function MembershipSuccessContent() {
     }
     frame()
   }
+
+  useEffect(() => {
+    if (!customerKey || !planId) {
+      setError('잘못된 접근입니다.')
+      setStep('error')
+      return
+    }
+
+    processSubscription()
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 bg-background relative overflow-hidden">

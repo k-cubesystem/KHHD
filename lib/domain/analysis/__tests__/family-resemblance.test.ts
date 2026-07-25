@@ -1,5 +1,4 @@
-import { buildFamilyResemblance, withGwaWa } from '../family-resemblance'
-import type { PartAssessments } from '../family-resemblance'
+import { buildFamilyResemblance, withGwaWa, type PartAssessments } from '../family-resemblance'
 
 describe('withGwaWa — 받침 조사', () => {
   it('받침 없는 단어 → 와', () => {

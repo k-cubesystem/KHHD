@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Share2, Link as LinkIcon, Twitter, Check } from 'lucide-react'
+import { Share2, Link as LinkIcon, Twitter } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -17,7 +17,7 @@ interface ShareButtonProps {
 }
 
 export function ShareButton({
-  title = '청담해화당',
+  title: _title = '청담해화당',
   text = '당신의 운명을 비춰주는 프리미엄 사주 분석',
   url,
   className,

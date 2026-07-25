@@ -1,6 +1,6 @@
 // 신위/테마 이미지 스펙을 구조화 JSON으로 출력 (웹 카탈로그 임베드용).
 // manifest.mjs 프롬프트 로직 재사용 → 스펙 문서와 정합.
-import { DEITIES, EMOTIONS, STYLE_PREFIX, STYLE_SUFFIX, basePrompt } from './manifest.mjs'
+import { DEITIES, EMOTIONS, STYLE_PREFIX, basePrompt } from './manifest.mjs'
 
 const META = {
   samsin:   { name: '삼신할매', hanja: '三神', tier: 1, tierName: '수호신', price: '무료', domains: '자녀·출산·가정화목', accent: '#E8A0A0', el: '土' },

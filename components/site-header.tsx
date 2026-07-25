@@ -4,53 +4,22 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { logger } from '@/lib/utils/logger'
 import { BLUR_DATA_URL } from '@/lib/utils/image'
-import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
-import {
-  Menu,
-  X,
-  ChevronDown,
-  Sun,
-  BookOpen,
-  ScanFace,
-  Hand,
-  Compass,
-  Users,
-  Clock,
-  Ticket,
-  Flower2,
-  User,
-  LogOut,
-  Sparkles,
-  LayoutDashboard,
-  ChevronLeft,
-  Home,
-} from 'lucide-react'
+import type { User } from '@supabase/supabase-js'
+import { Ticket, ChevronLeft, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { motion, AnimatePresence } from 'framer-motion'
-import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { getUserTierLimits } from '@/app/actions/payment/membership'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [userRole, setUserRole] = useState<string>('user')
+  const [user, setUser] = useState<User | null>(null)
+  const [_userRole, setUserRole] = useState<string>('user')
   const [balance, setBalance] = useState(0)
-  const [tier, setTier] = useState<string | null>(null)
+  const [_tier, setTier] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
   const pathname = usePathname()
@@ -100,18 +69,11 @@ export function SiteHeader() {
     }
   }, [])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
-    // Optionally redirect to home or login
-    router.push('/')
-  }
-
   return (
     <header
       className={cn(
         'fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-[100] transition-all duration-300 border-b',
-        isScrolled || mobileMenuOpen
+        isScrolled
           ? 'bg-background/80 backdrop-blur-md border-primary/20 shadow-sm'
           : 'bg-background/80 backdrop-blur-md border-primary/20'
       )}

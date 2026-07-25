@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Coins, Loader2, TrendingUp, AlertCircle, ShieldAlert, Zap, Clock, Target } from 'lucide-react'
+import { Coins, Loader2, TrendingUp, AlertCircle, ShieldAlert, Clock, Target } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

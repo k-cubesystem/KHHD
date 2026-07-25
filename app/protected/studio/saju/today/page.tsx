@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Sun, Loader2, Sparkles } from 'lucide-react'
+import { Sun, Loader2 } from 'lucide-react'
 import { DailyFortuneView } from '@/components/analysis/daily-fortune-view'
 import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'

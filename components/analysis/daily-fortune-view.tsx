@@ -4,9 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Loader2, MessageCircle, Share2, Sparkles, RefreshCw, Users, ArrowRight } from 'lucide-react'
+import { Loader2, Sparkles, RefreshCw, Users, ArrowRight } from 'lucide-react'
 import { generateDailyFortune } from '@/app/actions/fortune/daily'
-import { sendKakaoNotification } from '@/app/actions/fortune/notification'
 import { getFamilyMembers } from '@/app/actions/user/family'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
@@ -34,7 +33,6 @@ interface ProfileOption {
 export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFortuneViewProps) {
   const [fortune, setFortune] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [sending, setSending] = useState(false)
 
   const [profiles, setProfiles] = useState<ProfileOption[]>([{ id: userId, name: userName, type: 'USER' }])
   const [selectedProfileId, setSelectedProfileId] = useState<string>(initialMemberId ?? userId)
@@ -115,31 +113,6 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
       toast.error('오류가 발생했습니다.')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSendKakao = async () => {
-    if (!fortune) return
-    setSending(true)
-    try {
-      const result = await sendKakaoNotification(userId, 'DAILY_FORTUNE_V1', {
-        content: fortune.substring(0, 50) + '...',
-        link: window.location.href,
-      })
-
-      if (result.success) {
-        toast.success('카카오톡으로 발송되었습니다.')
-      } else {
-        if (result.mocked) {
-          toast.info('테스트 모드: 발송 로그가 기록되었습니다.')
-        } else {
-          toast.error('발송 실패: ' + result.error)
-        }
-      }
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : String(e))
-    } finally {
-      setSending(false)
     }
   }
 

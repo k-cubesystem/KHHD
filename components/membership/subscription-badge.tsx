@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { logger } from '@/lib/utils/logger'
 import Link from 'next/link'
-import { Crown, Loader2 } from 'lucide-react'
+import { Crown } from 'lucide-react'
 
 export function SubscriptionBadge() {
   const [isSubscribed, setIsSubscribed] = useState(false)

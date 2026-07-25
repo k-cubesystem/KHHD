@@ -62,7 +62,8 @@ const GYEOKGUK_DESC: Record<string, { description: string; characteristics: stri
     ],
   },
   편관격: {
-    description: '편관(칠살)이 격국을 이루어 강인한 추진력과 과단성의 사주. 제어가 되면 대권을 잡고, 안 되면 삶이 거칠어진다.',
+    description:
+      '편관(칠살)이 격국을 이루어 강인한 추진력과 과단성의 사주. 제어가 되면 대권을 잡고, 안 되면 삶이 거칠어진다.',
     characteristics: [
       '과감한 결단력과 위기관리 능력',
       '권위적이나 카리스마 있는 리더십',
@@ -71,11 +72,7 @@ const GYEOKGUK_DESC: Record<string, { description: string; characteristics: stri
   },
   정인격: {
     description: '정인이 격국을 이루어 학문과 지혜를 품은 사주. 어머니의 후덕함처럼 주변을 감싸는 인자한 기질.',
-    characteristics: [
-      '깊은 학습능력과 학문적 성취',
-      '인자하고 포용적인 성품',
-      '교육, 연구, 출판 분야에서 두각',
-    ],
+    characteristics: ['깊은 학습능력과 학문적 성취', '인자하고 포용적인 성품', '교육, 연구, 출판 분야에서 두각'],
   },
   편인격: {
     description: '편인이 격국을 이루어 비범한 직관과 영감의 사주. 독창적 사고를 하나 편향될 수 있다.',
@@ -87,19 +84,11 @@ const GYEOKGUK_DESC: Record<string, { description: string; characteristics: stri
   },
   정재격: {
     description: '정재가 격국을 이루어 꼼꼼한 재무 관리와 성실한 축적의 사주. 정직한 노동으로 부를 쌓는다.',
-    characteristics: [
-      '꼼꼼한 재무 관리와 안정적 축적',
-      '성실하고 실용적인 경제관',
-      '회계, 금융, 안정적 사업에 유리',
-    ],
+    characteristics: ['꼼꼼한 재무 관리와 안정적 축적', '성실하고 실용적인 경제관', '회계, 금융, 안정적 사업에 유리'],
   },
   편재격: {
     description: '편재가 격국을 이루어 큰 그림을 보는 사업가 기질의 사주. 투자와 무역, 영업에서 두각을 나타낸다.',
-    characteristics: [
-      '사업가적 안목과 임기응변',
-      '넓은 인맥과 뛰어난 사교성',
-      '벤처, 무역, 투자 분야에서 성공 가능성',
-    ],
+    characteristics: ['사업가적 안목과 임기응변', '넓은 인맥과 뛰어난 사교성', '벤처, 무역, 투자 분야에서 성공 가능성'],
   },
   식신격: {
     description: '식신이 격국을 이루어 창의력과 풍요로운 감성의 사주. 먹고 사는 문제에 강하고 기술로 입신한다.',
@@ -178,13 +167,16 @@ const GYEOKGUK_DESC: Record<string, { description: string; characteristics: stri
 }
 
 const GAN_ELEMENT: Record<string, string> = {
-  甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土',
-  己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水',
-}
-
-const GAN_YINYANG: Record<string, number> = {
-  甲: 0, 乙: 1, 丙: 0, 丁: 1, 戊: 0,
-  己: 1, 庚: 0, 辛: 1, 壬: 0, 癸: 1,
+  甲: '木',
+  乙: '木',
+  丙: '火',
+  丁: '火',
+  戊: '土',
+  己: '土',
+  庚: '金',
+  辛: '金',
+  壬: '水',
+  癸: '水',
 }
 
 /** 전왕격: 오행→격국 이름 */
@@ -204,10 +196,7 @@ const JEONWANG_MAP: Record<string, string> = {
  * 종살격: 관성이 가장 많을 때
  * 종아격: 식상이 가장 많을 때
  */
-function checkJonggyeok(
-  sajuData: SajuData,
-  grade: StrengthGrade
-): GyeokgukResult | null {
+function checkJonggyeok(sajuData: SajuData, grade: StrengthGrade): GyeokgukResult | null {
   if (grade !== '극약') return null
 
   const dayElement = GAN_ELEMENT[sajuData.dayMaster]
@@ -218,18 +207,10 @@ function checkJonggyeok(
   const SAENG_BY: Record<string, string> = { 木: '水', 火: '木', 土: '火', 金: '土', 水: '金' }
   const motherEl = SAENG_BY[dayElement]
 
-  // 비겁(같은 오행) 체크 — 일간 자체는 제외하므로 1개면 일간뿐
-  const sameCount = elementsDistribution[dayElement] || 0
-  const motherCount = elementsDistribution[motherEl] || 0
-
   // 천간에서 비겁이 일간 외에 있는지 확인
-  const allGans = [
-    sajuData.pillars.year.gan,
-    sajuData.pillars.month.gan,
-    sajuData.pillars.time.gan,
-  ]
-  const hasBigyeob = allGans.some(g => GAN_ELEMENT[g] === dayElement)
-  const hasInseong = allGans.some(g => GAN_ELEMENT[g] === motherEl)
+  const allGans = [sajuData.pillars.year.gan, sajuData.pillars.month.gan, sajuData.pillars.time.gan]
+  const hasBigyeob = allGans.some((g) => GAN_ELEMENT[g] === dayElement)
+  const hasInseong = allGans.some((g) => GAN_ELEMENT[g] === motherEl)
 
   // 비겁이 천간에 있거나, 인성이 천간에 있으면 종격 불가
   if (hasBigyeob || hasInseong) return null
@@ -280,10 +261,7 @@ function checkJonggyeok(
 /**
  * 극강일 때 전왕격/종강격/종왕격 판정
  */
-function checkJeonwanggyeok(
-  sajuData: SajuData,
-  grade: StrengthGrade
-): GyeokgukResult | null {
+function checkJeonwanggyeok(sajuData: SajuData, grade: StrengthGrade): GyeokgukResult | null {
   if (grade !== '극강') return null
 
   const dayElement = GAN_ELEMENT[sajuData.dayMaster]
@@ -354,14 +332,30 @@ function checkJeonwanggyeok(
 function checkGeollokYangin(dayMaster: string, monthZhi: string): GyeokgukResult | null {
   // 건록 체크: 일간의 12운성에서 월지가 건록인지
   const GEOLLOK_MAP: Record<string, string> = {
-    甲: '寅', 乙: '卯', 丙: '巳', 丁: '午', 戊: '巳',
-    己: '午', 庚: '申', 辛: '酉', 壬: '亥', 癸: '子',
+    甲: '寅',
+    乙: '卯',
+    丙: '巳',
+    丁: '午',
+    戊: '巳',
+    己: '午',
+    庚: '申',
+    辛: '酉',
+    壬: '亥',
+    癸: '子',
   }
 
   // 양인(제왕) 체크
   const YANGIN_MAP: Record<string, string> = {
-    甲: '卯', 乙: '寅', 丙: '午', 丁: '巳', 戊: '午',
-    己: '巳', 庚: '酉', 辛: '申', 壬: '子', 癸: '亥',
+    甲: '卯',
+    乙: '寅',
+    丙: '午',
+    丁: '巳',
+    戊: '午',
+    己: '巳',
+    庚: '酉',
+    辛: '申',
+    壬: '子',
+    癸: '亥',
   }
 
   if (GEOLLOK_MAP[dayMaster] === monthZhi) {
@@ -397,11 +391,7 @@ function checkGeollokYangin(dayMaster: string, monthZhi: string): GyeokgukResult
 
 // ===================== 격국 강도 계산 =====================
 
-function calculateGyeokgukStrength(
-  touchu: TouchuResult[],
-  sipseongName: string,
-  sajuData: SajuData
-): number {
+function calculateGyeokgukStrength(touchu: TouchuResult[], sipseongName: string, sajuData: SajuData): number {
   // 기본 강도 3
   let strength = 3
 
@@ -409,12 +399,8 @@ function calculateGyeokgukStrength(
   if (touchu.length > 0 && touchu[0].source === 'bongi') strength += 1
 
   // 격국 십성이 사주에 2개 이상이면 +1
-  const allGans = [
-    sajuData.pillars.year.gan,
-    sajuData.pillars.month.gan,
-    sajuData.pillars.time.gan,
-  ]
-  const count = allGans.filter(g => calculateSipseong(sajuData.dayMaster, g) === sipseongName).length
+  const allGans = [sajuData.pillars.year.gan, sajuData.pillars.month.gan, sajuData.pillars.time.gan]
+  const count = allGans.filter((g) => calculateSipseong(sajuData.dayMaster, g) === sipseongName).length
   if (count >= 2) strength += 1
 
   return Math.min(5, strength)
@@ -429,10 +415,7 @@ function calculateGyeokgukStrength(
  * @param strengthResult - 신강/신약 정밀 판정 결과
  * @returns 격국 판정 결과
  */
-export function analyzeGyeokgukAdvanced(
-  sajuData: SajuData,
-  strengthResult: AdvancedStrengthResult
-): GyeokgukResult {
+export function analyzeGyeokgukAdvanced(sajuData: SajuData, strengthResult: AdvancedStrengthResult): GyeokgukResult {
   const { dayMaster, pillars } = sajuData
   const monthZhi = pillars.month.zhi
   const { grade } = strengthResult
@@ -448,7 +431,7 @@ export function analyzeGyeokgukAdvanced(
   const allGans = [
     pillars.year.gan,
     pillars.month.gan,
-    pillars.day.gan,  // 일간 자체도 투출 판정 대상
+    pillars.day.gan, // 일간 자체도 투출 판정 대상
     pillars.time.gan,
   ]
 

@@ -26,10 +26,16 @@ serve(async (req) => {
 
   const encoder = new TextEncoder()
   const key = await crypto.subtle.importKey(
-    'raw', encoder.encode(webhookSecret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    'raw',
+    encoder.encode(webhookSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
   )
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(bodyText))
-  const expectedSig = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+  const expectedSig = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 
   if (!timingSafeEqual(signature, expectedSig)) {
     return errorResponse('Invalid signature', 401)
@@ -40,7 +46,7 @@ serve(async (req) => {
 
   try {
     if (event.eventType === 'PAYMENT_STATUS_CHANGED') {
-      const { paymentKey, status, orderId } = event.data
+      const { paymentKey, status } = event.data
       await admin.from('payments').update({ status }).eq('payment_key', paymentKey)
 
       if (status === 'DONE') {

@@ -3,9 +3,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { Solar, Lunar } from 'lunar-javascript'
-import { Badge } from '@/components/ui/badge'
-import { Sun, Moon, Sparkles, TrendingUp, Heart, Wallet, Briefcase } from 'lucide-react'
+import { Solar } from 'lunar-javascript'
+import { Sparkles, Heart, Wallet } from 'lucide-react'
 
 interface FortuneDetailModalProps {
   isOpen: boolean
@@ -20,7 +19,6 @@ export function FortuneDetailModal({ isOpen, onClose, date }: FortuneDetailModal
 
   // Mock Data for Detail
   const luckScore = ((date.getDate() * 7 + date.getMonth() * 3) % 30) + 70 // 70-100 range
-  const keywords = ['이동수', '귀인', '금전운']
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

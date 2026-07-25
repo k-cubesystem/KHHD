@@ -10,7 +10,6 @@ import {
   getCurrentSeasonalEvent,
   getUpcomingSeasonalEvent,
   getEventEndDate,
-  getEventStartDate,
   ELEMENT_LABELS,
   SEASON_LABELS,
   getDiscountedCost,
@@ -85,9 +84,7 @@ function EventCard({ event, isCurrent }: { event: SeasonalEvent; isCurrent: bool
         <span className="text-xl">{event.emoji}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className={cn('text-sm font-bold', isCurrent ? 'text-gold-500' : 'text-white/80')}>
-              {event.name}
-            </span>
+            <span className={cn('text-sm font-bold', isCurrent ? 'text-gold-500' : 'text-white/80')}>{event.name}</span>
             <span className="text-xs text-white/40">{event.hanja}</span>
             {isCurrent && (
               <span className="px-1.5 py-0.5 rounded-full bg-gold-500/20 border border-gold-500/40 text-[9px] font-bold text-gold-500 tracking-wide">

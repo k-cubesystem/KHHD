@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Heart, Share2, Copy, Check, Sparkles, MessageCircle, Link2, Users, QrCode, Loader2 } from 'lucide-react'
+import { Heart, Share2, Copy, Check, Sparkles, MessageCircle, Link2, Users, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,7 +47,7 @@ export default function InviteCreatePage() {
       } else {
         setError(result.error || '초대 링크 생성에 실패했습니다.')
       }
-    } catch (err) {
+    } catch {
       setError('서버 오류가 발생했습니다.')
     } finally {
       setLoading(false)
@@ -104,7 +104,7 @@ export default function InviteCreatePage() {
           text: '해화당에서 나와 당신의 궁합을 확인해보세요!',
           url: inviteLink,
         })
-      } catch (err) {
+      } catch {
         // User cancelled or error
       }
     } else {

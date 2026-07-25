@@ -23,6 +23,14 @@ export function RecentActivityLive() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
 
+  const loadActivities = async () => {
+    const result = await getRecentActivities(20)
+    if (result.success && result.activities) {
+      setActivities(result.activities)
+    }
+    setLoading(false)
+  }
+
   useEffect(() => {
     // 초기 로드
     loadActivities()
@@ -50,14 +58,6 @@ export function RecentActivityLive() {
       supabase.removeChannel(channel)
     }
   }, [])
-
-  const loadActivities = async () => {
-    const result = await getRecentActivities(20)
-    if (result.success && result.activities) {
-      setActivities(result.activities)
-    }
-    setLoading(false)
-  }
 
   const getIcon = (type: string) => {
     switch (type) {

@@ -12,7 +12,7 @@
 // 흐름: 프롬프트 → 녹색배경 PNG 생성 → assets-src/shrine/raw/ → chroma.mjs로 public/shrine/deities/
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { config } from 'dotenv'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { DEITIES, EMOTIONS, basePrompt, emotionPrompt } from './manifest.mjs'
@@ -28,7 +28,6 @@ const RAW = 'D:/anti/haehwadang/assets-src/shrine/raw'
 const genAI = new GoogleGenerativeAI(KEY)
 const model = genAI.getGenerativeModel({ model: MODEL })
 
-import { readFile } from 'node:fs/promises'
 async function gen(prompt, outPng, refPaths = []) {
   const parts = [{ text: prompt }]
   // 스타일/캐릭터 일관성: 참조 이미지를 inlineData로 첨부 (style-refs + base.png)

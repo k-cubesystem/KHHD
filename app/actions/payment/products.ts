@@ -21,7 +21,7 @@ function createAdminClient() {
       getAll() {
         return []
       },
-      setAll(cookiesToSet) {},
+      setAll(_cookiesToSet) {},
     },
   })
 }

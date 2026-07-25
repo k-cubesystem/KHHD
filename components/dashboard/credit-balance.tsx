@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { logger } from '@/lib/utils/logger'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TalismanBalanceProps {

@@ -1,22 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isSameDay,
-  addMonths,
-  subMonths,
-  getDay,
-} from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, getDay } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Sparkles, Moon, Sun } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Solar, Lunar } from 'lunar-javascript'
+import { motion } from 'framer-motion'
+import { Solar } from 'lunar-javascript'
 
 interface FortuneCalendarProps {
   onDateSelect: (date: Date) => void

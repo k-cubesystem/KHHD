@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, ChevronLeft } from 'lucide-react'
@@ -10,7 +10,6 @@ import { GA } from '@/lib/analytics/ga4'
 
 function PaymentFailContent() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const t = useTranslations()
 
   const code = searchParams.get('code')

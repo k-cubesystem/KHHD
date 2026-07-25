@@ -4,7 +4,7 @@
 // 산출: 512px 폭 webp (클라이언트가 저해상 다운스케일로 쓰는 규격 — 고DPR 흰화면 버그 회피 이력)
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { config } from 'dotenv'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'

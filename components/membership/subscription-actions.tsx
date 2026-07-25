@@ -24,7 +24,7 @@ interface SubscriptionActionsProps {
   periodEnd: string | null
 }
 
-export function SubscriptionActions({ subscriptionId, status, periodEnd }: SubscriptionActionsProps) {
+export function SubscriptionActions({ subscriptionId: _subscriptionId, status, periodEnd }: SubscriptionActionsProps) {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const router = useRouter()
 
@@ -43,7 +43,7 @@ export function SubscriptionActions({ subscriptionId, status, periodEnd }: Subsc
       } else {
         toast.error(result.error || '구독 해지에 실패했습니다.')
       }
-    } catch (error) {
+    } catch {
       toast.error('오류가 발생했습니다.')
     } finally {
       setIsLoading(null)
@@ -61,7 +61,7 @@ export function SubscriptionActions({ subscriptionId, status, periodEnd }: Subsc
       } else {
         toast.error(result.error || '구독 재활성화에 실패했습니다.')
       }
-    } catch (error) {
+    } catch {
       toast.error('오류가 발생했습니다.')
     } finally {
       setIsLoading(null)
@@ -87,7 +87,7 @@ export function SubscriptionActions({ subscriptionId, status, periodEnd }: Subsc
         successUrl: `${window.location.origin}/protected/membership/manage?changed=true&customerKey=${result.customerKey}`,
         failUrl: `${window.location.origin}/protected/membership/manage?changed=false`,
       })
-    } catch (error) {
+    } catch {
       toast.error('오류가 발생했습니다.')
       setIsLoading(null)
     }

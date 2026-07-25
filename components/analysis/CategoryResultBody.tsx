@@ -4,6 +4,28 @@ import type { AnalysisHistory } from '@/app/actions/user/history'
 import { BookOpen, Sun, Home, User, TrendingUp, Sparkles, Heart } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 
+const Section = ({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon?: React.ElementType
+  title: string
+  children: React.ReactNode
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center gap-2">
+      {Icon && <Icon className="w-4 h-4 text-primary/70" />}
+      <h4 className="text-xs font-bold text-primary/70 uppercase tracking-widest">{title}</h4>
+    </div>
+    <div className="pl-0">{children}</div>
+  </div>
+)
+
+const Divider = () => <div className="border-t border-primary/10" />
+
+const markdownClass = `text-sm text-ink-light/85 leading-relaxed space-y-2 [&_strong]:font-semibold [&_strong]:text-ink-light [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-ink-light [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-ink-light [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-primary [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2`
+
 /**
  * 카테고리별 분석 결과 본문 렌더러 (공유 화면 · 히스토리 상세 공용).
  * result_json 을 파싱해 카테고리에 맞는 섹션으로 렌더한다 — raw JSON 덤프를 대체한다.
@@ -19,28 +41,6 @@ export function CategoryResultBody({ record, full = false }: { record: AnalysisH
       <p className="text-base text-ink-light/85 leading-relaxed whitespace-pre-wrap">{record.summary}</p>
     ) : null
   }
-
-  const Section = ({
-    icon: Icon,
-    title,
-    children,
-  }: {
-    icon?: React.ElementType
-    title: string
-    children: React.ReactNode
-  }) => (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="w-4 h-4 text-primary/70" />}
-        <h4 className="text-xs font-bold text-primary/70 uppercase tracking-widest">{title}</h4>
-      </div>
-      <div className="pl-0">{children}</div>
-    </div>
-  )
-
-  const Divider = () => <div className="border-t border-primary/10" />
-
-  const markdownClass = `text-sm text-ink-light/85 leading-relaxed space-y-2 [&_strong]:font-semibold [&_strong]:text-ink-light [&_h1]:text-base [&_h1]:font-bold [&_h1]:text-ink-light [&_h2]:text-base [&_h2]:font-bold [&_h2]:text-ink-light [&_h3]:text-sm [&_h3]:font-bold [&_h3]:text-primary [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:mb-1 [&_p]:mb-2`
 
   // SAJU — cheon/ji/in 구조 OR 표준 구조
   if (record.category === 'SAJU') {

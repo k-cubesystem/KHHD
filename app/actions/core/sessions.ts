@@ -83,7 +83,10 @@ export async function saveAnalysisSession(
 /**
  * Get analysis sessions for a specific family member
  */
-export async function getMemberAnalysisSessions(memberId: string, limit: number = 10): Promise<AnalysisSessionListItem[]> {
+export async function getMemberAnalysisSessions(
+  memberId: string,
+  limit: number = 10
+): Promise<AnalysisSessionListItem[]> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -148,7 +151,7 @@ export async function markSessionAsShared(sessionId: string, shareCardUrl: strin
   }
 
   // user_id 필터 추가 — 다른 사용자의 세션 수정 방지 (IDOR 방어)
-  const { error, count } = await supabase
+  const { error } = await supabase
     .from('analysis_sessions')
     .update({
       shared: true,

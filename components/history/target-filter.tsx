@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { logger } from '@/lib/utils/logger'
-import { ChevronDown, User, Users } from 'lucide-react'
+import { User, Users } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'

@@ -831,7 +831,6 @@ export async function saveChatMessages(
   isFirstMessage: boolean
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createClient()
     const adminClient = createAdminClient()
 
     const rows = [

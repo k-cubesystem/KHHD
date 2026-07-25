@@ -6,7 +6,6 @@
 import type { SajuContext } from './context-builder'
 import { CHEONGAN_HAP, CHEONGAN_CHUNG, JIJI_YUKHAP, JIJI_SAMHAP, JIJI_CHUNG, JIJI_HYEONG } from './relations'
 import { calculateSipseong, SIPSEONG_MODERN } from './sipseong'
-import { SINSAL_MODERN } from './sinsal-extended'
 import { describeMulsangInteraction, ZHI_MULSANG } from './mulssangron'
 
 // ===================== 오행 데이터 =====================
@@ -24,24 +23,8 @@ const GAN_ELEMENT: Record<string, string> = {
   癸: '水',
 }
 
-const ZHI_ELEMENT: Record<string, string> = {
-  子: '水',
-  丑: '土',
-  寅: '木',
-  卯: '木',
-  辰: '土',
-  巳: '火',
-  午: '火',
-  未: '土',
-  申: '金',
-  酉: '金',
-  戌: '土',
-  亥: '水',
-}
-
 const SAENG: Record<string, string> = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' }
 const GEUK: Record<string, string> = { 木: '土', 火: '金', 土: '水', 金: '木', 水: '火' }
-const SAENG_BY: Record<string, string> = { 木: '水', 火: '木', 土: '火', 金: '土', 水: '金' }
 
 const ALL_ELEMENTS = ['木', '火', '土', '金', '水']
 const ELEMENT_KR: Record<string, string> = { 木: '목', 火: '화', 土: '토', 金: '금', 水: '수' }

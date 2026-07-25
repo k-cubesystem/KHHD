@@ -58,7 +58,7 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
     // If RPC fails, use fallback query
     logger.warn('RPC not available, using fallback query')
     throw error
-  } catch (e) {
+  } catch {
     // Fallback: Manual query without RPC
     const { data: members, error: membersError } = await supabase
       .from('family_members')

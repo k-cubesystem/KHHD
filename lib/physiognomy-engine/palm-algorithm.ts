@@ -115,7 +115,7 @@ export function predictTimeline(
   lifeLineScore: number,
   fateLineScore: number,
   sunLineScore: number,
-  currentAge: number = 35
+  _currentAge: number = 35
 ): { next1Year: string; next3Years: string; next10Years: string } {
   const overallStrength = (lifeLineScore + fateLineScore + sunLineScore) / 3
 
@@ -179,7 +179,7 @@ export const DAYGAN_PALM_SYNERGY: Record<string, { keyLine: string; keyMount: st
   癸: { keyLine: '태양선', keyMount: '월구', advice: '태양선과 월구 발달 시 예술적 재능이 빛을 발합니다' },
 }
 
-export function buildPalmSajuSynergyText(dayGan: string, palmScore: number): string {
+export function buildPalmSajuSynergyText(dayGan: string, _palmScore: number): string {
   const synergy = DAYGAN_PALM_SYNERGY[dayGan]
   if (!synergy) return ''
   return `일간 ${dayGan}의 운명을 가진 분에게 ${synergy.keyLine}과 ${synergy.keyMount}는 핵심 지표입니다. ${synergy.advice}`

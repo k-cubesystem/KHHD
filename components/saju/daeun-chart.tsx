@@ -41,6 +41,59 @@ interface DaeunChartProps {
   description?: string
 }
 
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as DaeunData
+    return (
+      <Card className="bg-surface/95 backdrop-blur-md border-primary/30 p-4">
+        <div className="space-y-2">
+          <div className="flex justify-between gap-4">
+            <span className="font-serif text-lg font-bold text-ink-light">{data.age}세</span>
+            <span className="text-2xl font-bold" style={{ color: ELEMENT_COLORS[data.element] }}>
+              {data.fortune}점
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-ink-light/60">대운:</span>
+            <span className="font-serif font-bold text-ink-light">
+              {data.heavenly}
+              {data.earthly}
+            </span>
+            <span
+              className="px-2 py-0.5 rounded text-xs"
+              style={{ backgroundColor: ELEMENT_COLORS[data.element] + '40', color: ELEMENT_COLORS[data.element] }}
+            >
+              {data.element}
+            </span>
+          </div>
+          {data.description && <p className="text-xs text-ink-light/70 pt-2">{data.description}</p>}
+        </div>
+      </Card>
+    )
+  }
+  return null
+}
+
+// currentAge 는 호출부에서 명시 전달 — Recharts 가 cloneElement 로 cx/cy/payload 를 덧씌운다.
+const CustomDot = (props: any) => {
+  const { cx, cy, payload, currentAge } = props
+  const data = payload as DaeunData
+  const isCurrent = currentAge
+    ? parseInt(data.age.split('-')[0]) <= currentAge && parseInt(data.age.split('-')[1]) >= currentAge
+    : false
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={isCurrent ? 8 : 5}
+      fill={ELEMENT_COLORS[data.element]}
+      stroke={isCurrent ? '#E2D5B5' : 'transparent'}
+      strokeWidth={isCurrent ? 3 : 0}
+      className={isCurrent ? 'animate-pulse' : ''}
+    />
+  )
+}
+
 export function DaeunChart({
   data,
   currentAge,
@@ -53,58 +106,6 @@ export function DaeunChart({
         return currentAge >= start && currentAge <= end
       })
     : null
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload as DaeunData
-      return (
-        <Card className="bg-surface/95 backdrop-blur-md border-primary/30 p-4">
-          <div className="space-y-2">
-            <div className="flex justify-between gap-4">
-              <span className="font-serif text-lg font-bold text-ink-light">{data.age}세</span>
-              <span className="text-2xl font-bold" style={{ color: ELEMENT_COLORS[data.element] }}>
-                {data.fortune}점
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-ink-light/60">대운:</span>
-              <span className="font-serif font-bold text-ink-light">
-                {data.heavenly}
-                {data.earthly}
-              </span>
-              <span
-                className="px-2 py-0.5 rounded text-xs"
-                style={{ backgroundColor: ELEMENT_COLORS[data.element] + '40', color: ELEMENT_COLORS[data.element] }}
-              >
-                {data.element}
-              </span>
-            </div>
-            {data.description && <p className="text-xs text-ink-light/70 pt-2">{data.description}</p>}
-          </div>
-        </Card>
-      )
-    }
-    return null
-  }
-
-  const CustomDot = (props: any) => {
-    const { cx, cy, payload } = props
-    const data = payload as DaeunData
-    const isCurrent = currentAge
-      ? parseInt(data.age.split('-')[0]) <= currentAge && parseInt(data.age.split('-')[1]) >= currentAge
-      : false
-    return (
-      <circle
-        cx={cx}
-        cy={cy}
-        r={isCurrent ? 8 : 5}
-        fill={ELEMENT_COLORS[data.element]}
-        stroke={isCurrent ? '#E2D5B5' : 'transparent'}
-        strokeWidth={isCurrent ? 3 : 0}
-        className={isCurrent ? 'animate-pulse' : ''}
-      />
-    )
-  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
@@ -143,7 +144,7 @@ export function DaeunChart({
                 dataKey="fortune"
                 stroke="#E2D5B5"
                 strokeWidth={3}
-                dot={<CustomDot />}
+                dot={<CustomDot currentAge={currentAge} />}
                 name="대운 점수"
               />
             </LineChart>

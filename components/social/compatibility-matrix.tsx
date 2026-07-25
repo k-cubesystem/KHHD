@@ -57,13 +57,6 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
     setPositions(newPositions)
   }, [nodes, centerX, centerY, radius])
 
-  // Get compatibility score between two nodes
-  const getCompatibility = (nodeId1: string, nodeId2: string): CompatibilityEdge | null => {
-    return (
-      edges.find((e) => (e.from === nodeId1 && e.to === nodeId2) || (e.from === nodeId2 && e.to === nodeId1)) || null
-    )
-  }
-
   // Get color based on compatibility score
   const getScoreColor = (score: number): string => {
     if (score >= 80) return '#C5B358' // zen-gold (Very Good)

@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -10,9 +9,7 @@ import {
   Package,
   Database,
   Bell,
-  ArrowLeft,
   Sparkles,
-  Menu,
   X,
   Shield,
   Power,
@@ -91,7 +88,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
         {/* Horizontal Scrollable Menu */}
         <div className="w-full overflow-x-auto no-scrollbar border-b border-gold-500/10 bg-ink-900/50">
           <div className="flex px-3 md:px-4 min-w-max pb-0.5 items-end">
-            {menuItems.map((item, index) => {
+            {menuItems.map((item, _index) => {
               if (item.type === 'divider') {
                 return (
                   <div key={`divider-${item.label}`} className="flex items-center self-stretch px-1 md:px-1.5">

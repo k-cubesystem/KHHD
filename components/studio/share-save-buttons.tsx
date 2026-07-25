@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { logger } from '@/lib/utils/logger'
-import { Share2, Download, Check, Copy } from 'lucide-react'
+import { Share2, Download } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 interface ShareSaveButtonsProps {

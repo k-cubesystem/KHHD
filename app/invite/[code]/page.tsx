@@ -2,18 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import {
-  Heart,
-  Sparkles,
-  Loader2,
-  Users,
-  Calendar,
-  TrendingUp,
-  Star,
-  Briefcase,
-  UserPlus,
-  ChevronRight,
-} from 'lucide-react'
+import { Heart, Sparkles, Loader2, Users, Star, Briefcase, UserPlus, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -104,7 +93,7 @@ export default function InvitePage() {
       } else {
         setError(result.error || '궁합 분석 중 오류가 발생했습니다.')
       }
-    } catch (err) {
+    } catch {
       setError('서버 오류가 발생했습니다.')
     } finally {
       setAnalyzing(false)
@@ -161,9 +150,7 @@ export default function InvitePage() {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/20 border border-pink-500/30">
             <Heart className="w-4 h-4 text-pink-400" />
-            <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">
-              Destiny Match
-            </span>
+            <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">Destiny Match</span>
           </div>
           <h1 className="text-3xl font-black">
             <span className="bg-gradient-to-r from-pink-400 via-gold-500 to-pink-400 bg-clip-text text-transparent">
@@ -302,9 +289,7 @@ export default function InvitePage() {
               ].map((item) => (
                 <Card key={item.label} className="p-4 bg-white/5 border-white/10 text-center">
                   <item.icon className={`w-5 h-5 ${item.color} mx-auto mb-1`} />
-                  <div className={`text-2xl font-black ${getScoreColor(item.score)}`}>
-                    {item.score}
-                  </div>
+                  <div className={`text-2xl font-black ${getScoreColor(item.score)}`}>{item.score}</div>
                   <p className="text-xs text-muted-foreground">{item.label}</p>
                 </Card>
               ))}
@@ -365,9 +350,7 @@ export default function InvitePage() {
             </Card>
 
             {/* Disclaimer */}
-            <p className="text-xs text-muted-foreground text-center">
-              * 본 서비스는 재미와 참고용으로만 제공됩니다.
-            </p>
+            <p className="text-xs text-muted-foreground text-center">* 본 서비스는 재미와 참고용으로만 제공됩니다.</p>
           </div>
         )}
       </div>

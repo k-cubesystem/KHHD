@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { CalendarCheck, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import Link from 'next/link'
+import { CalendarCheck } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface AttendanceMiniCardProps {
-  canCheckIn: boolean;
-  weekCount: number;
-  weekDays?: Array<{ checked: boolean; isToday: boolean; isFuture: boolean }>;
+  canCheckIn: boolean
+  weekCount: number
+  weekDays?: Array<{ checked: boolean; isToday: boolean; isFuture: boolean }>
 }
 
 export function AttendanceMiniCard({ canCheckIn, weekCount, weekDays = [] }: AttendanceMiniCardProps) {
@@ -24,8 +24,8 @@ export function AttendanceMiniCard({ canCheckIn, weekCount, weekDays = [] }: Att
 
         <CalendarCheck
           className={cn(
-            "w-7 h-7 mb-2 group-hover:scale-110 transition-transform",
-            canCheckIn ? "text-gold-400" : "text-primary"
+            'w-7 h-7 mb-2 group-hover:scale-110 transition-transform',
+            canCheckIn ? 'text-gold-400' : 'text-primary'
           )}
           strokeWidth={1}
         />
@@ -35,27 +35,27 @@ export function AttendanceMiniCard({ canCheckIn, weekCount, weekDays = [] }: Att
         {/* 주간 미니 도트 */}
         <div className="flex gap-0.5 mb-1">
           {Array.from({ length: 7 }).map((_, i) => {
-            const day = weekDays[i];
+            const day = weekDays[i]
             return (
               <div
                 key={i}
                 className={cn(
-                  "w-2 h-2 rounded-full",
+                  'w-2 h-2 rounded-full',
                   day?.checked
-                    ? "bg-gold-400"
+                    ? 'bg-gold-400'
                     : day?.isToday && canCheckIn
-                    ? "bg-primary/50 border border-primary animate-pulse"
-                    : "bg-white/10"
+                      ? 'bg-primary/50 border border-primary animate-pulse'
+                      : 'bg-white/10'
                 )}
               />
-            );
+            )
           })}
         </div>
 
         <span className="text-[10px] text-ink-light/50 font-light">
-          {canCheckIn ? "오늘 체크 가능" : `${weekCount}/7일 완료`}
+          {canCheckIn ? '오늘 체크 가능' : `${weekCount}/7일 완료`}
         </span>
       </div>
     </Link>
-  );
+  )
 }

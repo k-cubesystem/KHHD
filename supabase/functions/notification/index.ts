@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { requireAuth } from '../_shared/auth.ts'
 import { createSupabaseAdmin } from '../_shared/supabase-client.ts'
-import { corsResponse, jsonResponse, errorResponse, successResponse } from '../_shared/response.ts'
+import { corsResponse, errorResponse, successResponse } from '../_shared/response.ts'
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return corsResponse()
@@ -21,8 +21,11 @@ serve(async (req) => {
     if (error) return errorResponse(error.message)
     return successResponse({
       data: data ?? {
-        phone_number: null, alimtalk_enabled: false,
-        daily_fortune_enabled: false, attendance_reward_enabled: false, payment_enabled: false,
+        phone_number: null,
+        alimtalk_enabled: false,
+        daily_fortune_enabled: false,
+        attendance_reward_enabled: false,
+        payment_enabled: false,
       },
     })
   }
@@ -33,15 +36,18 @@ serve(async (req) => {
     if (auth instanceof Response) return auth
     const admin = createSupabaseAdmin()
     const phoneNumber = body.prefs?.phone_number?.replace(/-/g, '') || null
-    const { error } = await admin.from('notification_preferences').upsert({
-      user_id: auth.userId,
-      phone_number: phoneNumber,
-      alimtalk_enabled: body.prefs?.alimtalk_enabled ?? false,
-      daily_fortune_enabled: body.prefs?.daily_fortune_enabled ?? false,
-      attendance_reward_enabled: body.prefs?.attendance_reward_enabled ?? false,
-      payment_enabled: body.prefs?.payment_enabled ?? false,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' })
+    const { error } = await admin.from('notification_preferences').upsert(
+      {
+        user_id: auth.userId,
+        phone_number: phoneNumber,
+        alimtalk_enabled: body.prefs?.alimtalk_enabled ?? false,
+        daily_fortune_enabled: body.prefs?.daily_fortune_enabled ?? false,
+        attendance_reward_enabled: body.prefs?.attendance_reward_enabled ?? false,
+        payment_enabled: body.prefs?.payment_enabled ?? false,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' }
+    )
     if (error) return errorResponse(error.message)
     return successResponse()
   }

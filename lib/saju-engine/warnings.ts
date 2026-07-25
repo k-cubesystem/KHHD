@@ -438,7 +438,6 @@ function calculateSamjae(yearZhi: string): SamjaeResult {
   // 삼재 3개년의 실제 연도 계산
   const firstTriggerZhiIdx = ZHI_INDEX[triggers[0]]
   const yearsToFirst = (((firstTriggerZhiIdx - currentZhiIdx) % 12) + 12) % 12
-  const firstSamjaeYear = currentYear + yearsToFirst - (yearsToFirst === 0 ? 0 : 0)
 
   // 현재 삼재 구간인지 확인
   const phaseIdx = triggers.indexOf(currentZhi)

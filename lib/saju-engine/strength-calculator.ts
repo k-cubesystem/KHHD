@@ -8,7 +8,7 @@
 
 import type { SajuData } from '@/lib/domain/saju/saju'
 import type { SipseongMap } from './sipseong'
-import { JIJANGGAN, checkTonggeun, getJijangganGans } from './jijanggan'
+import { checkTonggeun } from './jijanggan'
 import { JIJI_CHUNG, JIJI_SAMHAP, JIJI_YUKHAP } from './relations'
 
 // ===================== 타입 정의 =====================
@@ -76,13 +76,16 @@ export interface AdvancedStrengthResult {
 // ===================== 오행/천간 데이터 =====================
 
 const GAN_ELEMENT: Record<string, string> = {
-  甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土',
-  己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水',
-}
-
-const GAN_YINYANG: Record<string, number> = {
-  甲: 0, 乙: 1, 丙: 0, 丁: 1, 戊: 0,
-  己: 1, 庚: 0, 辛: 1, 壬: 0, 癸: 1,
+  甲: '木',
+  乙: '木',
+  丙: '火',
+  丁: '火',
+  戊: '土',
+  己: '土',
+  庚: '金',
+  辛: '金',
+  壬: '水',
+  癸: '水',
 }
 
 /** 오행 상생: X를 생하는 오행 */
@@ -91,16 +94,146 @@ const SAENG_BY: Record<string, string> = { 木: '水', 火: '木', 土: '火', �
 // ===================== 십이운성 테이블 (sibjiunseong.ts와 동일) =====================
 
 const SIBJIUNSEONG_TABLE: Record<string, Record<string, string>> = {
-  甲: { 亥: '장생', 子: '목욕', 丑: '관대', 寅: '건록', 卯: '제왕', 辰: '쇠', 巳: '병', 午: '사', 未: '묘', 申: '절', 酉: '태', 戌: '양' },
-  乙: { 午: '장생', 巳: '목욕', 辰: '관대', 卯: '건록', 寅: '제왕', 丑: '쇠', 子: '병', 亥: '사', 戌: '묘', 酉: '절', 申: '태', 未: '양' },
-  丙: { 寅: '장생', 卯: '목욕', 辰: '관대', 巳: '건록', 午: '제왕', 未: '쇠', 申: '병', 酉: '사', 戌: '묘', 亥: '절', 子: '태', 丑: '양' },
-  丁: { 酉: '장생', 申: '목욕', 未: '관대', 午: '건록', 巳: '제왕', 辰: '쇠', 卯: '병', 寅: '사', 丑: '묘', 子: '절', 亥: '태', 戌: '양' },
-  戊: { 寅: '장생', 卯: '목욕', 辰: '관대', 巳: '건록', 午: '제왕', 未: '쇠', 申: '병', 酉: '사', 戌: '묘', 亥: '절', 子: '태', 丑: '양' },
-  己: { 酉: '장생', 申: '목욕', 未: '관대', 午: '건록', 巳: '제왕', 辰: '쇠', 卯: '병', 寅: '사', 丑: '묘', 子: '절', 亥: '태', 戌: '양' },
-  庚: { 巳: '장생', 午: '목욕', 未: '관대', 申: '건록', 酉: '제왕', 戌: '쇠', 亥: '병', 子: '사', 丑: '묘', 寅: '절', 卯: '태', 辰: '양' },
-  辛: { 子: '장생', 亥: '목욕', 戌: '관대', 酉: '건록', 申: '제왕', 未: '쇠', 午: '병', 巳: '사', 辰: '묘', 卯: '절', 寅: '태', 丑: '양' },
-  壬: { 申: '장생', 酉: '목욕', 戌: '관대', 亥: '건록', 子: '제왕', 丑: '쇠', 寅: '병', 卯: '사', 辰: '묘', 巳: '절', 午: '태', 未: '양' },
-  癸: { 卯: '장생', 寅: '목욕', 丑: '관대', 子: '건록', 亥: '제왕', 戌: '쇠', 酉: '병', 申: '사', 未: '묘', 午: '절', 巳: '태', 辰: '양' },
+  甲: {
+    亥: '장생',
+    子: '목욕',
+    丑: '관대',
+    寅: '건록',
+    卯: '제왕',
+    辰: '쇠',
+    巳: '병',
+    午: '사',
+    未: '묘',
+    申: '절',
+    酉: '태',
+    戌: '양',
+  },
+  乙: {
+    午: '장생',
+    巳: '목욕',
+    辰: '관대',
+    卯: '건록',
+    寅: '제왕',
+    丑: '쇠',
+    子: '병',
+    亥: '사',
+    戌: '묘',
+    酉: '절',
+    申: '태',
+    未: '양',
+  },
+  丙: {
+    寅: '장생',
+    卯: '목욕',
+    辰: '관대',
+    巳: '건록',
+    午: '제왕',
+    未: '쇠',
+    申: '병',
+    酉: '사',
+    戌: '묘',
+    亥: '절',
+    子: '태',
+    丑: '양',
+  },
+  丁: {
+    酉: '장생',
+    申: '목욕',
+    未: '관대',
+    午: '건록',
+    巳: '제왕',
+    辰: '쇠',
+    卯: '병',
+    寅: '사',
+    丑: '묘',
+    子: '절',
+    亥: '태',
+    戌: '양',
+  },
+  戊: {
+    寅: '장생',
+    卯: '목욕',
+    辰: '관대',
+    巳: '건록',
+    午: '제왕',
+    未: '쇠',
+    申: '병',
+    酉: '사',
+    戌: '묘',
+    亥: '절',
+    子: '태',
+    丑: '양',
+  },
+  己: {
+    酉: '장생',
+    申: '목욕',
+    未: '관대',
+    午: '건록',
+    巳: '제왕',
+    辰: '쇠',
+    卯: '병',
+    寅: '사',
+    丑: '묘',
+    子: '절',
+    亥: '태',
+    戌: '양',
+  },
+  庚: {
+    巳: '장생',
+    午: '목욕',
+    未: '관대',
+    申: '건록',
+    酉: '제왕',
+    戌: '쇠',
+    亥: '병',
+    子: '사',
+    丑: '묘',
+    寅: '절',
+    卯: '태',
+    辰: '양',
+  },
+  辛: {
+    子: '장생',
+    亥: '목욕',
+    戌: '관대',
+    酉: '건록',
+    申: '제왕',
+    未: '쇠',
+    午: '병',
+    巳: '사',
+    辰: '묘',
+    卯: '절',
+    寅: '태',
+    丑: '양',
+  },
+  壬: {
+    申: '장생',
+    酉: '목욕',
+    戌: '관대',
+    亥: '건록',
+    子: '제왕',
+    丑: '쇠',
+    寅: '병',
+    卯: '사',
+    辰: '묘',
+    巳: '절',
+    午: '태',
+    未: '양',
+  },
+  癸: {
+    卯: '장생',
+    寅: '목욕',
+    丑: '관대',
+    子: '건록',
+    亥: '제왕',
+    戌: '쇠',
+    酉: '병',
+    申: '사',
+    未: '묘',
+    午: '절',
+    巳: '태',
+    辰: '양',
+  },
 }
 
 // ===================== 1단계: 득령(得令) — 40점 만점 =====================
@@ -167,14 +300,14 @@ function calculateDeukji(dayMaster: string, pillars: Array<{ position: string; z
   // 같은 오행의 다른 천간도 통근으로 간주 (비겁 통근)
   // 예: 甲 일간이면 乙이 지장간에 있어도 통근
   const allGans = Object.keys(GAN_ELEMENT)
-  const sameElementGans = allGans.filter(g => GAN_ELEMENT[g] === dayElement && g !== dayMaster)
-  const motherElementGans = allGans.filter(g => GAN_ELEMENT[g] === motherElement)
+  const sameElementGans = allGans.filter((g) => GAN_ELEMENT[g] === dayElement && g !== dayMaster)
+  const motherElementGans = allGans.filter((g) => GAN_ELEMENT[g] === motherElement)
 
   let additionalRoots: typeof dayMasterRoots = []
   for (const gan of sameElementGans) {
     const roots = checkTonggeun(gan, pillars)
     additionalRoots = additionalRoots.concat(
-      roots.map(r => ({ ...r, strength: Math.round(r.strength * 0.7) })) // 편근은 70% 가중치
+      roots.map((r) => ({ ...r, strength: Math.round(r.strength * 0.7) })) // 편근은 70% 가중치
     )
   }
 
@@ -183,7 +316,7 @@ function calculateDeukji(dayMaster: string, pillars: Array<{ position: string; z
   for (const gan of motherElementGans) {
     const roots = checkTonggeun(gan, pillars)
     motherRoots = motherRoots.concat(
-      roots.map(r => ({ ...r, strength: Math.round(r.strength * 0.5) })) // 인성 통근은 50% 가중치
+      roots.map((r) => ({ ...r, strength: Math.round(r.strength * 0.5) })) // 인성 통근은 50% 가중치
     )
   }
 
@@ -196,15 +329,16 @@ function calculateDeukji(dayMaster: string, pillars: Array<{ position: string; z
   const rootDetails = allRoots
     .sort((a, b) => b.strength - a.strength)
     .slice(0, 5)
-    .map(r => `${r.position}(${r.zhi}) 지장간 ${r.hiddenGan}에 통근(강도 ${r.strength})`)
+    .map((r) => `${r.position}(${r.zhi}) 지장간 ${r.hiddenGan}에 통근(강도 ${r.strength})`)
 
-  const basis = rootDetails.length > 0
-    ? `일간 ${dayMaster}(${dayElement})의 통근: ${rootDetails.join(', ')}`
-    : `일간 ${dayMaster}(${dayElement})이(가) 어디에도 통근하지 못함 — 무근(無根)`
+  const basis =
+    rootDetails.length > 0
+      ? `일간 ${dayMaster}(${dayElement})의 통근: ${rootDetails.join(', ')}`
+      : `일간 ${dayMaster}(${dayElement})이(가) 어디에도 통근하지 못함 — 무근(無根)`
 
   return {
     score,
-    roots: allRoots.map(r => ({
+    roots: allRoots.map((r) => ({
       position: r.position,
       zhi: r.zhi,
       hiddenGan: r.hiddenGan,
@@ -270,7 +404,7 @@ function calculateCorrection(
 
   // 2. 생조 합국(三合) 가산
   for (const samhap of JIJI_SAMHAP) {
-    const matches = samhap.zhis.filter(z => allZhis.includes(z))
+    const matches = samhap.zhis.filter((z) => allZhis.includes(z))
     if (matches.length >= 3) {
       // 삼합이 일간 오행 또는 인성 오행과 같으면 가산
       const motherElement = SAENG_BY[dayElement]
@@ -343,9 +477,10 @@ export function calculateAdvancedStrength(sajuData: SajuData, sipseong: Sipseong
   const grade = gradeFromScore(totalScore)
 
   // 요약 텍스트
-  const correctionText = correction.details.length > 0
-    ? `\n합충 보정: ${correction.details.join(', ')} (보정 ${correction.adjustment >= 0 ? '+' : ''}${correction.adjustment}점)`
-    : ''
+  const correctionText =
+    correction.details.length > 0
+      ? `\n합충 보정: ${correction.details.join(', ')} (보정 ${correction.adjustment >= 0 ? '+' : ''}${correction.adjustment}점)`
+      : ''
 
   const summary = [
     `### 신강/신약 정밀 판정 — ${grade} (총점 ${totalScore}/100)`,
@@ -354,7 +489,9 @@ export function calculateAdvancedStrength(sajuData: SajuData, sipseong: Sipseong
     `[3단계 득세] ${deukse.score}/30점 — ${deukse.basis}`,
     correctionText,
     `→ 종합: 득령${deukryeong.score} + 득지${deukji.score} + 득세${deukse.score} + 보정${correction.adjustment} = ${totalScore}점 (${grade})`,
-  ].filter(Boolean).join('\n')
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   return {
     totalScore,

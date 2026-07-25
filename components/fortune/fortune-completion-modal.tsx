@@ -23,7 +23,7 @@ interface FortuneCompletionModalProps {
 export function FortuneCompletionModal({
   isOpen,
   onClose,
-  category,
+  category: _category,
   categoryLabel,
   fortuneGained,
   newPercentage,

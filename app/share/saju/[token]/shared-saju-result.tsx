@@ -7,20 +7,7 @@ import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
-import {
-  ArrowRight,
-  Clock,
-  User,
-  Sparkles,
-  Loader2,
-  AlertCircle,
-  Eye,
-  Sun,
-  ChevronDown,
-  BookOpen,
-  TrendingUp,
-  Share2,
-} from 'lucide-react'
+import { ArrowRight, Clock, User, Sparkles, Loader2, AlertCircle, Eye, Sun, ChevronDown, Share2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -37,8 +24,7 @@ function ScoreRing({ score }: { score: number }) {
   const radius = 38
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (clamped / 100) * circumference
-  const color =
-    clamped >= 80 ? '#F4E4BA' : clamped >= 60 ? '#E2D5B5' : clamped >= 40 ? '#C8B273' : '#8C7B50'
+  const color = clamped >= 80 ? '#F4E4BA' : clamped >= 60 ? '#E2D5B5' : clamped >= 40 ? '#C8B273' : '#8C7B50'
 
   return (
     <div className="relative flex items-center justify-center w-24 h-24">
@@ -122,7 +108,12 @@ function DetailSection({
 
   const colorMap = {
     blue: { bg: 'bg-blue-500/5', border: 'border-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
-    emerald: { bg: 'bg-emerald-500/5', border: 'border-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-400' },
+    emerald: {
+      bg: 'bg-emerald-500/5',
+      border: 'border-emerald-500/15',
+      text: 'text-emerald-400',
+      dot: 'bg-emerald-400',
+    },
     rose: { bg: 'bg-rose-500/5', border: 'border-rose-500/15', text: 'text-rose-400', dot: 'bg-rose-400' },
   }
   const c = colorMap[color]
@@ -218,7 +209,10 @@ function ErrorState({ message }: { message: string }) {
         </div>
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <Link href="/auth/login" className="w-full">
-            <Button size="lg" className="w-full bg-primary hover:bg-primary-dim text-background font-serif text-base py-5">
+            <Button
+              size="lg"
+              className="w-full bg-primary hover:bg-primary-dim text-background font-serif text-base py-5"
+            >
               무료로 내 사주 보기
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -254,13 +248,17 @@ function SajuResultBody({ data }: { data: AnalysisData }) {
                   <p className="text-[10px] text-ink-light/40">{item.label}</p>
                   <p className="text-xs text-gold-500 font-medium mt-0.5">{String(item.value)}</p>
                 </div>
-              ),
+              )
           )}
         </section>
       )}
 
       {/* 과거 역추산 */}
-      <ResultSection title="과거에 이런 일이 있으셨을 거예요" color="amber" show={!!data.pastRetrograde?.events?.length}>
+      <ResultSection
+        title="과거에 이런 일이 있으셨을 거예요"
+        color="amber"
+        show={!!data.pastRetrograde?.events?.length}
+      >
         {(data.pastRetrograde?.events as Array<{ period?: string; description?: string; basis?: string }>)?.map(
           (event, i) => (
             <div key={i} className="space-y-1">
@@ -269,7 +267,7 @@ function SajuResultBody({ data }: { data: AnalysisData }) {
               </p>
               <p className="text-[11px] text-ink-light/40 font-light">{event.basis}</p>
             </div>
-          ),
+          )
         )}
         {data.pastRetrograde?.accuracyHook && (
           <p className="mt-3 pt-3 border-t border-amber-500/10 text-[11px] text-amber-400/60 italic">
@@ -344,7 +342,7 @@ export function SharedSajuResult({ token }: SharedSajuResultProps) {
       try {
         const supabase = createBrowserClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+          process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
         )
 
         const { data, error: rpcError } = await supabase.rpc('get_shared_analysis_record', {
@@ -520,7 +518,10 @@ export function SharedSajuResult({ token }: SharedSajuResultProps) {
               </Button>
             </Link>
             <Link href="/" className="w-full">
-              <Button variant="ghost" className="w-full text-ink-light/45 hover:text-ink-light hover:bg-primary/5 text-sm">
+              <Button
+                variant="ghost"
+                className="w-full text-ink-light/45 hover:text-ink-light hover:bg-primary/5 text-sm"
+              >
                 메인으로 이동
               </Button>
             </Link>
