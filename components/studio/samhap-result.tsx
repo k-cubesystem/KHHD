@@ -1,19 +1,31 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Link2, Waves, Clock, Sparkles } from 'lucide-react'
+import { Link2, Waves, Clock, Sparkles, Compass, Scale } from 'lucide-react'
 import { ScoreRing } from './score-ring'
 import { DetailAnalysisAccordion } from './detail-analysis-accordion'
 import { cleanAnalysisText } from '@/lib/domain/analysis/clean-analysis-text'
 import type { SamhapResult } from '@/app/actions/ai/samhap'
 
+/** 합/반합/충 판정 뱃지 색 — 합=골드, 반합=청람, 충=단사(공포 아닌 표적의 색) */
+function verdictStyle(verdict: string): { color: string; bg: string; border: string } {
+  const v = verdict.trim()
+  if (v.startsWith('합')) return { color: '#F4E4BA', bg: 'rgba(201,168,76,0.15)', border: 'rgba(201,168,76,0.45)' }
+  if (v.startsWith('반')) return { color: '#A8C5DA', bg: 'rgba(168,197,218,0.12)', border: 'rgba(168,197,218,0.35)' }
+  return { color: '#E4A0A0', bg: 'rgba(158,43,43,0.16)', border: 'rgba(158,43,43,0.40)' }
+}
+
 /**
  * 종합사주풀이 결과 뷰 — 프리미엄 무드(玄·골드). 1차 카드 문법 재사용.
  * parsed 있으면 구조화 카드, 없으면 원문(raw) 폴백. 캡처 컨테이너 안에 위치.
+ * v2(삼재교차법) 필드(now·crosses·coherence)는 구 리포트에 없으므로 전부 optional 가드.
  */
 export function SamhapResultView({ result, targetName }: { result: SamhapResult; targetName?: string }) {
   const p = result.parsed
   const raw = result.raw ?? ''
+  const crosses = p?.crosses ?? []
+  const now = p?.now
+  const coherence = result.coherence
 
   return (
     <div className="space-y-5">
@@ -34,8 +46,14 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
             transition={{ type: 'spring', delay: 0.1, stiffness: 140, damping: 16 }}
             className="relative flex justify-center mb-4"
           >
-            <ScoreRing score={result.score} label="종합" />
+            <ScoreRing score={result.score} label={coherence ? '정합' : '종합'} />
           </motion.div>
+        )}
+        {coherence && (
+          <p className="relative text-[11px] font-sans text-gold-500/70 tracking-wide">
+            삼재 정합 판정 <span className="font-bold text-gold-300">{coherence.grade}</span> —
+            命(사주)·相(관상)·宅(풍수) 오행 교차
+          </p>
         )}
         <h2
           className="relative font-serif font-bold tracking-[0.14em] text-4xl leading-tight"
@@ -60,6 +78,87 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
       {/* 구조화 결과 */}
       {p ? (
         <>
+          {/* 현재 국면 — 대운×삼정×손금 시간축 정렬 (v2) */}
+          {now && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-gold-500/25 bg-white/[0.02] p-5"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Compass className="w-4 h-4 text-gold-500" />
+                <div>
+                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">지금 서 있는 자리</h3>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">대운 × 삼정 × 손금</p>
+                </div>
+              </div>
+              <p className="text-sm font-serif font-bold text-ink-primary/90 mb-1.5">{now.phase}</p>
+              <p className="text-xs text-ink-primary/70 font-sans font-light leading-relaxed">{now.detail}</p>
+            </motion.div>
+          )}
+
+          {/* 교차 검증 4주제 — 궁위-십성 대응 (v2) */}
+          {crosses.length > 0 && (
+            <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Scale className="w-4 h-4 text-gold-500" />
+                <div>
+                  <h3 className="text-sm font-serif font-bold text-gold-500 tracking-wide">삼재 교차 검증</h3>
+                  <p className="text-[10px] text-gold-500/50 font-sans tracking-wider uppercase">
+                    십성 × 궁위 × 선 — 합·반합·충
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {crosses.map((c, i) => {
+                  const vs = verdictStyle(c.verdict)
+                  return (
+                    <motion.div
+                      key={c.key}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.07 }}
+                      className="rounded-xl p-4 border border-white/8 bg-black/20"
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <p className="text-sm font-serif font-bold text-ink-primary/90">{c.label}</p>
+                        <span
+                          className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-serif font-bold border"
+                          style={{ color: vs.color, background: vs.bg, borderColor: vs.border }}
+                        >
+                          {c.verdict}
+                        </span>
+                      </div>
+                      <p className="text-xs text-ink-primary/70 font-sans font-light leading-relaxed">{c.detail}</p>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 정합 근거 — 코드 결정론 판정 (v2) */}
+          {coherence && coherence.parts.length > 0 && (
+            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4">
+              <p className="text-[11px] font-sans font-bold text-ink-primary/60 tracking-wide mb-2.5">
+                정합도 {coherence.score}점 산출 근거
+              </p>
+              <ul className="space-y-1.5">
+                {coherence.parts.map((part, i) => (
+                  <li key={i} className="flex items-center justify-between gap-2 text-[11px] font-sans">
+                    <span className="text-ink-primary/55">
+                      {part.label} <span className="text-ink-primary/80">{part.pair}</span> — {part.relationLabel}
+                    </span>
+                    <span className={part.delta >= 0 ? 'text-gold-400 shrink-0' : 'text-[#E4A0A0] shrink-0'}>
+                      {part.delta > 0 ? '+' : ''}
+                      {part.delta}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* 합치점 (三合) */}
           {p.harmonies.length > 0 && (
             <motion.div

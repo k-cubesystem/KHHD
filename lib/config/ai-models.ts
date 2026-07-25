@@ -57,6 +57,8 @@ export const FEATURE_MODELS: Record<string, AIModelConfig> = {
   compatibility: resolveModel('pro'),
   image: resolveModel('pro'),
   'celebrity-compatibility': resolveModel('pro'),
+  // 종합사주풀이(삼재교차법) — 최고가 상품. 미등록 시 flash 폴백 함정이 있어 명시 등록.
+  samhap: resolveModel('pro'),
 
   // 이미지 생성: Gemini 고정 (Imagen)
   'generate-image': { provider: 'gemini', model: GEMINI_IMAGE },
