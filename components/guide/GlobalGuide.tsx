@@ -82,7 +82,11 @@ type Bubble =
 export function GlobalGuide() {
   const pathname = usePathname()
   const [data, setData] = useState<GuideData | null>(null)
-  const [bubble, setBubble] = useState<Bubble>(null)
+  // 펼침 상태는 '어느 경로에서 펼쳤는지'와 함께 들고 있는다.
+  // 렌더 중 경로를 비교해 파생시키므로, 페이지를 옮기면 effect 없이 자동으로 접힌다.
+  const [expanded, setExpanded] = useState<{ path: string; bubble: Bubble }>({ path: pathname, bubble: null })
+  const bubble = expanded.path === pathname ? expanded.bubble : null
+  const setBubble = useCallback((next: Bubble) => setExpanded({ path: pathname, bubble: next }), [pathname])
   // 서버 진행률 + 구버전 localStorage 병합본 (세션 내 즉시 반영용)
   const [progress, setProgress] = useState<Record<string, number>>({})
   const [seenNotice, setSeenNotice] = useState<string | null>(null)
@@ -112,34 +116,9 @@ export function GlobalGuide() {
   // 오늘의 상식 — 날짜 기반 결정적 인덱스(마운트 시 1회 고정)
   const todayIdx = useMemo(() => todayTipIndex(), [])
 
-  // 경로 진입 시 자동 노출 — 개인 알림 > 공지(미확인) > 온보딩(미완료) > 투어(미완료) > 오늘의 상식
-  useEffect(() => {
-    if (!data || hidden) return
-    if (data.personalNotice) {
-      setBubble({ kind: 'personal' })
-      return
-    }
-    if (data.announcement && seenNotice !== data.announcement.id) {
-      setBubble({ kind: 'notice' })
-      return
-    }
-    if (data.onboarding) {
-      setBubble({ kind: 'onboarding' })
-      return
-    }
-    if (tour) {
-      const seen = progress[pathname] ?? 0
-      if (seen < tour.length) {
-        setBubble({ kind: 'tour', step: seen })
-        return
-      }
-      // 투어를 다 본 페이지는 접힌 채로 둔다 — 지식은 탭으로 펼친다(바쁜 허브에서 조용히)
-      setBubble(null)
-      return
-    }
-    // 투어가 없는 페이지: 알릴 게 없으면 접힘 — 흐르는 상식 마퀴가 기본. 탭하면 펼쳐진다(W3).
-    setBubble(null)
-  }, [data, pathname, tour, hidden, progress, seenNotice])
+  // 자동 노출 없음 — 페이지에 들어가면 항상 접힌 '바' 상태다.
+  // 공지·안내가 본문 위로 펼쳐진 채 뜨면 화면을 가리고 읽기를 강요한다.
+  // 알릴 게 있으면 바에 제목과 미확인 점으로만 알리고, 펼치는 건 사용자가 눌렀을 때만(onTapCollapsed).
 
   /** 개인 알림 확인 — 읽음 처리 후 로컬 상태에서 제거(재노출 방지) */
   const dismissPersonal = useCallback(() => {
@@ -147,7 +126,7 @@ export function GlobalGuide() {
     if (notice) void markNotificationRead(notice.id)
     setData((prev) => (prev ? { ...prev, personalNotice: null } : prev))
     setBubble(null)
-  }, [data])
+  }, [data, setBubble])
 
   const dismissNotice = useCallback(() => {
     const id = data?.announcement?.id
@@ -168,7 +147,7 @@ export function GlobalGuide() {
       }
     }
     setBubble(null)
-  }, [data, tour, pathname, progress])
+  }, [data, tour, pathname, progress, setBubble])
 
   /** 진행률 갱신 — 서버 저장(정본) + 로컬 상태 즉시 반영 */
   const commitProgress = useCallback(
@@ -186,19 +165,22 @@ export function GlobalGuide() {
       if (step + 1 < tour.length) setBubble({ kind: 'tour', step: step + 1 })
       else setBubble(null)
     },
-    [tour, commitProgress]
+    [tour, commitProgress, setBubble]
   )
 
   const skipTour = useCallback(() => {
     if (tour) commitProgress(tour.length)
     setBubble(null)
-  }, [tour, commitProgress])
+  }, [tour, commitProgress, setBubble])
 
   /** 지식 팁 회전 — (idx+1)%len 회전 인덱스(소진형 아님) */
-  const rotateKnowledge = useCallback((idx: number) => {
-    if (!KNOWLEDGE_TIPS.length) return
-    setBubble({ kind: 'knowledge', idx: (idx + 1) % KNOWLEDGE_TIPS.length })
-  }, [])
+  const rotateKnowledge = useCallback(
+    (idx: number) => {
+      if (!KNOWLEDGE_TIPS.length) return
+      setBubble({ kind: 'knowledge', idx: (idx + 1) % KNOWLEDGE_TIPS.length })
+    },
+    [setBubble]
+  )
 
   // 접힌 줄 탭 — 개인 알림 > 공지 > 온보딩 > 투어 처음부터 > 오늘의 상식
   const onTapCollapsed = useCallback(() => {
@@ -219,7 +201,7 @@ export function GlobalGuide() {
       return
     }
     if (KNOWLEDGE_TIPS.length) setBubble({ kind: 'knowledge', idx: todayIdx })
-  }, [data, tour, todayIdx])
+  }, [data, tour, todayIdx, setBubble])
 
   // 지식 팁이 상시 존재하므로 바는 신당 외 모든 페이지에서 유지된다(접힌 바가 사라지지 않음).
   const hasContent =
@@ -256,6 +238,18 @@ export function GlobalGuide() {
   )
   // 접힘 바 마퀴용 오늘의 상식(없으면 정적 안내문으로 폴백)
   const todayTip = KNOWLEDGE_TIPS.length ? KNOWLEDGE_TIPS[todayIdx % KNOWLEDGE_TIPS.length] : null
+
+  // 자동으로 펼치지 않으므로, 알릴 게 있으면 접힌 바가 그 제목을 대신 보여준다.
+  // (안 그러면 무엇을 눌러야 하는지 알 수 없다.) 우선순위는 펼침 순서와 동일.
+  const pending: { Icon: typeof Megaphone; text: string } | null = data.personalNotice
+    ? { Icon: Archive, text: data.personalNotice.title }
+    : data.announcement && seenNotice !== data.announcement.id
+      ? { Icon: Megaphone, text: data.announcement.title }
+      : data.onboarding
+        ? { Icon: Footprints, text: data.onboarding.text }
+        : tour && (progress[pathname] ?? 0) < tour.length
+          ? { Icon: Lightbulb, text: `${speaker}의 안내 보기` }
+          : null
 
   const portrait = data.portraitUrl ? (
     <Image
@@ -415,7 +409,15 @@ export function GlobalGuide() {
             className="w-full flex items-center gap-2 rounded-xl border border-gold-500/25 bg-[#120d07]/92 backdrop-blur-md px-3 py-1.5 shadow-lg active:scale-[0.99] transition-transform"
           >
             {portrait}
-            {todayTip ? (
+            {pending ? (
+              // 알릴 게 있는 상태 — 제목을 그대로 띄운다(마퀴로 흘리면 읽기 어렵다).
+              <>
+                <pending.Icon className="w-3.5 h-3.5 text-gold-500/80 shrink-0" />
+                <span className="flex-1 text-left text-[11px] text-gold-200/90 font-serif truncate">
+                  {pending.text}
+                </span>
+              </>
+            ) : todayTip ? (
               <>
                 <Lightbulb className="w-3.5 h-3.5 text-gold-500/70 shrink-0" />
                 {/* 흐르는 상식 마퀴 — review-marquee infinite-scroll 패턴(2배 복제+translateX -50%). reduced-motion 시 전역 규칙이 정지 */}
