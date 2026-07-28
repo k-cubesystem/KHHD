@@ -507,7 +507,11 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
 
   const catalog: StageCatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
   const placements: StagePlacement[] = (placeRows ?? []).map(toPlacement)
-  const activePack = (packs ?? []).find((p) => p.id === shrine.active_pack_id)
+  // active_pack_id 미지정(테마를 한 번도 고르지 않은 신당 — 대다수)은 기본 테마 banga 로 해석한다.
+  // 이 폴백이 없으면 activePackCode 는 'banga' 문자열로 폴백되는데 테마 '객체'는 빠져서
+  // 클라이언트가 stage(조립식 무대)·assets 를 찾지 못해 레거시 렌더로 떨어진다.
+  const activePack =
+    (packs ?? []).find((p) => p.id === shrine.active_pack_id) ?? (packs ?? []).find((p) => p.code === 'banga')
   const themes: StageThemePack[] = activePack
     ? [
         {
