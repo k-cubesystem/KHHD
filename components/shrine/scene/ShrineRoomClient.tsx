@@ -12,10 +12,24 @@ import {
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2, Lock } from 'lucide-react'
-import type { CatalogItem, Element, Placement, SceneData, ThemePack } from '@/lib/domain/shrine/types'
-import { computeEnergy, indexCatalog, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
+import type { Element, ThemePack } from '@/lib/domain/shrine/types'
+import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
+import {
+  depthScale,
+  depthZ,
+  groundShadow,
+  litBoost,
+  lightingOverlayStyle,
+  nearestAnchor,
+  DEFAULT_ANCHORS,
+  type StageAnchor,
+  type StageCatalogItem,
+  type StageLight,
+  type StagePlacement,
+  type StageSceneData,
+} from '@/lib/domain/shrine/stage'
 import {
   greetingFor,
   personalGreeting,
@@ -25,12 +39,14 @@ import {
   keeperTapLine,
   resonanceLine,
   idleLine,
+  anchorLine,
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
+import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
@@ -44,8 +60,25 @@ import { trackEvent } from '@/lib/analytics/ga4'
 /** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
 const FLAME_Y_OFFSET = 5
 
+/** 레거시 테마(stage 없음)용 기본 광원 — 테마의 --th-glow 색상을 광원색으로 쓴다. */
+const LEGACY_LIGHT_ORIGIN = { x: 50, y: 52 } as const
+/** #C9A84C 와 같은 색상, 알파만 그레이딩용으로 */
+const LEGACY_LIGHT_COLOR = 'rgba(201,168,76,0.55)'
+const LEGACY_LIGHT_INTENSITY = 0.45
+const RGB_HEAD_RE = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i
+
+/**
+ * 레거시 광원색 — 테마 `--th-glow` 의 **색상만** 취하고 알파는 0.55 로 정규화한다.
+ * glow 원본 알파(0.14)는 '은은한 blur 타원' 용도라 그대로 그레이딩에 쓰면 보이지 않는다.
+ * 형식이 어긋나면 기본 촛불 금색.
+ */
+function legacyLightColor(glow: string | undefined): string {
+  const m = glow ? RGB_HEAD_RE.exec(glow.trim()) : null
+  return m ? `rgba(${m[1]},${m[2]},${m[3]},0.55)` : LEGACY_LIGHT_COLOR
+}
+
 interface Props {
-  scene: SceneData
+  scene: StageSceneData
   /** 기원 현황(소유자 뷰에서만 주입). 방문자 뷰는 null → 기원 스트립 미표시. */
   devotion?: DevotionStatus | null
 }
@@ -73,10 +106,14 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
 }
 
 export function ShrineRoomClient({ scene, devotion = null }: Props) {
-  const catalogById = useMemo(() => indexCatalog(scene.catalog), [scene.catalog])
+  // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
+  const catalogById = useMemo(
+    () => new Map<string, StageCatalogItem>(scene.catalog.map((c) => [c.id, c])),
+    [scene.catalog]
+  )
   const { play, muted, toggleMute, startBgm } = useShrineAudio()
 
-  const [placements, setPlacements] = useState<Placement[]>(scene.placements)
+  const [placements, setPlacements] = useState<StagePlacement[]>(scene.placements)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activeCode, setActiveCode] = useState(scene.activePackCode)
@@ -149,6 +186,28 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   const isOwner = scene.isOwner
   const activePack = scene.themes.find((t) => t.code === activeCode)
   const ownedThemeCount = scene.themes.filter((t) => t.owned || purchasedCodes.has(t.code)).length
+
+  // ── 무대(舞臺) — stage 보유 테마만 조립식 렌더, 없으면 레거시 완성 일러스트 ──
+  const activeStage = activePack?.stage ?? null
+  /** 조명: stage.light 우선, 레거시는 테마 --th-glow 색 기반 기본 광원 */
+  const light: StageLight = useMemo(
+    () =>
+      activeStage?.light ?? {
+        color: legacyLightColor(activePack?.assets.glow),
+        intensity: LEGACY_LIGHT_INTENSITY,
+        origin: { ...LEGACY_LIGHT_ORIGIN },
+      },
+    [activeStage, activePack]
+  )
+  /** 앵커: 구조물 anchors 합집합, 없으면(레거시·앵커 미정의 무대) 기본 앵커 */
+  const anchors = useMemo<readonly StageAnchor[]>(() => {
+    const union = activeStage?.structures.flatMap((s) => s.anchors) ?? []
+    return union.length > 0 ? union : DEFAULT_ANCHORS
+  }, [activeStage])
+  /** 드래그 중 스냅 대상 앵커 (골드 링 하이라이트) */
+  const [snapAnchor, setSnapAnchor] = useState<StageAnchor | null>(null)
+  /** 이번 꾸미기에서 새로 앵커에 올린 배치 — 저장 시 신위 한마디 1회 */
+  const pendingAnchor = useRef<StageAnchor | null>(null)
   const deitiesHref = scene.familyMemberId
     ? `/protected/shrine/deities?member=${scene.familyMemberId}`
     : '/protected/shrine/deities'
@@ -165,13 +224,19 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     [placements, catalogById, displayYongsin]
   )
 
+  // 조명 오버레이 — 점화(lit)한 촛불이 많을수록 방이 밝아진다(연출 인센티브, §3-C4)
+  const lightOverlay = useMemo(() => {
+    const litCount = placements.reduce((n, p) => (p.state.lit ? n + 1 : n), 0)
+    return lightingOverlayStyle(light, litBoost(litCount))
+  }, [placements, light])
+
   // 보관함 가용 수량 = 보유 - 배치
   const available = useMemo(() => {
     const placed = new Map<string, number>()
     placements.forEach((p) => placed.set(p.catalogItemId, (placed.get(p.catalogItemId) ?? 0) + 1))
     return scene.inventory
       .map((inv) => ({ item: catalogById.get(inv.catalogItemId), qty: inv.qty - (placed.get(inv.catalogItemId) ?? 0) }))
-      .filter((e): e is { item: CatalogItem; qty: number } => !!e.item && e.qty > 0)
+      .filter((e): e is { item: StageCatalogItem; qty: number } => !!e.item && e.qty > 0)
   }, [placements, scene.inventory, catalogById])
 
   const lastActivity = useRef(Date.now())
@@ -216,7 +281,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
 
   // ── 아이템 탭 (보기 모드) ──
   const onTapItem = useCallback(
-    (p: Placement) => {
+    (p: StagePlacement) => {
       if (editing) return
       const item = catalogById.get(p.catalogItemId)
       if (!item) return
@@ -243,11 +308,19 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     [editing, catalogById, play, keeperSay, isOwner]
   )
 
+  // ── 앵커 스냅 하이라이트 (드래그 중, 앵커가 바뀔 때만 호출) ──
+  const onAnchorHover = useCallback((a: StageAnchor | null) => setSnapAnchor(a), [])
+
   // ── 드래그 종료 (편집 모드) ──
   const onDragEnd = useCallback(
-    (p: Placement, x: number, y: number) => {
-      setPlacements((prev) => prev.map((q) => (q.id === p.id ? { ...q, x, y } : q)))
+    (p: StagePlacement, x: number, y: number, anchorId: string | null) => {
+      setPlacements((prev) => prev.map((q) => (q.id === p.id ? { ...q, x, y, anchorId } : q)))
       dirty.current = true
+      // 새로 '의미 있는 자리'에 올렸으면 — 저장 시 신위가 한마디 (§3-D)
+      if (anchorId && anchorId !== p.anchorId) {
+        pendingAnchor.current = anchors.find((a) => a.id === anchorId) ?? null
+        effectsRef.current?.emit('sparkle', x, y)
+      }
       const item = catalogById.get(p.catalogItemId)
       if (item?.behavior.give && Math.hypot(x - KEEPER_POS.x, y - KEEPER_POS.y) < KEEPER_GIVE_RADIUS) {
         play('bell')
@@ -261,12 +334,12 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       }
       window.setTimeout(checkResonance, 0)
     },
-    [catalogById, play, keeperSay, checkResonance, isOwner]
+    [catalogById, play, keeperSay, checkResonance, isOwner, anchors]
   )
 
   // ── 수납 (편집 모드) ──
   const onRemove = useCallback(
-    (p: Placement) => {
+    (p: StagePlacement) => {
       setPlacements((prev) => prev.filter((q) => q.id !== p.id))
       dirty.current = true
       effectsRef.current?.setFlame(p.id, 0, 0, false)
@@ -277,11 +350,20 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
 
   // ── 보관함에서 꺼내기 ──
   const onPlaceFromTray = useCallback(
-    (item: CatalogItem) => {
+    (item: StageCatalogItem) => {
       const spot = initialSpot(item.layer, Math.random())
       setPlacements((prev) => [
         ...prev,
-        { id: nextLocalId(), catalogItemId: item.id, layer: item.layer, x: spot.x, y: spot.y, flip: false, state: {} },
+        {
+          id: nextLocalId(),
+          catalogItemId: item.id,
+          layer: item.layer,
+          x: spot.x,
+          y: spot.y,
+          flip: false,
+          anchorId: null,
+          state: {},
+        },
       ])
       dirty.current = true
       play('moktak')
@@ -304,6 +386,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
             x: p.x,
             y: p.y,
             flip: p.flip,
+            anchorId: p.anchorId,
             state: p.state,
           })),
           scene.familyMemberId
@@ -316,16 +399,24 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           play('bell')
           toast.success('신당이 저장되었습니다')
           trackEvent({ action: 'placement_save', category: 'shrine' })
+          // 앵커에 새로 올린 배치가 있으면 신위가 한마디 (기존 말풍선 재사용).
+          // 스냅했다가 다시 빼낸 경우는 제외 — 저장된 배치에 그 앵커가 남아 있을 때만.
+          const anchored = pendingAnchor.current
+          pendingAnchor.current = null
+          if (anchored && placements.some((q) => q.anchorId === anchored.id)) {
+            keeperSay(anchorLine(anchored.label, Date.now()))
+          }
         } else {
           toast.error(res.error === 'NOT_ENOUGH_OWNED' ? '보유하지 않은 아이템입니다' : '저장 실패')
           return
         }
       }
+      setSnapAnchor(null)
       setEditing(false)
     } else {
       setEditing(true)
     }
-  }, [editing, placements, play, isOwner, scene.familyMemberId])
+  }, [editing, placements, play, isOwner, scene.familyMemberId, keeperSay])
 
   // ── 신당지기(=좌정 主神) 탭 — 시그니처 사운드+파티클 버스트 반응 (§3.2) ──
   const onTapKeeper = useCallback(() => {
@@ -544,28 +635,8 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
         }}
       >
-        <div
-          className="absolute inset-x-0 top-0 bottom-[40%] rounded-t-[17px]"
-          style={{ background: 'var(--th-wall)' }}
-        />
-        <div
-          className="absolute inset-x-0 top-[60%] bottom-0 rounded-b-[17px]"
-          style={{ background: 'var(--th-floor)' }}
-        />
-        {/* 테마 방 배경 이미지 — <img>로 렌더. 둥근 클립 제거로 GPU 마스크 실패(흰화면) 회피.
-            저해상도(512w) 다운스케일 유지, 이미지 자체를 라운딩. 404 시 onError로 숨김 → 그라디언트 폴백. */}
-        <img
-          key={activeCode}
-          src={`/shrine/themes/${activeCode}/room.webp`}
-          alt=""
-          aria-hidden
-          draggable={false}
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none rounded-[17px]"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none'
-          }}
-        />
+        {/* L0 벽지 · L1 바닥재 (stage 테마) / 벽·바닥 블록 + room.webp (레거시) */}
+        <StageLayers stage={activeStage} themeCode={activeCode} slot="ground" />
         {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
             mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
             (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
@@ -616,29 +687,8 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           </div>
         )}
 
-        {/* 제단 */}
-        <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '47%', width: '62%', height: '20%' }}>
-          <div
-            className="absolute inset-x-0 top-0 bottom-[62%] rounded-t"
-            style={{
-              background: 'linear-gradient(180deg,#4a3620,#33240f)',
-              border: '1px solid rgba(201,168,76,0.35)',
-              borderBottom: 0,
-            }}
-          />
-          <div
-            className="absolute top-[38%] inset-x-[4%] bottom-0 rounded-b grid place-items-center"
-            style={{
-              background: 'linear-gradient(180deg,#2a1d0c,#1a1207)',
-              border: '1px solid rgba(201,168,76,0.2)',
-              borderTop: 0,
-            }}
-          >
-            <span className="font-serif text-[13px] opacity-55" style={{ color: 'var(--th-accent)' }}>
-              福
-            </span>
-          </div>
-        </div>
+        {/* L2 구조물 (stage 테마) / CSS 제단 박스 (레거시) */}
+        <StageLayers stage={activeStage} themeCode={activeCode} slot="structures" />
 
         {/* 존 가이드 (편집) */}
         {editing &&
@@ -697,10 +747,58 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
         </button>
 
-        {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조 */}
+        {/* 아이템 */}
+        {placements.map((p) => {
+          const item = catalogById.get(p.catalogItemId)
+          if (!item) return null
+          return (
+            <Sprite
+              key={p.id}
+              placement={p}
+              item={item}
+              editing={editing}
+              anchors={anchors}
+              onTap={() => onTapItem(p)}
+              onRemove={() => onRemove(p)}
+              onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
+              onAnchorHover={onAnchorHover}
+            />
+          )
+        })}
+
+        {/* 조명 오버레이 (§3-C4) — 배경·구조물·아이템이 '같은 빛'을 받게 하는 컬러 그레이딩 한 장.
+            아이템 최상단 밴드(z 29)와 같은 층에 두되 DOM 순서로 위에 얹고, UI 컨트롤(z-30) 아래에 둔다.
+            soft-light: 어두운 방의 톤을 죽이지 않으면서 색만 입힌다(screen 은 대비를 날려 반려). */}
+        <div
+          aria-hidden
+          className="absolute inset-0 rounded-[17px] pointer-events-none shrine-light-overlay"
+          style={{ ...lightOverlay, mixBlendMode: 'soft-light', zIndex: 29 }}
+        />
+
+        {/* 앵커 스냅 하이라이트 (꾸미기) — 골드 링 */}
+        {editing && snapAnchor && (
+          <span
+            aria-hidden
+            className="absolute rounded-full pointer-events-none shrine-anchor-ring"
+            style={{
+              left: `${snapAnchor.x}%`,
+              top: `${snapAnchor.y}%`,
+              width: '34px',
+              height: '34px',
+              marginLeft: '-17px',
+              marginTop: '-17px',
+              border: '2px solid #C9A84C',
+              boxShadow: '0 0 12px rgba(201,168,76,0.55)',
+              zIndex: 29,
+            }}
+          />
+        )}
+
+        {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조.
+            조명 오버레이보다 위(같은 z, 뒤 DOM)라 글이 그레이딩에 흐려지지 않는다. */}
         {!editing && (
           <div
-            className="absolute z-[26] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
+            className="absolute z-[29] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
             style={{
               left: '20%',
               top: '3%',
@@ -720,23 +818,6 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
             <span dangerouslySetInnerHTML={{ __html: bubble }} />
           </div>
         )}
-
-        {/* 아이템 */}
-        {placements.map((p) => {
-          const item = catalogById.get(p.catalogItemId)
-          if (!item) return null
-          return (
-            <Sprite
-              key={p.id}
-              placement={p}
-              item={item}
-              editing={editing}
-              onTap={() => onTapItem(p)}
-              onRemove={() => onRemove(p)}
-              onDragEnd={(x, y) => onDragEnd(p, x, y)}
-            />
-          )
-        })}
 
         {/* 공명 링 */}
         {rings.map((r) => (
@@ -1008,27 +1089,93 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           }
         }
       `}</style>
+
+      {/* 무대 물리·반응용 스타일 — Sprite 등 형제 컴포넌트에서도 써야 해 global 로 둔다.
+          이름은 전부 shrine- 접두로 충돌을 막는다. transform/opacity 만 애니메이션(합성 레이어 유지). */}
+      <style jsx global>{`
+        .shrine-anchor-ring {
+          animation: shrineAnchorPulse 1.1s ease-in-out infinite;
+        }
+        @keyframes shrineAnchorPulse {
+          0%,
+          100% {
+            transform: scale(1);
+            opacity: 0.92;
+          }
+          50% {
+            transform: scale(1.18);
+            opacity: 0.5;
+          }
+        }
+        .shrine-item-wiggle {
+          animation: shrineWiggle 0.4s ease-in-out;
+          transform-origin: 50% 92%;
+        }
+        @keyframes shrineWiggle {
+          0%,
+          100% {
+            transform: rotate(0deg);
+          }
+          28% {
+            transform: rotate(-7deg);
+          }
+          64% {
+            transform: rotate(5deg);
+          }
+        }
+        .shrine-light-overlay {
+          transition: opacity 700ms ease;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .shrine-anchor-ring,
+          .shrine-item-wiggle {
+            animation-duration: 0.01ms;
+          }
+          .shrine-light-overlay {
+            transition: none;
+          }
+        }
+      `}</style>
     </div>
   )
 }
 
 // ─── 개별 아이템 스프라이트 ──────────────────────────────────
 interface SpriteProps {
-  placement: Placement
-  item: CatalogItem
+  placement: StagePlacement
+  item: StageCatalogItem
   editing: boolean
+  /** 스냅 후보 앵커 (무대 구조물 anchors 합집합 / 레거시 기본 앵커) */
+  anchors: readonly StageAnchor[]
   onTap: () => void
   onRemove: () => void
-  onDragEnd: (x: number, y: number) => void
+  onDragEnd: (x: number, y: number, anchorId: string | null) => void
+  onAnchorHover: (a: StageAnchor | null) => void
 }
 
 const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
+/** v2「설빛온기」스프라이트 표시 크기 (512² 캔버스에 여백을 둔 규격이라 크게 잡는다) */
+const ASSET_EM = '3.2em'
+/** 레거시 스프라이트 표시 크기 — 기존 값 그대로 (회귀 0) */
+const LEGACY_SPRITE_EM = '1.55em'
 
-function Sprite({ placement, item, editing, onTap, onRemove, onDragEnd }: SpriteProps) {
+function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd, onAnchorHover }: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLSpanElement>(null)
   const dragging = useRef(false)
   const moved = useRef(false)
   const posRef = useRef({ x: placement.x, y: placement.y })
+  const snapRef = useRef<StageAnchor | null>(null)
+
+  /**
+   * 원근 스케일 합성 — 중심 정렬 translate + 깊이 스케일 + flip.
+   * transform-origin 을 바닥(50% 100%)에 둬야 커져도 발이 바닥에 붙어 있다.
+   */
+  const transformFor = useCallback(
+    (y: number) =>
+      `translate(-50%, -50%) scale(${depthScale(item.layer, y).toFixed(3)})${placement.flip ? ' scaleX(-1)' : ''}`,
+    [item.layer, placement.flip]
+  )
 
   const onPointerDown = useCallback(
     (e: RPointerEvent<HTMLDivElement>) => {
@@ -1039,6 +1186,7 @@ function Sprite({ placement, item, editing, onTap, onRemove, onDragEnd }: Sprite
       if (!el || !room) return
       dragging.current = true
       moved.current = false
+      snapRef.current = null
       el.setPointerCapture(e.pointerId)
       el.style.zIndex = '60'
       const zone = ZONES[item.layer]
@@ -1047,65 +1195,116 @@ function Sprite({ placement, item, editing, onTap, onRemove, onDragEnd }: Sprite
       const move = (ev: PointerEvent) => {
         if (!dragging.current) return
         moved.current = true
-        const x = clampPct(((ev.clientX - rect.left) / rect.width) * 100, zone.x)
-        const y = clampPct(((ev.clientY - rect.top) / rect.height) * 100, zone.y)
+        const rawX = clampPct(((ev.clientX - rect.left) / rect.width) * 100, zone.x)
+        const rawY = clampPct(((ev.clientY - rect.top) / rect.height) * 100, zone.y)
+        // 앵커 반경 안이면 자석 스냅 — 밖이면 자유 배치 그대로 (앵커는 보너스이지 제약이 아니다)
+        const snap = nearestAnchor(anchors, item.layer, rawX, rawY)
+        const x = snap ? snap.x : rawX
+        const y = snap ? snap.y : rawY
         posRef.current = { x, y }
         el.style.left = `${x}%`
         el.style.top = `${y}%`
-        if (item.layer === 'floor') el.style.zIndex = String(10 + Math.round(y))
+        el.style.transform = transformFor(y)
+        if (item.layer === 'floor') el.style.zIndex = String(depthZ(item.layer, y))
+        if ((snapRef.current?.id ?? null) !== (snap?.id ?? null)) {
+          snapRef.current = snap
+          onAnchorHover(snap)
+        }
       }
       const up = () => {
         dragging.current = false
         el.removeEventListener('pointermove', move)
         el.removeEventListener('pointerup', up)
         el.removeEventListener('pointercancel', up)
-        if (moved.current) onDragEnd(posRef.current.x, posRef.current.y)
+        const snapped = snapRef.current
+        snapRef.current = null
+        onAnchorHover(null)
+        // 드래그용 임시 z(60)를 React 가 알고 있는 값으로 되돌린다
+        // (다음 렌더에서 zIndex prop 이 그대로면 React 가 DOM 을 쓰지 않아 60 이 남는다)
+        el.style.zIndex = String(depthZ(item.layer, posRef.current.y))
+        if (moved.current) onDragEnd(posRef.current.x, posRef.current.y, snapped?.id ?? null)
       }
       el.addEventListener('pointermove', move)
       el.addEventListener('pointerup', up)
       el.addEventListener('pointercancel', up)
     },
-    [editing, item.layer, onDragEnd]
+    [editing, item.layer, anchors, onDragEnd, onAnchorHover, transformFor]
   )
 
+  /** 탭 반응 — 짧은 흔들림. 래퍼가 아닌 내부 span 에 걸어 원근 transform 을 덮지 않는다. */
+  const wiggle = useCallback(() => {
+    const el = bodyRef.current
+    if (!el) return
+    el.classList.remove('shrine-item-wiggle')
+    void el.offsetWidth // 리플로우 강제 → 연속 탭에도 애니메이션 재시작
+    el.classList.add('shrine-item-wiggle')
+  }, [])
+
   const lit = placement.state.lit === true
-  const zIndex = item.layer === 'floor' ? 10 + Math.round(placement.y) : 10
+  const zIndex = depthZ(item.layer, placement.y)
+  const shadow = groundShadow(item.layer, placement.y)
+  // ⚠️ scene.ts 는 asset_url 이 비면 sprite_url 로 폴백한다 → 둘이 같으면 아직 레거시 스프라이트다.
+  //    이때 v2 크기(3.2em)를 쓰면 기존 신당의 모든 신물이 2배로 커진다(회귀). 다를 때만 v2 규격.
+  const spriteSrc = item.assetUrl ?? item.spriteUrl
+  const spriteEm = item.assetUrl && item.assetUrl !== item.spriteUrl ? ASSET_EM : LEGACY_SPRITE_EM
 
   return (
     <div
       ref={ref}
       onPointerDown={onPointerDown}
       onClick={() => {
-        if (!editing && !moved.current) onTap()
+        if (editing || moved.current) return
+        wiggle()
+        onTap()
       }}
-      className="absolute -translate-x-1/2 -translate-y-1/2 select-none"
+      className="absolute select-none"
       style={{
         left: `${placement.x}%`,
         top: `${placement.y}%`,
         fontSize: SIZE_PX[item.size] ?? '29px',
         lineHeight: 1,
         zIndex,
+        transform: transformFor(placement.y),
+        transformOrigin: '50% 100%',
         cursor: editing ? 'grab' : 'pointer',
         filter: lit
           ? 'drop-shadow(0 0 7px rgba(244,228,186,0.95)) drop-shadow(0 0 15px rgba(201,168,76,0.5))'
           : 'drop-shadow(0 3px 3px rgba(0,0,0,0.55))',
       }}
     >
-      {item.spriteUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.spriteUrl}
-          alt={item.name}
-          draggable={false}
-          style={{ display: 'inline-block', width: '1.55em', height: '1.55em', objectFit: 'contain' }}
-        />
-      ) : (
-        <span style={{ display: 'inline-block' }}>{item.emoji}</span>
-      )}
-      {item.layer !== 'wall' && item.layer !== 'hanging' && (
+      <span
+        ref={bodyRef}
+        style={{ display: 'inline-block' }}
+        onAnimationEnd={(e) => e.currentTarget.classList.remove('shrine-item-wiggle')}
+      >
+        {spriteSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={spriteSrc}
+            alt={item.name}
+            draggable={false}
+            decoding="async"
+            style={{ display: 'inline-block', width: spriteEm, height: spriteEm, objectFit: 'contain' }}
+          />
+        ) : (
+          item.emoji
+        )}
+      </span>
+      {/* 접지 그림자 — 아이템과 한 래퍼라 함께 이동·함께 스케일된다 ("떠 있음" 해소) */}
+      {shadow && (
         <span
-          className="absolute left-1/2 -translate-x-1/2 rounded-full"
-          style={{ bottom: '-5px', width: '26px', height: '7px', background: 'rgba(0,0,0,0.45)', filter: 'blur(2px)' }}
+          className="absolute left-1/2 rounded-full pointer-events-none"
+          style={{
+            // 타원 중심을 아이템 밑동에 걸쳐 '닿아 있는' 접지로 보이게 (완전히 아래로 내리면 다시 떠 보인다)
+            bottom: `${-shadow.height / 2}em`,
+            width: `${shadow.width}em`,
+            height: `${shadow.height}em`,
+            marginLeft: `${-shadow.width / 2}em`,
+            background: `radial-gradient(ellipse at center, rgba(0,0,0,${shadow.opacity}) 0%, rgba(0,0,0,${(shadow.opacity * 0.55).toFixed(3)}) 55%, rgba(0,0,0,0) 78%)`,
+            filter: 'blur(1.5px)',
+            // 래퍼가 이미 스택 컨텍스트(숫자 z-index)라 -1 은 아이템 뒤로만 간다 (방 배경까지 내려가지 않음)
+            zIndex: -1,
+          }}
         />
       )}
       {editing && (

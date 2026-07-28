@@ -11,20 +11,34 @@ import {
   parseUnlockEffect,
   isLayer,
   isElement,
-  type CatalogItem,
   type Element,
   type InventoryEntry,
   type Layer,
-  type Placement,
-  type SceneData,
   type SizeGrade,
   type ThemeAssets,
-  type ThemePack,
 } from '@/lib/domain/shrine/types'
+import {
+  isCatalogKind,
+  parseAnchorId,
+  parseAnchorSpec,
+  parseAssetUrl,
+  parseStageSpec,
+  type StageCatalogItem,
+  type StagePlacement,
+  type StageSceneData,
+  type StageThemePack,
+} from '@/lib/domain/shrine/stage'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
 import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 
+/**
+ * ⚠️ v2 무대 컬럼(kind·asset_url·anchor_spec / anchor_id / stage)은 마이그레이션
+ *    `20260729_shrine_stage_v2.sql` 로 추가된다. 카탈로그·배치·소유자 테마 조회는 전부
+ *    `select('*')` 라 컬럼이 없어도 값이 undefined 로 들어올 뿐 터지지 않지만,
+ *    방문자 뷰의 테마 조회는 컬럼을 명시하므로 **마이그레이션 미적용 DB에서는 실패한다.**
+ *    배포 순서는 반드시 「마이그레이션 적용 → 코드 배포」 (오케스트레이터가 보장).
+ */
 interface CatalogRow {
   id: string
   name: string
@@ -42,9 +56,14 @@ interface CatalogRow {
   price_krw: number
   price_bokchae: number
   unlock_effect: unknown
+  /** v2 — 마이그레이션 이전 DB에서는 undefined 로 들어온다 (전부 방어 파싱) */
+  kind?: unknown
+  asset_url?: unknown
+  anchor_spec?: unknown
 }
 
-function toCatalogItem(r: CatalogRow): CatalogItem {
+function toCatalogItem(r: CatalogRow): StageCatalogItem {
+  const anchors = parseAnchorSpec(r.anchor_spec)
   return {
     id: r.id,
     name: r.name,
@@ -62,6 +81,35 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     priceKrw: r.price_krw,
     priceBokchae: r.price_bokchae,
     unlockEffect: parseUnlockEffect(r.unlock_effect),
+    kind: isCatalogKind(r.kind) ? r.kind : 'prop',
+    // v2 스프라이트가 아직 없는 품목은 기존 sprite_url 로 폴백 → 신규 렌더도 첫날부터 그림이 나온다
+    assetUrl: parseAssetUrl(r.asset_url) ?? parseAssetUrl(r.sprite_url),
+    anchorSpec: anchors.length > 0 ? anchors : null,
+  }
+}
+
+interface PlacementRow {
+  id: string
+  catalog_item_id: string
+  layer: string
+  x: number | string
+  y: number | string
+  flip: boolean
+  state: unknown
+  /** v2 — 마이그레이션 이전 DB에서는 undefined 로 들어온다 */
+  anchor_id?: unknown
+}
+
+function toPlacement(p: PlacementRow): StagePlacement {
+  return {
+    id: p.id,
+    catalogItemId: p.catalog_item_id,
+    layer: isLayer(p.layer) ? p.layer : 'floor',
+    x: Number(p.x),
+    y: Number(p.y),
+    flip: p.flip,
+    state: parsePlacementState(p.state),
+    anchorId: parseAnchorId(p.anchor_id),
   }
 }
 
@@ -261,7 +309,7 @@ async function ensureStarterKit(supabase: SupabaseServer, userId: string, shrine
   if (placeRows.length) await supabase.from('shrine_placements').insert(placeRows)
 }
 
-async function loadThemes(supabase: SupabaseServer, userId: string): Promise<ThemePack[]> {
+async function loadThemes(supabase: SupabaseServer, userId: string): Promise<StageThemePack[]> {
   const [{ data: packs }, { data: owned }] = await Promise.all([
     supabase.from('shrine_theme_packs').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('user_theme_packs').select('pack_id').eq('user_id', userId),
@@ -277,6 +325,7 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<The
     elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
     assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
     owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
+    stage: parseStageSpec(p.stage),
   }))
 }
 
@@ -287,7 +336,7 @@ const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, mai
  * familyMemberId 지정 시 그 가족의 신당(없으면 자동 생성 — 비공개, 가족 이름 노출 방지).
  * 본인 신당(생략/null)은 기존과 동일하게 없으면 null(생성 폼 유도).
  */
-export async function getSceneData(familyMemberId?: string | null): Promise<SceneData | null> {
+export async function getSceneData(familyMemberId?: string | null): Promise<StageSceneData | null> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -341,16 +390,8 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Scen
     loadThemes(supabase, user.id),
   ])
 
-  const catalog: CatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
-  const placements: Placement[] = (placeRows ?? []).map((p) => ({
-    id: p.id,
-    catalogItemId: p.catalog_item_id,
-    layer: isLayer(p.layer) ? p.layer : 'floor',
-    x: Number(p.x),
-    y: Number(p.y),
-    flip: p.flip,
-    state: parsePlacementState(p.state),
-  }))
+  const catalog: StageCatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
+  const placements: StagePlacement[] = (placeRows ?? []).map(toPlacement)
   const inventory: InventoryEntry[] = (invRows ?? []).map((i) => ({ catalogItemId: i.catalog_item_id, qty: i.qty }))
 
   const activePack = themes.find((t) => t.id === shrine.active_pack_id)
@@ -443,7 +484,7 @@ async function loadMainDeity(
 }
 
 /** 방문자용 공개 씬 데이터 (읽기 전용). 소유자의 방·테마만 노출, 인벤토리/프로필 비공개. */
-export async function getPublicSceneData(userId: string): Promise<SceneData | null> {
+export async function getPublicSceneData(userId: string): Promise<StageSceneData | null> {
   const supabase = await createClient()
 
   const { data: shrine } = await supabase
@@ -458,23 +499,16 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
     supabase.from('shrine_item_catalog').select('*').eq('is_active', true).order('sort_order'),
     supabase.from('shrine_placements').select('*').eq('shrine_id', shrine.id),
     supabase
+      // ⚠️ 유일하게 컬럼을 명시하는 조회 — `stage` 는 20260729 마이그레이션 적용 후에만 존재한다
       .from('shrine_theme_packs')
-      .select('id, code, name, price_bok, price_krw, price_bokchae, element_affinity, assets')
+      .select('id, code, name, price_bok, price_krw, price_bokchae, element_affinity, assets, stage')
       .eq('is_active', true),
   ])
 
-  const catalog: CatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
-  const placements: Placement[] = (placeRows ?? []).map((p) => ({
-    id: p.id,
-    catalogItemId: p.catalog_item_id,
-    layer: isLayer(p.layer) ? p.layer : 'floor',
-    x: Number(p.x),
-    y: Number(p.y),
-    flip: p.flip,
-    state: parsePlacementState(p.state),
-  }))
+  const catalog: StageCatalogItem[] = (catRows ?? []).map((r) => toCatalogItem(r as CatalogRow))
+  const placements: StagePlacement[] = (placeRows ?? []).map(toPlacement)
   const activePack = (packs ?? []).find((p) => p.id === shrine.active_pack_id)
-  const themes: ThemePack[] = activePack
+  const themes: StageThemePack[] = activePack
     ? [
         {
           id: activePack.id,
@@ -488,6 +522,7 @@ export async function getPublicSceneData(userId: string): Promise<SceneData | nu
             ? activePack.assets
             : {}) as ThemeAssets,
           owned: true,
+          stage: parseStageSpec(activePack.stage),
         },
       ]
     : []
@@ -520,13 +555,15 @@ interface PlacementInput {
   y: number
   flip?: boolean
   state?: { lit?: boolean }
+  /** 스냅된 앵커 id (자유 배치면 생략/null). 62자 초과·비문자열은 서버에서 null 처리. */
+  anchorId?: string | null
 }
 
 /** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
 export async function saveShrineLayout(
   placements: PlacementInput[],
   familyMemberId?: string | null
-): Promise<{ success: boolean; error?: string; placements?: Placement[] }> {
+): Promise<{ success: boolean; error?: string; placements?: StagePlacement[] }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -555,11 +592,17 @@ export async function saveShrineLayout(
     if (cnt > (owned.get(itemId) ?? 0)) return { success: false, error: 'NOT_ENOUGH_OWNED' }
   }
 
+  // 앵커 id 검증(62자 이하 문자열만 통과, 그 외 null).
+  // 앵커가 하나도 없으면 anchor_id 키 자체를 payload 에서 뺀다 — 마이그레이션 미적용 DB에서
+  // "알 수 없는 컬럼"으로 insert 가 실패하면 이미 실행된 delete 때문에 배치가 통째로 유실된다.
+  const anchorIds = placements.map((p) => parseAnchorId(p.anchorId))
+  const withAnchors = anchorIds.some((a) => a !== null)
+
   // 좌표 클램프 (서버 방어) — layer도 검증값 사용(원시값이 CHECK 위반으로 delete 후 insert 실패 → 배치 유실 방지)
-  const rows = placements.map((p) => {
+  const rows = placements.map((p, i) => {
     const layer = isLayer(p.layer) ? p.layer : 'floor'
     const zone = ZONES[layer]
-    return {
+    const row = {
       shrine_id: shrine.id,
       catalog_item_id: p.catalogItemId,
       layer,
@@ -568,6 +611,7 @@ export async function saveShrineLayout(
       flip: p.flip ?? false,
       state: p.state ?? {},
     }
+    return withAnchors ? { ...row, anchor_id: anchorIds[i] } : row
   })
 
   // 전체 교체 (delete + insert) — 새 id가 재발급되므로 반드시 반환해 클라 상태를 교체시킨다
@@ -575,19 +619,11 @@ export async function saveShrineLayout(
   const { error: delErr } = await supabase.from('shrine_placements').delete().eq('shrine_id', shrine.id)
   if (delErr) return { success: false, error: delErr.message }
 
-  let saved: Placement[] = []
+  let saved: StagePlacement[] = []
   if (rows.length) {
     const { data: inserted, error: insErr } = await supabase.from('shrine_placements').insert(rows).select('*')
     if (insErr) return { success: false, error: insErr.message }
-    saved = (inserted ?? []).map((p) => ({
-      id: p.id,
-      catalogItemId: p.catalog_item_id,
-      layer: isLayer(p.layer) ? p.layer : 'floor',
-      x: Number(p.x),
-      y: Number(p.y),
-      flip: p.flip,
-      state: parsePlacementState(p.state),
-    }))
+    saved = (inserted ?? []).map(toPlacement)
   }
 
   revalidatePath('/protected/shrine')

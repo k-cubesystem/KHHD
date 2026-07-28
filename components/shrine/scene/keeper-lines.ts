@@ -85,6 +85,26 @@ export function resonanceLine(element: Element): string {
   return `오호… 세 ${EL_KO[element]} 기운이 서로를 부르는구려. <em>공명</em>이 일어났소!`
 }
 
+/**
+ * 앵커(제단 상판·선반·신위 곁 등 '의미 있는 자리')에 새로 배치했을 때 — 꾸미기 저장 직후 1회.
+ * label 이 있으면 자리 이름을 불러준다.
+ */
+const ANCHOR_LINES = [
+  '오호, 그 자리에 두었구려. 기운이 곧게 서오.',
+  '자리를 알아보는 눈이 있구려 — 신령께서도 흡족해하실 게요.',
+  '거기 두니 향이 곧게 오르오. 방이 한결 단정해졌소.',
+] as const
+
+/** 대사는 말풍선에서 dangerouslySetInnerHTML 로 렌더된다 — DB(jsonb) 유래 문자열은 반드시 이스케이프. */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+export function anchorLine(label: string | null, seed: number): string {
+  const base = pick(ANCHOR_LINES, seed)
+  return label ? `<em>${escapeHtml(label)}</em> — ${base}` : base
+}
+
 /** 오래 가만히 있을 때 (idle) — 소리 없이 잔잔하게 */
 const IDLE = [
   '향 내음이 은은하구려…',
