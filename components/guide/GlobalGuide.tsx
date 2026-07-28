@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Megaphone, X, Archive, Footprints, ChevronUp, Lightbulb } from 'lucide-react'
 import { getGuideData, saveGuideProgress, type GuideData } from '@/app/actions/guide'
 import { markNotificationRead } from '@/app/actions/core/user-notifications'
-import { KNOWLEDGE_TIPS, todayTipIndex } from '@/lib/domain/guide/knowledge-tips'
+import { KNOWLEDGE_TIPS, tipForPath, nextTipInPath, type KnowledgeTip } from '@/lib/domain/guide/knowledge-tips'
 
 // ─── 페이지별 기능 소개 스크립트 (경로 정확 매칭) ───────────────
 const TOURS: Record<string, readonly string[]> = {
@@ -67,7 +67,8 @@ type Bubble =
   | { kind: 'personal' }
   | { kind: 'notice' }
   | { kind: 'tour'; step: number }
-  | { kind: 'knowledge'; idx: number }
+  /** 지식 팁 — 경로별 풀에서 고른 항목 자체를 들고 있는다(인덱스는 풀이 바뀌면 의미가 없어진다). */
+  | { kind: 'knowledge'; tip: KnowledgeTip }
   | null
 
 /**
@@ -113,8 +114,8 @@ export function GlobalGuide() {
   // 몰입 화면에서는 하단 바를 띄우지 않는다.
   // 신당: 전체화면 연출을 가림 / 고민상담: 대화에 집중해야 하는 화면이라 공지·안내가 방해된다.
   const hidden = pathname.startsWith('/protected/shrine') || pathname.startsWith('/protected/ai-shaman')
-  // 오늘의 상식 — 날짜 기반 결정적 인덱스(마운트 시 1회 고정)
-  const todayIdx = useMemo(() => todayTipIndex(), [])
+  // 오늘의 상식 — 경로 + 날짜로 결정. 페이지를 옮기면 다른 상식이 뜬다.
+  const pathTip = useMemo(() => tipForPath(pathname), [pathname])
 
   // 자동 노출 없음 — 페이지에 들어가면 항상 접힌 '바' 상태다.
   // 공지·안내가 본문 위로 펼쳐진 채 뜨면 화면을 가리고 읽기를 강요한다.
@@ -173,13 +174,13 @@ export function GlobalGuide() {
     setBubble(null)
   }, [tour, commitProgress, setBubble])
 
-  /** 지식 팁 회전 — (idx+1)%len 회전 인덱스(소진형 아님) */
+  /** 지식 팁 회전 — 같은 경로 풀 안에서 다음 항목으로(소진형 아님) */
   const rotateKnowledge = useCallback(
-    (idx: number) => {
-      if (!KNOWLEDGE_TIPS.length) return
-      setBubble({ kind: 'knowledge', idx: (idx + 1) % KNOWLEDGE_TIPS.length })
+    (current: KnowledgeTip) => {
+      const next = nextTipInPath(pathname, current)
+      if (next) setBubble({ kind: 'knowledge', tip: next })
     },
-    [setBubble]
+    [pathname, setBubble]
   )
 
   // 접힌 줄 탭 — 개인 알림 > 공지 > 온보딩 > 투어 처음부터 > 오늘의 상식
@@ -200,8 +201,8 @@ export function GlobalGuide() {
       setBubble({ kind: 'tour', step: 0 })
       return
     }
-    if (KNOWLEDGE_TIPS.length) setBubble({ kind: 'knowledge', idx: todayIdx })
-  }, [data, tour, todayIdx, setBubble])
+    if (pathTip) setBubble({ kind: 'knowledge', tip: pathTip })
+  }, [data, tour, pathTip, setBubble])
 
   // 지식 팁이 상시 존재하므로 바는 신당 외 모든 페이지에서 유지된다(접힌 바가 사라지지 않음).
   const hasContent =
@@ -236,8 +237,8 @@ export function GlobalGuide() {
     data.onboarding ||
     (data.announcement && seenNotice !== data.announcement.id)
   )
-  // 접힘 바 마퀴용 오늘의 상식(없으면 정적 안내문으로 폴백)
-  const todayTip = KNOWLEDGE_TIPS.length ? KNOWLEDGE_TIPS[todayIdx % KNOWLEDGE_TIPS.length] : null
+  // 접힘 바 마퀴용 상식 — 경로별로 다르다(없으면 정적 안내문으로 폴백)
+  const todayTip = pathTip
 
   // 자동으로 펼치지 않으므로, 알릴 게 있으면 접힌 바가 그 제목을 대신 보여준다.
   // (안 그러면 무엇을 눌러야 하는지 알 수 없다.) 우선순위는 펼침 순서와 동일.
@@ -277,7 +278,7 @@ export function GlobalGuide() {
               bubble.kind === 'tour'
                 ? `tour-${bubble.step}`
                 : bubble.kind === 'knowledge'
-                  ? `knowledge-${bubble.idx}`
+                  ? `knowledge-${bubble.tip.term}`
                   : bubble.kind
             }
             initial={{ opacity: 0, y: 8 }}
@@ -366,22 +367,16 @@ export function GlobalGuide() {
                     </button>
                   </div>
                 </>
-              ) : bubble.kind === 'knowledge' && KNOWLEDGE_TIPS.length ? (
+              ) : bubble.kind === 'knowledge' ? (
                 <>
                   <p className="flex items-center gap-1 text-[9px] text-gold-500/80 font-serif mb-1">
                     <Lightbulb className="w-3 h-3" /> 오늘의 사주 상식
                   </p>
-                  <p className="text-[12px] font-bold text-gold-200 leading-snug mb-1">
-                    {KNOWLEDGE_TIPS[bubble.idx % KNOWLEDGE_TIPS.length]?.term}
-                  </p>
-                  <p className="text-[11.5px] text-ink-light/85 leading-snug mb-2">
-                    {KNOWLEDGE_TIPS[bubble.idx % KNOWLEDGE_TIPS.length]?.plain}
-                  </p>
+                  <p className="text-[12px] font-bold text-gold-200 leading-snug mb-1">{bubble.tip.term}</p>
+                  <p className="text-[11.5px] text-ink-light/85 leading-snug mb-2">{bubble.tip.plain}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-ink-light/35 font-serif">
-                      {KNOWLEDGE_TIPS[bubble.idx % KNOWLEDGE_TIPS.length]?.category}
-                    </span>
-                    <button onClick={() => rotateKnowledge(bubble.idx)} className="text-[11px] font-bold text-gold-400">
+                    <span className="text-[9px] text-ink-light/35 font-serif">{bubble.tip.category}</span>
+                    <button onClick={() => rotateKnowledge(bubble.tip)} className="text-[11px] font-bold text-gold-400">
                       다른 상식 보기 →
                     </button>
                   </div>
@@ -420,6 +415,10 @@ export function GlobalGuide() {
             ) : todayTip ? (
               <>
                 <Lightbulb className="w-3.5 h-3.5 text-gold-500/70 shrink-0" />
+                {/* 분류 배지 — 지금 화면과 상관있는 상식임을 한눈에 알린다 */}
+                <span className="shrink-0 rounded-full border border-gold-500/25 bg-gold-500/10 px-1.5 py-[1px] text-[9px] font-serif text-gold-400/90">
+                  {todayTip.category}
+                </span>
                 {/* 흐르는 상식 마퀴 — review-marquee infinite-scroll 패턴(2배 복제+translateX -50%). reduced-motion 시 전역 규칙이 정지 */}
                 <div className="flex-1 min-w-0 overflow-hidden guide-marquee-mask">
                   <div className="flex w-max guide-marquee-track">
@@ -429,7 +428,7 @@ export function GlobalGuide() {
                         aria-hidden={dup === 1}
                         className="text-[11px] text-ink-light/65 font-serif whitespace-nowrap pr-16"
                       >
-                        {todayTip.term} — {todayTip.plain}
+                        <span className="text-gold-200/90 font-bold">{todayTip.term}</span> — {todayTip.plain}
                       </span>
                     ))}
                   </div>

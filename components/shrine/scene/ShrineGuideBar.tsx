@@ -1,15 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronRight, ListChecks, Sparkles, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 // 감성 돋보기:
-// 신당 하이브리드 가이드 — 평소엔 우하단 主神이 말풍선으로 안내(몰입),
-// 할 일이 2개 이상 쌓이면 하단 네비 위에 슬림 바가 떠서 놓침을 막는다.
+// 신당 가이드 — 하단 네비 위 슬림 바 하나로만 안내한다.
+// 우하단에 떠 있던 主神 아바타 + 말풍선은 제거했다(2026-07-28): 신당 연출을 가리고,
+// 자동으로 떠서 시야를 뺏었다. 안내는 사용자가 바를 눌렀을 때만 펼친다.
 
 export interface GuideTask {
   id: string
@@ -18,25 +17,16 @@ export interface GuideTask {
   href: string
 }
 
-interface GuideDeity {
-  name: string
-  portraitUrl: string | null
-  accent: string | null
-}
-
 interface Props {
-  deity: GuideDeity | null
   neededElementKo: string
   neededElementPlaced: boolean
   mainDeitySeated: boolean
   isOwner: boolean
 }
 
-export function ShrineGuideBar({ deity, neededElementKo, neededElementPlaced, mainDeitySeated, isOwner }: Props) {
+export function ShrineGuideBar({ neededElementKo, neededElementPlaced, mainDeitySeated, isOwner }: Props) {
   const [canCheckIn, setCanCheckIn] = useState(false)
-  const [bubbleOpen, setBubbleOpen] = useState(true)
   const [barOpen, setBarOpen] = useState(false)
-  const [idx, setIdx] = useState(0)
 
   // 출석 가능 여부(클라 조회)
   useEffect(() => {
@@ -80,24 +70,12 @@ export function ShrineGuideBar({ deity, neededElementKo, neededElementPlaced, ma
     return t
   }, [isOwner, mainDeitySeated, canCheckIn, neededElementPlaced, neededElementKo])
 
-  // 첫 진입 시 말풍선 잠깐 노출 후 접기
-  useEffect(() => {
-    if (!tasks.length) return
-    setBubbleOpen(true)
-    const id = window.setTimeout(() => setBubbleOpen(false), 5200)
-    return () => window.clearTimeout(id)
-  }, [tasks.length])
-
   if (!isOwner || !tasks.length) return null
-
-  const accent = deity?.accent ?? '#c9a84c'
-  const current = tasks[idx % tasks.length]
-  const nextGuide = () => setIdx((i) => (i + 1) % tasks.length)
 
   return (
     <>
-      {/* 슬림 할 일 바 (할 일 2개+ 일 때만) */}
-      {tasks.length >= 2 && (
+      {/* 슬림 할 일 바 — 우하단 HUD 를 없앤 뒤로 이 바가 유일한 안내 통로다(할 일 1개여도 노출) */}
+      {tasks.length >= 1 && (
         <div className="fixed left-2 right-2 bottom-[68px] z-[125] mx-auto max-w-[476px]">
           <AnimatePresence initial={false}>
             {barOpen ? (
@@ -153,61 +131,6 @@ export function ShrineGuideBar({ deity, neededElementKo, neededElementPlaced, ma
           </AnimatePresence>
         </div>
       )}
-
-      {/* 우하단 主神 가이드 HUD */}
-      <div className={cn('fixed right-3 z-[130]', tasks.length >= 2 ? 'bottom-[120px]' : 'bottom-[82px]')}>
-        <AnimatePresence>
-          {bubbleOpen && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 6 }}
-              className="absolute bottom-[60px] right-0 w-[228px] rounded-2xl rounded-br-md border border-gold-500/40 bg-[#120d07] p-3 shadow-2xl"
-            >
-              <p className="text-[9px] text-gold-500/70 font-serif mb-1">主神 {deity?.name ?? '신당지기'}</p>
-              <p className="text-[11.5px] text-ink-light/90 leading-snug mb-2">{current.text}</p>
-              <div className="flex items-center justify-between">
-                <Link href={current.href} className="text-[11px] font-bold text-gold-400 flex items-center gap-0.5">
-                  {current.cta} <ChevronRight className="w-3 h-3" />
-                </Link>
-                {tasks.length > 1 && (
-                  <button onClick={nextGuide} className="text-[10px] text-ink-light/40 hover:text-ink-light/70">
-                    다음 안내 →
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button
-          onClick={() => setBubbleOpen((o) => !o)}
-          aria-label="신당 가이드"
-          className="relative w-12 h-12 rounded-full overflow-hidden border-2 shadow-lg active:scale-95 transition-transform"
-          style={{ borderColor: `${accent}66`, boxShadow: `0 0 14px ${accent}44` }}
-        >
-          {/* 새 안내 알림 링 */}
-          <span
-            className="absolute inset-0 rounded-full animate-ping"
-            style={{ boxShadow: `0 0 0 2px ${accent}55`, animationDuration: '2.4s' }}
-          />
-          {deity?.portraitUrl ? (
-            <Image
-              src={deity.portraitUrl}
-              alt={deity.name}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover object-top"
-            />
-          ) : (
-            <span className="w-full h-full flex items-center justify-center text-lg bg-surface">🔮</span>
-          )}
-          {/* 할 일 수 배지 */}
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-gold-500 text-background text-[10px] font-bold flex items-center justify-center border border-background">
-            {tasks.length}
-          </span>
-        </button>
-      </div>
     </>
   )
 }

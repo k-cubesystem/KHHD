@@ -942,11 +942,6 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
 
       {/* 하이브리드 가이드 — 우하단 主神 말풍선 + 할 일 슬림 바 */}
       <ShrineGuideBar
-        deity={
-          scene.mainDeity
-            ? { name: scene.mainDeity.name, portraitUrl: scene.mainDeity.portraitUrl, accent: scene.mainDeity.accent }
-            : null
-        }
         neededElementKo={EL_KO[displayYongsin]}
         neededElementPlaced={neededElementPlaced}
         mainDeitySeated={!!scene.mainDeity}

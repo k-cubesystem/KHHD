@@ -95,3 +95,50 @@ export function todayTipIndex(now: number = Date.now()): number {
   const epochDay = Math.floor(now / 86_400_000)
   return ((epochDay % len) + len) % len
 }
+
+/**
+ * 페이지 성격에 맞는 분류 — 하단 가이드 바가 "지금 보고 있는 화면"과 상관있는 상식을 띄운다.
+ * 여기 없는 경로는 전체 풀에서 고른다.
+ */
+const PATH_CATEGORIES: Record<string, readonly string[]> = {
+  '/protected/analysis': ['십성', '오행', '용신'],
+  '/protected/family': ['궁합', '관계'],
+  '/protected/history': ['운의 흐름', '신살'],
+  '/protected/store': ['풍수', '오행'],
+  '/protected/profile': ['오행', '운의 흐름'],
+}
+
+/** 문자열 → 안정적 정수. 경로가 달라지면 인덱스도 달라진다(같은 날에도 페이지마다 다른 상식). */
+function hashString(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1_000_003
+  return h
+}
+
+/**
+ * 경로·날짜로 결정되는 상식 하나. 같은 날 같은 페이지면 항상 같고,
+ * 페이지를 옮기면 바뀌며, 날이 바뀌어도 바뀐다.
+ *
+ * 경로에 어울리는 분류가 있으면 그 안에서 고르고, 없으면 전체에서 고른다.
+ * 순수 함수 — now 를 주입받아 테스트 가능하게 했다.
+ */
+export function tipForPath(path: string, now: number = Date.now()): KnowledgeTip | null {
+  if (KNOWLEDGE_TIPS.length === 0) return null
+  const wanted = PATH_CATEGORIES[path]
+  const pool = wanted?.length ? KNOWLEDGE_TIPS.filter((t) => wanted.includes(t.category)) : KNOWLEDGE_TIPS
+  const effective = pool.length > 0 ? pool : KNOWLEDGE_TIPS
+  const epochDay = Math.floor(now / 86_400_000)
+  const idx = (((hashString(path) + epochDay) % effective.length) + effective.length) % effective.length
+  return effective[idx]
+}
+
+/** 같은 풀 안에서 다음 상식으로 — 접힘 바를 눌러 펼친 뒤 '다른 상식 보기'가 쓰는 회전. */
+export function nextTipInPath(path: string, current: KnowledgeTip, now: number = Date.now()): KnowledgeTip | null {
+  if (KNOWLEDGE_TIPS.length === 0) return null
+  const wanted = PATH_CATEGORIES[path]
+  const pool = wanted?.length ? KNOWLEDGE_TIPS.filter((t) => wanted.includes(t.category)) : KNOWLEDGE_TIPS
+  const effective = pool.length > 0 ? pool : KNOWLEDGE_TIPS
+  const at = effective.findIndex((t) => t.term === current.term)
+  if (at < 0) return tipForPath(path, now)
+  return effective[(at + 1) % effective.length]
+}
