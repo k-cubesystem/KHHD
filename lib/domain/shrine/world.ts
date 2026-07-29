@@ -29,6 +29,12 @@ export interface WorldZone {
   wallpaperUrl: string | null
   flooringUrl: string | null
   structures: StageStructure[]
+  /**
+   * 벽지·바닥을 **늘리지 말고 가로로 반복**(repeat-x)하라는 렌더 신호 (안2.1 「큰 방 하나」).
+   * 뷰포트보다 넓은 구역에서 한 장을 늘리면 벽 리듬이 폭 배수만큼 뭉개진다 — 타일 에셋은 이 값으로 구분한다.
+   * 없으면(기존 구역·항등 폴백) 지금까지처럼 늘려 그린다 = 회귀 0.
+   */
+  tile?: boolean
 }
 
 /** 두루마리 전체. zones 는 x0 오름차순·비중첩이고 최소 1개(대청)가 보장된다. */
@@ -61,6 +67,18 @@ export const ZONE_SNAP_TOLERANCE_PCT = 12
  * 지나는 느린 속도 — 의도적 튕김만 걸린다.
  */
 export const ZONE_FLICK_MIN_PCT_PER_S = 30
+
+/**
+ * 자유 팬의 감쇠 시간상수 τ(초) — **관성 튜닝의 단일 출처**(안2.1 확정: 스냅·페이징 폐지).
+ *
+ * 손을 뗀 뒤 속도가 지수적으로 잦아든다고 보면 총 이동거리는 v×τ 다(∫v·e^(−t/τ)dt).
+ * 0.35s 는 뷰포트 1장(100%p)을 1초에 지나는 손놀림이 35%p(≈화면 1/3)를 더 미끄러지는 세기 —
+ * 살짝 밀면 살짝, 세게 튕기면 한 화면 넘게 흐르고, **아무 데서나 멈춘다**.
+ *
+ * 이 값을 키우면 미끄러짐이 길어지지만 감속 길이 상한(CameraRig GLIDE_MS_MAX)에 먼저 걸려
+ * 손끝보다 빠른 첫 프레임이 나온다 — 곡선 상수와 함께 보고 조정할 것.
+ */
+export const FREE_GLIDE_TAU_S = 0.35
 
 /** 방어 상한 — jsonb 가 비정상 값을 들고 와도 카메라 이동 범위가 폭주하지 않게 한다. */
 const MAX_WORLD_WIDTH = 1000
@@ -171,6 +189,8 @@ function parseZone(v: unknown): WorldZone | null {
     wallpaperUrl: assets?.wallpaperUrl ?? null,
     flooringUrl: assets?.flooringUrl ?? null,
     structures: assets?.structures ?? [],
+    // 참(true)일 때만 키를 싣는다 — 기존 구역의 모양(키 집합)을 바꾸지 않아 소비처 회귀가 0 이다
+    ...(pick(v, 'tile') === true ? { tile: true } : null),
   }
 }
 
@@ -258,6 +278,25 @@ export function clampCamX(camX: number, worldWidth: number): number {
 }
 
 /**
+ * **자유 팬**의 관성 목적지(camX) — 안2.1 「큰 방 하나」의 카메라 규칙.
+ *
+ * 손을 뗀 지점에서 속도만큼 미끄러지고 **그 자리에 그대로 선다**. 구역 정렬점·페이징·허용 오차가
+ * 일절 개입하지 않는다(CEO: "원하는 곳에서 멈추는 스타일"). 이음새 없는 큰 방에서는 끌어당길
+ * 기준점 자체가 없고, 있어도 자석 스냅은 "슬라이드 넘기기"로 읽혀 반려된 문법이다.
+ *
+ * 목적지 = camX + 속도 × τ. 느린 손놓기(속도 0)는 이동이 없어 **정확히 제자리**다 —
+ * 몇 %p 때문에 사용자를 끌어당기지 않는다는 점만 zoneSnapTarget 의 허용 오차 규칙과 통한다.
+ *
+ * 속도 부호는 camX 기준(손가락을 왼쪽으로 밀면 camX 증가). 반환값은 항상 클램프돼 있어
+ * 세계 밖으로 던져도 양끝에서 멎는다.
+ */
+export function freeGlideTarget(camX: number, worldWidth: number, velocityPctPerS: number): number {
+  const from = clampCamX(camX, worldWidth)
+  const v = Number.isFinite(velocityPctPerS) ? velocityPctPerS : 0
+  return clampCamX(from + v * FREE_GLIDE_TAU_S, worldWidth)
+}
+
+/**
  * 구역의 카메라 정렬점 — 구역 중심이 뷰포트 중심에 오는 camX. 양끝 구역은 경계 클램프 때문에
  * 중심이 화면 중앙까지 오지 않는다(마당은 0, 후원은 width-100 에서 멈춘다) — 의도된 동작이다.
  * CameraRig 의 panTo(zone)·미니맵 점 위치도 이 값을 쓴다.
@@ -298,6 +337,10 @@ function nearestIndex(targets: readonly number[], from: number): number {
 
 /**
  * 팬 종료 스냅 목적지(camX).
+ *
+ * ⚠️ 안2.1 부터 **팬 릴리즈 경로에서는 쓰지 않는다** — 그 자리는 freeGlideTarget(자유 팬)이 대신한다.
+ *    구역 자석 스냅이 필요한 두루마리 문법(앞마당 씬 재론 등)이 다시 서면 그때 이 함수가 살아난다.
+ *    지금도 zoneAlignCamX 는 입장·테마 전환 팬 목표와 미니맵이 쓰므로 이 계열 전체가 유효하다.
  *
  * - **플릭**(|속도| ≥ 30%p/s): 허용 오차를 따지지 않고 진행 방향으로 **한 구역** 페이징한다
  *   (최근접 정렬점 기준 인접 1칸). 모바일 캐러셀 관례이자, 정렬점 코앞에서 세게 튕겼는데

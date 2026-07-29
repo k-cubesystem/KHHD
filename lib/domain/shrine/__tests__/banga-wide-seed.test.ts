@@ -12,7 +12,7 @@
  *   1. 시드 SQL 의 JSON 이 parseWorld 를 **통과**한다 (폭 240 · 구역 1 · 0~240).
  *   2. `(stage - 'zones') || …` 병합이 기존 최상위 무대(벽지/바닥/구조물/광원)를 지우지 않는다.
  *   3. 유일 구역이 **제 타일을 직접** 들고, 구조물·광원은 최상위에서 승계한다.
- *   4. `tile` 렌더 신호가 시드에 실려 있고, parseWorld 는 그 미지 필드를 조용히 버린다(배선 계약).
+ *   4. `tile` 렌더 신호가 시드에 실려 있고, parseWorld 가 그 신호를 렌더까지 넘긴다(C파 배선 완료).
  *   5. 전폭 재해석의 환산 계수 — 배선 담당이 놓치면 제단이 1.5화면짜리가 된다.
  *   6. 시드가 가리키는 에셋 파일이 public/ 에 실재한다.
  */
@@ -165,17 +165,15 @@ describe('무대 사양 — 타일은 구역이, 구조물·광원은 최상위�
   })
 })
 
-describe('tile 렌더 계약 (후속 배선 에이전트)', () => {
+describe('tile 렌더 계약 (배선 완료 — C파)', () => {
   it('시드 JSON 에 tile: true 가 실려 있다 — repeat-x 로 그리라는 신호', () => {
     expect(seededZoneRaw().tile).toBe(true)
   })
 
-  it('parseWorld 는 tile 을 조용히 버린다 — 배선 시 stageRaw 를 직접 읽거나 world.ts 에 파싱을 더해야 한다', () => {
-    // 이 테스트는 "버려지는 게 정상"이 아니라 **버려진다는 사실**을 계약으로 못 박는 것이다.
-    // WorldZone 에 tile 이 생기면 여기가 깨지고, 그때 이 기대값을 지우면 된다.
-    const zone = daecheongZone(seededWorld()) as unknown as Record<string, unknown>
-    expect(zone.tile).toBeUndefined()
-    // 그래도 미지 필드가 구역 자체를 반려시키지는 않는다(= 배선 전에 넣어도 무해하다)
+  it('parseWorld 가 tile 을 구역에 실어 렌더까지 넘긴다 (StageLayers repeat-x 분기의 입력)', () => {
+    // B파 시점에는 parseWorld 가 이 필드를 버렸고, 그 사실 자체가 배선 계약이었다.
+    // C파에서 WorldZone.tile 파싱이 붙어 신호가 끝까지 이어진다 — 여기가 그 연결의 증거다.
+    expect(daecheongZone(seededWorld()).tile).toBe(true)
     expect(seededWorld().zones).toHaveLength(1)
   })
 })
@@ -201,8 +199,9 @@ describe('전폭 재해석 — 배선 담당이 놓치면 안 되는 환산', ()
     expect(keepApparent).toBeCloseTo(25.83, 2)
   })
 
-  it("사랑방 구역('huwon')이 사라진다 — FamilyHall 마운트 조건이 무너지므로 재배치가 필요하다", () => {
-    // ShrineRoomClient: world.zones.find(z => z.code === 'huwon') 가 없으면 hallBox = null → 아예 안 그린다.
+  it("사랑방 구역('huwon')이 사라진다 — 그래서 사랑방은 구역이 아니라 좌표로 앉는다", () => {
+    // 구 배선(world.zones.find(z => z.code === 'huwon'))이었다면 hallBox = null → 예외도 로그도 없이 증발했다.
+    // C파에서 ShrineRoomClient 가 world 우측 영역([width-68, width-4])으로 옮겨 구역 구성과 무관해졌다.
     expect(seededWorld().zones.find((z) => z.code === 'huwon')).toBeUndefined()
   })
 })

@@ -33,7 +33,7 @@ import {
 import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
 import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
-import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage } from '@/lib/domain/shrine/world-render'
+import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '@/lib/domain/shrine/world-render'
 import { GAMEFEEL_V1, SCROLL_SHRINE_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import {
   greetingFor,
@@ -118,14 +118,17 @@ const JAMB_W_PCT = 3.2
 
 // ── 가족 사랑방 (안3 / ARCH §2 FamilyHall) ────────────────────
 /**
- * 사랑방이 사는 구역 코드 — 두루마리의 후원(後園). 이 구역이 없는 테마에서는 사랑방이 뜨지 않는다.
- * (이번 단계에서 사랑방은 두루마리 전용이다 — 단일 무대용 단독 화면 분기는 만들지 않는다.)
+ * 사랑방 자리 — 안2.1 「큰 방 하나」에서는 구역(후원)이 아니라 **world 우측 영역**이다.
+ * 구역이 하나뿐이라 code 로 찾을 자리가 없어졌고, 실내 문법상 사랑방은 같은 방의 오른편에 있다.
+ * world 오른쪽 끝에서 INSET 만큼 띄운 폭 WIDTH 의 띠 — 좌표는 world %(=x0/x1) 다.
  */
-const FAMILY_HALL_ZONE = 'huwon'
+const FAMILY_HALL_RIGHT_INSET_PCT = 4
+const FAMILY_HALL_WIDTH_PCT = 64
 /**
  * 사랑방 층 — 구역 구조물(StageLayers, z auto=0)보다 위·아이템 대역(depthZ 10~29)보다 아래.
- * 대청 콘텐츠와는 x 범위 자체가 겹치지 않아(후원 170~240 vs 대청 70~170) 시각 간섭이 없고,
  * 값만으로도 "무대 위에 선 인물" 자리에 들어간다(신위 스탠드 z-3 위, 신당지기 z-12 아래).
+ * 큰 방에서는 대청 콘텐츠와 x 범위가 겹치지만, 좌석은 배경이 없는 오브·방석뿐이라
+ * 아래로는 벽·마루만 가리고 위로는 아이템·신당지기가 그대로 앞에 선다.
  */
 const FAMILY_HALL_Z = 8
 
@@ -379,26 +382,60 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     () => (worldActive ? zoneStage(daecheong, activeStage) : activeStage),
     [worldActive, daecheong, activeStage]
   )
+  /**
+   * 대청이 뷰포트보다 넓을 때(안2.1 큰 방 하나) % 폭이 같이 커지는 것을 되돌리는 계수.
+   * 계산은 world-render `zoneWidthScale` 단일 출처이고, 뷰포트 이하 구역·단일 무대는 1 이라
+   * 아래 환산들이 전부 항등식이 된다(현행 3구역 라이브 회귀 0).
+   */
+  const stageScale = useMemo(() => (worldActive ? zoneWidthScale(daecheong) : 1), [worldActive, daecheong])
+  /**
+   * 벽지·바닥 가로 반복 여부. worldActive 를 같이 보는 이유는 원복 레버 때문이다 —
+   * 게이트를 내리면 무대 사양이 최상위 단일 무대(늘려 쓰는 한 장)로 돌아가므로 타일 신호도 같이 꺼야 한다.
+   */
+  const daecheongTile = worldActive && daecheong.tile === true
+  /** 큰 방 여부 — 폭 장식 환산과 말풍선 재배치의 유일한 분기 */
+  const wideRoom = stageScale !== 1
+  /**
+   * 겉보기 폭 유지 환산. 등배(1)면 **원래 문자열 그대로** 돌려 DOM 이 한 글자도 바뀌지 않게 한다
+   * (`64%` → `64.0000%` 같은 무해한 변화도 회귀 진단을 어렵게 만든다).
+   */
+  const scaleW = useCallback(
+    (pct: number) => (wideRoom ? `${Math.round(pct * stageScale * 1e4) / 1e4}%` : `${pct}%`),
+    [wideRoom, stageScale]
+  )
   /** 대청 밖 구역(마당·후원)의 무대 세트 — 대청은 기존 렌더 덩어리를 그대로 쓰므로 제외한다 */
   const scenery = useMemo(() => {
     if (!worldActive) return []
     return world.zones
       .filter((z) => z.code !== daecheong.code)
-      .map((z) => ({ code: z.code, box: zoneBox(world, z), stage: zoneStage(z, null) }))
+      .map((z) => ({
+        code: z.code,
+        box: zoneBox(world, z),
+        stage: zoneStage(z, null),
+        tile: z.tile === true,
+        scale: zoneWidthScale(z),
+      }))
   }, [worldActive, world, daecheong])
   const daecheongBox = useMemo(() => zoneBox(world, daecheong), [world, daecheong])
   /**
-   * 사랑방을 얹을 후원 박스. 아래 중 하나라도 아니면 null 이고, 그러면 사랑방은 아예 마운트되지 않는다:
-   * 연출 게이트 on(GAMEFEEL_V1) · 두루마리(worldActive ⊃ SCROLL_SHRINE_V1) · 후원 구역 실재 · 좌석 데이터.
+   * 사랑방을 얹을 박스 — **world 우측 영역**(안2.1). 아래 중 하나라도 아니면 null 이고,
+   * 그러면 사랑방은 아예 마운트되지 않는다: 연출 게이트 on(GAMEFEEL_V1) ·
+   * 두루마리(worldActive ⊃ SCROLL_SHRINE_V1) · 좌석 데이터.
    * 두 플래그 중 하나만 내려도 자동 비노출이라 사랑방도 같은 레버로 원복된다(ARCH §8).
-   * 후원이 곧 대청인 퇴화 테마(zones 가 한 개뿐인 경우)는 제외한다 — 대청 콘텐츠 위에 방을 겹치지 않는다.
+   *
+   * ⚠️ 구역 code('huwon') 탐색이 아니다 — 단일 구역 시드가 적용되면 후원이 사라져 사랑방이
+   *    예외도 로그도 없이 화면에서 증발한다. 좌표로 잡으면 구역 구성과 무관하게 자리가 남는다.
    */
   const hallBox = useMemo<CSSProperties | null>(() => {
     if (!GAMEFEEL_V1 || !worldActive || !hall) return null
-    const zone = world.zones.find((z) => z.code === FAMILY_HALL_ZONE)
-    if (!zone || zone.code === daecheong.code) return null
-    return { ...zoneBox(world, zone), zIndex: FAMILY_HALL_Z }
-  }, [worldActive, hall, world, daecheong])
+    const x1 = world.width - FAMILY_HALL_RIGHT_INSET_PCT
+    const x0 = x1 - FAMILY_HALL_WIDTH_PCT
+    return {
+      left: `${((x0 / world.width) * 100).toFixed(4)}%`,
+      width: `${((FAMILY_HALL_WIDTH_PCT / world.width) * 100).toFixed(4)}%`,
+      zIndex: FAMILY_HALL_Z,
+    }
+  }, [worldActive, hall, world.width])
   /** 시차층 계수 CSS 변수 — 폭이 바뀔 때만 다시 계산된다 */
   const worldVars = useMemo<CssVars>(
     () => ({
@@ -935,7 +972,13 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
   const stageContent = (
     <>
       {/* L0 벽지 · L1 바닥재 (stage 테마) / 벽·바닥 블록 + room.webp (레거시) */}
-      <StageLayers stage={daecheongStage} themeCode={activeCode} slot="ground" zoned={worldActive} />
+      <StageLayers
+        stage={daecheongStage}
+        themeCode={activeCode}
+        slot="ground"
+        zoned={worldActive}
+        tile={daecheongTile}
+      />
       {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
           mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
           (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
@@ -955,9 +998,10 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
         style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
       />
       <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
+      {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
       <div
         className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
-        style={{ top: '77%', width: '64%', height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
+        style={{ top: '77%', width: scaleW(64), height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
       />
 
       {/* 좌정한 主神 — 제단 위에 강림 */}
@@ -986,8 +1030,14 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
         </div>
       )}
 
-      {/* L2 구조물 (stage 테마) / CSS 제단 박스 (레거시) */}
-      <StageLayers stage={daecheongStage} themeCode={activeCode} slot="structures" zoned={worldActive} />
+      {/* L2 구조물 (stage 테마) / CSS 제단 박스 (레거시) — 큰 방에서는 w 만 겉보기 보정 */}
+      <StageLayers
+        stage={daecheongStage}
+        themeCode={activeCode}
+        slot="structures"
+        zoned={worldActive}
+        widthScale={stageScale}
+      />
 
       {/* 존 가이드 (편집) */}
       {editing &&
@@ -1094,14 +1144,16 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
       )}
 
       {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조.
-          조명 오버레이보다 위(같은 z, 뒤 DOM)라 글이 그레이딩에 흐려지지 않는다. */}
+          조명 오버레이보다 위(같은 z, 뒤 DOM)라 글이 그레이딩에 흐려지지 않는다.
+          큰 방에서는 좌우 여백(20%/5%)이 2.4배로 벌어져 말풍선이 화면 밖으로 밀려난다 —
+          신위 위 중앙에 앵커하고 폭만 겉보기(뷰포트 75%)로 환산한다. */}
       {!editing && (
         <div
           className="absolute z-[29] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
           style={{
-            left: '20%',
+            left: wideRoom ? '50%' : '20%',
             top: '3%',
-            right: '5%',
+            ...(wideRoom ? { width: scaleW(75), transform: 'translateX(-50%)' } : { right: '5%' }),
             background: oracle ? 'rgba(26,18,6,0.92)' : 'rgba(10,10,8,0.8)',
             border: oracle ? '1px solid rgba(212,175,55,0.65)' : '1px solid var(--th-accent)',
             boxShadow: oracle ? '0 0 16px rgba(212,175,55,0.25)' : undefined,
@@ -1242,12 +1294,12 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
             <div className="absolute inset-y-0 left-0" style={cam.worldStyle}>
               {scenery.map((z) => (
                 <div key={z.code} aria-hidden className="absolute inset-y-0 pointer-events-none" style={z.box}>
-                  <StageLayers stage={z.stage} themeCode={activeCode} slot="ground" zoned />
-                  <StageLayers stage={z.stage} themeCode={activeCode} slot="structures" zoned />
+                  <StageLayers stage={z.stage} themeCode={activeCode} slot="ground" zoned tile={z.tile} />
+                  <StageLayers stage={z.stage} themeCode={activeCode} slot="structures" zoned widthScale={z.scale} />
                 </div>
               ))}
-              {/* 가족 사랑방 — 후원 구역 박스를 100% 채운다(안쪽 좌표는 FamilyHall 이 % 로 자립).
-                  구역 세트(z auto)보다 위·아이템 대역(10~29)보다 아래라 대청 콘텐츠와 층이 섞이지 않는다.
+              {/* 가족 사랑방 — world 우측 영역 박스를 100% 채운다(안쪽 좌표는 FamilyHall 이 % 로 자립).
+                  구역 세트(z auto)보다 위·아이템 대역(10~29)보다 아래라 방 콘텐츠와 층이 섞이지 않는다.
                   scenery 와 달리 pointer-events 를 살린다 — 좌석 탭이 이 방의 유일한 상호작용이다.
                   (팬 제스처는 룸이 캡처 단계에서 가로채므로 좌석 위에서 끌어도 카메라가 따라온다.) */}
               {hallBox && hall && (

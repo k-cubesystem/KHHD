@@ -49,6 +49,23 @@ export function zoneBox(world: WorldSpec, zone: WorldZone): ZoneBox {
 }
 
 /**
+ * 구역 안에서 **겉보기 크기를 지키는** 폭 환산 계수 — 안2.1 「큰 방 하나」의 단일 출처.
+ *
+ * 구조물 `w` 나 % 폭 장식은 전부 **구역 컨테이너 폭 대비 %** 라, 구역이 뷰포트보다 넓어지면
+ * 그만큼 같이 커진다(대청 0~240 에서 제단 w 62 → 62%×2.4화면 = 1.49화면). 100/span 을 곱하면
+ * 화면에서 차지하는 크기가 단일 무대 시절과 같아진다(62 → 25.83).
+ *
+ * 뷰포트 이하 구역(기존 마당 70·대청 100 등)은 **1** 이다 — 좁은 구역의 구조물을 키우면
+ * 그건 보정이 아니라 새로운 회귀다. 즉 지금 라이브(3구역)에는 아무 영향이 없다.
+ */
+export function zoneWidthScale(zone: WorldZone): number {
+  const x0 = Number.isFinite(zone?.x0) ? zone.x0 : 0
+  const x1 = Number.isFinite(zone?.x1) ? zone.x1 : 0
+  const span = x1 - x0
+  return span > WORLD_VIEWPORT_PCT ? round(WORLD_VIEWPORT_PCT / span, 6) : 1
+}
+
+/**
  * 구역 → 무대 사양. 구역이 제 에셋을 안 들고 있으면 테마 단일 무대(base)를 물려받는다.
  *
  * 이 폴백이 「zones 만 추가하는 무해한 세대교체」를 가능하게 한다 — 기존 반가 stage 에

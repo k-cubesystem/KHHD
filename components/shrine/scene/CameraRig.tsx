@@ -12,8 +12,8 @@ import {
 } from 'react'
 import {
   clampCamX,
+  freeGlideTarget,
   zoneAlignCamX,
-  zoneSnapTarget,
   PARALLAX,
   WORLD_VIEWPORT_PCT,
   ZONE_FLICK_MIN_PCT_PER_S,
@@ -29,7 +29,7 @@ import {
  *
  * 좌표계는 lib/domain/shrine/world.ts 단일 출처를 따른다 — 뷰포트 폭 = 100,
  * world 는 그 배수(단일 100 / 두루마리 240), camX = "뷰포트 좌단의 world %"(0 ~ width-100).
- * 스냅 목적지·구역 정렬점·플릭 기준은 전부 도메인 순수 함수가 정하고 여기서는 재현하지 않는다.
+ * 관성 목적지(자유 팬)·구역 정렬점·플릭 기준은 전부 도메인 순수 함수가 정하고 여기서는 재현하지 않는다.
  *
  * 성능(ARCH §5): transform/opacity 만 움직인다. rAF 는 관성 감속 중에만 한시 가동하고
  * 도달·중단 즉시 멈춘다(상주 루프 금지). 이동 중 레이아웃 조회도 없다 — 뷰포트 폭은
@@ -350,8 +350,10 @@ export function useCameraRig(world: WorldSpec, opts: { enabled: boolean; editing
       const samples = samplesRef.current
       samplesRef.current = []
       const v = velocityOf(samples)
-      // 목적지·허용 오차·플릭 방향은 전부 도메인 판정(zoneSnapTarget). 반환값은 이미 클램프돼 있다.
-      const target = zoneSnapTarget(camRef.current, worldRef.current, v)
+      // 자유 팬(안2.1) — 손끝 속도만큼 미끄러지고 그 자리에 선다. 구역 스냅·페이징은 없다.
+      // 목적지 계산은 도메인 순수 함수(freeGlideTarget)가 하고 반환값은 이미 클램프돼 있다.
+      // 손이 멈춘 채 뗐으면 velocityOf 가 0 이라 목적지가 제자리 → glideTo 가 CAM_EPSILON 으로 걸러 즉시 끝난다.
+      const target = freeGlideTarget(camRef.current, worldRef.current.width, v)
       glideTo(target, glideMs(target - camRef.current, v))
     },
     [armClickGuard, glideTo]

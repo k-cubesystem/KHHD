@@ -1,5 +1,6 @@
 import { parseStageSpec, type StageSpec } from '../stage'
 import {
+  FREE_GLIDE_TAU_S,
   PARALLAX,
   WORLD_DEFAULT_WIDTH,
   WORLD_VIEWPORT_PCT,
@@ -7,6 +8,7 @@ import {
   ZONE_SNAP_TOLERANCE_PCT,
   clampCamX,
   daecheongZone,
+  freeGlideTarget,
   parseWorld,
   toWorldX,
   zoneAlignCamX,
@@ -37,6 +39,21 @@ const SCROLL_RAW = {
       ],
     },
     { code: 'huwon', x0: 170, x1: 240, wallpaperUrl: '/shrine/banga/huwon.webp' },
+  ],
+}
+
+/** 안2.1 「큰 방 하나」 — 이음새가 없도록 구역을 하나로 두고 벽지·바닥을 가로 타일로 반복한다 */
+const ONE_ROOM_RAW = {
+  width: WORLD_DEFAULT_WIDTH,
+  zones: [
+    {
+      code: 'daecheong',
+      x0: 0,
+      x1: 240,
+      wallpaperUrl: '/shrine/stage/banga/room-wall-tile.webp',
+      flooringUrl: '/shrine/stage/banga/room-floor-tile.webp',
+      tile: true,
+    },
   ],
 }
 
@@ -353,6 +370,37 @@ describe('toWorldX — 배치 좌표 재해석 (worldX = x0 + x·span/100)', () 
   })
 })
 
+describe('parseWorld — tile 렌더 신호 (안2.1 가로 반복)', () => {
+  function zoneOf(raw: unknown): Record<string, unknown> {
+    return parseWorld(null, raw).zones[0] as unknown as Record<string, unknown>
+  }
+
+  it('tile: true 인 구역은 신호를 그대로 싣는다', () => {
+    const world = parseWorld(null, ONE_ROOM_RAW)
+    expect(world.zones[0].tile).toBe(true)
+    expect(world.zones[0].wallpaperUrl).toBe('/shrine/stage/banga/room-wall-tile.webp')
+  })
+
+  it('신호가 없으면 키 자체가 없다 — 기존 구역의 모양이 변하지 않는다(회귀 0)', () => {
+    for (const zone of scrollWorld().zones) {
+      expect(zone.tile).toBeUndefined()
+    }
+    expect(zoneOf(null).tile).toBeUndefined() // 항등 폴백
+  })
+
+  it('true 가 아닌 값은 신호가 아니다 (문자열·1·null 을 참으로 읽지 않는다)', () => {
+    for (const tile of ['true', 1, {}, null]) {
+      expect(zoneOf({ width: 240, zones: [{ code: 'daecheong', x0: 0, x1: 240, tile }] }).tile).toBeUndefined()
+    }
+  })
+
+  it('tile 이 붙어도 구역 검증은 그대로 통과한다 (미지 필드가 세계를 반려시키지 않는다)', () => {
+    const world = parseWorld(null, ONE_ROOM_RAW)
+    expect(world.width).toBe(240)
+    expect(world.zones.map((z) => [z.code, z.x0, z.x1])).toEqual([['daecheong', 0, 240]])
+  })
+})
+
 describe('clampCamX — 카메라 이동 범위', () => {
   it('폭 240 이면 0 ~ 140', () => {
     expect(clampCamX(-30, 240)).toBe(0)
@@ -392,6 +440,85 @@ describe('zoneAlignCamX — 구역 정렬점', () => {
     const world = scrollWorld()
     const points = world.zones.map((z) => zoneAlignCamX(world, z))
     expect(points).toEqual([...points].sort((a, b) => a - b))
+  })
+
+  it('큰 방 하나(0~240)의 정렬점은 방 중앙 70 — 입장 팬이 향하는 자리', () => {
+    // 스냅이 사라져도 이 값은 남는다: 입장·테마 전환·꾸미기 진입 팬의 목표가 전부 여기다.
+    const world = parseWorld(null, ONE_ROOM_RAW)
+    expect(world.width).toBe(240)
+    expect(zoneAlignCamX(world, daecheongZone(world))).toBe((240 - WORLD_VIEWPORT_PCT) / 2)
+    expect(zoneAlignCamX(world, daecheongZone(world))).toBe(70)
+  })
+})
+
+describe('freeGlideTarget — 자유 팬 관성 (안2.1: 스냅·페이징 폐지)', () => {
+  const W = WORLD_DEFAULT_WIDTH // 폭 240 → camX 범위 0~140
+
+  it('감쇠 시간상수는 튜닝 단일 출처', () => {
+    expect(FREE_GLIDE_TAU_S).toBe(0.35)
+  })
+
+  it('속도 0(천천히 놓기)은 정확히 제자리 — 멈춘 자리를 끌어당기지 않는다', () => {
+    for (const camX of [0, 5, 37.4, 70, 118.25, 140]) {
+      expect(freeGlideTarget(camX, W, 0)).toBe(camX)
+    }
+  })
+
+  it('관성은 속도 × τ 만큼 미끄러진다 (부호는 camX 기준)', () => {
+    expect(freeGlideTarget(20, W, 100)).toBe(55)
+    expect(freeGlideTarget(100, W, -100)).toBe(65)
+    expect(freeGlideTarget(40, W, 20)).toBe(47)
+  })
+
+  it('구역 정렬점을 무시한다 — 같은 입력에서 스냅과 갈리는 지점', () => {
+    const world = scrollWorld()
+    // 구 동작(스냅): 40 은 오차 밖이라 대청 정렬점 70 으로 끌려갔다
+    expect(zoneSnapTarget(40, world, 0)).toBe(70)
+    // 자유 팬: 그 자리에 그대로 선다. 살짝 밀면 살짝만 흐른다.
+    expect(freeGlideTarget(40, world.width, 0)).toBe(40)
+    expect(freeGlideTarget(65, world.width, 300)).toBe(140) // 페이징(70→140)이 아니라 속도만큼
+    expect(freeGlideTarget(65, world.width, 20)).toBe(72)
+  })
+
+  it('속도가 클수록 멀리 간다 (단조) — 세기가 그대로 거리에 실린다', () => {
+    let prev = -Infinity
+    for (const v of [0, 10, 30, 60, 120, 240]) {
+      const target = freeGlideTarget(20, W, v)
+      expect(target).toBeGreaterThanOrEqual(prev)
+      prev = target
+    }
+  })
+
+  it('양끝 클램프 — 세계 밖으로 던져도 0 / width-100 에서 멎는다', () => {
+    expect(freeGlideTarget(130, W, 900)).toBe(140)
+    expect(freeGlideTarget(10, W, -900)).toBe(0)
+    expect(freeGlideTarget(-50, W, 0)).toBe(0)
+    expect(freeGlideTarget(999, W, 0)).toBe(140)
+  })
+
+  it('단일 무대(폭 100)는 언제나 0 — 팬 할 좌표계가 없다', () => {
+    for (const v of [-500, 0, 500]) {
+      expect(freeGlideTarget(50, WORLD_VIEWPORT_PCT, v)).toBe(0)
+    }
+  })
+
+  it('비유한 입력도 범위 안 — NaN 속도는 관성 0, NaN camX 는 0 에서 출발', () => {
+    expect(freeGlideTarget(70, W, Number.NaN)).toBe(70)
+    // Infinity 도 관성 0 이다 — 폭주한 표본 하나가 카메라를 끝까지 날려 보내지 않는다
+    expect(freeGlideTarget(70, W, Number.POSITIVE_INFINITY)).toBe(70)
+    expect(freeGlideTarget(Number.NaN, W, 100)).toBe(35)
+    expect(freeGlideTarget(70, Number.NaN, 100)).toBe(0)
+  })
+
+  it('결과는 항상 카메라 범위 안이고 결정론적', () => {
+    for (let camX = -20; camX <= 160; camX += 4) {
+      for (const v of [-400, -30, 0, 12, 300]) {
+        const a = freeGlideTarget(camX, W, v)
+        expect(a).toBe(freeGlideTarget(camX, W, v))
+        expect(a).toBeGreaterThanOrEqual(0)
+        expect(a).toBeLessThanOrEqual(W - WORLD_VIEWPORT_PCT)
+      }
+    }
   })
 })
 

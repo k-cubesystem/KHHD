@@ -1,6 +1,6 @@
 import { parseStageSpec, type StageSpec } from '../stage'
 import { PARALLAX, WORLD_DEFAULT_WIDTH, parseWorld, daecheongZone, type WorldSpec } from '../world'
-import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage } from '../world-render'
+import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '../world-render'
 
 // 3파가 시드할 반가 두루마리 규격 — 마당 0~70 · 대청 70~170 · 후원 170~240 (논리 폭 240)
 const SCROLL_RAW = {
@@ -62,6 +62,31 @@ describe('zoneBox — 구역 컨테이너 기하', () => {
       zones: [{ code: 'x', label: 'x', x0: -50, x1: 900, wallpaperUrl: null, flooringUrl: null, structures: [] }],
     }
     expect(zoneBox(broken, broken.zones[0])).toEqual({ left: '0%', width: '100%' })
+  })
+})
+
+describe('zoneWidthScale — 넓은 구역의 겉보기 폭 보정', () => {
+  it('뷰포트 이하 구역은 1 — 현행 3구역(마당 70·대청 100·후원 70)에 아무 영향이 없다', () => {
+    const world = scrollWorld()
+    expect(zoneWidthScale(zoneOf(world, 'madang'))).toBe(1)
+    expect(zoneWidthScale(zoneOf(world, 'daecheong'))).toBe(1)
+    expect(zoneWidthScale(zoneOf(world, 'huwon'))).toBe(1)
+    expect(zoneWidthScale(daecheongZone(parseWorld(singleStage(), null)))).toBe(1)
+  })
+
+  it('큰 방 하나(0~240)는 100/240 — 제단 w 62 가 겉보기 25.83 으로 유지된다', () => {
+    const world = parseWorld(null, { width: 240, zones: [{ code: 'daecheong', x0: 0, x1: 240 }] })
+    const scale = zoneWidthScale(daecheongZone(world))
+    expect(scale).toBeCloseTo(0.416667, 6)
+    // 환산을 빼먹으면 62%×2.4화면 = 1.49화면짜리 제단이 된다(시드 SQL §전폭 재해석 경고)
+    expect(Math.round(62 * scale * 100) / 100).toBeCloseTo(25.83, 2)
+  })
+
+  it('망가진 구역(역전·비유한 경계)도 1 로 떨어져 렌더가 죽지 않는다', () => {
+    const base = { code: 'x', label: 'x', wallpaperUrl: null, flooringUrl: null, structures: [] }
+    expect(zoneWidthScale({ ...base, x0: 200, x1: 40 })).toBe(1)
+    expect(zoneWidthScale({ ...base, x0: Number.NaN, x1: 240 })).toBeCloseTo(0.416667, 6)
+    expect(zoneWidthScale({ ...base, x0: 0, x1: Number.NaN })).toBe(1)
   })
 })
 
