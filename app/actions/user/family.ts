@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 
 /**

@@ -12,7 +12,7 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 import { logger } from '@/lib/utils/logger'
 
 /**

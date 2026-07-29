@@ -8,7 +8,7 @@ import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisHistoryObserved } from '../user/history'
 // recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'

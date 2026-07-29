@@ -32,7 +32,8 @@ jest.mock('@/app/actions/user/history', () => ({
   saveAnalysisHistoryObserved: jest.fn(async () => undefined),
 }))
 
-jest.mock('@/app/actions/payment/bok-points', () => ({
+// 복 포인트 발행은 서버 전용 모듈(lib/services/bok-grant)에 있다 — 대역으로 대체한다.
+jest.mock('@/lib/services/bok-grant', () => ({
   addBokPoints: jest.fn(async () => undefined),
 }))
 

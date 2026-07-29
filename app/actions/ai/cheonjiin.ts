@@ -12,7 +12,7 @@ import { generateAIContent } from '@/lib/services/ai-client'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 
 /**
  * Gemini 고도화 시스템 프롬프트

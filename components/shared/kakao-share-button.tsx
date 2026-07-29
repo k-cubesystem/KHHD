@@ -5,7 +5,7 @@ import { MessageCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { shareKakao } from '@/lib/kakao-sdk'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { GA } from '@/lib/analytics/ga4'
 
 interface KakaoShareButtonProps {
@@ -37,7 +37,8 @@ export function KakaoShareButton({
       const success = await shareKakao({ title, description, imageUrl, webUrl, buttonTitle })
       if (success) {
         GA.shareKakao('saju')
-        addBokPoints(20, 'SHARE', undefined, '카카오톡 공유').catch(() => {})
+        // 보상 금액·수령 자격은 전부 서버가 정한다(하루 1회). 실패해도 공유 UX 는 그대로.
+        claimShareReward().catch(() => {})
       }
 
       if (!success) {

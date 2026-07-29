@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 
 export interface CatalogItem {
   id: string

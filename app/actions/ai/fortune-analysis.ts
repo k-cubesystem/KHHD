@@ -10,7 +10,7 @@ import { getCachedAnalysis, isCacheValid } from '@/lib/utils/analysis-cache'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 import { logger } from '@/lib/utils/logger'
 
 export type FortuneType = 'today' | 'weekly' | 'monthly'

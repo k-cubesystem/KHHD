@@ -3,7 +3,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
-import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { addBokPoints } from '@/lib/services/bok-grant'
 import { getPromptByKey } from '@/lib/ai/prompt-loader'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_PRO } from '@/lib/config/ai-models'

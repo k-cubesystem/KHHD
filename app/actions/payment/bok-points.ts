@@ -3,21 +3,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import {
+  addBokPoints,
+  grantShareReward,
+  type BokTransactionType,
+  type ShareRewardResult,
+} from '@/lib/services/bok-grant'
 import type { BokTier } from '@/lib/config/bok-tiers'
 
-export type BokTransactionType =
-  | 'REGISTER'
-  | 'ANALYSIS'
-  | 'COMPATIBILITY'
-  | 'FORTUNE'
-  | 'SHARE'
-  | 'CHECKIN'
-  | 'BONUS'
-  | 'REFERRAL'
-  | 'MISSION'
-  | 'SHRINE_WISH_OWN'
-  | 'SHRINE_WISH_VISIT'
-  | 'SHRINE_ITEM_PURCHASE'
+/**
+ * 이 파일은 `'use server'` — 모든 export 가 로그인 유저의 공개 엔드포인트다.
+ * 복 포인트 **발행**(금액 인자) 함수는 여기 두지 않는다 → `@/lib/services/bok-grant`(server-only).
+ * 클라이언트가 트리거해야 하는 보상은 `claimShareReward` 처럼 금액이 서버 고정된 좁은 액션만 노출한다.
+ */
 
 export interface BokPointsStatus {
   balance: number
@@ -58,44 +56,22 @@ export async function getBokPointsBalance(): Promise<BokPointsStatus> {
   }
 }
 
-export async function addBokPoints(
-  amount: number,
-  type: BokTransactionType,
-  familyMemberId?: string,
-  description?: string
-): Promise<{ success: boolean; balance?: number; error?: string }> {
+/**
+ * 카카오 공유 보상 수령 — 클라이언트가 부를 수 있는 **유일한** 복 포인트 적립 경로.
+ * - 인자 없음: 금액은 서버 상수(20p)로 고정 → 임의 금액 발행 불가.
+ * - 로그인 본인 계정 한정.
+ * - 하루(KST) 1회 멱등 + rate limit(자세한 판정 근거는 lib/services/bok-grant.ts).
+ *
+ * 기존 동작(공유 1회당 무제한 20p)보다 보수적이다 — 의도된 변경.
+ */
+export async function claimShareReward(): Promise<ShareRewardResult> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
-  try {
-    // 재화(bok_points) 발행은 service_role 전용 — 인증 검증(위)을 통과한 본인 계정에만 적립.
-    const admin = createAdminClient()
-    const { data: newBalance, error: rpcError } = await admin.rpc('add_bok_points', {
-      p_user_id: user.id,
-      p_amount: amount,
-    })
-
-    if (rpcError) {
-      logger.error('[BokPoints] RPC error:', rpcError)
-      return { success: false, error: '복 포인트 적립에 실패했습니다.' }
-    }
-
-    await supabase.from('bok_transactions').insert({
-      user_id: user.id,
-      family_member_id: familyMemberId || null,
-      amount,
-      type,
-      description: description || `${type} +${amount}p`,
-    })
-
-    return { success: true, balance: newBalance as number }
-  } catch (err) {
-    logger.error('[BokPoints] addBokPoints error:', err)
-    return { success: false, error: '복 포인트 적립 중 오류가 발생했습니다.' }
-  }
+  return grantShareReward(user.id)
 }
 
 /**
@@ -178,6 +154,23 @@ export async function getBokMissions(): Promise<BokMission[]> {
   }))
 }
 
+/**
+ * 미션 유형별 **서버 고정** 보상.
+ *
+ * `bok_missions` RLS 는 `FOR ALL USING (auth.uid() = user_id)` 뿐이라 INSERT 의 WITH CHECK 가
+ * 동일 식으로 유도된다 → 유저가 PostgREST 로 자기 미션 행을 직접 INSERT 할 수 있다.
+ * 따라서 행에 실린 `points_reward` 를 신뢰하면 `completeBokMission` 이 임의 금액 발행 경로가 된다.
+ * 금액은 행이 아니라 **유형**으로만 정한다(cron 생성값과 동일: DAILY_FORTUNE 10 / SHARE 20).
+ */
+const MISSION_REWARDS: Record<string, number> = {
+  DAILY_FORTUNE: 10,
+  WEEKLY_FORTUNE: 20,
+  ANALYSIS: 20,
+  COMPATIBILITY: 20,
+  SHARE: 20,
+}
+const DEFAULT_MISSION_REWARD = 10
+
 export async function completeBokMission(missionId: string): Promise<{
   success: boolean
   pointsEarned?: number
@@ -212,67 +205,15 @@ export async function completeBokMission(missionId: string): Promise<{
     return { success: false, error: '미션 완료 처리에 실패했습니다.' }
   }
 
-  const result = await addBokPoints(mission.points_reward, 'MISSION', mission.family_member_id, mission.mission_title)
+  const pointsReward = MISSION_REWARDS[mission.mission_type] ?? DEFAULT_MISSION_REWARD
+
+  const result = await addBokPoints(pointsReward, 'MISSION', mission.family_member_id, mission.mission_title)
 
   return {
     success: true,
-    pointsEarned: mission.points_reward,
+    pointsEarned: pointsReward,
     newBalance: result.balance,
   }
-}
-
-export async function generateDailyBokMissions(userId: string): Promise<{ generated: number }> {
-  const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
-
-  const { data: existing } = await supabase
-    .from('bok_missions')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('mission_date', today)
-    .limit(1)
-
-  if (existing && existing.length > 0) return { generated: 0 }
-
-  const { data: members } = await supabase.from('family_members').select('id, name').eq('user_id', userId).limit(10)
-
-  if (!members || members.length === 0) return { generated: 0 }
-
-  interface MissionInsert {
-    user_id: string
-    family_member_id: string | null
-    mission_type: string
-    mission_title: string
-    points_reward: number
-    mission_date: string
-  }
-
-  const missions: MissionInsert[] = members.map((member) => ({
-    user_id: userId,
-    family_member_id: member.id,
-    mission_type: 'DAILY_FORTUNE',
-    mission_title: `${member.name}님의 오늘 운세 확인하기`,
-    points_reward: 10,
-    mission_date: today,
-  }))
-
-  missions.push({
-    user_id: userId,
-    family_member_id: null,
-    mission_type: 'SHARE',
-    mission_title: '카카오톡으로 복 나누기',
-    points_reward: 20,
-    mission_date: today,
-  })
-
-  const { error } = await supabase.from('bok_missions').insert(missions)
-
-  if (error) {
-    logger.error('[BokPoints] Mission generation error:', error)
-    return { generated: 0 }
-  }
-
-  return { generated: missions.length }
 }
 
 export async function getBokTransactions(limit: number = 20) {
