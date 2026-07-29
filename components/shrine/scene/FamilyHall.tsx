@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { findFamilyAvatar } from '@/lib/domain/family/avatars'
 import { trackEvent } from '@/lib/analytics/ga4'
 import {
+  hallAvatar,
   hallLayout,
   hallSeatLine,
   hallDaysSince,
   HALL_ALL_PRAYED_LINE,
   HALL_EMPTY_LINE,
+  HALL_SEAT_MIN_PX,
   type HallSeat,
 } from '@/lib/domain/shrine/family-hall-layout'
 import type { FamilyHallData, FamilyHallMember } from '@/app/actions/shrine/family-hall'
@@ -28,19 +29,45 @@ import type { FamilyHallData, FamilyHallMember } from '@/app/actions/shrine/fami
  * 방석 위 원형 오브로 연출한다. 착석 전용 스프라이트는 시범 검수 후 교체 지점만 열어 둔다.
  */
 
-/** 방석 대비 오브·등불 비율 — 방석 폭(=좌석 폭)을 1로 본 상대값. */
-const ORB_W = 0.74
-const LANTERN_W = 0.3
+/**
+ * 좌석 상자 대비 각 부품 비율 — 상자 **폭**을 1로 본 상대값.
+ * 상자는 오브(원)와 방석이 함께 들어가도록 세로로 길다(폭 1 : 높이 SEAT_ASPECT_H).
+ */
+const ORB_W = 0.72
+const LANTERN_W = 0.32
+const SEAT_ASPECT_H = 1.32
+
+/** 방석이 차지하는 상자 하단 띠(상자 높이 %). 방석 자체의 가로세로비는 대략 2.5:1 이 된다. */
+const CUSHION_H_PCT = 30
+
+/**
+ * 상자 기준점 — layout 이 주는 (x,y)는 **방석 중심**이라는 계약이라, 상자를 그만큼 끌어올려야
+ * 좌석 기하(반원·원근)가 그대로 성립한다. 방석 중심은 상자 위에서 100 - CUSHION_H_PCT/2 = 85% 지점.
+ * 등장 애니메이션(fhSeatIn)도 이 값을 `--fh-anchor` 로 받아 쓴다 — 두 곳이 어긋나면 좌석이 튄다.
+ */
+const SEAT_ANCHOR_Y = '-85%'
 
 /** 말풍선이 박스 밖으로 삐져나가지 않게 가두는 좌우 여백(%). */
 const BUBBLE_X_MIN = 16
 const BUBBLE_X_MAX = 84
+
+/**
+ * 말풍선을 오브 위로 띄우는 몫 — 좌석 상자 **폭** 기준. 오브 꼭대기는 방석 중심에서
+ * 상자 폭의 0.74배까지 올라가므로 그보다 크게 잡아야 얼굴을 가리지 않는다.
+ * (마진의 % 는 CSS 규칙상 세로 축에서도 컨테이너 **폭** 기준이라 좌석 폭 계산과 축이 맞는다.)
+ */
+const BUBBLE_LIFT_RATIO = 0.86
 
 /** 말풍선 자동 소멸(ms) — 읽고 사라질 만큼만. */
 const BUBBLE_MS = 4200
 
 /** 좌석 등장 간격(ms) — 왼쪽부터 차례로 앉는다. */
 const SEAT_STAGGER_MS = 70
+
+/** 좌석 상자 폭 CSS — 좁은 후원 박스에서도 손가락에 잡히도록 px 하한을 건다. */
+function seatWidthCss(pct: number): string {
+  return `max(${pct}%, ${HALL_SEAT_MIN_PX}px)`
+}
 
 interface Props {
   data: FamilyHallData
@@ -68,89 +95,97 @@ function SeatFigure({
   active: boolean
   onTap: (key: string) => void
 }) {
-  const avatar = findFamilyAvatar(member.avatarId)
+  const self = member.memberId === null
+  const label = self ? '나' : member.name
+  // 아바타는 **항상** 실체가 나온다 — 미설정(본인 좌석은 언제나 NULL)·레거시 키·오타 전부
+  // 이니셜 오브로 떨어진다. 여기서 null 이 나오면 좌석이 이름표만 남는다(실기기 증상의 뿌리).
+  const avatar = hallAvatar(member.avatarId, label)
   const lit = member.prayedToday
-  const width = sizePct * seat.scale
 
   return (
     <button
       type="button"
       onClick={() => onTap(seatKey(member))}
-      aria-label={`${member.name} 자리 — ${lit ? '오늘 다녀감' : '아직 오지 않음'}`}
+      aria-label={`${label} 자리 — ${lit ? '오늘 다녀감' : '아직 오지 않음'}`}
       aria-pressed={active}
       className="fh-seat absolute"
       style={{
         left: `${seat.x}%`,
         top: `${seat.y}%`,
-        width: `${width}%`,
-        aspectRatio: '2.6 / 1',
-        transform: 'translate(-50%, -50%)',
+        width: seatWidthCss(sizePct * seat.scale),
+        aspectRatio: `1 / ${SEAT_ASPECT_H}`,
+        transform: `translate(-50%, ${SEAT_ANCHOR_Y})`,
         zIndex: seat.z,
         ['--fh-delay' as string]: `${index * SEAT_STAGGER_MS}ms`,
+        ['--fh-anchor' as string]: SEAT_ANCHOR_Y,
       }}
     >
-      {/* 방석 — 점등이면 골드 기, 소등이면 먹빛 */}
+      {/* 방석 — 상자 바닥 띠. 소등도 보이도록 먹빛 대신 단청 적갈 + 골드 테두리로 대비를 올린다
+          (이전 rgba(255,255,255,0.05)/0.10 은 후원 흙바닥 위에서 사실상 보이지 않았다) */}
       <span
         aria-hidden
-        className="absolute inset-0 rounded-[50%] border"
+        className="absolute inset-x-0 bottom-0 rounded-[50%] border"
         style={{
+          height: `${CUSHION_H_PCT}%`,
           background: lit
-            ? 'radial-gradient(60% 70% at 50% 40%, rgba(201,168,76,0.30) 0%, rgba(158,43,43,0.22) 70%)'
-            : 'radial-gradient(60% 70% at 50% 40%, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.18) 70%)',
-          borderColor: lit ? 'rgba(201,168,76,0.45)' : 'rgba(255,255,255,0.10)',
+            ? 'radial-gradient(62% 74% at 50% 38%, rgba(201,168,76,0.42) 0%, rgba(158,43,43,0.42) 72%)'
+            : 'radial-gradient(62% 74% at 50% 38%, rgba(158,43,43,0.32) 0%, rgba(38,26,18,0.62) 72%)',
+          borderColor: lit ? 'rgba(201,168,76,0.75)' : 'rgba(201,168,76,0.38)',
+          boxShadow: lit ? '0 0 12px rgba(201,168,76,0.35)' : '0 1px 6px rgba(0,0,0,0.5)',
         }}
       />
 
-      {/* 착석 아바타 — 오늘 다녀간 자리에만 앉는다 */}
-      {lit && (
-        <span
-          aria-hidden
-          className="fh-orb absolute overflow-hidden rounded-full border"
-          style={{
-            left: '50%',
-            bottom: '46%',
-            width: `${ORB_W * 100}%`,
-            aspectRatio: '1 / 1',
-            transform: 'translateX(-50%)',
-            borderColor: 'rgba(201,168,76,0.55)',
-            backgroundColor: avatar ? `${avatar.color}22` : 'rgba(201,168,76,0.10)',
-            boxShadow: '0 0 10px rgba(201,168,76,0.35)',
-          }}
-        >
-          {avatar ? (
-            <Image src={avatar.src} alt="" fill sizes="72px" className="object-cover object-top" />
-          ) : (
-            <span className="grid h-full w-full place-items-center font-serif text-[11px] text-gold-300">
-              {member.name.slice(0, 1)}
-            </span>
-          )}
-        </span>
-      )}
-
-      {/* 등불 — 점등(골드 글로우) / 소등(테두리만) */}
+      {/* 착석 오브 — 좌석마다 **항상** 앉는다. 오늘 왔는가는 크기가 아니라 밝기·채도로 말한다
+          (소등 좌석을 비워 두면 "가족이 여기 있다"는 사실 자체가 화면에서 사라진다) */}
       <span
         aria-hidden
-        className={`absolute rounded-full border ${lit ? 'fh-flicker' : ''}`}
+        className="fh-orb absolute overflow-hidden rounded-full"
         style={{
-          right: '-4%',
-          bottom: '34%',
+          left: '50%',
+          bottom: `${CUSHION_H_PCT * 0.55}%`,
+          width: `${ORB_W * 100}%`,
+          aspectRatio: '1 / 1',
+          transform: 'translateX(-50%)',
+          border: `1.5px solid ${lit ? 'rgba(201,168,76,0.9)' : 'rgba(201,168,76,0.5)'}`,
+          backgroundColor: `${avatar.color}33`,
+          boxShadow: lit ? '0 0 14px rgba(201,168,76,0.5)' : '0 1px 6px rgba(0,0,0,0.5)',
+          opacity: lit ? 1 : 0.8,
+          filter: lit ? undefined : 'saturate(0.55)',
+        }}
+      >
+        {avatar.src ? (
+          <Image src={avatar.src} alt="" fill sizes="96px" className="object-cover object-top" />
+        ) : (
+          <span className="grid h-full w-full place-items-center font-serif text-[17px] leading-none text-gold-200">
+            {avatar.initial}
+          </span>
+        )}
+      </span>
+
+      {/* 등불 — 점등(골드 글로우) / 소등(꺼진 등이 그 자리에 있다는 것까지만) */}
+      <span
+        aria-hidden
+        className={`absolute border ${lit ? 'fh-flicker' : ''}`}
+        style={{
+          right: '-6%',
+          bottom: `${CUSHION_H_PCT * 0.6}%`,
           width: `${LANTERN_W * 100}%`,
           aspectRatio: '1 / 1.25',
           borderRadius: '42%',
-          borderColor: lit ? 'rgba(201,168,76,0.7)' : 'rgba(255,255,255,0.14)',
+          borderColor: lit ? 'rgba(201,168,76,0.85)' : 'rgba(201,168,76,0.4)',
           background: lit
             ? 'radial-gradient(circle at 50% 45%, rgba(244,228,186,0.95) 0%, rgba(201,168,76,0.55) 55%, rgba(201,168,76,0) 100%)'
-            : 'rgba(255,255,255,0.03)',
-          boxShadow: lit ? '0 0 12px rgba(201,168,76,0.55)' : 'none',
+            : 'radial-gradient(circle at 50% 45%, rgba(232,213,160,0.20) 0%, rgba(201,168,76,0.07) 60%, rgba(201,168,76,0) 100%)',
+          boxShadow: lit ? '0 0 14px rgba(201,168,76,0.6)' : 'none',
         }}
       />
 
-      {/* 이름표 — 본인 자리는 골드로 구분(주인 자리) */}
+      {/* 이름표 — 오브 아래 **보조**. 본인 자리는 골드로 구분(주인 자리) */}
       <span
-        className="absolute left-1/2 top-full block max-w-[130%] -translate-x-1/2 truncate pt-[3px] text-center font-sans text-[9px] leading-none"
-        style={{ color: member.memberId === null ? '#F4E4BA' : lit ? '#E8E4DC' : 'rgba(232,228,220,0.45)' }}
+        className="absolute left-1/2 top-full block max-w-[150%] -translate-x-1/2 truncate pt-[3px] text-center font-sans text-[9.5px] leading-none"
+        style={{ color: self ? '#F4E4BA' : lit ? '#E8E4DC' : 'rgba(232,228,220,0.62)' }}
       >
-        {member.memberId === null ? '나' : member.name}
+        {label}
       </span>
     </button>
   )
@@ -306,7 +341,9 @@ export function FamilyHall({ data, className }: Props) {
           style={{
             left: `${Math.min(BUBBLE_X_MAX, Math.max(BUBBLE_X_MIN, openSeat.x))}%`,
             top: `${openSeat.y}%`,
-            transform: 'translate(-50%, calc(-100% - 22px))',
+            // 좌석 (x,y)는 방석 중심이라, 그 위에 앉은 오브만큼 더 띄워야 얼굴을 가리지 않는다
+            marginTop: `calc(${seatWidthCss(layout.seatSizePct * openSeat.scale)} * -${BUBBLE_LIFT_RATIO})`,
+            transform: 'translate(-50%, calc(-100% - 8px))',
             background: 'rgba(22,20,15,0.94)',
           }}
         >
@@ -342,14 +379,17 @@ export function FamilyHall({ data, className }: Props) {
           animation: fhSeatIn 0.42s ease-out both;
           animation-delay: var(--fh-delay, 0ms);
         }
+        /* 기준점(--fh-anchor)은 SeatFigure 인라인 transform 과 반드시 같은 값이어야 한다 —
+           애니메이션이 인라인 transform 을 덮으므로 어긋나면 좌석이 끝나는 순간 튄다.
+           모션 최소화(animation:none)에서는 인라인 값이 그대로 쓰인다. */
         @keyframes fhSeatIn {
           from {
             opacity: 0;
-            transform: translate(-50%, -44%);
+            transform: translate(-50%, calc(var(--fh-anchor, -85%) + 6%));
           }
           to {
             opacity: 1;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, var(--fh-anchor, -85%));
           }
         }
 
@@ -389,11 +429,11 @@ export function FamilyHall({ data, className }: Props) {
         @keyframes fhBubbleIn {
           from {
             opacity: 0;
-            transform: translate(-50%, calc(-100% - 14px));
+            transform: translate(-50%, calc(-100% - 0px));
           }
           to {
             opacity: 1;
-            transform: translate(-50%, calc(-100% - 22px));
+            transform: translate(-50%, calc(-100% - 8px));
           }
         }
 

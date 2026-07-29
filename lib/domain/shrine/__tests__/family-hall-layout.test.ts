@@ -1,4 +1,5 @@
 import {
+  hallAvatar,
   hallLayout,
   hallSeatSizePct,
   hallSeatLine,
@@ -6,9 +7,11 @@ import {
   HALL_ARC,
   HALL_LANTERN,
   HALL_MAX_SEATS,
+  HALL_SEAT_MIN_PX,
   HALL_ALL_PRAYED_LINE,
   HALL_EMPTY_LINE,
 } from '../family-hall-layout'
+import { DEITY_AVATARS, ELEMENT_AVATARS } from '@/lib/domain/family/avatars'
 
 describe('hallLayout — 방석 반원 배치', () => {
   it('인원 수만큼 좌석을 만든다 (1~8)', () => {
@@ -104,6 +107,69 @@ describe('hallSeatSizePct — 인원이 늘수록 방석이 작아진다', () =>
 
   it('상한 초과 인원도 8석 기준 크기를 쓴다', () => {
     expect(hallSeatSizePct(30)).toBe(hallSeatSizePct(HALL_MAX_SEATS))
+  })
+})
+
+describe('hallAvatar — 어떤 avatar_id 여도 시각 실체가 나온다', () => {
+  it('오행 정령 id(레거시 …_dokkaebi 포함)는 초상 경로로 해석된다', () => {
+    const spirit = ELEMENT_AVATARS[0]
+    const a = hallAvatar(spirit.id, '어머니')
+    expect(a.resolved).toBe(true)
+    expect(a.src).toBe(spirit.src)
+    expect(a.color).toBe(spirit.color)
+  })
+
+  it('신위 id 도 초상 경로로 해석된다', () => {
+    const deity = DEITY_AVATARS[0]
+    const a = hallAvatar(deity.id, '아버지')
+    expect(a.resolved).toBe(true)
+    expect(a.src).toBe(deity.src)
+  })
+
+  it('미해석 avatar_id 는 이니셜 오브로 떨어진다 — 이름만 남는 좌석이 생기지 않는다', () => {
+    for (const bad of [null, undefined, '', '   ', 'legacy_ghost', '__proto__', 'water_dokkaebi ']) {
+      const a = hallAvatar(bad, '막내')
+      expect(a.resolved).toBe(false)
+      expect(a.src).toBeNull()
+      expect(a.initial).toBe('막')
+      expect(a.color).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+  })
+
+  it('본인 좌석(get_family_hall_presence 가 avatar_id 를 NULL 로 고정 발급)도 오브가 나온다', () => {
+    const a = hallAvatar(null, '나')
+    expect(a.src).toBeNull()
+    expect(a.initial).toBe('나')
+    expect(a.color.length).toBeGreaterThan(0)
+  })
+
+  it('이름이 비어도 오브에 새길 글자가 남는다', () => {
+    expect(hallAvatar(null, '').initial.length).toBeGreaterThan(0)
+    expect(hallAvatar(null, '   ').initial.length).toBeGreaterThan(0)
+  })
+
+  it('이모지 이름도 서로게이트 페어가 쪼개지지 않는다', () => {
+    expect(hallAvatar(null, '🐯막내').initial).toBe('🐯')
+  })
+
+  it('같은 입력이면 항상 같은 오브 — 결정론(하이드레이션 규율)', () => {
+    expect(hallAvatar(null, '할머니')).toEqual(hallAvatar(null, '할머니'))
+    expect(hallAvatar('fire_dokkaebi', '삼촌')).toEqual(hallAvatar('fire_dokkaebi', '삼촌'))
+  })
+
+  it('폴백 색은 오행 정령 팔레트에서 고르고 식구끼리 한 색으로 뭉치지 않는다', () => {
+    const palette = ELEMENT_AVATARS.map((a) => a.color)
+    const colors = ['나', '아버지', '어머니', '누나', '동생', '할머니', '삼촌', '막내'].map(
+      (n) => hallAvatar(null, n).color
+    )
+    for (const c of colors) expect(palette).toContain(c)
+    expect(new Set(colors).size).toBeGreaterThan(1)
+  })
+})
+
+describe('HALL_SEAT_MIN_PX — 좌석 터치 타깃 하한', () => {
+  it('44px 접근성 규율을 넘는다', () => {
+    expect(HALL_SEAT_MIN_PX).toBeGreaterThanOrEqual(44)
   })
 })
 

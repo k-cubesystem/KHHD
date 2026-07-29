@@ -11,7 +11,7 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2, Lock } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Lock } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
@@ -252,9 +252,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
   const effectsRef = useRef<EffectsHandle>(null)
   /** 기도 의식 중에만 띄우는 임시 불꽃 id — 저장된 lit 상태와 섞이지 않게 따로 추적한다 */
   const prayFlames = useRef<string[]>([])
-  const roomRef = useRef<HTMLDivElement>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [fallbackFull, setFallbackFull] = useState(false)
   // 이 세션에서 방금 구매한 테마 코드 (서버 owned 플래그 재로드 없이 즉시 반영)
   const [purchasedCodes, setPurchasedCodes] = useState<Set<string>>(new Set())
   const [visibility, setVisibility] = useState<'public' | 'private'>(scene.visibility)
@@ -299,10 +296,17 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     setTier(t)
     const revisit = readEntranceSeen() || t === 'lite'
     // 두루마리 입장 동선 — 마당(camX 0)에서 대청 정렬점으로. "대문으로 들어와 대청에 선다"(안2).
-    // 연출이 꺼졌거나 저사양이면 ms 0 으로 즉시 대청. 모션 최소화는 CameraRig 가 스스로 점프한다.
+    //
+    // 팬은 **매 진입 같은 길이**다(ENTRANCE_MS.pan). 재방문·저사양이라고 줄이면 암전이 걷히기도 전에
+    // 이동이 끝나 입장 자체가 사라진다 — 카메라 팬은 transform 하나뿐이라 저사양에서도 절감할 값이 없다.
+    // 화면을 덮는 암전·빛줄기만 기존대로 first/revisit 으로 갈린다(아래 playEntrance).
+    // 연출 게이트가 꺼졌으면 ms 0 으로 즉시 대청. 모션 최소화(prefers-reduced-motion)는 CameraRig 가 스스로 점프한다.
+    //
+    // ⚠️ camX 는 마운트 시 0(마당)이 보장된다 — useCameraRig 의 camState 초기값이 0 이고,
+    //    이 effect 는 카메라를 움직이는 다른 effect(테마 홈잉·꾸미기 진입)보다 먼저 등록돼 먼저 돈다.
     if (worldActive) {
       panSource.current = 'system'
-      panTo(daecheongCamX, GAMEFEEL_V1 && t !== 'lite' ? (revisit ? ENTRANCE_MS.revisit : ENTRANCE_MS.first) : 0)
+      panTo(daecheongCamX, GAMEFEEL_V1 ? ENTRANCE_MS.pan : 0)
     }
     if (!GAMEFEEL_V1) return
     markEntranceSeen()
@@ -913,31 +917,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     }
   }, [visibility, scene.familyMemberId])
 
-  // ── 전체화면 토글 (Fullscreen API + 미지원 브라우저 폴백) ──
-  const toggleFullscreen = useCallback(() => {
-    const el = roomRef.current
-    if (!el) return
-    const canApi = typeof el.requestFullscreen === 'function'
-    if (!canApi) {
-      setFallbackFull((v) => !v)
-      return
-    }
-    if (document.fullscreenElement) {
-      void document.exitFullscreen()
-    } else {
-      void el.requestFullscreen()
-    }
-  }, [])
-
-  // 브라우저 ESC 등으로 전체화면이 풀릴 때 상태 동기화
-  useEffect(() => {
-    const sync = () => setIsFullscreen(document.fullscreenElement === roomRef.current)
-    document.addEventListener('fullscreenchange', sync)
-    return () => document.removeEventListener('fullscreenchange', sync)
-  }, [])
-
-  const fullActive = isFullscreen || fallbackFull
-
   /**
    * 방 모서리 라운딩 — 단일 무대에서는 대청이 곧 방이라 전면 레이어를 방과 같이 둥글린다.
    * 두루마리에서는 대청이 세계 한가운데(x0~x1)라 모서리가 없다 — 둥글리면 구역 경계에 잘린 자국이 남는다.
@@ -1236,11 +1215,10 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
 
       {/* 룸 */}
       <div
-        ref={roomRef}
         className={`room relative rounded-[18px] ${editing ? 'editing' : ''} ${cin.roomClassName}`}
         {...bindRoom}
         style={{
-          height: fullActive ? '100vh' : 'min(56vh, 480px)',
+          height: 'min(56vh, 480px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
           // ⚠️ overflow:hidden 미사용(고의): 둥근 클립+overflow-hidden이 내부 <canvas>·큰 이미지를 GPU 마스크로
           //    합성하다 고DPR 실기기에서 실패→흰 화면이 되던 근본 원인. 대신 다크 배경색으로 폴백을 안전하게
@@ -1251,7 +1229,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
           // 두루마리 전용 — 가로 넘침만 자르고(clip 은 스크롤 컨테이너를 만들지 않아 세로 visible 과 공존한다)
           // 카메라 변수를 방 루트에 얹는다. 단일 무대·레거시에는 아무것도 더하지 않는다(위 흰화면 전례 회피).
           ...(worldActive ? { overflowX: 'clip' as const, ...cam.layerVar, ...worldVars } : null),
-          ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
           // 시네마틱 카메라(transform/transition). 평시엔 동결된 빈 객체라 위 값들에 영향이 없다.
           ...cin.roomStyle,
         }}
@@ -1319,27 +1296,15 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
             {editing ? (saving ? '저장 중…' : '완료') : '꾸미기'}
           </button>
         )}
+        {/* 우상단 HUD — 소원 배지 하나만 남긴다.
+            (실기기 검수: TODAY 방문자 수·전체화면 버튼은 방을 보는 데 쓰이지 않아 걷어냈다) */}
         <div className="absolute top-2.5 right-2.5 z-30 flex items-center gap-1.5">
-          <div
-            className="text-[8.5px] tracking-[0.06em] px-2 py-[3px] rounded-full text-ink-primary/75 tabular-nums"
-            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
-          >
-            TODAY <b style={{ color: 'var(--th-accent)' }}>{scene.visitorCount}</b>
-          </div>
           <div
             className="text-[8.5px] tracking-[0.06em] px-2 py-[3px] rounded-full text-ink-primary/75 tabular-nums"
             style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
           >
             소원 <b style={{ color: 'var(--th-accent)' }}>{scene.wishCount}</b>
           </div>
-          <button
-            onClick={toggleFullscreen}
-            aria-label="전체화면"
-            className="w-7 h-7 rounded-full grid place-items-center text-ink-primary/75"
-            style={{ background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.12)' }}
-          >
-            {fullActive ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          </button>
         </div>
         {editing && (
           <div

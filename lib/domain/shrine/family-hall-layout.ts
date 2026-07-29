@@ -9,8 +9,17 @@
  * (렌더·애니메이션은 components/shrine/scene/FamilyHall.tsx 책임)
  */
 
+import { ELEMENT_AVATARS, findFamilyAvatar } from '@/lib/domain/family/avatars'
+
 /** 방석 최대 수. 그 이상은 앉히지 않고 "외 N명"으로 접는다 — 반원이 뭉개지기 시작하는 경계. */
 export const HALL_MAX_SEATS = 8
+
+/**
+ * 좌석 상자의 최소 실측 폭(px). 후원 구역은 실기기에서 250px 안팎이라 % 만으로 크기를 정하면
+ * 방석이 40px대로 줄어 "사람이 앉아 있다"로 읽히지 않고 터치 타깃도 44px 규율에 미달한다.
+ * 렌더는 `max(폭%, 이 값)` 으로 하한을 걸어 좁은 박스에서도 오브가 손가락에 잡히게 한다.
+ */
+export const HALL_SEAT_MIN_PX = 60
 
 /** 반원 기하 — 중심(cx,cy)과 반지름(rx,ry). 아래가 열린 위쪽 호(弧)를 쓴다. */
 export const HALL_ARC = { cx: 50, cy: 63, rx: 33, ry: 20 } as const
@@ -111,6 +120,63 @@ export function hallLayout(count: number): HallLayout {
     seatSizePct,
     overflow: Math.max(0, requested - n),
   }
+}
+
+// ─── 좌석 오브 (아바타 해석 + 폴백) ──────────────────────────────────────────
+
+/**
+ * 미해석 좌석의 오브 색 후보 — 오행 정령 5색. 이름에서 결정론으로 골라 식구끼리 서로 구분되게 한다.
+ * (같은 색 하나로 통일하면 아바타를 안 고른 가족이 전부 똑같이 보여 "누가 누구인지"가 사라진다.)
+ */
+const FALLBACK_COLORS: readonly string[] = ELEMENT_AVATARS.map((a) => a.color)
+
+/** 정령 카탈로그가 비는 사고에 대비한 최후 색 — DESIGN.md 골드. */
+const FALLBACK_COLOR = '#C9A84C'
+
+/** 이름이 통째로 비었을 때 오브에 새길 글자. 빈 문자열이면 오브가 사라진 것처럼 보인다. */
+const FALLBACK_INITIAL = '·'
+
+export interface HallAvatar {
+  /** 오브를 채울 초상 경로. null 이면 `initial` 을 새긴 오브를 그린다 — 둘 중 하나는 **항상** 있다. */
+  src: string | null
+  /** 오브 배경·테두리 색조 */
+  color: string
+  /** 초상이 없을 때 오브에 새기는 한 글자 */
+  initial: string
+  /** 카탈로그에서 해석된 아바타인가. false = 폴백(본인 좌석·미설정·빈 문자열·미매칭 id) */
+  resolved: boolean
+}
+
+/** 이름 → 결정론 시드(코드포인트 합). 폴백 색 선택 전용이라 충돌해도 무해하다. */
+function nameSeed(name: string): number {
+  let sum = 0
+  for (const ch of name) sum = (sum + (ch.codePointAt(0) ?? 0)) % 100_000
+  return sum
+}
+
+/** 이름의 첫 글자. 서로게이트 페어(이모지)도 쪼개지지 않게 코드포인트 단위로 자른다. */
+function initialOf(name: string): string {
+  const trimmed = typeof name === 'string' ? name.trim() : ''
+  return Array.from(trimmed)[0] ?? FALLBACK_INITIAL
+}
+
+/**
+ * 좌석 오브의 그림 재료. **어떤 avatar_id 가 와도 시각 실체를 돌려준다.**
+ *
+ * 사랑방이 "이름만 나오는" 실기기 증상의 뿌리가 여기였다 — 좌석의 avatar_id 는
+ * 본인 좌석이 항상 NULL(get_family_hall_presence 가 NULL 로 고정 발급)이고,
+ * 가족 좌석도 미설정(NULL)·빈 문자열이 다수라 카탈로그 조회가 대부분 빈손으로 끝난다.
+ * 그래서 미해석은 실패가 아니라 **정상 경로**로 취급하고 이니셜 오브로 떨어뜨린다.
+ *
+ * 결정론이다(하이드레이션 규율) — 같은 (avatarId, name)이면 서버·클라가 같은 오브를 그린다.
+ */
+export function hallAvatar(avatarId: string | null | undefined, name: string): HallAvatar {
+  const safeName = typeof name === 'string' ? name : ''
+  const initial = initialOf(safeName)
+  const found = findFamilyAvatar(avatarId)
+  if (found) return { src: found.src, color: found.color, initial, resolved: true }
+  const palette = FALLBACK_COLORS.length > 0 ? FALLBACK_COLORS : [FALLBACK_COLOR]
+  return { src: null, color: palette[nameSeed(safeName) % palette.length], initial, resolved: false }
 }
 
 // ─── 대사 (결정론 · keeper-lines 문체) ────────────────────────────────────────
