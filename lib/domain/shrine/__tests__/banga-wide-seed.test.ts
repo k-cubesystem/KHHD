@@ -1,37 +1,43 @@
 /**
- * 반가 와이드 구역 시드 정합 — supabase/migrations/20260729_shrine_banga_wide_zones.sql
+ * 반가 「큰 방 하나」 시드 정합 — supabase/migrations/20260729_shrine_banga_one_room.sql
  *
- * 시드가 잘못되면 parseWorld 가 **부분 채택 없이 항등 폴백**(폭 100·대청 하나)으로 되돌아간다.
+ * 안2.1 확정안: 구역 3개(마당·대청·후원) → **단일 구역(대청 0~240)**.
+ * 경계를 없애고 벽지·바닥을 가로 타일 repeat-x 로 반복해 "같은 방이 끝까지 이어지게" 한다.
+ *
+ * 시드가 잘못되면 parseWorld 가 **부분 채택 없이 항등 폴백**(폭 100·구역 하나)으로 되돌아간다.
  * 예외도 로그도 없이 두루마리만 조용히 사라지므로 DB 에 적용하고 나서는 눈으로만 알 수 있다 →
  * DB 없이, 시드 파일 그 자체를 읽어서 미리 잡는다.
  *
  * 이 테스트가 검사하는 것
- *   1. 시드 SQL 의 JSON 이 parseWorld 를 **통과**한다 (폭 240 · 구역 3).
- *   2. `||` 병합이 기존 최상위 무대(벽지/바닥/구조물/광원)를 지우지 않는다.
- *   3. 대청은 필드가 비어 최상위를 승계하고, 마당·후원은 제 에셋을 직접 든다.
- *   4. 시드가 가리키는 에셋 파일이 public/ 에 실재한다.
+ *   1. 시드 SQL 의 JSON 이 parseWorld 를 **통과**한다 (폭 240 · 구역 1 · 0~240).
+ *   2. `(stage - 'zones') || …` 병합이 기존 최상위 무대(벽지/바닥/구조물/광원)를 지우지 않는다.
+ *   3. 유일 구역이 **제 타일을 직접** 들고, 구조물·광원은 최상위에서 승계한다.
+ *   4. `tile` 렌더 신호가 시드에 실려 있고, parseWorld 는 그 미지 필드를 조용히 버린다(배선 계약).
+ *   5. 전폭 재해석의 환산 계수 — 배선 담당이 놓치면 제단이 1.5화면짜리가 된다.
+ *   6. 시드가 가리키는 에셋 파일이 public/ 에 실재한다.
  */
 
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
 import { parseStageSpec, type StageSpec } from '../stage'
-import { WORLD_DEFAULT_WIDTH, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, type WorldSpec } from '../world'
+import { WORLD_DEFAULT_WIDTH, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, toWorldX, type WorldSpec } from '../world'
 import { zoneStage } from '../world-render'
 
 const ROOT = path.resolve(__dirname, '../../../..')
-const SEED_SQL = path.join(ROOT, 'supabase', 'migrations', '20260729_shrine_banga_wide_zones.sql')
+const SEED_SQL = path.join(ROOT, 'supabase', 'migrations', '20260729_shrine_banga_one_room.sql')
 const PUBLIC_DIR = path.join(ROOT, 'public')
 
 /** 시드 SQL 안에서 순수 JSON 을 감싸는 달러 인용 구분자 (Postgres dollar-quoting) */
 const DOLLAR_TAG = '$world$'
 
 /**
- * 시드 SQL → 두루마리 JSON.
+ * 시드 SQL → 구역 JSON.
  *
  * 정규식으로 긁지 않는다 — 구분자 두 개 사이를 그대로 잘라 JSON.parse 한다.
  * 그래서 SQL 쪽은 그 블록 안에 SQL 문법(주석·함수 호출·트레일링 콤마)을 넣을 수 없고,
  * 넣는 순간 이 테스트가 파싱 단계에서 깨진다 — 그게 의도한 계약이다.
+ * (원복 주석의 직전 3구역 JSON 이 다른 달러 태그를 쓰는 이유도 이것이다.)
  */
 function readSeedWorldJson(): unknown {
   const sql = readFileSync(SEED_SQL, 'utf8')
@@ -45,7 +51,7 @@ function readSeedWorldJson(): unknown {
 
 /**
  * 병합 대상인 **현행 반가 단일 무대** (프로덕션 shrine_theme_packs.stage 실값, 2026-07-29 조회).
- * 이 시드는 `stage || {...}` 라서 아래 필드가 그대로 남아야 한다 — 대청 화면 회귀 0 의 근거다.
+ * 이 시드는 `(stage - 'zones') || {...}` 라서 아래 필드가 그대로 남아야 한다 — 제단·광원 회귀 0 의 근거다.
  */
 const BANGA_STAGE_RAW = {
   wallpaperUrl: '/shrine/stage/banga/wallpaper.webp',
@@ -67,7 +73,11 @@ const BANGA_STAGE_RAW = {
   light: { color: '#C9A84C', intensity: 0.5, origin: { x: 50, y: 52 } },
 } as const
 
-/** DB 의 `stage || <시드 JSON>` 을 JS 로 재현 — jsonb `||` 는 최상위 키 단위 덮어쓰기다. */
+/**
+ * DB 의 `(stage - 'zones') || <시드 JSON>` 을 JS 로 재현.
+ * jsonb `||` 는 최상위 키 단위 덮어쓰기이고, `- 'zones'` 는 그 앞에서 구 3구역을 걷어낸다 —
+ * 여기서는 BANGA_STAGE_RAW 에 zones 가 애초에 없으므로 전개 순서만으로 같은 결과가 된다.
+ */
 function mergedStageRaw(): Record<string, unknown> {
   const seed = readSeedWorldJson()
   if (typeof seed !== 'object' || seed === null || Array.isArray(seed)) {
@@ -87,10 +97,12 @@ function seededWorld(): WorldSpec {
   return parseWorld(bangaStage(), mergedStageRaw())
 }
 
-function zoneOf(world: WorldSpec, code: string) {
-  const zone = world.zones.find((z) => z.code === code)
-  if (!zone) throw new Error(`구역 없음: ${code}`)
-  return zone
+/** 시드 JSON 의 유일 구역 원본(파서를 통과하기 **전**) — 미지 필드까지 그대로 본다 */
+function seededZoneRaw(): Record<string, unknown> {
+  const seed = readSeedWorldJson() as { zones?: unknown }
+  const zones = seed.zones
+  if (!Array.isArray(zones) || zones.length !== 1) throw new Error('시드 전제 붕괴: 구역이 1개가 아니다')
+  return zones[0] as Record<string, unknown>
 }
 
 describe('시드 SQL 파싱', () => {
@@ -110,75 +122,88 @@ describe('시드 SQL 파싱', () => {
 })
 
 describe('parseWorld 통과 — 항등 폴백으로 떨어지지 않는다', () => {
-  it('논리 폭 240 · 구역 3개', () => {
+  it('논리 폭 240 · 구역 1개', () => {
     const world = seededWorld()
     expect(world.width).toBe(WORLD_DEFAULT_WIDTH)
     expect(world.width).toBe(240)
-    expect(world.zones).toHaveLength(3)
+    expect(world.zones).toHaveLength(1)
   })
 
-  it('폴백이었다면 나왔을 값(폭 100·구역 1)이 아니다 — 검증 실패는 조용하므로 명시로 못 박는다', () => {
-    const world = seededWorld()
-    expect(world.width).toBeGreaterThan(WORLD_VIEWPORT_PCT) // ShrineRoomClient 의 worldActive 조건
-    expect(world.zones.length).toBeGreaterThan(1)
+  it('폴백이었다면 나왔을 값(폭 100)이 아니다 — 검증 실패는 조용하므로 명시로 못 박는다', () => {
+    // 구역이 1개라 개수로는 폴백과 구분되지 않는다. 폭이 유일한 판별점이다.
+    expect(seededWorld().width).toBeGreaterThan(WORLD_VIEWPORT_PCT) // ShrineRoomClient 의 worldActive 조건
   })
 
-  it('구역 경계가 마당 0~70 · 대청 70~170 · 후원 170~240 (정렬·비중첩·폭 정합)', () => {
+  it('유일 구역이 세계 전체를 덮는다 — 대청 0~240 (경계 자체가 없다 = 이음새 0)', () => {
     const world = seededWorld()
-    expect(world.zones.map((z) => [z.code, z.x0, z.x1])).toEqual([
-      ['madang', 0, 70],
-      ['daecheong', 70, 170],
-      ['huwon', 170, 240],
-    ])
-    // 마지막 구역의 오른쪽 끝이 곧 논리 폭 — 어긋나면 카메라가 빈 공간으로 팬 한다
-    expect(world.zones[world.zones.length - 1].x1).toBe(world.width)
+    expect(world.zones.map((z) => [z.code, z.x0, z.x1])).toEqual([['daecheong', 0, 240]])
+    expect(world.zones[0].x1).toBe(world.width)
+    expect(world.zones[0].x0).toBe(0)
   })
 
   it('구역 라벨은 world.ts 단일 출처에서 온다 (시드가 문구를 복제하지 않는다)', () => {
-    const world = seededWorld()
-    expect(world.zones.map((z) => z.label)).toEqual(['마당', '대청', '후원'])
+    expect(seededWorld().zones.map((z) => z.label)).toEqual(['대청'])
   })
 })
 
-describe('구역별 무대 사양', () => {
-  it('대청은 필드를 비워 최상위 무대를 그대로 승계한다 (대청 화면 회귀 0)', () => {
-    const world = seededWorld()
+describe('무대 사양 — 타일은 구역이, 구조물·광원은 최상위가', () => {
+  it('유일 구역이 제 가로 타일을 직접 든다 (최상위 벽지/바닥은 승계하지 않는다)', () => {
+    const zone = daecheongZone(seededWorld())
+    expect(zone.wallpaperUrl).toBe('/shrine/stage/banga/room-wall-tile.webp')
+    expect(zone.flooringUrl).toBe('/shrine/stage/banga/room-floor-tile.webp')
+    // 늘려 쓰는 단일 배경판(wallpaper.webp)이 다시 들어오면 큰 방에서 벽 리듬이 뭉개진다
+    expect(zone.wallpaperUrl).not.toBe(bangaStage().wallpaperUrl)
+  })
+
+  it('구조물·광원은 최상위에서 승계된다 — 제단이 사라지지 않는다', () => {
     const base = bangaStage()
-    const daecheong = daecheongZone(world)
-
-    // 시드 자체에는 아무 에셋도 없어야 한다 — 여기에 값이 생기면 최상위와 두 벌 관리가 된다
-    expect(daecheong.wallpaperUrl).toBeNull()
-    expect(daecheong.flooringUrl).toBeNull()
-    expect(daecheong.structures).toEqual([])
-
-    // 렌더 시점에 base 를 물려받아 지금 화면과 같아진다
-    const stage = zoneStage(daecheong, base)
-    expect(stage.wallpaperUrl).toBe(base.wallpaperUrl)
-    expect(stage.flooringUrl).toBe(base.flooringUrl)
+    // ShrineRoomClient: daecheongStage = zoneStage(daecheong, activeStage)
+    const stage = zoneStage(daecheongZone(seededWorld()), base)
     expect(stage.structures).toEqual(base.structures)
     expect(stage.light).toEqual(base.light)
+    expect(stage.wallpaperUrl).toBe('/shrine/stage/banga/room-wall-tile.webp')
+  })
+})
+
+describe('tile 렌더 계약 (후속 배선 에이전트)', () => {
+  it('시드 JSON 에 tile: true 가 실려 있다 — repeat-x 로 그리라는 신호', () => {
+    expect(seededZoneRaw().tile).toBe(true)
   })
 
-  it('마당·후원은 제 벽지·바닥을 직접 든다 — 렌더가 base 를 안 물려주기 때문', () => {
+  it('parseWorld 는 tile 을 조용히 버린다 — 배선 시 stageRaw 를 직접 읽거나 world.ts 에 파싱을 더해야 한다', () => {
+    // 이 테스트는 "버려지는 게 정상"이 아니라 **버려진다는 사실**을 계약으로 못 박는 것이다.
+    // WorldZone 에 tile 이 생기면 여기가 깨지고, 그때 이 기대값을 지우면 된다.
+    const zone = daecheongZone(seededWorld()) as unknown as Record<string, unknown>
+    expect(zone.tile).toBeUndefined()
+    // 그래도 미지 필드가 구역 자체를 반려시키지는 않는다(= 배선 전에 넣어도 무해하다)
+    expect(seededWorld().zones).toHaveLength(1)
+  })
+})
+
+describe('전폭 재해석 — 배선 담당이 놓치면 안 되는 환산', () => {
+  it('배치 x 는 방 전폭으로 퍼진다 (PRD 부록 A "방 전폭 꾸미기" — 의도된 동작)', () => {
     const world = seededWorld()
-    // ShrineRoomClient 는 대청 밖 구역에 zoneStage(z, null) 로 base 를 끊는다
-    for (const code of ['madang', 'huwon']) {
-      const stage = zoneStage(zoneOf(world, code), null)
-      expect(stage.wallpaperUrl).not.toBeNull()
-      expect(stage.flooringUrl).not.toBeNull()
-    }
+    const zone = daecheongZone(world)
+    // 기존 대청 로컬 x 가 그대로 world x × 2.4 가 된다. 마이그레이션 UPDATE 는 0건.
+    expect(toWorldX(world, zone, 0)).toBe(0)
+    expect(toWorldX(world, zone, 50)).toBe(120)
+    expect(toWorldX(world, zone, 100)).toBe(240)
   })
 
-  it('마당 구조물은 대문·석등 2종이고 좌표가 구역 로컬 %로 살아 있다', () => {
-    const madang = zoneOf(seededWorld(), 'madang')
-    expect(madang.structures.map((s) => [s.code, s.x, s.y, s.w])).toEqual([
-      ['gate-banga', 24, 52, 52],
-      ['seokdeung-banga', 72, 66, 14],
-    ])
+  it('구조물 w 는 구역 폭 대비 %라 겉보기 보존에 ×100/240 환산이 필요하다', () => {
+    const zone = daecheongZone(seededWorld())
+    const span = zone.x1 - zone.x0
+    expect(span).toBe(240)
+    const altar = bangaStage().structures[0]
+    expect(altar.w).toBe(62)
+    // 그대로 두면 2.4화면의 62% = 1.49화면짜리 제단이 된다
+    const keepApparent = Math.round(((altar.w * WORLD_VIEWPORT_PCT) / span) * 100) / 100
+    expect(keepApparent).toBeCloseTo(25.83, 2)
   })
 
-  it('후원에는 구조물을 두지 않는다 (에셋 없는 구조물은 조용히 버려지므로 아예 넣지 않는다)', () => {
-    expect(zoneOf(seededWorld(), 'huwon').structures).toEqual([])
+  it("사랑방 구역('huwon')이 사라진다 — FamilyHall 마운트 조건이 무너지므로 재배치가 필요하다", () => {
+    // ShrineRoomClient: world.zones.find(z => z.code === 'huwon') 가 없으면 hallBox = null → 아예 안 그린다.
+    expect(seededWorld().zones.find((z) => z.code === 'huwon')).toBeUndefined()
   })
 })
 
@@ -195,14 +220,10 @@ describe('에셋 실재', () => {
     return urls
   }
 
-  it('구역 에셋 6장이 전부 시드에 실려 있다', () => {
+  it('가로 타일 2장이 전부 시드에 실려 있다', () => {
     expect(seededAssetUrls().sort()).toEqual([
-      '/shrine/stage/banga/gate.webp',
-      '/shrine/stage/banga/huwon-floor.webp',
-      '/shrine/stage/banga/huwon-wall.webp',
-      '/shrine/stage/banga/madang-floor.webp',
-      '/shrine/stage/banga/madang-wall.webp',
-      '/shrine/stage/banga/seokdeung.webp',
+      '/shrine/stage/banga/room-floor-tile.webp',
+      '/shrine/stage/banga/room-wall-tile.webp',
     ])
   })
 
@@ -211,11 +232,24 @@ describe('에셋 실재', () => {
     expect(existsSync(path.join(PUBLIC_DIR, url))).toBe(true)
   })
 
-  it('대청이 승계하는 최상위 에셋도 실재한다', () => {
+  it('최상위가 물려주는 제단·벽지·바닥도 실재한다 (zones 를 걷어낸 원복 경로의 안전망)', () => {
     const base = bangaStage()
     for (const url of [base.wallpaperUrl, base.flooringUrl, ...base.structures.map((s) => s.assetUrl)]) {
       expect(url).not.toBeNull()
       expect(existsSync(path.join(PUBLIC_DIR, String(url)))).toBe(true)
+    }
+  })
+
+  it('마당·후원 실외 에셋은 삭제하지 않고 보관한다 (후속 앞마당 씬 재론용 — 시드에서만 제외)', () => {
+    for (const f of [
+      'gate.webp',
+      'seokdeung.webp',
+      'madang-wall.webp',
+      'madang-floor.webp',
+      'huwon-wall.webp',
+      'huwon-floor.webp',
+    ]) {
+      expect(existsSync(path.join(PUBLIC_DIR, 'shrine', 'stage', 'banga', f))).toBe(true)
     }
   })
 })
