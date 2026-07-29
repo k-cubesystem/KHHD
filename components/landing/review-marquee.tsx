@@ -11,7 +11,12 @@ interface Review {
 
 const MAX_SCORE = 5
 
-/** 노출 후기 10건 — 카드 1장당 한 줄 인용. 늘릴 경우 마퀴 밀도가 다시 높아지므로 12건을 넘기지 말 것. */
+/**
+ * 노출 후기 10건 — 실제 이용자 후기가 아니라 **서비스 이해를 돕기 위해 구성한 예시**다.
+ * 표시·광고법상 소비자 오인을 막기 위해 섹션 헤더 고지(social-proof.tsx)와 카드별 「예시」 배지를 항상 함께 유지할 것.
+ * 실후기로 교체하기 전에는 평균 별점 등 집계 수치를 파생해 노출하지 않는다.
+ * 카드 1장당 한 줄 인용. 늘릴 경우 마퀴 밀도가 다시 높아지므로 12건을 넘기지 말 것.
+ */
 const REVIEWS: readonly Review[] = [
   { name: '김*진', age: '32세', content: '이직으로 반년을 앓았는데, 제 천직을 찾았습니다.', score: 5 },
   { name: '박*수', age: '28세', content: 'AI라 반신반의했는데, 소름 돋게 정확하네요.', score: 5 },
@@ -24,9 +29,6 @@ const REVIEWS: readonly Review[] = [
   { name: '홍*표', age: '52세', content: '은퇴 후 막막했는데 제2의 전성기를 찾았습니다.', score: 5 },
   { name: '오*원', age: '30세', content: '부적을 폰 배경으로 해두니 든든함이 생겨요.', score: 4 },
 ] as const
-
-/** 헤더 요약(평균 별점)은 노출 데이터에서 파생 — 수치가 따로 놀지 않도록 단일 소스 유지 */
-export const REVIEW_AVERAGE = (REVIEWS.reduce((sum, review) => sum + review.score, 0) / REVIEWS.length).toFixed(1)
 
 function ReviewCard({ review }: { review: Review }) {
   return (
@@ -54,6 +56,10 @@ function ReviewCard({ review }: { review: Review }) {
         </span>
         <span className="font-sans text-[11px] text-ink-primary/55">
           <span className="text-ink-primary/70">{review.name}</span> · {review.age}
+        </span>
+        {/* 카드 단위 고지 — 헤더 고지를 지나쳐도 예시임이 드러나야 한다. 아바타(h-6)보다 낮아 카드 높이에 영향 없음 */}
+        <span className="ml-auto shrink-0 rounded-full border border-white/20 bg-white/[0.06] px-1.5 py-0.5 font-sans text-[10px] font-semibold leading-none text-ink-primary/70">
+          예시
         </span>
       </figcaption>
     </figure>
