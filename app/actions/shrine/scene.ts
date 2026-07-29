@@ -326,6 +326,8 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<Sta
     assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
     owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
     stage: parseStageSpec(p.stage),
+    // 두루마리 구역(zones)은 StageSpec 밖이라 원본을 함께 내려보낸다 (클라에서 parseWorld 가 파싱)
+    stageRaw: p.stage ?? null,
   }))
 }
 
@@ -527,6 +529,7 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
             : {}) as ThemeAssets,
           owned: true,
           stage: parseStageSpec(activePack.stage),
+          stageRaw: activePack.stage ?? null,
         },
       ]
     : []

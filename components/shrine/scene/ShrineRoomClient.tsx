@@ -32,7 +32,9 @@ import {
 } from '@/lib/domain/shrine/stage'
 import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
-import { GAMEFEEL_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
+import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
+import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage } from '@/lib/domain/shrine/world-render'
+import { GAMEFEEL_V1, SCROLL_SHRINE_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import {
   greetingFor,
   personalGreeting,
@@ -47,7 +49,8 @@ import {
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
-import { useCinematics, GamefeelStyles } from './useCinematics'
+import { useCinematics, GamefeelStyles, ENTRANCE_MS } from './useCinematics'
+import { CameraMinimap, useCameraRig } from './CameraRig'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
@@ -96,6 +99,20 @@ const MOTE_SPOTS = [
 
 /** CSS 사용자 정의 속성은 CSSProperties 에 없다 — 교차 타입으로 좁혀 any 를 피한다. */
 type CssVars = CSSProperties & Record<`--${string}`, string>
+
+// ── 두루마리 시차층 (안2 / ARCH §1 렌더 스택) ────────────────
+/**
+ * 시차 이동은 CSS 가 계산한다 — JS 가 매 프레임 만지는 값은 CameraRig 가 발행하는 `--shrine-cam-x` 하나뿐이고,
+ * 층별 계수(`--shrine-par-*`)는 테마(=world 폭)당 1회만 정해진다. 리플로우 0·컴포지터 전용.
+ */
+const FAR_TRANSFORM = 'translate3d(calc(var(--shrine-cam-x) * var(--shrine-par-far)), 0, 0)'
+const NEAR_TRANSFORM = 'translate3d(calc(var(--shrine-cam-x) * var(--shrine-par-near)), 0, 0)'
+/** 원경 — 위가 짙은 밤하늘 + 기와 능선을 흉내낸 담장 실루엣. 3파 에셋이 오면 이미지로 대체된다 */
+const FAR_SKY =
+  'linear-gradient(180deg,rgba(8,8,6,0.92) 0%,rgba(26,19,8,0.34) 46%,rgba(26,19,8,0) 63%),' +
+  'repeating-linear-gradient(90deg,rgba(0,0,0,0.44) 0 2.4%,rgba(0,0,0,0.16) 2.4% 5%)'
+/** 전경 문틀 — 대청 경계에 드리우는 그림자 폭(world %) */
+const JAMB_W_PCT = 3.2
 
 /**
  * 이 기기의 연출 등급. navigator 는 마운트 후에만 있으므로 렌더 중 호출 금지.
@@ -232,8 +249,14 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   useEffect(() => {
     const t = readEffectsTier()
     setTier(t)
-    if (!GAMEFEEL_V1) return
     const revisit = readEntranceSeen() || t === 'lite'
+    // 두루마리 입장 동선 — 마당(camX 0)에서 대청 정렬점으로. "대문으로 들어와 대청에 선다"(안2).
+    // 연출이 꺼졌거나 저사양이면 ms 0 으로 즉시 대청. 모션 최소화는 CameraRig 가 스스로 점프한다.
+    if (worldActive) {
+      panSource.current = 'system'
+      panTo(daecheongCamX, GAMEFEEL_V1 && t !== 'lite' ? (revisit ? ENTRANCE_MS.revisit : ENTRANCE_MS.first) : 0)
+    }
+    if (!GAMEFEEL_V1) return
     markEntranceSeen()
     playEntrance(revisit)
     trackEvent({ action: 'shrine_cinematic', category: 'shrine', label: 'entrance', value: revisit ? 1 : 0 })
@@ -282,6 +305,139 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
 
   // ── 무대(舞臺) — stage 보유 테마만 조립식 렌더, 없으면 레거시 완성 일러스트 ──
   const activeStage = activePack?.stage ?? null
+
+  // ── 두루마리(안2) — 테마 stage.zones 가 있는 테마에서만 가로 세계가 열린다 ──
+  // 파싱은 stage jsonb **원본** 기준이다(StageSpec 은 단일 무대 4필드만 담아 zones 가 걸러진다).
+  // zones 가 없으면 parseWorld 가 폭 100·대청 하나로 항등 폴백하므로 아래 worldActive 가 false 가 되고,
+  // 렌더는 기존 단일 무대 그대로 나간다 — 레거시·현행 테마 회귀 0 의 단일 분기점이다.
+  const world = useMemo(() => parseWorld(activeStage, activePack?.stageRaw ?? null), [activeStage, activePack])
+  const worldActive = SCROLL_SHRINE_V1 && world.width > WORLD_VIEWPORT_PCT
+  const daecheong = useMemo(() => daecheongZone(world), [world])
+  const cam = useCameraRig(world, { enabled: SCROLL_SHRINE_V1, editing })
+  // panTo 는 참조가 고정돼 있다 — cam 객체는 camX 마다 새로 나므로 effect deps 를 오염시키지 않으려 분해한다
+  const { panTo } = cam
+  /** 대청 정렬점 — 입장·편집 진입이 모두 여기로 모인다 */
+  const daecheongCamX = useMemo(() => zoneAlignCamX(world, daecheong), [world, daecheong])
+  /**
+   * 대청 무대 사양. 구역이 제 에셋을 안 들고 있으면 테마 단일 무대를 물려받는다 —
+   * 기존 stage 에 zones 만 얹어도 대청이 지금 화면 그대로 나오는 세대교체 경로다.
+   * 두루마리가 아니면 activeStage 를 **참조까지 그대로** 돌려 기존 렌더와 완전히 같게 둔다.
+   */
+  const daecheongStage = useMemo(
+    () => (worldActive ? zoneStage(daecheong, activeStage) : activeStage),
+    [worldActive, daecheong, activeStage]
+  )
+  /** 대청 밖 구역(마당·후원)의 무대 세트 — 대청은 기존 렌더 덩어리를 그대로 쓰므로 제외한다 */
+  const scenery = useMemo(() => {
+    if (!worldActive) return []
+    return world.zones
+      .filter((z) => z.code !== daecheong.code)
+      .map((z) => ({ code: z.code, box: zoneBox(world, z), stage: zoneStage(z, null) }))
+  }, [worldActive, world, daecheong])
+  const daecheongBox = useMemo(() => zoneBox(world, daecheong), [world, daecheong])
+  /** 시차층 계수 CSS 변수 — 폭이 바뀔 때만 다시 계산된다 */
+  const worldVars = useMemo<CssVars>(
+    () => ({
+      '--shrine-par-far': parallaxShiftPct(world, PARALLAX.far),
+      '--shrine-par-near': parallaxShiftPct(world, PARALLAX.near),
+    }),
+    [world]
+  )
+  const farStyle = useMemo<CSSProperties>(
+    () => ({
+      width: `${world.width}%`,
+      transform: FAR_TRANSFORM,
+      willChange: 'transform',
+      backgroundImage: FAR_SKY,
+      backgroundSize: '100% 100%, 100% 13%',
+      backgroundPosition: '0 0, 0 54%',
+      backgroundRepeat: 'no-repeat, repeat-x',
+    }),
+    [world.width]
+  )
+  const nearStyle = useMemo<CSSProperties>(
+    () => ({ width: `${world.width}%`, transform: NEAR_TRANSFORM, willChange: 'transform' }),
+    [world.width]
+  )
+  /** 대청 경계에 드리우는 문틀 그림자 — 전경층 안이라 좌표는 world 폭 기준 % */
+  const jambStyle = useCallback(
+    (side: 'left' | 'right'): CSSProperties => {
+      const edge = ((side === 'left' ? daecheong.x0 : daecheong.x1) / world.width) * 100
+      const w = (JAMB_W_PCT / world.width) * 100
+      return {
+        left: `${(side === 'left' ? edge : edge - w).toFixed(4)}%`,
+        width: `${w.toFixed(4)}%`,
+        background:
+          side === 'left'
+            ? 'linear-gradient(90deg,rgba(0,0,0,0.5),rgba(0,0,0,0))'
+            : 'linear-gradient(270deg,rgba(0,0,0,0.5),rgba(0,0,0,0))',
+      }
+    },
+    [daecheong.x0, daecheong.x1, world.width]
+  )
+  /** 팬의 출처 — 사용자 조작(제스처·미니맵)일 때만 GA4 에 남긴다(입장·편집 자동 이동은 제외) */
+  const panSource = useRef<'user' | 'system'>('system')
+  const bindRoom = useMemo(
+    () => ({
+      ...cam.bindPan,
+      onPointerDown: (e: RPointerEvent) => {
+        // 시네마틱 재생 중 입력은 "스킵 탭" 1종만(ARCH §4). 연출 오버레이는 전파를 막지 않으므로 여기서 끊는다 —
+        // 안 끊으면 스킵 탭이 진행 중인 입장 팬을 취소해 카메라가 마당과 대청 사이에 멈춘다.
+        if (cin.active) return
+        panSource.current = 'user'
+        cam.bindPan.onPointerDown(e)
+      },
+    }),
+    [cam.bindPan, cin.active]
+  )
+
+  // 구역 도착 1회 기록 — 팬이 멈춘(관성·스냅까지 끝난) 순간에만. 팬 시작마다 찍으면 표본이 부풀어 오른다.
+  const wasPanning = useRef(false)
+  useEffect(() => {
+    const was = wasPanning.current
+    wasPanning.current = cam.panning
+    if (!was || cam.panning || panSource.current !== 'user') return
+    trackEvent({ action: 'shrine_pan', category: 'shrine', label: zoneCodeAt(world, cam.camX) })
+  }, [cam.panning, cam.camX, world])
+
+  // 꾸미기 진입 — 배치 도구가 보이는 대청으로 카메라를 부른다(마당에서 편집을 시작하면 보관함이 헛돈다)
+  useEffect(() => {
+    if (!editing || !worldActive) return
+    panSource.current = 'system'
+    panTo(daecheongCamX)
+  }, [editing, worldActive, daecheongCamX, panTo])
+
+  /**
+   * 테마 전환 — 새 두루마리에서도 대청부터 보여준다.
+   * 카메라는 테마 소유가 아니라 방 소유라 전환해도 camX 가 남는다. 그대로 두면 마당(camX 0)이나
+   * 후원에 선 채로 새 테마가 열려 "방금 고른 신당의 제단이 화면 밖" 이 된다 — 입장과 같은 도착점으로 모은다.
+   * 마운트 1회는 입장 팬(위 시네마틱 effect)이 이미 같은 자리로 데려가므로 건너뛴다.
+   */
+  const camHomed = useRef(false)
+  useEffect(() => {
+    if (!camHomed.current) {
+      camHomed.current = true
+      return
+    }
+    if (!worldActive) return
+    panSource.current = 'system'
+    panTo(daecheongCamX)
+  }, [activeCode, worldActive, daecheongCamX, panTo])
+
+  /**
+   * 두루마리↔단일 무대 전환은 대청 덩어리(EffectsCanvas 포함)를 통째로 재마운트시킨다 —
+   * 새 캔버스에는 지속 불꽃도 主神 aura 도 없다. 살아 있던 연출을 다시 등록해 촛불이 꺼진 채 남지 않게 한다.
+   * (등록은 멱등이라 마운트 시 한 번 더 도는 것은 무해하다.)
+   */
+  useEffect(() => {
+    const d = scene.mainDeity
+    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, DEITY_POS.x, DEITY_POS.y, !!d)
+    placements.forEach((p) => {
+      if (p.state.lit) effectsRef.current?.setFlame(p.id, p.x, p.y - FLAME_Y_OFFSET, true)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [worldActive])
+
   /** 조명: stage.light 우선, 레거시는 테마 --th-glow 색 기반 기본 광원 */
   const light: StageLight = useMemo(
     () =>
@@ -292,11 +448,12 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       },
     [activeStage, activePack]
   )
-  /** 앵커: 구조물 anchors 합집합, 없으면(레거시·앵커 미정의 무대) 기본 앵커 */
+  /** 앵커: 구조물 anchors 합집합, 없으면(레거시·앵커 미정의 무대) 기본 앵커.
+      두루마리에서도 배치는 대청에만 살므로 대청 구조물만 본다 — 단일 무대에서는 activeStage 와 동일하다. */
   const anchors = useMemo<readonly StageAnchor[]>(() => {
-    const union = activeStage?.structures.flatMap((s) => s.anchors) ?? []
+    const union = daecheongStage?.structures.flatMap((s) => s.anchors) ?? []
     return union.length > 0 ? union : DEFAULT_ANCHORS
-  }, [activeStage])
+  }, [daecheongStage])
   /** 드래그 중 스냅 대상 앵커 (골드 링 하이라이트) */
   const [snapAnchor, setSnapAnchor] = useState<StageAnchor | null>(null)
   /** 이번 꾸미기에서 새로 앵커에 올린 배치 — 저장 시 신위 한마디 1회 */
@@ -708,6 +865,218 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
 
   const fullActive = isFullscreen || fallbackFull
 
+  /**
+   * 방 모서리 라운딩 — 단일 무대에서는 대청이 곧 방이라 전면 레이어를 방과 같이 둥글린다.
+   * 두루마리에서는 대청이 세계 한가운데(x0~x1)라 모서리가 없다 — 둥글리면 구역 경계에 잘린 자국이 남는다.
+   * (StageLayers 의 `zoned` 와 같은 규약. 방 자체의 rounded-[18px] 는 그대로다.)
+   */
+  const roundAll = worldActive ? '' : ' rounded-[17px]'
+  const roundBottom = worldActive ? '' : ' rounded-b-[17px]'
+
+  /**
+   * 대청(大廳) 구역의 내용물 전체 — 배치·신위·신당지기·앵커·존가이드·캔버스·조명이 한 덩어리다.
+   *
+   * 두루마리에서는 이 덩어리를 world 안의 대청 박스(폭이 뷰포트와 같다)로 통째로 감싼다.
+   * 그래서 기존 % 좌표·캔버스 크기·드래그 환산(Sprite 가 parentElement 를 기준 삼는다)이 **무수정**으로 성립한다.
+   * 단일 무대에서는 이 조각이 방의 직계 자식으로 그대로 나가 기존 DOM 과 같다(회귀 0 제1원칙).
+   */
+  const stageContent = (
+    <>
+      {/* L0 벽지 · L1 바닥재 (stage 테마) / 벽·바닥 블록 + room.webp (레거시) */}
+      <StageLayers stage={daecheongStage} themeCode={activeCode} slot="ground" zoned={worldActive} />
+      {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
+          mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
+          (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
+          편집 중엔 성능 위해 숨김. 영상 자체를 라운딩(부모 클립 의존 금지 — 흰화면 사고 교훈).
+          파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다. */}
+      {!editing && (
+        <AmbientVideo
+          key={`vid-${activeCode}`}
+          id={`shrine-theme-${activeCode}`}
+          className={`absolute inset-0 w-full h-full object-cover pointer-events-none select-none${roundAll}`}
+          style={{ mixBlendMode: 'lighten', opacity: 0.9 }}
+        />
+      )}
+      {/* 제단 영역 대비용 하단 암전 */}
+      <div
+        className={`absolute inset-x-0 bottom-0 h-[38%]${roundBottom}`}
+        style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
+      />
+      <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
+      <div
+        className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
+        style={{ top: '77%', width: '64%', height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
+      />
+
+      {/* 좌정한 主神 — 제단 위에 강림 */}
+      {scene.mainDeity?.spriteUrl && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-[3] deity-stand"
+          style={{ bottom: '50%', height: '38%' }}
+        >
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
+            style={{
+              bottom: '-6%',
+              width: '86%',
+              height: '20%',
+              background: 'var(--th-glow, rgba(201,168,76,0.28))',
+              filter: 'blur(9px)',
+            }}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={scene.mainDeity.spriteUrl}
+            alt={scene.mainDeity.name}
+            className="relative h-full w-auto object-contain"
+            style={{ filter: 'drop-shadow(0 5px 9px rgba(0,0,0,0.5))' }}
+          />
+        </div>
+      )}
+
+      {/* L2 구조물 (stage 테마) / CSS 제단 박스 (레거시) */}
+      <StageLayers stage={daecheongStage} themeCode={activeCode} slot="structures" zoned={worldActive} />
+
+      {/* 존 가이드 (편집) */}
+      {editing &&
+        (Object.keys(ZONES) as Array<keyof typeof ZONES>).map((layer) => {
+          const z = ZONES[layer]
+          return (
+            <div
+              key={layer}
+              className="absolute rounded-lg pointer-events-none"
+              style={{
+                left: `${z.x[0]}%`,
+                right: `${100 - z.x[1]}%`,
+                top: `${z.y[0]}%`,
+                bottom: `${100 - z.y[1]}%`,
+                border: '1.5px dashed rgba(201,168,76,0.32)',
+              }}
+            >
+              <span className="absolute -top-px left-1.5 text-[8px] tracking-[0.15em] text-gold-300 px-1 rounded-sm bg-black/80">
+                {ZONE_LABEL[layer]}
+              </span>
+            </div>
+          )
+        })}
+
+      {/* 파티클 이펙트 */}
+      <EffectsCanvas ref={effectsRef} />
+
+      {/* 신당지기 — 좌정한 主神이 겸한다 (초상 오브, 없으면 🔮 폴백) */}
+      <button
+        onClick={onTapKeeper}
+        className="absolute z-[12] text-center"
+        style={{ left: `${KEEPER_POS.x}%`, top: `${KEEPER_POS.y}%` }}
+        aria-label={scene.mainDeity ? `신당지기 ${scene.mainDeity.name}` : '신당지기'}
+      >
+        <div
+          key={bounce}
+          className="w-[38px] h-[38px] rounded-full grid place-items-center text-[19px] shrine-keeper-orb overflow-hidden"
+          style={{
+            background: 'radial-gradient(circle at 35% 30%, var(--th-glow), rgba(0,0,0,0.45))',
+            border: '1px solid var(--th-accent)',
+            boxShadow: '0 0 16px var(--th-glow)',
+          }}
+        >
+          {scene.mainDeity?.portraitUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={scene.mainDeity.portraitUrl}
+              alt=""
+              className="w-full h-full object-cover object-top"
+              draggable={false}
+            />
+          ) : (
+            '🔮'
+          )}
+        </div>
+        <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
+      </button>
+
+      {/* 아이템 */}
+      {placements.map((p) => {
+        const item = catalogById.get(p.catalogItemId)
+        if (!item) return null
+        return (
+          <Sprite
+            key={p.id}
+            placement={p}
+            item={item}
+            editing={editing}
+            anchors={anchors}
+            onTap={() => onTapItem(p)}
+            onRemove={() => onRemove(p)}
+            onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
+            onAnchorHover={onAnchorHover}
+          />
+        )
+      })}
+
+      {/* 조명 오버레이 (§3-C4) — 배경·구조물·아이템이 '같은 빛'을 받게 하는 컬러 그레이딩 한 장.
+          아이템 최상단 밴드(z 29)와 같은 층에 두되 DOM 순서로 위에 얹고, UI 컨트롤(z-30) 아래에 둔다.
+          soft-light: 어두운 방의 톤을 죽이지 않으면서 색만 입힌다(screen 은 대비를 날려 반려). */}
+      <div
+        aria-hidden
+        className={`absolute inset-0 pointer-events-none shrine-light-overlay${roundAll}`}
+        style={{ ...lightOverlay, mixBlendMode: 'soft-light', zIndex: 29 }}
+      />
+
+      {/* 앵커 스냅 하이라이트 (꾸미기) — 골드 링 */}
+      {editing && snapAnchor && (
+        <span
+          aria-hidden
+          className="absolute rounded-full pointer-events-none shrine-anchor-ring"
+          style={{
+            left: `${snapAnchor.x}%`,
+            top: `${snapAnchor.y}%`,
+            width: '34px',
+            height: '34px',
+            marginLeft: '-17px',
+            marginTop: '-17px',
+            border: '2px solid #C9A84C',
+            boxShadow: '0 0 12px rgba(201,168,76,0.55)',
+            zIndex: 29,
+          }}
+        />
+      )}
+
+      {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조.
+          조명 오버레이보다 위(같은 z, 뒤 DOM)라 글이 그레이딩에 흐려지지 않는다. */}
+      {!editing && (
+        <div
+          className="absolute z-[29] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
+          style={{
+            left: '20%',
+            top: '3%',
+            right: '5%',
+            background: oracle ? 'rgba(26,18,6,0.92)' : 'rgba(10,10,8,0.8)',
+            border: oracle ? '1px solid rgba(212,175,55,0.65)' : '1px solid var(--th-accent)',
+            boxShadow: oracle ? '0 0 16px rgba(212,175,55,0.25)' : undefined,
+          }}
+        >
+          <div
+            className="text-[9px] tracking-[0.24em] mb-0.5 flex items-center gap-1"
+            style={{ color: oracle ? '#E8D5A0' : 'var(--th-accent)' }}
+          >
+            {oracle && <span className="text-[8px]">✦ 신탁 ✦</span>}
+            {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
+          </div>
+          <span dangerouslySetInnerHTML={{ __html: bubble }} />
+        </div>
+      )}
+
+      {/* 공명 링 */}
+      {rings.map((r) => (
+        <span
+          key={r.id}
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none z-[50] shrine-ring"
+          style={{ left: `${r.x}%`, top: `${r.y}%`, border: `2px solid ${r.color}` }}
+        />
+      ))}
+    </>
+  )
+
   return (
     <div className="w-full max-w-[520px] mx-auto" style={themeVars(activePack)}>
       {/* 헤더 */}
@@ -796,6 +1165,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       <div
         ref={roomRef}
         className={`room relative rounded-[18px] ${editing ? 'editing' : ''} ${cin.roomClassName}`}
+        {...bindRoom}
         style={{
           height: fullActive ? '100vh' : 'min(56vh, 480px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
@@ -805,203 +1175,55 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           backgroundColor: '#1a1308',
           // 편집 중에만 드래그 배치를 위해 스크롤 차단. 평소엔 세로 스크롤 허용(방 위 스와이프로 페이지 이동).
           touchAction: editing ? 'none' : 'pan-y',
+          // 두루마리 전용 — 가로 넘침만 자르고(clip 은 스크롤 컨테이너를 만들지 않아 세로 visible 과 공존한다)
+          // 카메라 변수를 방 루트에 얹는다. 단일 무대·레거시에는 아무것도 더하지 않는다(위 흰화면 전례 회피).
+          ...(worldActive ? { overflowX: 'clip' as const, ...cam.layerVar, ...worldVars } : null),
           ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
           // 시네마틱 카메라(transform/transition). 평시엔 동결된 빈 객체라 위 값들에 영향이 없다.
           ...cin.roomStyle,
         }}
       >
-        {/* L0 벽지 · L1 바닥재 (stage 테마) / 벽·바닥 블록 + room.webp (레거시) */}
-        <StageLayers stage={activeStage} themeCode={activeCode} slot="ground" />
-        {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
-            mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
-            (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
-            편집 중엔 성능 위해 숨김. 영상 자체를 라운딩(부모 클립 의존 금지 — 흰화면 사고 교훈).
-            파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다. */}
-        {!editing && (
-          <AmbientVideo
-            key={`vid-${activeCode}`}
-            id={`shrine-theme-${activeCode}`}
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none rounded-[17px]"
-            style={{ mixBlendMode: 'lighten', opacity: 0.9 }}
-          />
-        )}
-        {/* 제단 영역 대비용 하단 암전 */}
-        <div
-          className="absolute inset-x-0 bottom-0 h-[38%] rounded-b-[17px]"
-          style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
-        />
-        <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
-        <div
-          className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
-          style={{ top: '77%', width: '64%', height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
-        />
+        {worldActive ? (
+          <>
+            {/* 원경(0.3x) — 하늘·담장 실루엣. 에셋 없이 CSS 그라디언트만으로 깊이를 만든다 */}
+            <div aria-hidden className="absolute inset-y-0 left-0 pointer-events-none" style={farStyle} />
 
-        {/* 좌정한 主神 — 제단 위에 강림 */}
-        {scene.mainDeity?.spriteUrl && (
-          <div
-            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-[3] deity-stand"
-            style={{ bottom: '50%', height: '38%' }}
-          >
-            <div
-              className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
-              style={{
-                bottom: '-6%',
-                width: '86%',
-                height: '20%',
-                background: 'var(--th-glow, rgba(201,168,76,0.28))',
-                filter: 'blur(9px)',
+            {/* 무대층(1.0x) — 구역별 세트 + 대청 한 덩어리 */}
+            <div className="absolute inset-y-0 left-0" style={cam.worldStyle}>
+              {scenery.map((z) => (
+                <div key={z.code} aria-hidden className="absolute inset-y-0 pointer-events-none" style={z.box}>
+                  <StageLayers stage={z.stage} themeCode={activeCode} slot="ground" zoned />
+                  <StageLayers stage={z.stage} themeCode={activeCode} slot="structures" zoned />
+                </div>
+              ))}
+              <div className="absolute inset-y-0" style={daecheongBox}>
+                {stageContent}
+              </div>
+            </div>
+
+            {/* 전경(1.15x) — 대청 문틀 그림자. 카메라보다 빨리 흘러 "안쪽에 서 있다"를 만든다 */}
+            <div aria-hidden className="absolute inset-y-0 left-0 pointer-events-none" style={nearStyle}>
+              <span className="absolute inset-y-0" style={jambStyle('left')} />
+              <span className="absolute inset-y-0" style={jambStyle('right')} />
+            </div>
+          </>
+        ) : (
+          stageContent
+        )}
+
+        {/* 구역 미니맵 — 상단 배지 아래 가운데. 두루마리일 때만 (구역 1개면 스스로 그리지 않는다) */}
+        {worldActive && (
+          <div className="absolute top-[26px] left-1/2 -translate-x-1/2 z-30">
+            <CameraMinimap
+              world={world}
+              camX={cam.camX}
+              onSelect={(x) => {
+                panSource.current = 'user'
+                panTo(x)
               }}
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={scene.mainDeity.spriteUrl}
-              alt={scene.mainDeity.name}
-              className="relative h-full w-auto object-contain"
-              style={{ filter: 'drop-shadow(0 5px 9px rgba(0,0,0,0.5))' }}
-            />
           </div>
         )}
-
-        {/* L2 구조물 (stage 테마) / CSS 제단 박스 (레거시) */}
-        <StageLayers stage={activeStage} themeCode={activeCode} slot="structures" />
-
-        {/* 존 가이드 (편집) */}
-        {editing &&
-          (Object.keys(ZONES) as Array<keyof typeof ZONES>).map((layer) => {
-            const z = ZONES[layer]
-            return (
-              <div
-                key={layer}
-                className="absolute rounded-lg pointer-events-none"
-                style={{
-                  left: `${z.x[0]}%`,
-                  right: `${100 - z.x[1]}%`,
-                  top: `${z.y[0]}%`,
-                  bottom: `${100 - z.y[1]}%`,
-                  border: '1.5px dashed rgba(201,168,76,0.32)',
-                }}
-              >
-                <span className="absolute -top-px left-1.5 text-[8px] tracking-[0.15em] text-gold-300 px-1 rounded-sm bg-black/80">
-                  {ZONE_LABEL[layer]}
-                </span>
-              </div>
-            )
-          })}
-
-        {/* 파티클 이펙트 */}
-        <EffectsCanvas ref={effectsRef} />
-
-        {/* 신당지기 — 좌정한 主神이 겸한다 (초상 오브, 없으면 🔮 폴백) */}
-        <button
-          onClick={onTapKeeper}
-          className="absolute z-[12] text-center"
-          style={{ left: `${KEEPER_POS.x}%`, top: `${KEEPER_POS.y}%` }}
-          aria-label={scene.mainDeity ? `신당지기 ${scene.mainDeity.name}` : '신당지기'}
-        >
-          <div
-            key={bounce}
-            className="w-[38px] h-[38px] rounded-full grid place-items-center text-[19px] shrine-keeper-orb overflow-hidden"
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, var(--th-glow), rgba(0,0,0,0.45))',
-              border: '1px solid var(--th-accent)',
-              boxShadow: '0 0 16px var(--th-glow)',
-            }}
-          >
-            {scene.mainDeity?.portraitUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={scene.mainDeity.portraitUrl}
-                alt=""
-                className="w-full h-full object-cover object-top"
-                draggable={false}
-              />
-            ) : (
-              '🔮'
-            )}
-          </div>
-          <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
-        </button>
-
-        {/* 아이템 */}
-        {placements.map((p) => {
-          const item = catalogById.get(p.catalogItemId)
-          if (!item) return null
-          return (
-            <Sprite
-              key={p.id}
-              placement={p}
-              item={item}
-              editing={editing}
-              anchors={anchors}
-              onTap={() => onTapItem(p)}
-              onRemove={() => onRemove(p)}
-              onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
-              onAnchorHover={onAnchorHover}
-            />
-          )
-        })}
-
-        {/* 조명 오버레이 (§3-C4) — 배경·구조물·아이템이 '같은 빛'을 받게 하는 컬러 그레이딩 한 장.
-            아이템 최상단 밴드(z 29)와 같은 층에 두되 DOM 순서로 위에 얹고, UI 컨트롤(z-30) 아래에 둔다.
-            soft-light: 어두운 방의 톤을 죽이지 않으면서 색만 입힌다(screen 은 대비를 날려 반려). */}
-        <div
-          aria-hidden
-          className="absolute inset-0 rounded-[17px] pointer-events-none shrine-light-overlay"
-          style={{ ...lightOverlay, mixBlendMode: 'soft-light', zIndex: 29 }}
-        />
-
-        {/* 앵커 스냅 하이라이트 (꾸미기) — 골드 링 */}
-        {editing && snapAnchor && (
-          <span
-            aria-hidden
-            className="absolute rounded-full pointer-events-none shrine-anchor-ring"
-            style={{
-              left: `${snapAnchor.x}%`,
-              top: `${snapAnchor.y}%`,
-              width: '34px',
-              height: '34px',
-              marginLeft: '-17px',
-              marginTop: '-17px',
-              border: '2px solid #C9A84C',
-              boxShadow: '0 0 12px rgba(201,168,76,0.55)',
-              zIndex: 29,
-            }}
-          />
-        )}
-
-        {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조.
-            조명 오버레이보다 위(같은 z, 뒤 DOM)라 글이 그레이딩에 흐려지지 않는다. */}
-        {!editing && (
-          <div
-            className="absolute z-[29] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
-            style={{
-              left: '20%',
-              top: '3%',
-              right: '5%',
-              background: oracle ? 'rgba(26,18,6,0.92)' : 'rgba(10,10,8,0.8)',
-              border: oracle ? '1px solid rgba(212,175,55,0.65)' : '1px solid var(--th-accent)',
-              boxShadow: oracle ? '0 0 16px rgba(212,175,55,0.25)' : undefined,
-            }}
-          >
-            <div
-              className="text-[9px] tracking-[0.24em] mb-0.5 flex items-center gap-1"
-              style={{ color: oracle ? '#E8D5A0' : 'var(--th-accent)' }}
-            >
-              {oracle && <span className="text-[8px]">✦ 신탁 ✦</span>}
-              {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
-            </div>
-            <span dangerouslySetInnerHTML={{ __html: bubble }} />
-          </div>
-        )}
-
-        {/* 공명 링 */}
-        {rings.map((r) => (
-          <span
-            key={r.id}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none z-[50] shrine-ring"
-            style={{ left: `${r.x}%`, top: `${r.y}%`, border: `2px solid ${r.color}` }}
-          />
-        ))}
 
         {/* 상단 컨트롤 */}
         {isOwner && (
@@ -1365,7 +1587,11 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
     (e: RPointerEvent<HTMLDivElement>) => {
       if (!editing) return
       e.preventDefault()
+      // 두루마리 카메라와의 3자 조정(ARCH §4) — 아이템에서 시작한 편집 드래그가 룸 팬으로 새면 안 된다.
+      // 팬은 빈 무대에서만. 보기 모드는 여기까지 오지 않으므로 탭 위 팬(관성+클릭 가드)은 그대로 산다.
+      e.stopPropagation()
       const el = ref.current
+      // 두루마리에서는 대청 박스가, 단일 무대에서는 방이 부모다 — 둘 다 좌표계가 뷰포트와 1:1 이라 환산이 같다
       const room = el?.parentElement
       if (!el || !room) return
       dragging.current = true

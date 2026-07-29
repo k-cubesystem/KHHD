@@ -25,8 +25,11 @@ import { GAMEFEEL_V1 } from '@/lib/config/gamefeel'
  */
 
 // ── 타임라인 (ms) ────────────────────────────────────────────
-/** 입장 시네마틱 총 길이 — 첫 진입 / 재방문 축약 */
-const ENTRANCE_MS = { first: 1200, revisit: 500 } as const
+/**
+ * 입장 시네마틱 총 길이 — 첫 진입 / 재방문 축약.
+ * 두루마리(안2) 입장 팬이 같은 길이로 붙어야 "대문으로 들어와 대청에 선다"가 한 동작으로 읽힌다 → export.
+ */
+export const ENTRANCE_MS = { first: 1200, revisit: 500 } as const
 /** 입장 구간 비율 — 암전 해제 / 빛줄기 상승 / 빛줄기 감쇠 시작점 */
 const ENTRANCE_RATIO = { dimOut: 0.62, bloomUp: 0.42, bloomFadeAt: 0.45 } as const
 /** 기도 의식 마디 (t0 암전 → 점화 → 절정 → 해제 → 종료) */

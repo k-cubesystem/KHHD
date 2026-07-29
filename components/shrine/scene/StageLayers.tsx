@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 무대(舞臺) 배경 레이어 — 신당 꾸미기 v2 「조립식 무대」 §3-A.
+ * 무대(舞臺) 배경 레이어 — 신당 꾸미기 v2 「조립식 무대」 §3-A + 게임필 2차 두루마리 구역(ARCH §1).
  *
  * 서버 의존 없는 순수 표현 컴포넌트. 활성 테마의 `stage` 유무로 렌더가 갈린다.
  *  - stage 있음 : L0 벽지 → L1 바닥재 → L2 구조물(제단·선반)을 조립해 그린다.
@@ -12,6 +12,9 @@
  * paint 순서를 보존하려고 slot 으로 두 번 렌더된다:
  *  - 'ground'     신위 스탠드보다 뒤 — 벽지·바닥재 (레거시: 벽 블록·바닥 블록·room.webp)
  *  - 'structures' 하단 암전·글로우보다 앞, 신위 스탠드(z-3)보다 뒤(z-auto) — 제단 등 구조물
+ *
+ * `zoned` 는 두루마리 구역(마당·대청·후원) 안에서 쓰는 모드다. 방 모서리에 붙지 않으므로
+ * 라운딩을 끄고, 에셋이 없는 구역도 구멍이 나지 않게 벽·바닥 CSS 폴백을 항상 깐다.
  */
 
 import type { SyntheticEvent } from 'react'
@@ -23,6 +26,8 @@ interface Props {
   /** 레거시 room.webp 경로 키 (= 테마 코드) */
   themeCode: string
   slot: 'ground' | 'structures'
+  /** 두루마리 구역 안에서의 렌더 (라운딩 끔 + 벽·바닥 CSS 폴백) */
+  zoned?: boolean
 }
 
 /** 404·로드 실패 시 조용히 숨겨 아래 폴백(그라디언트/다크 배경)이 드러나게 한다. */
@@ -30,8 +35,62 @@ function hideOnError(e: SyntheticEvent<HTMLImageElement>) {
   e.currentTarget.style.display = 'none'
 }
 
-export function StageLayers({ stage, themeCode, slot }: Props) {
+/**
+ * L0 벽지 — 방 상단. 하단 바닥재와 살짝 겹쳐(62%+40%) 이음새 틈을 없앤다.
+ * 구역 모드(zoned)에서는 방 모서리에 붙지 않으므로 라운딩을 끄고, 뷰포트 밖 구역의 와이드 벽지를
+ * 첫 페인트에 끌고 오지 않도록 지연 로드한다(ARCH §5).
+ */
+function Wallpaper({ url, zoned }: { url: string; zoned: boolean }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      aria-hidden
+      draggable={false}
+      decoding="async"
+      loading={zoned ? 'lazy' : undefined}
+      className={`absolute inset-x-0 top-0 h-[62%] w-full object-cover pointer-events-none select-none${
+        zoned ? '' : ' rounded-t-[17px]'
+      }`}
+      onError={hideOnError}
+    />
+  )
+}
+
+/** L1 바닥재 — 방 하단 (라운딩·지연 로드 규약은 벽지와 같다) */
+function Flooring({ url, zoned }: { url: string; zoned: boolean }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      aria-hidden
+      draggable={false}
+      decoding="async"
+      loading={zoned ? 'lazy' : undefined}
+      className={`absolute inset-x-0 bottom-0 h-[40%] w-full object-cover pointer-events-none select-none${
+        zoned ? '' : ' rounded-b-[17px]'
+      }`}
+      onError={hideOnError}
+    />
+  )
+}
+
+export function StageLayers({ stage, themeCode, slot, zoned = false }: Props) {
   if (slot === 'ground') {
+    if (zoned) {
+      return (
+        <>
+          {/* 벽·바닥 CSS 폴백 — 에셋 없는 구역(하늘만 있는 마당 등)도 구멍 없이 성립한다.
+              벽지·바닥재가 있으면 그 아래 깔릴 뿐이라 보이지 않는다. */}
+          <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
+          <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
+          {stage?.wallpaperUrl && <Wallpaper key={`wall-${stage.wallpaperUrl}`} url={stage.wallpaperUrl} zoned />}
+          {stage?.flooringUrl && <Flooring key={`floor-${stage.flooringUrl}`} url={stage.flooringUrl} zoned />}
+        </>
+      )
+    }
     if (!stage) {
       return (
         <>
@@ -61,45 +120,17 @@ export function StageLayers({ stage, themeCode, slot }: Props) {
     }
     return (
       <>
-        {/* L0 벽지 — 방 상단. 하단 바닥재와 살짝 겹쳐(62%+40%) 이음새 틈을 없앤다.
-            URL 이 없으면(부분 무대) 그리지 않고 방 배경색이 그대로 드러난다. */}
-        {stage.wallpaperUrl && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              key={`wall-${stage.wallpaperUrl}`}
-              src={stage.wallpaperUrl}
-              alt=""
-              aria-hidden
-              draggable={false}
-              decoding="async"
-              className="absolute inset-x-0 top-0 h-[62%] w-full object-cover pointer-events-none select-none rounded-t-[17px]"
-              onError={hideOnError}
-            />
-          </>
-        )}
-        {/* L1 바닥재 — 방 하단 */}
-        {stage.flooringUrl && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              key={`floor-${stage.flooringUrl}`}
-              src={stage.flooringUrl}
-              alt=""
-              aria-hidden
-              draggable={false}
-              decoding="async"
-              className="absolute inset-x-0 bottom-0 h-[40%] w-full object-cover pointer-events-none select-none rounded-b-[17px]"
-              onError={hideOnError}
-            />
-          </>
-        )}
+        {/* URL 이 없으면(부분 무대) 그리지 않고 방 배경색이 그대로 드러난다. */}
+        {stage.wallpaperUrl && <Wallpaper key={`wall-${stage.wallpaperUrl}`} url={stage.wallpaperUrl} zoned={false} />}
+        {stage.flooringUrl && <Flooring key={`floor-${stage.flooringUrl}`} url={stage.flooringUrl} zoned={false} />}
       </>
     )
   }
 
   // ── slot === 'structures' ──
   if (!stage) {
+    // 두루마리 구역에는 레거시 CSS 제단을 세우지 않는다 (구역은 stage 계약 위에서만 산다)
+    if (zoned) return <></>
     // 레거시 제단 (CSS 박스) — 원본 그대로
     return (
       <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '47%', width: '62%', height: '20%' }}>

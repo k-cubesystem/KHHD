@@ -472,6 +472,12 @@ export interface StagePlacement extends Placement {
 /** v2 테마 — 조립식 무대 스펙 추가 (null 이면 레거시 room.webp 렌더) */
 export interface StageThemePack extends ThemePack {
   stage: StageSpec | null
+  /**
+   * `stage` jsonb 원본. StageSpec 은 단일 무대 4필드만 담아서 두루마리 `zones` 가 여기서 걸러진다 —
+   * 구역 파싱(`parseWorld(stage, stageRaw)`)은 원본이 있어야 성립한다.
+   * 서버에서 온 미지의 값이므로 반드시 파서를 거쳐 쓴다(unknown 유지 — 캐스팅 금지).
+   */
+  stageRaw?: unknown
 }
 
 /** v2 씬 데이터 — SceneData 를 필드 단위로 좁힌 것이라 기존 소비처와 호환된다 */
