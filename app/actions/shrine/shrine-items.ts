@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { addBokPoints } from '@/lib/services/bok-grant'
+import { deductBokPoints } from '@/app/actions/payment/bok-points'
 
 export interface CatalogItem {
   id: string
@@ -55,13 +55,13 @@ export async function placeItem(input: {
 
   // 복 포인트 결제 (무료 아이템은 0포인트)
   if (catalogItem.price_bok_points > 0) {
-    const result = await addBokPoints(
-      -catalogItem.price_bok_points,
+    const result = await deductBokPoints(
+      catalogItem.price_bok_points,
       'SHRINE_ITEM_PURCHASE',
       undefined,
       `${catalogItem.name} 구매`
     )
-    if (!result.success) return { success: false, error: 'INSUFFICIENT_POINTS' }
+    if (!result.success) return { success: false, error: result.error ?? 'INSUFFICIENT_POINTS' }
   }
 
   // 슬롯에 아이템 배치 (기존 슬롯 교체 포함)
