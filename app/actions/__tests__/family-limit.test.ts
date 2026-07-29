@@ -1,4 +1,4 @@
-import { addFamilyMember } from '../user/family'
+import { addFamilyMember, updateFamilyMember } from '../user/family'
 import { canAddRelationship } from '../payment/membership'
 import { createClient } from '@/lib/supabase/server'
 
@@ -21,14 +21,20 @@ jest.mock('next/cache', () => ({
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 const mockCanAddRelationship = canAddRelationship as jest.MockedFunction<typeof canAddRelationship>
 
-function buildFormData(): FormData {
+function buildFormData(overrides: Record<string, string> = {}): FormData {
   const formData = new FormData()
-  formData.append('name', '홍길동')
-  formData.append('relationship', '자녀')
-  formData.append('birth_date', '2010-05-01')
-  formData.append('birth_time', 'unknown')
-  formData.append('calendar_type', 'solar')
-  formData.append('gender', 'male')
+  const fields: Record<string, string> = {
+    name: '홍길동',
+    relationship: '자녀',
+    birth_date: '2010-05-01',
+    birth_time: 'unknown',
+    calendar_type: 'solar',
+    gender: 'male',
+    ...overrides,
+  }
+  for (const [key, value] of Object.entries(fields)) {
+    formData.append(key, value)
+  }
   return formData
 }
 
@@ -89,6 +95,56 @@ describe('addFamilyMember 인연 등록 한도', () => {
 
     await expect(addFamilyMember(buildFormData())).rejects.toThrow()
     expect(mockSupabase.from).not.toHaveBeenCalled()
+  })
+})
+
+describe('가족 음력 윤달(is_leap_month) 저장', () => {
+  const insert = jest.fn()
+  const update = jest.fn()
+  const updateEqId = jest.fn()
+  const updateEqUser = jest.fn()
+
+  beforeEach(() => {
+    mockCanAddRelationship.mockResolvedValue({ allowed: true, current: 0, limit: 3 })
+    insert.mockResolvedValue({ error: null })
+    updateEqUser.mockResolvedValue({ error: null })
+    updateEqId.mockReturnValue({ eq: updateEqUser })
+    update.mockReturnValue({ eq: updateEqId })
+    mockCreateClient.mockResolvedValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }) },
+      from: jest.fn(() => ({ insert, update })),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('음력 + 윤달 체크는 is_leap_month: true 로 등록된다', async () => {
+    await addFamilyMember(buildFormData({ calendar_type: 'lunar', is_leap_month: 'true' }))
+
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({ calendar_type: 'lunar', is_leap_month: true })])
+  })
+
+  it('음력이라도 윤달 미체크면 false 로 등록된다', async () => {
+    await addFamilyMember(buildFormData({ calendar_type: 'lunar', is_leap_month: 'false' }))
+
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({ calendar_type: 'lunar', is_leap_month: false })])
+  })
+
+  it('양력이면 윤달 값이 실려 와도 false 로 정규화된다 — 본인(profiles) 경로와 동일 규약', async () => {
+    await addFamilyMember(buildFormData({ calendar_type: 'solar', is_leap_month: 'true' }))
+
+    expect(insert).toHaveBeenCalledWith([expect.objectContaining({ calendar_type: 'solar', is_leap_month: false })])
+  })
+
+  it('수정 경로도 윤달을 저장한다', async () => {
+    await updateFamilyMember(buildFormData({ id: 'member-1', calendar_type: 'lunar', is_leap_month: 'true' }))
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ calendar_type: 'lunar', is_leap_month: true }))
+    expect(updateEqId).toHaveBeenCalledWith('id', 'member-1')
+    expect(updateEqUser).toHaveBeenCalledWith('user_id', 'user-1')
   })
 })
 

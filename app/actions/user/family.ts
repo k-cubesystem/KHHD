@@ -8,6 +8,19 @@ import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/app/actions/payment/bok-points'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 
+/**
+ * 달력 종류와 윤달 여부를 FormData 에서 읽는다.
+ * 윤달은 음력일 때만 유효 — 양력이면 항상 false 로 정규화한다(본인 경로 saveProfile·saveSelfFamilyMember 와 동일 규약).
+ * family_members.is_leap_month 는 NOT NULL DEFAULT false 이므로 null 대신 false 를 쓴다.
+ */
+function readCalendarFields(formData: FormData): { calendarType: string; isLeapMonth: boolean } {
+  const calendarType = formData.get('calendar_type') as string // 'solar' | 'lunar'
+  return {
+    calendarType,
+    isLeapMonth: calendarType === 'lunar' && formData.get('is_leap_month') === 'true',
+  }
+}
+
 export async function getFamilyMembers() {
   if (isEdgeEnabled('user')) {
     return invokeEdgeSafe('user', { action: 'getFamilyMembers' })
@@ -97,13 +110,16 @@ export async function addFamilyMember(formData: FormData) {
   // "unknown"이면 null로 저장, 그 외에는 시간값 저장
   const birthTime = birthTimeRaw === 'unknown' || !birthTimeRaw ? null : birthTimeRaw
 
+  const { calendarType, isLeapMonth } = readCalendarFields(formData)
+
   const rawData = {
     user_id: user.id,
     name: formData.get('name') as string,
     relationship: formData.get('relationship') as string,
     birth_date: formData.get('birth_date') as string,
     birth_time: birthTime,
-    calendar_type: formData.get('calendar_type') as string, // 'solar' | 'lunar'
+    calendar_type: calendarType,
+    is_leap_month: isLeapMonth,
     gender: formData.get('gender') as string,
     job: formData.get('job') as string,
     hobby: formData.get('hobby') as string,
@@ -146,12 +162,15 @@ export async function updateFamilyMember(formData: FormData) {
   const birthTimeRaw = formData.get('birth_time') as string
   const birthTime = birthTimeRaw === 'unknown' || !birthTimeRaw ? null : birthTimeRaw
 
+  const { calendarType, isLeapMonth } = readCalendarFields(formData)
+
   const rawData = {
     name: formData.get('name') as string,
     relationship: formData.get('relationship') as string,
     birth_date: formData.get('birth_date') as string,
     birth_time: birthTime,
-    calendar_type: formData.get('calendar_type') as string,
+    calendar_type: calendarType,
+    is_leap_month: isLeapMonth,
     gender: formData.get('gender') as string,
     job: formData.get('job') as string,
     hobby: formData.get('hobby') as string,

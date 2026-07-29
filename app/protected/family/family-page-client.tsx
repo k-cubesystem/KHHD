@@ -10,6 +10,7 @@ import { BokUpsellModal } from '@/components/shared/bok-upsell-modal'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,10 +29,51 @@ interface EditingMember {
   birth_date: string
   birth_time: string
   calendar_type: string
+  is_leap_month: boolean
   gender: string
   job?: string
   hobby?: string
   avatar_id?: string
+}
+
+/**
+ * 달력 종류 + 윤달. 윤달 체크는 음력을 고른 순간에만 노출한다(본인 설정 폼과 동일 규약).
+ * 값은 hidden input 으로 실어 보낸다 — 서버는 'true' 만 참으로 읽고, 양력이면 무시하고 false 로 저장한다.
+ */
+function CalendarFields({
+  defaultCalendarType,
+  defaultIsLeapMonth,
+}: {
+  defaultCalendarType: string
+  defaultIsLeapMonth: boolean
+}) {
+  const [calendarType, setCalendarType] = useState(defaultCalendarType)
+  const [isLeapMonth, setIsLeapMonth] = useState(defaultIsLeapMonth)
+
+  return (
+    <div className="space-y-1.5">
+      <Select name="calendar_type" value={calendarType} onValueChange={setCalendarType}>
+        <SelectTrigger className="bg-black/30 border-white/10">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="solar">양력</SelectItem>
+          <SelectItem value="lunar">음력</SelectItem>
+        </SelectContent>
+      </Select>
+      {calendarType === 'lunar' && (
+        <label className="flex items-center gap-1.5 pt-0.5 cursor-pointer">
+          <Checkbox
+            checked={isLeapMonth}
+            onCheckedChange={(v) => setIsLeapMonth(v === true)}
+            className="border-gold-500/60"
+          />
+          <span className="text-[11px] font-light text-ink-light/70">윤달(閏月)</span>
+          <input type="hidden" name="is_leap_month" value={isLeapMonth ? 'true' : 'false'} />
+        </label>
+      )}
+    </div>
+  )
 }
 
 interface FamilyPageClientProps {
@@ -114,6 +156,7 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
       birth_date: member.birth_date,
       birth_time: member.birth_time || '00:00',
       calendar_type: member.calendar_type,
+      is_leap_month: member.is_leap_month === true,
       gender: member.gender,
       job: member.job,
       hobby: member.hobby,
@@ -319,16 +362,12 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Select name="calendar_type" defaultValue={editingMember?.calendar_type || 'solar'}>
-                    <SelectTrigger className="bg-black/30 border-white/10">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="solar">양력</SelectItem>
-                      <SelectItem value="lunar">음력</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3 items-start">
+                  <CalendarFields
+                    key={editingMember?.id ?? 'new'}
+                    defaultCalendarType={editingMember?.calendar_type || 'solar'}
+                    defaultIsLeapMonth={editingMember?.is_leap_month ?? false}
+                  />
                   <Select name="gender" defaultValue={editingMember?.gender || 'male'}>
                     <SelectTrigger className="bg-black/30 border-white/10">
                       <SelectValue />

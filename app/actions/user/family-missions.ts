@@ -11,6 +11,7 @@ export interface FamilyMemberWithMissions {
   birth_date: string
   birth_time: string | null
   calendar_type: string
+  is_leap_month?: boolean
   gender: string
   job?: string
   hobby?: string
@@ -52,7 +53,19 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
     })
 
     if (!error && data) {
-      return (data as FamilyMemberWithMissions[]).map(withFamilyMissionCount)
+      const rows = (data as FamilyMemberWithMissions[]).map(withFamilyMissionCount)
+
+      // RPC 반환 컬럼에 is_leap_month 가 없다 — 원본 테이블에서 보강한다.
+      // 이게 없으면 수정 폼이 윤달을 항상 해제 상태로 프리필해 저장 시 값이 지워진다(월주 오계산).
+      const { data: leapRows } = await supabase
+        .from('family_members')
+        .select('id, is_leap_month')
+        .eq('user_id', user.id)
+
+      if (!leapRows) return rows
+
+      const leapById = new Map<string, boolean>(leapRows.map((row) => [row.id as string, row.is_leap_month === true]))
+      return rows.map((member) => ({ ...member, is_leap_month: leapById.get(member.id) ?? false }))
     }
 
     // If RPC fails, use fallback query
@@ -94,6 +107,7 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
           birth_date: member.birth_date,
           birth_time: member.birth_time,
           calendar_type: member.calendar_type,
+          is_leap_month: member.is_leap_month === true,
           gender: member.gender,
           job: member.job,
           hobby: member.hobby,
