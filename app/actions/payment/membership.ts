@@ -98,6 +98,16 @@ export async function canAddRelationship(): Promise<{
 
   const currentCount = count || 0
 
+  // 마스터는 getUserTierLimits 의 admin 분기(UNLIMITED_TIER_LIMITS)로 여기 도달 —
+  // 999 를 상한이 아니라 무제한으로 해석한다(canStoreResult 와 동일 규약).
+  if (relationshipLimit >= UNLIMITED_TIER_LIMITS.relationship_limit) {
+    return {
+      allowed: true,
+      current: currentCount,
+      limit: relationshipLimit,
+    }
+  }
+
   if (currentCount >= relationshipLimit) {
     const upgradeMessage = limits?.is_subscribed
       ? '더 높은 등급으로 업그레이드하여 더 많은 인연의 복을 관리하세요.'

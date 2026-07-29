@@ -1,0 +1,20 @@
+-- ============================================
+-- check_relationship_limit() 제거 (dead code 정리)
+-- ============================================
+--
+-- 배경
+--   payment/04_membership_tiers.sql 이 정의했지만 앱·트리거·RLS 어디서도 호출하지 않는
+--   완전한 dead code 였다. "DB 에 한도 방어가 있다"는 착시만 만들고 실제로는 아무것도 막지 않았다.
+--
+-- 트리거로 승격하지 않고 삭제하는 이유
+--   1) 역할을 모른다. get_user_tier() 는 subscriptions 만 조회하므로 마스터(admin)·테스터가
+--      무조건 무구독 기본값 3명으로 막힌다. 마스터 무제한의 단일 기준은 lib/auth/privileges.ts 이고
+--      (project_master_privileges), SQL 에 role 분기를 새로 만드는 것은 그 기준을 흩뿌리는 일이다.
+--   2) '본인' 레코드를 구분하지 못한다. 이미 한도를 넘겨 등록해 둔 기존 유저가 프로필을 저장하면
+--      saveSelfFamilyMember() 의 '본인' 레코드 생성까지 트리거에 막혀 온보딩이 깨진다.
+--
+-- 실제 방어선
+--   app/actions/user/family.ts → addFamilyMember() 가 insert 전에 canAddRelationship() 으로 검증한다.
+--   기존 초과 등록 데이터는 건드리지 않는다(신규 등록만 차단).
+--
+DROP FUNCTION IF EXISTS public.check_relationship_limit(uuid);

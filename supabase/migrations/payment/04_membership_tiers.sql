@@ -242,27 +242,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 인연 한도 체크
-CREATE OR REPLACE FUNCTION check_relationship_limit(p_user_id uuid)
-RETURNS boolean AS $$
-DECLARE
-    v_limit integer;
-    v_count integer;
-BEGIN
-    SELECT relationship_limit INTO v_limit
-    FROM get_user_tier(p_user_id);
-
-    IF v_limit IS NULL THEN
-        v_limit := 3;
-    END IF;
-
-    SELECT COUNT(*) INTO v_count
-    FROM public.family_members
-    WHERE user_id = p_user_id;
-
-    RETURN (v_count < v_limit);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- 인연 한도 체크 함수(check_relationship_limit)는 제거됨 — 20260720_drop_check_relationship_limit.sql 참고.
+-- 구독 플랜만 보고 판정해서 마스터(admin)·테스터 역할을 알지 못했고, 호출처 0건인 dead code 였다.
+-- 한도 판정 단일 기준은 lib/auth/privileges.ts → getUserTierLimits() → canAddRelationship() 이다.
 
 -- 30일 지난 로그 자동 정리
 CREATE OR REPLACE FUNCTION cleanup_old_usage_logs()

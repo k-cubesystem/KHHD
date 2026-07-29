@@ -61,6 +61,15 @@ const eslintConfig = [
       "react-hooks/rules-of-hooks": "off",
     },
   },
+  {
+    // 파티클 엔진의 spawn/spawnAura 는 Math.random() 으로 입자를 흩뿌리는 게 존재 이유다.
+    // 두 함수는 useImperativeHandle 메서드와 rAF 루프에서만 호출되고 렌더 중엔 실행되지 않는데,
+    // 컴파일러가 그걸 증명하지 못해 38건을 purity 위반으로 오탐한다.
+    files: ["components/shrine/scene/EffectsCanvas.tsx"],
+    rules: {
+      "react-hooks/purity": "off",
+    },
+  },
 ];
 
 export default eslintConfig;

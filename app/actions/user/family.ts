@@ -6,6 +6,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/app/actions/payment/bok-points'
+import { canAddRelationship } from '@/app/actions/payment/membership'
 
 export async function getFamilyMembers() {
   if (isEdgeEnabled('user')) {
@@ -71,6 +72,14 @@ export async function getFamilyMembers() {
 }
 
 export async function addFamilyMember(formData: FormData) {
+  // 티어 한도 검증 — Edge 분기보다 먼저 둔다. UI 가드(family-page-client)는 우회 가능하므로
+  // 서버 액션이 최종 방어선이다. 마스터는 getUserTierLimits 의 admin 분기로 통과한다.
+  const limitCheck = await canAddRelationship()
+  if (!limitCheck.allowed) {
+    logger.warn(`인연 등록 한도 초과 차단: ${limitCheck.current}/${limitCheck.limit}`)
+    throw new Error(limitCheck.message ?? '인연 등록 한도에 도달했습니다.')
+  }
+
   if (isEdgeEnabled('user')) {
     await invokeEdgeSafe('user', { action: 'addFamilyMember', formData })
     return

@@ -44,9 +44,9 @@ function runCommand(command, silent = false) {
       encoding: 'utf8',
       stdio: silent ? 'pipe' : 'inherit',
     })
-    return { success: true, output }
+    return { success: true, output, status: 0 }
   } catch (error) {
-    return { success: false, error: error.message }
+    return { success: false, error: error.message, status: error.status ?? 1 }
   }
 }
 
@@ -95,11 +95,24 @@ async function main() {
 
   log('ESLint 검사 실행 중...', 'yellow')
   const lintResult = runCommand('npm run lint', true)
-  checkItem('ESLint 검사', lintResult.success, lintResult.success ? '통과' : '경고 있음 (배포 가능)')
 
-  // ESLint 실패는 배포를 막지 않음 (경고만)
-  if (!lintResult.success) {
-    log('   일부 Lint 경고가 있지만 배포는 가능합니다.', 'yellow')
+  // ESLint 종료코드: 1 = 린트 위반, 2 = 설정 로드 실패 등 치명적 오류.
+  // 둘을 구분하지 않으면 lint 자체가 죽어 아무것도 검사하지 않는 상태가
+  // "경고 있음(배포 가능)" 으로 표시돼 조용히 넘어간다 — 실제로 그렇게 방치된 적이 있다.
+  const lintBroken = !lintResult.success && lintResult.status >= 2
+
+  if (lintBroken) {
+    checkItem('ESLint 검사', false, '실행 실패 — 검사되지 않음')
+    log('   ESLint 가 설정 오류로 실행되지 못했습니다. 린트 결과가 없습니다.', 'yellow')
+    log('   `npm run lint` 를 직접 실행해 원인을 확인하세요.', 'yellow')
+    allPassed = false
+  } else {
+    checkItem('ESLint 검사', lintResult.success, lintResult.success ? '통과' : '경고 있음 (배포 가능)')
+
+    // 린트 위반은 배포를 막지 않음 (경고만)
+    if (!lintResult.success) {
+      log('   일부 Lint 경고가 있지만 배포는 가능합니다.', 'yellow')
+    }
   }
 
   // 5. 프로덕션 빌드
