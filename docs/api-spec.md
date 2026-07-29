@@ -102,7 +102,6 @@ Generate daily fortune for all active subscribers + send KakaoTalk notifications
 | `reactivateSubscription()`                       | Reactivate cancelled subscription         |
 | `getWalletBalance()`                             | Get user's bokchae balance                |
 | `deductTalismans(cost, featureKey)`              | Deduct bokchae for feature usage          |
-| `addTalismans(amount, type, description)`        | Add bokchae to wallet                     |
 | `getMembershipPlans()`                           | Get active membership plans               |
 | `getSubscriptionStatus()`                        | Check user's subscription status          |
 

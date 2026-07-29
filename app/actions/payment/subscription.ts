@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { addTalismans } from './wallet'
+import { addTalismans } from '@/lib/services/wallet-grant'
 import { createServerClient } from '@supabase/ssr'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'

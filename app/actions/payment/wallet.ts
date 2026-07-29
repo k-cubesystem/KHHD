@@ -10,7 +10,6 @@ import { getUserRole } from '@/lib/supabase/helpers'
 import { computeSpendPlan } from '@/lib/domain/payment/spend-plan'
 import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
-import { rateLimit } from '@/lib/utils/rate-limit'
 
 /** 오늘 일일 한도 소비량(무료분만 카운트) */
 async function getUsedToday(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<number> {
@@ -373,105 +372,10 @@ export async function refundStudioCost(featureKey: string): Promise<{ refunded: 
   return { refunded: true, amount }
 }
 
-/**
- * Add talismans to user wallet (for payments)
- */
-export async function addTalismans(
-  amount: number,
-  type: 'CHARGE' | 'BONUS' | 'SUBSCRIPTION' = 'CHARGE',
-  description?: string
-): Promise<{ success: boolean; error?: string }> {
-  if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'addTalismans', amount, type, description })
-  }
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) return { success: false, error: '로그인이 필요합니다.' }
-
-  // Rate limit(S-1): 복채 발행 버스트 방어 — 유저당 분당 10회.
-  // 정상 경로(결제 승인·구독 첫결제)는 건당 1회이므로 한도에 닿지 않는다.
-  const rl = await rateLimit(`wallet-charge:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
-  if (!rl.success) {
-    logger.warn('[Wallet] addTalismans rate limit exceeded:', { userId: user.id })
-    return { success: false, error: '충전 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
-  }
-
-  // 복채 발행(잔액 증액)은 service_role 전용 — 인증(위)을 통과한 본인 계정에만.
-  const admin = createAdminClient()
-
-  // Atomic balance increment via RPC — prevents race conditions
-  const { error: rpcError } = await admin.rpc('add_wallet_balance', {
-    p_user_id: user.id,
-    p_amount: amount,
-  })
-
-  if (rpcError) {
-    logger.error('[Wallet] add_wallet_balance RPC failed, using fallback:', rpcError)
-    // Fallback: upsert with increment — still better than read-then-write
-    const { error: upsertError } = await admin
-      .from('wallets')
-      .upsert({ user_id: user.id, balance: amount }, { onConflict: 'user_id' })
-    if (upsertError) {
-      return { success: false, error: '복채 충전 중 오류가 발생했습니다.' }
-    }
-  }
-
-  // Log transaction
-  await supabase.from('wallet_transactions').insert({
-    user_id: user.id,
-    amount: amount,
-    type: type,
-    description: description || `복채 ${amount}만냥 충전`,
-  })
-
-  return { success: true }
-}
-
-/**
- * 회원가입 축하 50만냥 지급 (관리자 권한으로 실행)
- * - 중복 지급 방지: SIGNUP_BONUS feature_key로 체크
- */
-export async function grantSignupBonus(userId: string): Promise<void> {
-  const adminClient = createAdminClient()
-
-  // 중복 지급 체크
-  const { data: existing } = await adminClient
-    .from('wallet_transactions')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('feature_key', 'SIGNUP_BONUS')
-    .maybeSingle()
-
-  if (existing) return // 이미 지급됨
-
-  const SIGNUP_AMOUNT = 50 // 50만냥
-
-  // 트랜잭션 로그 먼저 삽입 (중복 방지)
-  const { error: txError } = await adminClient.from('wallet_transactions').insert({
-    user_id: userId,
-    amount: SIGNUP_AMOUNT,
-    type: 'BONUS',
-    feature_key: 'SIGNUP_BONUS',
-    description: `신규 회원 가입 축하 복채 ${SIGNUP_AMOUNT}만냥 증정`,
-  })
-
-  if (txError) return // 중복 삽입 시 조용히 종료
-
-  // 지갑 잔액 업데이트
-  const { data: wallet } = await adminClient.from('wallets').select('balance').eq('user_id', userId).maybeSingle()
-
-  const currentBalance = wallet?.balance ?? 0
-  const newBalance = currentBalance + SIGNUP_AMOUNT
-
-  if (wallet) {
-    await adminClient.from('wallets').update({ balance: newBalance }).eq('user_id', userId)
-  } else {
-    await adminClient.from('wallets').insert({ user_id: userId, balance: newBalance })
-  }
-}
+// 복채 발행(addTalismans)·가입 보너스(grantSignupBonus)는 여기서 export 하지 않는다.
+// `'use server'` 파일의 export 는 전부 로그인 유저가 직접 호출 가능한 공개 엔드포인트가
+// 되므로, 결제 검증 없이 임의 금액을 발행할 수 있게 된다(S-P0).
+// → 서버 전용 모듈 `lib/services/wallet-grant.ts` 로 이관(결제 승인·구독 첫결제·가입 인증만 호출).
 
 /**
  * Get wallet transaction history

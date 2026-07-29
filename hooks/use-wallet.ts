@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getWalletBalance, deductTalisman, addTalismans } from '@/app/actions/payment/wallet'
+import { getWalletBalance, deductTalisman } from '@/app/actions/payment/wallet'
 
 export const WALLET_BALANCE_KEY = ['wallet', 'balance']
 
@@ -27,13 +27,7 @@ export function useDeductTalisman() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({
-      featureKey,
-      customAmount,
-    }: {
-      featureKey: string
-      customAmount?: number
-    }) => {
+    mutationFn: async ({ featureKey, customAmount }: { featureKey: string; customAmount?: number }) => {
       return await deductTalisman(featureKey, customAmount)
     },
     onMutate: async ({ customAmount }) => {
@@ -69,20 +63,6 @@ export function useDeductTalisman() {
   })
 }
 
-/**
- * Talisman 추가 훅
- * - 자동 캐시 갱신
- */
-export function useAddTalisman() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (amount: number) => {
-      return await addTalismans(amount)
-    },
-    onSuccess: () => {
-      // 캐시 무효화하여 최신 잔액 가져오기
-      queryClient.invalidateQueries({ queryKey: WALLET_BALANCE_KEY })
-    },
-  })
-}
+// 복채 충전 훅(useAddTalisman)은 제거됨 — 복채 발행은 클라이언트에서 호출할 수 없다.
+// 충전은 결제 승인(confirmPayment) 결과로만 일어나며, 잔액 갱신은 WALLET_BALANCE_KEY
+// invalidate 로 처리한다.

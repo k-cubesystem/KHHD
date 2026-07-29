@@ -13,13 +13,14 @@ jest.mock('@/lib/supabase/admin', () => ({
   createAdminClient: jest.fn(),
 }))
 
-// wallet 은 next/cache 를 끌고 오므로(jsdom 미지원) 대역으로 대체한다.
-jest.mock('@/app/actions/payment/wallet', () => ({
+// 복채 발행은 서버 전용 모듈(lib/services/wallet-grant)에 있다 — jsdom 에서 못 도는
+// 서버 의존(next/headers 등)을 끌고 오므로 대역으로 대체한다.
+jest.mock('@/lib/services/wallet-grant', () => ({
   addTalismans: jest.fn(async () => ({ success: true })),
 }))
 
 import { confirmPayment } from '../payment/payment'
-import { addTalismans } from '../payment/wallet'
+import { addTalismans } from '@/lib/services/wallet-grant'
 
 const mockRateLimit = rateLimit as jest.MockedFunction<typeof rateLimit>
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>

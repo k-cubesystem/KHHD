@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
-import { grantSignupBonus } from '@/app/actions/payment/wallet'
+import { grantSignupBonus } from '@/lib/services/wallet-grant'
 import { processReferralBonus } from '@/app/actions/user/referral'
 import { logger } from '@/lib/utils/logger'
 import { rateLimitByIp } from '@/lib/utils/rate-limit'
