@@ -30,6 +30,9 @@ import {
   type StagePlacement,
   type StageSceneData,
 } from '@/lib/domain/shrine/stage'
+import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
+import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
+import { GAMEFEEL_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import {
   greetingFor,
   personalGreeting,
@@ -40,9 +43,11 @@ import {
   resonanceLine,
   idleLine,
   anchorLine,
+  prayerLine,
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
+import { useCinematics, GamefeelStyles } from './useCinematics'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
@@ -59,6 +64,49 @@ import { trackEvent } from '@/lib/analytics/ga4'
 
 /** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
 const FLAME_Y_OFFSET = 5
+
+/** 좌정 主神 몸통 — 시그니처 aura 방출 기준점 */
+const DEITY_POS = { x: 50, y: 42 } as const
+/** 기도 절정의 반짝임 — 제단 상판 */
+const PRAYER_SPARKLE_POS = { x: 50, y: 52 } as const
+/** 낮밤 광원 갱신 주기. 위상 전이는 ±1h 에 걸쳐 있어 분 단위면 충분하다. */
+const SCENE_CLOCK_MS = 60_000
+/** 향로 상시 연기 — 방출 주기와 동시 개수 상한(ARCH §5 상시 이미터 3개 상한) */
+const SMOKE_INTERVAL_MS = 2600
+const SMOKE_MAX = 3
+/** 입장 시네마틱 1회성 판정 — 탭 세션 동안만 유지(새 탭은 다시 첫 진입) */
+const ENTRANCE_SEEN_KEY = 'shrine_gamefeel_seen'
+/** 탭 반응 클래스 — 게이트 오프면 v2 흔들림으로 되돌아간다 */
+const TAP_CLASS = GAMEFEEL_V1 ? 'shrine-tap-squash' : 'shrine-item-wiggle'
+
+/** CSS 사용자 정의 속성은 CSSProperties 에 없다 — 교차 타입으로 좁혀 any 를 피한다. */
+type CssVars = CSSProperties & Record<`--${string}`, string>
+
+/**
+ * 이 기기의 연출 등급. navigator 는 마운트 후에만 있으므로 렌더 중 호출 금지.
+ * 프레임 실측(avgFps)은 rAF 상주 루프가 필요해 안1 범위 밖 — 메모리만으로 판정한다.
+ */
+function readEffectsTier(): EffectsTier {
+  if (typeof navigator === 'undefined') return 'full'
+  const dm = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null
+  return effectsTier(dm, null)
+}
+
+/** sessionStorage 는 프라이빗 모드에서 던진다 — 실패해도 연출은 첫 진입 길이로 정상 재생된다. */
+function readEntranceSeen(): boolean {
+  try {
+    return window.sessionStorage.getItem(ENTRANCE_SEEN_KEY) !== null
+  } catch {
+    return false
+  }
+}
+function markEntranceSeen(): void {
+  try {
+    window.sessionStorage.setItem(ENTRANCE_SEEN_KEY, '1')
+  } catch {
+    // 저장 실패 = 다음 진입도 첫 진입 취급. 연출 외 부작용 없음
+  }
+}
 
 /** 레거시 테마(stage 없음)용 기본 광원 — 테마의 --th-glow 색상을 광원색으로 쓴다. */
 const LEGACY_LIGHT_ORIGIN = { x: 50, y: 52 } as const
@@ -112,8 +160,15 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     [scene.catalog]
   )
   const { play, muted, toggleMute, startBgm } = useShrineAudio()
+  const cin = useCinematics()
+  // 재생 함수·주스는 참조가 고정돼 있다 — 콜백 deps 를 시네마틱 상태 변화로 오염시키지 않으려 분해한다
+  const { playEntrance, playPrayer, shake: cinShake, vibrate: cinVibrate } = cin
 
   const [placements, setPlacements] = useState<StagePlacement[]>(scene.placements)
+  /** KST 시각(낮밤 조명). null = 아직 마운트 전 — SSR·하이드레이션은 테마 원색 그대로 (#418 전례) */
+  const [hour, setHour] = useState<number | null>(null)
+  /** 저사양 폴백 등급. 측정은 마운트 후 1회 */
+  const [tier, setTier] = useState<EffectsTier>('full')
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activeCode, setActiveCode] = useState(scene.activePackCode)
@@ -129,6 +184,8 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   const keeperTaps = useRef(0)
   const dirty = useRef(false)
   const effectsRef = useRef<EffectsHandle>(null)
+  /** 기도 의식 중에만 띄우는 임시 불꽃 id — 저장된 lit 상태와 섞이지 않게 따로 추적한다 */
+  const prayFlames = useRef<string[]>([])
   const roomRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [fallbackFull, setFallbackFull] = useState(false)
@@ -147,6 +204,27 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 낮밤 사이클 — 마운트 후에만 시각을 읽는다(서버·클라 렌더 결과 동일 유지).
+  // 조명 오버레이는 .shrine-light-overlay 의 700ms transition 이 받아 부드럽게 넘어간다.
+  useEffect(() => {
+    const tick = () => setHour(kstHour(Date.now()))
+    tick()
+    const iv = window.setInterval(tick, SCENE_CLOCK_MS)
+    return () => window.clearInterval(iv)
+  }, [])
+
+  // 입장 시네마틱 — 마운트 1회. 등급 측정도 여기서(같은 커밋의 state 는 아직 못 읽으므로 지역 변수로 쓴다).
+  useEffect(() => {
+    const t = readEffectsTier()
+    setTier(t)
+    if (!GAMEFEEL_V1) return
+    const revisit = readEntranceSeen() || t === 'lite'
+    markEntranceSeen()
+    playEntrance(revisit)
+    trackEvent({ action: 'shrine_cinematic', category: 'shrine', label: 'entrance', value: revisit ? 1 : 0 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // 배경음(BGM) 자동 재생 — 진입 시 on. 모바일 autoplay 정책상 첫 제스처에서 확실히 시작.
   useEffect(() => {
     startBgm(scene.activePackCode)
@@ -159,7 +237,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   // 좌정 主神 시그니처 aura 상시 방출 (§3.3) — 신위 몸 주변에서 은은하게
   useEffect(() => {
     const d = scene.mainDeity
-    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, 50, 42, !!d)
+    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, DEITY_POS.x, DEITY_POS.y, !!d)
     return () => effectsRef.current?.setAura(null, null, 0, 0, false)
   }, [scene.mainDeity])
 
@@ -225,10 +303,11 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   )
 
   // 조명 오버레이 — 점화(lit)한 촛불이 많을수록 방이 밝아진다(연출 인센티브, §3-C4)
+  // + 낮밤 사이클: hour 가 잡히기 전(SSR·첫 렌더)엔 테마 원색 그대로 둔다.
   const lightOverlay = useMemo(() => {
     const litCount = placements.reduce((n, p) => (p.state.lit ? n + 1 : n), 0)
-    return lightingOverlayStyle(light, litBoost(litCount))
-  }, [placements, light])
+    return lightingOverlayStyle(hour === null ? light : sceneLight(light, hour), litBoost(litCount))
+  }, [placements, light, hour])
 
   // 보관함 가용 수량 = 보유 - 배치
   const available = useMemo(() => {
@@ -258,6 +337,70 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     return () => window.clearInterval(iv)
   }, [editing, keeperSay])
 
+  // ── 향로 상시 연기 — 방이 "가만히 있어도 살아있게" 하는 유일한 상시 이미터 ──
+  // 캔버스는 손대지 않고 기존 emit 만 주기 호출한다(고DPR 흰화면 전례 — 캔버스 표면적 증가 금지).
+  const smokeSpots = useMemo(
+    () =>
+      placements
+        .filter((p) => catalogById.get(p.catalogItemId)?.behavior.tap === 'smoke')
+        // 앞쪽(y 큰) 향로부터 — 뒤에 가려진 연기는 값만 치르고 보이지 않는다
+        .sort((a, b) => b.y - a.y)
+        .slice(0, SMOKE_MAX)
+        .map((p) => ({ x: p.x, y: p.y })),
+    [placements, catalogById]
+  )
+
+  useEffect(() => {
+    if (!GAMEFEEL_V1 || editing || tier !== 'full' || smokeSpots.length === 0) return
+    const puff = () => {
+      // 백그라운드 탭에서는 rAF 가 멈춰 파티클이 큐에만 쌓인다 — 아예 쏘지 않는다
+      if (document.visibilityState !== 'visible') return
+      smokeSpots.forEach((s) => effectsRef.current?.emit('smoke', s.x, s.y - FLAME_Y_OFFSET))
+    }
+    const iv = window.setInterval(puff, SMOKE_INTERVAL_MS)
+    return () => window.clearInterval(iv)
+  }, [editing, tier, smokeSpots])
+
+  // ── 기도 의식 — 소원 폼이 기원 +1 을 알리면(SHRINE_PRAYED_EVENT) 룸이 연출을 받는다 ──
+  // 시각 연출 전용: 점화는 임시 불꽃(pray-*)이라 저장된 lit 상태를 건드리지 않는다(setPlacementLit 미호출).
+  useEffect(() => {
+    if (!isOwner || editing) return
+    const onPrayed = () => {
+      trackEvent({ action: 'shrine_cinematic', category: 'shrine', label: 'prayer' })
+      playPrayer({
+        onIgnite: () => {
+          const ids: string[] = []
+          placements.forEach((p) => {
+            if (p.state.lit) return
+            if (catalogById.get(p.catalogItemId)?.behavior.tap !== 'toggleLit') return
+            const id = `pray-${p.id}`
+            ids.push(id)
+            effectsRef.current?.setFlame(id, p.x, p.y - FLAME_Y_OFFSET, true)
+            effectsRef.current?.emit('flame', p.x, p.y - FLAME_Y_OFFSET)
+          })
+          prayFlames.current = ids
+          play('crackle')
+        },
+        onPeak: () => {
+          keeperSay(prayerLine(Date.now()))
+          play('bell')
+          const d = scene.mainDeity
+          if (d?.particle && d.accent) effectsRef.current?.burstAura(d.particle, d.accent, DEITY_POS.x, DEITY_POS.y)
+          // 카메라 전이가 멈춘 절정에서 흔들어야 의도대로 읽힌다
+          cinShake()
+          cinVibrate(20)
+          effectsRef.current?.emit('sparkle', PRAYER_SPARKLE_POS.x, PRAYER_SPARKLE_POS.y)
+        },
+        onEnd: () => {
+          prayFlames.current.forEach((id) => effectsRef.current?.setFlame(id, 0, 0, false))
+          prayFlames.current = []
+        },
+      })
+    }
+    window.addEventListener(SHRINE_PRAYED_EVENT, onPrayed)
+    return () => window.removeEventListener(SHRINE_PRAYED_EVENT, onPrayed)
+  }, [isOwner, editing, placements, catalogById, play, keeperSay, playPrayer, cinShake, cinVibrate, scene.mainDeity])
+
   const spawnRing = useCallback((x: number, y: number, color: string) => {
     const id = ++localSeq
     setRings((r) => [...r, { id, x, y, color }])
@@ -285,6 +428,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       if (editing) return
       const item = catalogById.get(p.catalogItemId)
       if (!item) return
+      cinVibrate(8)
       const b = item.behavior
       if (b.tap === 'toggleLit') {
         const lit = !p.state.lit
@@ -305,7 +449,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       }
       trackEvent({ action: 'shrine_tap', category: 'shrine', label: item.type })
     },
-    [editing, catalogById, play, keeperSay, isOwner]
+    [editing, catalogById, play, keeperSay, isOwner, cinVibrate]
   )
 
   // ── 앵커 스냅 하이라이트 (드래그 중, 앵커가 바뀔 때만 호출) ──
@@ -422,6 +566,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   const onTapKeeper = useCallback(() => {
     if (editing) return
     const deity = scene.mainDeity
+    cinVibrate(8)
     // 좌정 主神이 있으면 신위 고유 사운드+파티클, 없으면 기본 목탁
     play(deity?.sound ?? 'moktak')
     if (deity?.particle && deity.accent) {
@@ -435,7 +580,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       return
     }
     keeperSay(keeperTapLine(keeperTaps.current))
-  }, [editing, play, keeperSay, scene.mainDeity])
+  }, [editing, play, keeperSay, scene.mainDeity, cinVibrate])
 
   // ── 테마 전환 ──
   const applyTheme = useCallback(
@@ -622,7 +767,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       {/* 룸 */}
       <div
         ref={roomRef}
-        className={`room relative rounded-[18px] ${editing ? 'editing' : ''}`}
+        className={`room relative rounded-[18px] ${editing ? 'editing' : ''} ${cin.roomClassName}`}
         style={{
           height: fullActive ? '100vh' : 'min(56vh, 480px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
@@ -633,6 +778,8 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
           // 편집 중에만 드래그 배치를 위해 스크롤 차단. 평소엔 세로 스크롤 허용(방 위 스와이프로 페이지 이동).
           touchAction: editing ? 'none' : 'pan-y',
           ...(fallbackFull ? { position: 'fixed', inset: 0, zIndex: 50, borderRadius: 0 } : {}),
+          // 시네마틱 카메라(transform/transition). 평시엔 동결된 빈 객체라 위 값들에 영향이 없다.
+          ...cin.roomStyle,
         }}
       >
         {/* L0 벽지 · L1 바닥재 (stage 테마) / 벽·바닥 블록 + room.webp (레거시) */}
@@ -870,6 +1017,10 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
             드래그로 배치 · ✕로 수납 · 공물은 신당지기에게
           </div>
         )}
+
+        {/* 시네마틱 오버레이(암전·빛줄기·스킵 탭) — 룸 직계 자식. z-40 이라 룸 최상 UI(z-30) 위를 덮고,
+            재생 중에만 pointerEvents 를 받아 아이템·신당지기 탭이 자동으로 막힌다(추가 차단 불필요). */}
+        {cin.overlay}
       </div>
 
       {/* 테마 칩 + 수집 진행(F-8) */}
@@ -1090,6 +1241,9 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
         }
       `}</style>
 
+      {/* 게임필 v1 전역 키프레임(idle 살랑임·글로우 맥동·탭 스쿼시·화면 흔들림) — 1회만 마운트 */}
+      <GamefeelStyles />
+
       {/* 무대 물리·반응용 스타일 — Sprite 등 형제 컴포넌트에서도 써야 해 global 로 둔다.
           이름은 전부 shrine- 접두로 충돌을 막는다. transform/opacity 만 애니메이션(합성 레이어 유지). */}
       <style jsx global>{`
@@ -1154,10 +1308,12 @@ interface SpriteProps {
 }
 
 const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
-/** v2「설빛온기」스프라이트 표시 크기 (512² 캔버스에 여백을 둔 규격이라 크게 잡는다) */
-const ASSET_EM = '3.2em'
-/** 레거시 스프라이트 표시 크기 — 기존 값 그대로 (회귀 0) */
-const LEGACY_SPRITE_EM = '1.55em'
+/** v2「설빛온기」스프라이트 표시 크기 em (512² 캔버스에 여백을 둔 규격이라 크게 잡는다) */
+const ASSET_EM = 3.2
+/** 레거시 스프라이트 표시 크기 em — 기존 값 그대로 (회귀 0) */
+const LEGACY_SPRITE_EM = 1.55
+/** 점화 글로우 지름 = 스프라이트 크기 × 이 배수 */
+const LIT_GLOW_SCALE = 1.8
 
 function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd, onAnchorHover }: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -1231,22 +1387,47 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
     [editing, item.layer, anchors, onDragEnd, onAnchorHover, transformFor]
   )
 
-  /** 탭 반응 — 짧은 흔들림. 래퍼가 아닌 내부 span 에 걸어 원근 transform 을 덮지 않는다. */
+  /**
+   * 탭 반응 — 게임필 v1 은 스쿼시&스트레치, 게이트 오프면 기존 흔들림.
+   * 래퍼가 아닌 내부 span 에 걸어 원근 transform 을 덮지 않는다.
+   * (TAP_CLASS 는 idle 살랑임보다 뒤에 선언돼 있어, 붙어 있는 동안 idle animation 을 이긴다)
+   */
   const wiggle = useCallback(() => {
     const el = bodyRef.current
     if (!el) return
-    el.classList.remove('shrine-item-wiggle')
+    el.classList.remove(TAP_CLASS)
     void el.offsetWidth // 리플로우 강제 → 연속 탭에도 애니메이션 재시작
-    el.classList.add('shrine-item-wiggle')
+    el.classList.add(TAP_CLASS)
   }, [])
 
   const lit = placement.state.lit === true
+  /** 상시 idle — 편집 중엔 끈다(드래그 좌표와 회전이 싸운다) */
+  const idle = GAMEFEEL_V1 && !editing
+  /**
+   * 개체별 위상차. 배치 좌표에서 파생한 **결정론** 값이라 SSR·클라가 같다(Math.random 금지 — 하이드레이션).
+   * 음수 지연이라 첫 프레임부터 주기 중간에서 시작한다(일제히 움직이는 어색함 제거).
+   */
+  const idleDelay = `-${((placement.x * 7 + placement.y * 13) % 5.5 || 0).toFixed(2)}s`
+  const bodyStyle: CssVars = { display: 'inline-block', '--shrine-idle-delay': idleDelay }
   const zIndex = depthZ(item.layer, placement.y)
   const shadow = groundShadow(item.layer, placement.y)
   // ⚠️ scene.ts 는 asset_url 이 비면 sprite_url 로 폴백한다 → 둘이 같으면 아직 레거시 스프라이트다.
   //    이때 v2 크기(3.2em)를 쓰면 기존 신당의 모든 신물이 2배로 커진다(회귀). 다를 때만 v2 규격.
   const spriteSrc = item.assetUrl ?? item.spriteUrl
   const spriteEm = item.assetUrl && item.assetUrl !== item.spriteUrl ? ASSET_EM : LEGACY_SPRITE_EM
+  const spriteSize = `${spriteEm}em`
+  const glowEm = spriteEm * LIT_GLOW_SCALE
+  /** 인라인 리터럴로 두면 CSS 변수가 CSSProperties 초과 속성으로 걸린다 — 변수로 받아 좁힌다 */
+  const glowStyle: CssVars = {
+    '--shrine-idle-delay': idleDelay,
+    width: `${glowEm}em`,
+    height: `${glowEm}em`,
+    marginLeft: `${-glowEm / 2}em`,
+    marginTop: `${-glowEm / 2}em`,
+    background: 'radial-gradient(circle, rgba(201,168,76,0.5) 0%, rgba(201,168,76,0.2) 42%, rgba(201,168,76,0) 72%)',
+    // 래퍼가 스택 컨텍스트라 -1 은 아이템 뒤로만 간다 (접지 그림자와 같은 규약)
+    zIndex: -1,
+  }
 
   return (
     <div
@@ -1272,10 +1453,21 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
           : 'drop-shadow(0 3px 3px rgba(0,0,0,0.55))',
       }}
     >
+      {/* 점화 광원 — 아이템 뒤에서 맥동한다. filter 애니는 금지 규율(합성 레이어 유지)이라
+          위 정적 drop-shadow 는 그대로 두고 여기서는 opacity 만 움직인다. */}
+      {lit && idle && (
+        <span
+          aria-hidden
+          className="shrine-idle-glow absolute left-1/2 top-1/2 rounded-full pointer-events-none"
+          style={glowStyle}
+        />
+      )}
       <span
         ref={bodyRef}
-        style={{ display: 'inline-block' }}
-        onAnimationEnd={(e) => e.currentTarget.classList.remove('shrine-item-wiggle')}
+        // 걸이 신물은 상시 살랑인다 — 방이 "가만히 있어도 사는" 최소 신호
+        className={idle && item.layer === 'hanging' ? 'shrine-idle-sway' : undefined}
+        style={bodyStyle}
+        onAnimationEnd={(e) => e.currentTarget.classList.remove(TAP_CLASS)}
       >
         {spriteSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -1284,7 +1476,7 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
             alt={item.name}
             draggable={false}
             decoding="async"
-            style={{ display: 'inline-block', width: spriteEm, height: spriteEm, objectFit: 'contain' }}
+            style={{ display: 'inline-block', width: spriteSize, height: spriteSize, objectFit: 'contain' }}
           />
         ) : (
           item.emoji

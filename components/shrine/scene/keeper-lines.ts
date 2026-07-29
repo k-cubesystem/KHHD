@@ -105,6 +105,21 @@ export function anchorLine(label: string | null, seed: number): string {
   return label ? `<em>${escapeHtml(label)}</em> — ${base}` : base
 }
 
+/**
+ * 기도 의식(祈願 +1)의 절정 — 신위의 응답. 하루 한 번 보는 대사라 담백하게.
+ * seed 로 고르므로 결정론(랜덤 금지 — 하이드레이션 규율과 같은 이유).
+ */
+const PRAYER_LINES = [
+  '그대의 정성이 <em>하늘에 닿았소</em>. 오늘 하루, 삿된 것이 얼씬 못할 게요.',
+  '촛불이 일제히 일어서는구려 — <em>기원</em>이 한 겹 두터워졌소.',
+  '눈을 감고 빌었으니 이제 뜨시게. 앞길이 <em>한 뼘</em> 밝아졌소.',
+  '신령께서 고개를 끄덕이셨소. 그 마음, 내가 적어 두겠소.',
+  '향 연기가 곧게 오르오. <em>정성</em>이 흐트러지지 않았다는 뜻이오.',
+] as const
+export function prayerLine(seed: number): string {
+  return pick(PRAYER_LINES, seed)
+}
+
 /** 오래 가만히 있을 때 (idle) — 소리 없이 잔잔하게 */
 const IDLE = [
   '향 내음이 은은하구려…',

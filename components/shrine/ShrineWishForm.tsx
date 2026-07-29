@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Sparkles, Loader2, Flame } from 'lucide-react'
 import { addWish } from '@/app/actions/shrine/shrine-wishes'
 import { devotionProgress } from '@/lib/domain/shrine/devotion'
+import { SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -77,6 +78,9 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
           { description: `기원 ${p.level}단 · 오늘의 기도 🙏` }
         )
         trackEvent({ action: 'devotion_gain', category: 'shrine', label: `L${p.level}`, value: p.totalDays })
+        // 기도 의식 연출 신호 — refresh 보다 **먼저** 보내야 현재 마운트된 룸이 받는다
+        // (refresh 는 서버 렌더를 갈아끼우므로 그 뒤에 쏘면 리스너 교체 타이밍에 유실될 수 있다)
+        window.dispatchEvent(new CustomEvent(SHRINE_PRAYED_EVENT))
         router.refresh() // 기원 스트립·버튼 뉘앙스 갱신 (하루 최대 1회)
       } else {
         toast.success('소원을 기원했습니다 🙏')
