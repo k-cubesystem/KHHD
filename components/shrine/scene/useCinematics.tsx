@@ -484,7 +484,61 @@ export function GamefeelStyles(): JSX.Element {
         }
       }
 
-      /* 탭 반응 — 눌렸다 튀어오르는 스쿼시&스트레치 */
+      /* 벽걸이(wall) 아이템 — 걸이보다 약한 살랑 (벽에 붙어 있어 진폭이 작다) */
+      .shrine-idle-wallsway {
+        animation: shrineIdleWallsway 6.5s ease-in-out infinite;
+        animation-delay: var(--shrine-idle-delay, 0s);
+        transform-origin: 50% 0%;
+        will-change: transform;
+      }
+      @keyframes shrineIdleWallsway {
+        0%,
+        100% {
+          transform: rotate(0deg);
+        }
+        25% {
+          transform: rotate(0.9deg);
+        }
+        75% {
+          transform: rotate(-0.9deg);
+        }
+      }
+
+      /* 바닥·제단 소품 — 초미세 숨쉬기. 개체 하나는 안 보여도 위상차로 여럿이 숨쉬면
+         "방이 살아있다"가 촛불·향로 없는 신당에서도 성립한다 */
+      .shrine-idle-breathe {
+        animation: shrineIdleBreathe 4.6s ease-in-out infinite;
+        animation-delay: var(--shrine-idle-delay, 0s);
+        transform-origin: 50% 100%;
+        will-change: transform;
+      }
+      @keyframes shrineIdleBreathe {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.015);
+        }
+      }
+
+      /* 테마 광원 타원·신위 후광 — 촛불빛이 이는 듯한 은은한 맥동 (opacity 만) */
+      .shrine-glow-breathe {
+        animation: shrineGlowBreathe 3.6s ease-in-out infinite;
+        will-change: opacity;
+      }
+      @keyframes shrineGlowBreathe {
+        0%,
+        100% {
+          opacity: 0.72;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      /* 탭 반응 — 눌렸다 튀어오르는 스쿼시&스트레치.
+         idle 클래스보다 뒤에 선언해야 탭 순간 idle 을 잠시 이기고, 끝나면 idle 이 재개된다 */
       .shrine-tap-squash {
         animation: shrineTapSquash 0.28s ease-out;
         transform-origin: 50% 100%;
@@ -528,6 +582,9 @@ export function GamefeelStyles(): JSX.Element {
 
       @media (prefers-reduced-motion: reduce) {
         .shrine-idle-sway,
+        .shrine-idle-wallsway,
+        .shrine-idle-breathe,
+        .shrine-glow-breathe,
         .shrine-idle-glow,
         .shrine-tap-squash,
         .shrine-cam-shake {

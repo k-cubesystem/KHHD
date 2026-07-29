@@ -12,7 +12,7 @@ import {
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Maximize2, Minimize2, Lock } from 'lucide-react'
-import type { Element, ThemePack } from '@/lib/domain/shrine/types'
+import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
@@ -78,6 +78,21 @@ const SMOKE_MAX = 3
 const ENTRANCE_SEEN_KEY = 'shrine_gamefeel_seen'
 /** 탭 반응 클래스 — 게이트 오프면 v2 흔들림으로 되돌아간다 */
 const TAP_CLASS = GAMEFEEL_V1 ? 'shrine-tap-squash' : 'shrine-item-wiggle'
+/** 층별 상시 idle — 걸이 살랑·벽걸이 미세 살랑·바닥/제단 미세 숨쉬기.
+    전 층을 덮어야 "가만히 있어도 산다"가 신당 구성과 무관하게 성립한다(안1.1 체감 강화). */
+const IDLE_CLASS: Record<Layer, string> = {
+  hanging: 'shrine-idle-sway',
+  wall: 'shrine-idle-wallsway',
+  altar: 'shrine-idle-breathe',
+  floor: 'shrine-idle-breathe',
+}
+/** 상시 빛가루 — 배치가 빈약한 신당에서도 보이는 최소 상시 모션. 광원 타원 주변을 순환한다 */
+const MOTE_INTERVAL_MS = 6500
+const MOTE_SPOTS = [
+  { x: 38, y: 63 },
+  { x: 63, y: 57 },
+  { x: 50, y: 47 },
+] as const
 
 /** CSS 사용자 정의 속성은 CSSProperties 에 없다 — 교차 타입으로 좁혀 any 를 피한다. */
 type CssVars = CSSProperties & Record<`--${string}`, string>
@@ -360,6 +375,19 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     const iv = window.setInterval(puff, SMOKE_INTERVAL_MS)
     return () => window.clearInterval(iv)
   }, [editing, tier, smokeSpots])
+
+  // ── 상시 빛가루 — 촛불·향로·걸이가 하나도 없는 신당에서도 상시 모션을 보장한다 (안1.1) ──
+  const moteIdx = useRef(0)
+  useEffect(() => {
+    if (!GAMEFEEL_V1 || editing || tier !== 'full') return
+    const iv = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      const spot = MOTE_SPOTS[moteIdx.current % MOTE_SPOTS.length]
+      moteIdx.current += 1
+      effectsRef.current?.emit('sparkle', spot.x, spot.y)
+    }, MOTE_INTERVAL_MS)
+    return () => window.clearInterval(iv)
+  }, [editing, tier])
 
   // ── 기도 의식 — 소원 폼이 기원 +1 을 알리면(SHRINE_PRAYED_EVENT) 룸이 연출을 받는다 ──
   // 시각 연출 전용: 점화는 임시 불꽃(pray-*)이라 저장된 lit 상태를 건드리지 않는다(setPlacementLit 미호출).
@@ -804,7 +832,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
         />
         <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
         <div
-          className="absolute left-1/2 -translate-x-1/2 rounded-full"
+          className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
           style={{ top: '77%', width: '64%', height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
         />
 
@@ -815,7 +843,7 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
             style={{ bottom: '50%', height: '38%' }}
           >
             <div
-              className="absolute left-1/2 -translate-x-1/2 rounded-full"
+              className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
               style={{
                 bottom: '-6%',
                 width: '86%',
@@ -1464,8 +1492,8 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
       )}
       <span
         ref={bodyRef}
-        // 걸이 신물은 상시 살랑인다 — 방이 "가만히 있어도 사는" 최소 신호
-        className={idle && item.layer === 'hanging' ? 'shrine-idle-sway' : undefined}
+        // 전 층 상시 idle — 걸이 살랑·벽 미세 살랑·바닥/제단 숨쉬기 (위상차는 --shrine-idle-delay)
+        className={idle ? IDLE_CLASS[item.layer] : undefined}
         style={bodyStyle}
         onAnimationEnd={(e) => e.currentTarget.classList.remove(TAP_CLASS)}
       >
