@@ -7,11 +7,26 @@ import { ShrineTargetTabs, type ShrineTargetTab } from '@/components/shrine/Shri
 import { FamilySummonGate } from '@/components/shrine/FamilySummonGate'
 import { getWishes } from '@/app/actions/shrine/shrine-wishes'
 import { getDevotionStatus } from '@/app/actions/shrine/devotion'
+import { getFamilyHallData, type FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import { EL_KO } from '@/lib/domain/shrine/energy'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
+import { logger } from '@/lib/utils/logger'
+
+/**
+ * 사랑방 좌석 presence — 실패해도 **방 렌더를 막지 않는다**(null 이면 후원에 사랑방이 뜨지 않을 뿐).
+ * 등급 게이트·좌석 스코프는 전부 getFamilyHallData 안에서 끝난다 — 여기서 role/tier 를 다시 보지 않는다.
+ */
+async function loadFamilyHall(): Promise<FamilyHallData | null> {
+  try {
+    return await getFamilyHallData()
+  } catch (e) {
+    logger.warn('[shrine] 사랑방 presence 로드 실패:', e)
+    return null
+  }
+}
 
 export default async function ShrinePage({ searchParams }: { searchParams: Promise<{ member?: string }> }) {
   const supabase = await createClient()
@@ -80,12 +95,18 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
 
   // 오너도 자기 신당의 소원·방명록을 볼 수 있게(F-2). wishCount 는 ShrineRoomClient 배지에 표시.
   // 기원 현황은 유저 단위(신당 무관) — 스트립·보상 트랙·소원 폼 뉘앙스에 공용.
-  const [{ wishes }, devotion] = await Promise.all([getWishes(scene.shrineId, 0, 10), getDevotionStatus()])
+  // 사랑방은 **본인 신당 탭 전용**이다(가족 탭에서는 그 가족 방이지 온 식구의 방이 아니다).
+  // 여기서 같이 실어 내려보낸다 — 룸이 마운트 후 다시 부르면 클라 fetch 워터폴이 된다.
+  const [{ wishes }, devotion, familyHall] = await Promise.all([
+    getWishes(scene.shrineId, 0, 10),
+    getDevotionStatus(),
+    target ? Promise.resolve<FamilyHallData | null>(null) : loadFamilyHall(),
+  ])
 
   return (
     <div className="min-h-screen px-1 py-4">
       <div className="w-full max-w-[520px] mx-auto">{targetTabs}</div>
-      <ShrineRoomClient scene={scene} devotion={devotion} />
+      <ShrineRoomClient scene={scene} devotion={devotion} familyHall={familyHall} />
       {/* 가족 신당 첫 진입 — 主神이 없으면 그 가족 사주로 강신 의식 */}
       {target && !scene.mainDeity && (
         <FamilySummonGate

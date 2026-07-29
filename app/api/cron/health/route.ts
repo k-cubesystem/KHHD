@@ -27,6 +27,7 @@ const REQUIRED_RPCS = [
   'award_deity_bond',
   'grant_shrine_item',
   'increment_shrine_visitor',
+  'get_family_hall_presence',
   // 채팅 보존
   'purge_expired_chat_messages',
   'notify_expiring_chat_sessions',

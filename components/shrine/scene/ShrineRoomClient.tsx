@@ -57,6 +57,8 @@ import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
+import { FamilyHall } from './FamilyHall'
+import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
@@ -114,6 +116,33 @@ const FAR_SKY =
 /** 전경 문틀 — 대청 경계에 드리우는 그림자 폭(world %) */
 const JAMB_W_PCT = 3.2
 
+// ── 가족 사랑방 (안3 / ARCH §2 FamilyHall) ────────────────────
+/**
+ * 사랑방이 사는 구역 코드 — 두루마리의 후원(後園). 이 구역이 없는 테마에서는 사랑방이 뜨지 않는다.
+ * (이번 단계에서 사랑방은 두루마리 전용이다 — 단일 무대용 단독 화면 분기는 만들지 않는다.)
+ */
+const FAMILY_HALL_ZONE = 'huwon'
+/**
+ * 사랑방 층 — 구역 구조물(StageLayers, z auto=0)보다 위·아이템 대역(depthZ 10~29)보다 아래.
+ * 대청 콘텐츠와는 x 범위 자체가 겹치지 않아(후원 170~240 vs 대청 70~170) 시각 간섭이 없고,
+ * 값만으로도 "무대 위에 선 인물" 자리에 들어간다(신위 스탠드 z-3 위, 신당지기 z-12 아래).
+ */
+const FAMILY_HALL_Z = 8
+
+/**
+ * 합동 기도 낙관 반영 — 방금 기도한 **본인 좌석만** 켠다(서버 재조회 없이).
+ * 만개(allPrayedToday) 판정은 서버(get_family_hall_presence 소비부)와 같은 규칙으로 다시 센다 —
+ * 전원 점등이 되면 FamilyHall 이 data 만 보고 스스로 만개 연출로 넘어간다.
+ * 이미 켜져 있으면 **같은 참조**를 돌려 헛 리렌더를 내지 않는다.
+ */
+function litSelfSeat(data: FamilyHallData, atIso: string): FamilyHallData {
+  if (!data.isFamilyTier) return data
+  const self = data.members.find((m) => m.memberId === null)
+  if (!self || self.prayedToday) return data
+  const members = data.members.map((m) => (m.memberId === null ? { ...m, prayedToday: true, lastWishAt: atIso } : m))
+  return { ...data, members, allPrayedToday: members.length > 0 && members.every((m) => m.prayedToday) }
+}
+
 /**
  * 이 기기의 연출 등급. navigator 는 마운트 후에만 있으므로 렌더 중 호출 금지.
  * 프레임 실측(avgFps)은 rAF 상주 루프가 필요해 안1 범위 밖 — 메모리만으로 판정한다.
@@ -161,6 +190,11 @@ interface Props {
   scene: StageSceneData
   /** 기원 현황(소유자 뷰에서만 주입). 방문자 뷰는 null → 기원 스트립 미표시. */
   devotion?: DevotionStatus | null
+  /**
+   * 가족 사랑방 좌석(본인 신당 탭에서만 서버가 주입). 가족 탭·방문자 뷰·로드 실패는 null →
+   * 후원 구역에 사랑방을 얹지 않는다. 등급 게이트는 이미 서버에서 끝났다(isFamilyTier).
+   */
+  familyHall?: FamilyHallData | null
 }
 
 interface Ring {
@@ -185,7 +219,7 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
   } as CSSProperties
 }
 
-export function ShrineRoomClient({ scene, devotion = null }: Props) {
+export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
   const catalogById = useMemo(
     () => new Map<string, StageCatalogItem>(scene.catalog.map((c) => [c.id, c])),
@@ -227,6 +261,20 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
   const [visibilitySaving, setVisibilitySaving] = useState(false)
   // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
   const [oracle, setOracle] = useState<{ message: string } | null>(null)
+  /**
+   * 사랑방 좌석 — 서버 prop 이 정본이고(첫 렌더가 서버와 같아야 한다 · 하이드레이션 규율),
+   * 합동 기도 낙관 점등만 이 상태가 서버보다 앞서 들고 있는다.
+   *
+   * 서버가 새 presence 를 내려주면(탭 전환·소원 뒤 refresh) **렌더 중** 즉시 그 값으로 되돌린다.
+   * 룸은 탭을 옮겨도 같은 자리에 재사용되므로 effect 로 미루면 가족 탭 첫 페인트에 본인 탭 좌석이 한 프레임 스친다
+   * (React "prop 이 바뀔 때 state 조정" 패턴 — 첫 렌더에는 두 값이 같아 조정 자체가 일어나지 않는다).
+   */
+  const [hall, setHall] = useState<FamilyHallData | null>(familyHall)
+  const [hallSource, setHallSource] = useState<FamilyHallData | null>(familyHall)
+  if (hallSource !== familyHall) {
+    setHallSource(familyHall)
+    setHall(familyHall)
+  }
 
   // 저장된 점화 상태 → 불꽃 등록
   useEffect(() => {
@@ -335,6 +383,18 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
       .map((z) => ({ code: z.code, box: zoneBox(world, z), stage: zoneStage(z, null) }))
   }, [worldActive, world, daecheong])
   const daecheongBox = useMemo(() => zoneBox(world, daecheong), [world, daecheong])
+  /**
+   * 사랑방을 얹을 후원 박스. 아래 중 하나라도 아니면 null 이고, 그러면 사랑방은 아예 마운트되지 않는다:
+   * 연출 게이트 on(GAMEFEEL_V1) · 두루마리(worldActive ⊃ SCROLL_SHRINE_V1) · 후원 구역 실재 · 좌석 데이터.
+   * 두 플래그 중 하나만 내려도 자동 비노출이라 사랑방도 같은 레버로 원복된다(ARCH §8).
+   * 후원이 곧 대청인 퇴화 테마(zones 가 한 개뿐인 경우)는 제외한다 — 대청 콘텐츠 위에 방을 겹치지 않는다.
+   */
+  const hallBox = useMemo<CSSProperties | null>(() => {
+    if (!GAMEFEEL_V1 || !worldActive || !hall) return null
+    const zone = world.zones.find((z) => z.code === FAMILY_HALL_ZONE)
+    if (!zone || zone.code === daecheong.code) return null
+    return { ...zoneBox(world, zone), zIndex: FAMILY_HALL_Z }
+  }, [worldActive, hall, world, daecheong])
   /** 시차층 계수 CSS 변수 — 폭이 바뀔 때만 다시 계산된다 */
   const worldVars = useMemo<CssVars>(
     () => ({
@@ -585,6 +645,19 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
     window.addEventListener(SHRINE_PRAYED_EVENT, onPrayed)
     return () => window.removeEventListener(SHRINE_PRAYED_EVENT, onPrayed)
   }, [isOwner, editing, placements, catalogById, play, keeperSay, playPrayer, cinShake, cinVibrate, scene.mainDeity])
+
+  // ── 합동 기도 — 기도가 성립하면 서버 재조회(router.refresh)를 기다리지 않고 본인 좌석부터 켠다.
+  // 연출(불꽃·셰이크)은 위 기도 의식 effect 담당이라 여기서는 데이터만 앞당긴다. 편집 중에도 유효 —
+  // 소원 폼은 룸 밖에 있어 꾸미기 중에도 기도가 성립한다.
+  useEffect(() => {
+    if (!familyHall) return
+    const onPrayed = () => {
+      const at = new Date().toISOString()
+      setHall((prev) => (prev ? litSelfSeat(prev, at) : prev))
+    }
+    window.addEventListener(SHRINE_PRAYED_EVENT, onPrayed)
+    return () => window.removeEventListener(SHRINE_PRAYED_EVENT, onPrayed)
+  }, [familyHall])
 
   const spawnRing = useCallback((x: number, y: number, color: string) => {
     const id = ++localSeq
@@ -1196,6 +1269,15 @@ export function ShrineRoomClient({ scene, devotion = null }: Props) {
                   <StageLayers stage={z.stage} themeCode={activeCode} slot="structures" zoned />
                 </div>
               ))}
+              {/* 가족 사랑방 — 후원 구역 박스를 100% 채운다(안쪽 좌표는 FamilyHall 이 % 로 자립).
+                  구역 세트(z auto)보다 위·아이템 대역(10~29)보다 아래라 대청 콘텐츠와 층이 섞이지 않는다.
+                  scenery 와 달리 pointer-events 를 살린다 — 좌석 탭이 이 방의 유일한 상호작용이다.
+                  (팬 제스처는 룸이 캡처 단계에서 가로채므로 좌석 위에서 끌어도 카메라가 따라온다.) */}
+              {hallBox && hall && (
+                <div className="absolute inset-y-0" style={hallBox}>
+                  <FamilyHall data={hall} />
+                </div>
+              )}
               <div className="absolute inset-y-0" style={daecheongBox}>
                 {stageContent}
               </div>
