@@ -4,6 +4,10 @@ import type { EmailOtpType } from '@supabase/supabase-js'
 import { grantSignupBonus } from '@/app/actions/payment/wallet'
 import { processReferralBonus } from '@/app/actions/user/referral'
 import { logger } from '@/lib/utils/logger'
+import { rateLimitByIp } from '@/lib/utils/rate-limit'
+
+/** 이메일 OTP 검증 브루트포스 방어(S-1) — IP당 시간당 10회. PKCE 코드 교환(정상 로그인)은 제외한다. */
+const OTP_RATE_LIMIT = { interval: 60 * 60 * 1000, uniqueTokenPerInterval: 10 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -50,6 +54,16 @@ export async function GET(request: NextRequest) {
 
   if (token_hash && type) {
     // 이메일 인증 (회원가입 확인, 비밀번호 재설정 등)
+    // 미로그인 상태이므로 IP 기준으로 시도 횟수를 제한한다(Supabase 자체 한도에 더한 2중 방어).
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    const rl = await rateLimitByIp(ip, 'auth-otp-callback', OTP_RATE_LIMIT)
+    if (!rl.success) {
+      logger.warn('[Callback] OTP rate limit exceeded:', { ip })
+      return NextResponse.redirect(
+        `${requestUrl.origin}/auth/login?error=${encodeURIComponent('인증 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.')}`
+      )
+    }
+
     const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
       token_hash,
       type: type as EmailOtpType,

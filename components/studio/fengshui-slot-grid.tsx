@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, X, Loader2, Check } from 'lucide-react'
 import { compressImageForUpload } from '@/lib/utils/compress-image'
+import { verifyImageFile, UNSUPPORTED_IMAGE_MESSAGE, type ImageBytesVerdict } from '@/lib/security/magic-bytes'
 import { logger } from '@/lib/utils/logger'
 import type { FengshuiSlotSpec } from '@/lib/domain/analysis/fengshui-slots'
 
@@ -85,6 +86,13 @@ function SlotTile({
     setError(null)
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일만 가능합니다.')
+      return
+    }
+    // 매직바이트 검증(S-2) — 차감(분석 시작) 전에 끊어야 환불 경로를 타지 않는다. 읽기 실패는 fail-closed.
+    const verdict = await verifyImageFile(file).catch((): ImageBytesVerdict => ({ ok: false, reason: 'EMPTY' }))
+    if (!verdict.ok) {
+      logger.warn('[FengshuiSlotGrid] 매직바이트 검증 실패:', { reason: verdict.reason })
+      setError(UNSUPPORTED_IMAGE_MESSAGE)
       return
     }
     setCompressing(true)

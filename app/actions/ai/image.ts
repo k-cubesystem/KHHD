@@ -9,6 +9,7 @@ import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_PRO } from '@/lib/config/ai-models'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { verifyBase64Image, UNSUPPORTED_IMAGE_MESSAGE, type ImageBytesVerdict } from '@/lib/security/magic-bytes'
 import { parseFeatureTag } from '@/lib/domain/analysis/feature-parse'
 import { parseGisaek } from '@/lib/domain/analysis/gisaek-parse'
 import { computeFaceScore, computePalmScore } from '@/lib/domain/analysis/scoring'
@@ -20,6 +21,24 @@ import {
 } from '@/app/actions/user/history'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
+
+/**
+ * 업로드 이미지 매직바이트 게이트(S-2) — 확장자·MIME 이 아니라 실제 선두 바이트로 판정한다.
+ * 각 분석 액션의 첫 줄에서 호출해 AI 호출·복채 소비·엣지 위임보다 앞에서 끊는다.
+ * 통과하면 null, 막히면 사용자에게 보여줄 한국어 메시지를 반환한다.
+ */
+function guardUploadedImages(source: string, images: string[]): string | null {
+  for (const image of images) {
+    const verdict: ImageBytesVerdict = verifyBase64Image(image)
+    if (verdict.ok) continue
+    logger.warn(`[${source}] 이미지 매직바이트 검증 실패:`, {
+      reason: verdict.reason,
+      detectedMime: verdict.detectedMime,
+    })
+    return UNSUPPORTED_IMAGE_MESSAGE
+  }
+  return null
+}
 
 /**
  * 이미지 분석(관상·손금·풍수) 결과를 analysis_history 에 저장한다 (부가 단계).
@@ -375,6 +394,9 @@ export async function analyzeFaceForDestiny(
   sajuContext?: { dayGan?: string; currentAge?: number },
   target?: { id: string; name: string; relation: string }
 ): Promise<FaceAnalysisResult> {
+  const imageGuard = guardUploadedImages('analyzeFaceForDestiny', [imageBase64])
+  if (imageGuard) return { success: false, error: imageGuard }
+
   if (isEdgeEnabled('ai-image')) {
     return invokeEdgeSafe('ai-image', { action: 'analyzeFace', imageBase64, goal, sajuContext, target })
   }
@@ -777,6 +799,13 @@ export async function analyzeInteriorForFengshui(
   target?: { id: string; name: string; relation: string },
   options?: FengshuiSubjectOptions
 ): Promise<InteriorAnalysisResult> {
+  // 대표 사진 + 슬롯 사진 전부 검사 — 한 장이라도 위조면 분석 자체를 시작하지 않는다.
+  const imageGuard = guardUploadedImages('analyzeInteriorForFengshui', [
+    imageBase64,
+    ...(options?.images?.map((img) => img.base64) ?? []),
+  ])
+  if (imageGuard) return { success: false, error: imageGuard }
+
   if (isEdgeEnabled('ai-image')) {
     return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType, target, options })
   }
@@ -1102,6 +1131,9 @@ export async function analyzePalmReading(
   sajuContext?: { dayGan?: string; currentAge?: number },
   target?: { id: string; name: string; relation: string }
 ): Promise<PalmAnalysisResult> {
+  const imageGuard = guardUploadedImages('analyzePalmReading', [imageBase64])
+  if (imageGuard) return { success: false, error: imageGuard }
+
   if (isEdgeEnabled('ai-image')) {
     return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, goal, sajuContext, target })
   }
@@ -1399,6 +1431,9 @@ export async function generateDestinyImage(
 
   _type: 'face' | 'interior'
 ): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+  const imageGuard = guardUploadedImages('generateDestinyImage', [originalImageBase64])
+  if (imageGuard) return { success: false, error: imageGuard }
+
   if (isEdgeEnabled('ai-image')) {
     return invokeEdgeSafe('ai-image', { action: 'generateImage', originalImageBase64, prompt: _prompt, type: _type })
   }

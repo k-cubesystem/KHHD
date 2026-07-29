@@ -10,6 +10,7 @@ import { getUserRole } from '@/lib/supabase/helpers'
 import { computeSpendPlan } from '@/lib/domain/payment/spend-plan'
 import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit } from '@/lib/utils/rate-limit'
 
 /** 오늘 일일 한도 소비량(무료분만 카운트) */
 async function getUsedToday(admin: ReturnType<typeof createAdminClient>, userId: string): Promise<number> {
@@ -389,6 +390,14 @@ export async function addTalismans(
   } = await supabase.auth.getUser()
 
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+  // Rate limit(S-1): 복채 발행 버스트 방어 — 유저당 분당 10회.
+  // 정상 경로(결제 승인·구독 첫결제)는 건당 1회이므로 한도에 닿지 않는다.
+  const rl = await rateLimit(`wallet-charge:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
+  if (!rl.success) {
+    logger.warn('[Wallet] addTalismans rate limit exceeded:', { userId: user.id })
+    return { success: false, error: '충전 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
+  }
 
   // 복채 발행(잔액 증액)은 service_role 전용 — 인증(위)을 통과한 본인 계정에만.
   const admin = createAdminClient()

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { addTalismans } from './wallet'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit } from '@/lib/utils/rate-limit'
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 
@@ -35,6 +36,13 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
   } = await supabase.auth.getUser()
 
   if (!user) throw new Error('인증되지 않은 사용자입니다.')
+
+  // Rate limit(S-1): 결제 승인 버스트 방어 — 유저당 분당 10회. 정상 결제는 1건/분 수준이다.
+  const rl = await rateLimit(`payment-confirm:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
+  if (!rl.success) {
+    logger.warn('[Payment] Rate limit exceeded:', { userId: user.id })
+    throw new Error('결제 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.')
+  }
 
   // 상품·가격은 DB(price_plans)를 단일 소스로 검증 (클라이언트 데이터 신뢰 안 함).
   const admin = createAdminClient()

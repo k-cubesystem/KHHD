@@ -7,6 +7,18 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { grantMembershipDeity } from '@/lib/services/membership-deity'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit } from '@/lib/utils/rate-limit'
+
+/** 구독 결제 계열 공통 한도(S-1) — 유저당 분당 10회. 정상 결제 플로우는 단계당 1회다. */
+const BILLING_RATE_LIMIT = { interval: 60_000, uniqueTokenPerInterval: 10 } as const
+
+/** 한도 초과면 사용자 메시지를 반환한다(통과 시 null). */
+async function guardBillingRate(step: string, userId: string): Promise<string | null> {
+  const rl = await rateLimit(`subscription-${step}:${userId}`, BILLING_RATE_LIMIT)
+  if (rl.success) return null
+  logger.warn('[Subscription] Rate limit exceeded:', { step, userId })
+  return '결제 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.'
+}
 
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
@@ -215,6 +227,9 @@ export async function createBillingAuthUrl(planId: string): Promise<{
     return { success: false, error: '로그인이 필요합니다.' }
   }
 
+  const rateLimited = await guardBillingRate('auth-url', user.id)
+  if (rateLimited) return { success: false, error: rateLimited }
+
   // 플랜 확인
   const plan = await getMembershipPlan(planId)
   if (!plan) {
@@ -295,6 +310,9 @@ export async function issueBillingKey(
     return { success: false, error: '로그인이 필요합니다.' }
   }
 
+  const rateLimited = await guardBillingRate('billing-key', user.id)
+  if (rateLimited) return { success: false, error: rateLimited }
+
   // Toss API: 빌링키 발급
   const response = await fetch('https://api.tosspayments.com/v1/billing/authorizations/issue', {
     method: 'POST',
@@ -357,6 +375,9 @@ export async function executeFirstPayment(customerKey: string): Promise<{
   if (!user) {
     return { success: false, error: '로그인이 필요합니다.' }
   }
+
+  const rateLimited = await guardBillingRate('first-payment', user.id)
+  if (rateLimited) return { success: false, error: rateLimited }
 
   // 구독 정보 조회
   const { data: subscription, error: subError } = await supabase

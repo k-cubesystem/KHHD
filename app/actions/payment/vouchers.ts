@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deductTalisman, refundStudioCost } from './wallet'
 import { logger } from '@/lib/utils/logger'
+import { rateLimit } from '@/lib/utils/rate-limit'
 import { getVoucherProduct, isVoucherType, isVoucherActive, computeVoucherExpiry } from '@/lib/domain/payment/vouchers'
 
 export interface VoucherRow {
@@ -47,6 +48,13 @@ export async function purchaseVoucher(voucherType: string): Promise<PurchaseVouc
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: '로그인이 필요합니다.', errorType: 'UNAUTHENTICATED' }
+
+  // Rate limit(S-1): 구매 버스트 방어 — 유저당 분당 10회. 차감보다 앞에 둔다.
+  const rl = await rateLimit(`voucher-purchase:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
+  if (!rl.success) {
+    logger.warn('[purchaseVoucher] Rate limit exceeded:', { userId: user.id })
+    return { success: false, error: '구매 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.', errorType: 'RATE_LIMITED' }
+  }
 
   // 복채 차감(1만냥) — 마스터/무제한은 wallet 내부에서 면제(성공). 부족 시 errorType 반환.
   const featureKey = voucherFeatureKey(voucherType)
