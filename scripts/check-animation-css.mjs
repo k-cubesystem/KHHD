@@ -70,6 +70,16 @@ const REQUIRED_CLASSES = [
   '.shrine-ring',
   '.devotion-sheet',
   '.no-scrollbar',
+  // 액막이 의식 — 부적 태우기 (R-1). 연소는 mask-position 진행이라 CSS 가 없으면
+  // 부적이 그대로 남아 국면 전환(animationend)조차 오지 않는다 = 의식이 통째로 멎는다
+  '.ritual-sheet',
+  '.ritual-paper',
+  '.ritual-sigil',
+  '.ritual-burn',
+  '.ritual-char',
+  '.ritual-ember',
+  '.ritual-settle',
+  '.ritual-cup',
   // 신당 밖에서 같은 이유로 죽어 있던 것들 (app/globals.css 이관)
   '.review-marquee-track',
   '.animate-spin-slow',
@@ -120,6 +130,15 @@ const REQUIRED_KEYFRAMES = [
   'deityTurnSweep',
   'shrineRing',
   'devotionSheetUp',
+  // 액막이 의식 (R-1)
+  'ritualSheetUp',
+  'ritualPaperIn',
+  'ritualSigilIn',
+  'ritualBurn',
+  'ritualChar',
+  'ritualEmber',
+  'ritualSettleIn',
+  'ritualCupIn',
   'review-marquee-scroll',
   'spin-slow',
   'spin-reverse-slow',

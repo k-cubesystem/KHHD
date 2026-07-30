@@ -66,6 +66,7 @@ import { DeityTurn } from './DeityTurn'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
+import { AekmakStrip } from './AekmakSheet'
 import { FamilyHall } from './FamilyHall'
 import { HALL_BAND } from '@/lib/domain/shrine/family-hall-layout'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
@@ -74,6 +75,7 @@ import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
+import type { AekmakStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { trackEvent } from '@/lib/analytics/ga4'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
@@ -238,6 +240,11 @@ interface Props {
    * 후원 구역에 사랑방을 얹지 않는다. 등급 게이트는 이미 서버에서 끝났다(isFamilyTier).
    */
   familyHall?: FamilyHallData | null
+  /**
+   * 액막이 현황(소유자 뷰에서만 주입). null 이면 의식 진입점을 그리지 않는다 —
+   * 방문자 뷰는 남의 기록을 셀 수 없고(RLS), 조회 실패 시 남은 횟수를 3회로 오표시하면 안 된다.
+   */
+  aekmak?: AekmakStatus | null
 }
 
 interface Ring {
@@ -262,7 +269,7 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
   } as CSSProperties
 }
 
-export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: Props) {
+export function ShrineRoomClient({ scene, devotion = null, familyHall = null, aekmak = null }: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
   const catalogById = useMemo(
     () => new Map<string, StageCatalogItem>(scene.catalog.map((c) => [c.id, c])),
@@ -664,12 +671,15 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     [placements, catalogById, displayYongsin]
   )
 
+  /** 켜져 있는 촛불 수 — 조명 오버레이 세기이자 액막이 불씨의 밝기(같은 lit 시스템을 둘이 나눠 쓴다) */
+  const litCount = useMemo(() => placements.reduce((n, p) => (p.state.lit ? n + 1 : n), 0), [placements])
+
   // 조명 오버레이 — 점화(lit)한 촛불이 많을수록 방이 밝아진다(연출 인센티브, §3-C4)
   // + 낮밤 사이클: hour 가 잡히기 전(SSR·첫 렌더)엔 테마 원색 그대로 둔다.
-  const lightOverlay = useMemo(() => {
-    const litCount = placements.reduce((n, p) => (p.state.lit ? n + 1 : n), 0)
-    return lightingOverlayStyle(hour === null ? light : sceneLight(light, hour), litBoost(litCount))
-  }, [placements, light, hour])
+  const lightOverlay = useMemo(
+    () => lightingOverlayStyle(hour === null ? light : sceneLight(light, hour), litBoost(litCount)),
+    [litCount, light, hour]
+  )
 
   // 보관함 가용 수량 = 보유 - 배치
   const available = useMemo(() => {
@@ -1553,6 +1563,14 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* 의식(儀式) — 신당 하단. 액막이는 무료·일 3회라 게이팅 없이 소유자에게 항상 열려 있다.
+          촛불 수를 넘겨 불씨 밝기를 잇는다(방의 lit 시스템과 의식이 같은 불을 쓴다). */}
+      {isOwner && aekmak && !editing && (
+        <div className="mt-3 px-1">
+          <AekmakStrip status={aekmak} litCandles={litCount} play={play} />
         </div>
       )}
 
