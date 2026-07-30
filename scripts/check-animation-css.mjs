@@ -80,6 +80,17 @@ const REQUIRED_CLASSES = [
   '.ritual-ember',
   '.ritual-settle',
   '.ritual-cup',
+  // 오방기 점괘 (R-2). 셔플·뽑기 애니메이션의 animationend 가 국면을 몰기 때문에
+  // CSS 가 없으면 셔플에서 화면이 멎어 뽑기 자체가 불가능해진다(액막이와 같은 급의 파손)
+  '.obangki-bell',
+  '.obangki-slot',
+  '.obangki-cloth',
+  '.obangki-shuffle',
+  '.obangki-pull',
+  '.obangki-dim',
+  '.obangki-unfurl',
+  '.obangki-burst',
+  '.obangki-bubble',
   // 신당 밖에서 같은 이유로 죽어 있던 것들 (app/globals.css 이관)
   '.review-marquee-track',
   '.animate-spin-slow',
@@ -139,6 +150,15 @@ const REQUIRED_KEYFRAMES = [
   'ritualEmber',
   'ritualSettleIn',
   'ritualCupIn',
+  // 오방기 점괘 (R-2)
+  'obangkiBell',
+  'obangkiSway',
+  'obangkiShuffle',
+  'obangkiPull',
+  'obangkiDim',
+  'obangkiUnfurl',
+  'obangkiBurst',
+  'obangkiBubbleIn',
   'review-marquee-scroll',
   'spin-slow',
   'spin-reverse-slow',

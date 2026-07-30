@@ -7,7 +7,7 @@ import { ShrineTargetTabs, type ShrineTargetTab } from '@/components/shrine/Shri
 import { FamilySummonGate } from '@/components/shrine/FamilySummonGate'
 import { getWishes } from '@/app/actions/shrine/shrine-wishes'
 import { getDevotionStatus } from '@/app/actions/shrine/devotion'
-import { getAekmakStatus } from '@/app/actions/shrine/rituals'
+import { getAekmakStatus, getObangkiStatus } from '@/app/actions/shrine/rituals'
 import { getFamilyHallData, type FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
@@ -98,18 +98,19 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
   // 기원 현황은 유저 단위(신당 무관) — 스트립·보상 트랙·소원 폼 뉘앙스에 공용.
   // 사랑방은 **본인 신당 탭 전용**이다(가족 탭에서는 그 가족 방이지 온 식구의 방이 아니다).
   // 여기서 같이 실어 내려보낸다 — 룸이 마운트 후 다시 부르면 클라 fetch 워터폴이 된다.
-  // 액막이 현황도 유저 단위(신당 무관) — 오늘 남은 횟수·이달 회고를 스트립이 즉시 그린다.
-  const [{ wishes }, devotion, familyHall, aekmak] = await Promise.all([
+  // 액막이·오방기 현황도 유저 단위(신당 무관) — 남은 횟수와 오늘치 시드를 스트립이 즉시 그린다.
+  const [{ wishes }, devotion, familyHall, aekmak, obangki] = await Promise.all([
     getWishes(scene.shrineId, 0, 10),
     getDevotionStatus(),
     target ? Promise.resolve<FamilyHallData | null>(null) : loadFamilyHall(),
     getAekmakStatus(),
+    getObangkiStatus(),
   ])
 
   return (
     <div className="min-h-screen px-1 py-4">
       <div className="w-full max-w-[520px] mx-auto">{targetTabs}</div>
-      <ShrineRoomClient scene={scene} devotion={devotion} familyHall={familyHall} aekmak={aekmak} />
+      <ShrineRoomClient scene={scene} devotion={devotion} familyHall={familyHall} aekmak={aekmak} obangki={obangki} />
       {/* 가족 신당 첫 진입 — 主神이 없으면 그 가족 사주로 강신 의식 */}
       {target && !scene.mainDeity && (
         <FamilySummonGate

@@ -67,6 +67,7 @@ import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
 import { AekmakStrip } from './AekmakSheet'
+import { ObangkiStrip } from './ObangkiSheet'
 import { FamilyHall } from './FamilyHall'
 import { HALL_BAND } from '@/lib/domain/shrine/family-hall-layout'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
@@ -75,7 +76,7 @@ import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
-import type { AekmakStatus } from '@/app/actions/shrine/rituals'
+import type { AekmakStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { trackEvent } from '@/lib/analytics/ga4'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
@@ -245,6 +246,11 @@ interface Props {
    * 방문자 뷰는 남의 기록을 셀 수 없고(RLS), 조회 실패 시 남은 횟수를 3회로 오표시하면 안 된다.
    */
   aekmak?: AekmakStatus | null
+  /**
+   * 오방기 현황(소유자 뷰에서만 주입). null 이면 의식 진입점을 그리지 않는다 —
+   * 무료 잔여를 오표시하면 **복채를 물릴 자리에서 무료라고 말하게 된다**(액막이보다 더 엄격하다).
+   */
+  obangki?: ObangkiStatus | null
 }
 
 interface Ring {
@@ -269,7 +275,7 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
   } as CSSProperties
 }
 
-export function ShrineRoomClient({ scene, devotion = null, familyHall = null, aekmak = null }: Props) {
+export function ShrineRoomClient({ scene, devotion = null, familyHall = null, aekmak = null, obangki = null }: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
   const catalogById = useMemo(
     () => new Map<string, StageCatalogItem>(scene.catalog.map((c) => [c.id, c])),
@@ -1567,10 +1573,12 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
       )}
 
       {/* 의식(儀式) — 신당 하단. 액막이는 무료·일 3회라 게이팅 없이 소유자에게 항상 열려 있다.
-          촛불 수를 넘겨 불씨 밝기를 잇는다(방의 lit 시스템과 의식이 같은 불을 쓴다). */}
-      {isOwner && aekmak && !editing && (
-        <div className="mt-3 px-1">
-          <AekmakStrip status={aekmak} litCandles={litCount} play={play} />
+          촛불 수를 넘겨 불씨 밝기를 잇는다(방의 lit 시스템과 의식이 같은 불을 쓴다).
+          오방기는 무료 3회 뒤 복채 — 잔여 판정은 서버가 내려준 현황이 유일한 근거다. */}
+      {isOwner && !editing && (aekmak || obangki) && (
+        <div className="mt-3 space-y-1.5 px-1">
+          {aekmak && <AekmakStrip status={aekmak} litCandles={litCount} play={play} />}
+          {obangki && <ObangkiStrip status={obangki} play={play} />}
         </div>
       )}
 
