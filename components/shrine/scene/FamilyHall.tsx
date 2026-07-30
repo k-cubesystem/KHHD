@@ -1,20 +1,29 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { trackEvent } from '@/lib/analytics/ga4'
+import { clampPct } from '@/lib/domain/shrine/zones'
 import {
+  applyHallSeats,
   hallAvatar,
   hallLayout,
+  hallSeatKey,
   hallSeatLine,
+  hallSeatScale,
+  hallSeatZ,
   hallDaysSince,
+  EMPTY_HALL_SEATS,
   HALL_ALL_PRAYED_LINE,
   HALL_EMPTY_LINE,
   HALL_SEAT_MIN_PX,
+  HALL_SEAT_ZONE,
   type HallSeat,
+  type HallSeatMap,
 } from '@/lib/domain/shrine/family-hall-layout'
-import type { FamilyHallData, FamilyHallMember } from '@/app/actions/shrine/family-hall'
+import { saveFamilyHallSeats, type FamilyHallData, type FamilyHallMember } from '@/app/actions/shrine/family-hall'
 
 /**
  * 가족 사랑방 (PRD-shrine-gamefeel-v1 §안3 / ARCH §2 FamilyHall).
@@ -64,6 +73,9 @@ const BUBBLE_MS = 4200
 /** 좌석 등장 간격(ms) — 왼쪽부터 차례로 앉는다. */
 const SEAT_STAGGER_MS = 70
 
+/** 드래그로 인정하는 최소 이동(px). 이 아래는 탭이다 — 좌석을 툭 건드릴 때마다 저장이 나가지 않게 한다. */
+const DRAG_START_PX = 4
+
 /** 좌석 상자 폭 CSS — 좁은 후원 박스에서도 손가락에 잡히도록 px 하한을 건다. */
 function seatWidthCss(pct: number): string {
   return `max(${pct}%, ${HALL_SEAT_MIN_PX}px)`
@@ -73,11 +85,16 @@ interface Props {
   data: FamilyHallData
   /** 부모 박스에 얹을 클래스(크기·여백은 부모 책임). */
   className?: string
+  /**
+   * 꾸미기(편집) 모드. true 면 좌석을 끌어 옮길 수 있고 탭 말풍선은 잠긴다 —
+   * 보기 모드의 상호작용(탭 → 말풍선)은 종전과 완전히 같다.
+   */
+  editing?: boolean
 }
 
-/** 좌석 키 — 본인 좌석은 memberId 가 null 이다. */
+/** 좌석 키 — 본인 좌석은 memberId 가 null 이다(→ 'self'). 서버 저장 키와 같은 함수를 쓴다. */
 function seatKey(m: FamilyHallMember): string {
-  return m.memberId ?? 'self'
+  return hallSeatKey(m.memberId)
 }
 
 function SeatFigure({
@@ -86,14 +103,18 @@ function SeatFigure({
   index,
   sizePct,
   active,
+  editing,
   onTap,
+  onMove,
 }: {
   member: FamilyHallMember
   seat: HallSeat
   index: number
   sizePct: number
   active: boolean
+  editing: boolean
   onTap: (key: string) => void
+  onMove: (key: string, x: number, y: number) => void
 }) {
   const self = member.memberId === null
   const label = self ? '나' : member.name
@@ -102,11 +123,76 @@ function SeatFigure({
   const avatar = hallAvatar(member.avatarId, label)
   const lit = member.prayedToday
 
+  const ref = useRef<HTMLButtonElement>(null)
+  const dragging = useRef(false)
+  const moved = useRef(false)
+  const posRef = useRef({ x: seat.x, y: seat.y })
+
+  /**
+   * 좌석 드래그 — 아이템 배치(ShrineRoomClient 의 Sprite)와 **같은 규약**이다:
+   * pointer capture → 부모 박스 rect 로 % 환산 → 존 클램프 → 드래그 종료에만 커밋.
+   * 이동 중에는 인라인 스타일만 만지고 리렌더를 내지 않는다(좌석 8개 리렌더 = 프레임 낙하).
+   */
+  const onPointerDown = useCallback(
+    (e: RPointerEvent<HTMLButtonElement>) => {
+      if (!editing) return
+      e.preventDefault()
+      // 두루마리 카메라와의 3자 조정(ARCH §4) — 좌석에서 시작한 드래그가 룸 팬으로 새면 안 된다.
+      // 룸의 팬 핸들러는 버블 단계라 여기서 끊으면 도달하지 않는다(Sprite 와 동일).
+      e.stopPropagation()
+      const el = ref.current
+      // 사랑방 박스가 부모다 — 좌표계가 뷰포트와 1:1 이라 rect 환산이 그대로 성립한다
+      const box = el?.parentElement
+      if (!el || !box) return
+      dragging.current = true
+      moved.current = false
+      el.setPointerCapture(e.pointerId)
+      el.style.zIndex = '140'
+      const rect = box.getBoundingClientRect()
+      const from = { x: e.clientX, y: e.clientY }
+
+      const move = (ev: PointerEvent) => {
+        if (!dragging.current) return
+        // 손떨림·pointerdown 직후의 0px 이동은 이동으로 치지 않는다 — 탭 한 번에 저장이 나가면 안 된다
+        if (!moved.current && Math.hypot(ev.clientX - from.x, ev.clientY - from.y) < DRAG_START_PX) return
+        moved.current = true
+        const x = clampPct(((ev.clientX - rect.left) / rect.width) * 100, HALL_SEAT_ZONE.x)
+        const y = clampPct(((ev.clientY - rect.top) / rect.height) * 100, HALL_SEAT_ZONE.y)
+        posRef.current = { x, y }
+        el.style.left = `${x}%`
+        el.style.top = `${y}%`
+        // 앞(아래)으로 내려올수록 커지고 앞에 선다 — 자동 배치의 원근과 같은 축(hallSeatDepth)
+        el.style.width = seatWidthCss(sizePct * hallSeatScale(y))
+      }
+      const up = () => {
+        if (!dragging.current) return
+        dragging.current = false
+        el.removeEventListener('pointermove', move)
+        el.removeEventListener('pointerup', up)
+        el.removeEventListener('pointercancel', up)
+        // 드래그용 임시 z 를 React 가 아는 값으로 되돌린다 — 안 되돌리면 다음 렌더에서 140 이 남는다
+        el.style.zIndex = String(moved.current ? hallSeatZ(posRef.current.y) : seat.z)
+        if (moved.current) onMove(seatKey(member), posRef.current.x, posRef.current.y)
+      }
+      el.addEventListener('pointermove', move)
+      el.addEventListener('pointerup', up)
+      el.addEventListener('pointercancel', up)
+    },
+    [editing, member, seat.z, sizePct, onMove]
+  )
+
   return (
     <button
+      ref={ref}
       type="button"
-      onClick={() => onTap(seatKey(member))}
-      aria-label={`${label} 자리 — ${lit ? '오늘 다녀감' : '아직 오지 않음'}`}
+      onPointerDown={onPointerDown}
+      // 꾸미기 중에는 말풍선을 열지 않는다 — 드래그 끝의 click 이 말풍선으로 새면 자리를 옮길 때마다 대사가 뜬다
+      onClick={() => {
+        if (!editing) onTap(seatKey(member))
+      }}
+      aria-label={
+        editing ? `${label} 자리 — 끌어서 옮기기` : `${label} 자리 — ${lit ? '오늘 다녀감' : '아직 오지 않음'}`
+      }
       aria-pressed={active}
       className="fh-seat absolute"
       style={{
@@ -116,6 +202,9 @@ function SeatFigure({
         aspectRatio: `1 / ${SEAT_ASPECT_H}`,
         transform: `translate(-50%, ${SEAT_ANCHOR_Y})`,
         zIndex: seat.z,
+        // 편집 중에는 브라우저 스크롤 제스처에 좌석 드래그를 뺏기지 않는다(룸과 같은 규약)
+        touchAction: editing ? 'none' : undefined,
+        cursor: editing ? 'grab' : undefined,
         ['--fh-delay' as string]: `${index * SEAT_STAGGER_MS}ms`,
         ['--fh-anchor' as string]: SEAT_ANCHOR_Y,
       }}
@@ -233,14 +322,61 @@ function LockedHall() {
   )
 }
 
-export function FamilyHall({ data, className }: Props) {
+export function FamilyHall({ data, className, editing = false }: Props) {
   const { isFamilyTier, members, allPrayedToday } = data
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [now, setNow] = useState<number | null>(null)
   const timer = useRef<number | null>(null)
 
-  const layout = useMemo(() => hallLayout(members.length), [members.length])
-  const seated = useMemo(() => members.slice(0, layout.seats.length), [members, layout.seats.length])
+  /**
+   * 좌석 재배치 — 서버(data.seats)가 정본이고 드래그 결과만 이 상태가 앞서 들고 있는다.
+   * 서버가 새 배치를 내려주면 **렌더 중** 즉시 그 값으로 되돌린다(룸의 hall/hallSource 와 같은 패턴).
+   * 합동 기도 낙관 점등(litSelfSeat)은 seats 참조를 보존하므로 방금 옮긴 자리가 되돌아가지 않는다.
+   */
+  const [seats, setSeats] = useState<HallSeatMap>(data.seats)
+  const [seatsSource, setSeatsSource] = useState<HallSeatMap>(data.seats)
+  if (seatsSource !== data.seats) {
+    setSeatsSource(data.seats)
+    setSeats(data.seats)
+  }
+
+  const base = useMemo(() => hallLayout(members.length), [members.length])
+  const seated = useMemo(() => members.slice(0, base.seats.length), [members, base.seats.length])
+  const seatKeys = useMemo(() => seated.map(seatKey), [seated])
+  // 저장한 자리만 덮어쓴다 — 이력이 없는 좌석은 자동 반원 좌표 그대로다(기존 화면 회귀 0)
+  const layout = useMemo(() => applyHallSeats(base, seatKeys, seats), [base, seatKeys, seats])
+  const customized = useMemo(
+    () => seatKeys.some((k) => Object.prototype.hasOwnProperty.call(seats, k)),
+    [seatKeys, seats]
+  )
+
+  /**
+   * 좌표 저장 — 드래그 1회 = 저장 1회(보기 모드 점화의 setPlacementLit 과 같은 즉시 저장).
+   * 룸의 「완료」 저장(saveShrineLayout)은 신물 배치 전용이라 좌석이 끼어들 자리가 없다.
+   * 실패하면 서버 값으로 되돌리지 않고 토스트만 띄운다 — 다음 진입에 서버 정본이 다시 내려온다.
+   */
+  const persist = useCallback((next: HallSeatMap) => {
+    void saveFamilyHallSeats(next).then((res) => {
+      if (!res.success) toast.error('자리 저장에 실패했어요')
+    })
+  }, [])
+
+  // 상태 갱신 함수 안에서 저장하지 않는다 — StrictMode 가 updater 를 두 번 돌려 저장이 두 번 나간다
+  const onSeatMove = useCallback(
+    (key: string, x: number, y: number) => {
+      const next: HallSeatMap = { ...seats, [key]: { x, y } }
+      setSeats(next)
+      persist(next)
+      trackEvent({ action: 'family_hall_seat_move', category: 'shrine' })
+    },
+    [seats, persist]
+  )
+
+  const onResetSeats = useCallback(() => {
+    setSeats(EMPTY_HALL_SEATS)
+    persist(EMPTY_HALL_SEATS)
+    trackEvent({ action: 'family_hall_seat_reset', category: 'shrine' })
+  }, [persist])
 
   // 노출 계측 — 마운트 1회. 잠김/부분/만개를 나눠 FAMILY 퍼널을 본다(PRD §6 DoD).
   useEffect(() => {
@@ -329,12 +465,14 @@ export function FamilyHall({ data, className }: Props) {
           index={i}
           sizePct={layout.seatSizePct}
           active={openKey === seatKey(m)}
+          editing={editing}
           onTap={onTap}
+          onMove={onSeatMove}
         />
       ))}
 
-      {/* 말풍선 — 탭한 자리 위 */}
-      {openMember && openSeat && (
+      {/* 말풍선 — 탭한 자리 위 (꾸미기 중에는 열리지 않는다) */}
+      {!editing && openMember && openSeat && (
         <div
           role="status"
           className="fh-bubble pointer-events-none absolute z-[120] max-w-[74%] rounded-[10px] border border-gold-500/30 px-2.5 py-1.5 text-center"
@@ -358,19 +496,40 @@ export function FamilyHall({ data, className }: Props) {
         </div>
       )}
 
-      {/* 하단 캡션 — 만개 / 빈 방 / 더 앉지 못한 인원 */}
-      <p className="absolute bottom-[2%] left-1/2 w-full -translate-x-1/2 px-3 text-center font-sans text-[10px] leading-snug text-ink-primary/55">
-        {seated.length === 0 ? (
-          <span>{HALL_EMPTY_LINE}</span>
-        ) : allPrayedToday ? (
-          <span className="text-gold-300">{HALL_ALL_PRAYED_LINE}</span>
-        ) : (
-          <span>
-            오늘 {seated.filter((m) => m.prayedToday).length}/{seated.length} 자리에 불이 켜졌어요
-            {layout.overflow > 0 && ` · 외 ${layout.overflow}명`}
+      {/* 하단 캡션 — 꾸미기 안내 / 만개 / 빈 방 / 더 앉지 못한 인원.
+          꾸미기 중에는 캡션 자리를 조작 안내로 바꾼다(사랑방에 남는 유일한 여백이라 새 HUD 를 만들지 않는다). */}
+      {editing && seated.length > 0 ? (
+        <div className="absolute bottom-[2%] left-1/2 z-[130] flex w-full -translate-x-1/2 flex-col items-center gap-1 px-3">
+          <span className="text-center font-sans text-[10px] leading-snug text-gold-300/80">
+            식구를 끌어 자리를 옮겨 보세요
           </span>
-        )}
-      </p>
+          {customized && (
+            <button
+              type="button"
+              onClick={onResetSeats}
+              // 팬 제스처가 이 버튼의 탭을 삼키지 않게 — 좌석 드래그와 같은 규약
+              onPointerDown={(e) => e.stopPropagation()}
+              className="rounded-full border border-gold-500/45 px-2.5 py-1 font-sans text-[10px] leading-none text-gold-200"
+              style={{ background: 'rgba(22,20,15,0.86)' }}
+            >
+              자동 배치로 되돌리기
+            </button>
+          )}
+        </div>
+      ) : (
+        <p className="absolute bottom-[2%] left-1/2 w-full -translate-x-1/2 px-3 text-center font-sans text-[10px] leading-snug text-ink-primary/55">
+          {seated.length === 0 ? (
+            <span>{HALL_EMPTY_LINE}</span>
+          ) : allPrayedToday ? (
+            <span className="text-gold-300">{HALL_ALL_PRAYED_LINE}</span>
+          ) : (
+            <span>
+              오늘 {seated.filter((m) => m.prayedToday).length}/{seated.length} 자리에 불이 켜졌어요
+              {layout.overflow > 0 && ` · 외 ${layout.overflow}명`}
+            </span>
+          )}
+        </p>
+      )}
     </div>
   )
 }

@@ -10,6 +10,7 @@
  */
 
 import { ELEMENT_AVATARS, findFamilyAvatar } from '@/lib/domain/family/avatars'
+import { clampPct } from '@/lib/domain/shrine/zones'
 
 /** 방석 최대 수. 그 이상은 앉히지 않고 "외 N명"으로 접는다 — 반원이 뭉개지기 시작하는 경계. */
 export const HALL_MAX_SEATS = 8
@@ -120,6 +121,115 @@ export function hallLayout(count: number): HallLayout {
     seatSizePct,
     overflow: Math.max(0, requested - n),
   }
+}
+
+// ─── 사용자 재배치 좌석 (꾸미기 모드 드래그) ────────────────────────────────
+
+/**
+ * 좌석을 끌어 놓을 수 있는 범위 — 부모 박스 %. ZONES(아이템 배치)와 같은 역할이고
+ * 클램프도 같은 함수(zones.clampPct)를 쓴다. 클라·서버가 이 하나만 보게 해서
+ * "클라에서만 가둔 좌표"가 DB 에 남는 길을 없앤다.
+ *
+ * 자동 배치 반원(x 17~83 · y 43~63)을 완전히 품는다 — 저장 이력이 없는 좌석은 자동 좌표를
+ * 그대로 쓰는데, 범위가 그보다 좁으면 첫 드래그도 없이 기존 화면이 흔들린다.
+ * 상하 여유는 좌석 상자 기하에서 왔다: 오브 꼭대기는 방석 중심에서 상자 폭의 0.74배 위,
+ * 이름표는 0.2배 아래. 좁은 후원 박스(폭 250px 안팎)에서 그 값이 대략 ±8%p 다.
+ */
+export const HALL_SEAT_ZONE = {
+  x: [14, 86] as [number, number],
+  y: [30, 86] as [number, number],
+} as const
+
+/** 본인 좌석의 저장 키. 본인은 family_members 행이 아니라 id 가 없다. */
+export const HALL_SELF_SEAT_KEY = 'self'
+
+/** 저장 키 최대 길이 — uuid(36)에 여유를 둔 값. 넘으면 버린다(무한 길이 키 방어). */
+const SEAT_KEY_MAX_LEN = 64
+
+/** 프로토타입 오염 경로가 되는 키는 저장하지 않는다. */
+const UNSAFE_SEAT_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype'])
+
+/** 좌석 하나의 저장 좌표(부모 박스 %). */
+export interface HallSeatPos {
+  x: number
+  y: number
+}
+
+/** 좌석 키 → 저장 좌표. 키가 없는 좌석은 자동 배치를 쓴다(부분 저장이 정상 상태다). */
+export type HallSeatMap = Record<string, HallSeatPos>
+
+/** 빈 배치(=전부 자동). 초기화가 저장하는 값이기도 하다. */
+export const EMPTY_HALL_SEATS: HallSeatMap = {}
+
+/** 좌석 저장 키 — 본인은 'self', 가족은 family_members.id. 클라·서버 공용 계약. */
+export function hallSeatKey(memberId: string | null | undefined): string {
+  return typeof memberId === 'string' && memberId.length > 0 ? memberId : HALL_SELF_SEAT_KEY
+}
+
+/**
+ * y → 원근 깊이(0=가장 앞·1=가장 뒤). 자동 배치의 depth=sin(theta) 와 **같은 축**이라
+ * 자동 좌석 y 를 넣으면 자동 좌석과 같은 스케일·겹침 순서가 나온다(끌어 놓은 좌석만 재계산해도 화면이 섞이지 않는다).
+ */
+export function hallSeatDepth(y: number): number {
+  if (!Number.isFinite(y)) return 0
+  return clamp((HALL_ARC.cy - y) / HALL_ARC.ry, 0, 1)
+}
+
+/** 끌어 놓은 좌석의 원근 스케일 — 앞(아래)으로 갈수록 커진다. */
+export function hallSeatScale(y: number): number {
+  return round(1 - DEPTH_SCALE_DROP * hallSeatDepth(y), 3)
+}
+
+/** 끌어 놓은 좌석의 겹침 순서 — 앞(아래) 좌석이 위에 그려진다. */
+export function hallSeatZ(y: number): number {
+  return Math.round((1 - hallSeatDepth(y)) * 100)
+}
+
+/**
+ * 저장 좌표 파싱 + 클램프. **DB jsonb 와 서버 액션 인자 양쪽의 유일한 관문**이다.
+ * 형태가 어긋난 항목은 통째로 버리고 남은 것만 살린다 — 한 좌석이 깨져도 방 전체가 자동 배치로 되돌아가지 않게.
+ * 좌표는 소수 2자리로 접는다(jsonb 크기 + 서버·클라 값 동일성).
+ */
+export function parseHallSeats(raw: unknown): HallSeatMap {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
+  const out: HallSeatMap = {}
+  let kept = 0
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    // 렌더되는 좌석 수만큼만 받는다 — 그 이상은 화면에 나오지 않아 저장할 이유가 없다(페이로드 상한).
+    if (kept >= HALL_MAX_SEATS) break
+    if (key.length === 0 || key.length > SEAT_KEY_MAX_LEN || UNSAFE_SEAT_KEYS.has(key)) continue
+    if (typeof value !== 'object' || value === null) continue
+    const { x, y } = value as { x?: unknown; y?: unknown }
+    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) continue
+    out[key] = { x: round(clampPct(x, HALL_SEAT_ZONE.x), 2), y: round(clampPct(y, HALL_SEAT_ZONE.y), 2) }
+    kept += 1
+  }
+  return out
+}
+
+/**
+ * 자동 배치 위에 저장 좌표를 덮어쓴다. keys[i] 는 seats[i] 에 앉는 식구의 저장 키다.
+ *
+ * 저장 이력이 없는 좌석은 **자동 좌표를 손대지 않는다**(값을 다시 계산하지도 않는다) —
+ * 마이그레이션 없이 기존 사용자 화면이 그대로여야 하므로, 반올림 차이조차 만들지 않는 것이 계약이다.
+ * 덮어쓸 좌석이 하나도 없으면 **같은 참조**를 돌려 헛 리렌더를 내지 않는다.
+ */
+export function applyHallSeats(
+  layout: HallLayout,
+  keys: readonly string[],
+  saved: HallSeatMap | null | undefined
+): HallLayout {
+  if (!saved) return layout
+  let changed = false
+  const seats = layout.seats.map((seat, i) => {
+    const pos = Object.prototype.hasOwnProperty.call(saved, keys[i]) ? saved[keys[i]] : undefined
+    if (!pos) return seat
+    const x = round(clampPct(pos.x, HALL_SEAT_ZONE.x), 2)
+    const y = round(clampPct(pos.y, HALL_SEAT_ZONE.y), 2)
+    changed = true
+    return { x, y, scale: hallSeatScale(y), z: hallSeatZ(y) }
+  })
+  return changed ? { ...layout, seats } : layout
 }
 
 // ─── 좌석 오브 (아바타 해석 + 폴백) ──────────────────────────────────────────

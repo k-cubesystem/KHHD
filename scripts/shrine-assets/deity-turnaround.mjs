@@ -2,15 +2,24 @@
 //
 // ── 왜 프레임을 굽는가 ────────────────────────────────────────────────────────
 // 회전의 자연스러움은 rotateY 하나로는 나오지 않는다. 180° 에서 **좌우 반전된 정면**이 보여
-// "종이 뒤집기"가 된다. 5국면(정면 → 측면 → 뒷면 → 측면flip → 정면) 중 측면·뒷면은 그림을
-// **갈아 끼워야** 한다. 그래서 신위당 side·back 2장을 굽는다.
+// "종이 뒤집기"가 된다. 중간 자세는 그림을 **갈아 끼워야** 한다.
+//
+// ── 45° 아홉 국면 (4차 검수) ───────────────────────────────────────────────
+// 90° 씩 다섯 국면은 자세가 훅 건너뛰어 "그림 교체"로 읽혔다. 45° 씩 여덟 걸음이면 건너뛰는 각이
+// 절반이라 눈이 중간 자세를 보충한다. 그런데 **굽는 장수는 넷뿐**이다 — 180° 를 넘는 절반
+// (225·270·315°)은 그 대칭각(135·90·45°)을 좌우 반전해 쓰기 때문이다.
+//   q45 → 45°  ·  side → 90°  ·  q135 → 135°  ·  back → 180°   (정면은 DB sprite_url)
+// ⚠️ 네 장의 **회전 방향이 같아야** 반전 재사용이 성립한다. 전부 "관람자의 오른쪽으로 도는" 기준이며
+//    side.webp 가 이미 그 기준으로 구워져 있으므로 q45·q135 도 반드시 같은 방향이어야 한다.
 //
 // ── 경로 규약 (배선 계약 — DB 갱신 없음) ────────────────────────────────────
-//   /shrine/deities/{code}/side.webp   측면
-//   /shrine/deities/{code}/back.webp   뒷면
+//   /shrine/deities/{code}/{q45,side,q135,back}.webp
+// 키 목록의 정본은 lib/domain/shrine/deity-turn.ts 의 BAKED_FRAME_KEYS 이고,
+// 아래 VIEWS 와의 일치는 lib/domain/shrine/__tests__/deity-turn.test.ts 가 대조한다.
 // 배선은 **파일 존재 여부**로 판단한다(DB 컬럼 추가 없음, shrine_deities 무수정).
-//   · 있으면  : 5국면 프레임 교체 경로
-//   · 없으면  : rotateY + 90° 근처 모션블러·아우라 증폭 폴백 (부록 C ④)
+//   · 넷 다 있으면       : 9국면 프레임 교체 경로
+//   · side·back 만 있으면 : 5국면 프레임 교체 경로 (하위 등급 — 회귀 없이 버틴다)
+//   · 없으면             : rotateY + 90° 근처 모션블러·아우라 증폭 폴백 (부록 C ④)
 // 따라서 이 스크립트는 **에셋만** 만든다. 17신위 확산 전까지 15신위는 폴백으로 돈다.
 //
 // ── 동일 인물성이 관건 ──────────────────────────────────────────────────────
@@ -24,12 +33,13 @@
 // 캔버스에 딱 맞춘다 → 발끝이 항상 캔버스 바닥이므로 렌더(`object-contain`, 높이 고정)에서
 // 접지선이 어긋나지 않는다. 어깨선(=몸통이 시작되는 행)까지 계측해 프레임 간 차이를 보고한다.
 //
-// 산출: public/shrine/deities/{code}/side.webp · back.webp   (투명, 높이 480)
-// 검수: assets-src/shrine/deity-turnaround-check.webp  (신위별 base|side|back 나란히 — 인물 판정용)
+// 산출: public/shrine/deities/{code}/{q45,side,q135,back}.webp   (투명, 높이 480)
+// 검수: assets-src/shrine/deity-turnaround-check.webp  (신위별 base|q45|side|q135|back — 인물·각도 판정용)
 //
 // 사용:
-//   node scripts/shrine-assets/deity-turnaround.mjs               # 누락분만 (멱등)
+//   node scripts/shrine-assets/deity-turnaround.mjs               # 누락분만 (멱등 — 이미 있는 side/back 은 건너뛴다)
 //   node scripts/shrine-assets/deity-turnaround.mjs seonnyeo      # 한 신위만
+//   node scripts/shrine-assets/deity-turnaround.mjs --only=q45,q135 # 특정 각만 (중간각 추가 굽기)
 //   node scripts/shrine-assets/deity-turnaround.mjs --regen       # 원본부터 재생성
 //   node scripts/shrine-assets/deity-turnaround.mjs --rekey       # 원본 캐시로 키잉만 (API 0회)
 //   node scripts/shrine-assets/deity-turnaround.mjs --noref       # 참조 이미지 없이 생성(오염 대응)
@@ -59,8 +69,8 @@ const RAW_DIR = process.env.TURNAROUND_RAW_DIR || path.join(process.env.TEMP || 
  *  선녀신은 `seonnyeo`(sunyeo 아님) · 용왕신은 `yongwang`. 검수 통과 후 17신위로 확산한다. */
 const PILOT_CODES = ['seonnyeo', 'yongwang']
 
-/** 총 생성 상한(재시도 포함). 4장 + 재시도 4회. */
-const API_BUDGET = 8
+/** 총 생성 상한(재시도 포함). 시범 2신위 × 4각 = 8장 + 재시도 8회. */
+const API_BUDGET = 16
 let apiCalls = 0
 
 /** base 와 같은 캔버스 높이 — 접지선 정렬의 전제(실측: 전 신위 base.webp 가 480) */
@@ -86,20 +96,69 @@ const SAME_CHARACTER =
   'same art style and same line weight. This is the SAME individual turned in place — not a different person, ' +
   'not a redesign, not a costume change'
 
-/** @type {Array<{key:string,file:string,view:string}>} */
+/** 회전 방향 — 네 각이 같은 방향이라야 대칭각(225·270·315°) 반전 재사용이 성립한다.
+ *  side.webp 가 이미 이 방향으로 구워져 있으므로 바꾸면 기존 에셋과 어긋난다. */
+const TURN_DIRECTION =
+  'the figure rotates in place toward the viewer' +
+  "'" +
+  's RIGHT (counter-clockwise seen from above), ' +
+  'the same rotation direction for every frame of this turnaround'
+
+/** 각도 순서대로. key 는 파일명 겸 도메인 프레임 키(lib/domain/shrine/deity-turn.ts BAKED_FRAME_KEYS). */
+/** @type {Array<{key:string,file:string,deg:number,refFile?:string,view:string}>} */
 const VIEWS = [
+  {
+    key: 'q45',
+    file: 'q45.webp',
+    deg: 45,
+    refFile: 'side.webp',
+    // ⚠️ 방향을 반드시 명시한다. 1차 생성 때 "45 degrees away from the camera" 만 주고 방향을 비웠더니
+    //    모델이 **정면과 구분되지 않는 그림**으로 수렴했다(base 와 육안 차이 거의 없음 → 회전 앞
+    //    3분의 1이 정지처럼 보이고 side 로 넘어갈 때 튄다). side 와 **같은 쪽**으로 돌아야
+    //    0°→45°→90° 가 한 방향 회전으로 읽히고, 225·270·315° 반전 재사용도 성립한다.
+    // ⚠️ 기준을 **정면이 아니라 참조로 주는 측면(side.webp)** 으로 잡는다.
+    //    "정면에서 45도 돌려라"로 두 번 구웠지만 모델이 매번 정면으로 수렴했다(base 와 육안 차이
+    //    거의 없음 → 회전 앞 3분의 1이 정지처럼 보인다). 참조 이미지가 측면이므로 "그 측면을
+    //    카메라 쪽으로 절반 되돌려라"가 모델에게 훨씬 강한 신호다. 방향은 side 와 같은 쪽이어야
+    //    0°→45°→90° 가 한 방향 회전으로 읽히고 225·270·315° 반전 재사용도 성립한다.
+    view:
+      'START FROM THE REFERENCE SIDE-PROFILE POSE and rotate the figure HALFWAY BACK toward the camera — ' +
+      'the result is a FRONT THREE-QUARTER view at 45 degrees, still clearly turned to the viewer' +
+      "'" +
+      's right, NOT a frontal pose: ' +
+      'the torso stays visibly angled and narrower than a front view, the near shoulder overlaps and hides part of the chest, ' +
+      'the face is turned so the nose points to the viewer' +
+      "'" +
+      's right and breaks the line of the far cheek, the far eye is foreshortened, the far ear hidden, ' +
+      'roughly one third of the back of the head and hair mass is visible behind the near shoulder, ' +
+      'the sleeves and skirt hem trailing behind the turn as if the figure is mid-rotation',
+  },
   {
     key: 'side',
     file: 'side.webp',
+    deg: 90,
     view:
-      'seen from the SIDE — an exact 90-degree profile view, the body turned so it faces the viewer' + "'" +
+      'seen from the SIDE — an exact 90-degree profile view, the body turned so it faces the viewer' +
+      "'" +
       's right, ' +
       'only one eye and the profile line of the nose visible, one shoulder in front of the other, ' +
       'the sleeves and skirt hem trailing slightly behind the turn as if the figure just rotated',
   },
   {
+    key: 'q135',
+    file: 'q135.webp',
+    deg: 135,
+    refFile: 'side.webp',
+    view:
+      'seen from a REAR THREE-QUARTER angle — the body rotated exactly 135 degrees away from the camera, ' +
+      'mostly the back, with only a sliver of the cheek and jaw visible past the near shoulder and the far eye hidden, ' +
+      'the back of the head and the hair down the back dominating the silhouette, ' +
+      'the sleeves and skirt hem swinging wide with the turn',
+  },
+  {
     key: 'back',
     file: 'back.webp',
+    deg: 180,
     view:
       'seen from DIRECTLY BEHIND — a back view, the face completely hidden, ' +
       'showing the back of the head, the full length of the hair down the back, ' +
@@ -107,10 +166,13 @@ const VIEWS = [
   },
 ]
 
+/** 검수·정렬 계측이 훑을 파일 순서 — 정면부터 각도 순. VIEWS 가 정본이라 각을 늘려도 따라온다. */
+const CHECK_FILES = ['base.webp', ...VIEWS.map((v) => v.file)]
+
 function framePrompt(deity, view) {
   return (
     `${STYLE_PREFIX}, "${deity.code}" deity, ${deity.appearance}, neutral gentle expression, ` +
-    `${view.view}. ${SAME_CHARACTER}. ${FRAME_COMMON}`
+    `${view.view}. ${TURN_DIRECTION}. ${SAME_CHARACTER}. ${FRAME_COMMON}`
   )
 }
 
@@ -284,10 +346,19 @@ async function buildFrame(deity, view, { regen, rekey, noref }) {
   const outWebp = path.join(DEITY_DIR, deity.code, view.file)
   const basePath = path.join(DEITY_DIR, deity.code, 'base.webp')
 
+  // 중간각(q45·q135)은 side 를 **함께** 참조한다 — 정면만 주면 모델이 반대 방향으로 돌린 그림을
+  // 내놓는 일이 있고, 그러면 반전 재사용이 성립하지 않는다(180° 를 넘는 절반이 통째로 뒤집힌다).
+  // 참조가 인물을 오염시키면(세션12 교훈) `--noref` 로 프롬프트만 남겨 재시도한다.
+  const refPaths = [basePath]
+  if (view.refFile) refPaths.push(path.join(DEITY_DIR, deity.code, view.refFile))
+
   async function ensureRaw(force) {
     if (!force && existsSync(rawPng)) return
-    const refs = noref ? [] : [basePath]
-    console.log(`  · 생성 (${MODEL}${refs.length ? ', base 참조 첨부' : ', 참조 없음'}) — API ${apiCalls + 1}/${API_BUDGET}`)
+    const refs = noref ? [] : refPaths.filter((p) => existsSync(p))
+    console.log(
+      `  · 생성 (${MODEL}${refs.length ? `, 참조 ${refs.map((p) => path.basename(p)).join('+')}` : ', 참조 없음'})` +
+        ` — API ${apiCalls + 1}/${API_BUDGET}`
+    )
     const buf = await callModel(framePrompt(deity, view), refs)
     await mkdir(path.dirname(rawPng), { recursive: true })
     await writeFile(rawPng, buf)
@@ -343,14 +414,15 @@ const DARK = { r: 0x1a, g: 0x13, b: 0x08, alpha: 1 }
 const CHECK_GAP = 16
 
 /**
- * 신위별 base | side | back 을 **같은 높이·같은 바닥선**으로 나란히 붙인다.
- * 인물이 같은지(얼굴·복장·색), 키가 흔들리지 않는지를 이 한 장으로 판정한다.
+ * 신위별 base | q45 | side | q135 | back 을 **같은 높이·같은 바닥선**으로 각도 순으로 붙인다.
+ * 인물이 같은지(얼굴·복장·색), 키가 흔들리지 않는지, **회전 방향이 한쪽으로 일관되는지**를
+ * 이 한 장으로 판정한다 — 중간각이 반대로 돌아 있으면 반전 재사용이 통째로 어긋난다.
  */
 async function makeCheckImage(codes) {
   const rows = []
   for (const code of codes) {
     const cells = []
-    for (const f of ['base.webp', 'side.webp', 'back.webp']) {
+    for (const f of CHECK_FILES) {
       const file = path.join(DEITY_DIR, code, f)
       if (!existsSync(file)) continue
       cells.push(await sharp(file).resize({ height: FRAME_H, fit: 'inside' }).png().toBuffer())
@@ -398,7 +470,26 @@ if (!targets.length) {
   process.exit(1)
 }
 
-console.log(`모델: ${MODEL}\n원본 캐시: ${RAW_DIR}\n산출: ${DEITY_DIR}\\{code}\\{side,back}.webp\n검수: ${QA_DIR}\n`)
+// `--only=q45,q135` — 각 단위로 좁힌다(이미 side·back 이 있는 신위에 중간각만 얹을 때 과금이 반으로 준다).
+// 등호 형태만 받는다 — 공백 형태는 값이 신위 코드 위치와 겹쳐 조용히 오작동한다.
+const onlyKeysArg = args.find((a) => a.startsWith('--only='))
+const onlyKeys = onlyKeysArg
+  ? onlyKeysArg
+      .slice('--only='.length)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : null
+const views = onlyKeys ? VIEWS.filter((v) => onlyKeys.includes(v.key)) : VIEWS
+if (!views.length) {
+  console.error('unknown view key:', onlyKeys?.join(','), '— 가능한 각:', VIEWS.map((v) => v.key).join(', '))
+  process.exit(1)
+}
+
+console.log(
+  `모델: ${MODEL}\n원본 캐시: ${RAW_DIR}\n` +
+    `산출: ${DEITY_DIR}\\{code}\\{${views.map((v) => v.key).join(',')}}.webp\n검수: ${QA_DIR}\n`
+)
 
 const results = []
 for (const deity of targets) {
@@ -407,7 +498,7 @@ for (const deity of targets) {
     console.error(`✖ ${deity.code}: base.webp 가 없다 — 참조·정렬 기준이 없어 건너뛴다`)
     continue
   }
-  for (const view of VIEWS) {
+  for (const view of views) {
     const outWebp = path.join(DEITY_DIR, deity.code, view.file)
     if (!regen && !rekey && existsSync(outWebp)) {
       console.log('skip', `${deity.code}/${view.file}`, '(이미 존재 — 재생성은 --regen)')
@@ -433,14 +524,15 @@ for (const deity of targets) {
 const check = await makeCheckImage(codes)
 if (check) {
   console.log(
-    `\n✔ deity-turnaround-check.webp ${(check.bytes / 1024).toFixed(1)}KB — ${check.width}×${check.height} (${check.rows}행 × base|side|back, 바닥선 정렬)`
+    `\n✔ deity-turnaround-check.webp ${(check.bytes / 1024).toFixed(1)}KB — ${check.width}×${check.height} ` +
+      `(${check.rows}행 × ${CHECK_FILES.map((f) => f.replace('.webp', '')).join('|')}, 바닥선 정렬)`
   )
 }
 
 console.log('\n── 정렬 계측 (트림 후 · 캔버스 높이 480 고정) ──')
 for (const code of codes) {
   const frames = []
-  for (const f of ['base.webp', 'side.webp', 'back.webp']) {
+  for (const f of CHECK_FILES) {
     const file = path.join(DEITY_DIR, code, f)
     if (!existsSync(file)) continue
     frames.push({ name: f.replace('.webp', ''), s: await silhouette(file) })
@@ -472,8 +564,9 @@ for (const r of results) {
 }
 console.log(
   `\nAPI 호출 ${apiCalls}/${API_BUDGET}회` +
-    '\n⚠️ 인물 일관성은 수치로 잡히지 않는다 — deity-turnaround-check.webp 를 **육안 확인**하고,' +
+    '\n⚠️ 인물 일관성·회전 방향은 수치로 잡히지 않는다 — deity-turnaround-check.webp 를 **육안 확인**하고,' +
     '\n   인물이 달라졌으면 `--regen --noref` 로 참조 없이 다시 굽는다(세션12 오염 교훈).' +
-    '\n   프레임이 없어도 앱은 rotateY 폴백으로 동작한다 — DB 갱신은 하지 않는다.'
+    '\n   중간각이 반대로 돌아 있으면 그 각만 `--only=q45 --regen` 으로 다시 굽는다(반전 재사용이 어긋난다).' +
+    '\n   프레임이 모자라도 앱은 등급을 낮춰 동작한다(넷=9국면 · side·back=5국면 · 없음=rotateY) — DB 갱신은 하지 않는다.'
 )
 process.exit(results.some((r) => !r.ok) ? 1 : 0)

@@ -1,9 +1,24 @@
-import { KEEPER_WANDER_LEG_MS, keeperRestX, planKeeperEntrance, planKeeperWalk, type KeeperRange } from '../keeper-walk'
+import {
+  ENTRANCE_PACE_RATIO,
+  KEEPER_WANDER_LEG_MS,
+  entranceMsFor,
+  keeperRestX,
+  planKeeperEntrance,
+  planKeeperWalk,
+  type KeeperRange,
+} from '../keeper-walk'
 
 /** 배선(ShrineRoomClient)이 쓰는 실제 값 — 여기가 깨지면 방에서 신당지기가 튄다 */
 const WANDER: KeeperRange = { from: 31, to: 59 }
-/** 입장 걷기 3600ms (부록 C ② 감속: 1800→3600). 카메라 팬 1100ms 의 3.3배 */
-const ENTRANCE = { from: 8, to: 45, ms: 3600 }
+/** 배선 문간 x (ShrineRoomClient.KEEPER_ENTRANCE_FROM) */
+const DOOR_X = 8
+/** planKeeperEntrance 자체는 ms 를 통과시키기만 한다 — 그 통과 계약을 보는 고정 입력 */
+const ENTRANCE = { from: DOOR_X, to: 45, ms: 3600 }
+
+/** %p/ms — 두 걸음의 속도를 같은 자로 잰다 */
+function pace(distancePct: number, ms: number): number {
+  return distancePct / ms
+}
 
 describe('planKeeperWalk — 배회 구간', () => {
   it('구간을 정규화하고 중점을 정지 위치로 삼는다', () => {
@@ -79,5 +94,41 @@ describe('planKeeperEntrance — 입장 걷기 구간', () => {
     const p = planKeeperWalk(WANDER)
     expect(planKeeperEntrance({ from: -30, to: 45, ms: 1800 }, p)?.from).toBe(0)
     expect(planKeeperEntrance({ from: 8, to: 45, ms: 900_000 }, p)?.ms).toBe(10_000)
+  })
+})
+
+describe('entranceMsFor — 입장 걸음을 배회 속도에서 파생 (안2.4 / CEO 4차 "입장속도 아직 빠름")', () => {
+  it('★ 회귀: 입장 걸음이 배회 걸음의 정확히 ENTRANCE_PACE_RATIO 배다', () => {
+    // 안2.3 의 실제 결함: 입장 10.3%p/s vs 배회 0.93%p/s = 11배. 상수 두 개가 따로 조정된 결과였다.
+    const plan = planKeeperWalk(WANDER)
+    const ms = entranceMsFor(DOOR_X, plan)
+    expect(ms).not.toBeNull()
+
+    const wanderPace = pace(plan.hi - plan.lo, plan.cycleMs / 2)
+    const entrancePace = pace(Math.abs(plan.rest - DOOR_X), ms as number)
+    expect(entrancePace / wanderPace).toBeCloseTo(ENTRANCE_PACE_RATIO, 2)
+  })
+
+  it('종전 하드코딩(3600ms)보다 확실히 느리다 — 4차 검수 지시의 방향', () => {
+    expect(entranceMsFor(DOOR_X, planKeeperWalk(WANDER)) as number).toBeGreaterThan(3600)
+  })
+
+  it('배선 구성에서 방어 상한(10s) 안에 들어온다 — 클램프로 잘리면 비율 계약이 깨진다', () => {
+    expect(entranceMsFor(DOOR_X, planKeeperWalk(WANDER)) as number).toBeLessThanOrEqual(10_000)
+  })
+
+  it('배회 구간이 넓어지면(=배회가 빨라지면) 입장도 같이 빨라진다 — 한쪽만 어긋날 수 없다', () => {
+    const narrow = entranceMsFor(DOOR_X, planKeeperWalk({ from: 40, to: 50 })) as number
+    const wide = entranceMsFor(DOOR_X, planKeeperWalk({ from: 20, to: 70 })) as number
+    expect(wide).toBeLessThan(narrow)
+  })
+
+  it('배회하지 않는 방·제자리 입장은 null — 기준 속도가 없으면 걷기를 걸지 않는다', () => {
+    expect(entranceMsFor(DOOR_X, planKeeperWalk({ from: 45, to: 45 }))).toBeNull()
+    expect(entranceMsFor(45, planKeeperWalk(WANDER))).toBeNull()
+  })
+
+  it('비유한 입력에도 결정론을 유지한다 (SSR·클라 동일)', () => {
+    expect(entranceMsFor(Number.NaN, planKeeperWalk(WANDER))).toBe(entranceMsFor(0, planKeeperWalk(WANDER)))
   })
 })

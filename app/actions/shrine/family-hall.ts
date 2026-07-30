@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { logger } from '@/lib/utils/logger'
+import { parseHallSeats, type HallSeatMap } from '@/lib/domain/shrine/family-hall-layout'
 
 /**
  * 가족 사랑방 데이터 (PRD-shrine-gamefeel-v1 §안3 / ARCH §3·§7).
@@ -36,10 +37,15 @@ export interface FamilyHallData {
   members: FamilyHallMember[]
   /** 좌석이 1개 이상이고 전원이 오늘 기도했는가 — 만개 연출 조건 */
   allPrayedToday: boolean
+  /**
+   * 사용자가 끌어 옮긴 좌석 좌표(키 = 본인 'self' / 가족 family_members.id).
+   * 비어 있으면 전부 자동 반원 배치 — 저장한 적 없는 신당은 여기가 `{}` 라 화면이 종전과 같다.
+   */
+  seats: HallSeatMap
 }
 
 /** 잠긴 사랑방의 고정 응답. 데이터 자체를 내리지 않는다(ARCH §7). */
-const LOCKED: FamilyHallData = { isFamilyTier: false, members: [], allPrayedToday: false }
+const LOCKED: FamilyHallData = { isFamilyTier: false, members: [], allPrayedToday: false, seats: {} }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -64,6 +70,30 @@ function toMember(row: unknown): FamilyHallMember | null {
   }
 }
 
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+/**
+ * 사랑방 좌석 배치는 **본인 신당 행(shrines.hall_seats)** 에 산다.
+ * 사랑방 자체가 본인 신당 탭에서만 열리므로(page.tsx) 배치도 그 한 행에 모인다 — 새 테이블 0.
+ *
+ * ⚠️ `.is('family_member_id', null)` 없이 조회하면 가족별 신당 행을 잡는다(같은 테이블·같은 user_id).
+ * ⚠️ select('*') 인 이유: hall_seats 는 20260730 마이그레이션 이후에만 존재한다. 컬럼을 명시하면
+ *    미적용 DB에서 조회가 통째로 실패해 사랑방이 잠긴 것처럼 보인다 — 없는 컬럼은 undefined 로 흘려보낸다.
+ */
+async function loadHallSeats(supabase: SupabaseServer, userId: string): Promise<HallSeatMap> {
+  const { data, error } = await supabase
+    .from('shrines')
+    .select('*')
+    .eq('user_id', userId)
+    .is('family_member_id', null)
+    .maybeSingle()
+  if (error) {
+    logger.warn('[family-hall] seat layout load failed:', error)
+    return {}
+  }
+  return parseHallSeats(isRecord(data) ? data.hall_seats : null)
+}
+
 /**
  * 사랑방 좌석 presence. 비 FAMILY·비로그인은 좌석을 내리지 않고 잠금 상태만 돌려준다(업셀 씬용).
  *
@@ -76,11 +106,19 @@ export async function getFamilyHallData(): Promise<FamilyHallData> {
   if (!membership || !FAMILY_HALL_TIERS.has(membership.tier)) return LOCKED
 
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc('get_family_hall_presence')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const [presence, seats] = await Promise.all([
+    supabase.rpc('get_family_hall_presence'),
+    user ? loadHallSeats(supabase, user.id) : Promise.resolve<HallSeatMap>({}),
+  ])
+  const { data, error } = presence
 
   if (error) {
     logger.error('[family-hall] presence RPC failed:', error)
-    return { isFamilyTier: true, members: [], allPrayedToday: false }
+    return { isFamilyTier: true, members: [], allPrayedToday: false, seats }
   }
 
   const rows: unknown = data
@@ -90,5 +128,48 @@ export async function getFamilyHallData(): Promise<FamilyHallData> {
     isFamilyTier: true,
     members,
     allPrayedToday: members.length > 0 && members.every((m) => m.prayedToday),
+    seats,
   }
+}
+
+/**
+ * 사랑방 좌석 배치 저장(꾸미기 모드 드래그 종료 / 초기화).
+ *
+ * 보안 — 이 파일은 'use server' 라 export 가 곧 공개 엔드포인트다:
+ * · 재화·권한을 건드리지 않는다. 쓰는 것은 본인 신당 한 행의 `hall_seats` 좌표뿐이다.
+ * · 등급 게이트는 읽기와 같은 기준(FAMILY_HALL_TIERS) — 사랑방이 잠긴 계정은 쓰지도 못한다.
+ * · 소유자 검증을 액션에서 한다(`user_id = auth.uid()` + `family_member_id IS NULL`). RLS 는 2중 방어.
+ * · 좌표는 **서버에서 다시 클램프**한다(parseHallSeats) — 클라 클램프를 신뢰하지 않는다.
+ *
+ * `null`·`{}` 를 주면 전부 자동 반원 배치로 되돌아간다(초기화 경로).
+ */
+export async function saveFamilyHallSeats(seats: HallSeatMap | null): Promise<{ success: boolean; error?: string }> {
+  const membership = await getCurrentUserMembership()
+  if (!membership) return { success: false, error: 'UNAUTHORIZED' }
+  if (!FAMILY_HALL_TIERS.has(membership.tier)) return { success: false, error: 'FORBIDDEN' }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const parsed = parseHallSeats(seats)
+
+  const { error } = await supabase
+    .from('shrines')
+    .update({ hall_seats: parsed })
+    .eq('user_id', user.id)
+    // ⚠️ 본인 신당 행만 — 빼면 가족별 신당 행까지 함께 덮어쓴다
+    .is('family_member_id', null)
+
+  if (error) {
+    logger.error('[family-hall] seat layout save failed:', error)
+    return { success: false, error: 'SAVE_FAILED' }
+  }
+
+  // revalidatePath 를 부르지 않는다(고의) — 드래그 1회마다 라우트 전체가 다시 렌더되면
+  // 씬·기원·presence 를 전부 다시 읽는다. 화면은 이미 클라 낙관 상태가 들고 있고,
+  // 다음 진입에 서버 정본이 내려온다(보기 모드 점화 setPlacementLit 과 같은 규약).
+  return { success: true }
 }

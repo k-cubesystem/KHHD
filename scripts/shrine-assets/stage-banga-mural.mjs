@@ -166,16 +166,57 @@ function colDiff(data, w, h, ch, x1, x2) {
 }
 
 /**
- * 미러 경계 + 랩 경계의 열 차이. repeats=4 면 내부 3곳 + 랩 1곳 = **4곳**.
- * 미러 타일링이 성립하면 전부 정확히 0 이어야 한다(인코딩 전). 0 이 아니면 조립이 틀린 것이다.
+ * 이음매 열 차이 — 조립이 만든 **실제 경계 위치**에서 잰다(안2.4 이전에는 k·tileW 고정이었다).
+ * 퀼팅은 경계가 가변이라 위치를 받아야 하고, 랩(끝↔처음)은 무라가 단일 stretch 라 참고값이다.
  */
-function boundaryDiffs(data, w, h, ch, tileW, repeats) {
-  const out = []
-  for (let k = 1; k < repeats; k += 1) {
-    out.push({ at: k * tileW, diff: colDiff(data, w, h, ch, k * tileW - 1, k * tileW) })
-  }
+function boundaryDiffs(data, w, h, ch, seams) {
+  const out = seams.map((at) => ({ at, diff: colDiff(data, w, h, ch, at - 1, at) }))
   out.push({ at: 0, wrap: true, diff: colDiff(data, w, h, ch, w - 1, 0) })
   return out
+}
+
+/**
+ * 좌우 대칭도 — 안2.4 의 **핵심 회귀 지표**.
+ *
+ * 4차 검수 "세로줄 그대로"의 정체는 서브픽셀 아티팩트가 아니라 미러 타일링이 만든 구도였다.
+ * [T|flop(T)|T|flop(T)] 는 이음새를 수학적으로 0 으로 만드는 대신 무라 중앙에 **완벽한 거울축**을
+ * 남긴다. 한 화면(방 폭 320% 중 100%)에 그 축이 들어오면 좌우가 통째로 뒤집힌 벽이 보이고,
+ * 사람은 그걸 "방"이 아니라 "무늬"로 읽는다. 굵은 기둥이 균등 간격으로 서 있으면 더욱 그렇다.
+ *
+ * 그래서 화면 폭 창을 훑으며 **창 안에서의 좌우 대칭 상관**을 재고, 그 최대값을 지표로 삼는다.
+ * 미러 조립은 축을 품은 창에서 1.0 에 가깝고, 퀼팅은 0 근처다. 낮을수록 좋다.
+ */
+function mirrorSymmetry(col, w, viewW) {
+  let worst = 0
+  let worstAt = 0
+  const step = Math.max(1, Math.round(viewW / 16))
+  for (let left = 0; left + viewW <= w; left += step) {
+    const n = Math.floor(viewW / 2)
+    let sa = 0
+    let sb = 0
+    for (let i = 0; i < n; i += 1) {
+      sa += col[left + i]
+      sb += col[left + viewW - 1 - i]
+    }
+    const ma = sa / n
+    const mb = sb / n
+    let num = 0
+    let da = 0
+    let db = 0
+    for (let i = 0; i < n; i += 1) {
+      const a = col[left + i] - ma
+      const b = col[left + viewW - 1 - i] - mb
+      num += a * b
+      da += a * a
+      db += b * b
+    }
+    const r = da > 0 && db > 0 ? num / Math.sqrt(da * db) : 0
+    if (r > worst) {
+      worst = r
+      worstAt = left
+    }
+  }
+  return { worst, worstAt }
 }
 
 /** 내부 이웃 열 차이 분포 — 경계값을 견줄 기준선(절대 임계값을 쓰지 않는 이유는 room 스크립트 주석 ④) */
@@ -214,6 +255,14 @@ const EDGE_ACCEPT_MAX = 20
 const EDGE_TONE_TOL = 0.02
 /** CEO 화면의 실제 렌더 스케일 — 이 배율로 축소했을 때의 열 차이가 "눈에 보이는가"의 지표다 */
 const RENDER_SCALE = 0.445
+/** 한 화면(%) — lib/domain/shrine/world.ts 의 WORLD_VIEWPORT_PCT 와 같은 값. 방 폭은 아래 SEED_WORLD_WIDTH(320).
+ *  둘의 비가 "한 번에 보이는 무라 폭"이고, 좌우 대칭은 **그 창 안에서** 재야 의미가 있다. */
+const WORLD_VIEWPORT_PCT = 100
+/** 좌우 대칭 합격선 — 미러 조립은 축을 품은 창에서 0.76~0.91 이 나왔다(벽·마루 실측).
+ *  퀼팅이 이 값을 넘으면 구도가 되돌아간 것이다. */
+const SYMMETRY_MAX = 0.55
+/** 렌더 스케일에서 "육안 무해"로 이미 입증된 열 차이. 마루 무라 실측 5.5 — 3라운드 동안 민원 0건. */
+const HARMLESS_RENDER_DELTA = 6
 
 /** 인접 열 휘도차 배열 */
 function columnDiffs(col) {
@@ -347,25 +396,224 @@ async function renderScaleProfile(webpBuf) {
 // ───────────────────────── 무라 굽기 ─────────────────────────
 const DARK = { r: 0x1a, g: 0x13, b: 0x08, alpha: 1 }
 
+// ─────────────── 가변 세그먼트 퀼팅 (안2.4 / CEO 4차) ───────────────
+// 미러 교대 [T|flop(T)|T|flop(T)] 를 폐기한다. 이음새는 0 이었지만 그 대가로 거울축과
+// 균등한 기둥 리듬이 생겼고, 그게 4차까지 남은 "세로줄"의 정체였다(mirrorSymmetry 주석 참조).
+//
+// 대신 타일을 **길이가 제각각인 조각**으로 잘라 이어붙인다. 자르는 자리를 아무 데나 잡으면
+// 이음새가 보이므로, 잘라도 되는 열만 먼저 고른다:
+//   ① 국소적으로 평탄할 것(주변 열 기울기가 작다 = 기둥·먹선 위가 아니다)
+//   ② 기준 열과 RGB 가 거의 같을 것(colDiff ≤ SEAM_EPS)
+// 이 두 조건을 통과한 열끼리는 서로 붙여도 인접 열 차이가 2·SEAM_EPS 를 넘지 않는다.
+// 한지 패널이 넓어 후보 열이 많고, 그래서 조각 길이를 자유롭게 흔들 수 있다.
+//
+// ⚠️ 랩(끝↔처음) 연속성은 요구하지 않는다 — 무라는 `<img class="w-full object-cover">` 로
+//    **한 장 stretch** 되지 repeat 되지 않는다(파일 상단 §미러 타일링 참조). 그래서 이 제약을
+//    버린 만큼을 구도의 자유도로 쓸 수 있다.
+
 /**
- * 미러 교대 이어붙이기 → webp. 리사이즈를 **한 번도 하지 않는다** —
- * 스케일이 끼면 경계 픽셀 공유가 깨져(재샘플링) 미러의 항등성이 무너진다.
- * @param {{data:Buffer,width:number,height:number,channels:number}} tile 페더링을 마친 타일 raw
+ * 이음매로 인정할 최대 RGB 열 차이.
+ *
+ * 실측 스윕으로 정한 값이다. 1.6 으로 잡으면 **이어갈 수 있는 순환이 아예 없어** 계획이 실패하고
+ * (가지치기 후 시작 열 0개) 미러 폴백으로 되돌아간다. 3.0 부터 성립하며 그때 실제 최대 이음매는
+ * 정확히 3.00 이다 — 마루 무라의 육안 무해 실측(Δ4.17)보다 낮고, 벽 내부 이웃 열 p95(9.02)의
+ * 3분의 1이다. 즉 "벽 자체의 결보다 조용한 이음매"라 근거가 있다.
  */
-async function composeMural(tile, repeats) {
+const SEAM_EPS = 3
+/** 평탄 판정 창 — 이 반경 안의 최대 기울기가 이 값 이하여야 "기둥 위가 아니다" */
+const FLAT_RADIUS = 3
+const FLAT_GRAD_MAX = 1.2
+/** 조각 길이 범위(타일 폭 대비). 하한이 너무 작으면 같은 모티프가 촘촘히 반복돼 되레 무늬가 된다.
+ *  ⚠️ 하한을 크게 잡을수록 이을 수 있는 열 쌍이 급감한다 — 0.38 로 뒀더니 계획이 아예 실패해
+ *  미러 폴백으로 떨어졌다(후보 열이 x195~829 에만 있는데 조각이 389 이상이어야 했다). */
+const SEG_MIN_FRAC = 0.22
+const SEG_MAX_FRAC = 1
+/** 조립 난수 시드 — 고정이라 재굽기가 항상 같은 무라를 낸다(결정론). */
+const QUILT_SEED = 0x5eed1a3
+
+/** 결정론 LCG. Math.random 을 쓰면 재굽기마다 벽이 바뀌어 검수가 성립하지 않는다. */
+function lcg(seed) {
+  let s = seed >>> 0
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0
+    return s / 0x100000000
+  }
+}
+
+/**
+ * 잘라도 되는 열(= 국소적으로 평탄한 열) 목록.
+ *
+ * ⚠️ 여기서 "기준 열 하나와 같은 열만 후보"로 좁히면 안 된다(첫 구현의 실패). 벽은 패널마다
+ *    밝기가 달라서 그렇게 하면 후보가 한 패널(실측 x195~252)에만 몰리고, 그 폭 안에서는
+ *    조각 길이가 나오지 않아 계획 자체가 실패한다. 이음매는 **쌍끼리만** 맞으면 된다.
+ */
+function flatColumns(tile) {
+  const { data, width: w, height: h, channels: ch } = tile
+  const col = columnLuma(data, w, h, ch)
+  const grad = new Float64Array(w)
+  for (let x = 0; x < w - 1; x += 1) grad[x] = Math.abs(col[x + 1] - col[x])
+  const flat = []
+  // 여백은 평탄 창(FLAT_RADIUS)이 배열 밖으로 나가지 않을 만큼만. 종전에는 폭의 19%씩 잘라내
+  // 후보 열을 스스로 굶겼다 — 타일 가장자리에서 잘라도 이음매 조건만 맞으면 아무 문제가 없다.
+  const margin = FLAT_RADIUS + 1
+  for (let x = margin; x < w - margin; x += 1) {
+    let g = 0
+    for (let k = -FLAT_RADIUS; k <= FLAT_RADIUS; k += 1) g = Math.max(g, grad[Math.min(w - 2, Math.max(0, x + k))])
+    if (g <= FLAT_GRAD_MAX) flat.push(x)
+  }
+  return { flat, col }
+}
+
+/**
+ * 조립 계획. **한 번만 계산해 페더링 전/후 두 무라에 같이 쓴다** — 비교 이미지의 유일한 변수가
+ * 페더링이어야 하는데 조각 배치가 달라지면 비교가 성립하지 않는다.
+ *
+ * 이음매 하나의 조건은 「직전 조각의 **마지막 열**(b−1)과 다음 조각의 **첫 열**(a′)이 같을 것」
+ * 뿐이다. 전역 기준 열은 필요 없다 — 밝은 패널끼리, 어두운 패널끼리 각자 이으면 된다.
+ * @returns {{a:number,b:number,flop:boolean}[] | null}
+ */
+function planQuilt(tile, targetW) {
+  const { data, width: w, height: h, channels: ch } = tile
+  const { flat, col } = flatColumns(tile)
+  if (flat.length < 4) return null
+  const rand = lcg(QUILT_SEED)
+  const minLen = Math.round(w * SEG_MIN_FRAC)
+  const maxLen = Math.round(w * SEG_MAX_FRAC)
+
+  /** a 에서 시작해 길이 제약을 만족하는 끝 열들 (캐시 — 재시도마다 다시 세면 낭비다) */
+  const endsCache = new Map()
+  const endsFrom = (a) => {
+    if (!endsCache.has(a)) endsCache.set(a, flat.filter((b) => b - a >= minLen && b - a <= maxLen))
+    return endsCache.get(a)
+  }
+  /** 조각을 시작할 수 있는 열 = 그 뒤로 길이 제약을 채울 끝이 남아 있는 열 */
+  const starts = flat.filter((a) => endsFrom(a).length > 0)
+
+  /**
+   * b 에서 이어 붙일 수 있는 **다음 조각 시작 열**들. 휘도로 먼저 거르고(싸다) RGB 로 확정한다(정확하다).
+   * 값은 캐시한다 — 재시도마다 다시 재면 470² 번 colDiff 를 돌게 된다.
+   */
+  const nextsCache = new Map()
+  const nextsAfter = (b) => {
+    if (!nextsCache.has(b)) {
+      const p = b - 1
+      nextsCache.set(
+        b,
+        starts.filter((q) => Math.abs(col[q] - col[p]) <= SEAM_EPS && colDiff(data, w, h, ch, p, q) <= SEAM_EPS)
+      )
+    }
+    return nextsCache.get(b)
+  }
+
+  const pick = (arr) => arr[Math.floor(rand() * arr.length)]
+
+  /**
+   * **막다른 길 가지치기(고정점).**
+   *
+   * 한 수 앞만 보면 부족하다 — "이어지는 끝"이 다시 막다른 시작 열로만 이어질 수 있기 때문이다
+   * (실측: a=715~794 구간이 그랬다). 그래서 「무한히 이어갈 수 있는 시작 열」 집합을 수렴할
+   * 때까지 깎는다. 남은 집합 안에서는 어떤 선택을 해도 중간에 막히지 않는다.
+   */
+  let liveStarts = new Set(starts)
+  let liveEnds = new Set()
+  for (let iter = 0; iter < 12; iter += 1) {
+    liveEnds = new Set(flat.filter((b) => nextsAfter(b).some((q) => liveStarts.has(q))))
+    const next = new Set([...liveStarts].filter((a) => endsFrom(a).some((b) => liveEnds.has(b))))
+    if (next.size === liveStarts.size) break
+    liveStarts = next
+  }
+  const liveStartList = [...liveStarts]
+
+  if (process.env.QUILT_DEBUG) {
+    console.log(
+      `[quilt] 평탄 ${flat.length}(${flat[0]}..${flat[flat.length - 1]}) · minLen ${minLen} · 시작가능 ${starts.length}` +
+        ` → 가지치기 후 시작 ${liveStartList.length} · 끝 ${liveEnds.size}`
+    )
+  }
+  if (!liveStartList.length) return null
+
+  // 첫 조각은 이음매가 없으므로(왼쪽 끝) 아무 시작 열에서나 출발할 수 있다.
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const plan = []
+    let a = pick(liveStartList)
+    let filled = 0
+    let ok = true
+    while (filled < targetW) {
+      const ends = endsFrom(a)
+      // 마지막 조각은 잘려 나가므로 이어질 필요가 없다 — 가지치기 밖의 끝도 쓸 수 있다.
+      const closing = ends.filter((b) => filled + (b - a) >= targetW)
+      const usable = closing.length ? closing : ends.filter((b) => liveEnds.has(b))
+      if (!usable.length) {
+        if (process.env.QUILT_DEBUG) {
+          console.log(`[quilt] 시도${attempt} 중단: 조각 ${plan.length}개 ${filled}/${targetW}px · a=${a} 에서 쓸 끝 없음`)
+        }
+        ok = false
+        break
+      }
+      const b = pick(usable)
+      // ⚠️ 조각을 뒤집지 **않는다**. flop 을 섞으면 인접한 두 조각이 같은 영역의 정·역상이 되어
+      //    국소 거울축이 생긴다 — 없애려던 바로 그 현상이다(첫 구현 대칭 0.696 의 원인).
+      plan.push({ a, b, flop: false })
+      filled += b - a
+      if (filled >= targetW) break
+      a = pick(nextsAfter(b).filter((q) => liveStarts.has(q)))
+    }
+    if (ok && filled >= targetW) return plan
+  }
+  return null
+}
+
+/**
+ * 종전 미러 교대 조립 [T|flop(T)|T|flop(T)] — 퀼팅 불가 타일의 폴백.
+ * 경계에서 같은 픽셀 열이 공유되므로 이음새 불연속이 수학적으로 0 이다(파일 상단 §미러 타일링).
+ */
+async function composeMirror(tile, targetW) {
   const rawIn = { raw: { width: tile.width, height: tile.height, channels: tile.channels } }
   const normal = await sharp(tile.data, rawIn).png().toBuffer()
   const flopped = await sharp(tile.data, rawIn).flop().png().toBuffer()
-  const W = tile.width * repeats
+  const repeats = Math.ceil(targetW / tile.width)
   const layers = []
+  const seams = []
   for (let i = 0; i < repeats; i += 1) {
     layers.push({ input: i % 2 === 0 ? normal : flopped, left: i * tile.width, top: 0 })
+    if (i > 0) seams.push(i * tile.width)
   }
-  const raw = await sharp({ create: { width: W, height: tile.height, channels: 3, background: DARK } })
+  const raw = await sharp({ create: { width: targetW, height: tile.height, channels: 3, background: DARK } })
     .composite(layers)
     .raw()
     .toBuffer({ resolveWithObject: true })
-  return { raw, W }
+  return { raw, W: targetW, seams, mirrored: true }
+}
+
+/**
+ * 계획대로 조각을 이어붙여 무라 raw 를 만든다. 리사이즈는 **한 번도 하지 않는다** —
+ * 스케일이 끼면 이음매 열의 픽셀 값이 재샘플링돼 애써 맞춘 열 일치가 깨진다.
+ * @param {{data:Buffer,width:number,height:number,channels:number}} tile 페더링을 마친 타일 raw
+ * @param {{a:number,b:number,flop:boolean}[]} plan
+ */
+async function composeMural(tile, plan, targetW) {
+  const rawIn = { raw: { width: tile.width, height: tile.height, channels: tile.channels } }
+  // 퀼팅이 불가능한 타일(이음매 후보 열 부족)은 종전 미러 교대로 조립한다.
+  // 마루가 그렇다 — 평탄해서 후보를 고를 기준 자체가 안 서는데, 애초에 세로줄 민원도 없었다
+  // (실측 최대 Δ4.17 = 육안 무해). 문제 없는 곳까지 새 조립으로 바꿀 이유가 없다.
+  if (plan === null) return composeMirror(tile, targetW)
+  const layers = []
+  const seams = []
+  let x = 0
+  for (const seg of plan) {
+    if (x >= targetW) break
+    const segW = Math.min(seg.b - seg.a, targetW - x)
+    let piece = sharp(tile.data, rawIn).extract({ left: seg.a, top: 0, width: seg.b - seg.a, height: tile.height })
+    if (seg.flop) piece = piece.flop()
+    layers.push({ input: await piece.png().toBuffer(), left: x, top: 0 })
+    if (x > 0) seams.push(x)
+    x += segW
+  }
+  const raw = await sharp({ create: { width: targetW, height: tile.height, channels: 3, background: DARK } })
+    .composite(layers)
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  return { raw, W: targetW, seams }
 }
 
 async function buildMural(spec) {
@@ -389,12 +637,21 @@ async function buildMural(spec) {
   let repeats = spec.repeats
   let chosen = null
 
+  /** 조립 계획은 **폭마다 한 번만** 세워 페더링 전/후 무라가 같은 조각 배치를 쓰게 한다. */
+  const quiltPlans = new Map()
+  const planFor = (targetW) => {
+    if (!quiltPlans.has(targetW)) quiltPlans.set(targetW, planQuilt(rawTile, targetW))
+    return quiltPlans.get(targetW)
+  }
+
   // 용량 사다리: q 를 낮춰 보고, 그래도 넘으면 반복 수를 하나 줄여(4→3) 폭을 깎는다.
   for (; repeats >= 3 && !chosen; repeats -= 1) {
-    const { raw, W } = await composeMural(rawTile, repeats)
+    const targetW = tileW * repeats
+    const plan = planFor(targetW)
+    const { raw, W, seams, mirrored } = await composeMural(rawTile, plan, targetW)
     const ch = raw.info.channels
-    // ① 인코딩 **전** 경계 검증 — 미러 항등성 그 자체. 여기서 0 이 아니면 조립 버그다.
-    const preBoundary = boundaryDiffs(raw.data, W, tileH, ch, tileW, repeats)
+    // ① 인코딩 **전** 이음매 검증 — 이음매 후보 열끼리 붙였으므로 2·SEAM_EPS 를 넘으면 조립 버그다.
+    const preBoundary = boundaryDiffs(raw.data, W, tileH, ch, seams)
 
     for (const quality of MURA_QUALITY_LADDER) {
       const webp = await sharp(raw.data, { raw: { width: W, height: tileH, channels: ch } })
@@ -406,16 +663,20 @@ async function buildMural(spec) {
       }
       // ② 검증은 **인코딩된 최종본**을 다시 디코드해서 잰다 — webp 손실이 경계에 남기는 것까지 포함해야 정직하다.
       const dec = await sharp(webp).removeAlpha().raw().toBuffer({ resolveWithObject: true })
-      const postBoundary = boundaryDiffs(dec.data, W, tileH, dec.info.channels, tileW, repeats)
+      const postBoundary = boundaryDiffs(dec.data, W, tileH, dec.info.channels, seams)
       const interior = interiorStats(dec.data, W, tileH, dec.info.channels)
-      const muralStd = stdev(columnLuma(dec.data, W, tileH, dec.info.channels))
+      const decCol = columnLuma(dec.data, W, tileH, dec.info.channels)
+      const muralStd = stdev(decCol)
       // ③ 하드 에지 검증 — 무라 최종본의 열 휘도 프로파일(부록 C ① 과 같은 지표)
-      const muralEdge = lumaProfile(columnLuma(dec.data, W, tileH, dec.info.channels))
+      const muralEdge = lumaProfile(decCol)
+      // ④ 좌우 대칭 — 한 화면(방 폭 320% 중 100%)에 거울축이 들어오는지. 안2.4 의 핵심 지표.
+      const symmetry = mirrorSymmetry(decCol, W, Math.round(W * (WORLD_VIEWPORT_PCT / SEED_WORLD_WIDTH)))
       chosen = {
         webp,
         quality,
         W,
         repeats,
+        seams,
         preBoundary,
         postBoundary,
         interior,
@@ -424,6 +685,8 @@ async function buildMural(spec) {
         tileW,
         tileH,
         muralEdge,
+        symmetry,
+        mirrored: mirrored === true,
       }
       break
     }
@@ -433,8 +696,8 @@ async function buildMural(spec) {
   await mkdir(OUT_DIR, { recursive: true })
   await writeFile(outPath, chosen.webp)
 
-  // 페더링 전 무라 — 같은 조립·같은 q 로 굽는다(비교의 유일한 변수가 페더링이 되게)
-  const plainMural = await composeMural(plainTile, chosen.repeats)
+  // 페더링 전 무라 — 같은 조립 계획·같은 q 로 굽는다(비교의 유일한 변수가 페더링이 되게)
+  const plainMural = await composeMural(plainTile, planFor(chosen.W), chosen.W)
   const plainWebp = await sharp(plainMural.raw.data, {
     raw: { width: plainMural.W, height: tileH, channels: plainMural.raw.info.channels },
   })
@@ -444,10 +707,19 @@ async function buildMural(spec) {
   const plainEdge = lumaProfile(columnLuma(plainDec.data, plainMural.W, tileH, plainDec.info.channels))
   const renderBefore = await renderScaleProfile(plainWebp)
   const renderAfter = await renderScaleProfile(chosen.webp)
+  /** 기준선: 페더링을 마친 **타일 한 장**을 같은 배율로 축소한 프로파일. 조립이 더한 몫만 남는다. */
+  const tileRender = await renderScaleProfile(
+    await sharp(rawTile.data, { raw: { width: tileW, height: tileH, channels: tileCh } })
+      .webp({ quality: chosen.quality })
+      .toBuffer()
+  )
 
-  const worstPre = Math.max(...chosen.preBoundary.map((b) => b.diff))
-  const worstPost = Math.max(...chosen.postBoundary.map((b) => b.diff))
-  /** 미러 **축**(내부 경계)만 — 랩은 반복 렌더 전용 지표라 분리한다 */
+  /** ⚠️ 랩(끝↔처음)은 **제외**한다 — 무라는 단일 stretch 라 그 경계가 화면에 존재하지 않는다.
+   *  퀼팅은 랩 연속성을 요구하지 않는 대신 그만큼을 구도의 자유도로 쓴 것이라, 랩을 게이트에
+   *  넣으면 의도한 설계를 스스로 불합격시킨다(실측 랩 6.98 로 오검출한 적 있다). */
+  const worstPre = Math.max(...chosen.preBoundary.filter((b) => !b.wrap).map((b) => b.diff))
+  const worstPost = Math.max(...chosen.postBoundary.filter((b) => !b.wrap).map((b) => b.diff))
+  /** 이음매(내부 경계)만 — 랩은 단일 stretch 렌더에선 보이지 않으므로 분리해 참고값으로만 둔다 */
   const worstAxis = Math.max(...chosen.postBoundary.filter((b) => !b.wrap).map((b) => b.diff))
   const wrapPost = chosen.postBoundary.find((b) => b.wrap)?.diff ?? 0
   return {
@@ -471,15 +743,38 @@ async function buildMural(spec) {
     muralEdge: chosen.muralEdge,
     renderBefore,
     renderAfter,
+    tileRender,
     plainWebp,
     webpBuf: chosen.webp,
-    // 합격 조건 ① 미러 항등(인코딩 전 정확히 0) ② 인코딩 후도 내부 이웃 열 분포 안 ③ 밝기 산포 무악화
-    passMirror: worstPre === 0,
+    symmetry: chosen.symmetry,
+    seams: chosen.seams,
+    mirrored: chosen.mirrored,
+    // 합격 조건 ① 이음매가 허용치 안(퀼팅=2·SEAM_EPS · 미러 폴백=항등이라 0) ② 인코딩 후도 내부 이웃 열 분포 안 ③ 밝기 산포 무악화
+    passMirror: chosen.mirrored ? worstPre === 0 : worstPre <= SEAM_EPS * 2,
     passEncoded: worstPost <= Math.max(chosen.interior.p95, chosen.interior.median * 2 + 0.5),
     passRipple: chosen.muralStd <= chosen.tileStd * 1.02 + 0.01,
     withinBudget: chosen.webp.length <= MURA_MAX_BYTES,
-    // ④ 하드 에지 합격 — 무라 최종본 최대 인접 열 차이가 EDGE_ACCEPT_MAX 이하
-    passEdge: chosen.muralEdge.max <= EDGE_ACCEPT_MAX,
+    /**
+     * ④ 하드 에지 합격 — **렌더 스케일에서**, **원본 타일을 기준선으로** 잰다.
+     *
+     * ⚠️ 두 번 틀렸던 판정이다.
+     *  (1) 안2.3 까지 원본 해상도의 `muralEdge.max` 를 봤다. 실측: 원본 Δ19.2 → 0.445 축소 후
+     *      Δ28.5 로 **오른다**(페더 램프가 다운샘플 커널보다 좁으면 화면에서 다시 계단으로 뭉친다).
+     *      사람이 보는 건 축소본이니 축소본으로 잰다.
+     *  (2) 그렇다고 축소본에 절대 임계(Δ≤20)를 걸면 **영원히 불합격**이다 — 한지 위의 먹빛 기둥은
+     *      그 자체로 Δ80+ 이고 그건 아티팩트가 아니라 그림이다. 지울 대상이 아니다.
+     * 그래서 묻는 것은 "선이 있는가"가 아니라 **"조립이 원본에 없던 선을 더했는가"** 다.
+     * 무라의 축소 프로파일이 타일의 축소 프로파일보다 나빠지지 않으면 합격이고,
+     * 절대값이 이미 육안 무해 수준(HARMLESS_RENDER_DELTA)이면 그것으로도 합격이다 —
+     * 마루가 그 경우다(축소 후 5.5, 3라운드 동안 세로줄 민원이 한 번도 없던 자산).
+     */
+    passEdge: renderAfter.max <= Math.max(tileRender.max * 1.05 + 1, HARMLESS_RENDER_DELTA),
+    /**
+     * ⑤ 좌우 대칭 — 한 화면 창 안에서 거울축이 잡히면 불합격(안2.4 의 진짜 회귀 지표).
+     * 미러 폴백 자산(마루)은 정의상 대칭이므로 이 게이트를 적용하지 않는다 — 수치는 보고하되
+     * 세로줄 민원이 없던 곳(마루 Δ4.17 = 육안 무해)까지 새 조립을 강요하지 않는다.
+     */
+    passSymmetry: chosen.mirrored || chosen.symmetry.worst <= SYMMETRY_MAX,
     // ⑤ 톤 — 열 휘도 **평균**은 ±EDGE_TONE_TOL 안. (표준편차는 절벽을 램프로 펴면 반드시 줄어든다:
     //    극단값 열이 중간값으로 이동하기 때문. 그게 곧 처방의 정의라 합격 조건에 넣지 않고 수치만 보고한다.)
     passTone:
@@ -947,15 +1242,16 @@ for (const r of results) {
   console.log(
     `  ${r.passEdge ? '✔' : '⚠️'} ${r.key} — 검출 ${f.edges.length}곳 / 페더 열 ${f.touched}/${f.width} (패스 ${f.passes})\n` +
       `      ① 상위 5 (무라 최종본)  전 ${t5(r.plainEdge)}\n` +
-      `                              후 ${t5(r.muralEdge)}  → 최대 ${r.muralEdge.max.toFixed(1)} / 목표 ≤${EDGE_ACCEPT_MAX} ${r.passEdge ? 'PASS' : 'FAIL'}\n` +
+      `                              후 ${t5(r.muralEdge)}  → 원본해상도 최대 ${r.muralEdge.max.toFixed(1)} (참고값 · 판정 아님)\n` +
       `      ② 중앙값 전 ${fmt(r.plainEdge.median)} → 후 ${fmt(r.muralEdge.median)}\n` +
       `      ④ 톤(열 휘도) 평균 ${f.before.mean.toFixed(2)} → ${f.after.mean.toFixed(2)} (${dMean >= 0 ? '+' : ''}${dMean.toFixed(2)}%) ${r.passTone ? 'OK' : '⚠️ 초과'}` +
       ` · 표준편차 ${f.before.stdev.toFixed(2)} → ${f.after.stdev.toFixed(2)} (${dStd >= 0 ? '+' : ''}${dStd.toFixed(2)}%)\n` +
       `        톤(픽셀 전체) 평균 ${f.tonePre.mean.toFixed(2)} → ${f.tonePost.mean.toFixed(2)} (${dPixMean >= 0 ? '+' : ''}${dPixMean.toFixed(2)}%)` +
       ` · 표준편차 ${f.tonePre.stdev.toFixed(2)} → ${f.tonePost.stdev.toFixed(2)} (${dPixStd >= 0 ? '+' : ''}${dPixStd.toFixed(2)}%)` +
       ` → 명암 대비 보존 ${Math.abs(dPixStd) <= EDGE_TONE_TOL * 100 ? 'OK' : '⚠️ 초과'}\n` +
-      `      ⑤ 렌더 스케일 ${RENDER_SCALE} 축소 후 최대 열 차이 전 ${r.renderBefore.max.toFixed(1)} → 후 ${r.renderAfter.max.toFixed(1)}` +
-      ` (CEO 화면에서 선으로 보이는 크기)\n` +
+      `      ⑤ ★판정★ 렌더 스케일 ${RENDER_SCALE} 축소 후 최대 열 차이 — 페더 전 ${r.renderBefore.max.toFixed(1)} → 후 ${r.renderAfter.max.toFixed(1)}\n` +
+      `        기준선(타일 1장 같은 배율) ${r.tileRender.max.toFixed(1)} → 조립이 더한 몫 ${(r.renderAfter.max - r.tileRender.max).toFixed(1)} ${r.passEdge ? 'PASS' : 'FAIL'}\n` +
+      `        (묻는 것은 "선이 있는가"가 아니라 "조립이 원본에 없던 선을 더했는가"다 — 기둥 Δ80+ 은 그림이다)\n` +
       `      · 반경 분포 ${
         f.edges.length
           ? Object.entries(
@@ -968,7 +1264,7 @@ for (const r of results) {
   )
 }
 
-console.log('\n── 미러 경계 검증 ──')
+console.log('\n── 이음매·구도 검증 (안2.4 퀼팅) ──')
 for (const r of results) {
   if (!r.ok) {
     console.log(`  ✖ ${r.key}: ${r.error}`)
@@ -976,20 +1272,21 @@ for (const r of results) {
   }
   const pre = r.preBoundary.map((b) => `${b.wrap ? '랩' : `x=${b.at}`}:${fmt(b.diff)}`).join('  ')
   const post = r.postBoundary.map((b) => `${b.wrap ? '랩' : `x=${b.at}`}:${fmt(b.diff)}`).join('  ')
-  const verdict = r.passMirror && r.passEncoded && r.passRipple && r.withinBudget
+  const verdict = r.passMirror && r.passEncoded && r.passRipple && r.withinBudget && r.passSymmetry
+  const segs = r.seams.length + 1
   console.log(
-    `  ${verdict ? '✔' : '⚠️'} ${r.key} ${r.width}×${r.height} ${(r.bytes / 1024).toFixed(1)}KB q${r.quality}\n` +
-      `      ① 경계 ${r.preBoundary.length}곳 (인코딩 전) ${pre}  → ${r.passMirror ? '전부 0 = 미러 항등 성립' : '⚠️ 0 이 아니다 = 조립 버그'}\n` +
-      `      ① 경계 ${r.postBoundary.length}곳 (webp 후)   ${post}\n` +
+    `  ${verdict ? '✔' : '⚠️'} ${r.key} ${r.width}×${r.height} ${(r.bytes / 1024).toFixed(1)}KB q${r.quality} · ${r.mirrored ? '미러 폴백' : `퀼팅 조각 ${segs}개`}\n` +
+      `      ① 이음매 ${r.preBoundary.length}곳 (인코딩 전) ${pre}  → ${r.passMirror ? `전부 ≤${(SEAM_EPS * 2).toFixed(1)} = 후보 열끼리 붙었다` : '⚠️ 허용치 초과 = 이음매 선정 버그'}\n` +
+      `      ① 이음매 ${r.postBoundary.length}곳 (webp 후)   ${post}\n` +
       `        내부 이웃 열 차이 중앙값 ${fmt(r.interior.median)} · p95 ${fmt(r.interior.p95)} · 최대 ${fmt(r.interior.max)}` +
-      ` → ${r.passEncoded ? '경계가 내부 분포 안(육안 불가시)' : '⚠️ 내부 분포 초과'}\n` +
+      ` → ${r.passEncoded ? '이음매가 내부 분포 안(육안 불가시)' : '⚠️ 내부 분포 초과'}\n` +
       `      ② 열 휘도 표준편차 원본타일 ${fmt(r.tileStd)} → 무라 ${fmt(r.muralStd)}` +
       ` → ${r.passRipple ? '무악화' : '⚠️ 악화'}\n` +
       `      ③ 용량 ${(r.bytes / 1024).toFixed(1)}KB / 목표 ${(MURA_MAX_BYTES / 1024).toFixed(0)}KB ${r.withinBudget ? 'OK' : '⚠️ 초과'}\n` +
-      // 미러 **축**(내부 3곳)만 대칭성 지표다. 랩(끝↔처음)은 무라를 반복할 때만 의미가 있고
-      // 현 렌더는 단일 stretch 라 화면에 나타나지 않는다 — 그래서 따로 적는다.
-      `      ③ 미러 축 대칭성 ${fmt(r.worstAxis)} (webp 후, 내부 ${r.preBoundary.length - 1}곳) → 목표 ≤1 ${r.worstAxis <= 1 ? 'OK' : '⚠️ 초과'}` +
-      ` · 랩 경계 ${fmt(r.wrapPost)} (반복 렌더 미사용 → 화면 미노출)`
+      // ★ 안2.4 의 핵심. 미러 조립은 여기서 0.9+ 가 나왔고 그게 "세로줄"의 정체였다.
+      `      ④ ★좌우 대칭★ 한 화면 창 안 최대 상관 ${r.symmetry.worst.toFixed(3)} (x=${r.symmetry.worstAt}) / 목표 ≤${SYMMETRY_MAX}` +
+      ` ${r.mirrored ? '— 미러 폴백이라 게이트 미적용(세로줄 민원 없던 자산)' : r.passSymmetry ? 'PASS — 거울축 없음' : '⚠️ FAIL — 화면에 거울축이 잡힌다(무늬로 읽힌다)'}\n` +
+      `      · 랩 경계 ${fmt(r.wrapPost)} (단일 stretch 렌더 → 화면 미노출, 참고값)`
   )
 }
 if (doorResult) {

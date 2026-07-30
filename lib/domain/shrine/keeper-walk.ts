@@ -56,6 +56,39 @@ export const KEEPER_WANDER_LEG_MS = 30_000
 const MAX_LEG_MS = 600_000
 const MAX_ENTRANCE_MS = 10_000
 
+/**
+ * 입장 걸음이 배회 걸음의 몇 배 속도인가 (안2.4 / CEO 4차 "입장속도 아직 빠름").
+ *
+ * ⚠️ 4차 검수의 진짜 원인은 "3600ms 가 짧다"가 아니라 **두 속도가 따로 놀았다**는 것이다.
+ * 안2.3 까지 입장 37%p/3600ms = 10.3%p/s, 배회 28%p/30000ms = 0.93%p/s 로 입장이 배회보다
+ * **11배** 빨랐다. 주석은 "같은 비율로 늦췄다"고 적혀 있었지만 두 상수가 각자 조정돼 온 결과다.
+ * 도착 직후 같은 인물이 11배 느려지니 입장은 아무리 늘려도 "지나가 버리는" 걸음으로 읽힌다.
+ *
+ * 그래서 입장 ms 를 상수로 두지 않고 **배회 속도에서 파생**시킨다 — 한쪽만 고쳐 다시 어긋날 수 없다.
+ * 4배로 잡은 근거: 3배는 상한 10s 를 넘고(37%p ÷ (0.933×3) ≈ 13.2s), 4배면 ≈9.9s 로 상한 안에
+ * 들어오면서 승계 불연속이 11배 → 4배로 줄어든다. "목적을 가지고 걸어 들어오는" 결은 유지된다.
+ */
+export const ENTRANCE_PACE_RATIO = 4
+
+/**
+ * 배회 속도에서 파생한 입장 걷기 길이(ms).
+ *
+ * 배회 속도 = 구간 폭 ÷ legMs. 입장은 그 `ratio` 배로 걷는다 → ms = 거리 ÷ (배회속도 × ratio).
+ * 배회하지 않는 방(구간이 좁은 레거시 단일 무대)은 기준 속도가 없으므로 null — 호출측은
+ * 걷기 애니메이션을 걸지 않는다(종전 정위치 렌더와 같다).
+ */
+export function entranceMsFor(fromX: number, plan: KeeperWalkPlan, ratio: number = ENTRANCE_PACE_RATIO): number | null {
+  if (!plan.wanders || plan.cycleMs <= 0) return null
+  const from = clamp(fromX, X_MIN, X_MAX)
+  const distance = Math.abs(plan.rest - from)
+  if (distance < MIN_SPAN_PCT) return null
+  const r = clamp(ratio, 1, 100)
+  // 배회 한 구간(legMs = cycleMs/2) 동안 (hi-lo) 만큼 이동한다.
+  const wanderPctPerMs = (plan.hi - plan.lo) / (plan.cycleMs / 2)
+  if (wanderPctPerMs <= 0) return null
+  return Math.round(clamp(distance / (wanderPctPerMs * r), 0, MAX_ENTRANCE_MS))
+}
+
 function round(v: number, digits: number): number {
   const f = 10 ** digits
   return Math.round(v * f) / f

@@ -172,14 +172,8 @@ describe('인연(緣) 4단계', () => {
   })
 })
 
+// 프레임 키 목록·국면 표·CSS 정합은 __tests__/deity-turn.test.ts 가 본다 — 여기서는 수호신 코드와의 접점만 확인한다.
 describe('deityTurnFrames — 턴어라운드 프레임 경로 규약 (안2.3 ④)', () => {
-  it('코드에서 측면·뒷면 경로를 만든다', () => {
-    expect(deityTurnFrames('seonnyeo')).toEqual({
-      side: '/shrine/deities/seonnyeo/side.webp',
-      back: '/shrine/deities/seonnyeo/back.webp',
-    })
-  })
-
   it('굽지 않은 신위도 경로는 성립한다 — 실재 판정은 클라 프리로드가 한다', () => {
     for (const rule of GUARDIAN_RULES) expect(deityTurnFrames(rule.code)?.side).toContain(`/${rule.code}/`)
   })

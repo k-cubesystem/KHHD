@@ -1,13 +1,21 @@
 import {
+  applyHallSeats,
   hallAvatar,
   hallLayout,
+  hallSeatDepth,
+  hallSeatKey,
+  hallSeatScale,
   hallSeatSizePct,
   hallSeatLine,
+  hallSeatZ,
   hallDaysSince,
+  parseHallSeats,
   HALL_ARC,
   HALL_LANTERN,
   HALL_MAX_SEATS,
   HALL_SEAT_MIN_PX,
+  HALL_SEAT_ZONE,
+  HALL_SELF_SEAT_KEY,
   HALL_ALL_PRAYED_LINE,
   HALL_EMPTY_LINE,
 } from '../family-hall-layout'
@@ -107,6 +115,155 @@ describe('hallSeatSizePct — 인원이 늘수록 방석이 작아진다', () =>
 
   it('상한 초과 인원도 8석 기준 크기를 쓴다', () => {
     expect(hallSeatSizePct(30)).toBe(hallSeatSizePct(HALL_MAX_SEATS))
+  })
+})
+
+describe('hallSeatKey — 좌석 저장 키', () => {
+  it('본인 좌석(memberId null)은 self 로 모인다', () => {
+    expect(hallSeatKey(null)).toBe(HALL_SELF_SEAT_KEY)
+    expect(hallSeatKey(undefined)).toBe(HALL_SELF_SEAT_KEY)
+    expect(hallSeatKey('')).toBe(HALL_SELF_SEAT_KEY)
+  })
+
+  it('가족은 family_members.id 를 그대로 쓴다', () => {
+    expect(hallSeatKey('4a3f-uuid')).toBe('4a3f-uuid')
+  })
+})
+
+describe('HALL_SEAT_ZONE — 드래그 범위', () => {
+  it('자동 배치 반원을 완전히 품는다 — 저장 이력이 없는 화면이 흔들리지 않는다', () => {
+    for (let n = 1; n <= HALL_MAX_SEATS; n += 1) {
+      for (const s of hallLayout(n).seats) {
+        expect(s.x).toBeGreaterThanOrEqual(HALL_SEAT_ZONE.x[0])
+        expect(s.x).toBeLessThanOrEqual(HALL_SEAT_ZONE.x[1])
+        expect(s.y).toBeGreaterThanOrEqual(HALL_SEAT_ZONE.y[0])
+        expect(s.y).toBeLessThanOrEqual(HALL_SEAT_ZONE.y[1])
+      }
+    }
+  })
+})
+
+describe('hallSeatDepth / Scale / Z — 끌어 놓은 좌석의 원근', () => {
+  it('아래로 내려올수록 앞이다 — 커지고 위에 그려진다', () => {
+    expect(hallSeatScale(80)).toBeGreaterThan(hallSeatScale(40))
+    expect(hallSeatZ(80)).toBeGreaterThan(hallSeatZ(40))
+  })
+
+  it('호 범위 밖은 0~1 로 잘린다 (스케일 폭주 방지)', () => {
+    expect(hallSeatDepth(-999)).toBe(1)
+    expect(hallSeatDepth(999)).toBe(0)
+    expect(hallSeatDepth(Number.NaN)).toBe(0)
+    expect(hallSeatScale(999)).toBe(1)
+  })
+
+  it('자동 배치와 같은 축이다 — 자동 좌석 y 를 넣으면 그 좌석과 같은 스케일이 나온다', () => {
+    for (const s of hallLayout(5).seats) {
+      expect(hallSeatScale(s.y)).toBeCloseTo(s.scale, 2)
+      expect(hallSeatZ(s.y)).toBeCloseTo(s.z, 0)
+    }
+  })
+
+  it('같은 입력이면 항상 같은 값 — 결정론(하이드레이션 규율)', () => {
+    expect(hallSeatScale(57.3)).toBe(hallSeatScale(57.3))
+    expect(hallSeatZ(57.3)).toBe(hallSeatZ(57.3))
+  })
+})
+
+describe('parseHallSeats — DB·클라 입력의 단일 관문', () => {
+  it('정상 맵은 소수 2자리로 접어 통과시킨다', () => {
+    expect(parseHallSeats({ self: { x: 40.123, y: 70.567 } })).toEqual({ self: { x: 40.12, y: 70.57 } })
+  })
+
+  it('범위를 벗어난 좌표는 존 안으로 클램프한다', () => {
+    expect(parseHallSeats({ self: { x: -1000, y: 1000 } })).toEqual({
+      self: { x: HALL_SEAT_ZONE.x[0], y: HALL_SEAT_ZONE.y[1] },
+    })
+  })
+
+  it('맵이 아닌 값(배열·스칼라·null·undefined)은 빈 배치로 흡수한다', () => {
+    for (const bad of [null, undefined, 0, 'nope', [{ x: 1, y: 2 }], true]) {
+      expect(parseHallSeats(bad)).toEqual({})
+    }
+  })
+
+  it('형태가 어긋난 항목만 버리고 성한 좌석은 살린다', () => {
+    const parsed = parseHallSeats({
+      ok: { x: 50, y: 60 },
+      noNumber: { x: '50', y: 60 },
+      nan: { x: Number.NaN, y: 60 },
+      infinite: { x: 50, y: Number.POSITIVE_INFINITY },
+      notObject: 7,
+      nullValue: null,
+      missingY: { x: 50 },
+    })
+    expect(parsed).toEqual({ ok: { x: 50, y: 60 } })
+  })
+
+  it('프로토타입 오염 키는 저장하지 않는다', () => {
+    const parsed = parseHallSeats({ __proto__: { x: 50, y: 60 }, constructor: { x: 50, y: 60 } })
+    expect(Object.keys(parsed)).toEqual([])
+    expect(({} as Record<string, unknown>).x).toBeUndefined()
+  })
+
+  it('빈 키·과도하게 긴 키는 버린다', () => {
+    expect(parseHallSeats({ '': { x: 50, y: 60 }, ['k'.repeat(65)]: { x: 50, y: 60 } })).toEqual({})
+  })
+
+  it('렌더되는 좌석 수를 넘는 항목은 받지 않는다 (페이로드 상한)', () => {
+    const many: Record<string, { x: number; y: number }> = {}
+    for (let i = 0; i < HALL_MAX_SEATS + 5; i += 1) many[`m-${i}`] = { x: 50, y: 60 }
+    expect(Object.keys(parseHallSeats(many))).toHaveLength(HALL_MAX_SEATS)
+  })
+
+  it('같은 입력이면 항상 같은 결과 — 서버·클라가 같은 좌표를 본다', () => {
+    const raw = { self: { x: 33.333, y: 66.666 } }
+    expect(parseHallSeats(raw)).toEqual(parseHallSeats(raw))
+  })
+})
+
+describe('applyHallSeats — 저장 좌표를 자동 배치 위에 덮는다', () => {
+  const keysOf = (n: number) => Array.from({ length: n }, (_, i) => (i === 0 ? HALL_SELF_SEAT_KEY : `fm-${i}`))
+
+  it('저장이 없으면 자동 배치를 **참조까지 그대로** 돌려준다 (기존 사용자 화면 회귀 0)', () => {
+    const base = hallLayout(4)
+    expect(applyHallSeats(base, keysOf(4), null)).toBe(base)
+    expect(applyHallSeats(base, keysOf(4), undefined)).toBe(base)
+    expect(applyHallSeats(base, keysOf(4), {})).toBe(base)
+  })
+
+  it('내 좌석과 무관한 키만 저장돼 있어도 자동 배치가 유지된다', () => {
+    const base = hallLayout(3)
+    expect(applyHallSeats(base, keysOf(3), { 'someone-else': { x: 20, y: 80 } })).toBe(base)
+  })
+
+  it('저장된 좌석만 옮기고 나머지는 자동 좌표를 손대지 않는다', () => {
+    const base = hallLayout(3)
+    const moved = applyHallSeats(base, keysOf(3), { 'fm-1': { x: 22, y: 80 } })
+
+    expect(moved.seats[1]).toEqual({ x: 22, y: 80, scale: hallSeatScale(80), z: hallSeatZ(80) })
+    expect(moved.seats[0]).toEqual(base.seats[0])
+    expect(moved.seats[2]).toEqual(base.seats[2])
+    // 등불·좌석 크기·overflow 는 자동 배치 계약 그대로
+    expect(moved.lantern).toEqual(base.lantern)
+    expect(moved.seatSizePct).toBe(base.seatSizePct)
+    expect(moved.overflow).toBe(base.overflow)
+  })
+
+  it('저장 좌표도 존 안으로 클램프한다 — DB 에 남은 옛 값이 화면 밖으로 나가지 않는다', () => {
+    const moved = applyHallSeats(hallLayout(1), [HALL_SELF_SEAT_KEY], { [HALL_SELF_SEAT_KEY]: { x: 999, y: -999 } })
+    expect(moved.seats[0].x).toBe(HALL_SEAT_ZONE.x[1])
+    expect(moved.seats[0].y).toBe(HALL_SEAT_ZONE.y[0])
+  })
+
+  it('키 개수가 좌석보다 적어도 터지지 않는다', () => {
+    const base = hallLayout(3)
+    expect(applyHallSeats(base, [HALL_SELF_SEAT_KEY], { [HALL_SELF_SEAT_KEY]: { x: 30, y: 70 } }).seats).toHaveLength(3)
+  })
+
+  it('같은 입력이면 항상 같은 배치 — 결정론(하이드레이션 규율)', () => {
+    const base = hallLayout(6)
+    const saved = { 'fm-2': { x: 41.5, y: 77.25 } }
+    expect(applyHallSeats(base, keysOf(6), saved)).toEqual(applyHallSeats(base, keysOf(6), saved))
   })
 })
 

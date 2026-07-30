@@ -384,13 +384,26 @@
     animation: none;
   }
 }
-/* ── 신위 탭 한 바퀴 회전 (DeityTurn / 부록 C ④ · 안2.3) ──────────────────
-   국면 %는 DeityTurn.tsx PHASE_MS 표를 --deity-spin-ms(1480ms) 로 나눈 값이다 —
-   한쪽만 고치면 프레임과 몸통이 어긋난다.
-     0ms 정면 0% · 280ms 측면 18.92% · 620ms 뒷면 41.89% · 960ms 측면(반전) 64.86% ·
-     1300ms 정면 착지 87.84% · 1480ms 정지 100%
-   전환은 인접 두 정지점(…91%/…92%)으로 **즉시 교체**한다 — 크로스페이드는 두 자세가 겹쳐
-   이중 노출로 보인다. 이징은 부록 C 지정 곡선(돌기 시작이 느리고 중반 빠름 = 회전 관성). */
+/* ── 신위 탭 한 바퀴 회전 (DeityTurn / 부록 C ④ · 안2.3 · 4차 검수 9국면) ──────
+   국면 %는 lib/domain/shrine/deity-turn.ts 의 표를 --deity-spin-ms(1480ms) 로 나눈 값이다 —
+   한쪽만 고치면 프레임과 몸통이 어긋난다. 그래서 그 대조를 테스트가 한다
+   (lib/domain/shrine/__tests__/deity-turn.test.ts 가 아래 키프레임 %를 도메인 표와 맞춰 본다).
+
+   9국면(45°씩) — 굽는 프레임은 q45·side·q135·back 넷이고 225·270·315° 는 좌우 반전 재사용:
+     0°   0ms      0%      정면(base)
+     45°  287ms   19.39%   q45
+     90°  424ms   28.65%   side
+     135° 541ms   36.55%   q135
+     180° 650ms   43.92%   back
+     225° 759ms   51.28%   q135 반전
+     270° 876ms   59.19%   side 반전
+     315° 1013ms  68.45%   q45 반전
+     360° 1300ms  87.84%   정면 착지 · 1480ms 100% 정지
+   시각은 등간격이 아니다 — 각도가 smoothstep 을 따르도록 그 역함수로 뽑았다(회전 관성).
+
+   5국면(-lite)은 side·back 만 구워진 신위용 하위 등급이며 안2.3 A파 값 그대로다.
+   전환은 인접 두 정지점(…44%/…45%)으로 **즉시 교체**한다 — 크로스페이드는 두 자세가 겹쳐
+   이중 노출로 보인다. */
 .deity-turn {
   /* 버튼 리셋만 — 폭은 정면 프레임(h-full w-auto)이 정한다 */
   cursor: pointer;
@@ -401,7 +414,8 @@
 .deity-turn-frame {
   opacity: 0;
 }
-.deity-turn-side-flip {
+/* 반전 재사용 — 180° 를 넘는 각은 대칭각 파일을 좌우로 뒤집어 쓴다(굽는 장수가 절반인 근거) */
+.deity-turn-mirror {
   transform: scaleX(-1);
 }
 /* 잔상 2겹 — 같은 애니메이션을 --deity-turn-lag 만큼 늦춘 시간 이동 복제.
@@ -413,30 +427,221 @@
   pointer-events: none;
 }
 
+/* 회전 중 발광 — 버튼(=프레임 스택 전체)에 건 drop-shadow 라 마스크가 필요 없다.
+   그 순간 보이는 겹의 **알파**를 따라 번지므로 국면마다 실루엣이 저절로 맞고, 배경이 없는
+   서브트리라 사각형 섬광이 될 여지가 구조적으로 없다. 각속도가 최대인 반 바퀴(≈44%)에서
+   가장 밝고 착지(87.84%)에는 완전히 꺼진다 — "살짝" 이 요구라 brightness 는 1.06 을 넘기지 않는다.
+   filter 목록의 함수 구성이 모든 정지점에서 같아야 보간된다(하나라도 빠지면 툭 끊긴다). */
+.deity-turn-spin,
+.deity-turn-spin-lite {
+  animation: deityTurnGlow var(--deity-spin-ms, 1480ms) ease-in-out both;
+  will-change: filter;
+}
+
 .deity-turn-spin .deity-turn-body {
   animation: deityTurnBody var(--deity-spin-ms, 1480ms) cubic-bezier(0.34, 0.02, 0.2, 1) var(--deity-turn-lag, 0ms) both;
   will-change: transform;
 }
-.deity-turn-spin .deity-turn-base {
-  animation: deityTurnBase var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+.deity-turn-spin .deity-turn-step-0 {
+  animation: deityTurnStep0 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
 }
-.deity-turn-spin .deity-turn-side {
-  animation: deityTurnSide var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+.deity-turn-spin .deity-turn-step-1 {
+  animation: deityTurnStep1 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
 }
-.deity-turn-spin .deity-turn-back {
-  animation: deityTurnBack var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+.deity-turn-spin .deity-turn-step-2 {
+  animation: deityTurnStep2 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
 }
-.deity-turn-spin .deity-turn-side-flip {
-  animation: deityTurnSideFlip var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+.deity-turn-spin .deity-turn-step-3 {
+  animation: deityTurnStep3 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
 }
-/* 폴백 — side/back 을 아직 굽지 않은 신위. 90°·270° 근처 모션블러와 아우라 증폭으로 뒷면 부재를 가리고,
-   180°(좌우 반전된 정면)는 어둡게 눌러 "뒷모습"으로 읽히게 한다. */
+.deity-turn-spin .deity-turn-step-4 {
+  animation: deityTurnStep4 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+.deity-turn-spin .deity-turn-step-5 {
+  animation: deityTurnStep5 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+.deity-turn-spin .deity-turn-step-6 {
+  animation: deityTurnStep6 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+.deity-turn-spin .deity-turn-step-7 {
+  animation: deityTurnStep7 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+
+/* 5국면 등급 — 겹 클래스(.deity-turn-step-N)는 같고 부모가 어느 타임라인을 걸지만 고른다 */
+.deity-turn-spin-lite .deity-turn-body {
+  animation: deityTurnBodyLite var(--deity-spin-ms, 1480ms) cubic-bezier(0.34, 0.02, 0.2, 1) var(--deity-turn-lag, 0ms)
+    both;
+  will-change: transform;
+}
+.deity-turn-spin-lite .deity-turn-step-0 {
+  animation: deityTurnLite0 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+.deity-turn-spin-lite .deity-turn-step-1 {
+  animation: deityTurnLite1 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+.deity-turn-spin-lite .deity-turn-step-2 {
+  animation: deityTurnLite2 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+.deity-turn-spin-lite .deity-turn-step-3 {
+  animation: deityTurnLite3 var(--deity-spin-ms, 1480ms) linear var(--deity-turn-lag, 0ms) both;
+}
+
+/* 폴백 — 프레임을 아직 굽지 않은 신위. 90°·270° 근처 모션블러와 아우라 증폭으로 뒷면 부재를 가리고,
+   180°(좌우 반전된 정면)는 어둡게 눌러 "뒷모습"으로 읽히게 한다. 발광도 여기 filter 가 겸한다. */
 .deity-turn-flip .deity-turn-body {
   animation: deityTurnFlip var(--deity-spin-ms, 1480ms) cubic-bezier(0.34, 0.02, 0.2, 1) both;
   will-change: transform, filter;
 }
 
+/* 몸통 — 프레임이 실제 원근을 들고 있으므로 스쿼시는 **보조 동작**에 그친다(정면 대비 옆모습이
+   좁아 보이는 만큼만). 5국면 시절 0.82 는 자세가 성기던 것을 폭으로 메우던 값이라 되풀이하지 않는다. */
 @keyframes deityTurnBody {
+  0% {
+    transform: scale(1, 1);
+  }
+  19.39% {
+    transform: scale(0.98, 1);
+  }
+  28.65% {
+    transform: scale(0.92, 1);
+  }
+  36.55% {
+    transform: scale(0.98, 1);
+  }
+  43.92% {
+    transform: scale(1, 1);
+  }
+  51.28% {
+    transform: scale(0.98, 1);
+  }
+  59.19% {
+    transform: scale(0.92, 1);
+  }
+  68.45% {
+    transform: scale(0.98, 1);
+  }
+  87.84% {
+    transform: scale(1.04, 0.96);
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+@keyframes deityTurnStep0 {
+  0%,
+  19.38% {
+    opacity: 1;
+  }
+  19.39%,
+  87.83% {
+    opacity: 0;
+  }
+  87.84%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes deityTurnStep1 {
+  0%,
+  19.38% {
+    opacity: 0;
+  }
+  19.39%,
+  28.64% {
+    opacity: 1;
+  }
+  28.65%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes deityTurnStep2 {
+  0%,
+  28.64% {
+    opacity: 0;
+  }
+  28.65%,
+  36.54% {
+    opacity: 1;
+  }
+  36.55%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes deityTurnStep3 {
+  0%,
+  36.54% {
+    opacity: 0;
+  }
+  36.55%,
+  43.91% {
+    opacity: 1;
+  }
+  43.92%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes deityTurnStep4 {
+  0%,
+  43.91% {
+    opacity: 0;
+  }
+  43.92%,
+  51.27% {
+    opacity: 1;
+  }
+  51.28%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes deityTurnStep5 {
+  0%,
+  51.27% {
+    opacity: 0;
+  }
+  51.28%,
+  59.18% {
+    opacity: 1;
+  }
+  59.19%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes deityTurnStep6 {
+  0%,
+  59.18% {
+    opacity: 0;
+  }
+  59.19%,
+  68.44% {
+    opacity: 1;
+  }
+  68.45%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes deityTurnStep7 {
+  0%,
+  68.44% {
+    opacity: 0;
+  }
+  68.45%,
+  87.83% {
+    opacity: 1;
+  }
+  87.84%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 5국면(-lite) 타임라인 — 안2.3 A파 값 보존. 겹 0=정면 · 1=측면 · 2=뒷면 · 3=측면(반전) */
+@keyframes deityTurnBodyLite {
   0% {
     transform: scale(1, 1);
   }
@@ -456,7 +661,7 @@
     transform: scale(1, 1);
   }
 }
-@keyframes deityTurnBase {
+@keyframes deityTurnLite0 {
   0%,
   18.91% {
     opacity: 1;
@@ -470,7 +675,7 @@
     opacity: 1;
   }
 }
-@keyframes deityTurnSide {
+@keyframes deityTurnLite1 {
   0%,
   18.91% {
     opacity: 0;
@@ -484,7 +689,7 @@
     opacity: 0;
   }
 }
-@keyframes deityTurnBack {
+@keyframes deityTurnLite2 {
   0%,
   41.88% {
     opacity: 0;
@@ -498,7 +703,7 @@
     opacity: 0;
   }
 }
-@keyframes deityTurnSideFlip {
+@keyframes deityTurnLite3 {
   0%,
   64.85% {
     opacity: 0;
@@ -510,6 +715,28 @@
   87.84%,
   100% {
     opacity: 0;
+  }
+}
+@keyframes deityTurnGlow {
+  0% {
+    /* 꺼진 상태도 blur 를 0 이 아닌 값으로 둔다 — 0 이면 minify 가 그 인자를 통째로 지워
+       다른 정지점과 인자 수가 달라진다(보간이 끊길 여지). 알파가 0 이라 보이지는 않는다. */
+    filter: drop-shadow(0 0 4px rgba(255, 240, 196, 0)) brightness(1);
+  }
+  20% {
+    filter: drop-shadow(0 0 7px rgba(255, 240, 196, 0.2)) brightness(1.02);
+  }
+  44% {
+    filter: drop-shadow(0 0 13px rgba(255, 240, 196, 0.42)) brightness(1.06);
+  }
+  68% {
+    filter: drop-shadow(0 0 8px rgba(255, 240, 196, 0.22)) brightness(1.02);
+  }
+  87.84%,
+  100% {
+    /* 꺼진 상태도 blur 를 0 이 아닌 값으로 둔다 — 0 이면 minify 가 그 인자를 통째로 지워
+       다른 정지점과 인자 수가 달라진다(보간이 끊길 여지). 알파가 0 이라 보이지는 않는다. */
+    filter: drop-shadow(0 0 4px rgba(255, 240, 196, 0)) brightness(1);
   }
 }
 @keyframes deityTurnFlip {
@@ -541,11 +768,54 @@
 
 /* 접지 그림자 위상 동조 — 몸이 측면일 때 좁아지고 뒷면(정면 노출 폭 최대)에서 넓어진다.
    translateX(-50%) 를 키프레임마다 다시 써야 한다(애니메이션이 인라인 transform 을 덮는다).
-   .shrine-glow-breathe 보다 뒤에 선언돼 회전 중에는 이 애니메이션이 이긴다(끝나면 맥동 재개). */
+   .shrine-glow-breathe 보다 뒤에 선언돼 회전 중에는 이 애니메이션이 이긴다(끝나면 맥동 재개).
+   등급마다 국면 %가 다르므로 곡선도 둘이다 — 폴백(rotateY)은 90°·270° 자리가 5국면과 같아 -lite 를 쓴다. */
 .deity-turn-shadow {
   animation: deityTurnShadow var(--deity-spin-ms, 1480ms) cubic-bezier(0.34, 0.02, 0.2, 1) both;
 }
+.deity-turn-shadow-lite {
+  animation: deityTurnShadowLite var(--deity-spin-ms, 1480ms) cubic-bezier(0.34, 0.02, 0.2, 1) both;
+}
 @keyframes deityTurnShadow {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleX(1);
+    opacity: 0.85;
+  }
+  19.39% {
+    transform: translateX(-50%) scaleX(0.94);
+    opacity: 0.92;
+  }
+  28.65% {
+    transform: translateX(-50%) scaleX(0.86);
+    opacity: 1;
+  }
+  36.55% {
+    transform: translateX(-50%) scaleX(0.96);
+    opacity: 0.82;
+  }
+  43.92% {
+    transform: translateX(-50%) scaleX(1.06);
+    opacity: 0.7;
+  }
+  51.28% {
+    transform: translateX(-50%) scaleX(0.96);
+    opacity: 0.82;
+  }
+  59.19% {
+    transform: translateX(-50%) scaleX(0.86);
+    opacity: 1;
+  }
+  68.45% {
+    transform: translateX(-50%) scaleX(0.94);
+    opacity: 0.92;
+  }
+  87.84% {
+    transform: translateX(-50%) scaleX(1.02);
+    opacity: 0.95;
+  }
+}
+@keyframes deityTurnShadowLite {
   0%,
   100% {
     transform: translateX(-50%) scaleX(1);
@@ -569,7 +839,9 @@
   }
 }
 
-/* 회전 중 광원 스침 — 스프라이트 실루엣으로 마스크한다(마스크 없으면 사각형 섬광).
+/* 회전 중 광원 스침 — **폴백(rotateY) 전용**이다. 마스크가 정면 스프라이트 한 장이라,
+   프레임을 갈아 끼우는 등급에서는 지금 보이는 자세와 실루엣이 어긋나 빛이 몸 밖으로 샌다.
+   프레임 등급의 발광은 마스크가 필요 없는 deityTurnGlow(버튼 drop-shadow)가 맡는다.
    mask-image 미지원 브라우저에서는 사각형이 번쩍이므로 @supports 로 아예 띄우지 않는다.
    mask-image URL 은 DeityTurn 이 인라인으로 준다(스프라이트 경로). */
 .deity-turn-sweep {
@@ -591,7 +863,6 @@
   mask-repeat: no-repeat;
 }
 @supports (mask-image: linear-gradient(#000, #000)) or (-webkit-mask-image: linear-gradient(#000, #000)) {
-  .deity-turn-spin .deity-turn-sweep,
   .deity-turn-flip .deity-turn-sweep {
     display: block;
     animation: deityTurnSweep var(--deity-spin-ms, 1480ms) ease-in-out both;
@@ -614,16 +885,21 @@
   }
 }
 
-/* 모션 최소화 — 회전 자체를 걸지 않는다(룸이 spinning 을 세우지 않는다). CSS 는 2중 안전장치다. */
+/* 모션 최소화 — 회전 자체를 걸지 않는다(룸이 spinning 을 세우지 않는다). CSS 는 2중 안전장치다.
+   겹은 .deity-turn-frame(1~7번)과 .deity-turn-step-0(정면)이 남김없이 덮는다 — 겹을 더 늘려도
+   이 목록은 그대로다. */
 @media (prefers-reduced-motion: reduce) {
+  .deity-turn-spin,
+  .deity-turn-spin-lite,
   .deity-turn-spin .deity-turn-body,
-  .deity-turn-spin .deity-turn-base,
-  .deity-turn-spin .deity-turn-side,
-  .deity-turn-spin .deity-turn-back,
-  .deity-turn-spin .deity-turn-side-flip,
+  .deity-turn-spin-lite .deity-turn-body,
+  .deity-turn-spin .deity-turn-frame,
+  .deity-turn-spin-lite .deity-turn-frame,
+  .deity-turn-spin .deity-turn-step-0,
+  .deity-turn-spin-lite .deity-turn-step-0,
   .deity-turn-flip .deity-turn-body,
   .deity-turn-shadow,
-  .deity-turn-spin .deity-turn-sweep,
+  .deity-turn-shadow-lite,
   .deity-turn-flip .deity-turn-sweep {
     animation: none;
     will-change: auto;

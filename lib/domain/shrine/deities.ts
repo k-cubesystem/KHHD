@@ -4,6 +4,7 @@
  * 근거: TEAM_G_DESIGN/prd/PRD-shrine-3.0-deities-v1.md §2.1
  */
 
+import { BAKED_FRAME_KEYS, type BakedFrameKey } from './deity-turn'
 import type { Element } from './types'
 
 export type GuardianCode = 'samsin' | 'jowang' | 'seongju' | 'teoju' | 'dongja' | 'seonnyeo'
@@ -194,14 +195,14 @@ export function bondProgress(points: number): BondProgress {
 /** 신위 코드 허용 문자 — 경로에 그대로 박히므로 탈출 문자·상위 이동(..)을 원천 차단한다. */
 const DEITY_CODE_RE = /^[a-z0-9][a-z0-9_-]{0,30}$/
 
-/** 신위 회전 프레임 3종. 정면은 DB `sprite_url` 이 정본이라 여기서는 측면·뒷면만 규약으로 만든다. */
-export interface DeityTurnFrames {
-  side: string
-  back: string
-}
+/** 굽는 프레임의 URL 묶음. 정면은 DB `sprite_url` 이 정본이라 여기 없다. */
+export type DeityTurnFrames = Readonly<Record<BakedFrameKey, string>>
 
 /**
- * 신위 턴어라운드 프레임 경로 — `/shrine/deities/{code}/side.webp`·`back.webp`.
+ * 신위 턴어라운드 프레임 경로 — `/shrine/deities/{code}/{key}.webp`.
+ *
+ * 키 목록은 deity-turn.BAKED_FRAME_KEYS 단일 출처다 — 국면을 늘려도(45° 중간각 추가) 이 함수는
+ * 고칠 데가 없고, 생성 스크립트도 같은 목록을 본다.
  *
  * 굽지 않은 신위도 **경로는 성립한다**(파일만 없다). 실재 판정은 클라이언트가 프리로드 결과로 하고
  * (DeityTurn — 서버 fs 확인은 Vercel 람다에 public/ 이 없어 성립하지 않는다), 이 함수는 규약만 만든다.
@@ -209,5 +210,7 @@ export interface DeityTurnFrames {
  */
 export function deityTurnFrames(code: string | null | undefined): DeityTurnFrames | null {
   if (typeof code !== 'string' || !DEITY_CODE_RE.test(code)) return null
-  return { side: `/shrine/deities/${code}/side.webp`, back: `/shrine/deities/${code}/back.webp` }
+  const frames = {} as Record<BakedFrameKey, string>
+  for (const key of BAKED_FRAME_KEYS) frames[key] = `/shrine/deities/${code}/${key}.webp`
+  return frames
 }

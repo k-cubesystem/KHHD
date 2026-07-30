@@ -34,7 +34,13 @@ import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
 import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
 import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '@/lib/domain/shrine/world-render'
-import { keeperRestX, type KeeperEntranceSpec, type KeeperRange } from '@/lib/domain/shrine/keeper-walk'
+import {
+  entranceMsFor,
+  keeperRestX,
+  planKeeperWalk,
+  type KeeperEntranceSpec,
+  type KeeperRange,
+} from '@/lib/domain/shrine/keeper-walk'
 import { GAMEFEEL_V1, SCROLL_SHRINE_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import {
   greetingFor,
@@ -118,14 +124,11 @@ const KEEPER_WANDER: KeeperRange = { from: 31, to: 59 }
 /** 입장 걷기 시작점 — 문간(부록 B 방 구성 x≈8) */
 const KEEPER_ENTRANCE_FROM = 8
 /**
- * 입장 걷기 길이. 카메라 팬(ENTRANCE_MS.pan=1100)보다 길어야 "카메라가 멎은 뒤에도 걷고 있다"가 되고,
- * 팬이 캐릭터를 추월해 화면 밖에 두고 가지 않는다(둘 다 같은 감속 곡선을 쓴다).
- *
- * 1800 → **3600**(부록 C ② 3차 검수 "지나가 버린다"). 팬의 3.3배라 팬이 멎는 1100ms 시점에
- * 걸음은 아직 3분의 1도 남아 있다 — 카메라가 먼저 대청에 서고, 신당지기가 뒤따라 걸어 들어온다.
- * (상한은 keeper-walk MAX_ENTRANCE_MS=10s 라 이 값은 클램프에 걸리지 않는다.)
+ * 입장 걷기 길이는 **상수가 아니다** — `entranceMsFor(from, plan)` 가 배회 속도에서 파생한다.
+ * 1800 → 3600(3차) → 파생(4차). 상수로 두는 한 배회 상수와 따로 조정돼 다시 어긋난다.
+ * 현재 구성(37%p 이동 · 배회 28%p/30s · 4배)에서 ≈9.9s 이고, 카메라 팬(ENTRANCE_MS.pan=1100)의
+ * 9배라 "카메라가 먼저 대청에 서고 신당지기가 뒤따라 들어온다"는 원래 의도는 그대로다.
  */
-const KEEPER_ENTRANCE_MS = 3600
 /** 탭 후 걸음 멈춤 길이 — 말풍선을 읽을 만큼만(부록 B 2.5s) */
 const KEEPER_TAP_PAUSE_MS = 2500
 
@@ -472,11 +475,15 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     () => (keeperWalks && !editing ? KEEPER_WANDER : { from: keeperHomeX, to: keeperHomeX }),
     [keeperWalks, editing, keeperHomeX]
   )
-  /** 입장 걷기 — 마운트 1회. deps 에 editing 이 없어 꾸미기 토글로 다시 걸어 들어오지 않는다 */
-  const keeperEntrance = useMemo<KeeperEntranceSpec | null>(
-    () => (keeperWalks ? { from: KEEPER_ENTRANCE_FROM, to: keeperHomeX, ms: KEEPER_ENTRANCE_MS } : null),
-    [keeperWalks, keeperHomeX]
-  )
+  /** 입장 걷기 — 마운트 1회. deps 에 editing 이 없어 꾸미기 토글로 다시 걸어 들어오지 않는다.
+   *  길이는 상수가 아니라 **배회 속도에서 파생**한다(entranceMsFor) — 안2.3 까지 두 상수가 따로 놀아
+   *  입장이 배회보다 11배 빨랐고 그것이 4차 검수 "입장속도 아직 빠름"의 원인이었다. */
+  const keeperEntrance = useMemo<KeeperEntranceSpec | null>(() => {
+    if (!keeperWalks) return null
+    const ms = entranceMsFor(KEEPER_ENTRANCE_FROM, planKeeperWalk(KEEPER_WANDER))
+    if (ms === null) return null
+    return { from: KEEPER_ENTRANCE_FROM, to: keeperHomeX, ms }
+  }, [keeperWalks, keeperHomeX])
   const [keeperPaused, setKeeperPaused] = useState(false)
   const keeperPauseTimer = useRef<number | null>(null)
   useEffect(
@@ -994,7 +1001,7 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
   const onDeitySpinEnd = useCallback(() => setDeitySpinning(false), [])
 
   /**
-   * 턴어라운드 프레임 경로(측면·뒷면). 회전이 애초에 불가한 상태(게이트 오프·모션 최소화)에서는 null 을 줘
+   * 턴어라운드 프레임 경로(45°·측면·135°·뒷면). 회전이 애초에 불가한 상태(게이트 오프·모션 최소화)에서는 null 을 줘
    * DeityTurn 이 프리로드 요청조차 하지 않게 한다 — 실재 판정은 그 프리로드 결과가 정본이다.
    */
   const deityFrames = useMemo(
@@ -1130,8 +1137,7 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
       {scene.mainDeity?.spriteUrl && (
         <DeityTurn
           baseUrl={scene.mainDeity.spriteUrl}
-          sideUrl={deityFrames?.side ?? null}
-          backUrl={deityFrames?.back ?? null}
+          frames={deityFrames}
           name={scene.mainDeity.name}
           spinning={deitySpinning}
           onSpinEnd={onDeitySpinEnd}
@@ -1377,7 +1383,9 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
                   (팬 제스처는 룸이 캡처 단계에서 가로채므로 좌석 위에서 끌어도 카메라가 따라온다.) */}
               {hallBox && hall && (
                 <div className="absolute inset-y-0" style={hallBox}>
-                  <FamilyHall data={hall} />
+                  {/* 꾸미기 모드에서는 좌석도 끌어 옮긴다 — 좌석 좌표 저장은 사랑방이 스스로 한다
+                      (룸의 「완료」 저장은 신물 배치 전용이라 좌석이 끼어들 자리가 없다) */}
+                  <FamilyHall data={hall} editing={editing} />
                 </div>
               )}
               <div className="absolute inset-y-0" style={daecheongBox}>
