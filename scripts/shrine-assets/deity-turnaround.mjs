@@ -121,17 +121,20 @@ const VIEWS = [
     //    거의 없음 → 회전 앞 3분의 1이 정지처럼 보인다). 참조 이미지가 측면이므로 "그 측면을
     //    카메라 쪽으로 절반 되돌려라"가 모델에게 훨씬 강한 신호다. 방향은 side 와 같은 쪽이어야
     //    0°→45°→90° 가 한 방향 회전으로 읽히고 225·270·315° 반전 재사용도 성립한다.
+    // ⚠️ 이 각은 두 번 실패했다. 실패 방식이 서로 달라서 둘 다 교훈이다.
+    //    (1) "정면에서 45도" — 방향을 안 주니 모델이 **정면으로 수렴**했다.
+    //    (2) 실루엣 단서를 길게 덧붙이고 "CRITICAL / must NOT be mistaken" 같은 **메타 지시문**을
+    //        섞었더니, 모델이 그림이 아니라 **캐릭터 시트**(얼굴 습작 여러 장)를 냈다(폭 346→544).
+    //    → 잘 나온 side 와 **같은 짧은 서술체**를 유지하되, 방향과 옷깃 치우침만 얹는다.
+    //       설명을 늘리는 것이 아니라 관찰 가능한 사실 하나를 더하는 것이 먹힌다.
     view:
-      'START FROM THE REFERENCE SIDE-PROFILE POSE and rotate the figure HALFWAY BACK toward the camera — ' +
-      'the result is a FRONT THREE-QUARTER view at 45 degrees, still clearly turned to the viewer' +
+      'seen from a FRONT THREE-QUARTER angle — the body turned halfway between facing the viewer and ' +
+      'facing the viewer' +
       "'" +
-      's right, NOT a frontal pose: ' +
-      'the torso stays visibly angled and narrower than a front view, the near shoulder overlaps and hides part of the chest, ' +
-      'the face is turned so the nose points to the viewer' +
-      "'" +
-      's right and breaks the line of the far cheek, the far eye is foreshortened, the far ear hidden, ' +
-      'roughly one third of the back of the head and hair mass is visible behind the near shoulder, ' +
-      'the sleeves and skirt hem trailing behind the turn as if the figure is mid-rotation',
+      's right, the collar line and the garment center sitting off to the near shoulder instead of down the middle, ' +
+      'the nose breaking the line of the far cheek, the far ear hidden behind the head, ' +
+      'the far shoulder receding behind the torso so the figure reads narrower than the front view, ' +
+      'the sleeves and skirt hem trailing slightly behind the turn as if the figure just started rotating',
   },
   {
     key: 'side',
