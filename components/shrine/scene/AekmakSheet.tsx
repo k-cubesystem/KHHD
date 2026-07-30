@@ -21,12 +21,15 @@ import {
   AEKMAK_PRIVACY_NOTICE,
   AEKMAK_TAGS,
   AEKMAK_TAG_LABEL,
-  AEKMAK_TAG_SEAL,
+  AEKMAK_TAG_MARK,
+  AEKMAK_TAG_WORD,
   AEKMAK_TEXT_MAX,
   BURN_MS,
+  SIGIL_JAMO,
+  burnProgress,
   monthlyRecallLine,
   settleLine,
-  sigilStrokes,
+  sigilPlan,
   type AekmakTag,
 } from '@/lib/domain/ritual/aekmak'
 import { burnAekmak, type AekmakStatus } from '@/app/actions/shrine/rituals'
@@ -84,7 +87,7 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
   const suppressClick = useRef(false)
   const [emberOffset, setEmberOffset] = useState<{ x: number; y: number } | null>(null)
 
-  const strokes = useMemo(() => sigilStrokes(text), [text])
+  const sigil = useMemo(() => sigilPlan(text), [text])
   const soldOut = remaining <= 0
 
   /** 시트를 닫을 때 원문·태그를 확실히 지운다 — 다음에 열었을 때 남아 있으면 그 자체가 사고다 */
@@ -124,6 +127,10 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
   // ── 재·불티 — 타는 선을 따라 위로 올라가며 방출 ───────────
   // 향로 상시 연기(ShrineRoomClient SMOKE_INTERVAL_MS)와 같은 규약의 이미터다.
   // 연소 자체는 CSS 가 그리고, 여기서는 파티클 좌표만 같은 속도로 따라 올린다.
+  //
+  // ⚠️ 좌표를 **BURN_CURVE 로** 옮긴다(burnProgress). 예전에는 여기만 등속이고 CSS 는
+  //    ease-in 이라, 불길은 아직 아래에 있는데 불티는 이미 위에서 흩어지고 있었다.
+  //    가로 위치도 흔든다 — 타는 선이 직선이 아니게 됐으므로 한 열에서만 나오면 어색하다.
   useEffect(() => {
     if (phase !== 'burning') return
     const steps = Math.max(1, Math.round(BURN_MS.total / BURN_MS.emit))
@@ -131,9 +138,11 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
     const iv = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return
       step += 1
-      const y = Math.max(2, 98 - (step / steps) * 96)
-      effectsRef.current?.emit('smoke', 50 + (step % 3) * 4 - 4, y)
-      if (step % 2 === 0) effectsRef.current?.emit('flame', 50, y)
+      const p = burnProgress(step / steps)
+      const y = Math.max(2, 97 - p * 95)
+      const x = 50 + Math.sin(step * 1.7) * 22
+      effectsRef.current?.emit('smoke', x, y)
+      if (step % 2 === 0) effectsRef.current?.emit('flame', 50 + Math.sin(step * 2.3) * 16, y)
     }, BURN_MS.emit)
     return () => window.clearInterval(iv)
   }, [phase])
@@ -209,6 +218,10 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="액막이 의식 열기"
+        /* 창방 「액막이」 팻말이 이 버튼을 대신 누른다(액막이는 페이지가 아니라 방 안 시트라
+           이동이 아니라 열기여야 한다). 팻말이 `querySelector('button')` 로 첫 버튼을 잡으면
+           스트립에 버튼이 하나만 더 생겨도 조용히 엉뚱한 걸 누른다 — 그래서 이름표를 박는다. */
+        data-aekmak-open
         className="flex w-full items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
       >
         <span
@@ -286,7 +299,7 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
                   <EffectsCanvas ref={effectsRef} />
                   <TalismanPaper
                     tag={tag}
-                    strokes={strokes}
+                    sigil={sigil}
                     burning={phase === 'burning'}
                     onBurnEnd={() => setPhase('settled')}
                   />
@@ -381,8 +394,9 @@ function ComposeStep({
                   : 'border border-white/10 bg-surface text-ink-light/55'
               }`}
             >
-              <span className="mr-1 font-serif text-[10px] text-gold-500/70">{AEKMAK_TAG_SEAL[t]}</span>
+              {/* 태우는 것 → 비는 것. 한자 첨자를 걷어내고 **한글 발원**을 붙였다(부적 위와 같은 낱말) */}
               {AEKMAK_TAG_LABEL[t]}
+              <span className="ml-1.5 font-serif text-[10px] text-gold-500/70">{AEKMAK_TAG_WORD[t]}</span>
             </button>
           ))}
         </div>
@@ -421,18 +435,19 @@ function ComposeStep({
 // ─── 2. 부적지 ───────────────────────────────────────────────
 
 /**
- * 부적지 — 배경 이미지가 없어도(에셋 404) 한지 그라디언트로 형태가 남는다.
- * 연소 중에는 같은 요소에 `.ritual-burn` 이 붙어 마스크가 아래에서 위로 올라간다.
- * 잉걸불 띠(.ritual-char)는 **이 요소 안**에 둬야 같은 마스크에 잘려 "타는 선"으로 읽힌다.
+ * 부적지 — 배경 이미지가 없어도(에셋 404) 한지 색으로 형태가 남는다.
+ * 연소 중에는 같은 요소에 `.ritual-burn` 이 붙어 텍스처 마스크가 아래에서 위로 올라간다.
+ * 잉걸불(.ritual-char)·투과광(.ritual-glow)은 **이 요소 안**에 둬야 같은 마스크에 잘려
+ * "타는 선"으로 읽힌다(형제로 두면 이미 탄 자리 위에 뜬다).
  */
 function TalismanPaper({
   tag,
-  strokes,
+  sigil,
   burning,
   onBurnEnd,
 }: {
   tag: AekmakTag | null
-  strokes: ReturnType<typeof sigilStrokes>
+  sigil: ReturnType<typeof sigilPlan>
   burning: boolean
   onBurnEnd: () => void
 }) {
@@ -440,7 +455,11 @@ function TalismanPaper({
     <div
       className={`ritual-paper absolute inset-0 overflow-hidden rounded-[4px] ${burning ? 'ritual-burn' : ''}`}
       onAnimationEnd={(e) => {
-        // 자식(잉걸불 띠)의 animationend 도 여기로 버블한다 — 내 것만 받는다
+        // 자식(잉걸불·투과광)의 animationend 도 여기로 버블한다 — 내 것만 받는다.
+        // ⚠️ 이름(animationName)으로 거르지 않는다. 이 요소에는 마스크·오그라듦 둘이 붙어 두 번 오지만
+        //    setPhase 는 멱등이라 두 번 와도 무해한 반면, 이름이 한 글자만 어긋나면 **화면이 연소
+        //    상태로 영영 멎는다**(국면 전환이 여기 하나에 걸려 있다). 두 애니메이션의 길이가 같다는
+        //    것은 테스트가 강제하므로 일찍 끝날 일도 없다.
         if (burning && e.target === e.currentTarget) onBurnEnd()
       }}
       style={{
@@ -451,58 +470,106 @@ function TalismanPaper({
         boxShadow: '0 10px 26px -12px rgba(0,0,0,0.8)',
       }}
     >
-      {/* 머리 인장 — 태그의 한자 한 자 */}
+      {/* 머리 인장 — 태그의 **한글 한 자**를 붉은 전각에 새긴다. 印 은 반듯하지 않게 살짝 기울인다 */}
       {tag && (
         <span
-          className="absolute inset-x-0 top-[7%] text-center font-serif text-[22px] font-bold"
-          style={{ color: '#9E2B2B', textShadow: '0 0 6px rgba(158,43,43,0.35)' }}
+          className="absolute left-1/2 top-[5.5%] grid place-items-center rounded-[3px] font-serif font-bold"
+          style={{
+            width: 34,
+            height: 34,
+            marginLeft: -17,
+            transform: 'rotate(-1.6deg)',
+            background: '#9E2B2B',
+            border: '1px solid rgba(246,232,210,0.35)',
+            color: '#F6E8D2',
+            fontSize: 21,
+            lineHeight: '34px',
+            boxShadow: '0 1px 5px rgba(90,20,20,0.45)',
+          }}
         >
-          {AEKMAK_TAG_SEAL[tag]}
+          {AEKMAK_TAG_MARK[tag]}
         </span>
       )}
 
-      {/* 주문양(呪文樣) — 구운 경면주사 문양을 바탕으로 깔고, 그 위에 **원문에서 파생된 획**을 얹는다.
-          글자를 그리지 않으므로 화면 캡처에도 원문이 남지 않는다(무저장 약속의 시각적 짝).
-          흐림·투명도는 .ritual-sigil 이 든다 — 두 층이 같은 흐림을 먹어야 한 붓으로 읽힌다. */}
+      {/* 주문양(呪文樣) — 구운 주묵 바탕 위에 **원문에서 파생된 한글 자모 획**을 얹는다.
+          자음만 쓰므로 음절이 되지 않는다 = 원문도, 어떤 낱말도 읽히지 않는다(무저장 약속의 시각적 짝).
+          좌표계는 부적지와 같은 100×150(2:3) — preserveAspectRatio 를 켜야 자모가 찌그러지지 않는다. */}
       <div className="ritual-sigil absolute inset-0" aria-hidden>
+        {/* 주묵 바탕 — 위·아래를 페이드로 끊는다. 그냥 깔면 **직사각형 얼룩**이 되어
+            "부적 위에 색지를 붙인" 그림이 된다(사각 경계가 그대로 보였다). */}
         <span
-          className="absolute inset-x-[19%] top-[16%] bottom-[10%]"
+          className="absolute inset-x-[34%] top-[16%] bottom-[13%]"
           style={{
             backgroundImage: "url('/shrine/ritual/sigil.webp')",
-            backgroundSize: 'contain',
-            backgroundPosition: 'center',
+            backgroundSize: '100% 100%',
             backgroundRepeat: 'no-repeat',
+            opacity: 0.24,
+            filter: 'blur(2px)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 14%, #000 84%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, transparent 0%, #000 14%, #000 84%, transparent 100%)',
           }}
         />
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {strokes.map((s, i) => (
-            <g key={i} transform={`rotate(${s.tilt} ${s.x} ${s.y})`}>
-              <line
-                x1={s.x - s.len / 2}
-                y1={s.y}
-                x2={s.x + s.len / 2}
-                y2={s.y}
-                stroke="#9E2B2B"
-                strokeWidth={s.weight * 0.6}
-                strokeLinecap="round"
-                vectorEffect="non-scaling-stroke"
-              />
-              <line
-                x1={s.x}
-                y1={s.y - 3.4}
-                x2={s.x}
-                y2={s.y + 3.4}
-                stroke="#9E2B2B"
-                strokeWidth={s.weight * 0.4}
-                strokeLinecap="round"
-                vectorEffect="non-scaling-stroke"
-              />
+        <svg
+          className="absolute inset-0 h-full w-full"
+          viewBox="0 0 100 150"
+          preserveAspectRatio="xMidYMid meet"
+          fill="none"
+          stroke="#8C1F1F"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {/* 기둥 획 — 부적을 세로로 관통한다 */}
+          <line
+            x1={sigil.spineX}
+            y1={32}
+            x2={sigil.spineX}
+            y2={122}
+            strokeWidth={1.1}
+            opacity={0.35}
+            vectorEffect="non-scaling-stroke"
+          />
+          {sigil.bars.map((y, i) => (
+            <line
+              key={`b${i}`}
+              x1={34 + (i % 2) * 6}
+              y1={y}
+              x2={64 - (i % 2) * 5}
+              y2={y}
+              strokeWidth={1.4}
+              opacity={0.45}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          {sigil.glyphs.map((g, i) => (
+            <g
+              key={`g${i}`}
+              transform={`translate(${g.x} ${g.y}) rotate(${g.tilt}) scale(${g.size / 10}) translate(-5 -5)`}
+            >
+              <path d={SIGIL_JAMO[g.jamo]} strokeWidth={g.weight} vectorEffect="non-scaling-stroke" />
             </g>
+          ))}
+          {sigil.dots.map((d, i) => (
+            <circle key={`d${i}`} cx={d.x} cy={d.y} r={d.r} fill="#8C1F1F" stroke="none" opacity={0.55} />
           ))}
         </svg>
       </div>
 
-      {burning && <span aria-hidden className="ritual-char pointer-events-none absolute inset-0" />}
+      {/* 발원(發願) — 인장 한 자의 본말. 효능이 아니라 바람이다(표시광고법) */}
+      {tag && (
+        <span
+          className="absolute inset-x-0 bottom-[4.5%] text-center font-serif text-[11px] tracking-[0.42em]"
+          style={{ color: '#9E2B2B', opacity: 0.8, paddingLeft: '0.42em' }}
+        >
+          {AEKMAK_TAG_WORD[tag]}
+        </span>
+      )}
+
+      {burning && (
+        <>
+          <span aria-hidden className="ritual-char pointer-events-none absolute inset-0" />
+          <span aria-hidden className="ritual-glow pointer-events-none absolute inset-0" />
+        </>
+      )}
     </div>
   )
 }

@@ -547,21 +547,27 @@ function FlagStage({
                 {isPicked && revealed ? (
                   <span
                     aria-hidden
-                    className="obangki-unfurl relative mx-auto block rounded-[3px]"
+                    className="obangki-unfurl relative block"
                     style={{
-                      // 1:2 — 에셋(256×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다
-                      width: SLOT_W - 14,
-                      height: (SLOT_W - 14) * 2,
-                      // 에셋이 없어도(404) 오방색 면으로 형태와 색이 남는다
-                      backgroundColor: info.hex,
-                      backgroundImage: `url('/shrine/ritual/obangki-${color}.webp')`,
-                      backgroundSize: '100% 100%',
-                      backgroundRepeat: 'no-repeat',
-                      boxShadow: `0 8px 20px -10px rgba(0,0,0,0.85), 0 0 14px -4px ${info.accent}`,
+                      // 1:1 — 에셋(512×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다.
+                      // 실물 오방기는 기폭 가로(70cm)와 깃대 길이(72cm)가 거의 같아 외곽이 정사각이다.
+                      width: SLOT_W - 8,
+                      height: SLOT_W - 8,
+                      // 스프라이트의 **왼쪽 변이 곧 깃대**다. 자리 한가운데에 선 CSS 깃대 위에 그 변을 얹는다
+                      // (가운데 정렬하면 깃대가 두 줄로 보인다).
+                      marginLeft: SLOT_W / 2 - 1,
+                      // 에셋이 없어도(404) 기폭 자리에 오방색 면이 남는다 — 깃대·자루 자리까지 칠하지는 않는다
+                      backgroundImage: `url('/shrine/ritual/obangki-${color}.webp'), linear-gradient(${info.hex},${info.hex})`,
+                      backgroundSize: '100% 100%, 94% 54%',
+                      backgroundPosition: 'left top, right top',
+                      backgroundRepeat: 'no-repeat, no-repeat',
+                      // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
+                      // 빛나면 유령 사각형이 보인다
+                      filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
                     }}
                   >
                     <span
-                      className="absolute inset-x-0 top-[8%] text-center font-serif text-[13px] font-bold"
+                      className="absolute inset-x-0 top-[18%] text-center font-serif text-[13px] font-bold"
                       style={{ color: 'rgba(28,20,12,0.72)' }}
                     >
                       {info.seal}

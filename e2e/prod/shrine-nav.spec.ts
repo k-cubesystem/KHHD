@@ -60,13 +60,16 @@ test.describe('신당 3.0 네비게이션', () => {
       .catch(() => false)
     console.log(`[INFO] 신당 페이지: room=${hasRoom} setup=${hasSetup}`)
 
-    // 3) 신위 판테온 도달 (방이면 헤더 '신위' 버튼, 아니면 직접 이동)
+    // 3) 신위 판테온 도달 — 신위전은 모아보기의 한 탭이 되었다(CEO 6차 지시 2026-07-30).
+    //    방이면 헤더 '모아보기' 버튼 → '신위' 탭, 아니면 구 주소로(리다이렉트가 받는다).
     if (hasRoom) {
-      await page.getByRole('link', { name: '신위전' }).click()
+      await page.getByRole('link', { name: '신당테마·아이템·신위 모아보기' }).click()
+      await expect(page).toHaveURL(/\/protected\/shrine\/collection/, { timeout: 15_000 })
+      await page.getByRole('link', { name: '신위', exact: true }).click()
     } else {
       await page.goto('/protected/shrine/deities')
     }
-    await expect(page).toHaveURL(/\/protected\/shrine\/deities/, { timeout: 15_000 })
+    await expect(page).toHaveURL(/\/protected\/shrine\/collection\?tab=deity/, { timeout: 15_000 })
     await expect(page.getByRole('heading', { name: '신위전(神位殿)' })).toBeVisible({ timeout: 15_000 })
     // 신위 이미지 전부 로드 대기(스크린샷 정확도)
     await page.waitForLoadState('networkidle').catch(() => {})

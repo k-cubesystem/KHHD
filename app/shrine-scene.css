@@ -1035,11 +1035,13 @@
   }
 }
 
-/* 주문양(呪文樣) — 액운 원문이 읽을 수 없는 붉은 획으로 배어 나온다.
-   흐림이 남아 있어야 화면 캡처에도 글자가 남지 않는다(무저장 약속의 시각적 짝) */
+/* 주문양(呪文樣) — 액운 원문이 읽을 수 없는 한글 자모 획으로 배어 나온다.
+   흐림은 읽힘을 막는 장치가 아니라 **먹 번짐**이다(읽히지 않는 근거는 자모 선택 자체에 있다 —
+   모음이 없어 음절을 이루지 못한다: lib/domain/ritual/aekmak.ts). 그래서 1.4px → 0.75px 로
+   낮춘다. 획이 뭉개져 "폰트가 깨진 그림"으로 보이던 것이 옛 인상의 절반이었다. */
 .ritual-sigil {
-  opacity: 0.72;
-  filter: blur(1.4px);
+  opacity: 0.84;
+  filter: blur(0.75px);
   animation: ritualSigilIn 1.1s ease-out 0.22s both;
   will-change: opacity, filter;
 }
@@ -1049,79 +1051,162 @@
     filter: blur(7px);
   }
   to {
-    opacity: 0.72;
-    filter: blur(1.4px);
+    opacity: 0.84;
+    filter: blur(0.75px);
   }
 }
 
-/* 연소 마스크 — 아래에서 위로 타오른다.
-   기법: 요소 높이의 2.2배짜리 마스크 그라디언트를 mask-position 으로 밀어 올린다.
-   (그라디언트 정지점 자체를 애니메이션하면 프레임마다 마스크를 다시 그려야 한다 —
-    position 이동은 합성으로 끝난다.) 띠는 그라디언트 47~53% 구간에만 있어
-    시작에는 창 아래, 끝에는 창 위로 완전히 빠져나간다 = 남는 조각이 없다. */
+/* ── 연소 3층 ─────────────────────────────────────────────────────────────────
+   타는 선은 직선이 아니다. 그래서 마스크를 **그라디언트에서 텍스처로** 바꿨다.
+
+   세 층이 같은 기하로 함께 움직인다(전부 요소 높이의 220%, 위치 0%→100%):
+     .ritual-burn  mask-image        burn-mask.webp   남은 종이 (불규칙 경계 + 앞선 불티 구멍)
+     .ritual-char  background-image  burn-front.webp  백열심지 → 잉걸 → 검댕 → 갈변 (일반 합성)
+     .ritual-glow  background-image  burn-glow.webp   종이를 투과해 배어나오는 빛 (screen 합성)
+
+   ⚠️ **정합은 눈대중이 아니라 구조로 잡는다.** mask-position 과 background-position 은
+      백분율 의미가 같다(오프셋 = p·(요소높이 − 이미지높이)). 세 층이 같은 size·같은 position
+      키프레임을 쓰는 한 오차는 0 이다 — 예전처럼 잉걸불 띠를 translateY 로 따로 맞추다
+      높이의 14%(≈39px)가 떠 버리는 일이 구조적으로 불가능해진다.
+      세 이미지의 픽셀 자체도 같은 필드 함수에서 굽는다(scripts/shrine-assets/ritual-talisman.mjs).
+
+   ⚠️ 완급은 timing-function 이 아니라 **키프레임 표**가 진다(linear).
+      lib/domain/ritual/aekmak.ts 의 BURN_CURVE 가 단일 출처고 테스트가 한 줄씩 대조한다.
+      timing-function 으로 완급을 주면 층마다 보간이 갈릴 여지가 생긴다. */
 .ritual-burn {
-  -webkit-mask-image: linear-gradient(
-    to top,
-    transparent 0%,
-    transparent 47%,
-    rgba(0, 0, 0, 0.28) 49%,
-    rgba(0, 0, 0, 0.8) 51%,
-    #000 53%,
-    #000 100%
-  );
-  mask-image: linear-gradient(
-    to top,
-    transparent 0%,
-    transparent 47%,
-    rgba(0, 0, 0, 0.28) 49%,
-    rgba(0, 0, 0, 0.8) 51%,
-    #000 53%,
-    #000 100%
-  );
+  -webkit-mask-image: url('/shrine/ritual/burn-mask.webp');
+  mask-image: url('/shrine/ritual/burn-mask.webp');
   -webkit-mask-size: 100% 220%;
   mask-size: 100% 220%;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  animation: ritualBurn 2.4s ease-in forwards;
-  will-change: mask-position;
+  /* 오그라듦은 별도 트랙 — 마스크(11스톱)와 변형(3스톱)의 완급이 달라야 한다 */
+  animation:
+    ritualBurn 3.2s linear forwards,
+    ritualCurl 3.2s cubic-bezier(0.55, 0, 0.75, 0.95) forwards;
+  /* 불이 아래에서 올라오므로 종이는 위쪽(들린 자리)을 축으로 오그라든다 */
+  transform-origin: 50% 6%;
+  will-change: mask-position, transform;
 }
 @keyframes ritualBurn {
-  from {
+  0% {
     -webkit-mask-position: 0% 0%;
     mask-position: 0% 0%;
   }
-  to {
+  10% {
+    -webkit-mask-position: 0% 0.4%;
+    mask-position: 0% 0.4%;
+  }
+  20% {
+    -webkit-mask-position: 0% 3.5%;
+    mask-position: 0% 3.5%;
+  }
+  30% {
+    -webkit-mask-position: 0% 11.8%;
+    mask-position: 0% 11.8%;
+  }
+  40% {
+    -webkit-mask-position: 0% 25.8%;
+    mask-position: 0% 25.8%;
+  }
+  50% {
+    -webkit-mask-position: 0% 44.1%;
+    mask-position: 0% 44.1%;
+  }
+  60% {
+    -webkit-mask-position: 0% 63.7%;
+    mask-position: 0% 63.7%;
+  }
+  70% {
+    -webkit-mask-position: 0% 81.1%;
+    mask-position: 0% 81.1%;
+  }
+  80% {
+    -webkit-mask-position: 0% 93.2%;
+    mask-position: 0% 93.2%;
+  }
+  90% {
+    -webkit-mask-position: 0% 99%;
+    mask-position: 0% 99%;
+  }
+  100% {
     -webkit-mask-position: 0% 100%;
     mask-position: 0% 100%;
   }
 }
 
-/* 탄 가장자리 — 마스크 경계를 따라 올라가는 잉걸불 띠.
+/* 종이가 오그라든다 — 열을 받은 한지는 폭이 먼저 줄고 몸이 살짝 비틀린다.
+   과하면 "떨리는 카드"가 된다. 폭 3%·기울기 1도 안쪽으로 묶는다. */
+@keyframes ritualCurl {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: scaleX(0.995) rotate(-0.22deg);
+  }
+  72% {
+    transform: scaleX(0.984) rotate(-0.6deg) translateY(-2px);
+  }
+  100% {
+    transform: scaleX(0.968) rotate(-1.1deg) translateY(-5px);
+  }
+}
+
+/* 탄 가장자리 — 백열심지에서 검댕·갈변까지가 한 장에 구워져 있고, 경계를 그대로 따라간다.
    .ritual-burn **안쪽**에 둬야 같은 마스크에 잘려 "타는 선"이 된다(형제로 두면 재 위에 뜬다). */
 .ritual-char {
-  background: linear-gradient(
-    to top,
-    rgba(255, 240, 200, 0) 0%,
-    rgba(255, 236, 190, 0.75) 1.5%,
-    rgba(255, 176, 60, 0.95) 3.5%,
-    rgba(214, 92, 20, 0.5) 6%,
-    rgba(58, 30, 10, 0.4) 9%,
-    rgba(58, 30, 10, 0) 14%
-  );
-  animation: ritualChar 2.4s ease-in forwards;
-  will-change: transform;
+  background-image: url('/shrine/ritual/burn-front.webp');
+  background-size: 100% 220%;
+  background-repeat: no-repeat;
+  animation: ritualChar 3.2s linear forwards;
+  will-change: background-position;
 }
-/* 이동 구간은 **마스크 경계식에서 나온다** — 눈대중으로 0 → -100% 를 쓰면 잉걸불이 실제로 종이가
-   사라지는 선보다 높이의 14% 위에 떠서 "타는 선"이 아니라 "떠 있는 줄"로 읽힌다(실측으로 잡은 값).
-   경계 y = 0.53·k·H − (k−1)·H·p  (k = mask-size 220% = 2.2, p = 진행도)
-     p=0 → 1.166H,  p=1 → −0.034H
-   띠의 아래끝은 translateY(t) 에서 H + t 이므로  t = 0.166H − 1.2H·p 이고, 그게 아래 두 값이다. */
+
+/* 불빛이 종이를 투과해 배어나오는 층 — 타기 직전의 한지는 뒤에서 등을 켠 것처럼 밝아진다.
+   screen 이라야 종이 결 위로 빛이 "얹히지" 않고 "스며든다". */
+.ritual-glow {
+  background-image: url('/shrine/ritual/burn-glow.webp');
+  background-size: 100% 220%;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen;
+  animation: ritualChar 3.2s linear forwards;
+  will-change: background-position;
+}
+
+/* ⚠️ 아래 스톱은 ritualBurn 과 **한 자도 다르면 안 된다**(BURN_CURVE 단일 출처). */
 @keyframes ritualChar {
-  from {
-    transform: translateY(16.6%);
+  0% {
+    background-position: 0% 0%;
   }
-  to {
-    transform: translateY(-103.4%);
+  10% {
+    background-position: 0% 0.4%;
+  }
+  20% {
+    background-position: 0% 3.5%;
+  }
+  30% {
+    background-position: 0% 11.8%;
+  }
+  40% {
+    background-position: 0% 25.8%;
+  }
+  50% {
+    background-position: 0% 44.1%;
+  }
+  60% {
+    background-position: 0% 63.7%;
+  }
+  70% {
+    background-position: 0% 81.1%;
+  }
+  80% {
+    background-position: 0% 93.2%;
+  }
+  90% {
+    background-position: 0% 99%;
+  }
+  100% {
+    background-position: 0% 100%;
   }
 }
 
@@ -1183,6 +1268,7 @@
   .ritual-sigil,
   .ritual-burn,
   .ritual-char,
+  .ritual-glow,
   .ritual-settle,
   .ritual-cup {
     animation-duration: 0.01ms;
@@ -1305,26 +1391,27 @@
   }
 }
 
-/* 펼침 — 말려 있던 천이 아래로 풀리며 살짝 돌아 앉는다.
-   scaleY 원점이 위끝이라 깃대에 매달린 채 풀린다(원점을 가운데 두면 위로도 자라 깃대를 넘는다).
+/* 펼침 — 깃대를 축으로 감겨 있던 천이 **옆으로** 풀리며 살짝 돌아 앉는다.
+   실물 오방기는 기폭의 왼쪽 변이 통이 되어 깃대를 감싸므로, 말릴 때도 풀릴 때도 축은 깃대다.
+   그래서 scaleX 원점이 왼끝(=깃대)이다 — 원점을 가운데 두면 천이 깃대 왼쪽으로도 자란다.
    ⚠️ 색은 **여기서 처음 드러난다** — 말아둔 깃발에는 색이 없어야 뽑는 재미가 산다. */
 .obangki-unfurl {
-  transform-origin: 50% 0%;
+  transform-origin: 0% 50%;
   animation: obangkiUnfurl 0.9s cubic-bezier(0.2, 0.9, 0.3, 1) both;
   will-change: transform;
 }
 @keyframes obangkiUnfurl {
   0% {
-    transform: scaleY(0.16) scaleX(0.82) rotate(-8deg);
+    transform: scaleX(0.16) scaleY(0.82) rotate(-8deg);
   }
   55% {
-    transform: scaleY(1.08) scaleX(1.03) rotate(3deg);
+    transform: scaleX(1.08) scaleY(1.03) rotate(3deg);
   }
   78% {
-    transform: scaleY(0.97) scaleX(0.99) rotate(-1.5deg);
+    transform: scaleX(0.97) scaleY(0.99) rotate(-1.5deg);
   }
   100% {
-    transform: scaleY(1) scaleX(1) rotate(0deg);
+    transform: scaleX(1) scaleY(1) rotate(0deg);
   }
 }
 
@@ -1412,11 +1499,13 @@
 .shrine-plaque {
   --plq-s: max(0.024414cqw, 0.15625cqh);
   position: absolute;
+  /* 널 크기(--plq-w/h)와 세로 오프셋(--plq-dy)은 띠가 얹어 준다 — 단일 출처는
+     lib/domain/shrine/plaque.ts 의 PLAQUE_BOX 다. 여기에 숫자를 다시 적으면
+     팻말 수·크기를 고칠 때마다 두 곳이 갈려 널이 조용히 창방을 벗어난다. */
   left: calc(50% + (var(--plq-dx) * var(--plq-s)));
-  /* 131(널 중심) − 320(무라 중심) = −189 */
-  top: calc(50% - (189 * var(--plq-s)));
-  width: calc(175 * var(--plq-s));
-  height: calc(70 * var(--plq-s));
+  top: calc(50% + (var(--plq-dy) * var(--plq-s)));
+  width: calc(var(--plq-w) * var(--plq-s));
+  height: calc(var(--plq-h) * var(--plq-s));
   transform: translate(-50%, -50%);
   pointer-events: auto;
 }

@@ -5,10 +5,15 @@ import {
   AEKMAK_DISCLAIMER,
   AEKMAK_TAGS,
   AEKMAK_TAG_LABEL,
-  AEKMAK_TAG_SEAL,
+  AEKMAK_TAG_MARK,
+  AEKMAK_TAG_WORD,
   AEKMAK_TEXT_MAX,
+  BURN_CURVE,
+  BURN_MASK_SCALE,
   BURN_MS,
+  SIGIL_JAMO,
   allSettleLines,
+  burnProgress,
   countBurnsOnDay,
   countBurnsThisMonth,
   hashSeed,
@@ -18,7 +23,7 @@ import {
   monthlyRecallLine,
   remainingBurns,
   settleLine,
-  sigilStrokes,
+  sigilPlan,
   type AekmakTag,
 } from '../aekmak'
 
@@ -36,10 +41,23 @@ describe('감정 태그 6종', () => {
     expect(AEKMAK_TAGS.map((t) => AEKMAK_TAG_LABEL[t])).toEqual(['불안', '미련', '화', '걱정', '미움', '액운'])
   })
 
-  it('표시명·인장이 모든 태그에 빠짐없이 있다', () => {
+  it('표시명·인장·발원이 모든 태그에 빠짐없이 있다', () => {
     for (const t of AEKMAK_TAGS) {
       expect(AEKMAK_TAG_LABEL[t]).toBeTruthy()
-      expect(AEKMAK_TAG_SEAL[t]).toHaveLength(1)
+      expect(AEKMAK_TAG_MARK[t]).toHaveLength(1)
+      expect(AEKMAK_TAG_WORD[t]).toBeTruthy()
+    }
+  })
+
+  /**
+   * 부적을 한글로 기획했다(CEO 지시 2026-07-30). 한자가 한 자라도 돌아오면 실패한다.
+   * 인장 한 자는 발원 낱말의 첫 자여야 한다 — 둘이 갈리면 부적 위·아래가 딴 말을 한다.
+   */
+  it('인장·발원이 전부 한글이고, 인장은 발원의 첫 자다', () => {
+    for (const t of AEKMAK_TAGS) {
+      expect(AEKMAK_TAG_MARK[t]).toMatch(/^[가-힣]$/)
+      expect(AEKMAK_TAG_WORD[t]).toMatch(/^[가-힣]+$/)
+      expect(AEKMAK_TAG_WORD[t].startsWith(AEKMAK_TAG_MARK[t])).toBe(true)
     }
   })
 
@@ -197,6 +215,11 @@ describe('마무리 문구 — 결정론 + 법무', () => {
     for (const line of allSettleLines()) expect(line).not.toContain(word)
   })
 
+  // 부적 위에 찍히는 발원 낱말도 같은 게이트를 받는다 — 화면에 남는 글자라 문구 풀과 급이 같다
+  it.each(FORBIDDEN)('발원 낱말에 금지 어휘 "%s" 가 없다', (word) => {
+    for (const t of AEKMAK_TAGS) expect(AEKMAK_TAG_WORD[t]).not.toContain(word)
+  })
+
   it('고지 문구는 효능 부정형이라 풀 린트 대상이 아니다', () => {
     expect(AEKMAK_DISCLAIMER).toContain('대신하지 않습니다')
   })
@@ -206,37 +229,73 @@ describe('마무리 문구 — 결정론 + 법무', () => {
   })
 })
 
-describe('부적 문양(sigil) — 원문 비가역 변환', () => {
+describe('부적 주문양(sigil) — 한글 자모 · 원문 비가역 변환', () => {
+  const SAMPLES = ['', '액', 'a'.repeat(AEKMAK_TEXT_MAX), '가나다라마바사아자차카타파하', '  공백  ']
+
   it('같은 원문이면 같은 문양(리렌더에도 안 흔들린다)', () => {
-    expect(sigilStrokes('내일 면접이 두렵다')).toEqual(sigilStrokes('내일 면접이 두렵다'))
+    expect(sigilPlan('내일 면접이 두렵다')).toEqual(sigilPlan('내일 면접이 두렵다'))
   })
 
   it('다른 원문이면 다른 문양', () => {
-    expect(sigilStrokes('내일 면접이 두렵다')).not.toEqual(sigilStrokes('빚 걱정'))
+    expect(sigilPlan('내일 면접이 두렵다')).not.toEqual(sigilPlan('빚 걱정'))
   })
 
-  it('획은 부적지 안(0~100%)에 머문다', () => {
-    const samples = ['', '厄', 'a'.repeat(AEKMAK_TEXT_MAX), '가나다라마바사아자차카타파하', '  공백  ']
-    for (const s of samples) {
-      const strokes = sigilStrokes(s)
-      expect(strokes.length).toBeGreaterThanOrEqual(3)
-      expect(strokes.length).toBeLessThanOrEqual(9)
-      for (const st of strokes) {
-        expect(st.y).toBeGreaterThanOrEqual(0)
-        expect(st.y).toBeLessThanOrEqual(100)
-        expect(st.x - st.len / 2).toBeGreaterThan(-10)
-        expect(st.x + st.len / 2).toBeLessThan(110)
-        expect(st.weight).toBeGreaterThan(0)
+  /**
+   * 읽힘 방지의 **핵심 근거**: 자모표에 모음이 한 자도 없다.
+   * 한글은 초성+중성이 있어야 음절이 되므로, 자음만으로는 어떤 낱말도 이룰 수 없다.
+   * 여기에 모음이 섞여 들어오면 원문이 읽힐 여지가 생긴다 — 그래서 테스트로 못 박는다.
+   */
+  it('자모표는 자음 14종뿐이다 (모음이 없어 음절이 서지 않는다)', () => {
+    expect(SIGIL_JAMO).toHaveLength(14)
+    for (const d of SIGIL_JAMO) expect(d).toMatch(/^M[\d.]/)
+  })
+
+  it('자모는 부적지 안(x 0~100 · y 0~150)에 머문다', () => {
+    for (const s of SAMPLES) {
+      const plan = sigilPlan(s)
+      expect(plan.glyphs.length).toBeGreaterThanOrEqual(5)
+      expect(plan.glyphs.length).toBeLessThanOrEqual(9)
+      for (const g of plan.glyphs) {
+        expect(g.jamo).toBeGreaterThanOrEqual(0)
+        expect(g.jamo).toBeLessThan(SIGIL_JAMO.length)
+        expect(g.x - g.size / 2).toBeGreaterThan(0)
+        expect(g.x + g.size / 2).toBeLessThan(100)
+        expect(g.y - g.size / 2).toBeGreaterThan(0)
+        expect(g.y + g.size / 2).toBeLessThan(150)
+        expect(g.weight).toBeGreaterThan(0)
+      }
+      for (const b of plan.bars) {
+        expect(b).toBeGreaterThan(0)
+        expect(b).toBeLessThan(150)
+      }
+      for (const d of plan.dots) {
+        expect(d.x).toBeGreaterThan(0)
+        expect(d.x).toBeLessThan(100)
+        expect(d.y).toBeGreaterThan(0)
+        expect(d.y).toBeLessThan(150)
+      }
+      expect(plan.spineX).toBeGreaterThan(30)
+      expect(plan.spineX).toBeLessThan(70)
+    }
+  })
+
+  it('자모가 세로로 겹친다 — 낱자로 떨어지면 "자음 목록"이 되어 부적으로 안 읽힌다', () => {
+    for (const s of SAMPLES) {
+      const g = sigilPlan(s).glyphs
+      for (let i = 1; i < g.length; i += 1) {
+        const gap = g[i].y - g[i - 1].y
+        const half = (g[i].size + g[i - 1].size) / 2
+        expect(gap).toBeLessThan(half)
       }
     }
   })
 
-  it('원문 글자가 좌표로 새어 나가지 않는다 — 길이가 같으면 획 수가 같다', () => {
-    expect(sigilStrokes('일이삼사오').length).toBe(sigilStrokes('abcde').length)
+  it('원문 글자가 좌표로 새어 나가지 않는다 — 길이가 같으면 자모 수가 같다', () => {
+    expect(sigilPlan('일이삼사오').glyphs.length).toBe(sigilPlan('abcde').glyphs.length)
   })
 
   it('hashSeed 는 32bit 부호 없는 정수', () => {
-    for (const s of ['', '厄', 'hello']) {
+    for (const s of ['', '액', 'hello']) {
       const h = hashSeed(s)
       expect(Number.isInteger(h)).toBe(true)
       expect(h).toBeGreaterThanOrEqual(0)
@@ -245,19 +304,129 @@ describe('부적 문양(sigil) — 원문 비가역 변환', () => {
   })
 })
 
+describe('연소 완급 곡선 (BURN_CURVE)', () => {
+  it('0 에서 시작해 100 에서 끝나고 단조 증가한다', () => {
+    expect(BURN_CURVE[0]).toEqual({ t: 0, p: 0 })
+    expect(BURN_CURVE[BURN_CURVE.length - 1]).toEqual({ t: 100, p: 100 })
+    for (let i = 1; i < BURN_CURVE.length; i += 1) {
+      expect(BURN_CURVE[i].t).toBeGreaterThan(BURN_CURVE[i - 1].t)
+      expect(BURN_CURVE[i].p).toBeGreaterThan(BURN_CURVE[i - 1].p)
+    }
+  })
+
+  /** "처음엔 천천히 붙고 중간에 빨라졌다가 끝에 잦아든다" — 속도의 최댓값이 중간에 있어야 성립한다 */
+  it('속도가 중간(t 40~70%)에서 최대고 양끝이 그보다 느리다', () => {
+    const v = BURN_CURVE.slice(1).map((s, i) => ({
+      t: s.t,
+      v: (s.p - BURN_CURVE[i].p) / (s.t - BURN_CURVE[i].t),
+    }))
+    const peak = v.reduce((a, b) => (b.v > a.v ? b : a))
+    expect(peak.t).toBeGreaterThanOrEqual(40)
+    expect(peak.t).toBeLessThanOrEqual(70)
+    expect(v[0].v).toBeLessThan(peak.v * 0.35)
+    expect(v[v.length - 1].v).toBeLessThan(peak.v * 0.55)
+  })
+
+  it('burnProgress 는 표의 마디를 그대로 지나고 0~1 로 잘린다', () => {
+    for (const s of BURN_CURVE) expect(burnProgress(s.t / 100)).toBeCloseTo(s.p / 100, 6)
+    expect(burnProgress(-5)).toBe(0)
+    expect(burnProgress(9)).toBe(1)
+    expect(burnProgress(Number.NaN)).toBe(0)
+  })
+})
+
 describe('연소 타임라인 ↔ CSS 계약', () => {
   const css = read('app/shrine-scene.css')
   const gate = read('scripts/check-animation-css.mjs')
-  const RITUAL_CLASSES = ['.ritual-sheet', '.ritual-paper', '.ritual-sigil', '.ritual-burn', '.ritual-char']
-  const RITUAL_KEYFRAMES = ['ritualSheetUp', 'ritualPaperIn', 'ritualBurn', 'ritualChar', 'ritualSettleIn']
+  const baker = read('scripts/shrine-assets/ritual-talisman.mjs')
+  const RITUAL_CLASSES = [
+    '.ritual-sheet',
+    '.ritual-paper',
+    '.ritual-sigil',
+    '.ritual-burn',
+    '.ritual-char',
+    '.ritual-glow',
+  ]
+  const RITUAL_KEYFRAMES = [
+    'ritualSheetUp',
+    'ritualPaperIn',
+    'ritualBurn',
+    'ritualCurl',
+    'ritualChar',
+    'ritualSettleIn',
+  ]
+  const block = (cls: string): string => new RegExp(`\\.${cls}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? ''
+  const keyframes = (name: string): string =>
+    new RegExp(`@keyframes\\s+${name}\\s*\\{(?:[^{}]*\\{[^{}]*\\})*[^{}]*\\}`).exec(css)?.[0] ?? ''
 
-  it('.ritual-burn / .ritual-char 의 길이가 BURN_MS.total 과 같다', () => {
-    const seconds = (BURN_MS.total / 1000).toFixed(1).replace(/\.0$/, '')
-    const dur = seconds.replace('.', '\\.')
-    for (const cls of ['ritual-burn', 'ritual-char']) {
-      const block = new RegExp(`\\.${cls}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? ''
-      expect(block).not.toBe('')
-      expect(block).toMatch(new RegExp(`animation:[^;]*${dur}s`))
+  it('연소 세 층의 길이가 모두 BURN_MS.total 과 같다', () => {
+    const dur = (BURN_MS.total / 1000).toFixed(1).replace(/\.0$/, '').replace('.', '\\.')
+    for (const cls of ['ritual-burn', 'ritual-char', 'ritual-glow']) {
+      expect(block(cls)).not.toBe('')
+      expect(block(cls)).toMatch(new RegExp(`animation:[^;]*${dur}s`))
+    }
+  })
+
+  /**
+   * 완급의 **단일 출처** 대조. 마스크(ritualBurn)와 잉걸불·투과광(ritualChar)이 같은 스톱을
+   * 쓰지 않으면 두 층이 어긋난다 — 예전 구현이 그렇게 높이의 14% 를 벌렸다.
+   * 그래서 두 키프레임 모두에서 BURN_CURVE 의 (t, p) 를 한 줄씩 찾는다.
+   */
+  it('ritualBurn · ritualChar 의 스톱이 BURN_CURVE 와 한 줄도 다르지 않다', () => {
+    const burn = keyframes('ritualBurn')
+    const char = keyframes('ritualChar')
+    expect(burn).not.toBe('')
+    expect(char).not.toBe('')
+    for (const s of BURN_CURVE) {
+      const p = String(s.p).replace('.', '\\.')
+      expect(burn).toMatch(new RegExp(`${s.t}%\\s*\\{[^}]*mask-position:\\s*0%\\s+${p}%`))
+      expect(char).toMatch(new RegExp(`${s.t}%\\s*\\{[^}]*background-position:\\s*0%\\s+${p}%`))
+    }
+    // 표에 없는 스톱이 CSS 에만 몰래 끼어 있으면 대조가 무의미해진다 — 개수도 고정한다
+    expect((burn.match(/\d+%\s*\{/g) ?? []).length).toBe(BURN_CURVE.length)
+    expect((char.match(/\d+%\s*\{/g) ?? []).length).toBe(BURN_CURVE.length)
+  })
+
+  /**
+   * 국면 전환(연소 → 마무리)은 `.ritual-burn` 의 animationend 하나가 몬다. 이 요소에는
+   * 애니메이션이 둘(ritualBurn·ritualCurl) 붙으므로, 한쪽이 먼저 끝나면 부적이 다 타기도 전에
+   * 마무리 카드가 뜬다. 그래서 **길이가 같다**를 계약으로 못 박는다(컴포넌트가 이름으로 거르지 않는 근거).
+   */
+  it('.ritual-burn 에 붙은 두 애니메이션의 길이가 같다', () => {
+    // cubic-bezier 의 숫자에는 s 가 없으므로 `Ns` 만 골라내면 곧 지속시간 목록이다(지연은 쓰지 않는다)
+    const shorthand = /animation:\s*([^;]+);/.exec(block('ritual-burn'))?.[1] ?? ''
+    const durations = [...shorthand.matchAll(/(\d+(?:\.\d+)?)s\b/g)].map((m) => m[1])
+    expect(durations).toHaveLength(2)
+    expect(durations[0]).toBe(String(BURN_MS.total / 1000))
+    expect(durations[1]).toBe(durations[0])
+  })
+
+  it('연출 컴포넌트가 animationend 를 이름으로 거르지 않는다 (오타 한 글자에 화면이 멎는다)', () => {
+    expect(read('components/shrine/scene/AekmakSheet.tsx')).not.toMatch(/animationName\s*===/)
+  })
+
+  it('완급은 timing-function 이 아니라 표가 진다 — 연소 세 층이 linear 다', () => {
+    for (const cls of ['ritual-burn', 'ritual-char', 'ritual-glow']) {
+      expect(block(cls)).toMatch(/animation:[^;]*\blinear\b/)
+    }
+  })
+
+  /** 마스크·잉걸불·투과광이 같은 배율이라야 정합이 구조적으로 보장된다(눈대중 금지) */
+  it('세 층의 size 가 모두 BURN_MASK_SCALE 이다', () => {
+    const pct = `${Math.round(BURN_MASK_SCALE * 1000) / 10}%`
+    expect(block('ritual-burn')).toContain(`mask-size: 100% ${pct}`)
+    expect(block('ritual-char')).toContain(`background-size: 100% ${pct}`)
+    expect(block('ritual-glow')).toContain(`background-size: 100% ${pct}`)
+  })
+
+  /** 텍스처를 굽는 쪽과 화면이 같은 배율을 봐야 잡음 결이 세로로 늘어나지 않는다 */
+  it('에셋 스크립트의 MASK_SCALE 이 BURN_MASK_SCALE 과 같다', () => {
+    expect(baker).toMatch(new RegExp(`const MASK_SCALE = ${BURN_MASK_SCALE}\\b`))
+  })
+
+  it('연소 텍스처 세 장을 CSS 가 실제로 참조한다', () => {
+    for (const f of ['burn-mask', 'burn-front', 'burn-glow']) {
+      expect(css).toContain(`/shrine/ritual/${f}.webp`)
     }
   })
 
@@ -269,6 +438,14 @@ describe('연소 타임라인 ↔ CSS 계약', () => {
   it('배포 게이트(check-animation-css.mjs)에 ritual-* 가 등록돼 있다', () => {
     for (const cls of RITUAL_CLASSES) expect(gate).toContain(`'${cls}'`)
     for (const kf of RITUAL_KEYFRAMES) expect(gate).toContain(`'${kf}'`)
+  })
+
+  /** 모션 최소화에서 `none` 이면 animationend 가 안 와 화면이 연소 상태로 멎는다 */
+  it('모션 최소화는 연소를 끄지 않고 0.01ms 로 줄인다', () => {
+    const reduced = /@media \(prefers-reduced-motion: reduce\) \{\s*\.ritual-sheet[\s\S]*?\n\}/.exec(css)?.[0] ?? ''
+    expect(reduced).toContain('.ritual-burn')
+    expect(reduced).toContain('.ritual-glow')
+    expect(reduced).toContain('animation-duration: 0.01ms')
   })
 
   it('연출 컴포넌트에 styled-jsx 가 없다', () => {

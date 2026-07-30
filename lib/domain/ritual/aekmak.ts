@@ -37,14 +37,35 @@ export const AEKMAK_TAG_LABEL: Readonly<Record<AekmakTag, string>> = Object.free
   misfortune: '액운',
 })
 
-/** 태그 한자 첨자 — 부적지 머리에 찍는 인(印). 표시 전용. */
-export const AEKMAK_TAG_SEAL: Readonly<Record<AekmakTag, string>> = Object.freeze({
-  anxiety: '安',
-  regret: '捨',
-  anger: '靜',
-  worry: '解',
-  resentment: '和',
-  misfortune: '厄',
+/**
+ * 부적지 머리에 찍는 인(印) — **한글 한 자**. 표시 전용.
+ *
+ * 한자(安捨靜解和厄)를 쓰지 않는 이유: 부적 전체를 한글로 기획했다(CEO 지시 2026-07-30).
+ * 고른 글자는 전부 **순우리말 어간**이라 한자음이 아니다 — 고(요)·놓(음)·삭(임)·덜(기)·풀(림)·막(음).
+ * 한 자인 것은 인장이 좁아서다(테스트가 길이 1을 강제한다).
+ */
+export const AEKMAK_TAG_MARK: Readonly<Record<AekmakTag, string>> = Object.freeze({
+  anxiety: '고',
+  regret: '놓',
+  anger: '삭',
+  worry: '덜',
+  resentment: '풀',
+  misfortune: '막',
+})
+
+/**
+ * 부적지 발치에 적는 발원(發願) 낱말 — 인장 한 자의 본말.
+ *
+ * ⚠️ 효능이 아니라 **바람**이다(표시광고법). "치유·정화·해소" 류를 쓰지 않고
+ *    태그의 반대편 상태를 순우리말로만 적는다. 금지 어휘 대조는 테스트가 한다.
+ */
+export const AEKMAK_TAG_WORD: Readonly<Record<AekmakTag, string>> = Object.freeze({
+  anxiety: '고요',
+  regret: '놓음',
+  anger: '삭임',
+  worry: '덜기',
+  resentment: '풀림',
+  misfortune: '막음',
 })
 
 /** 서버 입력 검증용 타입 가드 — 액션은 이걸 통과한 값만 DB 로 보낸다. */
@@ -66,11 +87,71 @@ export const AEKMAK_TEXT_MAX = 80
  * 국면 전환 자체는 setTimeout 체인이 아니라 CSS animationend 가 몬다(AekmakSheet).
  */
 export const BURN_MS = Object.freeze({
-  /** 부적 아래에서 위로 타오르는 전체 길이 */
-  total: 2400,
+  /** 부적 아래에서 위로 타오르는 전체 길이. 완급(BURN_CURVE)을 담을 만큼은 길어야 한다 */
+  total: 3200,
   /** 재·불티 방출 주기(ShrineRoomClient 향로 연기 이미터와 같은 규약) */
-  emit: 180,
+  emit: 150,
 })
+
+/**
+ * 연소 마스크 배율 — CSS `mask-size: 100% 220%` 의 220%.
+ *
+ * 마스크 텍스처(burn-mask.webp)의 세로 길이가 요소 높이의 몇 배로 늘어나는가이고,
+ * 여기서 **경계가 창을 완전히 통과하는지**가 결정된다:
+ *   경계(텍스처 세로 중앙 v=0.5)의 요소 좌표 y = 0.5·k·H − (k−1)·H·p   (k=2.2, p=진행도)
+ *   p=0 → 1.1H (창 아래 0.1H 여유) · p=1 → −0.1H (창 위 0.1H 여유)
+ * 즉 시작에는 한 점도 타지 않았고 끝에는 한 조각도 남지 않는다. 이 여유 0.1H 안에
+ * 경계의 들쭉날쭉함(±0.046H)이 들어가야 하므로 두 값은 함께 움직인다.
+ * scripts/shrine-assets/ritual-talisman.mjs 의 MASK_SCALE 와 같아야 한다(테스트가 대조).
+ */
+export const BURN_MASK_SCALE = 2.2
+
+/**
+ * 연소 완급(緩急) — 시간(%) → 진행도(%). CSS `ritualBurn`·`ritualChar` 키프레임의 **단일 출처**다.
+ *
+ * 종이는 등속으로 타지 않는다. 불씨가 닿고 한동안 가장자리만 그을리다(0~20%),
+ * 불이 붙으면 급격히 번지고(30~70%), 태울 것이 줄면서 잦아든다(80~100%).
+ * 그래서 timing-function 은 `linear` 이고 완급은 **전부 이 표**가 진다 —
+ * 그래야 마스크(mask-position)와 잉걸불 층(background-position)이 한 치도 어긋나지 않는다.
+ * 곡선 원형: smootherstep(t)^1.18.
+ */
+export const BURN_CURVE: readonly Readonly<{ t: number; p: number }>[] = Object.freeze(
+  (
+    [
+      { t: 0, p: 0 },
+      { t: 10, p: 0.4 },
+      { t: 20, p: 3.5 },
+      { t: 30, p: 11.8 },
+      { t: 40, p: 25.8 },
+      { t: 50, p: 44.1 },
+      { t: 60, p: 63.7 },
+      { t: 70, p: 81.1 },
+      { t: 80, p: 93.2 },
+      { t: 90, p: 99 },
+      { t: 100, p: 100 },
+    ] as const
+  ).map((s) => Object.freeze({ ...s }))
+)
+
+/**
+ * 진행 비율(0~1) → 연소 진행도(0~1). BURN_CURVE 를 구간 선형 보간한다.
+ * 재·불티 이미터가 **CSS 와 같은 속도로** 따라 올라가려면 같은 표를 봐야 한다
+ * (예전엔 CSS 는 ease-in, JS 는 등속이라 불티가 불길을 앞질렀다).
+ */
+export function burnProgress(t: number): number {
+  if (!Number.isFinite(t)) return 0
+  const tp = Math.min(100, Math.max(0, t * 100))
+  for (let i = 1; i < BURN_CURVE.length; i += 1) {
+    const a = BURN_CURVE[i - 1]
+    const b = BURN_CURVE[i]
+    if (tp <= b.t) {
+      const span = b.t - a.t
+      const k = span <= 0 ? 0 : (tp - a.t) / span
+      return (a.p + (b.p - a.p) * k) / 100
+    }
+  }
+  return 1
+}
 
 /** 법무 고지 — 효능이 아니라 놀이임을 명시한다. 문구 풀 린트 대상 아님(고지 자체가 부정문). */
 export const AEKMAK_DISCLAIMER = '재미로 즐기는 전통 의식 놀이입니다. 의학적·심리적 상담을 대신하지 않습니다.'
@@ -211,51 +292,140 @@ export function monthlyRecallLine(count: number): string | null {
   return `이달에 ${n}개의 액을 태우셨습니다.`
 }
 
-// ─── 부적 문양(sigil) — 원문의 시각 변환 ──────────────────────
+// ─── 부적 주문양(呪文樣) — 한글 자모로 그리는 원문의 시각 변환 ──────────────
 //
 // PRD §1 "원문은 흐릿한 주문양으로 변환 표기". 글자를 그대로 보여주면 화면 캡처·공유에
 // 원문이 남는다 — 그래서 **읽을 수 없는 획**으로 바꾼다. 이 변환은 되돌릴 수 없다(해시 기반).
+//
+// 한자 대신 **한글 자음 자모**를 쓴다(CEO 지시 2026-07-30). 읽히지 않는 근거는 세 겹이다.
+//   1) 자모는 원문 해시에서 뽑는다 — 원문 글자와 대응 관계가 없다(FNV-1a 는 단방향).
+//   2) **자음만** 쓴다. 모음이 없으면 어떤 음절도 이루지 못한다(한글은 초성+중성이 최소 단위).
+//   3) 자모끼리 세로로 겹쳐 쌓고 기울이고, 가로 관통 획이 지나간다 — 낱자 경계 자체가 흐려진다.
+// 그래서 "한글의 결"만 남고 글자는 남지 않는다. 부적이 노리는 그림이 정확히 그것이다.
 
-/** 주문양 한 획. 부적지 위 % 좌표계(0~100)로 그린다. */
-export interface SigilStroke {
-  /** 세로 위치 % */
-  y: number
-  /** 가로 중심 % */
+/**
+ * 자음 자모 14종의 획 — 0~10 정사각 좌표계. 채우지 않고 **선으로만** 긋는다(붓질).
+ * 순서는 사전순(ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ)이고, 첨자가 곧 SigilGlyph.jamo 다.
+ */
+export const SIGIL_JAMO: readonly string[] = Object.freeze([
+  'M1.3 1.5 H8.7 L6.3 8.8', // ㄱ
+  'M2.3 1.3 V8.6 H8.8', // ㄴ
+  'M8.7 1.5 H2.1 V8.6 H8.7', // ㄷ
+  'M2.2 1.4 H8.2 L2.6 4.7 H8.2 V8.6 H2.2', // ㄹ
+  'M2.2 1.5 H8.2 V8.6 H2.2 Z', // ㅁ
+  'M2.4 1.3 V8.6 H8.1 V1.3 M2.4 5.1 H8.1', // ㅂ
+  'M5.1 1.3 L1.8 8.8 M5.1 1.3 L8.5 8.8', // ㅅ
+  'M5.1 1.4 C7.4 1.4 8.9 3.1 8.9 5.1 C8.9 7.2 7.4 8.8 5.1 8.8 C2.9 8.8 1.4 7.2 1.4 5.1 C1.4 3.1 2.9 1.4 5.1 1.4 Z', // ㅇ
+  'M1.6 1.6 H8.7 M5.1 1.6 L1.8 8.8 M5.1 1.6 L8.5 8.8', // ㅈ
+  'M4.1 0.4 L6.2 1.2 M1.6 2.6 H8.7 M5.1 2.6 L1.8 9.0 M5.1 2.6 L8.5 9.0', // ㅊ
+  'M1.3 1.5 H8.7 L6.3 8.8 M2.6 4.8 H7.8', // ㅋ
+  'M8.7 1.5 H2.1 V8.6 H8.7 M2.6 5.0 H8.1', // ㅌ
+  'M1.4 2.4 H8.7 M3.2 2.4 V7.8 M7.0 2.4 V7.8 M1.4 7.8 H8.7', // ㅍ
+  'M3.4 0.6 H6.8 M1.4 2.8 H8.7 M5.1 4.2 C6.7 4.2 7.9 5.3 7.9 6.5 C7.9 7.8 6.7 8.9 5.1 8.9 C3.4 8.9 2.3 7.8 2.3 6.5 C2.3 5.3 3.4 4.2 5.1 4.2 Z', // ㅎ
+])
+
+/** 주문양 자모 하나. 부적지와 **같은 좌표계**(100×150 = 2:3)로 그린다 — 자모가 찌그러지지 않는다. */
+export interface SigilGlyph {
+  /** SIGIL_JAMO 첨자 */
+  jamo: number
+  /** 중심 x (0~100) */
   x: number
-  /** 획 길이 % */
-  len: number
+  /** 중심 y (0~150) */
+  y: number
+  /** 한 변 길이 (좌표 단위) */
+  size: number
   /** 기울기(deg) */
   tilt: number
-  /** 굵기 px */
+  /** 획 굵기 px (non-scaling-stroke — 배율과 무관하게 일정) */
   weight: number
 }
 
-/** 주문양 획 수 상한 — 부적지 세로에 겹치지 않고 들어가는 최대치. */
-const SIGIL_MAX_STROKES = 9
+/** 주묵 방울 — 붓을 털었을 때 튄 자국. 부적의 "손으로 그린 티". */
+export interface SigilDot {
+  x: number
+  y: number
+  r: number
+}
+
+/** 부적 한 장의 주문양 전체. */
+export interface SigilPlan {
+  /** 세로로 쌓이는 자모 다발 */
+  glyphs: SigilGlyph[]
+  /** 기둥 획의 가로 위치 (0~100) — 부적을 관통하는 세로 한 획 */
+  spineX: number
+  /** 가로 관통 획들의 세로 위치 (0~150) */
+  bars: number[]
+  /** 튄 주묵 방울 */
+  dots: SigilDot[]
+}
+
+/**
+ * 자모 수 상·하한 — 부적지 세로에 겹쳐 쌓이는 범위.
+ * 적으면(4~6) 낱자가 커져 "휘갈긴 낙서"가 되고, 많으면 기둥이 빽빽한 주문 열로 읽힌다.
+ * 부적은 후자다.
+ */
+const SIGIL_MIN_GLYPHS = 7
+const SIGIL_MAX_GLYPHS = 10
+/** 자모 다발이 앉는 세로 구간(좌표 단위). 머리 인장(위)·발원 낱말(아래) 자리를 비워 둔다. */
+const SIGIL_TOP = 32
+const SIGIL_BOTTOM = 122
 
 /**
  * 액운 원문 → 결정론 주문양. **글자 수·해시만** 쓴다(문자 자체는 좌표로 흘리지 않는다).
- * 빈 문자열이면 획 3개의 기본 문양(부적지가 비어 보이지 않게).
+ * 빈 문자열이면 기본 문양('액' 시드)이 선다 — 부적지가 비어 보이지 않게.
  */
-export function sigilStrokes(text: string): SigilStroke[] {
+export function sigilPlan(text: string): SigilPlan {
   const trimmed = text.trim()
-  const seed = hashSeed(trimmed.length > 0 ? trimmed : '厄')
-  const count = Math.max(3, Math.min(SIGIL_MAX_STROKES, 3 + (trimmed.length % (SIGIL_MAX_STROKES - 2))))
-  const strokes: SigilStroke[] = []
+  const seed = hashSeed(trimmed.length > 0 ? trimmed : '액')
+  const span = SIGIL_MAX_GLYPHS - SIGIL_MIN_GLYPHS + 1
+  const count = SIGIL_MIN_GLYPHS + (trimmed.length % span)
+  const glyphs: SigilGlyph[] = []
+  const bars: number[] = []
+  // 선형 합동 생성기 — Math.random 을 쓰면 리렌더마다 문양이 바뀐다
   let s = seed
-  for (let i = 0; i < count; i += 1) {
-    // 선형 합동 생성기 — Math.random 을 쓰면 리렌더마다 문양이 바뀐다
+  const next = (): number => {
     s = (Math.imul(s, 1664525) + 1013904223) >>> 0
-    const a = (s >>> 24) & 0xff
-    const b = (s >>> 16) & 0xff
-    const c = (s >>> 8) & 0xff
-    strokes.push({
-      y: Math.round(((i + 0.5) / count) * 78 * 10) / 10 + 11,
-      x: 50 + Math.round((((a / 255) * 2 - 1) * 16 + Number.EPSILON) * 10) / 10,
-      len: 26 + Math.round(((b / 255) * 34 + Number.EPSILON) * 10) / 10,
-      tilt: Math.round((((c / 255) * 2 - 1) * 14 + Number.EPSILON) * 10) / 10,
-      weight: 2 + ((a + b) % 3),
+    return s
+  }
+  const r1 = (): number => next() / 0x100000000
+
+  const pitch = (SIGIL_BOTTOM - SIGIL_TOP) / count
+  for (let i = 0; i < count; i += 1) {
+    const a = r1()
+    const b = r1()
+    const c = r1()
+    glyphs.push({
+      jamo: Math.floor(r1() * SIGIL_JAMO.length) % SIGIL_JAMO.length,
+      x: round1(50 + (a * 2 - 1) * 9),
+      // 세로 흔들림은 pitch 의 ±12% 까지만 — 더 주면 최소 크기 두 자가 나란히 왔을 때
+      // 간격(최대 1.24·pitch)이 반지름 합(최소 1.3·pitch)을 넘어 **겹침이 끊긴다**
+      y: round1(SIGIL_TOP + pitch * (i + 0.5) + (b * 2 - 1) * pitch * 0.12),
+      // 자모끼리 세로로 30% 남짓 겹치도록 pitch 보다 크게 잡는다 — 낱자 경계를 뭉갠다.
+      // 겹치지 않으면 "자음 목록"으로 읽혀 부적이 아니라 학습표가 된다.
+      size: round1(pitch * (1.3 + c * 0.55)),
+      tilt: round1((r1() * 2 - 1) * 17),
+      weight: 1.6 + Math.floor(r1() * 3) * 0.35,
     })
   }
-  return strokes
+  // 가로 관통 획 2~3줄 — 자모 사이를 지나며 낱자 경계를 한 번 더 흐린다
+  const barCount = 2 + (next() % 2)
+  for (let i = 0; i < barCount; i += 1) {
+    bars.push(round1(SIGIL_TOP + ((i + 0.7) / barCount) * (SIGIL_BOTTOM - SIGIL_TOP) + (r1() * 2 - 1) * 6))
+  }
+  // 튄 주묵 방울 3~5개 — 기둥 옆 여백에만 앉힌다
+  const dotCount = 3 + (next() % 3)
+  const dots: SigilDot[] = []
+  for (let i = 0; i < dotCount; i += 1) {
+    const side = next() % 2 === 0 ? -1 : 1
+    dots.push({
+      x: round1(50 + side * (16 + r1() * 11)),
+      y: round1(SIGIL_TOP + r1() * (SIGIL_BOTTOM - SIGIL_TOP)),
+      r: round1(0.55 + r1() * 1.05),
+    })
+  }
+  return { glyphs, spineX: round1(50 + (r1() * 2 - 1) * 5), bars, dots }
+}
+
+function round1(v: number): number {
+  return Math.round((v + Number.EPSILON) * 10) / 10
 }

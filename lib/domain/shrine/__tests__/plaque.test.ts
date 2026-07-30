@@ -7,8 +7,8 @@
  *
  * 검사하는 것
  *   1. CSS 의 cover 배율 계수가 무라 규격(4096×640)에서 나온 값 그대로다.
- *   2. CSS 의 세로 오프셋·널 크기 리터럴이 PLAQUE_BOX 와 같다.
- *   3. 두 팻말이 **가장 좁은 기기**에서도 화면 안이고, 서로 겹치지 않는다.
+ *   2. CSS 가 세로 오프셋·널 크기를 **리터럴이 아니라 변수로** 받고, 그 변수의 값이 PLAQUE_BOX 다.
+ *   3. 세 팻말이 **가장 좁은 기기**에서도 화면 안이고, 서로 겹치지 않는다.
  *   4. 배포 게이트에 클래스·키프레임이 등록돼 있다(styled-jsx 사고 재발 방지).
  *   5. 널 스프라이트가 public/ 에 실재한다.
  */
@@ -23,6 +23,7 @@ import {
   PLAQUE_WALL_URL,
   SHRINE_PLAQUES,
   hasPlaqueWall,
+  plaqueBandVars,
   plaqueOffsetX,
 } from '../plaque'
 
@@ -47,15 +48,29 @@ describe('cover 배율식 — CSS 계수가 무라 규격에서 나온다', () =
     expect(Number(cqh)).toBeCloseTo(100 / PLAQUE_WALL_PX.h, 6)
   })
 
-  it('세로 오프셋 리터럴이 (무라 중심 − 널 중심) 이다', () => {
-    // top: calc(50% - (189 * var(--plq-s)))
-    const dy = /top:\s*calc\(50%\s*-\s*\((\d+)\s*\*/.exec(plaqueBlock)?.[1]
-    expect(Number(dy)).toBe(PLAQUE_WALL_PX.h / 2 - PLAQUE_BOX.cy)
+  /**
+   * 널 크기·세로 위치는 CSS 리터럴이 아니라 **띠가 얹는 변수**다(plaqueBandVars).
+   * 종전에는 175/70/189 가 CSS 에 박혀 있어 PLAQUE_BOX 와 두 벌이었고, 팻말이 3개가 되며
+   * 크기를 줄이는 순간 곧바로 어긋났다 — 어긋나도 널은 그려지므로 조용히 창방을 벗어난다.
+   */
+  it('CSS 는 숫자를 들지 않는다 — 크기·세로는 변수로 받는다', () => {
+    expect(plaqueBlock).toContain('var(--plq-dy)')
+    expect(plaqueBlock).toContain('var(--plq-w)')
+    expect(plaqueBlock).toContain('var(--plq-h)')
+    // 배율에 곱해지는 값은 전부 변수다 — `189 * var(--plq-s)` 같은 리터럴이 남아 있으면 안 된다
+    expect(plaqueBlock).not.toMatch(/\d+\s*\*\s*var\(--plq-s\)/)
   })
 
-  it('널 크기 리터럴이 PLAQUE_BOX 와 같다', () => {
-    expect(/width:\s*calc\((\d+)\s*\*/.exec(plaqueBlock)?.[1]).toBe(String(PLAQUE_BOX.w))
-    expect(/height:\s*calc\((\d+)\s*\*/.exec(plaqueBlock)?.[1]).toBe(String(PLAQUE_BOX.h))
+  it('띠가 얹는 변수 값이 PLAQUE_BOX 와 무라 규격에서 나온다', () => {
+    const vars = plaqueBandVars()
+    expect(vars['--plq-w']).toBe(PLAQUE_BOX.w)
+    expect(vars['--plq-h']).toBe(PLAQUE_BOX.h)
+    // 무라 중심(320) 기준 오프셋 — 음수면 중심보다 위
+    expect(vars['--plq-dy']).toBe(PLAQUE_BOX.cy - PLAQUE_WALL_PX.h / 2)
+  })
+
+  it('널 비율은 스프라이트가 굽힌 2.5:1 그대로다 — 늘려 쓰므로 비율이 바뀌면 몰딩이 찌그러진다', () => {
+    expect(PLAQUE_BOX.w / PLAQUE_BOX.h).toBeCloseTo(2.5, 6)
   })
 
   it('가로 오프셋은 CSS 에 하드코딩하지 않고 --plq-dx 로 받는다 (팻말마다 다르다)', () => {
@@ -88,7 +103,7 @@ describe('팻말 자리 — 가장 좁은 기기에서도 화면 안', () => {
     ['짧은 창 520×420', 520, 420],
   ]
 
-  it.each(ROOMS)('%s — 두 팻말이 온전히 화면 안이다', (_label, w, h) => {
+  it.each(ROOMS)('%s — 세 팻말이 온전히 화면 안이다', (_label, w, h) => {
     const half = halfSpan(w, h)
     for (const p of SHRINE_PLAQUES) {
       const dx = plaqueOffsetX(p.cx)
@@ -97,8 +112,9 @@ describe('팻말 자리 — 가장 좁은 기기에서도 화면 안', () => {
     }
   })
 
-  it('두 팻말이 겹치지 않는다', () => {
+  it('세 팻말이 겹치지 않는다 — 칸 중심 간격이 널 폭보다 넓다', () => {
     const xs = SHRINE_PLAQUES.map((p) => p.cx).sort((a, b) => a - b)
+    expect(xs).toHaveLength(3)
     for (let i = 1; i < xs.length; i += 1) expect(xs[i] - xs[i - 1]).toBeGreaterThan(PLAQUE_BOX.w)
   })
 
@@ -119,12 +135,27 @@ describe('벽 판정 · 목록', () => {
     expect(hasPlaqueWall(undefined)).toBe(false)
   })
 
-  it('두 팻말이 서로 다른 전용 페이지를 가리킨다', () => {
-    expect(SHRINE_PLAQUES.map((p) => p.href)).toEqual(['/protected/shrine/obangki', '/protected/shrine/baekil'])
+  it('페이지 팻말은 서로 다른 전용 페이지를 가리킨다', () => {
+    const hrefs = SHRINE_PLAQUES.filter((p) => p.kind === 'page').map((p) => p.href)
+    expect(hrefs).toEqual(['/protected/shrine/obangki', '/protected/shrine/baekil'])
+    expect(new Set(hrefs).size).toBe(hrefs.length)
   })
 
-  it('액막이는 팻말이 아니다 — 촛불에서 불을 받는 의식이라 방에 남는다', () => {
-    expect(SHRINE_PLAQUES.some((p) => p.href.includes('aekmak'))).toBe(false)
+  /**
+   * 액막이는 팻말이 되었지만(CEO 6차 지시 ⑦) **페이지로 나가지는 않는다** —
+   * 촛불에서 불을 받아 부적을 태우는 의식이라 방을 떠나면 행위 자체가 성립하지 않는다.
+   * 그래서 kind='sheet' 다. 여기가 'page' 로 바뀌면 불 없는 곳에서 부적을 태우게 된다.
+   */
+  it('액막이 팻말은 방을 떠나지 않는다 — 시트를 여는 팻말이다', () => {
+    const aekmak = SHRINE_PLAQUES.find((p) => p.key === 'aekmak')
+    expect(aekmak).toBeDefined()
+    expect(aekmak?.kind).toBe('sheet')
+    expect(SHRINE_PLAQUES.filter((p) => p.kind === 'page').every((p) => !p.href.includes('aekmak'))).toBe(true)
+  })
+
+  it('키가 유일하다 — 팻말 키는 GA4 라벨이자 시트 배선의 이름이다', () => {
+    const keys = SHRINE_PLAQUES.map((p) => p.key)
+    expect(new Set(keys).size).toBe(keys.length)
   })
 })
 
@@ -150,5 +181,25 @@ describe('에셋 · 배포 게이트', () => {
 
   it('오버레이 컴포넌트에 styled-jsx 가 없다', () => {
     expect(read('components/shrine/scene/WindowPlaques.tsx')).not.toMatch(/<style\s+jsx/)
+  })
+})
+
+describe('액막이 팻말 → 시트 배선 (6차)', () => {
+  const ROOT = path.resolve(__dirname, '../../../..')
+  const sheetSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/AekmakSheet.tsx'), 'utf8')
+  const roomSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/ShrineRoomClient.tsx'), 'utf8')
+
+  /**
+   * 액막이는 페이지가 아니라 방 안 시트라 팻말이 "이동"이 아니라 "열기"를 해야 한다.
+   * 그 연결이 DOM 질의라 타입이 못 잡는다 — 이름표 양쪽을 문자열로 못 박는다.
+   * (첫 버튼을 잡는 방식은 스트립에 버튼이 하나만 더 생겨도 조용히 깨진다.)
+   */
+  it('여는 버튼의 이름표와 룸의 질의가 같은 문자열이다', () => {
+    expect(sheetSrc).toMatch(/data-aekmak-open/)
+    expect(roomSrc).toMatch(/querySelector<HTMLButtonElement>\('\[data-aekmak-open\]'\)/)
+  })
+
+  it('룸이 첫 버튼을 잡는 방식으로 되돌아가지 않았다', () => {
+    expect(roomSrc).not.toMatch(/querySelector<HTMLButtonElement>\('button'\)/)
   })
 })

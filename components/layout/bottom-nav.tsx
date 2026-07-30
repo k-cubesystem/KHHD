@@ -18,11 +18,16 @@ export const BottomNav = memo(function BottomNav() {
     href: string
   }
 
+  /**
+   * 순서 = 화면에서의 자리다. 신당이 가운데(3번째), 고민상담이 그 오른쪽 —
+   * 종전의 두 자리를 맞바꿨다 (CEO 6차 지시 2026-07-30: "신당을 가운데로, 고민상담을 신당자리로").
+   * 다섯 칸 중 가운데가 엄지에 가장 가까운 자리라, 매일 들르는 신당을 그 자리에 둔다.
+   */
   const NAV_ITEMS: NavItem[] = [
     { label: t('analysis'), icon: '/icons/nav/analysis.webp', href: '/protected/analysis' },
     { label: t('family'), icon: '/icons/nav/family.webp', href: '/protected/family' },
-    { label: t('chat'), icon: '/icons/nav/chat.webp', href: '/protected/ai-shaman' },
     { label: t('shrine'), icon: '/icons/nav/shrine.webp', href: '/protected/shrine' },
+    { label: t('chat'), icon: '/icons/nav/chat.webp', href: '/protected/ai-shaman' },
     { label: t('profile'), icon: '/icons/nav/profile.webp', href: '/protected/profile' },
   ]
 

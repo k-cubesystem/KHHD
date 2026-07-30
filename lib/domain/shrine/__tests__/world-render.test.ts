@@ -1,6 +1,6 @@
 import { parseStageSpec, type StageSpec } from '../stage'
 import { PARALLAX, WORLD_DEFAULT_WIDTH, parseWorld, daecheongZone, type WorldSpec } from '../world'
-import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '../world-render'
+import { jambSides, parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '../world-render'
 
 // 3파가 시드할 반가 두루마리 규격 — 마당 0~70 · 대청 70~170 · 후원 170~240 (논리 폭 240)
 const SCROLL_RAW = {
@@ -169,5 +169,24 @@ describe('parallaxShiftPct — 시차 계수', () => {
   it('단일 무대는 계수가 있어도 camX 가 0 이라 움직이지 않는다', () => {
     const world = parseWorld(singleStage(), null)
     expect(parallaxShiftPct(world, PARALLAX.far)).toBe('-0.3%')
+  })
+})
+
+describe('jambSides — 문틀 그림자는 안쪽 경계에만 (6차 검수 "오른쪽 세로선")', () => {
+  const world = (width: number, zones: { code: string; x0: number; x1: number }[]) => ({ width, zones }) as never
+
+  it('단일 구역(0~320)은 양쪽 다 거짓 — 방 끝은 문간이 아니다', () => {
+    const w = world(320, [{ code: 'daecheong', x0: 0, x1: 320 }])
+    expect(jambSides(w, { code: 'daecheong', x0: 0, x1: 320 } as never)).toEqual({ left: false, right: false })
+  })
+
+  it('3구역 시절 대청(70~170)은 양쪽 다 참 — 원래 의도한 문간 표시', () => {
+    const w = world(240, [{ code: 'daecheong', x0: 70, x1: 170 }])
+    expect(jambSides(w, { code: 'daecheong', x0: 70, x1: 170 } as never)).toEqual({ left: true, right: true })
+  })
+
+  it('한쪽만 방 끝에 닿으면 그쪽만 거짓이다', () => {
+    const w = world(240, [{ code: 'daecheong', x0: 0, x1: 170 }])
+    expect(jambSides(w, { code: 'daecheong', x0: 0, x1: 170 } as never)).toEqual({ left: false, right: true })
   })
 })

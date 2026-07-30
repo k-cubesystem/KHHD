@@ -63,9 +63,12 @@ test.describe('가족별 신당', () => {
     await page.screenshot({ path: SHOT('3-family-room'), fullPage: true })
     console.log('[PASS] 가족 신당 방 렌더 (가 족 신 당 헤더)')
 
-    // 4) 가족 스코프 신위전 — 헤더 '신위' 버튼이 ?member= 를 보존해야 한다
-    await page.getByRole('link', { name: '신위전' }).click()
-    await expect(page).toHaveURL(/\/protected\/shrine\/deities\?member=/, { timeout: 15_000 })
+    // 4) 가족 스코프 신위전 — 헤더 '모아보기' 버튼이 member= 를 보존해야 한다
+    //    (신위전은 모아보기의 한 탭이 되었다 — CEO 6차 지시 2026-07-30)
+    await page.getByRole('link', { name: '신당테마·아이템·신위 모아보기' }).click()
+    await expect(page).toHaveURL(/\/protected\/shrine\/collection\?tab=theme&member=/, { timeout: 15_000 })
+    await page.getByRole('link', { name: '신위', exact: true }).click()
+    await expect(page).toHaveURL(/\/protected\/shrine\/collection\?tab=deity&member=/, { timeout: 15_000 })
     await expect(page.getByRole('heading', { name: '신위전(神位殿)' })).toBeVisible({ timeout: 15_000 })
     // 가족 신당에 主神이 좌정돼 있으므로 '主神 좌정중' 표시가 존재
     await expect(page.getByText('主神 좌정중').first()).toBeVisible({ timeout: 15_000 })

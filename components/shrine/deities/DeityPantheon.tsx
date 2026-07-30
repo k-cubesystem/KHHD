@@ -35,12 +35,18 @@ interface Props {
   bonds: Array<{ deityId: string; progress: BondProgress }>
   /** 점사 대상 가족 (null/생략=본인 신당) — 좌정·인연이 이 신당 스코프로 적용 */
   familyMemberId?: string | null
+  /**
+   * 모아보기(/protected/shrine/collection) 안의 한 탭으로 그릴 때 true.
+   * 그 화면이 이미 「신당으로」를 들고 있어 여기까지 그리면 뒤로가기가 두 개가 된다.
+   * 제목(신위전)은 그대로 둔다 — 탭 안에서 지금 무엇을 보고 있는지 알려 주는 유일한 표지다.
+   */
+  hideBackLink?: boolean
 }
 
 /** 연출 모드 — 강신(降神)=실제 좌정 시점, 봉안(奉安)=구매 완료(좌정 CTA 제공) */
 type RevealState = { deity: Deity; mode: 'gangshin' | 'bongan' } | null
 
-export function DeityPantheon({ catalog, bonds, familyMemberId }: Props) {
+export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = false }: Props) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [reveal, setReveal] = useState<RevealState>(null)
@@ -106,13 +112,15 @@ export function DeityPantheon({ catalog, bonds, familyMemberId }: Props) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link
-        href={shrineHref}
-        className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif mb-3"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        신당으로
-      </Link>
+      {!hideBackLink && (
+        <Link
+          href={shrineHref}
+          className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif mb-3"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          신당으로
+        </Link>
+      )}
       <header className="text-center space-y-1.5 mb-6">
         <p className="text-[10px] tracking-[0.5em] text-gold-500/50 font-serif">神 位</p>
         <h1 className="text-2xl font-serif font-bold text-ink-light">신위전(神位殿)</h1>

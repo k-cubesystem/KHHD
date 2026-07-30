@@ -115,3 +115,22 @@ export function parallaxShiftPct(world: WorldSpec, factor: number): string {
   const f = Number.isFinite(factor) ? factor : 0
   return `${round((-f * 100) / width, 5)}%`
 }
+
+/**
+ * 문틀 그림자를 드리울 쪽 — **안쪽 경계에만** 드리운다.
+ *
+ * ⚠️ 6차 검수 "신당 오른쪽 세로선"의 정체가 이것이었다. 문틀 그림자는 3구역 시절
+ * (마당–대청–후원) **구역과 구역 사이 문간**을 표시하려고 만든 것이다. 안2.1 에서 구역이
+ * 0~320 단일 구역으로 합쳐지자 두 그림자가 **방 바깥 끝**으로 밀려났고, 거기엔 문간이 없으므로
+ * 설명되지 않는 검은 세로 띠(alpha 0.5, 폭 3.2%)만 남았다. 게다가 전경층은 시차 1.15배라
+ * 방보다 빨리 흘러 **움직이는 세로 경계**로 읽힌다.
+ *
+ * 그래서 경계가 world 안쪽일 때만 참이다. 단일 구역 방에서는 양쪽 다 거짓 —
+ * 벽이 끝나는 자리는 문간이 아니라 그냥 방의 끝이다.
+ */
+export function jambSides(world: WorldSpec, zone: WorldZone): { left: boolean; right: boolean } {
+  const width = safeWidth(world)
+  const x0 = clamp(zone?.x0, 0, width)
+  const x1 = clamp(zone?.x1, x0, width)
+  return { left: x0 > 0, right: x1 < width }
+}

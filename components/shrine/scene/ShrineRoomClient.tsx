@@ -10,11 +10,12 @@ import {
   type PointerEvent as RPointerEvent,
 } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Lock, Flag, Flame } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, Flag, MessageCircle } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
-import { bondProgress, deityTurnFrames, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
+import { deityTurnFrames } from '@/lib/domain/shrine/deities'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   depthScale,
@@ -33,7 +34,14 @@ import {
 import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
 import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
-import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '@/lib/domain/shrine/world-render'
+import {
+  jambSides,
+  parallaxShiftPct,
+  zoneBox,
+  zoneCodeAt,
+  zoneStage,
+  zoneWidthScale,
+} from '@/lib/domain/shrine/world-render'
 import {
   entranceMsFor,
   keeperRestX,
@@ -65,7 +73,7 @@ import { WalkingKeeper, type KeeperSpot } from './WalkingKeeper'
 import { DeityTurn } from './DeityTurn'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
-import { DevotionStrip } from './DevotionStrip'
+import { BaekilStrip } from './BaekilStrip'
 import { AekmakStrip } from './AekmakSheet'
 import { WindowPlaques } from './WindowPlaques'
 import { hasPlaqueWall } from '@/lib/domain/shrine/plaque'
@@ -77,8 +85,9 @@ import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
-import type { AekmakStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import type { AekmakStatus, BaekilStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
+import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
 import { trackEvent } from '@/lib/analytics/ga4'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
 // ⚠️ styled-jsx 로 되돌리지 말 것 — App Router 에서는 산출물에 실리지 않는다(app/shrine-scene.css 머리말).
@@ -252,6 +261,12 @@ interface Props {
    * 무료 잔여를 오표시하면 **복채를 물릴 자리에서 무료라고 말하게 된다**(액막이보다 더 엄격하다).
    */
   obangki?: ObangkiStatus | null
+  /**
+   * 백일기도 현황(소유자 뷰에서만 주입). 방 위 게이지의 유일한 원천이다 —
+   * null 이면 게이지를 아예 그리지 않는다. 0% 막대를 지어내면 "아직 서약이 없다"와
+   * "서약했는데 조회에 실패했다"가 화면에서 구분되지 않는다(액막이·오방기와 같은 규율).
+   */
+  baekil?: BaekilStatus | null
 }
 
 interface Ring {
@@ -276,7 +291,14 @@ const themeVars = (pack: ThemePack | undefined): CSSProperties => {
   } as CSSProperties
 }
 
-export function ShrineRoomClient({ scene, devotion = null, familyHall = null, aekmak = null, obangki = null }: Props) {
+export function ShrineRoomClient({
+  scene,
+  devotion = null,
+  familyHall = null,
+  aekmak = null,
+  obangki = null,
+  baekil = null,
+}: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
   const catalogById = useMemo(
     () => new Map<string, StageCatalogItem>(scene.catalog.map((c) => [c.id, c])),
@@ -293,6 +315,13 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
   // ── 신위 탭 회전 (안2.3 ④) ──
   /** 회전 재생 중. true 인 동안 재탭은 무시된다(부록 C ④ 탭 잠금) */
   const [deitySpinning, setDeitySpinning] = useState(false)
+  /**
+   * 회전이 끝난 뒤 뜨는 「이야기를 나눌까요?」 확인 (CEO 6차 지시 ⑥).
+   * 지시는 "모시는 신을 누르면 채팅창으로 가게 하되 한번 물어보고 이동"이다 —
+   * 물어보는 단계를 둔 이유가 곧 이 상태의 존재 이유다: 신위 탭은 회전을 보려고 누르는 손짓이기도 해서
+   * 곧장 이동시키면 방을 구경하다 대화방으로 튕겨 나간다.
+   */
+  const [askChat, setAskChat] = useState(false)
   /**
    * 회전 허용 여부 = 연출 게이트 on + 모션 최소화 아님. matchMedia 는 마운트 후에만 읽는다
    * (렌더 중 호출하면 SSR 과 첫 클라 렌더가 갈린다 — #418 전례). false 면 탭 반응만 남는다.
@@ -579,6 +608,8 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
     },
     [daecheong.x0, daecheong.x1, world.width]
   )
+  /** 문틀 그림자를 드리울 쪽 — 안쪽 경계에만(도메인 단일 출처). 단일 구역 방은 양쪽 다 거짓이다. */
+  const jambs = useMemo(() => jambSides(world, daecheong), [world, daecheong])
   /** 팬의 출처 — 사용자 조작(제스처·미니맵)일 때만 GA4 에 남긴다(입장·편집 자동 이동은 제외) */
   const panSource = useRef<'user' | 'system'>('system')
   const bindRoom = useMemo(
@@ -662,9 +693,13 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
   const [snapAnchor, setSnapAnchor] = useState<StageAnchor | null>(null)
   /** 이번 꾸미기에서 새로 앵커에 올린 배치 — 저장 시 신위 한마디 1회 */
   const pendingAnchor = useRef<StageAnchor | null>(null)
-  const deitiesHref = scene.familyMemberId
-    ? `/protected/shrine/deities?member=${scene.familyMemberId}`
-    : '/protected/shrine/deities'
+  /**
+   * 모아보기(신당테마·아이템·신위) — 종전 「신위」 버튼이 가리키던 자리를 이어받았다
+   * (CEO 6차 지시 ③ "한개 버튼으로 묶어 3가지 탭으로"). 신위전은 그 안의 한 탭이다.
+   */
+  const collectionHref = scene.familyMemberId
+    ? `/protected/shrine/collection?tab=theme&member=${scene.familyMemberId}`
+    : '/protected/shrine/collection?tab=theme'
 
   // 기운 실시간 계산
   const { energy, yongsin, resonant } = useMemo(
@@ -1007,14 +1042,55 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
    * 회전은 그 위에 얹는 연출이라, 재생 중 재탭은 **반응까지 통째로 무시**한다(부록 C ④ 탭 잠금).
    */
   const onTapDeity = useCallback(() => {
-    if (editing || deitySpinning) return
+    if (editing || deitySpinning || askChat) return
     onTapKeeper({ x: DEITY_POS.x, y: DEITY_POS.y })
-    if (!spinAllowed) return
+    if (!spinAllowed) {
+      // 회전이 불가한 기기(모션 최소화·게이트 오프)라도 **묻는 단계는 남는다** —
+      // 여기서 곧장 이동시키면 접근성 설정을 켠 사람만 확인 없이 대화방으로 끌려간다.
+      if (isOwner) setAskChat(true)
+      return
+    }
     setDeitySpinning(true)
     trackEvent({ action: 'deity_spin', category: 'shrine', label: scene.mainDeity?.code ?? 'none' })
-  }, [editing, deitySpinning, onTapKeeper, spinAllowed, scene.mainDeity])
+  }, [editing, deitySpinning, askChat, onTapKeeper, spinAllowed, scene.mainDeity, isOwner])
 
-  const onDeitySpinEnd = useCallback(() => setDeitySpinning(false), [])
+  /**
+   * 회전이 끝나면 확인을 띄운다 (CEO 6차 지시 ⑥ "한번 물어보고 이동").
+   * ⚠️ 회전 연출 자체는 손대지 않았다 — DeityTurn 은 그대로고, 룸은 종전처럼 spinning 을 내릴 뿐
+   *    그 **뒤에** 물음을 얹는다. 두 차례 검수를 거친 9국면 회전을 확인창이 잡아먹으면 안 된다.
+   * 방문자 뷰(isOwner=false)는 묻지 않는다 — 남의 신당에서 눌러 내 대화방으로 가는 것은 뜬금없다.
+   */
+  const onDeitySpinEnd = useCallback(() => {
+    setDeitySpinning(false)
+    if (isOwner) setAskChat(true)
+  }, [isOwner])
+
+  const router = useRouter()
+  /** 신위와의 대화 = 고민상담(해화지기). 좌정 主神을 서버가 시딩하므로 새 경로를 만들지 않는다. */
+  const goDeityChat = useCallback(() => {
+    setAskChat(false)
+    trackEvent({ action: 'deity_chat_enter', category: 'shrine', label: scene.mainDeity?.code ?? 'none' })
+    router.push('/protected/ai-shaman')
+  }, [router, scene.mainDeity])
+
+  // ── 창방 「액막이」 팻말 → 방 하단 액막이 스트립과 **같은 시트**를 연다 (CEO 6차 지시 ⑦) ──
+  /**
+   * 액막이는 페이지가 아니라 방 안 시트다 — 촛불에서 불을 받아 태우는 의식이라 방을 떠나면
+   * 행위 자체가 성립하지 않는다. 그래서 팻말은 이동이 아니라 그 시트를 켠다.
+   *
+   * ⚠️ 시트의 열림 상태는 AekmakStrip 안에 산다(그 파일은 지금 손대지 않는다). 상태를 밖으로 끌어올리는
+   *    대신 **이미 있는 손잡이를 대신 눌러 준다** — 스트립의 여는 버튼이 곧 시트의 유일한 문이고,
+   *    문을 하나로 두는 편이 열림 상태를 두 곳에서 관리하는 것보다 어긋날 자리가 적다.
+   *    버튼을 못 찾으면(스트립 미표시) 아무 일도 하지 않는다 — 팻말 자체가 그때는 걸리지 않는다.
+   */
+  const aekmakRef = useRef<HTMLDivElement>(null)
+  const openAekmakSheet = useCallback(() => {
+    // ⚠️ `querySelector('button')`(첫 버튼)에 기대지 않는다 — 스트립에 버튼이 하나만 더 생겨도
+    //    조용히 엉뚱한 걸 누르고, 그 사고는 타입도 테스트도 못 잡는다. AekmakSheet 의 여는 버튼에
+    //    박아 둔 이름표를 찾는다(그 속성이 사라지면 팻말이 아무 일도 안 하는 쪽으로 안전하게 실패한다).
+    aekmakRef.current?.querySelector<HTMLButtonElement>('[data-aekmak-open]')?.click()
+  }, [])
+  const plaqueSheets = useMemo(() => (aekmak ? { aekmak: openAekmakSheet } : undefined), [aekmak, openAekmakSheet])
 
   /**
    * 턴어라운드 프레임 경로(45°·측면·135°·뒷면). 회전이 애초에 불가한 상태(게이트 오프·모션 최소화)에서는 null 을 줘
@@ -1148,7 +1224,9 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
           방문자는 남의 신당에서 의식을 치를 수 없고, 다른 테마에는 그 창이 아예 없다.
           꾸미기 중에는 내린다(신물 드래그와 탭 대상이 겹치면 배치가 페이지 이동으로 새어 나간다).
           z-2 라 신위(z-3)·신물(z 10~29) 뒤다 — 벽에 걸린 널이니 앞에 선 것에 가려지는 것이 맞다. */}
-      {isOwner && !editing && hasPlaqueWall(daecheongStage?.wallpaperUrl) && <WindowPlaques />}
+      {isOwner && !editing && hasPlaqueWall(daecheongStage?.wallpaperUrl) && (
+        <WindowPlaques onOpenSheet={plaqueSheets} />
+      )}
       {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
       <div
         className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
@@ -1290,14 +1368,16 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
           <h1 className="text-base font-serif font-bold text-ink-primary">{scene.shrineName}</h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* 모아보기 — 신당테마·아이템·신위를 묶은 단 하나의 버튼(CEO 6차 지시 ③).
+              종전 「신위」 버튼 자리를 그대로 이어받았다: 같은 결·같은 크기라 손이 기억하는 자리가 바뀌지 않는다. */}
           {isOwner && (
             <Link
-              href={deitiesHref}
+              href={collectionHref}
               className="h-8 px-2.5 rounded-[10px] flex items-center gap-1.5 bg-gold-500/[0.12] border border-gold-500/40 text-gold-200 text-[11.5px] font-serif font-bold"
-              aria-label="신위전"
+              aria-label="신당테마·아이템·신위 모아보기"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              신위
+              <LayoutGrid className="w-3.5 h-3.5" />
+              모아보기
             </Link>
           )}
           {isOwner && (
@@ -1330,38 +1410,13 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
         </div>
       </div>
 
-      {/* 主神 인연(緣) 스트립 — 소유자 전용 (방문자는 RLS로 인연 조회 불가 → 0점 오표시 방지) */}
-      {scene.mainDeity &&
-        (() => {
-          const deity = scene.mainDeity
-          if (deity.bondPoints === null) return null
-          const bp = bondProgress(deity.bondPoints)
-          const lower = BOND_THRESHOLDS[bp.level - 1] ?? 0
-          const ratio =
-            bp.nextThreshold === null
-              ? 1
-              : Math.max(0.04, Math.min(1, (bp.points - lower) / Math.max(1, bp.nextThreshold - lower)))
-          return (
-            <Link
-              href={deitiesHref}
-              className="flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-[10px] bg-surface/60 border border-gold-500/20"
-            >
-              <span className="text-[11px] font-serif text-gold-200 whitespace-nowrap">主神 {deity.name}</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gold-500/15 text-gold-300 font-serif whitespace-nowrap">
-                緣 {BOND_LEVEL_NAMES[bp.level]}
-              </span>
-              <div className="flex-1 h-1.5 rounded-full bg-ink-primary/15 overflow-hidden">
-                <div className="h-full rounded-full bg-gold-500 transition-all" style={{ width: `${ratio * 100}%` }} />
-              </div>
-              <span className="text-[9.5px] text-ink-primary/40 whitespace-nowrap tabular-nums">
-                {bp.nextThreshold === null ? '지음' : `다음 ${bp.toNext}`}
-              </span>
-            </Link>
-          )
-        })()}
-
-      {/* 기원(祈願) 스트립 — 매일 기도로 단 상승 → 테마·신물 해금 (소유자 전용) */}
-      {isOwner && devotion && <DevotionStrip devotion={devotion} />}
+      {/* 백일기도 게이지 — 방 위 한 줄 (CEO 6차 지시 ④).
+          여기 있던 「主神 ○○ · 緣 …」 인연 스트립과 「기원 N단」 스트립은 걷어냈다.
+          · 主神 이름은 방 안 말풍선 머리(신당지기 · ○○)에 그대로 남아 있고, 인연·좌정은 모아보기 「신위」 탭이 든다.
+          · 기원 단수는 백일기도 진행도의 원천이라 게이지가 같은 사실을 더 구체적으로 말한다.
+            무료 보상 수령은 모아보기로 옮겼다(테마·신물이 곧 그 보상이라 그 화면이 제자리다).
+          소유자 전용 — 방문자는 남의 서약을 셀 수 없다(RLS). */}
+      {isOwner && baekil && <BaekilStrip status={baekil} />}
 
       {/* 룸 */}
       <div
@@ -1416,11 +1471,16 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
               </div>
             </div>
 
-            {/* 전경(1.15x) — 대청 문틀 그림자. 카메라보다 빨리 흘러 "안쪽에 서 있다"를 만든다 */}
-            <div aria-hidden className="absolute inset-y-0 left-0 pointer-events-none" style={nearStyle}>
-              <span className="absolute inset-y-0" style={jambStyle('left')} />
-              <span className="absolute inset-y-0" style={jambStyle('right')} />
-            </div>
+            {/* 전경(1.15x) — 대청 문틀 그림자. 카메라보다 빨리 흘러 "안쪽에 서 있다"를 만든다.
+                ⚠️ **안쪽 경계에만** 드리운다(jambSides) — 단일 구역 방에서 방 바깥 끝에 드리우면
+                문간이 아니라 설명 없는 검은 세로 띠가 되고, 시차 1.15배라 움직이는 세로선으로 읽힌다
+                (6차 검수 "신당 오른쪽 세로선"의 정체). 양쪽 다 거짓이면 층 자체를 그리지 않는다. */}
+            {(jambs.left || jambs.right) && (
+              <div aria-hidden className="absolute inset-y-0 left-0 pointer-events-none" style={nearStyle}>
+                {jambs.left && <span className="absolute inset-y-0" style={jambStyle('left')} />}
+                {jambs.right && <span className="absolute inset-y-0" style={jambStyle('right')} />}
+              </div>
+            )}
           </>
         ) : (
           stageContent
@@ -1501,8 +1561,10 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
         {cin.overlay}
       </div>
 
-      {/* 테마 칩 + 수집 진행(F-8) */}
-      {isOwner && (
+      {/* 테마 칩 + 수집 진행(F-8) — CEO 6차 지시 ②로 **감췄다**(SHOW_THEME_COLLECTION=false).
+          지운 것이 아니라 가린 것이라 상수 한 줄로 되돌아온다(lib/config/shrine-ui.ts).
+          같은 목록·적용은 모아보기 「신당테마」 탭이 이어받았다 — 손잡이가 사라진 것은 아니다. */}
+      {SHOW_THEME_COLLECTION && isOwner && (
         <div className="px-1 pt-3 space-y-2">
           <div className="flex items-center gap-2">
             <span className="font-sans text-[10px] text-ink-light/40">테마 수집</span>
@@ -1544,8 +1606,10 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
         </div>
       )}
 
-      {/* 기운 게이지 */}
-      {isOwner && (
+      {/* 기운 게이지 — CEO 6차 지시 ①로 **감췄다**(SHOW_ENERGY_BALANCE=false, "나중에 다시 기획").
+          ⚠️ computeEnergy 는 그대로 돈다. 용신(displayYongsin)은 가이드바 할 일과 소원 문구가,
+             공명 판정은 신물 탭 파티클이 계속 쓴다 — 계산까지 들어내면 그 셋이 함께 죽는다. */}
+      {SHOW_ENERGY_BALANCE && isOwner && (
         <div className="mt-3 px-1">
           <div className="flex justify-between items-baseline mb-2">
             <span className="font-serif text-[13px] font-bold tracking-[0.1em] text-ink-primary">氣運 균형</span>
@@ -1583,46 +1647,39 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
       {/* 의식(儀式) — 신당 하단.
           액막이는 **여기 남는다**: 촛불에서 불을 받아 태우는 의식이라 불이 없는 곳으로 나가면
           행위 자체가 성립하지 않는다(촛불 수를 넘겨 불씨 밝기를 잇는다 — 방의 lit 시스템과 같은 불).
-          오방기·백일기도는 전용 페이지로 나갔다(CEO 지시 2026-07-30) — 여기 남는 것은 그 문이다.
-          창방 팻말과 같은 주소를 가리키되, 팻말이 없는 테마·좁은 화면에서도 문은 늘 여기 있다. */}
+          창방 「액막이」 팻말이 여는 시트도 **이 스트립의 것**이다(openAekmakSheet) — 문은 하나다.
+          오방기는 전용 페이지로 나갔다(CEO 지시 2026-07-30) — 여기 남는 것은 그 문이다.
+          창방 팻말과 같은 주소를 가리키되, 팻말이 없는 테마·좁은 화면에서도 문은 늘 여기 있다.
+          백일기도 문은 방 **위** 게이지가 겸한다 — 같은 페이지로 가는 문을 한 화면에 두 개 두지 않는다. */}
       {isOwner && !editing && (
         <div className="mt-3 space-y-1.5 px-1">
-          {aekmak && <AekmakStrip status={aekmak} litCandles={litCount} play={play} />}
-          <div className="flex gap-1.5">
-            <Link
-              href="/protected/shrine/obangki"
-              className="flex flex-1 items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
+          {aekmak && (
+            <div ref={aekmakRef}>
+              <AekmakStrip status={aekmak} litCandles={litCount} play={play} />
+            </div>
+          )}
+          <Link
+            href="/protected/shrine/obangki"
+            className="flex items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
+          >
+            <span
+              className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full"
+              style={{ background: 'rgba(62,95,134,0.22)', boxShadow: '0 0 9px rgba(143,180,218,0.28)' }}
             >
-              <span
-                className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full"
-                style={{ background: 'rgba(62,95,134,0.22)', boxShadow: '0 0 9px rgba(143,180,218,0.28)' }}
-              >
-                <Flag className="h-3 w-3" style={{ color: '#9FBEDD' }} />
+              <Flag className="h-3 w-3" style={{ color: '#9FBEDD' }} />
+            </span>
+            <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
+              오방기<span className="text-gold-500/60"> 旗</span>
+            </span>
+            <span className="flex-1 truncate text-left font-sans text-[10px] text-ink-primary/45">
+              오방 신기를 뽑아 오늘의 방위를 봅니다
+            </span>
+            {obangki && (
+              <span className="whitespace-nowrap font-serif text-[9.5px] tabular-nums text-ink-primary/45">
+                오늘 {Math.max(0, obangki.freeLimit - obangki.todayCount)}/{obangki.freeLimit}
               </span>
-              <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
-                오방기<span className="text-gold-500/60"> 旗</span>
-              </span>
-              {obangki && (
-                <span className="ml-auto whitespace-nowrap font-serif text-[9.5px] tabular-nums text-ink-primary/45">
-                  오늘 {Math.max(0, obangki.freeLimit - obangki.todayCount)}/{obangki.freeLimit}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/protected/shrine/baekil"
-              className="flex flex-1 items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
-            >
-              <span
-                className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full"
-                style={{ background: 'rgba(201,168,76,0.16)', boxShadow: '0 0 9px rgba(201,168,76,0.22)' }}
-              >
-                <Flame className="h-3 w-3 text-gold-300" />
-              </span>
-              <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
-                백일기도<span className="text-gold-500/60"> 禱</span>
-              </span>
-            </Link>
-          </div>
+            )}
+          </Link>
         </div>
       )}
 
@@ -1703,6 +1760,53 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
         mainDeitySeated={!!scene.mainDeity}
         isOwner={isOwner}
       />
+
+      {/* 신위 대화 확인 — 회전이 끝난 뒤 한 번 묻는다 (CEO 6차 지시 ⑥).
+          z-toast 라 가이드 바(z-125)와 방 UI(z-30) 위다. 바깥을 누르면 그냥 닫힌다 —
+          "아니오"가 기본값이어야 방을 구경하다 실수로 대화방에 들어가지 않는다. */}
+      {askChat && (
+        <div
+          className="fixed inset-0 z-toast flex items-center justify-center px-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="신위와 이야기 나누기"
+          onClick={() => setAskChat(false)}
+        >
+          <div className="absolute inset-0 bg-black/65 backdrop-blur-[2px]" />
+          <div
+            className="hanji-card relative w-full max-w-[320px] rounded-2xl border border-gold-500/30 p-5 text-center"
+            style={{ background: '#16140F' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span
+              className="mx-auto grid h-10 w-10 place-items-center rounded-full"
+              style={{ background: 'rgba(201,168,76,0.16)', boxShadow: '0 0 14px rgba(201,168,76,0.25)' }}
+            >
+              <MessageCircle className="h-5 w-5 text-gold-300" />
+            </span>
+            <p className="mt-3 font-serif text-[14px] leading-relaxed text-ink-primary">
+              {scene.mainDeity ? `${scene.mainDeity.name}과 이야기를 나누시겠습니까?` : '이야기를 나누시겠습니까?'}
+            </p>
+            <p className="mt-1.5 font-sans text-[11px] text-ink-primary/45">고민상담 화면으로 모십니다</p>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAskChat(false)}
+                className="flex-1 rounded-xl border border-white/12 bg-surface py-2.5 font-serif text-[12.5px] text-ink-primary/60"
+              >
+                아니오
+              </button>
+              <button
+                type="button"
+                onClick={goDeityChat}
+                className="flex-1 rounded-xl border border-gold-500/45 bg-gold-500/[0.14] py-2.5 font-serif text-[12.5px] font-bold text-gold-200"
+              >
+                예, 나눌게요
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

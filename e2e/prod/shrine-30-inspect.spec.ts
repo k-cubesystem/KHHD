@@ -59,16 +59,18 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
 
     // 방 로드는 비동기 — 즉시 검사 대신 대기 기반 단언. 콜드 런은 씬 로드가 20초를 넘길 수 있음.
     // 主神은 계정 상태에 따라 바뀔 수 있으므로(구매·좌정 테스트) 이름 하드코딩 대신
-    // 인연 스트립의 "主神 {이름}"에서 동적으로 읽어 그 신위 이미지를 단언한다.
-    const bondStrip = page.getByText(/^主神 /).first()
-    await expect(bondStrip).toBeVisible({ timeout: 45_000 })
-    const seatedName = ((await bondStrip.textContent()) ?? '').replace('主神', '').trim()
+    // 신당지기 말풍선 머리의 "신당지기 · {이름}"에서 동적으로 읽어 그 신위 이미지를 단언한다.
+    // (인연 스트립 "主神 {이름}"에서 옮겼다 — CEO 6차 지시 ④로 그 줄이 백일기도 게이지로 바뀌었다.)
+    const keeperHead = page.getByText(/^신당지기 · /).first()
+    await expect(keeperHead).toBeVisible({ timeout: 45_000 })
+    const seatedName = ((await keeperHead.textContent()) ?? '').split('·').pop()?.trim() ?? ''
     expect(seatedName.length).toBeGreaterThan(0)
     await expect(page.getByRole('img', { name: seatedName }).first()).toBeVisible({ timeout: 15_000 })
     console.log(`[CHECK] 제단 主神(${seatedName}) 렌더: true`)
 
-    await expect(page.getByText(/緣|인연/).first()).toBeVisible({ timeout: 10_000 })
-    console.log('[CHECK] 인연 바 표시: true')
+    // 인연 바가 있던 자리 — 백일기도 게이지로 대체됨(CEO 6차 지시 ④)
+    await expect(page.getByText(/백일기도/).first()).toBeVisible({ timeout: 10_000 })
+    console.log('[CHECK] 백일기도 게이지 표시: true')
 
     await expect(page.getByRole('button', { name: '전체화면' })).toBeVisible({ timeout: 10_000 })
     console.log('[CHECK] 전체화면 버튼: true')

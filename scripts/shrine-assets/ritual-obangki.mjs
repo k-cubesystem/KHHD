@@ -20,6 +20,27 @@
 //     기하(깃대 위치·기폭 비율·꼬리 수)가 서로 달라져 다섯 기가 한 다발로 안 읽힌다.
 //   - 순녹색(#00FF00) 배경 생성 → 하드 크로마키 → 트림. 접지 그림자는 굽지 않는다(런타임 담당).
 //
+// ── 실물 형태 (2026-07-30 조사 · 1차 반려분 전면 교체) ────────────────────────────
+// 1차본은 **가로대에 매단 세로로 긴 천 + 꼬리 3가닥**이었다. 그건 축제용 당기(幢旗)이지
+// 무속 오방기가 아니다. 실물은 이렇다:
+//   · 기폭은 **가로가 더 긴 민무늬 사각형**이다. 시판 규격 大 = 천 70(가로)×51(세로)cm,
+//     국립민속박물관 소장품도 가로 88.5 × 세로 43cm. 세로로 긴 천이 아니다.
+//   · **가로대가 없다.** 천의 왼쪽 변을 접어 통(casing)을 만들고 그 안에 깃대를 꿰어 박는다.
+//     깃대는 천의 왼쪽 변 뒤에 숨고, 천 아래로 **맨 자루**가 되어 다시 나온다.
+//   · 깃대는 가는 대나무 한 대(시판 大 72cm)로 기폭 위끝에서 시작해 위로 솟지 않는다.
+//     아래로는 자루가 기폭 세로의 약 40%만큼 남는다 — 손님이 잡아 뽑는 곳이 여기다.
+//   · **꼬리도 술도 화염각도 없다.** 나머지 세 변은 곧은 시접이고 모서리는 직각이다.
+//   · 천이 깃대에 붙어 있으므로 **깃대를 축으로 돌돌 말면** 색이 완전히 감춰지고 자루만 남는다.
+//     의례(무당이 다섯을 한 손에 쥐고 손님이 하나를 뽑는다)가 성립하는 것이 바로 이 구조 때문이고,
+//     가로대가 달린 1차본으로는 애초에 말 수가 없다 — 그게 반려 사유의 핵심이다.
+//   · 오방색·방위: 청 東 / 백 西 / 홍 南 / 흑 北(현대 무속은 녹색으로 대체) / 황 중앙.
+// 출처: 한국민속대백과사전·정책브리핑(korea.kr 148888314), 세존몰·11번가 시판 규격,
+//       국립민속박물관 소장 오방신장기 실측.
+//
+// ⚠️ 그래서 **종횡비가 1:2(세로) → 1:1(정사각)** 로 바뀌었다. 기폭 가로(70) ≈ 깃대 길이(72) 라
+//    깃발 한 기의 외곽은 거의 정사각이다. app/shrine-scene.css 의 .obangki-unfurl 과
+//    ObangkiSheet 의 천 상자도 같이 맞췄다(펼침도 아래가 아니라 **깃대에서 옆으로** 풀린다).
+//
 // 산출: public/shrine/ritual/obangki-*.webp
 // 검수: assets-src/shrine/ritual-obangki-check.webp  (5색 나란히 + 펼침 중간 시뮬)
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -67,18 +88,17 @@ const CHROMA =
  * 설명도(캐릭터 시트)를 그린다.
  */
 const FLAG_PROMPT =
-  'A single Korean shaman ritual flag on a slim bamboo pole, seen flat from the front. ' +
-  'A rectangular banner of {COLOR} silk hangs from a short crossbar at the top of the pole, ' +
-  'twice as tall as it is wide, its lower edge cut into three short pointed tails. ' +
-  'Four soft vertical folds run down the silk and the bottom edge drifts a little to the right. ' +
-  'A narrow strip of the same {COLOR} silk binds the banner to each end of the crossbar. ' +
-  // ⚠️ 두 번 어긋난 자리다. "single"만으로는 백기에 여분 깃대가 하나 더 그려졌고(1·2차),
-  //    "기폭 중앙을 지난다"로 고치자 이번엔 깃대가 천 **앞으로** 지나갔다(3차).
-  //    정상 4기의 실제 모습을 그대로 적는다 — 깃대는 천 뒤에 가려 위아래로만 보인다.
-  'Exactly one vertical pole in the whole picture, and it passes behind the banner: ' +
-  'the pole is visible only above the crossbar and below the bottom hem, never across the fabric. ' +
-  'The bamboo pole is pale honey brown with two faint nodes and continues a short way below the banner. ' +
-  'Portrait proportion, one unit wide and two units tall, the flag upright and centred with an even margin. ' +
+  'A single Korean shaman ritual flag standing upright, seen flat from the front. ' +
+  'A slim round bamboo stick stands vertically at the left, pale honey brown with one faint node near its lower end. ' +
+  'The left edge of a plain {COLOR} silk rectangle is sewn to that stick and the silk spreads to the right, ' +
+  'seven units wide and five units tall, its top level with the top of the stick. ' +
+  // ⚠️ 1차본이 무너진 자리다. 가로대에 매다는 순간 깃발을 말 수 없게 되고 오방기가 아니게 된다.
+  //    실물은 천의 왼쪽 변이 통이 되어 깃대를 감싼다 — 가림 관계를 그대로 적는다.
+  'The sewn edge is a narrow folded casing of the same {COLOR} silk wrapped around the stick, ' +
+  'so the stick is hidden behind the silk there and comes back into view as a bare handle below the bottom hem. ' +
+  'The three free edges are straight hems with square corners, no tails and no fringe. ' +
+  'Two soft folds ripple across the silk and its outer edge waves gently. ' +
+  'Square picture, the whole flag centred in it with an even margin. ' +
   `${STYLE}, ${LIGHT}, ${CHROMA}`
 
 /** 색 이름 — 두 단어로 통일한다(단어 수가 달라지면 문장 무게가 갈려 기하까지 흔들린다). */
@@ -99,11 +119,12 @@ const COLORS = [
  * @property {string} prompt
  */
 
-/** @type {RitualAsset[]} — 화면 무대의 깃발 천은 46×92px(1:2). 같은 비로 구워두면 CSS 가 늘일 일이 없다. */
+/** @type {RitualAsset[]} — 깃발 한 기의 외곽은 기폭 가로(70) ≈ 깃대 길이(72) 라 거의 정사각이다.
+ *  화면(ObangkiSheet)의 천 상자도 52×52px(1:1) 이므로 같은 비로 구워야 CSS 가 늘이지 않는다. */
 const ASSETS = COLORS.map(({ key, word }) => ({
   key,
   file: `obangki-${key}.webp`,
-  outW: 256,
+  outW: 512,
   outH: 512,
   prompt: FLAG_PROMPT.replaceAll('{COLOR}', word),
 }))
@@ -210,13 +231,18 @@ function isAuthError(e) {
   return /401|403|API_KEY_INVALID|API key not valid|PERMISSION_DENIED|UNAUTHENTICATED/i.test(s)
 }
 
-/** 트림된 내용물을 최종 규격으로. outH 가 있으면 그 비로 채운다(무대 비와 1:1). */
+/**
+ * 트림된 내용물을 최종 규격으로. outH 가 있으면 그 비로 채운다(무대 비와 1:1).
+ * 트림 직후의 종횡비도 같이 돌려준다 — `fill` 은 어긋난 비를 소리 없이 늘이므로,
+ * 형태가 곧 산출물인 이번 에셋에서는 **얼마나 늘였는지**가 보여야 한다.
+ */
 async function toFinal(pngBuf, asset) {
-  const trimmed = await sharp(pngBuf).trim({ threshold: 10 }).toBuffer()
+  const { data: trimmed, info: src } = await sharp(pngBuf).trim({ threshold: 10 }).toBuffer({ resolveWithObject: true })
   const resized = asset.outH
     ? sharp(trimmed).resize({ width: asset.outW, height: asset.outH, fit: 'fill' })
     : sharp(trimmed).resize({ width: asset.outW, fit: 'inside' })
-  return resized.webp({ quality: 90, alphaQuality: 100 }).toBuffer()
+  const buf = await resized.webp({ quality: 90, alphaQuality: 100 }).toBuffer()
+  return { buf, srcW: src.width, srcH: src.height }
 }
 
 async function buildAsset(asset, { regen, rekey }) {
@@ -244,12 +270,13 @@ async function buildAsset(asset, { regen, rekey }) {
       })
         .png()
         .toBuffer()
-      const finalBuf = await toFinal(png, asset)
+      const { buf: finalBuf, srcW, srcH } = await toFinal(png, asset)
       const { data, info } = await sharp(finalBuf).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
       const fringe = measureFringe(data, info.channels)
       const pass = fringe.ratio <= FRINGE_MAX && fringe.edgeRatio <= EDGE_FRINGE_MAX
       console.log(
-        `  · 키잉 P${p + 1} ${info.width}×${info.height} fringe=${(fringe.ratio * 100).toFixed(3)}% edge=${(fringe.edgeRatio * 100).toFixed(2)}% ${pass ? 'PASS' : 'retry'}`
+        `  · 키잉 P${p + 1} ${info.width}×${info.height} 원본 ${srcW}×${srcH}(${(srcW / srcH).toFixed(2)}:1) ` +
+          `fringe=${(fringe.ratio * 100).toFixed(3)}% edge=${(fringe.edgeRatio * 100).toFixed(2)}% ${pass ? 'PASS' : 'retry'}`
       )
       const candidate = { buf: finalBuf, fringe, profile: p + 1, info }
       if (!best || fringe.ratio < best.fringe.ratio) best = candidate
@@ -277,8 +304,13 @@ async function buildAsset(asset, { regen, rekey }) {
 //   윗줄 ①~⑤ 오방색 깃발 5기 나란히(펼친 상태)
 //   아랫줄 ⑥ 말아둔 기(런타임 CSS 도형 재현) ⑦ 펼침 45% 시뮬(위끝 고정 scaleY)
 const DARK = { r: 0x16, g: 0x14, b: 0x0f, alpha: 1 }
-/** 무대 실측(ObangkiSheet 깃발 천 46×92) 의 3배 — 검수는 육안 판정이라 확대해 본다 */
-const CELL = { w: 138, h: 276 }
+/** 무대 실측(ObangkiSheet 천 상자 52×52) 의 3배 — 검수는 육안 판정이라 확대해 본다 */
+const SPRITE = 156
+/** 자리 하나. 스프라이트 아래로 런타임 깃대(.obangki-slot 의 3px 선)가 바닥까지 이어진다. */
+const CELL = { w: 180, h: 250 }
+/** 깃대가 서는 x — 스프라이트의 **왼쪽 변**이 곧 깃대다(런타임도 같은 규약). */
+const POLE_X = 16
+const POLE_W = 6
 const PAD = 26
 const GAP = 18
 
@@ -309,18 +341,42 @@ function verticalGradient(w, h, stops) {
   return sharp(data, { raw: { width: w, height: h, channels: 4 } })
 }
 
+/** 런타임 깃대(3px, #C9A46A→#6B4A22) — 자리 바닥까지 이어지는 세로선. */
+function poleStrip(top) {
+  return {
+    input: verticalGradient(POLE_W, CELL.h - top, [
+      { at: 0, c: [0xc9, 0xa4, 0x6a] },
+      { at: 1, c: [0x6b, 0x4a, 0x22] },
+    ]),
+    top,
+  }
+}
+
+/** 자리 한 칸 = 어두운 바탕 + 깃대 + 얹을 것들. */
+async function cellWith(poleTop, poleX, layers) {
+  const strip = poleStrip(poleTop)
+  return sharp({ create: { width: CELL.w, height: CELL.h, channels: 4, background: DARK } })
+    .composite([{ input: await strip.input.png().toBuffer(), left: poleX, top: strip.top }, ...layers])
+    .png()
+    .toBuffer()
+}
+
 async function makeCheckSheet() {
   const present = ASSETS.filter((a) => existsSync(path.join(OUT_DIR, a.file)))
   if (present.length === 0) return null
 
+  // ①~⑤ 펼친 기 — 스프라이트의 왼쪽 변(깃대)을 런타임 깃대선 위에 얹는다.
+  //     둘이 어긋나면 여기서 깃대가 두 줄로 보인다(그게 이 칸의 검사 항목이다).
   const cells = []
   for (const a of present) {
-    cells.push(await sharp(path.join(OUT_DIR, a.file)).resize(CELL.w, CELL.h, { fit: 'fill' }).png().toBuffer())
+    const flag = await sharp(path.join(OUT_DIR, a.file)).resize(SPRITE, SPRITE, { fit: 'fill' }).png().toBuffer()
+    cells.push(await cellWith(14, POLE_X, [{ input: flag, left: POLE_X - 2, top: 14 }]))
   }
 
-  // ⑥ 말아둔 기 — .obangki-cloth 안의 캡슐(#D8C9A6 → #5C4B2E) + 붉은 매듭 띠
-  const rollW = Math.round(CELL.w * 0.42)
-  const rollH = Math.round(CELL.h * 0.38)
+  // ⑥ 말아둔 기 — .obangki-cloth 안의 캡슐(#D8C9A6 → #5C4B2E) + 붉은 매듭 띠.
+  //    천이 깃대를 축으로 감겨 있으므로 캡슐은 깃대 위에 올라앉는다.
+  const rollW = Math.round(SPRITE * 0.42)
+  const rollH = Math.round(SPRITE * 0.72)
   const bandH = Math.max(3, Math.round(rollH * 0.09))
   const roll = await verticalGradient(rollW, rollH, [
     { at: 0, c: [0xd8, 0xc9, 0xa6] },
@@ -341,22 +397,18 @@ async function makeCheckSheet() {
     ])
     .png()
     .toBuffer()
-  const rollCell = await sharp({ create: { width: CELL.w, height: CELL.h, channels: 4, background: DARK } })
-    .composite([{ input: roll, left: Math.round((CELL.w - rollW) / 2), top: Math.round(CELL.h * 0.12) }])
-    .png()
-    .toBuffer()
+  const rollPoleX = Math.round(CELL.w / 2)
+  const rollCell = await cellWith(14, rollPoleX, [{ input: roll, left: rollPoleX - Math.round(rollW / 2), top: 14 }])
 
-  // ⑦ 펼침 45% — 위끝을 고정한 scaleY(런타임 .obangki-unfurl 의 transform-origin: 50% 0)
+  // ⑦ 펼침 45% — 깃대를 고정한 scaleX(런타임 .obangki-unfurl 의 transform-origin: 0% 50%).
+  //    실물이 깃대를 축으로 말리므로 펼침도 아래가 아니라 **옆으로** 풀린다.
   const UNFURL = 0.45
-  const midH = Math.max(1, Math.round(CELL.h * UNFURL))
-  const midFlag = await sharp(path.join(OUT_DIR, present[0].file))
-    .resize(CELL.w, midH, { fit: 'fill' })
-    .png()
-    .toBuffer()
-  const midCell = await sharp({ create: { width: CELL.w, height: CELL.h, channels: 4, background: DARK } })
-    .composite([{ input: midFlag, left: 0, top: 0 }])
-    .png()
-    .toBuffer()
+  const midW = Math.max(1, Math.round(SPRITE * UNFURL))
+  const midH = Math.round(SPRITE * 0.95)
+  const midFlag = await sharp(path.join(OUT_DIR, present[0].file)).resize(midW, midH, { fit: 'fill' }).png().toBuffer()
+  const midCell = await cellWith(14, POLE_X, [
+    { input: midFlag, left: POLE_X - 2, top: 14 + Math.round((SPRITE - midH) / 2) },
+  ])
 
   const row1 = cells.length
   const row2 = 2
