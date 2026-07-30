@@ -11,7 +11,7 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Lock } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Lock, Flag, Flame } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { bondProgress, deityTurnFrames, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
@@ -67,7 +67,8 @@ import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
 import { AekmakStrip } from './AekmakSheet'
-import { ObangkiStrip } from './ObangkiSheet'
+import { WindowPlaques } from './WindowPlaques'
+import { hasPlaqueWall } from '@/lib/domain/shrine/plaque'
 import { FamilyHall } from './FamilyHall'
 import { HALL_BAND } from '@/lib/domain/shrine/family-hall-layout'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
@@ -1141,6 +1142,13 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
         style={{ background: 'linear-gradient(180deg,transparent,rgba(0,0,0,0.32))' }}
       />
       <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
+
+      {/* 창방 팻말 — 창 위에 걸린 의식 전용 페이지 진입점(CEO 지시 2026-07-30).
+          좌표를 아는 벽(반가 와이드 무라)에서만, 그리고 소유자에게만 건다 —
+          방문자는 남의 신당에서 의식을 치를 수 없고, 다른 테마에는 그 창이 아예 없다.
+          꾸미기 중에는 내린다(신물 드래그와 탭 대상이 겹치면 배치가 페이지 이동으로 새어 나간다).
+          z-2 라 신위(z-3)·신물(z 10~29) 뒤다 — 벽에 걸린 널이니 앞에 선 것에 가려지는 것이 맞다. */}
+      {isOwner && !editing && hasPlaqueWall(daecheongStage?.wallpaperUrl) && <WindowPlaques />}
       {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
       <div
         className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
@@ -1572,13 +1580,49 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null, ae
         </div>
       )}
 
-      {/* 의식(儀式) — 신당 하단. 액막이는 무료·일 3회라 게이팅 없이 소유자에게 항상 열려 있다.
-          촛불 수를 넘겨 불씨 밝기를 잇는다(방의 lit 시스템과 의식이 같은 불을 쓴다).
-          오방기는 무료 3회 뒤 복채 — 잔여 판정은 서버가 내려준 현황이 유일한 근거다. */}
-      {isOwner && !editing && (aekmak || obangki) && (
+      {/* 의식(儀式) — 신당 하단.
+          액막이는 **여기 남는다**: 촛불에서 불을 받아 태우는 의식이라 불이 없는 곳으로 나가면
+          행위 자체가 성립하지 않는다(촛불 수를 넘겨 불씨 밝기를 잇는다 — 방의 lit 시스템과 같은 불).
+          오방기·백일기도는 전용 페이지로 나갔다(CEO 지시 2026-07-30) — 여기 남는 것은 그 문이다.
+          창방 팻말과 같은 주소를 가리키되, 팻말이 없는 테마·좁은 화면에서도 문은 늘 여기 있다. */}
+      {isOwner && !editing && (
         <div className="mt-3 space-y-1.5 px-1">
           {aekmak && <AekmakStrip status={aekmak} litCandles={litCount} play={play} />}
-          {obangki && <ObangkiStrip status={obangki} play={play} />}
+          <div className="flex gap-1.5">
+            <Link
+              href="/protected/shrine/obangki"
+              className="flex flex-1 items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
+            >
+              <span
+                className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full"
+                style={{ background: 'rgba(62,95,134,0.22)', boxShadow: '0 0 9px rgba(143,180,218,0.28)' }}
+              >
+                <Flag className="h-3 w-3" style={{ color: '#9FBEDD' }} />
+              </span>
+              <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
+                오방기<span className="text-gold-500/60"> 旗</span>
+              </span>
+              {obangki && (
+                <span className="ml-auto whitespace-nowrap font-serif text-[9.5px] tabular-nums text-ink-primary/45">
+                  오늘 {Math.max(0, obangki.freeLimit - obangki.todayCount)}/{obangki.freeLimit}
+                </span>
+              )}
+            </Link>
+            <Link
+              href="/protected/shrine/baekil"
+              className="flex flex-1 items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
+            >
+              <span
+                className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full"
+                style={{ background: 'rgba(201,168,76,0.16)', boxShadow: '0 0 9px rgba(201,168,76,0.22)' }}
+              >
+                <Flame className="h-3 w-3 text-gold-300" />
+              </span>
+              <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
+                백일기도<span className="text-gold-500/60"> 禱</span>
+              </span>
+            </Link>
+          </div>
         </div>
       )}
 

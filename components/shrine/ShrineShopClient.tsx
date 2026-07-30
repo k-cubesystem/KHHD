@@ -6,6 +6,7 @@ import { Loader2, Check } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { purchaseToInventory, type ShopData } from '@/app/actions/shrine/inventory'
+import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 import { devotionLevelForItem } from '@/lib/domain/shrine/devotion'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
@@ -59,6 +60,13 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
           const rarity = RARITY[item.rarity] ?? RARITY.common
           const have = owned[item.id] ?? 0
           const free = item.priceBokchae === 0
+          /**
+           * 완주 보상 전용 품목 — 팔지 않는다(purchaseToInventory 가 REWARD_ONLY 로 거절한다).
+           * 카탈로그 조회가 전부 `is_active=true` 필터라 목록에서 숨길 수는 없다(숨기면 이미 배치한
+           * 사람의 신당 렌더가 깨진다). 그래서 여기서 값 대신 얻는 방법을 적어 준다 —
+           * 살 수 없는데 가격표만 붙어 있으면 그게 더 나쁜 화면이다.
+           */
+          const rewardOnly = item.name === BAEKIL_ITEM_NAME
           const canAfford = free || item.priceBokchae <= balance
           const loading = loadingId === item.id
           const devotionLvl = have === 0 ? devotionLevelForItem(item.name) : null
@@ -128,17 +136,21 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
 
               <button
                 onClick={() => buy(item.id, item.name, item.priceBokchae)}
-                disabled={loading || !canAfford}
+                disabled={loading || rewardOnly || !canAfford}
                 className={`w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-40 ${
-                  free
-                    ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                    : canAfford
-                      ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
-                      : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
+                  rewardOnly
+                    ? 'bg-white/[0.04] border border-gold-500/20 text-gold-500/70'
+                    : free
+                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                      : canAfford
+                        ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
+                        : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
                 }`}
               >
                 {loading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                ) : rewardOnly ? (
+                  '🕯 백일기도 완주 보상'
                 ) : free ? (
                   <span className="flex items-center justify-center gap-1">
                     <Check className="w-3 h-3" /> 무료로 받기

@@ -24,6 +24,7 @@ import {
   Bell,
   Store,
   Globe,
+  Flag,
 } from 'lucide-react'
 import { LocaleSwitcher } from '@/components/shared/locale-switcher'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
@@ -377,6 +378,30 @@ export default async function MyPage() {
                 >
                   {label}
                 </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* 신당 의식 — 전용 페이지 직행(CEO 지시 2026-07-30). 신당을 거치지 않고 바로 든다.
+            위 3열 격자에 끼우면 마지막 줄이 어긋나므로 의식끼리 한 줄로 묶었다. */}
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          {[
+            { href: '/protected/shrine/obangki', icon: Flag, label: '오방기 점괘', sub: '갈림길을 깃발에 맡기기' },
+            { href: '/protected/shrine/baekil', icon: Flame, label: '백일기도', sub: '백일 동안 하루 한 번' },
+          ].map(({ href, icon: Icon, label, sub }) => (
+            <Link key={href} href={href} className="group">
+              <div className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-surface/30 p-3 transition-all duration-300 hover:border-primary/50 hover:bg-surface/50">
+                <Icon
+                  className="h-5 w-5 flex-shrink-0 text-gold-400/80 transition-colors group-hover:text-gold-300"
+                  strokeWidth={1}
+                />
+                <div className="min-w-0">
+                  <span className="block font-serif text-[12.5px] leading-tight text-ink-light group-hover:text-primary">
+                    {label}
+                  </span>
+                  <span className="block text-[10px] leading-tight text-ink-light/40">{sub}</span>
+                </div>
               </div>
             </Link>
           ))}

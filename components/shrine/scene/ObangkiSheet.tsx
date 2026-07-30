@@ -5,6 +5,11 @@
  *
  * 흐름: 질문유형·선택지 입력 → 칠성방울 + 5기 셔플 → 한 기를 위로 쓸어 뽑기 → 펼침(색 공개) → 한마디.
  *
+ * 2026-07-30: 신당 룸 안의 스트립+모달에서 **전용 페이지**(/protected/shrine/obangki)로 옮겼다.
+ * 의식이 커질 것을 보고 자리를 먼저 뗀 것이라, 국면·연출·과금 규율은 한 줄도 바뀌지 않았다 —
+ * 사라진 것은 여는 트리거(스트립)와 덮개(모달 오버레이)뿐이고 그 자리를 페이지가 대신한다.
+ * 액막이는 촛불에서 불을 받는 의식이라 룸에 그대로 둔다(불이 없는 곳에서 태울 수 없다).
+ *
  * 이 컴포넌트의 네 가지 규율:
  *  1) **질문·선택지는 이 파일 밖으로 나가지 않는다.** 서버 액션에 넘기는 것은 색·질문유형 둘뿐이고,
  *     어느 깃발 뒤에 어느 선택지가 있는지는 서버가 준 시드로 **여기서** 계산한다. state 에만 살다 사라진다.
@@ -18,7 +23,7 @@
 
 import { useCallback, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import Link from 'next/link'
-import { Flag, X, Share2, Loader2, Coins } from 'lucide-react'
+import { X, Share2, Loader2, Coins, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   OBANGKI_COLOR_INFO,
@@ -67,15 +72,17 @@ interface DrawOutcome {
   error?: string
 }
 
+/** 신당으로 돌아가는 문 — 실패 화면·괘 화면이 같은 문을 쓴다 */
+const SHRINE_HREF = '/protected/shrine'
+
 interface Props {
-  /** 서버가 내려준 오늘 현황. null 이면 스트립을 그리지 않는다(비로그인·조회 실패). */
+  /** 서버가 내려준 오늘 현황. 페이지가 null 을 걸러 준다(비로그인·조회 실패). */
   status: ObangkiStatus
-  /** 신당 사운드 재생. 룸의 인스턴스를 빌려 쓴다(AudioContext 를 새로 만들지 않기 위함). */
+  /** 신당 사운드 재생. 페이지가 제 인스턴스를 만들어 넘긴다. */
   play: (key: SoundKey) => void
 }
 
-export function ObangkiStrip({ status, play }: Props) {
-  const [open, setOpen] = useState(false)
+export function ObangkiRitual({ status, play }: Props) {
   const [phase, setPhase] = useState<Phase>('compose')
   const [qtype, setQtype] = useState<ObangkiQType>('choice')
   const [options, setOptions] = useState<string[]>(['', ''])
@@ -108,17 +115,6 @@ export function ObangkiStrip({ status, play }: Props) {
   const failed = outcome?.success === false
   const pickedColor: ObangkiColor | null = picked === null ? null : flags[picked]
   const pickedOption = picked === null || slots.length <= picked ? null : (filled[slots[picked]] ?? null)
-
-  /** 시트를 닫을 때 질문·선택지를 확실히 지운다 — 다음에 열었을 때 남아 있으면 그 자체가 사고다 */
-  const close = useCallback(() => {
-    setOpen(false)
-    setPhase('compose')
-    setOptions(['', ''])
-    setPicked(null)
-    setPullDone(false)
-    setOutcome(null)
-    dragState.current = null
-  }, [])
 
   const restart = useCallback(() => {
     setPhase('compose')
@@ -208,7 +204,7 @@ export function ObangkiStrip({ status, play }: Props) {
     setSharing(true)
     // 질문도 선택지도 문장에 담지 않는다 — 공유물에 남는 것은 깃발 색과 괘뿐이다
     const shareText = `신당에서 오방기를 뽑았습니다 — ${verdictLine(pickedColor, null)}.`
-    const url = typeof window === 'undefined' ? '' : `${window.location.origin}/protected/shrine`
+    const url = typeof window === 'undefined' ? '' : `${window.location.origin}/protected/shrine/obangki`
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({ title: '오방기 점괘', text: shareText, url })
@@ -228,166 +224,125 @@ export function ObangkiStrip({ status, play }: Props) {
   }, [pickedColor])
 
   return (
-    <>
-      {/* 스트립 — 액막이 스트립과 같은 톤. 신당 하단 의식 진입점 */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="오방기 점괘 열기"
-        className="flex w-full items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
-      >
-        <span
-          className="grid h-5 w-5 place-items-center rounded-full"
-          style={{ background: 'rgba(62,95,134,0.22)', boxShadow: '0 0 9px rgba(143,180,218,0.28)' }}
+    <div
+      className="ritual-sheet hanji-card relative w-full rounded-2xl border border-gold-500/25 p-5 pb-7"
+      style={{ background: '#16140F' }}
+    >
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <p className="font-serif text-[10px] tracking-[0.3em] text-gold-500/60">五 方 旗</p>
+          <h1 className="font-serif text-lg font-bold text-ink-primary">
+            오방기 점괘
+            <span className="ml-2 text-[11px] font-normal text-ink-primary/45">
+              · 오늘 무료 {remainingFree}/{status.freeLimit}회
+            </span>
+          </h1>
+        </div>
+        <Link
+          href={SHRINE_HREF}
+          aria-label="신당으로 돌아가기"
+          className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-surface text-ink-primary/60"
         >
-          <Flag className="h-3 w-3" style={{ color: '#9FBEDD' }} />
-        </span>
-        <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
-          오방기<span className="text-gold-500/60"> 旗</span>
-        </span>
-        <span className="flex-1 truncate text-left font-sans text-[10px] text-ink-primary/45">
-          {paidDraw ? '한 번 더 여쭈려면 복채 1만냥' : '고민되는 두 갈래를 깃발에 맡깁니다'}
-        </span>
-        <span className="whitespace-nowrap font-serif text-[9.5px] tabular-nums text-ink-primary/45">
-          오늘 {remainingFree}/{status.freeLimit}
-        </span>
-      </button>
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+      </div>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-toast flex items-end justify-center"
-          onClick={close}
-          role="dialog"
-          aria-modal="true"
-          aria-label="오방기 점괘"
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
-          <div
-            className="ritual-sheet hanji-card relative max-h-[88vh] w-full max-w-[480px] overflow-y-auto rounded-t-2xl border-x border-t border-gold-500/25 p-5 pb-8"
-            onClick={(e) => e.stopPropagation()}
-            style={{ background: '#16140F' }}
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <div>
-                <p className="font-serif text-[10px] tracking-[0.3em] text-gold-500/60">五 方 旗</p>
-                <h2 className="font-serif text-lg font-bold text-ink-primary">
-                  오방기 점괘
-                  <span className="ml-2 text-[11px] font-normal text-ink-primary/45">
-                    · 오늘 무료 {remainingFree}/{status.freeLimit}회
-                  </span>
-                </h2>
+      {phase === 'compose' ? (
+        <ComposeStep
+          qtype={qtype}
+          options={options}
+          paidDraw={paidDraw}
+          cost={status.cost}
+          onQtype={setQtype}
+          onOptions={setOptions}
+          onStart={startShuffle}
+        />
+      ) : (
+        <div className="flex flex-col items-center">
+          <FlagStage
+            effectsRef={effectsRef}
+            flags={flags}
+            phase={phase}
+            picked={picked}
+            revealed={revealed}
+            onShuffleEnd={() => setPhase('pick')}
+            onPullEnd={() => setPullDone(true)}
+            onFlagDown={onFlagDown}
+            onFlagMove={onFlagMove}
+            onFlagUp={onFlagUp}
+            onFlagTap={(i) => {
+              // 드래그 뒤에 따라온 click 은 삼킨다 — 빗나간 드래그가 뽑기로 둔갑하지 않게
+              if (suppressClick.current) {
+                suppressClick.current = false
+                return
+              }
+              pull(i)
+            }}
+          />
+
+          {phase === 'shuffle' && (
+            <p className="mt-4 font-serif text-[12px] text-ink-primary/55">방울이 울리고 기가 섞입니다…</p>
+          )}
+          {phase === 'pick' && (
+            <p className="mt-4 font-serif text-[12px] text-gold-200">마음 가는 기 하나를 위로 쓸어 올리세요</p>
+          )}
+          {phase === 'draw' && !revealed && !failed && (
+            <p className="mt-4 font-serif text-[12px] text-ink-primary/55">기를 펴는 중입니다…</p>
+          )}
+
+          {revealed && pickedColor && (
+            <VerdictCard
+              color={pickedColor}
+              option={pickedOption}
+              line={obangkiLine(pickedColor, qtype, seed)}
+              remainingFree={remainingFree}
+              cost={status.cost}
+              sharing={sharing}
+              onShare={() => void onShare()}
+              onAgain={restart}
+            />
+          )}
+
+          {failed && (
+            <div className="mt-5 w-full space-y-3">
+              <p className="text-center font-serif text-[13px] text-ink-primary/70">
+                {DRAW_ERROR_MSG[outcome?.error ?? ''] ?? '점괘를 여쭙지 못했습니다'}
+              </p>
+              <div className="flex gap-2">
+                {outcome?.error === 'INSUFFICIENT_BOKCHAE' ? (
+                  <Link
+                    href="/protected/store?tab=bokchae"
+                    className="flex-1 rounded-xl border border-gold-500/35 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
+                  >
+                    복채 채우기
+                  </Link>
+                ) : (
+                  // 무료 소진(NEEDS_PAYMENT)은 여기서 바로 결제하지 않고 작성 화면으로 돌린다 —
+                  // 값이 붙은 버튼을 다시 눌러야 동의로 친다(액수를 안 보여주고 물리지 않는다)
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="flex-1 rounded-xl border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
+                  >
+                    다시 여쭙기
+                  </button>
+                )}
+                <Link
+                  href={SHRINE_HREF}
+                  className="flex-1 rounded-xl border border-white/10 bg-surface py-2.5 text-center font-serif text-[12px] font-bold text-ink-primary/60"
+                >
+                  신당으로
+                </Link>
               </div>
-              <button
-                type="button"
-                onClick={close}
-                aria-label="닫기"
-                className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-surface text-ink-primary/60"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
-
-            {phase === 'compose' ? (
-              <ComposeStep
-                qtype={qtype}
-                options={options}
-                paidDraw={paidDraw}
-                cost={status.cost}
-                onQtype={setQtype}
-                onOptions={setOptions}
-                onStart={startShuffle}
-              />
-            ) : (
-              <div className="flex flex-col items-center">
-                <FlagStage
-                  effectsRef={effectsRef}
-                  flags={flags}
-                  phase={phase}
-                  picked={picked}
-                  revealed={revealed}
-                  onShuffleEnd={() => setPhase('pick')}
-                  onPullEnd={() => setPullDone(true)}
-                  onFlagDown={onFlagDown}
-                  onFlagMove={onFlagMove}
-                  onFlagUp={onFlagUp}
-                  onFlagTap={(i) => {
-                    // 드래그 뒤에 따라온 click 은 삼킨다 — 빗나간 드래그가 뽑기로 둔갑하지 않게
-                    if (suppressClick.current) {
-                      suppressClick.current = false
-                      return
-                    }
-                    pull(i)
-                  }}
-                />
-
-                {phase === 'shuffle' && (
-                  <p className="mt-4 font-serif text-[12px] text-ink-primary/55">방울이 울리고 기가 섞입니다…</p>
-                )}
-                {phase === 'pick' && (
-                  <p className="mt-4 font-serif text-[12px] text-gold-200">마음 가는 기 하나를 위로 쓸어 올리세요</p>
-                )}
-                {phase === 'draw' && !revealed && !failed && (
-                  <p className="mt-4 font-serif text-[12px] text-ink-primary/55">기를 펴는 중입니다…</p>
-                )}
-
-                {revealed && pickedColor && (
-                  <VerdictCard
-                    color={pickedColor}
-                    option={pickedOption}
-                    line={obangkiLine(pickedColor, qtype, seed)}
-                    remainingFree={remainingFree}
-                    cost={status.cost}
-                    sharing={sharing}
-                    onShare={() => void onShare()}
-                    onAgain={restart}
-                    onClose={close}
-                  />
-                )}
-
-                {failed && (
-                  <div className="mt-5 w-full space-y-3">
-                    <p className="text-center font-serif text-[13px] text-ink-primary/70">
-                      {DRAW_ERROR_MSG[outcome?.error ?? ''] ?? '점괘를 여쭙지 못했습니다'}
-                    </p>
-                    <div className="flex gap-2">
-                      {outcome?.error === 'INSUFFICIENT_BOKCHAE' ? (
-                        <Link
-                          href="/protected/store?tab=bokchae"
-                          className="flex-1 rounded-xl border border-gold-500/35 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
-                        >
-                          복채 채우기
-                        </Link>
-                      ) : (
-                        // 무료 소진(NEEDS_PAYMENT)은 여기서 바로 결제하지 않고 작성 화면으로 돌린다 —
-                        // 값이 붙은 버튼을 다시 눌러야 동의로 친다(액수를 안 보여주고 물리지 않는다)
-                        <button
-                          type="button"
-                          onClick={restart}
-                          className="flex-1 rounded-xl border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
-                        >
-                          다시 여쭙기
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={close}
-                        className="flex-1 rounded-xl border border-white/10 bg-surface py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
-                      >
-                        신당으로
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <p className="mt-5 text-center font-sans text-[9.5px] leading-relaxed text-ink-primary/30">
-              {OBANGKI_DISCLAIMER}
-            </p>
-          </div>
+          )}
         </div>
       )}
-    </>
+
+      <p className="mt-5 text-center font-sans text-[9.5px] leading-relaxed text-ink-primary/30">
+        {OBANGKI_DISCLAIMER}
+      </p>
+    </div>
   )
 }
 
@@ -669,7 +624,6 @@ function VerdictCard({
   sharing,
   onShare,
   onAgain,
-  onClose,
 }: {
   color: ObangkiColor
   option: string | null
@@ -679,7 +633,6 @@ function VerdictCard({
   sharing: boolean
   onShare: () => void
   onAgain: () => void
-  onClose: () => void
 }) {
   const info = OBANGKI_COLOR_INFO[color]
   return (
@@ -723,13 +676,12 @@ function VerdictCard({
         >
           한 번 더
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-xl border border-white/10 bg-surface px-3 py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
+        <Link
+          href={SHRINE_HREF}
+          className="rounded-xl border border-white/10 bg-surface px-3 py-2.5 text-center font-serif text-[12px] font-bold text-ink-primary/60"
         >
-          닫기
-        </button>
+          신당
+        </Link>
       </div>
     </div>
   )

@@ -15,6 +15,7 @@ import {
   type CatalogItem,
   type SizeGrade,
 } from '@/lib/domain/shrine/types'
+import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 
 interface CatalogRow {
   id: string
@@ -102,6 +103,19 @@ export async function purchaseToInventory(
     .eq('id', catalogItemId)
     .maybeSingle()
   if (!item || !item.is_active) return { success: false, error: 'ITEM_NOT_FOUND' }
+
+  /**
+   * 완주 보상 전용 품목은 팔지 않는다.
+   *
+   * 「백일 소원끈」은 설명 자체가 "백일기도를 마친 이가 처마에 매다는" 이라, 살 수 있으면
+   * 그 설명이 거짓말이 된다. 트로피(목패·놋패·금패)는 서약 행 그 자체라 애초에 살 수 없는데
+   * 걸이 아이템만 구멍이 나 있었다.
+   *
+   * ⚠️ 가격을 0 으로 두거나 is_active=false 로 숨기는 방법은 둘 다 안 된다 —
+   *    0 이면 여기서 **무료로 지급**되고, 비활성이면 카탈로그 조회가 전부 `is_active=true` 필터라
+   *    이미 배치한 사람의 **신당 렌더가 깨진다**. 그래서 활성·유가로 두고 구매만 막는다.
+   */
+  if (item.name === BAEKIL_ITEM_NAME) return { success: false, error: 'REWARD_ONLY' }
 
   const price = item.price_bokchae
   let newBalance: number | undefined

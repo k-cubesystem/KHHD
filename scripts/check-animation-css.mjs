@@ -91,6 +91,10 @@ const REQUIRED_CLASSES = [
   '.obangki-unfurl',
   '.obangki-burst',
   '.obangki-bubble',
+  // 창방 팻말 (의식 전용 페이지 진입점) — 벽 무라 cover 배율 재현이 여기 걸려 있다
+  '.shrine-plaque-band',
+  '.shrine-plaque',
+  '.shrine-plaque-glow',
   // 신당 밖에서 같은 이유로 죽어 있던 것들 (app/globals.css 이관)
   '.review-marquee-track',
   '.animate-spin-slow',
@@ -159,6 +163,8 @@ const REQUIRED_KEYFRAMES = [
   'obangkiUnfurl',
   'obangkiBurst',
   'obangkiBubbleIn',
+  // 창방 팻말
+  'shrinePlaqueGlow',
   'review-marquee-scroll',
   'spin-slow',
   'spin-reverse-slow',

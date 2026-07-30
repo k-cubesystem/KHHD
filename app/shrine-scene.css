@@ -1380,3 +1380,61 @@
     animation: none;
   }
 }
+
+/* ── 창방 팻말(懸板) — 벽 무라에 고정된 의식 진입점 ───────────────────────────
+   좌표 규약과 그 이유는 lib/domain/shrine/plaque.ts 주석에 있다. 요지만 옮기면:
+   벽 무라는 `<img class="inset-x-0 top-0 h-[62%] w-full object-cover">` 라 방 종횡비마다
+   확대·크롭 배율이 달라진다. 팻말을 화면 % 로 못박으면 기기가 바뀔 때 벽만 미끄러져
+   창을 벗어난다(실측 약 110px). 그래서 팻말도 **같은 cover 배율**을 타게 만든다.
+
+   --plq-s = max(띠폭/4096, 띠높이/640) = object-fit:cover 의 배율 그 자체다.
+   (0.024414cqw = 100cqw/4096, 0.15625cqh = 100cqh/640 — cqw·cqh 는 띠 폭·높이의 1%)
+   JS 측정도 ResizeObserver 도 없다. 리플로 0. */
+.shrine-plaque-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 62%;
+  z-index: 2;
+  /* 널만 손에 걸린다 — 띠 전체가 탭을 먹으면 벽 어디를 눌러도 페이지가 열린다 */
+  pointer-events: none;
+  /* 컨테이너 질의 단위가 없으면 배율을 구할 길이 없다 → 아예 걸지 않는다.
+     같은 문(방 하단 의식 버튼·프로필 버튼)이 따로 있으므로 기능이 막히지는 않는다. */
+  display: none;
+}
+@supports (height: 1cqh) {
+  .shrine-plaque-band {
+    display: block;
+    container-type: size;
+  }
+}
+.shrine-plaque {
+  --plq-s: max(0.024414cqw, 0.15625cqh);
+  position: absolute;
+  left: calc(50% + (var(--plq-dx) * var(--plq-s)));
+  /* 131(널 중심) − 320(무라 중심) = −189 */
+  top: calc(50% - (189 * var(--plq-s)));
+  width: calc(175 * var(--plq-s));
+  height: calc(70 * var(--plq-s));
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+/* 촛불이 널을 스치는 숨 — "눌러도 되는 것"이라는 유일한 신호라 아주 얕게만 준다 */
+.shrine-plaque-glow {
+  animation: shrinePlaqueGlow 5.4s ease-in-out infinite;
+}
+@keyframes shrinePlaqueGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5)) brightness(1);
+  }
+  50% {
+    filter: drop-shadow(0 3px 9px rgba(0, 0, 0, 0.5)) brightness(1.13);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shrine-plaque-glow {
+    animation: none;
+  }
+}
