@@ -132,6 +132,10 @@ const VIEWS = [
       'facing the viewer' +
       "'" +
       's right, the collar line and the garment center sitting off to the near shoulder instead of down the middle, ' +
+      // ⚠️ **머리는 몸과 같은 각도로 돈다.** 이 문장이 없으면 모델이 얼굴을 카메라에 유지해
+      //    몸만 돌아간 그림이 나오고, 연속 재생하면 "머리와 몸이 따로 돈다"로 읽힌다(5차 검수 지적).
+      //    시선을 카메라 밖으로 보내는 것이 핵심 — 얼굴을 보여주려는 모델의 기본 편향을 이긴다.
+      'the head turned by the same angle as the torso and the gaze going off to the side, not at the viewer, ' +
       'the nose breaking the line of the far cheek, the far ear hidden behind the head, ' +
       'the far shoulder receding behind the torso so the figure reads narrower than the front view, ' +
       'the sleeves and skirt hem trailing slightly behind the turn as if the figure just started rotating',

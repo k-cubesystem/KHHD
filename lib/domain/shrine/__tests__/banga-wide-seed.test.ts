@@ -330,8 +330,9 @@ describe('앵커 — 기존 3점 승계, y 만 새 상판 면으로', () => {
   })
 
   it('앵커 y 가 ZONES.altar.y 안이다 — 밖이면 드래그 클램프에 막혀 **영구 도달 불가**', () => {
-    // 참고: 이 상한(현재 54)이 곧 상판을 더 내릴 수 없는 이유다(시드 계약 4). 여유는 0.5%p 뿐이다.
-    // zones.ty 를 넓히는 것은 개선이므로 여유값 자체를 단정하지 않는다 — 범위 안에 있는지만 본다.
+    // 안2.5 에서 상한을 54→56 으로 넓혀 여유가 0.4 → 2.4%p 가 됐다(종전에는 상판을 조금만
+    // 더 내려도 앵커가 존 밖으로 나가 영구 도달 불가가 됐다). 여유값 자체는 단정하지 않는다 —
+    // 넓히는 것은 개선이므로 범위 안에 있는지만 본다.
     const [lo, hi] = ZONES.altar.y
     expect(ALTAR_ANCHOR_Y).toBeGreaterThanOrEqual(lo)
     expect(ALTAR_ANCHOR_Y).toBeLessThanOrEqual(hi)
@@ -481,5 +482,23 @@ describe('에셋 실재', () => {
     const w = 1 + buf.readUIntLE(vp8x + 12, 3)
     const h = 1 + buf.readUIntLE(vp8x + 15, 3)
     expect({ w, h }).toEqual(PLATFORM_PX)
+  })
+})
+
+describe('ZONES.altar — 제단 존 계약 (안2.5)', () => {
+  /** 상판 겉보기 상단(방 높이 %) — stage-banga-mural 검수 산출 y49.4~66.6 의 위쪽 */
+  const ALTAR_TOP_Y = 49.4
+
+  it('하한이 상판 상단 부근이다 — 더 낮으면 공물이 상 뒤 허공에 놓인다', () => {
+    // 라이브 실측(2026-07-30): 종전 하한 42 에서 altar 배치 14건 중 3건이 42~48 구간에 있었고
+    // 전부 상판에 가려 보이지 않았다. 하한을 다시 낮추는 변경은 그 결함을 되살린다.
+    const [lo] = ZONES.altar.y
+    expect(lo).toBeGreaterThanOrEqual(48)
+    expect(lo).toBeLessThanOrEqual(ALTAR_TOP_Y)
+  })
+
+  it('상한이 시드 상판 앵커보다 위다 — 여유가 0 이면 상판을 더 못 내린다', () => {
+    const [, hi] = ZONES.altar.y
+    expect(hi).toBeGreaterThan(ALTAR_ANCHOR_Y)
   })
 })

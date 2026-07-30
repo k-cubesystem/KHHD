@@ -239,7 +239,13 @@ export function nearestAnchor(
 }
 
 /** ZONES 파생 좌표 (구조물 없는 레거시 테마의 폴백 앵커용) */
-const ALTAR_ANCHOR_Y = round((ZONES.altar.y[0] + ZONES.altar.y[1]) / 2, 2) // 48
+/**
+ * ⚠️ 존 중점에서 **파생하지 않는다**(종전에는 (42+54)/2 = 48 이었다).
+ * 이 값은 구조물이 없는 **레거시 테마**의 폴백 앵커라 레거시 제단 그림의 상면(≈48)을 가리켜야 하는데,
+ * 안2.5 에서 제단 존을 [48,56] 으로 좁히면서 중점이 52 로 밀린다 — 파생을 두면 레거시 테마의
+ * 앵커가 이유 없이 4%p 내려간다. 존이 바뀐 이유(반가 2단 제단)와 레거시 제단은 무관하므로 고정한다.
+ */
+const ALTAR_ANCHOR_Y = 48
 const ALTAR_SPAN_X = ZONES.altar.x[1] - ZONES.altar.x[0]
 const WALL_ANCHOR_Y = round((ZONES.wall.y[0] + ZONES.wall.y[1]) / 2, 2) // 32.5
 const WALL_SPAN_X = ZONES.wall.x[1] - ZONES.wall.x[0]

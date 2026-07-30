@@ -258,9 +258,6 @@ const RENDER_SCALE = 0.445
 /** 한 화면(%) — lib/domain/shrine/world.ts 의 WORLD_VIEWPORT_PCT 와 같은 값. 방 폭은 아래 SEED_WORLD_WIDTH(320).
  *  둘의 비가 "한 번에 보이는 무라 폭"이고, 좌우 대칭은 **그 창 안에서** 재야 의미가 있다. */
 const WORLD_VIEWPORT_PCT = 100
-/** 좌우 대칭 합격선 — 미러 조립은 축을 품은 창에서 0.76~0.91 이 나왔다(벽·마루 실측).
- *  퀼팅이 이 값을 넘으면 구도가 되돌아간 것이다. */
-const SYMMETRY_MAX = 0.55
 /** 렌더 스케일에서 "육안 무해"로 이미 입증된 열 차이. 마루 무라 실측 5.5 — 3라운드 동안 민원 0건. */
 const HARMLESS_RENDER_DELTA = 6
 
@@ -563,26 +560,73 @@ function planQuilt(tile, targetW) {
   return null
 }
 
+/** 크로스페이드 겹침 폭(px). 넓을수록 이음매가 부드럽지만 그만큼 잔상(고스팅)이 길어진다. */
+const CROSSFADE_OVERLAP = 160
+
 /**
- * 종전 미러 교대 조립 [T|flop(T)|T|flop(T)] — 퀼팅 불가 타일의 폴백.
- * 경계에서 같은 픽셀 열이 공유되므로 이음새 불연속이 수학적으로 0 이다(파일 상단 §미러 타일링).
+ * 종전 미러 교대 조립 — **출력용이 아니라 기준선 측정용**이다.
+ *
+ * 대칭도에 절대 임계를 걸면 안 된다는 걸 5차에서 배웠다: 지표가 창 폭에 지나치게 민감하고
+ * (같은 벽 무라가 창 1280 에서 0.372, 창 819 에서 0.653), 타일 원본 자체가 이미 대칭이라
+ * (마루 0.652·벽 0.864) 어떤 조립도 0 에 못 간다. 그래서 묻는 것은 "충분히 비대칭인가"가
+ * 아니라 **"우리가 버린 미러 조립보다 나아졌는가"** 다. 같은 자로 재는 단조 기준이라
+ * 창 폭을 어떻게 잡든 방향이 뒤집히지 않는다.
  */
-async function composeMirror(tile, targetW) {
-  const rawIn = { raw: { width: tile.width, height: tile.height, channels: tile.channels } }
-  const normal = await sharp(tile.data, rawIn).png().toBuffer()
-  const flopped = await sharp(tile.data, rawIn).flop().png().toBuffer()
-  const repeats = Math.ceil(targetW / tile.width)
-  const layers = []
-  const seams = []
-  for (let i = 0; i < repeats; i += 1) {
-    layers.push({ input: i % 2 === 0 ? normal : flopped, left: i * tile.width, top: 0 })
-    if (i > 0) seams.push(i * tile.width)
+function mirrorBaselineLuma(tile, targetW) {
+  const { data, width: W, height: H, channels: ch } = tile
+  const col = new Float64Array(targetW)
+  for (let x = 0; x < targetW; x += 1) {
+    const i = Math.floor(x / W)
+    const u = x - i * W
+    const sx = i % 2 === 0 ? u : W - 1 - u // 홀수 복사본은 flop
+    let s = 0
+    for (let y = 0; y < H; y += 1) {
+      const p = (y * W + sx) * ch
+      s += 0.2126 * data[p] + 0.7152 * data[p + 1] + 0.0722 * data[p + 2]
+    }
+    col[x] = s / H
   }
-  const raw = await sharp({ create: { width: targetW, height: tile.height, channels: 3, background: DARK } })
-    .composite(layers)
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-  return { raw, W: targetW, seams, mirrored: true }
+  return col
+}
+
+/**
+ * **크로스페이드 조립** — 퀼팅 불가 타일(매끈해서 절단 후보 짝이 안 서는 경우)의 폴백.
+ *
+ * ⚠️ 종전 폴백은 미러 교대 [T|flop(T)|…] 였고, 그게 5차 검수 "세로줄 아직있음"의 정체였다.
+ *    마루는 인접 열 차이가 Δ4.17 뿐이라 수치 게이트는 "육안 무해"로 통과시켰지만,
+ *    **미러 축에서 나뭇결이 좌우로 접히는 구조적 대칭**은 Δ가 작아도 그대로 보인다
+ *    (대칭 상관 0.910 실측). 숫자가 아니라 구도가 문제라는 점은 벽과 똑같았다.
+ *
+ * 그래서 뒤집지 않고 **같은 방향으로 겹쳐 깔고 겹침 구간을 섞는다**. 겹침 안에서는 같은 타일의
+ * 서로 다른 위상이 섞이므로 경계가 사라지고, 뒤집지 않으니 대칭축도 생기지 않는다.
+ * 가중치는 smoothstep 이다 — 선형이면 겹침 양끝에서 기울기가 꺾여 그 자리가 다시 선으로 보인다.
+ */
+function composeCrossfade(tile, targetW) {
+  const { data, width: W, height: H, channels: ch } = tile
+  const ov = Math.max(8, Math.min(CROSSFADE_OVERLAP, Math.floor(W / 4)))
+  const stride = W - ov
+  const out = Buffer.alloc(targetW * H * ch)
+  const seams = []
+  for (let i = 1; i * stride < targetW; i += 1) seams.push(i * stride + Math.floor(ov / 2))
+
+  for (let x = 0; x < targetW; x += 1) {
+    const i = Math.floor(x / stride)
+    const u = x - i * stride
+    const blending = u < ov && i > 0
+    // 겹침 구간이면 직전 복사본의 같은 지점(u+stride)과 섞는다. u+stride < W 가 항상 성립한다.
+    const t = blending ? (u / ov) * (u / ov) * (3 - 2 * (u / ov)) : 1
+    for (let y = 0; y < H; y += 1) {
+      const dst = (y * targetW + x) * ch
+      const a = (y * W + Math.min(W - 1, u)) * ch
+      if (!blending) {
+        for (let c = 0; c < ch; c += 1) out[dst + c] = data[a + c]
+        continue
+      }
+      const b = (y * W + (u + stride)) * ch
+      for (let c = 0; c < ch; c += 1) out[dst + c] = Math.round(data[b + c] * (1 - t) + data[a + c] * t)
+    }
+  }
+  return { raw: { data: out, info: { width: targetW, height: H, channels: ch } }, W: targetW, seams, crossfaded: true }
 }
 
 /**
@@ -593,10 +637,9 @@ async function composeMirror(tile, targetW) {
  */
 async function composeMural(tile, plan, targetW) {
   const rawIn = { raw: { width: tile.width, height: tile.height, channels: tile.channels } }
-  // 퀼팅이 불가능한 타일(이음매 후보 열 부족)은 종전 미러 교대로 조립한다.
-  // 마루가 그렇다 — 평탄해서 후보를 고를 기준 자체가 안 서는데, 애초에 세로줄 민원도 없었다
-  // (실측 최대 Δ4.17 = 육안 무해). 문제 없는 곳까지 새 조립으로 바꿀 이유가 없다.
-  if (plan === null) return composeMirror(tile, targetW)
+  // 퀼팅이 불가능한 타일(매끈해서 절단 후보 짝이 안 서는 경우)은 크로스페이드로 조립한다.
+  // 마루가 그렇다. 종전 미러 폴백은 Δ가 작아 게이트를 통과했지만 대칭축이 그대로 보였다(5차 검수).
+  if (plan === null) return composeCrossfade(tile, targetW)
   const layers = []
   const seams = []
   let x = 0
@@ -648,7 +691,7 @@ async function buildMural(spec) {
   for (; repeats >= 3 && !chosen; repeats -= 1) {
     const targetW = tileW * repeats
     const plan = planFor(targetW)
-    const { raw, W, seams, mirrored } = await composeMural(rawTile, plan, targetW)
+    const { raw, W, seams, crossfaded } = await composeMural(rawTile, plan, targetW)
     const ch = raw.info.channels
     // ① 인코딩 **전** 이음매 검증 — 이음매 후보 열끼리 붙였으므로 2·SEAM_EPS 를 넘으면 조립 버그다.
     const preBoundary = boundaryDiffs(raw.data, W, tileH, ch, seams)
@@ -670,7 +713,10 @@ async function buildMural(spec) {
       // ③ 하드 에지 검증 — 무라 최종본의 열 휘도 프로파일(부록 C ① 과 같은 지표)
       const muralEdge = lumaProfile(decCol)
       // ④ 좌우 대칭 — 한 화면(방 폭 320% 중 100%)에 거울축이 들어오는지. 안2.4 의 핵심 지표.
-      const symmetry = mirrorSymmetry(decCol, W, Math.round(W * (WORLD_VIEWPORT_PCT / SEED_WORLD_WIDTH)))
+      const viewW = Math.round(W * (WORLD_VIEWPORT_PCT / SEED_WORLD_WIDTH))
+      const symmetry = mirrorSymmetry(decCol, W, viewW)
+      // 기준선: 같은 타일을 **종전 미러 방식**으로 깔았을 때의 대칭도. 이보다 낮아야 개선이다.
+      const symmetryBaseline = mirrorSymmetry(mirrorBaselineLuma(rawTile, W), W, viewW)
       chosen = {
         webp,
         quality,
@@ -686,7 +732,8 @@ async function buildMural(spec) {
         tileH,
         muralEdge,
         symmetry,
-        mirrored: mirrored === true,
+        symmetryBaseline,
+        crossfaded: crossfaded === true,
       }
       break
     }
@@ -747,10 +794,11 @@ async function buildMural(spec) {
     plainWebp,
     webpBuf: chosen.webp,
     symmetry: chosen.symmetry,
+    symmetryBaseline: chosen.symmetryBaseline,
     seams: chosen.seams,
-    mirrored: chosen.mirrored,
+    crossfaded: chosen.crossfaded,
     // 합격 조건 ① 이음매가 허용치 안(퀼팅=2·SEAM_EPS · 미러 폴백=항등이라 0) ② 인코딩 후도 내부 이웃 열 분포 안 ③ 밝기 산포 무악화
-    passMirror: chosen.mirrored ? worstPre === 0 : worstPre <= SEAM_EPS * 2,
+    passMirror: worstPre <= SEAM_EPS * 2,
     passEncoded: worstPost <= Math.max(chosen.interior.p95, chosen.interior.median * 2 + 0.5),
     passRipple: chosen.muralStd <= chosen.tileStd * 1.02 + 0.01,
     withinBudget: chosen.webp.length <= MURA_MAX_BYTES,
@@ -774,7 +822,7 @@ async function buildMural(spec) {
      * 미러 폴백 자산(마루)은 정의상 대칭이므로 이 게이트를 적용하지 않는다 — 수치는 보고하되
      * 세로줄 민원이 없던 곳(마루 Δ4.17 = 육안 무해)까지 새 조립을 강요하지 않는다.
      */
-    passSymmetry: chosen.mirrored || chosen.symmetry.worst <= SYMMETRY_MAX,
+    passSymmetry: chosen.symmetry.worst < chosen.symmetryBaseline.worst,
     // ⑤ 톤 — 열 휘도 **평균**은 ±EDGE_TONE_TOL 안. (표준편차는 절벽을 램프로 펴면 반드시 줄어든다:
     //    극단값 열이 중간값으로 이동하기 때문. 그게 곧 처방의 정의라 합격 조건에 넣지 않고 수치만 보고한다.)
     passTone:
@@ -1275,7 +1323,7 @@ for (const r of results) {
   const verdict = r.passMirror && r.passEncoded && r.passRipple && r.withinBudget && r.passSymmetry
   const segs = r.seams.length + 1
   console.log(
-    `  ${verdict ? '✔' : '⚠️'} ${r.key} ${r.width}×${r.height} ${(r.bytes / 1024).toFixed(1)}KB q${r.quality} · ${r.mirrored ? '미러 폴백' : `퀼팅 조각 ${segs}개`}\n` +
+    `  ${verdict ? '✔' : '⚠️'} ${r.key} ${r.width}×${r.height} ${(r.bytes / 1024).toFixed(1)}KB q${r.quality} · ${r.crossfaded ? `크로스페이드 겹침 ${segs - 1}곳` : `퀼팅 조각 ${segs}개`}\n` +
       `      ① 이음매 ${r.preBoundary.length}곳 (인코딩 전) ${pre}  → ${r.passMirror ? `전부 ≤${(SEAM_EPS * 2).toFixed(1)} = 후보 열끼리 붙었다` : '⚠️ 허용치 초과 = 이음매 선정 버그'}\n` +
       `      ① 이음매 ${r.postBoundary.length}곳 (webp 후)   ${post}\n` +
       `        내부 이웃 열 차이 중앙값 ${fmt(r.interior.median)} · p95 ${fmt(r.interior.p95)} · 최대 ${fmt(r.interior.max)}` +
@@ -1284,8 +1332,9 @@ for (const r of results) {
       ` → ${r.passRipple ? '무악화' : '⚠️ 악화'}\n` +
       `      ③ 용량 ${(r.bytes / 1024).toFixed(1)}KB / 목표 ${(MURA_MAX_BYTES / 1024).toFixed(0)}KB ${r.withinBudget ? 'OK' : '⚠️ 초과'}\n` +
       // ★ 안2.4 의 핵심. 미러 조립은 여기서 0.9+ 가 나왔고 그게 "세로줄"의 정체였다.
-      `      ④ ★좌우 대칭★ 한 화면 창 안 최대 상관 ${r.symmetry.worst.toFixed(3)} (x=${r.symmetry.worstAt}) / 목표 ≤${SYMMETRY_MAX}` +
-      ` ${r.mirrored ? '— 미러 폴백이라 게이트 미적용(세로줄 민원 없던 자산)' : r.passSymmetry ? 'PASS — 거울축 없음' : '⚠️ FAIL — 화면에 거울축이 잡힌다(무늬로 읽힌다)'}\n` +
+      `      ④ ★좌우 대칭★ 한 화면 창 안 최대 상관 ${r.symmetry.worst.toFixed(3)} (x=${r.symmetry.worstAt})` +
+      ` / 종전 미러 조립 기준선 ${r.symmetryBaseline.worst.toFixed(3)}` +
+      ` ${r.passSymmetry ? 'PASS — 거울축 없음' : '⚠️ FAIL — 화면에 거울축이 잡힌다(무늬로 읽힌다)'}\n` +
       `      · 랩 경계 ${fmt(r.wrapPost)} (단일 stretch 렌더 → 화면 미노출, 참고값)`
   )
 }
