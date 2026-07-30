@@ -2,6 +2,7 @@ import { getFamilyHallData, saveFamilyHallSeats } from '../shrine/family-hall'
 import { getCurrentUserMembership, type ActiveMembership } from '@/lib/auth/subscription'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { HALL_SEAT_ZONE } from '@/lib/domain/shrine/family-hall-layout'
 
 jest.mock('@/lib/supabase/server', () => ({ createClient: jest.fn() }))
 jest.mock('@/lib/auth/subscription', () => ({ getCurrentUserMembership: jest.fn() }))
@@ -252,12 +253,13 @@ describe('getFamilyHallData — 좌석 재배치 복원', () => {
   })
 
   it('DB 에 범위를 벗어난 좌표가 남아 있어도 클램프해서 내려준다 (클라 클램프를 믿지 않는다)', async () => {
-    selectResult.mockReturnValue({ data: { hall_seats: { self: { x: -500, y: 9999 } } }, error: null })
+    selectResult.mockReturnValue({ data: { hall_seats: { self: { x: -99999, y: 9999 } } }, error: null })
 
     const { seats } = await getFamilyHallData()
 
-    expect(seats.self.x).toBeGreaterThanOrEqual(14)
-    expect(seats.self.y).toBeLessThanOrEqual(86)
+    // 범위는 도메인 단일 출처에서만 온다 — 여기서 숫자를 복제하면 범위를 넓힐 때마다 조용히 어긋난다
+    expect(seats.self.x).toBe(HALL_SEAT_ZONE.x[0])
+    expect(seats.self.y).toBe(HALL_SEAT_ZONE.y[1])
   })
 
   it('마이그레이션 미적용 DB(hall_seats 컬럼 없음)는 자동 배치로 흘려보낸다 — 사랑방이 죽지 않는다', async () => {
@@ -304,10 +306,20 @@ describe('saveFamilyHallSeats — 좌석 재배치 저장', () => {
   })
 
   it('좌표를 서버에서 다시 클램프해 저장한다', async () => {
-    await expect(saveFamilyHallSeats({ self: { x: 1000, y: -1000 } })).resolves.toEqual({ success: true })
+    await expect(saveFamilyHallSeats({ self: { x: 99999, y: -99999 } })).resolves.toEqual({ success: true })
 
-    // HALL_SEAT_ZONE = x [14,86] · y [30,86]
-    expect(updatePatch).toEqual({ hall_seats: { self: { x: 86, y: 30 } } })
+    // 클라와 **같은 범위**(HALL_SEAT_ZONE)를 서버가 다시 적용한다 — parseHallSeats 단일 관문
+    expect(updatePatch).toEqual({
+      hall_seats: { self: { x: HALL_SEAT_ZONE.x[1], y: HALL_SEAT_ZONE.y[0] } },
+    })
+  })
+
+  it('방 전 구역 좌표(띠 밖 음수)도 그대로 저장된다 — 범위 안이면 서버가 되돌리지 않는다', async () => {
+    const far = { x: HALL_SEAT_ZONE.x[0], y: HALL_SEAT_ZONE.y[0] }
+
+    await expect(saveFamilyHallSeats({ self: far })).resolves.toEqual({ success: true })
+
+    expect(updatePatch).toEqual({ hall_seats: { self: far } })
   })
 
   it('형태가 어긋난 항목은 버리고 성한 좌석만 남긴다', async () => {

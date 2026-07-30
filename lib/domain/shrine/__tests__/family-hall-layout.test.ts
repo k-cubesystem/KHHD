@@ -7,10 +7,12 @@ import {
   hallSeatScale,
   hallSeatSizePct,
   hallSeatLine,
+  hallSeatWorldX,
   hallSeatZ,
   hallDaysSince,
   parseHallSeats,
   HALL_ARC,
+  HALL_BAND,
   HALL_LANTERN,
   HALL_MAX_SEATS,
   HALL_SEAT_MIN_PX,
@@ -141,6 +143,35 @@ describe('HALL_SEAT_ZONE — 드래그 범위', () => {
       }
     }
   })
+
+  it('방 전 구역이 범위다 — 좌우 끝이 world 양 끝에 스프라이트 여백만 남기고 닿는다', () => {
+    const left = hallSeatWorldX(HALL_SEAT_ZONE.x[0])
+    const right = hallSeatWorldX(HALL_SEAT_ZONE.x[1])
+    // 방 밖으로는 못 나간다 — 나가면 카메라를 끝까지 밀어도 되찾을 수 없는 자리가 생긴다
+    expect(left).toBeGreaterThan(0)
+    expect(right).toBeLessThan(HALL_BAND.worldWidth)
+    // 그러면서 양 끝까지 닿는다. 여백은 좌석 스프라이트 반폭(띠 15% = world 9.6%p) 뿐이다
+    expect(left).toBeLessThan(10)
+    expect(HALL_BAND.worldWidth - right).toBeLessThan(10)
+  })
+
+  it('띠는 자(尺)일 뿐이라 좌석 좌표가 띠 밖으로 나간다 — 왼쪽은 음수가 정상이다', () => {
+    // 띠 왼쪽에는 방이 3화면 가까이 남아 있다 → 좌표가 크게 음수로 간다
+    expect(HALL_SEAT_ZONE.x[0]).toBeLessThan(0)
+    // 오른쪽은 띠 끝(100)과 방 끝 사이가 world 4%p 뿐이라 스프라이트 여백이 먼저 걸린다 —
+    // 띠 안에서 멈추지만 구 범위(86)보다는 넓다
+    expect(HALL_SEAT_ZONE.x[1]).toBeGreaterThan(86)
+    expect(HALL_SEAT_ZONE.x[1]).toBeLessThan(100)
+    // 띠 안(0~100)은 여전히 방 오른편이다 — 자동 반원이 있던 자리가 그대로다
+    expect(hallSeatWorldX(0)).toBe(HALL_BAND.worldWidth - HALL_BAND.rightInset - HALL_BAND.width)
+    expect(hallSeatWorldX(100)).toBe(HALL_BAND.worldWidth - HALL_BAND.rightInset)
+  })
+
+  it('이미 저장된 좌표(구 범위 x 14~86 · y 30~86)는 한 톨도 움직이지 않는다', () => {
+    // 범위를 넓히는 방향이라 클램프에 걸릴 값이 없다 — 마이그레이션 없이 기존 배치가 그대로여야 한다
+    const saved = { a: { x: 14, y: 30 }, b: { x: 86, y: 86 }, c: { x: 50, y: 63 } }
+    expect(parseHallSeats(saved)).toEqual(saved)
+  })
 })
 
 describe('hallSeatDepth / Scale / Z — 끌어 놓은 좌석의 원근', () => {
@@ -154,6 +185,19 @@ describe('hallSeatDepth / Scale / Z — 끌어 놓은 좌석의 원근', () => {
     expect(hallSeatDepth(999)).toBe(0)
     expect(hallSeatDepth(Number.NaN)).toBe(0)
     expect(hallSeatScale(999)).toBe(1)
+  })
+
+  it('넓어진 y 전 구간에서 스케일·겹침이 극단으로 가지 않는다 (아바타가 콩알·거인이 되지 않는다)', () => {
+    const [lo, hi] = HALL_SEAT_ZONE.y
+    for (let y = lo; y <= hi; y += 0.5) {
+      expect(hallSeatScale(y)).toBeGreaterThanOrEqual(0.86)
+      expect(hallSeatScale(y)).toBeLessThanOrEqual(1)
+      expect(hallSeatZ(y)).toBeGreaterThanOrEqual(0)
+      expect(hallSeatZ(y)).toBeLessThanOrEqual(100)
+    }
+    // 사랑방 바닥면(호) 밖은 양끝 값으로 눕는다 — 천장에 붙여도 더 작아지지 않는다
+    expect(hallSeatScale(lo)).toBe(hallSeatScale(HALL_ARC.cy - HALL_ARC.ry))
+    expect(hallSeatScale(hi)).toBe(hallSeatScale(HALL_ARC.cy))
   })
 
   it('자동 배치와 같은 축이다 — 자동 좌석 y 를 넣으면 그 좌석과 같은 스케일이 나온다', () => {

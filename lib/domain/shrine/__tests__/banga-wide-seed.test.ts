@@ -29,6 +29,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
+import { HALL_BAND, HALL_SEAT_ZONE, hallSeatWorldX } from '../family-hall-layout'
 import { PODIUM_TOP_Y, parseStageSpec, type StageSpec } from '../stage'
 import { WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, toWorldX, type WorldSpec } from '../world'
 import { zoneStage, zoneWidthScale } from '../world-render'
@@ -415,6 +416,22 @@ describe('전폭 재해석 · 겉보기 환산 — 배선 담당이 놓치면 �
 
   it("사랑방 구역('huwon')은 여전히 구역이 아니다 — 좌표로 앉는다", () => {
     expect(seededWorld().zones.find((z) => z.code === 'huwon')).toBeUndefined()
+  })
+
+  it('★ 사랑방 띠가 이 시드의 world 폭을 기준으로 잡혀 있다 — 시드↔좌석 범위 드리프트 방지', () => {
+    // 좌석 이동 범위(HALL_SEAT_ZONE)는 띠가 world 어디에 얹히는지에서 파생된다. 시드 폭이 바뀌면
+    // 좌석이 방을 다 덮지 못하거나(좁아지면) 카메라로 되찾을 수 없는 방 밖으로 나간다(넓어지면).
+    expect(HALL_BAND.worldWidth).toBe(seededWorld().width)
+  })
+
+  it('★ 좌석이 방 전 구역에 닿는다 — 양 끝이 방 안이면서 world 0·320 에 스프라이트 여백만 남긴다', () => {
+    const world = seededWorld()
+    const left = hallSeatWorldX(HALL_SEAT_ZONE.x[0])
+    const right = hallSeatWorldX(HALL_SEAT_ZONE.x[1])
+    expect(left).toBeGreaterThan(0)
+    expect(right).toBeLessThan(world.width)
+    expect(left).toBeLessThan(10)
+    expect(world.width - right).toBeLessThan(10)
   })
 })
 

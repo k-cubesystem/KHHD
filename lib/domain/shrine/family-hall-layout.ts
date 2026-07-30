@@ -5,7 +5,9 @@
  * 등불이 가리지 않고, 양끝 좌석이 앞(큰 스케일)·가운데 좌석이 뒤(작은 스케일)로 앉는다.
  *
  * 전 함수 순수(side-effect 0) · 결정론 — Date.now()/Math.random() 사용 금지.
- * 좌표는 **부모 박스에 대한 %** 라 두루마리 후원 구역이든 단독 화면이든 그대로 쓴다.
+ * 좌표는 **부모 박스(=사랑방 띠)에 대한 %** 다. 자동 배치는 그 안(0~100)에 떨어지지만,
+ * 사용자가 끌어 옮긴 좌석은 **띠 밖 방 전 구역**까지 나간다(HALL_SEAT_ZONE) — 띠는 벽이 아니라
+ * 크기·좌표를 재는 자(尺)이고, 그래서 띠가 world 어디에 얹히는지(HALL_BAND)를 이 파일이 안다.
  * (렌더·애니메이션은 components/shrine/scene/FamilyHall.tsx 책임)
  */
 
@@ -126,18 +128,64 @@ export function hallLayout(count: number): HallLayout {
 // ─── 사용자 재배치 좌석 (꾸미기 모드 드래그) ────────────────────────────────
 
 /**
- * 좌석을 끌어 놓을 수 있는 범위 — 부모 박스 %. ZONES(아이템 배치)와 같은 역할이고
- * 클램프도 같은 함수(zones.clampPct)를 쓴다. 클라·서버가 이 하나만 보게 해서
- * "클라에서만 가둔 좌표"가 DB 에 남는 길을 없앤다.
+ * 사랑방 띠가 두루마리 world 안에서 차지하는 자리 — ShrineRoomClient 마운트와 **공유하는 단일 출처**.
  *
- * 자동 배치 반원(x 17~83 · y 43~63)을 완전히 품는다 — 저장 이력이 없는 좌석은 자동 좌표를
- * 그대로 쓰는데, 범위가 그보다 좁으면 첫 드래그도 없이 기존 화면이 흔들린다.
- * 상하 여유는 좌석 상자 기하에서 왔다: 오브 꼭대기는 방석 중심에서 상자 폭의 0.74배 위,
- * 이름표는 0.2배 아래. 좁은 후원 박스(폭 250px 안팎)에서 그 값이 대략 ±8%p 다.
+ * 좌석 좌표는 이 띠의 % 라, 띠가 world 어디에 얹혀 있는지를 알아야 "방 전체"를 좌석 좌표로 환산할 수 있다.
+ * 두 곳이 따로 상수를 들면 띠는 옮겼는데 이동 범위는 옛 자리를 가리키는 조용한 어긋남이 난다.
+ *
+ * ⚠️ `worldWidth` 는 두루마리 테마 시드 값이다(반가 320 — 20260730_shrine_banga_mural_320.sql).
+ *    두루마리가 열리는 테마는 그 하나뿐이고, 값이 달라지면 좌석이 방을 다 덮지 못하거나(좁아지면)
+ *    방 밖으로 나간다(넓어지면) → banga-wide-seed.test.ts 가 시드와 이 값을 대조한다.
+ */
+export const HALL_BAND = { worldWidth: 320, rightInset: 4, width: 64 } as const
+
+/** 띠 왼쪽 끝의 world x — 띠는 world 오른쪽 끝에서 rightInset 만큼 띄운 자리에 얹힌다. */
+const HALL_BAND_X0 = HALL_BAND.worldWidth - HALL_BAND.rightInset - HALL_BAND.width
+
+/**
+ * 좌석 좌표(띠 %) → world x. 띠 밖의 좌석은 음수·100 초과 좌표를 갖는다 — **정상이다**.
+ * 띠는 좌석을 가두는 벽이 아니라 좌표와 크기를 재는 자(尺)일 뿐이고, 띠 박스에는 overflow 가 걸려 있지 않다.
+ */
+export function hallSeatWorldX(x: number): number {
+  if (!Number.isFinite(x)) return HALL_BAND_X0
+  return round(HALL_BAND_X0 + (x * HALL_BAND.width) / 100, 4)
+}
+
+/** world x → 좌석 좌표(띠 %). 범위 계산 전용이라 내부에만 둔다. */
+function seatXOfWorld(worldX: number): number {
+  return ((worldX - HALL_BAND_X0) / HALL_BAND.width) * 100
+}
+
+/**
+ * 좌우 여백(띠 %) — 좌석 그림이 방 밖으로 잘려 나가지 않게 두는 몫.
+ * 좌석 상자 폭 W 기준 실제 그림의 끝은 왼쪽 0.5W · 오른쪽 0.56W(등불이 right:-6% 로 삐져나온다)다.
+ * W 는 좁은 방(방 폭 382px → 띠 245px)에서 터치 하한 60px 에 걸려 띠의 24.5% 까지 커지므로
+ * 0.56 × 24.5 ≈ 13.7%p 가 최악값 — 15 는 거기에 반올림 여유를 더한 값이다.
+ */
+const SEAT_EDGE_MARGIN_X = 15
+
+/**
+ * 좌석을 끌어 놓을 수 있는 범위. ZONES(아이템 배치)와 같은 역할이고 클램프도 같은 함수(zones.clampPct)를 쓴다.
+ * 클라·서버가 이 하나만 보게 해서 "클라에서만 가둔 좌표"가 DB 에 남는 길을 없앤다.
+ *
+ * **방 전 구역**이 범위다(CEO: "가족 좌석은 전 구역 아무곳이나"). 좌표계가 띠 % 라서 띠 왼쪽은 음수가 되는데,
+ * 띠를 넓히는 대신 범위를 넓히는 이유는 띠 폭이 **좌석·등불·말풍선 크기의 단위**이자 자동 반원(HALL_ARC)의
+ * 기준이기 때문이다 — 띠를 늘리면 그 모든 그림이 같은 배로 커지고 이미 저장된 좌표의 뜻까지 바뀐다.
+ * 띠는 자로 남기고 벽만 걷어내면 저장된 배치는 뜻이 그대로다(범위가 넓어지기만 하므로 클램프에 걸리지도 않는다).
+ *
+ * 자동 배치 반원(x 17~83 · y 43~63)도 당연히 품는다 — 저장 이력이 없는 좌석은 자동 좌표를 그대로 쓰는데,
+ * 범위가 그보다 좁으면 첫 드래그도 없이 기존 화면이 흔들린다.
+ *
+ * 상하는 띠 박스가 이미 방 높이 전체(inset-y-0)라 여백만 남기면 된다. 좌석 (x,y)는 방석 중심이고
+ * 오브 꼭대기가 그 위 0.74W · 이름표 바닥이 그 아래 0.2W+13px 이므로, 넓은 방(520×620 · W 80px)에서
+ * 위 9.6%p·아래 4.6%p, 좁고 낮은 방(W 60px · 높이 480px)에서 위 9.3%p·아래 5.2%p — 둘을 모두 덮어 11·6 을 쓴다.
  */
 export const HALL_SEAT_ZONE = {
-  x: [14, 86] as [number, number],
-  y: [30, 86] as [number, number],
+  x: [
+    round(seatXOfWorld(0) + SEAT_EDGE_MARGIN_X, 2),
+    round(seatXOfWorld(HALL_BAND.worldWidth) - SEAT_EDGE_MARGIN_X, 2),
+  ] as [number, number],
+  y: [11, 94] as [number, number],
 } as const
 
 /** 본인 좌석의 저장 키. 본인은 family_members 행이 아니라 id 가 없다. */
@@ -169,6 +217,10 @@ export function hallSeatKey(memberId: string | null | undefined): string {
 /**
  * y → 원근 깊이(0=가장 앞·1=가장 뒤). 자동 배치의 depth=sin(theta) 와 **같은 축**이라
  * 자동 좌석 y 를 넣으면 자동 좌석과 같은 스케일·겹침 순서가 나온다(끌어 놓은 좌석만 재계산해도 화면이 섞이지 않는다).
+ *
+ * 0~1 클램프가 **파생 곡선의 상·하한**이다 — 이동 범위가 방 전체(y 11~94)로 넓어져도 원근 축은
+ * 사랑방 바닥면(y 43~63)에서만 자라고 그 밖은 양끝 값으로 눕는다. 그래서 천장 쪽·바닥 쪽 끝에 놓아도
+ * 스케일은 0.86~1 · z 는 0~100 을 벗어나지 않는다(아바타가 콩알이 되거나 방을 덮지 않는다).
  */
 export function hallSeatDepth(y: number): number {
   if (!Number.isFinite(y)) return 0

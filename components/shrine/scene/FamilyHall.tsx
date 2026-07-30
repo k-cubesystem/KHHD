@@ -56,10 +56,6 @@ const CUSHION_H_PCT = 30
  */
 const SEAT_ANCHOR_Y = '-85%'
 
-/** 말풍선이 박스 밖으로 삐져나가지 않게 가두는 좌우 여백(%). */
-const BUBBLE_X_MIN = 16
-const BUBBLE_X_MAX = 84
-
 /**
  * 말풍선을 오브 위로 띄우는 몫 — 좌석 상자 **폭** 기준. 오브 꼭대기는 방석 중심에서
  * 상자 폭의 0.74배까지 올라가므로 그보다 크게 잡아야 얼굴을 가리지 않는다.
@@ -477,7 +473,9 @@ export function FamilyHall({ data, className, editing = false }: Props) {
           role="status"
           className="fh-bubble pointer-events-none absolute z-[120] max-w-[74%] rounded-[10px] border border-gold-500/30 px-2.5 py-1.5 text-center"
           style={{
-            left: `${Math.min(BUBBLE_X_MAX, Math.max(BUBBLE_X_MIN, openSeat.x))}%`,
+            // 좌석 좌표를 그대로 따른다 — 종전에는 띠(박스) 안쪽 16~84 로 가뒀는데, 좌석이 띠 밖
+            // 방 전 구역으로 나갈 수 있게 되면서 그 클램프가 말풍선만 띠에 홀로 남기는 원인이 됐다.
+            left: `${openSeat.x}%`,
             top: `${openSeat.y}%`,
             // 좌석 (x,y)는 방석 중심이라, 그 위에 앉은 오브만큼 더 띄워야 얼굴을 가리지 않는다
             marginTop: `calc(${seatWidthCss(layout.seatSizePct * openSeat.scale)} * -${BUBBLE_LIFT_RATIO})`,

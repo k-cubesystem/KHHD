@@ -67,6 +67,7 @@ import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
 import { FamilyHall } from './FamilyHall'
+import { HALL_BAND } from '@/lib/domain/shrine/family-hall-layout'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
@@ -158,13 +159,11 @@ const FAR_SKY =
 const JAMB_W_PCT = 3.2
 
 // ── 가족 사랑방 (안3 / ARCH §2 FamilyHall) ────────────────────
-/**
- * 사랑방 자리 — 안2.1 「큰 방 하나」에서는 구역(후원)이 아니라 **world 우측 영역**이다.
- * 구역이 하나뿐이라 code 로 찾을 자리가 없어졌고, 실내 문법상 사랑방은 같은 방의 오른편에 있다.
- * world 오른쪽 끝에서 INSET 만큼 띄운 폭 WIDTH 의 띠 — 좌표는 world %(=x0/x1) 다.
- */
-const FAMILY_HALL_RIGHT_INSET_PCT = 4
-const FAMILY_HALL_WIDTH_PCT = 64
+// 사랑방 자리 — 안2.1 「큰 방 하나」에서는 구역(후원)이 아니라 **world 우측 영역**이다.
+// 구역이 하나뿐이라 code 로 찾을 자리가 없어졌고, 실내 문법상 사랑방은 같은 방의 오른편에 있다.
+// world 오른쪽 끝에서 rightInset 만큼 띄운 폭 width 의 띠 — 좌표는 world %(=x0/x1) 다.
+// 그 두 값은 도메인(HALL_BAND)이 든다: 좌석 이동 범위(HALL_SEAT_ZONE)가 띠의 world 자리에서 파생되므로
+// 여기서 상수를 따로 들면 띠는 옮겼는데 범위는 옛 자리를 가리키는 조용한 어긋남이 난다.
 /**
  * 사랑방 층 — 구역 구조물(StageLayers, z auto=0)보다 위·아이템 대역(depthZ 10~29)보다 아래.
  * 값만으로도 "무대 위에 선 인물" 자리에 들어간다(신위 스탠드 z-3 위, 신당지기 z-12 아래).
@@ -518,11 +517,11 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
    */
   const hallBox = useMemo<CSSProperties | null>(() => {
     if (!GAMEFEEL_V1 || !worldActive || !hall) return null
-    const x1 = world.width - FAMILY_HALL_RIGHT_INSET_PCT
-    const x0 = x1 - FAMILY_HALL_WIDTH_PCT
+    const x1 = world.width - HALL_BAND.rightInset
+    const x0 = x1 - HALL_BAND.width
     return {
       left: `${((x0 / world.width) * 100).toFixed(4)}%`,
-      width: `${((FAMILY_HALL_WIDTH_PCT / world.width) * 100).toFixed(4)}%`,
+      width: `${((HALL_BAND.width / world.width) * 100).toFixed(4)}%`,
       zIndex: FAMILY_HALL_Z,
     }
   }, [worldActive, hall, world.width])
