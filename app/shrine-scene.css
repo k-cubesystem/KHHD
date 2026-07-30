@@ -1,0 +1,473 @@
+/* ===== 신당 씬 CSS (게임필 v1 · 신당지기 보행 · 가족 사랑방 · 무대 물리) =====
+   ⚠️ 이 파일은 원래 컴포넌트의 <style jsx> 안에 있었다. styled-jsx 는 App Router 에서
+   서버 렌더 산출물에 CSS 를 한 줄도 남기지 않고(레지스트리가 Pages Router 전용) 빌드 CSS 청크에도
+   실리지 않는다 — 그래서 신당 연출이 배포 내내 죽어 있었다. 연출 CSS 는 반드시 이 정적 파일에 둔다.
+   재발 방지: scripts/check-animation-css.mjs 가 빌드 산출물에서 아래 클래스·키프레임의 실재를 검증한다.
+
+   ⚠️ 수치·이름·타이밍은 이관 전 원본 그대로다(값 튜닝 금지).
+   ⚠️ CSS 변수(--shrine-idle-delay · --shrine-keeper-* · --fh-*)는 컴포넌트가 인라인 style 로 주입한다.
+   ⚠️ 연출 게이트(GAMEFEEL_V1)는 **클래스 부여 조건**으로만 성립한다 — 이 파일은 항상 로드된다.
+   ⚠️ 선언 순서 의존: idle 계열이 먼저, 탭 반응(.shrine-tap-squash·.shrine-item-wiggle)이 뒤에 와야
+   탭 순간 idle 을 잠시 이기고 끝나면 idle 이 재개된다. */
+
+/* ── 게임필 v1 상시 idle (useCinematics.GamefeelStyles 이관) ──────────────
+   전역이어야 한다 — 룸 안 형제 컴포넌트(Sprite 등)가 같은 키프레임을 쓴다.
+   transform/opacity 만 애니메이션한다(합성 레이어 유지 — ARCH §5).
+   흔들림·살랑임 지연은 --shrine-idle-delay 로 개체마다 어긋나게 준다. */
+
+/* 걸이(hanging) 아이템 — 족자·풍경이 천천히 살랑인다 */
+.shrine-idle-sway {
+  animation: shrineIdleSway 5.5s ease-in-out infinite;
+  animation-delay: var(--shrine-idle-delay, 0s);
+  transform-origin: 50% 0%;
+  will-change: transform;
+}
+@keyframes shrineIdleSway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(1.6deg);
+  }
+  75% {
+    transform: rotate(-1.6deg);
+  }
+}
+
+/* 점화된 촛불 위 광원 span — radial-gradient 배경에 얹어 쓰는 맥동 */
+.shrine-idle-glow {
+  animation: shrineIdleGlow 2.8s ease-in-out infinite;
+  animation-delay: var(--shrine-idle-delay, 0s);
+  will-change: opacity;
+}
+@keyframes shrineIdleGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 벽걸이(wall) 아이템 — 걸이보다 약한 살랑 (벽에 붙어 있어 진폭이 작다) */
+.shrine-idle-wallsway {
+  animation: shrineIdleWallsway 6.5s ease-in-out infinite;
+  animation-delay: var(--shrine-idle-delay, 0s);
+  transform-origin: 50% 0%;
+  will-change: transform;
+}
+@keyframes shrineIdleWallsway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(0.9deg);
+  }
+  75% {
+    transform: rotate(-0.9deg);
+  }
+}
+
+/* 바닥·제단 소품 — 초미세 숨쉬기. 개체 하나는 안 보여도 위상차로 여럿이 숨쉬면
+   "방이 살아있다"가 촛불·향로 없는 신당에서도 성립한다 */
+.shrine-idle-breathe {
+  animation: shrineIdleBreathe 4.6s ease-in-out infinite;
+  animation-delay: var(--shrine-idle-delay, 0s);
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+@keyframes shrineIdleBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+/* 테마 광원 타원·신위 후광 — 촛불빛이 이는 듯한 은은한 맥동 (opacity 만) */
+.shrine-glow-breathe {
+  animation: shrineGlowBreathe 3.6s ease-in-out infinite;
+  will-change: opacity;
+}
+@keyframes shrineGlowBreathe {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 탭 반응 — 눌렸다 튀어오르는 스쿼시&스트레치.
+   idle 클래스보다 뒤에 선언해야 탭 순간 idle 을 잠시 이기고, 끝나면 idle 이 재개된다 */
+.shrine-tap-squash {
+  animation: shrineTapSquash 0.28s ease-out;
+  transform-origin: 50% 100%;
+}
+@keyframes shrineTapSquash {
+  0% {
+    transform: scale(0.92);
+  }
+  45% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 빅 모먼트 미세 화면 흔들림 — 시네마틱 카메라 transform 위에 더해진다
+   (animation-composition 미지원 브라우저는 흔들림이 카메라를 잠시 대체할 뿐 파손은 없다) */
+.shrine-cam-shake {
+  animation: shrineCamShake 0.3s ease-in-out;
+  animation-composition: add;
+}
+@keyframes shrineCamShake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  18% {
+    transform: translate3d(-2px, 1px, 0);
+  }
+  42% {
+    transform: translate3d(2px, -1px, 0);
+  }
+  66% {
+    transform: translate3d(-1.5px, -1px, 0);
+  }
+  86% {
+    transform: translate3d(1px, 1px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shrine-idle-sway,
+  .shrine-idle-wallsway,
+  .shrine-idle-breathe,
+  .shrine-glow-breathe,
+  .shrine-idle-glow,
+  .shrine-tap-squash,
+  .shrine-cam-shake {
+    animation: none;
+  }
+}
+
+/* ── 거니는 신당지기 (WalkingKeeper 이관 / PRD 부록 B · 안2.2) ────────────
+   입장→배회 승계를 **애니메이션 목록 우선순위**로 처리한다(타이머·클래스 교체 0). */
+
+/* 배회 — 중점에서 출발해 오른끝·왼끝을 돌아 중점으로. 거리비 1:2:1 이라 고정 %로 등속이 된다.
+   양끝과 중점에서 ease-in-out 이 속도를 0 으로 접으므로 "걷다가 잠깐 서는" 결이 생긴다 */
+@keyframes shrineKeeperWander {
+  0% {
+    transform: translateX(var(--shrine-keeper-rest));
+  }
+  25% {
+    transform: translateX(var(--shrine-keeper-hi));
+  }
+  75% {
+    transform: translateX(var(--shrine-keeper-lo));
+  }
+  100% {
+    transform: translateX(var(--shrine-keeper-rest));
+  }
+}
+/* 입장 걷기 — 문간에서 배회 시작점까지 1회. 카메라 팬과 같은 감속 곡선을 쓴다 */
+@keyframes shrineKeeperArrive {
+  from {
+    transform: translateX(var(--shrine-keeper-enter-from));
+  }
+  to {
+    transform: translateX(var(--shrine-keeper-rest));
+  }
+}
+/* 진행 방향 — 배회와 같은 구간(25%·75%)에서 딱 뒤집는다(보간 없이 steps) */
+@keyframes shrineKeeperFace {
+  0% {
+    transform: scaleX(1);
+  }
+  25% {
+    transform: scaleX(-1);
+  }
+  75% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+/* 2보 주기 — 한 사이클에 두 번 떠오른다(뒷걸음이 살짝 얕다) */
+@keyframes shrineKeeperBob {
+  0%,
+  50%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-3.5px);
+  }
+  75% {
+    transform: translateY(-2.2px);
+  }
+}
+@keyframes shrineKeeperTread {
+  0%,
+  50%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(0.8);
+    opacity: 0.55;
+  }
+  75% {
+    transform: scale(0.88);
+    opacity: 0.7;
+  }
+}
+/* 탭 반응 — 눌렸다 튀어오른다(기존 shrineBounce 계승) */
+@keyframes shrineKeeperPop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px) scale(1.06);
+  }
+}
+
+.shrine-keeper-track {
+  transform: translateX(var(--shrine-keeper-rest));
+}
+.shrine-keeper-arrive {
+  animation: shrineKeeperArrive var(--shrine-keeper-enter-ms) cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: transform;
+}
+.shrine-keeper-wander {
+  animation: shrineKeeperWander var(--shrine-keeper-cycle) ease-in-out var(--shrine-keeper-enter-ms, 0ms) infinite;
+  will-change: transform;
+}
+/* 입장 + 배회 — 목록 뒤쪽이 이기고, 지연 중인 배회는 아무 값도 얹지 않는다(fill 없음).
+   그래서 입장이 forwards 로 물고 있던 도착 자리를 배회가 정확히 그 프레임에 이어받는다 */
+.shrine-keeper-arrive.shrine-keeper-wander {
+  animation:
+    shrineKeeperArrive var(--shrine-keeper-enter-ms) cubic-bezier(0.22, 0.61, 0.36, 1) both,
+    shrineKeeperWander var(--shrine-keeper-cycle) ease-in-out var(--shrine-keeper-enter-ms, 0ms) infinite;
+}
+.shrine-keeper-face {
+  animation: shrineKeeperFace var(--shrine-keeper-cycle) steps(1, end) var(--shrine-keeper-enter-ms, 0ms) infinite;
+}
+.shrine-keeper-bob {
+  animation: shrineKeeperBob 0.62s ease-in-out infinite;
+}
+.shrine-keeper-tread {
+  animation: shrineKeeperTread 0.62s ease-in-out infinite;
+}
+.shrine-keeper-pop {
+  animation: shrineKeeperPop 0.55s ease;
+}
+
+/* 모션 최소화 — 배회·입장 걷기·바운스를 전부 끄고 정지 위치(=배회 중점, 제단 옆)에 세운다.
+   클래스 계약은 그대로라 배선·측정(measureSpot)은 동일하게 동작한다 */
+@media (prefers-reduced-motion: reduce) {
+  .shrine-keeper-arrive,
+  .shrine-keeper-wander,
+  .shrine-keeper-arrive.shrine-keeper-wander,
+  .shrine-keeper-face,
+  .shrine-keeper-bob,
+  .shrine-keeper-tread {
+    animation: none;
+    will-change: auto;
+  }
+  .shrine-keeper-pop {
+    animation-duration: 0.01ms;
+  }
+}
+
+/* ── 가족 사랑방 (FamilyHall 이관) ──────────────────────────────────────
+   전역이어야 한다 — 키프레임을 형제 컴포넌트(SeatFigure)가 쓴다. 이름은 전부 fh- 접두. */
+.fh-seat {
+  animation: fhSeatIn 0.42s ease-out both;
+  animation-delay: var(--fh-delay, 0ms);
+}
+/* 기준점(--fh-anchor)은 SeatFigure 인라인 transform 과 반드시 같은 값이어야 한다 —
+   애니메이션이 인라인 transform 을 덮으므로 어긋나면 좌석이 끝나는 순간 튄다.
+   모션 최소화(animation:none)에서는 인라인 값이 그대로 쓰인다. */
+@keyframes fhSeatIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(var(--fh-anchor, -85%) + 6%));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, var(--fh-anchor, -85%));
+  }
+}
+
+/* 등불 흔들림 — 밝기만 흔든다(레이아웃·색상 애니 금지) */
+.fh-flicker {
+  animation: fhFlicker 3.4s ease-in-out infinite;
+}
+@keyframes fhFlicker {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 만개 골드 링 — 등불 둘레가 천천히 벌어졌다 오므라든다 */
+.fh-bloom {
+  animation: fhBloom 3.2s ease-in-out infinite;
+}
+@keyframes fhBloom {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  50% {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+}
+
+.fh-bubble {
+  animation: fhBubbleIn 0.18s ease-out;
+}
+@keyframes fhBubbleIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 0px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 8px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fh-seat,
+  .fh-flicker,
+  .fh-bloom,
+  .fh-bubble {
+    animation: none;
+  }
+}
+
+/* ── 좌정 신위·기원 링 (ShrineRoomClient 이관) ──────────────────────────
+   원래 scoped(<style jsx>)였다 — 클래스 계약(.deity-stand·.shrine-ring)은 그대로다. */
+.deity-stand {
+  animation: deityBreathe 4.2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+@keyframes deityBreathe {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleY(1);
+  }
+  50% {
+    transform: translateX(-50%) scaleY(1.016);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deity-stand {
+    animation: none;
+  }
+}
+.shrine-ring {
+  animation: shrineRing 1.3s ease-out forwards;
+}
+@keyframes shrineRing {
+  0% {
+    width: 20px;
+    height: 20px;
+    opacity: 0.95;
+  }
+  100% {
+    width: 150px;
+    height: 150px;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shrine-ring {
+    animation-duration: 0.01ms;
+  }
+}
+
+/* ── 무대 물리·반응 (ShrineRoomClient 이관) ─────────────────────────────
+   전역이어야 한다 — Sprite 등 형제 컴포넌트가 쓴다. transform/opacity 만 애니메이션. */
+.shrine-anchor-ring {
+  animation: shrineAnchorPulse 1.1s ease-in-out infinite;
+}
+@keyframes shrineAnchorPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.92;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.5;
+  }
+}
+/* 게이트(GAMEFEEL_V1) 오프 시의 탭 반응 — idle 뒤에 선언돼야 탭이 idle 을 이긴다 */
+.shrine-item-wiggle {
+  animation: shrineWiggle 0.4s ease-in-out;
+  transform-origin: 50% 92%;
+}
+@keyframes shrineWiggle {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  28% {
+    transform: rotate(-7deg);
+  }
+  64% {
+    transform: rotate(5deg);
+  }
+}
+.shrine-light-overlay {
+  transition: opacity 700ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shrine-anchor-ring,
+  .shrine-item-wiggle {
+    animation-duration: 0.01ms;
+  }
+  .shrine-light-overlay {
+    transition: none;
+  }
+}
+
+/* ── 기원 시트 (DevotionStrip 이관) ─────────────────────────────────────
+   원래 scoped 였다 — 클래스 계약(.devotion-sheet)은 그대로다. */
+.devotion-sheet {
+  animation: devotionSheetUp 0.28s ease-out;
+}
+@keyframes devotionSheetUp {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .devotion-sheet {
+    animation-duration: 0.01ms;
+  }
+}

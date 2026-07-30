@@ -236,27 +236,6 @@ export function DevotionStrip({ devotion }: { devotion: DevotionStatus }) {
               돈으로 바로 사고 싶다면 상점에서 언제든 봉헌할 수 있어요
             </p>
           </div>
-
-          <style jsx>{`
-            .devotion-sheet {
-              animation: devotionSheetUp 0.28s ease-out;
-            }
-            @keyframes devotionSheetUp {
-              from {
-                transform: translateY(14px);
-                opacity: 0;
-              }
-              to {
-                transform: translateY(0);
-                opacity: 1;
-              }
-            }
-            @media (prefers-reduced-motion: reduce) {
-              .devotion-sheet {
-                animation-duration: 0.01ms;
-              }
-            }
-          `}</style>
         </div>
       )}
     </>

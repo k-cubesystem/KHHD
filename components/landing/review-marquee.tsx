@@ -82,29 +82,6 @@ export function ReviewMarquee() {
 
       <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-background to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent" />
-
-      <style jsx global>{`
-        @keyframes review-marquee-scroll {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(-50%);
-          }
-        }
-        .review-marquee-track {
-          animation: review-marquee-scroll 52s linear infinite;
-          will-change: transform;
-        }
-        .review-marquee-track:hover {
-          animation-play-state: paused;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .review-marquee-track {
-            animation: none;
-          }
-        }
-      `}</style>
     </div>
   )
 }

@@ -50,7 +50,7 @@ import {
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
-import { useCinematics, GamefeelStyles, ENTRANCE_MS } from './useCinematics'
+import { useCinematics, ENTRANCE_MS } from './useCinematics'
 import { CameraMinimap, useCameraRig } from './CameraRig'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
@@ -68,6 +68,9 @@ import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { trackEvent } from '@/lib/analytics/ga4'
+// 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
+// ⚠️ styled-jsx 로 되돌리지 말 것 — App Router 에서는 산출물에 실리지 않는다(app/shrine-scene.css 머리말).
+import '@/app/shrine-scene.css'
 
 /** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
 const FLAME_Y_OFFSET = 5
@@ -1580,104 +1583,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
         mainDeitySeated={!!scene.mainDeity}
         isOwner={isOwner}
       />
-
-      <style jsx>{`
-        .deity-stand {
-          animation: deityBreathe 4.2s ease-in-out infinite;
-          transform-origin: bottom center;
-        }
-        @keyframes deityBreathe {
-          0%,
-          100% {
-            transform: translateX(-50%) scaleY(1);
-          }
-          50% {
-            transform: translateX(-50%) scaleY(1.016);
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .deity-stand {
-            animation: none;
-          }
-        }
-        .shrine-ring {
-          animation: shrineRing 1.3s ease-out forwards;
-        }
-        @keyframes shrineRing {
-          0% {
-            width: 20px;
-            height: 20px;
-            opacity: 0.95;
-          }
-          100% {
-            width: 150px;
-            height: 150px;
-            opacity: 0;
-          }
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .shrine-ring {
-            animation-duration: 0.01ms;
-          }
-        }
-      `}</style>
-
-      {/* 게임필 v1 전역 키프레임(idle 살랑임·글로우 맥동·탭 스쿼시·화면 흔들림) — 1회만 마운트 */}
-      <GamefeelStyles />
-
-      {/* 무대 물리·반응용 스타일 — Sprite 등 형제 컴포넌트에서도 써야 해 global 로 둔다.
-          이름은 전부 shrine- 접두로 충돌을 막는다. transform/opacity 만 애니메이션(합성 레이어 유지). */}
-      <style jsx global>{`
-        .shrine-anchor-ring {
-          animation: shrineAnchorPulse 1.1s ease-in-out infinite;
-        }
-        @keyframes shrineAnchorPulse {
-          0%,
-          100% {
-            transform: scale(1);
-            opacity: 0.92;
-          }
-          50% {
-            transform: scale(1.18);
-            opacity: 0.5;
-          }
-        }
-        .shrine-item-wiggle {
-          animation: shrineWiggle 0.4s ease-in-out;
-          transform-origin: 50% 92%;
-        }
-        @keyframes shrineWiggle {
-          0%,
-          100% {
-            transform: rotate(0deg);
-          }
-          28% {
-            transform: rotate(-7deg);
-          }
-          64% {
-            transform: rotate(5deg);
-          }
-        }
-        .shrine-light-overlay {
-          transition: opacity 700ms ease;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .shrine-anchor-ring,
-          .shrine-item-wiggle {
-            animation-duration: 0.01ms;
-          }
-          .shrine-light-overlay {
-            transition: none;
-          }
-        }
-      `}</style>
     </div>
   )
 }

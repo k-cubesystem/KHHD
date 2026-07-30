@@ -680,6 +680,48 @@
   }
 }
 
+/* 느린 회전 링 (new-year 로딩 · fortune 상세 모달)
+   ⚠️ 지속시간은 사용처가 인라인 style(animationDuration)로 준다 — shorthand 에 duration 이 없다(원본 계약) */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spin-reverse-slow {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow linear infinite;
+}
+.animate-spin-reverse-slow {
+  animation: spin-reverse-slow linear infinite;
+}
+
+/* 후기 마퀴 — 콘텐츠 2배 복제 + translateX -50% 무한 (호버 시 정지) */
+@keyframes review-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.review-marquee-track {
+  animation: review-marquee-scroll 52s linear infinite;
+  will-change: transform;
+}
+.review-marquee-track:hover {
+  animation-play-state: paused;
+}
+
 /* 하단 가이드 접힘 바 — 흐르는 상식 글귀 마퀴(콘텐츠 2배 복제 + translateX -50% 무한) */
 @keyframes guide-marquee {
   from {
@@ -695,6 +737,16 @@
 .guide-marquee-mask {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+}
+
+/* 가로 스크롤 트레이의 스크롤바 숨김 — 신당·상점·스냅 캐러셀·어드민 탭이 함께 쓴다.
+   ⚠️ 원래 ShrineRoomClient 의 <style jsx>(scoped) 안에 있어 어디에서도 적용되지 않았다 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* ========== Motion Accessibility ========== */
@@ -729,7 +781,8 @@
   .anim-bar-shimmer,
   .anim-node-pulse,
   .anim-particle-rise,
-  .guide-marquee-track {
+  .guide-marquee-track,
+  .review-marquee-track {
     animation: none !important;
   }
 

@@ -126,6 +126,21 @@ async function main() {
     allPassed = false
   }
 
+  // 5-1. 애니메이션 CSS 실재 확인 (빌드 직후여야 의미가 있다)
+  checkSection('5-1. 애니메이션 CSS 산출물 확인')
+
+  if (buildResult.success) {
+    const animCssResult = runCommand('node scripts/check-animation-css.mjs', true)
+    checkItem('신당 연출 CSS 실재', animCssResult.success, animCssResult.success ? '통과' : '빌드 산출물에 누락')
+    if (!animCssResult.success) {
+      log(animCssResult.error ?? '', 'yellow')
+      log('   node scripts/check-animation-css.mjs 를 직접 실행해 누락 목록을 확인하세요.', 'yellow')
+      allPassed = false
+    }
+  } else {
+    checkItem('신당 연출 CSS 실재', false, '빌드 실패로 검사 불가')
+  }
+
   // 6. Git 상태
   checkSection('6. Git 상태 확인')
 
