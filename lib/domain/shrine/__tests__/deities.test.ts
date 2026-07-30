@@ -7,6 +7,7 @@ import {
   bondUnlocks,
   BOND_THRESHOLDS,
   BOND_MAX_LEVEL,
+  deityTurnFrames,
 } from '../deities'
 import type { Element } from '../types'
 
@@ -168,5 +169,23 @@ describe('인연(緣) 4단계', () => {
     it('결정론: 같은 입력 같은 결과', () => {
       expect(bondProgress(250)).toEqual(bondProgress(250))
     })
+  })
+})
+
+describe('deityTurnFrames — 턴어라운드 프레임 경로 규약 (안2.3 ④)', () => {
+  it('코드에서 측면·뒷면 경로를 만든다', () => {
+    expect(deityTurnFrames('seonnyeo')).toEqual({
+      side: '/shrine/deities/seonnyeo/side.webp',
+      back: '/shrine/deities/seonnyeo/back.webp',
+    })
+  })
+
+  it('굽지 않은 신위도 경로는 성립한다 — 실재 판정은 클라 프리로드가 한다', () => {
+    for (const rule of GUARDIAN_RULES) expect(deityTurnFrames(rule.code)?.side).toContain(`/${rule.code}/`)
+  })
+
+  it('규약 밖 코드는 null — 경로 탈출(../)·대문자·공백·빈값 차단', () => {
+    for (const bad of ['../../etc/passwd', 'Seonnyeo', 'seon nyeo', '', '_lead', 'a'.repeat(32), null, undefined])
+      expect(deityTurnFrames(bad)).toBeNull()
   })
 })

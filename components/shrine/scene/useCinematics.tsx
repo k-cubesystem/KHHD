@@ -122,8 +122,14 @@ export interface CinematicsApi {
   vibrate: (ms: number) => void
 }
 
-/** 연출 허용 여부 — 게이트 오프 또는 모션 최소화 설정이면 화면 연출을 전부 생략한다 */
-function motionAllowed(): boolean {
+/**
+ * 연출 허용 여부 — 게이트 오프 또는 모션 최소화 설정이면 화면 연출을 전부 생략한다.
+ *
+ * `window.matchMedia` 를 읽으므로 **렌더 중 호출 금지**(SSR 과 첫 클라 렌더가 달라진다).
+ * 룸의 신위 회전(안2.3 ④)도 같은 판정을 써야 하므로 export 한다 — 판정 규칙이 두 벌이 되면
+ * 게이트를 내렸는데 회전만 남는 식으로 어긋난다.
+ */
+export function motionAllowed(): boolean {
   if (!GAMEFEEL_V1) return false
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
   return !window.matchMedia('(prefers-reduced-motion: reduce)').matches

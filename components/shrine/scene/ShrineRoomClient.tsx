@@ -14,7 +14,7 @@ import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, Sparkles, Lock } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
-import { bondProgress, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
+import { bondProgress, deityTurnFrames, BOND_LEVEL_NAMES, BOND_THRESHOLDS } from '@/lib/domain/shrine/deities'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   depthScale,
@@ -50,12 +50,13 @@ import {
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
 } from './keeper-lines'
-import { useCinematics, ENTRANCE_MS } from './useCinematics'
+import { useCinematics, motionAllowed, ENTRANCE_MS } from './useCinematics'
 import { CameraMinimap, useCameraRig } from './CameraRig'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { WalkingKeeper, type KeeperSpot } from './WalkingKeeper'
+import { DeityTurn } from './DeityTurn'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
@@ -75,9 +76,15 @@ import '@/app/shrine-scene.css'
 /** 촛불 불꽃은 아이템 상단에서 피어오르도록 y를 살짝 위로 */
 const FLAME_Y_OFFSET = 5
 
-/** 좌정 主神 몸통 — 시그니처 aura 방출 기준점 */
-const DEITY_POS = { x: 50, y: 42 } as const
-/** 기도 절정의 반짝임 — 제단 상판 */
+/**
+ * 좌정 主神 몸통 — 시그니처 aura 방출·탭 버스트 기준점.
+ *
+ * 42 → **39**: 신위 접지가 단상 상면(y45.3)으로 올라가 스탠드가 y12~45.3 이 되었다. 42 를 그대로 두면
+ * 아우라가 발끝 3.3%p 위에서 터져 "옷자락에서 나는 빛"이 된다 — 접지에서 스탠드 높이의 20% 위
+ * (=몸통 아래쪽, 종전과 같은 몸의 위치)로 옮겼다. stage.PODIUM_TOP_Y 가 바뀌면 이 값도 같이 본다.
+ */
+const DEITY_POS = { x: 50, y: 39 } as const
+/** 기도 절정의 반짝임 — 제단 상판(단상 앞 공물상 y49~67, 상면 앞턱 y57)의 상면 위 */
 const PRAYER_SPARKLE_POS = { x: 50, y: 52 } as const
 /** 낮밤 광원 갱신 주기. 위상 전이는 ±1h 에 걸쳐 있어 분 단위면 충분하다. */
 const SCENE_CLOCK_MS = 60_000
@@ -113,8 +120,12 @@ const KEEPER_ENTRANCE_FROM = 8
 /**
  * 입장 걷기 길이. 카메라 팬(ENTRANCE_MS.pan=1100)보다 길어야 "카메라가 멎은 뒤에도 걷고 있다"가 되고,
  * 팬이 캐릭터를 추월해 화면 밖에 두고 가지 않는다(둘 다 같은 감속 곡선을 쓴다).
+ *
+ * 1800 → **3600**(부록 C ② 3차 검수 "지나가 버린다"). 팬의 3.3배라 팬이 멎는 1100ms 시점에
+ * 걸음은 아직 3분의 1도 남아 있다 — 카메라가 먼저 대청에 서고, 신당지기가 뒤따라 걸어 들어온다.
+ * (상한은 keeper-walk MAX_ENTRANCE_MS=10s 라 이 값은 클램프에 걸리지 않는다.)
  */
-const KEEPER_ENTRANCE_MS = 1800
+const KEEPER_ENTRANCE_MS = 3600
 /** 탭 후 걸음 멈춤 길이 — 말풍선을 읽을 만큼만(부록 B 2.5s) */
 const KEEPER_TAP_PAUSE_MS = 2500
 
@@ -263,6 +274,14 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
   const [placements, setPlacements] = useState<StagePlacement[]>(scene.placements)
   /** KST 시각(낮밤 조명). null = 아직 마운트 전 — SSR·하이드레이션은 테마 원색 그대로 (#418 전례) */
   const [hour, setHour] = useState<number | null>(null)
+  // ── 신위 탭 회전 (안2.3 ④) ──
+  /** 회전 재생 중. true 인 동안 재탭은 무시된다(부록 C ④ 탭 잠금) */
+  const [deitySpinning, setDeitySpinning] = useState(false)
+  /**
+   * 회전 허용 여부 = 연출 게이트 on + 모션 최소화 아님. matchMedia 는 마운트 후에만 읽는다
+   * (렌더 중 호출하면 SSR 과 첫 클라 렌더가 갈린다 — #418 전례). false 면 탭 반응만 남는다.
+   */
+  const [spinAllowed, setSpinAllowed] = useState(false)
   /** 저사양 폴백 등급. 측정은 마운트 후 1회 */
   const [tier, setTier] = useState<EffectsTier>('full')
   const [editing, setEditing] = useState(false)
@@ -324,6 +343,8 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
   useEffect(() => {
     const t = readEffectsTier()
     setTier(t)
+    // 신위 회전도 같은 연출 판정을 쓴다(게이트·모션 최소화 단일 출처 — useCinematics.motionAllowed)
+    setSpinAllowed(motionAllowed())
     const revisit = readEntranceSeen() || t === 'lite'
     // 두루마리 입장 동선 — 마당(camX 0)에서 대청 정렬점으로. "대문으로 들어와 대청에 선다"(안2).
     //
@@ -956,6 +977,31 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     [editing, play, keeperSay, scene.mainDeity, cinVibrate, keeperHomeX]
   )
 
+  // ── 좌정 신위(제단 위 스탠드) 탭 — 한 바퀴 회전 + 기존 반응 (안2.3 ④) ──
+  /**
+   * 반응(사운드·아우라 버스트·말풍선·햅틱)은 신당지기 탭과 **같은 경로**를 탄다 — 신당지기가 곧 좌정 主神이라
+   * 두 벌로 나누면 대사 카운트(KEEPER_TAP_LIMIT)와 사운드가 서로 어긋난다. 파티클 좌표만 신위 몸통으로 준다.
+   * 회전은 그 위에 얹는 연출이라, 재생 중 재탭은 **반응까지 통째로 무시**한다(부록 C ④ 탭 잠금).
+   */
+  const onTapDeity = useCallback(() => {
+    if (editing || deitySpinning) return
+    onTapKeeper({ x: DEITY_POS.x, y: DEITY_POS.y })
+    if (!spinAllowed) return
+    setDeitySpinning(true)
+    trackEvent({ action: 'deity_spin', category: 'shrine', label: scene.mainDeity?.code ?? 'none' })
+  }, [editing, deitySpinning, onTapKeeper, spinAllowed, scene.mainDeity])
+
+  const onDeitySpinEnd = useCallback(() => setDeitySpinning(false), [])
+
+  /**
+   * 턴어라운드 프레임 경로(측면·뒷면). 회전이 애초에 불가한 상태(게이트 오프·모션 최소화)에서는 null 을 줘
+   * DeityTurn 이 프리로드 요청조차 하지 않게 한다 — 실재 판정은 그 프리로드 결과가 정본이다.
+   */
+  const deityFrames = useMemo(
+    () => (spinAllowed ? deityTurnFrames(scene.mainDeity?.code) : null),
+    [spinAllowed, scene.mainDeity?.code]
+  )
+
   // ── 테마 전환 ──
   const applyTheme = useCallback(
     async (pack: ThemePack) => {
@@ -1079,30 +1125,23 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
         style={{ top: '77%', width: scaleW(64), height: '16%', background: 'var(--th-glow)', filter: 'blur(7px)' }}
       />
 
-      {/* 좌정한 主神 — 제단 위에 강림 */}
+      {/* 좌정한 主神 — 단상 위에 강림. 탭하면 한 바퀴 돈다(안2.3 ④).
+          세로 정합(발이 단상 상면에 닿음)은 DeityTurn 이 stage.deityStandBox 로 파생한다. */}
       {scene.mainDeity?.spriteUrl && (
-        <div
-          className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-[3] deity-stand"
-          style={{ bottom: '50%', height: '38%' }}
-        >
-          <div
-            className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
-            style={{
-              bottom: '-6%',
-              width: '86%',
-              height: '20%',
-              background: 'var(--th-glow, rgba(201,168,76,0.28))',
-              filter: 'blur(9px)',
-            }}
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={scene.mainDeity.spriteUrl}
-            alt={scene.mainDeity.name}
-            className="relative h-full w-auto object-contain"
-            style={{ filter: 'drop-shadow(0 5px 9px rgba(0,0,0,0.5))' }}
-          />
-        </div>
+        <DeityTurn
+          baseUrl={scene.mainDeity.spriteUrl}
+          sideUrl={deityFrames?.side ?? null}
+          backUrl={deityFrames?.back ?? null}
+          name={scene.mainDeity.name}
+          spinning={deitySpinning}
+          onSpinEnd={onDeitySpinEnd}
+          onTap={onTapDeity}
+          // 게이트를 내리면 신위는 **탭 대상 자체가 사라진다**(종전 pointer-events-none 그대로) —
+          // 원복 레버가 연출만 끄고 새 상호작용을 남기면 "되돌렸는데 손에 걸리는 것"이 생긴다(ARCH §8).
+          // 모션 최소화는 여기서 끄지 않는다 — 회전만 생략하고 탭 반응은 남기는 것이 부록 C ④ 계약이다.
+          interactive={GAMEFEEL_V1 && !editing}
+          idleGlow={GAMEFEEL_V1 && !editing}
+        />
       )}
 
       {/* L2 구조물 (stage 테마) / CSS 제단 박스 (레거시) — 큰 방에서는 w 만 겉보기 보정 */}
@@ -1300,7 +1339,11 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
         className={`room relative rounded-[18px] ${editing ? 'editing' : ''} ${cin.roomClassName}`}
         {...bindRoom}
         style={{
-          height: 'min(56vh, 480px)',
+          // 방 높이 — min(56vh,480px) → **min(72vh,620px)** (부록 C ③ "상하단으로 조금 더 길어도 됨").
+          // 세로가 29% 늘어나면 제단·단상·신위의 위계가 살고 걸이/벽/바닥 존도 넉넉해진다.
+          // 세로 % 값들은 전부 방 높이 비례라 함께 늘어난다(광원 타원·암전·존 가이드 = 의도 유지).
+          // 유일한 하드코딩이던 신위 접지는 단상 상면 파생(stage.deityStandBox)으로 옮겼다.
+          height: 'min(72vh, 620px)',
           border: '1px solid var(--th-frame, rgba(201,168,76,0.3))',
           // ⚠️ overflow:hidden 미사용(고의): 둥근 클립+overflow-hidden이 내부 <canvas>·큰 이미지를 GPU 마스크로
           //    합성하다 고DPR 실기기에서 실패→흰 화면이 되던 근본 원인. 대신 다크 배경색으로 폴백을 안전하게

@@ -44,8 +44,14 @@ const X_MIN = 0
 const X_MAX = 100
 /** 이보다 좁은 구간은 '배회 없음'으로 본다 — 몇 px 왕복은 떨림으로만 보인다. */
 const MIN_SPAN_PCT = 0.5
-/** 배회 구간을 한 번 훑는 시간 (부록 B: 24s) */
-export const KEEPER_WANDER_LEG_MS = 24_000
+/**
+ * 배회 구간을 한 번 훑는 시간.
+ *
+ * 부록 B 초안 24s → **30s**(부록 C ② 3차 검수: "지나가 버린다"). 입장 걷기를 3600ms 로 늦춘 만큼
+ * 배회도 같은 비율로 늦춰야 도착하는 걸음과 거니는 걸음의 속도가 이어진다 —
+ * 승계 프레임에서 걸음 빠르기가 튀면 "순간이동 0" 계약이 지켜져도 어색하게 읽힌다.
+ */
+export const KEEPER_WANDER_LEG_MS = 30_000
 /** 방어 상한 — 잘못된 값이 와도 걸음이 사실상 멈추거나 조작 불가 구간이 길어지지 않게 한다. */
 const MAX_LEG_MS = 600_000
 const MAX_ENTRANCE_MS = 10_000
@@ -63,7 +69,7 @@ function clamp(v: number, min: number, max: number): number {
 
 /**
  * 배회 계획. legMs 는 구간을 한 번 훑는 시간이라 한 바퀴는 그 두 배다 —
- * 「24s infinite alternate」와 같은 걸음 속도를 중점 출발 왕복으로 옮긴 값이다.
+ * 「구간 1회 legMs infinite alternate」와 같은 걸음 속도를 중점 출발 왕복으로 옮긴 값이다.
  */
 export function planKeeperWalk(range: KeeperRange, legMs: number = KEEPER_WANDER_LEG_MS): KeeperWalkPlan {
   const a = clamp(range?.from, X_MIN, X_MAX)

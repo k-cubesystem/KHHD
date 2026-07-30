@@ -1,7 +1,10 @@
 import {
   DEFAULT_ANCHORS,
   DEFAULT_SNAP_RADIUS_PCT,
+  DEITY_HEAD_ROOM_Y,
+  PODIUM_TOP_Y,
   LIT_BOOST_MAX,
+  deityStandBox,
   depthScale,
   depthZ,
   groundShadow,
@@ -523,5 +526,47 @@ describe('isCatalogKind — 카탈로그 품목 종류 가드', () => {
   it('4종만 통과', () => {
     for (const k of ['wallpaper', 'flooring', 'structure', 'prop']) expect(isCatalogKind(k)).toBe(true)
     for (const k of ['Prop', '', 'item', null, undefined, 3, {}]) expect(isCatalogKind(k)).toBe(false)
+  })
+})
+
+describe('deityStandBox — 신위 접지 계약 (안2.3 ③ 제단·단상 정립)', () => {
+  it('발은 단상 상면에 닿고 머리는 여백 선에 선다 (bottom = 100 - 상면)', () => {
+    // 시드 [계약 3]: 접지선 방 y 45.3% → 신위 래퍼 bottom 54.7%
+    expect(deityStandBox()).toEqual({ bottom: '54.7%', height: '33.3%', groundY: PODIUM_TOP_Y })
+  })
+
+  it('상면은 단상 상면 밴드의 기기 교집합(y44.70~45.87) 안이다 — 폰·데스크톱 모두 접지', () => {
+    expect(PODIUM_TOP_Y).toBeGreaterThanOrEqual(44.7)
+    expect(PODIUM_TOP_Y).toBeLessThanOrEqual(45.87)
+  })
+
+  it('상판(altar-top) 상단 y49.4 보다 위 — 신위(z-3)가 공물상을 덮지 않는다 (시드 경고)', () => {
+    expect(deityStandBox().groundY).toBeLessThan(49.4)
+  })
+
+  it('상면 y 하나만 바꾸면 스탠드 전체가 따라온다 — 시드 좌표 갈아끼우기 지점', () => {
+    expect(deityStandBox(40)).toEqual({ bottom: '60%', height: '28%', groundY: 40 })
+    expect(deityStandBox(52)).toEqual({ bottom: '48%', height: '40%', groundY: 52 })
+  })
+
+  it('상면이 올라가면 신위가 작아지고 내려가면 커진다 (머리 여백 고정 = 위계 유지)', () => {
+    const high = deityStandBox(PODIUM_TOP_Y - 6)
+    const low = deityStandBox(PODIUM_TOP_Y + 6)
+    expect(Number.parseFloat(high.height)).toBeLessThan(Number.parseFloat(low.height))
+  })
+
+  it('머리 여백은 종전 스탠드(bottom 50% · height 38%) 상단과 같은 줄이다 — 여백 회귀 0', () => {
+    expect(DEITY_HEAD_ROOM_Y).toBe(50 - 38)
+    expect(Number.parseFloat(deityStandBox().height)).toBe(PODIUM_TOP_Y - DEITY_HEAD_ROOM_Y)
+  })
+
+  it('종전 하드코딩(y50)보다 위 — 상판 앞 허공에 발이 떠 있던 기하를 되돌린다', () => {
+    expect(deityStandBox().groundY).toBeLessThan(50)
+  })
+
+  it('잘못된 시드값에도 스탠드가 사라지지 않는다 (높이 ≥ 1%p · NaN 방어)', () => {
+    expect(Number.parseFloat(deityStandBox(5, 40).height)).toBeGreaterThanOrEqual(1)
+    expect(deityStandBox(Number.NaN).groundY).toBe(1)
+    expect(deityStandBox(500).groundY).toBe(100)
   })
 })

@@ -188,3 +188,26 @@ export function bondProgress(points: number): BondProgress {
   const toNext = nextThreshold === null ? 0 : Math.max(0, nextThreshold - p)
   return { level, points: p, nextThreshold, toNext, unlocks: bondUnlocks(level) }
 }
+
+// ─── 턴어라운드 프레임 경로 규약 (안2.3 ④ / PRD 부록 C) ────────
+
+/** 신위 코드 허용 문자 — 경로에 그대로 박히므로 탈출 문자·상위 이동(..)을 원천 차단한다. */
+const DEITY_CODE_RE = /^[a-z0-9][a-z0-9_-]{0,30}$/
+
+/** 신위 회전 프레임 3종. 정면은 DB `sprite_url` 이 정본이라 여기서는 측면·뒷면만 규약으로 만든다. */
+export interface DeityTurnFrames {
+  side: string
+  back: string
+}
+
+/**
+ * 신위 턴어라운드 프레임 경로 — `/shrine/deities/{code}/side.webp`·`back.webp`.
+ *
+ * 굽지 않은 신위도 **경로는 성립한다**(파일만 없다). 실재 판정은 클라이언트가 프리로드 결과로 하고
+ * (DeityTurn — 서버 fs 확인은 Vercel 람다에 public/ 이 없어 성립하지 않는다), 이 함수는 규약만 만든다.
+ * 코드가 규약 밖이면 null → 호출측은 폴백(rotateY) 경로로 간다.
+ */
+export function deityTurnFrames(code: string | null | undefined): DeityTurnFrames | null {
+  if (typeof code !== 'string' || !DEITY_CODE_RE.test(code)) return null
+  return { side: `/shrine/deities/${code}/side.webp`, back: `/shrine/deities/${code}/back.webp` }
+}

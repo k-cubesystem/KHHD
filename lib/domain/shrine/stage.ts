@@ -294,6 +294,62 @@ export const DEFAULT_ANCHORS: readonly StageAnchor[] = Object.freeze([
   },
 ] as const)
 
+// ─── 신위 접지 계약 (안2.3 ③ 제단·단상 정립 / PRD 부록 C) ──────
+/**
+ * **단상(壇上) 상면 y** — 신위의 발이 닿는 면. 무대 % 좌표(위→아래).
+ *
+ * ⚠️ 이 값이 계약의 전부다. 단상 시드 좌표가 바뀌면 **여기 한 줄만** 갈아끼우면 신위 스탠드·
+ *    발밑 글로우·머리 여백이 한꺼번에 따라온다(deityStandBox 파생 — 룸에는 세로 하드코딩이 없다).
+ *
+ * 45.3 의 출처 = **시드 [계약 3]** (`supabase/migrations/20260730_shrine_banga_altar_platform.sql`,
+ * 정합 테스트 `__tests__/banga-wide-seed.test.ts` 가 이 값과 시드의 일치를 강제한다).
+ * 단상 스프라이트(`platform.webp` 640×299)와 시드 좌표(x50 y51 w44)에서 상면 앞턱(스프라이트 20.27%
+ * 지점, 행 휘도 하강으로 검출)을 찾아 방 % 로 환산한 **상면 밴드**의 기기 교집합 가운데다:
+ *   · 방 520×620(데스크톱·태블릿): 상면 y 42.38 ~ 45.87
+ *   · 방 380×620(세로 긴 폰):      상면 y 44.70 ~ 47.25
+ *   · 교집합 44.70 ~ 45.87 → 가운데 **45.3**
+ * 스프라이트의 겉보기 세로는 **방 가로:세로 비**에 딸려 오므로 한 상수로 모든 기기의 접지선을 정확히
+ * 맞출 수는 없다. 교집합 안이면 어느 기기에서도 발이 상면 **안**에 놓이고, 오차는 "상면 뒤쪽으로 조금
+ * 들어감"이지 "떠 있음"이 아니다(그래서 가운데를 쓴다 — 에셋↔배선 반올림 차이를 양쪽으로 흡수한다).
+ * 상판(altar-top) 상단이 y49.4 라 4.1%p 여유가 남아 신위(z-3)가 공물상을 덮지도 않는다.
+ *
+ * 종전에는 이 자리가 `bottom:50%`(=y50) 하드코딩이었다. 상면보다 4%p 넘게 아래 = 제단 몸통 안쪽에
+ * 발이 박혀 서 있을 면이 없었고(CEO "어색하다"의 기하적 원인), 방 높이를 72vh 로 늘리면 제단
+ * 스프라이트의 겉보기 세로가 줄어 그 어긋남이 더 벌어진다 — 하드코딩을 남겨 둘 수 없는 이유다.
+ */
+export const PODIUM_TOP_Y = 45.3
+/**
+ * 신위 머리 위 여백 상한 y — 걸이(hanging) 존 상단과 같은 줄(8)보다 4%p 아래.
+ * 종전 스탠드(bottom 50% · height 38%)의 상단이 정확히 이 값이라, 접지만 올리고 머리 여백은 보존한다.
+ */
+export const DEITY_HEAD_ROOM_Y = 12
+
+/** 신위 스탠드 박스 — CSS `bottom`/`height` 문자열과 접지 y(파티클·판정 공용). */
+export interface DeityStandBox {
+  /** 방 하단 기준 % (= 100 - 접지 y) */
+  bottom: string
+  /** 방 높이 대비 % (= 접지 y - 머리 여백 y) */
+  height: string
+  /** 접지 y (무대 % 좌표) — 그림자·아우라가 같은 기준을 쓰도록 노출한다 */
+  groundY: number
+}
+
+/**
+ * 단상 상면 기준 신위 스탠드 기하. 발은 상면에 닿고 머리는 headRoomY 에 선다 —
+ * 즉 상면이 올라가면 신위가 그만큼 커지고(위계가 살고), 내려가면 작아진다.
+ *
+ * 방어: 상면이 머리 여백보다 위로 올라오면(잘못된 시드) 최소 높이 1%p 를 보장해 스탠드가 사라지지 않게 한다.
+ */
+export function deityStandBox(podiumTopY: number = PODIUM_TOP_Y, headRoomY: number = DEITY_HEAD_ROOM_Y): DeityStandBox {
+  const ground = round(clamp(podiumTopY, 1, 100), 4)
+  const head = round(clamp(headRoomY, 0, ground - 1), 4)
+  return {
+    bottom: `${round(100 - ground, 4)}%`,
+    height: `${round(ground - head, 4)}%`,
+    groundY: ground,
+  }
+}
+
 // ─── §4 방어 파싱 (Supabase jsonb → 타입 안전) ────────────────
 
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i
