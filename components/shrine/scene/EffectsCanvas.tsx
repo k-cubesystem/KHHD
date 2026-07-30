@@ -61,6 +61,19 @@ interface Particle {
 }
 
 const POOL_SIZE = 160
+
+/**
+ * 캔버스 CSS 크기 상한(px). 큰 방(안2.2)에서 대청이 뷰포트보다 넓어지며 캔버스도 같이 넓어진다 —
+ * 폭 320% × 룸 520px = 1664px 라 기존 1400 클램프에 걸려 오른쪽이 잘리고 파티클 좌표가 어긋났다.
+ * 2048 은 그 위로 한 단계 여유(≈폭 390%)를 둔 값이다.
+ */
+const CANVAS_MAX_CSS_PX = 2048
+/**
+ * 버퍼 픽셀 예산 — width×height×dpr² 가 이 값을 넘으면 dpr 를 1 로 내린다.
+ * 과거 흰화면은 캔버스 폭이 2^25px 로 폭주해 버퍼가 33.5Mpx 를 넘긴 사고였고, 8Mpx 는 그 1/4 이다.
+ * 실측: 1664×480×2² = 3.19Mpx(통과) / 2048×480×2² = 3.93Mpx(통과) / 2048×1000×2² = 8.19Mpx → dpr 1.
+ */
+const CANVAS_BUDGET_PX = 8_000_000
 const COLORS = {
   flame: ['#ffd27a', '#ff9d3c', '#f4e4ba'],
   smoke: ['#c8bfa8', '#8c8478'],
@@ -247,11 +260,15 @@ export const EffectsCanvas = forwardRef<EffectsHandle, { className?: string }>(f
 
     const step = () => {
       const rect = canvas.getBoundingClientRect()
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
       // 방어적 클램프: 캔버스 버퍼가 비정상적으로 커지는 피드백 폭주 차단
       // (과거 방 크기 측정 이상으로 canvas.width가 2^25까지 폭주 → 빈 흰 캔버스가 방을 덮던 버그).
-      const w = Math.max(1, Math.min(Math.round(rect.width), 1400))
-      const h = Math.max(1, Math.min(Math.round(rect.height), 1400))
+      // ⚠️ spawn/spawnAura 는 rect.width 기반으로 % → px 를 환산하므로, 여기서 w 를 자르는 순간
+      //    그 폭을 넘는 좌표는 캔버스 밖으로 나간다. 상한은 반드시 실제 방 폭보다 커야 한다.
+      const w = Math.max(1, Math.min(Math.round(rect.width), CANVAS_MAX_CSS_PX))
+      const h = Math.max(1, Math.min(Math.round(rect.height), CANVAS_MAX_CSS_PX))
+      // 픽셀 예산 초과 시 선명도(dpr)를 먼저 포기한다 — 폭을 더 자르면 파티클 좌표계가 깨진다
+      const want = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr = w * h * want * want > CANVAS_BUDGET_PX ? 1 : want
       if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
         canvas.width = Math.round(w * dpr)
         canvas.height = Math.round(h * dpr)

@@ -34,6 +34,7 @@ import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
 import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
 import { parallaxShiftPct, zoneBox, zoneCodeAt, zoneStage, zoneWidthScale } from '@/lib/domain/shrine/world-render'
+import { keeperRestX, type KeeperEntranceSpec, type KeeperRange } from '@/lib/domain/shrine/keeper-walk'
 import { GAMEFEEL_V1, SCROLL_SHRINE_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import {
   greetingFor,
@@ -54,6 +55,7 @@ import { CameraMinimap, useCameraRig } from './CameraRig'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
+import { WalkingKeeper, type KeeperSpot } from './WalkingKeeper'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { DevotionStrip } from './DevotionStrip'
@@ -91,6 +93,28 @@ const IDLE_CLASS: Record<Layer, string> = {
   altar: 'shrine-idle-breathe',
   floor: 'shrine-idle-breathe',
 }
+// ── 거니는 신당지기 (안2.2 / PRD 부록 B) ──────────────────────
+/**
+ * 배회 구간(대청 구역 로컬 %) — 큰 방에서만 쓰인다.
+ *
+ * 중점이 곧 정지 위치·입장 도착점이라(keeper-walk 계약) **중점을 제단 옆(45)에 맞춘 구간**을 쓴다.
+ * 부록 B 초안의 22~78 은 중점이 50(제단 정면)이라 신위와 겹치고 입장 도착점(45)과도 어긋나
+ * 승계 순간 순간이동이 생긴다 — 중점 45 를 유지한 채 폭만 좁혔다.
+ * 28%p(≈0.9화면)로 잡은 이유: 320% 방에서 46%p 는 1.5화면이라 카메라가 멎어 있으면 신당지기가
+ * 주기적으로 화면을 벗어난다. 걷는 모습이 보이는 것이 이 프로토타입의 목적이라 폭을 양보했다
+ * (방을 더 쓰려면 여기만 넓히면 되고 다른 코드는 손댈 필요가 없다).
+ */
+const KEEPER_WANDER: KeeperRange = { from: 31, to: 59 }
+/** 입장 걷기 시작점 — 문간(부록 B 방 구성 x≈8) */
+const KEEPER_ENTRANCE_FROM = 8
+/**
+ * 입장 걷기 길이. 카메라 팬(ENTRANCE_MS.pan=1100)보다 길어야 "카메라가 멎은 뒤에도 걷고 있다"가 되고,
+ * 팬이 캐릭터를 추월해 화면 밖에 두고 가지 않는다(둘 다 같은 감속 곡선을 쓴다).
+ */
+const KEEPER_ENTRANCE_MS = 1800
+/** 탭 후 걸음 멈춤 길이 — 말풍선을 읽을 만큼만(부록 B 2.5s) */
+const KEEPER_TAP_PAUSE_MS = 2500
+
 /** 상시 빛가루 — 배치가 빈약한 신당에서도 보이는 최소 상시 모션. 광원 타원 주변을 순환한다 */
 const MOTE_INTERVAL_MS = 6500
 const MOTE_SPOTS = [
@@ -307,6 +331,10 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     //
     // ⚠️ camX 는 마운트 시 0(마당)이 보장된다 — useCameraRig 의 camState 초기값이 0 이고,
     //    이 effect 는 카메라를 움직이는 다른 effect(테마 홈잉·꾸미기 진입)보다 먼저 등록돼 먼저 돈다.
+    //
+    // 신당지기 입장 걷기(WalkingKeeper)는 **같은 마운트에서 CSS 로 스스로 시작**한다 — 첫 페인트에
+    // 애니메이션이 걸리고 이 팬도 같은 커밋에서 발화하므로 둘은 동시 시작이다(별도 동기화 타이머 없음).
+    // 이번 검수 지적("입장이 안 보인다")의 해법은 이 팬이 아니라 그 캐릭터 쪽이다 — 팬은 보조로 남는다.
     if (worldActive) {
       panSource.current = 'system'
       panTo(daecheongCamX, GAMEFEEL_V1 ? ENTRANCE_MS.pan : 0)
@@ -403,6 +431,37 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
     (pct: number) => (wideRoom ? `${Math.round(pct * stageScale * 1e4) / 1e4}%` : `${pct}%`),
     [wideRoom, stageScale]
   )
+  // ── 거니는 신당지기 배선 (안2.2) ──────────────────────────────
+  /**
+   * 두루마리에서만 거닌다. 단일 무대·레거시는 KEEPER_POS 정위치 그대로다(회귀 0) —
+   * 좁은 방에서 캐릭터가 왕복하면 제단·아이템을 계속 스치고 지나간다.
+   * 연출 게이트(GAMEFEEL_V1)를 내리면 보행도 함께 사라진다(ARCH §8 원복 레버).
+   */
+  const keeperWalks = GAMEFEEL_V1 && worldActive
+  /**
+   * 신당지기 정지 위치(구역 로컬 %) — 배회 구간의 중점. 입장 도착점·모션최소화 정위치·
+   * **공물 건네기 판정 기준점**이 모두 이 하나로 모인다(보이는 자리와 드롭 판정이 어긋나면 공물이 먹통이 된다).
+   */
+  const keeperHomeX = keeperWalks ? keeperRestX(KEEPER_WANDER) : KEEPER_POS.x
+  /** 꾸미기 중에는 배회를 접고 정지 위치에 세운다 — 그 자리가 공물 드롭 타깃이다 */
+  const keeperRange = useMemo<KeeperRange>(
+    () => (keeperWalks && !editing ? KEEPER_WANDER : { from: keeperHomeX, to: keeperHomeX }),
+    [keeperWalks, editing, keeperHomeX]
+  )
+  /** 입장 걷기 — 마운트 1회. deps 에 editing 이 없어 꾸미기 토글로 다시 걸어 들어오지 않는다 */
+  const keeperEntrance = useMemo<KeeperEntranceSpec | null>(
+    () => (keeperWalks ? { from: KEEPER_ENTRANCE_FROM, to: keeperHomeX, ms: KEEPER_ENTRANCE_MS } : null),
+    [keeperWalks, keeperHomeX]
+  )
+  const [keeperPaused, setKeeperPaused] = useState(false)
+  const keeperPauseTimer = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (keeperPauseTimer.current !== null) window.clearTimeout(keeperPauseTimer.current)
+    },
+    []
+  )
+
   /** 대청 밖 구역(마당·후원)의 무대 세트 — 대청은 기존 렌더 덩어리를 그대로 쓰므로 제외한다 */
   const scenery = useMemo(() => {
     if (!worldActive) return []
@@ -765,11 +824,13 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
         effectsRef.current?.emit('sparkle', x, y)
       }
       const item = catalogById.get(p.catalogItemId)
-      if (item?.behavior.give && Math.hypot(x - KEEPER_POS.x, y - KEEPER_POS.y) < KEEPER_GIVE_RADIUS) {
+      // 판정 기준은 **꾸미기 중 신당지기가 서 있는 자리**(keeperHomeX) — 큰 방에서 12% 는 화면 밖이라
+      // 보이는 신당지기에 올려도 아무 일이 없었다. y 는 예나 지금이나 KEEPER_POS.y 다.
+      if (item?.behavior.give && Math.hypot(x - keeperHomeX, y - KEEPER_POS.y) < KEEPER_GIVE_RADIUS) {
         play('bell')
         setBounce((b) => b + 1)
-        effectsRef.current?.emit('sparkle', KEEPER_POS.x, KEEPER_POS.y)
-        effectsRef.current?.emit('petals', KEEPER_POS.x, KEEPER_POS.y) // 공물 헌납 파티클(F-5)
+        effectsRef.current?.emit('sparkle', keeperHomeX, KEEPER_POS.y)
+        effectsRef.current?.emit('petals', keeperHomeX, KEEPER_POS.y) // 공물 헌납 파티클(F-5)
         toast(`🔮 신당지기가 ${item.name}을(를) 받았습니다`)
         keeperSay(giveLine(Date.now()))
         if (isOwner) void recordKeeperGift(item.name)
@@ -777,7 +838,7 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
       }
       window.setTimeout(checkResonance, 0)
     },
-    [catalogById, play, keeperSay, checkResonance, isOwner, anchors]
+    [catalogById, play, keeperSay, checkResonance, isOwner, anchors, keeperHomeX]
   )
 
   // ── 수납 (편집 모드) ──
@@ -862,24 +923,35 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
   }, [editing, placements, play, isOwner, scene.familyMemberId, keeperSay])
 
   // ── 신당지기(=좌정 主神) 탭 — 시그니처 사운드+파티클 버스트 반응 (§3.2) ──
-  const onTapKeeper = useCallback(() => {
-    if (editing) return
-    const deity = scene.mainDeity
-    cinVibrate(8)
-    // 좌정 主神이 있으면 신위 고유 사운드+파티클, 없으면 기본 목탁
-    play(deity?.sound ?? 'moktak')
-    if (deity?.particle && deity.accent) {
-      effectsRef.current?.burstAura(deity.particle, deity.accent, KEEPER_POS.x, KEEPER_POS.y)
-    }
-    setBounce((b) => b + 1)
-    keeperTaps.current += 1
-    if (keeperTaps.current >= KEEPER_TAP_LIMIT) {
-      keeperSay(KEEPER_SNEEZE)
-      keeperTaps.current = 0
-      return
-    }
-    keeperSay(keeperTapLine(keeperTaps.current))
-  }, [editing, play, keeperSay, scene.mainDeity, cinVibrate])
+  // spot = 탭 순간 실측한 캐릭터 자리(거니는 중이면 정위치와 다르다). 못 재면 정지 위치로 폴백한다.
+  const onTapKeeper = useCallback(
+    (spot: KeeperSpot | null) => {
+      if (editing) return
+      const deity = scene.mainDeity
+      cinVibrate(8)
+      // 좌정 主神이 있으면 신위 고유 사운드+파티클, 없으면 기본 목탁
+      play(deity?.sound ?? 'moktak')
+      if (deity?.particle && deity.accent) {
+        effectsRef.current?.burstAura(deity.particle, deity.accent, spot?.x ?? keeperHomeX, spot?.y ?? KEEPER_POS.y)
+      }
+      // 걸음을 멈추고 눈을 맞춘다 — 말풍선을 읽을 동안만(부록 B 상호작용)
+      setKeeperPaused(true)
+      if (keeperPauseTimer.current !== null) window.clearTimeout(keeperPauseTimer.current)
+      keeperPauseTimer.current = window.setTimeout(() => {
+        keeperPauseTimer.current = null
+        setKeeperPaused(false)
+      }, KEEPER_TAP_PAUSE_MS)
+      setBounce((b) => b + 1)
+      keeperTaps.current += 1
+      if (keeperTaps.current >= KEEPER_TAP_LIMIT) {
+        keeperSay(KEEPER_SNEEZE)
+        keeperTaps.current = 0
+        return
+      }
+      keeperSay(keeperTapLine(keeperTaps.current))
+    },
+    [editing, play, keeperSay, scene.mainDeity, cinVibrate, keeperHomeX]
+  )
 
   // ── 테마 전환 ──
   const applyTheme = useCallback(
@@ -1065,36 +1137,18 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
       {/* 파티클 이펙트 */}
       <EffectsCanvas ref={effectsRef} />
 
-      {/* 신당지기 — 좌정한 主神이 겸한다 (초상 오브, 없으면 🔮 폴백) */}
-      <button
-        onClick={onTapKeeper}
-        className="absolute z-[12] text-center"
-        style={{ left: `${KEEPER_POS.x}%`, top: `${KEEPER_POS.y}%` }}
-        aria-label={scene.mainDeity ? `신당지기 ${scene.mainDeity.name}` : '신당지기'}
-      >
-        <div
-          key={bounce}
-          className="w-[38px] h-[38px] rounded-full grid place-items-center text-[19px] shrine-keeper-orb overflow-hidden"
-          style={{
-            background: 'radial-gradient(circle at 35% 30%, var(--th-glow), rgba(0,0,0,0.45))',
-            border: '1px solid var(--th-accent)',
-            boxShadow: '0 0 16px var(--th-glow)',
-          }}
-        >
-          {scene.mainDeity?.portraitUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={scene.mainDeity.portraitUrl}
-              alt=""
-              className="w-full h-full object-cover object-top"
-              draggable={false}
-            />
-          ) : (
-            '🔮'
-          )}
-        </div>
-        <div className="w-[26px] h-[6px] mx-auto mt-0.5 rounded-full bg-black/40 blur-[2px]" />
-      </button>
+      {/* 신당지기 — 좌정한 主神이 겸한다 (초상 오브, 없으면 🔮 폴백).
+          큰 방에서는 바닥 위를 거닐고 입장 때 문간에서 걸어 들어온다(안2.2). 단일 무대는 KEEPER_POS 정위치. */}
+      <WalkingKeeper
+        portraitUrl={scene.mainDeity?.portraitUrl ?? null}
+        deityName={scene.mainDeity?.name ?? null}
+        range={keeperRange}
+        y={KEEPER_POS.y}
+        entrance={keeperEntrance}
+        bounceKey={bounce}
+        onTap={onTapKeeper}
+        paused={keeperPaused || editing}
+      />
 
       {/* 아이템 */}
       {placements.map((p) => {
@@ -1141,33 +1195,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
             zIndex: 29,
           }}
         />
-      )}
-
-      {/* 말풍선 — 방 최상단(신위 위)에 배치해 좌정 신위와 겹치지 않게. 신탁 선톡이면 강조.
-          조명 오버레이보다 위(같은 z, 뒤 DOM)라 글이 그레이딩에 흐려지지 않는다.
-          큰 방에서는 좌우 여백(20%/5%)이 2.4배로 벌어져 말풍선이 화면 밖으로 밀려난다 —
-          신위 위 중앙에 앵커하고 폭만 겉보기(뷰포트 75%)로 환산한다. */}
-      {!editing && (
-        <div
-          className="absolute z-[29] text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
-          style={{
-            left: wideRoom ? '50%' : '20%',
-            top: '3%',
-            ...(wideRoom ? { width: scaleW(75), transform: 'translateX(-50%)' } : { right: '5%' }),
-            background: oracle ? 'rgba(26,18,6,0.92)' : 'rgba(10,10,8,0.8)',
-            border: oracle ? '1px solid rgba(212,175,55,0.65)' : '1px solid var(--th-accent)',
-            boxShadow: oracle ? '0 0 16px rgba(212,175,55,0.25)' : undefined,
-          }}
-        >
-          <div
-            className="text-[9px] tracking-[0.24em] mb-0.5 flex items-center gap-1"
-            style={{ color: oracle ? '#E8D5A0' : 'var(--th-accent)' }}
-          >
-            {oracle && <span className="text-[8px]">✦ 신탁 ✦</span>}
-            {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
-          </div>
-          <span dangerouslySetInnerHTML={{ __html: bubble }} />
-        </div>
       )}
 
       {/* 공명 링 */}
@@ -1358,6 +1385,31 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
             소원 <b style={{ color: 'var(--th-accent)' }}>{scene.wishCount}</b>
           </div>
         </div>
+
+        {/* 신당지기 말풍선 — **룸 직계 HUD**(카메라 밖). 신탁 선톡이면 강조.
+            world 안(대청 박스)에 있던 동안은 팬하면 화면 밖으로 잘리고 「꾸미기」 버튼과 겹쳤다(2차 검수).
+            신당지기가 거닐기 시작한 뒤로는 붙일 앵커도 없어져 화면 고정 대사창으로 옮겼다 —
+            상단은 꾸미기(top-2.5 left-2.5)·소원 배지(top-2.5 right-2.5)·미니맵(top-26px, 44px 터치)이
+            이미 차지해 남는 안전 구역이 하단뿐이다. pointerEvents 를 끊어 팬 제스처·미니맵 탭을 가리지 않는다. */}
+        {!editing && (
+          <div
+            className="absolute left-2.5 right-2.5 bottom-2.5 z-30 pointer-events-none text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
+            style={{
+              background: oracle ? 'rgba(26,18,6,0.92)' : 'rgba(10,10,8,0.8)',
+              border: oracle ? '1px solid rgba(212,175,55,0.65)' : '1px solid var(--th-accent)',
+              boxShadow: oracle ? '0 0 16px rgba(212,175,55,0.25)' : undefined,
+            }}
+          >
+            <div
+              className="text-[9px] tracking-[0.24em] mb-0.5 flex items-center gap-1"
+              style={{ color: oracle ? '#E8D5A0' : 'var(--th-accent)' }}
+            >
+              {oracle && <span className="text-[8px]">✦ 신탁 ✦</span>}
+              {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
+            </div>
+            <span dangerouslySetInnerHTML={{ __html: bubble }} />
+          </div>
+        )}
         {editing && (
           <div
             className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 text-[9px] tracking-[0.08em] text-gold-300 px-2.5 py-[3px] rounded-full whitespace-nowrap"
@@ -1548,18 +1600,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
             animation: none;
           }
         }
-        .shrine-keeper-orb {
-          animation: shrineBounce 0.55s ease;
-        }
-        @keyframes shrineBounce {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          40% {
-            transform: translateY(-6px) scale(1.06);
-          }
-        }
         .shrine-ring {
           animation: shrineRing 1.3s ease-out forwards;
         }
@@ -1583,7 +1623,6 @@ export function ShrineRoomClient({ scene, devotion = null, familyHall = null }: 
           scrollbar-width: none;
         }
         @media (prefers-reduced-motion: reduce) {
-          .shrine-keeper-orb,
           .shrine-ring {
             animation-duration: 0.01ms;
           }
