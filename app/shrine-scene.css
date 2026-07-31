@@ -1410,21 +1410,6 @@
 }
 
 /* 위로 쓸어 뽑기 — 뽑힌 기 하나만 솟는다 */
-.obangki-pull {
-  animation: obangkiPull 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-@keyframes obangkiPull {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  55% {
-    transform: translateY(-26px) scale(1.1);
-  }
-  100% {
-    transform: translateY(-14px) scale(1.06);
-  }
-}
-
 /* 뽑히지 않은 기는 뒤로 물러난다 — 뽑힌 기가 혼자 서 있게 */
 .obangki-dim {
   animation: obangkiDim 0.55s ease-out both;
@@ -1461,6 +1446,47 @@
   }
   100% {
     transform: scaleX(1) scaleY(1) rotate(0deg);
+  }
+}
+
+/* 삼기(三旗) — 뽑힌 세 기가 **차례로** 앞으로 나와 선다(8차: 한 기가 아니라 세 기가 답한다).
+   순서는 setTimeout 체인이 아니라 **지연**으로 준다 — 자리 → 뿌리 → 향방.
+   지연은 인라인 --ob-delay 로 들어오고, 같은 값을 안쪽 펼침(.obangki-unfurl)에도 얹어 한 몸으로 움직인다. */
+.obangki-samgi {
+  animation: obangkiSamgiRise 0.62s cubic-bezier(0.22, 0.61, 0.36, 1) var(--ob-delay, 0s) both;
+  will-change: transform, opacity;
+}
+@keyframes obangkiSamgiRise {
+  0% {
+    transform: translateY(24px) scale(0.88);
+    opacity: 0;
+  }
+  62% {
+    transform: translateY(-5px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* 부정풀이 — 자리에 선 녹기를 **물리는** 한 박자. 전승에서 나쁜 기가 서면 잡귀를 쫓고 다시 뽑는다.
+   물린 기는 위로 흩어져 사라지고 그 자리에 재차 뽑은 기가 선다(재차는 --ob-delay 로 뒤에 온다). */
+.obangki-purified {
+  animation: obangkiPurify 0.92s ease-out both;
+  will-change: transform, opacity, filter;
+}
+@keyframes obangkiPurify {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.92;
+    filter: blur(0);
+  }
+  100% {
+    transform: translateY(-34px) scale(0.66);
+    opacity: 0;
+    filter: blur(3px);
   }
 }
 
@@ -1504,9 +1530,10 @@
 @media (prefers-reduced-motion: reduce) {
   .obangki-bell,
   .obangki-shuffle,
-  .obangki-pull,
   .obangki-dim,
   .obangki-unfurl,
+  .obangki-samgi,
+  .obangki-purified,
   .obangki-burst,
   .obangki-bubble {
     animation-duration: 0.01ms;

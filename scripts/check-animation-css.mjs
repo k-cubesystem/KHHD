@@ -89,9 +89,10 @@ const REQUIRED_CLASSES = [
   '.obangki-slot',
   '.obangki-cloth',
   '.obangki-shuffle',
-  '.obangki-pull',
   '.obangki-dim',
   '.obangki-unfurl',
+  '.obangki-samgi',
+  '.obangki-purified',
   '.obangki-burst',
   '.obangki-bubble',
   // 창방 팻말 (의식 전용 페이지 진입점) — 벽 무라 cover 배율 재현이 여기 걸려 있다
@@ -162,9 +163,10 @@ const REQUIRED_KEYFRAMES = [
   'obangkiBell',
   'obangkiSway',
   'obangkiShuffle',
-  'obangkiPull',
   'obangkiDim',
   'obangkiUnfurl',
+  'obangkiSamgiRise',
+  'obangkiPurify',
   'obangkiBurst',
   'obangkiBubbleIn',
   // 창방 팻말

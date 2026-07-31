@@ -93,24 +93,20 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
     await expect(page).toHaveURL(OBANGKI_URL)
     await page.screenshot({ path: SHOT('2-shuffle') })
 
-    // 4) 셔플 종료 → 뽑기 안내 (구 UI: 사용자가 고른다 / 신 UI: 자동 선출)
-    const pickPrompt = page.getByText('마음 가는 기 하나를 위로 쓸어 올리세요')
-    const autoPrompt = page.getByText(/기를 펴는 중입니다|기가 돌아갑니다/)
-    await expect(pickPrompt.or(autoPrompt).first()).toBeVisible({ timeout: 15_000 })
+    // 4) 셔플 종료 → 삼기가 저절로 나온다 (8차: 사용자가 고르는 국면이 없다)
+    await expect(page.getByText(/기를 펴는 중입니다|기가 돌아갑니다/).first()).toBeVisible({ timeout: 15_000 })
     await expect(page).toHaveURL(OBANGKI_URL)
     console.log('[PASS] 셔플 국면 — URL 유지')
 
-    // 5) 구 UI 라면 깃발 하나를 탭해 뽑는다
-    if (await pickPrompt.isVisible().catch(() => false)) {
-      await page.getByRole('button', { name: '3번째 깃발 뽑기' }).click()
+    // 5) 삼기 두루마리 — 공수·세 자리·처방까지 다 서야 점사가 끝난 것이다
+    await expect(page.getByText('신당지기')).toBeVisible({ timeout: 25_000 })
+    for (const label of ['공 수', '초기(初旗)', '중기(中旗)', '말기(末旗)']) {
+      await expect(page.getByText(label).first(), `삼기 두루마리 항목: ${label}`).toBeVisible()
     }
-    await expect(page).toHaveURL(OBANGKI_URL)
-
-    // 6) 괘 공개 — 신당지기 한마디까지
-    await expect(page.getByText('신당지기')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText(/처방 ·/).first()).toBeVisible()
     await expect(page).toHaveURL(OBANGKI_URL)
     await page.screenshot({ path: SHOT('3-verdict') })
-    console.log('[PASS] 괘 공개 — URL 유지')
+    console.log('[PASS] 삼기 풀이 공개 — URL 유지')
 
     // 7) 지연 튕김 감시 — 5초 대기 후에도 그대로인지
     await page.waitForTimeout(5_000)
@@ -125,7 +121,7 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
 
   // CEO 재현 변형 — 모바일 기기에서 드래그 뽑기 + 공유 + 「한 번 더」 재뽑기.
   // 튕김의 실사용 조건(터치·제스처·연속 조작)에 최대한 붙인다.
-  test('모바일 변형: 드래그 뽑기 → 공유 → 한 번 더', async ({ page, isMobile }) => {
+  test('모바일 변형: 잡제스처 중 자동 선출 → 공유 → 한 번 더', async ({ page, isMobile }) => {
     test.skip(!isMobile, '모바일 프로젝트 전용')
     test.setTimeout(150_000)
     const log = watchBounce(page)
@@ -136,6 +132,7 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
     await page.getByLabel('선택지 1').fill('짜장면')
     await page.getByLabel('선택지 2').fill('짬뽕')
 
+    // byDrag 는 이제 "뽑는 방법"이 아니라 **튕김 재현용 잡제스처**다(뽑기 제스처 자체가 폐지됨)
     const drawOnce = async (label: string, byDrag: boolean) => {
       const paidCta = page.getByRole('button', { name: /복채 .*만냥/ })
       if (await paidCta.isVisible().catch(() => false)) {
@@ -144,34 +141,28 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
       }
       await page.getByRole('button', { name: '기 세우고 방울 울리기' }).click()
 
-      const pickPrompt = page.getByText('마음 가는 기 하나를 위로 쓸어 올리세요')
-      const autoPrompt = page.getByText(/기를 펴는 중입니다|기가 돌아갑니다/)
-      await expect(pickPrompt.or(autoPrompt).first()).toBeVisible({ timeout: 15_000 })
-
-      if (await pickPrompt.isVisible().catch(() => false)) {
-        const flag = page.getByRole('button', { name: '2번째 깃발 뽑기' })
-        if (byDrag) {
-          // 위로 쓸어 올리기 — 실사용 제스처 재현(40px 임계 초과)
-          const box = await flag.boundingBox()
-          if (!box) throw new Error('깃발 위치를 찾지 못했습니다')
+      await expect(page.getByText(/기를 펴는 중입니다|기가 돌아갑니다/).first()).toBeVisible({ timeout: 15_000 })
+      // 뽑는 제스처가 사라졌으므로(8차) 여기서 사용자가 할 일은 없다 — 무대를 문질러도 이탈이 없어야 한다
+      if (byDrag) {
+        const stage = page.getByText(/기를 펴는 중입니다|기가 돌아갑니다|신당지기/).first()
+        const box = await stage.boundingBox()
+        if (box) {
           const cx = box.x + box.width / 2
-          const cy = box.y + box.height * 0.6
+          const cy = box.y
           await page.mouse.move(cx, cy)
           await page.mouse.down()
           for (let i = 1; i <= 6; i += 1) await page.mouse.move(cx + i, cy - i * 12)
           await page.mouse.up()
-        } else {
-          await flag.click()
         }
       }
-      await expect(page.getByText('신당지기')).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByText('신당지기')).toBeVisible({ timeout: 25_000 })
       await expect(page, `${label}: 괘 공개 후 URL`).toHaveURL(OBANGKI_URL)
       console.log(`[PASS] ${label} — 괘 공개, URL 유지`)
       return true
     }
 
     // 1) 드래그로 한 번
-    const first = await drawOnce('드래그 뽑기', true)
+    const first = await drawOnce('잡제스처 중 자동 선출', true)
     if (!first) return
 
     // 2) 공유(깃발 카드) — claimShareReward 경로 관찰. 클립보드 권한 없음 → 실패해도 UX 유지가 정상

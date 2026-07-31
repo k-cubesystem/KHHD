@@ -20,10 +20,28 @@
 import { hashSeed, kstDayKey } from './aekmak'
 import type { Element } from '@/lib/domain/shrine/types'
 
-// ─── 오방색 5기 ───────────────────────────────────────────────
+// ─── 오방색 5기 = 오방신장(五方神將) ──────────────────────────
 //
 // DB CHECK 제약(obangki_draws.color)과 **문자열이 같아야 한다**. 로그의 유일한 키다.
-// 5색 의미는 CEO 원안 그대로 — 빨강 대길 · 하양 순리 · 노랑 무난 · 파랑 신중 · 초록 멈춤.
+//
+// ⚠️ 2026-07-31 8차: 임의로 정했던 괘(대길·순리·무난·신중·멈춤)를 **전승 그대로**로 바꿨다.
+//    오방기는 색에 길흉이 붙은 제비가 아니라 **다섯 신장이 각자 맡은 것**이 있고,
+//    뽑힌 색은 "얼마나 좋은가"가 아니라 **"어느 신이 답했는가"**를 가리킨다:
+//
+//      동 청기 — 동방청제신장 · 신장  — 우환(憂患) · 터와 액
+//      남 홍기 — 남방적제신장 · 산신  — 재수(財數) · 바라는 것
+//      중 황기 — 중앙황제신장 · 조상  — 조상(祖上) · 집안의 뿌리
+//      서 백기 — 서방백제신장 · 칠성  — 명복(命福) · 몸과 명
+//      북 흑기 — 북방흑제신장 · 영산  — 부정(不淨) · 묵은 것
+//
+//    ⚠️ 북방은 본디 흑기이나 1970년대 이후 흑·청이 불길하다 하여 색을 바꿔 쓰는 관행이 생겼고,
+//       지금 무구(巫具)는 녹기가 그 자리에 선다. 우리도 녹기를 쓰되 방위·오행(北·水)은 흑기의 것을 잇는다.
+//       뜻도 "죽음(死)"이 아니라 **부정(不淨) — 물려야 할 묵은 것**으로 잡았다.
+//       전승이 흑을 녹으로 바꾼 이유가 그 무거움이었고, 애초에 오방기에는 **물리고 다시 뽑는 절차**가
+//       딸려 있어(obangki-reading.ts 부정풀이) "돌이킬 수 없는 괘"라는 것이 성립하지 않는다.
+//
+//    ⚠️ 길흉 배정은 스승·지역마다 다르다는 것이 전승 자체의 특징이다. 우리는 한 갈래로 고정한다 —
+//       홍·백은 길, 청·황은 반흉반길, 녹은 흉. 섞어 쓰면 같은 색이 화면마다 다른 말을 하게 된다.
 
 export type ObangkiColor = 'red' | 'white' | 'yellow' | 'blue' | 'green'
 
@@ -35,13 +53,25 @@ export const OBANGKI_COLORS: readonly ObangkiColor[] = Object.freeze([
   'green',
 ] as const)
 
+/** 길흉 — 길(吉) · 반흉반길(半凶半吉) · 흉(凶). */
+export type ObangkiFortune = 'gil' | 'ban' | 'hyung'
+
 export interface ObangkiColorInfo {
   /** 표시명(한국어) */
   readonly label: string
   /** 깃발 머리 한자 한 자 */
   readonly seal: string
-  /** 괘 이름 — 대길·순리·무난·신중·멈춤 */
+  /** 소관(所管) — 이 신장이 맡은 것. 재수·명복·조상·우환·부정 */
   readonly verdict: string
+  /** 오방신장 명호 */
+  readonly general: string
+  /** 모시는 갈래 — 산신·칠성·조상·신장·영산 */
+  readonly deity: string
+  /** 갈래를 우리말로 한 줄 */
+  readonly gloss: string
+  /** 방위 */
+  readonly direction: string
+  readonly fortune: ObangkiFortune
   /** 깃발 천 색(설빛온기 톤). 에셋 404 여도 이 색으로 형태가 남는다 */
   readonly hex: string
   /** 펼침 버스트 파티클 색 */
@@ -49,11 +79,66 @@ export interface ObangkiColorInfo {
 }
 
 export const OBANGKI_COLOR_INFO: Readonly<Record<ObangkiColor, ObangkiColorInfo>> = Object.freeze({
-  red: Object.freeze({ label: '홍기', seal: '赤', verdict: '대길', hex: '#B23A32', accent: '#E8836F' }),
-  white: Object.freeze({ label: '백기', seal: '白', verdict: '순리', hex: '#D9CFBC', accent: '#F3EADA' }),
-  yellow: Object.freeze({ label: '황기', seal: '黃', verdict: '무난', hex: '#C9A24C', accent: '#F0D48A' }),
-  blue: Object.freeze({ label: '청기', seal: '靑', verdict: '신중', hex: '#3E5F86', accent: '#8FB4DA' }),
-  green: Object.freeze({ label: '녹기', seal: '綠', verdict: '멈춤', hex: '#4A7C59', accent: '#9CCBA6' }),
+  red: Object.freeze({
+    label: '홍기',
+    seal: '赤',
+    verdict: '재수',
+    general: '남방적제신장',
+    deity: '산신',
+    gloss: '바라는 것과 재수를 맡는 갈래',
+    direction: '남(南)',
+    fortune: 'gil' as ObangkiFortune,
+    hex: '#B23A32',
+    accent: '#E8836F',
+  }),
+  white: Object.freeze({
+    label: '백기',
+    seal: '白',
+    verdict: '명복',
+    general: '서방백제신장',
+    deity: '칠성',
+    gloss: '명(命)과 복을 밝히는 갈래',
+    direction: '서(西)',
+    fortune: 'gil' as ObangkiFortune,
+    hex: '#D9CFBC',
+    accent: '#F3EADA',
+  }),
+  yellow: Object.freeze({
+    label: '황기',
+    seal: '黃',
+    verdict: '조상',
+    general: '중앙황제신장',
+    deity: '조상',
+    gloss: '집안의 뿌리를 맡는 갈래',
+    direction: '중앙(中央)',
+    fortune: 'ban' as ObangkiFortune,
+    hex: '#C9A24C',
+    accent: '#F0D48A',
+  }),
+  blue: Object.freeze({
+    label: '청기',
+    seal: '靑',
+    verdict: '우환',
+    general: '동방청제신장',
+    deity: '신장',
+    gloss: '터와 액을 다스리는 갈래',
+    direction: '동(東)',
+    fortune: 'ban' as ObangkiFortune,
+    hex: '#3E5F86',
+    accent: '#8FB4DA',
+  }),
+  green: Object.freeze({
+    label: '녹기',
+    seal: '綠',
+    verdict: '부정',
+    general: '북방흑제신장',
+    deity: '영산',
+    gloss: '묵은 것이 도는 자리',
+    direction: '북(北)',
+    fortune: 'hyung' as ObangkiFortune,
+    hex: '#4A7C59',
+    accent: '#9CCBA6',
+  }),
 })
 
 /** 서버 입력 검증용 타입 가드 — 액션은 이걸 통과한 값만 DB 로 보낸다. */
@@ -122,14 +207,20 @@ export const OBANGKI_MS = Object.freeze({
   bell: 700,
   /** 5기 교차 셔플 */
   shuffle: 1100,
-  /** 위로 쓸어 뽑기 — 깃발이 솟는 구간 */
-  pull: 550,
-  /** 펼침(scaleY + rotate) */
+  /** 삼기 한 기가 앞으로 나오는 구간 — .obangki-samgi */
+  samgi: 620,
+  /** 부정풀이 — 물린 기가 흩어지는 구간. .obangki-purified */
+  purify: 920,
+  /** 펼침(scaleX + rotate) */
   unfurl: 900,
 })
 
-/** 뽑기로 인정할 최소 위쪽 이동(px). ARCH §4 의 임계값. */
-export const OBANGKI_DRAG_THRESHOLD = 40
+/**
+ * 삼기가 한 기씩 나오는 **간격**(ms). 이것만은 CSS 길이가 아니라 지연 계산값이라
+ * OBANGKI_MS 밖에 둔다 — samgi(620)보다 짧아 연출이 조금 겹치고, 그래야 셋이 끊기지 않는다.
+ * 화면이 이 값으로 --ob-delay 를 만든다(같은 값을 TSX 에 또 적으면 두 곳이 갈린다).
+ */
+export const OBANGKI_SAMGI_STEP_MS = 460
 
 // ─── 결정론 시드 ──────────────────────────────────────────────
 //

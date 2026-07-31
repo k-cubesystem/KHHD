@@ -3,7 +3,11 @@
 /**
  * 오방기(五方旗) 점괘 — 선택장애 해소 의식 (PRD-shrine-rituals-v1 §2 / ARCH §2·4).
  *
- * 흐름: 질문유형·선택지 입력 → 칠성방울 + 5기 셔플 → 한 기를 위로 쓸어 뽑기 → 펼침(색 공개) → 한마디.
+ * 흐름: 질문유형 입력 → 칠성방울 + 5기 셔플 → **삼기(자리·뿌리·향방)가 차례로 나와 펼쳐짐** → 두루마리 풀이.
+ *
+ * 8차: 한 기 한 괘에서 **삼기 점사**로 바꿨다. 전승에서 오방기는 보통 세 번 뽑아 조합으로 읽고
+ * (앞 기 = 무슨 일인가 / 뒤 기 = 무엇을 하면 되는가), 자리에 흉기가 서면 부정을 물리고 다시 뽑는다.
+ * 세 기·부정풀이 모두 **회차 시드 하나**에서 나오므로 화면과 서버가 같은 결과를 따로 계산한다.
  *
  * 2026-07-30: 신당 룸 안의 스트립+모달에서 **전용 페이지**(/protected/shrine/obangki)로 옮겼다.
  * 의식이 커질 것을 보고 자리를 먼저 뗀 것이라, 국면·연출·과금 규율은 한 줄도 바뀌지 않았다 —
@@ -21,13 +25,15 @@
  *     서버가 차감을 확정한 뒤에 펼친다(뽑기 애니메이션 0.55s 가 그 대기를 덮는다).
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { X, Share2, Loader2, Coins, ChevronLeft } from 'lucide-react'
+import { X, Share2, Loader2, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   OBANGKI_COLOR_INFO,
   OBANGKI_DISCLAIMER,
+  OBANGKI_MS,
+  OBANGKI_SAMGI_STEP_MS,
   OBANGKI_OPTION_MAX,
   OBANGKI_OPTION_MIN,
   OBANGKI_OPTION_TEXT_MAX,
@@ -37,7 +43,6 @@ import {
   OBANGKI_QTYPE_LABEL,
   assignOptions,
   drawSeed,
-  electIndex,
   sajuLine,
   obangkiLine,
   shuffleFlags,
@@ -45,6 +50,13 @@ import {
   type ObangkiColor,
   type ObangkiQType,
 } from '@/lib/domain/ritual/obangki'
+import {
+  SAMGI_SLOT_INFO,
+  readSamgi,
+  samgiOrder,
+  type SamgiReading,
+  type SamgiSlot,
+} from '@/lib/domain/ritual/obangki-reading'
 import { drawObangki, type ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
@@ -57,9 +69,11 @@ const STAGE = { w: 300, h: 176 } as const
 /** 자리 하나의 폭 — 무대 폭을 5로 나눈 값. */
 const SLOT_W = STAGE.w / 5
 
+/** 이 회차가 부정풀이를 거쳤으면 그만큼 전부 뒤로 밀린다(물린 기가 흩어질 시간). */
+const PURIFY_LEAD_MS = (r: SamgiReading): number => (r.draw.purified ? OBANGKI_MS.purify : 0)
+
 const DRAW_ERROR_MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다',
-  INVALID_COLOR: '깃발을 잡지 못했습니다',
   INVALID_QTYPE: '무엇을 여쭐지 고르지 못했습니다',
   NEEDS_PAYMENT: '오늘 무료 점괘를 다 쓰셨습니다',
   INSUFFICIENT_BOKCHAE: '복채가 모자랍니다',
@@ -91,9 +105,8 @@ export function ObangkiRitual({ status, play }: Props) {
   const [todayCount, setTodayCount] = useState(status.todayCount)
   /** 이번 회차의 시드가 선 순번. 시작 시점에 고정한다(뽑는 동안 카운트가 바뀌어도 깃발이 안 흔들리게) */
   const [seq, setSeq] = useState(status.todayCount)
-  const [picked, setPicked] = useState<number | null>(null)
-  /** 뽑기 애니메이션이 끝났는가 — 펼침의 두 조건 중 하나(나머지는 서버 응답) */
-  const [pullDone, setPullDone] = useState(false)
+  /** 셔플 애니메이션이 끝났는가 — 삼기가 나오는 두 조건 중 하나(나머지는 서버 응답) */
+  const [shuffleDone, setShuffleDone] = useState(false)
   const [outcome, setOutcome] = useState<DrawOutcome | null>(null)
   const [sharing, setSharing] = useState(false)
 
@@ -109,35 +122,32 @@ export function ObangkiRitual({ status, play }: Props) {
   const flags = useMemo(() => shuffleFlags(seed), [seed])
   const slots = useMemo(() => assignOptions(filled.length, seed), [filled.length, seed])
 
-  const revealed = pullDone && outcome?.success === true
+  const revealed = shuffleDone && outcome?.success === true
   const failed = outcome?.success === false
-  const pickedColor: ObangkiColor | null = picked === null ? null : flags[picked]
-  const pickedOption = picked === null || slots.length <= picked ? null : (filled[slots[picked]] ?? null)
+
+  /**
+   * 이번 회차의 삼기 점사 — 회차 시드 하나가 세 기·부정풀이·풀이 전부를 정한다.
+   * 서버는 같은 함수로 **향방**만 계산해 기록하므로(로그 컬럼은 그대로 색 하나) 둘은 항상 같은 괘다.
+   */
+  const reading: SamgiReading = useMemo(() => readSamgi(seed, status.elements), [seed, status.elements])
+  const wayColor = reading.draw.way
+  /** 향방 기가 진열에서 선 자리 — 배정된 갈림길을 여기서 읽는다(선택지를 적었을 때만). */
+  const wayIndex = flags.indexOf(wayColor)
+  const wayOption = wayIndex < 0 || slots.length <= wayIndex ? null : (filled[slots[wayIndex]] ?? null)
 
   const restart = useCallback(() => {
     setPhase('compose')
-    setPicked(null)
-    setPullDone(false)
+    setShuffleDone(false)
     setOutcome(null)
   }, [])
-
-  // 선출 순간의 색 버스트 — 뽑힘(pull) 연출이 끝나 괘가 드러날 때 한 번
-  useEffect(() => {
-    if (!revealed || picked === null) return
-    const x = (picked + 0.5) * 20
-    effectsRef.current?.emit('sparkle', x, 34)
-    effectsRef.current?.emit('petals', x, 30)
-  }, [revealed, picked])
 
   // ── 뽑기 의뢰 — 셔플 연출과 서버 확정을 동시에 시작한다 (CEO 7차: 사용자가 고르지 않는다) ──
   // 색은 서버가 시드·회차로 확정하고(감사 A3 "시드 역산" 근본 해소) 셔플 ~1.2s 가 응답 대기를
   // 덮는다. 응답이 늦으면 '기를 펴는 중…'으로 자연히 이어진다. 실패(무료 소진·복채 부족)면
   // picked 가 서지 않아 뽑힘 연출 없이 실패 카드가 뜬다.
   const startShuffle = useCallback(() => {
-    const s = drawSeed(status.seed, todayCount)
     setSeq(todayCount)
-    setPicked(null)
-    setPullDone(false)
+    setShuffleDone(false)
     setOutcome(null)
     setPhase('shuffle')
     play('bell')
@@ -146,19 +156,15 @@ export function ObangkiRitual({ status, play }: Props) {
     void drawObangki(qtype, paidDraw)
       .then((res) => {
         if (typeof res.todayCount === 'number') setTodayCount(res.todayCount)
+        // **서버가 쓴 회차를 그대로 받아** 같은 삼기를 편다 — 동시요청으로 회차가 반 박자 밀려도
+        // 화면의 괘와 기록된 향방이 갈리지 않는다(7차의 '색만 받아 자리 찾기'를 대신한다).
+        if (typeof res.seq === 'number') setSeq(res.seq)
         if (res.success) {
-          // 서버가 확정한 색이 정본 — 진열(shuffleFlags)에서 그 색의 자리를 찾아 선출한다.
-          // 로컬 electIndex 와 어긋나는 경우는 동시요청으로 회차가 반 박자 밀렸을 때뿐이고,
-          // 그때도 화면은 서버 색을 따른다(색이 곧 괘다).
-          const fl = shuffleFlags(s)
-          const idx = res.color ? fl.indexOf(res.color) : electIndex(s)
-          setPicked(idx >= 0 ? idx : electIndex(s))
           setOutcome({ success: true })
           return
         }
         if (res.error === 'DRAW_FAILED') {
           // 기록만 실패 — 괘는 그대로 보여준다(연출을 취소하는 편이 더 나쁘다)
-          setPicked(electIndex(s))
           setOutcome({ success: true })
           toast(DRAW_ERROR_MSG.DRAW_FAILED)
           return
@@ -169,14 +175,13 @@ export function ObangkiRitual({ status, play }: Props) {
         // 네트워크 단절 — 고착 방지(감사 A2 P2: 실패 경로 부재). 실패 카드로 접는다.
         setOutcome({ success: false, error: 'DRAW_FAILED' })
       })
-  }, [status.seed, todayCount, qtype, paidDraw, play])
+  }, [todayCount, qtype, paidDraw, play])
 
   // ── 공유 — 기존 공유 보상 흐름 재사용(새 지급 경로 없음) ──
   const onShare = useCallback(async () => {
-    if (!pickedColor) return
     setSharing(true)
     // 질문도 선택지도 문장에 담지 않는다 — 공유물에 남는 것은 깃발 색과 괘뿐이다
-    const shareText = `신당에서 오방기를 뽑았습니다 — ${verdictLine(pickedColor, null)}.`
+    const shareText = `신당에서 오방기 삼기를 뽑았습니다 — 향방은 ${verdictLine(wayColor, null)}.`
     const url = typeof window === 'undefined' ? '' : `${window.location.origin}/protected/shrine/obangki`
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
@@ -194,7 +199,7 @@ export function ObangkiRitual({ status, play }: Props) {
     } finally {
       setSharing(false)
     }
-  }, [pickedColor])
+  }, [wayColor])
 
   return (
     <div
@@ -236,10 +241,11 @@ export function ObangkiRitual({ status, play }: Props) {
             effectsRef={effectsRef}
             flags={flags}
             phase={phase}
-            picked={picked}
-            revealed={revealed}
-            onShuffleEnd={() => setPhase('draw')}
-            onPullEnd={() => setPullDone(true)}
+            reading={revealed ? reading : null}
+            onShuffleEnd={() => {
+              setShuffleDone(true)
+              setPhase('draw')
+            }}
           />
 
           {phase === 'shuffle' && (
@@ -249,12 +255,12 @@ export function ObangkiRitual({ status, play }: Props) {
             <p className="mt-4 font-serif text-[12px] text-ink-primary/55">기를 펴는 중입니다…</p>
           )}
 
-          {revealed && pickedColor && (
-            <VerdictCard
-              color={pickedColor}
-              option={pickedOption}
-              line={obangkiLine(pickedColor, qtype, seed)}
-              saju={status.yongsin ? sajuLine(pickedColor, status.yongsin, seed) : null}
+          {revealed && (
+            <SamgiScroll
+              reading={reading}
+              option={wayOption}
+              line={obangkiLine(wayColor, qtype, seed)}
+              saju={status.yongsin ? sajuLine(wayColor, status.yongsin, seed) : null}
               remainingFree={remainingFree}
               cost={status.cost}
               sharing={sharing}
@@ -420,30 +426,66 @@ function ComposeStep({
 
 // ─── 2. 깃발 무대 ────────────────────────────────────────────
 
+/** 펼쳐진 기 한 폭 — 말린 기와 달리 색·인장이 드러난다. 무대와 두루마리가 같은 그림을 쓴다. */
+function UnfurledFlag({ color, size, delayMs }: { color: ObangkiColor; size: number; delayMs: number }) {
+  const info = OBANGKI_COLOR_INFO[color]
+  return (
+    <span
+      aria-hidden
+      className="obangki-unfurl relative block"
+      style={{
+        // 1:1 — 에셋(512×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다.
+        // 실물 오방기는 기폭 가로(70cm)와 깃대 길이(72cm)가 거의 같아 외곽이 정사각이다.
+        width: size,
+        height: size,
+        animationDelay: `${delayMs}ms`,
+        // 에셋이 없어도(404) 기폭 자리에 오방색 면이 남는다 — 깃대·자루 자리까지 칠하지는 않는다
+        backgroundImage: `url('/shrine/ritual/obangki-${color}.webp'), linear-gradient(${info.hex},${info.hex})`,
+        backgroundSize: '100% 100%, 94% 54%',
+        backgroundPosition: 'left top, right top',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
+        // 빛나면 유령 사각형이 보인다
+        filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
+      }}
+    >
+      <span
+        className="absolute inset-x-0 top-[18%] text-center font-serif text-[13px] font-bold"
+        style={{ color: 'rgba(28,20,12,0.72)' }}
+      >
+        {info.seal}
+      </span>
+    </span>
+  )
+}
+
 /**
- * 5기가 선 무대. 말아둔 상태에서는 **다섯 기가 전부 같은 모습**이고, 뽑아 편 기 하나만 색을 드러낸다.
- * 자리(.obangki-slot)가 이동을, 천(.obangki-cloth)이 나부낌을, 펼침(.obangki-unfurl)이 색 공개를 맡는다.
+ * 5기가 선 무대. 말아둔 상태에서는 **다섯 기가 전부 같은 모습**이고, 셔플이 끝나면 뒤로 물러난다.
+ * 그 앞으로 **삼기(자리·뿌리·향방)가 차례로 나와** 펼쳐진다 — 순서는 지연이 준다(타이머 체인이 아니라).
+ *
+ * 세 기의 색이 겹칠 수 있으므로(겹기) 뽑힌 기는 진열 자리를 쓰지 않고 **앞줄에 따로 선다**.
+ * 같은 자리를 두 번 뽑는 그림이 나오지 않아야 "거듭 섰다"가 눈에 보인다.
  */
 function FlagStage({
   effectsRef,
   flags,
   phase,
-  picked,
-  revealed,
+  reading,
   onShuffleEnd,
-  onPullEnd,
 }: {
   effectsRef: React.RefObject<EffectsHandle | null>
   flags: ObangkiColor[]
   phase: Phase
-  picked: number | null
-  revealed: boolean
+  /** 확정된 삼기. 서버 응답 전에는 null 이라 뒷줄만 보인다 */
+  reading: SamgiReading | null
   onShuffleEnd: () => void
-  onPullEnd: () => void
 }) {
+  const lead = reading ? PURIFY_LEAD_MS(reading) : 0
   return (
     <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
       <EffectsCanvas ref={effectsRef} />
+
+      {/* 뒷줄 — 말아둔 5기 */}
       <div
         className="absolute inset-0 flex items-end justify-center"
         onAnimationEnd={(e) => {
@@ -452,33 +494,16 @@ function FlagStage({
         }}
       >
         {flags.map((color, i) => {
-          const isPicked = picked === i
-          const info = OBANGKI_COLOR_INFO[color]
           // 셔플 이동폭 — 자리마다 다르게 줘야 다섯 기가 한 덩어리로 흔들리지 않는다
           const dx = (i - 2) * 22 + (i % 2 === 0 ? 14 : -14)
-          const slotClass =
-            phase === 'shuffle'
-              ? 'obangki-shuffle'
-              : phase === 'draw'
-                ? isPicked
-                  ? 'obangki-pull'
-                  : 'obangki-dim'
-                : ''
           return (
             <span
               key={i}
               aria-hidden
-              className={`obangki-slot relative block ${slotClass}`}
-              style={
-                {
-                  width: SLOT_W,
-                  height: STAGE.h - 12,
-                  '--ob-dx': `${dx}px`,
-                } as React.CSSProperties
-              }
-              onAnimationEnd={(e) => {
-                if (e.target === e.currentTarget && e.animationName === 'obangkiPull') onPullEnd()
-              }}
+              className={`obangki-slot relative block ${
+                phase === 'shuffle' ? 'obangki-shuffle' : phase === 'draw' ? 'obangki-dim' : ''
+              }`}
+              style={{ width: SLOT_W, height: STAGE.h - 12, '--ob-dx': `${dx}px` } as React.CSSProperties}
             >
               {/* 깃대 — 말린 기든 편 기든 늘 서 있다 */}
               <span
@@ -490,66 +515,66 @@ function FlagStage({
                 className="obangki-cloth absolute inset-x-0 top-[12%]"
                 style={{ '--ob-sway-delay': `${i * 0.24}s` } as React.CSSProperties}
               >
-                {isPicked && revealed ? (
-                  <span
-                    aria-hidden
-                    className="obangki-unfurl relative block"
-                    style={{
-                      // 1:1 — 에셋(512×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다.
-                      // 실물 오방기는 기폭 가로(70cm)와 깃대 길이(72cm)가 거의 같아 외곽이 정사각이다.
-                      width: SLOT_W - 8,
-                      height: SLOT_W - 8,
-                      // 스프라이트의 **왼쪽 변이 곧 깃대**다. 자리 한가운데에 선 CSS 깃대 위에 그 변을 얹는다
-                      // (가운데 정렬하면 깃대가 두 줄로 보인다).
-                      marginLeft: SLOT_W / 2 - 1,
-                      // 에셋이 없어도(404) 기폭 자리에 오방색 면이 남는다 — 깃대·자루 자리까지 칠하지는 않는다
-                      backgroundImage: `url('/shrine/ritual/obangki-${color}.webp'), linear-gradient(${info.hex},${info.hex})`,
-                      backgroundSize: '100% 100%, 94% 54%',
-                      backgroundPosition: 'left top, right top',
-                      backgroundRepeat: 'no-repeat, no-repeat',
-                      // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
-                      // 빛나면 유령 사각형이 보인다
-                      filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
-                    }}
-                  >
-                    <span
-                      className="absolute inset-x-0 top-[18%] text-center font-serif text-[13px] font-bold"
-                      style={{ color: 'rgba(28,20,12,0.72)' }}
-                    >
-                      {info.seal}
-                    </span>
-                  </span>
-                ) : (
-                  // 말아둔 기 — 다섯이 전부 같다(색을 미리 보이면 뽑기가 아니라 고르기가 된다)
-                  <span
-                    aria-hidden
-                    className="mx-auto block rounded-full"
-                    style={{
-                      width: SLOT_W - 26,
-                      height: STAGE.h * 0.34,
-                      background: 'linear-gradient(180deg,#D8C9A6,#8E7A54 62%,#5C4B2E)',
-                      boxShadow: 'inset 0 0 6px rgba(60,42,20,0.55), 0 6px 14px -8px rgba(0,0,0,0.9)',
-                    }}
-                  >
-                    <span
-                      className="absolute inset-x-[22%] top-[42%] h-[5px] rounded-full"
-                      style={{ background: 'linear-gradient(180deg,#9E2B2B,#6A1A1A)' }}
-                    />
-                  </span>
-                )}
-              </span>
-
-              {isPicked && revealed && (
+                {/* 말아둔 기 — 다섯이 전부 같다(색을 미리 보이면 뽑기가 아니라 고르기가 된다) */}
                 <span
                   aria-hidden
-                  className="obangki-burst pointer-events-none absolute left-1/2 top-[38%] h-[54px] w-[54px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-                  style={{ '--ob-accent': info.accent } as React.CSSProperties}
-                />
-              )}
+                  className="mx-auto block rounded-full"
+                  style={{
+                    width: SLOT_W - 26,
+                    height: STAGE.h * 0.34,
+                    background: 'linear-gradient(180deg,#D8C9A6,#8E7A54 62%,#5C4B2E)',
+                    boxShadow: 'inset 0 0 6px rgba(60,42,20,0.55), 0 6px 14px -8px rgba(0,0,0,0.9)',
+                  }}
+                >
+                  <span
+                    className="absolute inset-x-[22%] top-[42%] h-[5px] rounded-full"
+                    style={{ background: 'linear-gradient(180deg,#9E2B2B,#6A1A1A)' }}
+                  />
+                </span>
+              </span>
             </span>
           )
         })}
       </div>
+
+      {/* 앞줄 — 뽑힌 삼기 */}
+      {reading && (
+        <div className="absolute inset-x-0 bottom-1 flex items-end justify-center gap-2">
+          {samgiOrder(reading.draw).map(({ slot, color }, i) => {
+            const info = OBANGKI_COLOR_INFO[color]
+            const delay = lead + i * OBANGKI_SAMGI_STEP_MS
+            return (
+              <span
+                key={slot}
+                className="obangki-samgi relative flex flex-col items-center"
+                style={{ width: 88, '--ob-delay': `${delay}ms` } as React.CSSProperties}
+                onAnimationEnd={(e) => {
+                  // 파티클도 타이머가 아니라 **연출이** 몬다 — 국면 전환과 같은 규율이라
+                  // 지연을 두 곳에서 세지 않는다(어긋나면 빈 자리에서 색이 터진다)
+                  if (e.target !== e.currentTarget || e.animationName !== 'obangkiSamgiRise') return
+                  const x = 26 + i * 24
+                  effectsRef.current?.emit('sparkle', x, 34)
+                  effectsRef.current?.emit('petals', x, 30)
+                }}
+              >
+                <span className="mb-1 font-serif text-[9.5px] tracking-[0.18em] text-gold-500/70">
+                  {SAMGI_SLOT_INFO[slot].title}
+                </span>
+                {/* 부정풀이 — 물린 녹기가 흩어진 자리에 재차 뽑은 기가 선다(자리 기에만 온다) */}
+                {slot === 'seat' && reading.draw.purified && (
+                  <span className="obangki-purified absolute left-1/2 top-4 -translate-x-1/2">
+                    <UnfurledFlag color={reading.draw.purified} size={62} delayMs={0} />
+                  </span>
+                )}
+                <UnfurledFlag color={color} size={62} delayMs={delay} />
+                <span className="mt-1 font-serif text-[10px] font-bold" style={{ color: info.accent }}>
+                  {info.label}
+                </span>
+              </span>
+            )
+          })}
+        </div>
+      )}
 
       {/* 칠성방울 — 셔플이 시작될 때 한 번 울린다 */}
       {phase === 'shuffle' && (
@@ -565,10 +590,41 @@ function FlagStage({
   )
 }
 
-// ─── 3. 괘 ───────────────────────────────────────────────────
+// ─── 3. 삼기 두루마리 ────────────────────────────────────────
 
-function VerdictCard({
-  color,
+/** 자리 한 줄 — 기 이름·신장·소관과 그 자리의 풀이. */
+function SlotRow({ slot, color, line }: { slot: SamgiSlot; color: ObangkiColor; line: string }) {
+  const info = OBANGKI_COLOR_INFO[color]
+  const meta = SAMGI_SLOT_INFO[slot]
+  return (
+    <div className="flex gap-2.5 py-2">
+      <span
+        aria-hidden
+        className="mt-0.5 h-8 w-1.5 shrink-0 rounded-full"
+        style={{ background: `linear-gradient(180deg,${info.accent},${info.hex})` }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="font-serif text-[10px] tracking-[0.16em] text-gold-500/60">
+          {meta.flagName} · {meta.question}
+        </p>
+        <p className="mt-0.5 font-serif text-[12.5px] font-bold" style={{ color: info.accent }}>
+          {info.label} — {info.verdict}
+          <span className="ml-1.5 font-sans text-[10px] font-normal text-ink-primary/40">
+            {info.general} · {info.deity}
+          </span>
+        </p>
+        <p className="mt-1 font-serif text-[12px] leading-relaxed text-ink-primary/75">{line}</p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 삼기 점사 두루마리 — 전승의 순서 그대로 읽는다.
+ * 부정풀이 → 향방 머리 → 공수(자리 × 향방) → 세 자리 → 흐름·응기 → 신당지기·사주 → 처방.
+ */
+function SamgiScroll({
+  reading,
   option,
   line,
   saju,
@@ -578,10 +634,11 @@ function VerdictCard({
   onShare,
   onAgain,
 }: {
-  color: ObangkiColor
+  reading: SamgiReading
+  /** 향방 기에 배정된 갈림길 — 선택지를 적었을 때만 */
   option: string | null
   line: string
-  /** 사주 해석 층 — 용신 오행 × 색 오행 관계(결정론). 명식 분석 전 사용자는 null(기본 층만) */
+  /** 사주 해석 층 — 용신 오행 × 향방 색 오행 관계(결정론). 명식 분석 전 사용자는 null */
   saju: string | null
   remainingFree: number
   cost: number
@@ -589,32 +646,90 @@ function VerdictCard({
   onShare: () => void
   onAgain: () => void
 }) {
-  const info = OBANGKI_COLOR_INFO[color]
+  const way = OBANGKI_COLOR_INFO[reading.draw.way]
+  // 두루마리는 삼기가 다 펴진 뒤에 뜬다 — 지연이 곧 순서다(타이머가 아니라)
+  const delayMs = PURIFY_LEAD_MS(reading) + 2 * OBANGKI_SAMGI_STEP_MS + 700
   return (
-    <div className="obangki-bubble mt-5 w-full space-y-3.5">
-      {/* 괘 머리 — 색·괘 이름, 그리고 배정된 갈림길 */}
+    <div className="obangki-bubble mt-4 w-full space-y-3" style={{ animationDelay: `${delayMs}ms` }}>
+      {/* 부정풀이 — 전승이 이르는 대로 물리고 다시 뽑았음을 먼저 알린다 */}
+      {reading.purifyLine && (
+        <p className="rounded-lg border border-white/10 bg-surface/70 px-3 py-2 font-serif text-[11.5px] leading-relaxed text-ink-primary/60">
+          {reading.purifyLine}
+        </p>
+      )}
+
+      {/* 향방 머리 — 결론을 쥔 기, 그리고 배정된 갈림길 */}
       <div
         className="rounded-xl border px-3 py-2.5 text-center"
-        style={{ borderColor: `${info.accent}55`, background: `${info.hex}1f` }}
+        style={{ borderColor: `${way.accent}55`, background: `${way.hex}1f` }}
       >
-        <p className="font-serif text-[11px] tracking-[0.24em]" style={{ color: info.accent }}>
-          {info.seal} {info.label}
+        <p className="font-serif text-[10px] tracking-[0.24em]" style={{ color: way.accent }}>
+          향 방 · {way.direction}
         </p>
-        <p className="mt-0.5 font-serif text-[17px] font-bold text-ink-primary">{option ? option : info.verdict}</p>
-        {option && <p className="mt-0.5 font-sans text-[11px] text-ink-primary/45">{info.verdict}의 기운</p>}
+        <p className="mt-0.5 font-serif text-[17px] font-bold text-ink-primary">{option ? option : way.verdict}</p>
+        <p className="mt-0.5 font-sans text-[10.5px] text-ink-primary/45">
+          {option ? `${way.label} · ${way.verdict}의 기운` : way.gloss}
+        </p>
       </div>
 
-      {/* 신당지기 한마디 — 결정론 문구 풀(AI 0원·즉답) */}
-      <div className="flex items-start gap-2 rounded-xl border border-gold-500/20 bg-surface/60 px-3 py-2.5">
-        <span className="mt-0.5 whitespace-nowrap font-serif text-[10px] text-gold-500/60">신당지기</span>
-        <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{line}</p>
-        {saju && (
-          /* 사주 층 — 기본 괘 아래 한 줄. 용신은 개인 데이터라 문구에 오행 이름만 스치고 원리는 풀이가 진다 */
-          <p className="mt-2 border-t border-gold-500/15 pt-2 font-serif text-[12.5px] leading-relaxed text-gold-200">
-            {saju}
+      {/* 공수 — 자리 × 향방. 삼기 점사의 본문이다 */}
+      <div className="rounded-xl border border-gold-500/25 bg-gold-500/[0.06] px-3 py-3">
+        <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">공 수</p>
+        <p className="mt-1 font-serif text-[13.5px] font-bold leading-relaxed text-gold-100">{reading.gongsu}</p>
+      </div>
+
+      {/* 세 자리 */}
+      <div className="divide-y divide-white/[0.07] rounded-xl border border-white/10 bg-surface/50 px-3 py-1">
+        {reading.slotLines.map((r) => (
+          <SlotRow key={r.slot} slot={r.slot} color={r.color} line={r.line} />
+        ))}
+      </div>
+
+      {/* 결·때 — 세 기가 이루는 흐름과 응기 */}
+      <div className="rounded-xl border border-white/10 bg-surface/50 px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-gold-500/40 bg-gold-500/10 px-2 py-0.5 font-serif text-[10.5px] font-bold text-gold-200">
+            {reading.flowInfo.label}
+          </span>
+          <p className="min-w-0 flex-1 font-serif text-[12px] leading-relaxed text-ink-primary/75">
+            {reading.flowInfo.line}
           </p>
+        </div>
+        <p className="mt-2 border-t border-white/[0.07] pt-2 font-serif text-[12px] leading-relaxed text-ink-primary/60">
+          {reading.eunggi}
+        </p>
+      </div>
+
+      {/* 신당지기 한마디 + 사주 층 — 결정론 문구 풀(AI 0원·즉답) */}
+      <div className="rounded-xl border border-gold-500/20 bg-surface/60 px-3 py-2.5">
+        <div className="flex items-start gap-2">
+          <span className="mt-0.5 whitespace-nowrap font-serif text-[10px] text-gold-500/60">신당지기</span>
+          <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{line}</p>
+        </div>
+        {(saju || reading.wangswe) && (
+          /* 사주 층 — 용신은 개인 데이터라 문구에 오행 이름만 스치고 원리는 풀이가 진다 */
+          <div className="mt-2 space-y-1 border-t border-gold-500/15 pt-2">
+            {saju && <p className="font-serif text-[12.5px] leading-relaxed text-gold-200">{saju}</p>}
+            {reading.wangswe && (
+              <p className="font-serif text-[12.5px] leading-relaxed text-gold-200/80">{reading.wangswe}</p>
+            )}
+          </div>
         )}
       </div>
+
+      {/* 처방 — 전승의 해법을 신당의 의식으로. 값을 무는 곳이 아니라 정성을 들이는 곳으로 잇는다 */}
+      <Link
+        href={reading.remedy.href}
+        className="flex items-center justify-between rounded-xl border border-gold-500/35 bg-gold-500/[0.08] px-3 py-2.5"
+      >
+        <span className="min-w-0">
+          <span className="block font-serif text-[10px] tracking-[0.16em] text-gold-500/60">
+            처방 · {reading.remedy.rite}
+          </span>
+          <span className="mt-0.5 block font-serif text-[12.5px] font-bold text-gold-200">{reading.remedy.action}</span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-gold-300/70" />
+      </Link>
 
       <p className="text-center font-sans text-[10.5px] text-ink-primary/40">
         {remainingFree > 0 ? `오늘 무료 점괘 ${remainingFree}회 남았습니다` : `다음 점괘부터는 복채 ${cost}만냥입니다`}

@@ -22,11 +22,10 @@ import {
   countDrawsOnDay,
   dailySeed,
   drawSeed,
-  electIndex,
   isObangkiQType,
   remainingFreeDraws,
-  shuffleFlags,
 } from '@/lib/domain/ritual/obangki'
+import { drawSamgi } from '@/lib/domain/ritual/obangki-reading'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
 import {
   BAEKIL_TARGET_DAYS,
@@ -212,6 +211,37 @@ export interface ObangkiStatus {
    * 명식 분석 전이면 null — 화면은 기본 층(색×유형 풀)만 보여준다(폴백 필수).
    */
   yongsin: Element | null
+  /**
+   * 명식의 오행 분포 — 삼기 점사의 왕쇠(旺衰) 층 재료. 같은 홍기라도 화(火)가 넘치는 명식과
+   * 비어 있는 명식에 다르게 서기 때문에 용신만으로는 부족하다. 분석 전이면 null.
+   */
+  elements: Readonly<Record<Element, number>> | null
+}
+
+/**
+ * 명식 오행 분포 — base_* 다섯 컬럼을 삼기 왕쇠 판정이 쓰는 모양으로 옮긴다.
+ *
+ * **전부 0이거나 하나라도 수가 아니면 null** 이다. 빠진 값을 0으로 메우면 그 오행이 "가장 비어 있다"고
+ * 읽혀 없는 명식으로 왕쇠를 단정하게 된다 — 사주 층은 없으면 빼는 것이 맞고 지어내면 안 된다.
+ */
+function elementSpread(row: unknown): Readonly<Record<Element, number>> | null {
+  if (!isRecord(row)) return null
+  const keys: readonly (readonly [Element, string])[] = [
+    ['wood', 'base_wood'],
+    ['fire', 'base_fire'],
+    ['earth', 'base_earth'],
+    ['metal', 'base_metal'],
+    ['water', 'base_water'],
+  ]
+  const out = {} as Record<Element, number>
+  let sum = 0
+  for (const [el, col] of keys) {
+    const v = row[col]
+    if (typeof v !== 'number' || !Number.isFinite(v)) return null
+    out[el] = Math.max(0, v)
+    sum += out[el]
+  }
+  return sum > 0 ? Object.freeze(out) : null
 }
 
 /** timestamptz 문자열 → epochMs. 파싱 실패는 제외(카운트를 부풀리지 않는다). */
@@ -259,7 +289,7 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
     // 용신은 명식 분석 산출물 — 없으면 null 로 두고 화면이 기본 층만 쓴다(신규 가입 직후 등)
     const { data: energy } = await supabase
       .from('user_energy_profile')
-      .select('yongsin_element')
+      .select('yongsin_element, base_wood, base_fire, base_earth, base_metal, base_water')
       .eq('user_id', user.id)
       .maybeSingle()
     return {
@@ -269,6 +299,7 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
       cost: OBANGKI_EXTRA_COST,
       seed: dailySeed(user.id, today),
       yongsin: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
+      elements: elementSpread(energy),
     }
   } catch (e) {
     logger.warn('[obangki] 현황 조회 예외(비치명):', e)
@@ -295,8 +326,13 @@ export interface DrawObangkiResult {
   remainingFree?: number
   /** 차감 후 지갑 잔액(복채로 뽑았을 때만) */
   balance?: number
-  /** 서버가 확정한 뽑힌 색 — 화면은 이 값을 **보여줄 뿐**이다(성공 시 항상 있다) */
+  /** 서버가 확정한 향방(말기) 색 — 화면은 이 값을 **보여줄 뿐**이다(성공 시 항상 있다) */
   color?: import('@/lib/domain/ritual/obangki').ObangkiColor
+  /**
+   * 서버가 실제로 쓴 회차(seq). 화면이 이 값으로 시드를 맞춰 **같은 삼기**를 편다.
+   * 색 하나만 돌려주면 나머지 두 기가 갈릴 수 있어(동시요청으로 회차가 밀린 경우) 회차째로 준다.
+   */
+  seq?: number
 }
 
 /**
@@ -344,7 +380,10 @@ export async function drawObangki(qtype: string, confirmPaid: boolean): Promise<
   }
   const seq = countDrawsOnDay(toDrawEpochMs(todayRows), Date.now())
   const roundSeed = drawSeed(dailySeed(user.id, today), seq)
-  const color = shuffleFlags(roundSeed)[electIndex(roundSeed)]
+  // 8차: 한 점사는 삼기(자리·뿌리·향방)다. 로그에 남는 한 색은 **향방** — 결론을 쥔 기다.
+  // 나머지 두 기와 부정풀이 여부는 같은 회차 시드에서 언제든 다시 나오므로 컬럼을 늘리지 않는다
+  // (질문·선택지 무저장 원칙도 그대로: 남는 것은 여전히 색·유형·시각 셋뿐이다).
+  const color = drawSamgi(roundSeed).way
   const record = async (paid: boolean) =>
     admin.rpc('draw_shrine_obangki', {
       p_user_id: user.id,
@@ -363,7 +402,7 @@ export async function drawObangki(qtype: string, confirmPaid: boolean): Promise<
   }
   const freeRow = readDrawRow(free.data)
   if (freeRow.allowed) {
-    return { success: true, charged: false, color, ...counts(freeRow.todayCount) }
+    return { success: true, charged: false, color, seq, ...counts(freeRow.todayCount) }
   }
   // 응답을 못 읽었으면 "무료 소진"이 아니다 — 여기서 멈춘다. 계속 가면 무료가 남은 사람에게 과금한다.
   if (!freeRow.parsed) {
@@ -394,7 +433,7 @@ export async function drawObangki(qtype: string, confirmPaid: boolean): Promise<
     return { success: false, error: 'DRAW_FAILED', ...counts(freeRow.todayCount) }
   }
 
-  return { success: true, charged: true, color, balance: paid.balance, ...counts(chargedRow.todayCount) }
+  return { success: true, charged: true, color, seq, balance: paid.balance, ...counts(chargedRow.todayCount) }
 }
 
 /**

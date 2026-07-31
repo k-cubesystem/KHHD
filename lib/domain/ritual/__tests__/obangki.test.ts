@@ -5,8 +5,8 @@ import {
   OBANGKI_COLOR_INFO,
   OBANGKI_DAILY_FREE,
   OBANGKI_DISCLAIMER,
-  OBANGKI_DRAG_THRESHOLD,
   OBANGKI_EXTRA_COST,
+  OBANGKI_SAMGI_STEP_MS,
   OBANGKI_MS,
   OBANGKI_OPTION_MAX,
   OBANGKI_OPTION_MIN,
@@ -47,9 +47,37 @@ const MIGRATION_SQL = read('supabase/migrations/20260730_shrine_obangki_draws.sq
 const ACTIONS_SRC = read('app/actions/shrine/rituals.ts')
 
 describe('오방색 5기', () => {
-  it('원안 5색 그대로 — 빨강 대길·하양 순리·노랑 무난·파랑 신중·초록 멈춤', () => {
+  it('전승 그대로 — 홍 재수·백 명복·황 조상·청 우환·녹 부정 (8차: 임의 괘 폐지)', () => {
     expect([...OBANGKI_COLORS]).toEqual(['red', 'white', 'yellow', 'blue', 'green'])
-    expect(OBANGKI_COLORS.map((c) => OBANGKI_COLOR_INFO[c].verdict)).toEqual(['대길', '순리', '무난', '신중', '멈춤'])
+    expect(OBANGKI_COLORS.map((c) => OBANGKI_COLOR_INFO[c].verdict)).toEqual(['재수', '명복', '조상', '우환', '부정'])
+  })
+
+  it('오방신장 명호·방위·오행이 전승과 맞는다 (동청 남적 중황 서백 북흑)', () => {
+    const pairs: [ObangkiColor, string, string, string][] = [
+      ['blue', '동방청제신장', '동(東)', 'wood'],
+      ['red', '남방적제신장', '남(南)', 'fire'],
+      ['yellow', '중앙황제신장', '중앙(中央)', 'earth'],
+      ['white', '서방백제신장', '서(西)', 'metal'],
+      // 북방은 본디 흑기 — 현대 무구는 녹기가 그 자리에 서지만 방위·오행은 흑기의 것을 잇는다
+      ['green', '북방흑제신장', '북(北)', 'water'],
+    ]
+    for (const [color, general, direction, element] of pairs) {
+      expect(OBANGKI_COLOR_INFO[color].general).toBe(general)
+      expect(OBANGKI_COLOR_INFO[color].direction).toBe(direction)
+      expect(OBANGKI_COLOR_ELEMENT[color]).toBe(element)
+    }
+  })
+
+  it('모시는 갈래와 길흉이 색마다 빠짐없이 있다', () => {
+    for (const c of OBANGKI_COLORS) {
+      const info = OBANGKI_COLOR_INFO[c]
+      expect(info.deity).toBeTruthy()
+      expect(info.gloss).toBeTruthy()
+      expect(['gil', 'ban', 'hyung']).toContain(info.fortune)
+    }
+    // 전승에서 홍기가 가장 좋고 흑(녹)기가 가장 나쁘다 — 이 두 극만 고정한다(중간 배정은 스승마다 다르다)
+    expect(OBANGKI_COLOR_INFO.red.fortune).toBe('gil')
+    expect(OBANGKI_COLOR_INFO.green.fortune).toBe('hyung')
   })
 
   it('표시명·인장·색이 모든 깃발에 빠짐없이 있다', () => {
@@ -192,10 +220,6 @@ describe('정책 상수', () => {
     expect(OBANGKI_OPTION_MAX).toBe(4)
     expect(OBANGKI_OPTION_MAX).toBeLessThanOrEqual(OBANGKI_COLORS.length)
     expect(OBANGKI_OPTION_TEXT_MAX).toBeGreaterThan(0)
-  })
-
-  it('뽑기 임계는 ARCH §4 의 40px', () => {
-    expect(OBANGKI_DRAG_THRESHOLD).toBe(40)
   })
 
   it('법무 고지는 PRD §2 확정 문구 그대로다', () => {
@@ -423,9 +447,9 @@ describe('문구 풀 — 결정론 + 법무', () => {
 
 describe('verdictLine — 화면 자막', () => {
   it('선택지가 있으면 함께, 없으면 괘만', () => {
-    expect(verdictLine('red', '짬뽕')).toBe('홍기 · 대길 — 짬뽕')
-    expect(verdictLine('green', null)).toBe('녹기 · 멈춤')
-    expect(verdictLine('blue', '   ')).toBe('청기 · 신중')
+    expect(verdictLine('red', '짬뽕')).toBe('홍기 · 재수 — 짬뽕')
+    expect(verdictLine('green', null)).toBe('녹기 · 부정')
+    expect(verdictLine('blue', '   ')).toBe('청기 · 우환')
   })
 })
 
@@ -473,9 +497,10 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
     '.obangki-slot',
     '.obangki-cloth',
     '.obangki-shuffle',
-    '.obangki-pull',
     '.obangki-dim',
     '.obangki-unfurl',
+    '.obangki-samgi',
+    '.obangki-purified',
     '.obangki-burst',
     '.obangki-bubble',
   ]
@@ -483,9 +508,10 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
     'obangkiBell',
     'obangkiSway',
     'obangkiShuffle',
-    'obangkiPull',
     'obangkiDim',
     'obangkiUnfurl',
+    'obangkiSamgiRise',
+    'obangkiPurify',
     'obangkiBurst',
     'obangkiBubbleIn',
   ]
@@ -496,7 +522,8 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
   it.each([
     ['obangki-bell', OBANGKI_MS.bell],
     ['obangki-shuffle', OBANGKI_MS.shuffle],
-    ['obangki-pull', OBANGKI_MS.pull],
+    ['obangki-samgi', OBANGKI_MS.samgi],
+    ['obangki-purified', OBANGKI_MS.purify],
     ['obangki-unfurl', OBANGKI_MS.unfurl],
   ])('.%s 의 길이가 OBANGKI_MS 와 같다', (cls, ms) => {
     const block = new RegExp(`\\.${cls}\\s*\\{[^}]*\\}`).exec(css)?.[0] ?? ''
@@ -512,6 +539,33 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
   it('배포 게이트(check-animation-css.mjs)에 obangki-* 가 등록돼 있다', () => {
     for (const cls of OBANGKI_CLASSES) expect(gate).toContain(`'${cls}'`)
     for (const kf of OBANGKI_KEYFRAMES) expect(gate).toContain(`'${kf}'`)
+  })
+
+  /**
+   * ★ 게이트 목록이 **손으로 관리된다**는 것이 이 검사의 존재 이유다.
+   *
+   * 8차에 .obangki-samgi·.obangki-purified 를 새로 만들었는데 게이트는 그 이름을 몰라
+   * "클래스 67종 실재 확인 ✓"을 그대로 출력했다 — 자기가 안 보는 것을 통과시킨 것이다
+   * (feedback-gate-measures-wrong-thing 과 같은 구조의 결함).
+   * 그래서 목록을 위 상수에서 읽지 않고 **CSS 원본에서 역으로 뽑아** 대조한다:
+   * 새 obangki 연출을 CSS 에 넣고 게이트에 등록하지 않으면 여기서 걸린다.
+   */
+  it('★ CSS 안의 모든 obangki 연출이 게이트에 등록돼 있다 (목록 누락 자체를 잡는다)', () => {
+    const cssClasses = [...css.matchAll(/^\.(obangki-[a-z-]+)\s*\{/gm)].map((m) => m[1])
+    const cssKeyframes = [...css.matchAll(/@keyframes\s+(obangki[A-Za-z]+)/g)].map((m) => m[1])
+    expect(cssClasses.length).toBeGreaterThan(0)
+    expect(cssKeyframes.length).toBeGreaterThan(0)
+    // 빠진 것을 **모아서** 단언한다 — 하나씩 끊으면 첫 누락만 보이고 나머지는 다음 판까지 숨는다
+    const missingClasses = [...new Set(cssClasses)].filter((c) => !gate.includes(`'.${c}'`))
+    const missingKeyframes = [...new Set(cssKeyframes)].filter((k) => !gate.includes(`'${k}'`))
+    expect({ missingClasses, missingKeyframes }).toEqual({ missingClasses: [], missingKeyframes: [] })
+  })
+
+  it('죽은 연출이 남아 있지 않다 — 폐지된 뽑기(pull) 자취', () => {
+    // 7차에 제스처를, 8차에 단일 뽑기를 없앴다. 쓰이지 않는 키프레임이 게이트 목록에 남으면
+    // "확인했다"는 숫자만 늘고 실제로 지키는 것은 없다.
+    expect(css).not.toContain('obangkiPull')
+    expect(gate).not.toContain('obangkiPull')
   })
 
   it('모션 최소화에서도 국면 전환이 멎지 않는다 (animation:none 이 아니라 0.01ms)', () => {
@@ -615,7 +669,8 @@ describe('사주 해석 층 — 용신 오행 × 색 오행 (CEO 7차: "그 사�
 describe('서버 색 확정 — 감사 A3 "시드 역산" 근본 해소 계약', () => {
   it('액션이 색을 입력으로 받지 않고 시드·회차로 스스로 계산한다', () => {
     expect(ACTIONS_SRC).toMatch(/drawObangki\(qtype: string, confirmPaid: boolean\)/)
-    expect(ACTIONS_SRC).toContain('shuffleFlags(roundSeed)[electIndex(roundSeed)]')
+    // 8차: 한 점사는 삼기다. 로그에 남는 한 색은 **향방**이고 나머지 두 기는 같은 시드에서 다시 나온다
+    expect(ACTIONS_SRC).toContain('drawSamgi(roundSeed).way')
     // 색이 입력이던 시절의 검증이 되살아나면 안 된다
     expect(ACTIONS_SRC).not.toMatch(/drawObangki\(color/)
   })
