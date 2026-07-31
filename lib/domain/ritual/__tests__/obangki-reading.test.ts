@@ -254,13 +254,13 @@ describe('처방 — 전승의 해법을 신당의 의식으로', () => {
 describe('readSamgi — 한 회차의 완성된 점사', () => {
   it('같은 (시드, 분포)면 통째로 같다', () => {
     const sp: ElementSpread = Object.freeze({ wood: 1, fire: 4, earth: 2, metal: 1, water: 0 })
-    for (const s of seeds(80)) expect(readSamgi(s, sp)).toEqual(readSamgi(s, sp))
+    for (const s of seeds(80)) expect(readSamgi(s, sp, 'sinsu')).toEqual(readSamgi(s, sp, 'sinsu'))
   })
 
   it('분포가 없으면 왕쇠 층만 빠지고 나머지는 그대로다 (폴백)', () => {
     for (const s of seeds(60)) {
-      const withSpread = readSamgi(s, Object.freeze({ wood: 0, fire: 4, earth: 2, metal: 1, water: 1 }))
-      const without = readSamgi(s, null)
+      const withSpread = readSamgi(s, Object.freeze({ wood: 0, fire: 4, earth: 2, metal: 1, water: 1 }), 'sinsu')
+      const without = readSamgi(s, null, 'sinsu')
       expect(without.wangswe).toBeNull()
       expect(without.gongsu).toBe(withSpread.gongsu)
       expect(without.draw).toEqual(withSpread.draw)
@@ -270,14 +270,14 @@ describe('readSamgi — 한 회차의 완성된 점사', () => {
 
   it('부정풀이 문구는 물린 기가 있을 때만 있다', () => {
     for (const s of seeds(500)) {
-      const r = readSamgi(s, null)
+      const r = readSamgi(s, null, 'sinsu')
       expect(r.purifyLine === null).toBe(r.draw.purified === null)
     }
   })
 
   it('세 줄·공수·흐름·응기·처방이 늘 채워진다', () => {
     for (const s of seeds(200)) {
-      const r = readSamgi(s, null)
+      const r = readSamgi(s, null, 'sinsu')
       expect(r.slotLines).toHaveLength(3)
       for (const l of r.slotLines) expect(l.line).toBeTruthy()
       expect(r.gongsu).toBeTruthy()

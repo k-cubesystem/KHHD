@@ -32,7 +32,14 @@
  */
 
 import { hashSeed } from './aekmak'
-import { OBANGKI_COLORS, OBANGKI_COLOR_ELEMENT, type ObangkiColor } from './obangki'
+import {
+  OBANGKI_COLORS,
+  OBANGKI_COLOR_ELEMENT,
+  OBANGKI_MATTER_INFO,
+  matterLine,
+  type ObangkiColor,
+  type ObangkiMatter,
+} from './obangki'
 import type { Element } from '@/lib/domain/shrine/types'
 
 // ─── 세 자리 ──────────────────────────────────────────────────
@@ -103,16 +110,16 @@ export function samgiOrder(draw: SamgiDraw): readonly { slot: SamgiSlot; color: 
 // ─── 자리별 한 줄 ─────────────────────────────────────────────
 
 const SEAT_LINES: Readonly<Record<ObangkiColor, string>> = Object.freeze({
-  red: '자리에 홍기가 섰다 — 지금 그대는 무언가를 바라는 문 앞에 서 있구나.',
-  white: '자리에 백기가 섰다 — 몸과 명(命)을 살피는 자리에 와 있구나.',
-  yellow: '자리에 황기가 섰다 — 집안의 결이 걸린 자리로구나.',
-  blue: '자리에 청기가 섰다 — 마음 한켠에 걱정이 얹힌 자리구나.',
+  red: '자리에 홍기가 섰다 — 바라는 기운이 이 일을 감싸고 있구나.',
+  white: '자리에 백기가 섰다 — 위에서 지켜보는 손길이 이 일에 닿아 있구나.',
+  yellow: '자리에 황기가 섰다 — 집안 쪽 결이 이 일에 얹혀 있구나.',
+  blue: '자리에 청기가 섰다 — 터와 액의 기운이 걸려 있는 자리구나.',
   green: '자리에 녹기가 섰다 — 묵은 것이 앞을 가린 자리구나.',
 })
 
 const ROOT_LINES: Readonly<Record<ObangkiColor, string>> = Object.freeze({
   red: '뿌리에 홍기가 섰다 — 바라던 마음이 이미 크게 자라 있던 자리다.',
-  white: '뿌리에 백기가 섰다 — 위에서 지켜보던 손길이 이 일에 닿아 있구나.',
+  white: '뿌리에 백기가 섰다 — 명(命)이 걸린 데서 비롯된 일이구나.',
   yellow: '뿌리에 황기가 섰다 — 집안 쪽에서 흘러온 결이구나.',
   blue: '뿌리에 청기가 섰다 — 터와 사람 사이에서 비롯된 일이구나.',
   green: '뿌리에 녹기가 섰다 — 오래 두었던 것이 아직 돌고 있구나.',
@@ -139,35 +146,35 @@ export function slotLine(slot: SamgiSlot, color: ObangkiColor): string {
 
 const GONGSU: Readonly<Record<ObangkiColor, Readonly<Record<ObangkiColor, string>>>> = Object.freeze({
   red: Object.freeze({
-    red: '재물의 일에 산신이 거듭 답하는구나 — 청하던 자리에서 다시 청하면 될 일이다.',
-    white: '재물의 일이나 답은 칠성에 있구나 — 명을 먼저 밝히면 셈이 뒤따라 열리겠다.',
-    yellow: '재물의 일에 조상이 손을 내미는구나 — 뿌리를 먼저 대접하면 앞이 트이겠다.',
-    blue: '재물의 일에 신장이 나서는구나 — 터와 액을 먼저 다스려야 할 자리다.',
-    green: '재물의 일 앞에 묵은 것이 끼어 있구나 — 먼저 물리고 나서야 셈이 보이겠다.',
+    red: '이 일에 산신의 기운이 얹혀 있고 향방도 한 빛이구나 — 청하던 자리에서 다시 청하면 될 일이다.',
+    white: '산신의 기운이 일을 감쌌으나 답은 칠성에 있구나 — 명을 먼저 밝히면 뒤가 따라 열리겠다.',
+    yellow: '바라는 기운이 앞서는데 조상이 손을 내미는구나 — 뿌리를 먼저 대접하면 앞이 트이겠다.',
+    blue: '산신의 기운이 섰으나 신장이 앞에 나서는구나 — 터와 액을 먼저 다스릴 일이다.',
+    green: '바라는 마음은 큰데 앞에 묵은 것이 끼어 있구나 — 먼저 물리고 나서야 길이 보이겠다.',
   }),
   white: Object.freeze({
-    red: '명(命)의 일이나 산신이 답을 주는구나 — 청하는 자리에서 기운이 함께 서겠다.',
-    white: '명의 일에 칠성이 거듭 답하는구나 — 밝히던 것을 그대로 이어가면 될 일이다.',
-    yellow: '명의 일에 조상이 답하는구나 — 뿌리를 살피면 몸도 함께 편해지겠다.',
-    blue: '명의 일에 신장이 나선다 — 몸보다 터를 먼저 보라는 뜻이겠구나.',
-    green: '명의 일 앞에 묵은 기운이 서 있구나 — 물리고 나면 저절로 밝아지겠다.',
+    red: '위에서 지켜보는 손길이 닿아 있고 향방은 산신이구나 — 청하는 자리로 가면 기운이 함께 서겠다.',
+    white: '칠성의 빛이 거듭 이 일을 비추는구나 — 밝히던 것을 그대로 이어가면 될 일이다.',
+    yellow: '명을 밝히는 기운이 섰는데 조상이 답하는구나 — 뿌리를 살피면 위아래가 함께 편해지겠다.',
+    blue: '지켜보는 손길이 있으나 신장이 나서는구나 — 사람보다 터를 먼저 보라는 뜻이겠다.',
+    green: '밝은 기운 앞에 묵은 것이 서 있구나 — 물리고 나면 저절로 환해지겠다.',
   }),
   yellow: Object.freeze({
-    red: '집안의 일에 산신이 답하는구나 — 뿌리가 풀리면 재수가 함께 따라오겠다.',
-    white: '집안의 일에 칠성이 답한다 — 명을 밝히는 정성이 뿌리까지 닿겠구나.',
-    yellow: '집안의 일에 조상이 거듭 서는구나 — 뿌리 쪽을 오래 미뤄 둔 자리다.',
-    blue: '집안의 일에 신장이 나선다 — 사람보다 터에서 온 일이겠구나.',
-    green: '집안의 일에 묵은 것이 도는구나 — 먼저 물려야 뿌리가 편안해지겠다.',
+    red: '집안 쪽 기운이 얹혀 있고 향방은 산신이구나 — 뿌리가 풀리면 바라던 것도 따라오겠다.',
+    white: '조상의 결이 도는데 칠성이 답하는구나 — 명을 밝히는 정성이 뿌리까지 닿겠다.',
+    yellow: '조상의 기운이 거듭 서는구나 — 뿌리 쪽을 오래 미뤄 둔 일이다.',
+    blue: '집안 쪽 결이 도는데 신장이 나서는구나 — 사람이 아니라 터에서 온 일이겠다.',
+    green: '뿌리 쪽에 묵은 것이 도는구나 — 먼저 물려야 집안이 편안해지겠다.',
   }),
   blue: Object.freeze({
-    red: '걱정거리의 일이나 산신이 길을 여는구나 — 청하는 쪽으로 방향을 돌리면 풀리겠다.',
-    white: '걱정거리의 일에 칠성이 답한다 — 명을 밝히면 그늘이 옅어지겠구나.',
-    yellow: '걱정거리의 뿌리가 집안에 닿아 있구나 — 조상을 대접하면 가라앉겠다.',
-    blue: '걱정거리에 신장이 거듭 서는구나 — 터와 액을 정면으로 다스릴 자리다.',
-    green: '걱정거리 밑에 묵은 것이 깔려 있구나 — 물리는 것이 첫 걸음이겠다.',
+    red: '터와 액의 기운이 걸려 있으나 산신이 길을 여는구나 — 청하는 쪽으로 방향을 돌리면 풀리겠다.',
+    white: '걸림이 있는 자리에 칠성이 답하는구나 — 명을 밝히면 그늘이 옅어지겠다.',
+    yellow: '걸림의 뿌리가 집안에 닿아 있구나 — 조상을 대접하면 가라앉겠다.',
+    blue: '신장이 거듭 서는구나 — 터와 액을 정면으로 다스릴 일이다.',
+    green: '걸림 밑에 묵은 것이 깔려 있구나 — 물리는 것이 첫 걸음이겠다.',
   }),
   green: Object.freeze({
-    red: '묵은 기운으로 시작했으나 산신이 문을 여는구나 — 물리고 나면 재수가 서겠다.',
+    red: '묵은 기운으로 시작했으나 산신이 문을 여는구나 — 물리고 나면 바라던 자리가 서겠다.',
     white: '묵은 기운 위로 칠성이 빛을 내리는구나 — 밝히는 정성이 그늘을 걷겠다.',
     yellow: '묵은 기운의 뿌리가 집안에 있구나 — 조상을 대접하면 자리가 정해지겠다.',
     blue: '묵은 기운에 신장이 나서는구나 — 터를 다스리면 함께 걷히겠다.',
@@ -175,9 +182,15 @@ const GONGSU: Readonly<Record<ObangkiColor, Readonly<Record<ObangkiColor, string
   }),
 })
 
-/** 자리 × 향방 한 문장 — 삼기 점사의 본문이다. */
-export function gongsuLine(seat: ObangkiColor, way: ObangkiColor): string {
-  return GONGSU[seat][way]
+/**
+ * 자리 × 향방 한 문장 — 삼기 점사의 본문이다.
+ *
+ * 갈래를 주면 앞에 말머리를 붙인다. 자리 기가 **주제**를 정하지 않는다는 것이 8차b 의 요지다 —
+ * 무슨 일인지는 사용자가 이미 아뢨고, 기는 **그 일에 어느 신이 작용하는가**를 말한다.
+ */
+export function gongsuLine(seat: ObangkiColor, way: ObangkiColor, matter?: ObangkiMatter): string {
+  const body = GONGSU[seat][way]
+  return matter ? `${OBANGKI_MATTER_INFO[matter].label}의 일이다 — ${body}` : body
 }
 
 // ─── 오행 흐름 — 세 기가 이루는 결 ────────────────────────────
@@ -350,24 +363,27 @@ export interface SamgiReading {
   readonly remedy: SamgiRemedy
   /** 부정을 물렸다면 그 한 줄 */
   readonly purifyLine: string | null
+  /** 아뢴 일에 대한 신당지기 맺음말 — 색과 무관하게 갈래만 본다 */
+  readonly closing: string
 }
 
 const PURIFY_LINE = '첫 기에 녹기가 섰기에 부정을 물리고 다시 뽑았다 — 전승이 이르는 대로다.'
 
 /** 회차 시드 하나로 점사 전체를 확정한다. 서버·화면 어디서 불러도 같은 결과다. */
-export function readSamgi(roundSeed: number, spread: ElementSpread | null): SamgiReading {
+export function readSamgi(roundSeed: number, spread: ElementSpread | null, matter: ObangkiMatter): SamgiReading {
   const draw = drawSamgi(roundSeed)
   const flow = samgiFlow(draw)
   return Object.freeze({
     draw,
     slotLines: samgiOrder(draw).map(({ slot, color }) => ({ slot, color, line: slotLine(slot, color) })),
-    gongsu: gongsuLine(draw.seat, draw.way),
+    gongsu: gongsuLine(draw.seat, draw.way, matter),
     flow,
     flowInfo: SAMGI_FLOW_INFO[flow],
     eunggi: eunggiLine(draw.way),
     wangswe: wangsweLine(wangswe(draw.way, spread)),
     remedy: SAMGI_REMEDY[draw.way],
     purifyLine: draw.purified ? PURIFY_LINE : null,
+    closing: matterLine(matter, roundSeed),
   })
 }
 

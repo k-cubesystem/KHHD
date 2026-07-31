@@ -22,7 +22,7 @@ import {
   countDrawsOnDay,
   dailySeed,
   drawSeed,
-  isObangkiQType,
+  isObangkiMatter,
   remainingFreeDraws,
 } from '@/lib/domain/ritual/obangki'
 import { drawSamgi } from '@/lib/domain/ritual/obangki-reading'
@@ -216,6 +216,13 @@ export interface ObangkiStatus {
    * 비어 있는 명식에 다르게 서기 때문에 용신만으로는 부족하다. 분석 전이면 null.
    */
   elements: Readonly<Record<Element, number>> | null
+  /**
+   * 고축(告祝) 재료 — 이름·생년. 전승에서 점사는 "어디 사는 몇 년생 아무개가 아뢰옵니다"로 연다.
+   *
+   * ⚠️ 내려보내기만 하고 **되받지 않는다**. 화면이 문장으로 엮을 뿐이고 기록에 남는 것은
+   *    여전히 갈래·색·시각 셋뿐이다. 값이 없으면 화면이 "이 몸이"로 아뢴다(폴백 필수).
+   */
+  worshipper: { name: string | null; birthYear: number | null }
 }
 
 /**
@@ -242,6 +249,18 @@ function elementSpread(row: unknown): Readonly<Record<Element, number>> | null {
     sum += out[el]
   }
   return sum > 0 ? Object.freeze(out) : null
+}
+
+/**
+ * birth_date(text) → 생년. 형식이 어긋나면 null 이다 — 고축문에 엉뚱한 해를 넣느니 빼는 편이 낫다.
+ * 저장 형식이 'YYYY-MM-DD' 라는 전제에만 기대고, 그 밖의 문자열은 조용히 버린다.
+ */
+function birthYearOf(value: unknown): number | null {
+  if (typeof value !== 'string') return null
+  const m = /^(\d{4})-\d{2}-\d{2}/.exec(value.trim())
+  if (!m) return null
+  const y = Number(m[1])
+  return y >= 1900 && y <= 2200 ? y : null
 }
 
 /** timestamptz 문자열 → epochMs. 파싱 실패는 제외(카운트를 부풀리지 않는다). */
@@ -292,6 +311,11 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
       .select('yongsin_element, base_wood, base_fire, base_earth, base_metal, base_water')
       .eq('user_id', user.id)
       .maybeSingle()
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, birth_date')
+      .eq('id', user.id)
+      .maybeSingle()
     return {
       remainingFree: remainingFreeDraws(stamps, now),
       freeLimit: OBANGKI_DAILY_FREE,
@@ -300,6 +324,10 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
       seed: dailySeed(user.id, today),
       yongsin: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
       elements: elementSpread(energy),
+      worshipper: {
+        name: typeof profile?.full_name === 'string' && profile.full_name.trim() ? profile.full_name.trim() : null,
+        birthYear: birthYearOf(profile?.birth_date),
+      },
     }
   } catch (e) {
     logger.warn('[obangki] 현황 조회 예외(비치명):', e)
@@ -314,7 +342,7 @@ export interface DrawObangkiResult {
     | 'UNAUTHORIZED'
     | 'FORBIDDEN'
     | 'RATE_LIMITED'
-    | 'INVALID_QTYPE'
+    | 'INVALID_MATTER'
     | 'NEEDS_PAYMENT'
     | 'INSUFFICIENT_BOKCHAE'
     | 'DRAW_FAILED'
@@ -336,7 +364,7 @@ export interface DrawObangkiResult {
 }
 
 /**
- * 오방기 뽑기 — **질문유형만 받는다**(색은 서버가 시드·회차로 확정, 질문·선택지는 화면을 떠나지 않는다).
+ * 오방기 뽑기 — **문복 갈래만 받는다**(색은 서버가 시드·회차로 확정, 아뢰는 말은 화면을 떠나지 않는다).
  *
  * 과금 순서가 이 함수의 핵심이다:
  *   ① 무조건 **무료 시도 먼저**(RPC p_paid=false — 상한 검사와 INSERT 가 한 문장).
@@ -348,13 +376,13 @@ export interface DrawObangkiResult {
  * 차감은 server-only 모듈(spendBokchae)만 쓴다. 차감 후 기록이 실패하면 곧바로 환불한다
  * (deities.ts 의 구매 → 지급 실패 → refundBokchae 와 같은 패턴).
  */
-export async function drawObangki(qtype: string, confirmPaid: boolean): Promise<DrawObangkiResult> {
+export async function drawObangki(matter: string, confirmPaid: boolean): Promise<DrawObangkiResult> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
-  if (!isObangkiQType(qtype)) return { success: false, error: 'INVALID_QTYPE' }
+  if (!isObangkiMatter(matter)) return { success: false, error: 'INVALID_MATTER' }
 
   const gate = await ritualGate(user.id, 'obangki')
   if (gate !== 'OK') return { success: false, error: gate }
@@ -388,7 +416,7 @@ export async function drawObangki(qtype: string, confirmPaid: boolean): Promise<
     admin.rpc('draw_shrine_obangki', {
       p_user_id: user.id,
       p_color: color,
-      p_qtype: qtype,
+      p_qtype: matter,
       p_today: today,
       p_free_limit: OBANGKI_DAILY_FREE,
       p_paid: paid,

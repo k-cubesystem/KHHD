@@ -2,39 +2,34 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
   OBANGKI_COLORS,
+  OBANGKI_COLOR_ELEMENT,
   OBANGKI_COLOR_INFO,
   OBANGKI_DAILY_FREE,
   OBANGKI_DISCLAIMER,
   OBANGKI_EXTRA_COST,
-  OBANGKI_SAMGI_STEP_MS,
+  OBANGKI_MATTERS,
+  OBANGKI_MATTER_INFO,
+  OBANGKI_MATTER_VARIANTS,
   OBANGKI_MS,
-  OBANGKI_OPTION_MAX,
-  OBANGKI_OPTION_MIN,
-  OBANGKI_OPTION_TEXT_MAX,
-  OBANGKI_QTYPES,
-  OBANGKI_QTYPE_HINT,
-  OBANGKI_QTYPE_LABEL,
-  OBANGKI_VARIANTS,
-  allObangkiLines,
-  assignOptions,
+  OBANGKI_PLEA_TEXT_MAX,
+  OBANGKI_SAMGI_STEP_MS,
+  allMatterLines,
+  allSajuLines,
   countDrawsOnDay,
   dailySeed,
-  electIndex,
   drawSeed,
-  OBANGKI_COLOR_ELEMENT,
+  gochukLine,
   isObangkiColor,
-  isObangkiQType,
+  isObangkiMatter,
   isPaidDraw,
+  matterLine,
+  remainingFreeDraws,
   sajuLine,
   sajuRelation,
-  allSajuLines,
-  obangkiLine,
-  remainingFreeDraws,
-  resolveDraw,
   shuffleFlags,
   verdictLine,
   type ObangkiColor,
-  type ObangkiQType,
+  type ObangkiMatter,
 } from '../obangki'
 
 /** KST 시각을 UTC epoch 으로 — 테스트 의도를 KST 로 읽히게 한다(KST = UTC+9). */
@@ -45,6 +40,7 @@ function kst(y: number, m: number, d: number, h = 0, min = 0): number {
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION_SQL = read('supabase/migrations/20260730_shrine_obangki_draws.sql')
 const ACTIONS_SRC = read('app/actions/shrine/rituals.ts')
+const MATTER_MIGRATION_SQL = read('supabase/migrations/20260801_obangki_matter_categories.sql')
 
 describe('오방색 5기', () => {
   it('전승 그대로 — 홍 재수·백 명복·황 조상·청 우환·녹 부정 (8차: 임의 괘 폐지)', () => {
@@ -103,27 +99,58 @@ describe('오방색 5기', () => {
   })
 })
 
-describe('질문 유형 3종', () => {
-  it('세 유형 — 무엇을 고를까 / 지금 할까 말까 / 쓸까 말까', () => {
-    expect([...OBANGKI_QTYPES]).toEqual(['choice', 'timing', 'money'])
-    expect(OBANGKI_QTYPES.map((q) => OBANGKI_QTYPE_LABEL[q])).toEqual(['무엇을 고를까', '지금 할까 말까', '쓸까 말까'])
+describe('문복(問卜) 갈래 7종 — 8차b: 선택지 구조 폐지', () => {
+  it('전통 갈래 7종 그대로 — 신수·재수·관재·혼사·터·몸·자손', () => {
+    expect([...OBANGKI_MATTERS]).toEqual(['sinsu', 'jaesu', 'gwanjae', 'honsa', 'teo', 'mom', 'jason'])
+    expect(OBANGKI_MATTERS.map((m) => OBANGKI_MATTER_INFO[m].label)).toEqual([
+      '신수',
+      '재수',
+      '관재',
+      '혼사',
+      '터',
+      '몸',
+      '자손',
+    ])
   })
 
-  it('유형마다 입력 예시가 두 갈래로 들어 있다 (화면 플레이스홀더)', () => {
-    for (const q of OBANGKI_QTYPES) {
-      expect(OBANGKI_QTYPE_HINT[q].split(' / ')).toHaveLength(2)
+  it('갈래마다 한자·설명·아뢰는 말머리·입력 안내가 있다', () => {
+    for (const m of OBANGKI_MATTERS) {
+      const info = OBANGKI_MATTER_INFO[m]
+      expect(info.hanja).toMatch(/^[一-鿿]{1,2}$/)
+      expect(info.gloss).toBeTruthy()
+      expect(info.plea).toContain('여쭈옵니다')
+      expect(info.hint).toBeTruthy()
     }
   })
 
-  it('isObangkiQType 은 3종만 통과시킨다 (서버 입력 검증)', () => {
-    for (const q of OBANGKI_QTYPES) expect(isObangkiQType(q)).toBe(true)
-    for (const bad of ['', 'CHOICE', '선택', 'love', null, undefined, 0, {}, ['money']]) {
-      expect(isObangkiQType(bad)).toBe(false)
+  it('isObangkiMatter 는 7종만 통과시킨다 (서버 입력 검증)', () => {
+    for (const m of OBANGKI_MATTERS) expect(isObangkiMatter(m)).toBe(true)
+    // 폐지된 옛 유형이 그대로 들어오면 안 된다 — DB CHECK 에는 남아 있어도 새 기록은 막는다
+    for (const bad of ['choice', 'timing', 'money', '', '신수', 'SINSU', null, undefined, 0, {}, ['sinsu']]) {
+      expect(isObangkiMatter(bad)).toBe(false)
     }
   })
 
-  it('DB CHECK 제약(마이그레이션)과 유형 문자열이 같다', () => {
-    for (const q of OBANGKI_QTYPES) expect(MIGRATION_SQL).toContain(`'${q}'`)
+  it('DB CHECK 제약(마이그레이션)이 7종을 받고 옛 값도 보존한다', () => {
+    for (const m of OBANGKI_MATTERS) expect(MATTER_MIGRATION_SQL).toContain(`'${m}'`)
+    // 이미 쌓인 로그를 무효로 만들지 않는다
+    for (const legacy of ['choice', 'timing', 'money']) expect(MATTER_MIGRATION_SQL).toContain(`'${legacy}'`)
+  })
+
+  it('★ 선택지 배정 구조가 되살아나지 않는다 — 오방기는 제비가 아니다', () => {
+    // 폐지한 것은 **식별자**다. 왜 폐지했는지 적어 둔 주석은 남아 있어야 하므로 낱말이 아니라
+    // 코드 이름으로 검사한다(설명글까지 막으면 다음 사람이 이유를 모른 채 되살린다).
+    const src = read('lib/domain/ritual/obangki.ts')
+    for (const gone of ['assignOptions', 'OBANGKI_OPTION_MIN', 'OBANGKI_QTYPES', 'obangkiLine(']) {
+      expect(src).not.toContain(gone)
+    }
+    const sheet = read('components/shrine/scene/ObangkiSheet.tsx')
+    for (const gone of ['assignOptions', 'onOptions', 'OBANGKI_OPTION_TEXT_MAX', '선택지 ${i + 1}']) {
+      expect(sheet).not.toContain(gone)
+    }
+    // 그 자리에 문복 절차가 서 있다
+    expect(sheet).toContain('gochukLine')
+    expect(sheet).toContain('OBANGKI_MATTERS.map')
   })
 })
 
@@ -215,11 +242,9 @@ describe('정책 상수', () => {
     expect(OBANGKI_EXTRA_COST).toBe(1)
   })
 
-  it('선택지는 2~4개, 깃발 수를 넘지 않는다', () => {
-    expect(OBANGKI_OPTION_MIN).toBe(2)
-    expect(OBANGKI_OPTION_MAX).toBe(4)
-    expect(OBANGKI_OPTION_MAX).toBeLessThanOrEqual(OBANGKI_COLORS.length)
-    expect(OBANGKI_OPTION_TEXT_MAX).toBeGreaterThan(0)
+  it('아뢰는 말은 한 줄 — 한 번에 한 가지만 여쭙게 하는 장치다', () => {
+    expect(OBANGKI_PLEA_TEXT_MAX).toBeGreaterThan(0)
+    expect(OBANGKI_PLEA_TEXT_MAX).toBeLessThanOrEqual(60)
   })
 
   it('삼기 간격이 한 기 연출보다 짧다 — 셋이 끊기지 않고 이어지는 조건', () => {
@@ -297,107 +322,54 @@ describe('셔플 — 5기가 하나씩', () => {
   })
 })
 
-describe('선택지 배정 — 5기에 고르게', () => {
-  it('5칸을 채우고, 같은 시드면 같은 배정', () => {
-    const s = drawSeed(dailySeed('u', '2026-07-30'), 0)
-    expect(assignOptions(2, s)).toHaveLength(OBANGKI_COLORS.length)
-    expect(assignOptions(2, s)).toEqual(assignOptions(2, s))
+describe('신당지기 맺음말 — 갈래 7 × 변형 4', () => {
+  it('갈래마다 정확히 4문이고 전부 유일하다', () => {
+    expect(OBANGKI_MATTER_VARIANTS).toBe(4)
+    const all = allMatterLines()
+    expect(all).toHaveLength(OBANGKI_MATTERS.length * OBANGKI_MATTER_VARIANTS)
+    expect(new Set(all).size).toBe(all.length)
   })
 
-  it('선택지 2~4개 모두 최소 1기에 배정되고, 개수 차가 1을 넘지 않는다', () => {
-    for (let n = OBANGKI_OPTION_MIN; n <= OBANGKI_OPTION_MAX; n += 1) {
-      for (let i = 0; i < 120; i += 1) {
-        const slots = assignOptions(n, drawSeed(dailySeed(`u${i}`, '2026-07-30'), i % 3))
-        const counts = Array.from({ length: n }, (_, k) => slots.filter((v) => v === k).length)
-        expect(Math.min(...counts)).toBeGreaterThanOrEqual(1)
-        expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
-        expect(counts.reduce((a, b) => a + b, 0)).toBe(OBANGKI_COLORS.length)
-      }
+  it('같은 (갈래, 시드)면 항상 같은 문장이고 시드가 다르면 갈린다', () => {
+    for (const m of OBANGKI_MATTERS) {
+      expect(matterLine(m, 12345)).toBe(matterLine(m, 12345))
+      const variants = new Set(Array.from({ length: 60 }, (_, i) => matterLine(m, i * 104729)))
+      expect(variants.size).toBeGreaterThan(1)
     }
   })
 
-  it('선택지가 없으면 배정도 없다', () => {
-    expect(assignOptions(0, 1234)).toEqual([])
-    expect(assignOptions(-2, 1234)).toEqual([])
-    expect(assignOptions(Number.NaN, 1234)).toEqual([])
+  it('맺음말은 그 갈래 풀 안에서만 나온다', () => {
+    for (const m of OBANGKI_MATTERS) {
+      for (let i = 0; i < 40; i += 1) expect(allMatterLines()).toContain(matterLine(m, i * 7919))
+    }
   })
 
-  it('선택지 1개면 다섯 기가 모두 그 하나', () => {
-    expect(assignOptions(1, 4321)).toEqual([0, 0, 0, 0, 0])
-  })
-
-  it('선택지가 깃발 수를 넘으면 5개까지만 쓰인다(빈 깃발이 사라지지 않게)', () => {
-    const slots = assignOptions(9, 777)
-    expect(Math.max(...slots)).toBeLessThan(OBANGKI_COLORS.length)
+  it('몸(健康) 갈래는 의원을 함께 이르는 문구를 갖고 있다 — 의료 오인 방지', () => {
+    expect(allMatterLines().some((l) => l.includes('의원'))).toBe(true)
   })
 })
 
-describe('resolveDraw — 진열 × 고른 자리', () => {
-  const seed = drawSeed(dailySeed('u', '2026-07-30'), 0)
+describe('고축(告祝) — 신원을 아뢰며 연다', () => {
+  it('이름·생년이 있으면 그대로 엮는다', () => {
+    expect(gochukLine('김해화', 1990, 'honsa')).toBe('1990년생 김해화가 오방신장 앞에 혼사를 여쭈옵니다.')
+  })
 
-  it('고른 자리의 색·선택지를 그대로 돌려준다', () => {
-    const flags = shuffleFlags(seed)
-    const slots = assignOptions(3, seed)
-    for (let i = 0; i < flags.length; i += 1) {
-      const d = resolveDraw(seed, 3, i)
-      expect(d.color).toBe(flags[i])
-      expect(d.flagIndex).toBe(i)
-      expect(d.optionIndex).toBe(slots[i])
+  it('생년만 없으면 이름으로, 이름도 없으면 "이 몸이"로 아뢴다 (폴백 필수)', () => {
+    expect(gochukLine('김해화', null, 'sinsu')).toBe('김해화가 오방신장 앞에 신수를 여쭈옵니다.')
+    expect(gochukLine(null, 1990, 'mom')).toBe('이 몸이 오방신장 앞에 몸을 여쭈옵니다.')
+    expect(gochukLine('   ', null, 'teo')).toBe('이 몸이 오방신장 앞에 터를 여쭈옵니다.')
+  })
+
+  it('일곱 갈래 모두 문장이 성립한다', () => {
+    for (const m of OBANGKI_MATTERS) {
+      const line = gochukLine('아무개', 2000, m)
+      expect(line).toContain(OBANGKI_MATTER_INFO[m].plea)
+      expect(line.endsWith('.')).toBe(true)
     }
-  })
-
-  it('범위 밖 자리는 무대 안으로 접힌다', () => {
-    expect(resolveDraw(seed, 2, -3).flagIndex).toBe(0)
-    expect(resolveDraw(seed, 2, 99).flagIndex).toBe(OBANGKI_COLORS.length - 1)
-    expect(resolveDraw(seed, 2, Number.NaN).flagIndex).toBe(0)
-  })
-
-  it('선택지를 안 적었으면 배정이 없다(색만 나온다)', () => {
-    const d = resolveDraw(seed, 0, 2)
-    expect(d.optionIndex).toBeNull()
-    expect(isObangkiColor(d.color)).toBe(true)
   })
 })
 
-describe('문구 풀 — 결정론 + 법무', () => {
-  it('색 5 × 유형 3 × 변형 8 = 120문', () => {
-    expect(OBANGKI_VARIANTS).toBe(8)
-    expect(allObangkiLines()).toHaveLength(OBANGKI_COLORS.length * OBANGKI_QTYPES.length * OBANGKI_VARIANTS)
-  })
-
-  it('120문이 전부 서로 다른 문장이다', () => {
-    const lines = allObangkiLines()
-    expect(new Set(lines).size).toBe(lines.length)
-  })
-
-  it('같은 (색, 유형, 시드)면 항상 같은 문장', () => {
-    const seed = drawSeed(dailySeed('u', '2026-07-30'), 1)
-    for (const c of OBANGKI_COLORS) {
-      for (const q of OBANGKI_QTYPES) expect(obangkiLine(c, q, seed)).toBe(obangkiLine(c, q, seed))
-    }
-  })
-
-  it('모든 (색, 유형)이 자기 풀 안의 문장을 낸다', () => {
-    const pool = new Set(allObangkiLines())
-    for (const c of OBANGKI_COLORS) {
-      for (const q of OBANGKI_QTYPES) {
-        for (let i = 0; i < 120; i += 1) expect(pool.has(obangkiLine(c, q, i * 7919))).toBe(true)
-      }
-    }
-  })
-
-  it('시드가 흐르면 변형이 실제로 갈린다(한 문장에 고정되지 않는다)', () => {
-    for (const c of OBANGKI_COLORS) {
-      for (const q of OBANGKI_QTYPES) {
-        const seen = new Set<string>()
-        for (let i = 0; i < 400; i += 1) seen.add(obangkiLine(c, q, drawSeed(dailySeed(`u${i}`, '2026-07-30'), i % 3)))
-        expect(seen.size).toBeGreaterThan(1)
-      }
-    }
-  })
-
-  // 표시광고법(L-트랙) — 단정·지시 금지. 신위는 본 것을 말할 뿐 시키지 않는다.
-  // PRD §2: "아껴라" ✗ → "지갑은 잠시 쉬고 싶다 하는구나" ○. 문구를 늘릴 때 이 목록이 게이트다.
+describe('문구 규율 — 표시광고법 L-트랙', () => {
   const FORBIDDEN = [
     '사라',
     '팔아라',
@@ -429,32 +401,26 @@ describe('문구 풀 — 결정론 + 법무', () => {
   ]
 
   it.each(FORBIDDEN)('문구 풀에 금지 어휘 "%s" 가 없다', (word) => {
-    for (const line of allObangkiLines()) expect(line).not.toContain(word)
+    for (const line of allMatterLines()) expect(line).not.toContain(word)
     for (const line of allSajuLines()) expect(line).not.toContain(word)
   })
 
-  it('금전 유형 문구에 명령형 어미가 없다', () => {
-    for (const c of OBANGKI_COLORS) {
-      for (let i = 0; i < 200; i += 1) {
-        expect(obangkiLine(c, 'money', i * 104729)).not.toMatch(/(하십시오|하세요|해라|하라\.|십시오)/)
-      }
+  it('명령형 어미가 없다 — 신위는 본 것을 말할 뿐 시키지 않는다', () => {
+    for (const line of [...allMatterLines(), ...allSajuLines()]) {
+      expect(line).not.toMatch(/(하십시오|하세요|해라|하라\.|십시오|하시오)/)
     }
   })
 
-  it('모든 문구가 서술 어미(-구나/-이다)로 끝난다 — 지시가 아니라 관찰이다', () => {
-    for (const line of allObangkiLines()) expect(line).toMatch(/(구나|이다)\.$/)
-  })
-
-  it('고지 문구는 부정형이라 풀 린트 대상이 아니다', () => {
-    expect(OBANGKI_DISCLAIMER).toContain('삼지 마세요')
+  it('전 문구가 서술 종결이다', () => {
+    for (const line of allMatterLines()) expect(line).toMatch(/(다|구나|네|것이다)\.$/)
   })
 })
 
-describe('verdictLine — 화면 자막', () => {
-  it('선택지가 있으면 함께, 없으면 괘만', () => {
-    expect(verdictLine('red', '짬뽕')).toBe('홍기 · 재수 — 짬뽕')
-    expect(verdictLine('green', null)).toBe('녹기 · 부정')
-    expect(verdictLine('blue', '   ')).toBe('청기 · 우환')
+describe('verdictLine — 공유 자막', () => {
+  it('기 이름과 소관만 담는다 — 아뢴 말은 절대 담지 않는다', () => {
+    expect(verdictLine('red')).toBe('홍기 · 재수')
+    expect(verdictLine('green')).toBe('녹기 · 부정')
+    expect(verdictLine('blue')).toBe('청기 · 우환')
   })
 })
 
@@ -597,27 +563,17 @@ describe('타입 계약', () => {
     expect(Object.keys(all).sort()).toEqual([...OBANGKI_COLORS].sort())
   })
 
-  it('ObangkiQType 유니온과 OBANGKI_QTYPES 가 어긋나면 컴파일이 깨진다', () => {
-    const all: Record<ObangkiQType, true> = { choice: true, timing: true, money: true }
-    expect(Object.keys(all).sort()).toEqual([...OBANGKI_QTYPES].sort())
-  })
-})
-
-describe('electIndex — 자동 선출 (CEO 7차: 사용자가 고르지 않는다)', () => {
-  it('결정론 — 같은 시드는 같은 자리, 범위는 0~4', () => {
-    for (let i = 0; i < 50; i += 1) {
-      const s = drawSeed(dailySeed('elect-user', '2026-07-31'), i)
-      const a = electIndex(s)
-      expect(a).toBe(electIndex(s))
-      expect(a).toBeGreaterThanOrEqual(0)
-      expect(a).toBeLessThan(OBANGKI_COLORS.length)
+  it('ObangkiMatter 유니온과 OBANGKI_MATTERS 가 어긋나면 컴파일이 깨진다', () => {
+    const all: Record<ObangkiMatter, true> = {
+      sinsu: true,
+      jaesu: true,
+      gwanjae: true,
+      honsa: true,
+      teo: true,
+      mom: true,
+      jason: true,
     }
-  })
-
-  it('한 자리에 고정되지 않고 다섯 자리를 모두 낸다 (300회차)', () => {
-    const seen = new Set<number>()
-    for (let i = 0; i < 300; i += 1) seen.add(electIndex(drawSeed(dailySeed('elect-user', '2026-07-31'), i)))
-    expect(seen.size).toBe(OBANGKI_COLORS.length)
+    expect(Object.keys(all).sort()).toEqual([...OBANGKI_MATTERS].sort())
   })
 })
 
@@ -673,7 +629,7 @@ describe('사주 해석 층 — 용신 오행 × 색 오행 (CEO 7차: "그 사�
 
 describe('서버 색 확정 — 감사 A3 "시드 역산" 근본 해소 계약', () => {
   it('액션이 색을 입력으로 받지 않고 시드·회차로 스스로 계산한다', () => {
-    expect(ACTIONS_SRC).toMatch(/drawObangki\(qtype: string, confirmPaid: boolean\)/)
+    expect(ACTIONS_SRC).toMatch(/drawObangki\(matter: string, confirmPaid: boolean\)/)
     // 8차: 한 점사는 삼기다. 로그에 남는 한 색은 **향방**이고 나머지 두 기는 같은 시드에서 다시 나온다
     expect(ACTIONS_SRC).toContain('drawSamgi(roundSeed).way')
     // 색이 입력이던 시절의 검증이 되살아나면 안 된다

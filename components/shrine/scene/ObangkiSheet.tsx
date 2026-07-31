@@ -1,12 +1,16 @@
 'use client'
 
 /**
- * 오방기(五方旗) 점괘 — 선택장애 해소 의식 (PRD-shrine-rituals-v1 §2 / ARCH §2·4).
+ * 오방기(五方旗) 문복(問卜) — 신께 한 가지 일을 아뢰고 답을 받는 의식 (PLAN-obangki-samgi-v1).
  *
- * 흐름: 질문유형 입력 → 칠성방울 + 5기 셔플 → **삼기(자리·뿌리·향방)가 차례로 나와 펼쳐짐** → 두루마리 풀이.
+ * 흐름은 전승의 점사 절차 그대로다:
+ *   고축(신원을 아뢴다) → 문복(갈래를 고르고 한 가지 일을 아뢴다) → 청신(방울·5기 셔플)
+ *   → 기뽑기(삼기가 차례로 선다) → 부정풀이(자리에 흉기면 물리고 재차) → 공수(두루마리)
+ *   → 처방 → 송신(기를 말아 신장을 돌려보낸다)
  *
- * 8차: 한 기 한 괘에서 **삼기 점사**로 바꿨다. 전승에서 오방기는 보통 세 번 뽑아 조합으로 읽고
- * (앞 기 = 무슨 일인가 / 뒤 기 = 무엇을 하면 되는가), 자리에 흉기가 서면 부정을 물리고 다시 뽑는다.
+ * 8차b: 「무엇을 고를까 / 갈래 2~4개」 구조를 폐지했다. 오방기는 선택지마다 깃발을 배정하는
+ * 제비가 아니라 **한 가지 일에 대해 신이 답하는 도구**이고(내린 공수를 확인하거나 처음 공수를
+ * 내릴 때 쓴다), 그래서 화면이 받는 것은 **문복 갈래 하나**다.
  * 세 기·부정풀이 모두 **회차 시드 하나**에서 나오므로 화면과 서버가 같은 결과를 따로 계산한다.
  *
  * 2026-07-30: 신당 룸 안의 스트립+모달에서 **전용 페이지**(/protected/shrine/obangki)로 옮겼다.
@@ -27,26 +31,22 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { X, Share2, Loader2, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Share2, Loader2, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   OBANGKI_COLOR_INFO,
   OBANGKI_DISCLAIMER,
-  OBANGKI_OPTION_MAX,
-  OBANGKI_OPTION_MIN,
-  OBANGKI_OPTION_TEXT_MAX,
+  OBANGKI_MATTERS,
+  OBANGKI_MATTER_INFO,
+  OBANGKI_PLEA_TEXT_MAX,
   OBANGKI_PRIVACY_NOTICE,
-  OBANGKI_QTYPES,
-  OBANGKI_QTYPE_HINT,
-  OBANGKI_QTYPE_LABEL,
-  assignOptions,
   drawSeed,
+  gochukLine,
   sajuLine,
-  obangkiLine,
   shuffleFlags,
   verdictLine,
   type ObangkiColor,
-  type ObangkiQType,
+  type ObangkiMatter,
 } from '@/lib/domain/ritual/obangki'
 import { SAMGI_SLOT_INFO, readSamgi, type SamgiReading, type SamgiSlot } from '@/lib/domain/ritual/obangki-reading'
 import { SamgiRow, scrollDelayMs } from './SamgiRow'
@@ -64,7 +64,7 @@ const SLOT_W = STAGE.w / 5
 
 const DRAW_ERROR_MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다',
-  INVALID_QTYPE: '무엇을 여쭐지 고르지 못했습니다',
+  INVALID_MATTER: '무슨 일로 오셨는지 고르지 못했습니다',
   NEEDS_PAYMENT: '오늘 무료 점괘를 다 쓰셨습니다',
   INSUFFICIENT_BOKCHAE: '복채가 모자랍니다',
   DRAW_FAILED: '점괘가 기록되지 않았습니다 — 괘는 그대로입니다',
@@ -89,8 +89,9 @@ interface Props {
 
 export function ObangkiRitual({ status, play }: Props) {
   const [phase, setPhase] = useState<Phase>('compose')
-  const [qtype, setQtype] = useState<ObangkiQType>('choice')
-  const [options, setOptions] = useState<string[]>(['', ''])
+  const [matter, setMatter] = useState<ObangkiMatter>('sinsu')
+  /** 아뢰는 말 — 서버로 나가지 않는다. state 에만 살다 사라진다(무저장 원칙) */
+  const [plea, setPlea] = useState('')
   /** 오늘 뽑은 총 횟수 — 회차 시드(seq)이자 무료 잔여의 근거. 서버 응답으로 정정된다. */
   const [todayCount, setTodayCount] = useState(status.todayCount)
   /** 이번 회차의 시드가 선 순번. 시작 시점에 고정한다(뽑는 동안 카운트가 바뀌어도 깃발이 안 흔들리게) */
@@ -108,9 +109,7 @@ export function ObangkiRitual({ status, play }: Props) {
   // 이번 회차의 깃발 진열·선택지 배정 — 서버가 준 시드(userId+날짜)에 회차를 얹어 만든다.
   // 같은 (userId, 날짜, seq)면 언제 다시 그려도 같은 배열이다(리렌더에도 안 흔들린다).
   const seed = useMemo(() => drawSeed(status.seed, seq), [status.seed, seq])
-  const filled = useMemo(() => options.map((o) => o.trim()).filter((o) => o.length > 0), [options])
   const flags = useMemo(() => shuffleFlags(seed), [seed])
-  const slots = useMemo(() => assignOptions(filled.length, seed), [filled.length, seed])
 
   const revealed = shuffleDone && outcome?.success === true
   const failed = outcome?.success === false
@@ -119,11 +118,8 @@ export function ObangkiRitual({ status, play }: Props) {
    * 이번 회차의 삼기 점사 — 회차 시드 하나가 세 기·부정풀이·풀이 전부를 정한다.
    * 서버는 같은 함수로 **향방**만 계산해 기록하므로(로그 컬럼은 그대로 색 하나) 둘은 항상 같은 괘다.
    */
-  const reading: SamgiReading = useMemo(() => readSamgi(seed, status.elements), [seed, status.elements])
+  const reading: SamgiReading = useMemo(() => readSamgi(seed, status.elements, matter), [seed, status.elements, matter])
   const wayColor = reading.draw.way
-  /** 향방 기가 진열에서 선 자리 — 배정된 갈림길을 여기서 읽는다(선택지를 적었을 때만). */
-  const wayIndex = flags.indexOf(wayColor)
-  const wayOption = wayIndex < 0 || slots.length <= wayIndex ? null : (filled[slots[wayIndex]] ?? null)
 
   const restart = useCallback(() => {
     setPhase('compose')
@@ -141,9 +137,9 @@ export function ObangkiRitual({ status, play }: Props) {
     setOutcome(null)
     setPhase('shuffle')
     play('bell')
-    trackEvent({ action: 'obangki_draw', category: 'shrine', label: qtype })
+    trackEvent({ action: 'obangki_draw', category: 'shrine', label: matter })
 
-    void drawObangki(qtype, paidDraw)
+    void drawObangki(matter, paidDraw)
       .then((res) => {
         if (typeof res.todayCount === 'number') setTodayCount(res.todayCount)
         // **서버가 쓴 회차를 그대로 받아** 같은 삼기를 편다 — 동시요청으로 회차가 반 박자 밀려도
@@ -165,13 +161,13 @@ export function ObangkiRitual({ status, play }: Props) {
         // 네트워크 단절 — 고착 방지(감사 A2 P2: 실패 경로 부재). 실패 카드로 접는다.
         setOutcome({ success: false, error: 'DRAW_FAILED' })
       })
-  }, [todayCount, qtype, paidDraw, play])
+  }, [todayCount, matter, paidDraw, play])
 
   // ── 공유 — 기존 공유 보상 흐름 재사용(새 지급 경로 없음) ──
   const onShare = useCallback(async () => {
     setSharing(true)
     // 질문도 선택지도 문장에 담지 않는다 — 공유물에 남는 것은 깃발 색과 괘뿐이다
-    const shareText = `신당에서 오방기 삼기를 뽑았습니다 — 향방은 ${verdictLine(wayColor, null)}.`
+    const shareText = `신당에서 오방기 삼기를 뽑았습니다 — 향방은 ${verdictLine(wayColor)}.`
     const url = typeof window === 'undefined' ? '' : `${window.location.origin}/protected/shrine/obangki`
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
@@ -217,12 +213,13 @@ export function ObangkiRitual({ status, play }: Props) {
 
       {phase === 'compose' ? (
         <ComposeStep
-          qtype={qtype}
-          options={options}
+          matter={matter}
+          plea={plea}
+          worshipper={status.worshipper}
           paidDraw={paidDraw}
           cost={status.cost}
-          onQtype={setQtype}
-          onOptions={setOptions}
+          onMatter={setMatter}
+          onPlea={setPlea}
           onStart={startShuffle}
         />
       ) : (
@@ -248,8 +245,7 @@ export function ObangkiRitual({ status, play }: Props) {
           {revealed && (
             <SamgiScroll
               reading={reading}
-              option={wayOption}
-              line={obangkiLine(wayColor, qtype, seed)}
+              plea={plea}
               saju={status.yongsin ? sajuLine(wayColor, status.yongsin, seed) : null}
               remainingFree={remainingFree}
               cost={status.cost}
@@ -302,108 +298,97 @@ export function ObangkiRitual({ status, play }: Props) {
   )
 }
 
-// ─── 1. 작성 ─────────────────────────────────────────────────
-
+/**
+ * 1. 문복상(問卜床) — 신께 아뢰고 청하는 자리.
+ *
+ * 8차b 에 「무엇을 고를까 / 갈림길 2~4개」를 폐지하고 전승의 절차로 바꿨다.
+ * 오방기는 선택지에 깃발을 배정하는 제비가 아니라 **한 가지 일에 대해 신이 답하는 도구**다.
+ * 그래서 여기서 하는 일은 셋뿐이다 — 신원을 아뢰고(고축), 갈래를 고르고, 한 가지 일을 말한다.
+ */
 function ComposeStep({
-  qtype,
-  options,
+  matter,
+  plea,
+  worshipper,
   paidDraw,
   cost,
-  onQtype,
-  onOptions,
+  onMatter,
+  onPlea,
   onStart,
 }: {
-  qtype: ObangkiQType
-  options: string[]
+  matter: ObangkiMatter
+  plea: string
+  worshipper: ObangkiStatus['worshipper']
   paidDraw: boolean
   cost: number
-  onQtype: (q: ObangkiQType) => void
-  onOptions: (next: string[]) => void
+  onMatter: (m: ObangkiMatter) => void
+  onPlea: (next: string) => void
   onStart: () => void
 }) {
-  const hint = OBANGKI_QTYPE_HINT[qtype].split(' / ')
-  const ready = options.filter((o) => o.trim().length > 0).length >= OBANGKI_OPTION_MIN
-
+  const info = OBANGKI_MATTER_INFO[matter]
   return (
     <div className="space-y-4">
-      <div>
-        <p className="mb-2 font-serif text-[12px] text-gold-200">무엇을 여쭙시겠습니까</p>
-        <div className="flex flex-wrap gap-1.5">
-          {OBANGKI_QTYPES.map((q) => (
-            <button
-              key={q}
-              type="button"
-              onClick={() => onQtype(q)}
-              aria-pressed={qtype === q}
-              className={`rounded-full px-3 py-1.5 font-sans text-[12px] transition-colors ${
-                qtype === q
-                  ? 'border border-gold-500/60 bg-gold-500/15 text-gold-200'
-                  : 'border border-white/10 bg-surface text-ink-light/55'
-              }`}
-            >
-              {OBANGKI_QTYPE_LABEL[q]}
-            </button>
-          ))}
-        </div>
+      {/* ① 고축(告祝) — 누가 아뢰는가. 전승의 점사는 신원을 아뢰며 연다 */}
+      <div className="rounded-xl border border-gold-500/25 bg-gold-500/[0.05] px-3 py-2.5">
+        <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">고 축</p>
+        <p className="mt-1 font-serif text-[12.5px] leading-relaxed text-gold-100">
+          {gochukLine(worshipper.name, worshipper.birthYear, matter)}
+        </p>
       </div>
 
+      {/* ② 갈래 — 무슨 일로 왔는가 */}
       <div>
         <p className="mb-2 font-serif text-[12px] text-gold-200">
-          갈림길{' '}
-          <span className="text-ink-primary/40">
-            · {OBANGKI_OPTION_MIN}~{OBANGKI_OPTION_MAX}개
-          </span>
+          무슨 일로 오셨습니까 <span className="text-ink-primary/40">· 한 번에 한 가지</span>
         </p>
-        <div className="space-y-1.5">
-          {options.map((value, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="w-4 text-center font-serif text-[11px] text-gold-500/60">{i + 1}</span>
-              <input
-                value={value}
-                onChange={(e) => {
-                  const next = [...options]
-                  next[i] = e.target.value.slice(0, OBANGKI_OPTION_TEXT_MAX)
-                  onOptions(next)
-                }}
-                maxLength={OBANGKI_OPTION_TEXT_MAX}
-                placeholder={hint[i] ?? '또 다른 길'}
-                aria-label={`선택지 ${i + 1}`}
-                className="flex-1 rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-sans text-[13px] text-ink-primary placeholder:text-ink-primary/25 focus:border-gold-500/40 focus:outline-none"
-              />
-              {options.length > OBANGKI_OPTION_MIN && (
-                <button
-                  type="button"
-                  onClick={() => onOptions(options.filter((_, k) => k !== i))}
-                  aria-label={`선택지 ${i + 1} 지우기`}
-                  className="grid h-7 w-7 place-items-center rounded-full border border-white/10 text-ink-primary/40"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-1.5">
+          {OBANGKI_MATTERS.map((m) => {
+            const mi = OBANGKI_MATTER_INFO[m]
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => onMatter(m)}
+                aria-pressed={matter === m}
+                className={`rounded-full px-3 py-1.5 font-sans text-[12px] transition-colors ${
+                  matter === m
+                    ? 'border border-gold-500/60 bg-gold-500/15 text-gold-200'
+                    : 'border border-white/10 bg-surface text-ink-light/55'
+                }`}
+              >
+                {mi.label}
+                <span className="ml-1 font-serif text-[10px] opacity-60">{mi.hanja}</span>
+              </button>
+            )
+          })}
         </div>
-        {options.length < OBANGKI_OPTION_MAX && (
-          <button
-            type="button"
-            onClick={() => onOptions([...options, ''])}
-            className="mt-1.5 font-sans text-[11px] text-gold-300/70 underline"
-          >
-            ＋ 길 하나 더
-          </button>
-        )}
+        <p className="mt-1.5 font-sans text-[11px] text-ink-primary/45">{info.gloss}</p>
+      </div>
+
+      {/* ③ 아뢰는 말 — 없어도 된다. 전승에서도 말로 아뢰지 적어 내지 않는다 */}
+      <div>
+        <p className="mb-2 font-serif text-[12px] text-gold-200">
+          아뢰실 말씀 <span className="text-ink-primary/40">· 적지 않으셔도 됩니다</span>
+        </p>
+        <input
+          value={plea}
+          onChange={(e) => onPlea(e.target.value.slice(0, OBANGKI_PLEA_TEXT_MAX))}
+          maxLength={OBANGKI_PLEA_TEXT_MAX}
+          placeholder={info.hint}
+          aria-label="아뢰실 말씀"
+          className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-sans text-[13px] text-ink-primary placeholder:text-ink-primary/25 focus:border-gold-500/40 focus:outline-none"
+        />
         <p className="mt-2 font-sans text-[10px] text-gold-500/60">🔒 {OBANGKI_PRIVACY_NOTICE}</p>
       </div>
 
+      {/* ④ 복채를 올리고 청한다 — 무료분도 정성이라 같은 말로 연다 */}
       <button
         type="button"
         onClick={onStart}
-        disabled={!ready}
         // 주 CTA — 의식을 성립시키는 버튼은 도장 반경 3px + 도장 그림자 (DESIGN.md "buttons 3px")
-        className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang"
       >
         {paidDraw && <Coins className="h-3.5 w-3.5" />}
-        {paidDraw ? `복채 ${cost}만냥으로 기 세우기` : '기 세우고 방울 울리기'}
+        {paidDraw ? `복채 ${cost}만냥을 올리고 청하기` : '상 앞에 나아가 청하기'}
       </button>
       {paidDraw && (
         <p className="-mt-2 text-center font-sans text-[10px] text-ink-primary/40">
@@ -554,8 +539,7 @@ function SlotRow({ slot, color, line }: { slot: SamgiSlot; color: ObangkiColor; 
  */
 function SamgiScroll({
   reading,
-  option,
-  line,
+  plea,
   saju,
   remainingFree,
   cost,
@@ -564,9 +548,8 @@ function SamgiScroll({
   onAgain,
 }: {
   reading: SamgiReading
-  /** 향방 기에 배정된 갈림길 — 선택지를 적었을 때만 */
-  option: string | null
-  line: string
+  /** 아뢴 말 — 화면에만 있는 값이라 그대로 되보여 준다(서버로 간 적이 없다) */
+  plea: string
   /** 사주 해석 층 — 용신 오행 × 향방 색 오행 관계(결정론). 명식 분석 전 사용자는 null */
   saju: string | null
   remainingFree: number
@@ -587,7 +570,14 @@ function SamgiScroll({
         </p>
       )}
 
-      {/* 향방 머리 — 결론을 쥔 기, 그리고 배정된 갈림길 */}
+      {/* 아뢴 말 — 서버로 간 적 없는 값이라 화면이 기억했다가 그대로 돌려준다 */}
+      {plea.trim().length > 0 && (
+        <p className="rounded-lg border border-white/10 bg-black/25 px-3 py-2 font-serif text-[12px] leading-relaxed text-ink-primary/60">
+          여쭌 말씀 — “{plea.trim()}”
+        </p>
+      )}
+
+      {/* 향방 머리 — 결론을 쥔 기 */}
       <div
         className="rounded-xl border px-3 py-2.5 text-center"
         style={{ borderColor: `${way.accent}55`, background: `${way.hex}1f` }}
@@ -595,9 +585,9 @@ function SamgiScroll({
         <p className="font-serif text-[10px] tracking-[0.24em]" style={{ color: way.accent }}>
           향 방 · {way.direction}
         </p>
-        <p className="mt-0.5 font-serif text-[17px] font-bold text-ink-primary">{option ? option : way.verdict}</p>
+        <p className="mt-0.5 font-serif text-[17px] font-bold text-ink-primary">{way.verdict}</p>
         <p className="mt-0.5 font-sans text-[10.5px] text-ink-primary/45">
-          {option ? `${way.label} · ${way.verdict}의 기운` : way.gloss}
+          {way.label} · {way.gloss}
         </p>
       </div>
 
@@ -633,7 +623,7 @@ function SamgiScroll({
       <div className="rounded-xl border border-gold-500/20 bg-surface/60 px-3 py-2.5">
         <div className="flex items-start gap-2">
           <span className="mt-0.5 whitespace-nowrap font-serif text-[10px] text-gold-500/60">신당지기</span>
-          <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{line}</p>
+          <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{reading.closing}</p>
         </div>
         {(saju || reading.wangswe) && (
           /* 사주 층 — 용신은 개인 데이터라 문구에 오행 이름만 스치고 원리는 풀이가 진다 */
@@ -659,6 +649,12 @@ function SamgiScroll({
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-gold-300/70" />
       </Link>
+
+      {/* 송신(送神) — 전승은 기를 말아 어깨에 메고 신장타령을 불러 신령을 돌려보내며 닫는다.
+          닫는 동작이 있어야 점사가 "끝난 것"이 되므로 마지막 줄로 둔다. */}
+      <p className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2 text-center font-serif text-[11.5px] leading-relaxed text-ink-primary/50">
+        기를 말아 어깨에 메고 신장타령을 올린다 — 오방신장을 본자리로 돌려보낸다.
+      </p>
 
       <p className="text-center font-sans text-[10.5px] text-ink-primary/40">
         {remainingFree > 0 ? `오늘 무료 점괘 ${remainingFree}회 남았습니다` : `다음 점괘부터는 복채 ${cost}만냥입니다`}

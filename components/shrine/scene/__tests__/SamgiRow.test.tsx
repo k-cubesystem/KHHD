@@ -32,7 +32,7 @@ beforeAll(() => {
 function findSeed(match: (r: SamgiReading) => boolean): number {
   for (let i = 0; i < 20_000; i += 1) {
     const seed = (i * 2654435761) >>> 0
-    if (match(readSamgi(seed, null))) return seed
+    if (match(readSamgi(seed, null, 'sinsu'))) return seed
   }
   throw new Error('조건에 맞는 회차를 찾지 못했습니다')
 }
@@ -42,13 +42,13 @@ const plainSeed = findSeed((r) => r.draw.purified === null)
 
 describe('SamgiRow — 세 기가 차례로 선다', () => {
   it('세 칸이 서고 각 칸에 자리 이름이 붙는다', () => {
-    const { container, getByText } = render(<SamgiRow reading={readSamgi(plainSeed, null)} />)
+    const { container, getByText } = render(<SamgiRow reading={readSamgi(plainSeed, null, 'sinsu')} />)
     expect(container.querySelectorAll('.obangki-samgi')).toHaveLength(3)
     for (const title of ['자리', '뿌리', '향방']) expect(getByText(title)).not.toBeNull()
   })
 
   it('칸마다 지연이 한 걸음씩 늘어난다 — 순서를 CSS 지연이 준다', () => {
-    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null)} />)
+    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null, 'sinsu')} />)
     const delays = [...container.querySelectorAll<HTMLElement>('.obangki-samgi')].map((el) =>
       el.style.getPropertyValue('--ob-delay')
     )
@@ -56,7 +56,7 @@ describe('SamgiRow — 세 기가 차례로 선다', () => {
   })
 
   it('뽑힌 색이 그대로 그려진다 (기 이름 라벨)', () => {
-    const reading = readSamgi(plainSeed, null)
+    const reading = readSamgi(plainSeed, null, 'sinsu')
     const { container } = render(<SamgiRow reading={reading} />)
     const labels = [...container.querySelectorAll('.obangki-samgi')].map((el) => el.textContent ?? '')
     const expected = [reading.draw.seat, reading.draw.root, reading.draw.way].map((c) => OBANGKI_COLOR_INFO[c].label)
@@ -66,7 +66,7 @@ describe('SamgiRow — 세 기가 차례로 선다', () => {
 
 describe('부정풀이 — 물린 기가 실제로 보이는 자리에 있다', () => {
   it('★ 물린 기가 .obangki-samgi 의 자손이 아니다 (자손이면 지연 내내 투명해 연출이 죽는다)', () => {
-    const { container } = render(<SamgiRow reading={readSamgi(purifiedSeed, null)} />)
+    const { container } = render(<SamgiRow reading={readSamgi(purifiedSeed, null, 'sinsu')} />)
     const purified = container.querySelector('[data-purified]')
     expect(purified).not.toBeNull()
     expect(purified?.className).toContain('obangki-purified')
@@ -74,7 +74,7 @@ describe('부정풀이 — 물린 기가 실제로 보이는 자리에 있다', 
   })
 
   it('물린 기는 첫 칸(자리)에만 온다 — 뿌리·향방의 녹기는 제 뜻이 있어 물리지 않는다', () => {
-    const { container } = render(<SamgiRow reading={readSamgi(purifiedSeed, null)} />)
+    const { container } = render(<SamgiRow reading={readSamgi(purifiedSeed, null, 'sinsu')} />)
     const columns = [...container.querySelectorAll<HTMLElement>('[data-samgi-row] > span')]
     expect(columns).toHaveLength(3)
     expect(columns[0].querySelector('[data-purified]')).not.toBeNull()
@@ -83,19 +83,19 @@ describe('부정풀이 — 물린 기가 실제로 보이는 자리에 있다', 
   })
 
   it('물림이 없는 회차에는 물린 기가 아예 없다', () => {
-    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null)} />)
+    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null, 'sinsu')} />)
     expect(container.querySelector('[data-purified]')).toBeNull()
   })
 
   it('물림이 있으면 세 칸 전부가 물림 시간만큼 뒤로 밀린다 (겹쳐 보이지 않게)', () => {
-    const reading = readSamgi(purifiedSeed, null)
+    const reading = readSamgi(purifiedSeed, null, 'sinsu')
     const { container } = render(<SamgiRow reading={reading} />)
     const delays = [...container.querySelectorAll<HTMLElement>('.obangki-samgi')].map((el) =>
       el.style.getPropertyValue('--ob-delay')
     )
     expect(delays[0]).toBe(`${OBANGKI_MS.purify}ms`)
     expect(purifyLeadMs(reading)).toBe(OBANGKI_MS.purify)
-    expect(purifyLeadMs(readSamgi(plainSeed, null))).toBe(0)
+    expect(purifyLeadMs(readSamgi(plainSeed, null, 'sinsu'))).toBe(0)
   })
 })
 
@@ -104,7 +104,7 @@ describe('두루마리 등장 시각 — 마지막 기보다 늦다', () => {
     ['물림 없음', plainSeed],
     ['물림 있음', purifiedSeed],
   ])('%s: 두루마리 지연 > 마지막 기 지연 + 연출 길이', (_label, seed) => {
-    const reading = readSamgi(seed, null)
+    const reading = readSamgi(seed, null, 'sinsu')
     const lastFlag = purifyLeadMs(reading) + 2 * OBANGKI_SAMGI_STEP_MS
     expect(scrollDelayMs(reading)).toBeGreaterThan(lastFlag + OBANGKI_MS.samgi - OBANGKI_SAMGI_STEP_MS)
   })
@@ -113,7 +113,9 @@ describe('두루마리 등장 시각 — 마지막 기보다 늦다', () => {
 describe('연출 순서 통지 — 파티클도 타이머가 아니라 연출이 몬다', () => {
   it('obangkiSamgiRise 가 끝난 칸의 번호를 그대로 알린다', () => {
     const seen: number[] = []
-    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null)} onFlagShown={(i) => seen.push(i)} />)
+    const { container } = render(
+      <SamgiRow reading={readSamgi(plainSeed, null, 'sinsu')} onFlagShown={(i) => seen.push(i)} />
+    )
     const cols = [...container.querySelectorAll<HTMLElement>('.obangki-samgi')]
     cols.forEach((el) => fireEvent.animationEnd(el, { animationName: 'obangkiSamgiRise' }))
     expect(seen).toEqual([0, 1, 2])
@@ -121,7 +123,9 @@ describe('연출 순서 통지 — 파티클도 타이머가 아니라 연출이
 
   it('다른 애니메이션이 끝난 것은 무시한다 (안쪽 펼침이 파티클을 두 번 터뜨리지 않게)', () => {
     const seen: number[] = []
-    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null)} onFlagShown={(i) => seen.push(i)} />)
+    const { container } = render(
+      <SamgiRow reading={readSamgi(plainSeed, null, 'sinsu')} onFlagShown={(i) => seen.push(i)} />
+    )
     const first = container.querySelector<HTMLElement>('.obangki-samgi')
     if (first) fireEvent.animationEnd(first, { animationName: 'obangkiUnfurl' })
     expect(seen).toEqual([])
@@ -132,7 +136,7 @@ describe('시드 표본 — 어떤 회차에도 구조가 무너지지 않는다
   it('200 회차를 렌더해도 칸 3개·물린 기 위치 규칙이 유지된다', () => {
     for (let i = 0; i < 200; i += 1) {
       const seed = (i * 40503) >>> 0
-      const reading = readSamgi(seed, null)
+      const reading = readSamgi(seed, null, 'sinsu')
       const { container, unmount } = render(<SamgiRow reading={reading} />)
       expect(container.querySelectorAll('.obangki-samgi')).toHaveLength(3)
       const purified = container.querySelector('[data-purified]')

@@ -74,22 +74,23 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
     // 1) 직접 진입
     await page.goto('/protected/shrine/obangki')
     await expect(page).toHaveURL(OBANGKI_URL)
-    await expect(page.getByText('무엇을 여쭙시겠습니까')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText('무슨 일로 오셨습니까')).toBeVisible({ timeout: 15_000 })
     await page.screenshot({ path: SHOT('1-compose') })
     console.log('[PASS] 진입 — compose 렌더, URL 유지')
 
     // 2) 질문 작성
-    await page.getByLabel('선택지 1').fill('짜장면')
-    await page.getByLabel('선택지 2').fill('짬뽕')
+    // 8차b: 갈림길 입력이 사라지고 **문복 갈래 + 아뢰는 말 한 줄**이 그 자리에 섰다
+    await page.getByRole('button', { name: /재수/ }).click()
+    await page.getByLabel('아뢰실 말씀').fill('벌이가 어찌 되겠는지')
     await expect(page).toHaveURL(OBANGKI_URL)
 
     // 3) 기 세우기 (무료 회차 전제 — 유료 문구가 보이면 여기서 멈춘다: 과금 경로 진입 금지)
-    const paidCta = page.getByRole('button', { name: /복채 .*만냥/ })
+    const paidCta = page.getByRole('button', { name: /복채 .*만냥을 올리고 청하기/ })
     if (await paidCta.isVisible().catch(() => false)) {
       console.log('[SKIP] 오늘 무료 소진 — 과금 경로 진입 금지 규율로 중단')
       test.skip(true, '무료 소진')
     }
-    await page.getByRole('button', { name: '기 세우고 방울 울리기' }).click()
+    await page.getByRole('button', { name: /상 앞에 나아가 청하기/ }).click()
     await expect(page).toHaveURL(OBANGKI_URL)
     await page.screenshot({ path: SHOT('2-shuffle') })
 
@@ -100,7 +101,7 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
 
     // 5) 삼기 두루마리 — 공수·세 자리·처방까지 다 서야 점사가 끝난 것이다
     await expect(page.getByText('신당지기')).toBeVisible({ timeout: 25_000 })
-    for (const label of ['공 수', '초기(初旗)', '중기(中旗)', '말기(末旗)']) {
+    for (const label of ['공 수', '초기(初旗)', '중기(中旗)', '말기(末旗)', '기를 말아 어깨에 메고']) {
       await expect(page.getByText(label).first(), `삼기 두루마리 항목: ${label}`).toBeVisible()
     }
     await expect(page.getByText(/처방 ·/).first()).toBeVisible()
@@ -128,18 +129,19 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
 
     await login(page)
     await page.goto('/protected/shrine/obangki')
-    await expect(page.getByText('무엇을 여쭙시겠습니까')).toBeVisible({ timeout: 15_000 })
-    await page.getByLabel('선택지 1').fill('짜장면')
-    await page.getByLabel('선택지 2').fill('짬뽕')
+    await expect(page.getByText('무슨 일로 오셨습니까')).toBeVisible({ timeout: 15_000 })
+    // 8차b: 갈림길 입력이 사라지고 **문복 갈래 + 아뢰는 말 한 줄**이 그 자리에 섰다
+    await page.getByRole('button', { name: /재수/ }).click()
+    await page.getByLabel('아뢰실 말씀').fill('벌이가 어찌 되겠는지')
 
     // byDrag 는 이제 "뽑는 방법"이 아니라 **튕김 재현용 잡제스처**다(뽑기 제스처 자체가 폐지됨)
     const drawOnce = async (label: string, byDrag: boolean) => {
-      const paidCta = page.getByRole('button', { name: /복채 .*만냥/ })
+      const paidCta = page.getByRole('button', { name: /복채 .*만냥을 올리고 청하기/ })
       if (await paidCta.isVisible().catch(() => false)) {
         console.log(`[SKIP] ${label}: 무료 소진 — 과금 경로 진입 금지`)
         return false
       }
-      await page.getByRole('button', { name: '기 세우고 방울 울리기' }).click()
+      await page.getByRole('button', { name: /상 앞에 나아가 청하기/ }).click()
 
       await expect(page.getByText(/기를 펴는 중입니다|기가 돌아갑니다/).first()).toBeVisible({ timeout: 15_000 })
       // 뽑는 제스처가 사라졌으므로(8차) 여기서 사용자가 할 일은 없다 — 무대를 문질러도 이탈이 없어야 한다
@@ -173,9 +175,8 @@ test.describe('오방기 점괘 — 튕김 감시 회귀', () => {
 
     // 3) 한 번 더 → 탭으로 두 번째 뽑기
     await page.getByRole('button', { name: '한 번 더' }).click()
-    await expect(page.getByText('무엇을 여쭙시겠습니까')).toBeVisible({ timeout: 10_000 })
-    await page.getByLabel('선택지 1').fill('오늘 보낸다')
-    await page.getByLabel('선택지 2').fill('내일 보낸다')
+    await expect(page.getByText('무슨 일로 오셨습니까')).toBeVisible({ timeout: 10_000 })
+    await page.getByRole('button', { name: /신수/ }).click()
     await drawOnce('재뽑기(탭)', false)
 
     await page.waitForTimeout(5_000)
@@ -198,9 +199,10 @@ test.describe('오방기 — reduced-motion 변형(뽑기 전 중단, 과금 0)'
 
     await login(page)
     await page.goto('/protected/shrine/obangki')
-    await expect(page.getByText('무엇을 여쭙시겠습니까')).toBeVisible({ timeout: 15_000 })
-    await page.getByLabel('선택지 1').fill('짜장면')
-    await page.getByLabel('선택지 2').fill('짬뽕')
+    await expect(page.getByText('무슨 일로 오셨습니까')).toBeVisible({ timeout: 15_000 })
+    // 8차b: 갈림길 입력이 사라지고 **문복 갈래 + 아뢰는 말 한 줄**이 그 자리에 섰다
+    await page.getByRole('button', { name: /재수/ }).click()
+    await page.getByLabel('아뢰실 말씀').fill('벌이가 어찌 되겠는지')
 
     // CTA(무료/유료 라벨 공통) — 서버 호출 없는 클라 국면 전환만 일으킨다. 뽑기(과금)는 하지 않는다.
     await page.getByRole('button', { name: /기 세우/ }).click()

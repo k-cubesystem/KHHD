@@ -1,12 +1,12 @@
 /**
- * 오방기(五方旗) 점괘 도메인 — 선택장애 해소 의식 R-2 (PRD-shrine-rituals-v1 §2).
+ * 오방기(五方旗) 점괘 도메인 — 문복(問卜) 의식 R-2 (PRD-shrine-rituals-v1 §2 / PLAN-obangki-samgi-v1).
  *
  * 전 함수 순수(side-effect 0) · 결정론. 시각·시드는 호출자가 인자로 주입한다
  * (SSR·클라 동일 결과 = 하이드레이션 불일치 0 — aekmak.ts·scene-clock.ts 와 같은 규약).
  *
- * ⚠️ 이 모듈은 **질문 원문·선택지를 서버로 보내지 않는다**.
- *    깃발 배정(어느 깃발 뒤에 어느 선택지가 있는가)은 전부 화면에서 계산된다 — 그래서 시드만 서버가 준다.
- *    로그에 남는 것은 색·질문유형·시각 셋뿐이고, 스키마에도 텍스트 컬럼이 없다
+ * ⚠️ 이 모듈은 **아뢰는 말을 서버로 보내지 않는다**.
+ *    화면이 받는 것은 시드뿐이고, 아뢴 말은 state 에만 살다 사라진다.
+ *    로그에 남는 것은 색·문복 갈래·시각 셋뿐이고, 스키마에도 텍스트 컬럼이 없다
  *    (supabase/migrations/20260730_shrine_obangki_draws.sql).
  *
  * ⚠️ 문구는 **단정 어투로 지시하지 않는다**(표시광고법 L-트랙 기준).
@@ -146,30 +146,97 @@ export function isObangkiColor(value: unknown): value is ObangkiColor {
   return typeof value === 'string' && (OBANGKI_COLORS as readonly string[]).includes(value)
 }
 
-// ─── 질문 유형 3종 ────────────────────────────────────────────
+// ─── 문복(問卜) 갈래 7종 ─────────────────────────────────────
 //
 // DB CHECK 제약(obangki_draws.qtype)과 **문자열이 같아야 한다**.
-// 유형은 문구의 어미를 가른다 — 고를 때 / 지금 할까 말까 / 쓸까 말까.
+//
+// ⚠️ 2026-08-01 8차b: 「무엇을 고를까 / 지금 할까 말까 / 쓸까 말까」를 폐지하고 전통 문복 갈래로 바꿨다.
+//    전승에서 오방기는 **선택지에 깃발을 배정하는 제비가 아니다** — 내린 공수를 확인하거나 처음
+//    공수를 내릴 때 쓰는 도구이고, 묻는 것은 언제나 **한 가지 일(件)**이다.
+//    갈림길마다 깃발을 배정하던 구조는 서양식 제비뽑기였지 오방기가 아니었다.
+//
+//    갈래는 "무슨 일로 왔는가"이고, 뽑힌 기는 "그 일에 어느 신이 작용하는가"다 —
+//    둘은 겹치지 않는다. 혼사를 여쭈었는데 자리에 황기가 서면 "집안 쪽이 걸려 있다"가 된다.
 
-export type ObangkiQType = 'choice' | 'timing' | 'money'
+export type ObangkiMatter = 'sinsu' | 'jaesu' | 'gwanjae' | 'honsa' | 'teo' | 'mom' | 'jason'
 
-export const OBANGKI_QTYPES: readonly ObangkiQType[] = Object.freeze(['choice', 'timing', 'money'] as const)
+export const OBANGKI_MATTERS: readonly ObangkiMatter[] = Object.freeze([
+  'sinsu',
+  'jaesu',
+  'gwanjae',
+  'honsa',
+  'teo',
+  'mom',
+  'jason',
+] as const)
 
-export const OBANGKI_QTYPE_LABEL: Readonly<Record<ObangkiQType, string>> = Object.freeze({
-  choice: '무엇을 고를까',
-  timing: '지금 할까 말까',
-  money: '쓸까 말까',
+export interface ObangkiMatterInfo {
+  /** 갈래 이름 */
+  readonly label: string
+  /** 한자 */
+  readonly hanja: string
+  /** 무엇을 다루는 갈래인가 — 칩 아래 한 줄 */
+  readonly gloss: string
+  /** 신께 아뢰는 말머리 — 고축문에 그대로 들어간다 */
+  readonly plea: string
+  /** 아뢰는 말 입력 안내 */
+  readonly hint: string
+}
+
+export const OBANGKI_MATTER_INFO: Readonly<Record<ObangkiMatter, ObangkiMatterInfo>> = Object.freeze({
+  sinsu: Object.freeze({
+    label: '신수',
+    hanja: '身數',
+    gloss: '올 한 해 내 운수',
+    plea: '신수를 여쭈옵니다',
+    hint: '올해가 어떻게 흘러가겠는지',
+  }),
+  jaesu: Object.freeze({
+    label: '재수',
+    hanja: '財數',
+    gloss: '돈·벌이·거래',
+    plea: '재수를 여쭈옵니다',
+    hint: '벌이가 어떻게 되겠는지',
+  }),
+  gwanjae: Object.freeze({
+    label: '관재',
+    hanja: '官災',
+    gloss: '시비·구설·송사',
+    plea: '관재를 여쭈옵니다',
+    hint: '얽힌 시비가 어찌 풀리겠는지',
+  }),
+  honsa: Object.freeze({
+    label: '혼사',
+    hanja: '婚事',
+    gloss: '인연·혼인',
+    plea: '혼사를 여쭈옵니다',
+    hint: '이 인연이 어디로 가겠는지',
+  }),
+  teo: Object.freeze({
+    label: '터',
+    hanja: '基',
+    gloss: '집·이사·자리',
+    plea: '터를 여쭈옵니다',
+    hint: '옮길 자리가 어떠하겠는지',
+  }),
+  mom: Object.freeze({
+    label: '몸',
+    hanja: '身',
+    gloss: '건강·기력',
+    plea: '몸을 여쭈옵니다',
+    hint: '몸이 어찌 되겠는지',
+  }),
+  jason: Object.freeze({
+    label: '자손',
+    hanja: '子孫',
+    gloss: '자식·집안 사람',
+    plea: '자손을 여쭈옵니다',
+    hint: '집안 사람 일이 어찌 되겠는지',
+  }),
 })
 
-/** 유형별 입력 안내 — 화면 플레이스홀더. */
-export const OBANGKI_QTYPE_HINT: Readonly<Record<ObangkiQType, string>> = Object.freeze({
-  choice: '짜장면 / 짬뽕',
-  timing: '오늘 보낸다 / 내일 보낸다',
-  money: '산다 / 안 산다',
-})
-
-export function isObangkiQType(value: unknown): value is ObangkiQType {
-  return typeof value === 'string' && (OBANGKI_QTYPES as readonly string[]).includes(value)
+export function isObangkiMatter(value: unknown): value is ObangkiMatter {
+  return typeof value === 'string' && (OBANGKI_MATTERS as readonly string[]).includes(value)
 }
 
 // ─── 정책 상수 ────────────────────────────────────────────────
@@ -184,18 +251,17 @@ export const OBANGKI_DAILY_FREE = 3
  */
 export const OBANGKI_EXTRA_COST = 1
 
-/** 선택지 개수 범위 — 5기에 배정하므로 5를 넘으면 빈 깃발이 없어져 뽑는 재미가 사라진다. */
-export const OBANGKI_OPTION_MIN = 2
-export const OBANGKI_OPTION_MAX = 4
-
-/** 선택지 한 개의 길이 상한(자). 원문은 저장되지 않으므로 **화면**이 지키는 값이다. */
-export const OBANGKI_OPTION_TEXT_MAX = 14
+/**
+ * 아뢰는 말 한 줄의 길이 상한(자). 원문은 저장되지 않으므로 **화면**이 지키는 값이다.
+ * 한 번에 한 가지 일만 아뢰는 것이 전승이라, 길이 제한이 곧 "여러 건을 몰아 묻지 않게" 하는 장치다.
+ */
+export const OBANGKI_PLEA_TEXT_MAX = 40
 
 /** 법무 고지 — 효능이 아니라 놀이임을 명시한다(PRD §2 확정 문구). */
 export const OBANGKI_DISCLAIMER = '재미로 보는 전통 놀이 점괘입니다 — 중요한 결정의 근거로 삼지 마세요'
 
 /** 화면 고지 — 무저장이 이 기능의 약속이라 입력 옆에서 먼저 말한다. */
-export const OBANGKI_PRIVACY_NOTICE = '질문과 선택지는 저장되지 않습니다 — 남는 것은 깃발 색뿐입니다.'
+export const OBANGKI_PRIVACY_NOTICE = '아뢰는 말은 저장되지 않습니다 — 남는 것은 갈래와 깃발 색뿐입니다.'
 
 /**
  * 연출 타임라인(ms) — app/shrine-scene.css 의 같은 이름 키프레임 길이와 **같아야 한다**.
@@ -269,241 +335,98 @@ function shuffled<T>(source: readonly T[], seed: number): T[] {
 
 /**
  * 5기의 진열 순서 — 같은 시드면 항상 같은 배열이고, 언제나 5색이 하나씩 들어 있다.
- * "빨강=짬뽕" 같은 하드코딩이 성립하지 않으므로(선택지가 자유 입력) 색은 **톤**만 정하고
- * 답은 아래 배정이 정한다 — PRD §2 의 구조 그대로다.
+ * 삼기는 이 진열에서 자리를 빌리지 않고 **앞줄에 따로 선다**(색이 겹칠 수 있어서다) —
+ * 여기 5기는 "말려 있던 다섯"을 보여 주는 배경이다.
  */
 export function shuffleFlags(seed: number): ObangkiColor[] {
   return shuffled(OBANGKI_COLORS, seed)
 }
 
-/**
- * 깃발 5기 뒤에 선택지를 배정한 결과 — 값은 options 배열의 인덱스다.
- *
- * 선택지가 2~4개라 5기에 고르게 흩는다(2개면 3:2, 3개면 2:2:1, 4개면 2:1:1:1).
- * 같은 선택지가 한쪽에 몰리면 "뽑기"가 아니라 "정해진 답"이 된다.
- * 선택지가 없으면 빈 배열 — 화면이 배정 없이 색만 보여준다.
- */
-export function assignOptions(optionCount: number, seed: number): number[] {
-  const n = Number.isFinite(optionCount) ? Math.floor(optionCount) : 0
-  if (n <= 0) return []
-  const capped = Math.min(n, OBANGKI_COLORS.length)
-  // 0,1,2,…,0,1,… 로 5칸을 채운 뒤 통째로 섞는다 — 개수 균형이 구성 단계에서 이미 보장된다
-  const slots: number[] = []
-  for (let i = 0; i < OBANGKI_COLORS.length; i += 1) slots.push(i % capped)
-  return shuffled(slots, step(seed))
-}
-
-/** 한 번의 뽑기가 확정한 것 — 색·괘·(있다면) 배정된 선택지 인덱스. */
-export interface ObangkiDraw {
-  color: ObangkiColor
-  /** 진열 순서에서의 자리(0~4) */
-  flagIndex: number
-  /** 배정된 선택지 인덱스. 선택지를 안 적었으면 null */
-  optionIndex: number | null
-}
-
-/**
- * 진열·배정을 한 번에 확정한다. 화면은 이 결과를 들고 깃발을 그리고, 뽑힌 자리만 펼친다.
- * flagIndex 는 사용자가 고른 자리라 인자로 받는다(그 선택만이 유일한 비결정 입력이다).
- */
-export function resolveDraw(seed: number, optionCount: number, flagIndex: number): ObangkiDraw {
-  const flags = shuffleFlags(seed)
-  const slots = assignOptions(optionCount, seed)
-  const idx = Number.isFinite(flagIndex) ? Math.min(flags.length - 1, Math.max(0, Math.floor(flagIndex))) : 0
-  return {
-    color: flags[idx],
-    flagIndex: idx,
-    optionIndex: slots.length > idx ? slots[idx] : null,
-  }
-}
-
-// ─── 문구 풀 (색 5 × 유형 3 × 변형 8 = 120) ───────────────────
+// ─── 신당지기 맺음말 (갈래 7 × 변형 4 = 28) ──────────────────
 //
-// 규율: 지시·단정 금지. 재촉·확언("반드시"·"무조건"·"보장")과 금전 지시("사라"·"팔아라"·"투자")는
+// 색이 하는 말은 삼기 두루마리(자리·뿌리·향방 15문 + 공수 25쌍)가 이미 다 한다.
+// 여기 남는 것은 **아뢴 일 자체에 대한 맺음말** 하나다 — 색과 무관하게 갈래만 본다.
+// (8차b 이전의 색×유형 120문은 삼기 층과 말이 겹쳐 폐지했다. 같은 자리를 두 번 말하면 풀이가 흐려진다.)
+//
+// 규율: 지시·단정 금지. 재촉·확언("반드시"·"무조건"·"보장")과 금전 지시("사라"·"팔아라")는
 //       테스트가 막는다. 신위는 **본 것을 말할 뿐** 시키지 않는다.
 
-const OBANGKI_LINES: Readonly<Record<ObangkiColor, Readonly<Record<ObangkiQType, readonly string[]>>>> = Object.freeze({
-  red: Object.freeze({
-    choice: Object.freeze([
-      '홍기가 먼저 섰구나. 마음이 이미 기울어 있던 쪽이다.',
-      '붉은 기운이 환하다. 오늘은 손이 가는 대로 두어도 좋겠구나.',
-      '기가 앞장선다. 망설임이 길어질 자리는 아니로구나.',
-      '불빛이 이쪽을 비춘다. 눈이 먼저 간 것이 답이었구나.',
-      '홍기가 바람을 탄다. 고른 것이 마음을 가볍게 하겠구나.',
-      '붉은 천이 활짝 폈다. 오늘 이 자리에 온기가 있구나.',
-      '기폭이 힘차다. 이쪽 길이 오늘은 넓어 보이는구나.',
-      '홍기가 열렸다. 고민한 만큼 이미 답을 알고 있었구나.',
-    ]),
-    timing: Object.freeze([
-      '홍기가 먼저 섰구나. 지금이 물러설 때는 아니로구나.',
-      '붉은 기운이 앞으로 뻗는다. 발을 떼기 좋은 날이구나.',
-      '기가 활짝 폈다. 미뤄둔 것이 오늘 가벼워지겠구나.',
-      '불빛이 길을 비춘다. 늦출 이유가 보이지 않는구나.',
-      '홍기가 바람을 탄다. 오늘 움직임에 결이 있구나.',
-      '붉은 천이 높이 올랐다. 때가 이쪽으로 기울어 있구나.',
-      '기폭이 앞장선다. 마음먹은 날이 오늘이었구나.',
-      '홍기가 열렸다. 기다림보다 걸음이 어울리는 날이구나.',
-    ]),
-    money: Object.freeze([
-      '홍기가 먼저 섰구나. 지갑이 오늘은 너그러운 얼굴이구나.',
-      '붉은 기운이 환하다. 손에 쥔 것이 아깝지 않을 자리로구나.',
-      '기가 활짝 폈다. 오래 눈에 밟히던 것이었구나.',
-      '불빛이 이쪽을 비춘다. 오늘의 씀씀이는 무겁지 않겠구나.',
-      '홍기가 바람을 탄다. 값보다 마음이 큰 물건이로구나.',
-      '붉은 천이 높이 올랐다. 오늘은 셈이 순하게 풀리겠구나.',
-      '기폭이 힘차다. 미뤄둔 것을 오늘 들여도 자리가 있겠구나.',
-      '홍기가 열렸다. 마음이 먼저 값을 치른 뒤였구나.',
-    ]),
-  }),
-  white: Object.freeze({
-    choice: Object.freeze([
-      '백기가 섰구나. 순리대로 흘러가는 쪽에 손이 닿았구나.',
-      '흰 천이 조용히 폈다. 억지 없는 자리로구나.',
-      '기가 곧게 선다. 애써 고르지 않아도 될 일이었구나.',
-      '백기가 바람에 눕는다. 흐르는 대로 두어도 어긋나지 않겠구나.',
-      '흰빛이 맑다. 둘 중 어느 쪽이든 큰 탈은 없어 보이는구나.',
-      '기폭이 담담하다. 오늘은 결이 순한 쪽이 어울리는구나.',
-      '백기가 열렸다. 순서를 지키면 저절로 풀릴 일이구나.',
-      '흰 천이 가만하다. 마음을 크게 쓰지 않아도 될 자리로구나.',
-    ]),
-    timing: Object.freeze([
-      '백기가 섰구나. 순서가 오면 저절로 그때가 되겠구나.',
-      '흰 천이 조용히 폈다. 서두르지 않아도 흐름은 이어지는구나.',
-      '기가 곧게 선다. 오늘 아니어도 길은 닫히지 않는구나.',
-      '백기가 바람에 눕는다. 물이 가는 쪽으로 가도 되는 날이구나.',
-      '흰빛이 맑다. 억지로 당기지 않으면 순하게 오겠구나.',
-      '기폭이 담담하다. 때가 스스로 자리를 잡는 중이구나.',
-      '백기가 열렸다. 흐름을 거스를 일이 아니로구나.',
-      '흰 천이 가만하다. 오늘의 몫만 하면 되는 날이구나.',
-    ]),
-    money: Object.freeze([
-      '백기가 섰구나. 셈이 순리대로 맞아떨어지는 자리구나.',
-      '흰 천이 조용히 폈다. 지갑이 놀랄 일은 없어 보이는구나.',
-      '기가 곧게 선다. 오늘은 있는 만큼이 알맞은 날이구나.',
-      '백기가 바람에 눕는다. 흐름대로 두어도 축나지 않겠구나.',
-      '흰빛이 맑다. 크게 얻지도 잃지도 않을 자리로구나.',
-      '기폭이 담담하다. 값이 제 자리를 찾아가는 중이구나.',
-      '백기가 열렸다. 순서만 지키면 무리가 없겠구나.',
-      '흰 천이 가만하다. 오늘의 셈은 조용히 지나가겠구나.',
-    ]),
-  }),
-  yellow: Object.freeze({
-    choice: Object.freeze([
-      '황기가 섰구나. 어느 쪽이든 무난히 지나갈 자리구나.',
-      '누런 천이 가운데서 폈다. 크게 갈릴 일이 아니로구나.',
-      '기가 한가운데 선다. 고민한 값에 비해 차이가 작겠구나.',
-      '황빛이 은은하다. 둘 다 나쁘지 않아 망설였던 것이구나.',
-      '기폭이 느긋하다. 오늘은 고른 쪽이 답이 되는 날이구나.',
-      '황기가 바람을 살짝 탄다. 결이 크게 다르지 않구나.',
-      '누런 천이 열렸다. 어느 손을 펴도 크게 어긋나지 않겠구나.',
-      '기가 가만히 선다. 마음 편한 쪽으로 두어도 되겠구나.',
-    ]),
-    timing: Object.freeze([
-      '황기가 섰구나. 오늘이든 다음이든 무던히 흘러가겠구나.',
-      '누런 천이 가운데서 폈다. 서둘 일도 미룰 일도 아니구나.',
-      '기가 한가운데 선다. 때가 크게 좋지도 나쁘지도 않구나.',
-      '황빛이 은은하다. 어느 날에 해도 결은 비슷하겠구나.',
-      '기폭이 느긋하다. 마음이 편한 날을 골라도 되는구나.',
-      '황기가 바람을 살짝 탄다. 흐름이 잔잔한 시기로구나.',
-      '누런 천이 열렸다. 오늘 하면 오늘의 몫이 있을 뿐이구나.',
-      '기가 가만히 선다. 조급함만 덜면 무난한 자리구나.',
-    ]),
-    money: Object.freeze([
-      '황기가 섰구나. 지갑이 크게 흔들릴 자리는 아니구나.',
-      '누런 천이 가운데서 폈다. 셈이 무던하게 맞아가는구나.',
-      '기가 한가운데 선다. 오늘의 씀씀이는 평범하겠구나.',
-      '황빛이 은은하다. 큰 이야기가 될 값은 아니로구나.',
-      '기폭이 느긋하다. 서둘러 셈하지 않아도 되는 날이구나.',
-      '황기가 바람을 살짝 탄다. 오르내림이 잔잔한 자리구나.',
-      '누런 천이 열렸다. 들이든 아니든 표가 크게 나지 않겠구나.',
-      '기가 가만히 선다. 오늘은 마음이 정하는 값이로구나.',
-    ]),
-  }),
-  blue: Object.freeze({
-    choice: Object.freeze([
-      '청기가 섰구나. 한 번 더 들여다볼 구석이 남아 있구나.',
-      '푸른 천이 천천히 폈다. 서둘러 고를 자리는 아니로구나.',
-      '기가 낮게 흔들린다. 아직 보이지 않은 면이 있는 듯하구나.',
-      '청빛이 깊다. 오늘은 눈을 한 번 더 뜨는 편이 낫겠구나.',
-      '기폭이 무겁다. 마음이 반쯤만 기울어 있구나.',
-      '청기가 바람을 재고 있다. 결정을 하루 뒤에 두어도 늦지 않구나.',
-      '푸른 천이 열렸다. 물어볼 곳이 한 군데 남아 있구나.',
-      '기가 조심스럽다. 조건을 다시 읽어보라는 자리구나.',
-    ]),
-    timing: Object.freeze([
-      '청기가 섰구나. 지금은 발끝만 담글 때로구나.',
-      '푸른 천이 천천히 폈다. 조금 더 두고 보아도 좋겠구나.',
-      '기가 낮게 흔들린다. 때가 아직 여물지 않았구나.',
-      '청빛이 깊다. 서두른 걸음이 되돌아올 자리구나.',
-      '기폭이 무겁다. 오늘보다 다음이 순해 보이는구나.',
-      '청기가 바람을 재고 있다. 하루쯤 재워두어도 상하지 않겠구나.',
-      '푸른 천이 열렸다. 준비가 한 뼘 모자란 자리로구나.',
-      '기가 조심스럽다. 한 박자 늦추면 길이 넓어지겠구나.',
-    ]),
-    money: Object.freeze([
-      '청기가 섰구나. 지갑은 잠시 쉬고 싶다 하는구나.',
-      '푸른 천이 천천히 폈다. 값을 한 번 더 견주어 볼 자리구나.',
-      '기가 낮게 흔들린다. 오늘 셈에 빠진 항목이 있는 듯하구나.',
-      '청빛이 깊다. 서둘러 치른 값이 눈에 밟히기 쉬운 날이구나.',
-      '기폭이 무겁다. 장바구니에 하루 더 두어도 상하지 않겠구나.',
-      '청기가 바람을 재고 있다. 급한 값일수록 천천히 보라는구나.',
-      '푸른 천이 열렸다. 같은 물건이 다른 자리에도 있겠구나.',
-      '기가 조심스럽다. 오늘은 셈을 다시 세어보는 날이구나.',
-    ]),
-  }),
-  green: Object.freeze({
-    choice: Object.freeze([
-      '녹기가 섰구나. 오늘은 고르지 않는 것도 답이 되는구나.',
-      '푸른 잎빛 천이 폈다. 손을 거두어도 되는 자리로구나.',
-      '기가 제자리에 멈춘다. 둘 다 아닐 수도 있겠구나.',
-      '녹빛이 짙다. 고르기 전에 물음을 다시 보라는구나.',
-      '기폭이 움직이지 않는다. 오늘 정하지 않아도 될 일이구나.',
-      '녹기가 가만히 선다. 셋째 길이 아직 남아 있구나.',
-      '잎빛 천이 열렸다. 여기서 멈추면 잃을 것이 없구나.',
-      '기가 자리를 지킨다. 마음이 아직 어느 쪽도 아니로구나.',
-    ]),
-    timing: Object.freeze([
-      '녹기가 섰구나. 오늘은 그대로 두는 편이 낫겠구나.',
-      '푸른 잎빛 천이 폈다. 걸음을 멈추어도 되는 날이구나.',
-      '기가 제자리에 멈춘다. 지금은 때가 아니로구나.',
-      '녹빛이 짙다. 서두르면 되돌아올 자리구나.',
-      '기폭이 움직이지 않는다. 손을 놓고 지켜보라는구나.',
-      '녹기가 가만히 선다. 오늘의 일은 오늘 두어도 되는구나.',
-      '잎빛 천이 열렸다. 멈춤도 하나의 걸음이구나.',
-      '기가 자리를 지킨다. 다음 자리에서 다시 물어도 늦지 않구나.',
-    ]),
-    money: Object.freeze([
-      '녹기가 섰구나. 지갑은 오늘 문을 닫고 싶다 하는구나.',
-      '푸른 잎빛 천이 폈다. 손을 거두면 남는 자리로구나.',
-      '기가 제자리에 멈춘다. 오늘 치를 값은 아닌 듯하구나.',
-      '녹빛이 짙다. 필요보다 마음이 앞선 자리구나.',
-      '기폭이 움직이지 않는다. 장바구니를 그대로 두어도 좋겠구나.',
-      '녹기가 가만히 선다. 오늘 아낀 것이 내일의 여유가 되겠구나.',
-      '잎빛 천이 열렸다. 멈추면 잃을 것이 없는 자리구나.',
-      '기가 자리를 지킨다. 지갑이 조금 더 쉬고 싶다 하는구나.',
-    ]),
-  }),
+const MATTER_LINES: Readonly<Record<ObangkiMatter, readonly string[]>> = Object.freeze({
+  sinsu: Object.freeze([
+    '한 해의 결은 하루로 뒤집히지 않는다 — 오늘 본 것을 마음 한켠에 두고 지내면 되겠구나.',
+    '운수를 여쭙는 자리는 앞을 정하는 자리가 아니라 앞을 아는 자리구나.',
+    '한 해가 통째로 좋거나 나쁜 법은 없다 — 오르내림 가운데 어디쯤인지를 본 것이다.',
+    '올해의 결을 알았으니 서두를 일도 겁낼 일도 조금은 덜하겠구나.',
+  ]),
+  jaesu: Object.freeze([
+    '재물은 부르는 대로 오지 않고 길이 난 대로 온다 — 오늘 본 길이 그 길이다.',
+    '벌이의 일은 셈보다 때가 먼저인 법이구나.',
+    '드는 것과 나는 것이 함께 도는 자리다 — 한쪽만 보면 결이 어긋난다.',
+    '재수를 여쭈었으니 오늘은 셈보다 마음을 먼저 고르는 편이 낫겠구나.',
+  ]),
+  gwanjae: Object.freeze([
+    '얽힌 일은 힘으로 푸는 것이 아니라 순서로 푸는 것이구나.',
+    '시비가 도는 자리에서는 말수가 곧 방패다.',
+    '관재는 이기고 지는 일이 아니라 길고 짧음의 일이더구나.',
+    '오늘 본 결을 알고 있으면 부딪는 자리에서 한 박자 늦출 수 있겠구나.',
+  ]),
+  honsa: Object.freeze([
+    '인연의 일은 혼자 정하는 것이 아니라 둘이 같이 걸어야 보이는 것이구나.',
+    '맺어질 것은 맺어지고 흩어질 것은 흩어진다 — 그 사이가 지금 자리다.',
+    '혼사는 사람만의 일이 아니라 두 집안의 결이 함께 도는 일이더구나.',
+    '오늘 본 것은 사람의 마음이 아니라 그 마음이 놓인 자리다.',
+  ]),
+  teo: Object.freeze([
+    '터는 사람을 담는 그릇이라 그릇이 맞아야 편안한 법이구나.',
+    '자리를 옮기는 일에는 방위와 때가 함께 따라붙는다.',
+    '살던 자리를 떠나는 일은 두고 가는 것도 함께 보아야 하는 일이더구나.',
+    '터의 일을 여쭈었으니 오늘 본 방위를 마음에 두고 살피면 되겠구나.',
+  ]),
+  mom: Object.freeze([
+    '몸의 일은 신께 여쭙되 의원에게도 함께 물어야 하는 것이다.',
+    '기력이 도는 결을 본 것이지 병을 본 것은 아니니 그리 알고 있거라 하는구나.',
+    '몸은 마음을 따라 눕고 마음은 몸을 따라 흐리는 법이구나.',
+    '오늘 본 것은 몸이 놓인 자리다 — 살피는 마음이 곧 첫 걸음이겠구나.',
+  ]),
+  jason: Object.freeze([
+    '집안 사람의 일은 내 뜻대로 되는 일이 아니라 함께 기다리는 일이구나.',
+    '자손의 결은 뿌리에서 올라오는 것이라 위를 먼저 살피는 법이더구나.',
+    '지켜보는 것도 돌보는 것의 하나겠구나.',
+    '오늘 본 것은 그 사람의 앞이 아니라 그대와 그 사람 사이의 결이다.',
+  ]),
 })
 
-/** 변형 수 — 색·유형마다 이만큼 있어야 한다(테스트가 고정). */
-export const OBANGKI_VARIANTS = 8
+/** 갈래별 변형 수 — 갈래마다 이만큼 있어야 한다(테스트가 고정). */
+export const OBANGKI_MATTER_VARIANTS = 4
 
-/** 뽑기 직후 신위의 한마디. 같은 (색, 유형, 시드)면 항상 같은 문장. */
-export function obangkiLine(color: ObangkiColor, qtype: ObangkiQType, seed: number): string {
-  const pool = OBANGKI_LINES[color][qtype]
-  return pool[pickIndex(step(seed >>> 0), pool.length)]
+/** 삼기 풀이 끝의 맺음말. 같은 (갈래, 시드)면 항상 같은 문장. */
+export function matterLine(matter: ObangkiMatter, seed: number): string {
+  const pool = MATTER_LINES[matter]
+  return pool[pickIndex(hashSeed(`matter|${matter}|${seed >>> 0}`), pool.length)]
 }
 
 /** 문구 풀 전체(테스트의 금지 어휘 린트 대상). */
-export function allObangkiLines(): readonly string[] {
-  return OBANGKI_COLORS.flatMap((c) => OBANGKI_QTYPES.flatMap((q) => [...OBANGKI_LINES[c][q]]))
+export function allMatterLines(): readonly string[] {
+  return OBANGKI_MATTERS.flatMap((m) => [...MATTER_LINES[m]])
 }
 
-/** 배정된 선택지를 곁들인 한 줄 — 선택지가 없으면 괘 이름만. 화면 자막용. */
-export function verdictLine(color: ObangkiColor, option: string | null): string {
+/**
+ * 고축(告祝) — 신원을 아뢰는 말. 전승에서 점사는 "어디 사는 몇 년생 아무개가 아뢰옵니다"로 연다.
+ *
+ * ⚠️ 순수 함수다. 이름·생년은 **서버로 다시 보내지 않는다** — 앱이 이미 아는 값을 화면에서 문장으로
+ *    엮을 뿐이고, 기록에 남는 것은 여전히 갈래·색·시각 셋뿐이다.
+ */
+export function gochukLine(name: string | null, birthYear: number | null, matter: ObangkiMatter): string {
+  const who = (name ?? '').trim()
+  const born = Number.isFinite(birthYear) && (birthYear ?? 0) > 0 ? `${birthYear}년생 ` : ''
+  const subject = who.length > 0 ? `${born}${who}가` : '이 몸이'
+  return `${subject} 오방신장 앞에 ${OBANGKI_MATTER_INFO[matter].plea}.`
+}
+
+/** 공유 자막 — 향방 기 한 줄. 아뢴 말은 절대 담지 않는다(무저장 원칙과 같은 규율). */
+export function verdictLine(color: ObangkiColor): string {
   const { label, verdict } = OBANGKI_COLOR_INFO[color]
-  const trimmed = (option ?? '').trim()
-  return trimmed.length > 0 ? `${label} · ${verdict} — ${trimmed}` : `${label} · ${verdict}`
+  return `${label} · ${verdict}`
 }
 
 // ─── 하루 판정 ────────────────────────────────────────────────
@@ -530,23 +453,6 @@ export function remainingFreeDraws(drawnAtMs: readonly number[], epochMs: number
 export function isPaidDraw(todayCount: number): boolean {
   const n = Number.isFinite(todayCount) ? Math.max(0, Math.floor(todayCount)) : 0
   return n >= OBANGKI_DAILY_FREE
-}
-
-// ─── 자동 선출 (CEO 7차: "내가 고르는 게 아니라 랜덤으로 나오게") ───────────
-
-/**
- * 이번 회차에 **저절로 나오는** 깃발 자리(0~4).
- *
- * 사용자 선택을 폐지했으므로 어느 기가 나오는지는 회차 시드가 정한다 — 같은 (userId, 날짜, seq)는
- * 항상 같은 자리다(Math.random 금지 규율 그대로). 진열(shuffleFlags)과 다른 소금을 쓰는 이유:
- * 같은 시드를 그대로 쓰면 선출이 진열 순서와 상관을 갖게 되고, 소금 하나로 두 결정이 독립이 된다.
- *
- * ⚠️ 이 함수가 서버 색 확정의 근거다: 서버 액션이 같은 시드로 이 함수를 불러 색을 스스로 계산하고,
- * 클라이언트는 그 색을 **보여줄 뿐**이다 — "시드 역산으로 미리 안다"는 감사 A3 P1 은 선택권이
- * 사라지면서 함께 소멸한다(알아도 할 수 있는 것이 없다).
- */
-export function electIndex(seed: number): number {
-  return pickIndex(hashSeed(`elect|${seed >>> 0}`), OBANGKI_COLORS.length)
 }
 
 // ─── 사주 해석 층 (CEO 7차: "해석은 그 사람 사주 데이터 기반") ──────────────
