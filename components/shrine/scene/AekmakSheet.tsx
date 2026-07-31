@@ -6,8 +6,9 @@
  * 흐름: 태그·글 → 부적 렌더 → 촛불 불씨를 부적 아래로 → 아래에서 위로 연소 → 마무리 카드.
  *
  * 이 컴포넌트의 세 가지 규율:
- *  1) **액운 원문은 이 파일 밖으로 나가지 않는다.** 서버 액션에 넘기는 것은 감정 태그 하나뿐이고,
- *     원문은 sigilStrokes 로 읽을 수 없는 획이 되어 부적 위에서 타 없어진다. state 에만 살다 사라진다.
+ *  1) **액운 원문은 화면 밖으로 나가지 않는다.** 서버 액션에 넘기는 것은 감정 태그 하나뿐이고,
+ *     원문은 writPlan 으로 부적 위 세로쓰기 한글이 되어(CEO 7차: 읽히게) 종이와 함께 타 없어진다.
+ *     state 에만 살다 사라진다 — GA 라벨·로그·공유 문구에도 싣지 않는다.
  *  2) **연출 CSS 는 전부 app/shrine-scene.css** — styled-jsx 는 App Router 산출물에 실리지 않는다.
  *     국면 전환도 setTimeout 체인이 아니라 연소 애니메이션의 animationend 가 몬다.
  *  3) **파티클·사운드는 기존 자산 재사용** — EffectsCanvas('smoke'|'flame') · useShrineAudio('crackle').
@@ -25,12 +26,13 @@ import {
   AEKMAK_TAG_WORD,
   AEKMAK_TEXT_MAX,
   BURN_MS,
-  SIGIL_JAMO,
+  WRIT_BOX,
   burnProgress,
   monthlyRecallLine,
   settleLine,
-  sigilPlan,
+  writPlan,
   type AekmakTag,
+  type WritPlan,
 } from '@/lib/domain/ritual/aekmak'
 import { burnAekmak, type AekmakStatus } from '@/app/actions/shrine/rituals'
 import { claimShareReward } from '@/app/actions/payment/bok-points'
@@ -87,7 +89,8 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
   const suppressClick = useRef(false)
   const [emberOffset, setEmberOffset] = useState<{ x: number; y: number } | null>(null)
 
-  const sigil = useMemo(() => sigilPlan(text), [text])
+  // 폴백(빈 원문)이 태그 발원문이라 태그에도 의존한다 — 원문은 이 계산 밖으로 나가지 않는다
+  const writ = useMemo(() => writPlan(text, tag), [text, tag])
   const soldOut = remaining <= 0
 
   /** 시트를 닫을 때 원문·태그를 확실히 지운다 — 다음에 열었을 때 남아 있으면 그 자체가 사고다 */
@@ -309,7 +312,7 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
                     <EffectsCanvas ref={effectsRef} />
                     <TalismanPaper
                       tag={tag}
-                      sigil={sigil}
+                      writ={writ}
                       burning={phase === 'burning'}
                       onBurnEnd={() => setPhase('settled')}
                     />
@@ -454,12 +457,12 @@ function ComposeStep({
  */
 function TalismanPaper({
   tag,
-  sigil,
+  writ,
   burning,
   onBurnEnd,
 }: {
   tag: AekmakTag | null
-  sigil: ReturnType<typeof sigilPlan>
+  writ: WritPlan
   burning: boolean
   onBurnEnd: () => void
 }) {
@@ -503,67 +506,20 @@ function TalismanPaper({
         </span>
       )}
 
-      {/* 주문양(呪文樣) — 구운 주묵 바탕 위에 **원문에서 파생된 한글 자모 획**을 얹는다.
-          자음만 쓰므로 음절이 되지 않는다 = 원문도, 어떤 낱말도 읽히지 않는다(무저장 약속의 시각적 짝).
-          좌표계는 부적지와 같은 100×150(2:3) — preserveAspectRatio 를 켜야 자모가 찌그러지지 않는다. */}
-      <div className="ritual-sigil absolute inset-0" aria-hidden>
-        {/* 주묵 바탕 — 위·아래를 페이드로 끊는다. 그냥 깔면 **직사각형 얼룩**이 되어
-            "부적 위에 색지를 붙인" 그림이 된다(사각 경계가 그대로 보였다). */}
-        <span
-          className="absolute inset-x-[34%] top-[16%] bottom-[13%]"
-          style={{
-            backgroundImage: "url('/shrine/ritual/sigil.webp')",
-            backgroundSize: '100% 100%',
-            backgroundRepeat: 'no-repeat',
-            opacity: 0.24,
-            filter: 'blur(2px)',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 14%, #000 84%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, transparent 0%, #000 14%, #000 84%, transparent 100%)',
-          }}
-        />
-        <svg
-          className="absolute inset-0 h-full w-full"
-          viewBox="0 0 100 150"
-          preserveAspectRatio="xMidYMid meet"
-          fill="none"
-          stroke="#8C1F1F"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {/* 기둥 획 — 부적을 세로로 관통한다 */}
-          <line
-            x1={sigil.spineX}
-            y1={32}
-            x2={sigil.spineX}
-            y2={122}
-            strokeWidth={1.1}
-            opacity={0.35}
-            vectorEffect="non-scaling-stroke"
-          />
-          {sigil.bars.map((y, i) => (
-            <line
-              key={`b${i}`}
-              x1={34 + (i % 2) * 6}
-              y1={y}
-              x2={64 - (i % 2) * 5}
-              y2={y}
-              strokeWidth={1.4}
-              opacity={0.45}
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-          {sigil.glyphs.map((g, i) => (
-            <g
-              key={`g${i}`}
-              transform={`translate(${g.x} ${g.y}) rotate(${g.tilt}) scale(${g.size / 10}) translate(-5 -5)`}
-            >
-              <path d={SIGIL_JAMO[g.jamo]} strokeWidth={g.weight} vectorEffect="non-scaling-stroke" />
-            </g>
-          ))}
-          {sigil.dots.map((d, i) => (
-            <circle key={`d${i}`} cx={d.x} cy={d.y} r={d.r} fill="#8C1F1F" stroke="none" opacity={0.55} />
-          ))}
-        </svg>
+      {/* 본문 — 사용자가 쓴 원문이 **읽히는 세로쓰기 한글**로 앉는다(CEO 7차 지시).
+          원문은 화면 전용이다: writPlan 은 순수 함수고, 서버 액션(burnAekmak)에는 태그 하나만 간다.
+          .ritual-paper 의 자식이라 연소 마스크(.ritual-burn)에 같이 잘린다 — 글자도 종이와 함께 탄다.
+          aria-hidden: 방금 본인이 입력창에 쓴 글의 장식 렌더라 낭독이 겹말이 된다. */}
+      <div
+        className="ritual-writ absolute left-1/2"
+        aria-hidden
+        style={{ top: WRIT_BOX.top, height: WRIT_BOX.bottom - WRIT_BOX.top, fontSize: writ.fontPx }}
+      >
+        {writ.columns.map((col, i) => (
+          <span key={`c${i}`} className="ritual-writ-col">
+            {col}
+          </span>
+        ))}
       </div>
 
       {/* 발원(發願) — 인장 한 자의 본말. 효능이 아니라 바람이다(표시광고법) */}

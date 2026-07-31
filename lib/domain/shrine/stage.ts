@@ -71,6 +71,8 @@ const Z_HANGING = 10
 const Z_WALL = 11
 const Z_ALTAR = 14
 const Z_FLOOR_MIN = 16
+/** 단상 위 floor 소품 — 제단(Z_ALTAR=14)보다 뒤. 부록 P-2 깊이 분기. */
+const Z_FLOOR_BEHIND_ALTAR = 12
 const Z_FLOOR_MAX = 28
 const Z_FLOOR_STEPS = Z_FLOOR_MAX - Z_FLOOR_MIN // 12
 
@@ -88,8 +90,15 @@ const SHADOW_ASPECT = 0.3
 export const LIT_BOOST_MAX = 0.3
 export const LIT_BOOST_SATURATION = 3
 
-/** 앵커 스냅 기본 반경 (무대 % 거리) */
+/** 앵커 스냅 기본 반경 (무대 % 거리) — scale 미지정 호출(레거시 단일 무대)용 */
 export const DEFAULT_SNAP_RADIUS_PCT = 6
+/**
+ * 픽셀 거리계 스냅 반경(px) — 앵커 링 지름과 같다 (부록 P-2 / 진단 D-3).
+ * 종전 % 거리계는 와이드 룸에서 가로 1% ≈ 세로 1% 가 아니어서(방 1664×620) 포획 영역이
+ * **가로 100px × 세로 37px 타원**으로 왜곡됐다 — 「제단 왼편」 자석이 상판 밖 허공까지
+ * 끌어당기던 원인. 축 가중치(px/%)를 받아 화면 픽셀로 재면 포획이 링 크기의 원이 된다.
+ */
+export const SNAP_RADIUS_PX = 34
 
 /** 앵커 id · 구조물 code 최대 길이 (DB text 컬럼 방어 상한과 동일) */
 export const MAX_ANCHOR_ID_LEN = 62
@@ -111,12 +120,18 @@ function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v))
 }
 
-/** floor 존 안에서의 정규화 위치 0(뒤)~1(앞). 범위 밖 y 는 클램프. */
+/**
+ * floor 원근 램프의 기준 밴드 — **존과 분리해 동결**한다(부록 P-2, 마루 개활지 실측 64~90).
+ * 배치 자유도 v2 가 floor 존을 [44,96]으로 넓혔지만, 이 밴드가 존을 따라가면 기존 배치
+ * 전부의 크기·그림자·z 가 한꺼번에 변한다(라이브 floor 배치는 전부 64~90 안 — 이동 0 계약).
+ * 밴드 밖은 경계 클램프: 단상 위(y<64)는 "멀다=작다"의 최소값, 앞전(y>90)은 최대값 유지.
+ */
+const FLOOR_DEPTH_REF: readonly [number, number] = [64, 90]
+
+/** 기준 밴드 안에서의 정규화 위치 0(뒤)~1(앞). 범위 밖 y 는 클램프. */
 function floorT(y: number): number {
-  const [y0, y1] = ZONES.floor.y
-  const span = y1 - y0
-  if (span <= 0) return 0
-  return (clamp(y, y0, y1) - y0) / span
+  const [y0, y1] = FLOOR_DEPTH_REF
+  return (clamp(y, y0, y1) - y0) / (y1 - y0)
 }
 
 function numOr(v: unknown, fallback: number): number {
@@ -148,6 +163,9 @@ export function depthZ(layer: Layer, y: number): number {
     case 'altar':
       return Z_ALTAR
     case 'floor':
+      // 단상 위(y < 제단 존 하한 48 = 상판 뒤)는 제단(14)보다 뒤(12)에 그린다 — 부록 P-2.
+      // 안 그러면 신위 곁에 세운 소품이 공물상을 덮는 깊이 역전이 생긴다. y≥48 은 기존 램프 그대로.
+      if (y < ZONES.altar.y[0]) return Z_FLOOR_BEHIND_ALTAR
       return clamp(Z_FLOOR_MIN + Math.round(floorT(y) * Z_FLOOR_STEPS), Z_FLOOR_MIN, Z_FLOOR_MAX)
   }
 }
@@ -209,25 +227,42 @@ export function lightingOverlayStyle(
  * 반경(기본 6%) 안에서 가장 가까운 같은 layer 앵커. 없으면 null.
  * 거리는 x·y 유클리드(% 좌표), 동률이면 배열에서 먼저 나온 앵커(결정론).
  */
+export interface SnapScale {
+  /** 가로 1(%) 가 화면에서 몇 px 인가 */
+  sx: number
+  /** 세로 1(%) 가 화면에서 몇 px 인가 */
+  sy: number
+}
+
 export function nearestAnchor(
   anchors: readonly StageAnchor[],
   layer: Layer,
   x: number,
   y: number,
-  radiusPct: number = DEFAULT_SNAP_RADIUS_PCT
+  radiusPct: number = DEFAULT_SNAP_RADIUS_PCT,
+  /**
+   * 축 가중치(px/%). 주면 거리를 **화면 픽셀**로 재고 반경도 SNAP_RADIUS_PX(px)가 된다 —
+   * 와이드 룸에서 % 거리계가 만들던 3.2배 가로 왜곡(진단 D-3)의 교정. 안 주면 종전과 동일(% 거리계,
+   * 레거시 단일 무대 호출부 무수정 호환).
+   */
+  scale?: SnapScale
 ): StageAnchor | null {
   if (!Array.isArray(anchors) || anchors.length === 0) return null
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null
-  const r = Number.isFinite(radiusPct) && radiusPct >= 0 ? radiusPct : DEFAULT_SNAP_RADIUS_PCT
+  const usePx =
+    scale !== undefined && Number.isFinite(scale.sx) && Number.isFinite(scale.sy) && scale.sx > 0 && scale.sy > 0
+  const r = usePx ? SNAP_RADIUS_PX : Number.isFinite(radiusPct) && radiusPct >= 0 ? radiusPct : DEFAULT_SNAP_RADIUS_PCT
   const maxD2 = r * r
+  const wx = usePx ? scale.sx : 1
+  const wy = usePx ? scale.sy : 1
 
   let best: StageAnchor | null = null
   let bestD2 = Number.POSITIVE_INFINITY
   for (const a of anchors) {
     if (!a || a.layer !== layer) continue
     if (!Number.isFinite(a.x) || !Number.isFinite(a.y)) continue
-    const dx = a.x - x
-    const dy = a.y - y
+    const dx = (a.x - x) * wx
+    const dy = (a.y - y) * wy
     const d2 = dx * dx + dy * dy
     // 엄격한 < — 동률일 때 먼저 나온 앵커를 유지한다
     if (d2 < bestD2) {
@@ -238,67 +273,23 @@ export function nearestAnchor(
   return best !== null && bestD2 <= maxD2 ? best : null
 }
 
-/** ZONES 파생 좌표 (구조물 없는 레거시 테마의 폴백 앵커용) */
 /**
- * ⚠️ 존 중점에서 **파생하지 않는다**(종전에는 (42+54)/2 = 48 이었다).
- * 이 값은 구조물이 없는 **레거시 테마**의 폴백 앵커라 레거시 제단 그림의 상면(≈48)을 가리켜야 하는데,
- * 안2.5 에서 제단 존을 [48,56] 으로 좁히면서 중점이 52 로 밀린다 — 파생을 두면 레거시 테마의
- * 앵커가 이유 없이 4%p 내려간다. 존이 바뀐 이유(반가 2단 제단)와 레거시 제단은 무관하므로 고정한다.
- */
-const ALTAR_ANCHOR_Y = 48
-const ALTAR_SPAN_X = ZONES.altar.x[1] - ZONES.altar.x[0]
-const WALL_ANCHOR_Y = round((ZONES.wall.y[0] + ZONES.wall.y[1]) / 2, 2) // 32.5
-const WALL_SPAN_X = ZONES.wall.x[1] - ZONES.wall.x[0]
-
-/**
- * 레거시(무대 미보유) 테마용 기본 앵커 — ZONES 파생.
- * 제단 상판 3점(altar) · 벽 중앙 2점(wall) · 신위 곁 1점(floor, 신당지기 반대편).
+ * 레거시(무대 미보유) 테마용 기본 앵커 — **동결 리터럴** (부록 P-2).
+ *
+ * ⚠️ 존 파생을 전부 끊었다(종전에는 ZONES 중점·스팬에서 계산). 배치 자유도 v2 가 존을 크게
+ * 넓혔는데(벽 x[8,92]→[4,96] 등) 파생을 두면 레거시 테마의 "의미 있는 자리"가 존 확장을 따라
+ * 이유 없이 이동한다. 아래 숫자는 전부 v1 파생값 그대로다 — 좌표 이동 0 이 계약이고
+ * stage.test 가 리터럴로 대조한다. (ALTAR_ANCHOR_Y=48 동결과 같은 원리를 전 앵커로 확장)
  */
 export const DEFAULT_ANCHORS: readonly StageAnchor[] = Object.freeze([
-  {
-    id: 'altar-left',
-    layer: 'altar' as Layer,
-    x: round(ZONES.altar.x[0] + ALTAR_SPAN_X * 0.25, 2),
-    y: ALTAR_ANCHOR_Y,
-    label: '제단 왼편',
-  },
-  {
-    id: 'altar-center',
-    layer: 'altar' as Layer,
-    x: round(ZONES.altar.x[0] + ALTAR_SPAN_X * 0.5, 2),
-    y: ALTAR_ANCHOR_Y,
-    label: '제단 가운데',
-  },
-  {
-    id: 'altar-right',
-    layer: 'altar' as Layer,
-    x: round(ZONES.altar.x[0] + ALTAR_SPAN_X * 0.75, 2),
-    y: ALTAR_ANCHOR_Y,
-    label: '제단 오른편',
-  },
-  {
-    id: 'wall-left',
-    layer: 'wall' as Layer,
-    x: round(ZONES.wall.x[0] + WALL_SPAN_X / 3, 2),
-    y: WALL_ANCHOR_Y,
-    label: '벽 왼편',
-  },
-  {
-    id: 'wall-right',
-    layer: 'wall' as Layer,
-    x: round(ZONES.wall.x[0] + (WALL_SPAN_X * 2) / 3, 2),
-    y: WALL_ANCHOR_Y,
-    label: '벽 오른편',
-  },
-  {
-    // 신당지기(KEEPER_POS.x=12) 반대편 — 신위 곁 자리
-    id: 'deity-side',
-    layer: 'floor' as Layer,
-    x: round(clampPct(100 - KEEPER_POS.x, ZONES.floor.x), 2),
-    y: round(clampPct(ZONES.floor.y[0] + 2, ZONES.floor.y), 2),
-    label: '신위 곁',
-  },
-] as const)
+  { id: 'altar-left', layer: 'altar' as Layer, x: 37, y: 48, label: '제단 왼편' },
+  { id: 'altar-center', layer: 'altar' as Layer, x: 50, y: 48, label: '제단 가운데' },
+  { id: 'altar-right', layer: 'altar' as Layer, x: 63, y: 48, label: '제단 오른편' },
+  { id: 'wall-left', layer: 'wall' as Layer, x: 36, y: 32.5, label: '벽 왼편' },
+  { id: 'wall-right', layer: 'wall' as Layer, x: 64, y: 32.5, label: '벽 오른편' },
+  // 신당지기(KEEPER_POS.x=12) 반대편 — 신위 곁 자리. id 는 저장 배치의 anchor_id 라 불변.
+  { id: 'deity-side', layer: 'floor' as Layer, x: 88, y: 66, label: '신위 곁' },
+])
 
 // ─── 신위 접지 계약 (안2.3 ③ 제단·단상 정립 / PRD 부록 C) ──────
 /**

@@ -893,6 +893,9 @@ export function ShrineRoomClient({
 
   // ── 앵커 스냅 하이라이트 (드래그 중, 앵커가 바뀔 때만 호출) ──
   const onAnchorHover = useCallback((a: StageAnchor | null) => setSnapAnchor(a), [])
+  /** 지금 끌고 있는 아이템의 층 — 존 가이드는 이 층 1면만 그린다(부록 P-2, 상시 4띠 우리 폐지) */
+  const [draggingLayer, setDraggingLayer] = useState<Layer | null>(null)
+  const onDragLayer = useCallback((layer: Layer | null) => setDraggingLayer(layer), [])
 
   // ── 드래그 종료 (편집 모드) ──
   const onDragEnd = useCallback(
@@ -1259,28 +1262,26 @@ export function ShrineRoomClient({
         widthScale={stageScale}
       />
 
-      {/* 존 가이드 (편집) */}
-      {editing &&
-        (Object.keys(ZONES) as Array<keyof typeof ZONES>).map((layer) => {
-          const z = ZONES[layer]
-          return (
-            <div
-              key={layer}
-              className="absolute rounded-lg pointer-events-none"
-              style={{
-                left: `${z.x[0]}%`,
-                right: `${100 - z.x[1]}%`,
-                top: `${z.y[0]}%`,
-                bottom: `${100 - z.y[1]}%`,
-                border: '1.5px dashed rgba(201,168,76,0.32)',
-              }}
-            >
-              <span className="absolute -top-px left-1.5 text-[8px] tracking-[0.15em] text-gold-300 px-1 rounded-sm bg-black/80">
-                {ZONE_LABEL[layer]}
-              </span>
-            </div>
-          )
-        })}
+      {/* 존 가이드 (편집) — **드래그 중인 층 1면만** (부록 P-2).
+          v2 존은 서로 크게 겹쳐 4면 동시 표시는 소음이고, 상시 4띠 "우리(cage)"의 인상 자체가
+          어색함의 일부였다(진단 D-1). 잡기 전에는 아무것도 그리지 않는다. */}
+      {editing && draggingLayer && (
+        <div
+          className="absolute rounded-lg pointer-events-none"
+          style={{
+            left: `${ZONES[draggingLayer].x[0]}%`,
+            right: `${100 - ZONES[draggingLayer].x[1]}%`,
+            top: `${ZONES[draggingLayer].y[0]}%`,
+            bottom: `${100 - ZONES[draggingLayer].y[1]}%`,
+            border: '1.5px dashed rgba(201,168,76,0.32)',
+            background: 'rgba(201,168,76,0.04)',
+          }}
+        >
+          <span className="absolute -top-px left-1.5 text-[8px] tracking-[0.15em] text-gold-300 px-1 rounded-sm bg-black/80">
+            {ZONE_LABEL[draggingLayer]}
+          </span>
+        </div>
+      )}
 
       {/* 파티클 이펙트 */}
       <EffectsCanvas ref={effectsRef} />
@@ -1313,6 +1314,7 @@ export function ShrineRoomClient({
             onRemove={() => onRemove(p)}
             onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
             onAnchorHover={onAnchorHover}
+            onDragLayer={onDragLayer}
           />
         )
       })}
@@ -1798,6 +1800,8 @@ interface SpriteProps {
   onRemove: () => void
   onDragEnd: (x: number, y: number, anchorId: string | null) => void
   onAnchorHover: (a: StageAnchor | null) => void
+  /** 드래그 시작/끝에 층을 알린다 — 룸이 존 가이드 1면을 켜고 끈다 */
+  onDragLayer: (layer: Layer | null) => void
 }
 
 const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
@@ -1808,7 +1812,17 @@ const LEGACY_SPRITE_EM = 1.55
 /** 점화 글로우 지름 = 스프라이트 크기 × 이 배수 */
 const LIT_GLOW_SCALE = 1.8
 
-function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd, onAnchorHover }: SpriteProps) {
+function Sprite({
+  placement,
+  item,
+  editing,
+  anchors,
+  onTap,
+  onRemove,
+  onDragEnd,
+  onAnchorHover,
+  onDragLayer,
+}: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLSpanElement>(null)
   const dragging = useRef(false)
@@ -1842,6 +1856,7 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
       snapRef.current = null
       el.setPointerCapture(e.pointerId)
       el.style.zIndex = '60'
+      onDragLayer(item.layer)
       const zone = ZONES[item.layer]
       const rect = room.getBoundingClientRect()
 
@@ -1850,8 +1865,12 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
         moved.current = true
         const rawX = clampPct(((ev.clientX - rect.left) / rect.width) * 100, zone.x)
         const rawY = clampPct(((ev.clientY - rect.top) / rect.height) * 100, zone.y)
-        // 앵커 반경 안이면 자석 스냅 — 밖이면 자유 배치 그대로 (앵커는 보너스이지 제약이 아니다)
-        const snap = nearestAnchor(anchors, item.layer, rawX, rawY)
+        // 앵커 반경 안이면 자석 스냅 — 밖이면 자유 배치 그대로 (앵커는 보너스이지 제약이 아니다).
+        // 거리는 화면 픽셀로 잰다(부록 P-2) — % 거리계는 와이드 룸에서 가로 포획이 3.2배 왜곡됐다.
+        const snap = nearestAnchor(anchors, item.layer, rawX, rawY, undefined, {
+          sx: rect.width / 100,
+          sy: rect.height / 100,
+        })
         const x = snap ? snap.x : rawX
         const y = snap ? snap.y : rawY
         posRef.current = { x, y }
@@ -1875,13 +1894,14 @@ function Sprite({ placement, item, editing, anchors, onTap, onRemove, onDragEnd,
         // 드래그용 임시 z(60)를 React 가 알고 있는 값으로 되돌린다
         // (다음 렌더에서 zIndex prop 이 그대로면 React 가 DOM 을 쓰지 않아 60 이 남는다)
         el.style.zIndex = String(depthZ(item.layer, posRef.current.y))
+        onDragLayer(null)
         if (moved.current) onDragEnd(posRef.current.x, posRef.current.y, snapped?.id ?? null)
       }
       el.addEventListener('pointermove', move)
       el.addEventListener('pointerup', up)
       el.addEventListener('pointercancel', up)
     },
-    [editing, item.layer, anchors, onDragEnd, onAnchorHover, transformFor]
+    [editing, item.layer, anchors, onDragEnd, onAnchorHover, onDragLayer, transformFor]
   )
 
   /**

@@ -74,7 +74,9 @@ const REQUIRED_CLASSES = [
   // 부적이 그대로 남아 국면 전환(animationend)조차 오지 않는다 = 의식이 통째로 멎는다
   '.ritual-sheet',
   '.ritual-paper',
-  '.ritual-sigil',
+  // 부적 본문 세로쓰기(CEO 7차 — 읽히는 한글). 구 '.ritual-sigil'(자모 주문양)을 대체
+  '.ritual-writ',
+  '.ritual-writ-col',
   '.ritual-burn',
   '.ritual-char',
   '.ritual-glow',
@@ -149,7 +151,7 @@ const REQUIRED_KEYFRAMES = [
   // 액막이 의식 (R-1)
   'ritualSheetUp',
   'ritualPaperIn',
-  'ritualSigilIn',
+  'ritualWritIn',
   'ritualBurn',
   'ritualCurl',
   'ritualChar',

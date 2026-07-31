@@ -5,8 +5,8 @@
  * (SSR·클라 동일 결과 = 하이드레이션 불일치 0 — scene-clock.ts 와 같은 규약).
  *
  * ⚠️ 이 모듈은 **액운 원문을 다루되 절대 밖으로 내보내지 않는다**.
- *    원문은 클라이언트에서 부적 문양(sigil)으로 변환될 뿐이고, 서버로 가는 것은 태그 하나다.
- *    스키마에도 텍스트 컬럼이 없다(supabase/migrations/20260730_shrine_aekmak_logs.sql).
+ *    원문은 클라이언트 화면에서 부적 세로쓰기 본문(writPlan)으로 그려질 뿐이고, 서버로 가는 것은
+ *    태그 하나다. 스키마에도 텍스트 컬럼이 없다(supabase/migrations/20260730_shrine_aekmak_logs.sql).
  *
  * ⚠️ 문구는 **의료·심리 효능을 주장하지 않는다**(표시광고법 L-트랙 기준).
  *    "치유"·"정화 효과" 류 금지 — 금지 어휘는 테스트가 강제한다(__tests__/aekmak.test.ts).
@@ -292,140 +292,123 @@ export function monthlyRecallLine(count: number): string | null {
   return `이달에 ${n}개의 액을 태우셨습니다.`
 }
 
-// ─── 부적 주문양(呪文樣) — 한글 자모로 그리는 원문의 시각 변환 ──────────────
+// ─── 부적 본문(writ) — 원문이 읽히는 세로쓰기 한글로 앉는다 ──────────────
 //
-// PRD §1 "원문은 흐릿한 주문양으로 변환 표기". 글자를 그대로 보여주면 화면 캡처·공유에
-// 원문이 남는다 — 그래서 **읽을 수 없는 획**으로 바꾼다. 이 변환은 되돌릴 수 없다(해시 기반).
+// CEO 7차 지시(2026-07-31): "액막이 부적에 한글로 써지면 좋겠다" — **읽히는** 한글이다.
+// 종전의 자모 겹침 주문양(읽힘 방지)은 어제 지시의 오독이었으므로 여기서 대체한다.
 //
-// 한자 대신 **한글 자음 자모**를 쓴다(CEO 지시 2026-07-30). 읽히지 않는 근거는 세 겹이다.
-//   1) 자모는 원문 해시에서 뽑는다 — 원문 글자와 대응 관계가 없다(FNV-1a 는 단방향).
-//   2) **자음만** 쓴다. 모음이 없으면 어떤 음절도 이루지 못한다(한글은 초성+중성이 최소 단위).
-//   3) 자모끼리 세로로 겹쳐 쌓고 기울이고, 가로 관통 획이 지나간다 — 낱자 경계 자체가 흐려진다.
-// 그래서 "한글의 결"만 남고 글자는 남지 않는다. 부적이 노리는 그림이 정확히 그것이다.
+// ⚠️ 프라이버시 원칙은 그대로다. "원문 무저장"은 서버·DB 에 안 남긴다는 것이지 화면에 못
+//    그린다는 것이 아니다. 이 계획(WritPlan)은 순수 함수의 산출물로 **화면에서만** 쓰이고,
+//    서버 액션·GA 라벨·로그·공유 문구 어디에도 실리지 않는다(테스트가 소스를 대조한다).
+//
+// 배치는 전통 세로쓰기다: 오른쪽 열부터 위→아래로 읽는다. 열 수·글자 크기는 원문 길이의
+// 결정론 함수다 — 80자(AEKMAK_TEXT_MAX)까지 본문 영역에 들어가는 것을 테스트가 불변식으로 잡는다.
 
 /**
- * 자음 자모 14종의 획 — 0~10 정사각 좌표계. 채우지 않고 **선으로만** 긋는다(붓질).
- * 순서는 사전순(ㄱㄴㄷㄹㅁㅂㅅㅇㅈㅊㅋㅌㅍㅎ)이고, 첨자가 곧 SigilGlyph.jamo 다.
+ * 부적 본문 좌표(px) — AekmakSheet 의 부적 무대 STAGE(186×279)와 같은 좌표계.
+ * top 은 머리 인장(top 5.5%≈15px + 34px) 아래, bottom 은 발치 발원 낱말 위에서 끊는다.
+ * 무대 크기가 어긋나면 계산이 통째로 틀어지므로 STAGE 와의 일치는 테스트가 소스로 대조한다.
  */
-export const SIGIL_JAMO: readonly string[] = Object.freeze([
-  'M1.3 1.5 H8.7 L6.3 8.8', // ㄱ
-  'M2.3 1.3 V8.6 H8.8', // ㄴ
-  'M8.7 1.5 H2.1 V8.6 H8.7', // ㄷ
-  'M2.2 1.4 H8.2 L2.6 4.7 H8.2 V8.6 H2.2', // ㄹ
-  'M2.2 1.5 H8.2 V8.6 H2.2 Z', // ㅁ
-  'M2.4 1.3 V8.6 H8.1 V1.3 M2.4 5.1 H8.1', // ㅂ
-  'M5.1 1.3 L1.8 8.8 M5.1 1.3 L8.5 8.8', // ㅅ
-  'M5.1 1.4 C7.4 1.4 8.9 3.1 8.9 5.1 C8.9 7.2 7.4 8.8 5.1 8.8 C2.9 8.8 1.4 7.2 1.4 5.1 C1.4 3.1 2.9 1.4 5.1 1.4 Z', // ㅇ
-  'M1.6 1.6 H8.7 M5.1 1.6 L1.8 8.8 M5.1 1.6 L8.5 8.8', // ㅈ
-  'M4.1 0.4 L6.2 1.2 M1.6 2.6 H8.7 M5.1 2.6 L1.8 9.0 M5.1 2.6 L8.5 9.0', // ㅊ
-  'M1.3 1.5 H8.7 L6.3 8.8 M2.6 4.8 H7.8', // ㅋ
-  'M8.7 1.5 H2.1 V8.6 H8.7 M2.6 5.0 H8.1', // ㅌ
-  'M1.4 2.4 H8.7 M3.2 2.4 V7.8 M7.0 2.4 V7.8 M1.4 7.8 H8.7', // ㅍ
-  'M3.4 0.6 H6.8 M1.4 2.8 H8.7 M5.1 4.2 C6.7 4.2 7.9 5.3 7.9 6.5 C7.9 7.8 6.7 8.9 5.1 8.9 C3.4 8.9 2.3 7.8 2.3 6.5 C2.3 5.3 3.4 4.2 5.1 4.2 Z', // ㅎ
-])
+export const WRIT_BOX = Object.freeze({
+  w: 186,
+  h: 279,
+  /** 본문 상단 — 인장(≈49px) 아래 여백 포함 */
+  top: 56,
+  /** 본문 하단 — 발원 낱말(≈253px~) 위 여백 포함 */
+  bottom: 247,
+  /** 최대 열 수 — 부적 폭에서 붓글씨 열이 성립하는 상한 */
+  maxCols: 3,
+})
 
-/** 주문양 자모 하나. 부적지와 **같은 좌표계**(100×150 = 2:3)로 그린다 — 자모가 찌그러지지 않는다. */
-export interface SigilGlyph {
-  /** SIGIL_JAMO 첨자 */
-  jamo: number
-  /** 중심 x (0~100) */
-  x: number
-  /** 중심 y (0~150) */
-  y: number
-  /** 한 변 길이 (좌표 단위) */
-  size: number
-  /** 기울기(deg) */
-  tilt: number
-  /** 획 굵기 px (non-scaling-stroke — 배율과 무관하게 일정) */
-  weight: number
+/** 열 갈림 문턱(자) — n ≤ single 이면 1열, n ≤ double 이면 2열, 그 위는 3열. */
+export const WRIT_COL_LIMIT = Object.freeze({ single: 12, double: 34 })
+
+/**
+ * 글자 크기 규칙. advance/line 은 CSS(.ritual-writ-col)의 letter-spacing(0.12em)·
+ * line-height(1.6)와 **같아야 한다** — 어긋나면 "들어간다" 계산과 실제 렌더가 갈린다(테스트가 대조).
+ */
+export const WRIT_FONT = Object.freeze({
+  /** 글자 크기 상한(px) — 인장(21px)보다 본문이 커지면 위계가 뒤집힌다 */
+  max: 20,
+  /** 하한(px) — 80자·3열(열 27자)일 때 정확히 이 값에 닿는다. 고DPR 모바일에서 판독 가능선 */
+  min: 6,
+  /** 글자 전진폭 배수 = 1 + letter-spacing(em). 세로쓰기 한글 한 자는 1em 을 차지한다 */
+  advance: 1.12,
+  /** 열 전진폭 배수 = line-height. 열 수 × line × fontPx 가 가로 점유폭이다 */
+  line: 1.6,
+})
+
+/** 부적 본문 계획 — **화면 전용**. 이 타입의 값은 어떤 경로로도 서버에 보내지 않는다. */
+export interface WritPlan {
+  /** 읽는 순서의 열들 — vertical-rl(row-reverse)이 columns[0]을 맨 오른쪽에 세운다 */
+  columns: readonly string[]
+  /** 글자 크기(px) — WRIT_BOX(186×279) 기준 */
+  fontPx: number
+  /** 본문 출처 — 사용자가 쓴 원문인가, 빈 원문의 태그 발원문 폴백인가 */
+  source: 'user' | 'fallback'
 }
 
-/** 주묵 방울 — 붓을 털었을 때 튄 자국. 부적의 "손으로 그린 티". */
-export interface SigilDot {
-  x: number
-  y: number
-  r: number
-}
-
-/** 부적 한 장의 주문양 전체. */
-export interface SigilPlan {
-  /** 세로로 쌓이는 자모 다발 */
-  glyphs: SigilGlyph[]
-  /** 기둥 획의 가로 위치 (0~100) — 부적을 관통하는 세로 한 획 */
-  spineX: number
-  /** 가로 관통 획들의 세로 위치 (0~150) */
-  bars: number[]
-  /** 튄 주묵 방울 */
-  dots: SigilDot[]
+/** 받침 유무로 을/를을 가른다 — 폴백 발원문이 어색한 조사를 달지 않게. 한글 밖 글자는 '을'. */
+function eulReul(word: string): '을' | '를' {
+  const code = word.charCodeAt(word.length - 1)
+  if (code < 0xac00 || code > 0xd7a3) return '을'
+  return (code - 0xac00) % 28 > 0 ? '을' : '를'
 }
 
 /**
- * 자모 수 상·하한 — 부적지 세로에 겹쳐 쌓이는 범위.
- * 적으면(4~6) 낱자가 커져 "휘갈긴 낙서"가 되고, 많으면 기둥이 빽빽한 주문 열로 읽힌다.
- * 부적은 후자다.
+ * 빈 원문의 폴백 본문 — 태그의 표시명·발원 낱말(AEKMAK_TAG_WORD 계열)로 두 열을 짓는다.
+ * "여기 두고 · 빕니다"는 효능이 아니라 **바람**이다(표시광고법 — 금지 어휘 대조는 테스트가 한다).
  */
-const SIGIL_MIN_GLYPHS = 7
-const SIGIL_MAX_GLYPHS = 10
-/** 자모 다발이 앉는 세로 구간(좌표 단위). 머리 인장(위)·발원 낱말(아래) 자리를 비워 둔다. */
-const SIGIL_TOP = 32
-const SIGIL_BOTTOM = 122
-
-/**
- * 액운 원문 → 결정론 주문양. **글자 수·해시만** 쓴다(문자 자체는 좌표로 흘리지 않는다).
- * 빈 문자열이면 기본 문양('액' 시드)이 선다 — 부적지가 비어 보이지 않게.
- */
-export function sigilPlan(text: string): SigilPlan {
-  const trimmed = text.trim()
-  const seed = hashSeed(trimmed.length > 0 ? trimmed : '액')
-  const span = SIGIL_MAX_GLYPHS - SIGIL_MIN_GLYPHS + 1
-  const count = SIGIL_MIN_GLYPHS + (trimmed.length % span)
-  const glyphs: SigilGlyph[] = []
-  const bars: number[] = []
-  // 선형 합동 생성기 — Math.random 을 쓰면 리렌더마다 문양이 바뀐다
-  let s = seed
-  const next = (): number => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0
-    return s
-  }
-  const r1 = (): number => next() / 0x100000000
-
-  const pitch = (SIGIL_BOTTOM - SIGIL_TOP) / count
-  for (let i = 0; i < count; i += 1) {
-    const a = r1()
-    const b = r1()
-    const c = r1()
-    glyphs.push({
-      jamo: Math.floor(r1() * SIGIL_JAMO.length) % SIGIL_JAMO.length,
-      x: round1(50 + (a * 2 - 1) * 9),
-      // 세로 흔들림은 pitch 의 ±12% 까지만 — 더 주면 최소 크기 두 자가 나란히 왔을 때
-      // 간격(최대 1.24·pitch)이 반지름 합(최소 1.3·pitch)을 넘어 **겹침이 끊긴다**
-      y: round1(SIGIL_TOP + pitch * (i + 0.5) + (b * 2 - 1) * pitch * 0.12),
-      // 자모끼리 세로로 30% 남짓 겹치도록 pitch 보다 크게 잡는다 — 낱자 경계를 뭉갠다.
-      // 겹치지 않으면 "자음 목록"으로 읽혀 부적이 아니라 학습표가 된다.
-      size: round1(pitch * (1.3 + c * 0.55)),
-      tilt: round1((r1() * 2 - 1) * 17),
-      weight: 1.6 + Math.floor(r1() * 3) * 0.35,
-    })
-  }
-  // 가로 관통 획 2~3줄 — 자모 사이를 지나며 낱자 경계를 한 번 더 흐린다
-  const barCount = 2 + (next() % 2)
-  for (let i = 0; i < barCount; i += 1) {
-    bars.push(round1(SIGIL_TOP + ((i + 0.7) / barCount) * (SIGIL_BOTTOM - SIGIL_TOP) + (r1() * 2 - 1) * 6))
-  }
-  // 튄 주묵 방울 3~5개 — 기둥 옆 여백에만 앉힌다
-  const dotCount = 3 + (next() % 3)
-  const dots: SigilDot[] = []
-  for (let i = 0; i < dotCount; i += 1) {
-    const side = next() % 2 === 0 ? -1 : 1
-    dots.push({
-      x: round1(50 + side * (16 + r1() * 11)),
-      y: round1(SIGIL_TOP + r1() * (SIGIL_BOTTOM - SIGIL_TOP)),
-      r: round1(0.55 + r1() * 1.05),
-    })
-  }
-  return { glyphs, spineX: round1(50 + (r1() * 2 - 1) * 5), bars, dots }
+export function writFallbackColumns(tag: AekmakTag | null): readonly [string, string] {
+  if (!tag) return Object.freeze(['마음에 걸린 것을', '여기 두고 갑니다'] as [string, string])
+  const label = AEKMAK_TAG_LABEL[tag]
+  const word = AEKMAK_TAG_WORD[tag]
+  return Object.freeze([`${label}${eulReul(label)} 여기 두고`, `${word}${eulReul(word)} 빕니다`] as [string, string])
 }
 
-function round1(v: number): number {
-  return Math.round((v + Number.EPSILON) * 10) / 10
+/** 최장 열 글자 수 → 글자 크기(px). 0.5px 단위 **내림** — 올림하면 fit 불변식이 깨질 수 있다. */
+function writFontPx(maxColChars: number): number {
+  const boxH = WRIT_BOX.bottom - WRIT_BOX.top
+  const raw = boxH / (Math.max(1, maxColChars) * WRIT_FONT.advance)
+  const stepped = Math.floor(raw * 2) / 2
+  return Math.min(WRIT_FONT.max, Math.max(WRIT_FONT.min, stepped))
+}
+
+/**
+ * 액운 원문 → 세로쓰기 본문 계획(결정론). 규칙:
+ *  1) 공백·개행을 홑 공백으로 접고 80자(AEKMAK_TEXT_MAX)에서 자른다 — UI 상한의 도메인 짝.
+ *  2) 열 수는 길이 문턱(WRIT_COL_LIMIT)으로, 분배는 코드포인트 고른 나눔(앞열부터 +1)으로.
+ *     한국어 조판은 음절 단위 개행이 정법이라 어절 중간 갈림을 허용한다 — 규칙이 단순해야 결정론이 산다.
+ *  3) 열 머리·꼬리의 공백은 걷는다(열이 떠 보인다). 글자는 하나도 잃지 않는다.
+ *  4) 글자 크기는 최장 열이 본문 높이에 들어가는 최대값(0.5px 내림, min~max 클램프).
+ * 빈 원문이면 태그 발원문(writFallbackColumns)으로 선다 — 부적이 비어 보이지 않게.
+ */
+export function writPlan(text: string, tag: AekmakTag | null): WritPlan {
+  const body = text.replace(/\s+/g, ' ').trim()
+  if (body.length === 0) {
+    const columns = writFallbackColumns(tag)
+    const m = Math.max(...columns.map((c) => [...c].length))
+    return { columns, fontPx: writFontPx(m), source: 'fallback' }
+  }
+  // 코드포인트 단위 — UTF-16 짝(이모지)을 반 토막 내지 않는다
+  const chars = [...body].slice(0, AEKMAK_TEXT_MAX)
+  const n = chars.length
+  const colCount = n <= WRIT_COL_LIMIT.single ? 1 : n <= WRIT_COL_LIMIT.double ? 2 : WRIT_BOX.maxCols
+  const base = Math.floor(n / colCount)
+  const extra = n % colCount
+  const columns: string[] = []
+  let idx = 0
+  for (let c = 0; c < colCount; c += 1) {
+    const take = base + (c < extra ? 1 : 0)
+    columns.push(
+      chars
+        .slice(idx, idx + take)
+        .join('')
+        .trim()
+    )
+    idx += take
+  }
+  const filled = columns.filter((c) => c.length > 0)
+  const m = Math.max(...filled.map((c) => [...c].length))
+  return { columns: filled, fontPx: writFontPx(m), source: 'user' }
 }

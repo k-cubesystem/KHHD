@@ -32,6 +32,7 @@ import {
   turnSpinClass,
   turnTier,
   type TurnLayer,
+  XFADE_PCT,
 } from '../deity-turn'
 import { deityTurnFrames } from '../deities'
 
@@ -68,16 +69,16 @@ function keyframeStops(name: string): number[] {
 }
 
 /**
- * 겹 하나가 가져야 할 정지점.
- * 전환은 **즉시 교체**라 진입 직전(−0.01%)에 반대 상태를 한 번 더 찍는다 — 크로스페이드하면
- * 두 자세가 겹쳐 이중 노출로 보인다. 0%·100% 는 both fill 의 양 끝이라 항상 있다.
- * index 0(정면)만 창이 둘이다 — 출발점이자 착지점이라 LAND_PCT 에 다시 드러난다.
+ * 겹 하나가 가져야 할 정지점 — **유니언 페이드** 계약 (7차 검수 ⓓ, 즉시 교체(−0.01) 폐기).
+ * 들어오는 겹은 [진입−XFADE, 진입]에 페이드인, 나가는 겹은 [진입, 진입+XFADE]에 페이드아웃.
+ * DOM 순서(늦은 겹이 위) 덕에 반투명 두 장이 배경을 비추는 구간이 없다(이중 노출·알파 구멍 방지).
+ * index 0(정면)만 창이 둘이다 — 출발점이자 착지점이라 LAND_PCT 직전에 페이드인으로 되돌아온다.
  */
 function expectedStops(layer: TurnLayer): number[] {
   const raw =
     layer.index === 0
-      ? [0, round2(layer.toPct - 0.01), layer.toPct, round2(LAND_PCT - 0.01), LAND_PCT, 100]
-      : [0, round2(layer.fromPct - 0.01), layer.fromPct, round2(layer.toPct - 0.01), layer.toPct, 100]
+      ? [0, layer.toPct, round2(layer.toPct + XFADE_PCT), round2(LAND_PCT - XFADE_PCT), LAND_PCT, 100]
+      : [0, round2(layer.fromPct - XFADE_PCT), layer.fromPct, layer.toPct, round2(layer.toPct + XFADE_PCT), 100]
   return [...new Set(raw)].sort((a, b) => a - b)
 }
 

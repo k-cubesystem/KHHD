@@ -53,15 +53,44 @@ export const GHOST_LAG_MS = 45
 export const SPIN_TOTAL_MS = SPIN_MS + GHOST_LAG_MS * GHOST_LAYERS
 
 /**
- * 각도가 smoothstep(3u²−2u³)을 따르게 만드는 **시각** — 즉 smoothstep 의 역함수.
- *
- * 등간격 각도를 등간격 시각에 놓으면(선형) 모터가 도는 것처럼 보인다. 사람이 제자리에서 도는
- * 동작은 관성이 있어 처음엔 천천히 떠나고 반 바퀴(뒷면)에서 가장 빠르며 정면으로 감속해 멎는다.
- * 닫힌 해가 있어 수치해법이 필요 없다: u = 1/2 − sin(asin(1−2x)/3).
- * (검산: 이 식이 주는 첫 국면 287ms 는 5국면 시절 손으로 맞췄던 280ms 와 3ms 차다.)
+ * 프레임 교체의 유니언 페이드 창(7차 검수 ⓓ). 전환 하나가 [진입−45ms, 진입]에 들어오는 겹의
+ * 페이드인, [진입, 진입+45ms]에 나가는 겹의 페이드아웃으로 풀린다 — 겹침 순서(늦은 겹이 위)
+ * 덕에 반투명 두 장이 배경을 비추는 구간이 없다(이중 노출·알파 구멍 방지). 45ms(≈3표시프레임)는
+ * 잔상 지연과 같은 급이라 "블러 한 겹"으로 읽히고, 그보다 길면 두 자세가 또렷이 겹쳐 보인다.
+ * ⚠️ 국면 체류가 2×XFADE_MS 미만이면 페이드끼리 겹쳐 창 순서가 무너진다 — 테스트가 지킨다.
  */
-function smoothstepInverse(x: number): number {
-  return 0.5 - Math.sin(Math.asin(1 - 2 * x) / 3)
+export const XFADE_MS = 45
+export const XFADE_PCT = ((): number => Math.round((XFADE_MS / SPIN_MS) * 10000) / 100)()
+
+/**
+ * 각도의 시간 곡선 — **선형·smoothstep 절반 블렌드**의 역함수 (7차 검수 ⓑ).
+ *
+ * 등간격 각도를 등간격 시각에 놓으면(선형) 모터가 도는 것처럼 보인다. 그래서 처음엔 smoothstep
+ * 역함수를 그대로 썼는데, 프레임 **교체**에는 과했다: 연속 회전이라면 "느린 출발"인 구간이
+ * 스텝 재생에서는 **정지화면 유지**가 된다 — 첫 국면 287ms 는 탭 무반응으로, 315°(반전 재사용
+ * 프레임!) 287ms 는 뒤집힌 그림의 얼음으로 읽혔다(체류 최장:최단 = 2.63:1, 양끝이 회전의 44%).
+ * 선형을 절반 섞으면 체류가 223/158/138/131…ms(1.70:1)로 펴진다 — 관성(양끝 느림·뒷면 최속)은
+ * 남고 얼음은 사라진다. 블렌드엔 닫힌 역함수가 없어 이분법으로 역산한다(모듈 초기화 1회, 9점).
+ */
+const LINEAR_MIX = 0.5
+
+function smoothstep(u: number): number {
+  return u * u * (3 - 2 * u)
+}
+
+function turnEase(u: number): number {
+  return LINEAR_MIX * u + (1 - LINEAR_MIX) * smoothstep(u)
+}
+
+function turnEaseInverse(x: number): number {
+  let lo = 0
+  let hi = 1
+  for (let i = 0; i < 48; i += 1) {
+    const mid = (lo + hi) / 2
+    if (turnEase(mid) < x) lo = mid
+    else hi = mid
+  }
+  return (lo + hi) / 2
 }
 
 /** CSS 키프레임 %와 같은 정밀도. 그 이상은 산출물에 적을 수 없다. */
@@ -93,7 +122,7 @@ export interface TurnPhase {
 /** 9국면 표(0°·45°…360°). CSS 의 모든 % 는 여기서 나온다. */
 export const TURN_PHASES: readonly TurnPhase[] = Array.from({ length: TURN_STEPS + 1 }, (_, step) => {
   const deg = step * TURN_STEP_DEG
-  const atMs = Math.round(TURN_MS * smoothstepInverse(step / TURN_STEPS))
+  const atMs = Math.round(TURN_MS * turnEaseInverse(step / TURN_STEPS))
   return { step, deg, ...frameForDeg(deg), atMs, atPct: round2((atMs / SPIN_MS) * 100) }
 })
 

@@ -384,26 +384,32 @@
     animation: none;
   }
 }
-/* ── 신위 탭 한 바퀴 회전 (DeityTurn / 부록 C ④ · 안2.3 · 4차 검수 9국면) ──────
+/* ── 신위 탭 한 바퀴 회전 (DeityTurn / 부록 C ④ · 안2.3 · 7차 검수 리듬·페이드) ──────
    국면 %는 lib/domain/shrine/deity-turn.ts 의 표를 --deity-spin-ms(1480ms) 로 나눈 값이다 —
    한쪽만 고치면 프레임과 몸통이 어긋난다. 그래서 그 대조를 테스트가 한다
    (lib/domain/shrine/__tests__/deity-turn.test.ts 가 아래 키프레임 %를 도메인 표와 맞춰 본다).
 
    9국면(45°씩) — 굽는 프레임은 q45·side·q135·back 넷이고 225·270·315° 는 좌우 반전 재사용:
      0°   0ms      0%      정면(base)
-     45°  287ms   19.39%   q45
-     90°  424ms   28.65%   side
-     135° 541ms   36.55%   q135
+     45°  223ms   15.07%   q45
+     90°  381ms   25.74%   side
+     135° 519ms   35.07%   q135
      180° 650ms   43.92%   back
-     225° 759ms   51.28%   q135 반전
-     270° 876ms   59.19%   side 반전
-     315° 1013ms  68.45%   q45 반전
+     225° 781ms   52.77%   q135 반전
+     270° 919ms   62.09%   side 반전
+     315° 1077ms  72.77%   q45 반전
      360° 1300ms  87.84%   정면 착지 · 1480ms 100% 정지
-   시각은 등간격이 아니다 — 각도가 smoothstep 을 따르도록 그 역함수로 뽑았다(회전 관성).
+   시각은 등간격이 아니다 — 선형·smoothstep 절반 블렌드의 역함수다(7차 검수 ⓑ: 순수 smoothstep
+   은 양끝 체류 287ms = 스텝 재생에서 "정지화면 얼음"으로 읽혔다. 관성은 남기고 얼음만 뺐다).
 
-   5국면(-lite)은 side·back 만 구워진 신위용 하위 등급이며 안2.3 A파 값 그대로다.
-   전환은 인접 두 정지점(…44%/…45%)으로 **즉시 교체**한다 — 크로스페이드는 두 자세가 겹쳐
-   이중 노출로 보인다. */
+   전환은 **유니언 페이드**다(7차 검수 ⓓ): 국면 진입 t 마다 들어오는 겹이 [t−3.04%, t]에 위에서
+   페이드인하고, 나가는 겹이 [t, t+3.04%]에 아래에서 페이드아웃한다(3.04% = 45ms). 늦은 겹이
+   DOM 뒤 = 위라서 어느 순간에도 불투명한 겹이 화면을 받치고 있다 — 반투명 두 장이 배경을
+   비추는 알파 구멍이 없고, 하드컷의 "뚝뚝 끊김"만 3표시프레임의 블러로 풀린다.
+   착지(87.84%)만 역할이 뒤집힌다: 들어오는 base 가 스택 맨 아래라 [착지−3.04%, 착지]의
+   페이드인은 위 겹에 가려 조용히 끝나고, 위의 315° 겹이 [착지, +3.04%]에 걷히며 드러난다.
+
+   5국면(-lite)은 side·back 만 구워진 신위용 하위 등급이며 시각표는 안2.3 A파 값 그대로다. */
 .deity-turn {
   /* 버튼 리셋만 — 폭은 정면 프레임(h-full w-auto)이 정한다 */
   cursor: pointer;
@@ -411,7 +417,18 @@
 .deity-turn-body {
   transform-origin: 50% 100%;
 }
+/* 겹 프레임 — object-contain(꽉 채움) 대신 **높이 고정 + 가로 중앙**이다(7차 검수 ⓒ).
+   캔버스 폭은 실루엣(트림)이 정하므로 프레임마다 다른데, object-contain 은 base 폭보다 넓은
+   캔버스를 만나면 통째로 축소·수직 레터박스해 회전 중 키가 줄고 발이 뜬다(계측 1px, 정렬
+   후처리로 폭이 더 벌어지면 커진다). 높이를 못박으면 캔버스 폭은 배율에 영향을 주지 않는다.
+   translate 속성은 transform(반전 scaleX)과 독립이라 .deity-turn-mirror 와 겹쳐도 안전하다. */
 .deity-turn-frame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: auto;
+  translate: -50% 0;
   opacity: 0;
 }
 /* 반전 재사용 — 180° 를 넘는 각은 대칭각 파일을 좌우로 뒤집어 쓴다(굽는 장수가 절반인 근거) */
@@ -495,29 +512,33 @@
 
 /* 몸통 — 프레임이 실제 원근을 들고 있으므로 스쿼시는 **보조 동작**에 그친다(정면 대비 옆모습이
    좁아 보이는 만큼만). 5국면 시절 0.82 는 자세가 성기던 것을 폭으로 메우던 값이라 되풀이하지 않는다. */
+/* 겹 전환 = 유니언 페이드(도메인 XFADE_MS=45ms → 3.04%) — 7차 검수 ⓓ.
+   들어오는 겹이 [진입−X, 진입]에 위에서 페이드인하고, 나가는 겹이 [진입, 진입+X]에 아래에서
+   페이드아웃한다. DOM 순서(늦은 겹이 위) 덕에 반투명 두 장이 배경을 비추는 구간이 없다.
+   정지점 %는 전부 lib/domain/shrine/deity-turn.ts 표에서 나온다(테스트가 대조). */
 @keyframes deityTurnBody {
   0% {
     transform: scale(1, 1);
   }
-  19.39% {
+  15.07% {
     transform: scale(0.98, 1);
   }
-  28.65% {
+  25.74% {
     transform: scale(0.92, 1);
   }
-  36.55% {
+  35.07% {
     transform: scale(0.98, 1);
   }
   43.92% {
     transform: scale(1, 1);
   }
-  51.28% {
+  52.77% {
     transform: scale(0.98, 1);
   }
-  59.19% {
+  62.09% {
     transform: scale(0.92, 1);
   }
-  68.45% {
+  72.77% {
     transform: scale(0.98, 1);
   }
   87.84% {
@@ -529,11 +550,11 @@
 }
 @keyframes deityTurnStep0 {
   0%,
-  19.38% {
+  15.07% {
     opacity: 1;
   }
-  19.39%,
-  87.83% {
+  18.11%,
+  84.8% {
     opacity: 0;
   }
   87.84%,
@@ -543,98 +564,98 @@
 }
 @keyframes deityTurnStep1 {
   0%,
-  19.38% {
+  12.03% {
     opacity: 0;
   }
-  19.39%,
-  28.64% {
+  15.07%,
+  25.74% {
     opacity: 1;
   }
-  28.65%,
+  28.78%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnStep2 {
   0%,
-  28.64% {
+  22.7% {
     opacity: 0;
   }
-  28.65%,
-  36.54% {
+  25.74%,
+  35.07% {
     opacity: 1;
   }
-  36.55%,
+  38.11%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnStep3 {
   0%,
-  36.54% {
+  32.03% {
     opacity: 0;
   }
-  36.55%,
-  43.91% {
+  35.07%,
+  43.92% {
     opacity: 1;
   }
-  43.92%,
+  46.96%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnStep4 {
   0%,
-  43.91% {
+  40.88% {
     opacity: 0;
   }
   43.92%,
-  51.27% {
+  52.77% {
     opacity: 1;
   }
-  51.28%,
+  55.81%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnStep5 {
   0%,
-  51.27% {
+  49.73% {
     opacity: 0;
   }
-  51.28%,
-  59.18% {
+  52.77%,
+  62.09% {
     opacity: 1;
   }
-  59.19%,
+  65.13%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnStep6 {
   0%,
-  59.18% {
+  59.05% {
     opacity: 0;
   }
-  59.19%,
-  68.44% {
+  62.09%,
+  72.77% {
     opacity: 1;
   }
-  68.45%,
+  75.81%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnStep7 {
   0%,
-  68.44% {
+  69.73% {
     opacity: 0;
   }
-  68.45%,
-  87.83% {
+  72.77%,
+  87.84% {
     opacity: 1;
   }
-  87.84%,
+  90.88%,
   100% {
     opacity: 0;
   }
@@ -663,11 +684,11 @@
 }
 @keyframes deityTurnLite0 {
   0%,
-  18.91% {
+  18.92% {
     opacity: 1;
   }
-  18.92%,
-  87.83% {
+  21.96%,
+  84.8% {
     opacity: 0;
   }
   87.84%,
@@ -677,42 +698,42 @@
 }
 @keyframes deityTurnLite1 {
   0%,
-  18.91% {
+  15.88% {
     opacity: 0;
   }
   18.92%,
-  41.88% {
+  41.89% {
     opacity: 1;
   }
-  41.89%,
+  44.93%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnLite2 {
   0%,
-  41.88% {
+  38.85% {
     opacity: 0;
   }
   41.89%,
-  64.85% {
+  64.86% {
     opacity: 1;
   }
-  64.86%,
+  67.9%,
   100% {
     opacity: 0;
   }
 }
 @keyframes deityTurnLite3 {
   0%,
-  64.85% {
+  61.82% {
     opacity: 0;
   }
   64.86%,
-  87.83% {
+  87.84% {
     opacity: 1;
   }
-  87.84%,
+  90.88%,
   100% {
     opacity: 0;
   }
@@ -782,15 +803,15 @@
     transform: translateX(-50%) scaleX(1);
     opacity: 0.85;
   }
-  19.39% {
+  15.07% {
     transform: translateX(-50%) scaleX(0.94);
     opacity: 0.92;
   }
-  28.65% {
+  25.74% {
     transform: translateX(-50%) scaleX(0.86);
     opacity: 1;
   }
-  36.55% {
+  35.07% {
     transform: translateX(-50%) scaleX(0.96);
     opacity: 0.82;
   }
@@ -798,15 +819,15 @@
     transform: translateX(-50%) scaleX(1.06);
     opacity: 0.7;
   }
-  51.28% {
+  52.77% {
     transform: translateX(-50%) scaleX(0.96);
     opacity: 0.82;
   }
-  59.19% {
+  62.09% {
     transform: translateX(-50%) scaleX(0.86);
     opacity: 1;
   }
-  68.45% {
+  72.77% {
     transform: translateX(-50%) scaleX(0.94);
     opacity: 0.92;
   }
@@ -1035,24 +1056,49 @@
   }
 }
 
-/* 주문양(呪文樣) — 액운 원문이 읽을 수 없는 한글 자모 획으로 배어 나온다.
-   흐림은 읽힘을 막는 장치가 아니라 **먹 번짐**이다(읽히지 않는 근거는 자모 선택 자체에 있다 —
-   모음이 없어 음절을 이루지 못한다: lib/domain/ritual/aekmak.ts). 그래서 1.4px → 0.75px 로
-   낮춘다. 획이 뭉개져 "폰트가 깨진 그림"으로 보이던 것이 옛 인상의 절반이었다. */
-.ritual-sigil {
-  opacity: 0.84;
-  filter: blur(0.75px);
-  animation: ritualSigilIn 1.1s ease-out 0.22s both;
+/* 부적 본문(writ) — 사용자가 쓴 원문이 **읽히는** 세로쓰기 한글로 앉는다(CEO 7차 지시:
+   자모 주문양 → 본문). 읽혀야 하므로 잔류 blur 는 0 — 먹 번짐은 text-shadow 가 진다.
+   열 수·글자 크기·자간·줄높이는 lib/domain/ritual/aekmak.ts 의 writPlan·WRIT_FONT 가
+   단일 출처다(letter-spacing = advance−1, line-height = line — 테스트가 대조). */
+.ritual-writ {
+  display: flex;
+  flex-direction: row-reverse; /* 세로쓰기는 오른쪽 열부터 읽는다 — columns[0]이 오른쪽에 선다 */
+  align-items: center;
+  gap: 0.62em;
+  transform: translateX(-50%);
+  animation: ritualWritIn 1.1s ease-out 0.22s both;
   will-change: opacity, filter;
 }
-@keyframes ritualSigilIn {
+.ritual-writ-col {
+  writing-mode: vertical-rl;
+  text-orientation: upright; /* 한글을 눕히지 않는다 — 세로쓰기 정법 */
+  letter-spacing: 0.12em;
+  line-height: 1.6;
+  /* 붓 느낌은 새 폰트가 아니라 이미 실린 서체로 — 나눔명조 800(--font-gungseo)이 필획이 가장 짙다 */
+  font-family: var(--font-gungseo), var(--font-noto-serif), serif;
+  font-weight: 800;
+  color: #7c1b1b;
+  /* 붓 번짐 — 획 가장자리로 주묵이 배어난다. blur 를 쓰면 읽힘이 깎여 지시를 배반한다 */
+  text-shadow:
+    0 0 1px rgba(140, 31, 31, 0.6),
+    0 0 3.5px rgba(158, 43, 43, 0.25);
+}
+/* 손으로 쓴 티 — 열마다 기울기·앉은키가 미세하게 다르다. 판박이 평행이면 인쇄물로 보인다 */
+.ritual-writ-col:nth-child(odd) {
+  transform: rotate(0.55deg);
+}
+.ritual-writ-col:nth-child(even) {
+  transform: rotate(-0.45deg) translateY(2px);
+}
+/* 먹이 종이에 배어들며 또렷해진다 — 끝은 반드시 blur 0 (읽히는 것이 이번 지시의 전부다) */
+@keyframes ritualWritIn {
   from {
     opacity: 0;
-    filter: blur(7px);
+    filter: blur(5px);
   }
   to {
-    opacity: 0.84;
-    filter: blur(0.75px);
+    opacity: 0.93;
+    filter: blur(0px);
   }
 }
 
@@ -1265,7 +1311,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ritual-sheet,
   .ritual-paper,
-  .ritual-sigil,
+  .ritual-writ,
   .ritual-burn,
   .ritual-char,
   .ritual-glow,

@@ -19,12 +19,16 @@ import {
 } from '../stage'
 import { ZONES } from '../zones'
 
-// 존 실측(zones.ts) — 계약의 상수(floor 64~90)가 존과 일치하는지 먼저 고정한다.
-const [FY0, FY1] = ZONES.floor.y
-
+// 배치 자유도 v2(부록 P): floor 존은 [44,96]으로 넓어졌지만 원근 램프의 기준 밴드는
+// 존과 **분리·동결**됐다(FLOOR_DEPTH_REF=[64,90]) — 존이 넓어져도 기존 배치의 크기·그림자·z 는
+// 비트 단위로 같아야 한다. 여기서는 그 분리 자체를 계약으로 고정한다.
 describe('depthScale — 원근 스케일', () => {
-  it('존 상수 전제: floor 존 y 는 64~90', () => {
-    expect([FY0, FY1]).toEqual([64, 90])
+  it('존은 넓어졌고(44~96) 램프 기준은 64~90 에 동결 — 64·77·90 산출이 v1 과 동일하다', () => {
+    expect(ZONES.floor.y).toEqual([44, 96])
+    // 동결 밴드의 세 지점 — v1 시절 값 그대로(아래 개별 테스트가 수치를 대조)
+    expect(depthScale('floor', 64)).toBe(0.72)
+    expect(depthScale('floor', 77)).toBe(1.0)
+    expect(depthScale('floor', 90)).toBe(1.28)
   })
 
   it('floor: 뒤(64)=0.72 · 앞(90)=1.28 · 중앙(77)=1.0', () => {
@@ -83,10 +87,16 @@ describe('depthZ — 깊이 정렬', () => {
     expect(depthZ('floor', 90)).toBe(28)
   })
 
-  it('floor: 범위 밖·비유한 입력도 16~28 안에 클램프', () => {
-    expect(depthZ('floor', -50)).toBe(16)
+  it('floor: 단상 뒤(y<48)는 z12 — 제단(14)보다 뒤에 그린다 (부록 P-2 깊이 분기)', () => {
+    expect(depthZ('floor', 44)).toBe(12)
+    expect(depthZ('floor', 47.9)).toBe(12)
+    expect(depthZ('floor', 48)).toBe(16) // 경계 — 상판 앞부터는 기존 램프
+    expect(depthZ('floor', -50)).toBe(12) // 음수도 "상판 뒤" 분기 — 어차피 방 밖이라 존이 막는다
+  })
+
+  it('floor: 범위 밖·비유한 입력도 밴드 안에 클램프', () => {
     expect(depthZ('floor', 9999)).toBe(28)
-    expect(depthZ('floor', Number.NaN)).toBe(16)
+    expect(depthZ('floor', Number.NaN)).toBe(16) // NaN 은 분기 비교가 거짓 → 램프 최소
   })
 
   it('모든 레이어·y 에서 밴드 10~29 를 벗어나지 않는다', () => {

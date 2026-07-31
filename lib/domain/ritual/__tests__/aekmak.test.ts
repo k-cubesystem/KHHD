@@ -11,7 +11,9 @@ import {
   BURN_CURVE,
   BURN_MASK_SCALE,
   BURN_MS,
-  SIGIL_JAMO,
+  WRIT_BOX,
+  WRIT_COL_LIMIT,
+  WRIT_FONT,
   allSettleLines,
   burnProgress,
   countBurnsOnDay,
@@ -23,7 +25,8 @@ import {
   monthlyRecallLine,
   remainingBurns,
   settleLine,
-  sigilPlan,
+  writFallbackColumns,
+  writPlan,
   type AekmakTag,
 } from '../aekmak'
 
@@ -34,6 +37,27 @@ function kst(y: number, m: number, d: number, h = 0, min = 0): number {
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION_SQL = read('supabase/migrations/20260730_shrine_aekmak_logs.sql')
+
+// 표시광고법(L-트랙) — 의료·심리 효능 주장 금지. 마무리 문구·발원 낱말·폴백 발원문이 같은 게이트를 받는다.
+const FORBIDDEN = [
+  '치유',
+  '치료',
+  '완치',
+  '정화',
+  '효과',
+  '효능',
+  '해소',
+  '힐링',
+  '우울',
+  '불안장애',
+  '스트레스',
+  '심리',
+  '상담',
+  '처방',
+  '개선됩니다',
+  '낫습니다',
+  '사라집니다', // 원문 무저장 약속과 달리 "액이 사라진다"는 효능 단정
+]
 
 describe('감정 태그 6종', () => {
   it('원안 6종 그대로 — 불안·미련·화·걱정·미움·액운', () => {
@@ -190,27 +214,6 @@ describe('마무리 문구 — 결정론 + 법무', () => {
     expect(settleLine('anxiety', Number.NaN)).toBeTruthy()
   })
 
-  // 표시광고법(L-트랙) — 의료·심리 효능 주장 금지. 문구를 늘릴 때 이 목록이 게이트다.
-  const FORBIDDEN = [
-    '치유',
-    '치료',
-    '완치',
-    '정화',
-    '효과',
-    '효능',
-    '해소',
-    '힐링',
-    '우울',
-    '불안장애',
-    '스트레스',
-    '심리',
-    '상담',
-    '처방',
-    '개선됩니다',
-    '낫습니다',
-    '사라집니다', // 원문 무저장 약속과 달리 "액이 사라진다"는 효능 단정
-  ]
-
   it.each(FORBIDDEN)('문구 풀에 금지 어휘 "%s" 가 없다', (word) => {
     for (const line of allSettleLines()) expect(line).not.toContain(word)
   })
@@ -229,78 +232,131 @@ describe('마무리 문구 — 결정론 + 법무', () => {
   })
 })
 
-describe('부적 주문양(sigil) — 한글 자모 · 원문 비가역 변환', () => {
-  const SAMPLES = ['', '액', 'a'.repeat(AEKMAK_TEXT_MAX), '가나다라마바사아자차카타파하', '  공백  ']
+describe('부적 본문(writ) — 원문이 읽히는 세로쓰기 한글로 앉는다 (CEO 7차)', () => {
+  /** 공백 없는 한글 n자 — 분배 산술을 정확히 보려면 다듬기(공백 제거)가 안 끼어야 한다 */
+  const ko = (n: number): string => '가나다라마바사아자차카타파하'.repeat(6).slice(0, n)
 
-  it('같은 원문이면 같은 문양(리렌더에도 안 흔들린다)', () => {
-    expect(sigilPlan('내일 면접이 두렵다')).toEqual(sigilPlan('내일 면접이 두렵다'))
+  it('같은 (원문, 태그)면 같은 계획 — 리렌더에 흔들리지 않는다(결정론)', () => {
+    expect(writPlan('내일 면접이 두렵다', 'anxiety')).toEqual(writPlan('내일 면접이 두렵다', 'anxiety'))
   })
 
-  it('다른 원문이면 다른 문양', () => {
-    expect(sigilPlan('내일 면접이 두렵다')).not.toEqual(sigilPlan('빚 걱정'))
+  it('원문이 그대로 열에 실린다 — 공백만 다듬고 글자는 하나도 잃지 않는다(읽히는 한글의 요체)', () => {
+    const src = '면접이 무섭고\n잠이 오지 않는다'
+    const plan = writPlan(src, 'anxiety')
+    expect(plan.source).toBe('user')
+    expect(plan.columns.join('').replace(/ /g, '')).toBe(src.replace(/\s/g, ''))
+  })
+
+  it('열 수 문턱 — 12자까지 1열 · 34자까지 2열 · 그 위 3열', () => {
+    expect(writPlan(ko(1), null).columns).toHaveLength(1)
+    expect(writPlan(ko(WRIT_COL_LIMIT.single), null).columns).toHaveLength(1)
+    expect(writPlan(ko(WRIT_COL_LIMIT.single + 1), null).columns).toHaveLength(2)
+    expect(writPlan(ko(WRIT_COL_LIMIT.double), null).columns).toHaveLength(2)
+    expect(writPlan(ko(WRIT_COL_LIMIT.double + 1), null).columns).toHaveLength(3)
+    expect(writPlan(ko(AEKMAK_TEXT_MAX), null).columns).toHaveLength(WRIT_BOX.maxCols)
+  })
+
+  it('고른 분배 — 공백 없는 원문은 열 길이 차가 1자 이하고 글자 수 합이 보존된다', () => {
+    for (const n of [13, 20, 34, 35, 50, 79, 80]) {
+      const lens = writPlan(ko(n), null).columns.map((c) => [...c].length)
+      expect(Math.max(...lens) - Math.min(...lens)).toBeLessThanOrEqual(1)
+      expect(lens.reduce((a, b) => a + b, 0)).toBe(n)
+    }
   })
 
   /**
-   * 읽힘 방지의 **핵심 근거**: 자모표에 모음이 한 자도 없다.
-   * 한글은 초성+중성이 있어야 음절이 되므로, 자음만으로는 어떤 낱말도 이룰 수 없다.
-   * 여기에 모음이 섞여 들어오면 원문이 읽힐 여지가 생긴다 — 그래서 테스트로 못 박는다.
+   * **fit 불변식** — 80자까지 어떤 길이도 본문 영역(WRIT_BOX)에 들어간다.
+   * 세로: 최장 열 × 전진폭 × 글자크기 ≤ 영역 높이. 가로: 열 수 × 줄높이 × 글자크기 ≤ 부적 폭.
+   * CSS 의 letter-spacing·line-height 가 advance·line 과 같다는 계약(아래 CSS 대조)과 합쳐져
+   * "화면에서 실제로 안 넘친다"가 된다.
    */
-  it('자모표는 자음 14종뿐이다 (모음이 없어 음절이 서지 않는다)', () => {
-    expect(SIGIL_JAMO).toHaveLength(14)
-    for (const d of SIGIL_JAMO) expect(d).toMatch(/^M[\d.]/)
-  })
-
-  it('자모는 부적지 안(x 0~100 · y 0~150)에 머문다', () => {
-    for (const s of SAMPLES) {
-      const plan = sigilPlan(s)
-      expect(plan.glyphs.length).toBeGreaterThanOrEqual(5)
-      expect(plan.glyphs.length).toBeLessThanOrEqual(9)
-      for (const g of plan.glyphs) {
-        expect(g.jamo).toBeGreaterThanOrEqual(0)
-        expect(g.jamo).toBeLessThan(SIGIL_JAMO.length)
-        expect(g.x - g.size / 2).toBeGreaterThan(0)
-        expect(g.x + g.size / 2).toBeLessThan(100)
-        expect(g.y - g.size / 2).toBeGreaterThan(0)
-        expect(g.y + g.size / 2).toBeLessThan(150)
-        expect(g.weight).toBeGreaterThan(0)
-      }
-      for (const b of plan.bars) {
-        expect(b).toBeGreaterThan(0)
-        expect(b).toBeLessThan(150)
-      }
-      for (const d of plan.dots) {
-        expect(d.x).toBeGreaterThan(0)
-        expect(d.x).toBeLessThan(100)
-        expect(d.y).toBeGreaterThan(0)
-        expect(d.y).toBeLessThan(150)
-      }
-      expect(plan.spineX).toBeGreaterThan(30)
-      expect(plan.spineX).toBeLessThan(70)
+  it('fit 불변식 — 1~80자 전 길이가 부적 본문 영역에 들어간다', () => {
+    const boxH = WRIT_BOX.bottom - WRIT_BOX.top
+    for (let n = 1; n <= AEKMAK_TEXT_MAX; n += 1) {
+      const plan = writPlan(ko(n), 'worry')
+      const m = Math.max(...plan.columns.map((c) => [...c].length))
+      expect(m * WRIT_FONT.advance * plan.fontPx).toBeLessThanOrEqual(boxH + 1e-6)
+      expect(plan.columns.length * WRIT_FONT.line * plan.fontPx).toBeLessThanOrEqual(WRIT_BOX.w)
+      expect(plan.fontPx).toBeGreaterThanOrEqual(WRIT_FONT.min)
+      expect(plan.fontPx).toBeLessThanOrEqual(WRIT_FONT.max)
     }
   })
 
-  it('자모가 세로로 겹친다 — 낱자로 떨어지면 "자음 목록"이 되어 부적으로 안 읽힌다', () => {
-    for (const s of SAMPLES) {
-      const g = sigilPlan(s).glyphs
-      for (let i = 1; i < g.length; i += 1) {
-        const gap = g[i].y - g[i - 1].y
-        const half = (g[i].size + g[i - 1].size) / 2
-        expect(gap).toBeLessThan(half)
-      }
+  it('대표 길이의 결정 값 — 80자는 3열 [27,27,26]·6px, 34자는 2열·10px, 짧은 글은 1열·20px', () => {
+    const long = writPlan(ko(AEKMAK_TEXT_MAX), null)
+    expect(long.columns.map((c) => [...c].length)).toEqual([27, 27, 26])
+    expect(long.fontPx).toBe(WRIT_FONT.min)
+    expect(writPlan(ko(34), null).fontPx).toBe(10)
+    const short = writPlan('빚 걱정', null)
+    expect(short.columns).toEqual(['빚 걱정'])
+    expect(short.fontPx).toBe(WRIT_FONT.max)
+  })
+
+  it('80자 초과 입력은 80자에서 자른다 (UI 상한 AEKMAK_TEXT_MAX 의 도메인 짝)', () => {
+    expect(writPlan(ko(84), null)).toEqual(writPlan(ko(AEKMAK_TEXT_MAX), null))
+  })
+
+  it('빈 원문이면 태그 발원문 두 열로 선다 — 부적이 비어 보이지 않는다', () => {
+    for (const t of AEKMAK_TAGS) {
+      const plan = writPlan('  \n  ', t)
+      expect(plan.source).toBe('fallback')
+      expect(plan.columns).toEqual([...writFallbackColumns(t)])
+      expect(plan.columns.join(' ')).toContain(AEKMAK_TAG_LABEL[t])
+      expect(plan.columns.join(' ')).toContain(AEKMAK_TAG_WORD[t])
+    }
+    const noTag = writPlan('', null)
+    expect(noTag.source).toBe('fallback')
+    expect(noTag.columns.length).toBeGreaterThan(0)
+  })
+
+  it('발원문 조사가 받침 유무로 갈린다 — 어색한 을/를이 부적에 찍히면 놀이가 깨진다', () => {
+    expect(writFallbackColumns('anger')).toEqual(['화를 여기 두고', '삭임을 빕니다'])
+    expect(writFallbackColumns('anxiety')).toEqual(['불안을 여기 두고', '고요를 빕니다'])
+    expect(writFallbackColumns('worry')[1]).toBe('덜기를 빕니다')
+    expect(writFallbackColumns('regret')[1]).toBe('놓음을 빕니다')
+  })
+
+  it('폴백 발원문도 전부 한글·공백이고 fit 안에 있다', () => {
+    for (const t of [...AEKMAK_TAGS, null]) {
+      const cols = writFallbackColumns(t)
+      const plan = writPlan('', t)
+      for (const col of cols) expect(col).toMatch(/^[가-힣 ]+$/)
+      const m = Math.max(...cols.map((c) => [...c].length))
+      expect(m * WRIT_FONT.advance * plan.fontPx).toBeLessThanOrEqual(WRIT_BOX.bottom - WRIT_BOX.top)
     }
   })
 
-  it('원문 글자가 좌표로 새어 나가지 않는다 — 길이가 같으면 자모 수가 같다', () => {
-    expect(sigilPlan('일이삼사오').glyphs.length).toBe(sigilPlan('abcde').glyphs.length)
+  // 부적 위에 남는 글자라 마무리 문구·발원 낱말과 같은 급의 게이트를 받는다
+  it.each(FORBIDDEN)('폴백 발원문에 금지 어휘 "%s" 가 없다', (word) => {
+    for (const t of [...AEKMAK_TAGS, null]) {
+      for (const col of writFallbackColumns(t)) expect(col).not.toContain(word)
+    }
   })
 
-  it('hashSeed 는 32bit 부호 없는 정수', () => {
+  it('hashSeed 는 32bit 부호 없는 정수 (마무리 문구 결정론의 시드)', () => {
     for (const s of ['', '액', 'hello']) {
       const h = hashSeed(s)
       expect(Number.isInteger(h)).toBe(true)
       expect(h).toBeGreaterThanOrEqual(0)
       expect(h).toBeLessThanOrEqual(0xffffffff)
     }
+  })
+})
+
+describe('원문 화면 전용 계약 — 부적에 그리되 서버·GA 로는 내보내지 않는다', () => {
+  const sheet = read('components/shrine/scene/AekmakSheet.tsx')
+
+  it('서버 액션에는 태그 하나만 간다 — burnAekmak 호출에 원문이 없다', () => {
+    expect(sheet).toMatch(/burnAekmak\(tag\)/)
+    expect(sheet).not.toMatch(/burnAekmak\([^)]*(text|writ)/)
+  })
+
+  it('GA 라벨에 원문·본문 계획이 실리지 않는다', () => {
+    expect(sheet).not.toMatch(/label:\s*(text|writ)/)
+  })
+
+  it('부적 무대 크기가 도메인 WRIT_BOX 와 같다 — 열 분배 계산의 좌표 기준', () => {
+    expect(sheet).toContain(`{ w: ${WRIT_BOX.w}, h: ${WRIT_BOX.h} }`)
   })
 })
 
@@ -342,7 +398,8 @@ describe('연소 타임라인 ↔ CSS 계약', () => {
   const RITUAL_CLASSES = [
     '.ritual-sheet',
     '.ritual-paper',
-    '.ritual-sigil',
+    '.ritual-writ',
+    '.ritual-writ-col',
     '.ritual-burn',
     '.ritual-char',
     '.ritual-glow',
@@ -350,6 +407,7 @@ describe('연소 타임라인 ↔ CSS 계약', () => {
   const RITUAL_KEYFRAMES = [
     'ritualSheetUp',
     'ritualPaperIn',
+    'ritualWritIn',
     'ritualBurn',
     'ritualCurl',
     'ritualChar',
@@ -403,6 +461,25 @@ describe('연소 타임라인 ↔ CSS 계약', () => {
 
   it('연출 컴포넌트가 animationend 를 이름으로 거르지 않는다 (오타 한 글자에 화면이 멎는다)', () => {
     expect(read('components/shrine/scene/AekmakSheet.tsx')).not.toMatch(/animationName\s*===/)
+  })
+
+  /**
+   * 세로쓰기 계약 — writPlan 의 fit 계산이 화면에서 성립하려면 CSS 가 같은 수를 써야 한다:
+   * 글자 전진폭 = 1em + letter-spacing = WRIT_FONT.advance, 열 전진폭 = line-height = WRIT_FONT.line.
+   * writing-mode·upright 가 빠지면 가로쓰기가 되어 "세로 부적"이 통째로 무너진다.
+   */
+  it('.ritual-writ-col 이 세로쓰기고 자간·줄높이가 WRIT_FONT 와 같다', () => {
+    const col = block('ritual-writ-col')
+    expect(col).toContain('writing-mode: vertical-rl')
+    expect(col).toContain('text-orientation: upright')
+    expect(col).toContain(`letter-spacing: ${(WRIT_FONT.advance - 1).toFixed(2)}em`)
+    expect(col).toContain(`line-height: ${WRIT_FONT.line}`)
+  })
+
+  it('본문은 끝에 또렷하다 — ritualWritIn 이 blur 0 으로 끝난다(읽히는 것이 지시의 전부다)', () => {
+    const writIn = keyframes('ritualWritIn')
+    expect(writIn).not.toBe('')
+    expect(/to\s*\{[^}]*filter:\s*blur\(0px\)/.test(writIn)).toBe(true)
   })
 
   it('완급은 timing-function 이 아니라 표가 진다 — 연소 세 층이 linear 다', () => {
