@@ -32,8 +32,6 @@ import { toast } from 'sonner'
 import {
   OBANGKI_COLOR_INFO,
   OBANGKI_DISCLAIMER,
-  OBANGKI_MS,
-  OBANGKI_SAMGI_STEP_MS,
   OBANGKI_OPTION_MAX,
   OBANGKI_OPTION_MIN,
   OBANGKI_OPTION_TEXT_MAX,
@@ -50,13 +48,8 @@ import {
   type ObangkiColor,
   type ObangkiQType,
 } from '@/lib/domain/ritual/obangki'
-import {
-  SAMGI_SLOT_INFO,
-  readSamgi,
-  samgiOrder,
-  type SamgiReading,
-  type SamgiSlot,
-} from '@/lib/domain/ritual/obangki-reading'
+import { SAMGI_SLOT_INFO, readSamgi, type SamgiReading, type SamgiSlot } from '@/lib/domain/ritual/obangki-reading'
+import { SamgiRow, scrollDelayMs } from './SamgiRow'
 import { drawObangki, type ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
@@ -68,9 +61,6 @@ import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 const STAGE = { w: 300, h: 176 } as const
 /** 자리 하나의 폭 — 무대 폭을 5로 나눈 값. */
 const SLOT_W = STAGE.w / 5
-
-/** 이 회차가 부정풀이를 거쳤으면 그만큼 전부 뒤로 밀린다(물린 기가 흩어질 시간). */
-const PURIFY_LEAD_MS = (r: SamgiReading): number => (r.draw.purified ? OBANGKI_MS.purify : 0)
 
 const DRAW_ERROR_MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다',
@@ -426,39 +416,6 @@ function ComposeStep({
 
 // ─── 2. 깃발 무대 ────────────────────────────────────────────
 
-/** 펼쳐진 기 한 폭 — 말린 기와 달리 색·인장이 드러난다. 무대와 두루마리가 같은 그림을 쓴다. */
-function UnfurledFlag({ color, size, delayMs }: { color: ObangkiColor; size: number; delayMs: number }) {
-  const info = OBANGKI_COLOR_INFO[color]
-  return (
-    <span
-      aria-hidden
-      className="obangki-unfurl relative block"
-      style={{
-        // 1:1 — 에셋(512×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다.
-        // 실물 오방기는 기폭 가로(70cm)와 깃대 길이(72cm)가 거의 같아 외곽이 정사각이다.
-        width: size,
-        height: size,
-        animationDelay: `${delayMs}ms`,
-        // 에셋이 없어도(404) 기폭 자리에 오방색 면이 남는다 — 깃대·자루 자리까지 칠하지는 않는다
-        backgroundImage: `url('/shrine/ritual/obangki-${color}.webp'), linear-gradient(${info.hex},${info.hex})`,
-        backgroundSize: '100% 100%, 94% 54%',
-        backgroundPosition: 'left top, right top',
-        backgroundRepeat: 'no-repeat, no-repeat',
-        // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
-        // 빛나면 유령 사각형이 보인다
-        filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
-      }}
-    >
-      <span
-        className="absolute inset-x-0 top-[18%] text-center font-serif text-[13px] font-bold"
-        style={{ color: 'rgba(28,20,12,0.72)' }}
-      >
-        {info.seal}
-      </span>
-    </span>
-  )
-}
-
 /**
  * 5기가 선 무대. 말아둔 상태에서는 **다섯 기가 전부 같은 모습**이고, 셔플이 끝나면 뒤로 물러난다.
  * 그 앞으로 **삼기(자리·뿌리·향방)가 차례로 나와** 펼쳐진다 — 순서는 지연이 준다(타이머 체인이 아니라).
@@ -480,7 +437,6 @@ function FlagStage({
   reading: SamgiReading | null
   onShuffleEnd: () => void
 }) {
-  const lead = reading ? PURIFY_LEAD_MS(reading) : 0
   return (
     <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
       <EffectsCanvas ref={effectsRef} />
@@ -537,43 +493,16 @@ function FlagStage({
         })}
       </div>
 
-      {/* 앞줄 — 뽑힌 삼기 */}
+      {/* 앞줄 — 뽑힌 삼기. 물린 기와 애니메이션의 관계는 SamgiRow 가 지킨다(구조 불변식) */}
       {reading && (
-        <div className="absolute inset-x-0 bottom-1 flex items-end justify-center gap-2">
-          {samgiOrder(reading.draw).map(({ slot, color }, i) => {
-            const info = OBANGKI_COLOR_INFO[color]
-            const delay = lead + i * OBANGKI_SAMGI_STEP_MS
-            return (
-              <span
-                key={slot}
-                className="obangki-samgi relative flex flex-col items-center"
-                style={{ width: 88, '--ob-delay': `${delay}ms` } as React.CSSProperties}
-                onAnimationEnd={(e) => {
-                  // 파티클도 타이머가 아니라 **연출이** 몬다 — 국면 전환과 같은 규율이라
-                  // 지연을 두 곳에서 세지 않는다(어긋나면 빈 자리에서 색이 터진다)
-                  if (e.target !== e.currentTarget || e.animationName !== 'obangkiSamgiRise') return
-                  const x = 26 + i * 24
-                  effectsRef.current?.emit('sparkle', x, 34)
-                  effectsRef.current?.emit('petals', x, 30)
-                }}
-              >
-                <span className="mb-1 font-serif text-[9.5px] tracking-[0.18em] text-gold-500/70">
-                  {SAMGI_SLOT_INFO[slot].title}
-                </span>
-                {/* 부정풀이 — 물린 녹기가 흩어진 자리에 재차 뽑은 기가 선다(자리 기에만 온다) */}
-                {slot === 'seat' && reading.draw.purified && (
-                  <span className="obangki-purified absolute left-1/2 top-4 -translate-x-1/2">
-                    <UnfurledFlag color={reading.draw.purified} size={62} delayMs={0} />
-                  </span>
-                )}
-                <UnfurledFlag color={color} size={62} delayMs={delay} />
-                <span className="mt-1 font-serif text-[10px] font-bold" style={{ color: info.accent }}>
-                  {info.label}
-                </span>
-              </span>
-            )
-          })}
-        </div>
+        <SamgiRow
+          reading={reading}
+          onFlagShown={(i) => {
+            const x = 26 + i * 24
+            effectsRef.current?.emit('sparkle', x, 34)
+            effectsRef.current?.emit('petals', x, 30)
+          }}
+        />
       )}
 
       {/* 칠성방울 — 셔플이 시작될 때 한 번 울린다 */}
@@ -648,7 +577,7 @@ function SamgiScroll({
 }) {
   const way = OBANGKI_COLOR_INFO[reading.draw.way]
   // 두루마리는 삼기가 다 펴진 뒤에 뜬다 — 지연이 곧 순서다(타이머가 아니라)
-  const delayMs = PURIFY_LEAD_MS(reading) + 2 * OBANGKI_SAMGI_STEP_MS + 700
+  const delayMs = scrollDelayMs(reading)
   return (
     <div className="obangki-bubble mt-4 w-full space-y-3" style={{ animationDelay: `${delayMs}ms` }}>
       {/* 부정풀이 — 전승이 이르는 대로 물리고 다시 뽑았음을 먼저 알린다 */}

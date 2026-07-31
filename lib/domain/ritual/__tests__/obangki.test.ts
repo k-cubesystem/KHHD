@@ -222,6 +222,11 @@ describe('정책 상수', () => {
     expect(OBANGKI_OPTION_TEXT_MAX).toBeGreaterThan(0)
   })
 
+  it('삼기 간격이 한 기 연출보다 짧다 — 셋이 끊기지 않고 이어지는 조건', () => {
+    expect(OBANGKI_SAMGI_STEP_MS).toBeGreaterThan(0)
+    expect(OBANGKI_SAMGI_STEP_MS).toBeLessThan(OBANGKI_MS.samgi)
+  })
+
   it('법무 고지는 PRD §2 확정 문구 그대로다', () => {
     expect(OBANGKI_DISCLAIMER).toBe('재미로 보는 전통 놀이 점괘입니다 — 중요한 결정의 근거로 삼지 마세요')
   })

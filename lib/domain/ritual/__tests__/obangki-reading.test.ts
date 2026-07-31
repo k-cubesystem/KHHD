@@ -354,9 +354,22 @@ describe('연출 CSS 계약 — 삼기·부정풀이가 실제로 산출된다',
   })
 
   it('화면이 삼기 순서를 지연으로 몰고 타이머로 몰지 않는다', () => {
-    const src = readFileSync(path.join(process.cwd(), 'components/shrine/scene/ObangkiSheet.tsx'), 'utf8')
-    expect(src).not.toMatch(/\b(setTimeout|setInterval)\s*\(/)
-    expect(src).toContain('obangkiSamgiRise')
-    expect(src).toContain("'--ob-delay'")
+    // 앞줄은 SamgiRow 로 떼어냈다(jsdom 에서 렌더해 구조 불변식을 지키려고) — 규율은 두 파일 모두에 건다
+    const row = readFileSync(path.join(process.cwd(), 'components/shrine/scene/SamgiRow.tsx'), 'utf8')
+    const sheet = readFileSync(path.join(process.cwd(), 'components/shrine/scene/ObangkiSheet.tsx'), 'utf8')
+    for (const src of [row, sheet]) expect(src).not.toMatch(/\b(setTimeout|setInterval)\s*\(/)
+    expect(row).toContain('obangkiSamgiRise')
+    expect(row).toContain("'--ob-delay'")
+  })
+
+  it('물린 기가 연출 래퍼 밖에 있다 — 소스 순서로도 한 번 더 막는다', () => {
+    // JSX 상 물린 기가 .obangki-samgi 여는 태그보다 **먼저** 나온다 = 형제이지 자손이 아니다.
+    // 본 검증은 렌더 단언(components/shrine/scene/__tests__/SamgiRow.test.tsx)이고 이건 빠른 파수꾼이다.
+    const row = readFileSync(path.join(process.cwd(), 'components/shrine/scene/SamgiRow.tsx'), 'utf8')
+    const purified = row.indexOf('obangki-purified absolute')
+    const wrapper = row.indexOf('obangki-samgi flex')
+    expect(purified).toBeGreaterThan(-1)
+    expect(wrapper).toBeGreaterThan(-1)
+    expect(purified).toBeLessThan(wrapper)
   })
 })
