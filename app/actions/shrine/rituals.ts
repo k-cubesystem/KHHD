@@ -26,6 +26,16 @@ import {
   remainingFreeDraws,
 } from '@/lib/domain/ritual/obangki'
 import { drawSamgi } from '@/lib/domain/ritual/obangki-reading'
+import {
+  CHULJEON_DAILY_LIMIT,
+  CHULJEON_WAY_MAX,
+  CHULJEON_WAY_MIN,
+  castChuljeon,
+  countThrowsOnDay,
+  dailySeed as chuljeonDailySeed,
+  remainingThrows,
+  throwSeed as chuljeonThrowSeed,
+} from '@/lib/domain/ritual/chuljeon'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
 import {
   BAEKIL_TARGET_DAYS,
@@ -737,4 +747,139 @@ export async function settleBaekilVow(): Promise<SettleBaekilResult> {
     itemQty: result.itemQty,
     videoStatus: 'queued',
   }
+}
+
+// ─── R-4 척전(擲錢) 「엽전 세 닢」 ─────────────────────────────
+//
+// 갈림길을 정하는 도구 — 오방기(문복)와 **전혀 다른 의식**이다.
+// 오방기는 한 가지 일에 신이 답하는 자리이고, 척전은 사람이 이미 길을 다 알면서 고르지 못할 때
+// 하늘에 맡기는 자리다. 그래서 신격도 처방도 없고, **복채도 없다** —
+// 점심 메뉴를 고르는 자리에 값을 붙이면 도구가 아니라 판매가 된다.
+// 일 상한(10회)이 있는 이유는 과금이 아니라 기록 폭주를 막기 위해서다.
+
+export interface ChuljeonStatus {
+  /** 오늘(KST) 남은 던지기 */
+  remaining: number
+  /** 일 상한(10) */
+  limit: number
+  /** 오늘(KST) 던진 횟수 */
+  todayCount: number
+  /** 오늘치 결정론 시드의 뿌리 — 화면이 회차를 얹어 엽전 면을 만든다 */
+  seed: number
+}
+
+/** timestamptz 문자열 → epochMs. 파싱 실패는 제외(카운트를 부풀리지 않는다). */
+function toThrowEpochMs(rows: { thrown_at: string | null }[] | null): number[] {
+  const out: number[] = []
+  for (const r of rows ?? []) {
+    const t = r.thrown_at ? Date.parse(r.thrown_at) : Number.NaN
+    if (Number.isFinite(t)) out.push(t)
+  }
+  return out
+}
+
+/**
+ * 척전 현황. 비로그인·조회 실패 모두 null 이다(다른 의식과 같은 규약) —
+ * 마이그레이션 적용 전에는 테이블이 없으므로 그때는 진입점을 그리지 않는 것이 옳다.
+ */
+export async function getChuljeonStatus(): Promise<ChuljeonStatus | null> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const now = Date.now()
+    const today = formatKstDate(now)
+    const dayStart = Date.parse(`${today}T00:00:00+09:00`)
+    const { data, error } = await supabase
+      .from('shrine_chuljeon_throws')
+      .select('thrown_at')
+      .eq('user_id', user.id)
+      .gte('thrown_at', new Date(dayStart).toISOString())
+
+    if (error) {
+      logger.warn('[chuljeon] 현황 조회 실패:', error)
+      return null
+    }
+
+    const stamps = toThrowEpochMs(data)
+    return {
+      remaining: remainingThrows(stamps, now),
+      limit: CHULJEON_DAILY_LIMIT,
+      todayCount: countThrowsOnDay(stamps, now),
+      seed: chuljeonDailySeed(user.id, today),
+    }
+  } catch (e) {
+    logger.warn('[chuljeon] 현황 조회 예외(비치명):', e)
+    return null
+  }
+}
+
+export interface CastChuljeonResult {
+  success: boolean
+  error?: 'UNAUTHORIZED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'INVALID_WAYS' | 'DAILY_LIMIT' | 'THROW_FAILED'
+  /** 서버가 실제로 쓴 회차 — 화면이 이 값으로 시드를 맞춰 같은 엽전을 던진다 */
+  seq?: number
+  todayCount?: number
+  remaining?: number
+}
+
+/**
+ * 척전 한 판 — **갈래 수만 받는다**(갈림길 원문은 화면을 떠나지 않는다).
+ *
+ * 결과(어느 길이 정해졌는가)는 서버가 회차 시드로 스스로 계산한다. 클라이언트가 보낸 값을 믿으면
+ * "마음에 드는 길이 나올 때까지" 되던지는 길이 열리고, 그러면 정해 주는 도구가 아니게 된다.
+ */
+export async function castChuljeonThrow(ways: number): Promise<CastChuljeonResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const n = Number.isFinite(ways) ? Math.floor(ways) : 0
+  if (n < CHULJEON_WAY_MIN || n > CHULJEON_WAY_MAX) return { success: false, error: 'INVALID_WAYS' }
+
+  const gate = await ritualGate(user.id, 'chuljeon')
+  if (gate !== 'OK') return { success: false, error: gate }
+
+  const admin = createAdminClient()
+  const today = formatKstDate()
+  const dayStart = Date.parse(`${today}T00:00:00+09:00`)
+  const { data: todayRows, error: countError } = await supabase
+    .from('shrine_chuljeon_throws')
+    .select('thrown_at')
+    .eq('user_id', user.id)
+    .gte('thrown_at', new Date(dayStart).toISOString())
+  if (countError) {
+    logger.error('[chuljeon] 회차 조회 실패:', countError)
+    return { success: false, error: 'THROW_FAILED' }
+  }
+
+  const seq = countThrowsOnDay(toThrowEpochMs(todayRows), Date.now())
+  const result = castChuljeon(chuljeonThrowSeed(chuljeonDailySeed(user.id, today), seq), n)
+  // 끝내 갈리지 않은 판도 한 번의 던지기다 — picked 컬럼은 0 으로 두되 기록은 남긴다
+  const picked = result.picked ?? 0
+
+  const { data, error } = await admin.rpc('throw_shrine_chuljeon', {
+    p_user_id: user.id,
+    p_ways: n,
+    p_picked: picked,
+    p_today: today,
+    p_limit: CHULJEON_DAILY_LIMIT,
+  })
+  if (error) {
+    logger.error('[chuljeon] 기록 RPC 실패:', error)
+    return { success: false, error: 'THROW_FAILED' }
+  }
+
+  const row: unknown = Array.isArray(data) ? data[0] : data
+  const allowed = isRecord(row) && row.allowed === true
+  const todayCount = isRecord(row) && typeof row.today_count === 'number' ? row.today_count : CHULJEON_DAILY_LIMIT
+  const remaining = Math.max(0, CHULJEON_DAILY_LIMIT - todayCount)
+
+  if (!allowed) return { success: false, error: 'DAILY_LIMIT', todayCount, remaining }
+  return { success: true, seq, todayCount, remaining }
 }

@@ -93,6 +93,8 @@ const REQUIRED_CLASSES = [
   '.obangki-unfurl',
   '.obangki-samgi',
   '.obangki-purified',
+  '.chuljeon-coin',
+  '.chuljeon-seal',
   '.obangki-burst',
   '.obangki-bubble',
   // 창방 팻말 (의식 전용 페이지 진입점) — 벽 무라 cover 배율 재현이 여기 걸려 있다
@@ -167,6 +169,8 @@ const REQUIRED_KEYFRAMES = [
   'obangkiUnfurl',
   'obangkiSamgiRise',
   'obangkiPurify',
+  'chuljeonCoin',
+  'chuljeonSeal',
   'obangkiBurst',
   'obangkiBubbleIn',
   // 창방 팻말

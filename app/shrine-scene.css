@@ -1507,6 +1507,54 @@
   }
 }
 
+/* ── 척전(擲錢) 「엽전 세 닢」 — 갈림길을 정하는 의식 R-4 ──────────────────────
+   전거는 태종실록 4년(1404): 종묘에서 쟁반 위에 동전을 던져 한양(2길1흉)으로 도읍을 정했다.
+   그래서 연출도 "쟁반 위에 떨어져 구르다 멎는" 한 동작이다 — 던지는 사람은 손을 대지 않는다.
+   길이 여럿이면 한 길씩 차례로 떨어진다(순서는 --cj-delay 가 준다, 타이머가 아니라). */
+.chuljeon-coin {
+  animation: chuljeonCoin 0.72s cubic-bezier(0.3, 0.9, 0.35, 1) var(--cj-delay, 0s) both;
+  will-change: transform, opacity;
+}
+@keyframes chuljeonCoin {
+  0% {
+    transform: translateY(-42px) rotateX(0deg) scale(0.82);
+    opacity: 0;
+  }
+  22% {
+    opacity: 1;
+  }
+  62% {
+    transform: translateY(4px) rotateX(540deg) scale(1.06);
+  }
+  80% {
+    transform: translateY(-3px) rotateX(680deg) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) rotateX(720deg) scale(1);
+    opacity: 1;
+  }
+}
+
+/* 정해진 길에 찍히는 도장 — 셈이 끝났음을 한 박자로 알린다 */
+.chuljeon-seal {
+  animation: chuljeonSeal 0.62s cubic-bezier(0.22, 0.61, 0.36, 1) var(--cj-delay, 0s) both;
+  will-change: transform, opacity;
+}
+@keyframes chuljeonSeal {
+  0% {
+    transform: scale(1.6) rotate(-8deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.94) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
 /* 신당지기 말풍선 — 펼침이 끝나는 박자에 뜬다(지연이 곧 순서다, 타이머가 아니라) */
 .obangki-bubble {
   animation: obangkiBubbleIn 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) 0.62s both;
@@ -1534,6 +1582,8 @@
   .obangki-unfurl,
   .obangki-samgi,
   .obangki-purified,
+  .chuljeon-coin,
+  .chuljeon-seal,
   .obangki-burst,
   .obangki-bubble {
     animation-duration: 0.01ms;

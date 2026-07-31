@@ -20,8 +20,8 @@
 
 import Link from 'next/link'
 import type { RefObject } from 'react'
-import { Flag, Flame } from 'lucide-react'
-import type { AekmakStatus, BaekilStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import { Flag, Flame, Coins } from 'lucide-react'
+import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import type { SoundKey } from '@/lib/domain/shrine/types'
 import { AekmakStrip } from './AekmakSheet'
 
@@ -40,6 +40,8 @@ interface Props {
   /** null 이면 해당 행을 그리지 않는다(비로그인·조회 실패 시 잔여 오표시 금지) */
   aekmak: AekmakStatus | null
   obangki: ObangkiStatus | null
+  /** 척전(엽전 세 닢) — 갈림길 도구. 오방기와 전혀 다른 의식이라 행도 따로 선다 */
+  chuljeon: ChuljeonStatus | null
   baekil: BaekilStatus | null
   /** 액막이 불씨 밝기·문구 — AekmakStrip 에 그대로 전달 */
   litCandles: number
@@ -52,8 +54,8 @@ interface Props {
   aekmakSlotRef: RefObject<HTMLDivElement | null>
 }
 
-export function RitualDock({ aekmak, obangki, baekil, litCandles, play, aekmakSlotRef }: Props) {
-  if (!aekmak && !obangki && !baekil) return null
+export function RitualDock({ aekmak, obangki, chuljeon, baekil, litCandles, play, aekmakSlotRef }: Props) {
+  if (!aekmak && !obangki && !chuljeon && !baekil) return null
 
   return (
     <section className="hanji-card mt-3 overflow-hidden rounded-xl border border-gold-500/[0.18]">
@@ -71,6 +73,7 @@ export function RitualDock({ aekmak, obangki, baekil, litCandles, play, aekmakSl
           </div>
         )}
         {obangki && <ObangkiRow status={obangki} />}
+        {chuljeon && <ChuljeonRow status={chuljeon} />}
         {baekil && <BaekilRow status={baekil} />}
       </div>
     </section>
@@ -97,6 +100,36 @@ function ObangkiRow({ status }: { status: ObangkiStatus }) {
       ) : (
         // 무료 소진 — 값을 미리 밝힌다(눌러 들어가서야 액수를 아는 문을 만들지 않는다)
         <span className={`${STATE_CLASS} text-ink-primary/40`}>복채 {status.cost}만냥</span>
+      )}
+    </Link>
+  )
+}
+
+/**
+ * 척전 행 — 갈림길을 정하는 도구로 나가는 문.
+ *
+ * ⚠️ 오방기 바로 아래에 서지만 **다른 의식**이다. 오방기는 한 가지 일에 신이 답하는 자리(문복),
+ *    척전은 사람이 고르지 못한 갈림길을 하늘에 맡기는 자리다. 그래서 상태 표기도 다르다 —
+ *    복채가 없으므로 "무료 N회"가 아니라 그냥 "N회 남음"이다(값이 있는 척하지 않는다).
+ */
+function ChuljeonRow({ status }: { status: ChuljeonStatus }) {
+  const left = status.remaining
+  return (
+    <Link href="/protected/shrine/chuljeon" className={ROW_CLASS}>
+      <span className={`${PLATE_CLASS} border-gold-500/40 bg-gold-500/[0.14]`}>
+        <Coins className="h-3.5 w-3.5 text-gold-200" />
+      </span>
+      <span className={NAME_CLASS}>엽전 세 닢</span>
+      <span className="flex-1 truncate text-left font-sans text-[11px] text-ink-primary/55">
+        갈림길 앞에서 던져 정합니다
+      </span>
+      {left > 0 ? (
+        <span className={`${STATE_CLASS} text-ink-primary/55`}>
+          <span aria-hidden className={`${DOT_CLASS} bg-gold-500`} />
+          {left}회 남음
+        </span>
+      ) : (
+        <span className={`${STATE_CLASS} text-ink-primary/40`}>내일 다시</span>
       )}
     </Link>
   )

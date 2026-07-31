@@ -84,7 +84,7 @@ import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
-import type { AekmakStatus, BaekilStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
 import { trackEvent } from '@/lib/analytics/ga4'
@@ -260,6 +260,8 @@ interface Props {
    * 무료 잔여를 오표시하면 **복채를 물릴 자리에서 무료라고 말하게 된다**(액막이보다 더 엄격하다).
    */
   obangki?: ObangkiStatus | null
+  /** 척전(엽전 세 닢) 현황 — 갈림길 도구. null 이면 독에서 행을 그리지 않는다 */
+  chuljeon?: ChuljeonStatus | null
   /**
    * 백일기도 현황(소유자 뷰에서만 주입). 방 위 게이지의 유일한 원천이다 —
    * null 이면 게이지를 아예 그리지 않는다. 0% 막대를 지어내면 "아직 서약이 없다"와
@@ -296,6 +298,7 @@ export function ShrineRoomClient({
   familyHall = null,
   aekmak = null,
   obangki = null,
+  chuljeon = null,
   baekil = null,
 }: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
@@ -1653,6 +1656,7 @@ export function ShrineRoomClient({
           <RitualDock
             aekmak={aekmak}
             obangki={obangki}
+            chuljeon={chuljeon}
             baekil={baekil}
             litCandles={litCount}
             play={play}
