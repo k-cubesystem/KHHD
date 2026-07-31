@@ -1,3 +1,9 @@
+// ⚠️ 연출 CSS 는 신당 계열 **전 라우트**에서 적재돼야 한다(감사 A2 P0-1).
+//    종전에는 방 페이지 체인만 이 파일을 import 해서, 오방기·백일기도 **직접 진입**(새로고침·
+//    프로필 버튼)에는 키프레임이 통째로 빠졌다 — 국면 전환이 animationend 에 걸려 있어
+//    "방울이 울리고…"에서 영원히 멎는 무증상 교착이 됐다(콘솔 에러 0, 프로덕션 실측 재현).
+//    개별 페이지 import 는 또 빠뜨린다 — 게이트와 같은 원리로 layout 한 곳에 둔다.
+import '@/app/shrine-scene.css'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'

@@ -312,7 +312,7 @@ export function ObangkiRitual({ status, play }: Props) {
                 {outcome?.error === 'INSUFFICIENT_BOKCHAE' ? (
                   <Link
                     href="/protected/store?tab=bokchae"
-                    className="flex-1 rounded-xl border border-gold-500/35 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
+                    className="flex-1 rounded-lg border border-gold-500/35 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
                   >
                     복채 채우기
                   </Link>
@@ -322,14 +322,14 @@ export function ObangkiRitual({ status, play }: Props) {
                   <button
                     type="button"
                     onClick={restart}
-                    className="flex-1 rounded-xl border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
+                    className="flex-1 rounded-lg border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
                   >
                     다시 여쭙기
                   </button>
                 )}
                 <Link
                   href={SHRINE_HREF}
-                  className="flex-1 rounded-xl border border-white/10 bg-surface py-2.5 text-center font-serif text-[12px] font-bold text-ink-primary/60"
+                  className="flex-1 rounded-lg border border-white/10 bg-surface py-2.5 text-center font-serif text-[12px] font-bold text-ink-primary/60"
                 >
                   신당으로
                 </Link>
@@ -443,7 +443,8 @@ function ComposeStep({
         type="button"
         onClick={onStart}
         disabled={!ready}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 disabled:opacity-40"
+        // 주 CTA — 의식을 성립시키는 버튼은 도장 반경 3px + 도장 그림자 (DESIGN.md "buttons 3px")
+        className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang disabled:opacity-40"
       >
         {paidDraw && <Coins className="h-3.5 w-3.5" />}
         {paidDraw ? `복채 ${cost}만냥으로 기 세우기` : '기 세우고 방울 울리기'}
@@ -670,7 +671,7 @@ function VerdictCard({
           type="button"
           onClick={onShare}
           disabled={sharing}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gold-500/35 bg-gold-500/[0.08] py-2.5 font-serif text-[12px] font-bold text-gold-300 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/35 bg-gold-500/[0.08] py-2.5 font-serif text-[12px] font-bold text-gold-300 disabled:opacity-50"
         >
           {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
           깃발 카드
@@ -678,13 +679,13 @@ function VerdictCard({
         <button
           type="button"
           onClick={onAgain}
-          className="flex-1 rounded-xl border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
+          className="flex-1 rounded-lg border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
         >
           한 번 더
         </button>
         <Link
           href={SHRINE_HREF}
-          className="rounded-xl border border-white/10 bg-surface px-3 py-2.5 text-center font-serif text-[12px] font-bold text-ink-primary/60"
+          className="rounded-lg border border-white/10 bg-surface px-3 py-2.5 text-center font-serif text-[12px] font-bold text-ink-primary/60"
         >
           신당
         </Link>

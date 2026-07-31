@@ -44,6 +44,11 @@ const config: Config = {
           border: 'rgba(226, 213, 181, 0.2)',
         },
         gold: {
+          // 200 은 2026-07-31 감사 A4 P1-0 — text-gold-200 이 37곳에서 쓰이는데 슬롯이 없어
+          // 클래스가 아예 생성되지 않았다(빌드 청크 grep 0건 = 무증상 사망, styled-jsx 사건과 동류).
+          // 값은 DESIGN.md "Gold Light — 하이라이트 텍스트" 그대로(primary.DEFAULT 와 동일) —
+          // 새 색이 아니라 기존 정의색의 슬롯 등록이다.
+          200: '#E8D5A0', // Gold Light (DESIGN.md)
           300: '#F4E4BA', // 파스텔 골드
           400: '#E2D5B5', // 소프트 골드
           500: '#C9A84C', // 메인 골드 (가장 많이 쓰이는 값)

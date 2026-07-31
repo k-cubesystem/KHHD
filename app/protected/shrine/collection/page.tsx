@@ -116,7 +116,7 @@ export default async function ShrineCollectionPage({
               className={`flex flex-col items-center gap-1 rounded-xl border py-2.5 font-serif text-[11px] transition-colors ${
                 active
                   ? 'border-gold-500/50 bg-gold-500/[0.12] font-bold text-gold-300'
-                  : 'border-white/8 bg-surface/40 text-ink-light/55'
+                  : 'border-white/[0.08] bg-surface/40 text-ink-light/55'
               }`}
             >
               <Icon className="h-4 w-4" strokeWidth={1.5} />

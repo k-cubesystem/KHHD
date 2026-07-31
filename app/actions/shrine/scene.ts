@@ -703,7 +703,10 @@ export async function activateThemePack(
     if (!owned) return { success: false, error: 'NOT_OWNED' }
   }
 
-  const updateQuery = supabase.from('shrines').update({ active_pack_id: pack.id }).eq('user_id', user.id)
+  // ⚠️ admin 으로 쓴다(감사 A3 S-P0-1). 소유권 검증(위)은 앱 경로에만 있고, 사용자 클라이언트
+  //    쓰기는 PostgREST 직접 PATCH 와 같은 권한이라 "검증 없는 착용"의 존재 증명이 된다.
+  //    이 전환 뒤 shrines 의 사용자 UPDATE 컬럼 권한에서 active_pack_id 를 회수한다(마이그레이션).
+  const updateQuery = createAdminClient().from('shrines').update({ active_pack_id: pack.id }).eq('user_id', user.id)
   const { error } = await (familyMemberId
     ? updateQuery.eq('family_member_id', familyMemberId)
     : updateQuery.is('family_member_id', null))

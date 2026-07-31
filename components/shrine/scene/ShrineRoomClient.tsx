@@ -12,7 +12,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, Flag, MessageCircle } from 'lucide-react'
+import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, MessageCircle } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { deityTurnFrames } from '@/lib/domain/shrine/deities'
@@ -73,8 +73,7 @@ import { WalkingKeeper, type KeeperSpot } from './WalkingKeeper'
 import { DeityTurn } from './DeityTurn'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
-import { BaekilStrip } from './BaekilStrip'
-import { AekmakStrip } from './AekmakSheet'
+import { RitualDock } from './RitualDock'
 import { WindowPlaques } from './WindowPlaques'
 import { hasPlaqueWall } from '@/lib/domain/shrine/plaque'
 import { FamilyHall } from './FamilyHall'
@@ -1362,7 +1361,7 @@ export function ShrineRoomClient({
       {/* 헤더 */}
       <div className="flex items-center justify-between px-1 pb-2.5">
         <div>
-          <p className="text-[9px] tracking-[0.32em] text-gold-dim font-serif">
+          <p className="text-[9px] tracking-[0.32em] text-gold-600 font-serif">
             {scene.familyMemberId ? '가 족 신 당' : '나 의 신 당'}
           </p>
           <h1 className="text-base font-serif font-bold text-ink-primary">{scene.shrineName}</h1>
@@ -1410,13 +1409,10 @@ export function ShrineRoomClient({
         </div>
       </div>
 
-      {/* 백일기도 게이지 — 방 위 한 줄 (CEO 6차 지시 ④).
-          여기 있던 「主神 ○○ · 緣 …」 인연 스트립과 「기원 N단」 스트립은 걷어냈다.
-          · 主神 이름은 방 안 말풍선 머리(신당지기 · ○○)에 그대로 남아 있고, 인연·좌정은 모아보기 「신위」 탭이 든다.
-          · 기원 단수는 백일기도 진행도의 원천이라 게이지가 같은 사실을 더 구체적으로 말한다.
-            무료 보상 수령은 모아보기로 옮겼다(테마·신물이 곧 그 보상이라 그 화면이 제자리다).
-          소유자 전용 — 방문자는 남의 서약을 셀 수 없다(RLS). */}
-      {isOwner && baekil && <BaekilStrip status={baekil} />}
+      {/* 백일기도 게이지가 있던 자리 — 의식 독(RitualDock, 방 아래)으로 내려갔다(P1-1).
+          같은 급의 의식 3종이 방을 사이에 두고 위 1 + 아래 2로 갈라져 있던 것을 한 카드로 모았고,
+          그 덕에 방이 헤더 바로 아래로 올라온다. 6차 지시 ④의 취지(main神·기원 스트립 걷어냄)는
+          그대로다(主神·기원 스트립은 계속 없음) — 게이지가 사라진 것이 아니라 의식들 곁으로 간 것이다. */}
 
       {/* 룸 */}
       <div
@@ -1644,42 +1640,22 @@ export function ShrineRoomClient({
         </div>
       )}
 
-      {/* 의식(儀式) — 신당 하단.
+      {/* 의식 독(儀式 dock) — 신당 하단 한 카드 (P1-1, 스트립 3개 → RitualDock).
           액막이는 **여기 남는다**: 촛불에서 불을 받아 태우는 의식이라 불이 없는 곳으로 나가면
           행위 자체가 성립하지 않는다(촛불 수를 넘겨 불씨 밝기를 잇는다 — 방의 lit 시스템과 같은 불).
-          창방 「액막이」 팻말이 여는 시트도 **이 스트립의 것**이다(openAekmakSheet) — 문은 하나다.
-          오방기는 전용 페이지로 나갔다(CEO 지시 2026-07-30) — 여기 남는 것은 그 문이다.
-          창방 팻말과 같은 주소를 가리키되, 팻말이 없는 테마·좁은 화면에서도 문은 늘 여기 있다.
-          백일기도 문은 방 **위** 게이지가 겸한다 — 같은 페이지로 가는 문을 한 화면에 두 개 두지 않는다. */}
+          창방 「액막이」 팻말이 여는 시트도 **이 독의 것**이다(openAekmakSheet → aekmakRef) — 문은 하나다.
+          오방기·백일기도는 전용 페이지로 나갔고(CEO 지시 2026-07-30) 여기 남는 것은 그 문이다.
+          창방 팻말과 같은 주소를 가리키되, 팻말이 없는 테마·좁은 화면에서도 문은 늘 여기 있다. */}
       {isOwner && !editing && (
-        <div className="mt-3 space-y-1.5 px-1">
-          {aekmak && (
-            <div ref={aekmakRef}>
-              <AekmakStrip status={aekmak} litCandles={litCount} play={play} />
-            </div>
-          )}
-          <Link
-            href="/protected/shrine/obangki"
-            className="flex items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
-          >
-            <span
-              className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full"
-              style={{ background: 'rgba(62,95,134,0.22)', boxShadow: '0 0 9px rgba(143,180,218,0.28)' }}
-            >
-              <Flag className="h-3 w-3" style={{ color: '#9FBEDD' }} />
-            </span>
-            <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
-              오방기<span className="text-gold-500/60"> 旗</span>
-            </span>
-            <span className="flex-1 truncate text-left font-sans text-[10px] text-ink-primary/45">
-              오방 신기를 뽑아 오늘의 방위를 봅니다
-            </span>
-            {obangki && (
-              <span className="whitespace-nowrap font-serif text-[9.5px] tabular-nums text-ink-primary/45">
-                오늘 {Math.max(0, obangki.freeLimit - obangki.todayCount)}/{obangki.freeLimit}
-              </span>
-            )}
-          </Link>
+        <div className="px-1">
+          <RitualDock
+            aekmak={aekmak}
+            obangki={obangki}
+            baekil={baekil}
+            litCandles={litCount}
+            play={play}
+            aekmakSlotRef={aekmakRef}
+          />
         </div>
       )}
 
@@ -1692,7 +1668,7 @@ export function ShrineRoomClient({
               style={{ background: '#1e1b15', border: '1px solid rgba(201,168,76,0.4)' }}
             >
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] tracking-[0.14em] text-gold-dim">보관함 — 탭하여 꺼내기</span>
+                <span className="text-[10px] tracking-[0.14em] text-gold-600">보관함 — 탭하여 꺼내기</span>
                 <Link
                   href="/protected/store?tab=items"
                   className="text-[10px] font-bold text-gold-300 border border-gold-500/40 rounded-full px-2.5 py-1"

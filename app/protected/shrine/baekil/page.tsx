@@ -33,7 +33,7 @@ export default async function BaekilPage() {
             </p>
             <Link
               href="/protected/shrine"
-              className="mt-5 inline-flex items-center gap-1 rounded-xl border border-gold-500/40 bg-gold-500/[0.08] px-4 py-2.5 font-serif text-[12px] font-bold text-gold-300"
+              className="mt-5 inline-flex items-center gap-1 rounded-lg border border-gold-500/40 bg-gold-500/[0.08] px-4 py-2.5 font-serif text-[12px] font-bold text-gold-300"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               신당으로

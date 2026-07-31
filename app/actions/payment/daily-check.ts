@@ -37,7 +37,11 @@ export async function checkDailyAttendance() {
     }
 
     const admin = createAdminClient()
-    const db = admin ?? supabase
+
+    // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
+
+    if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
+    const db = admin
     const todayStr = getKSTDateString()
     const weekStartStr = getKSTWeekStartString()
 
@@ -77,7 +81,11 @@ export async function recordDailyAttendance() {
     }
 
     const admin = createAdminClient()
-    const db = admin ?? supabase
+
+    // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
+
+    if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
+    const db = admin
     const todayStr = getKSTDateString()
     const weekStartStr = getKSTWeekStartString()
 

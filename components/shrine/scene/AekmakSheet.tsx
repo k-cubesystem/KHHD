@@ -213,7 +213,8 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
 
   return (
     <>
-      {/* 스트립 — 기원(祈願) 스트립과 같은 톤. 신당 하단 의식 진입점 */}
+      {/* 행 — 의식 독(RitualDock)의 액막이 행. 겉 문법만 독의 행 스펙이고
+          여는 버튼·data-aekmak-open·시트 로직은 종전 그대로다(P1-1 배선 보존). */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -222,31 +223,37 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
            이동이 아니라 열기여야 한다). 팻말이 `querySelector('button')` 로 첫 버튼을 잡으면
            스트립에 버튼이 하나만 더 생겨도 조용히 엉뚱한 걸 누른다 — 그래서 이름표를 박는다. */
         data-aekmak-open
-        className="flex w-full items-center gap-2 rounded-[10px] border border-gold-500/20 bg-surface/60 px-2.5 py-1.5"
+        className="flex min-h-[44px] w-full items-center gap-2.5 px-4"
       >
+        {/* 아이콘 플레이트 — 도장 반경 3px. 소진이면 인주가 마른 듯 가라앉는다(점·글로우 없음) */}
         <span
-          className="grid h-5 w-5 place-items-center rounded-full"
-          style={{
-            background: soldOut ? 'rgba(255,255,255,0.04)' : 'rgba(158,43,43,0.2)',
-            boxShadow: soldOut ? 'none' : '0 0 9px rgba(200,64,64,0.35)',
-          }}
+          className={`grid h-[26px] w-[26px] flex-shrink-0 place-items-center rounded-[3px] border ${
+            soldOut ? 'border-white/10 bg-white/[0.04]' : 'border-seal/35 bg-seal/[0.16]'
+          }`}
         >
-          <Flame className="h-3 w-3" style={{ color: soldOut ? '#5C564C' : '#E8A07A' }} />
+          <Flame className={`h-3.5 w-3.5 ${soldOut ? 'text-[#5C564C]' : 'text-[#E8A07A]'}`} />
         </span>
-        <span className="whitespace-nowrap font-serif text-[11px] text-gold-200">
-          액막이<span className="text-gold-500/60"> 厄</span>
+        <span className="whitespace-nowrap font-serif text-body-sm font-bold text-ink-primary">액막이</span>
+        <span className="flex-1 truncate text-left font-sans text-[11px] text-ink-primary/55">
+          마음에 걸린 것을 태웁니다
         </span>
-        <span className="flex-1 truncate text-left font-sans text-[10px] text-ink-primary/45">
-          {soldOut ? '오늘 몫은 다 하셨습니다' : '마음에 걸린 것을 부적에 적어 태웁니다'}
-        </span>
-        <span className="whitespace-nowrap font-serif text-[9.5px] tabular-nums text-ink-primary/45">
-          오늘 {remaining}/{status.limit}
-        </span>
+        {soldOut ? (
+          <span className="whitespace-nowrap font-sans text-[11px] tabular-nums text-ink-primary/40">
+            오늘 몫을 다 했습니다
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 whitespace-nowrap font-sans text-[11px] tabular-nums text-ink-primary/55">
+            <span aria-hidden className="inline-block h-[5px] w-[5px] rounded-full bg-red-light" />
+            오늘 {remaining}회 남음
+          </span>
+        )}
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-toast flex items-end justify-center"
+          // z-[130]: 가이드 바가 z-[125]로 토스트(60)보다 높다 — 시트가 z-toast 면 진행 버튼이
+          // 가이드 바에 덮여 할 일이 있는 계정 전원이 의식을 못 밟는다(감사 A2 P0-2, 실측 재현).
+          className="fixed inset-0 z-[130] flex items-end justify-center"
           onClick={close}
           role="dialog"
           aria-modal="true"
@@ -294,18 +301,22 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
 
             {phase !== 'compose' && (
               <div className="flex flex-col items-center">
-                {/* 부적 무대 — 파티클 캔버스는 부적 위(z11)에서 재·불티를 뿌린다 */}
-                <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
-                  <EffectsCanvas ref={effectsRef} />
-                  <TalismanPaper
-                    tag={tag}
-                    sigil={sigil}
-                    burning={phase === 'burning'}
-                    onBurnEnd={() => setPhase('settled')}
-                  />
-                  {/* 불씨를 놓는 자리 — 부적 하단 1/3. 히트 판정의 기준 사각형이라 항상 렌더한다 */}
-                  <div ref={dropRef} aria-hidden className="absolute inset-x-0 bottom-0 h-1/3" />
-                </div>
+                {/* 부적 무대 — 파티클 캔버스는 부적 위(z11)에서 재·불티를 뿌린다.
+                    ⚠️ settled 에서는 그리지 않는다 — burning 클래스가 내려가는 순간 마스크가 벗겨져
+                    **다 탄 부적이 원상복구된 채** 마무리 카드 위에 서 있었다(감사 A2 P1, 실측). */}
+                {phase !== 'settled' && (
+                  <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
+                    <EffectsCanvas ref={effectsRef} />
+                    <TalismanPaper
+                      tag={tag}
+                      sigil={sigil}
+                      burning={phase === 'burning'}
+                      onBurnEnd={() => setPhase('settled')}
+                    />
+                    {/* 불씨를 놓는 자리 — 부적 하단 1/3. 히트 판정의 기준 사각형이라 항상 렌더한다 */}
+                    <div ref={dropRef} aria-hidden className="absolute inset-x-0 bottom-0 h-1/3" />
+                  </div>
+                )}
 
                 {phase === 'talisman' && (
                   <IgniteStep
@@ -424,7 +435,8 @@ function ComposeStep({
         type="button"
         onClick={onNext}
         disabled={!tag || soldOut}
-        className="w-full rounded-xl border border-seal/50 bg-seal/20 py-3 font-serif text-[13px] font-bold text-[#f2dcdc] disabled:opacity-40"
+        // 주 CTA — 의식을 성립시키는 버튼은 도장 반경 3px + 도장 그림자 (DESIGN.md "buttons 3px")
+        className="w-full rounded-[3px] border border-seal/50 bg-seal/20 py-3 font-serif text-[13px] font-bold text-[#f2dcdc] shadow-dojang disabled:opacity-40"
       >
         {soldOut ? '오늘 몫의 액막이는 다 하셨습니다' : '부적에 새기기'}
       </button>
@@ -687,7 +699,7 @@ function SettleCard({
           type="button"
           onClick={onShare}
           disabled={sharing}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-gold-500/35 bg-gold-500/[0.08] py-2.5 font-serif text-[12px] font-bold text-gold-300 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/35 bg-gold-500/[0.08] py-2.5 font-serif text-[12px] font-bold text-gold-300 disabled:opacity-50"
         >
           {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
           액막이 카드
@@ -696,7 +708,7 @@ function SettleCard({
           <button
             type="button"
             onClick={onAgain}
-            className="flex-1 rounded-xl border border-seal/45 bg-seal/15 py-2.5 font-serif text-[12px] font-bold text-[#f2dcdc]"
+            className="flex-1 rounded-lg border border-seal/45 bg-seal/15 py-2.5 font-serif text-[12px] font-bold text-[#f2dcdc]"
           >
             한 장 더 태우기
           </button>
@@ -704,7 +716,7 @@ function SettleCard({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl border border-white/10 bg-surface py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
+            className="flex-1 rounded-lg border border-white/10 bg-surface py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
           >
             신당으로
           </button>

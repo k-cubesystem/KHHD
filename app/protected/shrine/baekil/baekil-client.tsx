@@ -104,7 +104,8 @@ export function BaekilClient({ status }: { status: BaekilStatus }) {
               type="button"
               onClick={() => void onStart()}
               disabled={locked}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold-500/40 bg-gold-500/[0.10] py-3 font-serif text-[13px] font-bold text-gold-300 disabled:opacity-40"
+              // 주 CTA — 의식을 성립시키는 버튼은 도장 반경 3px + 도장 그림자 (DESIGN.md "buttons 3px")
+              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/40 bg-gold-500/[0.10] py-3 font-serif text-[13px] font-bold text-gold-300 shadow-dojang disabled:opacity-40"
             >
               {locked ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flame className="h-4 w-4" />}
               {nextRound}회차 첫 촛불 올리기
@@ -156,7 +157,8 @@ export function BaekilClient({ status }: { status: BaekilStatus }) {
                 type="button"
                 onClick={() => void onSettle()}
                 disabled={locked}
-                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold-500/50 bg-gold-500/[0.14] py-3 font-serif text-[13px] font-bold text-gold-200 disabled:opacity-40"
+                // 주 CTA — 완주 정산도 의식의 성립이라 도장 문법을 따른다
+                className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/[0.14] py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang disabled:opacity-40"
               >
                 {locked ? <Loader2 className="h-4 w-4 animate-spin" /> : <Flame className="h-4 w-4" />}
                 백일 발원 갈무리하기
@@ -170,7 +172,7 @@ export function BaekilClient({ status }: { status: BaekilStatus }) {
             {!prayedToday && (
               <Link
                 href="/protected/shrine"
-                className="mt-2.5 block w-full rounded-xl border border-gold-500/40 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
+                className="mt-2.5 block w-full rounded-lg border border-gold-500/40 bg-gold-500/[0.08] py-2.5 text-center font-serif text-[12px] font-bold text-gold-300"
               >
                 신당에서 기도 올리기
               </Link>

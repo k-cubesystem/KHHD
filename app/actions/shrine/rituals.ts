@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { logger } from '@/lib/utils/logger'
+import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { rateLimit } from '@/lib/utils/rate-limit'
 import { formatKstDate } from '@/lib/utils'
 import {
   AEKMAK_DAILY_LIMIT,
@@ -120,7 +122,7 @@ export async function getAekmakStatus(): Promise<AekmakStatus | null> {
 export interface BurnAekmakResult {
   success: boolean
   /** 실패 사유 코드(화면이 문구를 고른다). */
-  error?: 'UNAUTHORIZED' | 'INVALID_TAG' | 'DAILY_LIMIT' | 'BURN_FAILED'
+  error?: 'UNAUTHORIZED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'INVALID_TAG' | 'DAILY_LIMIT' | 'BURN_FAILED'
   /** 처리 후 오늘 남은 횟수. 실패해도 알 수 있으면 함께 내린다. */
   remaining?: number
 }
@@ -139,6 +141,9 @@ export async function burnAekmak(tag: string): Promise<BurnAekmakResult> {
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
   if (!isAekmakTag(tag)) return { success: false, error: 'INVALID_TAG' }
+
+  const gate = await ritualGate(user.id, 'aekmak')
+  if (gate !== 'OK') return { success: false, error: gate }
 
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('burn_shrine_aekmak', {
@@ -165,6 +170,22 @@ export async function burnAekmak(tag: string): Promise<BurnAekmakResult> {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null
+}
+
+/**
+ * 의식 공통 게이트 — 멤버십 + 분당 호출 상한 (감사 A3 P1, 2026-07-31).
+ *
+ * 페이지는 layout 이 막지만 서버 액션은 그 자체로 공개 엔드포인트다(4차 CONCERN #1 의 액션판).
+ * 같은 날 배포된 saveFamilyHallSeats 는 게이트가 걸려 있었는데 의식 4종만 비어 있었다.
+ * 일 상한 RPC(3회)는 **거절된 호출을 세지 않으므로** 호출 폭주 자체는 여기 rateLimit 이 막는다.
+ * 조회(getXxxStatus)에는 걸지 않는다 — 읽기는 RLS 본인 스코프가 이미 막고, 게이트 실패 시
+ * 진입점 렌더 자체가 사라져 "멤버십 만료 직후 화면이 통째로 죽는" 회귀를 만들 이유가 없다.
+ */
+async function ritualGate(userId: string, ritual: string): Promise<'OK' | 'FORBIDDEN' | 'RATE_LIMITED'> {
+  const membership = await getCurrentUserMembership()
+  if (!membership) return 'FORBIDDEN'
+  const rl = await rateLimit(`ritual-${ritual}:${userId}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
+  return rl.success ? 'OK' : 'RATE_LIMITED'
 }
 
 // ─── R-2 오방기 점괘 ──────────────────────────────────────────
@@ -243,7 +264,15 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
 export interface DrawObangkiResult {
   success: boolean
   /** 실패 사유 코드(화면이 문구를 고른다). */
-  error?: 'UNAUTHORIZED' | 'INVALID_COLOR' | 'INVALID_QTYPE' | 'NEEDS_PAYMENT' | 'INSUFFICIENT_BOKCHAE' | 'DRAW_FAILED'
+  error?:
+    | 'UNAUTHORIZED'
+    | 'FORBIDDEN'
+    | 'RATE_LIMITED'
+    | 'INVALID_COLOR'
+    | 'INVALID_QTYPE'
+    | 'NEEDS_PAYMENT'
+    | 'INSUFFICIENT_BOKCHAE'
+    | 'DRAW_FAILED'
   /** 이번 뽑기에 복채를 물었는가 */
   charged?: boolean
   /** 처리 후 오늘 뽑은 총 횟수 */
@@ -275,6 +304,9 @@ export async function drawObangki(color: string, qtype: string, confirmPaid: boo
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
   if (!isObangkiColor(color)) return { success: false, error: 'INVALID_COLOR' }
   if (!isObangkiQType(qtype)) return { success: false, error: 'INVALID_QTYPE' }
+
+  const gate = await ritualGate(user.id, 'obangki')
+  if (gate !== 'OK') return { success: false, error: gate }
 
   const admin = createAdminClient()
   const today = formatKstDate()
@@ -496,7 +528,7 @@ export async function getBaekilStatus(): Promise<BaekilStatus | null> {
 export interface StartBaekilResult {
   success: boolean
   /** 실패 사유 코드(화면이 문구를 고른다). */
-  error?: 'UNAUTHORIZED' | 'ALREADY_ACTIVE' | 'START_FAILED'
+  error?: 'UNAUTHORIZED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'ALREADY_ACTIVE' | 'START_FAILED'
   /** 시작된(또는 이미 진행 중인) 서약 id */
   vowId?: string
   /** 그 서약의 회차 */
@@ -518,6 +550,9 @@ export async function startBaekilVow(): Promise<StartBaekilResult> {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const gate = await ritualGate(user.id, 'baekil')
+  if (gate !== 'OK') return { success: false, error: gate }
 
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('start_shrine_vow', {
@@ -549,7 +584,7 @@ export async function startBaekilVow(): Promise<StartBaekilResult> {
 export interface SettleBaekilResult {
   success: boolean
   /** 실패 사유 코드(화면이 문구를 고른다). */
-  error?: 'UNAUTHORIZED' | 'NOT_READY' | 'SETTLE_FAILED'
+  error?: 'UNAUTHORIZED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'NOT_READY' | 'SETTLE_FAILED'
   /** 완주한 회차 */
   round?: number
   /** 그 회차의 트로피 등급 */
@@ -579,6 +614,9 @@ export async function settleBaekilVow(): Promise<SettleBaekilResult> {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const gate = await ritualGate(user.id, 'baekil')
+  if (gate !== 'OK') return { success: false, error: gate }
 
   const result = await grantVowCompletion(user.id)
   if (result.error) return { success: false, error: 'SETTLE_FAILED' }

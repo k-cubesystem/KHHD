@@ -43,6 +43,8 @@ export async function checkAttendanceAvailability() {
   }
   const supabase = await createClient()
   const admin = createAdminClient()
+  // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
+  if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -52,7 +54,7 @@ export async function checkAttendanceAvailability() {
   }
 
   const today = getKSTDateString()
-  const db = admin ?? supabase
+  const db = admin
 
   const { data: todayRecord } = await db
     .from('attendance_logs')
@@ -89,7 +91,9 @@ export async function checkInAttendance() {
   try {
     // 이미 체크인했는지 확인 (admin client로)
     const admin = createAdminClient()
-    const db = admin ?? supabase
+    // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
+    if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
+    const db = admin
 
     const todayStr = getKSTDateString()
     const weekStartStr = getKSTWeekStartString()
@@ -131,7 +135,7 @@ export async function checkInAttendance() {
       ')',
     ].join('')
 
-    // 복채 지급(잔액 쓰기)은 service_role 전용 — 위에서 만든 db(admin ?? supabase) 재사용.
+    // 복채 지급(잔액 쓰기)은 service_role 전용 — 위에서 만든 db(admin, R7 가드 통과분) 재사용.
 
     // 1. 먼저 wallet이 존재하는지 확인하고 없으면 생성
     const { data: existingWallet } = await db.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
@@ -239,7 +243,9 @@ export async function getWeeklyAttendance() {
   }
   const supabase = await createClient()
   const admin = createAdminClient()
-  const db = admin ?? supabase
+  // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
+  if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
+  const db = admin
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -303,7 +309,9 @@ export async function getMonthlyAttendance() {
   }
   const supabase = await createClient()
   const admin = createAdminClient()
-  const db = admin ?? supabase
+  // R7: service role 부재 시 사용자 클라이언트로 강등하지 않는다 — S1b 이후 강등은 조용한 지급 실패가 된다
+  if (!admin) throw new Error('[R7] SUPABASE_SERVICE_ROLE_KEY 부재 — 지급 경로 강등 금지')
+  const db = admin
   const {
     data: { user },
   } = await supabase.auth.getUser()
