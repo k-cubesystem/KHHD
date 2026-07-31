@@ -18,6 +18,7 @@
  */
 
 import { hashSeed, kstDayKey } from './aekmak'
+import type { Element } from '@/lib/domain/shrine/types'
 
 // ─── 오방색 5기 ───────────────────────────────────────────────
 //
@@ -438,4 +439,108 @@ export function remainingFreeDraws(drawnAtMs: readonly number[], epochMs: number
 export function isPaidDraw(todayCount: number): boolean {
   const n = Number.isFinite(todayCount) ? Math.max(0, Math.floor(todayCount)) : 0
   return n >= OBANGKI_DAILY_FREE
+}
+
+// ─── 자동 선출 (CEO 7차: "내가 고르는 게 아니라 랜덤으로 나오게") ───────────
+
+/**
+ * 이번 회차에 **저절로 나오는** 깃발 자리(0~4).
+ *
+ * 사용자 선택을 폐지했으므로 어느 기가 나오는지는 회차 시드가 정한다 — 같은 (userId, 날짜, seq)는
+ * 항상 같은 자리다(Math.random 금지 규율 그대로). 진열(shuffleFlags)과 다른 소금을 쓰는 이유:
+ * 같은 시드를 그대로 쓰면 선출이 진열 순서와 상관을 갖게 되고, 소금 하나로 두 결정이 독립이 된다.
+ *
+ * ⚠️ 이 함수가 서버 색 확정의 근거다: 서버 액션이 같은 시드로 이 함수를 불러 색을 스스로 계산하고,
+ * 클라이언트는 그 색을 **보여줄 뿐**이다 — "시드 역산으로 미리 안다"는 감사 A3 P1 은 선택권이
+ * 사라지면서 함께 소멸한다(알아도 할 수 있는 것이 없다).
+ */
+export function electIndex(seed: number): number {
+  return pickIndex(hashSeed(`elect|${seed >>> 0}`), OBANGKI_COLORS.length)
+}
+
+// ─── 사주 해석 층 (CEO 7차: "해석은 그 사람 사주 데이터 기반") ──────────────
+
+/** 오방색 ↔ 오행 — 전승 그대로: 청=木·홍=火·황=土·백=金, 흑(北·水)은 현대 무속 관행대로 녹이 대신한다. */
+export const OBANGKI_COLOR_ELEMENT: Readonly<Record<ObangkiColor, Element>> = Object.freeze({
+  blue: 'wood',
+  red: 'fire',
+  yellow: 'earth',
+  white: 'metal',
+  green: 'water',
+})
+
+/** 상생 고리 — 木生火 火生土 土生金 金生水 水生木 */
+const SAENG: Readonly<Record<Element, Element>> = Object.freeze({
+  wood: 'fire',
+  fire: 'earth',
+  earth: 'metal',
+  metal: 'water',
+  water: 'wood',
+})
+/** 상극 고리 — 木剋土 土剋水 水剋火 火剋金 金剋木 */
+const GEUK: Readonly<Record<Element, Element>> = Object.freeze({
+  wood: 'earth',
+  earth: 'water',
+  water: 'fire',
+  fire: 'metal',
+  metal: 'wood',
+})
+
+/**
+ * 뽑힌 색의 오행과 사용자 용신(用神)의 관계 5종.
+ * 생입 = 색이 용신을 살린다(가장 반가운 괘) · 비화 = 같은 기운 · 설기 = 용신이 힘을 내어준다 ·
+ * 제압 = 용신이 색을 다스린다(주도권) · 극입 = 색이 용신을 누른다(느긋하게 갈 자리).
+ */
+export type SajuRelation = 'saengip' | 'bihwa' | 'seolgi' | 'jeap' | 'geukip'
+
+export function sajuRelation(color: ObangkiColor, yongsin: Element): SajuRelation {
+  const el = OBANGKI_COLOR_ELEMENT[color]
+  if (el === yongsin) return 'bihwa'
+  if (SAENG[el] === yongsin) return 'saengip'
+  if (SAENG[yongsin] === el) return 'seolgi'
+  if (GEUK[yongsin] === el) return 'jeap'
+  return 'geukip'
+}
+
+/**
+ * 관계별 문구 풀 — 기본 층(색×유형 120문) **위에 얹는 한 문장**이다. AI 0원·즉답 결정론 유지.
+ * 규율은 기본 풀과 동일: 서술 어미(-구나/-이다/-네)만, 단정·명령·효능 주장 금지(금지어 린트 대상).
+ */
+const SAJU_LINES: Readonly<Record<SajuRelation, readonly string[]>> = Object.freeze({
+  saengip: Object.freeze([
+    '이 빛깔은 그대의 용신을 살리는 기운이구나 — 오늘의 걸음에 순풍이 실리겠다.',
+    '그대에게 필요한 기운을 이 기가 곧장 데워 주는구나.',
+    '용신이 반기는 빛이다 — 마음이 기우는 쪽에 힘이 실리겠구나.',
+  ]),
+  bihwa: Object.freeze([
+    '그대의 용신과 같은 기운이 나왔구나 — 낯익은 힘이라 다루기 쉽겠다.',
+    '같은 결의 기운이 어깨를 나란히 하는구나 — 서두르지 않아도 되겠다.',
+    '용신과 한 빛깔이다 — 지금 하던 결을 그대로 이어가도 좋겠구나.',
+  ]),
+  seolgi: Object.freeze([
+    '용신이 제 힘을 내어 이 빛을 밝히는구나 — 베푼 만큼 돌아오는 자리다.',
+    '기운이 밖으로 흐르는 괘다 — 쏟은 정성이 모양을 갖추겠구나.',
+    '내어주며 여는 자리구나 — 무리하지 않는 선에서 움직여 보거라 하는 뜻이다.',
+  ]),
+  jeap: Object.freeze([
+    '그대의 용신이 이 기운을 다스리는구나 — 주도권이 그대 손에 있다.',
+    '용신이 고삐를 쥔 괘다 — 조건을 그대가 정해도 되겠구나.',
+    '그대가 판을 이끄는 형국이다 — 차분히 몫을 챙기면 되겠구나.',
+  ]),
+  geukip: Object.freeze([
+    '이 기운이 용신을 살짝 누르는구나 — 오늘은 느긋하게 한 걸음 늦춰도 좋겠다.',
+    '맞바람이 조금 있는 괘다 — 급한 마음만 내려놓으면 탈이 없겠구나.',
+    '기운이 팽팽한 자리구나 — 오늘은 지키는 쪽이 이기는 날이겠다.',
+  ]),
+})
+
+/** 사주 층 한 문장 — 같은 (색, 용신, 시드)는 항상 같은 문장. 용신이 없으면 호출하지 않는다. */
+export function sajuLine(color: ObangkiColor, yongsin: Element, seed: number): string {
+  const pool = SAJU_LINES[sajuRelation(color, yongsin)]
+  return pool[pickIndex(hashSeed(`saju|${color}|${yongsin}|${seed >>> 0}`), pool.length)]
+}
+
+/** 문구 풀 전체(금지 어휘 린트 대상). */
+export function allSajuLines(): readonly string[] {
+  return (Object.keys(SAJU_LINES) as SajuRelation[]).flatMap((r) => [...SAJU_LINES[r]])
 }

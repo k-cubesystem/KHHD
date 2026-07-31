@@ -21,10 +21,13 @@ import {
   OBANGKI_EXTRA_COST,
   countDrawsOnDay,
   dailySeed,
-  isObangkiColor,
+  drawSeed,
+  electIndex,
   isObangkiQType,
   remainingFreeDraws,
+  shuffleFlags,
 } from '@/lib/domain/ritual/obangki'
+import { isElement, type Element } from '@/lib/domain/shrine/types'
 import {
   BAEKIL_TARGET_DAYS,
   daysSinceLastPrayer,
@@ -204,6 +207,11 @@ export interface ObangkiStatus {
    * userId 문자열 대신 해시를 내려보낸다 — 계정 식별자가 DOM·공유 카드로 새지 않게.
    */
   seed: number
+  /**
+   * 사용자 용신(用神) 오행 — 사주 해석 층(sajuLine)의 재료 (CEO 7차: "그 사람 사주 기반").
+   * 명식 분석 전이면 null — 화면은 기본 층(색×유형 풀)만 보여준다(폴백 필수).
+   */
+  yongsin: Element | null
 }
 
 /** timestamptz 문자열 → epochMs. 파싱 실패는 제외(카운트를 부풀리지 않는다). */
@@ -248,12 +256,19 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
     }
 
     const stamps = toDrawEpochMs(data)
+    // 용신은 명식 분석 산출물 — 없으면 null 로 두고 화면이 기본 층만 쓴다(신규 가입 직후 등)
+    const { data: energy } = await supabase
+      .from('user_energy_profile')
+      .select('yongsin_element')
+      .eq('user_id', user.id)
+      .maybeSingle()
     return {
       remainingFree: remainingFreeDraws(stamps, now),
       freeLimit: OBANGKI_DAILY_FREE,
       todayCount: countDrawsOnDay(stamps, now),
       cost: OBANGKI_EXTRA_COST,
       seed: dailySeed(user.id, today),
+      yongsin: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
     }
   } catch (e) {
     logger.warn('[obangki] 현황 조회 예외(비치명):', e)
@@ -268,7 +283,6 @@ export interface DrawObangkiResult {
     | 'UNAUTHORIZED'
     | 'FORBIDDEN'
     | 'RATE_LIMITED'
-    | 'INVALID_COLOR'
     | 'INVALID_QTYPE'
     | 'NEEDS_PAYMENT'
     | 'INSUFFICIENT_BOKCHAE'
@@ -281,10 +295,12 @@ export interface DrawObangkiResult {
   remainingFree?: number
   /** 차감 후 지갑 잔액(복채로 뽑았을 때만) */
   balance?: number
+  /** 서버가 확정한 뽑힌 색 — 화면은 이 값을 **보여줄 뿐**이다(성공 시 항상 있다) */
+  color?: import('@/lib/domain/ritual/obangki').ObangkiColor
 }
 
 /**
- * 오방기 뽑기 기록 — 뽑힌 색과 질문유형만 받는다(질문·선택지는 화면을 떠나지 않는다).
+ * 오방기 뽑기 — **질문유형만 받는다**(색은 서버가 시드·회차로 확정, 질문·선택지는 화면을 떠나지 않는다).
  *
  * 과금 순서가 이 함수의 핵심이다:
  *   ① 무조건 **무료 시도 먼저**(RPC p_paid=false — 상한 검사와 INSERT 가 한 문장).
@@ -296,13 +312,12 @@ export interface DrawObangkiResult {
  * 차감은 server-only 모듈(spendBokchae)만 쓴다. 차감 후 기록이 실패하면 곧바로 환불한다
  * (deities.ts 의 구매 → 지급 실패 → refundBokchae 와 같은 패턴).
  */
-export async function drawObangki(color: string, qtype: string, confirmPaid: boolean): Promise<DrawObangkiResult> {
+export async function drawObangki(qtype: string, confirmPaid: boolean): Promise<DrawObangkiResult> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
-  if (!isObangkiColor(color)) return { success: false, error: 'INVALID_COLOR' }
   if (!isObangkiQType(qtype)) return { success: false, error: 'INVALID_QTYPE' }
 
   const gate = await ritualGate(user.id, 'obangki')
@@ -310,6 +325,26 @@ export async function drawObangki(color: string, qtype: string, confirmPaid: boo
 
   const admin = createAdminClient()
   const today = formatKstDate()
+
+  // ── 색은 서버가 확정한다 (CEO 7차: 자동 선출 / 감사 A3 P1 "시드 역산" 근본 해소) ──
+  // 클라이언트가 보낸 색을 믿는 구조는 "선택"이 있을 때의 산물이다. 선택이 사라졌으므로
+  // 회차(seq = 오늘 뽑은 수)와 시드에서 색을 서버가 스스로 계산한다 — 클라이언트는 같은
+  // 결정론 함수로 연출만 그린다. 동시요청이 겹치면 RPC 잠금이 직렬화하지만 seq 사전 조회가
+  // 반 박자 늦을 수 있다 — 최악이 "같은 색 두 번"(문구 중복)이고 경제 영향은 0, 폭주는
+  // ritualGate 의 rate limit 이 막는다.
+  const dayStart = Date.parse(`${today}T00:00:00+09:00`)
+  const { data: todayRows, error: countError } = await supabase
+    .from('obangki_draws')
+    .select('drawn_at')
+    .eq('user_id', user.id)
+    .gte('drawn_at', new Date(dayStart).toISOString())
+  if (countError) {
+    logger.error('[obangki] 회차 조회 실패:', countError)
+    return { success: false, error: 'DRAW_FAILED' }
+  }
+  const seq = countDrawsOnDay(toDrawEpochMs(todayRows), Date.now())
+  const roundSeed = drawSeed(dailySeed(user.id, today), seq)
+  const color = shuffleFlags(roundSeed)[electIndex(roundSeed)]
   const record = async (paid: boolean) =>
     admin.rpc('draw_shrine_obangki', {
       p_user_id: user.id,
@@ -328,7 +363,7 @@ export async function drawObangki(color: string, qtype: string, confirmPaid: boo
   }
   const freeRow = readDrawRow(free.data)
   if (freeRow.allowed) {
-    return { success: true, charged: false, ...counts(freeRow.todayCount) }
+    return { success: true, charged: false, color, ...counts(freeRow.todayCount) }
   }
   // 응답을 못 읽었으면 "무료 소진"이 아니다 — 여기서 멈춘다. 계속 가면 무료가 남은 사람에게 과금한다.
   if (!freeRow.parsed) {
@@ -359,7 +394,7 @@ export async function drawObangki(color: string, qtype: string, confirmPaid: boo
     return { success: false, error: 'DRAW_FAILED', ...counts(freeRow.todayCount) }
   }
 
-  return { success: true, charged: true, balance: paid.balance, ...counts(chargedRow.todayCount) }
+  return { success: true, charged: true, color, balance: paid.balance, ...counts(chargedRow.todayCount) }
 }
 
 /**

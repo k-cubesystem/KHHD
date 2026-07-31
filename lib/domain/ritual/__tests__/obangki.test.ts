@@ -19,10 +19,15 @@ import {
   assignOptions,
   countDrawsOnDay,
   dailySeed,
+  electIndex,
   drawSeed,
+  OBANGKI_COLOR_ELEMENT,
   isObangkiColor,
   isObangkiQType,
   isPaidDraw,
+  sajuLine,
+  sajuRelation,
+  allSajuLines,
   obangkiLine,
   remainingFreeDraws,
   resolveDraw,
@@ -396,6 +401,7 @@ describe('문구 풀 — 결정론 + 법무', () => {
 
   it.each(FORBIDDEN)('문구 풀에 금지 어휘 "%s" 가 없다', (word) => {
     for (const line of allObangkiLines()) expect(line).not.toContain(word)
+    for (const line of allSajuLines()) expect(line).not.toContain(word)
   })
 
   it('금전 유형 문구에 명령형 어미가 없다', () => {
@@ -535,5 +541,82 @@ describe('타입 계약', () => {
   it('ObangkiQType 유니온과 OBANGKI_QTYPES 가 어긋나면 컴파일이 깨진다', () => {
     const all: Record<ObangkiQType, true> = { choice: true, timing: true, money: true }
     expect(Object.keys(all).sort()).toEqual([...OBANGKI_QTYPES].sort())
+  })
+})
+
+describe('electIndex — 자동 선출 (CEO 7차: 사용자가 고르지 않는다)', () => {
+  it('결정론 — 같은 시드는 같은 자리, 범위는 0~4', () => {
+    for (let i = 0; i < 50; i += 1) {
+      const s = drawSeed(dailySeed('elect-user', '2026-07-31'), i)
+      const a = electIndex(s)
+      expect(a).toBe(electIndex(s))
+      expect(a).toBeGreaterThanOrEqual(0)
+      expect(a).toBeLessThan(OBANGKI_COLORS.length)
+    }
+  })
+
+  it('한 자리에 고정되지 않고 다섯 자리를 모두 낸다 (300회차)', () => {
+    const seen = new Set<number>()
+    for (let i = 0; i < 300; i += 1) seen.add(electIndex(drawSeed(dailySeed('elect-user', '2026-07-31'), i)))
+    expect(seen.size).toBe(OBANGKI_COLORS.length)
+  })
+})
+
+describe('사주 해석 층 — 용신 오행 × 색 오행 (CEO 7차: "그 사람 사주 기반")', () => {
+  const ELS = ['wood', 'fire', 'earth', 'metal', 'water'] as const
+  const SAENG: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' }
+  const GEUK: Record<string, string> = { wood: 'earth', earth: 'water', water: 'fire', fire: 'metal', metal: 'wood' }
+
+  it('색 ↔ 오행 대응이 전승 그대로다 (청목·홍화·황토·백금·녹수)', () => {
+    expect(OBANGKI_COLOR_ELEMENT).toEqual({
+      blue: 'wood',
+      red: 'fire',
+      yellow: 'earth',
+      white: 'metal',
+      green: 'water',
+    })
+  })
+
+  it('관계 판정 25쌍 전수 — 정의(상생·상극 고리)와 일치한다', () => {
+    for (const color of OBANGKI_COLORS) {
+      const el = OBANGKI_COLOR_ELEMENT[color]
+      for (const yong of ELS) {
+        const expected =
+          el === yong
+            ? 'bihwa'
+            : SAENG[el] === yong
+              ? 'saengip'
+              : SAENG[yong] === el
+                ? 'seolgi'
+                : GEUK[yong] === el
+                  ? 'jeap'
+                  : 'geukip'
+        expect(sajuRelation(color, yong)).toBe(expected)
+      }
+    }
+  })
+
+  it('문구는 관계 풀 안에서 결정론이고, 다른 시드는 다른 문장을 낼 수 있다', () => {
+    const line = sajuLine('blue', 'fire', 1234)
+    expect(line).toBe(sajuLine('blue', 'fire', 1234))
+    expect(allSajuLines()).toContain(line)
+    const variants = new Set(Array.from({ length: 40 }, (_, i) => sajuLine('blue', 'fire', i)))
+    expect(variants.size).toBeGreaterThan(1)
+  })
+
+  it('전 문구가 서술 종결이고 15문(5관계 × 3변형)이 전부 유일하다', () => {
+    const all = allSajuLines()
+    expect(all).toHaveLength(15)
+    expect(new Set(all).size).toBe(15)
+    for (const line of all) expect(line).toMatch(/(다|구나|네)\.$/)
+  })
+})
+
+describe('서버 색 확정 — 감사 A3 "시드 역산" 근본 해소 계약', () => {
+  it('액션이 색을 입력으로 받지 않고 시드·회차로 스스로 계산한다', () => {
+    expect(ACTIONS_SRC).toMatch(/drawObangki\(qtype: string, confirmPaid: boolean\)/)
+    expect(ACTIONS_SRC).toContain('shuffleFlags(roundSeed)[electIndex(roundSeed)]')
+    // 색이 입력이던 시절의 검증이 되살아나면 안 된다
+    expect(ACTIONS_SRC).not.toMatch(/drawObangki\(color/)
   })
 })

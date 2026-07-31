@@ -21,14 +21,13 @@
  *     서버가 차감을 확정한 뒤에 펼친다(뽑기 애니메이션 0.55s 가 그 대기를 덮는다).
  */
 
-import { useCallback, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { X, Share2, Loader2, Coins, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   OBANGKI_COLOR_INFO,
   OBANGKI_DISCLAIMER,
-  OBANGKI_DRAG_THRESHOLD,
   OBANGKI_OPTION_MAX,
   OBANGKI_OPTION_MIN,
   OBANGKI_OPTION_TEXT_MAX,
@@ -38,6 +37,8 @@ import {
   OBANGKI_QTYPE_LABEL,
   assignOptions,
   drawSeed,
+  electIndex,
+  sajuLine,
   obangkiLine,
   shuffleFlags,
   verdictLine,
@@ -65,7 +66,7 @@ const DRAW_ERROR_MSG: Record<string, string> = {
   DRAW_FAILED: '점괘가 기록되지 않았습니다 — 괘는 그대로입니다',
 }
 
-type Phase = 'compose' | 'shuffle' | 'pick' | 'draw'
+type Phase = 'compose' | 'shuffle' | 'draw'
 
 interface DrawOutcome {
   success: boolean
@@ -97,9 +98,6 @@ export function ObangkiRitual({ status, play }: Props) {
   const [sharing, setSharing] = useState(false)
 
   const effectsRef = useRef<EffectsHandle>(null)
-  const dragState = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null)
-  /** 드래그로 끝난 제스처가 뒤이어 click 으로도 도착한다 — 빗나간 드래그가 탭 뽑기로 둔갑하지 않게 한 번 삼킨다 */
-  const suppressClick = useRef(false)
 
   const remainingFree = Math.max(0, status.freeLimit - todayCount)
   const paidDraw = remainingFree <= 0
@@ -121,82 +119,57 @@ export function ObangkiRitual({ status, play }: Props) {
     setPicked(null)
     setPullDone(false)
     setOutcome(null)
-    dragState.current = null
   }, [])
 
-  // ── 셔플 시작 ────────────────────────────────────────────
+  // 선출 순간의 색 버스트 — 뽑힘(pull) 연출이 끝나 괘가 드러날 때 한 번
+  useEffect(() => {
+    if (!revealed || picked === null) return
+    const x = (picked + 0.5) * 20
+    effectsRef.current?.emit('sparkle', x, 34)
+    effectsRef.current?.emit('petals', x, 30)
+  }, [revealed, picked])
+
+  // ── 뽑기 의뢰 — 셔플 연출과 서버 확정을 동시에 시작한다 (CEO 7차: 사용자가 고르지 않는다) ──
+  // 색은 서버가 시드·회차로 확정하고(감사 A3 "시드 역산" 근본 해소) 셔플 ~1.2s 가 응답 대기를
+  // 덮는다. 응답이 늦으면 '기를 펴는 중…'으로 자연히 이어진다. 실패(무료 소진·복채 부족)면
+  // picked 가 서지 않아 뽑힘 연출 없이 실패 카드가 뜬다.
   const startShuffle = useCallback(() => {
+    const s = drawSeed(status.seed, todayCount)
     setSeq(todayCount)
     setPicked(null)
     setPullDone(false)
     setOutcome(null)
     setPhase('shuffle')
     play('bell')
-  }, [todayCount, play])
+    trackEvent({ action: 'obangki_draw', category: 'shrine', label: qtype })
 
-  // ── 뽑기 ─────────────────────────────────────────────────
-  // 색은 여기서 확정된다(시드가 정한 진열 × 사용자가 고른 자리). 서버로는 그 색만 간다.
-  // 무료 회차는 결과를 기다리지 않고 펼쳐도 되지만, 복채 회차는 차감 확정 후에 펼친다 —
-  // 두 경로를 하나로 두기 위해 **언제나 서버 응답을 기다린다**(뽑기 0.55s 가 대기를 덮는다).
-  const pull = useCallback(
-    (index: number) => {
-      if (phase !== 'pick' || picked !== null) return
-      const color = flags[index]
-      setPicked(index)
-      setPullDone(false)
-      setPhase('draw')
-      play('chime')
-      trackEvent({ action: 'obangki_draw', category: 'shrine', label: color })
-
-      void drawObangki(color, qtype, paidDraw).then((res) => {
+    void drawObangki(qtype, paidDraw)
+      .then((res) => {
         if (typeof res.todayCount === 'number') setTodayCount(res.todayCount)
         if (res.success) {
+          // 서버가 확정한 색이 정본 — 진열(shuffleFlags)에서 그 색의 자리를 찾아 선출한다.
+          // 로컬 electIndex 와 어긋나는 경우는 동시요청으로 회차가 반 박자 밀렸을 때뿐이고,
+          // 그때도 화면은 서버 색을 따른다(색이 곧 괘다).
+          const fl = shuffleFlags(s)
+          const idx = res.color ? fl.indexOf(res.color) : electIndex(s)
+          setPicked(idx >= 0 ? idx : electIndex(s))
           setOutcome({ success: true })
-          // 뽑힌 자리(0~4) 위에서 색 버스트 — 무대를 5등분한 가운데가 x%
-          const x = (index + 0.5) * 20
-          effectsRef.current?.emit('sparkle', x, 34)
-          effectsRef.current?.emit('petals', x, 30)
           return
         }
-        // 기록 실패(DRAW_FAILED)는 괘를 되돌리지 않는다 — 사용자가 본 연출을 취소하는 편이 더 나쁘다.
-        // 반면 과금 거절(복채 부족·동의 필요)은 결과를 보여주면 안 된다.
         if (res.error === 'DRAW_FAILED') {
+          // 기록만 실패 — 괘는 그대로 보여준다(연출을 취소하는 편이 더 나쁘다)
+          setPicked(electIndex(s))
           setOutcome({ success: true })
           toast(DRAW_ERROR_MSG.DRAW_FAILED)
           return
         }
         setOutcome({ success: false, error: res.error })
       })
-    },
-    [phase, picked, flags, qtype, paidDraw, play]
-  )
-
-  // ── 위로 쓸어 뽑기 제스처 ─────────────────────────────────
-  const onFlagDown = useCallback((e: RPointerEvent<HTMLButtonElement>) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    suppressClick.current = false
-    dragState.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false }
-  }, [])
-
-  const onFlagMove = useCallback((e: RPointerEvent<HTMLButtonElement>) => {
-    const d = dragState.current
-    if (!d || d.id !== e.pointerId) return
-    if (Math.hypot(e.clientX - d.x, e.clientY - d.y) >= 6) d.moved = true
-  }, [])
-
-  const onFlagUp = useCallback(
-    (index: number) => (e: RPointerEvent<HTMLButtonElement>) => {
-      const d = dragState.current
-      dragState.current = null
-      if (!d || d.id !== e.pointerId) return
-      if (!d.moved) return // 탭 — onClick 이 받는다(키보드·스크린리더 경로와 같은 문)
-      suppressClick.current = true
-      // 위로 끌어올린 만큼만 뽑기로 인정한다(아래로 끌면 시트 스크롤이지 뽑기가 아니다)
-      if (d.y - e.clientY >= OBANGKI_DRAG_THRESHOLD) pull(index)
-    },
-    [pull]
-  )
+      .catch(() => {
+        // 네트워크 단절 — 고착 방지(감사 A2 P2: 실패 경로 부재). 실패 카드로 접는다.
+        setOutcome({ success: false, error: 'DRAW_FAILED' })
+      })
+  }, [status.seed, todayCount, qtype, paidDraw, play])
 
   // ── 공유 — 기존 공유 보상 흐름 재사용(새 지급 경로 없음) ──
   const onShare = useCallback(async () => {
@@ -265,26 +238,12 @@ export function ObangkiRitual({ status, play }: Props) {
             phase={phase}
             picked={picked}
             revealed={revealed}
-            onShuffleEnd={() => setPhase('pick')}
+            onShuffleEnd={() => setPhase('draw')}
             onPullEnd={() => setPullDone(true)}
-            onFlagDown={onFlagDown}
-            onFlagMove={onFlagMove}
-            onFlagUp={onFlagUp}
-            onFlagTap={(i) => {
-              // 드래그 뒤에 따라온 click 은 삼킨다 — 빗나간 드래그가 뽑기로 둔갑하지 않게
-              if (suppressClick.current) {
-                suppressClick.current = false
-                return
-              }
-              pull(i)
-            }}
           />
 
           {phase === 'shuffle' && (
             <p className="mt-4 font-serif text-[12px] text-ink-primary/55">방울이 울리고 기가 섞입니다…</p>
-          )}
-          {phase === 'pick' && (
-            <p className="mt-4 font-serif text-[12px] text-gold-200">마음 가는 기 하나를 위로 쓸어 올리세요</p>
           )}
           {phase === 'draw' && !revealed && !failed && (
             <p className="mt-4 font-serif text-[12px] text-ink-primary/55">기를 펴는 중입니다…</p>
@@ -295,6 +254,7 @@ export function ObangkiRitual({ status, play }: Props) {
               color={pickedColor}
               option={pickedOption}
               line={obangkiLine(pickedColor, qtype, seed)}
+              saju={status.yongsin ? sajuLine(pickedColor, status.yongsin, seed) : null}
               remainingFree={remainingFree}
               cost={status.cost}
               sharing={sharing}
@@ -472,10 +432,6 @@ function FlagStage({
   revealed,
   onShuffleEnd,
   onPullEnd,
-  onFlagDown,
-  onFlagMove,
-  onFlagUp,
-  onFlagTap,
 }: {
   effectsRef: React.RefObject<EffectsHandle | null>
   flags: ObangkiColor[]
@@ -484,10 +440,6 @@ function FlagStage({
   revealed: boolean
   onShuffleEnd: () => void
   onPullEnd: () => void
-  onFlagDown: (e: RPointerEvent<HTMLButtonElement>) => void
-  onFlagMove: (e: RPointerEvent<HTMLButtonElement>) => void
-  onFlagUp: (index: number) => (e: RPointerEvent<HTMLButtonElement>) => void
-  onFlagTap: (index: number) => void
 }) {
   return (
     <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
@@ -513,17 +465,10 @@ function FlagStage({
                   : 'obangki-dim'
                 : ''
           return (
-            <button
+            <span
               key={i}
-              type="button"
-              disabled={phase !== 'pick'}
-              aria-label={`${i + 1}번째 깃발 뽑기`}
-              onPointerDown={onFlagDown}
-              onPointerMove={onFlagMove}
-              onPointerUp={onFlagUp(i)}
-              onPointerCancel={onFlagUp(i)}
-              onClick={() => onFlagTap(i)}
-              className={`obangki-slot relative touch-none ${slotClass}`}
+              aria-hidden
+              className={`obangki-slot relative block ${slotClass}`}
               style={
                 {
                   width: SLOT_W,
@@ -601,7 +546,7 @@ function FlagStage({
                   style={{ '--ob-accent': info.accent } as React.CSSProperties}
                 />
               )}
-            </button>
+            </span>
           )
         })}
       </div>
@@ -626,6 +571,7 @@ function VerdictCard({
   color,
   option,
   line,
+  saju,
   remainingFree,
   cost,
   sharing,
@@ -635,6 +581,8 @@ function VerdictCard({
   color: ObangkiColor
   option: string | null
   line: string
+  /** 사주 해석 층 — 용신 오행 × 색 오행 관계(결정론). 명식 분석 전 사용자는 null(기본 층만) */
+  saju: string | null
   remainingFree: number
   cost: number
   sharing: boolean
@@ -660,6 +608,12 @@ function VerdictCard({
       <div className="flex items-start gap-2 rounded-xl border border-gold-500/20 bg-surface/60 px-3 py-2.5">
         <span className="mt-0.5 whitespace-nowrap font-serif text-[10px] text-gold-500/60">신당지기</span>
         <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{line}</p>
+        {saju && (
+          /* 사주 층 — 기본 괘 아래 한 줄. 용신은 개인 데이터라 문구에 오행 이름만 스치고 원리는 풀이가 진다 */
+          <p className="mt-2 border-t border-gold-500/15 pt-2 font-serif text-[12.5px] leading-relaxed text-gold-200">
+            {saju}
+          </p>
+        )}
       </div>
 
       <p className="text-center font-sans text-[10.5px] text-ink-primary/40">
