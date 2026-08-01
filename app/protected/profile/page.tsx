@@ -25,6 +25,7 @@ import {
   Store,
   Globe,
   Flag,
+  type LucideIcon,
 } from 'lucide-react'
 import { LocaleSwitcher } from '@/components/shared/locale-switcher'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
@@ -49,6 +50,65 @@ interface SajuIdentity {
   elementLabel: string // 오행 한글 (예: 흙)
   emblemUrl: string // 오행 엠블럼 에셋
 }
+
+/**
+ * 프로필 바로가기 묶음 — **하는 일별로** 나눈다.
+ *
+ * 지금까지 만든 것이 늘면서 3열 격자 하나로는 성격이 다른 것들이 섞였다(의식·분석·살림).
+ * 묶음에 제목과 한 줄 설명이 있으면 **새 기능이 늘어도 어디에 넣을지가 정해진다** —
+ * 목록이 아니라 자리를 만드는 것이 이 재설계의 요점이다.
+ *
+ * hero 는 그 묶음에서 가장 자주 눌리는 하나다(신당·웹툰). 나머지는 2열로 나란히 선다.
+ */
+const PROFILE_GROUPS: readonly {
+  title: string
+  gloss: string
+  hero?: { href: string; icon: LucideIcon; label: string; sub: string }
+  items: readonly { href: string; icon: LucideIcon; label: string; sub: string }[]
+}[] = [
+  {
+    title: '신당',
+    gloss: '매일 드리는 정성',
+    hero: { href: '/protected/shrine', icon: Flame, label: '나의 신당', sub: '신위를 모시고 오늘의 기도를 올립니다' },
+    items: [
+      { href: '/protected/shrine/baekil', icon: Flame, label: '백일기도', sub: '소원 하나로 백 일' },
+      { href: '/protected/shrine/obangki', icon: Flag, label: '오방기 점괘', sub: '한 가지 일을 여쭙기' },
+      { href: '/protected/shrine/chuljeon', icon: Coins, label: '엽전 세 닢', sub: '갈림길을 정하기' },
+      { href: '/protected/shrine/collection', icon: Store, label: '신위·테마·신물', sub: '모아 둔 것 보기' },
+    ],
+  },
+  {
+    title: '나를 보는 일',
+    gloss: '사주 · 가족',
+    items: [
+      { href: '/protected/profile/manse', icon: ScrollText, label: '내 명식', sub: '사주팔자 원국' },
+      { href: '/protected/history', icon: BookOpen, label: '분석 기록', sub: '지난 풀이 다시 보기' },
+      { href: '/protected/family', icon: Users, label: '가족·인연 관리', sub: '등록과 수정' },
+      { href: '/protected/ai-shaman', icon: Headphones, label: '고민상담', sub: '해화지기와 이야기' },
+    ],
+  },
+  {
+    title: '웹툰',
+    gloss: '청담해화당 이야기',
+    hero: {
+      href: '/protected/webtoon',
+      icon: BookOpen,
+      label: '웹툰 보기',
+      sub: '회차를 읽고 댓글을 남깁니다',
+    },
+    items: [{ href: '/protected/webtoon/story', icon: Sparkles, label: '내 이야기 쓰기', sub: '선정되면 한 화로' }],
+  },
+  {
+    title: '살림',
+    gloss: '복채 · 멤버십 · 설정',
+    items: [
+      { href: '/protected/store', icon: Store, label: '상점', sub: '복채 충전과 신물' },
+      { href: '/protected/store?tab=membership', icon: Shield, label: '멤버십', sub: '등급과 혜택' },
+      { href: '/protected/notifications', icon: Headphones, label: '알림', sub: '공지와 소식' },
+      { href: '/protected/settings', icon: UserIcon, label: '내 정보 설정', sub: '프로필과 계정' },
+    ],
+  },
+]
 
 export default async function MyPage() {
   const supabase = await createClient()
@@ -330,17 +390,19 @@ export default async function MyPage() {
       </section>
 
       {/* ── 2. 바로가기 (이름 바로 아래로 상향 — 발주 ④) ── */}
+      {/*
+        바로가기 — **하는 일별로** 묶는다 (CEO 2026-08-01 재설계).
+        종전에는 3열 격자 하나에 성격이 다른 것들이 섞여 있었고(신당·명식·가족·기록·상점·설정),
+        의식 둘만 따로 아래에 붙어 있어 "왜 저것만 따로인가"가 읽히지 않았다.
+        이제 네 묶음이다 — 신당에서 하는 일 / 나를 보는 일 / 웹툰 / 살림.
+        묶음마다 제목이 있으니 새 기능이 늘어도 어디에 넣을지가 정해진다.
+      */}
       <section
         aria-label="바로가기"
-        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-75 relative z-10"
+        className="px-3 mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-75 relative z-10 space-y-5"
       >
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-px w-6 bg-gold-500/40" />
-          <h3 className="text-xs font-serif text-gold-500/80 tracking-wider">바로가기</h3>
-        </div>
-
         {isAdmin && (
-          <Link href="/admin" className="group block mb-3">
+          <Link href="/admin" className="group block">
             <div className="bg-gradient-to-r from-seal/20 via-seal/10 to-seal/20 border-2 border-seal/40 hover:border-seal rounded-xl p-4 flex items-center justify-center gap-3 transition-all relative overflow-hidden">
               <Shield className="w-5 h-5 text-seal relative z-10" strokeWidth={1} />
               <span className="text-sm font-serif text-seal tracking-widest relative z-10">관리자 대시보드</span>
@@ -352,60 +414,50 @@ export default async function MyPage() {
           </Link>
         )}
 
-        <div className="grid grid-cols-3 gap-2.5">
-          {[
-            { href: '/protected/shrine', icon: Flame, label: '나의 신당', accent: true },
-            { href: '/protected/profile/manse', icon: ScrollText, label: '내 명식' },
-            { href: '/protected/family', icon: Users, label: '가족·인연 관리' },
-            { href: '/protected/history', icon: BookOpen, label: '사주 기록' },
-            { href: '/protected/store', icon: Store, label: '상점' },
-            { href: '/protected/settings', icon: UserIcon, label: '내 정보 설정' },
-          ].map(({ href, icon: Icon, label, accent }) => (
-            <Link key={href} href={href} className="group">
-              <div
-                className={`rounded-xl border p-4 flex flex-col items-center justify-center gap-2 aspect-square transition-all duration-300 ${
-                  accent
-                    ? 'border-gold-500/40 bg-gold-500/[0.07] hover:border-gold-500/70 hover:bg-gold-500/[0.12]'
-                    : 'border-primary/20 bg-surface/30 hover:border-primary/50 hover:bg-surface/50'
-                }`}
-              >
-                <Icon
-                  className={`w-7 h-7 transition-colors ${accent ? 'text-gold-400 group-hover:text-gold-300' : 'text-ink-light/60 group-hover:text-primary'}`}
-                  strokeWidth={1}
-                />
-                <span
-                  className={`text-[12px] font-serif text-center leading-tight transition-colors ${accent ? 'text-gold-200' : 'text-ink-light group-hover:text-primary'}`}
-                >
-                  {label}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {PROFILE_GROUPS.map((group) => (
+          <div key={group.title}>
+            <div className="flex items-baseline gap-2 mb-2.5">
+              <div className="h-px w-6 bg-gold-500/40" />
+              <h3 className="text-xs font-serif text-gold-500/80 tracking-wider">{group.title}</h3>
+              <span className="text-[10px] font-sans text-ink-light/30">{group.gloss}</span>
+            </div>
 
-        {/* 신당 의식 — 전용 페이지 직행(CEO 지시 2026-07-30). 신당을 거치지 않고 바로 든다.
-            위 3열 격자에 끼우면 마지막 줄이 어긋나므로 의식끼리 한 줄로 묶었다. */}
-        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          {[
-            { href: '/protected/shrine/obangki', icon: Flag, label: '오방기 점괘', sub: '갈림길을 깃발에 맡기기' },
-            { href: '/protected/shrine/baekil', icon: Flame, label: '백일기도', sub: '백일 동안 하루 한 번' },
-          ].map(({ href, icon: Icon, label, sub }) => (
-            <Link key={href} href={href} className="group">
-              <div className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-surface/30 p-3 transition-all duration-300 hover:border-primary/50 hover:bg-surface/50">
-                <Icon
-                  className="h-5 w-5 flex-shrink-0 text-gold-400/80 transition-colors group-hover:text-gold-300"
-                  strokeWidth={1}
-                />
-                <div className="min-w-0">
-                  <span className="block font-serif text-[12.5px] leading-tight text-ink-light group-hover:text-primary">
-                    {label}
+            {group.hero && (
+              <Link href={group.hero.href} className="group block mb-2">
+                <div className="rounded-xl border border-gold-500/40 bg-gold-500/[0.07] p-4 flex items-center gap-3 transition-all hover:border-gold-500/70 hover:bg-gold-500/[0.12]">
+                  <group.hero.icon className="w-6 h-6 flex-shrink-0 text-gold-400" strokeWidth={1} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-serif text-[14px] text-gold-200">{group.hero.label}</span>
+                    <span className="block text-[11px] text-ink-light/45 leading-snug">{group.hero.sub}</span>
                   </span>
-                  <span className="block text-[10px] leading-tight text-ink-light/40">{sub}</span>
+                  <ArrowRight
+                    className="w-4 h-4 flex-shrink-0 text-gold-400/60 group-hover:translate-x-1 transition-transform"
+                    strokeWidth={1}
+                  />
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              {group.items.map(({ href, icon: Icon, label, sub }) => (
+                <Link key={href} href={href} className="group">
+                  <div className="flex h-full items-center gap-2.5 rounded-xl border border-primary/20 bg-surface/30 p-3 transition-all duration-300 hover:border-primary/50 hover:bg-surface/50">
+                    <Icon
+                      className="h-5 w-5 flex-shrink-0 text-gold-400/80 transition-colors group-hover:text-gold-300"
+                      strokeWidth={1}
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-serif text-[12.5px] leading-tight text-ink-light group-hover:text-primary">
+                        {label}
+                      </span>
+                      <span className="block text-[10px] leading-tight text-ink-light/40">{sub}</span>
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
 
       {/* ── 3. 지표 스트립: 복채 · 멤버십 · 기록 ── */}

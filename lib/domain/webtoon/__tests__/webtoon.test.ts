@@ -15,9 +15,10 @@ import {
   STORY_BODY_MIN,
   STORY_CONTACT_NOTICE,
   STORY_DAILY_LIMIT,
-  STORY_FEE_NOTICE,
-  STORY_MEMBER_NOTICE,
+  STORY_FREE_NOTICE,
+  STORY_MEMBER_ONLY_NOTICE,
   STORY_NO_EXTRA_COST_NOTICE,
+  STORY_REPLY_NOTICE,
   STORY_SUBMIT_COST,
   STORY_PRIVACY_NOTICE,
   STORY_SELECTION_NOTICE,
@@ -30,11 +31,13 @@ import {
   validateStory,
   type StoryDraft,
 } from '../story'
+import { REPORT_HIDE_THRESHOLD, REPORT_REASONS, REPORT_REASON_INFO, isReportReason } from '../report'
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION = read('supabase/migrations/20260801_webtoon.sql')
 const ACTIONS = read('app/actions/webtoon/webtoon.ts')
 const FORM = read('components/webtoon/StoryForm.tsx')
+const REPORTS_MIGRATION = read('supabase/migrations/20260801_webtoon_reports.sql')
 
 const ok: StoryDraft = {
   title: '할머니의 신당',
@@ -210,7 +213,7 @@ describe('서버 액션 계약', () => {
     expect(rpc).toBeGreaterThan(-1)
     expect(mail).toBeGreaterThan(rpc)
     // 알림 결과로 성공을 뒤집지 않는다
-    expect(submit).toContain('return { success: true, charged: cost > 0, balance, notified }')
+    expect(submit).toContain('return { success: true, notified }')
   })
 
   it('댓글에 rate limit 과 회차당 상한이 함께 걸린다', () => {
@@ -219,67 +222,100 @@ describe('서버 액션 계약', () => {
   })
 })
 
-describe('접수 과금 — 사례가 아니라 값을 받는다 (CEO 2026-08-01)', () => {
-  it('멤버십 회원은 무료, 그 밖은 복채 5만냥', () => {
-    expect(STORY_SUBMIT_COST).toBe(5)
-    expect(STORY_MEMBER_NOTICE).toContain('복채 없이')
+describe('자격 — 접수는 누구나, 제작은 멤버십만 (CEO 2026-08-01 재확정)', () => {
+  it('★ 접수에 값이 없다 — 그려질 수 없는 사람에게 값을 받는 구조를 없앴다', () => {
+    expect(STORY_SUBMIT_COST).toBe(0)
+    expect(STORY_FREE_NOTICE).toContain('복채가 들지 않습니다')
+    // 과금 경로가 액션에서 통째로 사라졌는지
+    const submit = ACTIONS.slice(ACTIONS.indexOf('export async function submitStory'))
+    for (const gone of ['spendBokchae', 'refundBokchae', 'confirmPaid', 'NEEDS_PAYMENT']) {
+      expect(submit).not.toContain(gone)
+    }
   })
 
-  it('★ 값이 무엇을 사는지 흐리지 않는다 — 연재 확약이 아니라 읽고 답하는 값이다', () => {
-    expect(STORY_FEE_NOTICE).toContain('읽고 답을 드리는 값')
-    expect(STORY_FEE_NOTICE).toContain('확약하는 값이 아닙니다')
-    // 값과 한 몸인 약속: 선정되지 않아도 회신한다. 이게 없으면 복권을 파는 것이 된다.
-    expect(STORY_FEE_NOTICE).toContain('반드시 회신')
+  it('★ 제작 자격이 멤버십임을 **보내기 전에** 말한다', () => {
+    expect(STORY_MEMBER_ONLY_NOTICE).toContain('멤버십 회원의 사연')
+    // 폼에서 자격 안내가 제출 버튼보다 위에 있어야 한다
+    const noticeAt = FORM.indexOf('STORY_MEMBER_ONLY_NOTICE')
+    const submitAt = FORM.indexOf('비공개로 보내기')
+    expect(noticeAt).toBeGreaterThan(-1)
+    expect(noticeAt).toBeLessThan(submitAt)
   })
 
-  it('선정 뒤 추가 비용이 없다고 못박는다 — 값을 두 번 받지 않는다', () => {
+  it('비회원에게는 멤버십으로 가는 길을 함께 준다 (막다른 길을 만들지 않는다)', () => {
+    expect(FORM).toContain('/protected/store?tab=membership')
+  })
+
+  it('읽었으면 답한다는 약속이 남아 있다 — 값을 받지 않아도 지킨다', () => {
+    expect(STORY_REPLY_NOTICE).toContain('선정 여부와 무관하게')
     expect(STORY_NO_EXTRA_COST_NOTICE).toContain('추가로 드는 비용은 없습니다')
   })
 
-  it('★ 과금 순서 — 멤버십 판정이 차감보다 먼저다', () => {
-    const submit = ACTIONS.slice(ACTIONS.indexOf('export async function submitStory'))
-    const member = submit.indexOf('await getCurrentUserMembership()')
-    const spend = submit.indexOf('await spendBokchae(cost')
-    expect(member).toBeGreaterThan(-1)
-    expect(spend).toBeGreaterThan(-1)
-    // 이 순서라야 "회원인데 돈을 물렸다"가 구조적으로 불가능하다
-    expect(member).toBeLessThan(spend)
+  it('회신 한마디가 본인에게만 내려온다', () => {
+    const section = ACTIONS.slice(ACTIONS.indexOf('listMyStories'), ACTIONS.indexOf('SubmitStoryResult'))
+    expect(section).toContain('reply_note')
+    expect(section).toContain(".eq('user_id', user.id)")
+  })
+})
+
+describe('댓글 신고 (CEO 2026-08-01)', () => {
+  it('사유 다섯과 설명이 짝을 이룬다', () => {
+    expect([...REPORT_REASONS]).toEqual(['abuse', 'spam', 'privacy', 'sexual', 'other'])
+    for (const r of REPORT_REASONS) {
+      expect(REPORT_REASON_INFO[r].label).toBeTruthy()
+      expect(REPORT_REASON_INFO[r].gloss).toBeTruthy()
+      expect(isReportReason(r)).toBe(true)
+    }
+    for (const bad of ['', 'hate', null, 3, {}]) expect(isReportReason(bad)).toBe(false)
   })
 
-  it('★ 동의 없이 차감하지 않는다 — confirmPaid 가 없으면 NEEDS_PAYMENT 로 멈춘다', () => {
-    const submit = ACTIONS.slice(ACTIONS.indexOf('export async function submitStory'))
-    const guard = submit.indexOf("if (!confirmPaid) return { success: false, error: 'NEEDS_PAYMENT' }")
-    const spend = submit.indexOf('await spendBokchae(cost')
-    expect(guard).toBeGreaterThan(-1)
-    expect(guard).toBeLessThan(spend)
+  it('★ 가림 임계가 도메인과 스키마에서 같은 값이다 (갈리면 화면 설명이 거짓이 된다)', () => {
+    expect(REPORT_HIDE_THRESHOLD).toBe(3)
+    expect(REPORTS_MIGRATION).toContain('v_count >= 3')
   })
 
-  it('★ 차감 후 기록이 깨지면 환불한다 — 사연도 복채도 함께 사라지면 안 된다', () => {
-    const submit = ACTIONS.slice(ACTIONS.indexOf('export async function submitStory'))
-    expect(submit).toContain("refundBokchae(user.id, cost, '웹툰 내 이야기 접수 실패 환불')")
-    const refund = submit.indexOf('refundBokchae(')
-    const ok = submit.indexOf('return { success: true, charged:')
-    expect(refund).toBeLessThan(ok)
+  it('★ 신고는 가리는 일이지 지우는 일이 아니다 — 되돌릴 수 있어야 한다', () => {
+    expect(REPORTS_MIGRATION).toContain('hidden_at')
+    // 트리거가 행을 지우지 않는다
+    expect(REPORTS_MIGRATION).not.toMatch(/delete from public\.webtoon_comments/i)
   })
 
-  it('멤버십 조회가 실패하면 **유료로 본다** — 무료라 잘못 말하면 동의 없이 차감된다', () => {
-    const gate = ACTIONS.slice(
-      ACTIONS.indexOf('export async function getStoryGate'),
-      ACTIONS.indexOf('SubmitStoryResult')
+  it('★ 한 사람이 같은 댓글을 여러 번 신고해 수를 부풀릴 수 없다', () => {
+    expect(REPORTS_MIGRATION).toMatch(/unique \(comment_id, reporter_id\)/i)
+  })
+
+  it('★ 신고자는 본인 신고만 본다 — 남의 신고가 보이면 공격 수단이 된다', () => {
+    expect(REPORTS_MIGRATION).toMatch(
+      /create policy webtoon_reports_select_own[\s\S]*?using \(auth\.uid\(\) = reporter_id\)/i
     )
-    expect(gate).toContain('return { member: false, cost: STORY_SUBMIT_COST }')
+    expect(REPORTS_MIGRATION).toMatch(
+      /create policy webtoon_reports_insert_own[\s\S]*?with check \(auth\.uid\(\) = reporter_id\)/i
+    )
   })
 
-  it('★ 값이 화면에 **들어오기 전에** 있다 — 눌러 들어가서야 액수를 아는 문이 아니다', () => {
-    const page = read('app/protected/webtoon/story/page.tsx')
-    expect(page).toContain('await getStoryGate()')
-    expect(FORM).toContain('접수 복채 ${gate.cost}만냥')
-    // 버튼에도 액수가 적혀 있어야 클릭이 곧 동의가 된다
-    expect(FORM).toContain('복채 ${gate.cost}만냥으로 보내기')
+  it('★ 가림 판정을 액션이 하지 않는다 — 동시 신고 두 건이 둘 다 "아직 2건"으로 읽힌다', () => {
+    const report = ACTIONS.slice(ACTIONS.indexOf('export async function reportComment'))
+    expect(report).not.toContain('REPORT_HIDE_THRESHOLD')
+    expect(report).not.toContain('hidden_at')
+    // 사용자 클라이언트로 넣어 RLS 가 최종 관문이 되게 한다
+    expect(report).not.toContain('createAdminClient')
+    expect(report).toContain("supabase.from('webtoon_comment_reports').insert(")
   })
 
-  it('스키마가 어느 쪽이었는지 행에 남긴다 (환불·정산 대조용)', () => {
-    expect(MIGRATION).toMatch(/paid_amount\s+integer not null default 0 check \(paid_amount >= 0\)/i)
-    expect(MIGRATION).toContain('p_paid_amount')
+  it('이미 신고한 댓글은 이유를 구분해 알린다', () => {
+    const report = ACTIONS.slice(ACTIONS.indexOf('export async function reportComment'))
+    expect(report).toContain("error.code === '23505'")
+    expect(report).toContain("error: 'ALREADY'")
+  })
+
+  it('가려진 댓글은 목록에서 빠진다', () => {
+    expect(ACTIONS).toContain(".is('hidden_at', null)")
+    expect(REPORTS_MIGRATION).toMatch(/select using \(deleted_at is null and hidden_at is null\)/i)
+  })
+
+  it('신고 화면이 남의 댓글에만 뜬다 — 내 글을 신고할 일은 없다', () => {
+    const comments = read('components/webtoon/EpisodeComments.tsx')
+    expect(comments).toContain('{!c.mine && (')
+    expect(comments).toContain('이 댓글 신고하기')
   })
 })

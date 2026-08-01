@@ -8,9 +8,16 @@
  */
 
 import { useCallback, useState } from 'react'
-import { Loader2, MessageSquare, Trash2 } from 'lucide-react'
+import { Loader2, MessageSquare, Trash2, Flag } from 'lucide-react'
 import { toast } from 'sonner'
-import { addComment, removeComment, type WebtoonComment } from '@/app/actions/webtoon/webtoon'
+import { addComment, removeComment, reportComment, type WebtoonComment } from '@/app/actions/webtoon/webtoon'
+import {
+  REPORT_DONE_LINE,
+  REPORT_NOTICE,
+  REPORT_REASONS,
+  REPORT_REASON_INFO,
+  type ReportReason,
+} from '@/lib/domain/webtoon/report'
 import {
   COMMENT_EMPTY_LINE,
   COMMENT_MAX,
@@ -26,6 +33,8 @@ const ERROR_MSG: Record<string, string> = {
   RATE_LIMITED: '잠시 뒤 다시 남겨 주세요',
   TOO_MANY: '이 화에 남기실 수 있는 댓글을 다 쓰셨습니다',
   NOT_FOUND: '회차를 찾지 못했습니다',
+  ALREADY: '이미 신고하신 댓글입니다',
+  INVALID: '신고 사유를 골라 주세요',
   FAILED: '남기지 못했습니다 — 잠시 뒤 다시 시도해 주세요',
 }
 
@@ -42,6 +51,8 @@ export function EpisodeComments({
   const [items, setItems] = useState<WebtoonComment[]>(initial)
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
+  /** 신고 창을 연 댓글 id — 한 번에 하나만 연다 */
+  const [reporting, setReporting] = useState<string | null>(null)
 
   const issue = validateComment(body)
 
@@ -67,6 +78,18 @@ export function EpisodeComments({
     ])
     setBody('')
   }, [episodeId, body, nowMs])
+
+  const onReport = useCallback(async (id: string, reason: ReportReason) => {
+    setBusy(true)
+    const res = await reportComment(id, reason)
+    setBusy(false)
+    setReporting(null)
+    if (!res.success) {
+      toast.error(ERROR_MSG[res.error ?? 'FAILED'] ?? '신고하지 못했습니다')
+      return
+    }
+    toast.success(REPORT_DONE_LINE)
+  }, [])
 
   const onRemove = useCallback(async (id: string) => {
     setBusy(true)
@@ -123,20 +146,53 @@ export function EpisodeComments({
                 <span className="font-sans text-[10.5px] text-ink-primary/35">
                   {timeAgo(Date.parse(c.createdAt), nowMs)}
                 </span>
-                {c.mine && (
-                  <button
-                    type="button"
-                    onClick={() => void onRemove(c.id)}
-                    aria-label="내 댓글 지우기"
-                    className="ml-auto text-ink-primary/30 hover:text-ink-primary/60"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
+                <span className="ml-auto flex items-center gap-2">
+                  {/* 신고 — 남의 댓글에만. 내 글을 신고할 일은 없고, 버튼이 있으면 오조작만 는다 */}
+                  {!c.mine && (
+                    <button
+                      type="button"
+                      onClick={() => setReporting((v) => (v === c.id ? null : c.id))}
+                      aria-label="이 댓글 신고하기"
+                      aria-expanded={reporting === c.id}
+                      className="text-ink-primary/25 hover:text-ink-primary/60"
+                    >
+                      <Flag className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  {c.mine && (
+                    <button
+                      type="button"
+                      onClick={() => void onRemove(c.id)}
+                      aria-label="내 댓글 지우기"
+                      className="text-ink-primary/30 hover:text-ink-primary/60"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </span>
               </div>
               <p className="mt-1 whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-ink-primary/70">
                 {c.body}
               </p>
+              {reporting === c.id && (
+                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-2.5">
+                  <p className="mb-2 font-sans text-[10.5px] text-ink-primary/40">{REPORT_NOTICE}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {REPORT_REASONS.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => void onReport(c.id, r)}
+                        disabled={busy}
+                        title={REPORT_REASON_INFO[r].gloss}
+                        className="rounded-full border border-white/12 bg-surface/50 px-2.5 py-1 font-sans text-[11px] text-ink-primary/60 disabled:opacity-40"
+                      >
+                        {REPORT_REASON_INFO[r].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </li>
           ))}
         </ul>

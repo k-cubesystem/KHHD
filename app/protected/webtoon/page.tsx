@@ -94,13 +94,21 @@ export default async function WebtoonPage() {
             <p className="font-serif text-[11px] tracking-[0.2em] text-gold-500/60">내가 보낸 이야기</p>
             <ul className="mt-2.5 space-y-2">
               {myStories.map((s) => (
-                <li key={s.id} className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate font-serif text-[12.5px] text-ink-primary/70">
-                    {s.title}
-                  </span>
-                  <span className="flex-shrink-0 font-sans text-[11px] text-gold-300/70">
-                    {STORY_STATUS_LABEL[s.status]}
-                  </span>
+                <li key={s.id}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 flex-1 truncate font-serif text-[12.5px] text-ink-primary/70">
+                      {s.title}
+                    </span>
+                    <span className="flex-shrink-0 font-sans text-[11px] text-gold-300/70">
+                      {STORY_STATUS_LABEL[s.status]}
+                    </span>
+                  </div>
+                  {/* 회신 — 읽었으면 답한다는 약속의 실체. 있을 때만 뜬다 */}
+                  {s.replyNote && (
+                    <p className="mt-1.5 rounded-lg border border-gold-500/15 bg-gold-500/[0.05] px-2.5 py-2 font-serif text-[12px] leading-relaxed text-gold-200/85">
+                      {s.replyNote}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>

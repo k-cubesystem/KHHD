@@ -7,15 +7,9 @@ import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { formatKstDate } from '@/lib/utils'
 import { COMMENT_PER_EPISODE_LIMIT, COMMENT_RATE_PER_MIN, validateComment } from '@/lib/domain/webtoon/comment'
-import {
-  STORY_DAILY_LIMIT,
-  STORY_SUBMIT_COST,
-  isStoryStatus,
-  validateStory,
-  type StoryStatus,
-} from '@/lib/domain/webtoon/story'
+import { STORY_DAILY_LIMIT, isStoryStatus, validateStory, type StoryStatus } from '@/lib/domain/webtoon/story'
+import { REPORT_NOTE_MAX, isReportReason } from '@/lib/domain/webtoon/report'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
-import { refundBokchae, spendBokchae } from '@/lib/services/bokchae'
 import { notifyStorySubmission } from '@/lib/services/story-mail'
 
 /**
@@ -134,6 +128,7 @@ export async function listComments(episodeId: string, limit = 100): Promise<Comm
       .select('id, body, user_id, created_at, profiles(full_name)')
       .eq('episode_id', episodeId)
       .is('deleted_at', null)
+      .is('hidden_at', null)
       .order('created_at', { ascending: false })
       .limit(Math.max(1, Math.min(200, Math.floor(limit))))
 
@@ -240,6 +235,8 @@ export interface MyStoryRow {
   title: string
   status: StoryStatus
   createdAt: string
+  /** 운영자가 남긴 회신 한마디 — 읽었으면 답한다는 약속의 실체 */
+  replyNote: string | null
 }
 
 /**
@@ -258,7 +255,7 @@ export async function listMyStories(): Promise<MyStoryRow[]> {
 
     const { data, error } = await supabase
       .from('webtoon_story_submissions')
-      .select('id, title, status, created_at')
+      .select('id, title, status, created_at, reply_note')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
     if (error) {
@@ -270,6 +267,7 @@ export async function listMyStories(): Promise<MyStoryRow[]> {
       title: String(r.title),
       status: isStoryStatus(r.status) ? r.status : 'received',
       createdAt: String(r.created_at),
+      replyNote: typeof r.reply_note === 'string' && r.reply_note.trim() ? r.reply_note : null,
     }))
   } catch (e) {
     logger.warn('[webtoon] 내 사연 예외(비치명):', e)
@@ -278,39 +276,29 @@ export async function listMyStories(): Promise<MyStoryRow[]> {
 }
 
 export interface StoryGateInfo {
-  /** 멤버십 회원인가 — 회원은 값 없이 접수한다 */
+  /** 멤버십 회원인가 — **제작(선정) 자격**의 기준이다. 접수는 누구나 할 수 있다 */
   member: boolean
-  /** 회원이 아닐 때 드는 복채(wallets.balance 단위, 1 = 1만냥) */
-  cost: number
 }
 
-/** 접수 전에 화면이 값을 미리 보여 주기 위한 조회. 눌러 들어가서야 액수를 아는 문을 만들지 않는다. */
+/**
+ * 접수 전 안내용 조회 — **제작 자격을 보내기 전에** 알리기 위한 것이다.
+ * 다 쓰고 보낸 뒤에 "회원이 아니라 그릴 수 없다"고 알리면 사람의 시간을 받은 것이 된다.
+ */
 export async function getStoryGate(): Promise<StoryGateInfo> {
   try {
     const membership = await getCurrentUserMembership()
-    return { member: membership != null, cost: STORY_SUBMIT_COST }
+    return { member: membership != null }
   } catch (e) {
     logger.warn('[webtoon] 멤버십 조회 예외(비치명):', e)
-    // 모르면 **유료로 본다** — 무료라고 잘못 말하면 동의 없이 차감되는 화면이 된다
-    return { member: false, cost: STORY_SUBMIT_COST }
+    // 모르면 **비회원으로 본다** — 회원이라고 잘못 말하면 그려질 수 없는 사람에게 그려진다고 한 것이 된다
+    return { member: false }
   }
 }
 
 export interface SubmitStoryResult {
   success: boolean
-  error?:
-    | 'UNAUTHORIZED'
-    | 'RATE_LIMITED'
-    | 'INVALID'
-    | 'DAILY_LIMIT'
-    | 'NEEDS_PAYMENT'
-    | 'INSUFFICIENT_BOKCHAE'
-    | 'FAILED'
+  error?: 'UNAUTHORIZED' | 'RATE_LIMITED' | 'INVALID' | 'DAILY_LIMIT' | 'FAILED'
   message?: string
-  /** 이번 접수에 복채를 물었는가 */
-  charged?: boolean
-  /** 차감 후 지갑 잔액(복채로 냈을 때만) */
-  balance?: number
   /** 알림 메일이 실제로 나갔는가 — 화면이 "메일도 갔다"고 단정하지 않게 */
   notified?: boolean
 }
@@ -322,17 +310,13 @@ export interface SubmitStoryResult {
  *    사람이 오래 쓴 글이 사라진다. 메일은 실패해도 접수는 남는다.
  * ⚠️ 접수는 service_role RPC 로만 한다 — 쓰기 정책을 주면 하루 상한을 우회할 수 있다.
  */
-export async function submitStory(
-  input: {
-    title: string
-    body: string
-    contactName: string
-    contactPhone: string
-    contactKakao: string
-  },
-  /** 회원이 아닐 때 복채 차감에 대한 **명시 동의**. 없으면 NEEDS_PAYMENT 로 멈춘다 */
-  confirmPaid = false
-): Promise<SubmitStoryResult> {
+export async function submitStory(input: {
+  title: string
+  body: string
+  contactName: string
+  contactPhone: string
+  contactKakao: string
+}): Promise<SubmitStoryResult> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -352,25 +336,9 @@ export async function submitStory(
   const rl = await rateLimit(`webtoon-story:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 3 })
   if (!rl.success) return { success: false, error: 'RATE_LIMITED' }
 
-  // ── 과금 순서 (오방기와 같은 규율) ──
-  // ① 멤버십이면 값이 없다. ② 아니면 명시 동의가 있을 때만 차감한다. ③ 차감 뒤 기록이 깨지면 환불한다.
-  // 이 순서라야 "회원인데 돈을 물렸다"가 구조적으로 불가능하다 —
-  // 화면이 confirmPaid 를 항상 true 로 보내도 ①에서 통과해 버린다.
-  const membership = await getCurrentUserMembership()
-  const cost = membership ? 0 : STORY_SUBMIT_COST
-  let balance: number | undefined
-
-  if (cost > 0) {
-    if (!confirmPaid) return { success: false, error: 'NEEDS_PAYMENT' }
-    const paid = await spendBokchae(cost, '웹툰 내 이야기 접수', 'WEBTOON_STORY')
-    if (!paid.success) {
-      if (paid.error === 'INSUFFICIENT_BOKCHAE') return { success: false, error: 'INSUFFICIENT_BOKCHAE' }
-      logger.error('[webtoon] 복채 차감 실패:', paid.error)
-      return { success: false, error: 'FAILED' }
-    }
-    balance = paid.balance
-  }
-
+  // ⚠️ 접수에 값을 받지 않는다(CEO 2026-08-01). 제작 자격만 멤버십으로 좁혔으므로,
+  //    값을 그대로 두면 **그려질 수 없는 사람에게 값을 받는** 구조가 된다 — 그건 어떤 문구로도
+  //    정당화되지 않는다. 자격은 폼이 보내기 전에 알리고, 여기서는 받기만 한다.
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('submit_webtoon_story', {
     p_user_id: user.id,
@@ -381,14 +349,12 @@ export async function submitStory(
     p_contact_kakao: draft.contactKakao,
     p_today: formatKstDate(),
     p_daily_limit: STORY_DAILY_LIMIT,
-    p_paid_amount: cost,
+    p_paid_amount: 0,
   })
 
   const row: unknown = error ? null : Array.isArray(data) ? data[0] : data
   const allowed = isRecord(row) && row.allowed === true
   if (!allowed) {
-    // 값을 받았는데 글이 남지 않았다 — 되돌린다. 사연도 복채도 함께 사라지면 안 된다.
-    if (cost > 0) await refundBokchae(user.id, cost, '웹툰 내 이야기 접수 실패 환불')
     if (error) {
       logger.error('[webtoon] 사연 접수 RPC 실패:', error)
       return { success: false, error: 'FAILED' }
@@ -413,5 +379,48 @@ export async function submitStory(
   }
 
   revalidatePath('/protected/webtoon')
-  return { success: true, charged: cost > 0, balance, notified }
+  return { success: true, notified }
+}
+
+// ─── 댓글 신고 (CEO 2026-08-01) ──────────────────────────────
+
+export interface ReportResult {
+  success: boolean
+  error?: 'UNAUTHORIZED' | 'INVALID' | 'ALREADY' | 'RATE_LIMITED' | 'FAILED'
+}
+
+/**
+ * 댓글 신고 — 익명 접수. 여러 건이 쌓이면 **트리거가** 가린다.
+ *
+ * ⚠️ 가림 판정을 여기서 하지 않는다. 액션이 세면 클라이언트 경로마다 셈이 갈리고,
+ *    무엇보다 신고 두 건이 동시에 오면 둘 다 "아직 2건"으로 읽는다. 판정은 트리거 한 곳이다.
+ * ⚠️ 사용자 클라이언트로 INSERT 한다 — 정책의 with check (auth.uid() = reporter_id) 가
+ *    남의 이름으로 신고하는 길을 막는다(admin 을 쓰면 그 관문이 사라진다).
+ */
+export async function reportComment(commentId: string, reason: string, note = ''): Promise<ReportResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+  if (typeof commentId !== 'string' || commentId.length === 0) return { success: false, error: 'INVALID' }
+  if (!isReportReason(reason)) return { success: false, error: 'INVALID' }
+
+  const rl = await rateLimit(`webtoon-report:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
+  if (!rl.success) return { success: false, error: 'RATE_LIMITED' }
+
+  const trimmed = typeof note === 'string' ? note.trim().slice(0, REPORT_NOTE_MAX) : ''
+  const { error } = await supabase.from('webtoon_comment_reports').insert({
+    comment_id: commentId,
+    reporter_id: user.id,
+    reason,
+    note: trimmed.length > 0 ? trimmed : null,
+  })
+  if (error) {
+    // 유니크 위반 = 이미 신고한 댓글. 이유를 구분해 알린다(같은 말을 두 번 하게 두지 않는다)
+    if (error.code === '23505') return { success: false, error: 'ALREADY' }
+    logger.warn('[webtoon] 신고 저장 실패:', error)
+    return { success: false, error: 'FAILED' }
+  }
+  return { success: true }
 }

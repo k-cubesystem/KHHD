@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Loader2, Send, Lock, Coins } from 'lucide-react'
 import { toast } from 'sonner'
 import { submitStory, type StoryGateInfo } from '@/app/actions/webtoon/webtoon'
@@ -20,10 +21,11 @@ import {
   STORY_BODY_MAX,
   STORY_BODY_MIN,
   STORY_CONTACT_NOTICE,
-  STORY_FEE_NOTICE,
+  STORY_FREE_NOTICE,
   STORY_KAKAO_MAX,
-  STORY_MEMBER_NOTICE,
+  STORY_MEMBER_ONLY_NOTICE,
   STORY_NO_EXTRA_COST_NOTICE,
+  STORY_REPLY_NOTICE,
   STORY_NAME_MAX,
   STORY_PHONE_MAX,
   STORY_PRIVACY_NOTICE,
@@ -38,8 +40,6 @@ const ERROR_MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다',
   RATE_LIMITED: '잠시 뒤 다시 보내 주세요',
   DAILY_LIMIT: '오늘 보내실 수 있는 몫을 다 쓰셨습니다',
-  NEEDS_PAYMENT: '복채 동의가 필요합니다',
-  INSUFFICIENT_BOKCHAE: '복채가 모자랍니다',
   FAILED: '접수하지 못했습니다 — 잠시 뒤 다시 시도해 주세요',
 }
 
@@ -64,8 +64,7 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
 
   const onSubmit = useCallback(async () => {
     setBusy(true)
-    // 회원이 아니면 이 클릭이 곧 **복채 동의**다 — 버튼에 액수가 적혀 있어야 동의가 성립한다
-    const res = await submitStory(draft, !gate.member)
+    const res = await submitStory(draft)
     setBusy(false)
     if (!res.success) {
       toast.error(res.message ?? ERROR_MSG[res.error ?? 'FAILED'] ?? '접수하지 못했습니다')
@@ -74,7 +73,7 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
     trackEvent({ action: 'webtoon_story_submit', category: 'webtoon', label: 'ok' })
     setSent(true)
     onDone?.()
-  }, [draft, gate.member, onDone])
+  }, [draft, onDone])
 
   if (sent) {
     return (
@@ -118,18 +117,32 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
         <p className="font-sans text-[11.5px] leading-relaxed text-ink-primary/45">{STORY_SELECTION_NOTICE}</p>
       </div>
 
-      {/* 값 — **무엇을 사는 것인가**를 흐리지 않는다. 회원이면 값이 없다는 것도 여기서 말한다 */}
+      {/*
+        접수는 누구나 값 없이. **제작 자격만** 멤버십이다(CEO 2026-08-01).
+        ⚠️ 이 사실은 **보내기 전에** 있어야 한다 — 다 쓰고 보낸 뒤에 "회원이 아니라 그릴 수 없다"고
+           알리면 값을 받지 않았어도 사람의 시간을 받은 것이 된다.
+      */}
       <div className="space-y-1.5 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
         <p className="flex items-center gap-1.5 font-serif text-[11px] font-bold text-gold-200">
           <Coins className="h-3 w-3" />
-          {gate.member ? '멤버십 회원이라 복채가 들지 않습니다' : `접수 복채 ${gate.cost}만냥`}
+          {STORY_FREE_NOTICE}
         </p>
-        {!gate.member && (
-          <p className="font-sans text-[11.5px] leading-relaxed text-ink-primary/60">{STORY_FEE_NOTICE}</p>
+        {gate.member ? (
+          <p className="font-sans text-[11.5px] leading-relaxed text-ink-primary/60">
+            멤버십 회원이시라 <b className="text-ink-primary/85">선정 대상</b>입니다. {STORY_NO_EXTRA_COST_NOTICE}
+          </p>
+        ) : (
+          <>
+            <p className="font-sans text-[11.5px] leading-relaxed text-ink-primary/60">{STORY_MEMBER_ONLY_NOTICE}</p>
+            <Link
+              href="/protected/store?tab=membership"
+              className="inline-flex items-center gap-1 font-sans text-[11.5px] font-bold text-gold-300 underline"
+            >
+              멤버십 보기
+            </Link>
+          </>
         )}
-        <p className="font-sans text-[11.5px] leading-relaxed text-ink-primary/45">
-          {gate.member ? STORY_MEMBER_NOTICE : STORY_NO_EXTRA_COST_NOTICE}
-        </p>
+        <p className="font-sans text-[11.5px] leading-relaxed text-ink-primary/45">{STORY_REPLY_NOTICE}</p>
       </div>
 
       <div>
@@ -225,13 +238,8 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
         className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang disabled:opacity-40"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-        {gate.member ? '비공개로 보내기' : `복채 ${gate.cost}만냥으로 보내기`}
+        비공개로 보내기
       </button>
-      {!gate.member && (
-        <p className="-mt-2 text-center font-sans text-[10px] text-ink-primary/40">
-          버튼을 누르시면 복채 {gate.cost}만냥이 차감됩니다
-        </p>
-      )}
     </div>
   )
 }
