@@ -20,7 +20,9 @@ import {
   SAMGI_SLOT_PLAIN,
   YUKCHIN_INFO,
   allPlainLines,
+  allNarrationLines,
   headline,
+  narrate,
   yukchin,
   type Yukchin,
   type ElementSpread,
@@ -491,10 +493,14 @@ describe('쉬운 말 층 문구 규율', () => {
 describe('화면 계약 — 쉬운 층이 앞, 어려운 층은 접힌다', () => {
   const SHEET = readFileSync(path.join(process.cwd(), 'components/shrine/scene/ObangkiSheet.tsx'), 'utf8')
 
-  it('결론·내 사주·육친이 본문에 있다', () => {
-    for (const token of ['headline(reading.draw.way)', 'MyChart', 'yukchin(', 'YUKCHIN_INFO', '오늘의 답']) {
-      expect(SHEET).toContain(token)
-    }
+  it('본문은 결론 한 줄 + 설명 풀이 문단이다 — 표도 그래프도 없다 (8차d)', () => {
+    expect(SHEET).toContain('headline(reading.draw.way)')
+    expect(SHEET).toContain('오늘의 답')
+    expect(SHEET).toContain('narrate(reading, matter,')
+    expect(SHEET).toContain('narration.map(')
+    // CEO 8차d: 오행 그래프와 육친 표는 걷어냈다 — 데이터는 문장 안에만 있다
+    expect(SHEET).not.toContain('MyChart')
+    expect(SHEET).not.toContain('나에게 무엇인가')
   })
 
   it('★ 공수·신장 명호·오행 흐름은 **지워지지 않고** 접힌 층에 있다', () => {
@@ -505,8 +511,111 @@ describe('화면 계약 — 쉬운 층이 앞, 어려운 층은 접힌다', () =
     expect(SHEET).toContain('aria-expanded={deep}')
   })
 
-  it('명식이 없으면 막대·육친이 통째로 빠진다 (지어내지 않는다)', () => {
-    expect(SHEET).toContain('if (!elements) return null')
-    expect(SHEET).toContain('status.dayStem ? yukchin(')
+  it('명식이 없으면 사주 문단이 통째로 빠진다 (지어내지 않는다)', () => {
+    // 판정은 도메인이 하고, 재료가 없으면 문단 자체가 서지 않는다
+    const src = readFileSync(path.join(process.cwd(), 'lib/domain/ritual/obangki-reading.ts'), 'utf8')
+    expect(src).toContain('if (saju.dayElement) {')
+    expect(SHEET).toContain('dayElement: status.dayStem?.element ?? null')
+  })
+
+  it('★ 화면에 육친·용어 이름이 나가지 않는다 — 계산은 하되 보여주지는 않는다', () => {
+    const body = SHEET.slice(SHEET.indexOf('function SamgiScroll'), SHEET.indexOf('{deep && ('))
+    for (const term of ['재성', '관성', '인성', '비겁', '식상', '태과', '불급', '응기']) {
+      expect(body).not.toContain(term)
+    }
+  })
+})
+
+describe('설명 풀이 — 사주풀이처럼 (CEO 8차d)', () => {
+  const SAJU_FULL = {
+    dayElement: 'water' as Element,
+    yongsin: 'wood' as Element,
+    spread: Object.freeze({ wood: 0, fire: 4, earth: 2, metal: 1, water: 1 }),
+  }
+  const SAJU_NONE = { dayElement: null, yongsin: null, spread: null }
+
+  it('재료가 다 있으면 다섯 문단, 명식이 없으면 네 문단이다 (사주 문단만 빠진다)', () => {
+    for (const s of seeds(60)) {
+      const r = readSamgi(s, SAJU_FULL.spread, 'jaesu')
+      expect(narrate(r, 'jaesu', SAJU_FULL)).toHaveLength(5)
+      expect(narrate(r, 'jaesu', SAJU_NONE)).toHaveLength(4)
+    }
+  })
+
+  it('같은 (점사, 갈래, 사주)면 통째로 같다 — 결정론', () => {
+    for (const s of seeds(40)) {
+      const r = readSamgi(s, SAJU_FULL.spread, 'honsa')
+      expect(narrate(r, 'honsa', SAJU_FULL)).toEqual(narrate(r, 'honsa', SAJU_FULL))
+    }
+  })
+
+  it('첫 문단이 물으신 갈래로 연다 — 일곱 갈래 모두', () => {
+    const r = readSamgi(12345, null, 'sinsu')
+    const heads: string[] = []
+    for (const m of ['sinsu', 'jaesu', 'gwanjae', 'honsa', 'teo', 'mom', 'jason'] as const) {
+      const first = narrate(r, m, SAJU_NONE)[0]
+      expect(first).toContain('물으셨습니다')
+      heads.push(first.split('.')[0])
+    }
+    expect(new Set(heads).size).toBe(7)
+  })
+
+  it('★ 사주 문단이 일간·육친을 **이름 없이** 말한다 — 계산은 하되 용어는 안 쓴다', () => {
+    const para = narrate(readSamgi(777, SAJU_FULL.spread, 'mom'), 'mom', SAJU_FULL)[3]
+    expect(para).toContain('물의 기운으로 난 사람')
+    for (const term of ['재성', '관성', '인성', '비겁', '식상', '육친', '일간', '용신', '태과', '불급']) {
+      expect(para).not.toContain(term)
+    }
+  })
+
+  it('★ 왕쇠·용신은 재료가 있을 때만 문장에 붙는다', () => {
+    const r = readSamgi(999, SAJU_FULL.spread, 'jaesu')
+    const withAll = narrate(r, 'jaesu', SAJU_FULL)[3]
+    const dayOnly = narrate(r, 'jaesu', { dayElement: 'water', yongsin: null, spread: null })[3]
+    expect(withAll.length).toBeGreaterThan(dayOnly.length)
+  })
+
+  it('전 문단이 -습니다/-입니다 체다 — 공수 어투(-구나)가 섞이지 않는다', () => {
+    for (const line of allNarrationLines()) {
+      // 합쇼체 종결 전부 — 습니다·입니다·옵니다·됩니다…
+      expect(line).toMatch(/니다\.$/)
+      expect(line).not.toMatch(/구나\./)
+    }
+  })
+
+  it('한자가 한 자도 없다 — 본문에서 전문어를 걷어낸 것이 이 층의 요지다', () => {
+    for (const line of allNarrationLines()) expect(line).not.toMatch(/[\u4e00-\u9fff]/)
+  })
+
+  it('문구가 전부 유일하고 금지 어휘·명령형이 없다', () => {
+    const all = allNarrationLines()
+    expect(new Set(all).size).toBe(all.length)
+    for (const line of all) {
+      for (const w of ['반드시', '무조건', '확실', '보장', '절대', '치유', '효과', '효능']) {
+        expect(line).not.toContain(w)
+      }
+      expect(line).not.toMatch(/(하십시오|해라|하라\.|십시오|하시오)/)
+    }
+  })
+})
+
+describe('무대 — 한 다발 (CEO 8차d: "이상한 막대기 5개"를 없앤다)', () => {
+  const SHEET = readFileSync(path.join(process.cwd(), 'components/shrine/scene/ObangkiSheet.tsx'), 'utf8')
+
+  it('낱개 5기 무대가 사라지고 다발 하나가 선다', () => {
+    expect(SHEET).toContain('FlagBundle')
+    for (const dead of ['obangki-slot', 'obangki-cloth', 'obangki-dim', 'SLOT_W']) {
+      expect(SHEET).not.toContain(dead)
+    }
+  })
+
+  it('국면 전환 계약은 그대로다 — 다발 흔들림의 animationend 가 몬다', () => {
+    expect(SHEET).toContain("e.animationName === 'obangkiShuffle'")
+    expect(SHEET).not.toMatch(/\b(setTimeout|setInterval)\s*\(/)
+  })
+
+  it('펼쳐진 기가 펄럭인다 (CEO 8차d)', () => {
+    const row = readFileSync(path.join(process.cwd(), 'components/shrine/scene/SamgiRow.tsx'), 'utf8')
+    expect(row).toContain('obangki-flutter')
   })
 })

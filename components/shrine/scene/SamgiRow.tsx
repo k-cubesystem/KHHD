@@ -30,34 +30,47 @@ export function scrollDelayMs(reading: SamgiReading): number {
   return purifyLeadMs(reading) + 2 * OBANGKI_SAMGI_STEP_MS + 700
 }
 
-/** 펼쳐진 기 한 폭 — 말린 기와 달리 색·인장이 드러난다. */
+/**
+ * 펼쳐진 기 한 폭 — 말린 기와 달리 색·인장이 드러난다.
+ *
+ * 두 겹인 이유: 펼침(.obangki-unfurl, 유한)과 펄럭임(.obangki-flutter, 무한)이 **같은 요소의
+ * transform 을 두고 다투기 때문**이다(CEO 8차d: "조금 펄럭이는 효과가 있으면 좋겠어").
+ * 한 요소에 둘을 얹으면 뒤엣것이 앞엣것을 지워 펼침이 통째로 사라진다 — 바깥이 펄럭이고 안이 펴진다.
+ * 펄럭임은 펼침이 끝나는 박자에 시작하도록 같은 지연을 쓴다.
+ */
 export function UnfurledFlag({ color, size, delayMs }: { color: ObangkiColor; size: number; delayMs: number }) {
   const info = OBANGKI_COLOR_INFO[color]
   return (
     <span
       aria-hidden
-      className="obangki-unfurl relative block"
-      style={{
-        // 1:1 — 에셋(512×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다.
-        // 실물 오방기는 기폭 가로(70cm)와 깃대 길이(72cm)가 거의 같아 외곽이 정사각이다.
-        width: size,
-        height: size,
-        animationDelay: `${delayMs}ms`,
-        // 에셋이 없어도(404) 기폭 자리에 오방색 면이 남는다 — 깃대·자루 자리까지 칠하지는 않는다
-        backgroundImage: `url('/shrine/ritual/obangki-${color}.webp'), linear-gradient(${info.hex},${info.hex})`,
-        backgroundSize: '100% 100%, 94% 54%',
-        backgroundPosition: 'left top, right top',
-        backgroundRepeat: 'no-repeat, no-repeat',
-        // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
-        // 빛나면 유령 사각형이 보인다
-        filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
-      }}
+      className="obangki-flutter block"
+      style={{ '--ob-delay': `${delayMs + 400}ms` } as React.CSSProperties}
     >
       <span
-        className="absolute inset-x-0 top-[18%] text-center font-serif text-[13px] font-bold"
-        style={{ color: 'rgba(28,20,12,0.72)' }}
+        aria-hidden
+        className="obangki-unfurl relative block"
+        style={{
+          // 1:1 — 에셋(512×512)과 같은 비. 어긋나면 깃발 천이 늘어나 붓결이 뭉갠다.
+          // 실물 오방기는 기폭 가로(70cm)와 깃대 길이(72cm)가 거의 같아 외곽이 정사각이다.
+          width: size,
+          height: size,
+          animationDelay: `${delayMs}ms`,
+          // 에셋이 없어도(404) 기폭 자리에 오방색 면이 남는다 — 깃대·자루 자리까지 칠하지는 않는다
+          backgroundImage: `url('/shrine/ritual/obangki-${color}.webp'), linear-gradient(${info.hex},${info.hex})`,
+          backgroundSize: '100% 100%, 94% 54%',
+          backgroundPosition: 'left top, right top',
+          backgroundRepeat: 'no-repeat, no-repeat',
+          // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
+          // 빛나면 유령 사각형이 보인다
+          filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
+        }}
       >
-        {info.seal}
+        <span
+          className="absolute inset-x-0 top-[18%] text-center font-serif text-[13px] font-bold"
+          style={{ color: 'rgba(28,20,12,0.72)' }}
+        >
+          {info.seal}
+        </span>
       </span>
     </span>
   )

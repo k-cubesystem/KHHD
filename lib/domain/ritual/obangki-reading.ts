@@ -35,10 +35,13 @@ import { hashSeed } from './aekmak'
 import {
   OBANGKI_COLORS,
   OBANGKI_COLOR_ELEMENT,
+  OBANGKI_MATTERS,
   OBANGKI_MATTER_INFO,
   matterLine,
+  sajuRelation,
   type ObangkiColor,
   type ObangkiMatter,
+  type SajuRelation,
 } from './obangki'
 import type { Element } from '@/lib/domain/shrine/types'
 
@@ -517,5 +520,164 @@ export function allPlainLines(): readonly string[] {
     ...OBANGKI_COLORS.map((c) => HEADLINE[c]),
     ...(Object.keys(SAMGI_FLOW_PLAIN) as SamgiFlow[]).map((f) => SAMGI_FLOW_PLAIN[f]),
     ...(Object.keys(YUKCHIN_INFO) as Yukchin[]).flatMap((y) => [YUKCHIN_INFO[y].plain, YUKCHIN_INFO[y].detail]),
+  ]
+}
+
+// ─── 설명 풀이 (CEO 8차d: "우리 사주풀이처럼 이해하기 쉽게 설명 풀이로") ────────
+//
+// ⚠️ **용어와 표를 걷어내되 판정은 그대로 쓴다.** CEO 의 말 그대로다 —
+//    "육친도 안 보여줘도 돼. **데이터를 기반으로 풀이를 해달라는 거지** 보여주지 않아도 돼."
+//    그래서 일간·용신·오행 분포·육친·왕쇠·오행 흐름은 전부 계산하되, 화면에는 **이름이 나가지 않는다**.
+//    "재성(財星)입니다" 대신 "거두고 셈하는 자리입니다"라고 쓴다.
+//
+// 어투도 바꿨다. 신위의 공수(-구나/-겠다)는 짧게 읊는 말이라 설명에 맞지 않는다 —
+// 사주풀이와 같은 **-습니다 체 산문**으로 문단을 이어 붙인다.
+
+/** 문단 하나 — 화면은 이 배열을 그대로 <p> 로 편다. */
+export type Narration = readonly string[]
+
+const MATTER_OPENING: Readonly<Record<ObangkiMatter, string>> = Object.freeze({
+  sinsu: '올 한 해의 운수를 물으셨습니다.',
+  jaesu: '돈과 벌이의 일을 물으셨습니다.',
+  gwanjae: '얽힌 시비의 일을 물으셨습니다.',
+  honsa: '인연과 혼사의 일을 물으셨습니다.',
+  teo: '집과 자리의 일을 물으셨습니다.',
+  mom: '몸과 기력의 일을 물으셨습니다.',
+  jason: '집안 사람의 일을 물으셨습니다.',
+})
+
+/** 「지금 어떤 자리인가」 — 자리 기를 풀어 쓴다. 신장 이름도 소관 한자도 쓰지 않는다. */
+const SEAT_PROSE: Readonly<Record<ObangkiColor, string>> = Object.freeze({
+  red: '지금 이 일에는 바라는 마음이 크게 얹혀 있습니다. 이루고 싶은 것이 뚜렷하다는 뜻이고, 그만큼 조바심도 함께 자라 있는 자리입니다.',
+  white:
+    '지금 이 일은 지켜보는 손길 아래 놓여 있습니다. 급히 굴러가지 않는 대신 크게 어긋나지도 않는, 잠잠한 자리입니다.',
+  yellow: '지금 이 일에는 집안 쪽 결이 얹혀 있습니다. 나 혼자 정해서 되는 일이 아니라 위아래가 함께 걸린 자리입니다.',
+  blue: '지금 이 일에는 걸리는 것이 하나 있습니다. 크게 막힌 것은 아니지만 마음 한켠이 계속 그쪽으로 가는 자리입니다.',
+  green: '지금 이 일 앞에는 묵은 것이 놓여 있습니다. 새로 벌인 일이 아니라 예전부터 끌고 온 것이 아직 도는 자리입니다.',
+})
+
+/** 「어디서 비롯되었나」 — 뿌리 기. */
+const ROOT_PROSE: Readonly<Record<ObangkiColor, string>> = Object.freeze({
+  red: '이 일이 어디서 왔는가 하면, 그대의 바람이 먼저였습니다. 밖에서 밀려온 일이 아니라 마음이 먼저 자라 여기까지 온 것입니다.',
+  white: '이 일이 어디서 왔는가 하면, 오래 쌓아 둔 것에서 왔습니다. 그동안 들인 정성이 이제 모양을 갖추려는 참입니다.',
+  yellow: '이 일이 어디서 왔는가 하면, 집안 쪽에서 흘러왔습니다. 사람이든 내력이든 뿌리 쪽에 실마리가 있습니다.',
+  blue: '이 일이 어디서 왔는가 하면, 사람과 자리 사이에서 왔습니다. 누가 잘못해서가 아니라 놓인 자리가 서로 어긋나 생긴 결입니다.',
+  green:
+    '이 일이 어디서 왔는가 하면, 정리하지 못하고 둔 것에서 왔습니다. 한 번 매듭을 짓지 않아 같은 자리를 계속 돌고 있습니다.',
+})
+
+/** 「어떻게 하면 되나」 — 향방 기. 결론을 쥔 자리라 가장 구체적으로 쓴다. */
+const WAY_PROSE: Readonly<Record<ObangkiColor, string>> = Object.freeze({
+  red: '풀리는 쪽은 물러서지 않는 쪽입니다. 청할 것을 청하고 나서야 할 자리이니, 뜸을 들이는 동안 기운이 식지 않게 하는 편이 낫습니다.',
+  white:
+    '풀리는 쪽은 몸과 마음을 먼저 밝히는 쪽입니다. 일을 밀어붙이기보다 잠을 고르고 마음을 가라앉히면 나머지는 뒤따라옵니다.',
+  yellow: '풀리는 쪽은 집안을 먼저 돌보는 쪽입니다. 뿌리 쪽 사람에게 한 번 마음을 내면 막혀 있던 데가 함께 트입니다.',
+  blue: '풀리는 쪽은 걸린 것을 먼저 다스리는 쪽입니다. 새 일을 벌이기 전에 지금 걸려 있는 하나를 마무리 짓는 편이 순합니다.',
+  green: '풀리는 쪽은 묵은 것을 먼저 물리는 쪽입니다. 무엇을 더하기보다 붙들고 있던 하나를 놓는 데서 길이 열립니다.',
+})
+
+/** 세 기가 이루는 결 — 이름(순류·일충…) 대신 뜻만 쓴다. */
+const FLOW_PROSE: Readonly<Record<SamgiFlow, string>> = Object.freeze({
+  jungi: '같은 기운이 두 번 거듭 나왔습니다. 한 말을 두 번 하는 셈이라 그만큼 무겁게 받으시면 됩니다.',
+  sunryu: '세 기운이 앞엣것이 뒤엣것을 밀어 주는 차례로 나왔습니다. 순서만 지키면 막히는 데 없이 흘러갈 결입니다.',
+  yeokryu:
+    '세 기운이 거꾸로 흐르는 차례로 나왔습니다. 서두르면 애써 온 자리로 되돌아가기 쉬우니 속도를 늦추는 편이 낫습니다.',
+  chung: '세 기운 가운데 한 군데가 서로 부딪습니다. 그 한 고비를 넘기고 나서야 나머지가 풀릴 결입니다.',
+  ssangchung:
+    '세 기운 가운데 두 군데가 잇달아 부딪습니다. 한꺼번에 풀 자리가 아니니 하나씩 나누어 보시는 편이 낫습니다.',
+})
+
+/** 일간 오행 — "그대는 무엇으로 난 사람인가". 천간 이름도 한자도 쓰지 않는다. */
+const DAY_ELEMENT_PROSE: Readonly<Record<Element, string>> = Object.freeze({
+  wood: '그대는 나무의 기운으로 난 사람입니다. 위로 뻗고 싶어 하는 결이라 자라날 자리가 있으면 힘이 붙습니다.',
+  fire: '그대는 불의 기운으로 난 사람입니다. 밝고 빠른 결이라 마음이 붙으면 단숨에 가되 오래 태우면 지칩니다.',
+  earth: '그대는 흙의 기운으로 난 사람입니다. 품고 견디는 결이라 늦어 보여도 끝에 남는 쪽입니다.',
+  metal: '그대는 쇠의 기운으로 난 사람입니다. 가르고 맺는 결이라 분명한 것을 좋아하고 어정쩡한 자리를 견디지 못합니다.',
+  water: '그대는 물의 기운으로 난 사람입니다. 스미고 돌아가는 결이라 정면으로 부딪기보다 길을 찾아 흐르는 쪽입니다.',
+})
+
+/** 육친 — **이름을 쓰지 않고** 뜻만 쓴다(CEO: 보여주지 않아도 된다). */
+const YUKCHIN_PROSE: Readonly<Record<Yukchin, string>> = Object.freeze({
+  bigyeop:
+    '오늘 나온 기운은 그대와 같은 결입니다. 손발이 맞는 사람이 곁에 서는 자리이면서, 같은 것을 나눠 가져야 하는 자리이기도 합니다.',
+  siksang:
+    '오늘 나온 기운은 그대가 내놓는 결입니다. 말이든 솜씨든 안에 있던 것이 밖으로 나가는 자리라, 쏟은 만큼 모양이 잡힙니다.',
+  jaeseong:
+    '오늘 나온 기운은 그대가 다루는 결입니다. 손에 쥘 수 있는 것이 걸린 자리인데, 쥐려면 그만한 힘이 있어야 하는 자리이기도 합니다.',
+  gwanseong:
+    '오늘 나온 기운은 그대를 누르는 결입니다. 눌린다고 나쁜 것만은 아닙니다. 틀이 있어야 모양이 잡히는 자리이니, 감당할 만하면 그것이 곧 자리가 됩니다.',
+  inseong:
+    '오늘 나온 기운은 그대를 돕는 결입니다. 배움이든 사람이든 받는 것이 있는 자리라 편안하되, 기대기만 하면 걸음이 늦어집니다.',
+})
+
+/** 왕쇠 — "넘친다/비었다"만 말한다. */
+const WANGSWE_PROSE: Readonly<Record<'taegwa' | 'bulgeup', string>> = Object.freeze({
+  taegwa: '다만 그대 사주에 이미 넉넉한 기운이 또 나왔습니다. 더 채우기보다 있는 것을 고르게 쓰시는 편이 순합니다.',
+  bulgeup: '더구나 그대 사주에서 가장 비어 있던 자리를 이 기운이 채웁니다. 오래 아쉬웠던 것이 마침 들어온 셈입니다.',
+})
+
+/** 용신 관계 — 이름(생입·설기…) 없이 한 줄. */
+const YONGSIN_PROSE: Readonly<Record<SajuRelation, string>> = Object.freeze({
+  saengip: '게다가 그대에게 가장 필요한 기운을 이것이 살려 줍니다. 오늘의 걸음에 순풍이 붙는 셈입니다.',
+  bihwa: '그대에게 필요한 기운과 같은 결이라, 낯설지 않아 다루기 수월합니다.',
+  seolgi: '그대에게 필요한 기운이 제 힘을 내어 이것을 밝힙니다. 베푼 만큼 돌아오는 자리입니다.',
+  jeap: '그대에게 필요한 기운이 이것을 다스리는 형국이라, 조건을 그대가 정해도 되는 자리입니다.',
+  geukip: '다만 이것이 그대에게 필요한 기운을 조금 누릅니다. 급한 마음만 내려놓으면 탈이 없습니다.',
+})
+
+const EUNGGI_PROSE: Readonly<Record<ObangkiColor, string>> = Object.freeze({
+  blue: '이 일은 봄께, 음력으로 정월·이월 무렵에 결이 드러나겠습니다.',
+  red: '이 일은 여름께, 음력으로 사월·오월 무렵에 결이 드러나겠습니다.',
+  yellow: '이 일은 계절이 바뀌는 환절에 결이 드러나겠습니다.',
+  white: '이 일은 가을께, 음력으로 칠월·팔월 무렵에 결이 드러나겠습니다.',
+  green: '이 일은 겨울께, 음력으로 시월·동짓달 무렵에 결이 드러나겠습니다.',
+})
+
+/** 사주 층에 쓸 재료 — 있는 것만 문장이 된다(없으면 그 문단이 통째로 빠진다). */
+export interface NarrationSaju {
+  /** 일간 오행 — 명식에서 나 자신 */
+  readonly dayElement: Element | null
+  readonly yongsin: Element | null
+  readonly spread: ElementSpread | null
+}
+
+/**
+ * 설명 풀이 — 문단 배열. 화면은 이것만 펴면 된다.
+ *
+ * ⚠️ 사주 문단은 **재료가 있을 때만** 선다. 일간이 없으면 육친을 말할 수 없고,
+ *    없는 것을 지어내면 그 순간 점사가 아니라 거짓말이 된다.
+ */
+export function narrate(reading: SamgiReading, matter: ObangkiMatter, saju: NarrationSaju): Narration {
+  const { seat, root, way } = reading.draw
+  const out: string[] = []
+
+  out.push(`${MATTER_OPENING[matter]} ${SEAT_PROSE[seat]}`)
+  out.push(ROOT_PROSE[root])
+  out.push(`${WAY_PROSE[way]} ${FLOW_PROSE[reading.flow]}`)
+
+  // 사주 문단 — 일간이 있어야 성립한다
+  if (saju.dayElement) {
+    const parts = [DAY_ELEMENT_PROSE[saju.dayElement], YUKCHIN_PROSE[yukchin(way, saju.dayElement)]]
+    const w = wangswe(way, saju.spread)
+    if (w) parts.push(WANGSWE_PROSE[w])
+    if (saju.yongsin) parts.push(YONGSIN_PROSE[sajuRelation(way, saju.yongsin)])
+    out.push(parts.join(' '))
+  }
+
+  out.push(EUNGGI_PROSE[way])
+  return Object.freeze(out)
+}
+
+/** 문구 풀 전체(금지 어휘 린트 대상). */
+export function allNarrationLines(): readonly string[] {
+  return [
+    ...OBANGKI_MATTERS.map((m) => MATTER_OPENING[m]),
+    ...OBANGKI_COLORS.flatMap((c) => [SEAT_PROSE[c], ROOT_PROSE[c], WAY_PROSE[c], EUNGGI_PROSE[c]]),
+    ...(Object.keys(FLOW_PROSE) as SamgiFlow[]).map((f) => FLOW_PROSE[f]),
+    ...(Object.keys(DAY_ELEMENT_PROSE) as Element[]).map((e) => DAY_ELEMENT_PROSE[e]),
+    ...(Object.keys(YUKCHIN_PROSE) as Yukchin[]).map((y) => YUKCHIN_PROSE[y]),
+    WANGSWE_PROSE.taegwa,
+    WANGSWE_PROSE.bulgeup,
+    ...(Object.keys(YONGSIN_PROSE) as SajuRelation[]).map((r) => YONGSIN_PROSE[r]),
   ]
 }

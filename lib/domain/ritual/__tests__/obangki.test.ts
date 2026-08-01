@@ -465,11 +465,10 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
   const gate = read('scripts/check-animation-css.mjs')
   const OBANGKI_CLASSES = [
     '.obangki-bell',
-    '.obangki-slot',
-    '.obangki-cloth',
     '.obangki-shuffle',
-    '.obangki-dim',
     '.obangki-unfurl',
+    '.obangki-pullout',
+    '.obangki-flutter',
     '.obangki-samgi',
     '.obangki-purified',
     '.obangki-burst',
@@ -477,10 +476,10 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
   ]
   const OBANGKI_KEYFRAMES = [
     'obangkiBell',
-    'obangkiSway',
     'obangkiShuffle',
-    'obangkiDim',
     'obangkiUnfurl',
+    'obangkiPullout',
+    'obangkiFlutter',
     'obangkiSamgiRise',
     'obangkiPurify',
     'obangkiBurst',
@@ -532,11 +531,18 @@ describe('연출 타임라인 ↔ CSS 계약', () => {
     expect({ missingClasses, missingKeyframes }).toEqual({ missingClasses: [], missingKeyframes: [] })
   })
 
-  it('죽은 연출이 남아 있지 않다 — 폐지된 뽑기(pull) 자취', () => {
-    // 7차에 제스처를, 8차에 단일 뽑기를 없앴다. 쓰이지 않는 키프레임이 게이트 목록에 남으면
-    // "확인했다"는 숫자만 늘고 실제로 지키는 것은 없다.
-    expect(css).not.toContain('obangkiPull')
-    expect(gate).not.toContain('obangkiPull')
+  it('죽은 연출이 남아 있지 않다 — 폐지된 낱개 5기 자취 (8차d: 한 다발로 바뀜)', () => {
+    // 실물 기뽑기는 다섯 깃대를 **한데 모아 감아쥐고** 흔든다. 낱개로 세워 두는 무대가 사라지면서
+    // 자리 이동(.obangki-slot)·나부낌(.obangki-cloth)·물러남(.obangki-dim)도 함께 죽었다.
+    // 쓰이지 않는 이름이 게이트 목록에 남으면 "확인했다"는 숫자만 늘고 실제로 지키는 것은 없다.
+    for (const dead of ['obangkiPull', 'obangkiSway', 'obangkiDim']) {
+      expect(css).not.toMatch(new RegExp(`@keyframes\s+${dead}\b`))
+      expect(gate).not.toContain(`'${dead}'`)
+    }
+    for (const dead of ['.obangki-slot', '.obangki-cloth', '.obangki-dim']) {
+      expect(css).not.toContain(`${dead} {`)
+      expect(gate).not.toContain(`'${dead}'`)
+    }
   })
 
   it('모션 최소화에서도 국면 전환이 멎지 않는다 (animation:none 이 아니라 0.01ms)', () => {
