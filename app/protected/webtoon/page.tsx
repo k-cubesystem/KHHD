@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { BookOpen, ChevronRight, PenLine } from 'lucide-react'
+import { BookOpen, ChevronRight, Lock as LockIcon, PenLine } from 'lucide-react'
 import { listEpisodes, listMyStories } from '@/app/actions/webtoon/webtoon'
 import { STORY_STATUS_LABEL } from '@/lib/domain/webtoon/story'
 
@@ -56,7 +56,21 @@ export default async function WebtoonPage() {
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-serif text-[10px] tracking-[0.2em] text-gold-500/60">{ep.no}화</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-serif text-[10px] tracking-[0.2em] text-gold-500/60">
+                        {ep.no === 0 ? '예고편' : `${ep.no}화`}
+                      </span>
+                      {ep.access === 'membership' ? (
+                        <span className="inline-flex items-center gap-0.5 rounded-full border border-gold-500/35 bg-gold-500/[0.08] px-1.5 py-px font-sans text-[9px] font-bold text-gold-300">
+                          <LockIcon className="h-2.5 w-2.5" />
+                          멤버십
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-white/15 px-1.5 py-px font-sans text-[9px] text-ink-primary/45">
+                          무료
+                        </span>
+                      )}
+                    </span>
                     <span className="mt-0.5 block truncate font-serif text-[14px] font-bold text-ink-primary">
                       {ep.title}
                     </span>

@@ -34,6 +34,8 @@ export interface WebtoonEpisode {
   summary: string | null
   thumbUrl: string | null
   publishedAt: string
+  /** 접근 등급 — 'membership' 이면 본문은 멤버십만(getEpisodePages 가 판정) */
+  access: 'free' | 'membership'
 }
 
 function toEpisode(row: unknown): WebtoonEpisode | null {
@@ -47,6 +49,7 @@ function toEpisode(row: unknown): WebtoonEpisode | null {
     summary: typeof row.summary === 'string' ? row.summary : null,
     thumbUrl: typeof row.thumb_url === 'string' ? row.thumb_url : null,
     publishedAt: row.published_at,
+    access: row.access === 'membership' ? 'membership' : 'free',
   }
 }
 
@@ -56,7 +59,7 @@ export async function listEpisodes(): Promise<WebtoonEpisode[]> {
     const supabase = await createClient()
     const { data, error } = await supabase
       .from('webtoon_episodes')
-      .select('id, no, title, summary, thumb_url, published_at')
+      .select('id, no, title, summary, thumb_url, published_at, access')
       .order('no', { ascending: false })
     if (error) {
       logger.warn('[webtoon] 회차 목록 조회 실패:', error)
@@ -71,18 +74,83 @@ export async function listEpisodes(): Promise<WebtoonEpisode[]> {
 
 /** 회차 하나. 미공개거나 없으면 null(RLS 가 판정한다). */
 export async function getEpisode(no: number): Promise<WebtoonEpisode | null> {
-  if (!Number.isFinite(no) || no <= 0) return null
+  // 0화 = 예고편. 음수만 거른다.
+  if (!Number.isFinite(no) || no < 0) return null
   try {
     const supabase = await createClient()
     const { data } = await supabase
       .from('webtoon_episodes')
-      .select('id, no, title, summary, thumb_url, published_at')
+      .select('id, no, title, summary, thumb_url, published_at, access')
       .eq('no', Math.floor(no))
       .maybeSingle()
     return toEpisode(data)
   } catch (e) {
     logger.warn('[webtoon] 회차 조회 예외(비치명):', e)
     return null
+  }
+}
+
+export interface EpisodePage {
+  url: string
+  w: number
+  h: number
+}
+
+export interface EpisodePagesResult {
+  /** true 면 멤버십이 없어 본문을 내려주지 않은 것 — 화면은 잠금 안내를 그린다 */
+  locked: boolean
+  pages: EpisodePage[]
+}
+
+/**
+ * 회차 본문 페이지.
+ *
+ * ⚠️ 본문 경로 표(webtoon_episode_pages)는 RLS 정책이 없어 클라이언트가 직접 못 읽는다 —
+ *    게이트는 이 액션 **한 곳**이다. 멤버십 회차는 판정 통과 후에만 서명 URL 로 내려간다.
+ *    (무료 회차 = 공개 버킷 URL / 멤버십 회차 = 비공개 버킷 1시간 서명 URL)
+ */
+export async function getEpisodePages(episodeId: string): Promise<EpisodePagesResult> {
+  const none: EpisodePagesResult = { locked: false, pages: [] }
+  if (typeof episodeId !== 'string' || episodeId.length === 0) return none
+  try {
+    // 공개(RLS) 클라이언트로 회차 존재·공개 여부를 먼저 확인한다
+    const supabase = await createClient()
+    const { data: ep } = await supabase.from('webtoon_episodes').select('id, access').eq('id', episodeId).maybeSingle()
+    if (!isRecord(ep) || typeof ep.id !== 'string') return none
+
+    const isLockedTier = ep.access === 'membership'
+    if (isLockedTier) {
+      const membership = await getCurrentUserMembership()
+      if (!membership) return { locked: true, pages: [] }
+    }
+
+    const admin = createAdminClient()
+    const { data: rows, error } = await admin
+      .from('webtoon_episode_pages')
+      .select('idx, path, w, h')
+      .eq('episode_id', episodeId)
+      .order('idx', { ascending: true })
+    if (error || !rows) {
+      logger.warn('[webtoon] 본문 페이지 조회 실패:', error)
+      return none
+    }
+
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const pages: EpisodePage[] = []
+    for (const row of rows) {
+      if (!isRecord(row) || typeof row.path !== 'string') continue
+      if (typeof row.w !== 'number' || typeof row.h !== 'number') continue
+      if (isLockedTier) {
+        const { data: signed } = await admin.storage.from('webtoon-locked').createSignedUrl(row.path, 3600)
+        if (signed?.signedUrl) pages.push({ url: signed.signedUrl, w: row.w, h: row.h })
+      } else {
+        pages.push({ url: `${base}/storage/v1/object/public/webtoon/${row.path}`, w: row.w, h: row.h })
+      }
+    }
+    return { locked: false, pages }
+  } catch (e) {
+    logger.warn('[webtoon] 본문 페이지 예외(비치명):', e)
+    return none
   }
 }
 

@@ -29,6 +29,13 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
+      // 멤버십 웹툰 회차 — 비공개 버킷 서명 URL (getEpisodePages 가 발급)
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/sign/**',
+      },
     ],
     // Vercel Hobby Plan 무료 이미지 최적화 한도(5000/월) 내에서 최대 효율
     minimumCacheTTL: 2678400, // 31일 캐시 (재요청 최소화)
