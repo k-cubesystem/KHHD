@@ -31,9 +31,10 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Share2, Loader2, Coins, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Share2, Loader2, Coins, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import {
+  OBANGKI_COLOR_ELEMENT,
   OBANGKI_COLOR_INFO,
   OBANGKI_DISCLAIMER,
   OBANGKI_MATTERS,
@@ -48,13 +49,23 @@ import {
   type ObangkiColor,
   type ObangkiMatter,
 } from '@/lib/domain/ritual/obangki'
-import { SAMGI_SLOT_INFO, readSamgi, type SamgiReading, type SamgiSlot } from '@/lib/domain/ritual/obangki-reading'
+import {
+  EUNGGI,
+  SAMGI_FLOW_PLAIN,
+  SAMGI_SLOT_INFO,
+  SAMGI_SLOT_PLAIN,
+  YUKCHIN_INFO,
+  headline,
+  readSamgi,
+  yukchin,
+  type SamgiReading,
+} from '@/lib/domain/ritual/obangki-reading'
 import { SamgiRow, scrollDelayMs } from './SamgiRow'
 import { drawObangki, type ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
-import type { SoundKey } from '@/lib/domain/shrine/types'
+import type { Element, SoundKey } from '@/lib/domain/shrine/types'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 
 /** 깃발 무대(px) — 5기가 모바일 480px 시트 안에 여유롭게 선다. */
@@ -247,6 +258,7 @@ export function ObangkiRitual({ status, play }: Props) {
               reading={reading}
               plea={plea}
               saju={status.yongsin ? sajuLine(wayColor, status.yongsin, seed) : null}
+              status={status}
               remainingFree={remainingFree}
               cost={status.cost}
               sharing={sharing}
@@ -506,41 +518,112 @@ function FlagStage({
 
 // ─── 3. 삼기 두루마리 ────────────────────────────────────────
 
-/** 자리 한 줄 — 기 이름·신장·소관과 그 자리의 풀이. */
-function SlotRow({ slot, color, line }: { slot: SamgiSlot; color: ObangkiColor; line: string }) {
-  const info = OBANGKI_COLOR_INFO[color]
-  const meta = SAMGI_SLOT_INFO[slot]
+/** 오행 다섯 — 명식 막대의 순서이자 색이다(상생 차례: 목→화→토→금→수). */
+const EL_ORDER: readonly Element[] = ['wood', 'fire', 'earth', 'metal', 'water']
+const EL_KO: Readonly<Record<Element, string>> = {
+  wood: '목',
+  fire: '화',
+  earth: '토',
+  metal: '금',
+  water: '수',
+}
+const EL_HEX: Readonly<Record<Element, string>> = {
+  wood: '#3E5F86',
+  fire: '#B23A32',
+  earth: '#C9A24C',
+  metal: '#D9CFBC',
+  water: '#4A7C59',
+}
+
+/**
+ * 내 명식과 나란히 — 오행 분포 막대 위에 **뽑힌 세 기가 어디에 서는지** 얹는다.
+ *
+ * CEO 8차c: "내 사주와 오행을 사용해서 같이 해석해줘." 글로만 말하면 남의 이야기로 읽히는데,
+ * 내 다섯 칸 위에 기가 서 있으면 "이 기운이 내 어디를 건드리는가"가 눈으로 먼저 온다.
+ */
+function MyChart({
+  reading,
+  elements,
+  yongsin,
+  dayStem,
+}: {
+  reading: SamgiReading
+  elements: Readonly<Record<Element, number>> | null
+  yongsin: Element | null
+  dayStem: ObangkiStatus['dayStem']
+}) {
+  if (!elements) return null
+  const max = Math.max(1, ...EL_ORDER.map((e) => elements[e]))
+  const marks: Record<string, string[]> = {}
+  for (const { slot, color } of reading.slotLines) {
+    const el = OBANGKI_COLOR_ELEMENT[color]
+    marks[el] = [...(marks[el] ?? []), SAMGI_SLOT_PLAIN[slot]]
+  }
+
   return (
-    <div className="flex gap-2.5 py-2">
-      <span
-        aria-hidden
-        className="mt-0.5 h-8 w-1.5 shrink-0 rounded-full"
-        style={{ background: `linear-gradient(180deg,${info.accent},${info.hex})` }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="font-serif text-[10px] tracking-[0.16em] text-gold-500/60">
-          {meta.flagName} · {meta.question}
-        </p>
-        <p className="mt-0.5 font-serif text-[12.5px] font-bold" style={{ color: info.accent }}>
-          {info.label} — {info.verdict}
-          <span className="ml-1.5 font-sans text-[10px] font-normal text-ink-primary/40">
-            {info.general} · {info.deity}
-          </span>
-        </p>
-        <p className="mt-1 font-serif text-[12px] leading-relaxed text-ink-primary/75">{line}</p>
+    <div className="rounded-xl border border-white/10 bg-surface/50 px-3 py-3">
+      <div className="flex items-baseline justify-between">
+        <p className="font-serif text-[11px] font-bold text-gold-200">내 사주와 나란히</p>
+        {dayStem && (
+          <p className="font-sans text-[10.5px] text-ink-primary/45">
+            일간 {dayStem.ko}({dayStem.han}) · {EL_KO[dayStem.element]}
+          </p>
+        )}
       </div>
+
+      <div className="mt-2.5 flex items-end gap-1.5">
+        {EL_ORDER.map((el) => {
+          const n = elements[el]
+          const hit = marks[el]
+          return (
+            <div key={el} className="flex flex-1 flex-col items-center gap-1">
+              {/* 이 오행에 선 기가 있으면 자리 이름을 얹는다 */}
+              <span className="h-[13px] font-sans text-[9px] leading-none text-gold-200">
+                {hit ? hit.join('·') : ''}
+              </span>
+              <span
+                className="w-full rounded-t-[2px]"
+                style={{
+                  height: `${Math.max(4, Math.round((n / max) * 42))}px`,
+                  background: EL_HEX[el],
+                  opacity: hit ? 1 : 0.42,
+                  boxShadow: hit ? `0 0 8px ${EL_HEX[el]}88` : 'none',
+                }}
+              />
+              <span
+                className={`font-serif text-[11px] ${el === yongsin ? 'font-bold text-gold-200' : 'text-ink-primary/50'}`}
+              >
+                {EL_KO[el]}
+                {el === yongsin && <span className="ml-0.5 text-[8px]">用</span>}
+              </span>
+              <span className="font-sans text-[9.5px] tabular-nums text-ink-primary/35">{n}</span>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className="mt-2 font-sans text-[10px] leading-relaxed text-ink-primary/40">
+        막대는 내 명식의 오행 개수입니다. 밝게 선 칸이 이번에 뽑힌 기가 건드린 자리이고,
+        {yongsin ? ` 用 은 나에게 가장 필요한 기운(용신)입니다.` : ' 용신은 명식 분석 뒤에 표시됩니다.'}
+      </p>
     </div>
   )
 }
 
 /**
- * 삼기 점사 두루마리 — 전승의 순서 그대로 읽는다.
- * 부정풀이 → 향방 머리 → 공수(자리 × 향방) → 세 자리 → 흐름·응기 → 신당지기·사주 → 처방.
+ * 삼기 점사 두루마리 — **결론부터, 어려운 층은 접어서**(CEO 8차c).
+ *
+ * 순서: 결론 한 줄 → 아뢴 말 → 내 사주와 나란히 → 세 기가 말한 것(쉬운 말) → 언제쯤
+ *       → 신당지기 맺음말 → 처방 → [더 깊이 보기: 신장 명호·오행 흐름·공수 원문]
+ *
+ * ⚠️ 깊이를 **덜어내지 않았다**. 공수 25쌍도 신장 명호도 오행 원리도 그대로 있고 자리만 뒤로 갔다.
+ *    지우면 얕아지고, 앞에 두면 어렵다 — 그래서 순서를 바꾼 것이다.
  */
 function SamgiScroll({
   reading,
   plea,
   saju,
+  status,
   remainingFree,
   cost,
   sharing,
@@ -550,20 +633,41 @@ function SamgiScroll({
   reading: SamgiReading
   /** 아뢴 말 — 화면에만 있는 값이라 그대로 되보여 준다(서버로 간 적이 없다) */
   plea: string
-  /** 사주 해석 층 — 용신 오행 × 향방 색 오행 관계(결정론). 명식 분석 전 사용자는 null */
+  /** 용신 관계 한 줄 — 명식 분석 전이면 null */
   saju: string | null
+  status: ObangkiStatus
   remainingFree: number
   cost: number
   sharing: boolean
   onShare: () => void
   onAgain: () => void
 }) {
+  const [deep, setDeep] = useState(false)
   const way = OBANGKI_COLOR_INFO[reading.draw.way]
+  const yuk = status.dayStem ? yukchin(reading.draw.way, status.dayStem.element) : null
+  const yukInfo = yuk ? YUKCHIN_INFO[yuk] : null
   // 두루마리는 삼기가 다 펴진 뒤에 뜬다 — 지연이 곧 순서다(타이머가 아니라)
   const delayMs = scrollDelayMs(reading)
+
   return (
     <div className="obangki-bubble mt-4 w-full space-y-3" style={{ animationDelay: `${delayMs}ms` }}>
-      {/* 부정풀이 — 전승이 이르는 대로 물리고 다시 뽑았음을 먼저 알린다 */}
+      {/* ① 결론 — 한자도 신격도 없이 한 줄 */}
+      <div
+        className="rounded-xl border px-3 py-3 text-center"
+        style={{ borderColor: `${way.accent}55`, background: `${way.hex}1f` }}
+      >
+        <p className="font-serif text-[10px] tracking-[0.24em]" style={{ color: way.accent }}>
+          오늘의 답
+        </p>
+        <p className="mt-1 font-serif text-[16px] font-bold leading-relaxed text-ink-primary">
+          {headline(reading.draw.way)}
+        </p>
+        <p className="mt-1 font-sans text-[10.5px] text-ink-primary/45">
+          {way.label} · {way.verdict}
+        </p>
+      </div>
+
+      {/* 부정풀이 — 물리고 다시 뽑았음을 알린다 */}
       {reading.purifyLine && (
         <p className="rounded-lg border border-white/10 bg-surface/70 px-3 py-2 font-serif text-[11.5px] leading-relaxed text-ink-primary/60">
           {reading.purifyLine}
@@ -577,84 +681,141 @@ function SamgiScroll({
         </p>
       )}
 
-      {/* 향방 머리 — 결론을 쥔 기 */}
-      <div
-        className="rounded-xl border px-3 py-2.5 text-center"
-        style={{ borderColor: `${way.accent}55`, background: `${way.hex}1f` }}
-      >
-        <p className="font-serif text-[10px] tracking-[0.24em]" style={{ color: way.accent }}>
-          향 방 · {way.direction}
-        </p>
-        <p className="mt-0.5 font-serif text-[17px] font-bold text-ink-primary">{way.verdict}</p>
-        <p className="mt-0.5 font-sans text-[10.5px] text-ink-primary/45">
-          {way.label} · {way.gloss}
-        </p>
-      </div>
+      {/* ② 내 사주와 나란히 — 막대 + 육친 한 줄 */}
+      <MyChart reading={reading} elements={status.elements} yongsin={status.yongsin} dayStem={status.dayStem} />
 
-      {/* 공수 — 자리 × 향방. 삼기 점사의 본문이다 */}
-      <div className="rounded-xl border border-gold-500/25 bg-gold-500/[0.06] px-3 py-3">
-        <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">공 수</p>
-        <p className="mt-1 font-serif text-[13.5px] font-bold leading-relaxed text-gold-100">{reading.gongsu}</p>
-      </div>
+      {(yukInfo || saju || reading.wangswe) && (
+        <div className="space-y-1.5 rounded-xl border border-gold-500/20 bg-gold-500/[0.05] px-3 py-2.5">
+          <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">나에게 무엇인가</p>
+          {yukInfo && (
+            <p className="font-serif text-[12.5px] leading-relaxed text-gold-100">
+              <span className="font-bold">
+                {yukInfo.label}
+                <span className="ml-0.5 text-[10px] opacity-60">{yukInfo.hanja}</span>
+              </span>{' '}
+              — {yukInfo.plain}
+            </p>
+          )}
+          {saju && <p className="font-serif text-[12px] leading-relaxed text-gold-200/85">{saju}</p>}
+          {reading.wangswe && (
+            <p className="font-serif text-[12px] leading-relaxed text-gold-200/70">{reading.wangswe}</p>
+          )}
+        </div>
+      )}
 
-      {/* 세 자리 */}
+      {/* ③ 세 기가 말한 것 — 물음말이 앞, 기 이름은 곁 */}
       <div className="divide-y divide-white/[0.07] rounded-xl border border-white/10 bg-surface/50 px-3 py-1">
-        {reading.slotLines.map((r) => (
-          <SlotRow key={r.slot} slot={r.slot} color={r.color} line={r.line} />
-        ))}
+        {reading.slotLines.map((r) => {
+          const info = OBANGKI_COLOR_INFO[r.color]
+          return (
+            <div key={r.slot} className="flex gap-2.5 py-2">
+              <span
+                aria-hidden
+                className="mt-0.5 h-7 w-1.5 shrink-0 rounded-full"
+                style={{ background: `linear-gradient(180deg,${info.accent},${info.hex})` }}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-serif text-[11.5px] font-bold text-gold-200">
+                  {SAMGI_SLOT_PLAIN[r.slot]}
+                  <span className="ml-1.5 font-sans text-[10px] font-normal text-ink-primary/40">
+                    {info.label} · {info.verdict}
+                  </span>
+                </p>
+                <p className="mt-0.5 font-serif text-[12.5px] leading-relaxed text-ink-primary/80">{r.line}</p>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* 결·때 — 세 기가 이루는 흐름과 응기 */}
+      {/* ④ 결·때 — 쉬운 말이 본문, 한자 이름은 배지로 */}
       <div className="rounded-xl border border-white/10 bg-surface/50 px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-gold-500/40 bg-gold-500/10 px-2 py-0.5 font-serif text-[10.5px] font-bold text-gold-200">
+          <span className="whitespace-nowrap rounded-full border border-gold-500/40 bg-gold-500/10 px-2 py-0.5 font-serif text-[10px] font-bold text-gold-200">
             {reading.flowInfo.label}
           </span>
-          <p className="min-w-0 flex-1 font-serif text-[12px] leading-relaxed text-ink-primary/75">
-            {reading.flowInfo.line}
+          <p className="min-w-0 flex-1 font-serif text-[12.5px] leading-relaxed text-ink-primary/80">
+            세 기가 {SAMGI_FLOW_PLAIN[reading.flow]}
           </p>
         </div>
         <p className="mt-2 border-t border-white/[0.07] pt-2 font-serif text-[12px] leading-relaxed text-ink-primary/60">
-          {reading.eunggi}
+          언제쯤 — {EUNGGI[reading.draw.way].season}({EUNGGI[reading.draw.way].months})께 결이 드러나겠습니다.
         </p>
       </div>
 
-      {/* 신당지기 한마디 + 사주 층 — 결정론 문구 풀(AI 0원·즉답) */}
-      <div className="rounded-xl border border-gold-500/20 bg-surface/60 px-3 py-2.5">
-        <div className="flex items-start gap-2">
-          <span className="mt-0.5 whitespace-nowrap font-serif text-[10px] text-gold-500/60">신당지기</span>
-          <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{reading.closing}</p>
-        </div>
-        {(saju || reading.wangswe) && (
-          /* 사주 층 — 용신은 개인 데이터라 문구에 오행 이름만 스치고 원리는 풀이가 진다 */
-          <div className="mt-2 space-y-1 border-t border-gold-500/15 pt-2">
-            {saju && <p className="font-serif text-[12.5px] leading-relaxed text-gold-200">{saju}</p>}
-            {reading.wangswe && (
-              <p className="font-serif text-[12.5px] leading-relaxed text-gold-200/80">{reading.wangswe}</p>
-            )}
-          </div>
-        )}
+      {/* ⑤ 신당지기 맺음말 — 아뢴 일에 대한 말 */}
+      <div className="flex items-start gap-2 rounded-xl border border-gold-500/20 bg-surface/60 px-3 py-2.5">
+        <span className="mt-0.5 whitespace-nowrap font-serif text-[10px] text-gold-500/60">신당지기</span>
+        <p className="font-serif text-[13px] leading-relaxed text-ink-primary/85">{reading.closing}</p>
       </div>
 
-      {/* 처방 — 전승의 해법을 신당의 의식으로. 값을 무는 곳이 아니라 정성을 들이는 곳으로 잇는다 */}
+      {/* ⑥ 처방 — 값을 무는 곳이 아니라 정성을 들이는 곳으로 잇는다 */}
       <Link
         href={reading.remedy.href}
         className="flex items-center justify-between rounded-xl border border-gold-500/35 bg-gold-500/[0.08] px-3 py-2.5"
       >
         <span className="min-w-0">
           <span className="block font-serif text-[10px] tracking-[0.16em] text-gold-500/60">
-            처방 · {reading.remedy.rite}
+            해 볼 일 · {reading.remedy.rite}
           </span>
           <span className="mt-0.5 block font-serif text-[12.5px] font-bold text-gold-200">{reading.remedy.action}</span>
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-gold-300/70" />
       </Link>
 
-      {/* 송신(送神) — 전승은 기를 말아 어깨에 메고 신장타령을 불러 신령을 돌려보내며 닫는다.
-          닫는 동작이 있어야 점사가 "끝난 것"이 되므로 마지막 줄로 둔다. */}
-      <p className="rounded-lg border border-white/[0.07] bg-black/20 px-3 py-2 text-center font-serif text-[11.5px] leading-relaxed text-ink-primary/50">
-        기를 말아 어깨에 메고 신장타령을 올린다 — 오방신장을 본자리로 돌려보낸다.
-      </p>
+      {/* ⑦ 더 깊이 — 어려운 층은 여기 있다. 지운 것이 아니라 접은 것이다 */}
+      <button
+        type="button"
+        onClick={() => setDeep((v) => !v)}
+        aria-expanded={deep}
+        className="flex w-full items-center justify-center gap-1 rounded-lg border border-white/10 bg-surface/40 py-2 font-serif text-[11.5px] text-ink-primary/55"
+      >
+        {deep ? '접기' : '더 깊이 보기'}
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${deep ? 'rotate-180' : ''}`} />
+      </button>
+
+      {deep && (
+        <div className="space-y-2.5 rounded-xl border border-white/10 bg-black/25 px-3 py-3">
+          <div>
+            <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">공 수</p>
+            <p className="mt-1 font-serif text-[12.5px] leading-relaxed text-gold-100/90">{reading.gongsu}</p>
+          </div>
+
+          <div className="border-t border-white/[0.07] pt-2.5">
+            <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">어느 신장이 답했는가</p>
+            <div className="mt-1 space-y-1">
+              {reading.slotLines.map((r) => {
+                const info = OBANGKI_COLOR_INFO[r.color]
+                return (
+                  <p key={r.slot} className="font-sans text-[11.5px] leading-relaxed text-ink-primary/65">
+                    <span className="font-serif" style={{ color: info.accent }}>
+                      {SAMGI_SLOT_INFO[r.slot].flagName} {info.label}
+                    </span>{' '}
+                    — {info.general} · {info.deity}({info.gloss}) · {info.direction}
+                  </p>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="border-t border-white/[0.07] pt-2.5">
+            <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">
+              오행 흐름 · {reading.flowInfo.label}
+            </p>
+            <p className="mt-1 font-serif text-[12px] leading-relaxed text-ink-primary/65">{reading.flowInfo.line}</p>
+          </div>
+
+          {yukInfo && (
+            <div className="border-t border-white/[0.07] pt-2.5">
+              <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">
+                육친 · {yukInfo.label}
+                {yukInfo.hanja}
+              </p>
+              <p className="mt-1 font-serif text-[12px] leading-relaxed text-ink-primary/65">{yukInfo.detail}</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <p className="text-center font-sans text-[10.5px] text-ink-primary/40">
         {remainingFree > 0 ? `오늘 무료 점괘 ${remainingFree}회 남았습니다` : `다음 점괘부터는 복채 ${cost}만냥입니다`}

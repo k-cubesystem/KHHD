@@ -415,3 +415,39 @@ describe('신당 진입점 — 버튼이 실제로 걸려 있다', () => {
     expect(read('components/shrine/scene/ShrineRoomClient.tsx')).toContain('chuljeon={chuljeon}')
   })
 })
+
+describe('다시 던지기 — 결과를 보고 그 자리에서 (CEO 8차c)', () => {
+  const SHEET = read('components/shrine/scene/ChuljeonSheet.tsx')
+
+  it('결과 카드에 같은 갈림길로 다시 던지는 주 버튼이 있다', () => {
+    expect(SHEET).toContain('같은 갈림길로 다시 던지기')
+    expect(SHEET).toContain('onThrowAgain')
+    // 갈림길을 새로 적는 길도 남는다(주 버튼 자리는 내준다)
+    expect(SHEET).toContain('다른 갈림길')
+  })
+
+  it('★ 판마다 쟁반을 새로 세운다 — key 가 없으면 연출이 안 돌아 결과가 영영 안 뜬다', () => {
+    // CSS 애니메이션은 마운트 때만 돈다. 같은 DOM 을 재사용하면 animationend 가 오지 않고
+    // settled 가 false 로 굳어 결과 카드가 다시는 뜨지 않는다 — 콘솔도 조용한 교착이다.
+    expect(SHEET).toContain('<Tray key={throwNo}')
+    expect(SHEET).toContain('setThrowNo((n) => n + 1)')
+  })
+
+  it('회차는 서버가 정한다 — 화면이 미리 올리지 않는다', () => {
+    expect(SHEET).toContain("if (typeof res.seq === 'number') setSeq(res.seq)")
+    expect(SHEET).not.toMatch(/setSeq\(\s*seq\s*\+\s*1\s*\)/)
+  })
+
+  it('오늘 몫을 다 쓰면 다시 던지기가 잠긴다', () => {
+    expect(SHEET).toContain('disabled={remaining <= 0}')
+  })
+})
+
+describe('신당 팻말 — 창방에 널이 걸렸다 (CEO 8차c)', () => {
+  it('척전 팻말이 전용 페이지를 가리킨다', () => {
+    const plaque = read('lib/domain/shrine/plaque.ts')
+    expect(plaque).toContain("key: 'chuljeon'")
+    expect(plaque).toContain('/protected/shrine/chuljeon')
+    expect(plaque).toContain("ko: '엽전'")
+  })
+})

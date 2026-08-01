@@ -37,6 +37,7 @@ import {
   throwSeed as chuljeonThrowSeed,
 } from '@/lib/domain/ritual/chuljeon'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
+import { calculateManseBasic } from '@/lib/domain/saju/manse'
 import {
   BAEKIL_TARGET_DAYS,
   daysSinceLastPrayer,
@@ -227,6 +228,12 @@ export interface ObangkiStatus {
    */
   elements: Readonly<Record<Element, number>> | null
   /**
+   * 일간(日干) — 태어난 날의 천간, 곧 **명식에서 나 자신**이다. 육친(六親) 판정의 기준이라
+   * 용신·오행 분포만으로는 못 하는 "그 기운이 나에게 무엇인가"를 여기서 말한다.
+   * 생년월일이 없거나 만세력이 실패하면 null — 화면은 육친 층을 통째로 뺀다(지어내지 않는다).
+   */
+  dayStem: { ko: string; han: string; element: Element } | null
+  /**
    * 고축(告祝) 재료 — 이름·생년. 전승에서 점사는 "어디 사는 몇 년생 아무개가 아뢰옵니다"로 연다.
    *
    * ⚠️ 내려보내기만 하고 **되받지 않는다**. 화면이 문장으로 엮을 뿐이고 기록에 남는 것은
@@ -271,6 +278,36 @@ function birthYearOf(value: unknown): number | null {
   if (!m) return null
   const y = Number(m[1])
   return y >= 1900 && y <= 2200 ? y : null
+}
+
+/** 만세력 오행 표기('Wood'…) → 우리 Element. 모르는 값은 null 이다. */
+const MANSE_ELEMENT: Readonly<Record<string, Element>> = Object.freeze({
+  Wood: 'wood',
+  Fire: 'fire',
+  Earth: 'earth',
+  Metal: 'metal',
+  Water: 'water',
+})
+
+/**
+ * 일간(日干)을 명식에서 뽑는다 — 생년월일(+시)로 만세력을 세워 일주(日柱)의 천간을 읽는다.
+ *
+ * ⚠️ 실패하면 **null 이다**. 시가 없으면 자정으로 세우는데, 일간은 날짜가 정하는 값이라
+ *    시 누락이 일간을 바꾸지 않는다(일진 경계인 야자시만 예외이고 그건 시가 있어야 알 수 있다).
+ *    만세력이 던지면 육친 층을 빼는 것이 맞고, 임의값으로 메우면 없는 명식을 지어내는 것이 된다.
+ */
+function dayStemOf(birthDate: unknown, birthTime: unknown): { ko: string; han: string; element: Element } | null {
+  if (typeof birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(birthDate.trim())) return null
+  const time = typeof birthTime === 'string' && /^\d{2}:\d{2}/.test(birthTime.trim()) ? birthTime.trim() : '00:00'
+  try {
+    const manse = calculateManseBasic(birthDate.trim().slice(0, 10), time.slice(0, 5))
+    const el = MANSE_ELEMENT[manse.day.ganElement]
+    if (!el || !manse.day.gan) return null
+    return { ko: manse.day.gan, han: manse.day.ganHan, element: el }
+  } catch (e) {
+    logger.warn('[obangki] 일간 산출 실패 — 육친 층 생략:', e)
+    return null
+  }
 }
 
 /** timestamptz 문자열 → epochMs. 파싱 실패는 제외(카운트를 부풀리지 않는다). */
@@ -323,7 +360,7 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
       .maybeSingle()
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, birth_date')
+      .select('full_name, birth_date, birth_time')
       .eq('id', user.id)
       .maybeSingle()
     return {
@@ -334,6 +371,7 @@ export async function getObangkiStatus(): Promise<ObangkiStatus | null> {
       seed: dailySeed(user.id, today),
       yongsin: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
       elements: elementSpread(energy),
+      dayStem: dayStemOf(profile?.birth_date, profile?.birth_time),
       worshipper: {
         name: typeof profile?.full_name === 'string' && profile.full_name.trim() ? profile.full_name.trim() : null,
         birthYear: birthYearOf(profile?.birth_date),

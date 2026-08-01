@@ -103,7 +103,7 @@ describe('팻말 자리 — 가장 좁은 기기에서도 화면 안', () => {
     ['짧은 창 520×420', 520, 420],
   ]
 
-  it.each(ROOMS)('%s — 세 팻말이 온전히 화면 안이다', (_label, w, h) => {
+  it.each(ROOMS)('%s — 네 팻말이 온전히 화면 안이다', (_label, w, h) => {
     const half = halfSpan(w, h)
     for (const p of SHRINE_PLAQUES) {
       const dx = plaqueOffsetX(p.cx)
@@ -112,9 +112,12 @@ describe('팻말 자리 — 가장 좁은 기기에서도 화면 안', () => {
     }
   })
 
-  it('세 팻말이 겹치지 않는다 — 칸 중심 간격이 널 폭보다 넓다', () => {
+  it('네 팻말이 겹치지 않고 균등 간격이다 (칸 격자 대신 방 중심 균등 배치, 2026-08-01)', () => {
     const xs = SHRINE_PLAQUES.map((p) => p.cx).sort((a, b) => a - b)
-    expect(xs).toHaveLength(3)
+    expect(xs).toHaveLength(4)
+    // 균등 — 간격이 전부 같아야 띠 위에서 리듬으로 읽힌다
+    const gaps = xs.slice(1).map((x, i) => x - xs[i])
+    expect(new Set(gaps).size).toBe(1)
     for (let i = 1; i < xs.length; i += 1) expect(xs[i] - xs[i - 1]).toBeGreaterThan(PLAQUE_BOX.w)
   })
 
@@ -137,7 +140,7 @@ describe('벽 판정 · 목록', () => {
 
   it('페이지 팻말은 서로 다른 전용 페이지를 가리킨다', () => {
     const hrefs = SHRINE_PLAQUES.filter((p) => p.kind === 'page').map((p) => p.href)
-    expect(hrefs).toEqual(['/protected/shrine/obangki', '/protected/shrine/baekil'])
+    expect(hrefs).toEqual(['/protected/shrine/chuljeon', '/protected/shrine/obangki', '/protected/shrine/baekil'])
     expect(new Set(hrefs).size).toBe(hrefs.length)
   })
 

@@ -401,3 +401,121 @@ export function allReadingLines(): readonly string[] {
     PURIFY_LINE,
   ]
 }
+
+// ─── 쉬운 말 층 (CEO 8차c: "너무 어렵다 — 이해하기 편하면서도 깊이 있게") ──────
+//
+// 깊이를 덜어내는 것이 아니라 **순서를 바꾼다**. 결론과 쉬운 말이 앞에 서고,
+// 신장 명호·오행 원리·공수 원문 같은 층은 뒤에서 펼쳐 본다.
+// 전문 용어는 지우지 않는다 — 지우면 얕아진다. 대신 **쉬운 말을 먼저, 한자를 곁에** 둔다.
+
+/** 자리 이름을 물음말로 — 초기/중기/말기 대신 지금/어디서/어떻게. */
+export const SAMGI_SLOT_PLAIN: Readonly<Record<SamgiSlot, string>> = Object.freeze({
+  seat: '지금',
+  root: '어디서',
+  way: '어떻게',
+})
+
+/** 흐름 이름을 쉬운 말로 — 순류/역류/일충/쌍충/겹기의 뜻만 남긴다. */
+export const SAMGI_FLOW_PLAIN: Readonly<Record<SamgiFlow, string>> = Object.freeze({
+  jungi: '같은 말이 거듭됩니다',
+  sunryu: '막힘없이 흐릅니다',
+  yeokryu: '기운이 뒤로 돕니다',
+  chung: '한 군데 걸립니다',
+  ssangchung: '두 군데 걸립니다',
+})
+
+/**
+ * 결론 한 줄 — 두루마리 맨 위에 선다.
+ * 향방 기 하나만 보고 만든다(결론은 향방이 쥐고 있다). 한자도 신격도 쓰지 않는다.
+ */
+const HEADLINE: Readonly<Record<ObangkiColor, string>> = Object.freeze({
+  red: '청하고 나서면 되는 자리입니다',
+  white: '몸과 마음을 먼저 밝힐 자리입니다',
+  yellow: '집안 쪽을 먼저 돌볼 자리입니다',
+  blue: '걸린 것을 먼저 다스릴 자리입니다',
+  green: '묵은 것을 먼저 물릴 자리입니다',
+})
+
+export function headline(way: ObangkiColor): string {
+  return HEADLINE[way]
+}
+
+// ─── 명식 층 — 일간(日干) 대비 육친(六親) ────────────────────
+//
+// CEO 8차c: "내 사주와 오행을 사용해서 같이 해석해줘. 내 명식에 있는 데이터를 사용해서."
+//
+// 용신·오행 분포만으로는 "그 기운이 **나에게** 무엇인가"를 말할 수 없다. 명리에서 그 자리를
+// 맡는 것이 육친(六親)이고, 기준은 **일간(日干) — 태어난 날의 천간**, 곧 명식에서 나 자신이다.
+// 오행 다섯 관계가 곧 육친 다섯이라 눈금이 하나도 늘지 않으면서 뜻은 훨씬 구체적이 된다:
+// "이 기운은 그대에게 재성(財星) — 다루고 거두는 자리"처럼.
+
+export type Yukchin = 'bigyeop' | 'siksang' | 'jaeseong' | 'gwanseong' | 'inseong'
+
+export interface YukchinInfo {
+  /** 이름 */
+  readonly label: string
+  readonly hanja: string
+  /** 쉬운 말 한 줄 — 이것이 화면의 본문이다 */
+  readonly plain: string
+  /** 한 걸음 더 — 접힌 층에서 펼친다 */
+  readonly detail: string
+}
+
+export const YUKCHIN_INFO: Readonly<Record<Yukchin, YukchinInfo>> = Object.freeze({
+  bigyeop: Object.freeze({
+    label: '비겁',
+    hanja: '比劫',
+    plain: '나와 같은 편의 기운입니다 — 함께 가는 사람이자 겨루는 사람입니다.',
+    detail:
+      '일간과 같은 오행이다. 힘을 보태 주기도 하고 몫을 나눠 갖기도 하는 자리라, 혼자보다 여럿이 되는 일에서 뚜렷해진다.',
+  }),
+  siksang: Object.freeze({
+    label: '식상',
+    hanja: '食傷',
+    plain: '내가 내놓는 기운입니다 — 말·솜씨·베풂이 나가는 자리입니다.',
+    detail:
+      '일간이 생(生)하는 오행이다. 안에 있던 것이 밖으로 나가는 결이라 쏟은 만큼 모양을 갖추고, 지나치면 기운이 새기도 한다.',
+  }),
+  jaeseong: Object.freeze({
+    label: '재성',
+    hanja: '財星',
+    plain: '내가 다루는 기운입니다 — 거두고 셈하는 자리입니다.',
+    detail:
+      '일간이 극(剋)하는 오행이다. 손에 쥘 수 있는 것을 뜻하되 쥐려면 힘이 있어야 하는 자리라, 몸과 뜻이 여물었을 때 제 값을 한다.',
+  }),
+  gwanseong: Object.freeze({
+    label: '관성',
+    hanja: '官星',
+    plain: '나를 누르는 기운입니다 — 자리·규율·맡은 일이 걸린 곳입니다.',
+    detail:
+      '일간을 극(剋)하는 오행이다. 눌린다고 나쁜 것만은 아니다 — 틀이 있어야 모양이 잡히는 자리라 감당할 만하면 그것이 곧 자리가 된다.',
+  }),
+  inseong: Object.freeze({
+    label: '인성',
+    hanja: '印星',
+    plain: '나를 돕는 기운입니다 — 배움·문서·손윗사람의 손길입니다.',
+    detail: '일간을 생(生)하는 오행이다. 받는 자리라 편안하되 기대기만 하면 걸음이 늦어지는 결도 함께 있다.',
+  }),
+})
+
+/**
+ * 뽑힌 색이 **그 사람에게** 무엇인가 — 일간 오행 기준 육친 판정.
+ * 기준이 용신(필요한 기운)이 아니라 **일간(나 자신)**이라는 것이 sajuRelation 과의 차이다.
+ */
+export function yukchin(color: ObangkiColor, dayElement: Element): Yukchin {
+  const el = OBANGKI_COLOR_ELEMENT[color]
+  if (el === dayElement) return 'bigyeop'
+  if (SAENG[dayElement] === el) return 'siksang'
+  if (GEUK[dayElement] === el) return 'jaeseong'
+  if (GEUK[el] === dayElement) return 'gwanseong'
+  return 'inseong'
+}
+
+/** 문구 풀 전체(금지 어휘 린트 대상) — 쉬운 말 층까지. */
+export function allPlainLines(): readonly string[] {
+  return [
+    ...OBANGKI_COLORS.map((c) => HEADLINE[c]),
+    ...(Object.keys(SAMGI_FLOW_PLAIN) as SamgiFlow[]).map((f) => SAMGI_FLOW_PLAIN[f]),
+    ...(Object.keys(YUKCHIN_INFO) as Yukchin[]).flatMap((y) => [YUKCHIN_INFO[y].plain, YUKCHIN_INFO[y].detail]),
+  ]
+}

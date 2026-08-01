@@ -16,10 +16,17 @@ import {
   slotLine,
   wangswe,
   wangsweLine,
+  SAMGI_FLOW_PLAIN,
+  SAMGI_SLOT_PLAIN,
+  YUKCHIN_INFO,
+  allPlainLines,
+  headline,
+  yukchin,
+  type Yukchin,
   type ElementSpread,
   type SamgiFlow,
 } from '../obangki-reading'
-import { OBANGKI_COLORS, OBANGKI_COLOR_ELEMENT, type ObangkiColor } from '../obangki'
+import { OBANGKI_COLORS, OBANGKI_COLOR_ELEMENT, sajuRelation, type ObangkiColor } from '../obangki'
 import type { Element } from '@/lib/domain/shrine/types'
 
 const CSS = readFileSync(path.join(process.cwd(), 'app/shrine-scene.css'), 'utf8')
@@ -371,5 +378,135 @@ describe('연출 CSS 계약 — 삼기·부정풀이가 실제로 산출된다',
     expect(purified).toBeGreaterThan(-1)
     expect(wrapper).toBeGreaterThan(-1)
     expect(purified).toBeLessThan(wrapper)
+  })
+})
+
+describe('쉬운 말 층 — 깊이를 덜지 않고 순서만 바꾼다 (CEO 8차c)', () => {
+  it('자리 이름이 물음말로 있다 — 초기/중기/말기 대신 지금/어디서/어떻게', () => {
+    expect(SAMGI_SLOT_PLAIN.seat).toBe('지금')
+    expect(SAMGI_SLOT_PLAIN.root).toBe('어디서')
+    expect(SAMGI_SLOT_PLAIN.way).toBe('어떻게')
+    // 한자 이름도 **그대로 남아 있어야** 한다(접힌 층이 쓴다) — 지우면 얕아진다
+    for (const s of SAMGI_SLOTS) expect(SAMGI_SLOT_INFO[s].flagName).toMatch(/[初中末]旗/)
+  })
+
+  it('흐름 다섯이 모두 쉬운 말을 갖는다 — 한자 이름은 배지로만 남는다', () => {
+    for (const f of Object.keys(SAMGI_FLOW_INFO) as SamgiFlow[]) {
+      expect(SAMGI_FLOW_PLAIN[f]).toBeTruthy()
+      // 쉬운 말에는 한자가 없어야 한다
+      expect(SAMGI_FLOW_PLAIN[f]).not.toMatch(/[\u4e00-\u9fff]/)
+    }
+  })
+
+  it('결론 한 줄이 다섯 색 모두 있고 한자·전문어가 없다', () => {
+    for (const c of OBANGKI_COLORS) {
+      const h = headline(c)
+      expect(h).toBeTruthy()
+      expect(h).not.toMatch(/[\u4e00-\u9fff]/)
+      for (const jargon of ['공수', '응기', '태과', '불급', '신장']) expect(h).not.toContain(jargon)
+    }
+    expect(new Set(OBANGKI_COLORS.map((c) => headline(c))).size).toBe(OBANGKI_COLORS.length)
+  })
+})
+
+describe('육친(六親) — 일간 기준, 내 명식 데이터로 해석한다', () => {
+  const ELS: readonly Element[] = ['wood', 'fire', 'earth', 'metal', 'water']
+  const SAENG_T: Record<string, string> = { wood: 'fire', fire: 'earth', earth: 'metal', metal: 'water', water: 'wood' }
+  const GEUK_T: Record<string, string> = { wood: 'earth', earth: 'water', water: 'fire', fire: 'metal', metal: 'wood' }
+
+  it('25쌍 전수 — 정의(일간 기준 생·극)와 정확히 일치한다', () => {
+    for (const color of OBANGKI_COLORS) {
+      const el = OBANGKI_COLOR_ELEMENT[color]
+      for (const day of ELS) {
+        const expected =
+          el === day
+            ? 'bigyeop'
+            : SAENG_T[day] === el
+              ? 'siksang'
+              : GEUK_T[day] === el
+                ? 'jaeseong'
+                : GEUK_T[el] === day
+                  ? 'gwanseong'
+                  : 'inseong'
+        expect(yukchin(color, day)).toBe(expected)
+      }
+    }
+  })
+
+  it('★ 용신 관계와 기준이 다르다 — 용신은 "필요한 기운", 육친은 "나 자신(일간)"', () => {
+    // 두 판정이 같은 값을 내도록 얽혀 있으면 층을 둘로 나눈 의미가 없다.
+    // 일간과 용신이 다른 사람에게서 두 판정이 갈리는 경우가 실제로 있어야 한다.
+    let differed = 0
+    for (const color of OBANGKI_COLORS) {
+      for (const day of ELS) {
+        for (const yong of ELS) {
+          if (day === yong) continue
+          const a = yukchin(color, day)
+          const b = sajuRelation(color, yong)
+          // 이름 체계가 달라 직접 비교는 못 하지만, 관계 축(생/극/동일)이 갈리는지는 볼 수 있다
+          const axisA = a === 'bigyeop' ? 'same' : a === 'siksang' || a === 'jaeseong' ? 'out' : 'in'
+          const axisB = b === 'bihwa' ? 'same' : b === 'seolgi' || b === 'jeap' ? 'out' : 'in'
+          if (axisA !== axisB) differed += 1
+        }
+      }
+    }
+    expect(differed).toBeGreaterThan(0)
+  })
+
+  it('다섯 육친 모두 이름·한자·쉬운 말·깊은 말이 있다', () => {
+    for (const y of Object.keys(YUKCHIN_INFO) as Yukchin[]) {
+      const info = YUKCHIN_INFO[y]
+      expect(info.label).toBeTruthy()
+      expect(info.hanja).toMatch(/^[\u4e00-\u9fff]{2}$/)
+      // 본문(쉬운 말)에는 한자가 없어야 하고, 깊은 말에는 있어도 된다
+      expect(info.plain).not.toMatch(/[\u4e00-\u9fff]/)
+      expect(info.detail.length).toBeGreaterThan(info.plain.length / 2)
+    }
+  })
+
+  it('다섯 육친이 모두 도달 가능하다 (죽은 분기 없음)', () => {
+    const seen = new Set<Yukchin>()
+    for (const color of OBANGKI_COLORS) for (const day of ELS) seen.add(yukchin(color, day))
+    expect(seen.size).toBe(5)
+  })
+})
+
+describe('쉬운 말 층 문구 규율', () => {
+  const FORBIDDEN = ['반드시', '무조건', '확실', '보장', '절대', '치유', '효과', '효능', '틀림없']
+
+  it.each(FORBIDDEN)('금지 어휘 "%s" 가 없다', (word) => {
+    for (const line of allPlainLines()) expect(line).not.toContain(word)
+  })
+
+  it('명령형 어미가 없다', () => {
+    for (const line of allPlainLines()) expect(line).not.toMatch(/(하십시오|해라|하라\.|십시오|하시오)/)
+  })
+
+  it('문구가 전부 유일하다', () => {
+    const all = allPlainLines()
+    expect(new Set(all).size).toBe(all.length)
+  })
+})
+
+describe('화면 계약 — 쉬운 층이 앞, 어려운 층은 접힌다', () => {
+  const SHEET = readFileSync(path.join(process.cwd(), 'components/shrine/scene/ObangkiSheet.tsx'), 'utf8')
+
+  it('결론·내 사주·육친이 본문에 있다', () => {
+    for (const token of ['headline(reading.draw.way)', 'MyChart', 'yukchin(', 'YUKCHIN_INFO', '오늘의 답']) {
+      expect(SHEET).toContain(token)
+    }
+  })
+
+  it('★ 공수·신장 명호·오행 흐름은 **지워지지 않고** 접힌 층에 있다', () => {
+    const deep = SHEET.slice(SHEET.indexOf('{deep && ('))
+    expect(deep).toContain('reading.gongsu')
+    expect(deep).toContain('info.general')
+    expect(deep).toContain('reading.flowInfo.line')
+    expect(SHEET).toContain('aria-expanded={deep}')
+  })
+
+  it('명식이 없으면 막대·육친이 통째로 빠진다 (지어내지 않는다)', () => {
+    expect(SHEET).toContain('if (!elements) return null')
+    expect(SHEET).toContain('status.dayStem ? yukchin(')
   })
 })

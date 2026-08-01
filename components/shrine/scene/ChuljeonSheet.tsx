@@ -21,7 +21,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { X, ChevronLeft, Coins } from 'lucide-react'
+import { X, ChevronLeft, Coins, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   CHULJEON_COIN_STEP_MS,
@@ -69,6 +69,15 @@ export function ChuljeonRitual({ status }: Props) {
   /** 이번 판의 회차 — 서버가 쓴 값으로 맞춘다(되던지기 방지의 핵심) */
   const [seq, setSeq] = useState(status.todayCount)
   const [settled, setSettled] = useState(false)
+  /**
+   * 이번 판 번호 — 쟁반의 `key` 다. **연출 재생의 유일한 장치**라 없으면 안 된다.
+   *
+   * 같은 갈림길로 다시 던지면 React 는 같은 DOM 을 재사용하고, CSS 애니메이션은 마운트 때만
+   * 도므로 엽전이 굴러 떨어지지 않는다. 그러면 `animationend` 도 오지 않고 → settled 가 영영
+   * false → **결과 카드가 다시는 뜨지 않는다**. 숫자만 조용히 바뀌는 것이 아니라 화면이 멎는다.
+   * key 를 갈아 무대를 새로 세우는 것으로 그 교착을 원천에서 없앤다.
+   */
+  const [throwNo, setThrowNo] = useState(0)
   const [failed, setFailed] = useState<string | null>(null)
 
   const filled = useMemo(() => ways.map((w) => w.trim()).filter((w) => w.length > 0), [ways])
@@ -87,6 +96,7 @@ export function ChuljeonRitual({ status }: Props) {
   const onThrow = useCallback(() => {
     setSettled(false)
     setFailed(null)
+    setThrowNo((n) => n + 1)
     setPhase('throw')
     trackEvent({ action: 'chuljeon_throw', category: 'shrine', label: String(filled.length) })
 
@@ -105,6 +115,16 @@ export function ChuljeonRitual({ status }: Props) {
       })
       .catch(() => setFailed('THROW_FAILED'))
   }, [filled.length])
+
+  /**
+   * 같은 갈림길로 한 판 더 — 결과를 보고 **그 자리에서** 다시 던진다(CEO: "결과 보고 바로 다시 던지기").
+   *
+   * ⚠️ 갈림길을 다시 적게 하지 않는 것이 요점이다. 종전에는 「다른 갈림길」뿐이라 같은 물음을
+   *    한 번 더 물으려면 짜장면·짬뽕을 또 타이핑해야 했다.
+   * ⚠️ 회차(seq)는 **서버가 정한다** — 여기서 미리 올려 두면 서버 값과 어긋난 판이 한 프레임 보인다.
+   *    onThrow 가 settled 를 내리고 다시 올리므로 쟁반이 처음부터 다시 구른다.
+   */
+  const throwAgain = useCallback(() => onThrow(), [onThrow])
 
   return (
     <div
@@ -155,9 +175,17 @@ export function ChuljeonRitual({ status }: Props) {
             </div>
           ) : (
             <>
-              <Tray result={result} labels={filled} onSettled={() => setSettled(true)} />
+              {/* key=throwNo — 판이 바뀌면 무대를 새로 세운다(위 throwNo 주석의 교착 방지) */}
+              <Tray key={throwNo} result={result} labels={filled} onSettled={() => setSettled(true)} />
               {settled && (
-                <Verdict result={result} labels={filled} seed={seed} remaining={remaining} onAgain={restart} />
+                <Verdict
+                  result={result}
+                  labels={filled}
+                  seed={seed}
+                  remaining={remaining}
+                  onThrowAgain={throwAgain}
+                  onAgain={restart}
+                />
               )}
             </>
           )}
@@ -363,12 +391,16 @@ function Verdict({
   labels,
   seed,
   remaining,
+  onThrowAgain,
   onAgain,
 }: {
   result: ChuljeonResult
   labels: string[]
   seed: number
   remaining: number
+  /** 같은 갈림길로 그 자리에서 한 판 더 */
+  onThrowAgain: () => void
+  /** 갈림길을 새로 적는다 */
   onAgain: () => void
 }) {
   const decided = result.picked !== null && result.gil !== null
@@ -400,11 +432,22 @@ function Verdict({
         {remaining > 0 ? `오늘 ${remaining}회 더 던지실 수 있습니다` : '오늘 몫을 다 쓰셨습니다'}
       </p>
 
+      {/* 같은 갈림길로 한 판 더 — 결과 바로 아래 주 버튼이다(가장 자주 누를 자리) */}
+      <button
+        type="button"
+        onClick={onThrowAgain}
+        disabled={remaining <= 0}
+        className="flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-gold-500/50 bg-gold-500/15 py-3 font-serif text-[13px] font-bold text-gold-200 shadow-dojang disabled:opacity-40"
+      >
+        <RotateCcw className="h-3.5 w-3.5" />
+        {remaining > 0 ? '같은 갈림길로 다시 던지기' : '오늘 몫을 다 쓰셨습니다'}
+      </button>
+
       <div className="flex gap-2">
         <button
           type="button"
           onClick={onAgain}
-          className="flex-1 rounded-lg border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[12px] font-bold text-gold-200"
+          className="flex-1 rounded-lg border border-white/10 bg-surface py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
         >
           다른 갈림길
         </button>
