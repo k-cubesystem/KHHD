@@ -25,10 +25,14 @@ export function purifyLeadMs(reading: SamgiReading): number {
   return reading.draw.purified ? OBANGKI_MS.purify : 0
 }
 
-/** 두루마리가 뜨는 시각 — 세 기가 다 펴진 뒤. 지연이 곧 순서다(타이머가 아니라). */
-export function scrollDelayMs(reading: SamgiReading): number {
-  return purifyLeadMs(reading) + 2 * OBANGKI_SAMGI_STEP_MS + 700
-}
+/**
+ * 마지막 기의 자리 번호 — 이 기가 펴지는 순간이 곧 「셈이 끝난 때」다.
+ *
+ * 종전에는 두루마리를 지연(scrollDelayMs)으로 띄웠는데, 지연 구간 동안 **보이지 않는 카드가
+ * 클릭을 받아** 신당으로 튕기는 원인이 됐다. 이제 이 번호의 animationend 가 마운트를 몬다 —
+ * 시각을 두 곳에서 세지 않으므로 어긋날 자리도 없다.
+ */
+export const SAMGI_LAST_INDEX = 2
 
 /**
  * 펼쳐진 기 한 폭 — 말린 기와 달리 색·인장이 드러난다.

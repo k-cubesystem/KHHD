@@ -54,7 +54,7 @@ import {
   yukchin,
   type SamgiReading,
 } from '@/lib/domain/ritual/obangki-reading'
-import { SamgiRow, scrollDelayMs } from './SamgiRow'
+import { SAMGI_LAST_INDEX, SamgiRow } from './SamgiRow'
 import { drawObangki, type ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
@@ -100,6 +100,16 @@ export function ObangkiRitual({ status, play }: Props) {
   const [seq, setSeq] = useState(status.todayCount)
   /** 셔플 애니메이션이 끝났는가 — 삼기가 나오는 두 조건 중 하나(나머지는 서버 응답) */
   const [shuffleDone, setShuffleDone] = useState(false)
+  /**
+   * 세 기가 다 펴졌는가 — **두루마리를 마운트할 시점**이다.
+   *
+   * 🔴 이것이 「오방기 튕김」의 원인이었다. 종전에는 셔플이 끝나자마자(1.1s) 두루마리를 DOM 에
+   *    넣고 `animation-delay` 로 2.3s 뒤에 보이게 했는데, 지연 구간 동안 그 카드는 opacity:0 인 채
+   *    **레이아웃을 차지하고 클릭도 받는다**. 그 안에는 「해 볼 일」과 「신당」 링크가 있고 둘 다
+   *    /protected/shrine 로 간다 — 화면에는 아무것도 없는데 그 자리를 탭하면 신당으로 튕겼다.
+   *    보이지 않는 것은 눌리지도 않아야 한다. 그래서 **때가 되어서야 마운트**한다.
+   */
+  const [scrollReady, setScrollReady] = useState(false)
   const [outcome, setOutcome] = useState<DrawOutcome | null>(null)
   const [sharing, setSharing] = useState(false)
 
@@ -125,6 +135,7 @@ export function ObangkiRitual({ status, play }: Props) {
   const restart = useCallback(() => {
     setPhase('compose')
     setShuffleDone(false)
+    setScrollReady(false)
     setOutcome(null)
   }, [])
 
@@ -135,6 +146,7 @@ export function ObangkiRitual({ status, play }: Props) {
   const startShuffle = useCallback(() => {
     setSeq(todayCount)
     setShuffleDone(false)
+    setScrollReady(false)
     setOutcome(null)
     setPhase('shuffle')
     play('bell')
@@ -233,6 +245,7 @@ export function ObangkiRitual({ status, play }: Props) {
               setShuffleDone(true)
               setPhase('draw')
             }}
+            onLastFlag={() => setScrollReady(true)}
           />
 
           {phase === 'shuffle' && (
@@ -242,7 +255,7 @@ export function ObangkiRitual({ status, play }: Props) {
             <p className="mt-4 font-serif text-[12px] text-ink-primary/55">기를 펴는 중입니다…</p>
           )}
 
-          {revealed && (
+          {revealed && scrollReady && (
             <SamgiScroll
               reading={reading}
               matter={matter}
@@ -476,12 +489,15 @@ function FlagStage({
   phase,
   reading,
   onShuffleEnd,
+  onLastFlag,
 }: {
   effectsRef: React.RefObject<EffectsHandle | null>
   phase: Phase
   /** 확정된 삼기. 서버 응답 전에는 null 이라 다발만 보인다 */
   reading: SamgiReading | null
   onShuffleEnd: () => void
+  /** 마지막 기가 다 펴졌다 — 두루마리를 세울 때다 */
+  onLastFlag: () => void
 }) {
   return (
     <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
@@ -513,6 +529,8 @@ function FlagStage({
             const x = 26 + i * 24
             effectsRef.current?.emit('sparkle', x, 34)
             effectsRef.current?.emit('petals', x, 30)
+            // 마지막 기가 펴진 순간이 두루마리를 세울 때다(타이머가 아니라 연출이 몬다)
+            if (i === SAMGI_LAST_INDEX) onLastFlag()
           }}
         />
       )}
@@ -571,11 +589,11 @@ function SamgiScroll({
     yongsin: status.yongsin,
     spread: status.elements,
   })
-  // 두루마리는 삼기가 다 펴진 뒤에 뜬다 — 지연이 곧 순서다(타이머가 아니라)
-  const delayMs = scrollDelayMs(reading)
+  // 지연은 0 이다 — 「세 기가 다 펴졌을 때에야 마운트」가 순서를 이미 지켰다.
+  // 지연을 다시 얹으면 보이지 않는 클릭 영역이 되살아난다(튕김의 원인).
 
   return (
-    <div className="obangki-bubble mt-4 w-full space-y-3" style={{ animationDelay: `${delayMs}ms` }}>
+    <div className="obangki-bubble mt-4 w-full space-y-3">
       {/* ① 결론 — 한자도 신격도 없이 한 줄 */}
       <div
         className="rounded-xl border px-3 py-3 text-center"

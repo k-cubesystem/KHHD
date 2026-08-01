@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { getBaekilStatus } from '@/app/actions/shrine/rituals'
+import { createClient } from '@/lib/supabase/server'
+import { getBaekilStatus, getGutStatus } from '@/app/actions/shrine/rituals'
 import { BaekilClient } from './baekil-client'
 
 /**
@@ -15,13 +16,22 @@ import { BaekilClient } from './baekil-client'
  *    아무 상태도 지어내지 않고 되돌린다(액막이·오방기와 같은 규율).
  */
 export default async function BaekilPage() {
-  const status = await getBaekilStatus()
+  // 소원 폼이 쓸 본인 신당 id — 없으면(신당 미생성) 소원 칸만 빠진다(폼을 지어내지 않는다)
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: shrine } = user
+    ? await supabase.from('shrines').select('id').eq('user_id', user.id).is('family_member_id', null).maybeSingle()
+    : { data: null }
+
+  const [status, gut] = await Promise.all([getBaekilStatus(), getGutStatus()])
 
   return (
     <div className="min-h-screen px-3 py-5">
       <div className="mx-auto w-full max-w-[480px] space-y-4">
         {status ? (
-          <BaekilClient status={status} />
+          <BaekilClient status={status} shrineId={typeof shrine?.id === 'string' ? shrine.id : null} gut={gut} />
         ) : (
           <div className="rounded-2xl border border-gold-500/25 bg-surface/60 p-6 text-center">
             <p className="font-serif text-[10px] tracking-[0.3em] text-gold-500/60">百 日 祈 禱</p>

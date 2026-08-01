@@ -51,6 +51,7 @@ import {
   type VowVideoStatus,
 } from '@/lib/domain/ritual/baekil'
 import { grantVowCompletion } from '@/lib/services/ritual-grant'
+import { isGutKind, remainingFreeGut, type GutKind, type GutStatus } from '@/lib/domain/ritual/gut'
 
 /**
  * 신당 의식 서버 액션 — R-1 「액막이」 · R-2 「오방기 점괘」 · R-3 「백일기도」
@@ -920,4 +921,178 @@ export async function castChuljeonThrow(ways: number): Promise<CastChuljeonResul
 
   if (!allowed) return { success: false, error: 'DAILY_LIMIT', todayCount, remaining }
   return { success: true, seq, todayCount, remaining }
+}
+
+// ─── R-5 기원굿(祈願굿) ───────────────────────────────────────
+//
+// 백일기도를 마친 이의 소원을 굿 영상으로 만들어 드리는 의식(PLAN-gut-video-v1).
+// ⚠️ **영상 제작 직전까지만** 열려 있다(CEO 2026-08-01: 힉스필드 연동은 테스트 후).
+//    여기서 하는 일은 자격 판정과 접수뿐이고, 상태는 'requested' 에서 멈춘다.
+
+export interface GutRequestRow {
+  id: string
+  kind: GutKind
+  status: GutStatus
+  round: number | null
+  requestedAt: string
+  videoUrl: string | null
+}
+
+export interface GutStatusData {
+  /** 남은 완주 기원굿(회차마다 하나) */
+  remainingFree: number
+  /** 백일기도 완주 횟수 */
+  completedCount: number
+  /** 지금까지의 신청들 — 최신순 */
+  requests: GutRequestRow[]
+  /** 축원문 재료 — 없는 것은 null 이고 화면이 그만큼 뺀다 */
+  chukwon: {
+    name: string | null
+    birthYear: number | null
+    deity: string | null
+    wish: string | null
+    round: number | null
+    dayKey: string
+  }
+}
+
+function asGutStatus(v: unknown): GutStatus {
+  const all: GutStatus[] = [
+    'requested',
+    'script_ready',
+    'queued',
+    'rendering',
+    'review',
+    'delivered',
+    'failed',
+    'canceled',
+  ]
+  return typeof v === 'string' && (all as string[]).includes(v) ? (v as GutStatus) : 'requested'
+}
+
+/**
+ * 기원굿 현황 — 자격·신청 이력·축원문 재료를 한 번에 내려보낸다.
+ * 다른 의식과 같은 규약으로 실패는 null 이다(자격을 지어내면 없는 굿을 권하게 된다).
+ */
+export async function getGutStatus(): Promise<GutStatusData | null> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) return null
+
+    const [{ data: vows }, { data: reqs }, { data: profile }] = await Promise.all([
+      supabase.from('shrine_vows').select('round, completed_at').eq('user_id', user.id).not('completed_at', 'is', null),
+      supabase
+        .from('shrine_gut_requests')
+        .select('id, kind, status, vow_round, requested_at, video_url')
+        .eq('user_id', user.id)
+        .order('requested_at', { ascending: false }),
+      supabase.from('profiles').select('full_name, birth_date').eq('id', user.id).maybeSingle(),
+    ])
+
+    const requests: GutRequestRow[] = (reqs ?? []).map((r) => ({
+      id: String(r.id),
+      kind: isGutKind(r.kind) ? r.kind : 'petition',
+      status: asGutStatus(r.status),
+      round: typeof r.vow_round === 'number' ? r.vow_round : null,
+      requestedAt: String(r.requested_at),
+      videoUrl: typeof r.video_url === 'string' ? r.video_url : null,
+    }))
+
+    const completedCount = (vows ?? []).length
+    const usedFree = requests.filter((r) => r.kind === 'completion' && r.status !== 'canceled').length
+
+    // 주신·소원 — 본인 신당에서. 없으면 그 줄이 축원문에서 빠진다(지어내지 않는다).
+    const { data: shrine } = await supabase
+      .from('shrines')
+      .select('id, main_deity_name')
+      .eq('user_id', user.id)
+      .is('family_member_id', null)
+      .maybeSingle()
+    const { data: wish } = shrine?.id
+      ? await supabase
+          .from('shrine_wishes')
+          .select('wish_text')
+          .eq('shrine_id', shrine.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null }
+
+    const rounds = (vows ?? []).map((v) => (typeof v.round === 'number' ? v.round : 0)).sort((a, b) => b - a)
+
+    return {
+      remainingFree: remainingFreeGut(completedCount, usedFree),
+      completedCount,
+      requests,
+      chukwon: {
+        name: typeof profile?.full_name === 'string' && profile.full_name.trim() ? profile.full_name.trim() : null,
+        birthYear: birthYearOf(profile?.birth_date),
+        deity: typeof shrine?.main_deity_name === 'string' ? shrine.main_deity_name : null,
+        wish: typeof wish?.wish_text === 'string' ? wish.wish_text : null,
+        round: rounds[0] ?? null,
+        dayKey: formatKstDate(),
+      },
+    }
+  } catch (e) {
+    logger.warn('[gut] 현황 조회 예외(비치명):', e)
+    return null
+  }
+}
+
+export interface RequestGutResult {
+  success: boolean
+  error?: 'UNAUTHORIZED' | 'FORBIDDEN' | 'RATE_LIMITED' | 'INVALID_KIND' | 'NO_QUOTA' | 'NOT_OPEN' | 'REQUEST_FAILED'
+  requestId?: string
+}
+
+/**
+ * 기원굿 접수 — **완주 자격 건만** 연다.
+ *
+ * ⚠️ 청원(값을 치르고 청하는) 건은 **가격이 정해지지 않아 열지 않는다**(기획서 §4 결정 대기).
+ *    값이 미정인 채로 결제 경로를 열면 무료로 새거나 임의 금액이 굳는다 — 어느 쪽도 되돌리기 어렵다.
+ * ⚠️ 자격 판정은 **RPC 안에서** 완주 수와 사용 수를 견주며 어드바이저리 잠금을 쥔다 —
+ *    화면이 보낸 회차를 믿고 주면 완주하지 않고도 신청이 된다.
+ */
+export async function requestGut(kind: string): Promise<RequestGutResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+  if (!isGutKind(kind)) return { success: false, error: 'INVALID_KIND' }
+  if (kind === 'petition') return { success: false, error: 'NOT_OPEN' }
+
+  const gate = await ritualGate(user.id, 'gut')
+  if (gate !== 'OK') return { success: false, error: gate }
+
+  const { data: vows } = await supabase
+    .from('shrine_vows')
+    .select('round')
+    .eq('user_id', user.id)
+    .not('completed_at', 'is', null)
+    .order('round', { ascending: false })
+    .limit(1)
+  const round = Array.isArray(vows) && typeof vows[0]?.round === 'number' ? vows[0].round : null
+
+  const admin = createAdminClient()
+  const { data, error } = await admin.rpc('request_shrine_gut', {
+    p_user_id: user.id,
+    p_kind: kind,
+    p_round: round,
+  })
+  if (error) {
+    logger.error('[gut] 접수 RPC 실패:', error)
+    return { success: false, error: 'REQUEST_FAILED' }
+  }
+
+  const row: unknown = Array.isArray(data) ? data[0] : data
+  if (!isRecord(row) || row.allowed !== true) {
+    return { success: false, error: row && isRecord(row) && row.reason === 'NO_QUOTA' ? 'NO_QUOTA' : 'REQUEST_FAILED' }
+  }
+
+  revalidatePath('/protected/shrine/baekil')
+  return { success: true, requestId: typeof row.request_id === 'string' ? row.request_id : undefined }
 }

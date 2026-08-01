@@ -47,7 +47,7 @@ export const BAEKIL_ITEM_NAME = '백일 소원끈'
 export const BAEKIL_DISCLAIMER = '재미로 즐기는 전통 의식 놀이입니다. 의학적·심리적 상담을 대신하지 않습니다.'
 
 /** 서약 화면 고지 — 소원을 받아 적지 않는다는 약속을 먼저 말한다. */
-export const BAEKIL_PRIVACY_NOTICE = '소원은 마음에만 두십시오 — 적어 보내는 곳이 없습니다.'
+export const BAEKIL_PRIVACY_NOTICE = '적어 두신 소원은 나의 신당 기록에만 남습니다 — 남에게 보내지 않습니다.'
 
 /** GA4 이벤트명 — PRD §3 확정. 화면이 trackEvent 로 찍을 때 이 상수를 쓴다(이름이 갈리지 않게). */
 export const BAEKIL_GA = Object.freeze({

@@ -9,7 +9,6 @@ import { getWishes } from '@/app/actions/shrine/shrine-wishes'
 import { getDevotionStatus } from '@/app/actions/shrine/devotion'
 import { getAekmakStatus, getBaekilStatus, getChuljeonStatus, getObangkiStatus } from '@/app/actions/shrine/rituals'
 import { getFamilyHallData, type FamilyHallData } from '@/app/actions/shrine/family-hall'
-import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import { EL_KO } from '@/lib/domain/shrine/energy'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
@@ -77,7 +76,9 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
     { id: null, name: '나', avatarUrl: profile?.avatar_url ?? null },
     ...family.map((f) => ({ id: f.id, name: f.name, avatarId: f.avatar_id as string | null })),
   ]
-  const targetTabs = family.length > 0 && <ShrineTargetTabs tabs={tabs} activeId={target?.id ?? null} />
+  // 가족이 0명이어도 탭 줄을 그린다 — 그 줄에 **가족관리로 가는 유일한 문**이 달려 있어서다
+  // (하단 내비에서 가족관리를 뺀 뒤로는 여기가 사라지면 등록 자체를 할 수 없다).
+  const targetTabs = <ShrineTargetTabs tabs={tabs} activeId={target?.id ?? null} />
 
   // 본인 신당 미생성 → 생성 폼. (가족 신당은 getSceneData 가 자동 생성)
   if (!scene) {
@@ -133,12 +134,8 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
 
       {/* 오너 소원 기원 + 방명록 열람 (F-2) — 대상(본인/가족)을 소원에 새기고 로그에 표기(W2-b/c) */}
       <div className="w-full max-w-[430px] mx-auto mt-5 space-y-5">
-        <ShrineWishForm
-          shrineId={scene.shrineId}
-          isOwner
-          familyMemberId={target?.id ?? null}
-          prayedToday={devotion?.prayedToday ?? false}
-        />
+        {/* 「나의 소원 기원」은 백일기도로 옮겼다(CEO 2026-08-01) — 소원과 백 일은 한 의식이다.
+            여기 남는 것은 남이 남긴 소원을 보는 기록(방명록)뿐이다. */}
         <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} targetName={target?.name ?? '나'} />
       </div>
     </div>

@@ -80,8 +80,11 @@ describe('정책 상수', () => {
 
   it('고지 문구가 효능을 주장하지 않고, 무저장을 먼저 말한다', () => {
     expect(BAEKIL_DISCLAIMER).toContain('대신하지 않습니다')
-    // 소원을 받아 적는 곳이 없다는 약속 — 스키마에 컬럼이 없다는 사실과 짝이다
-    expect(BAEKIL_PRIVACY_NOTICE).toContain('적어 보내는 곳이 없습니다')
+    // 2026-08-01 소원 기원을 백일기도로 합치면서 **적는 곳이 생겼다**(CEO 지시).
+    // 그래서 약속의 내용이 "받지 않는다"에서 "내 신당에만 남고 남에게 가지 않는다"로 바뀌었다.
+    // 여전히 지켜야 하는 것은 **어디에 남고 어디로 가지 않는지를 먼저 말하는 것**이다.
+    expect(BAEKIL_PRIVACY_NOTICE).toContain('나의 신당 기록에만')
+    expect(BAEKIL_PRIVACY_NOTICE).toContain('남에게 보내지 않습니다')
   })
 })
 
@@ -424,7 +427,8 @@ describe('회차 — 재서약 규칙', () => {
       }
     }
     // VowPhase 유니온 자체에 포기·만료 상태가 없다(축원 영상의 'failed' 와 혼동하지 않게 유니온만 본다)
-    const union = /export type VowPhase =([\s\S]*?)\n\n/.exec(read('lib/domain/ritual/baekil.ts'))?.[1] ?? ''
+    // 줄바꿈 표기(LF/CRLF)에 걸리지 않게 — 파일이 어느 쪽으로 저장돼도 같은 것을 봐야 한다
+    const union = /export type VowPhase =([\s\S]*?)\r?\n\r?\n/.exec(read('lib/domain/ritual/baekil.ts'))?.[1] ?? ''
     expect(union).not.toBe('')
     for (const bad of ['abandoned', 'gaveup', 'expired', 'failed', 'broken']) {
       expect(union).not.toContain(`'${bad}'`)

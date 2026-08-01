@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import { fireEvent, render } from '@testing-library/react'
-import { SamgiRow, purifyLeadMs, scrollDelayMs } from '../SamgiRow'
+import { SAMGI_LAST_INDEX, SamgiRow, purifyLeadMs } from '../SamgiRow'
 import { OBANGKI_MS, OBANGKI_SAMGI_STEP_MS, OBANGKI_COLOR_INFO } from '@/lib/domain/ritual/obangki'
 import { drawSamgi, readSamgi, type SamgiReading } from '@/lib/domain/ritual/obangki-reading'
 
@@ -99,14 +101,26 @@ describe('부정풀이 — 물린 기가 실제로 보이는 자리에 있다', 
   })
 })
 
-describe('두루마리 등장 시각 — 마지막 기보다 늦다', () => {
-  it.each([
-    ['물림 없음', plainSeed],
-    ['물림 있음', purifiedSeed],
-  ])('%s: 두루마리 지연 > 마지막 기 지연 + 연출 길이', (_label, seed) => {
-    const reading = readSamgi(seed, null, 'sinsu')
-    const lastFlag = purifyLeadMs(reading) + 2 * OBANGKI_SAMGI_STEP_MS
-    expect(scrollDelayMs(reading)).toBeGreaterThan(lastFlag + OBANGKI_MS.samgi - OBANGKI_SAMGI_STEP_MS)
+describe('두루마리 등장 — 지연이 아니라 **마운트**로 몬다 (튕김 근본 수복)', () => {
+  it('마지막 기의 번호가 칸 수와 맞는다 — 이 기의 animationend 가 두루마리를 세운다', () => {
+    const { container } = render(<SamgiRow reading={readSamgi(plainSeed, null, 'sinsu')} />)
+    expect(container.querySelectorAll('.obangki-samgi')).toHaveLength(SAMGI_LAST_INDEX + 1)
+  })
+
+  /**
+   * 🔴 「오방기 튕김」의 정체: 두루마리를 셔플 직후 DOM 에 넣고 animation-delay 로 늦게 보이게 하면,
+   *    지연 구간 동안 그 카드는 opacity:0 인 채 **레이아웃을 차지하고 클릭도 받는다**.
+   *    안에는 /protected/shrine 로 가는 링크가 둘(해 볼 일·신당) 있어, 아무것도 보이지 않는 자리를
+   *    탭하면 신당으로 튕겼다. 지연으로 띄우는 방식이 되살아나면 그 순간 버그도 되살아난다.
+   */
+  it('★ 시트가 두루마리에 animation-delay 를 얹지 않는다 — 보이지 않는 것은 눌리지도 않아야 한다', () => {
+    const sheet = readFileSync(path.join(process.cwd(), 'components/shrine/scene/ObangkiSheet.tsx'), 'utf8')
+    expect(sheet).toContain('{revealed && scrollReady && (')
+    expect(sheet).toContain('if (i === SAMGI_LAST_INDEX) onLastFlag()')
+    expect(sheet).toContain('onLastFlag={() => setScrollReady(true)}')
+    // 두루마리 컨테이너에 인라인 지연이 다시 붙으면 실패한다
+    expect(sheet).not.toMatch(/obangki-bubble[^>]*animationDelay/)
+    expect(sheet).not.toContain('scrollDelayMs')
   })
 })
 

@@ -25,7 +25,9 @@ export const BottomNav = memo(function BottomNav() {
    */
   const NAV_ITEMS: NavItem[] = [
     { label: t('analysis'), icon: '/icons/nav/analysis.webp', href: '/protected/analysis' },
-    { label: t('family'), icon: '/icons/nav/family.webp', href: '/protected/family' },
+    // 가족관리는 신당 상단(가족 탭 옆)으로 옮겼다 — 대상 탭과 같은 축이라 그 자리가 제자리다.
+    // 비운 칸은 웹툰 연재가 잇는다(CEO 2026-08-01).
+    { label: t('webtoon'), icon: '/icons/nav/webtoon.webp', href: '/protected/webtoon' },
     { label: t('shrine'), icon: '/icons/nav/shrine.webp', href: '/protected/shrine' },
     { label: t('chat'), icon: '/icons/nav/chat.webp', href: '/protected/ai-shaman' },
     { label: t('profile'), icon: '/icons/nav/profile.webp', href: '/protected/profile' },
