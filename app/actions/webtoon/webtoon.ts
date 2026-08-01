@@ -7,7 +7,15 @@ import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { formatKstDate } from '@/lib/utils'
 import { COMMENT_PER_EPISODE_LIMIT, COMMENT_RATE_PER_MIN, validateComment } from '@/lib/domain/webtoon/comment'
-import { STORY_DAILY_LIMIT, isStoryStatus, validateStory, type StoryStatus } from '@/lib/domain/webtoon/story'
+import {
+  STORY_DAILY_LIMIT,
+  STORY_SUBMIT_COST,
+  isStoryStatus,
+  validateStory,
+  type StoryStatus,
+} from '@/lib/domain/webtoon/story'
+import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { refundBokchae, spendBokchae } from '@/lib/services/bokchae'
 import { notifyStorySubmission } from '@/lib/services/story-mail'
 
 /**
@@ -269,10 +277,40 @@ export async function listMyStories(): Promise<MyStoryRow[]> {
   }
 }
 
+export interface StoryGateInfo {
+  /** 멤버십 회원인가 — 회원은 값 없이 접수한다 */
+  member: boolean
+  /** 회원이 아닐 때 드는 복채(wallets.balance 단위, 1 = 1만냥) */
+  cost: number
+}
+
+/** 접수 전에 화면이 값을 미리 보여 주기 위한 조회. 눌러 들어가서야 액수를 아는 문을 만들지 않는다. */
+export async function getStoryGate(): Promise<StoryGateInfo> {
+  try {
+    const membership = await getCurrentUserMembership()
+    return { member: membership != null, cost: STORY_SUBMIT_COST }
+  } catch (e) {
+    logger.warn('[webtoon] 멤버십 조회 예외(비치명):', e)
+    // 모르면 **유료로 본다** — 무료라고 잘못 말하면 동의 없이 차감되는 화면이 된다
+    return { member: false, cost: STORY_SUBMIT_COST }
+  }
+}
+
 export interface SubmitStoryResult {
   success: boolean
-  error?: 'UNAUTHORIZED' | 'RATE_LIMITED' | 'INVALID' | 'DAILY_LIMIT' | 'FAILED'
+  error?:
+    | 'UNAUTHORIZED'
+    | 'RATE_LIMITED'
+    | 'INVALID'
+    | 'DAILY_LIMIT'
+    | 'NEEDS_PAYMENT'
+    | 'INSUFFICIENT_BOKCHAE'
+    | 'FAILED'
   message?: string
+  /** 이번 접수에 복채를 물었는가 */
+  charged?: boolean
+  /** 차감 후 지갑 잔액(복채로 냈을 때만) */
+  balance?: number
   /** 알림 메일이 실제로 나갔는가 — 화면이 "메일도 갔다"고 단정하지 않게 */
   notified?: boolean
 }
@@ -284,13 +322,17 @@ export interface SubmitStoryResult {
  *    사람이 오래 쓴 글이 사라진다. 메일은 실패해도 접수는 남는다.
  * ⚠️ 접수는 service_role RPC 로만 한다 — 쓰기 정책을 주면 하루 상한을 우회할 수 있다.
  */
-export async function submitStory(input: {
-  title: string
-  body: string
-  contactName: string
-  contactPhone: string
-  contactKakao: string
-}): Promise<SubmitStoryResult> {
+export async function submitStory(
+  input: {
+    title: string
+    body: string
+    contactName: string
+    contactPhone: string
+    contactKakao: string
+  },
+  /** 회원이 아닐 때 복채 차감에 대한 **명시 동의**. 없으면 NEEDS_PAYMENT 로 멈춘다 */
+  confirmPaid = false
+): Promise<SubmitStoryResult> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -310,6 +352,25 @@ export async function submitStory(input: {
   const rl = await rateLimit(`webtoon-story:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 3 })
   if (!rl.success) return { success: false, error: 'RATE_LIMITED' }
 
+  // ── 과금 순서 (오방기와 같은 규율) ──
+  // ① 멤버십이면 값이 없다. ② 아니면 명시 동의가 있을 때만 차감한다. ③ 차감 뒤 기록이 깨지면 환불한다.
+  // 이 순서라야 "회원인데 돈을 물렸다"가 구조적으로 불가능하다 —
+  // 화면이 confirmPaid 를 항상 true 로 보내도 ①에서 통과해 버린다.
+  const membership = await getCurrentUserMembership()
+  const cost = membership ? 0 : STORY_SUBMIT_COST
+  let balance: number | undefined
+
+  if (cost > 0) {
+    if (!confirmPaid) return { success: false, error: 'NEEDS_PAYMENT' }
+    const paid = await spendBokchae(cost, '웹툰 내 이야기 접수', 'WEBTOON_STORY')
+    if (!paid.success) {
+      if (paid.error === 'INSUFFICIENT_BOKCHAE') return { success: false, error: 'INSUFFICIENT_BOKCHAE' }
+      logger.error('[webtoon] 복채 차감 실패:', paid.error)
+      return { success: false, error: 'FAILED' }
+    }
+    balance = paid.balance
+  }
+
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('submit_webtoon_story', {
     p_user_id: user.id,
@@ -320,23 +381,27 @@ export async function submitStory(input: {
     p_contact_kakao: draft.contactKakao,
     p_today: formatKstDate(),
     p_daily_limit: STORY_DAILY_LIMIT,
+    p_paid_amount: cost,
   })
-  if (error) {
-    logger.error('[webtoon] 사연 접수 RPC 실패:', error)
-    return { success: false, error: 'FAILED' }
-  }
 
-  const row: unknown = Array.isArray(data) ? data[0] : data
-  if (!isRecord(row) || row.allowed !== true) {
+  const row: unknown = error ? null : Array.isArray(data) ? data[0] : data
+  const allowed = isRecord(row) && row.allowed === true
+  if (!allowed) {
+    // 값을 받았는데 글이 남지 않았다 — 되돌린다. 사연도 복채도 함께 사라지면 안 된다.
+    if (cost > 0) await refundBokchae(user.id, cost, '웹툰 내 이야기 접수 실패 환불')
+    if (error) {
+      logger.error('[webtoon] 사연 접수 RPC 실패:', error)
+      return { success: false, error: 'FAILED' }
+    }
     return { success: false, error: 'DAILY_LIMIT' }
   }
-  const submissionId = typeof row.submission_id === 'string' ? row.submission_id : ''
+  const submissionId = isRecord(row) && typeof row.submission_id === 'string' ? row.submission_id : ''
 
   // 접수는 끝났다. 여기부터는 **알림**이라 실패해도 성공을 돌려준다.
   const notified = await notifyStorySubmission({
     submissionId,
     title: draft.title,
-    no: typeof row.today_count === 'number' ? row.today_count : null,
+    no: isRecord(row) && typeof row.today_count === 'number' ? row.today_count : null,
     receivedAt: new Date().toISOString(),
     bodyLength: draft.body.trim().length,
   })
@@ -348,5 +413,5 @@ export async function submitStory(input: {
   }
 
   revalidatePath('/protected/webtoon')
-  return { success: true, notified }
+  return { success: true, charged: cost > 0, balance, notified }
 }

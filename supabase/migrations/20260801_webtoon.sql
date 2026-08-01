@@ -69,6 +69,10 @@ create table if not exists public.webtoon_story_submissions (
   contact_kakao text check (char_length(btrim(contact_kakao)) <= 60),
   status        text not null default 'received'
                   check (status in ('received', 'reviewing', 'selected', 'declined')),
+  -- 접수에 치른 복채(1 = 1만냥). 0 이면 멤버십 무료 접수.
+  -- ⚠️ 어느 쪽이었는지 **행에 남긴다** — 남기지 않으면 환불·정산 때 지갑 원장과 대조해야 하고,
+  --    그 대조는 반드시 어긋난다.
+  paid_amount   integer not null default 0 check (paid_amount >= 0),
   notified_at   timestamptz,
   created_at    timestamptz not null default now()
 );
@@ -90,7 +94,8 @@ create or replace function public.submit_webtoon_story(
   p_contact_phone text,
   p_contact_kakao text,
   p_today         text,
-  p_daily_limit   integer
+  p_daily_limit   integer,
+  p_paid_amount   integer
 )
 returns table (allowed boolean, submission_id uuid, today_count integer)
 language plpgsql
@@ -114,17 +119,17 @@ begin
   end if;
 
   insert into public.webtoon_story_submissions
-    (user_id, title, body, contact_name, contact_phone, contact_kakao)
+    (user_id, title, body, contact_name, contact_phone, contact_kakao, paid_amount)
   values
     (p_user_id, btrim(p_title), btrim(p_body), btrim(p_contact_name), btrim(p_contact_phone),
-     nullif(btrim(coalesce(p_contact_kakao, '')), ''))
+     nullif(btrim(coalesce(p_contact_kakao, '')), ''), greatest(0, coalesce(p_paid_amount, 0)))
   returning id into v_id;
 
   return query select true, v_id, v_count + 1;
 end;
 $$;
 
-revoke all on function public.submit_webtoon_story(uuid, text, text, text, text, text, text, integer)
+revoke all on function public.submit_webtoon_story(uuid, text, text, text, text, text, text, integer, integer)
   from public, anon, authenticated;
-grant execute on function public.submit_webtoon_story(uuid, text, text, text, text, text, text, integer)
+grant execute on function public.submit_webtoon_story(uuid, text, text, text, text, text, text, integer, integer)
   to service_role;
