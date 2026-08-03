@@ -30,3 +30,73 @@ export function toEpisodeAccess(v: unknown): EpisodeAccess {
  * 한 시간의 4분의 1이다. 늘리려면 "읽다 끊긴다"는 근거가 있어야 한다 — 편해서가 아니라.
  */
 export const EPISODE_SIGNED_URL_TTL_SEC = 900
+
+/** 등급별 버킷. 무료는 공개, 멤버십은 비공개 — 이 짝이 어긋나면 게이트가 통째로 무의미해진다. */
+export function episodeBucket(access: EpisodeAccess): 'webtoon' | 'webtoon-locked' {
+  return access === 'membership' ? 'webtoon-locked' : 'webtoon'
+}
+
+// ─── 운영 (회차 등록) ────────────────────────────────────────
+
+export const EPISODE_TITLE_MIN = 2
+export const EPISODE_TITLE_MAX = 80
+export const EPISODE_SUMMARY_MAX = 300
+/** 한 화 컷 상한. 넘길 일이 있으면 화를 나누는 게 맞다(스크롤도, 발급도 감당이 안 된다). */
+export const EPISODE_PAGE_MAX = 80
+
+/**
+ * 컷 이미지 가로 상한(px).
+ *
+ * ⚠️ 멤버십 회차는 이미지 최적화를 타지 않는다(서명 주소라 캐시가 안 맞는다) — **여기서 줄이지
+ *    않으면 원본이 그대로 독자에게 간다**. 공통 압축 유틸(compress-image)은 *긴 변*을 1280 으로
+ *    맞추는데, 세로로 긴 웹툰 컷에 그걸 쓰면 가로가 256px 로 뭉개진다. 웹툰은 가로를 잡아야 한다.
+ */
+export const EPISODE_CUT_MAX_WIDTH = 1080
+export const EPISODE_CUT_QUALITY = 0.82
+
+/**
+ * 컷의 스토리지 경로.
+ *
+ * ⚠️ 회차·순번으로 **결정되는** 이름이다. 무작위 이름을 쓰면 다시 올릴 때마다 옛 파일이 버킷에
+ *    쌓이고, 어느 것이 지금 쓰이는지 아무도 모르게 된다. 같은 자리에 덮어쓴다.
+ */
+export function episodeCutPath(no: number, idx: number): string {
+  return `ep-${String(Math.max(0, Math.floor(no))).padStart(3, '0')}/${String(Math.max(0, Math.floor(idx))).padStart(3, '0')}.jpg`
+}
+
+export interface EpisodeDraft {
+  readonly no: number
+  readonly title: string
+  readonly summary: string
+  readonly access: EpisodeAccess
+  /** 빈 문자열이면 미공개(초안) — 목록에도 뷰어에도 뜨지 않는다 */
+  readonly publishedAt: string
+}
+
+export interface EpisodeIssue {
+  readonly field: 'no' | 'title' | 'summary' | 'access'
+  readonly message: string
+}
+
+export function validateEpisode(draft: EpisodeDraft): readonly EpisodeIssue[] {
+  const out: EpisodeIssue[] = []
+
+  // 0 = 예고편. 음수와 소수는 회차 번호가 아니다.
+  if (!Number.isInteger(draft.no) || draft.no < 0) out.push({ field: 'no', message: '회차 번호는 0 이상의 정수입니다' })
+
+  const title = draft.title.trim()
+  if (title.length < EPISODE_TITLE_MIN) out.push({ field: 'title', message: '제목을 지어 주세요' })
+  else if (title.length > EPISODE_TITLE_MAX)
+    out.push({ field: 'title', message: `제목은 ${EPISODE_TITLE_MAX}자까지입니다` })
+
+  if (draft.summary.trim().length > EPISODE_SUMMARY_MAX)
+    out.push({ field: 'summary', message: `줄거리는 ${EPISODE_SUMMARY_MAX}자까지입니다` })
+
+  if (!isEpisodeAccess(draft.access)) out.push({ field: 'access', message: '접근 등급이 올바르지 않습니다' })
+
+  return Object.freeze(out)
+}
+
+export function isEpisodeValid(draft: EpisodeDraft): boolean {
+  return validateEpisode(draft).length === 0
+}

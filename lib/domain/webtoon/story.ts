@@ -36,6 +36,8 @@ export const STORY_NAME_MAX = 40
 export const STORY_PHONE_MIN = 6
 export const STORY_PHONE_MAX = 30
 export const STORY_KAKAO_MAX = 60
+/** 운영자 회신 한마디 — 편지가 아니라 한마디다. 길어지면 상담이 되고, 상담은 여기서 감당 못 한다. */
+export const STORY_REPLY_MAX = 500
 
 /** 접수 상태 — 스키마 CHECK 와 **문자열이 같아야 한다**. */
 export type StoryStatus = 'received' | 'reviewing' | 'selected' | 'declined'

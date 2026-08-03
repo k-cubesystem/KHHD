@@ -32,7 +32,16 @@ import {
   type StoryDraft,
 } from '../story'
 import { REPORT_HIDE_THRESHOLD, REPORT_REASONS, REPORT_REASON_INFO, isReportReason } from '../report'
-import { EPISODE_SIGNED_URL_TTL_SEC, isEpisodeAccess, toEpisodeAccess } from '../episode'
+import {
+  EPISODE_CUT_MAX_WIDTH,
+  EPISODE_PAGE_MAX,
+  EPISODE_SIGNED_URL_TTL_SEC,
+  episodeBucket,
+  episodeCutPath,
+  isEpisodeAccess,
+  toEpisodeAccess,
+  validateEpisode,
+} from '../episode'
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION = read('supabase/migrations/20260801_webtoon.sql')
@@ -45,6 +54,19 @@ const PAGES_ACTION = ACTIONS.slice(
   ACTIONS.indexOf('export async function getEpisodePages'),
   ACTIONS.indexOf('export interface WebtoonComment')
 )
+const ADMIN_MIGRATION = read('supabase/migrations/20260803_webtoon_admin.sql')
+/** 주석을 걷어내고 `create policy` 문만 통째로 꺼낸다 — drop 문이 섞이면 검사가 헛돈다. */
+const createPolicies = (sql: string): string[] =>
+  sql
+    .split('\n')
+    .filter((l) => !l.trim().startsWith('--'))
+    .join('\n')
+    .split(';')
+    .map((s) => s.trim())
+    .filter((s) => s.toLowerCase().startsWith('create policy'))
+const ADMIN_ACTIONS = read('app/actions/admin/webtoon.ts')
+const ADMIN_EPISODES_UI = read('app/admin/webtoon/webtoon-episodes-client.tsx')
+const ADMIN_STORIES_UI = read('app/admin/webtoon/stories/stories-client.tsx')
 
 const ok: StoryDraft = {
   title: '할머니의 신당',
@@ -377,5 +399,93 @@ describe('회차 본문 — 게이트는 한 곳, 서명 주소는 값이 든다
   it('무료 회차는 공개 URL 그대로 — 서명도 최적화 해제도 하지 않는다', () => {
     expect(PAGES_ACTION).toContain('/storage/v1/object/public/webtoon/')
     expect(PAGES_ACTION).toContain('return { locked: false, signed: false, pages }')
+  })
+})
+
+describe('운영 화면 — 권한은 RLS 가 지고, 사연만 예외다', () => {
+  it('★ 본문 경로 표에 생긴 정책은 전부 is_admin() 을 건다 (회원에게는 여전히 닫혀 있다)', () => {
+    const pages = createPolicies(ADMIN_MIGRATION).filter((s) => s.includes('on public.webtoon_episode_pages'))
+    expect(pages.length).toBeGreaterThan(0)
+    for (const block of pages) {
+      expect(block).toMatch(/using \(public\.is_admin\(\)\)/)
+      expect(block).toMatch(/with check \(public\.is_admin\(\)\)/)
+    }
+  })
+
+  it('★ 사연 표에는 어드민 정책을 만들지 않는다 — 브라우저 세션으로 전체를 긁는 길을 안 만든다', () => {
+    expect(ADMIN_MIGRATION).not.toContain('webtoon_story_submissions')
+    // 그래서 사연 조회는 service_role 이어야 한다
+    const list = ADMIN_ACTIONS.slice(
+      ADMIN_ACTIONS.indexOf('export async function listAdminStories'),
+      ADMIN_ACTIONS.indexOf('export async function updateStory')
+    )
+    expect(list).toContain('createAdminClient()')
+  })
+
+  it('★ 스토리지 정책은 웹툰 버킷 둘에만, 그것도 운영자에게만 열린다', () => {
+    const storage = createPolicies(ADMIN_MIGRATION).filter((s) => s.includes('on storage.objects'))
+    expect(storage.length).toBeGreaterThanOrEqual(4) // select · insert · update · delete
+    for (const block of storage) {
+      expect(block).toContain("bucket_id in ('webtoon', 'webtoon-locked')")
+      expect(block).toContain('public.is_admin()')
+    }
+  })
+
+  it('★ 액션 export 가 하나도 빠짐없이 권한을 확인한다 — 어드민 화면 안이라는 사실은 아무것도 안 막는다', () => {
+    const fns = ADMIN_ACTIONS.split('export async function').slice(1)
+    expect(fns.length).toBeGreaterThanOrEqual(8)
+    for (const fn of fns) {
+      const name = fn.slice(0, fn.indexOf('(')).trim()
+      expect([name, fn.includes('await requireAdmin()')]).toEqual([name, true])
+    }
+  })
+
+  it('★ 본문 교체는 넣기가 먼저다 — 지우기가 먼저면 넣기 실패에 회차가 통째로 빈다', () => {
+    const fn = ADMIN_ACTIONS.slice(ADMIN_ACTIONS.indexOf('export async function saveEpisodePages'))
+    const upsert = fn.indexOf('.upsert(rows')
+    const del = fn.indexOf('.delete()')
+    expect(upsert).toBeGreaterThan(-1)
+    expect(del).toBeGreaterThan(upsert)
+  })
+
+  it('★ 컷은 올리기 전에 가로를 줄인다 — 최적화를 안 타므로 여기서 안 줄이면 원본이 나간다', () => {
+    expect(ADMIN_EPISODES_UI).toContain('resizeImageToWidth(file, EPISODE_CUT_MAX_WIDTH, EPISODE_CUT_QUALITY)')
+    // 서버 액션으로 중계하지 않는다(페이로드 한도) — 버킷에 직접 올린다
+    expect(ADMIN_EPISODES_UI).toContain('.upload(path, blob')
+    expect(EPISODE_CUT_MAX_WIDTH).toBeGreaterThanOrEqual(720)
+    expect(EPISODE_CUT_MAX_WIDTH).toBeLessThanOrEqual(1440)
+  })
+
+  it('★ 연락처는 접혀 있다 — 운영 화면이라고 전화번호를 늘어놓으면 어깨너머는 똑같다', () => {
+    expect(ADMIN_STORIES_UI).toContain('showContact === row.id')
+    expect(ADMIN_STORIES_UI).toContain('연락처 보기')
+  })
+
+  it('등급과 버킷은 한 짝이다 — 어긋나면 게이트가 통째로 무의미해진다', () => {
+    expect(episodeBucket('free')).toBe('webtoon')
+    expect(episodeBucket('membership')).toBe('webtoon-locked')
+  })
+
+  it('컷 경로는 회차·순번으로 결정된다 — 무작위 이름이면 옛 파일이 버킷에 쌓인다', () => {
+    expect(episodeCutPath(0, 0)).toBe('ep-000/000.jpg')
+    expect(episodeCutPath(12, 7)).toBe('ep-012/007.jpg')
+    // 음수·소수가 경로를 망가뜨리지 않는다
+    expect(episodeCutPath(-3, -1)).toBe('ep-000/000.jpg')
+    expect(episodeCutPath(2.7, 1.9)).toBe('ep-002/001.jpg')
+  })
+
+  it('회차 입력 검증 — 0화(예고편)는 되고 음수·소수는 안 된다', () => {
+    const base = { title: '첫 화', summary: '', access: 'free' as const, publishedAt: '' }
+    expect(validateEpisode({ ...base, no: 0 })).toHaveLength(0)
+    expect(validateEpisode({ ...base, no: -1 })[0].field).toBe('no')
+    expect(validateEpisode({ ...base, no: 1.5 })[0].field).toBe('no')
+    expect(validateEpisode({ ...base, no: 1, title: 'ㄱ' })[0].field).toBe('title')
+    expect(validateEpisode({ ...base, no: 1, summary: 'ㄱ'.repeat(400) })[0].field).toBe('summary')
+  })
+
+  it('한 화 컷 상한이 서버와 화면에서 같은 값이다', () => {
+    expect(ADMIN_ACTIONS).toContain('EPISODE_PAGE_MAX')
+    expect(ADMIN_EPISODES_UI).toContain('EPISODE_PAGE_MAX')
+    expect(EPISODE_PAGE_MAX).toBeGreaterThan(0)
   })
 })

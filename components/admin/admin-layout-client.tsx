@@ -14,6 +14,8 @@ import {
   Shield,
   Power,
   Activity,
+  BookOpen,
+  ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,6 +30,8 @@ const ICON_MAP: Record<string, typeof LayoutDashboard> = {
   Power,
   Activity,
   Shield,
+  BookOpen,
+  ScrollText,
 }
 
 interface MenuLink {

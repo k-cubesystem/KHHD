@@ -1,4 +1,25 @@
-import { fitWithin, base64Bytes } from '../compress-image'
+import { fitWithin, fitWidth, base64Bytes } from '../compress-image'
+
+describe('fitWidth — 웹툰 컷은 가로를 잡는다', () => {
+  it('가로가 상한보다 좁으면 원본 유지', () => {
+    expect(fitWidth(800, 5000, 1080)).toEqual({ width: 800, height: 5000 })
+  })
+
+  it('★ 세로로 긴 컷도 가로만 줄인다 — 긴 변 기준이면 가로가 뭉개진다', () => {
+    expect(fitWidth(2000, 10000, 1080)).toEqual({ width: 1080, height: 5400 })
+    // 같은 이미지에 fitWithin 을 쓰면 가로가 216px 이 된다(쓰면 안 되는 이유)
+    expect(fitWithin(2000, 10000, 1080).width).toBeLessThan(300)
+  })
+
+  it('가로가 긴 이미지도 가로 기준으로 줄인다', () => {
+    expect(fitWidth(4000, 2000, 1080)).toEqual({ width: 1080, height: 540 })
+  })
+
+  it('0·음수 치수는 1x1로 방어', () => {
+    expect(fitWidth(0, 100, 1080)).toEqual({ width: 1, height: 1 })
+    expect(fitWidth(-5, -5, 1080)).toEqual({ width: 1, height: 1 })
+  })
+})
 
 describe('fitWithin — 압축 목표 치수', () => {
   it('최대 변보다 작으면 원본 유지', () => {

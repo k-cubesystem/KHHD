@@ -27,6 +27,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/payments', label: '결제 내역', icon: 'CreditCard' },
     { href: '/admin/subscriptions', label: '구독 관리', icon: 'CreditCard' },
     { href: '/admin/membership/plans', label: '멤버십/스토어', icon: 'Package' },
+    // 웹툰
+    { type: 'divider' as const, label: '웹툰' },
+    { href: '/admin/webtoon', label: '회차 관리', icon: 'BookOpen' },
+    { href: '/admin/webtoon/stories', label: '「내 이야기」 접수', icon: 'ScrollText' },
     // 이벤트 & 마케팅
     { type: 'divider' as const, label: '이벤트 & 마케팅' },
     { href: '/admin/notifications', label: '알림 자동화', icon: 'Bell' },
