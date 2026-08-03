@@ -4,7 +4,9 @@
 //    "방울이 울리고…"에서 영원히 멎는 무증상 교착이 됐다(콘솔 에러 0, 프로덕션 실측 재현).
 //    개별 페이지 import 는 또 빠뜨린다 — 게이트와 같은 원리로 layout 한 곳에 둔다.
 import '@/app/shrine-scene.css'
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { AnimAuditBadge } from '@/components/shrine/scene/AnimAuditBadge'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
@@ -37,5 +39,14 @@ export default async function ShrineLayout({ children }: { children: React.React
       />
     )
   }
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      {/* 연출 계측 — `?anim=1` 일 때만 뜬다. 신당 계열 전 라우트에서 재려고 레이아웃에 둔다
+          (개별 페이지에 꽂으면 CSS 적재와 똑같은 이유로 어딘가 빠뜨린다) */}
+      <Suspense fallback={null}>
+        <AnimAuditBadge />
+      </Suspense>
+    </>
+  )
 }
