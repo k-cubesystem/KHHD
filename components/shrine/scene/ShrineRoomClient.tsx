@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, MessageCircle } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
-import { deityTurnFrames } from '@/lib/domain/shrine/deities'
+import { bondLevelForPoints, bondUnlocks, deityTurnFrames } from '@/lib/domain/shrine/deities'
 import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   depthScale,
@@ -86,6 +86,7 @@ import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
+import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
 import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
 import { trackEvent } from '@/lib/analytics/ga4'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
@@ -1106,6 +1107,25 @@ export function ShrineRoomClient({
     [spinAllowed, scene.mainDeity?.code]
   )
 
+  /**
+   * 좌정 신위의 표정 — 오늘 기도를 올렸으면 흡족하고, 시작해 놓고 안 왔으면 기다린다.
+   *
+   * ⚠️ 유대 점수를 모르는 자리(방문자 뷰는 RLS 로 null)에서는 **표정 둘로 접는다**. 남의 신당에서
+   *    그 집 주인의 기도 이력이 표정으로 읽히면 안 되고, 모를 때 넉넉히 주는 쪽이 해금의 뜻을 깬다.
+   */
+  const deityFace = useMemo(
+    () =>
+      deityMood({
+        prayedToday: devotion?.prayedToday ?? false,
+        devotionLevel: devotion?.level ?? 0,
+        allowedEmotions:
+          scene.mainDeity?.bondPoints == null
+            ? 2
+            : bondUnlocks(bondLevelForPoints(scene.mainDeity.bondPoints)).emotions,
+      }),
+    [devotion?.prayedToday, devotion?.level, scene.mainDeity?.bondPoints]
+  )
+
   // ── 테마 전환 ──
   const applyTheme = useCallback(
     async (pack: ThemePack) => {
@@ -1242,7 +1262,7 @@ export function ShrineRoomClient({
           세로 정합(발이 단상 상면에 닿음)은 DeityTurn 이 stage.deityStandBox 로 파생한다. */}
       {scene.mainDeity?.spriteUrl && (
         <DeityTurn
-          baseUrl={scene.mainDeity.spriteUrl}
+          baseUrl={deityMoodUrl(scene.mainDeity.spriteUrl, deityFace)}
           frames={deityFrames}
           name={scene.mainDeity.name}
           spinning={deitySpinning}
