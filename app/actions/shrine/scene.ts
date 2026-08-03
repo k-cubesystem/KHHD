@@ -29,6 +29,7 @@ import {
   type StageThemePack,
 } from '@/lib/domain/shrine/stage'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
+import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 
@@ -56,6 +57,8 @@ interface CatalogRow {
   price_krw: number
   price_bokchae: number
   unlock_effect: unknown
+  matters: unknown
+  origin_note: string | null
   /** v2 — 마이그레이션 이전 DB에서는 undefined 로 들어온다 (전부 방어 파싱) */
   kind?: unknown
   asset_url?: unknown
@@ -81,6 +84,8 @@ function toCatalogItem(r: CatalogRow): StageCatalogItem {
     priceKrw: r.price_krw,
     priceBokchae: r.price_bokchae,
     unlockEffect: parseUnlockEffect(r.unlock_effect),
+    matters: parseMatters(r.matters),
+    originNote: r.origin_note,
     kind: isCatalogKind(r.kind) ? r.kind : 'prop',
     // v2 스프라이트가 아직 없는 품목은 기존 sprite_url 로 폴백 → 신규 렌더도 첫날부터 그림이 나온다
     assetUrl: parseAssetUrl(r.asset_url) ?? parseAssetUrl(r.sprite_url),

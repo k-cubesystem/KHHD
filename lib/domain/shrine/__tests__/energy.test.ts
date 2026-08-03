@@ -19,6 +19,8 @@ function item(id: string, element: Element, energyPower = 10): CatalogItem {
     priceKrw: 0,
     priceBokchae: 0,
     unlockEffect: null,
+    matters: [],
+    originNote: null,
   }
 }
 

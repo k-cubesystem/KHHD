@@ -3,6 +3,8 @@
  * 클라이언트·서버 공용 (순수 타입만, side-effect 없음)
  */
 
+import type { ObangkiMatter } from '@/lib/domain/ritual/obangki'
+
 export type Element = 'wood' | 'fire' | 'earth' | 'metal' | 'water'
 export type Layer = 'wall' | 'hanging' | 'altar' | 'floor'
 export type SizeGrade = 'sm' | 'md' | 'lg'
@@ -47,6 +49,15 @@ export interface CatalogItem {
   priceBokchae: number
   /** 배치 효험 (없으면 null) */
   unlockEffect: UnlockEffect | null
+  /**
+   * 어느 기도(문복 갈래)에 좋은가. 빈 배열 = 갈래를 가리지 않는 물건.
+   *
+   * ⚠️ 값은 `lib/domain/ritual/obangki.ts` 의 ObangkiMatter 와 **같은 문자열**이다 —
+   *    DB CHECK 도 같은 목록을 건다. 셋 중 하나만 바뀌면 조용히 어긋난다.
+   */
+  matters: ObangkiMatter[]
+  /** 실제로 어디에 쓰는 물건인가 — 설명이 "효과"라면 이것은 "출처"다 */
+  originNote: string | null
 }
 
 /** 방에 배치된 아이템 인스턴스 */

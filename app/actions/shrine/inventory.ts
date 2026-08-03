@@ -7,6 +7,7 @@ import { logger } from '@/lib/utils/logger'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { trackEvent } from '@/lib/analytics/ga4'
+import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import {
   parseBehavior,
   parseUnlockEffect,
@@ -34,6 +35,8 @@ interface CatalogRow {
   price_krw: number
   price_bokchae: number
   unlock_effect: unknown
+  matters: unknown
+  origin_note: string | null
 }
 
 function toCatalogItem(r: CatalogRow): CatalogItem {
@@ -54,6 +57,8 @@ function toCatalogItem(r: CatalogRow): CatalogItem {
     priceKrw: r.price_krw,
     priceBokchae: r.price_bokchae,
     unlockEffect: parseUnlockEffect(r.unlock_effect),
+    matters: parseMatters(r.matters),
+    originNote: r.origin_note,
   }
 }
 

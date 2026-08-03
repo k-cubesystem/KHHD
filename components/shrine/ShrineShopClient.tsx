@@ -9,6 +9,7 @@ import { purchaseToInventory, type ShopData } from '@/app/actions/shrine/invento
 import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 import { devotionLevelForItem } from '@/lib/domain/shrine/devotion'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
+import { mattersLabel } from '@/lib/domain/shrine/item-matters'
 import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
 
 const RARITY: Record<string, { label: string; cls: string }> = {
@@ -121,6 +122,16 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                 {item.element && (
                   <p className="text-[10px] text-gold-500/70 font-sans">
                     {EL_KO[item.element]} 기운 +{item.energyPower}
+                  </p>
+                )}
+                {/* 어느 기도에 좋은가 — 오방기 문복 갈래와 **같은 말**을 쓴다(두 화면이 한 세계로 읽히게) */}
+                {item.matters.length > 0 && (
+                  <p className="font-sans text-[10px] text-ink-light/45">기도 · {mattersLabel(item.matters)}</p>
+                )}
+                {/* 전거 — 실제로 어디에 쓰는 물건인지. 설명이 "효과"라면 이쪽은 "출처"다 */}
+                {item.originNote && (
+                  <p className="border-l border-white/10 pl-1.5 font-sans text-[10px] leading-tight text-ink-light/25">
+                    {item.originNote}
                   </p>
                 )}
                 {item.unlockEffect?.type === 'chat_retention' && (
