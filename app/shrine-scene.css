@@ -1668,3 +1668,42 @@
     animation: none;
   }
 }
+
+/* ═══ 의례 전환 (View Transitions) ══════════════════════════════════════════
+   신당 ↔ 오방기 ↔ 척전 ↔ 백일기도. 문을 여닫는 호흡으로 잇는다 —
+   나가는 화면은 향 연기처럼 흐려지며 물러나고, 드는 화면은 아래에서 올라오며 맺힌다.
+
+   ⚠️ 반드시 **정적 CSS** 여야 한다. styled-jsx 로 넣으면 빌드 산출물에 한 줄도 안 실린다
+      (2026-07-30 사고 — DOM 에 클래스는 붙고 콘솔은 조용해서 무증상으로 죽어 있었다).
+   ⚠️ ::view-transition-* 는 API 가 없는 브라우저에서 **그냥 무시된다**. 폴백은 즉시 이동이라
+      깨지는 자리가 없다 — 연출이 없을 뿐이다.                                              */
+::view-transition-old(root) {
+  animation: shrineRitualOut 240ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: shrineRitualIn 320ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes shrineRitualOut {
+  to {
+    opacity: 0;
+    transform: scale(0.988);
+    filter: blur(3px);
+  }
+}
+
+@keyframes shrineRitualIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(1.006);
+    filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}

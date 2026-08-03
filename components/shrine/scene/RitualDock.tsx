@@ -19,11 +19,24 @@
  */
 
 import Link from 'next/link'
-import type { RefObject } from 'react'
+import type { MouseEvent, RefObject } from 'react'
 import { Flag, Flame, Coins } from 'lucide-react'
 import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import type { SoundKey } from '@/lib/domain/shrine/types'
+import { useRitualTransition, type RitualNavigate } from '@/hooks/use-ritual-transition'
 import { AekmakStrip } from './AekmakSheet'
+
+/**
+ * 의식으로 나가는 문에 전환 연출을 입힌다.
+ *
+ * ⚠️ `<Link>` 를 버튼으로 바꾸지 않는다 — 프리페치·가운데클릭·「새 탭으로 열기」가 전부 링크의
+ *    것이다. 우리가 가로채는 것은 **평범한 왼쪽 클릭 하나뿐**이고, 나머지는 브라우저에 돌려준다.
+ */
+function ritualLinkHandler(go: RitualNavigate, href: string) {
+  return (e: MouseEvent<HTMLAnchorElement>) => {
+    if (go(href, e)) e.preventDefault()
+  }
+}
 
 /** 행 공통 골격 — 44px 터치 타깃. 세 행이 같은 뼈대를 써야 "한 카드"로 읽힌다. */
 const ROW_CLASS = 'flex items-center gap-2.5 px-4 min-h-[44px]'
@@ -83,8 +96,13 @@ export function RitualDock({ aekmak, obangki, chuljeon, baekil, litCandles, play
 /** 오방기 행 — 전용 페이지로 나가는 문. 잔여 판정은 서버 값(remainingFree)만 쓴다. */
 function ObangkiRow({ status }: { status: ObangkiStatus }) {
   const freeLeft = status.remainingFree
+  const go = useRitualTransition()
   return (
-    <Link href="/protected/shrine/obangki" className={ROW_CLASS}>
+    <Link
+      href="/protected/shrine/obangki"
+      onClick={ritualLinkHandler(go, '/protected/shrine/obangki')}
+      className={ROW_CLASS}
+    >
       <span className={`${PLATE_CLASS} border-obangsaek-blue/40 bg-obangsaek-blue/[0.16]`}>
         <Flag className="h-3.5 w-3.5 text-[#9FBEDD]" />
       </span>
@@ -114,8 +132,13 @@ function ObangkiRow({ status }: { status: ObangkiStatus }) {
  */
 function ChuljeonRow({ status }: { status: ChuljeonStatus }) {
   const left = status.remaining
+  const go = useRitualTransition()
   return (
-    <Link href="/protected/shrine/chuljeon" className={ROW_CLASS}>
+    <Link
+      href="/protected/shrine/chuljeon"
+      onClick={ritualLinkHandler(go, '/protected/shrine/chuljeon')}
+      className={ROW_CLASS}
+    >
       <span className={`${PLATE_CLASS} border-gold-500/40 bg-gold-500/[0.14]`}>
         <Coins className="h-3.5 w-3.5 text-gold-200" />
       </span>
@@ -148,10 +171,12 @@ function BaekilRow({ status }: { status: BaekilStatus }) {
   const { progress } = status
   const started = progress.phase !== 'none'
   const burning = progress.phase === 'active' || progress.phase === 'ready'
+  const go = useRitualTransition()
 
   return (
     <Link
       href="/protected/shrine/baekil"
+      onClick={ritualLinkHandler(go, '/protected/shrine/baekil')}
       aria-label={started ? '백일기도 진행 보기' : '백일기도 시작하기'}
       className={ROW_CLASS}
     >

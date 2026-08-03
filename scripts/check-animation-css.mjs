@@ -104,6 +104,10 @@ const REQUIRED_CLASSES = [
   '.review-marquee-track',
   '.animate-spin-slow',
   '.animate-spin-reverse-slow',
+  // 의례 전환 — 클래스가 아니라 의사요소다. 산출물에서 사라지면 이동이 툭 끊긴다
+  // (연출만 빠지고 기능은 살아 있어서, 이 게이트가 없으면 아무도 모른다)
+  '::view-transition-old(root)',
+  '::view-transition-new(root)',
 ]
 
 /** @keyframes 이름 */
@@ -177,6 +181,9 @@ const REQUIRED_KEYFRAMES = [
   'review-marquee-scroll',
   'spin-slow',
   'spin-reverse-slow',
+  // 의례 전환 (A-1)
+  'shrineRitualOut',
+  'shrineRitualIn',
 ]
 
 /** styled-jsx 금지 구역 — 여기 CSS 는 정적 파일(app/shrine-scene.css)에만 둔다 */
