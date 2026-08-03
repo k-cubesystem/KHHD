@@ -9,6 +9,7 @@ import { formatKstDate } from '@/lib/utils'
 import { COMMENT_PER_EPISODE_LIMIT, COMMENT_RATE_PER_MIN, validateComment } from '@/lib/domain/webtoon/comment'
 import { STORY_DAILY_LIMIT, isStoryStatus, validateStory, type StoryStatus } from '@/lib/domain/webtoon/story'
 import { REPORT_NOTE_MAX, isReportReason } from '@/lib/domain/webtoon/report'
+import { EPISODE_SIGNED_URL_TTL_SEC, toEpisodeAccess, type EpisodeAccess } from '@/lib/domain/webtoon/episode'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { notifyStorySubmission } from '@/lib/services/story-mail'
 
@@ -35,7 +36,7 @@ export interface WebtoonEpisode {
   thumbUrl: string | null
   publishedAt: string
   /** 접근 등급 — 'membership' 이면 본문은 멤버십만(getEpisodePages 가 판정) */
-  access: 'free' | 'membership'
+  access: EpisodeAccess
 }
 
 function toEpisode(row: unknown): WebtoonEpisode | null {
@@ -49,7 +50,7 @@ function toEpisode(row: unknown): WebtoonEpisode | null {
     summary: typeof row.summary === 'string' ? row.summary : null,
     thumbUrl: typeof row.thumb_url === 'string' ? row.thumb_url : null,
     publishedAt: row.published_at,
-    access: row.access === 'membership' ? 'membership' : 'free',
+    access: toEpisodeAccess(row.access),
   }
 }
 
@@ -99,6 +100,13 @@ export interface EpisodePage {
 export interface EpisodePagesResult {
   /** true 면 멤버십이 없어 본문을 내려주지 않은 것 — 화면은 잠금 안내를 그린다 */
   locked: boolean
+  /**
+   * 주소가 서명 URL 인가.
+   *
+   * ⚠️ 화면이 `access === 'membership'` 으로 다시 판정하지 않게 서버가 말해 준다. 서명 주소는
+   *    요청마다 달라서 이미지 최적화에 태우면 캐시가 영원히 빗나간다 — 뷰어는 이 값으로 끈다.
+   */
+  signed: boolean
   pages: EpisodePage[]
 }
 
@@ -107,10 +115,10 @@ export interface EpisodePagesResult {
  *
  * ⚠️ 본문 경로 표(webtoon_episode_pages)는 RLS 정책이 없어 클라이언트가 직접 못 읽는다 —
  *    게이트는 이 액션 **한 곳**이다. 멤버십 회차는 판정 통과 후에만 서명 URL 로 내려간다.
- *    (무료 회차 = 공개 버킷 URL / 멤버십 회차 = 비공개 버킷 1시간 서명 URL)
+ *    (무료 회차 = 공개 버킷 URL / 멤버십 회차 = 비공개 버킷 서명 URL, 기간은 EPISODE_SIGNED_URL_TTL_SEC)
  */
 export async function getEpisodePages(episodeId: string): Promise<EpisodePagesResult> {
-  const none: EpisodePagesResult = { locked: false, pages: [] }
+  const none: EpisodePagesResult = { locked: false, signed: false, pages: [] }
   if (typeof episodeId !== 'string' || episodeId.length === 0) return none
   try {
     // 공개(RLS) 클라이언트로 회차 존재·공개 여부를 먼저 확인한다
@@ -118,10 +126,10 @@ export async function getEpisodePages(episodeId: string): Promise<EpisodePagesRe
     const { data: ep } = await supabase.from('webtoon_episodes').select('id, access').eq('id', episodeId).maybeSingle()
     if (!isRecord(ep) || typeof ep.id !== 'string') return none
 
-    const isLockedTier = ep.access === 'membership'
+    const isLockedTier = toEpisodeAccess(ep.access) === 'membership'
     if (isLockedTier) {
       const membership = await getCurrentUserMembership()
-      if (!membership) return { locked: true, pages: [] }
+      if (!membership) return { locked: true, signed: false, pages: [] }
     }
 
     const admin = createAdminClient()
@@ -135,19 +143,42 @@ export async function getEpisodePages(episodeId: string): Promise<EpisodePagesRe
       return none
     }
 
-    const base = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const pages: EpisodePage[] = []
+    const cuts: { path: string; w: number; h: number }[] = []
     for (const row of rows) {
       if (!isRecord(row) || typeof row.path !== 'string') continue
       if (typeof row.w !== 'number' || typeof row.h !== 'number') continue
-      if (isLockedTier) {
-        const { data: signed } = await admin.storage.from('webtoon-locked').createSignedUrl(row.path, 3600)
-        if (signed?.signedUrl) pages.push({ url: signed.signedUrl, w: row.w, h: row.h })
-      } else {
-        pages.push({ url: `${base}/storage/v1/object/public/webtoon/${row.path}`, w: row.w, h: row.h })
-      }
+      cuts.push({ path: row.path, w: row.w, h: row.h })
     }
-    return { locked: false, pages }
+    if (cuts.length === 0) return none
+
+    if (!isLockedTier) {
+      const base = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const pages = cuts.map((c) => ({
+        url: `${base}/storage/v1/object/public/webtoon/${c.path}`,
+        w: c.w,
+        h: c.h,
+      }))
+      return { locked: false, signed: false, pages }
+    }
+
+    // ⚠️ 한 장씩 발급하면 컷 수만큼 왕복한다 — 50컷짜리 한 화가 50번이다. 한 번에 받는다.
+    //    돌아오는 순서는 넘긴 순서와 같지만, 한 장이 실패해도 나머지는 살려 보낸다.
+    const { data: signedRows, error: signError } = await admin.storage.from('webtoon-locked').createSignedUrls(
+      cuts.map((c) => c.path),
+      EPISODE_SIGNED_URL_TTL_SEC
+    )
+    if (signError || !signedRows) {
+      logger.warn('[webtoon] 서명 URL 발급 실패:', signError)
+      return none
+    }
+
+    const pages: EpisodePage[] = []
+    signedRows.forEach((s, i) => {
+      const cut = cuts[i]
+      if (!cut || typeof s?.signedUrl !== 'string' || s.signedUrl.length === 0) return
+      pages.push({ url: s.signedUrl, w: cut.w, h: cut.h })
+    })
+    return { locked: false, signed: true, pages }
   } catch (e) {
     logger.warn('[webtoon] 본문 페이지 예외(비치명):', e)
     return none

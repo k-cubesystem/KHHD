@@ -32,12 +32,19 @@ import {
   type StoryDraft,
 } from '../story'
 import { REPORT_HIDE_THRESHOLD, REPORT_REASONS, REPORT_REASON_INFO, isReportReason } from '../report'
+import { EPISODE_SIGNED_URL_TTL_SEC, isEpisodeAccess, toEpisodeAccess } from '../episode'
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION = read('supabase/migrations/20260801_webtoon.sql')
 const ACTIONS = read('app/actions/webtoon/webtoon.ts')
 const FORM = read('components/webtoon/StoryForm.tsx')
 const REPORTS_MIGRATION = read('supabase/migrations/20260801_webtoon_reports.sql')
+const PAGES_MIGRATION = read('supabase/migrations/20260801_webtoon_pages_access.sql')
+const VIEWER = read('app/protected/webtoon/[no]/page.tsx')
+const PAGES_ACTION = ACTIONS.slice(
+  ACTIONS.indexOf('export async function getEpisodePages'),
+  ACTIONS.indexOf('export interface WebtoonComment')
+)
 
 const ok: StoryDraft = {
   title: '할머니의 신당',
@@ -317,5 +324,58 @@ describe('댓글 신고 (CEO 2026-08-01)', () => {
     const comments = read('components/webtoon/EpisodeComments.tsx')
     expect(comments).toContain('{!c.mine && (')
     expect(comments).toContain('이 댓글 신고하기')
+  })
+})
+
+describe('회차 본문 — 게이트는 한 곳, 서명 주소는 값이 든다', () => {
+  it('★ 본문 경로 표는 RLS 를 켜고 정책을 하나도 만들지 않는다 (클라이언트 직접 조회 차단)', () => {
+    expect(PAGES_MIGRATION).toMatch(/alter table public\.webtoon_episode_pages enable row level security/i)
+    // 정책이 하나라도 생기면 게이트가 서버 액션 밖으로 새어 나간다
+    expect(PAGES_MIGRATION).not.toMatch(/create policy/i)
+  })
+
+  it('★ 자격을 확인하기 전에 주소를 만들지 않는다 — 잠긴 사람에겐 URL 자체가 없다', () => {
+    const gate = PAGES_ACTION.indexOf('getCurrentUserMembership()')
+    const sign = PAGES_ACTION.indexOf('createSignedUrls(')
+    expect(gate).toBeGreaterThan(-1)
+    expect(sign).toBeGreaterThan(gate)
+    expect(PAGES_ACTION).toContain('return { locked: true, signed: false, pages: [] }')
+  })
+
+  it('★ 모르는 접근 등급은 잠근다 — 오타 하나가 유료 회차를 공짜로 열면 안 된다', () => {
+    expect(toEpisodeAccess('free')).toBe('free')
+    expect(toEpisodeAccess('membership')).toBe('membership')
+    for (const v of ['premium', 'FREE', '', null, undefined, 0, {}]) {
+      expect(toEpisodeAccess(v)).toBe('membership')
+      expect(isEpisodeAccess(v)).toBe(false)
+    }
+    // 뱃지와 게이트가 같은 함수를 본다 — 판정이 갈라지면 한쪽만 고쳐진다
+    expect(ACTIONS).toContain('access: toEpisodeAccess(row.access)')
+    expect(PAGES_ACTION).toContain("toEpisodeAccess(ep.access) === 'membership'")
+  })
+
+  it('★ 서명 주소를 한 번에 받는다 — 한 장씩 발급하면 컷 수만큼 왕복한다', () => {
+    expect(PAGES_ACTION).toContain('createSignedUrls(')
+    // 단수형이 돌아오면 50컷짜리 한 화가 50번 왕복한다
+    expect(PAGES_ACTION).not.toMatch(/createSignedUrl\(/)
+  })
+
+  it('★ 서명 주소는 이미지 최적화를 타지 않는다 — 캐시가 한 번도 맞지 않아 한도를 갉는다', () => {
+    // 주소가 요청마다 달라 최적화 캐시의 열쇠가 매번 바뀐다(100명 × 5컷 = 최적화 500회)
+    expect(VIEWER).toContain('unoptimized={signed}')
+    expect(ACTIONS).toContain('signed: boolean')
+  })
+
+  it('★ 유효기간은 한 화를 읽을 만큼만 길다 — 주소 하나가 오래 열려 있으면 회원제가 샌다', () => {
+    expect(EPISODE_SIGNED_URL_TTL_SEC).toBeGreaterThanOrEqual(300)
+    expect(EPISODE_SIGNED_URL_TTL_SEC).toBeLessThanOrEqual(900)
+    // 기간은 도메인 상수 한 곳에서만 나온다
+    expect(PAGES_ACTION).toContain('EPISODE_SIGNED_URL_TTL_SEC')
+    expect(PAGES_ACTION).not.toMatch(/\b3600\b/)
+  })
+
+  it('무료 회차는 공개 URL 그대로 — 서명도 최적화 해제도 하지 않는다', () => {
+    expect(PAGES_ACTION).toContain('/storage/v1/object/public/webtoon/')
+    expect(PAGES_ACTION).toContain('return { locked: false, signed: false, pages }')
   })
 })

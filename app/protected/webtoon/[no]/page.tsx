@@ -18,7 +18,7 @@ export default async function EpisodePage({ params }: { params: Promise<{ no: st
   const episode = await getEpisode(Number(no))
   if (!episode) notFound()
 
-  const [{ locked, pages }, all, { items: comments, nowMs }] = await Promise.all([
+  const [{ locked, signed, pages }, all, { items: comments, nowMs }] = await Promise.all([
     getEpisodePages(episode.id),
     listEpisodes(),
     listComments(episode.id),
@@ -81,6 +81,10 @@ export default async function EpisodePage({ params }: { params: Promise<{ no: st
                 sizes="(max-width: 512px) 100vw, 480px"
                 className="block h-auto w-full"
                 priority={idx === 0}
+                // ⚠️ 서명 주소는 요청마다 달라 최적화 캐시가 **한 번도 맞지 않는다** — 100명이 5컷을
+                //    보면 최적화가 500번 돈다(무료 한도 월 5,000). 원본을 그대로 내보낸다.
+                //    대신 **올릴 때 줄여서 올려야 한다** — 여기서 줄여 주는 사람은 이제 없다.
+                unoptimized={signed}
               />
             ))}
           </div>

@@ -29,7 +29,8 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/storage/v1/object/public/**',
       },
-      // 멤버십 웹툰 회차 — 비공개 버킷 서명 URL (getEpisodePages 가 발급)
+      // 비공개 버킷 서명 URL. 웹툰 본문은 최적화를 타지 않으므로(unoptimized) 지금은 쓰이지 않고,
+      // 누가 그 옵션을 지웠을 때 조용히 깨지지 말라고 남겨 둔 그물이다.
       {
         protocol: 'https',
         hostname: '*.supabase.co',
