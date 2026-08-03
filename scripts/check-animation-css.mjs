@@ -108,6 +108,9 @@ const REQUIRED_CLASSES = [
   // (연출만 빠지고 기능은 살아 있어서, 이 게이트가 없으면 아무도 모른다)
   '::view-transition-old(root)',
   '::view-transition-new(root)',
+  // 스크롤 구동 읽기 막대 (A-3) — 감춤 규칙이 사라지면 미지원 브라우저가 "항상 다 읽음"을 본다
+  '.scroll-progress-track',
+  '.scroll-progress',
 ]
 
 /** @keyframes 이름 */
@@ -184,6 +187,8 @@ const REQUIRED_KEYFRAMES = [
   // 의례 전환 (A-1)
   'shrineRitualOut',
   'shrineRitualIn',
+  // 스크롤 구동 (A-3)
+  'scrollProgress',
 ]
 
 /** styled-jsx 금지 구역 — 여기 CSS 는 정적 파일(app/shrine-scene.css)에만 둔다 */

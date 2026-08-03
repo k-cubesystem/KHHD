@@ -33,6 +33,13 @@ export default async function EpisodePage({ params }: { params: Promise<{ no: st
 
   return (
     <div className="min-h-screen px-4 py-6">
+      {/* 읽기 진행 막대 — 컷 수십 장짜리 회차에서 남은 분량을 알린다.
+          순수 CSS(animation-timeline: scroll())라 JS 가 없고, 미지원 브라우저에서는 아예 안 뜬다 */}
+      {pages.length > 0 && (
+        <div aria-hidden className="scroll-progress-track fixed inset-x-0 top-0 z-50 h-[2px] bg-white/[0.06]">
+          <div className="scroll-progress h-full w-full bg-gold-500/80" />
+        </div>
+      )}
       <div className="mx-auto w-full max-w-[480px] space-y-4">
         <Link
           href="/protected/webtoon"
