@@ -20,6 +20,7 @@ mkdir -p "$HOME/.claude" 2>/dev/null
   if [ -n "$s" ]; then echo "$s"; else echo "(작업트리 clean)"; fi
   echo
   echo "## 재개 시 먼저 읽을 문서"
+  echo "0. docs/HANDOFF.md — **다른 기기·모바일이면 이것부터**. 이 체크포인트는 이 컴퓨터에만 있다"
   echo "1. WORKLOG-OPUS-20260711.md — 진행상황/게이트/사용자 승인대기 목록"
   echo "2. TEAM_I_REVIEW/REVIEW-20260711-opus-security-shrine.md — 보안 검토·개선현황(R1~R10)"
   echo "3. MEMORY/MEMORY.md + ~/.claude auto-memory — 프로젝트 맥락"
@@ -28,4 +29,6 @@ mkdir -p "$HOME/.claude" 2>/dev/null
   echo "위 문서를 먼저 읽고, WORKLOG의 '남은 것 / 사용자 승인 필요' 항목부터 이어서 진행할 것."
 } > "$CP" 2>/dev/null
 
-printf '{"systemMessage":"💾 해화당 세션 체크포인트 저장: %s"}\n' "$CP"
+# ⚠️ 이 파일은 $HOME 에 있어 **다른 기기에서는 안 보인다**. 기기를 옮기기 전에는 리포 안의
+#    docs/HANDOFF.md 를 갱신해 커밋해야 맥락이 따라간다.
+printf '{"systemMessage":"💾 해화당 세션 체크포인트 저장: %s | 기기를 옮길 예정이면 docs/HANDOFF.md 를 갱신해 커밋하세요 — 이 파일은 이 컴퓨터에만 남습니다"}\n' "$CP"

@@ -1,5 +1,14 @@
 # 해화당 — 사주/궁합/관상/풍수 AI SaaS
 
+## 세션 재개 — 먼저 읽을 것
+
+**`docs/HANDOFF.md`** 를 읽고 시작한다. 지금 어디까지 왔는지, 이 기기에서 뭘 할 수 있고 뭘 못
+하는지(모바일에서는 프로덕션 배포가 안 된다), 손대기 전에 알아야 할 함정이 거기 있다.
+
+⚠️ 세션 체크포인트 훅은 `~/.claude/hhd-session-checkpoint.md` — **그 컴퓨터에만** 있다. 다른
+기기·모바일 앱에서는 없으므로 `docs/HANDOFF.md` 가 유일한 인수인계다. 기기를 옮기기 전이나 큰
+작업을 마쳤을 때 그 파일을 갱신하고 커밋한다.
+
 ## 스택
 
 Next.js 16 + TypeScript strict + Tailwind + Shadcn/ui + Supabase (RLS) + Gemini AI + Toss Payments + Sentry + GA4
