@@ -17,10 +17,11 @@ import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { mattersLabel } from '@/lib/domain/shrine/item-matters'
 
 /**
- * 신수(神獸) 착좌 그리드 — 보유한 신수 중 둘까지 골라 신당에 모신다.
+ * 신수(神獸) 그리드 — 봉헌(구매)과 착좌를 한 자리에서.
  *
- * 구매는 여기서 하지 않는다 — 신수는 카탈로그 아이템이라 **아이템 탭이 파는 곳**이고,
- * 여기는 "누구를 곁에 세울까"를 정하는 곳이다(테마 탭의 구매/적용 분리와 같은 규율).
+ * 처음에는 구매를 아이템 탭에 미뤘는데, 32좌를 보고 → 탭을 건너가 사고 → 돌아와 고르는
+ * 왕복이 "선택이 안 된다"로 읽혔다(CEO 보고). 미보유 카드는 누르면 그 자리에서 봉헌되고,
+ * 결제·인벤토리는 purchaseToInventory 한 벌을 재사용한다 — 파는 곳이 두 곳이어도 경로는 하나다.
  */
 
 const CATEGORY_ORDER: readonly GuardianCategory[] = ['beast', 'chasa', 'dokkaebi', 'spirit']
