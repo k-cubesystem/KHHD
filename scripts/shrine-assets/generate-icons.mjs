@@ -89,6 +89,12 @@ const SETS = {
     ['jar-yongwang', '용왕단지 — blue-glazed earthen jar with a wave pattern, lidded'],
     ['liquor-jora', '조라술 — small earthen liquor jar sealed with hanji paper and straw rope'],
     ['shelf-sireong', '시렁 — traditional Korean wooden wall shelf, single warm wood plank with two carved brackets, empty'],
+    // ── 가족 자리 세간 5종 (2026-08-06, 제단·가구 확장분) ──
+    ['table-jesang', '제상 — low Korean ritual offering table with red lacquered rectangular top and short carved wooden legs, empty top surface'],
+    ['table-soban', '개다리소반 — small round Korean tray-table with four curved dog-leg shaped wooden legs, warm lacquered wood, empty, soft warm brown shadow on the ground'],
+    ['chest-bandaji', '반닫이 — Korean traditional low wooden chest with ornate brass hinge fittings and a half-front panel door, closed'],
+    ['chest-mungap', '문갑 — long low Korean document chest with small sliding doors and round brass pulls, dark lacquered wood grain'],
+    ['cushion-boryo', '보료 — thick rectangular Korean floor mattress with deep red silk cover and gold trim pattern, neatly laid flat'],
   ].map(([slug, d]) => ({ slug, out: `shrine/items/${slug}.webp`, size: 512, prompt: objectPrompt(d) })),
 
   // B2. 신수(神獸) 32 — 거니는 수호 영물. 걸음 연출이 좌우 반전을 쓰므로 **오른쪽을 보는

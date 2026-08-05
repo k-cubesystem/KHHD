@@ -10,7 +10,8 @@ import { ELEMENT_AVATAR_COLOR, findFamilyAvatar } from '@/lib/domain/family/avat
 import { EL_KO } from '@/lib/domain/shrine/energy'
 
 /**
- * 시렁 가족 배정 시트 — "이 시렁은 누구의 자리인가".
+ * 세간 가족 자리 배정 시트 — "이 세간은 누구의 자리인가". 시렁·제상·소반·반닫이·문갑·
+ * 보료·병풍·방석 등 「시렁·세간」 갈래 전부가 대상이다(FAMILY_SEAT_TYPES).
  *
  * ⚠️ 지정한 가족의 **정령 오행**을 여기서 바로 말해 준다("水 기운 신물을 얹어 주세요") —
  *    지정만 하고 무엇을 얹어야 하는지 말하지 않으면, 축복은 우연히만 켜지는 기능이 된다.
@@ -80,28 +81,28 @@ export function ShelfAssignSheet({
       const guardian = familyGuardianElement(member.avatarId)
       toast.success(
         guardian
-          ? `${member.name}의 시렁이 되었습니다 — ${EL_KO[guardian]} 기운 신물을 얹어 주세요`
-          : `${member.name}의 시렁이 되었습니다`
+          ? `${member.name}의 자리가 되었습니다 — ${EL_KO[guardian]} 기운 신물을 곁에 두세요`
+          : `${member.name}의 자리가 되었습니다`
       )
       onAssigned({ memberId: member.id, name: member.name, avatarId: member.avatarId })
     } else {
-      toast.success('빈 시렁으로 되돌렸습니다')
+      toast.success('빈 자리로 되돌렸습니다')
       onAssigned({ memberId: null, name: null, avatarId: null })
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-label="시렁 가족 지정">
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-label="가족 자리 지정">
       <button type="button" aria-label="닫기" onClick={onClose} className="absolute inset-0 bg-black/55" />
       <div className="devotion-sheet absolute inset-x-0 bottom-0 mx-auto w-full max-w-[480px] rounded-t-2xl border border-b-0 border-gold-500/25 bg-[#14100b] p-4 pb-6">
         <div className="mb-3 flex items-center justify-between">
-          <p className="font-serif text-[15px] font-bold text-ink-primary">누구의 시렁으로 할까요</p>
+          <p className="font-serif text-[15px] font-bold text-ink-primary">누구의 자리로 할까요</p>
           <button type="button" aria-label="닫기" onClick={onClose} className="p-1 text-ink-primary/50">
             <X className="h-4 w-4" />
           </button>
         </div>
         <p className="mb-3 font-sans text-[11.5px] leading-relaxed text-ink-primary/50">
-          지정한 가족의 정령 기운에 맞는 신물을 시렁 가까이 얹으면, 시렁이 그 사람을 위해 깨어납니다.
+          지정한 가족의 정령 기운에 맞는 신물을 이 세간 곁에 두면, 자리가 그 사람을 위해 깨어납니다.
         </p>
 
         {members === null ? (
@@ -164,7 +165,7 @@ export function ShelfAssignSheet({
             onClick={() => void assign(null)}
             className="mt-3 w-full rounded-xl border border-white/15 px-3 py-2 font-sans text-[12px] text-ink-primary/60"
           >
-            {busyId === 'none' ? <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" /> : '지정 해제 — 빈 시렁으로'}
+            {busyId === 'none' ? <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" /> : '지정 해제 — 빈 자리로'}
           </button>
         )}
       </div>

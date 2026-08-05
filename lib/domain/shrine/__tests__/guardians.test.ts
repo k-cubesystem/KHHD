@@ -127,9 +127,11 @@ describe('신수 — 신·신당 없이도 기본 사용', () => {
 
 describe('상점 갈래 — 카탈로그의 모든 type 이 갈래 하나에 속한다', () => {
   it('★ DB type CHECK 목록 전부가 갈래에 배정돼 있고, 겹치지 않는다', () => {
-    const check = /type in \(([\s\S]*?)\)\)/.exec(MIGRATION)?.[1] ?? ''
+    // CHECK 는 최신 마이그레이션이 정본 — 가족 자리 확장(20260806)이 table·chest 를 더했다
+    const SEATS_MIGRATION = read('supabase/migrations/20260806_shrine_family_seats.sql')
+    const check = /type in \(([\s\S]*?)\)\)/.exec(SEATS_MIGRATION)?.[1] ?? ''
     const dbTypes = [...check.matchAll(/'([a-z]+)'/g)].map((m) => m[1])
-    expect(dbTypes.length).toBeGreaterThanOrEqual(22)
+    expect(dbTypes.length).toBeGreaterThanOrEqual(24)
     const all = SHOP_SECTIONS.flatMap((s) => s.types)
     expect(new Set(all).size).toBe(all.length) // 겹침 없음
     for (const t of dbTypes) {

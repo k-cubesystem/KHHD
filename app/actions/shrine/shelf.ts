@@ -3,10 +3,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
-import { SHELF_TYPE } from '@/lib/domain/shrine/shelf'
+import { FAMILY_SEAT_TYPES } from '@/lib/domain/shrine/shelf'
 
 /**
- * 시렁 가족 지정 — 이 파일도 `'use server'` 공개 엔드포인트다.
+ * 세간(가족 자리) 가족 지정 — 이 파일도 `'use server'` 공개 엔드포인트다.
  *
  * ⚠️ 최종 방어는 RLS 다: placements_write_owner(내 신당의 배치만) + family_members FK
  *    (남의 가족 id 는 select-own 에 걸려 조회조차 안 된다). 아래 검사는 화면에 뜻이 통하는
@@ -15,10 +15,10 @@ import { SHELF_TYPE } from '@/lib/domain/shrine/shelf'
 
 export interface AssignShelfResult {
   success: boolean
-  error?: 'UNAUTHORIZED' | 'NOT_FOUND' | 'NOT_SHELF' | 'FAILED'
+  error?: 'UNAUTHORIZED' | 'NOT_FOUND' | 'NOT_SEAT' | 'FAILED'
 }
 
-/** familyMemberId=null 이면 지정 해제(빈 시렁으로 되돌린다). */
+/** familyMemberId=null 이면 지정 해제(빈 자리로 되돌린다). */
 export async function assignShelfMember(
   placementId: string,
   familyMemberId: string | null
@@ -30,7 +30,7 @@ export async function assignShelfMember(
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
   if (typeof placementId !== 'string' || placementId.length === 0) return { success: false, error: 'NOT_FOUND' }
 
-  // 시렁인가 — 아무 배치에나 가족을 붙이면 이름표가 방을 뒤덮는다
+  // 가족 자리가 되는 세간인가 — 아무 배치에나 가족을 붙이면 이름표가 방을 뒤덮는다
   const { data: row } = await supabase
     .from('shrine_placements')
     .select('id, catalog_item_id, shrine_item_catalog(type)')
@@ -39,7 +39,7 @@ export async function assignShelfMember(
   if (!row) return { success: false, error: 'NOT_FOUND' }
   const cat: unknown = row.shrine_item_catalog
   const type = typeof cat === 'object' && cat !== null ? (cat as Record<string, unknown>).type : null
-  if (type !== SHELF_TYPE) return { success: false, error: 'NOT_SHELF' }
+  if (typeof type !== 'string' || !FAMILY_SEAT_TYPES.includes(type)) return { success: false, error: 'NOT_SEAT' }
 
   // 내 가족인가 — select-own RLS 라 남의 가족은 여기서 빈 값이 된다
   if (familyMemberId !== null) {

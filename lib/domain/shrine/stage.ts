@@ -520,7 +520,7 @@ export interface StageCatalogItem extends CatalogItem {
 /** v2 배치 — 스냅된 앵커 식별자 추가 */
 export interface StagePlacement extends Placement {
   anchorId: string | null
-  /** 시렁(선반)에 지정된 가족. 시렁이 아닌 배치는 항상 null 이다. */
+  /** 세간(가족 자리)에 지정된 가족. 자리가 아닌 배치는 항상 null 이다. */
   familyMemberId: string | null
 }
 

@@ -88,7 +88,7 @@ import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
-import { familyGuardianElement, isShelf, readShelf } from '@/lib/domain/shrine/shelf'
+import { familyGuardianElement, isFamilySeat, readShelf } from '@/lib/domain/shrine/shelf'
 import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
 import { ELEMENT_AVATAR_COLOR } from '@/lib/domain/family/avatars'
@@ -319,14 +319,14 @@ export function ShrineRoomClient({
   const { playEntrance, playPrayer, shake: cinShake, vibrate: cinVibrate } = cin
 
   const [placements, setPlacements] = useState<StagePlacement[]>(scene.placements)
-  // ── 시렁(선반) — 가족 배정 ──
-  /** 배정 시트가 열린 시렁 배치 id (null=닫힘) */
+  // ── 세간(시렁·제상·소반·반닫이·문갑·보료…) — 가족 자리 배정 ──
+  /** 배정 시트가 열린 세간 배치 id (null=닫힘) */
   const [assignShelfId, setAssignShelfId] = useState<string | null>(null)
   /** 이 세션에서 새로 지정한 이름표 — scene.familyTags 는 서버 스냅샷이라 방금 지정분이 없다 */
   const [extraTags, setExtraTags] = useState<Record<string, { name: string; avatarId: string | null }>>({})
 
   /**
-   * 시렁별 읽기 — 이름표(가족·정령 색)와 축복 여부.
+   * 자리(세간)별 읽기 — 이름표(가족·정령 색)와 축복 여부.
    *
    * ⚠️ 방문자 뷰는 familyTags 가 빈 객체라 이름표가 아예 안 그려진다 — 남의 신당에서
    *    그 집 가족의 이름이 읽히면 안 된다(서버가 조회하지 않고, 여기서도 그리지 않는다).
@@ -336,7 +336,7 @@ export function ShrineRoomClient({
     const map = new Map<string, { tagName: string | null; color: string | null; blessed: boolean }>()
     for (const p of placements) {
       const item = catalogById.get(p.catalogItemId)
-      if (!item || !isShelf(item)) continue
+      if (!item || !isFamilySeat(item)) continue
       const tag = p.familyMemberId ? (merged[p.familyMemberId] ?? null) : null
       const guardian = familyGuardianElement(tag?.avatarId)
       const reading = readShelf(p, guardian, p.familyMemberId !== null && tag !== null, placements, catalogById)
@@ -1888,7 +1888,7 @@ export function ShrineRoomClient({
         </div>
       )}
 
-      {/* 시렁 가족 배정 시트 — 이름표(또는 「+ 가족 지정」) 탭으로 연다 */}
+      {/* 세간 가족 자리 배정 시트 — 이름표(또는 「+ 가족 지정」) 탭으로 연다 */}
       {assignShelfId !== null && (
         <ShelfAssignSheet
           placementId={assignShelfId}
@@ -1926,7 +1926,7 @@ interface SpriteProps {
   onAnchorHover: (a: StageAnchor | null) => void
   /** 드래그 시작/끝에 층을 알린다 — 룸이 존 가이드 1면을 켜고 끈다 */
   onDragLayer: (layer: Layer | null) => void
-  /** 시렁 전용 — 이름표·축복. 시렁이 아니면 null */
+  /** 세간(가족 자리) 전용 — 이름표·축복. 자리가 아니면 null */
   shelf?: { tagName: string | null; color: string | null; blessed: boolean } | null
   /** 이름표(또는 「+ 가족」) 탭 — 소유자만 받는다. 없으면 이름표는 그리되 CTA 는 없다 */
   onShelfTap?: (() => void) | null
@@ -2138,7 +2138,7 @@ function Sprite({
           item.emoji
         )}
       </span>
-      {/* 시렁 축복 — 지정된 가족의 오행이 실제로 얹혀 있을 때만. filter 대신 뒤 span opacity(합성 유지) */}
+      {/* 자리 축복 — 지정된 가족의 오행이 실제로 곁에 있을 때만. filter 대신 뒤 span opacity(합성 유지) */}
       {shelf?.blessed && idle && (
         <span
           aria-hidden
@@ -2153,11 +2153,11 @@ function Sprite({
           }}
         />
       )}
-      {/* 시렁 이름표 — 누구의 자리인가. 편집 중엔 내린다(드래그와 탭이 싸운다) */}
+      {/* 자리 이름표 — 누구의 자리인가. 편집 중엔 내린다(드래그와 탭이 싸운다) */}
       {shelf && !editing && (shelf.tagName !== null || onShelfTap) && (
         <button
           type="button"
-          aria-label={shelf.tagName ? `${shelf.tagName}의 시렁 — 지정 바꾸기` : '시렁에 가족 지정'}
+          aria-label={shelf.tagName ? `${shelf.tagName}의 자리 — 지정 바꾸기` : '가족 자리 지정'}
           disabled={!onShelfTap}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {

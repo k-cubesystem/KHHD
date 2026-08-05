@@ -7,6 +7,8 @@
  * 갈래 하나에 속하는지는 테스트가 대조한다.
  */
 
+import { FAMILY_SEAT_TYPES } from './shelf'
+
 export interface ShopSection {
   readonly key: string
   readonly label: string
@@ -26,8 +28,9 @@ export const SHOP_SECTIONS: readonly ShopSection[] = Object.freeze([
   {
     key: 'shelf',
     label: '시렁·세간',
-    types: ['shelf', 'screen', 'cushion', 'statue'],
-    hint: '벽에 매고 바닥에 놓는 세간 — 시렁은 가족 한 사람을 지정할 수 있습니다',
+    // 가족 자리 도메인(FAMILY_SEAT_TYPES)과 단일 출처 — 이 갈래 = 가족을 지정할 수 있는 세간 전부
+    types: FAMILY_SEAT_TYPES,
+    hint: '벽에 매고 바닥에 놓는 세간 — 가족 한 사람의 자리로 지정할 수 있습니다',
   },
   {
     key: 'mugu',

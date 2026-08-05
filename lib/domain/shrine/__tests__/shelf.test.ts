@@ -1,13 +1,25 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import { SHELF_CAPACITY, SHELF_RADIUS, SHELF_TYPE, familyGuardianElement, isShelf, readShelf } from '../shelf'
+import {
+  FAMILY_SEAT_TYPES,
+  SHELF_CAPACITY,
+  SHELF_RADIUS,
+  SHELF_TYPE,
+  familyGuardianElement,
+  isFamilySeat,
+  isShelf,
+  readShelf,
+} from '../shelf'
+import { SHOP_SECTIONS } from '../shop-sections'
 import { motionVariance, varianceStyle, hashId } from '../motion-variance'
-import type { CatalogItem, Element, Placement } from '../types'
+import type { CatalogItem, Placement } from '../types'
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
 const MIGRATION = read('supabase/migrations/20260805_shrine_shelf.sql')
+const SEATS_MIGRATION = read('supabase/migrations/20260806_shrine_family_seats.sql')
 const ROOM = read('components/shrine/scene/ShrineRoomClient.tsx')
 const SCENE_ACTION = read('app/actions/shrine/scene.ts')
+const ASSIGN_ACTION = read('app/actions/shrine/shelf.ts')
 
 let seq = 0
 function item(over: Partial<CatalogItem>): CatalogItem {
@@ -100,6 +112,75 @@ describe('시렁 — 가족 한 사람에게 바치는 자리', () => {
     expect(isShelf(item({ type: SHELF_TYPE }))).toBe(true)
     expect(isShelf(item({ type: 'candle' }))).toBe(false)
     expect(isShelf(null)).toBe(false)
+  })
+})
+
+describe('가족 자리 — 시렁을 넘어 세간 전반으로', () => {
+  it('★ 세간 type 전부가 자리다 — 제상·소반(table)·반닫이·문갑(chest)·보료(cushion)·병풍(screen)까지', () => {
+    for (const t of FAMILY_SEAT_TYPES) expect([t, isFamilySeat(item({ type: t }))]).toEqual([t, true])
+    expect(isFamilySeat(item({ type: 'candle' }))).toBe(false)
+    expect(isFamilySeat(item({ type: 'guardian' }))).toBe(false)
+    expect(isFamilySeat(null)).toBe(false)
+  })
+
+  it('★ 상점 「시렁·세간」 갈래와 단일 출처다 — 두 목록이 어긋나면 상점과 배정이 갈라진다', () => {
+    const section = SHOP_SECTIONS.find((s) => s.key === 'shelf')
+    expect(section?.types).toEqual(FAMILY_SEAT_TYPES)
+  })
+
+  it('★ 세간 곁의 세간은 얹은 것으로 세지 않는다 — 가구는 신물이 아니다', () => {
+    const shelfCat = item({ id: 'seat-shelf', type: SHELF_TYPE, element: null, size: 'md' })
+    const cushionCat = item({ id: 'seat-cushion', type: 'cushion', element: null, size: 'md' })
+    const fireCat = item({ id: 'fire-near', element: 'fire' })
+    const byId = new Map<string, CatalogItem>([
+      [shelfCat.id, shelfCat],
+      [cushionCat.id, cushionCat],
+      [fireCat.id, fireCat],
+    ])
+    const shelf = place(shelfCat.id, 50, 30)
+    const cushion = place(cushionCat.id, 53, 31)
+    const fire = place(fireCat.id, 47, 29)
+    const r = readShelf(shelf, 'fire', true, [shelf, cushion, fire], byId)
+    expect(r).toMatchObject({ laid: 1, matched: 1, blessed: true })
+  })
+
+  it('★ 배정 액션이 FAMILY_SEAT_TYPES 로 거른다 — shelf 하드코딩이 되살아나면 여기서 걸린다', () => {
+    expect(ASSIGN_ACTION).toContain('FAMILY_SEAT_TYPES.includes(type)')
+    expect(ASSIGN_ACTION).not.toContain('type !== SHELF_TYPE')
+  })
+
+  it('★ 방이 자리 판정에 isFamilySeat 를 쓴다 — isShelf 로 되돌아가면 새 세간의 이름표가 사라진다', () => {
+    expect(ROOM).toContain('isFamilySeat(item)')
+  })
+})
+
+describe('가구 5종 — 마이그레이션 계약 (20260806_shrine_family_seats)', () => {
+  it("★ DB type CHECK 에 'table'·'chest' 가 있다", () => {
+    expect(SEATS_MIGRATION).toMatch(/'table',\s*'chest'\s*\n?\)\)/)
+  })
+
+  it('★ 5종 전부 시드에 있고, element null(공명 밖) 규율을 지킨다', () => {
+    for (const name of ['제상', '개다리소반', '반닫이', '문갑', '보료']) {
+      expect([name, SEATS_MIGRATION.includes(`('${name}',`)]).toEqual([name, true])
+    }
+    // 세간 5행 전부 element 자리가 null — 오행을 주면 공명 계산에 끼어든다
+    const rows = SEATS_MIGRATION.match(/'(?:table|chest|cushion)', null, 0, 'floor'/g) ?? []
+    expect(rows.length).toBe(5)
+  })
+
+  it('★ 설명의 「N 점까지」가 도메인 상한과 같다 — 소2·중3·대4', () => {
+    expect(SEATS_MIGRATION).toContain('네 점까지 올립니다') // 제상 lg=4
+    expect(SEATS_MIGRATION).toContain('두 점까지 올립니다') // 소반·문갑 sm=2
+    expect(SEATS_MIGRATION).toContain('세 점까지 위에 올립니다') // 반닫이 md=3
+    expect(SEATS_MIGRATION).toContain('세 점까지 곁에 둡니다') // 보료 md=3
+  })
+
+  it('★ 스프라이트 5장이 실재한다 — 연결만 하고 파일이 없으면 방에 깨진 그림이 뜬다', () => {
+    for (const slug of ['table-jesang', 'table-soban', 'chest-bandaji', 'chest-mungap', 'cushion-boryo']) {
+      const rel = `public/shrine/items/${slug}.webp`
+      expect([slug, existsSync(path.join(process.cwd(), rel))]).toEqual([slug, true])
+      expect(SEATS_MIGRATION).toContain(`/shrine/items/${slug}.webp`)
+    }
   })
 })
 
