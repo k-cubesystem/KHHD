@@ -69,7 +69,8 @@ import { CameraMinimap, useCameraRig } from './CameraRig'
 import { useShrineAudio } from './useShrineAudio'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
-import { WalkingKeeper, type KeeperSpot } from './WalkingKeeper'
+import { type KeeperSpot } from './WalkingKeeper'
+import { GuardianWalkers } from './GuardianWalkers'
 import { DeityTurn } from './DeityTurn'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
@@ -88,6 +89,7 @@ import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
 import { familyGuardianElement, isShelf, readShelf } from '@/lib/domain/shrine/shelf'
+import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
 import { ELEMENT_AVATAR_COLOR } from '@/lib/domain/family/avatars'
 import { ShelfAssignSheet, type AssignedTag } from './ShelfAssignSheet'
@@ -374,7 +376,8 @@ export function ShrineRoomClient({
       ? personalGreeting(scene.activePackCode, scene.greetingName, scene.mainDeity?.name ?? null)
       : greetingFor(scene.activePackCode)
   )
-  const [bounce, setBounce] = useState(0)
+  // 종전 신당지기 오브의 탭 바운스 키 — 오브가 신수로 교체되며 소비처가 사라졌다(호출부는 반응 박자 겸 유지)
+  const [_bounce, setBounce] = useState(0)
   const [rings, setRings] = useState<Ring[]>([])
   const seenResonance = useRef<Set<Element>>(new Set())
   const keeperTaps = useRef(0)
@@ -763,9 +766,16 @@ export function ShrineRoomClient({
   const available = useMemo(() => {
     const placed = new Map<string, number>()
     placements.forEach((p) => placed.set(p.catalogItemId, (placed.get(p.catalogItemId) ?? 0) + 1))
-    return scene.inventory
-      .map((inv) => ({ item: catalogById.get(inv.catalogItemId), qty: inv.qty - (placed.get(inv.catalogItemId) ?? 0) }))
-      .filter((e): e is { item: StageCatalogItem; qty: number } => !!e.item && e.qty > 0)
+    return (
+      scene.inventory
+        .map((inv) => ({
+          item: catalogById.get(inv.catalogItemId),
+          qty: inv.qty - (placed.get(inv.catalogItemId) ?? 0),
+        }))
+        .filter((e): e is { item: StageCatalogItem; qty: number } => !!e.item && e.qty > 0)
+        // 신수는 배치 아이템이 아니다 — 스스로 거니는 존재를 트레이에서 꺼내 바닥에 못 박게 두지 않는다
+        .filter((e) => !isGuardianType(e.item.type))
+    )
   }, [placements, scene.inventory, catalogById])
 
   const lastActivity = useRef(Date.now())
@@ -1083,6 +1093,16 @@ export function ShrineRoomClient({
    * 두 벌로 나누면 대사 카운트(KEEPER_TAP_LIMIT)와 사운드가 서로 어긋난다. 파티클 좌표만 신위 몸통으로 준다.
    * 회전은 그 위에 얹는 연출이라, 재생 중 재탭은 **반응까지 통째로 무시**한다(부록 C ④ 탭 잠금).
    */
+  /** 신수 탭 — 대사가 없다(말은 신의 것). 소리와 잔반응만 낸다. */
+  const onTapGuardian = useCallback(
+    (slug: string) => {
+      play('chime')
+      cinVibrate?.(8)
+      trackEvent({ action: 'guardian_tap', category: 'shrine', label: slug })
+    },
+    [play, cinVibrate]
+  )
+
   const onTapDeity = useCallback(() => {
     if (editing || deitySpinning || askChat) return
     onTapKeeper({ x: DEITY_POS.x, y: DEITY_POS.y })
@@ -1361,17 +1381,16 @@ export function ShrineRoomClient({
       {/* 파티클 이펙트 */}
       <EffectsCanvas ref={effectsRef} />
 
-      {/* 신당지기 — 좌정한 主神이 겸한다 (초상 오브, 없으면 🔮 폴백).
-          큰 방에서는 바닥 위를 거닐고 입장 때 문간에서 걸어 들어온다(안2.2). 단일 무대는 KEEPER_POS 정위치. */}
-      <WalkingKeeper
-        portraitUrl={scene.mainDeity?.portraitUrl ?? null}
-        deityName={scene.mainDeity?.name ?? null}
+      {/* 거니는 신수(神獸) — 종전에는 主神 초상 오브가 거닐었다(WalkingKeeper). 신은 제단에
+          좌정해 있는데 같은 신이 바닥을 뛰는 것은 세계가 어긋난다 — 거니는 일은 착좌한 신수의
+          몫이다(최대 2, 상점 구매 → 모아보기에서 착좌). 없으면 아무도 거닐지 않는다. */}
+      <GuardianWalkers
+        slugs={scene.guardians}
         range={keeperRange}
         y={KEEPER_POS.y}
         entrance={keeperEntrance}
-        bounceKey={bounce}
-        onTap={onTapKeeper}
         paused={keeperPaused || editing}
+        onTap={onTapGuardian}
       />
 
       {/* 아이템 */}

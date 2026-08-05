@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ChevronLeft, Palette, Flame, Sparkles } from 'lucide-react'
+import { ChevronLeft, Palette, Flame, Sparkles, PawPrint } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getSceneData } from '@/app/actions/shrine/scene'
 import { listDeities, getDeityBonds, listThemePacks } from '@/app/actions/shrine/deities'
@@ -9,6 +9,8 @@ import { getDevotionStatus } from '@/app/actions/shrine/devotion'
 import { DeityPantheon } from '@/components/shrine/deities/DeityPantheon'
 import { ThemeShopGrid } from '@/components/store/ThemeShopGrid'
 import { ShrineShopClient } from '@/components/shrine/ShrineShopClient'
+import { GuardianGrid } from '@/components/shrine/GuardianGrid'
+import { listOwnedGuardianNames } from '@/app/actions/shrine/guardians'
 import { DevotionStrip } from '@/components/shrine/scene/DevotionStrip'
 // 기원 보상 시트(.devotion-sheet)의 연출 CSS. 신당 씬 CSS 는 룸이 싣지만 이 화면은 룸을 거치지 않는다 —
 // 여기서 싣지 않으면 시트가 애니메이션 없이 툭 나타난다(styled-jsx 금지 규율은 그대로: 정적 파일만).
@@ -41,13 +43,14 @@ import '@/app/shrine-scene.css'
  * 여기서 다시 검사하지 않는다(오방기·백일기도 페이지와 같은 규약).
  */
 
-const TAB_KEYS = ['theme', 'item', 'deity'] as const
+const TAB_KEYS = ['theme', 'item', 'deity', 'guardian'] as const
 type TabKey = (typeof TAB_KEYS)[number]
 
 const TABS: Array<{ key: TabKey; label: string; icon: typeof Palette }> = [
   { key: 'theme', label: '신당테마', icon: Palette },
   { key: 'item', label: '아이템', icon: Flame },
   { key: 'deity', label: '신위', icon: Sparkles },
+  { key: 'guardian', label: '신수', icon: PawPrint },
 ]
 
 function isTabKey(v: string | undefined): v is TabKey {
@@ -105,7 +108,7 @@ export default async function ShrineCollectionPage({
       {/* 기원 보상 트랙 — 이 화면의 테마·신물이 곧 그 보상이다(위 머리말 참조) */}
       {devotion && <DevotionStrip devotion={devotion} />}
 
-      <nav className="mb-6 grid grid-cols-3 gap-1.5" aria-label="모아보기 갈래">
+      <nav className="mb-6 grid grid-cols-4 gap-1.5" aria-label="모아보기 갈래">
         {TABS.map(({ key, label, icon: Icon }) => {
           const active = key === tab
           return (
@@ -129,6 +132,7 @@ export default async function ShrineCollectionPage({
       {tab === 'theme' && <ThemeTab familyMemberId={fmId} />}
       {tab === 'item' && <ItemTab />}
       {tab === 'deity' && <DeityTab familyMemberId={fmId} />}
+      {tab === 'guardian' && <GuardianTab familyMemberId={fmId} />}
     </div>
   )
 }
@@ -156,6 +160,12 @@ async function ItemTab() {
       <ShrineShopClient data={data} />
     </div>
   )
+}
+
+/** 신수 탭 — 보유(인벤토리)와 착좌(shrines.guardians)를 함께 싣는다. 구매는 아이템 탭의 몫이다. */
+async function GuardianTab({ familyMemberId }: { familyMemberId: string | null }) {
+  const [ownedNames, scene] = await Promise.all([listOwnedGuardianNames(), getSceneData(familyMemberId)])
+  return <GuardianGrid ownedNames={ownedNames} equipped={scene?.guardians ?? []} familyMemberId={familyMemberId} />
 }
 
 async function DeityTab({ familyMemberId }: { familyMemberId: string | null }) {

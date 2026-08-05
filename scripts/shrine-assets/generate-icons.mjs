@@ -91,6 +91,48 @@ const SETS = {
     ['shelf-sireong', '시렁 — traditional Korean wooden wall shelf, single warm wood plank with two carved brackets, empty'],
   ].map(([slug, d]) => ({ slug, out: `shrine/items/${slug}.webp`, size: 512, prompt: objectPrompt(d) })),
 
+  // B2. 신수(神獸) 32 — 거니는 수호 영물. 걸음 연출이 좌우 반전을 쓰므로 **오른쪽을 보는
+  //     전신**으로 통일한다(신위 턴어라운드와 같은 이유 — 방향이 섞이면 반전 재사용이 어긋난다).
+  guardians: [
+    ['cheongryong', '청룡 — azure blue eastern dragon, serpentine body with small legs, flowing whiskers'],
+    ['baekho', '백호 — white tiger with black stripes, dignified stance'],
+    ['jujak', '주작 — vermilion sacred bird with spread crimson-orange wings and long tail plumes'],
+    ['hyeonmu', '현무 — black tortoise entwined with a dark snake, ancient shell'],
+    ['haetae', '해태 — horned lion-like guardian beast with curly mane and small bell collar'],
+    ['girin', '기린 — kirin with deer-like body, scale patches, gentle flame mane'],
+    ['samjogo', '삼족오 — three-legged black crow with a golden sun-disc halo'],
+    ['bonghwang', '봉황 — five-colored phoenix with long flowing ornate tail'],
+    ['imugi', '이무기 — large teal serpent coiled, holding a glowing pearl'],
+    ['cheonma', '천마 — white heavenly horse with flowing mane, small cloud wisps at hooves'],
+    ['hyeonhak', '현학 — elegant black crane standing tall with folded wings'],
+    ['okto', '옥토끼 — moon rabbit holding a small wooden pestle, pale jade fur'],
+    ['gangnim', '강림차사 — stern Korean underworld enforcer in black gat hat and dark navy official robe with red sash'],
+    ['iljik', '일직차사 — Korean day-duty underworld clerk in black gat and charcoal robe holding a paper scroll'],
+    ['woljik', '월직차사 — Korean night-duty underworld clerk in black gat and indigo robe holding a small lantern'],
+    ['saja', '저승사자 — Korean grim reaper in wide black gat and flowing black hanbok robe, pale calm face'],
+    ['ssireum', '씨름도깨비 — burly Korean dokkaebi goblin wearing a wrestling satba sash, one small horn'],
+    ['bangmangi', '방망이도깨비 — grinning dokkaebi holding a studded wooden magic club'],
+    ['gat', '갓도깨비 — polite dokkaebi wearing a gentleman gat hat and durumagi coat'],
+    ['dokgak', '독각귀 — one-legged dokkaebi hopping cheerfully, straw texture hints'],
+    ['meokbo', '먹보도깨비 — chubby dokkaebi happily holding a bowl of memil-muk jelly'],
+    ['gimseobang', '김서방도깨비 — friendly waving dokkaebi with a warm grin, patched vest'],
+    ['natdokkaebi', '낮도깨비 — bold dokkaebi standing in daylight, sun motif, fearless grin'],
+    ['muldokkaebi', '물도깨비 — dokkaebi with wet slicked hair, water droplets, holding a small fish'],
+    ['cheongbul', '청도깨비불 — blue will-o-wisp flame spirit with a tiny sleepy face, floating'],
+    ['hongbul', '홍도깨비불 — warm red will-o-wisp flame spirit with a cheerful tiny face, floating'],
+    ['honbul', '혼불 — serene pale-blue soul flame, slow elegant trail, floating'],
+    ['dalbit', '달빛정령 — silvery moonlight spirit wisp with a small crescent ornament, floating'],
+    ['byeolbit', '별똥정령 — shooting-star spirit with trailing golden sparkles, floating'],
+    ['barampung', '바람정령 — pale green wind spirit swirl with tiny leaves caught in it, floating'],
+    ['angae', '안개정령 — soft grey-blue mist spirit, gentle fog wisp with calm face, floating'],
+    ['sutbul', '숯불정령 — glowing ember spirit, charcoal body with warm orange cracks, floating'],
+  ].map(([slug, d]) => ({
+    slug,
+    out: `shrine/guardians/${slug}.webp`,
+    size: 512,
+    prompt: `Korean mythical shrine guardian spirit: ${d}. ${STYLE}, single character full body, facing slightly to the right, small chibi proportions, feet or base at the bottom, ${BG}`,
+  })),
+
   // C. 오행 엠블럼 6
   elements: [
     ['wood', '木 wood element — young green tree and leaves, jade green glow'],

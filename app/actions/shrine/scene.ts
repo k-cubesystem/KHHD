@@ -31,6 +31,7 @@ import {
 } from '@/lib/domain/shrine/stage'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
 import { parseMatters } from '@/lib/domain/shrine/item-matters'
+import { isGuardianType, parseGuardianSlugs } from '@/lib/domain/shrine/guardians'
 import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 
@@ -346,7 +347,7 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<Sta
   }))
 }
 
-const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, main_deity_id, visibility'
+const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, main_deity_id, visibility, guardians'
 
 /**
  * 소유자용 씬 데이터 로드.
@@ -458,6 +459,7 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Stag
     wishCount: shrine.wish_count,
     mainDeity,
     familyTags,
+    guardians: parseGuardianSlugs(shrine.guardians),
   }
 }
 
@@ -520,7 +522,7 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
 
   const { data: shrine } = await supabase
     .from('shrines')
-    .select('id, name, visibility, visitor_count, wish_count, active_pack_id, main_deity_id')
+    .select('id, name, visibility, visitor_count, wish_count, active_pack_id, main_deity_id, guardians')
     .eq('user_id', userId)
     .is('family_member_id', null)
     .maybeSingle()
@@ -588,6 +590,7 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
     mainDeity,
     // 방문자에게 남의 가족 이름을 보이지 않는다 — 조회 자체를 하지 않는다
     familyTags: {},
+    guardians: parseGuardianSlugs(shrine.guardians),
   }
 }
 
@@ -625,6 +628,16 @@ export async function saveShrineLayout(
   if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
   if (placements.length > 40) return { success: false, error: 'TOO_MANY_ITEMS' }
+
+  // 신수는 배치 아이템이 아니다 — 스스로 거니는 존재를 바닥에 못 박으면 세계가 어긋난다.
+  // (트레이가 이미 거르지만, 서버가 최종 관문이다)
+  if (placements.length > 0) {
+    const usedIds = [...new Set(placements.map((p) => p.catalogItemId))]
+    const { data: cats } = await supabase.from('shrine_item_catalog').select('id, type').in('id', usedIds)
+    if ((cats ?? []).some((c) => isGuardianType(typeof c.type === 'string' ? c.type : null))) {
+      return { success: false, error: 'GUARDIAN_NOT_PLACEABLE' }
+    }
+  }
 
   // 보유량 검증
   const { data: invRows } = await supabase
