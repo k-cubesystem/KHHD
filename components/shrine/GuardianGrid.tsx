@@ -12,7 +12,7 @@ import {
   guardianSpriteUrl,
   type GuardianCategory,
 } from '@/lib/domain/shrine/guardians'
-import { equipGuardians } from '@/app/actions/shrine/guardians'
+import { equipGuardians, purchaseGuardian } from '@/app/actions/shrine/guardians'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { mattersLabel } from '@/lib/domain/shrine/item-matters'
 
@@ -37,9 +37,26 @@ export function GuardianGrid({
   familyMemberId: string | null
 }) {
   const router = useRouter()
-  const owned = useMemo(() => new Set(ownedNames), [ownedNames])
+  /** 이 화면에서 방금 봉헌한 것 — 서버 스냅샷(ownedNames)에 아직 없다 */
+  const [ownedExtra, setOwnedExtra] = useState<Set<string>>(new Set())
+  const owned = useMemo(() => new Set([...ownedNames, ...ownedExtra]), [ownedNames, ownedExtra])
   const [selected, setSelected] = useState<string[]>(equipped)
   const [saving, setSaving] = useState(false)
+  const [buyingSlug, setBuyingSlug] = useState<string | null>(null)
+
+  /** 봉헌 → 성공하면 그 자리에서 바로 고를 수 있게 착좌 후보에도 넣어 준다(빈 자리가 있으면) */
+  const buy = async (slug: string, name: string) => {
+    setBuyingSlug(slug)
+    const res = await purchaseGuardian(slug)
+    setBuyingSlug(null)
+    if (!res.success) {
+      toast.error(res.error === 'INSUFFICIENT_BOKCHAE' ? '복채가 모자랍니다' : '봉헌이 이루어지지 않았습니다')
+      return
+    }
+    setOwnedExtra((prev) => new Set(prev).add(name))
+    setSelected((prev) => (prev.length < MAX_GUARDIANS && !prev.includes(slug) ? [...prev, slug] : prev))
+    toast.success(`${name} — 모셔 왔습니다. 「이대로 모시기」로 착좌합니다`)
+  }
 
   const dirty = useMemo(
     () => selected.length !== equipped.length || selected.some((s) => !equipped.includes(s)),
@@ -104,14 +121,14 @@ export function GuardianGrid({
                 <button
                   key={g.slug}
                   type="button"
-                  disabled={!has}
-                  onClick={() => toggle(g.slug)}
+                  disabled={!has && buyingSlug !== null}
+                  onClick={() => (has ? toggle(g.slug) : void buy(g.slug, g.name))}
                   className={`relative rounded-xl border p-2.5 text-left transition-colors ${
                     on
                       ? 'border-gold-500/55 bg-gold-500/[0.12]'
                       : has
                         ? 'border-white/12 bg-white/[0.03]'
-                        : 'border-white/[0.06] bg-black/20 opacity-60'
+                        : 'border-white/[0.06] bg-black/25 opacity-80'
                   }`}
                 >
                   <div className="flex items-start gap-2">
@@ -150,8 +167,12 @@ export function GuardianGrid({
                     </span>
                   )}
                   {!has && (
-                    <span className="absolute bottom-1.5 right-2 font-sans text-[9px] text-gold-500/60">
-                      복채 {g.price}만냥 · 아이템 탭에서 봉헌
+                    <span className="absolute bottom-1.5 right-2 inline-flex items-center gap-1 rounded-md border border-gold-500/40 bg-gold-500/[0.12] px-1.5 py-0.5 font-sans text-[9.5px] font-bold text-gold-200">
+                      {buyingSlug === g.slug ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <>복채 {g.price}만냥 봉헌</>
+                      )}
                     </span>
                   )}
                 </button>
@@ -162,11 +183,12 @@ export function GuardianGrid({
       ))}
 
       <p className="font-sans text-[10.5px] leading-relaxed text-ink-light/35">
-        아직 모셔 오지 않은 신수는{' '}
-        <Link href="/protected/shrine/collection?tab=item" className="text-gold-500/70 underline underline-offset-2">
-          아이템 탭
+        카드를 누르면 그 자리에서 봉헌(구매)됩니다 — 신을 아직 모시지 않았어도 신수는 먼저 곁에 둘 수 있습니다. 복채
+        충전은{' '}
+        <Link href="/protected/store" className="text-gold-500/70 underline underline-offset-2">
+          상점
         </Link>
-        에서 봉헌합니다. 전승은 각 신수 카드의 아이템 설명에 적혀 있습니다.
+        에서.
       </p>
     </div>
   )

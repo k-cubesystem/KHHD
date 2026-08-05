@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { GUARDIANS, MAX_GUARDIANS, findGuardian } from '@/lib/domain/shrine/guardians'
+import { purchaseToInventory } from '@/app/actions/shrine/inventory'
 
 /**
  * 신수 착좌(모시기) — `'use server'` 공개 엔드포인트.
@@ -34,9 +35,30 @@ export async function equipGuardians(slugs: string[], familyMemberId?: string | 
 
   // 본인 신당인가 (가족 신당 포함 — 소유는 언제나 user_id)
   const shrineQuery = supabase.from('shrines').select('id').eq('user_id', user.id)
-  const { data: shrine } = await (
+  let { data: shrine } = await (
     familyMemberId ? shrineQuery.eq('family_member_id', familyMemberId) : shrineQuery.is('family_member_id', null)
   ).maybeSingle()
+
+  // 본인 신당이 아직 없으면 **만들어 준다** — 신수는 신(主神)이 없어도, 신당 개설 절차를 밟지
+  // 않았어도 기본으로 쓸 수 있어야 한다(가족 신당 자동 생성과 같은 문법·같은 컬럼 화이트리스트).
+  if (!shrine && !familyMemberId) {
+    const { data: created } = await supabase
+      .from('shrines')
+      .insert({ user_id: user.id, name: '나의 신당', visibility: 'private' })
+      .select('id')
+      .maybeSingle()
+    shrine = created
+    if (!shrine) {
+      // 동시 첫 진입 레이스(UNIQUE 충돌) — 이미 생성된 행을 재조회
+      const { data: existing } = await supabase
+        .from('shrines')
+        .select('id')
+        .eq('user_id', user.id)
+        .is('family_member_id', null)
+        .maybeSingle()
+      shrine = existing
+    }
+  }
   if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
 
   // 전부 보유했는가 — 신수는 카탈로그 이름이 열쇠다(구매가 인벤토리에 남긴다)
@@ -68,6 +90,37 @@ export async function equipGuardians(slugs: string[], familyMemberId?: string | 
 
   revalidatePath('/protected/shrine')
   return { success: true }
+}
+
+export interface PurchaseGuardianResult {
+  success: boolean
+  error?: 'UNKNOWN_GUARDIAN' | 'INSUFFICIENT_BOKCHAE' | 'FAILED'
+}
+
+/**
+ * 신수 봉헌(구매) — 신수 탭에서 바로. 결제·인벤토리 반영은 기존 purchaseToInventory 를
+ * **함수로 재사용**한다(경로가 두 벌이면 환불·중복 방지 같은 규칙이 갈라진다).
+ * 여기서는 슬러그 → 카탈로그 id 만 푼다.
+ */
+export async function purchaseGuardian(slug: string): Promise<PurchaseGuardianResult> {
+  const g = findGuardian(typeof slug === 'string' ? slug : '')
+  if (!g) return { success: false, error: 'UNKNOWN_GUARDIAN' }
+
+  const supabase = await createClient()
+  const { data: item } = await supabase
+    .from('shrine_item_catalog')
+    .select('id')
+    .eq('name', g.name)
+    .eq('type', 'guardian')
+    .maybeSingle()
+  if (!item) return { success: false, error: 'FAILED' }
+
+  const res = await purchaseToInventory(String(item.id))
+  if (res.success) return { success: true }
+  return {
+    success: false,
+    error: res.error === 'INSUFFICIENT_BOKCHAE' ? 'INSUFFICIENT_BOKCHAE' : 'FAILED',
+  }
 }
 
 /** 화면용 — 보유한 신수 이름 집합(카탈로그 이름 기준). 컬렉션 그리드가 쓴다. */

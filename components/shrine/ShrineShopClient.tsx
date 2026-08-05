@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { purchaseToInventory, type ShopData } from '@/app/actions/shrine/inventory'
 import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 import { devotionLevelForItem } from '@/lib/domain/shrine/devotion'
+import { SHOP_SECTIONS, sectionForType } from '@/lib/domain/shrine/shop-sections'
 import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { mattersLabel } from '@/lib/domain/shrine/item-matters'
 import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
@@ -56,124 +57,144 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {data.catalog.map((item, idx) => {
-          const rarity = RARITY[item.rarity] ?? RARITY.common
-          const have = owned[item.id] ?? 0
-          const free = item.priceBokchae === 0
-          /**
-           * 완주 보상 전용 품목 — 팔지 않는다(purchaseToInventory 가 REWARD_ONLY 로 거절한다).
-           * 카탈로그 조회가 전부 `is_active=true` 필터라 목록에서 숨길 수는 없다(숨기면 이미 배치한
-           * 사람의 신당 렌더가 깨진다). 그래서 여기서 값 대신 얻는 방법을 적어 준다 —
-           * 살 수 없는데 가격표만 붙어 있으면 그게 더 나쁜 화면이다.
-           */
-          const rewardOnly = item.name === BAEKIL_ITEM_NAME
-          const canAfford = free || item.priceBokchae <= balance
-          const loading = loadingId === item.id
-          const devotionLvl = have === 0 ? devotionLevelForItem(item.name) : null
-          return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.04 }}
-              className="rounded-xl p-4 flex flex-col gap-3 bg-gold-500/[0.03] border border-gold-500/[0.12]"
-            >
-              <div className="flex items-start justify-between">
-                {item.spriteUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.spriteUrl} alt={item.name} className="w-12 h-12 object-contain" draggable={false} />
-                ) : (
-                  <span className="text-4xl leading-none">{item.emoji}</span>
-                )}
-                <div className="flex flex-col items-end gap-1">
-                  <span className={`text-[9px] px-2 py-0.5 rounded-full border font-sans ${rarity.cls}`}>
-                    {rarity.label}
-                  </span>
-                  {have > 0 && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-900/20 text-emerald-300 tabular-nums">
-                      보유 {have}
-                    </span>
-                  )}
-                </div>
-              </div>
+      {SHOP_SECTIONS.map((section) => {
+        const items = data.catalog.filter((c) => sectionForType(c.type).key === section.key)
+        if (items.length === 0) return null
+        return (
+          <section key={section.key} className="space-y-2">
+            <div>
+              <h2 className="font-serif text-[13px] font-bold tracking-[0.18em] text-gold-500/70">
+                {section.label}{' '}
+                <span className="font-sans text-[10px] font-normal text-ink-light/35">{items.length}</span>
+              </h2>
+              <p className="font-sans text-[10px] text-ink-light/35">{section.hint}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {items.map((item, idx) => {
+                const rarity = RARITY[item.rarity] ?? RARITY.common
+                const have = owned[item.id] ?? 0
+                const free = item.priceBokchae === 0
+                /**
+                 * 완주 보상 전용 품목 — 팔지 않는다(purchaseToInventory 가 REWARD_ONLY 로 거절한다).
+                 * 카탈로그 조회가 전부 `is_active=true` 필터라 목록에서 숨길 수는 없다(숨기면 이미 배치한
+                 * 사람의 신당 렌더가 깨진다). 그래서 여기서 값 대신 얻는 방법을 적어 준다 —
+                 * 살 수 없는데 가격표만 붙어 있으면 그게 더 나쁜 화면이다.
+                 */
+                const rewardOnly = item.name === BAEKIL_ITEM_NAME
+                const canAfford = free || item.priceBokchae <= balance
+                const loading = loadingId === item.id
+                const devotionLvl = have === 0 ? devotionLevelForItem(item.name) : null
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04 }}
+                    className="rounded-xl p-4 flex flex-col gap-3 bg-gold-500/[0.03] border border-gold-500/[0.12]"
+                  >
+                    <div className="flex items-start justify-between">
+                      {item.spriteUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.spriteUrl}
+                          alt={item.name}
+                          className="w-12 h-12 object-contain"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span className="text-4xl leading-none">{item.emoji}</span>
+                      )}
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full border font-sans ${rarity.cls}`}>
+                          {rarity.label}
+                        </span>
+                        {have > 0 && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-900/20 text-emerald-300 tabular-nums">
+                            보유 {have}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-              <div className="space-y-1 flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-ink-primary font-serif text-sm font-bold">{item.name}</p>
-                  {item.element && (
-                    <span
-                      className="text-[9px] w-[15px] h-[15px] rounded-full grid place-items-center font-serif font-bold"
-                      style={{
-                        background: EL_COLOR[item.element],
-                        color: item.element === 'fire' || item.element === 'water' ? '#f2dcdc' : '#0a0a08',
-                      }}
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-ink-primary font-serif text-sm font-bold">{item.name}</p>
+                        {item.element && (
+                          <span
+                            className="text-[9px] w-[15px] h-[15px] rounded-full grid place-items-center font-serif font-bold"
+                            style={{
+                              background: EL_COLOR[item.element],
+                              color: item.element === 'fire' || item.element === 'water' ? '#f2dcdc' : '#0a0a08',
+                            }}
+                          >
+                            {EL_KO[item.element]}
+                          </span>
+                        )}
+                        <span className="text-[9px] text-ink-light/40 border border-white/10 rounded px-1.5 py-px">
+                          {ZONE_LABEL[item.layer]}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-ink-light/30 text-[10px] font-sans leading-tight">{item.description}</p>
+                      )}
+                      {item.element && (
+                        <p className="text-[10px] text-gold-500/70 font-sans">
+                          {EL_KO[item.element]} 기운 +{item.energyPower}
+                        </p>
+                      )}
+                      {/* 어느 기도에 좋은가 — 오방기 문복 갈래와 **같은 말**을 쓴다(두 화면이 한 세계로 읽히게) */}
+                      {item.matters.length > 0 && (
+                        <p className="font-sans text-[10px] text-ink-light/45">기도 · {mattersLabel(item.matters)}</p>
+                      )}
+                      {/* 전거 — 실제로 어디에 쓰는 물건인지. 설명이 "효과"라면 이쪽은 "출처"다 */}
+                      {item.originNote && (
+                        <p className="border-l border-white/10 pl-1.5 font-sans text-[10px] leading-tight text-ink-light/25">
+                          {item.originNote}
+                        </p>
+                      )}
+                      {item.unlockEffect?.type === 'chat_retention' && (
+                        <p className="text-[10px] text-sky-300/80 font-sans">
+                          ✦ 배치 효험: 대화 보존 +{item.unlockEffect.days ?? 90}일
+                          {item.unlockEffect.maxStack ? ` (최대 ${item.unlockEffect.maxStack}개)` : ''}
+                        </p>
+                      )}
+                      {devotionLvl != null && (
+                        <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => buy(item.id, item.name, item.priceBokchae)}
+                      disabled={loading || rewardOnly || !canAfford}
+                      className={`w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-40 ${
+                        rewardOnly
+                          ? 'bg-white/[0.04] border border-gold-500/20 text-gold-500/70'
+                          : free
+                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                            : canAfford
+                              ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
+                              : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
+                      }`}
                     >
-                      {EL_KO[item.element]}
-                    </span>
-                  )}
-                  <span className="text-[9px] text-ink-light/40 border border-white/10 rounded px-1.5 py-px">
-                    {ZONE_LABEL[item.layer]}
-                  </span>
-                </div>
-                {item.description && (
-                  <p className="text-ink-light/30 text-[10px] font-sans leading-tight">{item.description}</p>
-                )}
-                {item.element && (
-                  <p className="text-[10px] text-gold-500/70 font-sans">
-                    {EL_KO[item.element]} 기운 +{item.energyPower}
-                  </p>
-                )}
-                {/* 어느 기도에 좋은가 — 오방기 문복 갈래와 **같은 말**을 쓴다(두 화면이 한 세계로 읽히게) */}
-                {item.matters.length > 0 && (
-                  <p className="font-sans text-[10px] text-ink-light/45">기도 · {mattersLabel(item.matters)}</p>
-                )}
-                {/* 전거 — 실제로 어디에 쓰는 물건인지. 설명이 "효과"라면 이쪽은 "출처"다 */}
-                {item.originNote && (
-                  <p className="border-l border-white/10 pl-1.5 font-sans text-[10px] leading-tight text-ink-light/25">
-                    {item.originNote}
-                  </p>
-                )}
-                {item.unlockEffect?.type === 'chat_retention' && (
-                  <p className="text-[10px] text-sky-300/80 font-sans">
-                    ✦ 배치 효험: 대화 보존 +{item.unlockEffect.days ?? 90}일
-                    {item.unlockEffect.maxStack ? ` (최대 ${item.unlockEffect.maxStack}개)` : ''}
-                  </p>
-                )}
-                {devotionLvl != null && (
-                  <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
-                )}
-              </div>
-
-              <button
-                onClick={() => buy(item.id, item.name, item.priceBokchae)}
-                disabled={loading || rewardOnly || !canAfford}
-                className={`w-full py-2 rounded-lg text-xs font-serif font-bold transition-all disabled:opacity-40 ${
-                  rewardOnly
-                    ? 'bg-white/[0.04] border border-gold-500/20 text-gold-500/70'
-                    : free
-                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
-                      : canAfford
-                        ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
-                        : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'
-                }`}
-              >
-                {loading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
-                ) : rewardOnly ? (
-                  '🕯 백일기도 완주 보상'
-                ) : free ? (
-                  <span className="flex items-center justify-center gap-1">
-                    <Check className="w-3 h-3" /> 무료로 받기
-                  </span>
-                ) : (
-                  `복채 ${item.priceBokchae.toLocaleString()}만냥`
-                )}
-              </button>
-            </motion.div>
-          )
-        })}
-      </div>
+                      {loading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" />
+                      ) : rewardOnly ? (
+                        '🕯 백일기도 완주 보상'
+                      ) : free ? (
+                        <span className="flex items-center justify-center gap-1">
+                          <Check className="w-3 h-3" /> 무료로 받기
+                        </span>
+                      ) : (
+                        `복채 ${item.priceBokchae.toLocaleString()}만냥`
+                      )}
+                    </button>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }

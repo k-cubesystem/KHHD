@@ -10,6 +10,7 @@ import {
   parseGuardianSlugs,
 } from '../guardians'
 import { OBANGKI_MATTERS } from '@/lib/domain/ritual/obangki'
+import { SHOP_SECTIONS, sectionForType } from '../shop-sections'
 import { ELEMENTS } from '../energy'
 
 const read = (rel: string): string => readFileSync(path.join(process.cwd(), rel), 'utf8')
@@ -103,6 +104,40 @@ describe('신수 — 착좌 규율', () => {
   it('findGuardian 은 슬러그로 찾는다', () => {
     expect(findGuardian('cheongryong')?.name).toBe('청룡')
     expect(findGuardian('nope')).toBeUndefined()
+  })
+})
+
+describe('신수 — 신·신당 없이도 기본 사용', () => {
+  it('★ 본인 신당이 없으면 착좌가 만들어 준다 — 개설 절차가 신수의 관문이 아니다', () => {
+    expect(EQUIP_ACTION).toContain("name: '나의 신당'")
+    // 자동 생성이 admin 호출보다 앞(사용자 클라이언트 insert — 컬럼 화이트리스트 안)
+    const createAt = EQUIP_ACTION.indexOf("name: '나의 신당'")
+    const adminAt = EQUIP_ACTION.indexOf('createAdminClient()')
+    expect(createAt).toBeGreaterThan(-1)
+    expect(createAt).toBeLessThan(adminAt)
+  })
+
+  it('★ 봉헌이 신수 탭에서 바로 된다 — 결제 경로는 purchaseToInventory 한 벌 재사용', () => {
+    expect(EQUIP_ACTION).toContain('export async function purchaseGuardian')
+    expect(EQUIP_ACTION).toContain('purchaseToInventory(String(item.id))')
+    const grid = readFileSync(path.join(process.cwd(), 'components/shrine/GuardianGrid.tsx'), 'utf8')
+    expect(grid).toContain('purchaseGuardian')
+  })
+})
+
+describe('상점 갈래 — 카탈로그의 모든 type 이 갈래 하나에 속한다', () => {
+  it('★ DB type CHECK 목록 전부가 갈래에 배정돼 있고, 겹치지 않는다', () => {
+    const check = /type in \(([\s\S]*?)\)\)/.exec(MIGRATION)?.[1] ?? ''
+    const dbTypes = [...check.matchAll(/'([a-z]+)'/g)].map((m) => m[1])
+    expect(dbTypes.length).toBeGreaterThanOrEqual(22)
+    const all = SHOP_SECTIONS.flatMap((s) => s.types)
+    expect(new Set(all).size).toBe(all.length) // 겹침 없음
+    for (const t of dbTypes) {
+      // 모르는 type 은 폴백 갈래로 접히므로 sectionForType 이 항상 답을 준다
+      expect([t, sectionForType(t).key.length > 0]).toEqual([t, true])
+    }
+    // 명시 배정 커버리지 — 폴백에 기대는 type 이 없어야 한다(새 type 추가 시 여기서 걸린다)
+    for (const t of dbTypes) expect([t, all.includes(t)]).toEqual([t, true])
   })
 })
 

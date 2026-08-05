@@ -98,6 +98,70 @@ function PlaqueFace({ p, lit }: { p: ShrinePlaque; lit: boolean }): ReactNode {
 
 const PLAQUE_CLASS = 'shrine-plaque shrine-plaque-glow grid place-items-center leading-none'
 
+/**
+ * 간이 팻말 줄 — 무라(반가 벽화)가 아닌 테마용 (테마 공통 무대 P1).
+ *
+ * 본 팻말은 무라 원본 px 좌표 × cover 배율에 매여 있어 다른 벽에는 걸 수 없었다 — 그래서
+ * 15테마에서는 창방 팻말 진입점이 통째로 없었다(의식은 RitualDock 으로만). 여기서는 배율 없이
+ * **방 % 고정 좌표**로 같은 4문(척전·액막이·오방기·백일)을 건다. 처마 등(attention)도 같다.
+ * 무라 테마는 종전 WindowPlaques 그대로다 — 창틀에 정합된 팻말이 더 좋기 때문이다.
+ */
+export function GenericPlaqueBand({ onOpenSheet, attention }: Props) {
+  const track = (key: string) => trackEvent({ action: 'shrine_plaque', category: 'shrine', label: `${key}:generic` })
+
+  const face = (p: ShrinePlaque, lit: boolean) => (
+    <>
+      {lit && <span aria-hidden className="shrine-plaque-ember" style={{ width: 6, height: 6, top: 3, right: 4 }} />}
+      <span className="block font-serif text-[10px] font-bold leading-tight text-[#3b2d1c]">{p.ko}</span>
+    </>
+  )
+
+  const cls =
+    'shrine-plaque-lite pointer-events-auto relative rounded-[2px] border border-black/30 px-1.5 py-1 text-center shadow-[0_2px_3px_rgba(0,0,0,0.45)]'
+  const style: CSSProperties = {
+    background: 'linear-gradient(180deg,#caa468,#9a7743 82%,#7a5c30)',
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 z-[2] flex justify-center gap-1.5" style={{ top: '17.5%' }}>
+      {SHRINE_PLAQUES.map((p) => {
+        const lit = attention?.[p.key] === true
+        if (p.kind === 'sheet') {
+          const open = onOpenSheet?.[p.sheet]
+          if (!open) return null
+          return (
+            <button
+              key={p.key}
+              type="button"
+              aria-label={p.ariaLabel}
+              onClick={() => {
+                track(p.key)
+                open()
+              }}
+              className={cls}
+              style={style}
+            >
+              {face(p, lit)}
+            </button>
+          )
+        }
+        return (
+          <Link
+            key={p.key}
+            href={p.href}
+            aria-label={p.ariaLabel}
+            onClick={() => track(p.key)}
+            className={cls}
+            style={style}
+          >
+            {face(p, lit)}
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
 export function WindowPlaques({ onOpenSheet, attention }: Props) {
   const track = (key: string) => trackEvent({ action: 'shrine_plaque', category: 'shrine', label: key })
 

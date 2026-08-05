@@ -75,7 +75,7 @@ import { DeityTurn } from './DeityTurn'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
-import { WindowPlaques } from './WindowPlaques'
+import { GenericPlaqueBand, WindowPlaques } from './WindowPlaques'
 import { hasPlaqueWall } from '@/lib/domain/shrine/plaque'
 import { FamilyHall } from './FamilyHall'
 import { HALL_BAND } from '@/lib/domain/shrine/family-hall-layout'
@@ -1321,9 +1321,14 @@ export function ShrineRoomClient({
           방문자는 남의 신당에서 의식을 치를 수 없고, 다른 테마에는 그 창이 아예 없다.
           꾸미기 중에는 내린다(신물 드래그와 탭 대상이 겹치면 배치가 페이지 이동으로 새어 나간다).
           z-2 라 신위(z-3)·신물(z 10~29) 뒤다 — 벽에 걸린 널이니 앞에 선 것에 가려지는 것이 맞다. */}
-      {isOwner && !editing && hasPlaqueWall(daecheongStage?.wallpaperUrl) && (
-        <WindowPlaques onOpenSheet={plaqueSheets} attention={plaqueAttention} />
-      )}
+      {isOwner &&
+        !editing &&
+        (hasPlaqueWall(daecheongStage?.wallpaperUrl) ? (
+          <WindowPlaques onOpenSheet={plaqueSheets} attention={plaqueAttention} />
+        ) : (
+          // 테마 공통 무대 P1 — 무라가 아닌 15테마에도 같은 4문(처마 등 포함)을 건다
+          <GenericPlaqueBand onOpenSheet={plaqueSheets} attention={plaqueAttention} />
+        ))}
       {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
       <div
         className={`absolute left-1/2 -translate-x-1/2 rounded-full${GAMEFEEL_V1 && !editing ? ' shrine-glow-breathe' : ''}`}
