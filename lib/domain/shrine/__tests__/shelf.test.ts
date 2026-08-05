@@ -2,14 +2,22 @@ import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
   FAMILY_SEAT_TYPES,
+  SEAT_ANCHOR_PREFIX,
+  SEAT_SURFACE_TYPES,
   SHELF_CAPACITY,
   SHELF_RADIUS,
   SHELF_TYPE,
+  SURFACE_SLOTS,
   familyGuardianElement,
   isFamilySeat,
+  isOnSurface,
+  isSeatSurface,
   isShelf,
   readShelf,
+  seatRadius,
+  surfaceSlotOffsets,
 } from '../shelf'
+import { parseAnchorId } from '../stage'
 import { SHOP_SECTIONS } from '../shop-sections'
 import { motionVariance, varianceStyle, hashId } from '../motion-variance'
 import type { CatalogItem, Placement } from '../types'
@@ -151,6 +159,68 @@ describe('가족 자리 — 시렁을 넘어 세간 전반으로', () => {
 
   it('★ 방이 자리 판정에 isFamilySeat 를 쓴다 — isShelf 로 되돌아가면 새 세간의 이름표가 사라진다', () => {
     expect(ROOM).toContain('isFamilySeat(item)')
+  })
+})
+
+describe('진열대 — 위에 얹어 진열하는 세간', () => {
+  it('★ 진열대는 자리의 부분집합 — 시렁·상(table)·궤(chest)만. 보료·병풍·기억의 함은 자리이되 진열대가 아니다', () => {
+    for (const t of SEAT_SURFACE_TYPES) {
+      expect([t, FAMILY_SEAT_TYPES.includes(t)]).toEqual([t, true])
+      expect([t, isSeatSurface(item({ type: t }))]).toEqual([t, true])
+    }
+    expect(isSeatSurface(item({ type: 'cushion' }))).toBe(false)
+    expect(isSeatSurface(item({ type: 'screen' }))).toBe(false)
+    expect(isSeatSurface(item({ type: 'statue' }))).toBe(false)
+    expect(isSeatSurface(null)).toBe(false)
+  })
+
+  it('★ 진열 칸 수 = 얹힘 상한(소2·중3·대4), dy 전부 음수(상판은 중심보다 위), 좌우 대칭', () => {
+    for (const size of ['sm', 'md', 'lg'] as const) {
+      const slots = surfaceSlotOffsets(size)
+      expect(slots.length).toBe(SHELF_CAPACITY[size])
+      for (const s of slots) expect(s.dy).toBeLessThan(0)
+      expect(slots.reduce((a, s) => a + s.dx, 0)).toBe(0)
+    }
+    expect(surfaceSlotOffsets(null)).toEqual(SURFACE_SLOTS.md)
+  })
+
+  it('★ 얹힘 반경 — sm·md 는 15 그대로(무손실 — 라이브 시렁 축복이 좁아지면 안 된다), lg 만 19', () => {
+    expect(seatRadius('sm')).toBe(SHELF_RADIUS)
+    expect(seatRadius('md')).toBe(SHELF_RADIUS)
+    expect(seatRadius('lg')).toBe(19)
+    expect(seatRadius(null)).toBe(SHELF_RADIUS)
+  })
+
+  it('★ lg 진열대(제상)는 17% 거리 제물도 얹힘으로 센다 — 확대 상판의 가장자리 배제 방지', () => {
+    const jesangCat = item({ id: 'jesang', type: 'table', element: null, size: 'lg' })
+    const fireCat = item({ id: 'fire-edge', element: 'fire' })
+    const byId = new Map<string, CatalogItem>([
+      [jesangCat.id, jesangCat],
+      [fireCat.id, fireCat],
+    ])
+    const seat = place(jesangCat.id, 50, 70)
+    const edge = place(fireCat.id, 67, 70)
+    expect(readShelf(seat, 'fire', true, [seat, edge], byId).blessed).toBe(true)
+  })
+
+  it('★ isOnSurface — 위는 참, 곁이라도 아래(앞에 세운 것)·반경 밖은 거짓', () => {
+    const seat = { x: 50, y: 70 }
+    expect(isOnSurface({ x: 53, y: 65 }, seat, 'md')).toBe(true)
+    expect(isOnSurface({ x: 50, y: 74 }, seat, 'md')).toBe(false)
+    expect(isOnSurface({ x: 70, y: 65 }, seat, 'md')).toBe(false)
+  })
+
+  it('★ seat: 앵커 id 는 저장 왕복을 살아남는다 — parseAnchorId 62자 한도 안', () => {
+    const id = `${SEAT_ANCHOR_PREFIX}0f47c1e2-8f6a-4b7e-9c3d-1a2b3c4d5e6f:3`
+    expect(id.length).toBeLessThanOrEqual(62)
+    expect(parseAnchorId(id)).toBe(id)
+  })
+
+  it('★ 계약 — 저장은 seat: 존 우회, 방은 진열 칸 합류·동반 이동·깊이 역전 교정을 실제로 쓴다', () => {
+    expect(SCENE_ACTION).toContain('SEAT_ANCHOR_PREFIX')
+    expect(ROOM).toContain('surfaceAnchors')
+    expect(ROOM).toContain('isOnSurface(q, p, carry.size)')
+    expect(ROOM).toContain('zOverride ?? depthZ')
   })
 })
 

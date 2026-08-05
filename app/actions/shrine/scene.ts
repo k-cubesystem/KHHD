@@ -30,6 +30,7 @@ import {
   type StageThemePack,
 } from '@/lib/domain/shrine/stage'
 import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
+import { SEAT_ANCHOR_PREFIX } from '@/lib/domain/shrine/shelf'
 import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { isGuardianType, parseGuardianSlugs } from '@/lib/domain/shrine/guardians'
 import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
@@ -611,6 +612,9 @@ interface PlacementInput {
 }
 
 /** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
+/** 진열대 스냅 배치의 절대 클램프 범위 — 존 우회 시에도 좌표는 방 밖으로 못 나간다 */
+const FULL_RANGE: [number, number] = [0, 100]
+
 export async function saveShrineLayout(
   placements: PlacementInput[],
   familyMemberId?: string | null
@@ -678,12 +682,16 @@ export async function saveShrineLayout(
   const rows = placements.map((p, i) => {
     const layer = isLayer(p.layer) ? p.layer : 'floor'
     const zone = ZONES[layer]
+    // 진열대 스냅(seat:) 배치는 층 존 대신 절대 범위만 클램프한다 — 제물(altar 존 y48~58)이
+    // 바닥 가구 상판에 얹히는 유일한 경로. 존은 UX 가드이지 보안 경계가 아니고(RLS 가 소유권),
+    // 프리픽스는 저장 후 배치 id 재발급으로 dangling 이 돼도 존 우회 표식으로 계속 산다.
+    const onSurface = anchorIds[i] !== null && (anchorIds[i] as string).startsWith(SEAT_ANCHOR_PREFIX)
     const row = {
       shrine_id: shrine.id,
       catalog_item_id: p.catalogItemId,
       layer,
-      x: clampPct(p.x, zone.x),
-      y: clampPct(p.y, zone.y),
+      x: clampPct(p.x, onSurface ? FULL_RANGE : zone.x),
+      y: clampPct(p.y, onSurface ? FULL_RANGE : zone.y),
       flip: p.flip ?? false,
       state: p.state ?? {},
     }

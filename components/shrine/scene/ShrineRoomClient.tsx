@@ -88,7 +88,15 @@ import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
-import { familyGuardianElement, isFamilySeat, readShelf } from '@/lib/domain/shrine/shelf'
+import {
+  SEAT_ANCHOR_PREFIX,
+  familyGuardianElement,
+  isFamilySeat,
+  isOnSurface,
+  isSeatSurface,
+  readShelf,
+  surfaceSlotOffsets,
+} from '@/lib/domain/shrine/shelf'
 import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
 import { ELEMENT_AVATAR_COLOR } from '@/lib/domain/family/avatars'
@@ -728,6 +736,53 @@ export function ShrineRoomClient({
     const union = daecheongStage?.structures.flatMap((s) => s.anchors) ?? []
     return union.length > 0 ? union : DEFAULT_ANCHORS
   }, [daecheongStage])
+  /**
+   * 진열대(시렁·제상·소반·반닫이·문갑) 진열 칸 — **층 없는** 스냅 후보.
+   * 끌리는 아이템의 층을 Sprite 쪽에서 입혀 합류시킨다(무엇이든 얹는 진열의 문법 —
+   * nearestAnchor 가 층으로 거르므로, 칸에 층을 박으면 그 층 아이템만 얹을 수 있게 된다).
+   * id 의 `seat:` 프리픽스는 저장 경로(saveShrineLayout)의 존 클램프 우회 표식이기도 하다.
+   */
+  const surfaceAnchors = useMemo<ReadonlyArray<Omit<StageAnchor, 'layer'>>>(() => {
+    const out: Array<Omit<StageAnchor, 'layer'>> = []
+    for (const p of placements) {
+      const it = catalogById.get(p.catalogItemId)
+      if (!it || !isSeatSurface(it)) continue
+      surfaceSlotOffsets(it.size).forEach((o, i) => {
+        out.push({
+          id: `${SEAT_ANCHOR_PREFIX}${p.id}:${i}`,
+          x: Math.min(100, Math.max(0, p.x + o.dx)),
+          y: Math.min(100, Math.max(0, p.y + o.dy)),
+          label: `${it.name} 위`,
+        })
+      })
+    }
+    return out
+  }, [placements, catalogById])
+  /**
+   * 진열대 위 z 끌어올림 — painter's algorithm 은 y 로만 정렬해, 상판 위(y 가 진열대 중심보다
+   * 작다) 물건이 진열대 몸체 **뒤**로 숨는 깊이 역전이 난다. 위에 얹힌 것만 「진열대 z+1 이상」
+   * 으로 들고, 곁에 세운 것은 건드리지 않는다(isOnSurface 가 "위"만 가른다). 관계는 전부 거리
+   * 판정 — 저장이 배치 id 를 재발급해도 무너지지 않는다.
+   */
+  const surfaceZById = useMemo<ReadonlyMap<string, number> | null>(() => {
+    const seats: Array<{ p: StagePlacement; size: StageCatalogItem['size']; z: number }> = []
+    for (const p of placements) {
+      const it = catalogById.get(p.catalogItemId)
+      if (it && isSeatSurface(it)) seats.push({ p, size: it.size, z: depthZ(it.layer, p.y) })
+    }
+    if (seats.length === 0) return null
+    const map = new Map<string, number>()
+    for (const q of placements) {
+      const qi = catalogById.get(q.catalogItemId)
+      if (!qi || isFamilySeat(qi)) continue
+      let boosted = -1
+      for (const s of seats) {
+        if (s.p.id !== q.id && isOnSurface(q, s.p, s.size)) boosted = Math.max(boosted, s.z + 1)
+      }
+      if (boosted >= 0) map.set(q.id, Math.max(boosted, depthZ(qi.layer, q.y)))
+    }
+    return map.size > 0 ? map : null
+  }, [placements, catalogById])
   /** 드래그 중 스냅 대상 앵커 (골드 링 하이라이트) */
   const [snapAnchor, setSnapAnchor] = useState<StageAnchor | null>(null)
   /** 이번 꾸미기에서 새로 앵커에 올린 배치 — 저장 시 신위 한마디 1회 */
@@ -947,11 +1002,34 @@ export function ShrineRoomClient({
   // ── 드래그 종료 (편집 모드) ──
   const onDragEnd = useCallback(
     (p: StagePlacement, x: number, y: number, anchorId: string | null) => {
-      setPlacements((prev) => prev.map((q) => (q.id === p.id ? { ...q, x, y, anchorId } : q)))
+      // 진열대를 옮기면 위에 얹힌 것들이 함께 간다 — 상 위 제물이 허공에 남으면 진열이 아니다.
+      // 판정은 드래그 **이전** 자리(p.x/p.y) 기준·거리로만(id 링크 없음 — 저장 재발급 내성).
+      const seatItem = catalogById.get(p.catalogItemId)
+      const carry = seatItem && isSeatSurface(seatItem) ? { dx: x - p.x, dy: y - p.y, size: seatItem.size } : null
+      setPlacements((prev) =>
+        prev.map((q) => {
+          if (q.id === p.id) return { ...q, x, y, anchorId }
+          if (carry) {
+            const qi = catalogById.get(q.catalogItemId)
+            if (qi && !isFamilySeat(qi) && isOnSurface(q, p, carry.size)) {
+              return {
+                ...q,
+                x: Math.min(100, Math.max(0, q.x + carry.dx)),
+                y: Math.min(100, Math.max(0, q.y + carry.dy)),
+              }
+            }
+          }
+          return q
+        })
+      )
       dirty.current = true
-      // 새로 '의미 있는 자리'에 올렸으면 — 저장 시 신위가 한마디 (§3-D)
+      // 새로 '의미 있는 자리'에 올렸으면 — 저장 시 신위가 한마디 (§3-D).
+      // 진열 칸(seat:)도 의미 있는 자리다 — 「제상 위」에 올린 손짓에 반응이 없으면 진열이 심심하다.
       if (anchorId && anchorId !== p.anchorId) {
-        pendingAnchor.current = anchors.find((a) => a.id === anchorId) ?? null
+        const seatHit = surfaceAnchors.find((a) => a.id === anchorId)
+        pendingAnchor.current =
+          anchors.find((a) => a.id === anchorId) ??
+          (seatHit ? { ...seatHit, layer: catalogById.get(p.catalogItemId)?.layer ?? 'floor' } : null)
         effectsRef.current?.emit('sparkle', x, y)
       }
       const item = catalogById.get(p.catalogItemId)
@@ -969,7 +1047,7 @@ export function ShrineRoomClient({
       }
       window.setTimeout(checkResonance, 0)
     },
-    [catalogById, play, keeperSay, checkResonance, isOwner, anchors, keeperHomeX]
+    [catalogById, play, keeperSay, checkResonance, isOwner, anchors, surfaceAnchors, keeperHomeX]
   )
 
   // ── 수납 (편집 모드) ──
@@ -1416,6 +1494,8 @@ export function ShrineRoomClient({
             onDragLayer={onDragLayer}
             shelf={shelfInfoById.get(p.id) ?? null}
             onShelfTap={isOwner && shelfInfoById.has(p.id) ? () => setAssignShelfId(p.id) : null}
+            surfaceAnchors={surfaceAnchors}
+            zOverride={surfaceZById?.get(p.id)}
           />
         )
       })}
@@ -1930,9 +2010,19 @@ interface SpriteProps {
   shelf?: { tagName: string | null; color: string | null; blessed: boolean } | null
   /** 이름표(또는 「+ 가족」) 탭 — 소유자만 받는다. 없으면 이름표는 그리되 CTA 는 없다 */
   onShelfTap?: (() => void) | null
+  /** 진열대 진열 칸(층 없음) — 끌리는 아이템의 층을 입혀 스냅 후보에 합류시킨다 */
+  surfaceAnchors: ReadonlyArray<Omit<StageAnchor, 'layer'>>
+  /** 진열대 위 z 끌어올림 — 없으면 depthZ 그대로 (깊이 역전 교정, 거리 판정) */
+  zOverride?: number
 }
 
 const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
+/**
+ * 진열대 가구(table·chest) 표시 크기 — "아이템만 한 가구"가 아니라 제단처럼 서는 세간이다
+ * (스프라이트 폭 = 이 값 × 3.2em: 소 109px · 중 147px · 대 186px).
+ * ⚠️ 시렁(shelf)은 여기 넣지 않는다 — 라이브 배치의 치수가 변하면 기존 방 구도가 깨진다(무손실).
+ */
+const FURNITURE_PX: Record<string, string> = { sm: '34px', md: '46px', lg: '58px' }
 /** v2「설빛온기」스프라이트 표시 크기 em (512² 캔버스에 여백을 둔 규격이라 크게 잡는다) */
 const ASSET_EM = 3.2
 /** 레거시 스프라이트 표시 크기 em — 기존 값 그대로 (회귀 0) */
@@ -1952,6 +2042,8 @@ function Sprite({
   onDragLayer,
   shelf = null,
   onShelfTap = null,
+  surfaceAnchors,
+  zOverride,
 }: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLSpanElement>(null)
@@ -1959,6 +2051,15 @@ function Sprite({
   const moved = useRef(false)
   const posRef = useRef({ x: placement.x, y: placement.y })
   const snapRef = useRef<StageAnchor | null>(null)
+
+  /**
+   * 스냅 후보 — 구조물 앵커 + 진열대 진열 칸(끌리는 아이템의 층을 입힌다).
+   * 세간 자신은 진열대에 얹지 않는다(가구 위 가구 금지 — readShelf 의 "세간은 세지 않는다"와 한 몸).
+   */
+  const snapCandidates = useMemo<readonly StageAnchor[]>(() => {
+    if (surfaceAnchors.length === 0 || isFamilySeat(item)) return anchors
+    return [...anchors, ...surfaceAnchors.map((a) => ({ ...a, layer: item.layer }))]
+  }, [anchors, surfaceAnchors, item])
 
   /**
    * 원근 스케일 합성 — 중심 정렬 translate + 깊이 스케일 + flip.
@@ -1993,16 +2094,18 @@ function Sprite({
       const move = (ev: PointerEvent) => {
         if (!dragging.current) return
         moved.current = true
-        const rawX = clampPct(((ev.clientX - rect.left) / rect.width) * 100, zone.x)
-        const rawY = clampPct(((ev.clientY - rect.top) / rect.height) * 100, zone.y)
+        const freeX = ((ev.clientX - rect.left) / rect.width) * 100
+        const freeY = ((ev.clientY - rect.top) / rect.height) * 100
         // 앵커 반경 안이면 자석 스냅 — 밖이면 자유 배치 그대로 (앵커는 보너스이지 제약이 아니다).
         // 거리는 화면 픽셀로 잰다(부록 P-2) — % 거리계는 와이드 룸에서 가로 포획이 3.2배 왜곡됐다.
-        const snap = nearestAnchor(anchors, item.layer, rawX, rawY, undefined, {
+        // 스냅 판정은 **존 클램프 전** 포인터 자리로 한다: 진열 칸은 층 존 밖(가구 상판)에 있을 수
+        // 있다(제물 altar 존 vs 바닥 가구). 스냅이 안 걸리면 종전대로 존 안 자유 배치다.
+        const snap = nearestAnchor(snapCandidates, item.layer, freeX, freeY, undefined, {
           sx: rect.width / 100,
           sy: rect.height / 100,
         })
-        const x = snap ? snap.x : rawX
-        const y = snap ? snap.y : rawY
+        const x = snap ? snap.x : clampPct(freeX, zone.x)
+        const y = snap ? snap.y : clampPct(freeY, zone.y)
         posRef.current = { x, y }
         el.style.left = `${x}%`
         el.style.top = `${y}%`
@@ -2023,7 +2126,9 @@ function Sprite({
         onAnchorHover(null)
         // 드래그용 임시 z(60)를 React 가 알고 있는 값으로 되돌린다
         // (다음 렌더에서 zIndex prop 이 그대로면 React 가 DOM 을 쓰지 않아 60 이 남는다)
-        el.style.zIndex = String(depthZ(item.layer, posRef.current.y))
+        // ⚠️ 진열대 위 아이템은 React 의 마지막 값이 zOverride 다 — depthZ 로 되돌리면 재렌더가
+        //    같은 zOverride 를 스킵해 상판 아래로 숨은 채 남는다(수동 복원은 vdom 과 같아야 한다).
+        el.style.zIndex = String(zOverride ?? depthZ(item.layer, posRef.current.y))
         onDragLayer(null)
         if (moved.current) onDragEnd(posRef.current.x, posRef.current.y, snapped?.id ?? null)
       }
@@ -2031,7 +2136,7 @@ function Sprite({
       el.addEventListener('pointerup', up)
       el.addEventListener('pointercancel', up)
     },
-    [editing, item.layer, anchors, onDragEnd, onAnchorHover, onDragLayer, transformFor]
+    [editing, item.layer, snapCandidates, zOverride, onDragEnd, onAnchorHover, onDragLayer, transformFor]
   )
 
   /**
@@ -2065,7 +2170,7 @@ function Sprite({
     '--shrine-idle-delay': idleDelay,
     '--shrine-idle-scale': idleScale,
   }
-  const zIndex = depthZ(item.layer, placement.y)
+  const zIndex = zOverride ?? depthZ(item.layer, placement.y)
   const shadow = groundShadow(item.layer, placement.y)
   // ⚠️ scene.ts 는 asset_url 이 비면 sprite_url 로 폴백한다 → 둘이 같으면 아직 레거시 스프라이트다.
   //    이때 v2 크기(3.2em)를 쓰면 기존 신당의 모든 신물이 2배로 커진다(회귀). 다를 때만 v2 규격.
@@ -2098,7 +2203,8 @@ function Sprite({
       style={{
         left: `${placement.x}%`,
         top: `${placement.y}%`,
-        fontSize: SIZE_PX[item.size] ?? '29px',
+        fontSize:
+          (item.type === 'table' || item.type === 'chest' ? FURNITURE_PX[item.size] : SIZE_PX[item.size]) ?? '29px',
         lineHeight: 1,
         zIndex,
         transform: transformFor(placement.y),
