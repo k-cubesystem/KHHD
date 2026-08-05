@@ -58,6 +58,15 @@ const themes = [
   { code: 'daljip', name: '달집 마당', el: '토(earth)', accent: '#e6c37a', mood: 'full-moon night courtyard of an ochre earthen house, warm moonlight on clay walls, bundled straw and gentle amber glow' },
   { code: 'hongsal', name: '홍살문 안뜰', el: '화(fire)', accent: '#d96c5f', mood: 'inner court behind a crimson hongsalmun gate, red dancheong pillars, solemn ward-against-evil dignity, deep vermilion' },
   { code: 'byeolbat', name: '별밭 천문각', el: '무속성(프리미엄)', accent: '#8fa8e8', mood: 'celestial observatory pavilion under a field of stars, deep indigo night, constellation charts and starlight spilling in' },
+  // ── 확장 8종 (2026-08-05, 16테마) ──
+  { code: 'dangsan', name: '당산나무 그늘', el: '목(wood)', accent: '#7fb069', mood: 'ancient sacred village guardian tree with straw rope (geumjul) tied around its trunk, dappled green shade, moss and stone altar beneath' },
+  { code: 'yeondeung', name: '연등 골짜기', el: '화(fire)', accent: '#e08a4e', mood: 'valley at dusk strung with hundreds of glowing paper lotus lanterns along a stream, warm orange and pink light on water' },
+  { code: 'seonang', name: '서낭 고갯길', el: '토(earth)', accent: '#b89b6a', mood: 'mountain pass shrine with a tall cairn of stacked prayer stones and five-color cloth strips tied to an old tree, ochre dusk' },
+  { code: 'jangdok', name: '장독대 새벽', el: '토(earth)', accent: '#caa87c', mood: 'dawn courtyard with rows of earthen crocks (jangdokdae), a white bowl of pure water set on the largest crock, first pale light' },
+  { code: 'daejanggan', name: '무쇠 대장간', el: '금(metal)', accent: '#9fb3c8', mood: 'traditional Korean smithy forging a ritual blade, anvil and glowing furnace embers, steel-blue shadow and orange spark contrast' },
+  { code: 'jonggak', name: '새벽 종각', el: '금(metal)', accent: '#cfd8e3', mood: 'old bell pavilion at first light, great bronze bell with dragon crest, silver-blue morning mist through wooden pillars' },
+  { code: 'saemgut', name: '옹달샘 굿터', el: '수(water)', accent: '#6fc3c9', mood: 'forest spring shrine, clear pool ringed with mossy stones and a small altar, teal reflections and floating petals' },
+  { code: 'naru', name: '안개 나루터', el: '수(water)', accent: '#8fa8c8', mood: 'misty river ferry landing at dawn, wooden pier and a single moored boat, pale blue fog over still water' },
 ].map((t) => ({ ...t, path: `public/shrine/themes/${t.code}/room.webp`, prompt: `${THEME_STYLE}, ${t.mood}, accent color ${t.accent}` }))
 
 process.stdout.write(JSON.stringify({ deities, themes, emotions: EMOTIONS.length }, null, 0))

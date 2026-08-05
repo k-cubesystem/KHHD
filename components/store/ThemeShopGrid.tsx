@@ -10,7 +10,14 @@ import type { ThemePack } from '@/lib/domain/shrine/types'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { activateThemePack } from '@/app/actions/shrine/scene'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
-import { EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
+import { EL_KO, EL_COLOR, EL_LABEL } from '@/lib/domain/shrine/energy'
+import { mattersLabel } from '@/lib/domain/shrine/item-matters'
+import { findFamilyAvatar } from '@/lib/domain/family/avatars'
+
+/** 궁합 신위 이름 — 아바타 카탈로그가 신위 시드와 같은 코드를 쓴다(단일 출처). 모르면 코드 그대로. */
+function deityNames(codes: readonly string[]): string {
+  return codes.map((c) => findFamilyAvatar(c)?.label ?? c).join(' · ')
+}
 
 /**
  * 적용 범위 — 이 값이 있으면 **보유 테마를 그 자리에서 신당에 입힌다**.
@@ -92,29 +99,19 @@ export function ThemeShopGrid({ themes, apply }: { themes: ThemePack[]; apply?: 
               key={pack.id}
               className="rounded-xl overflow-hidden border border-gold-500/[0.15] bg-gold-500/[0.03] flex flex-col"
             >
-              {/* 방 프리뷰 — 벽/바닥 그라디언트 + 액센트 */}
-              <div className="relative h-24">
-                <div className="absolute inset-x-0 top-0 h-[62%]" style={{ background: pack.assets.wall }} />
-                <div className="absolute inset-x-0 bottom-0 h-[38%]" style={{ background: pack.assets.floor }} />
-                <div
-                  className="absolute inset-x-0 top-0 h-[3px]"
-                  style={{ background: pack.assets.top ?? `linear-gradient(90deg,transparent,${accent},transparent)` }}
+              {/* 방 프리뷰 — 실제 방 그림(room.webp). 없던 시절의 그라디언트는 폴백 배경으로만 남는다 */}
+              <div className="relative h-28" style={{ background: pack.assets.wall }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/shrine/themes/${pack.code}/room.webp`}
+                  alt={pack.name}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 bottom-2 rounded-full"
-                  style={{
-                    width: '55%',
-                    height: '22%',
-                    background: pack.assets.glow ?? `${accent}22`,
-                    filter: 'blur(6px)',
-                  }}
+                  className="absolute inset-x-0 bottom-0 h-1/2"
+                  style={{ background: 'linear-gradient(180deg,transparent,rgba(10,8,5,0.72))' }}
                 />
-                <span
-                  className="absolute left-1/2 -translate-x-1/2 bottom-2 font-serif text-[15px]"
-                  style={{ color: accent }}
-                >
-                  福
-                </span>
                 {pack.elementAffinity && (
                   <span
                     className="absolute top-1.5 right-1.5 w-[18px] h-[18px] rounded-full text-[9px] font-serif grid place-items-center font-bold"
@@ -127,10 +124,35 @@ export function ThemeShopGrid({ themes, apply }: { themes: ThemePack[]; apply?: 
                     {EL_KO[pack.elementAffinity]}
                   </span>
                 )}
+                <span
+                  className="absolute bottom-1.5 left-2 font-serif text-[13px] font-bold"
+                  style={{ color: accent, textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}
+                >
+                  {pack.name}
+                </span>
               </div>
 
-              <div className="p-3 flex flex-col gap-2 flex-1">
-                <div className="text-[13px] font-serif font-bold text-ink-light leading-tight">{pack.name}</div>
+              <div className="p-3 flex flex-col gap-1.5 flex-1">
+                {/* 스토리 — 이 자리가 어떤 곳인가 */}
+                {pack.story && <p className="font-sans text-[10.5px] leading-snug text-ink-light/55">{pack.story}</p>}
+                {/* 기운 · 궁합 신 · 기도 — 오방기 문복과 같은 말을 쓴다(한 세계) */}
+                <div className="space-y-0.5 font-sans text-[10px] leading-snug">
+                  {pack.elementAffinity && (
+                    <p className="text-gold-500/70">
+                      기운 · {EL_KO[pack.elementAffinity]}({EL_LABEL[pack.elementAffinity]}) 기운을 돋운다
+                    </p>
+                  )}
+                  {pack.deityCodes.length > 0 && (
+                    <p className="text-ink-light/50">궁합 신 · {deityNames(pack.deityCodes)}</p>
+                  )}
+                  {pack.matters.length > 0 && <p className="text-ink-light/50">기도 · {mattersLabel(pack.matters)}</p>}
+                </div>
+                {/* 어떤 사주에 맞는가 */}
+                {pack.sajuNote && (
+                  <p className="border-l border-white/10 pl-1.5 font-sans text-[10px] leading-snug text-ink-light/35">
+                    {pack.sajuNote}
+                  </p>
+                )}
                 {devotionLvl != null && (
                   <p className="text-[10px] text-gold-500/70 font-sans">🕯 기원 {devotionLvl}단 무료</p>
                 )}

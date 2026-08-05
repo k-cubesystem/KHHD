@@ -98,6 +98,14 @@ export interface ThemePack {
   elementAffinity: Element | null
   assets: ThemeAssets
   owned: boolean
+  /** 이 자리가 어떤 곳인가 — 두 문장 스토리 (없으면 구 데이터) */
+  story: string | null
+  /** 어떤 사주에 맞는 자리인가 — 한 문장 */
+  sajuNote: string | null
+  /** 궁합이 맞는 신위 (shrine_deities.code, 최대 2) */
+  deityCodes: string[]
+  /** 이 자리에서 올리기 좋은 기도 — 오방기 문복 갈래와 같은 문자열 */
+  matters: ObangkiMatter[]
 }
 
 export interface EnergyProfile {

@@ -334,6 +334,12 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<Sta
     elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
     assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
     owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
+    story: typeof p.story === 'string' && p.story ? p.story : null,
+    sajuNote: typeof p.saju_note === 'string' && p.saju_note ? p.saju_note : null,
+    deityCodes: Array.isArray(p.deity_codes)
+      ? p.deity_codes.filter((c: unknown): c is string => typeof c === 'string')
+      : [],
+    matters: parseMatters(p.matters),
     stage: parseStageSpec(p.stage),
     // 두루마리 구역(zones)은 StageSpec 밖이라 원본을 함께 내려보낸다 (클라에서 parseWorld 가 파싱)
     stageRaw: p.stage ?? null,
@@ -551,6 +557,11 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
             ? activePack.assets
             : {}) as ThemeAssets,
           owned: true,
+          // 방문자 뷰는 상점을 그리지 않는다 — 로어는 빈 값으로 두되 조회 컬럼도 늘리지 않는다
+          story: null,
+          sajuNote: null,
+          deityCodes: [],
+          matters: [],
           stage: parseStageSpec(activePack.stage),
           stageRaw: activePack.stage ?? null,
         },

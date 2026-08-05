@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { assignGuardian, bondProgress, type BondProgress } from '@/lib/domain/shrine/deities'
@@ -396,6 +397,12 @@ export async function listThemePacks(): Promise<ThemePack[]> {
     elementAffinity: isElement(p.element_affinity) ? p.element_affinity : null,
     assets: (typeof p.assets === 'object' && p.assets !== null ? p.assets : {}) as ThemeAssets,
     owned: (p.price_bokchae ?? 0) === 0 ? true : ownedSet.has(p.id),
+    story: typeof p.story === 'string' && p.story ? p.story : null,
+    sajuNote: typeof p.saju_note === 'string' && p.saju_note ? p.saju_note : null,
+    deityCodes: Array.isArray(p.deity_codes)
+      ? p.deity_codes.filter((c: unknown): c is string => typeof c === 'string')
+      : [],
+    matters: parseMatters(p.matters),
   }))
 }
 
