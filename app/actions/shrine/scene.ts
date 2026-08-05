@@ -24,6 +24,7 @@ import {
   parseAssetUrl,
   parseStageSpec,
   type StageCatalogItem,
+  type ShelfFamilyTag,
   type StagePlacement,
   type StageSceneData,
   type StageThemePack,
@@ -103,6 +104,8 @@ interface PlacementRow {
   state: unknown
   /** v2 — 마이그레이션 이전 DB에서는 undefined 로 들어온다 */
   anchor_id?: unknown
+  /** 시렁 가족 지정 — 마이그레이션 이전 DB에서는 undefined */
+  family_member_id?: unknown
 }
 
 function toPlacement(p: PlacementRow): StagePlacement {
@@ -115,6 +118,7 @@ function toPlacement(p: PlacementRow): StagePlacement {
     flip: p.flip,
     state: parsePlacementState(p.state),
     anchorId: parseAnchorId(p.anchor_id),
+    familyMemberId: typeof p.family_member_id === 'string' && p.family_member_id ? p.family_member_id : null,
   }
 }
 
@@ -418,6 +422,19 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Stag
     }
   }
 
+  // 시렁 이름표 — 지정된 가족만 골라 이름·정령을 붙인다(소유자 화면 전용, RLS select-own)
+  const assignedIds = [...new Set(placements.map((p) => p.familyMemberId).filter((v): v is string => v !== null))]
+  const familyTags: Record<string, ShelfFamilyTag> = {}
+  if (assignedIds.length > 0) {
+    const { data: fams } = await supabase.from('family_members').select('id, name, avatar_id').in('id', assignedIds)
+    for (const f of fams ?? []) {
+      familyTags[String(f.id)] = {
+        name: String(f.name ?? ''),
+        avatarId: typeof f.avatar_id === 'string' && f.avatar_id ? f.avatar_id : null,
+      }
+    }
+  }
+
   return {
     shrineId: shrine.id,
     shrineName: shrine.name,
@@ -434,6 +451,7 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Stag
     visitorCount: shrine.visitor_count,
     wishCount: shrine.wish_count,
     mainDeity,
+    familyTags,
   }
 }
 
@@ -557,6 +575,8 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
     visitorCount: shrine.visitor_count,
     wishCount: shrine.wish_count,
     mainDeity,
+    // 방문자에게 남의 가족 이름을 보이지 않는다 — 조회 자체를 하지 않는다
+    familyTags: {},
   }
 }
 
@@ -569,6 +589,11 @@ interface PlacementInput {
   state?: { lit?: boolean }
   /** 스냅된 앵커 id (자유 배치면 생략/null). 62자 초과·비문자열은 서버에서 null 처리. */
   anchorId?: string | null
+  /**
+   * 시렁 가족 지정. 저장이 delete+insert 전체 교체라 **여기 실리지 않으면 저장마다 지정이
+   * 통째로 날아간다** — 클라이언트는 반드시 현재 지정값을 그대로 실어 보낸다.
+   */
+  familyMemberId?: string | null
 }
 
 /** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
@@ -610,6 +635,21 @@ export async function saveShrineLayout(
   const anchorIds = placements.map((p) => parseAnchorId(p.anchorId))
   const withAnchors = anchorIds.some((a) => a !== null)
 
+  // 시렁 가족 지정 — uuid 모양만 통과(아니면 null). 지정된 것이 있는데 실제 내 가족이 아니면
+  // FK 가 막지만, 남의 가족 id 를 넣어 보는 시도는 여기서 먼저 거른다(내 가족 목록 대조).
+  const famIds = placements.map((p) =>
+    typeof p.familyMemberId === 'string' && /^[0-9a-f-]{36}$/i.test(p.familyMemberId) ? p.familyMemberId : null
+  )
+  const withFamily = famIds.some((f) => f !== null)
+  if (withFamily) {
+    const wanted = [...new Set(famIds.filter((f): f is string => f !== null))]
+    const { data: mine } = await supabase.from('family_members').select('id').in('id', wanted)
+    const mineSet = new Set((mine ?? []).map((m) => String(m.id)))
+    for (let i = 0; i < famIds.length; i += 1) {
+      if (famIds[i] !== null && !mineSet.has(famIds[i] as string)) famIds[i] = null
+    }
+  }
+
   // 좌표 클램프 (서버 방어) — layer도 검증값 사용(원시값이 CHECK 위반으로 delete 후 insert 실패 → 배치 유실 방지)
   const rows = placements.map((p, i) => {
     const layer = isLayer(p.layer) ? p.layer : 'floor'
@@ -623,7 +663,8 @@ export async function saveShrineLayout(
       flip: p.flip ?? false,
       state: p.state ?? {},
     }
-    return withAnchors ? { ...row, anchor_id: anchorIds[i] } : row
+    const withAnchor = withAnchors ? { ...row, anchor_id: anchorIds[i] } : row
+    return withFamily ? { ...withAnchor, family_member_id: famIds[i] } : withAnchor
   })
 
   // 전체 교체 (delete + insert) — 새 id가 재발급되므로 반드시 반환해 클라 상태를 교체시킨다

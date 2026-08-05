@@ -87,6 +87,10 @@ import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
+import { familyGuardianElement, isShelf, readShelf } from '@/lib/domain/shrine/shelf'
+import { motionVariance } from '@/lib/domain/shrine/motion-variance'
+import { ELEMENT_AVATAR_COLOR } from '@/lib/domain/family/avatars'
+import { ShelfAssignSheet, type AssignedTag } from './ShelfAssignSheet'
 import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
 import { trackEvent } from '@/lib/analytics/ga4'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
@@ -313,6 +317,35 @@ export function ShrineRoomClient({
   const { playEntrance, playPrayer, shake: cinShake, vibrate: cinVibrate } = cin
 
   const [placements, setPlacements] = useState<StagePlacement[]>(scene.placements)
+  // ── 시렁(선반) — 가족 배정 ──
+  /** 배정 시트가 열린 시렁 배치 id (null=닫힘) */
+  const [assignShelfId, setAssignShelfId] = useState<string | null>(null)
+  /** 이 세션에서 새로 지정한 이름표 — scene.familyTags 는 서버 스냅샷이라 방금 지정분이 없다 */
+  const [extraTags, setExtraTags] = useState<Record<string, { name: string; avatarId: string | null }>>({})
+
+  /**
+   * 시렁별 읽기 — 이름표(가족·정령 색)와 축복 여부.
+   *
+   * ⚠️ 방문자 뷰는 familyTags 가 빈 객체라 이름표가 아예 안 그려진다 — 남의 신당에서
+   *    그 집 가족의 이름이 읽히면 안 된다(서버가 조회하지 않고, 여기서도 그리지 않는다).
+   */
+  const shelfInfoById = useMemo(() => {
+    const merged = { ...scene.familyTags, ...extraTags }
+    const map = new Map<string, { tagName: string | null; color: string | null; blessed: boolean }>()
+    for (const p of placements) {
+      const item = catalogById.get(p.catalogItemId)
+      if (!item || !isShelf(item)) continue
+      const tag = p.familyMemberId ? (merged[p.familyMemberId] ?? null) : null
+      const guardian = familyGuardianElement(tag?.avatarId)
+      const reading = readShelf(p, guardian, p.familyMemberId !== null && tag !== null, placements, catalogById)
+      map.set(p.id, {
+        tagName: tag?.name ?? null,
+        color: guardian ? ELEMENT_AVATAR_COLOR[guardian] : null,
+        blessed: reading.blessed,
+      })
+    }
+    return map
+  }, [placements, catalogById, scene.familyTags, extraTags])
   /** KST 시각(낮밤 조명). null = 아직 마운트 전 — SSR·하이드레이션은 테마 원색 그대로 (#418 전례) */
   const [hour, setHour] = useState<number | null>(null)
   // ── 신위 탭 회전 (안2.3 ④) ──
@@ -954,6 +987,7 @@ export function ShrineRoomClient({
           y: spot.y,
           flip: false,
           anchorId: null,
+          familyMemberId: null,
           state: {},
         },
       ])
@@ -979,6 +1013,8 @@ export function ShrineRoomClient({
             y: p.y,
             flip: p.flip,
             anchorId: p.anchorId,
+            // ⚠️ 저장이 전체 교체(delete+insert)라 이걸 빠뜨리면 저장마다 시렁 지정이 날아간다
+            familyMemberId: p.familyMemberId,
             state: p.state,
           })),
           scene.familyMemberId
@@ -1097,6 +1133,22 @@ export function ShrineRoomClient({
     aekmakRef.current?.querySelector<HTMLButtonElement>('[data-aekmak-open]')?.click()
   }, [])
   const plaqueSheets = useMemo(() => (aekmak ? { aekmak: openAekmakSheet } : undefined), [aekmak, openAekmakSheet])
+
+  /**
+   * 팻말 처마 등 — 「오늘 할 일이 남았다」만 켠다. 서버 현황이 근거다.
+   * · 오방기/척전: 오늘 무료 횟수가 남아 있고 아직 한 번도 안 했다
+   * · 액막이: 오늘 태울 수 있는데 아직 안 태웠다
+   * · 백일: 서약이 살아 있는데 오늘 기도를 아직 안 올렸다
+   */
+  const plaqueAttention = useMemo(
+    () => ({
+      obangki: obangki != null && obangki.remainingFree > 0 && obangki.todayCount === 0,
+      chuljeon: chuljeon != null && chuljeon.remaining > 0 && chuljeon.todayCount === 0,
+      aekmak: aekmak != null && aekmak.remaining > 0 && aekmak.todayCount === 0,
+      baekil: baekil != null && baekil.progress.phase === 'active' && !baekil.prayedToday,
+    }),
+    [obangki, chuljeon, aekmak, baekil]
+  )
 
   /**
    * 턴어라운드 프레임 경로(45°·측면·135°·뒷면). 회전이 애초에 불가한 상태(게이트 오프·모션 최소화)에서는 null 을 줘
@@ -1250,7 +1302,7 @@ export function ShrineRoomClient({
           꾸미기 중에는 내린다(신물 드래그와 탭 대상이 겹치면 배치가 페이지 이동으로 새어 나간다).
           z-2 라 신위(z-3)·신물(z 10~29) 뒤다 — 벽에 걸린 널이니 앞에 선 것에 가려지는 것이 맞다. */}
       {isOwner && !editing && hasPlaqueWall(daecheongStage?.wallpaperUrl) && (
-        <WindowPlaques onOpenSheet={plaqueSheets} />
+        <WindowPlaques onOpenSheet={plaqueSheets} attention={plaqueAttention} />
       )}
       {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
       <div
@@ -1338,6 +1390,8 @@ export function ShrineRoomClient({
             onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
             onAnchorHover={onAnchorHover}
             onDragLayer={onDragLayer}
+            shelf={shelfInfoById.get(p.id) ?? null}
+            onShelfTap={isOwner && shelfInfoById.has(p.id) ? () => setAssignShelfId(p.id) : null}
           />
         )
       })}
@@ -1809,6 +1863,28 @@ export function ShrineRoomClient({
           </div>
         </div>
       )}
+
+      {/* 시렁 가족 배정 시트 — 이름표(또는 「+ 가족 지정」) 탭으로 연다 */}
+      {assignShelfId !== null && (
+        <ShelfAssignSheet
+          placementId={assignShelfId}
+          currentMemberId={placements.find((p) => p.id === assignShelfId)?.familyMemberId ?? null}
+          onClose={() => setAssignShelfId(null)}
+          onAssigned={(tag: AssignedTag) => {
+            setPlacements((prev) =>
+              prev.map((p) => (p.id === assignShelfId ? { ...p, familyMemberId: tag.memberId } : p))
+            )
+            if (tag.memberId && tag.name) {
+              setExtraTags((prev) => ({
+                ...prev,
+                [tag.memberId as string]: { name: tag.name as string, avatarId: tag.avatarId },
+              }))
+            }
+            setAssignShelfId(null)
+            play('chime')
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -1826,6 +1902,10 @@ interface SpriteProps {
   onAnchorHover: (a: StageAnchor | null) => void
   /** 드래그 시작/끝에 층을 알린다 — 룸이 존 가이드 1면을 켜고 끈다 */
   onDragLayer: (layer: Layer | null) => void
+  /** 시렁 전용 — 이름표·축복. 시렁이 아니면 null */
+  shelf?: { tagName: string | null; color: string | null; blessed: boolean } | null
+  /** 이름표(또는 「+ 가족」) 탭 — 소유자만 받는다. 없으면 이름표는 그리되 CTA 는 없다 */
+  onShelfTap?: (() => void) | null
 }
 
 const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
@@ -1846,6 +1926,8 @@ function Sprite({
   onDragEnd,
   onAnchorHover,
   onDragLayer,
+  shelf = null,
+  onShelfTap = null,
 }: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLSpanElement>(null)
@@ -1949,7 +2031,16 @@ function Sprite({
    * 음수 지연이라 첫 프레임부터 주기 중간에서 시작한다(일제히 움직이는 어색함 제거).
    */
   const idleDelay = `-${((placement.x * 7 + placement.y * 13) % 5.5 || 0).toFixed(2)}s`
-  const bodyStyle: CssVars = { display: 'inline-block', '--shrine-idle-delay': idleDelay }
+  /**
+   * 개체별 박자 배율 — 위상차만으로는 "파도 기계"다(같은 주기로 어긋나 있을 뿐 함께 돈다).
+   * 주기 자체가 다르면 겹쳤다 떨어졌다 하며 영원히 안 맞는다 — 실물의 결. id 파생 결정론.
+   */
+  const idleScale = String(motionVariance(placement.id).durScale)
+  const bodyStyle: CssVars = {
+    display: 'inline-block',
+    '--shrine-idle-delay': idleDelay,
+    '--shrine-idle-scale': idleScale,
+  }
   const zIndex = depthZ(item.layer, placement.y)
   const shadow = groundShadow(item.layer, placement.y)
   // ⚠️ scene.ts 는 asset_url 이 비면 sprite_url 로 폴백한다 → 둘이 같으면 아직 레거시 스프라이트다.
@@ -2023,6 +2114,39 @@ function Sprite({
           item.emoji
         )}
       </span>
+      {/* 시렁 축복 — 지정된 가족의 오행이 실제로 얹혀 있을 때만. filter 대신 뒤 span opacity(합성 유지) */}
+      {shelf?.blessed && idle && (
+        <span
+          aria-hidden
+          className="shelf-blessed-aura"
+          style={{
+            width: `${spriteEm * 2.2}em`,
+            height: `${spriteEm * 1.4}em`,
+            marginLeft: `${(-spriteEm * 2.2) / 2}em`,
+            marginTop: `${(-spriteEm * 1.4) / 2}em`,
+            zIndex: -1,
+            ...({ '--shrine-idle-scale': idleScale } as CssVars),
+          }}
+        />
+      )}
+      {/* 시렁 이름표 — 누구의 자리인가. 편집 중엔 내린다(드래그와 탭이 싸운다) */}
+      {shelf && !editing && (shelf.tagName !== null || onShelfTap) && (
+        <button
+          type="button"
+          aria-label={shelf.tagName ? `${shelf.tagName}의 시렁 — 지정 바꾸기` : '시렁에 가족 지정'}
+          disabled={!onShelfTap}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            onShelfTap?.()
+          }}
+          className="shelf-tag"
+          style={{ cursor: onShelfTap ? 'pointer' : 'default' }}
+        >
+          {shelf.color && <span aria-hidden className="shelf-tag-dot" style={{ background: shelf.color }} />}
+          {shelf.tagName ?? '+ 가족 지정'}
+        </button>
+      )}
       {/* 접지 그림자 — 아이템과 한 래퍼라 함께 이동·함께 스케일된다 ("떠 있음" 해소) */}
       {shadow && (
         <span

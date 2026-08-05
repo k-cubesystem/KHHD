@@ -111,6 +111,10 @@ const REQUIRED_CLASSES = [
   // 스크롤 구동 읽기 막대 (A-3) — 감춤 규칙이 사라지면 미지원 브라우저가 "항상 다 읽음"을 본다
   '.scroll-progress-track',
   '.scroll-progress',
+  // 시렁(선반) — 이름표·축복 · 팻말 처마 등
+  '.shelf-tag',
+  '.shelf-blessed-aura',
+  '.shrine-plaque-ember',
 ]
 
 /** @keyframes 이름 */
@@ -189,6 +193,9 @@ const REQUIRED_KEYFRAMES = [
   'shrineRitualIn',
   // 스크롤 구동 (A-3)
   'scrollProgress',
+  // 시렁 축복 · 팻말 처마 등
+  'shelfBlessed',
+  'shrinePlaqueEmber',
 ]
 
 /** styled-jsx 금지 구역 — 여기 CSS 는 정적 파일(app/shrine-scene.css)에만 둔다 */

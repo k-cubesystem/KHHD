@@ -17,7 +17,7 @@
 
 /* 걸이(hanging) 아이템 — 족자·풍경이 천천히 살랑인다 */
 .shrine-idle-sway {
-  animation: shrineIdleSway 5.5s ease-in-out infinite;
+  animation: shrineIdleSway calc(5.5s * var(--shrine-idle-scale, 1)) ease-in-out infinite;
   animation-delay: var(--shrine-idle-delay, 0s);
   transform-origin: 50% 0%;
   will-change: transform;
@@ -37,7 +37,7 @@
 
 /* 점화된 촛불 위 광원 span — radial-gradient 배경에 얹어 쓰는 맥동 */
 .shrine-idle-glow {
-  animation: shrineIdleGlow 2.8s ease-in-out infinite;
+  animation: shrineIdleGlow calc(2.8s * var(--shrine-idle-scale, 1)) ease-in-out infinite;
   animation-delay: var(--shrine-idle-delay, 0s);
   will-change: opacity;
 }
@@ -53,7 +53,7 @@
 
 /* 벽걸이(wall) 아이템 — 걸이보다 약한 살랑 (벽에 붙어 있어 진폭이 작다) */
 .shrine-idle-wallsway {
-  animation: shrineIdleWallsway 6.5s ease-in-out infinite;
+  animation: shrineIdleWallsway calc(6.5s * var(--shrine-idle-scale, 1)) ease-in-out infinite;
   animation-delay: var(--shrine-idle-delay, 0s);
   transform-origin: 50% 0%;
   will-change: transform;
@@ -74,7 +74,7 @@
 /* 바닥·제단 소품 — 초미세 숨쉬기. 개체 하나는 안 보여도 위상차로 여럿이 숨쉬면
    "방이 살아있다"가 촛불·향로 없는 신당에서도 성립한다 */
 .shrine-idle-breathe {
-  animation: shrineIdleBreathe 4.6s ease-in-out infinite;
+  animation: shrineIdleBreathe calc(4.6s * var(--shrine-idle-scale, 1)) ease-in-out infinite;
   animation-delay: var(--shrine-idle-delay, 0s);
   transform-origin: 50% 100%;
   will-change: transform;
@@ -1654,6 +1654,19 @@
 .shrine-plaque-glow {
   animation: shrinePlaqueGlow 5.4s ease-in-out infinite;
 }
+/* 넷이 같은 박자로 빛나면 전광판이 된다 — 널마다 위상·주기를 흩는다(자리 기준, 정적) */
+.shrine-plaque-band > :nth-child(2).shrine-plaque-glow {
+  animation-delay: -1.9s;
+  animation-duration: 5.9s;
+}
+.shrine-plaque-band > :nth-child(3).shrine-plaque-glow {
+  animation-delay: -3.4s;
+  animation-duration: 5.1s;
+}
+.shrine-plaque-band > :nth-child(4).shrine-plaque-glow {
+  animation-delay: -4.6s;
+  animation-duration: 6.3s;
+}
 @keyframes shrinePlaqueGlow {
   0%,
   100% {
@@ -1705,5 +1718,93 @@
   ::view-transition-old(root),
   ::view-transition-new(root) {
     animation: none;
+  }
+}
+
+/* ═══ 시렁(선반) — 가족 이름표 · 축복 ═══════════════════════════════════════ */
+.shelf-tag {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% + 2px);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  padding: 1px 7px 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(201, 168, 76, 0.35);
+  background: rgba(16, 12, 8, 0.82);
+  font-size: 10px;
+  line-height: 1.5;
+  color: #f2dea8;
+}
+
+.shelf-tag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+/* 축복 — 지정된 가족의 오행이 실제로 얹혀 있을 때만 숨쉬는 금빛 온기. 상시 점멸이 아니라
+   "맞게 얹었다"의 확인이다 — 근거 없는 빛은 연출이 아니라 소음이다.
+   ⚠️ filter 를 애니메이션하지 않는다(합성 레이어 유지 규율) — 점화 광원과 같은 문법으로
+   뒤에 깐 span 의 opacity 만 움직인다. */
+.shelf-blessed-aura {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(244, 228, 186, 0.5) 0%,
+    rgba(201, 168, 76, 0.22) 45%,
+    rgba(201, 168, 76, 0) 72%
+  );
+  animation: shelfBlessed calc(4.2s * var(--shrine-idle-scale, 1)) ease-in-out infinite;
+}
+
+@keyframes shelfBlessed {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-blessed-aura {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* 팻말 처마 등 — 오늘 할 일이 남은 팻말에만 켜지는 작은 불씨. 크기·자리는 널 배율(--plq-s)을 탄다 */
+.shrine-plaque-ember {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #f4e4ba 0%, #c9a84c 55%, rgba(201, 168, 76, 0) 100%);
+  animation: shrinePlaqueEmber 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shrinePlaqueEmber {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shrine-plaque-ember {
+    animation: none;
+    opacity: 0.8;
   }
 }

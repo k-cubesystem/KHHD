@@ -41,6 +41,13 @@ type BandVars = CSSProperties & ReturnType<typeof plaqueBandVars>
 interface Props {
   /** 방 안 시트를 여는 손잡이. 이 키에 핸들러가 없으면 해당 팻말을 걸지 않는다. */
   onOpenSheet?: Partial<Record<PlaqueSheet, () => void>>
+  /**
+   * 팻말별 「오늘 할 일이 남았다」 표식 — true 면 처마 등(燈) 점이 켜진다.
+   *
+   * ⚠️ 서버 현황(remaining 등)에서만 계산한다 — 근거 없는 점은 소음이고, 소음이 된 표식은
+   *    진짜 할 일이 남았을 때도 무시된다.
+   */
+  attention?: Partial<Record<string, boolean>>
 }
 
 /** 널 한 장의 공통 겉모습 — Link/button 두 껍데기가 같은 널을 쓰도록 한 곳에 둔다. */
@@ -55,9 +62,22 @@ function plaqueStyle(p: ShrinePlaque): PlaqueVars {
   }
 }
 
-function PlaqueFace({ p }: { p: ShrinePlaque }): ReactNode {
+function PlaqueFace({ p, lit }: { p: ShrinePlaque; lit: boolean }): ReactNode {
   return (
     <>
+      {/* 처마 등 — 오늘 할 일이 남은 팻말에만 켜진다(널과 같은 배율을 탄다) */}
+      {lit && (
+        <span
+          aria-hidden
+          className="shrine-plaque-ember"
+          style={{
+            width: 'calc(7 * var(--plq-s))',
+            height: 'calc(7 * var(--plq-s))',
+            top: 'calc(6 * var(--plq-s))',
+            right: 'calc(7 * var(--plq-s))',
+          }}
+        />
+      )}
       <span
         aria-hidden
         className="font-serif text-gold-500/70"
@@ -78,12 +98,13 @@ function PlaqueFace({ p }: { p: ShrinePlaque }): ReactNode {
 
 const PLAQUE_CLASS = 'shrine-plaque shrine-plaque-glow grid place-items-center leading-none'
 
-export function WindowPlaques({ onOpenSheet }: Props) {
+export function WindowPlaques({ onOpenSheet, attention }: Props) {
   const track = (key: string) => trackEvent({ action: 'shrine_plaque', category: 'shrine', label: key })
 
   return (
     <div className="shrine-plaque-band" style={plaqueBandVars() as BandVars}>
       {SHRINE_PLAQUES.map((p) => {
+        const lit = attention?.[p.key] === true
         if (p.kind === 'sheet') {
           const open = onOpenSheet?.[p.sheet]
           if (!open) return null
@@ -99,7 +120,7 @@ export function WindowPlaques({ onOpenSheet }: Props) {
               className={PLAQUE_CLASS}
               style={plaqueStyle(p)}
             >
-              <PlaqueFace p={p} />
+              <PlaqueFace p={p} lit={lit} />
             </button>
           )
         }
@@ -112,7 +133,7 @@ export function WindowPlaques({ onOpenSheet }: Props) {
             className={PLAQUE_CLASS}
             style={plaqueStyle(p)}
           >
-            <PlaqueFace p={p} />
+            <PlaqueFace p={p} lit={lit} />
           </Link>
         )
       })}

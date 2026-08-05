@@ -520,6 +520,14 @@ export interface StageCatalogItem extends CatalogItem {
 /** v2 배치 — 스냅된 앵커 식별자 추가 */
 export interface StagePlacement extends Placement {
   anchorId: string | null
+  /** 시렁(선반)에 지정된 가족. 시렁이 아닌 배치는 항상 null 이다. */
+  familyMemberId: string | null
+}
+
+/** 시렁 이름표용 — 지정된 가족의 표시 정보(소유자 화면에만 내려간다). */
+export interface ShelfFamilyTag {
+  name: string
+  avatarId: string | null
 }
 
 /** v2 테마 — 조립식 무대 스펙 추가 (null 이면 레거시 room.webp 렌더) */
@@ -538,4 +546,11 @@ export interface StageSceneData extends SceneData {
   catalog: StageCatalogItem[]
   placements: StagePlacement[]
   themes: StageThemePack[]
+  /**
+   * 시렁에 지정된 가족의 이름표 (memberId → 표시 정보).
+   *
+   * ⚠️ **소유자 화면에만** 채워진다. 방문자 뷰는 빈 객체다 — 남의 신당에서 그 집 가족의
+   *    이름이 읽히면 안 된다(RLS 도 막지만, 조회 자체를 하지 않는 것이 규율이다).
+   */
+  familyTags: Record<string, ShelfFamilyTag>
 }

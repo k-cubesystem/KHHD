@@ -33,6 +33,9 @@ export const SHRINE_ANIM_CLASSES: readonly string[] = Object.freeze([
   // 가족 사랑방
   'fh-flicker',
   'fh-bloom',
+  // 시렁 축복 · 팻말 처마 등
+  'shelf-blessed-aura',
+  'shrine-plaque-ember',
 ])
 
 /** 한 클래스에 대한 관측값 — DOM 을 모르는 순수 함수가 받도록 숫자만 담는다. */
