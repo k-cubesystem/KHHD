@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
-import { GUARDIANS, MAX_GUARDIANS, findGuardian } from '@/lib/domain/shrine/guardians'
+import { GUARDIANS, MAX_GUARDIANS, findGuardian, parseGuardianSlugs } from '@/lib/domain/shrine/guardians'
 import { purchaseToInventory } from '@/app/actions/shrine/inventory'
 
 /**
@@ -94,6 +94,8 @@ export async function equipGuardians(slugs: string[], familyMemberId?: string | 
 
 export interface PurchaseGuardianResult {
   success: boolean
+  /** 구매 직후 본인 신당 빈자리에 자동 착좌됐는가 — UI 토스트 분기용 */
+  seated?: boolean
   error?: 'UNKNOWN_GUARDIAN' | 'INSUFFICIENT_BOKCHAE' | 'FAILED'
 }
 
@@ -101,6 +103,11 @@ export interface PurchaseGuardianResult {
  * 신수 봉헌(구매) — 신수 탭에서 바로. 결제·인벤토리 반영은 기존 purchaseToInventory 를
  * **함수로 재사용**한다(경로가 두 벌이면 환불·중복 방지 같은 규칙이 갈라진다).
  * 여기서는 슬러그 → 카탈로그 id 만 푼다.
+ *
+ * 구매가 성사되면 **본인 신당 빈자리에 바로 착좌까지** 이어 준다 — 봉헌 4좌·착좌 0좌로
+ * 방이 비어 있던 실사용 데이터(2026-08-06)의 교훈: 구매와 착좌가 다른 탭이면 신수는
+ * 산 채로 잊힌다. 이미 2좌면 건드리지 않는다(교체는 모아보기 「신수」 탭 그대로).
+ * 착좌 실패는 구매를 되돌리지 않는다 — 봉헌은 유효하고, 착좌는 언제든 다시 할 수 있다.
  */
 export async function purchaseGuardian(slug: string): Promise<PurchaseGuardianResult> {
   const g = findGuardian(typeof slug === 'string' ? slug : '')
@@ -116,11 +123,33 @@ export async function purchaseGuardian(slug: string): Promise<PurchaseGuardianRe
   if (!item) return { success: false, error: 'FAILED' }
 
   const res = await purchaseToInventory(String(item.id))
-  if (res.success) return { success: true }
-  return {
-    success: false,
-    error: res.error === 'INSUFFICIENT_BOKCHAE' ? 'INSUFFICIENT_BOKCHAE' : 'FAILED',
+  if (!res.success) {
+    return {
+      success: false,
+      error: res.error === 'INSUFFICIENT_BOKCHAE' ? 'INSUFFICIENT_BOKCHAE' : 'FAILED',
+    }
   }
+
+  // 빈자리 자동 착좌 — 검증·admin 경유는 equipGuardians 한 벌을 그대로 쓴다(경로 분기 금지)
+  let seated = false
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user) {
+    const { data: shrine } = await supabase
+      .from('shrines')
+      .select('guardians')
+      .eq('user_id', user.id)
+      .is('family_member_id', null)
+      .maybeSingle()
+    const current = parseGuardianSlugs(shrine?.guardians)
+    if (!current.includes(g.slug) && current.length < MAX_GUARDIANS) {
+      const eq = await equipGuardians([...current, g.slug])
+      seated = eq.success
+    }
+  }
+
+  return { success: true, seated }
 }
 
 /** 화면용 — 보유한 신수 이름 집합(카탈로그 이름 기준). 컬렉션 그리드가 쓴다. */

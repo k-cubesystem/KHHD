@@ -28,9 +28,9 @@ export const SHOP_SECTIONS: readonly ShopSection[] = Object.freeze([
   {
     key: 'shelf',
     label: '시렁·세간',
-    // 가족 자리 도메인(FAMILY_SEAT_TYPES)과 단일 출처 — 이 갈래 = 가족을 지정할 수 있는 세간 전부
+    // 세간 도메인(FAMILY_SEAT_TYPES)과 단일 출처 — 갈래 배정·진열대 판정이 같은 배열을 본다
     types: FAMILY_SEAT_TYPES,
-    hint: '벽에 매고 바닥에 놓는 세간 — 가족 한 사람의 자리로 지정할 수 있습니다',
+    hint: '벽에 매고 바닥에 놓는 세간 — 시렁·상·궤 위에는 신물을 얹어 진열합니다',
   },
   {
     key: 'mugu',

@@ -83,10 +83,9 @@ import {
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
-import { GenericPlaqueBand, WindowPlaques } from './WindowPlaques'
+import { GenericPlaqueBand } from './WindowPlaques'
+import { RitualHall } from './RitualHall'
 import { hasPlaqueWall } from '@/lib/domain/shrine/plaque'
-import { FamilyHall } from './FamilyHall'
-import { HALL_BAND } from '@/lib/domain/shrine/family-hall-layout'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
@@ -98,17 +97,13 @@ import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
 import {
   SEAT_ANCHOR_PREFIX,
-  familyGuardianElement,
   isFamilySeat,
   isOnSurface,
   isSeatSurface,
-  readShelf,
   surfaceSlotOffsets,
 } from '@/lib/domain/shrine/shelf'
 import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
-import { ELEMENT_AVATAR_COLOR } from '@/lib/domain/family/avatars'
-import { ShelfAssignSheet, type AssignedTag } from './ShelfAssignSheet'
 import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
 import { trackEvent } from '@/lib/analytics/ga4'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
@@ -201,24 +196,14 @@ const FAR_SKY =
 /** 전경 문틀 — 대청 경계에 드리우는 그림자 폭(world %) */
 const JAMB_W_PCT = 3.2
 
-// ── 가족 사랑방 (안3 / ARCH §2 FamilyHall) ────────────────────
-// 사랑방 자리 — 안2.1 「큰 방 하나」에서는 구역(후원)이 아니라 **world 우측 영역**이다.
-// 구역이 하나뿐이라 code 로 찾을 자리가 없어졌고, 실내 문법상 사랑방은 같은 방의 오른편에 있다.
-// world 오른쪽 끝에서 rightInset 만큼 띄운 폭 width 의 띠 — 좌표는 world %(=x0/x1) 다.
-// 그 두 값은 도메인(HALL_BAND)이 든다: 좌석 이동 범위(HALL_SEAT_ZONE)가 띠의 world 자리에서 파생되므로
-// 여기서 상수를 따로 들면 띠는 옮겼는데 범위는 옛 자리를 가리키는 조용한 어긋남이 난다.
-/**
- * 사랑방 층 — 구역 구조물(StageLayers, z auto=0)보다 위·아이템 대역(depthZ 10~29)보다 아래.
- * 값만으로도 "무대 위에 선 인물" 자리에 들어간다(신위 스탠드 z-3 위, 신당지기 z-12 아래).
- * 큰 방에서는 대청 콘텐츠와 x 범위가 겹치지만, 좌석은 배경이 없는 오브·방석뿐이라
- * 아래로는 벽·마루만 가리고 위로는 아이템·신당지기가 그대로 앞에 선다.
- */
-const FAMILY_HALL_Z = 8
+// ── 가족 데이터 (구 사랑방 안3 승계) ────────────────────────────
+// 사랑방(FamilyHall) 렌더는 2026-08-06 물러났다 — 가족 표현이 선반장(FamilyShelfWall)과
+// 겹쳐 한 사람이 방에 두 번 서는 그림이 됐기 때문. **데이터(familyHall)는 계속 받는다**:
+// 선반장 유닛(hall.members)과 티어 게이트가 이 데이터에 산다. 우측 영역은 의식각(RitualHall)이 쓴다.
 
 /**
  * 합동 기도 낙관 반영 — 방금 기도한 **본인 좌석만** 켠다(서버 재조회 없이).
- * 만개(allPrayedToday) 판정은 서버(get_family_hall_presence 소비부)와 같은 규칙으로 다시 센다 —
- * 전원 점등이 되면 FamilyHall 이 data 만 보고 스스로 만개 연출로 넘어간다.
+ * 좌석 UI 는 물러났지만 members 의 prayedToday 는 선반장·후속 연출의 근거로 계속 갱신한다.
  * 이미 켜져 있으면 **같은 참조**를 돌려 헛 리렌더를 내지 않는다.
  */
 function litSelfSeat(data: FamilyHallData, atIso: string): FamilyHallData {
@@ -343,37 +328,13 @@ export function ShrineRoomClient({
   const { playEntrance, playPrayer, shake: cinShake, vibrate: cinVibrate } = cin
 
   const [placements, setPlacements] = useState<StagePlacement[]>(scene.placements)
-  // ── 세간(시렁·제상·소반·반닫이·문갑·보료…) — 가족 자리 배정 ──
-  /** 배정 시트가 열린 세간 배치 id (null=닫힘) */
-  const [assignShelfId, setAssignShelfId] = useState<string | null>(null)
-  /** 이 세션에서 새로 지정한 이름표 — scene.familyTags 는 서버 스냅샷이라 방금 지정분이 없다 */
-  const [extraTags, setExtraTags] = useState<Record<string, { name: string; avatarId: string | null }>>({})
+  // 세간별 「+ 가족 지정」 이름표·시트는 2026-08-06 물러났다 — 가족의 자리는 선반장
+  // (FamilyShelfWall) 하나로 통일한다(같은 사람이 방에 두 번 서는 그림 해소).
+  // ⚠️ familyMemberId 는 저장 경로에 **계속** 실어 나른다 — 전체 교체 저장이라 빼는 순간
+  //    기존 지정 데이터가 다음 저장에 소멸한다(shelf.test 계약).
 
-  /**
-   * 자리(세간)별 읽기 — 이름표(가족·정령 색)와 축복 여부.
-   *
-   * ⚠️ 방문자 뷰는 familyTags 가 빈 객체라 이름표가 아예 안 그려진다 — 남의 신당에서
-   *    그 집 가족의 이름이 읽히면 안 된다(서버가 조회하지 않고, 여기서도 그리지 않는다).
-   */
   /** 카탈로그 오행 룩업 — 가족 선반장 축복 판정용(참조 고정으로 자식 memo 오염 방지) */
   const elementOfCatalog = useCallback((id: string) => catalogById.get(id)?.element ?? null, [catalogById])
-  const shelfInfoById = useMemo(() => {
-    const merged = { ...scene.familyTags, ...extraTags }
-    const map = new Map<string, { tagName: string | null; color: string | null; blessed: boolean }>()
-    for (const p of placements) {
-      const item = catalogById.get(p.catalogItemId)
-      if (!item || !isFamilySeat(item)) continue
-      const tag = p.familyMemberId ? (merged[p.familyMemberId] ?? null) : null
-      const guardian = familyGuardianElement(tag?.avatarId)
-      const reading = readShelf(p, guardian, p.familyMemberId !== null && tag !== null, placements, catalogById)
-      map.set(p.id, {
-        tagName: tag?.name ?? null,
-        color: guardian ? ELEMENT_AVATAR_COLOR[guardian] : null,
-        blessed: reading.blessed,
-      })
-    }
-    return map
-  }, [placements, catalogById, scene.familyTags, extraTags])
   /** KST 시각(낮밤 조명). null = 아직 마운트 전 — SSR·하이드레이션은 테마 원색 그대로 (#418 전례) */
   const [hour, setHour] = useState<number | null>(null)
   // ── 신위 탭 회전 (안2.3 ④) ──
@@ -618,25 +579,7 @@ export function ShrineRoomClient({
       }))
   }, [worldActive, world, daecheong])
   const daecheongBox = useMemo(() => zoneBox(world, daecheong), [world, daecheong])
-  /**
-   * 사랑방을 얹을 박스 — **world 우측 영역**(안2.1). 아래 중 하나라도 아니면 null 이고,
-   * 그러면 사랑방은 아예 마운트되지 않는다: 연출 게이트 on(GAMEFEEL_V1) ·
-   * 두루마리(worldActive ⊃ SCROLL_SHRINE_V1) · 좌석 데이터.
-   * 두 플래그 중 하나만 내려도 자동 비노출이라 사랑방도 같은 레버로 원복된다(ARCH §8).
-   *
-   * ⚠️ 구역 code('huwon') 탐색이 아니다 — 단일 구역 시드가 적용되면 후원이 사라져 사랑방이
-   *    예외도 로그도 없이 화면에서 증발한다. 좌표로 잡으면 구역 구성과 무관하게 자리가 남는다.
-   */
-  const hallBox = useMemo<CSSProperties | null>(() => {
-    if (!GAMEFEEL_V1 || !worldActive || !hall) return null
-    const x1 = world.width - HALL_BAND.rightInset
-    const x0 = x1 - HALL_BAND.width
-    return {
-      left: `${((x0 / world.width) * 100).toFixed(4)}%`,
-      width: `${((HALL_BAND.width / world.width) * 100).toFixed(4)}%`,
-      zIndex: FAMILY_HALL_Z,
-    }
-  }, [worldActive, hall, world.width])
+  // (구 사랑방 hallBox — 2026-08-06 제거. 가족은 선반장으로, 우측 영역은 의식각(RitualHall)이 물려받았다)
   /** 시차층 계수 CSS 변수 — 폭이 바뀔 때만 다시 계산된다 */
   const worldVars = useMemo<CssVars>(
     () => ({
@@ -1426,17 +1369,16 @@ export function ShrineRoomClient({
       />
       <div className="absolute inset-x-0 top-0 h-[3px] z-[2]" style={{ background: 'var(--th-top)' }} />
 
-      {/* 창방 팻말 — 창 위에 걸린 의식 전용 페이지 진입점(CEO 지시 2026-07-30).
-          좌표를 아는 벽(반가 와이드 무라)에서만, 그리고 소유자에게만 건다 —
-          방문자는 남의 신당에서 의식을 치를 수 없고, 다른 테마에는 그 창이 아예 없다.
+      {/* 의식 진입점 — 소유자에게만(방문자는 남의 신당에서 의식을 치를 수 없다),
           꾸미기 중에는 내린다(신물 드래그와 탭 대상이 겹치면 배치가 페이지 이동으로 새어 나간다).
-          z-2 라 신위(z-3)·신물(z 10~29) 뒤다 — 벽에 걸린 널이니 앞에 선 것에 가려지는 것이 맞다. */}
+          · 반가(무라·두루마리): 의식각(RitualHall) — 신 뒤 창방 띠에서 빼서 **오른쪽 공간**에
+            현판 2×2 로 다시 걸었다(2026-08-06 지시, 사랑방이 물러난 자리).
+          · 그 밖의 테마: 간이 팻말 줄(GenericPlaqueBand) 그대로 — 테마 공통 무대 P1. */}
       {isOwner &&
         !editing &&
-        (hasPlaqueWall(daecheongStage?.wallpaperUrl) ? (
-          <WindowPlaques onOpenSheet={plaqueSheets} attention={plaqueAttention} />
+        (worldActive && hasPlaqueWall(daecheongStage?.wallpaperUrl) ? (
+          <RitualHall onOpenSheet={plaqueSheets} attention={plaqueAttention} />
         ) : (
-          // 테마 공통 무대 P1 — 무라가 아닌 15테마에도 같은 4문(처마 등 포함)을 건다
           <GenericPlaqueBand onOpenSheet={plaqueSheets} attention={plaqueAttention} />
         ))}
       {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
@@ -1533,8 +1475,6 @@ export function ShrineRoomClient({
             onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
             onAnchorHover={onAnchorHover}
             onDragLayer={onDragLayer}
-            shelf={shelfInfoById.get(p.id) ?? null}
-            onShelfTap={isOwner && shelfInfoById.has(p.id) ? () => setAssignShelfId(p.id) : null}
             surfaceAnchors={surfaceAnchors}
             zOverride={surfaceZById?.get(p.id)}
           />
@@ -1675,17 +1615,8 @@ export function ShrineRoomClient({
                   <StageLayers stage={z.stage} themeCode={activeCode} slot="structures" zoned widthScale={z.scale} />
                 </div>
               ))}
-              {/* 가족 사랑방 — world 우측 영역 박스를 100% 채운다(안쪽 좌표는 FamilyHall 이 % 로 자립).
-                  구역 세트(z auto)보다 위·아이템 대역(10~29)보다 아래라 방 콘텐츠와 층이 섞이지 않는다.
-                  scenery 와 달리 pointer-events 를 살린다 — 좌석 탭이 이 방의 유일한 상호작용이다.
-                  (팬 제스처는 룸이 캡처 단계에서 가로채므로 좌석 위에서 끌어도 카메라가 따라온다.) */}
-              {hallBox && hall && (
-                <div className="absolute inset-y-0" style={hallBox}>
-                  {/* 꾸미기 모드에서는 좌석도 끌어 옮긴다 — 좌석 좌표 저장은 사랑방이 스스로 한다
-                      (룸의 「완료」 저장은 신물 배치 전용이라 좌석이 끼어들 자리가 없다) */}
-                  <FamilyHall data={hall} editing={editing} />
-                </div>
-              )}
+              {/* (구 가족 사랑방 자리 — 2026-08-06 물러남. 가족은 선반장(FamilyShelfWall) 상단이
+                  유일한 자리이고, world 우측 영역은 의식각(RitualHall, stageContent 안)이 쓴다) */}
               <div className="absolute inset-y-0" style={daecheongBox}>
                 {stageContent}
               </div>
@@ -2008,28 +1939,6 @@ export function ShrineRoomClient({
           </div>
         </div>
       )}
-
-      {/* 세간 가족 자리 배정 시트 — 이름표(또는 「+ 가족 지정」) 탭으로 연다 */}
-      {assignShelfId !== null && (
-        <ShelfAssignSheet
-          placementId={assignShelfId}
-          currentMemberId={placements.find((p) => p.id === assignShelfId)?.familyMemberId ?? null}
-          onClose={() => setAssignShelfId(null)}
-          onAssigned={(tag: AssignedTag) => {
-            setPlacements((prev) =>
-              prev.map((p) => (p.id === assignShelfId ? { ...p, familyMemberId: tag.memberId } : p))
-            )
-            if (tag.memberId && tag.name) {
-              setExtraTags((prev) => ({
-                ...prev,
-                [tag.memberId as string]: { name: tag.name as string, avatarId: tag.avatarId },
-              }))
-            }
-            setAssignShelfId(null)
-            play('chime')
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -2047,10 +1956,6 @@ interface SpriteProps {
   onAnchorHover: (a: StageAnchor | null) => void
   /** 드래그 시작/끝에 층을 알린다 — 룸이 존 가이드 1면을 켜고 끈다 */
   onDragLayer: (layer: Layer | null) => void
-  /** 세간(가족 자리) 전용 — 이름표·축복. 자리가 아니면 null */
-  shelf?: { tagName: string | null; color: string | null; blessed: boolean } | null
-  /** 이름표(또는 「+ 가족」) 탭 — 소유자만 받는다. 없으면 이름표는 그리되 CTA 는 없다 */
-  onShelfTap?: (() => void) | null
   /** 진열대 진열 칸(층 없음) — 끌리는 아이템의 층을 입혀 스냅 후보에 합류시킨다 */
   surfaceAnchors: ReadonlyArray<Omit<StageAnchor, 'layer'>>
   /** 진열대 위 z 끌어올림 — 없으면 depthZ 그대로 (깊이 역전 교정, 거리 판정) */
@@ -2081,8 +1986,6 @@ function Sprite({
   onDragEnd,
   onAnchorHover,
   onDragLayer,
-  shelf = null,
-  onShelfTap = null,
   surfaceAnchors,
   zOverride,
 }: SpriteProps) {
@@ -2288,39 +2191,7 @@ function Sprite({
           item.emoji
         )}
       </span>
-      {/* 자리 축복 — 지정된 가족의 오행이 실제로 곁에 있을 때만. filter 대신 뒤 span opacity(합성 유지) */}
-      {shelf?.blessed && idle && (
-        <span
-          aria-hidden
-          className="shelf-blessed-aura"
-          style={{
-            width: `${spriteEm * 2.2}em`,
-            height: `${spriteEm * 1.4}em`,
-            marginLeft: `${(-spriteEm * 2.2) / 2}em`,
-            marginTop: `${(-spriteEm * 1.4) / 2}em`,
-            zIndex: -1,
-            ...({ '--shrine-idle-scale': idleScale } as CssVars),
-          }}
-        />
-      )}
-      {/* 자리 이름표 — 누구의 자리인가. 편집 중엔 내린다(드래그와 탭이 싸운다) */}
-      {shelf && !editing && (shelf.tagName !== null || onShelfTap) && (
-        <button
-          type="button"
-          aria-label={shelf.tagName ? `${shelf.tagName}의 자리 — 지정 바꾸기` : '가족 자리 지정'}
-          disabled={!onShelfTap}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            onShelfTap?.()
-          }}
-          className="shelf-tag"
-          style={{ cursor: onShelfTap ? 'pointer' : 'default' }}
-        >
-          {shelf.color && <span aria-hidden className="shelf-tag-dot" style={{ background: shelf.color }} />}
-          {shelf.tagName ?? '+ 가족 지정'}
-        </button>
-      )}
+      {/* (세간별 가족 이름표·축복은 2026-08-06 물러남 — 가족의 자리와 축복은 선반장이 든다) */}
       {/* 접지 그림자 — 아이템과 한 래퍼라 함께 이동·함께 스케일된다 ("떠 있음" 해소) */}
       {shadow && (
         <span

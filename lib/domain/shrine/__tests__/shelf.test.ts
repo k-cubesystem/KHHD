@@ -27,7 +27,6 @@ const MIGRATION = read('supabase/migrations/20260805_shrine_shelf.sql')
 const SEATS_MIGRATION = read('supabase/migrations/20260806_shrine_family_seats.sql')
 const ROOM = read('components/shrine/scene/ShrineRoomClient.tsx')
 const SCENE_ACTION = read('app/actions/shrine/scene.ts')
-const ASSIGN_ACTION = read('app/actions/shrine/shelf.ts')
 
 let seq = 0
 function item(over: Partial<CatalogItem>): CatalogItem {
@@ -152,13 +151,15 @@ describe('가족 자리 — 시렁을 넘어 세간 전반으로', () => {
     expect(r).toMatchObject({ laid: 1, matched: 1, blessed: true })
   })
 
-  it('★ 배정 액션이 FAMILY_SEAT_TYPES 로 거른다 — shelf 하드코딩이 되살아나면 여기서 걸린다', () => {
-    expect(ASSIGN_ACTION).toContain('FAMILY_SEAT_TYPES.includes(type)')
-    expect(ASSIGN_ACTION).not.toContain('type !== SHELF_TYPE')
+  it('★ 방이 세간 판정에 isFamilySeat 를 쓴다 — 진열대 스냅에서 가구 위 가구를 거르는 판정', () => {
+    expect(ROOM).toContain('isFamilySeat(item)')
   })
 
-  it('★ 방이 자리 판정에 isFamilySeat 를 쓴다 — isShelf 로 되돌아가면 새 세간의 이름표가 사라진다', () => {
-    expect(ROOM).toContain('isFamilySeat(item)')
+  it('★ 세간별 가족 배정 UI 는 물러났다(2026-08-06) — 가족의 자리는 선반장 하나다', () => {
+    // 배정 시트·액션이 되살아나면 가족이 방에 두 번 서는 그림이 재발한다
+    expect(ROOM).not.toContain('ShelfAssignSheet')
+    expect(existsSync(path.join(process.cwd(), 'app/actions/shrine/shelf.ts'))).toBe(false)
+    // 단, familyMemberId 는 저장 경로에 계속 실린다 — 빼면 기존 지정 데이터가 저장마다 소멸한다
   })
 })
 

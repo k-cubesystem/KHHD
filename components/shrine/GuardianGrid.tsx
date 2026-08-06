@@ -56,7 +56,12 @@ export function GuardianGrid({
     }
     setOwnedExtra((prev) => new Set(prev).add(name))
     setSelected((prev) => (prev.length < MAX_GUARDIANS && !prev.includes(slug) ? [...prev, slug] : prev))
-    toast.success(`${name} — 모셔 왔습니다. 「이대로 모시기」로 착좌합니다`)
+    // 빈자리가 있으면 서버가 봉헌과 함께 착좌까지 마친다 — 토스트가 다음 할 일을 정확히 말해야 한다
+    toast.success(
+      res.seated === true
+        ? `${name} — 모셔 왔습니다. 신당에 바로 착좌했어요`
+        : `${name} — 모셔 왔습니다. 「이대로 모시기」로 착좌합니다`
+    )
   }
 
   const dirty = useMemo(
