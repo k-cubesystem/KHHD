@@ -38,6 +38,8 @@ import { ZONES } from '../zones'
 const ROOT = path.resolve(__dirname, '../../../..')
 const SEED_SQL = path.join(ROOT, 'supabase', 'migrations', '20260730_shrine_banga_mural_320.sql')
 const ALTAR_SQL = path.join(ROOT, 'supabase', 'migrations', '20260730_shrine_banga_altar_platform.sql')
+/** 2026-08-06 문 제거 — 구역 structures 의 **현행 정본**은 이 파일의 $structures2$ 블록이다 */
+const FINAL_SQL = path.join(ROOT, 'supabase', 'migrations', '20260806b_banga_remove_door.sql')
 const PUBLIC_DIR = path.join(ROOT, 'public')
 
 /** 안2.2 논리 폭. world.ts WORLD_DEFAULT_WIDTH(240)의 후속이지만 상수를 고치지는 않았다 —
@@ -75,6 +77,7 @@ const ALTAR_ANCHOR_Y = 53.5
 /** 시드 SQL 안에서 순수 JSON 을 감싸는 달러 인용 구분자 (Postgres dollar-quoting) */
 const DOLLAR_TAG = '$world$'
 const ALTAR_DOLLAR_TAG = '$structures$'
+const FINAL_DOLLAR_TAG = '$structures2$'
 
 /**
  * 시드 SQL → JSON.
@@ -102,6 +105,13 @@ const readSeedWorldJson = (): unknown => readDollarJson(SEED_SQL, DOLLAR_TAG)
 function readAltarStructuresRaw(): Record<string, unknown>[] {
   const parsed = readDollarJson(ALTAR_SQL, ALTAR_DOLLAR_TAG)
   if (!Array.isArray(parsed)) throw new Error('시드 전제 붕괴: 안2.3 블록 최상위가 배열이 아니다')
+  return parsed as Record<string, unknown>[]
+}
+
+/** 문 제거(2026-08-06) 이후의 **현행** structures 원본 — 마이그레이션 체인의 마지막 승자다 */
+function readFinalStructuresRaw(): Record<string, unknown>[] {
+  const parsed = readDollarJson(FINAL_SQL, FINAL_DOLLAR_TAG)
+  if (!Array.isArray(parsed)) throw new Error('시드 전제 붕괴: 문 제거 블록 최상위가 배열이 아니다')
   return parsed as Record<string, unknown>[]
 }
 
@@ -143,7 +153,8 @@ function mergedStageRaw(): Record<string, unknown> {
   const merged = { ...BANGA_STAGE_RAW, ...seed } as Record<string, unknown>
   const zones = merged.zones
   if (!Array.isArray(zones) || zones.length !== 1) throw new Error('시드 전제 붕괴: 구역이 1개가 아니다')
-  const zone = { ...(zones[0] as Record<string, unknown>), structures: readAltarStructuresRaw() }
+  // 구조물은 마이그레이션 체인의 마지막 승자(문 제거 시드)가 정본이다 — 안2.3 원본은 역사로만 남는다
+  const zone = { ...(zones[0] as Record<string, unknown>), structures: readFinalStructuresRaw() }
   return { ...merged, zones: [zone] }
 }
 
@@ -264,20 +275,20 @@ describe('무대 사양 — 무라·구조물을 구역이 직접 든다', () =>
     expect(zone.wallpaperUrl).not.toBe(bangaStage().wallpaperUrl)
   })
 
-  it('구역 structures 가 단상·상판·문간 3종이다 — zoneStage 가 최상위를 **대체**하므로 여기 있어야 산다', () => {
+  it('구역 structures 가 단상·상판 2종이다 — 문간은 2026-08-06 걷었다(왼벽=가족 선반장 자리)', () => {
     // world-render.ts zoneStage: structures.length > 0 ? zone.structures : base.structures
-    // 문만 넣었다면 제단이 예외도 로그도 없이 사라진다. 그 함정을 이 단정이 막는다.
+    // 상판만 넣었다면 단상이 예외도 로그도 없이 사라진다. 그 함정을 이 단정이 막는다.
     const base = bangaStage()
     const stage = zoneStage(daecheongZone(seededWorld()), base)
-    expect(stage.structures.map((s) => s.code)).toEqual(['platform-banga', 'altar-banga', 'door-banga'])
+    expect(stage.structures.map((s) => s.code)).toEqual(['platform-banga', 'altar-banga'])
     expect(stage.structures).not.toEqual(base.structures) // 승계가 아니라 구역 정의가 이겼다
   })
 
   it('배열 순서가 곧 그리는 순서(뒤→앞) — 단상이 상판보다 먼저다', () => {
     // StageLayers 는 structures 를 순서대로 절대배치한다(z-index 미지정) → 나중 것이 위에 그려진다.
     // 순서가 뒤집히면 단상이 상판을 덮어 "제단이 신 뒤로 가는" 그림이 된다.
-    const raw = readAltarStructuresRaw()
-    expect(raw.map((s) => s.code)).toEqual(['platform-banga', 'altar-banga', 'door-banga'])
+    const raw = readFinalStructuresRaw()
+    expect(raw.map((s) => s.code)).toEqual(['platform-banga', 'altar-banga'])
   })
 
   it('제단 상판이 레거시 altar.webp 가 아니라 새 상판 스프라이트를 든다', () => {
@@ -301,10 +312,12 @@ describe('무대 사양 — 무라·구조물을 구역이 직접 든다', () =>
     })
   })
 
-  it('문간은 좌측 입장 시작점에 앵커 없이 선다 (안2.2 값 그대로 승계)', () => {
+  it('★ 문간이 없다 — 왼벽은 가족 선반장 자리다(2026-08-06). 자산(room-door.webp)은 원복용으로 남긴다', () => {
     const stage = zoneStage(daecheongZone(seededWorld()), bangaStage())
-    const door = stage.structures.find((s) => s.code === 'door-banga')
-    expect(door).toEqual({ code: 'door-banga', assetUrl: DOOR_SPRITE, x: 10, y: 37, w: 36, anchors: [] })
+    expect(stage.structures.find((s) => s.code === 'door-banga')).toBeUndefined()
+    expect(stage.structures.some((s) => s.assetUrl === DOOR_SPRITE)).toBe(false)
+    // 안2.3 시드(역사)에는 문간이 있었다 — 제거는 새 마이그레이션의 몫이지 역사 편집이 아니다
+    expect(readAltarStructuresRaw().map((s) => s.code)).toContain('door-banga')
   })
 
   it('광원은 최상위에서 승계된다 — 방 전체가 같은 빛을 받는다', () => {
@@ -319,13 +332,13 @@ describe('앵커 — 기존 3점 승계, y 만 새 상판 면으로', () => {
     const byCode = new Map(stage.structures.map((s) => [s.code, s]))
     expect(byCode.get('altar-banga')?.anchors.map((a) => a.id)).toEqual(['altar-left', 'altar-center', 'altar-right'])
     expect(byCode.get('platform-banga')?.anchors).toEqual([])
-    expect(byCode.get('door-banga')?.anchors).toEqual([])
   })
 
-  it('앵커 x 는 기존 34/50/66 유지 · y 는 53.5 (46 에서 상판 면으로 내려왔다)', () => {
+  it('앵커 x 는 45/50/55 (부록 P-2 시드 정정 라이브값) · y 는 53.5 (상판 면)', () => {
+    // 안2.3 원본의 34/66 으로 되돌리면 와이드 룸 "상 밖 허공" 스냅이 재발한다 — 라이브값이 정본.
     const stage = zoneStage(daecheongZone(seededWorld()), bangaStage())
     const anchors = stage.structures.find((s) => s.code === 'altar-banga')?.anchors ?? []
-    expect(anchors.map((a) => a.x)).toEqual([34, 50, 66])
+    expect(anchors.map((a) => a.x)).toEqual([45, 50, 55])
     expect(anchors.map((a) => a.y)).toEqual([ALTAR_ANCHOR_Y, ALTAR_ANCHOR_Y, ALTAR_ANCHOR_Y])
     expect(anchors.every((a) => a.layer === 'altar')).toBe(true)
   })
@@ -448,10 +461,8 @@ describe('에셋 실재', () => {
     return urls
   }
 
-  it('무라 2장 + 단상 + 상판 + 문간이 전부 시드에 실려 있다', () => {
-    expect(seededAssetUrls().sort()).toEqual(
-      [WALL_MURAL, FLOOR_MURAL, PLATFORM_SPRITE, ALTAR_TOP_SPRITE, DOOR_SPRITE].sort()
-    )
+  it('무라 2장 + 단상 + 상판이 전부 시드에 실려 있다 — 문간은 2026-08-06 걷었다', () => {
+    expect(seededAssetUrls().sort()).toEqual([WALL_MURAL, FLOOR_MURAL, PLATFORM_SPRITE, ALTAR_TOP_SPRITE].sort())
   })
 
   it.each(seededAssetUrls())('%s 가 public/ 에 실재한다', (url) => {

@@ -72,6 +72,14 @@ import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { type KeeperSpot } from './WalkingKeeper'
 import { GuardianWalkers } from './GuardianWalkers'
 import { DeityTurn } from './DeityTurn'
+import { FamilyShelfWall } from './FamilyShelfWall'
+import {
+  FSHELF_ANCHOR_PREFIX,
+  FSHELF_ITEM_SCALE,
+  buildFamilyShelfUnits,
+  fshelfSlotAnchors,
+  hasFamilyShelf,
+} from '@/lib/domain/shrine/family-shelf'
 import { StageLayers } from './StageLayers'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
@@ -149,8 +157,16 @@ const IDLE_CLASS: Record<Layer, string> = {
  * (방을 더 쓰려면 여기만 넓히면 되고 다른 코드는 손댈 필요가 없다).
  */
 const KEEPER_WANDER: KeeperRange = { from: 31, to: 59 }
-/** 입장 걷기 시작점 — 문간(부록 B 방 구성 x≈8) */
+/**
+ * 단일 무대(레거시 room.webp 테마) 배회 구간 — 신수는 마루를 거니는 존재라 좁은 방에서도
+ * 걷는다(2026-08-06 지시). 마루 전폭(존 x4~96)에서 여백을 둔 띠. 중점 50 은 단일 무대의
+ * 정지·입장 도착점(KEEPER_POS.x 대신 배회 중점)으로도 쓰인다.
+ */
+const KEEPER_WANDER_SINGLE: KeeperRange = { from: 20, to: 80 }
+/** 입장 걷기 시작점 — 두루마리 방 구성의 왼쪽 끝(종전 문간 자리 x≈8. 문은 2026-08-06 걷었다) */
 const KEEPER_ENTRANCE_FROM = 8
+/** 단일 무대 입장 시작점 — 왼쪽 벽 밖에서 스르륵 들어온다 */
+const KEEPER_ENTRANCE_FROM_SINGLE = 6
 /**
  * 입장 걷기 길이는 **상수가 아니다** — `entranceMsFor(from, plan)` 가 배회 속도에서 파생한다.
  * 1800 → 3600(3차) → 파생(4차). 상수로 두는 한 배회 상수와 따로 조정돼 다시 어긋난다.
@@ -339,6 +355,8 @@ export function ShrineRoomClient({
    * ⚠️ 방문자 뷰는 familyTags 가 빈 객체라 이름표가 아예 안 그려진다 — 남의 신당에서
    *    그 집 가족의 이름이 읽히면 안 된다(서버가 조회하지 않고, 여기서도 그리지 않는다).
    */
+  /** 카탈로그 오행 룩업 — 가족 선반장 축복 판정용(참조 고정으로 자식 memo 오염 방지) */
+  const elementOfCatalog = useCallback((id: string) => catalogById.get(id)?.element ?? null, [catalogById])
   const shelfInfoById = useMemo(() => {
     const merged = { ...scene.familyTags, ...extraTags }
     const map = new Map<string, { tagName: string | null; color: string | null; blessed: boolean }>()
@@ -547,32 +565,36 @@ export function ShrineRoomClient({
     (pct: number) => (wideRoom ? `${Math.round(pct * stageScale * 1e4) / 1e4}%` : `${pct}%`),
     [wideRoom, stageScale]
   )
-  // ── 거니는 신당지기 배선 (안2.2) ──────────────────────────────
+  // ── 거니는 신수 배선 (안2.2 신당지기 승계) ──────────────────────
   /**
-   * 두루마리에서만 거닌다. 단일 무대·레거시는 KEEPER_POS 정위치 그대로다(회귀 0) —
-   * 좁은 방에서 캐릭터가 왕복하면 제단·아이템을 계속 스치고 지나간다.
-   * 연출 게이트(GAMEFEEL_V1)를 내리면 보행도 함께 사라진다(ARCH §8 원복 레버).
+   * 신수는 단일 무대에서도 거닌다(2026-08-06 — "신수가 선택되면 마루바닥에서 돌아다니는").
+   * 종전 `&& worldActive` 는 신당지기(오브) 시절의 회귀 0 조건이었다: 거니는 주체가
+   * "마루를 지키는 신수"로 바뀐 지금은 좁은 방이 곧 그 신수의 마당이다 — 폭만 좁힌다
+   * (KEEPER_WANDER_SINGLE). 연출 게이트(GAMEFEEL_V1)를 내리면 보행도 함께 사라진다(ARCH §8).
    */
-  const keeperWalks = GAMEFEEL_V1 && worldActive
+  const keeperWalks = GAMEFEEL_V1
+  /** 활성 배회 구간 — 두루마리는 종전 그대로, 단일 무대는 마루 전폭 띠 */
+  const keeperWander = worldActive ? KEEPER_WANDER : KEEPER_WANDER_SINGLE
   /**
-   * 신당지기 정지 위치(구역 로컬 %) — 배회 구간의 중점. 입장 도착점·모션최소화 정위치·
+   * 신수 정지 위치(구역 로컬 %) — 배회 구간의 중점. 입장 도착점·모션최소화 정위치·
    * **공물 건네기 판정 기준점**이 모두 이 하나로 모인다(보이는 자리와 드롭 판정이 어긋나면 공물이 먹통이 된다).
    */
-  const keeperHomeX = keeperWalks ? keeperRestX(KEEPER_WANDER) : KEEPER_POS.x
+  const keeperHomeX = keeperWalks ? keeperRestX(keeperWander) : KEEPER_POS.x
   /** 꾸미기 중에는 배회를 접고 정지 위치에 세운다 — 그 자리가 공물 드롭 타깃이다 */
   const keeperRange = useMemo<KeeperRange>(
-    () => (keeperWalks && !editing ? KEEPER_WANDER : { from: keeperHomeX, to: keeperHomeX }),
-    [keeperWalks, editing, keeperHomeX]
+    () => (keeperWalks && !editing ? keeperWander : { from: keeperHomeX, to: keeperHomeX }),
+    [keeperWalks, editing, keeperWander, keeperHomeX]
   )
   /** 입장 걷기 — 마운트 1회. deps 에 editing 이 없어 꾸미기 토글로 다시 걸어 들어오지 않는다.
    *  길이는 상수가 아니라 **배회 속도에서 파생**한다(entranceMsFor) — 안2.3 까지 두 상수가 따로 놀아
    *  입장이 배회보다 11배 빨랐고 그것이 4차 검수 "입장속도 아직 빠름"의 원인이었다. */
   const keeperEntrance = useMemo<KeeperEntranceSpec | null>(() => {
     if (!keeperWalks) return null
-    const ms = entranceMsFor(KEEPER_ENTRANCE_FROM, planKeeperWalk(KEEPER_WANDER))
+    const from = worldActive ? KEEPER_ENTRANCE_FROM : KEEPER_ENTRANCE_FROM_SINGLE
+    const ms = entranceMsFor(from, planKeeperWalk(keeperWander))
     if (ms === null) return null
-    return { from: KEEPER_ENTRANCE_FROM, to: keeperHomeX, ms }
-  }, [keeperWalks, keeperHomeX])
+    return { from, to: keeperHomeX, ms }
+  }, [keeperWalks, worldActive, keeperWander, keeperHomeX])
   const [keeperPaused, setKeeperPaused] = useState(false)
   const keeperPauseTimer = useRef<number | null>(null)
   useEffect(
@@ -742,6 +764,14 @@ export function ShrineRoomClient({
    * nearestAnchor 가 층으로 거르므로, 칸에 층을 박으면 그 층 아이템만 얹을 수 있게 된다).
    * id 의 `seat:` 프리픽스는 저장 경로(saveShrineLayout)의 존 클램프 우회 표식이기도 하다.
    */
+  /**
+   * 가족 선반장(기본 사양) — 메인 테마(반가)·두루마리·사랑방 데이터가 있을 때 가족 수만큼 선다.
+   * 방문자 뷰는 hall 이 null 이라 저절로 없다(가족 이름 비노출 규율은 사랑방과 한 몸).
+   */
+  const familyShelfUnits = useMemo(
+    () => (worldActive && hasFamilyShelf(activeCode) && hall?.isFamilyTier ? buildFamilyShelfUnits(hall.members) : []),
+    [worldActive, activeCode, hall]
+  )
   const surfaceAnchors = useMemo<ReadonlyArray<Omit<StageAnchor, 'layer'>>>(() => {
     const out: Array<Omit<StageAnchor, 'layer'>> = []
     for (const p of placements) {
@@ -756,8 +786,10 @@ export function ShrineRoomClient({
         })
       })
     }
+    // 가족 선반장 진열 칸(3단 × 3칸) — id 가 seat: 로 시작해 존 우회·신위 한마디 모두 같은 길을 탄다
+    for (const a of fshelfSlotAnchors(familyShelfUnits)) out.push(a)
     return out
-  }, [placements, catalogById])
+  }, [placements, catalogById, familyShelfUnits])
   /**
    * 진열대 위 z 끌어올림 — painter's algorithm 은 y 로만 정렬해, 상판 위(y 가 진열대 중심보다
    * 작다) 물건이 진열대 몸체 **뒤**로 숨는 깊이 역전이 난다. 위에 얹힌 것만 「진열대 z+1 이상」
@@ -1440,6 +1472,15 @@ export function ShrineRoomClient({
         widthScale={stageScale}
       />
 
+      {/* 가족 선반장(사방탁자) — 기본 사양. 구조물(z auto)보다 위·아이템 대역(10~29) 아래(z 9)라
+          진열된 아이템이 언제나 널 앞에 선다. 유닛은 배치가 아니라 끌 수 없다. */}
+      <FamilyShelfWall
+        units={familyShelfUnits}
+        placements={placements}
+        elementOf={elementOfCatalog}
+        idle={GAMEFEEL_V1 && !editing}
+      />
+
       {/* 존 가이드 (편집) — **드래그 중인 층 1면만** (부록 P-2).
           v2 존은 서로 크게 겹쳐 4면 동시 표시는 소음이고, 상시 4띠 "우리(cage)"의 인상 자체가
           어색함의 일부였다(진단 D-1). 잡기 전에는 아무것도 그리지 않는다. */}
@@ -2064,11 +2105,14 @@ function Sprite({
   /**
    * 원근 스케일 합성 — 중심 정렬 translate + 깊이 스케일 + flip.
    * transform-origin 을 바닥(50% 100%)에 둬야 커져도 발이 바닥에 붙어 있다.
+   * 가족 선반장 칸(seat:fshelf:)에 스냅된 아이템은 진열 축소(0.6)를 곱한다 —
+   * 칸 개구부가 일반 아이템보다 낮아 원치수로는 진열이 아니라 «끼임»이 된다.
    */
+  const seatScale = placement.anchorId?.startsWith(FSHELF_ANCHOR_PREFIX) ? FSHELF_ITEM_SCALE : 1
   const transformFor = useCallback(
     (y: number) =>
-      `translate(-50%, -50%) scale(${depthScale(item.layer, y).toFixed(3)})${placement.flip ? ' scaleX(-1)' : ''}`,
-    [item.layer, placement.flip]
+      `translate(-50%, -50%) scale(${(depthScale(item.layer, y) * seatScale).toFixed(3)})${placement.flip ? ' scaleX(-1)' : ''}`,
+    [item.layer, placement.flip, seatScale]
   )
 
   const onPointerDown = useCallback(

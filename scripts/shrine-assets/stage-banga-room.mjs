@@ -118,7 +118,8 @@ const ASSETS = [
       'An even rhythm of dark walnut wooden posts standing at regular intervals with warm ivory hanji paper ' +
       'panels between them; a heavy continuous lintel beam runs straight across the top and a low dark wooden ' +
       'base rail runs straight across the bottom, both meeting the left and right edges at exactly the same height. ' +
-      'One softly glowing latticed changho window (창호) sits in the middle bay, diffusing gentle light through the paper. ' +
+      // 창호 없음(2026-08-06) — 벽 전체가 가족 선반장 자리가 되도록 창을 걷었다. 재생성 시 유지할 것.
+      'Every bay is a plain warm ivory hanji paper panel — no window, no door, no opening anywhere on the wall. ' +
       'The LEFT EDGE and the RIGHT EDGE must both cut through the middle of a plain hanji panel of identical width ' +
       'and identical tone — no post, no window, no ornament touching either edge. ' +
       'The wall is COMPLETELY EMPTY — no furniture, no shelves, no scrolls, no objects, nothing hanging on it. ' +

@@ -97,6 +97,23 @@ const SETS = {
     ['cushion-boryo', '보료 — thick rectangular Korean floor mattress with deep red silk cover and gold trim pattern, neatly laid flat'],
   ].map(([slug, d]) => ({ slug, out: `shrine/items/${slug}.webp`, size: 512, prompt: objectPrompt(d) })),
 
+  // C. 무대 가구 — 가족 선반장(사방탁자). 벽에 세워 붙이는 구조물이라 **정면 입면**으로 그린다
+  //    (objectPrompt 의 하이앵글 15도를 쓰면 상판 원근이 생겨 벽 부착이 어색해진다).
+  stagefurn: [
+    {
+      slug: 'shelf-sabang',
+      out: 'shrine/stage/banga/shelf-sabang.webp',
+      size: 640,
+      prompt:
+        'Korean traditional sabang-takja (四方卓子) — a TALL narrow open display shelf of dark walnut wood, ' +
+        'seen in flat frontal elevation view, much taller than wide. Four open tiers stacked vertically: ' +
+        'three empty shelf boards held by slender square corner posts, and a small closed cabinet with two ' +
+        'little doors as the bottom tier. Clean straight joinery, warm candlelight sheen on the dark wood, ' +
+        'subtle brass corner fittings, all tiers completely empty. ' +
+        `${STYLE}, single object centered, soft warm shadow beneath the object, ${BG}`,
+    },
+  ],
+
   // B2. 신수(神獸) 32 — 거니는 수호 영물. 걸음 연출이 좌우 반전을 쓰므로 **오른쪽을 보는
   //     전신**으로 통일한다(신위 턴어라운드와 같은 이유 — 방향이 섞이면 반전 재사용이 어긋난다).
   guardians: [
