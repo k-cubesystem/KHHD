@@ -83,6 +83,12 @@ export interface CameraApi {
   panning: boolean
   /** 구역 이동·시네마틱용 명령. ms 를 주지 않으면 거리에 맞춘 감속 길이를 쓴다 */
   panTo: (camX: number, ms?: number) => void
+  /**
+   * 상대 이동(world %p) — 휠·키보드용. **즉시 반영**(감속 없음): 휠 틱·키 반복 자체가
+   * 이산적이라 부드러움은 입력 빈도가 만들고, 틱마다 감속을 걸면 서로 씹혀 덜컹거린다.
+   * 최신 카메라값(camRef)에서 더하므로 연타에도 목표가 밀리지 않는다.
+   */
+  panBy: (delta: number) => void
   /** 룸 컨테이너에 스프레드할 포인터 핸들러(보기·편집 공용). touchAction 정책은 배선 측 유지 */
   bindPan: {
     onPointerDown: (e: RPointerEvent) => void
@@ -263,6 +269,14 @@ export function useCameraRig(world: WorldSpec, opts: { enabled: boolean; editing
     [glideTo]
   )
 
+  const panBy = useCallback(
+    (delta: number) => {
+      if (!activeRef.current || !Number.isFinite(delta) || delta === 0) return
+      glideTo(clampCamX(camRef.current + delta, worldRef.current.width), 0)
+    },
+    [glideTo]
+  )
+
   // ── 포인터 3자 조정 (ARCH §4) ─────────────────────────────
   const onPointerDown = useCallback(
     (e: RPointerEvent) => {
@@ -397,8 +411,8 @@ export function useCameraRig(world: WorldSpec, opts: { enabled: boolean; editing
   }, [camX])
 
   return useMemo<CameraApi>(
-    () => ({ camX, panning, panTo, bindPan, worldStyle, layerVar }),
-    [camX, panning, panTo, bindPan, worldStyle, layerVar]
+    () => ({ camX, panning, panTo, panBy, bindPan, worldStyle, layerVar }),
+    [camX, panning, panTo, panBy, bindPan, worldStyle, layerVar]
   )
 }
 

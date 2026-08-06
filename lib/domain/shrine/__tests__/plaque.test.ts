@@ -206,3 +206,42 @@ describe('액막이 팻말 → 시트 배선 (6차)', () => {
     expect(roomSrc).not.toMatch(/querySelector<HTMLButtonElement>\('button'\)/)
   })
 })
+
+describe('의식각(RitualHall) — 오른쪽 선반 위 현판 4문 (2026-08-06)', () => {
+  const ROOT = path.resolve(__dirname, '../../../..')
+  const hallSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/RitualHall.tsx'), 'utf8')
+  const roomSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/ShrineRoomClient.tsx'), 'utf8')
+
+  it('★ 현판이 벽에 뜨지 않는다 — 사방탁자 선반 위에 진열된다(가족 선반장과 같은 가구 문법)', () => {
+    expect(hallSrc).toContain('/shrine/stage/banga/shelf-sabang.webp')
+    expect(hallSrc).toContain('PLAQUE_SPRITE_URL')
+    // 4개 면(맨 위 칸·2단·3단·수납장 앞) — 현판 수와 어긋나면 마지막 자리로 접힌다
+    expect(hallSrc).toMatch(/PLAQUE_CY = \[[^\]]*0\.155[^\]]*0\.865[^\]]*\]/)
+  })
+
+  it('★ 반가(두루마리)는 의식각, 그 밖 테마는 간이 팻말 줄 — 신 뒤 창방 팻말로 되돌아가지 않았다', () => {
+    expect(roomSrc).toContain('<RitualHall')
+    expect(roomSrc).toContain('<GenericPlaqueBand')
+    expect(roomSrc).not.toContain('<WindowPlaques')
+  })
+})
+
+describe('PC 카메라 조작 — 휠·키보드·버튼 (2026-08-06)', () => {
+  const ROOT = path.resolve(__dirname, '../../../..')
+  const roomSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/ShrineRoomClient.tsx'), 'utf8')
+  const rigSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/CameraRig.tsx'), 'utf8')
+
+  it('★ 휠 리스너는 네이티브 non-passive 다 — React onWheel 은 passive 라 preventDefault 가 죽는다', () => {
+    expect(roomSrc).toMatch(/addEventListener\('wheel', onWheel, \{ passive: false \}\)/)
+    expect(roomSrc).toContain('e.deltaMode === 1')
+  })
+
+  it('★ 카메라 rig 가 상대 이동(panBy)을 노출한다 — 휠·키는 최신 camRef 기준이라 연타에 목표가 안 밀린다', () => {
+    expect(rigSrc).toContain('panBy: (delta: number) => void')
+    expect(roomSrc).toContain("e.key === 'ArrowLeft'")
+  })
+
+  it('좌우 버튼은 정밀 포인터에서만 보인다 — 터치 기기에는 스와이프가 있다', () => {
+    expect(roomSrc).toContain('[@media(pointer:fine)]:grid')
+  })
+})

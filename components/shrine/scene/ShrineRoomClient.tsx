@@ -493,7 +493,7 @@ export function ShrineRoomClient({
   const daecheong = useMemo(() => daecheongZone(world), [world])
   const cam = useCameraRig(world, { enabled: SCROLL_SHRINE_V1, editing })
   // panTo 는 참조가 고정돼 있다 — cam 객체는 camX 마다 새로 나므로 effect deps 를 오염시키지 않으려 분해한다
-  const { panTo } = cam
+  const { panTo, panBy } = cam
   /** 대청 정렬점 — 입장·편집 진입이 모두 여기로 모인다 */
   const daecheongCamX = useMemo(() => zoneAlignCamX(world, daecheong), [world, daecheong])
   /**
@@ -637,6 +637,45 @@ export function ShrineRoomClient({
     }),
     [cam.bindPan, cin.active]
   )
+
+  // ── PC 조작 (2026-08-06) — 드래그 팬만으로는 마우스가 힘들다 ──
+  /** 휠 팬 배율(world %p / px) — 휠 한 노치(≈100px)에 12%p, 전 구간(220)이 18노치쯤 */
+  const WHEEL_PAN = 0.12
+  /** ←/→ 한 번에 24%p — 꾹 누르면 키 반복이 이어 걸어 준다 */
+  const KEY_PAN = 24
+  /** 룸 루트(휠 리스너 부착용). React onWheel 은 passive 라 preventDefault 가 안 먹는다 — 네이티브로 단다. */
+  const roomElRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = roomElRef.current
+    if (!el || !worldActive) return
+    const onWheel = (e: WheelEvent) => {
+      if (cin.active) return
+      // 세로 휠도 가로 팬으로 받는다 — 이 방은 가로 세계다(가로 갤러리 관례). 방 위에서는
+      // 페이지 스크롤을 양보받는 대신, 방 밖에서는 평소대로 페이지가 흐른다.
+      const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      if (raw === 0) return
+      e.preventDefault()
+      const px = e.deltaMode === 1 ? raw * 16 : raw // Firefox 줄 단위 보정
+      panSource.current = 'user'
+      panBy(px * WHEEL_PAN)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [worldActive, panBy, cin.active, WHEEL_PAN])
+  useEffect(() => {
+    if (!worldActive) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (cin.active) return
+      e.preventDefault()
+      panSource.current = 'user'
+      panBy(e.key === 'ArrowLeft' ? -KEY_PAN : KEY_PAN)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [worldActive, panBy, cin.active, KEY_PAN])
 
   // 구역 도착 1회 기록 — 팬이 멈춘(관성·스냅까지 끝난) 순간에만. 팬 시작마다 찍으면 표본이 부풀어 오른다.
   const wasPanning = useRef(false)
@@ -1580,6 +1619,7 @@ export function ShrineRoomClient({
 
       {/* 룸 */}
       <div
+        ref={roomElRef}
         className={`room relative rounded-[18px] ${editing ? 'editing' : ''} ${cin.roomClassName}`}
         {...bindRoom}
         style={{
@@ -1650,6 +1690,38 @@ export function ShrineRoomClient({
             />
           </div>
         )}
+
+        {/* PC 좌우 이동 버튼 — 정밀 포인터(마우스) 기기에서만. 드래그 팬은 마우스로 힘들다는
+            지적(2026-08-06)의 답 셋 중 하나(휠 팬·←/→ 키와 한 벌). 끝에 닿은 쪽은 숨긴다. */}
+        {worldActive &&
+          !cin.active &&
+          (
+            [
+              { key: 'left', label: '왼쪽으로', show: cam.camX > 1, dx: -66, cls: 'left-2' },
+              {
+                key: 'right',
+                label: '오른쪽으로',
+                show: cam.camX < world.width - WORLD_VIEWPORT_PCT - 1,
+                dx: 66,
+                cls: 'right-2',
+              },
+            ] as const
+          )
+            .filter((b) => b.show)
+            .map((b) => (
+              <button
+                key={b.key}
+                type="button"
+                aria-label={`${b.label} 이동`}
+                onClick={() => {
+                  panSource.current = 'user'
+                  panTo(cam.camX + b.dx) // 감속 이동 — 한 클릭에 2/3 화면씩, 어디쯤 왔는지 눈이 따라온다
+                }}
+                className={`hidden [@media(pointer:fine)]:grid absolute ${b.cls} top-1/2 -translate-y-1/2 z-30 h-11 w-11 place-items-center rounded-full border border-gold-500/30 bg-black/35 font-serif text-[22px] leading-none text-gold-200 backdrop-blur-[2px] transition-opacity hover:bg-black/55`}
+              >
+                {b.key === 'left' ? '‹' : '›'}
+              </button>
+            ))}
 
         {/* 상단 컨트롤 */}
         {isOwner && (
