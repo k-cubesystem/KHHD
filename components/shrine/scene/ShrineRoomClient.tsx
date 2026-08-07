@@ -16,7 +16,7 @@ import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, MessageCir
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { bondLevelForPoints, bondUnlocks, deityTurnFrames } from '@/lib/domain/shrine/deities'
-import { ZONES, clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
+import { clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   depthScale,
   depthZ,
@@ -1009,9 +1009,8 @@ export function ShrineRoomClient({
 
   // ── 앵커 스냅 하이라이트 (드래그 중, 앵커가 바뀔 때만 호출) ──
   const onAnchorHover = useCallback((a: StageAnchor | null) => setSnapAnchor(a), [])
-  /** 지금 끌고 있는 아이템의 층 — 존 가이드는 이 층 1면만 그린다(부록 P-2, 상시 4띠 우리 폐지) */
-  const [draggingLayer, setDraggingLayer] = useState<Layer | null>(null)
-  const onDragLayer = useCallback((layer: Layer | null) => setDraggingLayer(layer), [])
+  /** 드래그 층 알림 — 존 가이드가 물러난 지금(자유 배치)은 소비처가 없다. Sprite 계약만 유지. */
+  const onDragLayer = useCallback((_layer: Layer | null) => {}, [])
 
   // ── 드래그 종료 (편집 모드) ──
   const onDragEnd = useCallback(
@@ -1462,26 +1461,8 @@ export function ShrineRoomClient({
         idle={GAMEFEEL_V1 && !editing}
       />
 
-      {/* 존 가이드 (편집) — **드래그 중인 층 1면만** (부록 P-2).
-          v2 존은 서로 크게 겹쳐 4면 동시 표시는 소음이고, 상시 4띠 "우리(cage)"의 인상 자체가
-          어색함의 일부였다(진단 D-1). 잡기 전에는 아무것도 그리지 않는다. */}
-      {editing && draggingLayer && (
-        <div
-          className="absolute rounded-lg pointer-events-none"
-          style={{
-            left: `${ZONES[draggingLayer].x[0]}%`,
-            right: `${100 - ZONES[draggingLayer].x[1]}%`,
-            top: `${ZONES[draggingLayer].y[0]}%`,
-            bottom: `${100 - ZONES[draggingLayer].y[1]}%`,
-            border: '1.5px dashed rgba(201,168,76,0.32)',
-            background: 'rgba(201,168,76,0.04)',
-          }}
-        >
-          <span className="absolute -top-px left-1.5 text-[8px] tracking-[0.15em] text-gold-300 px-1 rounded-sm bg-black/80">
-            {ZONE_LABEL[draggingLayer]}
-          </span>
-        </div>
-      )}
+      {/* (존 가이드 — 2026-08-07 자유 배치와 함께 물러남. 존이 배치를 가두지 않으니
+          "여기까지"를 그리는 띠 자체가 거짓말이 된다) */}
 
       {/* 파티클 이펙트 */}
       <EffectsCanvas ref={effectsRef} />
@@ -2034,6 +2015,8 @@ interface SpriteProps {
   zOverride?: number
 }
 
+/** 자유 배치 클램프 — 서버(FULL_RANGE)와 같은 계약. 존은 배치를 가두지 않는다(2026-08-07). */
+const FREE_RANGE: [number, number] = [0, 100]
 const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
 /**
  * 진열대 가구(table·chest) 표시 크기 — "아이템만 한 가구"가 아니라 제단처럼 서는 세간이다
@@ -2107,7 +2090,6 @@ function Sprite({
       el.setPointerCapture(e.pointerId)
       el.style.zIndex = '60'
       onDragLayer(item.layer)
-      const zone = ZONES[item.layer]
       const rect = room.getBoundingClientRect()
 
       const move = (ev: PointerEvent) => {
@@ -2117,14 +2099,14 @@ function Sprite({
         const freeY = ((ev.clientY - rect.top) / rect.height) * 100
         // 앵커 반경 안이면 자석 스냅 — 밖이면 자유 배치 그대로 (앵커는 보너스이지 제약이 아니다).
         // 거리는 화면 픽셀로 잰다(부록 P-2) — % 거리계는 와이드 룸에서 가로 포획이 3.2배 왜곡됐다.
-        // 스냅 판정은 **존 클램프 전** 포인터 자리로 한다: 진열 칸은 층 존 밖(가구 상판)에 있을 수
-        // 있다(제물 altar 존 vs 바닥 가구). 스냅이 안 걸리면 종전대로 존 안 자유 배치다.
+        // 자유 배치(2026-08-07): 층 존 클램프를 폐지했다 — 어떤 아이템이든 방 어디에나 선다.
+        // 방 경계 [0,100]만 지킨다(서버 FULL_RANGE 와 같은 계약 — 밖은 증발이지 자유가 아니다).
         const snap = nearestAnchor(snapCandidates, item.layer, freeX, freeY, undefined, {
           sx: rect.width / 100,
           sy: rect.height / 100,
         })
-        const x = snap ? snap.x : clampPct(freeX, zone.x)
-        const y = snap ? snap.y : clampPct(freeY, zone.y)
+        const x = snap ? snap.x : clampPct(freeX, FREE_RANGE)
+        const y = snap ? snap.y : clampPct(freeY, FREE_RANGE)
         posRef.current = { x, y }
         el.style.left = `${x}%`
         el.style.top = `${y}%`

@@ -29,8 +29,7 @@ import {
   type StageSceneData,
   type StageThemePack,
 } from '@/lib/domain/shrine/stage'
-import { ZONES, clampPct } from '@/lib/domain/shrine/zones'
-import { SEAT_ANCHOR_PREFIX } from '@/lib/domain/shrine/shelf'
+import { clampPct } from '@/lib/domain/shrine/zones'
 import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { isGuardianType, parseGuardianSlugs } from '@/lib/domain/shrine/guardians'
 import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
@@ -612,7 +611,7 @@ interface PlacementInput {
 }
 
 /** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
-/** 진열대 스냅 배치의 절대 클램프 범위 — 존 우회 시에도 좌표는 방 밖으로 못 나간다 */
+/** 배치 절대 클램프 범위 — 자유 배치에서도 좌표는 방 밖으로 못 나간다(방 밖 좌표 = 증발) */
 const FULL_RANGE: [number, number] = [0, 100]
 
 export async function saveShrineLayout(
@@ -678,20 +677,18 @@ export async function saveShrineLayout(
     }
   }
 
-  // 좌표 클램프 (서버 방어) — layer도 검증값 사용(원시값이 CHECK 위반으로 delete 후 insert 실패 → 배치 유실 방지)
+  // 좌표 클램프 (서버 방어) — layer도 검증값 사용(원시값이 CHECK 위반으로 delete 후 insert 실패 → 배치 유실 방지).
+  // 자유 배치(2026-08-07): 층 존 클램프를 **폐지**했다("구역에 묶여 자유도가 낮다"는 지적).
+  // 존(ZONES)은 이제 initialSpot·깊이 연출의 참고일 뿐 배치를 가두지 않는다 — 어떤 아이템이든
+  // 방 어디에나 선다. 절대 범위 [0,100]만 지킨다(방 밖 좌표가 저장되면 아이템이 증발한다).
   const rows = placements.map((p, i) => {
     const layer = isLayer(p.layer) ? p.layer : 'floor'
-    const zone = ZONES[layer]
-    // 진열대 스냅(seat:) 배치는 층 존 대신 절대 범위만 클램프한다 — 제물(altar 존 y48~58)이
-    // 바닥 가구 상판에 얹히는 유일한 경로. 존은 UX 가드이지 보안 경계가 아니고(RLS 가 소유권),
-    // 프리픽스는 저장 후 배치 id 재발급으로 dangling 이 돼도 존 우회 표식으로 계속 산다.
-    const onSurface = anchorIds[i] !== null && (anchorIds[i] as string).startsWith(SEAT_ANCHOR_PREFIX)
     const row = {
       shrine_id: shrine.id,
       catalog_item_id: p.catalogItemId,
       layer,
-      x: clampPct(p.x, onSurface ? FULL_RANGE : zone.x),
-      y: clampPct(p.y, onSurface ? FULL_RANGE : zone.y),
+      x: clampPct(p.x, FULL_RANGE),
+      y: clampPct(p.y, FULL_RANGE),
       flip: p.flip ?? false,
       state: p.state ?? {},
     }

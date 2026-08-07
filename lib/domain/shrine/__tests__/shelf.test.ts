@@ -217,8 +217,17 @@ describe('진열대 — 위에 얹어 진열하는 세간', () => {
     expect(parseAnchorId(id)).toBe(id)
   })
 
-  it('★ 계약 — 저장은 seat: 존 우회, 방은 진열 칸 합류·동반 이동·깊이 역전 교정을 실제로 쓴다', () => {
-    expect(SCENE_ACTION).toContain('SEAT_ANCHOR_PREFIX')
+  it('★ 계약 — 저장·드래그 모두 자유 배치(존 클램프 폐지 2026-08-07), 절대 범위 [0,100]만 지킨다', () => {
+    // 존 클램프가 되살아나면 "구역에 묶여 자유도가 낮다"가 재발하고, 절대 클램프가 사라지면
+    // 방 밖 좌표가 저장돼 아이템이 증발한다 — 두 방향 모두 여기서 걸린다.
+    expect(SCENE_ACTION).toContain('clampPct(p.x, FULL_RANGE)')
+    expect(SCENE_ACTION).toContain('clampPct(p.y, FULL_RANGE)')
+    expect(SCENE_ACTION).not.toContain('zone.x')
+    expect(ROOM).toContain('clampPct(freeX, FREE_RANGE)')
+    expect(ROOM).not.toContain('clampPct(freeX, zone.x)')
+  })
+
+  it('★ 계약 — 방은 진열 칸 합류·동반 이동·깊이 역전 교정을 실제로 쓴다', () => {
     expect(ROOM).toContain('surfaceAnchors')
     expect(ROOM).toContain('isOnSurface(q, p, carry.size)')
     expect(ROOM).toContain('zOverride ?? depthZ')

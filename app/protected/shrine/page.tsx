@@ -113,7 +113,8 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
 
   return (
     <div className="min-h-screen px-1 py-4">
-      <div className="w-full max-w-[520px] mx-auto">{targetTabs}</div>
+      {/* 신당(방)이 페이지 맨 위다(2026-08-07 지시) — 가족 탭 줄은 방 아래로 내렸다.
+          탭 줄 자체는 없애지 않는다: 가족 신당 전환과 **가족관리로 가는 유일한 문**이 여기 달려 있다. */}
       <ShrineRoomClient
         scene={scene}
         devotion={devotion}
@@ -123,6 +124,7 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
         chuljeon={chuljeon}
         baekil={baekil}
       />
+      <div className="w-full max-w-[520px] mx-auto mt-3">{targetTabs}</div>
       {/* 가족 신당 첫 진입 — 主神이 없으면 그 가족 사주로 강신 의식 */}
       {target && !scene.mainDeity && (
         <FamilySummonGate
