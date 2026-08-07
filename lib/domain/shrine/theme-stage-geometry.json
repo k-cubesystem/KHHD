@@ -1,0 +1,57 @@
+{
+  "worldWidth": 320,
+  "zone": { "code": "daecheong", "label": "대청", "x0": 0, "x1": 320 },
+  "mural": { "dir": "/shrine/stage", "wall": "room-wall-mural.webp", "floor": "room-floor-mural.webp" },
+  "structures": [
+    {
+      "code": "platform",
+      "assetUrl": "/shrine/stage/banga/platform.webp",
+      "x": 50,
+      "y": 51,
+      "w": 44,
+      "anchors": []
+    },
+    {
+      "code": "altar",
+      "assetUrl": "/shrine/stage/banga/altar-top.webp",
+      "x": 50,
+      "y": 58,
+      "w": 58,
+      "anchors": [
+        { "id": "altar-left", "layer": "altar", "x": 45, "y": 53.5, "label": "제단 왼편" },
+        { "id": "altar-center", "layer": "altar", "x": 50, "y": 53.5, "label": "제단 가운데" },
+        { "id": "altar-right", "layer": "altar", "x": 55, "y": 53.5, "label": "제단 오른편" }
+      ]
+    }
+  ],
+  "light": {
+    "intensity": 0.5,
+    "origin": { "x": 50, "y": 52 },
+    "neutralColor": "#C9A84C",
+    "elementColor": {
+      "wood": "#4a7c59",
+      "fire": "#9e2b2b",
+      "earth": "#d4a017",
+      "metal": "#c9a84c",
+      "water": "#2d5f8a"
+    }
+  },
+  "themeElements": {
+    "banga": "wood",
+    "choga": null,
+    "yonggung": "water",
+    "dokkaebi": "fire",
+    "seolbit": "metal",
+    "daljip": "earth",
+    "hongsal": "fire",
+    "byeolbat": null,
+    "dangsan": "wood",
+    "yeondeung": "fire",
+    "seonang": "earth",
+    "jangdok": "earth",
+    "daejanggan": "metal",
+    "jonggak": "metal",
+    "saemgut": "water",
+    "naru": "water"
+  }
+}

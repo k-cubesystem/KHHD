@@ -85,7 +85,7 @@ import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
 import { GenericPlaqueBand } from './WindowPlaques'
 import { RitualHall } from './RitualHall'
-import { hasPlaqueWall } from '@/lib/domain/shrine/plaque'
+import { PanCoachmark } from './PanCoachmark'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
 import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
@@ -1409,12 +1409,15 @@ export function ShrineRoomClient({
 
       {/* 의식 진입점 — 소유자에게만(방문자는 남의 신당에서 의식을 치를 수 없다),
           꾸미기 중에는 내린다(신물 드래그와 탭 대상이 겹치면 배치가 페이지 이동으로 새어 나간다).
-          · 반가(무라·두루마리): 의식각(RitualHall) — 신 뒤 창방 띠에서 빼서 **오른쪽 공간**에
-            현판 2×2 로 다시 걸었다(2026-08-06 지시, 사랑방이 물러난 자리).
-          · 그 밖의 테마: 간이 팻말 줄(GenericPlaqueBand) 그대로 — 테마 공통 무대 P1. */}
+          · 와이드 무대(worldActive): 의식각(RitualHall) — 오른쪽 공간(x 88.75)에 사방탁자 한 좌를
+            세우고 그 위에 현판 4문을 얹는다. **테마 무관**이다(2026-08-07 확산) — 현판이 서는 자리는
+            벽 그림이 아니라 world 좌표라, 폭 320 세계이기만 하면 어느 장소에서도 성립한다.
+            (종전 게이트는 반가 벽 무라 URL 대조였다. 그건 창방 띠에 팻말을 걸던 시절 —
+             무라 픽셀 좌표를 알아야 하던 시절 — 의 조건이라 선반 위로 옮긴 뒤로는 남을 이유가 없다.)
+          · 단일 무대: 간이 팻말 줄(GenericPlaqueBand) 그대로 — 원복 레버 겸 폴백. */}
       {isOwner &&
         !editing &&
-        (worldActive && hasPlaqueWall(daecheongStage?.wallpaperUrl) ? (
+        (worldActive ? (
           <RitualHall onOpenSheet={plaqueSheets} attention={plaqueAttention} />
         ) : (
           <GenericPlaqueBand onOpenSheet={plaqueSheets} attention={plaqueAttention} />
@@ -1671,6 +1674,12 @@ export function ShrineRoomClient({
             />
           </div>
         )}
+
+        {/* 첫 슬라이드 코치마크 — 「이 방은 옆으로 이어진다」 1회 안내(개선 A).
+            16테마 확산 뒤에는 모든 사용자가 처음 만나는 조작이라 발견성이 없으면 선반장·의식각이
+            화면 밖에 있는 채로 끝난다. 문구 판정(포인터 종류)·1회 규율·소멸은 컴포넌트가 스스로 한다 —
+            방은 «언제 걸 수 있는가»(두루마리 · 꾸미기 아님)와 카메라 상태만 넘긴다. */}
+        {worldActive && !editing && <PanCoachmark camX={cam.camX} homeCamX={daecheongCamX} />}
 
         {/* PC 좌우 이동 버튼 — 정밀 포인터(마우스) 기기에서만. 드래그 팬은 마우스로 힘들다는
             지적(2026-08-06)의 답 셋 중 하나(휠 팬·←/→ 키와 한 벌). 끝에 닿은 쪽은 숨긴다. */}

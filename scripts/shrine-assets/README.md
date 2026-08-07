@@ -32,5 +32,6 @@ PRD §4 + style-refs를 함께 전달. 납품 규격 PRD §1.3. 신위당 9컷(�
 ```
 public/shrine/deities/{code}/{base,neutral,smile,stern,sad,surprised,bless,angry,portrait}.webp
 public/shrine/themes/{theme}/{wall,floor}.webp
+public/shrine/stage/{theme}/room-{wall,floor}-{tile,mural}.webp  ← stage-theme-room.mjs (테마 무대 · `<code|all> [--plan]`)
 public/shrine/fx/{fxkey}.webp
 ```

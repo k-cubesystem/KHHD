@@ -219,10 +219,20 @@ describe('의식각(RitualHall) — 오른쪽 선반 위 현판 4문 (2026-08-06
     expect(hallSrc).toMatch(/PLAQUE_CY = \[[^\]]*0\.155[^\]]*0\.865[^\]]*\]/)
   })
 
-  it('★ 반가(두루마리)는 의식각, 그 밖 테마는 간이 팻말 줄 — 신 뒤 창방 팻말로 되돌아가지 않았다', () => {
+  it('★ 와이드 무대는 의식각, 단일 무대는 간이 팻말 줄 — 신 뒤 창방 팻말로 되돌아가지 않았다', () => {
     expect(roomSrc).toContain('<RitualHall')
     expect(roomSrc).toContain('<GenericPlaqueBand')
     expect(roomSrc).not.toContain('<WindowPlaques')
+  })
+
+  /**
+   * 2026-08-07 확산 — 게이트를 벽지 URL 대조(hasPlaqueWall)에서 worldActive 로 일반화했다.
+   * 현판은 벽 그림이 아니라 선반(world 좌표) 위에 있으므로 폭 320 세계이기만 하면 어느 테마에서도
+   * 성립한다. URL 대조가 되살아나면 15테마가 다시 간이 팻말 줄로 떨어진다 — 조용한 회귀라 여기서 막는다.
+   */
+  it('★ 의식각 게이트가 테마 무관(worldActive)이다 — 반가 벽지 URL 대조로 돌아가지 않았다', () => {
+    expect(roomSrc).toMatch(/worldActive \? \(\s*<RitualHall/)
+    expect(roomSrc).not.toContain('hasPlaqueWall')
   })
 })
 

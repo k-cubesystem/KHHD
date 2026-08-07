@@ -6,9 +6,8 @@
  * 진열한다. 진열은 기존 배치 문법 그대로다 — 칸이 스냅 앵커(`seat:fshelf:…`)를 노출하고,
  * 저장은 `seat:` 프리픽스 존 우회를 태우고, 관계는 전부 거리·좌표로 판정한다.
  *
- * ⚠️ 좌표는 전부 **세계(world) %** 다 — 반가 「큰 방 하나」(폭 320%)의 stageContent 좌표계.
- *    단일 무대(레거시 room.webp) 테마에는 아직 선반장이 없다(테마별 확산은 다음 차수 —
- *    THEMES 게이트가 그 확산 지점이다).
+ * ⚠️ 좌표는 전부 **세계(world) %** 다 — 「큰 방 하나」(폭 320%)의 stageContent 좌표계.
+ *    표준 와이드 무대(theme-stage.ts)가 전 테마 공통이라 좌표는 테마와 무관하다.
  * ⚠️ 유닛은 배치(placements)가 아니다 — 렌더 전용 파생물이라 저장할 것이 없다. 가족을
  *    지우면 선반장이 사라지고, 위에 진열했던 아이템은 그 자리에 남는다(자유 배치로 회귀).
  */
@@ -24,8 +23,35 @@ export interface FamilyShelfMemberInput {
   avatarId: string | null
 }
 
-/** 선반장이 서는 테마 — v1 은 메인 테마(반가)뿐. 확산 시 여기에 code 를 더한다. */
-export const FAMILY_SHELF_THEMES: readonly string[] = Object.freeze(['banga'])
+/**
+ * 선반장이 서는 테마 — **16종 전부**(2026-08-07 확산).
+ *
+ * ⚠️ 이 목록은 게이트 두 겹 중 **바깥쪽**이다. 룸의 조건은
+ *   `worldActive && hasFamilyShelf(code) && hall?.isFamilyTier`
+ * 이고 `worldActive` 는 그 테마의 stage jsonb 에 `zones`(폭 320)가 실려 있을 때만 참이다.
+ * 즉 여기에 이름이 있어도 **와이드 시드가 없는 테마에서는 선반장이 켜지지 않는다** —
+ * 선반장 좌표가 폭 320 세계의 값이라 단일 무대(폭 100)에 세우면 벽 밖으로 밀려나기 때문이다.
+ * 덕분에 코드(이 목록)와 데이터(시드)의 출하 순서를 서로 기다리지 않아도 된다.
+ * 목록 자체는 theme-stage.ts THEME_CODES 와 같은 16종이고, 그 대조는 theme-stage.test 가 한다.
+ */
+export const FAMILY_SHELF_THEMES: readonly string[] = Object.freeze([
+  'banga',
+  'choga',
+  'yonggung',
+  'dokkaebi',
+  'seolbit',
+  'daljip',
+  'hongsal',
+  'byeolbat',
+  'dangsan',
+  'yeondeung',
+  'seonang',
+  'jangdok',
+  'daejanggan',
+  'jonggak',
+  'saemgut',
+  'naru',
+])
 
 export function hasFamilyShelf(themeCode: string | null | undefined): boolean {
   return typeof themeCode === 'string' && FAMILY_SHELF_THEMES.includes(themeCode)

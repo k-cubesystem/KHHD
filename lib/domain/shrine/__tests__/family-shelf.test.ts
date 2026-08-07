@@ -16,6 +16,7 @@ import {
 } from '../family-shelf'
 import { SEAT_ANCHOR_PREFIX } from '../shelf'
 import { parseAnchorId } from '../stage'
+import { THEME_CODES } from '../theme-stage'
 import { ZONES } from '../zones'
 import type { Element, Placement } from '../types'
 
@@ -35,10 +36,14 @@ function place(x: number, y: number, catalogItemId = `cat-${(seq += 1)}`): Place
 }
 
 describe('가족 선반장 — 기본 사양(아이템이 아니다)', () => {
-  it('★ 메인 테마(반가)에만 선다 — 확산은 FAMILY_SHELF_THEMES 한 곳에서 연다', () => {
-    expect(FAMILY_SHELF_THEMES).toEqual(['banga'])
+  it('★ 16테마 전부에 선다(2026-08-07 확산) — 실제 발화는 worldActive 안쪽 게이트가 판정한다', () => {
+    // 목록에 있어도 그 테마에 와이드 시드(stage.zones)가 없으면 룸의 worldActive 가 거짓이라
+    // 선반장은 켜지지 않는다 — 코드와 데이터의 출하 순서를 분리하는 이중 게이트다.
+    expect(FAMILY_SHELF_THEMES).toHaveLength(16)
+    expect([...FAMILY_SHELF_THEMES].sort()).toEqual([...THEME_CODES].sort())
     expect(hasFamilyShelf('banga')).toBe(true)
-    expect(hasFamilyShelf('dangsan')).toBe(false)
+    expect(hasFamilyShelf('dangsan')).toBe(true)
+    expect(hasFamilyShelf('없는테마')).toBe(false)
     expect(hasFamilyShelf(null)).toBe(false)
   })
 
