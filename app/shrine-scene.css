@@ -1808,3 +1808,231 @@
     opacity: 0.8;
   }
 }
+
+/* ═══ 앰비언트 — 「살아있는 신당」 시간대 틴트 · 테마의 숨결 ═══════════════════════
+   ARCH-shrine-living-background-v1 §2(레이어 삽입)·§6(성능 예산).
+
+   ⚠️ 전 규칙이 transform/opacity 만 움직인다. filter·blur·blend·box-shadow 애니 금지 —
+      대면적 층이라 합성 레이어를 벗어나는 순간 저사양에서 프레임이 무너진다.
+   ⚠️ 위상 틴트 그라디언트는 **여기 고정값**이다. 인라인 그라디언트·변수 보간으로 만들면
+      값이 바뀔 때마다 전면 레이어가 재래스터된다(인라인은 opacity 하나만 받는다).
+   ⚠️ 개체별 편차(자리·지연·주기·크기)는 컴포넌트가 인덱스에서 파생해 인라인으로 준다 —
+      난수를 쓰면 SSR 과 클라가 갈린다.
+   ⚠️ 모션 최소화에서 파티클·맥동은 서지만 **틴트는 값을 유지한다**(끄지 않는다 —
+      "정적이되 완성된 그림"이 접근성 계약이다). */
+
+/* 위상 틴트 3층 — 상단이 진하고 하단이 옅다(살림·제단 가독 유지).
+   낮은 층이 없다: 낮 = 검수된 원화 그대로가 원화 보호 계약이다. */
+.shrine-tint-dawn,
+.shrine-tint-dusk,
+.shrine-tint-night {
+  transition: opacity 2000ms ease;
+}
+
+/* 새벽 청람(靑) */
+.shrine-tint-dawn {
+  background: linear-gradient(
+    180deg,
+    rgba(45, 95, 138, 0.16) 0%,
+    rgba(45, 95, 138, 0.09) 46%,
+    rgba(45, 95, 138, 0.03) 100%
+  );
+}
+
+/* 해질녘 주홍(朱) → 호박(土) */
+.shrine-tint-dusk {
+  background: linear-gradient(
+    180deg,
+    rgba(158, 43, 43, 0.14) 0%,
+    rgba(212, 160, 23, 0.08) 52%,
+    rgba(212, 160, 23, 0.03) 100%
+  );
+}
+
+/* 밤 남청 */
+.shrine-tint-night {
+  background: linear-gradient(180deg, rgba(10, 16, 42, 0.3) 0%, rgba(10, 16, 42, 0.19) 55%, rgba(10, 16, 42, 0.1) 100%);
+}
+
+/* 원경광 — 광선·안개 띠·광층. 그라디언트는 정지해 있고 밝기만 아주 느리게 숨쉰다 */
+.shrine-amb-back {
+  pointer-events: none;
+  animation: shrineAmbBack 11s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes shrineAmbBack {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 글로우 — 등·화덕·달무리의 맥동. 주기는 테마 스펙(pulseMs)이 정한다 */
+.shrine-amb-glow {
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: shrineAmbGlow 5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shrineAmbGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.42;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.9;
+  }
+}
+
+/* 빛기둥 속 먼지 — 났다가 스러진다(자리 이동은 짧게, 존재감은 밝기로) */
+.shrine-amb-mote {
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: var(--amb-o, 0.5);
+  animation: shrineAmbMote 11s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shrineAmbMote {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  22%,
+  74% {
+    opacity: var(--amb-o, 0.5);
+  }
+  100% {
+    transform: translate3d(var(--amb-dx, 8px), -40px, 0);
+    opacity: 0;
+  }
+}
+
+/* 반딧불·도깨비불 — 한 자리를 맴돌며 밝기가 크게 오르내린다 */
+.shrine-amb-firefly {
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: var(--amb-o, 0.8);
+  animation: shrineAmbFirefly 9s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shrineAmbFirefly {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.12;
+  }
+  25% {
+    transform: translate3d(var(--amb-dx, 14px), -11px, 0);
+    opacity: var(--amb-o, 0.8);
+  }
+  50% {
+    transform: translate3d(calc(var(--amb-dx, 14px) * 1.6), 7px, 0);
+    opacity: 0.26;
+  }
+  75% {
+    transform: translate3d(calc(var(--amb-dx, 14px) * 0.4), 13px, 0);
+    opacity: calc(var(--amb-o, 0.8) * 0.8);
+  }
+}
+
+/* 불티 — 등불·화덕에서 올라 사라진다 */
+.shrine-amb-ember {
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: var(--amb-o, 0.85);
+  animation: shrineAmbEmber 6s ease-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shrineAmbEmber {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  16% {
+    opacity: var(--amb-o, 0.85);
+  }
+  100% {
+    transform: translate3d(var(--amb-dx, 5px), -58px, 0);
+    opacity: 0;
+  }
+}
+
+/* 낙엽 — 지며 뒤집힌다(회전도 transform 이라 합성층을 벗어나지 않는다) */
+.shrine-amb-leaf {
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: var(--amb-o, 0.7);
+  animation: shrineAmbLeaf 13s linear infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shrineAmbLeaf {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  12%,
+  86% {
+    opacity: var(--amb-o, 0.7);
+  }
+  100% {
+    transform: translate3d(var(--amb-dx, 18px), 96px, 0) rotate(240deg);
+    opacity: 0;
+  }
+}
+
+/* 꽃잎·홍엽 — 낙엽보다 옆으로 더 흐르고 덜 구른다 */
+.shrine-amb-petal {
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: var(--amb-o, 0.65);
+  animation: shrineAmbPetal 12s linear infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes shrineAmbPetal {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  14%,
+  84% {
+    opacity: var(--amb-o, 0.65);
+  }
+  100% {
+    transform: translate3d(var(--amb-dx, 16px), 88px, 0) rotate(120deg);
+    opacity: 0;
+  }
+}
+
+/* 백그라운드 탭 — 보이지 않는 화면에 합성 비용을 치르지 않는다(Page Visibility) */
+.shrine-amb-paused * {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shrine-amb-back,
+  .shrine-amb-glow,
+  .shrine-amb-mote,
+  .shrine-amb-firefly,
+  .shrine-amb-ember,
+  .shrine-amb-leaf,
+  .shrine-amb-petal {
+    animation: none;
+  }
+  .shrine-tint-dawn,
+  .shrine-tint-dusk,
+  .shrine-tint-night {
+    transition: none;
+  }
+}

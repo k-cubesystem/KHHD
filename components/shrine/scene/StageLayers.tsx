@@ -42,6 +42,11 @@ interface Props {
    * w 는 구역 폭 대비 % 라 구역이 넓어지면 같이 커진다 — 기본 1 은 지금까지의 렌더 그대로다.
    */
   widthScale?: number
+  /**
+   * 이 구역이 **첫 화면**이라 벽지·바닥재를 미루면 안 된다(구역 1개짜리 세계).
+   * zoned 의 지연 로드는 «뷰포트 밖 구역» 을 미루려던 것이라, 볼 구역이 하나뿐이면 손해로 뒤집힌다.
+   */
+  eager?: boolean
 }
 
 /** 404·로드 실패 시 조용히 숨겨 아래 폴백(그라디언트/다크 배경)이 드러나게 한다. */
@@ -68,7 +73,7 @@ function tileBackground(url: string): CSSProperties {
  * 구역 모드(zoned)에서는 방 모서리에 붙지 않으므로 라운딩을 끄고, 뷰포트 밖 구역의 와이드 벽지를
  * 첫 페인트에 끌고 오지 않도록 지연 로드한다(ARCH §5).
  */
-function Wallpaper({ url, zoned, tile }: { url: string; zoned: boolean; tile: boolean }) {
+function Wallpaper({ url, zoned, tile, eager }: { url: string; zoned: boolean; tile: boolean; eager: boolean }) {
   if (tile) {
     return (
       <div
@@ -88,7 +93,10 @@ function Wallpaper({ url, zoned, tile }: { url: string; zoned: boolean; tile: bo
       aria-hidden
       draggable={false}
       decoding="async"
-      loading={zoned ? 'lazy' : undefined}
+      loading={zoned && !eager ? 'lazy' : undefined}
+      // 벽 뮤럴만 우선순위를 올린다 — 첫 화면에서 가장 큰 면적이고, 바닥재까지 같이 올리면
+      // 둘이 대역폭을 나눠 가져 정작 먼저 보여야 할 벽이 늦어진다
+      fetchPriority={eager ? 'high' : undefined}
       className={`absolute inset-x-0 top-0 h-[62%] w-full object-cover pointer-events-none select-none${
         zoned ? '' : ' rounded-t-[17px]'
       }`}
@@ -98,7 +106,7 @@ function Wallpaper({ url, zoned, tile }: { url: string; zoned: boolean; tile: bo
 }
 
 /** L1 바닥재 — 방 하단 (라운딩·지연 로드·타일 규약은 벽지와 같다) */
-function Flooring({ url, zoned, tile }: { url: string; zoned: boolean; tile: boolean }) {
+function Flooring({ url, zoned, tile, eager }: { url: string; zoned: boolean; tile: boolean; eager: boolean }) {
   if (tile) {
     return (
       <div
@@ -118,7 +126,7 @@ function Flooring({ url, zoned, tile }: { url: string; zoned: boolean; tile: boo
       aria-hidden
       draggable={false}
       decoding="async"
-      loading={zoned ? 'lazy' : undefined}
+      loading={zoned && !eager ? 'lazy' : undefined}
       className={`absolute inset-x-0 bottom-0 h-[40%] w-full object-cover pointer-events-none select-none${
         zoned ? '' : ' rounded-b-[17px]'
       }`}
@@ -127,7 +135,15 @@ function Flooring({ url, zoned, tile }: { url: string; zoned: boolean; tile: boo
   )
 }
 
-export function StageLayers({ stage, themeCode, slot, zoned = false, tile = false, widthScale = 1 }: Props) {
+export function StageLayers({
+  stage,
+  themeCode,
+  slot,
+  zoned = false,
+  tile = false,
+  widthScale = 1,
+  eager = false,
+}: Props) {
   if (slot === 'ground') {
     if (zoned) {
       return (
@@ -137,10 +153,10 @@ export function StageLayers({ stage, themeCode, slot, zoned = false, tile = fals
           <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
           <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
           {stage?.wallpaperUrl && (
-            <Wallpaper key={`wall-${stage.wallpaperUrl}`} url={stage.wallpaperUrl} zoned tile={tile} />
+            <Wallpaper key={`wall-${stage.wallpaperUrl}`} url={stage.wallpaperUrl} zoned tile={tile} eager={eager} />
           )}
           {stage?.flooringUrl && (
-            <Flooring key={`floor-${stage.flooringUrl}`} url={stage.flooringUrl} zoned tile={tile} />
+            <Flooring key={`floor-${stage.flooringUrl}`} url={stage.flooringUrl} zoned tile={tile} eager={eager} />
           )}
         </>
       )
@@ -176,10 +192,22 @@ export function StageLayers({ stage, themeCode, slot, zoned = false, tile = fals
       <>
         {/* URL 이 없으면(부분 무대) 그리지 않고 방 배경색이 그대로 드러난다. */}
         {stage.wallpaperUrl && (
-          <Wallpaper key={`wall-${stage.wallpaperUrl}`} url={stage.wallpaperUrl} zoned={false} tile={tile} />
+          <Wallpaper
+            key={`wall-${stage.wallpaperUrl}`}
+            url={stage.wallpaperUrl}
+            zoned={false}
+            tile={tile}
+            eager={eager}
+          />
         )}
         {stage.flooringUrl && (
-          <Flooring key={`floor-${stage.flooringUrl}`} url={stage.flooringUrl} zoned={false} tile={tile} />
+          <Flooring
+            key={`floor-${stage.flooringUrl}`}
+            url={stage.flooringUrl}
+            zoned={false}
+            tile={tile}
+            eager={eager}
+          />
         )}
       </>
     )

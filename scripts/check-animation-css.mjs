@@ -115,6 +115,20 @@ const REQUIRED_CLASSES = [
   '.shelf-tag',
   '.shelf-blessed-aura',
   '.shrine-plaque-ember',
+  // 앰비언트 — 시간대 틴트(전 테마). 그라디언트가 산출물에서 사라지면 방이 하루를 살지 않는다
+  // (인라인은 opacity 하나뿐이라 **아무 색도 안 남는다** = 무증상 사망)
+  '.shrine-tint-dawn',
+  '.shrine-tint-dusk',
+  '.shrine-tint-night',
+  // 앰비언트 — 테마의 숨결(원경광·글로우·CSS 파티클 5종) + 백그라운드 일괄 정지
+  '.shrine-amb-back',
+  '.shrine-amb-glow',
+  '.shrine-amb-mote',
+  '.shrine-amb-firefly',
+  '.shrine-amb-ember',
+  '.shrine-amb-leaf',
+  '.shrine-amb-petal',
+  '.shrine-amb-paused',
 ]
 
 /** @keyframes 이름 */
@@ -196,6 +210,14 @@ const REQUIRED_KEYFRAMES = [
   // 시렁 축복 · 팻말 처마 등
   'shelfBlessed',
   'shrinePlaqueEmber',
+  // 앰비언트 — 테마의 숨결
+  'shrineAmbBack',
+  'shrineAmbGlow',
+  'shrineAmbMote',
+  'shrineAmbFirefly',
+  'shrineAmbEmber',
+  'shrineAmbLeaf',
+  'shrineAmbPetal',
 ]
 
 /** styled-jsx 금지 구역 — 여기 CSS 는 정적 파일(app/shrine-scene.css)에만 둔다 */

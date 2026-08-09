@@ -120,6 +120,22 @@ export function phaseMix(hour: number): PhaseMix {
   return { from: pure, to: pure, t: 0 }
 }
 
+/**
+ * 시각 → 위상별 가중치(합 1). 위상마다 «레이어 1장» 을 겹치는 소비자(TimeTint 등)를 위한 형태다.
+ * 판정은 phaseMix 하나뿐이다 — 위상 경계를 두 번 구현하면 조명과 틴트가 서로 다른 시각을 산다.
+ */
+export function phaseWeights(hour: number): Readonly<Record<DayPhaseName, number>> {
+  const { from, to, t } = phaseMix(hour)
+  const w: Record<DayPhaseName, number> = { dawn: 0, day: 0, dusk: 0, night: 0 }
+  if (from === to) {
+    w[from] = 1
+    return w
+  }
+  w[from] = round(1 - t, 6)
+  w[to] = round(t, 6)
+  return w
+}
+
 /** 블렌드 창 밖에서의 소속 위상. PHASE_BOUNDARIES 와 같은 경계를 쓴다. */
 function bandAt(hour: number): DayPhaseName {
   if (hour < PHASE_BOUNDARIES[0].at) return 'night'

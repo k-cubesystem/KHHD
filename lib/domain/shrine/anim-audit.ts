@@ -36,6 +36,15 @@ export const SHRINE_ANIM_CLASSES: readonly string[] = Object.freeze([
   // 시렁 축복 · 팻말 처마 등
   'shelf-blessed-aura',
   'shrine-plaque-ember',
+  // 테마 앰비언트 — 원경광·글로우·CSS 파티클 5종
+  // (시간대 틴트는 여기 없다: 애니가 아니라 transition 이라 «도는가»로 잴 수 없다)
+  'shrine-amb-back',
+  'shrine-amb-glow',
+  'shrine-amb-mote',
+  'shrine-amb-firefly',
+  'shrine-amb-ember',
+  'shrine-amb-leaf',
+  'shrine-amb-petal',
 ])
 
 /** 한 클래스에 대한 관측값 — DOM 을 모르는 순수 함수가 받도록 숫자만 담는다. */

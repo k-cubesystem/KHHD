@@ -29,3 +29,45 @@ export function effectsTier(deviceMemoryGb: number | null, avgFps: number | null
   if (fps !== null && fps < LITE_FPS) return 'lite'
   return 'full'
 }
+
+// ─── 3티어 (ARCH-shrine-living-background-v1 §6) ────────────────
+// 앰비언트는 상한이 3단이라 'full'|'lite' 2단으로는 mid 를 표현할 수 없다.
+// 기존 effectsTier 는 ShrineRoomClient 가 쓰는 중이라 그대로 두고, 아래를 새 계약으로 얹는다.
+
+export type PerfTier = 'low' | 'mid' | 'high'
+
+/** 코어가 이 이하면 저사양. deviceMemory 를 안 주는 브라우저(사파리)에서 유일한 하드웨어 근거다. */
+export const LOW_CONCURRENCY = 4
+
+/** 판정 신호. 측정 자체(navigator·rAF 샘플링·미디어쿼리)는 호출자(훅) 책임 — 이 파일은 순수하다. */
+export interface PerfSignals {
+  deviceMemoryGb: number | null
+  hardwareConcurrency: number | null
+  avgFps: number | null
+  /** 모바일이면 mid 로 내린다. 모르면 null — 근거 없이 등급을 낮추지 않는다(기존 규율 승계). */
+  mobile: boolean | null
+}
+
+/**
+ * 3단 판정. 저사양 근거가 하나라도 있으면 'low',
+ * 아니면 모바일은 'mid' · 데스크톱/미상은 'high'.
+ */
+export function perfTier(signals: PerfSignals): PerfTier {
+  const memory = measured(signals.deviceMemoryGb)
+  if (memory !== null && memory < LITE_MEMORY_GB) return 'low'
+  const cores = measured(signals.hardwareConcurrency)
+  if (cores !== null && cores <= LOW_CONCURRENCY) return 'low'
+  const fps = measured(signals.avgFps)
+  if (fps !== null && fps < LITE_FPS) return 'low'
+  return signals.mobile === true ? 'mid' : 'high'
+}
+
+/** 3티어 → 기존 2티어. mid 는 시차·시네마틱을 감당하므로 'full' 쪽이다. */
+export function toEffectsTier(tier: PerfTier): EffectsTier {
+  return tier === 'low' ? 'lite' : 'full'
+}
+
+/** 기존 2티어 → 3티어. 'full' 은 mid/high 를 구분할 근거가 없어 상한인 'high' 로 올린다. */
+export function fromEffectsTier(tier: EffectsTier): PerfTier {
+  return tier === 'lite' ? 'low' : 'high'
+}

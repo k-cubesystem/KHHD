@@ -31,8 +31,9 @@ import {
   type StagePlacement,
   type StageSceneData,
 } from '@/lib/domain/shrine/stage'
-import { kstHour, sceneLight } from '@/lib/domain/shrine/scene-clock'
-import { effectsTier, type EffectsTier } from '@/lib/domain/shrine/perf-gate'
+import { kstHour, phaseMix, sceneLight } from '@/lib/domain/shrine/scene-clock'
+import { effectsTier, perfTier, type EffectsTier, type PerfTier } from '@/lib/domain/shrine/perf-gate'
+import { ambientForTheme, ambientForTier } from '@/lib/domain/shrine/theme-ambient'
 import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
 import {
   jambSides,
@@ -49,7 +50,13 @@ import {
   type KeeperEntranceSpec,
   type KeeperRange,
 } from '@/lib/domain/shrine/keeper-walk'
-import { GAMEFEEL_V1, SCROLL_SHRINE_V1, SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
+import {
+  AMBIENT_PILOT_THEMES,
+  AMBIENT_V1,
+  GAMEFEEL_V1,
+  SCROLL_SHRINE_V1,
+  SHRINE_PRAYED_EVENT,
+} from '@/lib/config/gamefeel'
 import {
   greetingFor,
   personalGreeting,
@@ -81,6 +88,8 @@ import {
   hasFamilyShelf,
 } from '@/lib/domain/shrine/family-shelf'
 import { StageLayers } from './StageLayers'
+import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
+import { TimeTint } from './TimeTint'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
 import { GenericPlaqueBand } from './WindowPlaques'
@@ -224,6 +233,22 @@ function readEffectsTier(): EffectsTier {
   return effectsTier(dm, null)
 }
 
+/**
+ * 앰비언트 3티어. 기존 2티어(readEffectsTier)와 **같은 신호**를 쓰되 코어 수·포인터 종류를 더 본다 —
+ * 메모리를 안 주는 브라우저(사파리)에서 하드웨어 근거가 코어뿐이라 그게 없으면 전부 high 가 된다.
+ * 프레임 실측(avgFps)은 rAF 상주 루프가 필요해 여전히 범위 밖이다(null = 미측정으로 흘린다).
+ */
+function readPerfTier(): PerfTier {
+  if (typeof navigator === 'undefined') return 'high'
+  const nav = navigator as Navigator & { deviceMemory?: number }
+  return perfTier({
+    deviceMemoryGb: nav.deviceMemory ?? null,
+    hardwareConcurrency: nav.hardwareConcurrency ?? null,
+    avgFps: null,
+    mobile: typeof window.matchMedia === 'function' ? window.matchMedia('(pointer: coarse)').matches : null,
+  })
+}
+
 /** sessionStorage 는 프라이빗 모드에서 던진다 — 실패해도 연출은 첫 진입 길이로 정상 재생된다. */
 function readEntranceSeen(): boolean {
   try {
@@ -354,6 +379,8 @@ export function ShrineRoomClient({
   const [spinAllowed, setSpinAllowed] = useState(false)
   /** 저사양 폴백 등급. 측정은 마운트 후 1회 */
   const [tier, setTier] = useState<EffectsTier>('full')
+  /** 앰비언트 3티어. null = 아직 못 잼 — 그 동안은 앰비언트를 **아예 안 그린다**(SSR·클라 첫 렌더 동일) */
+  const [ambientTier, setAmbientTier] = useState<PerfTier | null>(null)
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activeCode, setActiveCode] = useState(scene.activePackCode)
@@ -414,6 +441,8 @@ export function ShrineRoomClient({
   useEffect(() => {
     const t = readEffectsTier()
     setTier(t)
+    // 앰비언트만 3단이 필요하다(css/캔버스 상한이 low/mid/high 3단) — 같은 마운트에서 같이 잰다
+    setAmbientTier(readPerfTier())
     // 신위 회전도 같은 연출 판정을 쓴다(게이트·모션 최소화 단일 출처 — useCinematics.motionAllowed)
     setSpinAllowed(motionAllowed())
     const revisit = readEntranceSeen() || t === 'lite'
@@ -490,6 +519,12 @@ export function ShrineRoomClient({
   // 렌더는 기존 단일 무대 그대로 나간다 — 레거시·현행 테마 회귀 0 의 단일 분기점이다.
   const world = useMemo(() => parseWorld(activeStage, activePack?.stageRaw ?? null), [activeStage, activePack])
   const worldActive = SCROLL_SHRINE_V1 && world.width > WORLD_VIEWPORT_PCT
+  /**
+   * 구역이 하나뿐인 세계 — 「큰 방 하나」(안2.1) 구성이다. 이때 벽 뮤럴은 **첫 화면 그 자체**라
+   * 지연 로드가 첫 페인트를 늦춘다(구역 렌더가 뷰포트 밖 와이드 벽지를 미루려고 lazy 를 깔아 둔 것이
+   * 여기서는 손해로 뒤집힌다 — ARCH §11 미가드 지점). 구역이 둘 이상일 때만 lazy 를 유지한다.
+   */
+  const singleZone = world.zones.length <= 1
   const daecheong = useMemo(() => daecheongZone(world), [world])
   const cam = useCameraRig(world, { enabled: SCROLL_SHRINE_V1, editing })
   // panTo 는 참조가 고정돼 있다 — cam 객체는 camX 마다 새로 나므로 effect deps 를 오염시키지 않으려 분해한다
@@ -831,6 +866,27 @@ export function ShrineRoomClient({
     [litCount, light, hour]
   )
 
+  // ── 앰비언트(「살아있는 신당」 L1·L3) ──────────────────────────
+  /**
+   * 시간대 틴트 프로파일 — **전 16테마**가 대상이다(P1). 스펙 표에 없는 테마는 null 이고
+   * 그 방은 틴트 없이 지금까지의 화면 그대로다. stage 유무와는 무관하다(레거시 테마도 하루를 산다).
+   */
+  const tintProfile = useMemo(
+    () => (AMBIENT_V1 ? (ambientForTheme(activeCode)?.tintProfile ?? null) : null),
+    [activeCode]
+  )
+  /**
+   * 원경광·파티클 스펙 — 시범 3테마만(P2). 앰비언트 영상 v1~v5 전량 반려 전례 때문에
+   * CEO 검수 GO 전까지 확산하지 않는다(확산 = AMBIENT_PILOT_THEMES 에 코드 추가 한 줄).
+   */
+  const ambientSpec = useMemo(() => {
+    if (!AMBIENT_V1 || ambientTier === null || !AMBIENT_PILOT_THEMES.includes(activeCode)) return null
+    const base = ambientForTheme(activeCode)
+    return base ? ambientForTier(base, ambientTier) : null
+  }, [activeCode, ambientTier])
+  /** 캔버스 상시 이미터 계획(간격은 «정상상태 개수 = emit × 체류 ÷ 간격» 의 역산) */
+  const ambientEmits = useMemo(() => (ambientSpec ? ambientEmitPlan(ambientSpec) : []), [ambientSpec])
+
   // 보관함 가용 수량 = 보유 - 배치
   const available = useMemo(() => {
     const placed = new Map<string, number>()
@@ -891,9 +947,11 @@ export function ShrineRoomClient({
   }, [editing, tier, smokeSpots])
 
   // ── 상시 빛가루 — 촛불·향로·걸이가 하나도 없는 신당에서도 상시 모션을 보장한다 (안1.1) ──
+  // 앰비언트 스펙이 있는 테마에서는 내린다: 그 방은 제 공기(먼지·눈·불씨)를 이미 들고 있어
+  // 전 테마 공통 빛가루가 겹치면 «장소마다 다른 공기»라는 L3 의 전제가 흐려진다.
   const moteIdx = useRef(0)
   useEffect(() => {
-    if (!GAMEFEEL_V1 || editing || tier !== 'full') return
+    if (!GAMEFEEL_V1 || editing || tier !== 'full' || ambientSpec) return
     const iv = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return
       const spot = MOTE_SPOTS[moteIdx.current % MOTE_SPOTS.length]
@@ -901,7 +959,38 @@ export function ShrineRoomClient({
       effectsRef.current?.emit('sparkle', spot.x, spot.y)
     }, MOTE_INTERVAL_MS)
     return () => window.clearInterval(iv)
-  }, [editing, tier])
+  }, [editing, tier, ambientSpec])
+
+  // ── 테마 앰비언트 캔버스 이미터 (설빛 눈 · 달집 불씨) ──
+  // 향로 연기와 같은 문법이다 — 캔버스는 손대지 않고 기존 emit 만 주기 호출한다.
+  // low 티어와 모션 최소화에서는 **등록 자체를 하지 않는다**(캔버스 1개 축소와는 별개로 아예 안 뿌린다).
+  useEffect(() => {
+    if (editing || ambientTier === 'low' || ambientEmits.length === 0) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const ivs = ambientEmits.map((e) =>
+      window.setInterval(() => {
+        // 백그라운드 탭에서는 rAF 가 멈춰 파티클이 큐에만 쌓인다 — 아예 쏘지 않는다
+        if (document.visibilityState !== 'visible') return
+        effectsRef.current?.emit(e.kind, e.x, e.y)
+      }, e.intervalMs)
+    )
+    return () => ivs.forEach((iv) => window.clearInterval(iv))
+  }, [editing, ambientTier, ambientEmits])
+
+  // ── 앰비언트 노출 계측 — 마운트 1회. 시각·티어가 다 잡힌 뒤에 한 번만 찍는다.
+  // value 1 = 원경광·파티클까지 도는 시범 테마 / 0 = 시간대 틴트만(전 테마 공통층).
+  const ambientLogged = useRef(false)
+  useEffect(() => {
+    if (!AMBIENT_V1 || ambientLogged.current || hour === null || ambientTier === null) return
+    ambientLogged.current = true
+    const { from, to, t } = phaseMix(hour)
+    trackEvent({
+      action: 'ambient_view',
+      category: 'shrine',
+      label: `${activeCode}:${ambientTier}:${t < 0.5 ? from : to}`,
+      value: ambientSpec ? 1 : 0,
+    })
+  }, [hour, ambientTier, activeCode, ambientSpec])
 
   // ── 기도 의식 — 소원 폼이 기원 +1 을 알리면(SHRINE_PRAYED_EVENT) 룸이 연출을 받는다 ──
   // 시각 연출 전용: 점화는 임시 불꽃(pray-*)이라 저장된 lit 상태를 건드리지 않는다(setPlacementLit 미호출).
@@ -1386,13 +1475,19 @@ export function ShrineRoomClient({
         slot="ground"
         zoned={worldActive}
         tile={daecheongTile}
+        eager={singleZone}
       />
+      {/* 원경층 — 뮤럴 바로 위, 모든 살림 아래(z auto). 테마마다 다른 공기(원경광·CSS 파티클·글로우)를
+          여기 한 겹으로 얹는다. 밀도가 필요한 눈·불씨는 이 층이 아니라 EffectsCanvas(z11) 몫이다. */}
+      {ambientSpec && <AmbientBackdrop spec={ambientSpec} roundClassName={roundAll} />}
       {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
           mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
           (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
           편집 중엔 성능 위해 숨김. 영상 자체를 라운딩(부모 클립 의존 금지 — 흰화면 사고 교훈).
-          파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다. */}
-      {!editing && (
+          파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다.
+          ⚠️ 앰비언트 스펙을 든 테마에서는 **미렌더**다(ARCH §11 은퇴 경로) — 같은 자리에 두 연출을
+          겹치면 검수 대상이 무엇인지부터 흐려진다. 스펙 없는 테마는 지금까지 그대로 재생된다. */}
+      {!editing && !ambientSpec && (
         <AmbientVideo
           key={`vid-${activeCode}`}
           id={`shrine-theme-${activeCode}`}
@@ -1512,6 +1607,11 @@ export function ShrineRoomClient({
         className={`absolute inset-0 pointer-events-none shrine-light-overlay${roundAll}`}
         style={{ ...lightOverlay, mixBlendMode: 'soft-light', zIndex: 29 }}
       />
+
+      {/* 시간대 틴트 — 조명 오버레이와 같은 층(z29)에 일반 알파로 겹친다. 신규 blend-mode 를 만들지
+          않는 것이 이 자리의 계약이다(대면적 블렌드 사고 전례). 낮에는 세 장 다 0 이라 DOM 이 비어
+          검수된 원화가 그대로 나온다. */}
+      <TimeTint hour={hour} profile={tintProfile} roundClassName={roundAll} />
 
       {/* 앵커 스냅 하이라이트 (꾸미기) — 골드 링 */}
       {editing && snapAnchor && (
