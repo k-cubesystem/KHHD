@@ -32,6 +32,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import { warmDespill } from './despill.mjs'
 
 // ⚠️ .env.local 은 **메인 체크아웃만** 로드한다.
 //    워크트리(.claude/worktrees/*)의 .env.local 에는 폐기된 구키(AIzaSy…)가 잔존하며,
@@ -134,6 +135,7 @@ const ASSETS = [
     key: 'seokdeung',
     file: 'seokdeung.webp',
     alpha: true,
+    despill: 'warm', // 황록 스필 이력(0f637df 수술)
     w: 512,
     h: 768,
     fit: 'contain',
@@ -333,6 +335,7 @@ async function buildAsset(asset, { regen }) {
     let best = null
     for (let p = 0; p < KEY_PROFILES.length; p++) {
       const keyed = await chromaKey(await sharp(rawPng).toBuffer(), KEY_PROFILES[p])
+      if (asset.despill === 'warm') warmDespill(keyed.data, keyed.channels)
       const png = await sharp(keyed.data, {
         raw: { width: keyed.width, height: keyed.height, channels: keyed.channels },
       })

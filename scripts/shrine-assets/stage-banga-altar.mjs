@@ -44,6 +44,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import { warmDespill } from './despill.mjs'
 
 // ⚠️ .env.local 은 **메인 체크아웃만** 로드한다.
 //    워크트리(.claude/worktrees/*)의 .env.local 에는 폐기된 구키(AIzaSy…)가 잔존하며,
@@ -108,6 +109,7 @@ const ASSETS = [
     key: 'altar-top',
     file: 'altar-top.webp',
     outW: 768,
+    despill: 'warm', // 황록 스필 이력(2026-08-10 잔량 0.66% 수술)
     prompt:
       'A Korean traditional shrine offering table (제단 상판): a long wide flat lacquered top board with a moulded ' +
       'edge lip, carried on a low decorated apron rail with carved key-fret side panels and short stout front legs. ' +
@@ -301,6 +303,7 @@ async function buildAsset(asset, { regen, rekey }) {
     let best = null
     for (let p = 0; p < KEY_PROFILES.length; p += 1) {
       const keyed = await chromaKey(await sharp(rawPng).toBuffer(), KEY_PROFILES[p])
+      if (asset.despill === 'warm') warmDespill(keyed.data, keyed.channels)
       const png = await sharp(keyed.data, {
         raw: { width: keyed.width, height: keyed.height, channels: keyed.channels },
       })

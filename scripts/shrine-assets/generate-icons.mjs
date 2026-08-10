@@ -7,6 +7,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import sharp from 'sharp'
+import { warmDespill } from './despill.mjs'
 
 config({ path: path.resolve('D:/anti/haehwadang/.env.local') })
 
@@ -39,7 +40,7 @@ const navPrompt = (desc) =>
 const portraitPrompt = (desc) =>
   `Korean traditional character bust portrait for a circular avatar: ${desc}. ${STYLE}, head and shoulders framing centered with generous headroom, face clearly visible, gentle warm expression, looking slightly toward viewer, ${BG}`
 
-/** @type {Record<string, Array<{slug:string,out:string,size:number,prompt:string}>>} */
+/** @type {Record<string, Array<{slug:string,out:string,size:number,prompt:string,despill?:'warm'}>>} */
 const SETS = {
   // A. 신당 아이템 12 (방 배치 스프라이트 + 카드 공용)
   items: [
@@ -107,6 +108,7 @@ const SETS = {
       slug: 'shelf-sabang',
       out: 'shrine/stage/banga/shelf-sabang.webp',
       size: 640,
+      despill: 'warm',
       prompt:
         'Korean traditional sabang-takja (四方卓子) — a TALL narrow open display shelf of dark walnut wood, ' +
         'seen in flat frontal elevation view, much taller than wide. Four open tiers stacked vertically: ' +
@@ -268,7 +270,8 @@ async function gen(prompt, outPng, refPaths = []) {
 }
 
 // 크로마키(chroma.mjs 동일 로직) → 트림 → 정사각 리사이즈
-async function key_trim_resize(inPng, outWebp, size) {
+// 아래 despill 조건(g-r>20 && g-b>20)은 g≈r 황록 스필을 못 잡는다 — 해당 자산은 despill:'warm' 참조.
+async function key_trim_resize(inPng, outWebp, size, despill) {
   const { data, info } = await sharp(inPng).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const { width, height, channels } = info
   for (let i = 0; i < data.length; i += channels) {
@@ -278,6 +281,7 @@ async function key_trim_resize(inPng, outWebp, size) {
     if (g > 90 && g - r > 60 && g - b > 60) data[i + 3] = 0
     else if (g - r > 20 && g - b > 20) data[i + 1] = Math.min(g, Math.round((r + b) / 2) + 10)
   }
+  if (despill === 'warm') warmDespill(data, channels)
   const keyed = sharp(data, { raw: { width, height, channels } }).png()
   const trimmed = await keyed.trim({ threshold: 10 }).toBuffer()
   await mkdir(path.dirname(outWebp), { recursive: true })
@@ -308,7 +312,7 @@ for (const name of names) {
     const rawPng = path.join(RAW, name, `${item.slug}.png`)
     try {
       if (!existsSync(rawPng)) await gen(item.prompt, rawPng)
-      await key_trim_resize(rawPng, outWebp, item.size)
+      await key_trim_resize(rawPng, outWebp, item.size, item.despill)
       console.log('  ✔', item.out)
       ok++
     } catch (e) {
