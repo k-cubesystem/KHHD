@@ -42,8 +42,7 @@ const REQUIRED_CLASSES = [
   '.fh-flicker',
   '.fh-bloom',
   '.fh-bubble',
-  // 무대 물리 · 좌정 신위 · 기원 시트
-  '.shrine-anchor-ring',
+  // 무대 물리 · 좌정 신위 · 기원 시트 (`.shrine-anchor-ring` 은 자석 폐지 2026-08-10 로 제거)
   '.shrine-item-wiggle',
   '.shrine-light-overlay',
   '.deity-stand',
@@ -150,7 +149,7 @@ const REQUIRED_KEYFRAMES = [
   'fhFlicker',
   'fhBloom',
   'fhBubbleIn',
-  'shrineAnchorPulse',
+  // ('shrineAnchorPulse' — 앵커 스냅 링. 자석 폐지 2026-08-10 로 CSS·클래스 목록과 함께 제거)
   'shrineWiggle',
   'deityBreathe',
   // 신위 탭 한 바퀴 회전 (안2.3 ④ — 9국면 프레임 교체 + 5국면 하위 등급 + 폴백 rotateY)

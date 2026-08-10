@@ -28,9 +28,18 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 import { EL_COLOR, ELEMENTS } from '../energy'
-import { FAMILY_SHELF_THEMES, FSHELF_UNIT } from '../family-shelf'
+import { FAMILY_SHELF_THEMES, FSHELF_ANCHOR_PREFIX, FSHELF_TIERS, FSHELF_UNIT } from '../family-shelf'
 import { FIXTURE_DY_RANGE } from '../fixture-offsets'
-import { DEITY_HEAD_ROOM_Y, PODIUM_TOP_Y, deityHeadRoomY, deityStandBox, depthScale, parseStageSpec } from '../stage'
+import {
+  DEITY_HEAD_ROOM_Y,
+  PODIUM_TOP_Y,
+  deityHeadRoomY,
+  deityPodiumTopY,
+  deityStandBox,
+  depthScale,
+  depthZ,
+  parseStageSpec,
+} from '../stage'
 import {
   ALTAR_ANCHOR_X,
   ALTAR_ANCHOR_Y,
@@ -43,6 +52,8 @@ import {
   NEUTRAL_LIGHT_COLOR,
   STAGE_BANDS,
   STAGE_FLOOR_LINE_Y,
+  STAGE_GROUND_DROP,
+  STAGE_GROUND_LINE_Y,
   THEME_CODES,
   THEME_STAGE_WIDTH,
   THEME_STAGE_ZONE,
@@ -64,6 +75,9 @@ const MIGRATION = path.join(ROOT, 'supabase', 'migrations', '20260807_theme_stag
 const PILOT_MIGRATION = path.join(ROOT, 'supabase', 'migrations', '20260810_theme_stage_v4_pilot.sql')
 const STAGE_LAYERS = path.join(ROOT, 'components', 'shrine', 'scene', 'StageLayers.tsx')
 const RITUAL_HALL = path.join(ROOT, 'components', 'shrine', 'scene', 'RitualHall.tsx')
+const ROOM = path.join(ROOT, 'components', 'shrine', 'scene', 'ShrineRoomClient.tsx')
+/** 틀 상판의 세계 x 실폭(스프라이트 실측 최솟값 70% × 틀 폭 60%) — 앵커·아이템이 앉을 수 있는 띠 */
+const BOARD_SPAN: readonly [number, number] = [43.4, 56.6]
 const BANGA_SQL = path.join(ROOT, 'supabase', 'migrations', '20260806b_banga_remove_door.sql')
 const SPEC_DATA = path.join(ROOT, 'scripts', 'shrine-assets', 'spec-data.mjs')
 const PUBLIC_DIR = path.join(ROOT, 'public')
@@ -328,78 +342,166 @@ describe('밴드 — 마루선은 JSON 한 곳에서만 정해진다', () => {
   })
 
   /**
-   * ★ 사방탁자 접지 — **마루선 파생**이다 (2026-08-10 접지 수복 · CEO 실기기 검수)
+   * ★ 사방탁자 접지 — **접지선 파생**이다 (2026-08-10 · CEO 실기기 검수 2회)
    *
-   * "틀과 선반들이 공중에 떠 있어. 마루 라인에 맞춰서 내려와야 해."
-   * 직전 회차는 밑동 62 를 **동결**했다 — 진열 칸 앵커가 함께 내려가면 이미 진열해 둔 아이템이
-   * 널에서 떨어지고(배치는 절대 좌표), 상자를 키우면 `objectFit:'fill'` 스프라이트가 늘어난다는
-   * 이유였다. 그 대가가 마루선보다 **11%p 뜬 가구**였고, 실기기에서 그것이 먼저 보였다.
+   * 1차 "틀과 선반들이 공중에 떠 있어. 마루 라인에 맞춰서 내려와야 해." → 밑동 62 → 마루선(73) 파생.
+   * 2차 "선반과 틀 같은 건 마루 3/1은 자리를 잡아야 해." → 마루선에 발끝만 걸친 그림이 «벽에 기댄»
+   *     것으로 읽혔다. 파생 기준을 **접지선**(마루선 + 바닥밴드/3 = 82)으로 한 칸 옮긴다.
    *
    * 처방은 셋을 함께 지킨다:
-   *   · 밑동 = 마루선 **파생**(신수 KEEPER_POS 와 같은 규약) — 다음 마루선 이동은 공짜다.
+   *   · 밑동 = **파생**(신수 KEEPER_POS 와 같은 규약) — 다음 마루선 이동은 공짜다.
    *   · 상자 **높이 불변**(42) · top 을 같은 delta 로 함께 이동 → 스프라이트 왜곡 0.
-   *   · 진열 아이템 동반 이동은 **마이그레이션**이 맡는다(앵커 id + 옛 칸 좌표 정확일치, +11).
+   *   · 진열 아이템 동반 이동은 **마이그레이션**이 맡는다(앵커 id + 옛 칸 좌표 정확일치, v5 는 +9).
    */
-  it('★ 사방탁자 밑동이 마루선 파생이다 — 마루가 내려가면 살림도 함께 내려간다', () => {
-    expect(FSHELF_UNIT.bottom).toBe(STAGE_FLOOR_LINE_Y)
-    expect(FSHELF_UNIT.bottom).toBe(73)
+  it('★ 사방탁자 밑동이 접지선 파생이다 — 마루가 움직이면 살림도 함께 움직인다', () => {
+    expect(FSHELF_UNIT.bottom).toBe(STAGE_GROUND_LINE_Y)
+    expect(FSHELF_UNIT.bottom).toBe(82)
     // 상자 높이는 불변 — 커지면 가구가 세로로 늘어나고 단 비율(FSHELF_TIERS)의 정합이 깨진다
     expect(FSHELF_UNIT.bottom - FSHELF_UNIT.top).toBe(42)
-    expect(FSHELF_UNIT.top).toBe(31)
+    expect(FSHELF_UNIT.top).toBe(40)
     // 의식각도 같은 상자다(사방탁자 한 좌) — 숫자를 따로 들면 오른벽만 높이가 달라진다
     const hall = readFileSync(RITUAL_HALL, 'utf8')
     expect(hall).toContain('top: FSHELF_UNIT.top')
     expect(hall).toContain('bottom: FSHELF_UNIT.bottom')
     expect(hall).not.toContain('bottom: 62')
-    // 조절 손잡이는 이제 «미세 조정»으로 되돌아간다 — 덮어야 할 부양분이 0 이다
-    expect(FIXTURE_DY_RANGE[1]).toBeGreaterThanOrEqual(STAGE_FLOOR_LINE_Y - FSHELF_UNIT.bottom)
+    // 조절 손잡이는 «미세 조정»으로 남는다 — 덮어야 할 부양분이 0 이다
+    expect(FIXTURE_DY_RANGE[1]).toBeGreaterThanOrEqual(STAGE_GROUND_LINE_Y - FSHELF_UNIT.bottom)
   })
 
   /**
-   * ★ 진열 칸이 벽 존 안에 남는가 — 밑동을 마루선에 붙이는 한계선이 여기다.
+   * ★ 진열 칸이 벽 존 안에 남는가 — 밑동을 내리는 한계선이 여기다.
    *
-   * 맨 아래 칸 앵커 = top + 0.76·42 − 3.5 = 밑동 − 13.58. 밑동을 마루선(73) 그 자체로 두면 59.42 로
-   * 벽 존(4~60) 안이지만, «그려진 발끝»까지 마루선에 맞추려고 1.1%p 를 더 내리면 60.5 가 되어
-   * 나간다. 그 1.1%p 는 스프라이트 자체의 발밑 투명 여백이고 drop-shadow 가 덮는다.
+   * 맨 아래 칸 앵커 = top + 0.76·42 − 3.5 = 밑동 − 13.58. v4.1(밑동 73)에서는 59.42 라 벽 존 상한
+   * 60 에 1%p 도 안 남아 있었고, 그것이 「더 못 내린다」의 근거였다. v5 는 살림이 마루 안으로
+   * 들어오면서 벽 존도 함께 70 까지 열어(넓히는 방향만) 68.42 가 그 안에 든다.
    */
-  it('★ 맨 아래 진열 칸이 벽 존(4~60) 안에 남는다 — 접지를 더 내릴 수 없는 이유', () => {
+  it('★ 맨 아래 진열 칸이 벽 존 안에 남는다 — 존을 함께 열어야 성립한다', () => {
     const bottomSlotY = FSHELF_UNIT.bottom - 13.58
-    expect(bottomSlotY).toBeCloseTo(59.42, 2)
+    expect(bottomSlotY).toBeCloseTo(68.42, 2)
     expect(bottomSlotY).toBeLessThanOrEqual(ZONES.wall.y[1])
+    // 벽 존은 마루선 위에서 멈춘다 — 그 아래는 마루라 벽걸이가 걸릴 곳이 아니다
+    expect(ZONES.wall.y[1]).toBeLessThan(STAGE_FLOOR_LINE_Y)
   })
 })
 
-// ── ⑥ 틀(壇) 시범 3테마 ─────────────────────────────────────────
+// ── ⑧ 접지선 (무대 기하 v5 「마루 1/3 접지」) ────────────────────
 
-describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', () => {
-  const PILOT_THEMES = ['banga', 'daljip', 'seolbit']
-
-  it('★ 시범 목록이 3테마고 전부 실재하는 테마다', () => {
-    expect([...GRAND_ALTAR_THEMES]).toEqual(PILOT_THEMES)
-    for (const code of GRAND_ALTAR_THEMES) expect(THEME_CODES).toContain(code)
-    expect(GRAND_ALTAR_THEMES.every(hasGrandAltar)).toBe(true)
+/**
+ * ★ 마루선과 접지선은 **다른 줄**이다 (2026-08-10 밤 · CEO "마루 3/1")
+ *
+ * 마루선(73)은 벽·바닥 뮤럴이 만나는 이음새고, 접지선(82)은 가구의 발이 앉는 자리다. v4.1 까지는
+ * 둘이 같은 값이라 구분이 없었고, 그래서 가구가 마루에 발끝만 걸친 채 벽에 붙어 보였다.
+ * 여기서 지키는 것은 «둘이 갈라졌다»는 사실과 «갈라진 몫이 파생이다»라는 규율 두 가지다 —
+ * 상수 82 를 굽는 순간 다음 마루선 이동에서 가구만 제자리에 남는다(이미 두 번 겪었다).
+ */
+describe('접지선 — 살림은 마루 1/3 지점에 선다', () => {
+  it('★ 접지선 = 마루선 + 바닥밴드/3 = 82 (파생 · 상수 굽기 금지)', () => {
+    expect(STAGE_GROUND_DROP).toBe(9)
+    expect(STAGE_GROUND_DROP).toBe(STAGE_BANDS.floor / 3)
+    expect(STAGE_GROUND_LINE_Y).toBe(82)
+    expect(STAGE_GROUND_LINE_Y).toBe(STAGE_FLOOR_LINE_Y + STAGE_GROUND_DROP)
+    // 접지선은 마루 안쪽이다 — 마루선과 마루 끝(바닥 존 하한 96) 사이
+    expect(STAGE_GROUND_LINE_Y).toBeGreaterThan(STAGE_FLOOR_LINE_Y)
+    expect(STAGE_GROUND_LINE_Y).toBeLessThanOrEqual(ZONES.floor.y[1])
   })
 
-  it('★ 나머지 13테마는 v3(단상+상판) 그대로다 — 혼재가 정상 상태다', () => {
-    for (const code of THEME_CODES.filter((c) => !hasGrandAltar(c))) {
-      expect([code, buildThemeStageV4(code)]).toEqual([code, buildThemeStage(code)])
+  it('★ 마루선·밴드·신수는 v5 에서 안 움직인다 — 내려간 것은 「가구의 발」뿐이다', () => {
+    expect(STAGE_BANDS).toEqual({ wall: 75, floor: 27 })
+    expect(STAGE_FLOOR_LINE_Y).toBe(73)
+    // 신수는 마루를 밟는 존재라 «마루가 시작되는 줄»에 선다 — 가구 발치까지 끌려 내려가지 않는다
+    expect(KEEPER_POS.y).toBe(STAGE_FLOOR_LINE_Y - 1)
+    expect(KEEPER_POS.y).toBe(72)
+    expect(KEEPER_POS.y).toBeLessThan(STAGE_GROUND_LINE_Y)
+  })
+
+  /**
+   * ★ v5 는 **순수 평행이동**이다 — 크기가 변한 것이 하나도 없다.
+   *
+   * 이 신당의 사고는 늘 «맞추다가 다른 것이 늘어나는» 자리에서 났다(스프라이트 리패드·상자 높이).
+   * v5 가 안전한 이유는 이동뿐이라는 것이고, 그 증거를 수치로 남긴다.
+   */
+  it('★ 크기 불변 — 틀 세로·선반 높이·신위 키가 v4.1 과 같다', () => {
+    expect(GRAND_ALTAR_BOX_H).toBe(71.56) // 틀 상자 세로
+    expect(FSHELF_UNIT.bottom - FSHELF_UNIT.top).toBe(42) // 사방탁자 높이
+    for (const code of GRAND_ALTAR_THEMES) {
+      const box = deityStandBox(deityPodiumTopY(code), deityHeadRoomY(code))
+      // v4.1 의 신위 키 = 45.3 − (24.9/23.2/25.6). 발·머리가 같은 +9 라 높이가 그대로다.
+      const v41 = PODIUM_TOP_Y - (deityHeadRoomY(code) - STAGE_GROUND_DROP)
+      expect([code, box.height]).toEqual([code, `${Math.round(v41 * 1e4) / 1e4}%`])
     }
   })
 
-  it.each(['banga', 'daljip', 'seolbit'])('%s — 틀 1구조물 · 테마별 자산 경로 (J 생성 계약)', (code) => {
+  it('★ 살림 셋이 한 줄에 선다 — 틀·선반장·의식각의 밑동이 같은 값에서 나온다', () => {
+    const frame = grandAltarStructures('banga')[0]
+    expect(frame.y + GRAND_ALTAR_BOX_H / 2).toBeCloseTo(STAGE_GROUND_LINE_Y, 6)
+    expect(FSHELF_UNIT.bottom).toBe(STAGE_GROUND_LINE_Y)
+    // 의식각은 FSHELF_UNIT 을 승계한다(RitualHall.tsx) — 위 밴드 describe 가 소스로 확인한다
+  })
+})
+
+// ── ⑥ 틀(壇) 16테마 확산 ─────────────────────────────────────────
+
+describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', () => {
+  /** 확산 완료(2026-08-10) — 시범 3테마가 16테마 전량이 됐다. 순서는 THEME_CODES 와 같다. */
+  const NOT_A_THEME = 'no-such-theme'
+
+  it('★ 확산 완료 — 16테마 전부가 틀을 든다 (혼재 상태 종료)', () => {
+    expect([...GRAND_ALTAR_THEMES]).toEqual([...THEME_CODES])
+    expect(GRAND_ALTAR_THEMES).toHaveLength(16)
+    expect(GRAND_ALTAR_THEMES.every(hasGrandAltar)).toBe(true)
+    // 모르는 코드는 여전히 v3 로 떨어진다 — 이 분기가 사라지면 원복 레버가 함께 사라진다
+    expect(hasGrandAltar(NOT_A_THEME)).toBe(false)
+    expect(hasGrandAltar('__proto__')).toBe(false)
+  })
+
+  /**
+   * ★ v3 계보는 살아 있어야 한다 — 그것이 **원복 레버**다.
+   *
+   * 확산으로 「13테마는 v3 그대로」가 사라졌지만, 20260807 시드(단상+상판)는 여전히 적용된 이력이고
+   * 되돌리기는 그 문장을 다시 실행하는 것이다. 그래서 buildThemeStage(v3)는 16테마 전부에서
+   * **틀이 아닌** 살림을 계속 만들어야 하고, buildThemeStageV4 와 확실히 갈려야 한다.
+   */
+  it('★ v3 계보가 그대로 산다 — 16테마 모두 v3≠v4 이고 v3 에는 틀이 없다', () => {
+    for (const code of THEME_CODES) {
+      expect([code, buildThemeStageV4(code)]).not.toEqual([code, buildThemeStage(code)])
+      const v3 = buildThemeStage(code).zones[0].structures
+      expect([code, v3.map((s) => s.code)]).toEqual([code, [`platform-${code}`, `altar-${code}`]])
+    }
+    // 틀 밖 코드는 v3 와 같다(분기 자체가 코드 목록에 매여 있다는 증거)
+    expect(buildThemeStageV4(NOT_A_THEME)).toEqual(buildThemeStage(NOT_A_THEME))
+  })
+
+  it.each(THEME_CODES)('%s — 틀 1구조물 · 테마별 자산 경로 (J 생성 계약)', (code) => {
     const s = grandAltarStructures(code)
     expect(s).toHaveLength(1)
     expect(s[0].code).toBe(`grand-altar-${code}`)
     // 살림 공용(반가 스프라이트)이 아니라 **테마마다 다른 틀**이다 — 여기가 v3 와 갈리는 지점이다.
     // `-v2` 는 접지 수복본이다(2026-08-10) — 같은 이름 덮어쓰기는 폰·엣지 캐시가 옛 그림을 재사용한다.
     expect(s[0].assetUrl).toBe(`/shrine/stage/${code}/grand-altar-v2.webp`)
-    expect(s[0]).toMatchObject({ x: 50, y: 37.22, w: 60 })
+    // v5: 시드 y 37.22 → 46.22 (접지선 파생 · 상자 세로 71.56 불변 = 평행이동 +9)
+    expect(s[0]).toMatchObject({ x: 50, y: 46.22, w: 60 })
   })
 
-  it('★ 신위 접지 45.3 불변 — 틀이 감실을 품어도 신위는 어제 서 있던 높이에 선다', () => {
+  /**
+   * ★ 신위 접지는 틀의 **감실 바닥**이다 — v5 에서 틀과 함께 내려앉는다.
+   *
+   * v4.1 까지 감실 바닥은 단상 상면(PODIUM_TOP_Y 45.3)과 같은 줄이라 "불변"으로 적혀 있었다.
+   * 마루 1/3 접지가 틀을 통째로 9%p 내리면서 그 줄도 54.3 으로 따라갔고, 발만 45.3 에 두면
+   * 신위가 감실 안에서 9%p 뜬다. 13테마(단상)는 그대로 45.3 — 분기의 단일 출처는 deityPodiumTopY 다.
+   */
+  it('★ 신위 접지 — 틀 테마 54.3(감실 바닥) · 틀 없는 무대는 45.3(단상 상면) 그대로', () => {
     expect(PODIUM_TOP_Y).toBe(45.3)
-    // 저장된 배치가 안 움직이는 근거는 앵커 좌표가 아니라 «배치가 절대 좌표»라는 것이다.
-    // 앵커는 «다음에 놓을 자리»만 정한다 — 그래서 아래 2열 재배치도 이동 0 이다.
+    for (const code of GRAND_ALTAR_THEMES) {
+      expect([code, deityPodiumTopY(code)]).toEqual([code, 54.3])
+      expect([code, deityPodiumTopY(code)]).toEqual([code, PODIUM_TOP_Y + STAGE_GROUND_DROP])
+    }
+    // 확산으로 「틀 없는 테마」는 0 이 됐지만 **분기는 살아 있어야** 한다 — 원복 레버(v3)의 착지점이고,
+    // 목록을 지우면 라이브 신당의 신위가 한꺼번에 9%p 튄다.
+    expect(deityPodiumTopY(NOT_A_THEME)).toBe(PODIUM_TOP_Y)
+    // 프로토타입 오염 방어 — 모르는 코드는 단상 상면으로 떨어진다
+    expect(deityPodiumTopY('__proto__')).toBe(PODIUM_TOP_Y)
+    // 저장된 배치가 앵커를 따라가지 않는 근거는 «배치가 절대 좌표»라는 것이다 —
+    // 앵커는 «다음에 놓을 자리»만 정하고, 이번 회차의 동반 이동은 마이그레이션이 맡는다.
     for (const code of GRAND_ALTAR_THEMES) {
       expect(grandAltarStructures(code)[0].anchors.every((a) => a.layer === 'altar')).toBe(true)
     }
@@ -413,28 +515,61 @@ describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', 
    * 아예 상판 밖 허공이었다. 깊이 두 줄로 나누고 배율을 내리는 것이 그 처방이다.
    */
   it('★ 앵커가 틀 상판 실폭(43.4~56.6) 안에 2열로 앉는다 — 상판 밖 허공 금지', () => {
+    // v5: y 만 +9(52.4/55 → 61.4/64). x 는 상판 실폭이 안 변했으므로 그대로다.
     expect([...GRAND_ALTAR_ANCHOR_X]).toEqual([45.7, 50, 54.3, 47.85, 52.15])
-    expect([...GRAND_ALTAR_ANCHOR_Y]).toEqual([52.4, 52.4, 52.4, 55, 55])
+    expect([...GRAND_ALTAR_ANCHOR_Y]).toEqual([61.4, 61.4, 61.4, 64, 64])
     // 뒷줄 3점이 앞줄 2점보다 위(=뒤)에 있고, 앞줄은 뒷줄 사이 틈에 엇갈려 놓인다
     const rows = new Map<number, number[]>()
     for (const [i, y] of GRAND_ALTAR_ANCHOR_Y.entries()) rows.set(y, [...(rows.get(y) ?? []), GRAND_ALTAR_ANCHOR_X[i]])
-    expect([...rows.keys()]).toEqual([52.4, 55])
-    expect(rows.get(52.4)).toHaveLength(3)
-    expect(rows.get(55)).toHaveLength(2)
-    for (const x of rows.get(55) ?? []) {
-      expect(x).toBeGreaterThan(Math.min(...(rows.get(52.4) ?? [])))
-      expect(x).toBeLessThan(Math.max(...(rows.get(52.4) ?? [])))
+    expect([...rows.keys()]).toEqual([61.4, 64])
+    expect(rows.get(61.4)).toHaveLength(3)
+    expect(rows.get(64)).toHaveLength(2)
+    for (const x of rows.get(64) ?? []) {
+      expect(x).toBeGreaterThan(Math.min(...(rows.get(61.4) ?? [])))
+      expect(x).toBeLessThan(Math.max(...(rows.get(61.4) ?? [])))
     }
     /**
-     * 상판 실폭 — 밖으로 나가면 제물이 허공에 뜬다(구안 38/62 회귀 금지).
-     * v4.1 은 틀이 w50 → w60 이라 상판 세계 폭이 11.25% → **13.2%**(x43.4~56.6)로 넓어졌다.
-     * 여기에 아이템 반폭(가장 좁은 폰에서 2.2%)까지 얹어도 상판을 넘지 않아야 한다.
+     * ★ 앞줄이 뒷줄을 덮는가 — 깊이 2열의 존재 이유. 제단 z 밴드가 셋뿐이라 v3 평면(53.5 한 줄)과
+     * v5 틀 평면(61.4/64 두 줄)을 한 자로 동시에 가를 수 없다 — 그래서 자(ALTAR_DEPTH_REF)를 틀
+     * 무대에서 접지 이동분만큼 통째로 내린다. 스위치를 안 주면 두 줄이 같은 z 로 합쳐져 앞뒤가
+     * DOM 순서(배치를 만든 순서)로 넘어간다.
      */
-    const HALF_ITEM = 2.23 // 360x800 폰에서 아이템(3.2em×29px×0.54)의 세계 반폭
+    expect(depthZ('altar', 64, true)).toBeGreaterThan(depthZ('altar', 61.4, true))
+    expect(depthZ('altar', 61.4, true)).toBe(depthZ('altar', 52.4))
+    expect(depthZ('altar', 64, true)).toBe(depthZ('altar', 55))
+    /**
+     * 상판 실폭 — 앵커가 밖으로 나가면 «상판 밖 허공»이다(구안 38/62 회귀 금지).
+     * v4.1 은 틀이 w50 → w60 이라 상판 세계 폭이 11.25% → **13.2%**(x43.4~56.6)로 넓어졌다.
+     */
     for (const x of GRAND_ALTAR_ANCHOR_X) {
-      expect(x - HALF_ITEM).toBeGreaterThanOrEqual(43.4)
-      expect(x + HALF_ITEM).toBeLessThanOrEqual(56.6)
+      expect(x).toBeGreaterThanOrEqual(BOARD_SPAN[0])
+      expect(x).toBeLessThanOrEqual(BOARD_SPAN[1])
     }
+  })
+
+  /**
+   * ★ 아이템 반폭이 상판을 넘는가 — **예산 게이트**로 남긴다 (2026-08-10 자석 폐지 이후)
+   *
+   * 종전에는 «앵커 ± 아이템 반폭이 상판 안» 이 강한 계약이었다. 스냅이 좌표를 앵커 값으로 복사했으니
+   * 앵커가 곧 아이템 자리였기 때문이다. 자석이 사라진 지금 앵커는 아무것도 놓지 않는다 —
+   * 시드에 남긴 **데이터 계약**이고, 후속 「진설 도우미」가 다시 쓸 자리다.
+   * 그래서 계약을 «넘지 않는다»에서 «얼마나 넘는지 예산 안»으로 낮춘다. 예산이 터지면 그때는
+   * 배율(altarItemScale)이나 앵커 x 를 다시 정할 때다 — 도우미를 되살리기 전에 반드시 본다.
+   */
+  it('★ 앵커에 아이템을 얹었을 때 상판 넘침이 예산(1%p) 안이다 — 진설 도우미 복원 전 점검선', () => {
+    const room = readFileSync(ROOM, 'utf8')
+    const mdPx = Number(/md:\s*'(\d+(?:\.\d+)?)px'/.exec(room)?.[1])
+    const assetEm = Number(/const ASSET_EM = ([\d.]+)/.exec(room)?.[1])
+    expect(Number.isFinite(mdPx) && Number.isFinite(assetEm)).toBe(true)
+    // 가장 좁은 폰(360 → 방 352px)에서 세계 1% = 352 × 3.2 / 100 px. 아이템 상자는 CSS px 절대값이라
+    // 좁은 기기일수록 «세계 %»로는 커진다 — 넘침이 가장 심한 경우를 기준으로 잰다.
+    const worldPctPx = (352 * THEME_STAGE_WIDTH) / 100 / 100
+    const halfItemPct = (assetEm * mdPx * GRAND_ALTAR_ITEM_SCALE) / 2 / worldPctPx
+    const overhang = Math.max(
+      BOARD_SPAN[0] - (Math.min(...GRAND_ALTAR_ANCHOR_X) - halfItemPct),
+      Math.max(...GRAND_ALTAR_ANCHOR_X) + halfItemPct - BOARD_SPAN[1]
+    )
+    expect(overhang).toBeLessThanOrEqual(1)
   })
 
   it('★ 앵커가 전부 ZONES.altar 안이다 — 밖이면 드래그가 영영 닿지 못한다', () => {
@@ -492,8 +627,12 @@ describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', 
    *    이제 상자 하단이 곧 접지다 — 그래서 허용을 0.2%p 로 좁힌다. 이 등식이 깨지는 유일한 길은
    *    누군가 스프라이트를 다시 굽고 시드 y 를 안 고치는 것이고, 그 순간 여기서 멈춘다.
    *    (수복 도구: `node scripts/shrine-assets/stage-grand-altar-ground.mjs --compose` · API 0회)
+   *
+   * ⚠️ v5 「마루 1/3 접지」는 이 게이트의 **기준선만** 마루선 → 접지선으로 옮긴다. 상자 세로도
+   *    스프라이트도 그대로다 — 세 줄(감실 45.3→54.3 · 상판 60.98→69.98 · 접지 73→82) 사이의 거리가
+   *    안 변했으므로 그림을 다시 구울 이유가 없다(검증: `--verify` · 세 장 캔버스 크기 일치).
    */
-  it.each(['banga', 'daljip', 'seolbit'])('%s — 틀 상자 하단이 마루선 y73 에 정확히 앉는다', (code) => {
+  it.each(THEME_CODES)('%s — 틀 상자 하단이 접지선 y82 에 정확히 앉는다', (code) => {
     // 경로는 기하 정본에서 온다 — 파일명(-v2)을 테스트가 따로 들면 다음 세대에서 조용히 어긋난다
     const frame = grandAltarStructures(code)[0]
     const file = path.join(PUBLIC_DIR, frame.assetUrl.replace(/^\//, ''))
@@ -505,10 +644,11 @@ describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', 
     // 기준 방 520×620 (banga-wide-seed 의 apparentBand 와 같은 셈)
     const hPct = ((((520 * frame.w) / 100 / px.w) * px.h) / 620) * 100
     const box = { top: frame.y - hPct / 2, bottom: frame.y + hPct / 2 }
-    expect([code, Math.abs(box.bottom - STAGE_FLOOR_LINE_Y) <= 0.2]).toEqual([code, true])
-    // 닫집 꼭대기는 방 안에 남는다 — 0 을 넘어가면 처마가 잘린다
+    expect([code, Math.abs(box.bottom - STAGE_GROUND_LINE_Y) <= 0.2]).toEqual([code, true])
+    // 닫집 꼭대기는 방 안에 남는다 — 0 을 넘어가면 처마가 잘린다.
+    // v5 에서 1.44 → 10.44 로 내려와 벽 상부가 9%p 더 열린다(뮤럴 상부 장식이 살 자리).
     expect([code, box.top > 0]).toEqual([code, true])
-    expect([code, Math.abs(box.top - 1.44) <= 0.2]).toEqual([code, true])
+    expect([code, Math.abs(box.top - 10.44) <= 0.2]).toEqual([code, true])
     // 세 장이 **같은 종횡비**여야 시드 y 한 벌로 세 접지가 함께 마루선에 앉는다
     expect([code, Math.abs(hPct - GRAND_ALTAR_BOX_H) <= 0.2]).toEqual([code, true])
   })
@@ -522,17 +662,19 @@ describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', 
    * 실기기에서는 뜬 채로 보였다는 뜻이다. 틀의 계약은 전부 방 y(45.3 · 60.98 · 73)이므로 크기의
    * 기준도 방 세로여야 한다. 기준 방에서는 두 규칙의 결과가 같아 회귀가 0 이다.
    */
-  it('★ 틀 상자 세로가 마루선 파생이고 렌더가 그 상수를 읽는다 — 폭 기준 회귀 금지', () => {
+  it('★ 틀 상자 세로가 접지선 파생이고 렌더가 그 상수를 읽는다 — 폭 기준 회귀 금지', () => {
     const frame = grandAltarStructures('banga')[0]
     expect(GRAND_ALTAR_BOX_H).toBe(71.56)
-    // 상자 하단 = 마루선. 이 등식이 기기와 무관해지는 것이 이 규칙의 전부다.
-    expect(frame.y + GRAND_ALTAR_BOX_H / 2).toBeCloseTo(STAGE_FLOOR_LINE_Y, 6)
+    // 상자 하단 = 접지선. 이 등식이 기기와 무관해지는 것이 이 규칙의 전부다.
+    expect(frame.y + GRAND_ALTAR_BOX_H / 2).toBeCloseTo(STAGE_GROUND_LINE_Y, 6)
     const src = readFileSync(STAGE_LAYERS, 'utf8')
     expect(src).toContain('GRAND_ALTAR_BOX_H')
     expect(src).toContain('GRAND_ALTAR_CODE_PREFIX')
-    // 틀 구조물만 갈린다 — 접두사가 시드의 구조물 code 와 실제로 맞물려 있는가
+    // 틀 구조물만 갈린다 — 접두사가 시드의 구조물 code 와 실제로 맞물려 있는가.
+    // 확산 뒤에도 **v3 계보(원복 레버)** 는 접두사를 갖지 않아야 한다 — 되돌린 신당이 세로 기준으로
+    // 그려지면 단상·상판이 방 높이의 71.56% 로 부풀어 오른다.
     expect(frame.code.startsWith(GRAND_ALTAR_CODE_PREFIX)).toBe(true)
-    for (const code of THEME_CODES.filter((c) => !hasGrandAltar(c))) {
+    for (const code of THEME_CODES) {
       for (const s of buildThemeStage(code).zones[0].structures) {
         expect([code, s.code.startsWith(GRAND_ALTAR_CODE_PREFIX)]).toEqual([code, false])
       }
@@ -547,36 +689,69 @@ describe('틀 — 위·옆·아래로만 커진다 (상판면·접지 불변)', 
    * 배율과 머리 여백은 **틀을 든 테마에서만** 갈린다. 13테마에 새면 라이브 신당의 신물 크기와
    * 신위 키가 한꺼번에 변한다(무손실 위반) — 그 «새지 않음»을 여기서 못 박는다.
    */
-  it('★ 제단층 배율 0.54 는 틀 무대 전용이다 — 13테마는 0.88 그대로', () => {
-    expect(GRAND_ALTAR_ITEM_SCALE).toBe(0.54)
+  /**
+   * ★ 배율의 근거가 바뀌었다 — «셋이 안 겹치는 한계»에서 «형태가 읽히는 크기»로.
+   *
+   * 자석 폐지(2026-08-10)로 5점 정렬 제약이 사라졌고, 같은 회차에 기본 아이템이 +25% 커졌다
+   * (SIZE_PX.md 29 → 36.25, CEO "아이템이 너무 작아 잘 안 보여"). 배율을 그대로 두면 제단 제물만
+   * 25% 커지므로 **겉보기 픽셀**을 기준으로 다시 정한다 — 아이템 상자는 CSS px 절대값이라
+   * 기기와 무관하게 같은 크기로 그려진다.
+   */
+  it('★ 제단층 배율은 틀 무대 전용이고 겉보기 ≈70px 이다 — 13테마는 0.88 그대로', () => {
+    expect(GRAND_ALTAR_ITEM_SCALE).toBe(0.6)
     expect(geometry.grandAltar.altarItemScale).toBe(GRAND_ALTAR_ITEM_SCALE)
     // 도메인의 유일한 소비처(분기 한 곳 원칙)
-    expect(depthScale('altar', 53.5, true)).toBe(GRAND_ALTAR_ITEM_SCALE)
-    expect(depthScale('altar', 53.5, false)).toBe(0.88)
-    // 폰(390 → 방 382px) 상판 161px 에 뒷줄 셋이 «안쪽 여백 5%를 남기고» 실리는가 — 배율의 근거
-    const boardPx = 0.7 * 0.6 * 382 // 상판 실측 최솟값 70% × 틀 폭 60%
-    const itemPx = 3.2 * 29 * GRAND_ALTAR_ITEM_SCALE
-    expect(itemPx).toBeLessThanOrEqual((boardPx * 0.95) / 3)
+    expect(depthScale('altar', 61.4, true)).toBe(GRAND_ALTAR_ITEM_SCALE)
+    expect(depthScale('altar', 61.4, false)).toBe(0.88)
+
+    const room = readFileSync(ROOM, 'utf8')
+    const mdPx = Number(/md:\s*'(\d+(?:\.\d+)?)px'/.exec(room)?.[1])
+    const assetEm = Number(/const ASSET_EM = ([\d.]+)/.exec(room)?.[1])
+    // 겉보기 폭 = ASSET_EM × SIZE_PX.md × 배율. 룸이 아이템 치수를 바꾸면 여기서 먼저 걸린다 —
+    // 그때 배율' = 70 / (ASSET_EM × 새 md) 로 다시 정한다(theme-stage.ts 주석과 같은 식).
+    const shownPx = assetEm * mdPx * GRAND_ALTAR_ITEM_SCALE
+    expect(shownPx).toBeGreaterThanOrEqual(64)
+    expect(shownPx).toBeLessThanOrEqual(76)
+    // 가장 좁은 폰(360 → 방 352px)의 상판 실폭에 둘이 나란히 서고도 남는다
+    const boardPx = 0.7 * 0.6 * 352
+    expect(shownPx * 2).toBeLessThanOrEqual(boardPx)
   })
 
-  it('★ 신위 머리 여백이 테마별이고 틀 없는 테마는 정본 상수(12)로 떨어진다', () => {
-    // 접지 수복(2026-08-10)으로 틀 전체가 1.28%p 내려앉으면서 감실 윗턱도 그만큼 따라 내려왔다
-    expect(geometry.grandAltar.deityHeadRoomY).toEqual({ banga: 24.9, daljip: 23.2, seolbit: 25.6 })
+  it('★ 신위 머리 여백이 테마별이고 표에 빠진 테마가 없다 — 모르는 코드는 정본 상수(12)', () => {
+    // 접지 수복(2026-08-10 낮)으로 틀이 1.28%p 내려앉고, v5 「마루 1/3 접지」에서 다시 9%p 내려왔다.
+    // 확산 13종은 각 스프라이트의 **감실 윗턱 실측**에서 왔다(stage-grand-altar-ground.mjs 가 찍어 준다).
+    expect(geometry.grandAltar.deityHeadRoomY).toEqual({
+      banga: 33.9,
+      choga: 36.1,
+      yonggung: 31.7,
+      dokkaebi: 33.2,
+      seolbit: 34.6,
+      daljip: 32.2,
+      hongsal: 35.5,
+      byeolbat: 32.3,
+      dangsan: 36.1,
+      yeondeung: 34.8,
+      seonang: 39.6,
+      jangdok: 34.4,
+      daejanggan: 34.1,
+      jonggak: 34.1,
+      saemgut: 36.1,
+      naru: 36.0,
+    })
     const fromJson = new Map<string, number>(Object.entries(geometry.grandAltar.deityHeadRoomY))
     expect([...fromJson.keys()]).toEqual([...GRAND_ALTAR_THEMES]) // 표에 빠진 테마가 있으면 그 신위만 커진다
     for (const code of GRAND_ALTAR_THEMES) {
       const headRoom = grandAltarHeadRoomY(code)
       expect([code, headRoom]).toEqual([code, fromJson.get(code)])
       expect([code, deityHeadRoomY(code)]).toEqual([code, headRoom])
-      // 발은 그대로 두고 머리만 내려온다 = 신위가 감실 «안»에 들어앉는다
+      // 머리·발이 한 쌍으로 움직인다 = 신위가 감실 «안»에 들어앉은 채 통째로 내려온다
       expect(Number(headRoom)).toBeGreaterThan(DEITY_HEAD_ROOM_Y)
-      expect(Number(headRoom)).toBeLessThan(PODIUM_TOP_Y)
-      expect(deityStandBox(PODIUM_TOP_Y, headRoom ?? undefined).groundY).toBe(PODIUM_TOP_Y)
+      expect(Number(headRoom)).toBeLessThan(deityPodiumTopY(code))
+      expect(deityStandBox(deityPodiumTopY(code), headRoom ?? undefined).groundY).toBe(deityPodiumTopY(code))
     }
-    for (const code of THEME_CODES.filter((c) => !hasGrandAltar(c))) {
-      expect([code, grandAltarHeadRoomY(code)]).toEqual([code, null])
-      expect([code, deityHeadRoomY(code)]).toEqual([code, DEITY_HEAD_ROOM_Y])
-    }
+    // 틀 밖 코드는 정본 상수로 떨어진다 — 확산 뒤 이 분기가 남아 있는지를 여기서만 지킨다
+    expect(grandAltarHeadRoomY(NOT_A_THEME)).toBeNull()
+    expect(deityHeadRoomY(NOT_A_THEME)).toBe(DEITY_HEAD_ROOM_Y)
     // 프로토타입 오염 방어 — Map 이라 '__proto__' 가 값으로 새지 않는다
     expect(grandAltarHeadRoomY('__proto__')).toBeNull()
     expect(deityHeadRoomY('__proto__')).toBe(DEITY_HEAD_ROOM_Y)
@@ -614,9 +789,9 @@ describe('단일 출처 — v4 시드는 구역 structures 만 갈아끼운다',
     expect(readFileSync(MIGRATION, 'utf8')).not.toContain('grand-altar')
   })
 
-  it('★ 달러 인용 블록의 JSON 이 도메인 grandAltarStructures 와 값이 같다 (3테마)', () => {
+  it('★ 달러 인용 블록의 JSON 이 도메인 grandAltarStructures 와 값이 같다 (16테마)', () => {
     const parts = pilotSql().split('$grandaltar$')
-    expect(parts).toHaveLength(7) // 3문장 × 구분자 2개 + 앞뒤
+    expect(parts).toHaveLength(2 * GRAND_ALTAR_THEMES.length + 1) // 16문장 × 구분자 2개 + 앞뒤
     const codes = [...GRAND_ALTAR_THEMES]
     for (const [i, code] of codes.entries()) {
       expect([code, JSON.parse(parts[i * 2 + 1])]).toEqual([
@@ -628,14 +803,15 @@ describe('단일 출처 — v4 시드는 구역 structures 만 갈아끼운다',
 
   it('★ 최상위 structures 를 건드리지 않는다 — `stage - zones` 원복 레버의 착지점이다', () => {
     const sql = pilotSql()
-    expect(sql.match(/^update public\.shrine_theme_packs$/gm) ?? []).toHaveLength(3)
+    const n = GRAND_ALTAR_THEMES.length
+    expect(sql.match(/^update public\.shrine_theme_packs$/gm) ?? []).toHaveLength(n)
     // set 은 zones[0] 스코프 세 자리(structures·wallpaperUrl·flooringUrl)뿐이다.
     // `set stage = '{...}'` 였다면 반가의 레거시 제단이 증발하고, '{structures}' 경로가 있다면
     // 원복 레버(`stage - 'zones'`)의 착지점이 오염된다.
-    expect(sql.match(/^set stage = jsonb_set\(jsonb_set\(jsonb_set\(stage,$/gm) ?? []).toHaveLength(3)
-    expect(sql.match(/'\{zones,0,structures\}'/g) ?? []).toHaveLength(3)
-    expect(sql.match(/'\{zones,0,wallpaperUrl\}'/g) ?? []).toHaveLength(3)
-    expect(sql.match(/'\{zones,0,flooringUrl\}'/g) ?? []).toHaveLength(3)
+    expect(sql.match(/^set stage = jsonb_set\(jsonb_set\(jsonb_set\(stage,$/gm) ?? []).toHaveLength(n)
+    expect(sql.match(/'\{zones,0,structures\}'/g) ?? []).toHaveLength(n)
+    expect(sql.match(/'\{zones,0,wallpaperUrl\}'/g) ?? []).toHaveLength(n)
+    expect(sql.match(/'\{zones,0,flooringUrl\}'/g) ?? []).toHaveLength(n)
     expect(sql).not.toMatch(/'\{structures\}'/)
     expect(sql).not.toMatch(/^set stage = '/m)
   })
@@ -650,13 +826,84 @@ describe('단일 출처 — v4 시드는 구역 structures 만 갈아끼운다',
 
   it('★ 두루마리가 아닌 행은 건드리지 않는다 — 부분 적용·재실행이 안전하다', () => {
     const guards = pilotSql().match(/jsonb_array_length\(coalesce\(stage -> 'zones', '\[\]'::jsonb\)\) = 1;/g) ?? []
-    expect(guards).toHaveLength(3)
+    expect(guards).toHaveLength(GRAND_ALTAR_THEMES.length)
   })
 
-  it('시범 테마만 대상이다 — 13테마 update 문이 없다', () => {
+  it('★ 16테마가 빠짐없이 대상이다 — 한 테마만 빠지면 그 신당만 옛 살림으로 남는다', () => {
     const sql = pilotSql()
     for (const code of THEME_CODES) {
       expect([code, sql.includes(`where code = '${code}'`)]).toEqual([code, hasGrandAltar(code)])
+      // 확산의 실체 = 테마마다 **자기 틀**을 가리킨다(공용 반가 스프라이트가 아니다)
+      expect(sql).toContain(`/shrine/stage/${code}/grand-altar-v2.webp`)
     }
+  })
+})
+
+// ── ⑨ 배치 동반 이동 SQL (무대 기하 v5) ─────────────────────────
+
+/**
+ * ★ 「앵커가 내려가면 어제 놓아 둔 것은 어떻게 되나」 — 코드가 아니라 **마이그레이션**의 몫이다.
+ *
+ * 배치는 절대 좌표라 앵커를 옮겨도 따라오지 않는다(그것이 무손실의 근거이기도 하다). 그래서
+ * 살림을 통째로 내리는 회차마다 «스냅해 둔 것»만 같은 delta 로 미는 SQL 이 한 번 나간다.
+ * 여기서 지키는 것은 **그 SQL 에 구운 상수가 코드 상수에서 왔다**는 것과, **재실행이 무해**하다는
+ * 것(신·구 값 교집합 ∅) 두 가지다 — 손으로 적은 숫자가 조용히 낡으면 남의 신당이 어긋난다.
+ */
+describe('동반 이동 SQL — 구운 좌표가 코드 상수와 같다', () => {
+  const SHIFT_MIGRATION = path.join(ROOT, 'supabase', 'migrations', '20260810c_stage_ground_v5_shift.sql')
+  const sql = (): string => readFileSync(SHIFT_MIGRATION, 'utf8')
+  /** 소수 2자리 문자열 — SQL 리터럴과 같은 표기(52.40 처럼 0 이 붙는다) */
+  const lit = (v: number): string => v.toFixed(2)
+
+  it('★ 파일이 있고 이동량이 접지 이동분과 같다 (+9)', () => {
+    expect(existsSync(SHIFT_MIGRATION)).toBe(true)
+    // `p.y + 9` 문장 두 개(제단·선반) — delta 를 손으로 다르게 적으면 한쪽만 어긋난다
+    const bumps = sql().match(/^\s+set y = round\(least\(100, greatest\(0, p\.y \+ 9\)\), 2\)$/gm) ?? []
+    expect(bumps).toHaveLength(2)
+    expect(STAGE_GROUND_DROP).toBe(9)
+  })
+
+  it('★ 제단 — 옛 앵커 y(52.40/55.00) = 새 앵커 − 이동분, 새 값과 교집합이 없다', () => {
+    const s = sql()
+    const nowY = [...new Set(GRAND_ALTAR_ANCHOR_Y)]
+    const oldY = nowY.map((y) => Math.round((y - STAGE_GROUND_DROP) * 100) / 100)
+    expect(oldY).toEqual([52.4, 55])
+    for (const y of oldY) expect(s).toContain(lit(y))
+    // 재실행 무해 — 새 값이 옛 집합에 없다(두 번째 실행은 0행)
+    for (const y of nowY) expect(oldY).not.toContain(y)
+    // v3 13테마의 같은 이름 앵커(53.5)는 어느 집합에도 없다 = 단상 무대는 한 건도 안 움직인다
+    expect(oldY).not.toContain(ALTAR_ANCHOR_Y)
+    expect(nowY).not.toContain(ALTAR_ANCHOR_Y)
+    // 앵커 id 5개가 전부 조건에 실려 있어야 앞줄 2점이 조용히 빠지지 않는다
+    for (const a of grandAltarStructures('banga')[0].anchors) expect(s).toContain(`'${a.id}'`)
+  })
+
+  it('★ 선반 — 옛 칸 y(40.52/50.60/59.42)가 상자 상수에서 파생된다, 새 값과 교집합 없다', () => {
+    const s = sql()
+    const h = FSHELF_UNIT.bottom - FSHELF_UNIT.top
+    const slotY = (top: number) =>
+      FSHELF_TIERS.boards.map((b) => Math.round((top + b * h - FSHELF_TIERS.itemLift) * 100) / 100)
+    const nowY = slotY(FSHELF_UNIT.top)
+    const oldY = slotY(FSHELF_UNIT.top - STAGE_GROUND_DROP)
+    expect(oldY).toEqual([40.52, 50.6, 59.42])
+    expect(nowY).toEqual([49.52, 59.6, 68.42])
+    for (const y of oldY) expect(s).toContain(lit(y))
+    for (const y of nowY) expect(oldY).not.toContain(y) // 재실행 무해
+    expect(s).toContain("'seat:fshelf:%'")
+    expect(s).toContain(FSHELF_ANCHOR_PREFIX.replace(/:$/, '')) // 프리픽스 오타 방어
+  })
+
+  it('★ 자유 배치는 건드리지 않는다 — anchor_id 없는 행을 잡는 update 가 없다', () => {
+    const s = sql()
+    // 문장(주석 아님)만 본다 — 확인 쿼리에는 anchor_id is null 카운트가 있어도 된다
+    const statements = s
+      .split('\n')
+      .filter((l) => !l.trimStart().startsWith('--'))
+      .join('\n')
+    expect(statements.match(/^update public\.shrine_placements p$/gm) ?? []).toHaveLength(2)
+    expect(statements).not.toContain('anchor_id is null')
+    // 「고정 살림 조절」 dy 를 뺀 값으로 판정한다 — 안 그러면 조절을 쓴 신당만 조용히 빠진다
+    expect(statements).toContain("'deityStage' -> 'dy'")
+    expect(statements).toContain("'familyShelf' -> 'dy'")
   })
 })

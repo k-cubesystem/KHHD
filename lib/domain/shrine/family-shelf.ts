@@ -13,7 +13,7 @@
  */
 
 import { findFamilyAvatar } from '@/lib/domain/family/avatars'
-import { STAGE_FLOOR_LINE_Y } from './theme-stage'
+import { STAGE_GROUND_LINE_Y } from './theme-stage'
 import type { Element, Placement } from './types'
 
 /** 유닛을 세우는 데 필요한 최소 형태 — FamilyHallMember(사랑방 좌석)와 구조 호환이다. */
@@ -62,9 +62,27 @@ export function hasFamilyShelf(themeCode: string | null | undefined): boolean {
 export const FSHELF_ANCHOR_PREFIX = 'seat:fshelf:'
 
 /**
- * 선반 칸에 스냅된 아이템의 표시 축소 배율 — 칸(개구부) 높이가 일반 아이템(md 92px)보다
- * 낮아, 원치수로는 진열이 아니라 «끼임»이 된다. 축소는 anchorId 프리픽스로 판정한다
- * (스냅으로 얹은 것만 줄어든다 — 자유 배치로 근처에 둔 것은 원치수 그대로).
+ * 선반에 올려 둔 아이템의 표시 축소 배율 — 칸(개구부) 높이가 일반 아이템보다 낮아,
+ * 원치수로는 진열이 아니라 «끼임»이 된다.
+ *
+ * ── 판정이 바뀌었다: anchorId → **좌표** (2026-08-10 · 자석 폐지) ──────────────
+ * 종전에는 `anchorId` 가 `seat:fshelf:` 로 시작하는가로 갈랐다. 자석이 사라져 **새 배치에는
+ * anchorId 가 발급되지 않으므로** 그 판정은 조용히 죽는다 — 새로 얹은 신물만 원치수로 칸에
+ * 끼이고, 옛 배치는 줄어든 채 남아 같은 선반에 두 크기가 섞인다(무증상 어긋남).
+ * 그래서 이 신당의 다른 관계 판정과 같은 문법으로 되돌린다: **거리·좌표로 다시 잰다**
+ * (진열대 동반 이동·축복 읽기·제단 동반 이동이 전부 그 문법이다 — id 링크를 믿지 않는다).
+ * 옛 anchorId 보유 배치도 좌표가 칸 안에 있으므로 같은 판정에 자연히 포함된다.
+ *
+ * ── 값은 0.6 **유지** — 진열은 이미 +25% 커졌다 (합성판 실측) ──────────────────
+ * 같은 회차에 기본 아이템이 +25% 커졌으므로(SIZE_PX.md 29 → 36.25) **배율을 그대로 두어도**
+ * 진열 겉보기는 3.2 × 29 × 0.6 = 55.7px → 3.2 × 36.25 × 0.6 ≈ **69.6px** 로 함께 커진다.
+ * 여기서 0.75 로 더 올리는 안은 합성판에서 반려됐다(`stage-grand-altar-ground.mjs --verify --compose`):
+ * 상자가 87px 가 되어 3단 칸 개구부(0.21 × 42%p × 620 ≈ **55px**)를 넘고 접시가 사방탁자 기둥
+ * 밖으로 삐져나왔다 — 「진열」이 아니라 「끼임」으로 되돌아간다.
+ * (상자는 **아래를 기준으로** 커진다 — transform-origin 50% 100% 라 밑변은 널 위 그 자리에 남고
+ *  위로만 자란다. 그래서 배율을 올릴 때 먼저 터지는 것은 접지가 아니라 칸 높이다.)
+ *
+ * ⚠️ 룸이 SIZE_PX.md 를 또 바꾸면 이 값을 다시 정한다: 배율' = 69.6 / (3.2 × 새 md).
  */
 export const FSHELF_ITEM_SCALE = 0.6
 
@@ -91,26 +109,33 @@ const FSHELF_H = 42
  * "틀과 선반들이 공중에 떠 있어. 마루 라인에 맞춰서 내려와야 해."
  * v3 마루선(60)에 발을 2%p 묻고 서던 밑동 62 를 그대로 둔 채 마루선만 v4.1 **73** 으로 내려서,
  * 사방탁자 두 벌이 마루보다 11%p 위 허공에 서 있었다(직전 회차는 «사용자 조절이 덮는다»로 동결).
- * 이제 **밑동을 마루선에서 파생**한다 — 신수(KEEPER_POS = 마루선−1)와 같은 규약이라, 다음에
- * 마루선을 옮길 때 여기는 공짜로 따라온다. 높이는 그대로 두고 top 을 같은 delta 로 함께 내려
- * 스프라이트 왜곡은 0 이다(+11: 20→31 · 62→73).
+ * 이제 **밑동을 파생**한다 — 신수(KEEPER_POS = 마루선−1)와 같은 규약이라, 다음에 마루선을 옮길 때
+ * 여기는 공짜로 따라온다. 높이는 그대로 두고 top 을 같은 delta 로 함께 내려 스프라이트 왜곡은 0 이다.
  *
- * ⚠️ 진열 칸 앵커(`seat:fshelf:`)가 이 상자에서 파생되므로 **함께 +11 내려간다**. 이미 진열해 둔
- *    아이템은 절대 좌표라 따라오지 않는다 — 동반 이동은 마이그레이션
- *    `20260810b_family_shelf_ground_shift.sql` 이 (앵커 id + 옛 칸 좌표 정확일치로) 담당한다.
+ * ── 마루 1/3 접지 (2026-08-10 밤 · 무대 기하 v5) ─────────────────────────────
+ * "선반과 틀 같은 건 마루 3/1은 자리를 잡아야 해."
+ * 마루선에 발끝만 걸친 v4.1 은 접지선은 맞았지만 가구가 **벽에 붙어** 보였다. 파생 기준을
+ * 마루선(73) → **접지선(STAGE_GROUND_LINE_Y 82 = 마루선 + 바닥밴드/3)** 으로 한 칸 옮긴다.
+ * 여전히 파생이라 마루선이 또 움직여도 따라오고, 이번에도 **평행이동 +9**(31→40 · 73→82)다.
+ *
+ * ⚠️ 진열 칸 앵커(`seat:fshelf:`)가 이 상자에서 파생되므로 **함께 내려간다**. 이미 진열해 둔
+ *    아이템은 절대 좌표라 따라오지 않는다 — 동반 이동은 마이그레이션이 (앵커 id + 옛 칸 좌표
+ *    정확일치로) 담당한다: v4.1 은 `20260810b_family_shelf_ground_shift.sql`(+11),
+ *    v5 는 `20260810c_stage_ground_v5_shift.sql`(+9).
  */
 export const FSHELF_UNIT = Object.freeze({
   /** 폭(세계 %) — 겉보기 ≈ 28vw (세계 폭 320% 기준) */
   w: 8.65,
   /** 상단 y — 밑동에서 파생(높이 불변). 창방 팻말 띠(≈4~12) 아래로 충분히 내려온다 */
-  top: STAGE_FLOOR_LINE_Y - FSHELF_H,
+  top: STAGE_GROUND_LINE_Y - FSHELF_H,
   /**
-   * 밑동 y = **마루선**. 그려진 발끝은 스프라이트 자체의 발밑 투명 여백(271×640 중 17px = 2.66%)
-   * 만큼, 즉 42 × 0.0266 ≈ **1.1%p** 위에서 끝난다 — 그 몫은 렌더의 drop-shadow 가 덮는다.
-   * 여기에 그 1.1 을 더해 «그려진 발끝»을 마루선에 정확히 앉히면 맨 아래 칸 앵커가 60.5 가 되어
-   * 벽 존(ZONES.wall.y = [4,60]) 밖으로 나간다 — 그래서 상자 하단을 마루선 그 자체로 둔다.
+   * 밑동 y = **접지선**(마루 깊이 1/3 지점). 그려진 발끝은 스프라이트 자체의 발밑 투명 여백
+   * (271×640 중 17px = 2.66%) 만큼, 즉 42 × 0.0266 ≈ **1.1%p** 위에서 끝난다 — 그 몫은 렌더의
+   * drop-shadow 가 덮는다. v4.1 에서는 그 1.1 을 마저 내리면 맨 아래 칸 앵커가 벽 존(≤60) 밖으로
+   * 나가는 것이 한계선이었는데, v5 는 존 상한이 70 으로 넓어져 그 제약이 풀렸다 — 그래도 여백을
+   * 더 먹지 않는 이유는 같다: 「상자 하단 = 접지선」이라는 **한 줄짜리 등식**을 지키기 위해서다.
    */
-  bottom: STAGE_FLOOR_LINE_Y,
+  bottom: STAGE_GROUND_LINE_Y,
 })
 
 /**
@@ -192,22 +217,49 @@ export function fshelfSlotAnchors(units: readonly FamilyShelfUnit[]): FShelfSlot
   return out
 }
 
+/** 칸 밖 삐짐 여유(세계 %) — 널 끝에 반쯤 걸친 물건도 «그 선반의 것»으로 친다. */
+const UNIT_BOX_PAD = 1.2
+
+/**
+ * 유닛 상자 판정 — **축복 읽기와 진열 축소가 같은 자를 쓴다**. 자가 두 벌이 되면 «축복은 받는데
+ * 크기는 안 줄어드는» 물건이 생기고, 그 어긋남은 타입도 테스트도 안 잡는다.
+ */
+function inUnitBox(unit: FamilyShelfUnit, x: number, y: number): boolean {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false
+  return Math.abs(x - unit.x) <= unit.w / 2 + UNIT_BOX_PAD && y >= unit.top && y <= unit.bottom
+}
+
+/**
+ * 아이템 표시 배율 — 선반 유닛 상자 안이면 축소(FSHELF_ITEM_SCALE), 아니면 1.
+ *
+ * 자석이 사라진 뒤의 «선반에 올려 뒀다»의 정의다. anchorId 를 보지 않으므로 새 배치·옛 배치·
+ * 손으로 옮긴 배치가 **같은 규칙**을 받는다(id 링크 금지 · 관계는 전부 거리·좌표 재판정).
+ * 유닛 목록은 이미 「고정 살림 조절」 오프셋이 얹힌 것이어야 한다 — 룸이 그 좌표로 그린다.
+ */
+export function familyShelfItemScale(
+  x: number,
+  y: number,
+  units: readonly FamilyShelfUnit[] | null | undefined
+): number {
+  if (!Array.isArray(units) || units.length === 0) return 1
+  for (const u of units) if (inUnitBox(u, x, y)) return FSHELF_ITEM_SCALE
+  return 1
+}
+
 /**
  * 유닛 축복 읽기 — 유닛 박스 안 아이템 중 그 가족의 정령 오행과 맞는 것이 하나라도 있으면
  * 깨어난다(시렁 readShelf 와 같은 문법 — 정령 미설정은 무엇이든 그 사람 것으로 친다).
- * 박스 판정: |dx| ≤ w/2 + 1.2(칸 밖 삐짐 여유) · top~bottom.
+ * 박스 판정은 진열 축소와 **같은 함수**(inUnitBox)를 쓴다.
  */
 export function readFamilyShelf(
   unit: FamilyShelfUnit,
   placements: readonly Placement[],
   elementOf: (catalogItemId: string) => Element | null
 ): { laid: number; blessed: boolean } {
-  const halfW = unit.w / 2 + 1.2
   let laid = 0
   let matched = 0
   for (const p of placements) {
-    if (Math.abs(p.x - unit.x) > halfW) continue
-    if (p.y < unit.top || p.y > unit.bottom) continue
+    if (!inUnitBox(unit, p.x, p.y)) continue
     laid += 1
     const el = elementOf(p.catalogItemId)
     if (unit.guardian === null || el === unit.guardian) matched += 1

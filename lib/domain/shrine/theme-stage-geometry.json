@@ -26,23 +26,57 @@
     }
   ],
   "grandAltar": {
-    "themes": ["banga", "daljip", "seolbit"],
+    "themes": [
+      "banga",
+      "choga",
+      "yonggung",
+      "dokkaebi",
+      "seolbit",
+      "daljip",
+      "hongsal",
+      "byeolbat",
+      "dangsan",
+      "yeondeung",
+      "seonang",
+      "jangdok",
+      "daejanggan",
+      "jonggak",
+      "saemgut",
+      "naru"
+    ],
     "muralV3": { "wall": "room-wall-mural-v3.webp", "floor": "room-floor-mural-v3.webp" },
-    "altarItemScale": 0.54,
-    "deityHeadRoomY": { "banga": 24.9, "daljip": 23.2, "seolbit": 25.6 },
+    "altarItemScale": 0.6,
+    "deityHeadRoomY": {
+      "banga": 33.9,
+      "choga": 36.1,
+      "yonggung": 31.7,
+      "dokkaebi": 33.2,
+      "seolbit": 34.6,
+      "daljip": 32.2,
+      "hongsal": 35.5,
+      "byeolbat": 32.3,
+      "dangsan": 36.1,
+      "yeondeung": 34.8,
+      "seonang": 39.6,
+      "jangdok": 34.4,
+      "daejanggan": 34.1,
+      "jonggak": 34.1,
+      "saemgut": 36.1,
+      "naru": 36.0
+    },
     "structures": [
       {
         "code": "grand-altar",
         "assetUrl": "/shrine/stage/{code}/grand-altar-v2.webp",
         "x": 50,
-        "y": 37.22,
+        "y": 46.22,
         "w": 60,
         "anchors": [
-          { "id": "altar-left", "layer": "altar", "x": 45.7, "y": 52.4, "label": "제단 왼편" },
-          { "id": "altar-center", "layer": "altar", "x": 50, "y": 52.4, "label": "제단 가운데" },
-          { "id": "altar-right", "layer": "altar", "x": 54.3, "y": 52.4, "label": "제단 오른편" },
-          { "id": "altar-front-left", "layer": "altar", "x": 47.85, "y": 55, "label": "제단 앞줄 왼편" },
-          { "id": "altar-front-right", "layer": "altar", "x": 52.15, "y": 55, "label": "제단 앞줄 오른편" }
+          { "id": "altar-left", "layer": "altar", "x": 45.7, "y": 61.4, "label": "제단 왼편" },
+          { "id": "altar-center", "layer": "altar", "x": 50, "y": 61.4, "label": "제단 가운데" },
+          { "id": "altar-right", "layer": "altar", "x": 54.3, "y": 61.4, "label": "제단 오른편" },
+          { "id": "altar-front-left", "layer": "altar", "x": 47.85, "y": 64, "label": "제단 앞줄 왼편" },
+          { "id": "altar-front-right", "layer": "altar", "x": 52.15, "y": 64, "label": "제단 앞줄 오른편" }
         ]
       }
     ]

@@ -952,21 +952,9 @@
 }
 
 /* ── 무대 물리·반응 (ShrineRoomClient 이관) ─────────────────────────────
-   전역이어야 한다 — Sprite 등 형제 컴포넌트가 쓴다. transform/opacity 만 애니메이션. */
-.shrine-anchor-ring {
-  animation: shrineAnchorPulse 1.1s ease-in-out infinite;
-}
-@keyframes shrineAnchorPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.92;
-  }
-  50% {
-    transform: scale(1.18);
-    opacity: 0.5;
-  }
-}
+   전역이어야 한다 — Sprite 등 형제 컴포넌트가 쓴다. transform/opacity 만 애니메이션.
+   (`.shrine-anchor-ring` — 앵커 스냅 골드 링. 자석 폐지 2026-08-10 과 함께 내렸다.
+    쓰는 곳이 없는 클래스를 남기면 계측 게이트가 «죽어 있음»으로 울린다.) */
 /* 게이트(GAMEFEEL_V1) 오프 시의 탭 반응 — idle 뒤에 선언돼야 탭이 idle 을 이긴다 */
 .shrine-item-wiggle {
   animation: shrineWiggle 0.4s ease-in-out;
@@ -988,7 +976,6 @@
   transition: opacity 700ms ease;
 }
 @media (prefers-reduced-motion: reduce) {
-  .shrine-anchor-ring,
   .shrine-item-wiggle {
     animation-duration: 0.01ms;
   }

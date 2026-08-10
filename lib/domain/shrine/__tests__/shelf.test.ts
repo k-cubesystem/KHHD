@@ -151,8 +151,10 @@ describe('가족 자리 — 시렁을 넘어 세간 전반으로', () => {
     expect(r).toMatchObject({ laid: 1, matched: 1, blessed: true })
   })
 
-  it('★ 방이 세간 판정에 isFamilySeat 를 쓴다 — 진열대 스냅에서 가구 위 가구를 거르는 판정', () => {
-    expect(ROOM).toContain('isFamilySeat(item)')
+  it('★ 방이 세간 판정에 isFamilySeat 를 쓴다 — z 끌어올림에서 가구 위 가구를 거르는 판정', () => {
+    // (2026-08-10 자석 폐지 전에는 «진열대 스냅 후보에서 세간을 거르는» 자리였다.
+    //  스냅이 사라진 지금 같은 판정이 깊이 역전 교정(surfaceZById)에 그대로 산다)
+    expect(ROOM).toContain('isFamilySeat(qi)')
   })
 
   it('★ 세간별 가족 배정 UI 는 물러났다(2026-08-06) — 가족의 자리는 선반장 하나다', () => {
@@ -227,10 +229,24 @@ describe('진열대 — 위에 얹어 진열하는 세간', () => {
     expect(ROOM).not.toContain('clampPct(freeX, zone.x)')
   })
 
-  it('★ 계약 — 방은 진열 칸 합류·동반 이동·깊이 역전 교정을 실제로 쓴다', () => {
-    expect(ROOM).toContain('surfaceAnchors')
-    expect(ROOM).toContain('isOnSurface(q, p, carry.size)')
+  it('★ 계약 — 자석도 동반 이동도 없다(2026-08-10 CEO 지시), 깊이 역전 교정만 남는다', () => {
+    // CEO 실기기 지시: 「자석처럼 붙는 기능 빼고 아무 곳이나 놓게」 · 「서로 묶여서 움직이는 것도 해결」.
+    // ① 진열 칸 스냅 앵커가 되살아나면 손이 놓은 자리를 무대가 다시 빼앗는다.
+    expect(ROOM).not.toContain('surfaceAnchors')
+    expect(ROOM).not.toContain('nearestAnchor')
+    // ② 진열대 동반 이동이 되살아나면 가구 하나를 끌 때 위 제물이 통째로 따라온다.
+    expect(ROOM).not.toContain('isOnSurface(q, p, carry.size)')
+    // ③ 얹힘 관계는 여전히 **거리**로 판정한다 — 스냅과 독립이라 깊이 역전 교정은 그대로 산다.
+    expect(ROOM).toContain('isOnSurface(q, s.p, s.size)')
     expect(ROOM).toContain('zOverride ?? depthZ')
+  })
+
+  it('★ 계약 — 신물 표시 크기는 종전 23·29·35 의 +25% 다 (CEO 「너무 작아 잘 안 보여」)', () => {
+    // 되돌아가면 실기기에서 다시 «점»이 된다. 스크립트(stage-theme-harmony·stage-grand-altar)가
+    // 이 블록의 md 를 정규식으로 읽어 가므로 표기 형태도 함께 고정한다.
+    const block = ROOM.match(/const SIZE_PX[^=]*=\s*\{([^}]*)\}/)?.[1] ?? ''
+    const px = (k: string) => Number(block.match(new RegExp(`${k}:\\s*'([\\d.]+)px'`))?.[1])
+    expect([px('sm'), px('md'), px('lg')]).toEqual([23 * 1.25, 29 * 1.25, 35 * 1.25])
   })
 })
 

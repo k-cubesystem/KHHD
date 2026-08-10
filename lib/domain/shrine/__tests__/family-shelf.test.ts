@@ -9,6 +9,7 @@ import {
   FSHELF_UNIT_X,
   MAX_FAMILY_SHELF,
   buildFamilyShelfUnits,
+  familyShelfItemScale,
   fshelfSlotAnchors,
   hasFamilyShelf,
   readFamilyShelf,
@@ -112,7 +113,9 @@ describe('가족 선반장 — 진열 칸 앵커', () => {
     expect(ys.length).toBe(3)
   })
 
-  it('칸 y 가 벽 존(y 4~60) 안이다 — 벽걸이 신물이 칸에 스냅될 수 있어야 한다', () => {
+  // v5 「마루 1/3 접지」에서 상자가 82 까지 내려오며 맨 아래 칸이 68.42 가 됐다 — 벽 존도 70 까지
+  // 함께 열었다(넓히는 방향만). 범위를 리터럴로 적지 않고 ZONES 를 읽는 이유가 이런 회차 때문이다.
+  it('칸 y 가 벽 존 안이다 — 벽걸이 신물이 칸에 스냅될 수 있어야 한다', () => {
     for (const a of anchors) {
       expect(a.y).toBeGreaterThanOrEqual(ZONES.wall.y[0])
       expect(a.y).toBeLessThanOrEqual(ZONES.wall.y[1])
@@ -144,16 +147,61 @@ describe('가족 선반장 — 축복 읽기', () => {
 })
 
 describe('가족 선반장 — 배선 계약', () => {
-  it('★ 방이 유닛을 세우고 칸 앵커를 스냅 후보에 합류시킨다', () => {
+  it('★ 방이 유닛을 세운다 — 칸 자석은 2026-08-10 폐지(CEO 「아무 곳이나 놓게」)', () => {
     expect(ROOM).toContain('buildFamilyShelfUnits')
-    expect(ROOM).toContain('fshelfSlotAnchors(familyShelfUnits)')
     expect(ROOM).toContain('<FamilyShelfWall')
+    // 칸 앵커를 스냅 후보로 되돌리면 선반 앞에 둔 물건이 칸으로 빨려 들어간다
+    expect(ROOM).not.toContain('fshelfSlotAnchors(familyShelfUnits)')
   })
 
-  it('★ 칸에 스냅된 아이템은 진열 축소를 탄다 — 원치수로는 칸에 끼인다', () => {
+  /**
+   * ★ 진열 축소 판정 — anchorId 가 아니라 **좌표**다 (2026-08-10 자석 폐지 이후)
+   *
+   * 자석이 사라져 새 배치에는 `seat:fshelf:` anchorId 가 발급되지 않는다. id 로 갈라 두면 새로 얹은
+   * 신물만 원치수로 칸에 끼이고 옛 배치는 줄어든 채 남아 **같은 선반에 두 크기가 섞인다.**
+   * 이 신당의 다른 관계 판정과 같은 문법으로 되돌린다 — 거리·좌표로 다시 잰다.
+   */
+  it('★ 진열 축소는 좌표 판정이다 — 상자 안이면 줄고 밖이면 원치수', () => {
     expect(FSHELF_ITEM_SCALE).toBeLessThan(1)
-    expect(ROOM).toContain('FSHELF_ANCHOR_PREFIX')
-    expect(ROOM).toContain('FSHELF_ITEM_SCALE')
+    // 유닛 하나로 잰다 — 이웃 유닛(x 7·16)은 여유를 얹으면 상자가 서로 겹쳐 경계가 흐려진다
+    const units = buildFamilyShelfUnits([member(0)])
+    const u = units[0]
+    const mid = (u.top + u.bottom) / 2
+    expect(familyShelfItemScale(u.x, mid, units)).toBe(FSHELF_ITEM_SCALE)
+    // 칸 끝에 반쯤 걸친 것도 «그 선반의 것» (여유 1.2%p) · 그보다 밖은 자유 배치다
+    expect(familyShelfItemScale(u.x + u.w / 2 + 1.2, mid, units)).toBe(FSHELF_ITEM_SCALE)
+    expect(familyShelfItemScale(u.x + u.w / 2 + 1.3, mid, units)).toBe(1)
+    expect(familyShelfItemScale(u.x, u.top - 0.1, units)).toBe(1)
+    expect(familyShelfItemScale(u.x, u.bottom + 0.1, units)).toBe(1)
+    // 유닛이 없으면(가족 선반장 미보유 신당) 아무것도 줄이지 않는다 · 깨진 좌표도 원치수
+    expect(familyShelfItemScale(u.x, mid, [])).toBe(1)
+    expect(familyShelfItemScale(Number.NaN, mid, units)).toBe(1)
+  })
+
+  it('★ 옛 anchorId 배치도 같은 판정에 포함된다 — 두 세대가 한 크기로 읽힌다', () => {
+    const units = buildFamilyShelfUnits([member(0)])
+    // 자석 시절 저장된 좌표 = 칸 앵커 값 그대로. 좌표 판정이 그 자리를 그대로 덮는가.
+    for (const a of fshelfSlotAnchors(units)) {
+      expect([a.id, familyShelfItemScale(a.x, a.y, units)]).toEqual([a.id, FSHELF_ITEM_SCALE])
+    }
+  })
+
+  it('★ 축복 읽기와 진열 축소가 같은 상자를 쓴다 — 자가 두 벌이면 언젠가 갈라진다', () => {
+    const units = buildFamilyShelfUnits([member(0, { avatarId: 'fire_dokkaebi' })])
+    const u = units[0]
+    const el = (): Element | null => 'fire'
+    for (const [x, y] of [
+      [u.x, (u.top + u.bottom) / 2],
+      [u.x + u.w / 2 + 1.2, u.bottom],
+      [u.x + 20, u.top],
+    ]) {
+      const inBox = familyShelfItemScale(x, y, units) === FSHELF_ITEM_SCALE
+      expect([x, y, readFamilyShelf(u, [place(x, y)], el).laid > 0]).toEqual([x, y, inBox])
+    }
+  })
+
+  it('룸이 진열 축소를 실제로 적용한다 — 배선이 통째로 빠지면 칸에 끼인 그림이 된다', () => {
+    expect(ROOM.includes('familyShelfItemScale') || ROOM.includes('FSHELF_ITEM_SCALE')).toBe(true)
   })
 
   it('★ 스프라이트가 실재하고 벽 컴포넌트가 그 경로를 쓴다', () => {

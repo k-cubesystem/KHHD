@@ -27,8 +27,7 @@ export const SHRINE_ANIM_CLASSES: readonly string[] = Object.freeze([
   'shrine-keeper-bob',
   'shrine-keeper-tread',
   'shrine-keeper-face',
-  // 배치 앵커 · 창방 팻말
-  'shrine-anchor-ring',
+  // 창방 팻말 (배치 앵커 링은 자석 폐지 2026-08-10 과 함께 목록·CSS 에서 함께 내렸다)
   'shrine-plaque-glow',
   // 가족 사랑방
   'fh-flicker',

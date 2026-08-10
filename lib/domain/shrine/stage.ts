@@ -12,7 +12,7 @@
 import { ZONES, ZONE_LABEL, clampPct, KEEPER_POS } from './zones'
 // 기하 JSON 은 theme-stage.ts 한 곳에서만 읽는다 — 여기서는 그 파생값만 받아 쓴다.
 // (theme-stage 가 이 파일에서 가져가는 것은 타입뿐이라 런타임 순환이 생기지 않는다.)
-import { GRAND_ALTAR_ITEM_SCALE, grandAltarHeadRoomY } from './theme-stage'
+import { GRAND_ALTAR_ITEM_SCALE, STAGE_GROUND_DROP, grandAltarHeadRoomY, hasGrandAltar } from './theme-stage'
 import { isLayer, type CatalogItem, type Layer, type Placement, type SceneData, type ThemePack } from './types'
 // 타입만 참조한다(런타임 import 0) — fixture-offsets 도 이 파일의 타입만 보므로 순환이 생기지 않는다
 import type { FixtureOffsets } from './fixture-offsets'
@@ -77,16 +77,29 @@ const Z_WALL = 11
 /**
  * 제단층 z 밴드 13~15 (**세 칸**).
  *
- * 종전엔 14 하나였다. 틀(壇) 무대가 앵커를 **깊이 2열**(뒤 y52.4 · 앞 y55)로 나누면서 같은 z 를
- * 나눠 갖게 되었고, 그러면 앞뒤는 **DOM 순서**(배치를 만든 순서)로 정해진다 — 앞줄에 먼저 놓고
- * 뒷줄을 나중에 놓으면 뒷줄이 앞을 덮는다. y 에서 파생시켜 그 우연을 없앤다.
+ * 종전엔 14 하나였다. 틀(壇) 무대가 앵커를 **깊이 2열**(뒤 · 앞)로 나누면서 같은 z 를 나눠 갖게
+ * 되었고, 그러면 앞뒤는 **DOM 순서**(배치를 만든 순서)로 정해진다 — 앞줄에 먼저 놓고 뒷줄을
+ * 나중에 놓으면 뒷줄이 앞을 덮는다. y 에서 파생시켜 그 우연을 없앤다.
  *
  * 밴드가 셋뿐인 것은 이웃(단상 위 floor 12 · 마루 floor 16)을 건드리지 않고 쓸 수 있는 칸이
- * 그만큼이라서다. 경계는 존(48~58)을 삼등분한 51.33 / 54.67 이고, **v3 앵커 y53.5 는 가운데 칸에
- * 그대로 떨어져 z 14 를 유지한다** — 13테마 라이브 배치의 그림 순서는 한 칸도 변하지 않는다.
+ * 그만큼이라서다. 경계는 기준 밴드(48~58)를 삼등분한 51.33 / 54.67 이고, **v3 앵커 y53.5 는
+ * 가운데 칸에 그대로 떨어져 z 14 를 유지한다** — 13테마 라이브 배치의 그림 순서는 한 칸도 변하지 않는다.
  */
 const Z_ALTAR_MIN = 13
 const Z_ALTAR_STEPS = 3
+/**
+ * 제단 z 램프의 **기준 밴드 — 존과 분리해 동결한다**(floor 의 FLOOR_DEPTH_REF 와 같은 원리).
+ *
+ * 종전에는 ZONES.altar.y 를 삼등분했다. 무대 기하 v5 가 그 존을 [48,58] → [48,67] 로 넓히는데,
+ * 파생을 그대로 두면 **칸이 6.33%p 로 벌어져** 13테마 라이브 제단 배치의 z 가 한꺼번에 재배열된다
+ * (예: y52 와 y55 가 14/15 였다가 둘 다 13 으로 합쳐져 앞뒤가 DOM 순서로 넘어간다). 존은 «어디에
+ * 놓을 수 있나»이고 이 밴드는 «어느 것이 앞인가»라 애초에 다른 물음이다 — 그래서 끊는다.
+ *
+ * 칸 셋뿐인 밴드로는 v3 평면(53.5 한 줄)과 v5 틀 평면(61.4/64 두 줄)을 **동시에** 가를 수 없다
+ * (경계가 넷 필요한데 둘뿐이다). 그래서 밴드 자체를 틀 무대에서 접지 이동분만큼 통째로 내린다 —
+ * 살림이 9%p 내려갔으니 «앞뒤를 재는 자»도 같이 내려가는 것이 같은 규약이다.
+ */
+const ALTAR_DEPTH_REF: readonly [number, number] = [48, 58]
 const Z_FLOOR_MIN = 16
 /** 단상 위 floor 소품 — 제단 밴드(13~15)보다 뒤. 부록 P-2 깊이 분기. */
 const Z_FLOOR_BEHIND_ALTAR = 12
@@ -174,16 +187,21 @@ export function depthScale(layer: Layer, y: number, grandAltar = false): number 
 /**
  * 깊이 정렬(painter's algorithm) — 아이템 밴드 안의 상대 z(10~29).
  * hanging 10 · wall 11 · altar 13~15(앞줄이 뒷줄을 덮는다) · floor 16~28(앞일수록 크다).
+ *
+ * `grandAltar` 는 depthScale 과 **같은 스위치**다(틀 무대인가). 제단 평면이 v5 에서 9%p 내려갔으므로
+ * 앞뒤를 재는 기준 밴드도 같이 내린다 — 안 주면 종전과 한 글자도 다르지 않다(13테마 회귀 0).
  */
-export function depthZ(layer: Layer, y: number): number {
+export function depthZ(layer: Layer, y: number, grandAltar = false): number {
   switch (layer) {
     case 'hanging':
       return Z_HANGING
     case 'wall':
       return Z_WALL
     case 'altar': {
-      // 존을 세 칸으로 나눈 계단. NaN 은 clamp 규약대로 최소 칸(맨 뒤)으로 떨어진다.
-      const [a0, a1] = ZONES.altar.y
+      // 기준 밴드를 세 칸으로 나눈 계단. NaN 은 clamp 규약대로 최소 칸(맨 뒤)으로 떨어진다.
+      const drop = grandAltar ? STAGE_GROUND_DROP : 0
+      const a0 = ALTAR_DEPTH_REF[0] + drop
+      const a1 = ALTAR_DEPTH_REF[1] + drop
       const step = Math.floor(((clamp(y, a0, a1) - a0) / (a1 - a0)) * Z_ALTAR_STEPS)
       return Z_ALTAR_MIN + clamp(step, 0, Z_ALTAR_STEPS - 1)
     }
@@ -338,6 +356,9 @@ export const DEFAULT_ANCHORS: readonly StageAnchor[] = Object.freeze([
  * 종전에는 이 자리가 `bottom:50%`(=y50) 하드코딩이었다. 상면보다 4%p 넘게 아래 = 제단 몸통 안쪽에
  * 발이 박혀 서 있을 면이 없었고(CEO "어색하다"의 기하적 원인), 방 높이를 72vh 로 늘리면 제단
  * 스프라이트의 겉보기 세로가 줄어 그 어긋남이 더 벌어진다 — 하드코딩을 남겨 둘 수 없는 이유다.
+ *
+ * ⚠️ 틀(壇)을 든 테마는 이 값을 그대로 쓰지 않는다 — `deityPodiumTopY(themeCode)` 를 볼 것.
+ *    (스프라이트 파이프라인이 이 선언을 정규식으로 읽어 간다 — 이름·형태를 바꾸지 말 것)
  */
 export const PODIUM_TOP_Y = 45.3
 /**
@@ -358,6 +379,20 @@ export const DEITY_HEAD_ROOM_Y = 12
  */
 export function deityHeadRoomY(themeCode: string): number {
   return grandAltarHeadRoomY(themeCode) ?? DEITY_HEAD_ROOM_Y
+}
+
+/**
+ * 테마의 신위 **접지** y — 발이 닿는 면. 「발 분기」의 단일 출처다(머리는 deityHeadRoomY).
+ *
+ * v4.1 까지는 틀 테마도 45.3 이었다 — 틀의 감실 바닥이 마침 단상 상면과 같은 줄이었기 때문이다.
+ * 무대 기하 v5 가 틀을 통째로 마루 1/3(9%p) 아래로 내리면서 그 감실 바닥도 54.3 으로 따라갔고,
+ * 발만 45.3 에 두면 신위가 감실 안에서 9%p 떠 버린다. 머리 여백도 같은 +9 라 **키는 그대로**다
+ * (v4.1 20.4%p → v5 20.4%p) — 신위가 커지거나 작아지는 변화가 아니라 통째 평행이동이다.
+ *
+ * 틀이 없는 13테마는 단상 상면 45.3 그대로 — 크기·자리 변화 0.
+ */
+export function deityPodiumTopY(themeCode: string): number {
+  return hasGrandAltar(themeCode) ? round(PODIUM_TOP_Y + STAGE_GROUND_DROP, 4) : PODIUM_TOP_Y
 }
 
 /** 신위 스탠드 박스 — CSS `bottom`/`height` 문자열과 접지 y(파티클·판정 공용). */

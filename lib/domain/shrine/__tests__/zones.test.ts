@@ -35,6 +35,22 @@ describe('ZONES v2 — 무손실 확장 계약', () => {
     expect(ZONES.altar.y[0]).toBe(48)
   })
 
+  /**
+   * ★ 무대 기하 v5 「마루 1/3 접지」 — 살림이 마루 안으로 들어오면 존도 따라 열린다.
+   *
+   * 틀 앵커 2열이 52.4/55 → 61.4/64 로, 맨 아래 진열 칸이 59.42 → 68.42 로 내려갔다. 존이 옛 상한에
+   * 머물면 새 자리가 «존 밖»이 된다. 넓히는 방향뿐이라 위 무손실 계약과 충돌하지 않는다.
+   * 벽은 70 에서 멈춘다 — 그 아래는 마루(73~)라 벽걸이가 걸릴 곳이 아니다.
+   */
+  it('★ v5 확장 — altar 상한 67(틀 앵커 64 수용) · wall 상한 70(진열 칸 68.42 수용)', () => {
+    expect(ZONES.altar.y[1]).toBeGreaterThanOrEqual(64)
+    expect(ZONES.altar.y).toEqual([48, 67])
+    expect(ZONES.wall.y[1]).toBeGreaterThanOrEqual(68.42)
+    expect(ZONES.wall.y).toEqual([4, 70])
+    // 벽은 마루선(100 − 바닥밴드 27 = 73) 위에서 멈춘다
+    expect(ZONES.wall.y[1]).toBeLessThan(73)
+  })
+
   it('altar x 는 v1 그대로 — 좁히면 라이브 6건 이동, 넓힐 실익은 앵커·스냅이 담당 (부록 P-2)', () => {
     expect(ZONES.altar.x).toEqual([24, 76])
   })

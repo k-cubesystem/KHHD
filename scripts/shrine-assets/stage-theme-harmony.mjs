@@ -136,6 +136,29 @@ function readContracts() {
   // (x 88.75 · w 8.65 · top 20 · bottom 62) — 이 스크립트가 소리 내며 죽어 준 덕에 드리프트 없이 따라간다.
   const hallBlock = pluck(hall, /RITUAL_HALL_UNIT\s*=\s*Object\.freeze\(\{([^}]*)\}\)/, 'RITUAL_HALL_UNIT')[1]
 
+  /**
+   * ★ 기하 v5 대응(2026-08-10, 오퍼스 N) ★ — 「살림이 마루 깊이 1/3 만큼 안으로 들어온다」.
+   * `FSHELF_UNIT.top/bottom` 과 `RITUAL_HALL_UNIT.*` 이 **숫자 리터럴에서 파생식으로** 바뀌었고
+   * (`STAGE_GROUND_LINE_Y − FSHELF_H` 등), 그래서 이 스크립트가 설계대로 소리 내며 죽었다.
+   * 값을 여기 베껴 적으면 그 순간 «같은 숫자 두 벌»이 된다 — 대신 **같은 식으로 파생**시킨다:
+   *   마루선 = 100 − bands.floor · 접지 깊이 = bands.floor/3 · 접지선 = 그 합
+   * 리터럴이 돌아오면(원복) 그 리터럴을 그대로 쓴다. 두 세대가 한 함수로 읽힌다.
+   * ⚠️ 뮤럴 자체는 v5 에서 한 픽셀도 안 움직인다 — 이음새·수평선은 여전히 **마루선** 기준이다
+   *    (theme-stage.ts STAGE_GROUND_LINE_Y 주석). 이 파생은 합성판의 살림 위치에만 쓰인다.
+   */
+  const floorLineY = 100 - GEO.bands.floor
+  const groundDrop = Math.round((GEO.bands.floor / 3) * 100) / 100
+  const groundLineY = Math.round((floorLineY + groundDrop) * 100) / 100
+  const shelfH = Number(pluck(shelf, /const FSHELF_H = ([\d.]+)/, 'FSHELF_H')[1])
+  /** 리터럴이면 그 값, 파생식이면 계산값 — 어느 세대의 소스든 조용히 틀리지 않는다 */
+  const litOr = (block, key, derived) => {
+    const m = block.match(new RegExp(`\\b${key}:\\s*([\\d.]+)\\s*,`))
+    return m ? Number(m[1]) : derived
+  }
+  const fshelfTop = litOr(unitBlock, 'top', groundLineY - shelfH)
+  const fshelfBottom = litOr(unitBlock, 'bottom', groundLineY)
+  const fshelfW = litOr(unitBlock, 'w', NaN)
+
   return {
     /** 방 컨테이너 실측 — 이 두 값이 렌더 스케일의 분모다 */
     roomW: pluckNum(room, /max-w-\[(\d+)px\]/, 'room max-w'),
@@ -155,15 +178,15 @@ function readContracts() {
     altarScale: pluckNum(stage, /const ALTAR_SCALE = ([\d.]+)/, 'ALTAR_SCALE'),
     /** 가족 선반장 */
     fshelfX: pluckList(shelf, /FSHELF_UNIT_X[^=]*=\s*Object\.freeze\(\[([^\]]*)\]\)/, 'FSHELF_UNIT_X'),
-    fshelfW: Number(pluck(unitBlock, /w:\s*([\d.]+)/, 'FSHELF_UNIT.w')[1]),
-    fshelfTop: Number(pluck(unitBlock, /top:\s*([\d.]+)/, 'FSHELF_UNIT.top')[1]),
-    fshelfBottom: Number(pluck(unitBlock, /bottom:\s*([\d.]+)/, 'FSHELF_UNIT.bottom')[1]),
+    fshelfW,
+    fshelfTop,
+    fshelfBottom,
     fshelfFamilyTier: Number(pluck(tiersBlock, /family:\s*([\d.]+)/, 'FSHELF_TIERS.family')[1]),
-    /** 의식각 */
+    /** 의식각 — v5 부터 선반장 값을 그대로 승계한다(RitualHall 이 FSHELF_UNIT 을 읽는다) */
     hallX: pluckNum(hallBlock, /x:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.x'),
-    hallW: pluckNum(hallBlock, /w:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.w'),
-    hallTop: pluckNum(hallBlock, /top:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.top'),
-    hallBottom: pluckNum(hallBlock, /bottom:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.bottom'),
+    hallW: litOr(hallBlock, 'w', fshelfW),
+    hallTop: litOr(hallBlock, 'top', fshelfTop),
+    hallBottom: litOr(hallBlock, 'bottom', fshelfBottom),
     plaqueCy: pluckList(hall, /const PLAQUE_CY = \[([^\]]*)\]/, 'PLAQUE_CY'),
     plaqueWPct: pluckNum(hall, /const PLAQUE_W_PCT = ([\d.]+)/, 'PLAQUE_W_PCT'),
     shelfSprite: pluck(hall, /const SHELF_SPRITE = '([^']+)'/, 'SHELF_SPRITE')[1],
@@ -414,6 +437,13 @@ const CONTINUITY =
  * 짧아져 폭까지 깎게 된다. 소리를 키우는 대신 «위에서부터»와 «아래 2/5는 바닥뿐»을 관찰 사실로
  * 덧붙인다. 목표 60% 는 우연이 아니라 계산값이다: 16:9 에서 벽 AR 2.96 · 바닥 AR 4.45 로
  * 두 상한(3.0 · 4.6) 바로 아래에 앉는 유일한 자리다.
+ *
+ * ⚠️ 밴드 v4.1(75/27)로 갈아탄 뒤에도 이 문구는 **그대로 둔다** — 숫자를 고치는 쪽이 오히려 틀린다.
+ *    계산상 새 이상점은 70% 다(그 자리에서 벽 AR 이 폭 맞춤 상한 2.48 과 만난다). 그런데 실측된
+ *    모델의 편향은 «지시보다 7~15%p 아래에 놓는다» 였다 — 60% 를 시켰더니 반가 67.5 · 달집 70.0 ·
+ *    설빛 74.8 이 나왔다. 즉 「three fifths」가 곧 70% 언저리를 만든다. 70% 로 고쳐 적으면 77~85%
+ *    가 와서 바닥이 짧아지고 폭을 20% 넘게 깎게 된다(=③ 확대의 재발). 프롬프트는 «모델이 실제로
+ *    무엇을 하는가»에 맞추고, 이상점은 게이트가 잰다.
  */
 const HORIZON = SPEC_V2
   ? 'The line where the wall meets the floor runs straight across the frame at three-fifths of the frame height, ' +
@@ -466,7 +496,33 @@ const openingLine = (t) =>
   //    (승인분 반가 r2 · 달집 r3 · 설빛 r3 은 이 문장 이전 판으로 구웠다. 재생성하면 달라진다.)
   'The middle third of the picture, from one third of the way across to two thirds of the way across, is ' +
   'closed wall with no opening anywhere in it, and it carries the same panelling, the same framing and the ' +
-  'same rhythm as every other closed bay. Nothing hangs anywhere on this wall.'
+  'same rhythm as every other closed bay.'
+// ⚠️ 종전 이 문장 끝에는 「Nothing hangs anywhere on this wall.」 이 붙어 있었다. 「장식 완화」(아래
+//    decorLine)가 그 자리를 대신한다 — 둘을 같이 두면 정면으로 싸워 둘 다 뭉개진다(척추 충돌 3종).
+
+/**
+ * ★ 「장식 완화」 (2026-08-10 CEO 6차) ★
+ * "배경에 조금 더 디테일한 부분을 추가해주고, 선반과 틀에 겹치지 않는 배경엔 다른 테마를 이해하기
+ *  위한 그림이나 장식이 들어가도 돼."
+ *
+ * 살림과 장식을 가르는 축은 «가로»가 아니라 **«세로»** 다. 가로로는 피할 자리가 없다 —
+ * 선반장 x7·16·25·34 와 63.5·72.5, 의식각 88.75 를 빼면 벽이 거의 남지 않는다. 반면 세로로는
+ * 살림이 전부 **아래쪽**에 산다(선반장·의식각 y31~73 · 틀 접지 y73). 그래서 규칙은 하나다:
+ *   · 장식은 **벽 위쪽 절반**에, 칸마다 하나씩, 일정 간격으로 (리듬 — 확산 함정의 검증된 도구)
+ *   · 벽 **가운데 아래**는 종전 그대로 «완성된 빈 벽» (살림이 서는 자리)
+ *   · 가운데 1/3 은 여전히 비운다 (신위·제단 뒤 = 육안 ④)
+ * 바닥에 «놓인» 것은 여전히 0 이다(EMPTY_ROOM 불변) — 장식은 전부 벽에 붙거나 걸린 것이다.
+ * ⚠️ 이 절이 들어오면 상부 문장(upperOf)의 꼬리 「Below the beam the wall is quiet … to the floor」와
+ *    정면으로 싸운다. 그래서 그 꼬리를 테마 표에서 걷고 **QUIET_BELOW 로 옮겼다**(한 곳에서만 말한다).
+ */
+const QUIET_BELOW =
+  'Below the middle of the wall there is nothing on it at all, and it stays quiet and even all the way down to ' +
+  'the floor'
+const decorLine = (t) =>
+  'In the upper part of every closed bay to the left of that middle third and to the right of it, all the way ' +
+  `out to both edges of the picture, ${t.decor} hangs flat against the wall, one to a bay, repeating at even ` +
+  'intervals. Each of them is about a third as tall as the bay it hangs in and none of them reaches below the ' +
+  `middle of the wall. ${QUIET_BELOW}.`
 
 /** 규격 v3 밀도 규칙 ② 상부 — 「벽 상부 1/3이 이야기한다」. 테마마다 다른 목공 어휘를 쓴다. */
 const upperOf = (t) => t.upper ?? WALL_BAND
@@ -493,8 +549,12 @@ const WALL_BAND =
  *   ── 규격 v3 추가분 ──
  *   beyond    **개구부 너머의 원경**(방 밖이라 테마 상징물 허용). 없으면 v3 개구부를 열지 않는다.
  *   upper     벽 상부 어휘(서까래·보·처마 속). 없으면 공통 WALL_BAND.
+ *             ⚠️ 「장식 완화」 이후 이 문장은 **보 위**만 말한다 — 보 아래 정숙 선언은 QUIET_BELOW 전담.
+ *   ── 장식 완화 추가분(2026-08-10 CEO 6차) ──
+ *   decor     **벽 위쪽 절반에 걸리는 장식 한 종**(테마를 설명하는 그림·문양·걸개). 명사구로 적어
+ *             decorLine 의 「… hangs flat against the wall」 앞에 그대로 붙는다. 글자 없는 것만.
  * @type {Array<{code:string,name:string,el:string,hall:string,identity:string,wall:string,floor:string,
- *               pooled?:string,lightFrom?:string,fix?:string,beyond?:string,upper?:string}>}
+ *               pooled?:string,lightFrom?:string,fix?:string,beyond?:string,upper?:string,decor?:string}>}
  */
 const THEMES = [
   {
@@ -531,8 +591,11 @@ const THEMES = [
     upper:
       'Across the top of the wall one straight beam runs level from edge to edge, and small carved brackets sit ' +
       'under it over every post. Above the beam the round ends of the rafters repeat in a row all the way ' +
-      'across with dark boarding between them. Below the beam the wall is quiet and even all the way down to ' +
-      'the floor',
+      'across with dark boarding between them, and a slender purlin crosses them higher up',
+    // 장식 완화 — 반가의 어휘는 문인화 족자. 원화 팔레트(호두·상아) 안에서만 논다.
+    decor:
+      'a narrow hanging scroll of warm ivory paper painted in thin grey ink with a bent pine over a low rock, ' +
+      'its top and bottom rollers dark walnut',
   },
   {
     code: 'daljip',
@@ -575,8 +638,10 @@ const THEMES = [
     upper:
       'Across the top of the wall one straight rough-hewn beam runs level from edge to edge. Above it the ' +
       'underside of the thatch shows as close-packed bundles of straw bound down with twisted rope, and short ' +
-      'round rafters cross beneath them at even intervals. Below the beam the wall is quiet and even all the ' +
-      'way down to the floor',
+      'round rafters cross beneath them at even intervals',
+    // 장식 완화 — 민가의 세간이 아니라 «처마에 매단 수확». 밤에도 실루엣과 붉은 점으로 읽힌다.
+    decor:
+      'a braid of dried corn cobs with a string of dried red peppers twisted into it, hung from a wooden peg',
     // r2 처방(사실 2개): 값이 어둡다 · 달빛은 차갑고 등불빛은 좁다
     // ⚠️ r2 처방(v3 r1): 개구부가 둘이 열리자 **달이 둘** 떴다 — 하늘은 하나여야 세계가 하나다.
     fix:
@@ -630,7 +695,11 @@ const THEMES = [
       'Across the top of the wall one straight pale beam runs level from edge to edge close to the top edge of ' +
       'the picture, with only a narrow strip of flat plank boarding showing above it. Just under the beam a ' +
       'band of short rails and small square panels runs level all the way across, with a thin line of frost ' +
-      'caught along every joint. Below that band the wall is quiet and even all the way down to the floor',
+      'caught along every joint',
+    // 장식 완화 — 서고의 어휘는 담묵 족자. 난색은 여전히 나무 쪽에만 둔다(r3 교훈).
+    decor:
+      'a narrow hanging scroll of pale hanji painted in thin grey ink with one bare branch, a line of frost ' +
+      'caught along its lower roller',
     // r2 처방은 값의 폭만 좁혔을 뿐 «회색 상자»가 그대로였다 — 설빛이라 부를 근거가 화면에 하나도
     // 없었다(서리도 눈빛도 한지도 안 보임). r3 처방은 **설빛에만 있는 것 두 가지**를 관찰 사실로 넣는다:
     // 서리가 앉은 자리 · 한 칸 안에서 종이가 상아→푸름으로 넘어가는 그늘. 밀도는 이 둘이 만든다.
@@ -660,11 +729,28 @@ const THEMES = [
       'intervals, pale coral shapes painted low across the panels, and the dancheong band above muted by the ' +
       'water light to soft jade and old gold. A low stone wainscot runs level along the bottom of the whole ' +
       'wall, and fine bubbles rise slowly along the posts.',
+    // v3 바닥 변주 — 민짜 판재 금지. 자개 상감 띠 한 줄이 널의 흐름을 끊는다(원화의 진주모를 바닥으로).
     floor:
       'Deep green-black polished boards running away from the viewer, wet-sheened and holding the pale ' +
-      'reflections of the light shafts, with slow caustic ripples travelling across them.',
+      'reflections of the light shafts, with slow caustic ripples travelling across them. A band of ' +
+      'mother-of-pearl inlay runs along the foot of the wall in small irregular pieces, and one darker board ' +
+      'borders it.',
     pooled: 'pale green light',
     lightFrom: 'the shafts falling from the surface',
+    // 규격 v3 밀도 — 심해 궁궐의 상부는 단청과 물이다(원화 팔레트: 옥·낡은 금).
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge, painted in jade and old gold ' +
+      'dancheong muted by the water light, and small carved brackets sit under it over every post. Above the ' +
+      'beam the round ends of the rafters repeat in a row all the way across and fine bubbles slip up between ' +
+      'them',
+    // 장식 완화 — 벽에 붙는 바다의 것. 기물이 아니라 «자란 것»이라 살림과 자리를 다투지 않는다.
+    decor:
+      'a spreading fan of pale coral, its branches fine and many, fixed flat against the panel with small ' +
+      'bubbles caught in it',
+    // ★ 개구부 원경 — 방 밖은 물 그 자체다. 여기가 이 테마가 «어디인지» 말하는 유일한 창구다.
+    beyond:
+      'the open water, where pale shafts of light come down slowly from the surface far above through a drifting ' +
+      'haze of black-green, with a bank of coral standing far back in it',
   },
   {
     code: 'daejanggan',
@@ -692,11 +778,28 @@ const THEMES = [
     // ⚠️ 바닥은 «돌판»이 아니라 판재다. 공통 척추의 마지막 문장이 «the boards»로 고정이라 돌로 적으면
     //    한 문장 안에서 재료가 어긋난다(함정 ⑤ 계열의 모순). 원화도 신당 단은 꿀빛 마루판이므로
     //    돌은 굽도리로 내리고 바닥은 그을린 판재로 간다.
+    // v3 바닥 변주 — 판재는 유지하되(척추의 «the boards») 벽 밑동에 돌판 한 줄을 깐다. 원화의 회청색
+    //   돌바닥이 여기로 들어오고, 발밑이 밝아지는 자리(floorEven)와도 재료가 맞는다.
     floor:
       'Wide floorboards running away from the viewer, darkened almost black by soot and ash worked into the ' +
-      'grain, the thin seams between them showing, and faintly warm where the forge light reaches across them.',
+      'grain, the thin seams between them showing, and faintly warm where the forge light reaches across them. ' +
+      'Along the foot of the wall a course of grey-blue stone slabs is laid flat in front of them, scorched ' +
+      'pale in patches.',
     pooled: 'forge light',
     lightFrom: 'the open forge mouth',
+    // 규격 v3 밀도 — 대장간의 상부는 그을음과 쇠붙이다(단청·조각 없음 — 원화에 없다).
+    upper:
+      'Across the top of the wall one heavy squared beam runs level from edge to edge, black with soot, and ' +
+      'flat iron straps are let into it over every post. Above the beam short round rafters cross at even ' +
+      'intervals and the boarding between them is stained dark brown by smoke',
+    // 장식 완화 — 연장(모루·집게·망치)은 여전히 금지다(살림과 싸운다). 두드려 만든 «장식쇠»는 다르다.
+    decor:
+      'a hammered iron plate cut into a broad sunburst, its rays uneven and its face dark with soot, with the ' +
+      'forge light catching one edge',
+    // ★ 개구부 원경 — 대장간 바깥마당. 불은 여전히 방 안(fix 의 불구멍)에만 있다.
+    beyond:
+      'the smithy yard, a low soot-blackened stone wall with a stack of charcoal under a plank shelter beside ' +
+      'it, all of it grey under a flat white sky',
     // r1 반려(2026-08-10): 화덕이 **하나**뿐이라 하필 가족 선반장 자리 뒤에 앉아 가운데 선반장이
     //   아가리를 가렸고, 중앙 뷰에는 화덕이 아예 없어 그냥 «벽돌 방»으로 읽혔다. 이 테마의 유일한
     //   정체성 요소가 가구 구역에 몰린 것 — PLAN §1-3 「자리를 아는 벽」이 경고한 실패다.
@@ -733,10 +836,407 @@ const THEMES = [
       'glowing deep amber from behind, warmest near the top of each panel as if a light hung just in front of ' +
       'it. A low dark wainscot board runs level along the bottom of the whole wall, and a ' +
       'band of carved bracket-work runs level along the top under the beam.',
+    // v3 바닥 변주 — 널 방향이 한 번 바뀌는 자리 + 앞쪽 붉은 깔개(연등빛을 받는 면).
     floor:
       'Wide honey-brown floorboards running away from the viewer, their grain and the thin seams between them ' +
-      'showing, polished to a low sheen that holds the warm orange reflections of the lanterns.',
+      'showing, polished to a low sheen that holds the warm orange reflections of the lanterns. Along the foot ' +
+      'of the wall the boards turn and run parallel to it in a border two planks wide, and nearer the front a ' +
+      'long woven runner of faded rose lies flat over them.',
     lightFrom: 'the lantern-lit paper panels',
+    // 규격 v3 밀도 — 연등의 상부는 단청 공포다(원화의 붉은기 갈색 목조 + 조각 브라켓).
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge and tiers of carved bracket ' +
+      'arms step out under it over every post, their ends painted in worn green and white. Above the beam the ' +
+      'underside of the tiled eave shows, its rafters round and close-set and lit rose-orange from below',
+    // 장식 완화 — 등은 identity(보에 매달린 것)에 그대로 두고, 벽에는 «그려진 연꽃» 을 건다.
+    decor:
+      'a painted wooden panel of one lotus flower opening, its petals flat rose-pink and outlined dark, the ' +
+      'board around it deep red',
+    // ★ 개구부 원경 — 테마의 이름이 여기서 돌아온다(골짜기의 연등 줄).
+    beyond:
+      'the valley at sunset, where long strings of small paper lanterns hang above a stream and burn ' +
+      'rose-orange away into the dark of the far slope',
+  },
+  // ══════════════════════ 잔여 10테마 (2026-08-10 확산 · 장식 완화 회차) ══════════════════════
+  // 규율: identity 는 **원화에서 눈으로 뽑은 사실**만 적는다(형용사 늘리기 금지 — 캐릭터 시트가 온다).
+  //       가구·기물은 전부 개구부 **바깥**으로 내보내고(장독·종·배·샘), 방 안은 건축·재질·빛만 남긴다.
+  //       걸린 장식은 decor 한 종으로 분리한다(척추 충돌 회피의 검증된 우회).
+  {
+    code: 'choga',
+    name: '초가 신당',
+    el: '無',
+    // 원화(themes/choga/room.webp) 실측: 황토 회벽 + 잿빛 풍화 목조 + 위쪽에 초가 이엉 단면 +
+    // 서까래 끝에 흰 원판 장식 + 가운데 한지 미닫이가 호박색으로 빛남 + 넓은 회갈색 마루널.
+    hall: 'the earthen-walled hall of a thatched village shrine (초가 신당)',
+    identity:
+      'Warm ochre clay plaster fills the walls of this humble hall, hand-smoothed so the sweep of the trowel ' +
+      'and the chopped straw worked into the mud read across it close up, and it is stained and patched darker ' +
+      'in places. The timber is grey-brown and weathered, the grain raised proud and split fine along every ' +
+      'post. The paper panels glow a warm honey ivory from behind. The wide floorboards are pale grey-brown, ' +
+      'worn hollow down the middle. The air is warm and a little dusty.',
+    wall:
+      'A long wall of ochre clay plaster held between weathered grey-brown timber posts standing at even ' +
+      'intervals, a warm ivory paper panel filling the upper part of every bay. A low dark wainscot board runs ' +
+      'level along the bottom of the whole wall, and a band of plain rough slats runs level along the top ' +
+      'under the beam.',
+    floor:
+      'Wide pale grey-brown floorboards running away from the viewer, their grain raised and the wide dark ' +
+      'seams between them showing, worn hollow along the middle. Coarse straw matting lies over them in panels ' +
+      'nearer the front, the weave of each panel running across the weave of the next, and one darker board ' +
+      'runs along the foot of the wall.',
+    upper:
+      'Across the top of the wall one straight rough-hewn beam runs level from edge to edge, and the round ends ' +
+      'of the rafters repeat in a row above it, each end capped with a pale disc. Between and above them the ' +
+      'underside of the thatch shows as close-packed bundles of straw bound down with twisted rope',
+    decor:
+      'a short braid of straw rope with folded white paper strips hanging from it and one dried gourd tied at ' +
+      'its middle',
+    beyond:
+      'a stretch of village fields, low paddy squares stepping away under a pale sky, with a thin line of smoke ' +
+      'rising from the straw roof of a house among them',
+    // r2 처방(r1): 게이트는 전부 통과했으나 **개구부 바깥이 거의 흰 종이**로 비었다 — CEO 3차 ①
+    //   («벽·바닥만 있으니 퀄리티가 안 산다»)의 바깥판이다. 서술을 늘리지 않고 «바깥에 무슨 색이
+    //   있는가» 한 가지만 관찰 사실로 준다.
+    fix:
+      'The fields outside carry colour: the paddy squares are green-gold and the low earth banks between them ' +
+      'are ochre, and a soft blue-grey hill closes them off along the top.',
+  },
+  {
+    code: 'dokkaebi',
+    name: '도깨비 불',
+    el: '火',
+    // 원화(themes/dokkaebi/room.webp) 실측: 보랏빛 어둠 + 노출 서까래 + 청록 단청 공포 + 짙은 자두색
+    //   판벽 두 단 + 초록 도깨비불 구슬(꼬리 있음) + 옆으로 창살이 희미하게 밝음 + 자두빛 마루널.
+    // ⚠️ 함정 ③ 승계: 「밤이다」는 밝기를 못 내린다 — 값을 관찰 사실로 못박는다.
+    hall: 'the night hall of a dokkaebi shrine (도깨비 불)',
+    identity:
+      'It is night in this hall and it stays night: the only light is a scattering of small green flames ' +
+      'drifting in the air, each a pale green ball trailing a thin wisp behind it, and their glow reaches only ' +
+      'a little way. Everything else is deep plum violet going almost to black and no surface anywhere is ' +
+      'brighter than a dim green-grey. The timber is dark red-brown, the beams and brackets under the roof ' +
+      'carry worn blue-green dancheong, and the plaster panels are a deep dark plum, cloudy and mottled close up.',
+    wall:
+      'A long wall of deep plum plaster panels held between dark red-brown timber posts standing at even ' +
+      'intervals, each bay divided into two long recessed panels by a slender rail. A low black wainscot board ' +
+      'runs level along the bottom of the whole wall, and a band of worn blue-green painted carpentry runs ' +
+      'level along the top under the beam.',
+    floor:
+      'Dark plum-grey floorboards running away from the viewer, their grain and the thin seams between them ' +
+      'showing, the wood cold and slightly wet-sheened so it holds the faint green reflections of the drifting ' +
+      'flames, with one darker board along the foot of the wall.',
+    pooled: 'green glow',
+    lightFrom: 'the drifting green flames',
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge and tiers of bracket arms step ' +
+      'out under it over every post, painted in worn blue-green dancheong. Above the beam the dark rafters ' +
+      'cross at even intervals and the boarding between them is almost black',
+    decor:
+      'a round roof-end tile moulded with a grinning goblin face, two blunt horns and bared teeth, its ' +
+      'blue-green glaze worn thin',
+    beyond:
+      'a black forest of bare trunks with more of the small green flames drifting slowly between them, far back ' +
+      'in the dark',
+  },
+  {
+    code: 'hongsal',
+    name: '홍살문 안뜰',
+    el: '火',
+    // 원화(themes/hongsal/room.webp) 실측: 주칠 둥근 기둥 + 청·녹·백 단청 + 기와 처마 + 회색 판석 마당 +
+    //   붉은 홍살문(살대 한 줄 + 삼지창 꼭지) + 단풍 + 안쪽 사당의 열린 문.
+    // ⚠️ 원화는 «마당»이지만 harmony 는 실내로 통일한다(달집 전례) — 홍살문은 개구부 너머로 보낸다.
+    hall: 'the shrine hall standing inside a crimson hongsalmun gate (홍살문 안뜰)',
+    identity:
+      'Vermilion lacquer covers the round posts of this hall, the red deep and finely crazed so the cracks in ' +
+      'the lacquer read close up, and the beams and brackets above them carry green, blue and white dancheong, ' +
+      'the pigment chalky and worn thin along every edge. The plaster panels between the posts are a warm ' +
+      'oyster white. The board floor is warm red-brown with a low sheen. The light is the clear amber of late ' +
+      'autumn.',
+    wall:
+      'A long wall of warm oyster-white plaster held between round vermilion-lacquered posts standing at even ' +
+      'intervals. A low dark wainscot board runs level along the bottom of the whole wall, and a band of green ' +
+      'and white dancheong pattern runs level along the top under the beam.',
+    floor:
+      'Warm red-brown floorboards running away from the viewer, their grain and the thin seams between them ' +
+      'showing, polished to a low sheen. Along the foot of the wall a course of pale grey stone slabs is laid ' +
+      'flat in front of them, their joints wide and their faces worn smooth.',
+    lightFrom: 'the open courtyard',
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge, painted with a green and ' +
+      'white dancheong pattern, and tiers of carved bracket arms step out under it over every post. Above the ' +
+      'beam the underside of the tiled eave shows, its rafters round and close-set and their ends painted red',
+    decor:
+      'a flat painted board of a tiger with round eyes sitting among pines, its colours flat vermilion, ochre ' +
+      'and white and its outlines dark',
+    beyond:
+      'the paved courtyard and the hongsalmun standing in it, two tall crimson posts carrying a level row of ' +
+      'red spikes across the top with a three-pronged crest at the middle, and old maples turning red behind it',
+    // r2 처방(r1): 개구부에 **뜰만** 오고 정작 홍살문이 오지 않았다 — 테마 이름이 화면에서 사라졌다.
+    //   openingLine 의 「far away and hazy and set well back」이 문을 밀어내 버린 것이라, 달집의
+    //   「달은 하나뿐」과 같은 방식으로 **한 칸을 지정해** 가까이 세운다(사실 1개 추가).
+    fix:
+      'In one of the open bays the crimson gate stands close and clear: two tall red posts side by side ' +
+      'carrying a level row of red spikes across the top, with the three-pronged crest above the middle of ' +
+      'that row. The other open bays show only the paved court and the maples behind it.',
+  },
+  {
+    code: 'byeolbat',
+    name: '별밭 천문각',
+    el: '無',
+    // 원화(themes/byeolbat/room.webp) 실측: 짙은 남색 밤하늘 + 은하수와 별자리 선 + 천문 두루마리 +
+    //   호박색 사각 등 두 개 + 나무 난간 + 꿀빛 마루 + 돗자리 단.
+    hall: 'the star-viewing pavilion of an old observatory (별밭 천문각)',
+    identity:
+      'Deep indigo night stands beyond every opening of this pavilion and the room is lit only by a few paper ' +
+      'lanterns hanging from the beams, each burning a small warm amber. The paper panels are a cool pale ' +
+      'grey-blue with the night pressing behind them and the mulberry fibre in the sheets shows as fine pale ' +
+      'threads. The timber is warm mid-brown with a long open grain. The board floor is honey brown and takes a ' +
+      'faint blue cast from the night. The whole picture is dark, the way a room looks by starlight, and no ' +
+      'surface anywhere is brighter than the lanterns themselves.',
+    wall:
+      'A long wall of cool pale grey-blue paper panels set between warm mid-brown timber posts standing at even ' +
+      'intervals, each panel divided by a plain lattice of thin ribs. A low dark wainscot board runs level ' +
+      'along the bottom of the whole wall, and a band of plain flat planking runs level along the top under the ' +
+      'beam.',
+    floor:
+      'Honey-brown floorboards running away from the viewer, their long grain and the thin seams between them ' +
+      'showing, cool and blue in their shadows. Pale woven mats lie over them in panels nearer the front, ' +
+      'bound at the edges with dark cloth, and one darker board runs along the foot of the wall.',
+    pooled: 'lantern warmth',
+    lightFrom: 'the hanging lanterns',
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge, and above it the round ends ' +
+      'of the rafters repeat in a row all the way across with dark boarding between them, the whole strip lit ' +
+      'faintly from below by the lanterns',
+    decor:
+      'a long hanging scroll of dark indigo paper carrying a circular star chart, its rings and its small ' +
+      'points of stars drawn fine in pale silver, joined by thin straight lines',
+    beyond:
+      'the night sky, a broad pale river of stars crossing it from side to side with the constellations picked ' +
+      'out in faint lines, seen over a low wooden railing',
+    // r2 처방(r1): 별지도 족자에 **글자**가 그려져 나왔다(한글 비슷한 획 5자) — 계약 위반이다.
+    //   꼬리의 「no text」는 화면 전체를 두고 하는 말이라 «그림 안의 종이»까지 못 눌렀다. 부정문을
+    //   더 키우는 대신 **그 종이에 무엇이 있는가**를 긍정 관찰로 못박는다(빈 자리를 지정한다).
+    fix:
+      'Each star chart carries only the circle, the small points of the stars inside it and the thin straight ' +
+      'lines joining them, and the paper above and below that circle is left plain and empty.',
+  },
+  {
+    code: 'dangsan',
+    name: '당산나무 그늘',
+    el: '木',
+    // 원화(themes/dangsan/room.webp) 실측: 거대한 신목 줄기에 금줄(짚·흰 종이) + 초록 잎그늘 +
+    //   기와 지붕 + 이끼와 돌 + 석등 + 은회색 풍화 목조.
+    hall: 'the shaded hall beside an ancient village guardian tree (당산나무 그늘)',
+    identity:
+      'Green light comes down through leaves into this hall and lies over everything in shifting dapples. The ' +
+      'timber is weathered silver-grey, the grain raised and split, and moss has crept green into the joints ' +
+      'and along the foot of every post. The plaster panels are a pale moss-grey, stained darker where damp has ' +
+      'run down them. The board floor is grey-brown and looks cool and slightly damp. The air is fresh and ' +
+      'shaded.',
+    wall:
+      'A long wall of pale moss-grey plaster held between weathered silver-grey timber posts standing at even ' +
+      'intervals. A low stone wainscot runs level along the bottom of the whole wall with moss in its joints, ' +
+      'and a band of plain slatted carpentry runs level along the top under the beam.',
+    floor:
+      'Grey-brown floorboards running away from the viewer, their raised grain and the thin seams between them ' +
+      'showing, cool and slightly damp with green moss caught in the seams nearest the wall. The dapples of ' +
+      'leaf shadow lie scattered over them, and one darker board runs along the foot of the wall.',
+    pooled: 'green light',
+    lightFrom: 'the leaves outside',
+    upper:
+      'Across the top of the wall one straight silver-grey beam runs level from edge to edge, and above it ' +
+      'short round rafters cross at even intervals under the underside of a tiled eave, with the shadows of ' +
+      'moving leaves falling across all of it',
+    decor:
+      'a carved wooden guardian post face, tall and narrow with bulging round eyes and a broad grin, the wood ' +
+      'weathered pale grey and split down one cheek',
+    beyond:
+      'the guardian tree, its trunk so wide it fills the opening, a thick straw rope tied round it with folded ' +
+      'white paper strips hanging from the rope, and its green canopy spreading over a tiled roof behind',
+  },
+  {
+    code: 'seonang',
+    name: '서낭 고갯길',
+    el: '土',
+    // 원화(themes/seonang/room.webp) 실측: 열린 문 너머 고갯길 + 돌탑 + 오색천 묶인 노송 + 황금빛 능선 +
+    //   실내는 따뜻한 갈색 목조 + 한지 창호 + 수묵 병풍 + 오른쪽 벽에 오색천 + 옅은 꿀빛 마루.
+    hall: 'the hall of a wayside shrine on a mountain pass (서낭 고갯길)',
+    identity:
+      'Ochre dusk light fills this hall and lies gold along every edge. The timber is warm mid-brown and dry, ' +
+      'the grain lifted and the corners rubbed pale by hands. The paper panels are a warm ivory going amber ' +
+      'where the low sun crosses them, and the plaster beneath them is a dusty earth ochre with fine grit ' +
+      'showing in it. The board floor is pale honey wood, dry and dusty. The air is still and warm.',
+    wall:
+      'A long wall of dusty ochre plaster held between warm mid-brown timber posts standing at even intervals, ' +
+      'a warm ivory paper panel filling the upper part of every bay. A low brown wainscot board runs level ' +
+      'along the bottom of the whole wall, and a band of plain squared rails runs level along the top under the ' +
+      'beam.',
+    floor:
+      'Pale honey-wood floorboards running away from the viewer, their straight grain and the thin seams ' +
+      'between them showing, dry and dusty. A woven straw mat lies flat over them nearer the front, its ' +
+      'plaiting coarse, and along the foot of the wall the boards turn and run parallel to it in a border two ' +
+      'planks wide.',
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge and short squared struts stand ' +
+      'on it over every post. Above them the round rafters cross at even intervals and the boarding between ' +
+      'them is warm brown, all of it lit gold along its lower edges',
+    decor:
+      'a bunch of five narrow cloth strips in red, blue, yellow, white and black, knotted together at the top ' +
+      'and hanging straight down, their ends frayed and sun-faded',
+    beyond:
+      'the mountain pass, where a tall cairn of stacked flat stones stands at the roadside and an old bent pine ' +
+      'beside it carries more coloured cloth strips, with hazy gold ridges folding away behind',
+  },
+  {
+    code: 'jangdok',
+    name: '장독대 새벽',
+    el: '土',
+    // 원화(themes/jangdok/room.webp) 실측: 왼쪽으로 열린 마당에 검은 옹기 항아리 줄 + 돌단 + 정원 +
+    //   실내는 한지 미닫이 + 짙은 목재 + 술 달린 휘장 + 촛대 + 옅은 돗자리 바닥 + 차고 파리한 새벽빛.
+    hall: 'the dawn hall of a house that keeps a crock terrace (장독대 새벽)',
+    identity:
+      'The first pale light of dawn is in this hall, cool and grey-blue where it falls and leaving the corners ' +
+      'still dim. The paper panels are a soft warm ivory laid in overlapping sheets so the seams and the ' +
+      'mulberry fibre in them catch that light. The timber is warm walnut brown with a fine straight grain and ' +
+      'a dull sheen. The floorboards are pale wood, cool where the light crosses them. The air is cold and ' +
+      'completely still.',
+    wall:
+      'A long wall of warm ivory paper panels set between warm walnut timber posts standing at even intervals, ' +
+      'the sheets overlapping so their seams show. A low dark wainscot board runs level along the bottom of the ' +
+      'whole wall, and a band of short rails and small square panels runs level along the top under the beam.',
+    floor:
+      'Pale wood floorboards running away from the viewer, their fine straight grain and the thin seams between ' +
+      'them showing, cool and matte. Fine straw matting lies over them in panels nearer the front, the weave of ' +
+      'each panel running across the weave of the next, and one darker board runs along the foot of the wall.',
+    pooled: 'pale dawn light',
+    upper:
+      'Across the top of the wall one straight walnut beam runs level from edge to edge, and above it short ' +
+      'round rafters cross at even intervals with plain flat boarding between them, the boarding still dim ' +
+      'while the beam has caught the first light',
+    decor:
+      'a hanging paper scroll painted in thin grey ink with one stem of bamboo and a few leaves, its lower ' +
+      'roller plain dark wood',
+    beyond:
+      'the crock terrace in the yard, rows of round dark earthen jars standing on a low stone platform with ' +
+      'their shoulders wet with dew, under a pale rose sky',
+    // r2 처방(r1 반려 — 게이트 2개 미달 + 회색 상자). 실측: 수평선 84.9%(창 55~75 이탈) · 폭 크롭 42.1%.
+    //   ① **깊이**: 모델이 «먼 안쪽 벽까지 물러나 보는 깊은 방»을 그려 마루가 화면 대부분을 먹었다.
+    //      수평선 문장을 다시 말하지 않고(재진술 금지) «바닥이 몇 널인가»라는 다른 관찰로 못박는다.
+    //   ② **회색 상자**(함정 ④): 새벽 한기를 적었더니 나무까지 차가워져 원화의 호두빛이 사라졌다.
+    //      설빛 r3 처방과 같은 처방 — 한색은 종이와 빛에, 나무는 따뜻하게.
+    fix:
+      'Every piece of timber in this hall is warm walnut brown — the posts, the beam and the wainscot alike — ' +
+      'and only the paper and the light are cool. The floor in front of the wall is deep: several long boards ' +
+      'run away from the bottom edge of the picture before they reach the foot of the wall.',
+  },
+  {
+    code: 'jonggak',
+    name: '새벽 종각',
+    el: '金',
+    // 원화(themes/jonggak/room.webp) 실측: 안개 낀 마당에 종각(기와 지붕·목조 틀)과 청동 범종 +
+    //   은청색 새벽 안개 + 실내는 수묵 병풍 + 한지 미닫이 + 따뜻한 갈색 기둥 + 옅은 돗자리 바닥.
+    hall: 'the hall beside an old bell pavilion at first light (새벽 종각)',
+    identity:
+      'A silver-blue morning mist stands in the air of this hall and softens everything a little way back. The ' +
+      'paper panels are a cool pale grey-white and the mulberry fibre in them shows as fine pale threads. The ' +
+      'timber is warm brown, dry, with a faint bloom of damp along its lower edges. The board floor is pale ' +
+      'wood washed grey by the mist. The light is even and almost colourless, the light of the moment before ' +
+      'sunrise.',
+    wall:
+      'A long wall of cool pale grey-white paper panels set between warm brown timber posts standing at even ' +
+      'intervals, damp bloomed along every lower edge. A low brown wainscot board runs level along the bottom ' +
+      'of the whole wall, and a band of plain flat planking runs level along the top under the beam.',
+    floor:
+      'Pale wood floorboards running away from the viewer, their straight grain and the thin seams between them ' +
+      'showing, washed grey and faintly damp so the mist lies thin over them. A woven mat lies flat over them ' +
+      'nearer the front, and along the foot of the wall the boards turn and run parallel to it in a border two ' +
+      'planks wide.',
+    pooled: 'cold light',
+    lightFrom: 'the misted paper panels',
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge, and above it short round ' +
+      'rafters cross at even intervals with plain boarding between them, the mist standing thick enough up ' +
+      'there to soften their far ends',
+    decor:
+      'a small bronze wind bell on a short cord with a flat fish-shaped plate hanging under its clapper, the ' +
+      'bronze green with age',
+    beyond:
+      'the bell pavilion in the mist, a great bronze bell hanging from a heavy timber frame under a tiled roof, ' +
+      'the bell banded and studded and green with age, with pale fog lying all round it',
+  },
+  {
+    code: 'saemgut',
+    name: '옹달샘 굿터',
+    el: '水',
+    // 원화(themes/saemgut/room.webp) 실측: 앞쪽 바닥에 맑은 청록 샘 + 이끼 낀 둥근 돌 + 분홍 꽃 +
+    //   청록·붉은 굿천이 걸림 + 등롱 + 화조 병풍 + 초록 숲 + 따뜻한 나무.
+    // ⚠️ 샘은 **바닥에서 걷어 개구부 밖으로** 보낸다 — 바닥에 구멍이 나면 살림이 그 위에 서게 된다.
+    hall: 'the hall of a forest spring shrine (옹달샘 굿터)',
+    identity:
+      'Pale teal light off water moves over this hall in slow ripples, brightest along the lower part of every ' +
+      'post. The timber is warm mid-brown and slightly damp, its grain dark and open, and green moss has taken ' +
+      'hold in the joints near the floor. The paper panels are a cool white with a faint green cast in them. ' +
+      'The board floor is honey brown with a wet sheen. The air is cool and clean.',
+    wall:
+      'A long wall of cool white paper panels set between warm mid-brown timber posts standing at even ' +
+      'intervals, the wood damp-dark near its foot. A low mossy stone wainscot runs level along the bottom of ' +
+      'the whole wall, and a band of plain squared rails runs level along the top under the beam.',
+    floor:
+      'Honey-brown floorboards running away from the viewer, their grain and the thin seams between them ' +
+      'showing, wet-sheened so slow ripples of reflected light travel across them, with green moss in the seams ' +
+      'nearest the wall and one darker board running along its foot.',
+    pooled: 'water light',
+    lightFrom: 'the water outside',
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge, and above it short round ' +
+      'rafters cross at even intervals with plain boarding between them, the reflected ripples of the water ' +
+      'running faintly across the whole strip',
+    decor:
+      'a wide hanging cloth banner, white in the middle with a broad teal band across the top and a red band ' +
+      'across the bottom, its lower edge cut into points',
+    beyond:
+      'the spring in the forest, a small clear pool ringed with round mossy stones with pale petals floating on ' +
+      'it, and green leaves closing over it behind',
+  },
+  {
+    code: 'naru',
+    name: '안개 나루터',
+    el: '水',
+    // 원화(themes/naru/room.webp) 실측: 열린 문 너머 옅은 파란 강안개 + 나무 잔교 + 매인 배 한 척 +
+    //   소나무 + 파란 술 달린 걸개 + 양쪽 벽의 그림 병풍 + 꿀빛 마루 + 앞쪽 돗자리.
+    hall: 'the hall of a river ferry landing in the fog (안개 나루터)',
+    identity:
+      'Pale blue river fog stands in every opening of this hall and drains the colour out of anything more than ' +
+      'a few steps away. The timber is warm honey brown, its grain long and open and its surfaces worn smooth ' +
+      'by hands. The paper panels are a cool white with the fog behind them. The board floor is warm honey ' +
+      'wood. The light is soft and shadowless and very pale.',
+    wall:
+      'A long wall of cool white paper panels set between warm honey-brown timber posts standing at even ' +
+      'intervals, each panel divided by a plain lattice of thin ribs. A low brown wainscot board runs level ' +
+      'along the bottom of the whole wall, and a band of plain flat planking runs level along the top under the ' +
+      'beam.',
+    floor:
+      'Warm honey-wood floorboards running away from the viewer, their long grain and the thin seams between ' +
+      'them showing, worn smooth and holding a soft pale sheen. Woven mats lie flat over them nearer the front, ' +
+      'their plaiting fine and their edges bound dark, and one darker board runs along the foot of the wall.',
+    pooled: 'pale light',
+    lightFrom: 'the fog outside',
+    upper:
+      'Across the top of the wall one straight honey-brown beam runs level from edge to edge, and above it ' +
+      'short round rafters cross at even intervals with plain boarding between them, all of it pale and ' +
+      'low-contrast where the fog reaches it',
+    decor:
+      'a hanging ornament of dark blue silk cord worked into one broad flat knot with a long blue tassel ' +
+      'falling below it',
+    beyond:
+      'the river landing in the fog, a low wooden pier running out over still pale water with one ' +
+      'flat-bottomed boat moored at its end, and the far bank showing only as a grey line of pines',
+    // r2 처방(r1 반려 — 게이트 2개 미달). 실측: 수평선 80.0%(창 55~75 이탈) · 폭 크롭 23.3%.
+    //   바닥이 화면 아래 1/5 밖에 없어 벽 슬라이스가 세로로 길어졌고(AR 1.68), 폭 맞춤이 폭을 23%
+    //   깎았다 — 그게 곧 ③ 확대다. 수평선 문장을 재진술하는 대신 «바닥 널이 몇 장인가»로 못박는다.
+    fix:
+      'The floor in front of the wall is deep: several long boards run away from the bottom edge of the picture ' +
+      'before they reach the foot of the wall.',
   },
 ]
 
@@ -805,8 +1305,10 @@ function fullRoomPrompt(t) {
     (SPEC_V2 ? `${WALL_BAND}, and there is a little open space above that beam at the top of the frame. ` : `${upperOf(t)}. `) +
     (openings
       ? `${openingLine(t)} `
-      : 'This wall is closed all the way across: nothing opens through it, there is no doorway and no window, ' +
-        'and nothing hangs on it. ') +
+      : 'This wall is closed all the way across: nothing opens through it, there is no doorway and no window' +
+        (!SPEC_V2 && t.decor ? '. ' : ', and nothing hangs on it. ')) +
+    // 「장식 완화」 — 개구부 유무와 무관하게 걸린다(원경이 없는 테마도 벽 장식은 갖는다)
+    (!SPEC_V2 && t.decor ? `${decorLine(t)} ` : '') +
     `${SIDE_FLAT}. ` +
     `${EMPTY_ROOM}. ` +
     `${FURNITURE_REF} ` +
@@ -942,6 +1444,49 @@ const styleCardPath = (code) => path.join(pilotDir(code), 'style-card.webp')
 /** 원샷 통짜 원판 — 라운드당 한 장. 3샷 캐시(left/center/right)와 파일명이 겹치지 않는다. */
 const roomPath = (code, round) => path.join(roundDir(code, round), 'room.png')
 const qaDir = (code) => path.join(pilotDir(code), 'qa')
+
+// ═══════════════════ 수출 — assets-src → public (규격 v3 4렌디션) ═══════════════════
+/**
+ * `--export` 는 승인된 라운드의 네 장을 라이브 이름으로 복사한다.
+ *   r{N}/wall.webp     → public/shrine/stage/{code}/room-wall-mural-v3.webp
+ *   r{N}/wall-sd.webp  → …/room-wall-mural-v3-sd.webp   (floor 도 같은 규칙)
+ *
+ * **-v3 이름은 신규 파일이라 라이브에 영향이 없다** — 시드가 아직 구 이름(room-wall-mural.webp)을
+ * 보고 있고, `grandAltar.muralV3` 를 읽는 것은 시범 3테마뿐이다. 즉 이 복사는 «확산 시드를 켜면
+ * 곧바로 쓸 수 있는 자산을 미리 놓아 두는 일»이지 배포가 아니다.
+ *
+ * ⚠️ 시범 3테마의 public 파일은 **건드리지 않는다**(이번 회차의 계약). CEO 가 보강판을 보고
+ *    교체를 결정하기 전까지 라이브 화면이 바뀌면 안 되기 때문이다 — 그래서 코드로 막는다.
+ */
+const EXPORT_BLOCKED = new Set(['banga', 'daljip', 'seolbit'])
+const V3_EXPORT_MAP = {
+  'wall.webp': 'room-wall-mural-v3.webp',
+  'floor.webp': 'room-floor-mural-v3.webp',
+  'wall-sd.webp': 'room-wall-mural-v3-sd.webp',
+  'floor-sd.webp': 'room-floor-mural-v3-sd.webp',
+}
+async function exportV3(code, roundNo) {
+  if (EXPORT_BLOCKED.has(code)) {
+    console.log(`  · 수출 건너뜀 — ${code} 는 시범 3테마(public 무접촉 계약)`)
+    return null
+  }
+  const dir = roundDir(code, roundNo)
+  const dst = path.join(STAGE_ROOT, code)
+  const out = {}
+  let total = 0
+  for (const [src, name] of Object.entries(V3_EXPORT_MAP)) {
+    const from = path.join(dir, src)
+    if (!existsSync(from)) throw new Error(`수출할 파일 없음: ${showPath(from)}`)
+    const to = path.join(dst, name)
+    await mkdir(dst, { recursive: true })
+    await copyFile(from, to)
+    const b = (await sharp(to).metadata()).size ?? (await readFile(to)).length
+    total += b
+    out[name] = to
+  }
+  console.log(`  ✔ 수출 ${showPath(dst)}/room-{wall,floor}-mural-v3{,-sd}.webp — 합 ${(total / 1024).toFixed(0)}KB`)
+  return { files: out, bytes: total }
+}
 
 /**
  * 샷 참조 이미지. **순서가 프롬프트의 «first attached» / «last attached» 와 맞물린다** —
@@ -2232,7 +2777,17 @@ async function makeQaSet({ code, tag, wallFile, floorFile, seats, deityFile, lig
 // ──────────────────────────── main ────────────────────────────
 const args = process.argv.slice(2)
 const VALUE_FLAGS = ['--round', '--from', '--regen', '--seats', '--deity', '--against', '--horizon', '--band']
-const BOOL_FLAGS = ['--plan', '--assemble-only', '--qa-only', '--live', '--no-live', '--three-shot', '--spec-v2', '--no-device']
+const BOOL_FLAGS = [
+  '--plan',
+  '--assemble-only',
+  '--qa-only',
+  '--live',
+  '--no-live',
+  '--three-shot',
+  '--spec-v2',
+  '--no-device',
+  '--export',
+]
 
 function flagValue(name, fallback) {
   const i = args.indexOf(name)
@@ -2256,6 +2811,8 @@ const skipLive = args.includes('--no-live')
 const threeShot = args.includes('--three-shot')
 /** 기기 시뮬 컷(무거운 판)을 생략 — 프롬프트만 다듬는 라운드에서 시간을 아끼는 레버 */
 const skipDevice = args.includes('--no-device')
+/** 승인 라운드를 public 의 **-v3 이름**으로 복사(라이브 무영향 — 위 exportV3 주석) */
+const doExport = args.includes('--export')
 /** 대비판 기준 — 기본은 현행 라이브. `--against r2` 면 r2 뮤럴로 한 벌 더 구워 나란히 붙인다. */
 const against = flagValue('--against', 'live')
 const round = Number(flagValue('--round', '1'))
@@ -2318,13 +2875,29 @@ if (!Number.isInteger(seats) || seats < 0 || seats > C.fshelfX.length) {
  * glow 는 `assets.glow`(제단 광원 = CSS `--th-glow`). 합성판이 라이브와 다른 색으로 판정하지
  * 않게 하려는 것이므로, 시드가 바뀌면 여기도 같이 바꾼다.
  */
+/**
+ * ⚠️ 확산 함정 ⑦ — 16테마 전부 채운다. color 는 `shrine_theme_packs.stage.light.color`(오행색,
+ *    20260807_theme_stage_wide_all.sql), glow 는 `assets.glow`(테마팩 시드). 빠지면 합성판이
+ *    중립색(GEO.light.neutralColor)으로 판정해 **라이브와 다른 방**을 보여 준다.
+ */
+const ORIGIN = { x: 50, y: 52 }
 const LIGHT_BY_CODE = {
-  banga: { color: '#C9A84C', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(201,168,76,0.2)' },
-  daljip: { color: '#d4a017', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(230,195,122,0.17)' },
-  seolbit: { color: '#c9a84c', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(200,212,220,0.16)' },
-  yonggung: { color: '#2d5f8a', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(95,179,179,0.18)' },
-  daejanggan: { color: '#c9a84c', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(159,179,200,0.16)' },
-  yeondeung: { color: '#9e2b2b', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(224,138,78,0.18)' },
+  choga: { color: '#C9A84C', intensity: 0.5, origin: ORIGIN, glow: 'rgba(201,168,76,0.14)' },
+  banga: { color: '#C9A84C', intensity: 0.5, origin: ORIGIN, glow: 'rgba(201,168,76,0.2)' },
+  daljip: { color: '#d4a017', intensity: 0.5, origin: ORIGIN, glow: 'rgba(230,195,122,0.17)' },
+  seolbit: { color: '#c9a84c', intensity: 0.5, origin: ORIGIN, glow: 'rgba(200,212,220,0.16)' },
+  yonggung: { color: '#2d5f8a', intensity: 0.5, origin: ORIGIN, glow: 'rgba(95,179,179,0.18)' },
+  dokkaebi: { color: '#9e2b2b', intensity: 0.5, origin: ORIGIN, glow: 'rgba(134,239,172,0.13)' },
+  hongsal: { color: '#9e2b2b', intensity: 0.5, origin: ORIGIN, glow: 'rgba(217,108,95,0.15)' },
+  byeolbat: { color: '#C9A84C', intensity: 0.5, origin: ORIGIN, glow: 'rgba(143,168,232,0.16)' },
+  dangsan: { color: '#4a7c59', intensity: 0.5, origin: ORIGIN, glow: 'rgba(127,176,105,0.17)' },
+  yeondeung: { color: '#9e2b2b', intensity: 0.5, origin: ORIGIN, glow: 'rgba(224,138,78,0.18)' },
+  seonang: { color: '#d4a017', intensity: 0.5, origin: ORIGIN, glow: 'rgba(184,155,106,0.17)' },
+  jangdok: { color: '#d4a017', intensity: 0.5, origin: ORIGIN, glow: 'rgba(202,168,124,0.17)' },
+  daejanggan: { color: '#c9a84c', intensity: 0.5, origin: ORIGIN, glow: 'rgba(159,179,200,0.16)' },
+  jonggak: { color: '#c9a84c', intensity: 0.5, origin: ORIGIN, glow: 'rgba(207,216,227,0.15)' },
+  saemgut: { color: '#2d5f8a', intensity: 0.5, origin: ORIGIN, glow: 'rgba(111,195,201,0.17)' },
+  naru: { color: '#2d5f8a', intensity: 0.5, origin: ORIGIN, glow: 'rgba(143,168,200,0.16)' },
 }
 const lightFor = (code) =>
   LIGHT_BY_CODE[code] ?? {
@@ -2429,6 +3002,7 @@ for (const theme of targets) {
       const f = path.join(roundDir(theme.code, round), 'floor.webp')
       if (!existsSync(w) || !existsSync(f)) throw new Error(`후보 뮤럴 없음: ${showPath(w)}`)
       console.log(`── 합성 QA판 재생성 (API 0회 · 뮤럴 무변경) ──`)
+      if (doExport) entry.export = await exportV3(theme.code, round)
       entry.qa = await makeQaSet({ code: theme.code, tag: `r${round}`, wallFile: w, floorFile: f, seats, deityFile, light })
       console.log(`  ✔ ${showPath(entry.qa.wide)} + view ${Object.keys(entry.qa.views).join('/')}`)
       if (entry.live) {
@@ -2524,6 +3098,9 @@ for (const theme of targets) {
         '\n' +
         band('바닥', r.floor)
     )
+
+    // ③-b 수출 (API 0회) — 라이브 이름 -v3 로 복사. 시범 3테마는 exportV3 가 막는다.
+    if (doExport) entry.export = await exportV3(theme.code, round)
 
     // ④ 합성 QA판 (API 0회) — **판정 단위**
     console.log('── 합성 QA판 (API 0회) ──')

@@ -29,9 +29,15 @@
 // r5 세 장이 (f₂−f₁) 0.221~0.225 로 나와 상자 70(y3.5~73.5)이 됐고, 접지가 마루선에 앉는다.
 //
 // 산출:
-//   public/shrine/stage/{code}/grand-altar.webp      ← 신규 경로(라이브 렌더가 아직 안 읽는다)
+//   assets-src/shrine/grand-altar/{code}/base.webp   ← 키잉·리패드까지 끝난 **중간 산출**
 //   assets-src/shrine/grand-altar/{code}/r{N}.png    ← 원본 캐시(라운드 격리 — 지우지 않는다)
 //   assets-src/shrine/grand-altar/{code}/qa-r{N}.webp  ← 계약선 확인판(먼저 눈으로)
+//
+// ⚠️ 이 스크립트는 **public/ 에 쓰지 않는다**(2026-08-10 확산 회차에 바뀐 규약).
+//    라이브에 나가는 파일은 접지 수복까지 끝난 `grand-altar-v2.webp` 한 장뿐이고, 그것을 굽는 것은
+//    `stage-grand-altar-ground.mjs` 다. 중간 산출을 public 에 두면 «어느 장이 정본인가»가 흐려지고
+//    (시범 3테마의 grand-altar.webp 가 지금 그 상태다 — 원복 레버로만 남긴다), 확산 13테마에서는
+//    시드가 아직 안 나간 파일이 public 에 쌓인다.
 //
 // 사용:
 //   node scripts/shrine-assets/stage-grand-altar.mjs --plan            # 프롬프트만 (API 0회)
@@ -144,10 +150,22 @@ const deviceRoom = (d) => ({
 })
 
 // ══════════════════════════════ 프롬프트 ══════════════════════════════
-/** stage-banga.mjs → … → stage-theme-harmony.mjs 원문 그대로. 한 글자도 바꾸지 않는다. */
-const STYLE =
+/**
+ * 화풍 — stage-banga.mjs → … → stage-theme-harmony.mjs 원문. **붓은 한 글자도 바꾸지 않는다.**
+ *
+ * ⚠️ 확산 회차(2026-08-10)에 한 곳만 갈라진다: 가운데의 **팔레트 절**이다. 원문은 «sepia and
+ * dark-walnut … hanji ivory» 인데, 시범 셋이 모두 따뜻한 목재였기 때문에 그 말이 재질과 싸우지
+ * 않았을 뿐이다. 무쇠·먹빛·주칠·옻칠에 같은 절을 붙이면 **재질 문장이 팔레트에 먹혀** 열세 장이
+ * 다 갈색으로 나온다 — 그러면 「재질이 테마를 입는다」가 통째로 실패한다.
+ * (전례: 씬 파노라마의 공통 척추에서 「warmth」·「the paper panels」를 테마가 갈아 끼운 것과 같은 처방.
+ *  PLAN-stage-harmony-v1 추기 2 ⑥ — 「용궁에 한지 금지」)
+ * 갈리는 것은 **색 이름뿐**이고 붓질·구성·격 어휘(watercolor / brush texture / calm and tidy /
+ * key-art quality)는 전 테마 동일하다. palette 를 안 적은 테마는 원문 그대로 떨어진다.
+ */
+const PALETTE_DEFAULT = 'muted sepia and dark-walnut palette with hanji ivory, candlelit warmth'
+const STYLE = (t) =>
   'warm painterly watercolor illustration, soft K-anime aesthetic, visible gentle brush texture, ' +
-  'muted sepia and dark-walnut palette with hanji ivory, candlelit warmth, ' +
+  `${t.palette ?? PALETTE_DEFAULT}, ` +
   'calm and tidy composition rather than busy detail, refined key-art quality'
 /** stage-banga-altar.mjs 원문 그대로 */
 const CHROMA =
@@ -309,16 +327,268 @@ const THEMES = [
       'The cabinet is pale white wood with plain recessed panels, a thin silver line runs along every moulding, ' +
       'and the drawer faces carry small round silver pulls.',
   },
+
+  // ══════════════ 확산 13테마 (2026-08-10 · 오퍼스 P) ══════════════
+  //
+  // 형태(FORM)·빛(LIGHT)·크로마는 시범 3종과 **한 글자도 다르지 않다** — 갈리는 것은 아래 세 문장,
+  // 즉 «재질»뿐이다. 그것이 「재질이 테마를 입는다」의 전부이고, 붓이 갈리지 않는 유일한 길이다.
+  //
+  // despill('warm')은 **초록이 정상 색이 아닌 테마에만** 건다. 당산(이끼)·샘굿(물때 이끼)·
+  // 용궁(청동 녹·나전 청록)·도깨비(단청 녹)는 초록을 그림이 실제로 쓰므로 절대 걸지 않는다
+  // (feedback: 일괄 적용이 청죽을 파괴했다 — 2026-08-10).
+  {
+    code: 'choga',
+    name: '초가 신당',
+    mural: 2,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is roofed with layered rice straw instead of tiles, each eave a thick combed bundle of dry ' +
+      'straw with its cut ends showing in a even fringe along the edge, and the rafters carrying it are old ' +
+      'sun-greyed pine, split and checked along the grain.',
+    niche:
+      'The posts of the alcove are round pine logs with the adze facets still on them, pale grey where the ' +
+      'weather has worn them and honey-brown in the shade, and twisted hemp cord is lashed around each joint.',
+    body:
+      'The cabinet is plain unpainted pine boarding, its wide panels dry and matt with knots showing through, ' +
+      'the drawer faces carry small turned wooden pegs instead of metal pulls, and a band of plaited straw rope ' +
+      'runs along its base.',
+  },
+  {
+    code: 'yonggung',
+    name: '용궁',
+    palette: 'muted black-lacquer and deep teal palette with pearl sheen, lamplit warmth',
+    mural: 1,
+    adopted: 1,
+    canopy:
+      'The canopy is black-lacquered ebony polished to a wet gleam, each eave edged with a band of ' +
+      'mother-of-pearl cut into rolling wave crests, and small branching pieces of pale coral rise from the ' +
+      'lifted end of every eave.',
+    niche:
+      'The posts and the head-rail of the alcove are the same black lacquer, inlaid with broad mother-of-pearl ' +
+      'scrolls that turn green and blue as the light moves, and the bronze fittings at their corners have gone ' +
+      'soft green with age.',
+    body:
+      'The cabinet is black lacquer with panels of pearl shell laid in wave patterns, and heavy bronze mounts, ' +
+      'green with verdigris, sit at every corner and around each drawer pull.',
+  },
+  {
+    code: 'dokkaebi',
+    name: '도깨비 불',
+    palette: 'muted black-lacquer and deep vermilion palette with old iron grey, lamplit warmth',
+    mural: 1,
+    adopted: 2,
+    // ⚠️ r1 처방 — 형태·재질은 좋았는데 **층의 순서가 뒤집혔다**: 상판이 장(欌) «위»에 얹히고
+    //    서랍 두 줄이 그 아래로 갔다. 그러면 감실 바닥~상판 사이가 그림에서 12.9% 밖에 안 돼
+    //    (계약 요구 24%) 접지 도구가 그 구간을 **2.01배** 늘려야 한다 — 열여섯 장 중 혼자만
+    //    늘어난 서랍이 보인다. 순서를 «셀 수 있는 사실»로 다시 못박는다(FORM 의 비율 문장과
+    //    같은 어법). 재생성만이 답인 종류다 — 리패드는 사이 거리를 못 바꾼다.
+    fix:
+      'The deep chest of two drawer rows stands directly under the alcove and directly above the long top ' +
+      'board, so the chest is the middle of the three and fills a quarter of the whole height. The long top ' +
+      'board is lower than the chest and one step in front of it, and under the board there is nothing but the ' +
+      'apron rail and the short legs.',
+    canopy:
+      'The canopy is black lacquer, a band of dancheong pattern in vermilion and white runs along the edge of ' +
+      'each eave, and at the centre of the lowest eave a carved goblin face with round eyes and bared teeth ' +
+      'looks straight out.',
+    niche:
+      'The posts of the alcove are black lacquered timber studded with rows of round iron nail heads, and a ' +
+      'smaller goblin mask is carved into each corner post where it meets the head-rail.',
+    body:
+      'The cabinet is black lacquer with deep vermilion panels, iron straps run across every drawer face and ' +
+      'are fixed with large hammered iron studs, and heavy iron ring pulls hang from them.',
+  },
+  {
+    code: 'hongsal',
+    name: '홍살문 안뜰',
+    palette: 'muted vermilion and dark-timber palette with old gold, candlelit warmth',
+    mural: 2,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is painted deep vermilion all over, and a band of dancheong in green, white and gold runs ' +
+      'along the edge of each eave, the paint dry and a little chalky where it has weathered.',
+    niche:
+      'Between the lowest eave and the head-rail of the alcove stands a row of slender round vermilion staves, ' +
+      'upright and evenly spaced like the palisade of a red gate, and the two corner posts are the same ' +
+      'vermilion with a thin gold line along their edges.',
+    body:
+      'The cabinet is vermilion lacquer with narrow dancheong bands along every moulding, the drawer faces are ' +
+      'a darker red-brown, and small gilt bronze pulls sit at their centres.',
+  },
+  {
+    code: 'byeolbat',
+    name: '별밭 천문각',
+    palette: 'muted ink-blue and dark-timber palette with tarnished silver, candlelit warmth',
+    mural: 2,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is ink-dark timber with a faint blue cast, and fine silver wire is inlaid along the edge of ' +
+      'each eave in small stars joined by thin straight lines, like a chart of constellations.',
+    niche:
+      'The posts and the head-rail of the alcove are the same ink-dark wood rubbed smooth, scattered silver ' +
+      'star points are set into their faces, and a slender silver band runs across the top.',
+    body:
+      'The cabinet is ink-dark wood with plain deep indigo panels, each panel carrying one small ' +
+      'silver-inlaid constellation, and the drawer pulls are little flat silver discs.',
+  },
+  {
+    code: 'dangsan',
+    name: '당산나무 그늘',
+    palette: 'muted bark-brown and moss-green palette with straw ivory, candlelit warmth',
+    mural: 1,
+    adopted: 1,
+    canopy:
+      'The canopy is built of rough unsquared logs that still carry their bark at the cut ends, the eaves are ' +
+      'covered with split shingles gone grey, and a thick twisted straw rope hung with folded white paper is ' +
+      'bound along the front edge of the lowest eave.',
+    niche:
+      'The posts of the alcove are two whole tree trunks with the bark left on them, green moss growing in the ' +
+      'hollows of that bark, and the head-rail is a single curved branch laid across their tops.',
+    body:
+      'The cabinet is thick unplaned slabs with dark grain and wide gaps between the boards, moss and pale ' +
+      'lichen creep along its lower edges, and straw rope is knotted around each corner.',
+  },
+  {
+    code: 'yeondeung',
+    name: '연등 골짜기',
+    palette: 'muted vermilion and dark-timber palette with worn gold leaf, candlelit warmth',
+    mural: 1,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is vermilion lacquer, a row of open lotus petals is carved along the edge of each eave, and ' +
+      'the tip of every petal is touched with gold leaf that has worn thin in places.',
+    niche:
+      'The posts and the head-rail of the alcove are vermilion, a gilded lotus blossom is carved at the top of ' +
+      'each post, and a thin gold line follows every moulding.',
+    body:
+      'The cabinet is vermilion lacquer with panels of carved lotus flowers and leaves standing proud of the ' +
+      'ground, the carving gilded, and round gilt bronze pulls sit at the centre of each drawer face.',
+  },
+  {
+    code: 'seonang',
+    name: '서낭 고갯길',
+    palette: 'muted weathered-grey and ochre palette with five-colour cloth accents, candlelit warmth',
+    mural: 1,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is weathered timber gone silver-grey, its surface split and fibrous from years of wind, and ' +
+      'strips of cloth in red, blue, yellow, white and black are tied along the front edge of the lowest eave ' +
+      'and hang down.',
+    niche:
+      'The posts of the alcove are rough weathered beams with more cloth strips knotted around their heads, ' +
+      'and the head-rail is a plain grey plank with no carving on it.',
+    body:
+      'The cabinet is weathered grey board banded with dark iron straps, and the whole piece stands on a low ' +
+      'base of round river stones stacked and fitted tight without mortar.',
+  },
+  {
+    code: 'jangdok',
+    name: '장독대 새벽',
+    palette: 'muted pale-wood and onggi red-brown palette with glazed sheen, candlelit warmth',
+    mural: 2,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is pale seasoned wood, and each eave is roofed with small dark earthenware tiles whose glaze ' +
+      'is uneven and glossy, the red-brown of a well-fired crock.',
+    niche:
+      'The posts and the head-rail of the alcove are plain pale wood, and the lower part of each post is ' +
+      'sheathed in glazed earthenware of that same deep red-brown, its surface rippled where the glaze ran ' +
+      'down and pooled.',
+    body:
+      'The cabinet is pale wood with panels of dark glazed earthenware set into the frames, each panel catching ' +
+      'one soft wet-looking highlight, and the drawer pulls are small unglazed clay knobs.',
+  },
+  {
+    code: 'daejanggan',
+    name: '무쇠 대장간',
+    palette: 'muted charcoal and iron-grey palette with ember orange, candlelit warmth',
+    mural: 1,
+    adopted: 2,
+    despill: 'warm',
+    // ⚠️ r1 처방 — 비례는 좋았는데 **재질이 목재로 읽혔다**(무쇠 장식을 두른 나무 제단). 공통 화풍의
+    //    「dark-walnut」 계보와 벽 참조가 둘 다 나무 쪽으로 당긴다 — 팔레트 교체만으로는 부족했다.
+    //    설명을 늘리지 않고 «없는 것»을 관찰 사실로 한 문장 넣는다(FORM 의 「The alcove is empty」 어법).
+    fix:
+      'Every part of this piece is iron and there is no wood anywhere on it: the eaves, the posts, the chest ' +
+      'and the top board are all sheets of dark iron, each sheet covered in small overlapping hammer dents ' +
+      'with rows of round rivets along its edges, and the whole surface is the cold grey of an anvil.',
+    canopy:
+      'The canopy is built of black iron plate instead of wood, each eave a hammered sheet whose whole surface ' +
+      'is covered in overlapping hammer dents, and a line of round rivet heads runs along every edge.',
+    niche:
+      'The posts of the alcove are square iron pillars, their corners rounded by hammering, charcoal dark with ' +
+      'a faint blue temper sheen, heavy rivets marching down each edge, and the head-rail is one forged bar.',
+    body:
+      'The cabinet is iron plate riveted panel to panel, the drawer faces are flat hammered sheets with forged ' +
+      'iron ring pulls, and the metal is soot-black with lighter grey where the hammer has struck it.',
+  },
+  {
+    code: 'jonggak',
+    name: '새벽 종각',
+    palette: 'muted dark-timber and green-bronze palette with cold morning silver, candlelit warmth',
+    mural: 1,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is heavy dark timber, and along the edge of each eave runs a cast bronze band raised with the ' +
+      'lotus medallions and flying figures of a great temple bell, the bronze dull and softly greened.',
+    niche:
+      'The posts of the alcove are thick round pillars of dark wood as broad as a bell frame, each ringed near ' +
+      'the top with a bronze collar, and the head-rail carries a row of small raised bronze bosses.',
+    body:
+      'The cabinet is dark heavy timber with a bronze plate set into the centre of each panel, every plate cast ' +
+      'with a lotus medallion, and the drawer pulls are thick bronze rings.',
+  },
+  {
+    code: 'saemgut',
+    name: '옹달샘 굿터',
+    palette: 'muted wet-stone grey and moss-green palette with hanji ivory, candlelit warmth',
+    mural: 1,
+    adopted: 1,
+    canopy:
+      'The canopy is timber darkened and swollen with damp, each eave roofed with flat grey slabs of stone, and ' +
+      'fine green moss furs the wood where the eaves meet.',
+    niche:
+      'The posts of the alcove are damp grey stone pillars with pale water stains running down them in ' +
+      'streaks, and the head-rail is a single wet-looking beam with moss along its underside.',
+    body:
+      'The cabinet is dark damp wood set into a frame of rounded river stones, moss fills the joints between ' +
+      'those stones, and the drawer faces are plain boards with a wet sheen on them.',
+  },
+  {
+    code: 'naru',
+    name: '안개 나루터',
+    palette: 'muted tarred-black and driftwood grey palette with brass gold, candlelit warmth',
+    mural: 2,
+    adopted: 1,
+    despill: 'warm',
+    canopy:
+      'The canopy is built of thick boat planking, the wood painted black with tar that has cracked into a fine ' +
+      'net, its seams packed with pale caulking, and the eave ends cut square like the stem of a boat.',
+    niche:
+      'The posts of the alcove are heavy tarred timbers with rope whipped tightly around them in even turns, ' +
+      'and a thick hemp rope is coiled along the head-rail.',
+    body:
+      'The cabinet is planked like a hull with visible seams and square wooden pegs, brass rings hang from the ' +
+      'drawer faces as pulls, and a brass cleat is fixed at each corner.',
+  },
 ]
 
-const themePrompt = (t) => `${FORM(t)}\n${t.fix ? `${t.fix}\n` : ''}${REFS}\n${STYLE}. ${LIGHT}. ${CHROMA}`
+const themePrompt = (t) => `${FORM(t)}\n${t.fix ? `${t.fix}\n` : ''}${REFS}\n${STYLE(t)}. ${LIGHT}. ${CHROMA}`
 
 // ═══════════════════ 참조 이미지 준비 (API 0회) ═══════════════════
 const pilotDir = (code) => path.join(PILOT_ROOT, `${code}-v3`)
 const srcDir = (code) => path.join(SRC_ROOT, code)
 const rawPath = (code, round) => path.join(srcDir(code), `r${round}.png`)
 const qaPath = (code, round) => path.join(srcDir(code), `qa-r${round}.webp`)
-const outPath = (code) => path.join(PUB, 'shrine', 'stage', code, 'grand-altar.webp')
+/** 중간 산출 — 접지 수복(stage-grand-altar-ground.mjs)의 **입력**이다. public/ 에 두지 않는다. */
+const outPath = (code) => path.join(srcDir(code), 'base.webp')
 
 /** 참조로 붙일 벽 조각 — 승인 뮤럴의 **가운데 한 화면**(제단이 설 자리)을 1280px 로 줄인 것 */
 async function wallPatch(t) {
@@ -783,22 +1053,27 @@ async function writeQa(buf, m, file, marks) {
    * 감실 «윗쪽만» 어두운 성질). 랜드마크는 **눈으로 읽어 THEMES.landmarks 에 적는 것**이 정본이고,
    * 이 자가 그 읽기의 도구다. 자동값은 옆에 같이 그려 «어디서 헛짚었나»가 남게 한다.
    */
+  /**
+   * ⚠️ 눈금 간격이 곧 읽기 정밀도다. 40칸(2.5%)으로는 «어느 칸 사이인가»까지밖에 못 읽어
+   * 라운드마다 ±1% 가 남았다 — 그 1% 는 방 좌표로 0.7%p(≈4px)라 신위 발이 감실 바닥에서 뜬다.
+   * 200칸(**0.5%**)으로 좁히고 큰 눈금은 5% 마다 숫자를 붙인다(PLAN 추기 6 「0.5% 확대판」).
+   */
   const ticks = []
-  for (let i = 1; i < 40; i += 1) {
-    const f = i / 40
+  for (let i = 1; i < 200; i += 1) {
+    const f = i / 200
     const yy = y(f)
-    const major = i % 4 === 0
+    const major = i % 10 === 0
     ticks.push(
-      `<line x1="0" y1="${yy}" x2="${major ? 34 : 16}" y2="${yy}" stroke="#ffffff" stroke-opacity="${major ? 0.75 : 0.35}" stroke-width="1"/>` +
-        (major ? `<text x="37" y="${yy + 4}" fill="#ffffff" fill-opacity="0.8" font-size="12">${(f * 100).toFixed(0)}</text>` : '')
+      `<line x1="0" y1="${yy}" x2="${major ? 34 : 10}" y2="${yy}" stroke="#ffffff" stroke-opacity="${major ? 0.8 : 0.28}" stroke-width="1"/>` +
+        (major ? `<text x="37" y="${yy + 4}" fill="#ffffff" fill-opacity="0.85" font-size="11">${(f * 100).toFixed(0)}</text>` : '')
     )
   }
   const svg = Buffer.from(
     `<svg width="${vw}" height="${vh}" xmlns="http://www.w3.org/2000/svg">` +
       ticks.join('') +
-
-      line(marks.nicheFloor, '#7dff8f', `감실 바닥(육안) ${(marks.nicheFloor * 100).toFixed(1)}%`, false) +
-
+      // 감실 «윗턱» — deityHeadRoomY 의 출처다. 종전 확인판에는 이 줄이 없어 눈으로 못 고쳤다.
+      line(marks.nicheTop, '#7db6ff', `감실 윗턱 ${(marks.nicheTop * 100).toFixed(1)}%`, true) +
+      line(marks.nicheFloor, '#7dff8f', `감실 바닥 ${(marks.nicheFloor * 100).toFixed(1)}%`, false) +
       line(marks.boardFront, '#ff2d2d', `상판 앞턱 ${(marks.boardFront * 100).toFixed(1)}%`, false) +
       `</svg>`
   )
@@ -894,7 +1169,20 @@ async function buildTheme(t, { round, rekey }) {
    */
   const SIDE_PAD_MAX = 0.09
   let sidePad = null
-  {
+  /**
+   * ⚠️ 확산 회차(2026-08-10)부터 **기본 꺼짐**이다. 이유는 «주인이 바뀌었다» 하나다.
+   *
+   * 이 리패드는 v4.1 계약(상판면 53.5 · 접지 73.5)에 맞춰 좌우 여백을 고르는데, 그 계약의
+   * 랜드마크 거리는 `ITEM_BASE_Y` = 앵커 + **현행** 아이템 반높이에서 온다. 룸이 아이템을 키운
+   * 뒤로(md 29 → 36.25) 그 목표는 15.68 이 아니라 17.55 를 가리키고 있다 — 접지 도구가 리터럴로
+   * 동결해 둔 값(BAKED_ITEM_MD_PX 29)과 **다른 자를 들고 있다**.
+   * 게다가 최종 종횡비·여백은 이제 `stage-grand-altar-ground.mjs` 가 고정 AR(기하 정본)에 맞춰
+   * 한 번에 정한다. 여기서 미리 여백을 붙이면 그만큼 **그려진 틀만 좁아진다**(도깨비 r1 에서
+   * 실제로 88% 까지 줄었다 — 옆 테마와 나란히 놓으면 혼자 작다).
+   * 코드는 남긴다: 「세로 패딩은 사이 거리를 못 바꾸고 가로가 그 유일한 레버」라는 계산이
+   * 접지 도구의 근거와 같은 것이고, 자를 되돌릴 때 여기가 그 자리다. (`--repad` 로 되켠다)
+   */
+  if (repadPlan) {
     const sep = marks0.boardFront - marks0.nicheFloor
     const plan = planSidePad(best.info.height, best.info.width, marks0.nicheFloor, sep)
     const px = Math.round((plan.W - best.info.width) / 2)
@@ -928,7 +1216,7 @@ async function buildTheme(t, { round, rekey }) {
   }
 
   let repad = null
-  if (eye && round === t.adopted) {
+  if (repadPlan && eye && round === t.adopted) {
     const plan = planRepad(best.info.height / best.info.width, marks0)
     const px = Math.round(plan.pad.top ? plan.pad.top * best.info.height : plan.pad.bottom * best.info.height)
     if (px >= 1) {
@@ -1354,7 +1642,7 @@ async function compose(r) {
 // ──────────────────────────── main ────────────────────────────
 const args = process.argv.slice(2)
 const VALUE_FLAGS = ['--round']
-const BOOL_FLAGS = ['--plan', '--rekey', '--compose']
+const BOOL_FLAGS = ['--plan', '--rekey', '--compose', '--repad']
 const unknown = args.filter((a) => a.startsWith('--') && !VALUE_FLAGS.includes(a) && !BOOL_FLAGS.includes(a))
 if (unknown.length) {
   console.error('unknown flag:', unknown.join(' '), '— 가능:', [...VALUE_FLAGS, ...BOOL_FLAGS].join(', '))
@@ -1371,6 +1659,8 @@ const flagValue = (name, fb) => {
 const roundArg = flagValue('--round', null)
 const planOnly = args.includes('--plan')
 const rekey = args.includes('--rekey')
+/** 리패드(측면·세로) — 기본 꺼짐. 종횡비의 주인은 접지 도구다(buildTheme 안 주석 참조). */
+const repadPlan = args.includes('--repad')
 const positional = args.filter((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]))
 const only = positional[0] || 'all'
 const wanted = only === 'all' ? THEMES.map((t) => t.code) : only.split(',').map((s) => s.trim())
@@ -1387,7 +1677,8 @@ console.log(
     `계약: 상판면 y${SURFACE_Y} · 접지 y${GROUND_Y} · 방 ${ROOM_W}×${ROOM_H}(${ROOM_VH}vh)\n` +
     `설계: 상판면 ${(DESIGN.surfaceFrac * 100).toFixed(0)}% · AR ${DESIGN.ar} → 세로 ${design.hPct.toFixed(1)}% ` +
     `(y${design.topY.toFixed(1)}~${design.bottomY.toFixed(1)}) · w ${design.wPct.toFixed(1)}\n` +
-    `산출: public/shrine/stage/{code}/grand-altar.webp · 원본/확인판 assets-src/shrine/grand-altar/{code}/\n`
+    `산출: assets-src/shrine/grand-altar/{code}/{base.webp · r{N}.png · qa-r{N}.webp}\n` +
+    `      → 라이브 파일(grand-altar-v2.webp)은 stage-grand-altar-ground.mjs 가 굽는다(public 무접촉)\n`
 )
 
 if (planOnly) {

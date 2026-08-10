@@ -5,6 +5,7 @@ import {
   PODIUM_TOP_Y,
   LIT_BOOST_MAX,
   deityHeadRoomY,
+  deityPodiumTopY,
   deityStandBox,
   depthScale,
   depthZ,
@@ -71,12 +72,13 @@ describe('depthScale — 원근 스케일', () => {
   })
 
   /**
-   * 틀(壇) 무대의 제단층만 0.49 다 — 틀 상판이 좁은데 앵커가 2열 5점이라 0.88 이면 폰에서 겹친다.
+   * 틀(壇) 무대의 제단층만 배율이 다르다 — 틀 상판이 좁아 0.88 이면 폰에서 제물이 넘친다.
    * 「분기는 이 함수 한 곳」이 계약이므로, 다른 층이 이 인자에 딸려 오면 안 된다.
+   * 값 자체(0.6 = 겉보기 ≈70px)의 근거는 theme-stage.test 가 룸의 아이템 치수와 함께 지킨다.
    */
-  it('grandAltar=true 는 altar 층만 0.54 로 바꾼다 — floor/wall/hanging 무영향', () => {
+  it('grandAltar=true 는 altar 층만 바꾼다 — floor/wall/hanging 무영향', () => {
     for (const y of [0, 42, 48, 54, 90, Number.NaN]) {
-      expect(depthScale('altar', y, true)).toBe(0.54)
+      expect(depthScale('altar', y, true)).toBe(0.6)
       expect(depthScale('wall', y, true)).toBe(depthScale('wall', y))
       expect(depthScale('hanging', y, true)).toBe(depthScale('hanging', y))
     }
@@ -622,16 +624,75 @@ describe('deityStandBox — 신위 접지 계약 (안2.3 ③ 제단·단상 정�
   })
 
   /**
-   * 틀(壇) 무대는 머리 여백이 «감실 윗턱»이라 테마마다 다르다 — 접지는 그대로 두고 머리만 내려
-   * 신위가 감실 안에 들어앉는다. 어느 테마가 어떤 값인지는 theme-stage.test 가 지키고,
-   * 여기서는 **파생 규칙**(발 고정 · 작아짐 · 폴백)만 본다.
+   * 틀(壇) 무대는 머리 여백이 «감실 윗턱»이라 테마마다 다르다 — 신위가 감실 안에 들어앉는 크기다.
+   * 어느 테마가 어떤 값인지는 theme-stage.test 가 지키고, 여기서는 **파생 규칙**만 본다.
    */
-  it('deityHeadRoomY — 틀 테마는 머리만 내려온다(발·접지 불변), 나머지는 정본 상수', () => {
-    expect(deityHeadRoomY('jonggak')).toBe(DEITY_HEAD_ROOM_Y)
-    const plain = deityStandBox(PODIUM_TOP_Y, deityHeadRoomY('jonggak'))
-    const framed = deityStandBox(PODIUM_TOP_Y, deityHeadRoomY('banga'))
-    expect(framed.groundY).toBe(plain.groundY) // 접지 45.3 은 한 치도 안 움직인다
-    expect(framed.bottom).toBe(plain.bottom)
+  it('deityHeadRoomY — 틀 테마는 감실 안에 들어앉는 크기다, 나머지는 정본 상수', () => {
+    // ⚠️ 확산(2026-08-10)으로 16테마가 전부 틀을 든다 — 「틀 없는 무대」의 대표로 테마 코드를 쓰면
+    //    다음 확산에서 조용히 뒤집힌다. 여기서 지키는 것은 **파생 규칙**이므로 비-테마 코드로 잰다.
+    const NOT_A_THEME = 'no-such-theme'
+    expect(deityHeadRoomY(NOT_A_THEME)).toBe(DEITY_HEAD_ROOM_Y)
+    const plain = deityStandBox(deityPodiumTopY(NOT_A_THEME), deityHeadRoomY(NOT_A_THEME))
+    const framed = deityStandBox(deityPodiumTopY('banga'), deityHeadRoomY('banga'))
     expect(Number.parseFloat(framed.height)).toBeLessThan(Number.parseFloat(plain.height))
+  })
+
+  /**
+   * ★ 신위의 «발» 분기 (무대 기하 v5 「마루 1/3 접지」)
+   *
+   * 틀이 통째로 마루 1/3 만큼 내려가면서 감실 바닥도 45.3 → 54.3 으로 따라갔다. 머리 여백도 같은
+   * +9 라 **키는 그대로**다 — 신위가 커지거나 작아지는 변화가 아니라 통째 평행이동이다.
+   * (룸은 `deityPodiumTopY(themeCode) + dy` 를 DeityTurn 에 넘겨야 한다 — 상수를 그대로 넘기면
+   *  틀 테마에서 신위가 감실 안 9%p 허공에 뜬다.)
+   */
+  it('★ deityPodiumTopY — 틀 테마는 발도 함께 내려온다(키 불변), 틀 없는 무대는 단상 상면 그대로', () => {
+    expect(deityPodiumTopY('no-such-theme')).toBe(PODIUM_TOP_Y)
+    expect(deityPodiumTopY('banga')).toBe(54.3)
+    expect(deityPodiumTopY('banga') - PODIUM_TOP_Y).toBe(9)
+    // 발·머리가 같은 delta → 스탠드 높이가 v4.1 과 같다(접지만 9%p 아래로)
+    const v41 = deityStandBox(PODIUM_TOP_Y, deityHeadRoomY('banga') - 9)
+    const v5 = deityStandBox(deityPodiumTopY('banga'), deityHeadRoomY('banga'))
+    expect(v5.height).toBe(v41.height)
+    expect(v5.groundY - v41.groundY).toBe(9)
+  })
+})
+
+/**
+ * ★ 제단 z 램프의 기준 밴드 — **존과 분리·동결** (무대 기하 v5)
+ *
+ * floor 의 FLOOR_DEPTH_REF 와 같은 원리다. v5 가 ZONES.altar 를 [48,58] → [48,67] 로 넓히는데,
+ * z 계단을 존에서 파생시켜 두면 칸이 6.33%p 로 벌어져 13테마 라이브 제단 배치의 앞뒤가 한꺼번에
+ * 재배열된다(예: y52·y55 가 14/15 였다가 둘 다 13 으로 합쳐져 DOM 순서로 넘어간다).
+ * 존은 «어디에 놓을 수 있나», 이 밴드는 «어느 것이 앞인가» — 애초에 다른 물음이다.
+ */
+describe('depthZ altar 기준 밴드 — 존 확장이 z 를 흔들지 않는다', () => {
+  it('★ 존은 넓어졌고(48~67) 램프 기준은 48~58 에 동결 — 13테마 산출이 v4.1 과 동일하다', () => {
+    expect(ZONES.altar.y).toEqual([48, 67])
+    expect(depthZ('altar', 53.5)).toBe(14)
+    expect(depthZ('altar', 52.4)).toBe(14)
+    expect(depthZ('altar', 55)).toBe(15)
+    expect(depthZ('altar', 48)).toBe(13)
+    expect(depthZ('altar', 58)).toBe(15)
+  })
+
+  it('★ 틀 무대는 밴드가 접지 이동분만큼 내려간다 — 앞줄(64)이 뒷줄(61.4)을 덮는다', () => {
+    expect(depthZ('altar', 61.4, true)).toBe(14)
+    expect(depthZ('altar', 64, true)).toBe(15)
+    expect(depthZ('altar', 64, true)).toBeGreaterThan(depthZ('altar', 61.4, true))
+    // 스위치를 안 주면 둘 다 밴드 밖으로 클램프돼 같은 칸이 된다 = 앞뒤가 DOM 순서로 넘어간다
+    expect(depthZ('altar', 61.4)).toBe(depthZ('altar', 64))
+  })
+
+  it('세 번째 인자를 안 주면 종전 그대로다 — 13테마 회귀 0 (depthScale 과 같은 규약)', () => {
+    for (const y of [0, 48, 52.4, 53.5, 55, 58, 67, 90]) {
+      expect(depthZ('altar', y)).toBe(depthZ('altar', y, false))
+    }
+  })
+
+  it('틀 밴드도 이웃(단상 뒤 12 · 마루 16)을 침범하지 않는다', () => {
+    for (let y = 40; y <= 75; y += 0.5) {
+      expect(depthZ('altar', y, true)).toBeGreaterThan(depthZ('floor', 44))
+      expect(depthZ('altar', y, true)).toBeLessThan(depthZ('floor', 64))
+    }
   })
 })

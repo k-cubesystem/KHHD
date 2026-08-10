@@ -23,12 +23,8 @@ import {
   groundShadow,
   litBoost,
   lightingOverlayStyle,
-  nearestAnchor,
-  DEFAULT_ANCHORS,
-  PODIUM_TOP_Y,
+  deityPodiumTopY,
   deityHeadRoomY,
-  SNAP_RADIUS_PX,
-  type StageAnchor,
   type StageCatalogItem,
   type StageLight,
   type StagePlacement,
@@ -36,7 +32,6 @@ import {
 } from '@/lib/domain/shrine/stage'
 import {
   applyStageFixtureOffsets,
-  companionShiftPlacements,
   fixtureDelta,
   isZeroFixtureOffset,
   type FixtureKey,
@@ -78,7 +73,6 @@ import {
   keeperTapLine,
   resonanceLine,
   idleLine,
-  anchorLine,
   prayerLine,
   KEEPER_SNEEZE,
   KEEPER_TAP_LIMIT,
@@ -92,14 +86,8 @@ import { type KeeperSpot } from './WalkingKeeper'
 import { GuardianWalkers } from './GuardianWalkers'
 import { DeityTurn } from './DeityTurn'
 import { FamilyShelfWall } from './FamilyShelfWall'
-import {
-  FSHELF_ANCHOR_PREFIX,
-  FSHELF_ITEM_SCALE,
-  buildFamilyShelfUnits,
-  fshelfSlotAnchors,
-  hasFamilyShelf,
-} from '@/lib/domain/shrine/family-shelf'
-import { hasGrandAltar } from '@/lib/domain/shrine/theme-stage'
+import { buildFamilyShelfUnits, familyShelfItemScale, hasFamilyShelf } from '@/lib/domain/shrine/family-shelf'
+import { STAGE_GROUND_DROP, hasGrandAltar } from '@/lib/domain/shrine/theme-stage'
 import { StageLayers } from './StageLayers'
 import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
 import { TimeTint } from './TimeTint'
@@ -124,13 +112,7 @@ import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
-import {
-  SEAT_ANCHOR_PREFIX,
-  isFamilySeat,
-  isOnSurface,
-  isSeatSurface,
-  surfaceSlotOffsets,
-} from '@/lib/domain/shrine/shelf'
+import { isFamilySeat, isOnSurface, isSeatSurface } from '@/lib/domain/shrine/shelf'
 import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
 import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
@@ -597,11 +579,16 @@ export function ShrineRoomClient({
     () => applyStageFixtureOffsets(daecheongStageBase, { deityStage: deityDelta }),
     [daecheongStageBase, deityDelta]
   )
-  /** 신위 몸통·기도 절정 반짝임 — 무대가 움직이면 파티클도 함께 간다(빛만 옛 자리에 남지 않게) */
-  const deityPos = useMemo(() => ({ x: DEITY_POS.x + deityDelta.dx, y: DEITY_POS.y + deityDelta.dy }), [deityDelta])
+  /** 신위 몸통·기도 절정 반짝임 — 무대가 움직이면 파티클도 함께 간다(빛만 옛 자리에 남지 않게).
+      틀(壇) 무대는 살림이 마루 1/3(접지선)로 내려가 있으므로 같은 폭만큼 동행한다(v5). */
+  const fxGroundDy = hasGrandAltar(activeCode) ? STAGE_GROUND_DROP : 0
+  const deityPos = useMemo(
+    () => ({ x: DEITY_POS.x + deityDelta.dx, y: DEITY_POS.y + fxGroundDy + deityDelta.dy }),
+    [deityDelta, fxGroundDy]
+  )
   const prayerSparklePos = useMemo(
-    () => ({ x: PRAYER_SPARKLE_POS.x + deityDelta.dx, y: PRAYER_SPARKLE_POS.y + deityDelta.dy }),
-    [deityDelta]
+    () => ({ x: PRAYER_SPARKLE_POS.x + deityDelta.dx, y: PRAYER_SPARKLE_POS.y + fxGroundDy + deityDelta.dy }),
+    [deityDelta, fxGroundDy]
   )
 
   // 좌정 主神 시그니처 aura 상시 방출 (§3.3) — 신위 몸 주변에서 은은하게
@@ -839,23 +826,16 @@ export function ShrineRoomClient({
       },
     [activeStage, activePack]
   )
-  /** 앵커: 구조물 anchors 합집합, 없으면(레거시·앵커 미정의 무대) 기본 앵커.
-      두루마리에서도 배치는 대청에만 살므로 대청 구조물만 본다 — 단일 무대에서는 activeStage 와 동일하다. */
-  const anchors = useMemo<readonly StageAnchor[]>(() => {
-    const union = daecheongStage?.structures.flatMap((s) => s.anchors) ?? []
-    return union.length > 0 ? union : DEFAULT_ANCHORS
-  }, [daecheongStage])
+  /**
+   * ⚠️ 앵커 스냅(자석)은 2026-08-10 물러났다 — CEO 지시 「아무 곳이나 놓을 수 있도록」.
+   *    무대 구조물의 anchors 는 도메인(stage.ts)에 그대로 살아 있고 시드도 그대로다(이력 보존).
+   *    다만 **방은 더 이상 그것을 배치에 쓰지 않는다**: 놓은 자리가 곧 저장 자리다.
+   */
   /**
    * 이 테마가 「틀(壇)」 무대인가 — 제단층 아이템 배율(0.88 → 0.49)의 **유일한 스위치**다.
    * 배율 자체는 stage.depthScale 이 갖고 있다(여기서 곱하지 않는다 — 숫자가 두 벌이 되면 갈라진다).
    */
   const grandAltarStage = hasGrandAltar(activeCode)
-  /**
-   * 진열대(시렁·제상·소반·반닫이·문갑) 진열 칸 — **층 없는** 스냅 후보.
-   * 끌리는 아이템의 층을 Sprite 쪽에서 입혀 합류시킨다(무엇이든 얹는 진열의 문법 —
-   * nearestAnchor 가 층으로 거르므로, 칸에 층을 박으면 그 층 아이템만 얹을 수 있게 된다).
-   * id 의 `seat:` 프리픽스는 저장 경로(saveShrineLayout)의 존 클램프 우회 표식이기도 하다.
-   */
   /**
    * 가족 선반장(기본 사양) — 메인 테마(반가)·두루마리·사랑방 데이터가 있을 때 가족 수만큼 선다.
    * 방문자 뷰는 hall 이 null 이라 저절로 없다(가족 이름 비노출 규율은 사랑방과 한 몸).
@@ -877,24 +857,11 @@ export function ShrineRoomClient({
       bottom: Math.min(100, Math.max(0, u.bottom + shelfDelta.dy)),
     }))
   }, [worldActive, activeCode, hall, shelfDelta])
-  const surfaceAnchors = useMemo<ReadonlyArray<Omit<StageAnchor, 'layer'>>>(() => {
-    const out: Array<Omit<StageAnchor, 'layer'>> = []
-    for (const p of placements) {
-      const it = catalogById.get(p.catalogItemId)
-      if (!it || !isSeatSurface(it)) continue
-      surfaceSlotOffsets(it.size).forEach((o, i) => {
-        out.push({
-          id: `${SEAT_ANCHOR_PREFIX}${p.id}:${i}`,
-          x: Math.min(100, Math.max(0, p.x + o.dx)),
-          y: Math.min(100, Math.max(0, p.y + o.dy)),
-          label: `${it.name} 위`,
-        })
-      })
-    }
-    // 가족 선반장 진열 칸(3단 × 3칸) — id 가 seat: 로 시작해 존 우회·신위 한마디 모두 같은 길을 탄다
-    for (const a of fshelfSlotAnchors(familyShelfUnits)) out.push(a)
-    return out
-  }, [placements, catalogById, familyShelfUnits])
+  /**
+   * (진열 칸 스냅 앵커 — 2026-08-10 물러남. 진열대·선반장 칸에 「탁」 붙던 자석이 사라졌다:
+   *  상판 위든 앞이든 손이 놓은 자리에 그대로 선다. 얹힘 판정은 예나 지금이나 **거리**라
+   *  z 끌어올림(아래)·축복(readShelf)은 스냅 없이도 그대로 산다.)
+   */
   /**
    * 진열대 위 z 끌어올림 — painter's algorithm 은 y 로만 정렬해, 상판 위(y 가 진열대 중심보다
    * 작다) 물건이 진열대 몸체 **뒤**로 숨는 깊이 역전이 난다. 위에 얹힌 것만 「진열대 z+1 이상」
@@ -920,10 +887,6 @@ export function ShrineRoomClient({
     }
     return map.size > 0 ? map : null
   }, [placements, catalogById])
-  /** 드래그 중 스냅 대상 앵커 (골드 링 하이라이트) */
-  const [snapAnchor, setSnapAnchor] = useState<StageAnchor | null>(null)
-  /** 이번 꾸미기에서 새로 앵커에 올린 배치 — 저장 시 신위 한마디 1회 */
-  const pendingAnchor = useRef<StageAnchor | null>(null)
   /**
    * 모아보기(신당테마·아이템·신위) — 종전 「신위」 버튼이 가리키던 자리를 이어받았다
    * (CEO 6차 지시 ③ "한개 버튼으로 묶어 3가지 탭으로"). 신위전은 그 안의 한 탭이다.
@@ -1197,44 +1160,19 @@ export function ShrineRoomClient({
     [editing, catalogById, play, keeperSay, isOwner, cinVibrate]
   )
 
-  // ── 앵커 스냅 하이라이트 (드래그 중, 앵커가 바뀔 때만 호출) ──
-  const onAnchorHover = useCallback((a: StageAnchor | null) => setSnapAnchor(a), [])
   /** 드래그 층 알림 — 존 가이드가 물러난 지금(자유 배치)은 소비처가 없다. Sprite 계약만 유지. */
   const onDragLayer = useCallback((_layer: Layer | null) => {}, [])
 
   // ── 드래그 종료 (편집 모드) ──
+  // 놓은 자리가 곧 저장 자리다(2026-08-10 CEO 지시). 자석도, 동반 이동도 없다:
+  //   · 앵커 스냅 폐지 → `anchorId` 는 더 이상 발급하지 않는다(항상 null 로 덮는다).
+  //     컬럼과 과거 값은 건드리지 않는다 — 과거 이동 SQL 들이 참조한 이력이다.
+  //   · 진열대 동반 이동 폐지 → 가구는 가구만 움직인다("어쩔 때는 서로 묶여서 움직인다").
+  //     얹힘 관계(z 끌어올림·축복)는 여전히 **거리**로 매 프레임 다시 판정하므로 무너지지 않는다.
   const onDragEnd = useCallback(
-    (p: StagePlacement, x: number, y: number, anchorId: string | null) => {
-      // 진열대를 옮기면 위에 얹힌 것들이 함께 간다 — 상 위 제물이 허공에 남으면 진열이 아니다.
-      // 판정은 드래그 **이전** 자리(p.x/p.y) 기준·거리로만(id 링크 없음 — 저장 재발급 내성).
-      const seatItem = catalogById.get(p.catalogItemId)
-      const carry = seatItem && isSeatSurface(seatItem) ? { dx: x - p.x, dy: y - p.y, size: seatItem.size } : null
-      setPlacements((prev) =>
-        prev.map((q) => {
-          if (q.id === p.id) return { ...q, x, y, anchorId }
-          if (carry) {
-            const qi = catalogById.get(q.catalogItemId)
-            if (qi && !isFamilySeat(qi) && isOnSurface(q, p, carry.size)) {
-              return {
-                ...q,
-                x: Math.min(100, Math.max(0, q.x + carry.dx)),
-                y: Math.min(100, Math.max(0, q.y + carry.dy)),
-              }
-            }
-          }
-          return q
-        })
-      )
+    (p: StagePlacement, x: number, y: number) => {
+      setPlacements((prev) => prev.map((q) => (q.id === p.id ? { ...q, x, y, anchorId: null } : q)))
       dirty.current = true
-      // 새로 '의미 있는 자리'에 올렸으면 — 저장 시 신위가 한마디 (§3-D).
-      // 진열 칸(seat:)도 의미 있는 자리다 — 「제상 위」에 올린 손짓에 반응이 없으면 진열이 심심하다.
-      if (anchorId && anchorId !== p.anchorId) {
-        const seatHit = surfaceAnchors.find((a) => a.id === anchorId)
-        pendingAnchor.current =
-          anchors.find((a) => a.id === anchorId) ??
-          (seatHit ? { ...seatHit, layer: catalogById.get(p.catalogItemId)?.layer ?? 'floor' } : null)
-        effectsRef.current?.emit('sparkle', x, y)
-      }
       const item = catalogById.get(p.catalogItemId)
       // 판정 기준은 **꾸미기 중 신당지기가 서 있는 자리**(keeperHomeX) — 큰 방에서 12% 는 화면 밖이라
       // 보이는 신당지기에 올려도 아무 일이 없었다. y 는 예나 지금이나 KEEPER_POS.y 다.
@@ -1250,7 +1188,7 @@ export function ShrineRoomClient({
       }
       window.setTimeout(checkResonance, 0)
     },
-    [catalogById, play, keeperSay, checkResonance, isOwner, anchors, surfaceAnchors, keeperHomeX]
+    [catalogById, play, keeperSay, checkResonance, isOwner, keeperHomeX]
   )
 
   // ── 수납 (편집 모드) ──
@@ -1268,6 +1206,8 @@ export function ShrineRoomClient({
   const onPlaceFromTray = useCallback(
     (item: StageCatalogItem) => {
       const spot = initialSpot(item.layer, Math.random())
+      // 틀 무대는 제단 상판이 접지선만큼 내려가 있다 — 첫 자리도 상판 위로(그 뒤는 자유 배치)
+      if (grandAltarStage && item.layer === 'altar') spot.y = Math.min(96, spot.y + STAGE_GROUND_DROP)
       setPlacements((prev) => [
         ...prev,
         {
@@ -1290,13 +1230,8 @@ export function ShrineRoomClient({
   )
 
   // ── 고정 살림 조절 (CEO 지시 「꾸미기에서 조절」) ─────────────────────────
-  /** 무대 박스 실측(px) — 드래그 환산·동반 이동 거리계가 쓰는 좌표 기준. Sprite 의 parentElement 와 같은 상자다. */
+  /** 무대 박스(두루마리 대청) — 아이템 드래그 % 환산의 부모 상자이기도 하다. */
   const stageBoxRef = useRef<HTMLDivElement>(null)
-  const measureStageBox = useCallback((): { width: number; height: number } | null => {
-    const el = worldActive ? stageBoxRef.current : roomElRef.current
-    const r = el?.getBoundingClientRect()
-    return r && r.width > 0 && r.height > 0 ? { width: r.width, height: r.height } : null
-  }, [worldActive])
 
   /** 최신 배치 — 디바운스 저장이 «뜸 들이는 사이에 바뀐 배치»를 되돌리지 않게 한다 */
   const placementsRef = useRef<StagePlacement[]>(placements)
@@ -1304,9 +1239,6 @@ export function ShrineRoomClient({
     placementsRef.current = placements
   }, [placements])
 
-  /** 동반 이동을 이미 적용한 지점 — 저장이 디바운스라 «저장된 값」이 아니라 「민 값」을 기준 삼는다.
-      (아니면 연속 드롭마다 옛 기준으로 다시 밀어 제물이 두 배로 간다) */
-  const shiftedDeity = useRef<FixtureOffset>(fixtureDelta(scene.fixtureOffsets, 'deityStage'))
   const fixtureTimer = useRef<number | null>(null)
   const pendingFixture = useRef<{ offsets: FixtureOffsets; withPlacements: boolean } | null>(null)
   const pendingFixtureKinds = useRef<Set<FixtureKey>>(new Set())
@@ -1329,6 +1261,9 @@ export function ShrineRoomClient({
           x: p.x,
           y: p.y,
           flip: p.flip,
+          // ⚠️ 새 anchorId 는 더 이상 **발급**하지 않는다(자석 폐지 2026-08-10 — onDragEnd 가 null 로 덮는다).
+          //    다만 손대지 않은 배치의 옛 값은 그대로 실어 보낸다: 전체 교체(delete+insert) 저장이라
+          //    여기서 null 로 갈면 과거 데이터가 첫 저장에 증발한다("과거 데이터 무접촉").
           anchorId: p.anchorId,
           // ⚠️ 전체 교체 저장이라 빠뜨리면 저장마다 가족 지정이 날아간다(saveShrineLayout 과 같은 규약)
           familyMemberId: p.familyMemberId,
@@ -1385,63 +1320,32 @@ export function ShrineRoomClient({
   )
 
   /**
-   * 놓음 — 저장 예약. 신위 무대는 **여기서 1회** 제단 위 제물을 함께 민다(동반 이동).
-   * 판정 기준은 «옮기기 전 앵커»라, 정본 무대에 이번 이동 직전의 오프셋을 얹어 되살려 쓴다.
+   * 놓음 — 저장 예약.
+   * ⚠️ 신위 무대의 «제단 근접 제물 동반 이동»은 2026-08-10 물러났다(CEO 지시 ②).
+   *    근접 판정이 앵커 스냅 반경이었는데 자석 자체가 사라졌으니 관계를 유지할 명분도 없다 —
+   *    이제 살림은 살림만, 제물은 제물만 움직인다. (순수 함수 companionShiftPlacements 는
+   *    도메인에 그대로 두고 호출만 끊었다.)
    */
   const onCommitFixture = useCallback(
     (kind: FixtureKey, next: FixtureOffset) => {
       const merged = mergeFixture(fixtures, kind, next)
       setFixtures(merged)
-      let movedPlacements = false
-      if (kind === 'deityStage') {
-        const from = shiftedDeity.current
-        const delta = { dx: next.dx - from.dx, dy: next.dy - from.dy }
-        shiftedDeity.current = next
-        const box = measureStageBox()
-        const oldStage = applyStageFixtureOffsets(daecheongStageBase, { deityStage: from })
-        const oldAnchors = oldStage?.structures.flatMap((s) => s.anchors) ?? []
-        if (box) {
-          const shifted = companionShiftPlacements(placements, oldAnchors, delta, SNAP_RADIUS_PX, box)
-          if (shifted !== placements) {
-            setPlacements(shifted)
-            dirty.current = true
-            movedPlacements = true
-          }
-        }
-      }
       pendingFixtureKinds.current.add(kind)
-      scheduleFixtureSave(merged, movedPlacements)
+      scheduleFixtureSave(merged, false)
       play('moktak')
     },
-    [fixtures, mergeFixture, measureStageBox, daecheongStageBase, placements, scheduleFixtureSave, play]
+    [fixtures, mergeFixture, scheduleFixtureSave, play]
   )
 
-  /** 「자리 초기화」 — 세 덩어리를 정본으로 되돌린다. 신위 무대는 제물도 함께 되돌아온다(같은 경로). */
+  /** 「자리 초기화」 — 세 덩어리를 정본으로 되돌린다. 제물은 놓인 자리에 그대로 남는다(동반 이동 폐지). */
   const resetFixtures = useCallback(() => {
     if (Object.keys(fixtures).length === 0) return
     setFixtures({})
-    let movedPlacements = false
-    const from = shiftedDeity.current
-    if (!isZeroFixtureOffset(from)) {
-      const delta = { dx: -from.dx, dy: -from.dy }
-      shiftedDeity.current = { dx: 0, dy: 0 }
-      const box = measureStageBox()
-      const oldStage = applyStageFixtureOffsets(daecheongStageBase, { deityStage: from })
-      const oldAnchors = oldStage?.structures.flatMap((s) => s.anchors) ?? []
-      if (box) {
-        const shifted = companionShiftPlacements(placements, oldAnchors, delta, SNAP_RADIUS_PX, box)
-        if (shifted !== placements) {
-          setPlacements(shifted)
-          dirty.current = true
-          movedPlacements = true
-        }
-      }
-    }
     for (const k of Object.keys(fixtures) as FixtureKey[]) pendingFixtureKinds.current.add(k)
-    scheduleFixtureSave({}, movedPlacements)
+    scheduleFixtureSave({}, false)
     play('moktak')
     toast('살림 자리를 정본으로 되돌렸습니다')
-  }, [fixtures, measureStageBox, daecheongStageBase, placements, scheduleFixtureSave, play])
+  }, [fixtures, scheduleFixtureSave, play])
 
   // ── 꾸미기 토글 + 저장 ──
   const toggleEdit = useCallback(async () => {
@@ -1459,6 +1363,7 @@ export function ShrineRoomClient({
             x: p.x,
             y: p.y,
             flip: p.flip,
+            // 새 발급은 없고(자석 폐지), 손대지 않은 배치의 옛 값만 실려 간다 — 위 flushFixtureSave 와 같은 규약
             anchorId: p.anchorId,
             // ⚠️ 저장이 전체 교체(delete+insert)라 이걸 빠뜨리면 저장마다 시렁 지정이 날아간다
             familyMemberId: p.familyMemberId,
@@ -1474,24 +1379,18 @@ export function ShrineRoomClient({
           play('bell')
           toast.success('신당이 저장되었습니다')
           trackEvent({ action: 'placement_save', category: 'shrine' })
-          // 앵커에 새로 올린 배치가 있으면 신위가 한마디 (기존 말풍선 재사용).
-          // 스냅했다가 다시 빼낸 경우는 제외 — 저장된 배치에 그 앵커가 남아 있을 때만.
-          const anchored = pendingAnchor.current
-          pendingAnchor.current = null
-          if (anchored && placements.some((q) => q.anchorId === anchored.id)) {
-            keeperSay(anchorLine(anchored.label, Date.now()))
-          }
+          // (앵커에 올렸을 때의 신위 한마디 — 자석 폐지와 함께 물러났다. 이제 «의미 있는 자리»가
+          //  따로 없다: 손이 놓은 곳이 곧 그 자리다.)
         } else {
           toast.error(res.error === 'NOT_ENOUGH_OWNED' ? '보유하지 않은 아이템입니다' : '저장 실패')
           return
         }
       }
-      setSnapAnchor(null)
       setEditing(false)
     } else {
       setEditing(true)
     }
-  }, [editing, placements, play, isOwner, scene.familyMemberId, keeperSay, flushFixtureSave])
+  }, [editing, placements, play, isOwner, scene.familyMemberId, flushFixtureSave])
 
   // ── 신당지기(=좌정 主神) 탭 — 시그니처 사운드+파티클 버스트 반응 (§3.2) ──
   // spot = 탭 순간 실측한 캐릭터 자리(거니는 중이면 정위치와 다르다). 못 재면 정지 위치로 폴백한다.
@@ -1845,7 +1744,7 @@ export function ShrineRoomClient({
           interactive={GAMEFEEL_V1 && !editing}
           idleGlow={GAMEFEEL_V1 && !editing}
           // 고정 살림 조절 — 단상 상면 정본에 이동량을 **가산**한다(정본 상수는 그대로다)
-          podiumTopY={PODIUM_TOP_Y + deityDelta.dy}
+          podiumTopY={deityPodiumTopY(activeCode) + deityDelta.dy}
           // 머리 여백은 테마가 정한다 — 틀을 든 테마는 그 감실 윗턱, 나머지는 정본 상수(12)
           headRoomY={deityHeadRoomY(activeCode)}
           offsetXPct={deityDelta.dx}
@@ -1898,15 +1797,13 @@ export function ShrineRoomClient({
             placement={p}
             item={item}
             editing={editing}
-            anchors={anchors}
             onTap={() => onTapItem(p)}
             onRemove={() => onRemove(p)}
-            onDragEnd={(x, y, anchorId) => onDragEnd(p, x, y, anchorId)}
-            onAnchorHover={onAnchorHover}
+            onDragEnd={(x, y) => onDragEnd(p, x, y)}
             onDragLayer={onDragLayer}
-            surfaceAnchors={surfaceAnchors}
             zOverride={surfaceZById?.get(p.id)}
             grandAltar={grandAltarStage}
+            shelfScale={familyShelfItemScale(p.x, p.y, familyShelfUnits)}
           />
         )
       })}
@@ -1961,24 +1858,8 @@ export function ShrineRoomClient({
           검수된 원화가 그대로 나온다. */}
       <TimeTint hour={hour} profile={tintProfile} roundClassName={roundAll} />
 
-      {/* 앵커 스냅 하이라이트 (꾸미기) — 골드 링 */}
-      {editing && snapAnchor && (
-        <span
-          aria-hidden
-          className="absolute rounded-full pointer-events-none shrine-anchor-ring"
-          style={{
-            left: `${snapAnchor.x}%`,
-            top: `${snapAnchor.y}%`,
-            width: '34px',
-            height: '34px',
-            marginLeft: '-17px',
-            marginTop: '-17px',
-            border: '2px solid #C9A84C',
-            boxShadow: '0 0 12px rgba(201,168,76,0.55)',
-            zIndex: 29,
-          }}
-        />
-      )}
+      {/* (앵커 스냅 골드 링 — 자석 폐지와 함께 물러났다. 붙을 자리가 없으니 링도 거짓말이 된다.
+          CSS `.shrine-anchor-ring` 과 계측 목록 두 곳도 같은 손질에서 함께 내렸다.) */}
 
       {/* 공명 링 */}
       {rings.map((r) => (
@@ -2471,25 +2352,28 @@ interface SpriteProps {
   placement: StagePlacement
   item: StageCatalogItem
   editing: boolean
-  /** 스냅 후보 앵커 (무대 구조물 anchors 합집합 / 레거시 기본 앵커) */
-  anchors: readonly StageAnchor[]
   onTap: () => void
   onRemove: () => void
-  onDragEnd: (x: number, y: number, anchorId: string | null) => void
-  onAnchorHover: (a: StageAnchor | null) => void
+  /** 놓은 자리 그대로 — 앵커 스냅이 없으니 넘길 앵커도 없다(2026-08-10) */
+  onDragEnd: (x: number, y: number) => void
   /** 드래그 시작/끝에 층을 알린다 — 룸이 존 가이드 1면을 켜고 끈다 */
   onDragLayer: (layer: Layer | null) => void
-  /** 진열대 진열 칸(층 없음) — 끌리는 아이템의 층을 입혀 스냅 후보에 합류시킨다 */
-  surfaceAnchors: ReadonlyArray<Omit<StageAnchor, 'layer'>>
   /** 진열대 위 z 끌어올림 — 없으면 depthZ 그대로 (깊이 역전 교정, 거리 판정) */
   zOverride?: number
   /** 「틀(壇)」 무대인가 — depthScale 이 제단층 배율을 고르는 스위치(값은 도메인이 갖는다) */
   grandAltar: boolean
+  /** 선반 칸 진열 축소 — 좌표 판정(familyShelfItemScale) 결과. 칸 밖·비선반 테마는 1 */
+  shelfScale?: number
 }
 
 /** 자유 배치 클램프 — 서버(FULL_RANGE)와 같은 계약. 존은 배치를 가두지 않는다(2026-08-07). */
 const FREE_RANGE: [number, number] = [0, 100]
-const SIZE_PX: Record<string, string> = { sm: '23px', md: '29px', lg: '35px' }
+/**
+ * 신물 표시 크기(px) — 스프라이트 폭 = 이 값 × 3.2em(sm 92 · md 116 · lg 140).
+ * 2026-08-10 CEO 실기기 지시 「아이템 크기가 너무 작아 잘 안 보여」 — 종전 23·29·35 에서 **+25%**.
+ * 그림자·점화 글로우는 전부 em 파생이라 같은 비율로 함께 커진다(따로 손댈 곳 없음).
+ */
+const SIZE_PX: Record<string, string> = { sm: '28.75px', md: '36.25px', lg: '43.75px' }
 /**
  * 진열대 가구(table·chest) 표시 크기 — "아이템만 한 가구"가 아니라 제단처럼 서는 세간이다
  * (스프라이트 폭 = 이 값 × 3.2em: 소 109px · 중 147px · 대 186px).
@@ -2507,39 +2391,27 @@ function Sprite({
   placement,
   item,
   editing,
-  anchors,
   onTap,
   onRemove,
   onDragEnd,
-  onAnchorHover,
   onDragLayer,
-  surfaceAnchors,
   zOverride,
   grandAltar,
+  shelfScale = 1,
 }: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLSpanElement>(null)
   const dragging = useRef(false)
   const moved = useRef(false)
   const posRef = useRef({ x: placement.x, y: placement.y })
-  const snapRef = useRef<StageAnchor | null>(null)
-
-  /**
-   * 스냅 후보 — 구조물 앵커 + 진열대 진열 칸(끌리는 아이템의 층을 입힌다).
-   * 세간 자신은 진열대에 얹지 않는다(가구 위 가구 금지 — readShelf 의 "세간은 세지 않는다"와 한 몸).
-   */
-  const snapCandidates = useMemo<readonly StageAnchor[]>(() => {
-    if (surfaceAnchors.length === 0 || isFamilySeat(item)) return anchors
-    return [...anchors, ...surfaceAnchors.map((a) => ({ ...a, layer: item.layer }))]
-  }, [anchors, surfaceAnchors, item])
 
   /**
    * 원근 스케일 합성 — 중심 정렬 translate + 깊이 스케일 + flip.
    * transform-origin 을 바닥(50% 100%)에 둬야 커져도 발이 바닥에 붙어 있다.
-   * 가족 선반장 칸(seat:fshelf:)에 스냅된 아이템은 진열 축소(0.6)를 곱한다 —
-   * 칸 개구부가 일반 아이템보다 낮아 원치수로는 진열이 아니라 «끼임»이 된다.
+   * 선반 칸 축소는 anchorId 가 아니라 **좌표 판정**(familyShelfItemScale)이다 — 자석 폐지로
+   * 새 배치에 anchorId 가 없어도, 칸 안에 놓이면 축소를 탄다(옛 스냅 배치도 좌표로 자연 포함).
    */
-  const seatScale = placement.anchorId?.startsWith(FSHELF_ANCHOR_PREFIX) ? FSHELF_ITEM_SCALE : 1
+  const seatScale = shelfScale
   const transformFor = useCallback(
     (y: number) =>
       `translate(-50%, -50%) scale(${(depthScale(item.layer, y, grandAltar) * seatScale).toFixed(3)})${placement.flip ? ' scaleX(-1)' : ''}`,
@@ -2559,7 +2431,6 @@ function Sprite({
       if (!el || !room) return
       dragging.current = true
       moved.current = false
-      snapRef.current = null
       el.setPointerCapture(e.pointerId)
       el.style.zIndex = '60'
       onDragLayer(item.layer)
@@ -2570,47 +2441,34 @@ function Sprite({
         moved.current = true
         const freeX = ((ev.clientX - rect.left) / rect.width) * 100
         const freeY = ((ev.clientY - rect.top) / rect.height) * 100
-        // 앵커 반경 안이면 자석 스냅 — 밖이면 자유 배치 그대로 (앵커는 보너스이지 제약이 아니다).
-        // 거리는 화면 픽셀로 잰다(부록 P-2) — % 거리계는 와이드 룸에서 가로 포획이 3.2배 왜곡됐다.
-        // 자유 배치(2026-08-07): 층 존 클램프를 폐지했다 — 어떤 아이템이든 방 어디에나 선다.
+        // 손끝이 곧 자리다 — 자석(앵커 스냅)은 2026-08-10 폐지했다(CEO 지시 ①).
         // 방 경계 [0,100]만 지킨다(서버 FULL_RANGE 와 같은 계약 — 밖은 증발이지 자유가 아니다).
-        const snap = nearestAnchor(snapCandidates, item.layer, freeX, freeY, undefined, {
-          sx: rect.width / 100,
-          sy: rect.height / 100,
-        })
-        const x = snap ? snap.x : clampPct(freeX, FREE_RANGE)
-        const y = snap ? snap.y : clampPct(freeY, FREE_RANGE)
+        const x = clampPct(freeX, FREE_RANGE)
+        const y = clampPct(freeY, FREE_RANGE)
         posRef.current = { x, y }
         el.style.left = `${x}%`
         el.style.top = `${y}%`
         el.style.transform = transformFor(y)
-        if (item.layer === 'floor') el.style.zIndex = String(depthZ(item.layer, y))
-        if ((snapRef.current?.id ?? null) !== (snap?.id ?? null)) {
-          snapRef.current = snap
-          onAnchorHover(snap)
-        }
+        if (item.layer === 'floor') el.style.zIndex = String(depthZ(item.layer, y, grandAltar))
       }
       const up = () => {
         dragging.current = false
         el.removeEventListener('pointermove', move)
         el.removeEventListener('pointerup', up)
         el.removeEventListener('pointercancel', up)
-        const snapped = snapRef.current
-        snapRef.current = null
-        onAnchorHover(null)
         // 드래그용 임시 z(60)를 React 가 알고 있는 값으로 되돌린다
         // (다음 렌더에서 zIndex prop 이 그대로면 React 가 DOM 을 쓰지 않아 60 이 남는다)
         // ⚠️ 진열대 위 아이템은 React 의 마지막 값이 zOverride 다 — depthZ 로 되돌리면 재렌더가
         //    같은 zOverride 를 스킵해 상판 아래로 숨은 채 남는다(수동 복원은 vdom 과 같아야 한다).
-        el.style.zIndex = String(zOverride ?? depthZ(item.layer, posRef.current.y))
+        el.style.zIndex = String(zOverride ?? depthZ(item.layer, posRef.current.y, grandAltar))
         onDragLayer(null)
-        if (moved.current) onDragEnd(posRef.current.x, posRef.current.y, snapped?.id ?? null)
+        if (moved.current) onDragEnd(posRef.current.x, posRef.current.y)
       }
       el.addEventListener('pointermove', move)
       el.addEventListener('pointerup', up)
       el.addEventListener('pointercancel', up)
     },
-    [editing, item.layer, snapCandidates, zOverride, onDragEnd, onAnchorHover, onDragLayer, transformFor]
+    [editing, item.layer, zOverride, onDragEnd, onDragLayer, transformFor]
   )
 
   /**
@@ -2644,7 +2502,7 @@ function Sprite({
     '--shrine-idle-delay': idleDelay,
     '--shrine-idle-scale': idleScale,
   }
-  const zIndex = zOverride ?? depthZ(item.layer, placement.y)
+  const zIndex = zOverride ?? depthZ(item.layer, placement.y, grandAltar)
   const shadow = groundShadow(item.layer, placement.y)
   // ⚠️ scene.ts 는 asset_url 이 비면 sprite_url 로 폴백한다 → 둘이 같으면 아직 레거시 스프라이트다.
   //    이때 v2 크기(3.2em)를 쓰면 기존 신당의 모든 신물이 2배로 커진다(회귀). 다를 때만 v2 규격.
@@ -2678,7 +2536,7 @@ function Sprite({
         left: `${placement.x}%`,
         top: `${placement.y}%`,
         fontSize:
-          (item.type === 'table' || item.type === 'chest' ? FURNITURE_PX[item.size] : SIZE_PX[item.size]) ?? '29px',
+          (item.type === 'table' || item.type === 'chest' ? FURNITURE_PX[item.size] : SIZE_PX[item.size]) ?? SIZE_PX.md,
         lineHeight: 1,
         zIndex,
         transform: transformFor(placement.y),
