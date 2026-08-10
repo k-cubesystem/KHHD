@@ -29,6 +29,7 @@ import {
   type StageSceneData,
   type StageThemePack,
 } from '@/lib/domain/shrine/stage'
+import { parseFixtureOffsets, type FixtureOffsets } from '@/lib/domain/shrine/fixture-offsets'
 import { clampPct } from '@/lib/domain/shrine/zones'
 import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { isGuardianType, parseGuardianSlugs } from '@/lib/domain/shrine/guardians'
@@ -347,7 +348,12 @@ async function loadThemes(supabase: SupabaseServer, userId: string): Promise<Sta
   }))
 }
 
-const SHRINE_COLUMNS = 'id, name, visitor_count, wish_count, active_pack_id, main_deity_id, visibility, guardians'
+/**
+ * ⚠️ 컬럼을 명시하지 않는다(고의). `fixture_offsets` 는 20260810 마이그레이션 이후에만 존재하는데,
+ * 컬럼을 나열하면 미적용 DB 에서 **조회가 통째로 실패해 신당이 열리지 않는다**. `select('*')` 면
+ * 없는 컬럼은 undefined 로 흘러 파서가 `{}` 로 받는다 — 코드를 먼저 배포할 수 있다(hall_seats 전례).
+ */
+const SHRINE_COLUMNS = '*'
 
 /**
  * 소유자용 씬 데이터 로드.
@@ -460,6 +466,7 @@ export async function getSceneData(familyMemberId?: string | null): Promise<Stag
     mainDeity,
     familyTags,
     guardians: parseGuardianSlugs(shrine.guardians),
+    fixtureOffsets: parseFixtureOffsets(shrine.fixture_offsets),
   }
 }
 
@@ -520,9 +527,10 @@ async function loadMainDeity(
 export async function getPublicSceneData(userId: string): Promise<StageSceneData | null> {
   const supabase = await createClient()
 
+  // select('*') — SHRINE_COLUMNS 와 같은 이유다(마이그레이션 미적용 DB에서도 방이 열려야 한다)
   const { data: shrine } = await supabase
     .from('shrines')
-    .select('id, name, visibility, visitor_count, wish_count, active_pack_id, main_deity_id, guardians')
+    .select('*')
     .eq('user_id', userId)
     .is('family_member_id', null)
     .maybeSingle()
@@ -591,6 +599,8 @@ export async function getPublicSceneData(userId: string): Promise<StageSceneData
     // 방문자에게 남의 가족 이름을 보이지 않는다 — 조회 자체를 하지 않는다
     familyTags: {},
     guardians: parseGuardianSlugs(shrine.guardians),
+    // 고정 살림 조정은 **방문자에게도** 적용한다 — 주인이 맞춰 둔 자리가 곧 그 신당의 그림이다
+    fixtureOffsets: parseFixtureOffsets(shrine.fixture_offsets),
   }
 }
 
@@ -610,26 +620,36 @@ interface PlacementInput {
   familyMemberId?: string | null
 }
 
-/** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
 /** 배치 절대 클램프 범위 — 자유 배치에서도 좌표는 방 밖으로 못 나간다(방 밖 좌표 = 증발) */
 const FULL_RANGE: [number, number] = [0, 100]
 
-export async function saveShrineLayout(
-  placements: PlacementInput[],
-  familyMemberId?: string | null
-): Promise<{ success: boolean; error?: string; placements?: StagePlacement[] }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'UNAUTHORIZED' }
-
-  const shrineQuery = supabase.from('shrines').select('id').eq('user_id', user.id)
-  const { data: shrine } = await (
-    familyMemberId ? shrineQuery.eq('family_member_id', familyMemberId) : shrineQuery.is('family_member_id', null)
+/**
+ * 내 신당 한 채의 id — 가족 스코프 규칙(`.is('family_member_id', null)` 누락 금지)의 단일 관문.
+ * 빼먹으면 본인 신당 저장이 가족 신당 행을 잡는다(가족 신당 P1 전례).
+ */
+async function findOwnShrineId(
+  supabase: SupabaseServer,
+  userId: string,
+  familyMemberId: string | null
+): Promise<string | null> {
+  const q = supabase.from('shrines').select('id').eq('user_id', userId)
+  const { data } = await (
+    familyMemberId ? q.eq('family_member_id', familyMemberId) : q.is('family_member_id', null)
   ).maybeSingle()
-  if (!shrine) return { success: false, error: 'SHRINE_NOT_FOUND' }
+  return data?.id ?? null
+}
 
+/**
+ * 배치 전체 교체(delete + insert) — 보유량·신수·앵커·가족지정 검증 포함.
+ * `saveShrineLayout`(꾸미기 완료)과 `saveFixtureOffsets`(신위 무대 동반 이동)가 **같은 규약**을
+ * 쓰도록 뽑아 둔 내부 함수다. 검증이 두 벌이 되면 한쪽만 조용히 낡는다.
+ */
+async function replacePlacements(
+  supabase: SupabaseServer,
+  userId: string,
+  shrineId: string,
+  placements: PlacementInput[]
+): Promise<{ success: boolean; error?: string; placements?: StagePlacement[] }> {
   if (placements.length > 40) return { success: false, error: 'TOO_MANY_ITEMS' }
 
   // 신수는 배치 아이템이 아니다 — 스스로 거니는 존재를 바닥에 못 박으면 세계가 어긋난다.
@@ -646,7 +666,7 @@ export async function saveShrineLayout(
   const { data: invRows } = await supabase
     .from('user_shrine_inventory')
     .select('catalog_item_id, qty')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
   const owned = new Map((invRows ?? []).map((i) => [i.catalog_item_id, i.qty]))
   const placedCount = new Map<string, number>()
   for (const p of placements) {
@@ -684,7 +704,7 @@ export async function saveShrineLayout(
   const rows = placements.map((p, i) => {
     const layer = isLayer(p.layer) ? p.layer : 'floor'
     const row = {
-      shrine_id: shrine.id,
+      shrine_id: shrineId,
       catalog_item_id: p.catalogItemId,
       layer,
       x: clampPct(p.x, FULL_RANGE),
@@ -698,7 +718,7 @@ export async function saveShrineLayout(
 
   // 전체 교체 (delete + insert) — 새 id가 재발급되므로 반드시 반환해 클라 상태를 교체시킨다
   // (클라가 옛 id를 유지하면 이후 점화 저장(setPlacementLit)이 존재하지 않는 row에 무음 no-op)
-  const { error: delErr } = await supabase.from('shrine_placements').delete().eq('shrine_id', shrine.id)
+  const { error: delErr } = await supabase.from('shrine_placements').delete().eq('shrine_id', shrineId)
   if (delErr) return { success: false, error: delErr.message }
 
   let saved: StagePlacement[] = []
@@ -708,8 +728,99 @@ export async function saveShrineLayout(
     saved = (inserted ?? []).map(toPlacement)
   }
 
-  revalidatePath('/protected/shrine')
   return { success: true, placements: saved }
+}
+
+/** 방 레이아웃 일괄 저장 (인벤토리 보유량 초과 배치 방지). 성공 시 재발급된 placements 반환. */
+export async function saveShrineLayout(
+  placements: PlacementInput[],
+  familyMemberId?: string | null
+): Promise<{ success: boolean; error?: string; placements?: StagePlacement[] }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const shrineId = await findOwnShrineId(supabase, user.id, familyMemberId ?? null)
+  if (!shrineId) return { success: false, error: 'SHRINE_NOT_FOUND' }
+
+  const res = await replacePlacements(supabase, user.id, shrineId, placements)
+  if (!res.success) return res
+
+  revalidatePath('/protected/shrine')
+  return res
+}
+
+/**
+ * 고정 살림(신위 무대·가족 선반장·의식각) 자리 조정 저장 — 꾸미기 모드 드래그 종료 / 초기화.
+ *
+ * 보안 — 이 파일은 'use server' 라 export 가 곧 **공개 엔드포인트**다:
+ * · 인자는 전부 unknown 취급이다(클라이언트 타입을 신뢰하지 않는다). 좌표는 parseFixtureOffsets 가
+ *   서버에서 **다시** 클램프하고, 아는 키 3종 외에는 통째로 버린다.
+ * · 재화·권한을 건드리지 않는다. 쓰는 것은 내 신당 한 행의 `fixture_offsets` 좌표뿐이다.
+ * · 소유자 검증을 액션에서 한다(user_id = auth.uid() + 가족 스코프). RLS·컬럼 grant 는 2·3중 방어.
+ *
+ * `placements` 는 **신위 무대를 옮겼을 때만** 실린다 — 제단에 얹혀 있던 제물이 함께 가야 하기
+ * 때문이다(companionShiftPlacements 결과). 같은 액션에서 이어 저장해 «제단만 움직이고 제물은
+ * 남는» 중간 상태를 남기지 않는다. 저장 규약은 꾸미기 완료와 동일한 전체 교체다.
+ *
+ * ⚠️ 두 쓰기는 한 트랜잭션이 아니다(PostgREST 호출 2회). 뒤가 실패하면 앞선 오프셋 쓰기를
+ *    **되돌려** 화면과 DB 가 갈라지지 않게 한다(보상 쓰기).
+ */
+export async function saveFixtureOffsets(
+  offsets: unknown,
+  familyMemberId?: string | null,
+  placements?: PlacementInput[] | null
+): Promise<{ success: boolean; error?: string; placements?: StagePlacement[] }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const fmId = typeof familyMemberId === 'string' && familyMemberId.length > 0 ? familyMemberId : null
+  const shrineId = await findOwnShrineId(supabase, user.id, fmId)
+  if (!shrineId) return { success: false, error: 'SHRINE_NOT_FOUND' }
+
+  // 되돌릴 값 — 컬럼이 없는 DB(마이그레이션 미적용)에서는 {} 로 읽혀 보상 쓰기도 무해하다
+  const { data: before } = await supabase.from('shrines').select('*').eq('id', shrineId).maybeSingle()
+  const previous: FixtureOffsets = parseFixtureOffsets(before?.fixture_offsets)
+
+  // `user_id` 를 한 번 더 건다 — 행은 이미 소유자 스코프로 찾았고 RLS 도 막지만, 쓰기 조건은
+  // 읽기 조건과 같은 문장으로 서 있는 편이 낫다(사랑방 좌석 저장과 같은 규율).
+  const parsed = parseFixtureOffsets(offsets)
+  const { error } = await supabase
+    .from('shrines')
+    .update({ fixture_offsets: parsed })
+    .eq('id', shrineId)
+    .eq('user_id', user.id)
+  if (error) {
+    logger.error('[shrine/scene] fixture offsets save failed:', error)
+    return { success: false, error: 'SAVE_FAILED' }
+  }
+
+  if (Array.isArray(placements)) {
+    const res = await replacePlacements(supabase, user.id, shrineId, placements)
+    if (!res.success) {
+      // 보상 쓰기 — 실패해도 더 할 수 있는 일이 없다(로그만 남기고 원래 실패를 돌려준다)
+      const { error: revertErr } = await supabase
+        .from('shrines')
+        .update({ fixture_offsets: previous })
+        .eq('id', shrineId)
+        .eq('user_id', user.id)
+      if (revertErr) logger.error('[shrine/scene] fixture offsets revert failed:', revertErr)
+      return res
+    }
+    return res
+  }
+
+  // revalidatePath 를 부르지 않는다(고의) — 조절 1회마다 라우트 전체가 다시 렌더되면 씬·기원·
+  // presence 를 전부 다시 읽고, 그 사이 사용자가 이어 끌던 값이 서버 정본으로 되돌려진다
+  // (룸은 새 prop 이 오면 낙관 상태를 서버 값으로 맞춘다). 화면은 이미 클라가 들고 있고
+  // 재발급된 배치는 반환값으로 건네므로 다음 진입에 정본이 그대로 내려온다
+  // (사랑방 좌석 저장·보기 모드 점화와 같은 규약).
+  return { success: true }
 }
 
 /** 보기 모드에서 촛불 점화 상태를 즉시 저장 (소유자). RLS가 소유권 보장. state는 병합(통째 교체 시 다른 필드 유실). */

@@ -25,12 +25,23 @@ import {
   lightingOverlayStyle,
   nearestAnchor,
   DEFAULT_ANCHORS,
+  PODIUM_TOP_Y,
+  SNAP_RADIUS_PX,
   type StageAnchor,
   type StageCatalogItem,
   type StageLight,
   type StagePlacement,
   type StageSceneData,
 } from '@/lib/domain/shrine/stage'
+import {
+  applyStageFixtureOffsets,
+  companionShiftPlacements,
+  fixtureDelta,
+  isZeroFixtureOffset,
+  type FixtureKey,
+  type FixtureOffset,
+  type FixtureOffsets,
+} from '@/lib/domain/shrine/fixture-offsets'
 import { kstHour, phaseMix, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, perfTier, type EffectsTier, type PerfTier } from '@/lib/domain/shrine/perf-gate'
 import { ambientForTheme, ambientForTier } from '@/lib/domain/shrine/theme-ambient'
@@ -93,10 +104,17 @@ import { TimeTint } from './TimeTint'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
 import { GenericPlaqueBand } from './WindowPlaques'
-import { RitualHall } from './RitualHall'
+import { RitualHall, RITUAL_HALL_UNIT } from './RitualHall'
+import { FixtureHandle, type FixtureBox } from './FixtureHandle'
 import { PanCoachmark } from './PanCoachmark'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
-import { saveShrineLayout, activateThemePack, setPlacementLit, setShrineVisibility } from '@/app/actions/shrine/scene'
+import {
+  saveShrineLayout,
+  saveFixtureOffsets,
+  activateThemePack,
+  setPlacementLit,
+  setShrineVisibility,
+} from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
@@ -179,6 +197,20 @@ const KEEPER_ENTRANCE_FROM_SINGLE = 6
  */
 /** 탭 후 걸음 멈춤 길이 — 말풍선을 읽을 만큼만(부록 B 2.5s) */
 const KEEPER_TAP_PAUSE_MS = 2500
+
+// ── 고정 살림 조절 (2026-08-10 CEO 지시 「꾸미기에서 조절」) ───────────────
+/**
+ * 놓은 뒤 저장까지의 뜸 — 미세 조정은 연속 손짓이라 드롭마다 쏘면 한 번 맞추는 데 열 번 저장한다.
+ * 화면은 이미 낙관 반영돼 있으므로 이 뜸은 사용자에게 보이지 않는다.
+ */
+const FIXTURE_SAVE_DEBOUNCE_MS = 700
+/**
+ * 신위 무대 손잡이 상자의 세로 여백(무대 %) — 구조물 좌표는 스프라이트 **중심**이고 높이는 auto 라
+ * 실제 차지 높이를 좌표만으로는 알 수 없다. 단상(y51)·상판(y58) 기준으로 눈에 보이는 제단 덩어리
+ * (대략 y43~68)를 감싸는 값이다. 손잡이는 «잡는 자리»이지 판정이 아니라 이 근사로 충분하다.
+ */
+const DEITY_BOX_PAD_TOP = 8
+const DEITY_BOX_PAD_BOTTOM = 10
 
 /** 상시 빛가루 — 배치가 빈약한 신당에서도 보이는 최소 상시 모션. 광원 타원 주변을 순환한다 */
 const MOTE_INTERVAL_MS = 6500
@@ -420,6 +452,17 @@ export function ShrineRoomClient({
     setHall(familyHall)
   }
 
+  /**
+   * 고정 살림 조절값 — 서버 prop 이 정본이고 드래그 낙관 반영만 이 상태가 앞서 든다.
+   * 탭을 옮기면(본인↔가족) 서버가 새 값을 내려주므로 사랑방 좌석과 **같은 조정 패턴**으로 되돌린다.
+   */
+  const [fixtures, setFixtures] = useState<FixtureOffsets>(scene.fixtureOffsets)
+  const [fixtureSource, setFixtureSource] = useState<FixtureOffsets>(scene.fixtureOffsets)
+  if (fixtureSource !== scene.fixtureOffsets) {
+    setFixtureSource(scene.fixtureOffsets)
+    setFixtures(scene.fixtureOffsets)
+  }
+
   // 저장된 점화 상태 → 불꽃 등록
   useEffect(() => {
     scene.placements.forEach((p) => {
@@ -479,12 +522,8 @@ export function ShrineRoomClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 좌정 主神 시그니처 aura 상시 방출 (§3.3) — 신위 몸 주변에서 은은하게
-  useEffect(() => {
-    const d = scene.mainDeity
-    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, DEITY_POS.x, DEITY_POS.y, !!d)
-    return () => effectsRef.current?.setAura(null, null, 0, 0, false)
-  }, [scene.mainDeity])
+  // (좌정 主神 aura 등록 effect 는 아래 `deityPos` 선언 뒤로 내려갔다 — 고정 살림 조절로 무대가
+  //  움직이면 아우라도 따라가야 하는데, deps 배열은 렌더 중 **선언 순서대로** 평가되기 때문이다)
 
   // 신탁 선톡 — 방 진입 시 좌정 主神의 선제적 신탁을 불러와 말풍선에 표시(있을 때만, 즉시 확인처리)
   // 가족 신당에서는 미표시(신탁은 본인 신당 스코프)
@@ -536,10 +575,39 @@ export function ShrineRoomClient({
    * 기존 stage 에 zones 만 얹어도 대청이 지금 화면 그대로 나오는 세대교체 경로다.
    * 두루마리가 아니면 activeStage 를 **참조까지 그대로** 돌려 기존 렌더와 완전히 같게 둔다.
    */
-  const daecheongStage = useMemo(
+  const daecheongStageBase = useMemo(
     () => (worldActive ? zoneStage(daecheong, activeStage) : activeStage),
     [worldActive, daecheong, activeStage]
   )
+  /**
+   * 신위 무대를 옮길 수 있는가 = **옮길 몸이 있는가**. 레거시 테마(stage 없음)의 제단은 CSS 박스라
+   * 좌표로 밀 대상이 없다 — 거기서 접지만 내리면 신위가 제단을 뚫고 선다. 조절 UI 도 함께 닫힌다.
+   */
+  const stageMovable = (daecheongStageBase?.structures.length ?? 0) > 0
+  /** 신위 무대 이동량 — 단상·상판·앵커·신위 접지·아우라가 **전부 이 하나에서** 파생한다 */
+  const deityDelta = stageMovable ? fixtureDelta(fixtures, 'deityStage') : fixtureDelta(null, 'deityStage')
+  /**
+   * ★ 고정 살림 조절의 적용 지점 — 여기 한 번 통과시키면 구조물 렌더(StageLayers)와 스냅 앵커·
+   * 앵커 링이 같은 소스에서 움직인다. 이동량 0 이면 **같은 참조**를 돌려주므로 조정을 안 한 신당은
+   * 이 줄이 없던 때와 완전히 같다(memo 소비처까지 참조 동일).
+   */
+  const daecheongStage = useMemo(
+    () => applyStageFixtureOffsets(daecheongStageBase, { deityStage: deityDelta }),
+    [daecheongStageBase, deityDelta]
+  )
+  /** 신위 몸통·기도 절정 반짝임 — 무대가 움직이면 파티클도 함께 간다(빛만 옛 자리에 남지 않게) */
+  const deityPos = useMemo(() => ({ x: DEITY_POS.x + deityDelta.dx, y: DEITY_POS.y + deityDelta.dy }), [deityDelta])
+  const prayerSparklePos = useMemo(
+    () => ({ x: PRAYER_SPARKLE_POS.x + deityDelta.dx, y: PRAYER_SPARKLE_POS.y + deityDelta.dy }),
+    [deityDelta]
+  )
+
+  // 좌정 主神 시그니처 aura 상시 방출 (§3.3) — 신위 몸 주변에서 은은하게
+  useEffect(() => {
+    const d = scene.mainDeity
+    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, deityPos.x, deityPos.y, !!d)
+    return () => effectsRef.current?.setAura(null, null, 0, 0, false)
+  }, [scene.mainDeity, deityPos])
   /**
    * 대청이 뷰포트보다 넓을 때(안2.1 큰 방 하나) % 폭이 같이 커지는 것을 되돌리는 계수.
    * 계산은 world-render `zoneWidthScale` 단일 출처이고, 뷰포트 이하 구역·단일 무대는 1 이라
@@ -752,7 +820,7 @@ export function ShrineRoomClient({
    */
   useEffect(() => {
     const d = scene.mainDeity
-    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, DEITY_POS.x, DEITY_POS.y, !!d)
+    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, deityPos.x, deityPos.y, !!d)
     placements.forEach((p) => {
       if (p.state.lit) effectsRef.current?.setFlame(p.id, p.x, p.y - FLAME_Y_OFFSET, true)
     })
@@ -785,10 +853,23 @@ export function ShrineRoomClient({
    * 가족 선반장(기본 사양) — 메인 테마(반가)·두루마리·사랑방 데이터가 있을 때 가족 수만큼 선다.
    * 방문자 뷰는 hall 이 null 이라 저절로 없다(가족 이름 비노출 규율은 사랑방과 한 몸).
    */
-  const familyShelfUnits = useMemo(
-    () => (worldActive && hasFamilyShelf(activeCode) && hall?.isFamilyTier ? buildFamilyShelfUnits(hall.members) : []),
-    [worldActive, activeCode, hall]
-  )
+  /**
+   * ⚠️ 조절 오프셋을 **유닛 좌표에** 얹는다 — 렌더(FamilyShelfWall)·진열 칸 앵커(fshelfSlotAnchors)·
+   *    축복 판정 상자(readFamilyShelf)가 전부 이 유닛에서 파생하므로, 여기서 한 번 옮기면
+   *    이름패·후광·`seat:` 칸이 한 몸으로 따라온다(세 곳에 따로 더하면 언젠가 하나가 빠진다).
+   */
+  const shelfDelta = fixtureDelta(fixtures, 'familyShelf')
+  const familyShelfUnits = useMemo(() => {
+    const base =
+      worldActive && hasFamilyShelf(activeCode) && hall?.isFamilyTier ? buildFamilyShelfUnits(hall.members) : []
+    if (base.length === 0 || isZeroFixtureOffset(shelfDelta)) return base
+    return base.map((u) => ({
+      ...u,
+      x: Math.min(100, Math.max(0, u.x + shelfDelta.dx)),
+      top: Math.min(100, Math.max(0, u.top + shelfDelta.dy)),
+      bottom: Math.min(100, Math.max(0, u.bottom + shelfDelta.dy)),
+    }))
+  }, [worldActive, activeCode, hall, shelfDelta])
   const surfaceAnchors = useMemo<ReadonlyArray<Omit<StageAnchor, 'layer'>>>(() => {
     const out: Array<Omit<StageAnchor, 'layer'>> = []
     for (const p of placements) {
@@ -1016,11 +1097,11 @@ export function ShrineRoomClient({
           keeperSay(prayerLine(Date.now()))
           play('bell')
           const d = scene.mainDeity
-          if (d?.particle && d.accent) effectsRef.current?.burstAura(d.particle, d.accent, DEITY_POS.x, DEITY_POS.y)
+          if (d?.particle && d.accent) effectsRef.current?.burstAura(d.particle, d.accent, deityPos.x, deityPos.y)
           // 카메라 전이가 멈춘 절정에서 흔들어야 의도대로 읽힌다
           cinShake()
           cinVibrate(20)
-          effectsRef.current?.emit('sparkle', PRAYER_SPARKLE_POS.x, PRAYER_SPARKLE_POS.y)
+          effectsRef.current?.emit('sparkle', prayerSparklePos.x, prayerSparklePos.y)
         },
         onEnd: () => {
           prayFlames.current.forEach((id) => effectsRef.current?.setFlame(id, 0, 0, false))
@@ -1030,7 +1111,20 @@ export function ShrineRoomClient({
     }
     window.addEventListener(SHRINE_PRAYED_EVENT, onPrayed)
     return () => window.removeEventListener(SHRINE_PRAYED_EVENT, onPrayed)
-  }, [isOwner, editing, placements, catalogById, play, keeperSay, playPrayer, cinShake, cinVibrate, scene.mainDeity])
+  }, [
+    isOwner,
+    editing,
+    placements,
+    catalogById,
+    play,
+    keeperSay,
+    playPrayer,
+    cinShake,
+    cinVibrate,
+    scene.mainDeity,
+    deityPos,
+    prayerSparklePos,
+  ])
 
   // ── 합동 기도 — 기도가 성립하면 서버 재조회(router.refresh)를 기다리지 않고 본인 좌석부터 켠다.
   // 연출(불꽃·셰이크)은 위 기도 의식 effect 담당이라 여기서는 데이터만 앞당긴다. 편집 중에도 유효 —
@@ -1188,10 +1282,166 @@ export function ShrineRoomClient({
     [play, checkResonance]
   )
 
+  // ── 고정 살림 조절 (CEO 지시 「꾸미기에서 조절」) ─────────────────────────
+  /** 무대 박스 실측(px) — 드래그 환산·동반 이동 거리계가 쓰는 좌표 기준. Sprite 의 parentElement 와 같은 상자다. */
+  const stageBoxRef = useRef<HTMLDivElement>(null)
+  const measureStageBox = useCallback((): { width: number; height: number } | null => {
+    const el = worldActive ? stageBoxRef.current : roomElRef.current
+    const r = el?.getBoundingClientRect()
+    return r && r.width > 0 && r.height > 0 ? { width: r.width, height: r.height } : null
+  }, [worldActive])
+
+  /** 최신 배치 — 디바운스 저장이 «뜸 들이는 사이에 바뀐 배치»를 되돌리지 않게 한다 */
+  const placementsRef = useRef<StagePlacement[]>(placements)
+  useEffect(() => {
+    placementsRef.current = placements
+  }, [placements])
+
+  /** 동반 이동을 이미 적용한 지점 — 저장이 디바운스라 «저장된 값」이 아니라 「민 값」을 기준 삼는다.
+      (아니면 연속 드롭마다 옛 기준으로 다시 밀어 제물이 두 배로 간다) */
+  const shiftedDeity = useRef<FixtureOffset>(fixtureDelta(scene.fixtureOffsets, 'deityStage'))
+  const fixtureTimer = useRef<number | null>(null)
+  const pendingFixture = useRef<{ offsets: FixtureOffsets; withPlacements: boolean } | null>(null)
+  const pendingFixtureKinds = useRef<Set<FixtureKey>>(new Set())
+
+  const flushFixtureSave = useCallback(async () => {
+    if (fixtureTimer.current !== null) {
+      window.clearTimeout(fixtureTimer.current)
+      fixtureTimer.current = null
+    }
+    const pending = pendingFixture.current
+    pendingFixture.current = null
+    if (!pending) return
+    const kinds = [...pendingFixtureKinds.current]
+    pendingFixtureKinds.current.clear()
+    // 배치는 **저장 직전의 최신값**을 싣는다(캡처값을 쓰면 뜸 사이의 손질이 되돌려진다)
+    const payload = pending.withPlacements
+      ? placementsRef.current.map((p) => ({
+          catalogItemId: p.catalogItemId,
+          layer: p.layer,
+          x: p.x,
+          y: p.y,
+          flip: p.flip,
+          anchorId: p.anchorId,
+          // ⚠️ 전체 교체 저장이라 빠뜨리면 저장마다 가족 지정이 날아간다(saveShrineLayout 과 같은 규약)
+          familyMemberId: p.familyMemberId,
+          state: p.state,
+        }))
+      : null
+    const res = await saveFixtureOffsets(pending.offsets, scene.familyMemberId, payload)
+    if (!res.success) {
+      toast.error('살림 자리를 저장하지 못했습니다')
+      return
+    }
+    // 전체 교체는 배치 id 를 재발급한다 — 교체하지 않으면 이후 점화 저장이 없는 행에 무음 no-op
+    if (res.placements) setPlacements(res.placements)
+    for (const kind of kinds) {
+      const o = fixtureDelta(pending.offsets, kind)
+      trackEvent({ action: 'fixture_adjust', category: 'shrine', label: `${kind}:${o.dx},${o.dy}` })
+    }
+  }, [scene.familyMemberId])
+
+  const scheduleFixtureSave = useCallback(
+    (offsets: FixtureOffsets, withPlacements: boolean) => {
+      const prev = pendingFixture.current
+      pendingFixture.current = { offsets, withPlacements: withPlacements || prev?.withPlacements === true }
+      if (fixtureTimer.current !== null) window.clearTimeout(fixtureTimer.current)
+      fixtureTimer.current = window.setTimeout(() => {
+        fixtureTimer.current = null
+        void flushFixtureSave()
+      }, FIXTURE_SAVE_DEBOUNCE_MS)
+    },
+    [flushFixtureSave]
+  )
+
+  useEffect(
+    () => () => {
+      if (fixtureTimer.current !== null) window.clearTimeout(fixtureTimer.current)
+    },
+    []
+  )
+
+  /** 오프셋 맵 갱신 — 영(0,0)은 담지 않는다(도메인 정규화와 같은 규칙: `{}` = 정본). */
+  const mergeFixture = useCallback((base: FixtureOffsets, kind: FixtureKey, next: FixtureOffset): FixtureOffsets => {
+    const m: FixtureOffsets = { ...base }
+    if (isZeroFixtureOffset(next)) delete m[kind]
+    else m[kind] = next
+    return m
+  }, [])
+
+  /** 드래그 중 — 낙관 반영만. 저장도 동반 이동도 여기서 하지 않는다. */
+  const onDragFixture = useCallback(
+    (kind: FixtureKey, next: FixtureOffset) => {
+      setFixtures((prev) => mergeFixture(prev, kind, next))
+    },
+    [mergeFixture]
+  )
+
+  /**
+   * 놓음 — 저장 예약. 신위 무대는 **여기서 1회** 제단 위 제물을 함께 민다(동반 이동).
+   * 판정 기준은 «옮기기 전 앵커»라, 정본 무대에 이번 이동 직전의 오프셋을 얹어 되살려 쓴다.
+   */
+  const onCommitFixture = useCallback(
+    (kind: FixtureKey, next: FixtureOffset) => {
+      const merged = mergeFixture(fixtures, kind, next)
+      setFixtures(merged)
+      let movedPlacements = false
+      if (kind === 'deityStage') {
+        const from = shiftedDeity.current
+        const delta = { dx: next.dx - from.dx, dy: next.dy - from.dy }
+        shiftedDeity.current = next
+        const box = measureStageBox()
+        const oldStage = applyStageFixtureOffsets(daecheongStageBase, { deityStage: from })
+        const oldAnchors = oldStage?.structures.flatMap((s) => s.anchors) ?? []
+        if (box) {
+          const shifted = companionShiftPlacements(placements, oldAnchors, delta, SNAP_RADIUS_PX, box)
+          if (shifted !== placements) {
+            setPlacements(shifted)
+            dirty.current = true
+            movedPlacements = true
+          }
+        }
+      }
+      pendingFixtureKinds.current.add(kind)
+      scheduleFixtureSave(merged, movedPlacements)
+      play('moktak')
+    },
+    [fixtures, mergeFixture, measureStageBox, daecheongStageBase, placements, scheduleFixtureSave, play]
+  )
+
+  /** 「자리 초기화」 — 세 덩어리를 정본으로 되돌린다. 신위 무대는 제물도 함께 되돌아온다(같은 경로). */
+  const resetFixtures = useCallback(() => {
+    if (Object.keys(fixtures).length === 0) return
+    setFixtures({})
+    let movedPlacements = false
+    const from = shiftedDeity.current
+    if (!isZeroFixtureOffset(from)) {
+      const delta = { dx: -from.dx, dy: -from.dy }
+      shiftedDeity.current = { dx: 0, dy: 0 }
+      const box = measureStageBox()
+      const oldStage = applyStageFixtureOffsets(daecheongStageBase, { deityStage: from })
+      const oldAnchors = oldStage?.structures.flatMap((s) => s.anchors) ?? []
+      if (box) {
+        const shifted = companionShiftPlacements(placements, oldAnchors, delta, SNAP_RADIUS_PX, box)
+        if (shifted !== placements) {
+          setPlacements(shifted)
+          dirty.current = true
+          movedPlacements = true
+        }
+      }
+    }
+    for (const k of Object.keys(fixtures) as FixtureKey[]) pendingFixtureKinds.current.add(k)
+    scheduleFixtureSave({}, movedPlacements)
+    play('moktak')
+    toast('살림 자리를 정본으로 되돌렸습니다')
+  }, [fixtures, measureStageBox, daecheongStageBase, placements, scheduleFixtureSave, play])
+
   // ── 꾸미기 토글 + 저장 ──
   const toggleEdit = useCallback(async () => {
     if (!isOwner) return
     if (editing) {
+      // 살림 자리 조절이 뜸 들이는 중이면 먼저 내보낸다 — 완료가 그 저장을 앞질러 배치를 되돌리면 안 된다
+      await flushFixtureSave()
       // 완료 → 저장
       if (dirty.current) {
         setSaving(true)
@@ -1234,7 +1484,7 @@ export function ShrineRoomClient({
     } else {
       setEditing(true)
     }
-  }, [editing, placements, play, isOwner, scene.familyMemberId, keeperSay])
+  }, [editing, placements, play, isOwner, scene.familyMemberId, keeperSay, flushFixtureSave])
 
   // ── 신당지기(=좌정 主神) 탭 — 시그니처 사운드+파티클 버스트 반응 (§3.2) ──
   // spot = 탭 순간 실측한 캐릭터 자리(거니는 중이면 정위치와 다르다). 못 재면 정지 위치로 폴백한다.
@@ -1285,7 +1535,7 @@ export function ShrineRoomClient({
 
   const onTapDeity = useCallback(() => {
     if (editing || deitySpinning || askChat) return
-    onTapKeeper({ x: DEITY_POS.x, y: DEITY_POS.y })
+    onTapKeeper({ x: deityPos.x, y: deityPos.y })
     if (!spinAllowed) {
       // 회전이 불가한 기기(모션 최소화·게이트 오프)라도 **묻는 단계는 남는다** —
       // 여기서 곧장 이동시키면 접근성 설정을 켠 사람만 확인 없이 대화방으로 끌려간다.
@@ -1294,7 +1544,7 @@ export function ShrineRoomClient({
     }
     setDeitySpinning(true)
     trackEvent({ action: 'deity_spin', category: 'shrine', label: scene.mainDeity?.code ?? 'none' })
-  }, [editing, deitySpinning, askChat, onTapKeeper, spinAllowed, scene.mainDeity, isOwner])
+  }, [editing, deitySpinning, askChat, onTapKeeper, spinAllowed, scene.mainDeity, isOwner, deityPos])
 
   /**
    * 회전이 끝나면 확인을 띄운다 (CEO 6차 지시 ⑥ "한번 물어보고 이동").
@@ -1451,6 +1701,52 @@ export function ShrineRoomClient({
     }
   }, [visibility, scene.familyMemberId])
 
+  // ── 고정 살림 손잡이 상자 (꾸미기 모드) ───────────────────────────────────
+  /**
+   * 신위 무대 상자 — **옮긴 뒤 구조물**에서 파생하므로 손잡이가 살림을 따라다닌다.
+   * 폭은 구조물 `w`(구역 폭 대비 %)에 겉보기 보정(stageScale)을 곱한 값 — StageLayers 렌더와 같은 셈이다.
+   */
+  const deityHandleBox = useMemo<FixtureBox | null>(() => {
+    const st = daecheongStage?.structures ?? []
+    if (!stageMovable || st.length === 0) return null
+    let left = 100
+    let right = 0
+    let top = 100
+    let bottom = 0
+    for (const s of st) {
+      const half = (s.w * stageScale) / 2
+      left = Math.min(left, s.x - half)
+      right = Math.max(right, s.x + half)
+      top = Math.min(top, s.y)
+      bottom = Math.max(bottom, s.y)
+    }
+    const t = Math.max(0, top - DEITY_BOX_PAD_TOP)
+    const b = Math.min(100, bottom + DEITY_BOX_PAD_BOTTOM)
+    const l = Math.max(0, left)
+    return { left: l, top: t, width: Math.max(1, Math.min(100, right) - l), height: Math.max(1, b - t) }
+  }, [daecheongStage, stageMovable, stageScale])
+  /** 선반장 — 좌마다 손잡이를 단다(어느 좌를 잡아도 **묶음 전체**가 움직인다) */
+  const shelfHandleBoxes = useMemo<Array<{ key: string; box: FixtureBox }>>(
+    () =>
+      familyShelfUnits.map((u) => ({
+        key: u.key,
+        box: { left: u.x - u.w / 2, top: u.top, width: u.w, height: u.bottom - u.top },
+      })),
+    [familyShelfUnits]
+  )
+  const ritualDelta = fixtureDelta(fixtures, 'ritualHall')
+  const ritualHandleBox = useMemo<FixtureBox>(
+    () => ({
+      left: RITUAL_HALL_UNIT.x - RITUAL_HALL_UNIT.w / 2 + ritualDelta.dx,
+      top: RITUAL_HALL_UNIT.top + ritualDelta.dy,
+      width: RITUAL_HALL_UNIT.w,
+      height: RITUAL_HALL_UNIT.bottom - RITUAL_HALL_UNIT.top,
+    }),
+    [ritualDelta]
+  )
+  /** 꾸미기 중 소유자에게만. 보기 모드는 오프셋만 적용되고 손에 걸리는 것이 없다. */
+  const showFixtureHandles = isOwner && editing
+
   /**
    * 방 모서리 라운딩 — 단일 무대에서는 대청이 곧 방이라 전면 레이어를 방과 같이 둥글린다.
    * 두루마리에서는 대청이 세계 한가운데(x0~x1)라 모서리가 없다 — 둥글리면 구역 경계에 잘린 자국이 남는다.
@@ -1510,12 +1806,15 @@ export function ShrineRoomClient({
             (종전 게이트는 반가 벽 무라 URL 대조였다. 그건 창방 띠에 팻말을 걸던 시절 —
              무라 픽셀 좌표를 알아야 하던 시절 — 의 조건이라 선반 위로 옮긴 뒤로는 남을 이유가 없다.)
           · 단일 무대: 간이 팻말 줄(GenericPlaqueBand) 그대로 — 원복 레버 겸 폴백. */}
+      {/* 꾸미기 중에도 의식각의 **그림은 남긴다**(inert) — 자리를 맞출 대상이 화면에서 사라지면
+          「고정 살림 조절」 자체가 성립하지 않는다. 링크·버튼을 걷어 낸 면이라, 배치 드래그가 페이지
+          이동으로 새던 종전 문제(그래서 통째로 내렸던 이유)는 그대로 막힌다.
+          단일 무대의 간이 팻말 줄은 조절 대상이 아니므로 종전대로 꾸미기 중에는 내린다. */}
       {isOwner &&
-        !editing &&
         (worldActive ? (
-          <RitualHall onOpenSheet={plaqueSheets} attention={plaqueAttention} />
+          <RitualHall onOpenSheet={plaqueSheets} attention={plaqueAttention} offset={ritualDelta} inert={editing} />
         ) : (
-          <GenericPlaqueBand onOpenSheet={plaqueSheets} attention={plaqueAttention} />
+          !editing && <GenericPlaqueBand onOpenSheet={plaqueSheets} attention={plaqueAttention} />
         ))}
       {/* 제단 광원 — 폭이 방 대비 %라 큰 방에서는 2.4배로 퍼진다. 겉보기(뷰포트 64%)를 지킨다. */}
       <div
@@ -1538,6 +1837,9 @@ export function ShrineRoomClient({
           // 모션 최소화는 여기서 끄지 않는다 — 회전만 생략하고 탭 반응은 남기는 것이 부록 C ④ 계약이다.
           interactive={GAMEFEEL_V1 && !editing}
           idleGlow={GAMEFEEL_V1 && !editing}
+          // 고정 살림 조절 — 단상 상면 정본에 이동량을 **가산**한다(정본 상수는 그대로다)
+          podiumTopY={PODIUM_TOP_Y + deityDelta.dy}
+          offsetXPct={deityDelta.dx}
         />
       )}
 
@@ -1598,6 +1900,42 @@ export function ShrineRoomClient({
           />
         )
       })}
+
+      {/* 고정 살림 손잡이 (꾸미기) — 점선 테두리 + 잡이. z 는 아이템 대역(10~29) **아래**라
+          신물이 놓인 지점에서는 신물 드래그가 언제나 이긴다(히트테스트가 그 규칙 자체다).
+          ⚠️ stageContent 의 직계 형제여야 한다 — 드래그 % 환산이 parentElement 실측을 기준 삼는다. */}
+      {showFixtureHandles && deityHandleBox && (
+        <FixtureHandle
+          kind="deityStage"
+          box={deityHandleBox}
+          offset={deityDelta}
+          label="신위 무대"
+          onDrag={onDragFixture}
+          onCommit={onCommitFixture}
+        />
+      )}
+      {showFixtureHandles &&
+        shelfHandleBoxes.map((h) => (
+          <FixtureHandle
+            key={`fx-shelf-${h.key}`}
+            kind="familyShelf"
+            box={h.box}
+            offset={shelfDelta}
+            label="가족 선반장"
+            onDrag={onDragFixture}
+            onCommit={onCommitFixture}
+          />
+        ))}
+      {showFixtureHandles && worldActive && (
+        <FixtureHandle
+          kind="ritualHall"
+          box={ritualHandleBox}
+          offset={ritualDelta}
+          label="의식각"
+          onDrag={onDragFixture}
+          onCommit={onCommitFixture}
+        />
+      )}
 
       {/* 조명 오버레이 (§3-C4) — 배경·구조물·아이템이 '같은 빛'을 받게 하는 컬러 그레이딩 한 장.
           아이템 최상단 밴드(z 29)와 같은 층에 두되 DOM 순서로 위에 얹고, UI 컨트롤(z-30) 아래에 둔다.
@@ -1741,7 +2079,7 @@ export function ShrineRoomClient({
               ))}
               {/* (구 가족 사랑방 자리 — 2026-08-06 물러남. 가족은 선반장(FamilyShelfWall) 상단이
                   유일한 자리이고, world 우측 영역은 의식각(RitualHall, stageContent 안)이 쓴다) */}
-              <div className="absolute inset-y-0" style={daecheongBox}>
+              <div ref={stageBoxRef} className="absolute inset-y-0" style={daecheongBox}>
                 {stageContent}
               </div>
             </div>
@@ -1865,7 +2203,7 @@ export function ShrineRoomClient({
             className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 text-[9px] tracking-[0.08em] text-gold-300 px-2.5 py-[3px] rounded-full whitespace-nowrap"
             style={{ background: 'rgba(10,10,8,0.75)', border: '1px solid rgba(201,168,76,0.4)' }}
           >
-            드래그로 배치 · ✕로 수납 · 공물은 신당지기에게
+            드래그로 배치 · ✕로 수납 · ✥로 살림 자리 조절
           </div>
         )}
 
@@ -1987,12 +2325,25 @@ export function ShrineRoomClient({
             >
               <div className="flex justify-between items-center mb-2">
                 <span className="text-[10px] tracking-[0.14em] text-gold-600">보관함 — 탭하여 꺼내기</span>
-                <Link
-                  href="/protected/store?tab=items"
-                  className="text-[10px] font-bold text-gold-300 border border-gold-500/40 rounded-full px-2.5 py-1"
-                >
-                  ＋ 신물 구하기
-                </Link>
+                <div className="flex items-center gap-1.5">
+                  {/* 고정 살림 조절 되돌리기 — 조절한 적이 있을 때만 보인다(없으면 누를 것이 없는 버튼이다) */}
+                  {Object.keys(fixtures).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={resetFixtures}
+                      className="rounded-full border border-gold-500/25 px-2.5 py-1 text-[10px] text-gold-500/80"
+                      title="신위 무대·선반장·의식각을 정본 자리로"
+                    >
+                      자리 초기화
+                    </button>
+                  )}
+                  <Link
+                    href="/protected/store?tab=items"
+                    className="text-[10px] font-bold text-gold-300 border border-gold-500/40 rounded-full px-2.5 py-1"
+                  >
+                    ＋ 신물 구하기
+                  </Link>
+                </div>
               </div>
               <div className="flex gap-2 overflow-x-auto no-scrollbar pt-1.5">
                 {available.length === 0 && (

@@ -64,6 +64,14 @@ export interface DeityTurnProps {
   interactive: boolean
   /** 상시 글로우 맥동(연출 게이트 on · 꾸미기 아님) */
   idleGlow: boolean
+  /**
+   * 단상 상면 y(무대 %) — 발이 닿는 면. 생략하면 정본 상수(stage.PODIUM_TOP_Y) 그대로다.
+   * 「고정 살림 조절」로 신위 무대를 옮기면 룸이 «정본 + 오프셋» 을 여기로 넘긴다 —
+   * 접지·머리 여백·발밑 글로우가 **한 값에서** 함께 따라오는 계약은 그대로다.
+   */
+  podiumTopY?: number
+  /** 신위 무대 가로 이동량(무대 %). 0 이면 종전처럼 방 한가운데(left 50%)에 선다. */
+  offsetXPct?: number
 }
 
 /**
@@ -152,6 +160,8 @@ export function DeityTurn({
   onTap,
   interactive,
   idleGlow,
+  podiumTopY,
+  offsetXPct = 0,
 }: DeityTurnProps): JSX.Element {
   /**
    * 프리로드가 끝난 프레임 묶음의 식별자와 그 등급. **식별자(측면 URL)를 함께 담는다** —
@@ -187,7 +197,7 @@ export function DeityTurn({
    * 세로 정합의 단일 출처 — 발이 **단상 상면**에 닿고 머리 여백은 보존된다(stage.PODIUM_TOP_Y).
    * 룸에는 bottom/height 하드코딩이 남아 있지 않아, 시드가 상면 y 를 주면 도메인 상수 한 줄로 끝난다.
    */
-  const stand = useMemo(() => deityStandBox(), [])
+  const stand = useMemo(() => deityStandBox(podiumTopY), [podiumTopY])
 
   const layers = useMemo(() => layersForTier(tier), [tier])
   const spinClass = spinning ? ` ${turnSpinClass(tier)}` : ''
@@ -222,7 +232,13 @@ export function DeityTurn({
   return (
     <div
       className={`deity-stand absolute left-1/2 z-[3] -translate-x-1/2${interactive ? '' : ' pointer-events-none'}`}
-      style={{ bottom: stand.bottom, height: stand.height, ...vars }}
+      // 가로 이동은 0 일 때 **키 자체를 얹지 않는다** — DOM 이 한 글자도 바뀌지 않아야 회귀 진단이 산다
+      style={{
+        bottom: stand.bottom,
+        height: stand.height,
+        ...vars,
+        ...(offsetXPct !== 0 ? { left: `calc(50% + ${offsetXPct}%)` } : null),
+      }}
     >
       {/* 발밑 접지 글로우 — 스탠드 박스 기준이라 접지 y 가 바뀌면 자동으로 따라온다(같은 계약).
           회전 중에는 국면 표와 위상을 동조시켜 좁아졌다 넓어진다(등급마다 곡선이 다르다). */}

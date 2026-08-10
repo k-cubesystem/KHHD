@@ -11,6 +11,8 @@
 
 import { ZONES, ZONE_LABEL, clampPct, KEEPER_POS } from './zones'
 import { isLayer, type CatalogItem, type Layer, type Placement, type SceneData, type ThemePack } from './types'
+// 타입만 참조한다(런타임 import 0) — fixture-offsets 도 이 파일의 타입만 보므로 순환이 생기지 않는다
+import type { FixtureOffsets } from './fixture-offsets'
 
 // ─── 계약 타입 ────────────────────────────────────────────────
 
@@ -553,4 +555,11 @@ export interface StageSceneData extends SceneData {
    *    이름이 읽히면 안 된다(RLS 도 막지만, 조회 자체를 하지 않는 것이 규율이다).
    */
   familyTags: Record<string, ShelfFamilyTag>
+  /**
+   * 고정 살림(신위 무대·가족 선반장·의식각) 자리 미세 조정. 빈 객체 = 정본 좌표 그대로.
+   *
+   * ⚠️ **방문자 뷰에도 내려간다** — 주인이 맞춰 둔 자리로 보여야 같은 신당이다.
+   *    담기는 값은 좌표 두 개뿐이라 남의 정보가 새지 않는다(familyTags 와 다른 이유).
+   */
+  fixtureOffsets: FixtureOffsets
 }

@@ -19,11 +19,16 @@ import { trackEvent } from '@/lib/analytics/ga4'
  *  · 처마 등(attention)·시트/페이지 갈래(kind)는 창방 팻말의 계약을 그대로 승계한다.
  */
 
-/** 유닛 기하(world %) — 가족 선반장(FSHELF_UNIT)과 같은 규격: 우측 공간 한가운데 선다 */
-const UNIT_X = 88.75
-const UNIT_W = 8.65
-const UNIT_TOP = 20
-const UNIT_BOTTOM = 62
+/**
+ * 유닛 기하(world %) — 가족 선반장(FSHELF_UNIT)과 같은 규격: 우측 공간 한가운데 선다.
+ * 룸이 「고정 살림 조절」 손잡이 상자를 이 값에서 파생하므로 **export 가 단일 출처**다
+ * (두 곳이 상수를 따로 들면 손잡이는 옛 자리에, 살림은 새 자리에 서는 조용한 어긋남이 난다).
+ */
+export const RITUAL_HALL_UNIT = Object.freeze({ x: 88.75, w: 8.65, top: 20, bottom: 62 })
+const UNIT_X = RITUAL_HALL_UNIT.x
+const UNIT_W = RITUAL_HALL_UNIT.w
+const UNIT_TOP = RITUAL_HALL_UNIT.top
+const UNIT_BOTTOM = RITUAL_HALL_UNIT.bottom
 /** 아이템 대역(10~29) 최상단 — 진입 현판이 신물에 가려지면 안 된다. UI(z 30) 아래. */
 const HALL_Z = 29
 
@@ -68,22 +73,35 @@ function Face({ p, lit }: { p: ShrinePlaque; lit: boolean }): ReactNode {
 export function RitualHall({
   onOpenSheet,
   attention,
+  offset,
+  inert = false,
 }: {
   /** 방 안 시트를 여는 손잡이 — 핸들러가 없으면 그 현판은 걸지 않는다(눌러도 조용한 널 금지) */
   onOpenSheet?: Partial<Record<PlaqueSheet, () => void>>
   /** 「오늘 할 일이 남았다」 처마 등 — 서버 현황에서만 계산된 값 */
   attention?: Partial<Record<string, boolean>>
+  /** 고정 살림 조절 오프셋(무대 % 가산). 없으면 정본 자리 그대로 */
+  offset?: { dx: number; dy: number }
+  /**
+   * 꾸미기 모드 — 현판을 **눌리지 않는 면**으로 바꾼다. 종전에는 꾸미기 중 의식각을 아예 내렸는데
+   * (신물 드래그와 탭 대상이 겹쳐 배치가 페이지 이동으로 새던 문제), 그러면 자리를 맞출 대상이
+   * 화면에서 사라져 「고정 살림 조절」 자체가 성립하지 않는다. 링크·버튼을 걷어 낸 채 **보이기만**
+   * 하면 두 요구가 함께 선다(pointer-events 가 없으므로 드래그가 새어 나갈 경로도 없다).
+   */
+  inert?: boolean
 }) {
   const track = (key: string) => trackEvent({ action: 'shrine_plaque', category: 'shrine', label: `${key}:hall` })
   const cls = 'shrine-plaque-glow pointer-events-auto absolute grid place-items-center leading-none'
+  const dx = offset?.dx ?? 0
+  const dy = offset?.dy ?? 0
 
   return (
     <div
       aria-label="의식각"
       className="pointer-events-none absolute"
       style={{
-        left: `${UNIT_X - UNIT_W / 2}%`,
-        top: `${UNIT_TOP}%`,
+        left: `${UNIT_X - UNIT_W / 2 + dx}%`,
+        top: `${UNIT_TOP + dy}%`,
         width: `${UNIT_W}%`,
         height: `${UNIT_BOTTOM - UNIT_TOP}%`,
         zIndex: HALL_Z,
@@ -103,6 +121,19 @@ export function RitualHall({
       {SHRINE_PLAQUES.map((p, i) => {
         const lit = attention?.[p.key] === true
         const pos = plaqueStyle(PLAQUE_CY[i] ?? PLAQUE_CY[PLAQUE_CY.length - 1])
+        if (inert) {
+          // 꾸미기 중 — 그림만 남기고 손잡이는 걷는다(pointer-events 미부여 = 히트 대상 아님)
+          return (
+            <span
+              key={p.key}
+              aria-hidden
+              className="shrine-plaque-glow absolute grid place-items-center leading-none"
+              style={pos}
+            >
+              <Face p={p} lit={lit} />
+            </span>
+          )
+        }
         if (p.kind === 'sheet') {
           const open = onOpenSheet?.[p.sheet]
           if (!open) return null
