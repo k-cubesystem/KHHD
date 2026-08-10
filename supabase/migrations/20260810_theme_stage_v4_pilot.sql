@@ -42,9 +42,10 @@
 --   `(stage -> 'zones') is null` 조건을 지운 채 한 번 실행한다(반가는 20260806b 를 다시 실행).
 -- ============================================================================
 
--- banga — 틀 1종(닫집+감실+제단) · 앵커 2열 5점
+-- banga — 틀 1종(닫집+감실+제단) · 앵커 2열 5점 · 뮤럴 -v3(캐시 무효화+srcset)
 update public.shrine_theme_packs
-set stage = jsonb_set(stage, '{zones,0,structures}', $grandaltar$[
+set stage = jsonb_set(jsonb_set(jsonb_set(stage,
+    '{zones,0,structures}', $grandaltar$[
   {
     "code": "grand-altar-banga",
     "assetUrl": "/shrine/stage/banga/grand-altar.webp",
@@ -89,13 +90,16 @@ set stage = jsonb_set(stage, '{zones,0,structures}', $grandaltar$[
       }
     ]
   }
-]$grandaltar$::jsonb)
+]$grandaltar$::jsonb),
+    '{zones,0,wallpaperUrl}', to_jsonb('/shrine/stage/banga/room-wall-mural-v3.webp'::text)),
+    '{zones,0,flooringUrl}', to_jsonb('/shrine/stage/banga/room-floor-mural-v3.webp'::text))
 where code = 'banga'
   and jsonb_array_length(coalesce(stage -> 'zones', '[]'::jsonb)) = 1;
 
--- daljip — 틀 1종(닫집+감실+제단) · 앵커 2열 5점
+-- daljip — 틀 1종(닫집+감실+제단) · 앵커 2열 5점 · 뮤럴 -v3(캐시 무효화+srcset)
 update public.shrine_theme_packs
-set stage = jsonb_set(stage, '{zones,0,structures}', $grandaltar$[
+set stage = jsonb_set(jsonb_set(jsonb_set(stage,
+    '{zones,0,structures}', $grandaltar$[
   {
     "code": "grand-altar-daljip",
     "assetUrl": "/shrine/stage/daljip/grand-altar.webp",
@@ -140,13 +144,16 @@ set stage = jsonb_set(stage, '{zones,0,structures}', $grandaltar$[
       }
     ]
   }
-]$grandaltar$::jsonb)
+]$grandaltar$::jsonb),
+    '{zones,0,wallpaperUrl}', to_jsonb('/shrine/stage/daljip/room-wall-mural-v3.webp'::text)),
+    '{zones,0,flooringUrl}', to_jsonb('/shrine/stage/daljip/room-floor-mural-v3.webp'::text))
 where code = 'daljip'
   and jsonb_array_length(coalesce(stage -> 'zones', '[]'::jsonb)) = 1;
 
--- seolbit — 틀 1종(닫집+감실+제단) · 앵커 2열 5점
+-- seolbit — 틀 1종(닫집+감실+제단) · 앵커 2열 5점 · 뮤럴 -v3(캐시 무효화+srcset)
 update public.shrine_theme_packs
-set stage = jsonb_set(stage, '{zones,0,structures}', $grandaltar$[
+set stage = jsonb_set(jsonb_set(jsonb_set(stage,
+    '{zones,0,structures}', $grandaltar$[
   {
     "code": "grand-altar-seolbit",
     "assetUrl": "/shrine/stage/seolbit/grand-altar.webp",
@@ -191,7 +198,9 @@ set stage = jsonb_set(stage, '{zones,0,structures}', $grandaltar$[
       }
     ]
   }
-]$grandaltar$::jsonb)
+]$grandaltar$::jsonb),
+    '{zones,0,wallpaperUrl}', to_jsonb('/shrine/stage/seolbit/room-wall-mural-v3.webp'::text)),
+    '{zones,0,flooringUrl}', to_jsonb('/shrine/stage/seolbit/room-floor-mural-v3.webp'::text))
 where code = 'seolbit'
   and jsonb_array_length(coalesce(stage -> 'zones', '[]'::jsonb)) = 1;
 

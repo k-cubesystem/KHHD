@@ -27,6 +27,7 @@
   ],
   "grandAltar": {
     "themes": ["banga", "daljip", "seolbit"],
+    "muralV3": { "wall": "room-wall-mural-v3.webp", "floor": "room-floor-mural-v3.webp" },
     "altarItemScale": 0.54,
     "deityHeadRoomY": { "banga": 25.3, "daljip": 23.9, "seolbit": 25.7 },
     "structures": [

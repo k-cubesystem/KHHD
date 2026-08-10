@@ -578,9 +578,23 @@ describe('단일 출처 — v4 시드는 구역 structures 만 갈아끼운다',
   it('★ 최상위 structures 를 건드리지 않는다 — `stage - zones` 원복 레버의 착지점이다', () => {
     const sql = pilotSql()
     expect(sql.match(/^update public\.shrine_theme_packs$/gm) ?? []).toHaveLength(3)
-    // set 은 zones[0].structures 한 자리뿐이다. `set stage = '{...}'` 였다면 반가의 레거시 제단이 증발한다.
-    expect(sql.match(/^set stage = jsonb_set\(stage, '\{zones,0,structures\}'/gm) ?? []).toHaveLength(3)
+    // set 은 zones[0] 스코프 세 자리(structures·wallpaperUrl·flooringUrl)뿐이다.
+    // `set stage = '{...}'` 였다면 반가의 레거시 제단이 증발하고, '{structures}' 경로가 있다면
+    // 원복 레버(`stage - 'zones'`)의 착지점이 오염된다.
+    expect(sql.match(/^set stage = jsonb_set\(jsonb_set\(jsonb_set\(stage,$/gm) ?? []).toHaveLength(3)
+    expect(sql.match(/'\{zones,0,structures\}'/g) ?? []).toHaveLength(3)
+    expect(sql.match(/'\{zones,0,wallpaperUrl\}'/g) ?? []).toHaveLength(3)
+    expect(sql.match(/'\{zones,0,flooringUrl\}'/g) ?? []).toHaveLength(3)
+    expect(sql).not.toMatch(/'\{structures\}'/)
     expect(sql).not.toMatch(/^set stage = '/m)
+  })
+
+  it('★ 뮤럴은 -v3 파일명이다 — 같은 이름 덮어쓰기는 폰·엣지 캐시가 옛 그림을 재사용한다', () => {
+    const sql = pilotSql()
+    for (const code of GRAND_ALTAR_THEMES) {
+      expect(sql).toContain(`'/shrine/stage/${code}/room-wall-mural-v3.webp'::text`)
+      expect(sql).toContain(`'/shrine/stage/${code}/room-floor-mural-v3.webp'::text`)
+    }
   })
 
   it('★ 두루마리가 아닌 행은 건드리지 않는다 — 부분 적용·재실행이 안전하다', () => {

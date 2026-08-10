@@ -210,10 +210,18 @@ function buildPilotSql() {
     if (!CODE_RE.test(code)) throw new Error(`테마 코드 규격 위반: ${JSON.stringify(code)}`)
     const json = JSON.stringify(structures(code, GEO.grandAltar.structures), null, 2)
     if (json.includes(PILOT_TAG)) throw new Error(`구조물 JSON 이 달러 태그를 품었다(${code})`)
+    // 뮤럴은 -v3 파일명으로 갈아탄다 — 같은 이름 덮어쓰기는 폰·엣지 캐시가 옛 그림을 재사용한다
+    // (틀 스프라이트는 새 이름이라 즉시 떴고 뮤럴만 안 바뀌어 보인 2026-08-10 실증).
+    // -v3 접미사는 StageLayers muralSrcSet 의 srcset 계약(-v3-sd 형제 실재)도 함께 켠다.
+    const wallV3 = `${GEO.mural.dir}/${code}/${GEO.grandAltar.muralV3.wall}`
+    const floorV3 = `${GEO.mural.dir}/${code}/${GEO.grandAltar.muralV3.floor}`
     return (
-      `-- ${code} — 틀 1종(닫집+감실+제단) · 앵커 2열 5점\n` +
+      `-- ${code} — 틀 1종(닫집+감실+제단) · 앵커 2열 5점 · 뮤럴 -v3(캐시 무효화+srcset)\n` +
       `update public.shrine_theme_packs\n` +
-      `set stage = jsonb_set(stage, '{zones,0,structures}', ${PILOT_TAG}${json}${PILOT_TAG}::jsonb)\n` +
+      `set stage = jsonb_set(jsonb_set(jsonb_set(stage,\n` +
+      `    '{zones,0,structures}', ${PILOT_TAG}${json}${PILOT_TAG}::jsonb),\n` +
+      `    '{zones,0,wallpaperUrl}', to_jsonb('${wallV3}'::text)),\n` +
+      `    '{zones,0,flooringUrl}', to_jsonb('${floorV3}'::text))\n` +
       `where code = '${code}'\n` +
       `  and jsonb_array_length(coalesce(stage -> 'zones', '[]'::jsonb)) = 1;\n`
     )
