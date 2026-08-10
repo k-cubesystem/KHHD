@@ -29,13 +29,13 @@
     "themes": ["banga", "daljip", "seolbit"],
     "muralV3": { "wall": "room-wall-mural-v3.webp", "floor": "room-floor-mural-v3.webp" },
     "altarItemScale": 0.54,
-    "deityHeadRoomY": { "banga": 25.3, "daljip": 23.9, "seolbit": 25.7 },
+    "deityHeadRoomY": { "banga": 24.9, "daljip": 23.2, "seolbit": 25.6 },
     "structures": [
       {
         "code": "grand-altar",
-        "assetUrl": "/shrine/stage/{code}/grand-altar.webp",
+        "assetUrl": "/shrine/stage/{code}/grand-altar-v2.webp",
         "x": 50,
-        "y": 38.5,
+        "y": 37.22,
         "w": 60,
         "anchors": [
           { "id": "altar-left", "layer": "altar", "x": 45.7, "y": 52.4, "label": "제단 왼편" },

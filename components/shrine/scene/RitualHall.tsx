@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import type { CSSProperties, ReactNode } from 'react'
+import { FSHELF_UNIT } from '@/lib/domain/shrine/family-shelf'
 import { PLAQUE_SPRITE_URL, SHRINE_PLAQUES, type PlaqueSheet, type ShrinePlaque } from '@/lib/domain/shrine/plaque'
 import { trackEvent } from '@/lib/analytics/ga4'
 
@@ -24,11 +25,17 @@ import { trackEvent } from '@/lib/analytics/ga4'
  * 룸이 「고정 살림 조절」 손잡이 상자를 이 값에서 파생하므로 **export 가 단일 출처**다
  * (두 곳이 상수를 따로 들면 손잡이는 옛 자리에, 살림은 새 자리에 서는 조용한 어긋남이 난다).
  *
- * ⚠️ `bottom: 62` 는 FSHELF_UNIT 과 **같이 움직여야 하는 동결값**이다 — 무대 기하 v4 가 마루선을
- *    70 으로 내렸어도 여기를 따라 내리지 않는다(사유는 family-shelf.ts FSHELF_UNIT 주석).
- *    한쪽만 고치면 왼벽과 오른벽의 가구 높이가 갈라진다.
+ * ⚠️ 세로(top·bottom)는 **FSHELF_UNIT 에서 그대로 가져온다** — 같은 사방탁자 한 좌이므로 숫자를
+ *    따로 적으면 왼벽과 오른벽의 가구 높이가 조용히 갈라진다(2026-08-10 접지 수복에서 실제로
+ *    두 곳을 같이 고쳐야 했던 자리다). 이제 마루선이 움직이면 둘이 함께 따라온다.
+ *    x·w 만 의식각 고유값이다(제단 41~59 · 가족 선반장 오른벽 63.5/72.5 을 피한 자리).
  */
-export const RITUAL_HALL_UNIT = Object.freeze({ x: 88.75, w: 8.65, top: 20, bottom: 62 })
+export const RITUAL_HALL_UNIT = Object.freeze({
+  x: 88.75,
+  w: FSHELF_UNIT.w,
+  top: FSHELF_UNIT.top,
+  bottom: FSHELF_UNIT.bottom,
+})
 const UNIT_X = RITUAL_HALL_UNIT.x
 const UNIT_W = RITUAL_HALL_UNIT.w
 const UNIT_TOP = RITUAL_HALL_UNIT.top

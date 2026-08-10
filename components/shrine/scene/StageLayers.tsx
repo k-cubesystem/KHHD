@@ -23,7 +23,13 @@
 
 import type { CSSProperties, SyntheticEvent } from 'react'
 import type { StageSpec } from '@/lib/domain/shrine/stage'
-import { STAGE_BANDS, STAGE_FLOOR_LINE_Y } from '@/lib/domain/shrine/theme-stage'
+import {
+  GRAND_ALTAR_BOX_H,
+  GRAND_ALTAR_CODE_PREFIX,
+  STAGE_BANDS,
+  STAGE_FLOOR_LINE_Y,
+  hasGrandAltar,
+} from '@/lib/domain/shrine/theme-stage'
 
 interface Props {
   /** 활성 테마의 무대 사양. null 이면 레거시(완성 일러스트) 렌더. */
@@ -301,29 +307,40 @@ export function StageLayers({
   // L2 구조물 — x/y 는 스프라이트 **중심** 기준(%), w 는 구역 너비 대비 폭(%). 높이는 원본 비율.
   // x/y 는 "구역 어디쯤"이라는 비율 위치라 넓은 구역에서도 그대로 두고(제단이 방 한가운데로 간다),
   // 크기인 w 만 widthScale 로 겉보기를 지킨다. 등배(1)면 곱셈 결과가 원값이라 DOM 이 한 글자도 안 바뀐다.
+  //
+  // ⚠️ 예외 한 종 — 「틀(壇)」은 **세로**가 기준이다(2026-08-10 접지 수복). 사유는 theme-stage.ts
+  //    GRAND_ALTAR_BOX_H 주석: 틀의 계약(감실 바닥·제물 밑변·접지)이 전부 방 y 라, 폭 기준으로 그리면
+  //    방 종횡비가 바뀌는 실기기마다 접지가 마루선에서 떨어진다(390 폰 9%p). 기준 방에서는 두 규칙의
+  //    결과가 같아 회귀가 없다.
+  const grand = hasGrandAltar(themeCode)
   return (
     <>
-      {stage.structures.map((s) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={s.code}
-          src={s.assetUrl}
-          alt=""
-          aria-hidden
-          draggable={false}
-          decoding="async"
-          className="absolute pointer-events-none select-none"
-          style={{
-            left: `${s.x}%`,
-            top: `${s.y}%`,
-            width: `${widthScale === 1 ? s.w : Math.round(s.w * widthScale * 1e4) / 1e4}%`,
-            height: 'auto',
-            transform: 'translate(-50%, -50%)',
-            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
-          }}
-          onError={hideOnError}
-        />
-      ))}
+      {stage.structures.map((s) => {
+        const byHeight = grand && s.code.startsWith(GRAND_ALTAR_CODE_PREFIX)
+        const size: CSSProperties = byHeight
+          ? { height: `${GRAND_ALTAR_BOX_H}%`, width: 'auto' }
+          : { width: `${widthScale === 1 ? s.w : Math.round(s.w * widthScale * 1e4) / 1e4}%`, height: 'auto' }
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={s.code}
+            src={s.assetUrl}
+            alt=""
+            aria-hidden
+            draggable={false}
+            decoding="async"
+            className="absolute pointer-events-none select-none"
+            style={{
+              left: `${s.x}%`,
+              top: `${s.y}%`,
+              ...size,
+              transform: 'translate(-50%, -50%)',
+              filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.45))',
+            }}
+            onError={hideOnError}
+          />
+        )
+      })}
     </>
   )
 }
