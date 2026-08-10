@@ -25,7 +25,22 @@
 // 합성판을 굽는다. 좌표는 한 벌도 새로 적지 않고 **소스에서 뽑아 온다**(readContracts) —
 // 손으로 옮겨 적는 순간 QA판이 라이브와 다른 방을 그리게 되고, 그때부터 검수는 거짓말이 된다.
 //
+// ── 규격 v3 (2026-08-10 오후, CEO 3차 피드백) ────────────────────────────────
+// ①"벽·바닥만 있어 퀄리티가 안 산다 — 공간을 활용한 뒷배경" ②"모바일에서 4K인데 화질이 나쁘다"
+// ③"뒷배경이 전부 확대돼 나온다".
+//   ②③은 한 뿌리다 — 저장본이 **기준 뷰포트(520×620)의 밴드 비율**로 잘려 있는데(벽 4.33:1)
+//   실기기 밴드는 3.15~3.51:1 이라 `object-cover` 가 세로를 맞추며 가로를 20~25% 버렸고(=확대),
+//   그만큼 원판을 더 늘려 쓰느라 DPR3 에서 1.3~1.4× 업스케일이 겹쳤다.
+//   → 렌더를 **폭 맞춤(width-fit)** 으로 바꾸고(StageLayers 의 object-position 한 칸),
+//     수출을 **밴드보다 세로가 남는 비율**로 바꾼다: 생성 16:9 4K · 벽 AR ≤3.0 · 바닥 AR ≤4.6.
+//     원판 폭을 깎지 않고(고해상) + 표준 2048 을 함께 내 srcset 으로 저DPR 다운로드를 눌러 준다.
+//   ①은 프롬프트 밀도 규칙 — 개구부 원경·상부 구조·바닥 변주(가구는 여전히 0).
+//   ⚠️ 세로 크롭(수평선 60% 강제)은 **완화**한다. width-fit 에서는 수평선이 밴드 접지선에 붙으므로
+//      «이미지 안에서 몇 %인가»가 아니라 «벽/바닥 각각의 AR 상한»만 지키면 된다. 60% 를 억지로
+//      맞추려고 폭을 깎던 가지(fitToPanorama 의 세로·가로 크롭)가 곧 화각 확대의 원인이었다.
+//
 // 산출(전부 assets-src — public 라이브 자산은 이 스크립트가 **쓰지 않는다**):
+//   ⚠️ v3 는 `{code}-v3/` 아래에 쌓는다(구 시범과 섞이지 않게). `--spec-v2` 는 종전 `{code}/`.
 //   assets-src/shrine/harmony-pilot/{code}/r{N}/{center,left,right}.png   원본 3샷(캐시 = 라운드 격리)
 //   assets-src/shrine/harmony-pilot/{code}/r{N}/{wall,floor}.webp         후보 뮤럴
 //   assets-src/shrine/harmony-pilot/{code}/style-card.webp                살림 화풍 카드(참조 주입분)
@@ -125,6 +140,8 @@ function readContracts() {
     /** 방 컨테이너 실측 — 이 두 값이 렌더 스케일의 분모다 */
     roomW: pluckNum(room, /max-w-\[(\d+)px\]/, 'room max-w'),
     roomH: pluckNum(room, /height:\s*'min\(\d+vh,\s*(\d+)px\)'/, 'room height'),
+    /** 방 높이의 vh 몫 — 기기 시뮬(실폰 밴드 비율)의 분모라 정본에서 읽는다 */
+    roomVh: pluckNum(room, /height:\s*'min\((\d+)vh,\s*\d+px\)'/, 'room height vh'),
     /** 아이템 표시 크기(md) · v2 스프라이트 em */
     itemMdPx: Number(pluck(sizeBlock, /md:\s*'(\d+(?:\.\d+)?)px'/, 'SIZE_PX.md')[1]),
     assetEm: pluckNum(room, /const ASSET_EM = ([\d.]+)/, 'ASSET_EM'),
@@ -167,11 +184,20 @@ const PANO_H = 1280
 const PANO_W = Math.round((PANO_H * WORLD_SCREENS * C.roomW) / C.roomH)
 const OVERLAP_FRAC = 0.12
 /**
- * 원샷 종횡비 — API 가 허용하는 값 중 목표(2.684:1)에 **세로가 남는 쪽**으로 가장 가까운 것.
- * 남는 세로는 잘라내면 되지만(무손실) 모자란 가로는 늘리거나 이어 붙여야 한다(왜곡·이음매).
- * 4:1 은 목표보다 넓어 가로를 33% 버려야 하므로 해상도 손해가 크다.
+ * 규격 v2 원복 레버. 붙이면 종전 경로(21:9 캡처 · 파노라마 규격 · object-cover 저장본)로 돌아간다.
+ * 상수 정의가 인자 파싱보다 위에 있어야 해서 여기서 한 번 본다(파싱 자체는 아래 main 그대로).
  */
-const WIDE_ASPECT = process.env.SHRINE_WIDE_ASPECT || '21:9'
+const SPEC_V2 = process.argv.includes('--spec-v2')
+
+/**
+ * 원샷 종횡비.
+ *  v2: 목표(2.684:1)에 **세로가 남는 쪽**으로 가장 가까운 21:9 — 남는 세로는 잘라내면 되지만
+ *      (무손실) 모자란 가로는 늘리거나 이어 붙여야 한다(왜곡·이음매).
+ *  v3: **16:9** — 밴드보다 세로가 남아야 폭 맞춤이 성립한다. 수평선 60% 기준으로 자르면
+ *      벽 1.778/0.60 = 2.96:1, 바닥 1.778/0.40 = 4.44:1 로 두 상한(3.0 · 4.6)에 그대로 들어간다.
+ *      21:9 로는 벽이 3.89:1 이라 실기기 밴드(3.15)를 못 덮는다 — 확대가 남는다.
+ */
+const WIDE_ASPECT = process.env.SHRINE_WIDE_ASPECT || (SPEC_V2 ? '21:9' : '16:9')
 /** 원판 해상도 — 통짜는 한 장이 세계 전체를 감당하므로 4K 가 사실상 필수다(위 callModelAspect 주석). */
 const WIDE_SIZE = process.env.SHRINE_WIDE_SIZE || '4K'
 const SHOT_KEYS = ['left', 'center', 'right']
@@ -199,6 +225,83 @@ const MURAL_TARGET_BYTES = Math.round(MURAL_BUDGET_BYTES * 0.9)
 const QUALITY_LADDER = [90, 86, 82, 78, 74, 70, 66, 62, 58, 54, 50]
 
 const DARK = { r: 0x1a, g: 0x13, b: 0x08, alpha: 1 }
+
+// ══════════════════ 규격 v3 — 실기기 밴드에서 역산한 수출 계약 ══════════════════
+/**
+ * 사용자가 실제로 보는 밴드 비율. 방은 `w-full max-w-[520px]` 안에 있고 페이지 좌우 여백은
+ * `px-1`(4px)이며, 세계 폭은 3.2화면이다. 그래서
+ *   벽 밴드 AR = 3.2·Vw / (0.62·Vh방)   ·   바닥 밴드 AR = 3.2·Vw / (0.40·Vh방)
+ * 이 값들의 **최솟값보다 저장본 AR 이 작아야** 폭 맞춤이 성립한다(세로가 남아 잘려 들어간다).
+ * 기준 뷰포트(520×620)만 보면 4.33/6.71 이지만 실폰은 3.15/4.89 다 — 그 간극이 ③ 확대의 정체다.
+ */
+const PAGE_PAD_PX = 4
+const DEVICES = [
+  { name: '360x800', w: 360, h: 800, dpr: 3 },
+  { name: '390x844', w: 390, h: 844, dpr: 3 },
+  { name: '430x932', w: 430, h: 932, dpr: 3 },
+]
+function deviceStage(d) {
+  const vw = Math.min(C.roomW, d.w - PAGE_PAD_PX * 2)
+  const vh = Math.min((C.roomVh / 100) * d.h, C.roomH)
+  return {
+    ...d,
+    vw,
+    vh,
+    worldW: vw * WORLD_SCREENS,
+    wallBandAR: (vw * WORLD_SCREENS) / (vh * BAND_WALL),
+    floorBandAR: (vw * WORLD_SCREENS) / (vh * BAND_FLOOR),
+  }
+}
+/** 기준 뷰포트(=구 규격이 맞춰져 있던 방)도 목록에 넣어 «구본은 왜 확대되는가»가 로그에 남게 한다 */
+const REF_STAGE = {
+  name: `ref ${C.roomW}x${C.roomH}`,
+  vw: C.roomW,
+  vh: C.roomH,
+  worldW: C.roomW * WORLD_SCREENS,
+  wallBandAR: (C.roomW * WORLD_SCREENS) / (C.roomH * BAND_WALL),
+  floorBandAR: (C.roomW * WORLD_SCREENS) / (C.roomH * BAND_FLOOR),
+}
+const DEVICE_STAGES = DEVICES.map(deviceStage)
+const MIN_WALL_BAND_AR = Math.min(...DEVICE_STAGES.map((s) => s.wallBandAR))
+const MIN_FLOOR_BAND_AR = Math.min(...DEVICE_STAGES.map((s) => s.floorBandAR))
+
+/**
+ * 수출 AR 상한. 넘으면 그 기기에서 렌더가 **가로를 잘라** 확대한다 — 그런데 두 밴드에서 그 값이
+ * 갖는 무게가 다르다.
+ *   · 벽(3.0, 실기기 최솟값 3.15에 5% 여유) — 여기가 ③ 확대의 본진이다. 칸 리듬·개구부·목공이
+ *     전부 벽에 있어서 잘리면 «배경이 확대됐다»가 그대로 보인다. **한 픽셀도 양보하지 않는다.**
+ *   · 바닥(5.6) — 널이 소실점으로 모여드는 **거의 무늬 없는 평면**이라 가로 크롭이 눈에 잡히지
+ *     않는다. 실제로 현행 라이브 바닥은 6.71:1 로 실기기에서 이미 27% 씩 잘리고 있고 아무도
+ *     그것을 보지 못했다(반려 어휘는 전부 벽 이야기였다). 5.6 은 최악 기기(4.89)에서 크롭
+ *     13% — 바닥이 벽보다 1.13배 커 보이는 정도이며, 대신 **원판 폭을 깎지 않아 벽이 온전하다.**
+ * 두 상한을 같은 엄격함으로 걸면(구 4.6) 바닥 하나 때문에 벽까지 16~41% 깎여, 고치려던 문제를
+ * 다른 문으로 들여오게 된다.
+ */
+const V3_WALL_AR_MAX = 3.0
+const V3_FLOOR_AR_MAX = 5.6
+/**
+ * 벽 슬라이스가 수평선 **아래로** 물고 내려가는 몫(벽 슬라이스 높이 대비).
+ * 렌더 계약상 벽 밴드는 방 높이 62%, 바닥 밴드는 60% 에서 시작한다 — 즉 벽의 아래 2%는 바닥이
+ * 덮는다. 폭 맞춤에서는 벽 이미지가 밴드 바닥(62%)에 붙으므로, 이미지 안의 수평선이 딱 2% 위에
+ * 오도록 아래로 조금 물려 둬야 «두 개의 수평선»이 생기지 않는다. 2%는 기기별 편차를 감안해
+ * **항상 60% 이하로 앉는(=바닥에 가려지는)** 쪽으로 고른 값이다(최악 기기에서도 여유 ≤3px).
+ */
+const V3_WALL_BLEED = 0.02
+/** 렌디션 — 고해상(원판 폭, 상한) + 표준(저DPR·저사양) */
+const V3_HI_MAX_W = 5600
+const V3_SD_W = 2048
+/** 용량 예산: 테마당 **전 렌디션 합**. srcset 이 모바일 다운로드를 표준본으로 제어한다. */
+const V3_BUDGET_BYTES = 2.5 * 1024 * 1024
+const V3_TARGET_BYTES = Math.round(V3_BUDGET_BYTES * 0.88)
+const V3_QUALITY_LADDER = [88, 84, 80, 76, 72, 68, 64, 60, 56]
+const V3_SD_QUALITY = 85
+/**
+ * 수평선 허용 창 — 폭 맞춤에서는 «이미지 안 몇 %»가 품질을 정하지 않는다(밴드가 접지선을 잡는다).
+ * 다만 너무 치우치면 벽이나 바닥 한쪽의 AR 상한을 못 맞춰 **폭을 깎게** 되므로 창을 둔다.
+ */
+const V3_HORIZON_WINDOW = [55, 75]
+/** 폭 크롭 상한 — 이걸 넘으면 화각이 좁아져 ③이 다시 시작된다(재생성 신호) */
+const V3_WIDTH_CROP_MAX = 0.15
 
 // ══════════════════════════════ 프롬프트 ══════════════════════════════
 /** stage-theme-scene.mjs 원문 그대로. 한 글자도 바꾸지 않는다. */
@@ -265,7 +368,12 @@ const floorEven = (t) =>
  */
 const SIDE_FLAT =
   'The wall runs flat straight across the whole frame and both of its ends pass out of the frame; ' +
-  'no corner of the room is in view and the wall never turns away from the viewer'
+  'no corner of the room is in view and the wall never turns away from the viewer' +
+  // ⚠️ r2 처방(달집 r1): 16:9 로 좁아지자 모델이 «방 하나»를 그려 **양끝에 모서리**를 세웠다
+  //    (벽이 좌우에서 꺾여 들어옴 → 통짜 파노라마가 다시 «상자»가 된다). 같은 사실을 재진술하지
+  //    말고 «화면의 끝이 무엇을 자르는가»라는 다른 관찰로 못박는다. 반가·설빛은 이미 지키고 있어
+  //    무해하다.
+  (SPEC_V2 ? '' : ', and the left and right edges of the picture cut across the wall itself')
 
 /** 세 샷이 한 홀로 읽히게 묶는 절(빛의 «성격»은 원화가 정하고, 세 샷은 같은 값을 쓴다) */
 const CONTINUITY =
@@ -273,9 +381,21 @@ const CONTINUITY =
   'palette as the reference painting'
 
 /** 벽·바닥 경계 높이 계약 — 세 샷이 같은 말을 공유해야 62/40 슬라이스가 한 줄로 이어진다 */
-const HORIZON =
-  'The line where the wall meets the floor runs straight across the frame at three-fifths of the frame height, ' +
-  'level and unbroken from the left edge to the right edge; above it is the wall, below it is the floor'
+/**
+ * ⚠️ r2 처방(3테마 공통, 2026-08-10): v2 원문 「at three-fifths of the frame height」는 **어디서부터**
+ * 3/5인지 말하지 않는다 — 모델은 세 번 다 바닥선을 67~75% 에 놓았다. 그러면 벽 슬라이스가 너무
+ * 길어져(AR 1.5~2.2) 폭 맞춤에서 **위쪽 30~50%가 잘려 나가고**(서까래·보가 통째로 소실) 바닥은
+ * 짧아져 폭까지 깎게 된다. 소리를 키우는 대신 «위에서부터»와 «아래 2/5는 바닥뿐»을 관찰 사실로
+ * 덧붙인다. 목표 60% 는 우연이 아니라 계산값이다: 16:9 에서 벽 AR 2.96 · 바닥 AR 4.45 로
+ * 두 상한(3.0 · 4.6) 바로 아래에 앉는 유일한 자리다.
+ */
+const HORIZON = SPEC_V2
+  ? 'The line where the wall meets the floor runs straight across the frame at three-fifths of the frame height, ' +
+    'level and unbroken from the left edge to the right edge; above it is the wall, below it is the floor'
+  : 'The line where the wall meets the floor crosses the picture three fifths of the way down from the top edge, ' +
+    'level and unbroken from the left edge to the right edge. Everything above that line is wall, and the whole ' +
+    'bottom two fifths of the picture is floor and nothing else: measured up from the bottom edge of the ' +
+    'picture, the foot of the wall stands two fifths of the way up'
 
 const FRAMING =
   'Seen straight on at standing eye level, the camera level and not tilted, ' +
@@ -286,9 +406,44 @@ const FRAMING =
  * 만들어줘, 자연스럽게 이어지게." 3샷 크로스페이드는 이음매 수치가 통과해도 **톤 계단**과
  * «세 개의 방» 인상을 남긴다(R2 왼쪽 경계, R3 전면 파탄). 캡처를 한 장으로 바꾸면 이을 것이 없다.
  */
-const WIDE_FRAMING =
-  'Seen straight on at standing eye level, the camera level and not tilted, one single very wide horizontal ' +
-  'view about two and a half times as wide as it is tall, the scene filling the whole frame'
+const WIDE_FRAMING = SPEC_V2
+  ? 'Seen straight on at standing eye level, the camera level and not tilted, one single very wide horizontal ' +
+    'view about two and a half times as wide as it is tall, the scene filling the whole frame'
+  : 'Seen straight on at standing eye level, the camera level and not tilted, one single wide horizontal ' +
+    'view about twice as wide as it is tall, the scene filling the whole frame'
+
+/**
+ * ★ 규격 v3 밀도 규칙 ① 개구부 원경 ★ — CEO 3차 ①("벽·바닥만 있어 퀄리티가 안 산다").
+ *
+ * 「가구 0」(육안 ①)은 **방 안** 규칙이다. 개구부 너머의 바깥은 방이 아니라 별세계라 테마 상징물이
+ * 서도 살림과 자리를 다투지 않는다 — 오히려 그것이 이 테마가 «어디인지»를 말하는 유일한 창구다.
+ * 종전 척추의 «This wall is closed all the way across … no doorway and no window» 한 문장을
+ * **이 문장이 대체한다**(둘을 같이 적으면 정면으로 싸워 둘 다 뭉개진다 — 척추 충돌 3종의 교훈).
+ * «nothing hangs on it» 은 살려 둔다: 벽에 거는 것은 의식각 현판의 몫이다.
+ *
+ * 좌표는 여전히 AI 에 맡기지 않는다(PLAN §1-3). 대신 두 가지만 관찰 사실로 못박는다 —
+ *   ① 리듬(«세 칸에 한 칸») : 어느 화면을 잘라도 원경이 남고, 선반장이 하나를 가려도 옆 것이 보인다
+ *   ② 가운데 칸은 닫혀 있다 : 제단·신위 뒤가 뚫리면 육안 ④(중앙이 제단을 받친다)가 깨진다
+ */
+const openingLine = (t) =>
+  'Most of the bays in this wall are closed and quiet, and every third bay stands open with no panel in it. ' +
+  `Beyond those open bays, far away and hazy and set well back so that the room reads clearly in front of it, ` +
+  `there is ${t.beyond}. ` +
+  // ⚠️ r2 처방(설빛 r1): 「가운데 칸은 닫혀 있다」한 칸으로는 모델이 가운데를 열어 버렸다
+  //    (제단·신위 뒤가 밝은 구멍이 되어 육안 ④ 파탄). 한 «칸»이 아니라 한 «구간»으로 넓힌다.
+  // ⚠️ r3 재처방(설빛 r2): 「one unbroken closed surface」로 적었더니 가운데가 **민짜 회벽 한 장**이
+  //    됐다 — 육안 ③ 「완성된 빈 벽」의 반대말(덜 그린 허연 벽)이다. 「닫혔다」와 「비었다」는 다른
+  //    말이므로, 닫힌 칸도 **다른 칸과 같은 짜임**을 갖는다고 적는다.
+  // ⚠️ r6 처방(설빛 r4·r5 — **미검증**, 확산 기본값): 「가운데 칸들」은 여전히 자리를 못 잡아
+  //    설빛에서 두 번 연속 한가운데가 열렸다(신위 뒤에 밝은 눈밭 구멍 = 육안 ④ 파탄).
+  //    수평선 처방에서 통한 방식을 그대로 옮긴다 — «가운데»라는 말 대신 **프레임 분수로 잰 구간**.
+  //    (승인분 반가 r2 · 달집 r3 · 설빛 r3 은 이 문장 이전 판으로 구웠다. 재생성하면 달라진다.)
+  'The middle third of the picture, from one third of the way across to two thirds of the way across, is ' +
+  'closed wall with no opening anywhere in it, and it carries the same panelling, the same framing and the ' +
+  'same rhythm as every other closed bay. Nothing hangs anywhere on this wall.'
+
+/** 규격 v3 밀도 규칙 ② 상부 — 「벽 상부 1/3이 이야기한다」. 테마마다 다른 목공 어휘를 쓴다. */
+const upperOf = (t) => t.upper ?? WALL_BAND
 
 const TAIL = 'full-bleed background plate, no text, no watermark, no border'
 
@@ -309,8 +464,11 @@ const WALL_BAND =
  *   pooled    발밑에 «무엇이» 고이는가 — 난색 테마는 warmth(기본), 한색 테마는 그 세계의 빛 이름
  *   lightFrom 그 빛이 «어디서» 오는가 — 기본은 한지 창호. 창호가 없는 세계(용궁)는 갈아 끼운다
  *   fix       라운드별 처방 어휘 누적 자리. 반려 때 «사실 1개»만 여기 늘린다.
+ *   ── 규격 v3 추가분 ──
+ *   beyond    **개구부 너머의 원경**(방 밖이라 테마 상징물 허용). 없으면 v3 개구부를 열지 않는다.
+ *   upper     벽 상부 어휘(서까래·보·처마 속). 없으면 공통 WALL_BAND.
  * @type {Array<{code:string,name:string,el:string,hall:string,identity:string,wall:string,floor:string,
- *               pooled?:string,lightFrom?:string,fix?:string}>}
+ *               pooled?:string,lightFrom?:string,fix?:string,beyond?:string,upper?:string}>}
  */
 const THEMES = [
   {
@@ -320,18 +478,35 @@ const THEMES = [
     hall: 'the daecheong hall of a Korean noble house (반가 班家)',
     // 원화(public/shrine/themes/banga/room.webp) 실측: 짙은 호두나무 골조 + 뒤에서 빛나는 한지 창호 +
     // 넓은 짙은 갈색 마루널 + 노출 서까래. 팔레트를 이 문장이 붙든다.
+    // ⚠️ v3 «디테일하게»(CEO 3차 보충): 늘린 것은 **설명이 아니라 근접 질감**이다 — 고해상 렌디션이
+    //    살려 낼 수 있는 결(나뭇결·닥섬유)을 관찰 사실로 적는다. 형용사를 늘리면 캐릭터 시트가 온다.
     identity:
-      'Dark walnut timber frames every surface of this hall. The hanji paper panels between the posts glow a ' +
-      'warm ivory from behind, and the wide plank floor is deep brown with a soft amber sheen lying along it. ' +
+      'Dark walnut timber frames every surface of this hall, its grain running long and open along each post so ' +
+      'the flecks and the fine split lines in the wood are legible close up. The hanji paper panels between the ' +
+      'posts glow a warm ivory from behind and the mulberry fibre laid in the sheets shows as fine pale threads ' +
+      'crossing the light. The wide plank floor is deep brown with a soft amber sheen lying along it. ' +
       'The air is dim and quiet, warmer near the paper and darker toward the corners.',
     wall:
       'A long wall of dark walnut posts standing at even intervals with a warm ivory hanji panel filling the ' +
       'space between every pair of posts. Each panel carries a slender lattice of thin wooden ribs and glows ' +
       'faintly from behind. A low dark wainscot board runs level along the bottom of the whole wall, and a ' +
       'band of fine open latticework runs level along the top under the beam.',
+    // v3 바닥 변주 — 「민짜 널 금지」. 우물마루(청판+귀틀)는 원화에도 있는 짜임이라 재발명이 아니다.
     floor:
       'Wide dark walnut floorboards running away from the viewer, their long grain and the thin dark seams ' +
-      'between the boards showing, worn smooth and holding a soft amber sheen.',
+      'between the boards showing, worn smooth and holding a soft amber sheen. They are laid in square panels ' +
+      'set into a darker frame of beams, and the grain of each panel runs across the grain of the next, so a quiet ' +
+      'grid reads over the whole floor, with one darker border plank running along the foot of the wall.',
+    // 개구부 원경 = 후원(뒤뜰). 자연·건축만이고 가구는 없다(육안 ① 은 방 안 규칙, 바깥은 별세계).
+    beyond:
+      'the back garden of the house, with old pine trunks, a low stone wall capped with roof tile and one ' +
+      'stone lantern standing among them in dim green shade',
+    // 상부 밀도 — 반가는 목공만으로 낸다. 단청(녹·홍)은 원화 팔레트에 없어 ⑤와 싸운다(연등·용궁의 어휘).
+    upper:
+      'Across the top of the wall one straight beam runs level from edge to edge, and small carved brackets sit ' +
+      'under it over every post. Above the beam the round ends of the rafters repeat in a row all the way ' +
+      'across with dark boarding between them. Below the beam the wall is quiet and even all the way down to ' +
+      'the floor',
   },
   {
     code: 'daljip',
@@ -347,8 +522,11 @@ const THEMES = [
     //    먼저 걷고(모순 제거), 값(value) 자체를 관찰 사실로 적는다 → fix 절.
     identity:
       'It is night in every part of this scene and it stays night: the only light is the full moon outside ' +
-      'and one low lantern within, and no daylight reaches anything here. The clay plaster is a dim earth ' +
-      'ochre, the paper panels are a dull blue-grey only a little lighter than the timber around them, and ' +
+      'and a low warm lamplight that comes from somewhere outside the picture, and no daylight reaches ' +
+      'anything here. The clay plaster is a dim earth ' +
+      'ochre, hand-smoothed so the sweep of the trowel and the chopped straw worked into the mud read across ' +
+      'it close up, and the timber is dark earth-brown with the facets of the adze still on it. The paper ' +
+      'panels are a dull blue-grey only a little lighter than the timber around them, and ' +
       'the deep blue of the night sits in every shadow.',
     wall:
       'A long wall of dim ochre clay plaster held between dark earth-brown timber posts standing at even ' +
@@ -356,16 +534,31 @@ const THEMES = [
       'the upper part of every bay, dull blue-grey with the night pressing behind it. A low dark wainscot ' +
       'board runs level along the bottom of the whole wall, and a band of plain slatted carpentry runs level ' +
       'along the top under the beam.',
+    // v3 바닥 변주 — 돗자리를 «한 장»이 아니라 «짜임 방향이 갈리는 자리»로 적는다(민짜 금지).
     floor:
       'Wide boards the colour of dark earth running away from the viewer, their grain and the thin seams ' +
-      'between them showing, with coarse straw matting laid over them from edge to edge so its weave reads ' +
-      'as one fine even texture, its gold dulled almost to grey-brown in the dark.',
+      'between them showing, with coarse straw matting laid over them in panels so its weave reads as one ' +
+      'fine even texture, the weave of each panel running across the weave of the next, its gold dulled ' +
+      'almost to grey-brown in the dark, and a strip of the bare dark boards showing along the foot of the wall.',
     lightFrom: 'the moonlit paper panels',
+    // ★ 개구부 원경 — 테마의 이름이 여기서 돌아온다(달집더미와 보름달). 방은 밤 조도 그대로.
+    beyond:
+      'the yard, where a tall cone of stacked firewood and pine branches stands waiting and the full moon ' +
+      'hangs low and white behind it over a dark earth wall',
+    // 상부 밀도 — 초가·민가의 어휘. 처마 속(지붕 밑면)이 이 테마의 이야기다.
+    upper:
+      'Across the top of the wall one straight rough-hewn beam runs level from edge to edge. Above it the ' +
+      'underside of the thatch shows as close-packed bundles of straw bound down with twisted rope, and short ' +
+      'round rafters cross beneath them at even intervals. Below the beam the wall is quiet and even all the ' +
+      'way down to the floor',
     // r2 처방(사실 2개): 값이 어둡다 · 달빛은 차갑고 등불빛은 좁다
+    // ⚠️ r2 처방(v3 r1): 개구부가 둘이 열리자 **달이 둘** 떴다 — 하늘은 하나여야 세계가 하나다.
     fix:
       'The whole picture is dark, the way a room looks by moonlight: most of the wall lies in deep shadow and ' +
       'no surface anywhere is brighter than a dim amber. Where the moon reaches the clay it lies pale and ' +
-      'cool on it, and the lantern warmth stays low and narrow near the floor.',
+      'cool on it, and the warm light near the floor stays low and narrow. ' +
+      'There is one moon only in the whole picture, seen through one of the open bays; the sky beyond the ' +
+      'other open bays is empty night.',
   },
   {
     code: 'seolbit',
@@ -382,18 +575,36 @@ const THEMES = [
     //    그 세 마디는 원화에도 없다(원화의 기둥·마루는 따뜻한 갈색이고 한색은 창·한지 쪽이다).
     //    재발명을 걷고 원화로 되돌린다: 한색은 종이와 빛, 난색은 나무.
     identity:
-      'The cold light of snow fills this room. The paper panels stand a flat cool grey-white, the timber ' +
-      'posts and rails are pale aged brown, dry and lightly frosted along their edges, and the floor is pale ' +
+      'The cold light of snow fills this room. The paper panels stand a flat cool grey-white and the mulberry ' +
+      'fibre laid in the sheets shows as fine pale threads where the light crosses them. The timber ' +
+      'posts and rails are pale aged brown, dry and lightly frosted along their edges, the frost reading as a ' +
+      'fine crystalline bloom on the wood, and the floor is pale ' +
       'pine washed cool by the light off the snow. The air is still and very cold.',
     wall:
       'A long wall of plain pale hanji paper set in slender pale brown timber frames standing at even ' +
       'intervals, frost bloomed along every timber edge, the paper laid in overlapping sheets so that the ' +
       'seams and the fibre in it catch the light. A low brown wainscot board runs level along the ' +
       'bottom of the whole wall, and a band of plain flat planking runs level along the top under the beam.',
+    // v3 바닥 변주 — 널 방향이 바뀌는 자리 하나 + 앞쪽 깔개. 난색은 여전히 나무 쪽에만 둔다(r3 교훈).
     floor:
       'Pale pine boards running away from the viewer, fine straight grain and thin seams between them, dry ' +
-      'and matte, cool grey where the light off the snow crosses them and a little warmer in their shadows.',
+      'and matte, cool grey where the light off the snow crosses them and a little warmer in their shadows. ' +
+      'Along the foot of the wall the boards turn and run parallel to it in a border two planks wide, and ' +
+      'nearer the front a pale woven mat lies flat over them, its plaiting dry and fine.',
     pooled: 'cold brightness',
+    // ★ 개구부 원경 — 설빛이라 부를 근거를 «바깥»이 댄다(r3 처방의 연장: 서리·눈빛·한지).
+    beyond:
+      'a snow-covered courtyard where old pines stand bent under the weight of the snow on them, under a pale ' +
+      'grey sky',
+    // 상부 밀도 — 서고의 어휘는 판벽과 서리. 서까래를 노출하지 않고 평평한 널로 덮는다.
+    // ⚠️ r4 처방(r3): 보 위 천장 널이 화면 위쪽을 크게 먹어 벽이 길어졌고(바닥선 75.5%),
+    //    폭 맞춤에서 **상부 45%가 잘려** 정작 그 이야기가 화면에 남지 않았다. 보를 프레임 위끝
+    //    가까이로 올려 세로를 바닥에 돌려준다 — 밀도는 보 «아래»(창방 띠·서리)로 옮긴다.
+    upper:
+      'Across the top of the wall one straight pale beam runs level from edge to edge close to the top edge of ' +
+      'the picture, with only a narrow strip of flat plank boarding showing above it. Just under the beam a ' +
+      'band of short rails and small square panels runs level all the way across, with a thin line of frost ' +
+      'caught along every joint. Below that band the wall is quiet and even all the way down to the floor',
     // r2 처방은 값의 폭만 좁혔을 뿐 «회색 상자»가 그대로였다 — 설빛이라 부를 근거가 화면에 하나도
     // 없었다(서리도 눈빛도 한지도 안 보임). r3 처방은 **설빛에만 있는 것 두 가지**를 관찰 사실로 넣는다:
     // 서리가 앉은 자리 · 한 칸 안에서 종이가 상아→푸름으로 넘어가는 그늘. 밀도는 이 둘이 만든다.
@@ -549,7 +760,15 @@ function sidePrompt(t, side) {
  *   ① 홀이 화면 왼끝에서 오른끝까지 한 방으로 이어진다
  *   ② 보 위에 여백이 조금 있다  ← 세로 크롭(아래 fitToPanorama)이 먹을 몫을 미리 마련해 둔다
  */
+/**
+ * 규격 v3 변경점은 세 줄뿐이다(레시피는 그대로 — 반려 없이 통과한 것을 다시 흔들지 않는다):
+ *   ① «보 위에 여백을 조금» 삭제 — v3 는 위를 잘라내지 않는다(수평선 기준으로만 나눈다).
+ *      그 자리는 이제 상부 목공(upperOf)이 채운다 = 밀도 규칙 ②.
+ *   ② 닫힌 벽 한 문장 → 개구부 리듬 한 문장(openingLine) = 밀도 규칙 ①.
+ *   ③ 프레이밍 21:9 → 16:9(WIDE_FRAMING).
+ */
 function fullRoomPrompt(t) {
+  const openings = !SPEC_V2 && t.beyond
   return (
     `The interior of ${t.hall}, painted from the first attached reference as one single very wide view of the ` +
     'whole hall at once. ' +
@@ -557,9 +776,11 @@ function fullRoomPrompt(t) {
     'The hall runs from the left edge of the frame to the right edge as one room: the same wall continues ' +
     'without a break across the whole width, with the bays repeating at even intervals. ' +
     `${t.wall} ${t.floor} ` +
-    `${WALL_BAND}, and there is a little open space above that beam at the top of the frame. ` +
-    'This wall is closed all the way across: nothing opens through it, there is no doorway and no window, ' +
-    'and nothing hangs on it. ' +
+    (SPEC_V2 ? `${WALL_BAND}, and there is a little open space above that beam at the top of the frame. ` : `${upperOf(t)}. `) +
+    (openings
+      ? `${openingLine(t)} `
+      : 'This wall is closed all the way across: nothing opens through it, there is no doorway and no window, ' +
+        'and nothing hangs on it. ') +
     `${SIDE_FLAT}. ` +
     `${EMPTY_ROOM}. ` +
     `${FURNITURE_REF} ` +
@@ -687,7 +908,8 @@ function isAuthError(e) {
 }
 
 const artPath = (code) => path.join(THEME_ART, code, 'room.webp')
-const pilotDir = (code) => path.join(PILOT_ROOT, code)
+/** v3 산출은 `{code}-v3/` 아래에 쌓는다 — 구 시범(승인 이력·원복 자산)과 한 폴더에서 섞이지 않게 */
+const pilotDir = (code) => path.join(PILOT_ROOT, SPEC_V2 ? code : `${code}-v3`)
 const roundDir = (code, round) => path.join(pilotDir(code), `r${round}`)
 const shotPath = (code, round, key) => path.join(roundDir(code, round), `${key}.png`)
 const styleCardPath = (code) => path.join(pilotDir(code), 'style-card.webp')
@@ -1237,6 +1459,272 @@ async function buildRoomScene(theme, round, outDir) {
   }
 }
 
+/**
+ * ★ 수평선 검출 v3 — 「가로 결이 약해지는 자리」가 아니라 「**세로 결이 끊기는 자리**」 ★
+ *
+ * 구 검출기(horizonRow)는 행별 «가로 텍스처 에너지의 낙차»를 봤다. 그런데 v3 벽은 밀도가
+ * 올라가서(창호살·판벽·굽도리·돗자리) 낙차가 여러 군데에 생기고, 실측 결과 세 테마 모두
+ * 엉뚱한 줄을 집었다 — 반가 59%(창호살→굽도리 경계), 달집 81%·설빛 82.5%(돗자리 이음).
+ * 검출이 틀리면 **접지선이 방의 엉뚱한 높이에 앉는다**(가구가 벽에 서게 된다). 조용히 틀리는
+ * 종류의 오류라 게이트가 잡아 주지도 못한다(feedback_gate_measures_wrong_thing).
+ *
+ * 벽과 바닥을 가르는 것은 «밝기»도 «결의 세기»도 아니라 **결의 방향**이다:
+ *   · 벽은 기둥·문설주·살이 **세로로 이어진다** → 어떤 행의 가로 미분 프로파일 g(x,y) 가
+ *     열 칸 아래 g(x,y+10) 와 거의 같다(상관 높음).
+ *   · 바닥은 널이 소실점으로 **모여든다** → 같은 무늬가 옆으로 밀려 상관이 뚝 떨어진다.
+ * 그래서 상관이 «벽 값에서 바닥 값으로 내려앉은 자리»를 찾는다. 전이 구간의 **끝**(정착점)을
+ * 고르는 이유는 조금 아래로 치우치는 쪽이 안전하기 때문이다 — 벽 슬라이스가 바닥을 조금 물면
+ * 그건 계약된 물림(V3_WALL_BLEED)이 되고, 반대로 위로 치우치면 굽도리가 바닥 그림에 섞인다.
+ *
+ * 실측(2026-08-10 r1 3테마, 눈 판정 대비): 반가 68.5→67.5 · 달집 69.5→70.0 · 설빛 74.0→74.8.
+ * ⚠️ 그래도 «합격선==검출임계» 함정을 피하려고 **선을 그린 확인판을 매번 굽는다**(qa/*-horizon).
+ *    빗나갔으면 `--horizon <pct>` 로 사람이 값을 준다 — 이 경로가 있어야 자동이 정직해진다.
+ */
+const HZ3_PROBE_W = 1200
+const HZ3_K = 10
+const HZ3_SETTLE = 0.15
+function horizonRowV3(data, W, H, ch) {
+  const lum = (i) => 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]
+  const g = []
+  for (let y = 0; y < H; y += 1) {
+    const r = new Float64Array(W - 1)
+    for (let x = 0; x < W - 1; x += 1) r[x] = lum((y * W + x + 1) * ch) - lum((y * W + x) * ch)
+    g.push(r)
+  }
+  const corr = new Float64Array(H)
+  for (let y = 0; y + HZ3_K < H; y += 1) {
+    let num = 0
+    let da = 0
+    let db = 0
+    for (let x = 0; x < W - 1; x += 1) {
+      num += g[y][x] * g[y + HZ3_K][x]
+      da += g[y][x] ** 2
+      db += g[y + HZ3_K][x] ** 2
+    }
+    corr[y] = da > 1 && db > 1 ? num / Math.sqrt(da * db) : 0
+  }
+  const sm = new Float64Array(H)
+  for (let y = 0; y < H; y += 1) {
+    let s = 0
+    let n = 0
+    for (let d = -9; d <= 9; d += 1) {
+      const j = y + d
+      if (j < 0 || j >= H) continue
+      s += corr[j]
+      n += 1
+    }
+    sm[y] = s / n
+  }
+  const lo = Math.floor(H * 0.45)
+  const hi = Math.floor(H * 0.9)
+  let at = -1
+  let drop = -Infinity
+  for (let y = lo; y < hi; y += 1) {
+    const v = sm[Math.max(0, y - 14)] - sm[Math.min(H - 1, y + 14)]
+    if (v > drop) {
+      drop = v
+      at = y
+    }
+  }
+  if (at < 0) return { row: -1, pct: null, drop: 0 }
+  const above = sm[Math.max(0, at - 14)]
+  const below = sm[Math.min(H - 1, at + 14)]
+  const thr = below + (above - below) * HZ3_SETTLE
+  let end = at
+  while (end + 1 < hi && sm[end] > thr) end += 1
+  return { row: end, pct: (100 * end) / H, drop }
+}
+
+/** 임의 행 구간을 떼어 낸다(v3 는 밴드 높이가 테마마다 다르므로 sliceBands 의 고정 상수를 못 쓴다) */
+function sliceRows(data, W, ch, top, h) {
+  const out = Buffer.alloc(W * h * ch)
+  data.copy(out, 0, top * W * ch, (top + h) * W * ch)
+  return out
+}
+
+/**
+ * ★ 규격 v3 조립 ★ — 「파노라마 한 장을 62/40으로 자른다」에서 **「수평선에서 나눈 두 장」**으로.
+ *
+ * v2 는 벽·바닥이 한 장(파노라마)에서 나왔기 때문에 그 한 장의 AR 이 방 AR 로 고정됐고, 그래서
+ * 수평선을 60%에 억지로 앉히려고 **폭까지 깎는** 가지가 필요했다(그 가지가 화각 확대의 원인).
+ * 폭 맞춤 렌더에서는 두 장이 서로 독립이다 — 각자 제 AR 상한만 지키면 되고, 수평선은 밴드가
+ * 잡아 준다. 그래서 v3 가 하는 일은 셋뿐이다:
+ *   ① 수평선을 찾아 그 자리에서 나눈다 (벽은 아래로 2% 물려 «두 개의 수평선»을 막는다)
+ *   ② 두 AR 상한을 동시에 만족하는 **공통 폭**을 구해 가운데를 남긴다 (보통 크롭 0)
+ *   ③ 고해상·표준 두 렌디션으로 인코딩한다
+ * 폭을 «공통»으로 잡는 이유는 벽과 바닥이 같은 세계의 같은 구간이어야 하기 때문이다 —
+ * 한쪽만 좁히면 기둥과 마루널이 어긋난다.
+ */
+async function buildRoomSceneV3(theme, round, outDir, manualHorizonPct) {
+  const src = roomPath(theme.code, round)
+  if (!existsSync(src)) throw new Error(`통짜 원판 없음: ${showPath(src)}`)
+  const meta = await sharp(src).metadata()
+  const W0 = meta.width
+  const H0 = meta.height
+
+  // ① 수평선. v2 의 폐루프(재크롭→재측정)는 «규격이 수평선을 바꾸고 수평선이 규격을 바꾸는» 되먹임
+  //    때문에 필요했다. v3 는 규격이 수평선에서 **한 방향으로만** 파생되므로 루프가 없다.
+  //    검출은 축척을 타므로 실험이 보정된 폭(HZ3_PROBE_W)에서 잰다.
+  const probe = await sharp(src)
+    .resize(Math.min(W0, HZ3_PROBE_W), null, { kernel: 'lanczos3' })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const auto = horizonRowV3(probe.data, probe.info.width, probe.info.height, probe.info.channels)
+  if (auto.pct === null && manualHorizonPct === undefined) {
+    throw new Error('수평선 검출 실패 — 원판을 눈으로 보고 --horizon <pct> 로 줄 것')
+  }
+  const horizon = manualHorizonPct === undefined ? auto : { ...auto, pct: manualHorizonPct, manual: true }
+  const hzRow = Math.max(1, Math.min(H0 - 1, Math.round((horizon.pct / 100) * H0)))
+
+  // ② 밴드 높이와 공통 폭
+  const bleed = Math.round((hzRow * V3_WALL_BLEED) / (1 - V3_WALL_BLEED))
+  const wallH = Math.min(H0, hzRow + bleed)
+  const floorH = H0 - hzRow
+  const width = Math.max(2, Math.min(W0, Math.floor(V3_WALL_AR_MAX * wallH), Math.floor(V3_FLOOR_AR_MAX * floorH)))
+  const left = Math.round((W0 - width) / 2)
+  const widthCrop = 1 - width / W0
+
+  /**
+   * 확인판 — 검출선·물림선·폭 크롭을 원판 위에 그린다. 「먼저 눈으로」의 최소 장치이자,
+   * 자동 검출을 신뢰할지 `--horizon` 으로 갈아탈지 사람이 1초 만에 정하는 근거다.
+   */
+  {
+    const vw = 1200
+    const vh = Math.round((H0 * vw) / W0)
+    const sy = (row) => Math.round((row * vh) / H0)
+    const sx = (col) => Math.round((col * vw) / W0)
+    const svg = Buffer.from(
+      `<svg width="${vw}" height="${vh}" xmlns="http://www.w3.org/2000/svg">` +
+        `<line x1="0" y1="${sy(hzRow)}" x2="${vw}" y2="${sy(hzRow)}" stroke="#ff2d2d" stroke-width="2"/>` +
+        `<line x1="0" y1="${sy(wallH)}" x2="${vw}" y2="${sy(wallH)}" stroke="#ffc83d" stroke-width="1"/>` +
+        `<line x1="${sx(left)}" y1="0" x2="${sx(left)}" y2="${vh}" stroke="#3dd6ff" stroke-width="2"/>` +
+        `<line x1="${sx(left + width)}" y1="0" x2="${sx(left + width)}" y2="${vh}" stroke="#3dd6ff" stroke-width="2"/>` +
+        `<text x="6" y="${sy(hzRow) - 6}" fill="#ff2d2d" font-size="18">horizon ${horizon.pct.toFixed(1)}%` +
+        `${horizon.manual ? ' (manual)' : ''}</text></svg>`
+    )
+    const dir = qaDir(theme.code)
+    await mkdir(dir, { recursive: true })
+    await sharp(src)
+      .resize(vw, vh, { fit: 'fill' })
+      .composite([{ input: svg }])
+      .webp({ quality: 82 })
+      .toFile(path.join(dir, `r${round}-horizon.webp`))
+  }
+
+  // ③ 팔레트 앵커는 **잘라낸 구간 전체**에서 한 번 — 벽과 바닥이 따로 보정되면 접지선에서 색이 갈린다
+  const norm = await sharp(src)
+    .extract({ left, top: 0, width, height: H0 })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const ch = norm.info.channels
+  const data = norm.data
+  const refMean = await refChannelMean(theme.code)
+  const gains = refMean ? anchorPalette(data, ch, refMean, channelMean(data, ch)) : [1, 1, 1]
+
+  const wallRaw = sliceRows(data, width, ch, 0, wallH)
+  const floorRaw = sliceRows(data, width, ch, hzRow, floorH)
+  const footBefore = floorFootroom(floorRaw, width, floorH, ch)
+  const lift = liftFloorFoot(floorRaw, width, floorH, ch, footBefore)
+  const footroom = { ...floorFootroom(floorRaw, width, floorH, ch), before: footBefore, lift: lift.applied }
+
+  // ④ 렌디션 — 고해상(원판 폭, 상한 5600) + 표준(2048). 예산은 **네 장 합**이다.
+  const hiW = Math.min(width, V3_HI_MAX_W)
+  const sdW = Math.min(V3_SD_W, hiW)
+  const rawImg = (buf, h) => sharp(buf, { raw: { width, height: h, channels: ch } })
+  const enc = async (buf, h, outW, quality) => {
+    const img = rawImg(buf, h)
+    if (outW !== width) img.resize(outW, null, { kernel: 'lanczos3' })
+    return img.webp({ quality }).toBuffer()
+  }
+  const wallSd = await enc(wallRaw, wallH, sdW, V3_SD_QUALITY)
+  const floorSd = await enc(floorRaw, floorH, sdW, V3_SD_QUALITY)
+  let chosen = null
+  for (const quality of V3_QUALITY_LADDER) {
+    const wall = await enc(wallRaw, wallH, hiW, quality)
+    const floor = await enc(floorRaw, floorH, hiW, quality)
+    chosen = { quality, wall, floor, total: wall.length + floor.length + wallSd.length + floorSd.length }
+    if (chosen.total <= V3_TARGET_BYTES) break
+    console.log(`  · q${quality} → 합 ${(chosen.total / 1024).toFixed(0)}KB (목표 초과, q 하향)`)
+  }
+  if (chosen.total > V3_BUDGET_BYTES) {
+    throw new Error(`용량 게이트 실패 — 사다리 끝(q${chosen.quality})에서도 합 ${(chosen.total / 1024).toFixed(0)}KB`)
+  }
+
+  await mkdir(outDir, { recursive: true })
+  // 파일명은 «라운드 폴더 규약»(wall/floor.webp)을 지킨다 — --qa-only·--against 가 그 이름을 찾는다.
+  // 배포 시 대응: wall.webp → /shrine/stage/{code}/room-wall-mural-v3.webp, wall-sd → …-v3-sd.webp
+  const files = {
+    wall: path.join(outDir, 'wall.webp'),
+    floor: path.join(outDir, 'floor.webp'),
+    wallSd: path.join(outDir, 'wall-sd.webp'),
+    floorSd: path.join(outDir, 'floor-sd.webp'),
+  }
+  await writeFile(files.wall, chosen.wall)
+  await writeFile(files.floor, chosen.floor)
+  await writeFile(files.wallSd, wallSd)
+  await writeFile(files.floorSd, floorSd)
+
+  const wallAR = hiW / Math.round((wallH * hiW) / width)
+  const floorAR = hiW / Math.round((floorH * hiW) / width)
+  /** 폭 맞춤에서의 렌더 배율 — 저장 폭이 세계 폭(3.2화면)을 어떻게 감당하는가 */
+  const renderScale = (C.roomW * WORLD_SCREENS) / hiW
+  const measure = async (buf) => {
+    const dec = await sharp(buf).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+    const stats = interiorStats(dec.data, dec.info.width, dec.info.height, dec.info.channels)
+    const rs = await sharp(buf)
+      .resize(Math.max(2, Math.round(dec.info.width * renderScale)), null, { kernel: 'lanczos3' })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+    const rstats = interiorStats(rs.data, rs.info.width, rs.info.height, rs.info.channels)
+    const step = toneStep(rs.data, rs.info.width, rs.info.height, rs.info.channels, Math.round(VIEW_W * 0.25))
+    return { stats, render: { stats: rstats }, step, seams: [], pass: true }
+  }
+
+  /** 기기별 «필요 픽셀 대비 저장 픽셀» — 1 미만이면 업스케일(=② 화질 저하)이 남아 있다는 뜻 */
+  const coverage = DEVICE_STAGES.map((s) => ({
+    name: s.name,
+    need: Math.round(s.worldW * s.dpr),
+    ratio: hiW / (s.worldW * s.dpr),
+    wallBandAR: s.wallBandAR,
+    floorBandAR: s.floorBandAR,
+    /**
+     * 폭 맞춤 성립 여부 — **벽만** 본다(위 V3_FLOOR_AR_MAX 주석). 벽이 잘리면 ③ 확대가 그대로
+     * 돌아오지만, 바닥은 잘려도 «무늬 없는 평면이 조금 커 보이는» 정도라 현행 라이브가 이미
+     * 27% 씩 잘고 있는 값이다. 바닥 쪽은 게이트가 아니라 **숫자로 보고**한다.
+     */
+    widthFit: wallAR <= s.wallBandAR,
+    floorRenderCrop: Math.max(0, 1 - s.floorBandAR / floorAR),
+  }))
+
+  return {
+    code: theme.code,
+    v3: true,
+    oneshot: true,
+    quality: chosen.quality,
+    files,
+    bytes: {
+      wall: chosen.wall.length,
+      floor: chosen.floor.length,
+      wallSd: wallSd.length,
+      floorSd: floorSd.length,
+      total: chosen.total,
+    },
+    withinBudget: chosen.total <= V3_BUDGET_BYTES,
+    horizon,
+    footroom,
+    gains,
+    seamsX: [],
+    source: { w: W0, h: H0, ratio: W0 / H0, left, width, widthCrop, hzRow, bleed },
+    export: { hiW, sdW, wallH, floorH, wallAR, floorAR, renderScale },
+    coverage,
+    wall: await measure(chosen.wall),
+    floor: await measure(chosen.floor),
+  }
+}
+
 async function buildScene(theme, round, outDir) {
   const files = SHOT_KEYS.map((k) => shotPath(theme.code, round, k))
   const missing = files.filter((f) => !existsSync(f))
@@ -1327,15 +1815,12 @@ async function buildScene(theme, round, outDir) {
  *   · 구조물 w 는 «뷰포트 폭 대비 %»(widthScale 이 세계 폭 확대를 되돌린다) → 픽셀은 뷰포트 폭에 곱한다.
  *   · 아이템은 px 단위(font-size) — 세계 폭과 무관하다.
  * 뷰포트 폭 = 방 실측 폭(520)을 그대로 쓴다. 그래야 «사람이 보는 크기»에서 판정하게 된다.
+ * ⚠️ 규격 v3: 뷰포트는 이제 **인자**다(기기 시뮬이 실폰 픽셀로 같은 그림을 굽는다).
+ *    % 환산기는 buildWideComposite 안의 지역 함수로 내려갔고, 여기 상수는 기본값 노릇만 한다.
  */
 const VIEW_W = C.roomW
 const VIEW_H = C.roomH
 const WORLD_PX = Math.round(VIEW_W * WORLD_SCREENS)
-
-const pxX = (worldPct) => (WORLD_PX * worldPct) / 100
-const pxY = (roomPct) => (VIEW_H * roomPct) / 100
-/** 뷰포트 폭 기준 % → px (구조물 w 규약) */
-const pxVW = (viewPct) => (VIEW_W * viewPct) / 100
 
 /** 캔버스 밖으로 나가는 레이어를 잘라 넣는다 — sharp 는 음수 left/top 을 받지 않는다 */
 async function clipLayer(buf, left, top, W, H, blend) {
@@ -1423,14 +1908,14 @@ function lightOverlaySvg(w, h, light) {
   )
 }
 
-/** 제단 광원 — 타원 + blur(7px) */
-async function altarGlowBuf(color) {
-  const w = Math.round(pxVW(C.glowWPct))
-  const h = Math.round(pxY(C.glowHPct))
-  const pad = 24
+/** 제단 광원 — 타원 + blur(7px). px 로 못박힌 pad·blur 만 기기 배율 k 를 탄다. */
+async function altarGlowBuf(color, toVW, toY, k = 1) {
+  const w = Math.round(toVW(C.glowWPct))
+  const h = Math.round(toY(C.glowHPct))
+  const pad = Math.round(24 * k)
   const svg = `<svg width="${w + pad * 2}" height="${h + pad * 2}" xmlns="http://www.w3.org/2000/svg">
     <ellipse cx="${w / 2 + pad}" cy="${h / 2 + pad}" rx="${w / 2}" ry="${h / 2}" fill="${color}"/></svg>`
-  return { buf: await sharp(Buffer.from(svg)).blur(3.5).png().toBuffer(), pad, w, h }
+  return { buf: await sharp(Buffer.from(svg)).blur(Math.max(0.3, 3.5 * k)).png().toBuffer(), pad, w, h }
 }
 
 /** 방문 가족 — 선반장 좌수만큼. 아바타는 실제 정령 초상(라이브와 같은 자산). */
@@ -1450,17 +1935,36 @@ const OFFERINGS = ['offering-rice.webp', 'incense-burner.webp', 'candle-pair.web
  * 전폭 합성판(조명 오버레이 없음) 한 장을 RGBA png 버퍼로 만든다.
  * 이 한 장에서 크롭을 떠야 «크롭마다 살림이 미세하게 달라지는» 사고가 구조적으로 없다.
  */
-async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light }) {
-  const W = WORLD_PX
-  const H = VIEW_H
+async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light, viewW = VIEW_W, viewH = VIEW_H, k = 1 }) {
+  /**
+   * ⚠️ 좌표는 전부 «비율»이라 뷰포트만 갈아 끼우면 그대로 성립한다. 다만 **CSS px 로 못박힌 값**
+   * (아이템 크기·이름패·그림자 반경)은 비율이 아니므로 기기 배율 k 를 곱해 줘야 실기기와 같은 그림이
+   * 된다. k=1(기본)이면 곱셈이 항등이라 종전 합성판은 한 픽셀도 달라지지 않는다.
+   */
+  const W = Math.round(viewW * WORLD_SCREENS)
+  const H = Math.round(viewH)
+  const pxX = (worldPct) => (W * worldPct) / 100
+  const pxY = (roomPct) => (H * roomPct) / 100
+  const pxVW = (viewPct) => (viewW * viewPct) / 100
   const wallH = Math.round(H * BAND_WALL)
   const floorH = Math.round(H * BAND_FLOOR)
   const layers = []
 
-  // ① 벽·바닥 밴드 (object-cover)
-  layers.push({ input: await sharp(wallFile).resize(W, wallH, { fit: 'cover' }).png().toBuffer(), left: 0, top: 0 })
+  /**
+   * ① 벽·바닥 밴드 — **렌더 v3 의 거울**(StageLayers: object-cover + object-position bottom/top).
+   *   sharp 의 fit:'cover' + position 은 CSS 와 같은 규칙이다: 모자란 축을 채우고 남는 축을 버리되,
+   *   버리는 방향을 gravity 가 정한다. 저장 AR 이 밴드보다 «작으면» 폭이 맞고 세로가 잘리며(v3),
+   *   «크면» 세로가 맞고 가로가 잘린다(구 규격) — 한 줄로 두 세대를 다 그린다.
+   *   position:'bottom'/'top' 은 세로 크롭에서만 뜻이 있고 가로 크롭은 가운데라, 구 규격 자산은
+   *   종전 합성판과 **바이트 동일**하다.
+   */
   layers.push({
-    input: await sharp(floorFile).resize(W, floorH, { fit: 'cover' }).png().toBuffer(),
+    input: await sharp(wallFile).resize(W, wallH, { fit: 'cover', position: 'bottom' }).png().toBuffer(),
+    left: 0,
+    top: 0,
+  })
+  layers.push({
+    input: await sharp(floorFile).resize(W, floorH, { fit: 'cover', position: 'top' }).png().toBuffer(),
     left: 0,
     top: H - floorH,
   })
@@ -1476,7 +1980,7 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
   })
 
   // ③ 제단 광원
-  const glow = await altarGlowBuf(light.glow)
+  const glow = await altarGlowBuf(light.glow, pxVW, pxY, k)
   layers.push({
     input: glow.buf,
     left: Math.round(W / 2 - glow.w / 2 - glow.pad),
@@ -1492,8 +1996,8 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
     const buf = await sharp(file).resize({ width: sw, fit: 'inside' }).png().toBuffer()
     const meta = await sharp(buf).metadata()
     await pushSprite(layers, buf, pxX(s.x) - meta.width / 2, pxY(s.y) - meta.height / 2, W, H, {
-      dy: 4,
-      blur: 8,
+      dy: 4 * k,
+      blur: 8 * k,
       alpha: 0.45,
     })
   }
@@ -1505,8 +2009,8 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
     const buf = await sharp(deityFile).resize({ height: standH, fit: 'inside' }).png().toBuffer()
     const meta = await sharp(buf).metadata()
     await pushSprite(layers, buf, W / 2 - meta.width / 2, standBottom - meta.height, W, H, {
-      dy: 5,
-      blur: 9,
+      dy: 5 * k,
+      blur: 9 * k,
       alpha: 0.5,
     })
   }
@@ -1519,7 +2023,7 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
   for (let i = 0; i < seats; i += 1) {
     const cx = pxX(C.fshelfX[i])
     const buf = await sharp(shelfFile).resize(unitW, unitH, { fit: 'fill' }).png().toBuffer()
-    await pushSprite(layers, buf, cx - unitW / 2, unitTop, W, H, { dy: 5, blur: 6, alpha: 0.45 })
+    await pushSprite(layers, buf, cx - unitW / 2, unitTop, W, H, { dy: 5 * k, blur: 6 * k, alpha: 0.45 })
 
     // 가족 자리(정령 초상) — width 46% · translate(-50%,-58%) · 골드 테
     const av = Math.round(unitW * 0.46)
@@ -1527,8 +2031,8 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
     const avFile = path.join(PUB, AVATARS[i % AVATARS.length].replace(/^\//, ''))
     const ring = Buffer.from(
       `<svg width="${av}" height="${av}" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="${av / 2}" cy="${av / 2}" r="${av / 2 - 1}" fill="rgba(201,168,76,0.27)"
-          stroke="rgba(201,168,76,0.5)" stroke-width="1.5"/></svg>`
+        <circle cx="${av / 2}" cy="${av / 2}" r="${av / 2 - k}" fill="rgba(201,168,76,0.27)"
+          stroke="rgba(201,168,76,0.5)" stroke-width="${1.5 * k}"/></svg>`
     )
     if (existsSync(avFile)) {
       const face = await sharp(avFile).resize(av, av, { fit: 'cover', position: 'top' }).png().toBuffer()
@@ -1547,13 +2051,13 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
     if (l2) layers.push(l2)
 
     // 이름패 — 어두운 칩(글자는 굽지 않는다: 폰트 유무로 QA 가 흔들리지 않게)
-    const chipW = 36
-    const chipH = 15
+    const chipW = Math.round(36 * k)
+    const chipH = Math.round(15 * k)
     const chipTop = unitTop + C.fshelfFamilyTier * unitH + chipH * 0.46
     const chip = Buffer.from(
       `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
-        <rect x="0.5" y="0.5" width="${chipW - 1}" height="${chipH - 1}" rx="5"
-          fill="rgba(20,14,8,0.78)" stroke="rgba(201,168,76,0.35)"/></svg>`
+        <rect x="${0.5 * k}" y="${0.5 * k}" width="${chipW - k}" height="${chipH - k}" rx="${5 * k}"
+          fill="rgba(20,14,8,0.78)" stroke="rgba(201,168,76,0.35)" stroke-width="${k}"/></svg>`
     )
     const l3 = await clipLayer(await sharp(chip).png().toBuffer(), cx - chipW / 2, chipTop, W, H)
     if (l3) layers.push(l3)
@@ -1561,7 +2065,7 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
 
   // ⑦ 제물 — 제단 앵커(45/50/55 · y53.5) 위. altar 레이어는 depthScale 0.88 고정.
   const altar = GEO.structures.find((s) => Array.isArray(s.anchors) && s.anchors.length)
-  const base = C.assetEm * C.itemMdPx
+  const base = C.assetEm * C.itemMdPx * k
   const scaled = base * C.altarScale
   if (altar) {
     for (let i = 0; i < altar.anchors.length && i < OFFERINGS.length; i += 1) {
@@ -1573,7 +2077,7 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
       // translate(-50%,-50%) scale(s) · transform-origin 50% 100% → 밑변은 y+base/2 에 고정
       const left = pxX(a.x) - meta.width / 2
       const top = pxY(a.y) + base / 2 - meta.height
-      await pushSprite(layers, buf, left, top, W, H, { dy: 3, blur: 3, alpha: 0.55 })
+      await pushSprite(layers, buf, left, top, W, H, { dy: 3 * k, blur: 3 * k, alpha: 0.55 })
     }
   }
 
@@ -1583,7 +2087,7 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
   const hallTop = pxY(C.hallTop)
   const hallCx = pxX(C.hallX)
   const hallBody = await sharp(shelfFile).resize(hallW, hallH, { fit: 'fill' }).png().toBuffer()
-  await pushSprite(layers, hallBody, hallCx - hallW / 2, hallTop, W, H, { dy: 5, blur: 6, alpha: 0.45 })
+  await pushSprite(layers, hallBody, hallCx - hallW / 2, hallTop, W, H, { dy: 5 * k, blur: 6 * k, alpha: 0.45 })
   const plaqueFile = path.join(PUB, 'shrine', 'ritual', 'plaque.webp')
   if (existsSync(plaqueFile)) {
     const pw = Math.round((hallW * C.plaqueWPct) / 100)
@@ -1591,8 +2095,8 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
     for (const cy of C.plaqueCy) {
       const buf = await sharp(plaqueFile).resize(pw, ph, { fit: 'fill' }).png().toBuffer()
       await pushSprite(layers, buf, hallCx - pw / 2, hallTop + cy * hallH - ph / 2, W, H, {
-        dy: 3,
-        blur: 4,
+        dy: 3 * k,
+        blur: 4 * k,
         alpha: 0.5,
       })
     }
@@ -1606,12 +2110,12 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
 }
 
 /** 1화면 크롭 + 조명 오버레이(soft-light) — 사람이 실제로 보는 한 장 */
-async function viewCrop(widePng, leftPx, light) {
+async function viewCrop(widePng, leftPx, light, w = VIEW_W, h = VIEW_H) {
   const cropped = await sharp(widePng)
-    .extract({ left: Math.round(leftPx), top: 0, width: VIEW_W, height: VIEW_H })
+    .extract({ left: Math.round(leftPx), top: 0, width: Math.round(w), height: Math.round(h) })
     .png()
     .toBuffer()
-  const overlay = await sharp(lightOverlaySvg(VIEW_W, VIEW_H, light))
+  const overlay = await sharp(lightOverlaySvg(Math.round(w), Math.round(h), light))
     .png()
     .toBuffer()
   return sharp(cropped)
@@ -1620,8 +2124,34 @@ async function viewCrop(widePng, leftPx, light) {
     .toBuffer()
 }
 
+/**
+ * ★ 기기 시뮬 컷 ★ — 「확대·크롭이 사라졌는가」를 **눈으로** 증명하는 판(CEO 3차 ②③).
+ *
+ * 합성판(520 CSS px)은 조화를 보는 판이라 해상도 질문에 답하지 못한다 — 기준 뷰포트에서는
+ * 구 규격도 딱 맞기 때문이다(그게 진단의 핵심이었다). 그래서 실기기 픽셀 그대로 굽는다:
+ *   · 방 폭 = min(520, 기기폭 − px-1 여백) · 방 높이 = min(72vh, 620) · 세계 = 3.2화면 · DPR 3
+ *   · 자산은 실제 뮤럴, 렌더는 실제 규약(cover + bottom/top), 살림은 실좌표
+ * 왼쪽 = 현행 라이브 자산, 오른쪽 = 후보. 같은 렌더러로 굽는 것이 공정하다 —
+ * 구 규격 자산은 어차피 AR 이 커서 «세로 맞춤 + 가로 크롭»으로 떨어지므로 지금 화면 그대로다.
+ */
+async function makeDeviceShot({ wallFile, floorFile, seats, deityFile, light, stage }) {
+  const viewW = stage.vw * stage.dpr
+  const viewH = stage.vh * stage.dpr
+  const { png, W } = await buildWideComposite({
+    wallFile,
+    floorFile,
+    seats,
+    deityFile,
+    light,
+    viewW,
+    viewH,
+    k: stage.dpr,
+  })
+  return viewCrop(png, Math.round((W - viewW) / 2), light, Math.round(viewW), Math.round(viewH))
+}
+
 /** 두 장을 좌우로 붙여 «현행 vs 후보» 한 장 */
-async function sideBySide(aBuf, bBuf, gap = 12) {
+async function sideBySide(aBuf, bBuf, gap = 12, quality = 90) {
   const a = await sharp(aBuf).metadata()
   const b = await sharp(bBuf).metadata()
   const W = a.width + gap + b.width
@@ -1638,7 +2168,7 @@ async function sideBySide(aBuf, bBuf, gap = 12) {
         top: 0,
       },
     ])
-    .webp({ quality: 90 })
+    .webp({ quality })
     .toBuffer()
 }
 
@@ -1675,8 +2205,8 @@ async function makeQaSet({ code, tag, wallFile, floorFile, seats, deityFile, lig
 
 // ──────────────────────────── main ────────────────────────────
 const args = process.argv.slice(2)
-const VALUE_FLAGS = ['--round', '--from', '--regen', '--seats', '--deity', '--against']
-const BOOL_FLAGS = ['--plan', '--assemble-only', '--qa-only', '--live', '--no-live', '--three-shot']
+const VALUE_FLAGS = ['--round', '--from', '--regen', '--seats', '--deity', '--against', '--horizon']
+const BOOL_FLAGS = ['--plan', '--assemble-only', '--qa-only', '--live', '--no-live', '--three-shot', '--spec-v2', '--no-device']
 
 function flagValue(name, fallback) {
   const i = args.indexOf(name)
@@ -1698,12 +2228,21 @@ const skipLive = args.includes('--no-live')
  * 지우지 않고 남긴다(원복 레버). 두 경로가 같은 라운드 폴더를 쓰되 파일명이 달라 섞이지 않는다.
  */
 const threeShot = args.includes('--three-shot')
+/** 기기 시뮬 컷(무거운 판)을 생략 — 프롬프트만 다듬는 라운드에서 시간을 아끼는 레버 */
+const skipDevice = args.includes('--no-device')
 /** 대비판 기준 — 기본은 현행 라이브. `--against r2` 면 r2 뮤럴로 한 벌 더 구워 나란히 붙인다. */
 const against = flagValue('--against', 'live')
 const round = Number(flagValue('--round', '1'))
 const from = flagValue('--from', null)
 const seats = Number(flagValue('--seats', '3'))
 const deitySlug = flagValue('--deity', 'sansin')
+/** 수평선 수동 지정(%) — 확인판을 보고 자동 검출이 빗나갔을 때 사람이 준다 */
+const horizonArg = flagValue('--horizon', null)
+const manualHorizon = horizonArg === null ? undefined : Number(horizonArg)
+if (manualHorizon !== undefined && !(manualHorizon > 20 && manualHorizon < 95)) {
+  console.error('--horizon 은 20~95 사이 % 값')
+  process.exit(1)
+}
 const regenArg = flagValue('--regen', '')
 const regen = new Set(
   regenArg === 'all'
@@ -1730,9 +2269,12 @@ if (!only) {
   console.error('가능한 code:', THEMES.map((t) => t.code).join(', '))
   process.exit(1)
 }
-const targets = only === 'all' ? THEMES : THEMES.filter((t) => t.code === only)
-if (!targets.length) {
-  console.error('unknown theme code:', only, '— 가능:', THEMES.map((t) => t.code).join(', '))
+/** `all` 또는 쉼표 목록(`banga,daljip,seolbit`) — 시범 세트를 한 번에 돌린다 */
+const wanted = only === 'all' ? THEMES.map((t) => t.code) : only.split(',').map((s) => s.trim())
+const targets = THEMES.filter((t) => wanted.includes(t.code))
+if (targets.length !== wanted.length) {
+  const miss = wanted.filter((w) => !THEMES.some((t) => t.code === w))
+  console.error('unknown theme code:', miss.join(','), '— 가능:', THEMES.map((t) => t.code).join(', '))
   process.exit(1)
 }
 const badRegen = [...regen].filter((k) => !SHOT_KEYS.includes(k))
@@ -1766,14 +2308,21 @@ const lightFor = (code) =>
     glow: 'rgba(201,168,76,0.2)',
   }
 
-const geoLine =
-  `기하: 파노라마 ${PANO_W}×${PANO_H} (${WORLD_SCREENS}화면 × 방비율 ${C.roomW}/${C.roomH} = ${(PANO_W / PANO_H).toFixed(3)}:1) · ` +
-  (threeShot
-    ? `샷 ${SHOT.shotW}×${PANO_H} ×3, 겹침 ${SHOT.ov}px(${(OVERLAP_FRAC * 100).toFixed(0)}%) ×2, 크롭 ${SHOT.crop}px\n`
-    : `캡처 **원샷 통짜** ${WIDE_ASPECT} → 세로 크롭으로 규격 맞춤 (이을 자리 없음)\n`) +
-  `밴드: 벽 ${PANO_W}×${WALL_H} · 바닥 ${PANO_W}×${FLOOR_H} · 겹침 ${WALL_H - FLOOR_TOP}px · 렌더 스케일 ${RENDER_SCALE.toFixed(3)}\n` +
-  `합성판: 세계 ${WORLD_PX}×${VIEW_H} · 1화면 ${VIEW_W}×${VIEW_H} · 선반장 x[${C.fshelfX.slice(0, seats).join(',')}] w${C.fshelfW} · ` +
-  `의식각 x${C.hallX} · 신위 접지 y${C.podiumTopY}`
+const geoLine = SPEC_V2
+  ? `기하: 파노라마 ${PANO_W}×${PANO_H} (${WORLD_SCREENS}화면 × 방비율 ${C.roomW}/${C.roomH} = ${(PANO_W / PANO_H).toFixed(3)}:1) · ` +
+    (threeShot
+      ? `샷 ${SHOT.shotW}×${PANO_H} ×3, 겹침 ${SHOT.ov}px(${(OVERLAP_FRAC * 100).toFixed(0)}%) ×2, 크롭 ${SHOT.crop}px\n`
+      : `캡처 **원샷 통짜** ${WIDE_ASPECT} → 세로 크롭으로 규격 맞춤 (이을 자리 없음)\n`) +
+    `밴드: 벽 ${PANO_W}×${WALL_H} · 바닥 ${PANO_W}×${FLOOR_H} · 겹침 ${WALL_H - FLOOR_TOP}px · 렌더 스케일 ${RENDER_SCALE.toFixed(3)}\n` +
+    `합성판: 세계 ${WORLD_PX}×${VIEW_H} · 1화면 ${VIEW_W}×${VIEW_H} · 선반장 x[${C.fshelfX.slice(0, seats).join(',')}] w${C.fshelfW} · ` +
+    `의식각 x${C.hallX} · 신위 접지 y${C.podiumTopY}`
+  : `기하 **규격 v3(폭 맞춤)**: 캡처 원샷 통짜 ${WIDE_ASPECT} ${WIDE_SIZE} → 수평선에서 둘로 나눔 ` +
+    `(벽 AR ≤${V3_WALL_AR_MAX} · 바닥 AR ≤${V3_FLOOR_AR_MAX} · 벽 아래 물림 ${(V3_WALL_BLEED * 100).toFixed(0)}%)\n` +
+    `렌디션: 고해상 ≤${V3_HI_MAX_W}px + 표준 ${V3_SD_W}px(q${V3_SD_QUALITY}) · 예산 합 ${(V3_BUDGET_BYTES / 1024 / 1024).toFixed(1)}MB\n` +
+    `실기기 밴드 AR: ${[REF_STAGE, ...DEVICE_STAGES].map((s) => `${s.name} 벽 ${s.wallBandAR.toFixed(2)}/바닥 ${s.floorBandAR.toFixed(2)}`).join(' · ')}\n` +
+    `  ↳ 최솟값 벽 ${MIN_WALL_BAND_AR.toFixed(2)} · 바닥 ${MIN_FLOOR_BAND_AR.toFixed(2)} (수출 상한은 이보다 작아야 가로 크롭 0)\n` +
+    `합성판: 세계 ${WORLD_PX}×${VIEW_H} · 1화면 ${VIEW_W}×${VIEW_H} · 선반장 x[${C.fshelfX.slice(0, seats).join(',')}] w${C.fshelfW} · ` +
+    `의식각 x${C.hallX} · 신위 접지 y${C.podiumTopY}`
 
 if (planOnly) {
   console.log(geoLine)
@@ -1802,15 +2351,24 @@ if (apiBudget > 0 && !KEY) {
 }
 
 console.log(
-  `모델: ${MODEL}\n산출: ${showPath(PILOT_ROOT)}/{code}/  (public 무접촉)\n${geoLine}\n` +
+  `모델: ${MODEL}\n산출: ${showPath(PILOT_ROOT)}/{code}${SPEC_V2 ? '' : '-v3'}/  (public 무접촉)\n${geoLine}\n` +
     `라운드 r${round}${from ? ` (r${from} 승계)` : ''} · 재생성 [${[...regen].join(',') || '없음(누락분만)'}] · ` +
     `가족 ${seats}좌 · 신위 ${deitySlug} · API 예산 ${apiBudget}회\n`
 )
 
 const fmt = (v) => v.toFixed(2)
-/** 수평선 이탈 판정 — 계약 60% 에서 3%p 밖. 밴드 슬라이스가 그림을 엉뚱한 데서 자른다는 뜻이다. */
+/**
+ * 수평선 이탈 판정.
+ *  v2: 계약 60% 에서 3%p 밖 — 62/40 고정 슬라이스가 그림을 엉뚱한 데서 자른다는 뜻이다.
+ *  v3: **창(55~75%)** 으로 완화 — 자르는 자리가 수평선에서 파생되므로 «몇 %인가»는 더 이상
+ *      절단 오류가 아니라 **AR 여유**의 문제다. 창을 벗어나면 폭을 깎게 되고 그때 화각이 좁아진다.
+ */
 const HORIZON_TOL_PCT = 3
-const horizonOff = (h) => h.pct === null || Math.abs(h.pct - 60) > HORIZON_TOL_PCT
+const horizonOff = (h) =>
+  h.pct === null ||
+  (SPEC_V2
+    ? Math.abs(h.pct - 60) > HORIZON_TOL_PCT
+    : h.pct < V3_HORIZON_WINDOW[0] || h.pct > V3_HORIZON_WINDOW[1])
 const report = []
 
 for (const theme of targets) {
@@ -1877,11 +2435,41 @@ for (const theme of targets) {
     }
 
     // ③ 조립·슬라이스 (API 0회)
-    console.log(threeShot ? '── 파노라마 조립·슬라이스 (API 0회) ──' : '── 통짜 규격 맞춤·슬라이스 (API 0회) ──')
+    console.log(
+      threeShot
+        ? '── 파노라마 조립·슬라이스 (API 0회) ──'
+        : SPEC_V2
+          ? '── 통짜 규격 맞춤·슬라이스 (API 0회) ──'
+          : '── 규격 v3 수평선 분할·2렌디션 수출 (API 0회) ──'
+    )
     const r = threeShot
       ? await buildScene(theme, round, roundDir(theme.code, round))
-      : await buildRoomScene(theme, round, roundDir(theme.code, round))
+      : SPEC_V2
+        ? await buildRoomScene(theme, round, roundDir(theme.code, round))
+        : await buildRoomSceneV3(theme, round, roundDir(theme.code, round), manualHorizon)
     entry.scene = r
+    if (r.v3) {
+      const e = r.export
+      const s = r.source
+      const badFit = r.coverage.filter((c) => !c.widthFit).map((c) => c.name)
+      console.log(
+        `  ${r.withinBudget ? '✔' : '⚠️'} 벽 ${(r.bytes.wall / 1024).toFixed(0)}KB + 바닥 ${(r.bytes.floor / 1024).toFixed(0)}KB` +
+          ` + 표준 ${((r.bytes.wallSd + r.bytes.floorSd) / 1024).toFixed(0)}KB = ${(r.bytes.total / 1024).toFixed(0)}KB ` +
+          `q${r.quality}/q${V3_SD_QUALITY} (예산 ${(V3_BUDGET_BYTES / 1024).toFixed(0)}KB ${r.withinBudget ? 'OK' : '⚠️ 초과'})\n` +
+          `      원판 ${s.w}×${s.h} (${s.ratio.toFixed(3)}:1) · 수평선 ${r.horizon.pct.toFixed(1)}% → 행 ${s.hzRow} ` +
+          `(허용 ${V3_HORIZON_WINDOW[0]}~${V3_HORIZON_WINDOW[1]}%${horizonOff(r.horizon) ? ' ⚠️ 이탈' : ' OK'})\n` +
+          `      수출 벽 ${e.hiW}×${Math.round((e.wallH * e.hiW) / s.width)} (AR ${e.wallAR.toFixed(2)} ≤${V3_WALL_AR_MAX}` +
+          `${e.wallAR <= V3_WALL_AR_MAX ? ' OK' : ' ⚠️'}) · 바닥 ${e.hiW}×${Math.round((e.floorH * e.hiW) / s.width)} ` +
+          `(AR ${e.floorAR.toFixed(2)} ≤${V3_FLOOR_AR_MAX}${e.floorAR <= V3_FLOOR_AR_MAX ? ' OK' : ' ⚠️'}) · ` +
+          `폭 크롭 ${(s.widthCrop * 100).toFixed(1)}%${s.widthCrop > V3_WIDTH_CROP_MAX ? ' ⚠️ 화각 좁아짐' : ''}\n` +
+          `      기기 커버리지(저장폭/DPR3 소요) ${r.coverage.map((c) => `${c.name} ×${c.ratio.toFixed(2)}`).join(' · ')}` +
+          `${badFit.length ? ` ⚠️ 폭맞춤 실패: ${badFit.join(',')}` : ' · 폭 맞춤 전 기기 성립'}\n` +
+          `      팔레트 게인 ${r.gains.map((g) => g.toFixed(3)).join('/')} · 발밑 밝기 ${r.footroom.before.top.toFixed(0)}` +
+          `→${r.footroom.top.toFixed(0)}(×${r.footroom.lift.toFixed(2)} 램프) / 앞바닥 ${r.footroom.bottom.toFixed(0)}` +
+          ` = ${r.footroom.ratio.toFixed(2)} ${r.footroom.pass ? 'OK' : `⚠️ 어둠`}\n` +
+          `      톤 계단 벽 ${fmt(r.wall.step.max)} · 바닥 ${fmt(r.floor.step.max)} (렌더 ×${e.renderScale.toFixed(3)})`
+      )
+    }
     const band = (label, m) =>
       `      ${label} ${
         m.seams.length ? `이음매 ${m.seams.map((s) => `x${s.at}:${fmt(s.diff)}`).join(' · ')}` : '이음매 없음(통짜)'
@@ -1890,7 +2478,8 @@ for (const theme of targets) {
       `${m.render.seams ? m.render.seams.map((s) => fmt(s.diff)).join(' · ') : '—'} / p95 ${fmt(m.render.stats.p95)}` +
       ` · 톤 계단 ${fmt(m.step.max)}@x${m.step.at}`
     const ok = r.wall.pass && r.floor.pass && r.withinBudget
-    console.log(
+    if (!r.v3)
+      console.log(
       `  ${ok ? '✔' : '⚠️'} 벽 ${(r.bytes.wall / 1024).toFixed(0)}KB + 바닥 ${(r.bytes.floor / 1024).toFixed(0)}KB` +
         ` = ${(r.bytes.total / 1024).toFixed(0)}KB q${r.quality} (예산 ${(MURAL_BUDGET_BYTES / 1024).toFixed(0)}KB ` +
         `${r.withinBudget ? 'OK' : '⚠️ 초과'})\n` +
@@ -1953,6 +2542,41 @@ for (const theme of targets) {
         console.log(`  ✔ 대비 ${showPath(file)} (왼쪽 ${against} · 오른쪽 r${round})`)
       }
     }
+
+    /**
+     * ⑥ 기기 시뮬 (API 0회) — CEO 3차 ②③의 **증거판**.
+     * 실기기 픽셀(DPR3)에서 «현행 자산 | 후보»를 나란히 굽는다. 합성판(520px)에서는 구 규격도
+     * 딱 맞으므로 확대·화질 질문에 답할 수 없다 — 그게 이번 진단의 요점이었다.
+     */
+    if (!SPEC_V2 && !skipDevice) {
+      console.log('── 기기 시뮬 (API 0회 · DPR3) ──')
+      entry.device = {}
+      for (const stage of DEVICE_STAGES) {
+        const after = await makeDeviceShot({
+          wallFile: r.files.wall,
+          floorFile: r.files.floor,
+          seats,
+          deityFile,
+          light,
+          stage,
+        })
+        const hasLive = existsSync(liveWall) && existsSync(liveFloor)
+        const before = hasLive
+          ? await makeDeviceShot({ wallFile: liveWall, floorFile: liveFloor, seats, deityFile, light, stage })
+          : null
+        // 기기 판은 «해상도 증거»라 원래 픽셀을 지켜야 한다 — 다만 q82 로 눌러 자산 폴더가 붓지 않게
+        const buf = before
+          ? await sideBySide(before, after, 12, 82)
+          : await sharp(after).webp({ quality: 82 }).toBuffer()
+        const file = path.join(qaDir(theme.code), `r${round}-device-${stage.name}.webp`)
+        await writeFile(file, buf)
+        entry.device[stage.name] = file
+        console.log(
+          `  ✔ ${showPath(file)} — 방 ${stage.vw}×${Math.round(stage.vh)} CSS · 세계 ${Math.round(stage.worldW * stage.dpr)}px @DPR${stage.dpr}` +
+            `${before ? ' (왼쪽 현행 · 오른쪽 후보)' : ''}`
+        )
+      }
+    }
   } catch (e) {
     if (isAuthError(e)) {
       console.error('\n✖✖ API 키 인증 실패 — 즉시 중단합니다. 재시도하지 않음.')
@@ -1981,9 +2605,18 @@ for (const e of report) {
     !s.withinBudget && '용량',
     horizonOff(s.horizon) && '수평선',
     !s.footroom.pass && '발밑 어둠',
+    // v3 전용 게이트 — 폭 맞춤이 깨지면 ③(확대)이 그대로 돌아온다
+    s.v3 && s.export.wallAR > V3_WALL_AR_MAX && '벽 AR',
+    s.v3 && s.export.floorAR > V3_FLOOR_AR_MAX && '바닥 AR',
+    s.v3 && s.source.widthCrop > V3_WIDTH_CROP_MAX && '폭 크롭(화각)',
+    s.v3 && s.coverage.some((c) => !c.widthFit) && '벽 폭 맞춤 실패 기기',
   ].filter(Boolean)
   console.log(
     `  ${bad.length ? '⚠️' : '✔'} ${e.code.padEnd(11)} ${(s.bytes.total / 1024).toFixed(0)}KB q${s.quality}` +
+      (s.v3
+        ? ` · 벽 ${s.export.hiW}px AR ${s.export.wallAR.toFixed(2)} · 바닥 AR ${s.export.floorAR.toFixed(2)} · ` +
+          `DPR3 커버 ${Math.min(...s.coverage.map((c) => c.ratio)).toFixed(2)}~${Math.max(...s.coverage.map((c) => c.ratio)).toFixed(2)}`
+        : '') +
       `${bad.length ? ` — 게이트 미달: ${bad.join(', ')}` : ''}`
   )
 }

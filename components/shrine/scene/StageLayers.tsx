@@ -55,6 +55,45 @@ function hideOnError(e: SyntheticEvent<HTMLImageElement>) {
 }
 
 /**
+ * ★ 뮤럴 규격 v3 — 「폭 맞춤(width-fit) + 접지 고정」 ★ (PLAN-stage-harmony-v1 추기 3-2)
+ *
+ * 종전 `object-cover`(가운데)는 «세로를 맞추고 가로를 버리는» 동작이었다. 저장본은 기준 뷰포트
+ * (520×620)의 밴드 비율로 잘려 있는데(벽 4.33:1) 실기기 밴드는 3.15~3.51:1 이라, 실폰에서는
+ * 세로를 맞추는 순간 **가로가 20~25% 잘려 나가고**(= 배경이 확대돼 보인다) 그만큼 원판을 더
+ * 크게 늘려 쓰게 되어 화질까지 깎였다(DPR3 소요 폭 ≈3.4~4.1k px > 저장 폭 3435).
+ * CEO 3차 피드백 ②③ 은 이 한 줄에서 같이 나온 증상이다.
+ *
+ * v3 는 «가로를 맞추고 세로를 버린다» — 다만 새 레이아웃을 만들지 않고 **object-position 한 칸**만
+ * 바꾼다. `object-fit: cover` 는 «모자란 축을 채우는» 규칙이라 이미지 비가 밴드 비보다
+ *   · 작으면 (v3 수출: 벽 ≤3.0 · 바닥 ≤4.6) 폭을 맞추고 세로가 넘쳐 잘린다 → **가로 크롭 0**
+ *   · 크면 (구 규격 4.33 / 6.71)            세로를 맞추고 가로가 잘린다   → **지금까지의 렌더 그대로**
+ * 즉 새 동작은 «세로가 남는 자산»에만 걸리고 구 자산은 한 픽셀도 달라지지 않는다(전환기 회귀 0).
+ * 별도의 overflow 컨테이너를 세우지 않는 것도 의도다 — 잘라내기가 요소 상자 안에서 끝나므로
+ * 「둥근 클립 + overflow-hidden」이 고DPR 실기기에서 GPU 마스크로 터지던 경로를 건드리지 않는다.
+ *
+ * 버리는 방향은 **접지선이 움직이지 않게** 고정한다: 벽은 아래(수평선=마루선이 밴드 바닥에 붙고
+ * 여분의 헤드룸이 위로 잘림), 바닥은 위(수평선이 밴드 천장에 붙고 앞바닥이 아래로 잘림).
+ * 그래서 어느 기기에서도 벽·바닥이 만나는 선은 방 높이 60% 그 자리다.
+ */
+const MURAL_V3_SUFFIX = '-v3.webp'
+
+/**
+ * 렌디션 2종 — v3 뮤럴은 고해상(원판 폭)과 표준(2048px) 두 장으로 나간다.
+ * **`-v3.webp` 로 끝나는 URL 은 «`-v3-sd.webp` 형제가 있다»는 계약**이다. 파일명 자체를 신호로
+ * 삼아 DB 스키마도 렌더 props 도 늘리지 않고, 아직 구 규격이 남아 있는 테마에는 srcset 이
+ * 아예 붙지 않게 한다 — 없는 후보를 적으면 저DPR 기기가 404 를 받고 onError 로 **뮤럴이 통째로
+ * 사라진다**(전환기에 가장 비싼 사고).
+ *
+ * 기술자는 w 가 아니라 **x(DPR)** 로 적는다: 이 이미지의 레이아웃 폭은 언제나 «세계 폭 = 3.2화면»
+ * 이라 필요 픽셀이 DPR 하나로 결정되고, sizes 로 브라우저에 알려 줄 새 정보가 없다.
+ * (표준 2048px 는 DPR1 최대 소요 3.2×520=1664px 를 덮는다.)
+ */
+function muralSrcSet(url: string): string | undefined {
+  if (!url.endsWith(MURAL_V3_SUFFIX)) return undefined
+  return `${url.slice(0, -MURAL_V3_SUFFIX.length)}-v3-sd.webp 1x, ${url} 2x`
+}
+
+/**
  * 가로 타일 배경 — 원본 높이를 밴드에 맞추고(auto 100%) x 축으로만 반복한다.
  * <img> 가 아니라 background 라 onError 훅이 없지만, 404 면 아무것도 안 그려져
  * 구역 모드가 항상 깔아 두는 CSS 폴백색(--th-wall/--th-floor)이 그대로 드러난다.
@@ -89,6 +128,7 @@ function Wallpaper({ url, zoned, tile, eager }: { url: string; zoned: boolean; t
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
+      srcSet={muralSrcSet(url)}
       alt=""
       aria-hidden
       draggable={false}
@@ -97,7 +137,8 @@ function Wallpaper({ url, zoned, tile, eager }: { url: string; zoned: boolean; t
       // 벽 뮤럴만 우선순위를 올린다 — 첫 화면에서 가장 큰 면적이고, 바닥재까지 같이 올리면
       // 둘이 대역폭을 나눠 가져 정작 먼저 보여야 할 벽이 늦어진다
       fetchPriority={eager ? 'high' : undefined}
-      className={`absolute inset-x-0 top-0 h-[62%] w-full object-cover pointer-events-none select-none${
+      // object-bottom = 수평선(마루선)을 밴드 바닥에 붙인다 (v3 규약 — 위 주석)
+      className={`absolute inset-x-0 top-0 h-[62%] w-full object-cover object-bottom pointer-events-none select-none${
         zoned ? '' : ' rounded-t-[17px]'
       }`}
       onError={hideOnError}
@@ -122,12 +163,14 @@ function Flooring({ url, zoned, tile, eager }: { url: string; zoned: boolean; ti
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
+      srcSet={muralSrcSet(url)}
       alt=""
       aria-hidden
       draggable={false}
       decoding="async"
       loading={zoned && !eager ? 'lazy' : undefined}
-      className={`absolute inset-x-0 bottom-0 h-[40%] w-full object-cover pointer-events-none select-none${
+      // object-top = 수평선을 밴드 천장에 붙인다 — 벽의 object-bottom 과 한 쌍이라 접지선이 고정된다
+      className={`absolute inset-x-0 bottom-0 h-[40%] w-full object-cover object-top pointer-events-none select-none${
         zoned ? '' : ' rounded-b-[17px]'
       }`}
       onError={hideOnError}
