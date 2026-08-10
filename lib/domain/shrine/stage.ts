@@ -10,6 +10,9 @@
  */
 
 import { ZONES, ZONE_LABEL, clampPct, KEEPER_POS } from './zones'
+// 기하 JSON 은 theme-stage.ts 한 곳에서만 읽는다 — 여기서는 그 파생값만 받아 쓴다.
+// (theme-stage 가 이 파일에서 가져가는 것은 타입뿐이라 런타임 순환이 생기지 않는다.)
+import { GRAND_ALTAR_ITEM_SCALE, grandAltarHeadRoomY } from './theme-stage'
 import { isLayer, type CatalogItem, type Layer, type Placement, type SceneData, type ThemePack } from './types'
 // 타입만 참조한다(런타임 import 0) — fixture-offsets 도 이 파일의 타입만 보므로 순환이 생기지 않는다
 import type { FixtureOffsets } from './fixture-offsets'
@@ -71,9 +74,21 @@ const ALTAR_SCALE = 0.88
 /** 레이어별 기본 z (아이템 밴드 10~29 안의 상대값) */
 const Z_HANGING = 10
 const Z_WALL = 11
-const Z_ALTAR = 14
+/**
+ * 제단층 z 밴드 13~15 (**세 칸**).
+ *
+ * 종전엔 14 하나였다. 틀(壇) 무대가 앵커를 **깊이 2열**(뒤 y52.4 · 앞 y55)로 나누면서 같은 z 를
+ * 나눠 갖게 되었고, 그러면 앞뒤는 **DOM 순서**(배치를 만든 순서)로 정해진다 — 앞줄에 먼저 놓고
+ * 뒷줄을 나중에 놓으면 뒷줄이 앞을 덮는다. y 에서 파생시켜 그 우연을 없앤다.
+ *
+ * 밴드가 셋뿐인 것은 이웃(단상 위 floor 12 · 마루 floor 16)을 건드리지 않고 쓸 수 있는 칸이
+ * 그만큼이라서다. 경계는 존(48~58)을 삼등분한 51.33 / 54.67 이고, **v3 앵커 y53.5 는 가운데 칸에
+ * 그대로 떨어져 z 14 를 유지한다** — 13테마 라이브 배치의 그림 순서는 한 칸도 변하지 않는다.
+ */
+const Z_ALTAR_MIN = 13
+const Z_ALTAR_STEPS = 3
 const Z_FLOOR_MIN = 16
-/** 단상 위 floor 소품 — 제단(Z_ALTAR=14)보다 뒤. 부록 P-2 깊이 분기. */
+/** 단상 위 floor 소품 — 제단 밴드(13~15)보다 뒤. 부록 P-2 깊이 분기. */
 const Z_FLOOR_BEHIND_ALTAR = 12
 const Z_FLOOR_MAX = 28
 const Z_FLOOR_STEPS = Z_FLOOR_MAX - Z_FLOOR_MIN // 12
@@ -144,17 +159,21 @@ function numOr(v: unknown, fallback: number): number {
 
 /**
  * 원근 스케일 — floor 는 y(64~90)를 0.72~1.28 로 선형 매핑(뒤는 작게, 앞은 크게),
- * altar 는 0.88 고정, wall/hanging 은 1.0. 범위 밖 y 는 존 경계로 클램프.
+ * altar 는 고정, wall/hanging 은 1.0. 범위 밖 y 는 존 경계로 클램프.
+ *
+ * `grandAltar` 는 **틀(壇) 무대**(theme-stage.hasGrandAltar)에서만 참이다. 틀의 상판은 v3 단상보다
+ * 좁은데 앵커는 2열 5점이라, 0.88 그대로면 폰에서 이웃끼리 절반씩 겹친다 — 제단층만 0.49 로 내린다.
+ * 제단층 배율의 분기는 **이 한 줄이 전부다**. 렌더 쪽에서 따로 곱하지 말 것(두 벌이 되는 순간 갈라진다).
  */
-export function depthScale(layer: Layer, y: number): number {
-  if (layer === 'altar') return ALTAR_SCALE
+export function depthScale(layer: Layer, y: number, grandAltar = false): number {
+  if (layer === 'altar') return grandAltar ? GRAND_ALTAR_ITEM_SCALE : ALTAR_SCALE
   if (layer !== 'floor') return 1
   return round(FLOOR_SCALE_MIN + floorT(y) * (FLOOR_SCALE_MAX - FLOOR_SCALE_MIN), 4)
 }
 
 /**
  * 깊이 정렬(painter's algorithm) — 아이템 밴드 안의 상대 z(10~29).
- * hanging 10 · wall 11 · altar 14 · floor 16~28(앞일수록 크다 = 뒤 아이템을 가린다).
+ * hanging 10 · wall 11 · altar 13~15(앞줄이 뒷줄을 덮는다) · floor 16~28(앞일수록 크다).
  */
 export function depthZ(layer: Layer, y: number): number {
   switch (layer) {
@@ -162,8 +181,12 @@ export function depthZ(layer: Layer, y: number): number {
       return Z_HANGING
     case 'wall':
       return Z_WALL
-    case 'altar':
-      return Z_ALTAR
+    case 'altar': {
+      // 존을 세 칸으로 나눈 계단. NaN 은 clamp 규약대로 최소 칸(맨 뒤)으로 떨어진다.
+      const [a0, a1] = ZONES.altar.y
+      const step = Math.floor(((clamp(y, a0, a1) - a0) / (a1 - a0)) * Z_ALTAR_STEPS)
+      return Z_ALTAR_MIN + clamp(step, 0, Z_ALTAR_STEPS - 1)
+    }
     case 'floor':
       // 단상 위(y < 제단 존 하한 48 = 상판 뒤)는 제단(14)보다 뒤(12)에 그린다 — 부록 P-2.
       // 안 그러면 신위 곁에 세운 소품이 공물상을 덮는 깊이 역전이 생긴다. y≥48 은 기존 램프 그대로.
@@ -320,8 +343,22 @@ export const PODIUM_TOP_Y = 45.3
 /**
  * 신위 머리 위 여백 상한 y — 걸이(hanging) 존 상단과 같은 줄(8)보다 4%p 아래.
  * 종전 스탠드(bottom 50% · height 38%)의 상단이 정확히 이 값이라, 접지만 올리고 머리 여백은 보존한다.
+ *
+ * ⚠️ 틀(壇)을 든 테마는 이 값을 쓰지 않는다 — `deityHeadRoomY(themeCode)` 를 볼 것.
+ *    (스프라이트 파이프라인이 이 선언을 정규식으로 읽어 간다 — 이름·형태를 바꾸지 말 것)
  */
 export const DEITY_HEAD_ROOM_Y = 12
+
+/**
+ * 테마의 신위 머리 여백 y — **머리 여백 분기의 단일 출처**.
+ *
+ * 틀을 든 테마는 그 틀의 «감실 윗턱»(theme-stage-geometry.json grandAltar.deityHeadRoomY)이 답이다.
+ * 접지(PODIUM_TOP_Y 45.3)는 그대로이므로 머리만 내려오고, 신위는 감실 밖으로 삐져나오지 않고
+ * 그 안에 들어앉는다. 틀이 없는 13테마는 종전 여백(12) 그대로다 — 크기 변화 0.
+ */
+export function deityHeadRoomY(themeCode: string): number {
+  return grandAltarHeadRoomY(themeCode) ?? DEITY_HEAD_ROOM_Y
+}
 
 /** 신위 스탠드 박스 — CSS `bottom`/`height` 문자열과 접지 y(파티클·판정 공용). */
 export interface DeityStandBox {

@@ -26,6 +26,7 @@ import {
   nearestAnchor,
   DEFAULT_ANCHORS,
   PODIUM_TOP_Y,
+  deityHeadRoomY,
   SNAP_RADIUS_PX,
   type StageAnchor,
   type StageCatalogItem,
@@ -98,6 +99,7 @@ import {
   fshelfSlotAnchors,
   hasFamilyShelf,
 } from '@/lib/domain/shrine/family-shelf'
+import { hasGrandAltar } from '@/lib/domain/shrine/theme-stage'
 import { StageLayers } from './StageLayers'
 import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
 import { TimeTint } from './TimeTint'
@@ -843,6 +845,11 @@ export function ShrineRoomClient({
     const union = daecheongStage?.structures.flatMap((s) => s.anchors) ?? []
     return union.length > 0 ? union : DEFAULT_ANCHORS
   }, [daecheongStage])
+  /**
+   * 이 테마가 「틀(壇)」 무대인가 — 제단층 아이템 배율(0.88 → 0.49)의 **유일한 스위치**다.
+   * 배율 자체는 stage.depthScale 이 갖고 있다(여기서 곱하지 않는다 — 숫자가 두 벌이 되면 갈라진다).
+   */
+  const grandAltarStage = hasGrandAltar(activeCode)
   /**
    * 진열대(시렁·제상·소반·반닫이·문갑) 진열 칸 — **층 없는** 스냅 후보.
    * 끌리는 아이템의 층을 Sprite 쪽에서 입혀 합류시킨다(무엇이든 얹는 진열의 문법 —
@@ -1839,6 +1846,8 @@ export function ShrineRoomClient({
           idleGlow={GAMEFEEL_V1 && !editing}
           // 고정 살림 조절 — 단상 상면 정본에 이동량을 **가산**한다(정본 상수는 그대로다)
           podiumTopY={PODIUM_TOP_Y + deityDelta.dy}
+          // 머리 여백은 테마가 정한다 — 틀을 든 테마는 그 감실 윗턱, 나머지는 정본 상수(12)
+          headRoomY={deityHeadRoomY(activeCode)}
           offsetXPct={deityDelta.dx}
         />
       )}
@@ -1897,6 +1906,7 @@ export function ShrineRoomClient({
             onDragLayer={onDragLayer}
             surfaceAnchors={surfaceAnchors}
             zOverride={surfaceZById?.get(p.id)}
+            grandAltar={grandAltarStage}
           />
         )
       })}
@@ -2473,6 +2483,8 @@ interface SpriteProps {
   surfaceAnchors: ReadonlyArray<Omit<StageAnchor, 'layer'>>
   /** 진열대 위 z 끌어올림 — 없으면 depthZ 그대로 (깊이 역전 교정, 거리 판정) */
   zOverride?: number
+  /** 「틀(壇)」 무대인가 — depthScale 이 제단층 배율을 고르는 스위치(값은 도메인이 갖는다) */
+  grandAltar: boolean
 }
 
 /** 자유 배치 클램프 — 서버(FULL_RANGE)와 같은 계약. 존은 배치를 가두지 않는다(2026-08-07). */
@@ -2503,6 +2515,7 @@ function Sprite({
   onDragLayer,
   surfaceAnchors,
   zOverride,
+  grandAltar,
 }: SpriteProps) {
   const ref = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLSpanElement>(null)
@@ -2529,8 +2542,8 @@ function Sprite({
   const seatScale = placement.anchorId?.startsWith(FSHELF_ANCHOR_PREFIX) ? FSHELF_ITEM_SCALE : 1
   const transformFor = useCallback(
     (y: number) =>
-      `translate(-50%, -50%) scale(${(depthScale(item.layer, y) * seatScale).toFixed(3)})${placement.flip ? ' scaleX(-1)' : ''}`,
-    [item.layer, placement.flip, seatScale]
+      `translate(-50%, -50%) scale(${(depthScale(item.layer, y, grandAltar) * seatScale).toFixed(3)})${placement.flip ? ' scaleX(-1)' : ''}`,
+    [item.layer, placement.flip, seatScale, grandAltar]
   )
 
   const onPointerDown = useCallback(

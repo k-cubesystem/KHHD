@@ -70,6 +70,12 @@ export interface DeityTurnProps {
    * 접지·머리 여백·발밑 글로우가 **한 값에서** 함께 따라오는 계약은 그대로다.
    */
   podiumTopY?: number
+  /**
+   * 머리 여백 y(무대 %) — 머리가 서는 줄. 생략하면 정본 상수(stage.DEITY_HEAD_ROOM_Y).
+   * 틀(壇)을 든 테마는 룸이 `stage.deityHeadRoomY(themeCode)` 로 감실 윗턱을 넘긴다 —
+   * 접지는 그대로이므로 신위가 그만큼 작아져 감실 안에 들어앉는다.
+   */
+  headRoomY?: number
   /** 신위 무대 가로 이동량(무대 %). 0 이면 종전처럼 방 한가운데(left 50%)에 선다. */
   offsetXPct?: number
 }
@@ -161,6 +167,7 @@ export function DeityTurn({
   interactive,
   idleGlow,
   podiumTopY,
+  headRoomY,
   offsetXPct = 0,
 }: DeityTurnProps): JSX.Element {
   /**
@@ -194,10 +201,11 @@ export function DeityTurn({
   }, [spinning, framed, onSpinEnd])
 
   /**
-   * 세로 정합의 단일 출처 — 발이 **단상 상면**에 닿고 머리 여백은 보존된다(stage.PODIUM_TOP_Y).
-   * 룸에는 bottom/height 하드코딩이 남아 있지 않아, 시드가 상면 y 를 주면 도메인 상수 한 줄로 끝난다.
+   * 세로 정합의 단일 출처 — 발이 **단상 상면**에 닿고 머리는 머리 여백 줄에 선다
+   * (stage.PODIUM_TOP_Y · stage.deityHeadRoomY). 룸에는 bottom/height 하드코딩이 남아 있지 않아,
+   * 상면 y 와 머리 여백만 주면 크기·접지·발밑 글로우가 한꺼번에 따라온다.
    */
-  const stand = useMemo(() => deityStandBox(podiumTopY), [podiumTopY])
+  const stand = useMemo(() => deityStandBox(podiumTopY, headRoomY), [podiumTopY, headRoomY])
 
   const layers = useMemo(() => layersForTier(tier), [tier])
   const spinClass = spinning ? ` ${turnSpinClass(tier)}` : ''

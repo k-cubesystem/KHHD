@@ -4,6 +4,7 @@ import {
   DEITY_HEAD_ROOM_Y,
   PODIUM_TOP_Y,
   LIT_BOOST_MAX,
+  deityHeadRoomY,
   deityStandBox,
   depthScale,
   depthZ,
@@ -69,16 +70,56 @@ describe('depthScale — 원근 스케일', () => {
     }
   })
 
+  /**
+   * 틀(壇) 무대의 제단층만 0.49 다 — 틀 상판이 좁은데 앵커가 2열 5점이라 0.88 이면 폰에서 겹친다.
+   * 「분기는 이 함수 한 곳」이 계약이므로, 다른 층이 이 인자에 딸려 오면 안 된다.
+   */
+  it('grandAltar=true 는 altar 층만 0.54 로 바꾼다 — floor/wall/hanging 무영향', () => {
+    for (const y of [0, 42, 48, 54, 90, Number.NaN]) {
+      expect(depthScale('altar', y, true)).toBe(0.54)
+      expect(depthScale('wall', y, true)).toBe(depthScale('wall', y))
+      expect(depthScale('hanging', y, true)).toBe(depthScale('hanging', y))
+    }
+    for (let y = 60; y <= 95; y += 2.5) expect(depthScale('floor', y, true)).toBe(depthScale('floor', y))
+  })
+
+  it('세 번째 인자를 안 주면 종전 그대로다 — 13테마 회귀 0', () => {
+    for (const y of [0, 48, 53.5, 90]) expect(depthScale('altar', y)).toBe(depthScale('altar', y, false))
+  })
+
   it('결정론: 같은 입력 같은 결과', () => {
     expect(depthScale('floor', 71.3)).toBe(depthScale('floor', 71.3))
   })
 })
 
 describe('depthZ — 깊이 정렬', () => {
-  it('레이어 기본값: hanging 10 · wall 11 · altar 14', () => {
+  it('레이어 기본값: hanging 10 · wall 11 · altar 13~15', () => {
     expect(depthZ('hanging', 15)).toBe(10)
     expect(depthZ('wall', 30)).toBe(11)
-    expect(depthZ('altar', 48)).toBe(14)
+    expect(depthZ('altar', 48)).toBe(13)
+  })
+
+  /**
+   * ★ 제단층은 y 파생이다 (무대 기하 v4.1) ★
+   *
+   * 틀(壇) 무대의 앵커가 깊이 2열(뒤 52.4 · 앞 55)로 갈리면서 «앞줄이 뒷줄을 덮는가»가
+   * 배치를 만든 순서(DOM 순서)에 달리게 됐다. y 에서 z 를 뽑아 그 우연을 없앤다.
+   * 동시에 **v3 앵커 y53.5 는 z14 그대로**여야 한다 — 13테마 라이브 배치의 그림 순서 무변경 계약.
+   */
+  it('★ altar: 뒷줄(52.4) < 앞줄(55) · v3 앵커(53.5)는 14 불변', () => {
+    expect(depthZ('altar', 53.5)).toBe(14)
+    expect(depthZ('altar', 52.4)).toBe(14)
+    expect(depthZ('altar', 55)).toBe(15)
+    expect(depthZ('altar', 55)).toBeGreaterThan(depthZ('altar', 52.4))
+    // 존 경계·비유한 입력도 밴드 13~15 안에 머문다(맨 뒤로 클램프)
+    expect(depthZ('altar', 58)).toBe(15)
+    expect(depthZ('altar', 0)).toBe(13)
+    expect(depthZ('altar', Number.NaN)).toBe(13)
+    // 단상 뒤 floor(12)보다 앞, 마루 floor(16~)보다 뒤 — 이웃 밴드를 침범하지 않는다
+    for (let y = 40; y <= 66; y += 0.5) {
+      expect(depthZ('altar', y)).toBeGreaterThan(depthZ('floor', 44))
+      expect(depthZ('altar', y)).toBeLessThan(depthZ('floor', 64))
+    }
   })
 
   it('floor: 64→16 · 77→22 · 90→28', () => {
@@ -87,7 +128,7 @@ describe('depthZ — 깊이 정렬', () => {
     expect(depthZ('floor', 90)).toBe(28)
   })
 
-  it('floor: 단상 뒤(y<48)는 z12 — 제단(14)보다 뒤에 그린다 (부록 P-2 깊이 분기)', () => {
+  it('floor: 단상 뒤(y<48)는 z12 — 제단 밴드(13~15)보다 뒤에 그린다 (부록 P-2 깊이 분기)', () => {
     expect(depthZ('floor', 44)).toBe(12)
     expect(depthZ('floor', 47.9)).toBe(12)
     expect(depthZ('floor', 48)).toBe(16) // 경계 — 상판 앞부터는 기존 램프
@@ -578,5 +619,19 @@ describe('deityStandBox — 신위 접지 계약 (안2.3 ③ 제단·단상 정�
     expect(Number.parseFloat(deityStandBox(5, 40).height)).toBeGreaterThanOrEqual(1)
     expect(deityStandBox(Number.NaN).groundY).toBe(1)
     expect(deityStandBox(500).groundY).toBe(100)
+  })
+
+  /**
+   * 틀(壇) 무대는 머리 여백이 «감실 윗턱»이라 테마마다 다르다 — 접지는 그대로 두고 머리만 내려
+   * 신위가 감실 안에 들어앉는다. 어느 테마가 어떤 값인지는 theme-stage.test 가 지키고,
+   * 여기서는 **파생 규칙**(발 고정 · 작아짐 · 폴백)만 본다.
+   */
+  it('deityHeadRoomY — 틀 테마는 머리만 내려온다(발·접지 불변), 나머지는 정본 상수', () => {
+    expect(deityHeadRoomY('jonggak')).toBe(DEITY_HEAD_ROOM_Y)
+    const plain = deityStandBox(PODIUM_TOP_Y, deityHeadRoomY('jonggak'))
+    const framed = deityStandBox(PODIUM_TOP_Y, deityHeadRoomY('banga'))
+    expect(framed.groundY).toBe(plain.groundY) // 접지 45.3 은 한 치도 안 움직인다
+    expect(framed.bottom).toBe(plain.bottom)
+    expect(Number.parseFloat(framed.height)).toBeLessThan(Number.parseFloat(plain.height))
   })
 })

@@ -2,6 +2,7 @@
   "worldWidth": 320,
   "zone": { "code": "daecheong", "label": "대청", "x0": 0, "x1": 320 },
   "mural": { "dir": "/shrine/stage", "wall": "room-wall-mural.webp", "floor": "room-floor-mural.webp" },
+  "bands": { "wall": 75, "floor": 27 },
   "structures": [
     {
       "code": "platform",
@@ -24,6 +25,27 @@
       ]
     }
   ],
+  "grandAltar": {
+    "themes": ["banga", "daljip", "seolbit"],
+    "altarItemScale": 0.54,
+    "deityHeadRoomY": { "banga": 25.3, "daljip": 23.9, "seolbit": 25.7 },
+    "structures": [
+      {
+        "code": "grand-altar",
+        "assetUrl": "/shrine/stage/{code}/grand-altar.webp",
+        "x": 50,
+        "y": 38.5,
+        "w": 60,
+        "anchors": [
+          { "id": "altar-left", "layer": "altar", "x": 45.7, "y": 52.4, "label": "제단 왼편" },
+          { "id": "altar-center", "layer": "altar", "x": 50, "y": 52.4, "label": "제단 가운데" },
+          { "id": "altar-right", "layer": "altar", "x": 54.3, "y": 52.4, "label": "제단 오른편" },
+          { "id": "altar-front-left", "layer": "altar", "x": 47.85, "y": 55, "label": "제단 앞줄 왼편" },
+          { "id": "altar-front-right", "layer": "altar", "x": 52.15, "y": 55, "label": "제단 앞줄 오른편" }
+        ]
+      }
+    ]
+  },
   "light": {
     "intensity": 0.5,
     "origin": { "x": 50, "y": 52 },

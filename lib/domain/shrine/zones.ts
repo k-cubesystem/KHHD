@@ -12,6 +12,9 @@
  *    좁아지는 축이 하나라도 생기면 기존 저장 배치가 다음 저장 때 이동한다 — 금지.
  */
 
+// 런타임 의존은 기하 JSON 한 장뿐이다(theme-stage → energy/types 는 순수 상수) — 순환 없음:
+// stage.ts 가 zones 를 부르고 theme-stage 는 stage 를 **타입으로만** 참조한다.
+import { STAGE_FLOOR_LINE_Y } from './theme-stage'
 import type { Layer } from './types'
 
 export interface ZoneRange {
@@ -88,6 +91,13 @@ export function initialSpot(layer: Layer, jitter: number): { x: number; y: numbe
   }
 }
 
-/** 신당지기 미니미 위치 (건네기 판정 기준점) */
-export const KEEPER_POS = { x: 12, y: 61 }
+/**
+ * 거니는 신수의 자리 (건네기 판정 기준점 겸용).
+ *
+ * y 는 스프라이트 **상단**이고(GuardianWalkers `top`) 몸통은 아래로 40여 px 뻗으므로, 마루선
+ * 바로 위에 머리를 두면 발이 마루 안쪽에 놓인다. 그래서 **마루선에서 파생**한다 — 신수는 마루를
+ * 밟는 존재라 마루선이 내려가면 같이 내려가야 하고, 그 이동이 여기 한 줄로 끝나야 한다.
+ * (v3 마루선 60 · y61 → v4 마루선 70 · y69 → v4.1 마루선 73 · **y72**.)
+ */
+export const KEEPER_POS = { x: 12, y: STAGE_FLOOR_LINE_Y - 1 }
 export const KEEPER_GIVE_RADIUS = 15

@@ -176,9 +176,29 @@ const C = readContracts()
 const WORLD_WIDTH_PCT = GEO.worldWidth
 const WORLD_SCREENS = WORLD_WIDTH_PCT / 100
 
-/** 밴드 분할 — StageLayers.tsx 의 거울(62+40=102 → 2% 겹침이 렌더 규약) */
-const BAND_WALL = 0.62
-const BAND_FLOOR = 0.4
+/**
+ * 밴드 분할 — StageLayers.tsx 의 거울(62+40=102 → 2% 겹침이 렌더 규약).
+ *
+ * ⚠️ 「웅장한 틀」 작업(2026-08-10)에서 CEO 가 «마루바닥 사이즈를 좀 줄여 달라» 고 했다. 그 요구는
+ *    렌더 밴드(벽 72 / 바닥 30)를 바꾸는 일이고, 밴드가 바뀌면 **수출 AR 상한도 같이 바뀐다** —
+ *    바닥이 짧아지면 바닥 슬라이스의 AR 이 커지고, 벽이 길어지면 벽 슬라이스의 AR 이 작아져야 한다.
+ *    그래서 두 숫자를 손으로 두 번 적지 않고 `--band 72/30` 한 곳에서 파생시킨다.
+ *    플래그가 없으면 값은 한 글자도 달라지지 않는다(승인분 재슬라이스 시 바이트 동일).
+ */
+const BAND_OVERRIDE = (() => {
+  const i = process.argv.indexOf('--band')
+  const raw = i >= 0 ? process.argv[i + 1] : null
+  if (!raw) return null
+  const m = raw.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/)
+  if (!m) throw new Error(`--band 형식은 <벽>/<바닥> (예: 72/30) — 받은 값: ${raw}`)
+  const wall = Number(m[1]) / 100
+  const floor = Number(m[2]) / 100
+  if (!(wall > 0.3 && wall < 0.95) || !(floor > 0.05 && floor < 0.7)) throw new Error(`--band 값 범위 이탈: ${raw}`)
+  if (wall + floor <= 1) throw new Error(`--band 는 겹쳐야 한다(벽+바닥 > 100): ${raw}`)
+  return { wall, floor }
+})()
+const BAND_WALL = BAND_OVERRIDE ? BAND_OVERRIDE.wall : 0.62
+const BAND_FLOOR = BAND_OVERRIDE ? BAND_OVERRIDE.floor : 0.4
 
 const PANO_H = 1280
 const PANO_W = Math.round((PANO_H * WORLD_SCREENS * C.roomW) / C.roomH)
@@ -277,8 +297,14 @@ const MIN_FLOOR_BAND_AR = Math.min(...DEVICE_STAGES.map((s) => s.floorBandAR))
  * 두 상한을 같은 엄격함으로 걸면(구 4.6) 바닥 하나 때문에 벽까지 16~41% 깎여, 고치려던 문제를
  * 다른 문으로 들여오게 된다.
  */
-const V3_WALL_AR_MAX = 3.0
-const V3_FLOOR_AR_MAX = 5.6
+/**
+ * ⚠️ `--band` 로 밴드를 갈아 끼우면 이 두 상한은 **손으로 적을 수 없다** — 62/40 에서 고른 3.0/5.6
+ * 은 그 밴드의 최솟값(3.15/4.89)에서 역산한 값이기 때문이다. 밴드가 오면 같은 규칙으로 다시
+ * 역산한다: 실기기 최솟값에 5% 여유. 바닥도 이때는 «크롭 허용»을 접는다 — 밴드가 짧아지면
+ * 바닥 AR 이 저절로 커져서, 종전처럼 상한을 더 열어 둘 이유가 사라진다.
+ */
+const V3_WALL_AR_MAX = BAND_OVERRIDE ? Math.round(MIN_WALL_BAND_AR * 0.95 * 100) / 100 : 3.0
+const V3_FLOOR_AR_MAX = BAND_OVERRIDE ? Math.round(MIN_FLOOR_BAND_AR * 0.95 * 100) / 100 : 5.6
 /**
  * 벽 슬라이스가 수평선 **아래로** 물고 내려가는 몫(벽 슬라이스 높이 대비).
  * 렌더 계약상 벽 밴드는 방 높이 62%, 바닥 밴드는 60% 에서 시작한다 — 즉 벽의 아래 2%는 바닥이
@@ -2205,7 +2231,7 @@ async function makeQaSet({ code, tag, wallFile, floorFile, seats, deityFile, lig
 
 // ──────────────────────────── main ────────────────────────────
 const args = process.argv.slice(2)
-const VALUE_FLAGS = ['--round', '--from', '--regen', '--seats', '--deity', '--against', '--horizon']
+const VALUE_FLAGS = ['--round', '--from', '--regen', '--seats', '--deity', '--against', '--horizon', '--band']
 const BOOL_FLAGS = ['--plan', '--assemble-only', '--qa-only', '--live', '--no-live', '--three-shot', '--spec-v2', '--no-device']
 
 function flagValue(name, fallback) {

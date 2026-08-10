@@ -23,6 +23,7 @@
 
 import type { CSSProperties, SyntheticEvent } from 'react'
 import type { StageSpec } from '@/lib/domain/shrine/stage'
+import { STAGE_BANDS, STAGE_FLOOR_LINE_Y } from '@/lib/domain/shrine/theme-stage'
 
 interface Props {
   /** 활성 테마의 무대 사양. null 이면 레거시(완성 일러스트) 렌더. */
@@ -73,9 +74,25 @@ function hideOnError(e: SyntheticEvent<HTMLImageElement>) {
  *
  * 버리는 방향은 **접지선이 움직이지 않게** 고정한다: 벽은 아래(수평선=마루선이 밴드 바닥에 붙고
  * 여분의 헤드룸이 위로 잘림), 바닥은 위(수평선이 밴드 천장에 붙고 앞바닥이 아래로 잘림).
- * 그래서 어느 기기에서도 벽·바닥이 만나는 선은 방 높이 60% 그 자리다.
+ * 그래서 어느 기기에서도 벽·바닥이 만나는 선은 마루선(STAGE_FLOOR_LINE_Y) 그 자리다.
  */
 const MURAL_V3_SUFFIX = '-v3.webp'
+
+/**
+ * ★ 무대 기하 v4 — 밴드 %는 **theme-stage-geometry.json 단일 출처**다 (2026-08-10).
+ *
+ * 종전에는 `h-[62%]`·`bottom-[40%]`·`top-[60%]` 로 네 곳에 흩어져 있었다. Tailwind 임의값 클래스는
+ * 문자열이 정적일 때만 생성되므로 상수로 조립할 수 없다 — 그래서 **인라인 style** 로 바꾼다
+ * (동적 클래스명은 조용히 미생성되어 밴드가 통째로 사라지는 경로다).
+ *
+ * 마루선 y60 → **y70**(벽 72 · 바닥 30 · 겹침 2%p): 마루를 줄여 벽을 세운다.
+ * 뮤럴은 width-fit 이라 구 규격 장(수평선이 60에 구워진 13테마)도 밴드만 늘어날 뿐 가로 크롭은 0 이다.
+ */
+const WALL_BAND: CSSProperties = { height: `${STAGE_BANDS.wall}%` }
+const FLOOR_BAND: CSSProperties = { height: `${STAGE_BANDS.floor}%` }
+/** CSS 폴백 블록은 겹치지 않고 마루선에서 딱 만난다(그림이 없을 때의 방 색) */
+const WALL_FILL_BOX: CSSProperties = { bottom: `${STAGE_BANDS.floor}%`, background: 'var(--th-wall)' }
+const FLOOR_FILL_BOX: CSSProperties = { top: `${STAGE_FLOOR_LINE_Y}%`, background: 'var(--th-floor)' }
 
 /**
  * 렌디션 2종 — v3 뮤럴은 고해상(원판 폭)과 표준(2048px) 두 장으로 나간다.
@@ -108,7 +125,7 @@ function tileBackground(url: string): CSSProperties {
 }
 
 /**
- * L0 벽지 — 방 상단. 하단 바닥재와 살짝 겹쳐(62%+40%) 이음새 틈을 없앤다.
+ * L0 벽지 — 방 상단. 하단 바닥재와 살짝 겹쳐(벽 72% + 바닥 30%) 이음새 틈을 없앤다.
  * 구역 모드(zoned)에서는 방 모서리에 붙지 않으므로 라운딩을 끄고, 뷰포트 밖 구역의 와이드 벽지를
  * 첫 페인트에 끌고 오지 않도록 지연 로드한다(ARCH §5).
  */
@@ -117,10 +134,8 @@ function Wallpaper({ url, zoned, tile, eager }: { url: string; zoned: boolean; t
     return (
       <div
         aria-hidden
-        className={`absolute inset-x-0 top-0 h-[62%] w-full pointer-events-none select-none${
-          zoned ? '' : ' rounded-t-[17px]'
-        }`}
-        style={tileBackground(url)}
+        className={`absolute inset-x-0 top-0 w-full pointer-events-none select-none${zoned ? '' : ' rounded-t-[17px]'}`}
+        style={{ ...tileBackground(url), ...WALL_BAND }}
       />
     )
   }
@@ -138,9 +153,10 @@ function Wallpaper({ url, zoned, tile, eager }: { url: string; zoned: boolean; t
       // 둘이 대역폭을 나눠 가져 정작 먼저 보여야 할 벽이 늦어진다
       fetchPriority={eager ? 'high' : undefined}
       // object-bottom = 수평선(마루선)을 밴드 바닥에 붙인다 (v3 규약 — 위 주석)
-      className={`absolute inset-x-0 top-0 h-[62%] w-full object-cover object-bottom pointer-events-none select-none${
+      className={`absolute inset-x-0 top-0 w-full object-cover object-bottom pointer-events-none select-none${
         zoned ? '' : ' rounded-t-[17px]'
       }`}
+      style={WALL_BAND}
       onError={hideOnError}
     />
   )
@@ -152,10 +168,10 @@ function Flooring({ url, zoned, tile, eager }: { url: string; zoned: boolean; ti
     return (
       <div
         aria-hidden
-        className={`absolute inset-x-0 bottom-0 h-[40%] w-full pointer-events-none select-none${
+        className={`absolute inset-x-0 bottom-0 w-full pointer-events-none select-none${
           zoned ? '' : ' rounded-b-[17px]'
         }`}
-        style={tileBackground(url)}
+        style={{ ...tileBackground(url), ...FLOOR_BAND }}
       />
     )
   }
@@ -170,9 +186,10 @@ function Flooring({ url, zoned, tile, eager }: { url: string; zoned: boolean; ti
       decoding="async"
       loading={zoned && !eager ? 'lazy' : undefined}
       // object-top = 수평선을 밴드 천장에 붙인다 — 벽의 object-bottom 과 한 쌍이라 접지선이 고정된다
-      className={`absolute inset-x-0 bottom-0 h-[40%] w-full object-cover object-top pointer-events-none select-none${
+      className={`absolute inset-x-0 bottom-0 w-full object-cover object-top pointer-events-none select-none${
         zoned ? '' : ' rounded-b-[17px]'
       }`}
+      style={FLOOR_BAND}
       onError={hideOnError}
     />
   )
@@ -193,8 +210,8 @@ export function StageLayers({
         <>
           {/* 벽·바닥 CSS 폴백 — 에셋 없는 구역(하늘만 있는 마당 등)도 구멍 없이 성립한다.
               벽지·바닥재가 있으면 그 아래 깔릴 뿐이라 보이지 않는다. */}
-          <div className="absolute inset-x-0 top-0 bottom-[40%]" style={{ background: 'var(--th-wall)' }} />
-          <div className="absolute inset-x-0 top-[60%] bottom-0" style={{ background: 'var(--th-floor)' }} />
+          <div className="absolute inset-x-0 top-0" style={WALL_FILL_BOX} />
+          <div className="absolute inset-x-0 bottom-0" style={FLOOR_FILL_BOX} />
           {stage?.wallpaperUrl && (
             <Wallpaper key={`wall-${stage.wallpaperUrl}`} url={stage.wallpaperUrl} zoned tile={tile} eager={eager} />
           )}
@@ -207,14 +224,8 @@ export function StageLayers({
     if (!stage) {
       return (
         <>
-          <div
-            className="absolute inset-x-0 top-0 bottom-[40%] rounded-t-[17px]"
-            style={{ background: 'var(--th-wall)' }}
-          />
-          <div
-            className="absolute inset-x-0 top-[60%] bottom-0 rounded-b-[17px]"
-            style={{ background: 'var(--th-floor)' }}
-          />
+          <div className="absolute inset-x-0 top-0 rounded-t-[17px]" style={WALL_FILL_BOX} />
+          <div className="absolute inset-x-0 bottom-0 rounded-b-[17px]" style={FLOOR_FILL_BOX} />
           {/* 테마 방 배경 이미지 — <img>로 렌더. 둥근 클립 제거로 GPU 마스크 실패(흰화면) 회피.
               저해상도(512w) 다운스케일 유지, 이미지 자체를 라운딩. 404 시 onError로 숨김 → 그라디언트 폴백. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
