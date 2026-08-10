@@ -429,6 +429,78 @@ const THEMES = [
     pooled: 'pale green light',
     lightFrom: 'the shafts falling from the surface',
   },
+  {
+    code: 'daejanggan',
+    name: '무쇠 대장간',
+    el: '金',
+    // 원화(themes/daejanggan/room.webp) 실측: 왼쪽에 벽돌 화덕(아치 안에서 주홍 불이 실제로 타고 있다) +
+    // 그을린 짙은 목조 + 왼쪽은 회청색 돌바닥·오른쪽은 꿀빛 마루 단 + 뒤쪽 창호. spec-data 의
+    // accent #9fb3c8 · 「steel-blue shadow and orange spark contrast」와 일치한다.
+    // ⚠️ 무가구 계약의 최대 난제 테마 — 이 세계의 정체성이 하필 **기물**(모루·집게·망치)이다.
+    //    모루와 연장은 살림 레이어의 몫으로 넘기고, 정체성은 «벽에 박힌 화덕 아가리 + 그을음 + 불빛»
+    //    즉 건축·재질·빛으로만 낸다(PLAN §1-1). 연장을 벽에 걸면 살림과 다시 싸운다.
+    // ⚠️ 함정 ④ 승계: 한색 테마라고 «난색이 없다»를 쓰면 회색 상자가 된다 — 여기서는 강철빛 그늘과
+    //    화덕 불빛의 «대비»가 원화의 사실이므로 둘 다 관찰 사실로 적는다.
+    hall: 'the forge hall of a Korean smithy (무쇠 대장간)',
+    identity:
+      'Soot has darkened every timber in this hall to a deep grey-brown, and the shadows between them are the ' +
+      'colour of cold steel. Low on one side a brick forge mouth stands open in the wall with orange fire ' +
+      'burning inside it, and that fire is the only warm light here: it lies orange on the stone near it and ' +
+      'fades to steel-blue a short way off. The air is smoky and still.',
+    wall:
+      'A long wall of soot-darkened timber posts standing at even intervals with panels of grey fire-brick ' +
+      'laid in courses between every pair of posts, the brick faces chipped and smoke-stained, a few dull ' +
+      'iron straps let flat into the timber. A low stone wainscot runs level along the bottom of the whole ' +
+      'wall, and a band of plain heavy slats runs level along the top under the beam.',
+    // ⚠️ 바닥은 «돌판»이 아니라 판재다. 공통 척추의 마지막 문장이 «the boards»로 고정이라 돌로 적으면
+    //    한 문장 안에서 재료가 어긋난다(함정 ⑤ 계열의 모순). 원화도 신당 단은 꿀빛 마루판이므로
+    //    돌은 굽도리로 내리고 바닥은 그을린 판재로 간다.
+    floor:
+      'Wide floorboards running away from the viewer, darkened almost black by soot and ash worked into the ' +
+      'grain, the thin seams between them showing, and faintly warm where the forge light reaches across them.',
+    pooled: 'forge light',
+    lightFrom: 'the open forge mouth',
+    // r1 반려(2026-08-10): 화덕이 **하나**뿐이라 하필 가족 선반장 자리 뒤에 앉아 가운데 선반장이
+    //   아가리를 가렸고, 중앙 뷰에는 화덕이 아예 없어 그냥 «벽돌 방»으로 읽혔다. 이 테마의 유일한
+    //   정체성 요소가 가구 구역에 몰린 것 — PLAN §1-3 「자리를 아는 벽」이 경고한 실패다.
+    //   좌표는 AI 에 못 맡기므로(§1-3) 주인공 하나를 **리듬**으로 바꾼다: 낮고 작은 불구멍이
+    //   일정 간격으로 반복되면 어느 화면을 잘라도 정체성이 남고, 가구 뒤에 숨어도 옆 것이 보인다.
+    fix:
+      'Along the foot of the wall a row of small brick forge mouths is set at even intervals, each one low ' +
+      'and no taller than the wainscot, and a low orange fire burns in every one of them. They are small and ' +
+      'the wall above them stays quiet, so the warm light lies in a row of pools along the bottom of the wall ' +
+      'and on the boards in front of it.',
+  },
+  {
+    code: 'yeondeung',
+    name: '연등 골짜기',
+    el: '火',
+    // 원화(themes/yeondeung/room.webp) 실측: 붉은기 도는 갈색 목조 + 고운 정(井)자 창호가 호박색으로
+    // 빛남 + 기둥에 매단 사각 등 + 열린 문 너머 노을 골짜기에 연등이 줄줄이 걸림 + 꿀빛 윤나는 마루.
+    // ⚠️ 달집 전례 승계: 원화는 «실내에서 골짜기를 내다보는» 그림이다. 좌우 연장부는 무창·무문이므로
+    //    골짜기는 중앙에만 남고, 정체성은 재료와 빛으로 들여온다(연등빛·노을빛·호박색 창호).
+    // ⚠️ 연등은 이 세계의 이름 그 자체라 뺄 수 없다 — 다만 «바닥에 놓인 것»이 아니라 **보에 매단 것**으로
+    //    적어 살림(촛대·석등)과 자리를 다투지 않게 한다(PLAN §1-1 의 «소품 디테일» 범위).
+    hall: 'the lantern-hung hall of a Korean valley shrine (연등 골짜기)',
+    identity:
+      'Warm reddish-brown timber frames this whole hall and the light in it is the orange of late sunset. ' +
+      'The paper panels between the posts are filled with a fine square lattice and glow a deep amber from ' +
+      'behind, round paper lanterns hang from the beams and burn a soft rose-orange, and the wide plank floor ' +
+      'is honey brown with a low sheen carrying their reflections.',
+    // ⚠️ 등은 여기(wall)에 적지 않는다. 공통 척추에 «nothing hangs on it» 이 있어 바로 옆 문장과
+    //    정면으로 싸운다(모순 → 둘 다 뭉개짐). 등은 identity 에만 두어 «벽에 건 것»이 아니라
+    //    «보에 매달린 세계의 사실»로 읽히게 한다. 1라운드에서 등이 사라지면 그때 fix 로 처방한다.
+    wall:
+      'A long wall of warm reddish-brown timber posts standing at even intervals with a paper panel filling ' +
+      'the space between every pair of posts, each panel divided by a fine square lattice of thin ribs and ' +
+      'glowing deep amber from behind, warmest near the top of each panel as if a light hung just in front of ' +
+      'it. A low dark wainscot board runs level along the bottom of the whole wall, and a ' +
+      'band of carved bracket-work runs level along the top under the beam.',
+    floor:
+      'Wide honey-brown floorboards running away from the viewer, their grain and the thin seams between them ' +
+      'showing, polished to a low sheen that holds the warm orange reflections of the lanterns.',
+    lightFrom: 'the lantern-lit paper panels',
+  },
 ]
 
 /** 중앙 — 원화의 건축·구도·팔레트·빛은 유지하되 **가구·기물은 전부 뺀다**(scene.mjs 와의 본질적 차이). */
@@ -1683,6 +1755,8 @@ const LIGHT_BY_CODE = {
   daljip: { color: '#d4a017', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(230,195,122,0.17)' },
   seolbit: { color: '#c9a84c', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(200,212,220,0.16)' },
   yonggung: { color: '#2d5f8a', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(95,179,179,0.18)' },
+  daejanggan: { color: '#c9a84c', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(159,179,200,0.16)' },
+  yeondeung: { color: '#9e2b2b', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(224,138,78,0.18)' },
 }
 const lightFor = (code) =>
   LIGHT_BY_CODE[code] ?? {
