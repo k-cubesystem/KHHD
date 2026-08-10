@@ -117,6 +117,9 @@ function readContracts() {
   const unitBlock = pluck(shelf, /FSHELF_UNIT\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\)/, 'FSHELF_UNIT')[1]
   const tiersBlock = pluck(shelf, /FSHELF_TIERS\s*=\s*Object\.freeze\(\{([\s\S]*?)\n\}\)/, 'FSHELF_TIERS')[1]
   const sizeBlock = pluck(room, /const SIZE_PX[^=]*=\s*\{([^}]*)\}/, 'SIZE_PX')[1]
+  // 의식각 좌표는 3fc2f4d(고정 살림 드래그 조절)에서 개별 const → 동결 객체로 모였다. 값은 그대로다
+  // (x 88.75 · w 8.65 · top 20 · bottom 62) — 이 스크립트가 소리 내며 죽어 준 덕에 드리프트 없이 따라간다.
+  const hallBlock = pluck(hall, /RITUAL_HALL_UNIT\s*=\s*Object\.freeze\(\{([^}]*)\}\)/, 'RITUAL_HALL_UNIT')[1]
 
   return {
     /** 방 컨테이너 실측 — 이 두 값이 렌더 스케일의 분모다 */
@@ -140,10 +143,10 @@ function readContracts() {
     fshelfBottom: Number(pluck(unitBlock, /bottom:\s*([\d.]+)/, 'FSHELF_UNIT.bottom')[1]),
     fshelfFamilyTier: Number(pluck(tiersBlock, /family:\s*([\d.]+)/, 'FSHELF_TIERS.family')[1]),
     /** 의식각 */
-    hallX: pluckNum(hall, /const UNIT_X = ([\d.]+)/, 'RitualHall UNIT_X'),
-    hallW: pluckNum(hall, /const UNIT_W = ([\d.]+)/, 'RitualHall UNIT_W'),
-    hallTop: pluckNum(hall, /const UNIT_TOP = ([\d.]+)/, 'RitualHall UNIT_TOP'),
-    hallBottom: pluckNum(hall, /const UNIT_BOTTOM = ([\d.]+)/, 'RitualHall UNIT_BOTTOM'),
+    hallX: pluckNum(hallBlock, /x:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.x'),
+    hallW: pluckNum(hallBlock, /w:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.w'),
+    hallTop: pluckNum(hallBlock, /top:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.top'),
+    hallBottom: pluckNum(hallBlock, /bottom:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.bottom'),
     plaqueCy: pluckList(hall, /const PLAQUE_CY = \[([^\]]*)\]/, 'PLAQUE_CY'),
     plaqueWPct: pluckNum(hall, /const PLAQUE_W_PCT = ([\d.]+)/, 'PLAQUE_W_PCT'),
     shelfSprite: pluck(hall, /const SHELF_SPRITE = '([^']+)'/, 'SHELF_SPRITE')[1],
@@ -229,11 +232,15 @@ const EMPTY_ROOM =
  * 배경의 빛이 옆에서 오면 그림자 방향이 어긋나 스티커로 읽힌다. 그래서 위에서 내리는 빛으로 못박는다.
  */
 // ⚠️ R2 반려 처방: 종전 문구는 «방 한가운데 바닥에 온기가 고인다» 였다. 그림에서 «방 한가운데
-//    바닥»은 벽에서 먼 앞바닥이라, 이 한 절이 아래 FLOOR_EVEN 과 정면으로 싸워 벽 밑동을 어둡게
+//    바닥»은 벽에서 먼 앞바닥이라, 이 한 절이 아래 floorEven 과 정면으로 싸워 벽 밑동을 어둡게
 //    만들었다(실측 발밑 37 vs 앞바닥 62). 온기가 고이는 자리를 **벽 밑동**으로 옮긴다.
-const HARMONY_LIGHT =
-  'The light comes softly from above and settles downward; the warmth gathers on the floor along the foot of ' +
-  'the wall, and what shadows there are fall straight down, short and soft'
+// ⚠️ 확산 처방(2026-08-10, 달집·설빛·용궁): 반가 원문의 «warmth» 는 난색 테마의 관찰 사실이다.
+//    한색 테마(설야·심해)에 그대로 걸면 «따뜻함이 고인다»가 팔레트와 정면으로 싸운다(모순 문장은
+//    먼저 지운다는 규율). **문장 구조는 그대로 두고 빛의 «이름»만** 테마가 바꾼다 — 기본값은
+//    반가 원문 그대로라 반가 프롬프트는 한 글자도 달라지지 않는다.
+const harmonyLight = (t) =>
+  `The light comes softly from above and settles downward; the ${t?.pooled ?? 'warmth'} gathers on the floor ` +
+  'along the foot of the wall, and what shadows there are fall straight down, short and soft'
 
 /**
  * ★ R1 반려 처방(2026-08-09, 사실 1개 추가) ★
@@ -245,9 +252,12 @@ const HARMONY_LIGHT =
 // ⚠️ R2 재반려 처방: 부정문(«어두운 띠가 없다»)은 먹히지 않았다 — 원근 실내의 «뒤는 어둡다»는
 //    회화 관성이 더 세다. 그래서 **긍정 관찰문**으로 바꿔 밝은 자리를 지정한다. 이것은 재발명이
 //    아니라 원화 복원이기도 하다: 원화(room.webp)의 마루도 창호 앞이 가장 밝고 앞쪽 구석이 어둡다.
-const FLOOR_EVEN =
+// ⚠️ 확산 처방(2026-08-10): «한지 창호에서 오는 빛»은 반가·설빛·달집의 사실이지만 용궁에는 한지가
+//    없다 — 그대로 걸면 심해 궁궐 벽에 창호지를 끼워 넣는다(원화를 텍스트가 덮는 1차 반려의 재발).
+//    빛이 «어디서 오는가»만 테마가 갈아 끼우고, 기본값은 반가 원문이다.
+const floorEven = (t) =>
   'The strip of floor closest to the wall is the brightest part of the floor, catching the light straight from ' +
-  'the paper panels, and the boards grow a little darker toward the bottom of the frame'
+  `${t?.lightFrom ?? 'the paper panels'}, and the boards grow a little darker toward the bottom of the frame`
 
 /**
  * ★ R1 반려 처방(사실 1개 추가) ★ — 옆칸이 «또 하나의 방 상자»로 나와 파노라마가 방 세 개로 읽혔다.
@@ -296,8 +306,11 @@ const WALL_BAND =
  *   hall      세 프롬프트가 공유하는 장소 명사구
  *   identity  원화에서 «눈으로 추출한» 관찰 사실 — 색 세계를 못박는 보강재
  *   wall/floor  좌·우 연장부의 재질 문장(완성된 빈 벽의 재료)
+ *   pooled    발밑에 «무엇이» 고이는가 — 난색 테마는 warmth(기본), 한색 테마는 그 세계의 빛 이름
+ *   lightFrom 그 빛이 «어디서» 오는가 — 기본은 한지 창호. 창호가 없는 세계(용궁)는 갈아 끼운다
  *   fix       라운드별 처방 어휘 누적 자리. 반려 때 «사실 1개»만 여기 늘린다.
- * @type {Array<{code:string,name:string,el:string,hall:string,identity:string,wall:string,floor:string,fix?:string}>}
+ * @type {Array<{code:string,name:string,el:string,hall:string,identity:string,wall:string,floor:string,
+ *               pooled?:string,lightFrom?:string,fix?:string}>}
  */
 const THEMES = [
   {
@@ -320,6 +333,102 @@ const THEMES = [
       'Wide dark walnut floorboards running away from the viewer, their long grain and the thin dark seams ' +
       'between the boards showing, worn smooth and holding a soft amber sheen.',
   },
+  {
+    code: 'daljip',
+    name: '달집 마당',
+    el: '土',
+    // 원화(themes/daljip/room.webp)는 «마당»이 아니라 **마당을 내다보는 실내**다 — 보름달·등불이 안에서
+    // 읽힌다. 그래서 harmony 에서는 실내로 통일한다(구 씬 파노라마는 중앙=실내·좌우=흙담이라
+    // 세계가 둘로 갈려 있었다). 마당의 정체성(황토·짚·달빛)은 재료로 들여온다.
+    hall: 'the moonlit inner hall of a Korean village house (달집 마당)',
+    // ⚠️ 씬 파노라마 1차 반려 처방 승계: 연장부가 «낮처럼» 밝아지면 세계가 갈린다 → 밤을 관찰 사실로 못박는다.
+    // ⚠️ r1 재반려(2026-08-10): «밤이다»·«달빛이 은빛으로 빛난다»를 적었는데도 **한낮의 방**이 왔다.
+    //    밤은 «시각»이지 «밝기»가 아니라서 모델이 실내를 환하게 켠다. glow/silver 같은 밝기 어휘를
+    //    먼저 걷고(모순 제거), 값(value) 자체를 관찰 사실로 적는다 → fix 절.
+    identity:
+      'It is night in every part of this scene and it stays night: the only light is the full moon outside ' +
+      'and one low lantern within, and no daylight reaches anything here. The clay plaster is a dim earth ' +
+      'ochre, the paper panels are a dull blue-grey only a little lighter than the timber around them, and ' +
+      'the deep blue of the night sits in every shadow.',
+    wall:
+      'A long wall of dim ochre clay plaster held between dark earth-brown timber posts standing at even ' +
+      'intervals, the plaster hand-smoothed in broad strokes and slightly uneven, with a paper panel filling ' +
+      'the upper part of every bay, dull blue-grey with the night pressing behind it. A low dark wainscot ' +
+      'board runs level along the bottom of the whole wall, and a band of plain slatted carpentry runs level ' +
+      'along the top under the beam.',
+    floor:
+      'Wide boards the colour of dark earth running away from the viewer, their grain and the thin seams ' +
+      'between them showing, with coarse straw matting laid over them from edge to edge so its weave reads ' +
+      'as one fine even texture, its gold dulled almost to grey-brown in the dark.',
+    lightFrom: 'the moonlit paper panels',
+    // r2 처방(사실 2개): 값이 어둡다 · 달빛은 차갑고 등불빛은 좁다
+    fix:
+      'The whole picture is dark, the way a room looks by moonlight: most of the wall lies in deep shadow and ' +
+      'no surface anywhere is brighter than a dim amber. Where the moon reaches the clay it lies pale and ' +
+      'cool on it, and the lantern warmth stays low and narrow near the floor.',
+  },
+  {
+    code: 'seolbit',
+    name: '설빛 서고',
+    el: '金',
+    // ⚠️ 로어의 「두루마리 선반」은 벽에 **그리지 않는다**(그 자리가 가족 선반장이다) — 서고의 정체성은
+    //    한지·서리·한기로 낸다(씬 파노라마 교훈 승계). 그래서 hall 도 library 가 아니라 hall 로 적는다:
+    //    「library」라고 쓰는 순간 모델이 책장을 그려 무가구 계약과 싸운다.
+    // ⚠️ 구 처방 「격자는 창가에만」의 정신만 가져온다 — 창이 없는 harmony 벽에서는 격자 자체를 걷고
+    //    (반가 창호를 복붙하지 않는다) 밀도를 백목·서리·한지 이음매로 낸다.
+    hall: "a snow-lit scholar's hall (설빛 서고)",
+    // ⚠️ r1 재반려(2026-08-10): 「어디에도 난색이 없다 · 백목 · 바랜 흰 마루」를 그대로 적었더니
+    //    **흰 상자 방**이 왔다 — 살림(호두나무)이 흰 벽에 붙인 스티커로 읽히고 서고의 격도 사라졌다.
+    //    그 세 마디는 원화에도 없다(원화의 기둥·마루는 따뜻한 갈색이고 한색은 창·한지 쪽이다).
+    //    재발명을 걷고 원화로 되돌린다: 한색은 종이와 빛, 난색은 나무.
+    identity:
+      'The cold light of snow fills this room. The paper panels stand a flat cool grey-white, the timber ' +
+      'posts and rails are pale aged brown, dry and lightly frosted along their edges, and the floor is pale ' +
+      'pine washed cool by the light off the snow. The air is still and very cold.',
+    wall:
+      'A long wall of plain pale hanji paper set in slender pale brown timber frames standing at even ' +
+      'intervals, frost bloomed along every timber edge, the paper laid in overlapping sheets so that the ' +
+      'seams and the fibre in it catch the light. A low brown wainscot board runs level along the ' +
+      'bottom of the whole wall, and a band of plain flat planking runs level along the top under the beam.',
+    floor:
+      'Pale pine boards running away from the viewer, fine straight grain and thin seams between them, dry ' +
+      'and matte, cool grey where the light off the snow crosses them and a little warmer in their shadows.',
+    pooled: 'cold brightness',
+    // r2 처방은 값의 폭만 좁혔을 뿐 «회색 상자»가 그대로였다 — 설빛이라 부를 근거가 화면에 하나도
+    // 없었다(서리도 눈빛도 한지도 안 보임). r3 처방은 **설빛에만 있는 것 두 가지**를 관찰 사실로 넣는다:
+    // 서리가 앉은 자리 · 한 칸 안에서 종이가 상아→푸름으로 넘어가는 그늘. 밀도는 이 둘이 만든다.
+    fix:
+      'A fine white frost has settled in the corners of every panel and along the lower edge of every rail. ' +
+      'The paper is warm ivory where the snow light crosses it and pale blue in shadow, so each bay shades ' +
+      'from one side to the other, and the wall darkens toward the top of the frame.',
+    // ⚠️ r4 반려 기록(원복하지 말 것): 여기에 「마루만은 따뜻한 꿀빛」 한 문장을 더 붙였더니 바닥은
+    //    그대로 회백색인 채 **벽의 한지 결이 사라지고** 칸이 다시 민짜가 됐다. 게다가 바닥선을 프레임
+    //    80% 까지 내려 크롭이 ×1.74 확대로 붙어야 했다(수퍼샘플 0.94 — 여유가 거의 없다).
+    //    정본은 r3. 난색을 원하면 배경이 아니라 살림·조명 쪽에서 볼 것.
+  },
+  {
+    code: 'yonggung',
+    name: '용궁',
+    el: '水',
+    // ⚠️ 1차 반려(2026-08-07): 텍스트 서술(밝은 진주모 궁궐)이 원화를 덮어 **지상 궁궐**이 나왔다.
+    //    그래서 여기서는 서술을 늘리지 않고 원화의 두 사실 — 짙은 청록 심해 · 수면에서 꽂히는 빛기둥 —
+    //    만 못박는다. 씬 파노라마에서 이 문장으로 합격했으므로 어휘를 그대로 승계한다.
+    hall: 'an undersea dragon palace (용궁)',
+    identity:
+      'The whole hall stands deep under the sea: everything is steeped in dark teal-green water light, pale ' +
+      'shafts of light fall slowly from the surface far above, fine bubbles drift upward through them, and ' +
+      'the depth behind everything fades into a black-green haze.',
+    wall:
+      'A long palace wall of dark jade and teal panels held between weathered timber posts standing at even ' +
+      'intervals, pale coral shapes painted low across the panels, and the dancheong band above muted by the ' +
+      'water light to soft jade and old gold. A low stone wainscot runs level along the bottom of the whole ' +
+      'wall, and fine bubbles rise slowly along the posts.',
+    floor:
+      'Deep green-black polished boards running away from the viewer, wet-sheened and holding the pale ' +
+      'reflections of the light shafts, with slow caustic ripples travelling across them.',
+    pooled: 'pale green light',
+    lightFrom: 'the shafts falling from the surface',
+  },
 ]
 
 /** 중앙 — 원화의 건축·구도·팔레트·빛은 유지하되 **가구·기물은 전부 뺀다**(scene.mjs 와의 본질적 차이). */
@@ -331,7 +440,7 @@ function centerPrompt(t) {
     `${t.identity} ` +
     `${EMPTY_ROOM}. ${WALL_BAND}. ` +
     `${FURNITURE_REF} ` +
-    `${HARMONY_LIGHT}. ${HORIZON}. ${FLOOR_EVEN}. ${FRAMING}. ` +
+    `${harmonyLight(t)}. ${HORIZON}. ${floorEven(t)}. ${FRAMING}. ` +
     (t.fix ? `${t.fix} ` : '') +
     `${STYLE}, ${CONTINUITY}, ${TAIL}`
   )
@@ -355,7 +464,7 @@ function sidePrompt(t, side) {
     `${SIDE_FLAT}. ` +
     `${EMPTY_ROOM}. ` +
     `${FURNITURE_REF} ` +
-    `${HARMONY_LIGHT}. ${HORIZON}. ${FLOOR_EVEN}. ${FRAMING}. ` +
+    `${harmonyLight(t)}. ${HORIZON}. ${floorEven(t)}. ${FRAMING}. ` +
     (t.fix ? `${t.fix} ` : '') +
     `${STYLE}, ${CONTINUITY}, ${TAIL}`
   )
@@ -382,7 +491,7 @@ function fullRoomPrompt(t) {
     `${SIDE_FLAT}. ` +
     `${EMPTY_ROOM}. ` +
     `${FURNITURE_REF} ` +
-    `${HARMONY_LIGHT}. ${HORIZON}. ${FLOOR_EVEN}. ${WIDE_FRAMING}. ` +
+    `${harmonyLight(t)}. ${HORIZON}. ${floorEven(t)}. ${WIDE_FRAMING}. ` +
     (t.fix ? `${t.fix} ` : '') +
     `${STYLE}, ${CONTINUITY}, ${TAIL}`
   )
@@ -743,12 +852,35 @@ function horizonRow(data, W, H, ch) {
     }
     sm[y] = s / n
   }
+  /**
+   * ★ 확산 처방(2026-08-10) ★ — 종전에는 창 안에서 **가장 큰** 낙차를 골랐다. 반가는 벽 전체가
+   * 창호살이라 그 낙차가 곧 바닥선이었지만, 걸레받이(판벽 굽도리)가 있는 테마에서는 «판벽 위끝»이
+   * 더 큰 낙차를 내서 검출기가 바닥선보다 **위**를 가리킨다(달집 r2: 바닥선 70.5% 인데 69.8%~64%를
+   * 오락가락, 폐루프가 수렴하지 못했다). 우리가 찾는 것은 «가장 센 가로선»이 아니라 «벽이 끝나는
+   * 마지막 가로선»이다 — 그래서 충분히 센 봉우리들 중 **가장 아래**를 고른다.
+   */
+  const lo = Math.floor(H * 0.42)
+  const hi = Math.floor(H * 0.84)
+  const dvs = new Float64Array(H)
+  let maxDv = 0
+  for (let y = lo; y < hi; y += 1) {
+    dvs[y] = sm[Math.max(0, y - 6)] - sm[Math.min(H - 1, y + 6)]
+    if (dvs[y] > maxDv) maxDv = dvs[y]
+  }
+  if (!(maxDv > 0)) return { row: -1, pct: null, drop: 0 }
+  const thr = maxDv * 0.6
+  let end = -1
+  for (let y = hi - 1; y >= lo; y -= 1) {
+    if (dvs[y] >= thr) {
+      end = y
+      break
+    }
+  }
   let best = -1
   let drop = 0
-  for (let y = Math.floor(H * 0.42); y < Math.floor(H * 0.84); y += 1) {
-    const dv = sm[Math.max(0, y - 6)] - sm[Math.min(H - 1, y + 6)]
-    if (dv > drop) {
-      drop = dv
+  for (let y = end; y >= lo && dvs[y] >= thr; y -= 1) {
+    if (dvs[y] > drop) {
+      drop = dvs[y]
       best = y
     }
   }
@@ -887,9 +1019,59 @@ function fitToPanorama(srcW, srcH, horizonFrac) {
   }
   const h2 = Math.round(srcW / A)
   const spare = srcH - h2
-  const want = Math.round(horizonFrac * srcH - 0.6 * h2)
-  const top = Math.min(spare, Math.max(0, want))
-  return { left: 0, top, width: srcW, height: h2, mode: '세로 크롭', spare, topShare: top / (spare || 1) }
+  const hz = horizonFrac * srcH
+  const want = Math.round(hz - 0.6 * h2)
+  if (want <= spare) {
+    const top = Math.max(0, want)
+    return { left: 0, top, width: srcW, height: h2, mode: '세로 크롭', spare, topShare: top / (spare || 1) }
+  }
+  /**
+   * ★ 확산 처방(2026-08-10, 달집·설빛·용궁 r1) ★
+   * 세로 여유(21:9 → 2.684:1 = 12%)를 다 써도 바닥선이 60% 아래에 남는다. 세 테마 모두 모델이
+   * 바닥선을 프레임 70% 언저리에 놓았다 — 프롬프트의 「three-fifths」는 세 번 다 무시됐고,
+   * 좌표 정밀 지시는 프롬프트로 안 된다는 것이 이 기획의 전제다(PLAN §1-3). 그러니 **잘라서** 맞춘다.
+   * 폭을 좁히면 잘라낼 세로가 생긴다(늘이지 않으므로 왜곡 0, 화각만 좁아진다):
+   *   top = hz − 0.6·h ≥ 0  ·  top + h ≤ srcH   ⇒   h ≤ (srcH − hz) / 0.4
+   * 하한은 파노라마 세로(1280) — 그 밑으로 내려가면 업스케일이 되어 「수퍼샘플」 계약이 깨진다.
+   * ⚠️ 이 가지는 want > spare 일 때만 열린다 — 반가(승인분)는 종전 경로 그대로다.
+   */
+  const h3 = Math.max(PANO_H, Math.min(h2, Math.floor((srcH - hz) / 0.4)))
+  const width = Math.min(srcW, Math.round(h3 * A))
+  const height = Math.min(srcH, Math.round(width / A))
+  const top = Math.min(srcH - height, Math.max(0, Math.round(hz - 0.6 * height)))
+  return { left: Math.round((srcW - width) / 2), top, width, height, mode: '세로·가로 크롭', spare, topShare: 1 }
+}
+
+/**
+ * ★ 수평선 폐루프 ★ — 크롭량은 「수평선이 어디냐」에서 나오는데, 원판 전체에서 잰 수평선과
+ * 파노라마로 줄인 뒤 잰 수평선이 서로 다르다(달집 r1: 원판 57% → 결과 67.7%). 벽에 밝기·결이
+ * 갈리는 띠(창호↔흙벽, 판벽↔마루)가 있으면 축척에 따라 이긴 띠가 바뀌기 때문이다.
+ * 그래서 **게이트가 재는 그 표현(파노라마 규격)에서 재고, 맞을 때까지 크롭을 다시 계산한다.**
+ * API 0회·결정론이고 보통 2회 안에 붙는다.
+ * ⚠️ 이 루프는 «검출기가 옳다»를 전제하지 않는다 — 합격선과 검출임계가 같아지는 함정
+ *    (feedback_gate_measures_wrong_thing)이므로, 60% 선을 그린 확인판을 **눈으로도** 본다.
+ */
+const HORIZON_FIT_ROUNDS = 4
+async function fitByHorizon(src, srcW, srcH) {
+  let fit = fitToPanorama(srcW, srcH, 0.6)
+  let best = { fit, err: Infinity, pct: null, tries: 0 }
+  for (let i = 0; i < HORIZON_FIT_ROUNDS; i += 1) {
+    const norm = await sharp(src)
+      .extract(fit)
+      .resize(PANO_W, PANO_H, { fit: 'fill', kernel: 'lanczos3' })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+    const hz = horizonRow(norm.data, PANO_W, PANO_H, norm.info.channels)
+    if (hz.pct === null) break
+    const err = Math.abs(hz.pct - 60)
+    if (err < best.err) best = { fit, err, pct: hz.pct, tries: i + 1 }
+    if (err <= 0.5) break
+    const next = fitToPanorama(srcW, srcH, (fit.top + (hz.pct / 100) * fit.height) / srcH)
+    if (next.top === fit.top && next.height === fit.height && next.width === fit.width) break
+    fit = next
+  }
+  return best
 }
 
 /**
@@ -901,11 +1083,9 @@ async function buildRoomScene(theme, round, outDir) {
   if (!existsSync(src)) throw new Error(`통짜 원판 없음: ${showPath(src)}`)
   const meta = await sharp(src).metadata()
 
-  // 수평선은 **원판 좌표계**에서 먼저 잰다 — 크롭량이 그 값에서 나온다
-  const probe = await sharp(src).removeAlpha().raw().toBuffer({ resolveWithObject: true })
-  const hz0 = horizonRow(probe.data, probe.info.width, probe.info.height, probe.info.channels)
-  const horizonFrac = hz0.pct === null ? 0.6 : hz0.pct / 100
-  const fit = fitToPanorama(meta.width, meta.height, horizonFrac)
+  // 수평선은 **게이트가 재는 표현**(파노라마 규격)에서 재고, 60% 에 앉을 때까지 크롭을 다시 계산한다
+  const seat = await fitByHorizon(src, meta.width, meta.height)
+  const fit = seat.fit
 
   const norm = await sharp(src)
     .extract(fit)
@@ -972,7 +1152,14 @@ async function buildRoomScene(theme, round, outDir) {
     footroom,
     gains,
     seamsX: [],
-    source: { w: meta.width, h: meta.height, ratio: meta.width / meta.height, fit, upscale: PANO_W / fit.width },
+    source: {
+      w: meta.width,
+      h: meta.height,
+      ratio: meta.width / meta.height,
+      fit,
+      upscale: PANO_W / fit.width,
+      seat,
+    },
     wall: await measure(chosen.wall, WALL_H),
     floor: await measure(chosen.floor, FLOOR_H),
   }
@@ -1417,7 +1604,7 @@ async function makeQaSet({ code, tag, wallFile, floorFile, seats, deityFile, lig
 // ──────────────────────────── main ────────────────────────────
 const args = process.argv.slice(2)
 const VALUE_FLAGS = ['--round', '--from', '--regen', '--seats', '--deity', '--against']
-const BOOL_FLAGS = ['--plan', '--assemble-only', '--live', '--no-live', '--three-shot']
+const BOOL_FLAGS = ['--plan', '--assemble-only', '--qa-only', '--live', '--no-live', '--three-shot']
 
 function flagValue(name, fallback) {
   const i = args.indexOf(name)
@@ -1426,6 +1613,12 @@ function flagValue(name, fallback) {
 
 const planOnly = args.includes('--plan')
 const assembleOnly = args.includes('--assemble-only')
+/**
+ * 조립까지 건너뛰고 **합성판만** 다시 굽는다(API 0회). 살림 스프라이트가 바뀌었을 때
+ * 「승인된 뮤럴은 한 바이트도 건드리지 않고」 합성판만 최신 살림으로 갱신하는 경로다.
+ * 조립을 다시 돌리면 크롭·인코딩이 다시 계산되어 승인분과 다른 그림이 나올 수 있다.
+ */
+const qaOnly = args.includes('--qa-only')
 const liveOnly = args.includes('--live')
 const skipLive = args.includes('--no-live')
 /**
@@ -1480,9 +1673,16 @@ if (!Number.isInteger(seats) || seats < 0 || seats > C.fshelfX.length) {
   process.exit(1)
 }
 
-/** 조명 — 라이브 shrine_theme_packs 값(banga: #C9A84C · 0.5 · 50/52 · glow rgba(201,168,76,0.2)) */
+/**
+ * 조명 — 라이브 `shrine_theme_packs` 실값. color/origin/intensity 는 `stage.light`(오행색),
+ * glow 는 `assets.glow`(제단 광원 = CSS `--th-glow`). 합성판이 라이브와 다른 색으로 판정하지
+ * 않게 하려는 것이므로, 시드가 바뀌면 여기도 같이 바꾼다.
+ */
 const LIGHT_BY_CODE = {
   banga: { color: '#C9A84C', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(201,168,76,0.2)' },
+  daljip: { color: '#d4a017', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(230,195,122,0.17)' },
+  seolbit: { color: '#c9a84c', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(200,212,220,0.16)' },
+  yonggung: { color: '#2d5f8a', intensity: 0.5, origin: { x: 50, y: 52 }, glow: 'rgba(95,179,179,0.18)' },
 }
 const lightFor = (code) =>
   LIGHT_BY_CODE[code] ?? {
@@ -1521,7 +1721,7 @@ if (planOnly) {
   process.exit(0)
 }
 
-apiBudget = assembleOnly || liveOnly ? 0 : targets.length * (threeShot ? SHOT_KEYS.length : 1)
+apiBudget = assembleOnly || liveOnly || qaOnly ? 0 : targets.length * (threeShot ? SHOT_KEYS.length : 1)
 if (apiBudget > 0 && !KEY) {
   console.error('✖ GEMINI 키 없음 — .env.local의 GOOGLE_GENERATIVE_AI_API_KEY / GEMINI_API_KEY 확인')
   process.exit(1)
@@ -1565,6 +1765,25 @@ for (const theme of targets) {
     }
     if (liveOnly) continue
 
+    // ⓪-b 합성판만 다시 굽기 — 승인된 뮤럴(r{N}/wall·floor.webp)을 그대로 두고 살림만 최신본으로
+    if (qaOnly) {
+      const w = path.join(roundDir(theme.code, round), 'wall.webp')
+      const f = path.join(roundDir(theme.code, round), 'floor.webp')
+      if (!existsSync(w) || !existsSync(f)) throw new Error(`후보 뮤럴 없음: ${showPath(w)}`)
+      console.log(`── 합성 QA판 재생성 (API 0회 · 뮤럴 무변경) ──`)
+      entry.qa = await makeQaSet({ code: theme.code, tag: `r${round}`, wallFile: w, floorFile: f, seats, deityFile, light })
+      console.log(`  ✔ ${showPath(entry.qa.wide)} + view ${Object.keys(entry.qa.views).join('/')}`)
+      if (entry.live) {
+        for (const name of ['center', 'left', 'right']) {
+          const buf = await sideBySide(entry.live.viewBufs[name], entry.qa.viewBufs[name])
+          const file = path.join(qaDir(theme.code), `r${round}-compare-${name}.webp`)
+          await writeFile(file, buf)
+          console.log(`  ✔ 대비 ${showPath(file)} (왼쪽 live · 오른쪽 r${round})`)
+        }
+      }
+      continue
+    }
+
     // ① 살림 화풍 카드 (API 0회) — 참조 주입분. 매번 다시 굽는다(살림이 바뀌면 카드도 바뀌어야 한다).
     const card = await buildStyleCard(styleCardPath(theme.code))
     console.log(`── 살림 화풍 카드 ${showPath(card.out)} ${(card.bytes / 1024).toFixed(0)}KB ──`)
@@ -1603,7 +1822,8 @@ for (const theme of targets) {
         `${r.withinBudget ? 'OK' : '⚠️ 초과'})\n` +
         (r.oneshot
           ? `      원판 ${r.source.w}×${r.source.h} (${r.source.ratio.toFixed(3)}:1) → ${r.source.fit.mode} ` +
-            `${r.source.fit.width}×${r.source.fit.height} (위 ${r.source.fit.top}px 버림) → 업스케일 ×${r.source.upscale.toFixed(2)}\n`
+            `${r.source.fit.width}×${r.source.fit.height} @(${r.source.fit.left},${r.source.fit.top}) → ` +
+            `업스케일 ×${r.source.upscale.toFixed(2)} · 수평선 폐루프 ${r.source.seat.tries}회\n`
           : `      샷 원본 ${r.shots.map((s) => `${s.key} ${s.src}(×${s.scale.toFixed(2)})`).join(' · ')}\n`) +
         `      팔레트 게인 ${r.gains.map((g) => g.toFixed(3)).join('/')} (원화 기준 · 70% · ±12% 상한)\n` +
         `      수평선 ${r.horizon.pct === null ? '검출 실패' : `${r.horizon.pct.toFixed(1)}%`} (계약 60%` +
