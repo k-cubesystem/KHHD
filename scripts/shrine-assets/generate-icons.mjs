@@ -99,6 +99,9 @@ const SETS = {
 
   // C. 무대 가구 — 가족 선반장(사방탁자). 벽에 세워 붙이는 구조물이라 **정면 입면**으로 그린다
   //    (objectPrompt 의 하이앵글 15도를 쓰면 상판 원근이 생겨 벽 부착이 어색해진다).
+  // ⚠️ 발밑 그림자를 프롬프트로 요구하지 않는다 — 반투명 그림자가 #00FF00 위에 얹히면 크로마키가
+  //    초록을 다 못 걷어 **연두색 «자리 매트»** 가 구워진다(2026-08-10 CEO 반려로 픽셀 수술한 원인).
+  //    방은 CSS drop-shadow 로 접지 그림자를 직접 그린다(FamilyShelfWall·RitualHall).
   stagefurn: [
     {
       slug: 'shelf-sabang',
@@ -110,7 +113,9 @@ const SETS = {
         'three empty shelf boards held by slender square corner posts, and a small closed cabinet with two ' +
         'little doors as the bottom tier. Clean straight joinery, warm candlelight sheen on the dark wood, ' +
         'subtle brass corner fittings, all tiers completely empty. ' +
-        `${STYLE}, single object centered, soft warm shadow beneath the object, ${BG}`,
+        'The furniture stands alone in empty space — no floor, no ground plane, no mat, no cast shadow, ' +
+        'nothing beneath the feet. ' +
+        `${STYLE}, single object centered, ${BG}`,
     },
   ],
 
