@@ -78,6 +78,7 @@
     "solapi": "^5.5.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.0",
+    "web-push": "3.6.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -91,6 +92,7 @@
     "@types/node": "^20.19.33",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19",
+    "@types/web-push": "3.6.4",
     "autoprefixer": "^10.4.24",
     "dotenv": "^17.2.4",
     "eslint": "^9",

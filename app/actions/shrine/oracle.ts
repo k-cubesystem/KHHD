@@ -1,11 +1,13 @@
 'use server'
 
+import { after } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
+import { sendPushToUser } from '@/lib/services/webpush'
 import { logger } from '@/lib/utils/logger'
 
 export interface DeityOracle {
@@ -129,14 +131,28 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
 
     // 신탁 도착 알림 — 신당 미방문 시 영영 모르는 재방문 루프의 구멍 보완.
     // 새 신탁 생성 시에만 삽입되며(미확인 신탁이 있으면 위에서 조기 반환), oracle 당 1회로 자연 멱등.
+    const notifyTitle = `「${deity.name}」이 신탁을 내렸습니다`
+    const notifyBody = message.length > 60 ? message.slice(0, 60) + '…' : message
     const { error: notifyErr } = await admin.from('notifications').insert({
       user_id: user.id,
-      title: `「${deity.name}」이 신탁을 내렸습니다`,
-      message: message.length > 60 ? message.slice(0, 60) + '…' : message,
+      title: notifyTitle,
+      message: notifyBody,
       type: 'deity_oracle',
       is_read: false,
     })
     if (notifyErr) logger.warn('[getRoomOracle] oracle notification insert failed:', notifyErr)
+
+    // 같은 지점에서 웹푸시 1회 — 앱 밖에 있는 신도에게 닿는 유일한 경로.
+    // VAPID 키가 없으면 sendPushToUser 는 무동작이고, 어떤 실패도 throw 하지 않는다.
+    // after() 로 응답을 흘려보낸 뒤 실행해 방 진입 지연에 얹히지 않게 한다.
+    after(() =>
+      sendPushToUser(user.id, {
+        title: notifyTitle,
+        body: notifyBody,
+        url: '/protected/shrine',
+        tag: 'deity-oracle',
+      })
+    )
 
     return { id: inserted.id, message, emotion, deityCode: deity.code, deityName: deity.name }
   } catch (e) {

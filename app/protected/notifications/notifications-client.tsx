@@ -10,6 +10,7 @@ import {
   type UserNotification,
 } from '@/app/actions/core/user-notifications'
 import { formatKstShort } from '@/lib/utils'
+import { PushToggle } from './push-toggle'
 
 /** 알림 종류별 아이콘·CTA (기억함 업셀 등 행동 유도) */
 const KIND: Record<string, { icon: typeof Bell; cta?: { label: string; href: string } }> = {
@@ -67,6 +68,8 @@ export function NotificationsClient({ initialItems }: { initialItems: UserNotifi
           {unread > 0 ? `읽지 않은 소식 ${unread}건` : '신이 전한 소식이 이곳에 쌓입니다'}
         </p>
       </header>
+
+      <PushToggle />
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-gold-500/15 bg-surface/30 py-12 text-center space-y-2">

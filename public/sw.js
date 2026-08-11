@@ -67,6 +67,56 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(networkFirstWithOfflineFallback(request))
 })
 
+// ── Push: 신탁 알림 ───────────────────────────────────────────────────────────
+// 서버가 보내는 본문은 lib/services/webpush.ts 의 PushPayload JSON.
+// 본문이 깨졌거나 비어도 알림은 반드시 떠야 한다 — userVisibleOnly 구독이라
+// showNotification 을 부르지 않으면 브라우저가 구독을 취소한다.
+const DEFAULT_PUSH_TITLE = '청담해화당'
+const DEFAULT_PUSH_URL = '/protected/notifications'
+
+self.addEventListener('push', (event) => {
+  let payload = {}
+  if (event.data) {
+    try {
+      payload = event.data.json()
+    } catch {
+      payload = { body: event.data.text() }
+    }
+  }
+
+  const title = typeof payload.title === 'string' && payload.title ? payload.title : DEFAULT_PUSH_TITLE
+  const url = typeof payload.url === 'string' && payload.url.startsWith('/') ? payload.url : DEFAULT_PUSH_URL
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof payload.body === 'string' ? payload.body : '',
+      icon: '/app-icon.png',
+      badge: '/app-icon.png',
+      tag: typeof payload.tag === 'string' && payload.tag ? payload.tag : 'haehwadang',
+      renotify: true,
+      data: { url },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = (event.notification.data && event.notification.data.url) || DEFAULT_PUSH_URL
+
+  // 이미 열려 있는 탭이 있으면 그 탭을 쓴다 — 탭이 계속 늘어나지 않게.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (!('focus' in client)) continue
+        const samePage = new URL(client.url, self.location.origin).pathname === target
+        if (samePage) return client.focus()
+        if ('navigate' in client) return client.navigate(target).then((navigated) => (navigated || client).focus())
+      }
+      return self.clients.openWindow(target)
+    })
+  )
+})
+
 // ── Cache-first helper ────────────────────────────────────────────────────────
 async function cacheFirst(request) {
   const cached = await caches.match(request)
