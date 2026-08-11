@@ -119,6 +119,9 @@ const REQUIRED_CLASSES = [
   '.shrine-tint-dawn',
   '.shrine-tint-dusk',
   '.shrine-tint-night',
+  // 앰비언트 P3 — 달빛(月光). 틴트와 같은 이유로 여기 있다: 인라인은 opacity 하나뿐이라
+  // 그라디언트가 산출물에서 사라지면 «아무 색도 안 남는» 무증상 사망이 된다
+  '.shrine-moonlight',
   // 앰비언트 — 테마의 숨결(원경광·글로우·CSS 파티클 5종) + 백그라운드 일괄 정지
   '.shrine-amb-back',
   '.shrine-amb-glow',

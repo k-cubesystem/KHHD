@@ -16,6 +16,12 @@
  */
 
 import { phaseWeights } from './scene-clock'
+import type { CalendarDate } from './lunar'
+import type { SeasonalEventKey } from './seasonal'
+
+// ⚠️ lunar.ts·seasonal.ts 는 **타입만** 가져온다. 둘 다 만세력 엔진(lunar-javascript 436KB)을
+//    런타임 의존으로 들고 있어, 값을 import 하는 순간 신당 룸 첫 청크에 그게 통째로 실린다.
+//    실제 계산은 룸이 마운트 후 동적 import 로 가져간다(ShrineRoomClient 「달·절기」 절).
 
 // ─── 계약 타입 ────────────────────────────────────────────────
 
@@ -35,7 +41,13 @@ export type TintProfile = { base: 'day' | 'dusk' | 'night' | null; amp: number }
 /** 위상 틴트 3층의 opacity. 낮은 층이 없다 — 낮 = 검수된 원화 그대로(원화 보호 계약). */
 export type TintOpacities = { dawn: number; dusk: number; night: number }
 
-export type AmbientParticleKind = 'mote' | 'firefly' | 'snow' | 'ember' | 'bubble' | 'leaf' | 'petal' | 'drip'
+/**
+ * 파티클 종. **여기 있는 종은 반드시 렌더 경로를 갖는다** — css 는 AmbientBackdrop.PARTICLE_STYLE,
+ * canvas 는 AmbientBackdrop.CANVAS_KIND(→ EffectsCanvas 의 EffectKind)다.
+ * 렌더 경로 없는 종을 적으면 그 테마는 «파티클이 있다고 적혀 있는데 한 알도 안 나는» 무증상 회귀가 된다
+ * (구 'drip' 이 정확히 그랬다 — 확산 전까지 아무도 몰랐다. 지금은 ambient-render.test 가 diff 0 으로 막는다).
+ */
+export type AmbientParticleKind = 'mote' | 'firefly' | 'snow' | 'ember' | 'bubble' | 'leaf' | 'petal'
 
 /** css = DOM 노드(소수 큰 실루엣) · canvas = 기존 EffectsCanvas 1장에 그리는 밀도 파티클. */
 export type AmbientEngine = 'css' | 'canvas'
@@ -133,8 +145,11 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
     tintProfile: { base: null, amp: 0.3 },
   },
   // 도깨비(火) — 단청 야광 위를 청록 도깨비불 두 점이 서로 다른 주기로 맥동한다(위상 분산).
+  // ⚠️ 안개는 **청록**이다. 오행이 火라 주홍(seal)으로 적혀 있었지만, 원화(어두운 자회색 단청 실내)에서
+  //    유일하게 밝은 것은 초록 도깨비불이라 붉은 안개를 얹으면 방 전체가 다른 세계가 된다
+  //    (확산 전 육안 전수 판정 2026-08-11). 오행색은 조명 오버레이가 이미 따로 들고 있다.
   dokkaebi: {
-    backdrop: [{ kind: 'haze', hue: HUE.seal, area: { x: 0, y: 0, w: 100, h: 62 } }],
+    backdrop: [{ kind: 'haze', hue: HUE.teal, area: { x: 0, y: 0, w: 100, h: 62 } }],
     particles: [{ kind: 'firefly', engine: 'css', count: [1, 2, 3], area: { x: 8, y: 18, w: 84, h: 52 } }],
     glows: [
       { x: 26, y: 38, r: 9, hue: HUE.teal, pulseMs: 2600 },
@@ -219,10 +234,12 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
     glows: [{ x: 50, y: 40, r: 20, hue: HUE.gold, pulseMs: 9000 }],
     tintProfile: { base: 'day', amp: 1 },
   },
-  // 샘굿(水) — 물안개 띠와 낙수. 수면 반사광은 바닥 쪽에 둔다.
+  // 샘굿(水) — 물안개 띠와 «솟는 샘». 종전 스펙의 낙수(drip)는 EffectsCanvas 에 대응 종이 없어
+  // 한 알도 나지 않았다 → 옹달샘의 본체인 **샘솟는 기포**(bubble)로 바꾼다. 발원은 샘물(바닥)이라
+  // 상승종이 맞고, 기포 팔레트(청백)가 이 방의 물빛과 같은 계열이다.
   saemgut: {
     backdrop: [{ kind: 'haze', hue: HUE.mist, area: { x: 0, y: 32, w: 100, h: 36 } }],
-    particles: [{ kind: 'drip', engine: 'canvas', count: [4, 9, 16], area: { x: 12, y: 0, w: 76, h: 74 } }],
+    particles: [{ kind: 'bubble', engine: 'canvas', count: [4, 9, 16], area: { x: 12, y: 26, w: 76, h: 48 } }],
     glows: [{ x: 50, y: 66, r: 20, hue: HUE.blue, pulseMs: 6000 }],
     tintProfile: { base: 'day', amp: 1 },
   },
@@ -327,4 +344,134 @@ export function ambientForTier(spec: ThemeAmbient, tier: AmbientTier): ThemeAmbi
  */
 export function ambientForTheme(themeCode: string): ThemeAmbient | null {
   return Object.prototype.hasOwnProperty.call(THEME_AMBIENT, themeCode) ? THEME_AMBIENT[themeCode] : null
+}
+
+// ═══ P3 「달과 절기」 ═══════════════════════════════════════════
+//
+// ★ 달을 «원반»으로 그리지 않는 이유 (2026-08-11 육안 전수 판정) ★
+//
+// 16테마 벽 뮤럴을 전수로 펴 놓고 보면 **전부 실내**다 — 서까래가 덮인 대청·석실·심해 궁이고,
+// 바깥은 창·문 «칸» 너머로만 조금씩 보인다. 열린 하늘을 가진 장은 한 장도 없다.
+// 게다가 뮤럴은 `object-cover object-bottom` 이라 세로 크롭량이 기기 종횡비마다 다르다
+// (실측: 390폰 9.5% · 데스크톱 30.7% → 같은 그림 지점이 방 y 로 13%p 어긋난다).
+// 그래서 «창칸 안에 달 원반을 앉히는» 배치는 어느 기기에서 맞춰도 다른 기기에서 벽에 박힌다 —
+// 접지 사고와 정확히 같은 함정이다. 달집 뮤럴에는 **이미 보름달이 구워져 있어** 두 개가 뜬다.
+//
+// 그래서 달은 «빛»으로만 든다: 위상 조도(illum)에 비례하는 냉광 한 겹. 보름밤엔 방이 은은히
+// 밝고 푸르며, 그믐밤엔 아무것도 없다. 실내에서 사람이 실제로 겪는 달의 모습이고,
+// 검수 끝난 원화를 한 픽셀도 건드리지 않는다. (하늘이 열린 신규 뮤럴이 오면 그때 원반을 얹는다.)
+
+/** 달빛 겹의 최대 opacity(보름·한밤). 그라디언트 자체 알파(0.55)와 곱해져 실효 최대 ≈0.17 이 된다. */
+export const MOONLIGHT_MAX_OPACITY = 0.3
+
+/**
+ * 이 조도 미만은 «달 없는 밤» 으로 친다. 그믐 근처의 실낱 조도까지 그리면 층이 사실상 상시 켜져
+ * 있는 것과 같아져 «달이 찼다» 는 신호가 죽는다.
+ */
+export const MOONLIGHT_ILLUM_FLOOR = 0.08
+
+/**
+ * 그 시각·그 달 조도에서의 달빛 겹 opacity.
+ *
+ * 계약: ①밤 가중치(scene-clock)에 비례 — 낮·새벽·초저녁엔 0 이라 **원화가 그대로** 나온다
+ * ②조도에 비례하고 그믐(< FLOOR)은 0 ③무시간 원판(용궁 심해)은 하늘이 없으므로 언제나 0
+ * ④위상 판정은 tintOpacities 와 같은 phaseWeights 하나만 쓴다(시각을 두 번 구현하지 않는다).
+ */
+export function moonlightOpacity(hourFrac: number, illum: number, profile: TintProfile): number {
+  if (profile.base === null) return 0
+  const night = phaseWeights(hourFrac).night
+  const lit = clamp(illum, 0, 1)
+  if (night <= 0 || lit < MOONLIGHT_ILLUM_FLOOR) return 0
+  return round(night * lit * MOONLIGHT_MAX_OPACITY, 4)
+}
+
+/**
+ * 절기 가산 겹 — 절기 ±1일 창에만 테마 스펙 위에 얹는 «공기 한 겹». 소품 스프라이트가 아니다:
+ * 자산이 없는 상태에서 CSS 로 송편·팥죽을 흉내 내면 방의 화격이 떨어진다(앰비언트 영상 반려 전례).
+ * 대신 이미 검증된 앰비언트 어휘(원경광·파티클·글로우)로만 절기의 «기운»을 낸다.
+ *
+ * ⚠️ 전부 무료 연출이다. 판매 요소(한정 신물·패키지)는 CEO 미결정이라 이 계약 안에 없다.
+ */
+export type SeasonalAmbient = {
+  backdrop?: AmbientBackdropSpec[]
+  particles?: AmbientParticle[]
+  glows?: AmbientGlow[]
+}
+
+/**
+ * 5대 절기의 가산 겹.
+ *
+ * glow pulseMs 는 **어느 테마의 값과도 겹치지 않는 수**로 고른다 — 합쳐진 방에서 두 글로우가
+ * 같은 박자로 뛰면 기계처럼 보인다(THEME_AMBIENT 와 같은 규율, 테스트가 전 조합을 대조한다).
+ */
+export const SEASONAL_AMBIENT: Readonly<Record<SeasonalEventKey, SeasonalAmbient>> = {
+  // 설(음 1/1) — 합삭 직후라 달이 없다. 서설(瑞雪)의 흰 기운으로 낸다.
+  seol: {
+    backdrop: [{ kind: 'glow-band', hue: HUE.moon, area: { x: 0, y: 0, w: 100, h: 40 } }],
+    particles: [{ kind: 'snow', engine: 'canvas', count: [6, 14, 22], area: { x: 0, y: 0, w: 100, h: 52 } }],
+    glows: [{ x: 50, y: 20, r: 24, hue: HUE.moon, pulseMs: 3700 }],
+  },
+  // 정월대보름 — 달집 태우기. 보름이라 달빛은 이미 최대치고, 여기선 불씨가 오른다.
+  daeboreum: {
+    particles: [{ kind: 'ember', engine: 'canvas', count: [6, 14, 24], area: { x: 30, y: 30, w: 40, h: 50 } }],
+    glows: [{ x: 50, y: 18, r: 28, hue: HUE.moon, pulseMs: 2900 }],
+  },
+  // 단오 — 창포물·수리취. 푸른 잎이 바람에 든다.
+  dano: {
+    backdrop: [{ kind: 'haze', hue: HUE.wood, area: { x: 0, y: 20, w: 100, h: 34 } }],
+    particles: [{ kind: 'leaf', engine: 'css', count: [2, 4, 7], area: { x: 0, y: 0, w: 100, h: 74 } }],
+    glows: [{ x: 50, y: 44, r: 18, hue: HUE.wood, pulseMs: 6200 }],
+  },
+  // 추석(음 8/15) — 보름달과 햇곡. 달무리 + 금빛 가루.
+  chuseok: {
+    backdrop: [{ kind: 'glow-band', hue: HUE.goldLight, area: { x: 0, y: 0, w: 100, h: 38 } }],
+    particles: [{ kind: 'mote', engine: 'css', count: [2, 5, 9], area: { x: 0, y: 4, w: 100, h: 58 } }],
+    glows: [{ x: 50, y: 16, r: 30, hue: HUE.moon, pulseMs: 7900 }],
+  },
+  // 동지 — 팥죽. 붉은 온광이 아래에서 올라오고 김이 선다.
+  dongji: {
+    backdrop: [{ kind: 'glow-band', hue: HUE.seal, area: { x: 0, y: 40, w: 100, h: 46 } }],
+    particles: [{ kind: 'mote', engine: 'css', count: [2, 4, 7], area: { x: 24, y: 34, w: 52, h: 40 } }],
+    glows: [{ x: 50, y: 62, r: 20, hue: HUE.sealLight, pulseMs: 4400 }],
+  },
+}
+
+/**
+ * 테마 스펙 + 절기 가산 겹. key 가 null 이면 **같은 참조**를 그대로 돌려준다(헛 리렌더 0).
+ *
+ * 합치기만 하고 상한은 손대지 않는다 — 예산은 ambientForTier 가 «스펙 순서대로» 소진하므로,
+ * 테마 것을 먼저 적고 절기 것을 뒤에 붙이면 저사양에서 깎이는 쪽이 언제나 절기다(방의 정체성 보호).
+ */
+export function withSeasonal(spec: ThemeAmbient, key: SeasonalEventKey | null): ThemeAmbient {
+  if (key === null) return spec
+  const add = Object.prototype.hasOwnProperty.call(SEASONAL_AMBIENT, key) ? SEASONAL_AMBIENT[key] : null
+  if (!add) return spec
+  const out: ThemeAmbient = { tintProfile: spec.tintProfile }
+  const backdrop = [...(spec.backdrop ?? []), ...(add.backdrop ?? [])]
+  const particles = [...(spec.particles ?? []), ...(add.particles ?? [])]
+  const glows = [...(spec.glows ?? []), ...(add.glows ?? [])]
+  if (backdrop.length > 0) out.backdrop = backdrop
+  if (particles.length > 0) out.particles = particles
+  if (glows.length > 0) out.glows = glows
+  return out
+}
+
+// ─── KST 달력 날짜 (달·절기 도메인 입력) ───────────────────────
+
+/** KST 고정 오프셋 — Intl/TZ DB 없이 계산해야 서버·클라가 같은 날짜를 본다(scene-clock 과 같은 규약). */
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+
+/**
+ * epochMs → KST 달력 날짜. lunar.lunarPhase / seasonal.activeSeasonal 의 입력 규격이다.
+ * UTC 게터를 «9시간 민 시각» 에 쓰는 것이 KST 달력 날짜다 — 런타임 TZ 와 무관하게 결정론.
+ */
+export function kstCalendarDate(epochMs: number): CalendarDate {
+  const shifted = new Date((Number.isFinite(epochMs) ? epochMs : 0) + KST_OFFSET_MS)
+  return { y: shifted.getUTCFullYear(), m: shifted.getUTCMonth() + 1, d: shifted.getUTCDate() }
+}
+
+/** 같은 KST 날짜면 같은 문자열. 「자정에 달·절기를 다시 판정한다」를 effect 의존성 한 칸으로 만든다. */
+export function kstDayKey(epochMs: number): string {
+  const { y, m, d } = kstCalendarDate(epochMs)
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }

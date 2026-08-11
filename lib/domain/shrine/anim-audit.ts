@@ -35,8 +35,9 @@ export const SHRINE_ANIM_CLASSES: readonly string[] = Object.freeze([
   // 시렁 축복 · 팻말 처마 등
   'shelf-blessed-aura',
   'shrine-plaque-ember',
-  // 테마 앰비언트 — 원경광·글로우·CSS 파티클 5종
-  // (시간대 틴트는 여기 없다: 애니가 아니라 transition 이라 «도는가»로 잴 수 없다)
+  // 테마 앰비언트 — 원경광·글로우·CSS 파티클 5종 (2026-08-11 P2 확산으로 16테마 전부에서 돈다)
+  // (시간대 틴트·P3 달빛(.shrine-moonlight)은 여기 없다: 애니가 아니라 transition 이라
+  //  «도는가»로 잴 수 없다. 산출물 실재 대조는 scripts/check-animation-css.mjs 가 맡는다)
   'shrine-amb-back',
   'shrine-amb-glow',
   'shrine-amb-mote',

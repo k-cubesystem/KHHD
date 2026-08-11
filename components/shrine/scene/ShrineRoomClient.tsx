@@ -40,7 +40,15 @@ import {
 } from '@/lib/domain/shrine/fixture-offsets'
 import { kstHour, phaseMix, sceneLight } from '@/lib/domain/shrine/scene-clock'
 import { effectsTier, perfTier, type EffectsTier, type PerfTier } from '@/lib/domain/shrine/perf-gate'
-import { ambientForTheme, ambientForTier } from '@/lib/domain/shrine/theme-ambient'
+import {
+  ambientForTheme,
+  ambientForTier,
+  kstCalendarDate,
+  kstDayKey,
+  moonlightOpacity,
+  withSeasonal,
+} from '@/lib/domain/shrine/theme-ambient'
+import type { SeasonalEventKey } from '@/lib/domain/shrine/seasonal'
 import { PARALLAX, WORLD_VIEWPORT_PCT, daecheongZone, parseWorld, zoneAlignCamX } from '@/lib/domain/shrine/world'
 import {
   jambSides,
@@ -58,7 +66,8 @@ import {
   type KeeperRange,
 } from '@/lib/domain/shrine/keeper-walk'
 import {
-  AMBIENT_PILOT_THEMES,
+  AMBIENT_OMENS_V1,
+  AMBIENT_THEMES,
   AMBIENT_V1,
   GAMEFEEL_V1,
   SCROLL_SHRINE_V1,
@@ -80,7 +89,8 @@ import {
 import { useCinematics, motionAllowed, ENTRANCE_MS } from './useCinematics'
 import { CameraMinimap, useCameraRig } from './CameraRig'
 import { useShrineAudio } from './useShrineAudio'
-import { AmbientVideo } from '@/components/shared/AmbientVideo'
+// (AmbientVideo — 2026-08-11 앰비언트 16테마 확산으로 신당 룸에서 물러났다. 컴포넌트 자체는
+//  사주 로딩·강신·궁합 등 룸 밖 소비처 7곳이 계속 쓰므로 **삭제 대상이 아니다**.)
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 import { type KeeperSpot } from './WalkingKeeper'
 import { GuardianWalkers } from './GuardianWalkers'
@@ -91,6 +101,7 @@ import { STAGE_GROUND_DROP, hasGrandAltar } from '@/lib/domain/shrine/theme-stag
 import { StageLayers } from './StageLayers'
 import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
 import { TimeTint } from './TimeTint'
+import { Moonlight, SeasonalMark } from './SkyOmens'
 import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
 import { GenericPlaqueBand } from './WindowPlaques'
@@ -117,6 +128,7 @@ import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
 import { SHOW_ENERGY_BALANCE, SHOW_THEME_COLLECTION } from '@/lib/config/shrine-ui'
 import { trackEvent } from '@/lib/analytics/ga4'
+import { logger } from '@/lib/utils/logger'
 // 씬 전체(idle·탭·카메라·신당지기·사랑방·무대)의 연출 CSS. 룸이 유일한 진입점이라 여기서 한 번만 싣는다.
 // ⚠️ styled-jsx 로 되돌리지 말 것 — App Router 에서는 산출물에 실리지 않는다(app/shrine-scene.css 머리말).
 import '@/app/shrine-scene.css'
@@ -378,6 +390,17 @@ export function ShrineRoomClient({
   const elementOfCatalog = useCallback((id: string) => catalogById.get(id)?.element ?? null, [catalogById])
   /** KST 시각(낮밤 조명). null = 아직 마운트 전 — SSR·하이드레이션은 테마 원색 그대로 (#418 전례) */
   const [hour, setHour] = useState<number | null>(null)
+  /** KST 달력 날짜 키. 자정을 넘기면 값이 바뀌어 달·절기가 스스로 다시 잡힌다 */
+  const [dayKey, setDayKey] = useState<string | null>(null)
+  /**
+   * 「달과 절기」 판정 결과. 초기값(조도 0 · 절기 없음)이 곧 «아직 못 받음»이고, 그 동안은
+   * 달빛·절기 겹이 전부 미렌더라 P2 화면 그대로다(게이트 off·지연 로드 실패도 같은 상태).
+   * 만세력 엔진(lunar-javascript 436KB)이 무거워 **방이 그려진 뒤** 동적 import 로 받는다.
+   */
+  const [omens, setOmens] = useState<{ illum: number; seasonal: { key: SeasonalEventKey; label: string } | null }>({
+    illum: 0,
+    seasonal: null,
+  })
   // ── 신위 탭 회전 (안2.3 ④) ──
   /** 회전 재생 중. true 인 동안 재탭은 무시된다(부록 C ④ 탭 잠금) */
   const [deitySpinning, setDeitySpinning] = useState(false)
@@ -458,11 +481,45 @@ export function ShrineRoomClient({
   // 낮밤 사이클 — 마운트 후에만 시각을 읽는다(서버·클라 렌더 결과 동일 유지).
   // 조명 오버레이는 .shrine-light-overlay 의 700ms transition 이 받아 부드럽게 넘어간다.
   useEffect(() => {
-    const tick = () => setHour(kstHour(Date.now()))
+    const tick = () => {
+      const now = Date.now()
+      setHour(kstHour(now))
+      // 날짜 키는 자정에만 바뀐다 — 같은 문자열이면 setState 가 리렌더를 내지 않는다
+      setDayKey(kstDayKey(now))
+    }
     tick()
     const iv = window.setInterval(tick, SCENE_CLOCK_MS)
     return () => window.clearInterval(iv)
   }, [])
+
+  // ── 달 위상 · 절기 (P3) ──────────────────────────────────────
+  // 도메인 두 모듈 다 만세력 엔진을 런타임 의존으로 들고 있다(436KB). 정적 import 하면 신당 룸
+  // 첫 청크에 통째로 실리므로, 방이 이미 그려진 뒤 **지연 청크**로 받아 온다.
+  // 실패해도 조용히 P2 화면으로 남는다(연출 외 부작용 0).
+  useEffect(() => {
+    if (!AMBIENT_V1 || !AMBIENT_OMENS_V1 || dayKey === null) return
+    let alive = true
+    void (async () => {
+      try {
+        const [lunar, seasonal] = await Promise.all([
+          import('@/lib/domain/shrine/lunar'),
+          import('@/lib/domain/shrine/seasonal'),
+        ])
+        if (!alive) return
+        const date = kstCalendarDate(Date.now())
+        const event = seasonal.activeSeasonal(date)
+        setOmens({
+          illum: lunar.lunarPhase(date).illum,
+          seasonal: event ? { key: event.key, label: event.label } : null,
+        })
+      } catch (err) {
+        logger.warn('[shrine] 달·절기 도메인 지연 로드 실패 — P2 화면으로 남긴다', err)
+      }
+    })()
+    return () => {
+      alive = false
+    }
+  }, [dayKey])
 
   // 입장 시네마틱 — 마운트 1회. 등급 측정도 여기서(같은 커밋의 state 는 아직 못 읽으므로 지역 변수로 쓴다).
   useEffect(() => {
@@ -927,16 +984,28 @@ export function ShrineRoomClient({
     [activeCode]
   )
   /**
-   * 원경광·파티클 스펙 — 시범 3테마만(P2). 앰비언트 영상 v1~v5 전량 반려 전례 때문에
-   * CEO 검수 GO 전까지 확산하지 않는다(확산 = AMBIENT_PILOT_THEMES 에 코드 추가 한 줄).
+   * 원경광·파티클 스펙 — **16테마 전부**(P2 확산 완료 2026-08-11). 여기에 절기 가산 겹을 «뒤에»
+   * 붙인 뒤 티어를 적용한다: ambientForTier 가 스펙 순서대로 예산을 쓰므로, 저사양에서 깎이는 쪽이
+   * 언제나 절기가 되어 방의 정체성(테마 제 공기)이 먼저 지켜진다.
    */
   const ambientSpec = useMemo(() => {
-    if (!AMBIENT_V1 || ambientTier === null || !AMBIENT_PILOT_THEMES.includes(activeCode)) return null
+    if (!AMBIENT_V1 || ambientTier === null || !AMBIENT_THEMES.includes(activeCode)) return null
     const base = ambientForTheme(activeCode)
-    return base ? ambientForTier(base, ambientTier) : null
-  }, [activeCode, ambientTier])
+    if (!base) return null
+    return ambientForTier(withSeasonal(base, AMBIENT_OMENS_V1 ? (omens.seasonal?.key ?? null) : null), ambientTier)
+  }, [activeCode, ambientTier, omens.seasonal])
   /** 캔버스 상시 이미터 계획(간격은 «정상상태 개수 = emit × 체류 ÷ 간격» 의 역산) */
   const ambientEmits = useMemo(() => (ambientSpec ? ambientEmitPlan(ambientSpec) : []), [ambientSpec])
+  /**
+   * 달빛 겹의 짙기 — 밤 가중치 × 달 조도. 낮·그믐이면 0 이라 층 자체가 DOM 에 없다(원화 보호).
+   * hour 가 null(마운트 전)이면 0 — SSR·클라 첫 렌더가 같아야 한다(#418 전례).
+   */
+  const moonOpacity = useMemo(() => {
+    if (!AMBIENT_V1 || !AMBIENT_OMENS_V1 || hour === null || tintProfile === null) return 0
+    return moonlightOpacity(hour, omens.illum, tintProfile)
+  }, [hour, omens.illum, tintProfile])
+  /** 절기 현판 — 게이트가 닫혀 있으면 아예 없다 */
+  const seasonalEvent = AMBIENT_V1 && AMBIENT_OMENS_V1 ? omens.seasonal : null
 
   // 보관함 가용 수량 = 보유 - 배치
   const available = useMemo(() => {
@@ -1042,6 +1111,16 @@ export function ShrineRoomClient({
       value: ambientSpec ? 1 : 0,
     })
   }, [hour, ambientTier, activeCode, ambientSpec])
+
+  // ── 절기 노출 계측 (ARCH §4 L2 지표 `seasonal_view`) — 절기 창이 열린 방문마다 1회.
+  // 절기는 1년에 5회 × 3일뿐이라, 여기서 안 찍으면 «절기 기간 재방문율» 지표가 아예 안 선다.
+  const seasonalLogged = useRef<string | null>(null)
+  useEffect(() => {
+    const key = seasonalEvent?.key ?? null
+    if (key === null || seasonalLogged.current === key) return
+    seasonalLogged.current = key
+    trackEvent({ action: 'seasonal_view', category: 'shrine', label: `${activeCode}:${key}` })
+  }, [seasonalEvent, activeCode])
 
   // ── 기도 의식 — 소원 폼이 기원 +1 을 알리면(SHRINE_PRAYED_EVENT) 룸이 연출을 받는다 ──
   // 시각 연출 전용: 점화는 임시 불꽃(pray-*)이라 저장된 lit 상태를 건드리지 않는다(setPlacementLit 미호출).
@@ -1682,21 +1761,10 @@ export function ShrineRoomClient({
       {/* 원경층 — 뮤럴 바로 위, 모든 살림 아래(z auto). 테마마다 다른 공기(원경광·CSS 파티클·글로우)를
           여기 한 겹으로 얹는다. 밀도가 필요한 눈·불씨는 이 층이 아니라 EffectsCanvas(z11) 몫이다. */}
       {ambientSpec && <AmbientBackdrop spec={ambientSpec} roundClassName={roundAll} />}
-      {/* 살아있는 방 — 테마별 요소 오버레이(있는 테마만). 검정을 crush 한(요소만 남긴) 영상을
-          mixBlendMode:lighten 으로 얹어 room.webp 는 100% 정지시키고 방보다 밝은 요소(나비·벚꽃)만 노출한다.
-          (screen 은 방 전체를 핑크로 물들여 반려 — lighten=픽셀별 max 라 검정 영역은 방 원본 유지, v1 방 전체 움직임도 해소.)
-          편집 중엔 성능 위해 숨김. 영상 자체를 라운딩(부모 클립 의존 금지 — 흰화면 사고 교훈).
-          파일 없으면 AmbientVideo 계약상 아무것도 안 그려 위 room.webp 가 그대로 보인다.
-          ⚠️ 앰비언트 스펙을 든 테마에서는 **미렌더**다(ARCH §11 은퇴 경로) — 같은 자리에 두 연출을
-          겹치면 검수 대상이 무엇인지부터 흐려진다. 스펙 없는 테마는 지금까지 그대로 재생된다. */}
-      {!editing && !ambientSpec && (
-        <AmbientVideo
-          key={`vid-${activeCode}`}
-          id={`shrine-theme-${activeCode}`}
-          className={`absolute inset-0 w-full h-full object-cover pointer-events-none select-none${roundAll}`}
-          style={{ mixBlendMode: 'lighten', opacity: 0.9 }}
-        />
-      )}
+      {/* (앰비언트 영상 — 2026-08-11 물러났다. 16테마 전부가 제 공기를 들게 되면서 이 자리의 소비처가
+          0 이 됐고, 같은 자리에 두 연출을 겹치면 검수 대상이 무엇인지부터 흐려진다.
+          ⚠️ components/shared/AmbientVideo 자체는 **살아 있다** — 사주 로딩·강신·궁합 등 룸 밖
+          소비처 7곳이 계속 쓴다. 여기서 걷은 것은 «신당 룸에서의 사용» 뿐이다. ARCH §11 은퇴 경로.) */}
       {/* 제단 영역 대비용 하단 암전 */}
       <div
         className={`absolute inset-x-0 bottom-0 h-[38%]${roundBottom}`}
@@ -1857,6 +1925,14 @@ export function ShrineRoomClient({
           않는 것이 이 자리의 계약이다(대면적 블렌드 사고 전례). 낮에는 세 장 다 0 이라 DOM 이 비어
           검수된 원화가 그대로 나온다. */}
       <TimeTint hour={hour} profile={tintProfile} roundClassName={roundAll} />
+
+      {/* 달빛(月光) — P3. 틴트 바로 다음 형제로 같은 층(z29)에 일반 알파로 겹친다.
+          짙기 = 밤 가중치 × 그날 달 조도라, 보름밤엔 방이 은은히 밝고 그믐밤엔 층 자체가 없다.
+          달을 «원반»으로 그리지 않는 근거는 theme-ambient.ts 「P3 달과 절기」 절(뮤럴 전수 판정). */}
+      <Moonlight opacity={moonOpacity} roundClassName={roundAll} />
+
+      {/* 절기 현판 — 1년에 15일(5절기 × 3일)만 존재하는 한 줄. 판매 요소 없음(무료 연출). */}
+      <SeasonalMark event={seasonalEvent} />
 
       {/* (앵커 스냅 골드 링 — 자석 폐지와 함께 물러났다. 붙을 자리가 없으니 링도 거짓말이 된다.
           CSS `.shrine-anchor-ring` 과 계측 목록 두 곳도 같은 손질에서 함께 내렸다.) */}

@@ -25,13 +25,42 @@ export const SCROLL_SHRINE_V1 = true
 export const AMBIENT_V1 = true
 
 /**
- * 앰비언트 시범 테마 (PRD-shrine-living-background-v1 §5 검수 규율 · §8 결정 4).
+ * 앰비언트를 «제 공기»로 사는 테마 (PRD-shrine-living-background-v1 §5 · P2 확산 완료 2026-08-11).
  *
- * 앰비언트 영상 v1~v5 전량 반려 전례 때문에 **시범 검수 GO 전까지는 이 3테마만** 렌더한다.
- * 세 구현 계열(CSS 기준선·밤 원판 프로파일·캔버스 밀도)을 한 번에 검증하는 조합이고,
- * 확산은 이 배열에 테마 코드를 더하는 것으로 끝난다(스펙 16종은 이미 theme-ambient.ts 에 있다).
+ * 시범 3테마(반가·달집·설빛)로 세 구현 계열(CSS 기준선·밤 원판 프로파일·캔버스 밀도)을 검증했고,
+ * CEO GO 로 **16테마 전부**에 폈다. 여기 있는 테마는 자기 파티클을 들고 있으므로 전 테마 공통
+ * 빛가루(MOTE_SPOTS)와 앰비언트 영상을 함께 내린다 — 한 자리에 두 연출을 겹치지 않는다.
+ *
+ * 원복 레버 3단: ①전체 = AMBIENT_V1=false ②일부 = 이 배열에서 코드를 뺀다(그 방만 현행 화면)
+ * ③스펙 자체 = theme-ambient.THEME_AMBIENT 에서 항목 제거.
+ * (배열이 곧 모집단은 아니다 — 스펙 없는 코드를 적어도 ambientForTheme 가 null 로 막는다.)
  */
-export const AMBIENT_PILOT_THEMES: readonly string[] = ['banga', 'daljip', 'seolbit']
+export const AMBIENT_THEMES: readonly string[] = [
+  'choga',
+  'banga',
+  'yonggung',
+  'dokkaebi',
+  'seolbit',
+  'daljip',
+  'hongsal',
+  'byeolbat',
+  'daejanggan',
+  'yeondeung',
+  'dangsan',
+  'jangdok',
+  'jonggak',
+  'naru',
+  'saemgut',
+  'seonang',
+]
+
+/**
+ * 「달과 절기」 P3 게이트 (ARCH-shrine-living-background-v1 §4 L2).
+ *
+ * false 로 두면 달빛 겹·절기 가산 겹·절기 현판이 전부 미렌더되고 만세력 엔진 지연 청크도
+ * 아예 받지 않는다 — P2(테마의 숨결)까지의 화면으로 정확히 돌아간다.
+ */
+export const AMBIENT_OMENS_V1 = true
 
 /**
  * 기도(기원 +1)가 성립한 순간을 신당 룸에 알리는 window 이벤트 이름.

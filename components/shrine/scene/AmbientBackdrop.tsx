@@ -111,7 +111,7 @@ interface KindStyle {
   o: number
 }
 
-/** css 엔진 5종. 여기 없는 종(snow·bubble·drip)은 캔버스가 그리므로 DOM 노드를 만들지 않는다. */
+/** css 엔진 5종. 여기 없는 종(snow·bubble)은 캔버스가 그리므로 DOM 노드를 만들지 않는다. */
 const PARTICLE_STYLE: Readonly<Partial<Record<AmbientParticleKind, KindStyle>>> = {
   mote: { cls: 'shrine-amb-mote', size: [3, 2], dur: [9, 6], dx: [6, 10], o: 0.5 },
   firefly: { cls: 'shrine-amb-firefly', size: [5, 2], dur: [7, 5], dx: [12, 12], o: 0.8 },
@@ -170,6 +170,20 @@ const CANVAS_KIND: Readonly<Partial<Record<AmbientParticleKind, CanvasKind>>> = 
  * 불씨처럼 수명이 짧은 종은 목표 개수에 못 미친 채로 둔다(체감 우선).
  */
 export const AMBIENT_EMIT_MIN_MS = 600
+
+/**
+ * 실제 렌더 경로를 가진 종 — 스펙(THEME_AMBIENT·SEASONAL_AMBIENT)과의 대조를 위해 내보낸다.
+ *
+ * 이 두 목록에 없는 종을 스펙에 적으면 그 테마는 «파티클이 있다고 적혀 있는데 한 알도 안 나는»
+ * 상태가 된다. 구 'drip'(샘굿)이 정확히 그랬고, 시범 3테마만 켜져 있던 동안에는 아무도 몰랐다 —
+ * 확산 때 전수로 드러난 사고라 다시는 눈으로 찾지 않게 테스트가 diff 0 으로 대조한다.
+ */
+export const AMBIENT_CSS_KINDS: readonly AmbientParticleKind[] = Object.freeze(
+  Object.keys(PARTICLE_STYLE) as AmbientParticleKind[]
+)
+export const AMBIENT_CANVAS_KINDS: readonly AmbientParticleKind[] = Object.freeze(
+  Object.keys(CANVAS_KIND) as AmbientParticleKind[]
+)
 
 export interface AmbientEmit {
   kind: EffectKind

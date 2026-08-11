@@ -1841,6 +1841,19 @@
   background: linear-gradient(180deg, rgba(10, 16, 42, 0.3) 0%, rgba(10, 16, 42, 0.19) 55%, rgba(10, 16, 42, 0.1) 100%);
 }
 
+/* 달빛(月光) — P3 「달과 절기」. 위에서 비껴드는 냉광 한 겹으로, 짙기(opacity)는 밤 가중치 ×
+   달 조도를 렌더가 인라인으로 준다. 낮·그믐엔 요소 자체가 DOM 에 없다(원화 보호 계약).
+   ⚠️ 틴트와 같은 규약 — 애니 없음(전면 대면적), blend 없음, 그라디언트는 여기 고정값. */
+.shrine-moonlight {
+  background: linear-gradient(
+    180deg,
+    rgba(167, 182, 191, 0.55) 0%,
+    rgba(167, 182, 191, 0.22) 45%,
+    rgba(167, 182, 191, 0.05) 100%
+  );
+  transition: opacity 2000ms ease;
+}
+
 /* 원경광 — 광선·안개 띠·광층. 그라디언트는 정지해 있고 밝기만 아주 느리게 숨쉰다 */
 .shrine-amb-back {
   pointer-events: none;
@@ -2019,7 +2032,8 @@
   }
   .shrine-tint-dawn,
   .shrine-tint-dusk,
-  .shrine-tint-night {
+  .shrine-tint-night,
+  .shrine-moonlight {
     transition: none;
   }
 }
