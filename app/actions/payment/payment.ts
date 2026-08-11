@@ -9,6 +9,13 @@ import { rateLimit } from '@/lib/utils/rate-limit'
 const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 
 /**
+ * "한 번이라도 충전한 적 있음" 판정 대상 상태.
+ * 취소된 결제('refunded')도 반드시 포함한다 — 제외하면 결제→취소→재결제로
+ * 첫 구매 2배를 무한히 다시 받는 경로가 열린다.
+ */
+const CHARGED_STATUSES = ['completed', 'refunded'] as const
+
+/**
  * 로그인 사용자가 복채를 한 번이라도 충전했는지 여부 (첫 구매 2배 판정용).
  * 서버에서만 판단 — 클라이언트 플래그 신뢰 안 함.
  */
@@ -24,7 +31,7 @@ export async function hasChargedBefore(): Promise<boolean> {
     .from('payments')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
-    .eq('status', 'completed')
+    .in('status', CHARGED_STATUSES)
     .eq('bokchae_type', 'charge')
   return (count ?? 0) > 0
 }
@@ -94,7 +101,7 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
     .from('payments')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
-    .eq('status', 'completed')
+    .in('status', CHARGED_STATUSES)
     .eq('bokchae_type', 'charge')
   const isFirstPurchase = (priorCharges ?? 0) === 0
 
