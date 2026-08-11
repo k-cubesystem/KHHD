@@ -113,6 +113,16 @@ npx web-push generate-vapid-keys
 
 ---
 
+## 8. 토스 웹훅 이벤트 등록 확인 — 결제 취소 감지용
+
+**왜**: 결제 취소 시 복채를 자동 회수하는 수복이 들어갔는데, 이 코드는 토스가 보내는 `PAYMENT_STATUS_CHANGED` 이벤트를 받아야 작동합니다.
+
+1. https://developers.tosspayments.com → 로그인 → 내 개발정보 → **웹훅**
+2. 등록된 웹훅 주소가 `https://k-haehwadang.com/api/webhooks/toss` 인지 확인
+3. 구독 이벤트에 **`PAYMENT_STATUS_CHANGED`** 가 체크돼 있는지 확인 — 없으면 체크 추가
+
+---
+
 ## 완료 체크리스트
 
 - [ ] 1. Resend 가입·도메인 인증·Supabase SMTP 연결·발송 한도 상향 ← **최우선**
@@ -123,5 +133,6 @@ npx web-push generate-vapid-keys
 - [ ] 5. WAF·2FA×4·도메인 잠금
 - [ ] 6. (결정 시) Turnstile 키 발급
 - [ ] 7. VAPID 키 생성 → Vercel 환경변수 2개
+- [ ] 8. 토스 웹훅 `PAYMENT_STATUS_CHANGED` 등록 확인
 
 하나 끝날 때마다 채팅에 "1번 했어" 정도로만 알려주시면, 제가 이어받아 검증·배선합니다.
