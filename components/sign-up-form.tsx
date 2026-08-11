@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import SocialLoginButtons from '@/components/social-login-buttons'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 import { GA } from '@/lib/analytics/ga4'
+import { safeNextPath } from '@/lib/auth/next-path'
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
@@ -32,6 +33,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // 메일 인증을 마친 뒤 돌아갈 곳(가족 초대 링크 등). /auth/callback 이 이 값을 읽는다.
+  const nextPath = safeNextPath(searchParams.get('next'))
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +69,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: nextPath
+            ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+            : `${window.location.origin}/auth/callback`,
           data: {
             full_name: name,
             gender,

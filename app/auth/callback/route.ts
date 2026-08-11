@@ -5,6 +5,7 @@ import { grantSignupBonus } from '@/lib/services/wallet-grant'
 import { processReferralBonus } from '@/app/actions/user/referral'
 import { logger } from '@/lib/utils/logger'
 import { rateLimitByIp } from '@/lib/utils/rate-limit'
+import { safeNextPath } from '@/lib/auth/next-path'
 
 /** 이메일 OTP 검증 브루트포스 방어(S-1) — IP당 시간당 10회. PKCE 코드 교환(정상 로그인)은 제외한다. */
 const OTP_RATE_LIMIT = { interval: 60 * 60 * 1000, uniqueTokenPerInterval: 10 }
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
   // CRITICAL: Create response FIRST, then inject cookies into it
   // signup 타입이면 welcome 파라미터 추가 (토스트 알림용)
   const isSignup = type === 'signup'
-  const redirectUrl = isSignup ? `${requestUrl.origin}/protected/analysis?welcome=1` : `${requestUrl.origin}/protected`
+  // ?next= 로 돌아갈 곳을 지정할 수 있다(가족 초대 링크 등). 오픈 리다이렉트는 safeNextPath 가 막는다.
+  const nextPath = safeNextPath(requestUrl.searchParams.get('next'))
+  const defaultUrl = isSignup ? `${requestUrl.origin}/protected/analysis?welcome=1` : `${requestUrl.origin}/protected`
+  const redirectUrl = nextPath ? `${requestUrl.origin}${nextPath}` : defaultUrl
   const redirectResponse = NextResponse.redirect(redirectUrl)
 
   const supabase = createServerClient(

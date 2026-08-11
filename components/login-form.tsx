@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { GA } from '@/lib/analytics/ga4'
+import { safeNextPath } from '@/lib/auth/next-path'
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
@@ -41,7 +42,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
       })
       if (error) throw error
       GA.login()
-      router.push('/protected')
+      // ?next= 가 있으면 그리로 돌려보낸다(가족 초대 링크 등). 오픈 리다이렉트는 safeNextPath 가 막는다.
+      router.push(safeNextPath(searchParams.get('next')) ?? '/protected')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

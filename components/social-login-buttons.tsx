@@ -5,6 +5,8 @@ import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { safeNextPath } from '@/lib/auth/next-path'
 
 /** 카카오톡/라인/인스타 등 인앱 브라우저 감지 */
 function isInAppBrowser(): boolean {
@@ -33,6 +35,9 @@ export default function SocialLoginButtons() {
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [inApp, setInApp] = useState(false)
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  // 로그인 뒤 돌아갈 곳 — /auth/callback 이 이 값을 읽어 최종 리다이렉트를 정한다.
+  const nextPath = safeNextPath(searchParams.get('next'))
 
   useEffect(() => {
     setIsMounted(true)
@@ -58,7 +63,9 @@ export default function SocialLoginButtons() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: nextPath
+            ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`
+            : `${window.location.origin}/auth/callback`,
         },
       })
 

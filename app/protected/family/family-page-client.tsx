@@ -6,6 +6,9 @@ import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/a
 import { type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { MemberMissionCard } from '@/components/family/member-mission-card'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
+import { FamilyInvitePanel } from '@/components/family/family-invite-panel'
+import { LinkedFamiliesSection } from '@/components/family/linked-families-section'
+import type { FamilyInviteSummary, LinkedFamily } from '@/app/actions/family-invite'
 import { BokUpsellModal } from '@/components/shared/bok-upsell-modal'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
@@ -79,9 +82,21 @@ function CalendarFields({
 interface FamilyPageClientProps {
   initialMembers: FamilyMemberWithMissions[]
   isGuest: boolean
+  /** 내가 낸 살아있는 초대들. 게스트 경로에서는 비어 있다. */
+  invites?: FamilyInviteSummary[]
+  /** 이미 실계정이 붙은 내 가족 자리. */
+  linkedMemberIds?: string[]
+  /** 내가 남의 가족 자리에 붙어 있는 목록(읽기 전용). */
+  linkedFamilies?: LinkedFamily[]
 }
 
-export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientProps) {
+export function FamilyPageClient({
+  initialMembers,
+  isGuest,
+  invites = [],
+  linkedMemberIds = [],
+  linkedFamilies = [],
+}: FamilyPageClientProps) {
   const router = useRouter()
   // 사주 계산용으로 자동 생성되는 relationship='본인' 레코드는 목록·카운트·지도 입구에서 숨긴다.
   // (DB 행은 삭제하지 않는다 — 사주 계산 소비처가 재생성에 의존)
@@ -210,6 +225,9 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
         )}
       </section>
 
+      {/* 내가 연결된 가족(초대를 수락한 쪽) — 내 가족 목록보다 먼저 보여준다 */}
+      {linkedFamilies.length > 0 && <LinkedFamiliesSection families={linkedFamilies} />}
+
       {/* 기운 지도 입구 — 본인(profiles)이 항상 지도에 오르므로 레코드가 하나라도 있으면 진입 가능(지도가 self-only 빈 상태를 처리) */}
       {initialMembers.length > 0 && (
         <Link
@@ -262,6 +280,13 @@ export function FamilyPageClient({ initialMembers, isGuest }: FamilyPageClientPr
           </div>
         )}
       </section>
+
+      {/* 가족 초대 링크 — 등록된 자리에 실계정을 잇는다 */}
+      <FamilyInvitePanel
+        members={members.map((m) => ({ id: m.id, name: m.name, relationship: m.relationship }))}
+        invites={invites}
+        linkedMemberIds={linkedMemberIds}
+      />
 
       {/* 등록/수정 폼 모달 */}
       {(isFormOpen || editingMember) && (
