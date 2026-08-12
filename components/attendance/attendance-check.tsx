@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { useQueryClient } from '@tanstack/react-query'
 import { WALLET_BALANCE_KEY } from '@/hooks/use-wallet'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
+import { useKstToday, parseKstDateString } from '@/hooks/use-kst-today'
 
 /* ─────────────────────────────────────────
    Types
@@ -109,15 +110,15 @@ function MonthlyCalendar({
   month,
   checkedSet,
   showStamp,
+  todayStr,
 }: {
   year: number
   month: number // 0-indexed
   checkedSet: Set<string>
   showStamp: boolean
+  /** KST 기준 오늘 "YYYY-MM-DD" — 서버 출석 판정과 같은 기준이어야 한다 */
+  todayStr: string
 }) {
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
-
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
   // Monday = 0 offset
@@ -256,7 +257,10 @@ export function AttendanceCheck({
   totalBokchae: initialTotalBokchae,
   consecutiveStreak: initialStreak = 0,
 }: AttendanceCheckProps) {
-  const today = new Date()
+  // 자정에 스스로 갱신되는 KST 날짜. 밤새 열어둔 세션도 날짜가 따라 넘어간다.
+  const todayStr = useKstToday()
+  const { year: todayYear, monthIndex: todayMonth } = useMemo(() => parseKstDateString(todayStr), [todayStr])
+
   const [canCheckIn, setCanCheckIn] = useState(initialCanCheckIn)
   const [checkedDates, setCheckedDates] = useState<string[]>(initialCheckedDates)
   const [weekCount, setWeekCount] = useState(initialWeekCount)
@@ -270,26 +274,22 @@ export function AttendanceCheck({
     isWeeklyBonus: boolean
     currentBalance?: number
   } | null>(null)
-  const [viewYear, setViewYear] = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  // 보고 있는 달을 절대 연·월이 아니라 '이번 달로부터의 오프셋'으로 들고 있는다.
+  // 자정에 달이 바뀌어도 시야가 따라 넘어가고, 앞뒤 이동 가능 여부가 오프셋만으로 결정된다.
+  const [monthOffset, setMonthOffset] = useState(0)
 
   const queryClient = useQueryClient()
 
   const checkedSet = useMemo(() => new Set(checkedDates), [checkedDates])
 
-  const monthLabel = useMemo(() => {
-    return new Date(viewYear, viewMonth, 1).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
-  }, [viewYear, viewMonth])
+  const viewDate = useMemo(() => new Date(todayYear, todayMonth + monthOffset, 1), [todayYear, todayMonth, monthOffset])
+  const viewYear = viewDate.getFullYear()
+  const viewMonth = viewDate.getMonth()
 
-  const canGoPrev = useMemo(() => {
-    const d = new Date(viewYear, viewMonth - 1, 1)
-    const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1)
-    return d >= threeMonthsAgo
-  }, [viewYear, viewMonth, today])
+  const monthLabel = useMemo(() => viewDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' }), [viewDate])
 
-  const canGoNext = useMemo(() => {
-    return viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth())
-  }, [viewYear, viewMonth, today])
+  const canGoPrev = monthOffset > -3
+  const canGoNext = monthOffset < 0
 
   const { play } = useShrineAudio()
 
@@ -300,7 +300,6 @@ export function AttendanceCheck({
     setIsChecking(false)
 
     if (result.success) {
-      const todayStr = today.toISOString().split('T')[0]
       setCanCheckIn(false)
       setCheckedDates((prev) => [...prev, todayStr])
       setWeekCount((prev) => prev + 1)
@@ -313,8 +312,7 @@ export function AttendanceCheck({
       })
 
       // Jump to current month so the stamp is visible
-      setViewYear(today.getFullYear())
-      setViewMonth(today.getMonth())
+      setMonthOffset(0)
 
       setShowStamp(true)
       play('chime') // 출석 도장 순간 효과음(F-4, 전역 음소거 존중)
@@ -339,7 +337,7 @@ export function AttendanceCheck({
     } else {
       toast.error(result.error || '출석 체크에 실패했습니다.')
     }
-  }, [canCheckIn, isChecking, queryClient, today, play])
+  }, [canCheckIn, isChecking, queryClient, todayStr, play])
 
   return (
     <Card className="bg-surface/30 border-primary/20 overflow-hidden relative">
@@ -390,11 +388,7 @@ export function AttendanceCheck({
           {/* Calendar nav */}
           <div className="flex items-center justify-between">
             <button
-              onClick={() => {
-                const d = new Date(viewYear, viewMonth - 1, 1)
-                setViewYear(d.getFullYear())
-                setViewMonth(d.getMonth())
-              }}
+              onClick={() => setMonthOffset((o) => o - 1)}
               disabled={!canGoPrev}
               aria-label="이전 달"
               className={cn(
@@ -408,11 +402,7 @@ export function AttendanceCheck({
             </button>
             <span className="text-[11px] font-medium text-ink-light/70">{monthLabel}</span>
             <button
-              onClick={() => {
-                const d = new Date(viewYear, viewMonth + 1, 1)
-                setViewYear(d.getFullYear())
-                setViewMonth(d.getMonth())
-              }}
+              onClick={() => setMonthOffset((o) => o + 1)}
               disabled={!canGoNext}
               aria-label="다음 달"
               className={cn(
@@ -426,7 +416,13 @@ export function AttendanceCheck({
             </button>
           </div>
 
-          <MonthlyCalendar year={viewYear} month={viewMonth} checkedSet={checkedSet} showStamp={showStamp} />
+          <MonthlyCalendar
+            year={viewYear}
+            month={viewMonth}
+            checkedSet={checkedSet}
+            showStamp={showStamp}
+            todayStr={todayStr}
+          />
         </div>
 
         {/* ── Weekly Bonus Progress ── */}

@@ -58,16 +58,20 @@ export function SajuLoadingOverlay({
     setTimeout(() => onComplete(), 600)
   }, [finishing, onComplete])
 
-  // 메시지 순환
+  // 메시지 순환 — 페이드아웃(400ms) 중 언마운트되면 교체 타이머도 함께 거둔다
   useEffect(() => {
+    let swapTimer: ReturnType<typeof setTimeout> | undefined
     const interval = setInterval(() => {
       setMsgVisible(false)
-      setTimeout(() => {
+      swapTimer = setTimeout(() => {
         setMsgIndex((i) => (i + 1) % SAJU_LOADING_MESSAGES.length)
         setMsgVisible(true)
       }, 400)
     }, 3200)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      if (swapTimer !== undefined) clearTimeout(swapTimer)
+    }
   }, [])
 
   // 진행바: 0 → 98% (duration ms 동안) — ref로 DOM 직접 조작해 리렌더 방지

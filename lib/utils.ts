@@ -29,6 +29,11 @@ export function formatKstDate(value: string | number | Date = Date.now()): strin
   return new Date(time + KST_OFFSET_MS).toISOString().split('T')[0]
 }
 
+/** KST(UTC+9) 기준 0~23 시(時). 인사말·밤낮 분기 등 '시각' 판정 공용. 잘못된 값이면 NaN. */
+export function kstHour(value: string | number | Date = Date.now()): number {
+  return new Date(new Date(value).getTime() + KST_OFFSET_MS).getUTCHours()
+}
+
 /** 짧은 KST 포맷 "M.D HH:mm" — 알림 등 연도 생략. 하이드레이션 안전(위와 동일 오프셋 계산). */
 export function formatKstShort(value: string | Date): string {
   const time = new Date(value).getTime()

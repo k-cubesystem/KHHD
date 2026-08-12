@@ -8,6 +8,7 @@ import { CalendarCheck, Gift, Sparkles, Check, Flame, Crown, ChevronLeft, Chevro
 import { recordDailyAttendance } from '@/app/actions/payment/daily-check'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useKstToday, parseKstDateString } from '@/hooks/use-kst-today'
 
 /* ─────────────────────────────────────────
    Types
@@ -79,14 +80,15 @@ function MonthlyCalendar({
   month,
   checkedSet,
   showStamp,
+  todayStr,
 }: {
   year: number
   month: number
   checkedSet: Set<string>
   showStamp: boolean
+  /** KST 기준 오늘 "YYYY-MM-DD" — 서버 출석 판정과 같은 기준이어야 한다 */
+  todayStr: string
 }) {
-  const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
   const firstDay = new Date(year, month, 1)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const startOffset = (firstDay.getDay() + 6) % 7
@@ -205,7 +207,10 @@ export function DailyCheckIn({
   totalBokchae: initialTotalBokchae = 0,
   consecutiveStreak: initialStreak = 0,
 }: DailyCheckInProps) {
-  const today = new Date()
+  // 자정에 스스로 갱신되는 KST 날짜. 밤새 열어둔 세션도 날짜가 따라 넘어간다.
+  const todayStr = useKstToday()
+  const { year: todayYear, monthIndex: todayMonth } = useMemo(() => parseKstDateString(todayStr), [todayStr])
+
   const [open, setOpen] = useState(false)
   const [canCheckIn, setCanCheckIn] = useState(initialCanCheckIn)
   const [checkedDates, setCheckedDates] = useState<string[]>(initialCheckedDates)
@@ -216,26 +221,19 @@ export function DailyCheckIn({
   const [showStamp, setShowStamp] = useState(false)
   const [showParticles, setShowParticles] = useState(false)
   const [lastReward, setLastReward] = useState<{ reward: number; isWeeklyBonus: boolean } | null>(null)
-  const [viewYear, setViewYear] = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  // 보고 있는 달은 절대 연·월이 아니라 '이번 달로부터의 오프셋'이다(자정에 시야가 따라 넘어간다).
+  const [monthOffset, setMonthOffset] = useState(0)
 
   const checkedSet = useMemo(() => new Set(checkedDates), [checkedDates])
 
-  const monthLabel = useMemo(
-    () => new Date(viewYear, viewMonth, 1).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' }),
-    [viewYear, viewMonth]
-  )
+  const viewDate = useMemo(() => new Date(todayYear, todayMonth + monthOffset, 1), [todayYear, todayMonth, monthOffset])
+  const viewYear = viewDate.getFullYear()
+  const viewMonth = viewDate.getMonth()
 
-  const canGoPrev = useMemo(() => {
-    const d = new Date(viewYear, viewMonth - 1, 1)
-    const limit = new Date(today.getFullYear(), today.getMonth() - 3, 1)
-    return d >= limit
-  }, [viewYear, viewMonth, today])
+  const monthLabel = useMemo(() => viewDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' }), [viewDate])
 
-  const canGoNext = useMemo(
-    () => viewYear < today.getFullYear() || (viewYear === today.getFullYear() && viewMonth < today.getMonth()),
-    [viewYear, viewMonth, today]
-  )
+  const canGoPrev = monthOffset > -3
+  const canGoNext = monthOffset < 0
 
   const handleCheckIn = useCallback(async () => {
     if (!canCheckIn || isLoading) return
@@ -244,7 +242,6 @@ export function DailyCheckIn({
     setIsLoading(false)
 
     if (result.success) {
-      const todayStr = today.toISOString().split('T')[0]
       setCanCheckIn(false)
       setCheckedDates((prev) => [...prev, todayStr])
       setWeekCount((prev) => prev + 1)
@@ -252,8 +249,7 @@ export function DailyCheckIn({
       setStreak((prev) => prev + 1)
       setLastReward({ reward: result.reward || 1, isWeeklyBonus: result.isWeeklyBonus || false })
 
-      setViewYear(today.getFullYear())
-      setViewMonth(today.getMonth())
+      setMonthOffset(0)
 
       setShowStamp(true)
       setTimeout(() => {
@@ -266,7 +262,7 @@ export function DailyCheckIn({
     } else {
       toast.error(result.error || '출석 체크에 실패했습니다.')
     }
-  }, [canCheckIn, isLoading, today])
+  }, [canCheckIn, isLoading, todayStr])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -384,11 +380,8 @@ export function DailyCheckIn({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <button
-                onClick={() => {
-                  const d = new Date(viewYear, viewMonth - 1, 1)
-                  setViewYear(d.getFullYear())
-                  setViewMonth(d.getMonth())
-                }}
+                onClick={() => setMonthOffset((o) => o - 1)}
+                aria-label="이전 달"
                 disabled={!canGoPrev}
                 className={cn(
                   'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
@@ -401,11 +394,8 @@ export function DailyCheckIn({
               </button>
               <span className="text-[11px] font-medium text-ink-light/70">{monthLabel}</span>
               <button
-                onClick={() => {
-                  const d = new Date(viewYear, viewMonth + 1, 1)
-                  setViewYear(d.getFullYear())
-                  setViewMonth(d.getMonth())
-                }}
+                onClick={() => setMonthOffset((o) => o + 1)}
+                aria-label="다음 달"
                 disabled={!canGoNext}
                 className={cn(
                   'w-7 h-7 rounded-full flex items-center justify-center transition-colors',
@@ -418,7 +408,13 @@ export function DailyCheckIn({
               </button>
             </div>
 
-            <MonthlyCalendar year={viewYear} month={viewMonth} checkedSet={checkedSet} showStamp={showStamp} />
+            <MonthlyCalendar
+              year={viewYear}
+              month={viewMonth}
+              checkedSet={checkedSet}
+              showStamp={showStamp}
+              todayStr={todayStr}
+            />
           </div>
 
           {/* Weekly Bonus Bar */}

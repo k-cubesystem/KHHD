@@ -11,29 +11,25 @@ interface TypingLoaderProps {
 }
 
 export function TypingLoader({ className, mode = 'analyze' }: TypingLoaderProps) {
-  const [textIndex, setTextIndex] = useState(0)
-  const [displayText, setDisplayText] = useState('')
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  // 모드에 따라 메시지 소스 선택
+  // 모드에 따라 메시지 소스 선택 (둘 다 모듈 상수라 참조가 안정적)
   const messages = mode === 'analyze' ? LOADING_STEPS : COMFORT_MESSAGES
 
-  // 랜덤 시작 (페이지 모드일 경우)
-  useEffect(() => {
-    if (mode === 'page') {
-      setTextIndex(Math.floor(Math.random() * messages.length))
-    }
-  }, [mode, messages.length])
+  // 시작 지점은 '마운트 시 1회' 결정한다. 이펙트로 미루면 첫 글자를 이미 친 뒤에 문구가 갈아끼워진다.
+  // 첫 렌더의 displayText 는 항상 '' 이므로 서버·클라이언트 마크업은 어긋나지 않는다.
+  const [textIndex, setTextIndex] = useState(() => (mode === 'page' ? Math.floor(Math.random() * messages.length) : 0))
+  const [displayText, setDisplayText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     const currentMessage = messages[textIndex % messages.length]
     const typeSpeed = isDeleting ? 30 : 80 // 지울 땐 빠르게, 쓸 땐 사람이 치는 것처럼
     const pauseTime = 2000 // 다 쓰고 나서 2초간 보여줌
+    let pauseTimer: ReturnType<typeof setTimeout> | undefined
 
     const timer = setTimeout(() => {
       if (!isDeleting && displayText === currentMessage) {
         // 다 썼으면 잠시 대기 후 삭제 모드로
-        setTimeout(() => setIsDeleting(true), pauseTime)
+        pauseTimer = setTimeout(() => setIsDeleting(true), pauseTime)
         return
       }
 
@@ -51,7 +47,10 @@ export function TypingLoader({ className, mode = 'analyze' }: TypingLoaderProps)
       setDisplayText(nextText)
     }, typeSpeed)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      if (pauseTimer !== undefined) clearTimeout(pauseTimer)
+    }
   }, [displayText, isDeleting, messages, textIndex])
 
   return (

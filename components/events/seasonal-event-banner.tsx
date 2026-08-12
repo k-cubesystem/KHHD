@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { X, ChevronRight, Sparkles } from 'lucide-react'
@@ -11,6 +11,9 @@ import {
   type SeasonalEvent,
 } from '@/lib/data/seasonal-events'
 import { cn } from '@/lib/utils'
+import { useHydrated } from '@/hooks/use-hydrated'
+import { useKstToday, kstDateToLocalDate } from '@/hooks/use-kst-today'
+import { useCountdown } from '@/hooks/use-countdown'
 
 const DISMISS_KEY = 'seasonal_banner_dismissed'
 
@@ -21,32 +24,6 @@ function getStoredDismiss(): string | null {
   } catch {
     return null
   }
-}
-
-function useCountdown(targetDate: Date) {
-  const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(targetDate))
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeLeft(getTimeLeft(targetDate))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [targetDate])
-
-  return timeLeft
-}
-
-function getTimeLeft(targetDate: Date) {
-  const now = new Date()
-  const diff = targetDate.getTime() - now.getTime()
-  if (diff <= 0) return null
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-  return { days, hours, minutes, seconds }
 }
 
 const SEASON_THEMES = {
@@ -95,40 +72,32 @@ interface SeasonalEventBannerProps {
 }
 
 export function SeasonalEventBanner({ event: propEvent }: SeasonalEventBannerProps) {
-  const [dismissed, setDismissed] = useState(true) // start hidden to avoid flash
-  const [event, setEvent] = useState<SeasonalEvent | null>(propEvent ?? null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
+  // 절기 판정·카운트다운·localStorage 는 모두 클라이언트 전용 값이다 → 하이드레이션 뒤에만 그린다.
+  const hydrated = useHydrated()
+  const todayStr = useKstToday()
 
-  useEffect(() => {
-    // Detect event client-side if not provided
-    const detected = propEvent !== undefined ? propEvent : getCurrentSeasonalEvent()
-    setEvent(detected)
+  // 절기는 '오늘 날짜'의 함수다. 마운트 때 한 번 재는 대신 KST 날짜에서 파생시키면 자정에 저절로 넘어간다.
+  const event = useMemo<SeasonalEvent | null>(() => {
+    if (!hydrated) return null
+    return propEvent !== undefined ? propEvent : getCurrentSeasonalEvent(kstDateToLocalDate(todayStr))
+  }, [hydrated, propEvent, todayStr])
 
-    if (!detected) return
+  // 카운트다운 인자는 타임스탬프(number) — Date 를 넘기면 렌더마다 새 참조라 인터벌이 초기화된다.
+  const endTime = useMemo(() => (event ? getEventEndDate(event).getTime() : null), [event])
+  const timeLeft = useCountdown(endTime)
 
-    const end = getEventEndDate(detected)
-    setEndDate(end)
-
-    // Check if this event was already dismissed
-    const stored = getStoredDismiss()
-    if (stored === detected.id) {
-      setDismissed(true)
-    } else {
-      setDismissed(false)
-    }
-  }, [propEvent])
+  // 닫힘 표시는 마운트 시 1회만 읽는다(이후엔 이 상태가 정본).
+  const [dismissedId, setDismissedId] = useState<string | null>(getStoredDismiss)
 
   const handleDismiss = useCallback(() => {
     if (!event) return
     try {
       localStorage.setItem(DISMISS_KEY, event.id)
     } catch {}
-    setDismissed(true)
+    setDismissedId(event.id)
   }, [event])
 
-  const timeLeft = useCountdown(endDate ?? new Date(0))
-
-  if (!event || dismissed) return null
+  if (!event || dismissedId === event.id) return null
 
   const theme = SEASON_THEMES[event.season]
   const elementInfo = ELEMENT_LABELS[event.element]

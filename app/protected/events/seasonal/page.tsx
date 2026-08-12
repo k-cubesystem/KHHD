@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ChevronRight, Sparkles, CalendarDays, Zap, ArrowLeft, Clock } from 'lucide-react'
@@ -17,6 +17,9 @@ import {
   type Season,
 } from '@/lib/data/seasonal-events'
 import { cn } from '@/lib/utils'
+import { useHydrated } from '@/hooks/use-hydrated'
+import { useKstToday, kstDateToLocalDate } from '@/hooks/use-kst-today'
+import { useCountdown } from '@/hooks/use-countdown'
 
 const SEASON_BG: Record<Season, string> = {
   spring: 'from-pink-950/80 via-[#0D0900] to-charcoal-deep',
@@ -41,32 +44,6 @@ const SERVICE_COSTS = [
 
 function formatDate(month: number, day: number) {
   return `${month}월 ${day}일`
-}
-
-function useCountdown(targetDate: Date | null) {
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null)
-
-  useEffect(() => {
-    if (!targetDate) return
-    const update = () => {
-      const now = new Date()
-      const diff = targetDate.getTime() - now.getTime()
-      if (diff <= 0) {
-        setTimeLeft(null)
-        return
-      }
-      setTimeLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        minutes: Math.floor((diff % 3600000) / 60000),
-      })
-    }
-    update()
-    const id = setInterval(update, 60000)
-    return () => clearInterval(id)
-  }, [targetDate])
-
-  return timeLeft
 }
 
 function EventCard({ event, isCurrent }: { event: SeasonalEvent; isCurrent: boolean }) {
@@ -108,20 +85,24 @@ function EventCard({ event, isCurrent }: { event: SeasonalEvent; isCurrent: bool
 }
 
 export default function SeasonalEventPage() {
-  const [current, setCurrent] = useState<SeasonalEvent | null>(null)
-  const [upcoming, setUpcoming] = useState<SeasonalEvent | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
+  // 절기 판정은 클라이언트 시계에 달려 있다 → 하이드레이션 뒤에 붙인다(서버 마크업과 어긋나지 않게).
+  const hydrated = useHydrated()
+  const todayStr = useKstToday()
   const [activeTab, setActiveTab] = useState<'current' | 'calendar'>('current')
 
-  useEffect(() => {
-    const c = getCurrentSeasonalEvent()
-    const u = getUpcomingSeasonalEvent()
-    setCurrent(c)
-    setUpcoming(u)
-    if (c) setEndDate(getEventEndDate(c))
-  }, [])
+  // '오늘(KST)'에서 파생 — 자정을 넘기면 진행 중 절기가 저절로 다음 절기로 넘어간다.
+  const current = useMemo<SeasonalEvent | null>(
+    () => (hydrated ? getCurrentSeasonalEvent(kstDateToLocalDate(todayStr)) : null),
+    [hydrated, todayStr]
+  )
+  const upcoming = useMemo<SeasonalEvent | null>(
+    () => (hydrated ? getUpcomingSeasonalEvent(kstDateToLocalDate(todayStr)) : null),
+    [hydrated, todayStr]
+  )
 
-  const timeLeft = useCountdown(endDate)
+  // 카운트다운 인자는 타임스탬프(number). 분 단위 표시라 60초마다만 갱신한다.
+  const endTime = useMemo(() => (current ? getEventEndDate(current).getTime() : null), [current])
+  const timeLeft = useCountdown(endTime, 60000)
   const displayEvent = current
 
   const season = displayEvent?.season ?? 'spring'

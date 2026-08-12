@@ -1,126 +1,125 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Download, Monitor, Smartphone, X } from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Download, Monitor, Smartphone, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 /** BeforeInstallPromptEvent -- not yet in lib.dom.d.ts */
 interface BeforeInstallPromptEvent extends Event {
-    readonly platforms: string[];
-    readonly userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
-    prompt(): Promise<void>;
+  readonly platforms: string[]
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+  prompt(): Promise<void>
+}
+
+interface Platform {
+  isMobile: boolean
+  isIOS: boolean
+  /** 이미 홈 화면/앱으로 실행 중 — 설치 안내가 필요 없다 */
+  isStandalone: boolean
+}
+
+const SSR_PLATFORM: Platform = { isMobile: false, isIOS: false, isStandalone: false }
+
+/** UA·display-mode 판정. navigator 를 읽으므로 마운트 시 1회(lazy 초기화)만 호출한다. */
+function detectPlatform(): Platform {
+  if (typeof window === 'undefined') return SSR_PLATFORM
+  const userAgent = window.navigator.userAgent.toLowerCase()
+  return {
+    isMobile: /iphone|ipad|ipod|android|blackberry|windows phone/.test(userAgent),
+    isIOS: /iphone|ipad|ipod/.test(userAgent),
+    isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+  }
 }
 
 export function PWAInstallPrompt() {
-    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-    const [isVisible, setIsVisible] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-    const [isIOS, setIsIOS] = useState(false);
+  const hydrated = useHydrated()
+  const [platform] = useState<Platform>(detectPlatform)
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [dismissed, setDismissed] = useState(false)
 
-    useEffect(() => {
-        // Device Detection
-        const userAgent = window.navigator.userAgent.toLowerCase();
-        const mobile = /iphone|ipad|ipod|android|blackberry|windows phone/g.test(userAgent);
-        const ios = /iphone|ipad|ipod/.test(userAgent);
+  useEffect(() => {
+    if (platform.isStandalone) return
 
-        setIsMobile(mobile);
-        setIsIOS(ios);
+    // Chrome/Android 만 발화. iOS 는 이 이벤트가 없어 아래 파생식에서 따로 처리한다.
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+    }
 
-        // Check if already installed
-        const isApp = window.matchMedia('(display-mode: standalone)').matches;
-        if (isApp) return;
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  }, [platform.isStandalone])
 
-        // Chrome/Android Install Prompt
-        const handleBeforeInstallPrompt = (e: Event) => {
-            e.preventDefault();
-            setDeferredPrompt(e as BeforeInstallPromptEvent);
-            // Show prompt only if not dismissed recently (could use localStorage)
-            setIsVisible(true);
-        };
+  // 표시 여부는 상태가 아니라 파생값이다 — 설치 이벤트/플랫폼/닫기 셋으로 결정된다.
+  const isVisible = hydrated && !dismissed && !platform.isStandalone && (deferredPrompt !== null || platform.isIOS)
 
-        window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+  const handleInstallClick = async () => {
+    if (platform.isIOS) {
+      toast.info("화면 하단의 '공유' 버튼을 누르고 '홈 화면에 추가'를 선택하세요.", {
+        duration: 5000,
+        icon: <Smartphone className="w-5 h-5" />,
+      })
+      return
+    }
 
-        // Determine if we should show iOS guide (since iOS doesn't support beforeinstallprompt)
-        if (ios && !isApp) {
-            // iOS doesn't support programmatic install prompts, 
-            // usually we show a specific guide "Tap Share -> Add to Home Screen"
-            // For now, we will handle this via specific UI
-            setIsVisible(true);
-        }
+    if (!deferredPrompt) {
+      // Fallback if prompt is missing but user clicked button
+      toast.error('설치 기능이 지원되지 않는 브라우저입니다.')
+      return
+    }
 
-        return () => {
-            window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-        };
-    }, []);
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
 
-    const handleInstallClick = async () => {
-        if (isIOS) {
-            toast.info("화면 하단의 '공유' 버튼을 누르고 '홈 화면에 추가'를 선택하세요.", {
-                duration: 5000,
-                icon: <Smartphone className="w-5 h-5" />
-            });
-            return;
-        }
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null)
+      toast.success('앱이 설치되었습니다!')
+    }
+  }
 
-        if (!deferredPrompt) {
-            // Fallback if prompt is missing but user clicked button
-            toast.error("설치 기능이 지원되지 않는 브라우저입니다.");
-            return;
-        }
+  if (!isVisible) return null
 
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-
-        if (outcome === 'accepted') {
-            setDeferredPrompt(null);
-            setIsVisible(false);
-            toast.success("앱이 설치되었습니다!");
-        }
-    };
-
-    if (!isVisible) return null;
-
-    return (
-        <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500">
-            <div className="mx-auto max-w-md bg-zinc-900/90 backdrop-blur-md border border-gold-500/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="bg-gold-500/20 p-2 rounded-lg">
-                        {isMobile ? (
-                            <Smartphone className="w-6 h-6 text-gold-500" />
-                        ) : (
-                            <Monitor className="w-6 h-6 text-gold-500" />
-                        )}
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-white text-sm">
-                            {isMobile ? "해화당 앱 설치하기" : "PC 버전 설치하기"}
-                        </h3>
-                        <p className="text-xs text-zinc-400">
-                            {isMobile
-                                ? "홈 화면에 추가하여 더 빠르게 이용하세요"
-                                : "바탕화면에 바로가기를 만들어보세요"}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <Button
-                        size="sm"
-                        onClick={handleInstallClick}
-                        className="bg-gold-500 hover:bg-gold-300 text-black font-bold h-9 px-4"
-                    >
-                        <Download className="w-4 h-4 mr-2" />
-                        {isIOS ? "안내" : "설치"}
-                    </Button>
-                    <button
-                        onClick={() => setIsVisible(false)}
-                        className="p-1 hover:bg-white/10 rounded-full transition-colors"
-                    >
-                        <X className="w-4 h-4 text-zinc-400" />
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500">
+      <div className="mx-auto max-w-md bg-zinc-900/90 backdrop-blur-md border border-gold-500/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-gold-500/20 p-2 rounded-lg">
+            {platform.isMobile ? (
+              <Smartphone className="w-6 h-6 text-gold-500" />
+            ) : (
+              <Monitor className="w-6 h-6 text-gold-500" />
+            )}
+          </div>
+          <div>
+            <h3 className="font-bold text-white text-sm">
+              {platform.isMobile ? '해화당 앱 설치하기' : 'PC 버전 설치하기'}
+            </h3>
+            <p className="text-xs text-zinc-400">
+              {platform.isMobile ? '홈 화면에 추가하여 더 빠르게 이용하세요' : '바탕화면에 바로가기를 만들어보세요'}
+            </p>
+          </div>
         </div>
-    );
+
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={handleInstallClick}
+            className="bg-gold-500 hover:bg-gold-300 text-black font-bold h-9 px-4"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {platform.isIOS ? '안내' : '설치'}
+          </Button>
+          <button
+            onClick={() => setDismissed(true)}
+            aria-label="설치 안내 닫기"
+            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+          >
+            <X className="w-4 h-4 text-zinc-400" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }

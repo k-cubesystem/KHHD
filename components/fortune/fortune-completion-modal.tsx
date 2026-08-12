@@ -20,6 +20,95 @@ interface FortuneCompletionModalProps {
   totalCompleted: number
 }
 
+type CompletionContentProps = Pick<
+  FortuneCompletionModalProps,
+  'categoryLabel' | 'fortuneGained' | 'newPercentage' | 'totalCompleted' | 'onClose'
+>
+
+/**
+ * 모달이 열려 있는 동안에만 마운트된다. 닫히면 통째로 사라지므로 '다시 false 로 되돌리는' 초기화가 필요 없고,
+ * 300ms 안에 닫았다 다시 열어도 등장 연출이 처음부터 다시 돈다
+ * (예전엔 취소되지 않은 타이머가 살아남아 재개봉 시 연출이 통째로 생략됐다).
+ */
+function CompletionContent({
+  categoryLabel,
+  fortuneGained,
+  newPercentage,
+  totalCompleted,
+  onClose,
+}: CompletionContentProps) {
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setRevealed(true), 300)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <AnimatePresence>
+      {revealed && (
+        <motion.div
+          className="text-center space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+        >
+          {/* Icon */}
+          <motion.div
+            className="w-20 h-20 mx-auto rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center"
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: 'spring' }}
+          >
+            <Sparkles className="w-10 h-10 text-primary" />
+          </motion.div>
+
+          {/* Title */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
+            <h2 className="text-2xl font-serif font-bold text-primary mb-2">대운이 들어왔습니다!</h2>
+            <p className="text-ink-light/70 text-sm">{categoryLabel} 분석을 완료하여</p>
+          </motion.div>
+
+          {/* Fortune Increase */}
+          <motion.div
+            className="bg-primary/10 border border-primary/20 rounded-xl p-6"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            <div className="text-sm text-ink-light/60 mb-2">이번 달 운세가 상승했어요</div>
+            <div className="flex items-baseline justify-center gap-2">
+              <motion.span
+                className="text-4xl font-serif font-bold text-primary"
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.2, 1] }}
+                transition={{ delay: 0.8, type: 'spring' }}
+              >
+                +{(fortuneGained / 8).toFixed(1)}%
+              </motion.span>
+              <span className="text-xl text-primary/70">↑</span>
+            </div>
+            <div className="text-xs text-ink-light/50 mt-2">
+              현재 운세 상승도: {newPercentage}% ({totalCompleted}/8 완료)
+            </div>
+          </motion.div>
+
+          {/* CTA */}
+          <motion.button
+            onClick={onClose}
+            className="w-full bg-primary hover:bg-primary-dim text-background font-bold py-3 rounded-lg transition-colors"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+          >
+            다음 운 채우러 가기
+          </motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
 export function FortuneCompletionModal({
   isOpen,
   onClose,
@@ -29,16 +118,6 @@ export function FortuneCompletionModal({
   newPercentage,
   totalCompleted,
 }: FortuneCompletionModalProps) {
-  const [showContent, setShowContent] = useState(false)
-
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => setShowContent(true), 300)
-    } else {
-      setShowContent(false)
-    }
-  }, [isOpen])
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -85,67 +164,13 @@ export function FortuneCompletionModal({
             </div>
 
             {/* Content */}
-            <AnimatePresence>
-              {showContent && (
-                <motion.div
-                  className="text-center space-y-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                >
-                  {/* Icon */}
-                  <motion.div
-                    className="w-20 h-20 mx-auto rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center"
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ delay: 0.2, type: 'spring' }}
-                  >
-                    <Sparkles className="w-10 h-10 text-primary" />
-                  </motion.div>
-
-                  {/* Title */}
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
-                    <h2 className="text-2xl font-serif font-bold text-primary mb-2">대운이 들어왔습니다!</h2>
-                    <p className="text-ink-light/70 text-sm">{categoryLabel} 분석을 완료하여</p>
-                  </motion.div>
-
-                  {/* Fortune Increase */}
-                  <motion.div
-                    className="bg-primary/10 border border-primary/20 rounded-xl p-6"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.6 }}
-                  >
-                    <div className="text-sm text-ink-light/60 mb-2">이번 달 운세가 상승했어요</div>
-                    <div className="flex items-baseline justify-center gap-2">
-                      <motion.span
-                        className="text-4xl font-serif font-bold text-primary"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: [0, 1.2, 1] }}
-                        transition={{ delay: 0.8, type: 'spring' }}
-                      >
-                        +{(fortuneGained / 8).toFixed(1)}%
-                      </motion.span>
-                      <span className="text-xl text-primary/70">↑</span>
-                    </div>
-                    <div className="text-xs text-ink-light/50 mt-2">
-                      현재 운세 상승도: {newPercentage}% ({totalCompleted}/8 완료)
-                    </div>
-                  </motion.div>
-
-                  {/* CTA */}
-                  <motion.button
-                    onClick={onClose}
-                    className="w-full bg-primary hover:bg-primary-dim text-background font-bold py-3 rounded-lg transition-colors"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1 }}
-                  >
-                    다음 운 채우러 가기
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <CompletionContent
+              categoryLabel={categoryLabel}
+              fortuneGained={fortuneGained}
+              newPercentage={newPercentage}
+              totalCompleted={totalCompleted}
+              onClose={onClose}
+            />
           </motion.div>
         </motion.div>
       )}

@@ -1,33 +1,42 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Quote } from 'lucide-react'
 import { COMFORT_MESSAGES, WELCOME_GREETINGS } from '@/lib/constants/messages'
+import { useHydrated } from '@/hooks/use-hydrated'
+import { kstHour } from '@/lib/utils'
+
+/** 마운트 시각(KST) 기준 인사말. 시각을 읽으므로 렌더 중 호출 금지 — lazy 초기화로만 쓴다. */
+function pickGreeting(): string {
+  const hour = kstHour()
+  if (hour < 11) return WELCOME_GREETINGS.morning
+  if (hour < 17) return WELCOME_GREETINGS.afternoon
+  if (hour < 21) return WELCOME_GREETINGS.evening
+  return WELCOME_GREETINGS.night
+}
+
+/** 인스턴스마다 다른 위로 문구. 모듈 캐시로 올리면 여러 개가 같은 문구를 띄운다. */
+function pickQuote(): string {
+  return COMFORT_MESSAGES[Math.floor(Math.random() * COMFORT_MESSAGES.length)]
+}
 
 export function DailyQuote() {
-  const [greeting, setGreeting] = useState('')
-  const [quote, setQuote] = useState('')
+  // 시각·난수는 서버와 클라이언트가 다를 수밖에 없다 → 하이드레이션이 끝나고서 그린다.
+  const hydrated = useHydrated()
+  const [greeting] = useState(pickGreeting)
+  const [quote] = useState(pickQuote)
 
-  useEffect(() => {
-    const hour = new Date().getHours()
-    if (hour < 11) setGreeting(WELCOME_GREETINGS.morning)
-    else if (hour < 17) setGreeting(WELCOME_GREETINGS.afternoon)
-    else if (hour < 21) setGreeting(WELCOME_GREETINGS.evening)
-    else setGreeting(WELCOME_GREETINGS.night)
-
-    const randomQuote = COMFORT_MESSAGES[Math.floor(Math.random() * COMFORT_MESSAGES.length)]
-    setQuote(randomQuote)
-  }, [])
-
-  if (!greeting) return null
+  if (!hydrated) return null
 
   return (
     <div
       className="space-y-6 anim-fade-in-up"
-      style={{
-        '--fade-y': '10px',
-        animation: 'fade-in-up 0.8s ease-out both',
-      } as React.CSSProperties}
+      style={
+        {
+          '--fade-y': '10px',
+          animation: 'fade-in-up 0.8s ease-out both',
+        } as React.CSSProperties
+      }
     >
       <div className="bg-white/60 p-6 rounded-sm border border-zen-border backdrop-blur-sm shadow-sm relative overflow-hidden group hover:border-zen-gold/30 transition-colors">
         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
