@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { acceptFamilyInviteLink } from '@/app/actions/family-invite'
 import { inviteRejectionMessage, type InviteViewStatus } from '@/lib/domain/family/invite'
-import { trackEvent } from '@/lib/analytics/ga4'
+import { GA } from '@/lib/analytics/ga4'
 
 /**
  * ⚠️ `invite.ts` 는 node:crypto 를 잡으므로 여기서는 **타입과 문구 함수만** 가져온다
@@ -59,8 +59,8 @@ export function FamilyInviteAcceptClient({
         return
       }
 
-      // GA4 는 클라이언트에서만 발화한다 — 서버 액션 안의 trackEvent 는 아무 데도 닿지 않는다.
-      trackEvent({ action: 'invite_accepted', category: 'family', label: relationship })
+      // GA4 는 클라이언트에서만 발화한다 — 서버 액션 안에서 부르면 아무 데도 닿지 않는다.
+      GA.inviteAccepted(relationship)
       setAccepted(true)
       toast.success(`${result.data.memberName}님의 가족으로 연결되었습니다.`)
       router.replace('/protected/family')

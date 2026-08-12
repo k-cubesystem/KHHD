@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { createFamilyInviteLink, revokeFamilyInviteLink, type FamilyInviteSummary } from '@/app/actions/family-invite'
 import { formatInviteRemaining, inviteRejectionMessage } from '@/lib/domain/family/invite'
-import { trackEvent } from '@/lib/analytics/ga4'
+import { GA } from '@/lib/analytics/ga4'
 
 export interface InvitableMember {
   id: string
@@ -56,7 +56,7 @@ export function FamilyInvitePanel({ members, invites, linkedMemberIds }: FamilyI
         return
       }
 
-      trackEvent({ action: 'invite_created', category: 'family', label: member.relationship })
+      GA.inviteCreated(member.relationship)
       setRevealed({ memberId: member.id, url: result.data.url })
       setCopied(false)
       router.refresh()

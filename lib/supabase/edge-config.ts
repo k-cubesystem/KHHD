@@ -20,7 +20,8 @@ export const EDGE_ENABLED = {
   'ai-image': process.env.EDGE_AI_IMAGE === 'true',
   'ai-chat': process.env.EDGE_AI_CHAT === 'true',
   fortune: process.env.EDGE_FORTUNE === 'true',
-  'webhook-toss': process.env.EDGE_WEBHOOK_TOSS === 'true',
+  // ('webhook-toss' 는 2026-08-12 삭제 — 토스 웹훅 정본은 app/api/webhooks/toss/route.ts 하나뿐이다.
+  //  엣지 사본은 배포된 적이 없고 인증(HMAC)·상태 기록이 실제 토스와 어긋나 있었다.)
   'cron-fortune': process.env.EDGE_CRON_FORTUNE === 'true',
 } as const
 

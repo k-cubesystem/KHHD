@@ -20,9 +20,6 @@ verify_jwt = true
 [functions.payment]
 verify_jwt = true
 
-[functions.webhook-toss]
-verify_jwt = false
-
 [functions.ai-analysis]
 verify_jwt = true
 

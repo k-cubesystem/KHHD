@@ -59,6 +59,17 @@ export const GA = {
   bokMissionComplete: () => trackEvent({ action: 'bok_mission_complete', category: 'engagement' }),
   familyAdd: () => trackEvent({ action: 'family_add', category: 'engagement' }),
 
+  // ── 가족 초대(R-2) — 링크 발급 ↔ 수락. label 은 관계(어머니·배우자…)로, 어느 자리가 실제로
+  //    연결되는지 본다. 수락은 반드시 클라이언트에서 찍는다(서버 액션의 trackEvent 는 무발화).
+  inviteCreated: (relationship: string) =>
+    trackEvent({ action: 'invite_created', category: 'family', label: relationship }),
+  inviteAccepted: (relationship: string) =>
+    trackEvent({ action: 'invite_accepted', category: 'family', label: relationship }),
+
+  // ── 신탁 웹푸시(R-1) — 구독 ↔ 해지 ──
+  pushSubscribed: () => trackEvent({ action: 'push_subscribed', category: 'notification' }),
+  pushUnsubscribed: () => trackEvent({ action: 'push_unsubscribed', category: 'notification' }),
+
   pageView: (path: string) => trackEvent({ action: 'page_view', category: 'navigation', label: path }),
 
   shrineCreate: (theme: string) => trackEvent({ action: 'shrine_create', category: 'shrine', label: theme }),

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { BellRing, Loader2 } from 'lucide-react'
 import { getPushStatus, savePushSubscription, removePushSubscription } from '@/app/actions/notifications/push'
-import { trackEvent } from '@/lib/analytics/ga4'
+import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -131,7 +131,7 @@ export function PushToggle() {
     }
 
     setPhase({ kind: 'on', publicKey })
-    trackEvent({ action: 'push_subscribed', category: 'notification' })
+    GA.pushSubscribed()
   }, [])
 
   const disable = useCallback(async (publicKey: string) => {
@@ -146,7 +146,7 @@ export function PushToggle() {
     }
 
     setPhase({ kind: 'off', publicKey })
-    trackEvent({ action: 'push_unsubscribed', category: 'notification' })
+    GA.pushUnsubscribed()
   }, [])
 
   const onToggle = useCallback(async () => {
