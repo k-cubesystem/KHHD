@@ -18,5 +18,5 @@ export default async function AnalysisHubPage() {
 
   const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
 
-  return <AnalysisHubClient userId={user.id} userName={profile?.full_name || '회원'} />
+  return <AnalysisHubClient userName={profile?.full_name || '회원'} />
 }

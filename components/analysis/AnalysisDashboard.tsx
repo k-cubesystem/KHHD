@@ -107,11 +107,10 @@ const MENU_CARDS = [
 ] as const
 
 interface AnalysisDashboardProps {
-  userId?: string
   userName?: string
 }
 
-export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps = {}) {
+export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
   const router = useRouter()
 
   return (
@@ -215,11 +214,11 @@ export function AnalysisDashboard({ userId, userName }: AnalysisDashboardProps =
         </nav>
       </motion.div>
 
-      {/* 5. 오늘의 운세 (하단) */}
-      {userId && userName && (
+      {/* 5. 오늘의 운세 (하단) — 자동 생성 없이 버튼 진입만(CEO 2026-08-12) */}
+      {userName && (
         <motion.div variants={fadeInUp}>
           <div className="dancheong-divider my-4" />
-          <DailyFortuneCard userId={userId} userName={userName} />
+          <DailyFortuneCard userName={userName} />
         </motion.div>
       )}
     </motion.div>

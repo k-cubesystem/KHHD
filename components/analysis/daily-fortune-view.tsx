@@ -17,6 +17,7 @@ import { PillarsStrip } from '@/components/analysis/PillarsStrip'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { deriveDailyLucky } from '@/lib/domain/fortune/daily-lucky'
+import { GA } from '@/lib/analytics/ga4'
 
 interface DailyFortuneViewProps {
   userId: string
@@ -102,6 +103,9 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
 
       if (result.success && result.content) {
         setFortune(result.content)
+        // daily_fortune_view 는 종전에 허브 카드가 마운트될 때 찍혔다(=읽지 않아도 집계).
+        // 운세가 실제로 화면에 뜨는 이 자리로 옮겨, 지표가 이름대로 «조회»를 세게 한다.
+        GA.dailyFortuneView()
       } else {
         if (result.error && (result.error.includes('생년월일') || result.error.includes('가족의 생년월일'))) {
           setMissingInfo(true)

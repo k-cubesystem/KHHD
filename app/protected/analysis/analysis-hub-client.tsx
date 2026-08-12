@@ -7,11 +7,10 @@ import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 import { JourneyCard } from '@/components/analysis/journey-card'
 
 interface AnalysisHubClientProps {
-  userId?: string
   userName?: string
 }
 
-export function AnalysisHubClient({ userId, userName }: AnalysisHubClientProps = {}) {
+export function AnalysisHubClient({ userName }: AnalysisHubClientProps = {}) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -45,7 +44,7 @@ export function AnalysisHubClient({ userId, userName }: AnalysisHubClientProps =
         <div className="max-w-screen-sm mx-auto px-4 mb-6">
           <JourneyCard variant="full" />
         </div>
-        <AnalysisDashboard userId={userId} userName={userName} />
+        <AnalysisDashboard userName={userName} />
       </div>
     </div>
   )

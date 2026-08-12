@@ -1,109 +1,52 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { Flame, ChevronRight, Loader2 } from 'lucide-react'
+import { Flame, ChevronRight } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { Card } from '@/components/ui/card'
-import { fadeInUp } from '@/lib/animations'
-import { GA } from '@/lib/analytics/ga4'
 
 interface DailyFortuneCardProps {
-  userId: string
   userName: string
 }
 
-interface FortunePreview {
-  content: string
-  streak: number
-}
-
-export function DailyFortuneCard({ userId, userName }: DailyFortuneCardProps) {
+/**
+ * 「오늘의 운세」 진입 버튼 — 사주·궁합 허브(/protected/analysis) 하단.
+ *
+ * 종전에는 허브에 들어오기만 하면 useEffect 가 generateDailyFortune() 을 불러
+ * 보지도 않은 운세를 AI(Gemini)로 미리 생성했다. 하루 첫 방문마다 실호출 1회 +
+ * 복채 10점 적립 + 기록 저장이 사용자 의사와 무관하게 일어났고, 「오늘의 정성」
+ * 칩은 읽지도 않은 운세를 늘 '완료'로 표시했다.
+ * CEO 지시(2026-08-12)에 따라 자동 생성을 걷어내고, 눌러야 열리는 버튼만 남긴다.
+ * 생성은 전용 화면(/protected/analysis/today)에서만 일어난다 — 무료 기능이므로 과금 경로는 없다.
+ */
+export function DailyFortuneCard({ userName }: DailyFortuneCardProps) {
   const t = useTranslations('fortune')
   const router = useRouter()
-  const [fortune, setFortune] = useState<FortunePreview | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      try {
-        const [fortuneRes, streakRes] = await Promise.all([
-          import('@/app/actions/fortune/daily').then((m) => m.generateDailyFortune(userId, userId, 'USER')),
-          import('@/app/actions/payment/attendance').then((m) => m.checkAttendanceAvailability()),
-        ])
-
-        if (cancelled) return
-
-        const content =
-          fortuneRes.success && 'content' in fortuneRes && fortuneRes.content
-            ? (fortuneRes.content as string).substring(0, 80)
-            : t('daily')
-
-        const streak = streakRes && 'streak' in streakRes ? (streakRes.streak as number) : 0
-
-        setFortune({ content, streak })
-        GA.dailyFortuneView()
-      } catch {
-        setFortune({ content: t('daily'), streak: 0 })
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [userId, t])
 
   return (
-    <motion.div variants={fadeInUp}>
-      <Card
-        className="relative overflow-hidden cursor-pointer border-gold-500/20 bg-gradient-to-br from-gold-500/10 via-surface/50 to-surface/80 backdrop-blur-sm hover:border-gold-500/40 transition-colors"
-        onClick={() => router.push('/protected/analysis/today')}
-      >
-        <div className="p-4 space-y-2">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gold-500/20 flex items-center justify-center">
-                <Flame className="w-4 h-4 text-gold-500" />
-              </div>
-              <div>
-                <p className="text-xs text-gold-500/70 font-sans">{userName}님의 오늘</p>
-                <p className="text-sm font-serif text-ink-light">{t('daily')}</p>
-              </div>
-            </div>
+    <button
+      type="button"
+      onClick={() => router.push('/protected/analysis/today')}
+      aria-label={`${t('daily')} ${t('viewDetail')}`}
+      className="group relative w-full min-h-[56px] overflow-hidden rounded-xl border border-gold-500/20 bg-gradient-to-br from-gold-500/10 via-surface/50 to-surface/80 p-4 text-left backdrop-blur-sm transition-colors duration-medium hover:border-gold-500/40 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
+    >
+      <span className="relative z-10 flex items-center gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold-500/20">
+          <Flame className="h-5 w-5 text-gold-500" />
+        </span>
 
-            <div className="flex items-center gap-2">
-              {!loading && fortune && fortune.streak > 0 && (
-                <span className="text-[10px] font-sans px-2 py-0.5 rounded-full bg-gold-500/15 text-gold-500">
-                  {fortune.streak}일 연속
-                </span>
-              )}
-              <ChevronRight className="w-4 h-4 text-gold-500/50" />
-            </div>
-          </div>
+        <span className="min-w-0 flex-1">
+          <span className="block font-sans text-[11px] text-gold-500/70">{userName}님의 오늘</span>
+          <span className="block font-serif text-[15px] text-ink-light">{t('daily')}</span>
+        </span>
 
-          {/* Content */}
-          {loading ? (
-            <div className="flex items-center gap-2 py-2">
-              <Loader2 className="w-3 h-3 animate-spin text-gold-500/50" />
-              <div className="h-3 w-48 bg-white/5 rounded animate-pulse" />
-            </div>
-          ) : (
-            <p className="text-sm text-ink-light/80 font-sans leading-relaxed line-clamp-2 pl-10">
-              {fortune?.content}...
-            </p>
-          )}
-        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-gold-500/60 transition-transform duration-short group-hover:translate-x-0.5" />
+      </span>
 
-        {/* Decorative glow */}
-        <div className="absolute -top-12 -right-12 w-24 h-24 bg-gold-500/5 rounded-full blur-2xl" />
-      </Card>
-    </motion.div>
+      {/* 장식 글로우 */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-gold-500/5 blur-2xl"
+      />
+    </button>
   )
 }
