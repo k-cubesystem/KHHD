@@ -8,7 +8,8 @@
 
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { BGM_ROOT, PENTA } from '../useShrineAudio'
+import { act, renderHook } from '@testing-library/react'
+import { BGM_ROOT, PENTA, resolveMuted, useShrineAudio } from '../useShrineAudio'
 import geometryJson from '@/lib/domain/shrine/theme-stage-geometry.json'
 
 /** 오행-오음 정통 대응: 宮=土 · 商=金 · 角=木 · 徵=火 · 羽=水 (BGM_ROOT 주석의 파생 규칙) */
@@ -73,5 +74,121 @@ describe('BGM 실음원 — 배포 파일', () => {
       .map((f) => f.slice(4, -4))
       .filter((code) => !(code in BGM_ROOT))
     expect(orphans).toEqual([])
+  })
+})
+
+describe('resolveMuted — 저장값 판정표', () => {
+  it('저장값이 없으면 음소거가 기본이다 (CEO 지시: 시작 시 음소거)', () => {
+    expect(resolveMuted(null)).toBe(true)
+  })
+
+  it("'0' 만이 «사용자가 켠» 상태다 — 기존 선택은 존중한다", () => {
+    expect(resolveMuted('0')).toBe(false)
+  })
+
+  it("'1' 과 알 수 없는 값은 음소거로 본다", () => {
+    expect(resolveMuted('1')).toBe(true)
+    expect(resolveMuted('')).toBe(true)
+    expect(resolveMuted('true')).toBe(true)
+  })
+})
+
+describe('useShrineAudio — 기본 음소거 계약', () => {
+  /** jsdom 에는 재생 가능한 Audio 가 없다. 만들어진 element 의 src 를 관찰하려고 가짜를 세운다. */
+  class FakeAudio {
+    static created: FakeAudio[] = []
+    loop = false
+    volume = 1
+    paused = false
+    onerror: (() => void) | null = null
+    constructor(public readonly src: string) {
+      FakeAudio.created.push(this)
+    }
+    play(): Promise<void> {
+      return Promise.resolve()
+    }
+    pause(): void {
+      this.paused = true
+    }
+  }
+
+  const globalWithAudio = globalThis as unknown as { Audio?: unknown }
+  const originalAudio = globalWithAudio.Audio
+
+  beforeEach(() => {
+    FakeAudio.created = []
+    globalWithAudio.Audio = FakeAudio
+    window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    globalWithAudio.Audio = originalAudio
+    window.localStorage.clear()
+  })
+
+  it('저장값이 없으면 muted 로 시작하고 진입 호출이 소리를 내지 않는다', async () => {
+    const { result } = renderHook(() => useShrineAudio())
+    expect(result.current.muted).toBe(true)
+
+    await act(async () => {
+      result.current.startBgm('yonggung')
+    })
+
+    expect(FakeAudio.created).toHaveLength(0)
+    expect(result.current.bgmOn).toBe(false)
+  })
+
+  it("이미 «켬»을 고른 사용자('0')는 그대로 소리가 난다", async () => {
+    window.localStorage.setItem('hhd_shrine_muted', '0')
+    const { result } = renderHook(() => useShrineAudio())
+    expect(result.current.muted).toBe(false)
+
+    await act(async () => {
+      result.current.startBgm('yonggung')
+    })
+
+    expect(FakeAudio.created.map((a) => a.src)).toEqual(['/sounds/shrine/bgm-yonggung.mp3'])
+  })
+
+  it("«끔»을 고른 사용자('1')도 그대로 음소거다", () => {
+    window.localStorage.setItem('hhd_shrine_muted', '1')
+    const { result } = renderHook(() => useShrineAudio())
+    expect(result.current.muted).toBe(true)
+  })
+
+  it('음소거 중 진입한 테마를 기억한다 — 소리를 켜면 그 테마가 난다 (choga 폴백 금지)', async () => {
+    // 이 회귀가 나면 16트랙이 조용히 1트랙(choga)으로 무너진다. 화면에도 로그에도 안 남는다.
+    const { result } = renderHook(() => useShrineAudio())
+
+    await act(async () => {
+      result.current.startBgm('daejanggan') // 진입 — 음소거라 소리는 안 난다
+    })
+    expect(FakeAudio.created).toHaveLength(0)
+
+    await act(async () => {
+      result.current.toggleMute() // 사용자가 스피커를 켠다
+    })
+
+    expect(result.current.muted).toBe(false)
+    expect(FakeAudio.created.map((a) => a.src)).toEqual(['/sounds/shrine/bgm-daejanggan.mp3'])
+    expect(window.localStorage.getItem('hhd_shrine_muted')).toBe('0')
+  })
+
+  it('다시 끄면 재생이 멈추고 저장값이 남는다', async () => {
+    const { result } = renderHook(() => useShrineAudio())
+
+    await act(async () => {
+      result.current.startBgm('naru')
+    })
+    await act(async () => {
+      result.current.toggleMute()
+    })
+    await act(async () => {
+      result.current.toggleMute()
+    })
+
+    expect(result.current.muted).toBe(true)
+    expect(FakeAudio.created[0]?.paused).toBe(true)
+    expect(window.localStorage.getItem('hhd_shrine_muted')).toBe('1')
   })
 })

@@ -8,6 +8,11 @@
  *    scripts/media-assets/shrine-ambience.mjs, 라이선스 대장은 public/sounds/shrine/CREDITS.md.
  * 첫 제스처에서 AudioContext resume (모바일 autoplay 정책).
  * 음소거는 localStorage 공유(전역) — 모든 useShrineAudio 인스턴스가 존중.
+ *
+ * 🔴 **기본값은 음소거다**(CEO 지시). 저장값이 없으면 소리를 내지 않고, 사용자가 스피커 아이콘을
+ *    눌러 켜야 들린다. 이미 «켬»을 고른 사람(저장값 '0')은 그대로 존중한다 — 일괄 초기화하면
+ *    설정을 되돌려 놓는 셈이라 더 나쁘다. 판정표: null=음소거(신규) · '1'=음소거 · '0'=소리 켬.
+ *
  * 국악 팔레트: 목탁·풍경·종·낙수·촛불·바라.
  */
 
@@ -67,10 +72,17 @@ function isAutoplayBlocked(err: unknown): boolean {
   )
 }
 
+/** 저장값 → 음소거 여부. 미저장(null)은 음소거가 기본. '0' 만이 «사용자가 켠» 상태다. */
+export function resolveMuted(stored: string | null): boolean {
+  return stored !== '0'
+}
+
 export function useShrineAudio() {
   const acRef = useRef<AC | null>(null)
-  const [muted, setMuted] = useState(false)
-  const mutedRef = useRef(false)
+  // 기본 음소거 — 서버 렌더와 첫 클라 렌더가 같은 값이라야 하므로 상수 true 로 시작하고,
+  // 저장값 반영은 아래 effect 가 한다(localStorage 는 렌더 중에 못 읽는다).
+  const [muted, setMuted] = useState(true)
+  const mutedRef = useRef(true)
   // 절차적 배경음(BGM)
   const bgmRef = useRef<{ master: GainNode; drones: OscillatorNode[]; timer: number } | null>(null)
   const bgmAudioRef = useRef<HTMLAudioElement | null>(null) // 실음원 BGM
@@ -81,13 +93,12 @@ export function useShrineAudio() {
   const fxBufRef = useRef<Map<SoundKey, AudioBuffer | null>>(new Map())
   const fxLoadingRef = useRef<Set<SoundKey>>(new Set())
 
-  // 전역 음소거 초기화 (localStorage 공유)
+  // 전역 음소거 초기화 (localStorage 공유). 저장값 없으면 음소거 유지 = 기본값.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (window.localStorage.getItem(MUTE_KEY) === '1') {
-      mutedRef.current = true
-      setMuted(true)
-    }
+    const next = resolveMuted(window.localStorage.getItem(MUTE_KEY))
+    mutedRef.current = next
+    setMuted(next)
   }, [])
 
   const ctx = useCallback((): AC | null => {
@@ -303,12 +314,16 @@ export function useShrineAudio() {
   // ── BGM 시작: 실음원 우선 → 실패(파일 없음/정책) 시 절차 합성 ──
   const startBgm = useCallback(
     (themeCode?: string) => {
-      if (mutedRef.current) return
-      if (bgmRef.current || bgmAudioRef.current) return // 이미 재생 중
+      // 🔴 테마 기억이 음소거 판정보다 **먼저**다. 기본 음소거가 된 뒤로 진입 시 호출은 전부
+      // 소리 없이 돌아가는데, 여기서 조기 return 하면 lastThemeRef 가 비어 있고 나중에 사용자가
+      // 소리를 켤 때(toggleMute→startBgm(undefined)) choga 폴백이 걸린다 — 16트랙이 1트랙이 된다.
       const theme = themeCode && BGM_ROOT[themeCode] ? themeCode : (lastThemeRef.current ?? 'choga')
       lastThemeRef.current = theme
       const root = BGM_ROOT[theme] ?? bgmRootRef.current
       bgmRootRef.current = root
+
+      if (mutedRef.current) return
+      if (bgmRef.current || bgmAudioRef.current) return // 이미 재생 중
 
       if (typeof window === 'undefined' || typeof Audio === 'undefined') {
         startProceduralBgm(root)
