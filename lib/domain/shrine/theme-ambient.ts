@@ -33,13 +33,33 @@ export type AmbientTier = 'low' | 'mid' | 'high'
 
 /**
  * 뮤럴에 이미 구워진 시각. 그 위상의 틴트는 0 이 된다 — 밤 원판에 밤 틴트를 또 씌우면
- * 방이 검게 죽는다(PRD §4 L1-3 모순 방지).
- * null = 시각이 없는 원판(심해 등). amp 는 틴트 전체 진폭 0~1.
+ * 방이 검게 죽는다(PRD §4 L1-3 모순 방지). null = 시각이 없는 원판(심해).
+ *
+ * ★ v2 「전 테마 낮밤」 (2026-08-12) ★
+ * v1 은 어둡히는 층(새벽·해질녘·밤)밖에 없어서, 원판이 밤인 테마는 **하루 종일 아무 일도
+ * 일어나지 않았다**(실측: 달집·별밭·연등·도깨비의 하루 ΔL* 최대 0.9 · 용궁 2.3 — 사실상 정지).
+ * 그래서 «어둡힘» 하나로는 16테마를 다 살릴 수 없다. 방향을 위상마다 갈라 둔다:
+ *   · 낮 원판  → 밤에 **어두워진다**(amp, 기준선=낮 원화)
+ *   · 밤·노을·무시간 원판 → 낮에 **밝아진다**(dayAmp, 기준선=밤 원화 = 역방향 설계)
+ * 두 방향 모두 «원판 위상엔 층을 얹지 않는다» 는 같은 규칙에서 파생된다 — base 위상만 0 이고
+ * 나머지 세 위상은 살아 있다. day 층이 없던 것이 v1 의 구조적 구멍이었다.
  */
-export type TintProfile = { base: 'day' | 'dusk' | 'night' | null; amp: number }
+export type TintProfile = {
+  base: 'day' | 'dusk' | 'night' | null
+  /** 어둡히는 3층(새벽·해질녘·밤) 진폭 0~1 */
+  amp: number
+  /** 주광층 진폭 0~1. base==='day' 면 강제 0 이다 — 낮 원판의 «낮 = 원화 픽셀 동일» 계약. */
+  dayAmp: number
+  /** 원복 레버(TINT_V2=false) 전용 v1 진폭. v2 에서 amp 를 올린 테마에만 적는다(없으면 amp 와 같다). */
+  ampV1?: number
+}
 
-/** 위상 틴트 3층의 opacity. 낮은 층이 없다 — 낮 = 검수된 원화 그대로(원화 보호 계약). */
-export type TintOpacities = { dawn: number; dusk: number; night: number }
+/**
+ * 위상 틴트 4층의 opacity. day 는 «어둡힘» 이 아니라 **주광 가산**층이다(.shrine-tint-day).
+ * 동시에 0 보다 큰 층은 언제나 최대 2 장이다 — phaseWeights 가 최대 2 위상만 0 이 아니고,
+ * 그 중 base 위상은 0 으로 눌리기 때문(전면 승격 레이어 예산 ARCH §6 유지).
+ */
+export type TintOpacities = { dawn: number; day: number; dusk: number; night: number }
 
 /**
  * 파티클 종. **여기 있는 종은 반드시 렌더 경로를 갖는다** — css 는 AmbientBackdrop.PARTICLE_STYLE,
@@ -128,21 +148,21 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
     backdrop: [{ kind: 'rays', hue: HUE.goldLight, area: { x: 6, y: 0, w: 44, h: 54 } }],
     particles: [{ kind: 'mote', engine: 'css', count: [2, 5, 9], area: { x: 4, y: 6, w: 64, h: 52 } }],
     glows: [{ x: 50, y: 46, r: 16, hue: HUE.gold, pulseMs: 5200 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 초가 — 호롱 온광과 아궁이 김. 김은 스프라이트 종 대신 상승 mote 로 낸다(스프라이트 엔진은 이번 계약 밖).
   choga: {
     backdrop: [{ kind: 'glow-band', hue: HUE.gold, area: { x: 0, y: 16, w: 100, h: 44 } }],
     particles: [{ kind: 'mote', engine: 'css', count: [2, 4, 7], area: { x: 6, y: 34, w: 38, h: 44 } }],
     glows: [{ x: 24, y: 36, r: 13, hue: HUE.gold, pulseMs: 4800 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 용궁(水) — 수면에서 내려꽂히는 청록 광기둥과 상승 기포. 심해라 시각이 없다(tint base null).
   yonggung: {
     backdrop: [{ kind: 'rays', hue: HUE.teal, area: { x: 0, y: 0, w: 100, h: 62 } }],
     particles: [{ kind: 'bubble', engine: 'canvas', count: [6, 14, 24], area: { x: 0, y: 16, w: 100, h: 84 } }],
     glows: [{ x: 50, y: 22, r: 36, hue: HUE.teal, pulseMs: 7600 }],
-    tintProfile: { base: null, amp: 0.3 },
+    tintProfile: { base: null, amp: 0.4, dayAmp: 0.75, ampV1: 0.3 },
   },
   // 도깨비(火) — 단청 야광 위를 청록 도깨비불 두 점이 서로 다른 주기로 맥동한다(위상 분산).
   // ⚠️ 안개는 **청록**이다. 오행이 火라 주홍(seal)으로 적혀 있었지만, 원화(어두운 자회색 단청 실내)에서
@@ -155,14 +175,14 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
       { x: 26, y: 38, r: 9, hue: HUE.teal, pulseMs: 2600 },
       { x: 72, y: 30, r: 8, hue: HUE.teal, pulseMs: 3400 },
     ],
-    tintProfile: { base: 'night', amp: 0.4 },
+    tintProfile: { base: 'night', amp: 0.5, dayAmp: 0.8, ampV1: 0.4 },
   },
   // 설빛(金) — 달빛 냉광 아래 함박눈. 밀도가 필요해 캔버스로 그린다.
   seolbit: {
     backdrop: [{ kind: 'glow-band', hue: HUE.moon, area: { x: 0, y: 0, w: 100, h: 46 } }],
     particles: [{ kind: 'snow', engine: 'canvas', count: [10, 24, 40], area: { x: 0, y: 0, w: 100, h: 55 } }],
     glows: [{ x: 50, y: 14, r: 30, hue: HUE.moon, pulseMs: 7000 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 달집(土) — 보름달 달무리 + 달집 불씨(밀도, 캔버스) + 반딧불 소수. 원판이 밤이다.
   daljip: {
@@ -172,28 +192,28 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
       { kind: 'firefly', engine: 'css', count: [1, 2, 3], area: { x: 4, y: 34, w: 92, h: 40 } },
     ],
     glows: [{ x: 50, y: 58, r: 22, hue: HUE.ember, pulseMs: 3000 }],
-    tintProfile: { base: 'night', amp: 0.4 },
+    tintProfile: { base: 'night', amp: 0.5, dayAmp: 0.8, ampV1: 0.4 },
   },
   // 홍살(火) — 원판이 이미 노을이라 석양 틴트를 얹지 않는다. 홍엽이 진다.
   hongsal: {
     backdrop: [{ kind: 'glow-band', hue: HUE.sealLight, area: { x: 0, y: 0, w: 100, h: 52 } }],
     particles: [{ kind: 'petal', engine: 'css', count: [2, 5, 10], area: { x: 0, y: 0, w: 100, h: 72 } }],
     glows: [{ x: 50, y: 30, r: 26, hue: HUE.seal, pulseMs: 6400 }],
-    tintProfile: { base: 'dusk', amp: 0.5 },
+    tintProfile: { base: 'dusk', amp: 0.65, dayAmp: 0.7, ampV1: 0.5 },
   },
   // 별밭 — 은하수 글로우와 별 반짝임(유성은 L4 밤 이벤트 소관이라 여기 없다).
   byeolbat: {
     backdrop: [{ kind: 'haze', hue: HUE.mist, area: { x: 0, y: 0, w: 100, h: 50 } }],
     particles: [{ kind: 'mote', engine: 'css', count: [3, 6, 10], area: { x: 0, y: 0, w: 100, h: 48 } }],
     glows: [{ x: 50, y: 16, r: 34, hue: HUE.mist, pulseMs: 8200 }],
-    tintProfile: { base: 'night', amp: 0.4 },
+    tintProfile: { base: 'night', amp: 0.5, dayAmp: 0.85, ampV1: 0.4 },
   },
   // 당산(木) — 나무 사이로 갈라진 광선, 잎이 진다. 오색천 결(結)빛이 낮게 맥동.
   dangsan: {
     backdrop: [{ kind: 'rays', hue: HUE.goldLight, area: { x: 8, y: 0, w: 72, h: 58 } }],
     particles: [{ kind: 'leaf', engine: 'canvas', count: [4, 10, 18], area: { x: 0, y: 0, w: 100, h: 100 } }],
     glows: [{ x: 50, y: 42, r: 18, hue: HUE.gold, pulseMs: 5600 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 연등(火) — 등불 «무리»가 본체라 글로우 3점의 주기를 어긋나게 둔다(동시 맥동은 기계처럼 보인다).
   yeondeung: {
@@ -204,35 +224,35 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
       { x: 50, y: 12, r: 11, hue: HUE.goldLight, pulseMs: 4100 },
       { x: 76, y: 18, r: 10, hue: HUE.sealLight, pulseMs: 4900 },
     ],
-    tintProfile: { base: 'night', amp: 0.4 },
+    tintProfile: { base: 'night', amp: 0.5, dayAmp: 0.9, ampV1: 0.4 },
   },
   // 서낭(土) — 저층 안개 띠와 돌탑 이끼빛. 오색천 살랑은 스프라이트 종이 없어 leaf 로 대체한다.
   seonang: {
     backdrop: [{ kind: 'haze', hue: HUE.mist, area: { x: 0, y: 44, w: 100, h: 26 } }],
     particles: [{ kind: 'leaf', engine: 'css', count: [2, 4, 7], area: { x: 14, y: 14, w: 70, h: 46 } }],
     glows: [{ x: 30, y: 52, r: 14, hue: HUE.wood, pulseMs: 6800 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 장독(土) — 아침 햇살 사선. 장독 김은 아침에만 피워야 자연스럽다(시간 게이트는 렌더 측 책임).
   jangdok: {
     backdrop: [{ kind: 'rays', hue: HUE.goldLight, area: { x: 38, y: 0, w: 54, h: 50 } }],
     particles: [{ kind: 'mote', engine: 'css', count: [2, 4, 7], area: { x: 18, y: 38, w: 62, h: 36 } }],
     glows: [{ x: 50, y: 58, r: 16, hue: HUE.earth, pulseMs: 7200 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 대장간(金) — 화덕 적광과 간헐적으로 튀는 불똥. 맥동이 가장 빠른 테마다.
   daejanggan: {
     backdrop: [{ kind: 'glow-band', hue: HUE.seal, area: { x: 6, y: 18, w: 48, h: 46 } }],
     particles: [{ kind: 'ember', engine: 'css', count: [2, 4, 8], area: { x: 10, y: 24, w: 44, h: 42 } }],
     glows: [{ x: 28, y: 44, r: 14, hue: HUE.ember, pulseMs: 2400 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 종각(金) — 새벽빛과 먼지 모트. 범종 여운이라 맥동이 가장 느리다.
   jonggak: {
     backdrop: [{ kind: 'rays', hue: HUE.moon, area: { x: 0, y: 0, w: 58, h: 56 } }],
     particles: [{ kind: 'mote', engine: 'css', count: [2, 5, 9], area: { x: 0, y: 6, w: 100, h: 52 } }],
     glows: [{ x: 50, y: 40, r: 20, hue: HUE.gold, pulseMs: 9000 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 샘굿(水) — 물안개 띠와 «솟는 샘». 종전 스펙의 낙수(drip)는 EffectsCanvas 에 대응 종이 없어
   // 한 알도 나지 않았다 → 옹달샘의 본체인 **샘솟는 기포**(bubble)로 바꾼다. 발원은 샘물(바닥)이라
@@ -241,7 +261,7 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
     backdrop: [{ kind: 'haze', hue: HUE.mist, area: { x: 0, y: 32, w: 100, h: 36 } }],
     particles: [{ kind: 'bubble', engine: 'canvas', count: [4, 9, 16], area: { x: 12, y: 26, w: 76, h: 48 } }],
     glows: [{ x: 50, y: 66, r: 20, hue: HUE.blue, pulseMs: 6000 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
   // 나루(水) — 물빛 반사와 저층 안개 두 겹, 등롱 하나. 파티클은 강 위 부유물 소수.
   naru: {
@@ -251,7 +271,7 @@ export const THEME_AMBIENT: Readonly<Record<string, ThemeAmbient>> = {
     ],
     particles: [{ kind: 'mote', engine: 'css', count: [2, 4, 7], area: { x: 0, y: 10, w: 100, h: 52 } }],
     glows: [{ x: 74, y: 30, r: 12, hue: HUE.gold, pulseMs: 5000 }],
-    tintProfile: { base: 'day', amp: 1 },
+    tintProfile: { base: 'day', amp: 1, dayAmp: 0 },
   },
 }
 
@@ -283,19 +303,46 @@ function toCount(v: number): number {
 // ─── 시간대 틴트 ──────────────────────────────────────────────
 
 /**
- * 그 시각의 틴트 3층 opacity. 위상 판정은 scene-clock 하나만 쓴다(경계를 두 번 구현하면 갈라진다).
+ * 원복 레버 — false 로 두고 배포하면 v1(2026-08-11) 틴트 화면으로 **정확히** 되돌아간다.
+ * v2 는 ①주광층 신설 ②어둡힘 그라디언트 알파 강화 ③6테마 amp 상향 셋을 한꺼번에 넣었으므로,
+ * 원복도 셋을 한꺼번에 취소한다: day 를 0 으로, opacity 를 CSS 부스트로 나누고, ampV1 을 쓴다.
+ * (앰비언트 영상 v1~v5 반려 전례 — 연출 변경은 배포 한 번으로 물러설 수 있어야 한다.)
+ */
+export const TINT_V2: boolean = true
+
+/**
+ * v2 에서 .shrine-tint-{dawn,dusk,night} 그라디언트 알파를 올린 배수 — **app/shrine-scene.css 와 1:1**.
+ * v1 은 해질녘이 사실상 무효였다(실측 ΔL* ≈ 0, 밝은 호박색이 붉은 상단을 상쇄해 오히려 밝아지는 테마도 있었다).
+ * 색은 v1 그대로 두고 알파만 배수로 올렸기 때문에, 원복이 이 값의 나눗셈 하나로 정확해진다.
+ * ⚠️ CSS 알파를 손대면 여기 배수도 같이 고친다 — 어긋나면 원복 레버가 조용히 거짓말을 한다.
+ */
+export const TINT_V2_CSS_BOOST: Readonly<Record<'dawn' | 'dusk' | 'night', number>> = Object.freeze({
+  dawn: 1.6,
+  dusk: 1.5,
+  night: 1.3,
+})
+
+/**
+ * 그 시각의 틴트 4층 opacity. 위상 판정은 scene-clock 하나만 쓴다(경계를 두 번 구현하면 갈라진다).
  *
- * 계약: ①낮 순수 위상이면 셋 다 0(= 검수된 원화 그대로) ②profile.base 위상은 0
- * (밤 원판에 밤 틴트, 노을 원판에 노을 틴트를 겹치지 않는다) ③전 성분에 amp 를 곱한다
- * ④경계 블렌드 구간에서 연속(급점프 없음 — phaseWeights 가 선형이라 자동으로 따라온다).
+ * 계약: ①profile.base 위상은 언제나 0 — 원판에 같은 시각을 겹치지 않는다(밤 그림 새까매짐 방지)
+ * ②낮 원판 테마는 낮에 네 층 모두 0 = **검수된 원화 픽셀 그대로**(v1 계약 유지)
+ * ③밤·노을·무시간 원판은 낮에 day 층이 뜬다 = 밝아지는 역방향(v2 에서 바뀐 계약)
+ * ④어둡힘 3층은 amp, 주광층은 dayAmp 로 스케일한다 ⑤경계 블렌드 구간에서 연속(phaseWeights 가 선형).
  */
 export function tintOpacities(hourFrac: number, profile: TintProfile): TintOpacities {
   const w = phaseWeights(hourFrac)
-  const amp = clamp(profile.amp, 0, 1)
   const base = profile.base
-  const at = (phase: 'dawn' | 'dusk' | 'night'): number => (base === phase ? 0 : round(clamp(w[phase] * amp, 0, 1), 4))
-  // 'day' 성분에는 대응 레이어가 없다 — 낮 = 틴트 0 이 원화 보호 계약이다.
-  return { dawn: at('dawn'), dusk: at('dusk'), night: at('night') }
+  const amp = clamp(TINT_V2 ? profile.amp : (profile.ampV1 ?? profile.amp), 0, 1)
+  const dayAmp = TINT_V2 ? clamp(profile.dayAmp, 0, 1) : 0
+  const dark = (phase: 'dawn' | 'dusk' | 'night'): number => {
+    if (base === phase) return 0
+    const undo = TINT_V2 ? 1 : 1 / TINT_V2_CSS_BOOST[phase]
+    return round(clamp(w[phase] * amp * undo, 0, 1), 4)
+  }
+  // 낮 원판은 주광층을 얹지 않는다 — 그 방의 «낮» 은 이미 원화가 정본이다.
+  const day = base === 'day' ? 0 : round(clamp(w.day * dayAmp, 0, 1), 4)
+  return { dawn: dark('dawn'), day, dusk: dark('dusk'), night: dark('night') }
 }
 
 // ─── 티어 적용 ────────────────────────────────────────────────

@@ -20,8 +20,17 @@ import { tintOpacities, type TintProfile } from '@/lib/domain/shrine/theme-ambie
 /** 조명 오버레이와 같은 층. DOM 순서로 그 위에 얹히고 룸 UI(z30) 아래에 남는다. */
 const TINT_Z = 29
 
+/**
+ * 시간순으로 적는다(새벽→낮→해질녘→밤). 동시에 뜨는 층은 언제나 최대 2 장이라
+ * (tintOpacities 계약) 겹침 순서가 화면을 바꾸지 않지만, 읽는 사람의 시간 감각과 DOM 순서를 맞춰 둔다.
+ *
+ * ⚠️ 'day' 는 어둡히는 층이 아니라 **주광 가산**층이다 — 밤 원판 테마(달집·별밭·연등·도깨비)와
+ *    무시간 원판(용궁)이 «낮에 밝아지는» 역방향으로 하루를 사는 유일한 경로다. 이 줄을 지우면
+ *    그 다섯 방은 다시 하루 종일 정지한다(v1 실측 ΔL* 최대 0.9).
+ */
 const TINT_LAYERS = [
   { phase: 'dawn', className: 'shrine-tint-dawn' },
+  { phase: 'day', className: 'shrine-tint-day' },
   { phase: 'dusk', className: 'shrine-tint-dusk' },
   { phase: 'night', className: 'shrine-tint-night' },
 ] as const

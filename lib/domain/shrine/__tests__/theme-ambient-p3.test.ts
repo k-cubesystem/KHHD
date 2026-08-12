@@ -30,9 +30,9 @@ import { AMBIENT_THEMES } from '@/lib/config/gamefeel'
 const TIERS: readonly AmbientTier[] = ['low', 'mid', 'high']
 const THEMES = Object.keys(THEME_AMBIENT)
 const PURE_HOUR = { night: 0, dawn: 6.5, day: 12, dusk: 18.5 } as const
-const DAY: TintProfile = { base: 'day', amp: 1 }
-const NIGHT: TintProfile = { base: 'night', amp: 0.4 }
-const TIMELESS: TintProfile = { base: null, amp: 0.3 }
+const DAY: TintProfile = { base: 'day', amp: 1, dayAmp: 0 }
+const NIGHT: TintProfile = { base: 'night', amp: 0.5, dayAmp: 0.8 }
+const TIMELESS: TintProfile = { base: null, amp: 0.4, dayAmp: 0.75 }
 
 function cssTotal(spec: ThemeAmbient): number {
   return (spec.particles ?? []).filter((p) => p.engine === 'css').reduce((sum, p) => sum + p.count[0], 0)
