@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import Link from 'next/link'
 import { GA } from '@/lib/analytics/ga4'
 import { safeNextPath } from '@/lib/auth/next-path'
+import { PASSWORD_MIN_LENGTH } from '@/lib/auth/password'
 
 export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
@@ -50,6 +51,11 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
     }
     if (!birthDate) {
       setError('생년월일을 입력해주세요.')
+      setIsLoading(false)
+      return
+    }
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`)
       setIsLoading(false)
       return
     }
@@ -207,13 +213,14 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         {/* 비밀번호 */}
         <div className="space-y-2">
           <Label htmlFor="signup-password" className={labelClass}>
-            비밀번호
+            비밀번호 <span className="font-normal text-stone-500">(8자 이상)</span>
           </Label>
           <div className="relative">
             <Input
               id="signup-password"
               type={showPassword ? 'text' : 'password'}
               required
+              minLength={PASSWORD_MIN_LENGTH}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={cn(inputClass, 'pr-11')}
