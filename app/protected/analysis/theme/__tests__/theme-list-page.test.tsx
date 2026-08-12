@@ -7,7 +7,8 @@
 import { render, screen, within } from '@testing-library/react'
 import ThemeFortuneListPage from '@/app/protected/analysis/theme/page'
 import {
-  THEME_DESTINATIONS,
+  openRoutes,
+  STANDALONE_ROUTES,
   THEME_TABS,
   themeAnchorId,
   themeCostLabel,
@@ -92,9 +93,35 @@ describe('테마 목록 — 기존 진입 경로를 잃지 않는다', () => {
     const { container } = await renderPage()
     const hrefs = Array.from(container.querySelectorAll('a')).map((anchor) => anchor.getAttribute('href'))
 
-    for (const destination of Object.values(THEME_DESTINATIONS)) {
-      expect(hrefs).toContain(destination.href)
+    for (const route of openRoutes()) {
+      expect(hrefs).toContain(route.href)
     }
+  })
+
+  it('🔴 오늘의 운세·2026 병오년 — 이 화면이 유일한 입구다 (허브에서 내려왔다)', async () => {
+    // 2026-08-13 허브 비우기로 두 화면은 링크가 한 곳도 남지 않았다. 이 두 줄이 지워지면
+    // 기능이 접근 불가가 된다 — 그때는 라우트도 함께 지워야 한다.
+    const { container } = await renderPage()
+
+    for (const route of Object.values(STANDALONE_ROUTES)) {
+      const link = Array.from(container.querySelectorAll('a')).find(
+        (anchor) => anchor.getAttribute('href') === route.href
+      )
+
+      expect(link).toBeDefined()
+      expect(link?.textContent).toContain(route.label)
+    }
+  })
+
+  it('오늘의 운세는 무료로 표기한다 (유료로 보이게 하지 않는다)', async () => {
+    const { container } = await renderPage()
+
+    const link = Array.from(container.querySelectorAll('a')).find(
+      (anchor) => anchor.getAttribute('href') === STANDALONE_ROUTES.today.href
+    )
+
+    expect(link?.textContent).toContain('무료')
+    expect(link?.textContent).not.toMatch(/복채/)
   })
 
   it('허브로 돌아가는 길이 있다', async () => {

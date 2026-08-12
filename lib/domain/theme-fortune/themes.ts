@@ -97,6 +97,39 @@ export const THEME_DESTINATIONS = {
 
 export type ThemeDestinationKey = keyof typeof THEME_DESTINATIONS
 
+/**
+ * 테마가 가리키지는 않지만 「지금 바로 볼 수 있는 풀이」에 함께 거는 화면.
+ *
+ * 🔴 **이 목록이 두 화면의 유일한 진입 경로다.** 2026-08-13 허브 비우기(CEO 지시)로 「더 깊이
+ *    들여다보기」 섹션이 없어지면서, 오늘의 운세와 2026 병오년은 링크가 한 곳도 남지 않을
+ *    뻔했다. 여기서 빼는 순간 기능이 접근 불가가 된다 — 뺄 거면 라우트도 함께 지울 것.
+ *
+ * 🔴 둘 다 **복채를 받지 않는다**(`FEATURE_COST.today/newYear.free`). 표기는 다른 카드와 같은
+ *    경로(`formatFeatureCost`)로 만들어 «무료»가 화면에서 유료로 보이지 않게 한다.
+ */
+export const STANDALONE_ROUTES = {
+  today: { href: '/protected/analysis/today', label: '오늘의 운세', costKey: 'today' },
+  newYear: { href: '/protected/analysis/new-year', label: '2026 병오년', costKey: 'newYear' },
+} as const satisfies Record<string, ThemeDestination>
+
+/**
+ * 「지금 바로 볼 수 있는 풀이」에 그리는 전량 — 테마가 가는 곳 + 단독 화면.
+ * 화면은 이 함수 하나만 본다(두 표를 화면에서 다시 이어붙이면 그 순간 순서가 두 곳이 된다).
+ */
+export function openRoutes(): readonly ThemeDestination[] {
+  return [...Object.values(THEME_DESTINATIONS), ...Object.values(STANDALONE_ROUTES)]
+}
+
+/** 그 화면이 복채를 받지 않는가 — 배지 문구·색을 가르는 데만 쓴다. */
+export function isFreeRoute(route: ThemeDestination): boolean {
+  return route.costKey === null || FEATURE_COST[route.costKey].free
+}
+
+/** 「지금 바로 볼 수 있는 풀이」 배지 문구. 숫자는 `feature-costs.ts` 에서만 온다. */
+export function routeCostLabel(route: ThemeDestination): string {
+  return route.costKey ? formatFeatureCost(route.costKey) : '무료'
+}
+
 export interface ThemeFortune {
   /** 라우트 slug · 상수 키 · 썸네일 파일명이 전부 이 값 하나다. kebab-case. */
   readonly id: string
@@ -602,14 +635,14 @@ export function themeCostKey(theme: ThemeFortune): FeatureCostKey | null {
 export function themeCostLabel(theme: ThemeFortune): string {
   const destination = themeDestination(theme)
   if (!destination) return '준비 중'
-  return destination.costKey ? formatFeatureCost(destination.costKey) : '무료'
+  return routeCostLabel(destination)
 }
 
 /** 그 복채가 «무료»인가 — 배지 색을 가르는 데만 쓴다. */
 export function isFreeTheme(theme: ThemeFortune): boolean {
   const destination = themeDestination(theme)
   if (!destination) return false
-  return destination.costKey === null || FEATURE_COST[destination.costKey].free
+  return isFreeRoute(destination)
 }
 
 /** 카드 앵커 id — 허브에서 누른 카드가 목록의 어느 자리인지 알려면 필요하다. */

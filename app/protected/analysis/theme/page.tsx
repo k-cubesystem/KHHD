@@ -3,14 +3,16 @@ import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import {
+  openRoutes,
   resolveThemeTab,
-  THEME_DESTINATIONS,
+  routeCostLabel,
   THEME_TABS,
   themeAnchorId,
   themeCostLabel,
   themeDestination,
   themeImage,
   themesByTab,
+  isFreeRoute,
   isFreeTheme,
   type ThemeFortune,
 } from '@/lib/domain/theme-fortune/themes'
@@ -26,6 +28,10 @@ export const metadata: Metadata = {
  * ## 🔴 여기서 AI 를 부르지 않는다
  * 카드는 제목·서브카피·그림만 그린다. 9차에 「오늘의 운세 카드가 마운트마다 Gemini 생성」
  * 사고가 났다 — 목록은 서버 컴포넌트이고 서버 액션을 하나도 호출하지 않는다.
+ *
+ * ## 🔴 오늘의 운세·2026 병오년의 유일한 입구
+ * 허브 비우기(CEO 2026-08-13)로 「더 깊이 들여다보기」가 없어지면서 두 화면은 링크가 한 곳도
+ * 남지 않았다. 하단 「지금 바로 볼 수 있는 풀이」가 지금 그 둘의 유일한 경로다.
  *
  * ## 🔴 개별 테마 풀이는 아직 없다
  * 그래서 카드는 **지금 실제로 돌아가는 화면**으로 이어지고, 어디로 가는지를 카드 위에 적는다.
@@ -85,22 +91,35 @@ export default async function ThemeFortuneListPage({ searchParams }: { searchPar
           ))}
         </div>
 
+        {/* 🔴 오늘의 운세·2026 병오년은 **이 블록이 유일한 진입 경로**다(허브에서 내려왔다).
+            링크를 빼면 두 기능이 접근 불가가 된다 — 목록은 themes.ts 의 `openRoutes()` 하나. */}
         <section className="mt-8 space-y-3" aria-labelledby="theme-open-routes">
           <div className="dancheong-divider my-4" />
           <h2 id="theme-open-routes" className="px-1 font-serif text-sm text-gold-500/80">
             지금 바로 볼 수 있는 풀이
           </h2>
           <p className="px-1 text-[11px] font-light leading-relaxed text-ink-light/50">
-            테마마다의 풀이는 준비 중입니다. 위 카드는 아래 풀이로 이어집니다.
+            테마마다의 풀이는 준비 중입니다. 위 카드는 아래 풀이로 이어지고, 오늘의 운세·2026 병오년도 여기서 바로
+            열립니다.
           </p>
           <ul className="flex flex-wrap gap-2">
-            {Object.entries(THEME_DESTINATIONS).map(([key, destination]) => (
-              <li key={key}>
+            {openRoutes().map((route) => (
+              <li key={route.href}>
                 <Link
-                  href={destination.href}
-                  className="inline-flex items-center rounded-full border border-gold-500/20 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-ink-light/70 transition-colors hover:border-gold-500/40 hover:text-ink-light"
+                  href={route.href}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gold-500/20 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-ink-light/70 transition-colors hover:border-gold-500/40 hover:text-ink-light"
                 >
-                  {destination.label}
+                  {route.label}
+                  {/* 표시 = 실차감. 값은 feature-costs.ts 한 곳에서만 온다. */}
+                  <span
+                    className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+                      isFreeRoute(route)
+                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                        : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
+                    }`}
+                  >
+                    {routeCostLabel(route)}
+                  </span>
                 </Link>
               </li>
             ))}

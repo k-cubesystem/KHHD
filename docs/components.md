@@ -13,7 +13,6 @@
 | Component               | Path                                                        | Description                              |
 | ----------------------- | ----------------------------------------------------------- | ---------------------------------------- |
 | `AnalysisDashboard`     | `components/analysis/AnalysisDashboard.tsx`                 | 분석 메인 대시보드 (카드 그리드)         |
-| `DailyFortuneCard`      | `components/analysis/daily-fortune-card.tsx`                | 오늘의 운세 요약 카드 (GA4)              |
 | `DailyFortuneView`      | `components/analysis/daily-fortune-view.tsx`                | 오늘의 운세 상세 뷰                      |
 | `SajuResultClient`      | `app/protected/analysis/saju-result/saju-result-client.tsx` | 사주 분석 결과 (프리미엄 블러)           |
 | `CheonjiinSummary`      | `components/analysis/cheonjiin/CheonjiinSummary.tsx`        | 천지인 요약                              |
@@ -53,11 +52,10 @@
 
 ## Events & Engagement
 
-| Component             | Path                                          | Description           |
-| --------------------- | --------------------------------------------- | --------------------- |
-| `DailyCheckIn`        | `components/events/daily-check-in.tsx`        | 출석 체크 (복채 보상) |
-| `LuckyRoulette`       | `components/events/lucky-roulette.tsx`        | 럭키 룰렛 (복채 보상) |
-| `SeasonalEventBanner` | `components/events/seasonal-event-banner.tsx` | 시즌 이벤트 배너      |
+| Component       | Path                                   | Description           |
+| --------------- | -------------------------------------- | --------------------- |
+| `DailyCheckIn`  | `components/events/daily-check-in.tsx` | 출석 체크 (복채 보상) |
+| `LuckyRoulette` | `components/events/lucky-roulette.tsx` | 럭키 룰렛 (복채 보상) |
 
 ## Studio Components
 

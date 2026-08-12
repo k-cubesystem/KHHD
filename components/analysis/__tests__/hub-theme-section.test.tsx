@@ -1,11 +1,13 @@
 /**
- * 사주·궁합 허브의 3섹션 재편(마스터 §3-2)이 화면에서 실제로 성립하는지.
+ * 사주·궁합 허브 본문의 두 섹션이 화면에서 실제로 성립하는지.
  *
  * 이 테스트가 지키는 것은 두 가지다.
  * ① **잃지 않았는가** — 궁합·관상·손금·풍수 4장은 이 화면이 유일한 허브 진입 경로다.
  *    카드를 지우면 그 넷은 허브에서 사라진다. 링크·개수를 문자열로 못 박는다.
  * ② **죽은 카드가 없는가** — 인기테마운세 카드는 목록 페이지의 «그 카드 자리»로 가야 한다.
  *    구 목업 라우트(`/analysis/theme/{slug}`)로 가면 맵에 없어 허브로 튕긴다.
+ *
+ * 허브 전체 구성(무엇이 없어졌는가 · 여정이 맨 아래인가)은 hub-layout.test.tsx 가 본다.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -16,28 +18,8 @@ import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 import { HUB_SECTIONS } from '@/lib/domain/analysis/hub-sections'
 import { hubThemePicks, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
-jest.mock('@/app/actions/fortune/daily-ritual', () => ({
-  getDailyRitualStatus: jest.fn(async () => ({
-    attendanceDone: false,
-    fortuneViewed: false,
-    unseenOracleCount: 0,
-  })),
-}))
-
-jest.mock('@/app/actions/fortune/daily', () => ({
-  generateDailyFortune: jest.fn(),
-}))
-
-jest.mock('@/app/actions/payment/attendance', () => ({
-  checkAttendanceAvailability: jest.fn(),
-}))
-
 jest.mock('@/components/shared/AmbientVideo', () => ({
   AmbientVideo: () => null,
-}))
-
-jest.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
 }))
 
 /** 카드가 `router.push` 로 여는 화면을 보려면 push 가 렌더마다 같은 함수여야 한다. */
@@ -49,7 +31,7 @@ beforeEach(() => {
 })
 
 async function renderDashboard() {
-  const view = render(<AnalysisDashboard userName="해화" />)
+  const view = render(<AnalysisDashboard />)
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
   })
@@ -154,32 +136,24 @@ describe('② 무엇으로 볼까요 — 기존 진입 경로 무손실', () => 
   })
 })
 
-describe('③ 더 깊이 들여다보기', () => {
-  const DEEPER = [
-    { label: '2026 병오년', href: '/protected/analysis/new-year' },
-    { label: '고민 상담', href: '/protected/ai-shaman' },
-    { label: '오늘의 운세', href: '/protected/analysis/today' },
-  ]
-
-  it('세 장만 남는다 — 재물·애정·직장·학업·부동산은 ①로 흡수됐다', async () => {
+describe('허브 본문은 두 섹션뿐이다 (CEO 2026-08-13)', () => {
+  it('오늘의 정성·절기 배너·더 깊이 들여다보기를 그리지 않는다', async () => {
     const { container } = await renderDashboard()
-    const section = sectionOf(container, HUB_SECTIONS.deeper.id)
 
-    expect(within(section).getAllByLabelText(/2026 병오년|고민 상담|오늘의 운세/)).toHaveLength(DEEPER.length)
-    expect(within(section).queryByLabelText('재물운')).toBeNull()
-    expect(within(section).queryByLabelText('학업운')).toBeNull()
+    expect(screen.queryByText('오늘의 정성')).toBeNull()
+    expect(screen.queryByText('절기 특별 이벤트')).toBeNull()
+    expect(screen.queryByText('더 깊이 들여다보기')).toBeNull()
+    expect(container.querySelector('#hub-deeper')).toBeNull()
+    expect(container.querySelector('#hub-ritual')).toBeNull()
+    expect(container.querySelector('#hub-daily')).toBeNull()
   })
 
-  it('세 장이 각자의 화면을 연다', async () => {
-    const user = userEvent.setup()
-    const { container } = await renderDashboard()
-    const section = sectionOf(container, HUB_SECTIONS.deeper.id)
+  it('서버 액션을 부르는 카드가 하나도 남지 않았다', async () => {
+    // 오늘의 정성 카드가 마운트마다 부르던 getDailyRitualStatus 가 사라졌다 —
+    // 이제 이 화면은 모킹 없이도 선다(위 테스트들이 액션 모킹 없이 도는 것이 증거).
+    const source = readFileSync(join(process.cwd(), 'components/analysis/AnalysisDashboard.tsx'), 'utf8')
 
-    for (const { label, href } of DEEPER) {
-      push.mockClear()
-      await user.click(within(section).getByLabelText(label))
-      expect(push).toHaveBeenCalledWith(href)
-    }
+    expect(source).not.toMatch(/@\/app\/actions/)
   })
 })
 

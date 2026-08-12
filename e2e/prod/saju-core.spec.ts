@@ -38,23 +38,24 @@ test.describe('사주 핵심 루프 검수', () => {
     console.log('[PASS] 만세력 명식 렌더')
     await page.screenshot({ path: SHOT('1-manse'), fullPage: false })
 
-    // ── 2) 분석 허브: 오늘의 운세 위젯 (daily_fortune 프롬프트+캐시) ──
-    await page.goto('/protected/analysis')
-    const todayCard = page.getByText(/오늘의 운세/).first()
-    await expect(todayCard).toBeVisible({ timeout: 15_000 })
+    // ── 2) 오늘의 운세: daily_fortune 프롬프트+캐시 ──
+    // 허브 비우기(CEO 2026-08-13)로 허브의 오늘의 운세 카드가 없어졌다. 어차피 그 카드는
+    // 버튼일 뿐이라 본문이 뜨지 않았다 — 생성·캐시가 실제로 도는 전용 화면에서 잰다.
+    await page.goto('/protected/analysis/today')
+    await expect(page.getByText(/오늘의 기상도/).first()).toBeVisible({ timeout: 15_000 })
     // 운세 본문 생성/캐시 로드 대기 — 실패 시 '시스템 설정 오류' 문구가 뜬다
     await expect(page.getByText(/시스템 설정 오류|프롬프트를 불러올 수 없습니다/)).toHaveCount(0, {
       timeout: 30_000,
     })
     await page.waitForTimeout(8_000)
-    const hubText = (
+    const todayText = (
       await page
         .locator('main, body')
         .first()
         .innerText()
         .catch(() => '')
     ).replace(/\s+/g, ' ')
-    const hasFortuneBody = /총운|재물운|행운/.test(hubText)
+    const hasFortuneBody = /총운|재물운|행운/.test(todayText)
     console.log(`[CHECK] 오늘의 운세 본문 표시: ${hasFortuneBody}`)
     await page.screenshot({ path: SHOT('2-today'), fullPage: false })
 

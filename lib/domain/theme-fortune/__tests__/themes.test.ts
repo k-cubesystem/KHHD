@@ -12,9 +12,13 @@ import {
   DEFAULT_THEME_TAB,
   HUB_THEME_PICK_COUNT,
   hubThemePicks,
+  isFreeRoute,
   isFreeTheme,
+  openRoutes,
   resolveThemeTab,
+  routeCostLabel,
   shippedThemes,
+  STANDALONE_ROUTES,
   tabOfCategory,
   THEME_CATEGORIES,
   THEME_DESTINATIONS,
@@ -158,7 +162,7 @@ describe('THEME_FORTUNES — 금지어 (마스터 §9-3)', () => {
     const labels = [
       ...THEME_TABS.map((tab) => tab.label),
       ...Object.values(THEME_CATEGORIES).map((meta) => meta.label),
-      ...Object.values(THEME_DESTINATIONS).map((destination) => destination.label),
+      ...openRoutes().map((route) => route.label),
     ]
 
     for (const label of labels) {
@@ -183,9 +187,9 @@ describe('THEME_FORTUNES — 단가는 feature-costs 에서만 온다 (마스터
   })
 
   it('연결 화면의 단가 키는 모두 실존 FEATURE_COST 키다', () => {
-    for (const destination of Object.values(THEME_DESTINATIONS)) {
-      if (destination.costKey === null) continue
-      expect(FEATURE_COST[destination.costKey]).toBeDefined()
+    for (const route of openRoutes()) {
+      if (route.costKey === null) continue
+      expect(FEATURE_COST[route.costKey]).toBeDefined()
     }
   })
 
@@ -205,6 +209,22 @@ describe('THEME_FORTUNES — 단가는 feature-costs 에서만 온다 (마스터
     const trend = readFileSync(join(ROOT, 'app/actions/ai/trend.ts'), 'utf8')
 
     expect(trend).not.toMatch(/deductTalisman/)
+  })
+
+  it('단독 화면 둘(오늘의 운세·2026 병오년)도 실제로 복채를 받지 않는다', () => {
+    // FEATURE_COST 가 free: true 라고 적어 둔 것을 생성 액션에서 다시 확인한다.
+    // 표기만 «무료»이고 실차감이 있으면 표시광고법 문제가 된다.
+    for (const source of ['app/actions/fortune/daily.ts', 'app/actions/ai/year2026.ts']) {
+      expect({ source, deducts: readFileSync(join(ROOT, source), 'utf8').includes('deductTalisman') }).toEqual({
+        source,
+        deducts: false,
+      })
+    }
+
+    for (const route of Object.values(STANDALONE_ROUTES)) {
+      expect(isFreeRoute(route)).toBe(true)
+      expect(routeCostLabel(route)).toBe('무료')
+    }
   })
 
   it('복채를 받는 화면은 그 값을 FEATURE_COST 에서 읽는다', () => {
@@ -253,19 +273,29 @@ describe('진입 경로 — 가짜 화면으로 보내지 않는다', () => {
   })
 
   it('연결 화면이 실제 라우트로 존재한다 (죽은 링크 방지선)', () => {
-    for (const destination of Object.values(THEME_DESTINATIONS)) {
-      expect({ href: destination.href, exists: routeExists(destination.href) }).toEqual({
-        href: destination.href,
+    for (const route of openRoutes()) {
+      expect({ href: route.href, exists: routeExists(route.href) }).toEqual({
+        href: route.href,
         exists: true,
       })
     }
   })
 
+  it('🔴 단독 화면 둘은 이 표가 유일한 진입 경로다 — 표에서 빼지 않는다', () => {
+    // 허브 비우기(CEO 2026-08-13)로 「더 깊이 들여다보기」가 사라지면서 오늘의 운세와
+    // 2026 병오년은 링크가 한 곳도 남지 않았다. 이 둘이 표에서 빠지면 기능이 접근 불가가 된다.
+    expect(Object.values(STANDALONE_ROUTES).map((route) => route.href)).toEqual([
+      '/protected/analysis/today',
+      '/protected/analysis/new-year',
+    ])
+    expect(openRoutes()).toHaveLength(Object.keys(THEME_DESTINATIONS).length + Object.keys(STANDALONE_ROUTES).length)
+  })
+
   it('테마 slug 로 /analysis/theme/{slug} 를 링크하지 않는다', () => {
     // 그 자리는 구 5개 slug 를 진짜 화면으로 넘기는 **리다이렉트 전용**이다.
     // 새 slug 로 들어가면 맵에 없어 허브로 튕긴다 — 눌러도 아무 데도 못 가는 카드가 된다.
-    for (const destination of Object.values(THEME_DESTINATIONS)) {
-      expect(destination.href.startsWith(`${THEME_LIST_PATH}/`)).toBe(false)
+    for (const route of openRoutes()) {
+      expect(route.href.startsWith(`${THEME_LIST_PATH}/`)).toBe(false)
     }
     for (const theme of THEME_FORTUNES) {
       expect(themeListHref(theme).startsWith(`${THEME_LIST_PATH}?`)).toBe(true)

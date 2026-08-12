@@ -16,7 +16,6 @@ export default async function AnalysisHubPage() {
 
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-
-  return <AnalysisHubClient userName={profile?.full_name || '회원'} />
+  // 프로필 조회를 걷었다 — 이름을 쓰던 유일한 자리(하단 「오늘의 운세」 카드)가 없어졌다.
+  return <AnalysisHubClient />
 }

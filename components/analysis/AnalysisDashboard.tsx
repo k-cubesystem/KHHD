@@ -4,12 +4,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import { SeasonalEventBanner } from '@/components/events/seasonal-event-banner'
 import { Card } from '@/components/ui/card'
-import { ChevronRight, Flame, type LucideIcon } from 'lucide-react'
-import { DailyFortuneCard } from './daily-fortune-card'
+import { ChevronRight } from 'lucide-react'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
-import { DailyRitualCard } from './dashboard/DailyRitualCard'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 import {
   hubThemePicks,
@@ -20,10 +17,15 @@ import {
 } from '@/lib/domain/theme-fortune/themes'
 
 /**
- * 바로가기가 데려다 놓은 자리가 고정 헤더(h-14=56px) 밑에 깔리지 않도록 하는 여백.
- * `scroll-margin-top` 은 JS 의 scrollIntoView 와 브라우저 기본 해시 이동 **둘 다** 존중한다.
+ * 사주·궁합 허브 본문 — 두 섹션만 남는다(CEO 2026-08-13 「대폭 비우기」).
+ *
+ * 걷어낸 것: 오늘의 정성 카드 · 절기 특별 이벤트 배너 · ③ 더 깊이 들여다보기 · 하단 오늘의
+ * 운세 카드. 넷 다 컴포넌트째 사라졌다(소비처 0).
+ *
+ * 🔴 ③ 이 들고 있던 **오늘의 운세·2026 병오년은 지운 게 아니라 옮겼다** — 테마 목록
+ *    (`THEME_LIST_PATH`)의 「지금 바로 볼 수 있는 풀이」가 두 화면의 유일한 진입 경로다.
+ *    여기서 카드를 되살리기 전에 그 목록을 먼저 볼 것(길이 둘로 갈라진다).
  */
-const SECTION_ANCHOR = 'scroll-mt-20 outline-none'
 
 // 아이콘 → 「설빛 온기」 일러스트 (PRD §7, public/icons/hub)
 const STUDIO_CARDS = [
@@ -61,61 +63,14 @@ const STUDIO_CARDS = [
   },
 ] as const
 
-interface DeeperCard {
-  readonly id: string
-  readonly label: string
-  readonly desc: string
-  readonly bg: string
-  readonly href: string
-  readonly badge?: string
-  /** 「설빛 온기」 일러스트. 없으면 `icon` 을 그린다. */
-  readonly img?: string
-  readonly icon?: LucideIcon
-  /** 2열 그리드에서 한 줄을 통째로 쓰는 카드(홀수 장일 때 끝자리를 비우지 않는다). */
-  readonly wide?: boolean
-}
-
 /**
- * ③ 더 깊이 들여다보기 — 주기가 있는 것(연·일)과 대화만 남는다(마스터 §3-2).
- *
- * 구 MENU_CARDS 의 재물·애정·직장·학업·부동산 5장은 ① 인기테마운세로 흡수됐다. 그 화면들이
- * 사라진 게 아니라 **테마 목록을 거쳐 이어진다** — `lib/domain/theme-fortune/themes.ts` 의
- * `THEME_DESTINATIONS` 가 그 다섯 경로를 전부 들고 있고, 테마 목록 하단이 그것을 그린다.
+ * 바로가기가 데려다 놓은 자리가 고정 헤더(h-14=56px) 밑에 깔리지 않도록 하는 여백.
+ * `scroll-margin-top` 은 브라우저 기본 해시 이동(`#hub-theme`)을 존중한다 — 허브 밖에서
+ * 앵커를 걸고 들어오는 길이 남아 있다.
  */
-const DEEPER_CARDS = [
-  {
-    id: 'year2026',
-    label: '2026 병오년',
-    desc: '붉은 말의 해 운명 흐름',
-    img: '/icons/hub/unse.webp',
-    bg: 'bg-red-500/10',
-    href: '/protected/analysis/new-year',
-    badge: '2026',
-  },
-  {
-    id: 'ai-shaman',
-    label: '고민 상담',
-    desc: 'AI 해화지기',
-    img: '/icons/hub/sangdam.webp',
-    bg: 'bg-gold-500/15',
-    href: '/protected/ai-shaman',
-  },
-  {
-    id: 'today',
-    label: '오늘의 운세',
-    desc: '하루의 결을 짚어봅니다',
-    icon: Flame,
-    bg: 'bg-gold-500/15',
-    href: '/protected/analysis/today',
-    wide: true,
-  },
-] as const satisfies readonly DeeperCard[]
+const SECTION_ANCHOR = 'scroll-mt-20 outline-none'
 
-interface AnalysisDashboardProps {
-  userName?: string
-}
-
-export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
+export function AnalysisDashboard() {
   const router = useRouter()
 
   return (
@@ -123,31 +78,11 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="max-w-screen-sm mx-auto pb-40 px-2 space-y-6"
+      className="max-w-screen-sm mx-auto px-2 space-y-6"
     >
       {/* 0. 사주 유도 카드 (1장 — 한국 전통풍) */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
-      </motion.div>
-
-      {/* 0-1. 오늘의 정성 — 데일리 루프 허브(F-6) */}
-      <motion.section
-        variants={fadeInUp}
-        id={HUB_SECTIONS.ritual.id}
-        aria-labelledby={hubHeadingId(HUB_SECTIONS.ritual.id)}
-        tabIndex={-1}
-        className={SECTION_ANCHOR}
-      >
-        {/* 카드가 이미 제 이름을 달고 있어 눈에는 안 보이게 두되, 문서 구조에는 남긴다. */}
-        <h2 id={hubHeadingId(HUB_SECTIONS.ritual.id)} className="sr-only">
-          {HUB_SECTIONS.ritual.title}
-        </h2>
-        <DailyRitualCard />
-      </motion.section>
-
-      {/* 1. Seasonal Event Banner */}
-      <motion.div variants={fadeInUp}>
-        <SeasonalEventBanner />
       </motion.div>
 
       {/* ① 인기테마운세 — 「도구」가 아니라 「질문」으로 들어오는 입구 (마스터 §3-2).
@@ -253,79 +188,6 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
           })}
         </nav>
       </motion.section>
-
-      {/* ③ 더 깊이 들여다보기 — 연·일 주기와 대화 (2열) */}
-      <motion.section
-        variants={fadeInUp}
-        id={HUB_SECTIONS.deeper.id}
-        aria-labelledby={hubHeadingId(HUB_SECTIONS.deeper.id)}
-        tabIndex={-1}
-        className={`space-y-3 ${SECTION_ANCHOR}`}
-      >
-        <div className="dancheong-divider my-4" />
-        <div className="flex items-center gap-2 px-1">
-          <div className="h-px w-6 bg-gold-500/40" />
-          <h2 id={hubHeadingId(HUB_SECTIONS.deeper.id)} className="text-sm font-serif text-gold-500/80">
-            {HUB_SECTIONS.deeper.title}
-          </h2>
-        </div>
-
-        <nav role="navigation" aria-label="더 깊이 들여다보기 메뉴" className="grid grid-cols-2 gap-3">
-          {DEEPER_CARDS.map((card) => {
-            const Icon = 'icon' in card ? card.icon : undefined
-            return (
-              <Card
-                key={card.id}
-                onClick={() => router.push(card.href)}
-                aria-label={card.label}
-                className={`group cursor-pointer card-glass-manse transition-all duration-200 p-4 rounded-xl active:scale-[0.97] hover:border-gold-500/30 relative overflow-hidden ${
-                  'wide' in card && card.wide ? 'col-span-2' : ''
-                }`}
-              >
-                {'badge' in card && card.badge && (
-                  <span className="absolute top-2 right-2 text-[9px] font-medium text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full border border-red-500/20">
-                    {card.badge}
-                  </span>
-                )}
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-11 h-11 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform overflow-hidden`}
-                  >
-                    {'img' in card && card.img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={card.img} alt="" className="w-9 h-9 object-contain" draggable={false} />
-                    ) : (
-                      Icon && <Icon className="w-5 h-5 text-gold-500" strokeWidth={1.5} />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-ink-light">{card.label}</span>
-                    <span className="block text-[11px] text-ink-light/70 font-light mt-0.5">{card.desc}</span>
-                  </div>
-                </div>
-                <ChevronRight className="absolute bottom-3 right-3 w-3.5 h-3.5 text-ink-light/20 group-hover:text-gold-500/50 transition-colors" />
-              </Card>
-            )
-          })}
-        </nav>
-      </motion.section>
-
-      {/* 5. 오늘의 운세 (하단) — 자동 생성 없이 버튼 진입만(CEO 2026-08-12) */}
-      {userName && (
-        <motion.section
-          variants={fadeInUp}
-          id={HUB_SECTIONS.dailyFortune.id}
-          aria-labelledby={hubHeadingId(HUB_SECTIONS.dailyFortune.id)}
-          tabIndex={-1}
-          className={SECTION_ANCHOR}
-        >
-          <h2 id={hubHeadingId(HUB_SECTIONS.dailyFortune.id)} className="sr-only">
-            {HUB_SECTIONS.dailyFortune.title}
-          </h2>
-          <div className="dancheong-divider my-4" />
-          <DailyFortuneCard userName={userName} />
-        </motion.section>
-      )}
     </motion.div>
   )
 }
