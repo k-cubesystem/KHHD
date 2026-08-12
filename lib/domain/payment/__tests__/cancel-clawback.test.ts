@@ -7,7 +7,7 @@
  *  3. 같은 웹훅이 재전송되면 회수 증분이 0 이 된다(원장 기준 멱등).
  *  4. 확정되지 않은 취소(IN_PROGRESS/ABORTED)는 회수하지 않는다.
  */
-import { computeCancelClawback } from '../cancel-clawback'
+import { computeCancelClawback, netRevenue } from '../cancel-clawback'
 
 /** 1만원에 복채 20만냥을 지급받은 결제 — 아직 아무것도 회수되지 않은 상태 */
 function basePayment() {
@@ -217,5 +217,31 @@ describe('computeCancelClawback — 오회수 방지', () => {
     // 같은 페이로드는 항상 같은 키 → 재전송이 DB 유니크 인덱스에 걸린다.
     expect(computeCancelClawback(input).idempotencySuffix).toBe('amt4000')
     expect(computeCancelClawback(input).idempotencySuffix).toBe('amt4000')
+  })
+})
+
+describe('netRevenue — 부분 취소 매출 보정', () => {
+  it('취소가 없으면 결제액 그대로다', () => {
+    expect(netRevenue({ amount: 30_000, cancelled_amount: 0 })).toBe(30_000)
+  })
+
+  it('부분 취소분을 뺀다 — status 가 completed 로 남는 유일한 경로다', () => {
+    // 🔴 이 한 줄이 없으면 어드민 매출이 취소된 돈까지 세어 과대 계상된다.
+    expect(netRevenue({ amount: 30_000, cancelled_amount: 10_000 })).toBe(20_000)
+  })
+
+  it('전액 취소면 0 이다', () => {
+    expect(netRevenue({ amount: 30_000, cancelled_amount: 30_000 })).toBe(0)
+  })
+
+  it('취소액이 결제액을 넘어도 음수 매출을 만들지 않는다', () => {
+    expect(netRevenue({ amount: 30_000, cancelled_amount: 40_000 })).toBe(0)
+  })
+
+  it('컬럼이 비어 있어도(null/undefined) 안전하게 0 기준으로 센다', () => {
+    expect(netRevenue({ amount: 30_000, cancelled_amount: null })).toBe(30_000)
+    expect(netRevenue({ amount: 30_000 })).toBe(30_000)
+    expect(netRevenue({ amount: null, cancelled_amount: null })).toBe(0)
+    expect(netRevenue({})).toBe(0)
   })
 })

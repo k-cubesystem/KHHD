@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserRole } from '@/lib/supabase/helpers'
+import { netRevenue } from '@/lib/domain/payment/cancel-clawback'
 
 async function checkAdminPermission() {
   const supabase = await createClient()
@@ -106,14 +107,26 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
     dailyRevenueData,
     dailyUsersData,
   ] = await Promise.all([
-    // Revenue: today
-    supabase.from('payments').select('amount').eq('status', 'completed').gte('created_at', todayStart.toISOString()),
+    // Revenue: today — cancelled_amount 를 같이 읽어 부분 취소분을 뺀다(netRevenue).
+    supabase
+      .from('payments')
+      .select('amount, cancelled_amount')
+      .eq('status', 'completed')
+      .gte('created_at', todayStart.toISOString()),
 
     // Revenue: week
-    supabase.from('payments').select('amount').eq('status', 'completed').gte('created_at', weekStart.toISOString()),
+    supabase
+      .from('payments')
+      .select('amount, cancelled_amount')
+      .eq('status', 'completed')
+      .gte('created_at', weekStart.toISOString()),
 
     // Revenue: month
-    supabase.from('payments').select('amount').eq('status', 'completed').gte('created_at', monthStart.toISOString()),
+    supabase
+      .from('payments')
+      .select('amount, cancelled_amount')
+      .eq('status', 'completed')
+      .gte('created_at', monthStart.toISOString()),
 
     // DAU: unique users with analysis today
     supabase.from('analysis_history').select('user_id').gte('created_at', todayStart.toISOString()),
@@ -153,7 +166,7 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
     // Daily revenue for last 30 days
     supabase
       .from('payments')
-      .select('created_at, amount')
+      .select('created_at, amount, cancelled_amount')
       .eq('status', 'completed')
       .gte('created_at', monthStart.toISOString())
       .order('created_at', { ascending: true }),
@@ -166,11 +179,11 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
       .order('created_at', { ascending: true }),
   ])
 
-  // Aggregate revenue
+  // Aggregate revenue — 건수는 결제 건 그대로, 금액만 취소분을 뺀 순매출.
   const revenue: RevenueStats = {
-    today: todayPayments.data?.reduce((s, p) => s + (p.amount || 0), 0) ?? 0,
-    week: weekPayments.data?.reduce((s, p) => s + (p.amount || 0), 0) ?? 0,
-    month: monthPayments.data?.reduce((s, p) => s + (p.amount || 0), 0) ?? 0,
+    today: todayPayments.data?.reduce((s, p) => s + netRevenue(p), 0) ?? 0,
+    week: weekPayments.data?.reduce((s, p) => s + netRevenue(p), 0) ?? 0,
+    month: monthPayments.data?.reduce((s, p) => s + netRevenue(p), 0) ?? 0,
     todayCount: todayPayments.data?.length ?? 0,
     weekCount: weekPayments.data?.length ?? 0,
     monthCount: monthPayments.data?.length ?? 0,
@@ -249,7 +262,7 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
   for (const p of dailyRevenueData.data ?? []) {
     const key = p.created_at.split('T')[0]
     if (revByDay[key]) {
-      revByDay[key].amount += p.amount || 0
+      revByDay[key].amount += netRevenue(p)
       revByDay[key].count += 1
     }
   }

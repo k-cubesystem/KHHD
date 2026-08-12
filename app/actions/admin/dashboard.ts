@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserRole } from '@/lib/supabase/helpers'
+import { netRevenue } from '@/lib/domain/payment/cancel-clawback'
 import { logger } from '@/lib/utils/logger'
 
 // 권한 체크 헬퍼
@@ -135,10 +136,10 @@ export async function getHourlyTraffic(hours: number = 24) {
     if (a.activity_type === 'signup') buckets[key].new_signups++
   }
 
-  // payments 수익 집계
+  // payments 수익 집계 — 부분 취소분을 뺀 순매출(netRevenue)
   const { data: payments } = await supabase
     .from('payments')
-    .select('created_at, amount')
+    .select('created_at, amount, cancelled_amount')
     .eq('status', 'completed')
     .gte('created_at', since)
 
@@ -147,7 +148,7 @@ export async function getHourlyTraffic(hours: number = 24) {
     d.setMinutes(0, 0, 0)
     const key = d.toISOString()
     if (!buckets[key]) continue
-    buckets[key].total_revenue += p.amount || 0
+    buckets[key].total_revenue += netRevenue(p)
   }
 
   const data = Object.values(buckets)

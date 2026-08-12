@@ -62,6 +62,25 @@ function toNonNegativeInt(value: number | null | undefined): number {
   return Math.max(0, Math.trunc(value))
 }
 
+/** 매출로 잡을 실수령액 = 결제액 − 누적 취소액. */
+export interface NetRevenueRow {
+  amount?: number | null
+  cancelled_amount?: number | null
+}
+
+/**
+ * 부분 취소분을 뺀 순매출(원).
+ *
+ * 🔴 부분 취소는 payments.status 가 'completed' 로 **남는다**(전액 취소만 'refunded'). 그래서
+ * `status='completed'` 필터만 걸고 amount 를 합치면 취소분만큼 매출이 과대 계상된다.
+ * 어드민 집계는 전부 이 함수를 통과시킨다 — 화면마다 다른 숫자가 나오면 매출을 못 믿는다.
+ */
+export function netRevenue(row: NetRevenueRow): number {
+  const paid = toNonNegativeInt(row.amount)
+  const cancelled = toNonNegativeInt(row.cancelled_amount)
+  return Math.max(0, paid - cancelled)
+}
+
 export function computeCancelClawback(input: CancelClawbackInput): CancelClawbackPlan {
   const paidAmount = toNonNegativeInt(input.paidAmount)
   const creditsGranted = toNonNegativeInt(input.creditsGranted)
