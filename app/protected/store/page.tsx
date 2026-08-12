@@ -130,7 +130,7 @@ async function BokchaeTab({ userId, packs }: { userId: string; packs: PricePlan[
   const [roleData, alreadyCharged] = await Promise.all([getCurrentUserRole(), hasChargedBefore()])
   return (
     <div className="space-y-3">
-      {/* 오픈 이벤트 일일 복채 — 자동 팝업을 걷어낸 뒤의 수령 경로 */}
+      {/* 오픈 이벤트 일일 복채 — 종료됨(OPEN_EVENT_END_KST). 되살릴 때만 다시 그려진다 */}
       <OpenEventClaim />
       <TalismanPurchaseSection
         initialPlans={packs}

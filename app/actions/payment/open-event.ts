@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isOpenEventActive } from '@/lib/domain/payment/open-event-window'
 import { logger } from '@/lib/utils/logger'
 
 const EVENT_DAILY_AMOUNT = 20 // 20만냥
@@ -25,6 +26,12 @@ export async function claimDailyEventBonus(): Promise<{
   message: string
   alreadyClaimed?: boolean
 }> {
+  // 🔴 'use server' export 는 공개 엔드포인트다 — 화면에서 카드를 감추는 것만으로는 지급이 닫히지 않는다.
+  //    종료 판정은 반드시 이 서버 경로에서 먼저 한다.
+  if (!isOpenEventActive()) {
+    return { success: false, message: '오픈 이벤트가 종료되었습니다.' }
+  }
+
   try {
     const supabase = await createClient()
     const {
@@ -89,6 +96,11 @@ export async function checkEventBonusStatus(): Promise<{
   claimed: boolean
   eventActive: boolean
 }> {
+  // 종료됐으면 사용자 조회조차 하지 않는다 — 화면은 이 값 하나로 카드를 감춘다.
+  if (!isOpenEventActive()) {
+    return { claimed: false, eventActive: false }
+  }
+
   try {
     const supabase = await createClient()
     const {
@@ -113,6 +125,7 @@ export async function checkEventBonusStatus(): Promise<{
     return { claimed: !!existing, eventActive: true }
   } catch (error) {
     logger.error('[OpenEvent] Status check error:', error)
-    return { claimed: false, eventActive: true }
+    // fail-closed — 못 받는 버튼을 띄워 기대를 만들지 않는다.
+    return { claimed: false, eventActive: false }
   }
 }

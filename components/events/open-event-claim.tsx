@@ -4,16 +4,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Gift, Loader2 } from 'lucide-react'
 import { claimDailyEventBonus, checkEventBonusStatus } from '@/app/actions/payment/open-event'
+import { isOpenEventActive } from '@/lib/domain/payment/open-event-window'
 import { logger } from '@/lib/utils/logger'
 
 /**
- * 오픈 이벤트 일일 복채 수령 — 자동 팝업(OpenEventPopup)의 대체 경로.
+ * 오픈 이벤트 일일 복채 수령 — 상점 › 복채 충전 탭의 인라인 카드.
  *
- * 팝업은 걷어냈지만 «받을 수 있던 복채»까지 사라지면 안 되므로, 복채가 필요해진 그 자리
- * (상점 › 복채 충전 탭) 에 인라인 카드로 남긴다. 수령 완료·이벤트 종료 시엔 스스로 사라져
- * 상점 화면을 어지럽히지 않는다(팝업처럼 흐름을 끊지 않는 게 핵심).
+ * 🔴 현재 이벤트는 종료 상태다(OPEN_EVENT_END_KST 가 지났다) → 이 카드는 아무것도 그리지 않는다.
+ *    죽은 코드가 아니라 «되살리기 경로»다: 상수 한 줄을 미래 시각으로 되돌리면 카드가 그대로 돌아온다.
+ *    진입 조건은 lib/domain/payment/open-event-window.ts 단 하나뿐이다.
  *
- * 지급 금액·이벤트 활성 여부는 서버(app/actions/payment/open-event.ts)가 단독으로 판정한다.
+ * 열려 있을 때의 동작: 수령 완료·상태 확인 실패 시에도 스스로 사라져 상점 화면을 어지럽히지 않는다.
+ * 지급 금액과 최종 허용 여부는 서버(app/actions/payment/open-event.ts)가 단독으로 판정한다.
  */
 type Phase = 'checking' | 'claimable' | 'claimed' | 'hidden'
 
@@ -25,6 +27,12 @@ export function OpenEventClaim() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    // 종료됐으면 서버에 묻지도 않는다 — 상점을 열 때마다 죽은 왕복을 만들지 않기 위해.
+    if (!isOpenEventActive()) {
+      setPhase('hidden')
+      return
+    }
+
     let alive = true
     // 상태 확인 실패 시엔 숨긴다(fail-closed) — 못 받는 버튼을 띄워 기대를 만들지 않는다.
     checkEventBonusStatus()
