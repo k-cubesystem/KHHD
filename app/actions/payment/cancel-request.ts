@@ -20,6 +20,22 @@ import {
   type MembershipCancelOverview,
   type MembershipCancelSubmission,
 } from '@/lib/domain/payment/self-cancel'
+import {
+  evaluateLossCap,
+  isLossCapBlockedReason,
+  lossCapBlockedMessage,
+  lossCapWindowStart,
+  toLossCapStatus,
+  LOSS_CANCEL_MAX_AMOUNT,
+  LOSS_CANCEL_MAX_COUNT,
+  LOSS_CANCEL_WINDOW_DAYS,
+  LOSS_CAP_OPEN,
+  type LossCapDecision,
+  type LossCapStatus,
+  type LossCapUsage,
+} from '@/lib/domain/payment/loss-cap'
+import { getUserRole } from '@/lib/supabase/helpers'
+import { hasUnlimitedAccess } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 
@@ -33,12 +49,15 @@ import { rateLimit } from '@/lib/utils/rate-limit'
  *      3) 판정은 **서버에서 다시 계산**한다. 클라이언트가 보낸 금액·판정은 쓰지 않는다.
  *      4) 지갑 잔액 변경은 `clawbackPaymentCredits()`(service_role RPC) 단일 경로로만.
  *         이 파일에서 wallets 를 직접 INSERT/UPDATE 하지 않는다.
+ *      5) 손실 처리 상한(최근 365일 · 계정당 2회 / 10만원)의 **최종 판정은 DB 함수**
+ *         `open_charge_cancel_request` 가 잠금 아래에서 한다. 여기서 하는 사전 판정은 «안내»용이다
+ *         — 따닥으로 두 요청이 동시에 들어오면 애플리케이션 레벨 검사는 둘 다 통과시킨다.
  */
 
 const CANCEL_RATE_LIMIT = { interval: 60_000, uniqueTokenPerInterval: 5 } as const
 
 /** 이 시간이 지나도 REQUESTED 로 남아 있는 요청은 «응답을 못 받고 죽은 것»으로 보고 실패 확정한다. */
-const STALE_REQUEST_MS = 10 * 60_000
+const STALE_REQUEST_MINUTES = 10
 
 const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
 
@@ -83,6 +102,71 @@ function packLabelFor(plan: ChargeCancelPlan): string {
 }
 
 // ────────────────────────────────────────────────────────────
+// 손실 처리 상한 — 읽기(안내용). 최종 차단은 DB 함수가 한다.
+// ────────────────────────────────────────────────────────────
+
+interface LossRequestRow {
+  loss_amount: number | null
+  created_at: string
+}
+
+/**
+ * 이동창(최근 365일) 안의 손실 처리 사용량.
+ *
+ * 진행 중(REQUESTED)도 센다 — 토스 응답을 기다리는 사이에 두 번째 요청이 통과하면
+ * 상한을 한 번에 두 칸 넘길 수 있다. 실패(FAILED)는 환불이 나가지 않았으므로 세지 않는다.
+ */
+async function readLossCapUsage(userId: string): Promise<LossCapUsage> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('payment_cancel_requests')
+    .select('loss_amount, created_at')
+    .eq('user_id', userId)
+    .eq('kind', 'CHARGE')
+    .gt('loss_credits', 0)
+    .in('status', ['REQUESTED', 'SUCCEEDED'])
+    .gte('created_at', lossCapWindowStart().toISOString())
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    logger.warn('[PaymentCancel] 손실 상한 사용량 조회 실패:', { userId, message: error.message })
+    // 읽기에 실패했다고 상한을 열어주면 안 되지만, 막아버리면 정상 사용자가 갇힌다.
+    // → 안내는 «열림»으로 두고, 실제 차단은 DB 함수가 잠금 아래에서 판정한다.
+    return { count: 0, amount: 0, oldestAt: null }
+  }
+
+  const rows = (data ?? []) as LossRequestRow[]
+  const amount = rows.reduce((sum, row) => sum + Math.max(0, row.loss_amount ?? 0), 0)
+  return { count: rows.length, amount, oldestAt: rows[0]?.created_at ?? null }
+}
+
+interface OpenCancelOutcome {
+  ok: boolean
+  requestId: string | null
+  blockedReason: string | null
+  nextAvailableAt: string | null
+}
+
+/** `open_charge_cancel_request` 의 jsonb 응답 파서. RPC 반환은 unknown 이므로 형태를 확인하고 받는다. */
+function parseOpenResult(value: unknown): OpenCancelOutcome | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  const raw = value as Record<string, unknown>
+  if (typeof raw.ok !== 'boolean') return null
+  return {
+    ok: raw.ok,
+    requestId: typeof raw.request_id === 'string' ? raw.request_id : null,
+    blockedReason: typeof raw.blocked_reason === 'string' ? raw.blocked_reason : null,
+    nextAvailableAt: typeof raw.next_available_at === 'string' ? raw.next_available_at : null,
+  }
+}
+
+/** 마스터(admin)는 상한 면제 — 판정 기준은 lib/auth/privileges.ts 단일 출처. */
+async function isLossCapExempt(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<boolean> {
+  const role = await getUserRole(supabase, userId)
+  return hasUnlimitedAccess(role)
+}
+
+// ────────────────────────────────────────────────────────────
 // 1. 복채 충전 취소
 // ────────────────────────────────────────────────────────────
 
@@ -92,7 +176,7 @@ export async function getChargeCancelOverview(): Promise<ChargeCancelOverview> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { walletBalance: 0, items: [] }
+  if (!user) return { walletBalance: 0, items: [], lossCap: LOSS_CAP_OPEN }
 
   const admin = createAdminClient()
   const [{ data: rows }, walletBalance] = await Promise.all([
@@ -131,7 +215,21 @@ export async function getChargeCancelOverview(): Promise<ChargeCancelOverview> {
     }
   })
 
-  return { walletBalance, items }
+  // 손실이 나는 취소가 하나도 없으면 상한을 조회할 이유가 없다(정상 사용자에게 질의 0회).
+  const needsLossPath = items.some((item) => item.plan.verdict === 'PARTIALLY_SPENT')
+  const lossCap = needsLossPath ? await readLossCapStatus(supabase, user.id) : LOSS_CAP_OPEN
+
+  return { walletBalance, items, lossCap }
+}
+
+/** 화면 안내용 상한 상태. 🔴 잔여 횟수·금액은 절대 DTO 에 싣지 않는다(악용 유인). */
+async function readLossCapStatus(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<LossCapStatus> {
+  const [exempt, usage] = await Promise.all([isLossCapExempt(supabase, userId), readLossCapUsage(userId)])
+  // lossCredits: 1 = 「손실이 나는 취소를 하려 한다면」 이라는 질의.
+  return toLossCapStatus(evaluateLossCap({ lossCredits: 1, usage, exempt }))
 }
 
 /**
@@ -196,7 +294,26 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     return { success: false, error: BLOCKED_MESSAGES[plan.blockedReason ?? ''] ?? '취소할 수 없는 결제입니다.' }
   }
 
-  // (b) 갈래 — 기본은 취소 불가. 2차 경로에서 손실 처리에 동의해야 진행된다.
+  // (b) 갈래 — 손실이 나는 취소. 상한을 먼저 보고, 그다음 2차 동의를 받는다.
+  //     순서를 뒤집으면 「동의까지 다 해놓고 마지막에 거절」이 되어 안내가 불친절해진다.
+  const lossPlanned = plan.verdict === 'PARTIALLY_SPENT' && plan.lossCredits > 0
+  const exempt = lossPlanned ? await isLossCapExempt(supabase, user.id) : false
+
+  if (lossPlanned) {
+    const usage = await readLossCapUsage(user.id)
+    const decision = evaluateLossCap({ lossCredits: plan.lossCredits, usage, exempt })
+    if (!decision.allowed) {
+      logger.warn('[PaymentCancel] 손실 처리 상한 초과 — 요청 차단:', {
+        userId: user.id,
+        paymentId: payment.id,
+        blockedReason: decision.blockedReason,
+        usedCount: usage.count,
+        usedAmount: usage.amount,
+      })
+      return { success: false, lossCapBlocked: true, error: lossCapBlockedMessage(decision) }
+    }
+  }
+
   if (plan.verdict === 'PARTIALLY_SPENT' && input.acceptLoss !== true) {
     return {
       success: false,
@@ -206,50 +323,69 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
     }
   }
 
-  // 🔴 결제 1건당 REQUESTED 는 하나만 존재할 수 있다(부분 유니크 인덱스 = 따닥 방어).
-  //    그런데 토스 응답 직전에 프로세스가 죽으면 그 행이 REQUESTED 로 남아 **영구 잠금**이 된다.
-  //    시간이 지난(=응답을 못 받은) 요청은 실패로 확정해 다시 시도할 길을 열어둔다.
-  const staleBefore = new Date(Date.now() - STALE_REQUEST_MS).toISOString()
-  await admin
-    .from('payment_cancel_requests')
-    .update({ status: 'FAILED', toss_error_code: 'STALE_REQUEST', processed_at: new Date().toISOString() })
-    .eq('payment_id', payment.id)
-    .eq('status', 'REQUESTED')
-    .lt('created_at', staleBefore)
-
+  // 🔴 접수는 DB 함수 단일 경로. 굳은 요청 정리 → 상한 집계 → 판정 → INSERT 가
+  //    사용자 단위 advisory lock 아래 한 트랜잭션으로 일어난다(따닥 방어).
+  //    애플리케이션에서 「세고 나서 넣는」 방식은 동시 요청 둘을 모두 통과시킨다.
   const idempotencyKey = `HHD-CANCEL-${randomUUID()}`
-  const { data: requestRow, error: insertError } = await admin
-    .from('payment_cancel_requests')
-    .insert({
-      user_id: user.id,
-      kind: 'CHARGE',
-      payment_id: payment.id,
-      reason_code: reason.reasonCode,
-      reason_memo: reason.memo || null,
-      verdict: plan.verdict,
-      accepted_loss: plan.verdict === 'PARTIALLY_SPENT',
-      granted_credits: plan.grantedCredits,
-      ledger_remaining: payment.credits_remaining,
-      recoverable_credits: plan.recoverableCredits,
-      loss_credits: plan.lossCredits,
-      loss_amount: plan.lossAmount,
-      gross_amount: plan.grossAmount,
-      fee_amount: plan.feeAmount,
-      refund_amount: plan.refundAmount,
-      within_withdrawal_period: plan.withinWithdrawalPeriod,
-      elapsed_days: plan.elapsedDays,
-      status: 'REQUESTED',
-      idempotency_key: idempotencyKey,
-    })
-    .select('id')
-    .maybeSingle()
+  const { data: openedRaw, error: openError } = await admin.rpc('open_charge_cancel_request', {
+    p_user_id: user.id,
+    p_payment_id: payment.id,
+    p_idempotency_key: idempotencyKey,
+    p_reason_code: reason.reasonCode,
+    p_reason_memo: reason.memo || null,
+    p_verdict: plan.verdict,
+    p_accepted_loss: plan.verdict === 'PARTIALLY_SPENT',
+    p_granted_credits: plan.grantedCredits,
+    p_ledger_remaining: payment.credits_remaining,
+    p_recoverable_credits: plan.recoverableCredits,
+    p_loss_credits: plan.lossCredits,
+    p_loss_amount: plan.lossAmount,
+    p_gross_amount: plan.grossAmount,
+    p_fee_amount: plan.feeAmount,
+    p_refund_amount: plan.refundAmount,
+    p_within_withdrawal_period: plan.withinWithdrawalPeriod,
+    p_elapsed_days: plan.elapsedDays,
+    p_exempt: exempt,
+    p_stale_after_minutes: STALE_REQUEST_MINUTES,
+    p_max_count: LOSS_CANCEL_MAX_COUNT,
+    p_max_amount: LOSS_CANCEL_MAX_AMOUNT,
+    p_window_days: LOSS_CANCEL_WINDOW_DAYS,
+  })
 
-  if (insertError || !requestRow) {
-    // 부분 유니크 인덱스(payment_id, status='REQUESTED')에 걸리면 이미 처리 중이라는 뜻이다.
-    logger.warn('[PaymentCancel] 취소 요청 기록 실패:', { userId: user.id, message: insertError?.message })
+  const opened = parseOpenResult(openedRaw)
+  if (openError || !opened) {
+    logger.error(new Error('[PaymentCancel] 취소 요청 접수 실패'), {
+      userId: user.id,
+      paymentId: payment.id,
+      message: openError?.message,
+    })
+    return { success: false, error: '취소 요청을 접수하지 못했습니다. 잠시 후 다시 시도해주세요.' }
+  }
+
+  if (!opened.ok || !opened.requestId) {
+    if (isLossCapBlockedReason(opened.blockedReason)) {
+      // 사전 판정을 통과했는데 여기서 걸렸다 = 동시 요청이 먼저 자리를 채웠다.
+      const decision: LossCapDecision = {
+        allowed: false,
+        exempt: false,
+        blockedReason: opened.blockedReason,
+        nextAvailableAt: opened.nextAvailableAt,
+      }
+      logger.warn('[PaymentCancel] 손실 처리 상한 초과 — 잠금 아래에서 차단:', {
+        userId: user.id,
+        paymentId: payment.id,
+        blockedReason: opened.blockedReason,
+      })
+      return { success: false, lossCapBlocked: true, error: lossCapBlockedMessage(decision) }
+    }
+    logger.warn('[PaymentCancel] 취소 요청 접수 거절:', {
+      userId: user.id,
+      paymentId: payment.id,
+      blockedReason: opened.blockedReason,
+    })
     return { success: false, error: '이미 처리 중인 취소 요청이 있습니다. 잠시 후 다시 확인해주세요.' }
   }
-  const requestId = (requestRow as { id: string }).id
+  const requestId = opened.requestId
 
   const outcome = await requestTossCancel({
     secretKey: tossSecretKey,

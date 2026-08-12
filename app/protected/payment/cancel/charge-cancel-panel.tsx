@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { AlertTriangle, CheckCircle2, Info, Loader2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Headphones, Info, Loader2 } from 'lucide-react'
 import { submitChargeCancel } from '@/app/actions/payment/cancel-request'
 import type { ChargeCancelItem, ChargeCancelOverview, CancelReasonCode } from '@/lib/domain/payment/self-cancel'
+import type { LossCapStatus } from '@/lib/domain/payment/loss-cap'
 import { CancelReasonFields } from './cancel-reason-fields'
 
 const won = (value: number) => `${value.toLocaleString('ko-KR')}원`
@@ -23,11 +25,32 @@ const BLOCKED_TEXT: Readonly<Record<string, string>> = {
   NOTHING_GRANTED: '지급된 복채가 없어 자동 취소 대상이 아닙니다.',
 }
 
-interface ChargeCancelCardProps {
-  item: ChargeCancelItem
+/**
+ * 손실 처리 상한 안내.
+ * 🔴 남은 횟수·금액은 보여주지 않는다 — 「아직 한 번 남았네」가 곧 사용 유인이 된다.
+ *    막혔을 때만 이유와 다음 경로(고객센터)를 말한다.
+ */
+function LossCapNotice({ message }: { message: string }) {
+  return (
+    <div className="border border-primary/20 bg-surface/30 p-3 space-y-2">
+      <p className="text-sm font-light text-ink-light/80 leading-relaxed">{message}</p>
+      <Link
+        href="/protected/support"
+        className="inline-flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
+      >
+        <Headphones className="w-3.5 h-3.5" strokeWidth={1.5} />
+        고객센터로 문의하기
+      </Link>
+    </div>
+  )
 }
 
-function ChargeCancelCard({ item }: ChargeCancelCardProps) {
+interface ChargeCancelCardProps {
+  item: ChargeCancelItem
+  lossCap: LossCapStatus
+}
+
+function ChargeCancelCard({ item, lossCap }: ChargeCancelCardProps) {
   const { plan } = item
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -36,9 +59,14 @@ function ChargeCancelCard({ item }: ChargeCancelCardProps) {
   const [lossAcknowledged, setLossAcknowledged] = useState(false)
   const [reasonCode, setReasonCode] = useState<CancelReasonCode | ''>('')
   const [memo, setMemo] = useState('')
+  // 서버가 판정한 상한 차단 문구. 접수 도중 막힌 경우(따닥·창 만료)에 채워진다.
+  const [capMessage, setCapMessage] = useState<string | null>(null)
 
   const blocked = plan.verdict === 'NOT_CANCELLABLE'
   const spent = plan.verdict === 'PARTIALLY_SPENT'
+  // 손실이 나는 취소만 상한 대상이다. 복채를 안 쓴 정상 취소는 이 값과 무관하다.
+  const lossCapMessage = capMessage ?? (spent && !lossCap.available ? (lossCap.message ?? null) : null)
+  const lossPathOpen = spent && !lossCapMessage
   // (b) 갈래는 손실 처리 동의 없이는 버튼이 열리지 않는다.
   const canSubmit = !!reasonCode && !pending && (!spent || lossAcknowledged)
 
@@ -60,6 +88,16 @@ function ChargeCancelCard({ item }: ChargeCancelCardProps) {
         toast.success(`취소 접수되었습니다. ${won(result.refundAmount ?? 0)}이 환불됩니다.${lossNote}`)
         setOpen(false)
         router.refresh()
+        return
+      }
+
+      if (result.lossCapBlocked) {
+        // 화면이 열어준 경로였더라도 서버 판정이 최종이다 — 문구를 그대로 자리에 붙인다.
+        setCapMessage(result.error ?? null)
+        setOpen(false)
+        setShowLossPath(false)
+        setLossAcknowledged(false)
+        toast.error('지금은 이 방식으로 취소를 도와드리기 어렵습니다.')
         return
       }
 
@@ -136,7 +174,9 @@ function ChargeCancelCard({ item }: ChargeCancelCardProps) {
               </p>
             </div>
 
-            {!showLossPath ? (
+            {lossCapMessage ? (
+              <LossCapNotice message={lossCapMessage} />
+            ) : !showLossPath ? (
               <button
                 type="button"
                 onClick={() => setShowLossPath(true)}
@@ -172,7 +212,7 @@ function ChargeCancelCard({ item }: ChargeCancelCardProps) {
           </div>
         )}
 
-        {!blocked && (plan.verdict === 'FULL_REFUNDABLE' || showLossPath) && (
+        {!blocked && (plan.verdict === 'FULL_REFUNDABLE' || (showLossPath && lossPathOpen)) && (
           <div className="pt-1">
             {!open ? (
               <button
@@ -265,7 +305,7 @@ export function ChargeCancelPanel({ overview }: { overview: ChargeCancelOverview
         현재 지갑 잔액 {overview.walletBalance.toLocaleString('ko-KR')}만냥 · 최근 20건까지 보여드립니다.
       </p>
       {overview.items.map((item) => (
-        <ChargeCancelCard key={item.paymentId} item={item} />
+        <ChargeCancelCard key={item.paymentId} item={item} lossCap={overview.lossCap} />
       ))}
     </div>
   )

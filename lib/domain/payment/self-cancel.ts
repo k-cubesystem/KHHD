@@ -17,6 +17,8 @@
  *    → 약관이 위약금을 두지 않았으므로 **약관(사용자 유리) 기준**으로 위약금 0을 적용한다.
  */
 
+import type { LossCapStatus } from './loss-cap'
+
 // ────────────────────────────────────────────────────────────
 // 취소 사유 (객관식 + 메모)
 // ────────────────────────────────────────────────────────────
@@ -371,6 +373,8 @@ export interface ChargeCancelItem {
 export interface ChargeCancelOverview {
   walletBalance: number
   items: ChargeCancelItem[]
+  /** 「손실 처리」 취소 경로가 지금 열려 있는지(loss-cap.ts). 잔여 횟수·금액은 담지 않는다. */
+  lossCap: LossCapStatus
 }
 
 export interface MembershipCancelOverview {
@@ -413,4 +417,6 @@ export interface CancelActionResult {
   clawedCredits?: number
   /** true 면 「그래도 취소 요청」 2차 확인이 필요하다 */
   requiresLossAcknowledgement?: boolean
+  /** true 면 손실 처리 상한에 걸려 막혔다 — error 에 안내 문구가 들어 있다 */
+  lossCapBlocked?: boolean
 }
