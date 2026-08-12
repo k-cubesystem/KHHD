@@ -57,6 +57,11 @@ export const GA = {
   shareCopyLink: (contentType: string) =>
     trackEvent({ action: 'share_copy_link', category: 'social', label: contentType }),
 
+  // 허브 상단 섹션 바로가기 — label 은 앵커 id(hub-studio…). 어느 섹션이 실제로 멀어서
+  // 건너뛰어지는지 보면 다음 재편 때 순서를 근거로 바꿀 수 있다.
+  hubSectionJump: (sectionId: string) =>
+    trackEvent({ action: 'hub_section_jump', category: 'engagement', label: sectionId }),
+
   // 종합사주풀이 여정(Journey) — 노출·단계 클릭
   journeyView: (variant: string) => trackEvent({ action: 'journey_view', category: 'engagement', label: variant }),
   journeyStep: (stage: string) => trackEvent({ action: 'journey_step_click', category: 'engagement', label: stage }),

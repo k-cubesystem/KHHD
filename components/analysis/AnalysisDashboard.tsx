@@ -9,6 +9,13 @@ import { ChevronRight } from 'lucide-react'
 import { DailyFortuneCard } from './daily-fortune-card'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { DailyRitualCard } from './dashboard/DailyRitualCard'
+import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
+
+/**
+ * 바로가기가 데려다 놓은 자리가 고정 헤더(h-14=56px) 밑에 깔리지 않도록 하는 여백.
+ * `scroll-margin-top` 은 JS 의 scrollIntoView 와 브라우저 기본 해시 이동 **둘 다** 존중한다.
+ */
+const SECTION_ANCHOR = 'scroll-mt-20 outline-none'
 
 // 아이콘 → 「설빛 온기」 일러스트 (PRD §7, public/icons/hub)
 const STUDIO_CARDS = [
@@ -126,9 +133,19 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
       </motion.div>
 
       {/* 0-1. 오늘의 정성 — 데일리 루프 허브(F-6) */}
-      <motion.div variants={fadeInUp}>
+      <motion.section
+        variants={fadeInUp}
+        id={HUB_SECTIONS.ritual.id}
+        aria-labelledby={hubHeadingId(HUB_SECTIONS.ritual.id)}
+        tabIndex={-1}
+        className={SECTION_ANCHOR}
+      >
+        {/* 카드가 이미 제 이름을 달고 있어 눈에는 안 보이게 두되, 문서 구조에는 남긴다. */}
+        <h2 id={hubHeadingId(HUB_SECTIONS.ritual.id)} className="sr-only">
+          {HUB_SECTIONS.ritual.title}
+        </h2>
         <DailyRitualCard />
-      </motion.div>
+      </motion.section>
 
       {/* 1. Seasonal Event Banner */}
       <motion.div variants={fadeInUp}>
@@ -136,11 +153,19 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
       </motion.div>
 
       {/* 3. 개별 분석 (2열) */}
-      <motion.div variants={fadeInUp} className="space-y-3">
+      <motion.section
+        variants={fadeInUp}
+        id={HUB_SECTIONS.studio.id}
+        aria-labelledby={hubHeadingId(HUB_SECTIONS.studio.id)}
+        tabIndex={-1}
+        className={`space-y-3 ${SECTION_ANCHOR}`}
+      >
         <div className="dancheong-divider my-4" />
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
-          <h2 className="text-sm font-serif text-gold-500/80">청담해화당 통합분석</h2>
+          <h2 id={hubHeadingId(HUB_SECTIONS.studio.id)} className="text-sm font-serif text-gold-500/80">
+            {HUB_SECTIONS.studio.title}
+          </h2>
         </div>
 
         <nav role="navigation" aria-label="통합분석 메뉴" className="grid grid-cols-2 gap-3">
@@ -171,14 +196,22 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
             )
           })}
         </nav>
-      </motion.div>
+      </motion.section>
 
       {/* 4. 테마별 트렌드 (2열) */}
-      <motion.div variants={fadeInUp} className="space-y-3">
+      <motion.section
+        variants={fadeInUp}
+        id={HUB_SECTIONS.theme.id}
+        aria-labelledby={hubHeadingId(HUB_SECTIONS.theme.id)}
+        tabIndex={-1}
+        className={`space-y-3 ${SECTION_ANCHOR}`}
+      >
         <div className="dancheong-divider my-4" />
         <div className="flex items-center gap-2 px-1">
           <div className="h-px w-6 bg-gold-500/40" />
-          <h2 className="text-sm font-serif text-gold-500/80">더 깊이 들여다보기</h2>
+          <h2 id={hubHeadingId(HUB_SECTIONS.theme.id)} className="text-sm font-serif text-gold-500/80">
+            {HUB_SECTIONS.theme.title}
+          </h2>
         </div>
 
         <nav role="navigation" aria-label="테마별 분석 메뉴" className="grid grid-cols-2 gap-3">
@@ -212,14 +245,23 @@ export function AnalysisDashboard({ userName }: AnalysisDashboardProps = {}) {
             )
           })}
         </nav>
-      </motion.div>
+      </motion.section>
 
       {/* 5. 오늘의 운세 (하단) — 자동 생성 없이 버튼 진입만(CEO 2026-08-12) */}
       {userName && (
-        <motion.div variants={fadeInUp}>
+        <motion.section
+          variants={fadeInUp}
+          id={HUB_SECTIONS.dailyFortune.id}
+          aria-labelledby={hubHeadingId(HUB_SECTIONS.dailyFortune.id)}
+          tabIndex={-1}
+          className={SECTION_ANCHOR}
+        >
+          <h2 id={hubHeadingId(HUB_SECTIONS.dailyFortune.id)} className="sr-only">
+            {HUB_SECTIONS.dailyFortune.title}
+          </h2>
           <div className="dancheong-divider my-4" />
           <DailyFortuneCard userName={userName} />
-        </motion.div>
+        </motion.section>
       )}
     </motion.div>
   )

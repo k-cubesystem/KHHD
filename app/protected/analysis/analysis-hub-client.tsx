@@ -4,7 +4,9 @@ import { useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
+import { HubSectionNav } from '@/components/analysis/HubSectionNav'
 import { JourneyCard } from '@/components/analysis/journey-card'
+import { HUB_SECTIONS, hubHeadingId, visibleHubSections } from '@/lib/domain/analysis/hub-sections'
 
 interface AnalysisHubClientProps {
   userName?: string
@@ -40,10 +42,28 @@ export function AnalysisHubClient({ userName }: AnalysisHubClientProps = {}) {
       </div>
 
       <div className="relative z-10 w-full pt-6">
-        {/* 종합사주풀이 여정 — 사주/궁합 허브 상단부 (사용자 지정 위치) */}
-        <div className="max-w-screen-sm mx-auto px-4 mb-6">
-          <JourneyCard variant="full" />
+        {/* 섹션 바로가기 — 화면 맨 위. 아래로 한참 스크롤해야 닿던 섹션들을 한 번에 연다.
+            ⚠️ sticky 로 만들지 않았다. 이 화면의 조상 두 곳(ProtectedLayout 의 overflow-x-hidden,
+               아래 허브 루트의 overflow-hidden)이 스크롤 컨테이너를 만들어, position:sticky 는
+               «문서» 가 아니라 그 컨테이너에 붙는다 — 컨테이너 자체는 스크롤하지 않으므로 고정은
+               조용히 아무 일도 하지 않는다. 그걸 살리려면 레이아웃의 overflow-x-hidden 을 걷어야
+               하는데, 그 클래스는 배경 블러(가로 800px)가 만드는 가로 스크롤을 막고 있다. */}
+        <div className="max-w-screen-sm mx-auto px-4 mb-4">
+          <HubSectionNav sections={visibleHubSections({ hasDailyFortune: Boolean(userName) })} />
         </div>
+
+        {/* 종합사주풀이 여정 — 사주/궁합 허브 상단부 (사용자 지정 위치) */}
+        <section
+          id={HUB_SECTIONS.journey.id}
+          aria-labelledby={hubHeadingId(HUB_SECTIONS.journey.id)}
+          tabIndex={-1}
+          className="max-w-screen-sm mx-auto px-4 mb-6 scroll-mt-20 outline-none"
+        >
+          <h2 id={hubHeadingId(HUB_SECTIONS.journey.id)} className="sr-only">
+            {HUB_SECTIONS.journey.title}
+          </h2>
+          <JourneyCard variant="full" />
+        </section>
         <AnalysisDashboard userName={userName} />
       </div>
     </div>
