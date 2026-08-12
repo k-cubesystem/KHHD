@@ -1,106 +1,137 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Crown, Zap, Star, X, Check, ArrowRight, TrendingUp } from 'lucide-react'
+import { Crown, Zap, Star, X, Check, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { getMembershipPlans, type MembershipPlan } from '@/app/actions/payment/subscription'
+import {
+  FREE_RETENTION_DAYS,
+  FREE_TIER_LIMITS,
+  UNLIMITED_STORAGE_LIMIT,
+  intervalWords,
+  membershipBenefitLines,
+  toPlanFacts,
+  type MembershipPlanFacts,
+} from '@/lib/domain/payment/membership-benefits'
+import { logger } from '@/lib/utils/logger'
 
-// ─── Tier definitions (mirrors DB data) ─────────────────────────────────────
+// ─── Tier presentation ───────────────────────────────────────────────────────
+//
+// 🔴 등급의 «숫자»(가격·복채·인연·기록)는 여기에 적지 않는다. 예전엔 이 파일이 DB 를 손으로 베껴
+//    두었다가 실제와 어긋났다(무료 인연 1명·기록 3개로 적혀 있었으나 실제는 3명·10개, 지급 주기도
+//    «매일»로 잘못 적혀 있었다). 이제 membership_plans 를 그대로 읽고 문구는
+//    lib/domain/payment/membership-benefits.ts 가 만든다. 여기 남는 것은 색·아이콘뿐이다.
 
 export type MembershipTier = 'FREE' | 'SINGLE' | 'FAMILY' | 'BUSINESS'
 
 export type NudgeTrigger = 'DAILY_LIMIT' | 'PREMIUM_FEATURE' | 'GENTLE_REMINDER'
 
-interface TierInfo {
-  tier: MembershipTier
+interface TierStyle {
   name: string
-  price: number
-  dailyLimit: number
-  relationshipLimit: number
-  storageLimit: number | '무제한'
   color: string
   borderColor: string
   badgeClass: string
   icon: React.ReactNode
-  perks: string[]
 }
 
-const TIER_INFO: Record<MembershipTier, TierInfo> = {
+/** 이름은 플랜을 못 불러왔을 때의 폴백 — 불러오면 DB 의 plan.name 이 이긴다. */
+const TIER_STYLE: Record<MembershipTier, TierStyle> = {
   FREE: {
-    tier: 'FREE',
     name: '무료',
-    price: 0,
-    dailyLimit: 0,
-    relationshipLimit: 1,
-    storageLimit: 3,
     color: 'text-zinc-400',
     borderColor: 'border-zinc-600/40',
     badgeClass: 'bg-zinc-700 text-zinc-300',
     icon: <Star className="w-4 h-4" />,
-    perks: ['사주·궁합·관상·손금 개별 과금 이용', '최근 30일 기록 보관'],
   },
   SINGLE: {
-    tier: 'SINGLE',
     name: '싱글 멤버십',
-    price: 9900,
-    dailyLimit: 10,
-    relationshipLimit: 3,
-    storageLimit: 10,
     color: 'text-amber-400',
     borderColor: 'border-amber-500/40',
     badgeClass: 'bg-amber-900/60 text-amber-300',
     icon: <Star className="w-4 h-4" />,
-    perks: [
-      '매일 복채 10만냥 정액',
-      '신당 · 고민상담 무제한',
-      '가족관리 — 인연 3명',
-      '전체 기록 평생 보관 (10개)',
-      '출석체크 보너스',
-    ],
   },
   FAMILY: {
-    tier: 'FAMILY',
     name: '패밀리 멤버십',
-    price: 29900,
-    dailyLimit: 30,
-    relationshipLimit: 10,
-    storageLimit: 50,
     color: 'text-gold-500',
     borderColor: 'border-gold-500/50',
     badgeClass: 'bg-gold-500/20 text-gold-500',
     icon: <Crown className="w-4 h-4" />,
-    perks: [
-      '매일 복채 30만냥 정액',
-      '신당 · 고민상담 무제한',
-      '가족관리 — 인연 10명',
-      '가족 궁합 · 인연 네트워크',
-      '전체 기록 평생 보관 (50개)',
-      '복채 충전 15% 보너스',
-    ],
   },
   BUSINESS: {
-    tier: 'BUSINESS',
     name: '비즈니스 멤버십',
-    price: 99000,
-    dailyLimit: 100,
-    relationshipLimit: 50,
-    storageLimit: '무제한',
     color: 'text-purple-400',
     borderColor: 'border-purple-500/40',
     badgeClass: 'bg-purple-900/60 text-purple-300',
     icon: <Zap className="w-4 h-4" />,
-    perks: [
-      '매일 복채 100만냥 정액',
-      '신당 · 고민상담 무제한',
-      '가족관리 — 인연 50명',
-      '전체 기록 평생 보관 (무제한)',
-      '맞춤 보고서 · 우선 상담',
-      '복채 충전 20% 보너스',
-    ],
   },
+}
+
+/** 화면이 실제로 쓰는 등급 정보 — 스타일 + DB 에서 온 사실. */
+interface TierView {
+  tier: MembershipTier
+  name: string
+  style: TierStyle
+  /** 원(KRW). 무료는 0. */
+  price: number
+  facts: MembershipPlanFacts | null
+  perks: string[]
+}
+
+/** 무료 등급은 파는 상품이 아니라 «지금 상태»라 플랜 행이 없다 — 단일 출처 상수로 세운다. */
+function freeTierView(): TierView {
+  return {
+    tier: 'FREE',
+    name: TIER_STYLE.FREE.name,
+    style: TIER_STYLE.FREE,
+    price: 0,
+    facts: {
+      interval: 'MONTH',
+      talismansPerPeriod: FREE_TIER_LIMITS.talismansPerPeriod,
+      relationshipLimit: FREE_TIER_LIMITS.relationshipLimit,
+      storageLimit: FREE_TIER_LIMITS.storageLimit,
+    },
+    perks: [`사주·궁합·관상·손금 개별 과금 이용`, `기록은 최근 ${FREE_RETENTION_DAYS}일까지 열람`],
+  }
+}
+
+function planTierView(plan: MembershipPlan): TierView {
+  const style = TIER_STYLE[plan.tier] ?? TIER_STYLE.SINGLE
+  const facts = toPlanFacts(plan)
+  return {
+    tier: plan.tier,
+    name: plan.name,
+    style,
+    price: plan.price,
+    facts,
+    perks: membershipBenefitLines(facts),
+  }
+}
+
+/** 가격 표기 — 주기도 플랜에서 온다(연 결제 플랜이 생겨도 «/월»로 굳지 않게). */
+function priceLabel(view: TierView): string {
+  if (view.tier === 'FREE') return '무료'
+  if (!view.facts) return ''
+  return `${view.price.toLocaleString()}원/${intervalWords(view.facts.interval).price}`
+}
+
+/**
+ * 등급 비교 3줄. «복채 N만냥/일»이라 적던 자리 — 그건 지급량이 아니라 하루 사용 상한이었다.
+ * 지급은 주기 단위이므로 그대로 «달마다 N만냥»으로 적는다.
+ */
+function factLines(view: TierView): string[] {
+  const f = view.facts
+  if (!f) return []
+  const bokchae =
+    f.talismansPerPeriod > 0
+      ? `복채 ${intervalWords(f.interval).every}마다 ${f.talismansPerPeriod}만냥`
+      : '복채 지급 없음'
+  const records = f.storageLimit === UNLIMITED_STORAGE_LIMIT ? '기록 제한 없음' : `기록 ${f.storageLimit}개`
+  return [bokchae, `인연 ${f.relationshipLimit}명`, records]
 }
 
 // Returns the next tier up from the given tier
@@ -109,13 +140,6 @@ function getNextTier(current: MembershipTier | null | undefined): MembershipTier
   if (current === 'SINGLE') return 'FAMILY'
   if (current === 'FAMILY') return 'BUSINESS'
   return 'BUSINESS'
-}
-
-// Map numeric discount by tier upgrade path
-const UPGRADE_DISCOUNTS: Partial<Record<`${MembershipTier}->${MembershipTier}`, number>> = {
-  'FREE->SINGLE': 15,
-  'SINGLE->FAMILY': 20,
-  'FAMILY->BUSINESS': 25,
 }
 
 // ─── Trigger copy ─────────────────────────────────────────────────────────────
@@ -156,12 +180,35 @@ export function MembershipNudgeModal({
   currentTier,
   featureLabel,
 }: MembershipNudgeModalProps) {
+  const [plans, setPlans] = useState<MembershipPlan[]>([])
+
+  // 등급 비교표는 실제 판매 중인 플랜을 그대로 읽는다 — 열릴 때 한 번만.
+  useEffect(() => {
+    if (!isOpen || plans.length > 0) return
+    let alive = true
+    getMembershipPlans()
+      .then((rows) => {
+        if (alive) setPlans(rows)
+      })
+      .catch((err) => logger.warn('[MembershipNudgeModal] 플랜 조회 실패 — 숫자 없이 표시', err))
+    return () => {
+      alive = false
+    }
+  }, [isOpen, plans.length])
+
   const current = currentTier ?? 'FREE'
   const next = getNextTier(current)
-  const currentInfo = TIER_INFO[current]
-  const nextInfo = TIER_INFO[next]
-  const discountKey = `${current}->${next}` as `${MembershipTier}->${MembershipTier}`
-  const discount = UPGRADE_DISCOUNTS[discountKey]
+
+  const viewOf = (tier: MembershipTier): TierView => {
+    if (tier === 'FREE') return freeTierView()
+    const plan = plans.find((p) => p.tier === tier)
+    return plan
+      ? planTierView(plan)
+      : { tier, name: TIER_STYLE[tier].name, style: TIER_STYLE[tier], price: 0, facts: null, perks: [] }
+  }
+
+  const currentInfo = viewOf(current)
+  const nextInfo = viewOf(next)
   const copy = TRIGGER_COPY[trigger]
 
   // Features only in next tier (diff)
@@ -202,18 +249,10 @@ export function MembershipNudgeModal({
             </div>
           </div>
 
-          {/* Discount urgency badge */}
-          {discount && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="inline-flex items-center gap-1.5 bg-gold-500/20 border border-gold-500/40 rounded-full px-3 py-1"
-            >
-              <TrendingUp className="w-3.5 h-3.5 text-gold-500" />
-              <span className="text-xs font-semibold text-gold-500">지금 업그레이드하면 {discount}% 할인 혜택</span>
-            </motion.div>
-          )}
+          {/* 🔴 여기 있던 «지금 업그레이드하면 N% 할인 혜택» 배지를 걷어냈다(2026-08-12).
+              결제 경로(createBillingAuthUrl → 토스 빌링)는 언제나 plan.price 를 그대로 청구한다 —
+              업그레이드 할인은 코드 어디에도 없어 «없는 가격»을 광고하고 있었다.
+              프로모션을 실제로 만들면 그때 «가격 출처»와 함께 되살릴 것. */}
         </div>
 
         {/* Tier comparison */}
@@ -222,21 +261,18 @@ export function MembershipNudgeModal({
 
           <div className="grid grid-cols-2 gap-3">
             {/* Current tier */}
-            <div className={cn('rounded-xl border p-3 bg-white/[0.02]', currentInfo.borderColor)}>
+            <div className={cn('rounded-xl border p-3 bg-white/[0.02]', currentInfo.style.borderColor)}>
               <div className="flex items-center gap-1.5 mb-2">
-                <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', currentInfo.badgeClass)}>현재</Badge>
+                <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', currentInfo.style.badgeClass)}>현재</Badge>
               </div>
-              <p className={cn('text-sm font-semibold', currentInfo.color)}>{currentInfo.name}</p>
-              <p className="text-xs text-amber-300/50 mt-1">
-                {currentInfo.price === 0 ? '무료' : `${currentInfo.price.toLocaleString()}원/월`}
-              </p>
+              <p className={cn('text-sm font-semibold', currentInfo.style.color)}>{currentInfo.name}</p>
+              <p className="text-xs text-amber-300/50 mt-1">{priceLabel(currentInfo)}</p>
               <ul className="mt-2 space-y-1">
-                <li className="text-xs text-amber-300/60">복채 {currentInfo.dailyLimit}만냥/일</li>
-                <li className="text-xs text-amber-300/60">인연 {currentInfo.relationshipLimit}명</li>
-                <li className="text-xs text-amber-300/60">
-                  기록 {currentInfo.storageLimit}
-                  {typeof currentInfo.storageLimit === 'number' ? '개' : ''}
-                </li>
+                {factLines(currentInfo).map((line) => (
+                  <li key={line} className="text-xs text-amber-300/60">
+                    {line}
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -244,7 +280,7 @@ export function MembershipNudgeModal({
             <div
               className={cn(
                 'rounded-xl border p-3 relative overflow-hidden',
-                nextInfo.borderColor,
+                nextInfo.style.borderColor,
                 'bg-gradient-to-br from-[#2a1f08]/80 to-[#1a1208]/80'
               )}
             >
@@ -252,17 +288,16 @@ export function MembershipNudgeModal({
               <div className="absolute inset-0 bg-gold-500/5 pointer-events-none" />
 
               <div className="flex items-center gap-1.5 mb-2">
-                <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', nextInfo.badgeClass)}>추천</Badge>
+                <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', nextInfo.style.badgeClass)}>추천</Badge>
               </div>
-              <p className={cn('text-sm font-semibold', nextInfo.color)}>{nextInfo.name}</p>
-              <p className="text-xs text-amber-300/50 mt-1">{nextInfo.price.toLocaleString()}원/월</p>
+              <p className={cn('text-sm font-semibold', nextInfo.style.color)}>{nextInfo.name}</p>
+              <p className="text-xs text-amber-300/50 mt-1">{priceLabel(nextInfo)}</p>
               <ul className="mt-2 space-y-1">
-                <li className="text-xs text-gold-500/90 font-medium">복채 {nextInfo.dailyLimit}만냥/일</li>
-                <li className="text-xs text-gold-500/90 font-medium">인연 {nextInfo.relationshipLimit}명</li>
-                <li className="text-xs text-gold-500/90 font-medium">
-                  기록 {nextInfo.storageLimit}
-                  {typeof nextInfo.storageLimit === 'number' ? '개' : ''}
-                </li>
+                {factLines(nextInfo).map((line) => (
+                  <li key={line} className="text-xs text-gold-500/90 font-medium">
+                    {line}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

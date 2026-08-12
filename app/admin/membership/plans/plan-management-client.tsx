@@ -286,7 +286,8 @@ export function PlanManagementClient() {
                         {getPlanVal(plan, 'interval') === 'YEAR' ? '년' : '월'}
                       </span>
                       <span className="text-[10px] text-stone-500">
-                        복채 일일 {getPlanVal(plan, 'daily_talisman_limit') as number}만냥
+                        지급 {getPlanVal(plan, 'talismans_per_period') as number}만냥/주기 · 하루 상한{' '}
+                        {getPlanVal(plan, 'daily_talisman_limit') as number}만냥
                       </span>
                       <span
                         className={cn('text-[9px] font-bold', plan.is_active ? 'text-emerald-400' : 'text-stone-600')}
@@ -409,9 +410,11 @@ export function PlanManagementClient() {
                       <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">사용 한도</p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="space-y-1">
+                          {/* 🔴 이 칸은 «주기 지급»이다(결제 주기당 1회). 예전 라벨이 «일일 복채 지급»이라
+                              옆칸의 하루 사용 상한과 뒤섞여 앱 문구까지 틀리게 만들었다. */}
                           <Label className="text-[10px] text-stone-400 flex items-center gap-1">
                             <Ticket className="w-2.5 h-2.5 text-gold-500" />
-                            일일 복채 지급
+                            주기 지급 복채
                           </Label>
                           <Input
                             type="number"
@@ -423,7 +426,7 @@ export function PlanManagementClient() {
                         <div className="space-y-1">
                           <Label className="text-[10px] text-stone-400 flex items-center gap-1">
                             <Calendar className="w-2.5 h-2.5" />
-                            일일 한도
+                            하루 사용 상한
                           </Label>
                           <Input
                             type="number"

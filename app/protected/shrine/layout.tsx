@@ -10,6 +10,7 @@ import { AnimAuditBadge } from '@/components/shrine/scene/AnimAuditBadge'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
+import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 
 /**
  * 신당 계열 전체(deities·shop·setup·chat 포함) 멤버십 게이트.
@@ -33,8 +34,8 @@ export default async function ShrineLayout({ children }: { children: React.React
         benefits={[
           '나·가족별 신당과 신위 모시기',
           '소원 기원 · 방명록 · 배치 효험',
-          '매일 복채 정액 + 전체 기록 평생 보관',
-          '고민상담 채팅 · 가족관리 포함',
+          '가족관리 입장 포함',
+          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
         ]}
       />
     )

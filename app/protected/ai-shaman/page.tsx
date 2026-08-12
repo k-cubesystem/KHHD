@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { hasActiveChatPass } from '@/app/actions/payment/vouchers'
 import { MembershipGate } from '@/components/shared/membership-gate'
+import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { DAILY_FREE_QUESTIONS } from '@/lib/domain/chat/constants'
 import { logger } from '@/lib/utils/logger'
 import { Metadata } from 'next'
 
@@ -48,8 +50,13 @@ export default async function AIShamanPage() {
       <MembershipGate
         feature="counsel"
         title="고민상담 · 해화지기와의 대화"
-        description="명리학에 뿌리를 둔 AI 상담사가 당신의 고민을 깊이 들어드립니다. 멤버십 회원은 언제든 무제한, 또는 1일 이용권으로 지금 바로 시작하세요."
-        benefits={['해화지기 고민상담 무제한', '매일 복채 정액 지급', '신당 · 가족관리 · 전체 기록 평생 보관']}
+        description="명리학에 뿌리를 둔 AI 상담사가 당신의 고민을 깊이 들어드립니다. 멤버십 회원으로, 또는 1일 이용권으로 지금 바로 들어오세요."
+        benefits={[
+          '해화지기와의 고민상담 입장',
+          `질문은 하루 ${DAILY_FREE_QUESTIONS}문까지 무료 · 더 필요하면 복채로 충전`,
+          '신당 · 가족관리 입장 포함',
+          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
+        ]}
         dayPassType="CHAT_DAY_PASS"
       />
     )

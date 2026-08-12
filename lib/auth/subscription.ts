@@ -10,9 +10,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { hasUnlimitedAccess } from '@/lib/auth/privileges'
+import { FREE_RETENTION_DAYS } from '@/lib/domain/payment/membership-benefits'
 
-/** 무료 사용자 기록 보관 기간(일). 이 기간 이전 기록은 삭제하지 않고 잠근다(멤버십 가입 시 복원). */
-export const FREE_RETENTION_DAYS = 30
+// 보관 기간은 순수 도메인 모듈이 정본이다(클라이언트 문구도 같은 값을 읽어야 해서).
+// 기존 소비자를 위해 여기서 그대로 통과시킨다.
+export { FREE_RETENTION_DAYS }
 
 export interface ActiveMembership {
   /** SINGLE | FAMILY | BUSINESS | MASTER (마스터) | MEMBER (tier 조회 실패 폴백). */

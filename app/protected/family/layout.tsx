@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
+import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 
 /**
  * 가족관리 계열 전체(map·compatibility-matrix 포함) 멤버십 게이트.
@@ -26,7 +27,7 @@ export default async function FamilyLayout({ children }: { children: React.React
           '가족 구성원 등록 · 기운 지도',
           '구성원별 5대 풀이 미션 & 종합사주풀이',
           '가족 신당 · 닮은꼴 운세',
-          '매일 복채 정액 + 전체 기록 평생 보관',
+          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
         ]}
       />
     )

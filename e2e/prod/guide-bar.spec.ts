@@ -11,10 +11,6 @@ async function login(page: Page) {
   await page.getByLabel('비밀번호', { exact: true }).fill(process.env.E2E_USER_PASSWORD || '')
   await page.getByRole('button', { name: '로그인', exact: true }).click()
   await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
-  const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-  await page.addLocatorHandler(dlg, async () => {
-    await dlg.getByRole('button', { name: 'Close' }).click()
-  })
 }
 
 test.describe('가이드 공지 바', () => {

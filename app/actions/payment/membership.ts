@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { hasUnlimitedAccess, UNLIMITED_TIER_LIMITS } from '@/lib/auth/privileges'
+import { FREE_TIER_LIMITS } from '@/lib/domain/payment/membership-benefits'
 
 /**
  * Get user's membership tier and limits
@@ -45,12 +46,12 @@ export async function getUserTierLimits() {
     .single()
 
   if (!subscription || !subscription.membership_plans) {
-    // No active subscription - return default limits
+    // 무료 사용자 한도 — 화면(등급 비교표)과 같은 출처를 쓴다. membership-benefits.ts 참조.
     return {
       tier: null,
-      daily_talisman_limit: 0,
-      relationship_limit: 3, // Free users can add up to 3
-      storage_limit: 10,
+      daily_talisman_limit: FREE_TIER_LIMITS.dailyTalismanLimit,
+      relationship_limit: FREE_TIER_LIMITS.relationshipLimit,
+      storage_limit: FREE_TIER_LIMITS.storageLimit,
       is_subscribed: false,
     }
   }

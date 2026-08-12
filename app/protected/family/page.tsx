@@ -4,6 +4,7 @@ import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/acti
 import { getLinkedFamilies, listFamilyInviteLinks, type FamilyInviteSummary } from '@/app/actions/family-invite'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
+import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 import { LinkedFamiliesSection } from '@/components/family/linked-families-section'
 import { FamilyPageClient } from './family-page-client'
 
@@ -42,7 +43,7 @@ export default async function FamilyPage() {
           benefits={[
             '가족별 사주 · 신당 · 궁합 관리',
             '가족 미션과 인연 네트워크',
-            '매일 복채 정액 + 고민상담 무제한 + 전체 기록 평생 보관',
+            ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
           ]}
         />
       </div>

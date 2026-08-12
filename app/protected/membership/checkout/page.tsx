@@ -8,6 +8,14 @@ import { Button } from '@/components/ui/button'
 import { Crown, Loader2, ArrowLeft, Check } from 'lucide-react'
 import Link from 'next/link'
 import { logger } from '@/lib/utils/logger'
+import {
+  bokchaeGrantLine,
+  dailySpendCapLine,
+  intervalWords,
+  recordKeepingLine,
+  relationshipLine,
+  toPlanFacts,
+} from '@/lib/domain/payment/membership-benefits'
 
 function CheckoutContent() {
   const searchParams = useSearchParams()
@@ -110,23 +118,30 @@ function CheckoutContent() {
         {/* 플랜 요약 */}
         <div className="bg-surface/30 border border-primary/20 rounded-xl p-6 mb-6">
           <div className="text-center mb-4 pb-4 border-b border-primary/10">
-            <div className="text-3xl font-serif font-bold text-primary">월 {plan.price.toLocaleString()}원</div>
-            <p className="text-white/50 text-xs mt-1">매월 자동 결제 · 언제든 해지 가능</p>
+            <div className="text-3xl font-serif font-bold text-primary">
+              {intervalWords(plan.interval).price} {plan.price.toLocaleString()}원
+            </div>
+            <p className="text-white/50 text-xs mt-1">
+              {intervalWords(plan.interval).every}마다 자동 결제 · 언제든 해지 가능
+            </p>
           </div>
+          {/* 문구는 전부 membership_plans 행에서 파생된다 — 하드코딩 금지(membership-benefits.ts 참조). */}
           <ul className="space-y-2">
-            <li className="flex items-center gap-2 text-sm text-white/80">
-              <Check className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={1.5} />
-              일일 복채 {plan.daily_talisman_limit}만냥 지급
-            </li>
-            <li className="flex items-center gap-2 text-sm text-white/80">
-              <Check className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={1.5} />
-              인연 {plan.relationship_limit}명 등록
-            </li>
-            <li className="flex items-center gap-2 text-sm text-white/80">
-              <Check className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={1.5} />
-              결과 {plan.storage_limit === 999 ? '무제한' : `${plan.storage_limit}개`} 저장
-            </li>
+            {[
+              bokchaeGrantLine(toPlanFacts(plan)),
+              relationshipLine(toPlanFacts(plan)),
+              recordKeepingLine(toPlanFacts(plan)),
+            ].map((line) => (
+              <li key={line} className="flex items-center gap-2 text-sm text-white/80">
+                <Check className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={1.5} />
+                {line}
+              </li>
+            ))}
           </ul>
+          <p className="text-white/40 text-[11px] mt-3 leading-relaxed">
+            {dailySpendCapLine(plan.daily_talisman_limit)} · 신당·가족관리·고민상담 «입장»이 열립니다. 풀이는 회원도
+            복채로 봅니다.
+          </p>
         </div>
 
         {error && <p className="text-red-400 text-sm text-center mb-4 bg-red-400/10 rounded-lg p-3">{error}</p>}

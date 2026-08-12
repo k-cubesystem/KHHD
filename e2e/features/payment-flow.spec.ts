@@ -29,13 +29,6 @@ test('결제 플로우: 로그인 → 멤버십 → checkout → Toss 결제창'
     return
   }
 
-  // 오픈 이벤트(일일 복채) 팝업이 비동기로 늦게 떠서 클릭을 가로챌 수 있음 — 등장 시점 무관 자동 닫기
-  const eventDialog = page.getByRole('dialog', { name: '오픈 이벤트' })
-  await page.addLocatorHandler(eventDialog, async () => {
-    await eventDialog.getByRole('button', { name: 'Close' }).click()
-    console.log('[INFO] 오픈 이벤트 팝업 닫음')
-  })
-
   const startButton = page.getByText('지금 시작하기')
   await expect(startButton.first()).toBeVisible({ timeout: 15_000 })
   await startButton.first().click()

@@ -20,12 +20,6 @@ test.describe('프로덕션 스모크', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    // 오픈이벤트 팝업은 서버 상태체크 후 비동기로 늦게 뜰 수 있음 — 등장 시점 무관 자동 닫기
-    const eventDialog = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(eventDialog, async () => {
-      await eventDialog.getByRole('button', { name: 'Close' }).click()
-    })
-
     await page.goto('/protected/ai-shaman')
 
     const question = '한 문장으로 오늘의 기운을 알려주세요'

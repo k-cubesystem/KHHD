@@ -18,6 +18,10 @@
 
 import { FEATURE_COST, type FeatureCostKey } from '@/lib/domain/payment/feature-costs'
 import { VOUCHER_CATALOG } from '@/lib/domain/payment/vouchers'
+import { intervalWords } from '@/lib/domain/payment/membership-benefits'
+
+// 주기 표기는 멤버십 혜택 문구와 한 곳에서 나온다 — 여기선 다시 정의하지 않고 통과시킨다.
+export { intervalWords }
 
 /**
  * 기능의 «이름»만 여기서 정한다(가격은 FEATURE_COST 소관).
@@ -130,11 +134,6 @@ export interface PaymentGuideInput {
   retentionDays: number
   /** getCurrentUserMembership() 결과. 비회원이면 null. */
   membership: { tier: string; planId: string | null } | null
-}
-
-/** 결제 주기 표기 — «달마다 지급» / «월 9,900원». */
-export function intervalWords(interval: string): { every: string; price: string } {
-  return interval === 'YEAR' ? { every: '해', price: '연' } : { every: '달', price: '월' }
 }
 
 function toGuidePlan(p: PlanInput): GuidePlan {

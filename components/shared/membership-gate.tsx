@@ -115,7 +115,7 @@ export function MembershipGate({ feature, title, description, benefits, dayPassT
               )}
             </button>
             <p className="relative text-[10px] text-ink-light/35 mt-2 font-sans">
-              구매 즉시 24시간 이용 · 멤버십엔 상시 포함
+              구매 즉시 {dayPass.durationHours}시간 입장 · 멤버십엔 상시 포함
             </p>
           </>
         )}

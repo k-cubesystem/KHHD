@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import { FREE_RETENTION_DAYS } from '@/lib/domain/payment/membership-benefits'
 
 // 채팅 보존 정책 cron — ①만료 D-7 예고 알림 ②종료 세션의 원문 메시지만 등급별 보존기간 후 삭제.
 // 요약(chat_sessions.summary)·장기기억(user_ai_memory)은 영구 보존: 신은 그 뜻을 기억한다.
 // 보존일: 활성 구독 플랜 membership_plans.chat_retention_days (S90/F180/B365) + 기억함 배치 보너스, 무료는 아래 상수.
 
-const FREE_RETENTION_DAYS = 30
 const EXPIRY_NOTICE_LEAD_DAYS = 7
 
 export const dynamic = 'force-dynamic'

@@ -35,22 +35,8 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // ── 1) 신당 방 ──
     await page.goto('/protected/shrine')
-    // 오픈이벤트 팝업은 클릭 시에만 핸들러가 돌므로 스크린샷 전에 명시적으로 닫는다
-    await dlg.waitFor({ timeout: 5_000 }).catch(() => {})
-    if (await dlg.isVisible().catch(() => false)) {
-      await dlg
-        .getByRole('button', { name: 'Close' })
-        .click()
-        .catch(() => {})
-      await dlg.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {})
-    }
     await page
       .getByText(/나 의 신 당|수호신을 좌정|신당을 만들/)
       .first()
@@ -109,15 +95,7 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
     const input = page.getByPlaceholder(/고민을 편하게 적어주세요/).first()
     await expect(input).toBeVisible({ timeout: 20_000 })
 
-    // 팝업 명시 닫기(force 클릭은 locator handler 미트리거) + 세션 히스토리 로딩 완료 대기
-    await dlg.waitFor({ timeout: 5_000 }).catch(() => {})
-    if (await dlg.isVisible().catch(() => false)) {
-      await dlg
-        .getByRole('button', { name: 'Close' })
-        .click()
-        .catch(() => {})
-      await dlg.waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {})
-    }
+    // 세션 히스토리 로딩 완료 대기
     // 채팅 페이지는 백그라운드 요청이 이어져 networkidle이 안 올 수 있음 — 상한 필수
     await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {})
     await page.waitForTimeout(1_500)

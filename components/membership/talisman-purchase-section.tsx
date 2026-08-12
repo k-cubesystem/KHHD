@@ -299,7 +299,7 @@ export function TalismanPurchaseSection({
           '충전된 복채는 만료 기간 없이 영구 사용 가능합니다',
           '결제 완료 즉시 복채가 지급됩니다',
           '환불은 미사용 복채에 한해 7일 이내 가능합니다',
-          '멤버십 일일 복채와 별도로 합산 적용됩니다',
+          '멤버십으로 지급되는 복채와 합산되며, 충전한 복채는 하루 사용 상한을 받지 않습니다',
         ].map((text, i) => (
           <p key={i} className="text-[9px] text-white/40 flex items-start gap-1.5">
             <span className="text-primary/40 mt-0.5">·</span>

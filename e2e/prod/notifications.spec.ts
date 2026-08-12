@@ -27,11 +27,6 @@ test.describe('알림 센터 · 테마 이미지', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 프로필 → 언어 전환 배선 확인 (P3-14 — 이전엔 어디서도 렌더되지 않았음)
     await page.goto('/protected/profile')
     await expect(page.getByText('언어 / Language')).toBeVisible({ timeout: 25_000 })

@@ -15,11 +15,6 @@ test.describe('어드민 잔액 조정', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 회원 상세 → 지갑 탭 → 복채 조정
     await page.goto(`/admin/users/${process.env.E2E_ADMIN_TARGET_ID}`)
     await expect(page.getByText('계정 정보').first()).toBeVisible({ timeout: 20_000 })

@@ -19,12 +19,6 @@ test.describe('신당 3.0 네비게이션', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    // 오픈이벤트 팝업 자동 닫기
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 1) 하단 네비: 신당 있고 사주팔자 없음
     const nav = page.getByRole('navigation', { name: '주요 메뉴' })
     await expect(nav.getByText('신당', { exact: true })).toBeVisible({ timeout: 15_000 })

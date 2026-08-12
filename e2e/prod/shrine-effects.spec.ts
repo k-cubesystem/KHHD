@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import path from 'path'
+import { dismissPaymentGuide } from '../fixtures'
 
 // 배치 효험(P2-11) + 가이드 서버 저장·온보딩(P2-10) 검증.
 // 테스트 계정은 「초롱」(lucky_hour)을 배치 중 — 상점 뱃지·신당 렌더로 확인.
@@ -20,10 +21,8 @@ test.describe('배치 효험 · 가이드', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
+    // 아래 3)에서 상점 «정문»으로 들어가면 결제 도우미가 자동으로 떠 가이드 클릭을 가로챈다.
+    await dismissPaymentGuide(page)
 
     // 1) 상점 신물 탭 — 효험 있는 아이템이 뱃지로 노출 (기억의 함은 이미 검증됨)
     await page.goto('/protected/store?tab=items')

@@ -17,6 +17,7 @@ import {
 import { cancelSubscription, reactivateSubscription, changeBillingMethod } from '@/app/actions/payment/subscription'
 import { CreditCard, XCircle, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { FREE_RETENTION_DAYS } from '@/lib/domain/payment/membership-benefits'
 
 interface SubscriptionActionsProps {
   subscriptionId: string
@@ -147,11 +148,12 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
               <AlertDialogDescription className="text-zen-muted space-y-2">
                 <p>해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.</p>
                 <p className="font-medium text-zen-text">해지 시 잃게 되는 혜택:</p>
+                {/* 등급마다 액수가 달라 숫자는 적지 않는다 — 잃는 «것»만 정확히 적는다. */}
                 <ul className="list-disc list-inside text-sm space-y-1">
-                  <li>매월 복채 10만냥 자동 지급</li>
-                  <li>오늘의 운세 무제한 열람</li>
-                  <li>매일 카카오톡 알림</li>
-                  <li>분석 결과 PDF 보관</li>
+                  <li>결제 주기마다 지급되던 복채</li>
+                  <li>신당 · 가족관리 · 고민상담 입장</li>
+                  <li>웹툰 멤버십 전용 회차</li>
+                  <li>기록 보관 기간 제한 해제 (무료는 최근 {FREE_RETENTION_DAYS}일까지 열람)</li>
                 </ul>
               </AlertDialogDescription>
             </AlertDialogHeader>

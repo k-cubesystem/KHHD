@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Ticket, Check, Clock, Crown, Loader2 } from 'lucide-react'
 import { purchaseVoucher, type VoucherRow } from '@/app/actions/payment/vouchers'
 import { VOUCHER_CATALOG, VOUCHER_TYPES, isVoucherActive, type VoucherType } from '@/lib/domain/payment/vouchers'
+import { DAILY_FREE_QUESTIONS } from '@/lib/domain/chat/constants'
 import { GA } from '@/lib/analytics/ga4'
 
 interface VoucherShopProps {
@@ -51,8 +52,8 @@ export function VoucherShop({ initialVouchers, isMember }: VoucherShopProps) {
         <div className="flex items-center gap-2 rounded-xl border border-gold-500/30 bg-gold-500/[0.06] px-3.5 py-2.5">
           <Crown className="w-4 h-4 text-gold-400 shrink-0" strokeWidth={1.5} />
           <p className="text-xs text-ink-light/70 font-sans">
-            멤버십 회원은 고민상담이 <span className="text-gold-300 font-semibold">상시 무제한</span> — 이용권이
-            필요하지 않습니다.
+            멤버십 회원은 고민상담에 <span className="text-gold-300 font-semibold">상시 입장</span> — 이용권이 필요하지
+            않습니다. 질문은 회원도 하루 {DAILY_FREE_QUESTIONS}문까지 무료입니다.
           </p>
         </div>
       )}

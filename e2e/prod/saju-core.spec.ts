@@ -7,18 +7,6 @@ import path from 'path'
 // (오늘의운세 미캐시 시 Gemini 1콜 발생 가능)
 const SHOT = (n: string) => path.join(process.env.SHOT_DIR || 'test-results', `saju-core-${n}.png`)
 
-async function closeEventDialog(page: import('@playwright/test').Page) {
-  const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-  await dlg.waitFor({ timeout: 4_000 }).catch(() => {})
-  if (await dlg.isVisible().catch(() => false)) {
-    await dlg
-      .getByRole('button', { name: 'Close' })
-      .click()
-      .catch(() => {})
-    await dlg.waitFor({ state: 'hidden', timeout: 4_000 }).catch(() => {})
-  }
-}
-
 test.describe('사주 핵심 루프 검수', () => {
   test.skip(!process.env.E2E_PROD_SMOKE, 'E2E_PROD_SMOKE 미설정 — 스킵')
   test.use({ storageState: { cookies: [], origins: [] } })
@@ -43,7 +31,6 @@ test.describe('사주 핵심 루프 검수', () => {
 
     // ── 1) 만세력: 대상 로드(v_destiny_targets) + 사주팔자 명식 렌더 ──
     await page.goto('/protected/profile/manse')
-    await closeEventDialog(page)
     // 대상 정보가 로드되면 셀렉터/명식이, 깨지면 "내 정보를 먼저 등록해주세요"가 뜬다
     await expect(page.getByText('내 정보를 먼저 등록해주세요')).toHaveCount(0, { timeout: 15_000 })
     await expect(page.getByText('사주팔자 (四柱八字)')).toBeVisible({ timeout: 20_000 })
@@ -53,7 +40,6 @@ test.describe('사주 핵심 루프 검수', () => {
 
     // ── 2) 분석 허브: 오늘의 운세 위젯 (daily_fortune 프롬프트+캐시) ──
     await page.goto('/protected/analysis')
-    await closeEventDialog(page)
     const todayCard = page.getByText(/오늘의 운세/).first()
     await expect(todayCard).toBeVisible({ timeout: 15_000 })
     // 운세 본문 생성/캐시 로드 대기 — 실패 시 '시스템 설정 오류' 문구가 뜬다
@@ -74,7 +60,6 @@ test.describe('사주 핵심 루프 검수', () => {
 
     // ── 3) 천지인 사주풀이: 대상 선택 화면 도달 (실분석은 수동/필요 시) ──
     await page.goto('/protected/analysis/cheonjiin')
-    await closeEventDialog(page)
     await expect(page.getByText(/분석 대상 선택|사주풀이 시작하기/).first()).toBeVisible({ timeout: 15_000 })
     const combo = page.getByRole('combobox').first()
     await combo.click().catch(() => {})

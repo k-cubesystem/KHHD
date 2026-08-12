@@ -5,6 +5,7 @@ import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { dailySpendCapLine, membershipBenefitLines, toPlanFacts } from '@/lib/domain/payment/membership-benefits'
 
 interface Plan {
   id: string
@@ -51,21 +52,14 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
 
   const features = (currentPlan.features as Record<string, boolean | number>) || {}
 
-  // 등급별 특징 — 멤버십 핵심 가치 5종을 앞세운다(2026-07-23 개별 과금·게이팅 개편).
-  // 금액/수량은 plan 필드에서 오며(불변), 문구만 새 가치로 재구성한다.
-  const tierFeatures: string[] = []
-  tierFeatures.push(`매일 복채 ${currentPlan.daily_talisman_limit}만냥 정액 지급`)
-  tierFeatures.push('신당 · 신위 모시기 전용 이용')
-  tierFeatures.push('고민상담(해화지기) 무제한')
-  tierFeatures.push(`가족관리 — 인연 ${currentPlan.relationship_limit}명 등록`)
-  tierFeatures.push(
-    `전체 기록 평생 보관${currentPlan.storage_limit === 999 ? '' : ` (최대 ${currentPlan.storage_limit}개)`}`
-  )
+  // 등급별 특징 — 문구·숫자는 membership-benefits.ts(단일 출처)에서 파생한다.
+  // 🔴 여기에 숫자나 «매일/무제한»을 직접 쓰지 말 것: 지급은 결제 주기당 1회이고,
+  //    멤버십이 여는 것은 «입장»이지 사용량 무제한이 아니다(membership-benefits.ts 주석 참조).
+  const tierFeatures: string[] = [...membershipBenefitLines(toPlanFacts(currentPlan))]
   tierFeatures.push('출석 체크 시 추가 복채 지급')
 
-  if (features.daily_fortune) tierFeatures.push('오늘의 운세 무제한')
   if (features.kakao_daily) tierFeatures.push('카카오톡 매일 운세 알림')
-  if (features.pdf_archive) tierFeatures.push('PDF 결과 영구 보관')
+  if (features.pdf_archive) tierFeatures.push('PDF 결과 내려받기')
 
   // 등급별 추가 특징
   if (currentPlan.tier === 'FAMILY') {
@@ -146,6 +140,12 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
               </div>
             ))}
           </div>
+          {/* 지급과 «하루 사용 상한»은 다른 개념 — 혜택 줄과 섞지 않고 각주로 분리한다. */}
+          <p className="text-xs text-white/45 leading-relaxed border-t border-primary/10 pt-3">
+            {dailySpendCapLine(currentPlan.daily_talisman_limit)}
+            <br />
+            멤버십은 신당·가족관리·고민상담의 «입장»을 엽니다. 풀이는 회원도 복채로 봅니다.
+          </p>
         </div>
 
         {/* CTA Button */}

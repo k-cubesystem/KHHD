@@ -27,7 +27,7 @@ export default async function MembershipManagePage() {
         <div className="text-center space-y-4 mb-12">
           <h1 className="text-3xl md:text-4xl font-serif font-bold text-zen-text">멤버십 & 부적 결제</h1>
           <p className="text-zen-muted font-sans text-sm md:text-base max-w-2xl mx-auto">
-            매달 전해지는 천기를 무제한으로 누리는 멤버십과
+            신당 · 가족관리 · 고민상담의 문을 여는 멤버십과
             <br className="hidden md:block" />
             필요할 때마다 정성을 담아 사용하는 부적 패키지 중 선택해 주세요.
           </p>

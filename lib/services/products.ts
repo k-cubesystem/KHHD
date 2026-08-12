@@ -86,13 +86,8 @@ function getDefaultPlans(): PricePlan[] {
       is_active: true,
       description: '가장 합리적인 대용량 패키지',
       badge_text: '최저가',
-      features: [
-        '1회당 7,980원 (20% 할인)',
-        '프리미엄 AI 리포트',
-        '무제한 인연 분석',
-        '영구 소장 가능',
-        '분석 비록 우선 생성',
-      ],
+      // «무제한 인연 분석»은 사실이 아니었다 — 인연 등록 수는 멤버십 등급(relationship_limit)이 정한다.
+      features: ['1회당 7,980원 (20% 할인)', '프리미엄 AI 리포트', '영구 소장 가능', '분석 비록 우선 생성'],
     },
   ]
 }

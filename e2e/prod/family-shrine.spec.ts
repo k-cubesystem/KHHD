@@ -20,12 +20,6 @@ test.describe('가족별 신당', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    // 오픈이벤트 팝업 자동 닫기
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 1) 신당 페이지 — 대상 탭 노출 (본인 '나' + 가족 + '새 가족')
     await page.goto('/protected/shrine')
     await page.getByText('나 의 신 당').waitFor({ timeout: 20_000 })

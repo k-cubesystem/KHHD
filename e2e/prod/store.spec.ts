@@ -19,11 +19,6 @@ test.describe('통합 상점', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 1) 프로필 — 바로가기에 상점 있고 멤버십 없음
     await page.goto('/protected/profile')
     const shortcutStore = page.getByRole('link', { name: '상점' }).first()

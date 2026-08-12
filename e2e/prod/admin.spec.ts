@@ -22,11 +22,6 @@ test.describe('어드민 콘솔 개선', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 1) 대시보드 — 새 지표 카드
     await page.goto('/admin')
     await expect(page.getByRole('heading', { name: '대시보드' })).toBeVisible({ timeout: 20_000 })

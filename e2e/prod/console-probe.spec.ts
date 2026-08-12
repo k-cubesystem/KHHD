@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { dismissPaymentGuide } from '../fixtures'
 
 // 클라이언트 예외 재현 프로브 — 주요 페이지를 순회하며 console.error / pageerror / Application error 화면을 수집.
 // E2E_PROD_SMOKE=1 게이트. 일회성 진단이 아니라 상시 스모크로 유지 (크래시 회귀 방지).
@@ -37,6 +38,10 @@ test.describe('클라이언트 예외 프로브', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
     await page.waitForTimeout(3000)
+
+    // /protected/store 정문 진입에서 결제 도우미가 자동으로 뜬다 — 오버레이가 다음 페이지 판정을
+    // 가리지 않도록 닫아둔다(모달 렌더 자체는 이 프로브의 수집 대상으로 남는다).
+    await dismissPaymentGuide(page)
 
     await visit('/protected')
     await visit('/protected/profile')

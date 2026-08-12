@@ -20,13 +20,12 @@ import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
-import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
+import { PAST_SESSIONS_PAGE_SIZE, DAILY_FREE_QUESTIONS } from '@/lib/domain/chat/constants'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 
 // --- Constants ---
 
-const DAILY_FREE_QUESTIONS = 10
 const PURCHASE_COST = 1 // 1만냥 (wallets.balance 단위: 1 = 1만냥)
 const PURCHASE_QUESTIONS = 20 // 회
 const CHAT_HISTORY_WINDOW = 8 // Gemini에 전달할 최근 메시지 수 (슬라이딩 윈도우)

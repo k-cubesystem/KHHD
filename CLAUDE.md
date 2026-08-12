@@ -48,7 +48,29 @@ npm run dev | build | test | e2e | lint
 
 ## 복채 시스템
 
-SINGLE 10만/일 | FAMILY 30만/일 | BUSINESS 100만/일
+**두 숫자는 다른 개념이다.** 값이 우연히 같아 오래 뒤섞여 있었다(2026-08-12 정정).
+
+| 등급     | 주기 지급 `talismans_per_period` | 하루 사용 상한 `daily_talisman_limit` |
+| -------- | -------------------------------- | ------------------------------------- |
+| SINGLE   | 결제 주기(월)마다 10만냥         | 10만냥/일                             |
+| FAMILY   | 결제 주기(월)마다 30만냥         | 30만냥/일                             |
+| BUSINESS | 결제 주기(월)마다 100만냥        | 100만냥/일                            |
+
+- **주기 지급**: 결제 주기당 **1회**. 지급 경로는 첫 결제(`app/actions/payment/subscription.ts`)와
+  갱신(`app/api/cron/billing`) **두 곳뿐** — «매일 지급»이 아니다.
+- **하루 사용 상한**: 지급받은 복채를 하루에 얼마나 쓸 수 있는지의 한도(`wallet.ts` `computeSpendPlan`).
+  **충전한 복채는 이 상한을 받지 않는다.** 혜택이 아니라 한도이므로 «지급»으로 표기 금지.
+
+### 문구 규율 (표시광고법)
+
+혜택 문구는 `lib/domain/payment/membership-benefits.ts`에서만 만든다. 화면에 숫자·주기를 직접 쓰지 말 것.
+
+- 멤버십은 **문을 열 뿐**이다 — 회원도 풀이마다 복채를 낸다(`deductTalisman`에 구독 우회 없음, 마스터 role만 면제).
+- 고민상담은 회원·비회원 **모두 하루 10문**(`lib/domain/chat/constants.ts` `DAILY_FREE_QUESTIONS`).
+  멤버십·1일 이용권이 여는 것은 **입장**뿐 → «상담 무제한» 금지.
+- 기록은 개수 상한(`storage_limit`)을 넘기면 즐겨찾기 아닌 오래된 것부터 **자동 삭제**된다 → «평생 보관» 금지.
+- 금지어: 매일 / 무제한 / 평생 / 모두 이용 / 정액 (회귀 테스트가 막는다 —
+  `lib/domain/payment/__tests__/membership-benefits.test.ts`)
 
 ## 에이전트 (필요 시에만 참조)
 

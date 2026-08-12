@@ -13,6 +13,7 @@ import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
 import { EL_KO } from '@/lib/domain/shrine/energy'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
+import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -46,7 +47,7 @@ export default async function ShrinePage({ searchParams }: { searchParams: Promi
         benefits={[
           '나·가족별 신당과 신위 모시기',
           '소원 기원 · 방명록 · 배치 효험',
-          '매일 복채 정액 + 고민상담 무제한 + 전체 기록 평생 보관',
+          ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
         ]}
       />
     )

@@ -18,11 +18,6 @@ test.describe('분석 기록 상세 · 재조회 품질', () => {
     await page.getByRole('button', { name: '로그인', exact: true }).click()
     await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 
-    const dlg = page.getByRole('dialog', { name: '오픈 이벤트' })
-    await page.addLocatorHandler(dlg, async () => {
-      await dlg.getByRole('button', { name: 'Close' }).click()
-    })
-
     // 히스토리 목록
     await page.goto('/protected/history')
     await expect(page.getByRole('heading', { name: '운명 아카이브' })).toBeVisible({ timeout: 25_000 })

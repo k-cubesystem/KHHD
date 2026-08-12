@@ -96,14 +96,16 @@ export function PaymentWidget({ memberId, homeAddress }: PaymentWidgetProps) {
       }
     } catch (error) {
       logger.error('[PaymentWidget] Error loading data:', error)
-      // Fallback plans if DB fails
+      // Fallback plans if DB fails.
+      // 🔴 복채 팩이 주는 것은 «복채»뿐이다. 가족 등록 수는 멤버십 등급(relationship_limit)이 정하므로
+      //    여기에 «무제한 가족 등록» 같은 혜택을 적으면 사실과 다르다(2026-08-12 정정).
       setPricePlans([
         {
           credits: 3,
           price: 9900,
           label: '소복 씨앗',
           description: '가볍게 시작하는 입문 복채 패키지',
-          features: ['복채 3만냥', '정밀 분석 리포트', '영구 소장'],
+          features: ['복채 3만냥', '풀이에 바로 사용'],
         },
         {
           credits: 10,
@@ -111,7 +113,7 @@ export function PaymentWidget({ memberId, homeAddress }: PaymentWidgetProps) {
           label: '행운 꾸러미',
           description: '많은 분들이 선택하는 실속 패키지',
           badge: '가장 인기',
-          features: ['복채 10만냥', '정밀 분석 리포트', '영구 소장', '커플/궁합 분석'],
+          features: ['복채 10만냥', '풀이에 바로 사용'],
         },
         {
           credits: 30,
@@ -119,7 +121,7 @@ export function PaymentWidget({ memberId, homeAddress }: PaymentWidgetProps) {
           label: '대복 창고',
           description: '전문가 및 다인 분석 패키지',
           badge: '최저가',
-          features: ['복채 30만냥', 'VIP 우선 분석', 'PDF 리포트 제공', '무제한 가족 등록'],
+          features: ['복채 30만냥', '풀이에 바로 사용'],
         },
       ])
     }
@@ -231,9 +233,12 @@ export function PaymentWidget({ memberId, homeAddress }: PaymentWidgetProps) {
           운명을 여는 <span className="text-zen-wood">길(道)</span>의 선택
         </h2>
         <div className="text-zen-muted text-sm max-w-xl mx-auto leading-relaxed">
-          <p>매달 전해지는 천기를 무제한으로 누리는 멤버십과</p>
+          <p>신당 · 가족관리 · 고민상담의 문을 여는 멤버십과</p>
           <p>필요할 때마다 정성을 담아 사용하는 복채 패키지 중 선택해 주세요.</p>
-          <p className="mt-2 text-zen-wood font-bold">* 무료 회원은 &apos;오늘의 운세&apos;만 이용 가능합니다.</p>
+          {/* 멤버십이 없어도 풀이는 복채로 볼 수 있다 — 「오늘의 운세만 가능」은 사실이 아니었다. */}
+          <p className="mt-2 text-zen-wood font-bold">
+            * 멤버십이 없어도 사주 · 궁합 · 관상 · 손금 · 풍수는 복채로 이용할 수 있습니다.
+          </p>
         </div>
       </div>
 
@@ -287,7 +292,7 @@ export function PaymentWidget({ memberId, homeAddress }: PaymentWidgetProps) {
                     </div>
                     <div className="flex items-center gap-3">
                       <Sparkles className="w-4 h-4 text-zen-wood shrink-0" />
-                      <span className="text-sm text-zen-text">오늘의 운세 무제한</span>
+                      <span className="text-sm text-zen-text">신당 · 가족관리 · 고민상담 입장</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <MessageCircle className="w-4 h-4 text-zen-wood shrink-0" />
