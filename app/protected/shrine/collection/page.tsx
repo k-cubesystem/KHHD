@@ -17,7 +17,8 @@ import { DevotionStrip } from '@/components/shrine/scene/DevotionStrip'
 import '@/app/shrine-scene.css'
 
 /**
- * 신당 모아보기 — 신당테마 · 아이템 · 신위를 탭 하나로 (CEO 6차 지시 2026-07-30).
+ * 신당 꾸미기 — 신당테마 · 아이템 · 신위 · 신수를 탭 하나로 (CEO 6차 지시 2026-07-30).
+ * 화면 이름 이력: 「모아보기」→「신당테마」→「신당 꾸미기」(8차 지시, 4탭을 아우르는 이름).
  *
  * "신당테마, 아이템, 신위 한개버튼으로 묶어주고 페이지이동해서 3가지종류 탭으로 볼수있게해줘"
  *
@@ -101,7 +102,7 @@ export default async function ShrineCollectionPage({
 
       <header className="mb-5 mt-2 space-y-1.5 text-center">
         <p className="font-serif text-[10px] tracking-[0.5em] text-gold-500/50">神 堂 一 覽</p>
-        <h1 className="font-serif text-2xl font-bold text-ink-light">신당테마</h1>
+        <h1 className="font-serif text-2xl font-bold text-ink-light">신당 꾸미기</h1>
         <p className="font-sans text-sm text-ink-light/50">신당에 들일 테마 · 아이템 · 신위 · 신수를 한 자리에서</p>
       </header>
 

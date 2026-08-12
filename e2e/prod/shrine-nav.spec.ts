@@ -63,7 +63,7 @@ test.describe('신당 3.0 네비게이션', () => {
     // 3) 신위 판테온 도달 — 신위전은 모아보기의 한 탭이 되었다(CEO 6차 지시 2026-07-30).
     //    방이면 헤더 '신당테마' 버튼(구 '모아보기', CEO 8차 지시로 개명) → '신위' 탭, 아니면 구 주소로(리다이렉트가 받는다).
     if (hasRoom) {
-      await page.getByRole('link', { name: '신당테마 · 아이템 · 신위 · 신수' }).click()
+      await page.getByRole('link', { name: '신당 꾸미기 · 테마 · 아이템 · 신위 · 신수' }).click()
       await expect(page).toHaveURL(/\/protected\/shrine\/collection/, { timeout: 15_000 })
       await page.getByRole('link', { name: '신위', exact: true }).click()
     } else {
