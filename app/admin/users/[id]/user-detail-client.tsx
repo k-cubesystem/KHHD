@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X, Flame, ArrowUpDown } from 'lucide-react'
+import { describePaymentSettlement } from '../../payments/payment-display'
 
 interface AdminUserProfile {
   id: string
@@ -46,6 +47,8 @@ interface AdminFamilyMember {
 interface AdminPaymentRecord {
   id: string
   amount: number
+  /** 누적 취소 금액(원) — 부분 취소는 status 가 'completed' 로 남아 이 값만이 단서다 */
+  cancelled_amount?: number | null
   order_id: string
   status: string
   created_at: string
@@ -600,36 +603,62 @@ export function UserDetailClient({
                 <div className="text-center py-8 text-stone-500 text-sm">결제 내역이 없습니다.</div>
               ) : (
                 <div className="space-y-2">
-                  {payments.map((payment) => (
-                    <div
-                      key={payment.id}
-                      className="flex items-center justify-between p-3 border-b border-stone-700/30 last:border-0"
-                    >
-                      <div>
-                        <p className="text-sm font-bold text-stone-100 font-mono">
-                          {payment.amount.toLocaleString()}원
-                        </p>
-                        <p className="text-[10px] text-stone-600 font-mono mt-0.5">{payment.order_id}</p>
+                  {payments.map((payment) => {
+                    const settlement = describePaymentSettlement(payment)
+                    return (
+                      <div
+                        key={payment.id}
+                        className="flex items-center justify-between p-3 border-b border-stone-700/30 last:border-0"
+                      >
+                        <div>
+                          <p
+                            className={`text-sm font-bold font-mono ${
+                              settlement.kind === 'none' ? 'text-stone-100' : 'text-amber-200'
+                            }`}
+                          >
+                            {settlement.net.toLocaleString()}원
+                          </p>
+                          {settlement.kind !== 'none' && (
+                            <p className="text-[10px] font-mono text-stone-500 mt-0.5">
+                              <span className="line-through">{payment.amount.toLocaleString()}원</span>
+                              <span className={settlement.kind === 'full' ? ' text-rose-300/90' : ' text-amber-300/90'}>
+                                {' '}
+                                −{settlement.cancelled.toLocaleString()}원
+                              </span>
+                            </p>
+                          )}
+                          <p className="text-[10px] text-stone-600 font-mono mt-0.5">{payment.order_id}</p>
+                        </div>
+                        <div className="text-right">
+                          <Badge
+                            className={
+                              settlement.kind === 'full'
+                                ? 'text-[9px] bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                                : settlement.kind === 'partial'
+                                  ? 'text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                                  : payment.status === 'completed'
+                                    ? 'text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    : 'text-[9px] bg-stone-700/30 text-stone-500 border border-stone-600/30'
+                            }
+                          >
+                            {settlement.kind === 'full'
+                              ? '전액취소'
+                              : settlement.kind === 'partial'
+                                ? '부분취소'
+                                : payment.status === 'completed'
+                                  ? '완료'
+                                  : payment.status}
+                          </Badge>
+                          <p className="text-[10px] text-stone-600 mt-1">
+                            {new Date(payment.created_at).toLocaleDateString('ko-KR', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <Badge
-                          className={
-                            payment.status === 'completed'
-                              ? 'text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'text-[9px] bg-stone-700/30 text-stone-500 border border-stone-600/30'
-                          }
-                        >
-                          {payment.status === 'completed' ? '완료' : payment.status}
-                        </Badge>
-                        <p className="text-[10px] text-stone-600 mt-1">
-                          {new Date(payment.created_at).toLocaleDateString('ko-KR', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

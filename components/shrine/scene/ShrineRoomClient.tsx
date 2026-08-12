@@ -1959,16 +1959,17 @@ export function ShrineRoomClient({
           <h1 className="text-base font-serif font-bold text-ink-primary">{scene.shrineName}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {/* 모아보기 — 신당테마·아이템·신위를 묶은 단 하나의 버튼(CEO 6차 지시 ③).
-              종전 「신위」 버튼 자리를 그대로 이어받았다: 같은 결·같은 크기라 손이 기억하는 자리가 바뀌지 않는다. */}
+          {/* 신당테마 — 신당테마·아이템·신위·신수를 묶은 단 하나의 버튼(CEO 6차 지시 ③, 라벨은 8차 지시로 「모아보기」→「신당테마」).
+              종전 「신위」 버튼 자리를 그대로 이어받았다: 같은 결·같은 크기라 손이 기억하는 자리가 바뀌지 않는다.
+              보이는 글자가 접근성 이름의 앞머리여야 한다(WCAG 2.5.3) — aria-label 은 「신당테마」로 시작한다. */}
           {isOwner && (
             <Link
               href={collectionHref}
               className="h-8 px-2.5 rounded-[10px] flex items-center gap-1.5 bg-gold-500/[0.12] border border-gold-500/40 text-gold-200 text-[11.5px] font-serif font-bold"
-              aria-label="신당테마·아이템·신위 모아보기"
+              aria-label="신당테마 · 아이템 · 신위 · 신수"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              모아보기
+              신당테마
             </Link>
           )}
           {isOwner && (

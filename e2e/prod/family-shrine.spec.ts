@@ -63,9 +63,9 @@ test.describe('가족별 신당', () => {
     await page.screenshot({ path: SHOT('3-family-room'), fullPage: true })
     console.log('[PASS] 가족 신당 방 렌더 (가 족 신 당 헤더)')
 
-    // 4) 가족 스코프 신위전 — 헤더 '모아보기' 버튼이 member= 를 보존해야 한다
-    //    (신위전은 모아보기의 한 탭이 되었다 — CEO 6차 지시 2026-07-30)
-    await page.getByRole('link', { name: '신당테마·아이템·신위 모아보기' }).click()
+    // 4) 가족 스코프 신위전 — 헤더 '신당테마' 버튼(구 '모아보기')이 member= 를 보존해야 한다
+    //    (신위전은 그 화면의 한 탭이 되었다 — CEO 6차 지시 2026-07-30, 라벨 개명 8차)
+    await page.getByRole('link', { name: '신당테마 · 아이템 · 신위 · 신수' }).click()
     await expect(page).toHaveURL(/\/protected\/shrine\/collection\?tab=theme&member=/, { timeout: 15_000 })
     await page.getByRole('link', { name: '신위', exact: true }).click()
     await expect(page).toHaveURL(/\/protected\/shrine\/collection\?tab=deity&member=/, { timeout: 15_000 })

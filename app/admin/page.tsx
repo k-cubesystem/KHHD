@@ -5,6 +5,7 @@ import { TrafficChart } from '@/components/admin/traffic-chart'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import { describePaymentSettlement } from './payments/payment-display'
 
 interface DashboardStats {
   totalUsers: number
@@ -59,12 +60,15 @@ async function getStats(): Promise<DashboardStats & { recentPayments: Payment[] 
     }
   }
 
+  // cancelled_amount 를 함께 읽는다 — 부분 취소는 status 가 'completed' 로 남아서
+  // 이 값 없이는 「완료 · 총액」으로 보인다(매출 카드는 이미 순매출인데 목록만 총액이면 서로 어긋난다).
   const { data: recentPayments } = await adminClient
     .from('payments')
     .select(
       `
       id,
       amount,
+      cancelled_amount,
       status,
       created_at,
       profiles:user_id (full_name)
@@ -79,6 +83,7 @@ async function getStats(): Promise<DashboardStats & { recentPayments: Payment[] 
 interface Payment {
   id: string
   amount: number
+  cancelled_amount: number | null
   status: string
   created_at: string
   profiles: { full_name: string }[] | null
@@ -230,52 +235,80 @@ export default async function AdminDashboardPage() {
               <p className="text-xs md:text-sm text-stone-500">결제 내역이 없습니다.</p>
             </div>
           ) : (
-            stats.recentPayments.map((payment: Payment) => (
-              <div
-                key={payment.id}
-                className="flex items-start md:items-center justify-between py-3 md:py-3.5 border-b border-stone-700/30 last:border-0 gap-2 group hover:bg-stone-800/20 -mx-4 md:-mx-6 px-4 md:px-6 transition-colors"
-              >
-                <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0">
-                  {/* Avatar */}
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-gold-500/20 to-gold-600/5 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs md:text-sm font-bold text-gold-400">
-                      {payment.profiles?.[0]?.full_name?.charAt(0) || '?'}
+            stats.recentPayments.map((payment: Payment) => {
+              const settlement = describePaymentSettlement(payment)
+              return (
+                <div
+                  key={payment.id}
+                  className="flex items-start md:items-center justify-between py-3 md:py-3.5 border-b border-stone-700/30 last:border-0 gap-2 group hover:bg-stone-800/20 -mx-4 md:-mx-6 px-4 md:px-6 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0">
+                    {/* Avatar */}
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-gold-500/20 to-gold-600/5 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs md:text-sm font-bold text-gold-400">
+                        {payment.profiles?.[0]?.full_name?.charAt(0) || '?'}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs md:text-sm font-medium text-stone-200 truncate">
+                        {payment.profiles?.[0]?.full_name || '익명'}
+                      </p>
+                      <p className="text-[10px] md:text-xs text-stone-500">
+                        {new Date(payment.created_at).toLocaleString('ko-KR', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0 space-y-0.5">
+                    <p
+                      className={`text-xs md:text-sm font-bold whitespace-nowrap font-mono ${
+                        settlement.kind === 'none' ? 'text-stone-100' : 'text-amber-200'
+                      }`}
+                    >
+                      {settlement.net.toLocaleString()}원
+                    </p>
+                    {settlement.kind !== 'none' && (
+                      <p className="text-[9px] md:text-[10px] text-stone-500 whitespace-nowrap font-mono">
+                        <span className="line-through">{payment.amount?.toLocaleString()}원</span>
+                        <span className={settlement.kind === 'full' ? ' text-rose-300/90' : ' text-amber-300/90'}>
+                          {' '}
+                          −{settlement.cancelled.toLocaleString()}원
+                        </span>
+                      </p>
+                    )}
+                    <span
+                      className={`inline-block text-[9px] md:text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        settlement.kind === 'full'
+                          ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                          : settlement.kind === 'partial'
+                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                            : payment.status === 'completed'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : payment.status === 'pending'
+                                ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}
+                    >
+                      {settlement.kind === 'full'
+                        ? '전액취소'
+                        : settlement.kind === 'partial'
+                          ? '부분취소'
+                          : payment.status === 'completed'
+                            ? '완료'
+                            : payment.status === 'pending'
+                              ? '대기'
+                              : '실패'}
                     </span>
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs md:text-sm font-medium text-stone-200 truncate">
-                      {payment.profiles?.[0]?.full_name || '익명'}
-                    </p>
-                    <p className="text-[10px] md:text-xs text-stone-500">
-                      {new Date(payment.created_at).toLocaleString('ko-KR', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
                 </div>
-
-                <div className="text-right flex-shrink-0 space-y-0.5">
-                  <p className="text-xs md:text-sm font-bold text-stone-100 whitespace-nowrap font-mono">
-                    {payment.amount?.toLocaleString()}원
-                  </p>
-                  <span
-                    className={`inline-block text-[9px] md:text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      payment.status === 'completed'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : payment.status === 'pending'
-                          ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                    }`}
-                  >
-                    {payment.status === 'completed' ? '완료' : payment.status === 'pending' ? '대기' : '실패'}
-                  </span>
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </Card>

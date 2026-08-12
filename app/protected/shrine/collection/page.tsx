@@ -101,14 +101,14 @@ export default async function ShrineCollectionPage({
 
       <header className="mb-5 mt-2 space-y-1.5 text-center">
         <p className="font-serif text-[10px] tracking-[0.5em] text-gold-500/50">神 堂 一 覽</p>
-        <h1 className="font-serif text-2xl font-bold text-ink-light">모아보기</h1>
-        <p className="font-sans text-sm text-ink-light/50">신당에 들일 테마 · 아이템 · 신위를 한 자리에서</p>
+        <h1 className="font-serif text-2xl font-bold text-ink-light">신당테마</h1>
+        <p className="font-sans text-sm text-ink-light/50">신당에 들일 테마 · 아이템 · 신위 · 신수를 한 자리에서</p>
       </header>
 
       {/* 기원 보상 트랙 — 이 화면의 테마·신물이 곧 그 보상이다(위 머리말 참조) */}
       {devotion && <DevotionStrip devotion={devotion} />}
 
-      <nav className="mb-6 grid grid-cols-4 gap-1.5" aria-label="모아보기 갈래">
+      <nav className="mb-6 grid grid-cols-4 gap-1.5" aria-label="신당 갈래">
         {TABS.map(({ key, label, icon: Icon }) => {
           const active = key === tab
           return (

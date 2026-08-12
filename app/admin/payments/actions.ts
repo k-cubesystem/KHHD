@@ -1,13 +1,19 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import type { PaymentStatusFilter } from './payment-display'
 
 export interface AdminPayment {
   id: string
   user_id: string
   order_id: string
+  /** 결제 총액(원). 취소가 있어도 줄지 않는 원래 청구액이다. */
   amount: number
+  /** 누적 취소 금액(원). 부분 취소는 status 가 'completed' 로 남으므로 이 값이 유일한 단서다. */
+  cancelled_amount: number
+  cancelled_at: string | null
   credits_purchased: number
   status: string
   created_at: string
@@ -17,12 +23,10 @@ export interface AdminPayment {
   } | null
 }
 
-import { createAdminClient } from '@/lib/supabase/admin'
-
 export async function getPayments(
   page: number = 1,
   limit: number = 20,
-  statusFilter: string = 'all'
+  statusFilter: PaymentStatusFilter = 'all'
 ): Promise<{ data: AdminPayment[]; total: number }> {
   const supabase = await createClient()
 
@@ -42,9 +46,14 @@ export async function getPayments(
     // 1. Fetch Payments (No Join)
     let query = dbClient
       .from('payments')
-      .select('id, user_id, order_id, amount, credits_purchased, status, created_at', { count: 'exact' })
+      .select('id, user_id, order_id, amount, cancelled_amount, cancelled_at, credits_purchased, status, created_at', {
+        count: 'exact',
+      })
 
-    if (statusFilter !== 'all') {
+    if (statusFilter === 'partial_cancel') {
+      // 부분 취소 = 완료로 남아 있으면서 취소액이 붙은 결제. 상태값 하나로는 안 잡힌다.
+      query = query.eq('status', 'completed').gt('cancelled_amount', 0)
+    } else if (statusFilter !== 'all') {
       query = query.eq('status', statusFilter)
     }
 
@@ -108,11 +117,14 @@ export async function getPayments(
       }
     }
 
-    // 3. Merge
+    // 3. Merge — cancelled_amount 는 화면에서 금액 계산에 바로 쓰이므로 여기서 숫자로 못 박는다
+    //    (컬럼 도입 전 행이나 null 이 넘어오면 toLocaleString 에서 터진다).
     const joinedData: AdminPayment[] = paymentsData.map((p) => {
       const profile = p.user_id ? profilesMap[p.user_id] : null
       return {
         ...p,
+        cancelled_amount: typeof p.cancelled_amount === 'number' ? p.cancelled_amount : 0,
+        cancelled_at: typeof p.cancelled_at === 'string' ? p.cancelled_at : null,
         profiles: profile
           ? {
               full_name: profile.full_name,

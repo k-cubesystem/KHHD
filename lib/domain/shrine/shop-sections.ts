@@ -23,7 +23,7 @@ export const SHOP_SECTIONS: readonly ShopSection[] = Object.freeze([
     key: 'guardian',
     label: '신수(神獸)',
     types: ['guardian'],
-    hint: '신이 자리를 비울 때 신당을 지키는 영물 — 착좌는 모아보기 「신수」 탭에서',
+    hint: '신이 자리를 비울 때 신당을 지키는 영물 — 착좌는 「신당테마」 화면의 신수 탭에서',
   },
   {
     key: 'shelf',

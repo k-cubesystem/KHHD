@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { AdminPayment, getPayments } from './actions'
+import {
+  describePaymentSettlement,
+  isPaymentStatusFilter,
+  type PaymentSettlement,
+  type PaymentStatusFilter,
+} from './payment-display'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
@@ -13,7 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 export function PaymentManagementClient() {
   const [payments, setPayments] = useState<AdminPayment[]>([])
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all')
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const limit = 10
@@ -37,7 +43,25 @@ export function PaymentManagementClient() {
 
   const totalPages = Math.ceil(total / limit)
 
-  const getStatusBadge = (status: string) => {
+  /**
+   * 상태 배지 — 취소가 상태보다 먼저다.
+   * 부분 취소는 status 가 'completed' 로 남기 때문에 status 만 보면 「성공」으로 보인다(이번 수복 대상).
+   */
+  const getStatusBadge = (status: string, settlement: PaymentSettlement) => {
+    if (settlement.kind === 'full') {
+      return (
+        <Badge className="bg-rose-500/10 text-rose-300 border border-rose-500/30 text-[9px] md:text-[10px]">
+          전액취소
+        </Badge>
+      )
+    }
+    if (settlement.kind === 'partial') {
+      return (
+        <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[9px] md:text-[10px]">
+          부분취소
+        </Badge>
+      )
+    }
     switch (status) {
       case 'completed':
         return (
@@ -64,6 +88,27 @@ export function PaymentManagementClient() {
     }
   }
 
+  /** 금액 — 취소가 있으면 «실결제액» 을 크게, 원 청구액은 취소선으로 함께 보여 준다. */
+  const renderAmount = (payment: AdminPayment, settlement: PaymentSettlement, size: 'row' | 'card') => (
+    <div className="flex flex-col items-start gap-0.5">
+      <span
+        className={`font-mono font-bold tabular-nums ${size === 'card' ? 'text-base' : ''} ${
+          settlement.kind === 'none' ? 'text-stone-100' : 'text-amber-200'
+        }`}
+      >
+        ₩{settlement.net.toLocaleString()}
+      </span>
+      {settlement.kind !== 'none' && (
+        <span className="text-[10px] font-mono text-stone-500">
+          <span className="line-through">₩{payment.amount.toLocaleString()}</span>
+          <span className={`ml-1.5 ${settlement.kind === 'full' ? 'text-rose-300/90' : 'text-amber-300/90'}`}>
+            {settlement.kind === 'full' ? '전액취소' : '부분취소'} −₩{settlement.cancelled.toLocaleString()}
+          </span>
+        </span>
+      )}
+    </div>
+  )
+
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
@@ -79,6 +124,7 @@ export function PaymentManagementClient() {
           <Select
             value={statusFilter}
             onValueChange={(val) => {
+              if (!isPaymentStatusFilter(val)) return
               setStatusFilter(val)
               setPage(1)
             }}
@@ -93,11 +139,17 @@ export function PaymentManagementClient() {
               <SelectItem value="completed" className="text-emerald-400">
                 결제 성공
               </SelectItem>
+              <SelectItem value="partial_cancel" className="text-amber-300">
+                부분 취소
+              </SelectItem>
+              <SelectItem value="refunded" className="text-rose-300">
+                전액 취소
+              </SelectItem>
               <SelectItem value="test_charge" className="text-yellow-400">
                 테스트 충전
               </SelectItem>
               <SelectItem value="failed" className="text-red-400">
-                실패/취소
+                결제 실패
               </SelectItem>
             </SelectContent>
           </Select>
@@ -174,44 +226,56 @@ export function PaymentManagementClient() {
               </TableRow>
             ) : (
               <AnimatePresence>
-                {payments.map((payment) => (
-                  <motion.tr
-                    key={payment.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="border-stone-700/30 hover:bg-stone-800/30 transition-colors group"
-                  >
-                    <TableCell className="font-mono text-xs text-stone-500">{payment.order_id}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-sm text-stone-200 font-medium">
-                          {payment.profiles?.full_name || 'Unknown'}
-                        </span>
-                        <span className="text-xs text-stone-500">{payment.profiles?.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-bold tabular-nums text-stone-100 font-mono">
-                      ₩{payment.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className="bg-gold-500/10 text-gold-400 border border-gold-500/20 text-xs"
-                      >
-                        +{payment.credits_purchased}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                    <TableCell className="text-xs text-stone-500">
-                      {new Date(payment.created_at).toLocaleString('ko-KR', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </TableCell>
-                  </motion.tr>
-                ))}
+                {payments.map((payment) => {
+                  const settlement = describePaymentSettlement(payment)
+                  return (
+                    <motion.tr
+                      key={payment.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="border-stone-700/30 hover:bg-stone-800/30 transition-colors group"
+                    >
+                      <TableCell className="font-mono text-xs text-stone-500">{payment.order_id}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="text-sm text-stone-200 font-medium">
+                            {payment.profiles?.full_name || 'Unknown'}
+                          </span>
+                          <span className="text-xs text-stone-500">{payment.profiles?.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{renderAmount(payment, settlement, 'row')}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className="bg-gold-500/10 text-gold-400 border border-gold-500/20 text-xs"
+                        >
+                          +{payment.credits_purchased}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(payment.status, settlement)}</TableCell>
+                      <TableCell className="text-xs text-stone-500">
+                        {new Date(payment.created_at).toLocaleString('ko-KR', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                        {settlement.kind !== 'none' && payment.cancelled_at && (
+                          <span className="block text-[10px] text-stone-600">
+                            취소{' '}
+                            {new Date(payment.cancelled_at).toLocaleString('ko-KR', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        )}
+                      </TableCell>
+                    </motion.tr>
+                  )
+                })}
               </AnimatePresence>
             )}
           </TableBody>
@@ -235,51 +299,61 @@ export function PaymentManagementClient() {
           </div>
         ) : (
           <AnimatePresence>
-            {payments.map((payment) => (
-              <motion.div
-                key={payment.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="relative p-3.5 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
-              >
-                {/* Noise Overlay */}
-                <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
+            {payments.map((payment) => {
+              const settlement = describePaymentSettlement(payment)
+              return (
+                <motion.div
+                  key={payment.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="relative p-3.5 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
+                >
+                  {/* Noise Overlay */}
+                  <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
-                {/* Payment Info */}
-                <div className="relative space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-stone-200 truncate text-sm">
-                        {payment.profiles?.full_name || '익명'}
+                  {/* Payment Info */}
+                  <div className="relative space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-stone-200 truncate text-sm">
+                          {payment.profiles?.full_name || '익명'}
+                        </p>
+                        <p className="text-xs text-stone-500 truncate">{payment.profiles?.email}</p>
+                      </div>
+                      {getStatusBadge(payment.status, settlement)}
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-stone-700/30">
+                      <div className="min-w-0">
+                        <p className="text-xs text-stone-500">
+                          {settlement.kind === 'none' ? '결제 금액' : '실결제액'}
+                        </p>
+                        {renderAmount(payment, settlement, 'card')}
+                      </div>
+                      <Badge className="bg-gold-500/10 text-gold-400 border border-gold-500/20 text-xs shrink-0">
+                        +{payment.credits_purchased}장
+                      </Badge>
+                    </div>
+
+                    <div className="pt-2 border-t border-stone-700/30">
+                      <p className="text-[10px] text-stone-600 font-mono">{payment.order_id}</p>
+                      <p className="text-[10px] text-stone-600 mt-0.5">
+                        {new Date(payment.created_at).toLocaleString('ko-KR')}
                       </p>
-                      <p className="text-xs text-stone-500 truncate">{payment.profiles?.email}</p>
+                      {settlement.kind !== 'none' && payment.cancelled_at && (
+                        <p className="text-[10px] text-stone-600 mt-0.5">
+                          취소 {new Date(payment.cancelled_at).toLocaleString('ko-KR')}
+                        </p>
+                      )}
                     </div>
-                    {getStatusBadge(payment.status)}
                   </div>
 
-                  <div className="flex items-center justify-between pt-2.5 border-t border-stone-700/30">
-                    <div>
-                      <p className="text-xs text-stone-500">결제 금액</p>
-                      <p className="text-base font-bold text-stone-100 font-mono">₩{payment.amount.toLocaleString()}</p>
-                    </div>
-                    <Badge className="bg-gold-500/10 text-gold-400 border border-gold-500/20 text-xs">
-                      +{payment.credits_purchased}장
-                    </Badge>
-                  </div>
-
-                  <div className="pt-2 border-t border-stone-700/30">
-                    <p className="text-[10px] text-stone-600 font-mono">{payment.order_id}</p>
-                    <p className="text-[10px] text-stone-600 mt-0.5">
-                      {new Date(payment.created_at).toLocaleString('ko-KR')}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Shine Effect */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-              </motion.div>
-            ))}
+                  {/* Shine Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                </motion.div>
+              )
+            })}
           </AnimatePresence>
         )}
       </div>
