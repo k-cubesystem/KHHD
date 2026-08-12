@@ -109,13 +109,37 @@ npx web-push generate-vapid-keys
 
 ---
 
-## 8. (결정하시면) 로그인 CAPTCHA — Turnstile 키
+## 8. 로그인 CAPTCHA — Cloudflare Turnstile
 
-**왜**: 비밀번호 무차별 대입 방어가 없습니다. 키 발급(사장님) + 로그인·가입·재설정 3개 화면 배선(제가) 세트입니다. **하시겠다고 하시면**:
+### 왜 필요한가 (배경 설명)
 
-1. https://dash.cloudflare.com → **Turnstile** → Add site → `k-haehwadang.com`
-2. Site Key / Secret Key 발급 → Secret Key는 Supabase → Authentication → **Bot and Abuse Protection**에 입력
-3. Site Key는 Vercel 환경변수 `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+지금 로그인 화면은 **비밀번호를 무한정 시도해볼 수 있는 상태**입니다. 공격자가 흔한 비밀번호 목록을 자동으로 대입하면 막을 장치가 없습니다.
+
+정확히는 이렇습니다:
+
+- 우리 로그인은 브라우저가 **Supabase에 직접** 요청합니다(우리 서버를 안 지남). 그래서 우리 쪽 코드로는 횟수 제한을 걸 수가 없습니다.
+- Supabase 자체 한도는 **비밀번호 로그인에 전용 한도가 없고** 일반 버스트(~30회)만 적용됩니다.
+- Supabase 공식 문서가 명시합니다 — **로그인·가입·비밀번호 재설정을 보호하는 수단은 CAPTCHA가 유일**합니다.
+
+지금은 회원이 적어 표적이 될 일이 드뭅니다. 다만 **광고를 켜서 트래픽이 늘면 자동 공격도 따라옵니다.** 그래서 「광고 집행 전 필수」로 잡아두는 것이 맞습니다.
+
+### 왜 Turnstile인가
+
+reCAPTCHA(구글)와 hCaptcha도 지원되지만 Turnstile은 **대부분의 사용자에게 아무것도 안 보입니다**(퍼즐·신호등 사진 없음). 백그라운드 신호로 판정하고 의심스러울 때만 확인을 띄웁니다. 가입 이탈률이 가장 적습니다. 무료입니다.
+
+### 사장님이 하실 것 (10분)
+
+1. https://dash.cloudflare.com → 로그인(계정 없으면 무료 가입) → 왼쪽 메뉴 **Turnstile**
+2. **Add site** → 이름 아무거나(예: 해화당) → Domain에 `k-haehwadang.com` 입력 → Widget Mode는 **Managed** 선택 → 생성
+3. **Site Key**와 **Secret Key** 두 개가 나옵니다
+4. **Secret Key** → https://supabase.com/dashboard → 프로젝트 → **Authentication → Attack Protection(또는 Bot and Abuse Protection)** → CAPTCHA 켜고 provider `Turnstile` 선택 후 붙여넣기
+5. **Site Key** → Vercel → `hhd` → **Settings → Environment Variables** → `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Production)
+
+### 그다음 제가 할 것
+
+로그인·가입·비밀번호 재설정 3개 화면에 위젯을 붙이고, 발급된 토큰을 인증 요청에 실어 보냅니다(1~2시간).
+
+⚠️ **순서 주의**: 4번(Supabase에서 CAPTCHA 켜기)을 먼저 하고 제 배선이 배포되기 전이면, **그 사이 로그인이 전부 막힙니다**(서버는 토큰을 요구하는데 화면이 안 보냄). 그래서 **키만 발급해서 알려주시고, Supabase 스위치는 제 배선이 배포된 뒤에 켜는 것**이 안전합니다. 알려주시면 순서를 제가 맞춰 안내드리겠습니다.
 
 ---
 
@@ -128,7 +152,7 @@ npx web-push generate-vapid-keys
 - [ ] 5. 카카오 JS 키
 - [ ] 6. 로컬 Gemini 키 교체
 - [ ] 7. 보안 스위치 4종
-- [ ] 8. (결정 시) Turnstile
+- [ ] 8. Turnstile 키 발급 ← **광고 집행 전 필수** (스위치는 배선 후에)
 
 ---
 
