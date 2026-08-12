@@ -611,12 +611,15 @@ export async function reactivateSubscription(): Promise<{
     if (!adminDb) {
       return { success: false, error: '서버 설정 오류입니다. 잠시 후 다시 시도해주세요.' }
     }
+    // 🔴 next_billing_date 를 반드시 되살린다. 해지 시 이를 null 로 끊어 두는데(빌링 크론 2중 차단),
+    //    복구하지 않으면 재활성화한 구독이 «영원히 갱신되지 않는» 무료 멤버십이 된다.
     const { error: updateError } = await adminDb
       .from('subscriptions')
       .update({
         status: 'ACTIVE',
         cancelled_at: null,
         cancel_reason: null,
+        next_billing_date: subscription.current_period_end,
       })
       .eq('id', subscription.id)
       .eq('user_id', user.id)

@@ -52,12 +52,15 @@ async function resolveActiveSubscription(userId: string): Promise<ActiveSubscrip
     return { isMaster: true, planId: null, status: 'ACTIVE', currentPeriodEnd: null }
   }
 
-  // 2) 활성 구독 — status ACTIVE 이고 기간 미만료(기간 미설정이면 유효로 간주).
+  // 2) 활성 구독 — 기간 미만료.
+  //    🔴 CANCELLED 도 함께 본다. 약관 제6조 4항이 "해지 시 현재 결제 주기의 만료일까지 이용할 수 있다"고
+  //    약속하는데 status='ACTIVE' 만 보면 해지 버튼을 누른 즉시 혜택이 끊겨 약관 위반이 된다.
+  //    즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 아래 만료 검사에서 저절로 빠진다.
   const { data } = await supabase
     .from('subscriptions')
     .select('plan_id, status, current_period_end, end_date')
+    .in('status', ['ACTIVE', 'CANCELLED'])
     .eq('user_id', userId)
-    .eq('status', 'ACTIVE')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -66,6 +69,8 @@ async function resolveActiveSubscription(userId: string): Promise<ActiveSubscrip
   if (!row) return null
 
   const periodEnd = row.current_period_end ?? row.end_date ?? null
+  // 해지된 구독은 «남은 기간»이 있을 때만 유효하다. 기간을 모르면 무기한 통과시키지 않는다.
+  if (row.status === 'CANCELLED' && !periodEnd) return null
   if (periodEnd && new Date(periodEnd).getTime() < Date.now()) return null
 
   return { isMaster: false, planId: row.plan_id ?? null, status: row.status ?? 'ACTIVE', currentPeriodEnd: periodEnd }

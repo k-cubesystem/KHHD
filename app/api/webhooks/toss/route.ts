@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/utils/logger'
 import { clawbackPaymentCredits } from '@/lib/services/wallet-grant'
-import type { TossCancelRecord } from '@/lib/domain/payment/cancel-clawback'
+import { computeCancelClawback, type TossCancelRecord } from '@/lib/domain/payment/cancel-clawback'
 
 const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY
 
@@ -193,8 +193,7 @@ async function handlePaymentCanceled(data: TossWebhookEvent['data']) {
   if (!orderId) return
 
   if (orderId.startsWith('SUB_')) {
-    await getSupabaseAdmin().from('subscription_payments').update({ status: 'CANCELLED' }).eq('order_id', orderId)
-    logger.log('[Webhook] Subscription payment cancelled:', orderId)
+    await handleSubscriptionPaymentCanceled(orderId, data)
     return
   }
 
@@ -213,6 +212,48 @@ async function handlePaymentCanceled(data: TossWebhookEvent['data']) {
   if (result.clawed > 0 && result.userId) {
     await notifyClawback(result.userId, result.clawed)
   }
+}
+
+/**
+ * 구독 결제 취소.
+ *
+ * 🔴 부분 취소(멤버십 중도 해지 일할 환불)를 CANCELLED 로 적으면 «환불받은 만큼만 돌려준 결제»가
+ *    통째로 취소된 것처럼 기록된다. 전액 취소일 때만 상태를 내리고, 금액은 언제나 누적한다.
+ */
+async function handleSubscriptionPaymentCanceled(orderId: string, data: TossWebhookEvent['data']) {
+  const admin = getSupabaseAdmin()
+  const { data: row } = await admin
+    .from('subscription_payments')
+    .select('id, amount, cancelled_amount')
+    .eq('order_id', orderId)
+    .maybeSingle()
+
+  if (!row) {
+    logger.warn('[Webhook] 취소 웹훅에 대응하는 구독 결제 기록 없음:', { orderId })
+    return
+  }
+
+  const record = row as { id: string; amount: number; cancelled_amount: number | null }
+  const plan = computeCancelClawback({
+    tossStatus: data.status,
+    totalAmount: data.totalAmount,
+    balanceAmount: data.balanceAmount,
+    cancels: data.cancels,
+    paidAmount: record.amount,
+    creditsGranted: 0,
+    creditsRemaining: 0,
+  })
+
+  // 단조 증가 — 웹훅이 재전송돼도 누적 금액이 되돌아가지 않는다.
+  const cancelledAmount = Math.max(record.cancelled_amount ?? 0, plan.cancelledAmount)
+  const update: Record<string, string | number> = {
+    cancelled_amount: cancelledAmount,
+    cancelled_at: new Date().toISOString(),
+  }
+  if (plan.fullyCancelled) update.status = 'CANCELLED'
+
+  await admin.from('subscription_payments').update(update).eq('id', record.id)
+  logger.log('[Webhook] Subscription payment cancelled:', orderId, `full=${plan.fullyCancelled}`)
 }
 
 // 복채 회수 알림 1건 — 부수 기능이므로 실패해도 웹훅 처리를 막지 않는다.

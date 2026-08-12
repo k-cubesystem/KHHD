@@ -61,6 +61,24 @@ export default async function MembershipManagePage() {
           <PaymentWidget memberId={user.id} />
         </div>
 
+        {/* 취소·해지 셀프서비스 진입점 — 1:1 문의 없이 스스로 처리할 수 있게 노출한다 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Link
+            href="/protected/payment/cancel"
+            className="p-4 bg-white border border-zen-border rounded-sm hover:border-zen-gold transition-colors"
+          >
+            <p className="font-serif font-bold text-sm text-zen-text mb-1">복채 충전 취소</p>
+            <p className="text-xs text-zen-muted font-sans">7일 이내 전액 환불 · 이후 90% 환불</p>
+          </Link>
+          <Link
+            href="/protected/membership/cancel"
+            className="p-4 bg-white border border-zen-border rounded-sm hover:border-zen-gold transition-colors"
+          >
+            <p className="font-serif font-bold text-sm text-zen-text mb-1">멤버십 해지</p>
+            <p className="text-xs text-zen-muted font-sans">잔여기간 일할 환불 · 받으신 복채는 그대로</p>
+          </Link>
+        </div>
+
         {/* Back Link */}
         <div className="text-center pt-8">
           <Link href="/protected" className="text-zen-muted hover:text-zen-wood transition-colors">
