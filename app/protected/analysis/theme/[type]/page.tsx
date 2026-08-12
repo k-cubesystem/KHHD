@@ -2,13 +2,23 @@
 
 import { use } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Wallet, Heart, Building2, GraduationCap, TrendingUp, Sparkles, ChevronRight } from 'lucide-react'
+import {
+  ArrowLeft,
+  Wallet,
+  Heart,
+  Building2,
+  GraduationCap,
+  TrendingUp,
+  Sparkles,
+  ChevronRight,
+  type LucideIcon,
+} from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 
-const THEME_CONFIG: Record<string, { label: string; icon: any; color: string; desc: string }> = {
+const THEME_CONFIG: Record<string, { label: string; icon: LucideIcon; color: string; desc: string }> = {
   wealth: {
     label: '재물운',
     icon: Wallet,

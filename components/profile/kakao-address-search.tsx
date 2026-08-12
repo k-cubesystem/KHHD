@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Search, MapPin } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import DaumPostcodeEmbed from 'react-daum-postcode'
+import DaumPostcodeEmbed, { type Address } from 'react-daum-postcode'
 import { cn } from '@/lib/utils'
 import { GOLD_500 } from '@/lib/config/design-tokens'
 
@@ -18,16 +18,10 @@ interface KakaoAddressSearchProps {
   className?: string
 }
 
-export function KakaoAddressSearch({
-  label,
-  value,
-  onChange,
-  placeholder,
-  className,
-}: KakaoAddressSearchProps) {
+export function KakaoAddressSearch({ label, value, onChange, placeholder, className }: KakaoAddressSearchProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const handleComplete = (data: any) => {
+  const handleComplete = (data: Address) => {
     let fullAddress = data.address
     let extraAddress = ''
 
@@ -52,10 +46,7 @@ export function KakaoAddressSearch({
       </Label>
       <div className="flex gap-2">
         <div className="flex-1 relative">
-          <MapPin
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-light/40"
-            strokeWidth={1}
-          />
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-light/40" strokeWidth={1} />
           <Input
             id={`address-${label}`}
             value={value}

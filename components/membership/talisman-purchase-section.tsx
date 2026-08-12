@@ -178,7 +178,7 @@ export function TalismanPurchaseSection({
 
       {/* 충전 상품 카드 */}
       <div className="space-y-3">
-        {sortedPlans.map((plan: any) => {
+        {sortedPlans.map((plan) => {
           const bonus = plan.bonus_credits ?? 0
           const total = plan.credits + bonus // 기본 + 팩 보너스
           const firstTotal = total * 2 // 첫 충전 2배

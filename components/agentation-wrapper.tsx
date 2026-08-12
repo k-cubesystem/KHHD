@@ -1,20 +1,16 @@
-"use client";
+'use client'
 
-import { Agentation } from "agentation";
-import { useEffect, useState } from "react";
+import { Agentation } from 'agentation'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 export function AgentationWrapper() {
-    const [mounted, setMounted] = useState(false);
+  const mounted = useHydrated()
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+  if (process.env.NODE_ENV !== 'development') {
+    return null
+  }
 
-    if (process.env.NODE_ENV !== "development") {
-        return null;
-    }
+  if (!mounted) return null
 
-    if (!mounted) return null;
-
-    return <Agentation />;
+  return <Agentation />
 }

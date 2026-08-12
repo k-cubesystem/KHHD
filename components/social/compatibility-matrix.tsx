@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,16 +33,14 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
   const svgRef = useRef<SVGSVGElement>(null)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null)
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({})
-
   const width = 800
   const height = 600
   const centerX = width / 2
   const centerY = height / 2
   const radius = Math.min(width, height) / 2 - 100
 
-  // Calculate circular positions for nodes
-  useEffect(() => {
+  // Calculate circular positions for nodes — props 로부터의 순수 파생값이라 렌더 중 계산한다
+  const positions = useMemo(() => {
     const newPositions: Record<string, { x: number; y: number }> = {}
     const angleStep = (2 * Math.PI) / nodes.length
 
@@ -54,7 +52,7 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
       }
     })
 
-    setPositions(newPositions)
+    return newPositions
   }, [nodes, centerX, centerY, radius])
 
   // Get color based on compatibility score

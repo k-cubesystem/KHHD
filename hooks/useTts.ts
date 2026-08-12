@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 export interface TtsOptions {
   /** 0.1~2.0, 신위 페르소나별 속도 */
@@ -42,16 +43,18 @@ function pickKoreanVoiceByHint(
  *  2) 서버 실패(비공식 엔드포인트 다운 등) 시 → 브라우저 Web Speech API 폴백.
  */
 export function useTts() {
-  const [supported, setSupported] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const endpoint = process.env.NEXT_PUBLIC_TTS_ENDPOINT ?? '/api/tts'
 
+  // 지원 여부는 브라우저 능력 조회다 — 서버 렌더에선 false, 하이드레이션 후 판정(기존 동작 동일).
+  const hydrated = useHydrated()
+  const supported = hydrated && (Boolean(endpoint) || 'speechSynthesis' in window)
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const hasWebSpeech = 'speechSynthesis' in window
-    setSupported(Boolean(endpoint) || hasWebSpeech)
     if (!hasWebSpeech) return
 
     const pickVoice = () => {

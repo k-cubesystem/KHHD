@@ -10,16 +10,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Laptop, Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 const ThemeSwitcher = () => {
-  const [mounted, setMounted] = useState(false)
+  // 테마는 클라이언트에서만 확정된다 — 하이드레이션 전에는 렌더하지 않는다.
+  const mounted = useHydrated()
   const { theme, setTheme } = useTheme()
-
-  // useEffect only runs on the client, so now we can safely show the UI
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   if (!mounted) {
     return null

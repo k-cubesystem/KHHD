@@ -74,8 +74,9 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
 
   const loadProfiles = async (): Promise<ProfileOption[]> => {
     try {
-      const family = await getFamilyMembers()
-      const familyOptions = family.map((f: any) => ({
+      // 서버 액션이 엣지 경로에서 느슨한 타입을 돌려준다 — 화면이 실제로 쓰는 두 필드로 좁혀 받는다.
+      const family: Array<{ id: string; name: string }> = await getFamilyMembers()
+      const familyOptions = family.map((f) => ({
         id: f.id,
         name: f.name,
         type: 'FAMILY' as const,

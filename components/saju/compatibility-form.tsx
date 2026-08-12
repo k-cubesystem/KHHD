@@ -8,8 +8,15 @@ import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Heart } from 'lucide-react'
 
+export interface CompatibilityPartnerInput {
+  name: string
+  gender: string
+  birthDate: string
+  birthTime: string
+}
+
 interface CompatibilityFormProps {
-  onAnalyze: (data: any) => void
+  onAnalyze: (data: CompatibilityPartnerInput) => void
 }
 
 export function CompatibilityForm({ onAnalyze }: CompatibilityFormProps) {

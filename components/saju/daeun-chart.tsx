@@ -41,7 +41,13 @@ interface DaeunChartProps {
   description?: string
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
+// recharts 가 주입하는 프롭 중 실제로 쓰는 것만 선언한다(전부 optional).
+interface DaeunTooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: DaeunData }>
+}
+
+const CustomTooltip = ({ active, payload }: DaeunTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload as DaeunData
     return (
@@ -75,7 +81,14 @@ const CustomTooltip = ({ active, payload }: any) => {
 }
 
 // currentAge 는 호출부에서 명시 전달 — Recharts 가 cloneElement 로 cx/cy/payload 를 덧씌운다.
-const CustomDot = (props: any) => {
+interface DaeunDotProps {
+  cx?: number
+  cy?: number
+  payload?: DaeunData
+  currentAge?: number
+}
+
+const CustomDot = (props: DaeunDotProps) => {
   const { cx, cy, payload, currentAge } = props
   const data = payload as DaeunData
   const isCurrent = currentAge

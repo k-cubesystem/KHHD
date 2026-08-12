@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Sparkles } from 'lucide-react'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 /* 파티클 상수 (모듈 레벨 — hydration-safe) */
 const PARTICLE_SEEDS = [
@@ -13,16 +13,13 @@ const PARTICLE_SEEDS = [
   { left: 85, dur: 4.3, delay: 2.5 },
   { left: 15, dur: 3.7, delay: 3.0 },
   { left: 60, dur: 4.5, delay: 3.5 },
-];
+]
 
 function Particles() {
-  const [mounted, setMounted] = useState(false);
+  // 입자는 CSS 애니메이션이라 서버 렌더 결과가 무의미하다 — 하이드레이션 후에만 붙인다.
+  const mounted = useHydrated()
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (!mounted) return null
 
   return (
     <>
@@ -38,38 +35,41 @@ function Particles() {
         />
       ))}
     </>
-  );
+  )
 }
 
 interface FortuneEnergyGaugeProps {
-  currentFortune: number;
-  totalPossible: number;
-  percentage: number;
-  variant?: "monthly" | "yearly" | "family";
+  currentFortune: number
+  totalPossible: number
+  percentage: number
+  variant?: 'monthly' | 'yearly' | 'family'
 }
 
 export function FortuneEnergyGauge({
   currentFortune,
   totalPossible,
   percentage,
-  variant = "monthly",
+  variant = 'monthly',
 }: FortuneEnergyGaugeProps) {
   const getLabel = () => {
     switch (variant) {
-      case "monthly": return "이번 달 운세 상승도";
-      case "yearly": return "올해 누적 운세";
-      case "family": return "가족 총운";
+      case 'monthly':
+        return '이번 달 운세 상승도'
+      case 'yearly':
+        return '올해 누적 운세'
+      case 'family':
+        return '가족 총운'
     }
-  };
+  }
 
   const getEncouragement = () => {
-    if (percentage === 100) return "대운 완성! 최고의 기운입니다";
-    if (percentage >= 75) return "강한 기운이 흐르고 있어요";
-    if (percentage >= 50) return "운이 상승하는 중입니다";
-    if (percentage >= 25) return "운을 더 채워보세요";
-    if (percentage === 0) return "8가지 운세를 채워 운대를 올리세요";
-    return "운세를 시작해보세요";
-  };
+    if (percentage === 100) return '대운 완성! 최고의 기운입니다'
+    if (percentage >= 75) return '강한 기운이 흐르고 있어요'
+    if (percentage >= 50) return '운이 상승하는 중입니다'
+    if (percentage >= 25) return '운을 더 채워보세요'
+    if (percentage === 0) return '8가지 운세를 채워 운대를 올리세요'
+    return '운세를 시작해보세요'
+  }
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-surface/80 to-surface/40 p-6">
@@ -88,31 +88,31 @@ export function FortuneEnergyGauge({
       <div className="relative z-10">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-xs text-primary/70 font-bold uppercase tracking-wider">
-            {getLabel()}
-          </span>
+          <span className="text-xs text-primary/70 font-bold uppercase tracking-wider">{getLabel()}</span>
         </div>
 
         <div className="flex items-baseline gap-2 mb-2">
           <span
             className="text-4xl font-serif font-bold text-primary anim-fade-in-up"
-            style={{
-              '--fade-y': '10px',
-              animation: 'fade-in-up 0.5s ease-out both',
-            } as React.CSSProperties}
+            style={
+              {
+                '--fade-y': '10px',
+                animation: 'fade-in-up 0.5s ease-out both',
+              } as React.CSSProperties
+            }
           >
             {percentage}%
           </span>
           <span className="text-lg text-primary/70">↑</span>
         </div>
 
-        <p className="text-sm text-ink-light/70 mb-4">
-          {getEncouragement()}
-        </p>
+        <p className="text-sm text-ink-light/70 mb-4">{getEncouragement()}</p>
 
         <div className="flex items-center justify-between text-xs text-ink-light/50">
           <span>현재 운세</span>
-          <span>{currentFortune} / {totalPossible}</span>
+          <span>
+            {currentFortune} / {totalPossible}
+          </span>
         </div>
 
         {/* Fortune Flow Bar — CSS transition */}
@@ -124,5 +124,5 @@ export function FortuneEnergyGauge({
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ChevronRight, Flame, Sparkles, TrendingUp, Heart, Wallet, MoveRight } from 'lucide-react'
+import { ChevronRight, Flame, Sparkles, TrendingUp, Heart, Wallet, MoveRight, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
@@ -133,7 +133,7 @@ export default function ByeongOYearEventPage() {
   )
 }
 
-function KeywordCard({ icon: Icon, label, color, bg }: { icon: any; label: string; color: string; bg: string }) {
+function KeywordCard({ icon: Icon, label, color, bg }: { icon: LucideIcon; label: string; color: string; bg: string }) {
   return (
     <div
       className={`flex flex-col items-center justify-center p-4 rounded-xl border border-white/5 ${bg} backdrop-blur-sm`}

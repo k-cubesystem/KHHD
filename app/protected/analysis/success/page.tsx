@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, Suspense } from 'react'
+import { useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { confirmPayment } from '@/app/actions/payment/payment'
@@ -10,17 +10,15 @@ import { Loader2 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 function PaymentProcessor() {
-  const [isMounted, setIsMounted] = useState(false)
+  // 결제 승인은 하이드레이션 이후에만 — 서버 렌더 단계에서 돌지 않게 막는 기존 관문 그대로다.
+  const isMounted = useHydrated()
   const searchParams = useSearchParams()
   const router = useRouter()
   const t = useTranslations('analysis')
   const processed = useRef(false)
-
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   useEffect(() => {
     if (!isMounted || processed.current) return

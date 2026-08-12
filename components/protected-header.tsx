@@ -17,15 +17,21 @@ import { getCurrentUserRole } from '@/app/actions/payment/products'
 import { getSubscriptionStatus } from '@/app/actions/payment/subscription'
 import { UserRole } from '@/types/auth'
 import { TalismanBalance } from '@/components/talisman-balance'
+import { useHydrated } from '@/hooks/use-hydrated'
 
-export function ProtectedHeader({ user }: { user: any }) {
-  const [isMounted, setIsMounted] = useState(false)
+/** 헤더가 실제로 읽는 필드만 — supabase User 를 그대로 받아도 구조적으로 호환된다. */
+interface HeaderUser {
+  email?: string | null
+  user_metadata?: { avatar_url?: string } | null
+}
+
+export function ProtectedHeader({ user }: { user: HeaderUser | null }) {
+  const isMounted = useHydrated()
   const [userRole, setUserRole] = useState<UserRole>('user')
   const [planName, setPlanName] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
-    setIsMounted(true)
     getCurrentUserRole().then((res) => setUserRole(res.role))
     getSubscriptionStatus().then((res) => {
       if (res.isSubscribed && res.plan) {
