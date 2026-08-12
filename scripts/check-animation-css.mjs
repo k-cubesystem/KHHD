@@ -114,11 +114,19 @@ const REQUIRED_CLASSES = [
   '.shelf-tag',
   '.shelf-blessed-aura',
   '.shrine-plaque-ember',
+  // 고정 살림 접지 그림자 — 애니메이션은 없지만 **사라지면 살림이 다시 붕 뜬다**(CEO 반려 이력 2회).
+  // 인라인이 한 줄도 없어서(전부 CSS) 빠지면 무증상이다 — 정확히 이 게이트가 막으라고 있는 자리.
+  '.shrine-fixture-contact',
+  // 의식각 현판 — 글자 크기가 여기서만 정해진다. 빠지면 널은 그려지고 **글씨만 기본값**이 된다
+  '.shrine-hall',
+  '.shrine-hall-plaque',
   // 앰비언트 — 시간대 틴트(전 테마). 그라디언트가 산출물에서 사라지면 방이 하루를 살지 않는다
   // (인라인은 opacity 하나뿐이라 **아무 색도 안 남는다** = 무증상 사망)
   '.shrine-tint-dawn',
   '.shrine-tint-dusk',
   '.shrine-tint-night',
+  // 주광층(v2) — 밤 원판 5테마가 «낮에 밝아지는» 유일한 경로. 사라지면 그 방들이 다시 정지한다
+  '.shrine-tint-day',
   // 앰비언트 P3 — 달빛(月光). 틴트와 같은 이유로 여기 있다: 인라인은 opacity 하나뿐이라
   // 그라디언트가 산출물에서 사라지면 «아무 색도 안 남는» 무증상 사망이 된다
   '.shrine-moonlight',

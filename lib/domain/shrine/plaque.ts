@@ -43,10 +43,17 @@ export type PlaqueSheet = 'aekmak'
 
 interface PlaqueBase {
   key: string
-  /** 널에 새길 한글 (본문) */
+  /**
+   * 널에 새길 **한 줄** — 한글.
+   *
+   * ⚠️ 2026-08-12 CEO 지시 ④ "간판도 지금 글씨가 2개야 — 해당 내용에 1개씩으로 수정해줘."
+   *    종전에는 윗줄에 한자(`hanja`)를 함께 새겼다. 널이 120×48(무라 px) · 의식각 현판이
+   *    76~104px 라 두 줄을 넣으면 둘 다 작아져 **어느 쪽도 안 읽힌다** — 부적을 한글로 바꾼
+   *    것과 같은 판단이다(「읽히는 한글」). 되돌리려면 여기에 `hanja` 를 다시 두고 두 렌더
+   *    (RitualHall.Face · WindowPlaques.PlaqueFace)에 줄을 더한다. 걷어 낸 문안은
+   *    엽전=擲 錢 · 액막이=厄 막 이 · 오방기=五 方 旗 · 백일기도=百 日 祈 禱 다.
+   */
   ko: string
-  /** 널 윗줄 한자 — 장식. 자간을 위해 공백을 넣어 둔다 */
-  hanja: string
   ariaLabel: string
   /** 무라 픽셀 x (칸 중심). 화면에서는 무라와 같은 배율로 따라간다 */
   cx: number
@@ -78,7 +85,6 @@ export const SHRINE_PLAQUES: readonly ShrinePlaque[] = Object.freeze([
     kind: 'page',
     href: '/protected/shrine/chuljeon',
     ko: '엽전',
-    hanja: '擲 錢',
     ariaLabel: '엽전 세 닢으로 갈림길 정하러 가기',
     cx: 1853,
   },
@@ -87,7 +93,6 @@ export const SHRINE_PLAQUES: readonly ShrinePlaque[] = Object.freeze([
     kind: 'sheet',
     sheet: 'aekmak',
     ko: '액막이',
-    hanja: '厄 막 이',
     ariaLabel: '액막이 의식 열기',
     cx: 1983,
   },
@@ -96,7 +101,6 @@ export const SHRINE_PLAQUES: readonly ShrinePlaque[] = Object.freeze([
     kind: 'page',
     href: '/protected/shrine/obangki',
     ko: '오방기',
-    hanja: '五 方 旗',
     ariaLabel: '오방기 점괘 보러 가기',
     cx: 2113,
   },
@@ -105,7 +109,6 @@ export const SHRINE_PLAQUES: readonly ShrinePlaque[] = Object.freeze([
     kind: 'page',
     href: '/protected/shrine/baekil',
     ko: '백일기도',
-    hanja: '百 日 祈 禱',
     ariaLabel: '백일기도 보러 가기',
     cx: 2243,
   },

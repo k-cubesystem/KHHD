@@ -54,6 +54,8 @@ import {
   STAGE_FLOOR_LINE_Y,
   STAGE_GROUND_DROP,
   STAGE_GROUND_LINE_Y,
+  STAGE_WALL_GROUND_DROP,
+  STAGE_WALL_GROUND_LINE_Y,
   THEME_CODES,
   THEME_STAGE_WIDTH,
   THEME_STAGE_ZONE,
@@ -348,22 +350,34 @@ describe('밴드 — 마루선은 JSON 한 곳에서만 정해진다', () => {
    * 2차 "선반과 틀 같은 건 마루 3/1은 자리를 잡아야 해." → 마루선에 발끝만 걸친 그림이 «벽에 기댄»
    *     것으로 읽혔다. 파생 기준을 **접지선**(마루선 + 바닥밴드/3 = 82)으로 한 칸 옮긴다.
    *
+   * 3차 (2026-08-12) "틀 자리는 맞고, **선반과 간판은 좀 더 뒤로** 가야 해."
+   *     틀과 사방탁자를 같은 줄에 세운 것이 v5 의 남은 오차였다 — 틀은 방에 나와 선 제단이고
+   *     사방탁자는 벽에 붙여 두는 벽 살림인데 나란히 앞에 서니 벽 가구가 배경에서 떠 보인다.
+   *     그래서 **벽 접지선**(마루선 + 바닥밴드/9 = 76)이 갈라져 나온다 — 여전히 파생이다.
+   *
    * 처방은 셋을 함께 지킨다:
    *   · 밑동 = **파생**(신수 KEEPER_POS 와 같은 규약) — 다음 마루선 이동은 공짜다.
-   *   · 상자 **높이 불변**(42) · top 을 같은 delta 로 함께 이동 → 스프라이트 왜곡 0.
-   *   · 진열 아이템 동반 이동은 **마이그레이션**이 맡는다(앵커 id + 옛 칸 좌표 정확일치, v5 는 +9).
+   *   · 상자 높이를 바꿀 때는 top·bottom 을 **한 상수(FSHELF_H)로** 묶는다 → 스프라이트 왜곡 0.
+   *   · 진열 아이템 동반 이동은 v6 에서 **하지 않는다**(자유 배치는 사용자가 거기에 둔 물건이다).
    */
-  it('★ 사방탁자 밑동이 접지선 파생이다 — 마루가 움직이면 살림도 함께 움직인다', () => {
-    expect(FSHELF_UNIT.bottom).toBe(STAGE_GROUND_LINE_Y)
-    expect(FSHELF_UNIT.bottom).toBe(82)
-    // 상자 높이는 불변 — 커지면 가구가 세로로 늘어나고 단 비율(FSHELF_TIERS)의 정합이 깨진다
-    expect(FSHELF_UNIT.bottom - FSHELF_UNIT.top).toBe(42)
-    expect(FSHELF_UNIT.top).toBe(40)
-    // 의식각도 같은 상자다(사방탁자 한 좌) — 숫자를 따로 들면 오른벽만 높이가 달라진다
+  it('★ 사방탁자 밑동이 벽 접지선 파생이다 — 마루가 움직이면 살림도 함께 움직인다', () => {
+    expect(FSHELF_UNIT.bottom).toBe(STAGE_WALL_GROUND_LINE_Y)
+    expect(FSHELF_UNIT.bottom).toBe(76)
+    // 벽 접지선은 틀 접지선보다 **뒤**다 — 이 6%p 가 「선반은 좀 더 뒤로」의 좌표 몫이다
+    expect(STAGE_WALL_GROUND_LINE_Y).toBeLessThan(STAGE_GROUND_LINE_Y)
+    expect(STAGE_GROUND_LINE_Y - STAGE_WALL_GROUND_LINE_Y).toBe(6)
+    expect(FSHELF_UNIT.bottom - FSHELF_UNIT.top).toBe(28)
+    expect(FSHELF_UNIT.top).toBe(48)
+    /**
+     * ★ 의식각은 **자기 상수**를 든다 (v6 · PLAN-family-shelf-v2 §2-B 「착수 전 함정」①)
+     * v5 까지는 `top: FSHELF_UNIT.top` 승계였다. 선반장이 B안으로 28%p 가 되는 순간 현판 4문이
+     * 같이 찌그러지는 지뢰라, 승계를 끊고 벽 접지선 하나만 공유한다.
+     */
     const hall = readFileSync(RITUAL_HALL, 'utf8')
-    expect(hall).toContain('top: FSHELF_UNIT.top')
-    expect(hall).toContain('bottom: FSHELF_UNIT.bottom')
-    expect(hall).not.toContain('bottom: 62')
+    // import 를 본다 — 주석에는 «승계를 끊었다»는 이력이 남아 있어야 하므로 문자열 대조로는 못 잡는다
+    expect(hall).not.toMatch(/^import .*family-shelf.*$/m)
+    expect(hall).toContain('STAGE_WALL_GROUND_LINE_Y - RITUAL_HALL_H')
+    expect(hall).toContain('bottom: STAGE_WALL_GROUND_LINE_Y')
     // 조절 손잡이는 «미세 조정»으로 남는다 — 덮어야 할 부양분이 0 이다
     expect(FIXTURE_DY_RANGE[1]).toBeGreaterThanOrEqual(STAGE_GROUND_LINE_Y - FSHELF_UNIT.bottom)
   })
@@ -371,14 +385,15 @@ describe('밴드 — 마루선은 JSON 한 곳에서만 정해진다', () => {
   /**
    * ★ 진열 칸이 벽 존 안에 남는가 — 밑동을 내리는 한계선이 여기다.
    *
-   * 맨 아래 칸 앵커 = top + 0.76·42 − 3.5 = 밑동 − 13.58. v4.1(밑동 73)에서는 59.42 라 벽 존 상한
-   * 60 에 1%p 도 안 남아 있었고, 그것이 「더 못 내린다」의 근거였다. v5 는 살림이 마루 안으로
-   * 들어오면서 벽 존도 함께 70 까지 열어(넓히는 방향만) 68.42 가 그 안에 든다.
+   * v6 의 진열 칸은 하나다: 앵커 = top + 0.8767·28 − 9.35(아이템 반높이) = **63.20**.
+   * v4.1(밑동 73·3단)에서는 맨 아래 칸이 59.42 라 벽 존 상한 60 에 1%p 도 안 남아 있었고,
+   * 그것이 「더 못 내린다」의 근거였다. 존을 70 까지 연 지금은 여유가 6.8%p 다.
    */
-  it('★ 맨 아래 진열 칸이 벽 존 안에 남는다 — 존을 함께 열어야 성립한다', () => {
-    const bottomSlotY = FSHELF_UNIT.bottom - 13.58
-    expect(bottomSlotY).toBeCloseTo(68.42, 2)
-    expect(bottomSlotY).toBeLessThanOrEqual(ZONES.wall.y[1])
+  it('★ 진열 칸이 벽 존 안에 남는다 — 벽걸이 신물이 칸에 설 수 있어야 한다', () => {
+    const h = FSHELF_UNIT.bottom - FSHELF_UNIT.top
+    const slotY = FSHELF_UNIT.top + FSHELF_TIERS.boards[0] * h - FSHELF_TIERS.itemLift
+    expect(slotY).toBeCloseTo(63.2, 2)
+    expect(slotY).toBeLessThanOrEqual(ZONES.wall.y[1])
     // 벽 존은 마루선 위에서 멈춘다 — 그 아래는 마루라 벽걸이가 걸릴 곳이 아니다
     expect(ZONES.wall.y[1]).toBeLessThan(STAGE_FLOOR_LINE_Y)
   })
@@ -420,9 +435,11 @@ describe('접지선 — 살림은 마루 1/3 지점에 선다', () => {
    * 이 신당의 사고는 늘 «맞추다가 다른 것이 늘어나는» 자리에서 났다(스프라이트 리패드·상자 높이).
    * v5 가 안전한 이유는 이동뿐이라는 것이고, 그 증거를 수치로 남긴다.
    */
-  it('★ 크기 불변 — 틀 세로·선반 높이·신위 키가 v4.1 과 같다', () => {
-    expect(GRAND_ALTAR_BOX_H).toBe(71.56) // 틀 상자 세로
-    expect(FSHELF_UNIT.bottom - FSHELF_UNIT.top).toBe(42) // 사방탁자 높이
+  it('★ 크기 불변 — 틀 세로·신위 키가 v4.1 과 같다 (선반은 v6 에서 의도적으로 줄었다)', () => {
+    expect(GRAND_ALTAR_BOX_H).toBe(71.56) // 틀 상자 세로 — CEO 「틀 자리는 맞고」라 손대지 않는다
+    // ⚠️ 사방탁자 높이 42 는 v6 에서 **28** 이 됐다(가족선반 B안). 여기가 「크기 불변」의 예외이고,
+    //    예외인 이유가 지시 그 자체다 — 「선반은 좀 더 뒤로」에서 뒤로 가는 방법이 작아지는 것이다.
+    expect(FSHELF_UNIT.bottom - FSHELF_UNIT.top).toBe(28)
     for (const code of GRAND_ALTAR_THEMES) {
       const box = deityStandBox(deityPodiumTopY(code), deityHeadRoomY(code))
       // v4.1 의 신위 키 = 45.3 − (24.9/23.2/25.6). 발·머리가 같은 +9 라 높이가 그대로다.
@@ -431,11 +448,25 @@ describe('접지선 — 살림은 마루 1/3 지점에 선다', () => {
     }
   })
 
-  it('★ 살림 셋이 한 줄에 선다 — 틀·선반장·의식각의 밑동이 같은 값에서 나온다', () => {
+  /**
+   * ★ v6: 살림이 **두 줄**로 갈렸다 (CEO 2026-08-12 ①「틀 자리는 맞고, 선반과 간판은 좀 더 뒤로」)
+   *
+   * 틀은 접지선(82)에 그대로 서고, 벽 살림(가족 선반장·의식각)만 벽 접지선(76)으로 물러난다.
+   * 지키는 것은 «둘이 갈라졌다»와 «둘 다 파생이다» 두 가지다 — 어느 한쪽이라도 리터럴로 굳으면
+   * 다음 마루선 이동에서 그쪽만 제자리에 남는다(이미 두 번 겪었다).
+   */
+  it('★ 살림이 두 줄에 선다 — 틀은 접지선, 벽 살림은 벽 접지선 (둘 다 파생)', () => {
     const frame = grandAltarStructures('banga')[0]
     expect(frame.y + GRAND_ALTAR_BOX_H / 2).toBeCloseTo(STAGE_GROUND_LINE_Y, 6)
-    expect(FSHELF_UNIT.bottom).toBe(STAGE_GROUND_LINE_Y)
-    // 의식각은 FSHELF_UNIT 을 승계한다(RitualHall.tsx) — 위 밴드 describe 가 소스로 확인한다
+    expect(FSHELF_UNIT.bottom).toBe(STAGE_WALL_GROUND_LINE_Y)
+    // 벽 접지 깊이 = 틀 접지 깊이의 1/3 — 파생이라 밴드가 움직이면 둘이 같은 비로 따라온다
+    expect(STAGE_WALL_GROUND_DROP).toBe(3)
+    expect(STAGE_WALL_GROUND_DROP * 3).toBe(STAGE_GROUND_DROP)
+    expect(STAGE_WALL_GROUND_LINE_Y).toBe(STAGE_FLOOR_LINE_Y + STAGE_WALL_GROUND_DROP)
+    // 의식각도 같은 줄에 선다 — 자기 상수를 들되 벽 접지선 하나만 공유한다(승계 폐지)
+    const hall = readFileSync(RITUAL_HALL, 'utf8')
+    expect(hall).toContain('const RITUAL_HALL_H = 36')
+    expect(hall).toContain('bottom: STAGE_WALL_GROUND_LINE_Y')
   })
 })
 
@@ -878,19 +909,33 @@ describe('동반 이동 SQL — 구운 좌표가 코드 상수와 같다', () =>
     for (const a of grandAltarStructures('banga')[0].anchors) expect(s).toContain(`'${a.id}'`)
   })
 
-  it('★ 선반 — 옛 칸 y(40.52/50.60/59.42)가 상자 상수에서 파생된다, 새 값과 교집합 없다', () => {
+  /**
+   * ★ 이 마이그레이션은 **역사**다 — 오늘의 상수에서 파생시키지 않는다 (2026-08-12 · v6)
+   *
+   * 20260810c 가 구워진 날의 선반 기하는 3단(널 0.31/0.55/0.76 · itemLift 3.5 · 높이 42)이었다.
+   * v6(B안)에서 그 표가 통째로 바뀌었으므로, 여기서 «지금 상수로 그때 값을 다시 계산»하면
+   * **구운 SQL 이 멀쩡한데도 테스트가 깨진다** — 그리고 더 나쁘게는, 다음에 상수가 또 바뀔 때
+   * 옛 마이그레이션의 리터럴을 «고쳐 맞추고» 싶은 압력이 생긴다(이미 적용된 SQL 은 못 고친다).
+   * 그래서 그때의 여섯 숫자를 **리터럴로 동결**하고, 검사 대상을 「SQL 이 그 값을 담고 있는가」와
+   * 「+9 라는 이동분이 그때의 상수와 맞는가」로 좁힌다.
+   */
+  it('★ 선반 — 구운 칸 y(40.52/50.60/59.42 → 49.52/59.60/68.42)가 SQL 에 그대로 있다', () => {
     const s = sql()
-    const h = FSHELF_UNIT.bottom - FSHELF_UNIT.top
-    const slotY = (top: number) =>
-      FSHELF_TIERS.boards.map((b) => Math.round((top + b * h - FSHELF_TIERS.itemLift) * 100) / 100)
-    const nowY = slotY(FSHELF_UNIT.top)
-    const oldY = slotY(FSHELF_UNIT.top - STAGE_GROUND_DROP)
-    expect(oldY).toEqual([40.52, 50.6, 59.42])
-    expect(nowY).toEqual([49.52, 59.6, 68.42])
-    for (const y of oldY) expect(s).toContain(lit(y))
-    for (const y of nowY) expect(oldY).not.toContain(y) // 재실행 무해
+    const V5_OLD_Y = [40.52, 50.6, 59.42] // 3단 기하 · 밑동 73
+    const V5_NEW_Y = [49.52, 59.6, 68.42] // 같은 기하 · 밑동 82 (= 옛 값 + STAGE_GROUND_DROP)
+    expect(V5_NEW_Y.map((y, i) => Math.round((y - V5_OLD_Y[i]) * 100) / 100)).toEqual([
+      STAGE_GROUND_DROP,
+      STAGE_GROUND_DROP,
+      STAGE_GROUND_DROP,
+    ])
+    for (const y of V5_OLD_Y) expect(s).toContain(lit(y))
+    for (const y of V5_NEW_Y) expect(V5_OLD_Y).not.toContain(y) // 재실행 무해
     expect(s).toContain("'seat:fshelf:%'")
     expect(s).toContain(FSHELF_ANCHOR_PREFIX.replace(/:$/, '')) // 프리픽스 오타 방어
+    // v6 은 동반 이동 SQL 을 **새로 쓰지 않는다** — 새 칸 좌표가 여기 실려 있으면 안 된다
+    const h = FSHELF_UNIT.bottom - FSHELF_UNIT.top
+    const v6SlotY = Math.round((FSHELF_UNIT.top + FSHELF_TIERS.boards[0] * h - FSHELF_TIERS.itemLift) * 100) / 100
+    expect(s).not.toContain(lit(v6SlotY))
   })
 
   it('★ 자유 배치는 건드리지 않는다 — anchor_id 없는 행을 잡는 update 가 없다', () => {

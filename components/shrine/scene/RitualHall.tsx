@@ -2,40 +2,51 @@
 
 import Link from 'next/link'
 import type { CSSProperties, ReactNode } from 'react'
-import { FSHELF_UNIT } from '@/lib/domain/shrine/family-shelf'
 import { PLAQUE_SPRITE_URL, SHRINE_PLAQUES, type PlaqueSheet, type ShrinePlaque } from '@/lib/domain/shrine/plaque'
+import { STAGE_WALL_GROUND_LINE_Y } from '@/lib/domain/shrine/theme-stage'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * 의식각(儀式閣) — 방 오른쪽에 **선반(사방탁자)을 놓고 그 위에** 의식 현판 4문을 진열한다
+ * 의식각(儀式閣) — 방 오른쪽에 **현판 걸이(사방탁자)를 놓고 그 위에** 의식 현판 4문을 진열한다
  * (2026-08-06 2차 지시: "간판들도 선반을 놓고 그 위에다가 놔줘").
  *
- * v1 은 현판이 벽에 떠 있었다 — v2 는 가족 선반장과 같은 사방탁자 한 좌를 세우고,
- * 네 개의 열린 칸(맨 위 칸 + 3단 + 하단 수납장 앞면)에 현판을 한 장씩 얹는다:
+ * v1 은 현판이 벽에 떠 있었다 — v2 는 사방탁자 한 좌를 세우고, 네 개의 면(맨 위 칸 + 2·3단 +
+ * 하단 수납장 앞면)에 현판을 한 장씩 얹는다:
  * 엽전 → 액막이 → 오방기 → 백일기도 (의식의 호흡 순서, SHRINE_PLAQUES 정의 그대로).
- * 가족 선반장들과 같은 가구 문법이라 방이 한 세계로 읽힌다.
  *
  *  · 좌표는 **world %** — stageContent(대청=세계 전체) 안에 살아 카메라 팬을 함께 탄다.
  *  · 선반 몸체는 배경(fill — FamilyShelfWall 과 같은 정합 규약), 현판만 상호작용한다.
  *  · 처마 등(attention)·시트/페이지 갈래(kind)는 창방 팻말의 계약을 그대로 승계한다.
+ *
+ * ── v3 (2026-08-12 · CEO 지시 ①「선반과 간판은 좀 더 뒤로」 ④「오른쪽 간판도 수정 · 글씨 1개씩」) ──
+ *  ① **가족 선반장에서 독립했다.** v2 까지는 세로(top·bottom)를 `FSHELF_UNIT` 에서 그대로
+ *     가져왔다 — 「같은 사방탁자 한 좌」라는 이유였는데, 가족 선반장이 B안으로 2단·28%p 가 되는
+ *     순간 **의식각 현판 4문이 같이 찌그러진다**(승계가 곧 지뢰였다). 둘은 이제 다른 가구다:
+ *     가족 선반장은 2단 진열장이고 의식각은 4면 현판 걸이다. 공유하는 것은 **벽 접지선 하나**뿐이다.
+ *  ② **뒤로** — 밑동을 틀 접지선(82)에서 벽 접지선(**76**)으로 옮기고, 폭 8.65 → **7.6** ·
+ *     세로 42 → **36** 으로 줄인다. 원근에서 뒤로 가는 것은 작아지는 것이다.
+ *  ③ **글씨 한 줄** — 한자 병기를 걷고 한글만 남긴다(부적 한글화와 같은 방향: 「읽히는 한글」).
+ *     남은 한 줄은 **널 폭에서 파생한 크기**(컨테이너 질의)라 기기가 바뀌어도 널 안에 든다.
+ *  ④ **접지** — 걸이 스프라이트의 발밑 투명 여백을 잘라 낸 v2 자산을 쓰고(상자 하단 = 그려진
+ *     발끝), 발 밑에 접지 그림자를 깐다. drop-shadow 도 짧게 — 멀리 있는 물건의 그림자는 짧다.
  */
 
+/** 유닛 세로(무대 %) — 현판 4문이 서로 안 겹치는 최소치에서 왔다(현판 세로 = 널 폭 × 2/5). */
+const RITUAL_HALL_H = 36
+
 /**
- * 유닛 기하(world %) — 가족 선반장(FSHELF_UNIT)과 같은 규격: 우측 공간 한가운데 선다.
+ * 유닛 기하(world %) — **의식각 고유값**이다(가족 선반장 승계 폐지, 위 v3 ①).
  * 룸이 「고정 살림 조절」 손잡이 상자를 이 값에서 파생하므로 **export 가 단일 출처**다
  * (두 곳이 상수를 따로 들면 손잡이는 옛 자리에, 살림은 새 자리에 서는 조용한 어긋남이 난다).
  *
- * ⚠️ 세로(top·bottom)는 **FSHELF_UNIT 에서 그대로 가져온다** — 같은 사방탁자 한 좌이므로 숫자를
- *    따로 적으면 왼벽과 오른벽의 가구 높이가 조용히 갈라진다(2026-08-10 접지 수복에서 실제로
- *    두 곳을 같이 고쳐야 했던 자리다). 이제 접지선이 움직이면 둘이 함께 따라온다 —
- *    무대 기하 v5(마루 1/3 접지, 밑동 73 → 82)에서 이 파일은 **한 글자도 안 고쳤다**.
- *    x·w 만 의식각 고유값이다(제단 41~59 · 가족 선반장 오른벽 63.5/72.5 을 피한 자리).
+ * x 88.75 는 제단(41~59)·가족 선반장 오른벽(67·75.5, 우단 78.9)을 피한 자리다.
+ * 폭 7.6 이라 좌단 84.95 — 선반장과 6.05%p 떨어져 서고, 우단 92.55 로 벽 안에 든다.
  */
 export const RITUAL_HALL_UNIT = Object.freeze({
   x: 88.75,
-  w: FSHELF_UNIT.w,
-  top: FSHELF_UNIT.top,
-  bottom: FSHELF_UNIT.bottom,
+  w: 7.6,
+  top: STAGE_WALL_GROUND_LINE_Y - RITUAL_HALL_H,
+  bottom: STAGE_WALL_GROUND_LINE_Y,
 })
 const UNIT_X = RITUAL_HALL_UNIT.x
 const UNIT_W = RITUAL_HALL_UNIT.w
@@ -45,14 +56,24 @@ const UNIT_BOTTOM = RITUAL_HALL_UNIT.bottom
 const HALL_Z = 29
 
 /**
- * 현판 세로 자리 — 사방탁자 4개 면(맨 위 칸·2단·3단·하단 수납장 앞)의 중심,
- * 유닛 높이 비율(shelf-sabang.webp 271×640 실측 개구부 중점).
+ * 현판 세로 자리 — 걸이 네 면(맨 위 칸·2단·3단·하단 수납장 앞)의 **개구 중심**,
+ * 유닛 높이 비율. `shelf-rack-v2.webp`(306×623) 알파 실측값이다
+ * (scripts/shrine-assets/stage-shelf-v2.mjs 가 굽고 이 배열을 출력한다).
+ *
+ * ⚠️ v2 까지의 [0.155, 0.425, 0.65, 0.865] 는 손으로 적은 값이었고 2~4번째가 실측보다
+ *    0.047~0.057 **아래**였다 — 현판이 칸 아래턱을 물고 있었다(PLAN-family-shelf-v2 §4).
+ *    자산을 다시 구우면 스크립트 출력으로 이 줄을 갱신한다.
  */
-const PLAQUE_CY = [0.155, 0.425, 0.65, 0.865] as const
-/** 현판 폭 — 유닛 안폭에 맞춘다. 비율 5:2 는 널 스프라이트 몰딩·놋쇠 못의 계약이다 */
-const PLAQUE_W_PCT = 86
+const PLAQUE_CY = [0.162, 0.388, 0.616, 0.829] as const
+/**
+ * 현판 폭 — 유닛 폭 대비 %. 비율 5:2 는 널 스프라이트 몰딩·놋쇠 못의 계약이다.
+ * 82 는 «네 장이 세로로 안 겹치는» 상한이다: 기준 방에서 널 세로 = 0.82 × 7.6%p × 방폭×3.2 × 2/5
+ * ≈ 41.5px 이고 가장 좁은 칸 간격이 47.5px 라 6px 이 남는다(86 이면 3px — 눈에 붙어 보인다).
+ */
+const PLAQUE_W_PCT = 82
 
-const SHELF_SPRITE = '/shrine/stage/banga/shelf-sabang.webp'
+/** 걸이 몸체 — 가족 선반장과 **다른 자산**이다(4면 유지 · 여백만 걷어 접지를 맞춘 v2). */
+const SHELF_SPRITE = '/shrine/stage/banga/shelf-rack-v2.webp'
 
 function plaqueStyle(cy: number): CSSProperties {
   return {
@@ -66,18 +87,20 @@ function plaqueStyle(cy: number): CSSProperties {
     backgroundImage: `url('${PLAQUE_SPRITE_URL}')`,
     backgroundSize: '100% 100%',
     backgroundRepeat: 'no-repeat',
-    filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.5))',
+    filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.55))',
   }
 }
 
+/**
+ * 널 한 장의 얼굴 — **한글 한 줄**(CEO 지시 ④ "간판도 지금 글씨가 2개야, 1개씩으로").
+ * 한자 병기(擲 錢 / 厄 막 이 …)를 걷었다. 글자 크기·자간은 `.shrine-hall-plaque` 가 널 폭에서
+ * 파생한다 — px 로 박으면 기준 방(널 104px)과 390폰(널 76px) 사이에서 한쪽이 반드시 어색해진다.
+ */
 function Face({ p, lit }: { p: ShrinePlaque; lit: boolean }): ReactNode {
   return (
     <>
       {lit && <span aria-hidden className="shrine-plaque-ember" style={{ width: 6, height: 6, top: 4, right: 6 }} />}
-      <span aria-hidden className="font-serif text-[8px] tracking-[1px] text-gold-500/70">
-        {p.hanja}
-      </span>
-      <span className="mt-[1px] font-serif text-[14px] font-bold text-[#F2DEA8]">{p.ko}</span>
+      <span className="font-serif font-bold text-[#F2DEA8]">{p.ko}</span>
     </>
   )
 }
@@ -103,14 +126,14 @@ export function RitualHall({
   inert?: boolean
 }) {
   const track = (key: string) => trackEvent({ action: 'shrine_plaque', category: 'shrine', label: `${key}:hall` })
-  const cls = 'shrine-plaque-glow pointer-events-auto absolute grid place-items-center leading-none'
+  const cls = 'shrine-hall-plaque shrine-plaque-glow pointer-events-auto absolute grid place-items-center leading-none'
   const dx = offset?.dx ?? 0
   const dy = offset?.dy ?? 0
 
   return (
     <div
       aria-label="의식각"
-      className="pointer-events-none absolute"
+      className="shrine-hall pointer-events-none absolute"
       style={{
         left: `${UNIT_X - UNIT_W / 2 + dx}%`,
         top: `${UNIT_TOP + dy}%`,
@@ -119,8 +142,11 @@ export function RitualHall({
         zIndex: HALL_Z,
       }}
     >
-      {/* 사방탁자 몸체 — 가족 선반장과 같은 가구·같은 정합 규약(fill). 현판 자리 상수(PLAQUE_CY)가
-          이 정합에 기대므로 contain 으로 바꾸면 현판이 널에서 떨어진다 */}
+      {/* 접지 그림자 — 「붕 떠 보임」의 처방(CEO 지시 ③). 발끝 줄에 깔리는 어두운 타원 하나가
+          «바닥에 닿아 있다»를 만든다. 몸체보다 **뒤**에 그려야 다리 사이로 비쳐 보인다 */}
+      <span aria-hidden className="shrine-fixture-contact" />
+      {/* 걸이 몸체 — 상자에 딱 맞춘다(fill). 현판 자리 상수(PLAQUE_CY)가 이 정합에 기대므로
+          contain 으로 바꾸면 현판이 널에서 떨어진다 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={SHELF_SPRITE}
@@ -128,7 +154,7 @@ export function RitualHall({
         draggable={false}
         decoding="async"
         className="absolute inset-0 h-full w-full"
-        style={{ objectFit: 'fill', filter: 'drop-shadow(0 5px 6px rgba(0,0,0,0.45))' }}
+        style={{ objectFit: 'fill', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
       />
       {SHRINE_PLAQUES.map((p, i) => {
         const lit = attention?.[p.key] === true
@@ -139,7 +165,7 @@ export function RitualHall({
             <span
               key={p.key}
               aria-hidden
-              className="shrine-plaque-glow absolute grid place-items-center leading-none"
+              className="shrine-hall-plaque shrine-plaque-glow absolute grid place-items-center leading-none"
               style={pos}
             >
               <Face p={p} lit={lit} />

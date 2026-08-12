@@ -1770,6 +1770,61 @@
   }
 }
 
+/* ═══ 고정 살림 접지 그림자 ══════════════════════════════════════════════════
+   CEO 지시(2026-08-12) ③ "뒷배경과 어울리게 해줘. 지금은 붕 떠 보여."
+
+   좌표는 이미 맞아 있었다 — 뜬 것은 **그림자**였다. 종전 살림의 그림자는
+   `drop-shadow(0 5px 6px …)` 하나뿐이라 스프라이트 실루엣을 그대로 아래로 민 「띄운 카드」의
+   그림자였다: 발밑에 어두운 자국이 없으니 눈이 접지를 못 읽는다. 실제로 물건이 바닥에 닿으면
+   **닿은 자리 바로 아래가 가장 어둡고** 좁게 번진다(occlusion). 그 한 겹을 여기서 만든다.
+
+   · 부모 상자의 **하단 = 그려진 발끝**이라는 계약에 기댄다(v2 스프라이트가 발밑 여백을 잘랐다).
+   · 몸체보다 **먼저** 그려져(DOM 순서) 다리 사이로 비친다.
+   · 애니메이션 0 — 상시 정적이라 성능 예산에 잡히지 않는다.
+   · 상대 단위(%)라 유닛이 커지든 작아지든, 기기가 바뀌든 같은 비례로 따라온다.            */
+.shrine-fixture-contact {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 132%;
+  height: 7.5%;
+  transform: translate(-50%, 46%);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.34) 38%,
+    rgba(0, 0, 0, 0.12) 62%,
+    rgba(0, 0, 0, 0) 78%
+  );
+}
+
+/* ═══ 의식각 현판 — 글자 한 줄, 크기는 널에서 파생 ═══════════════════════════════
+   CEO 지시(2026-08-12) ④ "간판도 지금 글씨가 2개야 — 1개씩으로 수정해줘."
+   한자를 걷고 한글만 남기면 남은 한 줄의 크기를 다시 잡아야 한다. px 로 박으면 한쪽이 반드시
+   어색해진다 — 의식각 유닛 폭은 기준 방 127px · 390폰 93px 로 1.36배 차이가 난다.
+   그래서 창방 팻말(--plq-s)과 **같은 문법**으로 널 폭에서 파생한다: 1cqw = 유닛 폭의 1%.
+   4자("백일기도")가 (16+0.4)×4 = 65.6% 를 먹고 널 안폭이 82% × 0.9 ≈ 74% 라 11% 가 남는다.
+   컨테이너 질의가 없는 브라우저에서는 고정 px 로 떨어진다 — 글자는 반드시 남는다.           */
+.shrine-hall {
+  --hall-plq-fs: 15px;
+  --hall-plq-ls: 0.5px;
+}
+.shrine-hall-plaque {
+  font-size: var(--hall-plq-fs);
+  letter-spacing: var(--hall-plq-ls);
+}
+@supports (width: 1cqw) {
+  .shrine-hall {
+    container-type: size;
+  }
+  .shrine-hall-plaque {
+    --hall-plq-fs: 16cqw;
+    --hall-plq-ls: 0.4cqw;
+  }
+}
+
 /* 팻말 처마 등 — 오늘 할 일이 남은 팻말에만 켜지는 작은 불씨. 크기·자리는 널 배율(--plq-s)을 탄다 */
 .shrine-plaque-ember {
   position: absolute;
@@ -1811,34 +1866,58 @@
 /* 위상 틴트 3층 — 상단이 진하고 하단이 옅다(살림·제단 가독 유지).
    낮은 층이 없다: 낮 = 검수된 원화 그대로가 원화 보호 계약이다. */
 .shrine-tint-dawn,
+.shrine-tint-day,
 .shrine-tint-dusk,
 .shrine-tint-night {
   transition: opacity 2000ms ease;
 }
 
-/* 새벽 청람(靑) */
+/* ★ v2 「전 테마 낮밤」(2026-08-12) — 알파는 v1 × TINT_V2_CSS_BOOST 다.
+   색은 v1 그대로 두고 알파만 배수로 올렸다: 원복 레버가 opacity 나눗셈 하나로 정확해지고,
+   검수 끝난 색 정체성을 다시 판정하지 않아도 된다.
+   ⚠️ 여기 알파를 고치면 theme-ambient.ts 의 TINT_V2_CSS_BOOST 도 같은 배수로 고친다. */
+
+/* 새벽 청람(靑) — v1 ×1.6 */
 .shrine-tint-dawn {
   background: linear-gradient(
     180deg,
-    rgba(45, 95, 138, 0.16) 0%,
-    rgba(45, 95, 138, 0.09) 46%,
-    rgba(45, 95, 138, 0.03) 100%
+    rgba(45, 95, 138, 0.256) 0%,
+    rgba(45, 95, 138, 0.144) 46%,
+    rgba(45, 95, 138, 0.048) 100%
   );
 }
 
-/* 해질녘 주홍(朱) → 호박(土) */
+/* 주광(晝光) — 위에서 드는 볕 한 겹. **유일하게 밝히는 층**이라 밤 원판 테마(달집·별밭·연등·
+   도깨비)와 심해(용궁)가 이 층으로만 낮을 얻는다. 상단은 볕이라 따뜻하고 아래로 갈수록
+   중성·희미해진다(광원이 위에 있다는 신호). 밤 그림에 밤을 덧칠하지 않고 대비를 만드는 유일한 방향. */
+.shrine-tint-day {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 246, 226, 0.3) 0%,
+    rgba(246, 244, 238, 0.17) 48%,
+    rgba(236, 238, 242, 0.07) 100%
+  );
+}
+
+/* 해질녘 주홍(朱) → 호박(土) — v1 ×1.5.
+   v1 은 밝은 호박색이 붉은 상단을 상쇄해 실측 ΔL* ≈ 0 이었다(해질녘이 안 보이던 진짜 원인). */
 .shrine-tint-dusk {
   background: linear-gradient(
     180deg,
-    rgba(158, 43, 43, 0.14) 0%,
-    rgba(212, 160, 23, 0.08) 52%,
-    rgba(212, 160, 23, 0.03) 100%
+    rgba(158, 43, 43, 0.21) 0%,
+    rgba(212, 160, 23, 0.12) 52%,
+    rgba(212, 160, 23, 0.045) 100%
   );
 }
 
-/* 밤 남청 */
+/* 밤 남청 — v1 ×1.3 */
 .shrine-tint-night {
-  background: linear-gradient(180deg, rgba(10, 16, 42, 0.3) 0%, rgba(10, 16, 42, 0.19) 55%, rgba(10, 16, 42, 0.1) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(10, 16, 42, 0.39) 0%,
+    rgba(10, 16, 42, 0.247) 55%,
+    rgba(10, 16, 42, 0.13) 100%
+  );
 }
 
 /* 달빛(月光) — P3 「달과 절기」. 위에서 비껴드는 냉광 한 겹으로, 짙기(opacity)는 밤 가중치 ×
@@ -2031,6 +2110,7 @@
     animation: none;
   }
   .shrine-tint-dawn,
+  .shrine-tint-day,
   .shrine-tint-dusk,
   .shrine-tint-night,
   .shrine-moonlight {

@@ -128,6 +128,7 @@ function readContracts() {
   const shelf = srcOf('lib/domain/shrine/family-shelf.ts')
   const hall = srcOf('components/shrine/scene/RitualHall.tsx')
   const stage = srcOf('lib/domain/shrine/stage.ts')
+  const themeStage = srcOf('lib/domain/shrine/theme-stage.ts')
 
   const unitBlock = pluck(shelf, /FSHELF_UNIT\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\)/, 'FSHELF_UNIT')[1]
   const tiersBlock = pluck(shelf, /FSHELF_TIERS\s*=\s*Object\.freeze\(\{([\s\S]*?)\n\}\)/, 'FSHELF_TIERS')[1]
@@ -146,17 +147,27 @@ function readContracts() {
    * ⚠️ 뮤럴 자체는 v5 에서 한 픽셀도 안 움직인다 — 이음새·수평선은 여전히 **마루선** 기준이다
    *    (theme-stage.ts STAGE_GROUND_LINE_Y 주석). 이 파생은 합성판의 살림 위치에만 쓰인다.
    */
+  /**
+   * ★ 기하 v6 대응(2026-08-12) ★ — 「벽 살림은 틀보다 한 칸 뒤에 선다」(CEO ①「선반과 간판은
+   * 좀 더 뒤로」). 틀은 여전히 접지선(마루선 + 바닥/3 = 82)에 서지만, 사방탁자 두 벌은
+   * **벽 접지선**(마루선 + 바닥/3/WALL_GROUND_DIVISOR = 76)으로 물러났다. 분모는 리터럴이 아니라
+   * theme-stage.ts 에서 뽑는다 — 여기 3 을 베껴 적는 순간 «같은 숫자 두 벌»이 된다.
+   */
   const floorLineY = 100 - GEO.bands.floor
   const groundDrop = Math.round((GEO.bands.floor / 3) * 100) / 100
   const groundLineY = Math.round((floorLineY + groundDrop) * 100) / 100
+  const wallDivisor = pluckNum(themeStage, /const WALL_GROUND_DIVISOR = ([\d.]+)/, 'WALL_GROUND_DIVISOR')
+  const wallGroundLineY =
+    Math.round((floorLineY + Math.round((groundDrop / wallDivisor) * 100) / 100) * 100) / 100
   const shelfH = Number(pluck(shelf, /const FSHELF_H = ([\d.]+)/, 'FSHELF_H')[1])
+  const hallH = Number(pluck(hall, /const RITUAL_HALL_H = ([\d.]+)/, 'RITUAL_HALL_H')[1])
   /** 리터럴이면 그 값, 파생식이면 계산값 — 어느 세대의 소스든 조용히 틀리지 않는다 */
   const litOr = (block, key, derived) => {
     const m = block.match(new RegExp(`\\b${key}:\\s*([\\d.]+)\\s*,`))
     return m ? Number(m[1]) : derived
   }
-  const fshelfTop = litOr(unitBlock, 'top', groundLineY - shelfH)
-  const fshelfBottom = litOr(unitBlock, 'bottom', groundLineY)
+  const fshelfTop = litOr(unitBlock, 'top', wallGroundLineY - shelfH)
+  const fshelfBottom = litOr(unitBlock, 'bottom', wallGroundLineY)
   const fshelfW = litOr(unitBlock, 'w', NaN)
 
   return {
@@ -182,14 +193,19 @@ function readContracts() {
     fshelfTop,
     fshelfBottom,
     fshelfFamilyTier: Number(pluck(tiersBlock, /family:\s*([\d.]+)/, 'FSHELF_TIERS.family')[1]),
-    /** 의식각 — v5 부터 선반장 값을 그대로 승계한다(RitualHall 이 FSHELF_UNIT 을 읽는다) */
+    /**
+     * 의식각 — v6 부터 **자기 상수**다(v5 까지는 FSHELF_UNIT 승계였고, 선반장이 B안으로 줄어드는
+     * 순간 현판 4문이 같이 찌그러지는 지뢰였다). 세로는 자기 높이 RITUAL_HALL_H 로 파생한다.
+     */
     hallX: pluckNum(hallBlock, /x:\s*([\d.]+)/, 'RITUAL_HALL_UNIT.x'),
     hallW: litOr(hallBlock, 'w', fshelfW),
-    hallTop: litOr(hallBlock, 'top', fshelfTop),
-    hallBottom: litOr(hallBlock, 'bottom', fshelfBottom),
+    hallTop: litOr(hallBlock, 'top', wallGroundLineY - hallH),
+    hallBottom: litOr(hallBlock, 'bottom', wallGroundLineY),
     plaqueCy: pluckList(hall, /const PLAQUE_CY = \[([^\]]*)\]/, 'PLAQUE_CY'),
     plaqueWPct: pluckNum(hall, /const PLAQUE_W_PCT = ([\d.]+)/, 'PLAQUE_W_PCT'),
-    shelfSprite: pluck(hall, /const SHELF_SPRITE = '([^']+)'/, 'SHELF_SPRITE')[1],
+    /** v6 부터 자산이 둘로 갈렸다 — 가족 선반장은 2단, 의식각은 4면 걸이다 */
+    shelfSprite: pluck(srcOf('components/shrine/scene/FamilyShelfWall.tsx'), /const SPRITE = '([^']+)'/, 'FamilyShelfWall SPRITE')[1],
+    hallSprite: pluck(hall, /const SHELF_SPRITE = '([^']+)'/, 'SHELF_SPRITE')[1],
   }
 }
 
@@ -2657,7 +2673,10 @@ async function buildWideComposite({ wallFile, floorFile, seats, deityFile, light
   const hallH = Math.round(pxY(C.hallBottom - C.hallTop))
   const hallTop = pxY(C.hallTop)
   const hallCx = pxX(C.hallX)
-  const hallBody = await sharp(shelfFile).resize(hallW, hallH, { fit: 'fill' }).png().toBuffer()
+  const hallBody = await sharp(path.join(PUB, C.hallSprite.replace(/^\//, '')))
+    .resize(hallW, hallH, { fit: 'fill' })
+    .png()
+    .toBuffer()
   await pushSprite(layers, hallBody, hallCx - hallW / 2, hallTop, W, H, { dy: 5 * k, blur: 6 * k, alpha: 0.45 })
   const plaqueFile = path.join(PUB, 'shrine', 'ritual', 'plaque.webp')
   if (existsSync(plaqueFile)) {

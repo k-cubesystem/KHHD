@@ -212,11 +212,100 @@ describe('의식각(RitualHall) — 오른쪽 선반 위 현판 4문 (2026-08-06
   const hallSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/RitualHall.tsx'), 'utf8')
   const roomSrc = readFileSync(path.join(ROOT, 'components/shrine/scene/ShrineRoomClient.tsx'), 'utf8')
 
-  it('★ 현판이 벽에 뜨지 않는다 — 사방탁자 선반 위에 진열된다(가족 선반장과 같은 가구 문법)', () => {
-    expect(hallSrc).toContain('/shrine/stage/banga/shelf-sabang.webp')
+  it('★ 현판이 벽에 뜨지 않는다 — 걸이 선반 위에 진열된다(가족 선반장과 같은 가구 문법)', () => {
+    expect(hallSrc).toContain('/shrine/stage/banga/shelf-rack-v2.webp')
+    expect(existsSync(path.join(ROOT, 'public/shrine/stage/banga/shelf-rack-v2.webp'))).toBe(true)
     expect(hallSrc).toContain('PLAQUE_SPRITE_URL')
     // 4개 면(맨 위 칸·2단·3단·수납장 앞) — 현판 수와 어긋나면 마지막 자리로 접힌다
-    expect(hallSrc).toMatch(/PLAQUE_CY = \[[^\]]*0\.155[^\]]*0\.865[^\]]*\]/)
+    expect(hallSrc).toMatch(/PLAQUE_CY = \[[^\]]*0\.162[^\]]*0\.829[^\]]*\]/)
+  })
+
+  /**
+   * ★ 현판 자리는 **스프라이트 실측**이다 (2026-08-12 · PLAN-family-shelf-v2 §4 부록)
+   *
+   * v2 까지의 [0.155, 0.425, 0.65, 0.865] 는 손으로 적은 값이었고 2~4번째가 실측보다 0.047~0.057
+   * 아래였다 — 현판이 칸 아래턱을 물고 있었다. 실측은 `shelf-rack-v2.webp`(306×623) 의 개구
+   * 중심이고, 그 원본 랜드마크(칸1 50~152 · 칸2 182~302 · 칸3 328~439 · 수납장 440~593)는
+   * 생성 스크립트가 들고 있다. 여기서는 그 랜드마크로 네 값을 재현한다.
+   */
+  it('★ 현판 네 자리가 걸이 스프라이트 개구 중심에서 재현된다', () => {
+    const H = 623 // 발밑 빈칸을 자른 높이
+    const mid = ([a, b]: [number, number]) => Math.round(((a + b) / 2 / H) * 1000) / 1000
+    const faces = [mid([50, 152]), mid([182, 302]), mid([328, 439]), mid([440, 593])]
+    const cy = /PLAQUE_CY = \[([^\]]*)\]/
+      .exec(hallSrc)?.[1]
+      .split(',')
+      .map((s) => Number(s.trim()))
+    expect(cy).toEqual(faces)
+    expect(cy).toHaveLength(SHRINE_PLAQUES.length)
+  })
+
+  /**
+   * ★ 널 네 장이 세로로 안 겹친다 — 널 세로 = 널 폭 × 2/5 이고 널 폭은 유닛 폭의 PLAQUE_W_PCT % 다.
+   * 가로는 world %(방 폭의 3.2배), 세로는 방 높이 % 라 **기기마다 여유가 다르다** — 가장 빡빡한
+   * 기준 방(가로가 가장 넉넉해 널이 가장 두껍다)에서 잰다.
+   */
+  it('★ 현판 네 장이 서로 겹치지 않는다 — 가장 빡빡한 기준 방에서', () => {
+    const unitW = Number(/w:\s*([\d.]+)/.exec(hallSrc)?.[1])
+    const unitH = Number(/const RITUAL_HALL_H = ([\d.]+)/.exec(hallSrc)?.[1])
+    const wPct = Number(/const PLAQUE_W_PCT = ([\d.]+)/.exec(hallSrc)?.[1])
+    const cy = /PLAQUE_CY = \[([^\]]*)\]/
+      .exec(hallSrc)?.[1]
+      .split(',')
+      .map((s) => Number(s.trim())) as number[]
+    const ROOM = { w: 520, h: 620 }
+    const boxW = (unitW / 100) * ROOM.w * 3.2
+    const boxH = (unitH / 100) * ROOM.h
+    const plaqueH = ((boxW * wPct) / 100) * (2 / 5)
+    for (let i = 1; i < cy.length; i += 1) {
+      expect((cy[i] - cy[i - 1]) * boxH).toBeGreaterThan(plaqueH)
+    }
+    // 맨 위·맨 아래 널이 걸이 상자를 벗어나지 않는다
+    expect(cy[0] * boxH - plaqueH / 2).toBeGreaterThan(0)
+    expect(cy[cy.length - 1] * boxH + plaqueH / 2).toBeLessThan(boxH)
+  })
+
+  /**
+   * ★ 널에 새기는 글자는 **한 줄**이다 (2026-08-12 CEO 지시 ④ "간판도 지금 글씨가 2개야")
+   *
+   * 한자 윗줄(擲 錢 …)을 걷었다. 두 줄이면 널(의식각 76~104px · 창방 120무라px)에서 둘 다 작아져
+   * 어느 쪽도 안 읽힌다. 되살아나면 조용히 다시 작아지므로 여기서 막는다.
+   */
+  it('★ 두 렌더 모두 한 줄만 그린다 — 한자 병기가 되살아나지 않았다', () => {
+    const win = read('components/shrine/scene/WindowPlaques.tsx')
+    for (const src of [hallSrc, win]) {
+      expect(src).not.toMatch(/\{p\.hanja\}/)
+      expect(src.match(/\{p\.ko\}/g)?.length).toBeGreaterThanOrEqual(1)
+    }
+    // 도메인에도 한자 필드가 남아 있으면 안 된다 — 쓰이지 않는 값은 언젠가 다시 그려진다
+    expect(read('lib/domain/shrine/plaque.ts')).not.toMatch(/^\s*hanja:/m)
+    for (const p of SHRINE_PLAQUES) expect(Object.keys(p)).not.toContain('hanja')
+  })
+
+  /**
+   * ★ 남은 한 줄의 크기는 **널에서 파생**한다 — px 로 박으면 한쪽 기기가 반드시 어긋난다.
+   * 의식각 유닛 폭은 기준 방 127px · 390폰 93px 로 1.36배 차이가 난다.
+   */
+  it('★ 의식각 글자 크기가 컨테이너 질의(cqw)로 널 폭을 탄다 — 폴백 px 도 함께 있다', () => {
+    expect(hallSrc).toContain('shrine-hall-plaque')
+    expect(css).toMatch(/\.shrine-hall-plaque\s*\{[^}]*font-size:\s*var\(--hall-plq-fs\)/)
+    // 폴백(컨테이너 질의 미지원)에서도 글자는 반드시 남는다
+    expect(css).toMatch(/\.shrine-hall\s*\{[^}]*--hall-plq-fs:\s*\d+px/)
+    expect(css).toMatch(/@supports\s*\(width:\s*1cqw\)/)
+    expect(css).toMatch(/--hall-plq-fs:\s*[\d.]+cqw/)
+    for (const cls of ['.shrine-hall', '.shrine-hall-plaque']) expect(gate).toContain(`'${cls}'`)
+  })
+
+  /**
+   * ★ 「붕 떠 보임」의 처방 — 접지 그림자 (2026-08-12 CEO 지시 ③)
+   * 인라인이 한 줄도 없어서(전부 CSS) 산출물에서 빠지면 무증상이다 — 배포 게이트에 등록한다.
+   */
+  it('★ 고정 살림 접지 그림자가 두 살림 모두에 있고 배포 게이트에 등록돼 있다', () => {
+    for (const rel of ['components/shrine/scene/RitualHall.tsx', 'components/shrine/scene/FamilyShelfWall.tsx']) {
+      expect(read(rel)).toContain('shrine-fixture-contact')
+    }
+    expect(css).toContain('.shrine-fixture-contact {')
+    expect(gate).toContain("'.shrine-fixture-contact'")
   })
 
   it('★ 와이드 무대는 의식각, 단일 무대는 간이 팻말 줄 — 신 뒤 창방 팻말로 되돌아가지 않았다', () => {

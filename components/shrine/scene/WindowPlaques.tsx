@@ -78,17 +78,12 @@ function PlaqueFace({ p, lit }: { p: ShrinePlaque; lit: boolean }): ReactNode {
           }}
         />
       )}
-      <span
-        aria-hidden
-        className="font-serif text-gold-500/70"
-        // 글자도 널과 같은 배율을 타야 한다 — px 로 두면 좁은 폰에서 널 밖으로 넘친다
-        style={{ fontSize: 'calc(12 * var(--plq-s))', letterSpacing: 'calc(0.5 * var(--plq-s))' }}
-      >
-        {p.hanja}
-      </span>
+      {/* 글자 **한 줄** (CEO 지시 2026-08-12 ④). 한자 윗줄을 걷은 몫만큼 한글이 커진다 —
+          널이 120×48(무라 px)이라 4자("백일기도")가 (26+1)×4 = 108 을 먹고 12 가 남는다.
+          크기는 널과 **같은 배율**(--plq-s)을 타야 한다 — px 로 두면 좁은 폰에서 널 밖으로 넘친다 */}
       <span
         className="font-serif font-bold text-[#F2DEA8]"
-        style={{ fontSize: 'calc(22 * var(--plq-s))', marginTop: 'calc(2 * var(--plq-s))' }}
+        style={{ fontSize: 'calc(26 * var(--plq-s))', letterSpacing: 'calc(1 * var(--plq-s))' }}
       >
         {p.ko}
       </span>
@@ -109,10 +104,12 @@ const PLAQUE_CLASS = 'shrine-plaque shrine-plaque-glow grid place-items-center l
 export function GenericPlaqueBand({ onOpenSheet, attention }: Props) {
   const track = (key: string) => trackEvent({ action: 'shrine_plaque', category: 'shrine', label: `${key}:generic` })
 
+  // 글자 한 줄 — 본 팻말·의식각과 같은 규율(CEO 지시 2026-08-12 ④). 여기는 처음부터 한 줄이었고
+  // 11px 로 한 칸 키운 것이 전부다(널이 아니라 글자가 상자를 정하는 줄이라 넘칠 곳이 없다).
   const face = (p: ShrinePlaque, lit: boolean) => (
     <>
       {lit && <span aria-hidden className="shrine-plaque-ember" style={{ width: 6, height: 6, top: 3, right: 4 }} />}
-      <span className="block font-serif text-[10px] font-bold leading-tight text-[#3b2d1c]">{p.ko}</span>
+      <span className="block font-serif text-[11px] font-bold leading-tight text-[#3b2d1c]">{p.ko}</span>
     </>
   )
 

@@ -172,6 +172,31 @@ export const STAGE_GROUND_DROP = Math.round((GEO.bands.floor / 3) * 100) / 100
 export const STAGE_GROUND_LINE_Y = Math.round((STAGE_FLOOR_LINE_Y + STAGE_GROUND_DROP) * 100) / 100
 
 /**
+ * 벽 살림의 접지 깊이 분모 — **틀 접지 깊이의 1/3**(무대 기하 v6, CEO 지시 2026-08-12
+ * "틀 자리는 맞고, 선반과 간판은 좀 더 뒤로 가야 해").
+ *
+ * v5 는 살림 전부를 한 줄(접지선 82)에 세웠다. 그런데 방 안의 물건은 두 종류다 —
+ * **틀**은 방 한가운데 나와 선 제단이고, **사방탁자(가족 선반장·의식각)**는 벽에 붙여 두는
+ * 벽 살림이다. 둘을 같은 줄에 세우면 벽 가구가 제단과 나란히 «앞»에 나와 서서, 배경(뮤럴의
+ * 벽면)과 따로 노는 스티커로 읽힌다. 그래서 벽 살림만 마루 안쪽 깊이를 1/3 로 줄인다.
+ *
+ * ⚠️ 리터럴 76 을 굽지 않는 이유는 v5 와 같다 — 마루선·밴드가 또 움직여도 벽 살림이 공짜로
+ *    따라온다. 그리고 이 분모는 합성 QA(scripts/shrine-assets/stage-theme-harmony.mjs)가
+ *    **정규식으로 읽는다** — 이름을 바꾸면 QA 판이 조용히 다른 방을 그린다.
+ */
+const WALL_GROUND_DIVISOR = 3
+
+/** 벽 살림이 마루 안으로 들어오는 깊이 — 바닥 밴드의 1/9 (= 틀 깊이 9 의 1/3). */
+export const STAGE_WALL_GROUND_DROP = Math.round((STAGE_GROUND_DROP / WALL_GROUND_DIVISOR) * 100) / 100
+
+/**
+ * **벽 접지선** — 사방탁자(가족 선반장·의식각)의 발이 닿는 줄. 73 + 3 = **76**.
+ * 틀 접지선(82)보다 6%p 뒤다. 이 6%p 가 「선반과 간판은 좀 더 뒤로」의 좌표 몫이고,
+ * 나머지 몫(크기·그림자)은 family-shelf.ts / RitualHall.tsx 가 든다.
+ */
+export const STAGE_WALL_GROUND_LINE_Y = Math.round((STAGE_FLOOR_LINE_Y + STAGE_WALL_GROUND_DROP) * 100) / 100
+
+/**
  * 「틀(壇)」 테마 — grand-altar 1구조물을 쓰는 목록. **2026-08-10 확산으로 16테마 전량**이 됐다
  * (시범 3 → 16. 혼재 상태 종료).
  *
