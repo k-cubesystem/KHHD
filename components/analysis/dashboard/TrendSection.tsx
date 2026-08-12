@@ -5,6 +5,15 @@ import { Card } from '@/components/ui/card'
 import { Wallet, Heart, GraduationCap, Building2, TrendingUp, MessageCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
+// 재물운만 전용 화면, 나머지 4종은 사주 기반 trend 라우트(analyzeTrendAction)
+const TREND_ROUTES: Record<string, string> = {
+  wealth: '/protected/analysis/wealth',
+  love: '/protected/analysis/trend/love',
+  career: '/protected/analysis/trend/career',
+  exam: '/protected/analysis/trend/exam',
+  estate: '/protected/analysis/trend/estate',
+}
+
 const TRENDS = [
   {
     id: 'wealth',
@@ -66,11 +75,7 @@ export const TrendSection = memo(function TrendSection() {
           return (
             <Card
               key={trend.id}
-              onClick={() => {
-                if (trend.id === 'wealth')
-                  router.push('/protected/analysis/theme/wealth') // Standardized to use theme page
-                else router.push(`/protected/analysis/theme/${trend.id}`)
-              }}
+              onClick={() => router.push(TREND_ROUTES[trend.id] ?? '/protected/analysis')}
               className="group cursor-pointer card-glass-manse transition-all p-3 flex flex-col items-center justify-center gap-2 text-center h-[110px] rounded-xl active:scale-95 duration-200 hover:border-primary/40"
             >
               <div

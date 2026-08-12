@@ -139,9 +139,10 @@ describe('섹션 바로가기 — 칩 ↔ 앵커', () => {
   it('섹션 제목은 표를 그대로 쓴다 — 라벨 교체가 한 곳에서 끝난다', async () => {
     await renderHub('해화')
 
-    // 화면에 보이는 두 제목이 표의 문자열과 같은지. 다르면 문구가 두 곳으로 갈라진 것이다.
+    // 화면에 보이는 제목이 표의 문자열과 같은지. 다르면 문구가 두 곳으로 갈라진 것이다.
+    expect(screen.getByText(HUB_SECTIONS.themeFortune.title).id).toBe(hubHeadingId(HUB_SECTIONS.themeFortune.id))
     expect(screen.getByText(HUB_SECTIONS.studio.title).id).toBe(hubHeadingId(HUB_SECTIONS.studio.id))
-    expect(screen.getByText(HUB_SECTIONS.theme.title).id).toBe(hubHeadingId(HUB_SECTIONS.theme.id))
+    expect(screen.getByText(HUB_SECTIONS.deeper.title).id).toBe(hubHeadingId(HUB_SECTIONS.deeper.id))
   })
 })
 
@@ -150,10 +151,10 @@ describe('섹션 바로가기 — 이동 거동', () => {
     const user = userEvent.setup()
     const { container } = await renderHub('해화')
 
-    await user.click(within(quickNav()).getByRole('link', { name: HUB_SECTIONS.theme.label }))
+    await user.click(within(quickNav()).getByRole('link', { name: HUB_SECTIONS.deeper.label }))
 
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
-    expect(document.activeElement).toBe(container.querySelector(`#${HUB_SECTIONS.theme.id}`))
+    expect(document.activeElement).toBe(container.querySelector(`#${HUB_SECTIONS.deeper.id}`))
   })
 
   it('감속을 선호하면 즉시 이동한다 (부드러운 스크롤 끔)', async () => {

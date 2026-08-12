@@ -65,8 +65,9 @@ describe('visibleHubSections — 화면에 없는 섹션은 칩도 만들지 않
     expect(visibleHubSections({ hasDailyFortune: true }).map((section) => section.id)).toEqual([
       HUB_SECTIONS.journey.id,
       HUB_SECTIONS.ritual.id,
+      HUB_SECTIONS.themeFortune.id,
       HUB_SECTIONS.studio.id,
-      HUB_SECTIONS.theme.id,
+      HUB_SECTIONS.deeper.id,
       HUB_SECTIONS.dailyFortune.id,
     ])
   })

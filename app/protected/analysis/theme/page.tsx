@@ -1,0 +1,187 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import {
+  resolveThemeTab,
+  THEME_DESTINATIONS,
+  THEME_TABS,
+  themeAnchorId,
+  themeCostLabel,
+  themeDestination,
+  themeImage,
+  themesByTab,
+  isFreeTheme,
+  type ThemeFortune,
+} from '@/lib/domain/theme-fortune/themes'
+
+export const metadata: Metadata = {
+  title: '인기테마운세',
+  description: '지금 사람들이 가장 많이 묻는 질문으로 골라 보는 사주 풀이',
+}
+
+/**
+ * 인기테마운세 목록 — 「도구」가 아니라 「질문」으로 고르는 화면.
+ *
+ * ## 🔴 여기서 AI 를 부르지 않는다
+ * 카드는 제목·서브카피·그림만 그린다. 9차에 「오늘의 운세 카드가 마운트마다 Gemini 생성」
+ * 사고가 났다 — 목록은 서버 컴포넌트이고 서버 액션을 하나도 호출하지 않는다.
+ *
+ * ## 🔴 개별 테마 풀이는 아직 없다
+ * 그래서 카드는 **지금 실제로 돌아가는 화면**으로 이어지고, 어디로 가는지를 카드 위에 적는다.
+ * 전 사용자 동일 「85점」을 띄우던 목업으로는 보내지 않는다(그 라우트는 리다이렉트가 됐다).
+ *
+ * 탭은 평범한 링크(`?tab=`)다 — JS 없이도 동작하고, 허브에서 넘어온 앵커(`#theme-{id}`)가
+ * 그대로 살아 있어야 «내가 누른 카드»가 어디인지 보인다.
+ */
+export default async function ThemeFortuneListPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab: rawTab } = await searchParams
+  const tab = resolveThemeTab(rawTab)
+  const themes = themesByTab(tab)
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-screen-sm px-4 pb-32 pt-6">
+        <div className="mb-4 flex items-center justify-between">
+          <Link
+            href="/protected/analysis"
+            className="inline-flex items-center gap-1 text-xs text-ink-light/50 transition-colors hover:text-ink-light"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            사주·궁합으로
+          </Link>
+        </div>
+
+        <header className="mb-5 space-y-1.5 text-center">
+          <p className="font-serif text-[10px] tracking-[0.5em] text-gold-500/50">THEME</p>
+          <h1 className="font-serif text-2xl font-bold text-ink-light">인기테마운세</h1>
+          <p className="font-sans text-sm text-ink-light/50">지금 사람들이 가장 많이 묻는 것부터</p>
+        </header>
+
+        {/* 탭 바 — 라벨·구성은 themes.ts 한 곳에서 온다 */}
+        <nav className="mb-6 grid grid-cols-4 gap-1.5" aria-label="테마 갈래">
+          {THEME_TABS.map(({ key, label }) => {
+            const active = key === tab
+            return (
+              <Link
+                key={key}
+                href={`/protected/analysis/theme?tab=${key}`}
+                aria-current={active ? 'page' : undefined}
+                className={`rounded-xl border py-2.5 text-center font-serif text-[12px] transition-colors ${
+                  active
+                    ? 'border-gold-500/50 bg-gold-500/[0.12] font-bold text-gold-300'
+                    : 'border-white/10 bg-surface/40 text-ink-light/55'
+                }`}
+              >
+                {label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="grid grid-cols-2 gap-3">
+          {themes.map((theme) => (
+            <ThemeCard key={theme.id} theme={theme} />
+          ))}
+        </div>
+
+        <section className="mt-8 space-y-3" aria-labelledby="theme-open-routes">
+          <div className="dancheong-divider my-4" />
+          <h2 id="theme-open-routes" className="px-1 font-serif text-sm text-gold-500/80">
+            지금 바로 볼 수 있는 풀이
+          </h2>
+          <p className="px-1 text-[11px] font-light leading-relaxed text-ink-light/50">
+            테마마다의 풀이는 준비 중입니다. 위 카드는 아래 풀이로 이어집니다.
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {Object.entries(THEME_DESTINATIONS).map(([key, destination]) => (
+              <li key={key}>
+                <Link
+                  href={destination.href}
+                  className="inline-flex items-center rounded-full border border-gold-500/20 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-ink-light/70 transition-colors hover:border-gold-500/40 hover:text-ink-light"
+                >
+                  {destination.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div className="mt-8">
+          <ServiceDisclaimer />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 테마 카드.
+ *
+ * 「지금은 ○○로 이어집니다」를 카드에 적는 이유: 제목이 약속하는 개별 풀이가 아직 없다.
+ * 어디로 가는지·얼마인지를 누르기 **전에** 밝혀야 표시와 내용이 어긋나지 않는다.
+ */
+function ThemeCard({ theme }: { theme: ThemeFortune }) {
+  const destination = themeDestination(theme)
+  const anchor = themeAnchorId(theme.id)
+
+  const body = (
+    <>
+      {/* 썸네일 자리(마스터 §10). 지금은 카테고리 그림 — thumbnail 이 생기면 그림만 바뀐다. */}
+      <div className="mb-2.5 flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white/[0.04]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={themeImage(theme)} alt="" aria-hidden="true" draggable={false} className="h-9 w-9 object-contain" />
+      </div>
+
+      <h3 className="font-serif text-[13px] font-bold leading-snug text-ink-light">{theme.title}</h3>
+      <p className="mt-1 text-[11px] font-light leading-relaxed text-ink-light/60">{theme.subcopy}</p>
+
+      <div className="mt-2.5 flex items-center gap-1.5">
+        <span
+          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+            isFreeTheme(theme)
+              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+              : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
+          }`}
+        >
+          {themeCostLabel(theme)}
+        </span>
+        {theme.input === 'PAIR' && (
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] text-ink-light/60">
+            두 사람
+          </span>
+        )}
+      </div>
+
+      {destination ? (
+        <p className="mt-2 flex items-center gap-0.5 text-[10px] text-ink-light/40">
+          지금은 {destination.label}로<ChevronRight className="h-3 w-3" />
+        </p>
+      ) : (
+        <p className="mt-2 text-[10px] text-ink-light/40">개별 풀이 준비 중</p>
+      )}
+    </>
+  )
+
+  const shell = 'relative block rounded-xl border p-4 target:border-gold-500/60 target:bg-gold-500/[0.06] scroll-mt-20'
+
+  // 갈 곳이 없는 테마는 링크로 만들지 않는다 — 눌러도 아무 데도 못 가는 카드를 만들지 않는다.
+  if (!destination) {
+    return (
+      <div id={anchor} className={`${shell} border-white/10 bg-surface/30 opacity-70`}>
+        {body}
+      </div>
+    )
+  }
+
+  return (
+    <Link
+      id={anchor}
+      href={destination.href}
+      aria-label={`${theme.title} — ${destination.label}`}
+      className={`${shell} group border-white/10 bg-surface/60 transition-colors hover:border-gold-500/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60`}
+    >
+      {body}
+    </Link>
+  )
+}
