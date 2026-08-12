@@ -44,6 +44,15 @@ export const GA = {
   checkoutFail: (plan: string, reason: string) =>
     trackEvent({ action: 'checkout_fail', category: 'funnel', label: `${plan}:${reason}` }),
 
+  // ── 결제 도우미 — 상점의 «복채 vs 멤버십» 안내 모달.
+  //    open 의 label 은 auto(첫 진입 자동) / manual(«결제 안내» 버튼) — 자동 노출이 실제로
+  //    읽히는지, 나중에 다시 열어보는 사람이 있는지를 갈라 본다.
+  //    cta 의 label 은 bokchae | membership | voucher | manage.
+  paymentGuideOpen: (trigger: string) =>
+    trackEvent({ action: 'payment_guide_open', category: 'funnel', label: trigger }),
+  paymentGuideClose: () => trackEvent({ action: 'payment_guide_close', category: 'funnel' }),
+  paymentGuideCta: (target: string) => trackEvent({ action: 'payment_guide_cta', category: 'funnel', label: target }),
+
   shareKakao: (contentType: string) => trackEvent({ action: 'share_kakao', category: 'social', label: contentType }),
   shareCopyLink: (contentType: string) =>
     trackEvent({ action: 'share_copy_link', category: 'social', label: contentType }),

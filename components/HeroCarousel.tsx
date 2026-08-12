@@ -7,7 +7,6 @@ import { ArrowRight, Flower } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { EventPopupWrapper } from '@/components/EventPopup'
 
 const SLIDE_INTERVAL_MS = 8000
 
@@ -171,9 +170,6 @@ export function HeroCarousel() {
           </Link>
         </div>
       </div>
-
-      {/* 이벤트 팝업 (비로그인 시 자동 표시) */}
-      <EventPopupWrapper />
 
       {/* Dancheong Divider */}
       <div className="dancheong-divider absolute bottom-24 left-1/2 z-10 w-3/4 -translate-x-1/2" />

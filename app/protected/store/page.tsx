@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getMembershipPlans, getSubscriptionStatus } from '@/app/actions/payment/subscription'
+import { getMembershipPlans, getSubscriptionStatus, type MembershipPlan } from '@/app/actions/payment/subscription'
 import { getActivePlans, getCurrentUserRole } from '@/app/actions/payment/products'
 import { hasChargedBefore } from '@/app/actions/payment/payment'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
@@ -12,9 +12,13 @@ import { TalismanPurchaseSection } from '@/components/membership/talisman-purcha
 import { ShrineShopClient } from '@/components/shrine/ShrineShopClient'
 import { ThemeShopGrid } from '@/components/store/ThemeShopGrid'
 import { StoreFunnelTracker } from '@/components/store/StoreFunnelTracker'
+import { PaymentGuide } from '@/components/store/PaymentGuide'
+import { buildPaymentGuideModel } from '@/components/store/payment-guide-model'
+import { OpenEventClaim } from '@/components/events/open-event-claim'
 import { VoucherShop } from '@/components/store/voucher-shop'
 import { getMyVouchers } from '@/app/actions/payment/vouchers'
-import { getCurrentUserMembership } from '@/lib/auth/subscription'
+import { FREE_RETENTION_DAYS, getCurrentUserMembership, type ActiveMembership } from '@/lib/auth/subscription'
+import type { PricePlan } from '@/types/auth'
 import { getTranslations } from 'next-intl/server'
 import { ChevronLeft, Coins, Crown, Palette, Flame, Ticket, ArrowRight } from 'lucide-react'
 
@@ -43,23 +47,41 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
   const { tab: rawTab } = await searchParams
   const tab: TabKey = TAB_KEYS.includes(rawTab as TabKey) ? (rawTab as TabKey) : 'bokchae'
 
-  const [balance, t] = await Promise.all([getWalletBalance(), getTranslations('store')])
+  // 결제 도우미·각 탭이 같은 값을 두 번 읽지 않도록 페이지에서 한 번만 가져와 내려준다.
+  const [balance, t, plans, packs, membership] = await Promise.all([
+    getWalletBalance(),
+    getTranslations('store'),
+    getMembershipPlans(),
+    getActivePlans(),
+    getCurrentUserMembership(),
+  ])
+
+  const guideModel = buildPaymentGuideModel({
+    plans,
+    packs,
+    retentionDays: FREE_RETENTION_DAYS,
+    membership: membership ? { tier: membership.tier, planId: membership.planId } : null,
+  })
 
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto px-3 py-6 pb-24">
       <StoreFunnelTracker tab={tab} />
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <Link
           href="/protected/profile"
-          className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif"
+          className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif shrink-0"
         >
           <ChevronLeft className="w-4 h-4" />
           {t('backToLibrary')}
         </Link>
-        <span className="text-xs text-ink-light/45 font-sans">
-          {t('balance')} <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}</span>
-          {t('balanceUnit')}
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          {/* 자동 열림은 탭 지정 없이 들어온 «정문» 진입에서만 — 특정 탭으로 바로 온 사람은 막지 않는다 */}
+          <PaymentGuide model={guideModel} autoOpenEligible={rawTab === undefined} />
+          <span className="text-xs text-ink-light/45 font-sans whitespace-nowrap">
+            {t('balance')} <span className="text-gold-500 font-bold tabular-nums">{balance.toLocaleString()}</span>
+            {t('balanceUnit')}
+          </span>
+        </div>
       </div>
 
       <header className="text-center space-y-1.5 mb-5">
@@ -90,39 +112,39 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
         })}
       </nav>
 
-      {tab === 'bokchae' && <BokchaeTab userId={user.id} />}
-      {tab === 'membership' && <MembershipTab />}
-      {tab === 'voucher' && <VoucherTab />}
+      {tab === 'bokchae' && <BokchaeTab userId={user.id} packs={packs} />}
+      {tab === 'membership' && <MembershipTab plans={plans} />}
+      {tab === 'voucher' && <VoucherTab membership={membership} />}
       {tab === 'theme' && <ThemeTab />}
       {tab === 'items' && <ItemsTab />}
     </div>
   )
 }
 
-async function VoucherTab() {
-  const [vouchers, membership] = await Promise.all([getMyVouchers(), getCurrentUserMembership()])
+async function VoucherTab({ membership }: { membership: ActiveMembership | null }) {
+  const vouchers = await getMyVouchers()
   return <VoucherShop initialVouchers={vouchers} isMember={membership !== null} />
 }
 
-async function BokchaeTab({ userId }: { userId: string }) {
-  const [talismanPlans, roleData, alreadyCharged] = await Promise.all([
-    getActivePlans(),
-    getCurrentUserRole(),
-    hasChargedBefore(),
-  ])
+async function BokchaeTab({ userId, packs }: { userId: string; packs: PricePlan[] }) {
+  const [roleData, alreadyCharged] = await Promise.all([getCurrentUserRole(), hasChargedBefore()])
   return (
-    <TalismanPurchaseSection
-      initialPlans={talismanPlans}
-      userRole={roleData.role}
-      memberId={userId}
-      hasCharged={alreadyCharged}
-    />
+    <div className="space-y-3">
+      {/* 오픈 이벤트 일일 복채 — 자동 팝업을 걷어낸 뒤의 수령 경로 */}
+      <OpenEventClaim />
+      <TalismanPurchaseSection
+        initialPlans={packs}
+        userRole={roleData.role}
+        memberId={userId}
+        hasCharged={alreadyCharged}
+      />
+    </div>
   )
 }
 
-async function MembershipTab() {
-  const [plans, sub, t] = await Promise.all([getMembershipPlans(), getSubscriptionStatus(), getTranslations('store')])
-  const sorted = plans.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+async function MembershipTab({ plans }: { plans: MembershipPlan[] }) {
+  const [sub, t] = await Promise.all([getSubscriptionStatus(), getTranslations('store')])
+  const sorted = [...plans].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 
   if (sub.isSubscribed && sub.subscription) {
     return (

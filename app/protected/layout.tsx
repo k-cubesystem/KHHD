@@ -1,7 +1,6 @@
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { MobileHeader } from '@/components/mobile-header'
-import { OpenEventPopup } from '@/components/events/open-event-popup'
 import { GlobalGuide } from '@/components/guide/GlobalGuide'
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
@@ -24,9 +23,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
       {/* Mobile Bottom Navigation */}
       <BottomNav />
-
-      {/* Open Event Popup */}
-      <OpenEventPopup />
 
       {/* 전 페이지 신 가이드 (기능 소개 + 공지) — 신당 방은 자체 가이드 사용 */}
       <GlobalGuide />
