@@ -1,35 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import Link from 'next/link'
 import { Coins, Loader2, TrendingUp, AlertCircle, ShieldAlert, Clock, Target } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { logger } from '@/lib/utils/logger'
-import { GuestCTACard } from '@/components/guest-cta-card'
 import { toast } from 'sonner'
 import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { MembershipNudgeModal } from '@/components/membership/membership-nudge-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
+import type { DestinyTarget } from '@/app/actions/user/destiny'
 
-interface FamilyMember {
-  id: string
-  name: string
-  birth_date: string
-  birth_time?: string
+interface WealthAnalysisContentProps {
+  /** 서버에서 해석한 기본 대상(본인 우선). 등록된 대상이 하나도 없으면 null */
+  initialTargetId: string | null
+  targets: DestinyTarget[]
 }
 
-export function WealthAnalysisContent() {
-  const searchParams = useSearchParams()
-  const targetId = searchParams.get('targetId')
+function targetLabel(target: DestinyTarget): string {
+  return target.name?.trim() || (target.target_type === 'self' ? '본인' : '이름 없음')
+}
 
-  const [member, setMember] = useState<FamilyMember | null>(null)
-  const [loading, setLoading] = useState(true)
+export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalysisContentProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(initialTargetId)
   const [analyzing, setAnalyzing] = useState(false)
   const [wealthAnalysis, setWealthAnalysis] = useState<{
     currentSituation: string
@@ -40,47 +39,21 @@ export function WealthAnalysisContent() {
     longTerm: string
     actionItems: string[]
   } | null>(null)
-  const [isGuest, setIsGuest] = useState(false)
 
   const { nudgeModal, closeNudge, handleDeductResult, trackAnalysis } = useUpgradeNudge()
 
-  useEffect(() => {
-    const fetchMember = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        setIsGuest(true)
-        setLoading(false)
-        return
-      }
-
-      if (targetId) {
-        const { data } = await supabase
-          .from('family_members')
-          .select('id, name, birth_date, birth_time')
-          .eq('id', targetId)
-          .single()
-
-        if (data) {
-          setMember(data)
-        }
-      }
-      setLoading(false)
-    }
-    fetchMember()
-  }, [targetId])
+  const member = targets.find((t) => t.id === selectedId) ?? null
+  const showSelect = targets.length > 1
 
   const handleAnalyze = async () => {
-    if (!member) return
+    if (!member?.birth_date) return
 
     setAnalyzing(true)
     try {
       // Import dynamically to avoid circular dependencies
       const { analyzeWealth } = await import('@/app/actions/ai/wealth')
 
+      // memberId 는 destiny target id — 본인=profiles.id / 가족=family_members.id (다형)
       const result = await analyzeWealth({ memberId: member.id })
 
       // Handle daily limit / premium errors → show upgrade nudge
@@ -108,35 +81,21 @@ export function WealthAnalysisContent() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center p-24 h-full min-h-[50vh]">
-        <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        <p className="mt-4 text-ink/60 font-serif">정보를 불러오는 중...</p>
-      </div>
-    )
-  }
-
-  if (isGuest) {
-    return (
-      <div className="flex flex-col gap-12 w-full max-w-5xl mx-auto py-12 px-3 pb-24">
-        <GuestCTACard
-          title="가입하고 재물운 분석 받기"
-          description="당신의 사주를 기반으로 재물이 모이는 시기와 방향을 정확하게 분석해드립니다."
-          icon={<Coins className="w-8 h-8 text-primary" strokeWidth={1} />}
-        />
-      </div>
-    )
-  }
-
   if (!member) {
     return (
-      <div className="flex flex-col items-center justify-center p-24 h-full min-h-[50vh]">
-        <AlertCircle className="w-12 h-12 text-primary/50 mb-4" />
-        <p className="text-ink-light/60 font-serif">분석할 프로필을 찾을 수 없습니다.</p>
+      <div className="flex flex-col items-center justify-center gap-4 p-24 h-full min-h-[50vh]">
+        <AlertCircle className="w-12 h-12 text-primary/50" />
+        <p className="text-ink-light/60 font-serif">등록된 사주 정보가 없습니다.</p>
+        <Button asChild variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+          <Link href="/protected/settings">내 정보 입력하기</Link>
+        </Button>
       </div>
     )
   }
+
+  const memberName = targetLabel(member)
+  const birthDate = member.birth_date
+  const setupHref = member.target_type === 'self' ? '/protected/settings' : '/protected/family'
 
   return (
     <motion.div
@@ -176,33 +135,66 @@ export function WealthAnalysisContent() {
             <CardTitle className="text-xl font-serif text-ink-light">분석 대상</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-serif font-bold text-ink-light">{member.name}</p>
-                <p className="text-sm text-ink-light/60 mt-1">
-                  생년월일: {new Date(member.birth_date).toLocaleDateString('ko-KR')}
-                </p>
-                {member.birth_time && <p className="text-sm text-ink-light/60">생시: {member.birth_time}</p>}
-              </div>
-              <Button
-                onClick={handleAnalyze}
-                disabled={analyzing || wealthAnalysis !== null}
-                className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
+            {showSelect && (
+              <Select
+                value={selectedId ?? ''}
+                onValueChange={(v) => {
+                  setSelectedId(v || null)
+                  setWealthAnalysis(null)
+                }}
               >
-                {analyzing ? (
+                <SelectTrigger className="w-full bg-surface/20 border-primary/20 text-ink-light font-light text-sm">
+                  <SelectValue placeholder="분석 대상 선택" />
+                </SelectTrigger>
+                <SelectContent className="bg-surface border-primary/20">
+                  {targets.map((t) => (
+                    <SelectItem key={t.id} value={t.id} className="font-light text-ink-light">
+                      {targetLabel(t)}
+                      {t.target_type === 'self' ? ' (본인)' : ` (${t.relation_type})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-2xl font-serif font-bold text-ink-light">{memberName}</p>
+                {birthDate ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    분석 중...
+                    <p className="text-sm text-ink-light/60 mt-1">
+                      생년월일: {new Date(birthDate).toLocaleDateString('ko-KR')}
+                    </p>
+                    {member.birth_time && <p className="text-sm text-ink-light/60">생시: {member.birth_time}</p>}
                   </>
-                ) : wealthAnalysis !== null ? (
-                  '분석 완료'
                 ) : (
-                  <>
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    재물운 분석 시작
-                  </>
+                  <p className="text-sm text-ink-light/60 mt-1">생년월일이 없어 분석할 수 없습니다.</p>
                 )}
-              </Button>
+              </div>
+              {birthDate ? (
+                <Button
+                  onClick={handleAnalyze}
+                  disabled={analyzing || wealthAnalysis !== null}
+                  className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
+                >
+                  {analyzing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      분석 중...
+                    </>
+                  ) : wealthAnalysis !== null ? (
+                    '분석 완료'
+                  ) : (
+                    <>
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      재물운 분석 시작
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button asChild variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                  <Link href={setupHref}>사주 등록하기</Link>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -321,7 +313,7 @@ export function WealthAnalysisContent() {
           <ShareSaveButtons
             resultContainerId="wealth-result-capture"
             analysisTitle="재물운 분석"
-            memberName={member?.name}
+            memberName={memberName}
           />
 
           <ServiceDisclaimer className="mt-2" />
@@ -329,7 +321,7 @@ export function WealthAnalysisContent() {
       )}
 
       {/* Empty State */}
-      {!wealthAnalysis && !analyzing && (
+      {!wealthAnalysis && !analyzing && birthDate && (
         <motion.div variants={fadeInUp} className="text-center py-12">
           <Coins className="w-16 h-16 text-primary/30 mx-auto mb-4" />
           <p className="text-ink-light/50 font-serif">위의 버튼을 눌러 재물운 분석을 시작하세요</p>

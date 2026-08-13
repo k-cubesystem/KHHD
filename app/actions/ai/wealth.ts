@@ -1,6 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getDestinyTarget } from '../user/destiny'
 import { deductTalisman } from '../payment/wallet'
 import { refundBokchae } from '@/lib/services/bokchae'
 import { UNLIMITED_BALANCE } from '@/lib/auth/privileges'
@@ -65,7 +66,22 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       return { success: false, error: '로그인이 필요합니다.' }
     }
 
-    // 1. 복채 차감 (재물운 분석 비용)
+    // 1. 대상 조회 — destiny target 은 다형 id(본인=profiles.id / 가족=family_members.id)이므로
+    //    단일 출처인 v_destiny_targets(getDestinyTarget)로만 해석한다.
+    //    차감보다 먼저 본다 — 대상이 없으면 복채를 건드리지 않는다.
+    const member = await getDestinyTarget(params.memberId)
+
+    if (!member) {
+      return { success: false, error: '대상 정보를 찾을 수 없습니다.' }
+    }
+
+    const birthDate = member.birth_date
+    if (!birthDate) {
+      return { success: false, error: '생년월일 정보가 없습니다. 사주 정보를 먼저 입력해주세요.' }
+    }
+    const memberName = member.name?.trim() || '본인'
+
+    // 2. 복채 차감 (재물운 분석 비용)
     const deductResult = await deductTalisman('wealth_analysis', WEALTH_ANALYSIS_COST)
 
     if (!deductResult.success) {
@@ -80,23 +96,11 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
       refundOnFailure = () => refundBokchae(user.id, WEALTH_ANALYSIS_COST, '재물운 분석 실패 환불')
     }
 
-    // 2. 가족 구성원 정보 조회
-    const { data: member, error: memberError } = await supabase
-      .from('family_members')
-      .select('*')
-      .eq('id', params.memberId)
-      .single()
-
-    if (memberError || !member) {
-      if (refundOnFailure) await refundOnFailure()
-      return { success: false, error: '대상 정보를 찾을 수 없습니다.' }
-    }
-
     // 5. 해화지기 마스터 엔진으로 프롬프트 조립 (재물 심층 - 구조화 JSON)
     const { prompt } = await buildMasterPromptForAction(
       {
-        name: member.name,
-        birthDate: member.birth_date,
+        name: memberName,
+        birthDate,
         birthTime: member.birth_time || '12:00',
         gender: (member.gender || 'male') as 'male' | 'female',
         isSolar: isSolarCalendar(member.calendar_type),
@@ -151,9 +155,9 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     // 7. 분석 기록 저장 (recordFortuneEntry는 saveAnalysisHistory 내부에서 자동 호출됨)
     try {
       await saveAnalysisHistoryObserved({
-        target_id: params.memberId,
-        target_name: member.name,
-        target_relation: member.relationship || '본인',
+        target_id: member.id,
+        target_name: memberName,
+        target_relation: member.relation_type || '본인',
         category: 'WEALTH',
         result_json: analysis,
         summary: '재물운 심층 분석 결과',
