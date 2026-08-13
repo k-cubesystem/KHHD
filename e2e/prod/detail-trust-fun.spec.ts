@@ -8,11 +8,24 @@ test.describe('디테일 신뢰·재미 (R1/F2)', () => {
   test('비운 허브 + 옮긴 진입 경로 + 관상 2만냥 표기 + 운세 구조 요소', async ({ page }) => {
     test.setTimeout(120_000)
 
-    // 허브 비우기(CEO 2026-08-13): 「오늘의 정성」 카드는 없어졌다(구 F-6 단언을 대체).
+    // 허브 비우기 + 앱 홈 개편(CEO 2026-08-13): 「오늘의 정성」은 없어졌고, ② 「무엇으로
+    // 볼까요」 카드 4장은 상단 아이콘 런처 8칸으로 흡수됐다(링크 무손실).
     await page.goto('/protected/analysis', { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: '인기테마운세' })).toBeVisible({ timeout: 25_000 })
     await expect(page.getByText('오늘의 정성')).toHaveCount(0)
-    console.log('[PASS] 허브 = 인기테마운세 + 무엇으로 볼까요')
+
+    const launcher = page.getByRole('navigation', { name: '바로 보기' })
+    await expect(launcher).toBeVisible()
+    await expect(launcher.getByRole('link')).toHaveCount(8)
+    for (const label of ['사주풀이', '궁합', '관상', '손금', '풍수', '재물운', '종합풀이', '테마 전체']) {
+      await expect(launcher.getByRole('link', { name: label })).toBeVisible()
+    }
+    // 🔴 하루 전 CEO 가 허브에서 내린 셋은 런처에도 없다.
+    for (const gone of ['오늘의 운세', '2026 병오년', '고민상담']) {
+      await expect(launcher.getByRole('link', { name: gone })).toHaveCount(0)
+    }
+    await expect(page.getByText('무엇으로 볼까요')).toHaveCount(0)
+    console.log('[PASS] 허브 = 아이콘 런처 8칸 + 인기테마운세')
 
     // 🔴 오늘의 운세·2026 병오년의 유일한 입구 — 허브에서 내려와 테마 목록이 진다.
     await page.goto('/protected/analysis/theme', { waitUntil: 'domcontentloaded' })

@@ -1,11 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
-import { Card } from '@/components/ui/card'
 import { ChevronRight } from 'lucide-react'
+import { HubLauncher } from './HubLauncher'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 import {
@@ -17,51 +16,20 @@ import {
 } from '@/lib/domain/theme-fortune/themes'
 
 /**
- * 사주·궁합 허브 본문 — 두 섹션만 남는다(CEO 2026-08-13 「대폭 비우기」).
+ * 사주·궁합 허브 본문 — 「앱 홈」 문법으로 개편(CEO 2026-08-13 "상단에 어플처럼 아이콘과 제목").
  *
- * 걷어낸 것: 오늘의 정성 카드 · 절기 특별 이벤트 배너 · ③ 더 깊이 들여다보기 · 하단 오늘의
- * 운세 카드. 넷 다 컴포넌트째 사라졌다(소비처 0).
+ *   [아이콘 런처 8칸] → [사주 유도 카드] → [① 인기테마운세] → (여정은 상위가 그린다)
+ *
+ * 🔴 구 ② 「무엇으로 볼까요」 카드 4장(궁합·관상·손금·풍수)은 **런처가 흡수했다.**
+ *    카드를 되살리면 같은 문이 한 화면에 둘이 된다. 그 넷의 링크는 `HUB_LAUNCHER` 에 있다.
+ *
+ * 앞선 비우기(같은 날 새벽)에서 걷어낸 것: 오늘의 정성 카드 · 절기 특별 이벤트 배너 ·
+ * ③ 더 깊이 들여다보기 · 하단 오늘의 운세 카드. 넷 다 컴포넌트째 사라졌다(소비처 0).
  *
  * 🔴 ③ 이 들고 있던 **오늘의 운세·2026 병오년은 지운 게 아니라 옮겼다** — 테마 목록
  *    (`THEME_LIST_PATH`)의 「지금 바로 볼 수 있는 풀이」가 두 화면의 유일한 진입 경로다.
  *    여기서 카드를 되살리기 전에 그 목록을 먼저 볼 것(길이 둘로 갈라진다).
  */
-
-// 아이콘 → 「설빛 온기」 일러스트 (PRD §7, public/icons/hub)
-const STUDIO_CARDS = [
-  {
-    id: 'compatibility',
-    label: '궁합',
-    desc: '두 사람의 오행 기운으로 관계의 해법을 찾습니다',
-    img: '/icons/hub/gunghap.webp',
-    bg: 'bg-rose-500/10',
-    href: '/protected/analysis/compatibility',
-  },
-  {
-    id: 'face',
-    label: '관상',
-    desc: '얼굴에 새겨진 운명의 지도를 읽어드립니다',
-    img: '/icons/hub/gwansang.webp',
-    bg: 'bg-amber-500/10',
-    href: '/protected/studio/face',
-  },
-  {
-    id: 'palm',
-    label: '손금',
-    desc: '손바닥 위의 생명선·지능선·감정선을 해석합니다',
-    img: '/icons/hub/songeum.webp',
-    bg: 'bg-sky-500/10',
-    href: '/protected/studio/palm',
-  },
-  {
-    id: 'fengshui',
-    label: '풍수',
-    desc: '공간의 기운을 분석하여 길한 배치를 제안합니다',
-    img: '/icons/hub/pungsu.webp',
-    bg: 'bg-teal-500/10',
-    href: '/protected/studio/fengshui',
-  },
-] as const
 
 /**
  * 바로가기가 데려다 놓은 자리가 고정 헤더(h-14=56px) 밑에 깔리지 않도록 하는 여백.
@@ -71,8 +39,6 @@ const STUDIO_CARDS = [
 const SECTION_ANCHOR = 'scroll-mt-20 outline-none'
 
 export function AnalysisDashboard() {
-  const router = useRouter()
-
   return (
     <motion.div
       variants={staggerContainer}
@@ -80,6 +46,11 @@ export function AnalysisDashboard() {
       animate="animate"
       className="max-w-screen-sm mx-auto px-2 space-y-6"
     >
+      {/* 아이콘 런처 — 화면의 첫 자리. 앱 헤더(고정 상단 바) 바로 밑이다. */}
+      <motion.div variants={fadeInUp}>
+        <HubLauncher />
+      </motion.div>
+
       {/* 0. 사주 유도 카드 (1장 — 한국 전통풍) */}
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
@@ -141,52 +112,6 @@ export function AnalysisDashboard() {
           테마 전체 보기
           <ChevronRight className="h-3.5 w-3.5" />
         </Link>
-      </motion.section>
-
-      {/* ② 무엇으로 볼까요 — 도구를 아는 사람의 입구. 링크·아이콘 무손실 승계 (2열) */}
-      <motion.section
-        variants={fadeInUp}
-        id={HUB_SECTIONS.studio.id}
-        aria-labelledby={hubHeadingId(HUB_SECTIONS.studio.id)}
-        tabIndex={-1}
-        className={`space-y-3 ${SECTION_ANCHOR}`}
-      >
-        <div className="dancheong-divider my-4" />
-        <div className="flex items-center gap-2 px-1">
-          <div className="h-px w-6 bg-gold-500/40" />
-          <h2 id={hubHeadingId(HUB_SECTIONS.studio.id)} className="text-sm font-serif text-gold-500/80">
-            {HUB_SECTIONS.studio.title}
-          </h2>
-        </div>
-
-        <nav role="navigation" aria-label="통합분석 메뉴" className="grid grid-cols-2 gap-3">
-          {STUDIO_CARDS.map((card) => {
-            return (
-              <Card
-                key={card.id}
-                onClick={() => router.push(card.href)}
-                aria-label={card.label}
-                className="group cursor-pointer card-glass-manse transition-all duration-200 p-4 rounded-xl active:scale-[0.97] hover:border-gold-500/30 relative overflow-hidden"
-              >
-                <div className="flex flex-col gap-2.5">
-                  <div
-                    className={`w-11 h-11 rounded-xl ${card.bg} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform overflow-hidden`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={card.img} alt="" className="w-9 h-9 object-contain" draggable={false} />
-                  </div>
-                  <div>
-                    <span className="block text-sm font-medium text-ink-light">{card.label}</span>
-                    <span className="block text-[11px] text-ink-light/70 font-light mt-1 leading-relaxed">
-                      {card.desc}
-                    </span>
-                  </div>
-                </div>
-                <ChevronRight className="absolute bottom-3 right-3 w-3.5 h-3.5 text-ink-light/20 group-hover:text-gold-500/50 transition-colors" />
-              </Card>
-            )
-          })}
-        </nav>
       </motion.section>
     </motion.div>
   )

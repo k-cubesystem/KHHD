@@ -213,6 +213,13 @@ const SETS = {
     ['jikjang', '직장운 — traditional Korean gat hat and rising golden steps'],
     ['hakeop', '학업운 — glowing book with brush and inkstone'],
     ['budongsan', '부동산 — hanok house on auspicious hill with sun'],
+    // 허브 아이콘 런처 3칸(2026-08-13) — 기존 11종에 없던 자리. 결은 위와 같은 tilePrompt.
+    // hakeop(고서+벼루)과 겹치지 않도록 사주는 «네 기둥» 자체를 그린다.
+    // 1차 산출물은 기둥에 「사주팔자」 글자가 새겨져 나왔다(다른 10종은 글자가 없다).
+    // 규칙대로 설명을 늘리지 않고 관찰 가능한 사실 하나(민무늬 나뭇결)만 더했다.
+    ['saju', '사주팔자 — four slender wooden pillars with smooth bare woodgrain surfaces standing in a row on a lacquer base, golden constellation lines arcing behind them'],
+    ['samhap', '삼합 종합풀이 — three brass rings interlocking in a triangle, warm golden light glowing where they overlap'],
+    ['themes', '운세 테마 모음 — five hanji fortune cards fanned out in an arc, tied together with a red silk cord'],
   ].map(([slug, d]) => ({ slug, out: `icons/hub/${slug}.webp`, size: 256, prompt: tilePrompt(d) })),
 
   // F. 하단 네비 5 (소형 렌더 — 굵은 실루엣)

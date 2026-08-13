@@ -1,20 +1,21 @@
 /**
- * 사주·궁합 허브 본문의 두 섹션이 화면에서 실제로 성립하는지.
+ * 사주·궁합 허브 본문(런처 + 인기테마운세)이 화면에서 실제로 성립하는지.
  *
  * 이 테스트가 지키는 것은 두 가지다.
- * ① **잃지 않았는가** — 궁합·관상·손금·풍수 4장은 이 화면이 유일한 허브 진입 경로다.
- *    카드를 지우면 그 넷은 허브에서 사라진다. 링크·개수를 문자열로 못 박는다.
+ * ① **잃지 않았는가** — 궁합·관상·손금·풍수는 이 화면이 유일한 허브 진입 경로다. 구 ② 카드
+ *    4장이 아이콘 런처로 «흡수»된 것이지 지워진 게 아님을 링크·아이콘으로 못 박는다.
  * ② **죽은 카드가 없는가** — 인기테마운세 카드는 목록 페이지의 «그 카드 자리»로 가야 한다.
  *    구 목업 라우트(`/analysis/theme/{slug}`)로 가면 맵에 없어 허브로 튕긴다.
  *
- * 허브 전체 구성(무엇이 없어졌는가 · 여정이 맨 아래인가)은 hub-layout.test.tsx 가 본다.
+ * 허브 전체 구성(무엇이 없어졌는가 · 런처가 맨 위인가 · 여정이 맨 아래인가)은
+ * hub-layout.test.tsx 가, 런처 표 자체의 계약은 lib/domain/analysis 쪽 테스트가 본다.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { act, render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { useRouter } from 'next/navigation'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
+import { HUB_LAUNCHER } from '@/lib/domain/analysis/hub-home'
 import { HUB_SECTIONS } from '@/lib/domain/analysis/hub-sections'
 import { hubThemePicks, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
@@ -22,7 +23,7 @@ jest.mock('@/components/shared/AmbientVideo', () => ({
   AmbientVideo: () => null,
 }))
 
-/** 카드가 `router.push` 로 여는 화면을 보려면 push 가 렌더마다 같은 함수여야 한다. */
+/** 사주 유도 카드(`MasterpieceSection`)가 `useRouter` 를 쓴다 — 렌더가 서려면 필요하다. */
 const push = jest.fn()
 
 beforeEach(() => {
@@ -92,51 +93,60 @@ describe('① 인기테마운세', () => {
   })
 })
 
-describe('② 무엇으로 볼까요 — 기존 진입 경로 무손실', () => {
+describe('아이콘 런처 — 구 ② 카드 4장을 흡수한 자리', () => {
   const STUDIO = [
-    { label: '궁합', href: '/protected/analysis/compatibility' },
-    { label: '관상', href: '/protected/studio/face' },
-    { label: '손금', href: '/protected/studio/palm' },
-    { label: '풍수', href: '/protected/studio/fengshui' },
+    { label: '궁합', href: '/protected/analysis/compatibility', icon: '/icons/hub/gunghap.webp' },
+    { label: '관상', href: '/protected/studio/face', icon: '/icons/hub/gwansang.webp' },
+    { label: '손금', href: '/protected/studio/palm', icon: '/icons/hub/songeum.webp' },
+    { label: '풍수', href: '/protected/studio/fengshui', icon: '/icons/hub/pungsu.webp' },
   ]
 
-  it('네 장이 그대로 있고 각자의 화면을 연다', async () => {
-    const user = userEvent.setup()
+  it('구 카드 4장의 링크·아이콘이 런처 칸으로 그대로 넘어왔다', async () => {
     const { container } = await renderDashboard()
-    const section = sectionOf(container, HUB_SECTIONS.studio.id)
+    const section = sectionOf(container, HUB_SECTIONS.launcher.id)
 
-    expect(within(section).getAllByLabelText(/궁합|관상|손금|풍수/)).toHaveLength(STUDIO.length)
+    for (const { label, href, icon } of STUDIO) {
+      const link = within(section).getByRole('link', { name: label })
 
-    for (const { label, href } of STUDIO) {
-      push.mockClear()
-      await user.click(within(section).getByLabelText(label))
-      expect(push).toHaveBeenCalledWith(href)
+      expect(link.getAttribute('href')).toBe(href)
+      expect(link.querySelector('img')?.getAttribute('src')).toBe(icon)
     }
   })
 
-  it('카드 아이콘(설빛 온기 일러스트)도 그대로다', async () => {
+  it('여덟 칸이 표 순서대로 서고 아이콘은 전부 hub webp 다', async () => {
     const { container } = await renderDashboard()
-    const section = sectionOf(container, HUB_SECTIONS.studio.id)
+    const section = sectionOf(container, HUB_SECTIONS.launcher.id)
 
-    const sources = Array.from(section.querySelectorAll('img')).map((image) => image.getAttribute('src'))
-
-    expect(sources).toEqual([
-      '/icons/hub/gunghap.webp',
-      '/icons/hub/gwansang.webp',
-      '/icons/hub/songeum.webp',
-      '/icons/hub/pungsu.webp',
-    ])
+    expect(within(section).getAllByRole('link')).toHaveLength(HUB_LAUNCHER.length)
+    expect(Array.from(section.querySelectorAll('img')).map((image) => image.getAttribute('src'))).toEqual(
+      HUB_LAUNCHER.map((entry) => entry.icon)
+    )
   })
 
-  it('섹션 제목은 「무엇으로 볼까요」다 (구 「청담해화당 통합분석」은 없어졌다)', async () => {
+  it('칸은 router.push 가 아니라 진짜 <a> 다 (새 탭·미리보기가 살아 있다)', async () => {
+    // 구 카드는 onClick={() => router.push(...)} 였다 — 링크가 아니라 클릭 핸들러였다.
     const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.launcher.id)
 
-    expect(within(sectionOf(container, HUB_SECTIONS.studio.id)).getByText('무엇으로 볼까요')).not.toBeNull()
+    for (const entry of HUB_LAUNCHER) {
+      const link = within(section).getByRole('link', { name: entry.label })
+
+      expect(link.tagName).toBe('A')
+      expect(link.getAttribute('href')).toBeTruthy()
+    }
+  })
+
+  it('제목은 화면에 글자로 서지 않는다 (아이콘마다 제 이름을 달고 있다)', async () => {
+    const { container } = await renderDashboard()
+    const heading = container.querySelector(`#${HUB_SECTIONS.launcher.id}-title`)
+
+    expect(heading?.className).toContain('sr-only')
+    expect(screen.queryByText('무엇으로 볼까요')).toBeNull()
     expect(screen.queryByText('청담해화당 통합분석')).toBeNull()
   })
 })
 
-describe('허브 본문은 두 섹션뿐이다 (CEO 2026-08-13)', () => {
+describe('허브 본문은 런처 + 한 섹션뿐이다 (CEO 2026-08-13)', () => {
   it('오늘의 정성·절기 배너·더 깊이 들여다보기를 그리지 않는다', async () => {
     const { container } = await renderDashboard()
 
@@ -146,6 +156,7 @@ describe('허브 본문은 두 섹션뿐이다 (CEO 2026-08-13)', () => {
     expect(container.querySelector('#hub-deeper')).toBeNull()
     expect(container.querySelector('#hub-ritual')).toBeNull()
     expect(container.querySelector('#hub-daily')).toBeNull()
+    expect(container.querySelector('#hub-studio')).toBeNull()
   })
 
   it('서버 액션을 부르는 카드가 하나도 남지 않았다', async () => {

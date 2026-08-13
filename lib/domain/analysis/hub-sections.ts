@@ -11,6 +11,12 @@
  * 상단 바로가기 칩(`HubSectionNav`)도 함께 내렸다 — 섹션이 셋뿐인 화면에서 칩은 한 번 더
  * 누르게 만들 뿐이다. 그래서 이 표에는 칩 라벨(`label`)·조건부 노출(`condition`)이 없다.
  *
+ * 2026-08-13 저녁 앱 홈 개편(CEO 지시 "상단에 어플처럼 아이콘과 제목"): 셋의 «수»는 그대로고
+ * 첫 자리가 바뀌었다. ② 「무엇으로 볼까요」 카드 4장은 맨 위 **아이콘 런처 8칸**으로 흡수돼
+ * 사라졌다(링크 무손실 — `lib/domain/analysis/hub-home.ts` `HUB_LAUNCHER`).
+ * 앱 헤더는 이 표에 없다 — 페이지 본문이 아니라 고정 상단 바(`components/mobile-header.tsx`)가
+ * 그린다. 허브에서는 그 바가 뒤로가기 대신 앱 홈 머리글로 선다(최상위 탭에 뒤로가기는 없다).
+ *
  * 🔴 「더 깊이」가 들고 있던 **오늘의 운세·2026 병오년은 지운 게 아니라 옮겼다.**
  *    테마 목록(`/protected/analysis/theme`)의 「지금 바로 볼 수 있는 풀이」가 지금 두 화면의
  *    유일한 진입 경로다(`lib/domain/theme-fortune/themes.ts` `STANDALONE_ROUTES`).
@@ -31,15 +37,18 @@ export interface HubSection {
 }
 
 export const HUB_SECTIONS = {
+  /**
+   * 맨 위 — 아이콘 런처 8칸. 구 ② 「무엇으로 볼까요」의 자리를 잇는다.
+   * 제목은 화면에 글자로 서지 않는다(`sr-only`) — 아이콘마다 제 이름을 달고 있다.
+   */
+  launcher: {
+    id: 'hub-launcher',
+    title: '바로 보기',
+  },
   /** ① 질문으로 들어오는 입구. */
   themeFortune: {
     id: 'hub-theme',
     title: '인기테마운세',
-  },
-  /** ② 도구를 아는 사람의 입구. */
-  studio: {
-    id: 'hub-studio',
-    title: '무엇으로 볼까요',
   },
   /** 맨 하단 — 사주→관상→손금→풍수→종합의 진행. 화면을 다 본 뒤에 만나는 자리다. */
   journey: {
