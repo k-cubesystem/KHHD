@@ -30,6 +30,9 @@ export const CACHE_TTL_HOURS: Record<AnalysisCategory, number> = {
   WEALTH: 72,
   NEW_YEAR: 72,
   SAMHAP: 24,
+  // 인기테마운세는 이 유틸을 타지 않는다 — 캐시 판정이 (대상, 테마) 쌍이라 카테고리만으로는
+  // 못 가른다(`app/actions/theme-fortune/analyze.ts` 가 직접 본다). 값은 그 7일과 같게 둔다.
+  THEME: 24 * 7,
 }
 
 export interface CachedAnalysisRecord {

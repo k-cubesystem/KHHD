@@ -28,6 +28,7 @@ export type FeatureCostKey =
   | 'wealth'
   | 'imageGeneration'
   | 'samhap'
+  | 'themeFortune'
 
 export interface FeatureCost {
   /** 표시 복채(만냥). 실차감과 동일. */
@@ -48,6 +49,10 @@ export const FEATURE_COST = {
   imageGeneration: { display: 5, free: false },
   // 삼합(三合) 종합 리포트 — 신규 프리미엄 기능(사주+관상+손금 종합). 표시=실차감 5만냥.
   samhap: { display: 5, free: false },
+  // 인기테마운세 개별 풀이 — 사주 1인 골격 + AI 1회라 사주·관상과 같은 무게(기획 §7-1 «기본» 단).
+  // 🔴 5만냥을 쓰지 않는다 — 같은 값이면 재물 심층과 구분이 안 된다.
+  //    무료 미끼 테마(§7-1)는 이 키를 안 쓰고 차감 경로 자체를 타지 않는다(themes.ts themeReadingCostKey).
+  themeFortune: { display: 2, free: false },
 } as const satisfies Record<FeatureCostKey, FeatureCost>
 
 /** MISSION_CATEGORIES / FORTUNE_MISSIONS 의 category 값 → FeatureCostKey */

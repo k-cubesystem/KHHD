@@ -10,8 +10,10 @@ import { join } from 'path'
 import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
 import {
   DEFAULT_THEME_TAB,
+  hasThemeReading,
   HUB_THEME_COUNT,
   hubThemePicks,
+  isFreeReading,
   isFreeRoute,
   isFreeTheme,
   openRoutes,
@@ -29,8 +31,13 @@ import {
   themeCostKey,
   themeCostLabel,
   themeDestination,
+  themeEntryHref,
+  themeEntryLabel,
   themeFallbackImage,
   themeListHref,
+  themeReadingCostKey,
+  themeReadingCostLabel,
+  themeReadingPath,
   themesByTab,
   themeThumbnail,
   themeThumbnailPath,
@@ -235,13 +242,45 @@ describe('THEME_FORTUNES — 단가는 feature-costs 에서만 온다 (마스터
     expect(wealth).toMatch(/FEATURE_COST\.wealth\.display/)
   })
 
-  it('무료 판정은 연결 화면을 따른다', () => {
+  it('무료 판정은 «카드가 실제로 가는 곳»을 따른다', () => {
+    // 🔴 개별 풀이가 선 테마는 destination 이 아니라 자기 풀이의 값이다. 링크는 풀이로 가는데
+    //    배지가 옛 도착 화면 값을 쓰면 「무료」라고 적힌 카드가 복채를 받는다.
     for (const theme of THEME_FORTUNES) {
       const destination = themeDestination(theme)
 
-      if (!destination) expect(isFreeTheme(theme)).toBe(false)
+      if (hasThemeReading(theme)) expect(isFreeTheme(theme)).toBe(isFreeReading(theme))
+      else if (!destination) expect(isFreeTheme(theme)).toBe(false)
       else if (destination.costKey === null) expect(isFreeTheme(theme)).toBe(true)
       else expect(isFreeTheme(theme)).toBe(FEATURE_COST[destination.costKey].free)
+    }
+  })
+
+  it('🔴 개별 풀이가 선 테마의 배지·링크·실차감이 한 값을 가리킨다', () => {
+    const readingThemes = THEME_FORTUNES.filter(hasThemeReading)
+    expect(readingThemes.length).toBeGreaterThan(0)
+
+    for (const theme of readingThemes) {
+      expect(themeEntryHref(theme)).toBe(themeReadingPath(theme.id))
+      expect(themeCostKey(theme)).toBe(themeReadingCostKey(theme))
+      expect(themeCostLabel(theme)).toBe(themeReadingCostLabel(theme))
+      // 「지금은 ○○로」는 제자리로 가는 카드에 적을 말이 아니다.
+      expect(themeEntryLabel(theme)).toBeNull()
+    }
+  })
+
+  it('무료 미끼는 카테고리당 1종이고, 그 둘만 복채를 받지 않는다 (마스터 §7-1)', () => {
+    const free = THEME_FORTUNES.filter((theme) => theme.freeReading)
+
+    expect(free.map((theme) => theme.id)).toEqual(['what-next', 'money-self'])
+    for (const theme of free) {
+      expect(themeReadingCostKey(theme)).toBeNull()
+      expect(themeReadingCostLabel(theme)).toBe('무료')
+      expect(isFreeReading(theme)).toBe(true)
+    }
+    // 미끼가 아닌 테마는 예외 없이 단일 소스 키를 쓴다(리터럴 금액 금지).
+    for (const theme of THEME_FORTUNES.filter((item) => !item.freeReading)) {
+      expect(themeReadingCostKey(theme)).toBe('themeFortune')
+      expect(themeReadingCostLabel(theme)).toBe(formatFeatureCost('themeFortune'))
     }
   })
 })
@@ -293,9 +332,11 @@ describe('진입 경로 — 가짜 화면으로 보내지 않는다', () => {
     expect(openRoutes()).toHaveLength(Object.keys(THEME_DESTINATIONS).length + Object.keys(STANDALONE_ROUTES).length)
   })
 
-  it('테마 slug 로 /analysis/theme/{slug} 를 링크하지 않는다', () => {
-    // 그 자리는 구 5개 slug 를 진짜 화면으로 넘기는 **리다이렉트 전용**이다.
-    // 새 slug 로 들어가면 맵에 없어 허브로 튕긴다 — 눌러도 아무 데도 못 가는 카드가 된다.
+  it('«지금 돌아가는 화면» 표와 허브 카드는 테마 slug 로 들어가지 않는다', () => {
+    // `/analysis/theme/{slug}` 는 이제 세 일을 한다 — 구 5개 slug 리다이렉트 · 테마 상세 · 허브 폴백.
+    // 그래서 개별 풀이가 선 테마만 그리로 가고(`themeEntryHref`), 아래 둘은 여전히 아니다:
+    //   ① THEME_DESTINATIONS/STANDALONE 은 «지금 돌아가는 다른 화면»의 표다
+    //   ② 허브 카드는 목록의 그 카드 자리로 간다(복채를 한 번 보여 준 다음 누르게 한다)
     for (const route of openRoutes()) {
       expect(route.href.startsWith(`${THEME_LIST_PATH}/`)).toBe(false)
     }
@@ -463,7 +504,7 @@ describe('썸네일 — 경로 규약', () => {
   })
 
   it('규약은 테마 id 하나로 경로를 만든다 (파일명이 표와 갈라지지 않는다)', () => {
-    expect(themeThumbnailPath('leave-or-stay')).toBe('/images/theme-thumbs/leave-or-stay-v1.webp')
+    expect(themeThumbnailPath('leave-or-stay')).toBe('/images/theme-thumbs/leave-or-stay-v2.webp')
   })
 })
 

@@ -2,10 +2,23 @@
 
 import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Clock, Star, User2, Hand, Home, Heart, Sun, Coins, Sparkles, ChevronRight, Trash2 } from 'lucide-react'
+import {
+  Clock,
+  Star,
+  User2,
+  Hand,
+  Home,
+  Heart,
+  Sun,
+  Coins,
+  Sparkles,
+  ChevronRight,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { formatKstDateTime } from '@/lib/utils'
-import { deleteAnalysisHistory, type AnalysisHistory } from '@/app/actions/user/history'
+import { deleteAnalysisHistory, type AnalysisCategory, type AnalysisHistory } from '@/app/actions/user/history'
 
 interface AnalysisCardProps {
   record: AnalysisHistory
@@ -24,7 +37,8 @@ const categoryConfig = {
   TODAY: { icon: Sun, label: '오늘의운세', color: 'text-primary-dark' },
   NEW_YEAR: { icon: Sparkles, label: '신년운세', color: 'text-primary-dark' },
   SAMHAP: { icon: Star, label: '종합사주풀이', color: 'text-primary' },
-}
+  THEME: { icon: Sparkles, label: '인기테마운세', color: 'text-primary' },
+} satisfies Record<AnalysisCategory, { icon: LucideIcon; label: string; color: string }>
 
 export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick, onDelete }: AnalysisCardProps) {
   const config = categoryConfig[record.category] || categoryConfig.TODAY

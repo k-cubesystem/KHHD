@@ -4,13 +4,15 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { ThemeThumbnail } from '@/components/analysis/ThemeThumbnail'
 import {
+  hasThemeReading,
   openRoutes,
   resolveThemeTab,
   routeCostLabel,
   THEME_TABS,
   themeAnchorId,
   themeCostLabel,
-  themeDestination,
+  themeEntryHref,
+  themeEntryLabel,
   themesByTab,
   isFreeRoute,
   isFreeTheme,
@@ -33,9 +35,10 @@ export const metadata: Metadata = {
  * 허브 비우기(CEO 2026-08-13)로 「더 깊이 들여다보기」가 없어지면서 두 화면은 링크가 한 곳도
  * 남지 않았다. 하단 「지금 바로 볼 수 있는 풀이」가 지금 그 둘의 유일한 경로다.
  *
- * ## 🔴 개별 테마 풀이는 아직 없다
- * 그래서 카드는 **지금 실제로 돌아가는 화면**으로 이어지고, 어디로 가는지를 카드 위에 적는다.
- * 전 사용자 동일 「85점」을 띄우던 목업으로는 보내지 않는다(그 라우트는 리다이렉트가 됐다).
+ * ## 🔴 카드가 «실제로 가는 곳»만 적는다
+ * 개별 풀이가 선 테마는 자기 화면(`/analysis/theme/{id}`)으로, 아직 없는 테마는 **지금 실제로
+ * 돌아가는 화면**으로 이어지고 어디로 가는지를 카드 위에 적는다. 전 사용자 동일 「85점」을
+ * 띄우던 목업으로는 보내지 않는다(그 라우트는 리다이렉트·상세 렌더가 됐다).
  *
  * 탭은 평범한 링크(`?tab=`)다 — JS 없이도 동작하고, 허브에서 넘어온 앵커(`#theme-{id}`)가
  * 그대로 살아 있어야 «내가 누른 카드»가 어디인지 보인다.
@@ -100,8 +103,7 @@ export default async function ThemeFortuneListPage({ searchParams }: { searchPar
             지금 바로 볼 수 있는 풀이
           </h2>
           <p className="px-1 text-[11px] font-light leading-relaxed text-ink-light/50">
-            테마마다의 풀이는 준비 중입니다. 위 카드는 아래 풀이로 이어지고, 오늘의 운세·2026 병오년도 여기서 바로
-            열립니다.
+            아직 자기 풀이가 없는 카드는 아래 풀이로 이어집니다. 오늘의 운세·2026 병오년도 여기서 바로 열립니다.
           </p>
           <ul className="flex flex-wrap gap-2">
             {openRoutes().map((route) => (
@@ -138,14 +140,19 @@ export default async function ThemeFortuneListPage({ searchParams }: { searchPar
 /**
  * 테마 카드.
  *
- * 「지금은 ○○로 이어집니다」를 카드에 적는 이유: 제목이 약속하는 개별 풀이가 아직 없다.
- * 어디로 가는지·얼마인지를 누르기 **전에** 밝혀야 표시와 내용이 어긋나지 않는다.
+ * 개별 풀이가 선 테마는 **자기 풀이 화면**으로 가고, 아직 없는 테마는 지금 돌아가는 화면으로
+ * 가면서 「지금은 ○○로 이어집니다」를 카드에 적는다. 어디로 가는지·얼마인지를 누르기 **전에**
+ * 밝혀야 표시와 내용이 어긋나지 않는다.
+ *
+ * 🔴 복채 배지는 **가는 곳을 따라간다**(`themeCostLabel`). 링크만 풀이로 바꾸고 배지가 옛 도착
+ *    화면 값을 쓰면 「무료」라고 적힌 카드가 복채를 받는다.
  *
  * 🔴 그림은 허브 리스트와 **같은 컴포넌트·같은 파일**을 쓴다(`ThemeThumbnail`). 허브에서 본
  *    그림과 목록에서 만나는 그림이 다르면 누른 사람이 «다른 걸 눌렀나» 하게 된다.
  */
 function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
-  const destination = themeDestination(theme)
+  const href = themeEntryHref(theme)
+  const entryLabel = themeEntryLabel(theme)
   const anchor = themeAnchorId(theme.id)
 
   const body = (
@@ -173,9 +180,14 @@ function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
           )}
         </div>
 
-        {destination ? (
+        {hasThemeReading(theme) ? (
+          <p className="mt-2 flex items-center gap-0.5 text-[10px] text-gold-300/70">
+            풀이 보기
+            <ChevronRight className="h-3 w-3" />
+          </p>
+        ) : entryLabel ? (
           <p className="mt-2 flex items-center gap-0.5 text-[10px] text-ink-light/40">
-            지금은 {destination.label}로<ChevronRight className="h-3 w-3" />
+            지금은 {entryLabel}로<ChevronRight className="h-3 w-3" />
           </p>
         ) : (
           <p className="mt-2 text-[10px] text-ink-light/40">개별 풀이 준비 중</p>
@@ -188,7 +200,7 @@ function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
     'relative block overflow-hidden rounded-xl border target:border-gold-500/60 target:bg-gold-500/[0.06] scroll-mt-20'
 
   // 갈 곳이 없는 테마는 링크로 만들지 않는다 — 눌러도 아무 데도 못 가는 카드를 만들지 않는다.
-  if (!destination) {
+  if (!href) {
     return (
       <div id={anchor} className={`${shell} border-white/10 bg-surface/30 opacity-70`}>
         {body}
@@ -199,8 +211,8 @@ function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
   return (
     <Link
       id={anchor}
-      href={destination.href}
-      aria-label={`${theme.title} — ${destination.label}`}
+      href={href}
+      aria-label={`${theme.title} — ${entryLabel ?? '풀이 보기'}`}
       className={`${shell} group border-white/10 bg-surface/60 transition-colors hover:border-gold-500/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60`}
     >
       {body}

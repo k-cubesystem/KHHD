@@ -7,6 +7,7 @@
 import { render, screen, within } from '@testing-library/react'
 import ThemeFortuneListPage from '@/app/protected/analysis/theme/page'
 import {
+  hasThemeReading,
   hubThemePicks,
   openRoutes,
   STANDALONE_ROUTES,
@@ -14,7 +15,10 @@ import {
   themeAnchorId,
   themeCostLabel,
   themeDestination,
+  themeEntryHref,
   themeFallbackImage,
+  themeReadingCostLabel,
+  themeReadingPath,
   themesByTab,
   themeThumbnailPath,
 } from '@/lib/domain/theme-fortune/themes'
@@ -72,12 +76,27 @@ describe('테마 목록 — 카드', () => {
 
     for (const theme of themesByTab('work')) {
       const card = container.querySelector(`#${themeAnchorId(theme.id)}`)
-      const destination = themeDestination(theme)
-      if (!destination) throw new Error(`출하 테마인데 갈 곳이 없다: ${theme.id}`)
+      const href = themeEntryHref(theme)
+      if (!href) throw new Error(`출하 테마인데 갈 곳이 없다: ${theme.id}`)
 
-      expect(card?.getAttribute('href')).toBe(destination.href)
-      // 제목이 약속하는 개별 풀이는 아직 없다 — 그래서 도착지를 카드에 밝힌다.
-      expect(card?.textContent).toContain(destination.label)
+      expect(card?.getAttribute('href')).toBe(href)
+      // 개별 풀이가 선 테마는 제자리로 간다 — 적을 도착지가 없고 대신 「풀이 보기」라고 쓴다.
+      // 아직 없는 테마는 제목이 약속한 풀이가 아닌 다른 화면으로 가므로 도착지를 밝힌다.
+      expect(card?.textContent).toContain(hasThemeReading(theme) ? '풀이 보기' : themeDestination(theme)?.label)
+    }
+  })
+
+  it('🔴 개별 풀이가 선 카드는 그 풀이의 복채를 적는다 (도착지 값이 아니다)', async () => {
+    // 링크만 풀이로 바꾸고 배지가 옛 도착 화면 값을 쓰면 「무료」라고 적힌 카드가 복채를 받는다.
+    const { container } = await renderPage('work')
+    const readingThemes = themesByTab('work').filter(hasThemeReading)
+    expect(readingThemes.length).toBeGreaterThan(0)
+
+    for (const theme of readingThemes) {
+      const card = container.querySelector(`#${themeAnchorId(theme.id)}`)
+
+      expect(card?.getAttribute('href')).toBe(themeReadingPath(theme.id))
+      expect(card?.textContent).toContain(themeReadingCostLabel(theme))
     }
   })
 
