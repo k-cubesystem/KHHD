@@ -30,6 +30,7 @@ import {
 } from '@/app/actions/ai/samhap'
 import { AnalyzingAnimation } from '@/components/studio/analyzing-animation'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { SamhapResultView } from '@/components/studio/samhap-result'
 import { GA, trackEvent } from '@/lib/analytics/ga4'
 
@@ -167,8 +168,11 @@ function SamhapPageContent() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-5"
             >
-              <div id="samhap-result-container">
+              <div id="samhap-result-container" className="space-y-4">
                 <SamhapResultView result={result} targetName={result.targetName} />
+
+                {/* AI기본법 §31② — 캡처 컨테이너 «안» 이라야 이미지에 함께 박힌다 */}
+                <ServiceDisclaimer />
               </div>
               <ShareSaveButtons
                 resultContainerId="samhap-result-container"

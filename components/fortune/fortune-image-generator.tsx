@@ -6,6 +6,8 @@ import { Sparkles, Download, Share2, Loader2, ImageIcon, RefreshCw, Shield, Cred
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { generateFortuneImage, FortuneImageType, FortuneImageContext } from '@/app/actions/ai/generate-image'
+import { AI_DISCLOSURE_MARK, AI_DISCLOSURE_TEXT } from '@/components/shared/ServiceDisclaimer'
+import { logger } from '@/lib/utils/logger'
 
 interface FortuneImageGeneratorProps {
   context?: FortuneImageContext
@@ -24,6 +26,59 @@ const TYPE_LABELS: Record<FortuneImageType, { label: string; desc: string }> = {
   talisman: { label: '나만의 부적', desc: '재앙을 막고 복을 불러오는 전통 부적' },
   card: { label: '운세 카드', desc: '이달의 운세를 담은 아름다운 카드' },
   illustration: { label: '사주 일러스트', desc: '팔자를 우주로 표현한 신비로운 그림' },
+}
+
+/**
+ * AI기본법 §31② — 저장·공유된 그림 파일은 앱 밖으로 나가고 화면 캡션은 따라가지 않는다.
+ * 가이드라인이 「외부 반출 시 결과물 자체에 표시」로 구분한 지점이라 그림에 캡션을 태워 보낸다
+ * (시행령 §23②1호 「사람이 인식할 수 있는 방법」 = 가시 워터마크).
+ *
+ * blob: URL 로 되돌려 그리므로 캔버스가 오염되지 않는다 — 원본이 외부 Storage URL 이어도 된다.
+ * 실패하면 원본을 그대로 돌려준다: 표시를 못 태웠다고 저장 자체를 막을 일은 아니다.
+ */
+async function burnDisclosure(blob: Blob): Promise<Blob> {
+  const objectUrl = URL.createObjectURL(blob)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('generated image decode failed'))
+      el.src = objectUrl
+    })
+
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return blob
+    ctx.drawImage(img, 0, 0)
+
+    const pad = Math.max(8, Math.round(canvas.width * 0.022))
+    const fontSize = Math.max(13, Math.round(canvas.width * 0.03))
+    ctx.font = `${fontSize}px sans-serif`
+    ctx.textAlign = 'right'
+    ctx.textBaseline = 'alphabetic'
+    const textWidth = ctx.measureText(AI_DISCLOSURE_MARK).width
+
+    // 어떤 그림 위에서도 읽히도록 반투명 판을 깔고 흰 글씨를 얹는다
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'
+    ctx.fillRect(
+      canvas.width - textWidth - pad * 2.4,
+      canvas.height - fontSize - pad * 1.6,
+      textWidth + pad * 2.4,
+      fontSize + pad * 1.6
+    )
+    ctx.fillStyle = 'rgba(255,255,255,0.94)'
+    ctx.fillText(AI_DISCLOSURE_MARK, canvas.width - pad * 1.2, canvas.height - pad * 0.7)
+
+    const marked = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+    return marked ?? blob
+  } catch (error) {
+    logger.warn('[FortuneImageGenerator] AI 표시 소각 실패 — 원본으로 내보냄:', error)
+    return blob
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 
 export function FortuneImageGenerator({
@@ -63,23 +118,25 @@ export function FortuneImageGenerator({
     }
   }
 
+  /** 생성 결과를 blob 으로 — base64 응답과 Storage URL 응답 두 경로를 하나로 모은다. */
+  async function toBlob(): Promise<Blob> {
+    if (imageSource === 'base64') {
+      const [header, data] = generatedImage!.split(',')
+      const mimeType = header.match(/:(.*?);/)?.[1] ?? 'image/png'
+      const bytes = atob(data)
+      const arr = new Uint8Array(bytes.length)
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
+      return new Blob([arr], { type: mimeType })
+    }
+    const response = await fetch(generatedImage!)
+    return response.blob()
+  }
+
   async function handleDownload() {
     if (!generatedImage) return
 
     try {
-      let blob: Blob
-
-      if (imageSource === 'base64') {
-        const [header, data] = generatedImage.split(',')
-        const mimeType = header.match(/:(.*?);/)?.[1] ?? 'image/png'
-        const bytes = atob(data)
-        const arr = new Uint8Array(bytes.length)
-        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i)
-        blob = new Blob([arr], { type: mimeType })
-      } else {
-        const response = await fetch(generatedImage)
-        blob = await response.blob()
-      }
+      const blob = await burnDisclosure(await toBlob())
 
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -97,6 +154,21 @@ export function FortuneImageGenerator({
     if (!generatedImage) return
 
     try {
+      // AI기본법 §31② — 링크만 넘기면 표시 없는 원본이 나간다. 표시를 태운 «파일» 을 먼저 시도한다.
+      if (navigator.share && navigator.canShare) {
+        const file = new File([await burnDisclosure(await toBlob())], `haehwadang-${selectedType}.png`, {
+          type: 'image/png',
+        })
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: `해화당 ${TYPE_LABELS[selectedType].label}`,
+            text: '해화당에서 나만의 운세 이미지를 만들었어요!',
+            files: [file],
+          })
+          return
+        }
+      }
+
       if (navigator.share) {
         await navigator.share({
           title: `해화당 ${TYPE_LABELS[selectedType].label}`,
@@ -248,8 +320,12 @@ export function FortuneImageGenerator({
                 decoding="async"
                 className="w-full object-contain max-h-80"
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/40 to-transparent px-3 py-2">
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-2">
                 <p className="text-white text-xs font-medium">해화당 {TYPE_LABELS[selectedType].label}</p>
+                {/* AI기본법 §31② 화면 표시. 이 카드는 밝은 배경이라 ServiceDisclaimer 의 색이
+                    보이지 않는다 — 그림 위 어두운 띠에 얹고 문안만 단일 출처에서 가져온다.
+                    저장·공유되는 파일에는 burnDisclosure 가 따로 태운다. */}
+                <p className="text-white/85 text-[11px] font-light leading-snug">{AI_DISCLOSURE_TEXT.image}</p>
               </div>
             </div>
 

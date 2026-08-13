@@ -8,6 +8,7 @@ import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 import { sendPushToUser } from '@/lib/services/webpush'
+import { AI_DISCLOSURE_MARK } from '@/components/shared/ServiceDisclaimer'
 import { logger } from '@/lib/utils/logger'
 
 export interface DeityOracle {
@@ -132,7 +133,9 @@ export async function getRoomOracle(): Promise<DeityOracle | null> {
     // 신탁 도착 알림 — 신당 미방문 시 영영 모르는 재방문 루프의 구멍 보완.
     // 새 신탁 생성 시에만 삽입되며(미확인 신탁이 있으면 위에서 조기 반환), oracle 당 1회로 자연 멱등.
     const notifyTitle = `「${deity.name}」이 신탁을 내렸습니다`
-    const notifyBody = message.length > 60 ? message.slice(0, 60) + '…' : message
+    // AI기본법 §31② — 알림·웹푸시는 앱 밖(잠금화면)까지 나가는 반출물이라 화면 고지가 따라가지
+    // 않는다. 본문 뒤에 꼬리표를 붙여 결과물 자체에 표시를 남긴다.
+    const notifyBody = `${message.length > 60 ? message.slice(0, 60) + '…' : message} — ${AI_DISCLOSURE_MARK}`
     const { error: notifyErr } = await admin.from('notifications').insert({
       user_id: user.id,
       title: notifyTitle,

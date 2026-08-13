@@ -24,6 +24,7 @@ import { analyzeTrendAction, type TrendType, type TrendResult } from '@/app/acti
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 interface TrendClientProps {
   trendType: TrendType
@@ -312,8 +313,11 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
             {state.cached && (
               <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">캐시된 결과입니다</p>
             )}
-            <div id="trend-result-capture">
+            <div id="trend-result-capture" className="space-y-3">
               <TrendResultView result={state.result} config={config} />
+
+              {/* AI기본법 §31② — 캡처 컨테이너 «안» 이라야 이미지에 함께 박힌다 */}
+              <ServiceDisclaimer />
             </div>
             <ShareSaveButtons
               resultContainerId="trend-result-capture"

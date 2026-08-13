@@ -18,6 +18,7 @@ import {
   createShareLink,
 } from '@/app/actions/user/history'
 import { AnalysisResultView } from './analysis-result-view'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { buildReanalyzeRoute } from '@/lib/domain/analysis/reanalyze-routes'
 import { KakaoShareButton } from '@/components/shared/kakao-share-button'
 
@@ -208,6 +209,9 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
 
               {/* Result Content */}
               <AnalysisResultView record={record} />
+
+              {/* AI기본법 §31② — 기록 열람도 결과물 제공이다 */}
+              <ServiceDisclaimer />
 
               {/* User Memo */}
               <div className="space-y-2">

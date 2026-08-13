@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import type { AnalysisHistory } from '@/app/actions/user/history'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { Button } from '@/components/ui/button'
 import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
@@ -475,6 +476,10 @@ export function SharedSajuResult({ token }: SharedSajuResultProps) {
           transition={{ duration: 0.7, delay: 0.15, ease: 'easeOut' }}
         >
           {resultData && <SajuResultBody data={resultData} />}
+
+          {/* AI기본법 §31② — 🔴 비로그인 외부 공개 지면이다. 「외부 반출 시 결과물 «자체» 에
+              표시」에 해당하므로 풀이 바로 아래, 본문 크기로 둔다 */}
+          <ServiceDisclaimer tone="share" className="mt-6" />
         </motion.div>
 
         {/* Partial blur teaser overlay */}

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { CalendarRange, ArrowLeft, Sparkles, AlertCircle, Wallet, Heart, Activity, Briefcase } from 'lucide-react'
 import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 import type { FortuneResult } from '@/app/actions/ai/fortune-analysis'
 import { GOLD_500 } from '@/lib/config/design-tokens'
@@ -200,6 +201,9 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* AI기본법 §31② 결과물 표시 */}
+          <ServiceDisclaimer className="mt-2" />
         </div>
       )}
     </div>

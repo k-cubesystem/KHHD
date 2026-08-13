@@ -21,6 +21,7 @@ import {
 } from '@/app/actions/ai/shaman-chat'
 import { greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
 import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'
 import { OverlayPortal } from '@/components/ai/chat/overlay-portal'
 import { useFamilyMembers } from '@/hooks/use-family-members'
@@ -977,6 +978,11 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         className="relative z-10 flex-shrink-0 border-t border-primary/8 px-4 pt-2.5 pb-2.5"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)' }}
       >
+        {/* AI기본법 §31② 결과물 표시 — 신위의 말도 생성형 AI 결과물이다. 세계관을 지우지 않고
+            「대신 목소리를 낸다」로 층을 나눈다. 상시 1줄(대화가 흐르면 위로 밀려 사라지므로
+            메시지 목록이 아니라 입력 영역에 고정한다). */}
+        <ServiceDisclaimer tone="chat" className="mb-2 px-0" />
+
         {/* 잔여·충전 인라인 한 줄 — 헤더 2단을 대체한다. 한도 임박일 때만 강조. */}
         <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
           {isStatusLoading ? (

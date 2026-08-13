@@ -436,6 +436,10 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
           >
             이 분석 결과는 사주 기록에 자동 저장되었습니다
           </motion.p>
+
+          {/* AI기본법 §31② — 🔴 캡처 컨테이너 «안». 밖에 두면 카카오로 나가는 이미지에 고지가
+              따라가지 않는다(2026-08-13 이전이 그 상태였다) */}
+          <ServiceDisclaimer className="mt-6" />
         </div>
       </div>
       {/* end capture */}
@@ -460,8 +464,6 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
           </motion.div>
         </div>
       )}
-
-      <ServiceDisclaimer className="mt-6 mb-2" />
     </div>
   )
 }

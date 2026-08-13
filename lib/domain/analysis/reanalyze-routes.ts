@@ -14,6 +14,9 @@ export const REANALYZE_ROUTES: Record<AnalysisCategory, string> = {
   WEALTH: '/protected/analysis/wealth',
   NEW_YEAR: '/protected/analysis/new-year',
   SAMHAP: '/protected/studio/samhap',
+  // 테마는 32종이라 카테고리 하나로 라우트 하나를 정할 수 없다 — 목록으로 보낸다.
+  // (어느 테마였는지는 result_json.themeId 에 있고, 그건 결과 화면이 읽는다)
+  THEME: '/protected/analysis/theme',
 }
 
 /**

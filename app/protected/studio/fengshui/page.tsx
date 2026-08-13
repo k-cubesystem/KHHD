@@ -4,6 +4,7 @@ import { StudioAnalysisLayout } from '@/components/studio/studio-analysis-layout
 import { FengshuiSlotGrid, type SlotImageValue } from '@/components/studio/fengshui-slot-grid'
 import { AnalyzingAnimation } from '@/components/studio/analyzing-animation'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -622,6 +623,9 @@ function FengShuiAnalysisPageContent() {
 
               {/* 상세 분석 — AI 원문은 [[태그]]·마크다운 정돈 후 "전문 보기"로 강등(유령 태그 노출 차단) */}
               <DetailAnalysisAccordion raw={analysisResult.currentAnalysis} title="풍수 상세 · 전문 보기" />
+
+              {/* AI기본법 §31② — 캡처 컨테이너 «안» 이라야 이미지에 함께 박힌다 */}
+              <ServiceDisclaimer tone="photo" />
             </div>
 
             <ShareSaveButtons

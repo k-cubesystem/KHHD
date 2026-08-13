@@ -17,6 +17,7 @@ import { FortuneCalendar } from './fortune-calendar'
 import { FortuneDetailModal } from './fortune-detail-modal'
 import { FortuneImageGenerator } from '@/components/fortune/fortune-image-generator'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 interface FortuneClientProps {
   selfTarget: DestinyTarget | null
@@ -254,8 +255,11 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
         {state.cached && (
           <p className="text-center text-[10px] font-light text-ink-light/30 tracking-widest">캐시된 결과입니다</p>
         )}
-        <div id="fortune-result-capture">
+        <div id="fortune-result-capture" className="space-y-3">
           <FortuneResultView result={state.result} />
+
+          {/* AI기본법 §31② — 캡처 컨테이너 «안» 이라야 이미지에 함께 박힌다 */}
+          <ServiceDisclaimer />
         </div>
         <ShareSaveButtons
           resultContainerId="fortune-result-capture"

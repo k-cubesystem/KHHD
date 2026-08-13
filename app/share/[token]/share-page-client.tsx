@@ -5,6 +5,7 @@ import { logger } from '@/lib/utils/logger'
 import { createBrowserClient } from '@supabase/ssr'
 import type { AnalysisHistory } from '@/app/actions/user/history'
 import { CategoryResultBody } from '@/components/analysis/CategoryResultBody'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -466,6 +467,12 @@ export function SharePageClient({ token }: SharePageClientProps) {
 
           {/* Partial blur overlay — teaser */}
           <div className="relative h-16 -mt-8 bg-gradient-to-t from-surface/90 to-transparent pointer-events-none" />
+
+          {/* AI기본법 §31② — 🔴 비로그인 외부 공개 지면이다. 「외부 반출 시 결과물 «자체» 에
+              표시」에 해당하므로 결과 카드 안, 본문 크기로 둔다(작게 숨기면 표시로 보기 어렵다) */}
+          <div className="px-6 pb-4">
+            <ServiceDisclaimer tone="share" className="px-0" />
+          </div>
 
           {/* Unlock hint */}
           <div className="px-6 pb-5 text-center">

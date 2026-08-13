@@ -98,6 +98,7 @@ import { DeityTurn } from './DeityTurn'
 import { FamilyShelfWall } from './FamilyShelfWall'
 import { buildFamilyShelfUnits, familyShelfItemScale, hasFamilyShelf } from '@/lib/domain/shrine/family-shelf'
 import { STAGE_GROUND_DROP, hasGrandAltar } from '@/lib/domain/shrine/theme-stage'
+import { AI_DISCLOSURE_ATTR, AI_DISCLOSURE_TEXT } from '@/components/shared/ServiceDisclaimer'
 import { StageLayers } from './StageLayers'
 import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
 import { TimeTint } from './TimeTint'
@@ -2165,6 +2166,14 @@ export function ShrineRoomClient({
               {scene.mainDeity ? `신당지기 · ${scene.mainDeity.name}` : '신당지기'}
             </div>
             <span dangerouslySetInnerHTML={{ __html: bubble }} />
+            {/* AI기본법 §31② — 신탁만 생성형 AI 결과물이다. 신당지기 평소 대사는 정적 스크립트라
+                (lib/domain/shrine/voice-profiles.ts) 표시 대상이 아니고, 붙이면 오히려 거짓이 된다.
+                말풍선 한 칸뿐이라 컴포넌트 대신 문안 상수만 빌려 온다. */}
+            {oracle && (
+              <div {...{ [AI_DISCLOSURE_ATTR]: 'oracle' }} className="mt-1 text-[9px] leading-snug text-ink-light/50">
+                {AI_DISCLOSURE_TEXT.oracle}
+              </div>
+            )}
           </div>
         )}
         {editing && (

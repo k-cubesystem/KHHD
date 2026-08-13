@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { AI_DISCLOSURE_ATTR, AI_DISCLOSURE_TEXT } from '@/components/shared/ServiceDisclaimer'
 import { logger } from '@/lib/utils/logger'
 import { Share2, Download } from 'lucide-react'
 import { useState } from 'react'
@@ -10,6 +11,31 @@ interface ShareSaveButtonsProps {
   resultContainerId: string // DOM element ID to capture
   analysisTitle: string // e.g. "손금 분석 결과"
   memberName?: string
+}
+
+/**
+ * AI기본법 §31② — 캡처물은 다운로드·카카오 공유로 **외부로 반출**되므로 화면 고지가 따라가지
+ * 않는다. 가이드라인이 「외부 반출 시 결과물 자체에 표시」로 구분한 지점이라, 캡처되는 DOM 안에
+ * 고지가 없으면 캡처 직전에 심어 넣고 끝난 뒤 걷어낸다.
+ *
+ * 화면에 이미 `ServiceDisclaimer` 가 컨테이너 안에 있으면(정상 경로) 아무 일도 하지 않는다 —
+ * 이 함수는 그 배치가 언젠가 빠졌을 때를 위한 최후 방어선이다. 표시 없는 이미지가 나가는 일은
+ * 없어야 한다.
+ */
+function ensureDisclosure(element: HTMLElement): () => void {
+  if (element.querySelector(`[${AI_DISCLOSURE_ATTR}]`)) return () => {}
+
+  const line = document.createElement('p')
+  line.setAttribute(AI_DISCLOSURE_ATTR, 'reading')
+  line.textContent = AI_DISCLOSURE_TEXT.reading
+  // 인라인 스타일 — 캡처 전용 노드라 Tailwind 클래스 생성 여부에 기대지 않는다.
+  line.style.cssText =
+    'margin:12px 16px 4px;font-size:12px;line-height:1.6;font-weight:300;text-align:center;color:rgba(232,228,220,0.6);'
+  element.appendChild(line)
+
+  return () => {
+    line.remove()
+  }
 }
 
 export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName }: ShareSaveButtonsProps) {
@@ -23,6 +49,7 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
       return null
     }
 
+    const removeDisclosure = ensureDisclosure(element)
     try {
       const html2canvas = (await import('html2canvas')).default
       const canvas = await html2canvas(element, {
@@ -41,6 +68,8 @@ export function ShareSaveButtons({ resultContainerId, analysisTitle, memberName 
       logger.error('Screenshot error:', error)
       toast.error('이미지 생성 중 오류가 발생했습니다.')
       return null
+    } finally {
+      removeDisclosure()
     }
   }
 

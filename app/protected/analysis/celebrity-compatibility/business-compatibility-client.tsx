@@ -25,6 +25,7 @@ import {
 } from '@/app/actions/ai/celebrity-compatibility'
 import type { CompatibilityEngineResult } from '@/lib/saju-engine/compatibility-engine'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 interface PartnerInfo {
   id: string
@@ -259,6 +260,9 @@ export function BusinessCompatibilityClient() {
                 </p>
               </div>
             </motion.div>
+
+            {/* AI기본법 §31② — 위 「참고용」 문구엔 AI 언급이 없다. 캡처 컨테이너 «안» */}
+            <ServiceDisclaimer />
           </div>
         </div>
         {/* end capture */}

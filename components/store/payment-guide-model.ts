@@ -36,6 +36,7 @@ const FEATURE_LABEL = {
   fengshui: '풍수',
   wealth: '재물운',
   samhap: '종합사주풀이',
+  themeFortune: '인기테마운세',
   imageGeneration: '이미지 생성',
   today: '오늘의 운세',
   newYear: '신년운세',

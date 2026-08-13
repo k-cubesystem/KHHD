@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
     const name = searchParams.get('name')?.slice(0, 20) || null
     const category = searchParams.get('category')?.slice(0, 20) || null
 
+    // 풀이 결과가 실린 카드인지 — /share/* 는 name·category(·score)를 실어 보내고,
+    // 브랜드 기본 카드(app/layout.tsx)는 title·desc 만 보낸다.
+    const isResultCard = Boolean(name || category || score)
+
     // Use Google Fonts CSS API to load Noto Serif KR
     const fontRes = await fetch('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700&display=swap', {
       headers: { 'User-Agent': 'Mozilla/5.0' },
@@ -306,12 +310,21 @@ export async function GET(request: NextRequest) {
         <div
           style={{
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             paddingBottom: 28,
             gap: 8,
           }}
         >
+          {/* AI기본법 §31② — 이 카드는 desc 에 풀이 요약(record.summary)을 태워 카카오·SNS 로
+              나가는 이미지다. 결과물이 실린 경우에만 표시하고, 브랜드 기본 카드(app/layout.tsx)
+              에는 붙이지 않는다 — 거기엔 결과물이 없다. */}
+          {isResultCard && (
+            <span style={{ fontSize: 16, color: INK_DIM, letterSpacing: '0.02em' }}>
+              생성형 인공지능이 생성한 결과입니다
+            </span>
+          )}
           <span style={{ fontSize: 15, color: 'rgba(212,175,55,0.5)', letterSpacing: '0.15em' }}>haehwadang.com</span>
         </div>
       </div>,

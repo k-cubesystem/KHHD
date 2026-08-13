@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { getEpisode, getEpisodePages, listEpisodes, listComments } from '@/app/actions/webtoon/webtoon'
 import { EpisodeComments } from '@/components/webtoon/EpisodeComments'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 
 /**
  * 회차 상세 — 세로 스크롤 본문과 댓글.
@@ -102,6 +103,10 @@ export default async function EpisodePage({ params }: { params: Promise<{ no: st
             </div>
           )
         )}
+
+        {/* AI기본법 §31② — 컷 그림이 생성물이다. 서비스 UI 안에서만 보이므로(서명 URL) 회차
+            화면 단위 1회 표시로 족하다는 가이드라인 구분에 따른다 */}
+        <ServiceDisclaimer tone="webtoon" />
 
         <nav className="flex items-center justify-between gap-2">
           {prevNo !== null ? (

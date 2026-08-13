@@ -3,18 +3,11 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Calendar,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ArrowLeft,
-  Sparkles,
-  AlertCircle,
-} from 'lucide-react'
+import { Calendar, TrendingUp, TrendingDown, Minus, ArrowLeft, Sparkles, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { BRAND_QUOTES } from '@/lib/constants/brand-quotes'
 
 const DAYS_KR = ['월', '화', '수', '목', '금', '토', '일']
@@ -84,12 +77,8 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
           <Card className="bg-surface/30 border-primary/20">
             <CardContent className="p-12 text-center space-y-3">
               <Calendar className="w-12 h-12 text-primary/50 mx-auto" strokeWidth={1} />
-              <h3 className="text-lg font-serif font-light text-ink-light">
-                사주 정보가 필요합니다
-              </h3>
-              <p className="text-sm text-ink-light/60 font-light">
-                프로필에서 생년월일을 먼저 입력해주세요.
-              </p>
+              <h3 className="text-lg font-serif font-light text-ink-light">사주 정보가 필요합니다</h3>
+              <p className="text-sm text-ink-light/60 font-light">프로필에서 생년월일을 먼저 입력해주세요.</p>
               <Link
                 href="/protected/profile/edit"
                 className="inline-block mt-2 text-sm text-primary underline underline-offset-2"
@@ -120,9 +109,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
             <Card className="bg-surface/30 border-primary/20">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-serif font-light text-primary">
-                    이번 주 평균 운세
-                  </h3>
+                  <h3 className="text-base font-serif font-light text-primary">이번 주 평균 운세</h3>
                   <span className="text-2xl font-light text-primary">{data.overallScore}점</span>
                 </div>
                 <div className="h-2 bg-white/5 rounded-full overflow-hidden">
@@ -134,9 +121,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                   />
                 </div>
                 {data.overall && (
-                  <p className="text-xs text-ink-light/60 mt-3 font-light leading-relaxed">
-                    {data.overall}
-                  </p>
+                  <p className="text-xs text-ink-light/60 mt-3 font-light leading-relaxed">{data.overall}</p>
                 )}
               </CardContent>
             </Card>
@@ -181,12 +166,8 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
                         <div className="flex flex-col items-center min-w-[50px]">
-                          <span className="text-xs text-ink-light/50 font-light">
-                            {DAYS_KR[day.dayOfWeek]}
-                          </span>
-                          <span className="text-lg font-light text-ink-light">
-                            {day.date.split('-')[2]}
-                          </span>
+                          <span className="text-xs text-ink-light/50 font-light">{DAYS_KR[day.dayOfWeek]}</span>
+                          <span className="text-lg font-light text-ink-light">{day.date.split('-')[2]}</span>
                           {isToday && (
                             <Badge className="mt-1 bg-primary/20 text-primary border-primary/30 text-[10px] font-light px-1">
                               오늘
@@ -211,15 +192,11 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                             {getTrendIcon(day.score)}
                             <span className="text-sm text-primary font-light">{day.score}점</span>
                             {day.areaLabel && (
-                              <span className="text-[10px] text-ink-light/40 font-light">
-                                {day.areaLabel}
-                              </span>
+                              <span className="text-[10px] text-ink-light/40 font-light">{day.areaLabel}</span>
                             )}
                           </div>
                           <p className="text-sm text-ink-light/80 mb-1 font-light">{day.summary}</p>
-                          <p className="text-xs text-ink-light/50 italic font-light">
-                            &quot;{day.advice}&quot;
-                          </p>
+                          <p className="text-xs text-ink-light/50 italic font-light">&quot;{day.advice}&quot;</p>
                         </div>
 
                         {/* 점수 바 */}
@@ -231,11 +208,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                               transition={{ duration: 0.8, delay: idx * 0.07 }}
                               className={cn(
                                 'w-full rounded-full',
-                                day.score >= 75
-                                  ? 'bg-green-400'
-                                  : day.score >= 50
-                                    ? 'bg-primary'
-                                    : 'bg-red-400'
+                                day.score >= 75 ? 'bg-green-400' : day.score >= 50 ? 'bg-primary' : 'bg-red-400'
                               )}
                             />
                           </div>
@@ -253,17 +226,17 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
             <section className="px-3 mt-4">
               <Card className="bg-yellow-400/5 border-yellow-400/20">
                 <CardContent className="p-4 flex items-start gap-3">
-                  <AlertCircle
-                    className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5"
-                    strokeWidth={1}
-                  />
-                  <p className="text-xs text-ink-light/70 font-light leading-relaxed">
-                    {data.caution}
-                  </p>
+                  <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" strokeWidth={1} />
+                  <p className="text-xs text-ink-light/70 font-light leading-relaxed">{data.caution}</p>
                 </CardContent>
               </Card>
             </section>
           )}
+
+          {/* AI기본법 §31② 결과물 표시 */}
+          <section className="px-3 mt-6">
+            <ServiceDisclaimer />
+          </section>
         </>
       )}
     </div>

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { getInviterByCode, analyzeCompatibility } from '@/app/actions/user/invite'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import Link from 'next/link'
 
 interface InviterData {
@@ -349,8 +350,9 @@ export default function InvitePage() {
               </div>
             </Card>
 
-            {/* Disclaimer */}
-            <p className="text-xs text-muted-foreground text-center">* 본 서비스는 재미와 참고용으로만 제공됩니다.</p>
+            {/* Disclaimer — AI기본법 §31②. 종전 「재미와 참고용」 한 줄엔 AI 언급이 없었다.
+                비로그인도 닿는 초대 링크라 본문 크기(share) 로 둔다 */}
+            <ServiceDisclaimer tone="share" />
           </div>
         )}
       </div>

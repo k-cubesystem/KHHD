@@ -4,6 +4,7 @@ import { StudioAnalysisLayout } from '@/components/studio/studio-analysis-layout
 import { ImageCapture } from '@/components/studio/image-capture'
 import { AnalyzingAnimation } from '@/components/studio/analyzing-animation'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -571,6 +572,9 @@ function PalmAnalysisPageContent() {
 
               {/* 상세 분석 — 전문 보기(접힘) */}
               <DetailAnalysisAccordion raw={analysisResult.currentAnalysis} />
+
+              {/* AI기본법 §31② — 캡처 컨테이너 «안» 이라야 이미지에 함께 박힌다 */}
+              <ServiceDisclaimer tone="photo" />
             </div>
 
             <ShareSaveButtons

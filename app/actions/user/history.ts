@@ -22,6 +22,10 @@ export type AnalysisCategory =
   | 'WEALTH'
   | 'NEW_YEAR'
   | 'SAMHAP'
+  // 인기테마운세 개별 풀이. 🔴 DB 의 analysis_history_category_check 가 이 값을 허용해야 저장이
+  // 된다 — 과거 SAMHAP 이 정확히 이 제약에 막혀 저장이 통째로 실패한 전력이 있다.
+  // 제약 갱신: supabase/migrations/20260814_analysis_history_theme.sql
+  | 'THEME'
 
 /**
  * 분석 컨텍스트 모드
