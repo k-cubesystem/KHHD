@@ -10,7 +10,7 @@ import { join } from 'path'
 import { FEATURE_COST, formatFeatureCost } from '@/lib/domain/payment/feature-costs'
 import {
   DEFAULT_THEME_TAB,
-  HUB_THEME_PICK_COUNT,
+  HUB_THEME_COUNT,
   hubThemePicks,
   isFreeRoute,
   isFreeTheme,
@@ -29,9 +29,11 @@ import {
   themeCostKey,
   themeCostLabel,
   themeDestination,
-  themeImage,
+  themeFallbackImage,
   themeListHref,
   themesByTab,
+  themeThumbnail,
+  themeThumbnailPath,
   type ThemeCategory,
   type ThemeFortune,
 } from '@/lib/domain/theme-fortune/themes'
@@ -346,12 +348,19 @@ describe('1차 출하 범위', () => {
   })
 })
 
-describe('허브 ① 인기테마운세 — 와이드 카드 3장', () => {
-  it('정확히 3장이고 전부 출하 테마다', () => {
+describe('허브 ① 인기테마운세 — 리스트 10줄', () => {
+  it(`정확히 ${HUB_THEME_COUNT}줄이고 전부 출하 테마다`, () => {
     const picks = hubThemePicks()
 
-    expect(picks).toHaveLength(HUB_THEME_PICK_COUNT)
+    expect(HUB_THEME_COUNT).toBe(10)
+    expect(picks).toHaveLength(HUB_THEME_COUNT)
     for (const pick of picks) expect(pick.shipped).toBe(true)
+  })
+
+  it('출하 테마가 줄 수보다 많아도 열 줄까지만 건다', () => {
+    // 12종 중 열이다 — 나머지 둘은 hubRank 가 null 이고 목록에서만 보인다.
+    expect(shippedThemes().length).toBeGreaterThan(HUB_THEME_COUNT)
+    expect(shippedThemes().filter((theme) => theme.hubRank !== null)).toHaveLength(HUB_THEME_COUNT)
   })
 
   it('순위대로 줄을 서고 순위가 겹치지 않는다', () => {
@@ -361,10 +370,36 @@ describe('허브 ① 인기테마운세 — 와이드 카드 3장', () => {
     expect([...ranks].sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual(ranks)
   })
 
-  it('세 장의 카테고리가 서로 다르다 (한 갈래만 걸면 나머지가 안 보인다)', () => {
+  it('다섯 갈래가 모두 걸리고 한 갈래가 몰아 갖지 않는다', () => {
+    // 열 줄을 한 갈래가 넷 이상 가져가면 리스트가 «직장 운세 모음»으로 읽힌다.
     const categories = hubThemePicks().map((theme) => theme.category)
 
-    expect(new Set(categories).size).toBe(categories.length)
+    expect(new Set(categories).size).toBe(Object.keys(THEME_CATEGORIES).length)
+    for (const category of Object.keys(THEME_CATEGORIES) as ThemeCategory[]) {
+      expect({ category, count: categories.filter((value) => value === category).length }).toEqual({
+        category,
+        count: 2,
+      })
+    }
+  })
+
+  it('붙어 있는 두 줄의 갈래가 다르다 (같은 갈래가 연달아 서지 않는다)', () => {
+    // 정렬 결과가 곧 화면의 세로 순서다 — 여기서 섞여 있지 않으면 화면에서 뭉쳐 보인다.
+    const categories = hubThemePicks().map((theme) => theme.category)
+
+    for (let index = 1; index < categories.length; index += 1) {
+      expect({ index, same: categories[index] === categories[index - 1] }).toEqual({ index, same: false })
+    }
+  })
+
+  it('맨 위 다섯 줄만 봐도 다섯 갈래가 다 보인다', () => {
+    expect(
+      new Set(
+        hubThemePicks()
+          .slice(0, 5)
+          .map((theme) => theme.category)
+      ).size
+    ).toBe(Object.keys(THEME_CATEGORIES).length)
   })
 })
 
@@ -401,16 +436,51 @@ describe('탭', () => {
   })
 })
 
-describe('썸네일 — 전용 그림이 생기기 전까지의 폴백', () => {
-  it('썸네일이 없으면 카테고리 아이콘을 쓴다', () => {
-    for (const theme of THEME_FORTUNES) {
-      expect(themeImage(theme)).toBe(theme.thumbnail ?? THEME_CATEGORIES[theme.category].fallbackImage)
+describe('썸네일 — 경로 규약', () => {
+  /**
+   * 🔴 **여기서 실사 썸네일 파일의 실재를 재지 않는다.** 그림 생성은 이 작업과 병렬로 도는 별도
+   * 작업이라, 파일 실재를 CI 계약으로 걸면 자산이 도착하기 전까지 초록이 뜨지 않는다. 대신
+   * 두 가지를 건다 — ①표의 문자열이 규약과 일치하는가 ②파일이 없어도 화면이 멀쩡한가(폴백).
+   * ②는 컴포넌트 테스트(`components/analysis/__tests__/hub-theme-section.test.tsx`)가 본다.
+   */
+  it('출하 12종은 전부 실사 썸네일 자리를 갖는다', () => {
+    for (const theme of shippedThemes()) {
+      expect({ id: theme.id, thumbnail: themeThumbnail(theme) }).toEqual({
+        id: theme.id,
+        thumbnail: themeThumbnailPath(theme.id),
+      })
     }
   })
 
-  it('카드에 세우는 그림 파일이 public 에 실존한다', () => {
-    for (const theme of shippedThemes()) {
-      expect(existsSync(join(ROOT, 'public', themeImage(theme)))).toBe(true)
+  it('썸네일을 둔 테마는 예외 없이 규약 경로를 쓴다', () => {
+    for (const theme of THEME_FORTUNES) {
+      const thumbnail = themeThumbnail(theme)
+      if (thumbnail === undefined) continue
+
+      expect(thumbnail).toBe(themeThumbnailPath(theme.id))
+      expect(thumbnail).toMatch(/^\/images\/theme-thumbs\/[a-z0-9-]+-v\d+\.webp$/)
+    }
+  })
+
+  it('규약은 테마 id 하나로 경로를 만든다 (파일명이 표와 갈라지지 않는다)', () => {
+    expect(themeThumbnailPath('leave-or-stay')).toBe('/images/theme-thumbs/leave-or-stay-v1.webp')
+  })
+})
+
+describe('썸네일 — 파일이 없을 때의 폴백', () => {
+  it('폴백은 카테고리 그림이다', () => {
+    for (const theme of THEME_FORTUNES) {
+      expect(themeFallbackImage(theme)).toBe(THEME_CATEGORIES[theme.category].fallbackImage)
+    }
+  })
+
+  it('🔴 폴백 그림은 public 에 실존한다 (깨진 그림이 뜨지 않는다는 보증)', () => {
+    // 실사 썸네일과 달리 이 파일들은 리포에 이미 있다 — 실재를 여기서 재는 게 맞다.
+    for (const meta of Object.values(THEME_CATEGORIES)) {
+      expect({ file: meta.fallbackImage, exists: existsSync(join(ROOT, 'public', meta.fallbackImage)) }).toEqual({
+        file: meta.fallbackImage,
+        exists: true,
+      })
     }
   })
 })

@@ -7,13 +7,16 @@
 import { render, screen, within } from '@testing-library/react'
 import ThemeFortuneListPage from '@/app/protected/analysis/theme/page'
 import {
+  hubThemePicks,
   openRoutes,
   STANDALONE_ROUTES,
   THEME_TABS,
   themeAnchorId,
   themeCostLabel,
   themeDestination,
+  themeFallbackImage,
   themesByTab,
+  themeThumbnailPath,
 } from '@/lib/domain/theme-fortune/themes'
 
 async function renderPage(tab?: string) {
@@ -76,6 +79,47 @@ describe('테마 목록 — 카드', () => {
       // 제목이 약속하는 개별 풀이는 아직 없다 — 그래서 도착지를 카드에 밝힌다.
       expect(card?.textContent).toContain(destination.label)
     }
+  })
+
+  it('카드 상단에 허브와 같은 썸네일이 붙는다 (한 세계로 보인다)', async () => {
+    // 허브에서 누른 그림과 목록에서 만나는 그림이 다르면 «다른 걸 눌렀나» 하게 된다.
+    // 두 화면은 같은 컴포넌트(ThemeThumbnail)와 같은 경로 규약을 쓴다.
+    const { container } = await renderPage('work')
+
+    for (const theme of themesByTab('work')) {
+      const card = container.querySelector(`#${themeAnchorId(theme.id)}`)
+      const sources = Array.from(card?.querySelectorAll('img') ?? []).map((image) => image.getAttribute('src'))
+
+      expect({ id: theme.id, sources }).toEqual({
+        id: theme.id,
+        // 폴백 층이 늘 먼저 깔리고 그 위에 실사 사진이 덮인다 — 파일이 아직 없어도 빈 네모가 아니다.
+        sources: [themeFallbackImage(theme), themeThumbnailPath(theme.id)],
+      })
+    }
+  })
+
+  it('허브 리스트에 걸린 테마의 그림이 목록에서도 같은 파일이다', async () => {
+    const { container } = await renderPage('work')
+
+    for (const theme of hubThemePicks().filter((pick) => themesByTab('work').includes(pick))) {
+      const card = container.querySelector(`#${themeAnchorId(theme.id)}`)
+
+      expect(card?.querySelector(`img[src="${themeThumbnailPath(theme.id)}"]`)).not.toBeNull()
+    }
+  })
+
+  it('첫 줄 두 장만 즉시 받고 나머지는 lazy 다', async () => {
+    const { container } = await renderPage('work')
+
+    themesByTab('work').forEach((theme, index) => {
+      const card = container.querySelector(`#${themeAnchorId(theme.id)}`)
+      const loadings = Array.from(card?.querySelectorAll('img') ?? []).map((image) => image.getAttribute('loading'))
+
+      expect({ id: theme.id, loadings }).toEqual({
+        id: theme.id,
+        loadings: loadings.map(() => (index < 2 ? 'eager' : 'lazy')),
+      })
+    })
   })
 
   it('출하하지 않은 테마는 아예 그리지 않는다', async () => {

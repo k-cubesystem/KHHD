@@ -25,7 +25,17 @@ test.describe('디테일 신뢰·재미 (R1/F2)', () => {
       await expect(launcher.getByRole('link', { name: gone })).toHaveCount(0)
     }
     await expect(page.getByText('무엇으로 볼까요')).toHaveCount(0)
-    console.log('[PASS] 허브 = 아이콘 런처 8칸 + 인기테마운세')
+
+    // ① 인기테마운세 = 유튜브식 가로 리스트 10줄 (CEO 2026-08-13 「3개 말고 … 10개까지」).
+    // 🔴 숫자는 `HUB_THEME_COUNT`(lib/domain/theme-fortune/themes.ts) 와 같아야 한다 — 앱 코드를
+    //    import 하지 않는 것이 이 폴더의 규율이라 손으로 맞춘다. 줄 수를 바꾸면 여기도 바꾼다.
+    const themeList = page.getByRole('navigation', { name: '인기테마운세' })
+    await expect(themeList).toBeVisible()
+    await expect(themeList.getByRole('link')).toHaveCount(10)
+    // 썸네일은 실사 파일 + 폴백 두 층이라 줄마다 그림이 최소 하나는 뜬다(깨진 그림 금지).
+    await expect(themeList.locator('img').first()).toBeVisible()
+    await expect(page.getByRole('link', { name: '테마 전체 보기' })).toBeVisible()
+    console.log('[PASS] 허브 = 아이콘 런처 8칸 + 인기테마운세 10줄')
 
     // 🔴 오늘의 운세·2026 병오년의 유일한 입구 — 허브에서 내려와 테마 목록이 진다.
     await page.goto('/protected/analysis/theme', { waitUntil: 'domcontentloaded' })

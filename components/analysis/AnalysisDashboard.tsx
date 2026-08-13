@@ -5,20 +5,18 @@ import { motion } from 'framer-motion'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { ChevronRight } from 'lucide-react'
 import { HubLauncher } from './HubLauncher'
+import { ThemeThumbnail } from './ThemeThumbnail'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
-import {
-  hubThemePicks,
-  THEME_CATEGORIES,
-  THEME_LIST_PATH,
-  themeImage,
-  themeListHref,
-} from '@/lib/domain/theme-fortune/themes'
+import { hubThemePicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
 /**
  * 사주·궁합 허브 본문 — 「앱 홈」 문법으로 개편(CEO 2026-08-13 "상단에 어플처럼 아이콘과 제목").
  *
- *   [아이콘 런처 8칸] → [사주 유도 카드] → [① 인기테마운세] → (여정은 상위가 그린다)
+ *   [아이콘 런처 8칸] → [사주 유도 카드] → [① 인기테마운세 10줄] → (여정은 상위가 그린다)
+ *
+ * ① 은 2026-08-13 저녁 CEO 지시(「3개 말고 상하단 사이즈를 좀 줄여서 10개까지」)로 풀폭 와이드
+ * 카드 3장에서 **유튜브식 가로 리스트 10줄**이 됐다. 줄 수는 `HUB_THEME_COUNT` 하나가 정한다.
  *
  * 🔴 구 ② 「무엇으로 볼까요」 카드 4장(궁합·관상·손금·풍수)은 **런처가 흡수했다.**
  *    카드를 되살리면 같은 문이 한 화면에 둘이 된다. 그 넷의 링크는 `HUB_LAUNCHER` 에 있다.
@@ -57,7 +55,7 @@ export function AnalysisDashboard() {
       </motion.div>
 
       {/* ① 인기테마운세 — 「도구」가 아니라 「질문」으로 들어오는 입구 (마스터 §3-2).
-          🔴 카드는 제목·그림만 그린다. 목록·허브에서 AI 를 부르면 9차 사고(오늘의 운세 자동
+          🔴 행은 제목·그림만 그린다. 목록·허브에서 AI 를 부르면 9차 사고(오늘의 운세 자동
              생성)가 그대로 재발한다 — 풀이는 사용자가 누른 화면에서만 돈다. */}
       <motion.section
         variants={fadeInUp}
@@ -74,32 +72,36 @@ export function AnalysisDashboard() {
           </h2>
         </div>
 
-        <nav role="navigation" aria-label="인기테마운세" className="space-y-3">
-          {hubThemePicks().map((theme) => (
+        {/* 유튜브 모바일 리스트 문법 — 왼쪽 16:9 썸네일 + 오른쪽 제목 2줄.
+            🔴 세로가 이 레이아웃의 전부다: 풀폭 카드는 1장이 210px 를 먹어 셋이 한계였는데,
+               행은 88px(썸네일 128×72 + 상하 8px)이라 열 줄이 옛 넉 장 자리에 들어간다.
+            🔴 순번(1·2·3…)을 붙이지 않는다 — «인기»가 아직 수동값이라 순위 숫자는 실측 주장이
+               된다(themes.ts `hubThemePicks` 주석). */}
+        <nav role="navigation" aria-label="인기테마운세" className="space-y-1.5">
+          {hubThemePicks().map((theme, index) => (
             <Link
               key={theme.id}
               href={themeListHref(theme)}
               aria-label={theme.title}
-              className="group block relative overflow-hidden rounded-xl border border-white/10 bg-surface/60 transition-all duration-200 hover:border-gold-500/30 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
+              className="group flex gap-3 rounded-xl border border-white/[0.06] bg-surface/40 p-2 transition-colors duration-200 hover:border-gold-500/25 hover:bg-surface/70 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
             >
-              {/* 16:9 — 마스터 §10 썸네일이 들어올 자리. 지금은 카테고리 그림이 대신 선다. */}
-              <div className="relative aspect-[16/9] w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={themeImage(theme)}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  className="absolute right-4 top-1/2 h-24 w-24 -translate-y-1/2 object-contain opacity-25 transition-transform duration-200 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-4">
-                  <span className="font-serif text-[10px] tracking-[0.2em] text-gold-500/60">
-                    {THEME_CATEGORIES[theme.category].label}
-                  </span>
-                  <h3 className="font-serif text-[15px] font-bold leading-snug text-ink-light">{theme.title}</h3>
-                  <p className="text-[11px] font-light leading-relaxed text-ink-light/60">{theme.subcopy}</p>
-                </div>
+              {/* 위 세 줄만 즉시 — 나머지 일곱은 스크롤할 때 받는다. */}
+              <ThemeThumbnail
+                theme={theme}
+                eager={index < 3}
+                showCost
+                className="aspect-[16/9] w-32 shrink-0 rounded-lg border border-white/[0.06]"
+              />
+
+              {/* min-w-0 이 없으면 flex 자식이 안 줄어들어 line-clamp 가 듣지 않는다. */}
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 pr-1">
+                <span className="font-serif text-[10px] leading-none tracking-[0.2em] text-gold-500/60">
+                  {THEME_CATEGORIES[theme.category].label}
+                </span>
+                <h3 className="line-clamp-2 font-serif text-[13px] font-bold leading-snug text-ink-light">
+                  {theme.title}
+                </h3>
+                <p className="line-clamp-1 text-[11px] font-light leading-tight text-ink-light/50">{theme.subcopy}</p>
               </div>
             </Link>
           ))}

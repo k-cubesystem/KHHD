@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { ThemeThumbnail } from '@/components/analysis/ThemeThumbnail'
 import {
   openRoutes,
   resolveThemeTab,
@@ -10,7 +11,6 @@ import {
   themeAnchorId,
   themeCostLabel,
   themeDestination,
-  themeImage,
   themesByTab,
   isFreeRoute,
   isFreeTheme,
@@ -85,9 +85,10 @@ export default async function ThemeFortuneListPage({ searchParams }: { searchPar
           })}
         </nav>
 
+        {/* 2열 그리드. 첫 줄(두 장)만 즉시 받고 나머지는 스크롤할 때 — 허브 리스트와 같은 규율. */}
         <div className="grid grid-cols-2 gap-3">
-          {themes.map((theme) => (
-            <ThemeCard key={theme.id} theme={theme} />
+          {themes.map((theme, index) => (
+            <ThemeCard key={theme.id} theme={theme} eager={index < 2} />
           ))}
         </div>
 
@@ -139,50 +140,52 @@ export default async function ThemeFortuneListPage({ searchParams }: { searchPar
  *
  * 「지금은 ○○로 이어집니다」를 카드에 적는 이유: 제목이 약속하는 개별 풀이가 아직 없다.
  * 어디로 가는지·얼마인지를 누르기 **전에** 밝혀야 표시와 내용이 어긋나지 않는다.
+ *
+ * 🔴 그림은 허브 리스트와 **같은 컴포넌트·같은 파일**을 쓴다(`ThemeThumbnail`). 허브에서 본
+ *    그림과 목록에서 만나는 그림이 다르면 누른 사람이 «다른 걸 눌렀나» 하게 된다.
  */
-function ThemeCard({ theme }: { theme: ThemeFortune }) {
+function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
   const destination = themeDestination(theme)
   const anchor = themeAnchorId(theme.id)
 
   const body = (
     <>
-      {/* 썸네일 자리(마스터 §10). 지금은 카테고리 그림 — thumbnail 이 생기면 그림만 바뀐다. */}
-      <div className="mb-2.5 flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white/[0.04]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={themeImage(theme)} alt="" aria-hidden="true" draggable={false} className="h-9 w-9 object-contain" />
-      </div>
+      <ThemeThumbnail theme={theme} eager={eager} className="aspect-[16/9] w-full" />
 
-      <h3 className="font-serif text-[13px] font-bold leading-snug text-ink-light">{theme.title}</h3>
-      <p className="mt-1 text-[11px] font-light leading-relaxed text-ink-light/60">{theme.subcopy}</p>
+      <div className="p-3">
+        <h3 className="font-serif text-[13px] font-bold leading-snug text-ink-light">{theme.title}</h3>
+        <p className="mt-1 text-[11px] font-light leading-relaxed text-ink-light/60">{theme.subcopy}</p>
 
-      <div className="mt-2.5 flex items-center gap-1.5">
-        <span
-          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
-            isFreeTheme(theme)
-              ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-              : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
-          }`}
-        >
-          {themeCostLabel(theme)}
-        </span>
-        {theme.input === 'PAIR' && (
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] text-ink-light/60">
-            두 사람
+        <div className="mt-2.5 flex items-center gap-1.5">
+          <span
+            className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
+              isFreeTheme(theme)
+                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
+            }`}
+          >
+            {themeCostLabel(theme)}
           </span>
+          {theme.input === 'PAIR' && (
+            <span className="rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[9px] text-ink-light/60">
+              두 사람
+            </span>
+          )}
+        </div>
+
+        {destination ? (
+          <p className="mt-2 flex items-center gap-0.5 text-[10px] text-ink-light/40">
+            지금은 {destination.label}로<ChevronRight className="h-3 w-3" />
+          </p>
+        ) : (
+          <p className="mt-2 text-[10px] text-ink-light/40">개별 풀이 준비 중</p>
         )}
       </div>
-
-      {destination ? (
-        <p className="mt-2 flex items-center gap-0.5 text-[10px] text-ink-light/40">
-          지금은 {destination.label}로<ChevronRight className="h-3 w-3" />
-        </p>
-      ) : (
-        <p className="mt-2 text-[10px] text-ink-light/40">개별 풀이 준비 중</p>
-      )}
     </>
   )
 
-  const shell = 'relative block rounded-xl border p-4 target:border-gold-500/60 target:bg-gold-500/[0.06] scroll-mt-20'
+  const shell =
+    'relative block overflow-hidden rounded-xl border target:border-gold-500/60 target:bg-gold-500/[0.06] scroll-mt-20'
 
   // 갈 곳이 없는 테마는 링크로 만들지 않는다 — 눌러도 아무 데도 못 가는 카드를 만들지 않는다.
   if (!destination) {

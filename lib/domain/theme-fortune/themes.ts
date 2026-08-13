@@ -56,8 +56,10 @@ export const DEFAULT_THEME_TAB: ThemeTabKey = 'work'
 export interface ThemeCategoryMeta {
   readonly label: string
   /**
-   * 썸네일이 없을 때 카드에 세우는 그림.
-   * 테마 전용 썸네일(마스터 §10)은 아직 없다 — 기존 허브 아이콘을 그대로 빌려 쓴다.
+   * 실사 썸네일이 아직 없거나 못 불러왔을 때 카드에 세우는 그림.
+   *
+   * 🔴 **이 파일들은 리포에 이미 있다**(허브 아이콘 재사용). 실사 썸네일과 달리 실재를 테스트가
+   *    확인한다 — 화면이 «깨진 그림»을 절대 보이지 않는다는 보증이 여기서 나온다.
    */
   readonly fallbackImage: string
 }
@@ -149,12 +151,37 @@ export interface ThemeFortune {
   readonly destination: ThemeDestinationKey | null
   /** 목록 안에서의 노출 순서(작을수록 앞). 전체에서 유일. */
   readonly order: number
-  /** 허브 ① 「인기테마운세」에 거는 순위(마스터 §6-3 v1 = 수동값). 안 거는 테마는 null. */
+  /**
+   * 허브 ① 「인기테마운세」 리스트의 순위(마스터 §6-3 v1 = 수동값). 안 거는 테마는 null.
+   *
+   * 🔴 순위는 **갈래를 번갈아** 매긴다. 정렬 결과가 곧 화면의 세로 순서라, 같은 갈래를 몰아
+   *    두면 열 줄짜리 리스트가 「직장 직장 직장…」으로 읽힌다. 상위 5줄만 봐도 다섯 갈래가 다
+   *    보이도록 1~5 에 갈래를 하나씩 깔고, 6~10 에서 같은 차례를 되풀이한다(테스트가 강제).
+   */
   readonly hubRank: number | null
   /** 1차 출하 여부. 꺼져 있으면 화면에 아예 나오지 않는다. */
   readonly shipped: boolean
-  /** 마스터 §10 썸네일. 아직 없다 — 생기면 여기만 채우면 카드가 바뀐다. */
+  /**
+   * 마스터 §10 실사 썸네일. 경로 규약은 `themeThumbnailPath()` 하나뿐이다.
+   *
+   * 🔴 **파일이 아직 안 왔을 수 있다.** 이 칸은 «그려질 자리»의 선언이지 파일 실재 증명이 아니다
+   *    — 실재 테스트를 걸면 자산이 도착하기 전 CI 가 깨진다. 대신 화면이 폴백을 갖는다
+   *    (`components/analysis/ThemeThumbnail.tsx` — 못 불러오면 카테고리 그림으로 되돌아간다).
+   */
   readonly thumbnail?: string
+}
+
+/**
+ * 실사 썸네일 경로 규약 — 리포에서 이 함수 하나가 정본이다.
+ *
+ * 파일을 만드는 쪽과 그리는 쪽이 다른 작업으로 갈라져 있어, 규약이 두 곳에 적히면 그대로
+ * 어긋난다. 표에는 규약이 만든 문자열을 그대로 적고(읽는 사람이 경로를 눈으로 본다),
+ * 테스트가 표의 문자열과 이 함수의 출력이 같은지 대조한다.
+ *
+ * `-v1` 은 폰 캐시 때문이다 — 그림을 갈아 끼울 때는 같은 이름을 덮어쓰지 말고 번호를 올린다.
+ */
+export function themeThumbnailPath(themeId: string): string {
+  return `/images/theme-thumbs/${themeId}-v1.webp`
 }
 
 /**
@@ -177,6 +204,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 1,
     hubRank: 1,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/leave-or-stay-v1.webp',
   },
   {
     id: 'what-next',
@@ -187,8 +215,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'trendCareer',
     order: 2,
-    hubRank: null,
+    hubRank: 6,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/what-next-v1.webp',
   },
   {
     id: 'people-luck',
@@ -243,6 +272,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 6,
     hubRank: 2,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/nothing-left-v1.webp',
   },
   {
     id: 'money-self',
@@ -253,8 +283,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'wealthDeep',
     order: 7,
-    hubRank: null,
+    hubRank: 7,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/money-self-v1.webp',
   },
   {
     id: 'partner-money',
@@ -279,8 +310,11 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'trendLove',
     order: 9,
+    // 연애 셋 중 둘만 허브에 건다 — 열 줄을 다섯 갈래가 나눠 가지려면 한 갈래가 셋을 차지할
+    // 수 없다. 목록(`/analysis/theme?tab=love`)에서는 그대로 보인다.
     hubRank: null,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/attracts-me-v1.webp',
   },
   {
     id: 'same-type',
@@ -291,8 +325,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'trendLove',
     order: 10,
-    hubRank: null,
+    hubRank: 8,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/same-type-v1.webp',
   },
   {
     id: 'when-love',
@@ -305,6 +340,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 11,
     hubRank: 3,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/when-love-v1.webp',
   },
   {
     id: 'hot-or-not',
@@ -380,8 +416,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'face',
     order: 17,
-    hubRank: null,
+    hubRank: 4,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/first-impression-v1.webp',
   },
   {
     id: 'easy-to-ask',
@@ -392,8 +429,10 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'face',
     order: 18,
+    // 관상 셋 중 둘만 허브에 건다(연애와 같은 이유). 목록에서는 그대로 보인다.
     hubRank: null,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/easy-to-ask-v1.webp',
   },
   {
     // 🔴 이 테마의 시선은 **자기 얼굴을 보는 구직자 본인**이다. 채용절차법의 수범자는
@@ -443,8 +482,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'face',
     order: 22,
-    hubRank: null,
+    hubRank: 9,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/five-faces-v1.webp',
   },
   {
     id: 'resting-face',
@@ -481,8 +521,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'trendEstate',
     order: 25,
-    hubRank: null,
+    hubRank: 5,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/moving-day-v1.webp',
   },
   {
     id: 'house-or-timing',
@@ -493,8 +534,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     input: 'SOLO',
     destination: 'fengshui',
     order: 26,
-    hubRank: null,
+    hubRank: 10,
     shipped: true,
+    thumbnail: '/images/theme-thumbs/house-or-timing-v1.webp',
   },
   {
     id: 'before-contract',
@@ -573,8 +615,16 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
 /** 목록 페이지 경로. 허브 카드와 「테마 전체 보기」가 같은 문자열을 본다. */
 export const THEME_LIST_PATH = '/protected/analysis/theme'
 
-/** 허브 ① 에 거는 와이드 카드 수. */
-export const HUB_THEME_PICK_COUNT = 3
+/**
+ * 허브 ① 리스트에 거는 줄 수.
+ *
+ * 3 → 10 (CEO 2026-08-13 「3개 말고 상하단 사이즈를 좀 줄여서 10개까지」). 세로를 감당하는 것은
+ * 이 숫자가 아니라 **행 모양**이다 — 풀폭 16:9 카드(1장 ≈ 210px)를 유튜브식 가로 행(≈ 88px)으로
+ * 바꿔서 열 줄이 예전 넉 장보다 덜 먹는다(`components/analysis/AnalysisDashboard.tsx`).
+ *
+ * ⚠️ 출하 12종 중 열이므로 둘은 허브에 안 걸린다(`hubRank: null`) — 목록에서는 그대로 보인다.
+ */
+export const HUB_THEME_COUNT = 10
 
 /** 출하된 테마만. 화면은 예외 없이 이 함수를 거쳐 테마를 얻는다. */
 export function shippedThemes(): readonly ThemeFortune[] {
@@ -607,16 +657,17 @@ export function resolveThemeTab(raw: string | undefined): ThemeTabKey {
 }
 
 /**
- * 허브 ① 「인기테마운세」 와이드 카드.
+ * 허브 ① 「인기테마운세」 리스트 — 위에서 아래로의 순서 그대로.
  *
  * 🔴 «인기»는 지금 **수동 순위**다(마스터 §6-3 v1). 그래서 화면에 「1위」 「N명이 봤어요」 같은
- *    실측 주장을 쓰지 않는다 — 계측(v2)이 서기 전까지 그건 거짓이 된다.
+ *    실측 주장을 쓰지 않는다 — 계측(v2)이 서기 전까지 그건 거짓이 된다. 열 줄이 되면서 순번을
+ *    붙이고 싶어지는 자리지만, 숫자를 붙이는 순간 그 주장이 된다(금지어 목록에 「1위」가 있다).
  */
 export function hubThemePicks(): readonly ThemeFortune[] {
   return shippedThemes()
     .filter((theme) => theme.hubRank !== null)
     .sort((a, b) => (a.hubRank ?? 0) - (b.hubRank ?? 0))
-    .slice(0, HUB_THEME_PICK_COUNT)
+    .slice(0, HUB_THEME_COUNT)
 }
 
 export function themeDestination(theme: ThemeFortune): ThemeDestination | null {
@@ -660,7 +711,17 @@ export function themeListHref(theme: ThemeFortune): string {
   return `${THEME_LIST_PATH}?tab=${tabOfCategory(theme.category)}#${themeAnchorId(theme.id)}`
 }
 
-/** 카드 그림 — 전용 썸네일이 생기기 전까지는 카테고리 아이콘을 세운다. */
-export function themeImage(theme: ThemeFortune): string {
-  return theme.thumbnail ?? THEME_CATEGORIES[theme.category].fallbackImage
+/**
+ * 실사 썸네일 — **아직 파일이 없을 수 있다**(자산 작업이 따로 돈다).
+ *
+ * 그래서 «있으면 이 그림»이라는 뜻이지 «이 그림이 뜬다»가 아니다. 뜨지 않았을 때 무엇이
+ * 보이는지는 아래 `themeFallbackImage` 가 정하고, 둘을 겹쳐 그리는 것은 화면의 몫이다.
+ */
+export function themeThumbnail(theme: ThemeFortune): string | undefined {
+  return theme.thumbnail
+}
+
+/** 늘 존재하는 그림 — 실사 썸네일이 없거나 못 불러왔을 때 그 자리를 메운다. */
+export function themeFallbackImage(theme: ThemeFortune): string {
+  return THEME_CATEGORIES[theme.category].fallbackImage
 }

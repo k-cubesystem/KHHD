@@ -12,12 +12,20 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 import { HUB_LAUNCHER } from '@/lib/domain/analysis/hub-home'
 import { HUB_SECTIONS } from '@/lib/domain/analysis/hub-sections'
-import { hubThemePicks, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
+import {
+  HUB_THEME_COUNT,
+  hubThemePicks,
+  THEME_CATEGORIES,
+  THEME_LIST_PATH,
+  themeFallbackImage,
+  themeListHref,
+  themeThumbnailPath,
+} from '@/lib/domain/theme-fortune/themes'
 
 jest.mock('@/components/shared/AmbientVideo', () => ({
   AmbientVideo: () => null,
@@ -45,18 +53,46 @@ function sectionOf(container: HTMLElement, id: string): HTMLElement {
   return element
 }
 
-describe('① 인기테마운세', () => {
-  it('와이드 카드 3장이 걸린다', async () => {
+describe('① 인기테마운세 — 리스트 10줄', () => {
+  it('열 줄이 걸린다 (CEO 2026-08-13 「3개 말고 … 10개까지」)', async () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
     const picks = hubThemePicks()
     const cards = within(section).getAllByRole('link', { name: /.+/ })
 
-    // 카드 3장 + 「테마 전체 보기」
-    expect(cards).toHaveLength(picks.length + 1)
+    expect(picks).toHaveLength(HUB_THEME_COUNT)
+    // 열 줄 + 「테마 전체 보기」
+    expect(cards).toHaveLength(HUB_THEME_COUNT + 1)
     for (const theme of picks) {
       expect(within(section).getByRole('link', { name: theme.title })).not.toBeNull()
+    }
+  })
+
+  it('행 전체가 하나의 링크다 (그림·제목·서브카피가 한 탭 타깃 안에 있다)', async () => {
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+
+    for (const theme of hubThemePicks()) {
+      const row = within(section).getByRole('link', { name: theme.title })
+
+      expect(row.tagName).toBe('A')
+      expect(row.textContent).toContain(theme.title)
+      expect(row.textContent).toContain(theme.subcopy)
+      expect(row.textContent).toContain(THEME_CATEGORIES[theme.category].label)
+      expect(row.querySelector('img')).not.toBeNull()
+    }
+  })
+
+  it('순번 숫자를 붙이지 않는다 («인기»가 아직 수동 순위다)', async () => {
+    // 계측(v2)이 서기 전의 순위 숫자는 실측 주장이 된다 — 「1위」는 금지어이기도 하다.
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+
+    for (const theme of hubThemePicks()) {
+      const row = within(section).getByRole('link', { name: theme.title })
+
+      expect(row.textContent).not.toMatch(/\d+\s*위/)
     }
   })
 
@@ -89,6 +125,80 @@ describe('① 인기테마운세', () => {
     for (const theme of hubThemePicks()) {
       expect(screen.getByText(theme.title)).not.toBeNull()
       expect(screen.getByText(theme.subcopy)).not.toBeNull()
+    }
+  })
+})
+
+describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', () => {
+  /** 한 행의 그림 두 층 — [0] 폴백(늘 있다) · [1] 실사 사진(파일이 없을 수 있다). */
+  function imagesOf(section: HTMLElement, title: string): HTMLImageElement[] {
+    return Array.from(within(section).getByRole('link', { name: title }).querySelectorAll('img'))
+  }
+
+  it('행마다 실사 썸네일이 규약 경로로 걸린다', async () => {
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+
+    for (const theme of hubThemePicks()) {
+      const sources = imagesOf(section, theme.title).map((image) => image.getAttribute('src'))
+
+      expect(sources).toContain(themeThumbnailPath(theme.id))
+    }
+  })
+
+  it('🔴 실사 사진 밑에 폴백 그림이 늘 깔려 있다 (자산 도착 전에도 빈 네모가 아니다)', async () => {
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+
+    for (const theme of hubThemePicks()) {
+      const sources = imagesOf(section, theme.title).map((image) => image.getAttribute('src'))
+
+      expect(sources).toContain(themeFallbackImage(theme))
+    }
+  })
+
+  it('🔴 사진을 못 불러오면 그 층만 내려가고 폴백이 남는다 (깨진 그림 금지)', async () => {
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+    const [first] = hubThemePicks()
+
+    const photo = imagesOf(section, first.title).find(
+      (image) => image.getAttribute('src') === themeThumbnailPath(first.id)
+    )
+    if (!photo) throw new Error('실사 사진 층이 없다')
+
+    await act(async () => {
+      fireEvent.error(photo)
+    })
+
+    const after = imagesOf(section, first.title).map((image) => image.getAttribute('src'))
+    expect(after).not.toContain(themeThumbnailPath(first.id))
+    expect(after).toContain(themeFallbackImage(first))
+  })
+
+  it('위 세 줄만 즉시 받고 나머지는 lazy 다 (열 줄이 한꺼번에 내려오지 않는다)', async () => {
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+
+    hubThemePicks().forEach((theme, index) => {
+      const loadings = imagesOf(section, theme.title).map((image) => image.getAttribute('loading'))
+
+      expect({ id: theme.id, loadings }).toEqual({
+        id: theme.id,
+        loadings: loadings.map(() => (index < 3 ? 'eager' : 'lazy')),
+      })
+    })
+  })
+
+  it('그림은 장식이다 (제목을 두 번 읽지 않는다)', async () => {
+    const { container } = await renderDashboard()
+    const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
+
+    for (const theme of hubThemePicks()) {
+      for (const image of imagesOf(section, theme.title)) {
+        expect(image.getAttribute('alt')).toBe('')
+        expect(image.getAttribute('aria-hidden')).toBe('true')
+      }
     }
   })
 })
