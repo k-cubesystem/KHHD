@@ -13,13 +13,15 @@
  * 값은 그 화면의 실차감 키(`feature-costs.ts`)에서 파생한다. CEO 가 「메인 테마운세 기획 후
  * 가격 전부 정리」를 지시해 둔 상태라, 지금 확정가를 박으면 두 번 일이 된다.
  *
- * ## 🔴 개별 테마 «풀이»는 아직 없다
- * 그래서 `destination` 은 **지금 실제로 돌아가는 화면**을 가리킨다. 가짜 결과(전 사용자 동일
- * 85점 목업)로 보내지 않는 것이 이 표의 첫 번째 계약이다. 개별 풀이가 서면 그 화면으로
- * `destination` 만 갈아 끼운다 — 카피·순서·출하 플래그는 그대로다.
+ * ## 개별 테마 «풀이» — 판정이 선 테마만 자기 화면을 갖는다
+ * `/protected/analysis/theme/{slug}` 가 **테마 상세**다(구 5개 slug 는 그 라우트에서 계속
+ * 리다이렉트로 처리된다). 다만 그 화면이 실제 풀이를 내는 것은 **판정이 등록된 테마뿐**이고,
+ * 등록 여부는 이 표가 아니라 `resolvers/index.ts` 가 안다 — 카피(여기)와 계산(거기)이 서로
+ * 다른 속도로 늘어나기 때문이다.
  *
- * ⚠️ `/protected/analysis/theme/{slug}` 로는 링크하지 않는다. 그 자리는 구 5개 slug 를 진짜
- *    화면으로 넘기는 **리다이렉트 전용**이라, 새 테마 slug 로 들어가면 허브로 튕긴다.
+ * 그래서 `destination` 은 **판정이 서기 전까지 데려갈 곳**으로 남는다. 가짜 결과(전 사용자 동일
+ * 85점 목업)로 보내지 않는 것이 이 표의 첫 번째 계약이고, 판정이 서면 화면이 알아서 상세로
+ * 데려간다(`themeEntryHref`) — 카피·순서·출하 플래그는 그대로다.
  *
  * ## 테마 하나 추가하기
  * ①아래 표에 항목 1개 ②`shipped` 는 실존 진입 경로가 생긴 뒤에 켠다 ③테스트 통과.
@@ -162,6 +164,23 @@ export interface ThemeFortune {
   /** 1차 출하 여부. 꺼져 있으면 화면에 아예 나오지 않는다. */
   readonly shipped: boolean
   /**
+   * 개별 풀이(L2 판정)가 섰는가. 켜면 카드가 `destination` 이 아니라 **자기 풀이 화면**으로 간다.
+   *
+   * 🔴 이 한 칸이 **가는 곳과 복채를 함께** 바꾼다. 링크만 바꾸고 단가를 안 바꾸면 「무료」라고
+   *    적힌 카드가 복채를 받는다 — 표시광고법 사고의 전형이다(마스터 §7-1 표시 = 실차감).
+   * 🔴 켜 두고 판정을 등록하지 않으면 화면이 「준비 중」으로 닫히고 복채는 못 받는다.
+   *    그 어긋남은 빌드가 아니라 **테스트가 잡는다**(`__tests__/resolvers.test.ts`).
+   */
+  readonly reading?: boolean
+  /**
+   * 개별 풀이를 복채 없이 여는 «미끼»인가 (마스터 §7-1 — 카테고리당 1종).
+   *
+   * 🔴 근거는 «인심»이 아니라 **엔진 원가**다(직장·재물 §4). 이 둘만 세운 타임라인을 돌지 않아
+   *    다른 테마보다 실제로 싸다. 그래서 이 플래그 하나가 표시(무료 배지)와 실차감(차감 건너뜀)을
+   *    **동시에** 가른다 — 두 곳에 적으면 그 순간 표시와 실차감이 어긋난다.
+   */
+  readonly freeReading?: boolean
+  /**
    * 마스터 §10 실사 썸네일. 경로 규약은 `themeThumbnailPath()` 하나뿐이다.
    *
    * 🔴 **파일이 아직 안 왔을 수 있다.** 이 칸은 «그려질 자리»의 선언이지 파일 실재 증명이 아니다
@@ -178,10 +197,11 @@ export interface ThemeFortune {
  * 어긋난다. 표에는 규약이 만든 문자열을 그대로 적고(읽는 사람이 경로를 눈으로 본다),
  * 테스트가 표의 문자열과 이 함수의 출력이 같은지 대조한다.
  *
- * `-v1` 은 폰 캐시 때문이다 — 그림을 갈아 끼울 때는 같은 이름을 덮어쓰지 말고 번호를 올린다.
+ * 버전 접미사는 폰 캐시 때문이다 — 그림을 갈아 끼울 때는 같은 이름을 덮어쓰지 말고 번호를 올린다.
+ * `-v2` 는 현대(컨템포러리) 실사로 12장을 다시 찍은 회차다(v1 은 11장이 한옥이라 결이 갈렸다).
  */
 export function themeThumbnailPath(themeId: string): string {
-  return `/images/theme-thumbs/${themeId}-v1.webp`
+  return `/images/theme-thumbs/${themeId}-v2.webp`
 }
 
 /**
@@ -204,7 +224,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 1,
     hubRank: 1,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/leave-or-stay-v1.webp',
+    // 시범 관통 1종 — 판정은 `resolvers/leave-or-stay.ts`.
+    reading: true,
+    thumbnail: '/images/theme-thumbs/leave-or-stay-v2.webp',
   },
   {
     id: 'what-next',
@@ -217,7 +239,8 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 2,
     hubRank: 6,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/what-next-v1.webp',
+    freeReading: true,
+    thumbnail: '/images/theme-thumbs/what-next-v2.webp',
   },
   {
     id: 'people-luck',
@@ -272,7 +295,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 6,
     hubRank: 2,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/nothing-left-v1.webp',
+    thumbnail: '/images/theme-thumbs/nothing-left-v2.webp',
   },
   {
     id: 'money-self',
@@ -285,7 +308,8 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 7,
     hubRank: 7,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/money-self-v1.webp',
+    freeReading: true,
+    thumbnail: '/images/theme-thumbs/money-self-v2.webp',
   },
   {
     id: 'partner-money',
@@ -314,7 +338,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     // 수 없다. 목록(`/analysis/theme?tab=love`)에서는 그대로 보인다.
     hubRank: null,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/attracts-me-v1.webp',
+    thumbnail: '/images/theme-thumbs/attracts-me-v2.webp',
   },
   {
     id: 'same-type',
@@ -327,7 +351,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 10,
     hubRank: 8,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/same-type-v1.webp',
+    thumbnail: '/images/theme-thumbs/same-type-v2.webp',
   },
   {
     id: 'when-love',
@@ -340,7 +364,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 11,
     hubRank: 3,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/when-love-v1.webp',
+    thumbnail: '/images/theme-thumbs/when-love-v2.webp',
   },
   {
     id: 'hot-or-not',
@@ -418,7 +442,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 17,
     hubRank: 4,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/first-impression-v1.webp',
+    thumbnail: '/images/theme-thumbs/first-impression-v2.webp',
   },
   {
     id: 'easy-to-ask',
@@ -432,7 +456,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     // 관상 셋 중 둘만 허브에 건다(연애와 같은 이유). 목록에서는 그대로 보인다.
     hubRank: null,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/easy-to-ask-v1.webp',
+    thumbnail: '/images/theme-thumbs/easy-to-ask-v2.webp',
   },
   {
     // 🔴 이 테마의 시선은 **자기 얼굴을 보는 구직자 본인**이다. 채용절차법의 수범자는
@@ -484,7 +508,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 22,
     hubRank: 9,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/five-faces-v1.webp',
+    thumbnail: '/images/theme-thumbs/five-faces-v2.webp',
   },
   {
     id: 'resting-face',
@@ -523,7 +547,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 25,
     hubRank: 5,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/moving-day-v1.webp',
+    thumbnail: '/images/theme-thumbs/moving-day-v2.webp',
   },
   {
     id: 'house-or-timing',
@@ -536,7 +560,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 26,
     hubRank: 10,
     shipped: true,
-    thumbnail: '/images/theme-thumbs/house-or-timing-v1.webp',
+    thumbnail: '/images/theme-thumbs/house-or-timing-v2.webp',
   },
   {
     id: 'before-contract',
@@ -626,6 +650,15 @@ export const THEME_LIST_PATH = '/protected/analysis/theme'
  */
 export const HUB_THEME_COUNT = 10
 
+/**
+ * 개별 풀이 캐시 기간(일) — 기존 `analyzeTrendAction` 승계(마스터 §7-2).
+ * 이 기간 안의 재진입은 저장본을 보여 주고 **복채가 나가지 않는다.**
+ *
+ * ⚠️ 여기 사는 이유: 서버 액션 모듈은 **async 함수만 내보낼 수 있다**(Next 규칙) — 상수를
+ *    거기 두면 빌드가 깨진다. 정책 숫자는 도메인 상수 자리인 이 파일이 맞다.
+ */
+export const THEME_CACHE_DAYS = 7
+
 /** 출하된 테마만. 화면은 예외 없이 이 함수를 거쳐 테마를 얻는다. */
 export function shippedThemes(): readonly ThemeFortune[] {
   return THEME_FORTUNES.filter((theme) => theme.shipped).sort((a, b) => a.order - b.order)
@@ -674,8 +707,19 @@ export function themeDestination(theme: ThemeFortune): ThemeDestination | null {
   return theme.destination ? THEME_DESTINATIONS[theme.destination] : null
 }
 
-/** 단가 키 — 테마가 데려가는 화면의 실차감 키. null 은 «복채를 받지 않는다». */
+/** 개별 풀이가 선 테마인가 — 가는 곳과 복채를 함께 가른다. */
+export function hasThemeReading(theme: ThemeFortune): boolean {
+  return theme.reading === true
+}
+
+/**
+ * 단가 키 — **카드를 눌렀을 때 실제로 나가는 복채**의 키. null 은 «복채를 받지 않는다».
+ *
+ * 🔴 개별 풀이가 선 테마는 `destination` 이 아니라 **자기 풀이**의 값을 쓴다. 링크는 풀이로
+ *    가는데 배지가 도착 화면의 값을 쓰면, 「무료」라고 적힌 카드가 복채를 받는다.
+ */
 export function themeCostKey(theme: ThemeFortune): FeatureCostKey | null {
+  if (hasThemeReading(theme)) return themeReadingCostKey(theme)
   return themeDestination(theme)?.costKey ?? null
 }
 
@@ -684,6 +728,7 @@ export function themeCostKey(theme: ThemeFortune): FeatureCostKey | null {
  * 숫자는 `feature-costs.ts` 에서만 온다 — 이 파일에는 금액이 한 글자도 없다.
  */
 export function themeCostLabel(theme: ThemeFortune): string {
+  if (hasThemeReading(theme)) return themeReadingCostLabel(theme)
   const destination = themeDestination(theme)
   if (!destination) return '준비 중'
   return routeCostLabel(destination)
@@ -691,6 +736,7 @@ export function themeCostLabel(theme: ThemeFortune): string {
 
 /** 그 복채가 «무료»인가 — 배지 색을 가르는 데만 쓴다. */
 export function isFreeTheme(theme: ThemeFortune): boolean {
+  if (hasThemeReading(theme)) return isFreeReading(theme)
   const destination = themeDestination(theme)
   if (!destination) return false
   return isFreeRoute(destination)
@@ -724,4 +770,66 @@ export function themeThumbnail(theme: ThemeFortune): string | undefined {
 /** 늘 존재하는 그림 — 실사 썸네일이 없거나 못 불러왔을 때 그 자리를 메운다. */
 export function themeFallbackImage(theme: ThemeFortune): string {
   return THEME_CATEGORIES[theme.category].fallbackImage
+}
+
+/** id 로 테마를 찾는다. 라우트 slug 가 곧 id 이므로 URL 해석의 유일한 관문이다. */
+export function themeById(themeId: string): ThemeFortune | null {
+  return THEME_FORTUNES.find((theme) => theme.id === themeId) ?? null
+}
+
+/**
+ * 개별 풀이 화면 경로 규약 — 리포에서 이 함수 하나가 정본이다.
+ * slug 는 테마 id 그대로다(썸네일 파일명·상수 키와 같은 값 하나, 마스터 §4).
+ */
+export function themeReadingPath(themeId: string): string {
+  return `${THEME_LIST_PATH}/${themeId}`
+}
+
+/**
+ * 개별 풀이의 실차감 키. `null` 은 «복채를 받지 않는다».
+ *
+ * 🔴 표시 = 실차감(마스터 §7-1). 이 함수가 화면의 배지도, 서버 액션의 차감액도 정한다 —
+ *    금액은 `feature-costs.ts` 에서만 오고 이 파일에는 숫자가 한 글자도 없다.
+ */
+export function themeReadingCostKey(theme: ThemeFortune): FeatureCostKey | null {
+  return theme.freeReading ? null : 'themeFortune'
+}
+
+/** 상세 화면에 찍는 복채 표기. */
+export function themeReadingCostLabel(theme: ThemeFortune): string {
+  const key = themeReadingCostKey(theme)
+  return key ? formatFeatureCost(key) : '무료'
+}
+
+export function isFreeReading(theme: ThemeFortune): boolean {
+  const key = themeReadingCostKey(theme)
+  return key === null || FEATURE_COST[key].free
+}
+
+/**
+ * 카드를 눌렀을 때 실제로 가는 곳.
+ *
+ * 판정이 선 테마는 **자기 풀이 화면**으로, 아직 없는 테마는 지금 돌아가는 화면으로 간다.
+ * 갈 곳이 아예 없으면 `null` — 화면은 그때 카드를 링크로 만들지 않는다(눌러도 못 가는 카드 금지).
+ */
+export function themeEntryHref(theme: ThemeFortune): string | null {
+  if (hasThemeReading(theme)) return themeReadingPath(theme.id)
+  return themeDestination(theme)?.href ?? null
+}
+
+/** 카드에 적는 「지금은 ○○로 이어집니다」. 자기 풀이가 선 테마는 적을 것이 없다(제자리로 간다). */
+export function themeEntryLabel(theme: ThemeFortune): string | null {
+  if (hasThemeReading(theme)) return null
+  return themeDestination(theme)?.label ?? null
+}
+
+/** 결과 화면 8번 칸 「다음 걸음」 — 같은 갈래의 출하 테마 2장. 자기 자신은 뺀다. */
+export function relatedThemes(theme: ThemeFortune, count = 2): readonly ThemeFortune[] {
+  const tab = tabOfCategory(theme.category)
+  const sameTab = themesByTab(tab).filter((candidate) => candidate.id !== theme.id)
+  // 같은 갈래에 남는 게 모자라면 다른 갈래에서 채운다 — 「다음 걸음」이 비어 있으면 화면이 막힌다.
+  const rest = shippedThemes().filter(
+    (candidate) => candidate.id !== theme.id && !sameTab.some((item) => item.id === candidate.id)
+  )
+  return [...sameTab, ...rest].slice(0, count)
 }
