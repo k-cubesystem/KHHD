@@ -20,10 +20,11 @@ import { logger } from '@/lib/utils/logger'
 import {
   buildThemeAdditionalContext,
   parseThemeNarration,
-  THEME_OUTPUT_FORMAT_GUIDE,
+  themeOutputFormatGuide,
 } from '@/lib/domain/theme-fortune/ai-contract'
 import { themeResolver } from '@/lib/domain/theme-fortune/resolvers'
 import {
+  isFreeReading,
   THEME_CACHE_DAYS,
   themeById,
   themeReadingCostKey,
@@ -191,12 +192,15 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
     const verdict = resolver.judge({ ctx, yearly, baseYear, rules })
 
     // ── L3 서술 (AI 는 문장만 쓴다) ─────────────────────────────────────────
+    // 무료 미끼는 절단 스키마로 간다 — 행동·시기 해설·되짚기는 자리 자체가 없다(직장·재물
+    // 게이트 8번). 파서도 같은 기준으로 다시 자르므로 AI 가 스키마를 무시해도 새지 않는다.
+    const freeCut = isFreeReading(theme)
     const { prompt } = await buildMasterPromptForAction(
       person,
       resolver.prompt.analysisType,
       '',
       buildThemeAdditionalContext(resolver.prompt, verdict),
-      THEME_OUTPUT_FORMAT_GUIDE
+      themeOutputFormatGuide(freeCut)
     )
     const ai = await generateAIContent({
       featureKey: `theme_${theme.id}`,
@@ -205,7 +209,7 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       userPrompt: prompt,
     })
     // 판정에 없는 달은 여기서 판정의 달로 덮인다 — 조용히 틀린 달을 내보내지 않는다(§5-4).
-    const narration = parseThemeNarration(ai.text, verdict)
+    const narration = parseThemeNarration(ai.text, verdict, freeCut)
 
     const reading: ThemeReading = {
       themeId: theme.id,

@@ -152,6 +152,22 @@ describe('상세 — 누르기 전에 밝히는 것', () => {
   })
 })
 
+describe('상세 — 강화 고지 (마스터 §9-4 · §9-5 6번)', () => {
+  it('🔴 투자 부류는 결제 «전»에도 고지 박스가 보인다', async () => {
+    // 돈이 나가기 전에 「투자 자문이 아니다」를 봐야 고지가 고지다 — 그래서 결과가 아니라
+    // 히어로 아래 선다. 문구는 themes.ts 상수 단일 소스.
+    await renderDetail('nothing-left')
+
+    expect(screen.getByText(/투자 자문이 아닙니다/)).not.toBeNull()
+  })
+
+  it('부류 밖 테마에는 박스를 세우지 않는다 (고지가 흔해지면 아무도 읽지 않는다)', async () => {
+    await renderDetail(READING_THEME)
+
+    expect(screen.queryByText(/투자 자문이 아닙니다/)).toBeNull()
+  })
+})
+
 describe('상세 — 결과 골격 9섹션 (마스터 §4-2)', () => {
   const READING = {
     themeId: READING_THEME,
@@ -306,7 +322,9 @@ describe('상세 — 결과 골격 9섹션 (마스터 §4-2)', () => {
 describe('상세 — 판정이 없는 테마', () => {
   it('출하했지만 판정이 없으면 「준비 중」으로 닫고 버튼을 내주지 않는다', async () => {
     // 카드가 복채를 적고 링크가 여기로 오는데 화면이 열리면, 돈은 받고 결과가 없는 자리가 된다.
-    await renderDetail('when-love')
+    // 예시는 관상 테마 — 관상 3종은 사주 골격으로 판정할 수 없어(입력=FACE 판정, 관상 세트
+    // §5-6) 별도 파생층이 설 때까지 판정 없이 남는 유일한 출하 갈래다.
+    await renderDetail('first-impression')
 
     expect(screen.getByText('이 테마의 풀이는 준비 중입니다.')).not.toBeNull()
     expect(screen.queryByRole('button', { name: /풀이 보기/ })).toBeNull()

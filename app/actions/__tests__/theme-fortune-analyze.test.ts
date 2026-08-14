@@ -166,7 +166,9 @@ describe('인가 — 인자가 아니라 함수 안에서 판정한다', () => {
 
   it('판정이 등록되지 않은 출하 테마는 복채를 받지 않는다', async () => {
     // 카피 표에 `reading` 이 켜져 있어도 판정기가 없으면 여기서 먼저 거절한다.
-    const result = await analyzeThemeFortune({ themeId: 'when-love', targetId: TARGET_ID })
+    // 예시는 관상 테마 — 관상 3종은 입력이 사주가 아니라 사진 기반 FACE 판정이라(관상 세트
+    // §5-6) 별도 파생층이 설 때까지 판정 없이 남는 유일한 출하 갈래다.
+    const result = await analyzeThemeFortune({ themeId: 'first-impression', targetId: TARGET_ID })
 
     expect(result).toEqual({ success: false, error: '이 테마의 풀이는 아직 준비 중입니다.' })
     expect(mockDeduct).not.toHaveBeenCalled()
@@ -270,12 +272,17 @@ describe('🔴 복채 — 표시 = 실차감', () => {
   })
 
   it('🔴 무료 미끼 테마는 차감 경로 자체를 타지 않는다 (마스터 §7-1)', async () => {
-    // what-next 는 아직 판정이 없으므로, 「무료면 차감을 안 한다」는 계약은 그 앞 관문으로 증명된다.
-    // 판정이 서는 순간 이 테스트는 아래 두 줄로 «차감 0회 + 결과 성공»을 함께 재게 된다.
+    // 판정이 선 지금은 «차감 0회 + 결과 성공»을 함께 잰다 — 무료 미끼가 실제 풀이를 내면서도
+    // 지갑 경로(deductTalisman)를 아예 타지 않는다.
     const result = await analyzeThemeFortune({ themeId: 'what-next', targetId: TARGET_ID })
 
-    expect(result.success).toBe(false)
     expect(mockDeduct).not.toHaveBeenCalled()
+    if (!result.success) throw new Error(`무료 풀이가 실패했다: ${result.error}`)
+    // 절단 배선 증명 — AI 모킹은 7칸을 다 채워 보냈지만 서버가 행동·시기 해설·되짚기를
+    // 버린다(직장·재물 게이트 8번). 프롬프트가 아니라 파서가 게이트를 진다.
+    expect(result.reading.narration.actions).toEqual([])
+    expect(result.reading.narration.timingNotes).toEqual([])
+    expect(result.reading.narration.pastEcho).toBe('')
   })
 
   it('AI 가 실패하면 복채를 돌려준다', async () => {

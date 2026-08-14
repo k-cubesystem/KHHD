@@ -188,6 +188,14 @@ export interface ThemeFortune {
    *    (`components/analysis/ThemeThumbnail.tsx` — 못 불러오면 카테고리 그림으로 되돌아간다).
    */
   readonly thumbnail?: string
+  /**
+   * 상단 강화 고지(마스터 §9-4) — 있으면 상세 화면이 히어로 바로 아래 호박색 경고 박스를 세운다.
+   *
+   * 🔴 2인 직장·사업·투자 부류는 개별 풀이를 여는 순간 이 칸이 게이트다(마스터 §9-5 6번 —
+   *    비어 있으면 출하 실패). 문구는 §9-4 표의 문안 상수만 쓴다 — 화면·프롬프트에 다시 적으면
+   *    그 순간 두 소스가 된다.
+   */
+  readonly extraDisclaimer?: string
 }
 
 /**
@@ -203,6 +211,15 @@ export interface ThemeFortune {
 export function themeThumbnailPath(themeId: string): string {
   return `/images/theme-thumbs/${themeId}-v2.webp`
 }
+
+/**
+ * 강화 고지 문안 — 투자 부류(마스터 §9-4 표 3행 그대로).
+ *
+ * 🔴 다듬지 말 것 — 대가를 받고 투자 판단을 조언하면 자본시장법상 유사투자자문 영역과 닿고,
+ *    이 문장이 그 거리를 벌린다. 테스트가 문자열을 고정한다(의식 놀이 상수 패턴 승계).
+ */
+export const THEME_DISCLAIMER_INVEST =
+  '이 풀이는 투자 자문이 아닙니다. 특정 상품·종목·매매 시점을 권유하지 않으며, 투자 판단과 책임은 본인에게 있습니다.'
 
 /**
  * 테마 32종.
@@ -224,7 +241,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 1,
     hubRank: 1,
     shipped: true,
-    // 시범 관통 1종 — 판정은 `resolvers/leave-or-stay.ts`.
+    // 시범 관통 1호(13차) — 판정은 `resolvers/leave-or-stay.ts`.
     reading: true,
     thumbnail: '/images/theme-thumbs/leave-or-stay-v2.webp',
   },
@@ -239,6 +256,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 2,
     hubRank: 6,
     shipped: true,
+    reading: true,
     freeReading: true,
     thumbnail: '/images/theme-thumbs/what-next-v2.webp',
   },
@@ -295,6 +313,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 6,
     hubRank: 2,
     shipped: true,
+    reading: true,
+    // 투자 부류 강화 고지(마스터 §9-5 6번) — 개별 풀이가 서는 순간 이 칸이 게이트다.
+    extraDisclaimer: THEME_DISCLAIMER_INVEST,
     thumbnail: '/images/theme-thumbs/nothing-left-v2.webp',
   },
   {
@@ -308,7 +329,9 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 7,
     hubRank: 7,
     shipped: true,
+    reading: true,
     freeReading: true,
+    extraDisclaimer: THEME_DISCLAIMER_INVEST,
     thumbnail: '/images/theme-thumbs/money-self-v2.webp',
   },
   {
@@ -338,6 +361,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     // 수 없다. 목록(`/analysis/theme?tab=love`)에서는 그대로 보인다.
     hubRank: null,
     shipped: true,
+    reading: true,
     thumbnail: '/images/theme-thumbs/attracts-me-v2.webp',
   },
   {
@@ -351,6 +375,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 10,
     hubRank: 8,
     shipped: true,
+    reading: true,
     thumbnail: '/images/theme-thumbs/same-type-v2.webp',
   },
   {
@@ -364,6 +389,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 11,
     hubRank: 3,
     shipped: true,
+    reading: true,
     thumbnail: '/images/theme-thumbs/when-love-v2.webp',
   },
   {
@@ -547,6 +573,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 25,
     hubRank: 5,
     shipped: true,
+    reading: true,
     thumbnail: '/images/theme-thumbs/moving-day-v2.webp',
   },
   {
@@ -560,6 +587,7 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
     order: 26,
     hubRank: 10,
     shipped: true,
+    reading: true,
     thumbnail: '/images/theme-thumbs/house-or-timing-v2.webp',
   },
   {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Loader2, MessageCircle, Sparkles } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, MessageCircle, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { ThemeThumbnail } from '@/components/analysis/ThemeThumbnail'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
@@ -138,6 +138,15 @@ export function ThemeDetailContent({
             </div>
           </div>
         </header>
+
+        {/* 상단 강화 고지(마스터 §9-4) — 투자·사업 부류는 이 박스가 출하 게이트다(§9-5 6번).
+            결제 «전»에도 보여야 하는 문장이라 결과가 아니라 히어로 바로 아래 선다. */}
+        {theme.extraDisclaimer && (
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-700/30 bg-amber-900/20 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
+            <p className="text-[11px] font-light leading-relaxed text-amber-400/80">{theme.extraDisclaimer}</p>
+          </div>
+        )}
 
         {/* «무엇을 보는지» — 누르기 전에 밝힌다. 표시와 내용이 어긋나면 환불 민원의 씨앗이다. */}
         <section className="mt-4 space-y-2 rounded-xl border border-white/10 bg-surface/30 p-4">

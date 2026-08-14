@@ -10,6 +10,8 @@ import {
   parseThemeNarration,
   THEME_L3_FIXED_INSTRUCTION,
   THEME_OUTPUT_FORMAT_GUIDE,
+  THEME_OUTPUT_FORMAT_GUIDE_FREE,
+  themeOutputFormatGuide,
 } from '@/lib/domain/theme-fortune/ai-contract'
 import { leaveOrStayResolver } from '@/lib/domain/theme-fortune/resolvers/leave-or-stay'
 import type { ThemeVerdict } from '@/lib/domain/theme-fortune/verdict-types'
@@ -78,10 +80,35 @@ describe('고정 지시문 (마스터 §5-1)', () => {
 describe('출력 스키마 — 자리가 없으면 AI 가 쓸 수 없다 (직장·재물 §3-2)', () => {
   it('종목·매수 시점·수익률 칸을 만들지 않는다', () => {
     expect(THEME_OUTPUT_FORMAT_GUIDE).not.toMatch(/종목|매수|매도|수익률|목표가|투자 적기|bestMonth|bestWeek/)
+    expect(THEME_OUTPUT_FORMAT_GUIDE_FREE).not.toMatch(/종목|매수|매도|수익률|목표가|투자 적기|bestMonth|bestWeek/)
   })
 
   it('점수 칸을 만들지 않는다 (밴드는 이미 L2 가 정했다)', () => {
     expect(THEME_OUTPUT_FORMAT_GUIDE).not.toMatch(/"score"|점수|등급/)
+    expect(THEME_OUTPUT_FORMAT_GUIDE_FREE).not.toMatch(/"score"|점수|등급/)
+  })
+})
+
+describe('무료 절단 (마스터 §7-1 · 직장·재물 게이트 8번)', () => {
+  it('🔴 절단 스키마에 행동·시기 해설·되짚기 자리가 없다', () => {
+    // 칸 수 차이가 곧 무료와 유료 두 상품의 구분이다 — 자리가 생기는 순간 상품 구분이 사라진다.
+    expect(THEME_OUTPUT_FORMAT_GUIDE_FREE).not.toMatch(/actions|timingNotes|pastEcho/)
+  })
+
+  it('선택기는 무료에만 절단 스키마를 준다', () => {
+    expect(themeOutputFormatGuide(true)).toBe(THEME_OUTPUT_FORMAT_GUIDE_FREE)
+    expect(themeOutputFormatGuide(false)).toBe(THEME_OUTPUT_FORMAT_GUIDE)
+  })
+
+  it('🔴 AI 가 절단 스키마를 무시하고 써 보내도 서버가 버린다', () => {
+    // 게이트는 프롬프트가 아니라 파서가 진다 — 프롬프트는 지시일 뿐 강제가 아니다.
+    const narration = parseThemeNarration(narrationJson(), VERDICT, true)
+
+    expect(narration.actions).toEqual([])
+    expect(narration.timingNotes).toEqual([])
+    expect(narration.pastEcho).toBe('')
+    expect(narration.headline).toContain('자리보다 시기')
+    expect(narration.indicatorNotes).toHaveLength(3)
   })
 })
 

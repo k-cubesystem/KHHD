@@ -57,6 +57,26 @@ export const THEME_OUTPUT_FORMAT_GUIDE = `[출력 형식 (JSON Mandatory) — �
 }`
 
 /**
+ * 무료 미끼 테마(마스터 §7-1)의 절단 스키마 — 행동·시기 해설·되짚기는 **자리 자체가 없다**.
+ *
+ * 🔴 «자리가 없으면 AI 가 쓸 수 없다»가 문구 규율보다 강한 방어이고(직장·재물 §3-2), 칸 수
+ *    차이가 곧 무료와 유료 두 상품의 구분이다(직장·재물 게이트 8번). 그래서 공용 가이드에
+ *    조건문을 넣지 않고 상수를 따로 둔다 — 테스트가 두 문자열을 각각 고정한다.
+ */
+export const THEME_OUTPUT_FORMAT_GUIDE_FREE = `[출력 형식 (JSON Mandatory) — 아래 키만, 이 순서로]
+{
+  "headline": "질문에 대한 한 문장 답 (40자 내외, 판정 라벨과 어긋나지 않게)",
+  "situation": "왜 그런가 — 원국 근거를 쉬운 말로 3~4문장",
+  "indicatorNotes": ["지표1 해설 1~2문장", "지표2 해설", "지표3 해설"],
+  "caution": "이 풀이를 어떻게 쓰면 안 되는지 1문장"
+}`
+
+/** 액션이 쓰는 선택기 — 무료 미끼는 절단 스키마로 간다. */
+export function themeOutputFormatGuide(freeCut: boolean): string {
+  return freeCut ? THEME_OUTPUT_FORMAT_GUIDE_FREE : THEME_OUTPUT_FORMAT_GUIDE
+}
+
+/**
  * 테마 고유 지시 — `buildMasterPromptForAction` 의 `additionalContext` 자리에 통째로 들어간다.
  * 새 프롬프트 빌더를 만들지 않는다(마스터 §5-4).
  */
@@ -124,7 +144,7 @@ export function enforceMonths(text: string, allowed: readonly number[]): string 
  * 않는다). 필드 누락은 던지지 않고 빈 문자열로 떨어뜨린다(한 칸이 비었다고 유료 결과 전체를
  * 버리는 쪽이 사용자에게 더 나쁘다).
  */
-export function parseThemeNarration(raw: string, verdict: ThemeVerdict): ThemeNarration {
+export function parseThemeNarration(raw: string, verdict: ThemeVerdict, freeCut = false): ThemeNarration {
   const jsonMatch = raw.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('테마 풀이 결과를 해석하지 못했습니다.')
 
@@ -144,10 +164,12 @@ export function parseThemeNarration(raw: string, verdict: ThemeVerdict): ThemeNa
     headline: guard(asText(parsed.headline)),
     situation: guard(asText(parsed.situation)),
     indicatorNotes: asTextList(parsed.indicatorNotes, verdict.indicators.length).map(guard),
-    timingNotes: asTextList(parsed.timingNotes, 2).map(guard),
-    actions: asTextList(parsed.actions, 3).map(guard),
+    // 🔴 무료 절단 — AI 가 절단 스키마를 무시하고 써 보내도 서버가 버린다(게이트 8번은
+    //    프롬프트가 아니라 여기서 진다). 빈 배열·빈 문자열은 화면이 그 칸을 그리지 않는 신호다.
+    timingNotes: freeCut ? [] : asTextList(parsed.timingNotes, 2).map(guard),
+    actions: freeCut ? [] : asTextList(parsed.actions, 3).map(guard),
     // 근거가 없으면 화면이 「되짚기」 칸을 아예 그리지 않는다 — 지어낸 과거를 싣지 않는다.
-    pastEcho: verdict.pastHint ? guard(asText(parsed.pastEcho)) : '',
+    pastEcho: freeCut || !verdict.pastHint ? '' : guard(asText(parsed.pastEcho)),
     caution: guard(asText(parsed.caution)),
   }
 

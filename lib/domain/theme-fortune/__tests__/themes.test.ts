@@ -24,6 +24,7 @@ import {
   tabOfCategory,
   THEME_CATEGORIES,
   THEME_DESTINATIONS,
+  THEME_DISCLAIMER_INVEST,
   THEME_FORTUNES,
   THEME_LIST_PATH,
   THEME_TABS,
@@ -50,7 +51,7 @@ const THEMES_SOURCE = readFileSync(join(ROOT, 'lib/domain/theme-fortune/themes.t
 
 /** 카피가 실려 나가는 모든 문자열 — 금지어 검사는 여기 전량에 건다. */
 function copyOf(theme: ThemeFortune): string[] {
-  return [theme.title, theme.titleLong ?? '', theme.subcopy, theme.target]
+  return [theme.title, theme.titleLong ?? '', theme.subcopy, theme.target, theme.extraDisclaimer ?? '']
 }
 
 describe('THEME_FORTUNES — 표의 모양', () => {
@@ -183,6 +184,32 @@ describe('THEME_FORTUNES — 금지어 (마스터 §9-3)', () => {
     for (const theme of THEME_FORTUNES) {
       for (const word of BANNED) expect(themeCostLabel(theme)).not.toContain(word)
     }
+  })
+})
+
+describe('강화 고지 (마스터 §9-4 · §9-5 6번)', () => {
+  it('🔴 재물 테마 2종(W-1·W-2)은 투자 고지를 단다 — 비면 출하 실패', () => {
+    // 대가를 받고 투자 판단을 조언하면 자본시장법상 유사투자자문 영역과 닿는다(§9-4).
+    for (const id of ['nothing-left', 'money-self']) {
+      const theme = THEME_FORTUNES.find((candidate) => candidate.id === id)
+      expect({ id, extraDisclaimer: theme?.extraDisclaimer }).toEqual({ id, extraDisclaimer: THEME_DISCLAIMER_INVEST })
+    }
+  })
+
+  it('🔴 개별 풀이가 선 재물 테마는 예외 없이 고지를 단다 (앞으로 켤 W-3 도 이 게이트를 지난다)', () => {
+    for (const theme of THEME_FORTUNES.filter((candidate) => candidate.category === 'wealth')) {
+      if (!hasThemeReading(theme)) continue
+      expect({ id: theme.id, disclosed: theme.extraDisclaimer === THEME_DISCLAIMER_INVEST }).toEqual({
+        id: theme.id,
+        disclosed: true,
+      })
+    }
+  })
+
+  it('문안은 §9-4 표 3행 그대로다 — 다듬지 않는다', () => {
+    expect(THEME_DISCLAIMER_INVEST).toBe(
+      '이 풀이는 투자 자문이 아닙니다. 특정 상품·종목·매매 시점을 권유하지 않으며, 투자 판단과 책임은 본인에게 있습니다.'
+    )
   })
 })
 

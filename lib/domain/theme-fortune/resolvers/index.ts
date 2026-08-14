@@ -20,15 +20,40 @@
  *   ④ `__tests__/resolvers/{id}.test.ts` — 결정론 + 판정표 고정
  */
 import type { ThemeResolver } from '../verdict-types'
+import { attractsMeResolver } from './attracts-me'
+import { houseOrTimingResolver } from './house-or-timing'
 import { leaveOrStayResolver } from './leave-or-stay'
+import { moneySelfResolver } from './money-self'
+import { movingDayResolver } from './moving-day'
+import { nothingLeftResolver } from './nothing-left'
+import { sameTypeResolver } from './same-type'
+import { whatNextResolver } from './what-next'
+import { whenLoveResolver } from './when-love'
 
 /**
  * 🔴 키는 `THEME_FORTUNES` 의 id 와 같아야 한다 — 레지스트리 계약 테스트가 대조한다.
  *
  * Map 을 쓰는 이유: 조회 키가 **URL 에서 온 문자열**이다. 객체 리터럴을 그대로 인덱싱하면
  * `constructor`·`toString` 같은 이름이 프로토타입의 함수를 돌려줘 「등록된 테마」 행세를 한다.
+ *
+ * 관상 3종(first-impression·easy-to-ask·five-faces)은 여기 없는 것이 맞다 — 입력이 사주가
+ * 아니라 사진 기반 FACE 판정이라(관상 세트 §5-6) 이 골격 밖이다. 별도 파생층이 설 때까지
+ * 카드는 관상 스튜디오 실풀이로 간다.
  */
-const RESOLVERS: ReadonlyMap<string, ThemeResolver> = new Map([[leaveOrStayResolver.themeId, leaveOrStayResolver]])
+const RESOLVERS: ReadonlyMap<string, ThemeResolver> = new Map([
+  // 직장·재물 (PLAN-theme-career-wealth-v1 §5)
+  [leaveOrStayResolver.themeId, leaveOrStayResolver],
+  [whatNextResolver.themeId, whatNextResolver],
+  [nothingLeftResolver.themeId, nothingLeftResolver],
+  [moneySelfResolver.themeId, moneySelfResolver],
+  // 연애 (PLAN-theme-love-v1 §5)
+  [attractsMeResolver.themeId, attractsMeResolver],
+  [sameTypeResolver.themeId, sameTypeResolver],
+  [whenLoveResolver.themeId, whenLoveResolver],
+  // 풍수 (PLAN-theme-fengshui-v1 §4)
+  [movingDayResolver.themeId, movingDayResolver],
+  [houseOrTimingResolver.themeId, houseOrTimingResolver],
+])
 
 /** 판정이 선 테마인가. 아니면 상세 화면이 「준비 중」으로 닫힌다. */
 export function themeResolver(themeId: string): ThemeResolver | null {
