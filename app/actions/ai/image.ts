@@ -83,18 +83,27 @@ async function persistImageAnalysisHistory(params: {
 }
 
 /**
- * 관상·손금 사주 교차분석용 컨텍스트(일간·나이)를 서버에서 해석한다.
+ * 관상·손금·풍수 사주 교차분석용 컨텍스트를 서버에서 해석한다.
+ *
+ * 🔴 2026-08-15 확장: 일간·나이만 뽑던 자리에 **개운 처방**(`lib/domain/remedy`)을 더했다.
+ *    사진을 보는 상품이라도 사람은 사주를 함께 갖고 있고, 처방은 그 사주에서만 나온다 —
+ *    관상 결과에 「이 색을 곁에 두세요」가 붙으려면 여기서 계산해 프롬프트로 넘겨야 한다.
  * - 대상(target)이 있으면 그 가족 구성원의 생년월일(RLS로 소유권 보장),
  *   없으면 로그인 사용자 본인의 profiles 생년월일을 사용한다.
  * - 생년월일이 없거나 계산 실패 시 undefined → 호출부는 교차분석을 생략(크래시 없음).
  * - 일간(dayGan)은 기존 사주 엔진(getSajuData) 재사용, 나이는 calculateAge.
  *   무거운 만세력 의존성은 동적 import로 지연 로드(클라이언트 번들 영향 0).
  */
-async function resolveSajuForImageAnalysis(target?: {
-  id: string
-  name: string
-  relation: string
-}): Promise<{ dayGan?: string; currentAge?: number } | undefined> {
+async function resolveSajuForImageAnalysis(target?: { id: string; name: string; relation: string }): Promise<
+  | {
+      dayGan?: string
+      currentAge?: number
+      remedyBlock?: string
+      remedyCount?: number
+      remedy?: import('@/lib/domain/remedy/remedy').RemedySet
+    }
+  | undefined
+> {
   try {
     const supabase = await createClient()
     const {
@@ -134,8 +143,33 @@ async function resolveSajuForImageAnalysis(target?: {
 
     const { getSajuData, calculateAge } = await import('@/lib/domain/saju/saju')
     const { isSolarCalendar } = await import('@/lib/domain/saju/calendar')
-    const saju = getSajuData(birthDate, birthTime || '12:00', isSolarCalendar(calendarType), isLeapMonth)
-    return { dayGan: saju.dayGan, currentAge: calculateAge(birthDate) }
+    const isSolar = isSolarCalendar(calendarType)
+    const saju = getSajuData(birthDate, birthTime || '12:00', isSolar, isLeapMonth)
+
+    // 처방은 명식 전체가 있어야 나온다(용신·십성·신살). 실패해도 교차분석은 계속된다.
+    let remedyBlock: string | undefined
+    let remedyCount: number | undefined
+    let remedy: import('@/lib/domain/remedy/remedy').RemedySet | undefined
+    try {
+      const { buildSajuContext } = await import('@/lib/saju-engine/context-builder')
+      const { buildRemedySet, remedyPromptBlock } = await import('@/lib/domain/remedy/remedy')
+      const ctx = buildSajuContext({
+        name: target?.name ?? '본인',
+        birthDate,
+        birthTime: birthTime || '12:00',
+        gender: 'male',
+        isSolar,
+        isLeapMonth,
+        birthTimeUnknown: !birthTime,
+      })
+      remedy = buildRemedySet(ctx)
+      remedyBlock = remedyPromptBlock(remedy)
+      remedyCount = remedy.items.length
+    } catch (e) {
+      logger.warn('[resolveSajuForImageAnalysis] 개운 처방 생략:', e)
+    }
+
+    return { dayGan: saju.dayGan, currentAge: calculateAge(birthDate), remedyBlock, remedyCount, remedy }
   } catch (e) {
     logger.warn('[resolveSajuForImageAnalysis] 사주 컨텍스트 생략:', e)
     return undefined
@@ -260,6 +294,11 @@ export interface FaceAnalysisResult {
     senior: string // 51세 이후 입·턱
   }
   sajuSynergy?: string
+  /**
+   * 개운 처방 — 🔴 **엔진 결정론 값이라 AI 토큰이 한 개도 들지 않는다.**
+   * 사진을 보는 상품이라도 사람은 사주를 함께 갖고 있고, 처방은 그 사주에서만 나온다.
+   */
+  remedy?: import('@/lib/domain/remedy/remedy').RemedySet
   improvementPriority?: Array<{
     priority: number
     zone: string
@@ -336,6 +375,8 @@ export interface PalmAnalysisResult {
   }
   ageTimeline?: PalmAgeTimeline[] // 나이별 타임라인
   sajuSynergy?: string // 사주 연계 분석
+  /** 개운 처방 — 엔진 결정론 값(AI 토큰 0). */
+  remedy?: import('@/lib/domain/remedy/remedy').RemedySet
   error?: string
 }
 
@@ -371,6 +412,8 @@ export interface SpaceScore {
 }
 
 export interface InteriorAnalysisResult {
+  /** 개운 처방 — 엔진 결정론 값(AI 토큰 0). 사진이 아니라 **사주**에서 나온다. */
+  remedy?: import('@/lib/domain/remedy/remedy').RemedySet
   success: boolean
   currentAnalysis?: string
   problems?: string[]
@@ -391,7 +434,7 @@ export interface InteriorAnalysisResult {
 export async function analyzeFaceForDestiny(
   imageBase64: string,
   goal: FaceDestinyGoal,
-  sajuContext?: { dayGan?: string; currentAge?: number },
+  sajuContext?: { dayGan?: string; currentAge?: number; remedy?: import('@/lib/domain/remedy/remedy').RemedySet },
   target?: { id: string; name: string; relation: string }
 ): Promise<FaceAnalysisResult> {
   const imageGuard = guardUploadedImages('analyzeFaceForDestiny', [imageBase64])
@@ -700,6 +743,7 @@ Style: Professional headshot, warm lighting, confident expression.`
       ageFortuneMap,
       improvementPriority,
       sajuSynergy,
+      remedy: effectiveSaju?.remedy,
       gisaekReading,
       gisaekAdvice,
       firstImpression,
@@ -1091,6 +1135,8 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
       luckyDirection,
       spaceScore,
       quickFixes: quickFixes.length > 0 ? quickFixes : undefined,
+      // 개운 처방 — 사진이 아니라 **사주**에서 나온다. AI 재호출 없음(토큰 0).
+      remedy: (await resolveSajuForImageAnalysis(target))?.remedy,
     }
 
     await persistImageAnalysisHistory({
@@ -1128,7 +1174,7 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
 export async function analyzePalmReading(
   imageBase64: string,
   goal: PalmReadingGoal = 'general',
-  sajuContext?: { dayGan?: string; currentAge?: number },
+  sajuContext?: { dayGan?: string; currentAge?: number; remedy?: import('@/lib/domain/remedy/remedy').RemedySet },
   target?: { id: string; name: string; relation: string }
 ): Promise<PalmAnalysisResult> {
   const imageGuard = guardUploadedImages('analyzePalmReading', [imageBase64])
@@ -1398,6 +1444,7 @@ export async function analyzePalmReading(
       dualHandCompare,
       handShape,
       sajuSynergy,
+      remedy: effectiveSaju?.remedy,
       ageTimeline: ageTimeline.length > 0 ? ageTimeline : undefined,
     }
 

@@ -5,6 +5,8 @@
  * 어제 본 처방과 오늘 본 처방이 다르면, 사용자는 둘 중 무엇을 믿을지 모르게 된다. 그 순간
  * 처방은 조언이 아니라 장식이 된다 — AI 가 매번 지어내던 옛 구조가 정확히 그랬다.
  */
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { buildSajuContext, type PersonInfo } from '@/lib/saju-engine/context-builder'
 import { buildRemedySet, isElement, remedyPromptBlock, remedyTeaser, type RemedySet } from '@/lib/domain/remedy/remedy'
 
@@ -137,6 +139,40 @@ describe('무료 맛보기 — 후킹은 사실 위에서만 성립한다', () =
       expect(hiddenCount).toBe(set.items.length - 1 + set.avoid.length)
       expect(hiddenCount).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('🔴 배선 — 값을 치른 화면 전부가 처방을 받는다 (CEO 지시 2026-08-15)', () => {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
+
+  it('테마·종합사주·관상·손금·풍수·궁합이 모두 처방 엔진을 부른다', () => {
+    for (const path of [
+      'app/actions/theme-fortune/analyze.ts',
+      'app/actions/ai/samhap.ts',
+      'app/actions/ai/image.ts',
+      'app/actions/ai/compatibility.ts',
+    ]) {
+      expect({ path, wired: read(path).includes('buildRemedySet') }).toEqual({ path, wired: true })
+    }
+  })
+
+  it('여섯 화면이 하나의 처방 패널을 함께 쓴다 (문구가 여섯 벌로 갈라지지 않는다)', () => {
+    for (const path of [
+      'app/protected/analysis/theme/[type]/theme-detail-content.tsx',
+      'app/protected/studio/face/page.tsx',
+      'app/protected/studio/palm/page.tsx',
+      'app/protected/studio/fengshui/page.tsx',
+      'app/protected/analysis/compatibility/compatibility-result.tsx',
+    ]) {
+      expect({ path, panel: read(path).includes('RemedyPanel') }).toEqual({ path, panel: true })
+    }
+  })
+
+  it('🔴 궁합은 요청자 한 사람 몫만 낸다 (상대를 처방으로 규정하지 않는다)', () => {
+    const source = read('app/actions/ai/compatibility.ts')
+
+    expect(source).toContain('buildRemedySet(ctx1)')
+    expect(source).not.toContain('buildRemedySet(ctx2)')
   })
 })
 

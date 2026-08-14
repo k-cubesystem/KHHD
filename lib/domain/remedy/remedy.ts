@@ -33,7 +33,7 @@ export function isElement(value: string): value is Element {
 }
 
 /** 처방의 갈래 — 화면이 이 값으로 묶어 그린다. */
-export type RemedyKind = 'color' | 'direction' | 'time' | 'season' | 'space' | 'body' | 'habit' | 'word'
+export type RemedyKind = 'color' | 'direction' | 'time' | 'season' | 'space' | 'body' | 'habit' | 'word' | 'relation'
 
 export interface RemedyItem {
   readonly kind: RemedyKind
@@ -111,6 +111,20 @@ const BODY: Record<Element, string> = {
   土: '뿌리채소와 단맛, 규칙적인 식사 시간',
   金: '흰 음식과 매운맛, 깊게 쉬는 호흡',
   水: '검은 음식과 짠맛, 충분한 수면',
+}
+
+/**
+ * 곁에 두면 힘이 되는 사람의 결 — 용신 오행을 **사람의 성정**으로 옮긴 것.
+ *
+ * 🔴 «어떤 사람을 만나라»가 아니라 «어떤 결이 나를 채우는가»다. 사람을 고르라는 말로 쓰면
+ *    그 순간 상대를 평가하는 상품이 된다(채용절차법·명예훼손 인접 영역, 마스터 §9-2).
+ */
+const RELATION: Record<Element, string> = {
+  木: '먼저 시작하고 벌여 놓는 사람 곁에서 숨이 트입니다',
+  火: '말이 밝고 자리를 데우는 사람이 곁에 있으면 좋습니다',
+  土: '약속을 지키고 기다려 주는 사람에게서 힘을 얻습니다',
+  金: '맺고 끊는 것이 분명한 사람 곁에서 정리가 됩니다',
+  水: '말을 아끼고 깊이 듣는 사람에게서 숨을 돌립니다',
 }
 
 /** 기신 쪽 — 덜어낼 것. 「금지」가 아니라 «과하지 않게»의 결로 쓴다. */
@@ -296,6 +310,13 @@ export function buildRemedySet(ctx: SajuContext): RemedySet {
       value: habit.value,
       basis: `${group.plain}이 명식에서 가장 두껍다`,
       action: habit.action,
+    },
+    {
+      kind: 'relation',
+      label: '곁에 두면 힘이 되는 결',
+      value: RELATION[yongsin],
+      basis: `${yongsin} 기운을 사람의 성정으로 옮긴 것 — 사람을 고르라는 말이 아니다`,
+      action: '이번 주에 그런 결의 사람 한 명과 짧게라도 이야기를 나눕니다.',
     },
   ]
 

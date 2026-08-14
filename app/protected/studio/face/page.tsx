@@ -24,6 +24,7 @@ import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ReadingResultHero } from '@/components/studio/reading-result-hero'
+import { RemedyPanel } from '@/components/analysis/RemedyPanel'
 import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
 import { FaceDiagram } from '@/components/studio/face-diagram'
 import { GisaekRemeasureBanner, ReadingCompareCard, FamilyResemblanceCard } from '@/components/studio/reading-revisit'
@@ -380,6 +381,9 @@ function FaceAnalysisPageContent() {
 
               {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}
               {analysisResult.sajuSynergy && <SajuSynergyCard text={analysisResult.sajuSynergy} category="face" />}
+
+              {/* 개운 처방 — 🔴 엔진 결정론 값이라 AI 를 다시 부르지 않는다(토큰 0). */}
+              {analysisResult.remedy && <RemedyPanel remedy={analysisResult.remedy} />}
 
               {/* 전/후 비교 (B-2) — 페이지 로드 시점에 이전 관상 이력이 있을 때만 */}
               {prevReading && (

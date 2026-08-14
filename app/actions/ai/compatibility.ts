@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
 import { buildSajuContext } from '@/lib/saju-engine/context-builder'
+import { buildRemedySet } from '@/lib/domain/remedy/remedy'
 import { calculateCompatibility } from '@/lib/saju-engine/compatibility-engine'
 import { saveAnalysisHistoryObserved } from '../user/history'
 import { buildCompatibilityPrompt } from '@/lib/ai/prompts/compatibility'
@@ -89,6 +90,14 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
       mulsangNarrative: engineResult.mulsangNarrative,
       luckyActions: engineResult.luckyActions,
       focusGroup,
+      /**
+       * 개운 처방 — 🔴 **첫 번째 사람(요청자) 기준 한 벌만** 낸다.
+       *
+       * 두 사람 몫을 나란히 내면 상대의 사주를 «처방»으로 규정하는 화면이 된다. 상대는 그
+       * 판정을 반박할 자리에 없고, 그건 관계 상품이 넘지 말아야 할 선이다(직장·재물 §3-5).
+       * 관계에 대한 조언은 이미 `luckyActions`(엔진 궁합)가 낸다.
+       */
+      remedy: buildRemedySet(ctx1),
       engineVersion: 'v3',
     }
 

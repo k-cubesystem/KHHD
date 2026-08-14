@@ -37,6 +37,7 @@ import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
 import { ReadingResultHero } from '@/components/studio/reading-result-hero'
+import { RemedyPanel } from '@/components/analysis/RemedyPanel'
 import { SajuSynergyCard } from '@/components/studio/saju-synergy-card'
 import { PalmDiagram } from '@/components/studio/palm-diagram'
 import { JourneyCard } from '@/components/analysis/journey-card'
@@ -308,6 +309,9 @@ function PalmAnalysisPageContent() {
 
               {/* 사주 교차분석 — "사주가 같은 말을 합니다" */}
               {analysisResult.sajuSynergy && <SajuSynergyCard text={analysisResult.sajuSynergy} category="palm" />}
+
+              {/* 개운 처방 — 🔴 엔진 결정론 값이라 AI 를 다시 부르지 않는다(토큰 0). */}
+              {analysisResult.remedy && <RemedyPanel remedy={analysisResult.remedy} />}
 
               {/* 4대 운세 (텍스트 분석) — 빈 항목은 렌더 제외(유령 문구 방지) */}
               {analysisResult.fortuneOverview &&

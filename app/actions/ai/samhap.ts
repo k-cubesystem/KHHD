@@ -10,6 +10,7 @@ import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisHistoryObserved } from '@/app/actions/user/history'
 import { parseSamhap, isSamhapEmpty, type SamhapParsed } from '@/lib/domain/analysis/samhap-parse'
 import { computeSamhapCoherence, type SamhapCoherence } from '@/lib/domain/analysis/samhap-coherence'
+import { PREMIUM_PROSE_LAYER, TERM_DISCIPLINE } from '@/lib/ai/prose-quality'
 
 const SAMHAP_COST = FEATURE_COST.samhap.display // 5만냥 (표시=실차감)
 
@@ -431,6 +432,18 @@ function buildMatchHints(sajuBlock: SajuBlock): string {
  * 교차 절차(오행 정합·궁위-십성 대응·시간축 삼중 정렬·합/반합/충 판정)를 절차로 강제한다.
  */
 function buildSystemPrompt(sajuBlock: SajuBlock): string {
+  // 🔴 품질 레이어를 **맨 뒤**에 얹고, 종결어미만 이 문서가 이긴다고 마지막 줄에서 못 박는다.
+  //    (레이어 기본값은 «~합니다» 체인데 종합사주는 요체가 정본이다 — 순서가 곧 우선순위다.)
+  const proseLayer = [
+    '',
+    TERM_DISCIPLINE,
+    '',
+    PREMIUM_PROSE_LAYER,
+    '',
+    '🔴 위 [서술 품질 규율]의 종결어미 조항보다 이 문서 [말하기 규칙] 2번(요체)이 **우선한다.**',
+    '   나머지 조항(문장 길이 리듬·구체 명사·상투구 금지·실연 예시)은 그대로 지킨다.',
+  ].join('\n')
+
   return `당신은 청담해화당의 대가 '해화지기(解化之機)'입니다. 한 사람의 사주(天命)·관상과 손금(人相紋)·풍수(地宅)를 「삼재교차법(三才交叉法)」으로 꿰어 종합사주풀이를 씁니다.
 새로운 이미지 분석은 하지 않습니다 — 이미 도출된 아래 결과만 근거로 삼습니다.
 독자는 사주를 처음 보는 일반인입니다. 전문가에게 쓰는 글이 아닙니다.
@@ -472,7 +485,8 @@ function buildSystemPrompt(sajuBlock: SajuBlock): string {
 3. 서로 다른 근거(사주×관상×손금×풍수)를 엮지 않은 문단은 쓰지 마세요 — 한 근거만 반복하는 나열은 이 리포트의 실패입니다.
 
 [내담자 명식 데이터 — 단일 출처]
-${sajuBlock.contextText}`
+${sajuBlock.contextText}
+${proseLayer}`
 }
 
 function buildUserPrompt(
@@ -506,16 +520,21 @@ ${buildMatchHints(sajuBlock)}
 
 ${sajuBlock.remedyBlock ?? ''}
 
-[출력 형식 — 자유 서술 없이, 아래 태그를 정확히 이 형식으로 출력. 문장 수는 최소 기준이며 더 길고 쉽게 써도 좋습니다]
+[출력 형식 — 자유 서술 없이, 아래 태그를 정확히 이 형식으로 출력]
+
+🔴 **분량이 이 상품의 값이다**(CEO 지시 2026-08-15 — 기존의 세 배). 괄호 안 문장 수는 **최소**이고,
+   더 길고 더 쉽게 쓰는 쪽이 언제나 옳다. 다만 늘리는 방법은 같은 말을 되풀이하는 것이 아니라
+   **근거를 하나 더 대고, 장면을 하나 더 그리고, 오늘 할 일을 하나 더 쥐여 주는 것**이다.
+   문장을 늘리려고 「~할 수 있습니다」를 반복하면 그 순간 길이가 값이 아니라 부담이 된다.
 [[SUMMARY: 삼재가 모이는 핵심을 쉬운 한 줄로]]
-[[NOW: 현재 구간을 쉬운 비유 한 구절로 (예: 오르막을 거의 다 올라온 자리) | 대운×삼정×손금을 겹쳐 본 현재 국면 — 어디를 보고 그렇게 읽었는지 하나하나 짚으며 (6~8문장)]]
-[[NATURE: 타고난 그릇을 비유 한 구절로 (예: ${sajuBlock.dayMasterPoetic || '우뚝 선 소나무'}) | 어떤 사람으로 태어났는지 — 일간 비유로 시작해 성격의 결·강점·조심할 결까지, 얼굴과 손이 그 그릇을 어떻게 보여주는지 함께 (7~10문장)]]
-[[CROSS_WEALTH: 합|반합|충 중 하나 | 재물 — 사주 재성·코(재백궁)·재물선을 하나하나 짚으며 엮은 해석. 돈이 들어오는 모양·새는 구멍·키우는 법 (6~9문장)]]
-[[CROSS_CAREER: 판정 | 일·명예 — 관성·이마(관록궁)·운명선을 엮은 해석. 조직/독립 어느 쪽 그릇인지 포함 (6~9문장)]]
-[[CROSS_LOVE: 판정 | 인연 — 배우자성·눈꼬리(처첩궁)·감정선을 엮은 해석. 사랑할 때의 모습과 필요한 온도 (6~9문장)]]
-[[CROSS_HEALTH: 판정 | 건강·바탕 — 일간 강약·기색·생명선을 엮은 해석. 지치는 패턴과 회복 스위치 (6~9문장)]]
-[[MATCH_PEOPLE: 잘 맞는 사람을 한 줄로 | 나랑 잘 맞는 사람 — 위 궁합 힌트를 바탕으로: 어떤 기운·성격의 사람이 힘이 되는지, 그런 사람은 인상이 어떤지(얼굴 비유), 반대로 기 빨리기 쉬운 유형과 거리 조절법, 배우자성·연애 패턴까지 (8~12문장)]]
-[[MATCH_JOB: 잘 맞는 일을 한 줄로 | 나랑 잘 맞는 직업 — 위 적성 힌트를 바탕으로: 구체 직업군 예시를 여러 개 들고 왜 맞는지(사주 구조·이마·두뇌선·운명선 근거), 피하고 싶을 환경, 지금 하는 일과 다를 때의 현실적 활용법 (8~12문장)]]
+[[NOW: 현재 구간을 쉬운 비유 한 구절로 (예: 오르막을 거의 다 올라온 자리) | 대운×삼정×손금을 겹쳐 본 현재 국면 — 어디를 보고 그렇게 읽었는지 하나하나 짚으며 (18~24문장)]]
+[[NATURE: 타고난 그릇을 비유 한 구절로 (예: ${sajuBlock.dayMasterPoetic || '우뚝 선 소나무'}) | 어떤 사람으로 태어났는지 — 일간 비유로 시작해 성격의 결·강점·조심할 결까지, 얼굴과 손이 그 그릇을 어떻게 보여주는지 함께 (21~30문장)]]
+[[CROSS_WEALTH: 합|반합|충 중 하나 | 재물 — 사주 재성·코(재백궁)·재물선을 하나하나 짚으며 엮은 해석. 돈이 들어오는 모양·새는 구멍·키우는 법 (18~27문장)]]
+[[CROSS_CAREER: 판정 | 일·명예 — 관성·이마(관록궁)·운명선을 엮은 해석. 조직/독립 어느 쪽 그릇인지 포함 (18~27문장)]]
+[[CROSS_LOVE: 판정 | 인연 — 배우자성·눈꼬리(처첩궁)·감정선을 엮은 해석. 사랑할 때의 모습과 필요한 온도 (18~27문장)]]
+[[CROSS_HEALTH: 판정 | 건강·바탕 — 일간 강약·기색·생명선을 엮은 해석. 지치는 패턴과 회복 스위치 (18~27문장)]]
+[[MATCH_PEOPLE: 잘 맞는 사람을 한 줄로 | 나랑 잘 맞는 사람 — 위 궁합 힌트를 바탕으로: 어떤 기운·성격의 사람이 힘이 되는지, 그런 사람은 인상이 어떤지(얼굴 비유), 반대로 기 빨리기 쉬운 유형과 거리 조절법, 배우자성·연애 패턴까지 (24~36문장)]]
+[[MATCH_JOB: 잘 맞는 일을 한 줄로 | 나랑 잘 맞는 직업 — 위 적성 힌트를 바탕으로: 구체 직업군 예시를 여러 개 들고 왜 맞는지(사주 구조·이마·두뇌선·운명선 근거), 피하고 싶을 환경, 지금 하는 일과 다를 때의 현실적 활용법 (24~36문장)]]
 [[HARMONY_1: 겹친 이야기 제목, 사주·얼굴·손이 같은 말을 하는 지점을 쉬운 말로]]
 [[HARMONY_2: 제목, 설명]]
 [[HARMONY_3: 제목, 설명]]
@@ -523,7 +542,7 @@ ${sajuBlock.remedyBlock ?? ''}
 [[TIMING_1: 시기(연도·연령 구간), 대운 근거 + 그때 하면 좋은 것 (쉬운 말로)]]
 [[TIMING_2: 시기, 조언]]
 [[TIMING_3: 시기, 조언]]
-[[REMEDY_1: 아래 [개운 처방] 블록의 **첫 번째 항목**을 풀어 쓴다 — 무엇을 하는지 → 왜 이 사주에 그것인지 → 언제 하면 되는지 (3~4문장)]]
+[[REMEDY_1: 아래 [개운 처방] 블록의 **첫 번째 항목**을 풀어 쓴다 — 무엇을 하는지 → 왜 이 사주에 그것인지 → 언제 하면 되는지 (9~12문장)]]
 [[REMEDY_2: 두 번째 항목]]
 [[REMEDY_3: 세 번째 항목]]
 [[REMEDY_4: 네 번째 항목]]
@@ -619,7 +638,9 @@ export async function generateSamhapReport(targetId?: string): Promise<SamhapRes
       featureKey: 'samhap',
       systemPrompt: buildSystemPrompt(sajuBlock),
       userPrompt: buildUserPrompt(inputs, sajuBlock, face, hand, fengshui, coherence),
-      maxTokens: 16384,
+      // 3배 상세화(2026-08-15) — 출력이 약 9,000 토큰까지 늘어난다. 추론 토큰이 같은 예산을
+      // 먹으므로 여유를 둔다(모자라면 응답이 조용히 잘리고 파서가 빈 리포트를 낸다).
+      maxTokens: 24576,
       temperature: 0.8,
       actionType: 'samhap',
       userId: user.id,

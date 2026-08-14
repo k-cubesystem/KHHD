@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, MessageCircle, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
+import { RemedyPanel, RemedyTeaserPanel } from '@/components/analysis/RemedyPanel'
 import { ThemeThumbnail } from '@/components/analysis/ThemeThumbnail'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
@@ -19,7 +20,6 @@ import {
 } from '@/lib/domain/theme-fortune/themes'
 import { BAND_LABEL, timingsOf, type ThemeReading, type ThemeVerdict } from '@/lib/domain/theme-fortune/verdict-types'
 import { isFreeTheme } from '@/lib/domain/theme-fortune/themes'
-import type { RemedySet } from '@/lib/domain/remedy/remedy'
 import type { DestinyTarget } from '@/app/actions/user/destiny'
 
 /**
@@ -383,10 +383,17 @@ function ThemeReadingBody({
 
         {/* ⑥-2 개운 처방 — 🔴 엔진이 정한 값이다. 문장은 AI 가 쓰지만 항목은 결정론이라
             같은 사주면 언제 봐도 같은 처방이 나온다. */}
-        {reading.remedy && <RemedySection remedy={reading.remedy} notes={narration.remedyNotes} />}
+        {reading.remedy && <RemedyPanel remedy={reading.remedy} notes={narration.remedyNotes} />}
 
         {/* 무료 풀이의 맛보기 — 한 가지는 실제로 주고, 남은 개수는 배열 길이 그대로 밝힌다. */}
-        {reading.remedyTeaser && <RemedyTeaserCard teaser={reading.remedyTeaser} theme={theme} />}
+        {reading.remedyTeaser && (
+          <RemedyTeaserPanel
+            preview={reading.remedyTeaser.preview}
+            hiddenCount={reading.remedyTeaser.hiddenCount}
+            ctaHref={relatedPaidTheme(theme) ? themeReadingPath(relatedPaidTheme(theme)!.id) : undefined}
+            ctaLabel={relatedPaidTheme(theme) ? `${relatedPaidTheme(theme)!.title} 보기` : undefined}
+          />
+        )}
 
         {/* ⑦ 되짚기 — 근거(pastHint)가 있을 때만. 없는 과거를 지어내 싣지 않는다. */}
         {verdict.pastHint && narration.pastEcho && (
@@ -448,101 +455,6 @@ function ThemeReadingBody({
 
       <NextSteps related={related} openEnded={openEnded} />
     </div>
-  )
-}
-
-/**
- * 개운 처방 — 값을 치른 사람이 **손에 쥐고 나가는 것**.
- *
- * 🔴 항목·근거·행동은 전부 엔진 파생이다(`lib/domain/remedy`). AI 는 각 항목을 «왜 나에게»로
- *    풀어 쓴 문장(`remedyNotes`)만 얹는다 — 처방 자체를 AI 가 만들면 어제와 오늘이 달라진다.
- */
-function RemedySection({ remedy, notes }: { remedy: RemedySet; notes: readonly string[] }) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-serif text-sm text-gold-500/80">채우면 숨이 트이는 것</h2>
-        <span className="text-[10px] text-ink-light/40">{remedy.items.length}가지</span>
-      </div>
-
-      <ul className="space-y-2">
-        {remedy.items.map((item, index) => (
-          <li key={`${item.kind}-${item.label}`} className="rounded-xl border border-white/10 bg-surface/40 p-3">
-            <div className="flex items-baseline gap-2">
-              <span className="font-serif text-[13px] text-gold-300">{item.label}</span>
-              <span className="text-[13px] text-ink-light">{item.value}</span>
-            </div>
-            <p className="mt-1 text-[11px] font-light text-ink-light/45">{item.basis}</p>
-            {notes[index] && (
-              <p className="mt-1.5 text-[12px] font-light leading-relaxed text-ink-light/70">{notes[index]}</p>
-            )}
-            <p className="mt-1.5 text-[12px] font-light leading-relaxed text-gold-200/70">→ {item.action}</p>
-          </li>
-        ))}
-      </ul>
-
-      <h3 className="pt-1 font-serif text-sm text-ink-light/60">덜어내면 가벼워지는 것</h3>
-      <ul className="space-y-2">
-        {remedy.avoid.map((item) => (
-          <li key={`avoid-${item.label}`} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-            <div className="flex items-baseline gap-2">
-              <span className="font-serif text-[13px] text-ink-light/70">{item.label}</span>
-              <span className="text-[13px] text-ink-light/60">{item.value}</span>
-            </div>
-            <p className="mt-1.5 text-[12px] font-light leading-relaxed text-ink-light/50">→ {item.action}</p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-/**
- * 무료 풀이의 처방 맛보기.
- *
- * 🔴 후킹은 **사실 위에서만** 성립한다. 한 가지는 진짜로 주고(오늘 해볼 수 있는 색),
- *    남은 개수는 실제 배열 길이를 그대로 쓴다. 숫자를 부풀리면 그 순간 거짓 표시가 된다.
- */
-function RemedyTeaserCard({
-  teaser,
-  theme,
-}: {
-  teaser: NonNullable<ThemeReading['remedyTeaser']>
-  theme: ThemeFortune
-}) {
-  const paid = relatedPaidTheme(theme)
-
-  return (
-    <section className="space-y-3">
-      <h2 className="font-serif text-sm text-gold-500/80">채우면 숨이 트이는 것</h2>
-
-      <div className="rounded-xl border border-white/10 bg-surface/40 p-3">
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-[13px] text-gold-300">{teaser.preview.label}</span>
-          <span className="text-[13px] text-ink-light">{teaser.preview.value}</span>
-        </div>
-        <p className="mt-1 text-[11px] font-light text-ink-light/45">{teaser.preview.basis}</p>
-        <p className="mt-1.5 text-[12px] font-light leading-relaxed text-gold-200/70">→ {teaser.preview.action}</p>
-      </div>
-
-      <div className="rounded-xl border border-dashed border-gold-500/25 bg-gold-500/[0.04] p-4 text-center">
-        <p className="text-[12px] font-light leading-relaxed text-ink-light/70">
-          이 사주에 맞는 처방이 <span className="font-bold text-gold-300">{teaser.hiddenCount}가지</span> 더 있습니다.
-          <br />
-          앉는 방향, 몸이 붙는 시간, 흐름이 트이는 철, 집에서 손댈 자리까지.
-        </p>
-        {paid && (
-          <Link
-            href={themeReadingPath(paid.id)}
-            className="mt-3 inline-flex items-center gap-1 rounded-lg border border-gold-500/40 bg-gold-500/[0.12] px-4 py-2 text-[12px] font-bold text-gold-300"
-          >
-            {paid.title} 보기
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Link>
-        )}
-        <p className="mt-2 text-[10px] text-ink-light/35">시기와 행동, 되짚어 볼 과거도 함께 나옵니다.</p>
-      </div>
-    </section>
   )
 }
 

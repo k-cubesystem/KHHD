@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Heart, ArrowLeft, Sparkles, Compass, MapPin, UserX, Swords, Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
+import { RemedyPanel } from '@/components/analysis/RemedyPanel'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { FOCUS_GROUPS, type FocusGroup } from '@/lib/domain/compatibility/focus-groups'
@@ -42,6 +43,8 @@ export interface CompatibilityResultData {
   categoryBreakdown?: CategoryBreakdown[]
   mulsangNarrative?: string
   luckyActions?: string[]
+  /** 개운 처방 — 요청자(첫 번째 사람) 기준 한 벌. 엔진 결정론이라 AI 재호출 없음. */
+  remedy?: import('@/lib/domain/remedy/remedy').RemedySet
   honestVerdict?: string
   person1Weakness?: string
   person2Weakness?: string
@@ -388,6 +391,14 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
                   </li>
                 ))}
               </ul>
+            </motion.div>
+          )}
+
+          {/* 개운 처방 — 🔴 요청자 한 사람 기준이다. 두 사람 몫을 나란히 내면 상대의 사주를
+              «처방»으로 규정하는 화면이 되고, 상대는 그것을 반박할 자리에 없다. */}
+          {result.remedy && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}>
+              <RemedyPanel remedy={result.remedy} title="나를 채우는 것" />
             </motion.div>
           )}
 
