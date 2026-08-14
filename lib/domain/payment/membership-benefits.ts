@@ -37,7 +37,8 @@ export const FREE_TIER_LIMITS = {
   /** 지급분이 없으니 하루 사용 상한도 0(충전한 복채는 상한 없이 쓴다). */
   dailyTalismanLimit: 0,
   relationshipLimit: 3,
-  storageLimit: 10,
+  /** 보관 개수 5개(CEO 2026-08-15). 초과분은 즐겨찾기가 아닌 오래된 기록부터 자동 삭제. */
+  storageLimit: 5,
 } as const
 
 /** 혜택 문구에 필요한 플랜 사실만 — 구조적 타입이라 서버 모듈을 끌어오지 않는다. */

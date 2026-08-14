@@ -8,6 +8,7 @@ import { getUserTierLimits } from '../payment/membership'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { isRetentionLimited, retentionCutoffISO } from '@/lib/auth/subscription'
 import { logger } from '@/lib/utils/logger'
+import { FREE_TIER_LIMITS } from '@/lib/domain/payment/membership-benefits'
 
 /**
  * 분석 카테고리 타입
@@ -142,7 +143,8 @@ export async function saveAnalysisHistory(
         getUserTierLimits(),
         supabase.from('analysis_history').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       ])
-      const storageLimit = limits?.storage_limit ?? 10
+      // 한도를 못 읽으면 **무료 기준**으로 떨어뜨린다 — 넉넉히 잡으면 한도가 없는 셈이 된다.
+      const storageLimit = limits?.storage_limit ?? FREE_TIER_LIMITS.storageLimit
       if (storageLimit !== 999) {
         const excess = (count || 0) - storageLimit
         if (excess > 0) {

@@ -140,7 +140,8 @@ describe('1일 이용권 설명 — «무제한» 금지', () => {
 describe('단일 출처 상수', () => {
   it('무료 등급 한도는 getUserTierLimits 폴백과 같은 값이어야 한다', () => {
     expect(FREE_TIER_LIMITS.relationshipLimit).toBe(3)
-    expect(FREE_TIER_LIMITS.storageLimit).toBe(10)
+    // 5 로 내렸다(CEO 2026-08-15). 멤버십은 DB 행에서 20 — 두 값의 차이가 곧 «더 보관된다»의 실체다.
+    expect(FREE_TIER_LIMITS.storageLimit).toBe(5)
     expect(FREE_TIER_LIMITS.talismansPerPeriod).toBe(0)
   })
 

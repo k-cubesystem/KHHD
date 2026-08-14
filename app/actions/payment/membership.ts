@@ -32,7 +32,7 @@ export async function getUserTierLimits() {
       tier: 'TESTER',
       daily_talisman_limit: 100, // 100만냥/day
       relationship_limit: 10, // 가족 10명
-      storage_limit: 10, // 기록 10개
+      storage_limit: 20, // 기록 20개 — 멤버십과 같은 한도
       is_subscribed: true,
     }
   }
