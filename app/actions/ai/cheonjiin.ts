@@ -193,7 +193,8 @@ export async function analyzeCheonjiinAction(
       'CHEONJIIN',
       '',
       '',
-      ''
+      '',
+      'premium'
     )
     // 엔진 프롬프트를 시스템 역할로 사용하고, 풍수/관상/손금 조건 섹션은 코드에서 추가
     const prompt = getDefaultCheonjiinPrompt(variables, imageFlags, engineSystemPrompt)

@@ -200,7 +200,9 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       resolver.prompt.analysisType,
       '',
       buildThemeAdditionalContext(resolver.prompt, verdict),
-      themeOutputFormatGuide(freeCut)
+      themeOutputFormatGuide(freeCut),
+      // 복채를 받은 풀이에만 서술 품질 규율을 얹는다(무료 미끼는 표준).
+      freeCut ? 'standard' : 'premium'
     )
     const ai = await generateAIContent({
       featureKey: `theme_${theme.id}`,

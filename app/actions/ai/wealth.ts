@@ -138,7 +138,8 @@ export async function analyzeWealth(params: WealthAnalysisParams): Promise<Wealt
     "avoidMonth": "투자를 피해야 할 달 (예: '12월')",
     "avoidReason": "회피 이유 — 사주 근거 (예: '편재(투자 수익)가 기신(불리한 기운)을 만나 손실 우려')"
   }
-}`
+}`,
+      'premium'
     )
 
     // 6. AI 호출

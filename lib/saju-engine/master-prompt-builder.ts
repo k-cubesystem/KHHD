@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { buildSajuContextTextCached } from './context-cache'
 import { getAnalysisTypeGuide, type PersonInfo, type AnalysisType } from './context-builder'
 import { logger } from '@/lib/utils/logger'
+import { withProseTier, type ProseTier } from '@/lib/ai/prose-quality'
 
 /**
  * DB에서 haehwajigi_master 프롬프트 로드
@@ -58,17 +59,22 @@ export interface MasterPromptResult {
  * @param userContext 사용자 프로필 텍스트
  * @param additionalContext 추가 컨텍스트 (궁합 상대방 정보 등)
  * @param outputFormatGuide JSON 출력 형식 지시문 (JSON 파싱이 필요한 경우)
+ * @param proseTier 서술 등급. 'premium' 은 **복채를 받는 장문 풀이 전용**이다 —
+ *        무료 경로(상담·오늘의 운세·신탁)는 출력이 짧아 문장 공예가 드러나지 않고,
+ *        매출이 0인데 사용량만 는다(모델 선정 보고서 §5·§7).
  */
 export async function buildMasterPromptForAction(
   person: PersonInfo,
   analysisType: AnalysisType,
   userContext: string = '',
   additionalContext: string = '',
-  outputFormatGuide: string = ''
+  outputFormatGuide: string = '',
+  proseTier: ProseTier = 'standard'
 ): Promise<MasterPromptResult> {
   const [masterTemplate, sajuContextText] = await Promise.all([loadMasterPrompt(), buildSajuContextTextCached(person)])
 
-  const analysisGuide = getAnalysisTypeGuide(analysisType) + '\n\n' + outputFormatGuide
+  // 품질 규율은 출력 형식보다 뒤에 온다 — 모델은 뒤에 온 지시를 더 강하게 따른다.
+  const analysisGuide = withProseTier(getAnalysisTypeGuide(analysisType) + '\n\n' + outputFormatGuide, proseTier)
 
   const prompt = masterTemplate
     .replace(/{{analysisType}}/g, analysisType)
