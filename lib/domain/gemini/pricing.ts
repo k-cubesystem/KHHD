@@ -11,6 +11,10 @@
 //   - gemini-3.5-flash: input $1.50 / output $9.00  ← 구값(0.075/0.3)이 실제의 1/20 이었음.
 //     세션26 원가율 표를 본 값으로 재해석할 것(과거 로그의 estimated_cost_usd 는 과소계상).
 //   - gemini-2.5-flash: input $0.30 / output $2.50
+// 2026-08-14 갱신 — 주력을 3.7-flash 로 옮기며 라인업 재확인(https://ai.google.dev/gemini-api/docs/models):
+//   - gemini-3.7-flash(최신 GA): $1.50 / $7.50 · 인트로 $0.75/$3.75(~2026-12-31)
+//   - gemini-3.1-pro-preview: $2.00 / $12.00 — **구 상수 1.25/5.0 은 오류였다**
+//   - gemini-3.5-pro 는 미출시(라인업에 없다)
 // 미검증 레거시(1.5/2.0 계열)는 현재 코드가 사용하지 않아 구값 유지.
 // ============================================================
 export const MODEL_PRICING: Record<string, { input: number; output: number }> = {
@@ -20,8 +24,14 @@ export const MODEL_PRICING: Record<string, { input: number; output: number }> = 
   'gemini-1.5-flash': { input: 0.075, output: 0.3 },
   'gemini-1.5-pro': { input: 1.25, output: 5.0 },
   'gemini-3.5-flash': { input: 1.5, output: 9.0 },
+  // 주력(2026-08-14~). 인트로가 $0.75/$3.75(2026-12-31까지)이나 **정상가로 계상**한다 —
+  // 과소계상보다 과대계상이 안전하고, 2027-01-01 에 상수를 고칠 필요가 없다.
+  'gemini-3.7-flash': { input: 1.5, output: 7.5 },
+  'gemini-3.6-flash': { input: 1.5, output: 7.5 },
+  'gemini-3.5-flash-lite': { input: 0.3, output: 2.5 },
   'gemini-3-flash-preview': { input: 1.5, output: 9.0 },
-  'gemini-3.1-pro-preview': { input: 1.25, output: 5.0 },
+  // 🔴 정정(2026-08-14): 구값 1.25/5.0 은 1.5 Pro 값이었다 — 실제는 2/12(200K 초과 시 4/18).
+  'gemini-3.1-pro-preview': { input: 2.0, output: 12.0 },
   'gemini-2.5-flash-preview': { input: 0.3, output: 2.5 },
   // Claude models
   'claude-opus-4-6': { input: 15.0, output: 75.0 },
