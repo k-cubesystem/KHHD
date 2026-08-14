@@ -153,6 +153,16 @@ interface SajuBlock {
   jobHints?: string[]
   /** 일주 연애 패턴 — MATCH_PEOPLE 태그의 씨앗 */
   lovePattern?: string
+  /**
+   * 개운 처방 — **엔진이 정한 결정론 값**(`lib/domain/remedy`).
+   *
+   * 🔴 v1 은 REMEDY_1~3 을 AI 가 매번 지어냈다. 그러면 같은 사주에 어제는 동쪽, 오늘은 서쪽이
+   *    나온다 — 5만냥짜리 상품에서 가장 무거운 신뢰 문제다. 이제 항목은 엔진이 정하고 AI 는
+   *    «왜 이 사람에게 그것인지»만 쓴다.
+   */
+  remedyBlock?: string
+  /** 처방 개수 — REMEDY 태그를 몇 개 요구할지가 여기서 나온다. */
+  remedyCount?: number
 }
 
 /**
@@ -178,7 +188,11 @@ async function buildSajuBlock(inputs: SamhapInputs): Promise<SajuBlock> {
       birthTimeUnknown: !inputs.birthTime,
     })
     const jobHints = [...new Set([...(ctx.mulsang.dayMasterJobs ?? []), ...(ctx.mulsang.iljuCareer ?? [])])]
+    const { buildRemedySet, remedyPromptBlock } = await import('@/lib/domain/remedy/remedy')
+    const remedy = buildRemedySet(ctx)
     return {
+      remedyBlock: remedyPromptBlock(remedy),
+      remedyCount: remedy.items.length,
       contextText: ctx.promptContext,
       age,
       dayElement: ctx.sajuData.dayMasterElement,
@@ -490,6 +504,8 @@ ${coherenceBlock}
 
 ${buildMatchHints(sajuBlock)}
 
+${sajuBlock.remedyBlock ?? ''}
+
 [출력 형식 — 자유 서술 없이, 아래 태그를 정확히 이 형식으로 출력. 문장 수는 최소 기준이며 더 길고 쉽게 써도 좋습니다]
 [[SUMMARY: 삼재가 모이는 핵심을 쉬운 한 줄로]]
 [[NOW: 현재 구간을 쉬운 비유 한 구절로 (예: 오르막을 거의 다 올라온 자리) | 대운×삼정×손금을 겹쳐 본 현재 국면 — 어디를 보고 그렇게 읽었는지 하나하나 짚으며 (6~8문장)]]
@@ -507,9 +523,14 @@ ${buildMatchHints(sajuBlock)}
 [[TIMING_1: 시기(연도·연령 구간), 대운 근거 + 그때 하면 좋은 것 (쉬운 말로)]]
 [[TIMING_2: 시기, 조언]]
 [[TIMING_3: 시기, 조언]]
-[[REMEDY_1: 오늘부터 실행 가능한 개운 처방 + 기대 효과 (풍수 길방·색 활용 포함 가능)]]
-[[REMEDY_2: 개운 처방]]
-[[REMEDY_3: 개운 처방]]
+[[REMEDY_1: 아래 [개운 처방] 블록의 **첫 번째 항목**을 풀어 쓴다 — 무엇을 하는지 → 왜 이 사주에 그것인지 → 언제 하면 되는지 (3~4문장)]]
+[[REMEDY_2: 두 번째 항목]]
+[[REMEDY_3: 세 번째 항목]]
+[[REMEDY_4: 네 번째 항목]]
+[[REMEDY_5: 다섯 번째 항목]]
+
+🔴 REMEDY 는 **새로 만드는 자리가 아니다.** 아래 [개운 처방] 블록에 이미 정해진 항목만 순서대로
+   풀어 쓴다. 없는 색·방위·시간을 지어내면 화면의 처방표와 문장이 다른 말을 하게 된다.
 
 ※ CROSS 태그의 판정 값은 반드시 '합' '반합' '충' 중 하나만 쓰세요. 태그 밖 자유 서술은 태그 뒤에 이어 써도 좋습니다.`
 }

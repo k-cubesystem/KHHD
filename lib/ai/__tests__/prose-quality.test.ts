@@ -10,24 +10,38 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import {
   findProseSmells,
+  PLAIN_TERMS,
   PREMIUM_PROSE_LAYER,
   PROSE_CLICHES,
   PROSE_MACHINE_TICS,
+  TERM_DISCIPLINE,
   withProseTier,
 } from '@/lib/ai/prose-quality'
 
 const GUIDE = '[분석 지침]\n원래 있던 지침'
 
-describe('등급 — 유료에만 붙는다', () => {
-  it('standard 는 지침을 한 글자도 바꾸지 않는다', () => {
-    expect(withProseTier(GUIDE, 'standard')).toBe(GUIDE)
+describe('등급 — 문장 공예는 유료에만, 용어 예산은 모두에게', () => {
+  it('standard 도 용어 예산은 받는다 (무료가 어려우면 유료로 넘어올 이유가 없다)', () => {
+    const result = withProseTier(GUIDE, 'standard')
+
+    expect(result.startsWith(GUIDE)).toBe(true)
+    expect(result).toContain(TERM_DISCIPLINE)
+    expect(result).not.toContain(PREMIUM_PROSE_LAYER)
   })
 
   it('premium 은 원래 지침을 남기고 뒤에 규율을 얹는다', () => {
     const result = withProseTier(GUIDE, 'premium')
 
     expect(result.startsWith(GUIDE)).toBe(true)
+    expect(result).toContain(TERM_DISCIPLINE)
     expect(result).toContain(PREMIUM_PROSE_LAYER)
+  })
+
+  it('쉬운 말 사전이 프롬프트에 실제로 실린다 (금지만으로는 용어가 줄지 않는다)', () => {
+    const result = withProseTier(GUIDE, 'standard')
+
+    for (const [term, plain] of PLAIN_TERMS) expect(result).toContain(`${term} → ${plain}`)
+    expect(result).toContain('다섯 개까지만')
   })
 
   it('🔴 품질 규율이 출력 형식보다 **뒤에** 온다 (모델은 뒤에 온 지시를 더 강하게 따른다)', () => {

@@ -11,7 +11,7 @@
  *   [[HARMONY_1: 합치점 제목, 설명]]  (HARMONY_1~3)
  *   [[TENSION: 긴장점 제목, 해석]]   (v2 에선 체용 상충으로 재정의 — 태그는 동일)
  *   [[TIMING_1: 시기, 조언]]         (TIMING_1~3)
- *   [[REMEDY_1: 개운 처방]]          (REMEDY_1~3)
+ *   [[REMEDY_1: 개운 처방]]          (REMEDY_1~5 — 엔진 처방 항목 해설)
  *
  * 파싱 실패해도 크래시 없이 빈 구조를 반환 → 호출부는 isSamhapEmpty 로 원문 폴백 판단.
  * 순수 함수(side-effect 없음) — 단위테스트 대상.
@@ -101,7 +101,8 @@ export function parseSamhap(raw: string): SamhapParsed {
   }
 
   const remedies: string[] = []
-  for (const t of ['REMEDY_1', 'REMEDY_2', 'REMEDY_3']) {
+  // 처방은 엔진이 정한 항목 수만큼 온다(2026-08-15 처방 엔진 도입) — 없으면 조용히 건너뛴다.
+  for (const t of ['REMEDY_1', 'REMEDY_2', 'REMEDY_3', 'REMEDY_4', 'REMEDY_5']) {
     const r = one(raw, t)
     if (r) remedies.push(r)
   }

@@ -216,6 +216,7 @@ describe('상세 — 결과 골격 9섹션 (마스터 §4-2)', () => {
       indicatorNotes: ['눌림이 큽니다', '밖으로 도는 힘은 약합니다', '올해 문은 보통입니다'],
       timingNotes: ['3월과 9월이 열립니다', '7월은 말을 아끼는 편이 좋습니다'],
       actions: ['기록을 남기세요', '쉬는 날을 정하세요', '한 사람에게만 털어놓으세요'],
+      remedyNotes: ['붉은 계열을 곁에 두면 좋습니다', '남쪽을 보고 앉아 보세요'],
       pastEcho: '2024년 무렵 자리에 변동이 있었을 것입니다.',
       caution: '이 풀이는 결정을 대신하지 않습니다.',
     },
@@ -316,6 +317,107 @@ describe('상세 — 결과 골격 9섹션 (마스터 §4-2)', () => {
     expect(nextStepHrefs.indexOf('/protected/ai-shaman')).toBeLessThan(
       nextStepHrefs.indexOf(themeReadingPath('what-next'))
     )
+  })
+})
+
+describe('개운 처방 — 유료는 전량, 무료는 맛보기 (CEO 지시 2026-08-15)', () => {
+  const REMEDY = {
+    yongsin: '火' as const,
+    huisin: '木' as const,
+    gisin: '水' as const,
+    items: [
+      {
+        kind: 'color' as const,
+        label: '곁에 두는 색',
+        value: '붉은색·주황',
+        basis: '채워야 할 기운이 火',
+        action: '오늘 입는 옷 하나를 붉은 쪽으로 고릅니다.',
+      },
+      {
+        kind: 'direction' as const,
+        label: '앉는 방향',
+        value: '남쪽을 보고 앉기',
+        basis: '火 기운이 도는 방위',
+        action: '의자를 돌려 남쪽을 봅니다.',
+      },
+    ],
+    avoid: [
+      {
+        kind: 'habit' as const,
+        label: '덜어낼 버릇',
+        value: '밤을 새우는 일',
+        basis: '水 기운이 짙어지는 생활',
+        action: '이번 주에 한 번만 건너뜁니다.',
+      },
+    ],
+  }
+
+  /** 처방만 보는 테스트라 판정·서술은 최소로 둔다. */
+  const BASE = {
+    themeId: READING_THEME,
+    targetId: SELF.id,
+    targetName: '홍길동',
+    verdict: {
+      themeId: READING_THEME,
+      verdictLabel: null,
+      indicators: [
+        { key: 'a', label: '가', score: 50, band: 'mid' as const, basis: '근거 가' },
+        { key: 'b', label: '나', score: 50, band: 'mid' as const, basis: '근거 나' },
+        { key: 'c', label: '다', score: 50, band: 'mid' as const, basis: '근거 다' },
+      ] as const,
+      timings: [],
+      ruleHits: [] as string[],
+      pastHint: null,
+    },
+    narration: {
+      headline: '한 줄 답',
+      situation: '상황',
+      indicatorNotes: ['', '', ''],
+      timingNotes: [] as string[],
+      actions: [] as string[],
+      remedyNotes: [] as string[],
+      pastEcho: '',
+      caution: '',
+    },
+    analyzedAt: new Date().toISOString(),
+  }
+
+  async function renderWith(extra: Record<string, unknown>) {
+    mockAnalyze.mockResolvedValue({
+      success: true,
+      reading: { ...BASE, ...extra },
+      cached: false,
+    } as never)
+    const view = await renderDetail(READING_THEME)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /풀이 보기/ }))
+    })
+    return view
+  }
+
+  it('유료는 처방 항목·근거·행동을 전부 그린다', async () => {
+    await renderWith({ remedy: REMEDY, narration: { ...BASE.narration, remedyNotes: ['해설1', '해설2'] } })
+
+    expect(screen.getByText('붉은색·주황')).not.toBeNull()
+    expect(screen.getByText(/의자를 돌려 남쪽을 봅니다/)).not.toBeNull()
+    // 덜어낼 것도 함께 — 채우기만 하면 처방이 아니라 광고가 된다.
+    expect(screen.getByText('밤을 새우는 일')).not.toBeNull()
+  })
+
+  it('🔴 무료는 맛보기 하나만 보이고 잠긴 개수를 사실대로 밝힌다', async () => {
+    await renderWith({ remedyTeaser: { preview: REMEDY.items[0], hiddenCount: 9 } })
+
+    expect(screen.getByText('붉은색·주황')).not.toBeNull()
+    expect(screen.getByText('9가지')).not.toBeNull()
+    // 나머지는 화면에 없다 — 저장본에 애초에 실리지 않는다.
+    expect(screen.queryByText('남쪽을 보고 앉기')).toBeNull()
+  })
+
+  it('맛보기는 같은 갈래의 유료 테마로 길을 낸다', async () => {
+    const { container } = await renderWith({ remedyTeaser: { preview: REMEDY.items[0], hiddenCount: 9 } })
+    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'))
+
+    expect(hrefs.some((href) => href?.startsWith('/protected/analysis/theme/'))).toBe(true)
   })
 })
 

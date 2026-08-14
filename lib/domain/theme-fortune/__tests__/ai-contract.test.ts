@@ -186,6 +186,7 @@ describe('서술 파싱', () => {
       'headline',
       'indicatorNotes',
       'pastEcho',
+      'remedyNotes',
       'situation',
       'timingNotes',
     ])

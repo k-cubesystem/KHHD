@@ -14,6 +14,7 @@ import { buildSajuContext, type PersonInfo } from '@/lib/saju-engine/context-bui
 import { evaluateAllRules } from '@/lib/saju-engine/rule-base'
 import { calculateYearlyFortune } from '@/lib/saju-engine/woon-calculator'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
+import { buildRemedySet, remedyTeaser } from '@/lib/domain/remedy/remedy'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
@@ -195,11 +196,16 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
     // 무료 미끼는 절단 스키마로 간다 — 행동·시기 해설·되짚기는 자리 자체가 없다(직장·재물
     // 게이트 8번). 파서도 같은 기준으로 다시 자르므로 AI 가 스키마를 무시해도 새지 않는다.
     const freeCut = isFreeReading(theme)
+
+    // 개운 처방(결정론). 🔴 무료도 **계산은 한다** — 맛보기 한 가지와 잠긴 개수가 여기서 나오고,
+    //    그 숫자는 실제 배열 길이여야 한다(부풀리면 거짓 표시). 다만 전량은 실어 보내지 않는다.
+    const remedy = buildRemedySet(ctx)
+
     const { prompt } = await buildMasterPromptForAction(
       person,
       resolver.prompt.analysisType,
       '',
-      buildThemeAdditionalContext(resolver.prompt, verdict),
+      buildThemeAdditionalContext(resolver.prompt, verdict, freeCut ? undefined : remedy),
       themeOutputFormatGuide(freeCut),
       // 복채를 받은 풀이에만 서술 품질 규율을 얹는다(무료 미끼는 표준).
       freeCut ? 'standard' : 'premium'
@@ -211,7 +217,7 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       userPrompt: prompt,
     })
     // 판정에 없는 달은 여기서 판정의 달로 덮인다 — 조용히 틀린 달을 내보내지 않는다(§5-4).
-    const narration = parseThemeNarration(ai.text, verdict, freeCut)
+    const narration = parseThemeNarration(ai.text, verdict, freeCut, remedy.items.length)
 
     const reading: ThemeReading = {
       themeId: theme.id,
@@ -219,6 +225,9 @@ export async function analyzeThemeFortune(params: ThemeAnalyzeParams): Promise<T
       targetName,
       verdict,
       narration,
+      // 🔴 무료에는 처방 전량을 싣지 않는다 — 저장본이 그대로 응답에 실리므로 화면에서 가리는
+      //    것으로는 부족하다. 무료가 받는 것은 맛보기 한 가지와 «몇 개가 더 있는지»뿐이다.
+      ...(freeCut ? { remedyTeaser: remedyTeaser(remedy) } : { remedy }),
       analyzedAt: new Date().toISOString(),
     }
 

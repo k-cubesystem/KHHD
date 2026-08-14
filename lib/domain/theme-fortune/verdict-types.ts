@@ -12,6 +12,7 @@
  * (마스터 §1-1·§9-1). 밖으로 나가는 것은 `band` 와 막대 길이뿐이다.
  */
 import type { AnalysisType, SajuContext } from '@/lib/saju-engine/context-builder'
+import type { RemedyItem, RemedySet } from '@/lib/domain/remedy/remedy'
 import type { RuleBaseResult } from '@/lib/saju-engine/rule-base'
 import type { YearlyFortuneResult } from '@/lib/saju-engine/woon-calculator'
 
@@ -134,6 +135,13 @@ export interface ThemeNarration {
   readonly indicatorNotes: readonly string[]
   readonly timingNotes: readonly string[]
   readonly actions: readonly string[]
+  /**
+   * 처방 해설 — 엔진이 정한 개운 처방을 «왜 나에게 그것인가»로 풀어 쓴 것.
+   *
+   * 🔴 AI 가 처방을 **만드는** 자리가 아니다. 처방 자체는 `ThemeReading.remedy` 에 결정론으로
+   *    이미 들어 있고, 여기는 그 항목을 사람의 말로 옮긴 문장만 온다. 무료는 빈 배열이다.
+   */
+  readonly remedyNotes: readonly string[]
   readonly pastEcho: string
   readonly caution: string
 }
@@ -150,6 +158,18 @@ export interface ThemeReading {
   readonly targetName: string
   readonly verdict: ThemeVerdict
   readonly narration: ThemeNarration
+  /**
+   * 개운 처방 전량 — **복채를 받은 풀이에만 실린다.**
+   *
+   * 🔴 무료 풀이에는 이 칸을 **채우지 않는다.** 화면에서 가리는 것으로는 부족하다 — 저장본이
+   *    그대로 네트워크 응답에 실리므로, 값을 넣는 순간 무료로 전량이 나간다.
+   */
+  readonly remedy?: RemedySet
+  /**
+   * 무료 풀이가 보는 맛보기 — 한 가지 처방 + 잠긴 개수.
+   * 숫자는 실제 배열 길이에서 온다(부풀리면 그 순간 거짓 표시가 된다).
+   */
+  readonly remedyTeaser?: { readonly preview: RemedyItem; readonly hiddenCount: number }
   /** ISO. 「N일 전 풀이」 배지가 이 값에서 나온다. */
   readonly analyzedAt: string
 }
