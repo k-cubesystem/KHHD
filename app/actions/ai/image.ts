@@ -1,4 +1,4 @@
-﻿'use server'
+'use server'
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'

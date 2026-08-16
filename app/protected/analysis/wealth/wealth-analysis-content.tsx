@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { AddRelationInline } from '@/components/destiny/add-relation-inline'
 import { useState } from 'react'
 import Link from 'next/link'
 import { Coins, Loader2, TrendingUp, AlertCircle, ShieldAlert, Clock, Target } from 'lucide-react'
@@ -28,6 +30,7 @@ function targetLabel(target: DestinyTarget): string {
 }
 
 export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalysisContentProps) {
+  const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId)
   const [analyzing, setAnalyzing] = useState(false)
   const [wealthAnalysis, setWealthAnalysis] = useState<{
@@ -136,25 +139,34 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
           </CardHeader>
           <CardContent className="space-y-4">
             {showSelect && (
-              <Select
-                value={selectedId ?? ''}
-                onValueChange={(v) => {
-                  setSelectedId(v || null)
-                  setWealthAnalysis(null)
-                }}
-              >
-                <SelectTrigger className="w-full bg-surface/20 border-primary/20 text-ink-light font-light text-sm">
-                  <SelectValue placeholder="분석 대상 선택" />
-                </SelectTrigger>
-                <SelectContent className="bg-surface border-primary/20">
-                  {targets.map((t) => (
-                    <SelectItem key={t.id} value={t.id} className="font-light text-ink-light">
-                      {targetLabel(t)}
-                      {t.target_type === 'self' ? ' (본인)' : ` (${t.relation_type})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Select
+                  value={selectedId ?? ''}
+                  onValueChange={(v) => {
+                    setSelectedId(v || null)
+                    setWealthAnalysis(null)
+                  }}
+                >
+                  <SelectTrigger className="w-full bg-surface/20 border-primary/20 text-ink-light font-light text-sm">
+                    <SelectValue placeholder="분석 대상 선택" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-surface border-primary/20">
+                    {targets.map((t) => (
+                      <SelectItem key={t.id} value={t.id} className="font-light text-ink-light">
+                        {targetLabel(t)}
+                        {t.target_type === 'self' ? ' (본인)' : ` (${t.relation_type})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
+                <AddRelationInline
+                  onAdded={(id) => {
+                    setSelectedId(id)
+                    router.refresh()
+                  }}
+                />
+              </div>
             )}
             <div className="flex items-center justify-between gap-4">
               <div>

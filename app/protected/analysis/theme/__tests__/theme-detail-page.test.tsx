@@ -14,6 +14,7 @@ import { themeById, themeReadingCostLabel, themeReadingPath } from '@/lib/domain
 import { themeResolver } from '@/lib/domain/theme-fortune/resolvers'
 
 jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
   redirect: jest.fn((url: string) => {
     // 실제 next/navigation 과 같은 거동 — redirect 는 던진다(뒤 코드가 안 돈다).
     throw new Error(`REDIRECT:${url}`)

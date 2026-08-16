@@ -1,5 +1,6 @@
 'use client'
 
+import { AddRelationInline } from '@/components/destiny/add-relation-inline'
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -45,6 +46,7 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         </div>
 
         {targets.length > 0 ? (
+          <div className="space-y-2">
           <Select value={selectedId ?? ''} onValueChange={(val) => setSelectedId(val)}>
             <SelectTrigger className="w-full h-12 bg-surface/20 border-white/10 rounded-xl text-ink-light">
               <SelectValue placeholder="분석할 대상을 선택하세요">
@@ -73,6 +75,14 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
               ))}
             </SelectContent>
           </Select>
+            {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
+            <AddRelationInline
+              onAdded={(id) => {
+                setSelectedId(id)
+                router.refresh()
+              }}
+            />
+          </div>
         ) : (
           <Card
             onClick={() => router.push('/protected/family')}

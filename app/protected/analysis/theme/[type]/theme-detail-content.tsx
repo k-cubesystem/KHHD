@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, MessageCircle, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { RemedyPanel, RemedyTeaserPanel } from '@/components/analysis/RemedyPanel'
+import { AddRelationInline } from '@/components/destiny/add-relation-inline'
 import { ThemeThumbnail } from '@/components/analysis/ThemeThumbnail'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
@@ -79,6 +81,7 @@ export function ThemeDetailContent({
   related,
   listPath,
 }: ThemeDetailContentProps) {
+  const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(initialTargetId)
   const [analyzing, setAnalyzing] = useState(false)
   const [reading, setReading] = useState<ThemeReading | null>(null)
@@ -211,6 +214,15 @@ export function ThemeDetailContent({
                   </select>
                 </label>
               )}
+
+              {/* 인연 추가 — 이 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
+              <AddRelationInline
+                onAdded={(id) => {
+                  setSelectedId(id)
+                  setReading(null)
+                  router.refresh()
+                }}
+              />
 
               {!reading && (
                 <button

@@ -1,4 +1,4 @@
-﻿import { GoogleGenerativeAI, Part } from '@google/generative-ai'
+import { GoogleGenerativeAI, Part } from '@google/generative-ai'
 import { logger } from '@/lib/utils/logger'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_FLASH } from '@/lib/config/ai-models'

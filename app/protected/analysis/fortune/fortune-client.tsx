@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { AddRelationInline } from '@/components/destiny/add-relation-inline'
 import { useState } from 'react'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
 import { PaywallModal } from '@/components/shared/paywall-modal'
@@ -168,6 +170,7 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
 function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | null }) {
   const config = TAB_CONFIG.find((t) => t.value === type)!
   const { checkQuota, paywallProps } = useAnalysisQuota()
+  const router = useRouter()
   const [state, setState] = useState<
     | { status: 'idle' }
     | { status: 'loading' }
@@ -313,6 +316,7 @@ function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | nu
 
 export function FortuneClient({ selfTarget, targets }: FortuneClientProps) {
   const defaultId = selfTarget?.id ?? null
+  const router = useRouter()
   const [selectedId, setSelectedId] = useState<string | null>(defaultId)
 
   const showSelect = targets.length > 1
@@ -351,6 +355,15 @@ export function FortuneClient({ selfTarget, targets }: FortuneClientProps) {
                 ))}
               </SelectContent>
             </Select>
+            {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
+            <div className="mt-2">
+              <AddRelationInline
+                onAdded={(id) => {
+                  setSelectedId(id)
+                  router.refresh()
+                }}
+              />
+            </div>
           </motion.div>
         )}
 

@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Loader2, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
-import { quickAddDestinyTarget } from '@/app/actions/user/family'
 import { logger } from '@/lib/utils/logger'
 import {
   MEMBER_CATEGORIES,
@@ -51,6 +50,9 @@ export function QuickAddTarget({
   const submit = async () => {
     setSaving(true)
     try {
+      // 🔴 서버 액션은 **지연 import**. 정적으로 끌어오면 서버 전용 모듈이 클라이언트 그래프에
+      //    딸려 들어가 테스트·번들이 무거워진다(테마 상세의 analyzeThemeFortune 과 같은 패턴).
+      const { quickAddDestinyTarget } = await import('@/app/actions/user/family')
       const result = await quickAddDestinyTarget({
         name,
         birthDate,

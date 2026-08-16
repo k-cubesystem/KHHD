@@ -78,11 +78,18 @@ describe('🔴 배선 — 갈래가 실제로 흐른다', () => {
     expect(family).toContain('member_category')
   })
 
-  it('대상 선택기가 본인·가족·지인으로 갈라 보여 준다', () => {
-    const selector = read('components/destiny/target-selector.tsx')
-
-    expect(selector).toContain('QuickAddTarget')
-    expect(selector).toContain("'family', 'acquaintance'")
+  it('🔴 인연 추가가 **실제로 쓰이는** 풀이 화면들에 붙어 있다', () => {
+    // 처음엔 공용 바텀시트에만 넣었는데 그 컴포넌트를 쓰는 화면이 하나도 없어 아무 데도
+    // 보이지 않았다(2026-08-16). 화면 목록으로 못 박아 다시 «죽은 자리»에 넣지 않게 한다.
+    for (const path of [
+      'app/protected/analysis/theme/[type]/theme-detail-content.tsx',
+      'app/protected/analysis/wealth/wealth-analysis-content.tsx',
+      'app/protected/analysis/trend/[type]/trend-client.tsx',
+      'app/protected/analysis/cheonjiin/analysis-client-page.tsx',
+      'app/protected/analysis/fortune/fortune-client.tsx',
+    ]) {
+      expect({ path, wired: read(path).includes('AddRelationInline') }).toEqual({ path, wired: true })
+    }
   })
 
   it('기운 지도가 갈래를 싣고, 지인은 기본에서 빠져 있다', () => {
