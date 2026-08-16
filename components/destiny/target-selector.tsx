@@ -8,6 +8,8 @@ import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import { getTargetImageUrl } from '@/lib/domain/destiny/destiny-utils'
+import { QuickAddTarget } from '@/components/destiny/quick-add-target'
+import { MEMBER_CATEGORY_META, toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
 
 interface TargetSelectorProps {
   /**
@@ -38,6 +40,7 @@ interface TargetSelectorProps {
 export function TargetSelector({ isOpen, onClose, onSelect, selectedTargetId }: TargetSelectorProps) {
   const [targets, setTargets] = useState<DestinyTarget[]>([])
   const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -50,12 +53,36 @@ export function TargetSelector({ isOpen, onClose, onSelect, selectedTargetId }: 
     try {
       const data = await getDestinyTargets()
       setTargets(data)
+      return data
     } catch (error) {
       logger.error('Failed to load destiny targets:', error)
+      return []
     } finally {
       setLoading(false)
     }
   }
+
+  /**
+   * 방금 등록한 사람을 **곧바로 고른다.**
+   * 목록만 새로 고치고 끝내면 사용자가 자기가 만든 사람을 다시 찾아 눌러야 한다 —
+   * 나가지 않게 만든 이유가 거기서 반쯤 사라진다.
+   */
+  const handleAdded = async (id: string) => {
+    setAdding(false)
+    const fresh = await loadTargets()
+    const created = fresh.find((candidate) => candidate.id === id)
+    if (created) handleSelect(created)
+  }
+
+  /** 본인 → 가족 → 지인. 갈래가 섞여 있으면 「아는 사람」을 가족 틈에서 찾아야 한다. */
+  const groups: ReadonlyArray<{ key: string; label: string; items: DestinyTarget[] }> = [
+    { key: 'self', label: '본인', items: targets.filter((t) => t.target_type === 'self') },
+    ...(['family', 'acquaintance'] as MemberCategory[]).map((category) => ({
+      key: category,
+      label: MEMBER_CATEGORY_META[category].label,
+      items: targets.filter((t) => t.target_type !== 'self' && toMemberCategory(t.member_category) === category),
+    })),
+  ]
 
   const handleSelect = (target: DestinyTarget) => {
     onSelect(target)
@@ -126,91 +153,108 @@ export function TargetSelector({ isOpen, onClose, onSelect, selectedTargetId }: 
                   ))}
                 </div>
               ) : targets.length === 0 ? (
-                <div className="text-center py-8">
-                  <UserPlus className="w-12 h-12 text-ink-light/30 mx-auto mb-3" />
-                  <p className="text-sm text-ink-light/60 mb-4">등록된 인연이 없습니다.</p>
-                  <Link
-                    href="/protected/family"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg transition-colors text-sm"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>새로운 인연 등록</span>
-                  </Link>
-                </div>
+                <QuickAddTarget defaultCategory="family" onAdded={handleAdded} onCancel={onClose} />
               ) : (
                 <div className="space-y-2">
-                  {targets.map((target) => {
-                    const Icon = getRelationIcon(target.relation_type, target.target_type)
-                    const isSelected = target.id === selectedTargetId
-                    const imageUrl = getTargetImageUrl(target)
+                  {groups.map((group) =>
+                    group.items.length === 0 ? null : (
+                      <div key={group.key} className="space-y-2 pt-1">
+                        <p className="px-1 text-[10px] tracking-wider text-ink-light/35">{group.label}</p>
+                        {group.items.map((target) => {
+                          const Icon = getRelationIcon(target.relation_type, target.target_type)
+                          const isSelected = target.id === selectedTargetId
+                          const imageUrl = getTargetImageUrl(target)
 
-                    return (
-                      <button
-                        key={target.id}
-                        onClick={() => handleSelect(target)}
-                        className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all group ${
-                          isSelected
-                            ? 'bg-primary/10 border-2 border-primary'
-                            : 'bg-surface/30 border-2 border-transparent hover:bg-surface/50 hover:border-primary/30'
-                        }`}
-                      >
-                        {/* Avatar */}
-                        <Avatar className="w-12 h-12 border border-primary/20">
-                          <AvatarImage src={imageUrl || undefined} />
-                          <AvatarFallback className="bg-surface text-primary font-bold text-sm">
-                            {target.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-
-                        {/* Info */}
-                        <div className="flex-1 text-left">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-serif font-bold text-ink-light group-hover:text-primary transition-colors">
-                              {target.name}
-                            </h3>
-                            {target.target_type === 'self' && (
-                              <span className="text-[10px] px-2 py-0.5 bg-primary/20 text-primary rounded border border-primary/30">
-                                본인
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-ink-light/60">
-                            <Icon className="w-3.5 h-3.5" />
-                            <span>{target.relation_type}</span>
-                            {target.birth_date && (
-                              <>
-                                <span className="text-ink-light/30">•</span>
-                                <span>{target.birth_date}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Selected Indicator */}
-                        {isSelected && (
-                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                            <svg
-                              className="w-4 h-4 text-background"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
+                          return (
+                            <button
+                              key={target.id}
+                              onClick={() => handleSelect(target)}
+                              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all group ${
+                                isSelected
+                                  ? 'bg-primary/10 border-2 border-primary'
+                                  : 'bg-surface/30 border-2 border-transparent hover:bg-surface/50 hover:border-primary/30'
+                              }`}
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
+                              {/* Avatar */}
+                              <Avatar className="w-12 h-12 border border-primary/20">
+                                <AvatarImage src={imageUrl || undefined} />
+                                <AvatarFallback className="bg-surface text-primary font-bold text-sm">
+                                  {target.name.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
 
-                  {/* Add New Button */}
-                  <Link
-                    href="/protected/family"
-                    className="w-full flex items-center justify-center gap-2 p-4 mt-4 bg-surface/20 hover:bg-surface/40 border-2 border-dashed border-primary/30 hover:border-primary/50 rounded-xl transition-all group"
-                  >
-                    <Plus className="w-5 h-5 text-primary" />
-                    <span className="text-sm text-primary font-medium">새로운 인연 등록</span>
-                  </Link>
+                              {/* Info */}
+                              <div className="flex-1 text-left">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-serif font-bold text-ink-light group-hover:text-primary transition-colors">
+                                    {target.name}
+                                  </h3>
+                                  {target.target_type === 'self' && (
+                                    <span className="text-[10px] px-2 py-0.5 bg-primary/20 text-primary rounded border border-primary/30">
+                                      본인
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-ink-light/60">
+                                  <Icon className="w-3.5 h-3.5" />
+                                  <span>{target.relation_type}</span>
+                                  {target.birth_date && (
+                                    <>
+                                      <span className="text-ink-light/30">•</span>
+                                      <span>{target.birth_date}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Selected Indicator */}
+                              {isSelected && (
+                                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                                  <svg
+                                    className="w-4 h-4 text-background"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )
+                  )}
+
+                  {/* 인연 추가 — 🔴 화면을 떠나지 않는다. 나가면 절반이 돌아오지 않는다. */}
+                  {adding ? (
+                    <div className="pt-3">
+                      <QuickAddTarget onAdded={handleAdded} onCancel={() => setAdding(false)} />
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => setAdding(true)}
+                        className="w-full flex items-center justify-center gap-2 p-4 bg-surface/20 hover:bg-surface/40 border-2 border-dashed border-primary/30 hover:border-primary/50 rounded-xl transition-all"
+                      >
+                        <Plus className="w-5 h-5 text-primary" />
+                        <span className="text-sm text-primary font-medium">인연 추가 — 가족·지인</span>
+                      </button>
+                      <Link
+                        href="/protected/family"
+                        className="block text-center text-[11px] text-ink-light/40 underline-offset-2 hover:underline"
+                      >
+                        인연 관리로 가기
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

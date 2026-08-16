@@ -13,6 +13,14 @@ interface AnalyzingAnimationProps {
   message?: string
   /** 단계 롤링 메시지. 제공 시 3~4초 간격으로 순환(reduced-motion이면 첫 단계 고정). */
   steps?: string[]
+  /**
+   * 예상 소요 시간(초). 주면 **경과 시간과 진행 막대**가 함께 뜨고, 단계 문구가 되돌지 않는다.
+   *
+   * 🔴 긴 대기에서 문구만 순환시키면 같은 말이 서너 번 반복되고, 사용자는 그걸 «멈춤»으로 읽는다
+   *    (종합사주 실측 54초 = 5단계가 3바퀴). 오래 걸린다는 사실을 숨기지 말고 **얼마나 남았는지**를
+   *    보여 주는 편이 이탈을 막는다.
+   */
+  expectedSeconds?: number
 }
 
 const TYPE_CONFIG: Record<AnimationType, { icon: typeof User; defaultMessage: string; defaultSteps: string[] }> = {
@@ -50,7 +58,7 @@ const TYPE_CONFIG: Record<AnimationType, { icon: typeof User; defaultMessage: st
 
 const ROLL_INTERVAL_MS = 3200
 
-export function AnalyzingAnimation({ type, message, steps }: AnalyzingAnimationProps) {
+export function AnalyzingAnimation({ type, message, steps, expectedSeconds }: AnalyzingAnimationProps) {
   const config = TYPE_CONFIG[type]
   const Icon = config.icon
   const reduce = useReducedMotion()
@@ -60,15 +68,31 @@ export function AnalyzingAnimation({ type, message, steps }: AnalyzingAnimationP
   const useRolling = rollSteps.length > 1 && !reduce
 
   const [index, setIndex] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+  const longRun = typeof expectedSeconds === 'number' && expectedSeconds > 0
 
   useEffect(() => {
     if (!useRolling) return
-    const timer = setInterval(() => setIndex((i) => (i + 1) % rollSteps.length), ROLL_INTERVAL_MS)
+    // 예상 시간을 아는 대기에서는 **마지막 단계에서 멈춘다** — 되돌면 진행이 없어 보인다.
+    const timer = setInterval(
+      () => setIndex((i) => (longRun ? Math.min(i + 1, rollSteps.length - 1) : (i + 1) % rollSteps.length)),
+      ROLL_INTERVAL_MS
+    )
     return () => clearInterval(timer)
-  }, [useRolling, rollSteps.length])
+  }, [useRolling, rollSteps.length, longRun])
+
+  useEffect(() => {
+    if (!longRun) return
+    const timer = setInterval(() => setElapsed((value) => value + 1), 1000)
+    return () => clearInterval(timer)
+  }, [longRun])
 
   const currentText =
     (rollSteps.length > 0 ? rollSteps[Math.min(index, rollSteps.length - 1)] : message) || config.defaultMessage
+
+  // 예상보다 오래 걸려도 막대가 100%에 붙어 멈춘 것처럼 보이지 않게 95%에서 잡아 둔다.
+  const progress = longRun ? Math.min(95, Math.round((elapsed / (expectedSeconds as number)) * 100)) : 0
+  const overdue = longRun && elapsed > (expectedSeconds as number)
 
   return (
     <div className="relative overflow-hidden flex flex-col items-center justify-center py-16 px-6 gap-6">
@@ -101,6 +125,21 @@ export function AnalyzingAnimation({ type, message, steps }: AnalyzingAnimationP
           </motion.p>
         </AnimatePresence>
       </div>
+
+      {/* 긴 대기 — 🔴 오래 걸린다는 사실을 숨기지 않고 «얼마나 왔는지»를 보여 준다. */}
+      {longRun && (
+        <div className="relative z-10 w-full max-w-[260px] space-y-1.5">
+          <div className="h-1 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gold-500/70 transition-[width] duration-1000 ease-linear"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <p className="text-center text-[11px] font-light text-white/40">
+            {overdue ? `${elapsed}초 지났습니다 · 조금만 더 기다려 주세요` : `${elapsed}초 / 약 ${expectedSeconds}초`}
+          </p>
+        </div>
+      )}
 
       {/* 단계 진행 점 (롤링 시) 또는 기본 3점 펄스 */}
       <div className="relative z-10 flex gap-1.5">

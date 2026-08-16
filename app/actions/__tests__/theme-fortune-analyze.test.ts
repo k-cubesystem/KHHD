@@ -62,6 +62,7 @@ const TARGET = {
   hand_image_url: null,
   home_address: null,
   target_type: 'self' as const,
+  member_category: 'family' as const,
   created_at: '2026-01-01',
   updated_at: '2026-01-01',
   is_leap_month: false,

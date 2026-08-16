@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import type { MemberCategory } from '@/lib/domain/family/member-category'
 
 /**
  * Destiny Target 타입 정의
@@ -30,6 +31,11 @@ export interface DestinyTarget {
   hand_image_url: string | null
   home_address: string | null
   target_type: DestinyTargetType
+  /**
+   * 인연 갈래 — 가족/지인(2026-08-16). 본인은 언제나 'family'.
+   * 🔴 `target_type` 과 다른 축이다: 저쪽은 «본인이냐 등록한 사람이냐», 이쪽은 «가족이냐 남이냐».
+   */
+  member_category: MemberCategory
   created_at: string
   updated_at: string
   is_leap_month: boolean | null
@@ -59,7 +65,7 @@ export async function getDestinyTargets(): Promise<DestinyTarget[]> {
   const { data, error } = await supabase
     .from('v_destiny_targets')
     .select(
-      'id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at, is_leap_month'
+      'id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, member_category, created_at, updated_at, is_leap_month'
     )
     .eq('owner_id', user.id)
     .order('target_type', { ascending: false }) // self가 먼저 (descending으로 'self' > 'family')
@@ -95,7 +101,7 @@ export async function getDestinyTarget(targetId: string): Promise<DestinyTarget 
   const { data, error } = await supabase
     .from('v_destiny_targets')
     .select(
-      'id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, created_at, updated_at, is_leap_month'
+      'id, owner_id, name, relation_type, birth_date, birth_time, calendar_type, gender, avatar_url, face_image_url, hand_image_url, home_address, target_type, member_category, created_at, updated_at, is_leap_month'
     )
     .eq('id', targetId)
     .eq('owner_id', user.id)

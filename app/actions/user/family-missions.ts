@@ -16,6 +16,8 @@ export interface FamilyMemberWithMissions {
   job?: string
   hobby?: string
   avatar_id?: string
+  /** 인연 갈래 — 가족/지인(2026-08-16). 값이 없으면 화면이 가족으로 떨어뜨린다. */
+  member_category?: string
   face_image_url: string | null
   last_analysis_date: string | null
   last_analysis_summary: string | null
@@ -55,17 +57,27 @@ export async function getFamilyWithMissions(): Promise<FamilyMemberWithMissions[
     if (!error && data) {
       const rows = (data as FamilyMemberWithMissions[]).map(withFamilyMissionCount)
 
-      // RPC 반환 컬럼에 is_leap_month 가 없다 — 원본 테이블에서 보강한다.
-      // 이게 없으면 수정 폼이 윤달을 항상 해제 상태로 프리필해 저장 시 값이 지워진다(월주 오계산).
-      const { data: leapRows } = await supabase
+      // RPC 반환 컬럼에 is_leap_month·member_category 가 없다 — 원본 테이블에서 보강한다.
+      // 윤달이 없으면 수정 폼이 항상 해제로 프리필해 저장 시 값이 지워지고(월주 오계산),
+      // 갈래가 없으면 지인이 가족 탭에 섞인다.
+      const { data: extraRows } = await supabase
         .from('family_members')
-        .select('id, is_leap_month')
+        .select('id, is_leap_month, member_category')
         .eq('user_id', user.id)
 
-      if (!leapRows) return rows
+      if (!extraRows) return rows
 
-      const leapById = new Map<string, boolean>(leapRows.map((row) => [row.id as string, row.is_leap_month === true]))
-      return rows.map((member) => ({ ...member, is_leap_month: leapById.get(member.id) ?? false }))
+      const extraById = new Map(
+        extraRows.map((row) => [
+          row.id as string,
+          { leap: row.is_leap_month === true, category: (row.member_category as string | null) ?? 'family' },
+        ])
+      )
+      return rows.map((member) => ({
+        ...member,
+        is_leap_month: extraById.get(member.id)?.leap ?? false,
+        member_category: extraById.get(member.id)?.category ?? 'family',
+      }))
     }
 
     // If RPC fails, use fallback query

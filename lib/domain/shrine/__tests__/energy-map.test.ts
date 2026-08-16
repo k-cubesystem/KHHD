@@ -15,6 +15,7 @@ function entry(id: string, name: string, energy: Record<Element, number>): Energ
     name,
     relation: '본인',
     avatarId: null,
+    category: 'family' as const,
     hasShrine: true,
     itemCount: 0,
     deityName: null,

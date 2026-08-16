@@ -42,6 +42,12 @@ const INDIVIDUAL_TOTAL =
   FEATURE_COST.saju.display + FEATURE_COST.face.display + FEATURE_COST.palm.display + FEATURE_COST.fengshui.display
 const SAMHAP_DISCOUNT_PCT = INDIVIDUAL_TOTAL > 0 ? Math.round((1 - SAMHAP_COST / INDIVIDUAL_TOTAL) * 100) : 0
 
+/**
+ * 예상 소요 시간(초) — 2026-08-15 실측 54초(출력 7,861 토큰).
+ * 🔴 실제보다 짧게 적으면 막대가 먼저 차고 사용자가 «멈췄다»고 읽는다. 넉넉히 잡는다.
+ */
+const SAMHAP_EXPECTED_SECONDS = 60
+
 const LOADING_STEPS = [
   '사주(天)의 기운을 불러옵니다...',
   '관상·손금(人)의 결을 겹쳐 봅니다...',
@@ -157,7 +163,8 @@ function SamhapPageContent() {
 
           {step === 'loading' && (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <AnalyzingAnimation type="default" steps={LOADING_STEPS} />
+              {/* 🔴 실측 54초(3배 상세화 후). 예상 시간을 주면 문구가 되돌지 않고 경과가 보인다. */}
+              <AnalyzingAnimation type="default" steps={LOADING_STEPS} expectedSeconds={SAMHAP_EXPECTED_SECONDS} />
             </motion.div>
           )}
 

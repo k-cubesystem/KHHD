@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
 import { logger } from '@/lib/utils/logger'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { isLayer, isElement, type CatalogItem, type Element, type Placement } from '@/lib/domain/shrine/types'
@@ -87,7 +88,7 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
       supabase
         // ⚠️ avatar_url 컬럼은 존재하지 않는다 — 가족 아바타는 avatar_id(오행 정령 키)로 매핑
         .from('family_members')
-        .select('id, name, relationship, birth_date, birth_time, calendar_type, avatar_id')
+        .select('id, name, relationship, birth_date, birth_time, calendar_type, avatar_id, member_category')
         .eq('user_id', user.id)
         .order('created_at'),
       supabase.from('shrines').select('id, family_member_id, main_deity_id').eq('user_id', user.id),
@@ -149,6 +150,8 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
     birthDate: string | null
     birthTime: string | null
     isSolar: boolean
+    /** 인연 갈래 — 화면이 가족/지인을 갈라 고를 수 있게 함께 싣는다(2026-08-16). */
+    category: MemberCategory
   }> = [
     {
       id: 'self',
@@ -159,6 +162,7 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
       birthDate: me?.birth_date ?? null,
       birthTime: me?.birth_time ?? null,
       isSolar: me?.calendar_type !== 'lunar',
+      category: 'family' as MemberCategory,
     },
     // 사주 계산용 relationship='본인' 자동 레코드는 profiles 의 self 와 이중 계상되므로 제외
     ...(members ?? [])
@@ -171,6 +175,7 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
         birthDate: (m.birth_date as string) ?? null,
         birthTime: (m.birth_time as string) ?? null,
         isSolar: m.calendar_type !== 'lunar',
+        category: toMemberCategory(m.member_category as string | null),
       })),
   ]
 
@@ -202,6 +207,7 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
       name: t.name,
       relation: t.relation,
       avatarId: t.avatarId,
+      category: t.category,
       hasShrine: !!shrine,
       itemCount: placements.length,
       deityName: shrine?.main_deity_id ? (deityName.get(shrine.main_deity_id) ?? null) : null,

@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
 import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-react'
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
+import { buildEnergyMap } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 import type { EnergyMapEntry, FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
 
@@ -158,7 +159,29 @@ function MemberCard({ entry }: { entry: EnergyMapEntry }) {
 }
 
 export function FamilyEnergyMapView({ data }: { data: MapData }) {
-  const { entries, average, familyYongsin, complements } = data
+  /**
+   * 지도에 올릴 사람을 **고른다**(2026-08-16).
+   *
+   * 🔴 기본은 가족만이다. 이 화면은 «우리 가족 기운»을 보는 자리라, 지인이 자동으로 섞이면
+   *    가족 평균과 «서로 메워주는 관계»가 엉뚱해진다. 지인은 눌러서 들여온다.
+   */
+  const [picked, setPicked] = useState<Set<string>>(
+    () => new Set(data.entries.filter((e) => e.category !== 'acquaintance').map((e) => e.targetId))
+  )
+
+  const toggle = (targetId: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(targetId)) next.delete(targetId)
+      else next.add(targetId)
+      return next
+    })
+
+  const chosen = data.entries.filter((e) => picked.has(e.targetId))
+  // 둘 미만이면 견줄 것이 없다 — 원래 데이터로 되돌려 화면이 빈손이 되지 않게 한다.
+  const view = chosen.length >= 2 ? buildEnergyMap(chosen) : data
+  const { entries, average, familyYongsin, complements } = view
+  const acquaintances = data.entries.filter((e) => e.category === 'acquaintance')
 
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto px-3 py-6 pb-28">
@@ -179,6 +202,38 @@ export function FamilyEnergyMapView({ data }: { data: MapData }) {
           {entries.length}명의 오행을 나란히 두고 서로 무엇을 메워줄 수 있는지 봅니다
         </p>
       </header>
+
+      {/* 누구를 견줄까 — 가족은 기본, 지인은 골라서 */}
+      <section className="mb-5 space-y-2 rounded-xl border border-white/10 bg-surface/30 p-3">
+        <p className="text-[11px] text-ink-light/50">지도에 올릴 사람</p>
+        <div className="flex flex-wrap gap-1.5">
+          {data.entries.map((entry) => {
+            const on = picked.has(entry.targetId)
+            return (
+              <button
+                key={entry.targetId}
+                type="button"
+                onClick={() => toggle(entry.targetId)}
+                aria-pressed={on}
+                className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                  on
+                    ? 'border-gold-500/50 bg-gold-500/[0.14] text-gold-300'
+                    : 'border-white/10 bg-white/[0.02] text-ink-light/45'
+                }`}
+              >
+                {entry.name}
+                {entry.category === 'acquaintance' && <span className="ml-1 text-[10px] opacity-60">지인</span>}
+              </button>
+            )
+          })}
+        </div>
+        {chosen.length < 2 && (
+          <p className="text-[11px] text-amber-400/70">두 사람 이상 골라야 견줄 수 있어 전체를 보여 드립니다.</p>
+        )}
+        {acquaintances.length === 0 && (
+          <p className="text-[11px] font-light text-ink-light/35">지인을 등록하면 여기서 함께 견줄 수 있습니다.</p>
+        )}
+      </section>
 
       <ElementPrimer />
 

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
 import { addBokPoints } from '@/lib/services/bok-grant'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 
@@ -84,6 +85,69 @@ export async function getFamilyMembers() {
   return data || []
 }
 
+/**
+ * 인연 즉석 등록 — **풀이 화면을 떠나지 않고** 사람을 하나 더한다.
+ *
+ * ## 왜 별도 액션인가
+ * `addFamilyMember` 는 폼 제출용이라 아무것도 돌려주지 않고 가족 페이지를 갱신한다. 대상
+ * 선택기에서 쓰려면 «방금 만든 사람»을 곧바로 골라 줘야 하는데, 그러려면 id 가 필요하다.
+ * 사주를 보려다 등록하러 나갔다가 돌아오지 않는 이탈이 이 함수가 막는 것이다.
+ *
+ * 🔴 한도 검사는 여기서도 **다시** 한다. UI 가드는 우회 가능하고, 이 함수도 공개 엔드포인트다.
+ */
+export async function quickAddDestinyTarget(input: {
+  name: string
+  birthDate: string
+  birthTime?: string | null
+  gender?: 'male' | 'female'
+  calendarType?: 'solar' | 'lunar'
+  isLeapMonth?: boolean
+  relationship: string
+  category: MemberCategory
+}): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  const name = input.name?.trim()
+  const birthDate = input.birthDate?.trim()
+  if (!name) return { success: false, error: '이름을 입력해주세요.' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate ?? '')) return { success: false, error: '생년월일을 확인해주세요.' }
+
+  const limitCheck = await canAddRelationship()
+  if (!limitCheck.allowed) {
+    return { success: false, error: limitCheck.message ?? '인연 등록 한도에 도달했습니다.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: '로그인이 필요합니다.' }
+
+  const { data, error } = await supabase
+    .from('family_members')
+    .insert({
+      user_id: user.id,
+      name,
+      relationship: input.relationship?.trim() || (input.category === 'acquaintance' ? '지인' : '가족'),
+      birth_date: birthDate,
+      birth_time: input.birthTime || null,
+      calendar_type: input.calendarType ?? 'solar',
+      is_leap_month: input.isLeapMonth ?? false,
+      gender: input.gender ?? 'male',
+      member_category: toMemberCategory(input.category),
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    logger.error('[quickAddDestinyTarget] 등록 실패:', error?.message)
+    return { success: false, error: '등록 중 오류가 발생했습니다.' }
+  }
+
+  await addBokPoints(50, 'REGISTER', undefined, `${name}님 인연 등록`).catch(() => {})
+  revalidatePath('/protected/family')
+
+  return { success: true, id: data.id }
+}
+
 export async function addFamilyMember(formData: FormData) {
   // 티어 한도 검증 — Edge 분기보다 먼저 둔다. UI 가드(family-page-client)는 우회 가능하므로
   // 서버 액션이 최종 방어선이다. 마스터는 getUserTierLimits 의 admin 분기로 통과한다.
@@ -124,6 +188,8 @@ export async function addFamilyMember(formData: FormData) {
     job: formData.get('job') as string,
     hobby: formData.get('hobby') as string,
     avatar_id: formData.get('avatar_id') as string,
+    // 인연 갈래(2026-08-16). 값이 안 오면 가족 — 갈래가 없던 시절의 동작을 그대로 남긴다.
+    member_category: toMemberCategory(formData.get('member_category') as string | null),
   }
 
   const { error } = await supabase.from('family_members').insert([rawData])
@@ -175,6 +241,8 @@ export async function updateFamilyMember(formData: FormData) {
     job: formData.get('job') as string,
     hobby: formData.get('hobby') as string,
     avatar_id: formData.get('avatar_id') as string,
+    // 인연 갈래(2026-08-16). 값이 안 오면 가족 — 갈래가 없던 시절의 동작을 그대로 남긴다.
+    member_category: toMemberCategory(formData.get('member_category') as string | null),
   }
 
   const { error } = await supabase.from('family_members').update(rawData).eq('id', id).eq('user_id', user.id)

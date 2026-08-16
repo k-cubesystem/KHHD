@@ -1,3 +1,4 @@
+import type { MemberCategory } from '@/lib/domain/family/member-category'
 import { ELEMENTS } from './energy'
 import type { Element } from './types'
 
@@ -8,6 +9,11 @@ export interface EnergyMapEntry {
   relation: string
   /** 오행 정령 아바타 키 (family_members.avatar_id). 본인·미설정은 null */
   avatarId: string | null
+  /**
+   * 인연 갈래 — 가족/지인(2026-08-16).
+   * 🔴 지도는 «가족 기운»을 보는 화면이라 기본 비교 대상은 가족이다. 지인은 골라야 들어온다.
+   */
+  category: MemberCategory
   hasShrine: boolean
   itemCount: number
   deityName: string | null

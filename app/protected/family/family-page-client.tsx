@@ -24,6 +24,12 @@ import { ZodiacTimeSelect } from '@/components/zodiac-time-select'
 import { FiveAvatarSelector } from '@/components/family/five-avatar-selector'
 import { GuestCTACard } from '@/components/guest-cta-card'
 import { GA } from '@/lib/analytics/ga4'
+import {
+  MEMBER_CATEGORIES,
+  MEMBER_CATEGORY_META,
+  toMemberCategory,
+  type MemberCategory,
+} from '@/lib/domain/family/member-category'
 
 interface EditingMember {
   id: string
@@ -101,6 +107,16 @@ export function FamilyPageClient({
   // 사주 계산용으로 자동 생성되는 relationship='본인' 레코드는 목록·카운트·지도 입구에서 숨긴다.
   // (DB 행은 삭제하지 않는다 — 사주 계산 소비처가 재생성에 의존)
   const [members] = useState<FamilyMemberWithMissions[]>(initialMembers.filter((m) => m.relationship !== '본인'))
+  /**
+   * 가족과 지인을 갈라 본다(2026-08-16).
+   *
+   * 🔴 목록을 합쳐 두면 「아는 사람 사주 한번」으로 등록한 사람이 가족 틈에 섞여, 가족 신당·
+   *    기운 지도 같은 «가족 전제» 화면과 목록이 서로 다른 말을 하게 된다.
+   */
+  const [tab, setTab] = useState<MemberCategory>('family')
+  const membersByTab = members.filter((m) => toMemberCategory(m.member_category) === tab)
+  const countOf = (category: MemberCategory) =>
+    members.filter((m) => toMemberCategory(m.member_category) === category).length
   const [isPending, startTransition] = useTransition()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<EditingMember | null>(null)
@@ -252,11 +268,31 @@ export function FamilyPageClient({
         </Link>
       )}
 
-      {/* 가족 목록 */}
-      <section aria-label="가족 구성원 목록">
-        {members.length > 0 ? (
+      {/* 갈래 탭 — 가족 / 지인 */}
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        {MEMBER_CATEGORIES.map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            aria-pressed={tab === key}
+            className={`rounded-lg border px-3 py-2 text-[13px] transition-colors ${
+              tab === key
+                ? 'border-gold-500/50 bg-gold-500/[0.12] font-bold text-gold-300'
+                : 'border-white/10 bg-white/[0.02] text-ink-light/55'
+            }`}
+          >
+            {MEMBER_CATEGORY_META[key].label}
+            <span className="ml-1.5 text-[11px] opacity-60">{countOf(key)}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* 목록 */}
+      <section aria-label="인연 목록">
+        {membersByTab.length > 0 ? (
           <div className="space-y-3">
-            {members.map((member, idx) => (
+            {membersByTab.map((member, idx) => (
               <MemberMissionCard
                 key={member.id}
                 member={member}
