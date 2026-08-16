@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 interface ShareSajuResult {
   success: boolean
@@ -44,7 +45,7 @@ export async function createSajuShareToken(analysisId: string): Promise<ShareSaj
     // 카테고리가 SAJU가 아닌 경우에도 공유는 허용 (범용성)
     // 단, 공유 URL은 사주 전용 경로 사용
 
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com').trim().replace(/\/+$/, '')
+    const siteUrl = getSiteUrl()
 
     // 2. 이미 토큰이 있으면 재사용
     if (record.share_token) {

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { generateInviteLink } from '@/app/actions/user/invite'
 import { createClient } from '@/lib/supabase/client'
+import { getSiteUrl } from '@/lib/utils/site-url'
 import '@/lib/kakao-sdk'
 
 export default function InviteCreatePage() {
@@ -74,7 +75,7 @@ export default function InviteCreatePage() {
         content: {
           title: '우리 궁합 확인해볼래요? 💕',
           description: '해화당에서 나와 당신의 궁합을 확인해보세요!',
-          imageUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'}/og-image.png`,
+          imageUrl: `${getSiteUrl()}/opengraph-image.png`,
           link: {
             mobileWebUrl: inviteLink,
             webUrl: inviteLink,

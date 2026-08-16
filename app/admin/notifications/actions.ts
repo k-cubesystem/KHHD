@@ -5,8 +5,9 @@ import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
 import { requireAdmin } from '@/lib/admin/require-admin'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
+const SITE_URL = getSiteUrl()
 
 export interface SystemSetting {
   key: string

@@ -3,8 +3,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generateDailyFortune } from '@/app/actions/fortune/daily'
 import { sendKakaoNotification } from '@/app/actions/fortune/notification'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
+const SITE_URL = getSiteUrl()
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow 1 minute execution

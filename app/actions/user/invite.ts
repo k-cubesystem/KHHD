@@ -6,6 +6,7 @@ import { nanoid } from 'nanoid'
 import { withGeminiRateLimit } from '@/lib/services/gemini-rate-limiter'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || '')
 
@@ -191,8 +192,7 @@ export async function generateInviteLink(userId: string): Promise<{ success: boo
     return { success: false, error: result.error }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
-  const link = `${baseUrl}/invite/${result.code}`
+  const link = `${getSiteUrl()}/invite/${result.code}`
 
   return { success: true, link }
 }

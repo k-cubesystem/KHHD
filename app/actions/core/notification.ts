@@ -12,8 +12,9 @@ import { logger } from '@/lib/utils/logger'
 import { getSolapiClient, ALIMTALK_TEMPLATES, SOLAPI_PFID, SOLAPI_SENDER } from '@/lib/services/solapi'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
+const SITE_URL = getSiteUrl()
 
 // ─── 타입 ────────────────────────────────────────────────────────────────────
 

@@ -28,7 +28,8 @@ import {
   type InviteViewStatus,
 } from '@/lib/domain/family/invite'
 import { generateInviteToken, hashInviteToken } from '@/lib/domain/family/invite-token'
-import { resolveRelationshipLimit, siteOrigin } from '@/lib/domain/family/invite-repository'
+import { resolveRelationshipLimit } from '@/lib/domain/family/invite-repository'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -129,7 +130,7 @@ export async function createFamilyInviteLink(memberId: unknown): Promise<InviteA
     ok: true,
     data: {
       inviteId: row.invite_id,
-      url: buildInviteUrl(siteOrigin(), token),
+      url: buildInviteUrl(getSiteUrl(), token),
       expiresAt: expiresAt.toISOString(),
     },
   }
