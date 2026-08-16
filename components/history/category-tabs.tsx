@@ -1,7 +1,22 @@
 'use client'
 
-import { Sparkles, User2, Hand, Home, Heart, Sun, Coins } from 'lucide-react'
+import { Sparkles, User2, Hand, Home, Heart, Sun, Coins, Star } from 'lucide-react'
 import type { AnalysisHistory, AnalysisCategory } from '@/app/actions/user/history'
+import { ANALYSIS_CATEGORY_LABEL, ANALYSIS_CATEGORY_ORDER } from '@/lib/domain/analysis/category-labels'
+
+/** 아이콘만 화면 쪽에 둔다(컴포넌트라 도메인에 못 넣는다). 라벨·순서는 도메인이 정본. */
+const CATEGORY_ICON: Record<AnalysisCategory, typeof Sparkles> = {
+  SAJU: Sun,
+  FACE: User2,
+  HAND: Hand,
+  FENGSHUI: Home,
+  COMPATIBILITY: Heart,
+  WEALTH: Coins,
+  TODAY: Sun,
+  NEW_YEAR: Sparkles,
+  SAMHAP: Star,
+  THEME: Sparkles,
+}
 
 interface CategoryTabsProps {
   records: AnalysisHistory[]
@@ -15,17 +30,16 @@ export function CategoryTabs({ records, selectedCategory, onCategoryChange }: Ca
     return records.filter((r) => r.category === category).length
   }
 
+  // 🔴 카테고리는 라벨 단일 출처에서 온다. 여기 손으로 적어 두면 새 카테고리가 생길 때마다
+  //    탭에서만 빠진다 — 종합사주·테마가 정확히 그렇게 빠져 있었다(2026-08-16).
   const categories = [
-    { value: 'ALL', label: '전체', icon: Sparkles },
-    { value: 'SAJU', label: '사주', icon: Sun },
-    { value: 'FACE', label: '관상', icon: User2 },
-    { value: 'HAND', label: '손금', icon: Hand },
-    { value: 'FENGSHUI', label: '풍수', icon: Home },
-    { value: 'COMPATIBILITY', label: '궁합', icon: Heart },
-    { value: 'WEALTH', label: '재물운', icon: Coins },
-    { value: 'TODAY', label: '오늘의운세', icon: Sun },
-    { value: 'NEW_YEAR', label: '신년운세', icon: Sparkles },
-  ] as const
+    { value: 'ALL' as const, label: '전체', icon: Sparkles },
+    ...ANALYSIS_CATEGORY_ORDER.map((value) => ({
+      value,
+      label: ANALYSIS_CATEGORY_LABEL[value],
+      icon: CATEGORY_ICON[value],
+    })),
+  ]
 
   return (
     <div className="space-y-3">

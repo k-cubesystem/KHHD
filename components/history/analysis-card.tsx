@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useState } from 'react'
+import { analysisCategoryLabel } from '@/lib/domain/analysis/category-labels'
 import { motion } from 'framer-motion'
 import {
   Clock,
@@ -42,6 +43,8 @@ const categoryConfig = {
 
 export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick, onDelete }: AnalysisCardProps) {
   const config = categoryConfig[record.category] || categoryConfig.TODAY
+  // 라벨은 도메인 단일 출처가 정본 — 아이콘·색만 위 표에서 가져온다.
+  const label = analysisCategoryLabel(record.category)
   const Icon = config.icon
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -126,13 +129,13 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick,
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-primary uppercase tracking-wide">{config.label}</span>
+                <span className="text-xs font-medium text-primary uppercase tracking-wide">{label}</span>
                 {record.target_relation && (
                   <span className="text-xs text-ink-light/60">· {record.target_relation}</span>
                 )}
               </div>
               <h3 className="text-lg font-serif font-bold text-ink-light truncate">
-                {record.target_name}님의 {config.label} 분석
+                {record.target_name}님의 {label} 분석
               </h3>
             </div>
             <ChevronRight className="w-5 h-5 text-ink-light/60 group-hover:text-primary transition-colors" />

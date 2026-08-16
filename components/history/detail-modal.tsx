@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { logger } from '@/lib/utils/logger'
+import { analysisCategoryLabel } from '@/lib/domain/analysis/category-labels'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Star, Trash2, Share2, Edit3, Save, Clock, AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,8 @@ interface DetailModalProps {
 export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalProps) {
   const router = useRouter()
   const t = useTranslations('common')
+  // 🔴 영문 코드를 화면·공유 문구에 그대로 내보내지 않는다(「SAMHAP 분석」이 나가고 있었다).
+  const categoryLabel = analysisCategoryLabel(record.category)
   const [isFavorite, setIsFavorite] = useState(record.is_favorite)
   const [memo, setMemo] = useState(record.user_memo || '')
   const [isEditingMemo, setIsEditingMemo] = useState(false)
@@ -118,14 +121,14 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
 
       // 2. Client-side URL construction (Safe & Correct Domain)
       const shareUrl = `${window.location.origin}/share/${result.token}`
-      const shareText = `${record.target_name}님의 ${record.category} 분석 결과 | 청담 해화당\n${shareUrl}`
+      const shareText = `${record.target_name}님의 ${categoryLabel} 분석 결과 | 청담 해화당\n${shareUrl}`
 
       // 2. Web Share API
       if (navigator.share) {
         try {
           await navigator.share({
             title: `해화당 운명 분석`,
-            text: `${record.target_name}님의 ${record.category} 분석 결과를 확인해보세요.`,
+            text: `${record.target_name}님의 ${categoryLabel} 분석 결과를 확인해보세요.`,
             url: shareUrl,
           })
           toast.success('공유되었습니다!')
@@ -196,7 +199,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
               {/* Meta Info */}
               <div className="space-y-3 pb-4 border-b border-primary/10">
                 <h3 className="text-2xl font-serif font-bold text-ink-light">
-                  {record.target_name}님의 {record.category} 분석
+                  {record.target_name}님의 {categoryLabel} 분석
                 </h3>
                 <div className="flex items-center gap-4 text-sm text-ink-light/60">
                   <div className="flex items-center gap-2">
@@ -286,7 +289,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
               {/* 카카오톡 공유 (NEXT_PUBLIC_KAKAO_JS_KEY 설정 시에만 노출) */}
               {kakaoUrl && (
                 <KakaoShareButton
-                  title={`${record.target_name}님의 ${record.category} 분석`}
+                  title={`${record.target_name}님의 ${categoryLabel} 분석`}
                   description={record.summary || '청담 해화당 운명 분석 결과'}
                   imageUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/images/hanok-night-hero.jpg`}
                   webUrl={kakaoUrl}
