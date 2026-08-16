@@ -20,8 +20,8 @@ jest.mock('@/lib/utils/logger', () => ({ logger: { error: jest.fn(), warn: jest.
 jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
 jest.mock('@/lib/domain/family/invite-repository', () => ({
   resolveRelationshipLimit: jest.fn(),
-  siteOrigin: () => 'https://k-haehwadang.com',
 }))
+jest.mock('@/lib/utils/site-url', () => ({ getSiteUrl: () => 'https://k-haehwadang.com' }))
 
 import { acceptFamilyInviteLink, createFamilyInviteLink, revokeFamilyInviteLink } from '../family-invite'
 

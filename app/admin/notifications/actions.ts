@@ -3,8 +3,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
+const SITE_URL = getSiteUrl()
 
 export interface SystemSetting {
   key: string

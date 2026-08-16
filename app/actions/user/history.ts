@@ -8,6 +8,7 @@ import { getUserTierLimits } from '../payment/membership'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { isRetentionLimited, retentionCutoffISO } from '@/lib/auth/subscription'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 import { FREE_TIER_LIMITS } from '@/lib/domain/payment/membership-benefits'
 
 /**
@@ -489,7 +490,7 @@ export async function createShareLink(
       return {
         success: true,
         token: record.share_token,
-        url: `${process.env.NEXT_PUBLIC_SITE_URL}/share/${record.share_token}`,
+        url: `${getSiteUrl()}/share/${record.share_token}`,
       }
     }
 
@@ -510,7 +511,7 @@ export async function createShareLink(
     return {
       success: true,
       token,
-      url: `${process.env.NEXT_PUBLIC_SITE_URL}/share/${token}`,
+      url: `${getSiteUrl()}/share/${token}`,
     }
   } catch (error) {
     logger.error('Error in createShareLink:', error)

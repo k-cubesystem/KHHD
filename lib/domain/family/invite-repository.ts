@@ -107,8 +107,3 @@ export async function getInvitePreview(token: string): Promise<InvitePreview | n
     expiresAt: invite.expires_at,
   }
 }
-
-/** 사이트 기준 origin — 공유 링크 관례(app/actions/ai/share-saju.ts)와 같은 값. */
-export function siteOrigin(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com').trim().replace(/\/+$/, '')
-}

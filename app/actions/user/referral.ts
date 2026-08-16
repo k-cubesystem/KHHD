@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
  * 현재 로그인 유저의 추천 코드를 가져오거나 생성합니다.
@@ -35,11 +36,10 @@ export async function getOrCreateReferralCode(): Promise<{
   }
 
   const code = data as string
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   return {
     success: true,
     code,
-    referralLink: `${baseUrl}/invite?ref=${code}`,
+    referralLink: `${getSiteUrl()}/invite?ref=${code}`,
   }
 }
 
