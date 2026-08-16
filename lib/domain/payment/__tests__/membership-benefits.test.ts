@@ -102,8 +102,8 @@ describe('멤버십 혜택 묶음 — 여는 것은 «입장»', () => {
   })
 
   it('플랜 숫자가 그대로 반영된다', () => {
-    expect(membershipBenefitLines(SINGLE)).toContain('가족관리 — 인연 3명 등록·궁합')
-    expect(membershipBenefitLines(BUSINESS)).toContain('가족관리 — 인연 50명 등록·궁합')
+    expect(membershipBenefitLines(SINGLE)).toContain('가족관리 — 가족·지인 각 3명 등록·궁합')
+    expect(membershipBenefitLines(BUSINESS)).toContain('가족관리 — 가족·지인 각 50명 등록·궁합')
   })
 
   it('금지어가 하나도 없다', () => {

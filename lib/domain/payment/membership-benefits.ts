@@ -85,10 +85,11 @@ export function recordKeepingLine(plan: MembershipPlanFacts | null): string {
   return `기록 보관 — 최대 ${plan.storageLimit}개 · 기간 제한 없이`
 }
 
-/** 인연(가족) 등록 — relationship_limit 그대로. */
+/** 인연 등록 — relationship_limit 은 **갈래마다** 적용된다(가족 N · 지인 N, 2026-08-16). */
 export function relationshipLine(plan: MembershipPlanFacts | null): string {
   if (!plan) return '가족관리 — 인연 등록·궁합'
-  return `가족관리 — 인연 ${plan.relationshipLimit}명 등록·궁합`
+  // 🔴 «각»을 빼면 합산 한도로 읽힌다 — 표시와 실제가 어긋나는 순간 표시광고법 문제다.
+  return `가족관리 — 가족·지인 각 ${plan.relationshipLimit}명 등록·궁합`
 }
 
 /**

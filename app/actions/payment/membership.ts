@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { hasUnlimitedAccess, UNLIMITED_TIER_LIMITS } from '@/lib/auth/privileges'
 import { FREE_TIER_LIMITS } from '@/lib/domain/payment/membership-benefits'
+import { DEFAULT_MEMBER_CATEGORY, MEMBER_CATEGORY_META, type MemberCategory } from '@/lib/domain/family/member-category'
 
 /**
  * Get user's membership tier and limits
@@ -31,7 +32,7 @@ export async function getUserTierLimits() {
     return {
       tier: 'TESTER',
       daily_talisman_limit: 100, // 100만냥/day
-      relationship_limit: 10, // 가족 10명
+      relationship_limit: 10, // 갈래마다 10명 (가족 10 · 지인 10)
       storage_limit: 20, // 기록 20개 — 멤버십과 같은 한도
       is_subscribed: true,
     }
@@ -72,7 +73,14 @@ export async function getUserTierLimits() {
 /**
  * Check if user can add more relationships
  */
-export async function canAddRelationship(): Promise<{
+/**
+ * 인연을 하나 더 등록할 수 있는가 — **갈래별로 따로 센다**(CEO 지시 2026-08-16).
+ *
+ * 🔴 합산으로 세면 지인을 많이 등록한 사람의 «가족 자리»가 줄어든다. 가족은 지울 수 없는
+ *    사람들이고 지인은 늘었다 줄었다 하는 목록이라, 한 통에 담으면 늘 가족이 밀린다.
+ *    그래서 한도 하나(relationship_limit)를 **갈래마다 각각** 적용한다 — 가족 10 · 지인 10.
+ */
+export async function canAddRelationship(category: MemberCategory = DEFAULT_MEMBER_CATEGORY): Promise<{
   allowed: boolean
   current: number
   limit: number
@@ -91,11 +99,12 @@ export async function canAddRelationship(): Promise<{
   const limits = await getUserTierLimits()
   const relationshipLimit = limits?.relationship_limit || 3
 
-  // Count current relationships
+  // 같은 갈래만 센다 — 지인을 채워도 가족 자리는 그대로 남는다.
   const { count } = await supabase
     .from('family_members')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', user.id)
+    .eq('member_category', category)
 
   const currentCount = count || 0
 
@@ -118,7 +127,7 @@ export async function canAddRelationship(): Promise<{
       allowed: false,
       current: currentCount,
       limit: relationshipLimit,
-      message: `인연 등록 한도에 도달했습니다. (${currentCount}/${relationshipLimit}) ${upgradeMessage}`,
+      message: `${MEMBER_CATEGORY_META[category].label} 등록 한도에 도달했습니다. (${currentCount}/${relationshipLimit}) ${upgradeMessage}`,
     }
   }
 

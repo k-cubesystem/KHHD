@@ -110,7 +110,7 @@ export async function quickAddDestinyTarget(input: {
   if (!name) return { success: false, error: '이름을 입력해주세요.' }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate ?? '')) return { success: false, error: '생년월일을 확인해주세요.' }
 
-  const limitCheck = await canAddRelationship()
+  const limitCheck = await canAddRelationship(toMemberCategory(input.category))
   if (!limitCheck.allowed) {
     return { success: false, error: limitCheck.message ?? '인연 등록 한도에 도달했습니다.' }
   }
@@ -151,7 +151,8 @@ export async function quickAddDestinyTarget(input: {
 export async function addFamilyMember(formData: FormData) {
   // 티어 한도 검증 — Edge 분기보다 먼저 둔다. UI 가드(family-page-client)는 우회 가능하므로
   // 서버 액션이 최종 방어선이다. 마스터는 getUserTierLimits 의 admin 분기로 통과한다.
-  const limitCheck = await canAddRelationship()
+  // 🔴 갈래별로 센다(가족 10 · 지인 10) — 합산이면 지인이 가족 자리를 잡아먹는다.
+  const limitCheck = await canAddRelationship(toMemberCategory(formData.get('member_category') as string | null))
   if (!limitCheck.allowed) {
     logger.warn(`인연 등록 한도 초과 차단: ${limitCheck.current}/${limitCheck.limit}`)
     throw new Error(limitCheck.message ?? '인연 등록 한도에 도달했습니다.')

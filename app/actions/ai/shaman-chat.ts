@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
+import { toGeminiHistory } from '@/lib/domain/chat/history'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { recallMemories, recallMemoryList, extractAndSaveMemories } from '@/lib/ai/memory'
@@ -543,14 +544,13 @@ export async function sendShamanChatMessage(
 
     // 5. systemInstruction을 모델에 주입하고 대화 히스토리 복원
     const model = getGeminiModel(systemInstruction)
-    // 슬라이딩 윈도우: 최근 N개 메시지만 전달 (그 이전 맥락은 요약·기억으로 대체)
-    const windowedHistory = conversationHistory.slice(-CHAT_HISTORY_WINDOW)
+    // 슬라이딩 윈도우 + 🔴 **첫 항목은 user 여야 한다**.
+    // 신위가 먼저 인사하는 구조(선문안)라 히스토리 첫 항목이 model 이 되고, 그대로 넣으면 SDK 가
+    // 호출 전에 거절한다 — 「First content should be with role 'user'」. 고민상담이 그 한 줄로
+    // 통째로 죽어 있었다(2026-08-16). 규칙은 lib/domain/chat/history.ts 가 단독으로 든다.
     const chat = model.startChat({
       // 클라이언트가 넘긴 히스토리도 길이 컷(토큰 폭탄/히스토리 경유 인젝션 방어).
-      history: windowedHistory.map((msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: guardAiInput(msg.content).text }],
-      })),
+      history: toGeminiHistory(conversationHistory, CHAT_HISTORY_WINDOW, (text) => guardAiInput(text).text),
     })
 
     // 사용자 메시지만 전달 (systemInstruction은 모델에 이미 주입됨). 가드 통과한 safeMessage 사용.
