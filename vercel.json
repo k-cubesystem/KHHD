@@ -40,6 +40,10 @@
     {
       "path": "/api/cron/event-draw",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/analytics-retention",
+      "schedule": "0 18 * * *"
     }
   ]
 }

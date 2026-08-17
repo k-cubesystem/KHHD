@@ -17,6 +17,26 @@ export function trackEvent({ action, category, label, value }: GtagEvent) {
     event_label: label,
     value,
   })
+  // 자사 수집 동승 — 같은 이벤트를 우리 DB(activity_logs)에도. GA4 가 광고차단·ITP 로 새도 여기엔 남는다.
+  // 서버에서 호출된 경우(typeof window === 'undefined')는 collectEvent 가 스스로 무동작한다.
+  if (typeof window !== 'undefined') {
+    void import('./collector')
+      .then((m) => {
+        m.collectEvent(action, category, label, value)
+        // 퍼널 단계 — GA 이벤트 이름 → 퍼널 순번을 «여기 한 곳»에서 사상한다. 호출부를 흩뿌리지 않는다.
+        const step = FUNNEL_BY_ACTION[action]
+        if (step) m.collectFunnel(step.name, step.step, label ? { label } : undefined)
+      })
+      .catch(() => undefined)
+  }
+}
+
+/** GA 액션 → 퍼널 단계. 순번의 단일 출처는 lib/analytics/funnel.ts. */
+const FUNNEL_BY_ACTION: Record<string, { name: string; step: number }> = {
+  sign_up: { name: 'signup_done', step: 3 },
+  analysis_start: { name: 'first_analysis', step: 4 },
+  store_view: { name: 'store_view', step: 5 },
+  checkout_start: { name: 'checkout_start', step: 6 },
 }
 
 export const GA = {

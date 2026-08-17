@@ -8,6 +8,7 @@ import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import './globals.css'
@@ -121,6 +122,7 @@ export default async function RootLayout({
                   <AgentationWrapper />
                   <SpeedInsights />
                   {process.env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />}
+                  <PageViewTracker />
                 </div>
               </div>
             </QueryProvider>

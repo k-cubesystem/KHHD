@@ -162,6 +162,7 @@ async function handlePaymentDone(data: TossWebhookEvent['data']) {
     await getSupabaseAdmin().from('subscription_payments').update({ status: 'SUCCESS' }).eq('order_id', orderId)
 
     logger.log('[Webhook] Subscription payment confirmed:', orderId)
+    await recordPurchaseAnalytics(orderId, 'subscription')
   } else {
     // 일반 결제. 이미 취소·회수된 결제는 되살리지 않는다 — 지난 DONE 웹훅이 재전송돼도
     // refunded 가 completed 로 뒤집히면 매출·원장이 어긋난다.
@@ -172,6 +173,61 @@ async function handlePaymentDone(data: TossWebhookEvent['data']) {
       .neq('status', 'refunded')
 
     logger.log('[Webhook] Payment confirmed:', orderId)
+    await recordPurchaseAnalytics(orderId, 'charge')
+  }
+}
+
+/**
+ * 결제 확정을 자사 분석에 기록 — 웹훅이 «결제 확정의 유일한 신뢰 소스»라 여기서 쏜다
+ * (클라이언트 성공 페이지는 광고차단·이탈·ITP 로 샌다 — 마케팅 감사 A-4).
+ * activity_logs 는 기존 트리거(trigger_activity_to_traffic)가 'purchase' 를 시간별 표에도 반영한다.
+ * 멱등: 같은 orderId 로 두 번 오면 한 번만 남긴다. 실패해도 웹훅 응답을 막지 않는다.
+ */
+async function recordPurchaseAnalytics(orderId: string, kind: 'charge' | 'subscription') {
+  try {
+    const admin = getSupabaseAdmin()
+    const { data: dup } = await admin
+      .from('activity_logs')
+      .select('id')
+      .eq('activity_type', 'purchase')
+      .contains('metadata', { orderId })
+      .limit(1)
+      .maybeSingle()
+    if (dup) return
+
+    let userId: string | null = null
+    let amount = 0
+    if (kind === 'subscription') {
+      const { data } = await admin
+        .from('subscription_payments')
+        .select('user_id, amount')
+        .eq('order_id', orderId)
+        .maybeSingle()
+      userId = data?.user_id ? String(data.user_id) : null
+      amount = Number(data?.amount ?? 0)
+    } else {
+      const { data } = await admin.from('payments').select('user_id, amount').eq('order_id', orderId).maybeSingle()
+      userId = data?.user_id ? String(data.user_id) : null
+      amount = Number(data?.amount ?? 0)
+    }
+    await admin.from('activity_logs').insert({
+      user_id: userId,
+      activity_type: 'purchase',
+      activity_category: 'payment',
+      description: kind,
+      metadata: { orderId, amount, currency: 'KRW' },
+    })
+    if (userId) {
+      await admin.from('funnel_events').insert({
+        user_id: userId,
+        session_id: crypto.randomUUID(),
+        event_name: 'purchase',
+        funnel_step: 7,
+        metadata: { orderId, amount },
+      })
+    }
+  } catch (e) {
+    logger.warn('[Webhook] purchase 분석 기록 실패(무시)', e instanceof Error ? e.message : String(e))
   }
 }
 
