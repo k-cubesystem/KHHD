@@ -1,5 +1,6 @@
 'use client'
 
+import { toRichField } from '@/lib/domain/analysis/rich-field'
 import { motion } from 'framer-motion'
 import { Crown, Briefcase, Coins, Heart, Activity, Clock, Zap, Shield } from 'lucide-react'
 
@@ -18,10 +19,14 @@ interface CheonSectionProps {
     strengths?: string[]
     weaknesses?: string[]
     lifeTimeline?: LifeTimelineData
-    career?: string
-    wealth?: string
-    love?: string
-    health?: string
+    /** 🔴 문자열일 수도 객체일 수도 있다 — AI 스키마가 진화했다(2026-08-17 장애). */
+    career?: unknown
+    /** 🔴 문자열일 수도 객체일 수도 있다 — AI 스키마가 진화했다(2026-08-17 장애). */
+    wealth?: unknown
+    /** 🔴 문자열일 수도 객체일 수도 있다 — AI 스키마가 진화했다(2026-08-17 장애). */
+    love?: unknown
+    /** 🔴 문자열일 수도 객체일 수도 있다 — AI 스키마가 진화했다(2026-08-17 장애). */
+    health?: unknown
   } | null
 }
 
@@ -171,28 +176,14 @@ export function CheonSection({ data }: CheonSectionProps) {
               </div>
             )}
 
-            {/* 세부 분석: 직업·재물·연애·건강 */}
+            {/* 세부 분석: 직업·재물·연애·건강
+                🔴 값이 문자열일 수도 **객체**일 수도 있다. 그대로 JSX 에 넣었다가 화면이 통째로
+                   죽었다(React #31, 2026-08-17) — 반드시 toRichField 를 거친다. */}
             <div className="space-y-3 pt-4">
-              {data.career && (
-                <DetailCard icon={Briefcase} label="직업·사업" color="text-amber-300">
-                  {data.career}
-                </DetailCard>
-              )}
-              {data.wealth && (
-                <DetailCard icon={Coins} label="재물운" color="text-yellow-300">
-                  {data.wealth}
-                </DetailCard>
-              )}
-              {data.love && (
-                <DetailCard icon={Heart} label="연애·결혼" color="text-rose-300">
-                  {data.love}
-                </DetailCard>
-              )}
-              {data.health && (
-                <DetailCard icon={Activity} label="건강" color="text-emerald-300">
-                  {data.health}
-                </DetailCard>
-              )}
+              <RichDetail icon={Briefcase} label="직업·사업" color="text-amber-300" value={data.career} />
+              <RichDetail icon={Coins} label="재물운" color="text-yellow-300" value={data.wealth} />
+              <RichDetail icon={Heart} label="연애·결혼" color="text-rose-300" value={data.love} />
+              <RichDetail icon={Activity} label="건강" color="text-emerald-300" value={data.health} />
             </div>
           </div>
         </div>
@@ -219,6 +210,44 @@ function TimelineCard({
       <span className={`text-xs font-bold ${color} tracking-wide mb-1.5 block`}>{label}</span>
       <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">{children}</p>
     </div>
+  )
+}
+
+/**
+ * 문자열이든 객체든 안전하게 그리는 카드.
+ * 🔴 «값을 그대로 children 에 넣는» 옛 방식으로 되돌리지 말 것 — 그게 라이브 장애였다.
+ */
+function RichDetail({
+  icon,
+  label,
+  color,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  color: string
+  value: unknown
+}) {
+  const rich = toRichField(value)
+  if (!rich) return null
+
+  return (
+    <DetailCard icon={icon} label={label} color={color}>
+      {rich.text && <span className="whitespace-pre-line">{rich.text}</span>}
+      {rich.lists.map((list) => (
+        <div key={list.label || list.items[0]} className="mt-2">
+          {list.label && <p className="mb-1 text-[11px] text-ink-light/45">{list.label}</p>}
+          <ul className="space-y-1">
+            {list.items.map((item) => (
+              <li key={item} className="flex gap-1.5">
+                <span className="text-primary/50">·</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </DetailCard>
   )
 }
 
