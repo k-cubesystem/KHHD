@@ -95,9 +95,12 @@ export function HeroCarousel() {
               src={s.image}
               alt=""
               fill
-              // 첫 슬라이드(LCP)만 즉시 로드, 나머지는 지연 로드
+              // 첫 슬라이드(LCP)만 즉시 로드, 나머지는 지연 로드.
+              // 🔴 `loading` 을 함께 주지 말 것. `priority` 와 같이 넘기면 서버와 클라이언트가
+              //    <img> 속성을 다르게 만들어 **랜딩 전체가 하이드레이션 실패**한다
+              //    (React #418, 2026-08-17 프로덕션에서 실측). priority=true 면 즉시 로드,
+              //    false 면 next/image 가 알아서 lazy 를 붙인다 — 지금 동작과 정확히 같다.
               priority={index === 0}
-              loading={index === 0 ? 'eager' : 'lazy'}
               quality={75}
               sizes="100vw"
               placeholder="blur"
