@@ -1,4 +1,5 @@
 'use server'
+import { tossBillingSecretKey } from '@/lib/config/toss-keys'
 
 import { createClient } from '@/lib/supabase/server'
 import { addTalismans } from '@/lib/services/wallet-grant'
@@ -20,7 +21,8 @@ async function guardBillingRate(step: string, userId: string): Promise<string | 
   return '결제 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.'
 }
 
-const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
+// 빌링키 발급·정기 청구는 정기결제 상점(bill_khaehqj1a) 소관이다.
+const secretKey = tossBillingSecretKey
 const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
 
 // ============================================

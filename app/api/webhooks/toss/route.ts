@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/utils/logger'
 import { clawbackPaymentCredits } from '@/lib/services/wallet-grant'
 import { computeCancelClawback, type TossCancelRecord } from '@/lib/domain/payment/cancel-clawback'
-
-const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY
+import { tossWebhookSecretKeys } from '@/lib/config/toss-keys'
 
 // Supabase Admin Client (Service Role) - lazy initialization
 function getSupabaseAdmin() {
@@ -39,10 +38,26 @@ type TossWebhookEvent = {
   }
 }
 
+/** 타이밍 공격을 피해 두 토큰을 비교한다. 길이가 다르면 비교 자체가 불가하므로 먼저 거른다. */
+function tokenMatches(expected: string, received: string): boolean {
+  const expectedBuf = Buffer.from(expected)
+  const receivedBuf = Buffer.from(received)
+  if (expectedBuf.length !== receivedBuf.length) return false
+  return timingSafeEqual(expectedBuf, receivedBuf)
+}
+
+/**
+ * 웹훅 Basic 인증 — 형식은 `Basic base64("secretKey:")` (콜론 뒤 비밀번호 없음).
+ *
+ * 🔴 **상점이 둘이면 웹훅도 둘이고, 각자 자기 상점 시크릿으로 서명해서 온다.**
+ *    하나만 비교하면 다른 상점의 웹훅이 전량 401 로 떨어져 **취소·환불 통지가 통째로 사라진다**
+ *    (그 경로가 복채 회수를 건다 — 조용히 돈이 새는 자리다).
+ *    그래서 등록된 시크릿 **전부**와 대조하고, 하나라도 맞으면 통과시킨다.
+ */
 function verifyTossWebhookAuth(request: NextRequest): boolean {
-  if (!tossSecretKey) {
+  if (tossWebhookSecretKeys.length === 0) {
     // 환경변수 미설정 시 무조건 거부 — 프로덕션 보안 강제
-    logger.error('[Toss Webhook] TOSS_PAYMENTS_SECRET_KEY not set — rejecting request')
+    logger.error('[Toss Webhook] 시크릿 키 미설정 — 요청을 거부합니다')
     return false
   }
 
@@ -52,28 +67,18 @@ function verifyTossWebhookAuth(request: NextRequest): boolean {
     return false
   }
 
-  // Toss Payments webhook Authorization 형식: Basic base64(secretKey:)
   if (!authHeader.startsWith('Basic ')) {
     logger.error('[Toss Webhook] Authorization header is not Basic scheme')
     return false
   }
 
-  const base64Credentials = authHeader.slice('Basic '.length)
+  const receivedToken = authHeader.slice('Basic '.length)
 
-  // Toss 웹훅 Authorization 형식: Basic base64("secretKey:") — 콜론 뒤 비밀번호 없음
-  const expectedToken = Buffer.from(`${tossSecretKey}:`).toString('base64')
-  const receivedToken = base64Credentials
-
-  // 타이밍 공격 방지를 위해 crypto.timingSafeEqual 사용
-  const expectedBuf = Buffer.from(expectedToken)
-  const receivedBuf = Buffer.from(receivedToken)
-
-  if (expectedBuf.length !== receivedBuf.length) {
-    logger.error('[Toss Webhook] Authorization token length mismatch')
-    return false
-  }
-
-  return timingSafeEqual(expectedBuf, receivedBuf)
+  const ok = tossWebhookSecretKeys.some((secret) =>
+    tokenMatches(Buffer.from(`${secret}:`).toString('base64'), receivedToken)
+  )
+  if (!ok) logger.error('[Toss Webhook] 등록된 어느 상점 시크릿과도 일치하지 않습니다')
+  return ok
 }
 
 export async function POST(request: NextRequest) {

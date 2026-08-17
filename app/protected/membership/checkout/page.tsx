@@ -52,7 +52,7 @@ function CheckoutContent() {
         return
       }
 
-      const sdk = await getTossPaymentsSDK()
+      const sdk = await getTossPaymentsSDK('billing')
       if (!sdk) {
         setError('결제 모듈을 불러올 수 없습니다.')
         setPaying(false)
@@ -72,7 +72,7 @@ function CheckoutContent() {
       if (errMsg.includes('UserCancel') || errMsg.includes('사용자')) {
         setError('결제가 취소되었습니다.')
       } else if (errMsg.includes('clientKey') || errMsg.includes('client_key')) {
-        setError('결제 모듈 초기화 실패: 환경변수(TOSS_CLIENT_KEY)를 확인해주세요.')
+        setError('결제 모듈 초기화 실패: 환경변수(NEXT_PUBLIC_TOSS_BILLING_CLIENT_KEY)를 확인해주세요.')
       } else {
         setError(errMsg || '결제 중 오류가 발생했습니다.')
       }

@@ -86,7 +86,7 @@ export function TalismanPurchaseSection({
     // 퍼널: 결제 시도 (성공은 successUrl 페이지에서 bokchaeCharge 로 기록됨)
     GA.checkoutStart(plan.name, plan.price)
     try {
-      const sdk = await getTossPaymentsSDK()
+      const sdk = await getTossPaymentsSDK('general')
       if (!sdk) {
         GA.checkoutFail(plan.name, 'sdk_unavailable')
         toast.error('결제 모듈을 불러올 수 없습니다.')

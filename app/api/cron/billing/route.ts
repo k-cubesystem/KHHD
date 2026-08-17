@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
+import { tossBillingSecretKey } from '@/lib/config/toss-keys'
 
-const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
+// 정기 청구 — 정기결제 상점(bill_khaehqj1a) 소관이다.
+const secretKey = tossBillingSecretKey
 const basicAuth = Buffer.from(`${secretKey}:`).toString('base64')
 
 export const dynamic = 'force-dynamic'

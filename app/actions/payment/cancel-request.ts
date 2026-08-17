@@ -1,5 +1,7 @@
 'use server'
 
+import { tossBillingSecretKey, tossGeneralSecretKey } from '@/lib/config/toss-keys'
+
 import { randomUUID } from 'crypto'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
@@ -59,7 +61,11 @@ const CANCEL_RATE_LIMIT = { interval: 60_000, uniqueTokenPerInterval: 5 } as con
 /** 이 시간이 지나도 REQUESTED 로 남아 있는 요청은 «응답을 못 받고 죽은 것»으로 보고 실패 확정한다. */
 const STALE_REQUEST_MINUTES = 10
 
-const tossSecretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
+/**
+ * 🔴 취소는 **결제가 일어난 상점의 키**로 불러야 한다.
+ * 복채 충전은 일반결제 상점(khaehwjxqe), 멤버십은 정기결제 상점(bill_khaehqj1a) 소관이다.
+ * 한쪽 키로 다른 상점 결제를 취소하려 하면 토스가 거절한다 — 사용자는 «환불이 안 된다» 만 본다.
+ */
 
 function reasonLabel(code: string): string {
   return CANCEL_REASONS.find((item) => item.code === code)?.label ?? code
@@ -388,7 +394,7 @@ export async function submitChargeCancel(input: ChargeCancelSubmission): Promise
   const requestId = opened.requestId
 
   const outcome = await requestTossCancel({
-    secretKey: tossSecretKey,
+    secretKey: tossGeneralSecretKey,
     paymentKey: payment.payment_key,
     cancelReason: tossCancelReason(reason.reasonCode),
     cancelAmount: plan.refundAmount,
@@ -665,7 +671,7 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
   // 환불이 필요한 경우에만 토스를 부른다(환불액 0원이면 API 호출 자체가 오류가 된다).
   if (immediate && refundAmount > 0 && lastPayment?.payment_key) {
     const outcome = await requestTossCancel({
-      secretKey: tossSecretKey,
+      secretKey: tossBillingSecretKey,
       paymentKey: lastPayment.payment_key,
       cancelReason: `멤버십 중도 해지 일할 환불 — ${reasonLabel(reason.reasonCode)}`,
       cancelAmount: refundAmount,

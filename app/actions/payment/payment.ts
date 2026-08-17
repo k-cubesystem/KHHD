@@ -1,4 +1,5 @@
 'use server'
+import { tossGeneralSecretKey } from '@/lib/config/toss-keys'
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -6,7 +7,8 @@ import { addTalismans } from '@/lib/services/wallet-grant'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 
-const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY ?? ''
+// 복채 충전은 일반결제 상점(khaehwjxqe) 소관이다.
+const secretKey = tossGeneralSecretKey
 
 /**
  * "한 번이라도 충전한 적 있음" 판정 대상 상태.

@@ -80,7 +80,7 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
       }
 
       const { getTossPaymentsSDK } = await import('@/lib/services/tosspayments')
-      const sdk = await getTossPaymentsSDK()
+      const sdk = await getTossPaymentsSDK('billing')
       if (!sdk) throw new Error('결제 모듈 로드 실패')
       const payment = sdk.payment({ customerKey: result.customerKey })
       await payment.requestBillingAuth({

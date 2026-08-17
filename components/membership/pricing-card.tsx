@@ -56,7 +56,7 @@ export function PricingCard({ plan, features, isRecommended, isGuest = false, th
         return
       }
 
-      const sdk = await getTossPaymentsSDK()
+      const sdk = await getTossPaymentsSDK('billing')
       if (!sdk) throw new Error('결제 모듈 로드 실패')
 
       const payment = sdk.payment({ customerKey: result.customerKey })

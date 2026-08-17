@@ -10,9 +10,19 @@ const envSchema = z.object({
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1, 'Google Generative AI API Key가 필요합니다').optional(),
   OPENAI_API_KEY: z.string().min(1, 'OpenAI API Key가 필요합니다').optional(),
 
-  // Payments
-  NEXT_PUBLIC_TOSS_CLIENT_KEY: z.string().min(1, 'Toss Client Key가 필요합니다').optional(),
-  TOSS_PAYMENTS_SECRET_KEY: z.string().min(1, 'Toss Payments Secret Key가 필요합니다').optional(),
+  // Payments — 상점(MID)이 둘이라 키도 두 쌍이다. 실제 읽는 곳은 lib/config/toss-keys.ts,
+  // 클라이언트는 lib/services/tosspayments.ts.
+  // 🔴 예전에는 스키마가 NEXT_PUBLIC_TOSS_CLIENT_KEY 를 검증하는데 코드는
+  //    NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY 를 읽고 있었다 — 스키마대로 심으면 결제 모듈이
+  //    조용히 초기화 실패했다. 검증하는 이름과 읽는 이름을 여기서 일치시킨다.
+  NEXT_PUBLIC_TOSS_CLIENT_KEY: z.string().min(1, '일반결제 Toss Client Key가 필요합니다').optional(),
+  TOSS_SECRET_KEY: z.string().min(1, '일반결제 Toss Secret Key가 필요합니다').optional(),
+  NEXT_PUBLIC_TOSS_BILLING_CLIENT_KEY: z.string().min(1, '정기결제 Toss Client Key가 필요합니다').optional(),
+  TOSS_BILLING_SECRET_KEY: z.string().min(1, '정기결제 Toss Secret Key가 필요합니다').optional(),
+
+  // 옛 이름 — 새 키를 심고 정상 동작을 확인할 때까지 폴백으로 남긴다(확인 후 삭제).
+  NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY: z.string().min(1).optional(),
+  TOSS_PAYMENTS_SECRET_KEY: z.string().min(1).optional(),
 
   // App
   NEXT_PUBLIC_APP_URL: z.string().url('올바른 App URL이 필요합니다').optional(),
