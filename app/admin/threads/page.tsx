@@ -12,7 +12,7 @@ export default async function AdminThreadsPage() {
     listPosts(30),
   ])
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="px-3 py-4 sm:p-6 max-w-5xl">
       <h1 className="text-xl font-serif font-bold text-ink-light mb-1">스레드 이벤트</h1>
       <p className="text-xs text-ink-light/50 mb-6">
         자동: 예약 발행 · 댓글 수집·분류 · 마감 추첨 · 초안 생성 · 보고. 반자동(사람 1클릭): 신청 안내 답글 · 결과 발표

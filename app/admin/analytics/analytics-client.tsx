@@ -61,13 +61,13 @@ export function AnalyticsClient({
           <Link
             key={k}
             href={`/admin/analytics?range=${k}`}
-            className={`rounded px-2.5 py-1 ${range === k ? 'bg-gold-500/20 text-gold-300' : 'text-ink-light/60 hover:text-ink-light'}`}
+            className={`rounded-md px-3 py-2 min-h-[36px] flex items-center ${range === k ? 'bg-gold-500/20 text-gold-300' : 'text-ink-light/60 hover:text-ink-light'}`}
           >
             {k === '7d' ? '7일' : k === '30d' ? '30일' : '90일'}
           </Link>
         ))}
         {realtime ? (
-          <span className="ml-auto flex items-center gap-2 text-ink-light/70">
+          <span className="ml-auto flex items-center gap-2 text-ink-light/70 basis-full sm:basis-auto">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
             지금 {nf.format(realtime.activeVisitors)}명 · {nf.format(realtime.activeSessions)}세션 (30분)
           </span>
@@ -76,7 +76,7 @@ export function AnalyticsClient({
 
       {/* 스탯 타일 */}
       {t ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Tile label="세션" value={nf.format(t.sessions)} color={C.sessions} />
           <Tile
             label="방문자"
@@ -148,7 +148,7 @@ export function AnalyticsClient({
         </ResponsiveContainer>
       </Panel>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Panel title="가입 (일별)" legend={[['가입', C.signups]]}>
           <ResponsiveContainer width="100%" height={160}>
             <BarChart data={series} margin={{ top: 8, right: 8, left: -18, bottom: 0 }} barCategoryGap={2}>
@@ -191,7 +191,7 @@ export function AnalyticsClient({
       </div>
 
       <Tabs defaultValue="acq">
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="acq">유입</TabsTrigger>
           <TabsTrigger value="beh">행동</TabsTrigger>
           <TabsTrigger value="conv">전환</TabsTrigger>
@@ -281,7 +281,7 @@ export function AnalyticsClient({
         </TabsContent>
 
         <TabsContent value="tech">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Table
               title="기기"
               cols={['기기', '세션']}

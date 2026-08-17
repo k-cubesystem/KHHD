@@ -111,7 +111,7 @@ export function ThreadsAdminClient({
       </div>
 
       <Tabs defaultValue="queue">
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto no-scrollbar">
           <TabsTrigger value="queue">답글 큐 ({queue.length})</TabsTrigger>
           <TabsTrigger value="rounds">라운드 ({rounds.length})</TabsTrigger>
           <TabsTrigger value="replies">댓글 ({replies.length})</TabsTrigger>
@@ -309,7 +309,7 @@ function NewRoundForm({
   return (
     <div className="rounded-lg border border-gold-500/20 p-3">
       <p className="mb-2 text-xs font-semibold text-ink-light">새 라운드</p>
-      <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <Input
           placeholder="slug (예: w1-compat)"
           value={f.slug}
@@ -551,7 +551,7 @@ function NewPostForm({
   return (
     <div className="rounded-lg border border-gold-500/20 p-3">
       <p className="mb-2 text-xs font-semibold text-ink-light">새 글 (즉시 또는 예약)</p>
-      <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <select
           className="rounded border border-ink-light/20 bg-transparent px-2 py-1.5"
           value={f.kind}
@@ -592,7 +592,7 @@ function NewPostForm({
           onChange={(e) => setF({ ...f, scheduledAt: e.target.value })}
         />
         <Textarea
-          className="col-span-2 md:col-span-4"
+          className="col-span-2 sm:col-span-4"
           rows={4}
           maxLength={500}
           placeholder="본문(500자) — 링크는 5개까지"
