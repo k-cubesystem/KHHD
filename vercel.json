@@ -31,15 +31,15 @@
     },
     {
       "path": "/api/cron/threads-sync",
-      "schedule": "*/10 * * * *"
+      "schedule": "30 0 * * *"
     },
     {
       "path": "/api/cron/threads-publish",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 1 * * *"
     },
     {
       "path": "/api/cron/event-draw",
-      "schedule": "*/30 * * * *"
+      "schedule": "30 1 * * *"
     },
     {
       "path": "/api/cron/analytics-retention",
