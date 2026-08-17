@@ -19,10 +19,12 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const round = await getOpenRound(slug)
-  const title = round ? `${round.title} — 청담해화당 무료 이벤트` : '청담해화당 이벤트'
+  // metadata 단계에서 notFound() 를 불러야 응답이 진짜 404 가 된다(페이지 본문에서만 부르면 200 + 404 화면).
+  if (!round) notFound()
+  const title = `${round.title} — 청담해화당 무료 이벤트`
   return {
     title,
-    description: round?.description ?? '만세력으로 세운 명식, 간이 풀이를 무료로 받아보세요.',
+    description: round.description ?? '만세력으로 세운 명식, 간이 풀이를 무료로 받아보세요.',
     robots: { index: false }, // 이벤트 페이지는 색인 제외(시즌성·개인정보 폼)
   }
 }
