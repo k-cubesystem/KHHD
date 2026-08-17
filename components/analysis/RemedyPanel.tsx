@@ -16,21 +16,34 @@ import type { RemedyItem, RemedySet } from '@/lib/domain/remedy/remedy'
  * 그러면 같은 처방이 화면마다 다른 말로 보인다.
  */
 
-function RemedyRow({ item, dim = false }: { item: RemedyItem; dim?: boolean }) {
+/**
+ * 처방 한 줄.
+ *
+ * 🔴 `<li>` 는 **카드가 아니라 카드+주석을 감싸는 자리**다. 예전에는 카드 자체가 `<li>` 였고
+ *    주석을 붙이려고 바깥에 `<li className="contents">` 를 한 겹 더 씌워 **`<li>` 안에 `<li>`** 가
+ *    됐다. 브라우저 파서가 여는 `<li>` 를 조기 종료시켜 서버 HTML 과 클라이언트 트리가 어긋난다
+ *    (하이드레이션 오류). 이 패널은 6화면 공용이라 한 번 어긋나면 여섯 군데가 같이 어긋난다.
+ */
+function RemedyRow({ item, dim = false, note }: { item: RemedyItem; dim?: boolean; note?: string }) {
   return (
-    <li
-      className={`rounded-xl border p-3 ${
-        dim ? 'border-white/[0.06] bg-white/[0.02]' : 'border-white/10 bg-surface/40'
-      }`}
-    >
-      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className={`font-serif text-[13px] ${dim ? 'text-ink-light/70' : 'text-gold-300'}`}>{item.label}</span>
-        <span className={`text-[13px] ${dim ? 'text-ink-light/60' : 'text-ink-light'}`}>{item.value}</span>
+    <li>
+      <div
+        className={`rounded-xl border p-3 ${
+          dim ? 'border-white/[0.06] bg-white/[0.02]' : 'border-white/10 bg-surface/40'
+        }`}
+      >
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className={`font-serif text-[13px] ${dim ? 'text-ink-light/70' : 'text-gold-300'}`}>{item.label}</span>
+          <span className={`text-[13px] ${dim ? 'text-ink-light/60' : 'text-ink-light'}`}>{item.value}</span>
+        </div>
+        {!dim && <p className="mt-1 text-[11px] font-light text-ink-light/45">{item.basis}</p>}
+        <p
+          className={`mt-1.5 text-[12px] font-light leading-relaxed ${dim ? 'text-ink-light/50' : 'text-gold-200/70'}`}
+        >
+          → {item.action}
+        </p>
       </div>
-      {!dim && <p className="mt-1 text-[11px] font-light text-ink-light/45">{item.basis}</p>}
-      <p className={`mt-1.5 text-[12px] font-light leading-relaxed ${dim ? 'text-ink-light/50' : 'text-gold-200/70'}`}>
-        → {item.action}
-      </p>
+      {note && <p className="mt-1 px-3 text-[12px] font-light leading-relaxed text-ink-light/70">{note}</p>}
     </li>
   )
 }
@@ -58,12 +71,7 @@ export function RemedyPanel({
 
       <ul className="space-y-2">
         {remedy.items.map((item, index) => (
-          <li key={`${item.kind}-${item.label}`} className="contents">
-            <RemedyRow item={item} />
-            {notes[index] && (
-              <p className="-mt-1 px-3 text-[12px] font-light leading-relaxed text-ink-light/70">{notes[index]}</p>
-            )}
-          </li>
+          <RemedyRow key={`${item.kind}-${item.label}`} item={item} note={notes[index]} />
         ))}
       </ul>
 

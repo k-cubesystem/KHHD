@@ -84,10 +84,19 @@ export interface CheonjiinAnalysisResult {
     strengths?: string[]
     weaknesses?: string[]
     lifeTimeline?: LifeTimelineData
-    career?: string
-    wealth?: string
-    love?: string
-    health?: string
+    /**
+     * 🔴 아래 넷은 **문자열일 수도 객체일 수도 있다.** 프롬프트가 career·health 를 객체로
+     * 진화시켰고(추천 직업·사업 적성·취약 장기…), 이 타입이 `string` 이라고 거짓말하는 바람에
+     * 뷰가 `{data.career}` 로 그대로 그려 화면이 죽었다(React #31, 2026-08-17).
+     * 라이브 확인: 저장된 SAJU 기록 11건 전부 career 가 객체다.
+     *
+     * 값을 화면에 넣기 전 반드시 `lib/domain/analysis/rich-field.ts` 를 거친다.
+     * 여기를 다시 `string` 으로 좁히지 말 것 — 그 순간 같은 장애가 되돌아온다.
+     */
+    career?: unknown
+    wealth?: unknown
+    love?: unknown
+    health?: unknown
   }
   ji?: {
     title?: string

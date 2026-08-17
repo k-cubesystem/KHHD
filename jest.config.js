@@ -13,6 +13,8 @@ const customJestConfig = {
     '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/lib/(.*)$': '<rootDir>/lib/$1',
     '^@/app/(.*)$': '<rootDir>/app/$1',
+    // ESM-only 패키지 대역 — 아래 파일 주석 참조
+    '^react-markdown$': '<rootDir>/test/mocks/react-markdown.tsx',
   },
   testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
   testPathIgnorePatterns: ['[/\\\\]node_modules[/\\\\]', '[/\\\\]e2e[/\\\\]'],

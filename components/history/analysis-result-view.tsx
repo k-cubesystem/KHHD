@@ -6,6 +6,12 @@ import { JiSection } from '@/components/analysis/cheonjiin/JiSection'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
 import { CategoryResultBody } from '@/components/analysis/CategoryResultBody'
 import {
+  SajuCrossAnalysisSection,
+  SajuDeepSections,
+  SajuFreeSections,
+  type SajuReadingData,
+} from '@/components/analysis/saju/saju-reading-sections'
+import {
   CompatibilityResult,
   type CompatibilityResultData,
 } from '@/app/protected/analysis/compatibility/compatibility-result'
@@ -18,9 +24,14 @@ interface AnalysisResultViewProps {
 }
 
 export function AnalysisResultView({ record }: AnalysisResultViewProps) {
-  // SAJU — 천지인 전용 렌더 (기존 유지)
+  // SAJU — 천지인 전용 렌더.
+  // 🔴 라이브 결과 화면과 **같은 섹션 컴포넌트**를 쓴다. 예전엔 여기서 天地人 넷만 그려서,
+  //    저장된 특별한 기운·사주 구조·월별 운세·개운법·교차 분석이 통째로 안 보였다
+  //    (라이브 확인 2026-08-17: SAJU 11건 전부가 그 값들을 갖고 있었다).
+  //    새 섹션은 `components/analysis/saju/saju-reading-sections.tsx` 에만 추가한다.
   if (record.category === 'SAJU' && typeof record.result_json === 'object') {
     const result = record.result_json as CheonjiinAnalysisResult
+    const reading = record.result_json as SajuReadingData
 
     return (
       <div className="space-y-6">
@@ -40,9 +51,18 @@ export function AnalysisResultView({ record }: AnalysisResultViewProps) {
           />
         </div>
         <div className="space-y-4">
+          {/* 결제 전에도 보이던 자리 */}
+          <SajuFreeSections data={reading} />
+
+          {/* 天 — 저장본은 이미 결제된 풀이라 블러 없이 전부 보여준다 */}
           <CheonSection data={result?.cheon ?? null} />
+          <SajuDeepSections data={reading} />
+
+          {/* 地 · 人 */}
           <JiSection data={result?.ji ?? null} />
           <InSection data={result?.in ?? null} />
+
+          <SajuCrossAnalysisSection data={reading} />
         </div>
       </div>
     )

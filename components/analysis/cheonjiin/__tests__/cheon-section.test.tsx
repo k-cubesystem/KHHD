@@ -10,6 +10,7 @@
  */
 import { render, screen } from '@testing-library/react'
 import { CheonSection } from '@/components/analysis/cheonjiin/CheonSection'
+import type { CheonjiinAnalysisResult } from '@/types/cheonjiin'
 
 /** `app/actions/ai/cheonjiin.ts` 출력 스키마 그대로 — 실제 저장본이 이 모양이다. */
 const CAREER_OBJECT = {
@@ -27,7 +28,29 @@ const HEALTH_OBJECT = {
   weakOrgans: ['위장 — 식사 시간을 지키세요', '신장 — 물을 자주 드세요'],
 }
 
+/**
+ * 🔴 **타입이 다시 거짓말하지 못하게 하는 자리.**
+ *
+ * 지난 장애를 못 막은 것은 뷰가 아니라 타입이었다 — `types/cheonjiin.ts` 가 `career?: string`
+ * 이라고 선언해 둔 탓에, 객체를 그대로 JSX 에 넣는 코드가 «타입 통과»로 보였다.
+ * 아래 대입이 컴파일되지 않으면 누군가 그 필드를 다시 `string` 으로 좁힌 것이다.
+ * (tsconfig include 가 tsx 전체라 `tsc --noEmit` 이 이 파일까지 본다.)
+ */
+const SCHEMA_SHAPE_IS_HONEST: NonNullable<CheonjiinAnalysisResult['cheon']> = {
+  career: CAREER_OBJECT,
+  health: HEALTH_OBJECT,
+  wealth: { summary: '재물은 객체로도 온다' },
+  love: { summary: '연애도 마찬가지' },
+}
+
 describe('🔴 객체가 와도 화면이 죽지 않는다', () => {
+  it('타입이 객체를 허용한다 — 다시 string 으로 좁히면 컴파일이 깨진다', () => {
+    render(<CheonSection data={SCHEMA_SHAPE_IS_HONEST} />)
+
+    expect(screen.getByText(/1인 크리에이터에 가까워요/)).not.toBeNull()
+    expect(screen.getByText(/위장이 먼저 지칩니다/)).not.toBeNull()
+  })
+
   it('career 가 객체여도 렌더된다 (React #31 재발 방지)', () => {
     render(<CheonSection data={{ title: '천', content: '본문', career: CAREER_OBJECT }} />)
 

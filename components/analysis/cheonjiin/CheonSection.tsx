@@ -268,7 +268,12 @@ function DetailCard({
         <Icon className="w-4 h-4" />
         <span className="text-sm font-bold">{label}</span>
       </div>
-      <p className="text-sm text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">{children}</p>
+      {/* 🔴 `<p>` 가 아니라 `<div>` 다. RichDetail 이 목록(`<ul>`)과 소제목(`<p>`)을 함께 넘기는데
+          `<p>` 로 감싸면 브라우저 파서가 여는 `<p>` 를 **조기 종료**시켜 서버 HTML 과 클라이언트
+          트리가 어긋난다(하이드레이션 오류). 문단 간격은 whitespace-pre-line 이 그대로 진다. */}
+      <div className="text-sm text-ink-light/80 font-light leading-relaxed break-keep whitespace-pre-line">
+        {children}
+      </div>
     </div>
   )
 }
