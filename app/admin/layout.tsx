@@ -33,6 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/webtoon/stories', label: '「내 이야기」 접수', icon: 'ScrollText' },
     // 이벤트 & 마케팅
     { type: 'divider' as const, label: '이벤트 & 마케팅' },
+    { href: '/admin/threads', label: '스레드 이벤트', icon: 'ScrollText' },
     { href: '/admin/notifications', label: '알림 자동화', icon: 'Bell' },
     { href: '/admin/announcements', label: '공지사항', icon: 'Bell' },
     // 시스템

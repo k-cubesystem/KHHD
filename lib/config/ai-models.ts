@@ -74,6 +74,9 @@ export const FEATURE_MODELS: Record<string, AIModelConfig> = {
   daily: resolveModel('flash'),
   invite: resolveModel('flash'),
   engine: resolveModel('flash'),
+  // Threads 이벤트 간이 풀이·댓글 분류 — 무료 소재라 flash. 사람 승인 후 발송(반자동)이라 pro 불필요.
+  'event-reading': resolveModel('flash'),
+  'threads-classify': resolveModel('flash'),
 }
 
 export function getModelConfig(featureKey: string): AIModelConfig {
