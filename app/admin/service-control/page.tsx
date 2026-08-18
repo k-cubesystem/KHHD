@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertTriangle, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { logger } from '@/lib/utils/logger'
+import { setServiceSwitch } from './actions'
 import { FeatureKey, FeatureConfig } from '@/lib/feature-flags'
 import { cn } from '@/lib/utils'
 
@@ -64,13 +65,11 @@ export default function ServiceControlPage() {
     setConfigs((prev) => ({ ...prev, [key]: newConfig }))
 
     try {
-      const { error } = await supabase.from('system_settings').upsert({
-        key,
-        value: JSON.stringify(newConfig),
-        description: FEATURES.find((f) => f.key === key)?.desc,
-      })
+      // 🔴 브라우저에서 DB 로 직접 쓰지 않는다. 서버 액션이 권한을 확인하고 감사에 남긴다
+      //    (이 화면에 «전체 시스템 점검» — 전 사용자 차단 스위치가 있다).
+      const result = await setServiceSwitch(key, !current, FEATURES.find((f) => f.key === key)?.desc)
 
-      if (error) throw error
+      if (!result.success) throw new Error(result.error ?? '설정 저장 실패')
       toast.success('설정이 변경되었습니다.')
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e)

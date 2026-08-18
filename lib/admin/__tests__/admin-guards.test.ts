@@ -55,6 +55,18 @@ describe('🔴 어드민 서버액션은 반드시 권한 관문을 지난다', 
     expect(`${file}: ${guarded}`).toBe(`${file}: true`)
   })
 
+  it('🔴 전체 차단 스위치는 브라우저가 아니라 서버 액션이 쓴다', () => {
+    const page = read('app/admin/service-control/page.tsx')
+    const action = read('app/admin/service-control/actions.ts')
+
+    // 화면이 system_settings 를 직접 upsert 하면 감사도 서버 검증도 없다.
+    expect(page).not.toMatch(/from\('system_settings'\)[\s\S]{0,80}\.upsert\(/)
+    expect(page).toContain('setServiceSwitch')
+    // 임의 키 덮어쓰기 차단
+    expect(action).toContain('ALLOWED_KEYS')
+    expect(action).toContain("action: 'service_toggle'")
+  })
+
   it('🔴 대량 발송 액션은 requireAdmin 으로 막혀 있다', () => {
     const source = read('app/admin/notifications/actions.ts')
 
@@ -75,6 +87,7 @@ describe('🔴 돈·가격·발신 조작은 감사에 남는다', () => {
     { file: 'app/admin/users/actions.ts', action: 'balance_adjust' },
     { file: 'app/admin/users/actions.ts', action: 'role_change' },
     { file: 'app/admin/users/actions.ts', action: 'user_delete' },
+    { file: 'app/admin/service-control/actions.ts', action: 'service_toggle' },
   ]
 
   it.each(MUST_AUDIT)('$file 가 $action 을 기록한다', ({ file, action }) => {
