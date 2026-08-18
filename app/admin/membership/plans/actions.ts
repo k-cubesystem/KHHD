@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+import { logAdminAction } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/require-admin'
 
 export interface MembershipPlanAdmin {
   id: string
@@ -77,9 +79,12 @@ export async function updateMembershipPlan(
     sort_order?: number
   }
 ) {
-  await checkAdmin()
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
 
   const adminSupabase = createAdminClient()
+
+  const { data: before } = await adminSupabase.from('membership_plans').select('*').eq('id', planId).single()
 
   const { error } = await adminSupabase
     .from('membership_plans')
@@ -94,6 +99,25 @@ export async function updateMembershipPlan(
     return { success: false, error: error.message }
   }
 
+  // 가격·혜택 문구는 표시광고법 사안 — 바뀐 값만 추려 남긴다(전체 스냅샷은 잡음).
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'plan_update',
+    detail: {
+      planId,
+      changed: Object.fromEntries(
+        Object.keys(updates).map((k) => [
+          k,
+          {
+            before: (before as Record<string, unknown> | null)?.[k] ?? null,
+            after: (updates as Record<string, unknown>)[k],
+          },
+        ])
+      ),
+    },
+  })
+
   revalidatePath('/admin/membership/plans')
   revalidatePath('/protected/membership')
 
@@ -104,7 +128,8 @@ export async function updateMembershipPlan(
  * Toggle plan active status
  */
 export async function togglePlanStatus(planId: string) {
-  await checkAdmin()
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
 
   const adminSupabase = createAdminClient()
 
@@ -126,6 +151,13 @@ export async function togglePlanStatus(planId: string) {
     return { success: false, error: error.message }
   }
 
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'plan_toggle',
+    detail: { planId, before: plan.is_active, after: !plan.is_active },
+  })
+
   revalidatePath('/admin/membership/plans')
   revalidatePath('/protected/membership')
 
@@ -143,10 +175,30 @@ export async function getAllProducts(): Promise<import('@/types/auth').PricePlan
 }
 
 export async function updateProduct(id: string, updates: Partial<import('@/types/auth').PricePlan>) {
-  await checkAdmin()
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
   const dbClient = createAdminClient()
+  const { data: before } = await dbClient.from('price_plans').select('*').eq('id', id).single()
   const { error } = await dbClient.from('price_plans').update(updates).eq('id', id)
   if (error) return { success: false, error: error.message }
+
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'product_update',
+    detail: {
+      productId: id,
+      changed: Object.fromEntries(
+        Object.keys(updates).map((k) => [
+          k,
+          {
+            before: (before as Record<string, unknown> | null)?.[k] ?? null,
+            after: (updates as Record<string, unknown>)[k],
+          },
+        ])
+      ),
+    },
+  })
   revalidatePath('/admin/membership/plans')
   revalidatePath('/protected')
   revalidatePath('/protected/membership')

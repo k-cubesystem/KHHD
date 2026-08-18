@@ -7,23 +7,8 @@ import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 import { logAdminAction } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/require-admin'
 import { grantMembershipDeity } from '@/lib/services/membership-deity'
-
-async function requireAdmin(): Promise<
-  { authorized: true; actorId: string; actorEmail: string | null } | { authorized: false; error: string }
-> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { authorized: false, error: '로그인이 필요합니다.' }
-
-  const role = await getUserRole()
-  if (role !== 'admin') {
-    return { authorized: false, error: '관리자 권한이 필요합니다.' }
-  }
-  return { authorized: true, actorId: user.id, actorEmail: user.email ?? null }
-}
 
 export interface AdminUser {
   id: string

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/auth'
 import { logger } from '@/lib/utils/logger'
+import { logAdminAction } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/require-admin'
 
 export interface AdminSubscription {
   id: string
@@ -138,7 +140,9 @@ export async function updateSubscriptionStatus(
   subscriptionId: string,
   newStatus: string
 ): Promise<{ success: boolean; error?: string }> {
-  await checkAdminRole()
+  // 🔴 «누가» 를 알아야 감사에 남길 수 있다 — checkAdminRole 은 권한만 보고 행위자를 안 준다.
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
   // 타인 구독 대상이므로 admin(service_role) 필수 — 유저클라는 RLS에 막힘 (Fable 검토 R9)
   const supabase = createAdminClient()
 
@@ -154,12 +158,27 @@ export async function updateSubscriptionStatus(
     updateData.cancel_reason = '관리자에 의해 해지됨'
   }
 
+  // 감사용 전 상태 스냅샷 — 「무엇에서 무엇으로」가 남아야 되돌릴 수 있다.
+  const { data: before } = await supabase
+    .from('subscriptions')
+    .select('status, user_id')
+    .eq('id', subscriptionId)
+    .single()
+
   const { error } = await supabase.from('subscriptions').update(updateData).eq('id', subscriptionId)
 
   if (error) {
     logger.error('[Admin] Update subscription status error:', error)
     return { success: false, error: '상태 변경에 실패했습니다.' }
   }
+
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'subscription_status_change',
+    targetUser: before?.user_id ?? null,
+    detail: { subscriptionId, before: before?.status ?? null, after: newStatus },
+  })
 
   return { success: true }
 }
@@ -170,7 +189,8 @@ export async function grantTalismans(
   amount: number,
   reason: string
 ): Promise<{ success: boolean; error?: string }> {
-  await checkAdminRole()
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
 
   if (amount <= 0 || amount > 100) {
     return { success: false, error: '부적 수량은 1~100 사이여야 합니다.' }
@@ -201,6 +221,15 @@ export async function grantTalismans(
     description: `관리자 지급: ${reason}`,
   })
 
+  // 🔴 돈이다. 지갑 거래내역과 별개로 «누가 왜 줬는지» 를 감사에 남긴다.
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'talisman_grant',
+    targetUser: userId,
+    detail: { amount, reason, before: wallet?.balance ?? 0, after: (wallet?.balance ?? 0) + amount },
+  })
+
   return { success: true }
 }
 
@@ -229,8 +258,15 @@ export async function updateMembershipPlan(
     is_active?: boolean
   }
 ): Promise<{ success: boolean; error?: string }> {
-  await checkAdminRole()
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
   const supabase = await createClient()
+
+  const { data: before } = await supabase
+    .from('membership_plans')
+    .select('name, price, talismans_per_period, is_active')
+    .eq('id', planId)
+    .single()
 
   const { error } = await supabase.from('membership_plans').update(updates).eq('id', planId)
 
@@ -238,6 +274,14 @@ export async function updateMembershipPlan(
     logger.error('[Admin] Update plan error:', error)
     return { success: false, error: '플랜 업데이트에 실패했습니다.' }
   }
+
+  // 🔴 가격·혜택 문구는 표시광고법 사안이다. 사후에 「누가 언제 얼마로 바꿨나」를 못 대면 곤란해진다.
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'plan_update',
+    detail: { planId, before: before ?? null, after: updates },
+  })
 
   return { success: true }
 }

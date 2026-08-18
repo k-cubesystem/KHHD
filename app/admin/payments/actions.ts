@@ -1,5 +1,7 @@
 'use server'
 
+import { requireAdmin } from '@/lib/admin/require-admin'
+
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
@@ -28,6 +30,12 @@ export async function getPayments(
   limit: number = 20,
   statusFilter: PaymentStatusFilter = 'all'
 ): Promise<{ data: AdminPayment[]; total: number }> {
+  // 🔴 조회 전용이라도 결제 내역은 개인정보다. `'use server'` export 는 공개 엔드포인트라
+  //    어드민 화면 밖에서도 부를 수 있다. 아래 auth.getUser() 는 «로그인 여부»만 보므로
+  //    일반 회원도 통과한다 — 관리자 검사를 앞에 세운다.
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { data: [], total: 0 }
+
   const supabase = await createClient()
 
   try {

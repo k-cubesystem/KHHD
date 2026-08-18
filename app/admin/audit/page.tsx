@@ -4,6 +4,7 @@ import { getUserRole } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { ShieldAlert } from 'lucide-react'
+import { describeAuditAction } from '@/lib/admin/audit-labels'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,13 +15,6 @@ interface AuditRow {
   target_user: string | null
   detail: Record<string, unknown>
   created_at: string
-}
-
-const ACTION_LABEL: Record<string, { label: string; cls: string }> = {
-  balance_adjust: { label: '복채 조정', cls: 'bg-gold-500/10 text-gold-400 border-gold-500/20' },
-  role_change: { label: '권한 변경', cls: 'bg-red-500/10 text-red-400 border-red-500/20' },
-  subscription_change: { label: '구독 변경', cls: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
-  user_delete: { label: '회원 삭제', cls: 'bg-red-600/10 text-red-500 border-red-600/20' },
 }
 
 function summarize(action: string, detail: Record<string, unknown>): string {
@@ -35,6 +29,25 @@ function summarize(action: string, detail: Record<string, unknown>): string {
       return `등급: ${detail.tier ?? '-'}`
     case 'user_delete':
       return `${detail.email ?? detail.fullName ?? '알 수 없음'} (${detail.role ?? 'user'})`
+    case 'talisman_grant':
+      return `+${Number(detail.amount) || 0}만냥 · 사유: ${detail.reason ?? '-'}`
+    case 'subscription_status_change':
+      return `${detail.before ?? '?'} → ${detail.after ?? '?'}`
+    case 'plan_toggle':
+      return detail.after === true ? '판매 시작' : '판매 중지'
+    case 'plan_update':
+    case 'product_update': {
+      const changed = (detail.changed ?? {}) as Record<string, { before?: unknown; after?: unknown }>
+      const keys = Object.keys(changed)
+      if (keys.length === 0) return JSON.stringify(detail.after ?? detail)
+      return keys
+        .map((k) => `${k}: ${String(changed[k]?.before ?? '-')} → ${String(changed[k]?.after ?? '-')}`)
+        .join(' · ')
+    }
+    case 'notification_setting_change':
+      return `${detail.key ?? '-'}: ${String(detail.before ?? '-')} → ${String(detail.after ?? '-')}`
+    case 'service_toggle':
+      return `${detail.key ?? '-'} ${detail.after === 'true' || detail.after === true ? '켬' : '끔'}`
     default:
       return JSON.stringify(detail)
   }
@@ -63,7 +76,7 @@ export default async function AdminAuditPage() {
           <ShieldAlert className="w-5 h-5 text-gold-500" /> 감사 로그
         </h1>
         <p className="text-xs md:text-sm text-stone-500">
-          관리자 조작(복채 조정·권한 변경·구독 변경·회원 삭제) 기록. 최근 100건.
+          관리자 조작 기록 — 복채·권한·구독·가격·알림 발송·서비스 스위치. 최근 100건.
         </p>
       </div>
 
@@ -73,10 +86,8 @@ export default async function AdminAuditPage() {
         ) : (
           <div className="divide-y divide-stone-700/30">
             {rows.map((r) => {
-              const meta = ACTION_LABEL[r.action] ?? {
-                label: r.action,
-                cls: 'bg-stone-700/30 text-stone-400 border-stone-600/30',
-              }
+              // 🔴 라벨은 lib/admin/audit-labels.ts 단일 출처 — 화면에서 다시 만들면 즉시 뒤처진다.
+              const meta = describeAuditAction(r.action)
               return (
                 <div key={r.id} className="p-3 md:p-4 flex items-start gap-3 hover:bg-stone-800/20 transition-colors">
                   <span

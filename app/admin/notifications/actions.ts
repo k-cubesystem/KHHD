@@ -3,6 +3,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
+import { logAdminAction } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/require-admin'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
 
@@ -31,13 +33,27 @@ export async function getNotificationSettings() {
 }
 
 export async function updateNotificationSetting(key: string, value: string) {
+  // 🔴 `'use server'` export 는 **공개 엔드포인트**다. 어드민 화면에서만 부른다고
+  //    안전한 게 아니라, 액션 ID 만 알면 누구나 부를 수 있다. 권한을 여기서 막는다.
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, error: actor.error }
+
   const supabase = createAdminClient()
+  const { data: before } = await supabase.from('system_settings').select('value').eq('key', key).maybeSingle()
+
   const { error } = await supabase.from('system_settings').upsert({ key, value, updated_at: new Date().toISOString() })
 
   if (error) {
     logger.error('Error updating setting:', error)
     return { success: false, error: error.message }
   }
+
+  await logAdminAction({
+    actorId: actor.actorId,
+    actorEmail: actor.actorEmail,
+    action: 'notification_setting_change',
+    detail: { key, before: before?.value ?? null, after: value },
+  })
 
   revalidatePath('/admin/notifications')
   return { success: true }
@@ -60,6 +76,11 @@ export async function getNotificationLogs(page = 1, limit = 20) {
 }
 
 export async function runManualAutomation() {
+  // 🔴 이 함수는 **활성 구독자 전원에게 실제로 발송한다.** 권한 없이 열려 있으면
+  //    외부에서 부르는 것만으로 대량 발송이 일어난다.
+  const actor = await requireAdmin()
+  if (!actor.authorized) return { success: false, message: actor.error }
+
   try {
     const supabase = createAdminClient()
 

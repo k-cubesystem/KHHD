@@ -19,6 +19,7 @@ import { logger } from '@/lib/utils/logger'
 import { GA } from '@/lib/analytics/ga4'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { PillarsStrip } from '@/components/analysis/PillarsStrip'
+import { InSection } from '@/components/analysis/cheonjiin/InSection'
 import {
   SajuCrossAnalysisSection,
   SajuDeepSections,
@@ -277,6 +278,12 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
 
         {/* 운의 흐름 (地) */}
         <DetailSection title={data.ji?.title || '지금 흐르는 운의 방향이에요'} data={data.ji} color="emerald" />
+
+        {/* 인연과 내면 (人)
+            🔴 라이브가 天·地만 그리고 人 을 통째로 빠뜨리고 있었다(2026-08-18 발견). 저장본에는
+               귀인·관계 조언은 물론 **관상·손금 교차 해석**까지 들어 있는데 결과 화면에서 한 줄도
+               안 보였다. 기록 화면이 쓰던 `InSection` 을 그대로 재사용한다 — 세 번째 렌더러 금지. */}
+        <InSection data={data.in ?? null} />
 
         <SajuCrossAnalysisSection data={data} />
       </PremiumBlurSection>

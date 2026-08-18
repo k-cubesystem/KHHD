@@ -4,11 +4,15 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getFunnelAnalysis, getRetentionCohort, getUTMPerformance } from '@/app/actions/admin/dashboard'
 import { FUNNEL } from '@/lib/analytics/funnel'
 import { logger } from '@/lib/utils/logger'
+import { requireAdmin } from '@/lib/admin/require-admin'
 
 /**
  * 어드민 분석 조회 — 집계는 전부 DB RPC(SECURITY DEFINER, admin 전용)가 한다.
  * 이 파일은 날짜 파싱·형태 정리·기존 함수(getUTMPerformance 등)와의 합류만 담당한다.
- * 권한: 미들웨어·레이아웃·RLS(is_admin) 3중 — 리포 관례.
+ * 🔴 권한: **액션마다 requireAdmin 을 지난다.** 미들웨어·레이아웃은 «화면 진입» 을 막을 뿐이고,
+ *    여기서 쓰는 `createAdminClient()` 는 service_role 이라 **RLS 를 통째로 우회한다** —
+ *    「RLS(is_admin)가 막아 준다」는 이 파일에 성립하지 않는다.
+ *    `'use server'` export 는 공개 엔드포인트다(회사 매출·퍼널 수치가 통째로 나가는 자리).
  */
 
 export type RangeKey = '7d' | '30d' | '90d'
@@ -32,6 +36,9 @@ export interface DailyRow {
 }
 
 export async function getAnalyticsOverview(range: RangeKey) {
+  const actor = await requireAdmin()
+  if (!actor.authorized) throw new Error(actor.error)
+
   const { start, end, days } = rangeToDates(range)
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('analytics_daily_overview', { p_start: start, p_end: end })
@@ -62,6 +69,9 @@ export async function getAnalyticsOverview(range: RangeKey) {
 }
 
 export async function getAnalyticsAcquisition(range: RangeKey) {
+  const actor = await requireAdmin()
+  if (!actor.authorized) throw new Error(actor.error)
+
   const { start, end } = rangeToDates(range)
   const admin = createAdminClient()
   const [acq, utm] = await Promise.all([
@@ -91,6 +101,9 @@ export async function getAnalyticsAcquisition(range: RangeKey) {
 }
 
 export async function getAnalyticsBehavior(range: RangeKey) {
+  const actor = await requireAdmin()
+  if (!actor.authorized) throw new Error(actor.error)
+
   const { start, end } = rangeToDates(range)
   const admin = createAdminClient()
   const [pages, events, tech] = await Promise.all([
@@ -118,6 +131,9 @@ export async function getAnalyticsBehavior(range: RangeKey) {
 }
 
 export async function getAnalyticsConversion(range: RangeKey) {
+  const actor = await requireAdmin()
+  if (!actor.authorized) throw new Error(actor.error)
+
   const { start, end, days } = rangeToDates(range)
   const [funnel, retention] = await Promise.all([
     getFunnelAnalysis(new Date(start), new Date(end)),
@@ -140,6 +156,9 @@ export async function getAnalyticsConversion(range: RangeKey) {
 }
 
 export async function getAnalyticsRealtime() {
+  const actor = await requireAdmin()
+  if (!actor.authorized) throw new Error(actor.error)
+
   const admin = createAdminClient()
   const { data, error } = await admin.rpc('analytics_realtime')
   if (error) return { success: false as const, error: error.message }

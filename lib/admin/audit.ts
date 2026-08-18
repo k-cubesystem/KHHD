@@ -3,7 +3,9 @@ import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 
-export type AdminAuditAction = 'balance_adjust' | 'role_change' | 'subscription_change' | 'user_delete'
+// 🔴 액션 목록·우리말 라벨은 lib/admin/audit-labels.ts 단일 출처. 여기서 다시 정의하지 않는다.
+import type { AdminAuditAction } from '@/lib/admin/audit-labels'
+export type { AdminAuditAction }
 
 interface LogAdminActionInput {
   actorId: string
