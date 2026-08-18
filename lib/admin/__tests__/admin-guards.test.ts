@@ -62,8 +62,8 @@ describe('🔴 어드민 서버액션은 반드시 권한 관문을 지난다', 
     // 화면이 system_settings 를 직접 upsert 하면 감사도 서버 검증도 없다.
     expect(page).not.toMatch(/from\('system_settings'\)[\s\S]{0,80}\.upsert\(/)
     expect(page).toContain('setServiceSwitch')
-    // 임의 키 덮어쓰기 차단
-    expect(action).toContain('ALLOWED_KEYS')
+    // 임의 키 덮어쓰기 차단 — 키 목록은 lib/feature-flags 단일 출처를 쓴다
+    expect(action).toContain('FEATURE_KEYS')
     expect(action).toContain("action: 'service_toggle'")
   })
 
