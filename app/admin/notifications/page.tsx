@@ -73,13 +73,13 @@ export default function NotificationAdminPage() {
 
   return (
     <div className="space-y-6 md:space-y-8">
-      <div className="flex items-center gap-2.5 md:gap-3 border-b border-stone-700/30 pb-3 md:pb-4">
+      <div className="flex items-center gap-2.5 md:gap-3 border-b border-white/30 pb-3 md:pb-4">
         <Bell className="w-5 h-5 md:w-6 md:h-6 text-gold-500" />
-        <h1 className="text-lg md:text-2xl font-bold font-serif text-stone-100">알림 및 자동화 관리</h1>
+        <h1 className="text-lg md:text-2xl font-bold font-serif text-ink-primary">알림 및 자동화 관리</h1>
       </div>
 
       <Tabs defaultValue="settings">
-        <TabsList className="bg-stone-900/50 border-stone-700/30">
+        <TabsList className="bg-surface/50 border-white/30">
           <TabsTrigger
             value="settings"
             className="text-xs md:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg"
@@ -95,20 +95,22 @@ export default function NotificationAdminPage() {
         </TabsList>
 
         <TabsContent value="settings" className="space-y-4 md:space-y-6 mt-4 md:mt-6">
-          <Card className="relative p-4 md:p-6 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 shadow-lg overflow-hidden">
+          <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 shadow-lg overflow-hidden">
             {/* Noise Overlay */}
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
             <div className="relative space-y-6 md:space-y-8">
-              <h3 className="text-base md:text-lg font-bold flex items-center gap-2 text-stone-100 font-serif">
+              <h3 className="text-base md:text-lg font-bold flex items-center gap-2 text-ink-primary font-serif">
                 <Clock className="w-4 h-4 md:w-5 md:h-5 text-gold-500" /> 오늘의 운세 자동 발송
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                 <div className="space-y-3 md:space-y-4">
-                  <div className="flex items-center justify-between p-3 md:p-4 bg-stone-900/50 rounded-lg border border-stone-700/30">
+                  <div className="flex items-center justify-between p-3 md:p-4 bg-surface/50 rounded-lg border border-white/30">
                     <div className="space-y-0.5 md:space-y-1 flex-1 min-w-0 pr-2">
-                      <Label className="font-bold text-xs md:text-sm text-stone-200">자동 발송 활성화</Label>
-                      <p className="text-[10px] md:text-xs text-stone-500">매일 정해진 시간에 운세를 발송합니다.</p>
+                      <Label className="font-bold text-xs md:text-sm text-ink-primary/85">자동 발송 활성화</Label>
+                      <p className="text-[10px] md:text-xs text-ink-primary/40">
+                        매일 정해진 시간에 운세를 발송합니다.
+                      </p>
                     </div>
                     <Switch
                       checked={settings['daily_fortune_enabled'] === 'true'}
@@ -116,11 +118,13 @@ export default function NotificationAdminPage() {
                     />
                   </div>
 
-                  <div className="p-3 md:p-4 bg-stone-900/50 rounded-lg border border-stone-700/30">
+                  <div className="p-3 md:p-4 bg-surface/50 rounded-lg border border-white/30">
                     <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                       <div className="space-y-0.5 md:space-y-1 flex-1 min-w-0">
-                        <Label className="font-bold text-xs md:text-sm text-stone-200">즉시 실행 테스트</Label>
-                        <p className="text-[10px] md:text-xs text-stone-500">스케줄과 무관하게 지금 즉시 발송합니다.</p>
+                        <Label className="font-bold text-xs md:text-sm text-ink-primary/85">즉시 실행 테스트</Label>
+                        <p className="text-[10px] md:text-xs text-ink-primary/40">
+                          스케줄과 무관하게 지금 즉시 발송합니다.
+                        </p>
                       </div>
                       <Button
                         variant="outline"
@@ -141,13 +145,13 @@ export default function NotificationAdminPage() {
                   </div>
 
                   <div>
-                    <Label className="font-bold text-xs md:text-sm text-stone-300">발송 시간 (KST)</Label>
+                    <Label className="font-bold text-xs md:text-sm text-ink-primary/70">발송 시간 (KST)</Label>
                     <div className="flex gap-2 mt-2">
                       <Input
                         type="time"
                         value={settings['daily_fortune_time'] || '08:00'}
                         onChange={(e) => setSettings((prev) => ({ ...prev, daily_fortune_time: e.target.value }))}
-                        className="w-32 md:w-40 h-8 md:h-9 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200"
+                        className="w-32 md:w-40 h-8 md:h-9 text-xs bg-surface/50 border-white/50 text-ink-primary/85"
                       />
                       <Button
                         onClick={() => handleSave('daily_fortune_time', settings['daily_fortune_time'])}
@@ -167,13 +171,13 @@ export default function NotificationAdminPage() {
                 </div>
                 <div className="space-y-3 md:space-y-4">
                   <div>
-                    <Label className="font-bold text-xs md:text-sm text-stone-300">카카오 알림톡 템플릿 ID</Label>
+                    <Label className="font-bold text-xs md:text-sm text-ink-primary/70">카카오 알림톡 템플릿 ID</Label>
                     <div className="flex gap-2 mt-2">
                       <Input
                         value={settings['kakao_template_id'] || ''}
                         onChange={(e) => setSettings((prev) => ({ ...prev, kakao_template_id: e.target.value }))}
                         placeholder="KA01..."
-                        className="h-8 md:h-9 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200"
+                        className="h-8 md:h-9 text-xs bg-surface/50 border-white/50 text-ink-primary/85"
                       />
                       <Button
                         onClick={() => handleSave('kakao_template_id', settings['kakao_template_id'])}
@@ -183,7 +187,7 @@ export default function NotificationAdminPage() {
                         저장
                       </Button>
                     </div>
-                    <p className="text-[10px] md:text-xs text-stone-500 mt-2">
+                    <p className="text-[10px] md:text-xs text-ink-primary/40 mt-2">
                       Solapi/CoolSMS 관리자에서 승인된 템플릿 ID를 입력하세요.
                     </p>
                   </div>
@@ -194,24 +198,24 @@ export default function NotificationAdminPage() {
         </TabsContent>
 
         <TabsContent value="logs">
-          <Card className="relative p-0 overflow-hidden bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 shadow-lg">
+          <Card className="relative p-0 overflow-hidden bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 shadow-lg">
             {/* Noise Overlay */}
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
             <div className="relative overflow-x-auto">
               <table className="w-full text-xs md:text-sm">
-                <thead className="bg-stone-900/50 border-b border-stone-700/30">
+                <thead className="bg-surface/50 border-b border-white/30">
                   <tr>
-                    <th className="p-2 md:p-3 text-left text-stone-400 font-serif font-bold">발송 시간</th>
-                    <th className="p-2 md:p-3 text-left text-stone-400 font-serif font-bold">사용자</th>
-                    <th className="p-2 md:p-3 text-left text-stone-400 font-serif font-bold">상태</th>
-                    <th className="p-2 md:p-3 text-left text-stone-400 font-serif font-bold">메시지</th>
+                    <th className="p-2 md:p-3 text-left text-ink-primary/55 font-serif font-bold">발송 시간</th>
+                    <th className="p-2 md:p-3 text-left text-ink-primary/55 font-serif font-bold">사용자</th>
+                    <th className="p-2 md:p-3 text-left text-ink-primary/55 font-serif font-bold">상태</th>
+                    <th className="p-2 md:p-3 text-left text-ink-primary/55 font-serif font-bold">메시지</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <tr key={log.id} className="border-b border-stone-700/30 hover:bg-stone-800/30 transition-colors">
-                      <td className="p-2 md:p-3 text-stone-400 font-mono text-[10px] md:text-xs">
+                    <tr key={log.id} className="border-b border-white/30 hover:bg-surface/30 transition-colors">
+                      <td className="p-2 md:p-3 text-ink-primary/55 font-mono text-[10px] md:text-xs">
                         {new Date(log.sent_at).toLocaleString('ko-KR', {
                           month: 'short',
                           day: 'numeric',
@@ -220,10 +224,10 @@ export default function NotificationAdminPage() {
                         })}
                       </td>
                       <td className="p-2 md:p-3">
-                        <div className="font-bold text-stone-200 text-xs md:text-sm">
+                        <div className="font-bold text-ink-primary/85 text-xs md:text-sm">
                           {log.profiles?.full_name || 'Unknown'}
                         </div>
-                        <div className="text-[10px] md:text-xs text-stone-500 truncate max-w-[150px] md:max-w-none">
+                        <div className="text-[10px] md:text-xs text-ink-primary/40 truncate max-w-[150px] md:max-w-none">
                           {log.profiles?.email}
                         </div>
                       </td>
@@ -234,20 +238,20 @@ export default function NotificationAdminPage() {
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                               : log.status === 'FAILED'
                                 ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                : 'bg-stone-700/30 text-stone-500 border-stone-600/30'
+                                : 'bg-white/30 text-ink-primary/40 border-white/30'
                           }`}
                         >
                           {log.status}
                         </span>
                       </td>
-                      <td className="p-2 md:p-3 text-stone-500 break-all max-w-xs text-[10px] md:text-xs">
+                      <td className="p-2 md:p-3 text-ink-primary/40 break-all max-w-xs text-[10px] md:text-xs">
                         {log.error_message || '-'}
                       </td>
                     </tr>
                   ))}
                   {logs.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="p-6 md:p-8 text-center text-stone-500 text-xs md:text-sm">
+                      <td colSpan={4} className="p-6 md:p-8 text-center text-ink-primary/40 text-xs md:text-sm">
                         기록이 없습니다.
                       </td>
                     </tr>

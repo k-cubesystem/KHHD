@@ -117,8 +117,8 @@ export default async function AdminDashboardPage() {
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-black text-stone-100 font-serif">대시보드</h1>
-        <p className="text-xs md:text-sm text-stone-500">해화당 서비스 현황을 한눈에 확인하세요.</p>
+        <h1 className="text-xl md:text-2xl font-black text-ink-primary font-serif">대시보드</h1>
+        <p className="text-xs md:text-sm text-ink-primary/40">해화당 서비스 현황을 한눈에 확인하세요.</p>
       </div>
 
       {/* Stats Grid - 모바일 2칸 / 데스크톱 4칸 */}
@@ -132,9 +132,9 @@ export default async function AdminDashboardPage() {
       <SupportSummary />
 
       {/* Hourly Traffic Chart */}
-      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
+      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-        <h2 className="relative text-base md:text-lg font-bold mb-3 md:mb-4 text-stone-100 font-serif flex items-center gap-2">
+        <h2 className="relative text-base md:text-lg font-bold mb-3 md:mb-4 text-ink-primary font-serif flex items-center gap-2">
           <Activity className="w-4 h-4 md:w-5 md:h-5 text-gold-500" />
           시간대별 트래픽 (최근 24시간)
         </h2>
@@ -144,21 +144,21 @@ export default async function AdminDashboardPage() {
       </Card>
 
       {/* Recent Payments */}
-      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
+      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
         {/* Noise Overlay */}
         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
-        <h2 className="relative text-base md:text-lg font-bold mb-3 md:mb-4 text-stone-100 font-serif flex items-center gap-2">
+        <h2 className="relative text-base md:text-lg font-bold mb-3 md:mb-4 text-ink-primary font-serif flex items-center gap-2">
           <CreditCard className="w-4 h-4 md:w-5 md:h-5 text-gold-500" />
           최근 결제 내역
         </h2>
         <div className="relative space-y-0">
           {stats.recentPayments.length === 0 ? (
             <div className="text-center py-8 md:py-12">
-              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 rounded-full bg-stone-800/50 flex items-center justify-center">
-                <CreditCard className="w-6 h-6 md:w-8 md:h-8 text-stone-600" />
+              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 rounded-full bg-surface/50 flex items-center justify-center">
+                <CreditCard className="w-6 h-6 md:w-8 md:h-8 text-ink-primary/30" />
               </div>
-              <p className="text-xs md:text-sm text-stone-500">결제 내역이 없습니다.</p>
+              <p className="text-xs md:text-sm text-ink-primary/40">결제 내역이 없습니다.</p>
             </div>
           ) : (
             stats.recentPayments.map((payment: Payment) => {
@@ -166,7 +166,7 @@ export default async function AdminDashboardPage() {
               return (
                 <div
                   key={payment.id}
-                  className="flex items-start md:items-center justify-between py-3 md:py-3.5 border-b border-stone-700/30 last:border-0 gap-2 group hover:bg-stone-800/20 -mx-4 md:-mx-6 px-4 md:px-6 transition-colors"
+                  className="flex items-start md:items-center justify-between py-3 md:py-3.5 border-b border-white/30 last:border-0 gap-2 group hover:bg-surface/20 -mx-4 md:-mx-6 px-4 md:px-6 transition-colors"
                 >
                   <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0">
                     {/* Avatar */}
@@ -177,10 +177,10 @@ export default async function AdminDashboardPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs md:text-sm font-medium text-stone-200 truncate">
+                      <p className="text-xs md:text-sm font-medium text-ink-primary/85 truncate">
                         {payment.profiles?.[0]?.full_name || '익명'}
                       </p>
-                      <p className="text-[10px] md:text-xs text-stone-500">
+                      <p className="text-[10px] md:text-xs text-ink-primary/40">
                         {new Date(payment.created_at).toLocaleString('ko-KR', {
                           month: 'short',
                           day: 'numeric',
@@ -194,13 +194,13 @@ export default async function AdminDashboardPage() {
                   <div className="text-right flex-shrink-0 space-y-0.5">
                     <p
                       className={`text-xs md:text-sm font-bold whitespace-nowrap font-mono ${
-                        settlement.kind === 'none' ? 'text-stone-100' : 'text-amber-200'
+                        settlement.kind === 'none' ? 'text-ink-primary' : 'text-amber-200'
                       }`}
                     >
                       {settlement.net.toLocaleString()}원
                     </p>
                     {settlement.kind !== 'none' && (
-                      <p className="text-[9px] md:text-[10px] text-stone-500 whitespace-nowrap font-mono">
+                      <p className="text-[9px] md:text-[10px] text-ink-primary/40 whitespace-nowrap font-mono">
                         <span className="line-through">{payment.amount?.toLocaleString()}원</span>
                         <span className={settlement.kind === 'full' ? ' text-rose-300/90' : ' text-amber-300/90'}>
                           {' '}

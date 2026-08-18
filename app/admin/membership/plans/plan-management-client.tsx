@@ -216,14 +216,14 @@ export function PlanManagementClient() {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 bg-stone-900/30 rounded-xl animate-pulse border border-stone-700/30" />
+          <div key={i} className="h-20 bg-surface/30 rounded-xl animate-pulse border border-white/30" />
         ))}
       </div>
     )
   }
 
   const tierTheme: Record<string, { badge: string; icon: string }> = {
-    SINGLE: { badge: 'bg-stone-700/30 text-stone-300 border-stone-600/30', icon: 'text-stone-400' },
+    SINGLE: { badge: 'bg-white/30 text-ink-primary/70 border-white/30', icon: 'text-ink-primary/55' },
     FAMILY: { badge: 'bg-gold-500/10 text-gold-400 border-gold-500/30', icon: 'text-gold-400' },
     BUSINESS: {
       badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
@@ -235,10 +235,10 @@ export function PlanManagementClient() {
     <div className="space-y-8">
       {/* ===== SECTION 1: 멤버십 구독 플랜 ===== */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-stone-700/30">
+        <div className="flex items-center gap-2 pb-2 border-b border-white/30">
           <Crown className="w-4 h-4 text-gold-500" />
-          <h2 className="text-sm font-bold text-stone-100 font-serif">멤버십 구독 플랜</h2>
-          <span className="text-[10px] text-stone-500 ml-auto">{plans.length}개 플랜</span>
+          <h2 className="text-sm font-bold text-ink-primary font-serif">멤버십 구독 플랜</h2>
+          <span className="text-[10px] text-ink-primary/40 ml-auto">{plans.length}개 플랜</span>
         </div>
 
         <div className="space-y-3">
@@ -252,7 +252,7 @@ export function PlanManagementClient() {
               <Card
                 key={plan.id}
                 className={cn(
-                  'relative bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden transition-all',
+                  'relative bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden transition-all',
                   !plan.is_active && 'opacity-60'
                 )}
               >
@@ -262,7 +262,7 @@ export function PlanManagementClient() {
                 <div className="relative flex items-center gap-3 p-3.5">
                   <div
                     className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center bg-stone-900/50 border border-stone-700/30 flex-shrink-0',
+                      'w-8 h-8 rounded-lg flex items-center justify-center bg-surface/50 border border-white/30 flex-shrink-0',
                       theme.icon
                     )}
                   >
@@ -270,7 +270,7 @@ export function PlanManagementClient() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-stone-100 font-serif truncate">
+                      <span className="text-sm font-bold text-ink-primary font-serif truncate">
                         {getPlanVal(plan, 'name') as string}
                       </span>
                       <Badge className={cn('text-[9px] border', theme.badge)}>{plan.tier}</Badge>
@@ -285,12 +285,15 @@ export function PlanManagementClient() {
                         {(getPlanVal(plan, 'price') as number)?.toLocaleString()}원/
                         {getPlanVal(plan, 'interval') === 'YEAR' ? '년' : '월'}
                       </span>
-                      <span className="text-[10px] text-stone-500">
+                      <span className="text-[10px] text-ink-primary/40">
                         지급 {getPlanVal(plan, 'talismans_per_period') as number}만냥/주기 · 하루 상한{' '}
                         {getPlanVal(plan, 'daily_talisman_limit') as number}만냥
                       </span>
                       <span
-                        className={cn('text-[9px] font-bold', plan.is_active ? 'text-emerald-400' : 'text-stone-600')}
+                        className={cn(
+                          'text-[9px] font-bold',
+                          plan.is_active ? 'text-emerald-400' : 'text-ink-primary/30'
+                        )}
                       >
                         {plan.is_active ? 'LIVE' : 'OFF'}
                       </span>
@@ -308,7 +311,7 @@ export function PlanManagementClient() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 border-stone-700/50 text-stone-400 hover:text-stone-300"
+                          className="h-7 w-7 border-white/50 text-ink-primary/55 hover:text-ink-primary/70"
                           onClick={() => handleReset(plan.id)}
                         >
                           <RotateCcw className="w-3 h-3" />
@@ -333,7 +336,7 @@ export function PlanManagementClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-stone-500 hover:text-stone-300"
+                      className="h-7 w-7 text-ink-primary/40 hover:text-ink-primary/70"
                       onClick={() => toggleExpand(plan.id, expandedPlans, setExpandedPlans)}
                     >
                       {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -343,62 +346,64 @@ export function PlanManagementClient() {
 
                 {/* 상세 편집 영역 */}
                 {expanded && (
-                  <div className="relative border-t border-stone-700/30 p-4 space-y-4">
+                  <div className="relative border-t border-white/30 p-4 space-y-4">
                     {/* 기본 정보 */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">기본 정보</p>
+                      <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
+                        기본 정보
+                      </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">플랜 이름</Label>
+                          <Label className="text-[10px] text-ink-primary/55">플랜 이름</Label>
                           <Input
                             value={getPlanVal(plan, 'name') as string}
                             onChange={(e) => changePlan(plan.id, 'name', e.target.value)}
-                            className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">결제 주기</Label>
+                          <Label className="text-[10px] text-ink-primary/55">결제 주기</Label>
                           <Select
                             value={getPlanVal(plan, 'interval') as string}
                             onValueChange={(v) => changePlan(plan.id, 'interval', v)}
                           >
-                            <SelectTrigger className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200">
+                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-stone-900 border-stone-700">
-                              <SelectItem value="MONTH" className="text-xs text-stone-300">
+                            <SelectContent className="bg-surface border-white/[0.08]">
+                              <SelectItem value="MONTH" className="text-xs text-ink-primary/70">
                                 매월 (MONTH)
                               </SelectItem>
-                              <SelectItem value="YEAR" className="text-xs text-stone-300">
+                              <SelectItem value="YEAR" className="text-xs text-ink-primary/70">
                                 매년 (YEAR)
                               </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">구독료 (원)</Label>
+                          <Label className="text-[10px] text-ink-primary/55">구독료 (원)</Label>
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'price') as number}
                             onChange={(e) => changePlan(plan.id, 'price', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">정렬 순서</Label>
+                          <Label className="text-[10px] text-ink-primary/55">정렬 순서</Label>
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'sort_order') as number}
                             onChange={(e) => changePlan(plan.id, 'sort_order', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="sm:col-span-2 space-y-1">
-                          <Label className="text-[10px] text-stone-400">설명</Label>
+                          <Label className="text-[10px] text-ink-primary/55">설명</Label>
                           <Textarea
                             value={(getPlanVal(plan, 'description') as string) || ''}
                             onChange={(e) => changePlan(plan.id, 'description', e.target.value)}
-                            className="text-xs bg-stone-900/50 border-stone-700/50 text-stone-300 focus:border-gold-500/50"
+                            className="text-xs bg-surface/50 border-white/50 text-ink-primary/70 focus:border-gold-500/50"
                             rows={2}
                           />
                         </div>
@@ -407,12 +412,14 @@ export function PlanManagementClient() {
 
                     {/* 사용 한도 */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">사용 한도</p>
+                      <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
+                        사용 한도
+                      </p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="space-y-1">
                           {/* 🔴 이 칸은 «주기 지급»이다(결제 주기당 1회). 예전 라벨이 «일일 복채 지급»이라
                               옆칸의 하루 사용 상한과 뒤섞여 앱 문구까지 틀리게 만들었다. */}
-                          <Label className="text-[10px] text-stone-400 flex items-center gap-1">
+                          <Label className="text-[10px] text-ink-primary/55 flex items-center gap-1">
                             <Ticket className="w-2.5 h-2.5 text-gold-500" />
                             주기 지급 복채
                           </Label>
@@ -424,7 +431,7 @@ export function PlanManagementClient() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400 flex items-center gap-1">
+                          <Label className="text-[10px] text-ink-primary/55 flex items-center gap-1">
                             <Calendar className="w-2.5 h-2.5" />
                             하루 사용 상한
                           </Label>
@@ -432,11 +439,11 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'daily_talisman_limit') as number}
                             onChange={(e) => changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400 flex items-center gap-1">
+                          <Label className="text-[10px] text-ink-primary/55 flex items-center gap-1">
                             <Users className="w-2.5 h-2.5" />
                             인연 한도
                           </Label>
@@ -444,11 +451,11 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'relationship_limit') as number}
                             onChange={(e) => changePlan(plan.id, 'relationship_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400 flex items-center gap-1">
+                          <Label className="text-[10px] text-ink-primary/55 flex items-center gap-1">
                             <Database className="w-2.5 h-2.5" />
                             저장 한도
                           </Label>
@@ -456,61 +463,61 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'storage_limit') as number}
                             onChange={(e) => changePlan(plan.id, 'storage_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
-                          <p className="text-[9px] text-stone-600">999 = 무제한</p>
+                          <p className="text-[9px] text-ink-primary/30">999 = 무제한</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Features JSONB */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">
+                      <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
                         기능 설정 (features)
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">보너스 비율 (%)</Label>
+                          <Label className="text-[10px] text-ink-primary/55">보너스 비율 (%)</Label>
                           <Input
                             type="number"
                             value={(features.bonus_rate as number) ?? 0}
                             onChange={(e) => changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">멀티 기기 허용</Label>
+                          <Label className="text-[10px] text-ink-primary/55">멀티 기기 허용</Label>
                           <Select
                             value={String(features.multi_device ?? false)}
                             onValueChange={(v) => changeFeature(plan.id, 'multi_device', v === 'true')}
                           >
-                            <SelectTrigger className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200">
+                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-stone-900 border-stone-700">
+                            <SelectContent className="bg-surface border-white/[0.08]">
                               <SelectItem value="true" className="text-xs text-emerald-400">
                                 허용
                               </SelectItem>
-                              <SelectItem value="false" className="text-xs text-stone-400">
+                              <SelectItem value="false" className="text-xs text-ink-primary/55">
                                 불허
                               </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">우선 지원</Label>
+                          <Label className="text-[10px] text-ink-primary/55">우선 지원</Label>
                           <Select
                             value={String(features.priority_support ?? false)}
                             onValueChange={(v) => changeFeature(plan.id, 'priority_support', v === 'true')}
                           >
-                            <SelectTrigger className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200">
+                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-stone-900 border-stone-700">
+                            <SelectContent className="bg-surface border-white/[0.08]">
                               <SelectItem value="true" className="text-xs text-emerald-400">
                                 허용
                               </SelectItem>
-                              <SelectItem value="false" className="text-xs text-stone-400">
+                              <SelectItem value="false" className="text-xs text-ink-primary/55">
                                 불허
                               </SelectItem>
                             </SelectContent>
@@ -528,10 +535,10 @@ export function PlanManagementClient() {
 
       {/* ===== SECTION 2: 부적 상품 (일회성) ===== */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-stone-700/30">
+        <div className="flex items-center gap-2 pb-2 border-b border-white/30">
           <Ticket className="w-4 h-4 text-gold-500" />
-          <h2 className="text-sm font-bold text-stone-100 font-serif">복채 상품 (단건 구매)</h2>
-          <span className="text-[10px] text-stone-500 ml-auto">{products.length}개 상품</span>
+          <h2 className="text-sm font-bold text-ink-primary font-serif">복채 상품 (단건 구매)</h2>
+          <span className="text-[10px] text-ink-primary/40 ml-auto">{products.length}개 상품</span>
         </div>
 
         <div className="space-y-3">
@@ -544,7 +551,7 @@ export function PlanManagementClient() {
               <Card
                 key={prod.id}
                 className={cn(
-                  'relative bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden transition-all',
+                  'relative bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden transition-all',
                   !prod.is_active && 'opacity-60'
                 )}
               >
@@ -557,7 +564,7 @@ export function PlanManagementClient() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-bold text-stone-100 font-serif truncate">
+                      <span className="text-sm font-bold text-ink-primary font-serif truncate">
                         {getProdVal(prod, 'name') as string}
                       </span>
                       {(getProdVal(prod, 'badge_text') as string) && (
@@ -575,11 +582,14 @@ export function PlanManagementClient() {
                       <span className="text-xs font-mono text-gold-400 font-bold">
                         {(getProdVal(prod, 'price') as number)?.toLocaleString()}원
                       </span>
-                      <span className="text-[10px] text-stone-500">
+                      <span className="text-[10px] text-ink-primary/40">
                         복채 {getProdVal(prod, 'credits') as number}만냥
                       </span>
                       <span
-                        className={cn('text-[9px] font-bold', prod.is_active ? 'text-emerald-400' : 'text-stone-600')}
+                        className={cn(
+                          'text-[9px] font-bold',
+                          prod.is_active ? 'text-emerald-400' : 'text-ink-primary/30'
+                        )}
                       >
                         {prod.is_active ? '판매중' : '중지'}
                       </span>
@@ -597,7 +607,7 @@ export function PlanManagementClient() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 border-stone-700/50 text-stone-400 hover:text-stone-300"
+                          className="h-7 w-7 border-white/50 text-ink-primary/55 hover:text-ink-primary/70"
                           onClick={() => handleProductReset(prod.id)}
                         >
                           <RotateCcw className="w-3 h-3" />
@@ -622,7 +632,7 @@ export function PlanManagementClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-stone-500 hover:text-stone-300"
+                      className="h-7 w-7 text-ink-primary/40 hover:text-ink-primary/70"
                       onClick={() => toggleExpand(prod.id, expandedProducts, setExpandedProducts)}
                     >
                       {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -632,39 +642,41 @@ export function PlanManagementClient() {
 
                 {/* 상세 편집 */}
                 {expanded && (
-                  <div className="relative border-t border-stone-700/30 p-4 space-y-4">
+                  <div className="relative border-t border-white/30 p-4 space-y-4">
                     {/* 기본 필드 */}
                     <div>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mb-2">상품 정보</p>
+                      <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
+                        상품 정보
+                      </p>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="sm:col-span-2 space-y-1">
-                          <Label className="text-[10px] text-stone-400">상품명</Label>
+                          <Label className="text-[10px] text-ink-primary/55">상품명</Label>
                           <Input
                             value={getProdVal(prod, 'name') as string}
                             onChange={(e) => changeProd(prod.id, 'name', e.target.value)}
-                            className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">뱃지 텍스트</Label>
+                          <Label className="text-[10px] text-ink-primary/55">뱃지 텍스트</Label>
                           <Input
                             value={(getProdVal(prod, 'badge_text') as string) || ''}
                             onChange={(e) => changeProd(prod.id, 'badge_text', e.target.value)}
                             placeholder="예: 인기"
-                            className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">가격 (원)</Label>
+                          <Label className="text-[10px] text-ink-primary/55">가격 (원)</Label>
                           <Input
                             type="number"
                             value={getProdVal(prod, 'price') as number}
                             onChange={(e) => changeProd(prod.id, 'price', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px] text-stone-400">복채 수량 (만냥)</Label>
+                          <Label className="text-[10px] text-ink-primary/55">복채 수량 (만냥)</Label>
                           <Input
                             type="number"
                             value={getProdVal(prod, 'credits') as number}
@@ -673,12 +685,12 @@ export function PlanManagementClient() {
                           />
                         </div>
                         <div className="sm:col-span-3 space-y-1">
-                          <Label className="text-[10px] text-stone-400">상품 설명</Label>
+                          <Label className="text-[10px] text-ink-primary/55">상품 설명</Label>
                           <Input
                             value={(getProdVal(prod, 'description') as string) || ''}
                             onChange={(e) => changeProd(prod.id, 'description', e.target.value)}
                             placeholder="상품 설명"
-                            className="h-8 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                       </div>
@@ -687,7 +699,7 @@ export function PlanManagementClient() {
                     {/* 기능 목록 */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                        <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider">
                           기능 목록 (features)
                         </p>
                         <button
@@ -700,22 +712,22 @@ export function PlanManagementClient() {
                       </div>
                       <div className="space-y-2">
                         {featureList.length === 0 ? (
-                          <p className="text-[10px] text-stone-600 py-2 text-center">기능 목록이 없습니다.</p>
+                          <p className="text-[10px] text-ink-primary/30 py-2 text-center">기능 목록이 없습니다.</p>
                         ) : (
                           featureList.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-2">
-                              <span className="text-[10px] text-stone-500 w-4 text-right flex-shrink-0">
+                              <span className="text-[10px] text-ink-primary/40 w-4 text-right flex-shrink-0">
                                 {idx + 1}.
                               </span>
                               <Input
                                 value={item}
                                 onChange={(e) => updateFeatureItem(prod.id, idx, e.target.value)}
-                                className="h-7 text-xs flex-1 bg-stone-900/50 border-stone-700/50 text-stone-300 focus:border-gold-500/50"
+                                className="h-7 text-xs flex-1 bg-surface/50 border-white/50 text-ink-primary/70 focus:border-gold-500/50"
                                 placeholder={`기능 ${idx + 1}`}
                               />
                               <button
                                 onClick={() => removeFeatureItem(prod.id, idx)}
-                                className="text-stone-600 hover:text-red-400 transition-colors flex-shrink-0"
+                                className="text-ink-primary/30 hover:text-red-400 transition-colors flex-shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>

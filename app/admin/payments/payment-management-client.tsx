@@ -81,7 +81,7 @@ export function PaymentManagementClient() {
         )
       default:
         return (
-          <Badge variant="outline" className="text-stone-500 border-stone-700 text-[9px] md:text-[10px]">
+          <Badge variant="outline" className="text-ink-primary/40 border-white/[0.08] text-[9px] md:text-[10px]">
             {status}
           </Badge>
         )
@@ -93,13 +93,13 @@ export function PaymentManagementClient() {
     <div className="flex flex-col items-start gap-0.5">
       <span
         className={`font-mono font-bold tabular-nums ${size === 'card' ? 'text-base' : ''} ${
-          settlement.kind === 'none' ? 'text-stone-100' : 'text-amber-200'
+          settlement.kind === 'none' ? 'text-ink-primary' : 'text-amber-200'
         }`}
       >
         ₩{settlement.net.toLocaleString()}
       </span>
       {settlement.kind !== 'none' && (
-        <span className="text-[10px] font-mono text-stone-500">
+        <span className="text-[10px] font-mono text-ink-primary/40">
           <span className="line-through">₩{payment.amount.toLocaleString()}</span>
           <span className={`ml-1.5 ${settlement.kind === 'full' ? 'text-rose-300/90' : 'text-amber-300/90'}`}>
             {settlement.kind === 'full' ? '전액취소' : '부분취소'} −₩{settlement.cancelled.toLocaleString()}
@@ -113,14 +113,14 @@ export function PaymentManagementClient() {
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-black text-stone-100 font-serif">결제 내역</h1>
-        <p className="text-xs md:text-sm text-stone-500">회원들의 결제 및 충전 기록을 확인하세요.</p>
+        <h1 className="text-xl md:text-2xl font-black text-ink-primary font-serif">결제 내역</h1>
+        <p className="text-xs md:text-sm text-ink-primary/40">회원들의 결제 및 충전 기록을 확인하세요.</p>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row justify-between gap-3 md:gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-xs md:text-sm text-stone-500 font-medium">상태 필터:</span>
+          <span className="text-xs md:text-sm text-ink-primary/40 font-medium">상태 필터:</span>
           <Select
             value={statusFilter}
             onValueChange={(val) => {
@@ -129,11 +129,11 @@ export function PaymentManagementClient() {
               setPage(1)
             }}
           >
-            <SelectTrigger className="w-[140px] md:w-[180px] h-8 md:h-9 bg-stone-900/50 border-stone-700/50 text-stone-200 text-xs md:text-sm">
+            <SelectTrigger className="w-[140px] md:w-[180px] h-8 md:h-9 bg-surface/50 border-white/50 text-ink-primary/85 text-xs md:text-sm">
               <SelectValue placeholder="모든 상태" />
             </SelectTrigger>
-            <SelectContent className="bg-stone-900 border-stone-700">
-              <SelectItem value="all" className="text-stone-300">
+            <SelectContent className="bg-surface border-white/[0.08]">
+              <SelectItem value="all" className="text-ink-primary/70">
                 모든 결제
               </SelectItem>
               <SelectItem value="completed" className="text-emerald-400">
@@ -162,11 +162,11 @@ export function PaymentManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
-            className="h-8 w-8 md:h-9 md:w-9 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 md:h-9 md:w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </Button>
-          <span className="text-xs md:text-sm font-medium text-stone-400 px-2 font-mono">
+          <span className="text-xs md:text-sm font-medium text-ink-primary/55 px-2 font-mono">
             {page} / {totalPages || 1}
           </span>
           <Button
@@ -174,7 +174,7 @@ export function PaymentManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages || loading}
-            className="h-8 w-8 md:h-9 md:w-9 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 md:h-9 md:w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </Button>
@@ -182,45 +182,45 @@ export function PaymentManagementClient() {
       </div>
 
       {/* Desktop Table - hidden on mobile */}
-      <div className="hidden md:block rounded-xl border border-stone-700/30 bg-gradient-to-br from-stone-800/30 to-stone-900/20 overflow-hidden shadow-lg">
+      <div className="hidden md:block rounded-xl border border-white/30 bg-gradient-to-br from-surface/30 to-surface/20 overflow-hidden shadow-lg">
         <Table>
-          <TableHeader className="bg-stone-900/50">
-            <TableRow className="border-stone-700/30 hover:bg-stone-800/50">
-              <TableHead className="text-stone-400 font-serif text-xs">주문 ID</TableHead>
-              <TableHead className="text-stone-400 font-serif text-xs">사용자</TableHead>
-              <TableHead className="text-stone-400 font-serif text-xs">금액</TableHead>
-              <TableHead className="text-stone-400 font-serif text-xs">크레딧</TableHead>
-              <TableHead className="text-stone-400 font-serif text-xs">상태</TableHead>
-              <TableHead className="text-stone-400 font-serif text-xs">일시</TableHead>
+          <TableHeader className="bg-surface/50">
+            <TableRow className="border-white/30 hover:bg-surface/50">
+              <TableHead className="text-ink-primary/55 font-serif text-xs">주문 ID</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif text-xs">사용자</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif text-xs">금액</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif text-xs">크레딧</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif text-xs">상태</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif text-xs">일시</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-stone-700/30">
+                <TableRow key={i} className="border-white/30">
                   <TableCell>
-                    <div className="h-4 w-32 bg-stone-800/50 rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-4 w-24 bg-stone-800/50 rounded animate-pulse" />
+                    <div className="h-4 w-24 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-4 w-20 bg-stone-800/50 rounded animate-pulse" />
+                    <div className="h-4 w-20 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-4 w-10 bg-stone-800/50 rounded animate-pulse" />
+                    <div className="h-4 w-10 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-6 w-16 bg-stone-800/50 rounded animate-pulse" />
+                    <div className="h-6 w-16 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-4 w-24 bg-stone-800/50 rounded animate-pulse" />
+                    <div className="h-4 w-24 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
                 </TableRow>
               ))
             ) : payments.length === 0 ? (
-              <TableRow className="border-stone-700/30">
-                <TableCell colSpan={6} className="h-40 text-center text-stone-500">
+              <TableRow className="border-white/30">
+                <TableCell colSpan={6} className="h-40 text-center text-ink-primary/40">
                   결제 내역이 없습니다.
                 </TableCell>
               </TableRow>
@@ -233,15 +233,15 @@ export function PaymentManagementClient() {
                       key={payment.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-stone-700/30 hover:bg-stone-800/30 transition-colors group"
+                      className="border-white/30 hover:bg-surface/30 transition-colors group"
                     >
-                      <TableCell className="font-mono text-xs text-stone-500">{payment.order_id}</TableCell>
+                      <TableCell className="font-mono text-xs text-ink-primary/40">{payment.order_id}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-sm text-stone-200 font-medium">
+                          <span className="text-sm text-ink-primary/85 font-medium">
                             {payment.profiles?.full_name || 'Unknown'}
                           </span>
-                          <span className="text-xs text-stone-500">{payment.profiles?.email}</span>
+                          <span className="text-xs text-ink-primary/40">{payment.profiles?.email}</span>
                         </div>
                       </TableCell>
                       <TableCell>{renderAmount(payment, settlement, 'row')}</TableCell>
@@ -254,7 +254,7 @@ export function PaymentManagementClient() {
                         </Badge>
                       </TableCell>
                       <TableCell>{getStatusBadge(payment.status, settlement)}</TableCell>
-                      <TableCell className="text-xs text-stone-500">
+                      <TableCell className="text-xs text-ink-primary/40">
                         {new Date(payment.created_at).toLocaleString('ko-KR', {
                           month: 'short',
                           day: 'numeric',
@@ -262,7 +262,7 @@ export function PaymentManagementClient() {
                           minute: '2-digit',
                         })}
                         {settlement.kind !== 'none' && payment.cancelled_at && (
-                          <span className="block text-[10px] text-stone-600">
+                          <span className="block text-[10px] text-ink-primary/30">
                             취소{' '}
                             {new Date(payment.cancelled_at).toLocaleString('ko-KR', {
                               month: 'short',
@@ -286,16 +286,16 @@ export function PaymentManagementClient() {
       <div className="md:hidden space-y-2.5">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="p-3.5 bg-stone-900/30 rounded-xl border border-stone-700/30">
-              <div className="h-4 w-32 bg-stone-800/50 rounded animate-pulse mb-3" />
-              <div className="h-3 w-48 bg-stone-800/50 rounded animate-pulse mb-2" />
-              <div className="h-8 w-24 bg-stone-800/50 rounded animate-pulse" />
+            <div key={i} className="p-3.5 bg-surface/30 rounded-xl border border-white/30">
+              <div className="h-4 w-32 bg-surface/50 rounded animate-pulse mb-3" />
+              <div className="h-3 w-48 bg-surface/50 rounded animate-pulse mb-2" />
+              <div className="h-8 w-24 bg-surface/50 rounded animate-pulse" />
             </div>
           ))
         ) : payments.length === 0 ? (
-          <div className="p-8 text-center bg-stone-900/30 rounded-xl border border-stone-700/30">
-            <FileText className="w-12 h-12 mx-auto mb-3 text-stone-700" />
-            <p className="text-sm text-stone-500">결제 내역이 없습니다.</p>
+          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/30">
+            <FileText className="w-12 h-12 mx-auto mb-3 text-ink-primary/20" />
+            <p className="text-sm text-ink-primary/40">결제 내역이 없습니다.</p>
           </div>
         ) : (
           <AnimatePresence>
@@ -307,7 +307,7 @@ export function PaymentManagementClient() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="relative p-3.5 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
+                  className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
                 >
                   {/* Noise Overlay */}
                   <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
@@ -316,17 +316,17 @@ export function PaymentManagementClient() {
                   <div className="relative space-y-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-stone-200 truncate text-sm">
+                        <p className="font-medium text-ink-primary/85 truncate text-sm">
                           {payment.profiles?.full_name || '익명'}
                         </p>
-                        <p className="text-xs text-stone-500 truncate">{payment.profiles?.email}</p>
+                        <p className="text-xs text-ink-primary/40 truncate">{payment.profiles?.email}</p>
                       </div>
                       {getStatusBadge(payment.status, settlement)}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-stone-700/30">
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/30">
                       <div className="min-w-0">
-                        <p className="text-xs text-stone-500">
+                        <p className="text-xs text-ink-primary/40">
                           {settlement.kind === 'none' ? '결제 금액' : '실결제액'}
                         </p>
                         {renderAmount(payment, settlement, 'card')}
@@ -336,13 +336,13 @@ export function PaymentManagementClient() {
                       </Badge>
                     </div>
 
-                    <div className="pt-2 border-t border-stone-700/30">
-                      <p className="text-[10px] text-stone-600 font-mono">{payment.order_id}</p>
-                      <p className="text-[10px] text-stone-600 mt-0.5">
+                    <div className="pt-2 border-t border-white/30">
+                      <p className="text-[10px] text-ink-primary/30 font-mono">{payment.order_id}</p>
+                      <p className="text-[10px] text-ink-primary/30 mt-0.5">
                         {new Date(payment.created_at).toLocaleString('ko-KR')}
                       </p>
                       {settlement.kind !== 'none' && payment.cancelled_at && (
-                        <p className="text-[10px] text-stone-600 mt-0.5">
+                        <p className="text-[10px] text-ink-primary/30 mt-0.5">
                           취소 {new Date(payment.cancelled_at).toLocaleString('ko-KR')}
                         </p>
                       )}

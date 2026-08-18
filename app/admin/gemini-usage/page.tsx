@@ -1,4 +1,5 @@
 import { GeminiUsageDashboard } from '@/components/admin/gemini-usage-dashboard'
+import { GeminiUserUsage } from '@/components/admin/gemini-user-usage'
 import {
   getGeminiTodaySummary,
   getGeminiDailyStats,
@@ -23,14 +24,19 @@ export default async function GeminiUsagePage() {
   ])
 
   return (
-    <GeminiUsageDashboard
-      initialSummary={summary}
-      initialDailyStats={dailyStats}
-      initialActionStats={actionStats}
-      initialLogs={logs}
-      initialRpmConfig={rpmConfig}
-      initialCostVsPrice={costVsPrice}
-      usdKrwRate={usdKrwRate}
-    />
+    <div className="space-y-5">
+      <GeminiUsageDashboard
+        initialSummary={summary}
+        initialDailyStats={dailyStats}
+        initialActionStats={actionStats}
+        initialLogs={logs}
+        initialRpmConfig={rpmConfig}
+        initialCostVsPrice={costVsPrice}
+        usdKrwRate={usdKrwRate}
+      />
+
+      {/* 누가 · 무엇에 · 얼마나 — 액션별 합계로는 「한 사람이 몰아 쓰는 것」이 안 보인다 */}
+      <GeminiUserUsage daysBack={30} />
+    </div>
   )
 }

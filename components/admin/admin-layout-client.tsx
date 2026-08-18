@@ -103,7 +103,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
   }, [menuItems])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950 text-stone-100 font-sans relative flex flex-col w-full max-w-[480px] mx-auto shadow-2xl overflow-hidden selection:bg-gold-500/30">
+    <div className="min-h-screen bg-gradient-to-br from-ink-950 via-ink-900 to-ink-950 text-ink-primary font-sans relative flex flex-col w-full max-w-[480px] mx-auto shadow-2xl overflow-hidden selection:bg-gold-500/30">
       <div className="hanji-overlay opacity-40" />
       <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
 
@@ -118,7 +118,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
               <button
                 type="button"
                 aria-label="메뉴 열기"
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-stone-300 hover:bg-stone-800/60 hover:text-gold-400 active:scale-95 transition"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-primary/70 hover:bg-surface/60 hover:text-gold-400 active:scale-95 transition"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -126,7 +126,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
             <SheetContent
               side="left"
               showCloseButton={false}
-              className="w-[82%] max-w-[340px] border-r border-gold-500/15 bg-ink-950 p-0 text-stone-100"
+              className="w-[82%] max-w-[340px] border-r border-gold-500/15 bg-ink-950 p-0 text-ink-primary"
             >
               <SheetTitle className="sr-only">관리자 메뉴</SheetTitle>
               <div className="flex h-full flex-col">
@@ -140,17 +140,17 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
                     <span className="relative">海</span>
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 font-serif text-sm font-bold text-stone-100">
+                    <div className="flex items-center gap-1.5 font-serif text-sm font-bold text-ink-primary">
                       <Shield className="h-3.5 w-3.5 text-gold-500" />
                       해화당 Admin
                     </div>
-                    <div className="text-[9px] font-bold tracking-[0.2em] text-stone-500">SYSTEM CONTROL</div>
+                    <div className="text-[9px] font-bold tracking-[0.2em] text-ink-primary/40">SYSTEM CONTROL</div>
                   </div>
                   <button
                     type="button"
                     aria-label="메뉴 닫기"
                     onClick={() => setOpen(false)}
-                    className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-800/60 hover:text-gold-400"
+                    className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-ink-primary/40 hover:bg-surface/60 hover:text-gold-400"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -161,7 +161,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
                   {sections.map((sec, si) => (
                     <div key={sec.label ?? `top-${si}`} className={cn(si > 0 && 'mt-3')}>
                       {sec.label ? (
-                        <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-stone-600">
+                        <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-ink-primary/30">
                           {sec.label}
                         </div>
                       ) : null}
@@ -178,7 +178,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
                                   'flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] transition-colors',
                                   active
                                     ? 'bg-gold-500/15 text-gold-300'
-                                    : 'text-stone-300 hover:bg-stone-800/60 hover:text-stone-100'
+                                    : 'text-ink-primary/70 hover:bg-surface/60 hover:text-ink-primary'
                                 )}
                               >
                                 <span
@@ -186,7 +186,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
                                     'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
                                     active
                                       ? 'bg-gradient-to-br from-gold-500 to-gold-600 text-ink-950 shadow-md shadow-gold-500/30'
-                                      : 'bg-stone-800/50 text-stone-400'
+                                      : 'bg-surface/50 text-ink-primary/55'
                                   )}
                                 >
                                   <Icon className="h-4 w-4" strokeWidth={active ? 2.5 : 2} />
@@ -208,7 +208,7 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
                 >
                   <Link
                     href="/protected"
-                    className="flex min-h-[44px] items-center gap-2 text-[13px] text-stone-400 hover:text-gold-400"
+                    className="flex min-h-[44px] items-center gap-2 text-[13px] text-ink-primary/55 hover:text-gold-400"
                   >
                     <X className="h-4 w-4" />
                     앱으로 나가기
@@ -219,14 +219,16 @@ export function AdminLayoutClient({ children, menuItems }: AdminLayoutClientProp
           </Sheet>
 
           <div className="min-w-0 flex-1">
-            <div className="truncate font-serif text-[15px] font-bold text-stone-100">{current?.label ?? '관리자'}</div>
-            <div className="text-[9px] font-bold tracking-[0.2em] text-stone-500">해화당 ADMIN</div>
+            <div className="truncate font-serif text-[15px] font-bold text-ink-primary">
+              {current?.label ?? '관리자'}
+            </div>
+            <div className="text-[9px] font-bold tracking-[0.2em] text-ink-primary/40">해화당 ADMIN</div>
           </div>
 
           <Link
             href="/protected"
             aria-label="앱으로 나가기"
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-800/60 hover:text-gold-400"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-primary/40 hover:bg-surface/60 hover:text-gold-400"
           >
             <X className="h-[18px] w-[18px]" />
           </Link>

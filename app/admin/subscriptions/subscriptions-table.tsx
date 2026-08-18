@@ -5,13 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AdminSubscription, updateSubscriptionStatus, grantTalismans } from './actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -20,12 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ChevronLeft, ChevronRight, Gift, MoreHorizontal } from 'lucide-react'
@@ -54,9 +43,9 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; l
     label: '해지 예정',
   },
   EXPIRED: {
-    bg: 'bg-stone-700/30',
-    text: 'text-stone-500',
-    border: 'border-stone-600/30',
+    bg: 'bg-white/30',
+    text: 'text-ink-primary/40',
+    border: 'border-white/30',
     label: '만료됨',
   },
   PAYMENT_FAILED: {
@@ -72,9 +61,9 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; l
     label: '일시 중지',
   },
   PENDING: {
-    bg: 'bg-stone-700/30',
-    text: 'text-stone-500',
-    border: 'border-stone-600/30',
+    bg: 'bg-white/30',
+    text: 'text-ink-primary/40',
+    border: 'border-white/30',
     label: '대기 중',
   },
 }
@@ -145,20 +134,20 @@ export function SubscriptionsTable({
     <div className="space-y-4">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-xl font-serif font-bold text-stone-100">구독 관리</h1>
-        <p className="text-xs text-stone-500">회원 구독 현황 및 부적 수동 지급을 관리합니다.</p>
+        <h1 className="text-xl font-serif font-bold text-ink-primary">구독 관리</h1>
+        <p className="text-xs text-ink-primary/40">회원 구독 현황 및 부적 수동 지급을 관리합니다.</p>
       </div>
 
       {/* Filters */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-500 font-medium">상태 필터:</span>
+          <span className="text-xs text-ink-primary/40 font-medium">상태 필터:</span>
           <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-            <SelectTrigger className="w-[140px] h-8 bg-stone-900/50 border-stone-700/50 text-stone-200 text-xs">
+            <SelectTrigger className="w-[140px] h-8 bg-surface/50 border-white/50 text-ink-primary/85 text-xs">
               <SelectValue placeholder="상태 필터" />
             </SelectTrigger>
-            <SelectContent className="bg-stone-900 border-stone-700">
-              <SelectItem value="ALL" className="text-stone-300">
+            <SelectContent className="bg-surface border-white/[0.08]">
+              <SelectItem value="ALL" className="text-ink-primary/70">
                 전체
               </SelectItem>
               <SelectItem value="ACTIVE" className="text-emerald-400">
@@ -167,7 +156,7 @@ export function SubscriptionsTable({
               <SelectItem value="CANCELLED" className="text-amber-400">
                 해지 예정
               </SelectItem>
-              <SelectItem value="EXPIRED" className="text-stone-500">
+              <SelectItem value="EXPIRED" className="text-ink-primary/40">
                 만료됨
               </SelectItem>
               <SelectItem value="PAYMENT_FAILED" className="text-red-400">
@@ -176,14 +165,14 @@ export function SubscriptionsTable({
             </SelectContent>
           </Select>
         </div>
-        <span className="text-xs text-stone-500 font-mono">총 {total}명</span>
+        <span className="text-xs text-ink-primary/40 font-mono">총 {total}명</span>
       </div>
 
       {/* Mobile Card List */}
       <div className="space-y-2.5">
         {subscriptions.length === 0 ? (
-          <div className="p-8 text-center bg-stone-900/30 rounded-xl border border-stone-700/30">
-            <p className="text-sm text-stone-500">구독자가 없습니다.</p>
+          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/30">
+            <p className="text-sm text-ink-primary/40">구독자가 없습니다.</p>
           </div>
         ) : (
           <AnimatePresence>
@@ -195,23 +184,19 @@ export function SubscriptionsTable({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="relative p-3.5 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 hover:border-gold-500/20 transition-all overflow-hidden group"
+                  className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/30 hover:border-gold-500/20 transition-all overflow-hidden group"
                 >
                   <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
                   <div className="relative flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-stone-200 text-sm truncate">
+                      <p className="font-medium text-ink-primary/85 text-sm truncate">
                         {sub.profile?.email || 'Unknown'}
                       </p>
-                      <p className="text-[10px] text-stone-600 font-mono mt-0.5">
-                        {sub.user_id.slice(0, 8)}...
-                      </p>
+                      <p className="text-[10px] text-ink-primary/30 font-mono mt-0.5">{sub.user_id.slice(0, 8)}...</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge
-                        className={`${sc.bg} ${sc.text} border ${sc.border} text-[9px] font-bold`}
-                      >
+                      <Badge className={`${sc.bg} ${sc.text} border ${sc.border} text-[9px] font-bold`}>
                         {sc.label}
                       </Badge>
                       <DropdownMenu>
@@ -219,18 +204,15 @@ export function SubscriptionsTable({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-stone-500 hover:text-gold-400 hover:bg-stone-800/50"
+                            className="h-7 w-7 text-ink-primary/40 hover:text-gold-400 hover:bg-surface/50"
                           >
                             <MoreHorizontal className="h-3.5 w-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="bg-stone-900 border-stone-700 text-stone-200"
-                        >
+                        <DropdownMenuContent align="end" className="bg-surface border-white/[0.08] text-ink-primary/85">
                           <DropdownMenuItem
                             onClick={() => openGrantDialog(sub.user_id)}
-                            className="text-xs hover:bg-stone-800 cursor-pointer"
+                            className="text-xs hover:bg-surface cursor-pointer"
                           >
                             <Gift className="w-3.5 h-3.5 mr-2 text-gold-400" />
                             부적 지급
@@ -238,7 +220,7 @@ export function SubscriptionsTable({
                           {sub.status === 'ACTIVE' && (
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(sub.id, 'PAUSED')}
-                              className="text-xs hover:bg-stone-800 cursor-pointer"
+                              className="text-xs hover:bg-surface cursor-pointer"
                             >
                               일시 중지
                             </DropdownMenuItem>
@@ -246,7 +228,7 @@ export function SubscriptionsTable({
                           {sub.status === 'PAUSED' && (
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(sub.id, 'ACTIVE')}
-                              className="text-xs hover:bg-stone-800 cursor-pointer"
+                              className="text-xs hover:bg-surface cursor-pointer"
                             >
                               재활성화
                             </DropdownMenuItem>
@@ -264,24 +246,20 @@ export function SubscriptionsTable({
                     </div>
                   </div>
 
-                  <div className="relative grid grid-cols-3 gap-2 pt-2.5 border-t border-stone-700/30">
+                  <div className="relative grid grid-cols-3 gap-2 pt-2.5 border-t border-white/30">
                     <div>
-                      <p className="text-[9px] text-stone-600 mb-0.5">플랜</p>
-                      <p className="text-xs text-stone-300 font-medium truncate">
-                        {sub.plan?.name || '-'}
-                      </p>
+                      <p className="text-[9px] text-ink-primary/30 mb-0.5">플랜</p>
+                      <p className="text-xs text-ink-primary/70 font-medium truncate">{sub.plan?.name || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] text-stone-600 mb-0.5">구독 시작</p>
-                      <p className="text-xs text-stone-400 font-mono">
-                        {formatDate(sub.current_period_start)}
-                      </p>
+                      <p className="text-[9px] text-ink-primary/30 mb-0.5">구독 시작</p>
+                      <p className="text-xs text-ink-primary/55 font-mono">{formatDate(sub.current_period_start)}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] text-stone-600 mb-0.5">
+                      <p className="text-[9px] text-ink-primary/30 mb-0.5">
                         {sub.status === 'CANCELLED' ? '종료일' : '다음 결제'}
                       </p>
-                      <p className="text-xs text-stone-400 font-mono">
+                      <p className="text-xs text-ink-primary/55 font-mono">
                         {sub.status === 'CANCELLED'
                           ? formatDate(sub.current_period_end)
                           : formatDate(sub.next_billing_date)}
@@ -303,11 +281,11 @@ export function SubscriptionsTable({
             size="icon"
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="h-8 w-8 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-xs font-mono text-stone-400 px-2">
+          <span className="text-xs font-mono text-ink-primary/55 px-2">
             {currentPage} / {totalPages}
           </span>
           <Button
@@ -315,7 +293,7 @@ export function SubscriptionsTable({
             size="icon"
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="h-8 w-8 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -324,16 +302,16 @@ export function SubscriptionsTable({
 
       {/* Grant Talismans Dialog */}
       <Dialog open={isGrantDialogOpen} onOpenChange={setIsGrantDialogOpen}>
-        <DialogContent className="bg-stone-900 border-stone-700 text-stone-100 max-w-sm mx-auto">
+        <DialogContent className="bg-surface border-white/[0.08] text-ink-primary max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-stone-100">부적 수동 지급</DialogTitle>
-            <DialogDescription className="text-stone-500 text-xs">
+            <DialogTitle className="font-serif text-ink-primary">부적 수동 지급</DialogTitle>
+            <DialogDescription className="text-ink-primary/40 text-xs">
               선택한 사용자에게 부적을 지급합니다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="amount" className="text-xs text-stone-300 font-medium">
+              <Label htmlFor="amount" className="text-xs text-ink-primary/70 font-medium">
                 지급 수량
               </Label>
               <Input
@@ -343,11 +321,11 @@ export function SubscriptionsTable({
                 max="100"
                 value={grantAmount}
                 onChange={(e) => setGrantAmount(e.target.value)}
-                className="h-9 bg-stone-800/50 border-stone-700/50 text-stone-200 text-sm"
+                className="h-9 bg-surface/50 border-white/50 text-ink-primary/85 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="reason" className="text-xs text-stone-300 font-medium">
+              <Label htmlFor="reason" className="text-xs text-ink-primary/70 font-medium">
                 지급 사유 (선택)
               </Label>
               <Input
@@ -355,7 +333,7 @@ export function SubscriptionsTable({
                 value={grantReason}
                 onChange={(e) => setGrantReason(e.target.value)}
                 placeholder="예: 이벤트 당첨, 고객 보상 등"
-                className="h-9 bg-stone-800/50 border-stone-700/50 text-stone-200 text-sm placeholder:text-stone-600"
+                className="h-9 bg-surface/50 border-white/50 text-ink-primary/85 text-sm placeholder:text-ink-primary/30"
               />
             </div>
           </div>
@@ -363,7 +341,7 @@ export function SubscriptionsTable({
             <Button
               variant="outline"
               onClick={() => setIsGrantDialogOpen(false)}
-              className="h-9 text-xs border-stone-700 text-stone-400 hover:bg-stone-800"
+              className="h-9 text-xs border-white/[0.08] text-ink-primary/55 hover:bg-surface"
             >
               취소
             </Button>

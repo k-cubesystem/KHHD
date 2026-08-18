@@ -48,10 +48,10 @@ function when(iso: string): string {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="border border-stone-700/40 bg-stone-900/40 p-4">
-      <p className="text-[11px] uppercase tracking-widest text-stone-500 mb-1.5">{label}</p>
-      <p className="text-xl text-stone-100 font-medium tabular-nums">{value}</p>
-      {hint && <p className="text-[11px] text-stone-500 mt-1">{hint}</p>}
+    <div className="border border-white/40 bg-surface/40 p-4">
+      <p className="text-[11px] uppercase tracking-widest text-ink-primary/40 mb-1.5">{label}</p>
+      <p className="text-xl text-ink-primary font-medium tabular-nums">{value}</p>
+      {hint && <p className="text-[11px] text-ink-primary/40 mt-1">{hint}</p>}
     </div>
   )
 }
@@ -109,8 +109,8 @@ export async function CancelLossSummary() {
   return (
     <section className="mb-8">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-sm text-stone-300 font-medium">취소 손실 처리 · 최근 365일</h2>
-        <p className="text-[11px] text-stone-500">
+        <h2 className="text-sm text-ink-primary/70 font-medium">취소 손실 처리 · 최근 365일</h2>
+        <p className="text-[11px] text-ink-primary/40">
           상한 계정당 {LOSS_CANCEL_MAX_COUNT}회 / {won(LOSS_CANCEL_MAX_AMOUNT)}
         </p>
       </div>
@@ -122,15 +122,15 @@ export async function CancelLossSummary() {
         <Stat label="상한 소진 계정" value={`${exhausted}명`} />
       </div>
 
-      <div className="border border-stone-700/40">
+      <div className="border border-white/40">
         <Table>
           <TableHeader>
-            <TableRow className="border-stone-700/30 hover:bg-transparent">
-              <TableHead className="text-stone-500 text-xs">일시</TableHead>
-              <TableHead className="text-stone-500 text-xs">회원</TableHead>
-              <TableHead className="text-stone-500 text-xs">손실</TableHead>
-              <TableHead className="text-stone-500 text-xs">환불</TableHead>
-              <TableHead className="text-stone-500 text-xs">처리</TableHead>
+            <TableRow className="border-white/30 hover:bg-transparent">
+              <TableHead className="text-ink-primary/40 text-xs">일시</TableHead>
+              <TableHead className="text-ink-primary/40 text-xs">회원</TableHead>
+              <TableHead className="text-ink-primary/40 text-xs">손실</TableHead>
+              <TableHead className="text-ink-primary/40 text-xs">환불</TableHead>
+              <TableHead className="text-ink-primary/40 text-xs">처리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -138,17 +138,17 @@ export async function CancelLossSummary() {
               const owner = profiles.get(row.user_id)
               const blocked = (row.toss_error_code ?? '').startsWith('LOSS_CAP_')
               return (
-                <TableRow key={row.id} className="border-stone-700/30 hover:bg-stone-800/30">
-                  <TableCell className="text-xs text-stone-500">{when(row.created_at)}</TableCell>
+                <TableRow key={row.id} className="border-white/30 hover:bg-surface/30">
+                  <TableCell className="text-xs text-ink-primary/40">{when(row.created_at)}</TableCell>
                   <TableCell>
-                    <span className="block text-sm text-stone-200">{owner?.full_name || 'Unknown'}</span>
-                    <span className="block text-xs text-stone-500">{owner?.email ?? row.user_id.slice(0, 8)}</span>
+                    <span className="block text-sm text-ink-primary/85">{owner?.full_name || 'Unknown'}</span>
+                    <span className="block text-xs text-ink-primary/40">{owner?.email ?? row.user_id.slice(0, 8)}</span>
                   </TableCell>
-                  <TableCell className="text-sm text-stone-200 tabular-nums">
+                  <TableCell className="text-sm text-ink-primary/85 tabular-nums">
                     {won(Math.max(0, row.loss_amount ?? 0))}
-                    <span className="block text-[11px] text-stone-500">{row.loss_credits ?? 0}만냥</span>
+                    <span className="block text-[11px] text-ink-primary/40">{row.loss_credits ?? 0}만냥</span>
                   </TableCell>
-                  <TableCell className="text-sm text-stone-400 tabular-nums">
+                  <TableCell className="text-sm text-ink-primary/55 tabular-nums">
                     {won(Math.max(0, row.refund_amount ?? 0))}
                   </TableCell>
                   <TableCell>
@@ -161,7 +161,7 @@ export async function CancelLossSummary() {
                         손실 확정
                       </Badge>
                     ) : (
-                      <Badge variant="secondary" className="bg-stone-700/30 text-stone-400 border border-stone-600/30">
+                      <Badge variant="secondary" className="bg-white/30 text-ink-primary/55 border border-white/30">
                         {row.status}
                       </Badge>
                     )}

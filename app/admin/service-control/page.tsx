@@ -91,8 +91,10 @@ export default function ServiceControlPage() {
   return (
     <div className="space-y-6 md:space-y-8 max-w-2xl mx-auto">
       <div className="text-center space-y-2">
-        <h1 className="text-xl md:text-2xl font-serif font-bold text-stone-100">서비스 기능 제어</h1>
-        <p className="text-xs md:text-sm text-stone-500">앱을 다시 배포하지 않고, 실시간으로 기능을 켜고 끄세요.</p>
+        <h1 className="text-xl md:text-2xl font-serif font-bold text-ink-primary">서비스 기능 제어</h1>
+        <p className="text-xs md:text-sm text-ink-primary/40">
+          앱을 다시 배포하지 않고, 실시간으로 기능을 켜고 끄세요.
+        </p>
       </div>
 
       <div className="grid gap-3 md:gap-4">
@@ -107,7 +109,7 @@ export default function ServiceControlPage() {
                 'relative border overflow-hidden group',
                 isMaintenance
                   ? 'border-red-500/30 bg-gradient-to-br from-red-900/20 to-red-950/10'
-                  : 'border-stone-700/30 bg-gradient-to-br from-stone-800/30 to-stone-900/20'
+                  : 'border-white/30 bg-gradient-to-br from-surface/30 to-surface/20'
               )}
             >
               {/* Noise Overlay */}
@@ -122,7 +124,7 @@ export default function ServiceControlPage() {
                     <span
                       className={cn(
                         'font-bold font-serif text-sm md:text-base truncate',
-                        isMaintenance ? 'text-red-400' : 'text-stone-100'
+                        isMaintenance ? 'text-red-400' : 'text-ink-primary'
                       )}
                     >
                       {feature.label}
@@ -144,7 +146,7 @@ export default function ServiceControlPage() {
                       </Badge>
                     )}
                   </div>
-                  <p className="text-[10px] md:text-xs text-stone-500 line-clamp-2">{feature.desc}</p>
+                  <p className="text-[10px] md:text-xs text-ink-primary/40 line-clamp-2">{feature.desc}</p>
                 </div>
                 <Switch
                   checked={config.isActive}
@@ -160,8 +162,8 @@ export default function ServiceControlPage() {
         })}
       </div>
 
-      <div className="p-3 md:p-4 bg-stone-900/50 rounded-lg border border-stone-700/30 text-center">
-        <p className="text-[10px] md:text-xs text-stone-500 flex items-center justify-center gap-1.5">
+      <div className="p-3 md:p-4 bg-surface/50 rounded-lg border border-white/30 text-center">
+        <p className="text-[10px] md:text-xs text-ink-primary/40 flex items-center justify-center gap-1.5">
           <Power className="w-3 h-3 text-gold-500" />
           변경 사항은 모든 사용자에게 즉시 반영됩니다.
         </p>

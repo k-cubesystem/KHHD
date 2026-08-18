@@ -1,3 +1,5 @@
+import { FEATURE_COST, type FeatureCostKey } from '@/lib/domain/payment/feature-costs'
+
 /**
  * Gemini 사용량 계측 — action_type ↔ 한글 라벨 단일 소스.
  *
@@ -98,6 +100,53 @@ export const ACTION_TO_PROMPT_KEY: Record<string, string | null> = {
   deity_oracle: null,
   summarizer: null,
   memory: null,
+}
+
+/**
+ * action_type → **복채 단가 키** (`lib/domain/payment/feature-costs.ts`).
+ * null = 사용자에게 복채를 받지 않는 내부·무료 기능.
+ *
+ * ## 🔴 왜 ai_prompts 를 안 쓰나 (2026-08-19 수복)
+ * 원가 대비 판가 화면이 거의 전부 「측정 안 됨」이었다. 조인은 맞았는데
+ * **`ai_prompts.talisman_cost` 값이 낡아 있었다** — `cheonjiin_analysis: 0`(실제 2만냥),
+ * `haehwajigi_compatibility: 0`(실제 2만냥), `saju_analysis_v2: 0`. 0 은 «무료»로 읽혀
+ * 원가율이 산정 불가가 된다.
+ *
+ * 뿌리는 **가격 출처가 둘이었다**는 것이다. 이 프로젝트의 규율은 «표시 = 실차감»이고
+ * 그 단일 출처는 `feature-costs.ts` 다. DB 표는 사람이 손대면 즉시 어긋난다.
+ * 🔴 판가는 여기(코드)에서만 가져온다. `ACTION_TO_PROMPT_KEY` 는 프롬프트 조회용으로만 남긴다.
+ */
+export const ACTION_TO_COST_KEY: Record<string, FeatureCostKey | null> = {
+  cheonjiin: 'saju',
+  cheonjiin_report: 'saju',
+  saju_detail: 'saju',
+  compatibility: 'compatibility',
+  business_compatibility: 'compatibility',
+  invite_compatibility: 'compatibility',
+  face_destiny: 'face',
+  palm_destiny: 'palm',
+  fengshui_destiny: 'fengshui',
+  wealth: 'wealth',
+  image_generation: 'imageGeneration',
+  samhap: 'samhap',
+  theme_fortune: 'themeFortune',
+  trend: 'themeFortune',
+  fortune: 'themeFortune',
+  year2026: 'newYear',
+  daily_fortune: 'today',
+  // 사용자 복채 없음(내부)
+  shaman_chat: null,
+  deity_oracle: null,
+  summarizer: null,
+  memory: null,
+  reading_insights: null,
+}
+
+/** 이 호출이 받는 복채(만냥). 내부 기능이면 null. */
+export function bokchaeForAction(actionType: string): number | null {
+  const key = ACTION_TO_COST_KEY[actionType]
+  if (!key) return key === null && actionType in ACTION_TO_COST_KEY ? null : null
+  return FEATURE_COST[key].display
 }
 
 /**

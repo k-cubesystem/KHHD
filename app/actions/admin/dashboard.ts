@@ -164,6 +164,84 @@ export async function getHourlyTraffic(hours: number = 24) {
   return { success: true, data }
 }
 
+/**
+ * 일별 트래픽 — 시간대별과 **같은 원천**(activity_logs · payments)을 하루 단위로 묶는다.
+ *
+ * 🔴 두 화면이 서로 다른 표를 읽으면 「어제 방문수」가 두 값으로 갈린다.
+ *    집계 단위만 다르고 원천은 하나여야 한다.
+ * 🔴 날짜 경계는 **KST** 다. UTC 로 자르면 0~9시 방문이 전날로 밀린다
+ *    (출석 도장이 정확히 그렇게 하루 어긋난 전례가 있다).
+ */
+export async function getDailyTraffic(days: number = 30) {
+  if (!(await checkAdminPermission())) {
+    return { success: false, error: '권한 없음' }
+  }
+
+  const supabase = createAdminClient()
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+  /** KST 기준 YYYY-MM-DD. */
+  const kstDay = (iso: string): string => {
+    const d = new Date(iso)
+    return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  }
+
+  type DayBucket = {
+    day: string
+    total_visits: number
+    new_signups: number
+    unique_user_ids: string[]
+    total_revenue: number
+  }
+  const buckets: Record<string, DayBucket> = {}
+  for (let i = days; i >= 0; i--) {
+    const key = kstDay(new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString())
+    buckets[key] = { day: key, total_visits: 0, new_signups: 0, unique_user_ids: [], total_revenue: 0 }
+  }
+
+  const { data: activities, error: actErr } = await supabase
+    .from('activity_logs')
+    .select('created_at, user_id, activity_type')
+    .gte('created_at', since)
+
+  if (actErr) {
+    logger.error('[getDailyTraffic] activity_logs error:', actErr)
+    return { success: false, error: actErr.message }
+  }
+
+  for (const a of activities ?? []) {
+    const key = kstDay(a.created_at)
+    if (!buckets[key]) continue
+    buckets[key].total_visits++
+    if (a.user_id) buckets[key].unique_user_ids.push(a.user_id)
+    if (a.activity_type === 'signup') buckets[key].new_signups++
+  }
+
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('created_at, amount, cancelled_amount')
+    .eq('status', 'completed')
+    .gte('created_at', since)
+
+  for (const p of payments ?? []) {
+    const key = kstDay(p.created_at)
+    if (!buckets[key]) continue
+    buckets[key].total_revenue += netRevenue(p)
+  }
+
+  const data = Object.values(buckets)
+    .sort((a, b) => a.day.localeCompare(b.day))
+    .map((b) => ({
+      day: b.day,
+      total_visits: b.total_visits,
+      unique_users: new Set(b.unique_user_ids).size,
+      new_signups: b.new_signups,
+      total_revenue: b.total_revenue,
+    }))
+
+  return { success: true, data }
+}
+
 // 5. 리텐션 코호트 분석 (D1/D7/D30)
 export async function getRetentionCohort(days: number = 30) {
   if (!(await checkAdminPermission())) {

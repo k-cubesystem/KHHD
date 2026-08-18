@@ -72,32 +72,34 @@ export default async function AdminAuditPage() {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-black text-stone-100 font-serif flex items-center gap-2">
+        <h1 className="text-xl md:text-2xl font-black text-ink-primary font-serif flex items-center gap-2">
           <ShieldAlert className="w-5 h-5 text-gold-500" /> 감사 로그
         </h1>
-        <p className="text-xs md:text-sm text-stone-500">
+        <p className="text-xs md:text-sm text-ink-primary/40">
           관리자 조작 기록 — 복채·권한·구독·가격·알림 발송·서비스 스위치. 최근 100건.
         </p>
       </div>
 
-      <Card className="relative p-0 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">
+      <Card className="relative p-0 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
         {rows.length === 0 ? (
-          <p className="text-center py-12 text-sm text-stone-500">기록이 없습니다.</p>
+          <p className="text-center py-12 text-sm text-ink-primary/40">기록이 없습니다.</p>
         ) : (
-          <div className="divide-y divide-stone-700/30">
+          <div className="divide-y divide-white/30">
             {rows.map((r) => {
               // 🔴 라벨은 lib/admin/audit-labels.ts 단일 출처 — 화면에서 다시 만들면 즉시 뒤처진다.
               const meta = describeAuditAction(r.action)
               return (
-                <div key={r.id} className="p-3 md:p-4 flex items-start gap-3 hover:bg-stone-800/20 transition-colors">
+                <div key={r.id} className="p-3 md:p-4 flex items-start gap-3 hover:bg-surface/20 transition-colors">
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border font-bold whitespace-nowrap mt-0.5 ${meta.cls}`}
                   >
                     {meta.label}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs md:text-sm text-stone-200 break-words">{summarize(r.action, r.detail)}</p>
-                    <p className="text-[10px] text-stone-500 mt-0.5">
+                    <p className="text-xs md:text-sm text-ink-primary/85 break-words">
+                      {summarize(r.action, r.detail)}
+                    </p>
+                    <p className="text-[10px] text-ink-primary/40 mt-0.5">
                       {r.actor_email ?? '알 수 없는 관리자'}
                       {r.target_user ? ` · 대상 ${r.target_user.slice(0, 8)}…` : ''} ·{' '}
                       {new Date(r.created_at).toLocaleString('ko-KR')}

@@ -111,10 +111,10 @@ export function UserManagementClient() {
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row justify-between gap-3 md:gap-4">
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-primary/40" />
           <Input
             placeholder="이메일 또는 이름 검색..."
-            className="pl-10 h-9 md:h-10 bg-stone-900/50 border-stone-700/50 text-stone-200 placeholder:text-stone-600 focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20 transition-all font-sans text-sm"
+            className="pl-10 h-9 md:h-10 bg-surface/50 border-white/50 text-ink-primary/85 placeholder:text-ink-primary/30 focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20 transition-all font-sans text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -128,7 +128,7 @@ export function UserManagementClient() {
             onClick={fetchUsers}
             disabled={loading}
             title="새로고침"
-            className="h-9 w-9 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30"
+            className="h-9 w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -137,11 +137,11 @@ export function UserManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
-            className="h-9 w-9 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-9 w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <span className="text-xs md:text-sm font-medium text-stone-400 px-2 font-mono">
+          <span className="text-xs md:text-sm font-medium text-ink-primary/55 px-2 font-mono">
             {page} / {totalPages || 1}
           </span>
           <Button
@@ -149,7 +149,7 @@ export function UserManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages || loading}
-            className="h-9 w-9 bg-stone-900/50 border-stone-700/50 text-stone-400 hover:bg-stone-800 hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-9 w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -157,42 +157,42 @@ export function UserManagementClient() {
       </div>
 
       {/* Desktop Table - hidden on mobile */}
-      <div className="hidden md:block rounded-xl border border-stone-800 bg-stone-950/50 overflow-hidden shadow-sm backdrop-blur-sm">
+      <div className="hidden md:block rounded-xl border border-white/[0.06] bg-background/50 overflow-hidden shadow-sm backdrop-blur-sm">
         <Table>
-          <TableHeader className="bg-stone-900/80 border-b border-stone-800">
-            <TableRow className="border-stone-800 hover:bg-stone-900/50">
-              <TableHead className="text-stone-400 font-serif font-medium">사용자</TableHead>
-              <TableHead className="text-stone-400 font-serif font-medium">이메일</TableHead>
-              <TableHead className="text-stone-400 font-serif font-medium">가입일</TableHead>
-              <TableHead className="text-stone-400 font-serif font-medium">권한(Role)</TableHead>
-              <TableHead className="text-right text-stone-400 font-serif font-medium">관리</TableHead>
+          <TableHeader className="bg-surface/80 border-b border-white/[0.06]">
+            <TableRow className="border-white/[0.06] hover:bg-surface/50">
+              <TableHead className="text-ink-primary/55 font-serif font-medium">사용자</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif font-medium">이메일</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif font-medium">가입일</TableHead>
+              <TableHead className="text-ink-primary/55 font-serif font-medium">권한(Role)</TableHead>
+              <TableHead className="text-right text-ink-primary/55 font-serif font-medium">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               // Skeleton Loading
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-stone-800/50">
+                <TableRow key={i} className="border-white/50">
                   <TableCell>
-                    <div className="h-4 w-24 bg-stone-800 rounded animate-pulse" />
+                    <div className="h-4 w-24 bg-surface rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-4 w-32 bg-stone-800 rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-surface rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-4 w-20 bg-stone-800 rounded animate-pulse" />
+                    <div className="h-4 w-20 bg-surface rounded animate-pulse" />
                   </TableCell>
                   <TableCell>
-                    <div className="h-8 w-24 bg-stone-800 rounded animate-pulse" />
+                    <div className="h-8 w-24 bg-surface rounded animate-pulse" />
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="h-8 w-8 bg-stone-800 rounded-full animate-pulse ml-auto" />
+                    <div className="h-8 w-8 bg-surface rounded-full animate-pulse ml-auto" />
                   </TableCell>
                 </TableRow>
               ))
             ) : users.length === 0 ? (
-              <TableRow className="border-stone-800">
-                <TableCell colSpan={5} className="h-40 text-center text-stone-500">
+              <TableRow className="border-white/[0.06]">
+                <TableCell colSpan={5} className="h-40 text-center text-ink-primary/40">
                   검색 결과가 없습니다.
                 </TableCell>
               </TableRow>
@@ -204,18 +204,18 @@ export function UserManagementClient() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="border-stone-800/50 hover:bg-stone-900/40 transition-colors group"
+                    className="border-white/50 hover:bg-surface/40 transition-colors group"
                   >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-stone-800 border border-stone-700 flex items-center justify-center text-xs font-bold text-stone-300">
+                        <div className="w-8 h-8 rounded-full bg-surface border border-white/[0.08] flex items-center justify-center text-xs font-bold text-ink-primary/70">
                           {user.full_name?.charAt(0) || user.email?.charAt(0) || '?'}
                         </div>
-                        <span className="text-stone-200">{user.full_name || '-'}</span>
+                        <span className="text-ink-primary/85">{user.full_name || '-'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-stone-400 font-sans text-sm">{user.email || '-'}</TableCell>
-                    <TableCell className="text-stone-500 text-xs font-sans font-mono animate-in fade-in">
+                    <TableCell className="text-ink-primary/55 font-sans text-sm">{user.email || '-'}</TableCell>
+                    <TableCell className="text-ink-primary/40 text-xs font-sans font-mono animate-in fade-in">
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
@@ -232,24 +232,24 @@ export function UserManagementClient() {
                                 ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/20'
                                 : user.role === 'tester'
                                   ? 'bg-yellow-500/10 text-yellow-400 ring-1 ring-yellow-500/20 hover:bg-yellow-500/20'
-                                  : 'bg-stone-800 text-stone-400 ring-1 ring-stone-700 hover:bg-stone-700 hover:text-stone-300'
+                                  : 'bg-surface text-ink-primary/55 ring-1 ring-white/[0.08] hover:bg-white/[0.06] hover:text-ink-primary/70'
                           )}
                         >
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-stone-950 border-stone-800">
+                        <SelectContent className="bg-background border-white/[0.06]">
                           <SelectItem
                             value="user"
-                            className="text-stone-300 hover:bg-stone-900 focus:bg-stone-900 focus:text-stone-200"
+                            className="text-ink-primary/70 hover:bg-surface focus:bg-surface focus:text-ink-primary/85"
                           >
                             USER
                           </SelectItem>
-                          <SelectItem value="tester" className="text-yellow-400 hover:bg-stone-900 focus:bg-stone-900">
+                          <SelectItem value="tester" className="text-yellow-400 hover:bg-surface focus:bg-surface">
                             TESTER
                           </SelectItem>
                           <SelectItem
                             value="admin"
-                            className="text-red-400 font-bold hover:bg-stone-900 focus:bg-stone-900"
+                            className="text-red-400 font-bold hover:bg-surface focus:bg-surface"
                           >
                             ADMIN
                           </SelectItem>
@@ -278,7 +278,7 @@ export function UserManagementClient() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-stone-500 hover:text-gold-400 hover:bg-stone-800 rounded-full transition-colors"
+                            className="h-8 w-8 text-ink-primary/40 hover:text-gold-400 hover:bg-surface rounded-full transition-colors"
                           >
                             <UserCog className="w-4 h-4" />
                           </Button>
@@ -286,7 +286,7 @@ export function UserManagementClient() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-stone-500 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors"
+                          className="h-8 w-8 text-ink-primary/40 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors"
                           onClick={() => handleDelete(user.id)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -306,16 +306,16 @@ export function UserManagementClient() {
         {loading ? (
           // Skeleton Loading
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="p-4 bg-stone-900/30 rounded-xl border border-stone-700/30">
-              <div className="h-4 w-32 bg-stone-800/50 rounded animate-pulse mb-3" />
-              <div className="h-3 w-48 bg-stone-800/50 rounded animate-pulse mb-2" />
-              <div className="h-8 w-24 bg-stone-800/50 rounded animate-pulse" />
+            <div key={i} className="p-4 bg-surface/30 rounded-xl border border-white/30">
+              <div className="h-4 w-32 bg-surface/50 rounded animate-pulse mb-3" />
+              <div className="h-3 w-48 bg-surface/50 rounded animate-pulse mb-2" />
+              <div className="h-8 w-24 bg-surface/50 rounded animate-pulse" />
             </div>
           ))
         ) : users.length === 0 ? (
-          <div className="p-8 text-center bg-stone-900/30 rounded-xl border border-stone-700/30">
-            <Users className="w-12 h-12 mx-auto mb-3 text-stone-700" />
-            <p className="text-sm text-stone-500">검색 결과가 없습니다.</p>
+          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/30">
+            <Users className="w-12 h-12 mx-auto mb-3 text-ink-primary/20" />
+            <p className="text-sm text-ink-primary/40">검색 결과가 없습니다.</p>
           </div>
         ) : (
           <AnimatePresence>
@@ -325,7 +325,7 @@ export function UserManagementClient() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="relative p-3.5 bg-gradient-to-br from-stone-800/30 to-stone-900/20 rounded-xl border border-stone-700/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
+                className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
               >
                 {/* Noise Overlay */}
                 <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
@@ -335,16 +335,16 @@ export function UserManagementClient() {
                     {user.full_name?.charAt(0) || user.email?.charAt(0) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-stone-200 truncate text-sm">{user.full_name || '-'}</p>
-                    <p className="text-xs text-stone-500 truncate">{user.email || '-'}</p>
-                    <p className="text-[10px] text-stone-600 mt-0.5">
+                    <p className="font-medium text-ink-primary/85 truncate text-sm">{user.full_name || '-'}</p>
+                    <p className="text-xs text-ink-primary/40 truncate">{user.email || '-'}</p>
+                    <p className="text-[10px] text-ink-primary/30 mt-0.5">
                       {new Date(user.created_at).toLocaleDateString('ko-KR')}
                     </p>
                   </div>
                 </div>
 
                 {/* Role & Actions */}
-                <div className="relative flex items-center justify-between gap-2 pt-3 border-t border-stone-700/30">
+                <div className="relative flex items-center justify-between gap-2 pt-3 border-t border-white/30">
                   <Select
                     value={pendingRoles[user.id] ?? user.role}
                     onValueChange={(val) => handleRoleSelect(user.id, val as UserRole)}
@@ -358,19 +358,19 @@ export function UserManagementClient() {
                             ? 'bg-red-500/10 text-red-400 border-red-500/30'
                             : user.role === 'tester'
                               ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                              : 'bg-stone-700/30 text-stone-400 border-stone-600/30'
+                              : 'bg-white/30 text-ink-primary/55 border-white/30'
                       )}
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-stone-900 border-stone-700">
-                      <SelectItem value="user" className="text-stone-300 hover:bg-stone-800">
+                    <SelectContent className="bg-surface border-white/[0.08]">
+                      <SelectItem value="user" className="text-ink-primary/70 hover:bg-surface">
                         USER
                       </SelectItem>
-                      <SelectItem value="tester" className="text-yellow-400 hover:bg-stone-800">
+                      <SelectItem value="tester" className="text-yellow-400 hover:bg-surface">
                         TESTER
                       </SelectItem>
-                      <SelectItem value="admin" className="text-red-400 font-bold hover:bg-stone-800">
+                      <SelectItem value="admin" className="text-red-400 font-bold hover:bg-surface">
                         ADMIN
                       </SelectItem>
                     </SelectContent>
@@ -397,7 +397,7 @@ export function UserManagementClient() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-stone-500 hover:text-gold-400 hover:bg-stone-800/50"
+                        className="h-7 w-7 text-ink-primary/40 hover:text-gold-400 hover:bg-surface/50"
                       >
                         <UserCog className="w-3.5 h-3.5" />
                       </Button>
@@ -405,7 +405,7 @@ export function UserManagementClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-stone-500 hover:text-red-400 hover:bg-red-500/10"
+                      className="h-7 w-7 text-ink-primary/40 hover:text-red-400 hover:bg-red-500/10"
                       onClick={() => handleDelete(user.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
