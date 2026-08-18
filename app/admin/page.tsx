@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/card'
 import { Users, CreditCard, TrendingUp, Activity, Crown, UserPlus } from 'lucide-react'
 import { TrafficChart } from '@/components/admin/traffic-chart'
+import { StatStrip, StatTile } from '@/components/admin/ui/stat-tile'
+import { SupportSummary } from './support/support-summary'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
@@ -92,79 +94,23 @@ interface Payment {
 export default async function AdminDashboardPage() {
   const stats = await getStats()
 
-  const statCards = [
-    {
-      label: '총 회원수',
-      value: stats.totalUsers.toLocaleString(),
-      icon: Users,
-      color: 'text-blue-400',
-      bgGradient: 'from-blue-500/20 to-blue-600/5',
-      iconBg: 'bg-blue-500/10',
-      border: 'border-blue-500/20',
-    },
-    {
-      label: '오늘 가입',
-      value: `+${stats.todaySignups.toLocaleString()}`,
-      icon: UserPlus,
-      color: 'text-sky-400',
-      bgGradient: 'from-sky-500/20 to-sky-600/5',
-      iconBg: 'bg-sky-500/10',
-      border: 'border-sky-500/20',
-    },
-    {
-      label: '총 매출',
-      value: `${stats.totalRevenue.toLocaleString()}원`,
-      icon: TrendingUp,
-      color: 'text-emerald-400',
-      bgGradient: 'from-emerald-500/20 to-emerald-600/5',
-      iconBg: 'bg-emerald-500/10',
-      border: 'border-emerald-500/20',
-    },
-    {
-      label: '오늘 매출',
-      value: `${stats.todayRevenue.toLocaleString()}원`,
-      icon: CreditCard,
-      color: 'text-gold-400',
-      bgGradient: 'from-gold-500/20 to-gold-600/5',
-      iconBg: 'bg-gold-500/10',
-      border: 'border-gold-500/20',
-    },
-    {
-      label: '이번 달 매출',
-      value: `${stats.monthRevenue.toLocaleString()}원`,
-      icon: TrendingUp,
-      color: 'text-teal-400',
-      bgGradient: 'from-teal-500/20 to-teal-600/5',
-      iconBg: 'bg-teal-500/10',
-      border: 'border-teal-500/20',
-    },
-    {
-      label: '활성 구독',
-      value: stats.activeSubscriptions.toLocaleString(),
-      icon: Crown,
-      color: 'text-pink-400',
-      bgGradient: 'from-pink-500/20 to-pink-600/5',
-      iconBg: 'bg-pink-500/10',
-      border: 'border-pink-500/20',
-    },
-    {
-      label: 'MRR (월 반복매출)',
-      value: `${stats.mrr.toLocaleString()}원`,
-      icon: TrendingUp,
-      color: 'text-amber-400',
-      bgGradient: 'from-amber-500/20 to-amber-600/5',
-      iconBg: 'bg-amber-500/10',
-      border: 'border-amber-500/20',
-    },
-    {
-      label: '총 분석 횟수',
-      value: stats.totalAnalyses.toLocaleString(),
-      icon: Activity,
-      color: 'text-purple-400',
-      bgGradient: 'from-purple-500/20 to-purple-600/5',
-      iconBg: 'bg-purple-500/10',
-      border: 'border-purple-500/20',
-    },
+  // 🔴 색색깔 그라디언트 카드 8개를 없앴다. 숫자를 비교하려고 눈이 왔다 갔다 하던 화면이라
+  //    같은 결의 «띠»로 붙인다(components/admin/ui/stat-tile.tsx).
+  const tiles: Array<{
+    label: string
+    value: number
+    unit?: string
+    tone?: 'default' | 'accent' | 'warn'
+    hint?: string
+  }> = [
+    { label: '총 회원', value: stats.totalUsers, unit: '명' },
+    { label: '오늘 가입', value: stats.todaySignups, unit: '명', tone: stats.todaySignups > 0 ? 'accent' : 'default' },
+    { label: '총 매출', value: stats.totalRevenue, unit: '원' },
+    { label: '이번 달 매출', value: stats.monthRevenue, unit: '원' },
+    { label: '오늘 매출', value: stats.todayRevenue, unit: '원' },
+    { label: '활성 구독', value: stats.activeSubscriptions, unit: '건' },
+    { label: 'MRR', value: stats.mrr, unit: '원', hint: '월 반복 매출' },
+    { label: '누적 분석', value: stats.totalAnalyses, unit: '건' },
   ]
 
   return (
@@ -176,34 +122,14 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Stats Grid - 모바일 2칸 / 데스크톱 4칸 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-4">
-        {statCards.map((stat) => (
-          <Card
-            key={stat.label}
-            className={`relative p-3.5 md:p-5 bg-gradient-to-br ${stat.bgGradient} border ${stat.border} hover:shadow-lg hover:shadow-${stat.color}/10 transition-all duration-300 overflow-hidden group`}
-          >
-            {/* Noise Overlay */}
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-
-            <div className="relative flex flex-col gap-2.5 md:gap-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] md:text-xs text-stone-400 font-medium tracking-wide">{stat.label}</p>
-                <div
-                  className={`p-1.5 md:p-2 rounded-lg ${stat.iconBg} group-hover:scale-110 transition-transform duration-300`}
-                >
-                  <stat.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${stat.color} drop-shadow-sm`} strokeWidth={2.5} />
-                </div>
-              </div>
-              <p className="text-base md:text-2xl font-black text-stone-100 truncate font-serif tracking-tight">
-                {stat.value}
-              </p>
-            </div>
-
-            {/* Shine Effect */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          </Card>
+      <StatStrip>
+        {tiles.map((t) => (
+          <StatTile key={t.label} label={t.label} value={t.value} unit={t.unit} tone={t.tone} hint={t.hint} />
         ))}
-      </div>
+      </StatStrip>
+
+      {/* 문의 — 매일 보는 화면이라 첫 자리에 둔다 */}
+      <SupportSummary />
 
       {/* Hourly Traffic Chart */}
       <Card className="relative p-4 md:p-6 bg-gradient-to-br from-stone-800/30 to-stone-900/20 border border-stone-700/30 overflow-hidden">

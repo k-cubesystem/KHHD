@@ -27,6 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: '/admin/payments', label: '결제 내역', icon: 'CreditCard' },
     { href: '/admin/subscriptions', label: '구독 관리', icon: 'CreditCard' },
     { href: '/admin/membership/plans', label: '멤버십/스토어', icon: 'Package' },
+    { href: '/admin/support', label: '문의 관리', icon: 'Headphones' },
     // 웹툰
     { type: 'divider' as const, label: '웹툰' },
     { href: '/admin/webtoon', label: '회차 관리', icon: 'BookOpen' },
@@ -41,7 +42,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // 시스템
     { type: 'divider' as const, label: '시스템' },
     { href: '/admin/service-control', label: '서비스 제어', icon: 'Power' },
-    { href: '/admin/monitoring', label: '모니터링', icon: 'Activity' },
     { href: '/admin/gemini-usage', label: 'Gemini 사용량', icon: 'Activity' },
     { href: '/admin/audit', label: '감사 로그', icon: 'Shield' },
   ]

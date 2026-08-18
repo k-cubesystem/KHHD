@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getUnreadReplyCount } from '@/app/actions/support/tickets'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AVATAR_BLUR_DATA_URL } from '@/lib/utils/image'
@@ -111,6 +112,8 @@ const PROFILE_GROUPS: readonly {
 ]
 
 export default async function MyPage() {
+  // 답변 알림은 사이트 안 배지뿐이다(SMTP·VAPID 미설정 — 메일·푸시를 약속하지 않는다).
+  const unreadReplies = await getUnreadReplyCount()
   const supabase = await createClient()
   const {
     data: { user },
@@ -556,7 +559,13 @@ export default async function MyPage() {
                 className="w-[18px] h-[18px] text-ink-light/50 group-hover:text-primary transition-colors"
                 strokeWidth={1}
               />
-              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">고객센터</span>
+              <span className="text-sm text-ink-light/80 group-hover:text-ink-light font-light">문의하기</span>
+              {unreadReplies > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-seal/15 px-2 py-0.5 text-[10px] font-bold text-seal">
+                  <span className="h-1.5 w-1.5 rounded-full bg-seal" aria-hidden />
+                  답변 {unreadReplies}
+                </span>
+              )}
             </div>
             <ChevronLeft className="w-4 h-4 text-ink-light/30 rotate-180 group-hover:text-ink-light transition-colors" />
           </Link>
