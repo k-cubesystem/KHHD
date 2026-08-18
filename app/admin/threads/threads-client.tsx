@@ -15,6 +15,7 @@ import {
   createRound,
   drawNow,
   hideReplyAction,
+  generateReportNow,
   listWinners,
   publishWinnerResult,
   regenerateDraft,
@@ -24,6 +25,7 @@ import {
   setReplyClassification,
   setRoundStatus,
 } from './actions'
+import { deltaPct } from '@/lib/domain/threads/report'
 
 type Status = Awaited<ReturnType<typeof import('./actions').getThreadsStatus>>
 type Rounds = Extract<Awaited<ReturnType<typeof import('./actions').listRounds>>, { success: true }>['items']
@@ -31,6 +33,7 @@ type Queue = Extract<Awaited<ReturnType<typeof import('./actions').listReplyQueu
 type Replies = Extract<Awaited<ReturnType<typeof import('./actions').listRecentReplies>>, { success: true }>['items']
 type Posts = Extract<Awaited<ReturnType<typeof import('./actions').listPosts>>, { success: true }>['items']
 type Winners = Extract<Awaited<ReturnType<typeof listWinners>>, { success: true }>['items']
+type Reports = Extract<Awaited<ReturnType<typeof import('./actions').listReports>>, { success: true }>['items']
 
 const TOPICS = [
   ['saju', '사주 총운'],
@@ -52,12 +55,14 @@ export function ThreadsAdminClient({
   queue,
   replies,
   posts,
+  reports,
 }: {
   status: Status
   rounds: Rounds
   queue: Queue
   replies: Replies
   posts: Posts
+  reports: Reports
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
@@ -116,6 +121,7 @@ export function ThreadsAdminClient({
           <TabsTrigger value="rounds">라운드 ({rounds.length})</TabsTrigger>
           <TabsTrigger value="replies">댓글 ({replies.length})</TabsTrigger>
           <TabsTrigger value="posts">글 ({posts.length})</TabsTrigger>
+          <TabsTrigger value="report">보고</TabsTrigger>
         </TabsList>
 
         {/* 답글 큐 — 반자동 1클릭 */}
@@ -222,6 +228,30 @@ export function ThreadsAdminClient({
               <p className="mt-1 whitespace-pre-wrap text-ink-light/85">{p.body}</p>
               {p.error ? <p className="mt-1 text-red-400">{p.error}</p> : null}
             </div>
+          ))}
+        </TabsContent>
+
+        {/* 주간 보고 — 크론(월 09:00 KST)이 굳힌 행을 그대로 읽는다 */}
+        <TabsContent value="report" className="space-y-4">
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-ink-light/50">
+              월요일 09시에 지난주(월~일)를 자동 집계합니다. 인사이트는 지나면 못 되찾아 매주 굳혀둡니다.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto shrink-0"
+              disabled={busy !== null}
+              onClick={() => run('report', () => generateReportNow(), '지난주 집계 완료')}
+            >
+              {busy === 'report' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : '지금 집계'}
+            </Button>
+          </div>
+          {reports.length === 0 ? (
+            <p className="text-sm text-ink-light/50">아직 보고서가 없어요. 「지금 집계」를 누르면 지난주를 만듭니다.</p>
+          ) : null}
+          {reports.map((rep, i) => (
+            <ReportCard key={rep.id} rep={rep} prev={reports[i + 1] ?? null} />
           ))}
         </TabsContent>
       </Tabs>
@@ -617,6 +647,136 @@ function NewPostForm({
           {f.scheduledAt ? '예약' : '지금 발행'}
         </Button>
       </div>
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────
+// 주간 보고
+// ────────────────────────────────────────────────────────────────
+
+/** 저장된 metrics 는 jsonb 라 «과거 버전 모양»일 수 있다 — 캐스팅 대신 좁게 읽는다. */
+function obj(v: unknown): Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
+}
+function num(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0
+}
+function str(v: unknown): string {
+  return typeof v === 'string' ? v : ''
+}
+function counts(v: unknown): Array<[string, number]> {
+  return Object.entries(obj(v))
+    .map(([k, n]) => [k, num(n)] as [string, number])
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1])
+}
+
+function Delta({ current, previous }: { current: number; previous: number }) {
+  const d = deltaPct(current, previous)
+  if (d === null) return null
+  const up = d >= 0
+  return (
+    <span className={up ? 'text-emerald-400' : 'text-red-400'}>
+      {up ? '▲' : '▼'}
+      {Math.abs(d)}%
+    </span>
+  )
+}
+
+function Stat({ label, value, sub }: { label: string; value: string | number; sub?: React.ReactNode }) {
+  return (
+    <div className="rounded border border-ink-light/10 p-2">
+      <div className="text-[10.5px] text-ink-light/45">{label}</div>
+      <div className="mt-0.5 flex items-baseline gap-1.5 text-[15px] text-ink-light">
+        {value}
+        <span className="text-[10.5px]">{sub}</span>
+      </div>
+    </div>
+  )
+}
+
+function ReportCard({ rep, prev }: { rep: Reports[number]; prev: Reports[number] | null }) {
+  const m = obj(rep.metrics)
+  const p = obj(prev?.metrics)
+  const posts = obj(m.posts)
+  const prevPosts = obj(p.posts)
+  const replies = obj(m.replies)
+  const queue = obj(m.queue)
+  const ev = obj(m.event)
+  const acq = obj(m.acquisition)
+  const token = obj(m.token)
+  const top = obj(posts.top)
+  const lag = queue.medianApprovalMin
+  const daysLeft = token.daysLeft
+
+  return (
+    <div className="rounded border border-ink-light/10 p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-serif text-sm text-ink-light">
+          {rep.period_start} ~ {rep.period_end}
+        </span>
+        {typeof daysLeft === 'number' ? (
+          <span className={daysLeft < 14 ? 'text-red-400' : 'text-ink-light/45'}>토큰 D-{daysLeft}</span>
+        ) : (
+          <span className="text-ink-light/45">토큰 미연결</span>
+        )}
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat
+          label="발행"
+          value={num(posts.published)}
+          sub={<Delta current={num(posts.published)} previous={num(prevPosts.published)} />}
+        />
+        <Stat
+          label="조회"
+          value={num(posts.views)}
+          sub={<Delta current={num(posts.views)} previous={num(prevPosts.views)} />}
+        />
+        <Stat label="좋아요" value={num(posts.likes)} />
+        <Stat label="댓글 수집" value={num(replies.collected)} />
+        <Stat label="신청" value={num(ev.entries)} />
+        <Stat label="당첨·발표" value={`${num(ev.winners)}·${num(ev.resultsPublished)}`} />
+        <Stat label="스레드 유입" value={num(acq.visitors)} />
+        <Stat
+          label="가입"
+          value={num(acq.signups)}
+          sub={num(ev.converted) > 0 ? `당첨자 ${num(ev.converted)}` : undefined}
+        />
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-ink-light/55">
+        <span>
+          답글 발송 {num(queue.sent)} · 대기 {num(queue.pending)}
+          {typeof lag === 'number' ? ` · 승인까지 중앙 ${lag}분` : ''}
+        </span>
+        {counts(replies.byClass).length > 0 ? (
+          <span>
+            분류{' '}
+            {counts(replies.byClass)
+              .map(([k, n]) => `${k} ${n}`)
+              .join(' / ')}
+          </span>
+        ) : null}
+        {counts(acq.byMedium).length > 0 ? (
+          <span>
+            가입 경로{' '}
+            {counts(acq.byMedium)
+              .map(([k, n]) => `${k} ${n}`)
+              .join(' / ')}
+          </span>
+        ) : null}
+        {num(posts.insightsMissing) > 0 ? (
+          <span className="text-amber-400">인사이트 미수집 {num(posts.insightsMissing)}건</span>
+        ) : null}
+      </div>
+
+      {str(top.excerpt) ? (
+        <p className="mt-2 truncate text-[11px] text-ink-light/50">
+          최고 조회 {num(top.views)} — {str(top.excerpt)}
+        </p>
+      ) : null}
     </div>
   )
 }

@@ -1,15 +1,16 @@
-import { getThreadsStatus, listRounds, listReplyQueue, listRecentReplies, listPosts } from './actions'
+import { getThreadsStatus, listRounds, listReplyQueue, listRecentReplies, listPosts, listReports } from './actions'
 import { ThreadsAdminClient } from './threads-client'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AdminThreadsPage() {
-  const [status, rounds, queue, replies, posts] = await Promise.all([
+  const [status, rounds, queue, replies, posts, reports] = await Promise.all([
     getThreadsStatus(),
     listRounds(),
     listReplyQueue(),
     listRecentReplies(60),
     listPosts(30),
+    listReports(8),
   ])
   return (
     <div className="px-3 py-4 sm:p-6 max-w-5xl">
@@ -24,6 +25,7 @@ export default async function AdminThreadsPage() {
         queue={queue.success ? queue.items : []}
         replies={replies.success ? replies.items : []}
         posts={posts.success ? posts.items : []}
+        reports={reports.success ? reports.items : []}
       />
     </div>
   )
