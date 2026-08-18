@@ -30,7 +30,7 @@ export function AnimatedCard({ children, className, index = 0 }: AnimatedCardPro
     >
       <Card
         className={cn(
-          'relative overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors cursor-pointer group',
+          'relative overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/[0.07] transition-colors cursor-pointer group',
           className
         )}
       >

@@ -1,7 +1,7 @@
 import { GeminiUsageDashboard } from '@/components/admin/gemini-usage-dashboard'
 import { GeminiUserUsage } from '@/components/admin/gemini-user-usage'
 import {
-  getGeminiTodaySummary,
+  getGeminiRangeSummary,
   getGeminiDailyStats,
   getGeminiActionStats,
   getGeminiRecentLogs,
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function GeminiUsagePage() {
   const [summary, dailyStats, actionStats, logs, rpmConfig, costVsPrice, usdKrwRate] = await Promise.all([
-    getGeminiTodaySummary(),
+    getGeminiRangeSummary(30),
     getGeminiDailyStats(30),
     getGeminiActionStats(30),
     getGeminiRecentLogs(50),

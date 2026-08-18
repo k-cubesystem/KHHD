@@ -132,7 +132,7 @@ export default async function AdminDashboardPage() {
       <SupportSummary />
 
       {/* Hourly Traffic Chart */}
-      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
         <h2 className="relative text-base md:text-lg font-bold mb-3 md:mb-4 text-ink-primary font-serif flex items-center gap-2">
           <Activity className="w-4 h-4 md:w-5 md:h-5 text-gold-500" />
@@ -144,7 +144,7 @@ export default async function AdminDashboardPage() {
       </Card>
 
       {/* Recent Payments */}
-      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+      <Card className="relative p-4 md:p-6 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
         {/* Noise Overlay */}
         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
@@ -166,7 +166,7 @@ export default async function AdminDashboardPage() {
               return (
                 <div
                   key={payment.id}
-                  className="flex items-start md:items-center justify-between py-3 md:py-3.5 border-b border-white/30 last:border-0 gap-2 group hover:bg-surface/20 -mx-4 md:-mx-6 px-4 md:px-6 transition-colors"
+                  className="flex items-start md:items-center justify-between py-3 md:py-3.5 border-b border-white/[0.08] last:border-0 gap-2 group hover:bg-surface/20 -mx-4 md:-mx-6 px-4 md:px-6 transition-colors"
                 >
                   <div className="flex items-center gap-2.5 md:gap-3 flex-1 min-w-0">
                     {/* Avatar */}

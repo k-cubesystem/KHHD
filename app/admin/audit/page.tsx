@@ -80,11 +80,11 @@ export default async function AdminAuditPage() {
         </p>
       </div>
 
-      <Card className="relative p-0 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+      <Card className="relative p-0 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
         {rows.length === 0 ? (
           <p className="text-center py-12 text-sm text-ink-primary/40">기록이 없습니다.</p>
         ) : (
-          <div className="divide-y divide-white/30">
+          <div className="divide-y divide-white/[0.06]">
             {rows.map((r) => {
               // 🔴 라벨은 lib/admin/audit-labels.ts 단일 출처 — 화면에서 다시 만들면 즉시 뒤처진다.
               const meta = describeAuditAction(r.action)

@@ -409,7 +409,7 @@ export function WebtoonEpisodesClient({ initialEpisodes }: { initialEpisodes: Ad
                   className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
                     row.access === 'membership'
                       ? 'border-gold-500/40 text-gold-300 bg-gold-500/[0.08]'
-                      : 'border-white/15 text-ink-light/40'
+                      : 'border-white/[0.06] text-ink-light/40'
                   }`}
                 >
                   {row.access === 'membership' ? '멤버십' : '무료'}
@@ -418,7 +418,7 @@ export function WebtoonEpisodesClient({ initialEpisodes }: { initialEpisodes: Ad
                   className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
                     row.publishedAt
                       ? 'border-emerald-500/40 text-emerald-300 bg-emerald-900/20'
-                      : 'border-white/15 text-ink-light/40'
+                      : 'border-white/[0.06] text-ink-light/40'
                   }`}
                 >
                   {row.publishedAt ? '공개' : '초안'}

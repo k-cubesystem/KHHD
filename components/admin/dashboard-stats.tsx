@@ -37,13 +37,13 @@ export function DashboardStats({ cards }: DashboardStatsProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08, duration: 0.3 }}
           >
-            <Card className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 hover:border-gold-500/30 transition-all overflow-hidden group">
+            <Card className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] hover:border-gold-500/30 transition-all overflow-hidden group">
               <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
 
               <div className="relative">
                 <div className="flex items-center justify-between mb-3">
-                  <div className={cn('p-1.5 rounded-lg bg-surface/50 border border-white/40', card.color)}>
+                  <div className={cn('p-1.5 rounded-lg bg-surface/50 border border-white/[0.10]', card.color)}>
                     <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
                   </div>
                   <TrendingUp className="w-3 h-3 text-ink-primary/30 group-hover:text-gold-400 transition-colors" />

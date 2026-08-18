@@ -48,7 +48,7 @@ function when(iso: string): string {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="border border-white/40 bg-surface/40 p-4">
+    <div className="border border-white/[0.10] bg-surface/40 p-4">
       <p className="text-[11px] uppercase tracking-widest text-ink-primary/40 mb-1.5">{label}</p>
       <p className="text-xl text-ink-primary font-medium tabular-nums">{value}</p>
       {hint && <p className="text-[11px] text-ink-primary/40 mt-1">{hint}</p>}
@@ -122,10 +122,10 @@ export async function CancelLossSummary() {
         <Stat label="상한 소진 계정" value={`${exhausted}명`} />
       </div>
 
-      <div className="border border-white/40">
+      <div className="border border-white/[0.10]">
         <Table>
           <TableHeader>
-            <TableRow className="border-white/30 hover:bg-transparent">
+            <TableRow className="border-white/[0.08] hover:bg-transparent">
               <TableHead className="text-ink-primary/40 text-xs">일시</TableHead>
               <TableHead className="text-ink-primary/40 text-xs">회원</TableHead>
               <TableHead className="text-ink-primary/40 text-xs">손실</TableHead>
@@ -138,7 +138,7 @@ export async function CancelLossSummary() {
               const owner = profiles.get(row.user_id)
               const blocked = (row.toss_error_code ?? '').startsWith('LOSS_CAP_')
               return (
-                <TableRow key={row.id} className="border-white/30 hover:bg-surface/30">
+                <TableRow key={row.id} className="border-white/[0.08] hover:bg-surface/30">
                   <TableCell className="text-xs text-ink-primary/40">{when(row.created_at)}</TableCell>
                   <TableCell>
                     <span className="block text-sm text-ink-primary/85">{owner?.full_name || 'Unknown'}</span>
@@ -161,7 +161,7 @@ export async function CancelLossSummary() {
                         손실 확정
                       </Badge>
                     ) : (
-                      <Badge variant="secondary" className="bg-white/30 text-ink-primary/55 border border-white/30">
+                      <Badge variant="secondary" className="bg-white/30 text-ink-primary/55 border border-white/[0.08]">
                         {row.status}
                       </Badge>
                     )}

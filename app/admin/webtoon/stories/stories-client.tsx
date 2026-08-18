@@ -18,10 +18,10 @@ import { setCommentHidden, updateStory, type AdminCommentRow, type AdminStoryRow
 const STATUS_ORDER: readonly StoryStatus[] = ['received', 'reviewing', 'selected', 'declined']
 
 const STATUS_TONE: Readonly<Record<StoryStatus, string>> = {
-  received: 'border-white/15 text-ink-light/45',
+  received: 'border-white/[0.06] text-ink-light/45',
   reviewing: 'border-sky-500/40 text-sky-300 bg-sky-900/20',
   selected: 'border-emerald-500/40 text-emerald-300 bg-emerald-900/20',
-  declined: 'border-white/15 text-ink-light/35',
+  declined: 'border-white/[0.06] text-ink-light/35',
 }
 
 export function WebtoonStoriesClient({

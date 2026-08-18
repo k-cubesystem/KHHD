@@ -184,7 +184,7 @@ export function UserDetailClient({
       return <Badge className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20">ADMIN</Badge>
     if (role === 'tester')
       return <Badge className="text-[9px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">TESTER</Badge>
-    return <Badge className="text-[9px] bg-white/30 text-ink-primary/40 border border-white/30">USER</Badge>
+    return <Badge className="text-[9px] bg-white/30 text-ink-primary/40 border border-white/[0.08]">USER</Badge>
   }
 
   return (
@@ -196,7 +196,7 @@ export function UserDetailClient({
             variant="outline"
             size="icon"
             onClick={() => router.back()}
-            className="h-8 w-8 border-white/50 text-ink-primary/55 hover:text-gold-400 hover:border-gold-500/30 hover:bg-surface/50"
+            className="h-8 w-8 border-white/[0.12] text-ink-primary/55 hover:text-gold-400 hover:border-gold-500/30 hover:bg-surface/50"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
           </Button>
@@ -219,7 +219,7 @@ export function UserDetailClient({
 
       {/* Tabs */}
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="w-full justify-start bg-surface/50 border border-white/30 p-1 h-auto gap-1 rounded-lg overflow-x-auto no-scrollbar">
+        <TabsList className="w-full justify-start bg-surface/50 border border-white/[0.08] p-1 h-auto gap-1 rounded-lg overflow-x-auto no-scrollbar">
           <TabsTrigger
             value="profile"
             className="text-xs text-ink-primary/40 data-[state=active]:bg-gradient-to-r data-[state=active]:from-gold-500 data-[state=active]:to-gold-600 data-[state=active]:text-ink-950 data-[state=active]:shadow-lg px-3 py-1.5 whitespace-nowrap"
@@ -266,7 +266,7 @@ export function UserDetailClient({
 
         {/* 1. Profile Tab */}
         <TabsContent value="profile" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative space-y-3">
               <h3 className="text-sm font-serif font-bold text-ink-primary">계정 정보</h3>
@@ -276,7 +276,7 @@ export function UserDetailClient({
                   <Input
                     value={user.id}
                     readOnly
-                    className="h-7 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/55"
+                    className="h-7 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/55"
                   />
                 </div>
                 <div className="space-y-1">
@@ -284,7 +284,7 @@ export function UserDetailClient({
                   <Input
                     value={user.email || ''}
                     readOnly
-                    className="h-7 text-xs bg-surface/50 border-white/50 text-ink-primary/70"
+                    className="h-7 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/70"
                   />
                 </div>
                 <div className="space-y-1">
@@ -292,7 +292,7 @@ export function UserDetailClient({
                   <Input
                     value={user.full_name || ''}
                     readOnly
-                    className="h-7 text-xs bg-surface/50 border-white/50 text-ink-primary/70"
+                    className="h-7 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/70"
                   />
                 </div>
                 <div className="space-y-1">
@@ -306,13 +306,13 @@ export function UserDetailClient({
                           : '-'
                     }
                     readOnly
-                    className="h-7 text-xs bg-surface/50 border-white/50 text-ink-primary/55"
+                    className="h-7 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/55"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] text-gold-400 font-bold">권한 (Role)</Label>
                   <Select value={role} onValueChange={(v) => handleRoleChange(v as UserRole)}>
-                    <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
+                    <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-surface border-white/[0.08]">
@@ -338,7 +338,7 @@ export function UserDetailClient({
 
         {/* 2. Wallet & Membership Tab */}
         <TabsContent value="wallet" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative space-y-6">
               {/* Talisman Wallet */}
@@ -350,7 +350,7 @@ export function UserDetailClient({
                   </h3>
                 </div>
 
-                <div className="p-4 bg-surface/30 rounded-lg border border-white/30 space-y-3">
+                <div className="p-4 bg-surface/30 rounded-lg border border-white/[0.08] space-y-3">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
                       <Coins className="w-6 h-6 text-gold-400" />
@@ -364,7 +364,7 @@ export function UserDetailClient({
                   </div>
 
                   {isEditingBalance ? (
-                    <div className="space-y-2 pt-2 border-t border-white/30">
+                    <div className="space-y-2 pt-2 border-t border-white/[0.08]">
                       <div className="space-y-1">
                         <Label className="text-[10px] text-ink-primary/40">증감액 (양수=지급, 음수=차감)</Label>
                         <div className="flex items-center gap-1.5">
@@ -436,7 +436,7 @@ export function UserDetailClient({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 text-xs border-white/50 text-ink-primary/70 hover:text-gold-400 hover:border-gold-500/30"
+                      className="h-7 text-xs border-white/[0.12] text-ink-primary/70 hover:text-gold-400 hover:border-gold-500/30"
                       onClick={() => setIsEditingBalance(true)}
                     >
                       <Edit className="w-3.5 h-3.5 mr-1.5" /> 복채 조정
@@ -446,7 +446,7 @@ export function UserDetailClient({
               </div>
 
               {/* Membership Tier */}
-              <div className="space-y-3 pt-4 border-t border-white/30">
+              <div className="space-y-3 pt-4 border-t border-white/[0.08]">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-serif font-bold text-ink-primary flex items-center gap-2">
                     <Crown className="w-4 h-4 text-gold-400" />
@@ -464,7 +464,7 @@ export function UserDetailClient({
                   )}
                 </div>
 
-                <div className="p-4 bg-surface/30 rounded-lg border border-white/30">
+                <div className="p-4 bg-surface/30 rounded-lg border border-white/[0.08]">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
                       <Crown className="w-6 h-6 text-purple-400" />
@@ -521,7 +521,7 @@ export function UserDetailClient({
 
         {/* 3. Saju Records Tab */}
         <TabsContent value="saju" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-ink-primary mb-3">저장된 사주 풀이</h3>
@@ -532,7 +532,7 @@ export function UserDetailClient({
                   {sajuRecords.map((record) => (
                     <div
                       key={record.id}
-                      className="flex items-center justify-between p-3 bg-surface/30 rounded-lg border border-white/30 hover:border-gold-500/20 transition-colors"
+                      className="flex items-center justify-between p-3 bg-surface/30 rounded-lg border border-white/[0.08] hover:border-gold-500/20 transition-colors"
                     >
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
@@ -564,7 +564,7 @@ export function UserDetailClient({
 
         {/* 4. Family Tab */}
         <TabsContent value="family" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-ink-primary mb-3">가족 관계</h3>
@@ -575,9 +575,9 @@ export function UserDetailClient({
                   {familyMembers.map((member) => (
                     <div
                       key={member.id}
-                      className="flex items-center gap-3 p-3 bg-surface/30 rounded-lg border border-white/30"
+                      className="flex items-center gap-3 p-3 bg-surface/30 rounded-lg border border-white/[0.08]"
                     >
-                      <div className="w-8 h-8 rounded-full bg-surface/50 border border-white/30 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-surface/50 border border-white/[0.08] flex items-center justify-center flex-shrink-0">
                         <Users className="w-3.5 h-3.5 text-ink-primary/55" />
                       </div>
                       <div>
@@ -597,7 +597,7 @@ export function UserDetailClient({
 
         {/* 5. Payments Tab */}
         <TabsContent value="payments" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-ink-primary mb-3">결제 내역</h3>
@@ -610,7 +610,7 @@ export function UserDetailClient({
                     return (
                       <div
                         key={payment.id}
-                        className="flex items-center justify-between p-3 border-b border-white/30 last:border-0"
+                        className="flex items-center justify-between p-3 border-b border-white/[0.08] last:border-0"
                       >
                         <div>
                           <p
@@ -640,7 +640,7 @@ export function UserDetailClient({
                                   ? 'text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/30'
                                   : payment.status === 'completed'
                                     ? 'text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                    : 'text-[9px] bg-white/30 text-ink-primary/40 border border-white/30'
+                                    : 'text-[9px] bg-white/30 text-ink-primary/40 border border-white/[0.08]'
                             }
                           >
                             {settlement.kind === 'full'
@@ -669,7 +669,7 @@ export function UserDetailClient({
 
         {/* 6. 복채 트랜잭션 이력 — 잔액이 왜 이렇게 됐는지 추적 (CS 대응) */}
         <TabsContent value="transactions" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-ink-primary mb-1 flex items-center gap-2">
@@ -682,7 +682,7 @@ export function UserDetailClient({
               {transactions.length === 0 ? (
                 <div className="text-center py-8 text-ink-primary/40 text-sm">복채 내역이 없습니다.</div>
               ) : (
-                <div className="divide-y divide-white/30">
+                <div className="divide-y divide-white/[0.06]">
                   {transactions.map((tx) => {
                     const plus = tx.amount > 0
                     return (
@@ -712,7 +712,7 @@ export function UserDetailClient({
 
         {/* 7. 신당 현황 — 본인 + 가족별 (主神·테마·배치) */}
         <TabsContent value="shrines" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden">
+          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
             <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
             <div className="relative">
               <h3 className="text-sm font-serif font-bold text-ink-primary mb-3 flex items-center gap-2">
@@ -724,7 +724,7 @@ export function UserDetailClient({
               ) : (
                 <div className="space-y-2">
                   {shrines.map((s) => (
-                    <div key={s.id} className="p-3 bg-surface/30 rounded-lg border border-white/30">
+                    <div key={s.id} className="p-3 bg-surface/30 rounded-lg border border-white/[0.08]">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium text-ink-primary/85">{s.name}</p>
                         <Badge

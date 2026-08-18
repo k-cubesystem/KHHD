@@ -109,7 +109,7 @@ export default function ServiceControlPage() {
                 'relative border overflow-hidden group',
                 isMaintenance
                   ? 'border-red-500/30 bg-gradient-to-br from-red-900/20 to-red-950/10'
-                  : 'border-white/30 bg-gradient-to-br from-surface/30 to-surface/20'
+                  : 'border-white/[0.08] bg-gradient-to-br from-surface/30 to-surface/20'
               )}
             >
               {/* Noise Overlay */}
@@ -162,7 +162,7 @@ export default function ServiceControlPage() {
         })}
       </div>
 
-      <div className="p-3 md:p-4 bg-surface/50 rounded-lg border border-white/30 text-center">
+      <div className="p-3 md:p-4 bg-surface/50 rounded-lg border border-white/[0.08] text-center">
         <p className="text-[10px] md:text-xs text-ink-primary/40 flex items-center justify-center gap-1.5">
           <Power className="w-3 h-3 text-gold-500" />
           변경 사항은 모든 사용자에게 즉시 반영됩니다.

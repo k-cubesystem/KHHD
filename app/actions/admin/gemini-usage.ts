@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { bokchaeForAction, getActionLabel } from '@/lib/domain/gemini/actions'
+import { USAGE_RANGE_LABEL, isUsageRange, type UsageRange } from '@/lib/domain/gemini/usage-range'
 import { KRW_PER_TALISMAN } from '@/lib/constants'
 
 export interface GeminiDailyStat {
@@ -294,4 +295,80 @@ export async function getGeminiUserUsage(daysBack: number = 30, limit: number = 
     })
     .sort((a, b) => b.cost_krw - a.cost_krw || b.calls - a.calls)
     .slice(0, limit)
+}
+
+export interface GeminiRangeSummary {
+  range_days: number
+  range_label: string
+  total_calls: number
+  success_calls: number
+  error_calls: number
+  cached_calls: number
+  input_tokens: number
+  output_tokens: number
+  total_tokens: number
+  total_cost_usd: number
+  total_cost_krw: number
+}
+
+/** KST 기준 오늘 0시(UTC ISO). */
+function kstMidnightIso(): string {
+  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  nowKst.setUTCHours(0, 0, 0, 0)
+  return new Date(nowKst.getTime() - 9 * 60 * 60 * 1000).toISOString()
+}
+
+/**
+ * 선택한 기간의 요약. **화면 상단 카드가 기간 버튼을 따라간다.**
+ *
+ * 🔴 예전엔 상단이 `get_gemini_today_summary()` 로 «오늘» 에 고정돼 있었다. 기간을 90일로
+ *    바꿔도 카드는 그대로 0 이라, 오늘 호출이 없는 날이면 「측정이 안 된다」로 보였다.
+ */
+export async function getGeminiRangeSummary(days: number = 0): Promise<GeminiRangeSummary> {
+  const supabase = await createClient()
+  const range: UsageRange = isUsageRange(days) ? days : 0
+  const since = range === 0 ? kstMidnightIso() : new Date(Date.now() - range * 24 * 60 * 60 * 1000).toISOString()
+
+  const [{ data, error }, usdKrwRate] = await Promise.all([
+    supabase
+      .from('gemini_api_logs')
+      .select('status, cached, input_tokens, output_tokens, total_tokens, estimated_cost_usd')
+      .gte('created_at', since),
+    getUsdKrwRate(),
+  ])
+
+  const empty: GeminiRangeSummary = {
+    range_days: range,
+    range_label: USAGE_RANGE_LABEL[range],
+    total_calls: 0,
+    success_calls: 0,
+    error_calls: 0,
+    cached_calls: 0,
+    input_tokens: 0,
+    output_tokens: 0,
+    total_tokens: 0,
+    total_cost_usd: 0,
+    total_cost_krw: 0,
+  }
+
+  if (error) {
+    logger.error('[gemini-usage] getGeminiRangeSummary error:', error)
+    return empty
+  }
+
+  const rows = data ?? []
+  const usd = rows.reduce((sum, r) => sum + (Number(r.estimated_cost_usd) || 0), 0)
+
+  return {
+    ...empty,
+    total_calls: rows.length,
+    success_calls: rows.filter((r) => r.status === 'success').length,
+    error_calls: rows.filter((r) => r.status !== 'success').length,
+    cached_calls: rows.filter((r) => r.cached).length,
+    input_tokens: rows.reduce((s, r) => s + (Number(r.input_tokens) || 0), 0),
+    output_tokens: rows.reduce((s, r) => s + (Number(r.output_tokens) || 0), 0),
+    total_tokens: rows.reduce((s, r) => s + (Number(r.total_tokens) || 0), 0),
+    total_cost_usd: usd,
+    total_cost_krw: Math.round(usd * usdKrwRate),
+  }
 }

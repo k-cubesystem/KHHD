@@ -216,14 +216,14 @@ export function PlanManagementClient() {
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 bg-surface/30 rounded-xl animate-pulse border border-white/30" />
+          <div key={i} className="h-20 bg-surface/30 rounded-xl animate-pulse border border-white/[0.08]" />
         ))}
       </div>
     )
   }
 
   const tierTheme: Record<string, { badge: string; icon: string }> = {
-    SINGLE: { badge: 'bg-white/30 text-ink-primary/70 border-white/30', icon: 'text-ink-primary/55' },
+    SINGLE: { badge: 'bg-white/30 text-ink-primary/70 border-white/[0.08]', icon: 'text-ink-primary/55' },
     FAMILY: { badge: 'bg-gold-500/10 text-gold-400 border-gold-500/30', icon: 'text-gold-400' },
     BUSINESS: {
       badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
@@ -235,7 +235,7 @@ export function PlanManagementClient() {
     <div className="space-y-8">
       {/* ===== SECTION 1: 멤버십 구독 플랜 ===== */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-white/30">
+        <div className="flex items-center gap-2 pb-2 border-b border-white/[0.08]">
           <Crown className="w-4 h-4 text-gold-500" />
           <h2 className="text-sm font-bold text-ink-primary font-serif">멤버십 구독 플랜</h2>
           <span className="text-[10px] text-ink-primary/40 ml-auto">{plans.length}개 플랜</span>
@@ -252,7 +252,7 @@ export function PlanManagementClient() {
               <Card
                 key={plan.id}
                 className={cn(
-                  'relative bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden transition-all',
+                  'relative bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden transition-all',
                   !plan.is_active && 'opacity-60'
                 )}
               >
@@ -262,7 +262,7 @@ export function PlanManagementClient() {
                 <div className="relative flex items-center gap-3 p-3.5">
                   <div
                     className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center bg-surface/50 border border-white/30 flex-shrink-0',
+                      'w-8 h-8 rounded-lg flex items-center justify-center bg-surface/50 border border-white/[0.08] flex-shrink-0',
                       theme.icon
                     )}
                   >
@@ -311,7 +311,7 @@ export function PlanManagementClient() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 border-white/50 text-ink-primary/55 hover:text-ink-primary/70"
+                          className="h-7 w-7 border-white/[0.12] text-ink-primary/55 hover:text-ink-primary/70"
                           onClick={() => handleReset(plan.id)}
                         >
                           <RotateCcw className="w-3 h-3" />
@@ -346,7 +346,7 @@ export function PlanManagementClient() {
 
                 {/* 상세 편집 영역 */}
                 {expanded && (
-                  <div className="relative border-t border-white/30 p-4 space-y-4">
+                  <div className="relative border-t border-white/[0.08] p-4 space-y-4">
                     {/* 기본 정보 */}
                     <div>
                       <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
@@ -358,7 +358,7 @@ export function PlanManagementClient() {
                           <Input
                             value={getPlanVal(plan, 'name') as string}
                             onChange={(e) => changePlan(plan.id, 'name', e.target.value)}
-                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -367,7 +367,7 @@ export function PlanManagementClient() {
                             value={getPlanVal(plan, 'interval') as string}
                             onValueChange={(v) => changePlan(plan.id, 'interval', v)}
                           >
-                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
+                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-surface border-white/[0.08]">
@@ -386,7 +386,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'price') as number}
                             onChange={(e) => changePlan(plan.id, 'price', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -395,7 +395,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'sort_order') as number}
                             onChange={(e) => changePlan(plan.id, 'sort_order', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="sm:col-span-2 space-y-1">
@@ -403,7 +403,7 @@ export function PlanManagementClient() {
                           <Textarea
                             value={(getPlanVal(plan, 'description') as string) || ''}
                             onChange={(e) => changePlan(plan.id, 'description', e.target.value)}
-                            className="text-xs bg-surface/50 border-white/50 text-ink-primary/70 focus:border-gold-500/50"
+                            className="text-xs bg-surface/50 border-white/[0.12] text-ink-primary/70 focus:border-gold-500/50"
                             rows={2}
                           />
                         </div>
@@ -439,7 +439,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'daily_talisman_limit') as number}
                             onChange={(e) => changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -451,7 +451,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'relationship_limit') as number}
                             onChange={(e) => changePlan(plan.id, 'relationship_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -463,7 +463,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={getPlanVal(plan, 'storage_limit') as number}
                             onChange={(e) => changePlan(plan.id, 'storage_limit', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                           <p className="text-[9px] text-ink-primary/30">999 = 무제한</p>
                         </div>
@@ -482,7 +482,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={(features.bonus_rate as number) ?? 0}
                             onChange={(e) => changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -491,7 +491,7 @@ export function PlanManagementClient() {
                             value={String(features.multi_device ?? false)}
                             onValueChange={(v) => changeFeature(plan.id, 'multi_device', v === 'true')}
                           >
-                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
+                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-surface border-white/[0.08]">
@@ -510,7 +510,7 @@ export function PlanManagementClient() {
                             value={String(features.priority_support ?? false)}
                             onValueChange={(v) => changeFeature(plan.id, 'priority_support', v === 'true')}
                           >
-                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85">
+                            <SelectTrigger className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-surface border-white/[0.08]">
@@ -535,7 +535,7 @@ export function PlanManagementClient() {
 
       {/* ===== SECTION 2: 부적 상품 (일회성) ===== */}
       <section className="space-y-3">
-        <div className="flex items-center gap-2 pb-2 border-b border-white/30">
+        <div className="flex items-center gap-2 pb-2 border-b border-white/[0.08]">
           <Ticket className="w-4 h-4 text-gold-500" />
           <h2 className="text-sm font-bold text-ink-primary font-serif">복채 상품 (단건 구매)</h2>
           <span className="text-[10px] text-ink-primary/40 ml-auto">{products.length}개 상품</span>
@@ -551,7 +551,7 @@ export function PlanManagementClient() {
               <Card
                 key={prod.id}
                 className={cn(
-                  'relative bg-gradient-to-br from-surface/30 to-surface/20 border border-white/30 overflow-hidden transition-all',
+                  'relative bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden transition-all',
                   !prod.is_active && 'opacity-60'
                 )}
               >
@@ -607,7 +607,7 @@ export function PlanManagementClient() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 border-white/50 text-ink-primary/55 hover:text-ink-primary/70"
+                          className="h-7 w-7 border-white/[0.12] text-ink-primary/55 hover:text-ink-primary/70"
                           onClick={() => handleProductReset(prod.id)}
                         >
                           <RotateCcw className="w-3 h-3" />
@@ -642,7 +642,7 @@ export function PlanManagementClient() {
 
                 {/* 상세 편집 */}
                 {expanded && (
-                  <div className="relative border-t border-white/30 p-4 space-y-4">
+                  <div className="relative border-t border-white/[0.08] p-4 space-y-4">
                     {/* 기본 필드 */}
                     <div>
                       <p className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider mb-2">
@@ -654,7 +654,7 @@ export function PlanManagementClient() {
                           <Input
                             value={getProdVal(prod, 'name') as string}
                             onChange={(e) => changeProd(prod.id, 'name', e.target.value)}
-                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -663,7 +663,7 @@ export function PlanManagementClient() {
                             value={(getProdVal(prod, 'badge_text') as string) || ''}
                             onChange={(e) => changeProd(prod.id, 'badge_text', e.target.value)}
                             placeholder="예: 인기"
-                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -672,7 +672,7 @@ export function PlanManagementClient() {
                             type="number"
                             value={getProdVal(prod, 'price') as number}
                             onChange={(e) => changeProd(prod.id, 'price', parseInt(e.target.value))}
-                            className="h-8 text-xs font-mono bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs font-mono bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                         <div className="space-y-1">
@@ -690,7 +690,7 @@ export function PlanManagementClient() {
                             value={(getProdVal(prod, 'description') as string) || ''}
                             onChange={(e) => changeProd(prod.id, 'description', e.target.value)}
                             placeholder="상품 설명"
-                            className="h-8 text-xs bg-surface/50 border-white/50 text-ink-primary/85 focus:border-gold-500/50"
+                            className="h-8 text-xs bg-surface/50 border-white/[0.12] text-ink-primary/85 focus:border-gold-500/50"
                           />
                         </div>
                       </div>
@@ -722,7 +722,7 @@ export function PlanManagementClient() {
                               <Input
                                 value={item}
                                 onChange={(e) => updateFeatureItem(prod.id, idx, e.target.value)}
-                                className="h-7 text-xs flex-1 bg-surface/50 border-white/50 text-ink-primary/70 focus:border-gold-500/50"
+                                className="h-7 text-xs flex-1 bg-surface/50 border-white/[0.12] text-ink-primary/70 focus:border-gold-500/50"
                                 placeholder={`기능 ${idx + 1}`}
                               />
                               <button

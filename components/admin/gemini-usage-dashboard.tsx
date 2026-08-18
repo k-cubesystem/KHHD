@@ -15,22 +15,29 @@ import {
 } from 'recharts'
 import { Zap, TrendingUp, AlertTriangle, CheckCircle, RefreshCw, Save, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { StatStrip, StatTile } from '@/components/admin/ui/stat-tile'
 import { getActionLabel } from '@/lib/domain/gemini/actions'
 import { KRW_PER_TALISMAN } from '@/lib/constants'
 import {
   getGeminiDailyStats,
   getGeminiActionStats,
-  getGeminiTodaySummary,
+  getGeminiRangeSummary,
   getGeminiRecentLogs,
   getGeminiCostVsPrice,
   updateGeminiRpm,
   type GeminiDailyStat,
   type GeminiActionStat,
-  type GeminiTodaySummary,
+  type GeminiRangeSummary,
   type GeminiRecentLog,
   type GeminiRpmConfig,
   type GeminiCostVsPrice,
 } from '@/app/actions/admin/gemini-usage'
+import { USAGE_RANGES, USAGE_RANGE_LABEL, type UsageRange } from '@/lib/domain/gemini/usage-range'
+import { MODEL_PRICING } from '@/lib/domain/gemini/pricing'
+import { GEMINI_FLASH } from '@/lib/config/ai-models'
+
+/** 단가를 아는 모델만 고를 수 있다 — 모르는 모델을 고르면 원가가 폴백값으로 어긋난다. */
+const MODEL_OPTIONS = Object.keys(MODEL_PRICING).sort()
 
 // ─────────────────────────────────────────
 // 비용 포맷 유틸
@@ -58,7 +65,7 @@ function StatusBadge({ status }: { status: string }) {
     timeout: 'bg-primary-dark/20 text-primary-dark border-primary-dark/30',
     error: 'bg-red-500/20 text-red-400 border-red-500/30',
   }
-  const cls = map[status] ?? 'bg-white/20 text-ink-primary/55 border-white/30'
+  const cls = map[status] ?? 'bg-white/20 text-ink-primary/55 border-white/[0.08]'
   return <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', cls)}>{status.toUpperCase()}</span>
 }
 
@@ -100,7 +107,7 @@ function modelColor(model: string) {
 // Props
 // ─────────────────────────────────────────
 interface Props {
-  initialSummary: GeminiTodaySummary
+  initialSummary: GeminiRangeSummary
   initialDailyStats: GeminiDailyStat[]
   initialActionStats: GeminiActionStat[]
   initialLogs: GeminiRecentLog[]
@@ -121,7 +128,7 @@ export function GeminiUsageDashboard({
   initialCostVsPrice,
   usdKrwRate,
 }: Props) {
-  const [period, setPeriod] = useState<7 | 30 | 90>(30)
+  const [period, setPeriod] = useState<UsageRange>(30)
   const [summary, setSummary] = useState(initialSummary)
   const [dailyStats, setDailyStats] = useState(initialDailyStats)
   const [actionStats, setActionStats] = useState(initialActionStats)
@@ -139,7 +146,7 @@ export function GeminiUsageDashboard({
   function refresh() {
     startRefresh(async () => {
       const [newSummary, newDaily, newAction, newLogs, newCvp] = await Promise.all([
-        getGeminiTodaySummary(),
+        getGeminiRangeSummary(period),
         getGeminiDailyStats(period),
         getGeminiActionStats(period),
         getGeminiRecentLogs(50),
@@ -154,7 +161,7 @@ export function GeminiUsageDashboard({
   }
 
   // ── 기간 변경 ────────────────────────────
-  function changePeriod(p: 7 | 30 | 90) {
+  function changePeriod(p: UsageRange) {
     setPeriod(p)
     startRefresh(async () => {
       const [newDaily, newAction, newCvp] = await Promise.all([
@@ -207,8 +214,6 @@ export function GeminiUsageDashboard({
   // ── 요약 카드 데이터 ──────────────────────
   const errorRate = summary.total_calls > 0 ? ((summary.error_calls / summary.total_calls) * 100).toFixed(1) : '0.0'
 
-  const PERIOD_LABELS = { 7: '7일', 30: '30일', 90: '90일' }
-
   return (
     <div className="space-y-5">
       {/* ── 헤더 ───────────────────────────── */}
@@ -218,12 +223,12 @@ export function GeminiUsageDashboard({
             <Zap className="w-5 h-5 text-gold-400" />
             Gemini API 사용량
           </h2>
-          <p className="text-xs text-ink-primary/40 mt-0.5">오늘 기준 · 환율 ₩{usdKrwRate.toLocaleString()}/USD</p>
+          <p className="text-xs text-ink-primary/40 mt-0.5">환율 ₩{usdKrwRate.toLocaleString()}/USD</p>
         </div>
         <div className="flex items-center gap-2">
           {/* 기간 선택 */}
-          <div className="flex rounded-lg overflow-hidden border border-white/50">
-            {([7, 30, 90] as const).map((p) => (
+          <div className="flex rounded-lg overflow-hidden border border-white/[0.12]">
+            {USAGE_RANGES.map((p) => (
               <button
                 key={p}
                 onClick={() => changePeriod(p)}
@@ -232,85 +237,55 @@ export function GeminiUsageDashboard({
                   period === p ? 'bg-gold-500 text-ink-950' : 'bg-ink-900 text-ink-primary/55 hover:text-ink-primary/85'
                 )}
               >
-                {PERIOD_LABELS[p]}
+                {USAGE_RANGE_LABEL[p]}
               </button>
             ))}
           </div>
           <button
             onClick={refresh}
             disabled={isRefreshing}
-            className="p-2 rounded-lg bg-ink-900 border border-white/50 text-ink-primary/55 hover:text-gold-400 transition-colors"
+            className="p-2 rounded-lg bg-ink-900 border border-white/[0.12] text-ink-primary/55 hover:text-gold-400 transition-colors"
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
         </div>
       </div>
 
-      {/* ── 오늘 요약 카드 4개 ──────────────── */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* 총 API 호출 */}
-        <div className="bg-ink-900/60 border border-white/40 rounded-xl p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <Activity className="w-4 h-4 text-primary" />
-            <span className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider">총 호출 (오늘)</span>
-          </div>
-          <div className="text-2xl font-black text-ink-primary">{summary.total_calls.toLocaleString()}</div>
-          <div className="text-[10px] text-ink-primary/40 mt-1">
-            성공 {summary.success_calls} · 캐시 {summary.cached_calls}
-          </div>
-        </div>
-
-        {/* 총 토큰 */}
-        <div className="bg-ink-900/60 border border-white/40 rounded-xl p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4 text-primary-dark" />
-            <span className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider">총 토큰 (오늘)</span>
-          </div>
-          <div className="text-2xl font-black text-ink-primary">
-            {summary.total_tokens >= 1000
-              ? `${(summary.total_tokens / 1000).toFixed(1)}K`
-              : summary.total_tokens.toLocaleString()}
-          </div>
-          <div className="text-[10px] text-ink-primary/40 mt-1">
-            입력 {summary.total_input_tokens.toLocaleString()} · 출력 {summary.total_output_tokens.toLocaleString()}
-          </div>
-        </div>
-
-        {/* 예상 비용 */}
-        <div className="bg-ink-900/60 border border-white/40 rounded-xl p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-4 h-4 text-gold-400" />
-            <span className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider">예상 비용 (오늘)</span>
-          </div>
-          <div className="text-lg font-black text-gold-400 leading-tight">${summary.total_cost_usd.toFixed(4)}</div>
-          <div className="text-[11px] text-ink-primary/55 mt-0.5 font-semibold">
-            ₩{Math.round(summary.total_cost_usd * usdKrwRate).toLocaleString()}
-          </div>
-        </div>
-
-        {/* 오류율 */}
-        <div className="bg-ink-900/60 border border-white/40 rounded-xl p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-primary-dark" />
-            <span className="text-[10px] text-ink-primary/40 font-bold uppercase tracking-wider">오류율 (오늘)</span>
-          </div>
-          <div
-            className={cn(
-              'text-2xl font-black',
-              Number(errorRate) > 10 ? 'text-red-400' : Number(errorRate) > 3 ? 'text-primary' : 'text-primary-dim'
-            )}
-          >
-            {errorRate}%
-          </div>
-          <div className="text-[10px] text-ink-primary/40 mt-1">
-            에러 {summary.error_calls} · 한도초과 {summary.rate_limited_calls}
-          </div>
-        </div>
-      </div>
+      {/* ── 기간 요약 ────────────────────────
+          🔴 예전엔 「오늘」에 고정돼 있어 기간을 90일로 바꿔도 카드가 0 이었다.
+             오늘 호출이 없는 날이면 「측정이 안 된다」로 보였다. 이제 버튼을 따라간다. */}
+      <StatStrip>
+        <StatTile
+          label={`총 호출 (${summary.range_label})`}
+          value={summary.total_calls}
+          unit="회"
+          hint={`성공 ${summary.success_calls} · 캐시 ${summary.cached_calls}`}
+        />
+        <StatTile
+          label={`총 토큰 (${summary.range_label})`}
+          value={summary.total_tokens}
+          hint={`입력 ${summary.input_tokens.toLocaleString()} · 출력 ${summary.output_tokens.toLocaleString()}`}
+        />
+        <StatTile
+          label={`예상 비용 (${summary.range_label})`}
+          value={summary.total_cost_krw}
+          unit="원"
+          tone="accent"
+          hint={`$${summary.total_cost_usd.toFixed(4)}`}
+        />
+        <StatTile
+          label={`오류율 (${summary.range_label})`}
+          value={`${errorRate}%`}
+          tone={Number(errorRate) > 3 ? 'warn' : 'default'}
+          hint={`에러 ${summary.error_calls}`}
+        />
+      </StatStrip>
 
       {/* ── 일별 모델별 호출 차트 ─────────────── */}
-      <div className="bg-ink-900/60 border border-white/40 rounded-xl p-4">
-        <h3 className="text-xs font-bold text-ink-primary/70 mb-4">일별 모델별 API 호출 ({PERIOD_LABELS[period]})</h3>
+      <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl p-4">
+        <h3 className="text-xs font-bold text-ink-primary/70 mb-4">
+          일별 모델별 API 호출 ({USAGE_RANGE_LABEL[period]})
+        </h3>
         {dailyRows.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={dailyRows} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
@@ -354,8 +329,8 @@ export function GeminiUsageDashboard({
       </div>
 
       {/* ── 기능별 사용량 차트 ────────────────── */}
-      <div className="bg-ink-900/60 border border-white/40 rounded-xl p-4">
-        <h3 className="text-xs font-bold text-ink-primary/70 mb-4">기능별 API 호출 ({PERIOD_LABELS[period]})</h3>
+      <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl p-4">
+        <h3 className="text-xs font-bold text-ink-primary/70 mb-4">기능별 API 호출 ({USAGE_RANGE_LABEL[period]})</h3>
         {actionChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={actionChartData} margin={{ top: 0, right: 8, left: -20, bottom: 40 }}>
@@ -384,8 +359,10 @@ export function GeminiUsageDashboard({
       </div>
 
       {/* ── 기능별 비용 차트 (₩) ──────────────── */}
-      <div className="bg-ink-900/60 border border-white/40 rounded-xl p-4">
-        <h3 className="text-xs font-bold text-ink-primary/70 mb-4">기능별 예상 비용 ({PERIOD_LABELS[period]}) · ₩</h3>
+      <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl p-4">
+        <h3 className="text-xs font-bold text-ink-primary/70 mb-4">
+          기능별 예상 비용 ({USAGE_RANGE_LABEL[period]}) · ₩
+        </h3>
         {costChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={costChartData} margin={{ top: 0, right: 8, left: -20, bottom: 40 }}>
@@ -410,9 +387,9 @@ export function GeminiUsageDashboard({
       </div>
 
       {/* ── 원가 vs 복채 테이블 (가격 책정 근거) ── */}
-      <div className="bg-ink-900/60 border border-white/40 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/40">
-          <h3 className="text-xs font-bold text-ink-primary/70">원가 vs 복채 ({PERIOD_LABELS[period]})</h3>
+      <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.10]">
+          <h3 className="text-xs font-bold text-ink-primary/70">원가 vs 복채 ({USAGE_RANGE_LABEL[period]})</h3>
           <p className="text-[10px] text-ink-primary/40 mt-0.5">
             호출당 AI 원가와 현재 복채 가격 대비 원가율 · 1만냥 ≈ ₩{KRW_PER_TALISMAN.toLocaleString()}
           </p>
@@ -420,7 +397,7 @@ export function GeminiUsageDashboard({
         <div className="overflow-x-auto">
           <table className="w-full text-[10px]">
             <thead>
-              <tr className="border-b border-white/40 text-ink-primary/40">
+              <tr className="border-b border-white/[0.10] text-ink-primary/40">
                 <th className="text-left px-3 py-2 whitespace-nowrap">기능</th>
                 <th className="text-right px-3 py-2 whitespace-nowrap">호출 수</th>
                 <th className="text-right px-3 py-2 whitespace-nowrap">호출당 원가</th>
@@ -437,7 +414,7 @@ export function GeminiUsageDashboard({
                 </tr>
               )}
               {costRows.map((r) => (
-                <tr key={r.action_type} className="border-b border-white/50 hover:bg-ink-800/30 transition-colors">
+                <tr key={r.action_type} className="border-b border-white/[0.12] hover:bg-ink-800/30 transition-colors">
                   <td className="px-3 py-1.5 text-ink-primary/70 whitespace-nowrap">{getActionLabel(r.action_type)}</td>
                   <td className="px-3 py-1.5 text-right text-ink-primary/55">{r.call_count.toLocaleString()}</td>
                   <td className="px-3 py-1.5 text-right text-gold-500">₩{r.avg_cost_krw.toLocaleString()}</td>
@@ -470,7 +447,7 @@ export function GeminiUsageDashboard({
       </div>
 
       {/* ── RPM 관리 ─────────────────────────── */}
-      <div className="bg-ink-900/60 border border-white/40 rounded-xl p-4">
+      <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl p-4">
         <h3 className="text-xs font-bold text-ink-primary/70 mb-3 flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-gold-400" />
           Rate Limit 설정 (RPM)
@@ -495,15 +472,17 @@ export function GeminiUsageDashboard({
           <select
             value={modelInput}
             onChange={(e) => setModelInput(e.target.value)}
-            className="flex-1 bg-ink-800 border border-white/50 text-ink-primary/85 text-xs rounded-lg px-2 py-2"
+            className="flex-1 bg-surface border border-white/[0.12] text-ink-primary/85 text-xs rounded-lg px-2 py-2"
           >
-            <option value="gemini-3.5-flash">gemini-3.5-flash</option>
-            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-            <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite</option>
-            <option value="gemini-2.5-flash-preview">gemini-2.5-flash-preview</option>
-            <option value="gemini-3-flash-preview">gemini-3-flash-preview</option>
-            <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-            <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+            {/* 🔴 손으로 적은 목록이 gemini-3.7-flash 를 빠뜨려 지금 쓰는 모델을 고를 수 없었다.
+                단가표(pricing.ts)를 단일 출처로 삼는다 — 값을 아는 모델만 고를 수 있어야
+                원가 계산이 어긋나지 않는다. */}
+            {MODEL_OPTIONS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+                {m === GEMINI_FLASH ? ' (현재 기본)' : ''}
+              </option>
+            ))}
           </select>
           <input
             type="number"
@@ -511,7 +490,7 @@ export function GeminiUsageDashboard({
             max={10000}
             value={rpmInput}
             onChange={(e) => setRpmInput(e.target.value)}
-            className="w-24 bg-ink-800 border border-white/50 text-ink-primary/85 text-xs rounded-lg px-2 py-2 text-center"
+            className="w-24 bg-surface border border-white/[0.12] text-ink-primary/85 text-xs rounded-lg px-2 py-2 text-center"
             placeholder="RPM"
           />
           <button
@@ -535,7 +514,7 @@ export function GeminiUsageDashboard({
             <button
               key={p.rpm}
               onClick={() => setRpmInput(String(p.rpm))}
-              className="flex-1 py-1 text-[9px] font-bold bg-ink-800 border border-white/50 text-ink-primary/55 hover:text-gold-400 hover:border-gold-500/30 rounded transition-colors"
+              className="flex-1 py-1 text-[9px] font-bold bg-surface border border-white/[0.12] text-ink-primary/55 hover:text-gold-400 hover:border-gold-500/30 rounded transition-colors"
             >
               {p.label}
             </button>
@@ -550,14 +529,14 @@ export function GeminiUsageDashboard({
       </div>
 
       {/* ── 최근 API 로그 테이블 ──────────────── */}
-      <div className="bg-ink-900/60 border border-white/40 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-white/40">
+      <div className="bg-ink-900/60 border border-white/[0.10] rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.10]">
           <h3 className="text-xs font-bold text-ink-primary/70">최근 API 로그 (50건)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-[10px]">
             <thead>
-              <tr className="border-b border-white/40 text-ink-primary/40">
+              <tr className="border-b border-white/[0.10] text-ink-primary/40">
                 <th className="text-left px-3 py-2 whitespace-nowrap">시간</th>
                 <th className="text-left px-3 py-2 whitespace-nowrap">모델</th>
                 <th className="text-left px-3 py-2 whitespace-nowrap">기능</th>
@@ -576,7 +555,7 @@ export function GeminiUsageDashboard({
                 </tr>
               )}
               {logs.map((log) => (
-                <tr key={log.id} className="border-b border-white/50 hover:bg-ink-800/30 transition-colors">
+                <tr key={log.id} className="border-b border-white/[0.12] hover:bg-ink-800/30 transition-colors">
                   <td className="px-3 py-1.5 text-ink-primary/40 whitespace-nowrap">
                     {new Date(log.created_at).toLocaleString('ko-KR', {
                       month: '2-digit',

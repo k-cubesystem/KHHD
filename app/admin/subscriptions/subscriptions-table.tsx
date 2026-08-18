@@ -45,7 +45,7 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; l
   EXPIRED: {
     bg: 'bg-white/30',
     text: 'text-ink-primary/40',
-    border: 'border-white/30',
+    border: 'border-white/[0.08]',
     label: '만료됨',
   },
   PAYMENT_FAILED: {
@@ -63,7 +63,7 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; l
   PENDING: {
     bg: 'bg-white/30',
     text: 'text-ink-primary/40',
-    border: 'border-white/30',
+    border: 'border-white/[0.08]',
     label: '대기 중',
   },
 }
@@ -143,7 +143,7 @@ export function SubscriptionsTable({
         <div className="flex items-center gap-2">
           <span className="text-xs text-ink-primary/40 font-medium">상태 필터:</span>
           <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-            <SelectTrigger className="w-[140px] h-8 bg-surface/50 border-white/50 text-ink-primary/85 text-xs">
+            <SelectTrigger className="w-[140px] h-8 bg-surface/50 border-white/[0.12] text-ink-primary/85 text-xs">
               <SelectValue placeholder="상태 필터" />
             </SelectTrigger>
             <SelectContent className="bg-surface border-white/[0.08]">
@@ -171,7 +171,7 @@ export function SubscriptionsTable({
       {/* Mobile Card List */}
       <div className="space-y-2.5">
         {subscriptions.length === 0 ? (
-          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/30">
+          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/[0.08]">
             <p className="text-sm text-ink-primary/40">구독자가 없습니다.</p>
           </div>
         ) : (
@@ -184,7 +184,7 @@ export function SubscriptionsTable({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/30 hover:border-gold-500/20 transition-all overflow-hidden group"
+                  className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/[0.08] hover:border-gold-500/20 transition-all overflow-hidden group"
                 >
                   <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
 
@@ -246,7 +246,7 @@ export function SubscriptionsTable({
                     </div>
                   </div>
 
-                  <div className="relative grid grid-cols-3 gap-2 pt-2.5 border-t border-white/30">
+                  <div className="relative grid grid-cols-3 gap-2 pt-2.5 border-t border-white/[0.08]">
                     <div>
                       <p className="text-[9px] text-ink-primary/30 mb-0.5">플랜</p>
                       <p className="text-xs text-ink-primary/70 font-medium truncate">{sub.plan?.name || '-'}</p>
@@ -281,7 +281,7 @@ export function SubscriptionsTable({
             size="icon"
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="h-8 w-8 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -293,7 +293,7 @@ export function SubscriptionsTable({
             size="icon"
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="h-8 w-8 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -321,7 +321,7 @@ export function SubscriptionsTable({
                 max="100"
                 value={grantAmount}
                 onChange={(e) => setGrantAmount(e.target.value)}
-                className="h-9 bg-surface/50 border-white/50 text-ink-primary/85 text-sm"
+                className="h-9 bg-surface/50 border-white/[0.12] text-ink-primary/85 text-sm"
               />
             </div>
             <div className="space-y-1.5">
@@ -333,7 +333,7 @@ export function SubscriptionsTable({
                 value={grantReason}
                 onChange={(e) => setGrantReason(e.target.value)}
                 placeholder="예: 이벤트 당첨, 고객 보상 등"
-                className="h-9 bg-surface/50 border-white/50 text-ink-primary/85 text-sm placeholder:text-ink-primary/30"
+                className="h-9 bg-surface/50 border-white/[0.12] text-ink-primary/85 text-sm placeholder:text-ink-primary/30"
               />
             </div>
           </div>

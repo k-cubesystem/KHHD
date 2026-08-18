@@ -129,7 +129,7 @@ export function PaymentManagementClient() {
               setPage(1)
             }}
           >
-            <SelectTrigger className="w-[140px] md:w-[180px] h-8 md:h-9 bg-surface/50 border-white/50 text-ink-primary/85 text-xs md:text-sm">
+            <SelectTrigger className="w-[140px] md:w-[180px] h-8 md:h-9 bg-surface/50 border-white/[0.12] text-ink-primary/85 text-xs md:text-sm">
               <SelectValue placeholder="모든 상태" />
             </SelectTrigger>
             <SelectContent className="bg-surface border-white/[0.08]">
@@ -162,7 +162,7 @@ export function PaymentManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
-            className="h-8 w-8 md:h-9 md:w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 md:h-9 md:w-9 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </Button>
@@ -174,7 +174,7 @@ export function PaymentManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages || loading}
-            className="h-8 w-8 md:h-9 md:w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-8 w-8 md:h-9 md:w-9 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </Button>
@@ -182,10 +182,10 @@ export function PaymentManagementClient() {
       </div>
 
       {/* Desktop Table - hidden on mobile */}
-      <div className="hidden md:block rounded-xl border border-white/30 bg-gradient-to-br from-surface/30 to-surface/20 overflow-hidden shadow-lg">
+      <div className="hidden md:block rounded-xl border border-white/[0.08] bg-gradient-to-br from-surface/30 to-surface/20 overflow-hidden shadow-lg">
         <Table>
           <TableHeader className="bg-surface/50">
-            <TableRow className="border-white/30 hover:bg-surface/50">
+            <TableRow className="border-white/[0.08] hover:bg-surface/50">
               <TableHead className="text-ink-primary/55 font-serif text-xs">주문 ID</TableHead>
               <TableHead className="text-ink-primary/55 font-serif text-xs">사용자</TableHead>
               <TableHead className="text-ink-primary/55 font-serif text-xs">금액</TableHead>
@@ -197,7 +197,7 @@ export function PaymentManagementClient() {
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-white/30">
+                <TableRow key={i} className="border-white/[0.08]">
                   <TableCell>
                     <div className="h-4 w-32 bg-surface/50 rounded animate-pulse" />
                   </TableCell>
@@ -219,7 +219,7 @@ export function PaymentManagementClient() {
                 </TableRow>
               ))
             ) : payments.length === 0 ? (
-              <TableRow className="border-white/30">
+              <TableRow className="border-white/[0.08]">
                 <TableCell colSpan={6} className="h-40 text-center text-ink-primary/40">
                   결제 내역이 없습니다.
                 </TableCell>
@@ -233,7 +233,7 @@ export function PaymentManagementClient() {
                       key={payment.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="border-white/30 hover:bg-surface/30 transition-colors group"
+                      className="border-white/[0.08] hover:bg-surface/30 transition-colors group"
                     >
                       <TableCell className="font-mono text-xs text-ink-primary/40">{payment.order_id}</TableCell>
                       <TableCell>
@@ -286,14 +286,14 @@ export function PaymentManagementClient() {
       <div className="md:hidden space-y-2.5">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="p-3.5 bg-surface/30 rounded-xl border border-white/30">
+            <div key={i} className="p-3.5 bg-surface/30 rounded-xl border border-white/[0.08]">
               <div className="h-4 w-32 bg-surface/50 rounded animate-pulse mb-3" />
               <div className="h-3 w-48 bg-surface/50 rounded animate-pulse mb-2" />
               <div className="h-8 w-24 bg-surface/50 rounded animate-pulse" />
             </div>
           ))
         ) : payments.length === 0 ? (
-          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/30">
+          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/[0.08]">
             <FileText className="w-12 h-12 mx-auto mb-3 text-ink-primary/20" />
             <p className="text-sm text-ink-primary/40">결제 내역이 없습니다.</p>
           </div>
@@ -307,7 +307,7 @@ export function PaymentManagementClient() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
+                  className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/[0.08] hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
                 >
                   {/* Noise Overlay */}
                   <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
@@ -324,7 +324,7 @@ export function PaymentManagementClient() {
                       {getStatusBadge(payment.status, settlement)}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/30">
+                    <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-white/[0.08]">
                       <div className="min-w-0">
                         <p className="text-xs text-ink-primary/40">
                           {settlement.kind === 'none' ? '결제 금액' : '실결제액'}
@@ -336,7 +336,7 @@ export function PaymentManagementClient() {
                       </Badge>
                     </div>
 
-                    <div className="pt-2 border-t border-white/30">
+                    <div className="pt-2 border-t border-white/[0.08]">
                       <p className="text-[10px] text-ink-primary/30 font-mono">{payment.order_id}</p>
                       <p className="text-[10px] text-ink-primary/30 mt-0.5">
                         {new Date(payment.created_at).toLocaleString('ko-KR')}

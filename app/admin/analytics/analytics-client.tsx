@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { StatStrip } from '@/components/admin/ui/stat-tile'
 import Link from 'next/link'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -76,7 +77,7 @@ export function AnalyticsClient({
 
       {/* 스탯 타일 */}
       {t ? (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <StatStrip>
           <Tile label="세션" value={nf.format(t.sessions)} color={C.sessions} />
           <Tile
             label="방문자"
@@ -97,7 +98,7 @@ export function AnalyticsClient({
           />
           <Tile label="매출" value={won(t.revenue)} color={C.revenue} />
           <Tile label="기간" value={`${t.days}일`} sub={`${overview?.start} ~`} />
-        </div>
+        </StatStrip>
       ) : (
         <Empty>개요 집계를 못 읽었어요.</Empty>
       )}
@@ -307,13 +308,15 @@ export function AnalyticsClient({
 
 function Tile({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
-    <div className="rounded-lg border border-ink-light/10 bg-ink-primary/40 p-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-ink-light/55">
+    <div className="bg-surface/70 px-3.5 py-3">
+      <p className="flex items-center gap-1.5 font-sans text-[11px] leading-none text-ink-primary/45">
         {color ? <span className="inline-block h-2 w-2 rounded-sm" style={{ background: color }} /> : null}
         {label}
-      </div>
-      <div className="mt-1 font-serif text-xl text-ink-light tabular-nums">{value}</div>
-      {sub ? <div className="mt-0.5 text-[11px] text-ink-light/45 tabular-nums">{sub}</div> : null}
+      </p>
+      <p className="mt-1.5 font-serif text-[19px] font-bold leading-none tabular-nums text-ink-primary">{value}</p>
+      {sub ? (
+        <p className="mt-1.5 font-sans text-[10.5px] leading-none tabular-nums text-ink-primary/35">{sub}</p>
+      ) : null}
     </div>
   )
 }
@@ -328,7 +331,7 @@ function Panel({
   children: React.ReactNode
 }) {
   return (
-    <div className="rounded-lg border border-ink-light/10 bg-ink-primary/40 p-3">
+    <div className="rounded-xl border border-white/[0.08] bg-surface/60 p-3">
       <div className="mb-2 flex items-center gap-3">
         <span className="text-xs font-semibold text-ink-light">{title}</span>
         {legend && legend.length > 1 ? (
@@ -374,7 +377,7 @@ function Tip({
 
 function Table({ title, cols, rows, empty }: { title: string; cols: string[]; rows: string[][]; empty: string }) {
   return (
-    <div className="rounded-lg border border-ink-light/10 bg-ink-primary/40 p-3">
+    <div className="rounded-xl border border-white/[0.08] bg-surface/60 p-3">
       <div className="mb-2 text-xs font-semibold text-ink-light">{title}</div>
       {rows.length === 0 ? (
         <p className="text-[11.5px] text-ink-light/45">{empty}</p>

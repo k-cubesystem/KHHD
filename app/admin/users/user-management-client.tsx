@@ -114,7 +114,7 @@ export function UserManagementClient() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-primary/40" />
           <Input
             placeholder="이메일 또는 이름 검색..."
-            className="pl-10 h-9 md:h-10 bg-surface/50 border-white/50 text-ink-primary/85 placeholder:text-ink-primary/30 focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20 transition-all font-sans text-sm"
+            className="pl-10 h-9 md:h-10 bg-surface/50 border-white/[0.12] text-ink-primary/85 placeholder:text-ink-primary/30 focus:border-gold-500/50 focus:ring-1 focus:ring-gold-500/20 transition-all font-sans text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -128,7 +128,7 @@ export function UserManagementClient() {
             onClick={fetchUsers}
             disabled={loading}
             title="새로고침"
-            className="h-9 w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30"
+            className="h-9 w-9 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -137,7 +137,7 @@ export function UserManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1 || loading}
-            className="h-9 w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-9 w-9 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -149,7 +149,7 @@ export function UserManagementClient() {
             size="icon"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages || loading}
-            className="h-9 w-9 bg-surface/50 border-white/50 text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
+            className="h-9 w-9 bg-surface/50 border-white/[0.12] text-ink-primary/55 hover:bg-surface hover:text-gold-400 hover:border-gold-500/30 disabled:opacity-30"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -172,7 +172,7 @@ export function UserManagementClient() {
             {loading ? (
               // Skeleton Loading
               Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-white/50">
+                <TableRow key={i} className="border-white/[0.12]">
                   <TableCell>
                     <div className="h-4 w-24 bg-surface rounded animate-pulse" />
                   </TableCell>
@@ -204,7 +204,7 @@ export function UserManagementClient() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="border-white/50 hover:bg-surface/40 transition-colors group"
+                    className="border-white/[0.12] hover:bg-surface/40 transition-colors group"
                   >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
@@ -306,14 +306,14 @@ export function UserManagementClient() {
         {loading ? (
           // Skeleton Loading
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="p-4 bg-surface/30 rounded-xl border border-white/30">
+            <div key={i} className="p-4 bg-surface/30 rounded-xl border border-white/[0.08]">
               <div className="h-4 w-32 bg-surface/50 rounded animate-pulse mb-3" />
               <div className="h-3 w-48 bg-surface/50 rounded animate-pulse mb-2" />
               <div className="h-8 w-24 bg-surface/50 rounded animate-pulse" />
             </div>
           ))
         ) : users.length === 0 ? (
-          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/30">
+          <div className="p-8 text-center bg-surface/30 rounded-xl border border-white/[0.08]">
             <Users className="w-12 h-12 mx-auto mb-3 text-ink-primary/20" />
             <p className="text-sm text-ink-primary/40">검색 결과가 없습니다.</p>
           </div>
@@ -325,7 +325,7 @@ export function UserManagementClient() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/30 hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
+                className="relative p-3.5 bg-gradient-to-br from-surface/30 to-surface/20 rounded-xl border border-white/[0.08] hover:border-gold-500/30 transition-all duration-300 overflow-hidden group"
               >
                 {/* Noise Overlay */}
                 <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
@@ -344,7 +344,7 @@ export function UserManagementClient() {
                 </div>
 
                 {/* Role & Actions */}
-                <div className="relative flex items-center justify-between gap-2 pt-3 border-t border-white/30">
+                <div className="relative flex items-center justify-between gap-2 pt-3 border-t border-white/[0.08]">
                   <Select
                     value={pendingRoles[user.id] ?? user.role}
                     onValueChange={(val) => handleRoleSelect(user.id, val as UserRole)}
@@ -358,7 +358,7 @@ export function UserManagementClient() {
                             ? 'bg-red-500/10 text-red-400 border-red-500/30'
                             : user.role === 'tester'
                               ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                              : 'bg-white/30 text-ink-primary/55 border-white/30'
+                              : 'bg-white/30 text-ink-primary/55 border-white/[0.08]'
                       )}
                     >
                       <SelectValue />
