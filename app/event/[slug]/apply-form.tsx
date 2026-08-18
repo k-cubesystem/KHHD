@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { applyToEvent } from '@/app/actions/event/apply'
+import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
 
 interface Props {
   roundSlug: string
@@ -69,9 +70,24 @@ export function EventApplyForm({ roundSlug, utm }: Props) {
         <p className="mt-2 break-keep font-sans text-[13.5px] leading-relaxed text-ink-light/80">
           마감 후 선정 결과는 스레드에서 발표합니다. 선정되시면 아이디를 멘션해 알려드려요.
         </p>
-        <p className="mt-4 font-sans text-[12px] text-ink-light/60">기다리는 동안 오늘의 운세는 무료로 볼 수 있어요.</p>
-        <Button asChild variant="outline" className="mt-3">
-          <Link href="/?utm_source=threads&utm_medium=event_thanks">청담해화당 둘러보기</Link>
+        <div className="mt-5 rounded-lg border border-gold-500/25 bg-gold-500/[0.06] p-4">
+          <p className="font-serif text-[15px] text-ink-primary">
+            기다리는 동안 — 가입하면 복채 {SIGNUP_BONUS_TALISMANS}만냥을 드려요
+          </p>
+          <p className="mt-1.5 break-keep font-sans text-[12.5px] leading-relaxed text-ink-light/75">
+            사주 풀이 {SIGNUP_BONUS_SAJU_COUNT}회를 볼 수 있는 양이고, 오늘의 운세와 신년운세는 원래 무료예요. 선정되지
+            않아도 내 사주는 바로 볼 수 있습니다.
+          </p>
+          <Button asChild className="mt-3.5 w-full">
+            <Link
+              href={`/auth/sign-up?utm_source=threads&utm_medium=event_thanks&utm_campaign=${encodeURIComponent(roundSlug)}`}
+            >
+              복채 {SIGNUP_BONUS_TALISMANS}만냥 받고 시작하기
+            </Link>
+          </Button>
+        </div>
+        <Button asChild variant="ghost" size="sm" className="mt-2">
+          <Link href="/?utm_source=threads&utm_medium=event_thanks">먼저 둘러볼게요</Link>
         </Button>
       </div>
     )

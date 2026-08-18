@@ -85,3 +85,12 @@ export function formatFeatureCost(key: FeatureCostKey): string {
   const c = FEATURE_COST[key]
   return c.free ? '무료' : `복채 ${c.display}만냥`
 }
+
+/**
+ * 신규 가입 축하 복채(만냥) — **지급**(wallet-grant grantSignupBonus)과 **표시**(이벤트 유입 CTA)의 단일 출처.
+ * 이벤트로 들어온 비로그인 방문자에게 가입 이유를 숫자로 보여주는 문구가 이 값을 읽는다.
+ */
+export const SIGNUP_BONUS_TALISMANS = 50
+
+/** 가입 보너스로 볼 수 있는 사주 풀이 횟수 — "50만냥(사주 25회분)" 문구용. */
+export const SIGNUP_BONUS_SAJU_COUNT = Math.floor(SIGNUP_BONUS_TALISMANS / FEATURE_COST.saju.display)
