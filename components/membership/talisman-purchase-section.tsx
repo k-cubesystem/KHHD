@@ -38,7 +38,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '소복 씨앗',
     description: '가볍게 시작하는 입문 복채',
     badge_text: null,
-    features: ['복채 5만냥', '테마운세 5회', '관상·손금·풍수 2회', '영구 지급'],
+    features: ['복채 5만냥', '테마운세 5회', '관상·손금·풍수 2회', '만료 없이 사용'],
   },
   {
     credits: 10,
@@ -47,7 +47,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '행운 꾸러미',
     description: '가장 많이 선택하는 실속 복채',
     badge_text: '가장 인기',
-    features: ['복채 10만냥 + 보너스 1만냥', '사주·풀이 5회분 (회당 2만냥)', '종합사주풀이 2회분', '영구 지급'],
+    features: ['복채 10만냥 + 보너스 1만냥', '사주·풀이 5회분 (회당 2만냥)', '종합사주풀이 2회분', '만료 없이 사용'],
   },
   {
     credits: 20,
@@ -56,7 +56,12 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '대복 상자',
     description: '든든하게 채우는 고급 복채',
     badge_text: null,
-    features: ['복채 20만냥 + 보너스 3만냥', '사주·풀이 10회분 · 종합 4회분', '모든 서비스 자유 이용', '영구 지급'],
+    features: [
+      '복채 20만냥 + 보너스 3만냥',
+      '사주·풀이 10회분 · 종합 4회분',
+      '모든 서비스 자유 이용',
+      '만료 없이 사용',
+    ],
   },
   {
     credits: 30,
@@ -65,7 +70,12 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     name: '대복 창고',
     description: '넉넉하게 채우는 최고 혜택 복채',
     badge_text: '최대 혜택',
-    features: ['복채 30만냥 + 보너스 6만냥', '사주·풀이 15회분 · 종합 6회분', '모든 서비스 자유 이용', '영구 지급'],
+    features: [
+      '복채 30만냥 + 보너스 6만냥',
+      '사주·풀이 15회분 · 종합 6회분',
+      '모든 서비스 자유 이용',
+      '만료 없이 사용',
+    ],
   },
 ]
 
@@ -139,7 +149,7 @@ export function TalismanPurchaseSection({
           <Coins className="w-4 h-4 text-gold-400" />
           <span className="text-sm font-serif font-bold text-gold-400 tracking-wide">복채 충전</span>
         </div>
-        <p className="text-xs text-white/60">1 복채 = 1만냥 · 충전한 복채는 영구 지급됩니다</p>
+        <p className="text-xs text-white/60">1 복채 = 1만냥 · 결제 완료 즉시 전량 지급됩니다</p>
       </div>
 
       {/* 첫 충전 2배 배너 */}
@@ -296,8 +306,8 @@ export function TalismanPurchaseSection({
       <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-1.5">
         <p className="text-[10px] font-bold text-white/60 mb-2">복채 충전 안내</p>
         {[
-          '충전된 복채는 만료 기간 없이 영구 사용 가능합니다',
-          '결제 완료 즉시 복채가 지급됩니다',
+          '제공 시점 — 결제 완료 즉시 전량 지급되며, 그 시점에 상품 제공이 완료됩니다',
+          '사용 기간 — 지급된 복채는 만료 없이 사용하실 수 있습니다',
           '환불은 미사용 복채에 한해 7일 이내 가능합니다',
           '멤버십으로 지급되는 복채와 합산되며, 충전한 복채는 하루 사용 상한을 받지 않습니다',
         ].map((text, i) => (

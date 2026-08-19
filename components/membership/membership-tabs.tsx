@@ -5,7 +5,12 @@ import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { dailySpendCapLine, membershipBenefitLines, toPlanFacts } from '@/lib/domain/payment/membership-benefits'
+import {
+  servicePeriodLine,
+  dailySpendCapLine,
+  membershipBenefitLines,
+  toPlanFacts,
+} from '@/lib/domain/payment/membership-benefits'
 
 interface Plan {
   id: string
@@ -142,6 +147,8 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
           </div>
           {/* 지급과 «하루 사용 상한»은 다른 개념 — 혜택 줄과 섞지 않고 각주로 분리한다. */}
           <p className="text-xs text-white/45 leading-relaxed border-t border-primary/10 pt-3">
+            {servicePeriodLine()}
+            <br />
             {dailySpendCapLine(currentPlan.daily_talisman_limit)}
             <br />
             멤버십은 신당·가족관리·고민상담의 «입장»을 엽니다. 풀이는 회원도 복채로 봅니다.

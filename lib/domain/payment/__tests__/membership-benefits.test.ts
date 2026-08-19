@@ -9,6 +9,7 @@ import {
   membershipBenefitLines,
   recordKeepingLine,
   relationshipLine,
+  servicePeriodLine,
   toPlanFacts,
   type MembershipPlanFacts,
 } from '../membership-benefits'
@@ -162,5 +163,28 @@ describe('단일 출처 상수', () => {
 
   it('relationshipLine 은 플랜이 없으면 숫자를 지운다', () => {
     expect(relationshipLine(null)).toBe('가족관리 — 인연 등록·궁합')
+  })
+})
+
+/**
+ * 🔴 카드사 심사가 요구하는 «서비스 제공기간».
+ *
+ * 토스페이먼츠 판매정책 — 제공기간이 **12개월을 넘으면 입점 불가**이고, 그 기간이
+ * **상품페이지에 명확히 적혀 있어야** 한다. 멤버십은 1회 결제가 1개월을 열고 갱신은
+ * 새 결제다. 여기 숫자가 흔들리면 심사 답변과 화면이 어긋난다.
+ */
+describe('이용기간 — 심사가 묻는 «서비스 제공기간»', () => {
+  it('1회 결제가 여는 기간을 1개월로 명시한다', () => {
+    expect(servicePeriodLine()).toContain('1개월')
+  })
+
+  it('갱신과 해지가 함께 적혀 있다 — 자동결제라는 사실을 숨기지 않는다', () => {
+    const line = servicePeriodLine()
+    expect(line).toContain('자동 갱신')
+    expect(line).toContain('해지')
+  })
+
+  it('금지어가 없다', () => {
+    expectNoBannedClaims([servicePeriodLine()])
   })
 })
