@@ -49,3 +49,7 @@ nul
 
 # Veo 원본 영상 (재생성 가능 — 리포 제외)
 assets-src/video/
+
+# 토스 심사 문서 빌드 산출물 (원본은 md + images/)
+docs/toss-review/*.html
+docs/toss-review/*.pdf
