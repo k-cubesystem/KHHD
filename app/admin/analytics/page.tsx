@@ -7,6 +7,8 @@ import {
   type RangeKey,
 } from './actions'
 import { AnalyticsClient } from './analytics-client'
+import { ServiceMetrics } from '@/components/admin/service-metrics'
+import { getMonitoringStats } from '@/app/actions/admin/monitoring'
 import { AdminPageHeader } from '@/components/admin/ui/page-header'
 import { BarChart3 } from 'lucide-react'
 
@@ -19,12 +21,13 @@ interface PageProps {
 export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
   const sp = await searchParams
   const range: RangeKey = sp.range === '7d' || sp.range === '90d' ? sp.range : '30d'
-  const [overview, acquisition, behavior, conversion, realtime] = await Promise.all([
+  const [overview, acquisition, behavior, conversion, realtime, monitoring] = await Promise.all([
     getAnalyticsOverview(range),
     getAnalyticsAcquisition(range),
     getAnalyticsBehavior(range),
     getAnalyticsConversion(range),
     getAnalyticsRealtime(),
+    getMonitoringStats(),
   ])
   return (
     <div className="space-y-5">
@@ -42,6 +45,9 @@ export default async function AdminAnalyticsPage({ searchParams }: PageProps) {
         conversion={conversion.success ? conversion : null}
         realtime={realtime.success ? realtime : null}
       />
+
+      {/* 구 /admin/monitoring 에서 넘어온 구획 — 자세한 사정은 ServiceMetrics 주석에. */}
+      {monitoring.success && monitoring.data && <ServiceMetrics stats={monitoring.data} />}
     </div>
   )
 }

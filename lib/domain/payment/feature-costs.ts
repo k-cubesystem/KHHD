@@ -85,3 +85,36 @@ export function formatFeatureCost(key: FeatureCostKey): string {
   const c = FEATURE_COST[key]
   return c.free ? '무료' : `복채 ${c.display}만냥`
 }
+
+/**
+ * 복채 사용 내역에 보이는 이름.
+ *
+ * 🔴 예전에는 `feature_costs` 표에서 label 을 읽었다. 그 표는 **0행**이라 조회가 늘 실패했고,
+ *    내역에 `SAJU (2만냥 복채 사용)` 처럼 내부 키가 그대로 찍혔다(라이브 USE 11건 중 5건).
+ *    이름도 값과 같은 자리에서 온다 — 표시의 단일 출처는 이 파일이다.
+ */
+const DEDUCT_KEY_LABEL: Record<string, string> = {
+  SAJU: '사주 풀이',
+  FACE: '관상 풀이',
+  HAND: '손금 풀이',
+  FENGSHUI: '풍수 풀이',
+  COMPATIBILITY: '궁합 풀이',
+  SAMHAP: '종합사주풀이',
+  WEALTH: '재물운 심층',
+  wealth_analysis: '재물운 심층',
+  IMAGE_GEN: '이미지 생성',
+  NEW_YEAR: '신년운세',
+  TODAY: '오늘의 운세',
+}
+
+/**
+ * 차감 featureKey → 사람이 읽는 이름. 동적 키(테마·이용권)는 접두사로 판정한다.
+ * 미등록 키는 원문을 그대로 돌려준다 — 내역이 비는 것보다 낫다.
+ */
+export function deductKeyLabel(featureKey: string): string {
+  const known = DEDUCT_KEY_LABEL[featureKey]
+  if (known) return known
+  if (featureKey.startsWith('theme_')) return '인기테마운세'
+  if (featureKey.startsWith('VOUCHER_')) return '이용권'
+  return featureKey
+}

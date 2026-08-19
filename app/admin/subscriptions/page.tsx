@@ -1,137 +1,83 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { getSubscriptions, getSubscriptionStats } from "./actions";
-import { SubscriptionsTable } from "./subscriptions-table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Crown, Users, XCircle, AlertTriangle, DollarSign } from "lucide-react";
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { getSubscriptions, getSubscriptionStats } from './actions'
+import { SubscriptionsTable } from './subscriptions-table'
+import { AdminPageHeader } from '@/components/admin/ui/page-header'
+import { StatStrip, StatTile } from '@/components/admin/ui/stat-tile'
+import { Crown } from 'lucide-react'
 
+/**
+ * 구독 관리.
+ *
+ * 🔴 이 화면은 팔레트 통일(2026-08-19)에서 빠져 있었다. 밝은 테마 클래스가 그대로 남아
+ *    어두운 어드민 위에서 **글씨가 안 보였다** — `text-gray-900`(#111827) on `surface`(#16140F).
+ *    「월 예상 수익」 카드는 `bg-amber-50`(거의 흰색)이라 반대로 눈이 부셨다.
+ * 🔴 제목도 둘이었다 — 여기서 한 번, `subscriptions-table` 에서 또 한 번.
+ *    머리말은 화면당 하나이며 그 자리는 `AdminPageHeader` 다.
+ */
 export default async function AdminSubscriptionsPage({
-    searchParams,
+  searchParams,
 }: {
-    searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; status?: string }>
 }) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-    if (!user) {
-        return redirect("/auth/login");
-    }
+  if (!user) {
+    return redirect('/auth/login')
+  }
 
-    // 관리자 권한 확인
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
 
-    if (profile?.role !== "admin") {
-        return redirect("/protected");
-    }
+  if (profile?.role !== 'admin') {
+    return redirect('/protected')
+  }
 
-    const params = await searchParams;
-    const page = parseInt(params.page || "1");
-    const statusFilter = params.status || "ALL";
+  const params = await searchParams
+  const page = parseInt(params.page || '1')
+  const statusFilter = params.status || 'ALL'
 
-    const [stats, { subscriptions, total, totalPages }] = await Promise.all([
-        getSubscriptionStats(),
-        getSubscriptions(page, 20, statusFilter),
-    ]);
+  const [stats, { subscriptions, total, totalPages }] = await Promise.all([
+    getSubscriptionStats(),
+    getSubscriptions(page, 20, statusFilter),
+  ])
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat("ko-KR").format(amount) + "원";
-    };
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <AdminPageHeader
+        title="구독 관리"
+        description="멤버십 구독자 현황과 결제 상태. 복채 수동 지급도 여기서 한다."
+        icon={<Crown className="h-5 w-5 text-gold-500" aria-hidden />}
+      />
 
-    return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div>
-                <h1 className="text-3xl font-bold text-gray-900">구독 관리</h1>
-                <p className="text-gray-500 mt-1">
-                    멤버십 구독자 현황과 결제 상태를 관리합니다.
-                </p>
-            </div>
+      <StatStrip>
+        <StatTile label="활성 구독자" value={stats.totalActive} unit="명" tone="accent" />
+        <StatTile label="해지 예정" value={stats.totalCancelled} unit="명" hint="기간 끝까지는 이용" />
+        <StatTile label="만료됨" value={stats.totalExpired} unit="명" />
+        <StatTile
+          label="결제 실패"
+          value={stats.totalFailed}
+          unit="명"
+          tone={stats.totalFailed > 0 ? 'warn' : 'default'}
+          hint={stats.totalFailed > 0 ? '재청구 확인 필요' : undefined}
+        />
+        <StatTile
+          label="월 예상 수익"
+          value={`${stats.monthlyRevenue.toLocaleString('ko-KR')}원`}
+          tone="accent"
+          hint="활성 구독 기준"
+        />
+      </StatStrip>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">
-                            활성 구독자
-                        </CardTitle>
-                        <Crown className="w-4 h-4 text-amber-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900">
-                            {stats.totalActive}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">
-                            해지 예정
-                        </CardTitle>
-                        <XCircle className="w-4 h-4 text-gray-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900">
-                            {stats.totalCancelled}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">
-                            만료됨
-                        </CardTitle>
-                        <Users className="w-4 h-4 text-gray-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-gray-900">
-                            {stats.totalExpired}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500">
-                            결제 실패
-                        </CardTitle>
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">
-                            {stats.totalFailed}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-amber-50 border-amber-200">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-amber-700">
-                            월 예상 수익
-                        </CardTitle>
-                        <DollarSign className="w-4 h-4 text-amber-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-amber-900">
-                            {formatCurrency(stats.monthlyRevenue)}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Subscriptions Table */}
-            <SubscriptionsTable
-                subscriptions={subscriptions}
-                currentPage={page}
-                totalPages={totalPages}
-                total={total}
-                statusFilter={statusFilter}
-            />
-        </div>
-    );
+      <SubscriptionsTable
+        subscriptions={subscriptions}
+        currentPage={page}
+        totalPages={totalPages}
+        total={total}
+        statusFilter={statusFilter}
+      />
+    </div>
+  )
 }

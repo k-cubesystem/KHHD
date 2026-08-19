@@ -287,11 +287,7 @@ function MemberBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target
         <Link href="/protected/store?tab=bokchae" onClick={() => onCta('bokchae')} className={CTA_PRIMARY}>
           복채 충전하기 <ArrowRight className="h-3.5 w-3.5" />
         </Link>
-        <Link
-          href="/protected/membership/manage?tab=subscription"
-          onClick={() => onCta('manage')}
-          className={CTA_SECONDARY}
-        >
+        <Link href="/protected/membership/manage" onClick={() => onCta('manage')} className={CTA_SECONDARY}>
           멤버십 관리
         </Link>
       </div>

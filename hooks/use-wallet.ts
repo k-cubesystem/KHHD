@@ -27,10 +27,10 @@ export function useDeductTalisman() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ featureKey, customAmount }: { featureKey: string; customAmount?: number }) => {
-      return await deductTalisman(featureKey, customAmount)
+    mutationFn: async ({ featureKey, amount }: { featureKey: string; amount: number }) => {
+      return await deductTalisman(featureKey, amount)
     },
-    onMutate: async ({ customAmount }) => {
+    onMutate: async ({ amount }) => {
       // 진행 중인 refetch 취소
       await queryClient.cancelQueries({ queryKey: WALLET_BALANCE_KEY })
 
@@ -38,8 +38,8 @@ export function useDeductTalisman() {
       const previousBalance = queryClient.getQueryData<number>(WALLET_BALANCE_KEY)
 
       // 낙관적 업데이트
-      if (previousBalance !== undefined && customAmount) {
-        queryClient.setQueryData(WALLET_BALANCE_KEY, previousBalance - customAmount)
+      if (previousBalance !== undefined) {
+        queryClient.setQueryData(WALLET_BALANCE_KEY, previousBalance - amount)
       }
 
       return { previousBalance }

@@ -116,7 +116,7 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         requiredAmount: SAJU_COST,
         featureLabel: '사주 분석',
       })
-      if (!handled) toast.error(deduct.error || '복채가 부족합니다.')
+      if (!handled) toast.error(deduct.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
     }
     if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)

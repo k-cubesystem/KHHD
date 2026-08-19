@@ -28,15 +28,28 @@ describe('🔴 스위치 키는 단일 출처를 쓴다', () => {
     expect(source).not.toMatch(/const ALLOWED_KEYS\s*=\s*\[/)
   })
 
-  it('화면이 그리는 키가 전부 허용 목록에 있다', () => {
+  /**
+   * 🔴 화면도 키 목록을 다시 적지 않는다.
+   *
+   * 예전에는 화면이 `{ key: 'feat_saju_today', label: … }` 배열을 따로 들고 있었다.
+   * 목록이 둘이면 `FEATURE_KEYS` 에 스위치가 늘어도 **화면에서 조용히 빠진다** —
+   * 사람은 «그런 기능은 없다»고 읽는다. 지금은 `FEATURE_KEYS` 를 직접 돌고 이름표를
+   * `Record<FeatureKey, …>` 로 받으므로, 키가 늘면 **컴파일이 막힌다.**
+   */
+  it('화면이 키 목록을 다시 적지 않는다', () => {
     const page = read(PAGE)
-    const shown = [...page.matchAll(/\{\s*key:\s*'([^']+)'/g)].map((m) => m[1])
 
-    expect(shown.length).toBeGreaterThanOrEqual(5)
-    for (const key of shown) {
-      expect(`${key} 가 FEATURE_KEYS 에 있다: ${(FEATURE_KEYS as readonly string[]).includes(key)}`).toBe(
-        `${key} 가 FEATURE_KEYS 에 있다: true`
-      )
+    expect(page).toContain('FEATURE_KEYS.map')
+    expect(page).toMatch(/Record<FeatureKey,/)
+    // 손으로 적은 배열이 다시 생기면 목록이 갈린다.
+    expect(page).not.toMatch(/\{\s*key:\s*'feat_/)
+  })
+
+  it('모든 스위치에 이름표가 있다 — 화면에 키가 그대로 노출되지 않는다', () => {
+    const page = read(PAGE)
+
+    for (const key of FEATURE_KEYS) {
+      expect(`${key} 이름표: ${page.includes(`${key}: { label:`)}`).toBe(`${key} 이름표: true`)
     }
   })
 

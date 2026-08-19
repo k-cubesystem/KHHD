@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-08-17(15차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-08-19(18차) · 브랜치 `claude/determined-yonath`
 
 ---
 
@@ -334,3 +334,25 @@ npx tsc --noEmit && npx jest --silent && npm run build && node scripts/check-ani
   터진다. `no-bom.test.ts` 가 막고 있지만 새 파일 생성 경로(특히 Python heredoc)를 조심할 것.
 - ⚠️ **주석 안에 `*/` 를 만드는 문자열을 쓰지 말 것** (예: glob 패턴을 백틱으로 감싼 경우).
   블록 주석이 거기서 끝나 파일 뒷부분이 통째로 깨진다 — 이번 회차에 한 번 밟았다.
+
+- 🔴 **클라이언트 컴포넌트에서 서버 의존 모듈의 «값»을 import 하면 `next build` 가 죽는다.**
+  `tsc` 와 `dev` 는 통과한다 — **타입만** 가져올 땐 컴파일에서 지워지므로 오래 멀쩡해 보인다.
+  `lib/feature-flags.ts` 는 첫 줄이 `supabase/server` 라 상수 하나 가져오는 순간 번들이 깨졌다
+  (순수 상수는 `lib/domain/feature-flags/keys.ts`). **서버/클라 경계로 build 가 죽은 게 세 번째다** —
+  화면 코드에서 새 모듈을 부를 땐 그 모듈의 **첫 줄 import** 부터 볼 것.
+- 🔴 **어드민에서 «링크 없는 화면»을 조심할 것.** `/admin/monitoring` 이 메뉴에 없는 채로
+  매출·AI 지표를 따로 계산해 그리고 있었다(2026-08-19 통합·리다이렉트 처리). 화면을 만들었으면
+  `app/admin/layout.tsx` 의 `menuItems` 에 넣거나, 안 넣을 거면 만들지 않는다.
+- 🔴 **복채 값·이름은 `lib/domain/payment/feature-costs.ts` 에서만 온다.** DB 표
+  (`ai_prompts.talisman_cost`·`feature_costs`)는 낡았거나 비었다 — 읽던 코드는 2026-08-19에
+  걷어냈고 `deductTalisman` 은 금액을 **필수 인자**로 받는다. 다시 DB 에서 읽지 말 것.
+- 🔴 **`zen-*` 팔레트는 죽었다.** `zen.text` 가 흰색(`#FFFFFF`)이라 `bg-white` 카드와 만나면
+  **흰 위에 흰 글씨**가 된다. 2026-08-20에 결제 화면·가족 궁합 그래프를 제품 팔레트
+  (`ink-light`/`gold`/`surface`/`seal`)로 옮겼다. 새 화면에 `zen-` 를 쓰지 말 것.
+- 🔴 **복채 「하루 사용 상한」의 대상은 멤버십 주기 지급분뿐이다.** 충전(CHARGE)과 선물(BONUS)은
+  상한을 받지 않는다 — `get_charge_exempt_remaining` 이 CHARGE 만 세던 탓에 **가입 보너스를
+  한 푼도 못 쓰던** 기간이 있었다(2026-08-20 수복). 이 함수를 다시 좁히지 말 것.
+- 🔴 **차감보다 앞에 «돌 수 있는 풀이인가»를 확인한다.** 명식(생년월일)이 없는데 차감을 먼저
+  시도하면, 실패 문구가 엉뚱하게 「복채」를 가리켜 사람이 원인을 못 찾는다.
+- 🔴 **사는 곳은 `/protected/store`, 관리하는 곳은 `/protected/membership/manage`.**
+  manage 에 카탈로그를 다시 만들지 말 것(2026-08-20에 사본을 걷어냈다).

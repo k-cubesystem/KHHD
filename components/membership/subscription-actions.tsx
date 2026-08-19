@@ -95,14 +95,14 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
   }
 
   return (
-    <div className="flex flex-wrap gap-3 pt-6 border-t border-zen-border">
+    <div className="mt-4 flex flex-wrap gap-2 border-t border-white/[0.08] pt-4">
       {/* 결제 수단 변경 - 활성 상태에서만 */}
       {isActive && (
         <Button
           variant="outline"
           onClick={handleChangeBilling}
           disabled={isLoading !== null}
-          className="border-zen-border text-zen-text hover:bg-zen-bg rounded-sm"
+          className="h-10 rounded-xl border-white/15 bg-surface/60 text-[13px] text-ink-light hover:border-gold-500/40 hover:bg-surface"
         >
           {isLoading === 'billing' ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -118,7 +118,7 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
         <Button
           onClick={handleReactivate}
           disabled={isLoading !== null}
-          className="bg-zen-wood hover:bg-[#7A604D] text-white rounded-sm"
+          className="h-10 rounded-xl bg-gold-500 text-[13px] font-bold text-ink-950 hover:bg-gold-400"
         >
           {isLoading === 'reactivate' ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -136,18 +136,18 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
             <Button
               variant="ghost"
               disabled={isLoading !== null}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-sm"
+              className="h-10 rounded-xl text-[13px] text-seal hover:bg-seal/10 hover:text-seal"
             >
               <XCircle className="w-4 h-4 mr-2" />
               구독 해지
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="bg-white border-zen-border rounded-sm">
+          <AlertDialogContent className="rounded-2xl border-white/[0.08] bg-surface">
             <AlertDialogHeader>
-              <AlertDialogTitle className="font-serif text-zen-text">정말 구독을 해지하시겠습니까?</AlertDialogTitle>
-              <AlertDialogDescription className="text-zen-muted space-y-2">
+              <AlertDialogTitle className="font-serif text-ink-light">정말 구독을 해지하시겠습니까?</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2 text-ink-light/55">
                 <p>해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.</p>
-                <p className="font-medium text-zen-text">해지 시 잃게 되는 혜택:</p>
+                <p className="font-medium text-ink-light">해지 시 잃게 되는 혜택:</p>
                 {/* 등급마다 액수가 달라 숫자는 적지 않는다 — 잃는 «것»만 정확히 적는다. */}
                 <ul className="list-disc list-inside text-sm space-y-1">
                   <li>결제 주기마다 지급되던 복채</li>
@@ -158,11 +158,13 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-sm border-zen-border">취소</AlertDialogCancel>
+              <AlertDialogCancel className="rounded-xl border-white/15 bg-surface/60 text-ink-light hover:bg-surface">
+                취소
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleCancel}
                 disabled={isLoading === 'cancel'}
-                className="bg-red-600 hover:bg-red-700 text-white rounded-sm"
+                className="rounded-xl bg-seal text-white hover:bg-seal/85"
               >
                 {isLoading === 'cancel' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 해지하기

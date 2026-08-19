@@ -3,6 +3,7 @@ import {
   featureCostByCategory,
   isFreeFeatureCategory,
   formatFeatureCost,
+  deductKeyLabel,
 } from '@/lib/domain/payment/feature-costs'
 
 /**
@@ -63,5 +64,30 @@ describe('FEATURE_COST — 표시 = 실차감 단일 소스', () => {
     expect(formatFeatureCost('face')).toBe('복채 2만냥')
     expect(formatFeatureCost('wealth')).toBe('복채 5만냥')
     expect(formatFeatureCost('face')).not.toMatch(/\d복채/)
+  })
+  /**
+   * 회귀선: 복채 사용 내역의 이름.
+   *
+   * 🔴 라이브에서 USE 트랜잭션 11건 중 5건이 `SAJU (2만냥 복채 사용)` 처럼 **내부 키가 그대로**
+   *    찍혀 있었다. 이름을 `feature_costs` 표에서 읽었는데 그 표가 0행이었기 때문이다.
+   *    이름도 값과 같은 자리(코드)에서 온다.
+   */
+  it('차감 키는 사람이 읽는 이름으로 바뀐다 — 내부 키가 내역에 새지 않는다', () => {
+    expect(deductKeyLabel('SAJU')).toBe('사주 풀이')
+    expect(deductKeyLabel('FACE')).toBe('관상 풀이')
+    expect(deductKeyLabel('HAND')).toBe('손금 풀이')
+    expect(deductKeyLabel('FENGSHUI')).toBe('풍수 풀이')
+    expect(deductKeyLabel('COMPATIBILITY')).toBe('궁합 풀이')
+    expect(deductKeyLabel('SAMHAP')).toBe('종합사주풀이')
+    expect(deductKeyLabel('wealth_analysis')).toBe('재물운 심층')
+  })
+
+  it('동적 키(테마·이용권)도 접두사로 이름이 붙는다', () => {
+    expect(deductKeyLabel('theme_love_2026')).toBe('인기테마운세')
+    expect(deductKeyLabel('VOUCHER_1DAY')).toBe('이용권')
+  })
+
+  it('미등록 키는 원문을 돌려준다 — 내역이 비는 것보다 낫다', () => {
+    expect(deductKeyLabel('UNKNOWN_FEATURE')).toBe('UNKNOWN_FEATURE')
   })
 })

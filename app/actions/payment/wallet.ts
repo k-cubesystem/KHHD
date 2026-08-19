@@ -2,12 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { unstable_cache } from 'next/cache'
 import { incrementDailyUsage, getUserTierLimits } from './membership'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { computeSpendPlan } from '@/lib/domain/payment/spend-plan'
+import { deductKeyLabel } from '@/lib/domain/payment/feature-costs'
 import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
 
@@ -82,46 +82,6 @@ async function grantTesterDailyBokchae(userId: string): Promise<void> {
 }
 
 /**
- * Get feature cost from database.
- * Cached for 5 minutes since feature costs rarely change.
- */
-export async function getFeatureCost(featureKey: string): Promise<number> {
-  const getCachedFeatureCost = unstable_cache(
-    async (key: string) => {
-      const supabase = await createClient()
-
-      // 1. Try finding in AI Prompts (Preferred configuration source)
-      const { data: prompt } = await supabase.from('ai_prompts').select('talisman_cost').eq('key', key).single()
-
-      if (prompt && prompt.talisman_cost !== null) {
-        return prompt.talisman_cost
-      }
-
-      // 2. Fallback to legacy feature_costs table
-      const { data, error } = await supabase
-        .from('feature_costs')
-        .select('cost')
-        .eq('key', key)
-        .eq('is_active', true)
-        .single()
-
-      if (error || !data) {
-        return 1 // Default fallback
-      }
-
-      return data.cost
-    },
-    [`feature-cost-${featureKey}`],
-    {
-      revalidate: 300, // 5분 캐시
-      tags: ['feature-costs'],
-    }
-  )
-
-  return getCachedFeatureCost(featureKey)
-}
-
-/**
  * Get user's wallet balance
  */
 export async function getWalletBalance(): Promise<number> {
@@ -161,7 +121,15 @@ export async function getWalletBalance(): Promise<number> {
  */
 export async function deductTalisman(
   featureKey: string,
-  customAmount?: number
+  /**
+   * 차감할 복채(만냥). **필수** — 값은 lib/domain/payment/feature-costs.ts 에서 온다.
+   *
+   * 🔴 예전에는 생략하면 `ai_prompts.talisman_cost` 를 읽었다. 그 표는 낡아
+   *    `cheonjiin_analysis: 0`(실제 2만냥) 이었고, 키 이름도 이 호출부와 달라 조회가
+   *    실패하면 조용히 **1만냥**으로 떨어졌다. «표시 = 실차감» 규율이 뚫리는 자리라
+   *    생략 자체를 막는다(컴파일 타임 잠금).
+   */
+  amount: number
 ): Promise<{
   success: boolean
   error?: string
@@ -170,7 +138,7 @@ export async function deductTalisman(
   currentTier?: string
 }> {
   if (isEdgeEnabled('payment')) {
-    return invokeEdgeSafe('payment', { action: 'deductTalisman', featureKey, customAmount })
+    return invokeEdgeSafe('payment', { action: 'deductTalisman', featureKey, customAmount: amount })
   }
   const supabase = await createClient()
   const {
@@ -186,8 +154,7 @@ export async function deductTalisman(
     return { success: true, remainingBalance: UNLIMITED_BALANCE }
   }
 
-  // Get cost
-  const cost = customAmount || (await getFeatureCost(featureKey))
+  const cost = amount
 
   // 복채 차감은 service_role 전용 — 인증(위)을 통과한 본인 계정에만.
   const admin = createAdminClient()
@@ -292,14 +259,13 @@ export async function deductTalisman(
   }
 
   // Log transaction
-  const { data: featureCostData } = await supabase.from('feature_costs').select('label').eq('key', featureKey).single()
 
   await supabase.from('wallet_transactions').insert({
     user_id: user.id,
     amount: -cost,
     type: 'USE',
     feature_key: featureKey,
-    description: `${featureCostData?.label || featureKey} (${cost}만냥 복채 사용)`,
+    description: `${deductKeyLabel(featureKey)} (${cost}만냥 복채 사용)`,
   })
 
   // Increment daily usage counter — 무료분(fromCap)만 카운트. 충전분(overCap)은 한도 무관.

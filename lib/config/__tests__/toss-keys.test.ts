@@ -107,7 +107,8 @@ describe('🔴 클라이언트 SDK — 용도를 반드시 밝힌다', () => {
       'components/membership/membership-card.tsx',
       'components/membership/pricing-card.tsx',
       'components/membership/subscription-actions.tsx',
-      'components/payment/payment-widget.tsx',
+      // payment-widget.tsx 는 2026-08-20에 삭제됐다 — 상점(store)이 이미 파는 것을
+      // 죽은 zen 팔레트(흰 위 흰 글씨)로 한 번 더 그리던 사본이었다.
     ]
 
     for (const file of billingScreens) {

@@ -2,24 +2,33 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Card } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertTriangle, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { logger } from '@/lib/utils/logger'
 import { setServiceSwitch } from './actions'
-import { FeatureKey, FeatureConfig } from '@/lib/feature-flags'
-import { cn } from '@/lib/utils'
+// 🔴 서버 의존이 없는 정본에서 가져온다 — `lib/feature-flags` 는 supabase/server 를 물고 있어
+//    클라이언트 컴포넌트가 부르면 `next build` 가 죽는다(tsc·dev 는 통과한다).
+import { FEATURE_KEYS, type FeatureKey, type FeatureConfig } from '@/lib/domain/feature-flags/keys'
+import { AdminPageHeader } from '@/components/admin/ui/page-header'
+import { AdminCard } from '@/components/admin/ui/admin-card'
 
-const FEATURES: { key: FeatureKey; label: string; desc: string }[] = [
-  { key: 'feat_saju_today', label: '오늘의 운세', desc: '매일 08시 갱신되는 일일 운세 기능' },
-  { key: 'feat_saju_compat', label: '궁합 분석', desc: '두 사람의 사주를 비교하는 기능' },
-  { key: 'feat_face_analysis', label: 'AI 관상 분석', desc: '사진 업로드 및 관상 분석 기능' },
-  { key: 'feat_fengshui', label: '풍수 인테리어', desc: '방위 및 인테리어 가이드 기능' },
-  { key: 'feat_payment_pg', label: 'PG 결제 (테스트)', desc: '다날/토스 페이먼츠 결제 모듈' },
-  { key: 'global_maintenance', label: '⚠️ 전체 시스템 점검', desc: '활성화 시 모든 사용자 접근 차단' },
-]
+/**
+ * 스위치 이름표.
+ *
+ * 🔴 `Record<FeatureKey, ...>` 이므로 `FEATURE_KEYS` 에 키가 늘면 **컴파일이 막힌다**.
+ *    예전에는 이 화면이 키 목록을 따로 적어 뒀다 — 목록이 갈리면 새 스위치가 조용히
+ *    화면에서 빠지고, 사람은 «없는 기능»으로 오해한다.
+ */
+const FEATURE_LABEL: Record<FeatureKey, { label: string; desc: string }> = {
+  feat_saju_today: { label: '오늘의 운세', desc: '매일 08시 갱신되는 일일 운세 기능' },
+  feat_saju_compat: { label: '궁합 분석', desc: '두 사람의 사주를 비교하는 기능' },
+  feat_face_analysis: { label: 'AI 관상 분석', desc: '사진 업로드 및 관상 분석 기능' },
+  feat_fengshui: { label: '풍수 인테리어', desc: '방위 및 인테리어 가이드 기능' },
+  feat_payment_pg: { label: 'PG 결제', desc: '토스페이먼츠 결제 모듈' },
+  global_maintenance: { label: '전체 시스템 점검', desc: '켜면 모든 사용자의 접근이 막힌다' },
+}
 
 export default function ServiceControlPage() {
   const [configs, setConfigs] = useState<Record<string, FeatureConfig>>({})
@@ -27,7 +36,6 @@ export default function ServiceControlPage() {
 
   const supabase = createClient()
 
-  // Load initial settings
   useEffect(() => {
     const loadSettings = async () => {
       setLoading(true)
@@ -35,10 +43,7 @@ export default function ServiceControlPage() {
         const { data, error } = await supabase
           .from('system_settings')
           .select('key, value')
-          .in(
-            'key',
-            FEATURES.map((f) => f.key)
-          )
+          .in('key', [...FEATURE_KEYS])
 
         if (error) throw error
 
@@ -58,16 +63,15 @@ export default function ServiceControlPage() {
     loadSettings()
   }, [])
 
-  const handleToggle = async (key: string, current: boolean) => {
+  const handleToggle = async (key: FeatureKey, current: boolean) => {
     const newConfig = { ...configs[key], isActive: !current }
 
-    // Optimistic update
     setConfigs((prev) => ({ ...prev, [key]: newConfig }))
 
     try {
       // 🔴 브라우저에서 DB 로 직접 쓰지 않는다. 서버 액션이 권한을 확인하고 감사에 남긴다
       //    (이 화면에 «전체 시스템 점검» — 전 사용자 차단 스위치가 있다).
-      const result = await setServiceSwitch(key, !current, FEATURES.find((f) => f.key === key)?.desc)
+      const result = await setServiceSwitch(key, !current, FEATURE_LABEL[key].desc)
 
       if (!result.success) throw new Error(result.error ?? '설정 저장 실패')
       toast.success('설정이 변경되었습니다.')
@@ -75,7 +79,6 @@ export default function ServiceControlPage() {
       const errorMessage = e instanceof Error ? e.message : String(e)
       logger.error('Service Control 설정 저장 실패:', errorMessage)
       toast.error(`설정 저장 실패: ${errorMessage}`)
-      // Rollback
       setConfigs((prev) => ({ ...prev, [key]: { ...newConfig, isActive: current } }))
     }
   }
@@ -83,90 +86,52 @@ export default function ServiceControlPage() {
   if (loading) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-gold-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-gold-500" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-2xl mx-auto">
-      <div className="text-center space-y-2">
-        <h1 className="text-xl md:text-2xl font-serif font-bold text-ink-primary">서비스 기능 제어</h1>
-        <p className="text-xs md:text-sm text-ink-primary/40">
-          앱을 다시 배포하지 않고, 실시간으로 기능을 켜고 끄세요.
-        </p>
-      </div>
+    <div className="space-y-4 md:space-y-6">
+      <AdminPageHeader
+        title="서비스 기능 제어"
+        description="다시 배포하지 않고 기능을 켜고 끈다. 변경은 즉시 모든 사용자에게 반영되고 감사 로그에 남는다."
+        icon={<Power className="h-5 w-5 text-gold-500" aria-hidden />}
+      />
 
-      <div className="grid gap-3 md:gap-4">
-        {FEATURES.map((feature) => {
-          const config = configs[feature.key] || { isActive: false, accessLevel: 'admin' }
-          const isMaintenance = feature.key === 'global_maintenance'
+      <div className="grid gap-2.5">
+        {FEATURE_KEYS.map((key) => {
+          const config = configs[key] || { isActive: false, accessLevel: 'admin' }
+          const isMaintenance = key === 'global_maintenance'
+          const { label, desc } = FEATURE_LABEL[key]
 
           return (
-            <Card
-              key={feature.key}
-              className={cn(
-                'relative border overflow-hidden group',
-                isMaintenance
-                  ? 'border-red-500/30 bg-gradient-to-br from-red-900/20 to-red-950/10'
-                  : 'border-white/[0.08] bg-gradient-to-br from-surface/30 to-surface/20'
-              )}
-            >
-              {/* Noise Overlay */}
-              <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-
-              <div className="relative flex items-center justify-between p-4 md:p-6 gap-4">
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {isMaintenance && (
-                      <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500 flex-shrink-0" />
-                    )}
-                    <span
-                      className={cn(
-                        'font-bold font-serif text-sm md:text-base truncate',
-                        isMaintenance ? 'text-red-400' : 'text-ink-primary'
-                      )}
+            <AdminCard
+              key={key}
+              tone={isMaintenance ? 'danger' : 'default'}
+              title={
+                <span className="flex items-center gap-1.5">
+                  {isMaintenance && <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-seal" aria-hidden />}
+                  {label}
+                  {config.isActive && (
+                    <Badge
+                      variant="outline"
+                      className={
+                        isMaintenance
+                          ? 'border-seal/40 bg-seal/15 text-[9px] text-seal'
+                          : 'border-gold-500/30 bg-gold-500/10 text-[9px] text-gold-400'
+                      }
                     >
-                      {feature.label}
-                    </span>
-                    {config.isActive && !isMaintenance && (
-                      <Badge
-                        variant="outline"
-                        className="text-[9px] md:text-[10px] border-gold-500/30 text-gold-400 bg-gold-500/10"
-                      >
-                        LIVE
-                      </Badge>
-                    )}
-                    {config.isActive && isMaintenance && (
-                      <Badge
-                        variant="destructive"
-                        className="text-[9px] md:text-[10px] animate-pulse bg-red-500/20 text-red-400 border-red-500/30"
-                      >
-                        차단 중
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-[10px] md:text-xs text-ink-primary/40 line-clamp-2">{feature.desc}</p>
-                </div>
-                <Switch
-                  checked={config.isActive}
-                  onCheckedChange={() => handleToggle(feature.key, config.isActive)}
-                  className="flex-shrink-0"
-                />
-              </div>
-
-              {/* Shine Effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.01] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            </Card>
+                      {isMaintenance ? '차단 중' : 'LIVE'}
+                    </Badge>
+                  )}
+                </span>
+              }
+              subtitle={desc}
+              action={<Switch checked={config.isActive} onCheckedChange={() => handleToggle(key, config.isActive)} />}
+            />
           )
         })}
-      </div>
-
-      <div className="p-3 md:p-4 bg-surface/50 rounded-lg border border-white/[0.08] text-center">
-        <p className="text-[10px] md:text-xs text-ink-primary/40 flex items-center justify-center gap-1.5">
-          <Power className="w-3 h-3 text-gold-500" />
-          변경 사항은 모든 사용자에게 즉시 반영됩니다.
-        </p>
       </div>
     </div>
   )

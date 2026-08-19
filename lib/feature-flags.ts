@@ -1,26 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 
 /**
- * 기능 스위치 키 **단일 출처**.
- * 🔴 배열이 정본이고 타입은 거기서 파생한다 — 어드민 허용 목록을 손으로 다시 적다가
- *    실제 키와 어긋나 스위치가 전부 거절된 적이 있다(2026-08-19).
+ * 🔴 키·타입의 정본은 `lib/domain/feature-flags/keys.ts` 다 — 이 파일은 서버 전용
+ *    (`supabase/server`)이라 클라이언트가 가져오면 번들이 깨진다. 여기서는 다시 내보내기만
+ *    해서 기존 import 경로를 살려 둔다.
  */
-export const FEATURE_KEYS = [
-  'feat_saju_today',
-  'feat_saju_compat',
-  'feat_face_analysis',
-  'feat_fengshui',
-  'feat_payment_pg',
-  'global_maintenance',
-] as const
+export { FEATURE_KEYS } from '@/lib/domain/feature-flags/keys'
+export type { FeatureKey, FeatureConfig } from '@/lib/domain/feature-flags/keys'
 
-export type FeatureKey = (typeof FEATURE_KEYS)[number]
-
-export interface FeatureConfig {
-  isActive: boolean
-  accessLevel: 'all' | 'member' | 'tester' | 'admin'
-  message?: string
-}
+import type { FeatureKey, FeatureConfig } from '@/lib/domain/feature-flags/keys'
 
 /**
  * [Server-Side] 특정 기능 활성화 여부 확인

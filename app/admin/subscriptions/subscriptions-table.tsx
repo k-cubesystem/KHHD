@@ -115,13 +115,13 @@ export function SubscriptionsTable({
 
     const result = await grantTalismans(selectedUserId, amount, grantReason || '관리자 수동 지급')
     if (result.success) {
-      toast.success(`부적 ${amount}장이 지급되었습니다.`)
+      toast.success(`복채 ${amount}만냥을 지급했습니다.`)
       setIsGrantDialogOpen(false)
       setSelectedUserId(null)
       setGrantAmount('10')
       setGrantReason('')
     } else {
-      toast.error(result.error || '부적 지급에 실패했습니다.')
+      toast.error(result.error || '복채 지급에 실패했습니다.')
     }
   }
 
@@ -132,12 +132,6 @@ export function SubscriptionsTable({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-xl font-serif font-bold text-ink-primary">구독 관리</h1>
-        <p className="text-xs text-ink-primary/40">회원 구독 현황 및 부적 수동 지급을 관리합니다.</p>
-      </div>
-
       {/* Filters */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -215,7 +209,7 @@ export function SubscriptionsTable({
                             className="text-xs hover:bg-surface cursor-pointer"
                           >
                             <Gift className="w-3.5 h-3.5 mr-2 text-gold-400" />
-                            부적 지급
+                            복채 지급
                           </DropdownMenuItem>
                           {sub.status === 'ACTIVE' && (
                             <DropdownMenuItem
@@ -304,15 +298,15 @@ export function SubscriptionsTable({
       <Dialog open={isGrantDialogOpen} onOpenChange={setIsGrantDialogOpen}>
         <DialogContent className="bg-surface border-white/[0.08] text-ink-primary max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle className="font-serif text-ink-primary">부적 수동 지급</DialogTitle>
+            <DialogTitle className="font-serif text-ink-primary">복채 수동 지급</DialogTitle>
             <DialogDescription className="text-ink-primary/40 text-xs">
-              선택한 사용자에게 부적을 지급합니다.
+              선택한 회원의 지갑에 복채를 넣는다. 감사 로그에 남는다.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="amount" className="text-xs text-ink-primary/70 font-medium">
-                지급 수량
+                지급 복채 (만냥)
               </Label>
               <Input
                 id="amount"

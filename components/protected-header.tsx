@@ -152,7 +152,7 @@ export function ProtectedHeader({ user }: { user: HeaderUser | null }) {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link
-                  href="/protected/membership/manage?tab=store"
+                  href="/protected/store?tab=membership"
                   className="cursor-pointer flex items-center gap-3 p-3 rounded-sm hover:bg-ink/5 transition-colors"
                 >
                   <CreditCard className="w-4 h-4 text-gold-500" />

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card } from '@/components/ui/card'
+import { AdminCard } from '@/components/admin/ui/admin-card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, Trash2, Users, FileText, Coins, Crown, Edit, Save, X, Flame, ArrowUpDown } from 'lucide-react'
@@ -266,10 +266,8 @@ export function UserDetailClient({
 
         {/* 1. Profile Tab */}
         <TabsContent value="profile" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative space-y-3">
-              <h3 className="text-sm font-serif font-bold text-ink-primary">계정 정보</h3>
+          <AdminCard title="계정 정보">
+            <div className="space-y-3">
               <div className="grid grid-cols-1 gap-3">
                 <div className="space-y-1">
                   <Label className="text-[10px] text-ink-primary/40 font-medium">사용자 ID (UUID)</Label>
@@ -333,14 +331,13 @@ export function UserDetailClient({
                 </div>
               </div>
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
 
         {/* 2. Wallet & Membership Tab */}
         <TabsContent value="wallet" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative space-y-6">
+          <AdminCard>
+            <div className="space-y-6">
               {/* Talisman Wallet */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -516,15 +513,13 @@ export function UserDetailClient({
                 </div>
               </div>
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
 
         {/* 3. Saju Records Tab */}
         <TabsContent value="saju" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative">
-              <h3 className="text-sm font-serif font-bold text-ink-primary mb-3">저장된 사주 풀이</h3>
+          <AdminCard title="저장된 사주 풀이">
+            <div className="space-y-3">
               {sajuRecords.length === 0 ? (
                 <div className="text-center py-8 text-ink-primary/40 text-sm">저장된 기록이 없습니다.</div>
               ) : (
@@ -559,15 +554,13 @@ export function UserDetailClient({
                 </div>
               )}
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
 
         {/* 4. Family Tab */}
         <TabsContent value="family" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative">
-              <h3 className="text-sm font-serif font-bold text-ink-primary mb-3">가족 관계</h3>
+          <AdminCard title="가족 관계">
+            <div className="space-y-3">
               {familyMembers.length === 0 ? (
                 <div className="text-center py-8 text-ink-primary/40 text-sm">등록된 가족이 없습니다.</div>
               ) : (
@@ -592,15 +585,13 @@ export function UserDetailClient({
                 </div>
               )}
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
 
         {/* 5. Payments Tab */}
         <TabsContent value="payments" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative">
-              <h3 className="text-sm font-serif font-bold text-ink-primary mb-3">결제 내역</h3>
+          <AdminCard title="결제 내역">
+            <div className="space-y-3">
               {payments.length === 0 ? (
                 <div className="text-center py-8 text-ink-primary/40 text-sm">결제 내역이 없습니다.</div>
               ) : (
@@ -664,18 +655,19 @@ export function UserDetailClient({
                 </div>
               )}
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
 
         {/* 6. 복채 트랜잭션 이력 — 잔액이 왜 이렇게 됐는지 추적 (CS 대응) */}
         <TabsContent value="transactions" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative">
-              <h3 className="text-sm font-serif font-bold text-ink-primary mb-1 flex items-center gap-2">
-                <ArrowUpDown className="w-4 h-4 text-gold-400" />
-                복채 증감 내역
-              </h3>
+          <AdminCard
+            title={
+              <>
+                <ArrowUpDown className="h-4 w-4 text-gold-400" aria-hidden /> 복채 증감 내역
+              </>
+            }
+          >
+            <div className="space-y-3">
               <p className="text-[10px] text-ink-primary/40 mb-3">
                 최근 50건 · 현재 잔액 {balance.toLocaleString()}만냥
               </p>
@@ -707,18 +699,19 @@ export function UserDetailClient({
                 </div>
               )}
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
 
         {/* 7. 신당 현황 — 본인 + 가족별 (主神·테마·배치) */}
         <TabsContent value="shrines" className="mt-3">
-          <Card className="relative p-4 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay pointer-events-none" />
-            <div className="relative">
-              <h3 className="text-sm font-serif font-bold text-ink-primary mb-3 flex items-center gap-2">
-                <Flame className="w-4 h-4 text-gold-400" />
-                신당 현황
-              </h3>
+          <AdminCard
+            title={
+              <>
+                <Flame className="h-4 w-4 text-gold-400" aria-hidden /> 신당 현황
+              </>
+            }
+          >
+            <div className="space-y-3">
               {shrines.length === 0 ? (
                 <div className="text-center py-8 text-ink-primary/40 text-sm">개설한 신당이 없습니다.</div>
               ) : (
@@ -761,7 +754,7 @@ export function UserDetailClient({
                 </div>
               )}
             </div>
-          </Card>
+          </AdminCard>
         </TabsContent>
       </Tabs>
     </div>

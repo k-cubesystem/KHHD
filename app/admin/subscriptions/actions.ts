@@ -193,7 +193,7 @@ export async function grantTalismans(
   if (!actor.authorized) return { success: false, error: actor.error }
 
   if (amount <= 0 || amount > 100) {
-    return { success: false, error: '부적 수량은 1~100 사이여야 합니다.' }
+    return { success: false, error: '복채는 1~100만냥 사이여야 합니다.' }
   }
 
   // 직접 wallet 업데이트 (Service Role 필요 — 타인 지갑 대상이므로 admin 클라이언트 필수)

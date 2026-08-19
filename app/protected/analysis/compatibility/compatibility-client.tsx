@@ -117,6 +117,14 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
       return
     }
 
+    // 🔴 명식 확인은 **차감보다 먼저**. 생년월일이 없으면 궁합은 성립하지 않는데, 예전에는
+    //    차감이 먼저 일어나 실패 문구가 「복채」를 가리켰다(실제 원인은 명식 부재).
+    const noChart = [person1, person2].find((p) => !p.birth_date)
+    if (noChart) {
+      toast.error(`${noChart.name} 님의 생년월일이 없습니다. 명식을 먼저 채워 주세요.`)
+      return
+    }
+
     const canProceed = await checkQuota()
     if (!canProceed) return
 
@@ -128,7 +136,7 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
         requiredAmount: COMPATIBILITY_COST,
         featureLabel: '궁합 분석',
       })
-      if (!handled) toast.error(deduct.error || '복채가 부족합니다.')
+      if (!handled) toast.error(deduct.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
     }
     if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)

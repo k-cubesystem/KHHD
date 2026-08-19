@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { Card } from '@/components/ui/card'
+import { AdminPageHeader } from '@/components/admin/ui/page-header'
+import { AdminCard } from '@/components/admin/ui/admin-card'
 import { ShieldAlert } from 'lucide-react'
 import { describeAuditAction } from '@/lib/admin/audit-labels'
 
@@ -71,16 +72,13 @@ export default async function AdminAuditPage() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-xl md:text-2xl font-black text-ink-primary font-serif flex items-center gap-2">
-          <ShieldAlert className="w-5 h-5 text-gold-500" /> 감사 로그
-        </h1>
-        <p className="text-xs md:text-sm text-ink-primary/40">
-          관리자 조작 기록 — 복채·권한·구독·가격·알림 발송·서비스 스위치. 최근 100건.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="감사 로그"
+        description="관리자 조작 기록 — 복채·권한·구독·가격·알림 발송·서비스 스위치. 최근 100건."
+        icon={<ShieldAlert className="h-5 w-5 text-gold-500" aria-hidden />}
+      />
 
-      <Card className="relative p-0 bg-gradient-to-br from-surface/30 to-surface/20 border border-white/[0.08] overflow-hidden">
+      <AdminCard flush className="overflow-hidden">
         {rows.length === 0 ? (
           <p className="text-center py-12 text-sm text-ink-primary/40">기록이 없습니다.</p>
         ) : (
@@ -110,7 +108,7 @@ export default async function AdminAuditPage() {
             })}
           </div>
         )}
-      </Card>
+      </AdminCard>
     </div>
   )
 }

@@ -179,7 +179,7 @@ function FengShuiAnalysisPageContent() {
           requiredAmount: FENGSHUI_COST,
           featureLabel: '풍수 분석',
         })
-        if (!handled) toast.error(deductResult.error || '복채가 부족합니다.')
+        if (!handled) toast.error(deductResult.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
         return
       }
 

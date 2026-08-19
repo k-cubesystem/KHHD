@@ -156,7 +156,7 @@ async function MembershipTab({ plans }: { plans: MembershipPlan[] }) {
           </p>
           <p className="text-xs text-ink-light/50">{t('membershipManageHint')}</p>
           <Link
-            href="/protected/membership/manage?tab=subscription"
+            href="/protected/membership/manage"
             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gold-500/15 border border-gold-500/40 text-gold-300 text-sm font-serif"
           >
             {t('membershipManageCta')} <ArrowRight className="w-3.5 h-3.5" />

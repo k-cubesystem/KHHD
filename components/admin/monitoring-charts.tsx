@@ -1,60 +1,34 @@
 'use client'
 
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from 'recharts'
-import type { DailyRevenue, DailyActiveUsers, CategoryStat, GeminiStats } from '@/app/actions/admin/monitoring'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import type { DailyActiveUsers } from '@/app/actions/admin/monitoring'
 
-const PASTEL_COLORS = ['#c9a96e', '#7c9eb0', '#9b8fc2', '#6eac89', '#c97c7c', '#c2a56e', '#7cb8c9', '#b09b8f']
+/**
+ * 분석 화면의 「일별 활성 회원·분석 수」 그래프.
+ *
+ * ## 🔴 여기 있던 셋을 지웠다 (2026-08-19)
+ * `RevenueChart` · `LatencyChart` · `CategoryPieChart` 는 링크 없는 `/admin/monitoring`
+ * 에서만 쓰였고, 셋 다 다른 화면이 이미 같은 것을 그리고 있었다 —
+ * 매출은 **분석**, 응답시간은 **Gemini 사용량**, 카테고리 분포는 옆 카드의 막대 목록.
+ * 게다가 `CategoryPieChart` 는 라벨 표를 **따로 들고 있어** SAMHAP·THEME 가 영문으로 샜다
+ * (이름의 단일 출처는 `lib/domain/analysis/category-labels.ts`).
+ */
+
+/** 축·격자 색 — 제품 팔레트(ink/gold). 예전엔 stone 계열 hex 를 직접 박아 두었다. */
+const AXIS_TICK = { fill: 'rgba(226,213,181,0.45)', fontSize: 10 }
+const GRID_STROKE = 'rgba(226,213,181,0.10)'
 
 const tooltipStyle = {
-  backgroundColor: '#1c1917',
-  border: '1px solid rgba(120,113,108,0.3)',
+  backgroundColor: '#16140F',
+  border: '1px solid rgba(255,255,255,0.10)',
   borderRadius: '8px',
-  color: '#e7e5e4',
+  color: '#E2D5B5',
   fontSize: '12px',
 }
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr)
   return `${d.getMonth() + 1}/${d.getDate()}`
-}
-
-export function RevenueChart({ data }: { data: DailyRevenue[] }) {
-  const chartData = data.map((d) => ({
-    date: formatDate(d.date),
-    매출: d.amount,
-    건수: d.count,
-  }))
-
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,113,108,0.15)" />
-        <XAxis dataKey="date" tick={{ fill: '#78716c', fontSize: 10 }} tickLine={false} axisLine={false} interval={4} />
-        <YAxis
-          tick={{ fill: '#78716c', fontSize: 10 }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => (v >= 10000 ? `${Math.round(v / 10000)}만` : String(v))}
-        />
-        <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${Number(value).toLocaleString()}원`, '매출']} />
-        <Bar dataKey="매출" fill="#c9a96e" radius={[3, 3, 0, 0]} maxBarSize={20} />
-      </BarChart>
-    </ResponsiveContainer>
-  )
 }
 
 export function ActiveUsersChart({ data }: { data: DailyActiveUsers[] }) {
@@ -67,102 +41,14 @@ export function ActiveUsersChart({ data }: { data: DailyActiveUsers[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,113,108,0.15)" />
-        <XAxis dataKey="date" tick={{ fill: '#78716c', fontSize: 10 }} tickLine={false} axisLine={false} interval={4} />
-        <YAxis tick={{ fill: '#78716c', fontSize: 10 }} tickLine={false} axisLine={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+        <XAxis dataKey="date" tick={AXIS_TICK} tickLine={false} axisLine={false} interval={4} />
+        <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11, color: '#a8a29e' }} />
+        <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(226,213,181,0.55)' }} />
         <Line type="monotone" dataKey="DAU" stroke="#7c9eb0" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
         <Line type="monotone" dataKey="분석수" stroke="#c9a96e" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
       </LineChart>
-    </ResponsiveContainer>
-  )
-}
-
-const CATEGORY_LABELS: Record<string, string> = {
-  SAJU: '사주',
-  FACE: '관상',
-  HAND: '손금',
-  FENGSHUI: '풍수',
-  COMPATIBILITY: '궁합',
-  TODAY: '오늘운세',
-  WEALTH: '재물운',
-  NEW_YEAR: '신년운세',
-}
-
-export function CategoryPieChart({ data }: { data: CategoryStat[] }) {
-  const chartData = data.map((d) => ({
-    name: CATEGORY_LABELS[d.category] || d.category,
-    value: d.count,
-  }))
-
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={chartData}
-          cx="50%"
-          cy="50%"
-          innerRadius={55}
-          outerRadius={85}
-          paddingAngle={3}
-          dataKey="value"
-          label={({ name, percent }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
-          labelLine={false}
-        >
-          {chartData.map((_, idx) => (
-            <Cell key={idx} fill={PASTEL_COLORS[idx % PASTEL_COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip
-          contentStyle={tooltipStyle}
-          formatter={(value) => [`${Number(value).toLocaleString()}건`, '분석 수']}
-        />
-      </PieChart>
-    </ResponsiveContainer>
-  )
-}
-
-export function LatencyChart({ data }: { data: GeminiStats['avgLatencyByType'] }) {
-  const ACTION_LABELS: Record<string, string> = {
-    saju: '사주',
-    cheonjiin: '천지인',
-    compatibility: '궁합',
-    fortune_analysis: '운세분석',
-    trend: '트렌드',
-    year2026: '신년',
-    wealth: '재물',
-    shaman_chat: '무당채팅',
-  }
-
-  const chartData = data.map((d) => ({
-    name: ACTION_LABELS[d.action_type] || d.action_type,
-    ms: d.avg_ms,
-    count: d.count,
-  }))
-
-  return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 40, left: 60, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,113,108,0.15)" horizontal={false} />
-        <XAxis
-          type="number"
-          tick={{ fill: '#78716c', fontSize: 10 }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(v) => `${v}ms`}
-        />
-        <YAxis
-          type="category"
-          dataKey="name"
-          tick={{ fill: '#a8a29e', fontSize: 11 }}
-          tickLine={false}
-          axisLine={false}
-          width={55}
-        />
-        <Tooltip contentStyle={tooltipStyle} formatter={(value) => [`${value}ms`, '평균 응답시간']} />
-        <Bar dataKey="ms" fill="#9b8fc2" radius={[0, 3, 3, 0]} maxBarSize={18} />
-      </BarChart>
     </ResponsiveContainer>
   )
 }

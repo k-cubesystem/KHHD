@@ -8,7 +8,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
   if (result.error || !('profile' in result) || !result.profile) {
     if (result.error === 'Unauthorized' || result.error === 'Forbidden') {
-      return <div className="p-8 text-center text-red-500">Access Denied</div>
+      return <div className="p-8 text-center font-sans text-sm text-seal">접근 권한이 없습니다.</div>
     }
     notFound()
   }

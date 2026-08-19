@@ -32,6 +32,7 @@ export function AdminCard({
   icon,
   action,
   tone = 'default',
+  flush = false,
   details,
   detailsLabel = '세부내용',
   className = '',
@@ -43,6 +44,11 @@ export function AdminCard({
   /** 우상단 버튼·배지 자리. */
   action?: ReactNode
   tone?: AdminCardTone
+  /**
+   * 본문 여백을 없앤다 — 목록·표처럼 **가장자리까지 채우는** 내용에 쓴다.
+   * (행이 자기 여백을 갖는데 카드가 또 여백을 주면 안쪽으로 두 번 밀린다.)
+   */
+  flush?: boolean
   /** 접어 둘 세부내용. 주면 토글이 생긴다. */
   details?: ReactNode
   detailsLabel?: string
@@ -67,7 +73,7 @@ export function AdminCard({
         </header>
       )}
 
-      {children && <div className="px-4 pb-3.5 pt-0.5">{children}</div>}
+      {children && <div className={flush ? '' : 'px-4 pb-3.5 pt-0.5'}>{children}</div>}
 
       {details && (
         <div className="border-t border-white/[0.06]">

@@ -127,8 +127,8 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
   if (nodes.length === 0) {
     return (
       <Card className="p-12 text-center">
-        <Users className="w-16 h-16 mx-auto text-zen-muted mb-4" />
-        <p className="text-zen-muted">가족 및 지인 정보를 추가하여 궁합 그래프를 확인하세요.</p>
+        <Users className="w-16 h-16 mx-auto text-ink-light/50 mb-4" />
+        <p className="text-ink-light/50">가족 및 지인 정보를 추가하여 궁합 그래프를 확인하세요.</p>
       </Card>
     )
   }
@@ -138,14 +138,14 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-serif font-bold text-zen-text flex items-center gap-2">
-            <Users className="w-6 h-6 text-zen-gold" />
+          <h2 className="text-2xl font-serif font-bold text-ink-light flex items-center gap-2">
+            <Users className="w-6 h-6 text-gold-400" />
             인연 궁합 매트릭스
           </h2>
-          <p className="text-sm text-zen-muted mt-1">가족 및 지인 간의 궁합 관계를 한눈에 확인하세요</p>
+          <p className="text-sm text-ink-light/50 mt-1">가족 및 지인 간의 궁합 관계를 한눈에 확인하세요</p>
         </div>
 
-        <Button onClick={handleDownload} className="bg-zen-wood text-white hover:bg-zen-wood/90">
+        <Button onClick={handleDownload} className="bg-gold-500 text-ink-950 hover:bg-gold-400">
           <Download className="w-4 h-4 mr-2" />
           이미지 저장
         </Button>
@@ -155,7 +155,7 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
       <Card className="p-4">
         <div className="flex flex-wrap gap-4 items-center text-sm">
           <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-zen-muted" />
+            <Info className="w-4 h-4 text-ink-light/50" />
             <span className="font-semibold">점수:</span>
           </div>
           <div className="flex items-center gap-2">
@@ -180,7 +180,7 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
       {/* SVG Graph */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="bg-gradient-to-br from-zen-bg via-white to-zen-bg/50">
+          <div className="bg-surface/40">
             <svg ref={svgRef} width={width} height={height} className="mx-auto" viewBox={`0 0 ${width} ${height}`}>
               {/* Edges (drawn first, so they appear behind nodes) */}
               <g className="edges">
@@ -307,20 +307,20 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
                     return (
                       <div
                         key={`${edge.from}-${edge.to}`}
-                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-zen-border"
+                        className="flex items-center justify-between p-3 bg-surface/60 rounded-lg border border-white/[0.08]"
                       >
                         <div className="flex items-center gap-3">
                           {getTypeIcon(edge.type)}
                           <div>
                             <p className="font-semibold text-sm">{otherNode.name}</p>
-                            <p className="text-xs text-zen-muted">{otherNode.relationship}</p>
+                            <p className="text-xs text-ink-light/50">{otherNode.relationship}</p>
                           </div>
                         </div>
                         <Badge
                           className={cn(
                             'px-3 py-1 font-bold',
                             edge.score >= 80 && 'bg-gold-100 text-gold-800 border-gold-300',
-                            edge.score >= 60 && edge.score < 80 && 'bg-zen-wood/20 text-zen-wood border-zen-wood/30',
+                            edge.score >= 60 && edge.score < 80 && 'bg-gold-500/15 text-gold-300 border-gold-500/30',
                             edge.score >= 40 && edge.score < 60 && 'bg-gray-100 text-gray-700 border-gray-300',
                             edge.score < 40 && 'bg-gray-50 text-gray-500 border-gray-200'
                           )}

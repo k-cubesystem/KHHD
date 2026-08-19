@@ -35,7 +35,7 @@ export function TalismanBalance() {
   }
 
   return (
-    <Link href="/protected/membership/manage?tab=store">
+    <Link href="/protected/store?tab=bokchae">
       <div className="group relative flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-b from-gold-100 to-gold-300 rounded-full border border-gold-400/50 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300">
         {/* Coin Icon */}
         <div className="w-4 h-4 rounded-full bg-gold-500 flex items-center justify-center border border-gold-300 shadow-inner">
