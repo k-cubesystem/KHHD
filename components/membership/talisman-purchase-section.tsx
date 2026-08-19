@@ -29,7 +29,14 @@ interface DisplayPlan {
   sort_order?: number
 }
 
-// 복채 충전 상품 기본값 (DB 연동 실패 시 fallback — price_plans 시드와 동일)
+/**
+ * 복채 충전 상품 **폴백** — DB 연동이 실패했을 때만 쓰인다.
+ *
+ * 🔴 화면에 실제로 뜨는 문구의 정본은 `price_plans.features`(DB) 다.
+ *    여기만 고치면 **화면은 하나도 안 바뀐다** — 2026-08-20에 「영구 지급」을
+ *    코드에서만 고치고 배포했다가, 라이브 카드에 그대로 남아 있어 다시 잡았다.
+ *    문구를 바꿀 때는 **DB 를 함께** 고칠 것.
+ */
 const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
   {
     credits: 5,
@@ -59,7 +66,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     features: [
       '복채 20만냥 + 보너스 3만냥',
       '사주·풀이 10회분 · 종합 4회분',
-      '모든 서비스 자유 이용',
+      '모든 풀이에 사용 가능',
       '만료 없이 사용',
     ],
   },
@@ -73,7 +80,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
     features: [
       '복채 30만냥 + 보너스 6만냥',
       '사주·풀이 15회분 · 종합 6회분',
-      '모든 서비스 자유 이용',
+      '모든 풀이에 사용 가능',
       '만료 없이 사용',
     ],
   },
