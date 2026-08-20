@@ -3,7 +3,7 @@ import { GOLD_500 } from '@/lib/config/design-tokens'
 
 export const runtime = 'edge'
 
-export const alt = '청담해화당 - Premium 운명 공학 SaaS'
+export const alt = '청담해화당 - AI 사주 운세 분석'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -191,7 +191,7 @@ export default async function Image() {
             fontWeight: 700,
           }}
         >
-          Premium 운명 공학 SaaS
+          전통 명리학 × AI 사주 분석
         </div>
 
         {/* Divider */}
