@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { GOLD_500 } from '@/lib/config/design-tokens'
 import { TERMINOLOGY, TIANGAN_INFO, DIZHI_INFO, WUXING_KOREAN } from '@/lib/constants/saju-terms'
+import { GA } from '@/lib/analytics/ga4'
 import { ELEMENT_BOOST } from '@/lib/constants/element-boost'
 
 // 섹션 설명 (작가 톤)
@@ -515,7 +516,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             </Card>
 
             {/* Tabs Layout */}
-            <Tabs defaultValue="mysaju" className="w-full">
+            <Tabs defaultValue="mysaju" className="w-full" onValueChange={(v) => GA.manseTab(v)}>
               <TabsList className="dancheong-border-top grid w-full grid-cols-3 bg-white/[0.08] border border-white/20 rounded-2xl mb-8 p-2 relative z-10 gap-1.5 h-auto shadow-lg">
                 <TabsTrigger
                   value="mysaju"

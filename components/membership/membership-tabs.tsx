@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { GA } from '@/lib/analytics/ga4'
 import { useTranslations } from 'next-intl'
 import {
   servicePeriodLine,
@@ -81,6 +82,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
   }
 
   const handleSelectPlan = () => {
+    GA.membershipCta(currentPlan.tier)
     if (isGuest) {
       router.push('/auth/login')
     } else {

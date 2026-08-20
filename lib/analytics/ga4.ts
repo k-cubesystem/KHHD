@@ -82,6 +82,11 @@ export const GA = {
   journeyStep: (stage: string) => trackEvent({ action: 'journey_step_click', category: 'engagement', label: stage }),
 
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
+
+  // ── 만세력 리뉴얼(3탭) — 어느 탭이 실제로 읽히는지, 유료 탭(운세흐름·분석리포트) 도달률.
+  manseTab: (tab: string) => trackEvent({ action: 'manse_tab', category: 'engagement', label: tab }),
+  // ── 멤버십 가입 CTA — 상점 멤버십 탭 «지금 시작하기». label 은 tier.
+  membershipCta: (tier: string) => trackEvent({ action: 'membership_cta', category: 'funnel', label: tier }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),
 
   bokPointsEarn: (amount: number) => trackEvent({ action: 'bok_points_earn', category: 'engagement', value: amount }),
