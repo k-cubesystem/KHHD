@@ -52,10 +52,9 @@ import {
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { GOLD_500 } from '@/lib/config/design-tokens'
-import { TERMINOLOGY } from '@/lib/constants/saju-terms'
+import { TERMINOLOGY, TIANGAN_INFO, DIZHI_INFO, WUXING_KOREAN } from '@/lib/constants/saju-terms'
 import { ELEMENT_BOOST } from '@/lib/constants/element-boost'
 
-// 오행별 기운 보충법
 // 섹션 설명 (작가 톤)
 const SECTION_DESCRIPTIONS = {
   sinsal: {
@@ -88,44 +87,6 @@ const SECTION_DESCRIPTIONS = {
     intro:
       '십이운성(十二運星)은 생명이 태어나서 성장하고 쇠퇴하는 12가지 단계를 나타냅니다. 지금 당신은 어느 단계에 있나요? 장생처럼 왕성한 시기일 수도, 절처럼 기다림이 필요한 시기일 수도 있습니다. 현재 단계를 알면 어떻게 행동해야 할지 지혜가 생깁니다.',
   },
-}
-
-// 천간/지지 정보
-const TIANGAN_INFO: Record<string, { korean: string; element: string; yinyang: string; meaning: string }> = {
-  甲: { korean: '갑', element: '木', yinyang: '양', meaning: '큰 나무, 우두머리, 시작' },
-  乙: { korean: '을', element: '木', yinyang: '음', meaning: '풀, 유연함, 예술' },
-  丙: { korean: '병', element: '火', yinyang: '양', meaning: '태양, 밝음, 열정' },
-  丁: { korean: '정', element: '火', yinyang: '음', meaning: '촛불, 따뜻함, 섬세함' },
-  戊: { korean: '무', element: '土', yinyang: '양', meaning: '산, 중후함, 신뢰' },
-  己: { korean: '기', element: '土', yinyang: '음', meaning: '논밭, 수용력, 인내' },
-  庚: { korean: '경', element: '金', yinyang: '양', meaning: '바위, 강직함, 결단' },
-  辛: { korean: '신', element: '金', yinyang: '음', meaning: '보석, 예민함, 정제' },
-  壬: { korean: '임', element: '水', yinyang: '양', meaning: '바다, 지혜, 포용' },
-  癸: { korean: '계', element: '水', yinyang: '음', meaning: '이슬, 직관, 침착' },
-}
-
-const DIZHI_INFO: Record<string, { korean: string; element: string; animal: string; season: string }> = {
-  子: { korean: '자', element: '水', animal: '쥐', season: '한겨울' },
-  丑: { korean: '축', element: '土', animal: '소', season: '늦겨울' },
-  寅: { korean: '인', element: '木', animal: '호랑이', season: '초봄' },
-  卯: { korean: '묘', element: '木', animal: '토끼', season: '봄' },
-  辰: { korean: '진', element: '土', animal: '용', season: '늦봄' },
-  巳: { korean: '사', element: '火', animal: '뱀', season: '초여름' },
-  午: { korean: '오', element: '火', animal: '말', season: '한여름' },
-  未: { korean: '미', element: '土', animal: '양', season: '늦여름' },
-  申: { korean: '신', element: '金', animal: '원숭이', season: '초가을' },
-  酉: { korean: '유', element: '金', animal: '닭', season: '가을' },
-  戌: { korean: '술', element: '土', animal: '개', season: '늦가을' },
-  亥: { korean: '해', element: '水', animal: '돼지', season: '초겨울' },
-}
-
-// 오행 한글 표기
-const WUXING_KOREAN: Record<string, string> = {
-  木: '목',
-  火: '화',
-  土: '토',
-  金: '금',
-  水: '수',
 }
 
 interface Member {
