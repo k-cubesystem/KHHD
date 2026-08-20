@@ -265,15 +265,23 @@ export async function deductTalisman(
     newBalance = rpcBalance
   }
 
-  // Log transaction
-
-  await supabase.from('wallet_transactions').insert({
+  // Log transaction — 이 장부가 get_charge_exempt_remaining 의 사용액 합산 재원이다.
+  // 삽입이 조용히 실패하면 충전면제 잔여가 과대계상되어 일일 상한이 뚫린다(회계 누수).
+  // 차감(잔액)과 같은 admin 경로로 쓰고, 실패는 반드시 표면화한다.
+  const { error: txLogError } = await admin.from('wallet_transactions').insert({
     user_id: user.id,
     amount: -cost,
     type: 'USE',
     feature_key: featureKey,
     description: `${deductKeyLabel(featureKey)} (${cost}만냥 복채 사용)`,
   })
+  if (txLogError) {
+    logger.error('[Wallet] USE 트랜잭션 기록 실패 — 충전면제 회계 누수 위험:', {
+      featureKey,
+      cost,
+      message: txLogError.message,
+    })
+  }
 
   // Increment daily usage counter — 무료분(fromCap)만 카운트. 충전분(overCap)은 한도 무관.
   if (plan.fromCap > 0) {
