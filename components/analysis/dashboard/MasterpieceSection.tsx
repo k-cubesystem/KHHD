@@ -99,7 +99,7 @@ export function MasterpieceSection() {
             e.stopPropagation()
             router.push('/protected/analysis/cheonjiin')
           }}
-          className="relative overflow-hidden w-full h-13 rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200 border border-seal/[0.5] bg-seal"
+          className="tap-glow-gold relative overflow-hidden w-full h-13 rounded-sm group/btn hover:scale-[1.01] border border-seal/[0.5] bg-seal"
           style={{
             boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
           }}

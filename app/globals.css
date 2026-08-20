@@ -124,6 +124,27 @@
     line-break: strict;
   }
 
+  /* ===== 의례 탭 피드백 — hover 는 모바일에서 죽는다. :active 가 주 경로 ===== */
+  .tap-glow-gold {
+    transition:
+      transform 0.15s ease-out,
+      box-shadow 0.2s ease-out,
+      filter 0.15s ease-out;
+  }
+  .tap-glow-gold:active {
+    transform: scale(0.97);
+    box-shadow:
+      0 0 18px rgba(201, 168, 76, 0.35),
+      inset 0 0 12px rgba(201, 168, 76, 0.12);
+    filter: brightness(1.08);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tap-glow-gold:active {
+      transform: none;
+      filter: none;
+    }
+  }
+
   /* ===== 접근성: 포커스 링 ===== */
   :focus-visible {
     outline: 2px solid var(--color-info);
