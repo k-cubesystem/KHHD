@@ -421,7 +421,7 @@ export default async function MyPage() {
           <div key={group.title}>
             <div className="flex items-baseline gap-2 mb-2.5">
               <div className="h-px w-6 bg-gold-500/40" />
-              <h3 className="text-xs font-serif text-gold-500/80 tracking-wider">{group.title}</h3>
+              <h3 className="text-caption font-semibold font-serif text-gold-500/80 tracking-wider">{group.title}</h3>
               <span className="text-[10px] font-sans text-ink-light/30">{group.gloss}</span>
             </div>
 

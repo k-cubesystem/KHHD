@@ -116,7 +116,7 @@ export function GuardianGrid({
 
       {CATEGORY_ORDER.map((cat) => (
         <section key={cat} className="space-y-2">
-          <h2 className="font-serif text-[12px] font-bold tracking-[0.2em] text-gold-500/60">
+          <h2 className="font-serif text-caption font-bold tracking-[0.2em] text-gold-500/60">
             {GUARDIAN_CATEGORY_LABEL[cat]}
           </h2>
           <div className="grid grid-cols-2 gap-2.5">

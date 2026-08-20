@@ -98,7 +98,7 @@ export function AnalysisDashboard() {
                 <span className="font-serif text-[10px] leading-none tracking-[0.2em] text-gold-500/60">
                   {THEME_CATEGORIES[theme.category].label}
                 </span>
-                <h3 className="line-clamp-2 font-serif text-[13px] font-bold leading-snug text-ink-light">
+                <h3 className="line-clamp-2 font-serif text-body-sm font-bold leading-snug text-ink-light">
                   {theme.title}
                 </h3>
                 <p className="line-clamp-1 text-[11px] font-light leading-tight text-ink-light/50">{theme.subcopy}</p>

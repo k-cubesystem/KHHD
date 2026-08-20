@@ -86,7 +86,7 @@ export function StoryTrust() {
 
       <StoryReveal index={1}>
         <div className="mt-6 rounded-xl border border-white/10 bg-black/30 p-4">
-          <h3 className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2 m-0">
+          <h3 className="font-sans text-overline font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2 m-0">
             반드시 알고 계셔야 할 것
           </h3>
           <p className="font-sans text-[12px] leading-[1.75] text-ink-light/80 break-keep font-light m-0">

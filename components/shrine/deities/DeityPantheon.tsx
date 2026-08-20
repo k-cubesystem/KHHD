@@ -180,7 +180,7 @@ export function DeityPantheon({ catalog, bonds, familyMemberId, hideBackLink = f
         const tierName = list[0]?.tierName ?? ''
         return (
           <section key={tier} className="mb-6">
-            <h3 className="text-xs font-serif text-gold-500/70 tracking-wider mb-2.5 uppercase">
+            <h3 className="text-caption font-semibold font-serif text-gold-500/70 tracking-wider mb-2.5 uppercase">
               {tierName}
               {tier > 1 ? (
                 <span className="text-ink-light/30 ml-2 normal-case">유료</span>

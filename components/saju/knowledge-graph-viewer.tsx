@@ -438,7 +438,7 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
 
               {selectedEdges.length > 0 && (
                 <>
-                  <h4 className="text-gray-500 text-xs font-semibold mb-2 uppercase tracking-wider">연결 관계</h4>
+                  <h4 className="text-ink-light/50 text-caption font-semibold mb-2 uppercase tracking-wider">연결 관계</h4>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {selectedEdges.map((edge) => {
                       const style = EDGE_STYLES[edge.type]
@@ -467,7 +467,7 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
         {/* 사용 안내 */}
         {!selectedNodeData && (
           <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
-            <h3 className="text-gray-500 text-xs font-semibold mb-2 uppercase tracking-wider">사용법</h3>
+            <h3 className="text-ink-light/50 text-caption font-semibold mb-2 uppercase tracking-wider">사용법</h3>
             <ul className="text-gray-600 text-xs space-y-1">
               <li>· 노드 클릭 → 관계 하이라이트</li>
               <li>· 노드 호버 → 설명 툴팁</li>

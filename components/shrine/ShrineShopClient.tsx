@@ -63,7 +63,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
         return (
           <section key={section.key} className="space-y-2">
             <div>
-              <h2 className="font-serif text-[13px] font-bold tracking-[0.18em] text-gold-500/70">
+              <h2 className="font-serif text-body-sm font-bold tracking-[0.18em] text-gold-500/70">
                 {section.label}{' '}
                 <span className="font-sans text-[10px] font-normal text-ink-light/35">{items.length}</span>
               </h2>

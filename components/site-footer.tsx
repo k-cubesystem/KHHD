@@ -31,7 +31,7 @@ export function SiteFooter({ className }: SiteFooterProps) {
       {/* 브랜드 + 사업자 정보 */}
       <div className="px-5 space-y-2">
         <div className="flex items-baseline gap-2">
-          <h3 className="text-[13px] font-serif text-primary/70">해화당 (海華堂)</h3>
+          <h3 className="text-body-sm font-semibold font-serif text-primary/70">해화당 (海華堂)</h3>
           <p className="text-[9px] text-ink-light/30">전통 명리학 × AI</p>
         </div>
 
