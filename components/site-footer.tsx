@@ -11,19 +11,19 @@ export function SiteFooter({ className }: SiteFooterProps) {
     <footer className={cn('w-full max-w-[480px] mx-auto pb-28', className)}>
       {/* 링크 바 */}
       <div className="flex items-center justify-center gap-3 py-1.5 border-t border-primary/10 mb-4">
-        <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 text-[10px] text-ink-light/40 hover:text-primary transition-colors">
+        <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
           이용약관
         </Link>
         <span className="w-px h-3 bg-primary/20" />
-        <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 text-[10px] text-ink-light/40 hover:text-primary transition-colors">
+        <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
           개인정보처리방침
         </Link>
         <span className="w-px h-3 bg-primary/20" />
-        <Link href="/protected/support" className="inline-flex min-h-[44px] items-center px-1 text-[10px] text-ink-light/40 hover:text-primary transition-colors">
+        <Link href="/protected/support" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
           고객센터
         </Link>
         <span className="w-px h-3 bg-primary/20" />
-        <Link href="/business" className="inline-flex min-h-[44px] items-center px-1 text-[10px] text-ink-light/40 hover:text-primary transition-colors">
+        <Link href="/business" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
           기업 도입
         </Link>
       </div>
