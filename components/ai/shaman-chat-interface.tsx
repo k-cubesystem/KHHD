@@ -159,7 +159,7 @@ const Bubble = memo(function Bubble({
               type="button"
               onClick={() => onSpeak(msg.content)}
               aria-label="음성으로 듣기"
-              className="text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
+              className="-my-3 -mx-2 px-2 py-3 text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
             >
               🔊 듣기
             </button>
