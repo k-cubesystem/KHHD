@@ -1,5 +1,7 @@
 'use client'
 
+import * as React from 'react'
+
 /**
  * 사주풀이 **본문 섹션** — 라이브 결과 화면과 기록 상세가 **함께 쓰는 단일 출처**.
  *
@@ -541,6 +543,40 @@ export function SajuCrossAnalysisSection({ data }: { data: SajuReadingData }) {
 }
 
 // --- 섹션 헬퍼 (두 화면 공용) ---
+/**
+ * 스크롤 리빌 — 섹션이 뷰포트에 들어올 때 한 번 페이드업.
+ * IO 미지원·프리뷰 환경(IO 죽음)·reduced-motion 에서는 즉시 표시(콘텐츠 손실 금지).
+ */
+function useRevealOnScroll() {
+  const ref = React.useRef<HTMLElement | null>(null)
+  const [revealed, setRevealed] = React.useState(false)
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setRevealed(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setRevealed(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.05 }
+    )
+    io.observe(el)
+    // 안전장치 — 어떤 이유로든 IO 콜백이 안 오면 1.2초 뒤 그냥 보여준다(고급 연출 A안 전례).
+    const timer = window.setTimeout(() => setRevealed(true), 1200)
+    return () => {
+      io.disconnect()
+      window.clearTimeout(timer)
+    }
+  }, [])
+  return { ref, revealed }
+}
+
 function ResultSection({
   title,
   color,
@@ -552,6 +588,7 @@ function ResultSection({
   show: boolean
   children: React.ReactNode
 }) {
+  const { ref, revealed } = useRevealOnScroll()
   if (!show) return null
   const colors = {
     amber: 'bg-amber-500/5 border-amber-500/15 text-amber-400',
@@ -568,7 +605,10 @@ function ResultSection({
     rose: 'bg-rose-400',
   }
   return (
-    <section className={`mx-4 mb-4 p-4 rounded-xl border ${colors[color]}`}>
+    <section
+      ref={ref}
+      className={`hanji-section reveal-soft ${revealed ? 'is-revealed' : ''} mx-4 mb-4 p-4 rounded-xl border ${colors[color]}`}
+    >
       <h3 className={`text-sm font-serif font-medium mb-3 flex items-center gap-2 ${colors[color].split(' ')[2]}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${dotColors[color]}`} />
         {title}

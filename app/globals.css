@@ -145,6 +145,40 @@
     }
   }
 
+  /* ===== 풀이 섹션 스크롤 리빌 — 절제된 페이드(4050 배려), JS 실패 시에도 콘텐츠는 보인다 ===== */
+  .reveal-soft {
+    opacity: 0.001;
+    transform: translateY(12px);
+    transition:
+      opacity 0.6s ease-out,
+      transform 0.6s ease-out;
+  }
+  .reveal-soft.is-revealed {
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-soft {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  /* ===== 한지 질감 섹션 — 배경 장식이 아니라 카드 표면 재료로 ===== */
+  .hanji-section {
+    position: relative;
+  }
+  .hanji-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    @apply bg-noise-pattern pointer-events-none;
+    opacity: 0.14;
+    mix-blend-mode: overlay;
+  }
+
   /* ===== 접근성: 포커스 링 ===== */
   :focus-visible {
     outline: 2px solid var(--color-info);
