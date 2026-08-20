@@ -137,6 +137,13 @@ export async function deductTalisman(
   errorType?: string
   currentTier?: string
 }> {
+  // 'use server' export = 공개 엔드포인트. amount 는 클라이언트가 임의로 줄 수 있다.
+  // 음수·0·비정수를 여기서 자르지 않으면 RPC 가 예외를 던지고, 그 예외가
+  // «RPC 미설정» 폴백으로 해석되어 가드 없는 UPDATE 로 잔액이 **증액**된다.
+  if (!Number.isInteger(amount) || amount <= 0) {
+    logger.error('[Wallet] deductTalisman rejected invalid amount:', { featureKey, amount })
+    return { success: false, error: '잘못된 차감 금액입니다.' }
+  }
   if (isEdgeEnabled('payment')) {
     return invokeEdgeSafe('payment', { action: 'deductTalisman', featureKey, customAmount: amount })
   }
