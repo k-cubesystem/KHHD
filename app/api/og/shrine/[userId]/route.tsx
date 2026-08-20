@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: PageProps) {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     })
     const css = await fontRes.text()
-    const fontUrl = css.match(/src: url\((.+?)\) format\('opentype'\)/)?.[1] ?? null
+    const fontUrl = css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/)?.[1] ?? null
 
     let fontData: ArrayBuffer | null = null
     if (fontUrl) {

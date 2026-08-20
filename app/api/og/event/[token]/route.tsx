@@ -38,7 +38,7 @@ export async function GET(_req: NextRequest, { params }: PageProps) {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     })
     const css = await fontRes.text()
-    const fontUrl = css.match(/src: url\((.+?)\) format\('opentype'\)/)?.[1] ?? null
+    const fontUrl = css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/)?.[1] ?? null
     const fontData = fontUrl ? await fetch(fontUrl).then((r) => r.arrayBuffer()) : null
     const fonts: { name: string; data: ArrayBuffer; style: 'normal'; weight: 700 }[] = fontData
       ? [{ name: 'NotoSerifKR', data: fontData, style: 'normal', weight: 700 }]

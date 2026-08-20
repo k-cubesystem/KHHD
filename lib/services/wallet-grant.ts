@@ -7,6 +7,7 @@ import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { computeCancelClawback, type TossCancelRecord } from '@/lib/domain/payment/cancel-clawback'
+import { SIGNUP_BONUS_TALISMANS } from '@/lib/domain/payment/feature-costs'
 
 /**
  * 복채 **발행**(잔액 증액) 전용 모듈.
@@ -258,7 +259,7 @@ export async function grantSignupBonus(userId: string): Promise<void> {
 
   if (existing) return // 이미 지급됨
 
-  const SIGNUP_AMOUNT = 50 // 50만냥
+  const SIGNUP_AMOUNT = SIGNUP_BONUS_TALISMANS
 
   // 트랜잭션 로그 먼저 삽입 (중복 방지)
   const { error: txError } = await adminClient.from('wallet_transactions').insert({

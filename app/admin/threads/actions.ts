@@ -12,6 +12,7 @@ import {
   validateText,
 } from '@/lib/services/threads/client'
 import { runDrawForRound, generateDraftForWinner } from '@/lib/services/event/draw-service'
+import { generateWeeklyReport } from '@/lib/services/threads/report-service'
 import { maskUsername } from '@/lib/domain/event/reading'
 import { logger } from '@/lib/utils/logger'
 
@@ -472,4 +473,32 @@ export async function listPosts(limit = 50) {
     .limit(limit)
   if (error) return { success: false as const, error: error.message }
   return { success: true as const, items: data ?? [] }
+}
+
+// ────────────────────────────────────────────────────────────────
+// 주간 보고서 (S5)
+// ────────────────────────────────────────────────────────────────
+
+export async function listReports(limit = 8) {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('threads_reports')
+    .select('id, period_start, period_end, metrics, updated_at')
+    .order('period_start', { ascending: false })
+    .limit(limit)
+  if (error) {
+    logger.error('[Threads Admin] listReports', error)
+    return { success: false as const, error: error.message }
+  }
+  return { success: true as const, items: data ?? [] }
+}
+
+/** 크론을 기다리지 않고 지난주를 지금 집계 — 크론과 같은 서비스를 부르므로 결과가 갈리지 않는다. */
+export async function generateReportNow() {
+  const gate = await assertAdmin()
+  if ('error' in gate) return { success: false as const, error: gate.error }
+  const r = await generateWeeklyReport(new Date())
+  if (!r.success) return { success: false as const, error: r.error ?? '집계에 실패했어요' }
+  revalidatePath(ADMIN_PATH)
+  return { success: true as const, period: r.period }
 }

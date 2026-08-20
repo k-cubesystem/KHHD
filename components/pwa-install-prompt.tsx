@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Download, Monitor, Smartphone, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -33,7 +34,11 @@ function detectPlatform(): Platform {
   }
 }
 
+/** 비로그인 유입 첫 화면(3초 일간·이벤트 폼)에서는 띄우지 않는다 — 아직 아무것도 안 본 방문자에게 설치부터 권하면 결과 카드를 가린다. */
+const COLD_FUNNEL_PREFIXES = ['/ilgan', '/event']
+
 export function PWAInstallPrompt() {
+  const pathname = usePathname()
   const hydrated = useHydrated()
   const [platform] = useState<Platform>(detectPlatform)
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
@@ -53,7 +58,9 @@ export function PWAInstallPrompt() {
   }, [platform.isStandalone])
 
   // 표시 여부는 상태가 아니라 파생값이다 — 설치 이벤트/플랫폼/닫기 셋으로 결정된다.
-  const isVisible = hydrated && !dismissed && !platform.isStandalone && (deferredPrompt !== null || platform.isIOS)
+  const onColdFunnel = COLD_FUNNEL_PREFIXES.some((p) => pathname?.startsWith(p))
+  const isVisible =
+    hydrated && !dismissed && !onColdFunnel && !platform.isStandalone && (deferredPrompt !== null || platform.isIOS)
 
   const handleInstallClick = async () => {
     if (platform.isIOS) {
