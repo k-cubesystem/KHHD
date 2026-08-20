@@ -9,9 +9,11 @@ export interface ElementBoostEntry {
   advice: string
 }
 
-// 오행별 기운 보충법
+// 오행별 기운 보충법.
+// 🔴 키는 한자 오행(木·火·土·金·水) — 조회 키 yongsinAnalysis.yongsin 이 한자다.
+//    영문 키(Wood…)였을 때 조회가 늘 undefined 라 용신 실천법 UI 3곳이 조용히 비어 있었다.
 export const ELEMENT_BOOST: Record<string, ElementBoostEntry> = {
-  Wood: {
+  木: {
     color: '초록색, 청록색',
     direction: '동쪽',
     season: '봄',
@@ -27,7 +29,7 @@ export const ELEMENT_BOOST: Record<string, ElementBoostEntry> = {
     advice:
       '목 기운이 필요한 당신은 자연과 가까이 지내면 운이 좋아집니다. 매일 아침 초록색 식물에 물을 주는 습관을 들여보세요. 동쪽 창가에 책상을 두고 공부하거나 일하면 집중력이 높아집니다.',
   },
-  Fire: {
+  火: {
     color: '빨간색, 주황색, 자주색',
     direction: '남쪽',
     season: '여름',
@@ -43,7 +45,7 @@ export const ELEMENT_BOOST: Record<string, ElementBoostEntry> = {
     advice:
       '화 기운이 필요한 당신은 밝고 활기찬 환경에서 에너지를 얻습니다. 오전 시간에 중요한 일을 하고, 사람들과 활발히 교류하세요. 남쪽 방향을 바라보며 일하면 아이디어가 샘솟습니다.',
   },
-  Earth: {
+  土: {
     color: '노란색, 갈색, 베이지',
     direction: '중앙, 남서, 북동',
     season: '환절기 (계절의 끝 18일)',
@@ -54,7 +56,7 @@ export const ELEMENT_BOOST: Record<string, ElementBoostEntry> = {
     advice:
       '토 기운이 필요한 당신은 안정과 신뢰를 중시합니다. 규칙적인 생활 습관을 유지하고, 황토색 인테리어를 활용하세요. 맨발로 흙을 밟거나 도예 활동을 하면 마음이 안정됩니다.',
   },
-  Metal: {
+  金: {
     color: '흰색, 금색, 은색',
     direction: '서쪽',
     season: '가을',
@@ -65,7 +67,7 @@ export const ELEMENT_BOOST: Record<string, ElementBoostEntry> = {
     advice:
       '금 기운이 필요한 당신은 깨끗하고 정돈된 환경에서 능력을 발휘합니다. 흰색이나 금색 소품을 활용하고, 오후 시간에 중요한 결정을 내리세요. 서쪽 방향에서 명상하면 직관력이 높아집니다.',
   },
-  Water: {
+  水: {
     color: '검은색, 남색, 파란색',
     direction: '북쪽',
     season: '겨울',
