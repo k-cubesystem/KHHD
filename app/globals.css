@@ -108,10 +108,17 @@
   }
 
   /* ===== 한글 타이포그래피 최적화 ===== */
+  /* 제목도 포함 — 어절 중간 줄바꿈("등록해주/세요")은 제목에서 가장 눈에 띈다 */
   p,
   li,
   dd,
-  blockquote {
+  blockquote,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     word-break: keep-all;
     overflow-wrap: break-word;
     line-break: strict;
