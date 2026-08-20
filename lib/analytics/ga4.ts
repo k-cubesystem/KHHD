@@ -73,6 +73,8 @@ export const GA = {
   paymentGuideClose: () => trackEvent({ action: 'payment_guide_close', category: 'funnel' }),
   paymentGuideCta: (target: string) => trackEvent({ action: 'payment_guide_cta', category: 'funnel', label: target }),
 
+  // ── 9:16 공유 카드 저장(P5) — label 은 일간 slug. 어느 일간이 바이럴을 끄는지 본다.
+  cardSave: (slug: string) => trackEvent({ action: 'share_card_save', category: 'social', label: slug }),
   shareKakao: (contentType: string) => trackEvent({ action: 'share_kakao', category: 'social', label: contentType }),
   shareCopyLink: (contentType: string) =>
     trackEvent({ action: 'share_copy_link', category: 'social', label: contentType }),

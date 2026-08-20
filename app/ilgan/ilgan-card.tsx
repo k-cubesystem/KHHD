@@ -1,4 +1,5 @@
 import { ELEMENT_COLOR, ELEMENT_HANJA, type IlganInfo } from '@/lib/domain/saju/ilgan'
+import { SaveCardButton } from './save-card-button'
 
 /**
  * 일간 카드 — 결과 화면(/ilgan)과 공유 랜딩(/ilgan/[stem])이 같은 모양을 쓴다.
@@ -39,6 +40,8 @@ export function IlganCard({ info, dayPillar }: { info: IlganInfo; dayPillar?: st
       <p className="mt-5 font-sans text-[11px] leading-relaxed text-ink-light/55">
         명리에서 일간을 읽는 전통적 상(象)입니다. 사람을 단정하지 않으며, 팔자 여덟 글자 중 한 글자일 뿐입니다.
       </p>
+
+      <SaveCardButton slug={info.slug} />
     </section>
   )
 }
