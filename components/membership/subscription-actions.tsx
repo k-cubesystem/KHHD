@@ -145,16 +145,20 @@ export function SubscriptionActions({ subscriptionId: _subscriptionId, status, p
           <AlertDialogContent className="rounded-2xl border-white/[0.08] bg-surface">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-serif text-ink-light">정말 구독을 해지하시겠습니까?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2 text-ink-light/55">
-                <p>해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.</p>
-                <p className="font-medium text-ink-light">해지 시 잃게 되는 혜택:</p>
-                {/* 등급마다 액수가 달라 숫자는 적지 않는다 — 잃는 «것»만 정확히 적는다. */}
-                <ul className="list-disc list-inside text-sm space-y-1">
-                  <li>결제 주기마다 지급되던 복채</li>
-                  <li>신당 · 가족관리 · 고민상담 입장</li>
-                  <li>웹툰 멤버십 전용 회차</li>
-                  <li>기록 보관 기간 제한 해제 (무료는 최근 {FREE_RETENTION_DAYS}일까지 열람)</li>
-                </ul>
+              {/* Radix Description 기본 태그는 <p> — 안에 <p>·<ul> 블록을 넣으면 DOM 중첩 위반이라
+                  asChild 로 <div> 컨테이너로 바꾼다(접근성 aria-describedby 연결은 유지). */}
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 text-ink-light/55">
+                  <p>해지 후에도 현재 결제 기간이 끝날 때까지 모든 멤버십 혜택을 이용할 수 있습니다.</p>
+                  <p className="font-medium text-ink-light">해지 시 잃게 되는 혜택:</p>
+                  {/* 등급마다 액수가 달라 숫자는 적지 않는다 — 잃는 «것»만 정확히 적는다. */}
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    <li>결제 주기마다 지급되던 복채</li>
+                    <li>신당 · 가족관리 · 고민상담 입장</li>
+                    <li>웹툰 멤버십 전용 회차</li>
+                    <li>기록 보관 기간 제한 해제 (무료는 최근 {FREE_RETENTION_DAYS}일까지 열람)</li>
+                  </ul>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
