@@ -17,7 +17,8 @@ import { PillarsStrip } from '@/components/analysis/PillarsStrip'
 import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { getSajuData } from '@/lib/domain/saju/saju'
 import { deriveDailyLucky } from '@/lib/domain/fortune/daily-lucky'
-import { GA } from '@/lib/analytics/ga4'
+import { GA, trackEvent } from '@/lib/analytics/ga4'
+import { getRitualWindow } from '@/lib/domain/ritual/lunar-window'
 
 interface DailyFortuneViewProps {
   userId: string
@@ -151,6 +152,7 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
       <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
       <div className="relative z-10 space-y-6">
+        <RitualDayNotice />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-serif font-bold text-ink-light flex items-center gap-2">
@@ -302,5 +304,27 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
         {fortune && <ServiceDisclaimer className="mt-2" />}
       </div>
     </Card>
+  )
+}
+
+/** 초하루 안내 1줄 (설계 T4 — 진입 동선 2접점). 창 밖에서는 렌더하지 않는다. */
+function RitualDayNotice() {
+  const [inWindow, setInWindow] = useState(false)
+  useEffect(() => {
+    try {
+      setInWindow(getRitualWindow().inWindow)
+    } catch {
+      setInWindow(false)
+    }
+  }, [])
+  if (!inWindow) return null
+  return (
+    <Link
+      href="/protected/ritual"
+      onClick={() => trackEvent({ action: 'ritual_notice_tap', category: 'ritual', label: 'daily_fortune' })}
+      className="block rounded-[3px] border border-seal/40 px-3 py-2 text-sm text-ink-light"
+    >
+      🏮 오늘은 초하루 — 식구들 문안 올리러 가기 →
+    </Link>
   )
 }
