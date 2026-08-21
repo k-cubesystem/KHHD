@@ -295,6 +295,8 @@ vercel 빌드 훅도 없음). 이 리포의 마이그레이션 적용 경로는 
 **HEAD 가 아닌 커밋을 골라 배포하는 것은 그 사이 배포된 것을 되돌리는 일이 될 수 있다.**
 복구는 브랜치 HEAD 를 다시 배포하면 된다(승인 대기 중이라 하지 않았다).
 
+🔴 **배포 핑퐁 사고(19:10 복구)**: 18:45 tip 배포(`hhd-imhuorzx8`=87bf5f4) 4분 뒤 다른 세션의 CLI 프로덕션 배포(`hhd-hpwo61a7m`)가 도메인을 **a4bc7cc(여정 보상 없음)로 되돌렸다** — CEO가 «그대로인데?»로 발견. 파일 SHA1 대조로 확인 후 `vercel alias set hhd-imhuorzx8-...vercel.app k-haehwadang.com` 으로 복구. 교훈: **여러 세션이 같은 날 배포할 때는 배포 직전 `vercel ls hhd` 로 4분 내 다른 프로덕션 배포가 없는지 보고, 배포 후에도 `vercel inspect k-haehwadang.com` 으로 자기 배포가 살아 있는지 재확인**할 것. 프로덕션 배포는 반드시 브랜치 tip 이상에서.
+
 ⚠️ 같은 날 사고 기록: `determined-yonath` 워크트리가 `.git` 링크 소실로 메인에 폴백돼 있었고(원인 미상 — `git -C` 조차 상위로 걸어 올라가 **main 을 가리켰다**), 복구 중 `mv` 가 파일 2,313개를 유실시켰다(대상 디렉터리는 생성 안 됨 — 행방 불명). 커밋·push 가 전부 원격에 있어 `git restore --source=HEAD .` 로 전량 복원, 추적 diff 0 확인. 교훈: **워크트리에서 명령 전 `git -C <경로> rev-parse --show-toplevel` 로 실제 리포를 확인**할 것. 배포는 애초에 임시 detached 워크트리에서 해서 무영향.
 
 | 항목        | 내용                                                                                                                                                                                                                                                            |
