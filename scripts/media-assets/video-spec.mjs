@@ -15,6 +15,24 @@ export const VIDEO_SPECS = [
       'no text, no characters, seamless loop, subtle motion, luxurious dark-gold palette.',
   },
   {
+    id: 'journey-ambient',
+    title: '종합운수 여정 — 오상 향로(금빛 향 연기)',
+    placement: 'JourneyCard full 변형 배경 (screen-blend, opacity ~0.2)',
+    durationSec: 8,
+    resolution: '720p',
+    // 여정 카드 전용: 위 사주 카드(analysis-ambient 먹·금가루)와 같은 계보의 자매 톤 — 향 연기 한 줄기.
+    // 교훈 반영(신당 v5): 깜빡임·명멸 금지, 정적 카메라, 순검정 위 요소만(screen 블렌드 전제).
+    prompt:
+      'Pure solid black background (#000000), completely empty. A single slender wisp of incense smoke rises ' +
+      'slowly from the bottom center, rendered as faint glowing liquid gold, curling and unfurling in graceful ' +
+      'meditative slow motion. Very fine golden dust particles drift gently upward around it. The smoke stays ' +
+      'soft, dim and understated — luxurious, mystical, reverent. Smooth continuous steady motion — no ' +
+      'flickering, no blinking, no strobing, nothing suddenly appearing or disappearing, consistent steady ' +
+      'lighting throughout. Only the golden smoke and dust are visible on pure black. Static camera, no text, ' +
+      'no people, no objects, no incense stick visible. Seamless loop, subtle graceful motion, premium ' +
+      'dark-gold aesthetic.',
+  },
+  {
     id: 'analysis-ambient',
     title: '분석 앰비언트 — 흐르는 먹·금가루',
     placement: 'SajuLoadingOverlay (core-pulse 위 은은한 루프)',

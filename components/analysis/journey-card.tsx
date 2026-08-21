@@ -187,9 +187,9 @@ function JourneyFull({
         boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(201,168,76,0.07)',
       }}
     >
-      {/* 앰비언트 배경 영상 — 흐르는 먹·금가루. 없으면 폴백(그라디언트 유지), reduced-motion 존중 */}
+      {/* 앰비언트 배경 영상 — 오상 향로(금빛 향 연기). 없으면 폴백(그라디언트 유지), reduced-motion 존중 */}
       <AmbientVideo
-        id="analysis-ambient"
+        id="journey-ambient"
         rate={0.5}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         style={{ opacity: 0.22, mixBlendMode: 'screen' }}
