@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Sparkles, Landmark, Check, Loader2 } from 'lucide-react'
+import { Sparkles, Landmark, Check, Loader2, Star } from 'lucide-react'
 import {
   getJourneyRewardStatus,
   claimJourneyReward,
@@ -87,7 +87,7 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
         <DialogHeader>
           <DialogTitle className="font-serif text-gold-500 flex items-center gap-2">
             <Sparkles className="w-4 h-4" />
-            {JOURNEY_COMPLETE_TITLE} 완주 보상
+            {JOURNEY_COMPLETE_TITLE} 보상
           </DialogTitle>
         </DialogHeader>
 
@@ -100,12 +100,12 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
         ) : (
           <div className="space-y-5">
             <p className="text-[12px] text-ink-light/60 font-light leading-relaxed break-keep">
-              다섯 상(相)을 모두 모으신 것을 축하드립니다. 아래 신위 한 좌 또는 테마신당 한 곳을{' '}
-              <span className="text-gold-500">무료로 봉안</span>해 드립니다. (1회 한정, 선택 후 변경 불가)
+              다섯 개의 별을 모두 밝히신 것을 축하드립니다. 아래 신위 한 분 또는 테마신당 한 곳을{' '}
+              <span className="text-gold-500">무료로 모실 수 있습니다</span>. (1회 한정, 선택 후 변경 불가)
             </p>
 
             <ChoiceGroup
-              title="신위 봉안 (2품 명신)"
+              title="신위 모시기 (2품 명신)"
               icon={<Sparkles className="w-3.5 h-3.5" />}
               choices={deities}
               selected={selected}
@@ -134,7 +134,7 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
               {pending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : selected ? (
-                `${selected.name} 봉안 받기`
+                `${selected.name} 모시기`
               ) : (
                 '보상을 선택하세요'
               )}
@@ -210,25 +210,23 @@ function ChoiceGroup({
 function RewardClaimedView({ name }: { name: string }) {
   return (
     <div className="py-6 flex flex-col items-center gap-4 text-center">
-      {/* 낙관(도장) 연출 */}
+      {/* 별자리 완성 메달 연출 */}
       <motion.div
-        initial={{ scale: 1.6, opacity: 0, rotate: -12 }}
-        animate={{ scale: 1, opacity: 1, rotate: -6 }}
+        initial={{ scale: 1.6, opacity: 0, rotate: -20 }}
+        animate={{ scale: 1, opacity: 1, rotate: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-        className="w-20 h-20 rounded-md flex items-center justify-center font-serif font-bold text-[15px] leading-tight text-[#F4E4BA]"
+        className="w-20 h-20 rounded-full flex items-center justify-center"
         style={{
-          background: '#9E2B2B',
-          boxShadow: '0 0 24px rgba(158,43,43,0.45), inset 0 0 0 2px rgba(244,228,186,0.35)',
+          background: 'radial-gradient(circle, rgba(201,168,76,0.35) 0%, rgba(201,168,76,0.08) 70%)',
+          boxShadow: '0 0 28px rgba(212,175,55,0.45), inset 0 0 0 2px rgba(232,213,160,0.4)',
         }}
       >
-        五相
-        <br />
-        完集
+        <Star className="w-9 h-9 text-gold-500 fill-gold-500" />
       </motion.div>
       <div className="space-y-1.5">
         <p className="text-base font-serif font-bold text-gold-500">{name}</p>
         <p className="text-[12px] text-ink-light/60 font-light leading-relaxed break-keep">
-          봉안이 끝났습니다. 신당에서 확인하실 수 있습니다.
+          {JOURNEY_COMPLETE_TITLE} — 신당에서 확인하실 수 있습니다.
         </p>
       </div>
       <a

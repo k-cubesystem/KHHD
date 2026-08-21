@@ -15,6 +15,23 @@ export const VIDEO_SPECS = [
       'no text, no characters, seamless loop, subtle motion, luxurious dark-gold palette.',
   },
   {
+    id: 'journey-night',
+    title: '운세 별자리 — 밤하늘·별자리·달·별똥별',
+    placement: 'JourneyCard full 변형 + /studio/samhap 소개 카드 배경 (opacity ~0.5 screen)',
+    durationSec: 8,
+    resolution: '720p',
+    // CEO 지시(08-21): 밤하늘 별자리·달·별똥별. 사주 카드(먹·금가루)와 다른 세계관으로 기능 구별.
+    // 깜빡임 금지 교훈 유지 — 별 반짝임은 아주 완만하게, 스트로브 금지. 별똥별 1회 통과.
+    prompt:
+      'A deep midnight navy-blue night sky, calm and luxurious. Many tiny warm golden-white stars, with a few ' +
+      'faint constellations connected by very thin delicate golden lines. An elegant slender crescent moon glows ' +
+      'softly in the upper area. The star field drifts extremely slowly. One single shooting star streaks ' +
+      'gracefully across the sky leaving a thin fading golden trail. Stars shimmer very gently and slowly — ' +
+      'no strobing, no rapid blinking, no flickering, consistent steady soft lighting. No clouds, no landscape, ' +
+      'no horizon, no people, no text. Static camera, premium dark navy-and-gold palette, meditative subtle ' +
+      'motion, seamless loop.',
+  },
+  {
     id: 'journey-ambient',
     title: '종합운수 여정 — 오상 향로(금빛 향 연기)',
     placement: 'JourneyCard full 변형 배경 (screen-blend, opacity ~0.2)',

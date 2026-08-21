@@ -43,9 +43,9 @@ export const JOURNEY_CORE_STAGES: readonly JourneyStageId[] = ['SAJU', 'FACE', '
 export const JOURNEY_STAGE_ORDER: readonly JourneyStageId[] = ['SAJU', 'FACE', 'HAND', 'FENGSHUI', 'SAMHAP']
 
 const STAGE_META: Record<JourneyStageId, { label: string; subtitle: string; path: string }> = {
-  SAJU: { label: '사주', subtitle: '타고난 명(命)', path: '/protected/analysis/cheonjiin' },
-  FACE: { label: '관상', subtitle: '얼굴의 상(相)', path: '/protected/studio/face' },
-  HAND: { label: '손금', subtitle: '손안의 상(相)', path: '/protected/studio/palm' },
+  SAJU: { label: '사주', subtitle: '타고난 운명', path: '/protected/analysis/cheonjiin' },
+  FACE: { label: '관상', subtitle: '얼굴의 상', path: '/protected/studio/face' },
+  HAND: { label: '손금', subtitle: '손안의 상', path: '/protected/studio/palm' },
   FENGSHUI: { label: '풍수', subtitle: '터의 기운', path: '/protected/studio/fengshui' },
   SAMHAP: { label: '종합', subtitle: '종합사주풀이', path: '/protected/studio/samhap' },
 }

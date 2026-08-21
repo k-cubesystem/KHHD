@@ -5,7 +5,18 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { ArrowRight, Coins, Sparkles, User2, Hand, Compass, Calendar, ChevronLeft, type LucideIcon } from 'lucide-react'
+import {
+  ArrowRight,
+  Coins,
+  Sparkles,
+  User2,
+  Hand,
+  Compass,
+  Calendar,
+  ChevronLeft,
+  Star as StarIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import { logger } from '@/lib/utils/logger'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
@@ -37,9 +48,9 @@ const SAMHAP_DISCOUNT_PCT = INDIVIDUAL_TOTAL > 0 ? Math.round((1 - SAMHAP_COST /
 const SAMHAP_EXPECTED_SECONDS = 60
 
 const LOADING_STEPS = [
-  '사주(天)의 기운을 불러옵니다...',
-  '관상·손금(人)의 결을 겹쳐 봅니다...',
-  '풍수(地)의 터 기운을 더합니다...',
+  '사주, 하늘의 기운을 불러옵니다...',
+  '관상·손금, 사람의 결을 겹쳐 봅니다...',
+  '풍수, 터의 기운을 더합니다...',
   '네 기운의 합치점을 찾고 있습니다...',
   '종합사주풀이 처방을 정리합니다...',
 ]
@@ -115,7 +126,7 @@ function SamhapPageContent() {
               boxShadow: '0 0 14px rgba(158,43,43,0.35), inset 0 0 0 2px rgba(244,228,186,0.25)',
             }}
           >
-            合
+            합
           </span>
           <div>
             <div className="flex items-center gap-2">
@@ -124,7 +135,7 @@ function SamhapPageContent() {
                 Premium
               </span>
             </div>
-            <p className="text-xs text-white/40 font-sans mt-0.5">사주·관상·손금·풍수 四柱 종합</p>
+            <p className="text-xs text-white/40 font-sans mt-0.5">사주·관상·손금·풍수를 하나로 잇는 풀이</p>
           </div>
         </div>
       </header>
@@ -208,11 +219,10 @@ function SamhapCheck({
   onGenerate: () => void
   loading: boolean
 }) {
-  const requirements: { key: string; label: string; stamp: string; ok: boolean; icon: LucideIcon; href: string }[] = [
+  const requirements: { key: string; label: string; ok: boolean; icon: LucideIcon; href: string }[] = [
     {
       key: 'face',
       label: '관상 분석',
-      stamp: '相',
       ok: readiness.hasFace,
       icon: User2,
       href: `/protected/studio/face${targetQuery}`,
@@ -220,7 +230,6 @@ function SamhapCheck({
     {
       key: 'hand',
       label: '손금 분석',
-      stamp: '掌',
       ok: readiness.hasHand,
       icon: Hand,
       href: `/protected/studio/palm${targetQuery}`,
@@ -228,7 +237,6 @@ function SamhapCheck({
     {
       key: 'fengshui',
       label: '풍수 분석',
-      stamp: '宅',
       ok: readiness.hasFengshui,
       icon: Compass,
       href: `/protected/studio/fengshui${targetQuery}`,
@@ -236,7 +244,6 @@ function SamhapCheck({
     {
       key: 'birth',
       label: '생년월일 등록',
-      stamp: '命',
       ok: readiness.hasBirth,
       icon: Calendar,
       href: '/protected/family',
@@ -249,25 +256,25 @@ function SamhapCheck({
       <div
         className="relative overflow-hidden rounded-xl hanji-card dancheong-border-top"
         style={{
-          background: 'linear-gradient(160deg, #0e0b07 0%, #16140F 50%, #0a0807 100%)',
+          background: 'linear-gradient(165deg, #0A1020 0%, #0D1528 45%, #070C18 100%)',
           boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(201,168,76,0.07)',
         }}
       >
         <AmbientVideo
-          id="journey-ambient"
+          id="journey-night"
           rate={0.5}
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          style={{ opacity: 0.22, mixBlendMode: 'screen' }}
+          style={{ opacity: 0.5, mixBlendMode: 'screen' }}
         />
         <div
           aria-hidden="true"
           className="absolute right-0 bottom-0 select-none pointer-events-none font-serif text-gold-500"
           style={{ fontSize: '11rem', lineHeight: 1, opacity: 0.04, fontWeight: 700, transform: 'translate(12%, 18%)' }}
         >
-          合
+          별
         </div>
         <div className="relative z-10 px-6 py-7 flex flex-col gap-4">
-          <p className="text-[10px] font-serif tracking-[0.5em] text-gold-500/50">天 地 人 · 五 相 完 集</p>
+          <p className="text-[10px] font-serif tracking-[0.5em] text-gold-500/50">다 섯 별 의 완 성</p>
           <h2
             className="text-[1.35rem] font-serif font-bold leading-[1.45] text-ink-light tracking-tight"
             style={{ wordBreak: 'keep-all' }}
@@ -277,7 +284,7 @@ function SamhapCheck({
             하나의 풀이로 엮어드립니다
           </h2>
           <p className="text-[11px] italic font-serif text-gold-500/40 leading-relaxed">
-            &ldquo;命·相·掌·宅 — 네 기운이 모일 때, 하늘이 종합을 허락한다&rdquo;
+            &ldquo;네 개의 별이 모일 때, 하늘이 종합을 허락합니다&rdquo;
           </p>
           <div className="dancheong-divider" />
           <p
@@ -292,9 +299,7 @@ function SamhapCheck({
 
       {/* 요건 체크 — 낙관(도장) 수집 표 */}
       <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 hanji-card relative overflow-hidden">
-        <p className="relative text-xs text-gold-500/70 font-serif font-medium tracking-widest mb-3">
-          모아야 할 상(相)
-        </p>
+        <p className="relative text-xs text-gold-500/70 font-serif font-medium tracking-widest mb-3">모아야 할 별</p>
         <div className="relative space-y-3">
           {requirements.map((r) => {
             const Icon = r.icon
@@ -303,20 +308,22 @@ function SamhapCheck({
                 <div className="flex items-center gap-3">
                   {r.ok ? (
                     <span
-                      className="w-8 h-8 rounded-md flex items-center justify-center font-serif font-bold text-[15px] text-[#F4E4BA] -rotate-6 shrink-0"
-                      style={{ background: '#9E2B2B', boxShadow: '0 0 10px rgba(158,43,43,0.3)' }}
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(212,175,55,0.3)]"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(201,168,76,0.25) 0%, rgba(201,168,76,0.05) 70%)',
+                      }}
                     >
-                      {r.stamp}
+                      <StarIcon className="w-4 h-4 text-gold-500 fill-gold-500" />
                     </span>
                   ) : (
-                    <span className="w-8 h-8 rounded-md flex items-center justify-center border border-dashed border-white/15 text-white/25 shrink-0">
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center border border-dashed border-white/15 text-white/25 shrink-0">
                       <Icon className="w-4 h-4" strokeWidth={1.5} />
                     </span>
                   )}
                   <span className={`text-sm font-sans ${r.ok ? 'text-white/80' : 'text-white/45'}`}>{r.label}</span>
                 </div>
                 {r.ok ? (
-                  <span className="text-[11px] font-serif text-gold-500/60">수집 완료</span>
+                  <span className="text-[11px] font-serif text-gold-500/60">별 밝힘</span>
                 ) : (
                   <Link href={r.href} className="flex items-center gap-1 text-xs text-gold-500/80 hover:text-gold-500">
                     준비하기 <ArrowRight className="w-3 h-3" />
