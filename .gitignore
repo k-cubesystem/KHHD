@@ -49,3 +49,15 @@ nul
 
 # Veo 원본 영상 (재생성 가능 — 리포 제외)
 assets-src/video/
+
+# ── 마케팅·영상 트랙 (2026-08-21 정리) ───────────────────────────────
+# 서드파티 스킬 — higgsfield-ai/skills 에서 받아온 것. skills-lock.json 이 정본이고
+# 그 파일만 커밋하면 재설치된다(node_modules 와 같은 취급).
+.agents/
+# 위 실체를 가리키는 **절대경로** 심볼릭 링크 — 기기가 바뀌면 깨지므로 커밋하지 않는다.
+.claude/skills/higgsfield-*
+
+# 생성 미디어 — assets-src/video/ 와 같은 이유. 무게가 크고 파이프라인이 다시 만든다.
+# ⚠️ git 이 지켜주지 않으므로 이 워크트리를 지우면 사라진다. 원본이 필요하면 따로 보관할 것.
+assets-src/audio/
+assets-src/shrine/harmony-pilot/

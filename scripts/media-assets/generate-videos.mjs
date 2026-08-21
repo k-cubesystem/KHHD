@@ -123,12 +123,22 @@ async function runVeo(list) {
     process.exit(1)
   }
 
-  let hasFfmpeg = false
+  // ffmpeg 는 PATH 에 없다 → ffmpeg-static 을 먼저 보고, 없을 때만 PATH 를 본다.
+  // (PATH 만 보던 이전 코드는 항상 실패해 webm 트랜스코드가 조용히 건너뛰어졌다.)
+  let ffmpegBin = null
   try {
-    execSync('ffmpeg -version', { stdio: 'ignore' })
-    hasFfmpeg = true
+    ffmpegBin = (await import('ffmpeg-static')).default
+    execSync(`"${ffmpegBin}" -version`, { stdio: 'ignore' })
   } catch {
-    console.log('ffmpeg 없음 → webm 트랜스코드 생략, mp4 그대로 배포(public/videos/{id}.mp4)')
+    ffmpegBin = null
+  }
+  if (!ffmpegBin) {
+    try {
+      execSync('ffmpeg -version', { stdio: 'ignore' })
+      ffmpegBin = 'ffmpeg'
+    } catch {
+      console.log('ffmpeg 없음(ffmpeg-static 미설치 + PATH 부재) → webm 생략, mp4 그대로 배포')
+    }
   }
 
   mkdirSync('assets-src/video/raw', { recursive: true })
@@ -223,9 +233,9 @@ async function runVeo(list) {
     writeFileSync(raw, buf)
     console.log(`  저장 ${raw} (${(buf.length / 1024 / 1024).toFixed(2)}MB)`)
 
-    if (hasFfmpeg) {
+    if (ffmpegBin) {
       execSync(
-        `ffmpeg -y -i "${raw}" -an -c:v libvpx-vp9 -b:v 0 -crf 36 -vf scale=720:-2 -loglevel error "${outWebm}"`,
+        `"${ffmpegBin}" -y -i "${raw}" -an -c:v libvpx-vp9 -b:v 0 -crf 36 -vf scale=720:-2 -loglevel error "${outWebm}"`,
         { stdio: 'inherit' }
       )
       console.log('  →', outWebm)
