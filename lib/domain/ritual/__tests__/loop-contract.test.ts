@@ -142,6 +142,37 @@ describe('서버 액션 계약 (3A·V1)', () => {
   })
 })
 
+describe('킬스위치 계약 — 진입 동선 전 접점 (2026-08-21 배포 직전 발견)', () => {
+  const banner = readFileSync(join(ROOT, 'components/ritual/ritual-banner.tsx'), 'utf8')
+  const dailyFortune = readFileSync(join(ROOT, 'components/analysis/daily-fortune-view.tsx'), 'utf8')
+
+  // ritual_enabled=false 면 /protected/ritual 이 redirect 로 튕긴다. 진입 동선이 그걸 모르면
+  // 「눌러도 되돌아오는 버튼」이 남는다 — 설계가 세운 「죽은 버튼 금지」 원칙 위반이다.
+  it('대시보드 배너가 킬스위치를 확인한다', () => {
+    expect(banner).toContain('isRitualEntryEnabled')
+  })
+
+  it('일간운세 초하루 안내가 킬스위치를 확인한다', () => {
+    expect(dailyFortune).toContain('isRitualEntryEnabled')
+  })
+
+  it('페이지는 서버 상태의 enabled 로 차단한다', () => {
+    const page = readFileSync(join(ROOT, 'app/protected/ritual/page.tsx'), 'utf8')
+    expect(page).toMatch(/!state\.enabled/)
+  })
+
+  it('크론은 ritual_enabled=false 면 발송을 생략한다', () => {
+    expect(cron).toContain('ritual_enabled')
+    expect(cron).toMatch(/=== 'false'/)
+  })
+
+  it('판정은 한 곳에만 있다 — 각 접점이 조건을 다시 적지 않는다', () => {
+    // 컴포넌트가 system_settings 를 직접 읽기 시작하면 스위치가 갈라진다.
+    expect(banner).not.toContain('system_settings')
+    expect(dailyFortune).not.toContain('system_settings')
+  })
+})
+
 describe('크론 계약 (E1·V5)', () => {
   it('발송 조건은 창 내 && 미발송 — 미스런 복원 (E1)', () => {
     expect(cron).toContain('window.inWindow')

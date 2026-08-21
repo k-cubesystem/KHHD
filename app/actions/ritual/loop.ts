@@ -85,6 +85,21 @@ async function isRitualEnabled(): Promise<boolean> {
   }
 }
 
+/**
+ * 킬스위치 조회 — **진입 동선 컴포넌트 전용** 얇은 액션.
+ *
+ * 배너(대시보드)와 초하루 안내(일간운세)는 클라이언트 컴포넌트라 `system_settings` 를
+ * 직접 읽을 수 없다. 그렇다고 각자 조건을 다시 적으면 스위치가 조용히 빠진다 —
+ * 실제로 이 두 곳이 킬스위치를 무시해 **꺼진 기능으로 데려가는 죽은 버튼**이 됐었다
+ * (2026-08-21 배포 직전 발견). 판정은 `isRitualEnabled()` 한 곳에만 둔다.
+ *
+ * 인자를 받지 않고 불리언 하나만 돌려준다 — 공개 엔드포인트가 되어도 노출되는 것이
+ * 「이 기능이 켜져 있는가」뿐이다.
+ */
+export async function isRitualEntryEnabled(): Promise<boolean> {
+  return isRitualEnabled()
+}
+
 export async function getRitualState(): Promise<RitualState | null> {
   try {
     const supabase = await createClient()

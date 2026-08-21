@@ -8,14 +8,25 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getRitualWindow, type RitualWindow } from '@/lib/domain/ritual/lunar-window'
+import { isRitualEntryEnabled } from '@/app/actions/ritual/loop'
 
 export function RitualBanner() {
   const [w, setW] = useState<RitualWindow | null>(null)
   useEffect(() => {
-    try {
-      setW(getRitualWindow())
-    } catch {
-      setW(null)
+    let alive = true
+    // ⚠️ 킬스위치가 꺼져 있으면 창 계산 결과와 무관하게 렌더하지 않는다.
+    //    /protected/ritual 이 redirect 로 튕기므로, 이 확인이 없으면 눌러도 되돌아오는
+    //    죽은 버튼이 된다(설계의 「죽은 버튼 금지」 원칙). 판정은 서버 한 곳에만 있다.
+    void isRitualEntryEnabled().then((enabled) => {
+      if (!alive || !enabled) return
+      try {
+        setW(getRitualWindow())
+      } catch {
+        setW(null)
+      }
+    })
+    return () => {
+      alive = false
     }
   }, [])
   if (!w) return null

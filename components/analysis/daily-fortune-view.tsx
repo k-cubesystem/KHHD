@@ -19,6 +19,7 @@ import { getSajuData } from '@/lib/domain/saju/saju'
 import { deriveDailyLucky } from '@/lib/domain/fortune/daily-lucky'
 import { GA, trackEvent } from '@/lib/analytics/ga4'
 import { getRitualWindow } from '@/lib/domain/ritual/lunar-window'
+import { isRitualEntryEnabled } from '@/app/actions/ritual/loop'
 
 interface DailyFortuneViewProps {
   userId: string
@@ -307,14 +308,26 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
   )
 }
 
-/** 초하루 안내 1줄 (설계 T4 — 진입 동선 2접점). 창 밖에서는 렌더하지 않는다. */
+/**
+ * 초하루 안내 1줄 (설계 T4 — 진입 동선 2접점). 창 밖에서는 렌더하지 않는다.
+ *
+ * ⚠️ 킬스위치(`ritual_enabled`)도 함께 본다 — 꺼져 있으면 `/protected/ritual` 이 redirect 로
+ *    튕기므로, 확인 없이 그리면 눌러도 되돌아오는 죽은 버튼이 된다. 판정은 서버 한 곳에만.
+ */
 function RitualDayNotice() {
   const [inWindow, setInWindow] = useState(false)
   useEffect(() => {
-    try {
-      setInWindow(getRitualWindow().inWindow)
-    } catch {
-      setInWindow(false)
+    let alive = true
+    void isRitualEntryEnabled().then((enabled) => {
+      if (!alive || !enabled) return
+      try {
+        setInWindow(getRitualWindow().inWindow)
+      } catch {
+        setInWindow(false)
+      }
+    })
+    return () => {
+      alive = false
     }
   }, [])
   if (!inWindow) return null
