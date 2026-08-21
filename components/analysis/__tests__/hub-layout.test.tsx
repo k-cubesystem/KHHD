@@ -17,7 +17,11 @@ import { HUB_LAUNCHER } from '@/lib/domain/analysis/hub-home'
 import { allHubSections, HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 
 jest.mock('@/app/actions/analysis/reading-insights', () => ({
-  getJourneyProgress: jest.fn(async (): Promise<string[]> => []),
+  getJourneyStatus: jest.fn(async () => ({ categories: [], records: {} })),
+}))
+
+jest.mock('@/app/actions/analysis/journey-reward', () => ({
+  getJourneyRewardStatus: jest.fn(async () => null),
 }))
 
 jest.mock('@/components/shared/AmbientVideo', () => ({

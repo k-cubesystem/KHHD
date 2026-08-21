@@ -1,53 +1,97 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Sparkles, User, Hand, Compass, Layers, Check, Lock, ArrowRight, type LucideIcon } from 'lucide-react'
+import { Lock, ArrowRight, Gift } from 'lucide-react'
+import { IconSaju, IconGwansang, IconSongeum, IconPungsu, IconOhaeng } from '@/components/icons/traditional-icons'
 import {
   buildJourney,
   type JourneyProgress,
   type JourneyStage,
   type JourneyStageId,
 } from '@/lib/domain/analysis/journey'
-import { getJourneyProgress } from '@/app/actions/analysis/reading-insights'
+import { getJourneyStatus, type JourneyStatusData } from '@/app/actions/analysis/reading-insights'
+import { getJourneyRewardStatus } from '@/app/actions/analysis/journey-reward'
+import { JOURNEY_COMPLETE_TITLE, type JourneyRewardKind } from '@/lib/domain/analysis/journey-reward'
+import { JourneyRewardSheet } from './journey-reward-sheet'
 import { GA } from '@/lib/analytics/ga4'
 
-const STAGE_ICON: Record<JourneyStageId, LucideIcon> = {
-  SAJU: Sparkles,
-  FACE: User,
-  HAND: Hand,
-  FENGSHUI: Compass,
-  SAMHAP: Layers,
+interface StageIconProps {
+  className?: string
+  size?: number
 }
 
+const STAGE_ICON: Record<JourneyStageId, ComponentType<StageIconProps>> = {
+  SAJU: IconSaju,
+  FACE: IconGwansang,
+  HAND: IconSongeum,
+  FENGSHUI: IconPungsu,
+  SAMHAP: IconOhaeng,
+}
+
+/** 완료 낙관(도장)에 새길 상(相) 한자 — 표현 계층 전용. */
+const STAGE_STAMP: Record<JourneyStageId, string> = {
+  SAJU: '命',
+  FACE: '相',
+  HAND: '掌',
+  FENGSHUI: '宅',
+  SAMHAP: '合',
+}
+
+/** 수집 진행 한자 표기(0~5相). */
+const HANJA_COUNT = ['零', '一', '二', '三', '四', '五'] as const
+
 const JOURNEY_COPY = '네 가지 상(相)을 모두 모아야 진정한 종합운수가 완성됩니다'
+const SAMHAP_LOCKED_COPY = '四相이 모이면 종합풀이가 열립니다'
 
 interface JourneyCardProps {
-  /** 가족 대상 id(본인이면 생략). */
+  /** 가족 대상 id(본인이면 생략). 완주 보상은 본인 여정 전용. */
   targetId?: string
   /** full=허브용 큰 스텝퍼, compact=결과화면용 슬림. */
   variant?: 'full' | 'compact'
   className?: string
 }
 
+interface RewardState {
+  claimed: boolean
+  claimedName: string | null
+}
+
 /**
- * 종합사주풀이 여정 카드 — 사주→관상→손금→풍수→종합의 진행을 보여주고 다음 단계로 유도한다.
- * 스스로 진행도(getJourneyProgress)를 조회한다(자가 조회 배너 패턴). 로드 전엔 렌더 없음.
+ * 종합운수 여정 카드 — 사주→관상→손금→풍수→종합의 진행을 보여주고 다음 단계로 유도한다.
+ * 스스로 진행도(getJourneyStatus)를 조회한다(자가 조회 배너 패턴). 로드 전엔 렌더 없음.
+ * 본인 여정 완주 시 보상(신위·테마 택1) 수령 CTA 를 노출한다.
  */
 export function JourneyCard({ targetId, variant = 'full', className }: JourneyCardProps) {
   const router = useRouter()
   const [journey, setJourney] = useState<JourneyProgress | null>(null)
+  const [records, setRecords] = useState<JourneyStatusData['records']>({})
+  const [reward, setReward] = useState<RewardState | null>(null)
   const viewed = useRef(false)
+  const completeTracked = useRef(false)
 
   useEffect(() => {
     let active = true
-    getJourneyProgress(targetId).then((completed) => {
+    getJourneyStatus(targetId).then((status) => {
       if (!active) return
-      setJourney(buildJourney(completed, targetId))
+      const built = buildJourney(status.categories, targetId)
+      setJourney(built)
+      setRecords(status.records)
       if (!viewed.current) {
         viewed.current = true
         GA.journeyView(variant)
+      }
+      if (built.allComplete && !completeTracked.current) {
+        completeTracked.current = true
+        GA.journeyComplete()
+      }
+      // 완주한 본인 여정에만 보상 현황 조회(그 외엔 추가 쿼리 없음)
+      if (built.allComplete && !targetId) {
+        getJourneyRewardStatus().then((r) => {
+          if (!active || !r) return
+          setReward({ claimed: !!r.claimed, claimedName: r.claimed?.name ?? null })
+        })
       }
     })
     return () => {
@@ -63,9 +107,9 @@ export function JourneyCard({ targetId, variant = 'full', className }: JourneyCa
   }
 
   return variant === 'compact' ? (
-    <JourneyCompact journey={journey} onGo={go} className={className} />
+    <JourneyCompact journey={journey} reward={reward} onGo={go} className={className} />
   ) : (
-    <JourneyFull journey={journey} onGo={go} className={className} />
+    <JourneyFull journey={journey} records={records} reward={reward} onGo={go} className={className} />
   )
 }
 
@@ -82,60 +126,172 @@ function ctaTarget(journey: JourneyProgress): JourneyStage {
   return journey.stages[journey.stages.length - 1]! // SAMHAP(완료 상태)
 }
 
+function doneCount(journey: JourneyProgress): number {
+  return journey.stages.filter((s) => s.status === 'done').length
+}
+
+function formatStampDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`
+}
+
 // ── Full 변형 (허브) ──────────────────────────────────────────────────────────
 function JourneyFull({
   journey,
+  records,
+  reward,
   onGo,
   className,
 }: {
   journey: JourneyProgress
+  records: JourneyStatusData['records']
+  reward: RewardState | null
   onGo: (s: JourneyStage) => void
   className?: string
 }) {
+  const [detailId, setDetailId] = useState<JourneyStageId | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [claimedLocal, setClaimedLocal] = useState<{ name: string } | null>(null)
+
   const currentIdx = journey.stages.findIndex((s) => s.status === 'current')
   const fillPct = journey.allComplete ? 80 : currentIdx <= 0 ? 0 : currentIdx * 20
+  const collected = doneCount(journey)
+  const claimed = claimedLocal !== null || (reward?.claimed ?? false)
+  const claimedName = claimedLocal?.name ?? reward?.claimedName ?? null
+  const showRewardCta = journey.allComplete && reward !== null && !claimed
+
+  const handleNode = (stage: JourneyStage) => {
+    if (stage.status === 'done') {
+      setDetailId((prev) => (prev === stage.id ? null : stage.id))
+      return
+    }
+    onGo(stage)
+  }
+
+  const detailStage = detailId ? journey.stages.find((s) => s.id === detailId) : null
+  const detailRecord = detailId ? records[detailId] : null
+
+  const onClaimed = (_kind: JourneyRewardKind, name: string) => {
+    setClaimedLocal({ name })
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative overflow-hidden rounded-2xl border border-gold-500/30 p-5 ${className ?? ''}`}
+      className={`relative overflow-hidden rounded-2xl border border-gold-500/30 p-5 hanji-card dancheong-border-top ${className ?? ''}`}
       style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.10) 0%, rgba(158,43,43,0.05) 100%)' }}
     >
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
-
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 mb-1">
-        <Layers className="w-4 h-4 text-gold-500" strokeWidth={1.5} />
+      {/* 헤더 — 수집 서사(N相 · 五相) + 진행률 */}
+      <div className="flex items-center gap-2 mb-1 relative z-10">
+        <span
+          aria-hidden
+          className="w-5 h-5 rounded-[3px] flex items-center justify-center font-serif font-bold text-[10px] text-[#F4E4BA] -rotate-6"
+          style={{ background: '#9E2B2B' }}
+        >
+          運
+        </span>
         <p className="text-sm font-serif font-bold text-gold-500">종합운수 여정</p>
-        <span className="ml-auto text-[11px] font-bold text-gold-500 font-serif tabular-nums">{journey.progress}%</span>
+        <span className="ml-auto text-[11px] font-serif text-gold-500 tabular-nums">
+          <span className="font-bold">{HANJA_COUNT[collected] ?? collected}相</span>
+          <span className="text-gold-500/50"> · 五相 中</span>
+          <span className="text-gold-500/70 ml-1.5">{journey.progress}%</span>
+        </span>
       </div>
-      <p className="text-[11px] text-white/55 font-sans font-light leading-relaxed mb-4">{JOURNEY_COPY}</p>
+      <p className="text-[11px] text-white/55 font-sans font-light leading-relaxed mb-4 relative z-10">
+        {journey.allComplete ? `${JOURNEY_COMPLETE_TITLE} — 다섯 상이 모두 모였습니다` : JOURNEY_COPY}
+      </p>
 
       {/* 가로 스텝퍼 */}
-      <div className="relative mb-4">
+      <div className="relative mb-3 z-10">
         <div className="absolute top-5 h-px bg-white/10" style={{ left: '10%', right: '10%' }} />
         <div className="absolute top-5 h-px bg-gold-500/70" style={{ left: '10%', width: `${fillPct}%` }} />
         <div className="relative grid grid-cols-5">
           {journey.stages.map((s) => (
-            <StepNode key={s.id} stage={s} onGo={onGo} />
+            <StepNode key={s.id} stage={s} onTap={handleNode} isDetailOpen={detailId === s.id} />
           ))}
         </div>
       </div>
 
-      {/* 다음 단계 CTA */}
-      <button
-        onClick={() => onGo(ctaTarget(journey))}
-        className="w-full h-11 rounded-xl bg-gold-500/10 border border-gold-500/40 text-gold-500 font-serif font-bold text-sm flex items-center justify-center gap-2 hover:bg-gold-500/20 transition-colors"
-      >
-        {ctaLabel(journey)}
-        <ArrowRight className="w-4 h-4" />
-      </button>
+      {/* 종합 잠금 가치 소구 */}
+      {!journey.coreComplete && (
+        <p className="text-[10px] text-gold-500/45 font-sans font-light text-right mb-3 relative z-10">
+          {SAMHAP_LOCKED_COPY}
+        </p>
+      )}
+
+      {/* 완료 노드 상세 — 점수·측정일·다시 보기 */}
+      {detailStage && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="relative z-10 mb-3 overflow-hidden"
+        >
+          <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-gold-500/15 px-3 py-2.5">
+            <span className="text-[11px] font-serif font-bold text-gold-500 shrink-0">{detailStage.label}</span>
+            <span className="text-[11px] text-ink-light/60 font-light flex-1 truncate">
+              {detailRecord?.score != null && <span className="text-ink-light/80">{detailRecord.score}점</span>}
+              {detailRecord?.score != null && detailRecord?.createdAt && ' · '}
+              {detailRecord?.createdAt && `${formatStampDate(detailRecord.createdAt)} 측정`}
+              {!detailRecord && detailStage.subtitle}
+            </span>
+            <button
+              onClick={() => onGo(detailStage)}
+              className="text-[11px] text-gold-500/80 hover:text-gold-500 font-medium shrink-0 flex items-center gap-0.5"
+            >
+              다시 보기
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* CTA — 보상 수령 > 다음 단계 순 */}
+      {showRewardCta ? (
+        <button
+          onClick={() => setSheetOpen(true)}
+          className="relative z-10 w-full h-12 rounded-sm font-serif font-bold text-sm tracking-[0.08em] text-white flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.97] transition-transform"
+          style={{
+            background: '#9E2B2B',
+            border: '1px solid rgba(158,43,43,0.5)',
+            boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
+          }}
+        >
+          <Gift className="w-4 h-4" />
+          완주 보상 받기 — 신위·테마신당 택1
+        </button>
+      ) : (
+        <div className="relative z-10 space-y-2">
+          {claimed && claimedName && (
+            <p className="text-[11px] text-gold-500/70 font-serif text-center">
+              {JOURNEY_COMPLETE_TITLE} · {claimedName} 봉안 완료
+            </p>
+          )}
+          <button
+            onClick={() => onGo(ctaTarget(journey))}
+            className="w-full h-11 rounded-xl bg-gold-500/10 border border-gold-500/40 text-gold-500 font-serif font-bold text-sm flex items-center justify-center gap-2 hover:bg-gold-500/20 transition-colors"
+          >
+            {ctaLabel(journey)}
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <JourneyRewardSheet open={sheetOpen} onOpenChange={setSheetOpen} onClaimed={onClaimed} />
     </motion.div>
   )
 }
 
-function StepNode({ stage, onGo }: { stage: JourneyStage; onGo: (s: JourneyStage) => void }) {
+function StepNode({
+  stage,
+  onTap,
+  isDetailOpen,
+}: {
+  stage: JourneyStage
+  onTap: (s: JourneyStage) => void
+  isDetailOpen: boolean
+}) {
   const Icon = STAGE_ICON[stage.id]
   const done = stage.status === 'done'
   const current = stage.status === 'current'
@@ -143,36 +299,49 @@ function StepNode({ stage, onGo }: { stage: JourneyStage; onGo: (s: JourneyStage
 
   return (
     <button
-      onClick={() => onGo(stage)}
+      onClick={() => onTap(stage)}
       disabled={locked}
       className="flex flex-col items-center gap-1.5 disabled:cursor-not-allowed group"
-      aria-label={`${stage.label} · ${stage.subtitle}`}
+      aria-label={`${stage.label} · ${stage.subtitle}${done ? ' · 완료' : locked ? ' · 잠김' : ''}`}
+      aria-expanded={done ? isDetailOpen : undefined}
     >
-      <span
-        className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
-          done
-            ? 'bg-gold-500 border-gold-500 text-black shadow-[0_0_14px_rgba(212,175,55,0.4)]'
-            : current
+      {done ? (
+        // 낙관(도장) — 붉은 인주에 상(相) 한자를 새겨 찍는다
+        <motion.span
+          initial={{ scale: 1.5, opacity: 0, rotate: -14 }}
+          animate={{ scale: 1, opacity: 1, rotate: -6 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 20 }}
+          className={`w-10 h-10 rounded-md flex items-center justify-center font-serif font-bold text-[17px] text-[#F4E4BA] transition-shadow ${
+            isDetailOpen ? 'shadow-[0_0_16px_rgba(158,43,43,0.55)]' : 'shadow-[0_0_10px_rgba(158,43,43,0.3)]'
+          }`}
+          style={{ background: '#9E2B2B' }}
+        >
+          {STAGE_STAMP[stage.id]}
+        </motion.span>
+      ) : (
+        <span
+          className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${
+            current
               ? 'bg-gold-500/15 border-gold-500/70 text-gold-500 shadow-[0_0_14px_rgba(212,175,55,0.35)] animate-pulse'
               : locked
                 ? 'bg-white/[0.03] border-white/10 text-white/25'
                 : 'bg-white/5 border-white/10 text-white/40 group-hover:border-white/25'
-        }`}
-      >
-        {done ? (
-          <Check className="w-5 h-5" strokeWidth={2.5} />
-        ) : locked ? (
-          <Lock className="w-4 h-4" />
-        ) : (
-          <Icon className="w-5 h-5" strokeWidth={1.5} />
-        )}
-      </span>
+          }`}
+        >
+          {locked ? <Lock className="w-4 h-4" /> : <Icon className="w-5 h-5" size={20} />}
+        </span>
+      )}
       <span
         className={`text-[10px] font-sans leading-none ${
           done || current ? 'text-gold-500 font-semibold' : 'text-white/45'
         }`}
       >
         {stage.label}
+      </span>
+      <span
+        className={`text-[9px] font-sans font-light leading-none ${done || current ? 'text-gold-500/50' : 'text-white/25'}`}
+      >
+        {stage.subtitle}
       </span>
     </button>
   )
@@ -181,32 +350,57 @@ function StepNode({ stage, onGo }: { stage: JourneyStage; onGo: (s: JourneyStage
 // ── Compact 변형 (결과 화면) ──────────────────────────────────────────────────
 function JourneyCompact({
   journey,
+  reward,
   onGo,
   className,
 }: {
   journey: JourneyProgress
+  reward: RewardState | null
   onGo: (s: JourneyStage) => void
   className?: string
 }) {
+  const router = useRouter()
   const target = ctaTarget(journey)
+  const rewardWaiting = journey.allComplete && reward !== null && !reward.claimed
+  const collected = doneCount(journey)
+
+  const handleClick = () => {
+    if (rewardWaiting) {
+      // 보상 수령은 허브 여정 섹션에서 — 그리로 보낸다
+      router.push('/protected/analysis#hub-journey')
+      return
+    }
+    onGo(target)
+  }
 
   return (
     <motion.button
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      onClick={() => onGo(target)}
+      onClick={handleClick}
       className={`block w-full text-left relative overflow-hidden rounded-2xl border border-gold-500/40 p-4 group ${className ?? ''}`}
       style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(158,43,43,0.07) 100%)' }}
     >
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent" />
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-500/15 border border-gold-500/30 shrink-0">
-          <Layers className="w-5 h-5 text-gold-500" strokeWidth={1.5} />
+          {rewardWaiting ? (
+            <Gift className="w-5 h-5 text-gold-500" strokeWidth={1.5} />
+          ) : (
+            <span
+              className="w-6 h-6 rounded-[3px] flex items-center justify-center font-serif font-bold text-[11px] text-[#F4E4BA] -rotate-6"
+              style={{ background: '#9E2B2B' }}
+            >
+              運
+            </span>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-serif font-bold text-gold-500">종합운수 여정</p>
-            <span className="text-[10px] font-bold text-gold-500/80 font-serif tabular-nums">{journey.progress}%</span>
+            <span className="text-[10px] font-bold text-gold-500/80 font-serif tabular-nums">
+              {HANJA_COUNT[collected] ?? collected}相 · {journey.progress}%
+            </span>
           </div>
           {/* 미니 진행 점 */}
           <div className="flex items-center gap-1 mt-1.5">
@@ -223,7 +417,9 @@ function JourneyCompact({
               />
             ))}
           </div>
-          <p className="text-[11px] text-white/55 font-sans font-light mt-1.5">{ctaLabel(journey)}</p>
+          <p className="text-[11px] text-white/55 font-sans font-light mt-1.5">
+            {rewardWaiting ? '완주 보상이 기다립니다 — 신위·테마신당 택1' : ctaLabel(journey)}
+          </p>
         </div>
         <ArrowRight className="w-4 h-4 text-gold-500/70 group-hover:translate-x-1 transition-transform shrink-0" />
       </div>

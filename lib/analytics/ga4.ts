@@ -80,6 +80,10 @@ export const GA = {
   // 종합사주풀이 여정(Journey) — 노출·단계 클릭
   journeyView: (variant: string) => trackEvent({ action: 'journey_view', category: 'engagement', label: variant }),
   journeyStep: (stage: string) => trackEvent({ action: 'journey_step_click', category: 'engagement', label: stage }),
+  journeyComplete: () => trackEvent({ action: 'journey_complete', category: 'engagement' }),
+  journeyRewardView: () => trackEvent({ action: 'journey_reward_view', category: 'engagement' }),
+  journeyRewardClaim: (kind: string, code: string) =>
+    trackEvent({ action: 'journey_reward_claim', category: 'engagement', label: `${kind}:${code}` }),
 
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),

@@ -149,33 +149,56 @@ export async function getFamilyResemblance(input: {
   return { ...resemblance, otherLabel }
 }
 
+export interface JourneyStageRecord {
+  /** 최신 이력 점수(없으면 null). */
+  score: number | null
+  /** 최신 이력 생성일(ISO). */
+  createdAt: string
+}
+
+export interface JourneyStatusData {
+  /** buildJourney 입력용 완료 카테고리(중복 제거). */
+  categories: string[]
+  /** 카테고리별 최신 이력 요약 — 완료 노드의 점수·측정일 표기용. */
+  records: Record<string, JourneyStageRecord>
+}
+
 /**
- * 종합사주풀이 여정 진행 조회 — 특정 대상(없으면 본인)의 analysis_history DISTINCT category.
+ * 종합사주풀이 여정 진행 + 단계별 최신 이력 요약 — 여정 카드 전용.
  * RLS: 본인(user_id) 소유만. 본인 이력의 target_id 는 user.id 로 저장되므로(실측 확인)
  * getSamhapReadiness·getLatestFaceMeta 와 동일한 `target_id = targetId ?? user.id` 규약을 따른다.
- * 반환값(문자열 배열)은 lib/domain/analysis/journey.ts 의 buildJourney 입력으로 사용.
+ * categories 는 lib/domain/analysis/journey.ts 의 buildJourney 입력으로 사용.
  */
-export async function getJourneyProgress(targetId?: string): Promise<string[]> {
+export async function getJourneyStatus(targetId?: string): Promise<JourneyStatusData> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return []
+  if (!user) return { categories: [], records: {} }
 
   const target = targetId ?? user.id
   const { data, error } = await supabase
     .from('analysis_history')
-    .select('category')
+    .select('category, score, created_at')
     .eq('user_id', user.id)
     .eq('target_id', target)
+    .order('created_at', { ascending: false })
 
   if (error) {
-    logger.error('[getJourneyProgress] 조회 실패:', error)
-    return []
+    logger.error('[getJourneyStatus] 조회 실패:', error)
+    return { categories: [], records: {} }
   }
 
-  const categories = (data ?? [])
-    .map((row) => (row as { category: string | null }).category)
-    .filter((c): c is string => typeof c === 'string' && c.length > 0)
-  return Array.from(new Set(categories))
+  const records: Record<string, JourneyStageRecord> = {}
+  const categories: string[] = []
+  for (const row of data ?? []) {
+    const r = row as { category: string | null; score: number | null; created_at: string }
+    if (typeof r.category !== 'string' || r.category.length === 0) continue
+    if (!records[r.category]) {
+      // created_at 내림차순이라 첫 행 = 최신
+      records[r.category] = { score: r.score, createdAt: r.created_at }
+      categories.push(r.category)
+    }
+  }
+  return { categories, records }
 }
