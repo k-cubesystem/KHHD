@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Lock, ArrowRight, Gift } from 'lucide-react'
 import { IconSaju, IconGwansang, IconSongeum, IconPungsu, IconOhaeng } from '@/components/icons/traditional-icons'
+import { AmbientVideo } from '@/components/shared/AmbientVideo'
 import {
   buildJourney,
   type JourneyProgress,
@@ -180,103 +181,179 @@ function JourneyFull({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative overflow-hidden rounded-2xl border border-gold-500/30 p-5 hanji-card dancheong-border-top ${className ?? ''}`}
-      style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.10) 0%, rgba(158,43,43,0.05) 100%)' }}
+      className={`relative overflow-hidden rounded-xl hanji-card dancheong-border-top ${className ?? ''}`}
+      style={{
+        background: 'linear-gradient(160deg, #0e0b07 0%, #16140F 50%, #0a0807 100%)',
+        boxShadow: '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(201,168,76,0.07)',
+      }}
     >
-      {/* 헤더 — 수집 서사(N相 · 五相) + 진행률 */}
-      <div className="flex items-center gap-2 mb-1 relative z-10">
-        <span
-          aria-hidden
-          className="w-5 h-5 rounded-[3px] flex items-center justify-center font-serif font-bold text-[10px] text-[#F4E4BA] -rotate-6"
-          style={{ background: '#9E2B2B' }}
-        >
-          運
-        </span>
-        <p className="text-sm font-serif font-bold text-gold-500">종합운수 여정</p>
-        <span className="ml-auto text-[11px] font-serif text-gold-500 tabular-nums">
-          <span className="font-bold">{HANJA_COUNT[collected] ?? collected}相</span>
-          <span className="text-gold-500/50"> · 五相 中</span>
-          <span className="text-gold-500/70 ml-1.5">{journey.progress}%</span>
-        </span>
-      </div>
-      <p className="text-[11px] text-white/55 font-sans font-light leading-relaxed mb-4 relative z-10">
-        {journey.allComplete ? `${JOURNEY_COMPLETE_TITLE} — 다섯 상이 모두 모였습니다` : JOURNEY_COPY}
-      </p>
+      {/* 앰비언트 배경 영상 — 흐르는 먹·금가루. 없으면 폴백(그라디언트 유지), reduced-motion 존중 */}
+      <AmbientVideo
+        id="analysis-ambient"
+        rate={0.5}
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        style={{ opacity: 0.22, mixBlendMode: 'screen' }}
+      />
 
-      {/* 가로 스텝퍼 */}
-      <div className="relative mb-3 z-10">
-        <div className="absolute top-5 h-px bg-white/10" style={{ left: '10%', right: '10%' }} />
-        <div className="absolute top-5 h-px bg-gold-500/70" style={{ left: '10%', width: `${fillPct}%` }} />
-        <div className="relative grid grid-cols-5">
-          {journey.stages.map((s) => (
-            <StepNode key={s.id} stage={s} onTap={handleNode} isDetailOpen={detailId === s.id} />
-          ))}
+      {/* 運 워터마크 */}
+      <div
+        aria-hidden="true"
+        className="absolute right-0 bottom-0 select-none pointer-events-none font-serif text-gold-500"
+        style={{
+          fontSize: '14rem',
+          lineHeight: 1,
+          opacity: 0.03,
+          fontWeight: 700,
+          transform: 'translate(15%, 15%)',
+        }}
+      >
+        運
+      </div>
+
+      {/* 앰비언트 글로우 (도장 레드) */}
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none"
+        style={{
+          top: '-40%',
+          right: '-20%',
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(158,43,43,0.08) 0%, transparent 65%)',
+          filter: 'blur(40px)',
+        }}
+      />
+
+      <div className="relative z-10 px-6 py-7 flex flex-col gap-4">
+        {/* 한자 라벨 + 수집 진행 */}
+        <div className="flex items-baseline">
+          <p className="text-[10px] font-serif tracking-[0.5em] text-gold-500/50">五 相 完 集 · 綜 合 運 數</p>
+          <span className="ml-auto text-[11px] font-serif text-gold-500 tabular-nums shrink-0">
+            <span className="font-bold">{HANJA_COUNT[collected] ?? collected}相</span>
+            <span className="text-gold-500/50"> · 五相 中</span>
+            <span className="text-gold-500/70 ml-1.5">{journey.progress}%</span>
+          </span>
         </div>
-      </div>
 
-      {/* 종합 잠금 가치 소구 */}
-      {!journey.coreComplete && (
-        <p className="text-[10px] text-gold-500/45 font-sans font-light text-right mb-3 relative z-10">
-          {SAMHAP_LOCKED_COPY}
-        </p>
-      )}
-
-      {/* 완료 노드 상세 — 점수·측정일·다시 보기 */}
-      {detailStage && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="relative z-10 mb-3 overflow-hidden"
+        {/* 헤드라인 */}
+        <h2
+          className="text-[1.4rem] font-serif font-bold leading-[1.4] text-ink-light tracking-tight"
+          style={{ wordBreak: 'keep-all' }}
         >
-          <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-gold-500/15 px-3 py-2.5">
-            <span className="text-[11px] font-serif font-bold text-gold-500 shrink-0">{detailStage.label}</span>
-            <span className="text-[11px] text-ink-light/60 font-light flex-1 truncate">
-              {detailRecord?.score != null && <span className="text-ink-light/80">{detailRecord.score}점</span>}
-              {detailRecord?.score != null && detailRecord?.createdAt && ' · '}
-              {detailRecord?.createdAt && `${formatStampDate(detailRecord.createdAt)} 측정`}
-              {!detailRecord && detailStage.subtitle}
-            </span>
-            <button
-              onClick={() => onGo(detailStage)}
-              className="text-[11px] text-gold-500/80 hover:text-gold-500 font-medium shrink-0 flex items-center gap-0.5"
-            >
-              다시 보기
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        </motion.div>
-      )}
+          {journey.allComplete ? (
+            <>
+              다섯 상(相)이 모두 모여
+              <br />
+              당신의 <span className="text-gold-500">종합운수</span>가
+              <br />
+              완성되었습니다
+            </>
+          ) : (
+            <>
+              다섯 상(相)이 모이면
+              <br />
+              비로소 열리는
+              <br />
+              당신의 <span className="text-gold-500">종합운수</span>
+            </>
+          )}
+        </h2>
 
-      {/* CTA — 보상 수령 > 다음 단계 순 */}
-      {showRewardCta ? (
+        {/* 명언 */}
+        <p className="text-[11px] italic font-serif text-gold-500/40 leading-relaxed">
+          &ldquo;命·相·掌·宅 — 네 기운이 모일 때, 하늘이 종합을 허락한다&rdquo;
+        </p>
+
+        {/* 단청 구분선 */}
+        <div className="dancheong-divider" />
+
+        {/* 서브 카피 */}
+        <p
+          className="text-[12px] text-ink-light/50 font-sans font-light leading-relaxed"
+          style={{ wordBreak: 'keep-all' }}
+        >
+          {journey.allComplete ? `${JOURNEY_COMPLETE_TITLE} — 다섯 상이 모두 모였습니다` : JOURNEY_COPY}
+        </p>
+
+        {/* 가로 스텝퍼 */}
+        <div className="relative mt-1">
+          <div className="absolute top-5 h-px bg-white/10" style={{ left: '10%', right: '10%' }} />
+          <div className="absolute top-5 h-px bg-gold-500/70" style={{ left: '10%', width: `${fillPct}%` }} />
+          <div className="relative grid grid-cols-5">
+            {journey.stages.map((s) => (
+              <StepNode key={s.id} stage={s} onTap={handleNode} isDetailOpen={detailId === s.id} />
+            ))}
+          </div>
+        </div>
+
+        {/* 종합 잠금 가치 소구 */}
+        {!journey.coreComplete && (
+          <p className="text-[10px] text-gold-500/45 font-sans font-light text-right -mt-1">{SAMHAP_LOCKED_COPY}</p>
+        )}
+
+        {/* 완료 노드 상세 — 점수·측정일·다시 보기 */}
+        {detailStage && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="overflow-hidden"
+          >
+            <div className="flex items-center gap-2 rounded-lg bg-black/25 border border-gold-500/15 px-3 py-2.5">
+              <span className="text-[11px] font-serif font-bold text-gold-500 shrink-0">{detailStage.label}</span>
+              <span className="text-[11px] text-ink-light/60 font-light flex-1 truncate">
+                {detailRecord?.score != null && <span className="text-ink-light/80">{detailRecord.score}점</span>}
+                {detailRecord?.score != null && detailRecord?.createdAt && ' · '}
+                {detailRecord?.createdAt && `${formatStampDate(detailRecord.createdAt)} 측정`}
+                {!detailRecord && detailStage.subtitle}
+              </span>
+              <button
+                onClick={() => onGo(detailStage)}
+                className="text-[11px] text-gold-500/80 hover:text-gold-500 font-medium shrink-0 flex items-center gap-0.5"
+              >
+                다시 보기
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* CTA — 보상 수령 > 다음 단계 순. 도장(印章) 스타일 + 시머 */}
+        {claimed && claimedName && !showRewardCta && (
+          <p className="text-[11px] text-gold-500/70 font-serif text-center -mb-1">
+            {JOURNEY_COMPLETE_TITLE} · {claimedName} 봉안 완료
+          </p>
+        )}
         <button
-          onClick={() => setSheetOpen(true)}
-          className="relative z-10 w-full h-12 rounded-sm font-serif font-bold text-sm tracking-[0.08em] text-white flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.97] transition-transform"
+          onClick={() => (showRewardCta ? setSheetOpen(true) : onGo(ctaTarget(journey)))}
+          className="relative overflow-hidden w-full rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200"
           style={{
             background: '#9E2B2B',
             border: '1px solid rgba(158,43,43,0.5)',
             boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
           }}
         >
-          <Gift className="w-4 h-4" />
-          완주 보상 받기 — 신위·테마신당 택1
+          {/* 시머 */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out"
+            style={{
+              background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 50%, transparent 65%)',
+            }}
+          />
+          <span className="relative z-10 flex items-center justify-center gap-2.5 py-3.5">
+            {showRewardCta && <Gift className="w-4 h-4 text-white/90" />}
+            <span className="text-[14px] font-serif font-bold tracking-[0.15em] text-white">
+              {showRewardCta ? '완주 보상 받기 — 신위·테마신당 택1' : ctaLabel(journey)}
+            </span>
+            {!showRewardCta && (
+              <ArrowRight
+                className="w-4 h-4 text-white/80 group-hover/btn:translate-x-0.5 transition-transform duration-300"
+                strokeWidth={2}
+              />
+            )}
+          </span>
         </button>
-      ) : (
-        <div className="relative z-10 space-y-2">
-          {claimed && claimedName && (
-            <p className="text-[11px] text-gold-500/70 font-serif text-center">
-              {JOURNEY_COMPLETE_TITLE} · {claimedName} 봉안 완료
-            </p>
-          )}
-          <button
-            onClick={() => onGo(ctaTarget(journey))}
-            className="w-full h-11 rounded-xl bg-gold-500/10 border border-gold-500/40 text-gold-500 font-serif font-bold text-sm flex items-center justify-center gap-2 hover:bg-gold-500/20 transition-colors"
-          >
-            {ctaLabel(journey)}
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+      </div>
 
       <JourneyRewardSheet open={sheetOpen} onOpenChange={setSheetOpen} onClaimed={onClaimed} />
     </motion.div>
@@ -378,8 +455,11 @@ function JourneyCompact({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       onClick={handleClick}
-      className={`block w-full text-left relative overflow-hidden rounded-2xl border border-gold-500/40 p-4 group ${className ?? ''}`}
-      style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(158,43,43,0.07) 100%)' }}
+      className={`block w-full text-left relative overflow-hidden rounded-2xl border border-gold-500/40 p-4 group hanji-card ${className ?? ''}`}
+      style={{
+        background: 'linear-gradient(160deg, #0e0b07 0%, #16140F 50%, #0a0807 100%)',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(201,168,76,0.07)',
+      }}
     >
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/60 to-transparent" />
       <div className="flex items-center gap-3">
