@@ -7,6 +7,14 @@
 --   V2  push_subscriptions.topics — 목적별 구독 (초하루 옵트인)
 --   V3  wish_category nullable — 진입 INSERT 는 소원 없이, 완주 시 필수 검증
 --   V5  발송 멱등 — ritual_push_log 로 유저·월 단위 1회 발송
+--
+-- Eng 리뷰 보정 (2026-08-21, /gstack-plan-eng-review):
+--   9A  wish_text 컬럼 삭제 — 소원 원문은 스키마에 자리를 만들지 않는 것으로 강제
+--       (lib/domain/ritual/baekil.ts 가 같은 이유로 이미 정한 규율)
+--   10A complete_ritual 이 record_shrine_devotion 을 **호출**한다 — 적립과 KST 일
+--       멱등은 그 함수 안에만 있고 여기서 재구현하지 않는다
+--   11A 보상은 복채(wallets) — bok_points 는 소비처 없는 tier 게이지라 체감이 없다
+--   7A  members_viewed 는 서버가 파생한 값만 들어온다 (액션이 클라 uuid 를 받지 않음)
 -- =====================================================================
 
 -- 1. 의례 기록 원장 ----------------------------------------------------
@@ -24,8 +32,11 @@ CREATE TABLE IF NOT EXISTS ritual_records (
   completed_at TIMESTAMPTZ,
   -- 완주 시점에 열람한 가족 카드 (family_member_id 만, 본인 제외 — E3)
   members_viewed UUID[] NOT NULL DEFAULT '{}',
-  wish_category TEXT CHECK (wish_category IN ('PEACE','WEALTH','STUDY','HEALTH','CUSTOM')),
-  wish_text TEXT CHECK (char_length(wish_text) <= 100),
+  -- 9A: 소원 갈래는 기존 신당 소원(shrine_wishes.category)과 **같은 목록**이다.
+  --     갈래가 두 벌이 되면 통계도 이미지 자산(public/shrine/wish/*.webp)도 갈라진다.
+  --     ⚠️ 소원 **원문 컬럼은 만들지 않는다** — 자리를 안 만드는 것이 유일하게 확실한 강제다.
+  --        (원문은 클라이언트의 소원 카드 연출로만 쓰이고 화면을 떠나지 않는다.)
+  wish_category TEXT CHECK (wish_category IN ('health','exam','love','wealth','family','business','other')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT ritual_records_month_uniq UNIQUE (user_id, ritual_month, is_leap_month)
 );
@@ -74,17 +85,10 @@ CREATE POLICY "ritual_push_log_service_role" ON ritual_push_log FOR ALL USING (a
 -- 4. 푸시 목적별 구독 (V2) — 기존 구독자는 빈 배열 = 초하루 미옵트인
 ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS topics TEXT[] NOT NULL DEFAULT '{}';
 
--- 5. bok_transactions type 확장 — 의례 완주 적립
-ALTER TABLE bok_transactions
-  DROP CONSTRAINT IF EXISTS bok_transactions_type_check;
-ALTER TABLE bok_transactions
-  ADD CONSTRAINT bok_transactions_type_check
-  CHECK (type IN (
-    'REGISTER','ANALYSIS','COMPATIBILITY','FORTUNE','SHARE',
-    'CHECKIN','BONUS','REFERRAL','MISSION',
-    'SHRINE_WISH_OWN','SHRINE_WISH_VISIT','SHRINE_ITEM_PURCHASE',
-    'RITUAL_COMPLETE'
-  ));
+-- 5. (삭제됨) bok_transactions type 확장
+--    11A 로 보상이 복채(wallets)로 바뀌면서 필요 없어졌다. 적립은 기존 add_bokchae 가
+--    wallet_transactions 에 type='BONUS' 로 남기고, 그 CHECK 에 BONUS 가 이미 있다
+--    (실측: CHARGE·USE·BONUS·SUBSCRIPTION·REFUND). **기존 원장 제약을 건드리지 않는다.**
 
 -- 6. 진입 RPC — 창 내 첫 진입만 행 생성 (E2: ON CONFLICT DO NOTHING = 2탭 동시 안전)
 --    창 판정·서수 계산은 서버(KST 단일 함수)가 하고 인자로 전달한다.
@@ -111,75 +115,107 @@ BEGIN
 END;
 $$;
 
--- 7. 완주 RPC — 기록 + 복 적립 단일 트랜잭션 (3A). 멱등: 유저·음력월(윤달 구분)당 1회.
+-- 7. 완주 RPC — 기록 + 기원 누적 + 복채 적립을 **한 트랜잭션**으로 (3A·10A·11A).
+--    멱등: 유저·음력월(윤달 구분)당 1회.
 --    E2: 행 부재 시에도 원자 upsert 로 entered_at=completed_at 동시 기록.
 --    V3: wish_category 는 여기서 필수 검증 (진입 행은 소원 없이 존재 가능).
+--
+--    ⚠️ 세 단계의 **순서가 계약이다.** 1이 실패하면 2·3을 시도하지 않는다. 순서를 바꾸거나
+--       단계를 밖으로 빼면 「향은 올라갔는데 장부는 빈달」 이 무증상으로 생긴다
+--       (Eng 리뷰 실패모드 #1 — complete_shrine_vow 가 같은 이유로 한 함수 안에 있다).
+--
+--    ⚠️ **하루 중복 적립 방지를 여기서 다시 구현하지 말 것(10A).** record_shrine_devotion 이
+--       `last_prayer_date is distinct from p_today` 로 이미 하고 있고 gained 를 돌려준다.
+--       같은 규칙을 두 곳에 두면 자정 경계가 갈라진다. 신당에서 오늘 이미 기원했으면
+--       gained=false 로 no-op 되지만 **의례는 정상 완주한다** — 두 멱등은 서로 다른 질문
+--       ("이 달의 의례를 했나" / "오늘 적립했나")에 답하므로 이중화가 아니다.
 CREATE OR REPLACE FUNCTION public.complete_ritual(
   p_user_id UUID,
   p_ritual_month TEXT,
   p_is_leap BOOLEAN,
   p_seq INTEGER,
   p_wish_category TEXT,
-  p_wish_text TEXT,
   p_members_viewed UUID[],
-  p_bok_amount INTEGER
-) RETURNS TABLE (already_completed BOOLEAN, awarded INTEGER, balance INTEGER)
+  p_bok_amount INTEGER,
+  p_kst_today DATE
+) RETURNS TABLE (
+  already_completed BOOLEAN,
+  awarded INTEGER,
+  balance INTEGER,
+  devotion_gained BOOLEAN,
+  devotion_total INTEGER
+)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $$
 DECLARE
   v_id UUID;
   v_balance INTEGER := 0;
   v_amount INTEGER := GREATEST(COALESCE(p_bok_amount, 0), 0);
+  v_gained BOOLEAN := false;
+  v_total INTEGER := 0;
 BEGIN
+  -- 소원 갈래는 기존 신당 소원 목록과 같아야 한다(9A). 원문은 받지 않는다.
   IF p_wish_category IS NULL
-     OR p_wish_category NOT IN ('PEACE','WEALTH','STUDY','HEALTH','CUSTOM') THEN
+     OR p_wish_category NOT IN ('health','exam','love','wealth','family','business','other') THEN
     RAISE EXCEPTION 'WISH_REQUIRED';
   END IF;
-  IF p_wish_category = 'CUSTOM'
-     AND (p_wish_text IS NULL OR length(btrim(p_wish_text)) = 0) THEN
-    RAISE EXCEPTION 'WISH_TEXT_REQUIRED';
-  END IF;
 
+  -- ① 음력월 멱등 게이트 — 이 달의 의례를 이미 했는지는 오직 여기서만 판정한다.
   INSERT INTO ritual_records
     (user_id, ritual_month, is_leap_month, lunar_month_seq,
-     completed_at, wish_category, wish_text, members_viewed)
+     completed_at, wish_category, members_viewed)
   VALUES
     (p_user_id, p_ritual_month, p_is_leap, p_seq,
-     now(), p_wish_category, LEFT(p_wish_text, 100), COALESCE(p_members_viewed, '{}'))
+     now(), p_wish_category, COALESCE(p_members_viewed, '{}'))
   ON CONFLICT (user_id, ritual_month, is_leap_month) DO UPDATE SET
     completed_at   = now(),
     wish_category  = EXCLUDED.wish_category,
-    wish_text      = EXCLUDED.wish_text,
     members_viewed = EXCLUDED.members_viewed
   WHERE ritual_records.completed_at IS NULL
   RETURNING id INTO v_id;
 
   IF v_id IS NULL THEN
     -- 이미 완주된 달 (중복 탭·2탭) — 멱등 성공, 적립 없음
-    RETURN QUERY SELECT true, 0, (SELECT COALESCE(points, 0) FROM bok_points WHERE bok_points.user_id = p_user_id);
+    RETURN QUERY SELECT
+      true, 0,
+      COALESCE((SELECT w.balance FROM wallets w WHERE w.user_id = p_user_id), 0),
+      false,
+      COALESCE((SELECT d.total_days FROM shrine_devotion d WHERE d.user_id = p_user_id), 0);
     RETURN;
   END IF;
 
-  IF v_amount > 0 THEN
-    v_balance := add_bok_points(p_user_id, v_amount);
-    INSERT INTO bok_transactions (user_id, amount, type, description)
-    VALUES (p_user_id, v_amount, 'RITUAL_COMPLETE', p_ritual_month || CASE WHEN p_is_leap THEN '(윤)' ELSE '' END || ' 초하루 문안');
-  END IF;
+  -- ② 기원 누적 — 적립·KST 일 멱등은 이 함수가 단독으로 소유한다(10A).
+  --    반환값을 그대로 읽을 뿐 여기서 다시 세지 않는다.
+  SELECT r.gained, r.total_days INTO v_gained, v_total
+  FROM public.record_shrine_devotion(p_user_id, COALESCE(p_kst_today, (now() AT TIME ZONE 'Asia/Seoul')::date)) AS r;
 
-  RETURN QUERY SELECT false, v_amount, v_balance;
+  -- ③ 복채 적립 — 기존 지급 경로(add_bokchae → wallets + wallet_transactions).
+  --    새 원장을 만들지 않으므로 이원화 금지 원칙이 유지된다(11A).
+  IF v_amount > 0 THEN
+    PERFORM add_bokchae(
+      p_user_id,
+      v_amount,
+      p_ritual_month || CASE WHEN p_is_leap THEN '(윤)' ELSE '' END || ' 초하루 문안'
+    );
+  END IF;
+  SELECT COALESCE(w.balance, 0) INTO v_balance FROM wallets w WHERE w.user_id = p_user_id;
+
+  RETURN QUERY SELECT false, v_amount, COALESCE(v_balance, 0), COALESCE(v_gained, false), COALESCE(v_total, 0);
 END;
 $$;
 
 -- 8. 권한 — service_role 전용 (V1, burn_shrine_aekmak 패턴)
 REVOKE ALL ON FUNCTION public.enter_ritual(UUID, TEXT, BOOLEAN, INTEGER) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.enter_ritual(UUID, TEXT, BOOLEAN, INTEGER) TO service_role;
-REVOKE ALL ON FUNCTION public.complete_ritual(UUID, TEXT, BOOLEAN, INTEGER, TEXT, TEXT, UUID[], INTEGER) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.complete_ritual(UUID, TEXT, BOOLEAN, INTEGER, TEXT, TEXT, UUID[], INTEGER) TO service_role;
+-- 구(舊) 시그니처가 남아 있으면 오버로드가 되어 호출이 갈린다 — 먼저 지운다.
+DROP FUNCTION IF EXISTS public.complete_ritual(UUID, TEXT, BOOLEAN, INTEGER, TEXT, TEXT, UUID[], INTEGER);
+REVOKE ALL ON FUNCTION public.complete_ritual(UUID, TEXT, BOOLEAN, INTEGER, TEXT, UUID[], INTEGER, DATE) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.complete_ritual(UUID, TEXT, BOOLEAN, INTEGER, TEXT, UUID[], INTEGER, DATE) TO service_role;
 
--- 9. 설정 시드 — 킬스위치(2A) + 적립량 서버 고정(3A)
+-- 9. 설정 시드 — 킬스위치(2A) + 적립량 서버 고정(3A·11A)
 INSERT INTO system_settings (key, value, description) VALUES
   ('ritual_enabled', 'true', '초하루 의례 기능 스위치 (false 면 페이지·크론 전부 차단)'),
-  ('ritual_bok_amount', '30', '초하루 기원 완주 복 포인트 적립량')
+  ('ritual_bok_amount', '30', '초하루 기원 완주 복채 적립량 (만냥). 0 이면 적립 없음')
 ON CONFLICT (key) DO NOTHING;
 
 -- 10. AI 프롬프트 시드 (1A — 수동 입력 금지, 마이그레이션이 정본)

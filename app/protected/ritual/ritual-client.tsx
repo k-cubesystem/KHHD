@@ -22,7 +22,7 @@ import {
   RITUAL_WISH_TEXT_MAX,
   type RitualWishCategory,
 } from '@/lib/domain/ritual/lunar-window'
-import type { Ledger, LedgerRow } from '@/lib/domain/ritual/ledger'
+import type { LedgerRow } from '@/lib/domain/ritual/ledger'
 import {
   completeRitual,
   enhanceRitualCard,
@@ -59,9 +59,6 @@ export default function RitualClient({ initial, roomUrl }: { initial: RitualStat
     void enterRitual()
   }, [outOfWindow, initial.completed, w.ritualMonth])
 
-  // 열람한 가족 카드 (E3: family_member_id 만)
-  const viewedRef = useRef<Set<string>>(new Set())
-
   const handleComplete = useCallback(
     (wish: { category: RitualWishCategory; text: string }) => {
       setError(null)
@@ -70,19 +67,16 @@ export default function RitualClient({ initial, roomUrl }: { initial: RitualStat
       // 낙관적 연출 선행 + 백그라운드 제출 (D5)
       if (!reduced) setPhase('ceremony')
       const submittedAt = Date.now()
-      void completeRitual({
-        wishCategory: wish.category,
-        wishText: wish.category === 'CUSTOM' ? wish.text : null,
-        membersViewed: Array.from(viewedRef.current),
-      }).then((res) => {
+      // 7A·9A: 서버로 가는 것은 소원 갈래 하나뿐이다. 유저가 쓴 문장(wish.text)은
+      //        이 화면의 소원 카드 연출로만 쓰이고 전송되지 않으며, 열람한 식구 목록은
+      //        서버가 자기 family_members 에서 파생한다(클라 uuid 는 위조 가능).
+      void completeRitual({ wishCategory: wish.category }).then((res) => {
         const finish = () => {
           if (!res.success) {
             setError(
               res.error === 'OUT_OF_WINDOW'
                 ? '의례 창이 지났습니다. 다음 초하루에 다시 오세요.'
-                : res.error === 'WISH_TEXT_REQUIRED'
-                  ? '소원을 적어 주세요.'
-                  : '향이 꺼졌습니다 — 다시 올려 주세요.'
+                : '향이 꺼졌습니다 — 다시 올려 주세요.'
             )
             setPhase('pray')
             return
@@ -108,9 +102,7 @@ export default function RitualClient({ initial, roomUrl }: { initial: RitualStat
 
   return (
     <div className="mx-auto w-full max-w-[480px] px-4 pb-10">
-      {phase === 'letter' && (
-        <LetterPhase state={initial} onNext={() => setPhase('pray')} onCardViewed={(id) => viewedRef.current.add(id)} />
-      )}
+      {phase === 'letter' && <LetterPhase state={initial} onNext={() => setPhase('pray')} />}
       {phase === 'pray' && <PrayPhase error={error} onPray={handleComplete} roomUrl={roomUrl} />}
       {phase === 'ceremony' && <CeremonyPhase />}
       {phase === 'ledger' && (
@@ -128,15 +120,7 @@ export default function RitualClient({ initial, roomUrl }: { initial: RitualStat
 
 /* ────────────────────────── ① 서간(편지) ────────────────────────── */
 
-function LetterPhase({
-  state,
-  onNext,
-  onCardViewed,
-}: {
-  state: RitualState
-  onNext: () => void
-  onCardViewed: (memberId: string) => void
-}) {
+function LetterPhase({ state, onNext }: { state: RitualState; onNext: () => void }) {
   const { window: w, cards, hasBirth } = state
   const self = cards.find((c) => c.memberId === null) ?? null
   const family = cards.filter((c) => c.memberId !== null)
@@ -164,7 +148,7 @@ function LetterPhase({
           aria-label="식구 문안 카드"
         >
           {family.map((c) => (
-            <FamilyCard key={c.memberId} card={c} onViewed={onCardViewed} />
+            <FamilyCard key={c.memberId} card={c} />
           ))}
           <Link
             href="/protected/family"
@@ -226,7 +210,7 @@ function HeroCard({ card, seqLabel }: { card: RitualCard; seqLabel: string }) {
   )
 }
 
-function FamilyCard({ card, onViewed }: { card: RitualCard; onViewed: (id: string) => void }) {
+function FamilyCard({ card }: { card: RitualCard }) {
   const { text, swapped } = useAiLine(card)
   const ref = useRef<HTMLDivElement | null>(null)
   const firedRef = useRef(false)
@@ -243,7 +227,6 @@ function FamilyCard({ card, onViewed }: { card: RitualCard; onViewed: (id: strin
             timer = globalThis.setTimeout(() => {
               if (firedRef.current || !card.memberId) return
               firedRef.current = true
-              onViewed(card.memberId)
               trackEvent({ action: RITUAL_GA.cardView, category: 'ritual', label: card.memberId })
             }, 1000)
           } else if (timer) {
@@ -259,7 +242,7 @@ function FamilyCard({ card, onViewed }: { card: RitualCard; onViewed: (id: strin
       io.disconnect()
       if (timer) globalThis.clearTimeout(timer)
     }
-  }, [card.memberId, onViewed])
+  }, [card.memberId])
 
   return (
     <div ref={ref} role="listitem" className="hanji-card w-[200px] shrink-0 rounded-xl border border-gold-500/15 p-4">
@@ -303,9 +286,9 @@ function PrayPhase({
   onPray: (wish: { category: RitualWishCategory; text: string }) => void
   roomUrl: string | null
 }) {
-  const [category, setCategory] = useState<RitualWishCategory>('PEACE')
+  const [category, setCategory] = useState<RitualWishCategory>('family')
   const [text, setText] = useState('')
-  const custom = category === 'CUSTOM'
+  const custom = category === 'other'
   const canPray = !custom || text.trim().length > 0
 
   return (
@@ -353,7 +336,7 @@ function PrayPhase({
                   category === c.key
                     ? 'border-seal bg-seal/15 font-semibold text-ink-light'
                     : 'border-gold-500/20 text-ink-primary/70'
-                } ${c.key === 'CUSTOM' ? 'col-span-2' : ''}`}
+                } ${c.key === 'other' ? 'col-span-2' : ''}`}
               >
                 <input
                   type="radio"

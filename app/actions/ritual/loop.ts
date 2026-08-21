@@ -12,7 +12,7 @@
  *     └──optInRitualPush──────▶ push_subscriptions.topics += 'ritual' (V2)
  *
  * 쓰기 RPC 는 service_role 전용(V1) — 이 파일이 유일한 호출 경로이며,
- * 창·서수 인자는 전부 서버가 계산한다. 클라이언트 입력은 소원·열람 배열뿐.
+ * 창·서수 인자는 전부 서버가 계산한다. 클라이언트 입력은 소원 갈래 하나뿐이다(7A·9A — uuid 배열·소원 원문은 받지 않는다).
  */
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -26,7 +26,7 @@ import { calculateManse } from '@/lib/domain/saju/manse'
 import {
   getRitualWindow,
   RITUAL_PUSH_TOPIC,
-  RITUAL_WISH_TEXT_MAX,
+  isRitualWishCategory,
   type RitualWindow,
   type RitualWishCategory,
 } from '@/lib/domain/ritual/lunar-window'
@@ -71,7 +71,6 @@ export type RitualErrorCode =
   | 'OUT_OF_WINDOW'
   | 'RATE_LIMITED'
   | 'WISH_REQUIRED'
-  | 'WISH_TEXT_REQUIRED'
   | 'FAILED'
 
 async function isRitualEnabled(): Promise<boolean> {
@@ -216,14 +215,21 @@ export async function enterRitual(): Promise<{ success: boolean; completed?: boo
 
 export interface CompleteRitualInput {
   wishCategory: RitualWishCategory
-  wishText?: string | null
-  /** 열람한 가족 카드 id (본인 제외 — E3). 분석용 클라 입력(V4). */
-  membersViewed?: string[]
 }
 
-export async function completeRitual(
-  input: CompleteRitualInput
-): Promise<{ success: boolean; already?: boolean; awarded?: number; balance?: number; error?: RitualErrorCode }> {
+export async function completeRitual(input: CompleteRitualInput): Promise<{
+  success: boolean
+  already?: boolean
+  /** 이번 완주로 적립된 복채(만냥). 이미 완주한 달이면 0. */
+  awarded?: number
+  /** 적립 후 복채 잔액. */
+  balance?: number
+  /** 이번 완주로 기원 누적이 실제로 올랐는가(10A). 신당에서 오늘 이미 기원했으면 false. */
+  devotionGained?: boolean
+  /** 기원 누적 일수 — 단(壇) 진행의 근거. */
+  devotionTotal?: number
+  error?: RitualErrorCode
+}> {
   try {
     const supabase = await createClient()
     const {
@@ -238,15 +244,17 @@ export async function completeRitual(
     const rl = await rateLimit(`ritual-complete:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
     if (!rl.success) return { success: false, error: 'RATE_LIMITED' }
 
-    if (!input?.wishCategory) return { success: false, error: 'WISH_REQUIRED' }
-    const wishText = (input.wishText ?? '').slice(0, RITUAL_WISH_TEXT_MAX).trim() || null
-    if (input.wishCategory === 'CUSTOM' && !wishText) return { success: false, error: 'WISH_TEXT_REQUIRED' }
-
-    const membersViewed = (input.membersViewed ?? [])
-      .filter((v) => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v))
-      .slice(0, 50)
+    // 소원 갈래는 목록 안의 값만. 원문은 인자로도 받지 않는다(9A).
+    if (!isRitualWishCategory(input?.wishCategory)) return { success: false, error: 'WISH_REQUIRED' }
 
     const admin = createAdminClient()
+
+    // 7A: 열람한 식구 카드는 **서버가 파생한다.** 클라이언트가 uuid 배열을 보내면
+    //     남의 id 를 넣거나 자기 id 를 반복해 「식구 모시기」 지표를 부풀릴 수 있고,
+    //     하필 그 숫자가 2단계 확산을 결정하는 가족 가설 관찰 지표다.
+    //     의례 진입 화면은 이 유저의 식구 카드를 전량 렌더하므로, 그 목록이 곧 열람 목록이다.
+    const { data: ownedMembers } = await supabase.from('family_members').select('id').eq('user_id', user.id)
+    const membersViewed = (ownedMembers ?? []).map((m) => m.id as string).slice(0, 50)
 
     // 적립량 서버 고정 (3A — 클라 입력 불신)
     let amount = 30
@@ -264,12 +272,12 @@ export async function completeRitual(
       p_is_leap: window.isLeapMonth,
       p_seq: window.lunarMonthSeq,
       p_wish_category: input.wishCategory,
-      p_wish_text: wishText,
       p_members_viewed: membersViewed,
       p_bok_amount: amount,
+      // 10A: 기원 누적의 KST 날짜. 창 판정과 같은 서버 시계에서 나와야 자정 경계가 갈리지 않는다.
+      p_kst_today: window.kstDate,
     })
     if (error) {
-      if (String(error.message).includes('WISH_TEXT_REQUIRED')) return { success: false, error: 'WISH_TEXT_REQUIRED' }
       if (String(error.message).includes('WISH_REQUIRED')) return { success: false, error: 'WISH_REQUIRED' }
       logger.error('[ritual] complete_ritual RPC 실패', error)
       return { success: false, error: 'FAILED' }
@@ -280,6 +288,8 @@ export async function completeRitual(
       already: Boolean(row?.already_completed),
       awarded: Number(row?.awarded ?? 0),
       balance: Number(row?.balance ?? 0),
+      devotionGained: Boolean(row?.devotion_gained),
+      devotionTotal: Number(row?.devotion_total ?? 0),
     }
   } catch (err) {
     logger.error('[ritual] completeRitual 실패', err)

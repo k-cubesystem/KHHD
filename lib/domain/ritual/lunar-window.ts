@@ -25,17 +25,44 @@ const SEQ_EPOCH_YEAR = 2000
 const LUNAR_YEAR_MIN = 1950
 const LUNAR_YEAR_MAX = 2100
 
-export type RitualWishCategory = 'PEACE' | 'WEALTH' | 'STUDY' | 'HEALTH' | 'CUSTOM'
+/**
+ * 소원 갈래 — 기존 신당 소원(`shrine_wishes.category`)의 목록을 **그대로** 쓴다.
+ *
+ * ⚠️ 새 enum 을 만들지 않는 이유: 갈래가 두 벌이 되면 통계가 두 벌이 되고 이미지 자산
+ *    (`public/shrine/wish/*.webp`)도 갈라진다. 여기 문자열은 DB CHECK 제약과 한 글자도
+ *    달라선 안 된다 — 실측 기준(2026-08-21):
+ *    `CHECK (category = ANY (ARRAY['health','exam','love','wealth','family','business','other']))`
+ *
+ * ⚠️ **소원 원문은 받지도 저장하지도 않는다.** 서버가 아는 것은 이 갈래 하나뿐이고,
+ *    유저가 쓴 문장은 클라이언트의 소원 카드 연출로만 쓰이고 화면을 떠나지 않는다
+ *    (액막이·오방기·백일기도와 같은 원칙 — 스키마에 텍스트 컬럼을 만들지 않는 것으로 강제).
+ *    `ritual_records` 에 텍스트 컬럼을 되살리지 말 것.
+ */
+export type RitualWishCategory = 'health' | 'exam' | 'love' | 'wealth' | 'family' | 'business' | 'other'
 
 export const RITUAL_WISH_CATEGORIES: Array<{ key: RitualWishCategory; label: string }> = [
-  { key: 'PEACE', label: '식구들 무탈' },
-  { key: 'WEALTH', label: '재물' },
-  { key: 'STUDY', label: '학업' },
-  { key: 'HEALTH', label: '건강' },
-  { key: 'CUSTOM', label: '직접 적기' },
+  { key: 'family', label: '식구들 무탈' },
+  { key: 'health', label: '건강' },
+  { key: 'wealth', label: '재물' },
+  { key: 'exam', label: '학업' },
+  { key: 'love', label: '인연' },
+  { key: 'business', label: '사업' },
+  { key: 'other', label: '그 밖의 소원' },
 ]
 
+/**
+ * 소원 입력란의 최대 글자 수.
+ *
+ * ⚠️ **클라이언트 표시 전용이다.** 이 글자는 서버로 전송되지 않고 저장되지도 않는다 —
+ *    유저가 쓴 문장은 그 화면의 소원 카드에 그려질 뿐이다. 이 상수를 근거로 서버 측
+ *    길이 검증이나 DB 컬럼을 만들지 말 것(9A).
+ */
 export const RITUAL_WISH_TEXT_MAX = 100
+
+/** 서버 입력 검증용 타입 가드 — 액션은 이걸 통과한 값만 RPC 로 보낸다. */
+export function isRitualWishCategory(value: unknown): value is RitualWishCategory {
+  return typeof value === 'string' && RITUAL_WISH_CATEGORIES.some((c) => c.key === value)
+}
 
 /** GA4 이벤트 이름 단일 출처 (BAEKIL_GA 패턴) */
 export const RITUAL_GA = {
