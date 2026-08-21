@@ -1,6 +1,18 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
+// 흡수·통합되어 리다이렉트만 남은 구 주소들. RSC 페이지의 redirect()는 정적 셸이 200으로
+// 스트리밍된 뒤 클라이언트 전환으로 실행되는데, 부하로 하이드레이션과 겹치면 Next Router
+// 내부 훅 순서 오류(React #310, "Application error" 화면)를 유발한다 — HTTP 레이어에서 선처리.
+// 페이지 쪽 redirect()는 안전망으로 남긴다 (2026-08-20 /protected/membership 5/5 재현·수복).
+const LEGACY_REDIRECTS: Record<string, string> = {
+  '/protected': '/protected/analysis',
+  '/protected/membership': '/protected/store?tab=membership',
+  '/protected/shrine/shop': '/protected/store?tab=items',
+  '/protected/shrine/chat': '/protected/ai-shaman',
+  '/admin/monitoring': '/admin/analytics',
+}
+
 export async function updateSession(request: NextRequest) {
   // auth/callback은 자체적으로 세션을 처리하므로 middleware에서 제외
   // callback 실행 중 getUser() 호출 시 세션 미설정 상태에서 오류 발생 가능
@@ -49,10 +61,20 @@ export async function updateSession(request: NextRequest) {
     // }
   }
 
-  // 2.5 /protected 허브 → 분석 홈. RSC 페이지의 redirect()는 로그인 직후 클라이언트 전환과 겹치면
-  //     Next Router 내부 훅 순서 오류(React #310, "Application error" 화면)를 유발 — HTTP 레이어에서 선처리.
-  if (request.nextUrl.pathname === '/protected' && user) {
-    return NextResponse.redirect(new URL('/protected/analysis', request.url))
+  // 2.5 구 주소 선처리 (React #310 방지 — LEGACY_REDIRECTS 주석 참조)
+  if (user) {
+    const legacyTarget = LEGACY_REDIRECTS[request.nextUrl.pathname]
+    if (legacyTarget) {
+      return NextResponse.redirect(new URL(legacyTarget, request.url))
+    }
+    // 신위전은 member 쿼리를 보존해 넘긴다 (알림·가이드가 구 주소를 들고 있음)
+    if (request.nextUrl.pathname === '/protected/shrine/deities') {
+      const url = new URL('/protected/shrine/collection', request.url)
+      url.searchParams.set('tab', 'deity')
+      const member = request.nextUrl.searchParams.get('member')
+      if (member) url.searchParams.set('member', member)
+      return NextResponse.redirect(url)
+    }
   }
 
   // 3. 관리자 경로(/admin) 접근 제어
