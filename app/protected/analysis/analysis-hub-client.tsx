@@ -6,10 +6,16 @@ import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 import { JourneyCard } from '@/components/analysis/journey-card'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
+import { RitualBanner } from '@/components/ritual/ritual-banner'
+import { trackEvent } from '@/lib/analytics/ga4'
 
 export function AnalysisHubClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
+
+  useEffect(() => {
+    trackEvent({ action: 'screen_view', category: 'engagement', label: 'dashboard' })
+  }, [])
 
   useEffect(() => {
     if (searchParams.get('welcome') === '1') {
@@ -37,6 +43,7 @@ export function AnalysisHubClient() {
       </div>
 
       <div className="relative z-10 w-full pt-6">
+        <RitualBanner />
         <AnalysisDashboard />
 
         {/* 종합사주풀이 여정 — 맨 하단(CEO 2026-08-13).

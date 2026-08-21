@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=480">
+<title>초하루 의례 — 와이어프레임</title>
+<!-- 의도적으로 거친 스케치: 시스템 폰트, 회색 얇은 보더, 무채색. 레이아웃 검증용 -->
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f2; color: #333; display: flex; gap: 24px; padding: 24px; }
+  .screen { width: 375px; border: 2px solid #999; border-radius: 12px; background: #fff; padding: 16px; flex-shrink: 0; }
+  .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .box { border: 1.5px dashed #aaa; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .note { font-size: 11px; color: #a66; margin-top: 4px; }
+  h2 { font-size: 15px; margin-bottom: 12px; border-bottom: 2px solid #333; padding-bottom: 6px; }
+  .hstack { display: flex; gap: 8px; overflow-x: auto; }
+  .card { min-width: 130px; border: 1.5px solid #888; border-radius: 8px; padding: 10px; font-size: 12px; }
+  .card small { color: #777; display: block; margin-top: 6px; line-height: 1.4; }
+  .cta { display: block; width: 100%; text-align: center; border: 2px solid #333; border-radius: 3px; padding: 14px; font-weight: 700; font-size: 14px; background: #eee; }
+  .divider { height: 4px; background: repeating-linear-gradient(90deg, #bbb 0 20px, #ddd 20px 40px); margin: 12px 0; border-radius: 2px; }
+  .ledger { font-size: 12px; line-height: 1.9; border-left: 3px solid #999; padding-left: 10px; }
+  .badge { display: inline-block; border: 1px solid #999; border-radius: 3px; font-size: 10px; padding: 1px 5px; margin-left: 4px; }
+  .dim { color: #999; }
+</style>
+</head>
+<body>
+
+<!-- 화면 1: 의례 진입 (초하루 푸시 → 랜딩) -->
+<div class="screen">
+  <div class="label">화면 1 — 의례 진입 (매달 초하루)</div>
+  <h2>구월 초하루 문안 🏮</h2>
+  <div class="box">
+    <div class="label">이번 달 인사말 (해화지기 1줄)</div>
+    "구월입니다. 식구들 안부부터 여쭈어요."
+    <div class="note">※ 단청 구분선 + 한지 질감. Noto Serif KR 제목.</div>
+  </div>
+  <div class="label">식구 카드 (가로 스크롤 · 본인 카드가 항상 첫 번째)</div>
+  <div class="hstack">
+    <div class="card"><b>나</b> <span class="badge">본인</span><small>이번 달: 재물운이 문을 두드립니다. 지출 단속이 열쇠.</small></div>
+    <div class="card"><b>김민준</b> <span class="badge">자녀</span><small>학업운 상승. 시험 앞 초조함만 다스리면.</small></div>
+    <div class="card dim"><b>+ 식구 모시기</b><small>가족을 등록하면 매달 함께 문안합니다</small></div>
+  </div>
+  <div class="note">※ 가족 미등록 유저(82%)도 본인 카드 1장으로 완전한 의례 가능. "+식구 모시기"가 가족 가설 검증 지점.</div>
+  <div class="divider"></div>
+  <a class="cta">신당에 기원 올리기 →</a>
+</div>
+
+<!-- 화면 2: 기원 (신당 1탭) -->
+<div class="screen">
+  <div class="label">화면 2 — 기원 (기존 신당 재사용)</div>
+  <h2>기원 올리기</h2>
+  <div class="box" style="height:180px; display:flex; align-items:center; justify-content:center;">
+    [ 기존 신당 무대 컴포넌트 재사용 ]<br>
+  </div>
+  <div class="box">
+    <div class="label">이번 달 소원 (선택 1 or 자유 입력)</div>
+    ☐ 식구들 무탈 &nbsp; ☐ 재물 &nbsp; ☐ 학업 &nbsp; ☐ 건강
+  </div>
+  <a class="cta">향 올리고 절하기 (1탭)</a>
+  <div class="note">※ 탭 시 향 연기 모션 (정적 CSS — styled-jsx 금지). 복 포인트 적립 연동(bok_transactions).</div>
+</div>
+
+<!-- 화면 3: 장부 (축적) -->
+<div class="screen">
+  <div class="label">화면 3 — 복 장부 (축적감)</div>
+  <h2>우리 집 복 장부</h2>
+  <div class="box ledger">
+    구월 초하루 — 식구 2인 문안, 기원 1건 ✓<br>
+    팔월 초하루 — 식구 2인 문안, 기원 1건 ✓<br>
+    칠월 초하루 <span class="dim">— 거름 (빈칸이 보이는 것 자체가 리텐션 장치)</span>
+  </div>
+  <div class="box">
+    <div class="label">연속 기록</div>
+    <b>2달 연속 문안</b> — 석 달을 채우면 신수(神獸)가 깃듭니다
+  </div>
+  <div class="note">※ 옛 장부(치부책) 세로 리듬. JetBrains Mono 숫자. 다음 달 초하루 웹푸시 예약 CTA.</div>
+  <a class="cta">다음 초하루에 알려주오 (웹푸시)</a>
+</div>
+
+</body>
+</html>
