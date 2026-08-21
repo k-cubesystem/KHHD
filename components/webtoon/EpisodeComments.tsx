@@ -185,7 +185,7 @@ export function EpisodeComments({
                         onClick={() => void onReport(c.id, r)}
                         disabled={busy}
                         title={REPORT_REASON_INFO[r].gloss}
-                        className="rounded-full border border-white/12 bg-surface/50 px-2.5 py-1 font-sans text-[11px] text-ink-primary/60 disabled:opacity-40"
+                        className="rounded-full border border-white/10 bg-surface/50 px-2.5 py-1 font-sans text-[11px] text-ink-primary/60 disabled:opacity-40"
                       >
                         {REPORT_REASON_INFO[r].label}
                       </button>

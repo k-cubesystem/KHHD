@@ -288,7 +288,7 @@ function HowBaekil({ step }: { step: 0 | 1 | 2 }) {
                 className={`mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-[3px] border font-serif text-[10px] font-bold ${
                   now
                     ? 'border-gold-500/60 bg-gold-500/15 text-gold-200'
-                    : 'border-white/12 bg-white/[0.03] text-ink-primary/40'
+                    : 'border-white/10 bg-white/[0.03] text-ink-primary/40'
                 }`}
               >
                 {i + 1}

@@ -67,7 +67,7 @@ export function MembershipGate({ feature, title, description, benefits, dayPassT
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/50 to-transparent" />
 
         <div className="relative flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-full bg-gold-500/12 border border-gold-500/30 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-gold-500/[0.12] border border-gold-500/30 flex items-center justify-center">
             <Crown className="w-8 h-8 text-gold-400" strokeWidth={1.2} />
           </div>
         </div>
@@ -103,7 +103,7 @@ export function MembershipGate({ feature, title, description, benefits, dayPassT
             <button
               onClick={buyDayPass}
               disabled={buying}
-              className="relative w-full h-11 rounded-xl bg-white/[0.04] border border-white/12 text-ink-light/80 font-sans text-sm flex items-center justify-center gap-2 hover:border-gold-500/40 transition-colors disabled:opacity-50"
+              className="relative w-full h-11 rounded-xl bg-white/[0.04] border border-white/[0.12] text-ink-light/80 font-sans text-sm flex items-center justify-center gap-2 hover:border-gold-500/40 transition-colors disabled:opacity-50"
             >
               {buying ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

@@ -161,7 +161,7 @@ export function TalismanPurchaseSection({
 
       {/* 첫 충전 2배 배너 */}
       {!hasCharged && (
-        <div className="relative overflow-hidden rounded-xl border border-gold-500/50 bg-gradient-to-r from-gold-500/15 via-gold-500/8 to-transparent p-4">
+        <div className="relative overflow-hidden rounded-xl border border-gold-500/50 bg-gradient-to-r from-gold-500/15 via-gold-500/[0.08] to-transparent p-4">
           <div className="absolute -top-8 -right-6 w-24 h-24 bg-gold-500/10 rounded-full blur-2xl" />
           <div className="relative flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-gold-500/20 flex items-center justify-center shrink-0">
@@ -185,7 +185,7 @@ export function TalismanPurchaseSection({
           { label: '관상·손금·풍수', cost: '2만냥', icon: 'studio' },
           { label: '종합사주풀이', cost: '5만냥', icon: 'theme' },
         ].map((item) => (
-          <div key={item.label} className="bg-white/3 border border-white/8 rounded-lg py-2 px-1">
+          <div key={item.label} className="bg-white/[0.03] border border-white/[0.08] rounded-lg py-2 px-1">
             <Sparkles className="w-4 h-4 mx-auto mb-0.5 text-gold-400/60" />
             <p className="text-[9px] text-white/50 mb-0.5">{item.label}</p>
             <p className="text-[10px] font-bold text-gold-400">{item.cost}</p>
@@ -208,8 +208,8 @@ export function TalismanPurchaseSection({
               className={cn(
                 'relative rounded-xl border transition-all duration-200 overflow-hidden',
                 isPopular
-                  ? 'border-gold-500/50 bg-gradient-to-br from-gold-500/8 to-transparent shadow-[0_0_20px_rgba(212,175,55,0.15)]'
-                  : 'border-white/10 bg-white/3 hover:border-white/20'
+                  ? 'border-gold-500/50 bg-gradient-to-br from-gold-500/[0.08] to-transparent shadow-[0_0_20px_rgba(212,175,55,0.15)]'
+                  : 'border-white/10 bg-white/[0.03] hover:border-white/20'
               )}
             >
               {/* 인기 뱃지 */}
@@ -310,7 +310,7 @@ export function TalismanPurchaseSection({
       </div>
 
       {/* 충전 안내 */}
-      <div className="bg-white/3 border border-white/8 rounded-xl p-4 space-y-1.5">
+      <div className="bg-white/[0.03] border border-white/[0.08] rounded-xl p-4 space-y-1.5">
         <p className="text-[10px] font-bold text-white/60 mb-2">복채 충전 안내</p>
         {[
           '제공 시점 — 결제 완료 즉시 전량 지급되며, 그 시점에 상품 제공이 완료됩니다',

@@ -133,7 +133,7 @@ export function GuardianGrid({
                     on
                       ? 'border-gold-500/55 bg-gold-500/[0.12]'
                       : has
-                        ? 'border-white/12 bg-white/[0.03]'
+                        ? 'border-white/[0.12] bg-white/[0.03]'
                         : 'border-white/[0.06] bg-black/25 opacity-80'
                   }`}
                 >

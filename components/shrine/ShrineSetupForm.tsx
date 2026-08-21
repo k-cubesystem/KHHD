@@ -82,7 +82,7 @@ export function ShrineSetupForm() {
           onChange={(e) => setName(e.target.value)}
           placeholder="예) 우리 가족 복을 담은 신당"
           maxLength={20}
-          className="w-full bg-white/3 border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light placeholder:text-ink-light/20 focus:outline-none focus:border-gold-500/40 font-sans"
+          className="w-full bg-white/[0.03] border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light placeholder:text-ink-light/20 focus:outline-none focus:border-gold-500/40 font-sans"
         />
         <p className="text-[10px] text-ink-light/20 font-sans text-right">{name.length}/20</p>
       </div>
@@ -96,7 +96,7 @@ export function ShrineSetupForm() {
           placeholder="이 신당에 대한 소개를 적어주세요"
           maxLength={100}
           rows={2}
-          className="w-full bg-white/3 border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light placeholder:text-ink-light/20 resize-none focus:outline-none focus:border-gold-500/40 font-sans"
+          className="w-full bg-white/[0.03] border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light placeholder:text-ink-light/20 resize-none focus:outline-none focus:border-gold-500/40 font-sans"
         />
       </div>
 

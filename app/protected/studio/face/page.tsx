@@ -276,7 +276,7 @@ function FaceAnalysisPageContent() {
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 border ${
                       selectedGoal === g.value
                         ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
-                        : 'border-white/5 bg-white/3 hover:border-white/15'
+                        : 'border-white/5 bg-white/[0.03] hover:border-white/15'
                     }`}
                   >
                     <div className="text-lg mb-1">{g.icon}</div>
@@ -612,7 +612,7 @@ function FaceAnalysisPageContent() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.08 }}
-                        className="rounded-xl p-4 border border-white/5 bg-white/3"
+                        className="rounded-xl p-4 border border-white/5 bg-white/[0.03]"
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gold-500/15 text-gold-500 text-xs font-bold shrink-0">
@@ -642,7 +642,7 @@ function FaceAnalysisPageContent() {
                   </div>
                   <div className="space-y-3">
                     {analysisResult.improvementTips.map((t, idx) => (
-                      <div key={idx} className="rounded-xl p-3.5 border border-white/5 bg-white/3">
+                      <div key={idx} className="rounded-xl p-3.5 border border-white/5 bg-white/[0.03]">
                         <p className="text-sm text-white/75 font-sans leading-relaxed">{t.tip}</p>
                         <p className="text-xs text-gold-500/60 font-sans font-light mt-1.5">근거 · {t.basis}</p>
                       </div>
@@ -741,7 +741,7 @@ function PartFeatureCard({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.08 }}
-      className="rounded-xl border border-white/5 bg-white/3 overflow-hidden"
+      className="rounded-xl border border-white/5 bg-white/[0.03] overflow-hidden"
     >
       <button onClick={() => setExpanded((v) => !v)} className="w-full p-3.5 text-left">
         <div className="flex items-center justify-between mb-2">
@@ -810,7 +810,7 @@ function FeatureCard({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.08 }}
-      className="rounded-xl p-3.5 border border-white/5 bg-white/3"
+      className="rounded-xl p-3.5 border border-white/5 bg-white/[0.03]"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-serif font-bold text-gold-500">{label}</span>

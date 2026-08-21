@@ -187,8 +187,8 @@ function LoadingSkeleton() {
           {[...Array(3)].map((_, i) => (
             <div key={i} className="space-y-2">
               <div className="w-20 h-3 bg-primary/10 rounded animate-pulse" />
-              <div className="w-full h-4 bg-primary/8 rounded animate-pulse" />
-              <div className="w-5/6 h-4 bg-primary/8 rounded animate-pulse" />
+              <div className="w-full h-4 bg-primary/[0.08] rounded animate-pulse" />
+              <div className="w-5/6 h-4 bg-primary/[0.08] rounded animate-pulse" />
             </div>
           ))}
         </div>
@@ -341,7 +341,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
     <div className="min-h-screen bg-background text-ink-light font-sans selection:bg-primary/30 relative overflow-hidden flex flex-col items-center">
       {/* Background ambient glow */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/3 blur-[120px]" />
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.03] blur-[120px]" />
         <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-amber-900/10 blur-[80px]" />
       </div>
 

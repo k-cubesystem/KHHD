@@ -141,7 +141,7 @@ function FeeTable({ model }: { model: PaymentGuideModel }) {
 function SectionHead({ icon: Icon, title, eyebrow }: { icon: typeof Coins; title: string; eyebrow: string }) {
   return (
     <header className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gold-500/25 bg-gold-500/12">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gold-500/25 bg-gold-500/[0.12]">
         <Icon className="h-4 w-4 text-gold-400" strokeWidth={1.5} />
       </span>
       <div className="min-w-0">
@@ -231,7 +231,7 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
       </section>
 
       {/* 결정 도우미 */}
-      <section className="space-y-2 rounded-2xl border border-white/8 bg-surface/30 p-4">
+      <section className="space-y-2 rounded-2xl border border-white/10 bg-surface/30 p-4">
         <p className="font-serif text-[14px] font-bold text-ink-light">나는 어느 쪽?</p>
         <ul className="space-y-1.5 font-sans text-[12.5px] leading-relaxed text-ink-light/70">
           <li>

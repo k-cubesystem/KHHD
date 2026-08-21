@@ -175,7 +175,7 @@ export function FamilyResemblanceCard({ data }: { data: FamilyResemblanceResult 
             {data.similar.map((p) => (
               <span
                 key={p.key}
-                className="text-[11px] px-2 py-0.5 rounded-full bg-gold-500/12 border border-gold-500/30 text-gold-500/90 font-sans"
+                className="text-[11px] px-2 py-0.5 rounded-full bg-gold-500/[0.12] border border-gold-500/30 text-gold-500/90 font-sans"
               >
                 {p.label} ({p.palace})
               </span>

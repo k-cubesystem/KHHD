@@ -71,7 +71,7 @@ export function GreetingIntro({
               <div
                 className={cn(
                   'px-4 py-3.5 rounded-2xl rounded-bl-none text-sm leading-[1.75]',
-                  'bg-surface/60 border border-primary/8 backdrop-blur-md',
+                  'bg-surface/60 border border-primary/[0.08] backdrop-blur-md',
                   'text-foreground/85 shadow-[0_2px_24px_rgba(0,0,0,0.3)]'
                 )}
               >

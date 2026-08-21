@@ -210,7 +210,7 @@ function PalmAnalysisPageContent() {
                     className={`relative p-3 rounded-xl text-left transition-all duration-200 border ${
                       selectedGoal === g.value
                         ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
-                        : 'border-white/5 bg-white/3 hover:border-white/15'
+                        : 'border-white/5 bg-white/[0.03] hover:border-white/15'
                     }`}
                   >
                     <div className="text-lg mb-1">{g.icon}</div>
@@ -345,7 +345,7 @@ function PalmAnalysisPageContent() {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.1 }}
-                            className="rounded-xl p-4 border border-white/5 bg-white/3"
+                            className="rounded-xl p-4 border border-white/5 bg-white/[0.03]"
                           >
                             <div className="flex items-center gap-2 mb-2">
                               <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
@@ -479,7 +479,7 @@ function PalmAnalysisPageContent() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.08 }}
-                        className="rounded-xl p-4 border border-white/5 bg-white/3"
+                        className="rounded-xl p-4 border border-white/5 bg-white/[0.03]"
                       >
                         <span className="text-xs font-serif font-bold text-gold-500">{t.label}</span>
                         <p className="text-xs text-white/55 font-sans font-light leading-relaxed mt-1.5">{t.text}</p>
@@ -529,7 +529,7 @@ function PalmAnalysisPageContent() {
                     </h3>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="rounded-xl p-3.5 border border-white/5 bg-white/3">
+                    <div className="rounded-xl p-3.5 border border-white/5 bg-white/[0.03]">
                       <p className="text-[10px] text-gold-500/60 font-sans tracking-widest uppercase mb-1.5">
                         왼손 · 타고난 운
                       </p>
@@ -537,7 +537,7 @@ function PalmAnalysisPageContent() {
                         {analysisResult.dualHandCompare.leftHand}
                       </p>
                     </div>
-                    <div className="rounded-xl p-3.5 border border-white/5 bg-white/3">
+                    <div className="rounded-xl p-3.5 border border-white/5 bg-white/[0.03]">
                       <p className="text-[10px] text-gold-500/60 font-sans tracking-widest uppercase mb-1.5">
                         오른손 · 만들어가는 운
                       </p>
@@ -637,7 +637,7 @@ function PalmLineCard({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="rounded-xl p-4 border border-white/5 bg-white/3"
+      className="rounded-xl p-4 border border-white/5 bg-white/[0.03]"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-serif font-bold text-gold-500">{label}</span>

@@ -131,7 +131,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
 
           {/* 교차 검증 4주제 — 궁위-십성 대응 (v2) */}
           {crosses.length > 0 && (
-            <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Scale className="w-4 h-4 text-gold-500" />
                 <div>
@@ -150,7 +150,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.07 }}
-                      className="rounded-xl p-4 border border-white/8 bg-black/20"
+                      className="rounded-xl p-4 border border-white/[0.08] bg-black/20"
                     >
                       <div className="flex items-center justify-between gap-2 mb-0.5">
                         <p className="text-sm font-serif font-bold text-ink-primary/90">{c.label}</p>
@@ -282,7 +282,7 @@ export function SamhapResultView({ result, targetName }: { result: SamhapResult;
 
           {/* 긴장점 */}
           {p.tension && (
-            <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Waves className="w-4 h-4" style={{ color: '#A8C5DA' }} />
                 <h3 className="text-sm font-serif font-bold tracking-wide" style={{ color: '#A8C5DA' }}>

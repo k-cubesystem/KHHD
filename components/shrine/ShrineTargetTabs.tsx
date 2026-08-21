@@ -50,7 +50,7 @@ export function ShrineTargetTabs({ tabs, activeId }: Props) {
             href={t.id ? `/protected/shrine?member=${t.id}` : '/protected/shrine'}
             aria-current={active ? 'page' : undefined}
             className={`flex-shrink-0 flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl border transition-colors ${
-              active ? 'bg-gold-500/[0.12] border-gold-500/50' : 'bg-surface/40 border-white/8'
+              active ? 'bg-gold-500/[0.12] border-gold-500/50' : 'bg-surface/40 border-white/10'
             }`}
           >
             <TabAvatar tab={t} active={active} />
@@ -73,7 +73,7 @@ export function ShrineTargetTabs({ tabs, activeId }: Props) {
       <Link
         href="/protected/family"
         aria-label="가족관리 페이지로 이동"
-        className="flex-shrink-0 flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/12 bg-surface/40 text-ink-light/55"
+        className="flex-shrink-0 flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-xl border border-white/10 bg-surface/40 text-ink-light/55"
       >
         <span className="w-9 h-9 rounded-full grid place-items-center border border-white/15 bg-white/[0.04]">
           <Users className="h-4 w-4 text-gold-300/80" />

@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  ACTIVE: { label: '구독 중', cls: 'border-gold-500/40 bg-gold-500/12 text-gold-300' },
+  ACTIVE: { label: '구독 중', cls: 'border-gold-500/40 bg-gold-500/[0.12] text-gold-300' },
   CANCELLED: { label: '해지 예정', cls: 'border-white/15 bg-white/[0.06] text-ink-light/60' },
   PAUSED: { label: '일시 중지', cls: 'border-white/15 bg-white/[0.06] text-ink-light/60' },
   PAYMENT_FAILED: { label: '결제 실패', cls: 'border-seal/40 bg-seal/15 text-seal' },
@@ -97,7 +97,7 @@ export default async function MembershipManagePage() {
           </div>
           <Link
             href="/protected/store?tab=bokchae"
-            className="inline-flex min-h-[40px] shrink-0 items-center rounded-full border border-gold-500/40 bg-gold-500/12 px-4 font-serif text-[13px] text-gold-300 transition-colors hover:bg-gold-500/20"
+            className="inline-flex min-h-[40px] shrink-0 items-center rounded-full border border-gold-500/40 bg-gold-500/[0.12] px-4 font-serif text-[13px] text-gold-300 transition-colors hover:bg-gold-500/20"
           >
             충전하기
           </Link>

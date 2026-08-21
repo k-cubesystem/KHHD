@@ -102,7 +102,7 @@ export default async function StorePage({ searchParams }: { searchParams: Promis
               className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border text-[11px] font-serif transition-colors ${
                 active
                   ? 'bg-gold-500/[0.12] border-gold-500/50 text-gold-300 font-bold'
-                  : 'bg-surface/40 border-white/8 text-ink-light/55'
+                  : 'bg-surface/40 border-white/10 text-ink-light/55'
               }`}
             >
               <Icon className="w-4 h-4" strokeWidth={1.5} />

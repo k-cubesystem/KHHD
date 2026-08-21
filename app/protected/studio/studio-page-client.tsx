@@ -81,7 +81,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
           transition={{ duration: 0.6 }}
           className="space-y-5"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gold-500/8 border border-gold-500/15 rounded-full">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gold-500/[0.08] border border-gold-500/15 rounded-full">
             <div className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse" />
             <span className="text-[10px] text-gold-500/80 font-medium tracking-[0.2em] uppercase">
               Secret of Fortune
@@ -114,7 +114,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/8 border border-gold-500/15 rounded-xl"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500/[0.08] border border-gold-500/15 rounded-xl"
           >
             <Coins className="w-3.5 h-3.5 text-gold-500" />
             <span className="text-xs text-white/40 font-sans">보유 복채</span>
@@ -144,7 +144,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
                 {/* 상단 줄 */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gold-500/8 border border-gold-500/10 flex items-center justify-center shrink-0 group-hover:bg-gold-500/15 transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-gold-500/[0.08] border border-gold-500/10 flex items-center justify-center shrink-0 group-hover:bg-gold-500/15 transition-colors">
                       <service.icon className="w-5 h-5 text-gold-500" strokeWidth={1.5} />
                     </div>
                     <span className="text-[9px] font-bold text-gold-500/40 tracking-[0.25em] uppercase">
@@ -153,7 +153,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     {/* 비용 뱃지 */}
-                    <div className="flex items-center gap-1 bg-gold-500/8 border border-gold-500/15 rounded-full px-2.5 py-1">
+                    <div className="flex items-center gap-1 bg-gold-500/[0.08] border border-gold-500/15 rounded-full px-2.5 py-1">
                       <Coins className="w-3 h-3 text-gold-500/70" />
                       <span className="text-[10px] text-gold-500/70 font-bold">{service.cost}만냥</span>
                     </div>
@@ -194,7 +194,7 @@ export function StudioPageClient({ initialBalance }: StudioPageClientProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="mt-2 p-4 rounded-xl border border-white/5 bg-white/2"
+          className="mt-2 p-4 rounded-xl border border-white/5 bg-white/[0.02]"
         >
           <p className="text-[10px] text-white/55 text-center font-light leading-relaxed">
             각 분석은 AI 기반으로 참고용으로만 활용하세요.

@@ -40,7 +40,7 @@ export function ShrineEditForm({ shrine }: ShrineEditFormProps) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={20}
-          className="w-full bg-white/3 border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light focus:outline-none focus:border-gold-500/40 font-sans"
+          className="w-full bg-white/[0.03] border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light focus:outline-none focus:border-gold-500/40 font-sans"
         />
       </div>
 
@@ -51,7 +51,7 @@ export function ShrineEditForm({ shrine }: ShrineEditFormProps) {
           onChange={(e) => setDescription(e.target.value)}
           maxLength={100}
           rows={3}
-          className="w-full bg-white/3 border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light resize-none focus:outline-none focus:border-gold-500/40 font-sans"
+          className="w-full bg-white/[0.03] border border-gold-500/15 rounded-xl px-4 py-3 text-sm text-ink-light resize-none focus:outline-none focus:border-gold-500/40 font-sans"
         />
       </div>
 

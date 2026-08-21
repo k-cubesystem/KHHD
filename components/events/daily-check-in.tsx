@@ -274,7 +274,7 @@ export function DailyCheckIn({
           className={cn(
             'w-full flex items-center gap-3 rounded-xl border p-2.5 text-left transition-all active:scale-[0.98]',
             canCheckIn
-              ? 'bg-gradient-to-r from-gold-500/12 via-gold-500/5 to-transparent border-gold-500/40 hover:border-gold-500/60'
+              ? 'bg-gradient-to-r from-gold-500/10 via-gold-500/5 to-transparent border-gold-500/40 hover:border-gold-500/60'
               : 'bg-surface/40 border-primary/20 hover:border-primary/40'
           )}
         >

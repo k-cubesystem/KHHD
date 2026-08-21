@@ -16,7 +16,7 @@ import type { EnergyMapEntry, FamilyEnergyMap as MapData } from '@/lib/domain/sh
 function ElementPrimer() {
   const [open, setOpen] = useState(false)
   return (
-    <section className="mb-5 rounded-xl border border-white/8 bg-surface/20 overflow-hidden">
+    <section className="mb-5 rounded-xl border border-white/10 bg-surface/20 overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

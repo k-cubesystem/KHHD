@@ -36,7 +36,7 @@ export function PaymentFailureView({
   const [showCode, setShowCode] = useState(false)
 
   const tone: Record<PaymentFailureKind, { ring: string; icon: string; Icon: typeof Undo2 }> = {
-    canceled: { ring: 'border-white/12 bg-white/[0.03]', icon: 'text-ink-light/70', Icon: Undo2 },
+    canceled: { ring: 'border-white/[0.12] bg-white/[0.03]', icon: 'text-ink-light/70', Icon: Undo2 },
     rejected: { ring: 'border-gold-500/25 bg-gold-500/[0.06]', icon: 'text-gold-400', Icon: RotateCcw },
     failed: { ring: 'border-seal/30 bg-seal/[0.07]', icon: 'text-seal-light', Icon: ShieldAlert },
   }
@@ -67,7 +67,7 @@ export function PaymentFailureView({
         <Button
           asChild
           variant="outline"
-          className="h-12 rounded-xl border-white/12 font-sans text-ink-light/80 hover:bg-surface"
+          className="h-12 rounded-xl border-white/[0.12] font-sans text-ink-light/80 hover:bg-surface"
         >
           <Link href={exitHref}>{exitLabel}</Link>
         </Button>

@@ -144,7 +144,7 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
         placeholder="소원을 적어주세요 (5~100자)"
         maxLength={100}
         rows={3}
-        className="w-full bg-white/3 border border-gold-500/10 rounded-xl px-4 py-3 text-sm text-ink-light placeholder:text-ink-light/20 resize-none focus:outline-none focus:border-gold-500/30 font-sans leading-relaxed"
+        className="w-full bg-white/[0.03] border border-gold-500/10 rounded-xl px-4 py-3 text-sm text-ink-light placeholder:text-ink-light/20 resize-none focus:outline-none focus:border-gold-500/30 font-sans leading-relaxed"
       />
 
       <div className="flex items-center justify-between">
@@ -156,7 +156,7 @@ export function ShrineWishForm({ shrineId, isOwner, familyMemberId = null, praye
             onChange={(e) => setVisitorName(e.target.value)}
             placeholder="이름 (선택)"
             maxLength={10}
-            className="w-24 bg-white/3 border border-gold-500/10 rounded-lg px-3 py-2 text-xs text-ink-light placeholder:text-ink-light/20 focus:outline-none focus:border-gold-500/30 font-sans"
+            className="w-24 bg-white/[0.03] border border-gold-500/10 rounded-lg px-3 py-2 text-xs text-ink-light placeholder:text-ink-light/20 focus:outline-none focus:border-gold-500/30 font-sans"
           />
         ) : !prayedToday ? (
           <span className="flex items-center gap-1 font-serif text-[11px] text-gold-300/90">

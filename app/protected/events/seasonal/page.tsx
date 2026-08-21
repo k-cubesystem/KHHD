@@ -29,10 +29,10 @@ const SEASON_BG: Record<Season, string> = {
 }
 
 const SEASON_GLOW: Record<Season, string> = {
-  spring: 'bg-pink-400/8',
-  summer: 'bg-orange-400/8',
-  autumn: 'bg-amber-600/8',
-  winter: 'bg-blue-400/8',
+  spring: 'bg-pink-400/[0.08]',
+  summer: 'bg-orange-400/[0.08]',
+  autumn: 'bg-amber-600/[0.08]',
+  winter: 'bg-blue-400/[0.08]',
 }
 
 const SERVICE_COSTS = [
@@ -259,7 +259,7 @@ export default function SeasonalEventPage() {
               return (
                 <div
                   key={svc.key}
-                  className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/8 bg-white/[0.03]"
+                  className="flex items-center justify-between px-4 py-3 rounded-xl border border-white/[0.08] bg-white/[0.03]"
                 >
                   <span className="text-sm text-white/80">{svc.label}</span>
                   <div className="flex items-center gap-2">

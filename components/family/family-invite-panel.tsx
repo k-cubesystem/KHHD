@@ -93,7 +93,7 @@ export function FamilyInvitePanel({ members, invites, linkedMemberIds }: FamilyI
   return (
     <section className="rounded-xl border border-white/10 bg-surface/20 p-4">
       <header className="flex items-start gap-2.5">
-        <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-gold-500/35 bg-gold-500/12">
+        <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border border-gold-500/35 bg-gold-500/10">
           <Link2 className="h-3.5 w-3.5 text-gold-400" strokeWidth={1.8} />
         </span>
         <div className="min-w-0">

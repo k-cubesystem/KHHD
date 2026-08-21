@@ -2415,7 +2415,7 @@ export function ShrineRoomClient({
               <button
                 type="button"
                 onClick={() => setAskChat(false)}
-                className="flex-1 rounded-xl border border-white/12 bg-surface py-2.5 font-serif text-[12.5px] text-ink-primary/60"
+                className="flex-1 rounded-xl border border-white/10 bg-surface py-2.5 font-serif text-[12.5px] text-ink-primary/60"
               >
                 아니오
               </button>

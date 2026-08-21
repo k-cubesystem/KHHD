@@ -135,7 +135,7 @@ const Bubble = memo(function Bubble({
         <div
           className={cn(
             'px-4 py-3.5 rounded-2xl rounded-bl-none text-sm leading-[1.75]',
-            'bg-surface/60 border border-primary/8 backdrop-blur-md',
+            'bg-surface/60 border border-primary/[0.08] backdrop-blur-md',
             'text-foreground/85',
             'shadow-[0_2px_24px_rgba(0,0,0,0.3)]'
           )}
@@ -260,7 +260,7 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
 
           {/* 검색 — 목록 화면에서만 */}
           {!viewing && (
-            <div className="px-4 py-2 border-b border-primary/8">
+            <div className="px-4 py-2 border-b border-primary/[0.08]">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -273,7 +273,7 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {!viewing ? (
               // 세션 목록
-              <div className="divide-y divide-primary/8">
+              <div className="divide-y divide-primary/[0.08]">
                 {sessions === null && (
                   <div className="p-6 text-center text-xs text-ink-light/40">
                     <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
@@ -356,7 +356,7 @@ function PastSessionsPanel({ familyId, onClose }: { familyId: string; onClose: (
                         'max-w-[80%] px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed whitespace-pre-wrap break-words',
                         m.role === 'user'
                           ? 'rounded-br-none bg-gradient-to-br from-[#2a2318] to-[#1e1a10] text-primary/90 border border-gold-600/25'
-                          : 'rounded-bl-none bg-surface/60 border border-primary/8 text-foreground/85'
+                          : 'rounded-bl-none bg-surface/60 border border-primary/[0.08] text-foreground/85'
                       )}
                     >
                       {m.content}
@@ -796,13 +796,13 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     >
       {/* 배경 ambient */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/3 blur-[100px]" />
-        <div className="absolute bottom-0 right-0 w-[250px] h-[250px] rounded-full bg-gold-600/4 blur-[80px]" />
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/[0.03] blur-[100px]" />
+        <div className="absolute bottom-0 right-0 w-[250px] h-[250px] rounded-full bg-gold-600/[0.04] blur-[80px]" />
       </div>
 
       {/* ── 헤더 (1단 · 정체성 + 더보기) ── */}
       <header
-        className="sticky top-0 z-20 flex-shrink-0 border-b border-primary/8"
+        className="sticky top-0 z-20 flex-shrink-0 border-b border-primary/[0.08]"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(20px)' }}
       >
         <div className="flex items-center justify-between px-4 py-2.5">
@@ -906,14 +906,14 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         {isSessionLoading && (
           <div className="flex flex-col gap-3 animate-pulse px-1 pt-2">
             <div className="flex items-end gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-primary/8 flex-shrink-0" />
+              <div className="w-7 h-7 rounded-full bg-primary/[0.08] flex-shrink-0" />
               <div className="h-14 w-52 rounded-2xl rounded-bl-none bg-surface/50" />
             </div>
             <div className="flex justify-end">
               <div className="h-9 w-36 rounded-2xl rounded-br-none bg-primary/5" />
             </div>
             <div className="flex items-end gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-primary/8 flex-shrink-0" />
+              <div className="w-7 h-7 rounded-full bg-primary/[0.08] flex-shrink-0" />
               <div className="h-20 w-60 rounded-2xl rounded-bl-none bg-surface/50" />
             </div>
           </div>
@@ -975,7 +975,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
 
       {/* ── 입력 영역 ── */}
       <div
-        className="relative z-10 flex-shrink-0 border-t border-primary/8 px-4 pt-2.5 pb-2.5"
+        className="relative z-10 flex-shrink-0 border-t border-primary/[0.08] px-4 pt-2.5 pb-2.5"
         style={{ background: 'rgba(13,13,13,0.96)', backdropFilter: 'blur(16px)' }}
       >
         {/* AI기본법 §31② 결과물 표시 — 신위의 말도 생성형 AI 결과물이다. 세계관을 지우지 않고
@@ -986,7 +986,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         {/* 잔여·충전 인라인 한 줄 — 헤더 2단을 대체한다. 한도 임박일 때만 강조. */}
         <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
           {isStatusLoading ? (
-            <div className="w-24 h-3 rounded bg-primary/8 animate-pulse" />
+            <div className="w-24 h-3 rounded bg-primary/[0.08] animate-pulse" />
           ) : (
             <span className={cn('text-[10.5px]', isLow ? 'text-primary-dark' : 'text-foreground/45')}>
               오늘 남은 질문 <span className="font-medium">{totalRemaining}회</span>

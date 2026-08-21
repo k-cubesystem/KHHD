@@ -85,7 +85,7 @@ export function NotificationsClient({ initialItems }: { initialItems: UserNotifi
               <div
                 key={n.id}
                 className={`rounded-xl border p-3.5 transition-colors ${
-                  n.isRead ? 'border-white/8 bg-surface/25' : 'border-gold-500/35 bg-gold-500/[0.06]'
+                  n.isRead ? 'border-white/10 bg-surface/25' : 'border-gold-500/35 bg-gold-500/[0.06]'
                 }`}
               >
                 <div className="flex items-start gap-2.5">

@@ -441,7 +441,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     <div className="relative min-h-screen">
       {/* Subtle Background */}
       <div className="fixed inset-0 pointer-events-none -z-10">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gold-500/3 rounded-full blur-[200px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gold-500/[0.03] rounded-full blur-[200px]" />
       </div>
 
       <div className="w-full max-w-full mx-auto px-1 md:px-2 py-4 space-y-6">
@@ -991,7 +991,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                   return (
                                     <div
                                       key={name}
-                                      className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
+                                      className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5"
                                     >
                                       <div className="shrink-0 text-center w-10">
                                         <span className="text-sm font-black text-gold-500">{name}</span>
@@ -1214,7 +1214,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                     isHigh
                                       ? 'bg-gold-500/10 border-gold-500/30'
                                       : isLow
-                                        ? 'bg-white/3 border-white/5 opacity-70'
+                                        ? 'bg-white/[0.03] border-white/5 opacity-70'
                                         : 'bg-white/5 border-white/10'
                                   }`}
                                 >
@@ -1240,7 +1240,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             {engineData.sibjiunseong.items.map((item, i) => (
                               <div
                                 key={i}
-                                className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-white/5"
+                                className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5"
                               >
                                 <div className="shrink-0 text-center w-14">
                                   <span className="text-xs font-bold text-gold-500">{item.sibjiunseong}</span>
@@ -2225,7 +2225,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 return (
                   <div
                     key={el}
-                    className={`p-4 rounded-xl border ${isStrong ? 'bg-gold-500/5 border-gold-500/30' : isWeak ? 'bg-white/3 border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
+                    className={`p-4 rounded-xl border ${isStrong ? 'bg-gold-500/5 border-gold-500/30' : isWeak ? 'bg-white/[0.03] border-white/5 opacity-60' : 'bg-white/5 border-white/10'}`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xl font-black" style={{ color: WU_XING_COLORS[el] }}>

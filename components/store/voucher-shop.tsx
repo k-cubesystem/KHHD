@@ -64,7 +64,7 @@ export function VoucherShop({ initialVouchers, isMember }: VoucherShopProps) {
         return (
           <div key={type} className="rounded-2xl border border-gold-500/25 bg-surface/40 p-5 space-y-3">
             <div className="flex items-start gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-500/12 border border-gold-500/25 shrink-0">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gold-500/[0.12] border border-gold-500/25 shrink-0">
                 <Ticket className="w-5 h-5 text-gold-400" strokeWidth={1.5} />
               </div>
               <div className="flex-1 min-w-0">

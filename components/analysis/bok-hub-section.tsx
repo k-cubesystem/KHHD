@@ -154,7 +154,9 @@ export function BokHubSection() {
                 aria-label={mission.missionTitle + (mission.isCompleted ? ' 완료' : '')}
                 className={cn(
                   'w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-all',
-                  mission.isCompleted ? 'bg-white/3 opacity-60' : 'bg-white/5 hover:bg-white/8 active:scale-[0.98]'
+                  mission.isCompleted
+                    ? 'bg-white/[0.03] opacity-60'
+                    : 'bg-white/5 hover:bg-white/[0.08] active:scale-[0.98]'
                 )}
               >
                 <div

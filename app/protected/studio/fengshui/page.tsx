@@ -302,7 +302,7 @@ function FengShuiAnalysisPageContent() {
                       className={`p-3 rounded-xl text-center transition-all duration-200 border ${
                         active
                           ? 'border-gold-500/60 bg-gold-500/10 shadow-[0_0_12px_rgba(212,175,55,0.15)]'
-                          : 'border-white/5 bg-white/3 hover:border-white/15'
+                          : 'border-white/5 bg-white/[0.03] hover:border-white/15'
                       }`}
                     >
                       <Icon
@@ -381,7 +381,7 @@ function FengShuiAnalysisPageContent() {
                               className={`text-[11px] rounded-full px-3 py-1.5 border transition-all ${
                                 facing === f
                                   ? 'border-gold-500/60 bg-gold-500/10 text-gold-500 font-semibold'
-                                  : 'border-white/8 bg-white/3 text-white/50 hover:border-white/20'
+                                  : 'border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20'
                               }`}
                             >
                               {f !== '모름' ? `${f}향` : f}
@@ -733,7 +733,7 @@ function RoomRecommendationCard({ room, index }: { room: RoomRecommendation; ind
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.08 }}
-      className="rounded-xl border border-white/5 bg-white/3 overflow-hidden"
+      className="rounded-xl border border-white/5 bg-white/[0.03] overflow-hidden"
     >
       <button onClick={() => setExpanded((v) => !v)} className="w-full p-3.5 text-left">
         <div className="flex items-center justify-between">
@@ -803,7 +803,7 @@ function PlacementCard({ placement, index }: { placement: PlacementSuggestion; i
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.07 }}
-      className="rounded-xl p-3.5 border border-white/5 bg-white/3"
+      className="rounded-xl p-3.5 border border-white/5 bg-white/[0.03]"
     >
       <div className="flex items-start gap-3">
         <div className="w-6 h-6 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center shrink-0 mt-0.5">

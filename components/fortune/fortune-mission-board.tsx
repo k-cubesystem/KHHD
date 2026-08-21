@@ -38,7 +38,7 @@ export function FortuneMissionBoard({
       <div className="relative px-4 pt-4 pb-3 overflow-hidden">
         {/* 배경 에너지 */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-t from-primary/8 via-primary/3 to-transparent"
+          className="absolute inset-0 bg-gradient-to-t from-primary/[0.08] via-primary/[0.03] to-transparent"
           initial={{ y: '100%' }}
           animate={{ y: `${100 - percentage}%` }}
           transition={{ duration: 2, ease: 'easeOut' }}

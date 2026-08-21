@@ -76,7 +76,7 @@ export function OpenEventClaim() {
   return (
     <section className="rounded-2xl border border-gold-500/30 bg-gold-500/[0.06] p-4" aria-label="오픈 이벤트 복채">
       <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold-500/25 bg-gold-500/12">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-gold-500/25 bg-gold-500/[0.12]">
           <Gift className="h-4 w-4 text-gold-400" strokeWidth={1.5} />
         </span>
         <div className="min-w-0 flex-1">
