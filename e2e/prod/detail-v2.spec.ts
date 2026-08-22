@@ -37,18 +37,21 @@ test.describe('디테일 v2 — 가족·지식·명식', () => {
     expect(errors).toEqual([])
   })
 
-  test('V2: 하단 가이드 바가 내려간 상태 유지', async ({ page }) => {
+  test('V2: 하단 바는 없고, 투어 없는 페이지에서도 상단 종은 선다', async ({ page }) => {
     test.setTimeout(120_000)
     const errors: string[] = []
     page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`))
 
     await login(page)
 
-    // 🔴 2026-08-24 CEO 지시로 하단 가이드 바를 내렸다(app/protected/layout.tsx 주석) —
-    //    이 검사도 «유지»에서 «부재»로 뒤집혔다. 공지 전달은 알림 화면이 계속 진다.
+    // 🔴 2026-08-24 CEO 지시로 하단 상시 바를 내렸고, 안내는 상단 바의 종으로 옮겼다.
+    //    그래서 두 가지를 함께 본다 — 하단 바는 «부재», 상단 종은 «존재».
+    //    /protected/notifications 는 투어 정의가 없는 경로다(지식 팁만 남는 자리).
     await page.goto('/protected/notifications')
     await expect(page.locator('[data-guide-bar]')).toHaveCount(0)
-    console.log('[PASS] 가이드 바 내려간 상태 유지')
+    const bell = page.getByRole('button', { name: /안내 펼치기$/ })
+    await expect(bell).toBeVisible({ timeout: 30_000 })
+    console.log('[PASS] 하단 바 부재 + 투어 없는 페이지에서도 상단 종 유지')
     await page.screenshot({ path: SHOT('guide') })
 
     expect(errors).toEqual([])

@@ -6,11 +6,13 @@ import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { hubGreeting } from '@/lib/domain/analysis/hub-home'
 import { useHydrated } from '@/hooks/use-hydrated'
+import { GuideBell } from '@/components/guide/GuideBell'
 
 /** 고정 상단 바가 앱 홈 머리글로 서는 자리. 최상위 탭이라 여기엔 뒤로가기가 없다. */
 const APP_HOME_PATH = '/protected/analysis'
 
-const BAR = 'h-14 bg-background/80 backdrop-blur-md border-b border-primary/10 px-4 flex items-center shrink-0'
+// relative — 가이드 패널이 이 바 바로 아래(top-full)로 펼쳐지는 기준점이다.
+const BAR = 'relative h-14 bg-background/80 backdrop-blur-md border-b border-primary/10 px-4 flex items-center shrink-0'
 
 export function MobileHeader() {
   const router = useRouter()
@@ -43,9 +45,12 @@ export function MobileHeader() {
             </span>
           </div>
 
-          {/* 인사는 시각으로만 갈린다(결정론·KST). 하이드레이션 뒤에 그려 서버/브라우저 시각
-              차이로 문장이 엇갈리는 일을 없앤다. */}
-          <span className="shrink-0 text-[11px] font-light text-ink-light/50">{isHydrated ? hubGreeting() : null}</span>
+          <div className="flex shrink-0 items-center gap-1">
+            {/* 인사는 시각으로만 갈린다(결정론·KST). 하이드레이션 뒤에 그려 서버/브라우저 시각
+                차이로 문장이 엇갈리는 일을 없앤다. */}
+            <span className="text-[11px] font-light text-ink-light/50">{isHydrated ? hubGreeting() : null}</span>
+            <GuideBell />
+          </div>
         </header>
       </div>
     )
@@ -62,20 +67,25 @@ export function MobileHeader() {
           <ChevronLeft className="w-6 h-6" />
         </button>
 
+        {/* 좌우 버튼 수가 달라도 상호는 바 한가운데에 선다 */}
         <Link
           href={APP_HOME_PATH}
-          className="inline-flex min-h-[44px] items-center text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80 hover:opacity-100 transition-opacity"
+          className="absolute left-1/2 -translate-x-1/2 inline-flex min-h-[44px] items-center text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80 hover:opacity-100 transition-opacity"
         >
           {t('brand.name')}
         </Link>
 
-        <Link
-          href={APP_HOME_PATH}
-          className="w-11 h-11 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
-          aria-label={t('nav.home')}
-        >
-          <Home className="w-5 h-5" />
-        </Link>
+        <div className="flex items-center">
+          <GuideBell />
+
+          <Link
+            href={APP_HOME_PATH}
+            className="w-11 h-11 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
+            aria-label={t('nav.home')}
+          >
+            <Home className="w-5 h-5" />
+          </Link>
+        </div>
       </header>
     </div>
   )

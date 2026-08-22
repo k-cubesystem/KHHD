@@ -784,23 +784,6 @@
   animation-play-state: paused;
 }
 
-/* 하단 가이드 접힘 바 — 흐르는 상식 글귀 마퀴(콘텐츠 2배 복제 + translateX -50% 무한) */
-@keyframes guide-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.guide-marquee-track {
-  animation: guide-marquee 25s linear infinite;
-}
-.guide-marquee-mask {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
-}
-
 /* 가로 스크롤 트레이의 스크롤바 숨김 — 신당·상점·스냅 캐러셀·어드민 탭이 함께 쓴다.
    ⚠️ 원래 ShrineRoomClient 의 <style jsx>(scoped) 안에 있어 어디에서도 적용되지 않았다 */
 .no-scrollbar::-webkit-scrollbar {
@@ -847,7 +830,6 @@
   .anim-bar-shimmer,
   .anim-node-pulse,
   .anim-particle-rise,
-  .guide-marquee-track,
   .review-marquee-track {
     animation: none !important;
   }

@@ -925,9 +925,8 @@ export function ShamanChatInterface({
   return (
     <div
       className="fixed left-1/2 -translate-x-1/2 w-full max-w-[480px] flex flex-col bg-background"
-      // bottom = 하단 메뉴(60px)만. 이 화면에서는 가이드 공지 바를 띄우지 않으므로
-      // (GlobalGuide 의 hidden 경로) --guide-bar-h 는 0 이지만, 변수를 남겨두면
-      // 다른 화면에서 세팅된 잔여값이 전환 직후 한 프레임 남을 수 있어 아예 뺀다.
+      // bottom = 하단 메뉴(60px)만. 가이드는 상단 바의 종으로 옮겨가 하단 공간을
+      // 더는 먹지 않는다(2026-08-24) — 예전의 --guide-bar-h 보정도 함께 사라졌다.
       // 🔴 left/right:0 이면 fixed 가 전역 480px 프레임을 탈출해 PC 에서 풀블리드가 된다 —
       // BottomNav·MobileHeader 와 동일한 center-translate 패턴이 유일한 정답(P0-F3).
       style={{

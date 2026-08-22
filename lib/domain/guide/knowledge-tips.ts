@@ -7,7 +7,7 @@
  *  - 궁합 8대: compatibility-result CATEGORY_DEFINITIONS 를 평문으로
  *  - 풍수 기초: 통념 수준 평문(술수적 단정은 피함)
  *
- * 순수 데이터 모듈(side-effect 0). GlobalGuide 가 날짜 기반 결정적 인덱스로 하루 1개를 노출한다.
+ * 순수 데이터 모듈(side-effect 0). GuideBell 이 날짜 기반 결정적 인덱스로 하루 1개를 노출한다.
  */
 
 import { NODES } from '@/lib/data/saju-knowledge-graph'

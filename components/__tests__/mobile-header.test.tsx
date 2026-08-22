@@ -15,6 +15,11 @@ jest.mock('next-intl', () => ({
     ({ 'brand.name': '청담해화당', 'nav.back': '뒤로', 'nav.home': '홈' })[key] ?? key,
 }))
 
+// 종은 서버 액션으로 공지·진행률을 읽는다 — 여기선 «자리에 있는가»만 본다.
+jest.mock('@/components/guide/GuideBell', () => ({
+  GuideBell: () => <button aria-label="해화지기의 안내 펼치기" />,
+}))
+
 const setPath = (path: string) => (usePathname as jest.Mock).mockReturnValue(path)
 
 describe('허브(앱 홈)의 상단 바 = 앱 헤더', () => {
@@ -74,5 +79,27 @@ describe('허브 밖 — 종전 뒤로가기 헤더 그대로', () => {
     render(<MobileHeader />)
 
     expect(screen.getByLabelText('뒤로')).not.toBeNull()
+  })
+})
+
+describe('가이드 종 — 상단 바 붙박이 (하단 공지 바에서 올라옴, 2026-08-23)', () => {
+  it('허브에서도 허브 밖에서도 종이 헤더 안에 선다', () => {
+    for (const path of ['/protected/analysis', '/protected/studio/face']) {
+      setPath(path)
+      const { container, unmount } = render(<MobileHeader />)
+      const header = container.querySelector('header')
+      if (!header) throw new Error('헤더가 없다')
+
+      expect(within(header).getByLabelText('해화지기의 안내 펼치기')).not.toBeNull()
+      unmount()
+    }
+  })
+
+  it('패널이 바 바로 아래로 펼쳐지도록 헤더가 위치 기준점이 된다', () => {
+    setPath('/protected/analysis')
+    const { container } = render(<MobileHeader />)
+
+    // GuideBell 의 패널은 absolute top-full — 기준이 될 positioned 조상이 없으면 엉뚱한 데 뜬다.
+    expect(container.querySelector('header')?.className).toContain('relative')
   })
 })
