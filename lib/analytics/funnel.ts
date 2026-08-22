@@ -16,3 +16,16 @@ export const FUNNEL = {
 } as const
 
 export type FunnelStep = keyof typeof FUNNEL
+
+/**
+ * 속풀이(챗) 퍼널 — 메인 퍼널과 별개 이름 공간(P0-F4, 「새 퍼널 이름을 쓴다」 규칙).
+ * 진입 → 첫 질문(활성화) → 한도 도달 → 질문권 충전. get_funnel_analysis 가 이름별로 센다.
+ */
+export const CHAT_FUNNEL = {
+  chat_open: 1, // 속풀이 화면 진입
+  chat_first_question: 2, // 세션 첫 질문(활성화)
+  chat_limit_hit: 3, // 질문 한도 도달
+  chat_ticket_purchase: 4, // 질문권 충전(1만냥→20회)
+} as const
+
+export type ChatFunnelStep = keyof typeof CHAT_FUNNEL

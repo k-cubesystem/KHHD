@@ -37,6 +37,11 @@ const FUNNEL_BY_ACTION: Record<string, { name: string; step: number }> = {
   analysis_start: { name: 'first_analysis', step: 4 },
   store_view: { name: 'store_view', step: 5 },
   checkout_start: { name: 'checkout_start', step: 6 },
+  // ── 속풀이(챗) 퍼널 — 별개 이름 공간(funnel.ts CHAT_FUNNEL). 발화는 lib/analytics/chat-ga.ts.
+  chat_open: { name: 'chat_open', step: 1 },
+  chat_first_question: { name: 'chat_first_question', step: 2 },
+  chat_limit_hit: { name: 'chat_limit_hit', step: 3 },
+  chat_ticket_purchase: { name: 'chat_ticket_purchase', step: 4 },
 }
 
 export const GA = {
