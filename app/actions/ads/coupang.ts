@@ -44,10 +44,15 @@ const SETTING_KEYS = [
   'coupang_partners_url',
 ] as const
 
-type ServerClient = Awaited<ReturnType<typeof createClient>>
-
-async function loadAdSettings(supabase: ServerClient): Promise<AdSettings> {
-  const { data } = await supabase
+/**
+ * 🔴 system_settings 의 RLS 는 admin 전용(SELECT 포함) — 유저 클라이언트로 읽으면 0행이 돌아와
+ *    스위치가 꺼진 것으로 오판, 광고 기능이 전 사용자에게 숨는다(2026-08-22 실사고 — 관리자만
+ *    버튼이 보일 뻔한 게 아니라, 판정 자체가 조용히 죽었다). 반드시 service_role 로 읽는다.
+ *    서버 액션 내부 읽기이고 클라이언트에는 파생값(가용성)만 나가므로 노출 없음.
+ */
+async function loadAdSettings(): Promise<AdSettings> {
+  const adminClient = createAdminClient()
+  const { data } = await adminClient
     .from('system_settings')
     .select('key, value')
     .in('key', [...SETTING_KEYS])
@@ -97,7 +102,7 @@ export async function getAdRewardAvailability(): Promise<AdRewardAvailability> {
     } = await supabase.auth.getUser()
     if (!user) return off
 
-    const settings = await loadAdSettings(supabase)
+    const settings = await loadAdSettings()
     if (!settings.enabled) return off
     if (!hasCoupangApiKeys() && !settings.fallbackUrl) {
       return { enabled: false, reason: 'no_inventory', setsLeftToday: 0, reward: settings.reward }
@@ -169,7 +174,7 @@ export async function startCoupangVisit(): Promise<{
     const rl = await rateLimit(`ad-reward:${user.id}`, { interval: 60_000, uniqueTokenPerInterval: 10 })
     if (!rl.success) return { success: false, error: '요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
 
-    const settings = await loadAdSettings(supabase)
+    const settings = await loadAdSettings()
     if (!settings.enabled) return { success: false, error: '지금은 광고 보상이 닫혀 있습니다.' }
     if (await isBudgetExhausted(settings.budgetUsd)) {
       return { success: false, error: '오늘 향로가 가득 찼습니다. 내일 다시 열립니다.' }
@@ -229,7 +234,7 @@ export async function claimCoupangVisit(nonce: string): Promise<{
     const safeNonce = sanitizeSubId(nonce)
     if (!safeNonce) return { success: false, error: '잘못된 요청입니다.' }
 
-    const settings = await loadAdSettings(supabase)
+    const settings = await loadAdSettings()
     const adminClient = createAdminClient()
     const { data: grantResult, error: grantError } = await adminClient.rpc('grant_ad_reward', {
       p_user_id: user.id,
