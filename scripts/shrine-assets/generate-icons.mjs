@@ -238,13 +238,25 @@ const SETS = {
       '종합사주풀이 — four slender wooden pillars with smooth bare woodgrain surfaces standing in a row on a lacquer base, three interlocking brass rings glowing warm gold behind them like a halo, visible gaps of empty space between the rings',
     ],
     [
-      'saju-v2',
+      // 🔴 v2 는 라이브에 나갔다 — 덮어쓰지 않고 v3 으로 올린다(폰 캐시, 2026-08-10 실증).
+      'saju-v3',
       // 🔴 칸(cell)을 «비어 있다»고 못 박는다 — 구 saju 1차 산출물이 기둥에 「사주팔자」 글자를
       //    새겨 나온 전례가 있다(다른 아이콘엔 글자가 없다). 화면에 한자를 띄우지 않는다.
-      // 1차: 격자가 거의 안 보였다 → «금선이 밝게 빛난다» 한 줄 추가.
-      // 2차: 격자는 살았으나 판이 검게 나와 **여덟 칸 중 혼자 어두웠다**(옆 칸 gunghap·jaemul 은
-      //      밝은 수채다). 설명을 늘리지 않고 «dark lacquer» 한 단어를 밝은 꿀빛 나무로 고쳤다.
-      '사주 명식판 — a wide low Korean fortune board of light honey-toned wood lying flat, its face ruled into a grid of eight empty square cells with fine gold inlay lines, a slender writing brush resting across the near edge, faint golden constellation dust drifting above the board, the gold inlay lines glowing brightly against the pale wood',
+      //
+      // 재생성 이력(«설명을 늘리지 말고 관찰 가능한 사실 하나»):
+      //  v2-1차: 격자가 거의 안 보였다        → «금선이 밝게 빛난다» 추가
+      //  v2-2차: 판이 검어 여덟 칸 중 혼자 어두웠다 → 밝은 꿀빛 나무로
+      //  v2-3차: **과교정.** 옅고 밝아 첫 칸인데 2번 궁합에 시선을 뺏겼다(CEO 반려).
+      //          옆 칸들은 «검지 않되 채도·대비가 높다» — 그래서 검정이 아니라 **진한 채도**
+      //          (주칠 적색)로 가고 금선을 굵게 올린다. 별가루는 «작게»로 눌러 판을 안 덮는다.
+      //  v3-1차: 채도는 잡혔으나 **판을 눕혀 놔 칸의 절반만 찼다** — 궁합 태극은 타일을 꽉
+      //          채우는데 이쪽만 위아래가 비어 여전히 밀렸다. 각도만 정면으로 고쳤다.
+      //  v3-2차: 그래도 세로 35%. 원인은 각도가 아니라 **비율**이었다 — «wide board» 는 2:1 이라
+      //          정사각 타일을 원리적으로 못 채운다(태극은 원이라 꽉 찬다). 그래서 형태를
+      //          **정사각 명식판(4열×2행)**으로 바꾸고 정면 입면으로 세운다(shelf-sabang 과
+      //          같은 처방). 붓은 뺐다 — 정면 판에는 «앞턱»이 없어 매번 사라졌고, 44px 에서
+      //          읽히지도 않는 장식이었다. 종합풀이(세로 기둥+고리)와의 대비는 그대로다.
+      '사주 명식판 — a square Korean fortune plaque of deep vermilion-red lacquer seen straight from the front in flat frontal elevation, filling the frame, its face ruled into a grid of eight empty cells four across and two down with bold bright gold inlay lines, a few small golden sparks drifting above the plaque',
     ],
   ].map(([slug, d]) => ({ slug, out: `icons/hub/${slug}.webp`, size: 256, prompt: tilePrompt(d) })),
 

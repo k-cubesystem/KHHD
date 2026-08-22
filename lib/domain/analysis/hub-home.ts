@@ -49,13 +49,13 @@ export interface HubLauncherEntry {
  * 하루 사이에 «둘을 한 칸으로 통합»했다가 **되돌렸다.** CEO 의 원래 요청은
  * «기존 기능은 그대로 두고 **메인 배너와 아이콘만** 수정»이었다 — 기능 통합은 오해였다.
  * 여덟 칸이 정본이고, 이번에 바뀐 것은 **두 칸의 그림뿐**이다:
- *   · `saju`   → `saju-v2.webp`   (명식판)
+ *   · `saju`   → `saju-v3.webp`   (주칠 명식판 — v2 는 옅어서 첫 칸이 밀렸다, CEO 반려)
  *   · `samhap` → `samhap-v2.webp` (네 기둥 + 고리 셋)
  * 🔴 구 `saju.webp`·`samhap.webp` 를 덮어쓰지 않고 새 파일명을 쓴 이유 — 같은 이름을
  *    덮어쓰면 폰 캐시가 옛 그림을 재사용한다(2026-08-10 실증).
  */
 export const HUB_LAUNCHER: readonly HubLauncherEntry[] = [
-  { id: 'saju', label: '사주풀이', href: '/protected/analysis/cheonjiin', icon: '/icons/hub/saju-v2.webp' },
+  { id: 'saju', label: '사주풀이', href: '/protected/analysis/cheonjiin', icon: '/icons/hub/saju-v3.webp' },
   { id: 'compatibility', label: '궁합', href: '/protected/analysis/compatibility', icon: '/icons/hub/gunghap.webp' },
   { id: 'face', label: '관상', href: '/protected/studio/face', icon: '/icons/hub/gwansang.webp' },
   { id: 'palm', label: '손금', href: '/protected/studio/palm', icon: '/icons/hub/songeum.webp' },
