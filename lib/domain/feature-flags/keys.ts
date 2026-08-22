@@ -22,6 +22,17 @@ export const FEATURE_KEYS = [
 
 export type FeatureKey = (typeof FEATURE_KEYS)[number]
 
+/**
+ * 바깥에서 들어온 문자열이 «스위치 키»인지 판정한다.
+ *
+ * 🔴 이 판정이 없으면 서버액션이 `system_settings` **아무 행이나** 읽어 주는 창구가 된다 —
+ *    그 표에는 쿠팡 파트너스 설정·의례 지급액 같은 운영값이 함께 산다. 키는 반드시
+ *    이 목록으로 좁힌 뒤에만 조회할 것.
+ */
+export function isFeatureKey(value: string): value is FeatureKey {
+  return (FEATURE_KEYS as readonly string[]).includes(value)
+}
+
 export interface FeatureConfig {
   isActive: boolean
   accessLevel: 'all' | 'member' | 'tester' | 'admin'
