@@ -96,9 +96,11 @@ export function JourneyCard({ targetId, variant = 'full', className }: JourneyCa
 
 // ── 다음 단계 CTA 라벨 ────────────────────────────────────────────────────────
 function ctaLabel(journey: JourneyProgress): string {
-  if (journey.allComplete) return '종합사주풀이 다시 보기'
-  if (!journey.next) return '종합사주풀이 열기'
-  return journey.next.isFinal ? '종합사주풀이 열기' : `다음 주머니: ${journey.next.label} 보러 가기`
+  if (journey.allComplete) return '모아둔 종합풀이 다시 보기'
+  if (!journey.next) return '다섯 주머니 종합풀이 열기'
+  if (journey.next.isFinal) return '다섯 주머니 종합풀이 열기'
+  // 첫 주머니(사주)는 위 사주 유도 카드와 같은 곳으로 간다 — «첫 주머니»로 불러 역할을 가른다
+  return journey.next.id === 'SAJU' ? '첫 주머니: 사주 풀이 시작하기' : `다음 주머니: ${journey.next.label} 보러 가기`
 }
 
 /** allComplete 면 종합 단계, 아니면 next 단계로 이동시킬 대상. */

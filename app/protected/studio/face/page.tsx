@@ -230,7 +230,7 @@ function FaceAnalysisPageContent() {
                 style={{ background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.45))' }}
               />
               <div className="relative z-10 px-5 py-8 text-center space-y-2.5">
-                <p className="text-[10px] tracking-[0.55em] text-gold-500/60 font-serif">觀 相</p>
+                <p className="text-[10px] tracking-[0.55em] text-gold-500/60 font-serif">관 상</p>
                 <h2
                   className="text-[1.35rem] font-serif font-bold text-white leading-snug"
                   style={{ wordBreak: 'keep-all' }}
@@ -238,7 +238,7 @@ function FaceAnalysisPageContent() {
                   얼굴에 새겨진 <span className="text-gold-500">운의 지도</span>를 읽습니다
                 </h2>
                 <p className="text-[11.5px] text-white/45 font-light leading-relaxed" style={{ wordBreak: 'keep-all' }}>
-                  오관(五官)과 삼정(三停), 그리고 오늘의 기색(氣色)까지 — 지금의 당신을 비춥니다
+                  오관과 삼정, 그리고 오늘의 기색까지 — 지금의 당신을 비춥니다
                 </p>
               </div>
             </div>
@@ -323,7 +323,7 @@ function FaceAnalysisPageContent() {
               className="w-full h-14 rounded-2xl font-serif font-bold text-base tracking-wide transition-all duration-300 relative overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed group"
               style={{
                 background: imageBase64
-                  ? `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 50%, #C9A227 100%)`
+                  ? 'linear-gradient(135deg, #E8D5A0 0%, #C9A84C 45%, #A8903F 100%)'
                   : 'rgba(212,175,55,0.3)',
               }}
             >
@@ -704,7 +704,7 @@ function FaceAnalysisPageContent() {
               <Button
                 onClick={() => router.push('/protected/family')}
                 className="flex-1 h-12 font-serif font-bold text-[#0A192F]"
-                style={{ background: `linear-gradient(135deg, ${GOLD_500} 0%, ${GOLD_300} 100%)` }}
+                style={{ background: 'linear-gradient(135deg, #E8D5A0 0%, #C9A84C 45%, #A8903F 100%)' }}
               >
                 완료
               </Button>

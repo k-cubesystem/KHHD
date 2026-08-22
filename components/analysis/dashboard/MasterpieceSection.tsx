@@ -123,6 +123,11 @@ export function MasterpieceSection() {
             />
           </span>
         </button>
+
+        {/* 여정 연결 — 아래 「나의 복주머니」와 무엇이 다른지 한 줄로 가른다 */}
+        <p className="text-[10.5px] text-ink-light/40 font-light text-center -mt-1.5">
+          이 사주 풀이가 아래 「나의 복주머니」 첫 칸에 담깁니다
+        </p>
       </div>
     </div>
   )

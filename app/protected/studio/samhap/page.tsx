@@ -364,24 +364,23 @@ function SamhapCheck({
             disabled={loading}
             className="relative overflow-hidden w-full rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200 disabled:opacity-40"
             style={{
-              background: '#9E2B2B',
-              border: '1px solid rgba(158,43,43,0.5)',
-              boxShadow: '3px 3px 0 0 rgba(158,43,43,0.3)',
+              background: 'linear-gradient(135deg, #E8D5A0 0%, #C9A84C 45%, #A8903F 100%)',
+              boxShadow: '0 4px 20px rgba(201,168,76,0.25)',
             }}
           >
             <div
               aria-hidden="true"
               className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out"
               style={{
-                background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 50%, transparent 65%)',
+                background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.35) 50%, transparent 65%)',
               }}
             />
             <span className="relative z-10 flex items-center justify-center gap-2.5 py-4">
-              <Sparkles className="w-4 h-4 text-white/90" />
-              <span className="text-[15px] font-serif font-bold tracking-[0.12em] text-white">
+              <Sparkles className="w-4 h-4 text-[#0A0A08]" />
+              <span className="text-[15px] font-serif font-bold tracking-[0.12em] text-[#0A0A08]">
                 종합사주풀이 열람 · {SAMHAP_COST}만냥
               </span>
-              <ArrowRight className="w-4 h-4 text-white/80 group-hover/btn:translate-x-0.5 transition-transform duration-300" />
+              <ArrowRight className="w-4 h-4 text-[#0A0A08]/80 group-hover/btn:translate-x-0.5 transition-transform duration-300" />
             </span>
           </button>
           <p className="text-[10px] text-white/35 text-center font-sans">
