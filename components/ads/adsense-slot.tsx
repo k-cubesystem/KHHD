@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import Script from 'next/script'
 import { ADSENSE_CLIENT, ADSENSE_SLOTS, shouldRenderAds, type AdSlotName } from '@/lib/domain/ads/adsense'
 
 /**
@@ -31,7 +30,8 @@ interface AdSenseSlotProps {
 export function AdSenseSlot({ slot, className }: AdSenseSlotProps) {
   const pushed = useRef(false)
 
-  const enabled = shouldRenderAds(process.env.NODE_ENV, slot)
+  // 🔴 프리뷰 배포도 NODE_ENV=production 이라 VERCEL_ENV 로 갈라야 한다(무효 트래픽 방지).
+  const enabled = shouldRenderAds(process.env.NEXT_PUBLIC_VERCEL_ENV, process.env.NODE_ENV, slot)
 
   useEffect(() => {
     if (!enabled || pushed.current) return
@@ -50,13 +50,8 @@ export function AdSenseSlot({ slot, className }: AdSenseSlotProps) {
 
   return (
     <div className={className}>
-      <Script
-        id="adsense-loader"
-        strategy="afterInteractive"
-        async
-        crossOrigin="anonymous"
-        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-      />
+      {/* 로더 스크립트는 루트 레이아웃(app/layout.tsx)이 <head> 에서 이미 싣는다 —
+          사이트 소유권 확인이 그 태그를 보고 통과하기 때문. 여기서 또 부르지 않는다. */}
       {/* 광고 표기 — 콘텐츠와 광고를 구분해 준다(정책·사용자 신뢰 양쪽) */}
       <p className="mb-1 text-center text-[10px] tracking-wider text-ink-light/30">광고</p>
       <ins

@@ -41,9 +41,25 @@ export function hasAnyAdSlot(): boolean {
 }
 
 /**
- * 지금 환경에서 광고를 그려도 되는가.
- * 프로덕션 + 게재할 슬롯이 있을 때만 참. (무효 트래픽 방지 — 위 주석 참고)
+ * 여기가 «진짜 서비스» 환경인가.
+ *
+ * 🔴 **`NODE_ENV` 만으로는 부족하다** — Vercel 프리뷰 배포도 `NODE_ENV=production` 으로 빌드된다.
+ *    그것만 보면 프리뷰에서도 광고가 떠서, 우리가 QA 하며 만든 노출·클릭이 무효 트래픽으로
+ *    잡힌다. Vercel 이 주는 `VERCEL_ENV`(production|preview|development)로 갈라야 한다.
+ *    자체 호스팅 등 그 값이 없는 환경에서만 `NODE_ENV` 로 넘어간다.
  */
-export function shouldRenderAds(nodeEnv: string | undefined, slot: AdSlotName): boolean {
-  return nodeEnv === 'production' && isAdSlotConfigured(slot)
+export function isLiveAdEnvironment(vercelEnv: string | undefined, nodeEnv: string | undefined): boolean {
+  if (vercelEnv) return vercelEnv === 'production'
+  return nodeEnv === 'production'
+}
+
+/**
+ * 지금 환경에서 광고 «단위»를 그려도 되는가.
+ * 진짜 서비스 + 게재할 슬롯이 있을 때만 참.
+ *
+ * 사이트 소유권 확인용 스크립트는 이 판정과 별개다 — 슬롯이 없어도 실려야 확인이 통과한다
+ * (`app/layout.tsx` 참고).
+ */
+export function shouldRenderAds(vercelEnv: string | undefined, nodeEnv: string | undefined, slot: AdSlotName): boolean {
+  return isLiveAdEnvironment(vercelEnv, nodeEnv) && isAdSlotConfigured(slot)
 }

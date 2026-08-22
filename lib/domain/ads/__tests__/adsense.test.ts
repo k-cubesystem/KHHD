@@ -9,6 +9,7 @@ import {
   ADSENSE_SLOTS,
   hasAnyAdSlot,
   isAdSlotConfigured,
+  isLiveAdEnvironment,
   shouldRenderAds,
 } from '@/lib/domain/ads/adsense'
 
@@ -22,7 +23,7 @@ describe('애드센스 게재 판정', () => {
     try {
       ADSENSE_SLOTS.wallpaper = ''
       expect(isAdSlotConfigured('wallpaper')).toBe(false)
-      expect(shouldRenderAds('production', 'wallpaper')).toBe(false)
+      expect(shouldRenderAds('production', 'production', 'wallpaper')).toBe(false)
 
       ADSENSE_SLOTS.wallpaper = '   ' // 공백만 있어도 미설정으로 본다
       expect(isAdSlotConfigured('wallpaper')).toBe(false)
@@ -36,10 +37,13 @@ describe('애드센스 게재 판정', () => {
     try {
       ADSENSE_SLOTS.wallpaper = '1234567890'
       expect(isAdSlotConfigured('wallpaper')).toBe(true)
-      expect(shouldRenderAds('production', 'wallpaper')).toBe(true)
+      expect(shouldRenderAds('production', 'production', 'wallpaper')).toBe(true)
 
+      // 🔴 프리뷰도 NODE_ENV=production 이다 — VERCEL_ENV 로 갈리는지가 이 테스트의 핵심.
+      expect(shouldRenderAds('preview', 'production', 'wallpaper')).toBe(false)
+      expect(shouldRenderAds('development', 'production', 'wallpaper')).toBe(false)
       for (const env of ['development', 'test', undefined]) {
-        expect(shouldRenderAds(env, 'wallpaper')).toBe(false)
+        expect(shouldRenderAds(undefined, env, 'wallpaper')).toBe(false)
       }
     } finally {
       ADSENSE_SLOTS.wallpaper = 원래
@@ -56,5 +60,15 @@ describe('애드센스 게재 판정', () => {
     } finally {
       ADSENSE_SLOTS.wallpaper = 원래
     }
+  })
+
+  it('🔴 isLiveAdEnvironment — VERCEL_ENV가 있으면 그것이 정본, 없으면 NODE_ENV 폴백', () => {
+    expect(isLiveAdEnvironment('production', 'production')).toBe(true)
+    // 프리뷰 배포도 NODE_ENV=production 으로 빌드된다 — 여기서 걸러야 무효 트래픽을 막는다.
+    expect(isLiveAdEnvironment('preview', 'production')).toBe(false)
+    expect(isLiveAdEnvironment('development', 'production')).toBe(false)
+    // 자체 호스팅 등 VERCEL_ENV 부재 시에만 NODE_ENV 로 판정
+    expect(isLiveAdEnvironment(undefined, 'production')).toBe(true)
+    expect(isLiveAdEnvironment(undefined, 'development')).toBe(false)
   })
 })

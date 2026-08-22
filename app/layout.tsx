@@ -8,6 +8,7 @@ import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@next/third-parties/google'
+import { ADSENSE_CLIENT, isLiveAdEnvironment } from '@/lib/domain/ads/adsense'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
@@ -105,6 +106,20 @@ export default async function RootLayout({
           as="style"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
         />
+        {/* 애드센스 — 사이트 소유권 확인 + 광고 로더.
+            🔴 이 태그는 **모든 페이지의 <head> 에 서버 렌더로** 실려야 한다. 애드센스 심사
+               크롤러가 초기 HTML 에서 이걸 찾지 못하면 사이트 확인이 실패한다. 그래서
+               next/script(클라 주입)가 아니라 평범한 <script> 로 여기 둔다.
+            🔴 슬롯 ID 유무와 무관하게 싣는다 — 확인 단계에는 광고 단위가 아직 없다.
+            🔴 진짜 서비스에서만 — 프리뷰·로컬에서 실리면 우리 QA 노출이 무효 트래픽이 된다
+               (프리뷰도 NODE_ENV=production 이라 VERCEL_ENV 로 가른다). */}
+        {isLiveAdEnvironment(process.env.VERCEL_ENV, process.env.NODE_ENV) && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+          />
+        )}
       </head>
       <body
         className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#0A0A08]`}
