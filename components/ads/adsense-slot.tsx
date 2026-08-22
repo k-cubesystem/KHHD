@@ -1,0 +1,72 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+import Script from 'next/script'
+import { ADSENSE_CLIENT, ADSENSE_SLOTS, shouldRenderAds, type AdSlotName } from '@/lib/domain/ads/adsense'
+
+/**
+ * 애드센스 디스플레이 광고 한 자리.
+ *
+ * 🔴 **보상과 엮지 말 것** — 이 컴포넌트는 «보고만 가는» 광고다. 「광고 보고 배경화면 열기」·
+ *    「광고 보고 향 올리기」 같은 보상 흐름에 붙이면 애드센스 정책 위반(계정 폐쇄 사유)이다.
+ *    자세한 경계는 `lib/domain/ads/adsense.ts` 주석 참고.
+ *
+ * 슬롯 ID 가 비었거나 프로덕션이 아니면 **아무것도 그리지 않는다**(빈 회색 상자·무효 트래픽 방지).
+ */
+
+/** `window.adsbygoogle` — 애드센스가 밀어 넣는 전역 큐. any 없이 좁혀 쓴다. */
+type AdsByGoogleQueue = Array<Record<string, unknown>>
+declare global {
+  interface Window {
+    adsbygoogle?: AdsByGoogleQueue
+  }
+}
+
+interface AdSenseSlotProps {
+  slot: AdSlotName
+  /** 광고 위아래 여백 등 바깥 여백만 — 광고 자체 크기는 애드센스가 정한다. */
+  className?: string
+}
+
+export function AdSenseSlot({ slot, className }: AdSenseSlotProps) {
+  const pushed = useRef(false)
+
+  const enabled = shouldRenderAds(process.env.NODE_ENV, slot)
+
+  useEffect(() => {
+    if (!enabled || pushed.current) return
+    // 스크립트가 아직 안 왔어도 큐에 넣어 두면 로드 후 소비된다(애드센스 표준 패턴).
+    pushed.current = true
+    try {
+      window.adsbygoogle = window.adsbygoogle || []
+      window.adsbygoogle.push({})
+    } catch {
+      // 광고 실패가 화면을 깨서는 안 된다 — 조용히 넘어간다(빈 자리로 남음).
+      pushed.current = false
+    }
+  }, [enabled])
+
+  if (!enabled) return null
+
+  return (
+    <div className={className}>
+      <Script
+        id="adsense-loader"
+        strategy="afterInteractive"
+        async
+        crossOrigin="anonymous"
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+      />
+      {/* 광고 표기 — 콘텐츠와 광고를 구분해 준다(정책·사용자 신뢰 양쪽) */}
+      <p className="mb-1 text-center text-[10px] tracking-wider text-ink-light/30">광고</p>
+      <ins
+        className="adsbygoogle block"
+        style={{ display: 'block' }}
+        data-ad-client={ADSENSE_CLIENT}
+        data-ad-slot={ADSENSE_SLOTS[slot]}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
+    </div>
+  )
+}

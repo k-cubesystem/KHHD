@@ -76,12 +76,15 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com https://t1.daumcdn.net http://dapi.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://va.vercel-scripts.com",
+              // 🔴 애드센스 도메인 4종(pagead2·googleadservices·tpc·doubleclick)이 빠지면
+              //    광고 스크립트가 CSP 에 막혀 «태그는 붙였는데 아무것도 안 뜬다» 가 된다.
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com https://t1.daumcdn.net http://dapi.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://va.vercel-scripts.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
               "img-src 'self' data: https: blob: http://t1.daumcdn.net https://t1.daumcdn.net http://map.daumcdn.net https://map.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com",
-              "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net",
+              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com https://pagead2.googlesyndication.com https://*.doubleclick.net",
+              // 광고 본문은 iframe(safeframe)으로 들어온다 — frame-src 가 없으면 빈 자리만 남는다.
+              "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
               "media-src 'self' blob: data:",
               "base-uri 'self'",
               "object-src 'none'",
