@@ -53,6 +53,9 @@ assets-src/video/
 # 배경화면 원본 (재생성 가능 — 배포본은 public/wallpapers/*.webp)
 assets-src/wallpapers/
 
+# 미리보기 스크린샷 (재촬영 가능 — npm run preview:shots)
+/preview-shots/
+
 # 토스 심사 문서 빌드 산출물 (원본은 md + images/)
 docs/toss-review/*.html
 docs/toss-review/*.pdf

@@ -17,6 +17,8 @@
     "deploy": "vercel --prod",
     "deploy:preview": "vercel",
     "env:check": "npx tsx lib/config/env.ts",
+    "preview:serve": "node scripts/preview/serve.mjs",
+    "preview:shots": "node scripts/preview/shots.mjs",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "e2e:headed": "playwright test --headed"

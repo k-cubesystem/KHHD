@@ -120,7 +120,15 @@ function formatStampDate(iso: string): string {
 }
 
 // ── Full 변형 (허브) ──────────────────────────────────────────────────────────
-function JourneyFull({
+/**
+ * 카드의 표현부 — 진행도를 «받아서» 그리기만 한다(조회 없음).
+ *
+ * export 한 이유: 배경화면 카드(`WallpaperCardView`)와 같은 계보로, 화면 상태
+ * (빈 주머니·진행중·완주 미수령·수령함)를 목 값만 바꿔 세울 수 있어야
+ * `/dev-preview` 가 로그인·DB 없이 그 네 상태를 그대로 찍는다.
+ * 🔴 조회는 여전히 `JourneyCard` 만 진다 — 이걸 화면에서 직접 쓰지 말 것.
+ */
+export function JourneyFull({
   journey,
   records,
   reward,
