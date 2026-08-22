@@ -24,6 +24,10 @@ jest.mock('@/app/actions/analysis/journey-reward', () => ({
   getJourneyRewardStatus: jest.fn(async () => null),
 }))
 
+jest.mock('@/app/actions/analysis/wallpaper', () => ({
+  getWallpaperStatus: jest.fn(async () => null),
+}))
+
 jest.mock('@/components/shared/AmbientVideo', () => ({
   AmbientVideo: () => null,
 }))

@@ -8,6 +8,7 @@ import { HubLauncher } from './HubLauncher'
 import { ThemeThumbnail } from './ThemeThumbnail'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { JourneyCard } from './journey-card'
+import { WallpaperCard } from './wallpaper-card'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 import { hubThemePicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
@@ -130,6 +131,11 @@ export function AnalysisDashboard() {
           테마 전체 보기
           <ChevronRight className="h-3.5 w-3.5" />
         </Link>
+
+        {/* 복 배경화면 — 테마 섹션 «안»에 둔다. 새 허브 섹션을 만들면 hub-sections 표와
+            그 표를 화면과 대조하는 테스트(hub-layout)가 함께 흔들린다. 자격 조회는 카드가
+            스스로 진다 — 이 파일은 서버 액션을 import 하지 않는다(회귀 테스트가 막는다). */}
+        <WallpaperCard />
       </motion.section>
     </motion.div>
   )

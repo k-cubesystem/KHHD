@@ -38,6 +38,10 @@ jest.mock('@/app/actions/analysis/reading-insights', () => ({
 jest.mock('@/app/actions/analysis/journey-reward', () => ({
   getJourneyRewardStatus: jest.fn(async () => null),
 }))
+/** 테마 섹션 안에 앉은 복 배경화면 카드의 서버 액션 — 같은 이유로 끊는다. */
+jest.mock('@/app/actions/analysis/wallpaper', () => ({
+  getWallpaperStatus: jest.fn(async () => null),
+}))
 
 /** 사주 유도 카드(`MasterpieceSection`)가 `useRouter` 를 쓴다 — 렌더가 서려면 필요하다. */
 const push = jest.fn()

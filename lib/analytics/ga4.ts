@@ -85,6 +85,11 @@ export const GA = {
   journeyRewardClaim: (kind: string, code: string) =>
     trackEvent({ action: 'journey_reward_claim', category: 'engagement', label: `${kind}:${code}` }),
 
+  // 복 배경화면 — 시트 열람 ↔ 실제 다운로드. label 은 배경화면 id(element-water · monthly-202608…)로,
+  // 어느 오행이 실제로 받아지는지와 완주 한정판(이달의 복)이 완주 동기로 작동하는지를 가른다.
+  wallpaperView: () => trackEvent({ action: 'wallpaper_view', category: 'engagement' }),
+  wallpaperDownload: (label: string) => trackEvent({ action: 'wallpaper_download', category: 'engagement', label }),
+
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),
 
