@@ -507,3 +507,64 @@ npx tsc --noEmit && npx jest --silent && npm run build && node scripts/check-ani
   `grep -F` 로 찾을 것 — 정규식으로 찾다가 «없다»고 오판하기 쉽다).
   ⚠️ **일괄 치환으로 반올림하지 말 것.** 같은 삼항·같은 파일이 `/5`·`/10` 을 **다른 단으로**
   쓰고 있으면 반올림이 두 단을 합쳐 상태 구분이 사라진다. 자리마다 형제 단을 보고 고른다.
+
+---
+
+## (22차 · 2026-08-22) 초하루 의례 보류 · 워크트리 정리 · 보관소 신설
+
+### 🔴 초하루 의례는 **꺼져 있다** — `ritual_enabled = false`
+
+사용자 지시로 기획 재개까지 보류(2026-08-21 22:30 KST). **코드·DB·프로덕션은 그대로 두고
+스위치만 내렸다.** 위 258행의 시드값(`true`)은 적용 시점 기록이고 **현재값은 false 다.**
+
+- **켜는 법**: `system_settings.ritual_enabled` 를 `'true'` 로. **배포 불필요, 즉시 반영**
+  (캐시 없이 매 호출 DB 조회). 되돌리기도 같은 한 줄.
+- **꺼진 동안 안전한가**: 진입점 4곳이 전부 이 값을 본다 — 페이지 redirect · 크론 skip ·
+  대시보드 배너 · 일간운세 안내. 크론(`ritual-push`)은 돌아도 즉시 생략한다.
+  `ritual_records` 0행, 죽은 버튼 없음.
+- **켜기 전 검수**: `docs/qa/ritual-device-check.md`. A절(창 밖)은 아무 때나, **B절(창 안)은
+  음력 1~3일에만** 가능하다 — 시계 조작도 미리보기 플래그도 없다. **다음 초하루 2026-09-11~13**,
+  그 뒤 대략 10/10 · 11/9. 놓치면 검수와 1회차 관찰이 한 달씩 밀린다.
+- **관찰**: `docs/queries/ritual-observation.sql` 7종. 게이트는 완주율 ≥40% · 재방문율 ≥50% ·
+  푸시 구독자 ≥5명. **정본은 GA4 가 아니라 `ritual_records` DB** 다.
+- **미결정 2건**: ① `.ritual-ledger`·`.ritual-stage` 는 CSS 정의가 없는 이름이다(라이브 번들
+  전량 0건, 대조군 `.hanji-card` 등은 정상). 화면은 멀쩡하다 — 세로 괘선은 각 행의
+  `border-l-2 border-gold-500/[0.08]`(실측 `#c9a84c14` = 7.84%)가 그린다. 이름만 지울지는
+  시각 변경이라 승인 대기. ② 구독 CTA 2단계 이탈 — 관찰 후 판단.
+
+### 🔴 git 에 없는 자산은 `D:/anti/assets-archive/` 에 있다
+
+워크트리를 지우면서 **git 에 없던 고유본**을 옮겨 두었다. 각 디렉터리에 README(무엇을·왜·
+되살리는 법)가 있다. **이 경로를 모르면 잃어버린다.**
+
+    marketing-video-20260821/   52M / 97파일   shrine-ambience.wav(이 기기 유일본) +
+                                               harmony-pilot 40파일(marketing-video 전용 부분집합)
+    main-assets-src-20260822/  136M / 224파일  raw-icons·raw-stage-*·backup-20260806
+                                               (추적본 1,119파일과 경로 0건 겹침 — 별개 소재)
+
+⚠️ 헷갈리기 쉬운 것: `assets-src/shrine/harmony-pilot`(728파일 514M)은 **이 브랜치에
+커밋돼 있다.** 보관한 40파일짜리는 `claude/marketing-video` 쪽의 **다른 트리**다. 서로
+대체되지 않는다.
+
+### 워크트리 11 → 2 (약 3.6GB 회수)
+
+지운 것: `ritual-loop`(머지 완료) · `design-review-0820` · `marketing-video` ·
+`vigilant-fermi-6fe8b3` · `elastic-shtern` · `interesting-booth` · `focused-fermi`.
+전부 삭제 전 **미커밋 0 · 미추적 0 · HEAD 원격 도달**을 확인했다.
+남은 것: `main` · `dy-journey-design`(작업 중). 빈 껍데기 몇 개는 해당 세션이 닫히면 사라진다.
+
+`claude/marketing-video` 에 3주간 미커밋이던 1,200줄을 커밋·push 했다(`5f662e5`) —
+kie.ai 어댑터·후처리 CLI·마케팅 스펙, 그리고 **ffmpeg 를 PATH 에서만 찾아 webm 트랜스코드가
+항상 조용히 건너뛰어지던 버그 수정**이 섞여 있었다.
+
+### `sharp` 미선언 수정 (`7131441`)
+
+`scripts/shrine-assets/` 등 **22개 스크립트가 import 하는데 선언이 없었다** — next 의
+optionalDependencies 에 얹혀 우연히 돌던 상태다. `^0.34.4` 로 명시했다(next 와 같은 범위라
+지금 해석되는 것과 동일, 새 바이너리 없음). **`^0.35.x` 로 올리지 말 것** — sharp 는 0.x 라
+caret 이 마이너를 고정해 바이너리가 두 벌 깔린다. 올릴 때는 next 와 함께.
+
+🔴 곁가지 발견: **`package.json` 에 `name` 필드가 없다.** 그래서 `npm install` 을 돌린
+워크트리 디렉터리 이름이 `package-lock.json` 의 `name` 으로 들어간다(원격 lock 은
+`determined-yonath`). 임시 워크트리에서 npm 을 돌렸다면 **커밋 전 name 을 되돌릴 것.**
+근본 해결은 name 을 못박는 것이고, 아직 안 했다.
