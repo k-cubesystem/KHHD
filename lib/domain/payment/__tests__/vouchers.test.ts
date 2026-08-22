@@ -13,7 +13,7 @@ describe('VOUCHER_CATALOG — v1 상품', () => {
     expect(p.priceBokchae).toBe(1)
     expect(p.durationHours).toBe(24)
     expect(p.includedInMembership).toBe(true)
-    expect(p.label).toBe('고민상담 1일권')
+    expect(p.label).toBe('속풀이 1일권')
   })
 
   it('VOUCHER_TYPES 는 카탈로그 키 목록', () => {
