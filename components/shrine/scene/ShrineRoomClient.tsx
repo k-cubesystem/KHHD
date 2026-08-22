@@ -444,7 +444,7 @@ export function ShrineRoomClient({
   const [visibility, setVisibility] = useState<'public' | 'private'>(scene.visibility)
   const [visibilitySaving, setVisibilitySaving] = useState(false)
   // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
-  const [oracle, setOracle] = useState<{ message: string } | null>(null)
+  const [oracle, setOracle] = useState<{ message: string; id: string } | null>(null)
   /**
    * 사랑방 좌석 — 서버 prop 이 정본이고(첫 렌더가 서버와 같아야 한다 · 하이드레이션 규율),
    * 합동 기도 낙관 점등만 이 상태가 서버보다 앞서 들고 있는다.
@@ -575,7 +575,7 @@ export function ShrineRoomClient({
     getRoomOracle()
       .then((o) => {
         if (!alive || !o) return
-        setOracle({ message: o.message })
+        setOracle({ message: o.message, id: o.id })
         setBubble(o.message)
         setBounce((b) => b + 1)
         void markOracleSeen(o.id)
@@ -2173,6 +2173,17 @@ export function ShrineRoomClient({
               <div {...{ [AI_DISCLOSURE_ATTR]: 'oracle' }} className="mt-1 text-[9px] leading-snug text-ink-light/50">
                 {AI_DISCLOSURE_TEXT.oracle}
               </div>
+            )}
+            {/* 신탁을 여기서 닫지 않는다 — 그 말을 되받아 문답으로 잇는 유일한 출구(P1-C).
+                말풍선은 pointer-events-none 이라 버튼에만 따로 되살린다. */}
+            {oracle && (
+              <button
+                type="button"
+                onClick={() => router.push(`/protected/ai-shaman?oracle=${oracle.id}`)}
+                className="pointer-events-auto mt-1.5 inline-flex items-center gap-1 rounded-full border border-gold-500/45 bg-gold-500/15 px-2.5 py-[3px] text-[10px] text-gold-200"
+              >
+                이어서 여쭙기 →
+              </button>
             )}
           </div>
         )}

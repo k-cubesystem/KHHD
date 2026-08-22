@@ -52,7 +52,9 @@ export interface GuideData {
 const NOTICE_CTA: Record<string, { label: string; href: string }> = {
   chat_expiry_notice: { label: '기억의 함 보러가기', href: '/protected/store?tab=items' },
   membership_deity_gift: { label: '신위전에서 좌정하기', href: '/protected/shrine/deities' },
-  deity_oracle: { label: '신당 가기', href: '/protected/shrine' },
+  // 신탁은 «읽고 닫히던» 말이었다 — 문답으로 잇는다(P1-C). id 는 알림 행에 없으므로 최근 신탁을
+  // 이어받는 경로(?oracle=latest)로 보낸다.
+  deity_oracle: { label: '이어서 여쭙기', href: '/protected/ai-shaman?oracle=latest' },
 }
 
 /** 전 페이지 신 가이드 초기 데이터 — 마운트 시 1회 로드. */

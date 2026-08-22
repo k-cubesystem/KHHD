@@ -44,7 +44,14 @@ async function loadSeatedDeity(): Promise<SeatedDeityInfo | null> {
   }
 }
 
-export default async function AIShamanPage() {
+export default async function AIShamanPage({
+  searchParams,
+}: {
+  // 신탁 알림·푸시에서 「이어서 여쭙기」로 넘어오는 딥링크(P1-C): /protected/ai-shaman?oracle=<id>
+  searchParams?: Promise<{ oracle?: string }>
+}) {
+  const params = searchParams ? await searchParams : undefined
+  const oracleId = typeof params?.oracle === 'string' ? params.oracle : undefined
   // 게이트: 멤버십 or 활성 1일 이용권 or 광고 질문권(P1-A — 광고로 연 당일 입장). 마스터는 subscription 내부에서 통과.
   const [membership, chatPass, adCredits] = await Promise.all([
     getCurrentUserMembership(),
@@ -70,5 +77,5 @@ export default async function AIShamanPage() {
   }
 
   const seated = await loadSeatedDeity()
-  return <ShamanChatInterface initialDeity={seated} />
+  return <ShamanChatInterface initialDeity={seated} oracleId={oracleId} />
 }

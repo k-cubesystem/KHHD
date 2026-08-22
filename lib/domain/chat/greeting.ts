@@ -14,8 +14,11 @@
 
 import type { MemoryType } from '@/lib/ai/memory'
 
-/** 방문 유형 — 오프닝의 톤을 가른다. new_chat 은 사용자가 의도적으로 대화를 새로 편 경우. */
-export type VisitKind = 'first' | 'today_first' | 'long_absence' | 'resume' | 'new_chat'
+/**
+ * 방문 유형 — 오프닝의 톤을 가른다. new_chat 은 사용자가 의도적으로 대화를 새로 편 경우.
+ * oracle 은 신탁(선톡)을 받고 「이어서 여쭙기」로 들어온 경우 — 신위가 자기 말을 되받는다.
+ */
+export type VisitKind = 'first' | 'today_first' | 'long_absence' | 'resume' | 'new_chat' | 'oracle'
 
 /** 오프닝 한 줄. narration 은 말풍선이 아니라 중앙 이탤릭으로 렌더된다(ZETA 내레이션 UI). */
 export interface GreetingLine {
@@ -50,6 +53,13 @@ export interface GreetingInput {
    * 인사와 질문 사이에 놓여 **매일 다른 첫 마디**를 만든다. 같은 날 다시 와도 같은 문장(결정론).
    */
   todayMapLine?: string
+  /**
+   * 신탁에서 이어온 경우 — 그 신탁 본문. 신위가 «자기가 한 말»을 되받으며 문답을 연다.
+   * 열람률 100%인 신탁이 그냥 닫히던 것을 대화 입구로 잇는 자리다(P1-C).
+   */
+  oracleMessage?: string | null
+  /** 신탁이 내려진 시각(ISO) — 「어제/오늘」 같은 시간 표현에 쓴다. */
+  oracleAt?: string | null
 }
 
 export interface Greeting {
@@ -78,9 +88,11 @@ function kstDayKey(iso: string): string {
 
 /** 방문 유형 판정. 기억도 없고 방문 기록도 없으면 첫 만남. */
 export function resolveVisitKind(
-  input: Pick<GreetingInput, 'lastVisitAt' | 'now' | 'memories' | 'forceNewChat'>
+  input: Pick<GreetingInput, 'lastVisitAt' | 'now' | 'memories' | 'forceNewChat' | 'oracleMessage'>
 ): VisitKind {
   const { lastVisitAt, now } = input
+  // 신탁을 타고 들어온 걸음이 가장 앞선다 — 그 말을 되받지 않으면 여기 온 이유가 사라진다.
+  if (input.oracleMessage?.trim()) return 'oracle'
   const hasMemory = (input.memories?.length ?? 0) > 0
   // 첫 만남은 새 대화보다 우선 — 처음 온 사람에게 "새로 폈다"고 하면 말이 안 된다.
   if (input.forceNewChat && (lastVisitAt || hasMemory)) return 'new_chat'
@@ -234,6 +246,42 @@ function buildNewChat(input: GreetingInput): { lines: GreetingLine[]; question: 
   }
 }
 
+/** 신탁이 내려진 뒤 얼마나 지났는지 — 「오늘/어제/며칠 전」. KST 날짜키로 센다(결정론). */
+function oracleWhen(oracleAt: string | null | undefined, now: string): string {
+  if (!oracleAt) return ''
+  const a = new Date(kstDayKey(oracleAt)).getTime()
+  const b = new Date(kstDayKey(now)).getTime()
+  if (Number.isNaN(a) || Number.isNaN(b)) return ''
+  const days = Math.round((b - a) / DAY_MS)
+  if (days <= 0) return '조금 전'
+  if (days === 1) return '어제'
+  if (days <= 6) return '며칠 전'
+  return '지난번'
+}
+
+/**
+ * 신탁에서 이어온 걸음 — 신위가 «자기가 남긴 말»을 인용하고 그 뒤를 묻는다.
+ * 신탁은 지금까지 위로 한 줄로 닫혀 있었다(실측 34건 전부 열람·전부 무응답). 그 끝을 질문으로 연다.
+ */
+function buildOracle(input: GreetingInput): { lines: GreetingLine[]; question: string; quickReplies: string[] } {
+  const name = 호칭(input.userName)
+  const when = oracleWhen(input.oracleAt, input.now)
+  const quoted = trimMemory(input.oracleMessage ?? '', 70)
+  const question = '그 뒤로 마음이 좀 어떠셨어요?'
+  return {
+    lines: [
+      { kind: 'narration', text: '향불이 한 번 크게 흔들립니다.' },
+      {
+        kind: 'speech',
+        text: `${name ? `${name}, ` : ''}${when ? `${when} ` : ''}제가 이런 말을 남겼지요.\n「${quoted}」`,
+      },
+      { kind: 'speech', text: question },
+    ],
+    question,
+    quickReplies: ['그 말이 위로가 됐어요', '아직 그대로예요', '다른 이야기를 하고 싶어요'],
+  }
+}
+
 /** 이어서 — 같은 날 재입장. 인사 반복 없이 짧게 잇는다. */
 function buildResume(input: GreetingInput): { lines: GreetingLine[]; question: string; quickReplies: string[] } {
   const variants = [
@@ -256,15 +304,17 @@ export function buildGreeting(input: GreetingInput): Greeting {
   const visitKind = resolveVisitKind(input)
 
   const built =
-    visitKind === 'first'
-      ? buildFirst(input)
-      : visitKind === 'new_chat'
-        ? buildNewChat(input)
-        : visitKind === 'long_absence'
-          ? buildLongAbsence(input)
-          : visitKind === 'resume'
-            ? buildResume(input)
-            : buildTodayFirst(input)
+    visitKind === 'oracle'
+      ? buildOracle(input)
+      : visitKind === 'first'
+        ? buildFirst(input)
+        : visitKind === 'new_chat'
+          ? buildNewChat(input)
+          : visitKind === 'long_absence'
+            ? buildLongAbsence(input)
+            : visitKind === 'resume'
+              ? buildResume(input)
+              : buildTodayFirst(input)
 
   const lines = [...built.lines]
   const target = input.targetName?.trim()
@@ -274,7 +324,8 @@ export function buildGreeting(input: GreetingInput): Greeting {
   }
 
   // 「오늘의 지도」 — 인사와 질문 «사이»에. 첫 마디가 날마다 달라지는 자리다.
-  const todayMap = input.todayMapLine?.trim()
+  // 신탁을 되받는 자리에서는 넣지 않는다 — 인용 뒤에 지도까지 붙으면 말이 길어져 질문이 묻힌다.
+  const todayMap = visitKind === 'oracle' ? '' : input.todayMapLine?.trim()
   if (todayMap) lines.splice(lines.length - 1, 0, { kind: 'speech', text: todayMap })
 
   return { visitKind, lines: mergeSpeech(lines), question: built.question, quickReplies: built.quickReplies }

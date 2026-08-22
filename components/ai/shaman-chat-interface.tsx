@@ -470,7 +470,10 @@ export interface SeatedDeityInfo {
   name: string
 }
 
-export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: SeatedDeityInfo | null } = {}) {
+export function ShamanChatInterface({
+  initialDeity = null,
+  oracleId,
+}: { initialDeity?: SeatedDeityInfo | null; oracleId?: string } = {}) {
   const router = useRouter()
   const tCommon = useTranslations('common')
   const reduceMotion = useReducedMotion()
@@ -556,6 +559,10 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [])
 
+  // 신탁 딥링크(?oracle=)는 **첫 진입에서 한 번만** 쓴다 — 대상을 바꾸거나 새 대화를 열면
+  // 더는 그 신탁 이야기가 아니다. ref 라 소진 후 재렌더에도 되살아나지 않는다.
+  const oracleIdRef = useRef<string | undefined>(oracleId)
+
   // 세션 로드 및 메시지 복원. 대화가 비어 있으면 선문안(오프닝)을 받아 신위가 먼저 말을 건다.
   const loadSession = useCallback(async (familyMemberId: string) => {
     setIsSessionLoading(true)
@@ -584,10 +591,13 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       }
 
       // 열 때마다 오프닝을 새로 받는다(휘발성). 지난 대화가 있으면 그 아래에 붙는다.
-      const opening = await getChatOpening(familyMemberId)
+      const fromOracle = oracleIdRef.current
+      oracleIdRef.current = undefined // 한 번 쓰면 비운다
+      const opening = await getChatOpening(familyMemberId, fromOracle ? { oracleId: fromOracle } : undefined)
       if (opening.success && opening.greeting) {
         setGreeting(opening.greeting)
         GAChat.greetingShown(opening.greeting.visitKind)
+        if (opening.greeting.visitKind === 'oracle') GAChat.oracleToChat()
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 250)
       }
     } finally {

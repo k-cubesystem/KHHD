@@ -97,6 +97,56 @@ describe('buildGreeting — 공통 계약', () => {
   })
 })
 
+describe('buildGreeting — 신탁에서 이어온 걸음 (P1-C)', () => {
+  const ORACLE = '먼 길을 걸어오느라 애썼으니, 북두의 고요한 빛 아래 무거운 숨을 내려놓으시길.'
+
+  it('신탁이 있으면 다른 방문 유형을 제치고 oracle 이 된다', () => {
+    // 같은 날 재입장(=resume)이어도 신탁을 타고 왔으면 그 말을 먼저 되받아야 한다.
+    const g = buildGreeting({ now: NOW, lastVisitAt: '2026-07-25T01:00:00.000Z', oracleMessage: ORACLE })
+    expect(g.visitKind).toBe('oracle')
+  })
+
+  it('신탁 본문을 인용하고 열린 질문으로 닫는다', () => {
+    const g = buildGreeting({ now: NOW, lastVisitAt: null, oracleMessage: ORACLE, userName: '대건' })
+    const bubble = g.lines.at(-1)?.text ?? ''
+    expect(bubble).toContain('「')
+    expect(bubble).toContain('먼 길을 걸어오느라')
+    expect(bubble).toContain('대건님')
+    expect(bubble.endsWith(g.question)).toBe(true)
+    expect(g.question).toContain('?')
+    expect(g.lines.filter((l) => l.kind === 'speech')).toHaveLength(1)
+    expect(g.quickReplies.length).toBeGreaterThan(0)
+  })
+
+  it('신탁이 내려진 때를 말한다 — 어제 / 며칠 전', () => {
+    const yesterday = buildGreeting({
+      now: NOW,
+      lastVisitAt: null,
+      oracleMessage: ORACLE,
+      oracleAt: '2026-07-24T05:00:00.000Z',
+    })
+    expect(yesterday.lines.at(-1)?.text).toContain('어제')
+    const daysAgo = buildGreeting({
+      now: NOW,
+      lastVisitAt: null,
+      oracleMessage: ORACLE,
+      oracleAt: '2026-07-21T05:00:00.000Z',
+    })
+    expect(daysAgo.lines.at(-1)?.text).toContain('며칠 전')
+  })
+
+  it('신탁 자리에는 오늘의 지도를 겹치지 않는다 (질문이 묻히지 않게)', () => {
+    const map = '오늘은 흙이 두터워지는 날이에요.'
+    const g = buildGreeting({ now: NOW, lastVisitAt: null, oracleMessage: ORACLE, todayMapLine: map })
+    expect(g.lines.at(-1)?.text).not.toContain(map)
+  })
+
+  it('빈 신탁 문자열은 무시한다 (평소 오프닝으로)', () => {
+    const g = buildGreeting({ now: NOW, lastVisitAt: null, oracleMessage: '   ' })
+    expect(g.visitKind).toBe('first')
+  })
+})
+
 describe('buildGreeting — 첫 만남', () => {
   it('신위 이름으로 자기소개하고 내레이션으로 연다', () => {
     const g = buildGreeting({ now: NOW, lastVisitAt: null, deityName: '월하노인', userName: '민수' })

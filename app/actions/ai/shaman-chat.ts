@@ -812,7 +812,10 @@ export interface ChatOpening {
  *
  * @param options.newChat 사용자가 '새 대화'를 눌러 자리를 새로 편 경우 — 짧게 연다.
  */
-export async function getChatOpening(familyMemberId?: string, options?: { newChat?: boolean }): Promise<ChatOpening> {
+export async function getChatOpening(
+  familyMemberId?: string,
+  options?: { newChat?: boolean; oracleId?: string }
+): Promise<ChatOpening> {
   try {
     const supabase = await createClient()
     const {
@@ -898,6 +901,23 @@ export async function getChatOpening(familyMemberId?: string, options?: { newCha
       logger.warn('[getChatOpening] devotion skipped:', e)
     }
 
+    // 신탁에서 이어온 걸음(P1-C) — 그 신탁 본문을 인용해 신위가 자기 말을 되받는다.
+    // RLS(deity_oracles_select_own)가 남의 신탁을 막으므로 id 를 그대로 받아도 안전하다.
+    let oracleMessage: string | null = null
+    let oracleAt: string | null = null
+    if (options?.oracleId) {
+      // 'latest' = 알림 CTA 처럼 신탁 id 를 모르는 자리에서 «가장 최근 신탁»을 이어받는 경로.
+      const q = supabase.from('deity_oracles').select('message, created_at').eq('user_id', user.id)
+      const { data: oracle } =
+        options.oracleId === 'latest'
+          ? await q.order('created_at', { ascending: false }).limit(1).maybeSingle()
+          : await q.eq('id', options.oracleId).maybeSingle()
+      if (oracle?.message) {
+        oracleMessage = oracle.message
+        oracleAt = (oracle.created_at as string) ?? null
+      }
+    }
+
     // 「오늘의 지도」 — 그날 일진에서 결정론으로 뽑는 한 줄(AI 호출 0). 첫 마디가 날마다 달라진다.
     // 만세력은 서버 전용(lunar-javascript)이라 동적 로드하고, 실패해도 선문안 자체는 나와야 한다.
     let todayMapLine: string | undefined
@@ -925,6 +945,8 @@ export async function getChatOpening(familyMemberId?: string, options?: { newCha
       devotionLevel,
       forceNewChat: options?.newChat === true,
       todayMapLine,
+      oracleMessage,
+      oracleAt,
     })
 
     return { success: true, greeting }

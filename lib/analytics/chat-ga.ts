@@ -10,7 +10,9 @@ export const GAChat = {
   /** 채팅 화면 진입(세션 로드 완료 시점). label = 좌정 신위 코드 | none */
   open: (deityCode: string | null) =>
     trackEvent({ action: 'chat_open', category: 'counsel', label: deityCode ?? 'none' }),
-  /** 선문안 노출. label = 방문 유형(first/today_first/long_absence/resume/new_chat) */
+  /** 신탁 → 속풀이 유입(P1-C) — 열람률 100%인 신탁이 실제 문답으로 이어졌는지 */
+  oracleToChat: () => trackEvent({ action: 'oracle_to_chat', category: 'counsel' }),
+  /** 선문안 노출. label = 방문 유형(first/today_first/long_absence/resume/new_chat/oracle) */
   greetingShown: (visitKind: string) =>
     trackEvent({ action: 'chat_greeting_shown', category: 'counsel', label: visitKind }),
   /** 세션 첫 질문 — 활성화 순간 */
