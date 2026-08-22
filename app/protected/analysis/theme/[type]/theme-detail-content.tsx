@@ -592,7 +592,7 @@ function NextSteps({ related, openEnded = false }: { related: ThemeFortune[]; op
     >
       <span className="flex items-center gap-2">
         <MessageCircle className="h-4 w-4 text-gold-500/70" />
-        {openEnded ? '이 이야기를 더 풀어보기' : '해화지기와 이야기하기'}
+        {openEnded ? '이 이야기를 더 풀어보기' : '신령님께 여쭙기'}
       </span>
       <ChevronRight className="h-4 w-4 text-ink-light/30" />
     </Link>

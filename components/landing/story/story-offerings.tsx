@@ -102,8 +102,8 @@ const COMPANIONS: readonly CompanionItem[] = [
   },
   {
     icon: MessagesSquare,
-    label: '해화지기 고민 상담',
-    desc: '명리학에 뿌리를 둔 AI 상담사와 대화합니다.',
+    label: '신령님과 속풀이',
+    desc: '명리학에 뿌리를 둔 神과 문답하며 속을 풉니다.',
     badge: '멤버십 · 1일 이용권',
   },
   {

@@ -17,11 +17,17 @@ export function GreetingIntro({
   avatar,
   onSpeak,
   reduceMotion,
+  quickReplies,
+  onQuickReply,
 }: {
   lines: GreetingLine[]
   avatar?: React.ReactNode
   onSpeak?: (text: string) => void
   reduceMotion?: boolean
+  /** 마지막 질문에 답하기 쉬운 빠른 답 칩(P0-F2). 없으면 종전과 동일하게 칩 없이 렌더. */
+  quickReplies?: string[]
+  /** 칩 탭 → 그 문장을 즉시 전송. 미지정이면 칩을 그리지 않는다. */
+  onQuickReply?: (text: string) => void
 }) {
   const step = reduceMotion ? 0 : 0.55
 
@@ -91,6 +97,29 @@ export function GreetingIntro({
           </motion.div>
         )
       })}
+
+      {/* 이어 여쭙기 칩 — 모든 줄이 도착한 뒤에 나타난다. 탭 한 번이 곧 다음 질문(P0-F2). */}
+      {quickReplies && quickReplies.length > 0 && onQuickReply && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.3, delay: lines.length * step + 0.1 }}
+          className="flex flex-wrap gap-1.5 pl-10 pt-0.5"
+          role="group"
+          aria-label="빠른 답"
+        >
+          {quickReplies.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => onQuickReply(q)}
+              className="px-3 py-1.5 rounded-full border border-gold-500/25 bg-surface/50 text-[12px] text-gold-200/85 hover:border-gold-500/45 hover:bg-surface/70 active:scale-[0.97] transition-all"
+            >
+              {q}
+            </button>
+          ))}
+        </motion.div>
+      )}
     </div>
   )
 }

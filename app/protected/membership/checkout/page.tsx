@@ -139,7 +139,7 @@ function CheckoutContent() {
             ))}
           </ul>
           <p className="text-white/40 text-[11px] mt-3 leading-relaxed">
-            {dailySpendCapLine(plan.daily_talisman_limit)} · 신당·가족관리·고민상담 «입장»이 열립니다. 풀이는 회원도
+            {dailySpendCapLine(plan.daily_talisman_limit)} · 신당·가족관리·속풀이 «입장»이 열립니다. 풀이는 회원도
             복채로 봅니다.
           </p>
         </div>

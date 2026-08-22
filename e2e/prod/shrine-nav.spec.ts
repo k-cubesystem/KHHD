@@ -23,7 +23,7 @@ test.describe('신당 3.0 네비게이션', () => {
     const nav = page.getByRole('navigation', { name: '주요 메뉴' })
     await expect(nav.getByText('신당', { exact: true })).toBeVisible({ timeout: 15_000 })
     await expect(nav.getByText('사주팔자')).toHaveCount(0)
-    await expect(nav.getByText('고민상담', { exact: true })).toBeVisible()
+    await expect(nav.getByText('속풀이', { exact: true })).toBeVisible()
     await page.screenshot({ path: SHOT('1-nav'), fullPage: false })
     console.log('[PASS] 하단 네비에 신당 편입 · 사주팔자 제거 확인')
 

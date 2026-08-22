@@ -153,7 +153,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
             <br />
             {dailySpendCapLine(currentPlan.daily_talisman_limit)}
             <br />
-            멤버십은 신당·가족관리·고민상담의 «입장»을 엽니다. 풀이는 회원도 복채로 봅니다.
+            멤버십은 신당·가족관리·속풀이의 «입장»을 엽니다. 풀이는 회원도 복채로 봅니다.
           </p>
         </div>
 

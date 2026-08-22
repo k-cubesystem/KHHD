@@ -150,8 +150,8 @@ export async function getGuideData(): Promise<GuideData> {
       {
         key: 'chat' as const,
         done: (chatCount ?? 0) > 0,
-        text: '이제 고민을 여쭤보세요. 좌정하신 神이 사주를 근거로 답해드립니다.',
-        ctaLabel: '고민 여쭤보기',
+        text: '이제 속풀이로 여쭤보세요. 좌정하신 神이 사주를 근거로 답해드립니다.',
+        ctaLabel: '여쭈러 가기',
         ctaHref: '/protected/ai-shaman',
       },
     ]

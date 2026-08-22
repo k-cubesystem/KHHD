@@ -25,10 +25,10 @@ export interface VoucherProduct {
 export const VOUCHER_CATALOG: Record<VoucherType, VoucherProduct> = {
   CHAT_DAY_PASS: {
     type: 'CHAT_DAY_PASS',
-    // 🔴 «무제한» 금지 — 이 이용권이 여는 것은 고민상담 «입장»이다(app/protected/ai-shaman/page.tsx 게이트).
+    // 🔴 «무제한» 금지 — 이 이용권이 여는 것은 속풀이 «입장»이다(app/protected/ai-shaman/page.tsx 게이트).
     //    전송 경로는 등급·이용권을 보지 않고 하루 질문 한도만 본다(shaman-chat.ts sendShamanMessage).
-    label: '고민상담 1일권',
-    description: '구매 즉시 24시간 동안 해화지기 고민상담에 들어갈 수 있습니다. 질문은 하루 무료분까지 쓰십니다.',
+    label: '속풀이 1일권',
+    description: '구매 즉시 24시간 동안 신령님과의 속풀이에 들어갈 수 있습니다. 질문은 하루 무료분까지 쓰십니다.',
     priceBokchae: 1,
     durationHours: 24,
     includedInMembership: true,

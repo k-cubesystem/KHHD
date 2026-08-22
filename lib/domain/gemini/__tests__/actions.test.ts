@@ -16,7 +16,7 @@ describe('Gemini action 라벨 정합성', () => {
   it('getActionLabel: 등록된 타입은 한글 라벨을 돌려준다', () => {
     expect(getActionLabel('daily_fortune')).toBe('오늘운세')
     expect(getActionLabel('image_generation')).toBe('이미지 생성')
-    expect(getActionLabel('shaman_chat')).toBe('고민상담 채팅')
+    expect(getActionLabel('shaman_chat')).toBe('속풀이 채팅')
   })
 
   it('getActionLabel: 레거시 trend_* 는 프리픽스 보정', () => {
