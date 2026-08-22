@@ -29,8 +29,10 @@ export interface DayMap {
   headline: string
   /** 오늘 하면 잘 풀리는 것 */
   doLine: string
-  /** 오늘 조심할 것 */
+  /** 오늘 조심할 것 — 어떻게 생각하고 말해야 하는지 */
   avoidLine: string
+  /** "비 머금은 흙의 하루" — 지지의 계절 이미지(머리줄에 붙는 명사구). 지지를 모르면 없다. */
+  seasonLine?: string
 }
 
 interface DayMapEntry {
@@ -207,20 +209,28 @@ const DAY_MAP_TABLE: Record<string, DayMapEntry> = {
   },
 }
 
-/** 지지 12자의 계절·시간 이미지 — 같은 조합도 날마다 다르게 읽히도록 살을 붙인다. */
+/** 지지 12자의 계절·시간 이미지 — 머리줄에 붙는 명사구. 같은 조합도 날마다 다르게 읽힌다. */
 const BRANCH_COLOR: Record<string, string> = {
-  子: '깊은 밤의 물기가 도는 하루입니다',
-  丑: '언 흙이 아직 풀리지 않은 하루입니다',
-  寅: '이른 봄 숲의 기운이 도는 하루입니다',
-  卯: '새순이 오르는 결의 하루입니다',
-  辰: '비 머금은 흙의 하루입니다',
-  巳: '볕이 길게 드는 하루입니다',
-  午: '한낮의 불이 가장 높은 하루입니다',
-  未: '마른 흙에 볕이 남은 하루입니다',
-  申: '서늘한 쇠붙이 결의 하루입니다',
-  酉: '벼린 날처럼 또렷한 하루입니다',
-  戌: '해 저무는 흙담의 하루입니다',
-  亥: '넓은 물이 잔잔한 하루입니다',
+  子: '깊은 밤 물기가 도는 하루',
+  丑: '언 흙이 아직 풀리지 않은 하루',
+  寅: '이른 봄 숲의 하루',
+  卯: '새순이 오르는 하루',
+  辰: '비 머금은 흙의 하루',
+  巳: '볕이 길게 드는 하루',
+  午: '한낮의 불이 가장 높은 하루',
+  未: '마른 흙에 볕이 남은 하루',
+  申: '서늘한 쇠붙이 결의 하루',
+  酉: '벼린 날처럼 또렷한 하루',
+  戌: '해 저무는 흙담의 하루',
+  亥: '넓은 물이 잔잔한 하루',
+}
+
+const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'] as const
+
+/** "8월 22일 토요일" — KST 기준 날짜 라벨(선문안 머리줄용). */
+export function kstDateLabel(now: Date): string {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return `${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일 ${WEEKDAY_KO[kst.getUTCDay()]}요일`
 }
 
 /**
@@ -235,19 +245,25 @@ export function deriveDayMap(ganElement: string, jiElement: string, branchHan?: 
   const ji = EN_TO_HAN[jiElement] ?? jiElement
   const entry = DAY_MAP_TABLE[`${gan}${ji}`]
   if (!entry) return null
-  const color = branchHan ? BRANCH_COLOR[branchHan] : undefined
   return {
     flow: entry.flow,
     headline: entry.headline,
     doLine: entry.doLine,
-    avoidLine: color ? `${color} ${entry.avoidLine}` : entry.avoidLine,
+    avoidLine: entry.avoidLine,
+    seasonLine: branchHan ? BRANCH_COLOR[branchHan] : undefined,
   }
 }
 
 /**
- * 선문안에 얹을 한 문장 — "오늘은 ~하는 날이에요. ~" (신위 화법).
- * 인사말 안에 녹여 넣을 것이므로 두 문장을 넘기지 않는다.
+ * 선문안에 얹을 「오늘의 지도」 — 스레드 점심 글과 같은 뼈대(CEO 지시 08-22):
+ *   날짜 → 오늘은 어떤 날인가 → 어떻게 하면 좋은가 → 무엇을 조심할 것인가.
+ * 어투만 신위의 존댓말이다(스레드는 반말).
+ *
+ * @param now 현재 시각 — 날짜 라벨은 KST 기준으로 뽑는다(주입받아 결정론 유지)
  */
-export function dayMapGreetingLine(map: DayMap): string {
-  return `오늘은 ${map.headline}이에요.\n${map.doLine}.`
+export function dayMapGreetingLine(map: DayMap, now: Date): string {
+  const head = map.seasonLine
+    ? `[오늘의 지도] ${kstDateLabel(now)} · ${map.seasonLine}`
+    : `[오늘의 지도] ${kstDateLabel(now)}`
+  return `${head}\n\n오늘은 ${map.headline}이에요.\n${map.doLine}.\n다만 ${map.avoidLine}.`
 }

@@ -1,4 +1,7 @@
-import { deriveDayMap, dayMapGreetingLine } from '../day-map'
+import { deriveDayMap, dayMapGreetingLine, kstDateLabel } from '../day-map'
+
+/** KST 2026-08-22(토) 낮 — 날짜 라벨 검증 기준 */
+const NOW = new Date('2026-08-22T04:00:00.000Z')
 
 /**
  * 골든 케이스는 스레드 1주차 원고(TEAM_A_PM/threads-week1-mon-wed.md)의 「오늘의 지도」 3편이다.
@@ -51,7 +54,7 @@ describe('deriveDayMap — 입력 형식', () => {
     const a = deriveDayMap('Metal', 'Earth', '未')
     const b = deriveDayMap('Metal', 'Earth', '丑')
     expect(a?.headline).toBe(b?.headline)
-    expect(a?.avoidLine).not.toBe(b?.avoidLine)
+    expect(a?.seasonLine).not.toBe(b?.seasonLine)
   })
 
   it('모르는 오행이면 null — 화면은 지도 없이도 서야 한다', () => {
@@ -59,21 +62,44 @@ describe('deriveDayMap — 입력 형식', () => {
   })
 })
 
-describe('dayMapGreetingLine — 선문안에 얹는 한 문장', () => {
-  it('신위 화법(존댓말)이고 두 줄을 넘지 않는다', () => {
-    const map = deriveDayMap('Metal', 'Fire', '午')!
-    const line = dayMapGreetingLine(map)
-    expect(line.startsWith('오늘은 ')).toBe(true)
-    expect(line.split('\n')).toHaveLength(2)
-    expect(line).toContain('이에요')
+describe('kstDateLabel — 머리줄 날짜', () => {
+  it('KST 기준 월·일·요일', () => {
+    expect(kstDateLabel(NOW)).toBe('8월 22일 토요일')
   })
 
-  it('사주 용어를 노출하지 않는다 (독자의 말로 — 마케팅 v3 원칙)', () => {
+  it('UTC 밤은 KST 다음 날로 넘어간다', () => {
+    // UTC 08-22 20:00 = KST 08-23(일) 05:00
+    expect(kstDateLabel(new Date('2026-08-22T20:00:00.000Z'))).toBe('8월 23일 일요일')
+  })
+})
+
+describe('dayMapGreetingLine — 스레드 「오늘의 지도」와 같은 뼈대 (CEO 지시 08-22)', () => {
+  it('날짜 → 오늘은 어떤 날 → 할 것 → 조심할 것 순으로 선다', () => {
+    const map = deriveDayMap('Metal', 'Fire', '午')!
+    const line = dayMapGreetingLine(map, NOW)
+    expect(line.startsWith('[오늘의 지도] 8월 22일 토요일')).toBe(true)
+    expect(line).toContain('한낮의 불이 가장 높은 하루') // 계절 이미지가 머리줄에
+    expect(line).toContain('오늘은 쇠가 불을 만나는 날이에요')
+    expect(line).toContain('결단') // 할 것
+    expect(line).toContain('다만 성급하면 덴다') // 조심할 것
+    // 머리줄 · 본문 두 덩이
+    expect(line.split('\n\n')).toHaveLength(2)
+  })
+
+  it('지지를 모르면 머리줄은 날짜만 (계절 이미지 생략)', () => {
+    const line = dayMapGreetingLine(deriveDayMap('Metal', 'Fire')!, NOW)
+    expect(line.startsWith('[오늘의 지도] 8월 22일 토요일\n')).toBe(true)
+    expect(line).not.toContain('·')
+  })
+
+  it('25조합 전부 신위 화법(존댓말)이고 사주 용어를 노출하지 않는다', () => {
     const els = ['Wood', 'Fire', 'Earth', 'Metal', 'Water']
     const banned = ['일간', '일진', '천간', '지지', '상관', '편관', '식신', '비겁', '오행']
     for (const gan of els) {
       for (const ji of els) {
-        const line = dayMapGreetingLine(deriveDayMap(gan, ji, '午')!)
+        const line = dayMapGreetingLine(deriveDayMap(gan, ji, '午')!, NOW)
+        expect(line).toContain('이에요')
+        expect(line).toContain('다만 ')
         for (const word of banned) expect(line).not.toContain(word)
       }
     }

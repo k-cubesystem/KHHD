@@ -910,7 +910,7 @@ export async function getChatOpening(familyMemberId?: string, options?: { newCha
       // 정오 기준 — 야자시 경계에서 일주가 흔들리는 것을 피한다(/ilgan 과 동일 규율).
       const dayPillar = calculateManseBasic(kstToday, '12:00').day
       const map = deriveDayMap(dayPillar.ganElement, dayPillar.jiElement, dayPillar.jiHan || dayPillar.ji)
-      if (map) todayMapLine = dayMapGreetingLine(map)
+      if (map) todayMapLine = dayMapGreetingLine(map, new Date())
     } catch (e) {
       logger.warn('[getChatOpening] day map skipped:', e)
     }
