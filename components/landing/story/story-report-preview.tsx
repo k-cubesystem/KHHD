@@ -64,7 +64,7 @@ export function StoryReportPreview() {
 
           {/* 명식 4주 */}
           <div className="px-4 py-4 border-b border-white/10">
-            <h3 className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2.5 m-0">
+            <h3 className="font-sans text-overline font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2.5 m-0">
               명식 命式
             </h3>
             <div className="grid grid-cols-4 gap-1.5" aria-hidden>
@@ -94,7 +94,7 @@ export function StoryReportPreview() {
 
           {/* 오행 분포 */}
           <div className="px-4 py-4 border-b border-white/10">
-            <h3 className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-3 m-0">
+            <h3 className="font-sans text-overline font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-3 m-0">
               오행 분포 五行
             </h3>
             <ul className="flex flex-col gap-2 list-none p-0 m-0">
@@ -123,7 +123,7 @@ export function StoryReportPreview() {
 
           {/* 목차 */}
           <div className="px-4 py-4 border-b border-white/10">
-            <h3 className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2.5 m-0">
+            <h3 className="font-sans text-overline font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2.5 m-0">
               리포트 목차
             </h3>
             <ol className="grid grid-cols-2 gap-x-3 gap-y-1.5 list-none p-0 m-0">

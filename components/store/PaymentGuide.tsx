@@ -153,7 +153,7 @@ function SectionHead({ icon: Icon, title, eyebrow }: { icon: typeof Coins; title
 }
 
 const CTA_PRIMARY =
-  'flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[13px] font-bold text-gold-300 transition-opacity hover:opacity-85'
+  'tap-glow-gold flex w-full items-center justify-center gap-1.5 rounded-xl border border-gold-500/45 bg-gold-500/15 py-2.5 font-serif text-[13px] font-bold text-gold-300 transition-opacity hover:opacity-85'
 const CTA_SECONDARY =
   'flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-surface/50 py-2.5 font-serif text-[13px] text-ink-light/75 transition-colors hover:border-white/20'
 

@@ -45,7 +45,7 @@ const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
   title: {
-    default: '청담해화당 - Premium 운명 공학 SaaS',
+    default: '청담해화당 - AI 사주 운세 분석',
     template: '%s | 청담해화당',
   },
   description: '전통 명리학과 현대 데이터 사이언스의 결합, AI 마스터의 정교한 운명 분석 리포트',
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'ko_KR',
     url: defaultUrl,
-    title: '청담해화당 - Premium 운명 공학 SaaS',
+    title: '청담해화당 - AI 사주 운세 분석',
     description: '당신의 운명을 비춰주는 프리미엄 AI 사주 분석',
     siteName: '청담해화당',
     images: [
@@ -63,13 +63,13 @@ export const metadata: Metadata = {
         url: '/api/og?title=청담해화당&desc=당신의 운명을 비춰주는 프리미엄 AI 사주 분석',
         width: 1200,
         height: 630,
-        alt: '청담해화당 - Premium 운명 공학 SaaS',
+        alt: '청담해화당 - AI 사주 운세 분석',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '청담해화당 - Premium 운명 공학 SaaS',
+    title: '청담해화당 - AI 사주 운세 분석',
     description: '당신의 운명을 비춰주는 프리미엄 AI 사주 분석',
     images: ['/api/og?title=청담해화당&desc=당신의 운명을 비춰주는 프리미엄 AI 사주 분석'],
     creator: '@haehwadang',

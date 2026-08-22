@@ -1,5 +1,7 @@
 'use client'
 
+import * as React from 'react'
+
 /**
  * 사주풀이 **본문 섹션** — 라이브 결과 화면과 기록 상세가 **함께 쓰는 단일 출처**.
  *
@@ -71,7 +73,7 @@ export function SajuFreeSections({ data }: { data: SajuReadingData }) {
               <p className="text-sm text-ink-light">
                 <span className="text-amber-400/80 font-medium">{event.period}</span> — {event.description}
               </p>
-              <p className="text-[11px] text-ink-light/40 font-light">{event.basis}</p>
+              <p className="text-[11px] text-ink-light/55 font-light">{event.basis}</p>
             </div>
           )
         )}
@@ -86,7 +88,7 @@ export function SajuFreeSections({ data }: { data: SajuReadingData }) {
       <ResultSection title="요즘 이런 상황이시죠?" color="blue" show={!!data.currentSituation?.description}>
         <p className="text-sm text-ink-light leading-relaxed">{data.currentSituation?.description as string}</p>
         {data.currentSituation?.basis && (
-          <p className="text-[11px] text-ink-light/40 font-light mt-2">{data.currentSituation.basis as string}</p>
+          <p className="text-[11px] text-ink-light/55 font-light mt-2">{data.currentSituation.basis as string}</p>
         )}
         {data.currentSituation?.advice && (
           <p className="text-sm text-blue-400/80 font-medium mt-3 pt-3 border-t border-blue-500/10">
@@ -125,7 +127,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {data.sajuStructure.elementBalance && (
             <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-              <p className="text-xs text-ink-light/40 mb-2">오행 밸런스</p>
+              <p className="text-xs text-ink-light/55 mb-2">오행 밸런스</p>
               {(
                 [
                   { key: 'wood', label: '목(木)', color: 'bg-emerald-500/60' },
@@ -149,7 +151,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                       />
                     </div>
                     <span
-                      className={`text-[10px] w-10 text-right ${bal.status === '부족' ? 'text-red-400/60' : bal.status === '과다' ? 'text-amber-400/60' : 'text-ink-light/30'}`}
+                      className={`text-[10px] w-10 text-right ${bal.status === '부족' ? 'text-red-400/60' : bal.status === '과다' ? 'text-amber-400/60' : 'text-ink-light/50'}`}
                     >
                       {bal.status}
                     </span>
@@ -172,7 +174,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-medium text-ink-light">{m.month}</span>
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${m.rating === '상' ? 'bg-emerald-500/10 text-emerald-400' : m.rating === '하' ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-ink-light/40'}`}
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${m.rating === '상' ? 'bg-emerald-500/10 text-emerald-400' : m.rating === '하' ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-ink-light/55'}`}
                     >
                       {m.rating}
                     </span>
@@ -211,7 +213,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {(data.cheon.career.best_jobs as string[])?.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-ink-light/40">잘 맞는 직업</p>
+              <p className="text-xs text-ink-light/55">잘 맞는 직업</p>
               {(data.cheon.career.best_jobs as string[]).map((job: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/70 flex gap-2">
                   <span className="text-emerald-400/60 shrink-0">+</span> {job}
@@ -221,7 +223,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {(data.cheon.career.worst_jobs as string[])?.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-ink-light/40">안 맞는 직업</p>
+              <p className="text-xs text-ink-light/55">안 맞는 직업</p>
               {(data.cheon.career.worst_jobs as string[]).map((job: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/70 flex gap-2">
                   <span className="text-red-400/60 shrink-0">-</span> {job}
@@ -231,7 +233,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {data.cheon.career.business_aptitude && (
             <div className="space-y-1">
-              <p className="text-xs text-ink-light/40">사업 적성</p>
+              <p className="text-xs text-ink-light/55">사업 적성</p>
               <p className="text-sm text-ink-light/80 leading-relaxed">
                 {data.cheon.career.business_aptitude as string}
               </p>
@@ -239,7 +241,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {data.cheon.career.career_timing && (
             <div className="space-y-1">
-              <p className="text-xs text-ink-light/40">이직·승진 타이밍</p>
+              <p className="text-xs text-ink-light/55">이직·승진 타이밍</p>
               <p className="text-sm text-ink-light/80">{data.cheon.career.career_timing as string}</p>
             </div>
           )}
@@ -267,25 +269,25 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
         )}
         {data.cheon?.investment?.stockStyle && (
           <div className="space-y-1">
-            <p className="text-xs text-ink-light/40">주식</p>
+            <p className="text-xs text-ink-light/55">주식</p>
             <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.investment.stockStyle as string}</p>
           </div>
         )}
         {data.cheon?.investment?.cryptoStyle && (
           <div className="space-y-1">
-            <p className="text-xs text-ink-light/40">코인</p>
+            <p className="text-xs text-ink-light/55">코인</p>
             <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.investment.cryptoStyle as string}</p>
           </div>
         )}
         {data.cheon?.investment?.riskLevel && (
           <div className="space-y-1">
-            <p className="text-xs text-ink-light/40">위험 감수 성향</p>
+            <p className="text-xs text-ink-light/55">위험 감수 성향</p>
             <p className="text-sm text-ink-light/80">{data.cheon.investment.riskLevel as string}</p>
           </div>
         )}
         {data.cheon?.investment?.bestTiming && (
           <div className="space-y-1">
-            <p className="text-xs text-ink-light/40">투자 타이밍</p>
+            <p className="text-xs text-ink-light/55">투자 타이밍</p>
             <p className="text-sm text-ink-light/80">{data.cheon.investment.bestTiming as string}</p>
           </div>
         )}
@@ -339,7 +341,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
         )}
         {data.cheon?.people?.noble_person && (
           <div className="space-y-1 mt-2">
-            <p className="text-xs text-ink-light/40">나를 도와줄 귀인</p>
+            <p className="text-xs text-ink-light/55">나를 도와줄 귀인</p>
             <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.people.noble_person as string}</p>
           </div>
         )}
@@ -358,7 +360,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {(data.cheon.health.weakOrgans as string[])?.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-ink-light/40">주의가 필요한 부위</p>
+              <p className="text-xs text-ink-light/55">주의가 필요한 부위</p>
               {(data.cheon.health.weakOrgans as string[]).map((organ: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/70 flex gap-2">
                   <span className="text-red-400/60 shrink-0">!</span> {organ}
@@ -368,7 +370,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           )}
           {data.cheon.health.mentalHealth && (
             <div className="space-y-1">
-              <p className="text-xs text-ink-light/40">멘탈 관리</p>
+              <p className="text-xs text-ink-light/55">멘탈 관리</p>
               <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.health.mentalHealth as string}</p>
             </div>
           )}
@@ -409,7 +411,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                   label: '지난 10년',
                   key: 'pastDecade',
                   dotClass: 'border-white/20',
-                  textClass: 'text-ink-light/40',
+                  textClass: 'text-ink-light/55',
                 },
                 {
                   label: '지금',
@@ -449,7 +451,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                 <p className="text-sm text-ink-light font-medium">
                   {(data.gaewoon.luckyColor as Record<string, string>).color}
                 </p>
-                <p className="text-[11px] text-ink-light/40 mt-0.5">
+                <p className="text-[11px] text-ink-light/55 mt-0.5">
                   {(data.gaewoon.luckyColor as Record<string, string>).reason}
                 </p>
                 <p className="text-[10px] text-gold-500/40 mt-1">
@@ -463,7 +465,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                 <p className="text-sm text-ink-light font-medium">
                   {(data.gaewoon.luckyDirection as Record<string, string>).direction}
                 </p>
-                <p className="text-[11px] text-ink-light/40 mt-0.5">
+                <p className="text-[11px] text-ink-light/55 mt-0.5">
                   {(data.gaewoon.luckyDirection as Record<string, string>).reason}
                 </p>
                 <p className="text-[10px] text-gold-500/40 mt-1">
@@ -477,7 +479,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                 <p className="text-sm text-ink-light font-medium">
                   {((data.gaewoon.luckyFood as Record<string, unknown>).foods as string[])?.join(', ')}
                 </p>
-                <p className="text-[11px] text-ink-light/40 mt-0.5">
+                <p className="text-[11px] text-ink-light/55 mt-0.5">
                   {(data.gaewoon.luckyFood as Record<string, string>).reason}
                 </p>
               </div>
@@ -488,7 +490,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                 <p className="text-sm text-ink-light font-medium">
                   {((data.gaewoon.luckyNumber as Record<string, unknown>).numbers as number[])?.join(', ')}
                 </p>
-                <p className="text-[11px] text-ink-light/40 mt-0.5">
+                <p className="text-[11px] text-ink-light/55 mt-0.5">
                   {(data.gaewoon.luckyNumber as Record<string, string>).reason}
                 </p>
               </div>
@@ -500,7 +502,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
               <p className="text-sm text-ink-light/70">
                 {((data.gaewoon.avoidItems as Record<string, unknown>).items as string[])?.join(', ')}
               </p>
-              <p className="text-[11px] text-ink-light/40 mt-0.5">
+              <p className="text-[11px] text-ink-light/55 mt-0.5">
                 {(data.gaewoon.avoidItems as Record<string, string>).reason}
               </p>
             </div>
@@ -541,6 +543,40 @@ export function SajuCrossAnalysisSection({ data }: { data: SajuReadingData }) {
 }
 
 // --- 섹션 헬퍼 (두 화면 공용) ---
+/**
+ * 스크롤 리빌 — 섹션이 뷰포트에 들어올 때 한 번 페이드업.
+ * IO 미지원·프리뷰 환경(IO 죽음)·reduced-motion 에서는 즉시 표시(콘텐츠 손실 금지).
+ */
+function useRevealOnScroll() {
+  const ref = React.useRef<HTMLElement | null>(null)
+  const [revealed, setRevealed] = React.useState(false)
+  React.useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setRevealed(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setRevealed(true)
+          io.disconnect()
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.05 }
+    )
+    io.observe(el)
+    // 안전장치 — 어떤 이유로든 IO 콜백이 안 오면 1.2초 뒤 그냥 보여준다(고급 연출 A안 전례).
+    const timer = window.setTimeout(() => setRevealed(true), 1200)
+    return () => {
+      io.disconnect()
+      window.clearTimeout(timer)
+    }
+  }, [])
+  return { ref, revealed }
+}
+
 function ResultSection({
   title,
   color,
@@ -552,6 +588,7 @@ function ResultSection({
   show: boolean
   children: React.ReactNode
 }) {
+  const { ref, revealed } = useRevealOnScroll()
   if (!show) return null
   const colors = {
     amber: 'bg-amber-500/5 border-amber-500/15 text-amber-400',
@@ -568,7 +605,10 @@ function ResultSection({
     rose: 'bg-rose-400',
   }
   return (
-    <section className={`mx-4 mb-4 p-4 rounded-xl border ${colors[color]}`}>
+    <section
+      ref={ref}
+      className={`hanji-section reveal-soft ${revealed ? 'is-revealed' : ''} mx-4 mb-4 p-4 rounded-xl border ${colors[color]}`}
+    >
       <h3 className={`text-sm font-serif font-medium mb-3 flex items-center gap-2 ${colors[color].split(' ')[2]}`}>
         <span className={`w-1.5 h-1.5 rounded-full ${dotColors[color]}`} />
         {title}

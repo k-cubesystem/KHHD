@@ -56,7 +56,7 @@ export function MobileHeader() {
       <header className={`${BAR} justify-between`}>
         <button
           onClick={() => router.back()}
-          className="w-10 h-10 flex items-center justify-start text-ink-light/70 hover:text-primary transition-colors"
+          className="w-11 h-11 flex items-center justify-start text-ink-light/70 hover:text-primary transition-colors"
           aria-label={t('nav.back')}
         >
           <ChevronLeft className="w-6 h-6" />
@@ -64,14 +64,14 @@ export function MobileHeader() {
 
         <Link
           href={APP_HOME_PATH}
-          className="text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80 hover:opacity-100 transition-opacity"
+          className="inline-flex min-h-[44px] items-center text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80 hover:opacity-100 transition-opacity"
         >
           {t('brand.name')}
         </Link>
 
         <Link
           href={APP_HOME_PATH}
-          className="w-10 h-10 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
+          className="w-11 h-11 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
           aria-label={t('nav.home')}
         >
           <Home className="w-5 h-5" />

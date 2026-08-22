@@ -39,8 +39,8 @@ function TypingDots() {
   return (
     <div className="flex items-end gap-2.5 px-1">
       {/* 아바타 */}
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-600/30 to-gold-700/20 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
-        <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={16} height={16} className="inline-block" />
+      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-200/45 to-gold-600/30 border border-primary/25 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
+        <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={20} height={20} className="inline-block" />
       </div>
       {/* 점 */}
       <div className="px-4 py-3 rounded-2xl rounded-bl-none bg-surface/70 border border-primary/10 backdrop-blur-md">
@@ -124,8 +124,8 @@ const Bubble = memo(function Bubble({
     >
       {/* 아바타 - 연속 메시지면 투명 공간만 */}
       {showAvatar ? (
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-600/30 to-gold-700/20 border border-primary/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
-          <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={16} height={16} className="inline-block" />
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gold-200/45 to-gold-600/30 border border-primary/25 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(244,228,186,0.08)]">
+          <Image src="/avatars/haehwajigi.svg" alt="해화지기" width={20} height={20} className="inline-block" />
         </div>
       ) : (
         <div className="w-7 flex-shrink-0" />
@@ -159,7 +159,7 @@ const Bubble = memo(function Bubble({
               type="button"
               onClick={() => onSpeak(msg.content)}
               aria-label="음성으로 듣기"
-              className="text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
+              className="-my-3 -mx-2 px-2 py-3 text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
             >
               🔊 듣기
             </button>

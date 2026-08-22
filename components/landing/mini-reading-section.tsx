@@ -108,6 +108,7 @@ export function MiniReadingSection() {
           <input
             type="number"
             placeholder={t('year')}
+            aria-label={t('year')}
             value={year}
             onChange={(e) => setYear(e.target.value)}
             className="w-20 px-3 py-2.5 bg-white/5 border border-gold-500/20 rounded-lg text-center text-sm text-ink-light placeholder:text-ink-light/30 focus:border-gold-500/50 focus:outline-none font-sans"
@@ -117,6 +118,7 @@ export function MiniReadingSection() {
           <input
             type="number"
             placeholder={t('month')}
+            aria-label={t('month')}
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             className="w-16 px-3 py-2.5 bg-white/5 border border-gold-500/20 rounded-lg text-center text-sm text-ink-light placeholder:text-ink-light/30 focus:border-gold-500/50 focus:outline-none font-sans"
@@ -126,6 +128,7 @@ export function MiniReadingSection() {
           <input
             type="number"
             placeholder={t('day')}
+            aria-label={t('day')}
             value={day}
             onChange={(e) => setDay(e.target.value)}
             className="w-16 px-3 py-2.5 bg-white/5 border border-gold-500/20 rounded-lg text-center text-sm text-ink-light placeholder:text-ink-light/30 focus:border-gold-500/50 focus:outline-none font-sans"
@@ -136,7 +139,8 @@ export function MiniReadingSection() {
             onClick={handleReading}
             disabled={!year || !month || !day}
             size="sm"
-            className="bg-gold-500/20 hover:bg-gold-500/30 text-gold-500 border border-gold-500/30 font-sans"
+            aria-label={t('miniReading')}
+            className="min-h-[44px] min-w-[44px] bg-gold-500/20 hover:bg-gold-500/30 text-gold-500 border border-gold-500/30 font-sans"
           >
             <Sparkles className="w-3.5 h-3.5" />
           </Button>

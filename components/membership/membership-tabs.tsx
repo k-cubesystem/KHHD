@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { GA } from '@/lib/analytics/ga4'
 import { useTranslations } from 'next-intl'
 import {
   servicePeriodLine,
@@ -81,6 +82,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
   }
 
   const handleSelectPlan = () => {
+    GA.membershipCta(currentPlan.tier)
     if (isGuest) {
       router.push('/auth/login')
     } else {
@@ -158,7 +160,7 @@ export function MembershipTabs({ plans, isGuest }: MembershipTabsProps) {
         {/* CTA Button */}
         <Button
           onClick={handleSelectPlan}
-          className="w-full bg-primary hover:bg-primary/90 text-background font-serif font-bold h-14 text-base rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all"
+          className="tap-glow-gold w-full bg-primary hover:bg-primary/90 text-background font-serif font-bold h-14 text-base rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.3)] hover:shadow-[0_0_30px_rgba(212,175,55,0.5)] transition-all"
         >
           {isGuest ? '로그인하고 시작하기' : '지금 시작하기'}
         </Button>

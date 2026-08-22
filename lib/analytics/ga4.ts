@@ -73,6 +73,8 @@ export const GA = {
   paymentGuideClose: () => trackEvent({ action: 'payment_guide_close', category: 'funnel' }),
   paymentGuideCta: (target: string) => trackEvent({ action: 'payment_guide_cta', category: 'funnel', label: target }),
 
+  // ── 9:16 공유 카드 저장(P5) — label 은 일간 slug. 어느 일간이 바이럴을 끄는지 본다.
+  cardSave: (slug: string) => trackEvent({ action: 'share_card_save', category: 'social', label: slug }),
   shareKakao: (contentType: string) => trackEvent({ action: 'share_kakao', category: 'social', label: contentType }),
   shareCopyLink: (contentType: string) =>
     trackEvent({ action: 'share_copy_link', category: 'social', label: contentType }),
@@ -91,6 +93,11 @@ export const GA = {
   wallpaperDownload: (label: string) => trackEvent({ action: 'wallpaper_download', category: 'engagement', label }),
 
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
+
+  // ── 만세력 리뉴얼(3탭) — 어느 탭이 실제로 읽히는지, 유료 탭(운세흐름·분석리포트) 도달률.
+  manseTab: (tab: string) => trackEvent({ action: 'manse_tab', category: 'engagement', label: tab }),
+  // ── 멤버십 가입 CTA — 상점 멤버십 탭 «지금 시작하기». label 은 tier.
+  membershipCta: (tier: string) => trackEvent({ action: 'membership_cta', category: 'funnel', label: tier }),
   dailyFortuneView: () => trackEvent({ action: 'daily_fortune_view', category: 'engagement' }),
 
   bokPointsEarn: (amount: number) => trackEvent({ action: 'bok_points_earn', category: 'engagement', value: amount }),

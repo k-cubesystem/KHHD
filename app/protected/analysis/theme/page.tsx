@@ -160,7 +160,7 @@ function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
       <ThemeThumbnail theme={theme} eager={eager} className="aspect-[16/9] w-full" />
 
       <div className="p-3">
-        <h3 className="font-serif text-[13px] font-bold leading-snug text-ink-light">{theme.title}</h3>
+        <h3 className="font-serif text-body-sm font-bold leading-snug text-ink-light">{theme.title}</h3>
         <p className="mt-1 text-[11px] font-light leading-relaxed text-ink-light/60">{theme.subcopy}</p>
 
         <div className="mt-2.5 flex items-center gap-1.5">

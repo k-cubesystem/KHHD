@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { logger } from '@/lib/utils/logger'
-import { trackEvent } from '@/lib/analytics/ga4'
+import { GA, trackEvent } from '@/lib/analytics/ga4'
 import { getSajuData, WU_XING_COLORS, SajuData } from '@/lib/domain/saju/saju'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import {
@@ -519,11 +519,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
             </Card>
 
             {/* Tabs Layout */}
-            <Tabs
-              defaultValue="mysaju"
-              className="w-full"
-              onValueChange={(v) => trackEvent({ action: 'manse_tab_change', category: 'engagement', label: v })}
-            >
+            {/* 탭 계측은 GA 파사드 단일 경로(GA.manseTab) — 양 세션이 각자 넣은 이벤트명을 병합에서 통일 */}
+            <Tabs defaultValue="mysaju" className="w-full" onValueChange={(v) => GA.manseTab(v)}>
               <TabsList className="dancheong-border-top grid w-full grid-cols-3 bg-white/[0.08] border border-white/20 rounded-2xl mb-8 p-2 relative z-10 gap-1.5 h-auto shadow-lg">
                 <TabsTrigger
                   value="mysaju"

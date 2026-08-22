@@ -137,7 +137,7 @@ export function BokHubSection() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-gold-500" />
-              <h3 className="text-xs font-serif text-gold-500/80">{t('mission')}</h3>
+              <h3 className="text-caption font-semibold font-serif text-gold-500/80">{t('mission')}</h3>
             </div>
             <span className="text-[10px] text-ink-light/40 font-sans">
               {completedCount}/{totalMissions}

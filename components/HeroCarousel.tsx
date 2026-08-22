@@ -145,7 +145,7 @@ export function HeroCarousel() {
           <Link
             href={slide.link}
             className={cn(
-              'group mt-8 inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 sm:mt-10 sm:gap-3 sm:px-9',
+              'tap-glow-gold group mt-8 inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 sm:mt-10 sm:gap-3 sm:px-9',
               'border border-primary/35 bg-black/25 shadow-gold-glow backdrop-blur-[2px]',
               'transition-all duration-long hover:scale-[1.02] hover:border-seal hover:bg-seal',
               FOCUS_RING

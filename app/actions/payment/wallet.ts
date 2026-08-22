@@ -335,6 +335,20 @@ export async function refundStudioCost(featureKey: string): Promise<{ refunded: 
 
   if (existingRefund) return { refunded: false } // 이미 환불됨
 
+  // 성공 검증 — 차감 이후 같은 유형의 완료 기록(analysis_history)이 생겼다면
+  // 풀이는 성공한 것이다. 결과는 받고 돈은 돌려받는 어뷰즈를 여기서 끊는다.
+  // category 가 featureKey 와 안 겹치는 유형(이용권 등)은 조회가 비어 기존과 동일하게 동작.
+  const { data: successRecord } = await admin
+    .from('analysis_history')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('category', featureKey)
+    .gte('created_at', useTx.created_at)
+    .limit(1)
+    .maybeSingle()
+
+  if (successRecord) return { refunded: false } // 성공한 풀이 — 환불 대상 아님
+
   const amount = Math.abs(useTx.amount)
   if (amount <= 0) return { refunded: false }
 

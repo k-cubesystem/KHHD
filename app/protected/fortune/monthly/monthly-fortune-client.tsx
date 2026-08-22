@@ -128,7 +128,7 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
 
           {/* 영역별 운세 */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <h3 className="text-xs font-light text-ink-light/50 uppercase tracking-widest mb-3">영역별 분석</h3>
+            <h3 className="text-caption font-light text-ink-light/50 uppercase tracking-widest mb-3">영역별 분석</h3>
             <div className="space-y-3">
               {data.areas.map((area, idx) => {
                 const Icon = AREA_ICONS[area.name as keyof typeof AREA_ICONS] ?? Sparkles
@@ -171,7 +171,7 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Card className="bg-surface/20 border-white/5">
               <CardContent className="p-4 space-y-3">
-                <h3 className="text-xs font-light text-ink-light/50 uppercase tracking-widest">이달의 행운 키워드</h3>
+                <h3 className="text-caption font-light text-ink-light/50 uppercase tracking-widest">이달의 행운 키워드</h3>
                 <div className="flex gap-2 flex-wrap">
                   <Badge className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20 font-light">
                     행운의 색 {data.lucky.color}
