@@ -2,6 +2,8 @@ import { ShamanChatInterface, type SeatedDeityInfo } from '@/components/ai/shama
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { hasActiveChatPass } from '@/app/actions/payment/vouchers'
+import { getAdCreditBalance } from '@/app/actions/ads/coupang'
+import { AdGateCta } from '@/components/ai/chat/ad-gate-cta'
 import { MembershipGate } from '@/components/shared/membership-gate'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
 import { DAILY_FREE_QUESTIONS } from '@/lib/domain/chat/constants'
@@ -43,9 +45,13 @@ async function loadSeatedDeity(): Promise<SeatedDeityInfo | null> {
 }
 
 export default async function AIShamanPage() {
-  // 게이트: 멤버십 or 활성 1일 이용권. 마스터는 subscription 내부에서 통과.
-  const [membership, chatPass] = await Promise.all([getCurrentUserMembership(), hasActiveChatPass()])
-  if (!membership && !chatPass) {
+  // 게이트: 멤버십 or 활성 1일 이용권 or 광고 질문권(P1-A — 광고로 연 당일 입장). 마스터는 subscription 내부에서 통과.
+  const [membership, chatPass, adCredits] = await Promise.all([
+    getCurrentUserMembership(),
+    hasActiveChatPass(),
+    getAdCreditBalance(),
+  ])
+  if (!membership && !chatPass && adCredits <= 0) {
     return (
       <MembershipGate
         feature="counsel"
@@ -58,6 +64,7 @@ export default async function AIShamanPage() {
           ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
         ]}
         dayPassType="CHAT_DAY_PASS"
+        footerSlot={<AdGateCta />}
       />
     )
   }

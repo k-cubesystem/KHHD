@@ -27,4 +27,13 @@ export const GAChat = {
   rechargeRedirect: () => trackEvent({ action: 'chat_recharge_redirect', category: 'counsel' }),
   /** 전송 실패(사용자 노출 오류) */
   sendError: () => trackEvent({ action: 'chat_send_error', category: 'counsel' }),
+
+  // ── 광고 리워드 「광고 보고 향 올리기」(P1-A). label = provider(coupang_visit/gam_rewarded) ──
+  /** 시작 — 광고(방문) 탭이 열린 순간 */
+  adStart: (provider: string) => trackEvent({ action: 'chat_ad_start', category: 'counsel', label: provider }),
+  /** 지급 완료. value = 지급 질문권 수 */
+  adGrant: (provider: string, reward: number) =>
+    trackEvent({ action: 'chat_ad_grant', category: 'counsel', label: provider, value: reward }),
+  /** 중도 이탈(시작 후 미지급 종료) — 시청·방문 부담이 어디서 끊기는지 본다 */
+  adAbandon: (provider: string) => trackEvent({ action: 'chat_ad_abandon', category: 'counsel', label: provider }),
 } as const

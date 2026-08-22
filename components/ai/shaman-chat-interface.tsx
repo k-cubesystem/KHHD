@@ -30,10 +30,13 @@ import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft } from 'lucide-react'
+import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft, Flame } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { GAChat } from '@/lib/analytics/chat-ga'
+import { AdIncenseSheet } from '@/components/ai/chat/ad-incense-sheet'
+import { getAdRewardAvailability } from '@/app/actions/ads/coupang'
+import type { AdRewardAvailability } from '@/lib/domain/ads/rewarded'
 
 // ─── 타이핑 인디케이터 ────────────────────────────────
 function TypingDots() {
@@ -482,6 +485,9 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const [greeting, setGreeting] = useState<Greeting | null>(null)
   /** 답변 후 이어 여쭙기 칩(P0-F2). 새 전송을 시작하면 비운다. */
   const [followupChips, setFollowupChips] = useState<string[]>([])
+  /** 광고 리워드 가용성(P1-A) — 「향 올리기」 버튼 노출 여부 */
+  const [adAvail, setAdAvail] = useState<AdRewardAvailability | null>(null)
+  const [showAdSheet, setShowAdSheet] = useState(false)
   const [showMore, setShowMore] = useState(false)
 
   // 좌정 主神 표정 아바타 (신당 3.0). 서버 시딩(initialDeity)으로 첫 로드부터 신위 표시,
@@ -606,6 +612,17 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     GAChat.open(initialDeity?.code ?? null)
   }, [initialDeity])
 
+  // 광고 리워드 가용성(P1-A) — 1회 조회. 실패해도 무해(버튼만 안 뜬다).
+  useEffect(() => {
+    let alive = true
+    void getAdRewardAvailability().then((a) => {
+      if (alive) setAdAvail(a)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   // family 변경 시 해당 세션으로 전환
   const handleFamilyChange = async (newFamilyId: string) => {
     setSelectedFamilyId(newFamilyId)
@@ -667,7 +684,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
                 ...prev,
                 walletBalance: result.remainingBalance ?? prev.walletBalance,
                 purchasedCredits: result.newPurchasedCredits ?? prev.purchasedCredits,
-                totalRemaining: prev.dailyFreeRemaining + (result.newPurchasedCredits ?? prev.purchasedCredits),
+                totalRemaining:
+                  prev.dailyFreeRemaining + prev.adCredits + (result.newPurchasedCredits ?? prev.purchasedCredits),
               }
             : prev
         )
@@ -768,17 +786,25 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
               ...prev,
               dailyFreeUsed: Math.max(0, prev.dailyFreeTotal - result.remaining.free),
               dailyFreeRemaining: result.remaining.free,
+              adCredits: result.remaining.ad,
               purchasedCredits: result.remaining.purchased,
               totalRemaining: result.remaining.total,
             }
           }
-          // 구버전 응답 폴백 — 종전 낙관 감소
+          // 구버전 응답 폴백 — 종전 낙관 감소 (소비 순서: 무료 → 광고 → 구매)
           if (prev.dailyFreeRemaining > 0) {
             return {
               ...prev,
               dailyFreeUsed: prev.dailyFreeUsed + 1,
               dailyFreeRemaining: prev.dailyFreeRemaining - 1,
               totalRemaining: prev.totalRemaining - 1,
+            }
+          }
+          if (prev.adCredits > 0) {
+            return {
+              ...prev,
+              adCredits: prev.adCredits - 1,
+              totalRemaining: Math.max(0, prev.totalRemaining - 1),
             }
           }
           return {
@@ -912,6 +938,28 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       <AnimatePresence>
         {showHistory && <PastSessionsPanel familyId={selectedFamilyId} onClose={() => setShowHistory(false)} />}
       </AnimatePresence>
+
+      {/* 광고 보고 향 올리기 시트(P1-A) */}
+      {showAdSheet && adAvail && (
+        <AdIncenseSheet
+          availability={adAvail}
+          onClose={() => setShowAdSheet(false)}
+          onGranted={(adCredits, reward) => {
+            setQuestionStatus((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    adCredits,
+                    totalRemaining: prev.dailyFreeRemaining + adCredits + prev.purchasedCredits,
+                  }
+                : prev
+            )
+            // 하루 1세트 — 지급 즉시 버튼을 내린다(재조회 없이 로컬 반영)
+            setAdAvail((prev) => (prev ? { ...prev, enabled: false, reason: 'daily_limit', setsLeftToday: 0 } : prev))
+            toast.success(`향이 올랐습니다 — 질문권 +${reward}회`)
+          }}
+        />
+      )}
 
       {/* 더보기 시트 — 음성·지난대화·새대화·점사대상 */}
       <AnimatePresence>
@@ -1064,14 +1112,26 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
               </span>
             </span>
           )}
-          <button
-            onClick={handleRecharge}
-            disabled={isRecharging || isStatusLoading}
-            className="flex items-center gap-1 text-[10.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40"
-          >
-            {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Coins className="w-3 h-3" />}
-            1만냥 → +20회
-          </button>
+          <div className="flex items-center gap-3">
+            {/* 광고 보고 향 올리기(P1-A) — 인벤토리·한도·브레이커 통과 시에만 등장 */}
+            {adAvail?.enabled && (
+              <button
+                onClick={() => setShowAdSheet(true)}
+                className="flex items-center gap-1 text-[10.5px] text-gold-400/80 hover:text-gold-300 transition-colors"
+              >
+                <Flame className="w-3 h-3" />
+                광고 보고 +{adAvail.reward}회
+              </button>
+            )}
+            <button
+              onClick={handleRecharge}
+              disabled={isRecharging || isStatusLoading}
+              className="flex items-center gap-1 text-[10.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40"
+            >
+              {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Coins className="w-3 h-3" />}
+              1만냥 → +20회
+            </button>
+          </div>
         </div>
 
         {/* 입력창 */}

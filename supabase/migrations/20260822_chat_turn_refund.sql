@@ -3,6 +3,8 @@
 -- 호출이 실패하면 질문권이 그냥 소실됐다. 전송 액션의 catch 가 이 함수로 되돌린다.
 -- (구매권 환급은 기존 add_shaman_credits(+1) 재사용 — 이 파일은 무료분 전용.)
 -- 20260713_shaman_credit_rpcs.sql 과 동일 원칙: service_role 전용 원자 함수.
+--
+-- ⚠️ 적용 상태: 라이브 DB 적용 완료 (2026-08-22, Supabase MCP). 이 리포엔 자동 적용 파이프라인 없음.
 
 CREATE OR REPLACE FUNCTION public.refund_ai_chat_turn(p_user_id uuid, p_date date)
 RETURNS void

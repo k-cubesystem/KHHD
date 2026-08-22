@@ -15,8 +15,10 @@ interface MembershipGateProps {
   description: string
   /** 혜택 리스트(玄·골드 업셀). */
   benefits: string[]
-  /** 지정 시 즉석 구매 가능한 1일 이용권(고민상담 전용). */
+  /** 지정 시 즉석 구매 가능한 1일 이용권(속풀이 전용). */
   dayPassType?: VoucherType
+  /** 기능별 추가 입장로(예: 속풀이 광고 리워드 CTA) — 게이트는 내용을 모른 채 자리만 내준다. */
+  footerSlot?: React.ReactNode
 }
 
 /**
@@ -24,7 +26,14 @@ interface MembershipGateProps {
  * 리다이렉트 없이 in-place 로 렌더 → 데이터는 보존, 가입/이용권 구매 즉시 router.refresh 로 통과.
  * 마스터(admin)·멤버는 서버에서 이 컴포넌트를 렌더하지 않는다(privileges + subscription 경유).
  */
-export function MembershipGate({ feature, title, description, benefits, dayPassType }: MembershipGateProps) {
+export function MembershipGate({
+  feature,
+  title,
+  description,
+  benefits,
+  dayPassType,
+  footerSlot,
+}: MembershipGateProps) {
   const router = useRouter()
   const [buying, setBuying] = useState(false)
   const dayPass = dayPassType ? VOUCHER_CATALOG[dayPassType] : null
@@ -119,6 +128,8 @@ export function MembershipGate({ feature, title, description, benefits, dayPassT
             </p>
           </>
         )}
+
+        {footerSlot && <div className="relative">{footerSlot}</div>}
       </div>
     </div>
   )
