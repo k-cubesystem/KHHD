@@ -12,7 +12,10 @@ import { warmDespill } from './despill.mjs'
 config({ path: path.resolve('D:/anti/haehwadang/.env.local') })
 
 const MODEL = process.env.SHRINE_IMAGE_MODEL || 'gemini-3.1-flash-lite-image'
-const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
+// 🔴 키 우선순위: GOOGLE_GENERATIVE_AI_API_KEY 가 1순위다. GEMINI_API_KEY 는 프로덕션에서
+//    무효였던 전례가 있다(MEMORY project_gemini_key_p0) — 로컬에서만 유효할 수 있으니 뒤로.
+const KEY =
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
 if (!KEY) {
   console.error('GEMINI 키 없음')
   process.exit(1)
@@ -220,6 +223,15 @@ const SETS = {
     ['saju', '사주팔자 — four slender wooden pillars with smooth bare woodgrain surfaces standing in a row on a lacquer base, golden constellation lines arcing behind them'],
     ['samhap', '삼합 종합풀이 — three brass rings interlocking in a triangle, warm golden light glowing where they overlap'],
     ['themes', '운세 테마 모음 — five hanji fortune cards fanned out in an arc, tied together with a red silk cord'],
+    // 「종합사주풀이」 통합 칸(2026-08-22) — 구 saju + samhap 두 칸이 한 칸이 됐다.
+    // 🔴 파일명 버전업(-v2). 같은 이름을 덮어쓰면 폰 캐시가 옛 그림을 재사용한다(2026-08-10 실증).
+    // 구 saju(네 기둥) + 구 samhap(고리 셋)의 «합»을 한 장에 담는다 — 기둥이 주제, 고리는 후광.
+    [
+      'samhap-v2',
+      // 1차 산출물은 뒤쪽 고리 셋이 서로 붙어 하나의 «아치»로 읽혔다(다른 아이콘은 형체가 하나씩
+      // 또렷하다). 규칙대로 설명을 늘리지 않고 관찰 가능한 사실 하나(고리 사이에 틈)만 더했다.
+      '종합사주풀이 — four slender wooden pillars with smooth bare woodgrain surfaces standing in a row on a lacquer base, three interlocking brass rings glowing warm gold behind them like a halo, visible gaps of empty space between the rings',
+    ],
   ].map(([slug, d]) => ({ slug, out: `icons/hub/${slug}.webp`, size: 256, prompt: tilePrompt(d) })),
 
   // F. 하단 네비 5 (소형 렌더 — 굵은 실루엣)

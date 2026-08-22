@@ -56,7 +56,7 @@ const SERVICES = [
     icon: Layers,
     cost: FEATURE_COST.samhap.display,
     desc: '사주·관상·손금·풍수 네 기운을 하나로. 이미 분석한 결과를 종합해 합치점과 시기·개운 처방을 밝힙니다.',
-    tags: ['종합운', '四柱 종합', '프리미엄'],
+    tags: ['종합운', '사주 종합', '프리미엄'],
     gradient: 'from-amber-950/40 to-transparent',
     accent: 'rgba(201,168,76,0.08)',
   },

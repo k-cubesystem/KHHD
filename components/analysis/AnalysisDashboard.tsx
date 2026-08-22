@@ -10,15 +10,21 @@ import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { JourneyCard } from './journey-card'
 import { WallpaperCard } from './wallpaper-card'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
-import { hubThemePicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
+import {
+  hubThemeDailyPicks,
+  THEME_CATEGORIES,
+  THEME_LIST_PATH,
+  themeListHref,
+} from '@/lib/domain/theme-fortune/themes'
 
 /**
  * 사주·궁합 허브 본문 — 「앱 홈」 문법으로 개편(CEO 2026-08-13 "상단에 어플처럼 아이콘과 제목").
  *
- *   [아이콘 런처 8칸] → [사주 유도 카드] → [① 인기테마운세 10줄] → (여정은 상위가 그린다)
+ *   [아이콘 런처 7칸] → [종합사주풀이 대작 카드] → [나의 복주머니] → [① 인기테마운세 5줄]
  *
  * ① 은 2026-08-13 저녁 CEO 지시(「3개 말고 상하단 사이즈를 좀 줄여서 10개까지」)로 풀폭 와이드
- * 카드 3장에서 **유튜브식 가로 리스트 10줄**이 됐다. 줄 수는 `HUB_THEME_COUNT` 하나가 정한다.
+ * 카드 3장에서 유튜브식 가로 리스트 열 줄이 됐고, 2026-08-22 CEO 지시로 **다섯 줄 + 매일 다른
+ * 조합**이 됐다. 줄 수는 `HUB_THEME_ROWS`, 조합은 `hubThemeDailyPicks` 하나가 정한다.
  *
  * 🔴 구 ② 「무엇으로 볼까요」 카드 4장(궁합·관상·손금·풍수)은 **런처가 흡수했다.**
  *    카드를 되살리면 같은 문이 한 화면에 둘이 된다. 그 넷의 링크는 `HUB_LAUNCHER` 에 있다.
@@ -91,18 +97,20 @@ export function AnalysisDashboard() {
 
         {/* 유튜브 모바일 리스트 문법 — 왼쪽 16:9 썸네일 + 오른쪽 제목 2줄.
             🔴 세로가 이 레이아웃의 전부다: 풀폭 카드는 1장이 210px 를 먹어 셋이 한계였는데,
-               행은 88px(썸네일 128×72 + 상하 8px)이라 열 줄이 옛 넉 장 자리에 들어간다.
+               행은 88px(썸네일 128×72 + 상하 8px)이라 다섯 줄이 옛 두 장 반 자리에 들어간다.
             🔴 순번(1·2·3…)을 붙이지 않는다 — «인기»가 아직 수동값이라 순위 숫자는 실측 주장이
-               된다(themes.ts `hubThemePicks` 주석). */}
+               된다(themes.ts `hubThemePicks` 주석).
+            🔴 조합은 **날짜 시드 결정론**이다(`hubThemeDailyPicks`). 여기서 Math.random 을 쓰면
+               SSR 과 하이드레이션이 다른 다섯을 그려 섹션이 통째로 날아간다. */}
         <nav role="navigation" aria-label="인기테마운세" className="space-y-1.5">
-          {hubThemePicks().map((theme, index) => (
+          {hubThemeDailyPicks().map((theme, index) => (
             <Link
               key={theme.id}
               href={themeListHref(theme)}
               aria-label={theme.title}
               className="group flex gap-3 rounded-xl border border-white/[0.06] bg-surface/40 p-2 transition-colors duration-200 hover:border-gold-500/25 hover:bg-surface/70 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
             >
-              {/* 위 세 줄만 즉시 — 나머지 일곱은 스크롤할 때 받는다. */}
+              {/* 위 세 줄만 즉시 — 나머지 둘은 스크롤할 때 받는다. */}
               <ThemeThumbnail
                 theme={theme}
                 eager={index < 3}

@@ -12,14 +12,15 @@
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
 import { HUB_LAUNCHER } from '@/lib/domain/analysis/hub-home'
 import { HUB_SECTIONS } from '@/lib/domain/analysis/hub-sections'
 import {
-  HUB_THEME_COUNT,
-  hubThemePicks,
+  HUB_THEME_ROWS,
+  hubThemeDailyPicks,
   THEME_CATEGORIES,
   THEME_LIST_PATH,
   themeFallbackImage,
@@ -67,17 +68,24 @@ function sectionOf(container: HTMLElement, id: string): HTMLElement {
   return element
 }
 
-describe('① 인기테마운세 — 리스트 10줄', () => {
-  it('열 줄이 걸린다 (CEO 2026-08-13 「3개 말고 … 10개까지」)', async () => {
+/**
+ * ⚠️ 2026-08-22 갱신: 열 줄 → **다섯 줄**(CEO 「5줄로 줄이고 매번 다르게」). 단언을 새 사양에
+ *    맞춰 `HUB_THEME_COUNT`(후보 풀 10) → `HUB_THEME_ROWS`(화면 5), `hubThemePicks`(순위 그대로)
+ *    → `hubThemeDailyPicks`(그날의 다섯)로 옮겼다. **줄 수 말고는 아무것도 약화하지 않았다** —
+ *    행이 통짜 링크인지·목업 라우트로 가지 않는지·폴백 그림이 깔려 있는지는 그대로 본다.
+ *    조합이 날짜 결정론이라 테스트와 화면이 같은 날이면 같은 다섯을 본다(KST 자정 경계 제외).
+ */
+describe('① 인기테마운세 — 리스트 5줄', () => {
+  it('다섯 줄이 걸린다 (CEO 2026-08-22 「5줄로 줄이고 매번 다르게」)', async () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    const picks = hubThemePicks()
+    const picks = hubThemeDailyPicks()
     const cards = within(section).getAllByRole('link', { name: /.+/ })
 
-    expect(picks).toHaveLength(HUB_THEME_COUNT)
-    // 열 줄 + 「테마 전체 보기」
-    expect(cards).toHaveLength(HUB_THEME_COUNT + 1)
+    expect(picks).toHaveLength(HUB_THEME_ROWS)
+    // 다섯 줄 + 「테마 전체 보기」
+    expect(cards).toHaveLength(HUB_THEME_ROWS + 1)
     for (const theme of picks) {
       expect(within(section).getByRole('link', { name: theme.title })).not.toBeNull()
     }
@@ -87,7 +95,7 @@ describe('① 인기테마운세 — 리스트 10줄', () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       const row = within(section).getByRole('link', { name: theme.title })
 
       expect(row.tagName).toBe('A')
@@ -103,7 +111,7 @@ describe('① 인기테마운세 — 리스트 10줄', () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       const row = within(section).getByRole('link', { name: theme.title })
 
       expect(row.textContent).not.toMatch(/\d+\s*위/)
@@ -114,7 +122,7 @@ describe('① 인기테마운세 — 리스트 10줄', () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       const link = within(section).getByRole('link', { name: theme.title })
 
       expect(link.getAttribute('href')).toBe(themeListHref(theme))
@@ -133,10 +141,25 @@ describe('① 인기테마운세 — 리스트 10줄', () => {
     ).toBe(THEME_LIST_PATH)
   })
 
+  it('🔴 서버가 그린 다섯과 브라우저가 그린 다섯이 같다 (하이드레이션 불일치 금지)', async () => {
+    // 이 화면이 «매 새로고침 무작위»를 채택하지 않은 이유를 그대로 잰다: SSR 패스와 클라이언트
+    // 패스가 다른 다섯을 뽑으면 React 가 섹션을 통째로 버린다. 두 마크업에서 제목만 뽑아 견준다.
+    const titles = (html: string) =>
+      hubThemeDailyPicks()
+        .map((theme) => theme.title)
+        .filter((title) => html.includes(title))
+
+    const ssr = renderToStaticMarkup(<AnalysisDashboard />)
+    const { container } = await renderDashboard()
+
+    expect(titles(ssr)).toHaveLength(HUB_THEME_ROWS)
+    expect(titles(ssr)).toEqual(titles(container.innerHTML))
+  })
+
   it('제목·서브카피는 표의 문자열을 그대로 쓴다', async () => {
     await renderDashboard()
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       expect(screen.getByText(theme.title)).not.toBeNull()
       expect(screen.getByText(theme.subcopy)).not.toBeNull()
     }
@@ -153,7 +176,7 @@ describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', 
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       const sources = imagesOf(section, theme.title).map((image) => image.getAttribute('src'))
 
       expect(sources).toContain(themeThumbnailPath(theme.id))
@@ -164,7 +187,7 @@ describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', 
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       const sources = imagesOf(section, theme.title).map((image) => image.getAttribute('src'))
 
       expect(sources).toContain(themeFallbackImage(theme))
@@ -174,7 +197,7 @@ describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', 
   it('🔴 사진을 못 불러오면 그 층만 내려가고 폴백이 남는다 (깨진 그림 금지)', async () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
-    const [first] = hubThemePicks()
+    const [first] = hubThemeDailyPicks()
 
     const photo = imagesOf(section, first.title).find(
       (image) => image.getAttribute('src') === themeThumbnailPath(first.id)
@@ -190,11 +213,11 @@ describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', 
     expect(after).toContain(themeFallbackImage(first))
   })
 
-  it('위 세 줄만 즉시 받고 나머지는 lazy 다 (열 줄이 한꺼번에 내려오지 않는다)', async () => {
+  it('위 세 줄만 즉시 받고 나머지는 lazy 다 (다섯 줄이 한꺼번에 내려오지 않는다)', async () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    hubThemePicks().forEach((theme, index) => {
+    hubThemeDailyPicks().forEach((theme, index) => {
       const loadings = imagesOf(section, theme.title).map((image) => image.getAttribute('loading'))
 
       expect({ id: theme.id, loadings }).toEqual({
@@ -208,12 +231,35 @@ describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', 
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.themeFortune.id)
 
-    for (const theme of hubThemePicks()) {
+    for (const theme of hubThemeDailyPicks()) {
       for (const image of imagesOf(section, theme.title)) {
         expect(image.getAttribute('alt')).toBe('')
         expect(image.getAttribute('aria-hidden')).toBe('true')
       }
     }
+  })
+})
+
+describe('대작 카드 — 종합사주풀이의 메인 입구 (CEO 2026-08-22 통합)', () => {
+  it('🔴 카드도 CTA 도 통합 입구(studio/samhap)로 간다 — 사주 단독으로 가지 않는다', async () => {
+    await renderDashboard()
+
+    screen.getByRole('button', { name: /종합사주풀이 시작하기/ }).click()
+
+    expect(push).toHaveBeenCalledWith('/protected/studio/samhap')
+    expect(push).not.toHaveBeenCalledWith('/protected/analysis/cheonjiin')
+  })
+
+  it('카드에 한자를 쓰지 않는다 (구 「天 地 人 · 四 柱 八 字」 · 「命」)', async () => {
+    // 🔴 범위는 이 카드 하나다. 테마 표(`themes.ts`)의 카피에는 아직 한자가 남아 있고
+    //    (five-faces 서브카피의 오행 다섯 글자), 그건 법무 검토를 거친 별개 문안이라
+    //    여기서 함께 잡으면 남의 카피를 이 테스트가 인질로 잡는 꼴이 된다.
+    await renderDashboard()
+
+    const card = screen.getByRole('heading', { name: /태어난 순간 새겨진/ }).closest('.hanji-card')
+    if (!card) throw new Error('대작 카드를 찾지 못했다')
+
+    expect(card.textContent ?? '').not.toMatch(/[一-鿿]/)
   })
 })
 
@@ -237,7 +283,7 @@ describe('아이콘 런처 — 구 ② 카드 4장을 흡수한 자리', () => {
     }
   })
 
-  it('여덟 칸이 표 순서대로 서고 아이콘은 전부 hub webp 다', async () => {
+  it('일곱 칸이 표 순서대로 서고 아이콘은 전부 hub webp 다', async () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.launcher.id)
 

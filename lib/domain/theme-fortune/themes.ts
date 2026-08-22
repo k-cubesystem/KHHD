@@ -668,15 +668,23 @@ export const THEME_FORTUNES: readonly ThemeFortune[] = [
 export const THEME_LIST_PATH = '/protected/analysis/theme'
 
 /**
- * 허브 ① 리스트에 거는 줄 수.
+ * 허브 ① 의 **후보 풀** 크기 — 화면에 거는 줄 수가 아니다(2026-08-22 이후).
  *
- * 3 → 10 (CEO 2026-08-13 「3개 말고 상하단 사이즈를 좀 줄여서 10개까지」). 세로를 감당하는 것은
- * 이 숫자가 아니라 **행 모양**이다 — 풀폭 16:9 카드(1장 ≈ 210px)를 유튜브식 가로 행(≈ 88px)으로
- * 바꿔서 열 줄이 예전 넉 장보다 덜 먹는다(`components/analysis/AnalysisDashboard.tsx`).
+ * 3 → 10 (CEO 2026-08-13 「3개 말고 상하단 사이즈를 좀 줄여서 10개까지」)로 열 줄을 걸었다가,
+ * 2026-08-22 CEO 지시로 **화면은 다섯 줄**(`HUB_THEME_ROWS`)이 됐다. 열 종은 그대로 남아
+ * 「그날의 다섯」을 뽑는 모집단이 된다 — 순위표(`hubRank`)를 지우면 뽑을 후보가 사라진다.
  *
  * ⚠️ 출하 12종 중 열이므로 둘은 허브에 안 걸린다(`hubRank: null`) — 목록에서는 그대로 보인다.
  */
 export const HUB_THEME_COUNT = 10
+
+/**
+ * 허브 ① 리스트에 실제로 거는 줄 수. 10 → 5 (CEO 2026-08-22 「5줄로 줄이고 매번 다르게」).
+ *
+ * 다섯인 것이 곧 갈래 수(`THEME_CATEGORIES` 5종)라 «한 갈래에 한 줄»이 성립한다 —
+ * 그래서 매일 조합이 바뀌어도 리스트가 한 갈래로 쏠리지 않는다(`hubThemeDailyPicks`).
+ */
+export const HUB_THEME_ROWS = 5
 
 /**
  * 개별 풀이 캐시 기간(일) — 기존 `analyzeTrendAction` 승계(마스터 §7-2).
@@ -729,6 +737,70 @@ export function hubThemePicks(): readonly ThemeFortune[] {
     .filter((theme) => theme.hubRank !== null)
     .sort((a, b) => (a.hubRank ?? 0) - (b.hubRank ?? 0))
     .slice(0, HUB_THEME_COUNT)
+}
+
+/** 문자열 → 32bit 해시(FNV-1a). 날짜 키를 시드 숫자로 바꾸는 데만 쓴다. */
+function fnv1a(value: string): number {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash >>> 0
+}
+
+/** mulberry32 — 작고 결정론적인 PRNG(`lib/domain/event/draw.ts` 와 같은 구현). */
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = state
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** KST 는 서머타임이 없다 — UTC 고정 오프셋이면 충분하다. */
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000
+
+/** 그날의 시드 — KST 기준 'YYYY-MM-DD'. 서버와 브라우저의 로컬 타임존이 달라도 같은 값이다. */
+export function hubThemeDayKey(now: Date): string {
+  return new Date(now.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10)
+}
+
+/**
+ * 허브 ① 「인기테마운세」 — **그날의 다섯 줄**(CEO 2026-08-22 「5줄로 줄이고 매번 다르게」).
+ *
+ * 🔴 «매 새로고침 무작위»를 쓰지 않은 이유. 이 리스트를 그리는 `AnalysisDashboard` 는 클라이언트
+ *    컴포넌트지만 SSR 로 한 번 그려진 뒤 브라우저에서 하이드레이트된다. `Math.random()` 을 쓰면
+ *    서버가 뽑은 다섯과 브라우저가 뽑은 다섯이 달라 React 하이드레이션 불일치로 섹션이 통째로
+ *    날아간다(같은 함정을 `hubGreeting` 이 이미 «Math.random 금지»로 못 박아 뒀다). 게다가 이
+ *    화면은 캐시를 타므로 «무작위»가 실제로는 «캐시가 얼어붙은 하나»가 된다.
+ *    그래서 **날짜 시드 결정론**이다 — 같은 날은 누구에게나 같은 다섯, 날이 바뀌면 갈린다.
+ *
+ * 뽑는 방식: 갈래(5종)마다 후보 둘 중 하나를 고르고, 고른 다섯의 세로 순서를 다시 섞는다.
+ * 갈래당 한 줄이라 무엇이 뽑히든 다섯 갈래가 다 보이고, 같은 갈래가 연달아 설 수 없다.
+ */
+export function hubThemeDailyPicks(now: Date = new Date()): readonly ThemeFortune[] {
+  const pool = hubThemePicks()
+  const random = mulberry32(fnv1a(`hub-theme:${hubThemeDayKey(now)}`))
+
+  // 갈래 순서는 THEME_CATEGORIES 선언 순서 — 시드가 같으면 그룹 구성도 같아야 결정론이 선다.
+  const chosen: ThemeFortune[] = []
+  for (const category of Object.keys(THEME_CATEGORIES) as ThemeCategory[]) {
+    const group = pool.filter((theme) => theme.category === category)
+    if (group.length === 0) continue
+    chosen.push(group[Math.floor(random() * group.length)])
+  }
+
+  // Fisher-Yates — 같은 rng 를 이어 쓴다(호출 순서가 곧 시드의 일부다).
+  for (let index = chosen.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(random() * (index + 1))
+    ;[chosen[index], chosen[swap]] = [chosen[swap], chosen[index]]
+  }
+
+  return chosen.slice(0, HUB_THEME_ROWS)
 }
 
 export function themeDestination(theme: ThemeFortune): ThemeDestination | null {

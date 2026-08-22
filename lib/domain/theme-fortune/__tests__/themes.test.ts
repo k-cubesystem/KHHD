@@ -12,6 +12,9 @@ import {
   DEFAULT_THEME_TAB,
   hasThemeReading,
   HUB_THEME_COUNT,
+  HUB_THEME_ROWS,
+  hubThemeDailyPicks,
+  hubThemeDayKey,
   hubThemePicks,
   isFreeReading,
   isFreeRoute,
@@ -416,7 +419,12 @@ describe('1차 출하 범위', () => {
   })
 })
 
-describe('허브 ① 인기테마운세 — 리스트 10줄', () => {
+/**
+ * ⚠️ 2026-08-22: `hubThemePicks` 는 이제 **화면 리스트가 아니라 후보 풀**이다(열 종). 화면에
+ *    거는 다섯 줄은 `hubThemeDailyPicks` 가 여기서 뽑는다. 아래 단언은 그대로 둔다 — 풀이
+ *    무너지면 뽑을 것이 없어지므로 이 계약이 오히려 더 중요해졌다.
+ */
+describe('허브 ① 인기테마운세 — 후보 풀 10종', () => {
   it(`정확히 ${HUB_THEME_COUNT}줄이고 전부 출하 테마다`, () => {
     const picks = hubThemePicks()
 
@@ -468,6 +476,90 @@ describe('허브 ① 인기테마운세 — 리스트 10줄', () => {
           .map((theme) => theme.category)
       ).size
     ).toBe(Object.keys(THEME_CATEGORIES).length)
+  })
+})
+
+/**
+ * 허브 ① 화면 리스트 — 그날의 다섯 줄(CEO 2026-08-22 「5줄로 줄이고 매번 다르게」).
+ *
+ * 🔴 이 테스트가 지키는 핵심은 «다르다»가 아니라 **«같은 날은 같다»**다. 서버 렌더와 브라우저
+ *    하이드레이션이 다른 다섯을 뽑으면 React 불일치로 섹션이 통째로 날아간다.
+ */
+describe('허브 ① 인기테마운세 — 그날의 다섯 줄', () => {
+  const atKst = (year: number, month: number, day: number, hour = 12) =>
+    new Date(Date.UTC(year, month - 1, day, hour - 9, 0))
+
+  it(`정확히 ${HUB_THEME_ROWS}줄이다`, () => {
+    expect(HUB_THEME_ROWS).toBe(5)
+    expect(hubThemeDailyPicks(atKst(2026, 8, 22))).toHaveLength(HUB_THEME_ROWS)
+  })
+
+  it('🔴 같은 날이면 몇 번을 불러도 같다 (하이드레이션 불일치 방지)', () => {
+    const morning = hubThemeDailyPicks(atKst(2026, 8, 22, 6)).map((theme) => theme.id)
+
+    for (let repeat = 0; repeat < 20; repeat += 1) {
+      expect(hubThemeDailyPicks(atKst(2026, 8, 22, 6)).map((theme) => theme.id)).toEqual(morning)
+    }
+    // 같은 날 안에서는 시각이 달라도 같다 — 새로고침마다 흔들리지 않는다.
+    expect(hubThemeDailyPicks(atKst(2026, 8, 22, 23)).map((theme) => theme.id)).toEqual(morning)
+    expect(hubThemeDailyPicks(atKst(2026, 8, 22, 0)).map((theme) => theme.id)).toEqual(morning)
+  })
+
+  it('🔴 서울 시각으로 날을 센다 (로컬 타임존이 달라도 같은 다섯)', () => {
+    // 2026-08-21 21:00 UTC = 서울 8/22 06:00 → 22일의 다섯이 나와야 한다.
+    expect(hubThemeDayKey(new Date('2026-08-21T21:00:00Z'))).toBe('2026-08-22')
+    expect(hubThemeDailyPicks(new Date('2026-08-21T21:00:00Z')).map((theme) => theme.id)).toEqual(
+      hubThemeDailyPicks(atKst(2026, 8, 22)).map((theme) => theme.id)
+    )
+  })
+
+  it('날이 바뀌면 조합이 바뀐다 (한 달을 훑어 최소 다섯 가지 조합이 나온다)', () => {
+    const combos = new Set<string>()
+    for (let day = 1; day <= 30; day += 1) {
+      combos.add(
+        hubThemeDailyPicks(atKst(2026, 9, day))
+          .map((theme) => theme.id)
+          .join('|')
+      )
+    }
+    // 「매번 다르게」의 실체 — 고정 다섯이면 1이 나온다.
+    expect(combos.size).toBeGreaterThanOrEqual(5)
+  })
+
+  it('중복 없이 다섯이고 전부 후보 풀에서 나온다', () => {
+    const pool = new Set(hubThemePicks().map((theme) => theme.id))
+
+    for (let day = 1; day <= 60; day += 1) {
+      const picks = hubThemeDailyPicks(atKst(2026, 7, day))
+
+      expect(picks).toHaveLength(HUB_THEME_ROWS)
+      expect(new Set(picks.map((theme) => theme.id)).size).toBe(HUB_THEME_ROWS)
+      for (const pick of picks) {
+        expect(pool.has(pick.id)).toBe(true)
+        expect(pick.shipped).toBe(true)
+      }
+    }
+  })
+
+  it('어떤 날에도 다섯 갈래가 한 줄씩 걸린다 (한 갈래로 쏠리지 않는다)', () => {
+    for (let day = 1; day <= 60; day += 1) {
+      const categories = hubThemeDailyPicks(atKst(2026, 7, day)).map((theme) => theme.category)
+
+      expect(new Set(categories).size).toBe(Object.keys(THEME_CATEGORIES).length)
+    }
+  })
+
+  it('세로 순서도 날마다 갈린다 (갈래 순서가 고정이 아니다)', () => {
+    const orders = new Set<string>()
+    for (let day = 1; day <= 30; day += 1) {
+      orders.add(
+        hubThemeDailyPicks(atKst(2026, 10, day))
+          .map((theme) => theme.category)
+          .join('|')
+      )
+    }
+
+    expect(orders.size).toBeGreaterThanOrEqual(5)
   })
 })
 

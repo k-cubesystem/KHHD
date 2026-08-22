@@ -5,7 +5,7 @@
  * 그래서 허브 맨 위가 두 겹이 됐다.
  *
  *   [앱 헤더]  아이콘 + 「청담해화당」 + 인사 한 줄  ← `components/mobile-header.tsx` 가 그린다
- *   [런처]     원형 아이콘 8칸 (2×4)               ← `components/analysis/HubLauncher.tsx`
+ *   [런처]     원형 아이콘 7칸 (4열 · 4+3)          ← `components/analysis/HubLauncher.tsx`
  *
  * 🔴 이 층은 **상수와 정적 자산만** 쓴다. 허브에서 AI·서버액션을 부르면 9차 사고(마운트마다
  *    Gemini 생성)가 그대로 재발한다. 이 파일에 import 가 하나(테마 목록 경로)뿐인 것이 계약이다.
@@ -34,26 +34,38 @@ export interface HubLauncherEntry {
   readonly label: string
   /** 목적지. 허브 밖의 실제 화면이며, 리다이렉트 경유가 아니어야 한다. */
   readonly href: string
-  /** 「설빛 온기」 일러스트 (public/icons/hub). 여덟 칸 모두 같은 결의 webp 다. */
+  /** 「설빛 온기」 일러스트 (public/icons/hub). 일곱 칸 모두 같은 결의 webp 다. */
   readonly icon: string
 }
 
 /**
- * 선언 순서 = 화면의 왼쪽 위부터의 순서(2×4).
+ * 선언 순서 = 화면의 왼쪽 위부터의 순서(4열 그리드, 4+3).
  *
- * 앞 다섯은 «내 것을 본다»(사주→궁합→관상→손금→풍수), 뒤 셋은 «더 본다»(재물운·종합·목록).
- * 첫 칸이 사주풀이인 것은 유도 카드(`MasterpieceSection`)와 같은 목적지라 일부러다 —
+ * 첫 칸이 «종합사주풀이»인 것은 유도 카드(`MasterpieceSection`)와 같은 목적지라 일부러다 —
  * 아이콘으로 한 번, 큰 카드로 한 번, 같은 문을 두 크기로 연다.
+ *
+ * ## 🔴 「사주풀이」 칸이 없어진 이유 (CEO 2026-08-22)
+ * «사주만 따로 있고 종합사주 따로 있고 이렇게 있을 필요가 없어» — 두 칸(`saju` →
+ * `/analysis/cheonjiin`, `samhap` → `/studio/samhap`)이 **한 칸으로 합쳐졌다.** 통합 입구는
+ * `/protected/studio/samhap` 이고, 그 화면이 재료 상태를 보고 갈린다:
+ *   · 재료 완비 → 「종합사주풀이 열람」
+ *   · 재료 부족 → 「사주풀이부터 시작하기」(→ `/analysis/cheonjiin`)를 주 행동으로
+ *
+ * 🔴 `cheonjiin` 경로는 **죽이지 않았다.** 복주머니 여정의 첫 주머니(`journey.ts` STAGE_META
+ *    SAJU)·재분석 라우트(`reanalyze-routes.ts`)·가족 미션이 그 경로를 그대로 쓴다. 없앤 것은
+ *    허브의 «두 번째 문»이지 화면이 아니다.
+ *
+ * 🔴 가격·상품 구조는 그대로다 — `FEATURE_COST.saju` 와 `.samhap` 은 여전히 별개 상품이다.
+ *    이번 통합은 **입구·내비게이션·카피**에서 끝난다.
  */
 export const HUB_LAUNCHER: readonly HubLauncherEntry[] = [
-  { id: 'saju', label: '사주풀이', href: '/protected/analysis/cheonjiin', icon: '/icons/hub/saju.webp' },
+  { id: 'samhap', label: '종합사주', href: '/protected/studio/samhap', icon: '/icons/hub/samhap-v2.webp' },
   { id: 'compatibility', label: '궁합', href: '/protected/analysis/compatibility', icon: '/icons/hub/gunghap.webp' },
   { id: 'face', label: '관상', href: '/protected/studio/face', icon: '/icons/hub/gwansang.webp' },
   { id: 'palm', label: '손금', href: '/protected/studio/palm', icon: '/icons/hub/songeum.webp' },
   { id: 'fengshui', label: '풍수', href: '/protected/studio/fengshui', icon: '/icons/hub/pungsu.webp' },
   // targetId 없는 맨 경로로 보낸다 — 그 화면이 v_destiny_targets 로 본인 대상을 스스로 고른다.
   { id: 'wealth', label: '재물운', href: '/protected/analysis/wealth', icon: '/icons/hub/jaemul.webp' },
-  { id: 'samhap', label: '종합풀이', href: '/protected/studio/samhap', icon: '/icons/hub/samhap.webp' },
   { id: 'themes', label: '테마 전체', href: THEME_LIST_PATH, icon: '/icons/hub/themes.webp' },
 ]
 
