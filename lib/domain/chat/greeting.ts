@@ -45,13 +45,21 @@ export interface GreetingInput {
   devotionLevel?: number | null
   /** 사용자가 '새 대화'를 눌러 자리를 새로 편 경우 — 방문 간격과 무관하게 짧게 연다. */
   forceNewChat?: boolean
+  /**
+   * 「오늘의 지도」 한 줄(lib/domain/fortune/day-map.ts) — 그날 일진에서 결정론으로 뽑은 문장.
+   * 인사와 질문 사이에 놓여 **매일 다른 첫 마디**를 만든다. 같은 날 다시 와도 같은 문장(결정론).
+   */
+  todayMapLine?: string
 }
 
 export interface Greeting {
   visitKind: VisitKind
-  /** 순서대로 시차 출력할 줄들 (마지막 줄이 질문). */
+  /**
+   * 순서대로 시차 출력할 줄들. 내레이션 뒤에 **말풍선은 하나**다 —
+   * 신위가 두세 번 연달아 말을 걸면 «먼저 말하는 사람»이 아니라 «떠드는 화면»이 된다(CEO 지시 08-22).
+   */
   lines: GreetingLine[]
-  /** 마지막 열린 질문 — lines 의 끝과 동일 문자열. */
+  /** 마지막 열린 질문 — 말풍선의 끝을 이룬다(lines.at(-1).text 가 이 문자열로 끝난다). */
   question: string
   /** 질문에 답하기 쉽게 주는 빠른 답 칩. */
   quickReplies: string[]
@@ -261,11 +269,32 @@ export function buildGreeting(input: GreetingInput): Greeting {
   const lines = [...built.lines]
   const target = input.targetName?.trim()
   if (target && visitKind !== 'resume' && visitKind !== 'new_chat') {
-    // 질문 앞에 대상 고지를 끼운다 — 질문은 항상 마지막 줄이어야 한다.
+    // 질문 앞에 대상 고지를 끼운다 — 질문은 항상 마지막이어야 한다.
     lines.splice(lines.length - 1, 0, { kind: 'speech', text: `오늘은 ${target}님을 함께 살펴보는 자리네요.` })
   }
 
-  return { visitKind, lines, question: built.question, quickReplies: built.quickReplies }
+  // 「오늘의 지도」 — 인사와 질문 «사이»에. 첫 마디가 날마다 달라지는 자리다.
+  const todayMap = input.todayMapLine?.trim()
+  if (todayMap) lines.splice(lines.length - 1, 0, { kind: 'speech', text: todayMap })
+
+  return { visitKind, lines: mergeSpeech(lines), question: built.question, quickReplies: built.quickReplies }
+}
+
+/**
+ * 연속된 말풍선을 하나로 합친다 — 화면에 뜨는 신위의 말풍선은 «한 개»여야 한다.
+ * (내레이션은 말풍선이 아니라 중앙 이탤릭이므로 합치지 않고 자리도 지킨다.)
+ */
+function mergeSpeech(lines: GreetingLine[]): GreetingLine[] {
+  const merged: GreetingLine[] = []
+  for (const line of lines) {
+    const prev = merged[merged.length - 1]
+    if (line.kind === 'speech' && prev?.kind === 'speech') {
+      merged[merged.length - 1] = { kind: 'speech', text: `${prev.text}\n\n${line.text}` }
+      continue
+    }
+    merged.push(line)
+  }
+  return merged
 }
 
 /** 오프닝 줄들을 대화 저장용 단일 본문으로 합친다(내레이션은 괄호로 보존). */

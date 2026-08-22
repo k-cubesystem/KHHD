@@ -41,7 +41,7 @@ describe('resolveVisitKind', () => {
 })
 
 describe('buildGreeting — 공통 계약', () => {
-  it('마지막 줄은 항상 질문과 동일하다', () => {
+  it('마지막 말풍선은 항상 질문으로 끝난다', () => {
     const cases = [
       { now: NOW, lastVisitAt: null },
       { now: NOW, lastVisitAt: '2026-07-24T10:00:00.000Z', memories: [concern] },
@@ -50,9 +50,39 @@ describe('buildGreeting — 공통 계약', () => {
     ]
     for (const c of cases) {
       const g = buildGreeting(c)
-      expect(g.lines.at(-1)?.text).toBe(g.question)
+      // 말풍선을 하나로 합치므로 «질문과 동일»이 아니라 «질문으로 끝난다»가 계약이다(08-22 CEO 지시).
+      expect(g.lines.at(-1)?.text.endsWith(g.question)).toBe(true)
       expect(g.lines.at(-1)?.kind).toBe('speech')
     }
+  })
+
+  it('🔴 신위의 말풍선은 언제나 한 개 — 연달아 말 걸지 않는다 (08-22 CEO 지시)', () => {
+    const cases = [
+      { now: NOW, lastVisitAt: null },
+      { now: NOW, lastVisitAt: '2026-07-24T10:00:00.000Z', memories: [concern], devotionLevel: 3 },
+      { now: NOW, lastVisitAt: '2026-07-01T10:00:00.000Z', memories: [concern] },
+      { now: NOW, lastVisitAt: '2026-07-25T00:30:00.000Z' },
+      { now: NOW, lastVisitAt: null, targetName: '어머니', todayMapLine: '오늘은 흙이 쇠를 기르는 날이에요.' },
+    ]
+    for (const c of cases) {
+      const g = buildGreeting(c)
+      expect(g.lines.filter((l) => l.kind === 'speech')).toHaveLength(1)
+    }
+  })
+
+  it('오늘의 지도 한 줄은 인사와 질문 사이에 놓인다', () => {
+    const line = '오늘은 쇠가 불을 만나는 날이에요.\n달궈지는 만큼 그릇이 됩니다.'
+    const g = buildGreeting({ now: NOW, lastVisitAt: null, todayMapLine: line })
+    const bubble = g.lines.at(-1)?.text ?? ''
+    expect(bubble).toContain(line)
+    expect(bubble.indexOf(line)).toBeLessThan(bubble.indexOf(g.question))
+    expect(bubble.endsWith(g.question)).toBe(true)
+  })
+
+  it('오늘의 지도가 없으면 종전 그대로 (선택 입력)', () => {
+    const g = buildGreeting({ now: NOW, lastVisitAt: null })
+    expect(g.lines.filter((l) => l.kind === 'speech')).toHaveLength(1)
+    expect(g.lines.at(-1)?.text.endsWith(g.question)).toBe(true)
   })
 
   it('질문은 정확히 한 개 — 물음표로 끝나거나 이어가기 유도문', () => {
@@ -183,7 +213,7 @@ describe('buildGreeting — 새 대화(new_chat)', () => {
     expect(g.lines.length).toBeLessThanOrEqual(2)
     const joined = g.lines.map((l) => l.text).join('\n')
     expect(joined).not.toContain('이직')
-    expect(g.lines.at(-1)?.text).toBe(g.question)
+    expect(g.lines.at(-1)?.text.endsWith(g.question)).toBe(true)
   })
 
   it('새 대화엔 대상 고지를 넣지 않는다 (짧게 유지)', () => {
@@ -198,12 +228,13 @@ describe('buildGreeting — 새 대화(new_chat)', () => {
 })
 
 describe('buildGreeting — 점사 대상(가족)', () => {
-  it('가족 대상이면 질문 바로 앞에 대상 고지를 넣는다', () => {
+  it('가족 대상이면 말풍선 안에서 질문 바로 앞에 대상 고지가 온다', () => {
     const g = buildGreeting({ now: NOW, lastVisitAt: null, targetName: '어머니' })
-    const idx = g.lines.findIndex((l) => l.text.includes('어머니님을 함께 살펴보는'))
-    expect(idx).toBeGreaterThan(-1)
-    expect(idx).toBe(g.lines.length - 2) // 질문 바로 앞
-    expect(g.lines.at(-1)?.text).toBe(g.question)
+    const bubble = g.lines.at(-1)?.text ?? ''
+    const noticeIdx = bubble.indexOf('어머니님을 함께 살펴보는')
+    expect(noticeIdx).toBeGreaterThan(-1)
+    expect(noticeIdx).toBeLessThan(bubble.indexOf(g.question)) // 질문보다 앞
+    expect(bubble.endsWith(g.question)).toBe(true)
   })
 
   it('이어서 유형엔 대상 고지를 넣지 않는다 (짧게 유지)', () => {
@@ -218,6 +249,11 @@ describe('greetingToContent', () => {
     const content = greetingToContent(g)
     expect(content).toContain('(향 연기가 천천히 피어오릅니다.)')
     expect(content).toContain('월하노인')
-    expect(content.split('\n\n').length).toBe(g.lines.length)
+    // 내레이션 문단은 정확히 줄 수만큼 — 말풍선 안의 문단 나눔(\n\n)은 복원 시 한 말풍선 안에 남는다.
+    const paragraphs = content.split('\n\n')
+    expect(paragraphs.filter((p) => p.startsWith('(') && p.endsWith(')'))).toHaveLength(
+      g.lines.filter((l) => l.kind === 'narration').length
+    )
+    expect(content.endsWith(g.question)).toBe(true)
   })
 })

@@ -898,6 +898,23 @@ export async function getChatOpening(familyMemberId?: string, options?: { newCha
       logger.warn('[getChatOpening] devotion skipped:', e)
     }
 
+    // 「오늘의 지도」 — 그날 일진에서 결정론으로 뽑는 한 줄(AI 호출 0). 첫 마디가 날마다 달라진다.
+    // 만세력은 서버 전용(lunar-javascript)이라 동적 로드하고, 실패해도 선문안 자체는 나와야 한다.
+    let todayMapLine: string | undefined
+    try {
+      const kstToday = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      const [{ calculateManseBasic }, { deriveDayMap, dayMapGreetingLine }] = await Promise.all([
+        import('@/lib/domain/saju/manse'),
+        import('@/lib/domain/fortune/day-map'),
+      ])
+      // 정오 기준 — 야자시 경계에서 일주가 흔들리는 것을 피한다(/ilgan 과 동일 규율).
+      const dayPillar = calculateManseBasic(kstToday, '12:00').day
+      const map = deriveDayMap(dayPillar.ganElement, dayPillar.jiElement, dayPillar.jiHan || dayPillar.ji)
+      if (map) todayMapLine = dayMapGreetingLine(map)
+    } catch (e) {
+      logger.warn('[getChatOpening] day map skipped:', e)
+    }
+
     const greeting = buildGreeting({
       deityName,
       userName: profileRes.data?.full_name ?? null,
@@ -907,6 +924,7 @@ export async function getChatOpening(familyMemberId?: string, options?: { newCha
       memories: memories.map((m) => ({ type: m.type, content: m.content })),
       devotionLevel,
       forceNewChat: options?.newChat === true,
+      todayMapLine,
     })
 
     return { success: true, greeting }

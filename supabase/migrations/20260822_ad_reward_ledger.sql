@@ -45,9 +45,12 @@ BEGIN
         AND (granted_at AT TIME ZONE 'Asia/Seoul')::date = v_today) >= p_daily_sets THEN
     RETURN 'DAILY_LIMIT';
   END IF;
+  -- 🔴 버려진 pending 은 세지 않는다 — 광고를 시작만 하고 안 돌아온 행까지 세면 실수로 두 번
+  --    누른 사용자가 하루 시도권을 까먹는다(08-22 실측 관찰). 지급됐거나 아직 살아 있는 것만.
   IF (SELECT count(*) FROM ad_reward_ledger
       WHERE user_id = p_user_id
-        AND (started_at AT TIME ZONE 'Asia/Seoul')::date = v_today) >= p_daily_starts THEN
+        AND (started_at AT TIME ZONE 'Asia/Seoul')::date = v_today
+        AND (status = 'granted' OR started_at > now() - interval '10 minutes')) >= p_daily_starts THEN
     RETURN 'START_LIMIT';
   END IF;
   INSERT INTO ad_reward_ledger (user_id, provider, proof_key, proof)
