@@ -85,7 +85,7 @@ const PROFILE_GROUPS: readonly {
       { href: '/protected/profile/manse', icon: ScrollText, label: '내 명식', sub: '사주팔자 원국' },
       { href: '/protected/history', icon: BookOpen, label: '분석 기록', sub: '지난 풀이 다시 보기' },
       { href: '/protected/family', icon: Users, label: '가족·인연 관리', sub: '등록과 수정' },
-      { href: '/protected/ai-shaman', icon: Headphones, label: '고민상담', sub: '해화지기와 이야기' },
+      { href: '/protected/ai-shaman', icon: Headphones, label: '속풀이', sub: '신령님께 여쭙기' },
     ],
   },
   {

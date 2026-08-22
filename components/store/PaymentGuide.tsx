@@ -164,7 +164,7 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
   const membershipBenefits = [
     '신당 — 신위 모시기·꾸미기 전용 이용',
     entryPlan ? `가족관리 — 인연 ${entryPlan.relationshipLimit}명 등록·궁합` : '가족관리 — 인연 등록·궁합',
-    '고민상담 — 해화지기와 대화 (멤버십 전용 입장)',
+    '속풀이 — 신령님과 문답 (멤버십 전용 입장)',
     '웹툰 — 멤버십 전용 회차 열람',
     `기록 보관 — 무료는 최근 ${retentionDays}일까지, 멤버십은 제한 없이`,
     entryPlan ? `복채 — ${words.every}마다 ${entryPlan.bokchaePerPeriod}만냥 지급` : '복채 — 결제 주기마다 지급',
@@ -195,7 +195,7 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
       <section className="space-y-2.5 rounded-2xl border border-gold-500/25 bg-surface/40 p-4">
         <SectionHead icon={Crown} title="멤버십 — 기능이 열립니다" eyebrow="전부 쓰실 분" />
         <p className="font-sans text-[13px] leading-relaxed text-ink-light/70">
-          복채로는 열리지 않는 방이 있습니다. 신당·가족관리·고민상담·웹툰 멤버십 회차는 멤버십 회원만 들어갑니다.
+          복채로는 열리지 않는 방이 있습니다. 신당·가족관리·속풀이·웹툰 멤버십 회차는 멤버십 회원만 들어갑니다.
         </p>
         <ul className="space-y-1.5">
           {membershipBenefits.map((b) => (
@@ -241,7 +241,7 @@ function GuestBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target:
             신당을 꾸미고 가족 사주까지 관리한다 → <span className="font-semibold text-gold-300">멤버십</span>
           </li>
           <li>
-            고민상담만 하루 써 본다 →{' '}
+            속풀이만 하루 써 본다 →{' '}
             <Link
               href="/protected/store?tab=voucher"
               onClick={() => onCta('voucher')}
@@ -271,7 +271,7 @@ function MemberBody({ model, onCta }: { model: PaymentGuideModel; onCta: (target
             : '멤버십에 포함된 복채는 결제 주기마다 채워집니다. 주기 안에 다 쓰셨다면 복채만 따로 충전하시면 됩니다.'}
         </p>
         <p className="font-sans text-[12px] text-ink-light/55">
-          신당·가족관리·고민상담·웹툰 멤버십 회차는 이미 열려 있습니다. 복채는 풀이를 볼 때 쓰입니다.
+          신당·가족관리·속풀이·웹툰 멤버십 회차는 이미 열려 있습니다. 복채는 풀이를 볼 때 쓰입니다.
         </p>
         <FeeTable model={model} />
         {entryPack && (

@@ -25,7 +25,7 @@ test.describe('가이드 공지 바', () => {
 
     await login(page)
     await page.goto('/protected/ai-shaman')
-    await expect(page.getByPlaceholder(/고민|질문|입력/)).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByPlaceholder(/고민|질문|입력|여쭤/)).toBeVisible({ timeout: 30_000 })
 
     // 1) 구 우하단 아바타(가이드 …)가 사라졌는지
     await expect(page.getByRole('button', { name: /^가이드 / })).toHaveCount(0)
@@ -39,7 +39,7 @@ test.describe('가이드 공지 바', () => {
     console.log('[PASS] 하단 가이드 바 노출')
 
     // 3) 하단 메뉴 "위쪽"에 있는지 — 바 아래끝이 메뉴 위끝보다 위여야 한다
-    const nav = page.locator('nav').filter({ hasText: '고민상담' }).first()
+    const nav = page.locator('nav').filter({ hasText: '속풀이' }).first()
     const navBox = await nav.boundingBox()
     expect(navBox, '하단 메뉴 박스').not.toBeNull()
     if (barBox && navBox) {

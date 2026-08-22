@@ -26,7 +26,7 @@ export const AI_ACTION_LABELS: Record<string, string> = {
   summarizer: '대화 요약',
   memory: '기억 추출',
   // ── 직접 호출 3곳 ──
-  shaman_chat: '고민상담 채팅',
+  shaman_chat: '속풀이 채팅',
   cheonjiin_report: '천지인 종합비록',
   image_generation: '이미지 생성',
   // ── withGeminiRateLimit 6종 ──

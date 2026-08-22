@@ -21,7 +21,7 @@ test.describe('디테일 신뢰·재미 (R1/F2)', () => {
       await expect(launcher.getByRole('link', { name: label })).toBeVisible()
     }
     // 🔴 하루 전 CEO 가 허브에서 내린 셋은 런처에도 없다.
-    for (const gone of ['오늘의 운세', '2026 병오년', '고민상담']) {
+    for (const gone of ['오늘의 운세', '2026 병오년', '속풀이']) {
       await expect(launcher.getByRole('link', { name: gone })).toHaveCount(0)
     }
     await expect(page.getByText('무엇으로 볼까요')).toHaveCount(0)

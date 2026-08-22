@@ -2410,7 +2410,7 @@ export function ShrineRoomClient({
             <p className="mt-3 font-serif text-[14px] leading-relaxed text-ink-primary">
               {scene.mainDeity ? `${scene.mainDeity.name}과 이야기를 나누시겠습니까?` : '이야기를 나누시겠습니까?'}
             </p>
-            <p className="mt-1.5 font-sans text-[11px] text-ink-primary/45">고민상담 화면으로 모십니다</p>
+            <p className="mt-1.5 font-sans text-[11px] text-ink-primary/45">속풀이 화면으로 모십니다</p>
             <div className="mt-4 flex gap-2">
               <button
                 type="button"

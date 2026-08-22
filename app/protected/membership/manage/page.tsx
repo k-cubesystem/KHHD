@@ -164,8 +164,8 @@ export default async function MembershipManagePage() {
         ) : (
           <div className="mt-4 space-y-3">
             <p className="break-keep font-sans text-[12.5px] leading-relaxed text-ink-light/50">
-              멤버십은 신당 · 가족관리 · 고민상담의 문을 엽니다. 사주 · 궁합 · 관상 · 손금 · 풍수는 멤버십이 없어도
-              복채로 보실 수 있습니다.
+              멤버십은 신당 · 가족관리 · 속풀이의 문을 엽니다. 사주 · 궁합 · 관상 · 손금 · 풍수는 멤버십이 없어도 복채로
+              보실 수 있습니다.
             </p>
             <Link
               href="/protected/store?tab=membership"

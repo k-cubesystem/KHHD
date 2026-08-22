@@ -210,6 +210,8 @@ export interface ShamanChatResponse {
   bondLeveledUp?: boolean
   /** 현재 인연 단계명 (레벨업 연출용) */
   bondLevelName?: string
+  /** 차감 반영 후 서버 기준 잔여 — 클라 낙관 감소치를 이 값으로 덮어써 desync 를 없앤다(P0-F5). */
+  remaining?: { free: number; purchased: number; total: number }
 }
 
 export interface ShamanQuestionStatus {
@@ -381,6 +383,10 @@ export async function sendShamanChatMessage(
     // 엣지로 보내면 신당 통합이 조용히 전부 사라지므로 위임하지 않는다.
     logger.warn('[sendShamanChatMessage] EDGE_AI_CHAT 활성 상태지만 신당 3.0 패리티 부재 — 로컬 경로로 처리')
   }
+  // AI 실패 시 보상 환급용 — 어느 주머니에서 소비했는지 try 밖에서 기억한다(P0-F5).
+  let consumedFrom: 'free' | 'purchased' | null = null
+  let refundUserId: string | null = null
+  let refundDate = ''
   try {
     const supabase = await createClient()
     const {
@@ -407,7 +413,9 @@ export async function sendShamanChatMessage(
       }
     }
 
-    // 2. 질문권 소비 (일일권 먼저, 소진 시 구매권)
+    // 2. 질문권 소비 (일일권 먼저, 소진 시 구매권). 성공한 소비처를 기억한다 — AI 실패 시 되돌린다.
+    refundUserId = user.id
+    refundDate = today
     if (status.dailyFreeRemaining > 0) {
       // 일일 무료 질문 소비 (total_turns 증가)
       const { error: rpcError } = await adminClient.rpc('record_ai_chat_turn', {
@@ -418,11 +426,14 @@ export async function sendShamanChatMessage(
       if (rpcError) {
         logger.error('[sendShamanChatMessage] RPC error:', rpcError)
         // RPC 실패해도 AI 응답은 진행 (non-fatal)
+      } else {
+        consumedFrom = 'free'
       }
     } else {
       // 구매 질문권 소비 — 원자 RPC (동시 요청 시 단일 차감 레이스 제거)
       const { error: consumeError } = await adminClient.rpc('consume_shaman_credit', { p_user_id: user.id })
       if (consumeError) logger.error('[sendShamanChatMessage] credit consume error:', consumeError)
+      else consumedFrom = 'purchased'
     }
 
     // 3. 사용자 및 가족 컨텍스트 조회
@@ -611,18 +622,45 @@ export async function sendShamanChatMessage(
     if (handRecord) suggestions.push('손금에서 가장 주목해야 할 부분이 있나요?')
     suggestions.push('올해 가장 조심해야 할 것은?', '이번 달 주요 운세 흐름은?', '저에게 맞는 개운법을 알려주세요')
 
+    // 서버 기준 잔여(차감 반영). 마스터(UNLIMITED_BALANCE)는 감산 없이 그대로 내려간다.
+    const remainingFree =
+      consumedFrom === 'free' ? Math.max(0, status.dailyFreeRemaining - 1) : status.dailyFreeRemaining
+    const remainingPurchased =
+      consumedFrom === 'purchased' ? Math.max(0, status.purchasedCredits - 1) : status.purchasedCredits
+
     return {
       success: true,
       response: responseText,
       suggestedQuestions: suggestions.slice(0, 4),
+      remaining: { free: remainingFree, purchased: remainingPurchased, total: remainingFree + remainingPurchased },
       deityCode: deityCode ?? undefined,
       emotion: emotion ?? undefined,
       bondLeveledUp: bondLeveledUp || undefined,
       bondLevelName,
     }
   } catch (e: unknown) {
-    logger.error('[sendShamanChatMessage] Error:', e)
-    return { success: false, error: e instanceof Error ? e.message : '오류가 발생했습니다.' }
+    // Error 를 첫 인자로 — logger 가 Sentry captureException 으로 잇는다(스택 보존).
+    logger.error(e instanceof Error ? e : new Error(String(e)), '[sendShamanChatMessage]')
+
+    // 차감 후 AI 가 실패하면 질문권이 그냥 소실됐다 — 소비처 그대로 되돌린다(P0-F5).
+    if (consumedFrom && refundUserId) {
+      try {
+        const adminClient = createAdminClient()
+        const { error: refundError } =
+          consumedFrom === 'free'
+            ? await adminClient.rpc('refund_ai_chat_turn', { p_user_id: refundUserId, p_date: refundDate })
+            : await adminClient.rpc('add_shaman_credits', { p_user_id: refundUserId, p_amount: 1 })
+        if (refundError) logger.error('[sendShamanChatMessage] 질문권 환급 실패:', refundError, consumedFrom)
+      } catch (refundErr) {
+        logger.error(
+          refundErr instanceof Error ? refundErr : new Error(String(refundErr)),
+          '[sendShamanChatMessage] refund'
+        )
+      }
+    }
+
+    // SDK 원문(e.message)은 사용자에게 내보내지 않는다 — 08-16 전면 장애 때 원문이 토스트로 노출됐다.
+    return { success: false, error: '신당의 기운이 잠시 흐렸습니다. 잠시 후 다시 여쭤 주십시오.' }
   }
 }
 
@@ -823,7 +861,7 @@ export async function getChatOpening(familyMemberId?: string, options?: { newCha
 
     return { success: true, greeting }
   } catch (e) {
-    logger.error('[getChatOpening]', e)
+    logger.error(e instanceof Error ? e : new Error(String(e)), '[getChatOpening]')
     return { success: false, error: '오프닝 생성 오류' }
   }
 }
@@ -983,7 +1021,7 @@ export async function saveChatMessages(
 
     return { success: true }
   } catch (e) {
-    logger.error('[saveChatMessages]', e)
+    logger.error(e instanceof Error ? e : new Error(String(e)), '[saveChatMessages]')
     return { success: false, error: '메시지 저장 오류' }
   }
 }

@@ -9,8 +9,8 @@ import { logger } from '@/lib/utils/logger'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: '해화당 고민 상담소',
-  description: '당신의 깊은 고민을 들어주는 명리학 기반 AI 상담소',
+  title: '해화당 속풀이',
+  description: '신령님께 여쭙고 속을 푸는 명리학 기반 AI 문답',
 }
 
 /** 좌정 主神을 서버에서 시딩 — 첫 로드부터 신위 아바타·이름 표시 (응답 전 해화지기 회귀 방지) */
@@ -49,10 +49,10 @@ export default async function AIShamanPage() {
     return (
       <MembershipGate
         feature="counsel"
-        title="고민상담 · 해화지기와의 대화"
-        description="명리학에 뿌리를 둔 AI 상담사가 당신의 고민을 깊이 들어드립니다. 멤버십 회원으로, 또는 1일 이용권으로 지금 바로 들어오세요."
+        title="속풀이 · 신령님과의 문답"
+        description="좌정하신 神이 사주를 근거로 답합니다. 작은 질문도 좋습니다 — 멤버십 회원으로, 또는 1일 이용권으로 지금 바로 여쭤보세요."
         benefits={[
-          '해화지기와의 고민상담 입장',
+          '신령님과의 속풀이 입장',
           `질문은 하루 ${DAILY_FREE_QUESTIONS}문까지 무료 · 더 필요하면 복채로 충전`,
           '신당 · 가족관리 입장 포함',
           ...GENERIC_MEMBERSHIP_BENEFIT_LINES,
