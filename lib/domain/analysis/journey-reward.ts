@@ -67,4 +67,4 @@ export function findJourneyRewardChoice(kind: string, code: string): JourneyRewa
 }
 
 /** 여정 완주 칭호 — 완주 연출·claimed 상태 표기에 사용. */
-export const JOURNEY_COMPLETE_TITLE = '별자리 완성'
+export const JOURNEY_COMPLETE_TITLE = '복주머니 완성'

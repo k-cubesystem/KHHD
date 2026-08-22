@@ -319,6 +319,29 @@ const IconBokjigi = memo(function IconBokjigi({ className, size = 24, ...rest }:
   )
 })
 
+const IconBokjumeoni = memo(function IconBokjumeoni({ className, size = 24, ...rest }: SvgIconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      className={className}
+      {...defaultProps}
+      {...rest}
+    >
+      {/* 복주머니 몸통 (비단 주머니) */}
+      <path d="M12 8.5c-4.2 0-7 2.9-7 6.5a7 7 0 0 0 14 0c0-3.6-2.8-6.5-7-6.5z" />
+      {/* 조임 주름 */}
+      <path d="M9.6 8.9 9.1 6.6" />
+      <path d="M12 8.6v-2.4" />
+      <path d="M14.4 8.9l.5-2.3" />
+      {/* 끈 매듭 */}
+      <circle cx="12" cy="4.6" r="1.4" />
+    </svg>
+  )
+})
+
 IconSaju.displayName = 'IconSaju'
 IconGunghap.displayName = 'IconGunghap'
 IconGwansang.displayName = 'IconGwansang'
@@ -331,8 +354,10 @@ IconOhaeng.displayName = 'IconOhaeng'
 IconUnse.displayName = 'IconUnse'
 IconInyon.displayName = 'IconInyon'
 IconBokjigi.displayName = 'IconBokjigi'
+IconBokjumeoni.displayName = 'IconBokjumeoni'
 
 export {
+  IconBokjumeoni,
   IconSaju,
   IconGunghap,
   IconGwansang,

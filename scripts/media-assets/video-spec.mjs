@@ -15,6 +15,24 @@ export const VIDEO_SPECS = [
       'no text, no characters, seamless loop, subtle motion, luxurious dark-gold palette.',
   },
   {
+    id: 'journey-bok',
+    title: '나의 복주머니 — 금빛 복주머니·엽전 부유',
+    placement: 'JourneyCard full 변형 + /studio/samhap 소개 카드 배경 (opacity ~0.5 screen)',
+    durationSec: 8,
+    resolution: '720p',
+    // CEO 컨셉 확정(08-22): 복주머니 다섯. 별자리(journey-night)는 서양 별자리 운세로 읽혀 반려.
+    prompt:
+      'Pure solid black background (#000000), completely empty. Several small traditional Korean silk lucky ' +
+      'pouches (bokjumeoni) — round fabric pouches cinched at the top with golden drawstring cords and small ' +
+      'tassels, in deep crimson red and warm gold silk with subtle embroidery — float and drift very slowly, ' +
+      'gently bobbing as if weightless. A few antique brass coins with square center holes drift among them, ' +
+      'catching warm glints of light. Fine golden dust particles float softly around everything. Smooth ' +
+      'continuous steady motion — no flickering, no blinking, no strobing, nothing suddenly appearing or ' +
+      'disappearing, consistent steady warm lighting. Only the pouches, coins and gold dust are visible on ' +
+      'pure black. Static camera, no text, no people, no hands, shallow depth of field with soft bokeh, ' +
+      'luxurious dark red-and-gold palette, seamless loop, subtle graceful motion.',
+  },
+  {
     id: 'journey-night',
     title: '운세 별자리 — 밤하늘·별자리·달·별똥별',
     placement: 'JourneyCard full 변형 + /studio/samhap 소개 카드 배경 (opacity ~0.5 screen)',

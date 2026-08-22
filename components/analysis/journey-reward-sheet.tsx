@@ -4,7 +4,8 @@ import { useEffect, useState, useTransition } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Sparkles, Landmark, Check, Loader2, Star } from 'lucide-react'
+import { Sparkles, Landmark, Check, Loader2 } from 'lucide-react'
+import { IconBokjumeoni } from '@/components/icons/traditional-icons'
 import {
   getJourneyRewardStatus,
   claimJourneyReward,
@@ -100,7 +101,7 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
         ) : (
           <div className="space-y-5">
             <p className="text-[12px] text-ink-light/60 font-light leading-relaxed break-keep">
-              다섯 개의 별을 모두 밝히신 것을 축하드립니다. 아래 신위 한 분 또는 테마신당 한 곳을{' '}
+              다섯 복주머니를 모두 채우신 것을 축하드립니다. 아래 신위 한 분 또는 테마신당 한 곳을{' '}
               <span className="text-gold-500">무료로 모실 수 있습니다</span>. (1회 한정, 선택 후 변경 불가)
             </p>
 
@@ -210,7 +211,7 @@ function ChoiceGroup({
 function RewardClaimedView({ name }: { name: string }) {
   return (
     <div className="py-6 flex flex-col items-center gap-4 text-center">
-      {/* 별자리 완성 메달 연출 */}
+      {/* 복주머니 완성 연출 */}
       <motion.div
         initial={{ scale: 1.6, opacity: 0, rotate: -20 }}
         animate={{ scale: 1, opacity: 1, rotate: 0 }}
@@ -221,7 +222,7 @@ function RewardClaimedView({ name }: { name: string }) {
           boxShadow: '0 0 28px rgba(212,175,55,0.45), inset 0 0 0 2px rgba(232,213,160,0.4)',
         }}
       >
-        <Star className="w-9 h-9 text-gold-500 fill-gold-500" />
+        <IconBokjumeoni className="w-10 h-10 text-gold-500" fill="rgba(201,168,76,0.35)" />
       </motion.div>
       <div className="space-y-1.5">
         <p className="text-base font-serif font-bold text-gold-500">{name}</p>
