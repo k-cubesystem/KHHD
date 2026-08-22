@@ -1,14 +1,22 @@
 /**
- * 「복 배경화면」 순수 도메인 — 배포된 6장의 정의와 잠금 규칙.
+ * 「복 배경화면」 순수 도메인 — 배포된 6장의 정의와 접근 규칙.
  *
  * 오행 5장(나무·불·흙·쇠·물) + 이달의 복 1장. 사용자의 용신 오행과 같은 장은 화면에서
- * 「내 오행」으로 추천되고, 잠금은 세 등급뿐이다(free · saju · journey).
+ * 「내 오행」으로 추천된다.
+ *
+ * **접근 모델(2026-08-22 확장)** — 다섯 경로의 순수 OR 다. 우선순위는 «표기»에만 쓰고
+ * 판정에는 쓰지 않는다(어느 하나만 서면 열린다):
+ *   ① 기본 무료 1장(흙) ② 멤버십 ACTIVE → 전 장 ③ 구매(복채) ④ 광고 해금(하루 1장)
+ *   ⑤ 여정 보너스 — 사주 1회 → 오행 5장 / 복주머니 완주 → 이달의 복
+ * ⑤가 남아 있는 이유는 서사다. 「복주머니를 채우면 한정판이 열린다」는 완주 동기를
+ * 과금으로 지우지 않는다 — 돈으로도 열리지만, 완주하면 공짜다.
  *
  * side-effect 없음(순수) — 단위테스트 대상. 화면 표현(배지·시트)은 컴포넌트가 입힌다.
  *
- * 🔴 이미지 파일 자체는 `public/` 에 있어 URL 을 아는 사람은 잠금과 무관하게 받을 수 있다.
- *    이건 과금 상품이 아니라 «완주 선물»이라 수용한 위험이다(서버 액션도 같은 주석을 진다).
- *    여기에 유료 자산을 얹으려면 파일을 Storage 서명 URL 뒤로 옮겨야 한다.
+ * 🔴 이미지 파일 자체는 `public/`(오행 5장)에 있어 URL 을 아는 사람은 잠금과 무관하게 받을 수
+ *    있다. 복채가 걸린 지금도 이건 그대로다 — 값이 낮고(1~2만냥) 이미 라이브에 나간 자산이라
+ *    수용한 위험이다. 서명 URL 로 옮기려면 여섯 장 전부 Storage 로 이사시켜야 한다.
+ *    이달의 복만은 크론이 Storage(공개 버킷)에 올린다.
  */
 
 /** 오행 — shrine 쪽 Element 와 같은 어휘를 쓴다(용신 값이 그 표에서 온다). */
@@ -35,9 +43,12 @@ export const WALLPAPER_LOCK_REASON: Record<Exclude<WallpaperLock, 'free'>, strin
 }
 
 /**
- * 이달의 복 — 지금 배포된 판(版). 연월이 파일명에 박혀 있다.
- * 🔴 달이 바뀌면 이 상수와 `public/wallpapers/{새 id}.webp` 를 함께 갱신한다.
- *    상수만 바꾸면 없는 파일을 가리켜 깨진 그림이 된다(생성: scripts/media-assets/generate-wallpapers.mjs).
+ * 이달의 복 — 리포에 «번들»로 들어 있는 폴백 판(版). `public/wallpapers/monthly-202608.webp`.
+ *
+ * 🔴 더 이상 «이번 달 판»의 정본이 아니다(2026-08-22 확장). 정본은 DB `wallpaper_monthly` 이고,
+ *    매월 1일 크론(`/api/cron/wallpaper-monthly`)이 새 판을 만들어 넣는다. 이 상수는 DB 행이
+ *    아직 없을 때만 쓰이는 안전망이므로 **손으로 매달 갱신할 필요가 없다**(21차d 의 수동 갱신
+ *    경고는 이 확장으로 해소됨). 세트 id 자리표시자 역할도 겸한다.
  */
 export const MONTHLY_WALLPAPER_ID = 'monthly-202608'
 
@@ -133,7 +144,183 @@ export function isMyElement(item: WallpaperItem, element: WallpaperElement | nul
  * 용신이 없으면 세트 앞 세 장(나무·불·흙) 그대로.
  */
 export function wallpaperPreview(element: WallpaperElement | null, count = 3): WallpaperItem[] {
-  const mine = element ? WALLPAPER_SET.filter((w) => w.element === element) : []
-  const rest = WALLPAPER_SET.filter((w) => !mine.includes(w))
-  return [...mine, ...rest].slice(0, count)
+  return orderWallpapersByElement(WALLPAPER_SET, element).slice(0, count)
+}
+
+/** 내 오행 장을 맨 앞으로 끌어올린 정렬 — 나머지는 세트 순서 그대로. */
+export function orderWallpapersByElement<T extends WallpaperItem>(
+  items: readonly T[],
+  element: WallpaperElement | null
+): T[] {
+  const mine = element ? items.filter((w) => w.element === element) : []
+  const rest = items.filter((w) => !mine.includes(w))
+  return [...mine, ...rest]
+}
+
+// ── 값(복채) ────────────────────────────────────────────────────────────────
+
+/**
+ * 소장 가격(만냥) — 신위·테마팩과 같은 단위다(`price_bokchae`, 화면 표기 「N만냥」).
+ * 오행 한 장 1만냥 · 이달의 복 2만냥(그 달에만 나오는 한정판이라 두 배).
+ * 🔴 서버 액션이 이 값을 읽어 차감한다. 클라가 보낸 금액은 쓰지 않는다.
+ */
+export const WALLPAPER_PRICE_ELEMENT = 1
+export const WALLPAPER_PRICE_MONTHLY = 2
+
+/** 한 장의 소장 가격(만냥). 오행이 없는 장(이달의 복)이 한정판 가격을 받는다. */
+export function wallpaperPrice(item: WallpaperItem): number {
+  return item.element === null ? WALLPAPER_PRICE_MONTHLY : WALLPAPER_PRICE_ELEMENT
+}
+
+// ── 접근 모델 ───────────────────────────────────────────────────────────────
+
+/** 해금 출처 — DB `wallpaper_unlocks.source` 체크 제약과 같은 어휘. */
+export type WallpaperUnlockSource = 'purchase' | 'ad'
+
+/** 내가 이미 연 장 한 건. */
+export interface WallpaperUnlockRecord {
+  wallpaperId: string
+  source: WallpaperUnlockSource
+}
+
+/** 열린 근거 — 표기용. 판정은 OR 이므로 순서는 «무엇이라 적을까»에만 쓴다. */
+export type WallpaperAccessVia = 'free' | 'purchase' | 'ad' | 'member' | 'saju' | 'journey'
+
+/** 근거별 한 줄 배지 문구. 잠긴 장에는 붙지 않는다. */
+export const WALLPAPER_ACCESS_LABEL: Record<WallpaperAccessVia, string> = {
+  free: '기본 제공',
+  purchase: '소장 완료',
+  ad: '오늘 열림',
+  member: '멤버십',
+  saju: '사주 풀이 선물',
+  journey: '복주머니 완주 선물',
+}
+
+/**
+ * 사용자의 접근 자격 — 서버가 판정해 내려주는 값(클라 값 신뢰 금지).
+ * 여정 자격(`WallpaperEntitlement`)에 멤버십·해금 목록을 얹은 것이다.
+ */
+export interface WallpaperAccess extends WallpaperEntitlement {
+  /** subscriptions.status = 'ACTIVE' 인 본인 구독이 있는가. */
+  isMember: boolean
+  /** 내 해금 기록(구매·광고). */
+  unlocks: readonly WallpaperUnlockRecord[]
+}
+
+export interface WallpaperAccessState {
+  unlocked: boolean
+  /** 열렸을 때만 채워지는 근거. */
+  via: WallpaperAccessVia | null
+  /** 잠겼을 때만 채워지는 사유 문구(여정 경로 기준). */
+  reason: string | null
+}
+
+/** 이 장을 이미 산(또는 광고로 연) 기록이 있는가. */
+function findUnlock(item: WallpaperItem, access: WallpaperAccess): WallpaperUnlockRecord | undefined {
+  return access.unlocks.find((u) => u.wallpaperId === item.id)
+}
+
+/**
+ * 한 장의 접근 판정 — 다섯 경로의 OR.
+ *
+ * 표기 우선순위는 «소유가 먼저»다: 기본 무료 → 구매 → 광고 → 멤버십 → 여정 보너스.
+ * 구매를 멤버십보다 앞에 두는 이유는, 멤버십이 끝나도 산 장은 남기 때문이다 —
+ * 화면이 「멤버십」이라 적어두면 해지 뒤에 사라질 것처럼 읽힌다.
+ */
+export function resolveWallpaperAccess(item: WallpaperItem, access: WallpaperAccess): WallpaperAccessState {
+  if (item.lock === 'free') return { unlocked: true, via: 'free', reason: null }
+
+  const unlock = findUnlock(item, access)
+  if (unlock) return { unlocked: true, via: unlock.source, reason: null }
+  if (access.isMember) return { unlocked: true, via: 'member', reason: null }
+
+  const bonus = item.lock === 'saju' ? access.hasSaju : access.journeyComplete
+  if (bonus) return { unlocked: true, via: item.lock, reason: null }
+
+  return { unlocked: false, via: null, reason: WALLPAPER_LOCK_REASON[item.lock] }
+}
+
+// ── 이달의 복 — 달마다 갈리는 판(版) ────────────────────────────────────────
+
+/** DB `wallpaper_monthly` 한 행 — 크론이 만들어 넣는 이번 달 판. */
+export interface MonthlyWallpaperRef {
+  /** 'YYYYMM'. */
+  ym: string
+  /** 공개 Storage URL. */
+  url: string
+}
+
+/** KST 기준 'YYYYMM' — 크론과 화면이 같은 달을 봐야 하므로 서울 시각으로 센다. */
+export function kstYearMonth(now: Date): string {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return `${kst.getUTCFullYear()}${String(kst.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+/** KST 기준 'YYYY-MM-DD' — 광고 하루 1장 상한의 날짜 키. */
+export function kstDateKey(now: Date): string {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().slice(0, 10)
+}
+
+/** 'YYYYMM' → 그 판의 배경화면 id. 달마다 다른 한정판이라 id 도 달마다 갈린다. */
+export function monthlyWallpaperIdForYm(ym: string): string {
+  return `monthly-${ym}`
+}
+
+/** 'YYYYMM' → 「이달의 복 (9월)」. 한자 없이 한글로만 적는다. */
+export function monthlyWallpaperTitle(ym: string): string {
+  const month = Number(ym.slice(4, 6))
+  return Number.isFinite(month) && month >= 1 && month <= 12 ? `이달의 복 (${month}월)` : '이달의 복'
+}
+
+/** Storage 오브젝트 이름 — 버킷 `wallpapers` 안의 경로. 크론이 upsert 로 덮는다. */
+export function monthlyWallpaperObject(ym: string): string {
+  return `monthly-${ym}.webp`
+}
+
+// ── 화면용 세트 ─────────────────────────────────────────────────────────────
+
+/** 그리기에 필요한 것까지 채운 한 장 — 도메인 정의 + 실제 파일 주소. */
+export interface WallpaperDisplayItem extends WallpaperItem {
+  /** 미리보기 `<img src>`. */
+  href: string
+  /** 「받기」 링크 — 교차 출처(Storage)면 저장이 되도록 질의를 붙인다. */
+  downloadHref: string
+}
+
+/**
+ * 저장 링크 — 동일 출처(`/wallpapers/...`)는 `download` 속성이 그대로 먹지만,
+ * Storage 공개 URL 은 교차 출처라 브라우저가 `download` 를 무시하고 탭 이동을 한다.
+ * Supabase Storage 는 `?download` 질의에 Content-Disposition: attachment 로 답한다.
+ */
+export function wallpaperDownloadHref(href: string): string {
+  if (!/^https?:\/\//.test(href)) return href
+  return href.includes('?') ? `${href}&download` : `${href}?download`
+}
+
+/**
+ * 화면에 세울 여섯 장 — 오행 5장은 번들 고정, 이달의 복만 DB 행을 따른다.
+ * DB 행이 없으면(크론 첫 실행 전·실패) 번들 폴백으로 선다. 빈 자리를 남기지 않는 것이 규율이다.
+ */
+export function buildWallpaperDisplaySet(monthly: MonthlyWallpaperRef | null): WallpaperDisplayItem[] {
+  return WALLPAPER_SET.map((item) => {
+    if (item.element !== null) {
+      const href = wallpaperPath(item.id)
+      return { ...item, href, downloadHref: wallpaperDownloadHref(href) }
+    }
+    const id = monthly ? monthlyWallpaperIdForYm(monthly.ym) : item.id
+    const href = monthly ? monthly.url : wallpaperPath(item.id)
+    return {
+      ...item,
+      id,
+      title: monthly ? monthlyWallpaperTitle(monthly.ym) : item.title,
+      href,
+      downloadHref: wallpaperDownloadHref(href),
+    }
+  })
+}
+
+/** 화면 세트에서 id 로 한 장 찾기 — 서버 액션이 클라가 보낸 id 를 검증할 때 쓴다. */
+export function findWallpaperById(id: string, monthly: MonthlyWallpaperRef | null): WallpaperDisplayItem | null {
+  return buildWallpaperDisplaySet(monthly).find((w) => w.id === id) ?? null
 }

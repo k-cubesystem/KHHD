@@ -52,6 +52,10 @@
     {
       "path": "/api/cron/ritual-push",
       "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/cron/wallpaper-monthly",
+      "schedule": "0 1 1,2,3 * *"
     }
   ]
 }

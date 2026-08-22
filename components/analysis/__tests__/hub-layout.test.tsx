@@ -24,8 +24,11 @@ jest.mock('@/app/actions/analysis/journey-reward', () => ({
   getJourneyRewardStatus: jest.fn(async () => null),
 }))
 
+// 해금 액션까지 함께 끊는다 — 카드가 셋 다 import 하므로 하나라도 빠지면 모듈이 반쪽으로 선다.
 jest.mock('@/app/actions/analysis/wallpaper', () => ({
   getWallpaperStatus: jest.fn(async () => null),
+  purchaseWallpaper: jest.fn(async () => ({ success: false, error: 'UNAUTHORIZED' })),
+  unlockWallpaperByAd: jest.fn(async () => ({ success: false, error: 'UNAUTHORIZED' })),
 }))
 
 jest.mock('@/components/shared/AmbientVideo', () => ({

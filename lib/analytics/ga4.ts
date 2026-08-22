@@ -91,6 +91,11 @@ export const GA = {
   // 어느 오행이 실제로 받아지는지와 완주 한정판(이달의 복)이 완주 동기로 작동하는지를 가른다.
   wallpaperView: () => trackEvent({ action: 'wallpaper_view', category: 'engagement' }),
   wallpaperDownload: (label: string) => trackEvent({ action: 'wallpaper_download', category: 'engagement', label }),
+  // 해금 경로 셋 — 산 것(purchase) ↔ 광고를 «본» 것(ad_view) ↔ 그 광고로 «연» 것(ad_unlock).
+  // 시청과 해금을 가르는 이유는 중도 이탈(15초를 못 채우고 닫음)이 그 차이로만 보이기 때문이다.
+  wallpaperPurchase: (label: string) => trackEvent({ action: 'wallpaper_purchase', category: 'engagement', label }),
+  wallpaperAdView: (label: string) => trackEvent({ action: 'wallpaper_ad_view', category: 'engagement', label }),
+  wallpaperAdUnlock: (label: string) => trackEvent({ action: 'wallpaper_ad_unlock', category: 'engagement', label }),
 
   miniReading: () => trackEvent({ action: 'mini_reading', category: 'engagement' }),
 
