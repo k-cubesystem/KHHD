@@ -31,6 +31,14 @@ jest.mock('@/components/shared/AmbientVideo', () => ({
   AmbientVideo: () => null,
 }))
 
+/** 대시보드가 품게 된 여정 카드의 서버 액션 — jsdom 에서 next/cache 체인을 끊는다. */
+jest.mock('@/app/actions/analysis/reading-insights', () => ({
+  getJourneyStatus: jest.fn(async () => ({ categories: [], records: {} })),
+}))
+jest.mock('@/app/actions/analysis/journey-reward', () => ({
+  getJourneyRewardStatus: jest.fn(async () => null),
+}))
+
 /** 사주 유도 카드(`MasterpieceSection`)가 `useRouter` 를 쓴다 — 렌더가 서려면 필요하다. */
 const push = jest.fn()
 

@@ -14,8 +14,8 @@ describe('HUB_SECTIONS — 허브 섹션 표', () => {
     // 되살아나면 화면과 어긋난다. 개수와 순서를 문자열로 못 박는다.
     expect(ALL.map((section) => section.id)).toEqual([
       HUB_SECTIONS.launcher.id,
-      HUB_SECTIONS.themeFortune.id,
       HUB_SECTIONS.journey.id,
+      HUB_SECTIONS.themeFortune.id,
     ])
   })
 
@@ -23,8 +23,9 @@ describe('HUB_SECTIONS — 허브 섹션 표', () => {
     expect(ALL[0].id).toBe(HUB_SECTIONS.launcher.id)
   })
 
-  it('여정은 맨 끝이다 (CEO 지시 — 종합운수여정을 맨 하단으로)', () => {
-    expect(ALL[ALL.length - 1].id).toBe(HUB_SECTIONS.journey.id)
+  it('여정(복주머니)은 런처 다음·테마 앞이다 (CEO 2026-08-22 재지시 — «위치가 너무 하단»)', () => {
+    expect(ALL[ALL.length - 1].id).toBe(HUB_SECTIONS.themeFortune.id)
+    expect(ALL[1].id).toBe(HUB_SECTIONS.journey.id)
   })
 
   it('없어진 섹션의 키가 표에 남아 있지 않다', () => {

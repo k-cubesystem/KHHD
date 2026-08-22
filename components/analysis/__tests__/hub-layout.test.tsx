@@ -52,7 +52,7 @@ describe('허브 구성 — 세 자리만 남는다', () => {
     expect(container.querySelectorAll('[id^="hub-"]:not([id$="-title"])')).toHaveLength(allHubSections().length)
   })
 
-  it('아이콘 런처가 맨 위, 종합사주풀이 여정이 맨 아래다', async () => {
+  it('아이콘 런처가 맨 위, 복주머니(여정)가 테마 앞, 인기테마가 맨 아래다 (CEO 08-22 재배치)', async () => {
     const { container } = await renderHub()
 
     const launcher = container.querySelector(`#${HUB_SECTIONS.launcher.id}`)
@@ -60,10 +60,10 @@ describe('허브 구성 — 세 자리만 남는다', () => {
     const journey = container.querySelector(`#${HUB_SECTIONS.journey.id}`)
     if (!launcher || !theme || !journey) throw new Error('허브 섹션이 없다')
 
-    for (const later of [theme, journey]) {
+    for (const later of [journey, theme]) {
       expect(launcher.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     }
-    expect(theme.compareDocumentPosition(journey) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(journey.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('런처가 사주 유도 카드보다 위다 (아이콘이 화면의 첫 줄)', async () => {

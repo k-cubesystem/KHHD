@@ -4,8 +4,6 @@ import { useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AnalysisDashboard } from '@/components/analysis/AnalysisDashboard'
-import { JourneyCard } from '@/components/analysis/journey-card'
-import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 import { RitualBanner } from '@/components/ritual/ritual-banner'
 import { trackEvent } from '@/lib/analytics/ga4'
 
@@ -44,23 +42,9 @@ export function AnalysisHubClient() {
 
       <div className="relative z-10 w-full pt-6">
         <RitualBanner />
+        {/* 여정(나의 복주머니)은 대시보드 안에서 사주 유도 카드 바로 아래 선다(CEO 2026-08-22).
+            바닥 여백(pb-40)도 대시보드가 진다 — 고정 하단 바에 마지막 카드가 깔리지 않게. */}
         <AnalysisDashboard />
-
-        {/* 종합사주풀이 여정 — 맨 하단(CEO 2026-08-13).
-            좌우 여백을 대시보드와 같은 px-2 로 맞춰 위 카드들과 한 줄로 선다.
-            바닥 여백(pb-40)은 화면의 마지막 요소가 진다 — 고정 하단 바에 카드가 깔리지 않게. */}
-        <section
-          id={HUB_SECTIONS.journey.id}
-          aria-labelledby={hubHeadingId(HUB_SECTIONS.journey.id)}
-          tabIndex={-1}
-          className="max-w-screen-sm mx-auto px-2 pb-40 scroll-mt-20 outline-none"
-        >
-          <h2 id={hubHeadingId(HUB_SECTIONS.journey.id)} className="sr-only">
-            {HUB_SECTIONS.journey.title}
-          </h2>
-          <div className="dancheong-divider my-4" />
-          <JourneyCard variant="full" />
-        </section>
       </div>
     </div>
   )

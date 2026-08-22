@@ -45,15 +45,19 @@ export const HUB_SECTIONS = {
     id: 'hub-launcher',
     title: '바로 보기',
   },
-  /** ① 질문으로 들어오는 입구. */
+  /**
+   * 사주 유도 카드 바로 아래 — 사주→관상→손금→풀이→종합의 진행(복주머니 다섯).
+   * 2026-08-22 CEO 재지시(«위치가 너무 하단»)로 맨 하단에서 올라왔다: 10줄 테마 리스트 밑에
+   * 묻혀 있던 코어 루프를 «사주 보기 = 첫 주머니 채우기» 동선으로 사주 카드에 붙인다.
+   */
+  journey: {
+    id: 'hub-journey',
+    title: '나의 복주머니',
+  },
+  /** 맨 하단 — 질문으로 들어오는 입구(브라우징 롱테일). */
   themeFortune: {
     id: 'hub-theme',
     title: '인기테마운세',
-  },
-  /** 맨 하단 — 사주→관상→손금→풍수→종합의 진행. 화면을 다 본 뒤에 만나는 자리다. */
-  journey: {
-    id: 'hub-journey',
-    title: '종합사주풀이 여정',
   },
 } as const satisfies Record<string, HubSection>
 

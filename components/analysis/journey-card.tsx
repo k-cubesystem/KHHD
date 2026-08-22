@@ -18,8 +18,8 @@ import { JOURNEY_COMPLETE_TITLE, type JourneyRewardKind } from '@/lib/domain/ana
 import { JourneyRewardSheet } from './journey-reward-sheet'
 import { GA } from '@/lib/analytics/ga4'
 
-const JOURNEY_COPY = '사주·관상·손금·풍수 네 주머니를 채우면, 마지막 큰 주머니 종합풀이가 열립니다'
-const JOURNEY_COMPLETE_COPY = '다섯 복주머니가 모두 가득 찼습니다'
+const JOURNEY_COPY = '주머니 하나를 채울 때마다 나의 기운이 오르고, 다섯이 모이면 큰 복(종합풀이)이 열립니다'
+const JOURNEY_COMPLETE_COPY = '다섯 복주머니가 가득 차, 나의 기운이 정점에 올랐습니다'
 
 /** 비단 복주머니 팔레트(짙은 진홍·금) — 사주 유도 카드(먹빛·도장)와 기능 구별을 위한 별도 정체성. */
 const BOK_BG = 'linear-gradient(165deg, #170C0E 0%, #241014 45%, #120909 100%)'
@@ -172,14 +172,14 @@ function JourneyFull({
         id="journey-bok"
         rate={0.6}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        style={{ opacity: 0.45, mixBlendMode: 'screen' }}
+        style={{ opacity: 0.3, mixBlendMode: 'screen' }}
       />
       {/* 텍스트 가독용 하단 그라데이션 */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(180deg, rgba(18,9,9,0.25) 0%, rgba(18,9,9,0.6) 60%, rgba(18,9,9,0.82) 100%)',
+          background: 'linear-gradient(180deg, rgba(18,9,9,0.45) 0%, rgba(18,9,9,0.72) 55%, rgba(18,9,9,0.88) 100%)',
         }}
       />
 
@@ -191,7 +191,7 @@ function JourneyFull({
             <IconBokjumeoni className="w-3.5 h-3.5 text-gold-500" />
             <span className="font-bold">{collected}</span>
             <span className="text-gold-500/50">/ 5</span>
-            <span className="text-gold-500/70 ml-1">{journey.progress}%</span>
+            <span className="text-gold-500/70 ml-1.5">기운 {journey.progress}%</span>
           </span>
         </div>
 
@@ -217,7 +217,7 @@ function JourneyFull({
 
         {/* 부제 */}
         <p className="text-[11px] italic font-serif text-ink-light/45 leading-relaxed">
-          풀이 하나하나가, 복주머니에 차곡차곡 담깁니다
+          주머니가 채워질수록, 나의 기운이 차오릅니다
         </p>
 
         {/* 금실 구분선 */}
@@ -421,7 +421,7 @@ function JourneyCompact({
           <div className="flex items-center gap-2">
             <p className="text-sm font-serif font-bold text-gold-500">나의 복주머니</p>
             <span className="text-[10px] font-bold text-gold-500/80 font-serif tabular-nums">
-              주머니 {collected}/5 · {journey.progress}%
+              주머니 {collected}/5 · 기운 {journey.progress}%
             </span>
           </div>
           {/* 미니 진행 점 */}

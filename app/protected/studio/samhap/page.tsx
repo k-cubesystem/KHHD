@@ -254,7 +254,15 @@ function SamhapCheck({
           id="journey-bok"
           rate={0.5}
           className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          style={{ opacity: 0.45, mixBlendMode: 'screen' }}
+          style={{ opacity: 0.3, mixBlendMode: 'screen' }}
+        />
+        {/* 텍스트 가독용 하단 그라데이션 */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(180deg, rgba(18,9,9,0.45) 0%, rgba(18,9,9,0.72) 55%, rgba(18,9,9,0.88) 100%)',
+          }}
         />
         <div
           aria-hidden="true"
@@ -274,7 +282,7 @@ function SamhapCheck({
             하나의 풀이로 엮어드립니다
           </h2>
           <p className="text-[11px] italic font-serif text-gold-500/40 leading-relaxed">
-            &ldquo;네 주머니가 가득할 때, 하늘이 종합을 허락합니다&rdquo;
+            &ldquo;다섯 주머니가 가득할 때, 기운이 정점에 오릅니다&rdquo;
           </p>
           <div className="dancheong-divider" />
           <p

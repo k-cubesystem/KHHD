@@ -7,6 +7,7 @@ import { ChevronRight } from 'lucide-react'
 import { HubLauncher } from './HubLauncher'
 import { ThemeThumbnail } from './ThemeThumbnail'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
+import { JourneyCard } from './journey-card'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 import { hubThemePicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
@@ -42,7 +43,7 @@ export function AnalysisDashboard() {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="max-w-screen-sm mx-auto px-2 space-y-6"
+      className="max-w-screen-sm mx-auto px-2 space-y-6 pb-40"
     >
       {/* 아이콘 런처 — 화면의 첫 자리. 앱 헤더(고정 상단 바) 바로 밑이다. */}
       <motion.div variants={fadeInUp}>
@@ -53,6 +54,21 @@ export function AnalysisDashboard() {
       <motion.div variants={fadeInUp}>
         <MasterpieceSection />
       </motion.div>
+
+      {/* 나의 복주머니(여정) — 사주 카드 바로 아래(CEO 2026-08-22 «위치가 너무 하단» 재지시).
+          «사주 보기 = 첫 주머니 채우기» 동선이 이어지고, 10줄 테마 리스트에 묻히지 않는다. */}
+      <motion.section
+        variants={fadeInUp}
+        id={HUB_SECTIONS.journey.id}
+        aria-labelledby={hubHeadingId(HUB_SECTIONS.journey.id)}
+        tabIndex={-1}
+        className={SECTION_ANCHOR}
+      >
+        <h2 id={hubHeadingId(HUB_SECTIONS.journey.id)} className="sr-only">
+          {HUB_SECTIONS.journey.title}
+        </h2>
+        <JourneyCard variant="full" />
+      </motion.section>
 
       {/* ① 인기테마운세 — 「도구」가 아니라 「질문」으로 들어오는 입구 (마스터 §3-2).
           🔴 행은 제목·그림만 그린다. 목록·허브에서 AI 를 부르면 9차 사고(오늘의 운세 자동
