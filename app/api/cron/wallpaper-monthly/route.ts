@@ -108,7 +108,10 @@ function findInlineImage(payload: unknown): { data: string } | null {
  *    최종 비율은 어차피 sharp 의 cover crop 이 맞춘다.
  */
 async function generateImage(prompt: string): Promise<Uint8Array> {
-  const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY
+  // 🔴 키 우선순위는 본 서비스(lib/services/gemini.ts)와 동일하게 GOOGLE_GENERATIVE_AI_API_KEY 1순위.
+  //    프로덕션엔 구키 GEMINI_API_KEY 가 무효 상태로 남아 있어(2026-08-22 실측 API_KEY_INVALID),
+  //    GEMINI_API_KEY 를 앞세우면 크론만 죽는다.
+  const key = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
   if (!key) throw new Error('GEMINI 키 없음')
 
   for (const withAspect of [true, false]) {
