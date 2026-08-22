@@ -53,13 +53,11 @@ export function SamhapIntroCard() {
           &ldquo;다섯 주머니가 가득할 때, 기운이 정점에 오릅니다&rdquo;
         </p>
         <div className="dancheong-divider" />
-        {/* 「이미 모였습니다」는 재료가 없는 사람에게 거짓이 된다 — 통합 입구가 되면서
-            재료 0 인 사람도 이 카드를 본다(CEO 2026-08-22 사주·종합 통합). */}
         <p
           className="text-[12px] text-ink-light/50 font-sans font-light leading-relaxed"
           style={{ wordBreak: 'keep-all' }}
         >
-          하늘의 기운(사주), 사람의 기운(관상·손금), 터의 기운(풍수). 넷이 모이면 새 사진 촬영 없이,
+          하늘의 기운(사주), 사람의 기운(관상·손금), 터의 기운(풍수)이 이미 당신 안에 모였습니다. 새 사진 촬영 없이,
           저장된 네 분석을 겹쳐 종합사주풀이 한 권으로 정리합니다.
         </p>
       </div>

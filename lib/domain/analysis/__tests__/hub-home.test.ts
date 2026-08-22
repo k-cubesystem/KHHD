@@ -1,14 +1,8 @@
 /**
- * 허브 「앱 홈」 층의 계약 — 아이콘 런처 7칸과 헤더 인사.
- *
- * ⚠️ 2026-08-22 갱신: 8칸 → **7칸**. CEO 지시(「사주만 따로 있고 종합사주 따로 있고 이렇게 있을
- *    필요가 없어」)로 `saju`(→ cheonjiin) 칸과 `samhap`(→ studio/samhap) 칸이 **한 칸으로
- *    합쳐졌다.** 개수·순서 단언을 새 사양에 맞게 고친 것이며, 지키던 규율(중복 없음·라벨 길이·
- *    금지 목록·자산 실존)은 하나도 약화하지 않았다. 오히려 «합친 문이 다시 둘로 갈라지지
- *    않는가»를 새로 단언한다.
+ * 허브 「앱 홈」 층의 계약 — 아이콘 런처 8칸과 헤더 인사.
  *
  * 이 테스트가 지키는 것은 셋이다.
- * ① **일곱 칸이 성립하는가** — 개수·중복·라벨 길이·아이콘 자산 실존.
+ * ① **여덟 칸이 성립하는가** — 개수·중복·라벨 길이·아이콘 자산 실존.
  * ② **넣지 말라고 한 것이 안 들어왔는가** — 오늘의 운세·2026 병오년·고민상담.
  *    CEO 가 하루 전 허브에서 내린 셋이고, 셋째는 하단 네비와 겹친다.
  * ③ **인사가 결정론인가** — 같은 시각이면 같은 문장이다(Math.random 이 끼면 화면이 흔들린다).
@@ -20,34 +14,25 @@ import { join } from 'path'
 import { HUB_LAUNCHER, hubGreeting } from '@/lib/domain/analysis/hub-home'
 import { THEME_LIST_PATH } from '@/lib/domain/theme-fortune/themes'
 
-describe('HUB_LAUNCHER — 아이콘 런처 7칸', () => {
-  it('일곱 칸이다 (4열 · 4+3)', () => {
-    expect(HUB_LAUNCHER).toHaveLength(7)
+describe('HUB_LAUNCHER — 아이콘 런처 8칸', () => {
+  it('여덟 칸이다 (2×4)', () => {
+    expect(HUB_LAUNCHER).toHaveLength(8)
   })
 
-  it('선언 순서가 화면 순서다 — 첫 칸이 통합된 종합사주풀이다', () => {
+  it('선언 순서가 화면 순서다 — 앞 다섯은 내 것을 보는 도구, 뒤 셋은 더 보는 길', () => {
     expect(HUB_LAUNCHER.map((entry) => entry.id)).toEqual([
-      'samhap',
+      'saju',
       'compatibility',
       'face',
       'palm',
       'fengshui',
       'wealth',
+      'samhap',
       'themes',
     ])
   })
 
-  it('🔴 사주·종합이 한 칸이다 — 같은 문이 둘로 갈라지지 않는다 (CEO 2026-08-22)', () => {
-    const hrefs = HUB_LAUNCHER.map((entry) => entry.href)
-
-    // 통합 입구는 studio/samhap 하나뿐. 사주 단독 입구를 런처에 다시 올리면 통합이 무효가 된다.
-    expect(hrefs).toContain('/protected/studio/samhap')
-    expect(hrefs).not.toContain('/protected/analysis/cheonjiin')
-    expect(HUB_LAUNCHER.filter((entry) => entry.href === '/protected/studio/samhap')).toHaveLength(1)
-    expect(HUB_LAUNCHER.map((entry) => entry.label)).not.toContain('사주풀이')
-  })
-
-  it('일곱 칸이 저마다 다른 화면으로 간다', () => {
+  it('여덟 칸이 저마다 다른 화면으로 간다', () => {
     const hrefs = HUB_LAUNCHER.map((entry) => entry.href)
 
     expect(new Set(hrefs).size).toBe(hrefs.length)
@@ -117,13 +102,13 @@ describe('HUB_LAUNCHER — 아이콘 런처 7칸', () => {
     }
   })
 
-  it('아이콘 파일이 실제로 있고 일곱 칸이 다 다르다', () => {
+  it('아이콘 파일이 실제로 있고 여덟 칸이 다 다르다', () => {
     const icons = HUB_LAUNCHER.map((entry) => entry.icon)
     expect(new Set(icons).size).toBe(icons.length)
 
     for (const icon of icons) {
-      // 숫자를 허용한다 — 자산 교체는 반드시 파일명 버전업(`samhap-v2`)이다. 같은 이름을
-      // 덮어쓰면 폰 캐시가 옛 그림을 재사용한다(2026-08-10 실증, HANDOFF 함정 ①).
+      // 숫자를 허용한다 — 자산 교체는 반드시 파일명 버전업(`saju-v2`·`samhap-v2`)이다.
+      // 같은 이름을 덮어쓰면 폰 캐시가 옛 그림을 재사용한다(2026-08-10 실증).
       expect(icon).toMatch(/^\/icons\/hub\/[a-z0-9-]+\.webp$/)
       expect(existsSync(join(process.cwd(), 'public', icon))).toBe(true)
     }

@@ -240,29 +240,6 @@ describe('① 썸네일 — 파일이 아직 없어도 화면이 멀쩡하다', 
   })
 })
 
-describe('대작 카드 — 종합사주풀이의 메인 입구 (CEO 2026-08-22 통합)', () => {
-  it('🔴 카드도 CTA 도 통합 입구(studio/samhap)로 간다 — 사주 단독으로 가지 않는다', async () => {
-    await renderDashboard()
-
-    screen.getByRole('button', { name: /종합사주풀이 시작하기/ }).click()
-
-    expect(push).toHaveBeenCalledWith('/protected/studio/samhap')
-    expect(push).not.toHaveBeenCalledWith('/protected/analysis/cheonjiin')
-  })
-
-  it('카드에 한자를 쓰지 않는다 (구 「天 地 人 · 四 柱 八 字」 · 「命」)', async () => {
-    // 🔴 범위는 이 카드 하나다. 테마 표(`themes.ts`)의 카피에는 아직 한자가 남아 있고
-    //    (five-faces 서브카피의 오행 다섯 글자), 그건 법무 검토를 거친 별개 문안이라
-    //    여기서 함께 잡으면 남의 카피를 이 테스트가 인질로 잡는 꼴이 된다.
-    await renderDashboard()
-
-    const card = screen.getByRole('heading', { name: /태어난 순간 새겨진/ }).closest('.hanji-card')
-    if (!card) throw new Error('대작 카드를 찾지 못했다')
-
-    expect(card.textContent ?? '').not.toMatch(/[一-鿿]/)
-  })
-})
-
 describe('아이콘 런처 — 구 ② 카드 4장을 흡수한 자리', () => {
   const STUDIO = [
     { label: '궁합', href: '/protected/analysis/compatibility', icon: '/icons/hub/gunghap.webp' },
@@ -283,7 +260,7 @@ describe('아이콘 런처 — 구 ② 카드 4장을 흡수한 자리', () => {
     }
   })
 
-  it('일곱 칸이 표 순서대로 서고 아이콘은 전부 hub webp 다', async () => {
+  it('여덟 칸이 표 순서대로 서고 아이콘은 전부 hub webp 다', async () => {
     const { container } = await renderDashboard()
     const section = sectionOf(container, HUB_SECTIONS.launcher.id)
 

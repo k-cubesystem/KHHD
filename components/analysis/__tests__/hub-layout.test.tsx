@@ -73,31 +73,17 @@ describe('허브 구성 — 세 자리만 남는다', () => {
     expect(journey.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('런처가 대작 카드보다 위다 (아이콘이 화면의 첫 줄)', async () => {
-    // ⚠️ 2026-08-22: CTA 문구가 「나의 사주 · 운명 풀어보기」 → 「종합사주풀이 시작하기」로 바뀌었다
-    //    (CEO 사주·종합 통합). 이 테스트가 재는 것은 문구가 아니라 «순서»라 이름만 갱신한다.
+  it('런처가 사주 유도 카드보다 위다 (아이콘이 화면의 첫 줄)', async () => {
     const { container } = await renderHub()
 
     const launcher = container.querySelector(`#${HUB_SECTIONS.launcher.id}`)
-    const masterpiece = screen.getByRole('button', { name: /종합사주풀이 시작하기/ })
+    const masterpiece = screen.getByRole('button', { name: /나의 사주 · 운명 풀어보기/ })
     if (!launcher) throw new Error('런처가 없다')
 
     expect(launcher.compareDocumentPosition(masterpiece) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('🔴 대작 카드가 CEO 가 명시한 헤드라인을 지킨다 (2026-08-22)', async () => {
-    // CEO 가 문구를 명시한 자리다 — 「태어난 순간 새겨진 / 당신만의 운명의 지도를 / 펼쳐드립니다」.
-    // 카피를 다듬다 이 세 줄이 사라지면 지시가 무효가 된다.
-    // (목적지가 통합 입구인지는 hub-theme-section.test.tsx 가 라우터로 잰다.)
-    await renderHub()
-
-    const headline = screen.getByRole('heading', { name: /태어난 순간 새겨진/ })
-    expect(headline.textContent).toContain('태어난 순간 새겨진')
-    expect(headline.textContent).toContain('운명의 지도')
-    expect(headline.textContent).toContain('펼쳐드립니다')
-  })
-
-  it('런처 일곱 칸이 표 그대로 걸린다', async () => {
+  it('런처 여덟 칸이 표 그대로 걸린다', async () => {
     const { container } = await renderHub()
 
     const launcher = container.querySelector<HTMLElement>(`#${HUB_SECTIONS.launcher.id}`)

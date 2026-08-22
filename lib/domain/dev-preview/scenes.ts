@@ -13,7 +13,7 @@
  */
 
 /** 화면 묶음 — 목록 페이지의 소제목이자 촬영 순서. */
-export type PreviewSceneGroup = '복주머니' | '복 배경화면' | '종합사주풀이'
+export type PreviewSceneGroup = '허브' | '복주머니' | '복 배경화면' | '종합사주풀이'
 
 export interface PreviewScene {
   /** URL·PNG 파일명이 되는 식별자. 소문자·숫자·하이픈만(아래 패턴). */
@@ -43,6 +43,18 @@ export const PREVIEW_RESERVED_SEGMENTS: readonly string[] = ['manifest']
  * `/dev-preview/manifest` 로 이 표를 그대로 읽으므로 따로 손댈 곳이 없다.
  */
 export const PREVIEW_SCENES = [
+  {
+    id: 'hub-launcher',
+    label: '허브 — 아이콘 런처 8칸',
+    group: '허브',
+    note: '8칸 그림이 다 뜨는가(빈 네모·깨진 링크면 그 자체가 결함이다)',
+  },
+  {
+    id: 'hub-banner',
+    label: '허브 — 메인 배너',
+    group: '허브',
+    note: '헤드라인 세 줄 · 도장 CTA · 앰비언트 영상 자리',
+  },
   {
     id: 'journey-empty',
     label: '복주머니 — 아직 빈 주머니',

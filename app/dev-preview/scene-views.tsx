@@ -10,6 +10,8 @@
  * 미리보기가 현실과 갈라져 도구 자체가 거짓이 된다.
  */
 
+import { HubLauncher } from '@/components/analysis/HubLauncher'
+import { MasterpieceSection } from '@/components/analysis/dashboard/MasterpieceSection'
 import { JourneyFull } from '@/components/analysis/journey-card'
 import { WallpaperGrid } from '@/components/analysis/wallpaper-card'
 import { SamhapIntroCard } from '@/components/studio/samhap-intro-card'
@@ -44,6 +46,16 @@ function JourneyScene({
   return <JourneyFull journey={buildJourney(categories)} records={JOURNEY_RECORDS} reward={reward} onGo={noGo} />
 }
 
+// ── 허브 목 ──────────────────────────────────────────────────────────────────
+
+/**
+ * 런처·메인 배너는 **목 데이터가 필요 없다.** 둘 다 상수(`HUB_LAUNCHER`)와 정적 자산만 보고
+ * 서므로 로그인·DB 없이 그대로 선다 — 그게 허브 상단 층의 계약이기도 하다(hub-home.ts 주석).
+ *
+ * 배너는 `useRouter()` 를 쓰지만 여기서는 **아무도 누르지 않는다**(촬영은 클릭하지 않는다).
+ * dev-preview 는 실제 App Router 라우트라 라우터 컨텍스트가 이미 있어 목이 필요 없다.
+ */
+
 // ── 배경화면 목 ───────────────────────────────────────────────────────────────
 
 /**
@@ -64,6 +76,11 @@ const WALLPAPER_BASE: WallpaperStatus = {
 // ── 표 ────────────────────────────────────────────────────────────────────────
 
 const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
+  // 🔴 아이콘이 이번 작업의 핵심이라 런처는 «그림이 실제로 뜨는가»를 보는 장면이다.
+  //    빈 네모가 찍히면 그건 촬영 실패가 아니라 자산 결함이다(파일명·경로를 먼저 볼 것).
+  'hub-launcher': () => <HubLauncher />,
+  'hub-banner': () => <MasterpieceSection />,
+
   'journey-empty': () => <JourneyScene categories={[]} reward={null} />,
   'journey-progress': () => <JourneyScene categories={['SAJU', 'FACE']} reward={null} />,
   'journey-complete-unclaimed': () => (

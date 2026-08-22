@@ -5,24 +5,23 @@ import { useRouter } from 'next/navigation'
 import { AmbientVideo } from '@/components/shared/AmbientVideo'
 
 /**
- * 허브의 대작 카드 — **종합사주풀이의 메인 입구**(CEO 2026-08-22).
+ * 허브의 대작 카드 — **사주풀이 유도 카드**. 목적지는 `cheonjiin`(사주 단독)이다.
  *
- * «사주만 따로 있고 종합사주 따로 있고 이렇게 있을 필요가 없어. 두 가지 내용을 합쳐서
- * 종합사주풀이를 메인 기획으로 가줘.» 그래서 이 카드는 `cheonjiin`(사주 단독)이 아니라
- * 통합 입구(`/protected/studio/samhap`)로 간다. 그 화면이 재료 상태를 보고 갈린다 —
- * 재료가 없으면 거기서 「사주풀이부터 시작하기」가 주 행동으로 뜬다.
+ * ⚠️ 2026-08-22 한때 이 카드를 종합사주풀이 통합 입구로 돌렸다가 **되돌렸다.** CEO 의 원래
+ *    요청은 «기존 기능은 그대로 두고 메인 배너와 아이콘만 수정»이었다 — 사주풀이와
+ *    종합풀이는 **각각 남는다.** 목적지를 다시 samhap 으로 돌리지 말 것.
  *
  * 🔴 헤드라인 「태어난 순간 새겨진 / 당신만의 운명의 지도를 / 펼쳐드립니다」는 CEO 가 문구를
  *    명시한 자리다. 카피를 다듬을 때도 이 세 줄은 건드리지 않는다.
  */
-const SAMHAP_ENTRANCE = '/protected/studio/samhap'
+const SAJU_PATH = '/protected/analysis/cheonjiin'
 
 export function MasterpieceSection() {
   const router = useRouter()
 
   return (
     <div
-      onClick={() => router.push(SAMHAP_ENTRANCE)}
+      onClick={() => router.push(SAJU_PATH)}
       className="relative overflow-hidden rounded-xl cursor-pointer group hanji-card dancheong-border-top"
       style={{
         background: 'linear-gradient(160deg, #0e0b07 0%, #16140F 50%, #0a0807 100%)',
@@ -94,23 +93,23 @@ export function MasterpieceSection() {
         {/* 단청 구분선 */}
         <div className="dancheong-divider" />
 
-        {/* 서브 카피 — 이 카드가 «종합사주풀이의 메인 입구»임이 읽혀야 한다(CEO 08-22 통합). */}
+        {/* 서브 카피 */}
         <p
           className="text-[12.5px] leading-[1.8] font-light text-ink-light/50"
           style={{ wordBreak: 'keep-all' }}
         >
-          사주에서 시작해 관상·손금·풍수까지,
+          천간·지지·오행의 흐름을 읽고,
           <br />
-          <span className="text-ink-light/70">네 기운이 같은 말을 하는 지점</span>을
+          <span className="text-ink-light/70">대운과 세운이 알려주는 인생의 전환점</span>을
           <br />
-          청담해화당이 한 권으로 엮어드립니다.
+          청담해화당이 짚어드립니다.
         </p>
 
         {/* CTA 버튼 (도장 스타일) */}
         <button
           onClick={(e) => {
             e.stopPropagation()
-            router.push(SAMHAP_ENTRANCE)
+            router.push(SAJU_PATH)
           }}
           className="tap-glow-gold relative overflow-hidden w-full h-13 rounded-sm group/btn hover:scale-[1.01] border border-seal/[0.5] bg-seal"
           style={{
@@ -128,7 +127,7 @@ export function MasterpieceSection() {
 
           <span className="relative z-10 flex items-center justify-center gap-2.5 py-3.5">
             <span className="text-[14px] font-serif font-bold tracking-[0.15em] text-white">
-              종합사주풀이 시작하기
+              나의 사주 · 운명 풀어보기
             </span>
             <ArrowRight
               className="w-4 h-4 text-white/80 group-hover/btn:translate-x-0.5 transition-transform duration-300"
@@ -137,9 +136,9 @@ export function MasterpieceSection() {
           </span>
         </button>
 
-        {/* 여정 연결 — 재료가 없어도 헛걸음이 아님을 미리 알린다(통합 입구가 갈라 준다) */}
+        {/* 여정 연결 — 아래 「나의 복주머니」와 무엇이 다른지 한 줄로 가른다 */}
         <p className="text-[10.5px] text-ink-light/40 font-light text-center -mt-1.5">
-          처음이시라면 사주풀이부터 — 「나의 복주머니」 첫 칸에 담깁니다
+          이 사주 풀이가 아래 「나의 복주머니」 첫 칸에 담깁니다
         </p>
       </div>
     </div>

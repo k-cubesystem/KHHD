@@ -223,14 +223,28 @@ const SETS = {
     ['saju', '사주팔자 — four slender wooden pillars with smooth bare woodgrain surfaces standing in a row on a lacquer base, golden constellation lines arcing behind them'],
     ['samhap', '삼합 종합풀이 — three brass rings interlocking in a triangle, warm golden light glowing where they overlap'],
     ['themes', '운세 테마 모음 — five hanji fortune cards fanned out in an arc, tied together with a red silk cord'],
-    // 「종합사주풀이」 통합 칸(2026-08-22) — 구 saju + samhap 두 칸이 한 칸이 됐다.
+    // 런처 두 칸의 그림 교체(2026-08-22). **칸을 합친 게 아니다** — 사주풀이·종합풀이는
+    // 여덟 칸 안에 각각 남고, 바뀐 것은 그림뿐이다(기능 통합은 오해였고 되돌렸다).
     // 🔴 파일명 버전업(-v2). 같은 이름을 덮어쓰면 폰 캐시가 옛 그림을 재사용한다(2026-08-10 실증).
-    // 구 saju(네 기둥) + 구 samhap(고리 셋)의 «합»을 한 장에 담는다 — 기둥이 주제, 고리는 후광.
+    //
+    // 🔴 둘은 런처에서 **나란히 서지 않지만 같은 화면에** 있다(1행 1열 · 2행 3열) — 한눈에
+    //    갈려야 한다. 그래서 실루엣을 아예 다른 계열로 잡았다:
+    //      · samhap-v2 = 세로 기둥 다발 + 둥근 고리 후광 (세로·원형)
+    //      · saju-v2   = 눕힌 명식판 + 격자 (가로·사각)
     [
       'samhap-v2',
       // 1차 산출물은 뒤쪽 고리 셋이 서로 붙어 하나의 «아치»로 읽혔다(다른 아이콘은 형체가 하나씩
       // 또렷하다). 규칙대로 설명을 늘리지 않고 관찰 가능한 사실 하나(고리 사이에 틈)만 더했다.
       '종합사주풀이 — four slender wooden pillars with smooth bare woodgrain surfaces standing in a row on a lacquer base, three interlocking brass rings glowing warm gold behind them like a halo, visible gaps of empty space between the rings',
+    ],
+    [
+      'saju-v2',
+      // 🔴 칸(cell)을 «비어 있다»고 못 박는다 — 구 saju 1차 산출물이 기둥에 「사주팔자」 글자를
+      //    새겨 나온 전례가 있다(다른 아이콘엔 글자가 없다). 화면에 한자를 띄우지 않는다.
+      // 1차: 격자가 거의 안 보였다 → «금선이 밝게 빛난다» 한 줄 추가.
+      // 2차: 격자는 살았으나 판이 검게 나와 **여덟 칸 중 혼자 어두웠다**(옆 칸 gunghap·jaemul 은
+      //      밝은 수채다). 설명을 늘리지 않고 «dark lacquer» 한 단어를 밝은 꿀빛 나무로 고쳤다.
+      '사주 명식판 — a wide low Korean fortune board of light honey-toned wood lying flat, its face ruled into a grid of eight empty square cells with fine gold inlay lines, a slender writing brush resting across the near edge, faint golden constellation dust drifting above the board, the gold inlay lines glowing brightly against the pale wood',
     ],
   ].map(([slug, d]) => ({ slug, out: `icons/hub/${slug}.webp`, size: 256, prompt: tilePrompt(d) })),
 

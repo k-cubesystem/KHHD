@@ -23,22 +23,7 @@ import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
 import { SamhapResultView } from '@/components/studio/samhap-result'
 import { GA, trackEvent } from '@/lib/analytics/ga4'
 
-/**
- * 종합사주풀이 — **사주·종합의 통합 입구**(CEO 2026-08-22 「두 가지 내용을 합쳐서 종합사주풀이를
- * 메인 기획으로」).
- *
- * 허브의 런처 한 칸과 대작 카드(`MasterpieceSection`)가 둘 다 이 화면으로 온다. 그래서 이 화면은
- * 재료 상태를 보고 **주 행동을 갈라야** 한다:
- *   · 4재료 완비 → 「종합사주풀이 열람」(기존 그대로)
- *   · 재료 부족 → 「사주풀이부터 시작하기」(→ `/protected/analysis/cheonjiin`)가 주 행동
- *
- * 🔴 상품·가격은 합치지 않았다. `FEATURE_COST.saju` 와 `.samhap` 은 여전히 별개이고 차감 경로도
- *    그대로다 — 합친 것은 **입구와 카피**뿐이다(상품 통합은 CEO 결정 사항).
- */
 type StepType = 'check' | 'loading' | 'result'
-
-/** 재료가 없을 때의 첫 걸음. 여정 첫 주머니(`journey.ts` STAGE_META SAJU)와 같은 경로다. */
-const SAJU_PATH = '/protected/analysis/cheonjiin'
 
 const SAMHAP_COST = FEATURE_COST.samhap.display
 // 할인 포지셔닝 — 개별 4상(사주·관상·손금·풍수)을 따로 보면 합계, 종합은 5만냥.
@@ -358,41 +343,11 @@ function SamhapCheck({
           </p>
         </>
       ) : (
-        <div className="space-y-3">
-          {/* 🔴 재료가 부족할 때의 **주 행동** — 「사주풀이부터 시작하기」(CEO 08-22 통합 지시).
-              예전엔 여기가 안내문 한 장이라 화면이 막다른 길이었다. 이제 첫 걸음이 버튼이다. */}
-          <Link
-            href={`${SAJU_PATH}${targetQuery}`}
-            onClick={() =>
-              trackEvent({ action: 'samhap_start_with_saju', category: 'analysis', label: 'samhap' })
-            }
-            className="relative overflow-hidden block w-full rounded-sm group/btn hover:scale-[1.01] active:scale-[0.97] transition-transform duration-200"
-            style={{
-              background: 'linear-gradient(135deg, #E8D5A0 0%, #C9A84C 45%, #A8903F 100%)',
-              boxShadow: '0 4px 20px rgba(201,168,76,0.25)',
-            }}
-          >
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 ease-in-out"
-              style={{
-                background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.35) 50%, transparent 65%)',
-              }}
-            />
-            <span className="relative z-10 flex items-center justify-center gap-2.5 py-4">
-              <Sparkles className="w-4 h-4 text-[#0A0A08]" />
-              <span className="text-[15px] font-serif font-bold tracking-[0.12em] text-[#0A0A08]">
-                사주풀이부터 시작하기
-              </span>
-              <ArrowRight className="w-4 h-4 text-[#0A0A08]/80 group-hover/btn:translate-x-0.5 transition-transform duration-300" />
-            </span>
-          </Link>
-
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 text-center space-y-2.5">
+        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 text-center space-y-2.5">
           <p className="text-sm text-white/55 font-sans font-light leading-relaxed">
-            타고난 운명의 지도를 먼저 펼친 뒤, 위 복주머니를 하나씩 채우면 종합사주풀이가 열립니다.
+            위 재료가 모두 준비되면 종합사주풀이를 열람할 수 있습니다.
             <br />
-            (준비 단계에서는 복채가 차감되지 않습니다.)
+            부족한 항목을 먼저 준비해 주세요. (준비 단계에서는 복채가 차감되지 않습니다.)
           </p>
           {SAMHAP_DISCOUNT_PCT > 0 && (
             <p className="text-[11px] font-sans">
@@ -403,7 +358,6 @@ function SamhapCheck({
               </span>
             </p>
           )}
-          </div>
         </div>
       )}
     </div>
