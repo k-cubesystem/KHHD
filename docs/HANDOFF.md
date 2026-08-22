@@ -354,6 +354,32 @@ vercel 빌드 훅도 없음). 이 리포의 마이그레이션 적용 경로는 
 
 **(20차b · 2026-08-21 20:02) 여정 카드 럭셔리 리디자인 — 앰비언트 영상 배경, 프로덕션 라이브** (`6b47a10`, 배포 `hhd-509vig7a3` — CEO «사주 카드처럼 고급스럽게 + 배경 영상» 지시 반영): MasterpieceSection 문법 그대로 이식 — `AmbientVideo id="analysis-ambient"`(opacity 0.22 screen), 다크 그라디언트 + 運 워터마크 + 도장 레드 글로우, 한자 트래킹 라벨(五相完集·綜合運數), 상태별 세리프 헤드라인, 명언·단청 구분선, CTA 도장+시머 통일, compact 도 다크 정합. 배포된 journey-card.tsx SHA1 = git blob 일치 검증. 이 작업은 **워크트리 `dy-journey-design`(detached, push는 `HEAD:claude/determined-yonath`)** 에서 진행 — 공유 determined-yonath 워크트리가 반복 훼손(.git 소실 2회)되어 회피.
 
+**(21차e · 2026-08-22) 복 배경화면 확장 4종 — 접근 모델·하우스 광고·월간 자동 갱신, 프로덕션 미배포** (커밋 `fa832a6`, CEO 승인 4건 구현): 21차d 의 «완주 선물» 6장에 값과 자동 보급을 붙였다.
+
+**① 접근 모델 — 다섯 경로의 OR** (`resolveWallpaperAccess`, 순수). 우선순위는 **표기에만** 쓰고 판정에는 쓰지 않는다(하나만 서면 열린다):
+
+| 경로       | 조건                                            | 여는 범위  | 표기      |
+| ---------- | ----------------------------------------------- | ---------- | --------- |
+| 기본 무료  | 없음                                            | 흙 1장     | 기본 제공 |
+| 구매       | `wallpaper_unlocks` source='purchase'           | 그 장      | 소장 완료 |
+| 광고       | `wallpaper_unlocks` source='ad'                 | 그 장      | 오늘 열림 |
+| 멤버십     | `subscriptions.status='ACTIVE'`                 | **전 6장** | 멤버십    |
+| 여정(보존) | 사주 1회 → 오행 5장 / 복주머니 완주 → 이달의 복 | 해당 장    | 완주 선물 |
+
+🔴 **여정 경로를 남긴 것은 서사 보존이다** — 「복주머니를 채우면 한정판이 열린다」는 완주 동기를 과금으로 지우지 않는다(돈으로도 열리지만, 완주하면 공짜). 🔴 표기에서 **구매를 멤버십보다 앞**에 둔다: 멤버십이 끝나도 산 장은 남는데 화면이 「멤버십」이라 적으면 해지 뒤 사라질 것처럼 읽힌다. 가격은 도메인 상수 단일 출처 — 오행 **1만냥**·이달의 복 **2만냥**(클라가 보낸 금액은 쓰지 않는다). 구매는 `purchaseDeity` 패턴 그대로 미러(검증 → `spendBokchae` → admin upsert → 지급 실패 시 `refundBokchae`) — 돈 흐름을 새로 발명하지 않았다.
+
+**② 광고 = 하우스 광고**(`wallpaper-ad-dialog.tsx`) — **외부 광고 SDK 가 아니다.** 우리 상품(멤버십·상점)을 우리가 15초 슬라이드로 소개하고 카운트다운이 끝나야 「보상 받기」가 열린다. 🔴 시청 사실은 **서버가 검증할 수 없다**(클라이언트의 정직 신고). 그래서 방어선은 시청 검증이 아니라 **하루 1장 상한**이고, 그 상한은 서버가 KST 날짜로 강제한다(`unlockWallpaperByAd` → 'AD_LIMIT'). 🔴 멤버십 홍보 문구는 `membershipBenefitLines(null)` 출력만 쓴다(화면에 숫자·주기 직접 쓰기 금지) — 금지어 회귀 테스트를 화면 쪽에도 걸었다(`wallpaper-unlock-ui.test.tsx`).
+
+**③ 이달의 복 매월 자동 갱신** — `app/api/cron/wallpaper-monthly` 신설(`Bearer ${CRON_SECRET}`, ritual-push 패턴). 절차는 `lib/services/wallpaper-monthly.ts` 로 **순수 분리**(바깥 세계 주입) — 크론은 배포 뒤에나 실기동해서 실행 전에 절차를 볼 방법이 이것뿐이다. 🔴 **멱등이 전부다**: 스케줄 `0 1 1,2,3 * *`(1~3일 재시도)라 같은 달에 세 번 들어오므로, `wallpaper_monthly` 에 그 ym 이 있으면 **아무것도 만들지 않는다** — 이 검사가 빠지면 매달 그림값을 세 번 낸다. 조회 실패는 「없다」로 넘기지 않고 **던진다**(중복 생성 방지). 흐름: KST ym → 프롬프트 → `gemini-3.1-flash-image-preview` → sharp 1080×1920 cover·webp q80 → 공개 버킷 `wallpapers/monthly-{ym}.webp`(upsert) → 행 insert. 소재는 12개월 로테이션 표(`wallpaper-monthly.ts` — 1월 복조리·눈솔 … 9월 보름달·송편·억새 · 10월 단풍·홍시 · 11월 서리국화 · 12월 설매·화로). 🔴 프롬프트 함정 2건(«wallpaper/lock screen» = 시계 목업, «art print» = 액자·매트)은 **문자열을 직접 훑는 회귀 테스트**로 못 박았다.
+
+🔴 **21차d 의 «달이 바뀌면 손으로 갱신» 경고는 해소됨** — 정본이 DB `wallpaper_monthly` 로 옮겨졌고 `MONTHLY_WALLPAPER_ID='monthly-202608'` 은 **DB 행이 없을 때만 쓰이는 번들 폴백**이 되었다(더 이상 매달 손댈 필요 없음). 화면은 최신 ym 행을 따라 「이달의 복 (N월)」로 서고, 행이 없으면 폴백으로 선다(빈 자리를 남기지 않는 것이 규율). 교차 출처(Storage) 링크는 `?download` 를 달아야 저장이 된다 — `download` 속성만으로는 탭 이동이다.
+
+**④ DB** `supabase/migrations/analysis/20260822_wallpaper_unlocks.sql` — `wallpaper_unlocks`(PK user_id+wallpaper_id = 중복 해금 방어선) · `wallpaper_monthly`(PK ym = 멱등 열쇠). 쓰기 정책 **없음**(service_role 전용 — 자가발행 차단), select 만 본인/전원. ⚠️ **라이브 적용 완료(2026-08-22, 감독자 MCP)** + 공개 버킷 `wallpapers` 생성됨 — 파일은 기록용이니 재적용하지 말 것.
+
+**⑤ 게이트** tsc 0 · jest **3,474/3,474**(21차d 기준선 3,418 + 신규 56) · SSR 목 4종(무료·멤버십·광고사용됨·구매완료)으로 「1만냥으로 소장」 11건·「2만냥으로 소장」 3건·「광고 보고 오늘 1장 열기」 9건(광고 사용 케이스에서 0으로 사라짐 확인)·멤버십 배너 1건·다운로드 링크 10건 대조 후 임시 페이지 삭제. 🔴 크론 실검증은 **불가**(배포 후 감독자 몫) — 대신 순수 절차에 no-op/생성/실패 단위테스트를 걸었다. GA `wallpaperPurchase`/`wallpaperAdView`/`wallpaperAdUnlock` 신설(시청과 해금을 가른 이유는 중도 이탈이 그 차이로만 보이기 때문).
+
+⚠️ 총계 3,474 는 **이 작업만 얹었을 때**의 숫자다. 같은 시각 다른 세션들(「속풀이」 개편 · 디자인 리뷰 병합)이 들어오면서 최종 리베이스 기준 총계는 **3,477/3,477**(전부 그린)이 됐다 — 배경화면 확장의 몫은 어느 쪽이든 **신규 56건**이다. 기준선이 흔들려 보이면 이 문단을 먼저 볼 것.
+
 **(21차d · 2026-08-22) 복 배경화면 — 허브 인기테마 하단, 프로덕션 미배포** (커밋 `8642ee3`, 21차c 의 «다음 기획»이 구현됨): 폰 잠금화면용 다운로드 아트 6장(오행 5 + 이달의 복 1). ①**자산** — `scripts/media-assets/generate-wallpapers.mjs` 신설(REST `generateContent` + `imageConfig.aspectRatio 9:16` · 기본 --dry-run · 멱등 skip · `--force` 재생성), 산출 `public/wallpapers/*.webp` 1080×1920 q80 (21~176KB, 6장 합 594KB). 원본 `assets-src/wallpapers/*.src` 는 gitignore(재생성 가능). 🔴프롬프트 함정 2건이 주석에 박혀 있다 — «phone lock-screen wallpaper»·«clock area» 라고 쓰면 모델이 **시계 「12:03」과 전화·카메라 아이콘을 그린 잠금화면 목업**을 주고, «art print» 는 **안쪽 금색 액자 테두리 + 매트 여백**을 부른다. 지금 문법은 «세로 회화 한 점» + «네 변까지 꽉 참». 총 9장 생성(재생성 3장 포함), 6장 전수 육안 검수 ✓ ②**도메인** `lib/domain/analysis/wallpaper.ts`(순수) — `WALLPAPER_SET` 6장, 잠금 3등급(free·saju·journey), `MONTHLY_WALLPAPER_ID='monthly-202608'`. 🔴달이 바뀌면 이 상수와 `public/wallpapers/{새 id}.webp` 를 **함께** 갱신할 것(상수만 바꾸면 깨진 그림). `isMonthlyWallpaperCurrent()` 가 갱신 시점을 판별한다 ③**액션** `app/actions/analysis/wallpaper.ts` — 용신(`user_energy_profile.yongsin_element`)·사주 보유·완주를 서버 재판정(`journey-reward` 와 동일 계보), 비로그인 null → 카드 미렌더. 🔴이미지는 `public/` 이라 URL 직타로는 잠금을 못 막는다 — 과금 상품이 아니라 수용한 위험(코드 주석 명시), 유료화하려면 Storage 서명 URL 로 옮겨야 함 ④**UI** `components/analysis/wallpaper-card.tsx` — 「테마 전체 보기」 **바로 아래, 테마 섹션 안**에 앉혔다. 🔴새 허브 섹션을 만들지 않은 이유: `hub-sections.ts` 표와 화면을 개수로 대조하는 hub-layout 테스트가 함께 흔들린다. 조회(`WallpaperCard`)와 표현(`WallpaperCardView`·`WallpaperGrid`)을 갈라 목 자격으로 상태를 세울 수 있다. GA `wallpaperView`/`wallpaperDownload(id)` 신설 ⑤**게이트** tsc 0 · jest **3,418/3,418**(기준선 3,396 + 신규 22) · SSR 목 3종(자격없음·사주·완주)으로 잠금 문구·「내 오행」 배지·download 12건·이미지 6경로·한자 0 확인 후 임시 페이지 삭제. 🔴 AnalysisDashboard.tsx 는 여전히 `@/app/actions` 를 import 하지 않는다(회귀 테스트가 막는 계약) — 자격 조회는 카드가 진다. **→ 프로덕션 라이브**(2026-08-22 18:09, 배포 `hhd-7h6bopeu1`, 감독 세션이 배포·알리아스/배경화면 6장 서빙 200 검증).
 
 **(21차c · 2026-08-22 17:20) 관상·손금·풍수 디자인 통일 + 사주/종합 CTA 혼동 해소, 프로덕션 라이브** (`426e5dc`, 배포 `hhd-bo9cdzcpm`): ①스튜디오 공용 헤더(`studio-analysis-layout`)에 낙관 배지 상·손·터·명 ②palm·fengshui 히어로 신설, face 히어로 한글화(觀相→관상) ③분석 실행 CTA 4페이지 금빛 채움 통일(samhap 도장 레드 은퇴) ④혼동 해소 — 사주 유도 카드에 「이 사주 풀이가 아래 나의 복주머니 첫 칸에 담깁니다」 캡션, 여정 CTA «첫 주머니: 사주 풀이 시작하기»/«다섯 주머니 종합풀이 열기»/«모아둔 종합풀이 다시 보기». 다음 기획 대기: 인기테마 하단 빈공간에 «폰 배경화면 다운로드» (CEO 제안, 기획만 요청됨).
