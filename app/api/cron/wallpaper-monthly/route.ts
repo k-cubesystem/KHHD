@@ -38,7 +38,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, ...result })
   } catch (err) {
     logger.error('[cron/wallpaper-monthly] 생성 실패', err)
-    return NextResponse.json({ success: false, error: '이달의 복 생성 실패' }, { status: 500 })
+    // 이 라인까지 온 호출자는 CRON_SECRET 인증을 통과했다 — 운영 진단용 상세를 담아도 안전하다.
+    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 300)
+    return NextResponse.json({ success: false, error: '이달의 복 생성 실패', detail }, { status: 500 })
   }
 }
 
