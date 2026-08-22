@@ -33,6 +33,7 @@ import Image from 'next/image'
 import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { GAChat } from '@/lib/analytics/chat-ga'
 
 // ─── 타이핑 인디케이터 ────────────────────────────────
 function TypingDots() {
@@ -479,6 +480,8 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const [isStatusLoading, setIsStatusLoading] = useState(true)
   /** 선문안 — 신위가 먼저 건넨 오프닝. 대화가 시작되면 메시지 목록으로 자연히 밀려난다. */
   const [greeting, setGreeting] = useState<Greeting | null>(null)
+  /** 답변 후 이어 여쭙기 칩(P0-F2). 새 전송을 시작하면 비운다. */
+  const [followupChips, setFollowupChips] = useState<string[]>([])
   const [showMore, setShowMore] = useState(false)
 
   // 좌정 主神 표정 아바타 (신당 3.0). 서버 시딩(initialDeity)으로 첫 로드부터 신위 표시,
@@ -551,6 +554,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
   const loadSession = useCallback(async (familyMemberId: string) => {
     setIsSessionLoading(true)
     setGreeting(null)
+    setFollowupChips([])
     try {
       const sessionResult = await getOrCreateChatSession(familyMemberId)
       if (!sessionResult.success || !sessionResult.sessionId) {
@@ -577,6 +581,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       const opening = await getChatOpening(familyMemberId)
       if (opening.success && opening.greeting) {
         setGreeting(opening.greeting)
+        GAChat.greetingShown(opening.greeting.visitKind)
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 250)
       }
     } finally {
@@ -596,11 +601,17 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     loadSession('self')
   }, [loadSession])
 
+  // 진입 계측(P0-F4) — 화면 진입 1회. initialDeity 는 서버 시딩 prop 이라 마운트 후 불변.
+  useEffect(() => {
+    GAChat.open(initialDeity?.code ?? null)
+  }, [initialDeity])
+
   // family 변경 시 해당 세션으로 전환
   const handleFamilyChange = async (newFamilyId: string) => {
     setSelectedFamilyId(newFamilyId)
     setMessages([])
     setTurnCount(0)
+    setFollowupChips([])
     // 대상 전환 = 다른 대화 맥락. 좌정 신위(본인 한정)는 초기화.
     setDeityCode(null)
     setDeityEmotion('neutral')
@@ -616,6 +627,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
       setSessionId(result.newSessionId)
       setMessages([])
       setTurnCount(0)
+      setFollowupChips([])
       setDeityCode(null)
       setDeityEmotion('neutral')
       setGreeting(null)
@@ -634,7 +646,14 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     if (balance < 1) {
       toast.error('복채가 부족합니다', {
         description: `${balance.toLocaleString()}만냥 보유 · 1만냥 필요`,
-        action: { label: '복채 충전', onClick: () => router.push('/protected/membership') },
+        action: {
+          label: '복채 충전',
+          onClick: () => {
+            // 다른 페이월과 충전 동선 통일 — 멤버십 관리가 아니라 상점 복채 탭(P0-F5)
+            GAChat.rechargeRedirect()
+            router.push('/protected/store?tab=bokchae')
+          },
+        },
       })
       return
     }
@@ -652,6 +671,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
               }
             : prev
         )
+        GAChat.ticketPurchase()
         toast.success('질문권 20회 충전 완료', {
           description: `남은 복채: ${(result.remainingBalance ?? 0).toLocaleString()}만냥`,
         })
@@ -669,11 +689,13 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
     if (!textToSend || isLoading) return
 
     if ((questionStatus?.totalRemaining ?? 0) <= 0) {
+      GAChat.limitHit()
       toast.error('질문 횟수가 소진되었습니다.', { action: { label: '충전하기', onClick: handleRecharge } })
       return
     }
 
     setIsLoading(true)
+    setFollowupChips([])
     const userMsg: ShamanChatMessage = { role: 'user', content: textToSend, timestamp: new Date().toISOString() }
 
     // 선문안은 저장하지 않는 휘발성 인사지만, 사용자가 그 질문에 답한 순간부터는 대화의 일부다.
@@ -738,8 +760,19 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
         // AI 응답 후 스크롤
         setTimeout(scrollToBottomSmooth, 80)
 
+        // 잔여 동기화(P0-F5) — 서버가 차감 반영 잔여를 주면 그 값으로 덮어쓴다(낙관 desync 제거).
         setQuestionStatus((prev) => {
           if (!prev) return prev
+          if (result.remaining) {
+            return {
+              ...prev,
+              dailyFreeUsed: Math.max(0, prev.dailyFreeTotal - result.remaining.free),
+              dailyFreeRemaining: result.remaining.free,
+              purchasedCredits: result.remaining.purchased,
+              totalRemaining: result.remaining.total,
+            }
+          }
+          // 구버전 응답 폴백 — 종전 낙관 감소
           if (prev.dailyFreeRemaining > 0) {
             return {
               ...prev,
@@ -755,15 +788,21 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
           }
         })
 
-        // 추천 질문(result.suggestedQuestions)은 화면에 노출하지 않는다 —
-        // 예상질문 칩을 걷어내고 입력창에 집중하도록 바꾼 UI 결정.
+        // 이어 여쭙기 칩(P0-F2) — 0e78efb 의 「칩 제거」 결정을 실측(세션당 3.2문답)으로 뒤집는다.
+        setFollowupChips((result.suggestedQuestions ?? []).slice(0, 3))
+
+        // 계측(P0-F4). messages 는 이번 전송 «이전» 스냅샷 — 첫 질문 판정에 그대로 쓴다.
+        GAChat.messageSent(turnCount + 1)
+        if (!messages.some((m) => m.role === 'user')) GAChat.firstQuestion()
       } else {
         if (result.noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
         else toast.error(result.error || '전송 실패')
+        GAChat.sendError()
         rollbackSend()
       }
     } catch {
       toast.error('오류가 발생했습니다.')
+      GAChat.sendError()
       rollbackSend()
     } finally {
       setIsLoading(false)
@@ -782,20 +821,20 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
 
   return (
     <div
-      className="fixed flex flex-col bg-background"
+      className="fixed left-1/2 -translate-x-1/2 w-full max-w-[480px] flex flex-col bg-background"
       // bottom = 하단 메뉴(60px)만. 이 화면에서는 가이드 공지 바를 띄우지 않으므로
       // (GlobalGuide 의 hidden 경로) --guide-bar-h 는 0 이지만, 변수를 남겨두면
       // 다른 화면에서 세팅된 잔여값이 전환 직후 한 프레임 남을 수 있어 아예 뺀다.
+      // 🔴 left/right:0 이면 fixed 가 전역 480px 프레임을 탈출해 PC 에서 풀블리드가 된다 —
+      // BottomNav·MobileHeader 와 동일한 center-translate 패턴이 유일한 정답(P0-F3).
       style={{
         top: '56px',
         bottom: '60px',
-        left: 0,
-        right: 0,
         zIndex: 10,
       }}
     >
-      {/* 배경 ambient */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+      {/* 배경 ambient — 루트가 프레임 폭이므로 absolute 로 그 안에 갇힌다 */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-primary/[0.03] blur-[100px]" />
         <div className="absolute bottom-0 right-0 w-[250px] h-[250px] rounded-full bg-gold-600/[0.04] blur-[80px]" />
       </div>
@@ -943,12 +982,41 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
           )}
         </AnimatePresence>
 
+        {/* 이어 여쭙기 칩(P0-F2) — 마지막 신위 답변 아래, 응답 대기·선문안 중엔 숨긴다 */}
+        {!isSessionLoading &&
+          !isLoading &&
+          !greeting &&
+          followupChips.length > 0 &&
+          messages.length > 0 &&
+          messages[messages.length - 1].role === 'assistant' && (
+            <div className="flex flex-wrap gap-1.5 pl-10 pt-0.5" role="group" aria-label="이어 여쭙기">
+              {followupChips.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => {
+                    GAChat.chipTap('followup')
+                    void handleSend(q)
+                  }}
+                  className="px-3 py-1.5 rounded-full border border-gold-500/25 bg-surface/50 text-[12px] text-gold-200/85 hover:border-gold-500/45 hover:bg-surface/70 active:scale-[0.97] transition-all"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
+
         {/* 선문안 — 지금 막 건네는 말이므로 지난 대화 '아래'에 붙는다. */}
         {!isSessionLoading && greeting && (
           <GreetingIntro
             lines={greeting.lines}
             reduceMotion={reduceMotion ?? false}
             onSpeak={ttsSupported ? speakDeity : undefined}
+            quickReplies={greeting.quickReplies}
+            onQuickReply={(text) => {
+              GAChat.chipTap('greeting')
+              void handleSend(text)
+            }}
             avatar={
               deityCode ? (
                 <DeityFaceAvatar
@@ -1023,7 +1091,7 @@ export function ShamanChatInterface({ initialDeity = null }: { initialDeity?: Se
                   handleSend()
                 }
               }}
-              placeholder={isLimitReached ? '질문 한도 소진 · 충전해주세요' : '고민을 편하게 적어주세요...'}
+              placeholder={isLimitReached ? '질문 한도 소진 · 충전해주세요' : '무엇이든 편하게 여쭤보세요…'}
               disabled={isLoading || isLimitReached || isSessionLoading}
               rows={1}
               className={cn(
