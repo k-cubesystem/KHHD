@@ -10,12 +10,7 @@ import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { JourneyCard } from './journey-card'
 import { WallpaperCard } from './wallpaper-card'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
-import {
-  hubThemeDailyPicks,
-  THEME_CATEGORIES,
-  THEME_LIST_PATH,
-  themeListHref,
-} from '@/lib/domain/theme-fortune/themes'
+import { hubThemeDailyPicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
 /**
  * 사주·궁합 허브 본문 — 「앱 홈」 문법으로 개편(CEO 2026-08-13 "상단에 어플처럼 아이콘과 제목").
@@ -50,7 +45,15 @@ export function AnalysisDashboard() {
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="max-w-screen-sm mx-auto px-2 space-y-6 pb-40"
+      className="max-w-screen-sm mx-auto px-2 space-y-6"
+      // 바닥 여백은 «고정 하단 바에 가리지 않을 만큼»만 준다 — 그 이상은 빈 공간으로 보인다.
+      // 🔴 이전 `pb-40`(160px)은 실제 필요분의 두 배였고 마지막 카드 아래가 허옇게 비어
+      //    CEO 지적을 받았다(2026-08-23). 탭바는 `h-[60px]` + `pb-safe-area-bottom` 이므로
+      //    그 둘을 그대로 계산해 쓰고 숨쉴 틈 16px 만 더한다. 기기별 세이프에어리어에
+      //    자동으로 맞는다(안드로이드·데스크톱 0 → 76px, 홈바 있는 아이폰 → 약 110px).
+      //    Tailwind 임의값 대신 인라인 style 인 이유: 이 레포는 «클래스가 조용히 생성되지
+      //    않는» 사고 이력이 있어(HANDOFF 19차) 계산식은 CSS 로 직접 준다.
+      style={{ paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 16px)' }}
     >
       {/* 아이콘 런처 — 화면의 첫 자리. 앱 헤더(고정 상단 바) 바로 밑이다. */}
       <motion.div variants={fadeInUp}>
