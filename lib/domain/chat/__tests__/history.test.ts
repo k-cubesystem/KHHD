@@ -76,13 +76,24 @@ describe('창·정화', () => {
   })
 })
 
-describe('🔴 배선 — 액션이 이 함수를 쓴다', () => {
-  it('shaman-chat 이 직접 map 하지 않고 정규화를 거친다', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const source: string = require('fs').readFileSync('app/actions/ai/shaman-chat.ts', 'utf8')
+describe('🔴 배선 — 파이프라인이 이 함수를 쓴다', () => {
+  // 히스토리 조립은 파이프라인으로 옮겨졌다(P1-B 스트리밍). 액션·SSE 라우트가 **함께** 이 파일을
+  // 거치므로, 검사 대상도 파이프라인이다 — 액션만 보면 두 경로 중 하나가 새는 것을 못 잡는다.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const read = (p: string): string => require('fs').readFileSync(p, 'utf8')
 
+  it('파이프라인이 직접 map 하지 않고 정규화를 거친다', () => {
+    const source = read('lib/services/shaman-chat-pipeline.ts')
     expect(source).toContain('toGeminiHistory(conversationHistory, CHAT_HISTORY_WINDOW')
     // 옛 배선이 남아 있으면 장애가 그대로 돌아온다.
     expect(source).not.toContain('conversationHistory.slice(-CHAT_HISTORY_WINDOW)')
+  })
+
+  it('액션도 SSE 라우트도 스스로 히스토리를 만들지 않는다 (조립은 한 곳)', () => {
+    for (const p of ['app/actions/ai/shaman-chat.ts', 'app/api/chat/stream/route.ts']) {
+      const source = read(p)
+      expect(source).not.toContain('toGeminiHistory(')
+      expect(source).toContain('prepared.geminiHistory')
+    }
   })
 })

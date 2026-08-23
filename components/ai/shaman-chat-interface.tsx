@@ -34,6 +34,7 @@ import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft, Flame } from 'luc
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { GAChat } from '@/lib/analytics/chat-ga'
+import { canStream, streamShamanChat, type StreamDonePayload } from '@/lib/domain/chat/stream-client'
 import { AdIncenseSheet } from '@/components/ai/chat/ad-incense-sheet'
 import { getAdRewardAvailability } from '@/app/actions/ads/coupang'
 import type { AdRewardAvailability } from '@/lib/domain/ads/rewarded'
@@ -488,6 +489,8 @@ export function ShamanChatInterface({
   const [greeting, setGreeting] = useState<Greeting | null>(null)
   /** 답변 후 이어 여쭙기 칩(P0-F2). 새 전송을 시작하면 비운다. */
   const [followupChips, setFollowupChips] = useState<string[]>([])
+  /** 스트리밍으로 도착 중인 본문(P1-B) — 완결되면 messages 로 옮긴다. */
+  const [streamingText, setStreamingText] = useState('')
   /** 광고 리워드 가용성(P1-A) — 「향 올리기」 버튼 노출 여부 */
   const [adAvail, setAdAvail] = useState<AdRewardAvailability | null>(null)
   const [showAdSheet, setShowAdSheet] = useState(false)
@@ -543,6 +546,8 @@ export function ShamanChatInterface({
 
   const chatRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  /** 스트리밍 말풍선의 시각 — 토큰마다 새로 만들면 시계가 흔들린다. */
+  const streamStartedAtRef = useRef<string>(new Date().toISOString())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isAtBottomRef = useRef(true)
 
@@ -744,12 +749,15 @@ export function ShamanChatInterface({
     // 사용자 메시지 후 바로 스크롤
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50)
 
-    try {
-      const result = await sendShamanChatMessage(textToSend, history, turnCount, selectedFamilyId)
-      if (result.success && result.response) {
+    /**
+     * 성공 응답 반영 — 스트리밍(SSE)과 서버 액션이 «같은 마무리»를 쓴다.
+     * 두 벌로 갈라 두면 한쪽만 고쳐지고 다른 쪽이 조용히 뒤처진다.
+     */
+    const applySuccess = (result: StreamDonePayload) => {
+      {
         const aiMsg: ShamanChatMessage = {
           role: 'assistant',
-          content: result.response,
+          content: result.full,
           timestamp: new Date().toISOString(),
         }
         setMessages((prev) => [...prev, aiMsg])
@@ -830,18 +838,77 @@ export function ShamanChatInterface({
         // 계측(P0-F4). messages 는 이번 전송 «이전» 스냅샷 — 첫 질문 판정에 그대로 쓴다.
         GAChat.messageSent(turnCount + 1)
         if (!messages.some((m) => m.role === 'user')) GAChat.firstQuestion()
-      } else {
-        if (result.noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
-        else toast.error(result.error || '전송 실패')
-        GAChat.sendError()
-        rollbackSend()
       }
-    } catch {
-      toast.error('오류가 발생했습니다.')
+    }
+
+    /** 실패 처리 — 되돌리고 알린다. */
+    const applyFailure = (message: string, noCredits = false) => {
+      if (noCredits) toast.error('질문 횟수 소진', { action: { label: '충전', onClick: handleRecharge } })
+      else toast.error(message)
       GAChat.sendError()
       rollbackSend()
+    }
+
+    try {
+      let done: StreamDonePayload | null = null
+      let handled = false
+
+      // ① 스트리밍(P1-B) — 첫 글자가 바로 흐른다. 미지원 브라우저면 시도조차 하지 않는다
+      //    (열린 뒤 폴백하면 질문권이 두 번 차감된다 — stream-client 주석 참조).
+      if (canStream()) {
+        streamStartedAtRef.current = new Date().toISOString()
+        setStreamingText('')
+        const outcome = await streamShamanChat(
+          { message: textToSend, history, familyMemberId: selectedFamilyId },
+          {
+            onMeta: (m) => {
+              if (m.deityCode) setDeityCode(m.deityCode)
+              if (m.emotion) setDeityEmotion(m.emotion)
+            },
+            onToken: (t) => {
+              setStreamingText((prev) => prev + t)
+              // 사용자가 위로 올려 읽는 중이면 따라가지 않는다.
+              if (isAtBottomRef.current) bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+            },
+          }
+        )
+        setStreamingText('')
+        if (outcome.status === 'done') done = outcome.payload
+        else if (outcome.status === 'rejected') {
+          applyFailure(outcome.message, outcome.noCredits)
+          handled = true
+        } else if (outcome.status === 'error') {
+          applyFailure(outcome.message)
+          handled = true
+        }
+        // status === 'unavailable' → 연결 자체가 안 됐다. 차감도 없으니 아래 액션으로 폴백한다.
+      }
+
+      // ② 서버 액션 폴백 — 스트리밍 미지원·연결 실패 시
+      if (!done && !handled) {
+        const result = await sendShamanChatMessage(textToSend, history, turnCount, selectedFamilyId)
+        if (result.success && result.response) {
+          done = {
+            full: result.response,
+            suggestedQuestions: result.suggestedQuestions,
+            remaining: result.remaining,
+            deityCode: result.deityCode,
+            emotion: result.emotion,
+            bondLeveledUp: result.bondLeveledUp,
+            bondLevelName: result.bondLevelName,
+          }
+        } else {
+          applyFailure(result.error || '전송 실패', result.noCredits === true)
+          handled = true
+        }
+      }
+
+      if (done) applySuccess(done)
+    } catch {
+      applyFailure('오류가 발생했습니다.')
     } finally {
       setIsLoading(false)
+      setStreamingText('')
     }
 
     /** 전송 실패 되돌리기 — 접어 넣었던 선문안까지 함께 걷어내고 인사를 다시 세운다. */
@@ -1032,11 +1099,18 @@ export function ShamanChatInterface({
               )
             })}
 
-          {/* 타이핑 */}
-          {isLoading && (
+          {/* 도착 중인 답 — 첫 글자가 오기 전엔 점 세 개, 오기 시작하면 말풍선이 자란다(P1-B) */}
+          {isLoading && !streamingText && (
             <motion.div key="typing" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
               <TypingDots />
             </motion.div>
+          )}
+          {isLoading && streamingText && (
+            <Bubble
+              key="streaming"
+              msg={{ role: 'assistant', content: streamingText, timestamp: streamStartedAtRef.current }}
+              showAvatar
+            />
           )}
         </AnimatePresence>
 
