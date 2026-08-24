@@ -21,7 +21,7 @@ import {
 } from '@/app/actions/ai/shaman-chat'
 import { greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
 import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
-import { ServiceDisclaimer } from '@/components/shared/ServiceDisclaimer'
+import { AiDisclosureBadge } from '@/components/shared/AiDisclosureBadge'
 import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'
 import { OverlayPortal } from '@/components/ai/chat/overlay-portal'
 import { useFamilyMembers } from '@/hooks/use-family-members'
@@ -980,10 +980,13 @@ export function ShamanChatInterface({
               <p className="text-sm font-semibold text-foreground/90 tracking-wide leading-tight">
                 {deityCode && initialDeity && deityCode === initialDeity.code ? initialDeity.name : '해화지기'}
               </p>
-              <p className="text-[10px] text-primary/45 tracking-widest mt-0.5">
+              {/* 부제 + AI 고지 배지 — 고지를 입력창 위 한 줄에서 여기로 옮겼다(CEO 지시 2026-08-24).
+                  표시는 남기고 대화 영역은 비운다. 배지를 누르면 법정 문언 전문이 뜬다. */}
+              <p className="flex items-center gap-1.5 text-[10px] text-primary/45 tracking-widest mt-0.5">
                 {deityCode && initialDeity && deityCode === initialDeity.code
                   ? '청담해화당 · 좌정 主神'
                   : '청담해화당 · 수석 명리 상담가'}
+                <AiDisclosureBadge tone="chat" />
               </p>
             </div>
           </div>
@@ -1180,7 +1183,6 @@ export function ShamanChatInterface({
         {/* AI기본법 §31② 결과물 표시 — 신위의 말도 생성형 AI 결과물이다. 세계관을 지우지 않고
             「대신 목소리를 낸다」로 층을 나눈다. 상시 1줄(대화가 흐르면 위로 밀려 사라지므로
             메시지 목록이 아니라 입력 영역에 고정한다). */}
-        <ServiceDisclaimer tone="chat" className="mb-2 px-0" />
 
         {/* 잔여·충전 — 남은 질문과 복채는 «지금 쓸 수 있는 것»이라 흐리면 안 된다(CEO 지시 08-24).
             한 줄 텍스트였던 것을 칩 두 개로 세워 숫자가 먼저 읽히게 한다. */}

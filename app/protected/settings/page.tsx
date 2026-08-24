@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { SettingsForm } from '@/components/profile/settings-form'
 import { NotificationSettingsForm } from '@/components/profile/notification-settings-form'
+import { VoiceSettings } from '@/components/profile/voice-settings'
 import { ArrowLeft, Bell } from 'lucide-react'
 import Link from 'next/link'
 import { BrandQuote } from '@/components/ui/BrandQuote'
@@ -81,6 +82,12 @@ export default async function SettingsPage() {
 
         {/* 카카오 알림톡 설정 */}
         <NotificationSettingsForm initialPrefs={initialNotificationPrefs} />
+
+        {/* 신위 음성 — 채팅 더보기 시트에 숨어 있던 것을 설정으로 올린다(CEO 지시 2026-08-24).
+            채팅 쪽 토글도 그대로 두었다: 같은 키를 보므로 어디서 바꾸든 한 값이다. */}
+        <div className="mt-4">
+          <VoiceSettings />
+        </div>
       </div>
     </>
   )
