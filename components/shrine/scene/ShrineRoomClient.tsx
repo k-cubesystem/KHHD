@@ -96,6 +96,9 @@ import { type KeeperSpot } from './WalkingKeeper'
 import { GuardianWalkers } from './GuardianWalkers'
 import { DeityTurn } from './DeityTurn'
 import { FamilyShelfWall } from './FamilyShelfWall'
+import { PrayerBoard } from './PrayerBoard'
+import { PrayerSheet, type PrayerFamilyOption } from '@/components/shrine/PrayerSheet'
+import type { FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
 import { buildFamilyShelfUnits, familyShelfItemScale, hasFamilyShelf } from '@/lib/domain/shrine/family-shelf'
 import { STAGE_GROUND_DROP, hasGrandAltar } from '@/lib/domain/shrine/theme-stage'
 import { AI_DISCLOSURE_ATTR, AI_DISCLOSURE_TEXT } from '@/components/shared/ServiceDisclaimer'
@@ -110,18 +113,12 @@ import { RitualHall, RITUAL_HALL_UNIT } from './RitualHall'
 import { FixtureHandle, type FixtureBox } from './FixtureHandle'
 import { PanCoachmark } from './PanCoachmark'
 import type { FamilyHallData } from '@/app/actions/shrine/family-hall'
-import {
-  saveShrineLayout,
-  saveFixtureOffsets,
-  activateThemePack,
-  setPlacementLit,
-  setShrineVisibility,
-} from '@/app/actions/shrine/scene'
+import { saveShrineLayout, saveFixtureOffsets, activateThemePack, setPlacementLit } from '@/app/actions/shrine/scene'
 import { purchaseThemePack } from '@/app/actions/shrine/deities'
 import { recordKeeperGift } from '@/app/actions/shrine/keeper'
 import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
-import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import type { AekmakStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
 import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
 import { isFamilySeat, isOnSurface, isSeatSurface } from '@/lib/domain/shrine/shelf'
@@ -333,11 +330,12 @@ interface Props {
   /** 척전(엽전 세 닢) 현황 — 갈림길 도구. null 이면 독에서 행을 그리지 않는다 */
   chuljeon?: ChuljeonStatus | null
   /**
-   * 백일기도 현황(소유자 뷰에서만 주입). 방 위 게이지의 유일한 원천이다 —
-   * null 이면 게이지를 아예 그리지 않는다. 0% 막대를 지어내면 "아직 서약이 없다"와
-   * "서약했는데 조회에 실패했다"가 화면에서 구분되지 않는다(액막이·오방기와 같은 규율).
+   * 기도 올리기 시트의 가족 목록(소유자 뷰에서만 주입, 본인 제외 rows).
+   * 사랑방(familyHall)과 별개다 — 저쪽은 FAMILY 등급 게이트를 타지만 기도 대상은 전 등급이다.
    */
-  baekil?: BaekilStatus | null
+  family?: readonly PrayerFamilyOption[]
+  /** 기도 액자 — 대상별 최신 기도(서버 getFamilyPrayers). 소유자·방문자 모두 벽에 걸려 보인다. */
+  prayers?: readonly FamilyPrayer[]
 }
 
 interface Ring {
@@ -369,7 +367,8 @@ export function ShrineRoomClient({
   aekmak = null,
   obangki = null,
   chuljeon = null,
-  baekil = null,
+  family = [],
+  prayers = [],
 }: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
   const catalogById = useMemo(
@@ -441,8 +440,6 @@ export function ShrineRoomClient({
   const prayFlames = useRef<string[]>([])
   // 이 세션에서 방금 구매한 테마 코드 (서버 owned 플래그 재로드 없이 즉시 반영)
   const [purchasedCodes, setPurchasedCodes] = useState<Set<string>>(new Set())
-  const [visibility, setVisibility] = useState<'public' | 'private'>(scene.visibility)
-  const [visibilitySaving, setVisibilitySaving] = useState(false)
   // 신탁 선톡 — 좌정 主神이 선제적으로 건넨 신탁(있으면 말풍선에 특별 표시)
   const [oracle, setOracle] = useState<{ message: string; id: string } | null>(null)
   /**
@@ -1568,22 +1565,31 @@ export function ShrineRoomClient({
     //    박아 둔 이름표를 찾는다(그 속성이 사라지면 팻말이 아무 일도 안 하는 쪽으로 안전하게 실패한다).
     aekmakRef.current?.querySelector<HTMLButtonElement>('[data-aekmak-open]')?.click()
   }, [])
-  const plaqueSheets = useMemo(() => (aekmak ? { aekmak: openAekmakSheet } : undefined), [aekmak, openAekmakSheet])
+  /** 기도 올리기 시트(백일기도 v2) — 팻말·의식 독 두 문이 같은 시트를 연다. */
+  const [prayerOpen, setPrayerOpen] = useState(false)
+  const openPrayerSheet = useCallback(() => setPrayerOpen(true), [])
+  const plaqueSheets = useMemo(
+    () => ({
+      ...(aekmak ? { aekmak: openAekmakSheet } : {}),
+      ...(isOwner ? { prayer: openPrayerSheet } : {}),
+    }),
+    [aekmak, openAekmakSheet, isOwner, openPrayerSheet]
+  )
 
   /**
    * 팻말 처마 등 — 「오늘 할 일이 남았다」만 켠다. 서버 현황이 근거다.
    * · 오방기/척전: 오늘 무료 횟수가 남아 있고 아직 한 번도 안 했다
    * · 액막이: 오늘 태울 수 있는데 아직 안 태웠다
-   * · 백일: 서약이 살아 있는데 오늘 기도를 아직 안 올렸다
+   * · 기도: 오늘(KST) 기도를 아직 안 올렸다(기원 적립 기준)
    */
   const plaqueAttention = useMemo(
     () => ({
       obangki: obangki != null && obangki.remainingFree > 0 && obangki.todayCount === 0,
       chuljeon: chuljeon != null && chuljeon.remaining > 0 && chuljeon.todayCount === 0,
       aekmak: aekmak != null && aekmak.remaining > 0 && aekmak.todayCount === 0,
-      baekil: baekil != null && baekil.progress.phase === 'active' && !baekil.prayedToday,
+      prayer: devotion != null && !devotion.prayedToday,
     }),
-    [obangki, chuljeon, aekmak, baekil]
+    [obangki, chuljeon, aekmak, devotion]
   )
 
   /**
@@ -1665,27 +1671,8 @@ export function ShrineRoomClient({
     [applyTheme, buyAndApplyTheme, purchasedCodes]
   )
 
-  // ── 공개/비공개 전환 — 가족 신당은 이름이 드러나므로 공개 전에 확인을 받는다 ──
-  const toggleVisibility = useCallback(async () => {
-    const next = visibility === 'public' ? 'private' : 'public'
-    if (next === 'public' && scene.familyMemberId) {
-      const ok = window.confirm(
-        '이 신당을 공개하면 신당 이름(“○○의 신당”)으로 가족의 이름이 다른 사람에게 보일 수 있습니다.\n공개할까요?'
-      )
-      if (!ok) return
-    }
-    setVisibilitySaving(true)
-    const prev = visibility
-    setVisibility(next)
-    const res = await setShrineVisibility(next, scene.familyMemberId)
-    setVisibilitySaving(false)
-    if (!res.success) {
-      setVisibility(prev)
-      toast.error('공개 설정 변경 실패')
-    } else {
-      toast.success(next === 'public' ? '이 신당이 공개되었습니다' : '이 신당을 비공개로 바꾸었습니다')
-    }
-  }, [visibility, scene.familyMemberId])
+  // (공개/비공개 토글은 2026-08-25 CEO 지시로 물러났다 — 신당은 기본 비공개, 공개 전환 문 없음.
+  //  이미 공개된 신당의 방문 경로(/shrine/[userId])와 서버 액션 setShrineVisibility 는 남아 있다.)
 
   // ── 고정 살림 손잡이 상자 (꾸미기 모드) ───────────────────────────────────
   /**
@@ -1838,6 +1825,10 @@ export function ShrineRoomClient({
         idle={GAMEFEEL_V1 && !editing}
       />
 
+      {/* 기도 액자 — 가족 선반장 위쪽 벽(백일기도 v2). 유닛이 없는 방(비 FAMILY 등급·단일
+          무대)에서는 최신 한 장만 중앙 폴백 자리에 걸린다(도메인 buildPrayerFrames 판정). */}
+      {!editing && <PrayerBoard prayers={prayers} units={familyShelfUnits} />}
+
       {/* (존 가이드 — 2026-08-07 자유 배치와 함께 물러남. 존이 배치를 가두지 않으니
           "여기까지"를 그리는 띠 자체가 거짓말이 된다) */}
 
@@ -1973,17 +1964,6 @@ export function ShrineRoomClient({
               <LayoutGrid className="w-3.5 h-3.5" />
               신당 꾸미기
             </Link>
-          )}
-          {isOwner && (
-            <button
-              onClick={() => void toggleVisibility()}
-              disabled={visibilitySaving}
-              aria-label={visibility === 'public' ? '신당 비공개로 전환' : '신당 공개로 전환'}
-              title={visibility === 'public' ? '공개 중 — 눌러서 비공개' : '비공개 — 눌러서 공개'}
-              className="h-8 px-2 rounded-[10px] flex items-center gap-1 bg-surface border border-gold-500/25 text-gold-300 text-[10px] disabled:opacity-50"
-            >
-              {visibility === 'public' ? '공개' : '비공개'}
-            </button>
           )}
           <button
             onClick={toggleMute}
@@ -2296,7 +2276,8 @@ export function ShrineRoomClient({
             aekmak={aekmak}
             obangki={obangki}
             chuljeon={chuljeon}
-            baekil={baekil}
+            prayedToday={devotion ? devotion.prayedToday : null}
+            onOpenPrayer={openPrayerSheet}
             litCandles={litCount}
             play={play}
             aekmakSlotRef={aekmakRef}
@@ -2385,6 +2366,11 @@ export function ShrineRoomClient({
             🏮 나만의 신당 만들기
           </Link>
         </div>
+      )}
+
+      {/* 기도 올리기 시트(백일기도 v2) — 팻말·의식 독 두 문이 이 하나를 연다 */}
+      {isOwner && (
+        <PrayerSheet open={prayerOpen} onOpenChange={setPrayerOpen} shrineId={scene.shrineId} family={family} />
       )}
 
       {/* 하이브리드 가이드 — 우하단 主神 말풍선 + 할 일 슬림 바 */}

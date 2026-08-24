@@ -139,9 +139,22 @@ describe('벽 판정 · 목록', () => {
   })
 
   it('페이지 팻말은 서로 다른 전용 페이지를 가리킨다', () => {
+    // 백일기도 팻말은 v2(기도 액자, 2026-08-25)에서 sheet 로 바뀌었다 — 페이지로 나가는 문은 둘이다.
     const hrefs = SHRINE_PLAQUES.filter((p) => p.kind === 'page').map((p) => p.href)
-    expect(hrefs).toEqual(['/protected/shrine/chuljeon', '/protected/shrine/obangki', '/protected/shrine/baekil'])
+    expect(hrefs).toEqual(['/protected/shrine/chuljeon', '/protected/shrine/obangki'])
     expect(new Set(hrefs).size).toBe(hrefs.length)
+  })
+
+  /**
+   * 기도 팻말(구 백일기도)은 방을 떠나지 않는다 — 올린 기도가 **이 방 벽의 액자**에 걸리므로
+   * 자리가 방 안이다(백일기도 v2 · CEO 2026-08-25). 'page' 로 되돌리면 삭제된
+   * /protected/shrine/baekil 로 나가는 죽은 문이 된다.
+   */
+  it('기도 팻말은 방 안에서 기도 시트를 연다', () => {
+    const prayer = SHRINE_PLAQUES.find((p) => p.key === 'prayer')
+    expect(prayer).toBeDefined()
+    expect(prayer?.kind).toBe('sheet')
+    if (prayer?.kind === 'sheet') expect(prayer.sheet).toBe('prayer')
   })
 
   /**

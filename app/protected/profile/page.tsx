@@ -72,7 +72,7 @@ const PROFILE_GROUPS: readonly {
     gloss: '매일 드리는 정성',
     hero: { href: '/protected/shrine', icon: Flame, label: '나의 신당', sub: '신위를 모시고 오늘의 기도를 올립니다' },
     items: [
-      { href: '/protected/shrine/baekil', icon: Flame, label: '백일기도', sub: '소원 하나로 백 일' },
+      { href: '/protected/shrine', icon: Flame, label: '기도 올리기', sub: '가족 기도를 액자에' },
       { href: '/protected/shrine/obangki', icon: Flag, label: '오방기 점괘', sub: '한 가지 일을 여쭙기' },
       { href: '/protected/shrine/chuljeon', icon: Coins, label: '엽전 세 닢', sub: '갈림길을 정하기' },
       { href: '/protected/shrine/collection', icon: Store, label: '신위·테마·신물', sub: '모아 둔 것 보기' },

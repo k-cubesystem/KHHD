@@ -21,7 +21,7 @@
 import Link from 'next/link'
 import type { MouseEvent, RefObject } from 'react'
 import { Flag, Flame, Coins } from 'lucide-react'
-import type { AekmakStatus, BaekilStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
+import type { AekmakStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import type { SoundKey } from '@/lib/domain/shrine/types'
 import { useRitualTransition, type RitualNavigate } from '@/hooks/use-ritual-transition'
 import { AekmakStrip } from './AekmakSheet'
@@ -55,7 +55,10 @@ interface Props {
   obangki: ObangkiStatus | null
   /** 척전(엽전 세 닢) — 갈림길 도구. 오방기와 전혀 다른 의식이라 행도 따로 선다 */
   chuljeon: ChuljeonStatus | null
-  baekil: BaekilStatus | null
+  /** 오늘(KST) 이미 기도(기원 적립)했는가 — 기도 행의 상태점. null 이면 행을 그리지 않는다 */
+  prayedToday: boolean | null
+  /** 기도 올리기 시트(백일기도 v2) — 룸이 소유한 시트를 연다 */
+  onOpenPrayer: () => void
   /** 액막이 불씨 밝기·문구 — AekmakStrip 에 그대로 전달 */
   litCandles: number
   /** 신당 사운드 — 룸의 인스턴스를 빌려 쓴다 */
@@ -67,8 +70,17 @@ interface Props {
   aekmakSlotRef: RefObject<HTMLDivElement | null>
 }
 
-export function RitualDock({ aekmak, obangki, chuljeon, baekil, litCandles, play, aekmakSlotRef }: Props) {
-  if (!aekmak && !obangki && !chuljeon && !baekil) return null
+export function RitualDock({
+  aekmak,
+  obangki,
+  chuljeon,
+  prayedToday,
+  onOpenPrayer,
+  litCandles,
+  play,
+  aekmakSlotRef,
+}: Props) {
+  if (!aekmak && !obangki && !chuljeon && prayedToday === null) return null
 
   return (
     <section className="hanji-card mt-3 overflow-hidden rounded-xl border border-gold-500/[0.18]">
@@ -87,7 +99,7 @@ export function RitualDock({ aekmak, obangki, chuljeon, baekil, litCandles, play
         )}
         {obangki && <ObangkiRow status={obangki} />}
         {chuljeon && <ChuljeonRow status={chuljeon} />}
-        {baekil && <BaekilRow status={baekil} />}
+        {prayedToday !== null && <PrayerRow prayedToday={prayedToday} onOpen={onOpenPrayer} />}
       </div>
     </section>
   )
@@ -159,55 +171,35 @@ function ChuljeonRow({ status }: { status: ChuljeonStatus }) {
 }
 
 /**
- * 백일기도 행 — 구 BaekilStrip(방 위 슬롯)을 독의 행으로 흡수했다.
+ * 기도 행 — 백일기도 v2 「기도 액자」의 문 (CEO 2026-08-25 재기획).
  *
- * ⚠️ 진행도를 여기서 다시 계산하지 않는다 — percent·earnedDays·targetDays·phase 는 전부
- *    서버(getBaekilStatus → lib/domain/ritual/baekil.ts)가 판정한 값이다(구 스트립과 같은 규율).
- * ⚠️ 미서약(phase='none')이면 0% 막대 대신 「시작하기」 — 빈 막대는 "서약 없음"과
- *    "오늘 0일째"를 구분하지 못한다. 서약 자체는 전용 페이지가 맡는다(이 행은 문일 뿐).
- * 휴면(dormant)은 실패가 아니다 — 막대는 남기고 불씨·상태점만 사그라뜨려 알린다.
+ * 구 백일기도(서약·게이지·갈무리)는 물러났다 — 이 행은 페이지로 나가지 않고 방 안에서
+ * 기도 올리기 시트를 연다(올린 기도가 이 방 벽의 액자에 걸리므로 자리가 방 안이다).
+ * 상태는 기원(devotion)의 오늘 기도 여부 하나만 말한다 — 서버 값이 없으면 행을 그리지 않는다.
  */
-function BaekilRow({ status }: { status: BaekilStatus }) {
-  const { progress } = status
-  const started = progress.phase !== 'none'
-  const burning = progress.phase === 'active' || progress.phase === 'ready'
-  const go = useRitualTransition()
-
+function PrayerRow({ prayedToday, onOpen }: { prayedToday: boolean; onOpen: () => void }) {
   return (
-    <Link
-      href="/protected/shrine/baekil"
-      onClick={ritualLinkHandler(go, '/protected/shrine/baekil')}
-      aria-label={started ? '백일기도 진행 보기' : '백일기도 시작하기'}
-      className={ROW_CLASS}
-    >
+    <button type="button" onClick={onOpen} aria-label="가족 기도 올리기" className={`${ROW_CLASS} w-full`}>
       <span
-        className={`${PLATE_CLASS} ${burning ? 'border-gold-500/40 bg-gold-500/[0.14]' : 'border-white/10 bg-white/[0.04]'}`}
+        className={`${PLATE_CLASS} ${prayedToday ? 'border-gold-500/40 bg-gold-500/[0.14]' : 'border-white/10 bg-white/[0.04]'}`}
       >
         <Flame
-          className={`h-3.5 w-3.5 ${burning ? 'text-gold-200' : 'text-[#5C564C]'}`}
-          fill={burning ? '#C9A84C' : 'none'}
+          className={`h-3.5 w-3.5 ${prayedToday ? 'text-gold-200' : 'text-[#8C8478]'}`}
+          fill={prayedToday ? '#C9A84C' : 'none'}
         />
       </span>
-      <span className={NAME_CLASS}>백일기도</span>
-      {/* 설명 대신 게이지가 말한다 — 우측 상태로 몬다(행 문법 유지를 위한 스페이서) */}
-      <span className="flex-1" />
-      {started ? (
-        <span className={`${STATE_CLASS} ${burning ? 'text-ink-primary/55' : 'text-ink-primary/40'}`}>
-          {burning && <span aria-hidden className={`${DOT_CLASS} bg-gold-500`} />}
-          <span className="h-1 w-[72px] overflow-hidden rounded-full bg-ink-primary/15">
-            <span className="block h-full rounded-full bg-gold-500" style={{ width: `${progress.percent}%` }} />
-          </span>
-          {progress.earnedDays}/{progress.targetDays}일
-          {progress.ready && (
-            <span className="grid h-[15px] flex-shrink-0 place-items-center rounded-full bg-seal px-1.5 text-[9px] font-bold text-[#f2dcdc]">
-              갈무리
-            </span>
-          )}
-        </span>
+      <span className={NAME_CLASS}>기도 올리기</span>
+      <span className="flex-1 truncate text-left font-sans text-[11px] text-ink-primary/55">
+        가족을 골라 한 줄 기도를 액자에 겁니다
+      </span>
+      {prayedToday ? (
+        <span className={`${STATE_CLASS} text-ink-primary/40`}>오늘 기도 올림</span>
       ) : (
-        // 시작하기는 행위 유도라 상태색(/55)이 아니라 금색을 입힌다 — 죽은 글자로 보이면 문이 닫힌다
-        <span className="whitespace-nowrap font-sans text-[11px] text-gold-300">시작하기</span>
+        <span className={`${STATE_CLASS} text-ink-primary/55`}>
+          <span aria-hidden className={`${DOT_CLASS} bg-gold-500`} />
+          오늘의 기도
+        </span>
       )}
-    </Link>
+    </button>
   )
 }

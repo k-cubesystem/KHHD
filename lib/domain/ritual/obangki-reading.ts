@@ -343,7 +343,7 @@ export interface SamgiRemedy {
 }
 
 export const SAMGI_REMEDY: Readonly<Record<ObangkiColor, SamgiRemedy>> = Object.freeze({
-  red: Object.freeze({ rite: '산신제·재수굿', action: '백일기도를 올린다', href: '/protected/shrine/baekil' }),
+  red: Object.freeze({ rite: '산신제·재수굿', action: '신당에 기도를 올린다', href: '/protected/shrine' }),
   white: Object.freeze({ rite: '칠성기도·명굿', action: '오늘의 기도를 올린다', href: '/protected/shrine' }),
   yellow: Object.freeze({ rite: '조상 대접', action: '가족 신당을 돌본다', href: '/protected/family' }),
   blue: Object.freeze({ rite: '신장 축원', action: '액막이 부적을 태운다', href: '/protected/shrine' }),

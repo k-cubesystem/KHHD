@@ -55,6 +55,11 @@ import { isGutKind, remainingFreeGut, type GutKind, type GutStatus } from '@/lib
 
 /**
  * 신당 의식 서버 액션 — R-1 「액막이」 · R-2 「오방기 점괘」 · R-3 「백일기도」
+ *
+ * ⚠️ 구 백일기도(서약·게이지·트로피) UI 는 2026-08-25 CEO 재기획(기도 액자 v2)으로 물러났다.
+ *    아래 getBaekilStatus·startBaekilVow·settleBaekilVow·getGutStatus 는 **호출처 0** 이지만
+ *    지급된 트로피·아이템·shrine_vows 행이 살아 있어 재개 레버로 남긴다 — 새 소비처를 만들
+ *    때는 PrayerSheet(기도 액자) 문법과 겹치지 않는지 먼저 볼 것.
  * (PRD-shrine-rituals-v1 §1·§2·§3).
  *
  * ⚠️ 이 파일은 `'use server'` — 모든 export 가 로그인 유저의 **공개 엔드포인트**다.
@@ -1093,6 +1098,6 @@ export async function requestGut(kind: string): Promise<RequestGutResult> {
     return { success: false, error: row && isRecord(row) && row.reason === 'NO_QUOTA' ? 'NO_QUOTA' : 'REQUEST_FAILED' }
   }
 
-  revalidatePath('/protected/shrine/baekil')
+  revalidatePath('/protected/shrine')
   return { success: true, requestId: typeof row.request_id === 'string' ? row.request_id : undefined }
 }

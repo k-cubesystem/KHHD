@@ -54,9 +54,9 @@ test.describe('신당 3.0 핵심 루프 검수', () => {
     await expect(page.getByRole('img', { name: seatedName }).first()).toBeVisible({ timeout: 15_000 })
     console.log(`[CHECK] 제단 主神(${seatedName}) 렌더: true`)
 
-    // 인연 바가 있던 자리 — 백일기도 게이지로 대체됨(CEO 6차 지시 ④)
-    await expect(page.getByText(/백일기도/).first()).toBeVisible({ timeout: 10_000 })
-    console.log('[CHECK] 백일기도 게이지 표시: true')
+    // 구 백일기도 게이지 → 기도 올리기 행(백일기도 v2 「기도 액자」 · CEO 2026-08-25)
+    await expect(page.getByText(/기도 올리기/).first()).toBeVisible({ timeout: 10_000 })
+    console.log('[CHECK] 기도 올리기 행 표시: true')
 
     await expect(page.getByRole('button', { name: '전체화면' })).toBeVisible({ timeout: 10_000 })
     console.log('[CHECK] 전체화면 버튼: true')

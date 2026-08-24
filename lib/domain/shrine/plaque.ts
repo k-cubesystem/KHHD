@@ -38,8 +38,12 @@ export const PLAQUE_SPRITE_URL = '/shrine/ritual/plaque.webp'
  */
 export const PLAQUE_BOX = { w: 120, h: 48, cy: 131 } as const
 
-/** 방을 떠나지 않고 그 자리에서 여는 의식 — 팻말이 페이지가 아니라 시트를 켠다. */
-export type PlaqueSheet = 'aekmak'
+/**
+ * 방을 떠나지 않고 그 자리에서 여는 의식 — 팻말이 페이지가 아니라 시트를 켠다.
+ * · aekmak  촛불에서 불을 받아 태우는 의식이라 방을 떠날 수 없다.
+ * · prayer  기도 올리기(백일기도 v2) — 올린 기도가 이 방 벽의 액자에 걸리므로 방 안이 자리다.
+ */
+export type PlaqueSheet = 'aekmak' | 'prayer'
 
 interface PlaqueBase {
   key: string
@@ -61,7 +65,7 @@ interface PlaqueBase {
 
 /**
  * 팻말이 하는 일은 둘 중 하나다 — 판별 유니온이라 둘 다 들거나 둘 다 비는 상태가 타입에서 막힌다.
- *  - `page`  전용 페이지로 나간다(오방기·백일기도).
+ *  - `page`  전용 페이지로 나간다(오방기·엽전).
  *  - `sheet` **방 안에서** 시트를 연다. 액막이가 그렇다 — 촛불에서 불을 받아 부적을 태우는 의식이라
  *            불이 없는 곳으로 나가면 행위 자체가 성립하지 않는다.
  */
@@ -77,7 +81,7 @@ export type ShrinePlaque = PlaqueBase & ({ kind: 'page'; href: string } | { kind
  *    칸 격자 대신 **방 중심 기준 균등 배치**(간격 130)로 바꿨다. 널을 120 으로 줄여 겹침도 없앴다.
  *
  * 순서는 **의식의 주기**다 — 왼쪽에서 오른쪽으로 호흡이 길어진다:
- *   엽전(하루 10회) → 액막이(하루 3회) → 오방기(하루 3회·무겁다) → 백일기도(100일).
+ *   엽전(하루 10회) → 액막이(하루 3회) → 오방기(하루 3회·무겁다) → 기도(가족 기도 액자).
  */
 export const SHRINE_PLAQUES: readonly ShrinePlaque[] = Object.freeze([
   {
@@ -105,11 +109,13 @@ export const SHRINE_PLAQUES: readonly ShrinePlaque[] = Object.freeze([
     cx: 2113,
   },
   {
-    key: 'baekil',
-    kind: 'page',
-    href: '/protected/shrine/baekil',
-    ko: '백일기도',
-    ariaLabel: '백일기도 보러 가기',
+    // 구 백일기도 팻말 자리 — v2(2026-08-25)에서 「기도 올리기」 시트를 여는 문이 됐다.
+    // 올린 기도는 이 방 벽의 액자(PrayerBoard)에 걸리므로 page 가 아니라 sheet 다.
+    key: 'prayer',
+    kind: 'sheet',
+    sheet: 'prayer',
+    ko: '기도',
+    ariaLabel: '가족 기도 올리기',
     cx: 2243,
   },
 ])

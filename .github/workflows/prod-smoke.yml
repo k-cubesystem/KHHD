@@ -54,7 +54,6 @@ jobs:
           npx playwright test \
             e2e/prod/console-probe.spec.ts \
             e2e/prod/shrine-nav.spec.ts \
-            e2e/prod/family-shrine.spec.ts \
             e2e/prod/store.spec.ts \
             e2e/prod/notifications.spec.ts \
             e2e/prod/shrine-effects.spec.ts \

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { addBokPoints } from '@/lib/services/bok-grant'
 import { accrueDevotion } from '@/lib/services/devotion'
+import { latestPrayerPerTarget, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
 
 export interface ShrineWish {
   id: string
@@ -129,4 +130,50 @@ export async function deleteWish(wishId: string): Promise<{ success: boolean; er
   if (error) return { success: false, error: error.message }
 
   return { success: true }
+}
+
+/**
+ * 가족 기도 액자 데이터 — 이 신당의 **소유자 기도** 중 대상(본인·가족)별 최신 1건.
+ *
+ * 백일기도 v2(기도 액자)의 유일한 읽기 경로다. 새 테이블이 아니라 shrine_wishes 의
+ * is_owner_wish + family_member_id 를 그대로 읽는다 — 「기도 올리기」(addWish)가 쓴 것을
+ * 여기서 돌려받는 왕복이라 스키마 추가가 0 이다.
+ *
+ * 이름 해석까지 서버가 끝낸다(본인=나, 가족=family_members.name). 가족이 삭제돼 이름이
+ * 없는 기도는 **버린다** — 주인 없는 액자를 걸지 않는다(도메인 buildPrayerFrames 와 같은 규율).
+ */
+export async function getFamilyPrayers(shrineId: string): Promise<FamilyPrayer[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  // 최근 60건이면 대상 6명(선반 상한)의 최신을 넉넉히 덮는다 — 전체 스캔을 걸지 않는다.
+  const { data, error } = await supabase
+    .from('shrine_wishes')
+    .select('wish_text, family_member_id, created_at')
+    .eq('shrine_id', shrineId)
+    .eq('is_owner_wish', true)
+    .order('created_at', { ascending: false })
+    .limit(60)
+
+  if (error || !data) return []
+
+  const { data: family } = await supabase.from('family_members').select('id, name').eq('user_id', user.id)
+  const nameOf = new Map((family ?? []).map((f) => [f.id as string, f.name as string]))
+
+  const rows: FamilyPrayer[] = []
+  for (const w of data) {
+    const memberId = (w.family_member_id as string | null) ?? null
+    const name = memberId === null ? '나' : nameOf.get(memberId)
+    if (!name) continue
+    rows.push({
+      memberId,
+      name,
+      text: (w.wish_text as string) ?? '',
+      createdAt: (w.created_at as string) ?? '',
+    })
+  }
+  return latestPrayerPerTarget(rows)
 }
