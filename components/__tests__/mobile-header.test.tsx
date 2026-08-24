@@ -60,13 +60,13 @@ describe('상단 바 — 전 화면 동일', () => {
     expect(screen.getByLabelText('홈').getAttribute('href')).toBe('/protected/analysis')
   })
 
-  it('인사 한 줄이 붙는다', () => {
+  it('상호 말고 다른 글자는 없다 (인사 한 줄은 CEO 지시로 뺐다)', () => {
     const { container } = render(<MobileHeader />)
 
-    // 결정론이라 문장은 시각에 따라 갈린다 — 여기서는 «비어 있지 않다»만 본다.
-    // 어떤 시각에 무슨 문장인지는 lib/domain/analysis/__tests__/hub-home.test.ts 가 본다.
-    const texts = Array.from(container.querySelectorAll('span')).map((node) => node.textContent?.trim())
-    expect(texts.filter((text) => text && text !== '청담해화당').length).toBeGreaterThan(0)
+    const texts = Array.from(container.querySelectorAll('span'))
+      .map((node) => node.textContent?.trim())
+      .filter(Boolean)
+    expect(texts).toEqual(['청담해화당'])
   })
 
   it('바는 하나뿐이고 높이는 그대로다 (레이아웃 pt-14 가 이 높이를 전제한다)', () => {

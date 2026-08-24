@@ -3,8 +3,6 @@
 import { Home } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { hubGreeting } from '@/lib/domain/analysis/hub-home'
-import { useHydrated } from '@/hooks/use-hydrated'
 import { GuideBell } from '@/components/guide/GuideBell'
 
 /** 상호·로고를 누르면 가는 곳. 홈 버튼도 같은 자리다. */
@@ -16,7 +14,10 @@ const BAR =
 
 /**
  * 고정 상단 바 — **모든 화면이 같은 머리글을 쓴다**(CEO 2026-08-24 "상단헤더를 전부 이렇게").
- * 아이콘 + 「청담해화당」(홈 링크) · 인사 한 줄 · 가이드 종 · 홈.
+ * 아이콘 + 「청담해화당」(홈 링크) · 가이드 종 · 홈.
+ *
+ * 인사 한 줄(「늦은 밤에 오셨네요」)은 CEO 지시로 뺐다(2026-08-24) — `hubGreeting()` 자체는
+ * 도메인에 그대로 있으니 되살릴 땐 여기서 다시 부르면 된다.
  *
  * 🔴 화면마다 바를 갈아 끼우지 않는다. 종전에는 허브에서만 「앱 헤더」였고 그 밖에서는
  *    «뒤로가기 + 상호 + 홈» 이라 같은 앱에서 머리글이 두 벌로 보였다. 뒤로가기는 이 개편으로
@@ -24,7 +25,6 @@ const BAR =
  * 🔴 페이지 안에 헤더를 또 그리지 말 것. 같은 상호가 세로로 두 번 뜬다.
  */
 export function MobileHeader() {
-  const isHydrated = useHydrated()
   const t = useTranslations()
 
   return (
@@ -45,12 +45,6 @@ export function MobileHeader() {
         </Link>
 
         <div className="flex shrink-0 items-center">
-          {/* 인사는 시각으로만 갈린다(결정론·KST). 하이드레이션 뒤에 그려 서버/브라우저 시각
-              차이로 문장이 엇갈리는 일을 없앤다. 폭이 모자라면 상호가 먼저 줄어든다(왼쪽 min-w-0). */}
-          <span className="whitespace-nowrap pr-1 text-[11px] font-light text-ink-light/50">
-            {isHydrated ? hubGreeting() : null}
-          </span>
-
           <GuideBell />
 
           <Link
