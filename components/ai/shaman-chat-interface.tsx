@@ -89,10 +89,15 @@ const Bubble = memo(function Bubble({
   msg,
   showAvatar,
   onSpeak,
+  isSpeaking = false,
+  onStop,
 }: {
   msg: ShamanChatMessage
   showAvatar: boolean
   onSpeak?: (text: string) => void
+  /** 지금 이 말풍선을 읽고 있는가 — 버튼을 「정지·처음부터」로 바꾼다 */
+  isSpeaking?: boolean
+  onStop?: () => void
 }) {
   const isUser = msg.role === 'user'
   const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
@@ -160,15 +165,38 @@ const Bubble = memo(function Bubble({
         </div>
         <div className="flex items-center gap-2 pl-1">
           <p className="text-[10px] text-primary/60">{time}</p>
+          {/* 듣기 / (재생 중이면) 처음부터 · 정지 — 재생 중 상태를 보여주지 않으면
+              사용자가 «안 나오나?» 하고 다시 눌러 소리가 겹친다(2026-08-24 CEO 보고의 시작점). */}
           {onSpeak && msg.content ? (
-            <button
-              type="button"
-              onClick={() => onSpeak(msg.content)}
-              aria-label="음성으로 듣기"
-              className="-my-3 -mx-2 px-2 py-3 text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
-            >
-              🔊 듣기
-            </button>
+            isSpeaking ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onSpeak(msg.content)}
+                  aria-label="처음부터 다시 듣기"
+                  className="-my-3 -mx-1 px-1.5 py-3 text-[10px] text-primary/55 hover:text-gold-300 transition inline-flex items-center gap-0.5"
+                >
+                  ⏮ 처음부터
+                </button>
+                <button
+                  type="button"
+                  onClick={onStop}
+                  aria-label="음성 정지"
+                  className="-my-3 -mx-1 px-1.5 py-3 text-[10px] text-gold-300 hover:text-gold-200 transition inline-flex items-center gap-0.5"
+                >
+                  ⏹ 정지
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onSpeak(msg.content)}
+                aria-label="음성으로 듣기"
+                className="-my-3 -mx-2 px-2 py-3 text-[10px] text-primary/50 hover:text-gold-300 transition inline-flex items-center gap-0.5"
+              >
+                🔊 듣기
+              </button>
+            )
           ) : null}
         </div>
       </div>
@@ -506,7 +534,7 @@ export function ShamanChatInterface({
   const { play: playFx } = useShrineAudio()
 
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
-  const { supported: ttsSupported, speak, stop: ttsStop } = useTts()
+  const { supported: ttsSupported, speakingId, speak, stop: ttsStop } = useTts()
   // 좌정 신위별 목소리 — deityCode 로 프로파일(rate/pitch/voiceHint) 조회 후 발화. 미좌정이면 기본.
   // 어드민에서 조절한 값(deity_voice_profiles)을 브라우저 폴백에도 반영한다.
   // 서버 TTS 는 /api/tts 가 스스로 DB 를 읽으므로 이 값은 «폴백 전용»이다. 조회 실패 시 코드 상수.
@@ -525,7 +553,8 @@ export function ShamanChatInterface({
     }
   }, [deityCode])
   const speakDeity = useCallback(
-    (text: string) => speak(text, { ...(voiceOverride ?? voiceProfileFor(deityCode)), deityCode }),
+    (text: string, trackId?: string) =>
+      speak(text, { ...(voiceOverride ?? voiceProfileFor(deityCode)), deityCode, trackId }),
     [speak, deityCode, voiceOverride]
   )
   const [autoSpeak, setAutoSpeak] = useState(false)
@@ -1113,7 +1142,9 @@ export function ShamanChatInterface({
                   key={`${msg.timestamp}-${i}`}
                   msg={msg}
                   showAvatar={showAvatar}
-                  onSpeak={ttsSupported ? speakDeity : undefined}
+                  onSpeak={ttsSupported ? (text) => speakDeity(text, msg.timestamp) : undefined}
+                  isSpeaking={speakingId === msg.timestamp}
+                  onStop={ttsStop}
                 />
               )
             })}
