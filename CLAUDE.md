@@ -33,6 +33,9 @@ npm run dev | build | test | e2e | lint
 
 /design /build /review /security /data /docs /status
 
+**/pipeline** — 기반확인 → 게이트(병렬) → 리뷰(에이전트 4기 병렬) → QA → 디버깅 → 수정 루프 → 배포.
+단계는 순서대로, 단계 안은 병렬로. 이 저장소에서 실제로 터진 함정 목록과 배포 규율이 박혀 있다.
+
 ## 4중 프로토콜 (모든 코드에 자동 적용)
 
 1. **ZERO-LATENCY**: Optimistic UI, Upload First, Background Submit, Client Compress
