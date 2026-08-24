@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { logger } from '@/lib/utils/logger'
-import { User, Users } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
+import { TargetSelect, toTargetOption, type TargetOption } from '@/components/destiny/target-select'
+import { getDestinyTargets } from '@/app/actions/user/destiny'
+
+/**
+ * 기록 화면의 대상 필터 — 「전체 보기」가 하나 더 붙은 것 말고는 다른 화면의 대상 선택과 같다.
+ * 모양은 `TargetSelect` 하나가 정한다(2026-08-25 드롭다운 통일).
+ */
+
+/** 목록 밖 항목. 대상 id 는 uuid 라 이 문자열과 부딪히지 않는다. */
+const ALL_OPTION = { id: 'ALL', label: '전체 보기' }
 
 interface TargetFilterProps {
   selectedTargetId: string | null
@@ -13,65 +19,34 @@ interface TargetFilterProps {
 }
 
 export function TargetFilter({ selectedTargetId, onTargetChange }: TargetFilterProps) {
-  const [targets, setTargets] = useState<DestinyTarget[]>([])
-  const [loading, setLoading] = useState(true)
+  const [targets, setTargets] = useState<TargetOption[] | null>(null)
 
   useEffect(() => {
-    loadTargets()
+    let active = true
+    getDestinyTargets()
+      .then((data) => {
+        if (active) setTargets(data.map(toTargetOption))
+      })
+      .catch((error) => {
+        logger.error('Failed to load destiny targets:', error)
+        if (active) setTargets([])
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
-  const loadTargets = async () => {
-    try {
-      const data = await getDestinyTargets()
-      setTargets(data)
-    } catch (error) {
-      logger.error('Failed to load destiny targets:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading || targets.length === 0) {
-    return null
-  }
+  // 고를 대상이 없으면 필터 자체가 의미 없다 — 자리를 비운다(로딩 중에도 뼈대를 세우지 않는다).
+  if (targets === null || targets.length === 0) return null
 
   return (
-    <div className="space-y-2">
-      <label className="text-xs text-ink-light/60 font-medium uppercase tracking-wide">분석 대상 필터</label>
-      <Select
-        value={selectedTargetId || 'ALL'}
-        onValueChange={(value) => onTargetChange(value === 'ALL' ? null : value)}
-      >
-        <SelectTrigger className="w-full bg-surface/30 border-primary/20 text-ink-light hover:border-primary/40 h-12">
-          <SelectValue placeholder="전체 보기" />
-        </SelectTrigger>
-        <SelectContent className="bg-surface border-primary/20">
-          <SelectItem value="ALL" className="text-ink-light hover:bg-primary/10">
-            <div className="flex items-center gap-3">
-              <Users className="w-4 h-4 text-primary" />
-              <span>전체 보기</span>
-            </div>
-          </SelectItem>
-          {targets.map((target) => (
-            <SelectItem key={target.id} value={target.id} className="text-ink-light hover:bg-primary/10">
-              <div className="flex items-center gap-3">
-                {target.target_type === 'self' ? (
-                  <User className="w-4 h-4 text-primary" />
-                ) : (
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={target.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs bg-primary/20 text-primary">{target.name[0]}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div>
-                  <span className="font-medium">{target.name}</span>
-                  <span className="text-ink-light/60 text-xs ml-2">({target.relation_type})</span>
-                </div>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <TargetSelect
+      label="분석 대상 필터"
+      targets={targets}
+      value={selectedTargetId ?? ALL_OPTION.id}
+      onChange={(id) => onTargetChange(id === ALL_OPTION.id ? null : id)}
+      allOption={ALL_OPTION}
+      placeholder={ALL_OPTION.label}
+    />
   )
 }

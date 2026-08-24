@@ -21,6 +21,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
+import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import Link from 'next/link'
 import { analyzeYear2026Action, type Year2026Result } from '@/app/actions/ai/year2026'
 import { ShareSaveButtons } from '@/components/studio/share-save-buttons'
@@ -149,65 +150,6 @@ function LoadingOracle() {
           <h3 className="font-serif text-xl text-ink-light font-medium tracking-wide">천기의 흐름을 읽고 있습니다</h3>
           <p className="text-sm text-ink-light/50 font-light">2026년 병오년의 기운을 분석 중...</p>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function TargetSelector({
-  targets,
-  onSelect,
-  selectedId,
-}: {
-  targets: DestinyTarget[]
-  onSelect: (id: string) => void
-  selectedId: string | null
-}) {
-  if (targets.length === 0) return null
-
-  return (
-    <div className="w-full">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {targets.map((target) => {
-          const isSelected = selectedId === target.id
-          return (
-            <motion.button
-              key={target.id}
-              onClick={() => onSelect(target.id)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`
-                 relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 w-full text-left
-                 ${
-                   isSelected
-                     ? 'bg-gradient-to-r from-red-900/80 to-red-950 border-red-500/50 shadow-[0_0_15px_rgba(220,38,38,0.3)]'
-                     : 'bg-surface/40 border-white/5 hover:border-white/20 hover:bg-surface/60'
-                 }
-               `}
-            >
-              <div
-                className={`
-                 w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-bold
-                 ${isSelected ? 'bg-red-500 text-white' : 'bg-white/10 text-ink-light/50'}
-               `}
-              >
-                {target.name.slice(0, 1)}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className={`text-sm font-serif truncate ${isSelected ? 'text-white' : 'text-ink-light/80'}`}>
-                  {target.name}
-                </span>
-                <span className="text-[10px] text-ink-light/40 truncate">{target.relation_type}</span>
-              </div>
-              {isSelected && (
-                <motion.div
-                  layoutId="active-indicator"
-                  className="absolute inset-0 border-2 border-red-500/30 rounded-xl"
-                />
-              )}
-            </motion.button>
-          )
-        })}
       </div>
     </div>
   )
@@ -343,7 +285,13 @@ function NewYear2026Content() {
       {/* Target Selection */}
       <motion.div variants={fadeInUp} className="mb-8 md:mb-12 space-y-3">
         <h3 className="text-sm font-serif text-ink-light/70 ml-1">누구의 운명을 보시겠습니까?</h3>
-        <TargetSelector targets={targets} selectedId={selectedTargetId} onSelect={handleTargetChange} />
+        {/* 카드 격자였던 자리 — 모양은 `TargetSelect` 하나가 정한다(2026-08-25 드롭다운 통일). */}
+        <TargetSelect
+          targets={targets.map(toTargetOption)}
+          value={selectedTargetId}
+          onChange={handleTargetChange}
+          placeholder="분석할 대상을 선택하세요"
+        />
       </motion.div>
 
       {/* Main Action Area */}

@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Loader2, Sparkles, RefreshCw, Users, ArrowRight } from 'lucide-react'
+import { Loader2, Sparkles, RefreshCw, ArrowRight } from 'lucide-react'
 import { generateDailyFortune } from '@/app/actions/fortune/daily'
 import { getFamilyMembers } from '@/app/actions/user/family'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TargetSelect } from '@/components/destiny/target-select'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -171,19 +171,19 @@ export function DailyFortuneView({ userId, userName, initialMemberId }: DailyFor
           </div>
 
           <div className="flex items-center gap-2">
-            <Select value={selectedProfileId} onValueChange={handleProfileChange}>
-              <SelectTrigger className="w-[140px] bg-surface/50 border-primary/20 text-ink-light">
-                <Users className="w-4 h-4 mr-2 text-ink-light/60" />
-                <SelectValue placeholder="대상 선택" />
-              </SelectTrigger>
-              <SelectContent className="bg-surface border-primary/20 text-ink-light">
-                {profiles.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id} className="focus:bg-primary/20 focus:text-ink-light">
-                    {profile.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* 대상 선택 — 모양은 `TargetSelect` 하나가 정한다(2026-08-25 드롭다운 통일).
+                여기만 폭을 좁게 쓴다: 제목 줄 오른쪽에 새로고침 버튼과 나란히 앉는 자리다. */}
+            <TargetSelect
+              className="w-[190px]"
+              targets={profiles.map((p) => ({
+                id: p.id,
+                name: p.name,
+                relation: p.type === 'USER' ? '본인' : null,
+              }))}
+              value={selectedProfileId}
+              onChange={handleProfileChange}
+              placeholder="대상 선택"
+            />
 
             <Button
               variant="ghost"

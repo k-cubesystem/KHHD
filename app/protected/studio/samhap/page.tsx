@@ -9,7 +9,7 @@ import { ArrowRight, Coins, Sparkles, User2, Hand, Compass, Calendar, ChevronLef
 import { IconBokjumeoni } from '@/components/icons/traditional-icons'
 import { logger } from '@/lib/utils/logger'
 import { SamhapIntroCard } from '@/components/studio/samhap-intro-card'
-import { SamhapTargetPicker } from '@/components/studio/samhap-target-picker'
+import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { resolveSamhapTarget, samhapTargetId, samhapTargetQuery } from '@/lib/domain/analysis/samhap-target'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
@@ -191,7 +191,20 @@ function SamhapPageContent() {
               <SamhapIntroCard />
 
               {/* 대상 선택 — 요건 표 «위»에 둔다. 표가 누구 것인지 먼저 말하고 나서 표를 보인다. */}
-              <SamhapTargetPicker targets={targets} selectedId={selectedId} onSelect={handleSelectTarget} />
+              <TargetSelect
+                label="누구의 종합풀이인가요"
+                targets={targets?.map(toTargetOption) ?? null}
+                value={selectedId}
+                onChange={handleSelectTarget}
+                action={
+                  <Link
+                    href="/protected/family"
+                    className="text-[11px] text-white/35 transition-colors hover:text-gold-500"
+                  >
+                    가족 관리
+                  </Link>
+                }
+              />
 
               {/* 🔴 스피너는 요건 자리만 덮는다 — 대상 줄까지 사라지면 바꾸자마자 고르던 손이 붕 뜬다.
                   🔴 대상이 하나도 없으면(등록 0건) 요건을 잴 것도 없다 — 여기서 스피너를 그리면

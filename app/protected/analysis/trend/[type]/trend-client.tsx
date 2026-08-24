@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import {
   Heart,
   Building2,
@@ -255,25 +255,15 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
         {/* 대상 선택 */}
         {showSelect && (
           <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-            <Select
-              value={selectedId ?? ''}
-              onValueChange={(v) => {
-                setSelectedId(v || null)
+            <TargetSelect
+              targets={targets.map(toTargetOption)}
+              value={selectedId}
+              onChange={(id) => {
+                setSelectedId(id || null)
                 setState({ status: 'idle' })
               }}
-            >
-              <SelectTrigger className="w-full bg-surface/20 border-gold-500/20 text-ink-light font-light text-sm">
-                <SelectValue placeholder="분석 대상 선택" />
-              </SelectTrigger>
-              <SelectContent className="bg-surface border-gold-500/20">
-                {targets.map((t) => (
-                  <SelectItem key={t.id} value={t.id} className="font-light text-ink-light">
-                    {t.name}
-                    {t.target_type === 'self' ? ' (본인)' : ` (${t.relation_type})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="분석 대상 선택"
+            />
             {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
             <div className="mt-2">
               <AddRelationInline

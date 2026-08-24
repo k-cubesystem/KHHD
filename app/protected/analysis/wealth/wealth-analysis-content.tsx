@@ -8,7 +8,7 @@ import { Coins, Loader2, TrendingUp, AlertCircle, ShieldAlert, Clock, Target } f
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { logger } from '@/lib/utils/logger'
 import { toast } from 'sonner'
@@ -140,25 +140,15 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
           <CardContent className="space-y-4">
             {showSelect && (
               <div className="space-y-2">
-                <Select
-                  value={selectedId ?? ''}
-                  onValueChange={(v) => {
-                    setSelectedId(v || null)
+                <TargetSelect
+                  targets={targets.map(toTargetOption)}
+                  value={selectedId}
+                  onChange={(id) => {
+                    setSelectedId(id || null)
                     setWealthAnalysis(null)
                   }}
-                >
-                  <SelectTrigger className="w-full bg-surface/20 border-primary/20 text-ink-light font-light text-sm">
-                    <SelectValue placeholder="분석 대상 선택" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-surface border-primary/20">
-                    {targets.map((t) => (
-                      <SelectItem key={t.id} value={t.id} className="font-light text-ink-light">
-                        {targetLabel(t)}
-                        {t.target_type === 'self' ? ' (본인)' : ` (${t.relation_type})`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="분석 대상 선택"
+                />
                 {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
                 <AddRelationInline
                   onAdded={(id) => {

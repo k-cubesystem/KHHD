@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Users, User, Heart, Check, ArrowRight } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
+import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
 import { toast } from 'sonner'
 import { analyzeCompatibilityAction } from '@/app/actions/ai/compatibility'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
@@ -89,6 +90,14 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
     const inferred = inferRelationship(person1, person2)
     if (inferred) setRelationship(inferred)
   }, [person1, person2, relationshipTouched])
+
+  /**
+   * 드롭다운에는 «고를 수 없는 사람»을 아예 올리지 않는다 — 같은 사람을 두 자리에 넣는 선택지가
+   * 목록에 보이면 눌러 보고 토스트로 거절당한다(카드 목록 시절의 동작). 아래 handleSelectPerson
+   * 의 가드는 그대로 둔다 — 고정 대상(fixedTarget)으로 들어오는 길이 따로 있어서다.
+   */
+  const person1Candidates = targets.filter((t) => t.id !== person2?.id)
+  const person2Candidates = targets.filter((t) => t.id !== (fixedTarget?.id ?? person1?.id))
 
   const handleSelectPerson = (target: DestinyTarget, personNumber: 1 | 2) => {
     if (personNumber === 1) {
@@ -264,36 +273,16 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {targets.map((target) => (
-                    <Card
-                      key={target.id}
-                      className={`cursor-pointer transition-all ${
-                        person1?.id === target.id
-                          ? 'bg-primary/10 border-primary/40'
-                          : 'bg-surface/20 border-primary/20 hover:bg-primary/5'
-                      }`}
-                      onClick={() => handleSelectPerson(target, 1)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="w-5 h-5 text-primary" strokeWidth={1} />
-                            </div>
-                            <div>
-                              <div className="font-medium text-ink-light">{target.name}</div>
-                              <div className="text-xs text-ink-light/50">
-                                {target.birth_date} {target.birth_time && `• ${target.birth_time}`}
-                              </div>
-                            </div>
-                          </div>
-                          {person1?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                /* 카드 목록이던 자리 — 모양은 `TargetSelect` 하나가 정한다(2026-08-25 드롭다운 통일). */
+                <TargetSelect
+                  targets={person1Candidates.map(toTargetOption)}
+                  value={person1?.id ?? null}
+                  onChange={(id) => {
+                    const picked = person1Candidates.find((t) => t.id === id)
+                    if (picked) handleSelectPerson(picked, 1)
+                  }}
+                  placeholder="첫 번째 사람을 선택하세요"
+                />
               )}
             </motion.div>
 
@@ -304,38 +293,16 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
                 {fixedTarget ? '궁합을 볼 상대' : '두 번째 사람'}
               </h2>
 
-              <div className="grid grid-cols-1 gap-3">
-                {targets
-                  .filter((t) => !fixedTarget || t.id !== fixedTarget.id)
-                  .map((target) => (
-                    <Card
-                      key={target.id}
-                      className={`cursor-pointer transition-all ${
-                        person2?.id === target.id
-                          ? 'bg-primary/10 border-primary/40'
-                          : 'bg-surface/20 border-primary/20 hover:bg-primary/5'
-                      }`}
-                      onClick={() => handleSelectPerson(target, 2)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <User className="w-5 h-5 text-primary" strokeWidth={1} />
-                            </div>
-                            <div>
-                              <div className="font-medium text-ink-light">{target.name}</div>
-                              <div className="text-xs text-ink-light/50">
-                                {target.birth_date} {target.birth_time && `• ${target.birth_time}`}
-                              </div>
-                            </div>
-                          </div>
-                          {person2?.id === target.id && <Check className="w-5 h-5 text-primary" strokeWidth={2} />}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
+              {/* 카드 목록이던 자리 — 첫 번째로 고른 사람은 목록에서 뺀다(자기 자신과의 궁합 방지). */}
+              <TargetSelect
+                targets={person2Candidates.map(toTargetOption)}
+                value={person2?.id ?? null}
+                onChange={(id) => {
+                  const picked = person2Candidates.find((t) => t.id === id)
+                  if (picked) handleSelectPerson(picked, 2)
+                }}
+                placeholder={fixedTarget ? '궁합을 볼 상대를 선택하세요' : '두 번째 사람을 선택하세요'}
+              />
             </motion.div>
 
             {/* Relationship Selection */}

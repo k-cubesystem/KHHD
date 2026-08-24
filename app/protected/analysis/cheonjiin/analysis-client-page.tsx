@@ -2,9 +2,8 @@
 
 import { AddRelationInline } from '@/components/destiny/add-relation-inline'
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { User, ArrowRight, Sparkles } from 'lucide-react'
+import { TargetSelect, toTargetOption } from '@/components/destiny/target-select'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import { DestinyTarget } from '@/app/actions/user/destiny'
 import { useRouter } from 'next/navigation'
 
@@ -22,8 +21,6 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
     router.push(`/protected/analysis/saju-result?targetId=${selectedId}`)
   }
 
-  const selectedTarget = targets.find((t) => t.id === selectedId)
-
   return (
     <div className="max-w-3xl mx-auto py-6 px-4 pb-20">
       {/* Header */}
@@ -38,44 +35,19 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
         </p>
       </section>
 
-      {/* 분석 대상 선택 (리스트박스) */}
+      {/* 분석 대상 선택 — 모양은 `TargetSelect` 하나가 정한다(2026-08-25 드롭다운 통일). */}
       <section className="mb-6">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-1 h-5 bg-gold-500/40 rounded-full" />
-          <h3 className="text-sm font-serif text-ink-light">분석 대상 선택</h3>
-        </div>
-
-        {targets.length > 0 ? (
-          <div className="space-y-2">
-          <Select value={selectedId ?? ''} onValueChange={(val) => setSelectedId(val)}>
-            <SelectTrigger className="w-full h-12 bg-surface/20 border-white/10 rounded-xl text-ink-light">
-              <SelectValue placeholder="분석할 대상을 선택하세요">
-                {selectedTarget && (
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-xs font-serif font-bold text-gold-500">
-                      {selectedTarget.name.slice(0, 1)}
-                    </div>
-                    <span className="text-sm">{selectedTarget.name}</span>
-                    <span className="text-[11px] text-ink-light/40">({selectedTarget.relation_type})</span>
-                  </div>
-                )}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {targets.map((target) => (
-                <SelectItem key={target.id} value={target.id}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-serif text-ink-light/60">
-                      {target.name.slice(0, 1)}
-                    </div>
-                    <span>{target.name}</span>
-                    <span className="text-ink-light/40 text-xs">({target.relation_type})</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-            {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
+        <TargetSelect
+          label="분석 대상 선택"
+          targets={targets.map(toTargetOption)}
+          value={selectedId}
+          onChange={setSelectedId}
+          placeholder="분석할 대상을 선택하세요"
+          emptyLabel="등록된 대상이 없습니다. 가족 관리에서 추가해주세요"
+        />
+        {/* 인연 추가 — 화면을 떠나지 않고 등록하고 바로 선택된다(2026-08-16). */}
+        {targets.length > 0 && (
+          <div className="mt-2">
             <AddRelationInline
               onAdded={(id) => {
                 setSelectedId(id)
@@ -83,19 +55,6 @@ export function AnalysisClientPage({ targets, initialTargetId }: AnalysisClientP
               }}
             />
           </div>
-        ) : (
-          <Card
-            onClick={() => router.push('/protected/family')}
-            className="bg-surface/10 border-dashed border-gold-500/20 p-6 text-center cursor-pointer hover:bg-surface/20 transition-colors group"
-          >
-            <div className="flex flex-col items-center gap-2">
-              <User className="w-6 h-6 text-ink-light/20 group-hover:text-gold-500/60 transition-colors" />
-              <p className="text-xs text-ink-light/50 group-hover:text-gold-500 transition-colors">
-                등록된 대상이 없습니다. 가족 관리에서 추가해주세요
-                <ArrowRight className="w-3 h-3 inline ml-1" />
-              </p>
-            </div>
-          </Card>
         )}
       </section>
 

@@ -30,7 +30,7 @@ import {
 } from '@/lib/saju-engine'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { TargetSelect } from '@/components/destiny/target-select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -463,36 +463,21 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
           <p className="text-muted-foreground">사주팔자의 천간·지지·오행을 전문가 수준으로 분석합니다</p>
         </div>
 
-        {/* Member Selector */}
+        {/* 분석 대상 선택 — 모양은 `TargetSelect` 하나가 정한다(2026-08-25 드롭다운 통일). */}
         <div className="w-full max-w-xs mx-auto">
-          <p className="text-center text-xs text-white/40 mb-3 uppercase tracking-widest">분석 대상 선택</p>
-          <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-            <SelectTrigger className="w-full bg-white/5 border-gold-500/40 text-gold-500 rounded-xl h-12 text-sm font-medium hover:border-gold-500/60 transition-colors">
-              <SelectValue placeholder="분석할 대상을 선택하세요" />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1a1a2e] border-white/20 rounded-xl">
-              {members.map((m) => (
-                <SelectItem
-                  key={m.id}
-                  value={m.id}
-                  className="text-white/80 focus:bg-gold-500/20 focus:text-gold-500 rounded-lg cursor-pointer"
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                        m.gender === 'male' ? 'bg-blue-500/20 text-blue-400' : 'bg-pink-500/20 text-pink-400'
-                      )}
-                    >
-                      {m.gender === 'male' ? '남' : '여'}
-                    </span>
-                    <span>{m.name}</span>
-                    <span className="text-[10px] opacity-60">({m.relationship})</span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <TargetSelect
+            label="분석 대상 선택"
+            targets={members.map((m) => ({
+              id: m.id,
+              name: m.name,
+              relation: m.relationship,
+              // 구 드롭다운의 남/여 배지를 여기로 옮겼다 — 정보를 잃지 않으면서 줄을 하나로 줄인다.
+              hint: `${m.gender === 'male' ? '남' : '여'} · ${m.birth_date}${m.birth_time ? ` · ${m.birth_time}` : ''}`,
+            }))}
+            value={selectedMemberId}
+            onChange={setSelectedMemberId}
+            placeholder="분석할 대상을 선택하세요"
+          />
         </div>
 
         {saju && selectedMember && (
