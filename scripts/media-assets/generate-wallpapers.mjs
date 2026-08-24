@@ -131,7 +131,10 @@ export const WALLPAPER_SPECS = [
 // 🔴 «lock screen»·«clock» 이라고 쓰지 말 것. 모델이 그 말을 잠금화면 목업으로 읽고
 //    시계와 앱 아이콘을 그려 넣는다(2026-08-22 실측). 위 여백은 «새벽 하늘»로만 부른다.
 const PREMIUM_STYLE = [
-  'A single vertical 9:16 painting, portrait orientation, much taller than wide.',
+  // 🔴 full-bleed 는 서두에 — v2 시안 5장 중 3장이 액자 매트를 그려 왔다(2026-08-25 실측).
+  //    NEGATIVE 끝의 금칙만으로는 밀린다. 문법 첫 문장에서 못 박아야 듣는다.
+  'A single vertical 9:16 painting that FILLS THE ENTIRE CANVAS edge to edge, full bleed,',
+  'with no border, no frame and no margin of any kind. Portrait orientation, much taller than wide.',
   'Korean minhwa (Joseon folk painting) rendered as a luxury modern art print:',
   'flat mineral-pigment color fields, hand-painted silk texture, subtle hanji paper grain,',
   'confident brush outlines, gentle humor, decorative rather than realistic.',
@@ -145,57 +148,169 @@ const PREMIUM_STYLE = [
 
 // 🔴 무료 세트의 «얼굴 있는 동물 금지»를 여기서는 뒤집는다 — 십이지가 정면으로 그 반대다.
 //    대신 «민화답게, 사실적이지 않게»를 못 박는다. 사실주의로 가면 얼굴이 무너진다.
+// 재물 과 전용 — 금이 «선묘»가 아니라 «주인공»이다(PRD v2 §3, CEO «황금빛 컬러풀»).
+// 상단 남빛(시계 자리)만은 그대로 지킨다.
+const PREMIUM_STYLE_GOLD = [
+  'A single vertical 9:16 painting that FILLS THE ENTIRE CANVAS edge to edge, full bleed,',
+  'with no border, no frame and no margin of any kind. Portrait orientation, much taller than wide.',
+  'Korean minhwa (Joseon folk painting) rendered as a luxury modern art print:',
+  'flat mineral-pigment color fields, hand-painted silk texture, subtle hanji paper grain,',
+  'confident brush outlines, decorative rather than realistic.',
+  'OPULENT GOLD palette: the top of the canvas is deep indigo night sky (#0E1A2B),',
+  'but the lower two thirds blaze with layered golds — gold leaf, amber, honey, warm bronze —',
+  'the subject itself rendered largely in radiant metallic gold with vermilion accents.',
+  'Luxurious, festive, abundant; fine gold dust drifting through the air.',
+  'The upper third is quiet empty indigo sky; the subject sits in the lower two thirds.',
+  'Museum-quality, richly colored, elegant, high detail, soft depth.',
+].join(' ')
+
 const PREMIUM_NEGATIVE = [
   'ABSOLUTELY NO text, NO letters, NO Korean hangul, NO Chinese hanja characters, NO calligraphy,',
   'NO signage, NO seals with writing, NO watermark, NO logo, NO numbers, NO digits.',
   'The image contains no clock, no time display, and no app icons of any kind.',
   'NO people, NO human figures, NO human faces.',
-  'Animals are drawn in flat decorative folk-painting style, never photorealistic,',
-  'never 3D rendered, never anatomically detailed — stylized and charming.',
+  // 🔴 조건문으로 쓴다 — «동물은 민화풍으로»를 평서문으로 두면 동물 없는 화면(물결)에
+  //    고양이·개를 «추가»하라는 말로 읽는다(2026-08-25 실측: 달빛 물결에 개·고양이 4마리).
+  'Do NOT add any animal, bird or creature that is not explicitly named in the SUBJECT.',
+  'If the SUBJECT names an animal, draw it in flat decorative folk-painting style,',
+  'never photorealistic, never 3D rendered, never anatomically detailed — stylized and charming.',
   'Not a photograph, not a 3D render, not anime, no screen mockup, no phone frame.',
   'The painting bleeds off all four edges of the canvas; there is no inner frame,',
   'no mat, no matting margin, and no rectangular outline anywhere in the image.',
 ].join(' ')
 
 /**
- * 프리미엄 시안 4장 — CEO 검수용 첫 배치(PRD §6-ⓒ 권장안).
- * 명화 3 + 십이지 대표 1(닭). 명화 셋은 얼굴이 없어 실패율이 낮아, 동물이 헤매도
- * 세트가 통째로 밀리지 않는다. 통과하면 나머지 십이지 11장을 같은 문법으로 잇는다.
+ * 프리미엄 15장 「채운(彩運)」 — 효능(기운) 중심 재기획 (PRD v2, 2026-08-25).
+ * v1 십이지는 CEO 반려로 폐기: «기운을 올려주는 기획으로 — 부족한 오행, 재물운,
+ * 가족 평안, 연애운. 황금빛 컬러풀·화려함도 좋다».
+ *
+ * 5과(科): 오행 보충 gi-*(5) · 재물 jae-*(3) · 가족 ga-*(2) · 연애 yeon-*(2) · 성공 seong-*(3).
+ * 🔴 재물 과만 goldDominant — 여명 그라디언트보다 금박이 화면을 지배한다(과별 주조색 규율은 PRD §3).
  */
 export const PREMIUM_SPECS = [
+  // ── 一. 오행 보충 — «부족한 기운을 채운다» (용신 배지 대상) ──
   {
-    id: 'premium-rooster',
-    title: '새벽을 여는 닭 (酉)',
+    id: 'gi-wood',
+    title: '푸른 새벽 숲 (木)',
     tier: 'premium',
     subject:
-      'A proud rooster with a brilliant vermilion comb and wattle stands on a low earthen wall in the lower third, seen from the side, painted in flat folk-painting style with bold outlines. Its tail feathers sweep in arcs of indigo, ochre and white. Behind it the horizon glows with the first orange light of dawn breaking over distant hills. A few stalks of grass and one peony blossom at its feet.',
+      'A misty bamboo forest at dawn. Tall bamboo stalks in deep teal and jade green rise through layers of soft morning fog, and young golden bamboo shoots sprout from the mossy ground, outlined in gold. Fresh spring energy, upward growth. Emerald, jade and soft green washes with gold linework.',
   },
   {
-    id: 'premium-ilwol-obongdo',
-    title: '일월오봉도 (日月五峰圖)',
+    id: 'gi-fire',
+    title: '타오르는 연등 (火)',
     tier: 'premium',
     subject:
-      'The classic Korean royal screen composition, vertical: five stylized mountain peaks in layered indigo and jade rise across the middle, a round white moon on the left and a round vermilion sun on the right hang in the sky above them, two symmetrical red-trunked pine trees stand at the lower left and lower right, and stylized white waves roll across the very bottom. Flat decorative color fields, gold outlines, ceremonial symmetry.',
+      'Dozens of glowing crimson and vermilion Korean paper lanterns rising into the night sky like embers, each painted flat with a gold rim, their warm light blooming against the indigo. The lowest lanterns are largest and brightest, trailing gentle sparks. Passion and vitality. Deep red, vermilion, warm orange glow.',
   },
   {
-    id: 'premium-sipjangsaeng',
-    title: '십장생 (十長生)',
+    id: 'gi-earth',
+    title: '황금 들녘 (土)',
     tier: 'premium',
     subject:
-      'The ten longevity symbols arranged in a vertical landscape: sun, mountains, water, rock, auspicious clouds, pine tree, bullocho fungus, tortoise, crane and deer. Jade-green hills and indigo water in the lower half, a pair of white cranes flying, a spotted deer among pines, a tortoise at the water edge, gold-outlined clouds drifting upward into the dawn sky. Flat mineral color, decorative, serene.',
+      'A golden autumn rice field at sunset, painted in flat folk style: layered ochre and amber paddies heavy with grain, round rice-straw stacks, a small thatched-roof cottage with warm light, distant loess hills. Groundedness and stability. Ochre, amber, harvest gold washes.',
   },
   {
-    id: 'premium-cheonwon',
-    title: '십이지 천원 (天圓)',
+    id: 'gi-metal',
+    title: '서리 내린 달 (金)',
     tier: 'premium',
     subject:
-      'Twelve small Korean zodiac animals — rat, ox, tiger, rabbit, dragon, snake, horse, goat, monkey, rooster, dog, pig — arranged evenly around a large circle in the lower two thirds, each drawn tiny and flat in folk-painting style, each in its own obangsaek color. The circle itself is a thin gold ring on deep indigo, with auspicious clouds drifting through it and a soft dawn glow at the bottom edge.',
+      'A large round white porcelain moon in a cold clear sky, and below it a single plum-blossom branch covered in frost, its white petals edged with silver and thin gold lines. Crisp, decisive stillness. Porcelain white, silver-grey, ink black, restrained gold.',
+  },
+  {
+    id: 'gi-water',
+    title: '달빛 물결 (水)',
+    tier: 'premium',
+    subject:
+      'Deep indigo night water rolling in stylized traditional wave crests, moonlight shattering across the surface as ribbons of silver and gold. A full moon low on the horizon pours a shimmering path across the water. Wisdom and flow. Prussian blue, midnight indigo, silver and gold foam.',
+  },
+
+  // ── 二. 재물운 — «황금빛, 가장 화려하게» (goldDominant) ──
+  {
+    id: 'jae-koi',
+    goldDominant: true,
+    title: '황금 잉어',
+    tier: 'premium',
+    subject:
+      'A magnificent golden koi carp leaping out of golden water, its scales rendered as overlapping gold-leaf plates catching light, spray and droplets flying as gold dust. Beneath it, stylized waves carry drifting old Korean brass coins with square holes. The whole lower canvas glows in layered golds — amber, honey, metallic gold-leaf — luxurious and radiant.',
+  },
+  {
+    id: 'jae-sack',
+    goldDominant: true,
+    title: '만복 복주머니',
+    tier: 'premium',
+    subject:
+      'A large embroidered crimson silk fortune pouch (bokjumeoni) with its drawstring just loosened, pouring out a river of gold coins, golden grains and tiny gold ingots that cascade toward the bottom edge. Gold thread embroidery of lotus and cloud patterns on the silk. Falling gold dust everywhere. Opulent crimson and overwhelming gold.',
+  },
+  {
+    id: 'jae-tree',
+    goldDominant: true,
+    title: '돈나무',
+    tier: 'premium',
+    subject:
+      'A stylized golden tree whose branches bear old brass coins with square holes as if they were fruit, dozens of them glinting, some drifting down like falling leaves. The trunk and branches are drawn in confident gold-outlined strokes, and fine gold dust snows through the air. Prosperity growing and ripening. Amber, deep gold, warm bronze.',
+  },
+
+  // ── 三. 가족 평안 — «안정과 평화와 건강» ──
+  {
+    id: 'ga-crane',
+    title: '학 가족',
+    tier: 'premium',
+    subject:
+      'A family of white cranes — two elegant parents and small chicks — resting together on a broad pine branch under a huge full moon. The pine needles are drawn in fine gold strokes, the cranes in serene white with black and red accents. Warm, protective calm. Soft indigo night, warm moonlight, gentle gold.',
+  },
+  {
+    id: 'ga-hearth',
+    title: '등불 켠 집',
+    tier: 'premium',
+    subject:
+      'A snowy winter night: a traditional Korean tile-roofed house with warm golden lantern light glowing from its papered windows, smoke curling gently from the chimney, snow resting on the roof curves and on a bare persimmon tree with a few bright orange fruits left. Peace and warmth of home. Indigo night, white snow, warm amber light.',
+  },
+
+  // ── 四. 연애·사랑운 — «도화(桃花)를 피운다» ──
+  {
+    id: 'yeon-wonang',
+    title: '원앙 한 쌍',
+    tier: 'premium',
+    subject:
+      'A pair of mandarin ducks floating side by side on a calm lotus pond, their plumage painted in rich vermilion, teal, white and gold, perfectly mirrored in the water. Pink lotus flowers bloom around them and pink petals drift down like rain. Deep affection and harmony. Rose pink, teal, vermilion, gold accents.',
+  },
+  {
+    id: 'yeon-dohwa',
+    title: '도화 만개',
+    tier: 'premium',
+    subject:
+      'Peach blossom branches in full bloom filling the lower canvas with clouds of pink and white petals, each flower outlined in fine gold, and a slender crescent moon hanging between the branches. Petals float upward into the indigo sky. Romance blossoming. Blush pink, soft coral, ivory, gold linework.',
+  },
+
+  // ── 五. 성공·명예 — «오르고, 이루고, 날아오른다» ──
+  {
+    id: 'seong-yongmun',
+    title: '등용문',
+    tier: 'premium',
+    subject:
+      'The legend of the dragon gate, vertical: a powerful carp has leapt to the top of a tall waterfall and is transforming mid-air into an azure dragon — the lower body still a gold-scaled fish, the upper body already a horned dragon wreathed in auspicious clouds. The waterfall pours down in white and gold ribbons between indigo cliffs. Triumph and breakthrough.',
+  },
+  {
+    id: 'seong-haetsal',
+    title: '첫 햇살',
+    tier: 'premium',
+    subject:
+      'A brilliant sunrise breaking over layered indigo mountain ridges: the sun a perfect vermilion disc rimmed in gold, rays spreading as flat decorative bands of gold and coral across the sky, gold-outlined auspicious clouds drifting. A new beginning blessed with light. Vermilion, coral, gold, deep indigo.',
+  },
+  {
+    id: 'seong-bonghwang',
+    title: '봉황 비상',
+    tier: 'premium',
+    subject:
+      'A majestic golden phoenix (bonghwang) soaring upward, wings spread wide, its long tail streaming behind in five ribbons of obangsaek colors — blue, red, yellow, white, black — each edged in gold. Gold dust and small auspicious clouds swirl in its wake against the deep indigo. The crowning image of great fortune. Radiant gold body, five-color tail, indigo sky.',
   },
 ]
 
 export function wallpaperPrompt(spec) {
   if (spec.tier === 'premium') {
-    return `${PREMIUM_STYLE}\n\nSUBJECT: ${spec.subject}\n\n${PREMIUM_NEGATIVE}`
+    const style = spec.goldDominant ? PREMIUM_STYLE_GOLD : PREMIUM_STYLE
+    return `${style}\n\nSUBJECT: ${spec.subject}\n\n${PREMIUM_NEGATIVE}`
   }
   return `${STYLE}\n\nSUBJECT: ${spec.subject}\n\n${NEGATIVE}`
 }
