@@ -109,6 +109,12 @@ export const PREVIEW_SCENES = [
     group: '종합사주풀이',
     note: '앰비언트 영상 위 글씨 가독(CEO 「글이 안 보여」 지점)',
   },
+  {
+    id: 'coupang-banner',
+    label: '허브 — 쿠팡 제휴 배너',
+    group: '허브',
+    note: '배경화면 카드 아래 비던 자리. 대가성 고지가 배너에 딸려 있어야 한다',
+  },
 ] as const satisfies readonly PreviewScene[]
 
 /** 표의 한 줄 — id 가 리터럴로 좁혀져 있어 렌더 표를 그대로 색인할 수 있다. */

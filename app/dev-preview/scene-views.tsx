@@ -15,6 +15,7 @@ import { MasterpieceSection } from '@/components/analysis/dashboard/MasterpieceS
 import { JourneyFull } from '@/components/analysis/journey-card'
 import { WallpaperGrid } from '@/components/analysis/wallpaper-card'
 import { SamhapIntroCard } from '@/components/studio/samhap-intro-card'
+import { CoupangBannerView } from '@/components/ads/coupang-banner'
 import { buildJourney, type JourneyStage } from '@/lib/domain/analysis/journey'
 import type { JourneyStatusData } from '@/app/actions/analysis/reading-insights'
 import type { WallpaperStatus } from '@/app/actions/analysis/wallpaper'
@@ -106,6 +107,8 @@ const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
   ),
 
   'samhap-intro': () => <SamhapIntroCard />,
+  // 목 URL — 실제 링크는 system_settings 가 준다(여기서는 조회하지 않는다).
+  'coupang-banner': () => <CoupangBannerView url="https://link.coupang.com/a/EXAMPLE" />,
 }
 
 /**

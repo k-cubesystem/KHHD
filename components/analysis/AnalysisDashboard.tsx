@@ -9,6 +9,7 @@ import { ThemeThumbnail } from './ThemeThumbnail'
 import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { JourneyCard } from './journey-card'
 import { WallpaperCard } from './wallpaper-card'
+import { CoupangBanner } from '@/components/ads/coupang-banner'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
 import { hubThemeDailyPicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } from '@/lib/domain/theme-fortune/themes'
 
@@ -147,6 +148,11 @@ export function AnalysisDashboard() {
             그 표를 화면과 대조하는 테스트(hub-layout)가 함께 흔들린다. 자격 조회는 카드가
             스스로 진다 — 이 파일은 서버 액션을 import 하지 않는다(회귀 테스트가 막는다). */}
         <WallpaperCard />
+
+        {/* 쿠팡 제휴 배너 — 배경화면 카드 아래 비던 자리(CEO 2026-08-24).
+            🔴 «보고 가기만» 하는 광고다. 보상을 걸지 말 것(속풀이 보상형과 별개 경로).
+            🔴 대가성 고지가 배너에 딸려 있다 — 컴포넌트 안에서 지우지 말 것. */}
+        <CoupangBanner />
       </motion.section>
     </motion.div>
   )

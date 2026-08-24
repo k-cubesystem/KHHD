@@ -88,6 +88,8 @@ export const GA = {
   journeyView: (variant: string) => trackEvent({ action: 'journey_view', category: 'engagement', label: variant }),
   journeyStep: (stage: string) => trackEvent({ action: 'journey_step_click', category: 'engagement', label: stage }),
   journeyComplete: () => trackEvent({ action: 'journey_complete', category: 'engagement' }),
+  coupangBannerView: () => trackEvent({ action: 'coupang_banner_view', category: 'ads' }),
+  coupangBannerClick: () => trackEvent({ action: 'coupang_banner_click', category: 'ads' }),
   journeyRewardView: () => trackEvent({ action: 'journey_reward_view', category: 'engagement' }),
   journeyRewardClaim: (kind: string, code: string) =>
     trackEvent({ action: 'journey_reward_claim', category: 'engagement', label: `${kind}:${code}` }),
