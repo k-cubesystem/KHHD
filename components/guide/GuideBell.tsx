@@ -269,7 +269,11 @@ export function GuideBell() {
               data-guide-panel
               className="absolute top-full left-0 right-0 px-2 pt-1.5"
             >
-              <div className="relative flex gap-2.5 rounded-xl border border-gold-500/40 bg-[#120d07]/97 backdrop-blur-md p-3 pr-8 shadow-2xl">
+              {/* 🔴 배경은 «완전 불투명»이어야 한다. 종전 `bg-[#120d07]/97` 은 투명도가 5의 배수가
+                  아니라 Tailwind 가 클래스를 아예 만들지 않았고(빌드 CSS 에 #120d07 0건), 배경이
+                  통째로 비어 본문 글자가 패널 위로 비쳤다(CEO 실기기 제보 2026-08-24).
+                  투명도를 다시 넣을 일이 있으면 5의 배수만 쓸 것 — HANDOFF 19차와 같은 계보다. */}
+              <div className="relative flex gap-2.5 rounded-xl border border-gold-500/40 bg-[#120d07] p-3 pr-8 shadow-2xl">
                 {portrait}
                 <div className="flex-1 min-w-0">
                   {bubble.kind === 'onboarding' && data.onboarding ? (

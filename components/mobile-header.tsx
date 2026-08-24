@@ -1,86 +1,61 @@
 'use client'
 
-import { usePathname, useRouter } from 'next/navigation'
-import { ChevronLeft, Home } from 'lucide-react'
+import { Home } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { hubGreeting } from '@/lib/domain/analysis/hub-home'
 import { useHydrated } from '@/hooks/use-hydrated'
 import { GuideBell } from '@/components/guide/GuideBell'
 
-/** 고정 상단 바가 앱 홈 머리글로 서는 자리. 최상위 탭이라 여기엔 뒤로가기가 없다. */
+/** 상호·로고를 누르면 가는 곳. 홈 버튼도 같은 자리다. */
 const APP_HOME_PATH = '/protected/analysis'
 
 // relative — 가이드 패널이 이 바 바로 아래(top-full)로 펼쳐지는 기준점이다.
-const BAR = 'relative h-14 bg-background/80 backdrop-blur-md border-b border-primary/10 px-4 flex items-center shrink-0'
+const BAR =
+  'relative h-14 bg-background/80 backdrop-blur-md border-b border-primary/10 px-4 flex items-center justify-between gap-2 shrink-0'
 
+/**
+ * 고정 상단 바 — **모든 화면이 같은 머리글을 쓴다**(CEO 2026-08-24 "상단헤더를 전부 이렇게").
+ * 아이콘 + 「청담해화당」(홈 링크) · 인사 한 줄 · 가이드 종 · 홈.
+ *
+ * 🔴 화면마다 바를 갈아 끼우지 않는다. 종전에는 허브에서만 「앱 헤더」였고 그 밖에서는
+ *    «뒤로가기 + 상호 + 홈» 이라 같은 앱에서 머리글이 두 벌로 보였다. 뒤로가기는 이 개편으로
+ *    내려갔다 — 되돌아갈 길은 하단 메뉴와 기기 뒤로가기(안드로이드 버튼·iOS 스와이프)가 진다.
+ * 🔴 페이지 안에 헤더를 또 그리지 말 것. 같은 상호가 세로로 두 번 뜬다.
+ */
 export function MobileHeader() {
-  const router = useRouter()
-  const pathname = usePathname()
   const isHydrated = useHydrated()
   const t = useTranslations()
 
-  /**
-   * 허브(앱 홈)에서는 같은 바가 «앱 헤더»로 바뀐다 — 아이콘 + 「청담해화당」 + 인사 한 줄
-   * (CEO 2026-08-13 "상단에 어플처럼 아이콘과 제목으로").
-   *
-   * 🔴 바를 하나 더 얹지 않는다. 페이지 안에 헤더를 또 그리면 같은 상호가 세로로 두 번 뜬다.
-   *    뒤로가기·홈 버튼도 여기선 내린다 — 최상위 탭에서 뒤로 갈 곳도, 갈 홈도 이 화면이다.
-   */
-  if (pathname === APP_HOME_PATH) {
-    return (
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-[480px]">
-        <header className={`${BAR} justify-between gap-2`}>
-          <div className="flex items-center gap-2 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-new.png"
-              alt=""
-              aria-hidden="true"
-              draggable={false}
-              className="h-7 w-7 shrink-0 object-contain"
-            />
-            <span className="font-serif text-[15px] font-bold tracking-[0.08em] text-gold-500 truncate">
-              {t('brand.name')}
-            </span>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-1">
-            {/* 인사는 시각으로만 갈린다(결정론·KST). 하이드레이션 뒤에 그려 서버/브라우저 시각
-                차이로 문장이 엇갈리는 일을 없앤다. */}
-            <span className="text-[11px] font-light text-ink-light/50">{isHydrated ? hubGreeting() : null}</span>
-            <GuideBell />
-          </div>
-        </header>
-      </div>
-    )
-  }
-
   return (
     <div className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-full max-w-[480px]">
-      <header className={`${BAR} justify-between`}>
-        <button
-          onClick={() => router.back()}
-          className="w-11 h-11 flex items-center justify-start text-ink-light/70 hover:text-primary transition-colors"
-          aria-label={t('nav.back')}
-        >
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-
-        {/* 좌우 버튼 수가 달라도 상호는 바 한가운데에 선다 */}
-        <Link
-          href={APP_HOME_PATH}
-          className="absolute left-1/2 -translate-x-1/2 inline-flex min-h-[44px] items-center text-xs font-serif font-bold text-primary tracking-[0.2em] opacity-80 hover:opacity-100 transition-opacity"
-        >
-          {t('brand.name')}
+      <header className={BAR}>
+        <Link href={APP_HOME_PATH} className="flex items-center gap-2 min-w-0 group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-new.png"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="h-7 w-7 shrink-0 object-contain"
+          />
+          <span className="font-serif text-[15px] font-bold tracking-[0.08em] text-gold-500 truncate group-hover:text-gold-300 transition-colors">
+            {t('brand.name')}
+          </span>
         </Link>
 
-        <div className="flex items-center">
+        <div className="flex shrink-0 items-center">
+          {/* 인사는 시각으로만 갈린다(결정론·KST). 하이드레이션 뒤에 그려 서버/브라우저 시각
+              차이로 문장이 엇갈리는 일을 없앤다. 폭이 모자라면 상호가 먼저 줄어든다(왼쪽 min-w-0). */}
+          <span className="whitespace-nowrap pr-1 text-[11px] font-light text-ink-light/50">
+            {isHydrated ? hubGreeting() : null}
+          </span>
+
           <GuideBell />
 
           <Link
             href={APP_HOME_PATH}
-            className="w-11 h-11 flex items-center justify-end text-ink-light/70 hover:text-primary transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-ink-light/70 hover:text-primary transition-colors"
             aria-label={t('nav.home')}
           >
             <Home className="w-5 h-5" />
