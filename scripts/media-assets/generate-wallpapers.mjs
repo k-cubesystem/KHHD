@@ -267,6 +267,14 @@ export const PREMIUM_SPECS = [
       'A snowy winter night: a traditional Korean tile-roofed house with warm golden lantern light glowing from its papered windows, smoke curling gently from the chimney, snow resting on the roof curves and on a bare persimmon tree with a few bright orange fruits left. Peace and warmth of home. Indigo night, white snow, warm amber light.',
   },
 
+  {
+    id: 'ga-pomegranate',
+    title: '다복 석류',
+    tier: 'premium',
+    subject:
+      'A pomegranate tree branch heavy with ripe fruit, painted in flat folk style: several large crimson pomegranates, one burst open revealing rows of glistening ruby seeds outlined in gold — the classic Korean symbol of many children and abundant family blessing. Deep green leaves, a pair of small white butterflies. Warm, generous, celebratory. Crimson, ruby red, jade green, gold.',
+  },
+
   // ── 四. 연애·사랑운 — «도화(桃花)를 피운다» ──
   {
     id: 'yeon-wonang',
@@ -281,6 +289,14 @@ export const PREMIUM_SPECS = [
     tier: 'premium',
     subject:
       'Peach blossom branches in full bloom filling the lower canvas with clouds of pink and white petals, each flower outlined in fine gold, and a slender crescent moon hanging between the branches. Petals float upward into the indigo sky. Romance blossoming. Blush pink, soft coral, ivory, gold linework.',
+  },
+
+  {
+    id: 'yeon-hojeop',
+    title: '나비의 춤',
+    tier: 'premium',
+    subject:
+      'A pair of butterflies dancing together above blooming peony flowers — the Korean hwajeopdo motif of love and marital joy. The peonies are lush pink and coral with gold-lined petals, the two butterflies mirror each other in flight, wings patterned in soft violet, white and gold. Petals and gold dust drift in the air. Tender and joyful. Pink, coral, soft violet, gold.',
   },
 
   // ── 五. 성공·명예 — «오르고, 이루고, 날아오른다» ──
