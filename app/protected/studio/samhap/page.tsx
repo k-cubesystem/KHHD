@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,8 +9,11 @@ import { ArrowRight, Coins, Sparkles, User2, Hand, Compass, Calendar, ChevronLef
 import { IconBokjumeoni } from '@/components/icons/traditional-icons'
 import { logger } from '@/lib/utils/logger'
 import { SamhapIntroCard } from '@/components/studio/samhap-intro-card'
+import { SamhapTargetPicker } from '@/components/studio/samhap-target-picker'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { resolveSamhapTarget, samhapTargetId, samhapTargetQuery } from '@/lib/domain/analysis/samhap-target'
 import { getWalletBalance } from '@/app/actions/payment/wallet'
+import { getDestinyTargets, type DestinyTarget } from '@/app/actions/user/destiny'
 import {
   getSamhapReadiness,
   generateSamhapReport,
@@ -48,33 +51,77 @@ const LOADING_STEPS = [
 function SamhapPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const targetId = searchParams.get('target')
-  const targetQuery = targetId ? `?target=${targetId}` : ''
+  /**
+   * `?target=` 은 **처음 들어올 때만** 읽는다(여정 카드·「준비하기」 링크가 대상을 물고 온다).
+   * 이후 주인은 선택 상태이고 URL 은 뒤따라간다 — 매 렌더 다시 읽으면 아래 `router.replace` 와
+   * 서로를 깨우는 왕복이 생긴다.
+   */
+  const initialTargetId = useRef(searchParams.get('target'))
 
   const [step, setStep] = useState<StepType>('check')
   const [readiness, setReadiness] = useState<SamhapReadiness | null>(null)
   const [result, setResult] = useState<SamhapResult | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [targets, setTargets] = useState<DestinyTarget[] | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  const selectedTarget = targets?.find((t) => t.id === selectedId) ?? null
+  // 🔴 본인은 targetId 를 붙이지 않는다(samhap-target.ts 주석의 함정).
+  const effectiveTargetId = samhapTargetId(selectedTarget)
+  const targetQuery = samhapTargetQuery(selectedTarget)
+
+  // 대상 목록·잔액은 화면당 한 번. 선택이 정해지면 아래 요건 조회가 이어받는다.
   useEffect(() => {
-    getWalletBalance().then(setBalance)
-    getSamhapReadiness(targetId ?? undefined).then((r) => {
+    let active = true
+    getWalletBalance().then((b) => {
+      if (active) setBalance(b)
+    })
+    getDestinyTargets().then((list) => {
+      if (!active) return
+      setTargets(list)
+      setSelectedId(resolveSamhapTarget(list, initialTargetId.current)?.id ?? null)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // 요건(채워야 할 복주머니)은 **선택한 대상마다** 다시 잰다 — 가족을 바꾸면 표가 그 사람 것이 된다.
+  useEffect(() => {
+    if (!selectedId) return
+    let active = true
+    setReadiness(null)
+    getSamhapReadiness(effectiveTargetId).then((r) => {
+      if (!active) return
       setReadiness(r)
       trackEvent({
         action: r.ready ? 'samhap_ready' : 'samhap_requirements_unmet',
         category: 'analysis',
-        label: 'samhap',
+        label: effectiveTargetId ? 'samhap_family' : 'samhap_self',
       })
     })
-  }, [targetId])
+    return () => {
+      active = false
+    }
+  }, [selectedId, effectiveTargetId])
+
+  const handleSelectTarget = (id: string) => {
+    if (id === selectedId) return
+    setSelectedId(id)
+    setResult(null)
+    setStep('check')
+    // 새로고침·공유로 같은 대상이 다시 서도록 URL 을 맞춰 둔다(기록은 남기지 않는다 — replace).
+    const next = targets?.find((t) => t.id === id) ?? null
+    router.replace(`/protected/studio/samhap${samhapTargetQuery(next)}`, { scroll: false })
+  }
 
   const handleGenerate = async () => {
     setLoading(true)
     setStep('loading')
     GA.analysisStart('samhap')
     try {
-      const res = await generateSamhapReport(targetId ?? undefined)
+      const res = await generateSamhapReport(effectiveTargetId)
       if (!res.success) {
         setStep('check')
         toast.error(res.error || '종합사주풀이 생성에 실패했습니다.')
@@ -140,8 +187,17 @@ function SamhapPageContent() {
               exit={{ opacity: 0, y: -16 }}
               className="space-y-5"
             >
-              {readiness === null ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3">
+              {/* 소개 — 대작 카드 문법(앰비언트 영상·세리프 헤드라인·명언·단청) */}
+              <SamhapIntroCard />
+
+              {/* 대상 선택 — 요건 표 «위»에 둔다. 표가 누구 것인지 먼저 말하고 나서 표를 보인다. */}
+              <SamhapTargetPicker targets={targets} selectedId={selectedId} onSelect={handleSelectTarget} />
+
+              {/* 🔴 스피너는 요건 자리만 덮는다 — 대상 줄까지 사라지면 바꾸자마자 고르던 손이 붕 뜬다.
+                  🔴 대상이 하나도 없으면(등록 0건) 요건을 잴 것도 없다 — 여기서 스피너를 그리면
+                     선택이 영영 안 서므로 영원히 도는 바퀴가 된다. 그 안내는 위 선택 줄이 진다. */}
+              {targets !== null && selectedId === null ? null : readiness === null ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gold-500" />
                   <p className="text-white/40 text-sm font-sans">요건을 확인하고 있습니다...</p>
                 </div>
@@ -150,6 +206,7 @@ function SamhapPageContent() {
                   readiness={readiness}
                   balance={balance}
                   targetQuery={targetQuery}
+                  targetName={selectedTarget?.name ?? readiness.targetName}
                   onGenerate={handleGenerate}
                   loading={loading}
                 />
@@ -200,12 +257,16 @@ function SamhapCheck({
   readiness,
   balance,
   targetQuery,
+  targetName,
   onGenerate,
   loading,
 }: {
   readiness: SamhapReadiness
   balance: number | null
+  /** 선택한 대상의 `?target=` 쿼리(본인이면 빈 문자열) — 「준비하기」가 그 사람을 데리고 간다. */
   targetQuery: string
+  /** 요건 표가 누구 것인지 밝히는 이름. */
+  targetName: string
   onGenerate: () => void
   loading: boolean
 }) {
@@ -236,20 +297,23 @@ function SamhapCheck({
       label: '생년월일 등록',
       ok: readiness.hasBirth,
       icon: Calendar,
+      // 본인이든 가족이든 생년월일은 가족 관리에서 고친다(본인 행도 그 화면에 있다).
       href: '/protected/family',
     },
   ]
 
+  const filled = requirements.filter((r) => r.ok).length
+
   return (
     <div className="space-y-5">
-      {/* 소개 — 대작 카드 문법(앰비언트 영상·한자 라벨·세리프 헤드라인·명언·단청) */}
-      <SamhapIntroCard />
-
-      {/* 요건 체크 — 낙관(도장) 수집 표 */}
+      {/* 요건 체크 — 낙관(도장) 수집 표. 대상이 바뀌면 이 표가 통째로 그 사람 것이 된다. */}
       <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-5 hanji-card relative overflow-hidden">
-        <p className="relative text-xs text-gold-500/70 font-serif font-medium tracking-widest mb-3">
-          채워야 할 복주머니
-        </p>
+        <div className="relative flex items-baseline justify-between gap-2 mb-3">
+          <p className="text-xs text-gold-500/70 font-serif font-medium tracking-widest">채워야 할 복주머니</p>
+          <p className="text-[11px] font-serif text-gold-500/60 tabular-nums shrink-0">
+            <span className="text-white/40">{targetName}</span> · {filled}/{requirements.length}
+          </p>
+        </div>
         <div className="relative space-y-3">
           {requirements.map((r) => {
             const Icon = r.icon

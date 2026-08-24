@@ -21,7 +21,23 @@ import { GA } from '@/lib/analytics/ga4'
 const JOURNEY_COPY = '주머니 하나를 채울 때마다 나의 기운이 오르고, 다섯이 모이면 큰 복(종합풀이)이 열립니다'
 const JOURNEY_COMPLETE_COPY = '다섯 복주머니가 가득 차, 나의 기운이 정점에 올랐습니다'
 
-/** 비단 복주머니 팔레트(짙은 진홍·금) — 사주 유도 카드(먹빛·도장)와 기능 구별을 위한 별도 정체성. */
+/**
+ * 첫 주머니(사주) 문안 — 구 사주 유도 카드(`MasterpieceSection`)에서 **옮겨 온** 카피다.
+ *
+ * 🔴 2026-08-24 CEO: «메인 배너가 2개일 필요가 없어. 아래 걸로 쓰고, 위 글 내용을 아래 배너에
+ *    더해라. 위 배너는 없애도 된다 — 사주 아이콘이 런처에 있고, 종합운세에 들어가면 기본
+ *    사주를 먼저 본다.» 그래서 배너는 이 카드 하나만 남았고, 사주 유도 카드는 삭제됐다.
+ *
+ * 🔴 헤드라인 세 줄(「태어난 순간 새겨진 / 당신만의 운명의 지도를 / 펼쳐드립니다」)과 아래
+ *    명언은 CEO 가 문구를 명시한 자리다. 카피를 다듬을 때도 이 둘은 건드리지 않는다.
+ *
+ * 이 문안은 **첫 주머니가 아직 사주일 때만** 나온다(`journey.next?.id === 'SAJU'`).
+ * 사주를 채우고 나면 카드는 원래의 복주머니 서사로 돌아간다 — 같은 자리에서 두 말을 하지 않는다.
+ */
+const SAJU_LABEL = '천 지 인 · 사 주 팔 자'
+const SAJU_QUOTE = '하늘의 뜻을 알면, 땅 위의 길이 보인다'
+
+/** 비단 복주머니 팔레트(짙은 진홍·금) — 허브의 **유일한** 메인 배너 정체성(구 먹빛 사주 카드는 폐기). */
 const BOK_BG = 'linear-gradient(165deg, #170C0E 0%, #241014 45%, #120909 100%)'
 const BOK_SHADOW = '0 12px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(201,168,76,0.08)'
 const GOLD_FILL = 'linear-gradient(135deg, #E8D5A0 0%, #C9A84C 45%, #A8903F 100%)'
@@ -99,8 +115,8 @@ function ctaLabel(journey: JourneyProgress): string {
   if (journey.allComplete) return '모아둔 종합풀이 다시 보기'
   if (!journey.next) return '다섯 주머니 종합풀이 열기'
   if (journey.next.isFinal) return '다섯 주머니 종합풀이 열기'
-  // 첫 주머니(사주)는 위 사주 유도 카드와 같은 곳으로 간다 — «첫 주머니»로 불러 역할을 가른다
-  return journey.next.id === 'SAJU' ? '첫 주머니: 사주 풀이 시작하기' : `다음 주머니: ${journey.next.label} 보러 가기`
+  // 첫 주머니는 사주다 — 구 사주 배너의 CTA(「나의 사주 · 운명 풀어보기」)를 여기로 합쳤다.
+  return journey.next.id === 'SAJU' ? '첫 주머니 · 나의 사주 풀어보기' : `다음 주머니: ${journey.next.label} 보러 가기`
 }
 
 /** allComplete 면 종합 단계, 아니면 next 단계로 이동시킬 대상. */
@@ -151,6 +167,8 @@ export function JourneyFull({
   const claimed = claimedLocal !== null || (reward?.claimed ?? false)
   const claimedName = claimedLocal?.name ?? reward?.claimedName ?? null
   const showRewardCta = journey.allComplete && reward !== null && !claimed
+  /** 첫 주머니가 아직 사주 — 이때만 구 사주 배너의 문안으로 말한다(SAJU_LABEL 주석 참고). */
+  const atSaju = journey.next?.id === 'SAJU'
 
   const handleNode = (stage: JourneyStage) => {
     if (stage.status === 'done') {
@@ -205,7 +223,13 @@ export function JourneyFull({
           </span>
         </div>
 
-        {/* 헤드라인 */}
+        {/* 사주 라벨 — 첫 주머니(사주) 단계에서만. 구 사주 배너의 첫 줄이다. */}
+        {/* ml-[0.5em] — 자간이 마지막 글자 뒤에도 붙어 가운데정렬이 그만큼 왼쪽으로 밀리는 걸 되민다. */}
+        {atSaju && (
+          <p className="text-[10px] font-serif tracking-[0.5em] text-gold-500/50 -mb-1 ml-[0.5em]">{SAJU_LABEL}</p>
+        )}
+
+        {/* 헤드라인 — 첫 주머니(사주) / 진행중 / 완주 세 상태 */}
         <h2
           className="text-[1.35rem] font-serif font-bold leading-[1.5] text-ink-light tracking-tight"
           style={{ wordBreak: 'keep-all' }}
@@ -216,6 +240,14 @@ export function JourneyFull({
               <br />
               나의 <span className="text-gold-500">큰 복</span>이 열렸습니다
             </>
+          ) : atSaju ? (
+            <>
+              태어난 순간 새겨진
+              <br />
+              당신만의 <span className="text-gold-500">운명의 지도</span>를
+              <br />
+              펼쳐드립니다
+            </>
           ) : (
             <>
               다섯 개의 복주머니를 채우면
@@ -225,9 +257,9 @@ export function JourneyFull({
           )}
         </h2>
 
-        {/* 부제 */}
+        {/* 부제 — 사주 단계에서는 구 배너의 명언이 그 자리를 대신한다(이탤릭 두 줄을 만들지 않는다) */}
         <p className="text-[11px] italic font-serif text-ink-light/45 leading-relaxed">
-          주머니가 채워질수록, 나의 기운이 차오릅니다
+          {atSaju ? `“${SAJU_QUOTE}”` : '주머니가 채워질수록, 나의 기운이 차오릅니다'}
         </p>
 
         {/* 금실 구분선 */}
@@ -238,7 +270,17 @@ export function JourneyFull({
           className="text-[12px] text-ink-light/55 font-sans font-light leading-relaxed"
           style={{ wordBreak: 'keep-all' }}
         >
-          {journey.allComplete ? `${JOURNEY_COMPLETE_COPY} — ${JOURNEY_COMPLETE_TITLE}` : JOURNEY_COPY}
+          {journey.allComplete ? (
+            `${JOURNEY_COMPLETE_COPY} — ${JOURNEY_COMPLETE_TITLE}`
+          ) : atSaju ? (
+            <>
+              천간·지지·오행의 흐름을 읽고,{' '}
+              <span className="text-ink-light/80">대운과 세운이 알려주는 인생의 전환점</span>을 청담해화당이
+              짚어드립니다. 이 사주 풀이가 첫 주머니에 담깁니다.
+            </>
+          ) : (
+            JOURNEY_COPY
+          )}
         </p>
 
         {/* 복주머니 스텝퍼 */}

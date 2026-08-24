@@ -2,7 +2,7 @@
  * 사주·궁합 허브의 «앱 홈» 구성 — 화면에 무엇이 남았고 무엇이 없는지.
  *
  * CEO 지시(2026-08-13)로 허브는 세 자리만 남았다.
- * 아이콘 런처 → ① 인기테마운세 → 종합사주풀이 여정(맨 하단).
+ * 아이콘 런처 → 나의 복주머니(메인 배너) → ① 인기테마운세.
  *
  * 이 테스트가 지키는 것은 셋이다.
  * ① **되살아나지 않았는가** — 오늘의 정성·절기 이벤트·더 깊이·하단 오늘의 운세·상단 바로가기,
@@ -73,14 +73,25 @@ describe('허브 구성 — 세 자리만 남는다', () => {
     expect(journey.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('런처가 사주 유도 카드보다 위다 (아이콘이 화면의 첫 줄)', async () => {
+  it('메인 배너는 하나다 — 사주 유도 카드가 복주머니 위에 다시 서지 않는다 (CEO 08-24)', async () => {
+    // 지운 게 아니라 합쳤다 — 사주 문안·CTA 는 복주머니 카드가 첫 주머니 단계에서 스스로 말한다
+    // (아래 「첫 주머니 단계면…」 테스트가 그 실존을 지킨다). 구 카드의 CTA 만 돌아오면 배너가 둘이다.
+    await renderHub()
+
+    expect(screen.queryByRole('button', { name: /나의 사주 · 운명 풀어보기/ })).toBeNull()
+    expect(screen.queryByText(/아래 「나의 복주머니」 첫 칸에 담깁니다/)).toBeNull()
+  })
+
+  it('첫 주머니 단계면 복주머니 카드가 사주 유도 문안을 그대로 든다 (구 배너에서 옮겨 온 카피)', async () => {
+    // 이력 0건 목이라 next 가 SAJU 다 — 헤드라인 세 줄과 명언은 CEO 가 문구를 명시한 자리다.
     const { container } = await renderHub()
 
-    const launcher = container.querySelector(`#${HUB_SECTIONS.launcher.id}`)
-    const masterpiece = screen.getByRole('button', { name: /나의 사주 · 운명 풀어보기/ })
-    if (!launcher) throw new Error('런처가 없다')
+    const journey = container.querySelector<HTMLElement>(`#${HUB_SECTIONS.journey.id}`)
+    if (!journey) throw new Error('복주머니 섹션이 없다')
 
-    expect(launcher.compareDocumentPosition(masterpiece) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(journey).getByText(/태어난 순간 새겨진/)).toBeTruthy()
+    expect(within(journey).getByText(/하늘의 뜻을 알면, 땅 위의 길이 보인다/)).toBeTruthy()
+    expect(within(journey).getByText(/천간·지지·오행의 흐름을 읽고/)).toBeTruthy()
   })
 
   it('런처 여덟 칸이 표 그대로 걸린다', async () => {

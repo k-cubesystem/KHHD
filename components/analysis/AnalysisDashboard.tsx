@@ -6,7 +6,6 @@ import { fadeInUp, staggerContainer } from '@/lib/animations'
 import { ChevronRight } from 'lucide-react'
 import { HubLauncher } from './HubLauncher'
 import { ThemeThumbnail } from './ThemeThumbnail'
-import { MasterpieceSection } from './dashboard/MasterpieceSection'
 import { JourneyCard } from './journey-card'
 import { WallpaperCard } from './wallpaper-card'
 import { CoupangBanner } from '@/components/ads/coupang-banner'
@@ -16,7 +15,12 @@ import { hubThemeDailyPicks, THEME_CATEGORIES, THEME_LIST_PATH, themeListHref } 
 /**
  * 사주·궁합 허브 본문 — 「앱 홈」 문법으로 개편(CEO 2026-08-13 "상단에 어플처럼 아이콘과 제목").
  *
- *   [아이콘 런처 8칸] → [사주 유도 카드] → [나의 복주머니] → [① 인기테마운세 5줄]
+ *   [아이콘 런처 8칸] → [나의 복주머니 = 메인 배너] → [① 인기테마운세 5줄]
+ *
+ * 🔴 **메인 배너는 하나다** (CEO 2026-08-24). 위에 있던 사주 유도 카드(`MasterpieceSection`)를
+ *    지우고 그 문안을 복주머니 카드로 합쳤다 — 사주 입구는 런처 첫 칸이 이미 지고 있고,
+ *    복주머니 첫 칸도 사주라 같은 문이 한 화면에 셋이었다. 카드를 되살리지 말 것(카피는
+ *    `journey-card.tsx` 의 `SAJU_LABEL` 주석에 그대로 남아 있다).
  *
  * ① 은 2026-08-13 저녁 CEO 지시(「3개 말고 상하단 사이즈를 좀 줄여서 10개까지」)로 풀폭 와이드
  * 카드 3장에서 유튜브식 가로 리스트 열 줄이 됐고, 2026-08-22 CEO 지시로 **다섯 줄 + 매일 다른
@@ -61,13 +65,8 @@ export function AnalysisDashboard() {
         <HubLauncher />
       </motion.div>
 
-      {/* 0. 사주 유도 카드 (1장 — 한국 전통풍) */}
-      <motion.div variants={fadeInUp}>
-        <MasterpieceSection />
-      </motion.div>
-
-      {/* 나의 복주머니(여정) — 사주 카드 바로 아래(CEO 2026-08-22 «위치가 너무 하단» 재지시).
-          «사주 보기 = 첫 주머니 채우기» 동선이 이어지고, 10줄 테마 리스트에 묻히지 않는다. */}
+      {/* 나의 복주머니(여정) — 허브의 **유일한** 메인 배너(CEO 2026-08-24 «배너가 2개일 필요 없다»).
+          첫 주머니가 아직 사주면 카드가 스스로 사주 유도 문안으로 말한다 — 배너를 더 얹지 말 것. */}
       <motion.section
         variants={fadeInUp}
         id={HUB_SECTIONS.journey.id}

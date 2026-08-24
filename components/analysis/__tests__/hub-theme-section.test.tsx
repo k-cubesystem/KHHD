@@ -46,7 +46,7 @@ jest.mock('@/app/actions/analysis/wallpaper', () => ({
   unlockWallpaperByAd: jest.fn(async () => ({ success: false, error: 'UNAUTHORIZED' })),
 }))
 
-/** 사주 유도 카드(`MasterpieceSection`)가 `useRouter` 를 쓴다 — 렌더가 서려면 필요하다. */
+/** 메인 배너(`JourneyCard`)가 `useRouter` 를 쓴다 — 렌더가 서려면 필요하다. */
 const push = jest.fn()
 
 beforeEach(() => {

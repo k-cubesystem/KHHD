@@ -11,7 +11,6 @@
  */
 
 import { HubLauncher } from '@/components/analysis/HubLauncher'
-import { MasterpieceSection } from '@/components/analysis/dashboard/MasterpieceSection'
 import { JourneyFull } from '@/components/analysis/journey-card'
 import { WallpaperGrid } from '@/components/analysis/wallpaper-card'
 import { SamhapIntroCard } from '@/components/studio/samhap-intro-card'
@@ -80,7 +79,6 @@ const PREVIEW_SCENE_VIEWS: Record<PreviewSceneId, () => React.ReactNode> = {
   // 🔴 아이콘이 이번 작업의 핵심이라 런처는 «그림이 실제로 뜨는가»를 보는 장면이다.
   //    빈 네모가 찍히면 그건 촬영 실패가 아니라 자산 결함이다(파일명·경로를 먼저 볼 것).
   'hub-launcher': () => <HubLauncher />,
-  'hub-banner': () => <MasterpieceSection />,
 
   'journey-empty': () => <JourneyScene categories={[]} reward={null} />,
   'journey-progress': () => <JourneyScene categories={['SAJU', 'FACE']} reward={null} />,
