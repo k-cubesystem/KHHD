@@ -72,15 +72,18 @@ describe('하우스 광고 — 우리 상품을 우리가 소개한다(외부 �
   })
 })
 
-describe('시트 — 잠긴 장에만 값과 광고가 붙는다', () => {
-  it('무료 사용자: 다섯 장이 잠기고 각각 값과 광고 버튼을 진다', () => {
+describe('시트 — 배포된 여섯 장은 전부 무료다 (2026-08-24)', () => {
+  /**
+   * 🔴 CEO 지시로 현행 여섯 장을 전부 풀었다. 그래서 이 세트에는 결제·광고 버튼이 서지
+   * 않는다. 값·광고 «기계»는 지우지 않았고(위 하우스 광고 describe 가 계속 지킨다) 앞으로
+   * 나올 프리미엄 세트가 그대로 쓴다 — 그때 이 자리에 잠긴 장 테스트가 다시 붙는다.
+   */
+  it('자격이 없어도 여섯 장이 전부 열리고, 결제·광고 버튼이 하나도 서지 않는다', () => {
     render(<WallpaperGrid status={BASE} />)
 
-    expect(screen.getAllByRole('button', { name: /만냥으로 소장/ })).toHaveLength(5)
-    expect(screen.getAllByRole('button', { name: '광고 보고 오늘 1장 열기' })).toHaveLength(5)
-    // 오행 1만냥 넷 · 이달의 복 2만냥 하나
-    expect(screen.getAllByRole('button', { name: '1만냥으로 소장' })).toHaveLength(4)
-    expect(screen.getAllByRole('button', { name: '2만냥으로 소장' })).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: /배경화면 받기/ })).toHaveLength(6)
+    expect(screen.queryByRole('button', { name: /만냥으로 소장/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '광고 보고 오늘 1장 열기' })).not.toBeInTheDocument()
   })
 
   it('멤버십이면 전 장이 열리고 결제·광고 버튼이 서지 않는다', () => {
@@ -91,18 +94,18 @@ describe('시트 — 잠긴 장에만 값과 광고가 붙는다', () => {
     expect(screen.getAllByRole('link', { name: /배경화면 받기/ })).toHaveLength(6)
   })
 
-  it('🔴 오늘 광고를 썼으면 광고 버튼이 사라진다 (하루 1장)', () => {
+  it('오늘 광고를 썼든 안 썼든 이 세트에는 광고 버튼이 없다', () => {
     render(<WallpaperGrid status={{ ...BASE, adUsedToday: true }} />)
 
     expect(screen.queryByRole('button', { name: '광고 보고 오늘 1장 열기' })).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /만냥으로 소장/ })).toHaveLength(5)
+    expect(screen.getAllByRole('link', { name: /배경화면 받기/ })).toHaveLength(6)
   })
 
-  it('산 장은 열린 채로 서고 다시 팔지 않는다', () => {
+  it('예전에 산 기록이 있어도 다시 팔지 않는다 (이미 전부 무료다)', () => {
     render(<WallpaperGrid status={{ ...BASE, unlocks: [{ wallpaperId: 'element-water', source: 'purchase' }] }} />)
 
-    expect(screen.getByText('소장 완료')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /만냥으로 소장/ })).toHaveLength(4)
+    expect(screen.queryByRole('button', { name: /만냥으로 소장/ })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /배경화면 받기/ })).toHaveLength(6)
   })
 
   it('🔴 시트 문구에도 금지어가 없다', () => {

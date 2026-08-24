@@ -4,12 +4,13 @@
  * 오행 5장(나무·불·흙·쇠·물) + 이달의 복 1장. 사용자의 용신 오행과 같은 장은 화면에서
  * 「내 오행」으로 추천된다.
  *
- * **접근 모델(2026-08-22 확장)** — 다섯 경로의 순수 OR 다. 우선순위는 «표기»에만 쓰고
- * 판정에는 쓰지 않는다(어느 하나만 서면 열린다):
- *   ① 기본 무료 1장(흙) ② 멤버십 ACTIVE → 전 장 ③ 구매(복채) ④ 광고 해금(하루 1장)
- *   ⑤ 여정 보너스 — 사주 1회 → 오행 5장 / 복주머니 완주 → 이달의 복
- * ⑤가 남아 있는 이유는 서사다. 「복주머니를 채우면 한정판이 열린다」는 완주 동기를
- * 과금으로 지우지 않는다 — 돈으로도 열리지만, 완주하면 공짜다.
+ * 🔴 **2026-08-24 — 이 여섯 장은 전부 무료다**(CEO 지시). 종전의 «기본 무료 1장 + 사주/완주
+ * 선물 + 구매/광고 해금» 은 이 세트에서 내려갔다. 값을 받는 자리는 앞으로 나올 **프리미엄
+ * 세트**가 지고, 그때 쓸 잠금·구매·광고 기계장치(`resolveWallpaperAccess` 이하)는 손대지 않고
+ * 그대로 남겨 두었다 — 새 세트에 `lock: 'saju' | 'journey'` 를 주면 즉시 다시 돈다.
+ *
+ * **접근 모델** — 다섯 경로의 순수 OR. 우선순위는 «표기»에만 쓰고 판정에는 쓰지 않는다:
+ *   ① 무료 ② 멤버십 ACTIVE ③ 구매(복채) ④ 광고 해금(하루 1장) ⑤ 여정 보너스.
  *
  * side-effect 없음(순수) — 단위테스트 대상. 화면 표현(배지·시트)은 컴포넌트가 입힌다.
  *
@@ -52,7 +53,11 @@ export const WALLPAPER_LOCK_REASON: Record<Exclude<WallpaperLock, 'free'>, strin
  */
 export const MONTHLY_WALLPAPER_ID = 'monthly-202608'
 
-/** 항상 무료로 여는 오행 장 — 맛보기 한 장(기획: '흙'). */
+/**
+ * 맛보기 한 장이었던 자리. 🔴 **2026-08-24부터 여섯 장 전부 무료**라 이 상수는 판정에 쓰이지
+ * 않는다(«어느 장이 대표 무료인가»를 가리키는 표시로만 남겼다). 유료는 앞으로 나올
+ * 프리미엄 세트가 진다 — 잠금·구매·광고 해금 기계장치는 그대로 살아 있다.
+ */
 export const FREE_WALLPAPER_ELEMENT: WallpaperElement = 'earth'
 
 const ELEMENT_META: Record<WallpaperElement, { title: string; subtitle: string }> = {
@@ -76,7 +81,7 @@ export const WALLPAPER_SET: readonly WallpaperItem[] = [
       id: `element-${element}`,
       title: ELEMENT_META[element].title,
       subtitle: ELEMENT_META[element].subtitle,
-      lock: element === FREE_WALLPAPER_ELEMENT ? 'free' : 'saju',
+      lock: 'free',
       element,
     })
   ),
@@ -84,7 +89,7 @@ export const WALLPAPER_SET: readonly WallpaperItem[] = [
     id: MONTHLY_WALLPAPER_ID,
     title: '이달의 복',
     subtitle: '이번 달에만 받을 수 있는 한정 배경',
-    lock: 'journey',
+    lock: 'free',
     element: null,
   },
 ]

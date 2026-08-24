@@ -46,21 +46,47 @@ function itemById(id: string): WallpaperItem {
 }
 
 const FREE = itemById(`element-${FREE_WALLPAPER_ELEMENT}`)
-const PAID_ELEMENT = itemById('element-water')
 const MONTHLY = itemById(MONTHLY_WALLPAPER_ID)
+
+/**
+ * 🔴 2026-08-24 부터 배포된 여섯 장은 **전부 무료**다. 그래도 잠금·구매·광고 기계장치는
+ * 앞으로 나올 **프리미엄 세트**가 그대로 쓰므로, 여기서는 «잠긴 장» 표본을 손으로 세워
+ * 그 기계를 계속 지킨다 — 세트를 다시 유료로 되돌리지 않고도 회귀를 잡는다.
+ */
+const PAID_ELEMENT: WallpaperItem = {
+  id: 'premium-water',
+  title: '프리미엄 물',
+  subtitle: '표본',
+  lock: 'saju',
+  element: 'water',
+}
+const PAID_OTHER: WallpaperItem = { ...PAID_ELEMENT, id: 'premium-fire', element: 'fire' }
+const PAID_MONTHLY: WallpaperItem = {
+  id: 'premium-limited',
+  title: '프리미엄 한정',
+  subtitle: '표본',
+  lock: 'journey',
+  element: null,
+}
 
 describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다', () => {
   it('① 기본 무료 한 장은 아무 자격 없이 열린다', () => {
     expect(resolveWallpaperAccess(FREE, NOBODY)).toEqual({ unlocked: true, via: 'free', reason: null })
   })
 
-  it('① 자격이 없으면 나머지 다섯 장은 전부 잠기고 여정 사유가 붙는다', () => {
-    const locked = WALLPAPER_SET.filter((w) => !resolveWallpaperAccess(w, NOBODY).unlocked)
+  it('① 자격이 없어도 배포된 여섯 장은 전부 열린다 (2026-08-24 전면 무료)', () => {
+    for (const item of WALLPAPER_SET) {
+      expect(resolveWallpaperAccess(item, NOBODY)).toEqual({ unlocked: true, via: 'free', reason: null })
+    }
+  })
 
-    expect(locked).toHaveLength(5)
-    for (const item of locked) {
-      expect(resolveWallpaperAccess(item, NOBODY).reason).toBe(WALLPAPER_LOCK_REASON[item.lock as 'saju' | 'journey'])
-      expect(resolveWallpaperAccess(item, NOBODY).via).toBeNull()
+  it('① 잠긴 장(프리미엄 표본)은 자격이 없으면 사유가 붙고 근거가 비어 있다', () => {
+    for (const item of [PAID_ELEMENT, PAID_MONTHLY]) {
+      const state = resolveWallpaperAccess(item, NOBODY)
+
+      expect(state.unlocked).toBe(false)
+      expect(state.via).toBeNull()
+      expect(state.reason).toBe(WALLPAPER_LOCK_REASON[item.lock as 'saju' | 'journey'])
     }
   })
 
@@ -76,36 +102,35 @@ describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다',
     const bought = withUnlocks([{ wallpaperId: PAID_ELEMENT.id, source: 'purchase' }])
 
     expect(resolveWallpaperAccess(PAID_ELEMENT, bought)).toEqual({ unlocked: true, via: 'purchase', reason: null })
-    expect(resolveWallpaperAccess(itemById('element-fire'), bought).unlocked).toBe(false)
-    expect(resolveWallpaperAccess(MONTHLY, bought).unlocked).toBe(false)
+    expect(resolveWallpaperAccess(PAID_OTHER, bought).unlocked).toBe(false)
+    expect(resolveWallpaperAccess(PAID_MONTHLY, bought).unlocked).toBe(false)
   })
 
   it('④ 광고 해금도 그 장만 열고, 근거를 광고로 적는다', () => {
     const adUnlocked = withUnlocks([{ wallpaperId: PAID_ELEMENT.id, source: 'ad' }])
 
     expect(resolveWallpaperAccess(PAID_ELEMENT, adUnlocked)).toEqual({ unlocked: true, via: 'ad', reason: null })
-    expect(resolveWallpaperAccess(itemById('element-wood'), adUnlocked).unlocked).toBe(false)
+    expect(resolveWallpaperAccess(PAID_OTHER, adUnlocked).unlocked).toBe(false)
   })
 
-  it('⑤ 사주 1회면 오행 다섯이 열리고 이달의 복만 잠긴다 (여정 보너스 보존)', () => {
+  it('⑤ 사주 1회는 saju 장을 열고 journey 장은 못 연다 (여정 보너스 보존)', () => {
     const saju: WallpaperAccess = { ...NOBODY, hasSaju: true }
-    const open = WALLPAPER_SET.filter((w) => resolveWallpaperAccess(w, saju).unlocked)
 
-    expect(open.map((w) => w.id)).toEqual(WALLPAPER_ELEMENT_ORDER.map((e) => `element-${e}`))
-    expect(resolveWallpaperAccess(MONTHLY, saju)).toEqual({
+    expect(resolveWallpaperAccess(PAID_ELEMENT, saju)).toEqual({ unlocked: true, via: 'saju', reason: null })
+    expect(resolveWallpaperAccess(PAID_MONTHLY, saju)).toEqual({
       unlocked: false,
       via: null,
       reason: WALLPAPER_LOCK_REASON.journey,
     })
   })
 
-  it('⑤ 복주머니를 완주하면 이달의 복까지 여섯 장이 전부 열린다', () => {
+  it('⑤ 복주머니를 완주하면 journey 장까지 열린다', () => {
     const complete: WallpaperAccess = { ...NOBODY, hasSaju: true, journeyComplete: true }
 
-    for (const item of WALLPAPER_SET) {
+    for (const item of [...WALLPAPER_SET, PAID_ELEMENT, PAID_MONTHLY]) {
       expect(resolveWallpaperAccess(item, complete).unlocked).toBe(true)
     }
-    expect(resolveWallpaperAccess(MONTHLY, complete).via).toBe('journey')
+    expect(resolveWallpaperAccess(PAID_MONTHLY, complete).via).toBe('journey')
   })
 
   it('경로가 겹쳐도 판정은 OR 이고, 표기는 «소유가 먼저»다', () => {
@@ -119,13 +144,13 @@ describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다',
     // 멤버십이 끝나도 산 장은 남는다 — 화면이 「멤버십」이라 적으면 해지 뒤 사라질 것처럼 읽힌다.
     expect(resolveWallpaperAccess(PAID_ELEMENT, both).via).toBe('purchase')
     // 사지 않은 장은 멤버십이 먼저 잡는다(여정 보너스보다 앞).
-    expect(resolveWallpaperAccess(itemById('element-metal'), both).via).toBe('member')
+    expect(resolveWallpaperAccess(PAID_OTHER, both).via).toBe('member')
   })
 
   it('멤버십이 끝나도 (isMember=false) 산 장은 그대로 열려 있다', () => {
-    const expired = withUnlocks([{ wallpaperId: MONTHLY.id, source: 'purchase' }])
+    const expired = withUnlocks([{ wallpaperId: PAID_MONTHLY.id, source: 'purchase' }])
 
-    expect(resolveWallpaperAccess(MONTHLY, expired).unlocked).toBe(true)
+    expect(resolveWallpaperAccess(PAID_MONTHLY, expired)).toEqual({ unlocked: true, via: 'purchase', reason: null })
   })
 
   it('열린 장에는 사유가 없고 잠긴 장에는 근거가 없다 (둘이 동시에 서지 않는다)', () => {
@@ -135,11 +160,11 @@ describe('접근 판정 — 다섯 경로가 각자 독립으로 문을 연다',
       { ...NOBODY, hasSaju: true },
       { ...NOBODY, hasSaju: true, journeyComplete: true },
       withUnlocks([{ wallpaperId: PAID_ELEMENT.id, source: 'purchase' }]),
-      withUnlocks([{ wallpaperId: MONTHLY.id, source: 'ad' }]),
+      withUnlocks([{ wallpaperId: PAID_MONTHLY.id, source: 'ad' }]),
     ]
 
     for (const access of samples) {
-      for (const item of WALLPAPER_SET) {
+      for (const item of [...WALLPAPER_SET, PAID_ELEMENT, PAID_OTHER, PAID_MONTHLY]) {
         const state = resolveWallpaperAccess(item, access)
 
         expect(state.reason === null).toBe(state.unlocked)

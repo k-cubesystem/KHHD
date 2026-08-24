@@ -8,7 +8,6 @@
  * ③ **완주자가 막히지 않는가** — 완주는 사주를 포함하므로 완주자에겐 6장이 전부 열린다.
  */
 import {
-  FREE_WALLPAPER_ELEMENT,
   MONTHLY_WALLPAPER_ID,
   WALLPAPER_ELEMENT_ORDER,
   WALLPAPER_LOCK_REASON,
@@ -20,6 +19,7 @@ import {
   wallpaperPath,
   wallpaperPreview,
   type WallpaperEntitlement,
+  type WallpaperItem,
 } from '../wallpaper'
 
 const NOBODY: WallpaperEntitlement = { hasSaju: false, journeyComplete: false }
@@ -60,7 +60,7 @@ describe('세트 불변식 — 6장이 파일과 1:1이다', () => {
 
     expect(MONTHLY_WALLPAPER_ID).toMatch(/^monthly-\d{6}$/)
     expect(monthly.element).toBeNull()
-    expect(monthly.lock).toBe('journey')
+    expect(monthly.lock).toBe('free')
   })
 
   it('파일 경로는 `/wallpapers/{id}.webp` 다', () => {
@@ -86,50 +86,48 @@ describe('세트 불변식 — 6장이 파일과 1:1이다', () => {
   })
 })
 
-describe('잠금 규칙 — 무료는 한 장뿐이다', () => {
-  it('무료는 흙 한 장이고, 나머지 오행 넷은 사주를 요구한다', () => {
-    const free = WALLPAPER_SET.filter((w) => w.lock === 'free')
+describe('잠금 규칙 — 배포된 여섯 장은 전부 무료다 (2026-08-24)', () => {
+  /**
+   * 🔴 종전에는 «무료 한 장 + 사주 넷 + 완주 하나» 였다. CEO 지시로 여섯 장을 전부 풀었다.
+   * 잠금 기계장치(`resolveWallpaperUnlock`)는 앞으로 나올 **프리미엄 세트**가 그대로 쓰므로
+   * 지우지 않고, 여기서는 잠긴 장 표본을 손으로 세워 그 기계를 계속 지킨다.
+   */
+  const PAID_SAJU: WallpaperItem = {
+    id: 'premium-sample-saju',
+    title: '표본',
+    subtitle: '표본',
+    lock: 'saju',
+    element: 'water',
+  }
+  const PAID_JOURNEY: WallpaperItem = { ...PAID_SAJU, id: 'premium-sample-journey', lock: 'journey', element: null }
 
-    expect(free).toHaveLength(1)
-    expect(free[0]!.element).toBe(FREE_WALLPAPER_ELEMENT)
-    expect(WALLPAPER_SET.filter((w) => w.lock === 'saju')).toHaveLength(4)
-    expect(WALLPAPER_SET.filter((w) => w.lock === 'journey')).toHaveLength(1)
+  it('여섯 장이 전부 free 다 (유료 표시가 하나도 남아 있지 않다)', () => {
+    expect(WALLPAPER_SET.filter((w) => w.lock === 'free')).toHaveLength(WALLPAPER_SET.length)
+    expect(WALLPAPER_SET.some((w) => w.lock !== 'free')).toBe(false)
   })
 
-  it('아무 자격이 없어도 무료 한 장은 열린다', () => {
-    const free = itemById(`element-${FREE_WALLPAPER_ELEMENT}`)
-
-    expect(resolveWallpaperUnlock(free, NOBODY)).toEqual({ unlocked: true, reason: null })
-  })
-
-  it('자격이 없으면 무료 외 다섯 장이 전부 잠기고 사유가 붙는다', () => {
-    const locked = WALLPAPER_SET.filter((w) => !resolveWallpaperUnlock(w, NOBODY).unlocked)
-
-    expect(locked).toHaveLength(5)
-    for (const item of locked) {
-      expect(resolveWallpaperUnlock(item, NOBODY).reason).toBe(WALLPAPER_LOCK_REASON[item.lock as 'saju' | 'journey'])
+  it('아무 자격이 없어도 여섯 장이 전부 열린다', () => {
+    for (const item of WALLPAPER_SET) {
+      expect(resolveWallpaperUnlock(item, NOBODY)).toEqual({ unlocked: true, reason: null })
     }
   })
 
-  it('사주만 있으면 오행 다섯이 열리고 이달의 복만 잠긴다', () => {
-    const open = WALLPAPER_SET.filter((w) => resolveWallpaperUnlock(w, SAJU_ONLY).unlocked)
-
-    expect(open.map((w) => w.id)).toEqual(WALLPAPER_ELEMENT_ORDER.map((e) => `element-${e}`))
-    expect(resolveWallpaperUnlock(itemById(MONTHLY_WALLPAPER_ID), SAJU_ONLY)).toEqual({
+  it('잠금 기계는 살아 있다 — 표본 장은 자격에 따라 갈린다', () => {
+    expect(resolveWallpaperUnlock(PAID_SAJU, NOBODY)).toEqual({
+      unlocked: false,
+      reason: WALLPAPER_LOCK_REASON.saju,
+    })
+    expect(resolveWallpaperUnlock(PAID_SAJU, SAJU_ONLY)).toEqual({ unlocked: true, reason: null })
+    expect(resolveWallpaperUnlock(PAID_JOURNEY, SAJU_ONLY)).toEqual({
       unlocked: false,
       reason: WALLPAPER_LOCK_REASON.journey,
     })
-  })
-
-  it('완주하면 여섯 장이 전부 열린다', () => {
-    for (const item of WALLPAPER_SET) {
-      expect(resolveWallpaperUnlock(item, COMPLETE)).toEqual({ unlocked: true, reason: null })
-    }
+    expect(resolveWallpaperUnlock(PAID_JOURNEY, COMPLETE)).toEqual({ unlocked: true, reason: null })
   })
 
   it('잠금 사유 문구는 잠긴 장에만 붙는다 (열린 장은 늘 null)', () => {
     for (const entitlement of [NOBODY, SAJU_ONLY, COMPLETE]) {
-      for (const item of WALLPAPER_SET) {
+      for (const item of [...WALLPAPER_SET, PAID_SAJU, PAID_JOURNEY]) {
         const state = resolveWallpaperUnlock(item, entitlement)
 
         expect(state.reason === null).toBe(state.unlocked)
