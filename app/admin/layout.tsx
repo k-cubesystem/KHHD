@@ -42,6 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // 시스템
     { type: 'divider' as const, label: '시스템' },
     { href: '/admin/service-control', label: '서비스 제어', icon: 'Power' },
+    { href: '/admin/voice', label: '신위 음성', icon: 'Activity' },
     { href: '/admin/gemini-usage', label: 'Gemini 사용량', icon: 'Activity' },
     { href: '/admin/audit', label: '감사 로그', icon: 'Shield' },
   ]

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/utils/logger'
-import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
+import { resolveVoiceProfile } from '@/lib/services/voice-profile-store'
+import { isKnownVoice, formatPitchHz, parsePitchHz } from '@/lib/domain/shrine/voice-catalog'
+import type { VoiceProfile } from '@/lib/domain/shrine/voice-profiles'
 
 // 무료 뉴럴 TTS — Microsoft Edge Read Aloud(edge-tts) 프록시.
 //
@@ -41,7 +43,22 @@ export async function POST(req: NextRequest) {
   const text = body.text.trim().slice(0, MAX_TEXT_LEN)
   if (!text) return NextResponse.json({ error: 'TEXT_EMPTY' }, { status: 400 })
   const deityCode = typeof body.deityCode === 'string' ? body.deityCode : null
-  const profile = voiceProfileFor(deityCode)
+
+  // 기본: 서버가 신위코드로만 프로파일을 정한다(클라가 임의 보이스를 주입 못 하게).
+  let profile: VoiceProfile = await resolveVoiceProfile(deityCode)
+
+  // 예외: 어드민 «미리듣기» — 저장 전 값을 그대로 들어봐야 조절이 가능하다.
+  //  🔴 admin 확인 후에만 열고, 보이스는 카탈로그 안의 것만 받는다(오픈 프록시 방지).
+  if (isRecord(body.preview)) {
+    const { data: profileRow } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    if (profileRow?.role !== 'admin') return NextResponse.json({ error: 'FORBIDDEN' }, { status: 403 })
+    const pv = body.preview
+    const voice = typeof pv.edgeVoice === 'string' && isKnownVoice(pv.edgeVoice) ? pv.edgeVoice : profile.edgeVoice
+    const rate = typeof pv.rate === 'number' && pv.rate >= 0.5 && pv.rate <= 2 ? pv.rate : profile.rate
+    const pitchHz =
+      typeof pv.pitchHz === 'number' ? formatPitchHz(pv.pitchHz) : formatPitchHz(parsePitchHz(profile.edgePitch))
+    profile = { ...profile, edgeVoice: voice, rate, edgePitch: pitchHz }
+  }
 
   try {
     const tts = new MsEdgeTTS()

@@ -26,6 +26,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   'notification_manual_run',
   // 서비스 전체
   'service_toggle',
+  'voice_profile_save',
+  'voice_profile_reset',
 ] as const
 
 export type AdminAuditAction = (typeof ADMIN_AUDIT_ACTIONS)[number]
@@ -55,6 +57,8 @@ export const ADMIN_AUDIT_LABELS: Record<AdminAuditAction, ActionLabel> = {
   notification_setting_change: { label: '알림 설정 변경', cls: OUTBOUND },
   notification_manual_run: { label: '알림 수동 발송', cls: OUTBOUND, heavy: true },
   service_toggle: { label: '서비스 스위치', cls: DANGER, heavy: true },
+  voice_profile_save: { label: '신위 음성 설정', cls: CHANGE },
+  voice_profile_reset: { label: '신위 음성 되돌리기', cls: CHANGE },
 }
 
 /** 모르는 액션도 영문 코드를 그대로 노출하지 않는다. */

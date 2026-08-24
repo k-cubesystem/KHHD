@@ -28,6 +28,7 @@ import { useFamilyMembers } from '@/hooks/use-family-members'
 import { useTts } from '@/hooks/useTts'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
+import { getVoiceProfileForDeity } from '@/app/actions/shrine/voice'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft, Flame, MessageCircle } from 'lucide-react'
@@ -507,9 +508,25 @@ export function ShamanChatInterface({
   // TTS(신과의 음성) — 무료 Web Speech 기본, 자동읽기 토글은 localStorage 유지
   const { supported: ttsSupported, speak, stop: ttsStop } = useTts()
   // 좌정 신위별 목소리 — deityCode 로 프로파일(rate/pitch/voiceHint) 조회 후 발화. 미좌정이면 기본.
+  // 어드민에서 조절한 값(deity_voice_profiles)을 브라우저 폴백에도 반영한다.
+  // 서버 TTS 는 /api/tts 가 스스로 DB 를 읽으므로 이 값은 «폴백 전용»이다. 조회 실패 시 코드 상수.
+  const [voiceOverride, setVoiceOverride] = useState<{
+    rate: number
+    pitch: number
+    voiceHint: 'male' | 'female' | null
+  } | null>(null)
+  useEffect(() => {
+    let alive = true
+    void getVoiceProfileForDeity(deityCode).then((p) => {
+      if (alive) setVoiceOverride(p)
+    })
+    return () => {
+      alive = false
+    }
+  }, [deityCode])
   const speakDeity = useCallback(
-    (text: string) => speak(text, { ...voiceProfileFor(deityCode), deityCode }),
-    [speak, deityCode]
+    (text: string) => speak(text, { ...(voiceOverride ?? voiceProfileFor(deityCode)), deityCode }),
+    [speak, deityCode, voiceOverride]
   )
   const [autoSpeak, setAutoSpeak] = useState(false)
   useEffect(() => {
