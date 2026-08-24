@@ -1,8 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 import path from 'path'
 
-// 가이드 UI 전환 검증 — 우하단 떠 있는 아바타 → 하단 메뉴 위 공지 바 (2026-07-20).
-// 핵심 회귀: 고민상담 화면에서 가이드가 입력창·전송 버튼을 덮지 않아야 한다.
+// 🔴 2026-08-24 CEO 지시로 «하단 가이드 공지 바»를 내렸다(app/protected/layout.tsx 주석 참조).
+// 그래서 이 스펙의 성격이 뒤집혔다 — 예전엔 «바가 뜨는가 + 입력창을 안 덮는가»를 봤고,
+// 지금은 «바가 정말 사라졌는가 + 그 자리를 대신 차지한 것은 없는가»를 본다.
+// 컴포넌트 자체는 남아 있으므로(되살리기 쉽게) 실수로 다시 마운트되면 여기서 잡힌다.
 const SHOT = (n: string) => path.join(process.env.SHOT_DIR || 'test-results', `guide-${n}.png`)
 
 async function login(page: Page) {
@@ -13,94 +15,50 @@ async function login(page: Page) {
   await expect(page).toHaveURL(/protected/, { timeout: 20_000 })
 }
 
-test.describe('가이드 공지 바', () => {
+test.describe('하단 가이드 바 — 내려간 상태 유지', () => {
   test.skip(!process.env.E2E_PROD_SMOKE, 'E2E_PROD_SMOKE 미설정')
-  // 앱은 max-w-480 모바일 셸이다 — 겹침은 좁은 폭에서 터지므로 모바일 뷰포트로 본다.
+  // 앱은 max-w-480 모바일 셸이다 — 겹침·가림은 좁은 폭에서 터지므로 모바일 뷰포트로 본다.
   test.use({ storageState: { cookies: [], origins: [] }, viewport: { width: 390, height: 844 } })
 
-  test('고민상담: 우하단 아바타 없음 + 바가 입력창을 덮지 않음', async ({ page }) => {
+  test('허브·속풀이 어디에도 가이드 바가 없다', async ({ page }) => {
     test.setTimeout(120_000)
     const errors: string[] = []
     page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`))
 
     await login(page)
-    await page.goto('/protected/ai-shaman')
-    await expect(page.getByPlaceholder(/고민|질문|입력|여쭤/)).toBeVisible({ timeout: 30_000 })
 
-    // 1) 구 우하단 아바타(가이드 …)가 사라졌는지
+    // 1) 허브 — 카드·푸터를 가리던 상시 바가 사라졌는지
+    await page.goto('/protected/analysis')
+    await expect(page.getByRole('heading', { name: '인기테마운세' })).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('[data-guide-bar]')).toHaveCount(0)
+    // 구 UI(우하단 떠 있던 아바타)도 여전히 없어야 한다
     await expect(page.getByRole('button', { name: /^가이드 / })).toHaveCount(0)
-    console.log('[PASS] 우하단 신 아바타 제거됨')
+    console.log('[PASS] 허브에 가이드 바 없음')
+    await page.screenshot({ path: SHOT('hub'), fullPage: false })
 
-    // 2) 가이드가 하단 바로 뜨는지 (펼침 또는 접힘 중 하나)
-    const bar = page.locator('[data-guide-bar]')
-    await expect(bar).toBeVisible({ timeout: 15_000 })
-    const barBox = await bar.boundingBox()
-    expect(barBox, '가이드 바 박스').not.toBeNull()
-    console.log('[PASS] 하단 가이드 바 노출')
-
-    // 3) 하단 메뉴 "위쪽"에 있는지 — 바 아래끝이 메뉴 위끝보다 위여야 한다
-    const nav = page.locator('nav').filter({ hasText: '속풀이' }).first()
-    const navBox = await nav.boundingBox()
-    expect(navBox, '하단 메뉴 박스').not.toBeNull()
-    if (barBox && navBox) {
-      expect(Math.round(barBox.y + barBox.height)).toBeLessThanOrEqual(Math.round(navBox.y) + 2)
-      console.log(
-        `[PASS] 바가 메뉴 위쪽 (바 하단 ${Math.round(barBox.y + barBox.height)} ≤ 메뉴 상단 ${Math.round(navBox.y)})`
-      )
-    }
-
-    // 4) 실제 겹침 검사 — 입력창·전송 버튼과 가이드 바의 사각형이 교차하면 실패
-    const input = page.getByPlaceholder(/고민|질문|입력/).first()
-    const inputBox = await input.boundingBox()
-    expect(inputBox, '입력창 박스').not.toBeNull()
-    if (barBox && inputBox) {
-      const overlap =
-        barBox.x < inputBox.x + inputBox.width &&
-        barBox.x + barBox.width > inputBox.x &&
-        barBox.y < inputBox.y + inputBox.height &&
-        barBox.y + barBox.height > inputBox.y
-      expect(overlap, '가이드 바가 입력창을 덮음').toBe(false)
-      console.log('[PASS] 입력창과 겹치지 않음')
-    }
-
-    // 5) 입력창이 실제로 클릭·타이핑 가능한지 (가려지면 Playwright 가 막힌다)
+    // 2) 속풀이 — 입력창이 그대로 쓸 수 있는지(바가 없어졌으니 가릴 것도 없다)
+    await page.goto('/protected/ai-shaman')
+    const input = page.getByPlaceholder(/고민|질문|입력|여쭤/).first()
+    await expect(input).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('[data-guide-bar]')).toHaveCount(0)
     await input.click({ timeout: 10_000 })
     await input.fill('겹침 확인')
     await expect(input).toHaveValue('겹침 확인')
     await input.fill('')
-    console.log('[PASS] 입력창 클릭·타이핑 가능')
+    console.log('[PASS] 속풀이에 가이드 바 없음 · 입력창 정상')
 
     await page.screenshot({ path: SHOT('chat'), fullPage: false })
     expect(errors, errors.join('\n')).toHaveLength(0)
   })
 
-  test('접기 → 펼치기 재진입 동작', async ({ page }) => {
+  test('공지 전달 경로는 살아 있다 — 알림 화면', async ({ page }) => {
     test.setTimeout(120_000)
+    // 바를 내린 대가로 공지가 사라지면 안 된다. 알림 화면이 그 역할을 계속 진다.
     await login(page)
-    await page.goto('/protected/analysis')
-
-    const bar = page.locator('[data-guide-bar]')
-    await expect(bar).toBeVisible({ timeout: 30_000 })
-
-    const close = page.getByRole('button', { name: '안내 접기' })
-    const collapsed = page.getByRole('button', { name: /안내 펼치기$/ })
-
-    // 바가 보인 직후엔 자동 노출(useEffect)이 아직 안 돌았을 수 있다. 둘 중 하나로
-    // 확정될 때까지 기다린 뒤 판단해야 "접힘인 줄 알았는데 곧 펼쳐지는" 레이스를 안 탄다.
-    await expect(close.or(collapsed).first()).toBeVisible({ timeout: 30_000 })
-    await page.waitForTimeout(800) // 펼침 애니메이션(0.18s)과 우선순위 재평가가 끝날 여유
-
-    // 펼쳐져 있으면 접고, 접힌 줄을 눌러 다시 펼친다
-    if (await close.isVisible().catch(() => false)) {
-      await close.click()
-    }
-    await expect(collapsed).toBeVisible({ timeout: 10_000 })
-    console.log('[PASS] 접힌 줄 노출')
-
-    await collapsed.click()
-    await expect(page.getByRole('button', { name: '안내 접기' })).toBeVisible({ timeout: 10_000 })
-    console.log('[PASS] 접힌 줄 탭 → 다시 펼쳐짐')
-
-    await page.screenshot({ path: SHOT('expanded'), fullPage: false })
+    await page.goto('/protected/notifications')
+    await expect(page.getByRole('button', { name: /모두 읽음|읽음 처리/ }).or(page.getByText(/알림/))).toBeVisible({
+      timeout: 30_000,
+    })
+    console.log('[PASS] 알림 화면 생존')
   })
 })

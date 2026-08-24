@@ -1,7 +1,6 @@
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { SiteFooter } from '@/components/site-footer'
 import { MobileHeader } from '@/components/mobile-header'
-import { GlobalGuide } from '@/components/guide/GlobalGuide'
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -24,8 +23,11 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
       {/* Mobile Bottom Navigation */}
       <BottomNav />
 
-      {/* 전 페이지 신 가이드 (기능 소개 + 공지) — 신당 방은 자체 가이드 사용 */}
-      <GlobalGuide />
+      {/* 🔴 전 페이지 신 가이드 바 — CEO 지시로 내림(2026-08-24). 하단에 상시 떠 있는 안내 줄이
+          화면을 가리고, 정작 봐야 할 것(카드·푸터)보다 먼저 눈에 들었다.
+          컴포넌트(components/guide/GlobalGuide.tsx)와 서버액션(getGuideData)은 그대로 두어 되살리기
+          쉽게 남긴다 — 다시 켤 땐 import 와 이 자리만 복구하면 된다.
+          공지·개인 알림 전달 경로는 /protected/notifications 가 계속 진다(사라지지 않는다). */}
     </div>
   )
 }

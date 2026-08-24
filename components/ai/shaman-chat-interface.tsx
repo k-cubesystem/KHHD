@@ -30,7 +30,7 @@ import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { voiceProfileFor } from '@/lib/domain/shrine/voice-profiles'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft, Flame } from 'lucide-react'
+import { Loader2, Send, Coins, MoreHorizontal, X, ChevronLeft, Flame, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { GAChat } from '@/lib/analytics/chat-ga'
@@ -1183,37 +1183,48 @@ export function ShamanChatInterface({
             메시지 목록이 아니라 입력 영역에 고정한다). */}
         <ServiceDisclaimer tone="chat" className="mb-2 px-0" />
 
-        {/* 잔여·충전 인라인 한 줄 — 헤더 2단을 대체한다. 한도 임박일 때만 강조. */}
+        {/* 잔여·충전 — 남은 질문과 복채는 «지금 쓸 수 있는 것»이라 흐리면 안 된다(CEO 지시 08-24).
+            한 줄 텍스트였던 것을 칩 두 개로 세워 숫자가 먼저 읽히게 한다. */}
         <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
           {isStatusLoading ? (
-            <div className="w-24 h-3 rounded bg-primary/[0.08] animate-pulse" />
+            <div className="w-40 h-6 rounded-full bg-primary/[0.08] animate-pulse" />
           ) : (
-            <span className={cn('text-[10.5px]', isLow ? 'text-primary-dark' : 'text-foreground/45')}>
-              오늘 남은 질문 <span className="font-medium">{totalRemaining}회</span>
-              <span className="text-foreground/25">
-                {' '}
-                · 보유 {(questionStatus?.walletBalance ?? 0).toLocaleString()}만냥
+            <div className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium tabular-nums',
+                  isLow
+                    ? 'border-seal/50 bg-seal/15 text-primary-dark'
+                    : 'border-gold-500/35 bg-gold-500/[0.12] text-gold-200'
+                )}
+              >
+                <MessageCircle className="w-3.5 h-3.5 opacity-80" />
+                남은 질문 <b className="font-bold">{totalRemaining}</b>회
               </span>
-            </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.04] px-2.5 py-1 text-[12px] text-ink-light/75 tabular-nums">
+                <Coins className="w-3.5 h-3.5 text-gold-400/80" />
+                <b className="font-bold text-gold-200">{(questionStatus?.walletBalance ?? 0).toLocaleString()}</b>만냥
+              </span>
+            </div>
           )}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* 광고 보고 향 올리기(P1-A) — 인벤토리·한도·브레이커 통과 시에만 등장 */}
             {adAvail?.enabled && (
               <button
                 onClick={() => setShowAdSheet(true)}
-                className="flex items-center gap-1 text-[10.5px] text-gold-400/80 hover:text-gold-300 transition-colors"
+                className="flex items-center gap-1 rounded-full border border-gold-500/35 bg-gold-500/10 px-2.5 py-1 text-[11.5px] text-gold-300 hover:bg-gold-500/20 transition-colors"
               >
-                <Flame className="w-3 h-3" />
-                광고 보고 +{adAvail.reward}회
+                <Flame className="w-3.5 h-3.5" />
+                광고 +{adAvail.reward}회
               </button>
             )}
             <button
               onClick={handleRecharge}
               disabled={isRecharging || isStatusLoading}
-              className="flex items-center gap-1 text-[10.5px] text-primary/60 hover:text-primary transition-colors disabled:opacity-40"
+              className="flex items-center gap-1 rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-1 text-[11.5px] text-primary/85 hover:bg-primary/15 transition-colors disabled:opacity-40"
             >
-              {isRecharging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Coins className="w-3 h-3" />}
-              1만냥 → +20회
+              {isRecharging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}
+              충전 +20회
             </button>
           </div>
         </div>

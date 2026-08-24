@@ -76,24 +76,25 @@ describe('창·정화', () => {
   })
 })
 
-describe('🔴 배선 — 파이프라인이 이 함수를 쓴다', () => {
-  // 히스토리 조립은 파이프라인으로 옮겨졌다(P1-B 스트리밍). 액션·SSE 라우트가 **함께** 이 파일을
-  // 거치므로, 검사 대상도 파이프라인이다 — 액션만 보면 두 경로 중 하나가 새는 것을 못 잡는다.
+describe('🔴 배선 — 문답을 보내는 «모든» 경로가 이 함수를 쓴다', () => {
+  // 08-16 전면 장애(첫 항목이 model 이라 SDK 가 거절)의 방지선. 지금 문답 경로는 둘이다 —
+  // 서버 액션(비스트리밍)과 SSE 라우트(스트리밍, 파이프라인 경유). 한쪽만 검사하면 다른 쪽이 샌다.
+  // 🔴 액션과 파이프라인의 중복은 «의도된 것»이다(파이프라인 헤더 주석 참조) — 그래서 둘 다 잰다.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const read = (p: string): string => require('fs').readFileSync(p, 'utf8')
 
-  it('파이프라인이 직접 map 하지 않고 정규화를 거친다', () => {
-    const source = read('lib/services/shaman-chat-pipeline.ts')
-    expect(source).toContain('toGeminiHistory(conversationHistory, CHAT_HISTORY_WINDOW')
-    // 옛 배선이 남아 있으면 장애가 그대로 돌아온다.
-    expect(source).not.toContain('conversationHistory.slice(-CHAT_HISTORY_WINDOW)')
+  it('액션·파이프라인 모두 직접 map 하지 않고 정규화를 거친다', () => {
+    for (const p of ['app/actions/ai/shaman-chat.ts', 'lib/services/shaman-chat-pipeline.ts']) {
+      const source = read(p)
+      expect(source).toContain('toGeminiHistory(conversationHistory, CHAT_HISTORY_WINDOW')
+      // 옛 배선이 남아 있으면 장애가 그대로 돌아온다.
+      expect(source).not.toContain('conversationHistory.slice(-CHAT_HISTORY_WINDOW)')
+    }
   })
 
-  it('액션도 SSE 라우트도 스스로 히스토리를 만들지 않는다 (조립은 한 곳)', () => {
-    for (const p of ['app/actions/ai/shaman-chat.ts', 'app/api/chat/stream/route.ts']) {
-      const source = read(p)
-      expect(source).not.toContain('toGeminiHistory(')
-      expect(source).toContain('prepared.geminiHistory')
-    }
+  it('SSE 라우트는 스스로 히스토리를 만들지 않는다 (파이프라인이 조립한 것을 그대로 쓴다)', () => {
+    const source = read('app/api/chat/stream/route.ts')
+    expect(source).not.toContain('toGeminiHistory(')
+    expect(source).toContain('prepared.geminiHistory')
   })
 })
