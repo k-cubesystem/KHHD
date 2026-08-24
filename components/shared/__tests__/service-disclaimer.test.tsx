@@ -71,9 +71,18 @@ describe('ServiceDisclaimer 렌더', () => {
     expect(screen.getByText(/사진을 생성형 인공지능이 살펴/)).not.toBeNull()
   })
 
-  it('고민상담은 신위를 지우지 않고 층을 나눈다', () => {
+  it('속풀이는 신위를 지우지 않고 층을 나눈다 — 짧아져도 «누가 말하는지»는 남는다', () => {
     render(<ServiceDisclaimer tone="chat" />)
-    expect(screen.getByText(/신위는 생성형 인공지능이 대신 목소리를 냅니다/)).not.toBeNull()
+    // 2026-08-24 CEO 지시로 두 문장 → 한 문장으로 줄였다. 길이는 자유지만 이 둘은 남아야 한다:
+    // 「신위」(세계관을 지우지 않음) + 「생성형 인공지능」(법정 문언, 위 it.each 가 별도로 지킨다).
+    expect(screen.getByText(/신위의 말은 생성형 인공지능이 냅니다/)).not.toBeNull()
+  })
+
+  it('🔴 속풀이 고지는 한 줄을 넘지 않는다 — 입력창 위에 상시 뜨는 자리다', () => {
+    // 길어지면 대화를 가려 CEO 가 「없애 달라」고 한 상태로 돌아간다. 문장 부호로 길이를 잰다.
+    const text = AI_DISCLOSURE_TEXT.chat
+    expect(text.length).toBeLessThanOrEqual(24)
+    expect(text.split('.').filter(Boolean)).toHaveLength(1)
   })
 })
 
