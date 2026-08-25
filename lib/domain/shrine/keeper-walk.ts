@@ -5,11 +5,23 @@
  * 배회 구간이 바뀌어도 걸음 속도가 일정하려면 구간 길이비가 항상 같아야 한다. 그 제약을 만족하는
  * 구성이 **구간 중점에서 출발하는 왕복**이다:
  *
- *   중점 → 오른끝 → 왼끝 → 중점   (거리비 ½ : 1 : ½)  →  키프레임 0% · 25% · 75% · 100%
+ *   [참배] → 오른끝 → 제단 → [참배] → 왼끝 → 제단   (걷는 거리비 ½ : ½ : ½ : ½)
  *
- * 거리비가 정확히 1:2:1 이라 고정 %만으로 등속이 되고(구간 좌표는 CSS 변수로 주입), 한 바퀴는
- * 구간을 두 번 훑는 길이(2×legMs)가 된다. 그리고 **입장 도착점을 이 중점에 맞추면** 입장 걷기가
- * 끝나는 프레임과 배회 첫 프레임의 좌표·속도가 모두 이어져 순간이동·정지 프레임이 0 이 된다.
+ * ── 「제단 참배」 (2026-08-25 · CEO A안) ──────────────────────────────────────
+ * 종전은 «중점 → 오른끝 → 왼끝 → 중점» 왕복이라 신수가 제단 앞을 **지나쳐 갔다**. 왜 거기 있는지가
+ * 그림에 없었다. 이제 한쪽 끝을 돌 때마다 **제단(중점)으로 돌아와 멈춰 절하고** 반대편으로 간다 —
+ * 신수가 신을 지키는 존재라는 세계관이 걸음 자체로 읽힌다.
+ *
+ * 네 걷기 구간이 전부 «반 구간»이라 거리비가 1:1:1:1 이고, 멈춤(참배)은 양쪽에 같은 몫으로 들어가
+ * **고정 %만으로 등속**이 유지된다(구간 좌표는 CSS 변수로 주입).
+ *
+ * 🔴 한 바퀴 길이가 늘어난 것은 «걸음이 느려져서»가 아니라 **멈춤이 들어가서**다. 걷는 속도를
+ *    종전과 한 픽셀도 다르지 않게 두려고 `walkMs`(걷는 시간 총합 = 2×legMs)를 **불변량으로 두고**
+ *    cycleMs 를 그 위에서 파생시킨다(cycleMs = walkMs ÷ 걷기 비중). 입장 걷기 속도도 walkMs 에서
+ *    파생하므로(entranceMsFor) 참배를 넣거나 빼도 입장이 흔들리지 않는다.
+ *
+ * 그리고 **입장 도착점을 이 중점에 맞추면** 입장 걷기가 끝나는 프레임과 배회 첫 프레임의 좌표가
+ * 이어져 순간이동·정지 프레임이 0 이 된다(참배가 0% 에서 시작하므로 도착 즉시 첫 절을 올린다).
  *
  * 전 함수 순수·결정론 — DOM/Date.now()/Math.random() 접근 금지(SSR 과 클라 결과가 같아야 한다).
  */
@@ -35,8 +47,15 @@ export interface KeeperWalkPlan {
   rest: number
   /** 배회 여부. false = rest 에 정위치(레거시 단일 무대 회귀 경로) */
   wanders: boolean
-  /** 한 바퀴(중점→오른끝→왼끝→중점) 길이 ms. 배회하지 않으면 0. */
+  /** 한 바퀴(참배→오른끝→제단→참배→왼끝→제단) 길이 ms. 배회하지 않으면 0. */
   cycleMs: number
+  /**
+   * 한 바퀴 중 **실제로 걷는** 시간 총합 ms(= 2×legMs). 참배 멈춤은 빠져 있다.
+   *
+   * 🔴 걸음 «속도»의 단일 출처다. 참배 비중을 조정해도 이 값이 그대로면 걷는 속도가 안 변한다 —
+   *    입장 걷기(entranceMsFor)가 이 값에서 파생하는 이유이기도 하다.
+   */
+  walkMs: number
 }
 
 /** 방 안(구역 로컬 %) 좌표 범위 */
@@ -52,6 +71,15 @@ const MIN_SPAN_PCT = 0.5
  * 승계 프레임에서 걸음 빠르기가 튀면 "순간이동 0" 계약이 지켜져도 어색하게 읽힌다.
  */
 export const KEEPER_WANDER_LEG_MS = 30_000
+
+/**
+ * 한 바퀴에서 **걷는 시간의 비중** — 나머지가 제단 앞 참배(멈춤)다.
+ *
+ * 🔴 CSS 키프레임(`shrineKeeperWander`)의 정지 %와 **짝이다**. 여기만 바꾸면 걸음이 키프레임과
+ *    어긋나 신수가 제단을 지나쳐 절하거나 허공에서 절한다. 둘의 정합은 테스트가 CSS 를 읽어 잡는다.
+ *    현재 키프레임: 참배 0~15% · 65~50% 두 번(합 30%) + 걷기 네 구간(각 17.5%, 합 70%).
+ */
+export const KEEPER_WALK_DUTY = 0.7
 /** 방어 상한 — 잘못된 값이 와도 걸음이 사실상 멈추거나 조작 불가 구간이 길어지지 않게 한다. */
 const MAX_LEG_MS = 600_000
 const MAX_ENTRANCE_MS = 10_000
@@ -78,13 +106,13 @@ export const ENTRANCE_PACE_RATIO = 4
  * 걷기 애니메이션을 걸지 않는다(종전 정위치 렌더와 같다).
  */
 export function entranceMsFor(fromX: number, plan: KeeperWalkPlan, ratio: number = ENTRANCE_PACE_RATIO): number | null {
-  if (!plan.wanders || plan.cycleMs <= 0) return null
+  if (!plan.wanders || plan.walkMs <= 0) return null
   const from = clamp(fromX, X_MIN, X_MAX)
   const distance = Math.abs(plan.rest - from)
   if (distance < MIN_SPAN_PCT) return null
   const r = clamp(ratio, 1, 100)
-  // 배회 한 구간(legMs = cycleMs/2) 동안 (hi-lo) 만큼 이동한다.
-  const wanderPctPerMs = (plan.hi - plan.lo) / (plan.cycleMs / 2)
+  // 한 바퀴에서 걷는 거리는 «구간 2번»이고 그 시간이 walkMs 다 — 참배 멈춤은 속도에 안 들어간다.
+  const wanderPctPerMs = ((plan.hi - plan.lo) * 2) / plan.walkMs
   if (wanderPctPerMs <= 0) return null
   return Math.round(clamp(distance / (wanderPctPerMs * r), 0, MAX_ENTRANCE_MS))
 }
@@ -111,12 +139,15 @@ export function planKeeperWalk(range: KeeperRange, legMs: number = KEEPER_WANDER
   const hi = round(Math.max(a, b), 4)
   const leg = clamp(legMs, 0, MAX_LEG_MS)
   const wanders = hi - lo >= MIN_SPAN_PCT && leg > 0
+  const walkMs = wanders ? Math.round(leg * 2) : 0
   return {
     lo,
     hi,
     rest: round((lo + hi) / 2, 4),
     wanders,
-    cycleMs: wanders ? Math.round(leg * 2) : 0,
+    // 걷는 시간은 그대로 두고 참배 몫만큼 한 바퀴가 길어진다 — 걸음 속도 불변(위 주석).
+    cycleMs: wanders ? Math.round(walkMs / KEEPER_WALK_DUTY) : 0,
+    walkMs,
   }
 }
 

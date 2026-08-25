@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 import {
   ENTRANCE_PACE_RATIO,
+  KEEPER_WALK_DUTY,
   KEEPER_WANDER_LEG_MS,
   entranceMsFor,
   keeperRestX,
@@ -30,9 +33,19 @@ describe('planKeeperWalk — 배회 구간', () => {
     expect(planKeeperWalk({ from: 59, to: 31 })).toEqual(planKeeperWalk(WANDER))
   })
 
-  it('한 바퀴는 구간을 두 번 훑는 길이 — 「구간 1회 30s」와 같은 걸음 속도', () => {
-    expect(planKeeperWalk(WANDER).cycleMs).toBe(KEEPER_WANDER_LEG_MS * 2)
-    expect(planKeeperWalk(WANDER, 1000).cycleMs).toBe(2000)
+  it('★ 걷는 시간(walkMs)은 구간을 두 번 훑는 길이 — 「구간 1회 30s」 걸음 속도 그대로', () => {
+    // 🔴 참배(2026-08-25)가 들어오며 cycleMs 는 늘었지만 **걷는 시간은 그대로**다.
+    //    걸음 속도의 단일 출처는 walkMs 이고, cycleMs 는 거기서 파생한다.
+    expect(planKeeperWalk(WANDER).walkMs).toBe(KEEPER_WANDER_LEG_MS * 2)
+    expect(planKeeperWalk(WANDER, 1000).walkMs).toBe(2000)
+  })
+
+  it('★ 한 바퀴 = 걷는 시간 ÷ 걷기 비중 — 늘어난 몫이 곧 제단 앞 참배(멈춤)다', () => {
+    const p = planKeeperWalk(WANDER)
+    expect(p.cycleMs).toBe(Math.round(p.walkMs / KEEPER_WALK_DUTY))
+    expect(p.cycleMs).toBeGreaterThan(p.walkMs) // 멈춤이 실재한다
+    // 멈춤 몫 = 1 − 걷기 비중
+    expect((p.cycleMs - p.walkMs) / p.cycleMs).toBeCloseTo(1 - KEEPER_WALK_DUTY, 2)
   })
 
   it('배회 한 구간은 30s — 입장 걷기 감속(부록 C ②)에 맞춘 걸음 속도', () => {
@@ -50,12 +63,13 @@ describe('planKeeperWalk — 배회 구간', () => {
       rest: 0,
       wanders: false,
       cycleMs: 0,
+      walkMs: 0,
     })
   })
 
   it('from===to (단일 무대 레거시)는 배회하지 않고 그 자리에 선다 — 회귀 0 경로', () => {
     const p = planKeeperWalk({ from: 12, to: 12 })
-    expect(p).toEqual({ lo: 12, hi: 12, rest: 12, wanders: false, cycleMs: 0 })
+    expect(p).toEqual({ lo: 12, hi: 12, rest: 12, wanders: false, cycleMs: 0, walkMs: 0 })
   })
 
   it('떨림으로만 보이는 폭(<0.5%p)과 legMs 0 은 배회로 치지 않는다', () => {
@@ -104,7 +118,10 @@ describe('entranceMsFor — 입장 걸음을 배회 속도에서 파생 (안2.4 
     const ms = entranceMsFor(DOOR_X, plan)
     expect(ms).not.toBeNull()
 
-    const wanderPace = pace(plan.hi - plan.lo, plan.cycleMs / 2)
+    // 🔴 배회 «걸음» 속도는 cycleMs 가 아니라 **walkMs** 로 잰다 — 참배(멈춤)가 들어온 뒤로
+    //    cycleMs 에는 서 있는 시간이 섞여 있어 그걸로 나누면 걸음이 실제보다 느리게 계산된다.
+    //    한 바퀴에 걷는 거리는 «구간 2번»이다.
+    const wanderPace = pace((plan.hi - plan.lo) * 2, plan.walkMs)
     const entrancePace = pace(Math.abs(plan.rest - DOOR_X), ms as number)
     expect(entrancePace / wanderPace).toBeCloseTo(ENTRANCE_PACE_RATIO, 2)
   })
@@ -130,5 +147,48 @@ describe('entranceMsFor — 입장 걸음을 배회 속도에서 파생 (안2.4 
 
   it('비유한 입력에도 결정론을 유지한다 (SSR·클라 동일)', () => {
     expect(entranceMsFor(Number.NaN, planKeeperWalk(WANDER))).toBe(entranceMsFor(0, planKeeperWalk(WANDER)))
+  })
+})
+
+/**
+ * 🔴 도메인(걷기 비중)과 CSS(정지 %)는 **짝**이다 — 한쪽만 고치면 신수가 제단을 지나쳐 절하거나
+ *    허공에서 절한다. 타입도 빌드도 못 잡는 어긋남이라 여기서 CSS 파일을 직접 읽어 대조한다.
+ *    (같은 규율: family-shelf 가 렌더 상수를 소스에서 읽어 대조한다)
+ */
+describe('제단 참배 — CSS 정지 %와 도메인 걷기 비중의 정합', () => {
+  const css = readFileSync(path.join(process.cwd(), 'app', 'shrine-scene.css'), 'utf8')
+  /** 공백·개행에 둔감하게 — 포매터가 줄바꿈을 바꿔도 계약은 그대로여야 한다 */
+  const squash = (t: string) => t.replace(/[\s]+/g, ' ')
+  /** 이름이 같은 키프레임 블록 하나를 통째로 집어 온다(중괄호 짝을 세지 않고 다음 '@' 까지). */
+  function frames(name: string): string {
+    const from = css.indexOf('@keyframes ' + name)
+    const rest = css.slice(from + 1)
+    const next = rest.indexOf('@')
+    return squash(next === -1 ? rest : rest.slice(0, next))
+  }
+  const block = frames('shrineKeeperWander')
+
+  it('걷기 네 구간의 합이 도메인 걷기 비중과 같다', () => {
+    // 참배 0~15% · 50~65% → 멈춤 30%, 걷기 70%
+    const bowHold = 15 - 0 + (65 - 50)
+    expect((100 - bowHold) / 100).toBeCloseTo(KEEPER_WALK_DUTY, 5)
+  })
+
+  it('CSS 가 제단(rest)에서 실제로 멈춘다 — 0·15% 와 50·65% 가 같은 좌표', () => {
+    expect(block).toContain('0%, 15% {')
+    expect(block).toContain('50%, 65% {')
+    expect(block.split('var(--shrine-keeper-rest)').length - 1).toBe(3)
+  })
+
+  it('양끝은 걷기 구간의 한가운데다 — 등속 유지', () => {
+    expect(block).toContain('32.5% {')
+    expect(block).toContain('82.5% {')
+  })
+
+  it('절(拜)은 참배 구간에서만 숙이고 걷기 경계에서 항등으로 돌아온다', () => {
+    const bow = frames('shrineKeeperBow')
+    expect(bow).toContain('scaleY(0.88)')
+    expect(bow).toContain('15%,')
+    expect(bow).toContain('65%,')
   })
 })

@@ -23,8 +23,11 @@ import { motionVariance } from '@/lib/domain/shrine/motion-variance'
  *  · 위상은 --shrine-keeper-enter-ms 에 **음수 지연**을 넣어 흩는다(입장 없는 신수는 이미
  *    걷던 중간에서 시작한다). 박자는 cycleMs 에 슬러그 해시 배율.
  *
- * ⚠️ 대사가 없다. 말은 신(하단 신당지기 말풍선)의 것이고, 신수는 지키는 존재다 —
- *    탭하면 부모가 소리·잔반응만 낸다.
+ * ⚠️ 대사가 없다. 말은 신의 것이고, 신수는 지키는 존재다 — 탭하면 부모가 소리·잔반응만 낸다.
+ *
+ * 🔴 **제단 참배**(2026-08-25 · CEO A안) — 한쪽 끝을 돌 때마다 제단으로 돌아와 멈춰 절한다.
+ *    걸음 경로·정지 %는 CSS(shrineKeeperWander)가, 그 %와 짝인 걷기 비중은 도메인
+ *    (KEEPER_WALK_DUTY)이 든다. 절 동작은 `shrine-keeper-bow` 겹 하나 — 새 타이머 0.
  */
 
 type CssVars = CSSProperties & Record<`--${string}`, string>
@@ -114,23 +117,29 @@ function Walker({
         aria-label={`신수 ${g.name}`}
       >
         <span className={`block${plan.wanders ? ' shrine-keeper-face' : ''}`} style={playState}>
-          <span className={`block${plan.wanders || enter ? ' shrine-keeper-bob' : ''}`} style={playState}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={guardianSpriteUrl(g.slug)}
-              alt=""
-              draggable={false}
-              decoding="async"
-              className="mx-auto"
-              style={{
-                width: px,
-                height: px,
-                objectFit: 'contain',
-                filter: 'drop-shadow(0 4px 5px rgba(0,0,0,0.5))',
-              }}
-            />
+          {/* 절(拜) — 제단 앞 참배 구간에서만 상체를 숙인다(배회할 때만 걸린다).
+              보행 바운스(bob)와 **다른 겹**이라 두 transform 이 합성된다 — 한 겹에 몰면
+              주기가 달라(0.62s vs 한 바퀴) 서로를 덮어쓴다. */}
+          <span className={`block${plan.wanders ? ' shrine-keeper-bow' : ''}`} style={playState}>
+            <span className={`block${plan.wanders || enter ? ' shrine-keeper-bob' : ''}`} style={playState}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={guardianSpriteUrl(g.slug)}
+                alt=""
+                draggable={false}
+                decoding="async"
+                className="mx-auto"
+                style={{
+                  width: px,
+                  height: px,
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 4px 5px rgba(0,0,0,0.5))',
+                }}
+              />
+            </span>
           </span>
-          {/* 접지 타원 — 정령(부유형)은 몸 대신 그림자를 옅게 해 떠 있음을 말한다 */}
+          {/* 접지 타원 — 정령(부유형)은 몸 대신 그림자를 옅게 해 떠 있음을 말한다.
+              절할 때 그림자는 그대로 둔다 — 발은 바닥에 붙어 있고 상체만 숙이기 때문이다. */}
           <span
             aria-hidden
             className={`mx-auto mt-0.5 w-[26px] h-[6px] rounded-full blur-[2px]${

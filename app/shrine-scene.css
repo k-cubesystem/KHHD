@@ -162,20 +162,55 @@
 /* ── 거니는 신당지기 (WalkingKeeper 이관 / PRD 부록 B · 안2.2) ────────────
    입장→배회 승계를 **애니메이션 목록 우선순위**로 처리한다(타이머·클래스 교체 0). */
 
-/* 배회 — 중점에서 출발해 오른끝·왼끝을 돌아 중점으로. 거리비 1:2:1 이라 고정 %로 등속이 된다.
-   양끝과 중점에서 ease-in-out 이 속도를 0 으로 접으므로 "걷다가 잠깐 서는" 결이 생긴다 */
+/* 배회 + 제단 참배 (2026-08-25 · CEO A안) — 한쪽 끝을 돌 때마다 제단(중점)으로 돌아와 멈춰 절한다.
+     0~15%   제단 앞 참배(멈춤)      15~32.5%  제단 → 오른끝
+     32.5~50% 오른끝 → 제단          50~65%    제단 앞 참배(멈춤)
+     65~82.5% 제단 → 왼끝            82.5~100% 왼끝 → 제단
+   걷는 네 구간이 전부 «반 구간»이라 거리비 1:1:1:1 → 고정 %로 등속이다.
+   🔴 이 정지 %는 도메인 KEEPER_WALK_DUTY(=0.7, 걷기 비중)와 **짝이다**. 한쪽만 고치면 신수가
+      제단을 지나쳐 절한다 — 테스트가 이 파일을 읽어 둘의 정합을 잡는다. */
 @keyframes shrineKeeperWander {
-  0% {
+  0%,
+  15% {
     transform: translateX(var(--shrine-keeper-rest));
   }
-  25% {
+  32.5% {
     transform: translateX(var(--shrine-keeper-hi));
   }
-  75% {
+  50%,
+  65% {
+    transform: translateX(var(--shrine-keeper-rest));
+  }
+  82.5% {
     transform: translateX(var(--shrine-keeper-lo));
   }
   100% {
     transform: translateX(var(--shrine-keeper-rest));
+  }
+}
+/* 절(拜) — 참배 구간에서만 몸을 숙인다. 걷는 동안은 항등이라 보행 바운스와 싸우지 않는다.
+   transform-origin: bottom 이라 발이 바닥에 붙은 채 상체만 내려간다(허리 굽히는 결). */
+@keyframes shrineKeeperBow {
+  0%,
+  2% {
+    transform: translateY(0) scaleY(1);
+  }
+  6%,
+  10% {
+    transform: translateY(6%) scaleY(0.88);
+  }
+  15%,
+  50%,
+  52% {
+    transform: translateY(0) scaleY(1);
+  }
+  56%,
+  60% {
+    transform: translateY(6%) scaleY(0.88);
+  }
+  65%,
+  100% {
+    transform: translateY(0) scaleY(1);
   }
 }
 /* 입장 걷기 — 문간에서 배회 시작점까지 1회. 카메라 팬과 같은 감속 곡선을 쓴다 */
@@ -192,10 +227,10 @@
   0% {
     transform: scaleX(1);
   }
-  25% {
+  32.5% {
     transform: scaleX(-1);
   }
-  75% {
+  82.5% {
     transform: scaleX(1);
   }
   100% {
@@ -261,6 +296,11 @@
     shrineKeeperArrive var(--shrine-keeper-enter-ms) cubic-bezier(0.22, 0.61, 0.36, 1) both,
     shrineKeeperWander var(--shrine-keeper-cycle) ease-in-out var(--shrine-keeper-enter-ms, 0ms) infinite;
 }
+.shrine-keeper-bow {
+  display: block;
+  transform-origin: 50% 100%;
+  animation: shrineKeeperBow var(--shrine-keeper-cycle) ease-in-out var(--shrine-keeper-enter-ms, 0ms) infinite;
+}
 .shrine-keeper-face {
   animation: shrineKeeperFace var(--shrine-keeper-cycle) steps(1, end) var(--shrine-keeper-enter-ms, 0ms) infinite;
 }
@@ -281,6 +321,7 @@
   .shrine-keeper-wander,
   .shrine-keeper-arrive.shrine-keeper-wander,
   .shrine-keeper-face,
+  .shrine-keeper-bow,
   .shrine-keeper-bob,
   .shrine-keeper-tread {
     animation: none;
