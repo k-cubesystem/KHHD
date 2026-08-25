@@ -20,6 +20,7 @@ import {
   type PastChatSession,
 } from '@/app/actions/ai/shaman-chat'
 import { greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
+import { PURCHASE_COST_BOKCHAE, PURCHASE_QUESTIONS, totalRemainingOf } from '@/lib/domain/chat/entitlements'
 import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
 import { AiDisclosureBadge } from '@/components/shared/AiDisclosureBadge'
 import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'
@@ -745,13 +746,17 @@ export function ShamanChatInterface({
                 ...prev,
                 walletBalance: result.remainingBalance ?? prev.walletBalance,
                 purchasedCredits: result.newPurchasedCredits ?? prev.purchasedCredits,
-                totalRemaining:
-                  prev.dailyFreeRemaining + prev.adCredits + (result.newPurchasedCredits ?? prev.purchasedCredits),
+                totalRemaining: totalRemainingOf({
+                  onboarding: prev.onboardingCredits,
+                  memberWeekly: prev.memberWeeklyRemaining,
+                  ad: prev.adCredits,
+                  purchased: result.newPurchasedCredits ?? prev.purchasedCredits,
+                }),
               }
             : prev
         )
         GAChat.ticketPurchase()
-        toast.success('질문권 20회 충전 완료', {
+        toast.success(`질문권 ${PURCHASE_QUESTIONS}회 충전 완료`, {
           description: `남은 복채: ${(result.remainingBalance ?? 0).toLocaleString()}만냥`,
         })
       } else {
@@ -848,20 +853,30 @@ export function ShamanChatInterface({
           if (result.remaining) {
             return {
               ...prev,
-              dailyFreeUsed: Math.max(0, prev.dailyFreeTotal - result.remaining.free),
-              dailyFreeRemaining: result.remaining.free,
+              onboardingCredits: result.remaining.onboarding,
+              memberWeeklyUsed: Math.max(0, prev.memberWeeklyTotal - result.remaining.memberWeekly),
+              memberWeeklyRemaining: result.remaining.memberWeekly,
               adCredits: result.remaining.ad,
               purchasedCredits: result.remaining.purchased,
               totalRemaining: result.remaining.total,
             }
           }
-          // 구버전 응답 폴백 — 종전 낙관 감소 (소비 순서: 무료 → 광고 → 구매)
-          if (prev.dailyFreeRemaining > 0) {
+          // 구버전 응답 폴백 — 종전 낙관 감소.
+          // 🔴 순서는 서버 소비 순서와 같아야 한다(온보딩 → 멤버십 주간 → 광고 → 구매).
+          //    어긋나면 화면이 «다른 주머니»를 깎아 새로고침 때 숫자가 튄다.
+          if (prev.onboardingCredits > 0) {
             return {
               ...prev,
-              dailyFreeUsed: prev.dailyFreeUsed + 1,
-              dailyFreeRemaining: prev.dailyFreeRemaining - 1,
-              totalRemaining: prev.totalRemaining - 1,
+              onboardingCredits: prev.onboardingCredits - 1,
+              totalRemaining: Math.max(0, prev.totalRemaining - 1),
+            }
+          }
+          if (prev.memberWeeklyRemaining > 0) {
+            return {
+              ...prev,
+              memberWeeklyUsed: prev.memberWeeklyUsed + 1,
+              memberWeeklyRemaining: prev.memberWeeklyRemaining - 1,
+              totalRemaining: Math.max(0, prev.totalRemaining - 1),
             }
           }
           if (prev.adCredits > 0) {
@@ -1075,7 +1090,12 @@ export function ShamanChatInterface({
                 ? {
                     ...prev,
                     adCredits,
-                    totalRemaining: prev.dailyFreeRemaining + adCredits + prev.purchasedCredits,
+                    totalRemaining: totalRemainingOf({
+                      onboarding: prev.onboardingCredits,
+                      memberWeekly: prev.memberWeeklyRemaining,
+                      ad: adCredits,
+                      purchased: prev.purchasedCredits,
+                    }),
                   }
                 : prev
             )

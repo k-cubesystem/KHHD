@@ -14,6 +14,7 @@ import {
   type MembershipPlanFacts,
 } from '../membership-benefits'
 import { VOUCHER_CATALOG } from '../vouchers'
+import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
 
 /**
  * 표시광고법 회귀 방지 — 2026-08-12 정정.
@@ -96,10 +97,15 @@ describe('기록 보관 — «평생»이 아니다', () => {
 })
 
 describe('멤버십 혜택 묶음 — 여는 것은 «입장»', () => {
-  it('고민상담은 무제한이 아니라 입장으로 적는다', () => {
+  it('속풀이는 무제한이 아니라 «주 10문»으로 적는다 (2026-08-25 개편)', () => {
     const lines = membershipBenefitLines(SINGLE)
-    const counsel = lines.find((l) => l.includes('고민상담'))
-    expect(counsel).toBe('고민상담 — 해화지기와 대화 (멤버십 전용 입장)')
+    const counsel = lines.find((l) => l.includes('속풀이'))
+    expect(counsel).toBe(`속풀이 — 신령님께 주 ${MEMBER_WEEKLY_QUESTIONS}문 (소진 후엔 광고·질문권으로 이어가기)`)
+  })
+
+  it('🔴 회원 문구가 «매일»·«무제한»을 주장하지 않는다 — 무료 일일분은 폐지됐다', () => {
+    const counsel = membershipBenefitLines(SINGLE).find((l) => l.includes('속풀이')) ?? ''
+    expect(counsel).not.toMatch(/매일|하루|무제한/)
   })
 
   it('플랜 숫자가 그대로 반영된다', () => {

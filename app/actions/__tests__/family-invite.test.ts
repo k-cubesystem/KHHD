@@ -50,7 +50,14 @@ function blockRate() {
 }
 
 function membership(): ActiveMembership {
-  return { tier: 'FAMILY', planId: 'plan-1', status: 'ACTIVE', currentPeriodEnd: null, isMaster: false }
+  return {
+    tier: 'FAMILY',
+    planId: 'plan-1',
+    status: 'ACTIVE',
+    currentPeriodEnd: null,
+    currentPeriodStart: null,
+    isMaster: false,
+  }
 }
 
 function supabaseStub(user: { id: string } | null) {

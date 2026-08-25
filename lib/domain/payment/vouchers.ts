@@ -20,22 +20,34 @@ export interface VoucherProduct {
   durationHours: number
   /** 멤버십에 상시 포함되는지(안내 문구용). */
   includedInMembership: boolean
+  /**
+   * 지금 팔고 있는 상품인지. false 면 상점에 노출되지 않는다.
+   * 카탈로그에서 지우지 않는 이유: user_vouchers 에 이 타입으로 남은 «기존 구매 이력»을
+   * 계속 해석해야 하고, VoucherType 유니온이 비면 이용권 계통 전체가 무너진다.
+   */
+  sellable: boolean
 }
 
 export const VOUCHER_CATALOG: Record<VoucherType, VoucherProduct> = {
   CHAT_DAY_PASS: {
     type: 'CHAT_DAY_PASS',
-    // 🔴 «무제한» 금지 — 이 이용권이 여는 것은 속풀이 «입장»이다(app/protected/ai-shaman/page.tsx 게이트).
-    //    전송 경로는 등급·이용권을 보지 않고 하루 질문 한도만 본다(shaman-chat.ts sendShamanMessage).
+    // 🔴 2026-08-25 판매 중단. 무료 일일분이 0이 되면서 «입장만 여는 권»이 빈 방 열쇠가 됐다
+    //    (같은 1만냥이면 질문권 10문을 사는 편이 낫다). 속풀이 유료 진입은 질문권 구매
+    //    (shaman-chat.ts purchaseShamanQuestions)로 일원화됐고, 입장 게이트도
+    //    «잔여가 1회라도 있으면 통과»로 바뀌었다(app/protected/ai-shaman/page.tsx).
     label: '속풀이 1일권',
-    description: '구매 즉시 24시간 동안 신령님과의 속풀이에 들어갈 수 있습니다. 질문은 하루 무료분까지 쓰십니다.',
+    description: '구매 즉시 24시간 동안 신령님과의 속풀이에 들어갈 수 있습니다. (판매 종료)',
     priceBokchae: 1,
     durationHours: 24,
     includedInMembership: true,
+    sellable: false,
   },
 }
 
 export const VOUCHER_TYPES = Object.keys(VOUCHER_CATALOG) as VoucherType[]
+
+/** 상점에 노출할 상품만. 기존 이력 해석에는 VOUCHER_TYPES 를 그대로 쓴다. */
+export const SELLABLE_VOUCHER_TYPES = VOUCHER_TYPES.filter((t) => VOUCHER_CATALOG[t].sellable)
 
 export function getVoucherProduct(type: VoucherType): VoucherProduct {
   return VOUCHER_CATALOG[type]

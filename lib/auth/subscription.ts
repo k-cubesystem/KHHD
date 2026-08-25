@@ -23,6 +23,12 @@ export interface ActiveMembership {
   status: string
   /** 만료 기준 시각 ISO. 마스터·무기한이면 null. */
   currentPeriodEnd: string | null
+  /**
+   * 현재 결제 주기 시작 시각 ISO. 마스터·미상이면 null.
+   * 속풀이 «주 10회»의 7일 창이 여기에 앵커된다(lib/domain/chat/entitlements memberWeekWindow) —
+   * 멤버십 판정과 창 계산이 갈라지지 않도록 같은 조회에서 함께 내놓는다.
+   */
+  currentPeriodStart: string | null
   /** 마스터(admin) 무제한 여부. */
   isMaster: boolean
 }
@@ -32,6 +38,7 @@ interface ActiveSubscriptionCore {
   planId: string | null
   status: string
   currentPeriodEnd: string | null
+  currentPeriodStart: string | null
 }
 
 interface SubscriptionRow {
@@ -39,6 +46,8 @@ interface SubscriptionRow {
   status: string | null
   current_period_end: string | null
   end_date: string | null
+  current_period_start: string | null
+  start_date: string | null
 }
 
 /**
@@ -51,7 +60,7 @@ async function resolveActiveSubscription(userId: string): Promise<ActiveSubscrip
   // 1) 마스터(admin) 무제한 — privileges 단일 기준. 항상 통과.
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
   if (hasUnlimitedAccess((profile as { role?: string } | null)?.role)) {
-    return { isMaster: true, planId: null, status: 'ACTIVE', currentPeriodEnd: null }
+    return { isMaster: true, planId: null, status: 'ACTIVE', currentPeriodEnd: null, currentPeriodStart: null }
   }
 
   // 2) 활성 구독 — 기간 미만료.
@@ -60,7 +69,7 @@ async function resolveActiveSubscription(userId: string): Promise<ActiveSubscrip
   //    즉시 해지(일할 환불)는 current_period_end 를 지금으로 닫으므로 아래 만료 검사에서 저절로 빠진다.
   const { data } = await supabase
     .from('subscriptions')
-    .select('plan_id, status, current_period_end, end_date')
+    .select('plan_id, status, current_period_end, end_date, current_period_start, start_date')
     .in('status', ['ACTIVE', 'CANCELLED'])
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
@@ -75,7 +84,13 @@ async function resolveActiveSubscription(userId: string): Promise<ActiveSubscrip
   if (row.status === 'CANCELLED' && !periodEnd) return null
   if (periodEnd && new Date(periodEnd).getTime() < Date.now()) return null
 
-  return { isMaster: false, planId: row.plan_id ?? null, status: row.status ?? 'ACTIVE', currentPeriodEnd: periodEnd }
+  return {
+    isMaster: false,
+    planId: row.plan_id ?? null,
+    status: row.status ?? 'ACTIVE',
+    currentPeriodEnd: periodEnd,
+    currentPeriodStart: row.current_period_start ?? row.start_date ?? null,
+  }
 }
 
 /** 활성 멤버십 여부(boolean). 마스터 포함. 게이트 판정용. */
@@ -88,7 +103,14 @@ export async function getActiveMembership(userId: string): Promise<ActiveMembers
   const core = await resolveActiveSubscription(userId)
   if (!core) return null
   if (core.isMaster) {
-    return { tier: 'MASTER', planId: null, status: 'ACTIVE', currentPeriodEnd: null, isMaster: true }
+    return {
+      tier: 'MASTER',
+      planId: null,
+      status: 'ACTIVE',
+      currentPeriodEnd: null,
+      currentPeriodStart: null,
+      isMaster: true,
+    }
   }
 
   let tier = 'MEMBER'
@@ -104,6 +126,7 @@ export async function getActiveMembership(userId: string): Promise<ActiveMembers
     planId: core.planId,
     status: core.status,
     currentPeriodEnd: core.currentPeriodEnd,
+    currentPeriodStart: core.currentPeriodStart,
     isMaster: false,
   }
 }

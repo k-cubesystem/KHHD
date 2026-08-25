@@ -44,7 +44,7 @@ export function canStream(): boolean {
 export interface StreamDonePayload {
   full: string
   suggestedQuestions?: string[]
-  remaining?: { free: number; ad: number; purchased: number; total: number }
+  remaining?: { onboarding: number; memberWeekly: number; ad: number; purchased: number; total: number }
   deityCode?: string
   emotion?: string
   bondLeveledUp?: boolean

@@ -69,7 +69,7 @@ npm run dev | build | test | e2e | lint
 혜택 문구는 `lib/domain/payment/membership-benefits.ts`에서만 만든다. 화면에 숫자·주기를 직접 쓰지 말 것.
 
 - 멤버십은 **문을 열 뿐**이다 — 회원도 풀이마다 복채를 낸다(`deductTalisman`에 구독 우회 없음, 마스터 role만 면제).
-- 고민상담은 회원·비회원 **모두 하루 10문**(`lib/domain/chat/constants.ts` `DAILY_FREE_QUESTIONS`).
+- 속풀이 질문: 무료 일일분 **폐지(0)** · 멤버십 **주 10문** · 명식 완료 시 **평생 1문** · 광고 1문/방문 · 질문권 1만냥=10문(30일). 정본 `lib/domain/chat/entitlements.ts`
   멤버십·1일 이용권이 여는 것은 **입장**뿐 → «상담 무제한» 금지.
 - 기록은 개수 상한(`storage_limit`)을 넘기면 즐겨찾기 아닌 오래된 것부터 **자동 삭제**된다 → «평생 보관» 금지.
 - 금지어: 매일 / 무제한 / 평생 / 모두 이용 / 정액 (회귀 테스트가 막는다 —

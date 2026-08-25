@@ -10,13 +10,18 @@
  *    → «매일 지급»은 사실이 아니다.
  *  - daily_talisman_limit = 지급받은 복채의 «하루 사용 상한»이다(충전한 복채는 상한 면제 —
  *    app/actions/payment/wallet.ts computeSpendPlan). 혜택이 아니라 한도이므로 «지급»으로 쓰지 않는다.
- *  - 고민상담은 회원·비회원 모두 하루 10문이다(app/actions/ai/shaman-chat.ts DAILY_FREE_QUESTIONS).
- *    멤버십과 1일 이용권이 여는 것은 «입장»뿐이다 → «무제한» 금지.
+ *  - 속풀이(구 고민상담) 질문 수는 2026-08-25 개편됐다. 정본은 lib/domain/chat/entitlements.ts:
+ *    무료 일일분 폐지(0) · 멤버십은 «구독 주기 기준 7일»마다 10문 · 명식 입력을 마치면 평생 1문 ·
+ *    그 밖에는 광고 리워드(방문 1회 = 1문)나 질문권 구매(1만냥 = 10문, 30일)로만 얻는다.
+ *    → 회원 문구에 «무제한»·«매일»을 쓰면 사실과 다르다. 「주 10문」이라고만 적을 것.
+ *    → 「속풀이 1일권」은 판매 종료다(입장만 여는 권이 빈 방 열쇠가 됐다) → 안내에서 빼야 한다.
  *  - 멤버십 회원도 풀이마다 복채를 낸다(wallet.ts deductTalisman 에 구독 우회 없음, 마스터 role 만 면제)
  *    → «모두 이용»·«무제한» 금지.
  *  - storage_limit 은 보관 «개수» 상한이고, 초과분은 즐겨찾기가 아닌 오래된 기록부터 자동 삭제된다
  *    (app/actions/user/history.ts) → «평생 보관» 금지.
  */
+
+import { MEMBER_WEEKLY_QUESTIONS } from '@/lib/domain/chat/entitlements'
 
 /** storage_limit 이 이 값이면 개수 제한 없음(기존 DB 관례). */
 export const UNLIMITED_STORAGE_LIMIT = 999
@@ -113,7 +118,7 @@ export function membershipBenefitLines(plan: MembershipPlanFacts | null): string
     bokchaeGrantLine(plan),
     '신당 — 신위 모시기·꾸미기 전용 이용',
     relationshipLine(plan),
-    '고민상담 — 해화지기와 대화 (멤버십 전용 입장)',
+    `속풀이 — 신령님께 주 ${MEMBER_WEEKLY_QUESTIONS}문 (소진 후엔 광고·질문권으로 이어가기)`,
     '웹툰 — 멤버십 전용 회차 열람',
     recordKeepingLine(plan),
   ]
@@ -125,7 +130,9 @@ export function membershipBenefitLines(plan: MembershipPlanFacts | null): string
  */
 export const GENERIC_MEMBERSHIP_BENEFIT_LINES: readonly string[] = [
   '복채 — 결제 주기마다 지급 (풀이는 회원도 복채로 봅니다)',
-  '고민상담 · 웹툰 멤버십 회차 입장',
+  // 🔴 이 묶음에는 숫자를 넣지 않는다(회귀 테스트가 강제). 플랜·정책이 바뀌어도 어긋날 자리를 없앤다 —
+  //    구체적 횟수가 필요한 화면은 entitlements 상수를 직접 인용해 자기 줄을 만든다.
+  '속풀이 입장 · 웹툰 멤버십 회차 입장',
   '기록 보관 — 기간 제한 없이 (개수는 등급별)',
 ]
 

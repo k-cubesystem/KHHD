@@ -24,7 +24,7 @@ let updatePatch: unknown = null
 let updateFilters: Array<[string, unknown]> = []
 
 function membership(tier: string, isMaster = false): ActiveMembership {
-  return { tier, planId: 'plan-1', status: 'ACTIVE', currentPeriodEnd: null, isMaster }
+  return { tier, planId: 'plan-1', status: 'ACTIVE', currentPeriodEnd: null, currentPeriodStart: null, isMaster }
 }
 
 /** shrines 테이블 스텁 — select 는 maybeSingle 로, update 는 필터를 기록하고 .is() 에서 결과를 낸다 */
@@ -149,6 +149,7 @@ describe('getFamilyHallData — FAMILY 멤버십 게이트', () => {
       planId: null,
       status: 'ACTIVE',
       currentPeriodEnd: null,
+      currentPeriodStart: null,
       isMaster: true,
     })
 

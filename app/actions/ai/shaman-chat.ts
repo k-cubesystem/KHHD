@@ -21,14 +21,24 @@ import { awardDeityBondForUser } from '@/lib/services/deity-bond'
 import { logUsage } from '@/lib/services/gemini-rate-limiter'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { bondProgress, BOND_LEVEL_NAMES, type BondLevel } from '@/lib/domain/shrine/deities'
-import { PAST_SESSIONS_PAGE_SIZE, DAILY_FREE_QUESTIONS } from '@/lib/domain/chat/constants'
+import { PAST_SESSIONS_PAGE_SIZE } from '@/lib/domain/chat/constants'
+import {
+  MEMBER_WEEKLY_QUESTIONS,
+  ONBOARDING_FREE_QUESTIONS,
+  PURCHASE_COST_BOKCHAE,
+  PURCHASE_QUESTIONS,
+  memberWeekWindow,
+  isCreditExpired,
+  totalRemainingOf,
+} from '@/lib/domain/chat/entitlements'
+import { getActiveMembership } from '@/lib/auth/subscription'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 
 // --- Constants ---
 
-const PURCHASE_COST = 1 // 1만냥 (wallets.balance 단위: 1 = 1만냥)
-const PURCHASE_QUESTIONS = 20 // 회
+// 가격·수량·소비기한은 lib/domain/chat/entitlements.ts 가 정본이다(화면 문구도 같은 값을 읽는다).
+const PURCHASE_COST = PURCHASE_COST_BOKCHAE // 1만냥 (wallets.balance 단위: 1 = 1만냥)
 const CHAT_HISTORY_WINDOW = 8 // Gemini에 전달할 최근 메시지 수 (슬라이딩 윈도우)
 const MEMORY_EXTRACT_INTERVAL = 6 // 메시지 N개마다 기억 추출 (2msg/턴 → 3턴마다)
 
@@ -211,18 +221,31 @@ export interface ShamanChatResponse {
   /** 현재 인연 단계명 (레벨업 연출용) */
   bondLevelName?: string
   /** 차감 반영 후 서버 기준 잔여 — 클라 낙관 감소치를 이 값으로 덮어써 desync 를 없앤다(P0-F5). */
-  remaining?: { free: number; ad: number; purchased: number; total: number }
+  remaining?: { onboarding: number; memberWeekly: number; ad: number; purchased: number; total: number }
 }
 
+/**
+ * 질문권 현황 — 주머니 넷의 합(2026-08-25 개편).
+ *
+ * 🔴 이 타입·계산은 lib/services/shaman-chat-pipeline.ts 와 **의도적으로 중복**돼 있다.
+ *    08-22 사고(액션까지 파이프라인으로 묶었다가 프로덕션 전멸) 이후 «라우트 전용» 구성을
+ *    유지하기로 한 결정 때문이다. 대신 수치·창 계산은 양쪽 모두 순수 모듈
+ *    lib/domain/chat/entitlements.ts 를 인용한다 — 규칙이 한쪽만 고쳐지는 사고를 막는다.
+ *    한쪽을 고치면 반드시 다른 쪽도 같이 고칠 것.
+ */
 export interface ShamanQuestionStatus {
   success: boolean
   walletBalance: number
-  dailyFreeUsed: number
-  dailyFreeTotal: number
-  dailyFreeRemaining: number
-  /** 광고 리워드 질문권(유효분 합, P1-A) — 소비 순서는 무료 → 광고 → 구매 */
+  isMember: boolean
+  onboardingCredits: number
+  memberWeeklyUsed: number
+  memberWeeklyTotal: number
+  memberWeeklyRemaining: number
+  /** 광고 리워드 질문권(유효분 합, P1-A) */
   adCredits: number
   purchasedCredits: number
+  /** 구매 질문권 만료 시각. null = 무기한(소비기한 도입 이전 구매분) */
+  purchasedExpiresAt: string | null
   totalRemaining: number
   error?: string
 }
@@ -230,22 +253,27 @@ export interface ShamanQuestionStatus {
 // --- Core Actions ---
 
 /**
- * 신당 질문권 현황 조회
+ * 속풀이 질문권 현황 조회 — 주머니 넷의 합.
  * - walletBalance: 현재 보유 복채 (냥)
- * - dailyFreeRemaining: 오늘 남은 무료 질문권 (최대 10개, 자정 리셋)
- * - purchasedCredits: 구매한 누적 질문권
+ * - onboardingCredits: 명식 입력 완료 맛보기 잔여(평생 1회)
+ * - memberWeeklyRemaining: 멤버십 주간분 잔여(구독 주기 기준 7일 창). 비회원은 0
+ * - adCredits: 광고 리워드 질문권(유효분)
+ * - purchasedCredits: 구매 질문권(미만료분)
  * - totalRemaining: 총 사용 가능 질문 수
  */
 export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
   const defaultResult: ShamanQuestionStatus = {
     success: false,
     walletBalance: 0,
-    dailyFreeUsed: 0,
-    dailyFreeTotal: DAILY_FREE_QUESTIONS,
-    dailyFreeRemaining: DAILY_FREE_QUESTIONS,
+    isMember: false,
+    onboardingCredits: 0,
+    memberWeeklyUsed: 0,
+    memberWeeklyTotal: 0,
+    memberWeeklyRemaining: 0,
     adCredits: 0,
     purchasedCredits: 0,
-    totalRemaining: DAILY_FREE_QUESTIONS,
+    purchasedExpiresAt: null,
+    totalRemaining: 0,
   }
 
   try {
@@ -255,13 +283,18 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
     } = await supabase.auth.getUser()
     if (!user) return { ...defaultResult, error: '로그인이 필요합니다.' }
 
-    const today = new Date().toISOString().split('T')[0]
+    const nowMs = Date.now()
 
-    // 병렬 조회: 지갑 잔액(role 특수처리 포함) + 오늘 사용 횟수 + 구매 질문권 + 광고 질문권(P1-A)
-    const [walletBalance, usageResult, creditsResult, adLedgerResult] = await Promise.all([
+    // 병렬 조회: 지갑 + 멤버십(주간 창 앵커 포함) + 질문권 행 + 명식 보유 + 광고 질문권
+    const [walletBalance, membership, creditsResult, profileResult, adLedgerResult] = await Promise.all([
       getWalletBalance(), // admin=999, tester=100, 일반=실제 잔액
-      supabase.from('ai_chat_usage').select('total_turns').eq('user_id', user.id).eq('usage_date', today).maybeSingle(),
-      supabase.from('shaman_question_credits').select('purchased_credits').eq('user_id', user.id).maybeSingle(),
+      getActiveMembership(user.id),
+      supabase
+        .from('shaman_question_credits')
+        .select('purchased_credits, expires_at, onboarding_credits, onboarding_granted_at')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+      supabase.from('profiles').select('birth_date').eq('id', user.id).maybeSingle(),
       supabase
         .from('ad_reward_ledger')
         .select('remaining, expires_at')
@@ -269,40 +302,83 @@ export async function getShamanQuestionStatus(): Promise<ShamanQuestionStatus> {
         .eq('status', 'granted')
         .gt('remaining', 0),
     ])
-    const dailyFreeUsed = usageResult.data?.total_turns ?? 0
-    const purchasedCredits = creditsResult.data?.purchased_credits ?? 0
-    const nowMs = Date.now()
+
+    const credits = creditsResult.data as {
+      purchased_credits?: number
+      expires_at?: string | null
+      onboarding_credits?: number
+      onboarding_granted_at?: string | null
+    } | null
+
+    const purchasedExpiresAt = credits?.expires_at ?? null
+    const purchasedCredits = isCreditExpired(purchasedExpiresAt, nowMs) ? 0 : (credits?.purchased_credits ?? 0)
+
     const adCredits = (adLedgerResult.data ?? [])
       .filter((r) => r.expires_at && new Date(r.expires_at as string).getTime() > nowMs)
       .reduce((sum, r) => sum + (r.remaining ?? 0), 0)
 
-    // 마스터: 일일 10회 제한도 개방 (잔액만 무한이고 질문은 막히던 비대칭 해소)
+    // 명식을 채운 계정에 맛보기 지연 지급 — RPC 가 멱등을 잠근다(평생 1회).
+    let onboardingCredits = credits?.onboarding_credits ?? 0
+    const hasChart = Boolean((profileResult.data as { birth_date?: string | null } | null)?.birth_date)
+    if (hasChart && !credits?.onboarding_granted_at && ONBOARDING_FREE_QUESTIONS > 0) {
+      const { data: granted, error: grantError } = await createAdminClient().rpc('grant_onboarding_credit', {
+        p_user_id: user.id,
+        p_amount: ONBOARDING_FREE_QUESTIONS,
+      })
+      if (grantError) logger.error('[getShamanQuestionStatus] 온보딩 맛보기 지급 실패:', grantError)
+      else if (typeof granted === 'number') onboardingCredits += granted
+    }
+
+    // 마스터: 상한 자체를 개방 (잔액만 무한이고 질문은 막히던 비대칭 해소)
     const role = await getUserRole(supabase, user.id)
     if (hasUnlimitedAccess(role)) {
       return {
         success: true,
         walletBalance,
-        dailyFreeUsed,
-        dailyFreeTotal: UNLIMITED_BALANCE,
-        dailyFreeRemaining: UNLIMITED_BALANCE,
+        isMember: true,
+        onboardingCredits,
+        memberWeeklyUsed: 0,
+        memberWeeklyTotal: UNLIMITED_BALANCE,
+        memberWeeklyRemaining: UNLIMITED_BALANCE,
         adCredits,
         purchasedCredits,
+        purchasedExpiresAt,
         totalRemaining: UNLIMITED_BALANCE,
       }
     }
 
-    const dailyFreeRemaining = Math.max(0, DAILY_FREE_QUESTIONS - dailyFreeUsed)
-    const totalRemaining = dailyFreeRemaining + adCredits + purchasedCredits
+    let memberWeeklyUsed = 0
+    let memberWeeklyTotal = 0
+    if (membership) {
+      const anchorMs = membership.currentPeriodStart ? new Date(membership.currentPeriodStart).getTime() : nowMs
+      const win = memberWeekWindow(Number.isFinite(anchorMs) ? anchorMs : nowMs, nowMs)
+      memberWeeklyTotal = MEMBER_WEEKLY_QUESTIONS
+      const { data: turns, error: turnsError } = await createAdminClient().rpc('get_member_week_turns', {
+        p_user_id: user.id,
+        p_window_start: win.startIso,
+      })
+      if (turnsError) logger.error('[getShamanQuestionStatus] 멤버십 주간 사용량 조회 실패:', turnsError)
+      else if (typeof turns === 'number') memberWeeklyUsed = turns
+    }
+    const memberWeeklyRemaining = Math.max(0, memberWeeklyTotal - memberWeeklyUsed)
 
     return {
       success: true,
       walletBalance,
-      dailyFreeUsed,
-      dailyFreeTotal: DAILY_FREE_QUESTIONS,
-      dailyFreeRemaining,
+      isMember: Boolean(membership),
+      onboardingCredits,
+      memberWeeklyUsed,
+      memberWeeklyTotal,
+      memberWeeklyRemaining,
       adCredits,
       purchasedCredits,
-      totalRemaining,
+      purchasedExpiresAt,
+      totalRemaining: totalRemainingOf({
+        onboarding: onboardingCredits,
+        memberWeekly: memberWeeklyRemaining,
+        ad: adCredits,
+        purchased: purchasedCredits,
+      }),
     }
   } catch (error) {
     logger.error('[getShamanQuestionStatus] Error:', error)
@@ -338,12 +414,15 @@ export async function purchaseShamanQuestions(): Promise<{
       // 1. 복채 차감 — 원자 RPC(deduct_wallet_balance) 경유. read-then-write 레이스 제거.
       const res = await spendBokchae(
         PURCHASE_COST,
-        `신당 질문권 ${PURCHASE_QUESTIONS}회 구매(1만냥)`,
+        `속풀이 질문권 ${PURCHASE_QUESTIONS}회 구매(${PURCHASE_COST_BOKCHAE}만냥)`,
         'SHAMAN_QUESTIONS'
       )
       if (!res.success) {
         if (res.error === 'INSUFFICIENT_BOKCHAE') {
-          return { success: false, error: '복채가 부족합니다. (질문권 20회 = 1만냥)' }
+          return {
+            success: false,
+            error: `복채가 부족합니다. (질문권 ${PURCHASE_QUESTIONS}회 = ${PURCHASE_COST_BOKCHAE}만냥)`,
+          }
         }
         return { success: false, error: '복채 차감 중 오류가 발생했습니다.' }
       }
@@ -399,7 +478,7 @@ export async function sendShamanChatMessage(
     logger.warn('[sendShamanChatMessage] EDGE_AI_CHAT 활성 상태지만 신당 3.0 패리티 부재 — 로컬 경로로 처리')
   }
   // AI 실패 시 보상 환급용 — 어느 주머니에서 소비했는지 try 밖에서 기억한다(P0-F5).
-  let consumedFrom: 'free' | 'ad' | 'purchased' | null = null
+  let consumedFrom: 'onboarding' | 'member' | 'ad' | 'purchased' | null = null
   let refundUserId: string | null = null
   let refundDate = ''
   try {
@@ -423,40 +502,52 @@ export async function sendShamanChatMessage(
     if (status.totalRemaining <= 0) {
       return {
         success: false,
-        error: '질문 횟수가 모두 소진되었습니다. 복채 1만냥으로 질문권 20회를 충전하세요.',
+        error: `질문 횟수가 모두 소진되었습니다. 복채 ${PURCHASE_COST_BOKCHAE}만냥으로 질문권 ${PURCHASE_QUESTIONS}회를 충전하거나, 광고를 보고 받으실 수 있습니다.`,
         noCredits: true,
       }
     }
 
-    // 2. 질문권 소비 (일일권 먼저, 소진 시 구매권). 성공한 소비처를 기억한다 — AI 실패 시 되돌린다.
+    // 2. 질문권 소비 — 유효기간이 짧은 주머니부터(온보딩 → 멤버십 주간 → 광고 → 구매).
+    //    구매분을 마지막에 두는 것은 의도다: 돈 낸 질문권이 공짜분보다 먼저 닳으면 안 된다.
+    //    🔴 순서·주머니는 lib/services/shaman-chat-pipeline.ts prepareShamanChat 와 같아야 한다.
     refundUserId = user.id
     refundDate = today
-    if (status.dailyFreeRemaining > 0) {
-      // 일일 무료 질문 소비 (total_turns 증가)
+
+    if (status.onboardingCredits > 0) {
+      const { data: left, error } = await adminClient.rpc('consume_onboarding_credit', { p_user_id: user.id })
+      if (error) logger.error('[sendShamanChatMessage] 온보딩 맛보기 소비 실패:', error)
+      else if (typeof left === 'number' && left >= 0) consumedFrom = 'onboarding'
+    }
+
+    if (!consumedFrom && status.memberWeeklyRemaining > 0) {
       const { error: rpcError } = await adminClient.rpc('record_ai_chat_turn', {
         p_user_id: user.id,
         p_date: today,
         p_talisman_used: 0,
       })
-      if (rpcError) {
-        logger.error('[sendShamanChatMessage] RPC error:', rpcError)
-        // RPC 실패해도 AI 응답은 진행 (non-fatal)
-      } else {
-        consumedFrom = 'free'
-      }
-    } else {
-      // 광고 질문권 먼저(만료 있는 표부터, P1-A) → 구매 질문권. 전부 원자 RPC.
-      let adConsumed = false
-      if (status.adCredits > 0) {
-        const { data: adLeft, error: adError } = await adminClient.rpc('consume_ad_credit', { p_user_id: user.id })
-        if (adError) logger.error('[sendShamanChatMessage] ad credit consume error:', adError)
-        adConsumed = !adError && typeof adLeft === 'number' && adLeft >= 0
-        if (adConsumed) consumedFrom = 'ad'
-      }
-      if (!adConsumed) {
-        const { error: consumeError } = await adminClient.rpc('consume_shaman_credit', { p_user_id: user.id })
-        if (consumeError) logger.error('[sendShamanChatMessage] credit consume error:', consumeError)
-        else consumedFrom = 'purchased'
+      if (rpcError) logger.error('[sendShamanChatMessage] RPC error:', rpcError)
+      else consumedFrom = 'member'
+    }
+
+    if (!consumedFrom && status.adCredits > 0) {
+      const { data: adLeft, error: adError } = await adminClient.rpc('consume_ad_credit', { p_user_id: user.id })
+      if (adError) logger.error('[sendShamanChatMessage] ad credit consume error:', adError)
+      else if (typeof adLeft === 'number' && adLeft >= 0) consumedFrom = 'ad'
+    }
+
+    if (!consumedFrom) {
+      const { data: left, error: consumeError } = await adminClient.rpc('consume_shaman_credit', { p_user_id: user.id })
+      if (consumeError) logger.error('[sendShamanChatMessage] credit consume error:', consumeError)
+      else if (typeof left === 'number' && left >= 0) consumedFrom = 'purchased'
+    }
+
+    // 어느 주머니에서도 못 뺐다 = 현황과 실제 잔여가 어긋났다(동시 요청·만료 경계).
+    // 차감 없이 진행하면 공짜 호출이 되므로 끊는다.
+    if (!consumedFrom) {
+      return {
+        success: false,
+        error: '질문권을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.',
+        noCredits: true,
       }
     }
 
@@ -647,21 +738,28 @@ export async function sendShamanChatMessage(
     suggestions.push('올해 가장 조심해야 할 것은?', '이번 달 주요 운세 흐름은?', '저에게 맞는 개운법을 알려주세요')
 
     // 서버 기준 잔여(차감 반영). 마스터(UNLIMITED_BALANCE)는 감산 없이 그대로 내려간다.
-    const remainingFree =
-      consumedFrom === 'free' ? Math.max(0, status.dailyFreeRemaining - 1) : status.dailyFreeRemaining
-    const remainingAd = consumedFrom === 'ad' ? Math.max(0, status.adCredits - 1) : status.adCredits
-    const remainingPurchased =
-      consumedFrom === 'purchased' ? Math.max(0, status.purchasedCredits - 1) : status.purchasedCredits
+    const dec = (bucket: typeof consumedFrom, value: number) =>
+      consumedFrom === bucket ? Math.max(0, value - 1) : value
+    const remainingOnboarding = dec('onboarding', status.onboardingCredits)
+    const remainingMemberWeekly = dec('member', status.memberWeeklyRemaining)
+    const remainingAd = dec('ad', status.adCredits)
+    const remainingPurchased = dec('purchased', status.purchasedCredits)
 
     return {
       success: true,
       response: responseText,
       suggestedQuestions: suggestions.slice(0, 4),
       remaining: {
-        free: remainingFree,
+        onboarding: remainingOnboarding,
+        memberWeekly: remainingMemberWeekly,
         ad: remainingAd,
         purchased: remainingPurchased,
-        total: remainingFree + remainingAd + remainingPurchased,
+        total: totalRemainingOf({
+          onboarding: remainingOnboarding,
+          memberWeekly: remainingMemberWeekly,
+          ad: remainingAd,
+          purchased: remainingPurchased,
+        }),
       },
       deityCode: deityCode ?? undefined,
       emotion: emotion ?? undefined,
@@ -676,28 +774,31 @@ export async function sendShamanChatMessage(
     if (consumedFrom && refundUserId) {
       try {
         const adminClient = createAdminClient()
-        if (consumedFrom === 'free') {
+        if (consumedFrom === 'onboarding') {
+          const { error: refundError } = await adminClient.rpc('refund_onboarding_credit', {
+            p_user_id: refundUserId,
+          })
+          if (refundError) logger.error('[sendShamanChatMessage] 질문권 환급 실패(onboarding):', refundError)
+        } else if (consumedFrom === 'member') {
           const { error: refundError } = await adminClient.rpc('refund_ai_chat_turn', {
             p_user_id: refundUserId,
             p_date: refundDate,
           })
-          if (refundError) logger.error('[sendShamanChatMessage] 질문권 환급 실패(free):', refundError)
+          if (refundError) logger.error('[sendShamanChatMessage] 질문권 환급 실패(member):', refundError)
         } else if (consumedFrom === 'ad') {
-          // 유효 광고 행이 사라졌으면(만료 직후 등) 구매권 +1 폴백 — 사용자에게 손해 없는 방향
+          // 유효 광고 행이 사라졌으면(만료 직후 등) 구매권 +1 폴백 — 사용자에게 손해 없는 방향.
+          // 🔴 폴백은 refund_shaman_credit 이다. add_shaman_credits 는 소비기한을 갱신해
+          //    «AI 가 실패할수록 유효기간이 늘어나는» 구멍을 연다.
           const { data: adBack, error: adRefundError } = await adminClient.rpc('refund_ad_credit', {
             p_user_id: refundUserId,
           })
           if (adRefundError || adBack === -1) {
-            const { error: fbError } = await adminClient.rpc('add_shaman_credits', {
-              p_user_id: refundUserId,
-              p_amount: 1,
-            })
+            const { error: fbError } = await adminClient.rpc('refund_shaman_credit', { p_user_id: refundUserId })
             if (fbError) logger.error('[sendShamanChatMessage] 광고권 환급 폴백 실패:', fbError, adRefundError)
           }
         } else {
-          const { error: refundError } = await adminClient.rpc('add_shaman_credits', {
+          const { error: refundError } = await adminClient.rpc('refund_shaman_credit', {
             p_user_id: refundUserId,
-            p_amount: 1,
           })
           if (refundError) logger.error('[sendShamanChatMessage] 질문권 환급 실패(purchased):', refundError)
         }
@@ -1168,8 +1269,10 @@ export async function getAIChatUsageStatus() {
     success: status.success,
     isPro: false,
     remaining: status.totalRemaining,
-    total: status.dailyFreeTotal,
-    used: status.dailyFreeUsed,
+    // 「총량/사용」은 상한이 있는 유일한 주머니(멤버십 주간분)를 가리킨다.
+    // 비회원은 상한 개념이 없어 0/0 — 이 함수는 deprecated 라 호환만 맞춘다.
+    total: status.memberWeeklyTotal,
+    used: status.memberWeeklyUsed,
     error: status.error,
   }
 }
