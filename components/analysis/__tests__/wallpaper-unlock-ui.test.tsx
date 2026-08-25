@@ -6,9 +6,9 @@
  * ② **하루 1장 상한이 화면에도 보이는가** — 오늘 광고를 썼으면 그 버튼이 사라진다.
  * ③ **잠긴 장에만 값이 붙는가** — 열린 장에 결제 버튼이 서면 안 된다.
  */
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { WallpaperAdDialog } from '../wallpaper-ad-dialog'
-import { WallpaperGrid } from '../wallpaper-card'
+import { WallpaperCardView, WallpaperGrid } from '../wallpaper-card'
 import { membershipBenefitLines } from '@/lib/domain/payment/membership-benefits'
 import type { WallpaperStatus } from '@/app/actions/analysis/wallpaper'
 
@@ -70,6 +70,33 @@ describe('하우스 광고 — 우리 상품을 우리가 소개한다(외부 �
     render(<WallpaperAdDialog open onOpenChange={() => {}} onReward={() => {}} targetTitle="이달의 복 (9월)" />)
 
     expect(screen.getByText(/이달의 복 \(9월\)/)).toBeInTheDocument()
+  })
+})
+
+describe('닫기 X — 본문과 함께 스크롤돼 사라지지 않는다', () => {
+  /**
+   * 🔴 종전에는 `DialogContent` 자체가 `overflow-y-auto` 였다. X 는 다이얼로그 기준 absolute 라
+   * 본문과 함께 밀려 올라갔고, 세트가 23장으로 길어지자 «맨 위까지 되올라와야 닫히는» 상태가
+   * 됐다(CEO 제보 2026-08-25). 겉은 스크롤하지 않고 **안쪽 본문만** 스크롤해야 한다.
+   */
+  it('겉(DialogContent)은 스크롤하지 않고, 안쪽 본문이 스크롤을 진다', () => {
+    const { baseElement } = render(<WallpaperCardView status={BASE} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /복 배경화면/ }))
+
+    const content = baseElement.querySelector('[data-slot="dialog-content"]')
+    if (!content) throw new Error('다이얼로그가 열리지 않았다')
+
+    expect(content.className).toContain('overflow-hidden')
+    expect(content.className).not.toContain('overflow-y-auto')
+    // 스크롤을 지는 본문이 안에 정확히 하나 있고, grid 에서 줄어들 수 있어야 한다(min-h-0)
+    const scroller = content.querySelector('.overflow-y-auto')
+    expect(scroller).not.toBeNull()
+    expect(scroller?.className).toContain('min-h-0')
+    // 닫기 X 는 스크롤 영역 «밖»에 있어야 제자리에 선다
+    const close = baseElement.querySelector('[data-slot="dialog-close"]')
+    expect(close).not.toBeNull()
+    expect(scroller?.contains(close!)).toBe(false)
   })
 })
 

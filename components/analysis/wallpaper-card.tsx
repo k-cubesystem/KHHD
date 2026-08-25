@@ -174,16 +174,23 @@ function WallpaperSheet({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto border-gold-500/25 bg-surface sm:max-w-md">
-        <DialogHeader>
+      {/* 🔴 스크롤은 **본문**이 진다. 종전에는 DialogContent 자체가 스크롤돼서, 닫기 X(다이얼로그
+          기준 absolute)가 본문과 함께 밀려 올라갔다 — 아래로 내려가면 X 가 화면 밖이라 «맨 위까지
+          되올라와야 닫히는» 상태였다(CEO 제보 2026-08-25). 세트가 23장으로 길어지며 드러났다.
+          겉은 overflow-hidden 으로 두고 안쪽 div 에만 overflow-y-auto 를 주면 X 가 제자리에 선다.
+          🔴 grid 자식은 min-h-0 이 없으면 줄어들지 않아 스크롤이 생기지 않는다. */}
+      <DialogContent className="max-h-[88vh] gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
+        <DialogHeader className="px-6 pt-6 pb-3">
           <DialogTitle className="font-serif text-gold-500">{CARD_TITLE}</DialogTitle>
         </DialogHeader>
 
-        <p className="-mt-1 text-[12px] font-light text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
-          마음에 드는 그림을 눌러 받아, 잠금화면으로 지정해 보세요.
-        </p>
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-6">
+          <p className="text-[12px] font-light text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
+            마음에 드는 그림을 눌러 받아, 잠금화면으로 지정해 보세요.
+          </p>
 
-        <WallpaperGrid status={status} />
+          <WallpaperGrid status={status} />
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -83,57 +83,61 @@ export function ManseQuickView() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[88vh] overflow-y-auto border-gold-500/25 bg-surface sm:max-w-md">
-          <DialogHeader>
+        {/* 🔴 스크롤은 본문이 진다 — 겉이 스크롤되면 닫기 X 가 함께 밀려 올라간다(배경화면 시트와
+            같은 함정, 2026-08-25). 안쪽 div 에만 overflow-y-auto + min-h-0. */}
+        <DialogContent className="max-h-[88vh] gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
+          <DialogHeader className="px-6 pt-6 pb-3">
             <DialogTitle className="flex items-center gap-1.5 font-serif text-gold-500">
               <IconGunghap className="h-4 w-4 shrink-0" />내 명식 바로보기
             </DialogTitle>
           </DialogHeader>
 
-          {!loaded ? (
-            <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-ink-light/60">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              불러오는 중
-            </p>
-          ) : !summary ? (
-            <p className="py-8 text-center text-[12px] text-ink-light/60">로그인이 필요합니다.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <TargetSelect
-                targets={summary.targets.map(toTargetOption)}
-                value={targetId}
-                onChange={setTargetId}
-                label="누구의 명식을 볼까요"
-                emptyHref="/protected/family"
-                emptyLabel="가족·인연 등록하기"
-              />
+          <div className="flex min-h-0 flex-col overflow-y-auto px-6 pb-6">
+            {!loaded ? (
+              <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-ink-light/60">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                불러오는 중
+              </p>
+            ) : !summary ? (
+              <p className="py-8 text-center text-[12px] text-ink-light/60">로그인이 필요합니다.</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <TargetSelect
+                  targets={summary.targets.map(toTargetOption)}
+                  value={targetId}
+                  onChange={setTargetId}
+                  label="누구의 명식을 볼까요"
+                  emptyHref="/protected/family"
+                  emptyLabel="가족·인연 등록하기"
+                />
 
-              <AccountRow summary={summary} />
+                <AccountRow summary={summary} />
 
-              {!target?.birth_date ? (
-                <EmptyBirth />
-              ) : !saju ? (
-                <p className="rounded-lg border border-white/10 px-3 py-4 text-center text-[12px] text-ink-light/60">
-                  명식을 계산할 수 없습니다. 생년월일을 확인해주세요.
-                </p>
-              ) : (
-                <>
-                  <Pillars saju={saju} />
-                  <Elements saju={saju} />
-                  <DayMasterNote saju={saju} />
-                </>
-              )}
+                {!target?.birth_date ? (
+                  <EmptyBirth />
+                ) : !saju ? (
+                  <p className="rounded-lg border border-white/10 px-3 py-4 text-center text-[12px] text-ink-light/60">
+                    명식을 계산할 수 없습니다. 생년월일을 확인해주세요.
+                  </p>
+                ) : (
+                  <>
+                    <Pillars saju={saju} />
+                    <Elements saju={saju} />
+                    <DayMasterNote saju={saju} />
+                  </>
+                )}
 
-              <Link
-                href="/protected/profile/manse"
-                onClick={() => setOpen(false)}
-                className="flex items-center justify-between rounded-lg border border-gold-500/45 bg-gold-500/10 px-3 py-2.5 font-serif text-[12px] font-bold text-gold-500 transition-colors hover:bg-gold-500/20"
-              >
-                만세력에서 자세히 보기
-                <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-              </Link>
-            </div>
-          )}
+                <Link
+                  href="/protected/profile/manse"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-between rounded-lg border border-gold-500/45 bg-gold-500/10 px-3 py-2.5 font-serif text-[12px] font-bold text-gold-500 transition-colors hover:bg-gold-500/20"
+                >
+                  만세력에서 자세히 보기
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                </Link>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>
