@@ -764,8 +764,8 @@ describe('deityStandShift — 이동은 이동이어야 한다', () => {
  *    1.4 배면 머리가 방 위로 뚫고 나가 clamp 에 걸려 벽 전체를 덮는다.
  */
 describe('deityStandGrandeur — 기본 위계 배율', () => {
-  it('틀을 든 테마는 1.4배', () => {
-    expect(DEITY_STAND_GRANDEUR).toBe(1.4)
+  it('틀을 든 테마는 1.6배', () => {
+    expect(DEITY_STAND_GRANDEUR).toBe(1.6)
     expect(deityStandGrandeur('banga')).toBe(DEITY_STAND_GRANDEUR)
     expect(deityStandGrandeur('dangsan')).toBe(DEITY_STAND_GRANDEUR)
   })
@@ -780,8 +780,9 @@ describe('deityStandGrandeur — 기본 위계 배율', () => {
       const foot = deityPodiumTopY(code)
       const head = deityHeadRoomY(code)
       const stand = deityStandShift(foot, head, 0, deityStandGrandeur(code))
-      expect(stand.headRoomY).toBeGreaterThan(0)
-      expect(stand.podiumTopY - stand.headRoomY).toBeCloseTo((foot - head) * 1.4, 4)
+      // 닫집 꼭대기(y10.44)를 뚫지 않는다 — 신위가 처마 밖으로 나가면 «감실 안의 신»이 깨진다
+      expect(stand.headRoomY).toBeGreaterThan(10.44)
+      expect(stand.podiumTopY - stand.headRoomY).toBeCloseTo((foot - head) * DEITY_STAND_GRANDEUR, 4)
     }
   })
 

@@ -429,11 +429,16 @@ export function deityStandBox(podiumTopY: number = PODIUM_TOP_Y, headRoomY: numb
  *    (deityHeadRoomY) 신위가 액자 속 인물처럼 작아지는데, 닫집 안쪽은 그 위로도 어두운 여백이라
  *    조금 넘겨 서는 편이 «모신 신»의 위계에 맞는다.
  *
+ * 🔴 1.4 → **1.6** (2026-08-25 재검수 「사이즈를 좀 더 키워줘」). 상한 근거를 함께 남긴다:
+ *    16테마 중 신위가 가장 커지는 용궁 기준 머리 y18.1 로, 닫집 꼭대기(y10.44)까지 7.7%p 가
+ *    남는다 — 신위가 닫집을 뚫지 않는다. 1.7 이면 그 여유가 5.4%p 로 줄어 좁은 폰에서 머리가
+ *    처마에 닿아 보이기 시작한다. 더 키우려면 이 계산을 먼저 다시 할 것(테스트가 전수 확인한다).
+ *
  * 🔴 틀이 없는 테마에는 곱하지 않는다. 그쪽은 정본 키가 이미 33.3%p(45.3−12)라 1.4 배를 곱하면
  *    머리가 방 천장을 뚫는다(clamp 에 걸려 벽 전체를 덮는 그림이 된다).
  *    사용자 조절(−/＋)은 이 값 **위에** 곱해진다 — 화면의 100% 가 곧 이 기본이다.
  */
-export const DEITY_STAND_GRANDEUR = 1.4
+export const DEITY_STAND_GRANDEUR = 1.6
 
 /** 이 테마의 신위 기본 배율. 틀이 있으면 위계 배율, 없으면 1(정본 그대로). */
 export function deityStandGrandeur(themeCode: string): number {

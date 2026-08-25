@@ -33,8 +33,22 @@ import { motionVariance } from '@/lib/domain/shrine/motion-variance'
 type CssVars = CSSProperties & Record<`--${string}`, string>
 
 const GUARDIAN_Z = 12
-/** 표시 크기(px) — 종전 오브(38px)와 같은 급. 정령(부유형)은 한 치 작다. */
-const BODY_PX = { beast: 46, chasa: 44, dokkaebi: 44, spirit: 38 } as const
+/**
+ * 표시 크기(px). 정령(부유형)은 한 치 작다.
+ *
+ * 2026-08-25 **1.35배** (46/44/38 -> 62/59/51). 두 가지가 겹쳐 작아 보였다:
+ *   1. 신수가 벽 밑동(y72)에서 **제단 앞바닥(y82)** 으로 내려왔다 - 원근에서 앞으로 나온 것이라
+ *      같은 px 면 오히려 **더 작아 보인다**. 앞으로 나온 만큼 커져야 거리가 맞는다.
+ *   2. 종전 값은 «主神 초상 오브(38px)와 같은 급»으로 잡힌 값이다. 그 오브는 신위 자리에 떠 있던
+ *      작은 원이었고, 지금 신수는 방바닥을 밟는 몸이라 기준이 애초에 달랐다.
+ * 상한 근거: 62px 는 신위 그린 키(당산 25.5%p, 폰에서 약 118px)의 절반 남짓이라
+ * «신을 지키는 짐승»의 위계가 뒤집히지 않는다.
+ */
+const BODY_PX = { beast: 62, chasa: 59, dokkaebi: 59, spirit: 51 } as const
+
+/** 탭 타깃·접지 그림자는 몸 폭을 따라간다 - 몸만 키우면 손에 안 걸리고 그림자가 뜬다. */
+const TRACK_W_PX = 60
+const TREAD_W_PX = 35
 
 export interface GuardianWalkersProps {
   /** 착좌 슬러그 (0~2 — 검증은 parseGuardianSlugs 가 이미 했다) */
@@ -113,7 +127,8 @@ function Walker({
       <button
         type="button"
         onClick={() => onTap(g.slug)}
-        className="block w-[44px] -ml-[3px] text-center"
+        className="block text-center"
+        style={{ width: TRACK_W_PX, marginLeft: -4 }}
         aria-label={`신수 ${g.name}`}
       >
         <span className={`block${plan.wanders ? ' shrine-keeper-face' : ''}`} style={playState}>
@@ -142,10 +157,14 @@ function Walker({
               절할 때 그림자는 그대로 둔다 — 발은 바닥에 붙어 있고 상체만 숙이기 때문이다. */}
           <span
             aria-hidden
-            className={`mx-auto mt-0.5 w-[26px] h-[6px] rounded-full blur-[2px]${
+            className={`mx-auto mt-0.5 h-[7px] rounded-full blur-[2px]${
               plan.wanders || enter ? ' shrine-keeper-tread' : ''
             }`}
-            style={{ background: g.category === 'spirit' ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.4)', ...playState }}
+            style={{
+              width: TREAD_W_PX,
+              background: g.category === 'spirit' ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.4)',
+              ...playState,
+            }}
           />
         </span>
       </button>
