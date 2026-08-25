@@ -4,6 +4,7 @@ import { Home } from 'lucide-react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { GuideBell } from '@/components/guide/GuideBell'
+import { ManseQuickView } from '@/components/destiny/manse-quick-view'
 
 /** 상호·로고를 누르면 가는 곳. 홈 버튼도 같은 자리다. */
 const APP_HOME_PATH = '/protected/analysis'
@@ -45,6 +46,10 @@ export function MobileHeader() {
         </Link>
 
         <div className="flex shrink-0 items-center">
+          {/* 태극 — 내 명식 바로보기(사람 선택·사주팔자·오행·복채·등급·신위). 종 왼쪽에 둔다:
+              «내 것»이 먼저, 알림이 그다음, 홈이 마지막. */}
+          <ManseQuickView />
+
           <GuideBell />
 
           <Link

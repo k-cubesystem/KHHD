@@ -54,6 +54,37 @@ test.describe('가이드 — 하단 바 부재 + 상단 종', () => {
     expect(errors, errors.join('\n')).toHaveLength(0)
   })
 
+  test('신당에도 하단 안내 바가 없다 (「오늘 할 것」 바 제거, 2026-08-25)', async ({ page }) => {
+    test.setTimeout(120_000)
+    await login(page)
+
+    // 🔴 신당은 자체 하단 바(ShrineGuideBar «오늘 할 것 N개»)를 따로 갖고 있었다.
+    //    전 화면에서 하단 상시 안내를 걷어내는 지시라 이것도 함께 내려갔다.
+    await page.goto('/protected/shrine')
+    await expect(bell(page)).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByRole('button', { name: /오늘 할 것/ })).toHaveCount(0)
+    await expect(page.locator('[data-guide-bar]')).toHaveCount(0)
+    console.log('[PASS] 신당에 하단 안내 바 없음')
+  })
+
+  test('상단 태극 — 내 명식 팝업이 열리고 사주팔자·오행이 선다', async ({ page }) => {
+    test.setTimeout(120_000)
+    await login(page)
+    await page.goto('/protected/analysis')
+
+    const taegeuk = page.getByRole('button', { name: '내 명식 바로보기' })
+    await expect(taegeuk).toBeVisible({ timeout: 30_000 })
+    await taegeuk.click()
+
+    await expect(page.getByText('사주팔자(四柱八字)')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByText('오행(五行) 분포')).toBeVisible()
+    // 복채·등급·신위 세 칸이 각자 제 화면으로 간다
+    await expect(page.getByText('복채', { exact: true })).toBeVisible()
+    await expect(page.getByText('등급', { exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: /만세력에서 자세히 보기/ })).toBeVisible()
+    console.log('[PASS] 태극 팝업 — 명식·오행·계정 요약')
+  })
+
   test('종은 상단 바 안에 있고, 자동으로 펼쳐지지 않는다', async ({ page }) => {
     test.setTimeout(120_000)
     await login(page)

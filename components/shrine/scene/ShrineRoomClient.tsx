@@ -106,7 +106,6 @@ import { StageLayers } from './StageLayers'
 import { AmbientBackdrop, ambientEmitPlan } from './AmbientBackdrop'
 import { TimeTint } from './TimeTint'
 import { Moonlight, SeasonalMark } from './SkyOmens'
-import { ShrineGuideBar } from './ShrineGuideBar'
 import { RitualDock } from './RitualDock'
 import { GenericPlaqueBand } from './WindowPlaques'
 import { RitualHall, RITUAL_HALL_UNIT } from './RitualHall'
@@ -2373,13 +2372,10 @@ export function ShrineRoomClient({
         <PrayerSheet open={prayerOpen} onOpenChange={setPrayerOpen} shrineId={scene.shrineId} family={family} />
       )}
 
-      {/* 하이브리드 가이드 — 우하단 主神 말풍선 + 할 일 슬림 바 */}
-      <ShrineGuideBar
-        neededElementKo={EL_KO[displayYongsin]}
-        neededElementPlaced={neededElementPlaced}
-        mainDeitySeated={!!scene.mainDeity}
-        isOwner={isOwner}
-      />
+      {/* 🔴 신당 하단 「오늘 할 것」 바는 내려갔다(CEO 지시 2026-08-25). 하단에 상시 떠 있는
+          안내는 전 화면에서 걷어냈고(app/protected/layout.tsx 주석 참조), 안내·공지는 상단 바의
+          종(components/guide/GuideBell.tsx)이 진다. 여기에 다시 마운트하지 말 것.
+          컴포넌트(ShrineGuideBar)와 할 일 계산은 되살리기 쉽게 남겨 둔다. */}
 
       {/* 신위 대화 확인 — 회전이 끝난 뒤 한 번 묻는다 (CEO 6차 지시 ⑥).
           z-toast 라 가이드 바(z-125)와 방 UI(z-30) 위다. 바깥을 누르면 그냥 닫힌다 —

@@ -20,6 +20,11 @@ jest.mock('@/components/guide/GuideBell', () => ({
   GuideBell: () => <button aria-label="해화지기의 안내 펼치기" />,
 }))
 
+// 태극(내 명식)도 마찬가지 — 팝업 내용은 자기 테스트가 지고, 여기선 자리만 본다.
+jest.mock('@/components/destiny/manse-quick-view', () => ({
+  ManseQuickView: () => <button aria-label="내 명식 바로보기" />,
+}))
+
 const setPath = (path: string) => (usePathname as jest.Mock).mockReturnValue(path)
 
 /** 허브(앱 홈) · 허브 하위 · 완전히 다른 계열 — 어디서든 같은 바여야 한다. */
@@ -28,7 +33,7 @@ const PATHS = ['/protected/analysis', '/protected/analysis/compatibility', '/pro
 describe('상단 바 — 전 화면 동일', () => {
   beforeEach(() => setPath('/protected/analysis'))
 
-  it.each(PATHS)('%s 에서도 아이콘·상호·종·홈이 한 줄에 선다', (path) => {
+  it.each(PATHS)('%s 에서도 아이콘·상호·태극·종·홈이 한 줄에 선다', (path) => {
     setPath(path)
     const { container } = render(<MobileHeader />)
     const header = container.querySelector('header')
@@ -36,6 +41,7 @@ describe('상단 바 — 전 화면 동일', () => {
 
     expect(within(header).getByText('청담해화당')).not.toBeNull()
     expect(header.querySelector('img')?.getAttribute('src')).toBe('/logo-new.png')
+    expect(within(header).getByLabelText('내 명식 바로보기')).not.toBeNull()
     expect(within(header).getByLabelText('해화지기의 안내 펼치기')).not.toBeNull()
     expect(within(header).getByLabelText('홈')).not.toBeNull()
   })
