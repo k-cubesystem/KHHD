@@ -1,4 +1,4 @@
-import { deityMood, deityMoodUrl, type DeityMood } from '../deity-mood'
+import { deityMood, deityMoodUrl, deityStandUrl, type DeityMood } from '../deity-mood'
 import { bondUnlocks } from '../deities'
 
 const full = (o: { prayedToday: boolean; devotionLevel: number }) => ({ ...o, allowedEmotions: 7 })
@@ -69,5 +69,35 @@ describe('좌정 신위 표정 — 그림 주소', () => {
   it('.webp 가 아닌 주소는 건드리지 않는다 (스프라이트 규약이 바뀌어도 안 깨진다)', () => {
     expect(deityMoodUrl('/img/sansin.png', 'bless')).toBe('/img/sansin.png')
     expect(deityMoodUrl('', 'bless')).toBe('')
+  })
+})
+
+/**
+ * 🔴 2026-08-25 「신위가 상반신만 나온다」 회귀 방지.
+ *
+ * 표정 그림 7종은 **흉상 프레이밍**이다(실측 종횡비 0.85~1.01 · 세로 420px). 방의 신위 스탠드는
+ * 발(감실 바닥)과 머리(감실 윗턱)로 높이가 고정된 상자라, 흉상을 넣으면 «머리~가슴»이 상자를
+ * 다 채워 크게 확대된 상반신이 된다. 전신(base·회전 4종)은 종횡비 0.456 · 세로 480px 이다.
+ */
+describe('deityStandUrl — 서 있는 신위는 언제나 전신', () => {
+  const base = '/shrine/deities/chilseong/base.webp'
+
+  it('표정과 무관하게 base 를 그대로 돌려준다', () => {
+    expect(deityStandUrl(base)).toBe(base)
+  })
+
+  it('어떤 표정 파일도 서 있는 자리에 오지 않는다', () => {
+    const moods: DeityMood[] = ['neutral', 'smile', 'stern', 'sad', 'surprised', 'bless', 'angry']
+    for (const mood of moods) {
+      expect(deityStandUrl(base)).not.toContain(`${mood}.webp`)
+    }
+  })
+
+  it('portrait(메달리온 흉상)도 아니다', () => {
+    expect(deityStandUrl(base)).not.toContain('portrait.webp')
+  })
+
+  it('🔴 표정 URL 산출 자체는 살아 있다 — 얼굴이 주인공인 자리(메달리온·채팅)의 몫이다', () => {
+    expect(deityMoodUrl(base, 'bless')).toBe(base.replace('base.webp', 'bless.webp'))
   })
 })

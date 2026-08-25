@@ -54,3 +54,21 @@ export function deityMoodUrl(baseUrl: string, mood: DeityMood): string {
   if (!/[^/]+\.webp$/.test(baseUrl)) return baseUrl
   return baseUrl.replace(/[^/]+\.webp$/, `${mood}.webp`)
 }
+
+/**
+ * 방에 **서 있는** 신위의 그림 주소 — 언제나 전신(base) 이다.
+ *
+ * 🔴 2026-08-25 「신위가 상반신만 나온다」 사고의 근인이 여기였다. 표정 그림 7종은 전부
+ *    **흉상 프레이밍**으로 구워져 있다(실측 종횡비: base·회전 4종 0.456 vs bless 0.848 ·
+ *    neutral 0.931 · sad 1.007 — 세로가 420px 로 잘린 가슴 위 그림이다). 그런데 방의 신위 스탠드는
+ *    **높이 고정 상자**(발=감실 바닥, 머리=감실 윗턱)라 그 흉상을 넣으면 «머리부터 가슴까지»가
+ *    상자 높이를 다 먹는다 — 크게 확대된 상반신이 된다. 탭해서 회전하면 회전 프레임(전신)으로
+ *    갈아타 갑자기 전신이 되던 것도 같은 이유다.
+ *
+ *    그래서 **서 있는 자리에서는 표정을 쓰지 않는다.** 표정 그림은 얼굴이 주인공인 자리
+ *    (메달리온·채팅 초상)의 것이고, 전신 표정 스프라이트가 생기기 전까지 이 규칙은 유지한다.
+ *    되돌리려면 표정 7종을 base 와 같은 전신 프레이밍(세로 480·비율 0.456)으로 다시 구워야 한다.
+ */
+export function deityStandUrl(baseUrl: string): string {
+  return baseUrl
+}

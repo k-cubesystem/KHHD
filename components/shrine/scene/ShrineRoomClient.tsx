@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import { Volume2, VolumeX, Wrench, Check, Settings, LayoutGrid, Lock, MessageCircle } from 'lucide-react'
 import type { Element, Layer, ThemePack } from '@/lib/domain/shrine/types'
 import { computeEnergy, ELEMENTS, EL_KO, EL_COLOR } from '@/lib/domain/shrine/energy'
-import { bondLevelForPoints, bondUnlocks, deityTurnFrames } from '@/lib/domain/shrine/deities'
+import { deityTurnFrames } from '@/lib/domain/shrine/deities'
 import { clampPct, initialSpot, KEEPER_POS, KEEPER_GIVE_RADIUS, ZONE_LABEL } from '@/lib/domain/shrine/zones'
 import {
   depthScale,
@@ -121,7 +121,7 @@ import { getRoomOracle, markOracleSeen } from '@/app/actions/shrine/oracle'
 import type { DevotionStatus } from '@/app/actions/shrine/devotion'
 import type { AekmakStatus, ChuljeonStatus, ObangkiStatus } from '@/app/actions/shrine/rituals'
 import { devotionLevelForTheme } from '@/lib/domain/shrine/devotion'
-import { deityMood, deityMoodUrl } from '@/lib/domain/shrine/deity-mood'
+import { deityStandUrl } from '@/lib/domain/shrine/deity-mood'
 import { isFamilySeat, isOnSurface, isSeatSurface } from '@/lib/domain/shrine/shelf'
 import { isGuardianType } from '@/lib/domain/shrine/guardians'
 import { motionVariance } from '@/lib/domain/shrine/motion-variance'
@@ -1617,24 +1617,11 @@ export function ShrineRoomClient({
     [spinAllowed, scene.mainDeity?.code]
   )
 
-  /**
-   * 좌정 신위의 표정 — 오늘 기도를 올렸으면 흡족하고, 시작해 놓고 안 왔으면 기다린다.
-   *
-   * ⚠️ 유대 점수를 모르는 자리(방문자 뷰는 RLS 로 null)에서는 **표정 둘로 접는다**. 남의 신당에서
-   *    그 집 주인의 기도 이력이 표정으로 읽히면 안 되고, 모를 때 넉넉히 주는 쪽이 해금의 뜻을 깬다.
+  /*
+   * (좌정 신위 «표정» 상태머신은 2026-08-25 여기서 물러났다 — 표정 그림 7종이 흉상이라
+   *  서 있는 신위에 걸면 상반신만 남는다. 규칙 자체는 lib/domain/shrine/deity-mood.ts 에
+   *  그대로 살아 있으니, 전신 표정 스프라이트가 생기면 deityStandUrl 만 바꿔 되살린다.)
    */
-  const deityFace = useMemo(
-    () =>
-      deityMood({
-        prayedToday: devotion?.prayedToday ?? false,
-        devotionLevel: devotion?.level ?? 0,
-        allowedEmotions:
-          scene.mainDeity?.bondPoints == null
-            ? 2
-            : bondUnlocks(bondLevelForPoints(scene.mainDeity.bondPoints)).emotions,
-      }),
-    [devotion?.prayedToday, devotion?.level, scene.mainDeity?.bondPoints]
-  )
 
   // ── 테마 전환 ──
   const applyTheme = useCallback(
@@ -1804,7 +1791,9 @@ export function ShrineRoomClient({
           세로 정합(발이 단상 상면에 닿음)은 DeityTurn 이 stage.deityStandBox 로 파생한다. */}
       {scene.mainDeity?.spriteUrl && (
         <DeityTurn
-          baseUrl={deityMoodUrl(scene.mainDeity.spriteUrl, deityFace)}
+          // 🔴 전신(base)만 건다 — 표정 7종은 흉상 프레이밍이라 높이 고정 상자에 넣으면
+          //    «확대된 상반신»이 된다(2026-08-25 사고). 근거는 deityStandUrl 주석.
+          baseUrl={deityStandUrl(scene.mainDeity.spriteUrl)}
           frames={deityFrames}
           name={scene.mainDeity.name}
           spinning={deitySpinning}
