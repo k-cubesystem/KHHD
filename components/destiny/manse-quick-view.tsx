@@ -9,7 +9,7 @@ import { IconGunghap } from '@/components/icons/traditional-icons'
 import { getManseSummary, type ManseSummary } from '@/app/actions/user/manse-summary'
 import { getSajuData, WU_XING_COLORS, type SajuData } from '@/lib/domain/saju/saju'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
-import { WUXING_KOREAN } from '@/lib/constants/saju-terms'
+import { DIZHI_INFO, TIANGAN_INFO, WUXING_KOREAN } from '@/lib/constants/saju-terms'
 import { logger } from '@/lib/utils/logger'
 
 /** 기둥 표시 순서 — 연·월·일·시(읽는 순서 그대로). */
@@ -196,22 +196,28 @@ function Pillars({ saju }: { saju: SajuData }) {
           return (
             <div key={key} className="rounded-lg border border-white/10 py-2 text-center">
               <p className="text-[9px] font-light text-ink-light/45">{label}</p>
-              <p
-                className="mt-0.5 font-serif text-[19px] font-bold leading-none"
-                style={{ color: WU_XING_COLORS[pillar.ganElement] ?? undefined }}
-              >
-                {pillar.gan}
-              </p>
-              <p
-                className="mt-1 font-serif text-[19px] font-bold leading-none"
-                style={{ color: WU_XING_COLORS[pillar.zhiElement] ?? undefined }}
-              >
-                {pillar.zhi}
-              </p>
+              <Glyph char={pillar.gan} korean={TIANGAN_INFO[pillar.gan]?.korean} element={pillar.ganElement} />
+              <Glyph char={pillar.zhi} korean={DIZHI_INFO[pillar.zhi]?.korean} element={pillar.zhiElement} />
             </div>
           )
         })}
       </div>
+    </div>
+  )
+}
+
+/**
+ * 여덟 글자 중 한 글자 — 한자 아래 한글 독음을 나란히 적는다(CEO 2026-08-25).
+ * 한자를 못 읽어도 「갑·자」로 읽히게 하는 것이 목적이라, 독음은 흐리게 두어 한자를 가리지 않는다.
+ * 독음 표는 만세력과 같은 출처(`saju-terms`)를 쓴다 — 두 벌이 되면 표기가 갈린다.
+ */
+function Glyph({ char, korean, element }: { char: string; korean?: string; element: string }) {
+  return (
+    <div className="mt-1 leading-none">
+      <span className="font-serif text-[19px] font-bold" style={{ color: WU_XING_COLORS[element] ?? undefined }}>
+        {char}
+      </span>
+      {korean ? <span className="ml-1 font-serif text-[11px] text-ink-light/55">{korean}</span> : null}
     </div>
   )
 }
@@ -247,14 +253,19 @@ function Elements({ saju }: { saju: SajuData }) {
 /** 간략 설명 — 일간이 무엇이고 어떤 기운인지 한 줄. 깊은 해석은 만세력이 진다. */
 function DayMasterNote({ saju }: { saju: SajuData }) {
   const elementKo = WUXING_KOREAN[saju.dayMasterElement] ?? saju.dayMasterElement
+  const dayMasterKo = TIANGAN_INFO[saju.dayMaster]?.korean ?? ''
   const missing = ELEMENT_ORDER.filter((el) => (saju.elementsDistribution[el] ?? 0) === 0)
   const missingKo = missing.map((el) => WUXING_KOREAN[el] ?? el).join('·')
 
   return (
     <div className="rounded-lg border border-gold-500/20 bg-gold-500/[0.05] px-3 py-2.5">
       <p className="text-[11.5px] font-light leading-relaxed text-ink-light/80" style={{ wordBreak: 'keep-all' }}>
-        나를 뜻하는 글자는 <span className="font-bold text-gold-500">{saju.dayMaster}</span>, 곧{' '}
-        <span className="font-bold text-gold-500">{elementKo}</span>의 기운입니다.
+        나를 뜻하는 글자는{' '}
+        <span className="font-bold text-gold-500">
+          {saju.dayMaster}
+          {dayMasterKo ? `(${dayMasterKo})` : ''}
+        </span>
+        , 곧 <span className="font-bold text-gold-500">{elementKo}</span>의 기운입니다.
         {missing.length > 0 ? (
           <>
             {' 여덟 글자에 '}
