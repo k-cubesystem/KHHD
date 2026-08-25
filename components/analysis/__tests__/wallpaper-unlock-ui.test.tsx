@@ -89,10 +89,15 @@ describe('닫기 X — 본문과 함께 스크롤돼 사라지지 않는다', ()
 
     expect(content.className).toContain('overflow-hidden')
     expect(content.className).not.toContain('overflow-y-auto')
-    // 스크롤을 지는 본문이 안에 정확히 하나 있고, grid 에서 줄어들 수 있어야 한다(min-h-0)
+    // 🔴 겉이 flex-col 이어야 본문이 줄어든다. DialogContent 기본은 `grid` 이고, grid 트랙은
+    //    자식의 min-h-0 만으로는 안 줄어들어 «스크롤 자체가 죽는다»(1차 수정의 실패 원인).
+    expect(content.className).toContain('flex')
+    expect(content.className).toContain('flex-col')
+    // 스크롤을 지는 본문 — flex-1 과 min-h-0 이 둘 다 있어야 실제로 줄어든다
     const scroller = content.querySelector('.overflow-y-auto')
     expect(scroller).not.toBeNull()
     expect(scroller?.className).toContain('min-h-0')
+    expect(scroller?.className).toContain('flex-1')
     // 닫기 X 는 스크롤 영역 «밖»에 있어야 제자리에 선다
     const close = baseElement.querySelector('[data-slot="dialog-close"]')
     expect(close).not.toBeNull()

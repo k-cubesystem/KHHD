@@ -83,16 +83,16 @@ export function ManseQuickView() {
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        {/* 🔴 스크롤은 본문이 진다 — 겉이 스크롤되면 닫기 X 가 함께 밀려 올라간다(배경화면 시트와
-            같은 함정, 2026-08-25). 안쪽 div 에만 overflow-y-auto + min-h-0. */}
-        <DialogContent className="max-h-[88vh] gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
-          <DialogHeader className="px-6 pt-6 pb-3">
+        {/* 🔴 머리글 고정 + 본문만 스크롤. DialogContent 는 grid 라 flex flex-col 로 바꿔야
+            본문이 줄어들며 스크롤이 생긴다(배경화면 시트와 같은 처방, 2026-08-25). */}
+        <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
+          <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
             <DialogTitle className="flex items-center gap-1.5 font-serif text-gold-500">
               <IconGunghap className="h-4 w-4 shrink-0" />내 명식 바로보기
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-col overflow-y-auto px-6 pb-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pb-6">
             {!loaded ? (
               <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-ink-light/60">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

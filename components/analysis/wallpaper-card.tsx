@@ -174,17 +174,20 @@ function WallpaperSheet({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 🔴 스크롤은 **본문**이 진다. 종전에는 DialogContent 자체가 스크롤돼서, 닫기 X(다이얼로그
-          기준 absolute)가 본문과 함께 밀려 올라갔다 — 아래로 내려가면 X 가 화면 밖이라 «맨 위까지
-          되올라와야 닫히는» 상태였다(CEO 제보 2026-08-25). 세트가 23장으로 길어지며 드러났다.
-          겉은 overflow-hidden 으로 두고 안쪽 div 에만 overflow-y-auto 를 주면 X 가 제자리에 선다.
-          🔴 grid 자식은 min-h-0 이 없으면 줄어들지 않아 스크롤이 생기지 않는다. */}
-      <DialogContent className="max-h-[88vh] gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
-        <DialogHeader className="px-6 pt-6 pb-3">
+      {/* 🔴 머리글은 고정, **본문만** 스크롤한다.
+          ① 종전에는 DialogContent 자체가 overflow-y-auto 였다 — 닫기 X 는 다이얼로그 기준
+             absolute 라 본문과 함께 밀려 올라갔고, 세트가 23장이 되자 «맨 위까지 되올라와야
+             닫히는» 상태가 됐다(CEO 제보 2026-08-25).
+          ② 1차 수정에서 겉을 overflow-hidden 으로만 바꿨더니 **스크롤 자체가 죽었다** —
+             DialogContent 는 `grid` 라 행이 내용 크기로 잡히고, 자식의 min-h-0 만으로는
+             트랙이 줄지 않는다. 그래서 여기서 `flex flex-col` 로 바꿔 잡는다.
+          🔴 본문에는 flex-1 + min-h-0 이 둘 다 있어야 한다(하나만으로는 안 줄어든다). */}
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
           <DialogTitle className="font-serif text-gold-500">{CARD_TITLE}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 pb-6">
           <p className="text-[12px] font-light text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
             마음에 드는 그림을 눌러 받아, 잠금화면으로 지정해 보세요.
           </p>

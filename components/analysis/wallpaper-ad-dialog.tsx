@@ -53,10 +53,10 @@ interface WallpaperAdDialogProps {
 export function WallpaperAdDialog({ open, onOpenChange, onReward, pending, targetTitle }: WallpaperAdDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 🔴 스크롤은 본문이 진다 — 겉이 스크롤되면 닫기 X 가 함께 밀려 올라간다(2026-08-25). */}
-      <DialogContent className="max-h-[92vh] gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
+      {/* 🔴 본문만 스크롤 — grid 를 flex flex-col 로 바꿔야 줄어든다(2026-08-25). */}
+      <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden border-gold-500/25 bg-surface p-0 sm:max-w-md">
         <DialogTitle className="sr-only">광고 보고 배경화면 열기</DialogTitle>
-        <div className="flex min-h-0 flex-col overflow-y-auto p-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
           {/* 열릴 때만 마운트한다 — 카운트다운을 «되돌리는» 코드를 없애려는 것이다.
               효과 안에서 상태를 되돌리면 연쇄 렌더가 되고, 닫았다 연 광고가 반쯤 지난 채로 설 여지도 남는다. */}
           {open && <AdBody onReward={onReward} pending={pending} targetTitle={targetTitle} />}
