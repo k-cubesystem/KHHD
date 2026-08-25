@@ -4,7 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { addBokPoints } from '@/lib/services/bok-grant'
 import { accrueDevotion } from '@/lib/services/devotion'
-import { latestPrayerPerTarget, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
+import { logger } from '@/lib/utils/logger'
+import { PRAYER_MAX_SAVED, PRAYER_PAGE_SIZE, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 export interface ShrineWish {
   id: string
@@ -89,6 +92,9 @@ export async function addWish(input: {
     devotionTotalDays = accrual.totalDays
   }
 
+  // 100편 상한 정리 — 소유자 기도에만(방문자 소원은 상한 대상이 아니다)
+  if (isOwner) await prunePrayers(supabase, input.shrineId)
+
   revalidatePath(`/shrine/${shrine.user_id}`)
   return { success: true, devotionGained, devotionTotalDays }
 }
@@ -133,47 +139,142 @@ export async function deleteWish(wishId: string): Promise<{ success: boolean; er
 }
 
 /**
- * 가족 기도 액자 데이터 — 이 신당의 **소유자 기도** 중 대상(본인·가족)별 최신 1건.
+ * 백일기도 데이터 — 이 신당의 **소유자 기도** 한 쪽(10편) + 액자에 걸린 편 + 총 편수.
  *
- * 백일기도 v2(기도 액자)의 유일한 읽기 경로다. 새 테이블이 아니라 shrine_wishes 의
- * is_owner_wish + family_member_id 를 그대로 읽는다 — 「기도 올리기」(addWish)가 쓴 것을
- * 여기서 돌려받는 왕복이라 스키마 추가가 0 이다.
+ * 새 테이블이 아니라 shrine_wishes 의 is_owner_wish + family_member_id 를 그대로 읽는다 —
+ * 「기도 올리기」(addWish)가 쓴 것을 여기서 돌려받는 왕복이라 스키마 추가가 0 이다.
  *
- * 이름 해석까지 서버가 끝낸다(본인=나, 가족=family_members.name). 가족이 삭제돼 이름이
- * 없는 기도는 **버린다** — 주인 없는 액자를 걸지 않는다(도메인 buildPrayerFrames 와 같은 규율).
+ * 이름 해석까지 서버가 끝낸다(본인=나, 가족=family_members.name). 가족이 삭제돼 이름이 없는
+ * 기도는 **버린다** — 주인 없는 액자를 걸지 않는다.
+ *
+ * ⚠️ 페이지 계산은 서버가 진다(count: 'exact'). 클라가 전체를 받아 자르면 100편을 매번 실어
+ *    나르게 된다 — 목록은 10편만 내려간다.
  */
-export async function getFamilyPrayers(shrineId: string): Promise<FamilyPrayer[]> {
+export interface PrayerPageData {
+  /** 요청한 쪽의 기도(최신순 10편) */
+  prayers: FamilyPrayer[]
+  /** 소유자 기도 총 편수 — 진행도(n/100)와 쪽수의 원천 */
+  total: number
+  /** 액자에 걸린 기도 id. null 이면 최신 기도가 걸린다 */
+  featuredId: string | null
+}
+
+const EMPTY_PAGE: PrayerPageData = { prayers: [], total: 0, featuredId: null }
+
+/** 행 → 기도. 이름을 못 찾으면(삭제된 가족) null 을 돌려 호출부가 버린다. */
+function toPrayer(row: Record<string, unknown>, nameOf: Map<string, string>): FamilyPrayer | null {
+  const memberId = (row.family_member_id as string | null) ?? null
+  const name = memberId === null ? '나' : nameOf.get(memberId)
+  if (!name) return null
+  return {
+    id: (row.id as string) ?? '',
+    memberId,
+    name,
+    text: (row.wish_text as string) ?? '',
+    createdAt: (row.created_at as string) ?? '',
+  }
+}
+
+export async function getPrayerPage(shrineId: string, page = 0): Promise<PrayerPageData> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return []
+  if (!user) return EMPTY_PAGE
 
-  // 최근 60건이면 대상 6명(선반 상한)의 최신을 넉넉히 덮는다 — 전체 스캔을 걸지 않는다.
-  const { data, error } = await supabase
-    .from('shrine_wishes')
-    .select('wish_text, family_member_id, created_at')
-    .eq('shrine_id', shrineId)
-    .eq('is_owner_wish', true)
-    .order('created_at', { ascending: false })
-    .limit(60)
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 0
+  const from = safePage * PRAYER_PAGE_SIZE
 
-  if (error || !data) return []
+  const [{ data, error, count }, { data: shrine }, { data: family }] = await Promise.all([
+    supabase
+      .from('shrine_wishes')
+      .select('id, wish_text, family_member_id, created_at', { count: 'exact' })
+      .eq('shrine_id', shrineId)
+      .eq('is_owner_wish', true)
+      .order('created_at', { ascending: false })
+      .range(from, from + PRAYER_PAGE_SIZE - 1),
+    supabase.from('shrines').select('featured_wish_id').eq('id', shrineId).maybeSingle(),
+    supabase.from('family_members').select('id, name').eq('user_id', user.id),
+  ])
 
-  const { data: family } = await supabase.from('family_members').select('id, name').eq('user_id', user.id)
+  if (error || !data) return EMPTY_PAGE
+
   const nameOf = new Map((family ?? []).map((f) => [f.id as string, f.name as string]))
+  const prayers = data.map((row) => toPrayer(row, nameOf)).filter((p): p is FamilyPrayer => p !== null)
 
-  const rows: FamilyPrayer[] = []
-  for (const w of data) {
-    const memberId = (w.family_member_id as string | null) ?? null
-    const name = memberId === null ? '나' : nameOf.get(memberId)
-    if (!name) continue
-    rows.push({
-      memberId,
-      name,
-      text: (w.wish_text as string) ?? '',
-      createdAt: (w.created_at as string) ?? '',
-    })
+  return {
+    prayers,
+    total: count ?? prayers.length,
+    featuredId: (shrine?.featured_wish_id as string | null) ?? null,
   }
-  return latestPrayerPerTarget(rows)
+}
+
+/**
+ * 액자에 걸 기도를 고른다. null 이면 «최신 기도» 기본값으로 되돌린다.
+ *
+ * 🔴 **소유 확인이 여기서 끝난다.** featured_wish_id 는 컬럼 그랜트로 열려 있고 FK 는 «존재하는
+ *    기도»만 보므로, 확인이 없으면 남의 기도 id 를 자기 액자에 걸 수 있다. 그 기도가 이 신당의
+ *    소유자 기도인지 먼저 묻고, 아니면 조용히 거절한다.
+ */
+export async function setFeaturedPrayer(
+  shrineId: string,
+  wishId: string | null
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const { data: shrine } = await supabase.from('shrines').select('user_id').eq('id', shrineId).maybeSingle()
+  if (!shrine || shrine.user_id !== user.id) return { success: false, error: 'FORBIDDEN' }
+
+  if (wishId) {
+    const { data: wish } = await supabase
+      .from('shrine_wishes')
+      .select('id')
+      .eq('id', wishId)
+      .eq('shrine_id', shrineId)
+      .eq('is_owner_wish', true)
+      .maybeSingle()
+    if (!wish) return { success: false, error: 'NOT_FOUND' }
+  }
+
+  const { error } = await supabase.from('shrines').update({ featured_wish_id: wishId }).eq('id', shrineId)
+  if (error) {
+    logger.error('[prayer] 액자 걸기 실패:', error)
+    return { success: false, error: 'SAVE_FAILED' }
+  }
+
+  revalidatePath('/protected/shrine')
+  return { success: true }
+}
+
+/**
+ * 100편 상한 — 넘치면 **가장 오래된 기도부터** 물러난다.
+ *
+ * 기록 보관 상한(storage_limit)과 같은 규약이다. 상한을 넘겨 «저장이 거절»되는 편보다
+ * 오래된 것이 조용히 물러나는 편이 백일기도의 서사(계속 올린다)에 맞는다.
+ * 실패해도 기도 저장 자체는 성공으로 둔다 — 정리는 다음 기회에 다시 시도된다.
+ */
+async function prunePrayers(supabase: SupabaseClient, shrineId: string): Promise<void> {
+  try {
+    const { data, error } = await supabase
+      .from('shrine_wishes')
+      .select('id')
+      .eq('shrine_id', shrineId)
+      .eq('is_owner_wish', true)
+      .order('created_at', { ascending: false })
+      .range(PRAYER_MAX_SAVED, PRAYER_MAX_SAVED + 49)
+    if (error || !data || data.length === 0) return
+    await supabase
+      .from('shrine_wishes')
+      .delete()
+      .in(
+        'id',
+        data.map((r) => r.id as string)
+      )
+  } catch (e) {
+    logger.warn('[prayer] 오래된 기도 정리 실패(비치명):', e)
+  }
 }

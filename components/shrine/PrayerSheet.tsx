@@ -8,15 +8,28 @@ import { Flame, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { TargetSelect, type TargetOption } from '@/components/destiny/target-select'
 import { addWish } from '@/app/actions/shrine/shrine-wishes'
-import { PRAYER_MAX_LEN, validatePrayerText } from '@/lib/domain/shrine/family-prayer'
+import {
+  PRAYER_DISCLAIMER,
+  PRAYER_INTRO_LINES,
+  PRAYER_MAX_LEN,
+  PRAYER_REASONS,
+  PRAYER_TITLE,
+  prayerProgress,
+  validatePrayerText,
+} from '@/lib/domain/shrine/family-prayer'
 import { devotionProgress } from '@/lib/domain/shrine/devotion'
 import { SHRINE_PRAYED_EVENT } from '@/lib/config/gamefeel'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * 기도 올리기 시트 — 백일기도 v2 (CEO 2026-08-25 «간단하게 가족 선택하고 기도 올리기»).
+ * 「100일기도 올리기」 시트 — 백일기도 v3 (CEO 2026-08-25).
  *
  * 하는 일이 전부다: 대상(나·가족)을 고르고 → 한 줄 기도를 적고 → 올린다.
+ * v3 에서 **백 일의 서사**가 붙었다 — 기도 한 편이 하루치이고 백 편이 백 일이다.
+ * 규칙(서약·연속·실패)이 아니라 **개수**로 세는 것이 v1 의 무거움을 되풀이하지 않는 길이다.
+ *
+ * 🔴 문안은 효험·치유·운수 상승을 **약속하지 않는다**(표시광고법 L-트랙). 문구 정본은 도메인
+ *    (PRAYER_INTRO_LINES·PRAYER_REASONS·PRAYER_DISCLAIMER)에 있고 여기서 새로 쓰지 않는다.
  * 저장은 기존 addWish(shrine_wishes) 그대로라 기원(devotion) 적립·복 포인트·기도 연출
  * (SHRINE_PRAYED_EVENT)이 종전 규칙 그대로 이어진다. 올린 기도는 새로고침 후 신당 벽 —
  * 가족 선반장 위 — 의 액자(PrayerBoard)에 걸린다.
@@ -40,13 +53,17 @@ interface PrayerSheetProps {
   onOpenChange: (open: boolean) => void
   shrineId: string
   family: readonly PrayerFamilyOption[]
+  /** 지금까지 올린 기도 편수 — 백 일의 진행도(n/100)를 시트 머리에 보인다. */
+  prayerCount?: number
 }
 
-export function PrayerSheet({ open, onOpenChange, shrineId, family }: PrayerSheetProps) {
+export function PrayerSheet({ open, onOpenChange, shrineId, family, prayerCount = 0 }: PrayerSheetProps) {
   const router = useRouter()
   const [targetId, setTargetId] = useState<string>(SELF_ID)
   const [text, setText] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const progress = prayerProgress(prayerCount)
 
   const options: TargetOption[] = useMemo(
     () => [
@@ -95,16 +112,55 @@ export function PrayerSheet({ open, onOpenChange, shrineId, family }: PrayerShee
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-serif text-base font-bold text-ink-light">
             <Flame className="h-4 w-4 text-gold-500" fill="#C9A84C" />
-            기도 올리기
+            {PRAYER_TITLE}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="font-sans text-[12px] font-light leading-relaxed text-ink-light/55">
-            누구를 위한 기도인지 고르고 한 줄을 적어 주세요.
-            <br />
-            올린 기도는 신당 벽의 <span className="text-gold-500/80">액자</span>에 걸립니다.
-          </p>
+          {/* 백 일의 진행 — 편수 하나가 곧 날수다 */}
+          <div className="rounded-xl border border-gold-500/20 bg-gold-500/[0.05] p-3">
+            <div className="flex items-baseline justify-between">
+              <span className="font-serif text-[11px] tracking-widest text-gold-500/75">백 일의 정성</span>
+              <span className="font-serif text-[12px] font-bold tabular-nums text-gold-300">
+                {progress.count} / {progress.target}편
+              </span>
+            </div>
+            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-gold-500" style={{ width: `${progress.percent}%` }} />
+            </div>
+            <p className="mt-2 font-sans text-[11px] font-light leading-relaxed text-ink-light/55">
+              {progress.complete
+                ? '백 편을 모두 채우셨습니다 — 백일기도를 마쳤습니다 🙏'
+                : `기도 한 편이 하루치입니다. 백 편까지 ${progress.remaining}편 남았습니다.`}
+            </p>
+          </div>
+
+          {/* 백일기도가 무엇이고 왜 하는가 — 문안 정본은 도메인에 있다 */}
+          <div className="space-y-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+            {PRAYER_INTRO_LINES.map((line) => (
+              <p key={line} className="font-sans text-[11.5px] font-light leading-relaxed text-ink-light/60">
+                {line.split('**').map((part, i) =>
+                  i % 2 === 1 ? (
+                    <span key={i} className="font-medium text-gold-500/85">
+                      {part}
+                    </span>
+                  ) : (
+                    part
+                  )
+                )}
+              </p>
+            ))}
+            <ul className="space-y-1.5 pt-1">
+              {PRAYER_REASONS.map(([head, body]) => (
+                <li key={head} className="flex gap-2">
+                  <span className="mt-[3px] h-1 w-1 shrink-0 rounded-full bg-gold-500/60" />
+                  <span className="font-sans text-[11px] font-light leading-relaxed text-ink-light/50">
+                    <span className="font-serif font-bold text-gold-500/80">{head}</span> — {body}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <TargetSelect
             label="누구를 위한 기도인가요"
@@ -152,8 +208,10 @@ export function PrayerSheet({ open, onOpenChange, shrineId, family }: PrayerShee
             </span>
           </button>
 
-          <p className="text-center font-sans text-[10px] font-light text-ink-light/30">
-            같은 대상에게 새 기도를 올리면 액자의 글이 바뀝니다
+          <p className="text-center font-sans text-[10px] font-light leading-relaxed text-ink-light/30">
+            올린 기도는 신당 벽 액자에 걸립니다 — 아래 목록에서 지난 기도로 바꿔 걸 수 있습니다.
+            <br />
+            {PRAYER_DISCLAIMER}
           </p>
         </div>
       </DialogContent>

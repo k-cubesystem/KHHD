@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { getSceneData } from '@/app/actions/shrine/scene'
 import { ShrineRoomClient } from '@/components/shrine/scene/ShrineRoomClient'
 import { ShrineSetupForm } from '@/components/shrine/ShrineSetupForm'
-import { getWishes, getFamilyPrayers } from '@/app/actions/shrine/shrine-wishes'
+import { getPrayerPage } from '@/app/actions/shrine/shrine-wishes'
+import { selectBoardPrayer } from '@/lib/domain/shrine/family-prayer'
 import { getDevotionStatus } from '@/app/actions/shrine/devotion'
 import { getAekmakStatus, getChuljeonStatus, getObangkiStatus } from '@/app/actions/shrine/rituals'
 import { getFamilyHallData, type FamilyHallData } from '@/app/actions/shrine/family-hall'
-import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
+import { PrayerList } from '@/components/shrine/PrayerList'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
@@ -81,23 +82,24 @@ export default async function ShrinePage() {
   // 오너도 자기 신당의 소원·방명록을 볼 수 있게(F-2). 기원 현황은 유저 단위 — 스트립·소원 폼 공용.
   // 액막이·오방기·척전 현황도 유저 단위 — 남은 횟수와 오늘치 시드를 독이 즉시 그린다.
   // 기도 액자(getFamilyPrayers)와 기도 대상 가족 목록도 여기서 같이 실어 보낸다(클라 fetch 워터폴 회피).
-  const [{ wishes }, devotion, familyHall, aekmak, obangki, chuljeon, prayers, { data: familyRows }] =
-    await Promise.all([
-      getWishes(scene.shrineId, 0, 10),
-      getDevotionStatus(),
-      loadFamilyHall(),
-      getAekmakStatus(),
-      getObangkiStatus(),
-      getChuljeonStatus(),
-      getFamilyPrayers(scene.shrineId),
-      // relationship='본인' 행은 기도 대상 「나」와 중복이라 제외(family-page-client.tsx:46 동일 패턴)
-      supabase
-        .from('family_members')
-        .select('id, name, relationship')
-        .eq('user_id', user.id)
-        .neq('relationship', '본인')
-        .order('created_at'),
-    ])
+  const [prayerPage, devotion, familyHall, aekmak, obangki, chuljeon, { data: familyRows }] = await Promise.all([
+    getPrayerPage(scene.shrineId, 0),
+    getDevotionStatus(),
+    loadFamilyHall(),
+    getAekmakStatus(),
+    getObangkiStatus(),
+    getChuljeonStatus(),
+    // relationship='본인' 행은 기도 대상 「나」와 중복이라 제외(family-page-client.tsx:46 동일 패턴)
+    supabase
+      .from('family_members')
+      .select('id, name, relationship')
+      .eq('user_id', user.id)
+      .neq('relationship', '본인')
+      .order('created_at'),
+  ])
+
+  // 액자에 걸릴 한 편 — 고른 것이 있으면 그것, 없으면 최신(도메인 판정). 방은 고르지 않는다.
+  const boardPrayer = selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId)
 
   return (
     <div className="min-h-screen px-1 py-4">
@@ -109,12 +111,20 @@ export default async function ShrinePage() {
         obangki={obangki}
         chuljeon={chuljeon}
         family={familyRows ?? []}
-        prayers={prayers}
+        boardPrayer={boardPrayer}
+        prayerCount={prayerPage.total}
       />
 
-      {/* 오너 소원 기원 + 방명록 열람 (F-2) — 기도 올리기는 방의 시트(PrayerSheet)가 든다 */}
+      {/* 올린 기도 목록 — 10편씩·쪽 번호(백일기도 v3). 여기서 지난 기도를 골라 액자에 건다.
+          구 방명록(ShrineWishLog)은 공개 신당 페이지(app/shrine/[userId])에 남아 있다 — 여기
+          소유자 화면의 하단은 «남이 남긴 소원»이 아니라 «내가 올린 백 편»의 자리다. */}
       <div className="w-full max-w-[430px] mx-auto mt-5 space-y-5">
-        <ShrineWishLog wishes={wishes} shrineId={scene.shrineId} targetName="나" />
+        <PrayerList
+          shrineId={scene.shrineId}
+          initialPrayers={prayerPage.prayers}
+          initialTotal={prayerPage.total}
+          initialFeaturedId={prayerPage.featuredId}
+        />
       </div>
     </div>
   )

@@ -1,27 +1,25 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { orderPrayersForBoard, prayerBoardBox, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
+import { prayerBoardBox, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
 
 /**
- * 기도 현판(祈禱 懸板) — 벽 상단, 금줄 위 빈 띠에 걸리는 **한 장의 긴 액자** (백일기도 v2 · 2차).
+ * 기도 액자(祈禱 額子) — 벽 상단, 금줄 위 빈 띠에 걸리는 **긴 액자 한 장** (백일기도 v3).
  *
- * 1차(선반별 소형 액자)는 CEO 실기기 검수에서 반려됐다 — «상단에, 끈 위쪽 빈 벽에, 길게.
- * 프레임은 더 고급스럽게». 그래서:
- *  · 자리는 도메인 상수(prayerBoardBox) 하나 — 유닛과 무관하다.
- *  · 여러 기도는 현판 한 장 안에서 **갈아든다**(7.5초 교차 페이드 · opacity 만 — 연출 규율).
- *    모션 최소화 설정이면 자동 전환을 끄고 탭으로만 넘긴다.
- *  · 격은 재료로 낸다: 자단(紫檀) 목틀 + **뇌문(雷紋) 금실 무늬 띠** + 이중 금선 + 한지 판면 +
- *    먹글씨 + 낙관(대상 이름 도장). 자산 0 — 전부 CSS 그라디언트다.
+ * 🔴 **한 편만 걸린다.** v2 의 «여러 편이 7.5초마다 번갈아 뜨는» 자동 순환은 CEO 3차 지시로
+ *    걷어 냈다(«랜덤으로 나오는 건 없애줘»). 되살리지 말 것 — 벽에 걸린 글이 저 혼자 바뀌면
+ *    «내가 건 글»이 아니게 된다. 어느 편을 거는지는 **사람이 목록에서 고른다**(PrayerList).
+ *    고르지 않았으면 최신 기도가 걸린다(도메인 selectBoardPrayer 판정 — 여기서 고르지 않는다).
  *
- * 🔴 네 귀 «ㄱ자 금쇠(장석)»는 CEO 2026-08-25 3차 지시로 걷어 냈다 — 되살리지 말 것.
- * 🔴 판면은 **한지색**이고 글씨는 **먹빛**이다(구 먹빛 판면 + 금글씨는 반려). 어두운 방에서
- *    벽에 걸린 한지가 스스로 밝은 것이 이 물건의 정체다.
+ * 🔴 판면은 **한지색**, 글씨는 **먹빛**이다(구 먹빛 판면 + 금글씨는 2차에서 반려).
+ *    어두운 방에서 벽에 걸린 한지가 스스로 밝은 것이 이 물건의 정체다.
+ * 🔴 네 귀 «ㄱ자 금쇠(장석)»는 3차 지시로 걷어 냈다 — 되살리지 말 것.
+ *
+ * 격은 재료로 낸다: 자단(紫檀) 목틀 + 뇌문(雷紋) 금실 무늬 띠 + 이중 금선 + 한지 판면 +
+ * 먹글씨 + 낙관(대상 이름 도장). 자산 0 — 전부 CSS 그라디언트다.
  *
  * 연출 규율: transform/opacity 만. 새 keyframes 금지(styled-jsx·CSS 게이트 전례).
+ * 표시 전용이라 **누를 수 없다**(div) — 아무 일도 안 하는 버튼을 벽에 걸지 않는다.
  */
-
-const CYCLE_MS = 7500
 
 /**
  * 뇌문(雷紋) 무늬 띠 — 목틀 안쪽을 두르는 금실 격자. 전통 단청·나전의 번개무늬 근사다.
@@ -31,38 +29,14 @@ const FRET_PATTERN =
   'repeating-linear-gradient(45deg, rgba(201,168,76,0.30) 0 1px, transparent 1px 6px),' +
   'repeating-linear-gradient(-45deg, rgba(201,168,76,0.22) 0 1px, transparent 1px 6px)'
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
-}
-
-export function PrayerBoard({ prayers, wide }: { prayers: readonly FamilyPrayer[]; wide: boolean }) {
-  const pages = useMemo(() => orderPrayersForBoard(prayers), [prayers])
-  const [idx, setIdx] = useState(0)
-
-  // 자동 전환 — 두 장 이상일 때만. 모션 최소화면 손으로만 넘긴다(깜빡이는 벽은 소음이다).
-  useEffect(() => {
-    if (pages.length < 2 || prefersReducedMotion()) return
-    const t = setInterval(() => setIdx((i) => (i + 1) % pages.length), CYCLE_MS)
-    return () => clearInterval(t)
-  }, [pages.length])
-
-  // 기도가 갈리면(새 기도 올림) 첫 장 — 방금 쓴 글이 바로 걸려야 인과가 보인다.
-  // effect 가 아니라 렌더 중 조정(React 공식 «props 변화에 state 맞추기» 패턴 — 연쇄 렌더 없음).
-  const [seenLen, setSeenLen] = useState(pages.length)
-  if (seenLen !== pages.length) {
-    setSeenLen(pages.length)
-    setIdx(0)
-  }
-
-  if (pages.length === 0) return null
+export function PrayerBoard({ prayer, wide }: { prayer: FamilyPrayer | null; wide: boolean }) {
+  if (!prayer) return null
   const box = prayerBoardBox(wide)
-  const current = pages[Math.min(idx, pages.length - 1)]
 
   return (
-    <button
-      type="button"
-      aria-label={`가족 기도 현판 — ${current.name}: ${current.text}`}
-      onClick={() => pages.length > 1 && setIdx((i) => (i + 1) % pages.length)}
+    <div
+      role="img"
+      aria-label={`신당 벽에 걸린 기도 — ${prayer.name}: ${prayer.text}`}
       className="absolute select-none"
       style={{
         left: `${box.x - box.w / 2}%`,
@@ -70,10 +44,9 @@ export function PrayerBoard({ prayers, wide }: { prayers: readonly FamilyPrayer[
         width: `${box.w}%`,
         height: `${box.h}%`,
         zIndex: 9,
-        cursor: pages.length > 1 ? 'pointer' : 'default',
       }}
     >
-      {/* 매듭끈 두 가닥 — 현판이 들보에 매여 있음을 말한다(위로 갈수록 사라진다) */}
+      {/* 매듭끈 두 가닥 — 액자가 들보에 매여 있음을 말한다(위로 갈수록 사라진다) */}
       {[18, 82].map((x) => (
         <span
           key={x}
@@ -138,30 +111,26 @@ export function PrayerBoard({ prayers, wide }: { prayers: readonly FamilyPrayer[
         }}
       />
 
-      {/* 기도문 — 갈아드는 장들(교차 페이드). 최대 40자라 말줄임 없이 다 걸린다. */}
+      {/* 기도문 — 한 편. 최대 40자라 말줄임 없이 전문이 걸린다 */}
       <span className="absolute grid place-items-center" style={{ inset: '14% 8.5%' }}>
-        {pages.map((p, i) => (
-          <span
-            key={`${p.memberId ?? 'self'}-${p.createdAt}`}
-            className="col-start-1 row-start-1 w-full text-center font-serif font-bold leading-[1.5] transition-opacity duration-700 ease-in-out"
-            style={{
-              opacity: i === idx ? 1 : 0,
-              // 먹빛 — 한지 위의 글씨는 붓으로 쓴 먹이다(금글씨는 3차 반려)
-              color: '#2E2114',
-              fontSize: 'clamp(11px, 3.4vw, 15px)',
-              letterSpacing: '0.04em',
-              wordBreak: 'keep-all',
-              textShadow: '0 1px 0 rgba(255,250,235,0.55)',
-            }}
-          >
-            {p.text}
-          </span>
-        ))}
+        <span
+          className="w-full text-center font-serif font-bold leading-[1.5]"
+          style={{
+            // 먹빛 — 한지 위의 글씨는 붓으로 쓴 먹이다(금글씨는 3차 반려)
+            color: '#2E2114',
+            fontSize: 'clamp(11px, 3.4vw, 15px)',
+            letterSpacing: '0.04em',
+            wordBreak: 'keep-all',
+            textShadow: '0 1px 0 rgba(255,250,235,0.55)',
+          }}
+        >
+          {prayer.text}
+        </span>
       </span>
 
       {/* 낙관(落款) — 기도 대상의 이름 도장. 장이 갈리면 도장도 함께 갈린다 */}
       <span
-        className="absolute grid place-items-center rounded-[2px] font-serif font-bold transition-opacity duration-700"
+        className="absolute grid place-items-center rounded-[2px] font-serif font-bold"
         style={{
           right: '6.5%',
           bottom: '18%',
@@ -173,27 +142,8 @@ export function PrayerBoard({ prayers, wide }: { prayers: readonly FamilyPrayer[
           boxShadow: '0 1px 3px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(244,228,186,0.35)',
         }}
       >
-        {current.name}
+        {prayer.name}
       </span>
-
-      {/* 장 표시점 — 두 장 이상일 때만, 아주 작게 */}
-      {pages.length > 1 && (
-        <span aria-hidden className="absolute inset-x-0 flex justify-center gap-[5px]" style={{ bottom: '5.5%' }}>
-          {pages.map((_, i) => (
-            <span
-              key={i}
-              className="rounded-full transition-opacity duration-500"
-              style={{
-                width: '3px',
-                height: '3px',
-                // 한지 위가 아니라 목틀 위에 앉는 점이라 금색 그대로가 맞다
-                background: '#E8D5A0',
-                opacity: i === idx ? 0.95 : 0.3,
-              }}
-            />
-          ))}
-        </span>
-      )}
-    </button>
+    </div>
   )
 }

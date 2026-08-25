@@ -333,8 +333,13 @@ interface Props {
    * 사랑방(familyHall)과 별개다 — 저쪽은 FAMILY 등급 게이트를 타지만 기도 대상은 전 등급이다.
    */
   family?: readonly PrayerFamilyOption[]
-  /** 기도 액자 — 대상별 최신 기도(서버 getFamilyPrayers). 소유자·방문자 모두 벽에 걸려 보인다. */
-  prayers?: readonly FamilyPrayer[]
+  /**
+   * 기도 액자에 걸린 **한 편**. 어느 편을 걸지는 서버(도메인 selectBoardPrayer)가 이미 정해
+   * 내려보낸다 — 방은 고르지 않고 걸기만 한다(v3: 자동 순환 폐지).
+   */
+  boardPrayer?: FamilyPrayer | null
+  /** 지금까지 올린 기도 편수 — 「100일기도 올리기」 시트의 진행도(n/100). */
+  prayerCount?: number
 }
 
 interface Ring {
@@ -367,7 +372,8 @@ export function ShrineRoomClient({
   obangki = null,
   chuljeon = null,
   family = [],
-  prayers = [],
+  boardPrayer = null,
+  prayerCount = 0,
 }: Props) {
   // v2 무대 필드(kind·assetUrl)를 살려 색인한다 — indexCatalog 는 CatalogItem 으로 좁혀 반환하므로 직접 구성
   const catalogById = useMemo(
@@ -1824,9 +1830,10 @@ export function ShrineRoomClient({
         idle={GAMEFEEL_V1 && !editing}
       />
 
-      {/* 기도 현판 — 벽 상단, 금줄 위 빈 띠의 긴 액자 한 장(백일기도 v2 · CEO 2차 «상단에 길게»).
-          자리는 도메인 상수(prayerBoardBox)가 정하고 여러 기도는 그 안에서 갈아든다. */}
-      {!editing && <PrayerBoard prayers={prayers} wide={worldActive} />}
+      {/* 기도 액자 — 벽 상단, 금줄 위 빈 띠의 긴 액자 한 장(백일기도 v3).
+          자리는 도메인 상수(prayerBoardBox), 걸릴 한 편은 서버가 정한다(selectBoardPrayer).
+          🔴 v2 의 자동 순환은 폐지됐다 — 여러 편을 여기서 돌리지 말 것(CEO 3차). */}
+      {!editing && <PrayerBoard prayer={boardPrayer} wide={worldActive} />}
 
       {/* (존 가이드 — 2026-08-07 자유 배치와 함께 물러남. 존이 배치를 가두지 않으니
           "여기까지"를 그리는 띠 자체가 거짓말이 된다) */}
@@ -2369,7 +2376,13 @@ export function ShrineRoomClient({
 
       {/* 기도 올리기 시트(백일기도 v2) — 팻말·의식 독 두 문이 이 하나를 연다 */}
       {isOwner && (
-        <PrayerSheet open={prayerOpen} onOpenChange={setPrayerOpen} shrineId={scene.shrineId} family={family} />
+        <PrayerSheet
+          open={prayerOpen}
+          onOpenChange={setPrayerOpen}
+          shrineId={scene.shrineId}
+          family={family}
+          prayerCount={prayerCount}
+        />
       )}
 
       {/* 🔴 신당 하단 「오늘 할 것」 바는 내려갔다(CEO 지시 2026-08-25). 하단에 상시 떠 있는
