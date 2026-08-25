@@ -422,6 +422,25 @@ export function deityStandBox(podiumTopY: number = PODIUM_TOP_Y, headRoomY: numb
 }
 
 /**
+ * 신위 **기본 위계 배율** — 틀(닫집)을 든 테마에서 정본 키에 곱한다.
+ *
+ * 🔴 2026-08-25 CEO: 「기본 사이즈를 지금보다 더 크게. +140% 에 했더니 이게 기본이 좋은 것 같아.」
+ *    실기기에서 직접 맞춰 본 값이라 그대로 기본값으로 승격한다. 감실 «윗턱»에 머리를 맞추면
+ *    (deityHeadRoomY) 신위가 액자 속 인물처럼 작아지는데, 닫집 안쪽은 그 위로도 어두운 여백이라
+ *    조금 넘겨 서는 편이 «모신 신»의 위계에 맞는다.
+ *
+ * 🔴 틀이 없는 테마에는 곱하지 않는다. 그쪽은 정본 키가 이미 33.3%p(45.3−12)라 1.4 배를 곱하면
+ *    머리가 방 천장을 뚫는다(clamp 에 걸려 벽 전체를 덮는 그림이 된다).
+ *    사용자 조절(−/＋)은 이 값 **위에** 곱해진다 — 화면의 100% 가 곧 이 기본이다.
+ */
+export const DEITY_STAND_GRANDEUR = 1.4
+
+/** 이 테마의 신위 기본 배율. 틀이 있으면 위계 배율, 없으면 1(정본 그대로). */
+export function deityStandGrandeur(themeCode: string): number {
+  return hasGrandAltar(themeCode) ? DEITY_STAND_GRANDEUR : 1
+}
+
+/**
  * 「고정 살림 조절」의 **이동(dy)과 크기(scale)** 를 신위 스탠드에 얹는다.
  *
  * 🔴 2026-08-25 CEO 「신이 왜 상반신만 나오면서 크기가 커졌지?」의 근인이 여기 있었다.

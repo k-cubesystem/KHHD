@@ -25,6 +25,7 @@ import {
   lightingOverlayStyle,
   deityPodiumTopY,
   deityHeadRoomY,
+  deityStandGrandeur,
   deityStandShift,
   type StageCatalogItem,
   type StageLight,

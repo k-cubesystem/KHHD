@@ -14,7 +14,7 @@
 
 // 런타임 의존은 기하 JSON 한 장뿐이다(theme-stage → energy/types 는 순수 상수) — 순환 없음:
 // stage.ts 가 zones 를 부르고 theme-stage 는 stage 를 **타입으로만** 참조한다.
-import { STAGE_FLOOR_LINE_Y } from './theme-stage'
+import { STAGE_GROUND_LINE_Y } from './theme-stage'
 import type { Layer } from './types'
 
 export interface ZoneRange {
@@ -113,5 +113,16 @@ export function initialSpot(layer: Layer, jitter: number): { x: number; y: numbe
  *    신수는 마루를 밟는 존재라 마루가 시작되는 줄에 선다 — 둘을 같은 상수로 묶으면 신수가
  *    가구 발치까지 끌려 내려가 카메라 팬에서 마루 위쪽이 비어 보인다.
  */
-export const KEEPER_POS = { x: 12, y: STAGE_FLOOR_LINE_Y - 1 }
+/**
+ * 신수(神獸)가 발을 딛는 줄 — **제단 접지선**(STAGE_GROUND_LINE_Y).
+ *
+ * 🔴 2026-08-25 CEO 「신수들 뛰어다니는 자리가 애매해. 더 하단으로 내려서 제단 안에서
+ *    뛰어다니게 해줘.」 종전은 **마루선 − 1**(y74)이었다 — 마루선은 벽과 바닥이 만나는 줄이라
+ *    신수가 «방 안»이 아니라 **벽 밑동**에서 걷고 있었다. 제단 틀은 그보다 9%p 앞(접지선 y84)에
+ *    나와 서 있으니, 신수만 뒤에 남아 제단과 다른 바닥을 밟는 그림이 됐다.
+ *    이제 **제단과 같은 줄**을 밟는다 — 제단 앞마당에서 뛰노는 그림이 된다.
+ *
+ * 파생인 이유: 마루선·바닥밴드가 다시 움직여도 신수가 공짜로 따라온다(사방탁자와 같은 규약).
+ */
+export const KEEPER_POS = { x: 12, y: STAGE_GROUND_LINE_Y }
 export const KEEPER_GIVE_RADIUS = 15

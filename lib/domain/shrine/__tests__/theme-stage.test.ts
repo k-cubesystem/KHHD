@@ -331,11 +331,14 @@ describe('밴드 — 마루선은 JSON 한 곳에서만 정해진다', () => {
     for (const dead of ['h-[62%]', 'h-[40%]', 'bottom-[40%]', 'top-[60%]']) expect(code).not.toContain(dead)
   })
 
-  it('★ 거니는 신수 y 가 마루선 파생이다 — 마루가 내려가면 신수도 따라 내려간다', () => {
-    // 하드코딩(61)이던 시절에는 마루선을 옮길 때마다 신수만 허공에 남았다.
-    expect(KEEPER_POS.y).toBe(STAGE_FLOOR_LINE_Y - 1)
-    expect(KEEPER_POS.y).toBe(72)
-    expect(KEEPER_POS.x).toBe(12) // x 는 마루선과 무관 — 같이 옮기지 않는다
+  it('★ 거니는 신수 y 가 접지선 파생이다 — 제단과 같은 줄을 밟는다 (CEO 2026-08-25)', () => {
+    // 하드코딩(61)이던 시절에는 마루선을 옮길 때마다 신수만 허공에 남았다 — 그래서 파생이다.
+    // 🔴 기준이 마루선 → **접지선**으로 바뀌었다. 마루선은 벽과 바닥이 만나는 줄이라 신수가
+    //    «방 안»이 아니라 벽 밑동에서 걸었고, 제단 틀은 그보다 9%p 앞에 나와 서 있어 둘이
+    //    다른 바닥을 밟는 그림이 됐다(CEO 「자리가 애매해 · 제단 안에서 뛰게 해줘」).
+    expect(KEEPER_POS.y).toBe(STAGE_GROUND_LINE_Y)
+    expect(KEEPER_POS.y).toBe(82)
+    expect(KEEPER_POS.x).toBe(12) // x 는 세로 줄과 무관 — 같이 옮기지 않는다
   })
 
   it('마루선이 바닥 존 안이다 — 신수가 밟을 마루가 실제로 있다', () => {
@@ -420,13 +423,15 @@ describe('접지선 — 살림은 마루 1/3 지점에 선다', () => {
     expect(STAGE_GROUND_LINE_Y).toBeLessThanOrEqual(ZONES.floor.y[1])
   })
 
-  it('★ 마루선·밴드·신수는 v5 에서 안 움직인다 — 내려간 것은 「가구의 발」뿐이다', () => {
+  it('★ 마루선·밴드는 그대로 — 움직인 것은 「가구의 발」과, 그 뒤 신수다', () => {
     expect(STAGE_BANDS).toEqual({ wall: 75, floor: 27 })
     expect(STAGE_FLOOR_LINE_Y).toBe(73)
-    // 신수는 마루를 밟는 존재라 «마루가 시작되는 줄»에 선다 — 가구 발치까지 끌려 내려가지 않는다
-    expect(KEEPER_POS.y).toBe(STAGE_FLOOR_LINE_Y - 1)
-    expect(KEEPER_POS.y).toBe(72)
-    expect(KEEPER_POS.y).toBeLessThan(STAGE_GROUND_LINE_Y)
+    // 🔴 v5 에서는 신수가 마루선에 남았지만(가구만 내려감), 2026-08-25 CEO 지시로 신수도
+    //    가구와 **같은 줄**로 내려왔다 — 제단 앞마당에서 뛰노는 그림을 위해서다.
+    expect(KEEPER_POS.y).toBe(STAGE_GROUND_LINE_Y)
+    expect(KEEPER_POS.y).toBeGreaterThan(STAGE_FLOOR_LINE_Y)
+    // 그래도 마루 안이다 — 바닥 존을 벗어나면 밟을 마루가 없다
+    expect(KEEPER_POS.y).toBeLessThanOrEqual(ZONES.floor.y[1])
   })
 
   /**

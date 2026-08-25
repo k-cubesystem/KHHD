@@ -7,7 +7,9 @@ import {
   deityHeadRoomY,
   deityPodiumTopY,
   deityStandBox,
+  deityStandGrandeur,
   deityStandShift,
+  DEITY_STAND_GRANDEUR,
   depthScale,
   depthZ,
   groundShadow,
@@ -20,6 +22,7 @@ import {
   type StageAnchor,
   type StageLight,
 } from '../stage'
+import { THEME_CODES } from '../theme-stage'
 import { ZONES } from '../zones'
 
 // 배치 자유도 v2(부록 P): floor 존은 [44,96]으로 넓어졌지만 원근 램프의 기준 밴드는
@@ -751,5 +754,43 @@ describe('deityStandShift — 이동은 이동이어야 한다', () => {
     const plain = deityStandShift(FOOT, HEAD, 0)
     expect(deityStandShift(FOOT, HEAD, 0, Number.NaN)).toEqual(plain)
     expect(deityStandShift(FOOT, HEAD, 0, 0)).toEqual(plain)
+  })
+})
+
+/**
+ * 신위 기본 위계 배율 — CEO 실기기 확정(2026-08-25, 「+140% 가 기본이 좋다」).
+ *
+ * 🔴 틀(닫집)을 든 테마에만 곱한다. 틀이 없는 테마는 정본 키가 이미 33.3%p(45.3−12)라
+ *    1.4 배면 머리가 방 위로 뚫고 나가 clamp 에 걸려 벽 전체를 덮는다.
+ */
+describe('deityStandGrandeur — 기본 위계 배율', () => {
+  it('틀을 든 테마는 1.4배', () => {
+    expect(DEITY_STAND_GRANDEUR).toBe(1.4)
+    expect(deityStandGrandeur('banga')).toBe(DEITY_STAND_GRANDEUR)
+    expect(deityStandGrandeur('dangsan')).toBe(DEITY_STAND_GRANDEUR)
+  })
+
+  it('틀이 없는 테마·미지의 코드는 정본 그대로(1배)', () => {
+    expect(deityStandGrandeur('없는테마')).toBe(1)
+  })
+
+  it('틀 테마에서 머리가 방을 뚫지 않는다 — 16테마 전부 확인', () => {
+    for (const code of THEME_CODES) {
+      if (deityStandGrandeur(code) === 1) continue
+      const foot = deityPodiumTopY(code)
+      const head = deityHeadRoomY(code)
+      const stand = deityStandShift(foot, head, 0, deityStandGrandeur(code))
+      expect(stand.headRoomY).toBeGreaterThan(0)
+      expect(stand.podiumTopY - stand.headRoomY).toBeCloseTo((foot - head) * 1.4, 4)
+    }
+  })
+
+  it('사용자 조절은 기본 배율 «위에» 곱해진다 — 화면의 100% 가 곧 기본이다', () => {
+    const foot = deityPodiumTopY('dangsan')
+    const head = deityHeadRoomY('dangsan')
+    const base = deityStandShift(foot, head, 0, deityStandGrandeur('dangsan') * 1)
+    const bigger = deityStandShift(foot, head, 0, deityStandGrandeur('dangsan') * 1.1)
+    const baseH = base.podiumTopY - base.headRoomY
+    expect(bigger.podiumTopY - bigger.headRoomY).toBeCloseTo(baseH * 1.1, 4)
   })
 })
