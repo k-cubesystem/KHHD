@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getShrineByUserId } from '@/app/actions/shrine/shrine'
 import { getPublicSceneData } from '@/app/actions/shrine/scene'
-import { getWishes } from '@/app/actions/shrine/shrine-wishes'
+import { getPrayerPage, getWishes } from '@/app/actions/shrine/shrine-wishes'
+import { selectBoardPrayer } from '@/lib/domain/shrine/family-prayer'
 import { ShrineRoomClient } from '@/components/shrine/scene/ShrineRoomClient'
 import { ShrineWishForm } from '@/components/shrine/ShrineWishForm'
 import { ShrineWishLog } from '@/components/shrine/ShrineWishLog'
@@ -44,6 +45,12 @@ export default async function PublicShrinePage({ params }: PageProps) {
   // 방문 카운트는 소원 기원 시(addWish)에만 증가 — 새로고침 인플레이션 방지
   const { wishes } = await getWishes(scene.shrineId, 0, 10)
 
+  // 기도 액자 — 방문자에게도 걸려 보인다(주인이 골라 둔 한 편·없으면 최신). v3 배선 때 이
+  // 페이지만 빠져 방문자 벽이 비어 있었다(2026-08-25 발견). 공개 신당은 visibility 게이트를
+  // 이미 지났으므로 소유자 기도문 노출은 주인의 공개 결정 범위 안이다.
+  const prayerPage = await getPrayerPage(scene.shrineId, 0)
+  const boardPrayer = selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId)
+
   return (
     <div className="min-h-screen px-4 py-5 space-y-5">
       {/* 방문자 배너 */}
@@ -58,7 +65,7 @@ export default async function PublicShrinePage({ params }: PageProps) {
       )}
 
       {/* 신당 미니룸 (읽기 전용) */}
-      <ShrineRoomClient scene={scene} />
+      <ShrineRoomClient scene={scene} boardPrayer={boardPrayer} />
 
       {/* 소원 기원 폼 + 로그 */}
       <div className="max-w-[430px] mx-auto space-y-5">

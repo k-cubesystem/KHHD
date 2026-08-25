@@ -161,11 +161,16 @@ export interface PrayerPageData {
 
 const EMPTY_PAGE: PrayerPageData = { prayers: [], total: 0, featuredId: null }
 
-/** 행 → 기도. 이름을 못 찾으면(삭제된 가족) null 을 돌려 호출부가 버린다. */
-function toPrayer(row: Record<string, unknown>, nameOf: Map<string, string>): FamilyPrayer | null {
+/**
+ * 행 → 기도. 이름을 못 찾으면 '가족' 으로 뭉갠다 — 두 경우가 여기로 온다:
+ *  · 삭제된 가족의 기도(주인 뷰) — 기록은 남기되 이름만 잃는다.
+ *  · 방문자 뷰 — family_members 는 RLS(소유자 전용)라 이름 조회가 통째로 빈다.
+ *    공개 신당이라도 **가족 실명은 방문자에게 내리지 않는 것**이 맞다(가족 신당 공개 확인창의
+ *    「이름이 보일 수 있습니다」 경고와 같은 축 — 액자는 그 경고 없이 걸리므로 익명이 기본).
+ */
+function toPrayer(row: Record<string, unknown>, nameOf: Map<string, string>): FamilyPrayer {
   const memberId = (row.family_member_id as string | null) ?? null
-  const name = memberId === null ? '나' : nameOf.get(memberId)
-  if (!name) return null
+  const name = memberId === null ? '나' : (nameOf.get(memberId) ?? '가족')
   return {
     id: (row.id as string) ?? '',
     memberId,
@@ -175,12 +180,16 @@ function toPrayer(row: Record<string, unknown>, nameOf: Map<string, string>): Fa
   }
 }
 
+/**
+ * 🔴 비로그인(방문자)도 부른다 — 공개 신당의 액자가 이 데이터로 걸린다. 행 접근 제어는 전부
+ *    RLS 몫이다(비공개 신당이면 shrine_wishes·shrines 조회가 빈다 → EMPTY). 가족 이름은
+ *    family_members RLS(소유자 전용)가 방문자에게 자연히 감춘다(toPrayer 의 '가족' 폴백).
+ */
 export async function getPrayerPage(shrineId: string, page = 0): Promise<PrayerPageData> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return EMPTY_PAGE
 
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 0
   const from = safePage * PRAYER_PAGE_SIZE
@@ -194,13 +203,15 @@ export async function getPrayerPage(shrineId: string, page = 0): Promise<PrayerP
       .order('created_at', { ascending: false })
       .range(from, from + PRAYER_PAGE_SIZE - 1),
     supabase.from('shrines').select('featured_wish_id').eq('id', shrineId).maybeSingle(),
-    supabase.from('family_members').select('id, name').eq('user_id', user.id),
+    user
+      ? supabase.from('family_members').select('id, name').eq('user_id', user.id)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
   ])
 
   if (error || !data) return EMPTY_PAGE
 
   const nameOf = new Map((family ?? []).map((f) => [f.id as string, f.name as string]))
-  const prayers = data.map((row) => toPrayer(row, nameOf)).filter((p): p is FamilyPrayer => p !== null)
+  const prayers = data.map((row) => toPrayer(row, nameOf))
 
   return {
     prayers,

@@ -1,5 +1,11 @@
 // 해화당 Service Worker — basic offline support
-const CACHE_VERSION = 'v1'
+//
+// 🔴 CACHE_VERSION 은 **원격 강제 새로고침 레버**이기도 하다(2026-08-25 실전 투입).
+//    sw.js 바이트가 바뀌면 sw-register 의 updatefound → statechange(installed) 훅이
+//    window.location.reload() 를 부른다 — 하루 종일 안 닫힌 탭·PWA 가 옛 번들·옛 RSC 데이터로
+//    도는 사고(신위 상반신 사고의 전파 경로)를 배포만으로 끊을 수 있는 유일한 길이다.
+//    큰 화면 수정을 배포했는데 «그대로예요»가 돌아오면 이 버전을 올려라.
+const CACHE_VERSION = 'v2'
 const STATIC_CACHE = `haehwadang-static-${CACHE_VERSION}`
 const DYNAMIC_CACHE = `haehwadang-dynamic-${CACHE_VERSION}`
 

@@ -1842,11 +1842,6 @@ export function ShrineRoomClient({
         idle={GAMEFEEL_V1 && !editing}
       />
 
-      {/* 기도 액자 — 벽 상단, 금줄 위 빈 띠의 긴 액자 한 장(백일기도 v3).
-          자리는 도메인 상수(prayerBoardBox), 걸릴 한 편은 서버가 정한다(selectBoardPrayer).
-          🔴 v2 의 자동 순환은 폐지됐다 — 여러 편을 여기서 돌리지 말 것(CEO 3차). */}
-      {!editing && <PrayerBoard prayer={boardPrayer} wide={worldActive} />}
-
       {/* (존 가이드 — 2026-08-07 자유 배치와 함께 물러남. 존이 배치를 가두지 않으니
           "여기까지"를 그리는 띠 자체가 거짓말이 된다) */}
 
@@ -2068,6 +2063,11 @@ export function ShrineRoomClient({
         ) : (
           stageContent
         )}
+
+        {/* 기도 액자 — **방 상단 중앙 고정**(백일기도 v3.1). 카메라 컨테이너 밖이라 두루마리를
+            어디로 팬해도 화면 그 자리에 걸려 있다(세계 좌표 시절 «왼쪽으로 밀렸어» 반려의 처방).
+            걸릴 한 편은 서버가 정한다(selectBoardPrayer). 자동 순환 없음(v3 계약 그대로). */}
+        {!editing && <PrayerBoard prayer={boardPrayer} />}
 
         {/* 구역 미니맵 — 상단 배지 아래 가운데. 두루마리일 때만 (구역 1개면 스스로 그리지 않는다) */}
         {worldActive && (

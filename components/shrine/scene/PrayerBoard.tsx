@@ -3,7 +3,10 @@
 import { prayerBoardBox, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
 
 /**
- * 기도 액자(祈禱 額子) — 벽 상단, 금줄 위 빈 띠에 걸리는 **긴 액자 한 장** (백일기도 v3).
+ * 기도 액자(祈禱 額子) — **방 상단 중앙에 고정**된 긴 액자 한 장 (백일기도 v3.1).
+ *
+ * 🔴 카메라(두루마리 팬) **밖**에 산다 — 마운트는 stageContent 가 아니라 방 직속이다.
+ *    세계 좌표에 걸면 카메라 위치에 따라 화면에서 좌우로 밀린다(CEO 「왼쪽으로 밀렸어」 반려).
  *
  * 🔴 **한 편만 걸린다.** v2 의 «여러 편이 7.5초마다 번갈아 뜨는» 자동 순환은 CEO 3차 지시로
  *    걷어 냈다(«랜덤으로 나오는 건 없애줘»). 되살리지 말 것 — 벽에 걸린 글이 저 혼자 바뀌면
@@ -29,9 +32,9 @@ const FRET_PATTERN =
   'repeating-linear-gradient(45deg, rgba(201,168,76,0.30) 0 1px, transparent 1px 6px),' +
   'repeating-linear-gradient(-45deg, rgba(201,168,76,0.22) 0 1px, transparent 1px 6px)'
 
-export function PrayerBoard({ prayer, wide }: { prayer: FamilyPrayer | null; wide: boolean }) {
+export function PrayerBoard({ prayer }: { prayer: FamilyPrayer | null }) {
   if (!prayer) return null
-  const box = prayerBoardBox(wide)
+  const box = prayerBoardBox()
 
   return (
     <div
