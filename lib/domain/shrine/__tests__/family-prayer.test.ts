@@ -15,7 +15,8 @@ import {
   PRAYER_PAGE_SIZE,
   PRAYER_REASONS,
   PRAYER_TARGET_COUNT,
-  PRAYER_BOARD_VIEW,
+  PRAYER_BOARD_NARROW,
+  PRAYER_BOARD_WIDE,
   prayerBoardBox,
   prayerPageCount,
   prayerProgress,
@@ -105,14 +106,21 @@ describe('prayerPageCount — 10편씩 · 최대 10쪽', () => {
   })
 })
 
-describe('prayerBoardBox — 액자의 자리 (방 뷰포트 고정 · v3.1)', () => {
-  it('상단 중앙 — 제단 틀 지붕 꼭대기(y≈10.4)를 덮지 않고, 좌우 20%는 칩·배지 자리로 남긴다', () => {
-    const b = prayerBoardBox()
-    expect(b).toBe(PRAYER_BOARD_VIEW)
+describe('prayerBoardBox — 액자의 자리 (왼쪽 상단 문틀 · CEO 확정 v3.2)', () => {
+  it('와이드: 왼벽 위를 길게 덮고 — 금줄(y≈20)·제단 틀 폰 좌단(37.5)을 침범하지 않는다', () => {
+    const b = prayerBoardBox(true)
+    expect(b).toBe(PRAYER_BOARD_WIDE)
+    expect(b.x).toBe(18.2)
+    expect(b.top + b.h).toBeLessThanOrEqual(20)
+    expect(b.x + b.w / 2).toBeLessThan(37.5)
+    expect(b.w).toBeLessThanOrEqual(31.25) // 한 화면에 통째로 든다
+  })
+
+  it('단일 무대 폴백은 중앙 상단', () => {
+    const b = prayerBoardBox(false)
+    expect(b).toBe(PRAYER_BOARD_NARROW)
     expect(b.x).toBe(50)
-    expect(b.top + b.h).toBeLessThanOrEqual(11)
-    expect(b.x - b.w / 2).toBeGreaterThanOrEqual(20)
-    expect(b.x + b.w / 2).toBeLessThanOrEqual(80)
+    expect(b.top + b.h).toBeLessThanOrEqual(20)
   })
 })
 

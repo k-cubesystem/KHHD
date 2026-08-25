@@ -1842,6 +1842,11 @@ export function ShrineRoomClient({
         idle={GAMEFEEL_V1 && !editing}
       />
 
+      {/* 기도 액자 — 왼쪽 상단 문틀 위(세계 좌표 · v3.2). 걸릴 한 편은 서버가 정한다
+          (selectBoardPrayer) · 자동 순환 없음(v3 계약). 🔴 뷰포트 고정(HUD)으로 옮기지 말 것 —
+          CEO 반려 이력(v3.1)이 PrayerBoard 헤더 주석에 있다. */}
+      {!editing && <PrayerBoard prayer={boardPrayer} wide={worldActive} />}
+
       {/* (존 가이드 — 2026-08-07 자유 배치와 함께 물러남. 존이 배치를 가두지 않으니
           "여기까지"를 그리는 띠 자체가 거짓말이 된다) */}
 
@@ -2064,11 +2069,6 @@ export function ShrineRoomClient({
           stageContent
         )}
 
-        {/* 기도 액자 — **방 상단 중앙 고정**(백일기도 v3.1). 카메라 컨테이너 밖이라 두루마리를
-            어디로 팬해도 화면 그 자리에 걸려 있다(세계 좌표 시절 «왼쪽으로 밀렸어» 반려의 처방).
-            걸릴 한 편은 서버가 정한다(selectBoardPrayer). 자동 순환 없음(v3 계약 그대로). */}
-        {!editing && <PrayerBoard prayer={boardPrayer} />}
-
         {/* 구역 미니맵 — 상단 배지 아래 가운데. 두루마리일 때만 (구역 1개면 스스로 그리지 않는다) */}
         {worldActive && (
           <div className="absolute top-[26px] left-1/2 -translate-x-1/2 z-30">
@@ -2149,7 +2149,11 @@ export function ShrineRoomClient({
             신당지기가 거닐기 시작한 뒤로는 붙일 앵커도 없어져 화면 고정 대사창으로 옮겼다 —
             상단은 꾸미기(top-2.5 left-2.5)·소원 배지(top-2.5 right-2.5)·미니맵(top-26px, 44px 터치)이
             이미 차지해 남는 안전 구역이 하단뿐이다. pointerEvents 를 끊어 팬 제스처·미니맵 탭을 가리지 않는다. */}
-        {!editing && (
+        {/* 🔴 평시 대사(신당지기 잡담)는 내렸다 — CEO 2026-08-25 「신당 하단에 나오는 안내문구도
+            빼줘」. 이 창은 이제 **신탁이 있을 때만** 선다: 신탁은 사용자가 돈·행동으로 받은
+            생성 결과물이고 「이어서 여쭙기」(P1-C)의 유일한 출구라 함께 걷어 낼 수 없다.
+            평시 문구를 되살리려면 여기 조건에서 oracle 가드만 빼면 된다(keeper-lines 는 보존). */}
+        {!editing && oracle && (
           <div
             className="absolute left-2.5 right-2.5 bottom-2.5 z-30 pointer-events-none text-[11px] leading-snug px-3 py-1.5 rounded-[3px_12px_12px_12px] backdrop-blur-sm transition-all"
             style={{

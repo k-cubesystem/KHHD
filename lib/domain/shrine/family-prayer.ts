@@ -74,7 +74,7 @@ export interface FamilyPrayer {
   createdAt: string
 }
 
-/** 액자 상자 — **방(뷰포트) % 좌표**. 카메라(두루마리 팬)와 무관하게 화면에 고정된다. */
+/** 액자 상자 — 세계(stageContent) % 좌표. */
 export interface PrayerBoardBox {
   x: number
   top: number
@@ -83,23 +83,24 @@ export interface PrayerBoardBox {
 }
 
 /**
- * 액자의 자리 — 방 상단 중앙, **카메라 밖**.
+ * 액자의 자리 — **왼쪽 상단 문틀 위**(세계 좌표). CEO 확정(2026-08-25 밤).
  *
- * 🔴 v3.1 (2026-08-25 저녁): 세계(stageContent) 좌표 x18.2(왼벽 선반 위)에서 **뷰포트 고정**으로
- *    옮겼다. CEO 「자리가 잘 잡았었는데 왼쪽으로 밀렸어」의 뿌리 — 세계 좌표에 박힌 액자는
- *    두루마리 카메라가 어디를 보느냐에 따라 화면에서 좌우로 밀리고, 진입 화면(제단 중앙)에서는
- *    아예 보이지 않았다. 가훈 현판처럼 «이 집의 기도»는 어느 벽을 보고 있어도 걸려 있는 것이
- *    맞다 — 그래서 카메라 컨테이너 **밖**(방 직속)에 건다. 세계 좌표로 되돌리지 말 것.
+ * 🔴 v3.1 의 «방 뷰포트 고정(상단 중앙)»은 **반려됐다** — 「액자는 원래 왼쪽 상단 문틀에
+ *    배치되는 게 맞아. 지금이 틀렸어.」 카메라를 따라다니는 HUD 가 아니라 **그 벽에 걸린
+ *    물건**이 맞다. 뷰포트 고정으로 되돌리지 말 것.
  *
- * 기하 근거(방 %):
- *  · 상단 y3~11 — 방 안 상단의 「꾸미기」 칩(좌)·「소원」 배지(우)와 같은 띠라, 폭을 60으로 좁혀
- *    좌우 20%씩을 그 둘에게 남긴다(x20~80 — 칩·배지와 가로로 겹치지 않는 실측 경계).
- *  · 하단 11 — 제단 틀 지붕 꼭대기(y≈10.4)와 사실상 같은 줄이라 지붕을 덮지 않는다.
+ * 기하 근거(세계 %):
+ *  · 가로 x18.2·w30(3.2~33.2) — 왼벽(가족 선반장 무리 2.6~33.85) 위를 길게 덮고,
+ *    제단 틀의 폰 좌단(37.5)에 닿지 않는다. 한 화면(세계 31.25%)에 통째로 든다.
+ *  · 세로 y7.5~17.5 — 금줄 걸이점(실측 y≈20) 위에서 끝나 줄을 덮지 않는다.
  */
-export const PRAYER_BOARD_VIEW: PrayerBoardBox = Object.freeze({ x: 50, top: 3, w: 60, h: 8 })
+export const PRAYER_BOARD_WIDE: PrayerBoardBox = Object.freeze({ x: 18.2, top: 7.5, w: 30, h: 10 })
 
-export function prayerBoardBox(): PrayerBoardBox {
-  return PRAYER_BOARD_VIEW
+/** 단일 무대(폭 100) 폴백 — 벽 상단 중앙. 와이드 시드가 없는 테마도 액자는 갖는다. */
+export const PRAYER_BOARD_NARROW: PrayerBoardBox = Object.freeze({ x: 50, top: 6, w: 72, h: 12 })
+
+export function prayerBoardBox(wide: boolean): PrayerBoardBox {
+  return wide ? PRAYER_BOARD_WIDE : PRAYER_BOARD_NARROW
 }
 
 /** 최신순 정렬 — 입력의 정렬을 가정하지 않는다(서버 쿼리 옵션이 바뀌어도 화면이 틀리지 않게). */
