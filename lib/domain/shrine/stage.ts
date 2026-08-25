@@ -421,6 +421,26 @@ export function deityStandBox(podiumTopY: number = PODIUM_TOP_Y, headRoomY: numb
   }
 }
 
+/**
+ * 「고정 살림 조절」의 세로 이동을 신위 스탠드에 **크기를 바꾸지 않고** 얹는다.
+ *
+ * 🔴 2026-08-25 CEO 「신이 왜 상반신만 나오면서 크기가 커졌지?」의 근인이 여기 있었다.
+ *    룸이 이동량(dy)을 **발(podiumTopY)에만** 더하고 머리(headRoomY)는 정본 그대로 뒀다.
+ *    스탠드 높이는 `발 − 머리` 라, 아래로 5%p 옮기면 신위가 **5%p 더 커지면서** 발이 제단상
+ *    뒤로 잠겨 상반신만 남았다. 이동이 확대로 새는 자리였다.
+ *
+ * 이동은 이동이어야 한다 — 두 줄을 **같이** 옮기면 높이가 보존되고 그림만 내려간다.
+ * 크기를 바꾸고 싶으면 그것은 별도의 조절(scale)이지 이동이 아니다.
+ */
+export function deityStandShift(
+  podiumTopY: number,
+  headRoomY: number,
+  dy: number
+): { podiumTopY: number; headRoomY: number } {
+  const shift = Number.isFinite(dy) ? dy : 0
+  return { podiumTopY: podiumTopY + shift, headRoomY: headRoomY + shift }
+}
+
 // ─── §4 방어 파싱 (Supabase jsonb → 타입 안전) ────────────────
 
 const HEX_COLOR_RE = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i

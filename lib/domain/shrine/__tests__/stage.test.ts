@@ -7,6 +7,7 @@ import {
   deityHeadRoomY,
   deityPodiumTopY,
   deityStandBox,
+  deityStandShift,
   depthScale,
   depthZ,
   groundShadow,
@@ -694,5 +695,37 @@ describe('depthZ altar 기준 밴드 — 존 확장이 z 를 흔들지 않는다
       expect(depthZ('altar', y, true)).toBeGreaterThan(depthZ('floor', 44))
       expect(depthZ('altar', y, true)).toBeLessThan(depthZ('floor', 64))
     }
+  })
+})
+
+/**
+ * 「고정 살림 조절」의 세로 이동 — 이동이 확대로 새지 않는가.
+ *
+ * 🔴 2026-08-25 사고: 룸이 이동량을 **발에만** 더해, 아래로 옮길수록 신위가 커지고 발이
+ *    제단상 뒤로 잠겨 «상반신만» 남았다. 스탠드 높이는 `발 − 머리` 라 한쪽만 옮기면 늘어난다.
+ */
+describe('deityStandShift — 이동은 이동이어야 한다', () => {
+  const FOOT = 45.3
+  const HEAD = 12
+
+  it('발과 머리를 같은 양만큼 옮긴다', () => {
+    expect(deityStandShift(FOOT, HEAD, 5.07)).toEqual({ podiumTopY: FOOT + 5.07, headRoomY: HEAD + 5.07 })
+  })
+
+  it('어느 방향으로 얼마를 옮겨도 스탠드 높이(=신위 크기)가 보존된다', () => {
+    const base = deityStandBox(FOOT, HEAD)
+    for (const dy of [-8, -5.07, -0.5, 0, 0.5, 5.07, 8]) {
+      const moved = deityStandShift(FOOT, HEAD, dy)
+      expect(deityStandBox(moved.podiumTopY, moved.headRoomY).height).toBe(base.height)
+    }
+  })
+
+  it('아래로 옮기면 접지도 그만큼 내려간다 (그림자·아우라가 따라오도록)', () => {
+    const moved = deityStandShift(FOOT, HEAD, 5.07)
+    expect(deityStandBox(moved.podiumTopY, moved.headRoomY).groundY).toBeCloseTo(FOOT + 5.07, 4)
+  })
+
+  it('이동량이 숫자가 아니면 0으로 본다 (저장값 손상이 신위를 사라지게 하지 않는다)', () => {
+    expect(deityStandShift(FOOT, HEAD, Number.NaN)).toEqual({ podiumTopY: FOOT, headRoomY: HEAD })
   })
 })

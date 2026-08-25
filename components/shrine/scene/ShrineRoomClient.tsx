@@ -25,6 +25,7 @@ import {
   lightingOverlayStyle,
   deityPodiumTopY,
   deityHeadRoomY,
+  deityStandShift,
   type StageCatalogItem,
   type StageLight,
   type StagePlacement,
@@ -630,6 +631,11 @@ export function ShrineRoomClient({
   const stageMovable = (daecheongStageBase?.structures.length ?? 0) > 0
   /** 신위 무대 이동량 — 단상·상판·앵커·신위 접지·아우라가 **전부 이 하나에서** 파생한다 */
   const deityDelta = stageMovable ? fixtureDelta(fixtures, 'deityStage') : fixtureDelta(null, 'deityStage')
+  /** 신위 스탠드 세로 정합 — 이동량을 발·머리에 함께 얹어 **크기를 보존**한다(도메인 규칙). */
+  const deityStand = useMemo(
+    () => deityStandShift(deityPodiumTopY(activeCode), deityHeadRoomY(activeCode), deityDelta.dy),
+    [activeCode, deityDelta.dy]
+  )
   /**
    * ★ 고정 살림 조절의 적용 지점 — 여기 한 번 통과시키면 구조물 렌더(StageLayers)와 스냅 앵커·
    * 앵커 링이 같은 소스에서 움직인다. 이동량 0 이면 **같은 참조**를 돌려주므로 조정을 안 한 신당은
@@ -1804,10 +1810,11 @@ export function ShrineRoomClient({
           // 모션 최소화는 여기서 끄지 않는다 — 회전만 생략하고 탭 반응은 남기는 것이 부록 C ④ 계약이다.
           interactive={GAMEFEEL_V1 && !editing}
           idleGlow={GAMEFEEL_V1 && !editing}
-          // 고정 살림 조절 — 단상 상면 정본에 이동량을 **가산**한다(정본 상수는 그대로다)
-          podiumTopY={deityPodiumTopY(activeCode) + deityDelta.dy}
-          // 머리 여백은 테마가 정한다 — 틀을 든 테마는 그 감실 윗턱, 나머지는 정본 상수(12)
-          headRoomY={deityHeadRoomY(activeCode)}
+          // 고정 살림 조절 — 발과 머리를 **함께** 옮긴다(deityStandShift). 발에만 더하면 스탠드
+          // 높이(발−머리)가 그만큼 늘어 «이동»이 «확대»로 샌다(2026-08-25 상반신 사고의 근인).
+          podiumTopY={deityStand.podiumTopY}
+          // 머리 여백의 정본은 테마가 정한다 — 틀을 든 테마는 그 감실 윗턱, 나머지는 정본 상수(12)
+          headRoomY={deityStand.headRoomY}
           offsetXPct={deityDelta.dx}
         />
       )}
