@@ -1825,9 +1825,9 @@ export function ShrineRoomClient({
         idle={GAMEFEEL_V1 && !editing}
       />
 
-      {/* 기도 액자 — 가족 선반장 위쪽 벽(백일기도 v2). 유닛이 없는 방(비 FAMILY 등급·단일
-          무대)에서는 최신 한 장만 중앙 폴백 자리에 걸린다(도메인 buildPrayerFrames 판정). */}
-      {!editing && <PrayerBoard prayers={prayers} units={familyShelfUnits} />}
+      {/* 기도 현판 — 벽 상단, 금줄 위 빈 띠의 긴 액자 한 장(백일기도 v2 · CEO 2차 «상단에 길게»).
+          자리는 도메인 상수(prayerBoardBox)가 정하고 여러 기도는 그 안에서 갈아든다. */}
+      {!editing && <PrayerBoard prayers={prayers} wide={worldActive} />}
 
       {/* (존 가이드 — 2026-08-07 자유 배치와 함께 물러남. 존이 배치를 가두지 않으니
           "여기까지"를 그리는 띠 자체가 거짓말이 된다) */}

@@ -14,7 +14,6 @@
  */
 
 import { hallSeatKey } from './family-hall-layout'
-import type { FamilyShelfUnit } from './family-shelf'
 
 /**
  * 기도문 길이 — 액자에 «글로» 걸리는 것이 목적이라 짧게 강제한다(길면 액자가 아니라 문서다).
@@ -34,46 +33,43 @@ export interface FamilyPrayer {
   createdAt: string
 }
 
-/** 액자 하나 — 세계(stageContent) % 좌표. */
-export interface PrayerFrameBox {
-  /** hallSeatKey(memberId) — React key 겸 유닛 대응 */
-  key: string
-  name: string
-  text: string
-  /** 액자 중심 x (세계 %) */
+/**
+ * 기도 현판(懸板) — 벽 **상단, 금줄 위 빈 띠**에 걸리는 **한 장의 긴 액자** (CEO 2026-08-25 2차).
+ *
+ * 1차(선반별 소형 액자 · 유닛 x 정렬)는 실기기 검수에서 반려됐다 — «상단에, 끈(금줄) 위쪽
+ * 빈 벽에, 길게». 그래서 액자는 유닛과 **무관해졌다**: 자리는 상수 하나가 정하고, 여러 기도는
+ * 한 현판 안에서 갈아든다(교차 페이드 — 렌더 몫).
+ *
+ * 기하 근거(세계 %):
+ *  · 금줄은 테마 벽화에 그려진 것이라 y 를 코드로 알 수 없다 — 실측(반가·서낭 스크린샷)으로
+ *    걸이점이 y≈20 이라, 현판 하단을 17.5 에서 끊으면 어느 테마에서도 줄을 덮지 않는다.
+ *  · 가로는 **왼벽(가족 선반장 무리 2.6~33.85) 위**를 길게 덮는다 — 초기 카메라 화면(한 화면
+ *    = 세계 31.25%)에 통째로 들어오는 폭이다. 오른쪽 끝 33.2 는 제단 틀의 폰 좌단(37.5)에
+ *    닿지 않는다(신위를 가리지 않는 것이 상한).
+ */
+export interface PrayerBoardBox {
+  /** 현판 중심 x (세계 %) */
   x: number
-  /** 상자 기하 (세계 %) */
   top: number
   w: number
   h: number
-  /** 살짝 기운 각도(도) — 손으로 건 액자의 온기. 결정론(순번 파생)이라 SSR 과 어긋나지 않는다 */
-  tilt: number
 }
 
-/** 액자 폭 — 유닛(6.8)보다 살짝 넓게. 겹침 없는 유닛 간격(8.15)보다 좁아 이웃 액자와 안 닿는다. */
-const FRAME_W = 8
-/** 액자 높이(세계 세로 %) — 기도 3줄 + 이름 한 줄. */
-const FRAME_H = 13
-/** 액자 하단과 선반장 천판 사이 숨통(세계 세로 %). */
-const FRAME_GAP = 2
+/** 와이드 무대(세계 폭 320) — 왼벽 가족 구역 위 긴 현판. */
+export const PRAYER_BOARD_WIDE: PrayerBoardBox = Object.freeze({ x: 18.2, top: 7.5, w: 30, h: 10 })
 
-/**
- * 유닛이 없을 때(비 FAMILY 등급·좁은 무대)의 폴백 자리 — **왼벽 상단**.
- * 중앙(x 50)은 제단 틀(폰에서 x 37.5~62.5)의 자리라 액자가 신위를 가린다 — 왼벽이 빈 벽이다.
- */
-const FALLBACK_FRAME: Omit<PrayerFrameBox, 'key' | 'name' | 'text'> = {
-  x: 18,
-  top: 24,
-  w: 20,
-  h: 15,
-  tilt: 0,
+/** 단일 무대(폭 100) 폴백 — 벽 상단 중앙. 와이드 시드가 없는 테마도 현판은 갖는다. */
+export const PRAYER_BOARD_NARROW: PrayerBoardBox = Object.freeze({ x: 50, top: 6, w: 72, h: 12 })
+
+export function prayerBoardBox(wide: boolean): PrayerBoardBox {
+  return wide ? PRAYER_BOARD_WIDE : PRAYER_BOARD_NARROW
 }
 
 /**
  * 소유자 소원 행들 → **대상별 최신 1건**.
  *
  * 입력은 최신순 정렬을 가정하지 않는다 — createdAt 으로 직접 비교한다(서버 쿼리의 정렬 옵션이
- * 바뀌어도 화면이 틀리지 않게). 같은 대상의 옛 기도는 액자에서 내려간다(교체이지 축적이 아니다 —
+ * 바뀌어도 화면이 틀리지 않게). 같은 대상의 옛 기도는 현판에서 내려간다(교체이지 축적이 아니다 —
  * 축적은 소원 기록(방명록 로그)이 이미 지고 있는 몫이다).
  */
 export function latestPrayerPerTarget(rows: readonly FamilyPrayer[]): FamilyPrayer[] {
@@ -88,51 +84,11 @@ export function latestPrayerPerTarget(rows: readonly FamilyPrayer[]): FamilyPray
 }
 
 /**
- * 기도 → 액자 상자. 원칙: **가족 자신의 선반장 바로 위**에 건다(CEO «가족들 상단 위쪽 벽에»).
- *
- * · 대상의 유닛이 있으면 그 유닛 x 에 정렬해 선반 천판 위(top − gap − h)에 건다.
- * · 유닛이 하나도 없으면(비 FAMILY·좁은 무대) 최신 기도 **1장**만 중앙 폴백 자리에 건다 —
- *   여러 장을 한 점에 겹쳐 걸면 종잇장 더미가 된다.
- * · 유닛이 있는데 대상 유닛만 없으면(가족 7번째 이후·삭제된 가족) 그 기도는 걸지 않는다 —
- *   주인 없는 액자를 임의 자리에 지어내지 않는다(기록은 소원 로그에 남아 있다).
+ * 현판에 갈아들 순서 — 대상별 최신 1건을 **새 기도부터**. 갓 올린 기도가 첫 장으로 걸려야
+ * 「올리면 벽에 걸린다」는 인과가 눈에 보인다(옛 기도부터 돌면 방금 쓴 글이 안 보여 실패로 읽힌다).
  */
-export function buildPrayerFrames(
-  prayers: readonly FamilyPrayer[],
-  units: readonly FamilyShelfUnit[]
-): PrayerFrameBox[] {
-  const latest = latestPrayerPerTarget(prayers)
-  if (latest.length === 0) return []
-
-  if (units.length === 0) {
-    const newest = latest.reduce((a, b) => (b.createdAt > a.createdAt ? b : a))
-    return [
-      {
-        ...FALLBACK_FRAME,
-        key: hallSeatKey(newest.memberId),
-        name: newest.name,
-        text: newest.text,
-      },
-    ]
-  }
-
-  const frames: PrayerFrameBox[] = []
-  for (const prayer of latest) {
-    const key = hallSeatKey(prayer.memberId)
-    const unit = units.find((u) => u.key === key)
-    if (!unit) continue
-    frames.push({
-      key,
-      name: prayer.name,
-      text: prayer.text,
-      x: unit.x,
-      top: unit.top - FRAME_GAP - FRAME_H,
-      w: FRAME_W,
-      h: FRAME_H,
-      // 순번 파생 기울기(-0.8·0·+0.8 순환) — Math.random 은 SSR 불일치라 금지
-      tilt: [-0.8, 0, 0.8][frames.length % 3],
-    })
-  }
-  return frames
+export function orderPrayersForBoard(rows: readonly FamilyPrayer[]): FamilyPrayer[] {
+  return latestPrayerPerTarget(rows).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
 }
 
 /** 기도문 검증 — 시트·서버가 같은 기준을 쓴다(화면 통과·서버 반려의 갈라짐 방지). */

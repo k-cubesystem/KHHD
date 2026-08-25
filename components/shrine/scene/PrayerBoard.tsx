@@ -1,89 +1,196 @@
 'use client'
 
-import { useMemo, type CSSProperties } from 'react'
-import { toast } from 'sonner'
-import { buildPrayerFrames, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
-import type { FamilyShelfUnit } from '@/lib/domain/shrine/family-shelf'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { orderPrayersForBoard, prayerBoardBox, type FamilyPrayer } from '@/lib/domain/shrine/family-prayer'
 
 /**
- * 기도 액자(祈禱 額子) — 가족 선반장 **위쪽 벽**에 걸리는 기도문 (백일기도 v2 · CEO 2026-08-25).
+ * 기도 현판(祈禱 懸板) — 벽 상단, 금줄 위 빈 띠에 걸리는 **한 장의 긴 액자** (백일기도 v2 · 2차).
  *
- * «어디에 무엇을 거는가»는 전부 도메인(buildPrayerFrames)이 판정하고, 여기는 상자를 받아
- * 그리기만 한다. 자산 0 — 나무틀·한지 전부 CSS 다(액자 그림을 굽는 것은 다음 회차의 선택지).
+ * 1차(선반별 소형 액자)는 CEO 실기기 검수에서 반려됐다 — «상단에, 끈 위쪽 빈 벽에, 길게.
+ * 프레임은 더 고급스럽게». 그래서:
+ *  · 자리는 도메인 상수(prayerBoardBox) 하나 — 유닛과 무관하다.
+ *  · 여러 기도는 현판 한 장 안에서 **갈아든다**(7.5초 교차 페이드 · opacity 만 — 연출 규율).
+ *    모션 최소화 설정이면 자동 전환을 끄고 탭으로만 넘긴다.
+ *  · 격은 재료로 낸다: 흑칠 목틀 + 이중 금선 + 네 귀 장석(裝錫) + 낙관(대상 이름 도장).
+ *    자산 0 — 전부 CSS 그라디언트다.
  *
- * 연출 규율: transform/opacity 만. 새 keyframes 를 만들지 않는다(styled-jsx·CSS 게이트 전례).
- * 액자는 탭하면 전문(全文)을 토스트로 보여준다 — 좁은 액자에서 말줄임된 기도의 구제책.
+ * 연출 규율: transform/opacity 만. 새 keyframes 금지(styled-jsx·CSS 게이트 전례).
  */
 
-type FrameVars = CSSProperties & Record<`--${string}`, string>
+const CYCLE_MS = 7500
 
-export function PrayerBoard({
-  prayers,
-  units,
-}: {
-  prayers: readonly FamilyPrayer[]
-  units: readonly FamilyShelfUnit[]
-}) {
-  const frames = useMemo(() => buildPrayerFrames(prayers, units), [prayers, units])
-  if (frames.length === 0) return null
+/** 네 귀 장석 — 금틀 모서리를 무는 ㄱ자 쇠. 방향은 border 두 변으로 만든다. */
+const CORNER_BASE: CSSProperties = {
+  position: 'absolute',
+  width: '4.2%',
+  aspectRatio: '1 / 1',
+  minWidth: '10px',
+  borderColor: 'rgba(232,213,160,0.85)',
+  filter: 'drop-shadow(0 0 2px rgba(201,168,76,0.45))',
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+}
+
+export function PrayerBoard({ prayers, wide }: { prayers: readonly FamilyPrayer[]; wide: boolean }) {
+  const pages = useMemo(() => orderPrayersForBoard(prayers), [prayers])
+  const [idx, setIdx] = useState(0)
+
+  // 자동 전환 — 두 장 이상일 때만. 모션 최소화면 손으로만 넘긴다(깜빡이는 벽은 소음이다).
+  useEffect(() => {
+    if (pages.length < 2 || prefersReducedMotion()) return
+    const t = setInterval(() => setIdx((i) => (i + 1) % pages.length), CYCLE_MS)
+    return () => clearInterval(t)
+  }, [pages.length])
+
+  // 기도가 갈리면(새 기도 올림) 첫 장 — 방금 쓴 글이 바로 걸려야 인과가 보인다.
+  // effect 가 아니라 렌더 중 조정(React 공식 «props 변화에 state 맞추기» 패턴 — 연쇄 렌더 없음).
+  const [seenLen, setSeenLen] = useState(pages.length)
+  if (seenLen !== pages.length) {
+    setSeenLen(pages.length)
+    setIdx(0)
+  }
+
+  if (pages.length === 0) return null
+  const box = prayerBoardBox(wide)
+  const current = pages[Math.min(idx, pages.length - 1)]
 
   return (
-    <>
-      {frames.map((f) => {
-        const wrap: FrameVars = {
-          left: `${f.x - f.w / 2}%`,
-          top: `${f.top}%`,
-          width: `${f.w}%`,
-          height: `${f.h}%`,
-          // 선반장(z 9)과 같은 벽 살림 대역 — 아이템 대역(10~29) 아래라 진열물이 앞에 선다
-          zIndex: 9,
-          transform: `rotate(${f.tilt}deg)`,
-        }
-        return (
-          <button
-            key={f.key}
-            type="button"
-            aria-label={`${f.name} 기도 액자 — ${f.text}`}
-            onClick={() => toast(`「${f.text}」`, { description: `기도 대상 · ${f.name} 🙏` })}
-            className="absolute select-none text-left"
-            style={wrap}
+    <button
+      type="button"
+      aria-label={`가족 기도 현판 — ${current.name}: ${current.text}`}
+      onClick={() => pages.length > 1 && setIdx((i) => (i + 1) % pages.length)}
+      className="absolute select-none"
+      style={{
+        left: `${box.x - box.w / 2}%`,
+        top: `${box.top}%`,
+        width: `${box.w}%`,
+        height: `${box.h}%`,
+        zIndex: 9,
+        cursor: pages.length > 1 ? 'pointer' : 'default',
+      }}
+    >
+      {/* 매듭끈 두 가닥 — 현판이 들보에 매여 있음을 말한다(위로 갈수록 사라진다) */}
+      {[18, 82].map((x) => (
+        <span
+          key={x}
+          aria-hidden
+          className="absolute bottom-full"
+          style={{
+            left: `${x}%`,
+            width: '2px',
+            height: '46%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(to top, rgba(138,47,43,0.85), rgba(138,47,43,0))',
+          }}
+        />
+      ))}
+
+      {/* 흑칠 목틀 — 옻칠 광택(위가 밝고 아래로 가라앉는다) + 바깥 금선 */}
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-[5px]"
+        style={{
+          background: 'linear-gradient(172deg, #45311e 0%, #2a1c0e 38%, #17100a 100%)',
+          boxShadow:
+            '0 5px 16px rgba(0,0,0,0.65), 0 1px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(232,213,160,0.32), inset 0 0 0 1px rgba(201,168,76,0.38)',
+        }}
+      />
+      {/* 이중 금선 안틀 */}
+      <span
+        aria-hidden
+        className="absolute rounded-[3px]"
+        style={{
+          inset: '7% 2.6%',
+          border: '1px solid rgba(201,168,76,0.55)',
+          boxShadow: 'inset 0 0 0 1px rgba(201,168,76,0.18)',
+        }}
+      />
+      {/* 네 귀 장석 */}
+      <span
+        aria-hidden
+        style={{ ...CORNER_BASE, left: '1.6%', top: '4%', borderLeft: '2px solid', borderTop: '2px solid' }}
+      />
+      <span
+        aria-hidden
+        style={{ ...CORNER_BASE, right: '1.6%', top: '4%', borderRight: '2px solid', borderTop: '2px solid' }}
+      />
+      <span
+        aria-hidden
+        style={{ ...CORNER_BASE, left: '1.6%', bottom: '4%', borderLeft: '2px solid', borderBottom: '2px solid' }}
+      />
+      <span
+        aria-hidden
+        style={{ ...CORNER_BASE, right: '1.6%', bottom: '4%', borderRight: '2px solid', borderBottom: '2px solid' }}
+      />
+
+      {/* 판면 — 먹빛 비단결(위에서 은은한 금기운이 내려앉는다) */}
+      <span
+        aria-hidden
+        className="absolute overflow-hidden rounded-[2px]"
+        style={{
+          inset: '13% 4.4%',
+          background:
+            'radial-gradient(130% 150% at 50% -20%, rgba(201,168,76,0.14) 0%, rgba(30,22,13,0) 55%), linear-gradient(178deg, #221912 0%, #171009 100%)',
+          boxShadow: 'inset 0 0 14px rgba(0,0,0,0.65)',
+        }}
+      />
+
+      {/* 기도문 — 갈아드는 장들(교차 페이드). 최대 40자라 말줄임 없이 다 걸린다. */}
+      <span className="absolute grid place-items-center" style={{ inset: '13% 7%' }}>
+        {pages.map((p, i) => (
+          <span
+            key={`${p.memberId ?? 'self'}-${p.createdAt}`}
+            className="col-start-1 row-start-1 w-full text-center font-serif font-bold leading-[1.5] transition-opacity duration-700 ease-in-out"
+            style={{
+              opacity: i === idx ? 1 : 0,
+              color: '#F0E2BC',
+              fontSize: 'clamp(11px, 3.4vw, 15px)',
+              letterSpacing: '0.05em',
+              wordBreak: 'keep-all',
+              textShadow: '0 0 8px rgba(201,168,76,0.35), 0 1px 2px rgba(0,0,0,0.8)',
+            }}
           >
-            {/* 걸이못 — 액자가 벽에 «걸려» 있음을 말하는 한 점 */}
+            {p.text}
+          </span>
+        ))}
+      </span>
+
+      {/* 낙관(落款) — 기도 대상의 이름 도장. 장이 갈리면 도장도 함께 갈린다 */}
+      <span
+        className="absolute grid place-items-center rounded-[2px] font-serif font-bold transition-opacity duration-700"
+        style={{
+          right: '5.2%',
+          bottom: '16%',
+          padding: '1px 4px',
+          fontSize: 'clamp(8px, 2.2vw, 10px)',
+          transform: 'rotate(-2.5deg)',
+          background: 'linear-gradient(160deg, #a63530 0%, #7e211f 100%)',
+          color: '#F4E4BA',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(244,228,186,0.35)',
+        }}
+      >
+        {current.name}
+      </span>
+
+      {/* 장 표시점 — 두 장 이상일 때만, 아주 작게 */}
+      {pages.length > 1 && (
+        <span aria-hidden className="absolute inset-x-0 flex justify-center gap-[5px]" style={{ bottom: '5.5%' }}>
+          {pages.map((_, i) => (
             <span
-              aria-hidden
-              className="absolute left-1/2 top-[-4%] h-[5px] w-[5px] -translate-x-1/2 rounded-full"
-              style={{ background: 'radial-gradient(circle at 35% 35%, #d8c08a, #6e5320 70%)' }}
-            />
-            {/* 나무틀 */}
-            <span
-              aria-hidden
-              className="absolute inset-0 rounded-[3px]"
+              key={i}
+              className="rounded-full transition-opacity duration-500"
               style={{
-                background: 'linear-gradient(160deg, #5a4326 0%, #3b2c18 55%, #2a1e10 100%)',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.55), inset 0 1px 0 rgba(216,192,138,0.25)',
+                width: '3px',
+                height: '3px',
+                background: '#C9A84C',
+                opacity: i === idx ? 0.9 : 0.28,
               }}
             />
-            {/* 한지 면 + 기도문 */}
-            <span
-              className="absolute inset-[7%] flex flex-col items-center justify-center gap-[6%] overflow-hidden rounded-[2px] px-[7%] py-[5%] text-center"
-              style={{
-                background: 'linear-gradient(175deg, #efe4c9 0%, #e4d5b2 100%)',
-                boxShadow: 'inset 0 0 6px rgba(90,67,38,0.35)',
-              }}
-            >
-              <span
-                className="line-clamp-3 w-full font-serif font-bold leading-[1.45] text-[#3b2c18]"
-                style={{ fontSize: 'clamp(8px, 0.72em, 11px)', wordBreak: 'keep-all' }}
-              >
-                {f.text}
-              </span>
-              <span className="w-full truncate font-sans font-medium text-[#7a5c30]" style={{ fontSize: '8px' }}>
-                — {f.name}
-              </span>
-            </span>
-          </button>
-        )
-      })}
-    </>
+          ))}
+        </span>
+      )}
+    </button>
   )
 }

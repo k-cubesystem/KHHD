@@ -1,19 +1,21 @@
 /**
- * 기도 액자(백일기도 v2) — «어디에 무엇을 거는가» 판정.
+ * 기도 현판(백일기도 v2 · 2차 «상단에 길게») — «무엇이 어떤 순서로 걸리는가» 판정.
  *
  * 지키는 것 셋:
  *  ① 대상별 **최신 1건**만 걸린다(교체이지 축적이 아니다 — 축적은 소원 로그의 몫).
- *  ② 액자는 그 가족의 선반장 **바로 위**에 선다 — 유닛 x 정렬 + 선반 천판 위 숨통.
- *  ③ 유닛이 없으면 최신 1장만 중앙 폴백, 유닛이 있는데 대상 유닛만 없으면 걸지 않는다.
+ *  ② 갈아드는 순서는 **새 기도부터** — 방금 올린 글이 첫 장이어야 인과가 보인다.
+ *  ③ 현판 상자는 금줄 위 빈 띠에 있고(하단 ≤ 20) 제단 틀(폰 좌단 37.5)을 침범하지 않는다.
  */
 import {
-  buildPrayerFrames,
   latestPrayerPerTarget,
+  orderPrayersForBoard,
+  prayerBoardBox,
   validatePrayerText,
+  PRAYER_BOARD_WIDE,
+  PRAYER_BOARD_NARROW,
   PRAYER_MAX_LEN,
   type FamilyPrayer,
 } from '../family-prayer'
-import { buildFamilyShelfUnits } from '../family-shelf'
 
 const P = (memberId: string | null, text: string, createdAt: string, name = '가족'): FamilyPrayer => ({
   memberId,
@@ -21,12 +23,6 @@ const P = (memberId: string | null, text: string, createdAt: string, name = '가
   text,
   createdAt,
 })
-
-const UNITS = buildFamilyShelfUnits([
-  { memberId: null, name: '나', avatarId: null },
-  { memberId: 'fam-1', name: '어머니', avatarId: 'water_dokkaebi' },
-  { memberId: 'fam-2', name: '아들', avatarId: 'fire_dokkaebi' },
-])
 
 describe('latestPrayerPerTarget — 대상별 최신 1건', () => {
   it('같은 대상의 옛 기도는 내려간다 (입력 정렬을 가정하지 않는다)', () => {
@@ -45,60 +41,38 @@ describe('latestPrayerPerTarget — 대상별 최신 1건', () => {
   })
 })
 
-describe('buildPrayerFrames — 액자의 자리', () => {
-  it('액자는 그 가족 유닛의 x 에 정렬되고 선반 천판보다 위에 선다', () => {
-    const frames = buildPrayerFrames([P('fam-1', '건강하게 해 주세요', '2026-08-25T00:00:00Z', '어머니')], UNITS)
-    expect(frames).toHaveLength(1)
-    const unit = UNITS.find((u) => u.key === 'fam-1')!
-    expect(frames[0].x).toBe(unit.x)
-    expect(frames[0].top + frames[0].h).toBeLessThan(unit.top)
-    expect(frames[0].name).toBe('어머니')
-  })
-
-  it('본인 기도는 self 유닛 위에 선다', () => {
-    const frames = buildPrayerFrames([P(null, '올해도 무탈하게', '2026-08-25T00:00:00Z')], UNITS)
-    expect(frames[0].key).toBe('self')
-    expect(frames[0].x).toBe(UNITS[0].x)
-  })
-
-  it('이웃 액자와 겹치지 않는다 — 폭이 유닛 간격보다 좁다', () => {
-    const frames = buildPrayerFrames(
-      [
-        P(null, '나의 기도입니다', '2026-08-25T00:00:00Z'),
-        P('fam-1', '어머니 기도입니다', '2026-08-25T00:00:00Z', '어머니'),
-        P('fam-2', '아들 기도입니다', '2026-08-25T00:00:00Z', '아들'),
-      ],
-      UNITS
-    )
-    const sorted = [...frames].sort((a, b) => a.x - b.x)
-    for (let i = 1; i < sorted.length; i++) {
-      expect(sorted[i].x - sorted[i].w / 2).toBeGreaterThan(sorted[i - 1].x + sorted[i - 1].w / 2)
-    }
-  })
-
-  it('유닛이 없으면(비 FAMILY·좁은 무대) 최신 1장만 왼벽 폴백에 건다', () => {
-    const frames = buildPrayerFrames(
-      [P(null, '먼저 온 기도', '2026-08-20T00:00:00Z'), P('fam-1', '나중 온 기도', '2026-08-25T00:00:00Z', '어머니')],
-      []
-    )
-    expect(frames).toHaveLength(1)
-    expect(frames[0].text).toBe('나중 온 기도')
-    expect(frames[0].x).toBe(18)
-  })
-
-  it('유닛이 있는데 대상 유닛만 없으면(삭제된 가족) 그 액자는 걸지 않는다', () => {
-    const frames = buildPrayerFrames([P('ghost', '주인 없는 기도', '2026-08-25T00:00:00Z', '옛가족')], UNITS)
-    expect(frames).toHaveLength(0)
-  })
-
-  it('기울기는 결정론이다 — 같은 입력이면 같은 각도(SSR 불일치 금지)', () => {
+describe('orderPrayersForBoard — 새 기도가 첫 장', () => {
+  it('대상별 최신 1건을 최신순으로 늘어놓는다', () => {
     const rows = [
-      P(null, '나의 기도입니다', '2026-08-25T00:00:00Z'),
-      P('fam-1', '어머니 기도입니다', '2026-08-25T00:00:00Z', '어머니'),
+      P('fam-1', '옛 기도', '2026-08-01T00:00:00Z', '어머니'),
+      P(null, '나의 기도', '2026-08-10T00:00:00Z'),
+      P('fam-2', '방금 올린 기도', '2026-08-25T09:00:00Z', '아들'),
+      P('fam-1', '어머니 새 기도', '2026-08-24T00:00:00Z', '어머니'),
     ]
-    const a = buildPrayerFrames(rows, UNITS).map((f) => f.tilt)
-    const b = buildPrayerFrames(rows, UNITS).map((f) => f.tilt)
-    expect(a).toEqual(b)
+    const pages = orderPrayersForBoard(rows)
+    expect(pages.map((r) => r.text)).toEqual(['방금 올린 기도', '어머니 새 기도', '나의 기도'])
+  })
+})
+
+describe('prayerBoardBox — 현판의 자리', () => {
+  it('와이드: 금줄 걸이점(실측 y≈20) 위에서 끝나고 제단 틀(폰 좌단 37.5)에 닿지 않는다', () => {
+    const b = prayerBoardBox(true)
+    expect(b).toBe(PRAYER_BOARD_WIDE)
+    expect(b.top + b.h).toBeLessThanOrEqual(20)
+    expect(b.x + b.w / 2).toBeLessThan(37.5)
+    expect(b.x - b.w / 2).toBeGreaterThanOrEqual(0)
+  })
+
+  it('와이드: 한 화면(세계 31.25%)에 통째로 들어온다 — 카메라를 밀어야 보이는 현판은 없느니만 못하다', () => {
+    const b = prayerBoardBox(true)
+    expect(b.w).toBeLessThanOrEqual(31.25)
+  })
+
+  it('단일 무대 폴백은 중앙 상단', () => {
+    const b = prayerBoardBox(false)
+    expect(b).toBe(PRAYER_BOARD_NARROW)
+    expect(b.x).toBe(50)
+    expect(b.top + b.h).toBeLessThanOrEqual(20)
   })
 })
 
