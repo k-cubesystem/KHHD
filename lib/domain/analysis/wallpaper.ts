@@ -23,8 +23,11 @@
 /** 오행 — shrine 쪽 Element 와 같은 어휘를 쓴다(용신 값이 그 표에서 온다). */
 export type WallpaperElement = 'wood' | 'fire' | 'earth' | 'metal' | 'water'
 
-/** free=항상 열림 · saju=사주 풀이 1회 필요 · journey=복주머니 완주 필요. */
-export type WallpaperLock = 'free' | 'saju' | 'journey'
+/**
+ * free=항상 열림 · saju=사주 풀이 1회 필요 · journey=복주머니 완주 필요 ·
+ * premium=멤버십/구매로만 (여정 보너스 없음 — 단 «내게 필요한 기운» 1장은 사주 선물, 아래 참조).
+ */
+export type WallpaperLock = 'free' | 'saju' | 'journey' | 'premium'
 
 export interface WallpaperItem {
   /** 파일명이자 화면 key. `public/wallpapers/{id}.webp` 와 1:1. */
@@ -41,6 +44,7 @@ export interface WallpaperItem {
 export const WALLPAPER_LOCK_REASON: Record<Exclude<WallpaperLock, 'free'>, string> = {
   saju: '사주 풀이 1회 후 열립니다',
   journey: '복주머니 완주 후 열립니다',
+  premium: '멤버십이면 전부 열립니다',
 }
 
 /**
@@ -172,8 +176,14 @@ export function orderWallpapersByElement<T extends WallpaperItem>(
 export const WALLPAPER_PRICE_ELEMENT = 1
 export const WALLPAPER_PRICE_MONTHLY = 2
 
-/** 한 장의 소장 가격(만냥). 오행이 없는 장(이달의 복)이 한정판 가격을 받는다. */
+/**
+ * 한 장의 소장 가격(만냥). 프리미엄은 낱장 균일가(팩이 본진), 무료 세트에서는
+ * 오행이 없는 장(이달의 복)이 한정판 가격을 받는다.
+ * 🔴 element 로 먼저 갈리면 프리미엄 비오행 장(재물·가족·연애·성공)이 이달의 복 가격을
+ *    받는다 — lock 검사부터.
+ */
 export function wallpaperPrice(item: WallpaperItem): number {
+  if (item.lock === 'premium') return PREMIUM_PRICE_SINGLE
   return item.element === null ? WALLPAPER_PRICE_MONTHLY : WALLPAPER_PRICE_ELEMENT
 }
 
@@ -210,6 +220,11 @@ export interface WallpaperAccess extends WallpaperEntitlement {
   isMember: boolean
   /** 내 해금 기록(구매·광고). */
   unlocks: readonly WallpaperUnlockRecord[]
+  /**
+   * 사용자의 용신 오행 — 프리미엄 «내게 필요한 기운» 선물 판정에만 쓴다.
+   * 없으면(미풀이·구버전 호출) 선물 경로만 닫히고 나머지 판정은 그대로다.
+   */
+  myElement?: WallpaperElement | null
 }
 
 export interface WallpaperAccessState {
@@ -238,6 +253,15 @@ export function resolveWallpaperAccess(item: WallpaperItem, access: WallpaperAcc
   const unlock = findUnlock(item, access)
   if (unlock) return { unlocked: true, via: unlock.source, reason: null }
   if (access.isMember) return { unlocked: true, via: 'member', reason: null }
+
+  if (item.lock === 'premium') {
+    // 프리미엄의 유일한 무상 경로 — 사주를 마친 사람에게 «내게 필요한 기운»(용신 오행) 1장.
+    // 풀이가 처방하고, 선물로 맛보이고, 나머지는 멤버십이 연다(PRD v2 §4).
+    if (access.hasSaju && item.element !== null && item.element === (access.myElement ?? null)) {
+      return { unlocked: true, via: 'saju', reason: null }
+    }
+    return { unlocked: false, via: null, reason: WALLPAPER_LOCK_REASON.premium }
+  }
 
   const bonus = item.lock === 'saju' ? access.hasSaju : access.journeyComplete
   if (bonus) return { unlocked: true, via: item.lock, reason: null }
@@ -328,4 +352,229 @@ export function buildWallpaperDisplaySet(monthly: MonthlyWallpaperRef | null): W
 /** 화면 세트에서 id 로 한 장 찾기 — 서버 액션이 클라가 보낸 id 를 검증할 때 쓴다. */
 export function findWallpaperById(id: string, monthly: MonthlyWallpaperRef | null): WallpaperDisplayItem | null {
   return buildWallpaperDisplaySet(monthly).find((w) => w.id === id) ?? null
+}
+
+// ── 프리미엄 「채운(彩運)」 — 기운을 채우는 17장 (PRD v2) ──────────────────
+
+/** 5과(科) — 세트의 묶음이자 화면의 소제목. */
+export type PremiumCategory = 'gi' | 'jae' | 'ga' | 'yeon' | 'seong'
+
+export const PREMIUM_CATEGORY_ORDER: readonly PremiumCategory[] = ['gi', 'jae', 'ga', 'yeon', 'seong']
+
+export const PREMIUM_CATEGORY_META: Record<PremiumCategory, { title: string; subtitle: string }> = {
+  gi: { title: '기운 보충', subtitle: '사주에 부족한 오행 기운을 채웁니다' },
+  jae: { title: '재물운', subtitle: '황금빛으로 재물의 기운을 부릅니다' },
+  ga: { title: '가족 평안', subtitle: '집안의 안정과 평화와 건강을 빕니다' },
+  yeon: { title: '연애·사랑운', subtitle: '도화(桃花)의 기운으로 인연을 부릅니다' },
+  seong: { title: '성공·명예운', subtitle: '오르고, 이루고, 날아오릅니다' },
+}
+
+export interface PremiumWallpaperItem extends WallpaperItem {
+  category: PremiumCategory
+}
+
+/**
+ * 「채운」 17장 — id 는 Storage(`wallpapers-premium/{id}.webp`)·썸네일·생성 스크립트와 1:1.
+ * 🔴 여기 id 를 바꾸면 Storage 오브젝트·`public/wallpapers/premium-thumbs/`·
+ *    `scripts/media-assets/generate-wallpapers.mjs` 의 PREMIUM_SPECS 도 같이 바꿔야 한다.
+ * gi 과만 element 를 갖는다 — «내게 필요한 기운»(용신) 배지·선물 판정의 근거다.
+ */
+export const PREMIUM_WALLPAPER_SET: readonly PremiumWallpaperItem[] = [
+  {
+    id: 'gi-wood',
+    title: '푸른 새벽 숲',
+    subtitle: '나무 기운 — 성장과 시작',
+    lock: 'premium',
+    element: 'wood',
+    category: 'gi',
+  },
+  {
+    id: 'gi-fire',
+    title: '타오르는 연등',
+    subtitle: '불 기운 — 열정과 활력',
+    lock: 'premium',
+    element: 'fire',
+    category: 'gi',
+  },
+  {
+    id: 'gi-earth',
+    title: '황금 들녘',
+    subtitle: '흙 기운 — 안정과 중심',
+    lock: 'premium',
+    element: 'earth',
+    category: 'gi',
+  },
+  {
+    id: 'gi-metal',
+    title: '서리 내린 달',
+    subtitle: '쇠 기운 — 결단과 결실',
+    lock: 'premium',
+    element: 'metal',
+    category: 'gi',
+  },
+  {
+    id: 'gi-water',
+    title: '달빛 물결',
+    subtitle: '물 기운 — 지혜와 흐름',
+    lock: 'premium',
+    element: 'water',
+    category: 'gi',
+  },
+  {
+    id: 'jae-koi',
+    title: '황금 잉어',
+    subtitle: '재물이 뛰어오릅니다',
+    lock: 'premium',
+    element: null,
+    category: 'jae',
+  },
+  {
+    id: 'jae-sack',
+    title: '만복 복주머니',
+    subtitle: '복이 쏟아집니다',
+    lock: 'premium',
+    element: null,
+    category: 'jae',
+  },
+  { id: 'jae-tree', title: '돈나무', subtitle: '재물이 열립니다', lock: 'premium', element: null, category: 'jae' },
+  {
+    id: 'ga-crane',
+    title: '학 가족',
+    subtitle: '온 가족이 평안합니다',
+    lock: 'premium',
+    element: null,
+    category: 'ga',
+  },
+  {
+    id: 'ga-hearth',
+    title: '등불 켠 집',
+    subtitle: '집안이 화목합니다',
+    lock: 'premium',
+    element: null,
+    category: 'ga',
+  },
+  {
+    id: 'ga-pomegranate',
+    title: '다복 석류',
+    subtitle: '자손과 다복이 깃듭니다',
+    lock: 'premium',
+    element: null,
+    category: 'ga',
+  },
+  {
+    id: 'yeon-wonang',
+    title: '원앙 한 쌍',
+    subtitle: '인연이 깃듭니다',
+    lock: 'premium',
+    element: null,
+    category: 'yeon',
+  },
+  {
+    id: 'yeon-dohwa',
+    title: '도화 만개',
+    subtitle: '사랑이 피어납니다',
+    lock: 'premium',
+    element: null,
+    category: 'yeon',
+  },
+  {
+    id: 'yeon-hojeop',
+    title: '나비의 춤',
+    subtitle: '설레는 만남이 날아듭니다',
+    lock: 'premium',
+    element: null,
+    category: 'yeon',
+  },
+  {
+    id: 'seong-yongmun',
+    title: '등용문',
+    subtitle: '시험과 승진이 뚫립니다',
+    lock: 'premium',
+    element: null,
+    category: 'seong',
+  },
+  {
+    id: 'seong-haetsal',
+    title: '첫 햇살',
+    subtitle: '시작이 길합니다',
+    lock: 'premium',
+    element: null,
+    category: 'seong',
+  },
+  {
+    id: 'seong-bonghwang',
+    title: '봉황 비상',
+    subtitle: '큰 운이 날아듭니다',
+    lock: 'premium',
+    element: null,
+    category: 'seong',
+  },
+]
+
+/** 프리미엄 낱장 가격(만냥). 팩이 본진이고 낱장은 기준점이다(복채 최소 단위 제약 — PRD v1 §6ⓐ). */
+export const PREMIUM_PRICE_SINGLE = 1
+
+/** Storage 사설 버킷 — 원본은 서명 URL 로만 나간다. */
+export const PREMIUM_BUCKET = 'wallpapers-premium'
+
+/** 공개 썸네일(360×640 q60) — 잠긴 장의 흐릿한 미리보기용. 마케팅 자산이라 공개가 의도다. */
+export function premiumThumbPath(id: string): string {
+  return `/wallpapers/premium-thumbs/${id}.webp`
+}
+
+/** 팩 — 멤버십이 제1 유도이고, 팩은 «비회원에게 추천하는 세트 구매» 경로다(CEO 확정). */
+export interface WallpaperPack {
+  id: string
+  title: string
+  /** 가격(만냥). 부분 보유와 무관하게 고정 — 낱장을 먼저 산 사람이 손해 보지 않도록 화면이 안내한다. */
+  price: number
+  itemIds: readonly string[]
+}
+
+export const WALLPAPER_PACKS: readonly WallpaperPack[] = [
+  {
+    id: 'pack-gi',
+    title: '기운 보충 5장',
+    price: 3,
+    itemIds: PREMIUM_WALLPAPER_SET.filter((w) => w.category === 'gi').map((w) => w.id),
+  },
+  {
+    id: 'pack-bok',
+    title: '복 배경화면 12장',
+    price: 3,
+    itemIds: PREMIUM_WALLPAPER_SET.filter((w) => w.category !== 'gi').map((w) => w.id),
+  },
+  { id: 'pack-all', title: '채운 전체 17장', price: 5, itemIds: PREMIUM_WALLPAPER_SET.map((w) => w.id) },
+]
+
+export function findWallpaperPack(packId: string): WallpaperPack | null {
+  return WALLPAPER_PACKS.find((p) => p.id === packId) ?? null
+}
+
+/** 프리미엄 한 장의 화면 표시형 — 원본 서명 URL 은 열린 장에만 온다(액션이 발급). */
+export interface PremiumDisplayItem extends PremiumWallpaperItem {
+  /** 미리보기 `<img src>` — 열려 있으면 서명 URL(원본), 잠겨 있으면 공개 썸네일. */
+  href: string
+  /** 「받기」 링크 — 서명 URL 이 있을 때만. 잠긴 장은 null(받기 버튼이 서지 않는다). */
+  downloadHref: string | null
+}
+
+/**
+ * 프리미엄 17장의 화면 세트. `signedUrls` 는 액션이 «열린 장에만» 발급한 서명 URL 맵 —
+ * 잠긴 장은 썸네일로 서고, URL 이 없으니 클라를 뒤져도 원본 주소가 없다.
+ */
+export function buildPremiumDisplaySet(signedUrls: Readonly<Record<string, string>>): PremiumDisplayItem[] {
+  return PREMIUM_WALLPAPER_SET.map((item) => {
+    const signed = signedUrls[item.id]
+    return {
+      ...item,
+      href: signed ?? premiumThumbPath(item.id),
+      downloadHref: signed ? wallpaperDownloadHref(signed) : null,
+    }
+  })
+}
+
+/** 프리미엄에서 id 로 한 장 — 서버 액션의 클라 id 검증용(무료 세트는 findWallpaperById). */
+export function findPremiumWallpaperById(id: string): PremiumWallpaperItem | null {
+  return PREMIUM_WALLPAPER_SET.find((w) => w.id === id) ?? null
 }

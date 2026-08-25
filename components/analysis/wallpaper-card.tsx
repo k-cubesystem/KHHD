@@ -3,24 +3,33 @@
 import { useEffect, useState, useTransition } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Lock, Download, ChevronRight, Coins, Play, Loader2, Crown } from 'lucide-react'
+import Link from 'next/link'
+import { Lock, Download, ChevronRight, Coins, Play, Loader2, Crown, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { IconBokjumeoni } from '@/components/icons/traditional-icons'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { WallpaperAdDialog } from '@/components/analysis/wallpaper-ad-dialog'
 import {
+  PREMIUM_CATEGORY_META,
+  PREMIUM_CATEGORY_ORDER,
   WALLPAPER_ACCESS_LABEL,
+  WALLPAPER_PACKS,
+  buildPremiumDisplaySet,
   buildWallpaperDisplaySet,
   isMyElement,
   orderWallpapersByElement,
   resolveWallpaperAccess,
   wallpaperPrice,
+  type PremiumDisplayItem,
+  type WallpaperAccess,
   type WallpaperDisplayItem,
+  type WallpaperPack,
 } from '@/lib/domain/analysis/wallpaper'
 import {
   getWallpaperStatus,
   purchaseWallpaper,
+  purchaseWallpaperPack,
   unlockWallpaperByAd,
   type WallpaperStatus,
 } from '@/app/actions/analysis/wallpaper'
@@ -210,9 +219,51 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
       balance: typeof newBalance === 'number' ? newBalance : prev.balance,
     }))
     celebrate()
+    // 프리미엄 원본은 서명 URL 로만 나간다 — 방금 산 장의 URL 은 서버 재조회로만 온다.
+    // 낙관 갱신(위)이 «열림» 표시를 먼저 세우고, 재조회가 「받기」 링크를 잇는다.
+    void getWallpaperStatus().then((s) => {
+      if (s) setAccess(s)
+    })
   }
 
-  const onPurchase = async (item: WallpaperDisplayItem) => {
+  const onPack = async (pack: WallpaperPack) => {
+    setErrorMsg(null)
+    setPendingId(pack.id)
+    try {
+      const res = await purchaseWallpaperPack(pack.id)
+      if (res.success) {
+        GA.wallpaperPurchase(pack.id)
+        setAccess((prev) => ({
+          ...prev,
+          unlocks: [
+            ...prev.unlocks,
+            ...pack.itemIds
+              .filter((id) => !prev.unlocks.some((u) => u.wallpaperId === id))
+              .map((id) => ({ wallpaperId: id, source: 'purchase' as const })),
+          ],
+          balance: typeof res.newBalance === 'number' ? res.newBalance : prev.balance,
+        }))
+        celebrate()
+        void getWallpaperStatus().then((s) => {
+          if (s) setAccess(s)
+        })
+        return
+      }
+      if (res.error === 'INSUFFICIENT_BOKCHAE') {
+        showBokchaeModal({
+          currentBalance: res.balance ?? access.balance,
+          requiredAmount: res.price ?? pack.price,
+          featureLabel: pack.title,
+        })
+        return
+      }
+      setErrorMsg(UNLOCK_ERROR_COPY[res.error ?? ''] ?? '소장에 실패했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  const onPurchase = async (item: Pick<WallpaperDisplayItem, 'id' | 'title' | 'subtitle' | 'lock' | 'element'>) => {
     setErrorMsg(null)
     setPendingId(item.id)
     try {
@@ -289,6 +340,8 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
           />
         ))}
       </div>
+
+      <PremiumSection access={access} pendingId={pendingId} onPurchase={(item) => onPurchase(item)} onPack={onPack} />
 
       <WallpaperAdDialog
         open={adTarget !== null}
@@ -400,6 +453,203 @@ function SheetTile({
             </button>
           )}
         </div>
+      )}
+    </div>
+  )
+}
+
+/** onPurchase 가 받는 최소 모양 — SheetTile 의 display 형과 프리미엄 형이 함께 통과한다. */
+type PurchasableItem = Pick<WallpaperDisplayItem, 'id' | 'title' | 'subtitle' | 'lock' | 'element'>
+
+/**
+ * 「채운(彩運)」 — 프리미엄 17장 섹션. 무료 여섯 장 아래에 선다.
+ *
+ * 유도 순서는 CEO 확정(2026-08-25)을 그대로 편다: ①멤버십(전 장 열림)이 제1 ②팩(세트 소장)이
+ * 그다음 ③낱장은 기준점. 원본은 사설 Storage 라 열린 장에만 서명 URL 이 온다 —
+ * 잠긴 장은 공개 썸네일을 흐려 보여주고, 「받기」 링크 자체가 서지 않는다.
+ */
+function PremiumSection({
+  access,
+  pendingId,
+  onPurchase,
+  onPack,
+}: {
+  access: WallpaperStatus
+  pendingId: string | null
+  onPurchase: (item: PurchasableItem) => void
+  onPack: (pack: WallpaperPack) => void
+}) {
+  const items = buildPremiumDisplaySet(access.premiumUrls)
+  // 판정은 도메인 한 곳 — 용신(element)을 myElement 로 넘겨 «내게 필요한 기운» 선물이 선다.
+  const accessCtx: WallpaperAccess = { ...access, myElement: access.element }
+  const allOpen = items.every((item) => resolveWallpaperAccess(item, accessCtx).unlocked)
+
+  return (
+    <div className="mt-2 flex flex-col gap-3 border-t border-gold-500/20 pt-4">
+      <div>
+        <p className="flex items-center gap-1.5 font-serif text-[14px] font-bold text-gold-500">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          채운(彩運) — 기운을 채우는 배경화면
+        </p>
+        <p className="mt-0.5 text-[11px] font-light text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
+          부족한 기운을 채우고, 필요한 운을 부르는 열일곱 장입니다.
+        </p>
+      </div>
+
+      {!access.isMember && (
+        <Link
+          href="/protected/store?tab=membership"
+          className="flex items-center justify-between gap-2 rounded-lg border border-gold-500/45 bg-gold-500/10 px-3 py-2.5 transition-colors hover:bg-gold-500/20"
+        >
+          <span className="flex items-center gap-1.5 font-serif text-[12px] font-bold text-gold-500">
+            <Crown className="h-3.5 w-3.5 shrink-0" />
+            멤버십이면 열일곱 장이 전부 열립니다
+          </span>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-gold-500/70" />
+        </Link>
+      )}
+
+      {!access.isMember && !allOpen && (
+        <div className="flex flex-col gap-1.5">
+          {WALLPAPER_PACKS.map((pack) => (
+            <button
+              key={pack.id}
+              type="button"
+              onClick={() => onPack(pack)}
+              disabled={pendingId !== null}
+              className="flex h-9 items-center justify-between rounded-lg border border-white/15 px-3 font-serif text-[11px] text-ink-light/80 transition-colors hover:border-gold-500/45 hover:text-gold-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="flex items-center gap-1.5">
+                {pendingId === pack.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <IconBokjumeoni className="h-3 w-3" />
+                )}
+                {pack.title}
+              </span>
+              <span className="font-bold">{pack.price}만냥</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {PREMIUM_CATEGORY_ORDER.map((category) => (
+        <div key={category} className="flex flex-col gap-2">
+          <div className="px-0.5">
+            <p className="font-serif text-[12px] font-bold text-ink-light/85">
+              {PREMIUM_CATEGORY_META[category].title}
+            </p>
+            <p className="text-[10px] font-light text-ink-light/50" style={{ wordBreak: 'keep-all' }}>
+              {PREMIUM_CATEGORY_META[category].subtitle}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {items
+              .filter((item) => item.category === category)
+              .map((item) => (
+                <PremiumTile
+                  key={item.id}
+                  item={item}
+                  accessCtx={accessCtx}
+                  myElement={access.element}
+                  pending={pendingId === item.id}
+                  onPurchase={() => onPurchase(item)}
+                />
+              ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PremiumTile({
+  item,
+  accessCtx,
+  myElement,
+  pending,
+  onPurchase,
+}: {
+  item: PremiumDisplayItem
+  accessCtx: WallpaperAccess
+  myElement: WallpaperStatus['element']
+  pending: boolean
+  onPurchase: () => void
+}) {
+  const { unlocked, via, reason } = resolveWallpaperAccess(item, accessCtx)
+  const mine = item.category === 'gi' && item.element !== null && item.element === myElement
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="relative aspect-[9/16] overflow-hidden rounded-lg border border-white/10">
+        <img
+          src={item.href}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          className={`h-full w-full object-cover ${unlocked ? '' : 'blur-[3px] brightness-[0.35]'}`}
+        />
+
+        {mine && (
+          <span className="absolute left-1.5 top-1.5 rounded bg-gold-500 px-1.5 py-0.5 font-serif text-[9px] font-bold leading-none text-[#0A0A08]">
+            내게 필요한 기운
+          </span>
+        )}
+
+        {unlocked ? (
+          item.downloadHref ? (
+            <a
+              href={item.downloadHref}
+              download
+              onClick={() => GA.wallpaperDownload(item.id)}
+              aria-label={`${item.title} 배경화면 받기`}
+              className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/70 py-1.5 font-serif text-[11px] text-gold-500 transition-colors hover:bg-black/85 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
+            >
+              <Download className="h-3 w-3" />
+              받기
+            </a>
+          ) : (
+            // 방금 열려 서명 URL 재조회가 도는 짧은 사이 — applyUnlock 의 재조회가 채운다.
+            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/70 py-1.5 font-serif text-[11px] text-ink-light/60">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              여는 중
+            </span>
+          )
+        ) : (
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-center">
+            <Lock className="h-4 w-4 text-white/70" />
+            <span className="text-[10px] font-light leading-tight text-white/75" style={{ wordBreak: 'keep-all' }}>
+              {reason}
+            </span>
+          </span>
+        )}
+      </div>
+
+      <div className="px-0.5">
+        <p className="font-serif text-[12px] font-bold text-ink-light">{item.title}</p>
+        <p className="text-[10px] font-light leading-tight text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
+          {item.subtitle}
+        </p>
+      </div>
+
+      {unlocked
+        ? via && (
+            <span className="px-0.5 font-serif text-[10px] leading-none text-gold-500/70">
+              {WALLPAPER_ACCESS_LABEL[via]}
+            </span>
+          )
+        : null}
+
+      {!unlocked && (
+        <button
+          type="button"
+          onClick={onPurchase}
+          disabled={pending}
+          className="flex h-8 items-center justify-center gap-1 rounded-lg border border-gold-500/45 bg-gold-500/10 font-serif text-[11px] font-bold text-gold-500 transition-colors hover:bg-gold-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Coins className="h-3 w-3" />}
+          {wallpaperPrice(item)}만냥으로 소장
+        </button>
       )}
     </div>
   )

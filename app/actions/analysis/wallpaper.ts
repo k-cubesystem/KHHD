@@ -7,11 +7,16 @@ import { buildJourney } from '@/lib/domain/analysis/journey'
 import { isElement } from '@/lib/domain/shrine/types'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import {
+  PREMIUM_BUCKET,
+  PREMIUM_WALLPAPER_SET,
+  findPremiumWallpaperById,
   findWallpaperById,
+  findWallpaperPack,
   kstDateKey,
   resolveWallpaperAccess,
   wallpaperPrice,
   type MonthlyWallpaperRef,
+  type WallpaperAccess,
   type WallpaperElement,
   type WallpaperUnlockRecord,
   type WallpaperUnlockSource,
@@ -34,6 +39,11 @@ export interface WallpaperStatus {
   monthly: MonthlyWallpaperRef | null
   /** 복채 잔액(만냥) — 잔액 부족 안내 모달이 쓴다. */
   balance: number
+  /**
+   * 프리미엄 «열린 장»의 원본 서명 URL(1시간) — 잠긴 장은 여기 없다.
+   * 원본은 사설 버킷이라 이 맵이 유일한 통로다. 클라를 뒤져도 잠긴 장의 주소는 없다.
+   */
+  premiumUrls: Record<string, string>
 }
 
 export interface WallpaperUnlockResult {
@@ -121,27 +131,71 @@ export async function getWallpaperStatus(): Promise<WallpaperStatus | null> {
   )
 
   const yongsin = energy?.yongsin_element
-  return {
-    element: isElement(yongsin) ? yongsin : null,
+  const element = isElement(yongsin) ? yongsin : null
+  const access: WallpaperAccess = {
     hasSaju: categories.includes('SAJU'),
     journeyComplete: buildJourney(categories).allComplete,
     isMember: Boolean(subscription),
     unlocks,
+    myElement: element,
+  }
+
+  return {
+    element,
+    hasSaju: access.hasSaju,
+    journeyComplete: access.journeyComplete,
+    isMember: access.isMember,
+    unlocks,
     adUsedToday,
     monthly: toMonthlyRef(monthlyRow),
     balance: typeof wallet?.balance === 'number' ? wallet.balance : 0,
+    premiumUrls: await signPremiumUrls(access),
   }
+}
+
+/**
+ * 프리미엄 «열린 장»에만 원본 서명 URL 을 발급한다(1시간). 판정과 발급이 같은 함수에 있어
+ * «잠긴 장의 URL 이 새는» 경로가 구조적으로 없다. 실패는 빈 맵 — 화면은 썸네일로 선다.
+ */
+async function signPremiumUrls(access: WallpaperAccess): Promise<Record<string, string>> {
+  const openIds = PREMIUM_WALLPAPER_SET.filter((item) => resolveWallpaperAccess(item, access).unlocked).map(
+    (item) => item.id
+  )
+  if (openIds.length === 0) return {}
+
+  const admin = createAdminClient()
+  const { data, error } = await admin.storage.from(PREMIUM_BUCKET).createSignedUrls(
+    openIds.map((id) => `${id}.webp`),
+    60 * 60
+  )
+  if (error || !data) {
+    logger.warn('[wallpaper] premium signed urls failed:', error)
+    return {}
+  }
+
+  const urls: Record<string, string> = {}
+  for (const row of data) {
+    if (row.signedUrl && row.path) urls[row.path.replace(/\.webp$/, '')] = row.signedUrl
+  }
+  return urls
 }
 
 /** 판정에 필요한 것만 다시 모은다 — 구매·광고 경로가 현황 액션과 같은 근거를 보게 하는 단일 지점. */
 async function loadAccessContext(userId: string) {
   const supabase = await createClient()
-  const [{ data: history }, { data: subscription }, { data: unlockRows }, { data: monthlyRow }] = await Promise.all([
-    supabase.from('analysis_history').select('category').eq('user_id', userId).eq('target_id', userId),
-    supabase.from('subscriptions').select('id').eq('user_id', userId).eq('status', 'ACTIVE').limit(1).maybeSingle(),
-    supabase.from('wallpaper_unlocks').select('wallpaper_id, source, created_at').eq('user_id', userId),
-    supabase.from('wallpaper_monthly').select('ym, image_url').order('ym', { ascending: false }).limit(1).maybeSingle(),
-  ])
+  const [{ data: history }, { data: subscription }, { data: unlockRows }, { data: monthlyRow }, { data: energy }] =
+    await Promise.all([
+      supabase.from('analysis_history').select('category').eq('user_id', userId).eq('target_id', userId),
+      supabase.from('subscriptions').select('id').eq('user_id', userId).eq('status', 'ACTIVE').limit(1).maybeSingle(),
+      supabase.from('wallpaper_unlocks').select('wallpaper_id, source, created_at').eq('user_id', userId),
+      supabase
+        .from('wallpaper_monthly')
+        .select('ym, image_url')
+        .order('ym', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from('user_energy_profile').select('yongsin_element').eq('user_id', userId).maybeSingle(),
+    ])
 
   const categories = Array.from(
     new Set(
@@ -160,7 +214,10 @@ async function loadAccessContext(userId: string) {
       journeyComplete: buildJourney(categories).allComplete,
       isMember: Boolean(subscription),
       unlocks: rows.map(toUnlockRecord).filter((u): u is WallpaperUnlockRecord => u !== null),
-    },
+      // 프리미엄 «내게 필요한 기운» 선물 판정 — 구매 경로도 현황과 같은 근거를 봐야
+      // «이미 선물로 열린 장을 파는» 일이 없다.
+      myElement: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
+    } satisfies WallpaperAccess,
   }
 }
 
@@ -179,7 +236,8 @@ export async function purchaseWallpaper(wallpaperId: string): Promise<WallpaperU
   if (!user) return { success: false, error: 'UNAUTHORIZED' }
 
   const { monthly, access } = await loadAccessContext(user.id)
-  const item = findWallpaperById(wallpaperId, monthly)
+  // 무료 세트 → 프리미엄 순으로 찾는다 — 프리미엄 낱장도 같은 결제 경로를 탄다(id 는 겹치지 않는다).
+  const item = findWallpaperById(wallpaperId, monthly) ?? findPremiumWallpaperById(wallpaperId)
   if (!item) return { success: false, error: 'NOT_FOUND' }
   if (resolveWallpaperAccess(item, access).unlocked) return { success: false, error: 'ALREADY_UNLOCKED' }
 
@@ -206,6 +264,57 @@ export async function purchaseWallpaper(wallpaperId: string): Promise<WallpaperU
   }
 
   return { success: true, unlock: { wallpaperId: item.id, source: 'purchase' }, newBalance: paid.balance, price }
+}
+
+/**
+ * 팩 소장 — «비회원에게 추천하는 세트 구매» 경로(멤버십이 제1 유도, 팩이 그다음 — CEO 확정).
+ *
+ * 가격은 부분 보유와 무관하게 고정이다(팩 정의 주석 참조). 이미 전부 열려 있으면 결제하지
+ * 않는다. 지급은 남은 장 전부를 한 번의 upsert 로 — 실패 시 전액 환불(낱장과 같은 규율).
+ */
+export async function purchaseWallpaperPack(packId: string): Promise<WallpaperUnlockResult> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { success: false, error: 'UNAUTHORIZED' }
+
+  const pack = findWallpaperPack(packId)
+  if (!pack) return { success: false, error: 'NOT_FOUND' }
+
+  const { access } = await loadAccessContext(user.id)
+  const missing = pack.itemIds.filter((id) => {
+    const item = findPremiumWallpaperById(id)
+    return item !== null && !resolveWallpaperAccess(item, access).unlocked
+  })
+  if (missing.length === 0) return { success: false, error: 'ALREADY_UNLOCKED' }
+
+  const paid = await spendBokchae(pack.price, `복 배경화면 팩 (${pack.title})`)
+  if (!paid.success) {
+    if (paid.error === 'INSUFFICIENT_BOKCHAE') {
+      const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle()
+      return {
+        success: false,
+        error: 'INSUFFICIENT_BOKCHAE',
+        balance: typeof wallet?.balance === 'number' ? wallet.balance : 0,
+        price: pack.price,
+      }
+    }
+    return { success: false, error: paid.error ?? 'PAYMENT_FAILED' }
+  }
+
+  const admin = createAdminClient()
+  const { error: grantError } = await admin.from('wallpaper_unlocks').upsert(
+    missing.map((id) => ({ user_id: user.id, wallpaper_id: id, source: 'purchase' as const })),
+    { onConflict: 'user_id,wallpaper_id', ignoreDuplicates: true }
+  )
+  if (grantError) {
+    logger.error('[wallpaper] pack grant failed:', grantError)
+    await refundBokchae(user.id, pack.price, `복 배경화면 팩 소장 취소 환불 (${pack.title})`)
+    return { success: false, error: 'GRANT_FAILED' }
+  }
+
+  return { success: true, newBalance: paid.balance, price: pack.price }
 }
 
 /**

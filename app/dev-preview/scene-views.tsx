@@ -70,6 +70,7 @@ const WALLPAPER_BASE: WallpaperStatus = {
   unlocks: [],
   adUsedToday: false,
   monthly: null,
+  premiumUrls: {},
   balance: 12,
 }
 
