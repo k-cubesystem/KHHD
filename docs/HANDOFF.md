@@ -784,3 +784,30 @@ cat .next/static/chunks/*.css | grep -c "120d07"   # 고치기 전 0 · 고친 �
 
 **게이트**: tsc 0 · jest 3,563/3,563(168 suite) · next build ✓ · eslint 0 · 공개 4경로 200 ·
 라이브 CSS 에서 패널 배경 규칙 1건 실측.
+
+
+---
+
+## (26차 · 2026-08-25 오전) 「채운(彩運)」 프리미엄 17장 상품화 — 사설 Storage·팩·용신 선물
+
+**프로덕션 라이브** (`7784174`, 이후 배포에 포함되어 alias 이동 확인 · 썸네일 17장 200 · 사설 버킷 직타 400 차단 실측).
+
+- **접근 모델**: lock `premium` 신설 — 멤버십(전 장)·구매(낱장 1만냥/팩)·«내게 필요한 기운»(사주
+  완주자의 용신 오행 장 1장, via='saju')로만 열린다. 🔴 여정 보너스(사주·완주)로는 안 열린다 —
+  무료 세트와의 결정적 차이이고 회귀 테스트가 잠근다(`wallpaper-premium.test.ts` 14건).
+- **팩 3종**: 기운 5장 3만냥 · 복 12장 3만냥 · 전체 17장 5만냥(`WALLPAPER_PACKS`).
+  `purchaseWallpaperPack` — 남은 장 일괄 upsert, 실패 시 전액 환불.
+- 🔴 **`wallpaperPrice` 함정 수정**: element 로 먼저 갈려 프리미엄 비오행 장이 «이달의 복
+  2만냥»으로 오판되던 것 — lock 검사 선행으로 교정.
+- **원본 유출 차단 구조**: 원본은 사설 버킷 `wallpapers-premium`, 서명 URL(1h)은
+  `signPremiumUrls` 가 «열린 장에만» 발급 — 판정과 발급이 같은 함수라 잠긴 장 URL 이 클라에
+  실릴 경로가 없다. 잠긴 장은 공개 썸네일(`public/wallpapers/premium-thumbs/`, 360×640)로 선다.
+- 🔴 **로컬 env 함정**: `.env`·`.env.local` 의 SUPABASE URL 이 **죽은 구 프로젝트**
+  (ukuscwvkkbedszwmetfu, DNS 미해석)를 가리킨다. 프로덕션은 Vercel env 라 무사했지만 로컬
+  스크립트는 전부 이 함정을 밟는다 — `upload-premium-wallpapers.mjs` 는 Management API
+  (`SUPABASE_ACCESS_TOKEN` 셸 변수)로 현행 키를 런타임 획득한다. **CEO: env 파일 갱신 요망.**
+- UI: 배경화면 시트에 「채운」 섹션 — 멤버십 CTA(제1 유도) → 팩 3버튼 → 5과 그리드.
+  구매 직후 상태 재조회로 서명 URL 을 잇는다(그 사이 「여는 중」).
+
+게이트: jest 3,603(171 suites) · tsc 0 · build ✓. 다음: 실기기 구매·다운로드 검수(CEO),
+GA 퍼널 관찰, Batch API 재생성 여지(2K $0.050)는 확정본 교체 때만.
