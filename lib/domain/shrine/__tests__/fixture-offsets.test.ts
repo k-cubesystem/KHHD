@@ -11,6 +11,9 @@ import {
   isZeroFixtureOffset,
   parseFixtureOffsets,
   type FixtureOffsets,
+  FIXTURE_SCALE_DEFAULT,
+  FIXTURE_SCALE_RANGE,
+  fixtureScale,
 } from '../fixture-offsets'
 import { SNAP_RADIUS_PX, type StageAnchor, type StageSpec } from '../stage'
 
@@ -315,5 +318,42 @@ describe('저장 정규화 — 전체 초기화', () => {
       ritualHall: { dx: 0, dy: 0 },
     }
     expect(parseFixtureOffsets(all)).toEqual(EMPTY_FIXTURE_OFFSETS)
+  })
+})
+
+/**
+ * 크기 축(scale) — 2026-08-25 추가. 이동(dx·dy)과 **다른 축**이다.
+ *
+ * 🔴 그전에는 크기를 바꿀 길이 없었고, 룸이 세로 이동을 발에만 더하는 버그가 «아래로 끌면 커진다»는
+ *    부작용으로 크기 조절 노릇을 하고 있었다. 그 버그를 고치면서 축을 제대로 갈랐다.
+ */
+describe('scale — 크기 축', () => {
+  it('정본(1)이면 키를 담지 않는다 — scale 이 붙기 전 저장값과 바이트가 같다', () => {
+    expect(parseFixtureOffsets({ deityStage: { dx: 1, dy: 2, scale: 1 } })).toEqual({
+      deityStage: { dx: 1, dy: 2 },
+    })
+  })
+
+  it('정본이 아니면 담는다', () => {
+    expect(parseFixtureOffsets({ deityStage: { dx: 0, dy: 0, scale: 0.8 } })).toEqual({
+      deityStage: { dx: 0, dy: 0, scale: 0.8 },
+    })
+  })
+
+  it('배율만 바꿔도 «정본이 아님»으로 본다 — 이동이 0이라고 버려지지 않는다', () => {
+    expect(isZeroFixtureOffset({ dx: 0, dy: 0, scale: 0.8 })).toBe(false)
+    expect(isZeroFixtureOffset({ dx: 0, dy: 0, scale: 1 })).toBe(true)
+    expect(isZeroFixtureOffset({ dx: 0, dy: 0 })).toBe(true)
+  })
+
+  it('범위를 벗어나면 클램프한다', () => {
+    expect(fixtureScale({ dx: 0, dy: 0, scale: 99 })).toBe(FIXTURE_SCALE_RANGE[1])
+    expect(fixtureScale({ dx: 0, dy: 0, scale: 0.01 })).toBe(FIXTURE_SCALE_RANGE[0])
+  })
+
+  it('없거나 손상된 배율은 1 — 살림이 사라지지 않는다', () => {
+    expect(fixtureScale({ dx: 0, dy: 0 })).toBe(FIXTURE_SCALE_DEFAULT)
+    expect(fixtureScale({ dx: 0, dy: 0, scale: Number.NaN })).toBe(FIXTURE_SCALE_DEFAULT)
+    expect(fixtureScale(null)).toBe(FIXTURE_SCALE_DEFAULT)
   })
 })

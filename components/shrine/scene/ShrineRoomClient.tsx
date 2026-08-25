@@ -34,6 +34,7 @@ import {
 import {
   applyStageFixtureOffsets,
   fixtureDelta,
+  fixtureScale,
   isZeroFixtureOffset,
   type FixtureKey,
   type FixtureOffset,
@@ -631,10 +632,14 @@ export function ShrineRoomClient({
   const stageMovable = (daecheongStageBase?.structures.length ?? 0) > 0
   /** 신위 무대 이동량 — 단상·상판·앵커·신위 접지·아우라가 **전부 이 하나에서** 파생한다 */
   const deityDelta = stageMovable ? fixtureDelta(fixtures, 'deityStage') : fixtureDelta(null, 'deityStage')
-  /** 신위 스탠드 세로 정합 — 이동량을 발·머리에 함께 얹어 **크기를 보존**한다(도메인 규칙). */
+  /**
+   * 신위 스탠드 세로 정합 — 이동(dy)은 발·머리를 함께, 크기(scale)는 발 고정으로.
+   * 두 축의 합성은 도메인(deityStandShift)이 한다 — 여기서 산수를 하지 않는다.
+   */
   const deityStand = useMemo(
-    () => deityStandShift(deityPodiumTopY(activeCode), deityHeadRoomY(activeCode), deityDelta.dy),
-    [activeCode, deityDelta.dy]
+    () =>
+      deityStandShift(deityPodiumTopY(activeCode), deityHeadRoomY(activeCode), deityDelta.dy, fixtureScale(deityDelta)),
+    [activeCode, deityDelta]
   )
   /**
    * ★ 고정 살림 조절의 적용 지점 — 여기 한 번 통과시키면 구조물 렌더(StageLayers)와 스냅 앵커·
@@ -1892,6 +1897,8 @@ export function ShrineRoomClient({
           label="신위 무대"
           onDrag={onDragFixture}
           onCommit={onCommitFixture}
+          // 신위만 크기를 연다 — 선반장·의식각은 가구 기하가 배율을 못 받는다(FixtureHandle 주석)
+          resizable
         />
       )}
       {showFixtureHandles &&

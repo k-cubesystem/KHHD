@@ -27,10 +27,20 @@ export type FixtureKey = 'deityStage' | 'familyShelf' | 'ritualHall'
 /** 파싱·순회의 단일 출처. 입력 객체의 키를 훑지 않고 **이 목록만** 훑는다(프로토타입 오염 차단). */
 export const FIXTURE_KEYS: readonly FixtureKey[] = Object.freeze(['deityStage', 'familyShelf', 'ritualHall'])
 
-/** 정본 좌표에 더하는 이동량(무대 %). */
+/**
+ * 정본 좌표에 더하는 이동량(무대 %) + 크기 배율.
+ *
+ * 🔴 `scale` 은 2026-08-25 에 붙었다. 그 전에는 크기를 바꿀 길이 없었는데, 룸이 세로 이동량을
+ *    **발에만** 더하는 버그 덕분에 «아래로 끌면 커지는» 부작용이 사실상 크기 조절 노릇을 하고
+ *    있었다. 그 버그를 고치자(이동은 이동이어야 한다) 크기를 줄일 방법이 사라졌다 — 그래서
+ *    **이동과 크기를 별개 축으로 갈라** 제대로 연다. 되돌리지 말 것: 한 축이 두 일을 하면
+ *    사용자는 원하는 결과를 «부작용으로» 얻게 되고, 고치는 순간 그 결과를 잃는다.
+ */
 export interface FixtureOffset {
   dx: number
   dy: number
+  /** 크기 배율. 1 = 정본. 생략·손상되면 1로 본다(기존 저장값과 호환). */
+  scale?: number
 }
 
 /** 신당 한 채의 조정값. 키가 없으면 정본 그대로다 — 부분 저장이 정상 상태다. */
@@ -42,6 +52,15 @@ export type FixtureOffsets = Partial<Record<FixtureKey, FixtureOffset>>
  */
 export const FIXTURE_DX_RANGE: [number, number] = [-12, 12]
 export const FIXTURE_DY_RANGE: [number, number] = [-14, 14]
+
+/**
+ * 크기 배율 한계 — 조절이지 재창작이 아니다. 0.6 아래면 신위가 제단 장식만 해지고,
+ * 1.4 위면 감실을 뚫고 나가 «틀 안에 든 신»이라는 그림 자체가 깨진다.
+ */
+export const FIXTURE_SCALE_RANGE: [number, number] = [0.6, 1.4]
+/** 버튼 한 번에 움직이는 몫 — 눈에 보이되 한 번에 망가지지 않는 크기. */
+export const FIXTURE_SCALE_STEP = 0.05
+export const FIXTURE_SCALE_DEFAULT = 1
 
 /** 「움직이지 않음」 — 공유 상수(참조 고정으로 memo·effect deps 를 오염시키지 않는다). */
 export const ZERO_FIXTURE_OFFSET: FixtureOffset = Object.freeze({ dx: 0, dy: 0 })
@@ -70,15 +89,40 @@ function clampNum(v: unknown, range: [number, number]): number {
   return Math.min(range[1], Math.max(range[0], v))
 }
 
-/** 미지의 값 → 오프셋. 형태가 어긋나면 (0,0). */
-function offsetFrom(v: unknown): FixtureOffset {
-  const r = isRecord(v) ? v : {}
-  return { dx: round2(clampNum(r.dx, FIXTURE_DX_RANGE)), dy: round2(clampNum(r.dy, FIXTURE_DY_RANGE)) }
+/**
+ * 크기 배율 클램프 — 이동량과 달리 **기본이 1**이라 0으로 떨어뜨리면 살림이 사라진다.
+ * 깨진 값·미지정은 전부 1로 되돌린다(기존 저장값에 scale 이 없는 것이 정상 상태다).
+ */
+function scaleFrom(v: unknown): number {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return FIXTURE_SCALE_DEFAULT
+  return round2(Math.min(FIXTURE_SCALE_RANGE[1], Math.max(FIXTURE_SCALE_RANGE[0], v)))
 }
 
-/** 정본과 같은 값인가. 저장 정규화(0 은 안 담는다)와 항등 반환 판정의 단일 기준. */
+/**
+ * 미지의 값 → 오프셋. 형태가 어긋나면 (0,0).
+ *
+ * 🔴 `scale` 은 **정본(1)일 때 키를 담지 않는다** — 이 파일의 정규화 규율 그대로다
+ *    (「초기화」·「제자리로 되돌림」·「한 번도 안 건드림」이 저장 결과에서 같아야 한다).
+ *    그래서 scale 이 붙기 전에 저장된 값들과 바이트가 한 글자도 달라지지 않는다.
+ */
+function offsetFrom(v: unknown): FixtureOffset {
+  const r = isRecord(v) ? v : {}
+  const base: FixtureOffset = {
+    dx: round2(clampNum(r.dx, FIXTURE_DX_RANGE)),
+    dy: round2(clampNum(r.dy, FIXTURE_DY_RANGE)),
+  }
+  const scale = scaleFrom(r.scale)
+  return scale === FIXTURE_SCALE_DEFAULT ? base : { ...base, scale }
+}
+
+/** 크기 배율 — 생략·손상이면 1. 화면·저장이 같은 기준을 쓴다. */
+export function fixtureScale(o: FixtureOffset | null | undefined): number {
+  return scaleFrom(o?.scale)
+}
+
+/** 정본과 같은 값인가. 저장 정규화(정본은 안 담는다)와 항등 반환 판정의 단일 기준. */
 export function isZeroFixtureOffset(o: FixtureOffset | null | undefined): boolean {
-  return !o || (o.dx === 0 && o.dy === 0)
+  return !o || (o.dx === 0 && o.dy === 0 && fixtureScale(o) === FIXTURE_SCALE_DEFAULT)
 }
 
 /** 범위 클램프 + 소수 2자리. 드래그 중에도 이 함수를 거쳐 «끌 수 있는 곳»과 «저장되는 곳»이 같다. */

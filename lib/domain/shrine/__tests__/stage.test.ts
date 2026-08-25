@@ -728,4 +728,28 @@ describe('deityStandShift — 이동은 이동이어야 한다', () => {
   it('이동량이 숫자가 아니면 0으로 본다 (저장값 손상이 신위를 사라지게 하지 않는다)', () => {
     expect(deityStandShift(FOOT, HEAD, Number.NaN)).toEqual({ podiumTopY: FOOT, headRoomY: HEAD })
   })
+
+  it('크기(scale)는 **발을 고정한 채** 키만 바꾼다 — 접지가 깨지지 않는다', () => {
+    const small = deityStandShift(FOOT, HEAD, 0, 0.8)
+    expect(small.podiumTopY).toBe(FOOT)
+    expect(deityStandBox(small.podiumTopY, small.headRoomY).height).toBe(
+      `${Math.round((FOOT - HEAD) * 0.8 * 10000) / 10000}%`
+    )
+  })
+
+  it('크기와 이동은 서로를 오염시키지 않는다 — 옮겨도 배율만큼의 키가 그대로다', () => {
+    const base = deityStandShift(FOOT, HEAD, 0, 0.8)
+    const baseH = deityStandBox(base.podiumTopY, base.headRoomY).height
+    for (const dy of [-6, 0, 6]) {
+      const moved = deityStandShift(FOOT, HEAD, dy, 0.8)
+      expect(deityStandBox(moved.podiumTopY, moved.headRoomY).height).toBe(baseH)
+      expect(moved.podiumTopY).toBeCloseTo(FOOT + dy, 4)
+    }
+  })
+
+  it('배율이 없거나 손상되면 정본 크기(1배)다', () => {
+    const plain = deityStandShift(FOOT, HEAD, 0)
+    expect(deityStandShift(FOOT, HEAD, 0, Number.NaN)).toEqual(plain)
+    expect(deityStandShift(FOOT, HEAD, 0, 0)).toEqual(plain)
+  })
 })

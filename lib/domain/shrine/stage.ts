@@ -422,23 +422,33 @@ export function deityStandBox(podiumTopY: number = PODIUM_TOP_Y, headRoomY: numb
 }
 
 /**
- * 「고정 살림 조절」의 세로 이동을 신위 스탠드에 **크기를 바꾸지 않고** 얹는다.
+ * 「고정 살림 조절」의 **이동(dy)과 크기(scale)** 를 신위 스탠드에 얹는다.
  *
  * 🔴 2026-08-25 CEO 「신이 왜 상반신만 나오면서 크기가 커졌지?」의 근인이 여기 있었다.
  *    룸이 이동량(dy)을 **발(podiumTopY)에만** 더하고 머리(headRoomY)는 정본 그대로 뒀다.
  *    스탠드 높이는 `발 − 머리` 라, 아래로 5%p 옮기면 신위가 **5%p 더 커지면서** 발이 제단상
- *    뒤로 잠겨 상반신만 남았다. 이동이 확대로 새는 자리였다.
+ *    뒤로 잠겨 상반신만 남았다. **이동이 확대로 새는** 자리였다.
  *
- * 이동은 이동이어야 한다 — 두 줄을 **같이** 옮기면 높이가 보존되고 그림만 내려간다.
- * 크기를 바꾸고 싶으면 그것은 별도의 조절(scale)이지 이동이 아니다.
+ * 그래서 두 축을 갈랐다:
+ *  · 이동(dy) — 발과 머리를 **함께** 옮긴다. 높이가 보존되고 그림만 오르내린다.
+ *  · 크기(scale) — **발을 고정한 채** 머리만 오르내린다. 선 사람이 커지고 작아지는 방식이고,
+ *    발이 제단 바닥을 떠나지 않으므로 접지가 깨지지 않는다.
+ *
+ * 🔴 순서가 중요하다: 먼저 크기를 정하고(발 기준), 그다음 통째로 옮긴다. 반대로 하면
+ *    옮긴 만큼 크기가 달라진다 — 고친 바로 그 버그로 되돌아간다.
  */
 export function deityStandShift(
   podiumTopY: number,
   headRoomY: number,
-  dy: number
+  dy: number,
+  scale: number = 1
 ): { podiumTopY: number; headRoomY: number } {
   const shift = Number.isFinite(dy) ? dy : 0
-  return { podiumTopY: podiumTopY + shift, headRoomY: headRoomY + shift }
+  const factor = Number.isFinite(scale) && scale > 0 ? scale : 1
+  const baseHeight = podiumTopY - headRoomY
+  // ① 크기 — 발 고정, 머리만 움직인다  ② 이동 — 둘을 함께
+  const scaledHead = podiumTopY - baseHeight * factor
+  return { podiumTopY: podiumTopY + shift, headRoomY: scaledHead + shift }
 }
 
 // ─── §4 방어 파싱 (Supabase jsonb → 타입 안전) ────────────────
