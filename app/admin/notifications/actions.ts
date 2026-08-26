@@ -1,6 +1,6 @@
 'use server'
 
-import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAdminClient } from '@/lib/auth/admin-guard'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 
@@ -13,7 +13,7 @@ export interface SystemSetting {
 }
 
 export async function getNotificationSettings() {
-  const supabase = createAdminClient()
+  const supabase = await requireAdminClient()
   const { data, error } = await supabase
     .from('system_settings')
     .select('*')
@@ -30,8 +30,15 @@ export async function getNotificationSettings() {
   return settings
 }
 
+const EDITABLE_SETTING_KEYS = ['daily_fortune_time', 'daily_fortune_enabled', 'kakao_template_id'] as const
+
 export async function updateNotificationSetting(key: string, value: string) {
-  const supabase = createAdminClient()
+  // key를 그대로 받으면 system_settings의 임의 키(기능 플래그·환율 등)를 덮어쓸 수 있다
+  if (!EDITABLE_SETTING_KEYS.includes(key as (typeof EDITABLE_SETTING_KEYS)[number])) {
+    return { success: false, error: `수정할 수 없는 설정 키입니다: ${key}` }
+  }
+
+  const supabase = await requireAdminClient()
   const { error } = await supabase.from('system_settings').upsert({ key, value, updated_at: new Date().toISOString() })
 
   if (error) {
@@ -44,7 +51,7 @@ export async function updateNotificationSetting(key: string, value: string) {
 }
 
 export async function getNotificationLogs(page = 1, limit = 20) {
-  const supabase = createAdminClient()
+  const supabase = await requireAdminClient()
   const from = (page - 1) * limit
   const to = from + limit - 1
 
@@ -61,7 +68,7 @@ export async function getNotificationLogs(page = 1, limit = 20) {
 
 export async function runManualAutomation() {
   try {
-    const supabase = createAdminClient()
+    const supabase = await requireAdminClient()
 
     // 1. Get Template
     const { data: tmplSetting } = await supabase
