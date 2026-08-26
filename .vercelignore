@@ -1,0 +1,37 @@
+# .vercelignore가 있으면 Vercel은 .gitignore 대신 이 파일만 사용한다.
+# → .gitignore 항목을 그대로 옮겨 적고, 배포에 불필요한 대용량 소스를 추가로 제외한다.
+
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn
+
+# next.js
+/.next
+/out
+/build
+
+# testing
+/coverage
+e2e/.auth
+test-results
+playwright-report
+
+# env / vercel
+.env*.local
+.env
+.vercel
+.git
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+npm-debug.log*
+
+# 배포 산출물이 아닌 대용량 원본·도구 (파일 수 15000 제한 초과 방지)
+.claude
+.gstack
+assets-src
+preview-shots
