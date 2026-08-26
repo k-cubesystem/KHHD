@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getUserRole } from '@/lib/auth'
 import { logger } from '@/lib/utils/logger'
 
@@ -270,27 +271,32 @@ export async function updateRouletteConfig(
   const role = await getUserRole()
   if (role !== 'admin') return { success: false, error: '관리자 권한이 필요합니다.' }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // roulette_config에는 INSERT/DELETE RLS 정책이 없다 → 유저 세션 클라이언트로는 쓸 수 없다
+  const supabase = createAdminClient()
 
-  if (!user) return { success: false, error: '로그인이 필요합니다.' }
+  if (configs.length === 0) {
+    return { success: false, error: '설정이 비어 있습니다.' }
+  }
 
-  // 확률 합계 검증 (0-100 사이)
+  for (const c of configs) {
+    if (!Number.isFinite(c.probability) || c.probability < 0) {
+      return { success: false, error: `확률은 0 이상이어야 합니다: ${c.label}` }
+    }
+    if (!Number.isFinite(c.reward_value) || c.reward_value < 0) {
+      return { success: false, error: `보상 값은 0 이상이어야 합니다: ${c.label}` }
+    }
+  }
+
   const totalProb = configs.reduce((sum, c) => sum + Number(c.probability), 0)
   if (totalProb <= 0) {
     return { success: false, error: '확률 합계는 0보다 커야 합니다.' }
   }
 
-  // 기존 설정 삭제 후 재삽입
-  const { error: deleteError } = await supabase
-    .from('roulette_config')
-    .delete()
-    .neq('id', '00000000-0000-0000-0000-000000000000') // 전체 삭제
-
-  if (deleteError) {
-    return { success: false, error: deleteError.message }
+  // 기존 설정을 먼저 지우면 INSERT가 실패했을 때 룰렛이 통째로 비어버린다.
+  // 새 설정을 먼저 넣고, 성공한 뒤에 옛 행만 지운다.
+  const { data: oldRows, error: readError } = await supabase.from('roulette_config').select('id')
+  if (readError) {
+    return { success: false, error: readError.message }
   }
 
   const { error: insertError } = await supabase.from('roulette_config').insert(
@@ -302,12 +308,20 @@ export async function updateRouletteConfig(
       color: c.color,
       sort_order: c.sort_order,
       is_active: true,
-      updated_at: new Date().toISOString(),
+      // updated_at 컬럼은 roulette_config에 없다 — 넣으면 PGRST204로 저장 자체가 실패한다
     }))
   )
 
   if (insertError) {
     return { success: false, error: insertError.message }
+  }
+
+  const oldIds = (oldRows ?? []).map((r) => r.id)
+  if (oldIds.length > 0) {
+    const { error: deleteError } = await supabase.from('roulette_config').delete().in('id', oldIds)
+    if (deleteError) {
+      logger.error('[roulette] 옛 설정 삭제 실패:', deleteError)
+    }
   }
 
   return { success: true }
