@@ -11,19 +11,36 @@ export function SiteFooter({ className }: SiteFooterProps) {
     <footer className={cn('w-full max-w-[480px] mx-auto pb-28', className)}>
       {/* 링크 바 */}
       <div className="flex items-center justify-center gap-3 py-1.5 border-t border-primary/10 mb-4">
-        <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
+        <Link
+          href="/terms"
+          className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"
+        >
           이용약관
         </Link>
         <span className="w-px h-3 bg-primary/20" />
-        <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
+        <Link
+          href="/privacy"
+          className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"
+        >
           개인정보처리방침
         </Link>
         <span className="w-px h-3 bg-primary/20" />
-        <Link href="/protected/support" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
-          고객센터
+        {/* 1:1 문의 — 목적지는 문의 게시판(app/protected/support)이다.
+            🔴 종전 이름은 「고객센터」였는데, 이 앱에 전화 상담·FAQ 같은 «센터»는 없고 그 링크가
+               가리키는 것도 처음부터 이 게시판이었다. 이름이 물건을 감추고 있어서 CEO 가
+               «1:1 문의 게시판을 넣어 달라»고 한 것이다(2026-08-26) — 그래서 **하나 더 만들지 않고
+               이름을 물건에 맞췄다.** 같은 곳으로 가는 문을 둘로 만들면 그때부터 둘이 갈라진다. */}
+        <Link
+          href="/protected/support"
+          className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"
+        >
+          1:1 문의
         </Link>
         <span className="w-px h-3 bg-primary/20" />
-        <Link href="/business" className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors">
+        <Link
+          href="/business"
+          className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"
+        >
           기업 도입
         </Link>
       </div>
