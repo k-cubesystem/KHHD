@@ -15,13 +15,13 @@ import { useUpgradeNudge } from '@/hooks/use-upgrade-nudge'
 import { logger } from '@/lib/utils/logger'
 import {
   isFreeReading,
+  isFreeTheme,
   relatedThemes,
   themeReadingCostLabel,
   themeReadingPath,
   type ThemeFortune,
 } from '@/lib/domain/theme-fortune/themes'
 import { BAND_LABEL, timingsOf, type ThemeReading, type ThemeVerdict } from '@/lib/domain/theme-fortune/verdict-types'
-import { isFreeTheme } from '@/lib/domain/theme-fortune/themes'
 import type { DestinyTarget } from '@/app/actions/user/destiny'
 
 /**

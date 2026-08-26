@@ -1150,7 +1150,7 @@ async function buildTheme(t, { round, rekey }) {
    */
   const toCanvas = (f, m, h) => (m.contentTop + f * m.span) / h
   const eye = eyeOf(t, round)
-  let marks0 = {
+  const marks0 = {
     nicheFloor: eye?.floor ?? toCanvas(best.m.nicheFloorFrac, best.m, best.info.height),
     boardFront: eye?.board ?? toCanvas(best.m.boardFrontFrac, best.m, best.info.height),
   }

@@ -1,9 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Volume2, VolumeX } from 'lucide-react'
 import { useTts } from '@/hooks/useTts'
 import { cn } from '@/lib/utils'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 /**
  * 신위 음성 설정 — 속풀이에서 신위의 답을 소리로 읽어줄지(CEO 지시 2026-08-24: 설정으로 옮길 것).
@@ -16,17 +17,24 @@ import { cn } from '@/lib/utils'
  */
 const TTS_AUTO_KEY = 'hhd_tts_auto'
 
+/** 저장된 자동읽기 설정. 서버에는 localStorage 가 없으므로 하이드레이션 뒤에만 부른다. */
+function readStoredAutoSpeak(): boolean {
+  return typeof window !== 'undefined' && window.localStorage.getItem(TTS_AUTO_KEY) === '1'
+}
+
 export function VoiceSettings() {
   const { supported, speak, stop } = useTts()
-  const [autoSpeak, setAutoSpeak] = useState(false)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') setAutoSpeak(window.localStorage.getItem(TTS_AUTO_KEY) === '1')
-  }, [])
+  // 저장값은 하이드레이션 뒤에만 읽는다(서버엔 localStorage 가 없다). 이펙트에서 setState 를
+  // 하지 않으려고 «사용자가 만진 값»만 상태로 들고, 만지기 전에는 저장값을 그대로 읽는다.
+  const hydrated = useHydrated()
+  const [override, setOverride] = useState<boolean | null>(null)
+  const autoSpeak = override ?? (hydrated && readStoredAutoSpeak())
 
   const toggle = useCallback(() => {
-    setAutoSpeak((v) => {
-      const next = !v
+    // 이전 값은 «만진 적 있으면 그 값», 아니면 저장값 — 업데이터 안에서 읽어야
+    // useCallback 이 렌더 값에 묶이지 않는다(묶이면 메모이제이션이 깨진다).
+    setOverride((prev) => {
+      const next = !(prev ?? readStoredAutoSpeak())
       if (typeof window !== 'undefined') window.localStorage.setItem(TTS_AUTO_KEY, next ? '1' : '0')
       if (!next) stop()
       return next

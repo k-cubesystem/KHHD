@@ -8,9 +8,12 @@ import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
 import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-react'
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
-import { buildEnergyMap } from '@/lib/domain/shrine/energy-map'
+import {
+  buildEnergyMap,
+  type EnergyMapEntry,
+  type FamilyEnergyMap as MapData,
+} from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
-import type { EnergyMapEntry, FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
 
 /** 오행이 무엇인지 처음 보는 사람을 위한 접이식 설명 — saju-knowledge-graph 오행 노드 재사용. */
 function ElementPrimer() {

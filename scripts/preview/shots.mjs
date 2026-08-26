@@ -63,7 +63,7 @@ async function serveAndShoot() {
 }
 
 try {
-  let { code, owned } = await serveAndShoot()
+  const { code, owned } = await serveAndShoot()
 
   if (code !== 0 && owned) {
     console.log('\n↻ 촬영이 실패했습니다 — Turbopack 캐시를 지우고 한 번 더 해 봅니다.')

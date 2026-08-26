@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Button } from '@/components/ui/button'
 import { ExternalLink, Loader2 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { safeNextPath } from '@/lib/auth/next-path'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 /** 카카오톡/라인/인스타 등 인앱 브라우저 감지 */
 function isInAppBrowser(): boolean {
@@ -31,18 +32,16 @@ function openInExternalBrowser(url: string) {
 }
 
 export default function SocialLoginButtons() {
-  const [isMounted, setIsMounted] = useState(false)
   const [isLoading, setIsLoading] = useState<string | null>(null)
-  const [inApp, setInApp] = useState(false)
   const supabase = createClient()
   const searchParams = useSearchParams()
   // 로그인 뒤 돌아갈 곳 — /auth/callback 이 이 값을 읽어 최종 리다이렉트를 정한다.
   const nextPath = safeNextPath(searchParams.get('next'))
 
-  useEffect(() => {
-    setIsMounted(true)
-    setInApp(isInAppBrowser())
-  }, [])
+  // 하이드레이션 뒤에만 클라이언트 값을 읽는다 — useState+useEffect 관용구와 결과는 같고
+  // 이펙트에서 setState 를 하지 않는다(useHydrated 가 그 목적으로 만들어져 있다).
+  const isMounted = useHydrated()
+  const inApp = isMounted && isInAppBrowser()
 
   const handleLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao') => {
     e.preventDefault()
