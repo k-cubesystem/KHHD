@@ -99,6 +99,24 @@ const eslintConfig = [
       "react-hooks/preserve-manual-memoization": "off",
     },
   },
+  {
+    // next/image 가 다룰 수 없거나 다뤄선 안 되는 소스만 <img> 로 그린다(2026-08-26).
+    //  · wallpaper-card — 프리미엄 원본은 **1시간 만료 서명 URL** 이다. next/image 가
+    //    최적화 캐시에 넣으면 만료된 URL 을 계속 내주거나 사설 자산이 캐시에 남는다.
+    //  · viral-share-button — /api/og 가 그 자리에서 만들어 주는 이미지다. 이미 최종 산출물이라
+    //    한 번 더 최적화할 이유가 없고 URL 이 매번 다르다.
+    //  · image-capture — 사용자가 방금 찍은 사진의 blob:/data: URL. next/image 가 처리하지 못한다.
+    //  · AmbientVideo — 모션 최소화일 때의 포스터 폴백. 영상 대체 경로라 같은 소스를 그대로 쓴다.
+    files: [
+      "components/analysis/wallpaper-card.tsx",
+      "components/share/viral-share-button.tsx",
+      "components/studio/image-capture.tsx",
+      "components/shared/AmbientVideo.tsx",
+    ],
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
