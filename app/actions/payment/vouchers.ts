@@ -43,6 +43,14 @@ export async function purchaseVoucher(voucherType: string): Promise<PurchaseVouc
   }
   const product = getVoucherProduct(voucherType)
 
+  // 🔴 sellable:false 는 «진열만» 내린 것이었다(2026-08-26 수복). 이 함수는 'use server'
+  //    export = 공개 엔드포인트라, 화면에서 안 보여도 로그인한 누구나 직접 호출해
+  //    실제로 복채가 차감되고 이용권이 발급됐다. 게다가 CHAT_DAY_PASS 를 읽는
+  //    hasActiveChatPass 는 자격 개편 뒤 어디서도 호출되지 않아 «효력 없는 물건»이었다.
+  if (!product.sellable) {
+    return { success: false, error: '판매가 종료된 이용권입니다.' }
+  }
+
   const supabase = await createClient()
   const {
     data: { user },

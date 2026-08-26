@@ -5,6 +5,7 @@ import {
   isVoucherType,
   computeVoucherExpiry,
   isVoucherActive,
+  SELLABLE_VOUCHER_TYPES,
 } from '../vouchers'
 
 describe('VOUCHER_CATALOG — v1 상품', () => {
@@ -62,5 +63,25 @@ describe('isVoucherActive — 활성 판정', () => {
 
   it('expires_at 없음 = 비활성(방어)', () => {
     expect(isVoucherActive({ status: 'active', expires_at: null }, now)).toBe(false)
+  })
+})
+
+/**
+ * 판매 종료 상품의 서버 게이트 — 「진열만 내리고 엔드포인트는 열려 있던」 사고 잠금.
+ *
+ * sellable:false 는 화면 필터(SELLABLE_VOUCHER_TYPES)에만 반영돼 있었고,
+ * purchaseVoucher('CHAT_DAY_PASS') 직접 호출은 복채를 실제로 차감했다.
+ * Regression: /pipeline 2026-08-26 — 돈 경로 리뷰 H-5.
+ */
+describe('판매 종료 상품 계약', () => {
+  it('sellable:false 인 상품은 진열 목록에서 빠진다', () => {
+    const notSellable = VOUCHER_TYPES.filter((t) => !VOUCHER_CATALOG[t].sellable)
+    for (const t of notSellable) {
+      expect(SELLABLE_VOUCHER_TYPES).not.toContain(t)
+    }
+  })
+
+  it('CHAT_DAY_PASS 는 판매 종료 상태다 — 서버도 이 값을 봐야 한다', () => {
+    expect(VOUCHER_CATALOG.CHAT_DAY_PASS.sellable).toBe(false)
   })
 })
