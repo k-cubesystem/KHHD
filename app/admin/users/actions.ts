@@ -245,62 +245,106 @@ export async function updateUserBalance(targetUserId: string, newBalance: number
   return { success: true }
 }
 
+/**
+ * 관리자 멤버십 등급 수동 부여/해지
+ *
+ * subscriptions 테이블에는 user_id 유니크 제약이 없어 upsert(onConflict:'user_id')가
+ * 항상 실패했다. ACTIVE 행이 있으면 UPDATE, 없으면 INSERT로 처리한다.
+ * customer_key는 NOT NULL이므로 신규 행에는 관리자 부여용 키를 넣는다.
+ * next_billing_date는 비워 둬야 정기결제 크론(/api/cron/billing)이 청구를 시도하지 않는다.
+ */
 export async function updateUserSubscription(targetUserId: string, planTier: string | null) {
   const adminCheck = await requireAdmin()
   if (!adminCheck.authorized) return { success: false, error: adminCheck.error }
 
   const adminClient = createAdminClient()
+  const nowIso = new Date().toISOString()
 
-  // 1. Get Plan ID if not null
-  let planId = null
-  if (planTier) {
-    const { data: plan } = await adminClient.from('membership_plans').select('id').eq('tier', planTier).single()
+  const { data: activeSubs, error: fetchError } = await adminClient
+    .from('subscriptions')
+    .select('id')
+    .eq('user_id', targetUserId)
+    .eq('status', 'ACTIVE')
+    .order('created_at', { ascending: false })
 
-    if (!plan) return { success: false, error: 'Plan not found' }
-    planId = plan.id
+  if (fetchError) {
+    logger.error('[updateUserSubscription] Fetch failed:', fetchError)
+    return { success: false, error: fetchError.message }
   }
 
-  // 2. Manage Subscription
-  if (planId) {
-    // Upsert Active Subscription
-    const { error } = await adminClient.from('subscriptions').upsert(
-      {
-        user_id: targetUserId,
-        plan_id: planId,
-        status: 'ACTIVE',
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 days
-        payment_status: 'PAID', // Admin grant
-      },
-      { onConflict: 'user_id' }
-    ) // Assuming one sub per user or logic to handle multiple
+  const activeIds = (activeSubs ?? []).map((sub) => sub.id)
 
-    // Note: If distinct constraints are different, might need logic to deactivate old ones.
-    // For now assuming 1 active sub per user for simplicity or upsert handles it if checking unique user_id/status.
-    // Actually standard subscription table might allow multiple history.
-    // Let's Deactivate all other active subs first to be safe.
+  if (!planTier) {
+    if (activeIds.length > 0) {
+      const { error } = await adminClient
+        .from('subscriptions')
+        .update({
+          status: 'CANCELLED',
+          cancelled_at: nowIso,
+          cancel_reason: '관리자 해지',
+          updated_at: nowIso,
+        })
+        .in('id', activeIds)
 
-    await adminClient
-      .from('subscriptions')
-      .update({ status: 'EXPIRED' })
-      .eq('user_id', targetUserId)
-      .eq('status', 'ACTIVE')
-      .neq('plan_id', planId) // Don't expire if it's the same (though upsert handled it)
+      if (error) {
+        logger.error('[updateUserSubscription] Cancel failed:', error)
+        return { success: false, error: error.message }
+      }
+    }
 
-    if (error) return { success: false, error: error.message }
+    revalidatePath(`/admin/users/${targetUserId}`)
+    return { success: true }
+  }
+
+  const { data: plan, error: planError } = await adminClient
+    .from('membership_plans')
+    .select('id')
+    .eq('tier', planTier)
+    .maybeSingle()
+
+  if (planError) {
+    logger.error('[updateUserSubscription] Plan lookup failed:', planError)
+    return { success: false, error: planError.message }
+  }
+  if (!plan) return { success: false, error: `'${planTier}' 요금제를 찾을 수 없습니다.` }
+
+  const periodEndIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const grant = {
+    plan_id: plan.id,
+    status: 'ACTIVE',
+    start_date: nowIso,
+    end_date: periodEndIso,
+    current_period_start: nowIso,
+    current_period_end: periodEndIso,
+    payment_status: 'PAID',
+    cancelled_at: null,
+    cancel_reason: null,
+    updated_at: nowIso,
+  }
+
+  const [primaryId, ...duplicateIds] = activeIds
+
+  if (primaryId) {
+    const { error } = await adminClient.from('subscriptions').update(grant).eq('id', primaryId)
+    if (error) {
+      logger.error('[updateUserSubscription] Update failed:', error)
+      return { success: false, error: error.message }
+    }
   } else {
-    // Cancel Subscription
-    const { error } = await adminClient
-      .from('subscriptions')
-      .update({ status: 'CANCELLED' })
-      .eq('user_id', targetUserId)
-      .eq('status', 'ACTIVE')
-
-    if (error) return { success: false, error: error.message }
+    const { error } = await adminClient.from('subscriptions').insert({
+      ...grant,
+      user_id: targetUserId,
+      customer_key: `ADMIN_GRANT_${targetUserId}`,
+    })
+    if (error) {
+      logger.error('[updateUserSubscription] Insert failed:', error)
+      return { success: false, error: error.message }
+    }
   }
 
-  // Update Profile is_subscribed flag for easier frontend check
-  await adminClient.from('profiles').update({ is_subscribed: !!planId }).eq('id', targetUserId)
+  if (duplicateIds.length > 0) {
+    await adminClient.from('subscriptions').update({ status: 'EXPIRED', updated_at: nowIso }).in('id', duplicateIds)
+  }
 
   revalidatePath(`/admin/users/${targetUserId}`)
   return { success: true }
