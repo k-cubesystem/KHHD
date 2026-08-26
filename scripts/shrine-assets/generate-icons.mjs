@@ -267,6 +267,10 @@ const SETS = {
     ['chat', '고민 상담 — speech bubble with a small crystal orb inside'],
     ['shrine', '신당 — small shrine gate (홍살문) with a flame'],
     ['profile', '프로필 — round hanbok person portrait frame'],
+    // 웹툰은 별도 회차에서 구웠다(파일만 있고 이 표엔 없었다) — 재생성 시 같은 결로 나오게 등록.
+    ['webtoon', '웹툰 — open illustrated storybook with a brush'],
+    // 1:1 문의 — 서찰(한지 편지) 한 장에 붓. 「말을 건네는 창구」를 전통 물건으로 옮긴 것.
+    ['support', '1:1 문의 — folded hanji letter (서찰) with a small brush resting on it'],
   ].map(([slug, d]) => ({ slug, out: `icons/nav/${slug}.webp`, size: 256, prompt: navPrompt(d) })),
 
   // S. 절기 24
