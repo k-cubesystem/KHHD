@@ -150,7 +150,7 @@ export default function NotificationAdminPage() {
                         className="w-32 md:w-40 h-8 md:h-9 text-xs bg-stone-900/50 border-stone-700/50 text-stone-200"
                       />
                       <Button
-                        onClick={() => handleSave('daily_fortune_time', settings['daily_fortune_time'])}
+                        onClick={() => handleSave('daily_fortune_time', settings['daily_fortune_time'] || '08:00')}
                         size="sm"
                         className="h-8 md:h-9 bg-gradient-to-r from-gold-500 to-gold-600 text-ink-950 hover:from-gold-400 hover:to-gold-500 shadow-lg shadow-gold-500/20 text-xs"
                       >

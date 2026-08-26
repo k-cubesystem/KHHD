@@ -55,15 +55,35 @@ export async function getNotificationLogs(page = 1, limit = 20) {
   const from = (page - 1) * limit
   const to = from + limit - 1
 
+  // notification_logs.user_id의 FK는 auth.users를 가리켜 profiles를 임베드할 수 없다(PGRST200)
   const { data, count, error } = await supabase
     .from('notification_logs')
-    .select('*, profiles:user_id(full_name, email)', { count: 'exact' })
+    .select('*', { count: 'exact' })
     .order('sent_at', { ascending: false })
     .range(from, to)
 
   if (error) throw error
 
-  return { data, count }
+  const rows = data ?? []
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
+  const profileMap = new Map<string, { full_name: string | null; email: string | null }>()
+
+  if (userIds.length > 0) {
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', userIds)
+
+    if (profileError) logger.error('발송 로그 프로필 조회 실패:', profileError)
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, { full_name: p.full_name, email: p.email })
+    }
+  }
+
+  return {
+    data: rows.map((r) => ({ ...r, profiles: profileMap.get(r.user_id) ?? null })),
+    count,
+  }
 }
 
 export async function runManualAutomation() {
@@ -71,15 +91,26 @@ export async function runManualAutomation() {
     const supabase = await requireAdminClient()
 
     // 1. Get Template
-    const { data: tmplSetting } = await supabase
+    const { data: tmplSetting, error: tmplError } = await supabase
       .from('system_settings')
       .select('value')
       .eq('key', 'kakao_template_id')
-      .single()
+      .maybeSingle()
+
+    if (tmplError) logger.error('알림톡 템플릿 조회 실패:', tmplError)
     const templateId = tmplSetting?.value || 'DAILY_FORTUNE_V1'
 
     // 2. Fetch Active Subscribers
-    const { data: subscriptions } = await supabase.from('subscriptions').select('user_id').eq('status', 'active')
+    // status 값은 대문자다(ACTIVE/PENDING/...). 소문자 'active'로는 영원히 0건이었다
+    const { data: subscriptions, error: subError } = await supabase
+      .from('subscriptions')
+      .select('user_id')
+      .eq('status', 'ACTIVE')
+
+    if (subError) {
+      logger.error('활성 구독자 조회 실패:', subError)
+      return { success: false, message: '활성 구독자 조회에 실패했습니다.' }
+    }
 
     if (!subscriptions || subscriptions.length === 0) {
       return { success: false, message: '활성 구독자가 없습니다.' }
