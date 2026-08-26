@@ -2,8 +2,9 @@ import { getUserDetails } from '../actions'
 import { UserDetailClient } from './user-detail-client'
 import { notFound } from 'next/navigation'
 
-export default async function UserDetailPage({ params }: { params: { id: string } }) {
-  const result = await getUserDetails(params.id)
+export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const result = await getUserDetails(id)
 
   if (result.error || !('profile' in result) || !result.profile) {
     if (result.error === 'Unauthorized' || result.error === 'Forbidden') {
