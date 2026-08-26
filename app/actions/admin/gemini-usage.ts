@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth/admin-guard'
 import { logger } from '@/lib/utils/logger'
 
 export interface GeminiDailyStat {
@@ -61,6 +62,7 @@ export interface GeminiRpmConfig {
 }
 
 export async function getGeminiDailyStats(daysBack: number = 30): Promise<GeminiDailyStat[]> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_daily_stats', { days_back: daysBack })
   if (error) {
@@ -71,6 +73,7 @@ export async function getGeminiDailyStats(daysBack: number = 30): Promise<Gemini
 }
 
 export async function getGeminiActionStats(daysBack: number = 30): Promise<GeminiActionStat[]> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_action_stats', { days_back: daysBack })
   if (error) {
@@ -81,6 +84,7 @@ export async function getGeminiActionStats(daysBack: number = 30): Promise<Gemin
 }
 
 export async function getGeminiTodaySummary(): Promise<GeminiTodaySummary> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_today_summary')
   if (error || !data) {
@@ -102,6 +106,7 @@ export async function getGeminiTodaySummary(): Promise<GeminiTodaySummary> {
 }
 
 export async function getGeminiRecentLogs(logLimit: number = 50): Promise<GeminiRecentLog[]> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('get_gemini_recent_logs', { log_limit: logLimit })
   if (error) {
@@ -112,6 +117,7 @@ export async function getGeminiRecentLogs(logLimit: number = 50): Promise<Gemini
 }
 
 export async function getGeminiRpmConfig(): Promise<GeminiRpmConfig | null> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('gemini_token_bucket')
@@ -129,6 +135,7 @@ export async function updateGeminiRpm(
   newRpm: number,
   newModel?: string
 ): Promise<{ success: boolean; error?: string; data?: GeminiRpmConfig }> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('update_gemini_rpm', {
     new_rpm: newRpm,
@@ -141,6 +148,7 @@ export async function updateGeminiRpm(
 }
 
 export async function getUsdKrwRate(): Promise<number> {
+  await requireAdmin()
   const supabase = await createClient()
   const { data } = await supabase.from('system_settings').select('value').eq('key', 'usd_krw_rate').single()
   return data?.value ? Number(data.value) : 1380
