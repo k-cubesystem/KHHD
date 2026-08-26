@@ -185,10 +185,29 @@ describe('제단 참배 — CSS 정지 %와 도메인 걷기 비중의 정합', 
     expect(block).toContain('82.5% {')
   })
 
-  it('절(拜)은 참배 구간에서만 숙이고 걷기 경계에서 항등으로 돌아온다', () => {
+  it('🔴 절은 **회전**이다 — 몸을 세로로 누르는 scaleY 로 되돌리지 말 것', () => {
+    // 종전 scaleY(0.88) 은 «종이인형이 눌리는» 그림이었다(CEO 2026-08-26 반려).
+    // 절은 허리를 굽히는 동작이라 발밑을 축으로 한 rotate 여야 한다.
     const bow = frames('shrineKeeperBow')
-    expect(bow).toContain('scaleY(0.88)')
-    expect(bow).toContain('15%,')
-    expect(bow).toContain('65%,')
+    expect(bow).toContain('rotate(17deg)')
+    expect(bow).not.toMatch(/scaleY\(0?\.\d+\)/)
+  })
+
+  it('발밑이 회전축이다 — 절하면서 발이 떠오르지 않는다', () => {
+    const css = readFileSync(path.join(process.cwd(), 'app', 'shrine-scene.css'), 'utf8')
+    const cls = css.slice(css.indexOf('.shrine-keeper-bow'))
+    expect(squash(cls.slice(0, cls.indexOf('}')))).toContain('transform-origin: 50% 100%')
+  })
+
+  it('재배(再拜) — 참배 한 번에 두 번 절한다', () => {
+    const bow = frames('shrineKeeperBow')
+    // 참배 구간이 둘(0~15% · 50~65%)이고 각 구간에 숙임이 두 번 → 총 4
+    expect(bow.split('rotate(17deg)').length - 1).toBe(4)
+  })
+
+  it('걷는 구간에서는 항등이라 보행과 싸우지 않는다', () => {
+    const bow = frames('shrineKeeperBow')
+    expect(bow).toContain('11.5%, 50%, 51.5% { transform: rotate(0deg)')
+    expect(bow).toContain('61.5%, 100% { transform: rotate(0deg)')
   })
 })
