@@ -1,8 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
-import { getUserRole } from '@/lib/auth'
-import { addTalismans } from '@/app/actions/payment/wallet'
+import { requireAdminClient } from '@/lib/auth/admin-guard'
 import { logger } from '@/lib/utils/logger'
 
 export interface AdminSubscription {
@@ -35,23 +33,16 @@ export interface SubscriptionStats {
   monthlyRevenue: number
 }
 
-async function checkAdminRole() {
-  const role = await getUserRole()
-  if (role !== 'admin') {
-    throw new Error('관리자 권한이 필요합니다.')
-  }
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('인증되지 않은 사용자입니다.')
-  return user
-}
+/**
+ * 이 파일의 액션들은 남의 구독·지갑을 읽고 쓴다.
+ * 유저 세션 클라이언트로는 RLS(subscriptions/wallets 모두 select-own만 존재)에 막혀
+ * 0행이 매칭되고도 error가 나지 않아 «성공했다고 표시되지만 아무것도 안 바뀌는» 상태가 된다.
+ * 반드시 관리자 관문이 돌려주는 service_role 클라이언트를 쓴다.
+ */
 
 // 구독 통계 조회
 export async function getSubscriptionStats(): Promise<SubscriptionStats> {
-  await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
 
   const { data: subscriptions } = await supabase.from('subscriptions').select(`
             status,
@@ -101,14 +92,14 @@ export async function getSubscriptions(
   total: number
   totalPages: number
 }> {
-  await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
 
+  // profiles는 subscriptions와 직접 FK가 없어 임베드하면 PGRST200으로 쿼리 전체가 실패한다.
+  // (양쪽 다 auth.users를 가리킬 뿐이다) → 아래에서 따로 조회해 붙인다.
   let query = supabase.from('subscriptions').select(
     `
             *,
-            plan:membership_plans(id, name, price),
-            profile:profiles(email, role)
+            plan:membership_plans(id, name, price)
         `,
     { count: 'exact' }
   )
@@ -126,8 +117,26 @@ export async function getSubscriptions(
     return { subscriptions: [], total: 0, totalPages: 0 }
   }
 
+  const rows = data || []
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)))
+  const profileMap = new Map<string, { email: string; role: string }>()
+
+  if (userIds.length > 0) {
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, email, role')
+      .in('id', userIds)
+
+    if (profileError) {
+      logger.error('[Admin] 구독자 프로필 조회 실패:', profileError)
+    }
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, { email: p.email ?? '', role: p.role ?? 'user' })
+    }
+  }
+
   return {
-    subscriptions: (data || []) as AdminSubscription[],
+    subscriptions: rows.map((r) => ({ ...r, profile: profileMap.get(r.user_id) ?? null })) as AdminSubscription[],
     total: count || 0,
     totalPages: Math.ceil((count || 0) / limit),
   }
@@ -138,8 +147,7 @@ export async function updateSubscriptionStatus(
   subscriptionId: string,
   newStatus: string
 ): Promise<{ success: boolean; error?: string }> {
-  await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
 
   const validStatuses = ['ACTIVE', 'PAUSED', 'CANCELLED', 'EXPIRED']
   if (!validStatuses.includes(newStatus)) {
@@ -169,44 +177,52 @@ export async function grantTalismans(
   amount: number,
   reason: string
 ): Promise<{ success: boolean; error?: string }> {
-  await checkAdminRole()
+  const supabase = await requireAdminClient()
 
-  if (amount <= 0 || amount > 100) {
-    return { success: false, error: '부적 수량은 1~100 사이여야 합니다.' }
+  if (!Number.isInteger(amount) || amount <= 0 || amount > 100) {
+    return { success: false, error: '부적 수량은 1~100 사이의 정수여야 합니다.' }
   }
 
-  // 직접 wallet 업데이트 (Service Role 필요)
-  const supabase = await createClient()
+  const { data: wallet, error: readError } = await supabase
+    .from('wallets')
+    .select('balance')
+    .eq('user_id', userId)
+    .maybeSingle()
 
-  // 먼저 wallet 존재 확인
-  const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', userId).single()
-
-  if (!wallet) {
-    // wallet이 없으면 생성
-    await supabase.from('wallets').insert({ user_id: userId, balance: amount })
-  } else {
-    // 기존 balance에 추가
-    await supabase
-      .from('wallets')
-      .update({ balance: wallet.balance + amount })
-      .eq('user_id', userId)
+  if (readError) {
+    logger.error('[Admin] grantTalismans 지갑 조회 실패:', readError)
+    return { success: false, error: '지갑 조회에 실패했습니다.' }
   }
 
-  // 트랜잭션 기록
-  await supabase.from('wallet_transactions').insert({
+  const writeError = wallet
+    ? (
+        await supabase
+          .from('wallets')
+          .update({ balance: wallet.balance + amount })
+          .eq('user_id', userId)
+      ).error
+    : (await supabase.from('wallets').insert({ user_id: userId, balance: amount })).error
+
+  if (writeError) {
+    logger.error('[Admin] grantTalismans 지갑 갱신 실패:', writeError)
+    return { success: false, error: '복채 지급에 실패했습니다.' }
+  }
+
+  const { error: logError } = await supabase.from('wallet_transactions').insert({
     user_id: userId,
     amount: amount,
     type: 'BONUS',
     description: `관리자 지급: ${reason}`,
   })
 
+  if (logError) logger.error('[Admin] grantTalismans 거래기록 실패:', logError)
+
   return { success: true }
 }
 
 // 멤버십 플랜 목록 조회 (관리자용)
 export async function getMembershipPlansAdmin() {
-  await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
 
   const { data, error } = await supabase.from('membership_plans').select('*').order('sort_order', { ascending: true })
 
@@ -228,8 +244,7 @@ export async function updateMembershipPlan(
     is_active?: boolean
   }
 ): Promise<{ success: boolean; error?: string }> {
-  await checkAdminRole()
-  const supabase = await createClient()
+  const supabase = await requireAdminClient()
 
   const { error } = await supabase.from('membership_plans').update(updates).eq('id', planId)
 
