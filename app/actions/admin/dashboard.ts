@@ -132,7 +132,8 @@ export async function getHourlyTraffic(hours: number = 24) {
     if (!buckets[key]) continue
     buckets[key].total_visits++
     if (a.user_id) buckets[key].unique_user_ids.push(a.user_id)
-    if (a.activity_type === 'signup') buckets[key].new_signups++
+    // 가입 이벤트가 'signup'/'sign_up' 두 표기로 쌓여 있다
+    if (a.activity_type === 'signup' || a.activity_type === 'sign_up') buckets[key].new_signups++
   }
 
   // payments 수익 집계
@@ -248,7 +249,7 @@ export async function getConversionMetrics() {
     supabase
       .from('activity_logs')
       .select('user_id', { count: 'exact', head: true })
-      .eq('activity_type', 'analysis')
+      .in('activity_type', ['analysis_start', 'analysis_complete'])
       .gte('created_at', thirtyDaysAgo),
     supabase
       .from('payments')
