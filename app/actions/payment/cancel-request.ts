@@ -1,4 +1,5 @@
 'use server'
+import { SUPPORT_ASK } from '@/lib/domain/support/contact'
 
 import { tossBillingSecretKey, tossGeneralSecretKey } from '@/lib/config/toss-keys'
 
@@ -79,8 +80,8 @@ function tossCancelReason(code: string): string {
 const BLOCKED_MESSAGES: Readonly<Record<string, string>> = {
   ALREADY_CANCELLED: '이미 취소된 결제입니다.',
   NOT_A_CHARGE: '복채 충전 결제만 취소할 수 있습니다.',
-  NOT_COMPLETED: '결제가 완료되지 않아 취소할 수 없습니다. 고객센터로 문의해주세요.',
-  NOTHING_GRANTED: '지급된 복채가 없어 자동 취소 대상이 아닙니다. 고객센터로 문의해주세요.',
+  NOT_COMPLETED: `결제가 완료되지 않아 취소할 수 없습니다. ${SUPPORT_ASK}`,
+  NOTHING_GRANTED: `지급된 복채가 없어 자동 취소 대상이 아닙니다. ${SUPPORT_ASK}`,
 }
 
 interface PaymentRow {
@@ -635,7 +636,7 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
   const refundAmount = immediate ? refund.refundAmount : 0
 
   if (immediate && refundAmount > 0 && !lastPayment?.payment_key) {
-    return { success: false, error: '환불 대상 결제를 찾을 수 없습니다. 고객센터로 문의해주세요.' }
+    return { success: false, error: `환불 대상 결제를 찾을 수 없습니다. ${SUPPORT_ASK}` }
   }
 
   const idempotencyKey = `HHD-SUBCANCEL-${randomUUID()}`
@@ -738,7 +739,7 @@ export async function submitMembershipCancel(input: MembershipCancelSubmission):
       .from('payment_cancel_requests')
       .update({ status: 'FAILED', toss_error_code: 'SUBSCRIPTION_UPDATE_FAILED', processed_at: now })
       .eq('id', requestId)
-    return { success: false, error: '해지 처리 중 오류가 발생했습니다. 고객센터로 문의해주세요.' }
+    return { success: false, error: `해지 처리 중 오류가 발생했습니다. ${SUPPORT_ASK}` }
   }
 
   await admin.from('payment_cancel_requests').update({ status: 'SUCCEEDED', processed_at: now }).eq('id', requestId)

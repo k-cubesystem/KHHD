@@ -116,7 +116,7 @@
     "firstPayment": "Processing first payment...",
     "pleaseWait": "Please wait a moment.",
     "processFail": "Processing Failed",
-    "contactSupport": "If the problem persists, please contact support."
+    "contactSupport": "If the problem persists, please leave a 1:1 inquiry."
   },
   "paywall": {
     "unlock": "Unlock",
@@ -165,7 +165,7 @@
     "auth": "Login Required",
     "authDesc": "Your session has expired. Please log in again.",
     "server": "Server error occurred",
-    "serverDesc": "Please try again later. Contact support if the issue persists.",
+    "serverDesc": "Please try again later. Leave a 1:1 inquiry if the issue persists.",
     "unknown": "Something went wrong",
     "unknownDesc": "Please try again shortly.",
     "retry": "Try Again",

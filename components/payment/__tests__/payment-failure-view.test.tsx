@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PaymentFailureView } from '@/components/payment/payment-failure-view'
 
+import { SUPPORT_LABEL } from '@/lib/domain/support/contact'
 function renderView(code: string | null, message: string | null = null) {
   return render(
     <PaymentFailureView
@@ -31,10 +32,10 @@ describe('🔴 사용자 취소 화면', () => {
     expect(container.textContent).not.toContain('결제 실패')
   })
 
-  it('고객센터 안내를 띄우지 않는다', () => {
+  it('1:1 문의 안내를 띄우지 않는다', () => {
     const { container } = renderView('PAY_PROCESS_CANCELED')
 
-    expect(container.textContent).not.toContain('고객센터')
+    expect(container.textContent).not.toContain(SUPPORT_LABEL)
   })
 
   it('돌아갈 길 둘을 준다', () => {
@@ -83,9 +84,9 @@ describe('진짜 실패는 다르게 말한다', () => {
     expect(screen.getByText('카드사 점검 중입니다.')).not.toBeNull()
   })
 
-  it('실패에는 고객센터를 안내한다', () => {
+  it('실패에는 1:1 문의를 안내한다', () => {
     const { container } = renderView('PAY_PROCESS_ABORTED')
 
-    expect(container.textContent).toContain('고객센터')
+    expect(container.textContent).toContain(SUPPORT_LABEL)
   })
 })

@@ -7,6 +7,7 @@ import { CalendarClock, Loader2, Sparkles } from 'lucide-react'
 import { submitMembershipCancel } from '@/app/actions/payment/cancel-request'
 import type { CancelReasonCode, MembershipCancelOverview } from '@/lib/domain/payment/self-cancel'
 import { CancelReasonFields } from '@/app/protected/payment/cancel/cancel-reason-fields'
+import { SUPPORT_ASK } from '@/lib/domain/support/contact'
 
 const won = (value: number) => `${value.toLocaleString('ko-KR')}원`
 
@@ -150,7 +151,7 @@ export function MembershipCancelForm({ overview }: { overview: MembershipCancelO
           </p>
           {refundBlocked && (
             <p className="text-[11px] text-red-light leading-relaxed pt-1">
-              환불 대상 결제 정보를 찾을 수 없습니다. 고객센터로 문의해주세요.
+              환불 대상 결제 정보를 찾을 수 없습니다. {SUPPORT_ASK}
             </p>
           )}
         </section>

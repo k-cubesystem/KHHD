@@ -15,6 +15,7 @@
  */
 
 import type { TossCancelRecord } from './cancel-clawback'
+import { SUPPORT_ASK } from '@/lib/domain/support/contact'
 
 const TOSS_API_BASE = 'https://api.tosspayments.com/v1/payments'
 
@@ -54,10 +55,10 @@ const RETRYABLE_CODES: ReadonlySet<string> = new Set([
 /** 사용자에게 그대로 보여줄 수 있는 안내로 치환. 없으면 토스 메시지를 쓴다. */
 const USER_MESSAGES: Readonly<Record<string, string>> = {
   ALREADY_CANCELED_PAYMENT: '이미 취소된 결제입니다.',
-  NOT_CANCELABLE_PAYMENT: '결제 수단 사정으로 취소할 수 없는 결제입니다. 고객센터로 문의해주세요.',
+  NOT_CANCELABLE_PAYMENT: `결제 수단 사정으로 취소할 수 없는 결제입니다. ${SUPPORT_ASK}`,
   NOT_CANCELABLE_AMOUNT: '취소할 수 있는 금액을 넘었습니다. 화면을 새로고침한 뒤 다시 시도해주세요.',
   EXCEED_CANCEL_AMOUNT: '취소할 수 있는 금액을 넘었습니다. 화면을 새로고침한 뒤 다시 시도해주세요.',
-  NOT_FOUND_PAYMENT: '결제 정보를 찾을 수 없습니다. 고객센터로 문의해주세요.',
+  NOT_FOUND_PAYMENT: `결제 정보를 찾을 수 없습니다. ${SUPPORT_ASK}`,
   INVALID_IDEMPOTENCY_KEY: '취소 요청을 만들지 못했습니다. 잠시 후 다시 시도해주세요.',
   IDEMPOTENT_REQUEST_PROCESSING: '앞선 취소 요청을 처리하는 중입니다. 잠시 후 다시 확인해주세요.',
 }
@@ -161,7 +162,7 @@ export async function requestTossCancel(input: TossCancelRequest): Promise<TossC
     return {
       ok: false,
       code: 'INVALID_RESPONSE',
-      message: '결제 취소 응답을 해석하지 못했습니다. 고객센터로 문의해주세요.',
+      message: `결제 취소 응답을 해석하지 못했습니다. ${SUPPORT_ASK}`,
       retryable: false,
       httpStatus: response.status,
     }

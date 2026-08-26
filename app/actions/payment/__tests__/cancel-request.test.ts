@@ -28,6 +28,7 @@ jest.mock('@/lib/domain/payment/toss-cancel', () => ({ requestTossCancel: jest.f
 
 import { getChargeCancelOverview, submitChargeCancel, submitMembershipCancel } from '../cancel-request'
 
+import { SUPPORT_LABEL } from '@/lib/domain/support/contact'
 const mockCreateClient = createClient as jest.MockedFunction<typeof createClient>
 const mockCreateAdmin = createAdminClient as jest.MockedFunction<typeof createAdminClient>
 const mockRateLimit = rateLimit as jest.MockedFunction<typeof rateLimit>
@@ -569,7 +570,7 @@ describe('getChargeCancelOverview — 화면에 내려보내는 상한 상태', 
 
     expect(overview.items[0].plan.verdict).toBe('PARTIALLY_SPENT')
     expect(overview.lossCap.available).toBe(false)
-    expect(overview.lossCap.message).toContain('고객센터')
+    expect(overview.lossCap.message).toContain(SUPPORT_LABEL)
   })
 
   it('🔴 상한 DTO 에 잔여 횟수·금액을 싣지 않는다 — 「아직 한 번 남았네」 유인 차단', async () => {

@@ -19,6 +19,7 @@ import {
   LOSS_CANCEL_WINDOW_DAYS,
 } from '../loss-cap'
 
+import { SUPPORT_LABEL } from '@/lib/domain/support/contact'
 const DAY = 86_400_000
 const NOW = new Date('2026-08-12T03:00:00.000Z')
 
@@ -151,7 +152,7 @@ describe('lossCapBlockedMessage — 사용자 문구', () => {
     const message = lossCapBlockedMessage(decision)
 
     expect(message).toContain('1년 2회')
-    expect(message).toContain('고객센터')
+    expect(message).toContain(SUPPORT_LABEL)
     // 다음 가능일은 KST 기준으로 찍는다(서버가 UTC 로 돌아도 하루가 밀리면 안 된다).
     expect(message).toContain('2027년')
   })
@@ -163,7 +164,7 @@ describe('lossCapBlockedMessage — 사용자 문구', () => {
     expect(message).not.toContain('100,000')
     expect(message).not.toContain('10만')
     expect(message).toContain('한도')
-    expect(message).toContain('고객센터')
+    expect(message).toContain(SUPPORT_LABEL)
   })
 
   it('다음 가능일을 모르면 그 문장을 빼고 안내한다', () => {

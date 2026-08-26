@@ -29,7 +29,7 @@ export interface PaymentFailureNotice {
   readonly description: string
   /** 다시 시도가 의미 있는가. 취소·거절은 의미 있고, 설정 오류는 없다. */
   readonly canRetry: boolean
-  /** 고객센터를 안내할 것인가. **취소에는 절대 띄우지 않는다**(불안만 준다). */
+  /** 1:1 문의를 안내할 것인가. **취소에는 절대 띄우지 않는다**(불안만 준다). */
   readonly showSupport: boolean
 }
 

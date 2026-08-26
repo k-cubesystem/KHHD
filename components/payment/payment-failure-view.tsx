@@ -5,6 +5,7 @@ import { ChevronDown, RotateCcw, ShieldAlert, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { describePaymentFailure, type PaymentFailureKind } from '@/lib/domain/payment/payment-failure'
+import { SUPPORT_ASK_REPEAT } from '@/lib/domain/support/contact'
 
 /**
  * 결제가 끝나지 못했을 때 보는 화면 — **복채 충전과 멤버십이 함께 쓴다**.
@@ -13,7 +14,7 @@ import { describePaymentFailure, type PaymentFailureKind } from '@/lib/domain/pa
  *    느낌표 + 「결제 실패」로, 다른 쪽은 X 아이콘 + 다른 문구로 그렸다. 문구를 화면에서 만들면
  *    반드시 갈라진다 — 무슨 말을 할지는 `lib/domain/payment/payment-failure.ts` 가 정한다.
  *
- * 🔴 취소는 실패가 아니다. 붉은색·경고 아이콘·고객센터 안내를 **취소에는 쓰지 않는다.**
+ * 🔴 취소는 실패가 아니다. 붉은색·경고 아이콘·1:1 문의 안내를 **취소에는 쓰지 않는다.**
  */
 export function PaymentFailureView({
   code,
@@ -93,7 +94,7 @@ export function PaymentFailureView({
 
       {notice.showSupport && (
         <p className="max-w-[20rem] break-keep text-center font-sans text-[11.5px] leading-relaxed text-ink-light/45">
-          같은 일이 반복되면 고객센터로 알려주세요. 결제된 것이 있는지 저희가 먼저 확인해 드립니다.
+          {SUPPORT_ASK_REPEAT} 결제된 것이 있는지 저희가 먼저 확인해 드립니다.
         </p>
       )}
     </div>
