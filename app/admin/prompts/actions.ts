@@ -1,7 +1,6 @@
 'use server'
 
-import { createAdminClient } from '@/lib/supabase/admin'
-import { createClient } from '@/lib/supabase/server'
+import { requireAdminClient, adminClientOrError } from '@/lib/auth/admin-guard'
 import { revalidatePath } from 'next/cache'
 import { logger } from '@/lib/utils/logger'
 
@@ -16,16 +15,7 @@ export interface AIPrompt {
 }
 
 export async function getPrompts(): Promise<AIPrompt[]> {
-  const supabase = await createClient()
-
-  // Check Auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
-  // TEMPORARY: Use admin client to bypass RLS
-  const dbClient = createAdminClient()
+  const dbClient = await requireAdminClient()
 
   // Fetch prompts
   const { data, error } = await dbClient.from('ai_prompts').select('*').order('category', { ascending: true })
@@ -39,16 +29,9 @@ export async function getPrompts(): Promise<AIPrompt[]> {
 }
 
 export async function updatePrompt(key: string, data: { template?: string; talisman_cost?: number }) {
-  const supabase = await createClient()
-
-  // Check Auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
-
-  // TEMPORARY: Use admin client to bypass RLS
-  const dbClient = createAdminClient()
+  const guard = await adminClientOrError()
+  if (!guard.ok) return { success: false, error: guard.error }
+  const dbClient = guard.client
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (data.template !== undefined) updates.template = data.template
@@ -73,16 +56,9 @@ export async function createPrompt(
   description?: string,
   talismanCost: number = 1
 ) {
-  const supabase = await createClient()
-
-  // Check Auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
-
-  // TEMPORARY: Use admin client to bypass RLS
-  const dbClient = createAdminClient()
+  const guard = await adminClientOrError()
+  if (!guard.ok) return { success: false, error: guard.error }
+  const dbClient = guard.client
 
   const { error } = await dbClient
     .from('ai_prompts')
@@ -97,29 +73,10 @@ export async function createPrompt(
   return { success: true }
 }
 
-export async function getPromptByKey(key: string): Promise<string | null> {
-  try {
-    const dbClient = createAdminClient()
-    const { data, error } = await dbClient.from('ai_prompts').select('template').eq('key', key).single()
-
-    if (error || !data) return null
-    return data.template as string
-  } catch {
-    return null
-  }
-}
-
 export async function deletePrompt(key: string) {
-  const supabase = await createClient()
-
-  // Check Auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { success: false, error: 'Unauthorized' }
-
-  // TEMPORARY: Use admin client to bypass RLS
-  const dbClient = createAdminClient()
+  const guard = await adminClientOrError()
+  if (!guard.ok) return { success: false, error: guard.error }
+  const dbClient = guard.client
 
   const { error } = await dbClient.from('ai_prompts').delete().eq('key', key)
 
