@@ -104,6 +104,8 @@ export interface ShamanQuestionStatus {
   memberWeeklyUsed: number
   memberWeeklyTotal: number
   memberWeeklyRemaining: number
+  /** 멤버십 주간 창 시작(ISO) — 원자 차감 RPC 가 창을 알아야 한다. 비회원 null. */
+  memberWeekStartIso: string | null
   /** 광고 리워드 질문권(유효분 합, P1-A) */
   adCredits: number
   /** 구매 질문권(미만료분) */
@@ -253,6 +255,7 @@ async function buildShrineContext(familyMemberId: string | null): Promise<{
 export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
   const defaultResult: ShamanQuestionStatus = {
     success: false,
+    memberWeekStartIso: null,
     walletBalance: 0,
     isMember: false,
     onboardingCredits: 0,
@@ -325,6 +328,7 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
     if (hasUnlimitedAccess(role)) {
       return {
         success: true,
+        memberWeekStartIso: null, // 마스터는 상한 자체가 없다
         walletBalance,
         isMember: true,
         onboardingCredits,
@@ -342,10 +346,12 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
     // (안전 측: 회원에게서 주간분을 빼앗지 않는다).
     let memberWeeklyUsed = 0
     let memberWeeklyTotal = 0
+    let memberWeekStartIso: string | null = null
     if (membership) {
       const anchorMs = membership.currentPeriodStart ? new Date(membership.currentPeriodStart).getTime() : nowMs
       const win = memberWeekWindow(Number.isFinite(anchorMs) ? anchorMs : nowMs, nowMs)
       memberWeeklyTotal = MEMBER_WEEKLY_QUESTIONS
+      memberWeekStartIso = win.startIso
       const { data: turns, error: turnsError } = await createAdminClient().rpc('get_member_week_turns', {
         p_user_id: user.id,
         p_window_start: win.startIso,
@@ -357,6 +363,7 @@ export async function loadQuestionStatus(): Promise<ShamanQuestionStatus> {
 
     return {
       success: true,
+      memberWeekStartIso,
       walletBalance,
       isMember: Boolean(membership),
       onboardingCredits,
@@ -434,14 +441,16 @@ export async function prepareShamanChat(
   }
 
   if (!consumedFrom && status.memberWeeklyRemaining > 0) {
-    const { error: rpcError } = await adminClient.rpc('record_ai_chat_turn', {
+    // 🔴 세기와 늘리기를 한 함수 안에서 — 동시 요청 이중 소비(1문으로 20문) 차단.
+    const { data: weekLeft, error: rpcError } = await adminClient.rpc('consume_member_week_turn', {
       p_user_id: user.id,
+      p_window_start: status.memberWeekStartIso,
+      p_limit: status.memberWeeklyTotal,
       p_date: today,
-      p_talisman_used: 0,
     })
     if (rpcError)
       logger.error('[prepareShamanChat] RPC error:', rpcError) // non-fatal
-    else consumedFrom = 'member'
+    else if (typeof weekLeft === 'number' && weekLeft >= 0) consumedFrom = 'member'
   }
 
   if (!consumedFrom && status.adCredits > 0) {
