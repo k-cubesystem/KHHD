@@ -1,6 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logger } from '@/lib/utils/logger'
 import { createClient } from '@/lib/supabase/server'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
@@ -128,24 +129,24 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
     supabase.from('analysis_history').select('category').gte('created_at', monthStart.toISOString()),
 
     // Gemini calls today
-    supabase.from('gemini_usage_logs').select('id, status').gte('created_at', todayStart.toISOString()),
+    supabase.from('gemini_api_logs').select('id, status').gte('created_at', todayStart.toISOString()),
 
     // Gemini calls week
-    supabase.from('gemini_usage_logs').select('id, status').gte('created_at', weekStart.toISOString()),
+    supabase.from('gemini_api_logs').select('id, status').gte('created_at', weekStart.toISOString()),
 
-    // Gemini errors week
-    supabase.from('gemini_usage_logs').select('id').eq('status', 'error').gte('created_at', weekStart.toISOString()),
+    // Gemini errors week — status는 'success' 아니면 HTTP 코드 문자열('400' 등)이다
+    supabase.from('gemini_api_logs').select('id').neq('status', 'success').gte('created_at', weekStart.toISOString()),
 
     // Average latency overall
     supabase
-      .from('gemini_usage_logs')
+      .from('gemini_api_logs')
       .select('latency_ms')
       .gte('created_at', weekStart.toISOString())
       .not('latency_ms', 'is', null),
 
     // Latency by action type
     supabase
-      .from('gemini_usage_logs')
+      .from('gemini_api_logs')
       .select('action_type, latency_ms')
       .gte('created_at', weekStart.toISOString())
       .not('latency_ms', 'is', null),
@@ -165,6 +166,26 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
       .gte('created_at', monthStart.toISOString())
       .order('created_at', { ascending: true }),
   ])
+
+  // 14개 쿼리의 error를 버리면 조회 실패가 «매출 0원·이용자 0명»으로 조용히 표시된다
+  for (const [label, res] of [
+    ['오늘 매출', todayPayments],
+    ['주간 매출', weekPayments],
+    ['월간 매출', monthPayments],
+    ['DAU', dauData],
+    ['WAU', wauData],
+    ['MAU', mauData],
+    ['카테고리', categoryData],
+    ['Gemini 오늘', geminiToday],
+    ['Gemini 주간', geminiWeek],
+    ['Gemini 오류', geminiErrors],
+    ['Gemini 지연', geminiLatency],
+    ['Gemini 유형별 지연', geminiLatencyByType],
+    ['일별 매출', dailyRevenueData],
+    ['일별 이용자', dailyUsersData],
+  ] as const) {
+    if (res.error) logger.error(`[Monitoring] ${label} 조회 실패:`, res.error)
+  }
 
   // Aggregate revenue
   const revenue: RevenueStats = {
@@ -195,7 +216,7 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
   // Gemini stats
   const todayCalls = geminiToday.data?.length ?? 0
   const weekCalls = geminiWeek.data?.length ?? 0
-  const todayErrors = geminiToday.data?.filter((r) => r.status === 'error').length ?? 0
+  const todayErrors = geminiToday.data?.filter((r) => r.status !== 'success').length ?? 0
   const weekErrors = geminiErrors.data?.length ?? 0
   const errorRate = weekCalls > 0 ? Math.round((weekErrors / weekCalls) * 100 * 10) / 10 : 0
   const latencies = geminiLatency.data?.map((r) => r.latency_ms).filter(Boolean) ?? []
@@ -222,7 +243,7 @@ export async function getMonitoringStats(): Promise<{ success: boolean; data?: M
   const monthCalls =
     (
       await supabase
-        .from('gemini_usage_logs')
+        .from('gemini_api_logs')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', monthStart.toISOString())
     ).count ?? 0
