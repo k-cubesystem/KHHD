@@ -9,6 +9,7 @@ import {
   purchaseExpiryFrom,
   isCreditExpired,
   totalRemainingOf,
+  chatUsageDateKey,
 } from '../entitlements'
 
 const DAY = 86_400_000
@@ -93,5 +94,32 @@ describe('totalRemainingOf', () => {
 
   it('전부 0이면 0 — 이때 화면은 「소진」이 아니라 「충전 안내」를 보여야 한다', () => {
     expect(totalRemainingOf({ onboarding: 0, memberWeekly: 0, ad: 0, purchased: 0 })).toBe(0)
+  })
+})
+
+/**
+ * 사용 기록 날짜 키는 KST — 「UTC 로 쓰고 KST 로 읽던」 9시간 구멍 잠금.
+ *
+ * 주간 사용량 SQL 은 KST 로 읽는데 쓰기만 UTC 였다. 주 경계가 지나는 순간 새 창의
+ * 시작 날짜가 UTC 날짜보다 하루 앞서, KST 00:00~09:00 에 쓴 문답이 닫힌 옛 날짜에
+ * 적혀 새 창이 세지 못했다 → 사용량 0 고정 → 주 1회 최대 9시간 무제한.
+ * Regression: /pipeline 2026-08-26 — 로직 리뷰 ④.
+ */
+describe('chatUsageDateKey — KST 날짜 키', () => {
+  it('KST 00:00~09:00 구간에서 UTC 날짜와 갈린다 — KST 쪽을 쓴다', () => {
+    // 2026-08-26 01:00 KST = 2026-08-25 16:00 UTC
+    const t = new Date('2026-08-25T16:00:00.000Z')
+    expect(t.toISOString().slice(0, 10)).toBe('2026-08-25') // UTC(옛 동작)
+    expect(chatUsageDateKey(t)).toBe('2026-08-26') // KST(정본)
+  })
+
+  it('KST 자정 직전/직후가 하루를 넘긴다', () => {
+    expect(chatUsageDateKey(new Date('2026-08-25T14:59:59.000Z'))).toBe('2026-08-25')
+    expect(chatUsageDateKey(new Date('2026-08-25T15:00:00.000Z'))).toBe('2026-08-26')
+  })
+
+  it('KST 오전 9시 이후는 UTC 날짜와 같다', () => {
+    const t = new Date('2026-08-26T03:00:00.000Z') // 12:00 KST
+    expect(chatUsageDateKey(t)).toBe(t.toISOString().slice(0, 10))
   })
 })

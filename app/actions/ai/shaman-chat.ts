@@ -27,6 +27,7 @@ import {
   ONBOARDING_FREE_QUESTIONS,
   PURCHASE_COST_BOKCHAE,
   PURCHASE_QUESTIONS,
+  chatUsageDateKey,
   memberWeekWindow,
   isCreditExpired,
   totalRemainingOf,
@@ -493,7 +494,7 @@ export async function sendShamanChatMessage(
     if (!rl.success) return { success: false, error: '요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' }
 
     const adminClient = createAdminClient()
-    const today = new Date().toISOString().split('T')[0]
+    const today = chatUsageDateKey()
 
     // 1. 질문권 현황 확인
     const status = await getShamanQuestionStatus()

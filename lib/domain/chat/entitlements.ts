@@ -48,6 +48,20 @@ export interface WeekWindow {
  *
  * periodStart 가 now 보다 미래이면(시계 오차·선결제) 첫 주기를 그대로 돌려준다.
  */
+/**
+ * 사용 기록에 적는 날짜 키 — **KST 기준 'YYYY-MM-DD'**.
+ *
+ * 🔴 여기가 UTC 였다(2026-08-26 수복). 주간 사용량을 세는 SQL(get_member_week_turns)은
+ *    `(p_window_start AT TIME ZONE 'Asia/Seoul')::date` 로 **KST** 로 읽는데, 쓰는 쪽만
+ *    `toISOString()`(UTC)이라 9시간이 어긋났다. 주 경계가 지나는 순간 새 창의 시작 날짜가
+ *    UTC 날짜보다 하루 앞서, 그 사이(최대 9시간)에 쓴 문답이 닫힌 옛 날짜로 적혀
+ *    새 창이 세지 못했다 — 사용량이 0에 고정되어 **주 1회, 최대 9시간 무제한**이 됐다.
+ *    KST 날짜 판정의 정본은 SQL 한 곳이다. 쓰기도 같은 자로 잰다.
+ */
+export function chatUsageDateKey(now: Date = new Date()): string {
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
 export function memberWeekWindow(periodStartMs: number, nowMs: number): WeekWindow {
   const elapsed = nowMs - periodStartMs
   const weeksElapsed = elapsed > 0 ? Math.floor(elapsed / WEEK_MS) : 0
