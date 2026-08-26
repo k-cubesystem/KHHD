@@ -639,7 +639,16 @@ export function ShrineRoomClient({
    */
   const deityStand = useMemo(
     () =>
-      deityStandShift(deityPodiumTopY(activeCode), deityHeadRoomY(activeCode), deityDelta.dy, fixtureScale(deityDelta)),
+      deityStandShift(
+        deityPodiumTopY(activeCode),
+        deityHeadRoomY(activeCode),
+        deityDelta.dy,
+        // 🔴 기본 위계 배율이 여기 안 걸려 있었다(2026-08-26 수복). import 만 되고 호출이 없어
+        //    CEO 지시(1.4 → 1.6)가 두 번 연속 화면에 닿지 않았다. 도메인 테스트는 전부 green
+        //    이었는데 — 함수만 재고 «룸이 그 함수를 부르는가»는 아무도 안 쟀기 때문이다.
+        //    사용자 조절(−/＋)은 이 기본 **위에** 곱해진다: 화면의 100% 가 곧 이 기본이다.
+        deityStandGrandeur(activeCode) * fixtureScale(deityDelta)
+      ),
     [activeCode, deityDelta]
   )
   /**

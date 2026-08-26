@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import {
   DEFAULT_ANCHORS,
   DEFAULT_SNAP_RADIUS_PCT,
@@ -793,5 +795,25 @@ describe('deityStandGrandeur — 기본 위계 배율', () => {
     const bigger = deityStandShift(foot, head, 0, deityStandGrandeur('dangsan') * 1.1)
     const baseH = base.podiumTopY - base.headRoomY
     expect(bigger.podiumTopY - bigger.headRoomY).toBeCloseTo(baseH * 1.1, 4)
+  })
+})
+
+/**
+ * 배선 잠금 — 「도메인 함수는 맞는데 화면이 그 함수를 안 부르는」 사고를 막는다.
+ *
+ * 실제 사고(2026-08-26 발견): deityStandGrandeur 가 ShrineRoomClient 에 **import 만 되고
+ * 호출되지 않아** CEO 의 기본 배율 지시(1.4 → 1.6)가 두 번 연속 화면에 닿지 않았다.
+ * 그동안 이 파일의 도메인 테스트 113건은 전부 green 이었다 — 함수를 직접 불러 재기만 하고
+ * 「룸이 그 함수를 쓰는가」는 아무도 재지 않았기 때문이다.
+ * (이 저장소가 이미 한 번 데인 패턴: feedback_gate_measures_wrong_thing)
+ */
+describe('배율 배선 — 룸이 도메인 함수를 실제로 쓰는가', () => {
+  it('ShrineRoomClient 가 deityStandGrandeur 를 호출한다', () => {
+    const src = readFileSync(
+      join(__dirname, '..', '..', '..', '..', 'components', 'shrine', 'scene', 'ShrineRoomClient.tsx'),
+      'utf8'
+    )
+    // import 만으로는 통과하지 못한다 — 호출 형태를 본다.
+    expect(src).toMatch(/deityStandGrandeur\s*\(/)
   })
 })
