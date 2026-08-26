@@ -43,9 +43,15 @@ export default function ServiceControlPage() {
 
         if (error) throw error
 
+        // system_settings.value는 혼합 포맷 컬럼이다(JSON도 있고 '1380' 같은 평문도 있다).
+        // 한 행이 JSON이 아니라고 전체 스위치가 OFF로 표시되면 안 된다.
         const loadedConfigs: Record<string, FeatureConfig> = {}
         data?.forEach((row) => {
-          loadedConfigs[row.key] = typeof row.value === 'string' ? JSON.parse(row.value) : row.value
+          try {
+            loadedConfigs[row.key] = typeof row.value === 'string' ? JSON.parse(row.value) : row.value
+          } catch {
+            logger.error(`Service Control: ${row.key} 값 파싱 실패`, row.value)
+          }
         })
         setConfigs(loadedConfigs)
       } catch (e) {

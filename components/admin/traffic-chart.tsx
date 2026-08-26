@@ -32,22 +32,27 @@ export function TrafficChart() {
   }, [])
 
   const loadData = async () => {
-    const result = await getHourlyTraffic(24)
-    if (!result.success) {
-      setError(result.error ?? '트래픽 조회에 실패했습니다.')
-    } else {
-      setError(null)
+    try {
+      const result = await getHourlyTraffic(24)
+      if (!result.success) {
+        setError(result.error ?? '트래픽 조회에 실패했습니다.')
+      } else {
+        setError(null)
+      }
+      if (result.success && result.data) {
+        const formatted = (result.data as HourlyTrafficRow[]).map((item) => ({
+          time: format(new Date(item.hour_timestamp), 'HH:mm'),
+          방문수: item.total_visits || 0,
+          신규가입: item.new_signups || 0,
+          매출: Math.round(item.total_revenue || 0),
+        }))
+        setData(formatted)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
     }
-    if (result.success && result.data) {
-      const formatted = (result.data as HourlyTrafficRow[]).map((item) => ({
-        time: format(new Date(item.hour_timestamp), 'HH:mm'),
-        방문수: item.total_visits || 0,
-        신규가입: item.new_signups || 0,
-        매출: Math.round(item.total_revenue || 0),
-      }))
-      setData(formatted)
-    }
-    setLoading(false)
   }
 
   if (loading) return <div className="text-ink-light/50">Loading...</div>

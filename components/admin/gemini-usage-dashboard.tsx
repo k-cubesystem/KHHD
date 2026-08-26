@@ -154,17 +154,22 @@ export function GeminiUsageDashboard({
 
   // ── 데이터 새로고침 ──────────────────────
   function refresh() {
+    // transition 안에서 throw하면 React 19는 에러 바운더리로 올려버린다 → 페이지가 통째로 죽는다
     startRefresh(async () => {
-      const [newSummary, newDaily, newAction, newLogs] = await Promise.all([
-        getGeminiTodaySummary(),
-        getGeminiDailyStats(period),
-        getGeminiActionStats(period),
-        getGeminiRecentLogs(50),
-      ])
-      setSummary(newSummary)
-      setDailyStats(newDaily)
-      setActionStats(newAction)
-      setLogs(newLogs)
+      try {
+        const [newSummary, newDaily, newAction, newLogs] = await Promise.all([
+          getGeminiTodaySummary(),
+          getGeminiDailyStats(period),
+          getGeminiActionStats(period),
+          getGeminiRecentLogs(50),
+        ])
+        setSummary(newSummary)
+        setDailyStats(newDaily)
+        setActionStats(newAction)
+        setLogs(newLogs)
+      } catch (e) {
+        setRpmMsg(`새로고침 실패: ${e instanceof Error ? e.message : String(e)}`)
+      }
     })
   }
 
@@ -172,9 +177,13 @@ export function GeminiUsageDashboard({
   function changePeriod(p: 7 | 30 | 90) {
     setPeriod(p)
     startRefresh(async () => {
-      const [newDaily, newAction] = await Promise.all([getGeminiDailyStats(p), getGeminiActionStats(p)])
-      setDailyStats(newDaily)
-      setActionStats(newAction)
+      try {
+        const [newDaily, newAction] = await Promise.all([getGeminiDailyStats(p), getGeminiActionStats(p)])
+        setDailyStats(newDaily)
+        setActionStats(newAction)
+      } catch (e) {
+        setRpmMsg(`기간 변경 실패: ${e instanceof Error ? e.message : String(e)}`)
+      }
     })
   }
 
@@ -187,12 +196,16 @@ export function GeminiUsageDashboard({
     }
     setRpmMsg(null)
     startSaveRpm(async () => {
-      const res = await updateGeminiRpm(rpm, modelInput)
-      if (res.success) {
-        setRpmConfig(res.data ?? rpmConfig)
-        setRpmMsg(`✓ RPM ${rpm}으로 변경 완료`)
-      } else {
-        setRpmMsg(`오류: ${res.error}`)
+      try {
+        const res = await updateGeminiRpm(rpm, modelInput)
+        if (res.success) {
+          setRpmConfig(res.data ?? rpmConfig)
+          setRpmMsg(`✓ RPM ${rpm}으로 변경 완료`)
+        } else {
+          setRpmMsg(`오류: ${res.error}`)
+        }
+      } catch (e) {
+        setRpmMsg(`오류: ${e instanceof Error ? e.message : String(e)}`)
       }
     })
   }

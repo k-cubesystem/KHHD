@@ -109,8 +109,12 @@ export function PlanManagementClient() {
     const updates = editedPlans[planId]
     if (!updates || !Object.keys(updates).length) return
     setSaving(planId)
-    const result = await updateMembershipPlan(planId, updates)
-    if (result.success) {
+    try {
+      const result = await updateMembershipPlan(planId, updates)
+      if (!result.success) {
+        toast.error('저장 실패: ' + result.error)
+        return
+      }
       toast.success('플랜이 저장되었습니다.')
       setPlans(plans.map((p) => (p.id === planId ? { ...p, ...updates } : p)))
       setEditedPlans((prev) => {
@@ -118,10 +122,11 @@ export function PlanManagementClient() {
         delete u[planId]
         return u
       })
-    } else {
-      toast.error('저장 실패: ' + result.error)
+    } catch (e) {
+      toast.error('저장 실패: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setSaving(null)
     }
-    setSaving(null)
   }
 
   const handleReset = (planId: string) => {
@@ -135,14 +140,19 @@ export function PlanManagementClient() {
 
   const handleToggleStatus = async (planId: string) => {
     setSaving(planId)
-    const result = await togglePlanStatus(planId)
-    if (result.success) {
+    try {
+      const result = await togglePlanStatus(planId)
+      if (!result.success) {
+        toast.error('상태 변경 실패: ' + result.error)
+        return
+      }
       toast.success(`${result.newStatus ? '활성화' : '비활성화'}되었습니다.`)
       setPlans(plans.map((p) => (p.id === planId ? { ...p, is_active: !!result.newStatus } : p)))
-    } else {
-      toast.error('상태 변경 실패: ' + result.error)
+    } catch (e) {
+      toast.error('상태 변경 실패: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setSaving(null)
     }
-    setSaving(null)
   }
 
   // === PRODUCT HANDLERS ===
@@ -174,8 +184,12 @@ export function PlanManagementClient() {
     const updates = editedProducts[prodId]
     if (!updates || !Object.keys(updates).length) return
     setSavingProduct(prodId)
-    const result = await updateProduct(prodId, updates)
-    if (result.success) {
+    try {
+      const result = await updateProduct(prodId, updates)
+      if (!result.success) {
+        toast.error('저장 실패: ' + result.error)
+        return
+      }
       toast.success('상품이 저장되었습니다.')
       setProducts(products.map((p) => (p.id === prodId ? { ...p, ...updates } : p)))
       setEditedProducts((prev) => {
@@ -183,10 +197,11 @@ export function PlanManagementClient() {
         delete u[prodId]
         return u
       })
-    } else {
-      toast.error('저장 실패: ' + result.error)
+    } catch (e) {
+      toast.error('저장 실패: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setSavingProduct(null)
     }
-    setSavingProduct(null)
   }
 
   const handleProductReset = (prodId: string) => {
@@ -202,14 +217,19 @@ export function PlanManagementClient() {
     const prod = products.find((p) => p.id === prodId)!
     const newState = !prod.is_active
     setSavingProduct(prodId)
-    const result = await updateProduct(prodId, { is_active: newState })
-    if (result.success) {
+    try {
+      const result = await updateProduct(prodId, { is_active: newState })
+      if (!result.success) {
+        toast.error('상태 변경 실패: ' + result.error)
+        return
+      }
       toast.success(`${newState ? '판매 시작' : '판매 중지'}되었습니다.`)
       setProducts(products.map((p) => (p.id === prodId ? { ...p, is_active: newState } : p)))
-    } else {
-      toast.error('상태 변경 실패: ' + result.error)
+    } catch (e) {
+      toast.error('상태 변경 실패: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setSavingProduct(null)
     }
-    setSavingProduct(null)
   }
 
   if (loading) {
@@ -379,7 +399,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'price') as number}
-                            onChange={(e) => changePlan(plan.id, 'price', parseInt(e.target.value))}
+                            onChange={(e) => changePlan(plan.id, 'price', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -388,7 +408,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'sort_order') as number}
-                            onChange={(e) => changePlan(plan.id, 'sort_order', parseInt(e.target.value))}
+                            onChange={(e) => changePlan(plan.id, 'sort_order', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -416,7 +436,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'talismans_per_period') as number}
-                            onChange={(e) => changePlan(plan.id, 'talismans_per_period', parseInt(e.target.value))}
+                            onChange={(e) => changePlan(plan.id, 'talismans_per_period', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-gold-500/10 border-gold-500/30 text-gold-300 focus:border-gold-500/50"
                           />
                         </div>
@@ -428,7 +448,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'daily_talisman_limit') as number}
-                            onChange={(e) => changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value))}
+                            onChange={(e) => changePlan(plan.id, 'daily_talisman_limit', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -440,7 +460,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'relationship_limit') as number}
-                            onChange={(e) => changePlan(plan.id, 'relationship_limit', parseInt(e.target.value))}
+                            onChange={(e) => changePlan(plan.id, 'relationship_limit', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -452,7 +472,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getPlanVal(plan, 'storage_limit') as number}
-                            onChange={(e) => changePlan(plan.id, 'storage_limit', parseInt(e.target.value))}
+                            onChange={(e) => changePlan(plan.id, 'storage_limit', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                           <p className="text-[9px] text-stone-600">999 = 무제한</p>
@@ -471,7 +491,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={(features.bonus_rate as number) ?? 0}
-                            onChange={(e) => changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value))}
+                            onChange={(e) => changeFeature(plan.id, 'bonus_rate', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -656,7 +676,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getProdVal(prod, 'price') as number}
-                            onChange={(e) => changeProd(prod.id, 'price', parseInt(e.target.value))}
+                            onChange={(e) => changeProd(prod.id, 'price', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-stone-900/50 border-stone-700/50 text-stone-200 focus:border-gold-500/50"
                           />
                         </div>
@@ -665,7 +685,7 @@ export function PlanManagementClient() {
                           <Input
                             type="number"
                             value={getProdVal(prod, 'credits') as number}
-                            onChange={(e) => changeProd(prod.id, 'credits', parseInt(e.target.value))}
+                            onChange={(e) => changeProd(prod.id, 'credits', parseInt(e.target.value) || 0)}
                             className="h-8 text-xs font-mono bg-gold-500/10 border-gold-500/30 text-gold-300 focus:border-gold-500/50"
                           />
                         </div>

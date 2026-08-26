@@ -4,35 +4,12 @@ import { useState, useEffect } from 'react'
 import { AdminUser, getUsers, updateUserRole, deleteUser } from './actions'
 import { UserRole } from '@/types/auth'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import {
-  Search,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  UserCog,
-  Trash2,
-  Users,
-  RefreshCw,
-  Save,
-} from 'lucide-react'
+import { Search, Loader2, ChevronLeft, ChevronRight, UserCog, Trash2, Users, RefreshCw, Save } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -181,7 +158,7 @@ export function UserManagementClient() {
       </div>
 
       {/* Desktop Table - hidden on mobile */}
-      <div className="hidden md:block rounded-xl border border-stone-800 bg-stone-950/50 overflow-hidden shadow-sm backdrop-blur-sm">
+      <div className="hidden md:block rounded-xl border border-stone-800 bg-stone-950/50 overflow-x-auto shadow-sm backdrop-blur-sm">
         <Table>
           <TableHeader className="bg-stone-900/80 border-b border-stone-800">
             <TableRow className="border-stone-800 hover:bg-stone-900/50">
@@ -189,9 +166,7 @@ export function UserManagementClient() {
               <TableHead className="text-stone-400 font-serif font-medium">이메일</TableHead>
               <TableHead className="text-stone-400 font-serif font-medium">가입일</TableHead>
               <TableHead className="text-stone-400 font-serif font-medium">권한(Role)</TableHead>
-              <TableHead className="text-right text-stone-400 font-serif font-medium">
-                관리
-              </TableHead>
+              <TableHead className="text-right text-stone-400 font-serif font-medium">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -240,9 +215,7 @@ export function UserManagementClient() {
                         <span className="text-stone-200">{user.full_name || '-'}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-stone-400 font-sans text-sm">
-                      {user.email || '-'}
-                    </TableCell>
+                    <TableCell className="text-stone-400 font-sans text-sm">{user.email || '-'}</TableCell>
                     <TableCell className="text-stone-500 text-xs font-sans font-mono animate-in fade-in">
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
@@ -272,10 +245,7 @@ export function UserManagementClient() {
                           >
                             USER
                           </SelectItem>
-                          <SelectItem
-                            value="tester"
-                            className="text-yellow-400 hover:bg-stone-900 focus:bg-stone-900"
-                          >
+                          <SelectItem value="tester" className="text-yellow-400 hover:bg-stone-900 focus:bg-stone-900">
                             TESTER
                           </SelectItem>
                           <SelectItem
@@ -366,9 +336,7 @@ export function UserManagementClient() {
                     {user.full_name?.charAt(0) || user.email?.charAt(0) || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-stone-200 truncate text-sm">
-                      {user.full_name || '-'}
-                    </p>
+                    <p className="font-medium text-stone-200 truncate text-sm">{user.full_name || '-'}</p>
                     <p className="text-xs text-stone-500 truncate">{user.email || '-'}</p>
                     <p className="text-[10px] text-stone-600 mt-0.5">
                       {new Date(user.created_at).toLocaleDateString('ko-KR')}
@@ -403,10 +371,7 @@ export function UserManagementClient() {
                       <SelectItem value="tester" className="text-yellow-400 hover:bg-stone-800">
                         TESTER
                       </SelectItem>
-                      <SelectItem
-                        value="admin"
-                        className="text-red-400 font-bold hover:bg-stone-800"
-                      >
+                      <SelectItem value="admin" className="text-red-400 font-bold hover:bg-stone-800">
                         ADMIN
                       </SelectItem>
                     </SelectContent>

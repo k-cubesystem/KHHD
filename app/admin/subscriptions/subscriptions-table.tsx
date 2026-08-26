@@ -5,13 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AdminSubscription, updateSubscriptionStatus, grantTalismans } from './actions'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -20,12 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ChevronLeft, ChevronRight, Gift, MoreHorizontal } from 'lucide-react'
@@ -106,12 +95,19 @@ export function SubscriptionsTable({
   }
 
   const handleStatusChange = async (subscriptionId: string, newStatus: string) => {
-    const result = await updateSubscriptionStatus(subscriptionId, newStatus)
-    if (result.success) {
-      toast.success('상태가 변경되었습니다.')
-      router.refresh()
-    } else {
-      toast.error(result.error || '상태 변경에 실패했습니다.')
+    if (newStatus === 'CANCELLED' && !confirm('이 구독을 강제 해지하시겠습니까?')) return
+
+    // 액션은 권한 검사에서 throw할 수 있다 — 잡지 않으면 클릭이 아무 반응 없이 죽는다
+    try {
+      const result = await updateSubscriptionStatus(subscriptionId, newStatus)
+      if (result.success) {
+        toast.success('상태가 변경되었습니다.')
+        router.refresh()
+      } else {
+        toast.error(result.error || '상태 변경에 실패했습니다.')
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '상태 변경에 실패했습니다.')
     }
   }
 
@@ -124,15 +120,19 @@ export function SubscriptionsTable({
       return
     }
 
-    const result = await grantTalismans(selectedUserId, amount, grantReason || '관리자 수동 지급')
-    if (result.success) {
-      toast.success(`부적 ${amount}장이 지급되었습니다.`)
-      setIsGrantDialogOpen(false)
-      setSelectedUserId(null)
-      setGrantAmount('10')
-      setGrantReason('')
-    } else {
-      toast.error(result.error || '부적 지급에 실패했습니다.')
+    try {
+      const result = await grantTalismans(selectedUserId, amount, grantReason || '관리자 수동 지급')
+      if (result.success) {
+        toast.success(`부적 ${amount}장이 지급되었습니다.`)
+        setIsGrantDialogOpen(false)
+        setSelectedUserId(null)
+        setGrantAmount('10')
+        setGrantReason('')
+      } else {
+        toast.error(result.error || '부적 지급에 실패했습니다.')
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '부적 지급에 실패했습니다.')
     }
   }
 
@@ -143,12 +143,6 @@ export function SubscriptionsTable({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="space-y-1">
-        <h1 className="text-xl font-serif font-bold text-stone-100">구독 관리</h1>
-        <p className="text-xs text-stone-500">회원 구독 현황 및 부적 수동 지급을 관리합니다.</p>
-      </div>
-
       {/* Filters */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -201,17 +195,11 @@ export function SubscriptionsTable({
 
                   <div className="relative flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-stone-200 text-sm truncate">
-                        {sub.profile?.email || 'Unknown'}
-                      </p>
-                      <p className="text-[10px] text-stone-600 font-mono mt-0.5">
-                        {sub.user_id.slice(0, 8)}...
-                      </p>
+                      <p className="font-medium text-stone-200 text-sm truncate">{sub.profile?.email || 'Unknown'}</p>
+                      <p className="text-[10px] text-stone-600 font-mono mt-0.5">{sub.user_id.slice(0, 8)}...</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <Badge
-                        className={`${sc.bg} ${sc.text} border ${sc.border} text-[9px] font-bold`}
-                      >
+                      <Badge className={`${sc.bg} ${sc.text} border ${sc.border} text-[9px] font-bold`}>
                         {sc.label}
                       </Badge>
                       <DropdownMenu>
@@ -224,10 +212,7 @@ export function SubscriptionsTable({
                             <MoreHorizontal className="h-3.5 w-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="bg-stone-900 border-stone-700 text-stone-200"
-                        >
+                        <DropdownMenuContent align="end" className="bg-stone-900 border-stone-700 text-stone-200">
                           <DropdownMenuItem
                             onClick={() => openGrantDialog(sub.user_id)}
                             className="text-xs hover:bg-stone-800 cursor-pointer"
@@ -267,15 +252,11 @@ export function SubscriptionsTable({
                   <div className="relative grid grid-cols-3 gap-2 pt-2.5 border-t border-stone-700/30">
                     <div>
                       <p className="text-[9px] text-stone-600 mb-0.5">플랜</p>
-                      <p className="text-xs text-stone-300 font-medium truncate">
-                        {sub.plan?.name || '-'}
-                      </p>
+                      <p className="text-xs text-stone-300 font-medium truncate">{sub.plan?.name || '-'}</p>
                     </div>
                     <div>
                       <p className="text-[9px] text-stone-600 mb-0.5">구독 시작</p>
-                      <p className="text-xs text-stone-400 font-mono">
-                        {formatDate(sub.current_period_start)}
-                      </p>
+                      <p className="text-xs text-stone-400 font-mono">{formatDate(sub.current_period_start)}</p>
                     </div>
                     <div>
                       <p className="text-[9px] text-stone-600 mb-0.5">
