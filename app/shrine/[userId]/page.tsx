@@ -49,7 +49,7 @@ export default async function PublicShrinePage({ params }: PageProps) {
   // 페이지만 빠져 방문자 벽이 비어 있었다(2026-08-25 발견). 공개 신당은 visibility 게이트를
   // 이미 지났으므로 소유자 기도문 노출은 주인의 공개 결정 범위 안이다.
   const prayerPage = await getPrayerPage(scene.shrineId, 0)
-  const boardPrayer = selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId)
+  const boardPrayer = (prayerPage.featuredPrayer ?? selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId))
 
   return (
     <div className="min-h-screen px-4 py-5 space-y-5">

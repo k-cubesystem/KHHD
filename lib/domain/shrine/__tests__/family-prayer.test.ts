@@ -148,3 +148,38 @@ describe('validatePrayerText — 화면과 저장 경로가 같은 기준', () =
     expect(validatePrayerText('  건강하세요  ')).toEqual({ ok: true, text: '건강하세요' })
   })
 })
+
+/**
+ * 「지난 기도 골라 걸기」의 쪽 경계 계약 — 목록과 벽이 서로 다른 말을 하던 사고 잠금.
+ *
+ * 화면은 최신 10편(쪽 0)만 받아 selectBoardPrayer 에 넘겼다. 그래서 3쪽에서 고른
+ * 기도는 그 10편 안에 없어 폴백이 걸렸고, 목록은 「걸림」이라 표시하는데 벽에는
+ * 최신 기도가 걸렸다. 수복 후에는 getPrayerPage 가 쪽 밖의 고른 편을 따로 실어 보내고
+ * 화면이 그것을 우선한다.
+ * Regression: /pipeline 2026-08-26 — 로직 리뷰 ⑥.
+ */
+describe('액자 선택 — 쪽 경계', () => {
+  const mk = (id: string, iso: string) => ({
+    id,
+    memberId: null,
+    name: '나',
+    text: `기도 ${id}`,
+    createdAt: iso,
+  })
+
+  it('고른 기도가 이번 쪽 안에 있으면 그것이 걸린다', () => {
+    const page = [mk('p3', '2026-08-03'), mk('p2', '2026-08-02'), mk('p1', '2026-08-01')]
+    expect(selectBoardPrayer(page, 'p1')?.id).toBe('p1')
+  })
+
+  it('🔴 고른 기도가 쪽 밖이면 도메인 함수만으로는 최신으로 폴백한다 — 그래서 화면이 따로 실어 보내야 한다', () => {
+    const page = [mk('p3', '2026-08-03'), mk('p2', '2026-08-02')]
+    // 'old' 는 3쪽에 있어 이 배열에 없다
+    expect(selectBoardPrayer(page, 'old')?.id).toBe('p3')
+
+    // 화면 계약: getPrayerPage 가 채워 준 featuredPrayer 를 우선한다
+    const featuredPrayer = mk('old', '2026-05-01')
+    const board = featuredPrayer ?? selectBoardPrayer(page, 'old')
+    expect(board.id).toBe('old')
+  })
+})

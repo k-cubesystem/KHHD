@@ -157,9 +157,17 @@ export interface PrayerPageData {
   total: number
   /** 액자에 걸린 기도 id. null 이면 최신 기도가 걸린다 */
   featuredId: string | null
+  /**
+   * 액자에 걸린 기도 **그 자체**.
+   *
+   * 🔴 이 필드가 없던 동안, 고른 기도가 이번 쪽(최신 10편) 밖에 있으면 화면이 찾지 못해
+   *    조용히 최신 기도로 되돌아갔다 — 목록은 「걸림」이라 표시하는데 벽에는 다른 기도가
+   *    걸려 있었다(2026-08-26 수복). 쪽 밖이면 id 로 한 행만 따로 읽어 채운다.
+   */
+  featuredPrayer: FamilyPrayer | null
 }
 
-const EMPTY_PAGE: PrayerPageData = { prayers: [], total: 0, featuredId: null }
+const EMPTY_PAGE: PrayerPageData = { prayers: [], total: 0, featuredId: null, featuredPrayer: null }
 
 /**
  * 행 → 기도. 이름을 못 찾으면 '가족' 으로 뭉갠다 — 두 경우가 여기로 온다:
@@ -212,11 +220,27 @@ export async function getPrayerPage(shrineId: string, page = 0): Promise<PrayerP
 
   const nameOf = new Map((family ?? []).map((f) => [f.id as string, f.name as string]))
   const prayers = data.map((row) => toPrayer(row, nameOf))
+  const featuredId = (shrine?.featured_wish_id as string | null) ?? null
+
+  // 고른 기도가 이번 쪽 안에 있으면 그대로 쓰고, 밖이면 한 행만 따로 읽는다.
+  // (쪽 크기 10 이라 11편째부터는 항상 밖이었다 — 그때 액자가 최신 기도로 되돌아갔다)
+  let featuredPrayer = featuredId ? (prayers.find((p) => p.id === featuredId) ?? null) : null
+  if (featuredId && !featuredPrayer) {
+    const { data: one } = await supabase
+      .from('shrine_wishes')
+      .select('id, wish_text, family_member_id, created_at')
+      .eq('id', featuredId)
+      .eq('shrine_id', shrineId)
+      .eq('is_owner_wish', true)
+      .maybeSingle()
+    featuredPrayer = one ? toPrayer(one, nameOf) : null
+  }
 
   return {
     prayers,
     total: count ?? prayers.length,
-    featuredId: (shrine?.featured_wish_id as string | null) ?? null,
+    featuredId,
+    featuredPrayer,
   }
 }
 

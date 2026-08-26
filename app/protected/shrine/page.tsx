@@ -99,7 +99,7 @@ export default async function ShrinePage() {
   ])
 
   // 액자에 걸릴 한 편 — 고른 것이 있으면 그것, 없으면 최신(도메인 판정). 방은 고르지 않는다.
-  const boardPrayer = selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId)
+  const boardPrayer = (prayerPage.featuredPrayer ?? selectBoardPrayer(prayerPage.prayers, prayerPage.featuredId))
 
   return (
     <div className="min-h-screen px-1 py-4">
