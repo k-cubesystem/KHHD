@@ -33,15 +33,10 @@ export async function getUsers(
   unstable_noStore()
 
   try {
-    const supabase = await createClient()
-
-    // 1. Check Caller Auth
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
-      logger.error('getUsers: Auth failed', authError)
+    // service_role 클라이언트를 쓰므로 RLS가 아니라 이 검사가 유일한 방어선이다
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.authorized) {
+      logger.error('getUsers: 관리자 아님')
       return { data: [], total: 0 }
     }
 
@@ -115,15 +110,11 @@ export async function updateUserRole(targetUserId: string, newRole: UserRole) {
 
 export async function getUserDetails(userId: string) {
   try {
-    const supabase = await createClient()
+    // userId를 인자로 받는데 호출자가 관리자인지 확인하지 않으면
+    // 로그인한 아무나 남의 생년월일·결제내역·잔액을 조회할 수 있다
+    const adminCheck = await requireAdmin()
+    if (!adminCheck.authorized) return { error: 'Forbidden' }
 
-    // 1. Check Auth
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return { error: 'Unauthorized' }
-
-    // TEMPORARY: Use admin client to bypass RLS
     const adminClient = createAdminClient()
 
     // 2. Fetch Data in Parallel

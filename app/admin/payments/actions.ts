@@ -18,25 +18,24 @@ export interface AdminPayment {
 }
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getUserRole } from '@/lib/supabase/helpers'
 
 export async function getPayments(
   page: number = 1,
   limit: number = 20,
   statusFilter: string = 'all'
 ): Promise<{ data: AdminPayment[]; total: number }> {
-  const supabase = await createClient()
-
   try {
-    // Check Auth
+    // service_role로 전 회원 결제원장을 읽는다. 로그인 여부가 아니라 관리자 여부를 봐야 한다
+    const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
-      logger.error('getPayments: No user found')
+    if (!user || (await getUserRole(supabase, user.id)) !== 'admin') {
+      logger.error('getPayments: 관리자 아님')
       return { data: [], total: 0 }
     }
 
-    // TEMPORARY: Use admin client to bypass RLS
     const dbClient = createAdminClient()
 
     // 1. Fetch Payments (No Join)
