@@ -28,6 +28,8 @@
  * 🔴 손실이 0인 취소(복채를 안 쓴 정상 취소)는 이 상한과 **무관**하다. lossCredits > 0 일 때만 잰다.
  */
 
+import { SUPPORT_LABEL } from '@/lib/domain/support/contact'
+
 /** 이동창 길이(일). 달력 연도가 아니라 «최근 N일». */
 export const LOSS_CANCEL_WINDOW_DAYS = 365
 
@@ -145,7 +147,7 @@ function koreanDate(iso: string | null): string | null {
 export function lossCapBlockedMessage(decision: LossCapDecision): string {
   const when = koreanDate(decision.nextAvailableAt)
   const reopen = when ? ` ${when} 이후에는 다시 요청하실 수 있습니다.` : ''
-  const guide = ' 그전에 사정이 있으시면 고객센터로 말씀해 주세요 — 사람이 직접 살펴보고 도와드리겠습니다.'
+  const guide = ` 그전에 사정이 있으시면 ${SUPPORT_LABEL}로 말씀해 주세요 — 사람이 직접 살펴보고 도와드리겠습니다.`
 
   if (decision.blockedReason === 'AMOUNT_EXCEEDED') {
     return (

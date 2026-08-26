@@ -1,4 +1,5 @@
 'use server'
+import { SUPPORT_ASK } from '@/lib/domain/support/contact'
 import { tossGeneralSecretKey } from '@/lib/config/toss-keys'
 
 import { createClient } from '@/lib/supabase/server'
@@ -147,7 +148,7 @@ export async function confirmPayment(paymentKey: string, orderId: string, talism
     logger.error('[Payment] Wallet charge failed, marking payment for retry:', walletResult.error)
     // 결제는 완료됐지만 지갑 충전 실패 — 상태를 wallet_failed로 변경하여 수동/자동 재시도 가능
     await supabase.from('payments').update({ status: 'wallet_failed' }).eq('id', insertedPayment.id)
-    throw new Error('결제는 완료되었으나 복채 충전에 실패했습니다. 고객센터에 문의해주세요.')
+    throw new Error(`결제는 완료되었으나 복채 충전에 실패했습니다. ${SUPPORT_ASK}`)
   }
 
   return { ...result, creditedTotal, isFirstPurchase, baseCredits }

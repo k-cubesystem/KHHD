@@ -9,6 +9,7 @@ import { submitChargeCancel } from '@/app/actions/payment/cancel-request'
 import type { ChargeCancelItem, ChargeCancelOverview, CancelReasonCode } from '@/lib/domain/payment/self-cancel'
 import type { LossCapStatus } from '@/lib/domain/payment/loss-cap'
 import { CancelReasonFields } from './cancel-reason-fields'
+import { SUPPORT_CTA } from '@/lib/domain/support/contact'
 
 const won = (value: number) => `${value.toLocaleString('ko-KR')}원`
 
@@ -28,7 +29,7 @@ const BLOCKED_TEXT: Readonly<Record<string, string>> = {
 /**
  * 손실 처리 상한 안내.
  * 🔴 남은 횟수·금액은 보여주지 않는다 — 「아직 한 번 남았네」가 곧 사용 유인이 된다.
- *    막혔을 때만 이유와 다음 경로(고객센터)를 말한다.
+ *    막혔을 때만 이유와 다음 경로(1:1 문의)를 말한다.
  */
 function LossCapNotice({ message }: { message: string }) {
   return (
@@ -39,7 +40,7 @@ function LossCapNotice({ message }: { message: string }) {
         className="inline-flex items-center gap-2 text-xs text-primary hover:text-primary/80 transition-colors"
       >
         <Headphones className="w-3.5 h-3.5" strokeWidth={1.5} />
-        고객센터로 문의하기
+        {SUPPORT_CTA}
       </Link>
     </div>
   )
