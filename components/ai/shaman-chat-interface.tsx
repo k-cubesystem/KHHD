@@ -1293,7 +1293,7 @@ export function ShamanChatInterface({
               className="flex items-center gap-1 rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-1 text-[11.5px] text-primary/85 hover:bg-primary/15 transition-colors disabled:opacity-40"
             >
               {isRecharging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}
-              충전 +20회
+              충전 +{PURCHASE_QUESTIONS}회
             </button>
           </div>
         </div>
