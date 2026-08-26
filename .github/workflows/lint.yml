@@ -1,0 +1,27 @@
+# ESLint 차단 게이트 (2026-08-26 승격)
+#
+# 🔴 왜 생겼나: 린트가 어디서도 «막지» 않던 동안, react-hooks/rules-of-hooks 가 error 로
+#    잡던 훅 위반(useState 초기화 함수 안의 useEffect)이 프로덕션까지 살아남아
+#    만세력 화면이 첫 상호작용에서 통째로 죽었다. 사람이 눈으로 놓칠 수 있는 것을
+#    도구가 이미 알고 있었는데 아무도 그 말을 듣지 않는 상태였다.
+#
+# 막는 것은 «오류»뿐이다 — eslint 는 경고만 있으면 0 으로 끝난다.
+name: lint
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: ESLint (오류만 차단)
+        run: npx eslint .

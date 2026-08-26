@@ -70,6 +70,35 @@ const eslintConfig = [
       "react-hooks/purity": "off",
     },
   },
+  {
+    // 데이터 적재 이펙트 — 「적재 시작」과 「로딩 표시」가 같은 프레임이어야 이전 결과가
+    // 남아 있는 것처럼 보이지 않는다. 컴파일러 규칙은 그 한 번의 추가 렌더를 지적하는
+    // 성능 권고이지 정확성 결함이 아니고, 이 다섯은 결제 복귀·어드민 지표·보상 시트라
+    // 재작성 위험이 이득보다 크다(2026-08-26 게이트 승격 시 유예).
+    //
+    // 🔴 새 코드는 이 목록에 추가하지 말 것. 클라이언트 전용 값을 하이드레이션 뒤에 읽는
+    //    경우라면 `hooks/use-hydrated.ts` 의 useHydrated() 를 쓴다 — 그 목적으로 만든 훅이다.
+    //    (React Compiler 규칙은 eslint-disable 주석을 무시하므로 예외는 여기에만 적을 수 있다.)
+    files: [
+      "app/protected/membership/success/page.tsx",
+      "components/admin/recent-activity-live.tsx",
+      "components/admin/traffic-chart.tsx",
+      "components/analysis/journey-reward-sheet.tsx",
+      "components/shared/SajuLoadingOverlay.tsx",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
+  {
+    // 신위 편집 드래그 핸들러(onPointerDown) — ref 변형과 포인터 캡처가 얽혀 컴파일러가
+    // 수동 메모이제이션을 보존하지 못한다. 이 파일은 드래그·접지에서 여러 번 사고가 났던
+    // 자리라 규칙을 맞추려는 재작성이 이득보다 위험하다(2026-08-26).
+    files: ["components/shrine/scene/ShrineRoomClient.tsx"],
+    rules: {
+      "react-hooks/preserve-manual-memoization": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
