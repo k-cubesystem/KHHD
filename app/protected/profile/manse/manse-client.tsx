@@ -116,10 +116,12 @@ interface ManseClientProps {
 }
 
 export default function ManseClient({ members, isSubscribed }: ManseClientProps) {
+  // 🔴 이 초기화 함수 안에 useEffect 가 들어 있었다(2026-08-26 수복).
+  //    lazy initializer 는 첫 렌더에서만 돌아 마운트/갱신의 훅 순서가 어긋났고,
+  //    두 번째 렌더의 같은 자리에서 useState 가 effect 훅을 집어 화면이 통째로 죽었다
+  //    (React #310 «Rendered more hooks than during the previous render»).
+  //    초기화 함수 안에서는 어떤 훅도 부르지 않는다 — 계측은 본문 최상위 useEffect 로.
   const [selectedMemberId, setSelectedMemberId] = useState<string>(() => {
-    useEffect(() => {
-      trackEvent({ action: 'screen_view', category: 'engagement', label: 'manse' })
-    }, [])
     if (members.length > 0) {
       const self = members.find((m: Member) => m.relationship === '본인')
       return self?.id || members[0].id
@@ -127,6 +129,10 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
     return ''
   })
   const [termDialog, setTermDialog] = useState<TermDialogState>({ open: false, term: '' })
+
+  useEffect(() => {
+    trackEvent({ action: 'screen_view', category: 'engagement', label: 'manse' })
+  }, [])
   const [sajuInterpretOpen, setSajuInterpretOpen] = useState(false)
   const [wuxingAnalysisOpen, setWuxingAnalysisOpen] = useState(false)
   const [yukchinAnalysisOpen, setYukchinAnalysisOpen] = useState(false)
