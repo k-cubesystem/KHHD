@@ -108,15 +108,17 @@ export function PrayerSheet({ open, onOpenChange, shrineId, family, prayerCount 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[400px] rounded-2xl border border-gold-500/30 bg-[#151210]">
-        <DialogHeader>
+      {/* 뷰포트가 짧은 기기에서 「기도 올리기」와 고지문이 화면 밖으로 나가 도달 불가였다(2026-08-26 수복).
+          다른 다이얼로그가 받은 처방과 같게 — 머리글·닫기 X 는 고정, 본문만 스크롤. */}
+      <DialogContent className="flex max-h-[88vh] max-w-[400px] flex-col overflow-hidden rounded-2xl border border-gold-500/30 bg-[#151210]">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2 font-serif text-base font-bold text-ink-light">
             <Flame className="h-4 w-4 text-gold-500" fill="#C9A84C" />
             {PRAYER_TITLE}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
           {/* 백 일의 진행 — 편수 하나가 곧 날수다 */}
           <div className="rounded-xl border border-gold-500/20 bg-gold-500/[0.05] p-3">
             <div className="flex items-baseline justify-between">
