@@ -64,6 +64,17 @@ export async function POST(req: NextRequest) {
     async start(controller) {
       const startedAt = Date.now()
       let full = ''
+      /**
+       * 클라이언트에 **실제로 전달된** 본문 길이.
+       *
+       * 🔴 환급 판정의 기준이다(2026-08-26). 예전엔 catch 가 무조건 환급해서,
+       *    답을 거의 다 읽은 뒤 탭을 닫거나 abort 하면 — 취소된 스트림에 enqueue 하면
+       *    throw 가 나므로 catch 로 떨어진다 — **답은 받고 질문권은 돌려받는** 짓을
+       *    레이트리밋 안에서 무한 반복할 수 있었다.
+       *    `full`(모델 산출량)이 아니라 «전달 성공량»으로 재야 한다. 모델이 글자를 냈어도
+       *    첫 토큰조차 못 보냈다면 사용자는 아무것도 못 받은 것이고, 그때는 환급이 옳다.
+       */
+      let delivered = 0
       try {
         const model = getGeminiModel(prepared.systemInstruction)
         const chat = model.startChat({ history: prepared.geminiHistory })
@@ -84,12 +95,16 @@ export async function POST(req: NextRequest) {
             const tagLen = head.length - head.replace(/^\s*\[\[[^\]]*\]\]\s*/, '').length
             controller.enqueue(sse('meta', { emotion, deityCode: prepared.deityCode }))
             const visible = head.slice(tagLen)
-            if (visible) controller.enqueue(sse('token', { t: visible }))
+            if (visible) {
+              controller.enqueue(sse('token', { t: visible }))
+              delivered += visible.length
+            }
             head = ''
             headFlushed = true
             continue
           }
           controller.enqueue(sse('token', { t: piece }))
+          delivered += piece.length
         }
 
         // 응답이 EMOTION_PROBE_CHARS 보다 짧아 한 번도 흘리지 못한 경우
@@ -97,6 +112,7 @@ export async function POST(req: NextRequest) {
           const { emotion, text } = stripEmotionTag(head, prepared.deityCode)
           controller.enqueue(sse('meta', { emotion, deityCode: prepared.deityCode }))
           controller.enqueue(sse('token', { t: text }))
+          delivered += text.length
         }
 
         const usage = (await result.response).usageMetadata
@@ -127,8 +143,21 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         logger.error(e instanceof Error ? e : new Error(String(e)), '[chat/stream]')
         // 차감했는데 모델이 실패했으면 되돌린다(P0-F5) — 스트리밍도 같은 약속을 진다.
-        await refundConsumed(prepared)
-        controller.enqueue(sse('error', { message: '신당의 기운이 잠시 흐렸습니다. 잠시 후 다시 여쭤 주십시오.' }))
+        // 단 **아무것도 전달되지 않았을 때만**. 답을 받은 뒤의 중단은 환급 대상이 아니다.
+        if (delivered === 0) {
+          await refundConsumed(prepared)
+        } else {
+          logger.warn('[chat/stream] 전달 후 중단 — 환급하지 않는다', {
+            userId: prepared.userId,
+            delivered,
+          })
+        }
+        // 이미 끊긴 스트림에 쓰면 또 throw 난다 — 오류 통지는 실패해도 무시한다.
+        try {
+          controller.enqueue(sse('error', { message: '신당의 기운이 잠시 흐렸습니다. 잠시 후 다시 여쭤 주십시오.' }))
+        } catch {
+          /* 클라이언트가 이미 떠났다 */
+        }
       } finally {
         controller.close()
       }
