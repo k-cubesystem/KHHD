@@ -20,7 +20,7 @@ import {
   type PastChatSession,
 } from '@/app/actions/ai/shaman-chat'
 import { greetingToContent, type Greeting } from '@/lib/domain/chat/greeting'
-import { PURCHASE_COST_BOKCHAE, PURCHASE_QUESTIONS, totalRemainingOf } from '@/lib/domain/chat/entitlements'
+import { PURCHASE_QUESTIONS, totalRemainingOf } from '@/lib/domain/chat/entitlements'
 import { GreetingIntro } from '@/components/ai/chat/greeting-intro'
 import { AiDisclosureBadge } from '@/components/shared/AiDisclosureBadge'
 import { ChatMoreSheet } from '@/components/ai/chat/chat-more-sheet'

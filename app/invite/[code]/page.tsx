@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect , useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Heart, Sparkles, Loader2, Users, Star, Briefcase, UserPlus, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -48,11 +48,8 @@ export default function InvitePage() {
   // Result
   const [compatibility, setCompatibility] = useState<CompatibilityData | null>(null)
 
-  useEffect(() => {
-    loadInviter()
-  }, [code])
-
-  const loadInviter = async () => {
+  // 적재 함수를 메모이즈해 이펙트 의존성으로 쓴다(낡은 클로저 방지).
+  const loadInviter = useCallback(async () => {
     setLoading(true)
     const result = await getInviterByCode(code)
 
@@ -63,7 +60,11 @@ export default function InvitePage() {
       setError(result.error || '유효하지 않은 초대 링크입니다.')
     }
     setLoading(false)
-  }
+  }, [code])
+
+  useEffect(() => {
+    loadInviter()
+  }, [loadInviter])
 
   const handleAnalyze = async () => {
     if (!inviter || !guestName || !guestBirthDate) {

@@ -37,7 +37,7 @@ function CheckoutContent() {
       else setPlan(p)
       setLoading(false)
     })
-  }, [planId])
+  }, [planId, router])
 
   const handleCheckout = async () => {
     if (!plan || !planId) return

@@ -2,7 +2,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getUserRole } from '@/lib/auth'
 import { UserRole } from '@/types/auth'
 import { revalidatePath, unstable_noStore } from 'next/cache'
 import { logger } from '@/lib/utils/logger'

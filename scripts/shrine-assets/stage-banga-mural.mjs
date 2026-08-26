@@ -250,7 +250,7 @@ const EDGE_TAPER_PAD = 2
 /** 재검출 반복 상한 — 페더가 만든 잔여 단계까지 정리한다(보통 1패스에서 끝난다) */
 const EDGE_PASS_MAX = 3
 /** 합격: 무라 최종본(webp 디코드)의 인접 열 휘도차 최대값이 이 값 이하 */
-const EDGE_ACCEPT_MAX = 20
+const _EDGE_ACCEPT_MAX = 20
 /** 톤 허용 오차 — 열 휘도 평균 기준(±%). 표준편차는 절벽을 램프로 펴는 순간 반드시 줄어든다(후술). */
 const EDGE_TONE_TOL = 0.02
 /** CEO 화면의 실제 렌더 스케일 — 이 배율로 축소했을 때의 열 차이가 "눈에 보이는가"의 지표다 */

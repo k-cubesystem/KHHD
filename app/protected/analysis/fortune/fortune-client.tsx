@@ -170,7 +170,6 @@ function FortuneResultView({ result }: { result: FortuneResult }) {
 function TabPanel({ type, targetId }: { type: FortuneType; targetId: string | null }) {
   const config = TAB_CONFIG.find((t) => t.value === type)!
   const { checkQuota, paywallProps } = useAnalysisQuota()
-  const router = useRouter()
   const [state, setState] = useState<
     | { status: 'idle' }
     | { status: 'loading' }

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card } from '@/components/ui/card'
-import { Users, CreditCard, TrendingUp, Activity, Crown, UserPlus } from 'lucide-react'
+import { CreditCard, Activity } from 'lucide-react'
 import { TrafficChart } from '@/components/admin/traffic-chart'
 import { StatStrip, StatTile } from '@/components/admin/ui/stat-tile'
 import { SupportSummary } from './support/support-summary'

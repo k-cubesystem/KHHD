@@ -137,13 +137,13 @@ const DESIGN = {
   ar: 1.391,
 }
 /** 기기 시뮬 — 겉보기 세로는 방 AR 에 딸려 오므로 «가장 좁은 방»도 같이 보고한다 */
-const DEVICES = [
+const _DEVICES = [
   { name: 'ref 520x620', w: ROOM_W, h: null },
   { name: '360x800', w: 352, h: 800 },
   { name: '390x844', w: 382, h: 844 },
   { name: '430x932', w: 422, h: 932 },
 ]
-const deviceRoom = (d) => ({
+const _deviceRoom = (d) => ({
   name: d.name,
   vw: Math.min(ROOM_W, d.w),
   vh: d.h === null ? ROOM_H : Math.min((ROOM_VH / 100) * d.h, ROOM_H),
@@ -1020,7 +1020,7 @@ function planSidePad(Hc, W0, f1, sep) {
  * 그래서 리패드는 «사이 거리가 이미 맞은» 스프라이트를 제자리에 앉히는 마지막 한 칸이고,
  * 거리가 어긋난 스프라이트는 리패드로 못 고친다 — 그건 재생성(장 깊이)이 답이다.
  */
-const shiftPerPad = (a) => ((SEED.w / 100) * ROOM_W * 100) / ROOM_H / 2 // = 25.16 (w60·520/620/2)
+const shiftPerPad = (_a) => ((SEED.w / 100) * ROOM_W * 100) / ROOM_H / 2 // = 25.16 (w60·520/620/2)
 function planRepad(a, marks) {
   const yOfF = (f) => SEED.y + hPctOf(a) * (f - 0.5)
   const errs = LANDMARKS.map((L) => yOfF(marks[L.key]) - L.roomY)
@@ -1030,7 +1030,7 @@ function planRepad(a, marks) {
 }
 
 /** 그 시드를 실기기에 걸면 세로가 어떻게 보이는가 — 겉보기 세로는 방 AR 에 딸려 온다 */
-function apparentIn(room, wPct, arHw) {
+function _apparentIn(room, wPct, arHw) {
   const pxW = (room.vw * wPct) / 100
   const pxH = pxW * arHw
   const hPct = (pxH / room.vh) * 100
@@ -1044,7 +1044,7 @@ async function writeQa(buf, m, file, marks) {
   const vh = Math.round((meta.height * vw) / meta.width)
   /** 확인판의 자·선은 전부 **캔버스 비율**이다(리패드 뒤에는 내용물 비율과 갈린다) */
   const y = (frac) => Math.round(frac * vh)
-  const yc = (frac) => Math.round(((m.contentTop + m.span * frac) * vh) / meta.height)
+  const _yc = (frac) => Math.round(((m.contentTop + m.span * frac) * vh) / meta.height)
   const line = (frac, color, label, dash) =>
     `<line x1="0" y1="${y(frac)}" x2="${vw}" y2="${y(frac)}" stroke="${color}" stroke-width="2"` +
     `${dash ? ' stroke-dasharray="7 6"' : ''}/><text x="6" y="${y(frac) - 5}" fill="${color}" font-size="15">${label}</text>`
@@ -1168,7 +1168,7 @@ async function buildTheme(t, { round, rekey }) {
    * 닫집 끝을 자르는 순간 그림이 망가진다. 그건 재생성 신호다(사이 거리가 짧다 = 장이 얕다).
    */
   const SIDE_PAD_MAX = 0.09
-  let sidePad = null
+  let _sidePad = null
   /**
    * ⚠️ 확산 회차(2026-08-10)부터 **기본 꺼짐**이다. 이유는 «주인이 바뀌었다» 하나다.
    *
@@ -1196,7 +1196,7 @@ async function buildTheme(t, { round, rekey }) {
         .toBuffer()
       const { data, info } = await sharp(padded).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
       const m = measureContract(data, info.width, info.height, info.channels)
-      sidePad = { px, frac, arNow, needAR, sep }
+      _sidePad = { px, frac, arNow, needAR, sep }
       best = { ...best, buf: padded, info, m }
       // 세로 비율(f)은 가로 패딩에 불변이라 marks0 는 그대로 산다 — 다시 재지 않는다(자동 검출 재실패 방지)
       console.log(

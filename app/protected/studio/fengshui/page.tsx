@@ -25,7 +25,7 @@ import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/action
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
-import { GOLD_500, GOLD_300 } from '@/lib/config/design-tokens'
+import { GOLD_500 } from '@/lib/config/design-tokens'
 import { toast } from 'sonner'
 import {
   ArrowRight,

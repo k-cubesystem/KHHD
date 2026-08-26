@@ -107,15 +107,15 @@ async function main() {
     log('   `npm run lint` 를 직접 실행해 원인을 확인하세요.', 'yellow')
     allPassed = false
   } else {
-    checkItem('ESLint 검사', lintResult.success, lintResult.success ? '통과' : '오류 있음 — 배포 차단')
+    checkItem('ESLint 검사', lintResult.success, lintResult.success ? '통과' : '오류·경고 있음 — 배포 차단')
 
     // 🔴 2026-08-26: 린트를 차단 게이트로 승격했다.
     //    그 전까지는 «경고 있음(배포 가능)» 으로 흘려보냈고, 그 사이
     //    react-hooks/rules-of-hooks 가 error 로 잡던 만세력 훅 위반(화면 전체 크래시)이
-    //    프로덕션까지 살아남았다. eslint 는 경고만 있으면 0 으로 끝나므로
-    //    여기서 막히는 것은 «오류»뿐이다 — 경고는 여전히 배포를 막지 않는다.
+    //    프로덕션까지 살아남았다. 2026-08-26 2차로 경고 45건까지 0 으로 만들고
+    //    `npm run lint` 에 --max-warnings=0 을 걸었다 — 0 은 강제해야만 유지된다.
     if (!lintResult.success) {
-      log('   ESLint 오류를 수정해야 배포할 수 있습니다. `npm run lint` 로 확인하세요.', 'yellow')
+      log('   ESLint 오류·경고를 수정해야 배포할 수 있습니다. `npm run lint` 로 확인하세요.', 'yellow')
       allPassed = false
     }
   }

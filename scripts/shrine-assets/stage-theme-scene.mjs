@@ -551,7 +551,7 @@ async function ensureShot(theme, key, { regen }) {
 const smoothstep = (u) => u * u * (3 - 2 * u)
 
 /** 열 평균 휘도 프로파일 (다른 무대 스크립트와 동일 규약) */
-function columnLuma(data, w, h, ch) {
+function _columnLuma(data, w, h, ch) {
   const col = new Float64Array(w)
   for (let x = 0; x < w; x += 1) {
     let s = 0

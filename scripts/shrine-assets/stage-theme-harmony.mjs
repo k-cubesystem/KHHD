@@ -155,7 +155,7 @@ function readContracts() {
    */
   const floorLineY = 100 - GEO.bands.floor
   const groundDrop = Math.round((GEO.bands.floor / 3) * 100) / 100
-  const groundLineY = Math.round((floorLineY + groundDrop) * 100) / 100
+  const _groundLineY = Math.round((floorLineY + groundDrop) * 100) / 100
   const wallDivisor = pluckNum(themeStage, /const WALL_GROUND_DIVISOR = ([\d.]+)/, 'WALL_GROUND_DIVISOR')
   const wallGroundLineY =
     Math.round((floorLineY + Math.round((groundDrop / wallDivisor) * 100) / 100) * 100) / 100

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect , useCallback } from 'react'
 import { AdminPayment, getPayments } from './actions'
 import {
   describePaymentSettlement,
@@ -24,11 +24,9 @@ export function PaymentManagementClient() {
   const [total, setTotal] = useState(0)
   const limit = 10
 
-  useEffect(() => {
-    fetchPayments()
-  }, [statusFilter, page])
-
-  async function fetchPayments() {
+  // 적재 함수를 메모이즈해 이펙트 의존성으로 쓴다 — 함수 선언을 의존성 밖에 두면
+  // 필터·쪽이 바뀌었는데도 옛 값을 잡은 함수가 도는 «낡은 클로저»가 생긴다.
+  const fetchPayments = useCallback(async () => {
     setLoading(true)
     try {
       const { data, total } = await getPayments(page, limit, statusFilter)
@@ -39,7 +37,11 @@ export function PaymentManagementClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, limit, statusFilter])
+
+  useEffect(() => {
+    fetchPayments()
+  }, [fetchPayments])
 
   const totalPages = Math.ceil(total / limit)
 

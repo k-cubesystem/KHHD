@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { Zap, TrendingUp, AlertTriangle, CheckCircle, RefreshCw, Save, Activity } from 'lucide-react'
+import { Zap, CheckCircle, RefreshCw, Save, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { StatStrip, StatTile } from '@/components/admin/ui/stat-tile'
 import { getActionLabel } from '@/lib/domain/gemini/actions'

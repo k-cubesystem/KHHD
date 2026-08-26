@@ -27,10 +27,10 @@ config({ path: path.resolve('D:/anti/haehwadang/.env.local') })
 const MODEL = process.env.WALLPAPER_IMAGE_MODEL || 'gemini-3.1-flash-image-preview'
 const KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
 
-const RAW_DIR = 'assets-src/wallpapers'
-const OUT_DIR = 'public/wallpapers'
-const OUT_W = 1080
-const OUT_H = 1920
+const _RAW_DIR = 'assets-src/wallpapers'
+const _OUT_DIR = 'public/wallpapers'
+const _OUT_W = 1080
+const _OUT_H = 1920
 const WEBP_QUALITY = 80
 
 /**

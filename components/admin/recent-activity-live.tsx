@@ -15,7 +15,8 @@ interface ActivityItem {
   user_email: string
   activity_type: string
   description: string
-  metadata: any
+  /** DB jsonb — 모양이 활동 종류마다 다르다. 읽는 쪽에서 좁힌다(any 금지). */
+  metadata: Record<string, unknown> | null
   created_at: string
 }
 
@@ -117,7 +118,7 @@ export function RecentActivityLive() {
                   locale: ko,
                 })}
               </p>
-              {activity.metadata?.amount && (
+              {typeof activity.metadata?.amount === 'number' && (
                 <p className="text-xs text-primary/70 mt-1">₩{activity.metadata.amount.toLocaleString()}</p>
               )}
             </div>

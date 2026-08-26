@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect , useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
@@ -34,7 +34,8 @@ export default function ServiceControlPage() {
   const [configs, setConfigs] = useState<Record<string, FeatureConfig>>({})
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  // 매 렌더 새로 만들면 로드 이펙트가 매번 다시 돈다 — 한 번만 만들어 의존성으로 쓴다.
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -61,7 +62,7 @@ export default function ServiceControlPage() {
       }
     }
     loadSettings()
-  }, [])
+  }, [supabase])
 
   const handleToggle = async (key: FeatureKey, current: boolean) => {
     const newConfig = { ...configs[key], isActive: !current }

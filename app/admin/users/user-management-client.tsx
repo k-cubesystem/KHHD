@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect , useCallback } from 'react'
 import { AdminUser, getUsers, updateUserRole, deleteUser } from './actions'
 import { UserRole } from '@/types/auth'
 import { Input } from '@/components/ui/input'
@@ -23,15 +23,8 @@ export function UserManagementClient() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const limit = 10
 
-  // Debounce Search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchUsers()
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [searchTerm, page])
-
-  async function fetchUsers() {
+  // 적재 함수를 메모이즈해 이펙트 의존성으로 쓴다(낡은 클로저 방지).
+  const fetchUsers = useCallback(async () => {
     setLoading(true)
     try {
       const { data, total } = await getUsers(page, limit, searchTerm)
@@ -42,7 +35,15 @@ export function UserManagementClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, limit, searchTerm])
+
+  // Debounce Search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchUsers()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [fetchUsers])
 
   const handleDelete = async (userId: string) => {
     if (

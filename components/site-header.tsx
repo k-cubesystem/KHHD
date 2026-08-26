@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { logger } from '@/lib/utils/logger'
 import { BLUR_DATA_URL } from '@/lib/utils/image'
-import { useState, useEffect } from 'react'
+import { useState, useEffect , useMemo } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { Ticket, ChevronLeft, Home } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,7 +20,8 @@ export function SiteHeader() {
   const [_userRole, setUserRole] = useState<string>('user')
   const [balance, setBalance] = useState(0)
   const [_tier, setTier] = useState<string | null>(null)
-  const supabase = createClient()
+  // 매 렌더 새로 만들면 아래 이펙트가 매번 다시 붙는다 — 한 번만 만들어 의존성으로 쓴다.
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
   const pathname = usePathname()
 
@@ -67,7 +68,7 @@ export function SiteHeader() {
       window.removeEventListener('scroll', handleScroll)
       subscription.unsubscribe()
     }
-  }, [])
+  }, [supabase.auth])
 
   return (
     <header

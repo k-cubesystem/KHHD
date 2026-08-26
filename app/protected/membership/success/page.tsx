@@ -120,6 +120,11 @@ function MembershipSuccessContent() {
     }
 
     processSubscription()
+    // 🔴 결제 처리는 마운트 시 «정확히 한 번»이다. customerKey·planId 는 URL 에서 오므로 이 화면이
+    //    사는 동안 바뀌지 않고, processSubscription 은 메모이즈되지 않은 함수라 의존성에 넣으면
+    //    렌더마다 다시 구독 처리를 호출한다 — 이중 결제·이중 지급이 된다.
+    //    (이 화면은 토스 복귀 지점이라 재실행이 곧 돈 문제다.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

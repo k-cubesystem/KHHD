@@ -9,7 +9,7 @@
  *    v2 에서 필요한 타입·상수는 전부 이 파일에 신설한다.
  */
 
-import { ZONES, ZONE_LABEL, clampPct, KEEPER_POS } from './zones'
+import { ZONES, ZONE_LABEL } from './zones'
 // 기하 JSON 은 theme-stage.ts 한 곳에서만 읽는다 — 여기서는 그 파생값만 받아 쓴다.
 // (theme-stage 가 이 파일에서 가져가는 것은 타입뿐이라 런타임 순환이 생기지 않는다.)
 import { GRAND_ALTAR_ITEM_SCALE, STAGE_GROUND_DROP, grandAltarHeadRoomY, hasGrandAltar } from './theme-stage'

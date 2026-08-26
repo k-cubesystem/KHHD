@@ -674,9 +674,11 @@ export function ShrineRoomClient({
 
   // 좌정 主神 시그니처 aura 상시 방출 (§3.3) — 신위 몸 주변에서 은은하게
   useEffect(() => {
+    // 정리는 «설치했던 그 인스턴스»에 해야 한다 — cleanup 시점의 ref.current 는 이미 바뀌어 있을 수 있다.
+    const fx = effectsRef.current
     const d = scene.mainDeity
-    effectsRef.current?.setAura(d?.particle ?? null, d?.accent ?? null, deityPos.x, deityPos.y, !!d)
-    return () => effectsRef.current?.setAura(null, null, 0, 0, false)
+    fx?.setAura(d?.particle ?? null, d?.accent ?? null, deityPos.x, deityPos.y, !!d)
+    return () => fx?.setAura(null, null, 0, 0, false)
   }, [scene.mainDeity, deityPos])
   /**
    * 대청이 뷰포트보다 넓을 때(안2.1 큰 방 하나) % 폭이 같이 커지는 것을 되돌리는 계수.
@@ -982,12 +984,6 @@ export function ShrineRoomClient({
     [scene.profile.base, placements, catalogById]
   )
   const displayYongsin: Element = scene.profile.yongsin ?? yongsin
-  // 가이드바용: 필요 기운(용신)에 해당하는 신물이 이미 배치돼 있는지
-  const neededElementPlaced = useMemo(
-    () => placements.some((p) => catalogById.get(p.catalogItemId)?.element === displayYongsin),
-    [placements, catalogById, displayYongsin]
-  )
-
   /** 켜져 있는 촛불 수 — 조명 오버레이 세기이자 액막이 불씨의 밝기(같은 lit 시스템을 둘이 나눠 쓴다) */
   const litCount = useMemo(() => placements.reduce((n, p) => (p.state.lit ? n + 1 : n), 0), [placements])
 
@@ -1329,7 +1325,8 @@ export function ShrineRoomClient({
       play('moktak')
       window.setTimeout(checkResonance, 0)
     },
-    [play, checkResonance]
+    // grandAltarStage 를 읽어 제단 배치 y 를 내린다 — 빠지면 테마가 바뀌어도 옛 값으로 놓인다.
+    [play, checkResonance, grandAltarStage]
   )
 
   // ── 고정 살림 조절 (CEO 지시 「꾸미기에서 조절」) ─────────────────────────
@@ -2578,7 +2575,8 @@ function Sprite({
       el.addEventListener('pointerup', up)
       el.addEventListener('pointercancel', up)
     },
-    [editing, item.layer, zOverride, onDragEnd, onDragLayer, transformFor]
+    // grandAltar 는 놓을 때 depthZ 계산에 들어간다 — 빠지면 테마 전환 뒤 z 가 어긋난다.
+    [editing, item.layer, zOverride, onDragEnd, onDragLayer, transformFor, grandAltar]
   )
 
   /**
