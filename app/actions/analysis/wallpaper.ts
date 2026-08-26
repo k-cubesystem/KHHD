@@ -149,7 +149,7 @@ export async function getWallpaperStatus(): Promise<WallpaperStatus | null> {
     adUsedToday,
     monthly: toMonthlyRef(monthlyRow),
     balance: typeof wallet?.balance === 'number' ? wallet.balance : 0,
-    premiumUrls: await signPremiumUrls(access),
+    premiumUrls: await signPremiumUrls(access, user.id),
   }
 }
 
@@ -157,11 +157,17 @@ export async function getWallpaperStatus(): Promise<WallpaperStatus | null> {
  * 프리미엄 «열린 장»에만 원본 서명 URL 을 발급한다(1시간). 판정과 발급이 같은 함수에 있어
  * «잠긴 장의 URL 이 새는» 경로가 구조적으로 없다. 실패는 빈 맵 — 화면은 썸네일로 선다.
  */
-async function signPremiumUrls(access: WallpaperAccess): Promise<Record<string, string>> {
-  const openIds = PREMIUM_WALLPAPER_SET.filter((item) => resolveWallpaperAccess(item, access).unlocked).map(
-    (item) => item.id
-  )
+async function signPremiumUrls(access: WallpaperAccess, userId?: string): Promise<Record<string, string>> {
+  const open = PREMIUM_WALLPAPER_SET.filter((item) => resolveWallpaperAccess(item, access).unlocked)
+  const openIds = open.map((item) => item.id)
   if (openIds.length === 0) return {}
+
+  // 선물로 열린 장은 **행으로 확정**한다 — 다음 호출부터는 재계산이 아니라 이 행이 근거다.
+  // (멱등 upsert. 실패해도 열람은 막지 않는다 — 다음 기회에 다시 시도된다.)
+  if (userId && !access.unlocks.some((u) => u.source === 'saju')) {
+    const gift = open.find((item) => resolveWallpaperAccess(item, access).via === 'saju')
+    if (gift) await grantUnlock(userId, gift.id, 'saju').catch(() => ({ error: null }))
+  }
 
   const admin = createAdminClient()
   const { data, error } = await admin.storage.from(PREMIUM_BUCKET).createSignedUrls(
@@ -206,6 +212,12 @@ async function loadAccessContext(userId: string) {
   )
   const rows = (unlockRows ?? []) as UnlockRow[]
 
+  // 이미 선물(source='saju')로 열린 프리미엄 장이 있으면 그 오행이 이 계정의 선물이다.
+  const giftedId = rows.find((r) => r.source === 'saju')?.wallpaper_id
+  const giftedElement = giftedId
+    ? (PREMIUM_WALLPAPER_SET.find((item) => item.id === giftedId)?.element ?? null)
+    : null
+
   return {
     monthly: toMonthlyRef(monthlyRow),
     rows,
@@ -216,7 +228,13 @@ async function loadAccessContext(userId: string) {
       unlocks: rows.map(toUnlockRecord).filter((u): u is WallpaperUnlockRecord => u !== null),
       // 프리미엄 «내게 필요한 기운» 선물 판정 — 구매 경로도 현황과 같은 근거를 봐야
       // «이미 선물로 열린 장을 파는» 일이 없다.
-      myElement: isElement(energy?.yongsin_element) ? energy.yongsin_element : null,
+      //
+      // 🔴 선물은 **한 번 정해지면 고정**이다(2026-08-26). 예전엔 매 호출 재계산이라,
+      //    근거인 두 표가 모두 사용자가 직접 쓸 수 있는 자리(analysis_history 는 본인 행
+      //    INSERT 가능, user_energy_profile 은 본인 행 UPDATE 가능)여서 용신을 바꿔가며
+      //    오행 5장을 전부 0원에 가져갈 수 있었다. 이미 선물로 받은 장이 있으면 그 오행만
+      //    인정한다 — 위조하더라도 «원래 받았을 1장»을 넘지 못한다.
+      myElement: giftedElement ?? (isElement(energy?.yongsin_element) ? energy.yongsin_element : null),
     } satisfies WallpaperAccess,
   }
 }

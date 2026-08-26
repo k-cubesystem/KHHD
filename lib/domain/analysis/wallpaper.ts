@@ -190,7 +190,12 @@ export function wallpaperPrice(item: WallpaperItem): number {
 // ── 접근 모델 ───────────────────────────────────────────────────────────────
 
 /** 해금 출처 — DB `wallpaper_unlocks.source` 체크 제약과 같은 어휘. */
-export type WallpaperUnlockSource = 'purchase' | 'ad'
+/**
+ * 해금 출처. 'saju' 는 «내게 필요한 기운» 선물이 **행으로 확정된** 것 —
+ * 선물 판정의 근거(analysis_history·user_energy_profile)가 둘 다 사용자가 쓸 수 있는
+ * 자리라, 매 호출 재계산하면 오행을 바꿔가며 5장을 전부 가져갈 수 있었다(2026-08-26).
+ */
+export type WallpaperUnlockSource = 'purchase' | 'ad' | 'saju'
 
 /** 내가 이미 연 장 한 건. */
 export interface WallpaperUnlockRecord {
