@@ -2,6 +2,11 @@ import { getFeatureCosts } from './actions'
 import FeatureCostManagement from './feature-cost-management-client'
 import { logger } from '@/lib/utils/logger'
 
+// 관리자 세션(cookies)에 의존하므로 정적 프리렌더 대상이 아니다.
+// 명시하지 않으면 빌드 중 프리렌더가 시도되고, 그때 발생하는 DynamicServerError를
+// 아래 try/catch가 삼켜 «조회 실패»로 오인된다.
+export const dynamic = 'force-dynamic'
+
 export default async function FeatureCostsPage() {
   // getFeatureCosts는 throw한다 — 그대로 두면 조회 실패가 어드민 에러 바운더리로 떨어진다
   let features: Awaited<ReturnType<typeof getFeatureCosts>> = []
