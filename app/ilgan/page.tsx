@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { IlganForm } from './ilgan-form'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
  * 「3초 일간」 — 비로그인 공개. 스레드 이야기 글의 「당신의 일간은?」이 여기로 온다.
@@ -10,7 +11,7 @@ import { IlganForm } from './ilgan-form'
 
 export const dynamic = 'force-dynamic'
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com'
+const SITE = getSiteUrl()
 
 export const metadata: Metadata = {
   title: '내 일간 3초 확인 — 청담해화당',

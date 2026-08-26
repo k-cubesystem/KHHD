@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { maskUsername, EVENT_TOPICS, type EventTopic } from '@/lib/domain/event/reading'
 import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
  * 당첨자 결과 페이지 — 스레드 발표 글의 링크가 여기로 온다. 이 페이지가 «가입 전환 지점»이다.
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug, token } = await params
   const w = await loadWinner(slug, token)
   if (!w) return { title: '청담해화당', robots: { index: false } }
-  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com'
+  const site = getSiteUrl()
   const dj = (w.draft_json ?? {}) as { headline?: string }
   return {
     title: `${w.round.title} 결과 — 청담해화당`,

@@ -15,6 +15,7 @@ import { runDrawForRound, generateDraftForWinner } from '@/lib/services/event/dr
 import { generateWeeklyReport } from '@/lib/services/threads/report-service'
 import { maskUsername } from '@/lib/domain/event/reading'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
  * Threads 이벤트 어드민 액션.
@@ -237,7 +238,7 @@ export async function publishWinnerResult(winnerId: string) {
   const username = String(entry?.threads_username ?? '')
   const consentPublic = !!entry?.consent_public
   const dj = (w.draft_json ?? {}) as { headline?: string }
-  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com'
+  const site = getSiteUrl()
   const { data: round } = await admin.from('event_rounds').select('slug, title').eq('id', w.round_id).single()
 
   // 공개 동의 없으면 카드 없이 텍스트만(멘션으로 안내) — 풀이 본문은 사이트에서 본다

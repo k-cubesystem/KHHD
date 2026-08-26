@@ -4,6 +4,7 @@ import { fetchReplies, fetchInsights, loadThreadsToken, refreshLongLivedToken } 
 import { classifyReply, needsAiClassification, type ReplyClass } from '@/lib/domain/threads/classify'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { logger } from '@/lib/utils/logger'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
  * Threads 동기화 크론 (10분) — 웹훅은 Live Mode+비즈니스 인증이 전제라 폴링으로 간다.
@@ -195,7 +196,7 @@ async function buildApplyReplyDraft(
 ): Promise<{ text: string; variant: string } | null> {
   const { data: round } = await admin.from('event_rounds').select('slug, status').eq('id', roundId).maybeSingle()
   if (!round || round.status !== 'open') return null
-  const site = process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com'
+  const site = getSiteUrl()
   const url = `${site}/event/${round.slug}?utm_source=threads&utm_medium=reply&utm_campaign=${encodeURIComponent(round.slug)}`
   const name = username ? `@${username}` : '안녕하세요,'
   // 결정론 로테이션 — 같은 댓글엔 같은 문안(재실행 안전), 댓글마다는 다르게

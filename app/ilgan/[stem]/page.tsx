@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ILGAN, ILGAN_SLUGS, isIlganSlug } from '@/lib/domain/saju/ilgan'
 import { SIGNUP_BONUS_TALISMANS, SIGNUP_BONUS_SAJU_COUNT } from '@/lib/domain/payment/feature-costs'
 import { IlganCard } from '../ilgan-card'
+import { getSiteUrl } from '@/lib/utils/site-url'
 
 /**
  * 일간별 공유 랜딩 — 「내 일간은 경금」을 스레드에 올리면 이 URL 이 붙는다.
@@ -12,7 +13,7 @@ import { IlganCard } from '../ilgan-card'
  * 정적 10장. 검색(「경금 일간」)에도 잡히도록 색인 허용.
  */
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://k-haehwadang.com'
+const SITE = getSiteUrl()
 
 interface PageProps {
   params: Promise<{ stem: string }>
