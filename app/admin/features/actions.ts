@@ -1,34 +1,25 @@
-"use server";
+'use server'
 
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminClient } from '@/lib/auth/admin-guard'
 
 export async function getFeatureCosts() {
-    const adminClient = createAdminClient();
+  const adminClient = await requireAdminClient()
 
-    const { data, error } = await adminClient
-        .from("feature_costs")
-        .select("*")
-        .order("key");
+  const { data, error } = await adminClient.from('feature_costs').select('*').order('key')
 
-    if (error) throw error;
-    return data;
+  if (error) throw error
+  return data
 }
 
 export async function updateFeatureCost(key: string, cost: number, isActive: boolean) {
-    const supabase = await createClient();
+  const adminClient = await requireAdminClient()
 
-    // Check auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Unauthorized");
+  if (!Number.isInteger(cost) || cost < 0) {
+    throw new Error('복채 소모량은 0 이상의 정수여야 합니다.')
+  }
 
-    // TEMPORARY: Use admin client to bypass RLS
-    const adminClient = createAdminClient();
-    const { error } = await adminClient
-        .from("feature_costs")
-        .update({ cost, is_active: isActive })
-        .eq("key", key);
+  const { error } = await adminClient.from('feature_costs').update({ cost, is_active: isActive }).eq('key', key)
 
-    if (error) throw error;
-    return { success: true };
+  if (error) throw error
+  return { success: true }
 }
