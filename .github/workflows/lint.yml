@@ -5,7 +5,8 @@
 #    만세력 화면이 첫 상호작용에서 통째로 죽었다. 사람이 눈으로 놓칠 수 있는 것을
 #    도구가 이미 알고 있었는데 아무도 그 말을 듣지 않는 상태였다.
 #
-# 막는 것은 «오류»뿐이다 — eslint 는 경고만 있으면 0 으로 끝난다.
+# 오류와 경고를 모두 막는다(--max-warnings=0). 2026-08-26 에 45건을 0 으로 만들었고,
+# 0 은 «0 을 강제해야만» 유지된다 — 의도적으로 남기는 값은 _ 접두(varsIgnorePattern)를 쓴다.
 name: lint
 
 on:
@@ -23,5 +24,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: ESLint (오류만 차단)
-        run: npx eslint .
+      - name: ESLint (오류·경고 모두 차단)
+        run: npm run lint
