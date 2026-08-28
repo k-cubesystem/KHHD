@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { ILGAN_SLUGS } from '@/lib/domain/saju/ilgan'
+import { TYPE_SLUGS } from '@/lib/domain/saju/saju3'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://haehwadang.com'
@@ -21,13 +21,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route === '' ? 1 : 0.8,
   }))
 
-  // 「3초 일간」 공개 페이지 + 일간별 공유 랜딩 10장 — 색인 대상(「경금 일간」 검색 유입)
-  const ilgan = ['/ilgan', ...ILGAN_SLUGS.map((s) => `/ilgan/${s}`)].map((route) => ({
+  // 「3초 사주」 공개 페이지 + 유형별 공유 랜딩 10장 — 색인 대상
+  const saju3 = ['/saju3', ...TYPE_SLUGS.map((s) => `/saju3/${s}`)].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
-    priority: route === '/ilgan' ? 0.9 : 0.7,
+    priority: route === '/saju3' ? 0.9 : 0.7,
   }))
 
-  return [...routes, ...ilgan]
+  return [...routes, ...saju3]
 }

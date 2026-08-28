@@ -42,6 +42,15 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 2678400, // 31일 캐시 (재요청 최소화)
   },
 
+  // 은퇴한 경로 — 이미 나간 링크·색인의 유입을 버리지 않는다.
+  // /ilgan(「3초 일간」)은 2026-08-21 「3초 사주」로 대체됐다.
+  async redirects() {
+    return [
+      { source: '/ilgan', destination: '/saju3', permanent: true },
+      { source: '/ilgan/:stem', destination: '/saju3', permanent: true },
+    ]
+  },
+
   // 정적 자산 캐싱 최적화
   async rewrites() {
     return []
