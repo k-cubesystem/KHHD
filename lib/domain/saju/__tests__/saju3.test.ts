@@ -86,19 +86,19 @@ describe('세 줄', () => {
 
   it('돈 줄은 «내가 다루는 자리» 개수를 따라간다 — 0개면 비었다고 말한다', () => {
     const r = buildSaju3(base) // 나=金 → 돈=木, 0개
-    expect(r.lines.money).toContain('비어 있는')
+    expect(r.lines.money).toContain('돈 자리가 비었어')
   })
 
   it('돈 자리가 셋 이상이면 «문이 많다»로 뒤집는다 (많다 ≠ 부자)', () => {
     const rich: Saju3Input = { me: '金', elements: { 木: 3, 火: 1, 土: 2, 金: 1, 水: 1 }, spouseSeat: '木' }
-    expect(buildSaju3(rich).lines.money).toContain('문이 많은')
+    expect(buildSaju3(rich).lines.money).toContain('나가는 길도 그만큼')
   })
 
   it('인연 줄은 배우자 자리가 나에게 어떤 자리인지로 갈린다', () => {
     const byOfficer = buildSaju3({ ...base, spouseSeat: '火' }) // 火가 金을 누른다
     const byOutput = buildSaju3({ ...base, spouseSeat: '水' }) // 金이 水를 낳는다
     expect(byOfficer.lines.love).toContain('알아봐 주는')
-    expect(byOutput.lines.love).toContain('먼저 챙기고')
+    expect(byOutput.lines.love).toContain('먼저 주고 먼저 연락해')
     expect(byOfficer.lines.love).not.toBe(byOutput.lines.love)
   })
 
@@ -106,9 +106,9 @@ describe('세 줄', () => {
     const late = buildSaju3({ me: '金', elements: { 木: 2, 火: 3, 土: 1, 金: 1, 水: 1 }, spouseSeat: '木' })
     const mid = buildSaju3({ me: '金', elements: { 木: 2, 火: 2, 土: 2, 金: 1, 水: 1 }, spouseSeat: '木' })
     const early = buildSaju3({ me: '金', elements: { 木: 1, 火: 1, 土: 3, 金: 2, 水: 1 }, spouseSeat: '木' })
-    expect(late.lines.timing).toContain('늦게 트이는')
-    expect(mid.lines.timing).toContain('쌓은 만큼')
-    expect(early.lines.timing).toContain('일찍부터')
+    expect(late.lines.timing).toContain('늦게 트여')
+    expect(mid.lines.timing).toContain('지름길 찾다가')
+    expect(early.lines.timing).toContain('일찍 판을 벌이는')
   })
 })
 
@@ -164,7 +164,7 @@ describe('화면 규율', () => {
     const t = typeBySlug('late-bloom')
     const s = shareText(t, 'https://k-haehwadang.com/saju3/late-bloom')
     expect(s.length).toBeLessThan(200)
-    expect(s).toContain('늦게 피는 대기만성형')
+    expect(s).toContain('아직 안 터진 사람')
     expect(s).toContain('/saju3/late-bloom')
   })
 })
@@ -177,7 +177,7 @@ describe('실제 만세력과 이어 붙였을 때 (골든)', () => {
     const r = buildSaju3(input)
     expect(r.type.slug).toBe('anchor')
     expect(r.missing.map((m) => m.ko)).toEqual(['나무'])
-    expect(r.lines.money).toContain('비어 있는') // 돈 자리(木)가 0
+    expect(r.lines.money).toContain('돈 자리가 비었어') // 돈 자리(木)가 0
   })
 
   it('오행 여덟 칸의 합은 언제나 8이다', () => {
@@ -300,5 +300,43 @@ describe('아이 버전 — 학창 시절 밖의 구간', () => {
     expect(r.decisiveLine).toContain('등수보다')
     // 나쁜 소식으로 겁주지 않는다
     expect(r.decisiveLine).not.toMatch(/안 됩니다|늦었|포기/)
+  })
+})
+
+describe('🔴 페르소나 규율 (2026-08-21 CEO 반려 후 신설)', () => {
+  it('유형 이름은 설명문이 아니라 부를 수 있는 이름이다 — 전부 «~하는 사람»', () => {
+    for (const slug of TYPE_SLUGS) {
+      const t = typeBySlug(slug)
+      expect(t.title.endsWith('사람')).toBe(true)
+      // 「~형」은 설명문 냄새가 나서 반려됐다. 되돌아오면 여기서 걸린다
+      expect(t.title).not.toMatch(/형$/)
+      expect(t.title.length).toBeLessThanOrEqual(16)
+    }
+  })
+
+  it('열 이름이 서로 겹치지 않는다 — 「거절을 못 하는」과 「다 내가 하고 마는」은 다른 사람이다', () => {
+    const titles = TYPE_SLUGS.map((s) => typeBySlug(s).title)
+    expect(new Set(titles).size).toBe(10)
+    expect(typeBySlug('anchor').title).toBe('거절을 못 하는 사람') // 남이 맡긴 걸 못 거절
+    expect(typeBySlug('solo').title).toBe('다 내가 하고 마는 사람') // 남을 못 믿어 내가 함
+  })
+
+  it('설명 구절은 찔리되 판단하지 않는다', () => {
+    for (const slug of TYPE_SLUGS) {
+      const t = typeBySlug(slug)
+      expect(t.tagline.length).toBeGreaterThan(20) // 한 줄로 끝내면 찔림이 안 산다
+      expect(t.tagline).not.toMatch(/문제야|잘못|고쳐야|나쁜 사람/)
+    }
+  })
+
+  it('세 줄은 두루뭉술하지 않다 — 겪어봤을 장면이 들어간다', () => {
+    const seen: string[] = []
+    for (const f of TYPE_FIXTURES) {
+      for (const seat of ELEMENTS) {
+        const r = buildSaju3({ me: '金', elements: f.elements, spouseSeat: seat })
+        seen.push(r.lines.money, r.lines.love, r.lines.timing)
+      }
+    }
+    for (const line of seen) expect(line.length).toBeGreaterThan(25)
   })
 })
