@@ -16,6 +16,7 @@ import {
   relationshipLine,
   toPlanFacts,
 } from '@/lib/domain/payment/membership-benefits'
+import { PurchaseConsent } from '@/components/payment/purchase-consent'
 
 function CheckoutContent() {
   const searchParams = useSearchParams()
@@ -26,6 +27,8 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState('')
+  // 🔴 카드사 심사가 요구하는 «구매조건 확인 및 결제진행 동의». 동의 전에는 결제로 못 넘어간다.
+  const [agreed, setAgreed] = useState(false)
 
   useEffect(() => {
     if (!planId) {
@@ -41,6 +44,10 @@ function CheckoutContent() {
 
   const handleCheckout = async () => {
     if (!plan || !planId) return
+    if (!agreed) {
+      setError('구매조건에 동의하셔야 결제를 진행할 수 있습니다.')
+      return
+    }
     setPaying(true)
     setError('')
 
@@ -144,11 +151,21 @@ function CheckoutContent() {
           </p>
         </div>
 
+        <div className="mb-4">
+          <PurchaseConsent
+            checked={agreed}
+            onChange={setAgreed}
+            orderName={`${tierLabel[plan.tier] || plan.name} 멤버십`}
+            amount={plan.price}
+            interval={`${intervalWords(plan.interval).every}마다`}
+          />
+        </div>
+
         {error && <p className="text-red-400 text-sm text-center mb-4 bg-red-400/10 rounded-lg p-3">{error}</p>}
 
         <Button
           onClick={handleCheckout}
-          disabled={paying}
+          disabled={paying || !agreed}
           className="w-full h-14 bg-primary hover:bg-primary/90 text-background font-serif font-bold text-base rounded-lg shadow-[0_0_20px_rgba(212,175,55,0.3)]"
         >
           {paying ? (

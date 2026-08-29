@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
 import { Check, Coins, Loader2, Zap, Sparkles, Gift } from 'lucide-react'
@@ -19,6 +20,8 @@ interface TalismanPurchaseSectionProps {
 }
 
 interface DisplayPlan {
+  /** DB 상품 id. 폴백 상수에는 없다 — 없으면 주문 확인 화면으로 못 넘긴다. */
+  id?: string
   credits: number
   price: number
   bonus_credits?: number
@@ -92,13 +95,30 @@ export function TalismanPurchaseSection({
   memberId,
   hasCharged = true,
 }: TalismanPurchaseSectionProps) {
+  const router = useRouter()
   const [loadingPlan, setLoadingPlan] = useState<number | null>(null)
   const [isTestLoading, setIsTestLoading] = useState(false)
 
   const displayPlans: DisplayPlan[] = initialPlans.length > 0 ? initialPlans : DEFAULT_BOKCHAE_PLANS
   const sortedPlans = [...displayPlans].sort((a, b) => (a.sort_order ?? a.price) - (b.sort_order ?? b.price))
 
+  /**
+   * 🔴 결제창을 여기서 바로 열지 않는다.
+   *
+   * 카드사 결제경로 심사가 요구하는 ⑤「구매하는 일련의 과정」이 없었다 — 상품 카드에서
+   * 곧바로 토스 창이 떴다. 대금을 받기 전에 무엇을 얼마에 사는지 확인시키고 동의를 받는 것은
+   * 「전자상거래법」 제8조의 판매자 의무이기도 하다. 주문 확인 화면으로 넘긴다.
+   *
+   * DB 상품에는 id 가 있고 폴백 상수에는 없다. id 가 없으면 옛 경로(결제창 직행)로 떨어뜨려
+   * DB 가 잠깐 안 읽혀도 충전 자체는 막히지 않게 한다.
+   */
   const handleCharge = async (plan: DisplayPlan) => {
+    if (plan.id) {
+      GA.checkoutStart(plan.name, plan.price)
+      router.push(`/protected/store/checkout?pack=${plan.id}`)
+      return
+    }
+
     setLoadingPlan(plan.credits)
     // 퍼널: 결제 시도 (성공은 successUrl 페이지에서 bokchaeCharge 로 기록됨)
     GA.checkoutStart(plan.name, plan.price)
