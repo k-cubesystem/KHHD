@@ -72,3 +72,29 @@ describe('애드센스 게재 판정', () => {
     expect(isLiveAdEnvironment(undefined, 'development')).toBe(false)
   })
 })
+
+/**
+ * 🔴 로더는 **하이드레이션이 끝난 뒤**에만 실행돼야 한다 (2026-08-30 사고 회귀선).
+ *
+ * ads.txt 게재 다음 날 자동 광고(앵커)가 송출을 시작하자, <head> 의 async 로더가
+ * 하이드레이션 «도중» <body> 에 <ins> 를 꽂았다. App Router 는 문서 전체를
+ * 하이드레이션하므로 React #418 로 죽고 — 스트리밍 본문이 커밋되지 않아 상점이
+ * 「불러오는 중...」 에 갇히고 **결제 버튼이 전부 죽었다.**
+ *
+ * head 의 서버 렌더 <script> 로 되돌리면 이 사고가 그대로 재발한다. 재확인이
+ * 필요하면 애드센스 «메타 태그» 확인을 쓴다.
+ */
+describe('🔴 애드센스 로더는 하이드레이션과 경주하지 않는다', () => {
+  const fs = jest.requireActual<typeof import('fs')>('fs')
+  const path = jest.requireActual<typeof import('path')>('path')
+  const layout = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'app', 'layout.tsx'), 'utf8')
+
+  it('로더는 next/script lazyOnload 로 실린다', () => {
+    expect(layout).toContain('strategy="lazyOnload"')
+    expect(layout).toMatch(/<Script[\s\S]{0,200}adsbygoogle\.js/)
+  })
+
+  it('head 에 서버 렌더 <script> 로 되돌아가지 않는다', () => {
+    expect(layout).not.toMatch(/<script[\s\S]{0,120}adsbygoogle\.js/)
+  })
+})
