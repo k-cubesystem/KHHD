@@ -33,9 +33,9 @@ import { AmbientVideo } from '@/components/shared/AmbientVideo'
 // ScoreRing removed — score system replaced with text-based outlook
 
 function getOutlookStyle(outlook: string): { label: string; color: string; bg: string } {
-  if (outlook === '좋음') return { label: '좋음', color: 'text-green-400', bg: 'bg-green-500/10' }
-  if (outlook === '주의') return { label: '주의', color: 'text-red-400', bg: 'bg-red-500/10' }
-  return { label: '보통', color: 'text-yellow-400', bg: 'bg-yellow-500/10' }
+  if (outlook === '좋음') return { label: '좋음', color: 'text-gold-300', bg: 'bg-gold-500/15' }
+  if (outlook === '주의') return { label: '주의', color: 'text-error-text', bg: 'bg-error-light' }
+  return { label: '보통', color: 'text-ink-light/55', bg: 'bg-white/5' }
 }
 
 function ArtifactCard({
@@ -53,12 +53,16 @@ function ArtifactCard({
   variant?: 'default' | 'gold' | 'red' | 'blue' | 'green'
   delay?: number
 }) {
+  // 네 기둥은 «색색 프레임»이 아니라 같은 차분한 액자를 쓴다 — 뜻을 나르는 색은 우측
+  // 전망 배지(좋음·보통·주의) 하나뿐이고, 카드 자체는 골드 위계로 통일한다.
+  // 형태 계약: `colorClass.split(' ')` 의 [0]=글자 [1]=테두리 [2]=배경 (아래 참조 순서)
+  const CALM_FRAME = 'text-gold-300 border-white/10 bg-surface/40'
   const colors = {
-    default: 'text-ink-light',
-    gold: 'text-yellow-400 border-yellow-500/20 bg-yellow-900/10',
-    red: 'text-red-400 border-red-500/20 bg-red-900/10',
-    blue: 'text-blue-400 border-blue-500/20 bg-blue-900/10',
-    green: 'text-green-400 border-green-500/20 bg-green-900/10',
+    default: CALM_FRAME,
+    gold: CALM_FRAME,
+    red: CALM_FRAME,
+    blue: CALM_FRAME,
+    green: CALM_FRAME,
   }
 
   const colorClass = colors[variant]
@@ -70,7 +74,7 @@ function ArtifactCard({
         initial: { opacity: 0, y: 20 },
         animate: { opacity: 1, y: 0, transition: { delay } },
       }}
-      className={`relative overflow-hidden rounded-xl border p-5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${colorClass.split(' ')[1]} ${colorClass.split(' ')[2]}`}
+      className={`relative overflow-hidden rounded-2xl border p-5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${colorClass.split(' ')[1]} ${colorClass.split(' ')[2]}`}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -115,7 +119,7 @@ function SeasonCard({
 
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs font-bold text-primary/80 uppercase tracking-widest font-sans">{season}</span>
-        <span className="text-[10px] text-ink-light/30 px-2 py-0.5 rounded-full border border-white/5 bg-white/5 font-sans">
+        <span className="text-[10px] text-ink-light/55 px-2 py-0.5 rounded-full border border-white/5 bg-white/5 font-sans">
           {months}
         </span>
       </div>
@@ -133,7 +137,7 @@ function LoadingOracle() {
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-        className="absolute w-64 h-64 border border-dashed border-red-500/20 rounded-full opacity-50"
+        className="absolute w-64 h-64 border border-dashed border-seal/30 rounded-full opacity-50"
       />
       <motion.div
         animate={{ rotate: -180 }}
@@ -142,8 +146,8 @@ function LoadingOracle() {
       />
 
       <div className="relative z-20 flex flex-col items-center gap-6 text-center">
-        <div className="w-20 h-20 bg-gradient-to-b from-red-900/40 to-black rounded-full flex items-center justify-center border border-red-500/30 shadow-[0_0_30px_rgba(220,38,38,0.2)]">
-          <Flame className="w-8 h-8 text-red-500 animate-pulse" />
+        <div className="w-20 h-20 bg-gradient-to-b from-seal/40 to-black rounded-full flex items-center justify-center border border-seal/40 shadow-[0_0_30px_rgba(158,43,43,0.25)]">
+          <Flame className="w-8 h-8 text-obangsaek-red animate-pulse" />
         </div>
 
         <div className="space-y-2">
@@ -263,15 +267,16 @@ function NewYear2026Content() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1 bg-red-950/40 border border-red-900/50 rounded-full"
+              className="inline-flex items-center gap-2 px-3 py-1 bg-seal/15 border border-seal/35 rounded-full"
             >
-              <Flame className="w-3 h-3 text-red-500" />
-              <span className="text-[10px] font-bold text-red-300 tracking-wider">2026 RED HORSE YEAR</span>
+              <Flame className="w-3 h-3 text-obangsaek-red" />
+              <span className="text-[10px] font-bold text-gold-300 tracking-wider">2026 RED HORSE YEAR</span>
             </motion.div>
             <h1 className="text-3xl md:text-5xl font-serif font-bold text-ink-light leading-tight md:leading-none">
               병오년(丙午年)
               <br />
-              <span className="text-red-500/90 drop-shadow-[0_0_15px_rgba(220,38,38,0.4)]">붉은 말의 해</span>
+              {/* 병오(丙午)의 화(火) — 색은 오방색 적(#C83232) 단일 출처를 따른다 */}
+              <span className="text-obangsaek-red drop-shadow-[0_0_15px_rgba(200,50,50,0.4)]">붉은 말의 해</span>
             </h1>
             <p className="text-ink-light/60 font-light max-w-lg leading-relaxed">
               활활 타오르는 불의 기운이 가득한 2026년.
@@ -316,8 +321,8 @@ function NewYear2026Content() {
             <Card className="luxury-card-glow max-w-2xl mx-auto border-primary/20 bg-gradient-to-br from-[#1a1815] to-charcoal-deep overflow-hidden">
               <div className="absolute inset-0 bg-noise-pattern opacity-10 pointer-events-none" />
               <div className="p-6 md:p-12 text-center space-y-6 md:space-y-8 relative z-10">
-                <div className="w-24 h-24 mx-auto bg-red-600/10 rounded-full flex items-center justify-center border border-red-500/20 shadow-[0_0_30px_rgba(220,38,38,0.1)]">
-                  <ScrollText className="w-10 h-10 text-red-400 opacity-80" strokeWidth={1} />
+                <div className="w-24 h-24 mx-auto bg-seal/10 rounded-full flex items-center justify-center border border-seal/25 shadow-[0_0_30px_rgba(158,43,43,0.15)]">
+                  <ScrollText className="w-10 h-10 text-obangsaek-red opacity-80" strokeWidth={1} />
                 </div>
 
                 <div className="space-y-3">
@@ -335,14 +340,14 @@ function NewYear2026Content() {
                 <Button
                   onClick={handleGenerate}
                   disabled={!selectedTargetId}
-                  className="w-full md:w-auto px-8 py-6 text-lg font-serif bg-gradient-to-r from-red-800 to-red-900 hover:from-red-700 hover:to-red-800 border border-red-500/30 text-red-50 shadow-[0_4px_20px_rgba(220,38,38,0.25)] transition-all hover:scale-[1.02]"
+                  className="w-full md:w-auto px-8 py-6 text-lg font-serif bg-gradient-to-r from-seal to-seal/75 hover:from-seal/90 hover:to-seal/65 border border-seal/40 text-gold-200 shadow-[0_4px_20px_rgba(158,43,43,0.3)] transition-all hover:scale-[1.02]"
                 >
-                  <Sparkles className="w-5 h-5 mr-3 text-yellow-300 animate-pulse" />
+                  <Sparkles className="w-5 h-5 mr-3 text-gold-200 animate-pulse" />
                   신년 운세 열어보기
                 </Button>
 
                 {errorMsg && (
-                  <p className="text-red-400 text-sm mt-4 bg-red-950/30 py-2 rounded-lg border border-red-900/50">
+                  <p className="text-error-text text-sm mt-4 bg-error-light py-2 rounded-lg border border-error-border">
                     {errorMsg}
                   </p>
                 )}
@@ -358,14 +363,14 @@ function NewYear2026Content() {
             id="newyear-result-capture"
           >
             {/* 1. Summary Card */}
-            <Card className="card-glass-manse p-6 md:p-10 border-red-900/30 relative overflow-hidden">
+            <Card className="card-glass-manse p-6 md:p-10 border-seal/25 relative overflow-hidden">
               {/* 앰비언트 배경 영상 — 신년 의식 테마. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
               <AmbientVideo
                 id="analysis-ambient"
                 className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                 style={{ opacity: 0.14, mixBlendMode: 'screen' }}
               />
-              <div className="absolute top-0 right-0 w-64 h-64 bg-red-600/5 blur-[80px] rounded-full pointer-events-none -mr-20 -mt-20" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-seal/10 blur-[80px] rounded-full pointer-events-none -mr-20 -mt-20" />
 
               <div className="flex flex-col items-center lg:items-start gap-6 relative z-10">
                 <div className="text-center lg:text-left space-y-4 flex-1 w-full">
@@ -401,46 +406,46 @@ function NewYear2026Content() {
                 {/* Lucky Items */}
                 <Card className="card-glass-manse p-6 md:p-8 space-y-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-                      <Sparkles className="w-5 h-5 text-yellow-400" />
+                    <div className="p-2 bg-gold-500/10 rounded-lg border border-gold-500/20">
+                      <Sparkles className="w-5 h-5 text-gold-300" />
                     </div>
                     <h3 className="font-serif text-xl text-ink-light">행운의 징표</h3>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="text-center p-4 rounded-xl bg-surface/50 border border-white/5 space-y-2 flex flex-col items-center justify-center">
-                      <span className="text-xs text-ink-light/40 block">행운의 색</span>
+                      <span className="text-xs text-ink-light/55 block">행운의 색</span>
                       <div
                         className="w-6 h-6 rounded-full mx-auto shadow-inner"
-                        style={{ backgroundColor: fortune.lucky.color === '레드' ? 'red' : 'gray' }}
+                        style={{ backgroundColor: fortune.lucky.color === '레드' ? '#C83232' : '#8C8478' }}
                       />
                       <span className="text-sm font-medium text-ink-light break-keep">{fortune.lucky.color}</span>
                     </div>
                     <div className="text-center p-4 rounded-xl bg-surface/50 border border-white/5 space-y-2 flex flex-col items-center justify-center">
-                      <span className="text-xs text-ink-light/40 block">행운의 방위</span>
+                      <span className="text-xs text-ink-light/55 block">행운의 방위</span>
                       <span className="text-lg block pt-1">🧭</span>
                       <span className="text-sm font-medium text-ink-light break-keep">{fortune.lucky.direction}</span>
                     </div>
                     <div className="text-center p-4 rounded-xl bg-surface/50 border border-white/5 space-y-2 flex flex-col items-center justify-center">
-                      <span className="text-xs text-ink-light/40 block">행운의 숫자</span>
+                      <span className="text-xs text-ink-light/55 block">행운의 숫자</span>
                       <span className="text-xl font-serif font-bold text-primary block">{fortune.lucky.number}</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="bg-gradient-to-br from-yellow-900/20 to-black p-4 rounded-xl border border-yellow-700/20 flex flex-col items-center justify-center text-center">
-                      <span className="text-xs text-yellow-500/70 mb-1">최고의 달</span>
-                      <span className="text-xl font-serif font-bold text-yellow-400">{fortune.peak_month}</span>
+                    <div className="bg-gradient-to-br from-gold-500/10 to-black p-4 rounded-xl border border-gold-500/20 flex flex-col items-center justify-center text-center">
+                      <span className="text-xs text-gold-500/70 mb-1">최고의 달</span>
+                      <span className="text-xl font-serif font-bold text-gold-300">{fortune.peak_month}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-red-900/20 to-black p-4 rounded-xl border border-red-700/20 flex flex-col items-center justify-center text-center">
-                      <span className="text-xs text-red-500/70 mb-1">주의할 달</span>
-                      <span className="text-xl font-serif font-bold text-red-400">{fortune.caution_month}</span>
+                    <div className="bg-gradient-to-br from-error/10 to-black p-4 rounded-xl border border-error-border flex flex-col items-center justify-center text-center">
+                      <span className="text-xs text-error-text/70 mb-1">주의할 달</span>
+                      <span className="text-xl font-serif font-bold text-error-text">{fortune.caution_month}</span>
                     </div>
                   </div>
                 </Card>
 
                 {/* Message */}
-                <Card className="card-glass-manse p-6 bg-gradient-to-r from-surface to-red-950/10 border-l-4 border-l-red-500/40">
+                <Card className="card-glass-manse p-6 bg-gradient-to-r from-surface to-seal/10 border-l-4 border-l-seal/50">
                   <p className="font-serif italic text-ink-light/80 text-center leading-loose">
                     &ldquo; {fortune.message} &rdquo;
                   </p>

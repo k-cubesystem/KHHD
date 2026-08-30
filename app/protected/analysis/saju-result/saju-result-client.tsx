@@ -154,8 +154,8 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md space-y-4">
-          <AlertTriangle className="w-12 h-12 mx-auto text-red-400/80" />
-          <p className="text-red-400 text-sm">{error}</p>
+          <AlertTriangle className="w-12 h-12 mx-auto text-error/60" />
+          <p className="text-error-text text-sm">{error}</p>
           <div className="flex gap-2 justify-center">
             {error.includes('생년월일') ? (
               <Link href="/protected/settings">
@@ -643,7 +643,7 @@ function SajuShareSection({
             {isSharing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : copied ? (
-              <Check className="w-4 h-4 text-emerald-400" />
+              <Check className="w-4 h-4 text-success" />
             ) : (
               <Link2 className="w-4 h-4" />
             )}
@@ -680,7 +680,7 @@ function SajuShareSection({
               onClick={handleCopyLink}
               className="text-gold-500/60 hover:text-gold-500 transition-colors shrink-0"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link2 className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Link2 className="w-3.5 h-3.5" />}
             </button>
           </div>
         )}

@@ -48,39 +48,39 @@ const TREND_CONFIG: Record<
     label: '애정운',
     desc: '만남 · 결혼 · 연애',
     icon: Heart,
-    color: 'text-pink-400',
-    bg: 'bg-pink-400/10',
+    color: 'text-gold-300',
+    bg: 'bg-gold-500/10',
   },
   career: {
     label: '직장운',
     desc: '승진 · 이직 · 사업',
     icon: Building2,
-    color: 'text-blue-400',
-    bg: 'bg-blue-400/10',
+    color: 'text-gold-300',
+    bg: 'bg-gold-500/10',
   },
   exam: {
     label: '학업운',
     desc: '합격 · 자격 · 성취',
     icon: GraduationCap,
-    color: 'text-green-400',
-    bg: 'bg-green-400/10',
+    color: 'text-gold-300',
+    bg: 'bg-gold-500/10',
   },
   estate: {
     label: '부동산',
     desc: '매매 · 이사 · 계약',
     icon: TrendingUp,
-    color: 'text-purple-400',
-    bg: 'bg-purple-400/10',
+    color: 'text-gold-300',
+    bg: 'bg-gold-500/10',
   },
 }
 
 function OutlookBadge({ outlook }: { outlook: string }) {
   const config =
     outlook === '좋음'
-      ? { color: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' }
+      ? { color: 'text-gold-300 border-gold-500/30 bg-gold-500/15' }
       : outlook === '주의'
-        ? { color: 'text-orange-400 border-orange-400/30 bg-orange-400/10' }
-        : { color: 'text-gold-500 border-gold-500/30 bg-gold-500/10' }
+        ? { color: 'text-error-text border-error-border bg-error-light' }
+        : { color: 'text-ink-light/55 border-white/10 bg-white/5' }
   return (
     <Badge variant="outline" className={`${config.color} font-light text-xs`}>
       {outlook}
@@ -190,11 +190,11 @@ function TrendResultView({ result, config }: { result: TrendResult; config: (typ
 
       {/* 주의사항 */}
       <motion.div variants={fadeInUp}>
-        <Card className="bg-surface/20 border-yellow-500/30 card-glass-manse">
+        <Card className="bg-surface/20 border-warning-border card-glass-manse">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-yellow-400" strokeWidth={1} />
-              <span className="text-xs font-light text-yellow-400 tracking-widest uppercase">주의사항</span>
+              <AlertCircle className="w-4 h-4 text-warning-text" strokeWidth={1} />
+              <span className="text-xs font-light text-warning-text tracking-widest uppercase">주의사항</span>
             </div>
             <p className="text-sm font-light text-ink-light/70 leading-relaxed">{result.caution}</p>
           </CardContent>
@@ -291,10 +291,10 @@ export function TrendClient({ trendType, selfTarget, targets }: TrendClientProps
         {/* 에러 */}
         {state.status === 'error' && (
           <motion.div initial="initial" animate="animate" variants={fadeInUp}>
-            <Card className="bg-surface/20 border-red-500/30 card-glass-manse">
+            <Card className="bg-surface/20 border-error-border card-glass-manse">
               <CardContent className="p-6 flex flex-col items-center gap-4">
-                <AlertCircle className="w-8 h-8 text-red-400" strokeWidth={1} />
-                <p className="text-sm font-light text-red-400/80 text-center">{state.message}</p>
+                <AlertCircle className="w-8 h-8 text-error/60" strokeWidth={1} />
+                <p className="text-sm font-light text-error-text text-center">{state.message}</p>
                 <Button
                   variant="outline"
                   size="sm"
