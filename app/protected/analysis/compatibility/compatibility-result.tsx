@@ -68,24 +68,24 @@ interface CompatibilityResultProps {
 }
 
 function getAssessmentColor(assessment: string): string {
-  if (assessment === '좋은 궁합') return 'bg-pink-500 text-pink-50'
+  if (assessment === '좋은 궁합') return 'bg-seal text-red-50'
   if (assessment === '보통 궁합') return 'bg-gold-500 text-yellow-50'
-  if (assessment === '어려운 궁합') return 'bg-orange-400 text-orange-50'
-  return 'bg-red-500 text-red-50'
+  if (assessment === '어려운 궁합') return 'bg-warning text-ink-900'
+  return 'bg-error text-red-50'
 }
 
 function getAssessmentBorderColor(assessment: string): string {
-  if (assessment === '좋은 궁합') return 'border-pink-500/30'
+  if (assessment === '좋은 궁합') return 'border-seal/40'
   if (assessment === '보통 궁합') return 'border-gold-500/30'
-  if (assessment === '어려운 궁합') return 'border-orange-400/30'
-  return 'border-red-500/30'
+  if (assessment === '어려운 궁합') return 'border-warning-border'
+  return 'border-error-border'
 }
 
 function getCategoryAssessmentStyle(assessment: string): string {
-  if (assessment === '좋은 궁합') return 'text-pink-400 bg-pink-500/10'
+  if (assessment === '좋은 궁합') return 'text-obangsaek-red bg-seal/10'
   if (assessment === '보통 궁합') return 'text-gold-500 bg-gold-500/10'
-  if (assessment === '어려운 궁합') return 'text-orange-400 bg-orange-400/10'
-  return 'text-red-400 bg-red-500/10'
+  if (assessment === '어려운 궁합') return 'text-warning bg-warning-light'
+  return 'text-error-text bg-error-light'
 }
 
 // "이게 뭐냐" 한 줄 정의 (§5-1 — AI 아닌 UI 고정 상수, category 키 기준)
@@ -147,19 +147,19 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               animate={{ opacity: 1, y: 0 }}
               className="text-center space-y-4"
             >
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 mx-auto flex items-center justify-center">
-                <Heart className="w-10 h-10 text-pink-500 fill-current" />
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-seal/25 to-gold-500/15 mx-auto flex items-center justify-center">
+                <Heart className="w-10 h-10 text-obangsaek-red fill-current" />
               </div>
               <h1 className="text-3xl font-bold">궁합 분석 결과</h1>
               <div className="flex items-center justify-center gap-3 text-lg">
                 <span className="text-ink-light">{person1.name}</span>
-                <Heart className="w-5 h-5 text-pink-500" />
+                <Heart className="w-5 h-5 text-obangsaek-red" />
                 <span className="text-ink-light">{person2.name}</span>
               </div>
               <p className="text-sm text-muted-foreground">{summary}</p>
               {honestVerdict && (
                 <p
-                  className={`text-sm font-semibold ${overallAssessment === '좋은 궁합' || overallAssessment === '보통 궁합' ? 'text-gold-500' : 'text-red-400'}`}
+                  className={`text-sm font-semibold ${overallAssessment === '좋은 궁합' || overallAssessment === '보통 궁합' ? 'text-gold-500' : 'text-error-text'}`}
                 >
                   {honestVerdict}
                 </p>
@@ -215,9 +215,9 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-6 space-y-2"
+              className="bg-gradient-to-r from-gold-500/10 to-seal/10 border border-gold-500/20 rounded-lg p-6 space-y-2"
             >
-              <h3 className="text-lg font-semibold text-purple-400 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-gold-300 flex items-center gap-2">
                 <Compass className="w-5 h-5" />두 사람의 물상 풍경
               </h3>
               <p className="text-sm text-ink-light/80 leading-relaxed">{mulsangNarrative}</p>
@@ -276,7 +276,7 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               transition={{ delay: 0.4 }}
               className="bg-card border rounded-lg p-6 space-y-4"
             >
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-orange-400">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-warning">
                 <UserX className="w-5 h-5" />
                 각자의 약점
               </h3>
@@ -301,9 +301,9 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="bg-red-500/5 border border-red-500/20 rounded-lg p-6 space-y-2"
+              className="bg-error-light border border-error-border rounded-lg p-6 space-y-2"
             >
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-red-400">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-error-text">
                 <Swords className="w-5 h-5" />
                 예상 갈등 패턴
               </h3>
@@ -319,7 +319,7 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               transition={{ delay: 0.48 }}
               className="bg-card border rounded-lg p-6 space-y-3"
             >
-              <h3 className="text-lg font-semibold flex items-center gap-2 text-purple-400">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-gold-300">
                 <Clock className="w-5 h-5" />
                 지난 시간 돌아보기
               </h3>
@@ -408,16 +408,16 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.63 }}
-              className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-6 space-y-3"
+              className="bg-gold-500/10 border border-gold-500/20 rounded-lg p-6 space-y-3"
             >
-              <h3 className="text-lg font-semibold text-emerald-400 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-gold-300 flex items-center gap-2">
                 <MapPin className="w-5 h-5" />
                 {placesTitle}
               </h3>
               <ul className="space-y-2">
                 {recommendedPlaces.map((place: string, idx: number) => (
                   <li key={idx} className="text-sm text-ink-light/80 flex items-start gap-2">
-                    <span className="text-emerald-400 mt-0.5">*</span>
+                    <span className="text-gold-300 mt-0.5">*</span>
                     {place}
                   </li>
                 ))}
@@ -431,9 +431,9 @@ export function CompatibilityResult({ person1, person2, result, onReset, readOnl
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.65 }}
-              className="bg-pink-500/10 border border-pink-500/20 rounded-lg p-6 space-y-2"
+              className="bg-seal/10 border border-seal/25 rounded-lg p-6 space-y-2"
             >
-              <h3 className="text-lg font-semibold text-pink-500">관계 조언</h3>
+              <h3 className="text-lg font-semibold text-obangsaek-red">관계 조언</h3>
               <p className="text-sm text-ink-light/80 leading-relaxed whitespace-pre-line">{advice}</p>
             </motion.div>
           )}
