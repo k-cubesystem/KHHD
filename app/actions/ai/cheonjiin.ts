@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { calculateAge } from '@/lib/domain/saju/saju'
+import { calculateAge, getSajuData } from '@/lib/domain/saju/saju'
+import { deriveRarityDirective } from '@/lib/domain/analysis/rarity-variation'
 import { saveAnalysisHistoryObserved } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
@@ -176,6 +177,14 @@ export async function analyzeCheonjiinAction(
       // 인(人) - 이미지는 multimodal Part로 전달, 텍스트엔 첨부 여부만 표시
       faceImageUrl: imageFlags.hasFaceImage ? '관상 이미지 첨부됨 (별도 이미지 참조)' : '관상 이미지 없음',
       handImageUrl: imageFlags.hasHandImage ? '손금 이미지 첨부됨 (별도 이미지 참조)' : '손금 이미지 없음',
+
+      // 희소성 문구 변주용 씨앗 — 프롬프트에 그대로 실리지 않는다(명식 단일 출처는 마스터 엔진)
+      raritySeed: buildRaritySeed(
+        target.birth_date,
+        target.birth_time,
+        target.calendar_type !== 'lunar',
+        target.is_leap_month ?? false
+      ),
     }
 
     // 8. 프롬프트 생성 (해화지기 마스터 엔진 연동)
@@ -211,6 +220,19 @@ export async function analyzeCheonjiinAction(
     logger.error('[CheonjiinAnalysis] Error:', error)
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
+  }
+}
+
+/**
+ * 희소성 문구 변주의 씨앗 — 팔자 간지 8자.
+ * 만세력 계산이 실패해도 풀이 자체는 계속돼야 하므로 생년월일시 문자열로 물러선다.
+ */
+function buildRaritySeed(birthDate: string, birthTime: string | null, isSolar: boolean, isLeapMonth: boolean): string {
+  try {
+    return getSajuData(birthDate, birthTime || '12:00', isSolar, isLeapMonth).ganjiList.join('')
+  } catch (error: unknown) {
+    logger.error('[CheonjiinAnalysis] 희소성 시드 계산 실패 — 생년월일시로 대체:', error)
+    return `${birthDate}|${birthTime ?? ''}`
   }
 }
 
@@ -353,6 +375,9 @@ function getDefaultCheonjiinPrompt(
   const hasHandImage = flags?.hasHandImage ?? vars.handImageUrl !== '손금 이미지 없음'
   const hasFengshui = flags?.hasFengshui ?? vars.homeAddress !== '정보 없음'
   const hasWorkAddress = flags?.hasWorkAddress ?? vars.workAddress !== '정보 없음'
+
+  // 명식마다 다른 희소성 틀 — 예시를 하나만 박아두면 모델이 그 한 문장으로 수렴한다
+  const rarity = deriveRarityDirective(vars.raritySeed || `${vars.birthDate}|${vars.birthTime}`)
 
   // DB 시스템 프롬프트가 있으면 사용, 없으면 기본 역할 정의 사용
   const systemRole =
@@ -612,7 +637,7 @@ ${
   "specialEnergy": {
     "title": "이 사주만의 특별한 기운 한줄 (예: '불꽃 속에서 탄생한 다이아몬드')",
     "description": "이 사람 사주에서 가장 독특한 점 (3~4문장, 60갑자+격국+용신+신살 종합)",
-    "rarity": "희소성 (예: '100명 중 5명 정도의 조합이에요')",
+    "rarity": "희소성 한 문장 — 반드시 '${rarity.scaleLine}' 틀을 살려서 쓰고, 결합하는 특성 두 가지는 이 명식의 격국·용신·일주 물상에서 실제로 도출한 서로 다른 것 두 가지로 써요. '극강의 지성과 실행력' 같은 상투 조합이나 어느 사주에나 붙는 범용 문구는 금지예요",
     "hiddenTalent": "본인도 모르는 숨겨진 재능 (2문장)",
     "destinyMission": "이 사주가 가진 인생 미션 (2문장)"
   },
@@ -661,7 +686,9 @@ ${
 ## 특별한 사주 기운 (specialEnergy) — 가장 중요한 차별화
 이 사람 사주에서 가장 독특한 조합을 찾아내요:
 - 60갑자 일주 물상 + 격국 + 용신 + 신살을 종합해요
-- "100명 중 N명" 같은 희소성을 표현해요
+- 희소성(rarity)은 이 명식에 배정된 틀 '${rarity.scaleLine}' 을 그대로 살려서 한 문장으로 써요 (다른 스케일 표현으로 바꾸지 마요)
+- 희소하다고 말하는 근거는 '${rarity.angleHint}' 각도에서 잡아요 — 이 각도로 이 명식의 특성 두 가지를 골라 묶어요
+- 어느 사주에나 그대로 붙일 수 있는 문구('지성과 실행력의 결합' 같은)면 실패예요. 격국·용신·일주 물상에서 실제로 도출한 말이어야 해요
 - 숨겨진 재능과 인생 미션을 구체적으로 써요
 - 이 섹션이 "와, 나만 이런 게 있구나" 하는 감동을 만들어야 해요
 
