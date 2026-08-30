@@ -38,13 +38,13 @@ export const OBANGSAEK = {
   black: '#1A1714', // 玄 (현) — 배경, 텍스트
 } as const
 
-/** 복 등급 컬러 */
+/** 복 등급 컬러 — 오방색 성장 사다리 (tailwind.config `bok.*`·DESIGN.md 와 값 동기) */
 export const BOK_TIER_COLORS = {
-  SEED: '#8C7B50',
-  SPROUT: '#22C55E',
-  FLOWER: '#F472B6',
-  TREE: '#10B981',
-  FOREST: '#6EE7B7',
+  SEED: '#8C7B50', // 황토 — 흙 속 씨앗 (土 간색)
+  SPROUT: '#4E9A6B', // 목(木) 청록 — WU_XING_COLORS.木 동일값
+  FLOWER: '#C84040', // 연지 홍 — Red Light
+  TREE: '#3F7A9E', // 창송(蒼松) 담청
+  FOREST: '#D4A017', // 금 — 오방 황, 만복의 정점
 } as const
 
 /** 가장 많이 쓰이는 메인 골드 hex — SVG, Chart, OG 이미지용 */

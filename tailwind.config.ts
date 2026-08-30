@@ -96,13 +96,14 @@ const config: Config = {
           black: '#1A1714',
         },
 
-        // 복 등급 (Bok Tier)
+        // 복 등급 (Bok Tier) — 오방색 성장 사다리. 정본은 DESIGN.md 「Bok Tier Colors」,
+        // lib/config/design-tokens.ts BOK_TIER_COLORS 와 값이 같아야 한다.
         bok: {
-          seed: '#8C7B50',
-          sprout: '#22C55E',
-          flower: '#F472B6',
-          tree: '#10B981',
-          forest: '#6EE7B7',
+          seed: '#8C7B50', // 황토 — 흙 속 씨앗 (土 간색)
+          sprout: '#4E9A6B', // 목(木) 청록 — WU_XING_COLORS.木 동일값
+          flower: '#C84040', // 연지 홍 — Red Light
+          tree: '#3F7A9E', // 창송(蒼松) 담청
+          forest: '#D4A017', // 금 — 오방 황, 만복의 정점
         },
       },
       fontFamily: {
