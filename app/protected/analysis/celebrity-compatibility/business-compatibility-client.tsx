@@ -42,11 +42,15 @@ const fadeUp = {
   exit: { opacity: 0, y: -8 },
 }
 
+/**
+ * 점수 띠 — 좋을수록 금이 밝아지고, 경계는 warning, 나쁨은 error 로 내려간다.
+ * 오방색 규율상 「좋음=초록 / 나쁨=빨강」 신호등 팔레트는 쓰지 않는다.
+ */
 function getScoreLabel(score: number) {
-  if (score >= 85) return { label: '최고의 파트너', color: 'text-emerald-400', bg: 'bg-emerald-500', emoji: '🏆' }
+  if (score >= 85) return { label: '최고의 파트너', color: 'text-gold-200', bg: 'bg-gold-200', emoji: '🏆' }
   if (score >= 70) return { label: '좋은 파트너십', color: 'text-gold-500', bg: 'bg-gold-500', emoji: '🤝' }
-  if (score >= 55) return { label: '보완 필요', color: 'text-orange-400', bg: 'bg-orange-400', emoji: '⚠️' }
-  return { label: '신중한 검토 필요', color: 'text-red-400', bg: 'bg-red-400', emoji: '🔍' }
+  if (score >= 55) return { label: '보완 필요', color: 'text-warning', bg: 'bg-warning', emoji: '⚠️' }
+  return { label: '신중한 검토 필요', color: 'text-error-text', bg: 'bg-error', emoji: '🔍' }
 }
 
 export function BusinessCompatibilityClient() {
@@ -103,10 +107,10 @@ export function BusinessCompatibilityClient() {
   if (result && selectedPartner) {
     const scoreInfo = getScoreLabel(result.score)
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#0f1d32] to-[#0a1628] pb-20">
+      <div className="min-h-screen bg-background pb-20">
         <div id="business-compat-result-capture">
           {/* 헤더 */}
-          <div className="sticky top-0 z-10 bg-[#0a1628]/90 backdrop-blur-sm border-b border-gold-500/20 px-4 py-3 flex items-center gap-3">
+          <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-gold-500/20 px-4 py-3 flex items-center gap-3">
             <Button variant="ghost" size="icon" className="text-gold-500 hover:bg-gold-500/10" onClick={handleReset}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -116,14 +120,14 @@ export function BusinessCompatibilityClient() {
           <div className="max-w-lg mx-auto px-4 pt-6 space-y-5">
             {/* 점수 카드 */}
             <motion.div {...fadeUp}>
-              <Card className="bg-gradient-to-br from-[#0f1d32] to-[#0a1628] border-gold-500/30 text-center overflow-hidden relative">
+              <Card className="bg-surface/60 border-gold-500/30 text-center overflow-hidden relative">
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-gold-500/5 rounded-full blur-3xl" />
                 </div>
                 <CardContent className="pt-8 pb-6 relative">
                   <div className="flex items-center justify-center gap-6 mb-6">
                     <div className="text-center">
-                      <div className="w-14 h-14 rounded-full bg-blue-500/20 border-2 border-blue-400/40 flex items-center justify-center mx-auto mb-2">
+                      <div className="w-14 h-14 rounded-full bg-gold-500/15 border-2 border-gold-500/40 flex items-center justify-center mx-auto mb-2">
                         <span className="text-2xl">👤</span>
                       </div>
                       <p className="text-gold-500 font-medium text-sm">{result.myName}</p>
@@ -133,7 +137,7 @@ export function BusinessCompatibilityClient() {
                       <div className="w-8 h-px bg-gold-500/30" />
                     </div>
                     <div className="text-center">
-                      <div className="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-400/40 flex items-center justify-center mx-auto mb-2">
+                      <div className="w-14 h-14 rounded-full bg-seal/20 border-2 border-seal/50 flex items-center justify-center mx-auto mb-2">
                         <span className="text-2xl">👤</span>
                       </div>
                       <p className="text-gold-500 font-medium text-sm">{result.partnerName}</p>
@@ -170,7 +174,7 @@ export function BusinessCompatibilityClient() {
             {/* 카테고리 분석 */}
             {result.categories?.categories && result.categories.categories.length > 0 && (
               <motion.div {...fadeUp} transition={{ delay: 0.1 }}>
-                <Card className="bg-[#0f1d32]/80 border-gold-500/20">
+                <Card className="bg-surface/60 border-gold-500/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-gold-500 text-base flex items-center gap-2">
                       <Target className="w-4 h-4" />
@@ -184,11 +188,7 @@ export function BusinessCompatibilityClient() {
                           <span className="text-sm text-gold-500/80">{cat.label}</span>
                           <span
                             className={`text-sm font-bold ${
-                              cat.score >= 70
-                                ? 'text-emerald-400'
-                                : cat.score >= 50
-                                  ? 'text-orange-400'
-                                  : 'text-red-400'
+                              cat.score >= 70 ? 'text-gold-300' : cat.score >= 50 ? 'text-warning' : 'text-error-text'
                             }`}
                           >
                             {cat.score}점
@@ -197,7 +197,7 @@ export function BusinessCompatibilityClient() {
                         <div className="w-full bg-gold-500/10 rounded-full h-1.5 overflow-hidden">
                           <motion.div
                             className={`h-full rounded-full ${
-                              cat.score >= 70 ? 'bg-emerald-400' : cat.score >= 50 ? 'bg-orange-400' : 'bg-red-400'
+                              cat.score >= 70 ? 'bg-gold-500' : cat.score >= 50 ? 'bg-warning' : 'bg-error'
                             }`}
                             initial={{ width: 0 }}
                             animate={{ width: `${cat.score}%` }}
@@ -217,7 +217,7 @@ export function BusinessCompatibilityClient() {
             {/* 오행 서사 */}
             {result.categories?.mulsangNarrative && (
               <motion.div {...fadeUp} transition={{ delay: 0.15 }}>
-                <Card className="bg-[#0f1d32]/80 border-gold-500/20">
+                <Card className="bg-surface/60 border-gold-500/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-gold-500 text-base flex items-center gap-2">
                       <Sparkles className="w-4 h-4" />
@@ -236,7 +236,7 @@ export function BusinessCompatibilityClient() {
             {/* AI 심층 분석 */}
             {result.aiAnalysis && (
               <motion.div {...fadeUp} transition={{ delay: 0.2 }}>
-                <Card className="bg-[#0f1d32]/80 border-gold-500/20">
+                <Card className="bg-surface/60 border-gold-500/20">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-gold-500 text-base flex items-center gap-2">
                       <Building2 className="w-4 h-4" />
@@ -252,9 +252,9 @@ export function BusinessCompatibilityClient() {
 
             {/* 주의 */}
             <motion.div {...fadeUp} transition={{ delay: 0.3 }}>
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-900/20 border border-amber-700/30">
-                <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-400/80">
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-light border border-warning-border">
+                <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-warning-text">
                   본 분석은 사주 오행 이론 기반의 참고용입니다. 실제 사업 결정은 시장 조사, 재무 분석 등 종합적 판단이
                   필요합니다.
                 </p>
@@ -287,9 +287,9 @@ export function BusinessCompatibilityClient() {
 
   // 파트너 선택 화면
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#0f1d32] to-[#0a1628] pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* 헤더 */}
-      <div className="sticky top-0 z-10 bg-[#0a1628]/90 backdrop-blur-sm border-b border-gold-500/20 px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-gold-500/20 px-4 py-3 flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
@@ -358,7 +358,7 @@ export function BusinessCompatibilityClient() {
               {partners.map((partner) => (
                 <motion.div key={partner.id} variants={fadeUp}>
                   <button
-                    className="w-full text-left transition-all rounded-xl border border-gold-500/15 bg-[#0f1d32]/50 hover:border-gold-500/40 hover:bg-[#0f1d32]/80"
+                    className="w-full text-left transition-all rounded-xl border border-gold-500/15 bg-surface/40 hover:border-gold-500/40 hover:bg-surface/70"
                     onClick={() => handleCalculate(partner)}
                   >
                     <div className="p-4 flex items-center gap-3">

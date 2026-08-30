@@ -55,21 +55,23 @@ export default async function KnowledgeGraphPage() {
   const userNodes = await getUserSajuNodes()
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-background text-ink-light">
       {/* 헤더 */}
-      <div className="border-b border-amber-900/30 bg-gray-900/50 backdrop-blur-sm px-6 py-4">
+      <div className="border-b border-gold-500/20 bg-surface/50 backdrop-blur-sm px-6 py-4">
         <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-amber-300">명리학 관계도</h1>
-            <p className="text-gray-500 text-sm mt-0.5">오행 · 천간 · 지지의 상생상극, 합충형파해 관계를 탐색합니다</p>
+            <h1 className="text-xl font-bold font-serif text-gold-300">명리학 관계도</h1>
+            <p className="text-ink-light/55 text-sm mt-0.5">
+              오행 · 천간 · 지지의 상생상극, 합충형파해 관계를 탐색합니다
+            </p>
           </div>
-          <div className="flex items-center gap-3 text-xs text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-ink-light/55">
             {userNodes ? (
-              <span className="flex items-center gap-1.5 text-amber-400/80 bg-amber-900/20 border border-amber-800/30 rounded-full px-3 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />내 사주 하이라이트 활성
+              <span className="flex items-center gap-1.5 text-gold-300 bg-gold-500/10 border border-gold-500/25 rounded-full px-3 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse" />내 사주 하이라이트 활성
               </span>
             ) : (
-              <span className="text-gray-600">프로필 설정 시 내 사주 하이라이트</span>
+              <span className="text-ink-light/55">프로필 설정 시 내 사주 하이라이트</span>
             )}
           </div>
         </div>
@@ -80,7 +82,7 @@ export default async function KnowledgeGraphPage() {
         <Suspense
           fallback={
             <div className="h-full flex items-center justify-center">
-              <div className="text-amber-400/60 text-sm animate-pulse">관계도 로딩 중...</div>
+              <div className="text-gold-500/70 text-sm animate-pulse">관계도 로딩 중...</div>
             </div>
           }
         >

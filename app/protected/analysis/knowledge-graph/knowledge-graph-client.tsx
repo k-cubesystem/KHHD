@@ -15,7 +15,7 @@ export function KnowledgeGraphClient({ userNodes }: Props) {
   return (
     <div className="h-full flex flex-col gap-3">
       {/* 상단 통계 바 */}
-      <div className="flex items-center gap-4 text-xs text-gray-500 flex-shrink-0">
+      <div className="flex items-center gap-4 text-xs text-ink-light/55 flex-shrink-0">
         <span>노드 {NODES.length}개</span>
         <span>엣지 {EDGES.length}개</span>
         <span>관계 유형 {ALL_EDGE_TYPES.length}가지</span>
@@ -37,11 +37,11 @@ export function KnowledgeGraphClient({ userNodes }: Props) {
               onClick={() => setMySajuMode((prev) => !prev)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                 mySajuMode
-                  ? 'bg-amber-800/40 border-amber-600/50 text-amber-300'
-                  : 'bg-gray-800/60 border-gray-700 text-gray-500'
+                  ? 'bg-gold-500/[0.18] border-gold-500/50 text-gold-200'
+                  : 'bg-surface/60 border-white/10 text-ink-light/55'
               }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${mySajuMode ? 'bg-amber-400' : 'bg-gray-600'}`} />내 사주에서
+              <span className={`w-1.5 h-1.5 rounded-full ${mySajuMode ? 'bg-gold-500' : 'bg-white/20'}`} />내 사주에서
               보기
             </button>
           )}

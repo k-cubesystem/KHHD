@@ -117,7 +117,7 @@ export default async function ThemeFortuneListPage({ searchParams }: { searchPar
                   <span
                     className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
                       isFreeRoute(route)
-                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                        ? 'border-gold-500/40 bg-gold-500/[0.18] text-gold-200'
                         : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
                     }`}
                   >
@@ -167,7 +167,7 @@ function ThemeCard({ theme, eager }: { theme: ThemeFortune; eager: boolean }) {
           <span
             className={`rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${
               isFreeTheme(theme)
-                ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                ? 'border-gold-500/40 bg-gold-500/[0.18] text-gold-200'
                 : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
             }`}
           >

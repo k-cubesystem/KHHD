@@ -140,7 +140,7 @@ export function ThemeDetailContent({
               <span
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${
                   free
-                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+                    ? 'border-gold-500/40 bg-gold-500/[0.18] text-gold-200'
                     : 'border-gold-500/20 bg-gold-500/10 text-gold-300'
                 }`}
               >
@@ -158,9 +158,9 @@ export function ThemeDetailContent({
         {/* 상단 강화 고지(마스터 §9-4) — 투자·사업 부류는 이 박스가 출하 게이트다(§9-5 6번).
             결제 «전»에도 보여야 하는 문장이라 결과가 아니라 히어로 바로 아래 선다. */}
         {theme.extraDisclaimer && (
-          <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-700/30 bg-amber-900/20 p-3">
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-400" />
-            <p className="text-[11px] font-light leading-relaxed text-amber-400/80">{theme.extraDisclaimer}</p>
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-warning-border bg-warning-light p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+            <p className="text-[11px] font-light leading-relaxed text-warning-text">{theme.extraDisclaimer}</p>
           </div>
         )}
 
