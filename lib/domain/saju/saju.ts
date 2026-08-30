@@ -86,12 +86,13 @@ const ZHI_WUXING: Record<string, string> = {
 }
 
 // 오행 색상 (디자인 시스템 통일)
+// 오방색 정본은 /story 리포트 미리보기(components/landing/story/story-report-preview.tsx)와 동일 팔레트.
 export const WU_XING_COLORS: Record<string, string> = {
-  木: '#4A7C59', // Green (Wood)
-  火: '#C07055', // Red (Fire)
-  土: '#C5B358', // Gold (Earth)
-  金: '#989390', // Silver (Metal)
-  水: '#4A5D7C', // Blue (Water)
+  木: '#4E9A6B', // Green (Wood)
+  火: '#C83232', // Red (Fire)
+  土: '#C9A84C', // Gold (Earth)
+  金: '#D8D2C4', // Silver (Metal)
+  水: '#2D5F8A', // Blue (Water)
 }
 
 // 오행 한글명
