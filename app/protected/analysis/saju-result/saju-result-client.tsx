@@ -13,12 +13,13 @@ import { PremiumBlurSection } from '@/components/shared/premium-blur-section'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { DestinyTarget } from '@/app/actions/user/destiny'
-import { RefreshCw, AlertTriangle, Settings, Sparkles, ChevronDown, Share2, Link2, Check, Loader2 } from 'lucide-react'
+import { RefreshCw, AlertTriangle, Settings, ChevronDown, Share2, Link2, Check, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { logger } from '@/lib/utils/logger'
 import { GA } from '@/lib/analytics/ga4'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { PillarsStrip } from '@/components/analysis/PillarsStrip'
+import { ElementDistribution } from '@/components/analysis/report/element-distribution'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
 import {
   SajuCrossAnalysisSection,
@@ -208,14 +209,17 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       <PaywallModal {...paywallProps} />
       <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
 
-      {/* 헤더 */}
+      {/* 헤더 — 모양 정본은 /story 섹션 헤딩(story-section-heading.tsx) */}
       <header className="text-center pt-8 pb-6 px-4">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 mb-3">
-          <Sparkles className="w-3 h-3 text-gold-500" />
-          <span className="text-[10px] font-medium text-gold-500 tracking-widest">청담해화당 통합분석</span>
+        <div className="flex items-center justify-center gap-2.5 mb-3">
+          <span className="h-px w-5 bg-gold-500/60" aria-hidden />
+          <span className="font-sans text-[10px] font-bold uppercase tracking-[0.22em] text-gold-500">
+            Cheonjiin Report
+          </span>
+          <span className="h-px w-5 bg-gold-500/60" aria-hidden />
         </div>
-        <h1 className="text-2xl font-serif font-bold text-ink-light">
-          {target.name}님의 <span className="text-gold-500">사주풀이</span>
+        <h1 className="text-2xl font-serif font-bold text-ink-light tracking-tight">
+          {target.name}님의 <span className="text-gold-300">사주 상세풀이</span>
         </h1>
         {data.summary && (
           <p className="text-sm text-ink-light/60 font-light mt-2 max-w-sm mx-auto leading-relaxed">
@@ -233,43 +237,68 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         )}
       </header>
 
-      {/* 명식 4주 스트립 — AI 풀이의 근거(원국) 노출 */}
-      <div className="mx-4 mb-6">
-        <PillarsStrip
-          birthDate={target.birth_date}
-          birthTime={target.birth_time}
-          isSolar={target.calendar_type !== 'lunar'}
-          isLeapMonth={target.is_leap_month ?? false}
-          birthTimeUnknown={!target.birth_time}
-        />
-      </div>
-
-      {/* 행운 정보 */}
-      {data.lucky && (
-        <section className="mx-4 mb-6 grid grid-cols-4 gap-2">
-          {[
-            { label: '색상', value: data.lucky.color },
-            { label: '방위', value: data.lucky.direction },
-            { label: '숫자', value: data.lucky.number },
-            { label: '키워드', value: data.lucky.keyword },
-          ].map(
-            (item) =>
-              item.value && (
-                <div key={item.label} className="text-center p-2.5 rounded-lg bg-surface/30 border border-white/5">
-                  <p className="text-[10px] text-ink-light/40">{item.label}</p>
-                  <p className="text-xs text-gold-500 font-medium mt-0.5">{String(item.value)}</p>
-                </div>
-              )
-          )}
-        </section>
-      )}
+      {/* 리포트 카드 — 명식·오행 분포·행운 요소를 한 장으로.
+          모양 정본은 /story 리포트 미리보기(story-report-preview.tsx) — 단청 상단 보더 + 금테 카드. */}
+      <section className="mx-4 mb-6 rounded-2xl border border-gold-500/25 bg-surface overflow-hidden shadow-gold-glow divide-y divide-white/10">
+        <div className="dancheong-border-top" />
+        <div className="px-4 py-4">
+          <PillarsStrip
+            frameless
+            birthDate={target.birth_date}
+            birthTime={target.birth_time}
+            isSolar={target.calendar_type !== 'lunar'}
+            isLeapMonth={target.is_leap_month ?? false}
+            birthTimeUnknown={!target.birth_time}
+          />
+        </div>
+        <div className="px-4 py-4">
+          <ElementDistribution
+            birthDate={target.birth_date}
+            birthTime={target.birth_time}
+            isSolar={target.calendar_type !== 'lunar'}
+            isLeapMonth={target.is_leap_month ?? false}
+            birthTimeUnknown={!target.birth_time}
+          />
+        </div>
+        {data.lucky && (
+          <div className="px-4 py-4">
+            <h3 className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2.5 m-0">
+              행운 요소
+            </h3>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[
+                { label: '색상', value: data.lucky.color },
+                { label: '방위', value: data.lucky.direction },
+                { label: '숫자', value: data.lucky.number },
+                { label: '키워드', value: data.lucky.keyword },
+              ].map(
+                (item) =>
+                  item.value && (
+                    <div
+                      key={item.label}
+                      className="text-center py-2 px-1 rounded-lg bg-white/[0.03] border border-white/10"
+                    >
+                      <p className="text-[9px] text-ink-light/60">{item.label}</p>
+                      <p className="text-xs text-gold-300 font-medium mt-0.5 break-keep">{String(item.value)}</p>
+                    </div>
+                  )
+              )}
+            </div>
+          </div>
+        )}
+      </section>
 
       <SajuFreeSections data={data} />
 
       {/* 프리미엄 섹션 — 무료 사용자에게 블러 처리 */}
       <PremiumBlurSection isPaid={quota.isPaid}>
         {/* 타고난 성격 */}
-        <DetailSection title={data.cheon?.title || '타고난 성격과 재능이에요'} data={data.cheon} color="blue" />
+        <DetailSection
+          title={data.cheon?.title || '타고난 성격과 재능이에요'}
+          data={data.cheon}
+          hanja="天"
+          tagline="하늘의 기운 · 타고난 것"
+        />
 
         <SajuDeepSections data={data} />
 
@@ -277,7 +306,12 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         <CheonToJiDivider />
 
         {/* 운의 흐름 (地) */}
-        <DetailSection title={data.ji?.title || '지금 흐르는 운의 방향이에요'} data={data.ji} color="emerald" />
+        <DetailSection
+          title={data.ji?.title || '지금 흐르는 운의 방향이에요'}
+          data={data.ji}
+          hanja="地"
+          tagline="땅의 기운 · 흐르는 것"
+        />
 
         {/* 인연과 내면 (人)
             🔴 라이브가 天·地만 그리고 人 을 통째로 빠뜨리고 있었다(2026-08-18 발견). 저장본에는
@@ -329,11 +363,15 @@ function CheonToJiDivider() {
 function DetailSection({
   title,
   data,
-  color,
+  hanja,
+  tagline,
 }: {
   title: string
   data: Record<string, unknown> | null | undefined
-  color: 'blue' | 'emerald' | 'rose'
+  /** 챕터 한자 — 天 · 地 · 人 */
+  hanja: string
+  /** 헤더 오버라인 — 예) 하늘의 기운 · 타고난 것 */
+  tagline: string
 }) {
   const [isOpen, setIsOpen] = useState(true)
   if (!data) return null
@@ -353,39 +391,43 @@ function DetailSection({
       ? data.health
       : ((data.health as Record<string, unknown>)?.overall as string | undefined)
 
-  const colorMap = {
-    blue: { bg: 'bg-blue-500/5', border: 'border-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
-    emerald: {
-      bg: 'bg-emerald-500/5',
-      border: 'border-emerald-500/15',
-      text: 'text-emerald-400',
-      dot: 'bg-emerald-400',
-    },
-    rose: { bg: 'bg-rose-500/5', border: 'border-rose-500/15', text: 'text-rose-400', dot: 'bg-rose-400' },
-  }
-  const c = colorMap[color]
-
   return (
-    <section className={`mx-4 mb-4 rounded-xl border ${c.bg} ${c.border} overflow-hidden`}>
-      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-4">
-        <h3 className={`text-sm font-serif font-medium flex items-center gap-2 ${c.text}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-          {title}
-        </h3>
-        <ChevronDown className={`w-4 h-4 text-ink-light/30 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+    <section className="mx-4 mb-4 rounded-2xl border border-gold-500/20 bg-surface/50 overflow-hidden">
+      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between gap-3 p-4">
+        <div className="flex flex-col gap-1.5 text-left min-w-0">
+          <span className="flex items-center gap-2.5">
+            <span className="font-serif text-[15px] leading-none text-gold-500" aria-hidden>
+              {hanja}
+            </span>
+            <span className="h-px w-5 bg-gold-500/60" aria-hidden />
+            <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-light/65">
+              {tagline}
+            </span>
+          </span>
+          <span className="font-serif text-[16px] font-bold text-ink-light break-keep leading-snug">{title}</span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-ink-light/30 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
         <div className="px-4 pb-4 space-y-4">
-          {content && <p className="text-sm text-ink-light/80 leading-relaxed whitespace-pre-line">{content}</p>}
+          {content && (
+            <p className="text-sm text-ink-light/85 font-light leading-[1.85] break-keep whitespace-pre-line">
+              {content}
+            </p>
+          )}
 
           {strengths && strengths.length > 0 && (
             <div>
-              <p className="text-xs text-ink-light/40 mb-1.5">강점</p>
+              <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/60 mb-1.5">
+                강점
+              </p>
               <ul className="space-y-1">
                 {strengths.map((s, i) => (
                   <li key={i} className="text-sm text-ink-light/70 flex gap-2">
-                    <span className="text-gold-500/60 shrink-0">+</span>
+                    <span className="text-gold-500/70 shrink-0">+</span>
                     {s}
                   </li>
                 ))}
@@ -395,11 +437,13 @@ function DetailSection({
 
           {weaknesses && weaknesses.length > 0 && (
             <div>
-              <p className="text-xs text-ink-light/40 mb-1.5">약점</p>
+              <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/60 mb-1.5">
+                보완점
+              </p>
               <ul className="space-y-1">
                 {weaknesses.map((w, i) => (
                   <li key={i} className="text-sm text-ink-light/70 flex gap-2">
-                    <span className="text-red-400/60 shrink-0">-</span>
+                    <span className="text-error/60 shrink-0">-</span>
                     {w}
                   </li>
                 ))}
