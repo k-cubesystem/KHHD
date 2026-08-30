@@ -30,9 +30,7 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
             className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm mb-2"
           >
             <Sparkles className="w-2.5 h-2.5 text-primary" />
-            <span className="text-[9px] font-bold text-primary tracking-widest uppercase">
-              The Masterpiece Analysis
-            </span>
+            <span className="text-[9px] font-bold text-primary tracking-[0.22em] uppercase">Cheonjiin Report</span>
           </motion.div>
 
           <h1 className="text-2xl font-serif font-light text-ink-light leading-tight">
@@ -51,23 +49,17 @@ export function CheonjiinSummary({ data, target }: CheonjiinSummaryProps) {
           >
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] text-primary/60 font-serif tracking-widest">天 (천)</span>
-              <span className="text-lg font-serif font-bold" style={{ color: '#93c5fd' }}>
-                사주
-              </span>
+              <span className="text-lg font-serif font-bold text-gold-300">사주</span>
             </div>
             <div className="w-px h-8 bg-white/10" />
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] text-primary/60 font-serif tracking-widest">地 (지)</span>
-              <span className="text-lg font-serif font-bold" style={{ color: '#6ee7b7' }}>
-                환경
-              </span>
+              <span className="text-lg font-serif font-bold text-gold-300">환경</span>
             </div>
             <div className="w-px h-8 bg-white/10" />
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] text-primary/60 font-serif tracking-widest">人 (인)</span>
-              <span className="text-lg font-serif font-bold" style={{ color: '#fca5a5' }}>
-                인연
-              </span>
+              <span className="text-lg font-serif font-bold text-gold-300">인연</span>
             </div>
           </motion.div>
         </div>
