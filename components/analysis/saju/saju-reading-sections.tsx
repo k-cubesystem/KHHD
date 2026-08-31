@@ -32,29 +32,51 @@ export type SajuReadingData = Record<string, any>
 export function SajuFreeSections({ data }: { data: SajuReadingData }) {
   return (
     <>
-      {/* ⭐ 특별한 사주 기운 */}
+      {/* ⭐ 특별한 사주 기운 — 이 풀이의 얼굴. /story 리포트 카드 문법(단청 보더·금테)에
+          희소성 문장은 稀 낙관(도장)을 찍은 세리프 인용으로 올린다. */}
       {data.specialEnergy?.title && (
-        <section className="mx-4 mb-6 p-5 rounded-2xl bg-gradient-to-br from-gold-500/15 via-gold-500/5 to-transparent border border-gold-500/30 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/20 rounded-full blur-[60px] pointer-events-none" />
-          <div className="relative z-10 space-y-3">
-            <p className="text-[10px] text-gold-500/60 tracking-wider">이 사주만의 특별한 기운</p>
-            <h3 className="text-lg font-serif font-bold text-gold-500">{data.specialEnergy.title as string}</h3>
-            <p className="text-sm text-ink-light/80 leading-relaxed">{data.specialEnergy.description as string}</p>
+        <section className="mx-4 mb-6 rounded-2xl border border-gold-500/30 bg-surface overflow-hidden shadow-gold-glow relative">
+          <div className="dancheong-border-top" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/15 rounded-full blur-[60px] pointer-events-none" />
+          <div className="relative z-10 p-5 space-y-3">
+            <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-gold-500 m-0">
+              이 사주만의 특별한 기운
+            </p>
+            <h3 className="font-serif text-[19px] font-bold text-gold-200 leading-snug break-keep m-0">
+              {data.specialEnergy.title as string}
+            </h3>
+            <p className="text-sm text-ink-light/80 font-light leading-[1.85] break-keep m-0">
+              {data.specialEnergy.description as string}
+            </p>
             {data.specialEnergy.rarity && (
-              <span className="inline-block px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 text-[11px] text-gold-500">
-                {data.specialEnergy.rarity as string}
-              </span>
+              <figure className="mt-4 mb-0 mx-0 flex items-start gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.07] p-4">
+                <span
+                  className="w-9 h-9 shrink-0 rounded-[3px] bg-seal text-red-50 font-serif text-[16px] leading-none flex items-center justify-center shadow-dojang"
+                  aria-hidden
+                >
+                  稀
+                </span>
+                <blockquote className="font-serif text-[13.5px] leading-[1.8] text-gold-200 break-keep m-0">
+                  {data.specialEnergy.rarity as string}
+                </blockquote>
+              </figure>
             )}
             {data.specialEnergy.hiddenTalent && (
               <div className="pt-3 border-t border-gold-500/10">
-                <p className="text-[10px] text-gold-500/50 mb-1">숨겨진 재능</p>
-                <p className="text-sm text-ink-light/70 leading-relaxed">{data.specialEnergy.hiddenTalent as string}</p>
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-gold-500/70 mb-1">
+                  숨겨진 재능
+                </p>
+                <p className="text-sm text-ink-light/70 font-light leading-relaxed break-keep m-0">
+                  {data.specialEnergy.hiddenTalent as string}
+                </p>
               </div>
             )}
             {data.specialEnergy.destinyMission && (
               <div className="pt-3 border-t border-gold-500/10">
-                <p className="text-[10px] text-gold-500/50 mb-1">인생 미션</p>
-                <p className="text-sm text-ink-light/70 leading-relaxed">
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-gold-500/70 mb-1">
+                  인생 미션
+                </p>
+                <p className="text-sm text-ink-light/70 font-light leading-relaxed break-keep m-0">
                   {data.specialEnergy.destinyMission as string}
                 </p>
               </div>
@@ -264,11 +286,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
       )}
 
       {/* 재물운 + 투자 성향 통합 */}
-      <ResultSection
-        title="돈은 이렇게 벌고 굴리면 돼요"
-       
-        show={!!(data.cheon?.wealth || data.cheon?.investment)}
-      >
+      <ResultSection title="돈은 이렇게 벌고 굴리면 돼요" show={!!(data.cheon?.wealth || data.cheon?.investment)}>
         {data.cheon?.wealth && typeof data.cheon.wealth === 'string' && (
           <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.wealth}</p>
         )}
@@ -534,11 +552,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
  */
 export function SajuCrossAnalysisSection({ data }: { data: SajuReadingData }) {
   return (
-    <ResultSection
-      title="여러 분석이 같은 결론을 가리키고 있어요"
-     
-      show={!!data.crossAnalysis?.convergenceInsight}
-    >
+    <ResultSection title="여러 분석이 같은 결론을 가리키고 있어요" show={!!data.crossAnalysis?.convergenceInsight}>
       {data.crossAnalysis?.sajuAndFace && (
         <p className="text-sm text-ink-light/80 leading-relaxed">{data.crossAnalysis.sajuAndFace as string}</p>
       )}
