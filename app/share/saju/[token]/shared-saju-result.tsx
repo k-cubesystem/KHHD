@@ -140,7 +140,7 @@ function DetailSection({
               <ul className="space-y-1">
                 {weaknesses.map((w, i) => (
                   <li key={i} className="text-sm text-ink-light/70 flex gap-2">
-                    <span className="text-red-400/60 shrink-0">-</span>
+                    <span className="text-obangsaek-red/70 shrink-0">-</span>
                     {w}
                   </li>
                 ))}

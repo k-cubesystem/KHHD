@@ -51,7 +51,7 @@ export function SajuFreeSections({ data }: { data: SajuReadingData }) {
             {data.specialEnergy.rarity && (
               <figure className="mt-4 mb-0 mx-0 flex items-start gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.07] p-4">
                 <span
-                  className="w-9 h-9 shrink-0 rounded-[3px] bg-seal text-red-50 font-serif text-[16px] leading-none flex items-center justify-center shadow-dojang"
+                  className="w-9 h-9 shrink-0 rounded-[3px] bg-seal text-ink-light font-serif text-[16px] leading-none flex items-center justify-center shadow-dojang"
                   aria-hidden
                 >
                   稀

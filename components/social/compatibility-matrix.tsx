@@ -289,7 +289,7 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
       <AnimatePresence>
         {selectedNode && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}>
-            <Card className="p-6 bg-gold-50/50 border-gold-300">
+            <Card className="p-6 bg-gold-500/[0.07] border-gold-500/25">
               <CardHeader className="p-0 mb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-gold-500" />
@@ -319,10 +319,10 @@ export function CompatibilityMatrix({ nodes, edges }: CompatibilityMatrixProps) 
                         <Badge
                           className={cn(
                             'px-3 py-1 font-bold',
-                            edge.score >= 80 && 'bg-gold-100 text-gold-800 border-gold-300',
+                            edge.score >= 80 && 'bg-gold-500/25 text-gold-200 border-gold-500/40',
                             edge.score >= 60 && edge.score < 80 && 'bg-gold-500/15 text-gold-300 border-gold-500/30',
-                            edge.score >= 40 && edge.score < 60 && 'bg-gray-100 text-gray-700 border-gray-300',
-                            edge.score < 40 && 'bg-gray-50 text-gray-500 border-gray-200'
+                            edge.score >= 40 && edge.score < 60 && 'bg-white/[0.08] text-ink-light/70 border-white/15',
+                            edge.score < 40 && 'bg-white/[0.04] text-ink-light/45 border-white/10'
                           )}
                         >
                           {edge.score}점

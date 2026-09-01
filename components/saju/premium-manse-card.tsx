@@ -5,7 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Sparkles, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { WU_XING_COLORS } from '@/lib/domain/saju/saju'
 import type { ManseResult, SajuPillar } from '@/lib/domain/saju/manse'
+
+// 水 배경 광채 — 오행색 정본(#2D5F8A)에 30% 알파(4D)만 얹는다
+const WATER_GLOW = `${WU_XING_COLORS['水']}4D`
 
 interface PremiumManseCardProps {
   manse: ManseResult
@@ -20,7 +24,7 @@ const ElementBackground = ({ element }: { element: string }) => {
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="wood-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M20 0 L20 40 M0 20 L40 20" stroke="currentColor" strokeWidth="0.5" className="text-green-600" />
+              <path d="M20 0 L20 40 M0 20 L40 20" stroke="currentColor" strokeWidth="0.5" className="text-bok-sprout" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#wood-pattern)" />
@@ -30,7 +34,7 @@ const ElementBackground = ({ element }: { element: string }) => {
     Fire: (
       <div className="absolute inset-0 opacity-10">
         <motion.div
-          className="absolute inset-0 bg-gradient-to-t from-red-500/20 via-transparent to-transparent"
+          className="absolute inset-0 bg-gradient-to-t from-obangsaek-red/20 via-transparent to-transparent"
           animate={{
             opacity: [0.1, 0.3, 0.1],
           }}
@@ -47,7 +51,7 @@ const ElementBackground = ({ element }: { element: string }) => {
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <pattern id="earth-pattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-              <circle cx="10" cy="10" r="1" fill="currentColor" className="text-yellow-600" />
+              <circle cx="10" cy="10" r="1" fill="currentColor" className="text-obangsaek-yellow" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#earth-pattern)" />
@@ -57,7 +61,7 @@ const ElementBackground = ({ element }: { element: string }) => {
     Metal: (
       <div className="absolute inset-0 opacity-10">
         <motion.div
-          className="absolute inset-0 bg-gradient-to-br from-gray-400/20 via-transparent to-gray-400/20"
+          className="absolute inset-0 bg-gradient-to-br from-gold-400/20 via-transparent to-gold-400/20"
           animate={{
             backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
           }}
@@ -75,9 +79,9 @@ const ElementBackground = ({ element }: { element: string }) => {
           className="absolute inset-0"
           animate={{
             backgroundImage: [
-              'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
-              'radial-gradient(circle at 80% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
-              'radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
+              `radial-gradient(circle at 20% 50%, ${WATER_GLOW} 0%, transparent 50%)`,
+              `radial-gradient(circle at 80% 50%, ${WATER_GLOW} 0%, transparent 50%)`,
+              `radial-gradient(circle at 20% 50%, ${WATER_GLOW} 0%, transparent 50%)`,
             ],
           }}
           transition={{
@@ -97,17 +101,9 @@ const ElementBackground = ({ element }: { element: string }) => {
 const PillarCell = ({ pillar, label: _label, isDay }: { pillar: SajuPillar; label: string; isDay?: boolean }) => {
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // 오행 추출 (color class에서)
-  const getElement = (colorClass: string): string => {
-    if (colorClass.includes('green')) return 'Wood'
-    if (colorClass.includes('red')) return 'Fire'
-    if (colorClass.includes('yellow')) return 'Earth'
-    if (colorClass.includes('gray')) return 'Metal'
-    if (colorClass.includes('blue')) return 'Water'
-    return 'Unknown'
-  }
-
-  const element = getElement(pillar.color)
+  // 오행은 데이터 필드에서 직접 읽는다 — 예전에는 color 클래스 문자열에서 'green' 을
+  // 파싱했는데, 그 결합 때문에 팔레트를 토큰으로 바꾸는 순간 오행 판별이 통째로 깨졌다.
+  const element = pillar.ganElement
 
   return (
     <motion.div className="relative" initial={false} animate={{ height: isExpanded ? 'auto' : 'auto' }}>
@@ -130,7 +126,7 @@ const PillarCell = ({ pillar, label: _label, isDay }: { pillar: SajuPillar; labe
         {/* 천간 (상단) */}
         <div className="relative h-32 flex flex-col items-center justify-center p-2 border-b border-zen-border/30">
           <motion.span
-            className="text-4xl font-serif font-bold relative text-gray-900 z-10 drop-shadow-sm"
+            className="text-4xl font-serif font-bold relative text-ink-900 z-10 drop-shadow-sm"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -153,21 +149,21 @@ const PillarCell = ({ pillar, label: _label, isDay }: { pillar: SajuPillar; labe
               </motion.div>
             )}
           </motion.span>
-          <span className="text-[10px] text-gray-600 font-bold mt-1 z-10">천간</span>
+          <span className="text-[10px] text-ink-900/60 font-bold mt-1 z-10">천간</span>
           {isDay && <span className="text-[10px] font-bold text-zen-wood mt-0.5 z-10">나(我)</span>}
         </div>
 
         {/* 지지 (하단) */}
         <div className="relative h-32 flex flex-col items-center justify-center p-2">
           <motion.span
-            className="text-4xl font-serif font-bold text-gray-900 z-10 drop-shadow-sm"
+            className="text-4xl font-serif font-bold text-ink-900 z-10 drop-shadow-sm"
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             {pillar.ji}
           </motion.span>
-          <span className="text-[10px] text-gray-600 font-bold mt-1 z-10">{pillar.label}</span>
+          <span className="text-[10px] text-ink-900/60 font-bold mt-1 z-10">{pillar.label}</span>
         </div>
 
         {/* 확장 인디케이터 */}
@@ -248,12 +244,12 @@ export function PremiumManseCard({ manse, className }: PremiumManseCardProps) {
 
         {/* 하단 설명 */}
         <motion.div
-          className="bg-gray-50 p-6 text-center border-t border-zen-border"
+          className="bg-obangsaek-white p-6 text-center border-t border-zen-border"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          <p className="text-sm text-gray-900 leading-relaxed font-serif">
+          <p className="text-sm text-ink-900 leading-relaxed font-serif">
             당신은{' '}
             <span className="font-bold text-zen-wood">
               {manse.day.label.split(' ')[0]} {manse.day.ji}({manse.day.label.split(' ')[1]})
@@ -265,7 +261,7 @@ export function PremiumManseCard({ manse, className }: PremiumManseCardProps) {
             </span>
             의 계절을 품고 있습니다.
           </p>
-          <p className="text-xs text-gray-500 mt-3 italic">각 기둥을 클릭하여 상세 정보를 확인하세요</p>
+          <p className="text-xs text-ink-900/50 mt-3 italic">각 기둥을 클릭하여 상세 정보를 확인하세요</p>
         </motion.div>
       </CardContent>
     </Card>

@@ -8,6 +8,7 @@ import { Sparkles, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ManseResult } from '@/lib/domain/saju/manse'
 import { GOLD_500 } from '@/lib/config/design-tokens'
+import { WU_XING_COLORS } from '@/lib/domain/saju/saju'
 
 // Dynamic imports for Recharts components to reduce initial bundle size
 const RadarChart = dynamic(() => import('recharts').then((mod) => mod.RadarChart), { ssr: false })
@@ -23,14 +24,13 @@ interface FiveElementsChartProps {
   className?: string
 }
 
-// 오행 정보
-// 오행 정보 (Updated for better visibility)
+// 오행 정보 — 색은 오행색 정본(saju.ts WU_XING_COLORS)에서만 가져온다
 const ELEMENTS = {
-  Wood: { name: '목(木)', color: '#22c55e', bgColor: 'bg-green-500/10', textColor: 'text-green-500' }, // Green-500
-  Fire: { name: '화(火)', color: '#ef4444', bgColor: 'bg-red-500/10', textColor: 'text-red-500' }, // Red-500
-  Earth: { name: '토(土)', color: '#eab308', bgColor: 'bg-yellow-500/10', textColor: 'text-yellow-500' }, // Yellow-500
-  Metal: { name: '금(金)', color: '#94a3b8', bgColor: 'bg-slate-400/10', textColor: 'text-slate-400' }, // Slate-400 (Metal)
-  Water: { name: '수(水)', color: '#3b82f6', bgColor: 'bg-blue-500/10', textColor: 'text-blue-500' }, // Blue-500
+  Wood: { name: '목(木)', color: WU_XING_COLORS['木'] },
+  Fire: { name: '화(火)', color: WU_XING_COLORS['火'] },
+  Earth: { name: '토(土)', color: WU_XING_COLORS['土'] },
+  Metal: { name: '금(金)', color: WU_XING_COLORS['金'] },
+  Water: { name: '수(水)', color: WU_XING_COLORS['水'] },
 }
 
 /** 레이더 차트 한 꼭짓점 — 오행 하나의 분포 */
@@ -157,7 +157,7 @@ export function FiveElementsChart({ manse, className }: FiveElementsChartProps) 
               transition={{ delay: idx * 0.1 }}
               className="flex flex-col items-center gap-1 p-3 rounded-sm border border-zen-border hover:shadow-md transition-shadow"
             >
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+              <div className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: item.color }} />
               <span className="text-xs font-bold text-zen-text">{item.element}</span>
               <span className="text-[10px] text-zen-muted">{item.count}/8</span>
             </motion.div>

@@ -68,10 +68,10 @@ interface CompatibilityResultProps {
 }
 
 function getAssessmentColor(assessment: string): string {
-  if (assessment === '좋은 궁합') return 'bg-seal text-red-50'
-  if (assessment === '보통 궁합') return 'bg-gold-500 text-yellow-50'
+  if (assessment === '좋은 궁합') return 'bg-seal text-ink-light'
+  if (assessment === '보통 궁합') return 'bg-gold-500 text-ink-900'
   if (assessment === '어려운 궁합') return 'bg-warning text-ink-900'
-  return 'bg-error text-red-50'
+  return 'bg-error text-ink-light'
 }
 
 function getAssessmentBorderColor(assessment: string): string {
