@@ -214,7 +214,7 @@ function ErrorState({ message }: { message: string }) {
       <header className="w-full max-w-[480px] mx-auto p-6 flex justify-center border-b border-primary/10">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/logo.png"
+            src="/logo-new.png"
             alt="청담 해화당"
             width={120}
             height={40}
@@ -349,7 +349,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
       <header className="w-full max-w-[480px] px-6 py-4 flex justify-between items-center sticky top-0 bg-background/90 backdrop-blur-md z-50 border-b border-primary/10">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/logo.png"
+            src="/logo-new.png"
             alt="청담 해화당"
             width={110}
             height={36}
