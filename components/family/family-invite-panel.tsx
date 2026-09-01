@@ -126,7 +126,7 @@ export function FamilyInvitePanel({ members, invites, linkedMemberIds }: FamilyI
                 </span>
 
                 {isLinked ? (
-                  <span className="flex shrink-0 items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+                  <span className="flex shrink-0 items-center gap-1 rounded-full border border-success/30 bg-success/10 px-2 py-0.5 text-[10px] text-success-text">
                     <ShieldCheck className="h-3 w-3" strokeWidth={2} />
                     연결
                   </span>

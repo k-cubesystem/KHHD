@@ -44,10 +44,10 @@ export default function CompatibilityMatrixPage() {
   }
 
   const getScoreColor = (score: number): string => {
-    if (score >= 90) return 'bg-green-500/80'
+    if (score >= 90) return 'bg-seal/80'
     if (score >= 70) return 'bg-primary/80'
-    if (score >= 50) return 'bg-yellow-500/80'
-    return 'bg-red-500/80'
+    if (score >= 50) return 'bg-gold-500/80'
+    return 'bg-error/80'
   }
 
   const getScoreText = (score: number): string => {
@@ -69,12 +69,8 @@ export default function CompatibilityMatrixPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
         <Heart className="w-16 h-16 text-primary/50 mb-4" />
-        <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">
-          가족 구성원이 부족합니다
-        </h2>
-        <p className="text-ink-light/60 mb-6">
-          궁합 매트릭스를 보려면 최소 2명의 구성원이 필요합니다.
-        </p>
+        <h2 className="text-2xl font-serif font-bold text-ink-light mb-2">가족 구성원이 부족합니다</h2>
+        <p className="text-ink-light/60 mb-6">궁합 매트릭스를 보려면 최소 2명의 구성원이 필요합니다.</p>
         <Link
           href="/protected/family"
           className="px-6 py-3 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-all"
@@ -95,24 +91,16 @@ export default function CompatibilityMatrixPage() {
       <motion.section variants={fadeInUp} className="space-y-4 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-surface/50 border border-primary/20 mb-2">
           <Heart className="w-4 h-4 text-primary" />
-          <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">
-            Family Compatibility
-          </span>
+          <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">Family Compatibility</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-serif font-bold text-ink-light">
-          가족 궁합 매트릭스
-        </h1>
-        <p className="text-ink-light/70 max-w-2xl mx-auto">
-          가족 구성원 간의 궁합을 한눈에 확인하세요
-        </p>
+        <h1 className="text-4xl md:text-5xl font-serif font-bold text-ink-light">가족 궁합 매트릭스</h1>
+        <p className="text-ink-light/70 max-w-2xl mx-auto">가족 구성원 간의 궁합을 한눈에 확인하세요</p>
       </motion.section>
 
       <motion.div variants={fadeInUp}>
         <Card className="bg-surface/50 backdrop-blur-md border border-primary/20 overflow-x-auto">
           <CardHeader>
-            <CardTitle className="text-xl font-serif font-bold text-ink-light">
-              궁합 점수 매트릭스
-            </CardTitle>
+            <CardTitle className="text-xl font-serif font-bold text-ink-light">궁합 점수 매트릭스</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="min-w-[600px]">
@@ -123,10 +111,7 @@ export default function CompatibilityMatrixPage() {
               >
                 <div></div>
                 {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="text-center font-serif text-sm font-bold text-primary truncate"
-                  >
+                  <div key={member.id} className="text-center font-serif text-sm font-bold text-primary truncate">
                     {member.name}
                   </div>
                 ))}
@@ -180,7 +165,7 @@ export default function CompatibilityMatrixPage() {
             {/* Legend */}
             <div className="mt-6 pt-6 border-t border-primary/10 flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-green-500/80" />
+                <div className="w-8 h-8 rounded bg-seal/80" />
                 <span className="text-sm text-ink-light">90-100점: 매우 좋음</span>
               </div>
               <div className="flex items-center gap-2">
@@ -188,11 +173,11 @@ export default function CompatibilityMatrixPage() {
                 <span className="text-sm text-ink-light">70-89점: 좋음</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-yellow-500/80" />
+                <div className="w-8 h-8 rounded bg-gold-500/80" />
                 <span className="text-sm text-ink-light">50-69점: 보통</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-red-500/80" />
+                <div className="w-8 h-8 rounded bg-error/80" />
                 <span className="text-sm text-ink-light">0-49점: 주의</span>
               </div>
             </div>
@@ -210,13 +195,9 @@ export default function CompatibilityMatrixPage() {
             <div className="space-y-6">
               <div className="text-center">
                 <div className="flex items-center justify-center gap-3 mb-4">
-                  <span className="text-xl font-serif font-bold text-ink-light">
-                    {selectedPair.person1}
-                  </span>
+                  <span className="text-xl font-serif font-bold text-ink-light">{selectedPair.person1}</span>
                   <Heart className="w-6 h-6 text-primary" />
-                  <span className="text-xl font-serif font-bold text-ink-light">
-                    {selectedPair.person2}
-                  </span>
+                  <span className="text-xl font-serif font-bold text-ink-light">{selectedPair.person2}</span>
                 </div>
                 <div className="text-sm text-ink-light/60">{selectedPair.relation}</div>
               </div>
@@ -239,9 +220,7 @@ export default function CompatibilityMatrixPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-ink-light mb-2">조언</h4>
-                  <p className="text-sm text-ink-light/70">
-                    함께 시간을 보내며 유대감을 강화하세요.
-                  </p>
+                  <p className="text-sm text-ink-light/70">함께 시간을 보내며 유대감을 강화하세요.</p>
                 </div>
               </div>
 

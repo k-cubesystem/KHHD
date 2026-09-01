@@ -164,7 +164,7 @@ export function ProtectedHeader({ user }: { user: HeaderUser | null }) {
 
               <DropdownMenuItem
                 onClick={handleSignOut}
-                className="cursor-pointer flex items-center gap-3 p-3 rounded-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                className="cursor-pointer flex items-center gap-3 p-3 rounded-sm text-error hover:bg-error/10 hover:text-error-text transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 <span className="text-sm font-bold">로그아웃</span>

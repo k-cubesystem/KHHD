@@ -165,7 +165,7 @@ function SlotTile({
         </button>
       )}
 
-      {error && <p className="mt-1 text-[10px] text-red-400 text-center font-sans">{error}</p>}
+      {error && <p className="mt-1 text-[10px] text-error-text text-center font-sans">{error}</p>}
     </div>
   )
 }

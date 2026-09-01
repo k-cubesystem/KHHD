@@ -52,7 +52,7 @@ export const BottomNav = memo(function BottomNav() {
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.label}
               className={cn(
-                'flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-all text-stone-500 hover:text-stone-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background rounded-lg',
+                'flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-all text-ink-light/45 hover:text-ink-light/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background rounded-lg',
                 isActive && 'text-gold-500'
               )}
             >

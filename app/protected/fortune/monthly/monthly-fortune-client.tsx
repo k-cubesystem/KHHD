@@ -19,10 +19,10 @@ const AREA_ICONS = {
 }
 
 const AREA_COLORS = {
-  재물운: 'text-yellow-400',
-  애정운: 'text-pink-400',
-  건강운: 'text-green-400',
-  직업운: 'text-blue-400',
+  재물운: 'text-gold-antique',
+  애정운: 'text-obangsaek-red',
+  건강운: 'text-bok-sprout',
+  직업운: 'text-info-text',
 }
 
 interface Props {
@@ -149,9 +149,9 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
                             variant="outline"
                             className={`ml-auto font-light text-xs ${
                               area.outlook === '좋음'
-                                ? 'text-emerald-400 border-emerald-400/30'
+                                ? 'text-success-text border-success/30'
                                 : area.outlook === '주의'
-                                  ? 'text-orange-400 border-orange-400/30'
+                                  ? 'text-warning-text border-warning/30'
                                   : 'text-primary border-primary/30'
                             }`}
                           >
@@ -171,15 +171,17 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Card className="bg-surface/20 border-white/5">
               <CardContent className="p-4 space-y-3">
-                <h3 className="text-caption font-light text-ink-light/50 uppercase tracking-widest">이달의 행운 키워드</h3>
+                <h3 className="text-caption font-light text-ink-light/50 uppercase tracking-widest">
+                  이달의 행운 키워드
+                </h3>
                 <div className="flex gap-2 flex-wrap">
-                  <Badge className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20 font-light">
+                  <Badge className="bg-gold-500/10 text-gold-300 border-gold-500/20 font-light">
                     행운의 색 {data.lucky.color}
                   </Badge>
-                  <Badge className="bg-blue-400/10 text-blue-400 border-blue-400/20 font-light">
+                  <Badge className="bg-obangsaek-blue/20 text-info-text border-obangsaek-blue/40 font-light">
                     길한 방향 {data.lucky.direction}
                   </Badge>
-                  <Badge className="bg-purple-400/10 text-purple-400 border-purple-400/20 font-light">
+                  <Badge className="bg-gold-antique/10 text-gold-antique border-gold-antique/25 font-light">
                     행운의 숫자 {data.lucky.number}
                   </Badge>
                 </div>
@@ -194,9 +196,9 @@ export function MonthlyFortuneClient({ data, cached }: Props) {
 
           {/* 주의사항 */}
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-            <Card className="bg-yellow-400/5 border-yellow-400/20">
+            <Card className="bg-warning/5 border-warning/20">
               <CardContent className="p-4 flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" strokeWidth={1} />
+                <AlertCircle className="w-4 h-4 text-warning-text flex-shrink-0 mt-0.5" strokeWidth={1} />
                 <p className="text-xs text-ink-light/70 font-light leading-relaxed">{data.caution}</p>
               </CardContent>
             </Card>

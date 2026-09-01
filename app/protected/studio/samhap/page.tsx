@@ -379,7 +379,7 @@ function SamhapCheck({
               )}
               <span className="text-sm font-bold text-gold-500 font-serif">종합 {SAMHAP_COST}만냥</span>
               {SAMHAP_DISCOUNT_PCT > 0 && (
-                <span className="text-[10px] font-bold text-red-200 bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
+                <span className="text-[10px] font-bold text-ink-primary bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
                   {SAMHAP_DISCOUNT_PCT}% 할인
                 </span>
               )}
@@ -430,7 +430,7 @@ function SamhapCheck({
             <p className="text-[11px] font-sans">
               <span className="text-white/30 line-through">개별 4가지 합 {INDIVIDUAL_TOTAL}만냥</span>{' '}
               <span className="text-gold-400 font-bold">→ 종합 {SAMHAP_COST}만냥</span>{' '}
-              <span className="text-[10px] font-bold text-red-200 bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
+              <span className="text-[10px] font-bold text-ink-primary bg-seal/25 border border-seal/50 rounded-full px-2 py-0.5">
                 {SAMHAP_DISCOUNT_PCT}% 할인
               </span>
             </p>

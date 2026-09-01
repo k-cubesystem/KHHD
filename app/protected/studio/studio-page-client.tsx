@@ -18,7 +18,7 @@ const SERVICES = [
     cost: FEATURE_COST.palm.display,
     desc: '내 손안에 쥐고 있던 재물과 생명의 지도를 읽어드립니다. 놓치고 있던 타고난 재능을 발견하세요.',
     tags: ['재물운', '생명선', '숨겨진재능'],
-    gradient: 'from-emerald-950/40 to-transparent',
+    gradient: 'from-bok-sprout/15 to-transparent',
     accent: 'rgba(74,222,128,0.06)',
   },
   {
@@ -31,7 +31,7 @@ const SERVICES = [
     cost: FEATURE_COST.face.display,
     desc: '성공하는 사람들의 얼굴에는 공통점이 있습니다. 당신의 부와 명예를 부르는 징조를 찾아보세요.',
     tags: ['성공운', '인복', '리더십'],
-    gradient: 'from-amber-950/40 to-transparent',
+    gradient: 'from-gold-700/25 to-transparent',
     accent: 'rgba(251,191,36,0.06)',
   },
   {
@@ -44,7 +44,7 @@ const SERVICES = [
     cost: FEATURE_COST.fengshui.display,
     desc: '머무는 곳이 당신의 기운을 결정합니다. 나쁜 기운은 막고 좋은 기운을 부르는 공간의 비밀.',
     tags: ['가구배치', '양택풍수', '기운전환'],
-    gradient: 'from-blue-950/40 to-transparent',
+    gradient: 'from-obangsaek-blue/25 to-transparent',
     accent: 'rgba(96,165,250,0.06)',
   },
   {
@@ -59,7 +59,7 @@ const SERVICES = [
     // 「四柱」→「사주」: 화면에 한자를 쓰지 않는다(CEO 상시 지시 — 한글, 필요시 괄호).
     // 🔴 이 한 줄은 사주·종합 통합 되돌리기의 대상이 **아니다**. 되돌린 것은 기능 통합뿐이다.
     tags: ['종합운', '사주 종합', '프리미엄'],
-    gradient: 'from-amber-950/40 to-transparent',
+    gradient: 'from-gold-antique/15 to-transparent',
     accent: 'rgba(201,168,76,0.08)',
   },
 ]

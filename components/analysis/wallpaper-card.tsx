@@ -333,7 +333,7 @@ export function WallpaperGrid({ status }: { status: WallpaperStatus }) {
       )}
 
       {errorMsg && (
-        <p role="alert" className="text-[11px] font-light text-red-300/85" style={{ wordBreak: 'keep-all' }}>
+        <p role="alert" className="text-[11px] font-light text-error-text/85" style={{ wordBreak: 'keep-all' }}>
           {errorMsg}
         </p>
       )}

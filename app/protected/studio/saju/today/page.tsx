@@ -85,15 +85,15 @@ export default function TodayFortunePage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <p className="text-xs text-ink-light/50">재물운</p>
-                    <p className="text-lg font-serif text-amber-400">★★★</p>
+                    <p className="text-lg font-serif text-gold-antique">★★★</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-ink-light/50">애정운</p>
-                    <p className="text-lg font-serif text-rose-400">★★★★</p>
+                    <p className="text-lg font-serif text-obangsaek-red">★★★★</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-ink-light/50">건강운</p>
-                    <p className="text-lg font-serif text-emerald-400">★★★</p>
+                    <p className="text-lg font-serif text-bok-sprout">★★★</p>
                   </div>
                 </div>
               </div>

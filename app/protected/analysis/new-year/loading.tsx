@@ -13,18 +13,18 @@ export default function NewYearLoading() {
         {/* Rotating Rings (CSS Animation) */}
         <div className="relative w-64 h-64 flex items-center justify-center">
           <div
-            className="absolute inset-0 border border-dashed border-red-500/20 rounded-full animate-spin-slow opacity-50"
+            className="absolute inset-0 border border-dashed border-seal/30 rounded-full animate-spin-slow opacity-50"
             style={{ animationDuration: '15s' }}
           />
           <div
             className="absolute inset-4 border border-dotted border-primary/30 rounded-full animate-spin-reverse-slow opacity-50"
             style={{ animationDuration: '12s' }}
           />
-          <div className="absolute inset-0 bg-red-900/5 blur-3xl rounded-full" />
+          <div className="absolute inset-0 bg-seal/5 blur-3xl rounded-full" />
 
           {/* Center Icon */}
-          <div className="relative z-20 w-24 h-24 bg-gradient-to-b from-red-900/40 to-black rounded-full flex items-center justify-center border border-red-500/30 shadow-[0_0_40px_rgba(220,38,38,0.25)]">
-            <Flame className="w-10 h-10 text-red-500 animate-pulse" />
+          <div className="relative z-20 w-24 h-24 bg-gradient-to-b from-seal/40 to-black rounded-full flex items-center justify-center border border-seal/40 shadow-[0_0_40px_rgba(220,38,38,0.25)]">
+            <Flame className="w-10 h-10 text-obangsaek-red animate-pulse" />
           </div>
         </div>
 

@@ -771,7 +771,7 @@ function RoomRecommendationCard({ room, index }: { room: RoomRecommendation; ind
           <span className="text-[10px] text-white/30">{expanded ? '▲' : '▼'}</span>
         </div>
         {room.chiFlow && <p className="text-xs text-white/40 mt-1.5 font-sans font-light">{room.chiFlow}</p>}
-        {room.mainIssue && <p className="text-xs text-amber-400/60 mt-1 font-sans font-light">▸ {room.mainIssue}</p>}
+        {room.mainIssue && <p className="text-xs text-warning-text/60 mt-1 font-sans font-light">▸ {room.mainIssue}</p>}
       </button>
       <AnimatePresence>
         {expanded && (room.improvements.length > 0 || room.luckyItems.length > 0) && (

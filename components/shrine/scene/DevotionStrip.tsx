@@ -34,7 +34,7 @@ function RewardBadge({ status }: { status: DevotionRewardStatus['status'] }) {
     )
   if (status === 'owned')
     return (
-      <span className="flex items-center gap-1 text-[10px] text-emerald-300/80">
+      <span className="flex items-center gap-1 text-[10px] text-success-text/80">
         <Check className="h-3 w-3" /> 보유 중
       </span>
     )

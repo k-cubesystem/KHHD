@@ -16,7 +16,7 @@ export default function HistoryError({ error, reset }: { error: Error & { digest
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-md text-center space-y-4">
         <div className="text-5xl mb-2">📜</div>
-        <h2 className="text-lg font-bold text-amber-200">{t('historyError')}</h2>
+        <h2 className="text-lg font-bold text-error-text">{t('historyError')}</h2>
         <p className="text-sm text-ink-light/70">{t('unknownDesc')}</p>
 
         {/* 🔴 오류를 숨기지 않는다. 프로덕션은 메시지를 가리고 digest 만 주는데, 그 값이 있어야
@@ -24,9 +24,7 @@ export default function HistoryError({ error, reset }: { error: Error & { digest
         <details className="mx-auto max-w-sm text-left">
           <summary className="cursor-pointer text-[11px] text-ink-light/40">문제 정보 보기</summary>
           <div className="mt-2 space-y-1 rounded-lg border border-white/10 bg-black/30 p-3">
-            {error.digest && (
-              <p className="break-all font-mono text-[10px] text-amber-300/80">digest: {error.digest}</p>
-            )}
+            {error.digest && <p className="break-all font-mono text-[10px] text-gold-300/80">digest: {error.digest}</p>}
             <p className="break-all font-mono text-[10px] text-ink-light/60">{error.message || '메시지 없음'}</p>
             <button
               type="button"
@@ -42,7 +40,7 @@ export default function HistoryError({ error, reset }: { error: Error & { digest
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-medium text-ink-900 transition-colors hover:bg-gold-600"
           >
             <RefreshCw className="w-4 h-4" />
             {t('retry')}

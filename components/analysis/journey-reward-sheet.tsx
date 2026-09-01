@@ -120,7 +120,7 @@ export function JourneyRewardSheet({ open, onOpenChange, onClaimed }: JourneyRew
               onSelect={setSelected}
             />
 
-            {errorMsg && <p className="text-[12px] text-red-400/90">{errorMsg}</p>}
+            {errorMsg && <p className="text-[12px] text-error-text/90">{errorMsg}</p>}
 
             <button
               onClick={claim}

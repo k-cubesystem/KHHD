@@ -354,7 +354,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
                 <Input
                   value={extraData.zipcode}
                   placeholder="우편번호"
-                  className="w-24 border-zen-border bg-gray-50"
+                  className="w-24 border-zen-border bg-white/[0.06]"
                   readOnly
                 />
                 <Button
@@ -369,7 +369,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
               <Input
                 value={extraData.address}
                 placeholder="기본 주소"
-                className="border-zen-border bg-gray-50"
+                className="border-zen-border bg-white/[0.06]"
                 readOnly
               />
               <Input
@@ -693,7 +693,7 @@ export function ProfileEditForm({ userId, initialData, profileData }: ProfileEdi
           <DialogHeader>
             <DialogTitle>주소 검색</DialogTitle>
           </DialogHeader>
-          <div className="h-[400px] w-full border border-gray-200 rounded">
+          <div className="h-[400px] w-full border border-white/15 rounded">
             <DaumPostcodeEmbed onComplete={handleAddressComplete} style={{ height: '100%' }} autoClose={false} />
           </div>
         </DialogContent>

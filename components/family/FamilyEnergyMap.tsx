@@ -8,11 +8,7 @@ import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
 import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-react'
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
-import {
-  buildEnergyMap,
-  type EnergyMapEntry,
-  type FamilyEnergyMap as MapData,
-} from '@/lib/domain/shrine/energy-map'
+import { buildEnergyMap, type EnergyMapEntry, type FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 
 /** 오행이 무엇인지 처음 보는 사람을 위한 접이식 설명 — saju-knowledge-graph 오행 노드 재사용. */
@@ -231,7 +227,7 @@ export function FamilyEnergyMapView({ data }: { data: MapData }) {
           })}
         </div>
         {chosen.length < 2 && (
-          <p className="text-[11px] text-amber-400/70">두 사람 이상 골라야 견줄 수 있어 전체를 보여 드립니다.</p>
+          <p className="text-[11px] text-warning-text/70">두 사람 이상 골라야 견줄 수 있어 전체를 보여 드립니다.</p>
         )}
         {acquaintances.length === 0 && (
           <p className="text-[11px] font-light text-ink-light/35">지인을 등록하면 여기서 함께 견줄 수 있습니다.</p>
