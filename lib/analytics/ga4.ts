@@ -68,6 +68,17 @@ export const GA = {
     trackEvent({ action: 'checkout_start', category: 'funnel', label: plan, value }),
   checkoutFail: (plan: string, reason: string) =>
     trackEvent({ action: 'checkout_fail', category: 'funnel', label: `${plan}:${reason}` }),
+  /**
+   * 주문 확인 화면에서 실제로 결제 버튼을 누른 순간.
+   *
+   * checkout_start(퍼널 6단계)와 나눠 둔다 — 심사 대응으로 상품 카드와 결제창 사이에
+   * 확인·동의 화면을 하나 끼워 넣었는데, 양쪽을 같은 이벤트로 찍으면 그 화면에서
+   * 몇 명이 떨어지는지 볼 수가 없다. 퍼널 step 번호는 「끝에만 추가」 규칙(funnel.ts)이
+   * 있어 6과 7 사이에 끼울 수 없으므로, 퍼널 밖 GA 이벤트로 둔다.
+   * 확인 화면 통과율 = checkout_pay_click / checkout_start.
+   */
+  checkoutPayClick: (plan: string, value: number) =>
+    trackEvent({ action: 'checkout_pay_click', category: 'funnel', label: plan, value }),
 
   // ── 결제 도우미 — 상점의 «복채 vs 멤버십» 안내 모달.
   //    open 의 label 은 auto(첫 진입 자동) / manual(«결제 안내» 버튼) — 자동 노출이 실제로

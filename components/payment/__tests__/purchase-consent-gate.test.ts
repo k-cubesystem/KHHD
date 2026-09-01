@@ -48,14 +48,32 @@ describe('🔴 복채도 주문 확인 화면을 거친다', () => {
    * 예전에는 상점 카드의 「충전하기」가 곧바로 토스 결제창을 열어, 심사가 요구하는
    * 구매과정이 통째로 비어 있었다.
    */
-  it('상점 카드는 결제창을 직접 열지 않고 주문 확인 화면으로 보낸다', () => {
+  /**
+   * 🔴 이 잠금은 «등장 순서»를 재지 않는다.
+   *
+   * 2026-09-01 까지 여기는 `라우팅 위치 < 결제 호출 위치` 를 봤다. 그런데 실제 코드는
+   * 라우팅이 `if (plan.id)` 조건 안에 있고 결제 호출이 그 아래에 있었으므로,
+   * 「DB 를 못 읽으면 동의 없이 결제창 직행」이라는 우회로가 살아 있는 채로 통과했다.
+   * 합격선이 결함과 무관한 것을 재던, 이 저장소가 이미 한 번 겪은 측정 설계 결함이다.
+   *
+   * 지금은 조건을 그대로 잰다 — 이 화면에는 결제창을 여는 코드가 **없어야 한다**.
+   */
+  it('상점 카드는 결제창을 열 수 있는 코드를 아예 갖지 않는다', () => {
     const source = read('components/membership/talisman-purchase-section.tsx')
 
     expect(source).toContain('/protected/store/checkout?pack=')
-    // 라우팅이 차감·결제보다 먼저 일어나야 한다.
-    const routeAt = source.indexOf('/protected/store/checkout?pack=')
-    const payAt = source.indexOf('payment.requestPayment')
-    expect(`라우팅이 결제 호출보다 앞: ${routeAt < payAt}`).toBe('라우팅이 결제 호출보다 앞: true')
+    for (const forbidden of ['requestPayment', 'getTossPaymentsSDK', 'successUrl']) {
+      expect(`${forbidden} 없음: ${!source.includes(forbidden)}`).toBe(`${forbidden} 없음: true`)
+    }
+  })
+
+  it('상품 정보를 못 읽으면 결제로 넘기지 않고 멈춘다', () => {
+    const source = read('components/membership/talisman-purchase-section.tsx')
+
+    // 폴백 상수에는 DB id 가 없다. id 없는 상품은 주문 확인 화면을 만들 수 없으므로
+    // 「그냥 결제」로 떨어뜨리는 대신 사용자에게 알리고 멈춰야 한다.
+    expect(/if\s*\(\s*!plan\.id\s*\)/.test(source)).toBe(true)
+    expect(source).toContain('plans_unavailable')
   })
 
   it('주문 확인 화면은 금액을 서버에서 다시 읽는다 (화면 값을 믿지 않는다)', () => {
