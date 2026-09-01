@@ -13,6 +13,7 @@ import { ADSENSE_CLIENT, isLiveAdEnvironment } from '@/lib/domain/ads/adsense'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
+import { getSiteUrl } from '@/lib/utils/site-url'
 import './globals.css'
 
 const notoSans = Noto_Sans_KR({
@@ -42,7 +43,10 @@ const playfair = Playfair_Display({
   subsets: ['latin'],
 })
 
-const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+// metadataBase 는 반드시 «정본 도메인»이어야 한다. VERCEL_URL 은 배포마다 바뀌는 호스트이고
+// 배포 보호(deployment protection)가 걸려 있어 소셜 크롤러에게 302 를 돌려준다 —
+// og:image 가 그 주소로 나가면 카카오톡·페북 공유 미리보기가 통째로 빈칸이 된다(2026-09-01 라이브 실사고).
+const defaultUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
