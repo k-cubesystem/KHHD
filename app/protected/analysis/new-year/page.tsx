@@ -43,29 +43,16 @@ function ArtifactCard({
   title,
   outlook,
   content,
-  variant = 'default',
   delay = 0,
 }: {
   icon: React.ElementType
   title: string
   outlook: string
   content: string
-  variant?: 'default' | 'gold' | 'red' | 'blue' | 'green'
   delay?: number
 }) {
   // 네 기둥은 «색색 프레임»이 아니라 같은 차분한 액자를 쓴다 — 뜻을 나르는 색은 우측
   // 전망 배지(좋음·보통·주의) 하나뿐이고, 카드 자체는 골드 위계로 통일한다.
-  // 형태 계약: `colorClass.split(' ')` 의 [0]=글자 [1]=테두리 [2]=배경 (아래 참조 순서)
-  const CALM_FRAME = 'text-gold-300 border-white/10 bg-surface/40'
-  const colors = {
-    default: CALM_FRAME,
-    gold: CALM_FRAME,
-    red: CALM_FRAME,
-    blue: CALM_FRAME,
-    green: CALM_FRAME,
-  }
-
-  const colorClass = colors[variant]
   const outlookStyle = getOutlookStyle(outlook)
 
   return (
@@ -74,12 +61,12 @@ function ArtifactCard({
         initial: { opacity: 0, y: 20 },
         animate: { opacity: 1, y: 0, transition: { delay } },
       }}
-      className={`relative overflow-hidden rounded-2xl border p-5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] ${colorClass.split(' ')[1]} ${colorClass.split(' ')[2]}`}
+      className="relative overflow-hidden rounded-2xl border p-5 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] border-white/10 bg-surface/40"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg bg-black/20 ${colorClass.split(' ')[1]} border`}>
-            <Icon className={`w-4 h-4 ${colorClass.split(' ')[0]}`} />
+          <div className="p-2 rounded-lg bg-black/20 border-white/10 border">
+            <Icon className="w-4 h-4 text-gold-300" />
           </div>
           <h4 className="font-serif font-medium text-ink-light tracking-wide">{title}</h4>
         </div>
@@ -464,7 +451,6 @@ function NewYear2026Content() {
                   title="재물운"
                   outlook={fortune.areas.wealth.outlook}
                   content={fortune.areas.wealth.content}
-                  variant="gold"
                   delay={0.1}
                 />
                 <ArtifactCard
@@ -472,7 +458,6 @@ function NewYear2026Content() {
                   title="직업운"
                   outlook={fortune.areas.career.outlook}
                   content={fortune.areas.career.content}
-                  variant="blue"
                   delay={0.2}
                 />
                 <ArtifactCard
@@ -480,7 +465,6 @@ function NewYear2026Content() {
                   title="애정운"
                   outlook={fortune.areas.love.outlook}
                   content={fortune.areas.love.content}
-                  variant="red"
                   delay={0.3}
                 />
                 <ArtifactCard
@@ -488,7 +472,6 @@ function NewYear2026Content() {
                   title="건강운"
                   outlook={fortune.areas.health.outlook}
                   content={fortune.areas.health.content}
-                  variant="green"
                   delay={0.4}
                 />
               </div>
