@@ -21,7 +21,7 @@ import {
   type FengshuiSubjectType,
 } from '@/app/actions/ai/image'
 import { getSlotSpec, isWithinUploadBudget } from '@/lib/domain/analysis/fengshui-slots'
-import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { saveAnalysisSession } from '@/app/actions/core/sessions'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
@@ -170,19 +170,9 @@ function FengShuiAnalysisPageContent() {
     setStep('analyzing')
 
     try {
-      const deductResult = await deductTalisman('FENGSHUI', FENGSHUI_COST)
-      if (!deductResult.success) {
-        setLoading(false)
-        setStep('upload')
-        const handled = handleDeductResult(deductResult, {
-          currentBalance: balance ?? 0,
-          requiredAmount: FENGSHUI_COST,
-          featureLabel: '풍수 분석',
-        })
-        if (!handled) toast.error(deductResult.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
-        return
-      }
-
+      // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서 빠진다 — 화면이 차감하던 종전 구조에서는
+      //    액션을 브라우저에서 직접 부르면 공짜였다. 실패 시 되돌리는 것도 액션이 한다
+      //    (화면이 환급을 부르면 그 자체가 「결과 받고 환급」 어뷰즈 경로가 된다).
       // roomType 자리에 대표 슬롯 라벨을 넣어 프롬프트 문맥을 맞춘다(하위호환)
       const roomTypeForAnalysis = primaryImageLabel
 
@@ -197,19 +187,19 @@ function FengShuiAnalysisPageContent() {
       )
 
       if (!result.success) {
-        const refund = await refundStudioCost('FENGSHUI')
         setLoading(false)
         setStep('upload')
-        toast.error(
-          refund.refunded
-            ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
-            : result.error || '분석 중 오류가 발생했습니다.'
-        )
+        const handled = handleDeductResult(result, {
+          currentBalance: balance ?? 0,
+          requiredAmount: FENGSHUI_COST,
+          featureLabel: '풍수 분석',
+        })
+        if (!handled) toast.error(result.error || '분석 중 오류가 발생했습니다.')
         return
       }
 
       setAnalysisResult(result)
-      if (deductResult.remainingBalance !== undefined) setBalance(deductResult.remainingBalance)
+      void getWalletBalance().then(setBalance)
 
       if (targetId) {
         await saveAnalysisSession({
@@ -236,12 +226,10 @@ function FengShuiAnalysisPageContent() {
       setStep('result')
     } catch (error) {
       logger.error('Feng shui analysis error:', error)
-      const refund = await refundStudioCost('FENGSHUI').catch(() => ({ refunded: false }))
-      toast.error(
-        refund.refunded
-          ? '복채는 돌려드렸습니다. 잠시 후 다시 시도해주세요.'
-          : '분석 중 예상치 못한 오류가 발생했습니다.'
-      )
+      // 🔴 여기서 환급을 부르지 않는다. 이 catch 는 «액션이 성공을 돌려준 뒤» 화면 쪽에서
+      //    터진 경우(기록 저장 실패 등)까지 잡는데, 그때 환급을 부르면 결과는 받고 돈은
+      //    돌려받는 경로가 된다. 풀이가 실제로 실패했으면 액션이 자기 안에서 되돌린다.
+      toast.error('분석 중 예상치 못한 오류가 발생했습니다.')
       setStep('upload')
     } finally {
       setLoading(false)

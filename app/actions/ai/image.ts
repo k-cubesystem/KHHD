@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
+import { chargeFeature } from '@/lib/services/feature-charge'
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/lib/services/bok-grant'
 import { getPromptByKey } from '@/lib/ai/prompt-loader'
@@ -309,6 +310,8 @@ export interface FaceAnalysisResult {
   firstImpression?: string // 첫인상 한줄 요약
   improvementTips?: FaceImprovementTip[] // 관상 개운법
   error?: string
+  /** 복채 부족·일일 한도 등 차감 실패 종류. 화면의 「복채가 부족해요」 모달이 이 값으로 뜬다. */
+  errorType?: string
 }
 
 export interface PalmAgeTimeline {
@@ -378,6 +381,8 @@ export interface PalmAnalysisResult {
   /** 개운 처방 — 엔진 결정론 값(AI 토큰 0). */
   remedy?: import('@/lib/domain/remedy/remedy').RemedySet
   error?: string
+  /** 복채 부족·일일 한도 등 차감 실패 종류. 화면의 「복채가 부족해요」 모달이 이 값으로 뜬다. */
+  errorType?: string
 }
 
 export interface DirectionAnalysis {
@@ -428,6 +433,8 @@ export interface InteriorAnalysisResult {
   spaceScore?: SpaceScore // 공간 점수 (현재/잠재력)
   quickFixes?: string[] // 즉시 실행 가능한 개선안 3가지
   error?: string
+  /** 복채 부족·일일 한도 등 차감 실패 종류. 화면의 「복채가 부족해요」 모달이 이 값으로 뜬다. */
+  errorType?: string
 }
 
 // 1. Face Destiny Hacking - 관상 분석 및 개선 프롬프트 생성
@@ -440,8 +447,30 @@ export async function analyzeFaceForDestiny(
   const imageGuard = guardUploadedImages('analyzeFaceForDestiny', [imageBase64])
   if (imageGuard) return { success: false, error: imageGuard }
 
+  // 🔴 복채 차감은 **여기**가 유일한 지점이다. 엣지 분기보다 앞에 둔다.
+  //
+  // 2026-09-01 까지 이 액션에는 인증도 과금도 없었다. 화면(스튜디오)이 차감한 뒤 불렀는데,
+  // 'use server' export 는 공개 엔드포인트라 브라우저에서 직접 부르면 유료 풀이가 공짜였다.
+  // 엣지 사본(supabase/functions/ai-image)에는 차감 코드가 없으므로 분기 앞에서 받아야 한다.
+  const chargeClient = await createClient()
+  const {
+    data: { user: chargeUser },
+  } = await chargeClient.auth.getUser()
+  if (!chargeUser) return { success: false, error: '로그인이 필요합니다.' }
+
+  const charge = await chargeFeature({
+    userId: chargeUser.id,
+    featureKey: 'FACE',
+    costKey: 'face',
+    label: '관상 풀이',
+  })
+  if (!charge.ok) return charge.failure
+  const refundOnFailure = charge.refundOnFailure
+
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzeFace', imageBase64, goal, sajuContext, target })
+    const edge = await invokeEdgeSafe('ai-image', { action: 'analyzeFace', imageBase64, goal, sajuContext, target })
+    if (!edge?.success) await refundOnFailure?.()
+    return edge
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const goalConfig = GOAL_PROMPTS[goal]
@@ -765,6 +794,7 @@ Style: Professional headshot, warm lighting, confident expression.`
     return faceResult
   } catch (error: unknown) {
     logger.error('Face Destiny Analysis Error:', error)
+    await refundOnFailure?.()
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,
@@ -850,8 +880,37 @@ export async function analyzeInteriorForFengshui(
   ])
   if (imageGuard) return { success: false, error: imageGuard }
 
+  // 🔴 복채 차감은 **여기**가 유일한 지점이다. 엣지 분기보다 앞에 둔다.
+  //
+  // 2026-09-01 까지 이 액션에는 인증도 과금도 없었다. 화면(스튜디오)이 차감한 뒤 불렀는데,
+  // 'use server' export 는 공개 엔드포인트라 브라우저에서 직접 부르면 유료 풀이가 공짜였다.
+  // 엣지 사본(supabase/functions/ai-image)에는 차감 코드가 없으므로 분기 앞에서 받아야 한다.
+  const chargeClient = await createClient()
+  const {
+    data: { user: chargeUser },
+  } = await chargeClient.auth.getUser()
+  if (!chargeUser) return { success: false, error: '로그인이 필요합니다.' }
+
+  const charge = await chargeFeature({
+    userId: chargeUser.id,
+    featureKey: 'FENGSHUI',
+    costKey: 'fengshui',
+    label: '풍수 풀이',
+  })
+  if (!charge.ok) return charge.failure
+  const refundOnFailure = charge.refundOnFailure
+
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzeFengshui', imageBase64, theme, roomType, target, options })
+    const edge = await invokeEdgeSafe('ai-image', {
+      action: 'analyzeFengshui',
+      imageBase64,
+      theme,
+      roomType,
+      target,
+      options,
+    })
+    if (!edge?.success) await refundOnFailure?.()
+    return edge
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
   const themeConfig = INTERIOR_THEMES[theme]
@@ -1162,6 +1221,7 @@ Warm, inviting atmosphere with ${theme === 'wealth' ? 'luxurious' : theme === 'r
     return fengshuiResult
   } catch (error: unknown) {
     logger.error('Interior Fengshui Analysis Error:', error)
+    await refundOnFailure?.()
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,
@@ -1180,8 +1240,30 @@ export async function analyzePalmReading(
   const imageGuard = guardUploadedImages('analyzePalmReading', [imageBase64])
   if (imageGuard) return { success: false, error: imageGuard }
 
+  // 🔴 복채 차감은 **여기**가 유일한 지점이다. 엣지 분기보다 앞에 둔다.
+  //
+  // 2026-09-01 까지 이 액션에는 인증도 과금도 없었다. 화면(스튜디오)이 차감한 뒤 불렀는데,
+  // 'use server' export 는 공개 엔드포인트라 브라우저에서 직접 부르면 유료 풀이가 공짜였다.
+  // 엣지 사본(supabase/functions/ai-image)에는 차감 코드가 없으므로 분기 앞에서 받아야 한다.
+  const chargeClient = await createClient()
+  const {
+    data: { user: chargeUser },
+  } = await chargeClient.auth.getUser()
+  if (!chargeUser) return { success: false, error: '로그인이 필요합니다.' }
+
+  const charge = await chargeFeature({
+    userId: chargeUser.id,
+    featureKey: 'HAND',
+    costKey: 'palm',
+    label: '손금 풀이',
+  })
+  if (!charge.ok) return charge.failure
+  const refundOnFailure = charge.refundOnFailure
+
   if (isEdgeEnabled('ai-image')) {
-    return invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, goal, sajuContext, target })
+    const edge = await invokeEdgeSafe('ai-image', { action: 'analyzePalm', imageBase64, goal, sajuContext, target })
+    if (!edge?.success) await refundOnFailure?.()
+    return edge
   }
   const model = genAI.getGenerativeModel({ model: MODEL_PRO })
 
@@ -1462,6 +1544,7 @@ export async function analyzePalmReading(
     return palmResult
   } catch (error: unknown) {
     logger.error('Palm Reading Analysis Error:', error)
+    await refundOnFailure?.()
     const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     return {
       success: false,

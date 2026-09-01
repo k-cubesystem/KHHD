@@ -15,6 +15,7 @@ import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/lib/services/bok-grant'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { chargeFeature } from '@/lib/services/feature-charge'
 
 /**
  * Gemini 고도화 시스템 프롬프트
@@ -88,6 +89,10 @@ export async function analyzeCheonjiinAction(
     return { success: false, error: '인증되지 않은 사용자입니다.' }
   }
 
+  // AI 가 실패하면 차감을 되돌린다. 차감 전 단계에서 나가면 null 이라 아무 일도 없다.
+  let refundOnFailure: (() => Promise<void>) | null = null
+  let chargedRemaining: number | undefined
+
   try {
     // 1. 대상 정보 조회 + 주소 병렬 조회
     const [target, workAddress] = await Promise.all([getDestinyTarget(targetId), getWorkAddress(user.id)])
@@ -133,6 +138,19 @@ export async function analyzeCheonjiinAction(
     if (checkOnly) {
       return { success: true, cached: false }
     }
+
+    // 2.5 복채 차감 — 🔴 **여기가 과금의 유일한 지점이다.**
+    //
+    // 2026-09-01 까지는 화면(saju-result-client)이 차감한 뒤 이 액션을 불렀다. 이 액션은
+    // 'use server' export = 공개 엔드포인트이므로, 브라우저에서 직접 부르면 차감 없이
+    // 유료 풀이가 나왔다. 화면을 잠가도 서버가 강제하지 않으면 게이트가 아니다.
+    //
+    // 캐시 확인 **뒤**에 둔 것도 의도다 — 캐시 적중은 새 연산이 아니라 과금하지 않는다.
+    // 종전에는 클라가 먼저 차감하고 캐시면 되돌리는 왕복이 있었고, 그 왕복이 사라진다.
+    const charge = await chargeFeature({ userId: user.id, featureKey: 'SAJU', costKey: 'saju', label: '사주 풀이' })
+    if (!charge.ok) return charge.failure
+    refundOnFailure = charge.refundOnFailure
+    chargedRemaining = charge.remainingBalance
 
     // 3. 나이 계산
     // 명식·오행·대운 데이터는 아래 해화지기 마스터 엔진 프롬프트에서 단일 공급한다
@@ -216,9 +234,11 @@ export async function analyzeCheonjiinAction(
     // 복 포인트 적립 (분석 완료)
     await addBokPoints(30, 'ANALYSIS', targetId, `${target.name}님 사주 분석`).catch(() => {})
 
-    return { success: true, data: result, cached: false }
+    // remainingBalance 는 «이번 호출에서 실제로 차감했을 때»만 실린다 — 캐시 적중은 undefined.
+    return { success: true, data: result, cached: false, remainingBalance: chargedRemaining }
   } catch (error: unknown) {
     logger.error('[CheonjiinAnalysis] Error:', error)
+    await refundOnFailure?.()
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }

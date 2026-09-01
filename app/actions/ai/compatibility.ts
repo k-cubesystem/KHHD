@@ -15,6 +15,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { addBokPoints } from '@/lib/services/bok-grant'
 import { logger } from '@/lib/utils/logger'
+import { chargeFeature } from '@/lib/services/feature-charge'
 
 /**
  * 궁합 분석 서버 액션 v2
@@ -33,6 +34,10 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
     return { success: false, error: '인증되지 않은 사용자입니다.' }
   }
 
+  // AI 가 실패하면 차감을 되돌린다. 차감 전 단계에서 나가면 null 이라 아무 일도 없다.
+  let refundOnFailure: (() => Promise<void>) | null = null
+  let chargedRemaining: number | undefined
+
   try {
     // 1. 대상 정보 조회
     const [target1, target2] = await Promise.all([getDestinyTarget(targetId1), getDestinyTarget(targetId2)])
@@ -48,6 +53,21 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
     if (recentAnalysis) {
       return { success: true, data: recentAnalysis, cached: true }
     }
+
+    // 2.5 복채 차감 — 🔴 **여기가 과금의 유일한 지점이다.**
+    //
+    // 2026-09-01 까지는 화면(compatibility-client)이 차감한 뒤 이 액션을 불렀다. 이 액션은
+    // 'use server' export = 공개 엔드포인트이므로, 브라우저에서 직접 부르면 차감 없이 풀이가 나왔다.
+    // 캐시 확인 뒤에 둔 것도 의도다 — 캐시 적중은 새 연산이 아니라 과금하지 않는다.
+    const charge = await chargeFeature({
+      userId: user.id,
+      featureKey: 'COMPATIBILITY',
+      costKey: 'compatibility',
+      label: '궁합 풀이',
+    })
+    if (!charge.ok) return charge.failure
+    refundOnFailure = charge.refundOnFailure
+    chargedRemaining = charge.remainingBalance
 
     // 3. 양쪽 모두 사주 컨텍스트 생성 (병렬)
     const [ctx1, ctx2] = await Promise.all([
@@ -119,9 +139,11 @@ export async function analyzeCompatibilityAction(targetId1: string, targetId2: s
 
     await addBokPoints(40, 'COMPATIBILITY', undefined, '궁합 분석 완료').catch(() => {})
 
-    return { success: true, data: finalResult, cached: false }
+    // remainingBalance 는 «이번 호출에서 실제로 차감했을 때»만 실린다 — 캐시 적중은 undefined.
+    return { success: true, data: finalResult, cached: false, remainingBalance: chargedRemaining }
   } catch (error: unknown) {
     logger.error('[CompatibilityAnalysis] Error:', error)
+    await refundOnFailure?.()
     const message = error instanceof Error ? error.message : '궁합 분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
   }

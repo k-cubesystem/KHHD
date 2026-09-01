@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { createSajuShareTokenByTarget } from '@/app/actions/ai/share-saju'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
@@ -109,35 +109,26 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     setError(null)
     GA.analysisStart('saju')
 
-    // 복채 차감(2만냥) — 마스터/무제한은 wallet 내부에서 면제. 부족 시 업셀 모달.
-    const deduct = await deductTalisman('SAJU', SAJU_COST)
-    if (!deduct.success) {
-      setIsLoading(false)
-      const handled = handleDeductResult(deduct, {
-        currentBalance: walletBalance ?? 0,
-        requiredAmount: SAJU_COST,
-        featureLabel: '사주 분석',
-      })
-      if (!handled) toast.error(deduct.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      return
-    }
-    if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)
-
+    // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서, 캐시 확인 뒤에 빠진다.
+    //    화면이 차감하던 종전 구조에서는 액션을 브라우저에서 직접 부르면 공짜였다.
+    //    실패 시 되돌리는 것도 액션이 한다 — 화면이 환급을 부르면 그 자체가 어뷰즈 경로가 된다.
     try {
       const result = await analyzeCheonjiinAction(target.id, null, false, true)
       if (result.success && result.data) {
-        // 캐시 히트(신규 연산 아님)면 환불 — 신규 분석만 과금(표시=실차감)
-        if (result.cached) await refundStudioCost('SAJU').catch(() => {})
+        if (result.remainingBalance !== undefined) setWalletBalance(result.remainingBalance)
         setData(result.data as AnalysisData)
         GA.analysisComplete('saju')
         setApiDone(true) // progress가 80% 미만이어도 완료 처리
       } else {
-        await refundStudioCost('SAJU').catch(() => {})
-        setError(result.error || '분석 중 오류가 발생했습니다.')
         setIsLoading(false)
+        const handled = handleDeductResult(result, {
+          currentBalance: walletBalance ?? 0,
+          requiredAmount: SAJU_COST,
+          featureLabel: '사주 분석',
+        })
+        if (!handled) setError(result.error || '분석 중 오류가 발생했습니다.')
       }
     } catch (err) {
-      await refundStudioCost('SAJU').catch(() => {})
       setError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.')
       toast.error('분석 중 오류가 발생했습니다.')
       setIsLoading(false)
