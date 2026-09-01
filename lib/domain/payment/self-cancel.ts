@@ -112,6 +112,19 @@ export const WITHDRAWAL_PERIOD_DAYS = 7
 /** 약관 제7조 제2항 — 기간 경과 후 환불 수수료율(10%). */
 export const LATE_CANCEL_FEE_RATE = 0.1
 
+/**
+ * 복채 환불 조건 안내 문구 — **화면에 적는 숫자의 단일 출처.**
+ *
+ * 실제 사고(2026-09-01 발견): 심사 제출 문서는 상점 화면이 「미사용분 7일 이내 전액,
+ * 이후 90%」를 명시한다고 적었는데, 화면은 「7일 이내 가능」까지만 있었다. 심사관이
+ * 캡처와 설명을 대조하면 바로 어긋난다. 같은 숫자가 화면 4곳에 손으로 박혀 있어
+ * 수수료율을 바꾸면 옛 숫자가 남는 구조이기도 했다.
+ */
+export function chargeRefundPolicyLine(): string {
+  const keepRate = Math.round((1 - LATE_CANCEL_FEE_RATE) * 100)
+  return `미사용분은 결제일로부터 ${WITHDRAWAL_PERIOD_DAYS}일 이내 전액, 이후 ${keepRate}% 환불합니다.`
+}
+
 const DAY_MS = 86_400_000
 
 export type ChargeCancelVerdict =

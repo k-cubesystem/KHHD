@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { addTestCredits } from '@/app/actions/payment/products'
 import { GA } from '@/lib/analytics/ga4'
 import type { PricePlan, UserRole } from '@/types/auth'
+import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 
 interface TalismanPurchaseSectionProps {
   initialPlans: PricePlan[]
@@ -308,7 +309,7 @@ export function TalismanPurchaseSection({ initialPlans, userRole, hasCharged = t
         {[
           '제공 시점 — 결제 완료 즉시 전량 지급되며, 그 시점에 상품 제공이 완료됩니다',
           '사용 기간 — 지급된 복채는 만료 없이 사용하실 수 있습니다',
-          '환불은 미사용 복채에 한해 7일 이내 가능합니다',
+          chargeRefundPolicyLine(),
           '멤버십으로 지급되는 복채와 합산되며, 충전한 복채는 하루 사용 상한을 받지 않습니다',
         ].map((text, i) => (
           <p key={i} className="text-[9px] text-white/40 flex items-start gap-1.5">

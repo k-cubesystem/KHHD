@@ -14,6 +14,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/lib/services/bok-grant'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 
 /**
  * Gemini 고도화 시스템 프롬프트
@@ -353,7 +354,8 @@ async function analyzeCheonjiinWithAI(
     summary: (data.summary as string) || '청담해화당 통합분석 결과',
     score: 0,
     model_used: getModelConfig('cheonjiin').model,
-    talisman_cost: 3,
+    // 기록되는 차감량은 실차감과 같아야 한다 — 3 은 옛 값이고 실차감은 FEATURE_COST.saju.display(2) 다.
+    talisman_cost: FEATURE_COST.saju.display,
   })
 
   logger.log('[CheonjiinAnalysis] AI 분석 완료')
