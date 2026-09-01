@@ -25,11 +25,11 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { stem } = await params
-  if (!isIlganSlug(stem)) return { title: '청담해화당', robots: { index: false } }
+  if (!isIlganSlug(stem)) return { title: '일간', robots: { index: false } }
   const info = ILGAN[stem]
   const title = `${info.name}(${info.hanja}) 일간 — 「${info.image}」`
   return {
-    title: `${title} | 청담해화당`,
+    title,
     description: info.lines[0],
     alternates: { canonical: `${SITE}/ilgan/${stem}` },
     openGraph: {
@@ -53,7 +53,7 @@ export default async function IlganStemPage({ params }: PageProps) {
         <p className="font-sans text-[11px] tracking-[0.18em] text-gold-500/80">청담해화당 · 일간 열 글자</p>
       </header>
 
-      <IlganCard info={info} />
+      <IlganCard info={info} asHeading="h1" />
 
       <section className="hanji-card mt-4 rounded-xl border border-gold-500/20 p-5 text-center">
         <p className="font-serif text-[16px] text-ink-primary">당신의 일간은 무엇일까요</p>

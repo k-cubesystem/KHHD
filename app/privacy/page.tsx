@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: '개인정보처리방침 | 청담해화당',
+  title: '개인정보처리방침',
   description: '청담해화당 개인정보처리방침',
 }
 

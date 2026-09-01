@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 const SITE = getSiteUrl()
 
 export const metadata: Metadata = {
-  title: '내 일간 3초 확인 — 청담해화당',
+  title: '내 일간 3초 확인',
   description:
     '생년월일만 넣으면 3초. 만세력으로 세운 내 일간(日干) 한 글자와 그 상(象)을 읽어드립니다. 로그인 없음, 저장 없음.',
   alternates: { canonical: `${SITE}/ilgan` },

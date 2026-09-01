@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const site = getSiteUrl()
   const dj = (w.draft_json ?? {}) as { headline?: string }
   return {
-    title: `${w.round.title} 결과 — 청담해화당`,
+    title: `${w.round.title} 결과`,
     description: dj.headline ?? '만세력으로 세운 명식, 간이 풀이',
     robots: { index: false },
     openGraph: w.entry?.consent_public ? { images: [`${site}/api/og/event/${token}`] } : undefined,

@@ -7,7 +7,7 @@ import RitualClient from './ritual-client'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: '초하루 의례 | 청담해화당',
+  title: '초하루 의례',
   description: '매달 초하루, 식구들 안부를 여쭙고 신당에 기원을 올립니다.',
 }
 

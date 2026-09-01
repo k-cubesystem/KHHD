@@ -7,7 +7,7 @@ import { getChargeCancelOverview } from '@/app/actions/payment/cancel-request'
 import { ChargeCancelPanel } from './charge-cancel-panel'
 
 export const metadata: Metadata = {
-  title: '결제 취소 | 청담해화당',
+  title: '결제 취소',
   description: '복채 충전 결제를 직접 취소하고 환불받으실 수 있습니다.',
 }
 
