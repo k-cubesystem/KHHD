@@ -1,0 +1,20 @@
+-- v_destiny_targets 의 security_invoker 복원. ✅ 2026-09-01 라이브 적용 완료(CEO 승인) — 재적용 무해.
+--
+-- 2026-07-11 하드닝(20260711_security_s1a_hardening.sql:29)이 이 뷰를 security_invoker 로
+-- 바꿨는데, 2026-08-16(20260816_member_category.sql)이 컬럼을 끼우려고 drop view → create view
+-- 하면서 옵션을 다시 적지 않아 **조용히 되돌아갔다.** 그 뒤 복원 마이그레이션이 없었다.
+-- create or replace 가 42P16 으로 막혀 drop 을 택한 것이 원인인데, 그때 옵션이 함께 날아간다.
+--
+-- 뷰 소유자가 postgres 이고 security_invoker 가 꺼져 있으면 base 테이블(profiles·family_members)의
+-- own-row RLS 가 적용되지 않는다. 라이브 실측(2026-09-01):
+--   v_destiny_targets.reloptions = null / owner = postgres / anon·authenticated 에 SELECT 부여
+--   (같은 하드닝을 받은 user_profiles 는 security_invoker=true 로 멀쩡하다 — 이 뷰만 되돌아갔다)
+--
+-- base 테이블 정책은 정상이므로 이 한 줄이면 원래 의도한 경계로 돌아간다:
+--   profiles_select_own            auth.uid() = id
+--   family_members_all_own         auth.uid() = user_id
+--   family_members_select_linked   auth.uid() = linked_user_id
+-- 서버 경로는 service_role 로 읽으므로 영향이 없다.
+--
+-- 🔴 앞으로 이 뷰를 drop 후 재생성할 때는 반드시 `with (security_invoker = true)` 를 함께 적을 것.
+alter view public.v_destiny_targets set (security_invoker = true);
