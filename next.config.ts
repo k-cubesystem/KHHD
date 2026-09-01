@@ -78,17 +78,19 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               // 🔴 애드센스 도메인 4종(pagead2·googleadservices·tpc·doubleclick)이 빠지면
               //    광고 스크립트가 CSP 에 막혀 «태그는 붙였는데 아무것도 안 뜬다» 가 된다.
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com https://t1.daumcdn.net http://dapi.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://va.vercel-scripts.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com https://t1.daumcdn.net http://dapi.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://va.vercel-scripts.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
               "img-src 'self' data: https: blob: http://t1.daumcdn.net https://t1.daumcdn.net http://map.daumcdn.net https://map.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
               // 🔴 adtrafficquality.google 은 애드센스의 무효 트래픽 판정(Sodar) 신호를 보내는 곳이다.
               //    빠지면 **모든 페이지에서** CSP 위반이 콘솔에 찍히고 신호가 서버에 닿지 않는다
               //    (2026-09-01 프로덕션 실측: 20개 페이지 로드 전부 이 오류 1건씩).
-              //    광고는 그려지지만 트래픽 품질 신호가 비는 건 수익 판정에 불리하다.
+              //    🔴 세 지시문을 **함께** 열어야 한다 — connect-src 만 열면 getconfig 는 통과하고
+              //    그다음 sodar2.js 로드가 script-src 에 막혀, 이번엔 처리되지 않은 프로미스 거절
+              //    (Uncaught (in promise) undefined)이 전 페이지에 뜬다. 실제로 그렇게 됐다.
               "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com https://pagead2.googlesyndication.com https://*.doubleclick.net https://*.adtrafficquality.google",
               // 광고 본문은 iframe(safeframe)으로 들어온다 — frame-src 가 없으면 빈 자리만 남는다.
-              "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
+              "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google",
               "media-src 'self' blob: data:",
               "base-uri 'self'",
               "object-src 'none'",
