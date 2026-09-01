@@ -225,7 +225,7 @@ export function EventApplyForm({ roundSlug, utm }: Props) {
         </label>
       </div>
 
-      {error ? <p className="font-sans text-[13px] text-red-400">{error}</p> : null}
+      {error ? <p className="font-sans text-[13px] text-error-text">{error}</p> : null}
 
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

@@ -1,13 +1,7 @@
 import type { Metadata } from 'next'
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const metadata: Metadata = {
   title: '회원가입 완료',
@@ -19,7 +13,7 @@ export default function Page() {
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10 bg-background text-foreground">
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
-          <Card className="border-gold-500/30 bg-black/40 backdrop-blur-md shadow-2xl shadow-gold-900/10">
+          <Card className="border-gold-500/30 bg-black/40 backdrop-blur-md shadow-2xl shadow-gold-700/10">
             <CardHeader className="text-center space-y-4 pt-10">
               <div className="mx-auto w-12 h-12 rounded-full bg-gold-500/10 flex items-center justify-center border border-gold-500/30 mb-2">
                 <svg
@@ -37,10 +31,8 @@ export default function Page() {
                   />
                 </svg>
               </div>
-              <CardTitle className="text-2xl font-serif text-gold-100">
-                귀한 인연이 닿았습니다
-              </CardTitle>
-              <CardDescription className="text-zinc-400 text-sm break-keep">
+              <CardTitle className="text-2xl font-serif text-gold-200">귀한 인연이 닿았습니다</CardTitle>
+              <CardDescription className="text-ink-light/70 text-sm break-keep">
                 혜화당의 회원이 되신 것을 환영합니다.
                 <br />
                 이메일 인증을 완료하시면
@@ -50,7 +42,7 @@ export default function Page() {
             </CardHeader>
             <CardContent className="pb-10">
               <div className="flex flex-col gap-4">
-                <p className="text-xs text-center text-zinc-500 bg-zinc-900/50 p-3 rounded-lg border border-zinc-800 break-keep">
+                <p className="text-xs text-center text-ink-light/50 bg-surface/50 p-3 rounded-lg border border-white/10 break-keep">
                   입력하신 이메일로 인증 링크가 발송되었습니다.
                   <br />
                   확인 후 아래 버튼을 눌러 로그인해주세요.
@@ -58,7 +50,7 @@ export default function Page() {
                 <div className="pt-2">
                   <Button
                     asChild
-                    className="w-full bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-black font-semibold shadow-lg shadow-gold-900/20 active:scale-[0.98] transition-all"
+                    className="w-full bg-gradient-to-r from-gold-600 to-gold-500 hover:from-gold-500 hover:to-gold-400 text-black font-semibold shadow-lg shadow-gold-700/20 active:scale-[0.98] transition-all"
                   >
                     <Link href="/auth/login">로그인하러 가기</Link>
                   </Button>
@@ -69,5 +61,5 @@ export default function Page() {
         </div>
       </div>
     </div>
-  );
+  )
 }

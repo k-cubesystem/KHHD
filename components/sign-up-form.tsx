@@ -98,10 +98,10 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   }
 
   const inputClass =
-    'h-12 bg-stone-900/60 border border-stone-700/50 rounded-lg text-white placeholder:text-stone-600 focus:border-gold-500/60 focus:ring-1 focus:ring-gold-500/20 transition-all px-4'
-  const labelClass = 'text-stone-400 text-xs font-medium tracking-wide'
+    'h-12 bg-surface/60 border border-white/10 rounded-lg text-white placeholder:text-ink-light/30 focus:border-gold-500/60 focus:ring-1 focus:ring-gold-500/20 transition-all px-4'
+  const labelClass = 'text-ink-light/60 text-xs font-medium tracking-wide'
   const selectTriggerClass =
-    'h-12 bg-stone-900/60 border border-stone-700/50 rounded-lg text-white focus:border-gold-500/60 focus:ring-1 focus:ring-gold-500/20'
+    'h-12 bg-surface/60 border border-white/10 rounded-lg text-white focus:border-gold-500/60 focus:ring-1 focus:ring-gold-500/20'
 
   return (
     <div className={cn('flex flex-col', className)} {...props}>
@@ -127,7 +127,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               <SelectTrigger className={selectTriggerClass}>
                 <SelectValue placeholder="성별 선택" />
               </SelectTrigger>
-              <SelectContent className="bg-stone-900 border-stone-700 text-white">
+              <SelectContent className="bg-surface border-white/15 text-white">
                 <SelectItem value="female">여성</SelectItem>
                 <SelectItem value="male">남성</SelectItem>
               </SelectContent>
@@ -146,7 +146,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 <RadioGroupItem value="solar" id="solar" className="border-gold-400 text-gold-400 w-3.5 h-3.5" />
                 <Label
                   htmlFor="solar"
-                  className="text-stone-400 text-xs cursor-pointer hover:text-white transition-colors"
+                  className="text-ink-light/60 text-xs cursor-pointer hover:text-white transition-colors"
                 >
                   양력
                 </Label>
@@ -155,7 +155,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                 <RadioGroupItem value="lunar" id="lunar" className="border-gold-400 text-gold-400 w-3.5 h-3.5" />
                 <Label
                   htmlFor="lunar"
-                  className="text-stone-400 text-xs cursor-pointer hover:text-white transition-colors"
+                  className="text-ink-light/60 text-xs cursor-pointer hover:text-white transition-colors"
                 >
                   음력
                 </Label>
@@ -175,7 +175,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               <SelectTrigger className={selectTriggerClass}>
                 <SelectValue placeholder="태어난 시간" />
               </SelectTrigger>
-              <SelectContent className="bg-stone-900 border-stone-700 text-white max-h-[300px]">
+              <SelectContent className="bg-surface border-white/15 text-white max-h-[300px]">
                 <SelectItem value="자시 (23:30 ~ 01:29)">자시 (23:30 ~ 01:29)</SelectItem>
                 <SelectItem value="축시 (01:30 ~ 03:29)">축시 (01:30 ~ 03:29)</SelectItem>
                 <SelectItem value="인시 (03:30 ~ 05:29)">인시 (03:30 ~ 05:29)</SelectItem>
@@ -213,7 +213,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         {/* 비밀번호 */}
         <div className="space-y-2">
           <Label htmlFor="signup-password" className={labelClass}>
-            비밀번호 <span className="font-normal text-stone-500">(8자 이상)</span>
+            비밀번호 <span className="font-normal text-ink-light/50">(8자 이상)</span>
           </Label>
           <div className="relative">
             <Input
@@ -230,7 +230,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-stone-500 transition-colors hover:text-stone-300"
+              className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-ink-light/50 transition-colors hover:text-ink-light/80"
               aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
               aria-pressed={showPassword}
             >
@@ -261,9 +261,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               id="agree-terms"
               checked={agreeTerms}
               onCheckedChange={(v) => setAgreeTerms(v === true)}
-              className="mt-0.5 border-stone-600 data-[state=checked]:bg-gold-500 data-[state=checked]:border-gold-500"
+              className="mt-0.5 border-white/25 data-[state=checked]:bg-gold-500 data-[state=checked]:border-gold-500"
             />
-            <Label htmlFor="agree-terms" className="text-xs text-stone-400 leading-relaxed cursor-pointer">
+            <Label htmlFor="agree-terms" className="text-xs text-ink-light/60 leading-relaxed cursor-pointer">
               <Link href="/terms" target="_blank" className="text-gold-400 underline underline-offset-2">
                 이용약관
               </Link>
@@ -275,9 +275,9 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               id="agree-privacy"
               checked={agreePrivacy}
               onCheckedChange={(v) => setAgreePrivacy(v === true)}
-              className="mt-0.5 border-stone-600 data-[state=checked]:bg-gold-500 data-[state=checked]:border-gold-500"
+              className="mt-0.5 border-white/25 data-[state=checked]:bg-gold-500 data-[state=checked]:border-gold-500"
             />
-            <Label htmlFor="agree-privacy" className="text-xs text-stone-400 leading-relaxed cursor-pointer">
+            <Label htmlFor="agree-privacy" className="text-xs text-ink-light/60 leading-relaxed cursor-pointer">
               <Link href="/privacy" target="_blank" className="text-gold-400 underline underline-offset-2">
                 개인정보처리방침
               </Link>
@@ -288,7 +288,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
         {/* Error */}
         {error && (
-          <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 text-center animate-in fade-in slide-in-from-top-1">
+          <div className="px-4 py-3 rounded-lg bg-error-light border border-error-border text-xs text-error-text text-center animate-in fade-in slide-in-from-top-1">
             {error}
           </div>
         )}
@@ -296,7 +296,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         {/* Submit */}
         <Button
           type="submit"
-          className="w-full h-12 font-bold bg-gold-500 text-stone-950 hover:bg-gold-400 active:scale-[0.98] transition-all rounded-lg shadow-[0_0_20px_rgba(234,179,8,0.15)] hover:shadow-[0_0_30px_rgba(234,179,8,0.3)] font-serif tracking-wider text-[15px] mt-1"
+          className="w-full h-12 font-bold bg-gold-500 text-ink-900 hover:bg-gold-400 active:scale-[0.98] transition-all rounded-lg shadow-gold-glow hover:shadow-gold-glow-lg font-serif tracking-wider text-[15px] mt-1"
           disabled={isLoading}
         >
           {isLoading ? (
@@ -312,16 +312,16 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
 
       {/* Divider */}
       <div className="flex items-center gap-4 my-6">
-        <div className="flex-1 h-px bg-stone-700/50" />
-        <span className="text-[11px] text-stone-500 tracking-wide">또는</span>
-        <div className="flex-1 h-px bg-stone-700/50" />
+        <div className="flex-1 h-px bg-white/10" />
+        <span className="text-[11px] text-ink-light/50 tracking-wide">또는</span>
+        <div className="flex-1 h-px bg-white/10" />
       </div>
 
       {/* Social Login */}
       <SocialLoginButtons />
 
       {/* Login Link */}
-      <p className="mt-8 text-center text-sm text-stone-500">
+      <p className="mt-8 text-center text-sm text-ink-light/50">
         이미 계정이 있으신가요?{' '}
         <Link href="/auth/login" className="text-gold-400 hover:text-gold-300 font-semibold transition-colors">
           로그인

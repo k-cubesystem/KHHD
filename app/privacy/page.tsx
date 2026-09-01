@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <article className="prose prose-invert prose-sm sm:prose-base mx-auto max-w-3xl prose-headings:text-amber-200 prose-strong:text-amber-100 prose-a:text-amber-400 hover:prose-a:text-amber-300">
+      <article className="prose prose-invert prose-sm sm:prose-base mx-auto max-w-3xl prose-headings:text-gold-200 prose-strong:text-gold-300 prose-a:text-gold-500 hover:prose-a:text-gold-300">
         <Link
           href="/"
-          className="mb-8 inline-flex items-center text-sm text-muted-foreground no-underline hover:text-amber-400"
+          className="mb-8 inline-flex items-center text-sm text-muted-foreground no-underline hover:text-gold-500"
         >
           ← 홈으로 돌아가기
         </Link>

@@ -28,7 +28,7 @@ export default async function TestDestinyPage() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-bold">User Info</h2>
-        <pre className="bg-gray-100 p-4 rounded overflow-auto">
+        <pre className="bg-white/[0.06] p-4 rounded overflow-auto">
           {JSON.stringify({ id: user.id, email: user.email }, null, 2)}
         </pre>
       </div>
@@ -36,34 +36,24 @@ export default async function TestDestinyPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-bold">Test 1: Direct View Query</h2>
         {viewError ? (
-          <pre className="bg-red-100 p-4 rounded text-red-800">
-            {JSON.stringify(viewError, null, 2)}
-          </pre>
+          <pre className="bg-error-light p-4 rounded text-error-text">{JSON.stringify(viewError, null, 2)}</pre>
         ) : (
-          <pre className="bg-gray-100 p-4 rounded overflow-auto">
-            {JSON.stringify(viewData, null, 2)}
-          </pre>
+          <pre className="bg-white/[0.06] p-4 rounded overflow-auto">{JSON.stringify(viewData, null, 2)}</pre>
         )}
       </div>
 
       <div className="space-y-4">
         <h2 className="text-xl font-bold">Test 2: RPC Function</h2>
         {rpcError ? (
-          <pre className="bg-red-100 p-4 rounded text-red-800">
-            {JSON.stringify(rpcError, null, 2)}
-          </pre>
+          <pre className="bg-error-light p-4 rounded text-error-text">{JSON.stringify(rpcError, null, 2)}</pre>
         ) : (
-          <pre className="bg-gray-100 p-4 rounded overflow-auto">
-            {JSON.stringify(rpcData, null, 2)}
-          </pre>
+          <pre className="bg-white/[0.06] p-4 rounded overflow-auto">{JSON.stringify(rpcData, null, 2)}</pre>
         )}
       </div>
 
       <div className="space-y-4">
         <h2 className="text-xl font-bold">Test 3: Server Action (getDestinyTargets)</h2>
-        <pre className="bg-gray-100 p-4 rounded overflow-auto">
-          {JSON.stringify(actionData, null, 2)}
-        </pre>
+        <pre className="bg-white/[0.06] p-4 rounded overflow-auto">{JSON.stringify(actionData, null, 2)}</pre>
       </div>
     </div>
   )

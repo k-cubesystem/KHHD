@@ -47,64 +47,64 @@ const CATEGORY_CONFIG: Record<
     icon: Sun,
     label: '사주 분석',
     badgeLabel: '천지인 사주',
-    gradient: 'from-amber-900/40 via-yellow-900/20 to-transparent',
-    ringColor: 'border-amber-400/40',
+    gradient: 'from-gold-700/40 via-gold-600/15 to-transparent',
+    ringColor: 'border-gold-500/40',
     description: '사주팔자로 읽는 운명의 흐름',
   },
   FACE: {
     icon: User2,
     label: '관상 분석',
     badgeLabel: '관상',
-    gradient: 'from-rose-900/30 via-pink-900/10 to-transparent',
-    ringColor: 'border-rose-400/40',
+    gradient: 'from-bok-flower/25 via-bok-flower/10 to-transparent',
+    ringColor: 'border-bok-flower/40',
     description: '얼굴로 읽는 운명과 성격',
   },
   HAND: {
     icon: Hand,
     label: '손금 분석',
     badgeLabel: '손금',
-    gradient: 'from-sky-900/30 via-blue-900/10 to-transparent',
-    ringColor: 'border-sky-400/40',
+    gradient: 'from-bok-tree/30 via-bok-tree/10 to-transparent',
+    ringColor: 'border-bok-tree/40',
     description: '손금으로 읽는 인생의 선',
   },
   FENGSHUI: {
     icon: Home,
     label: '풍수 분석',
     badgeLabel: '풍수지리',
-    gradient: 'from-emerald-900/30 via-green-900/10 to-transparent',
-    ringColor: 'border-emerald-400/40',
+    gradient: 'from-bok-sprout/25 via-bok-sprout/10 to-transparent',
+    ringColor: 'border-bok-sprout/40',
     description: '공간의 기운으로 읽는 운세',
   },
   COMPATIBILITY: {
     icon: Heart,
     label: '궁합 분석',
     badgeLabel: '남녀 궁합',
-    gradient: 'from-pink-900/40 via-rose-900/20 to-transparent',
-    ringColor: 'border-pink-400/40',
+    gradient: 'from-seal/40 via-obangsaek-red/15 to-transparent',
+    ringColor: 'border-obangsaek-red/40',
     description: '두 사람의 운명적 인연',
   },
   TODAY: {
     icon: Star,
     label: '오늘의 운세',
     badgeLabel: '일일 운세',
-    gradient: 'from-violet-900/30 via-purple-900/10 to-transparent',
-    ringColor: 'border-violet-400/40',
+    gradient: 'from-obangsaek-blue/30 via-obangsaek-blue/10 to-transparent',
+    ringColor: 'border-obangsaek-blue/40',
     description: '오늘 하루의 운기 흐름',
   },
   WEALTH: {
     icon: Coins,
     label: '재물운 분석',
     badgeLabel: '재물운',
-    gradient: 'from-yellow-900/40 via-amber-900/20 to-transparent',
-    ringColor: 'border-yellow-400/40',
+    gradient: 'from-obangsaek-yellow/30 via-gold-700/15 to-transparent',
+    ringColor: 'border-obangsaek-yellow/45',
     description: '금전과 재물의 운세 흐름',
   },
   NEW_YEAR: {
     icon: Sparkles,
     label: '신년운세',
     badgeLabel: '2026 신년운세',
-    gradient: 'from-indigo-900/30 via-blue-900/10 to-transparent',
-    ringColor: 'border-indigo-400/40',
+    gradient: 'from-bok-seed/40 via-bok-seed/15 to-transparent',
+    ringColor: 'border-bok-seed/60',
     description: '새해 1년의 전체 운세',
   },
 }
@@ -342,7 +342,7 @@ export function SharePageClient({ token }: SharePageClientProps) {
       {/* Background ambient glow */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.03] blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-amber-900/10 blur-[80px]" />
+        <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-gold-700/10 blur-[80px]" />
       </div>
 
       {/* Header */}

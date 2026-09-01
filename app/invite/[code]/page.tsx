@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect , useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { Heart, Sparkles, Loader2, Users, Star, Briefcase, UserPlus, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -103,10 +103,10 @@ export default function InvitePage() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-400'
+    if (score >= 80) return 'text-bok-sprout'
     if (score >= 60) return 'text-gold-500'
-    if (score >= 40) return 'text-yellow-400'
-    return 'text-orange-400'
+    if (score >= 40) return 'text-obangsaek-yellow'
+    return 'text-warning'
   }
 
   const getScoreEmoji = (score: number) => {
@@ -129,10 +129,10 @@ export default function InvitePage() {
             </>
           ) : error ? (
             <>
-              <div className="w-16 h-16 mx-auto rounded-full bg-red-500/10 flex items-center justify-center">
-                <Heart className="w-8 h-8 text-red-400" />
+              <div className="w-16 h-16 mx-auto rounded-full bg-error-light flex items-center justify-center">
+                <Heart className="w-8 h-8 text-error-text" />
               </div>
-              <p className="text-red-400">{error}</p>
+              <p className="text-error-text">{error}</p>
               <Link href="/">
                 <Button variant="outline" className="border-white/10">
                   홈으로 돌아가기
@@ -150,12 +150,12 @@ export default function InvitePage() {
       <div className="max-w-lg mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/20 border border-pink-500/30">
-            <Heart className="w-4 h-4 text-pink-400" />
-            <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">Destiny Match</span>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-seal/20 border border-seal/30">
+            <Heart className="w-4 h-4 text-obangsaek-red" />
+            <span className="text-xs font-bold text-gold-300 uppercase tracking-wider">Destiny Match</span>
           </div>
           <h1 className="text-3xl font-black">
-            <span className="bg-gradient-to-r from-pink-400 via-gold-500 to-pink-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-obangsaek-red via-gold-500 to-obangsaek-red bg-clip-text text-transparent">
               궁합 초대장
             </span>
           </h1>
@@ -165,10 +165,10 @@ export default function InvitePage() {
         {step === 'input' && inviter && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Inviter Card */}
-            <Card className="p-6 bg-gradient-to-br from-pink-500/10 to-gold-500/10 border-pink-500/20">
+            <Card className="p-6 bg-gradient-to-br from-seal/10 to-gold-500/10 border-seal/20">
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 mx-auto rounded-full bg-pink-500/20 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-pink-400" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-seal/20 flex items-center justify-center">
+                  <Users className="w-8 h-8 text-obangsaek-red" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">초대한 사람</p>
@@ -230,12 +230,12 @@ export default function InvitePage() {
               </div>
             </Card>
 
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+            {error && <p className="text-error-text text-sm text-center">{error}</p>}
 
             <Button
               onClick={handleAnalyze}
               disabled={analyzing || !guestName || !guestBirthDate}
-              className="w-full bg-gradient-to-r from-pink-500 to-gold-500 text-black font-bold py-6 hover:opacity-90"
+              className="w-full bg-gradient-to-r from-obangsaek-red to-gold-500 text-black font-bold py-6 hover:opacity-90"
             >
               {analyzing ? (
                 <>
@@ -256,7 +256,7 @@ export default function InvitePage() {
         {step === 'result' && compatibility && inviter && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Overall Score */}
-            <Card className="p-8 bg-gradient-to-br from-pink-500/20 via-gold-500/10 to-pink-500/20 border-pink-500/20 text-center">
+            <Card className="p-8 bg-gradient-to-br from-seal/20 via-gold-500/10 to-seal/20 border-seal/20 text-center">
               <div className="text-6xl mb-2">{getScoreEmoji(compatibility.overallScore)}</div>
               <div className={`text-7xl font-black ${getScoreColor(compatibility.overallScore)}`}>
                 {compatibility.overallScore}
@@ -274,19 +274,19 @@ export default function InvitePage() {
                   label: '연애궁합',
                   score: compatibility.loveScore,
                   icon: Heart,
-                  color: 'text-pink-400',
+                  color: 'text-obangsaek-red',
                 },
                 {
                   label: '일궁합',
                   score: compatibility.workScore,
                   icon: Briefcase,
-                  color: 'text-blue-400',
+                  color: 'text-obangsaek-blue',
                 },
                 {
                   label: '친구궁합',
                   score: compatibility.friendScore,
                   icon: Users,
-                  color: 'text-green-400',
+                  color: 'text-bok-sprout',
                 },
               ].map((item) => (
                 <Card key={item.label} className="p-4 bg-white/5 border-white/10 text-center">
@@ -299,8 +299,8 @@ export default function InvitePage() {
 
             {/* Strengths & Challenges */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="p-4 bg-green-500/5 border-green-500/20">
-                <h4 className="font-bold text-sm mb-2 text-green-400">💪 강점</h4>
+              <Card className="p-4 bg-bok-sprout/5 border-bok-sprout/20">
+                <h4 className="font-bold text-sm mb-2 text-bok-sprout">💪 강점</h4>
                 <ul className="space-y-1">
                   {compatibility.strengths?.map((s, i) => (
                     <li key={i} className="text-xs text-muted-foreground">
@@ -309,8 +309,8 @@ export default function InvitePage() {
                   ))}
                 </ul>
               </Card>
-              <Card className="p-4 bg-orange-500/5 border-orange-500/20">
-                <h4 className="font-bold text-sm mb-2 text-orange-400">⚠️ 주의점</h4>
+              <Card className="p-4 bg-warning/5 border-warning/20">
+                <h4 className="font-bold text-sm mb-2 text-warning">⚠️ 주의점</h4>
                 <ul className="space-y-1">
                   {compatibility.challenges?.map((c, i) => (
                     <li key={i} className="text-xs text-muted-foreground">
@@ -333,7 +333,7 @@ export default function InvitePage() {
             </Card>
 
             {/* CTA */}
-            <Card className="p-6 bg-gradient-to-r from-gold-500/20 to-pink-500/20 border-gold-500/30">
+            <Card className="p-6 bg-gradient-to-r from-gold-500/20 to-seal/20 border-gold-500/30">
               <div className="text-center space-y-4">
                 <h3 className="font-bold">더 자세한 분석이 궁금하신가요?</h3>
                 <p className="text-sm text-muted-foreground">

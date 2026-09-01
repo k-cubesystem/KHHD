@@ -17,14 +17,14 @@ export default async function Page({ searchParams }: Props) {
   const isReferral = !!ref && from === 'invite'
 
   return (
-    <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-stone-950">
+    <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-surface">
       {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/hanok-night-hero.jpg')" }}
       />
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-stone-950/60 via-stone-950/80 to-stone-950/95" />
+      <div className="absolute inset-0 bg-gradient-to-b from-surface/60 via-surface/80 to-surface/95" />
       {/* Texture */}
       <div className="hanji-overlay" />
 
@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: Props) {
             <span className="text-gold-500/60 text-xs tracking-widest">會員</span>
             <div className="h-px w-10 bg-gold-500/40" />
           </div>
-          <p className="mt-4 text-stone-400 text-sm text-center leading-relaxed">운명의 문을 열어보세요</p>
+          <p className="mt-4 text-ink-light/60 text-sm text-center leading-relaxed">운명의 문을 열어보세요</p>
         </div>
 
         {/* Referral Banner */}
@@ -47,7 +47,7 @@ export default async function Page({ searchParams }: Props) {
             <Gift className="w-5 h-5 text-gold-400 shrink-0" />
             <div>
               <p className="text-sm font-bold text-gold-400">추천 혜택 적용 중</p>
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-ink-light/60">
                 가입 완료 시 <span className="text-gold-400 font-bold">5만냥</span> 추가 지급 (코드:{' '}
                 <span className="font-mono text-gold-400">{ref}</span>)
               </p>
