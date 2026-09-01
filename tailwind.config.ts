@@ -2,7 +2,17 @@ import type { Config } from 'tailwindcss'
 
 const config: Config = {
   darkMode: ['class'],
-  content: ['./pages/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
+  // 🔴 lib 도 스캔한다 — 오행 표(manse.ts GAN_INFO)·절기 표(seasonal-events)처럼 lib 가
+  //    클래스 문자열을 드는 관례가 실재하는데, lib 미스캔이라 그 클래스들은 CSS 가 아예
+  //    생성되지 않았다(2026-09-01 빌드 산출물 grep 으로 실증 — 옛 팔레트 클래스는 다른
+  //    파일에 같은 리터럴이 우연히 있어서만 살아 있었다).
+  content: [
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+    './lib/**/*.{ts,tsx}',
+  ],
   theme: {
     container: {
       center: true,
