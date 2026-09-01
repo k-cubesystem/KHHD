@@ -225,13 +225,16 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
               onChange={(e) => setPassword(e.target.value)}
               className={cn(inputClass, 'pr-11')}
             />
+            {/* 아이콘만 두면 실제 누를 수 있는 넓이가 16x16 이 된다(라이브 실측). 모바일에서
+                손끝으로 맞히기 어렵고, 라벨이 없어 스크린리더에는 이름 없는 버튼으로 읽힌다. */}
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 transition-colors"
-              tabIndex={-1}
+              className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-stone-500 transition-colors hover:text-stone-300"
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+              aria-pressed={showPassword}
             >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showPassword ? <EyeOff className="w-4 h-4" aria-hidden /> : <Eye className="w-4 h-4" aria-hidden />}
             </button>
           </div>
         </div>
