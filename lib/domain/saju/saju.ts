@@ -95,6 +95,35 @@ export const WU_XING_COLORS: Record<string, string> = {
   水: '#2D5F8A', // Blue (Water)
 }
 
+/**
+ * 오행색의 **글자 전용** 변형.
+ *
+ * WU_XING_COLORS 는 막대·아이콘 같은 «면»에 쓰라고 고른 오방색이다. 그대로 작은 글자에
+ * 쓰면 리포트 카드 바탕(#16140F) 대비가 모자란다 — 실측으로 水 #2D5F8A = 2.73:1,
+ * 火 #C83232 = 3.47:1 로 WCAG AA(4.5:1)는 물론 큰 글자 기준(3:1)도 水 는 못 넘는다.
+ * 명식은 「AI가 지어낸 말이 아니다」를 증명하려고 띄운 데이터라 못 읽히면 목적이 무너진다.
+ *
+ * 그래서 팔레트를 바꾸지 않고 글자용 명도만 올린다. 木·土·金 은 이미 넉넉해 그대로 둔다.
+ */
+export const WU_XING_TEXT_COLORS: Record<string, string> = {
+  ...WU_XING_COLORS,
+  火: '#E06A5A', // 5.02:1
+  水: '#6FA3D0', // 6.28:1
+}
+
+/**
+ * 오행색의 **면(배경) 전용** 어두운 변형 — 지식 관계도 노드처럼 글자를 얹는 바탕에 쓴다.
+ * 세 역할(면 WU_XING_SURFACE / 테두리·막대 WU_XING / 글자 WU_XING_TEXT)을 한자리에 둬야
+ * 화면마다 표가 다시 생기지 않는다.
+ */
+export const WU_XING_SURFACE_COLORS: Record<string, string> = {
+  木: '#2D5A3D',
+  火: '#6B2D1A',
+  土: '#5A4A1A',
+  金: '#3A3938',
+  水: '#1A2B45',
+}
+
 // 오행 한글명
 export const WU_XING_NAMES: Record<string, string> = {
   木: '목(木)',

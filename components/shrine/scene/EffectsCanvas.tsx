@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react'
+import { WU_XING_COLORS } from '@/lib/domain/saju/saju'
 
 export type EffectKind =
   | 'flame'
@@ -99,7 +100,7 @@ const COLORS: Record<EffectKind, string[]> = {
   // 소원 빌기 — 물결처럼 은은히 퍼지는 청백
   ripple: ['#a8c5da', '#dbeafe', '#ffffff'],
   // 오행 공명 — 오방색이 섞여 방사되는 공명
-  resonance: ['#f4e4ba', '#c9a84c', '#4A7C59', '#C07055', '#4A5D7C'],
+  resonance: ['#f4e4ba', '#c9a84c', WU_XING_COLORS['木'], WU_XING_COLORS['火'], WU_XING_COLORS['水']],
   // 설빛 눈 — 흰색~얼음빛 냉광
   snow: ['#ffffff', '#e8f0f8', '#d6e6f2'],
   // 달집 불씨·대장간 불똥 — 주홍~호박

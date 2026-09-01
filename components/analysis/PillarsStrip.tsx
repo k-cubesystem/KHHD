@@ -1,6 +1,6 @@
 'use client'
 
-import { getSajuData, WU_XING_COLORS } from '@/lib/domain/saju/saju'
+import { getSajuData, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
 import { logger } from '@/lib/utils/logger'
 
 /**
@@ -75,13 +75,13 @@ export function PillarsStrip({
               <>
                 <span
                   className="font-serif text-[19px] leading-none"
-                  style={{ color: WU_XING_COLORS[c.pillar.ganElement] }}
+                  style={{ color: WU_XING_TEXT_COLORS[c.pillar.ganElement] }}
                 >
                   {c.pillar.gan}
                 </span>
                 <span
                   className="font-serif text-[19px] leading-none"
-                  style={{ color: WU_XING_COLORS[c.pillar.zhiElement] }}
+                  style={{ color: WU_XING_TEXT_COLORS[c.pillar.zhiElement] }}
                 >
                   {c.pillar.zhi}
                 </span>

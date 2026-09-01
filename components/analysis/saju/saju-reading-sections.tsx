@@ -23,7 +23,7 @@ import * as React from 'react'
  * 기록은 이미 결제된 풀이라 블러 없이 셋을 이어 붙인다.
  */
 
-import { WU_XING_COLORS } from '@/lib/domain/saju/saju'
+import { WU_XING_COLORS, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SajuReadingData = Record<string, any>
@@ -167,7 +167,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                   <div key={el.key} className="flex items-center gap-2.5">
                     <span
                       className="font-serif text-[13px] w-4 text-center shrink-0"
-                      style={{ color: WU_XING_COLORS[el.hanja] }}
+                      style={{ color: WU_XING_TEXT_COLORS[el.hanja] }}
                     >
                       {el.hanja}
                     </span>
