@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_KR, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display } from 'next/font/google'
+import { Noto_Sans_KR, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
@@ -35,6 +35,13 @@ const nanumMyeongjo = Nanum_Myeongjo({
   display: 'swap',
   weight: ['400', '700', '800'], // 400, 700, 800 available for Nanum Myeongjo typically
   subsets: ['latin'],
+})
+
+const jetbrains = JetBrains_Mono({
+  variable: '--font-jetbrains',
+  display: 'swap',
+  subsets: ['latin'],
+  weight: ['400', '600'],
 })
 
 const playfair = Playfair_Display({
@@ -113,7 +120,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#0A0A08]`}
+        className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} ${jetbrains.variable} font-serif font-light antialiased notranslate bg-[#0A0A08]`}
         suppressHydrationWarning
       >
         {/* 애드센스 로더 — 🔴 반드시 lazyOnload(하이드레이션 끝난 뒤).

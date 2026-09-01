@@ -80,11 +80,13 @@ const config: Config = {
           border: 'rgba(245,158,11,0.20)',
           text: '#FCD34D',
         },
+        // 🔴 값의 정본은 DESIGN.md 「Color」 — info 는 단청 청(#2D5F8A)이다.
+        //    2026-09-01 정합: Tailwind 기본 파랑(#3B82F6)으로 갈라져 있던 것을 문서에 맞췄다.
         info: {
-          DEFAULT: '#3B82F6',
-          light: 'rgba(59,130,246,0.10)',
-          border: 'rgba(59,130,246,0.20)',
-          text: '#93C5FD',
+          DEFAULT: '#2D5F8A',
+          light: 'rgba(45,95,138,0.12)',
+          border: 'rgba(45,95,138,0.25)',
+          text: '#8FB8DA',
         },
 
         // 오방색 (五方色) — Korean Traditional Colors
@@ -109,6 +111,9 @@ const config: Config = {
       fontFamily: {
         serif: ['var(--font-noto-serif)', 'serif'],
         sans: ['Pretendard', 'var(--font-noto-sans)', 'sans-serif'],
+        // DESIGN.md 「Data/Tables: JetBrains Mono」 — font-mono 가 39곳에서 쓰이는데
+        // 배선이 없어 브라우저 기본 모노로 떨어지고 있었다(2026-09-01 발견).
+        mono: ['var(--font-jetbrains)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         display: ['1.75rem', { lineHeight: '1.2', letterSpacing: '-0.03em', fontWeight: '600' }],
