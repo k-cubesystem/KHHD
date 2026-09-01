@@ -117,6 +117,40 @@ const DEDUCT_KEY_LABEL: Record<string, string> = {
 }
 
 /**
+ * 차감 featureKey → **서버가 되도출하는 정본 차감액**(만냥).
+ *
+ * 🔴 `deductTalisman(featureKey, amount)` 은 `'use server'` export 다 — 즉 공개 엔드포인트고,
+ *    amount 는 브라우저가 임의로 준다. 양수 정수인지만 보면 `deductTalisman('SAJU', 1)` 로
+ *    2만냥짜리를 1만냥에 살 수 있다. 「표시 = 실차감」은 화면에서만 지켜져도 소용이 없다.
+ *
+ * 여기 등재된 키는 서버가 값을 다시 도출해 인자와 대조하고, 다르면 거절한다.
+ * 값이 상황마다 달라지는 동적 키(theme_* · VOUCHER_*)는 여기 두지 않는다 —
+ * 그쪽은 애초에 서버 액션 안에서 서버가 계산한 값을 넘긴다.
+ */
+const CANONICAL_DEDUCT_COST: Record<string, number> = {
+  SAJU: FEATURE_COST.saju.display,
+  COMPATIBILITY: FEATURE_COST.compatibility.display,
+  FACE: FEATURE_COST.face.display,
+  HAND: FEATURE_COST.palm.display,
+  FENGSHUI: FEATURE_COST.fengshui.display,
+  SAMHAP: FEATURE_COST.samhap.display,
+  WEALTH: FEATURE_COST.wealth.display,
+  wealth_analysis: FEATURE_COST.wealth.display,
+  IMAGE_GEN: FEATURE_COST.imageGeneration.display,
+  NEW_YEAR: FEATURE_COST.newYear.display,
+  TODAY: FEATURE_COST.today.display,
+}
+
+/**
+ * 이 featureKey 의 정본 차감액. 동적 키처럼 정본이 없으면 null.
+ * null 이면 «검증할 수 없다»는 뜻이지 «아무 값이나 된다»는 뜻이 아니다 — 호출부가 판단한다.
+ */
+export function canonicalDeductCost(featureKey: string): number | null {
+  const known = CANONICAL_DEDUCT_COST[featureKey]
+  return typeof known === 'number' ? known : null
+}
+
+/**
  * 차감 featureKey → 사람이 읽는 이름. 동적 키(테마·이용권)는 접두사로 판정한다.
  * 미등록 키는 원문을 그대로 돌려준다 — 내역이 비는 것보다 낫다.
  */
