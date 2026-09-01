@@ -97,7 +97,7 @@ export function OpenEventClaim() {
       </div>
 
       {message && (
-        <p className={`mt-2.5 font-sans text-[12px] ${failed ? 'text-red-400' : 'text-green-400'}`} role="status">
+        <p className={`mt-2.5 font-sans text-[12px] ${failed ? 'text-error-text' : 'text-success-text'}`} role="status">
           {message}
         </p>
       )}

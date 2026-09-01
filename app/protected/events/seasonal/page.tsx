@@ -21,18 +21,19 @@ import { useHydrated } from '@/hooks/use-hydrated'
 import { useKstToday, kstDateToLocalDate } from '@/hooks/use-kst-today'
 import { useCountdown } from '@/hooks/use-countdown'
 
+// 계절 틴트는 오행 배색을 따른다 — 봄=木(청록) · 여름=火(도장 홍) · 가을=金(금) · 겨울=水(오방 청).
 const SEASON_BG: Record<Season, string> = {
-  spring: 'from-pink-950/80 via-[#0D0900] to-charcoal-deep',
-  summer: 'from-orange-950/80 via-[#0D0900] to-charcoal-deep',
-  autumn: 'from-amber-950/80 via-[#0D0900] to-charcoal-deep',
-  winter: 'from-blue-950/80 via-[#0D0900] to-charcoal-deep',
+  spring: 'from-bok-sprout/25 via-[#0D0900] to-charcoal-deep',
+  summer: 'from-seal/40 via-[#0D0900] to-charcoal-deep',
+  autumn: 'from-gold-700/40 via-[#0D0900] to-charcoal-deep',
+  winter: 'from-obangsaek-blue/30 via-[#0D0900] to-charcoal-deep',
 }
 
 const SEASON_GLOW: Record<Season, string> = {
-  spring: 'bg-pink-400/[0.08]',
-  summer: 'bg-orange-400/[0.08]',
-  autumn: 'bg-amber-600/[0.08]',
-  winter: 'bg-blue-400/[0.08]',
+  spring: 'bg-bok-sprout/[0.08]',
+  summer: 'bg-obangsaek-red/[0.08]',
+  autumn: 'bg-gold-600/[0.08]',
+  winter: 'bg-obangsaek-blue/[0.08]',
 }
 
 const SERVICE_COSTS = [

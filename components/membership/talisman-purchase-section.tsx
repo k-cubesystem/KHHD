@@ -233,7 +233,9 @@ export function TalismanPurchaseSection({ initialPlans, userRole, hasCharged = t
                       <span className="text-xs text-white/60">원</span>
                     </div>
                     {bonus > 0 && (
-                      <div className="text-[9px] text-green-400 font-bold text-right mt-0.5">보너스 +{bonus}만냥</div>
+                      <div className="text-[9px] text-success-text font-bold text-right mt-0.5">
+                        보너스 +{bonus}만냥
+                      </div>
                     )}
                   </div>
                 </div>

@@ -43,7 +43,7 @@ export function BokUpsellModal({ open, onClose, currentCount, limit }: BokUpsell
           </div>
 
           <DialogHeader className="text-center">
-            <DialogTitle className="text-amber-200 text-lg font-bold leading-snug">{t('upgrade.title')}</DialogTitle>
+            <DialogTitle className="text-gold-200 text-lg font-bold leading-snug">{t('upgrade.title')}</DialogTitle>
           </DialogHeader>
         </div>
 
@@ -55,7 +55,7 @@ export function BokUpsellModal({ open, onClose, currentCount, limit }: BokUpsell
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <p className="text-amber-300/70 text-xs text-center">
+            <p className="text-gold-300/70 text-xs text-center">
               {currentCount} / {limit}
             </p>
           </div>
@@ -64,7 +64,7 @@ export function BokUpsellModal({ open, onClose, currentCount, limit }: BokUpsell
             <span className="bok-badge">{t('upgrade.title')}</span>
           </div>
 
-          <p className="text-amber-100/80 text-sm text-center leading-relaxed hanji-card rounded-lg p-3">
+          <p className="text-ink-primary/80 text-sm text-center leading-relaxed hanji-card rounded-lg p-3">
             {t('upgrade.desc')}
           </p>
 
@@ -84,10 +84,7 @@ export function BokUpsellModal({ open, onClose, currentCount, limit }: BokUpsell
             </Button>
 
             <div className="text-center">
-              <button
-                onClick={onClose}
-                className="text-amber-500/60 hover:text-amber-400 text-xs py-1 transition-colors"
-              >
+              <button onClick={onClose} className="text-gold-500/60 hover:text-gold-500 text-xs py-1 transition-colors">
                 {t('upgrade.later')}
               </button>
             </div>

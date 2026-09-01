@@ -160,7 +160,7 @@ export function ViralShareButton({ title, description, ogParams, url, className 
                 <AnimatePresence mode="wait">
                   {copied ? (
                     <motion.div key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                      <Check className="w-4 h-4 text-green-600" />
+                      <Check className="w-4 h-4 text-success" />
                     </motion.div>
                   ) : (
                     <motion.div key="link" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
