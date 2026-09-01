@@ -122,7 +122,7 @@ export function AnnouncementsClient({ initialItems }: { initialItems: Announceme
                 <span
                   className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
                     item.isActive
-                      ? 'border-emerald-500/40 text-emerald-300 bg-emerald-900/20'
+                      ? 'border-success/40 text-success-text bg-success-light'
                       : 'border-white/[0.06] text-ink-light/40'
                   }`}
                 >

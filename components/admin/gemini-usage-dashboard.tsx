@@ -59,11 +59,11 @@ function formatCostShort(usd: number, krwRate: number): string {
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     success: 'bg-primary-dim/20 text-primary-dim border-primary-dim/30',
-    rate_limited: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    '429': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-    '400': 'bg-red-500/20 text-red-400 border-red-500/30',
+    rate_limited: 'bg-warning/20 text-warning-text border-warning/30',
+    '429': 'bg-warning-light text-warning-text border-warning/40',
+    '400': 'bg-error/20 text-error-text border-error/30',
     timeout: 'bg-primary-dark/20 text-primary-dark border-primary-dark/30',
-    error: 'bg-red-500/20 text-red-400 border-red-500/30',
+    error: 'bg-error/20 text-error-text border-error/30',
   }
   const cls = map[status] ?? 'bg-white/20 text-ink-primary/55 border-white/[0.08]'
   return <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded border', cls)}>{status.toUpperCase()}</span>
@@ -90,17 +90,18 @@ function aggregateDailyData(stats: GeminiDailyStat[]) {
 // ─────────────────────────────────────────
 // 모델 색상
 // ─────────────────────────────────────────
+// 시맨틱·오방 토큰 hex 만 쓴다(warning·info·obangsaek-blue·gold-500·success·seal·error·gold-700)
 const MODEL_COLORS: Record<string, string> = {
-  'gemini-3.5-flash': '#f59e0b',
-  'gemini-2.0-flash': '#60a5fa',
-  'gemini-2.0-flash-lite': '#a78bfa',
-  'gemini-3-flash-preview': '#eab308',
-  'gemini-2.5-flash-preview': '#34d399',
-  'gemini-1.5-flash': '#f472b6',
-  'gemini-1.5-pro': '#fb923c',
+  'gemini-3.5-flash': '#F59E0B',
+  'gemini-2.0-flash': '#3B82F6',
+  'gemini-2.0-flash-lite': '#2D5F8A',
+  'gemini-3-flash-preview': '#C9A84C',
+  'gemini-2.5-flash-preview': '#22C55E',
+  'gemini-1.5-flash': '#9E2B2B',
+  'gemini-1.5-pro': '#EF4444',
 }
 function modelColor(model: string) {
-  return MODEL_COLORS[model] ?? '#94a3b8'
+  return MODEL_COLORS[model] ?? '#8C7B50'
 }
 
 // ─────────────────────────────────────────
@@ -289,20 +290,20 @@ export function GeminiUsageDashboard({
         {dailyRows.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={dailyRows} margin={{ top: 0, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.10)" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 9, fill: '#6b7280' }}
+                tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.45)' }}
                 tickFormatter={(v) => String(v).slice(5)} // MM-DD
               />
-              <YAxis tick={{ fontSize: 9, fill: '#6b7280' }} />
+              <YAxis tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.45)' }} />
               <Tooltip
                 contentStyle={{
-                  background: '#111827',
-                  border: '1px solid #374151',
+                  background: '#16140F',
+                  border: '1px solid rgba(255,255,255,0.10)',
                   borderRadius: 8,
                 }}
-                labelStyle={{ color: '#9ca3af', fontSize: 10 }}
+                labelStyle={{ color: 'rgba(255,255,255,0.55)', fontSize: 10 }}
                 itemStyle={{ fontSize: 10 }}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />
@@ -334,19 +335,25 @@ export function GeminiUsageDashboard({
         {actionChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={actionChartData} margin={{ top: 0, right: 8, left: -20, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
-              <YAxis tick={{ fontSize: 9, fill: '#6b7280' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.10)" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 8, fill: 'rgba(255,255,255,0.45)' }}
+                angle={-35}
+                textAnchor="end"
+                interval={0}
+              />
+              <YAxis tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.45)' }} />
               <Tooltip
                 contentStyle={{
-                  background: '#111827',
-                  border: '1px solid #374151',
+                  background: '#16140F',
+                  border: '1px solid rgba(255,255,255,0.10)',
                   borderRadius: 8,
                 }}
-                labelStyle={{ color: '#9ca3af', fontSize: 10 }}
+                labelStyle={{ color: 'rgba(255,255,255,0.55)', fontSize: 10 }}
                 itemStyle={{ fontSize: 10 }}
               />
-              <Bar dataKey="calls" name="호출 수" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="calls" name="호출 수" fill="#F59E0B" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -366,16 +373,25 @@ export function GeminiUsageDashboard({
         {costChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={costChartData} margin={{ top: 0, right: 8, left: -20, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
-              <YAxis tick={{ fontSize: 9, fill: '#6b7280' }} tickFormatter={(v) => `₩${Number(v).toLocaleString()}`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.10)" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 8, fill: 'rgba(255,255,255,0.45)' }}
+                angle={-35}
+                textAnchor="end"
+                interval={0}
+              />
+              <YAxis
+                tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.45)' }}
+                tickFormatter={(v) => `₩${Number(v).toLocaleString()}`}
+              />
               <Tooltip
-                contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8 }}
-                labelStyle={{ color: '#9ca3af', fontSize: 10 }}
+                contentStyle={{ background: '#16140F', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8 }}
+                labelStyle={{ color: 'rgba(255,255,255,0.55)', fontSize: 10 }}
                 itemStyle={{ fontSize: 10 }}
                 formatter={(v) => [`₩${Number(v ?? 0).toLocaleString()}`, '예상 비용']}
               />
-              <Bar dataKey="costKrw" name="예상 비용(₩)" fill="#fbbf24" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="costKrw" name="예상 비용(₩)" fill="#C9A84C" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -429,9 +445,9 @@ export function GeminiUsageDashboard({
                         className={cn(
                           'font-bold',
                           r.cost_ratio_pct > 50
-                            ? 'text-red-400'
+                            ? 'text-error-text'
                             : r.cost_ratio_pct > 20
-                              ? 'text-amber-400'
+                              ? 'text-warning-text'
                               : 'text-primary-dim'
                         )}
                       >
@@ -461,7 +477,7 @@ export function GeminiUsageDashboard({
             </div>
             <div>
               남은 토큰:{' '}
-              <span className={cn('font-bold', rpmConfig.tokens < 3 ? 'text-red-400' : 'text-primary-dim')}>
+              <span className={cn('font-bold', rpmConfig.tokens < 3 ? 'text-error-text' : 'text-primary-dim')}>
                 {rpmConfig.tokens} / {rpmConfig.max_tokens}
               </span>
             </div>
@@ -522,7 +538,7 @@ export function GeminiUsageDashboard({
         </div>
 
         {rpmMsg && (
-          <p className={cn('text-[10px] mt-1', rpmMsg.startsWith('✓') ? 'text-emerald-400' : 'text-red-400')}>
+          <p className={cn('text-[10px] mt-1', rpmMsg.startsWith('✓') ? 'text-success-text' : 'text-error-text')}>
             {rpmMsg}
           </p>
         )}

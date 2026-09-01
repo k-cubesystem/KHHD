@@ -13,18 +13,18 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
         <div className="mb-6 text-5xl">🛠️</div>
-        <h2 className="mb-2 text-xl font-bold text-amber-400">관리자 페이지 오류</h2>
-        <p className="mb-6 text-sm text-gray-400">관리자 기능에서 오류가 발생했습니다.</p>
+        <h2 className="mb-2 text-xl font-bold text-warning-text">관리자 페이지 오류</h2>
+        <p className="mb-6 text-sm text-ink-light/55">관리자 기능에서 오류가 발생했습니다.</p>
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={reset}
-            className="rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-500"
+            className="rounded-lg bg-gold-600 px-6 py-2.5 text-sm font-medium text-ink-950 transition-colors hover:bg-gold-500"
           >
             다시 시도
           </button>
           <Link
             href="/admin"
-            className="rounded-lg border border-gray-700 px-6 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800"
+            className="rounded-lg border border-white/10 px-6 py-2.5 text-sm font-medium text-ink-light/70 transition-colors hover:bg-white/[0.06]"
           >
             관리자 홈
           </Link>

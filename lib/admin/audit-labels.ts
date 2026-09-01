@@ -39,10 +39,11 @@ interface ActionLabel {
   readonly heavy?: boolean
 }
 
-const DANGER = 'bg-red-500/10 text-red-400 border-red-500/20'
+const DANGER = 'bg-error-light text-error-text border-error-border'
 const MONEY = 'bg-gold-500/10 text-gold-400 border-gold-500/20'
-const CHANGE = 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-const OUTBOUND = 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+// CHANGE 는 «위험도 중립»의 일반 변경 — 보라(팔레트 밖)를 중립 칩으로. MONEY(골드)와 구분 유지.
+const CHANGE = 'bg-white/[0.06] text-ink-light/80 border-white/15'
+const OUTBOUND = 'bg-info-light text-info-text border-info-border'
 
 export const ADMIN_AUDIT_LABELS: Record<AdminAuditAction, ActionLabel> = {
   balance_adjust: { label: '복채 조정', cls: MONEY, heavy: true },

@@ -19,8 +19,8 @@ const STATUS_ORDER: readonly StoryStatus[] = ['received', 'reviewing', 'selected
 
 const STATUS_TONE: Readonly<Record<StoryStatus, string>> = {
   received: 'border-white/[0.06] text-ink-light/45',
-  reviewing: 'border-sky-500/40 text-sky-300 bg-sky-900/20',
-  selected: 'border-emerald-500/40 text-emerald-300 bg-emerald-900/20',
+  reviewing: 'border-info/40 text-info-text bg-info-light',
+  selected: 'border-success/40 text-success-text bg-success-light',
   declined: 'border-white/[0.06] text-ink-light/35',
 }
 

@@ -23,7 +23,7 @@ interface NotificationLog {
 }
 
 const STATUS_CLS: Record<string, string> = {
-  SENT: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  SENT: 'bg-success-light text-success-text border-success-border',
   FAILED: 'bg-seal/15 text-seal border-seal/30',
 }
 

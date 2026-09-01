@@ -194,7 +194,7 @@ export default async function AdminDashboardPage() {
                   <div className="text-right flex-shrink-0 space-y-0.5">
                     <p
                       className={`text-xs md:text-sm font-bold whitespace-nowrap font-mono ${
-                        settlement.kind === 'none' ? 'text-ink-primary' : 'text-amber-200'
+                        settlement.kind === 'none' ? 'text-ink-primary' : 'text-warning-text'
                       }`}
                     >
                       {settlement.net.toLocaleString()}원
@@ -202,7 +202,7 @@ export default async function AdminDashboardPage() {
                     {settlement.kind !== 'none' && (
                       <p className="text-[9px] md:text-[10px] text-ink-primary/40 whitespace-nowrap font-mono">
                         <span className="line-through">{payment.amount?.toLocaleString()}원</span>
-                        <span className={settlement.kind === 'full' ? ' text-rose-300/90' : ' text-amber-300/90'}>
+                        <span className={settlement.kind === 'full' ? ' text-error-text/90' : ' text-warning-text/90'}>
                           {' '}
                           −{settlement.cancelled.toLocaleString()}원
                         </span>
@@ -211,14 +211,14 @@ export default async function AdminDashboardPage() {
                     <span
                       className={`inline-block text-[9px] md:text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         settlement.kind === 'full'
-                          ? 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                          ? 'bg-error-light text-error-text border border-error/30'
                           : settlement.kind === 'partial'
-                            ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                            ? 'bg-warning-light text-warning-text border border-warning/30'
                             : payment.status === 'completed'
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-success-light text-success-text border border-success-border'
                               : payment.status === 'pending'
-                                ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                ? 'bg-white/[0.06] text-ink-primary/55 border border-white/[0.08]'
+                                : 'bg-error/20 text-error-text border border-error/40'
                       }`}
                     >
                       {settlement.kind === 'full'

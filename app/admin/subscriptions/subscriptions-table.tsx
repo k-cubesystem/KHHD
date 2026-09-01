@@ -31,15 +31,15 @@ interface SubscriptionsTableProps {
 
 const statusConfig: Record<string, { bg: string; text: string; border: string; label: string }> = {
   ACTIVE: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    border: 'border-emerald-500/20',
+    bg: 'bg-success-light',
+    text: 'text-success-text',
+    border: 'border-success-border',
     label: '구독 중',
   },
   CANCELLED: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    border: 'border-amber-500/20',
+    bg: 'bg-warning-light',
+    text: 'text-warning-text',
+    border: 'border-warning-border',
     label: '해지 예정',
   },
   EXPIRED: {
@@ -49,15 +49,15 @@ const statusConfig: Record<string, { bg: string; text: string; border: string; l
     label: '만료됨',
   },
   PAYMENT_FAILED: {
-    bg: 'bg-red-500/10',
-    text: 'text-red-400',
-    border: 'border-red-500/20',
+    bg: 'bg-error-light',
+    text: 'text-error-text',
+    border: 'border-error-border',
     label: '결제 실패',
   },
   PAUSED: {
-    bg: 'bg-blue-500/10',
-    text: 'text-blue-400',
-    border: 'border-blue-500/20',
+    bg: 'bg-info-light',
+    text: 'text-info-text',
+    border: 'border-info-border',
     label: '일시 중지',
   },
   PENDING: {
@@ -144,16 +144,16 @@ export function SubscriptionsTable({
               <SelectItem value="ALL" className="text-ink-primary/70">
                 전체
               </SelectItem>
-              <SelectItem value="ACTIVE" className="text-emerald-400">
+              <SelectItem value="ACTIVE" className="text-success-text">
                 구독 중
               </SelectItem>
-              <SelectItem value="CANCELLED" className="text-amber-400">
+              <SelectItem value="CANCELLED" className="text-warning-text">
                 해지 예정
               </SelectItem>
               <SelectItem value="EXPIRED" className="text-ink-primary/40">
                 만료됨
               </SelectItem>
-              <SelectItem value="PAYMENT_FAILED" className="text-red-400">
+              <SelectItem value="PAYMENT_FAILED" className="text-error-text">
                 결제 실패
               </SelectItem>
             </SelectContent>
@@ -230,7 +230,7 @@ export function SubscriptionsTable({
                           {sub.status !== 'CANCELLED' && sub.status !== 'EXPIRED' && (
                             <DropdownMenuItem
                               onClick={() => handleStatusChange(sub.id, 'CANCELLED')}
-                              className="text-xs text-red-400 hover:bg-red-500/10 cursor-pointer"
+                              className="text-xs text-error-text hover:bg-error-light cursor-pointer"
                             >
                               강제 해지
                             </DropdownMenuItem>
