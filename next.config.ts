@@ -82,7 +82,11 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
               "img-src 'self' data: https: blob: http://t1.daumcdn.net https://t1.daumcdn.net http://map.daumcdn.net https://map.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com https://pagead2.googlesyndication.com https://*.doubleclick.net",
+              // 🔴 adtrafficquality.google 은 애드센스의 무효 트래픽 판정(Sodar) 신호를 보내는 곳이다.
+              //    빠지면 **모든 페이지에서** CSP 위반이 콘솔에 찍히고 신호가 서버에 닿지 않는다
+              //    (2026-09-01 프로덕션 실측: 20개 페이지 로드 전부 이 오류 1건씩).
+              //    광고는 그려지지만 트래픽 품질 신호가 비는 건 수익 판정에 불리하다.
+              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com https://pagead2.googlesyndication.com https://*.doubleclick.net https://*.adtrafficquality.google",
               // 광고 본문은 iframe(safeframe)으로 들어온다 — frame-src 가 없으면 빈 자리만 남는다.
               "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
               "media-src 'self' blob: data:",
