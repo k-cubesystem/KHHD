@@ -9,6 +9,7 @@ import {
   ADSENSE_SLOTS,
   hasAnyAdSlot,
   isAdSlotConfigured,
+  isAdEligiblePath,
   isLiveAdEnvironment,
   shouldRenderAds,
 } from '@/lib/domain/ads/adsense'
@@ -83,18 +84,80 @@ describe('애드센스 게재 판정', () => {
  *
  * head 의 서버 렌더 <script> 로 되돌리면 이 사고가 그대로 재발한다. 재확인이
  * 필요하면 애드센스 «메타 태그» 확인을 쓴다.
+ * 로더 본체는 components/ads/adsense-loader.tsx 로 옮겨졌다(2026-09-02, 경로 게이팅) — 규칙은 그대로.
  */
 describe('🔴 애드센스 로더는 하이드레이션과 경주하지 않는다', () => {
   const fs = jest.requireActual<typeof import('fs')>('fs')
   const path = jest.requireActual<typeof import('path')>('path')
-  const layout = fs.readFileSync(path.join(__dirname, '..', '..', '..', '..', 'app', 'layout.tsx'), 'utf8')
+  const root = path.join(__dirname, '..', '..', '..', '..')
+  const layout = fs.readFileSync(path.join(root, 'app', 'layout.tsx'), 'utf8')
+  const loader = fs.readFileSync(path.join(root, 'components', 'ads', 'adsense-loader.tsx'), 'utf8')
 
   it('로더는 next/script lazyOnload 로 실린다', () => {
-    expect(layout).toContain('strategy="lazyOnload"')
-    expect(layout).toMatch(/<Script[\s\S]{0,200}adsbygoogle\.js/)
+    expect(loader).toContain('strategy="lazyOnload"')
+    expect(loader).toMatch(/<Script[\s\S]{0,200}adsbygoogle\.js/)
+    expect(layout).toContain('<AdsenseLoader />')
   })
 
   it('head 에 서버 렌더 <script> 로 되돌아가지 않는다', () => {
     expect(layout).not.toMatch(/<script[\s\S]{0,120}adsbygoogle\.js/)
+    expect(layout).not.toMatch(/<Script[\s\S]{0,200}adsbygoogle\.js/)
+  })
+
+  it('로더는 진짜 서비스 판정 뒤에서만 실린다', () => {
+    expect(layout).toContain('isLiveAdEnvironment(process.env.VERCEL_ENV, process.env.NODE_ENV) && <AdsenseLoader />')
+  })
+})
+
+/**
+ * 🔴 «게시자 콘텐츠가 없는 화면»에는 광고를 두지 않는다
+ * (2026-09-02 애드센스 «가치가 별로 없는 콘텐츠» 반려 회귀선).
+ * 로그인·결제·신당처럼 읽을 것이 없는 화면에 자동 광고가 붙으면 정책 위반이 된다.
+ */
+describe('광고 게재 가능 경로', () => {
+  it('콘텐츠 화면은 허용', () => {
+    for (const p of [
+      '/',
+      '/story',
+      '/guide',
+      '/guide/ohaeng',
+      '/ilgan',
+      '/ilgan/gap',
+      '/about',
+      '/business',
+      '/protected/analysis',
+      '/protected/analysis/saju',
+    ]) {
+      expect(isAdEligiblePath(p)).toBe(true)
+    }
+  })
+
+  it('🔴 인증·결제·관리·게임·전환 화면은 제외', () => {
+    const excluded = [
+      '/auth/login',
+      '/auth/sign-up',
+      '/admin',
+      '/admin/analytics',
+      '/api/og',
+      '/dev-preview',
+      '/test-destiny',
+      '/invite/abc',
+      '/share/xyz',
+      '/event/x',
+      '/protected/store',
+      '/protected/store?tab=membership',
+      '/protected/membership/checkout?plan=1',
+      '/protected/shrine',
+      '/protected/support',
+    ]
+    for (const p of excluded) expect(isAdEligiblePath(p)).toBe(false)
+  })
+
+  it('접두사는 경로 경계로만 일치한다 · 빈 경로는 제외', () => {
+    expect(isAdEligiblePath('/eventual')).toBe(true)
+    expect(isAdEligiblePath('/authors')).toBe(true)
+    expect(isAdEligiblePath('')).toBe(false)
+    expect(isAdEligiblePath(null)).toBe(false)
+    expect(isAdEligiblePath(undefined)).toBe(false)
   })
 })

@@ -90,6 +90,28 @@ export default async function IlganStemPage({ params }: PageProps) {
           ))}
         </div>
       </nav>
+
+      {/* 명리 가이드 — 일간 한 글자에서 천간 열 글자·십성으로 이어지는 읽기. 로그인 없이. */}
+      <section className="mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+        <p className="font-sans text-[11px] tracking-[0.18em] text-ink-light/50">더 읽기 · 명리 가이드</p>
+        <ul className="mt-2 space-y-1.5 font-sans text-[13px]">
+          <li>
+            <Link href="/guide/cheongan" className="text-ink-light/85 underline underline-offset-4 hover:text-gold-300">
+              천간 열 글자 — 갑목부터 계수까지의 상(象)
+            </Link>
+          </li>
+          <li>
+            <Link href="/guide/ilgan" className="text-ink-light/85 underline underline-offset-4 hover:text-gold-300">
+              일간 — 여덟 글자의 주인
+            </Link>
+          </li>
+          <li>
+            <Link href="/guide" className="text-ink-light/60 hover:text-gold-300">
+              가이드 전체 보기 →
+            </Link>
+          </li>
+        </ul>
+      </section>
     </main>
   )
 }

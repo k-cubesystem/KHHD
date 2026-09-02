@@ -51,6 +51,26 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Screen 3.6: 명리 가이드 — 로그인 없이 읽는 32편. 크롤러에게 «읽을 것»을 여는 입구(애드센스 콘텐츠 부족 반려 대응) */}
+      <section className="w-full px-4 pb-4">
+        <div className="max-w-[420px] mx-auto">
+          <Link
+            href="/guide"
+            className="group flex items-center justify-between gap-3 w-full px-4 py-3.5 rounded-xl border border-white/10 bg-white/[0.03] hover:border-gold-500/30 transition-colors"
+          >
+            <span className="flex flex-col text-left">
+              <span className="font-serif text-[14px] font-bold text-ink-light">
+                사주 용어가 낯설다면 — 명리 가이드
+              </span>
+              <span className="font-sans text-[11.5px] text-ink-light/70 mt-0.5">
+                음양·오행·십성·용신 32편 · 로그인 없이 읽기
+              </span>
+            </span>
+            <ArrowRight className="w-4 h-4 text-gold-500 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
+        </div>
+      </section>
+
       {/* Screen 4: CTA */}
       <section className="w-full px-4 pb-8">
         <div className="max-w-[420px] mx-auto space-y-3">

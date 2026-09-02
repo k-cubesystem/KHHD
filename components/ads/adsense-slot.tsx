@@ -13,8 +13,14 @@ import { ADSENSE_CLIENT, ADSENSE_SLOTS, shouldRenderAds, type AdSlotName } from 
  * 슬롯 ID 가 비었거나 프로덕션이 아니면 **아무것도 그리지 않는다**(빈 회색 상자·무효 트래픽 방지).
  */
 
-/** `window.adsbygoogle` — 애드센스가 밀어 넣는 전역 큐. any 없이 좁혀 쓴다. */
-type AdsByGoogleQueue = Array<Record<string, unknown>>
+/**
+ * `window.adsbygoogle` — 애드센스가 밀어 넣는 전역 큐. any 없이 좁혀 쓴다.
+ * 🔴 전역 선언은 여기 한 곳뿐 — 다른 파일에서 다시 선언하면 TS2717(타입 불일치)로 빌드가 깨진다.
+ *    `pauseAdRequests` 는 애드센스가 문서화한 스위치(1=새 광고 요청 중지) — 로더가 경로 게이팅에 쓴다.
+ */
+export interface AdsByGoogleQueue extends Array<Record<string, unknown>> {
+  pauseAdRequests?: 0 | 1
+}
 declare global {
   interface Window {
     adsbygoogle?: AdsByGoogleQueue

@@ -8,8 +8,8 @@ import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@next/third-parties/google'
-import Script from 'next/script'
-import { ADSENSE_CLIENT, isLiveAdEnvironment } from '@/lib/domain/ads/adsense'
+import { isLiveAdEnvironment } from '@/lib/domain/ads/adsense'
+import { AdsenseLoader } from '@/components/ads/adsense-loader'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
@@ -133,15 +133,9 @@ export default async function RootLayout({
                사이트 확인은 이미 통과했다(광고 송출 중) — 초기 HTML 요건은 확인 단계에만 필요했다.
                재확인이 필요해지면 애드센스의 「메타 태그」 확인 방식을 쓸 것(스크립트를 head 로
                되돌리면 이 사고가 그대로 재발한다).
-            🔴 진짜 서비스에서만 — 프리뷰·로컬에서 실리면 QA 노출이 무효 트래픽이 된다. */}
-        {isLiveAdEnvironment(process.env.VERCEL_ENV, process.env.NODE_ENV) && (
-          <Script
-            id="adsbygoogle-loader"
-            strategy="lazyOnload"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-          />
-        )}
+            🔴 진짜 서비스에서만 — 프리뷰·로컬에서 실리면 QA 노출이 무효 트래픽이 된다.
+            로더 본체는 components/ads/adsense-loader.tsx — 경로 게이팅(로그인·결제·신당 제외)도 거기서. */}
+        {isLiveAdEnvironment(process.env.VERCEL_ENV, process.env.NODE_ENV) && <AdsenseLoader />}
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             <QueryProvider>
