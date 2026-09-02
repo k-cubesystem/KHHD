@@ -8,7 +8,20 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-08-25(25차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-03(26차) · 브랜치 `claude/design-story-unify` (라이브 통합 브랜치 — determined-yonath 의 상위집합)
+
+**(26차 · 2026-09-03) 애드센스 «가치가 별로 없는 콘텐츠» 반려 대응 — 프로덕션 라이브(`hhd-lnhnwptau`):**
+
+| 커밋       | 내용                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `a08c3e2a` | 공개 명리 가이드 32편 `/guide`(`lib/content/guide/`) + `/about` + 사이트맵 정비(/auth 제외) + `/test-destiny` 삭제 + 광고 로더 경로 게이팅 |
+
+🔴 26차 함정·남은 일: 애드센스 **「검토 요청」은 구글이 /guide 를 색인한 뒤에**(Search Console 사이트맵 재제출 →
+`site:k-haehwadang.com/guide` 확인 → 「문제를 수정했음」 체크 → 검토 요청). 자동 광고는 콘솔에서 끌 것.
+가이드 본문 두께·문장 규율은 `lib/content/guide/__tests__/guide.test.ts` 가 지킨다 — 편을 줄이거나 얇게 고치면 실패한다.
+`Window.adsbygoogle` 전역 선언은 `components/ads/adsense-slot.tsx` 한 곳뿐(재선언 시 TS2717).
+로컬 prod 검증 시 `NEXT_PUBLIC_*` 는 빌드 인라인이라 env 없이 만든 .next 는 못 살린다 — 미들웨어가 읽는 키 이름은
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
 **(25차 · 2026-08-25 새벽) 신당 단일화 + 백일기도 v2 「기도 액자」 — 프로덕션 라이브(`hhd-fkfac2urn`, 01:25):**
 
@@ -784,7 +797,6 @@ cat .next/static/chunks/*.css | grep -c "120d07"   # 고치기 전 0 · 고친 �
 
 **게이트**: tsc 0 · jest 3,563/3,563(168 suite) · next build ✓ · eslint 0 · 공개 4경로 200 ·
 라이브 CSS 에서 패널 배경 규칙 1건 실측.
-
 
 ---
 
