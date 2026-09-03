@@ -241,6 +241,7 @@ export function ObangkiRitual({ status, play }: Props) {
             effectsRef={effectsRef}
             phase={phase}
             reading={revealed ? reading : null}
+            play={play}
             onShuffleEnd={() => {
               setShuffleDone(true)
               setPhase('draw')
@@ -427,54 +428,57 @@ function ComposeStep({
  */
 function FlagBundle({ shaking }: { shaking: boolean }) {
   return (
-    <span
-      aria-hidden
-      className={`relative block ${shaking ? 'obangki-shuffle' : ''}`}
-      style={{ width: 96, height: STAGE.h - 14 }}
-    >
-      {/* 자루 다섯 — 부챗살로 살짝 벌어져 끝만 보인다(색은 여기서 드러나지 않는다) */}
-      {[-16, -8, 0, 8, 16].map((deg, i) => (
+    <span aria-hidden className="relative block" style={{ width: 96, height: STAGE.h - 14 }}>
+      {/* 바닥 그림자 — 다발이 들릴 때 오므라들고 내려앉을 때 퍼진다(흔들림과 반대 위상).
+          transform 을 애니메이션이 쓰므로 가운데 맞춤은 translate 가 아니라 left 계산으로 */}
+      <span
+        className={`absolute bottom-0 h-[10px] w-[64px] rounded-full ${shaking ? 'obangki-bundle-shadow' : ''}`}
+        style={{
+          left: 'calc(50% - 32px)',
+          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.75), rgba(0,0,0,0) 70%)',
+          opacity: 0.6,
+        }}
+      />
+      {/* 다발 실물 그림(2026-09-04, scripts/shrine-assets/ritual-chuljeon.mjs) — 감아쥔 기폭 한 통 아래로
+          자루 다섯이 부챗살로 나온다. 색은 여기서 드러나지 않는다(뽑기가 고르기가 되지 않게).
+          그림이 없어도(404) 통 자리에 한지색 두루마리가 남는다.
+          ⚠️ .obangki-shuffle 은 이 요소에 건다 — 국면 전환이 이 animationend 를 듣는다. */}
+      <span
+        className={`absolute inset-x-0 bottom-1 top-0 block ${shaking ? 'obangki-shuffle' : ''}`}
+        style={{
+          backgroundImage:
+            "url('/shrine/ritual/obangki-bundle.webp'), linear-gradient(100deg,#E2D3AE,#B49C6E 46%,#7A6540 78%,#544425)",
+          backgroundSize: 'auto 100%, 46% 60%',
+          backgroundPosition: 'center bottom, center top',
+          backgroundRepeat: 'no-repeat, no-repeat',
+          filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.85))',
+        }}
+      />
+    </span>
+  )
+}
+
+/** 칠성방울 — 요령(搖鈴) 실물 그림이 끈에 매달려 흔들리고, 울림 고리 둘이 퍼진다. */
+function Bell() {
+  return (
+    <span aria-hidden className="absolute right-2 top-0 block" style={{ width: 44, height: 60 }}>
+      <span className="obangki-bell relative block h-full w-full">
+        <span className="absolute top-0 h-3 w-[1.5px]" style={{ left: 'calc(50% - 0.75px)', background: '#9E2B2B' }} />
         <span
-          key={i}
-          className="absolute bottom-0 left-1/2 w-[4px] rounded-full"
+          className="absolute inset-x-0 bottom-0 top-3 block"
           style={{
-            height: '52%',
-            transformOrigin: '50% 0%',
-            transform: `translateX(-50%) rotate(${deg}deg)`,
-            background: 'linear-gradient(180deg,#C9A46A,#6B4A22)',
-            boxShadow: '0 3px 6px -3px rgba(0,0,0,0.9)',
+            backgroundImage: "url('/shrine/items/bell-yoryeong.webp')",
+            backgroundSize: 'contain',
+            backgroundPosition: 'center top',
+            backgroundRepeat: 'no-repeat',
+            filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.8))',
           }}
         />
-      ))}
-
-      {/* 감아쥔 기폭 한 통 — 다섯 기가 함께 말려 있다 */}
-      <span
-        className="absolute left-1/2 top-[6%] block -translate-x-1/2 rounded-[18px]"
-        style={{
-          width: 46,
-          height: '50%',
-          background: 'linear-gradient(100deg,#E2D3AE,#B49C6E 46%,#7A6540 78%,#544425)',
-          boxShadow:
-            'inset -6px 0 10px -6px rgba(40,28,12,0.9), inset 6px 0 8px -6px rgba(255,240,200,0.35), 0 8px 18px -10px rgba(0,0,0,0.95)',
-        }}
-      >
-        {/* 통을 따라 도는 결 — 여러 폭이 겹쳐 말린 티가 나게 */}
-        {[26, 44, 62].map((top) => (
-          <span
-            key={top}
-            className="absolute inset-x-[10%] h-[1.5px] rounded-full"
-            style={{ top: `${top}%`, background: 'rgba(70,52,26,0.35)' }}
-          />
-        ))}
       </span>
-
-      {/* 허리 띠 — 다발을 묶은 자리 */}
+      <span className="obangki-bell-ring pointer-events-none absolute top-7 h-8 w-8 rounded-full" style={{ left: 6 }} />
       <span
-        className="absolute left-1/2 top-[42%] h-[9px] w-[54px] -translate-x-1/2 rounded-[3px]"
-        style={{
-          background: 'linear-gradient(180deg,#9E2B2B,#6A1A1A)',
-          boxShadow: '0 2px 5px -2px rgba(0,0,0,0.9)',
-        }}
+        className="obangki-bell-ring pointer-events-none absolute top-7 h-8 w-8 rounded-full"
+        style={{ left: 6, '--ob-delay': '220ms' } as React.CSSProperties}
       />
     </span>
   )
@@ -488,6 +492,7 @@ function FlagStage({
   effectsRef,
   phase,
   reading,
+  play,
   onShuffleEnd,
   onLastFlag,
 }: {
@@ -495,6 +500,7 @@ function FlagStage({
   phase: Phase
   /** 확정된 삼기. 서버 응답 전에는 null 이라 다발만 보인다 */
   reading: SamgiReading | null
+  play: (key: SoundKey) => void
   onShuffleEnd: () => void
   /** 마지막 기가 다 펴졌다 — 두루마리를 세울 때다 */
   onLastFlag: () => void
@@ -505,6 +511,13 @@ function FlagStage({
 
       <div
         className="absolute inset-0 flex items-end justify-center"
+        // 흔들기가 시작되는 박자에 방울 자리에서 파문이, 다발에서 금가루가 인다 — 캔버스가 이미 서 있는
+        // 자리(animationstart)라 ref 가 비어 있을 수 없다(startShuffle 에서 쏘면 마운트 전이다)
+        onAnimationStart={(e) => {
+          if (e.animationName !== 'obangkiShuffle') return
+          effectsRef.current?.emit('ripple', 88, 22)
+          effectsRef.current?.emit('sparkle', 50, 40)
+        }}
         onAnimationEnd={(e) => {
           if (e.animationName === 'obangkiShuffle') onShuffleEnd()
         }}
@@ -529,22 +542,21 @@ function FlagStage({
             const x = 26 + i * 24
             effectsRef.current?.emit('sparkle', x, 34)
             effectsRef.current?.emit('petals', x, 30)
+            play('chime')
             // 마지막 기가 펴진 순간이 두루마리를 세울 때다(타이머가 아니라 연출이 몬다)
             if (i === SAMGI_LAST_INDEX) onLastFlag()
+          }}
+          onPurify={() => {
+            // 물린 기가 흩어지는 자리(첫 칸) — 연기 두 줌과 바람 소리
+            effectsRef.current?.emit('smoke', 26, 42)
+            effectsRef.current?.emit('smoke', 30, 36)
+            play('whoosh')
           }}
         />
       )}
 
       {/* 칠성방울 — 셔플이 시작될 때 한 번 울린다 */}
-      {phase === 'shuffle' && (
-        <span
-          aria-hidden
-          className="obangki-bell absolute right-1 top-1 grid h-8 w-8 place-items-center rounded-full"
-          style={{ background: 'radial-gradient(circle,#E8D08A 0%,#8A6B24 72%)' }}
-        >
-          <span className="font-serif text-[13px] text-[#2A1F0A]">鈴</span>
-        </span>
-      )}
+      {phase === 'shuffle' && <Bell />}
     </div>
   )
 }

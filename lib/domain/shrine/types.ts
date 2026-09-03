@@ -9,7 +9,12 @@ export type Element = 'wood' | 'fire' | 'earth' | 'metal' | 'water'
 export type Layer = 'wall' | 'hanging' | 'altar' | 'floor'
 export type SizeGrade = 'sm' | 'md' | 'lg'
 export type TapKind = 'toggleLit' | 'swing' | 'smoke'
-export type SoundKey = 'moktak' | 'chime' | 'bell' | 'water' | 'crackle' | 'bara'
+/**
+ * 의식 연출 전용 두 음(2026-09-04): coin = 엽전 짤랑, whoosh = 불붙는·천 펴지는 바람.
+ * 살림 아이템 behavior 의 sound 화이트리스트(SOUNDS · scene.ts SOUND_KEYS)에는 넣지 않는다 —
+ * 아이템이 낼 소리가 아니라 의식이 내는 소리다.
+ */
+export type SoundKey = 'moktak' | 'chime' | 'bell' | 'water' | 'crackle' | 'bara' | 'coin' | 'whoosh'
 export type EffectKey = 'flame' | 'smoke' | 'petals' | 'ripple' | 'sparkle' | 'resonance'
 
 /** 카탈로그 아이템의 behavior JSONB 스키마 */

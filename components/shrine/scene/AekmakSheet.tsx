@@ -38,6 +38,7 @@ import { burnAekmak, type AekmakStatus } from '@/app/actions/shrine/rituals'
 import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
+import { hapticPulse } from '@/lib/utils/haptic'
 import type { SoundKey } from '@/lib/domain/shrine/types'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
 
@@ -51,6 +52,16 @@ const STAGE = { w: 186, h: 279 } as const
 const DROP_SLACK = 24
 /** 드래그로 인정할 최소 이동(px). 이 아래는 탭으로 처리해 접근성 경로를 남긴다. */
 const DRAG_THRESHOLD = 6
+/** 불씨 꼬리 — 손이 이만큼(px) 움직일 때마다 지나온 자리에 불티 한 줌을 남긴다 */
+const EMBER_TRAIL_STEP = 14
+/** 마무리 카드의 남은 불티 다섯 — 자리·박자·흩날림이 다 다르다(같으면 전광판이다) */
+const SETTLE_SPARKS = [
+  { left: '30%', delay: 0, dx: -6 },
+  { left: '46%', delay: 420, dx: 4 },
+  { left: '58%', delay: 900, dx: -3 },
+  { left: '40%', delay: 1300, dx: 7 },
+  { left: '64%', delay: 600, dx: -8 },
+] as const
 
 const BURN_ERROR_MSG: Record<string, string> = {
   UNAUTHORIZED: '로그인이 필요합니다',
@@ -84,10 +95,20 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
 
   const effectsRef = useRef<EffectsHandle>(null)
   const dropRef = useRef<HTMLDivElement>(null)
-  const dragState = useRef<{ id: number; x: number; y: number; moved: boolean } | null>(null)
+  const dragState = useRef<{
+    id: number
+    x: number
+    y: number
+    moved: boolean
+    /** 마지막으로 불티를 남긴 자리 — 꼬리 간격(EMBER_TRAIL_STEP)의 기준 */
+    lastX: number
+    lastY: number
+  } | null>(null)
   /** 드래그로 끝난 제스처가 뒤이어 click 으로도 도착한다 — 빗나간 드래그가 탭으로 점화되지 않게 한 번 삼킨다 */
   const suppressClick = useRef(false)
   const [emberOffset, setEmberOffset] = useState<{ x: number; y: number } | null>(null)
+  /** 불씨가 부적 아랫자락 위에 있다 — 종이가 달아오른다(.ritual-heat). 놓기 판정과 같은 자(inDropZone)를 쓴다 */
+  const [hot, setHot] = useState(false)
 
   // 폴백(빈 원문)이 태그 발원문이라 태그에도 의존한다 — 원문은 이 계산 밖으로 나가지 않는다
   const writ = useMemo(() => writPlan(text, tag), [text, tag])
@@ -100,6 +121,7 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
     setTag(null)
     setText('')
     setEmberOffset(null)
+    setHot(false)
     dragState.current = null
   }, [])
 
@@ -112,8 +134,13 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
     setBurnedAt(at)
     setPhase('burning')
     setEmberOffset(null)
+    setHot(false)
+    // 붙는 순간 — 바람이 훅 일고(whoosh) 타닥이며(crackle) 손에 한 번 울린다
+    play('whoosh')
     play('crackle')
+    hapticPulse(30)
     effectsRef.current?.emit('flame', 50, 96)
+    effectsRef.current?.emit('ember', 50, 94)
     setRemaining((r) => Math.max(0, r - 1))
     setMonthCount((n) => n + 1)
     trackEvent({ action: 'aekmak_burn', category: 'shrine', label: tag })
@@ -146,27 +173,64 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
       const x = 50 + Math.sin(step * 1.7) * 22
       effectsRef.current?.emit('smoke', x, y)
       if (step % 2 === 0) effectsRef.current?.emit('flame', 50 + Math.sin(step * 2.3) * 16, y)
+      // 불티 — 타는 선에서 튀어 올라 흩어진다(연기보다 성기게)
+      if (step % 3 === 0) effectsRef.current?.emit('ember', 50 + Math.sin(step * 1.3) * 26, y)
     }, BURN_MS.emit)
     return () => window.clearInterval(iv)
   }, [phase])
+
+  /** 불씨가 부적 아랫자락(dropRef) 위에 있는가 — 놓기 판정과 달아오름 표시가 같은 자를 쓴다 */
+  const inDropZone = useCallback((clientX: number, clientY: number) => {
+    const zone = dropRef.current?.getBoundingClientRect()
+    return (
+      zone !== undefined &&
+      clientX >= zone.left - DROP_SLACK &&
+      clientX <= zone.right + DROP_SLACK &&
+      clientY >= zone.top - DROP_SLACK &&
+      clientY <= zone.bottom + DROP_SLACK
+    )
+  }, [])
 
   // ── 불씨 드래그 ───────────────────────────────────────────
   const onEmberDown = useCallback((e: RPointerEvent<HTMLButtonElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return
     e.currentTarget.setPointerCapture(e.pointerId)
     suppressClick.current = false
-    dragState.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false }
+    dragState.current = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      moved: false,
+      lastX: e.clientX,
+      lastY: e.clientY,
+    }
   }, [])
 
-  const onEmberMove = useCallback((e: RPointerEvent<HTMLButtonElement>) => {
-    const d = dragState.current
-    if (!d || d.id !== e.pointerId) return
-    const dx = e.clientX - d.x
-    const dy = e.clientY - d.y
-    if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return
-    d.moved = true
-    setEmberOffset({ x: dx, y: dy })
-  }, [])
+  const onEmberMove = useCallback(
+    (e: RPointerEvent<HTMLButtonElement>) => {
+      const d = dragState.current
+      if (!d || d.id !== e.pointerId) return
+      const dx = e.clientX - d.x
+      const dy = e.clientY - d.y
+      if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return
+      d.moved = true
+      setEmberOffset({ x: dx, y: dy })
+      setHot(inDropZone(e.clientX, e.clientY))
+      // 불씨 꼬리 — 손이 한 뼘(EMBER_TRAIL_STEP) 움직일 때마다 지나온 자리에 불티 한 줌.
+      // 좌표는 무대(dropRef 의 부모) 기준 % — 캔버스가 그 무대에 꼭 맞게 서 있다
+      if (Math.hypot(e.clientX - d.lastX, e.clientY - d.lastY) < EMBER_TRAIL_STEP) return
+      d.lastX = e.clientX
+      d.lastY = e.clientY
+      const stage = dropRef.current?.parentElement?.getBoundingClientRect()
+      if (!stage || stage.width <= 0 || stage.height <= 0) return
+      effectsRef.current?.emit(
+        'ember',
+        ((e.clientX - stage.left) / stage.width) * 100,
+        ((e.clientY - stage.top) / stage.height) * 100
+      )
+    },
+    [inDropZone]
+  )
 
   const onEmberUp = useCallback(
     (e: RPointerEvent<HTMLButtonElement>) => {
@@ -175,17 +239,11 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
       if (!d || d.id !== e.pointerId) return
       if (!d.moved) return // 탭 — onClick 이 받는다(키보드·스크린리더 경로와 같은 문)
       suppressClick.current = true
-      const zone = dropRef.current?.getBoundingClientRect()
-      const hit =
-        zone !== undefined &&
-        e.clientX >= zone.left - DROP_SLACK &&
-        e.clientX <= zone.right + DROP_SLACK &&
-        e.clientY >= zone.top - DROP_SLACK &&
-        e.clientY <= zone.bottom + DROP_SLACK
-      if (hit) ignite()
+      setHot(false)
+      if (inDropZone(e.clientX, e.clientY)) ignite()
       else setEmberOffset(null) // 빗나가면 제자리로
     },
-    [ignite]
+    [ignite, inDropZone]
   )
 
   // ── 마무리 카드 공유 — 기존 공유 보상 흐름 재사용(새 지급 경로 없음) ──
@@ -308,14 +366,26 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
                     ⚠️ settled 에서는 그리지 않는다 — burning 클래스가 내려가는 순간 마스크가 벗겨져
                     **다 탄 부적이 원상복구된 채** 마무리 카드 위에 서 있었다(감사 A2 P1, 실측). */}
                 {phase !== 'settled' && (
-                  <div className="relative" style={{ width: STAGE.w, height: STAGE.h }}>
+                  <div
+                    className={`relative ${phase === 'burning' ? 'ritual-shake' : ''}`}
+                    // perspective — 오그라드는 종이가 위쪽을 축으로 들리는(ritualCurl 의 rotateX) 것이 보이는 근거
+                    style={{ width: STAGE.w, height: STAGE.h, perspective: 640 }}
+                  >
                     <EffectsCanvas ref={effectsRef} />
                     <TalismanPaper
                       tag={tag}
                       writ={writ}
+                      hot={hot}
                       burning={phase === 'burning'}
-                      onBurnEnd={() => setPhase('settled')}
+                      onBurnEnd={() => {
+                        setPhase('settled')
+                        play('bara')
+                      }}
                     />
+                    {/* 점화 섬광 — 붙는 그 한 순간, 캔버스 위(z12)에서 한 번 번쩍인다 */}
+                    {phase === 'burning' && (
+                      <span aria-hidden className="ritual-flash pointer-events-none absolute inset-0 z-[12]" />
+                    )}
                     {/* 불씨를 놓는 자리 — 부적 하단 1/3. 히트 판정의 기준 사각형이라 항상 렌더한다 */}
                     <div ref={dropRef} aria-hidden className="absolute inset-x-0 bottom-0 h-1/3" />
                   </div>
@@ -324,6 +394,7 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
                 {phase === 'talisman' && (
                   <IgniteStep
                     litCandles={litCandles}
+                    hot={hot}
                     emberOffset={emberOffset}
                     onPointerDown={onEmberDown}
                     onPointerMove={onEmberMove}
@@ -458,11 +529,14 @@ function ComposeStep({
 function TalismanPaper({
   tag,
   writ,
+  hot,
   burning,
   onBurnEnd,
 }: {
   tag: AekmakTag | null
   writ: WritPlan
+  /** 불씨가 아랫자락 위에 머문다 — 종이가 달아오른다 */
+  hot: boolean
   burning: boolean
   onBurnEnd: () => void
 }) {
@@ -532,6 +606,9 @@ function TalismanPaper({
         </span>
       )}
 
+      {/* 달아오름 — 불씨가 아랫자락 위에 머무는 동안만. 아래에서 배어나는 빛이 숨 쉰다 */}
+      {hot && !burning && <span aria-hidden className="ritual-heat pointer-events-none absolute inset-0" />}
+
       {burning && (
         <>
           <span aria-hidden className="ritual-char pointer-events-none absolute inset-0" />
@@ -546,6 +623,7 @@ function TalismanPaper({
 
 function IgniteStep({
   litCandles,
+  hot,
   emberOffset,
   onPointerDown,
   onPointerMove,
@@ -554,6 +632,8 @@ function IgniteStep({
   onBack,
 }: {
   litCandles: number
+  /** 불씨가 부적 아랫자락 위에 있다 — 불씨가 커지고 더 밝다(놓아도 된다는 신호) */
+  hot: boolean
   emberOffset: { x: number; y: number } | null
   onPointerDown: (e: RPointerEvent<HTMLButtonElement>) => void
   onPointerMove: (e: RPointerEvent<HTMLButtonElement>) => void
@@ -580,8 +660,14 @@ function IgniteStep({
           background: bright
             ? 'radial-gradient(circle,#FFD08A 0%,#C05A1E 70%)'
             : 'radial-gradient(circle,#C9A06A,#6B3B14)',
-          boxShadow: bright ? '0 0 18px rgba(255,150,60,0.55)' : '0 0 10px rgba(180,110,50,0.3)',
-          transform: emberOffset ? `translate(${emberOffset.x}px, ${emberOffset.y}px)` : undefined,
+          boxShadow: hot
+            ? '0 0 28px rgba(255,160,70,0.9)'
+            : bright
+              ? '0 0 18px rgba(255,150,60,0.55)'
+              : '0 0 10px rgba(180,110,50,0.3)',
+          transform: emberOffset
+            ? `translate(${emberOffset.x}px, ${emberOffset.y}px) scale(${hot ? 1.22 : 1})`
+            : undefined,
           transition: emberOffset ? 'none' : 'transform 220ms cubic-bezier(0.22,0.61,0.36,1)',
         }}
       >
@@ -620,7 +706,48 @@ function SettleCard({
   const used = Math.max(0, limit - remaining)
   return (
     <div className="ritual-settle mt-5 w-full space-y-3.5">
-      <p className="text-center font-serif text-[15px] leading-relaxed text-ink-primary">{line}</p>
+      {/* 재 무더기와 남은 불티 — 다 탄 자리. 이 국면엔 파티클 캔버스가 없으므로(마스크 원상복구 사고) CSS 가 그린다 */}
+      <div className="relative mx-auto h-10 w-28" aria-hidden>
+        <span
+          className="ritual-ash absolute inset-x-3 bottom-0 h-4 rounded-[50%]"
+          style={{
+            background: 'radial-gradient(ellipse at 50% 60%, #3A3129, #1A1512 75%)',
+            boxShadow: '0 0 14px rgba(255,120,40,0.2)',
+          }}
+        />
+        {SETTLE_SPARKS.map((s, i) => (
+          <span
+            key={i}
+            className="ritual-spark absolute bottom-3 h-[3px] w-[3px] rounded-full"
+            style={
+              {
+                left: s.left,
+                background: '#FFB25A',
+                boxShadow: '0 0 6px #FF8A2A',
+                '--rs-delay': `${s.delay}ms`,
+                '--rs-x': `${s.dx}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+      </div>
+
+      <div className="relative">
+        <p className="px-8 text-center font-serif text-[15px] leading-relaxed text-ink-primary">{line}</p>
+        {/* 낙관 — 「마침」 붉은 인장이 한 박자 늦게 내리찍힌다 */}
+        <span
+          aria-hidden
+          className="ritual-stamp absolute -top-2 right-0 grid h-8 w-8 place-items-center rounded-[3px] border font-serif text-[10px] font-bold leading-none"
+          style={{
+            borderColor: 'rgba(158,43,43,0.75)',
+            color: '#B83232',
+            background: 'rgba(158,43,43,0.12)',
+            boxShadow: 'inset 0 0 0 1px rgba(158,43,43,0.35)',
+          }}
+        >
+          마침
+        </span>
+      </div>
 
       {/* 옥수(玉水) 한 잔 — 재가 흩어진 자리에 올린다 */}
       <div className="flex justify-center">

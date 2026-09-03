@@ -176,6 +176,35 @@ export function useShrineAudio() {
     [ctx]
   )
 
+  /** 바람·쓸림(whoosh) — 백색소음을 띠통과 필터로 걸러 주파수를 훑는다. 발진기로는 못 내는 소리다. */
+  const noise = useCallback(
+    (dur: number, from: number, to: number, vol: number) => {
+      if (mutedRef.current) return
+      const c = ctx()
+      if (!c) return
+      const t = c.currentTime
+      const len = Math.max(1, Math.floor(c.sampleRate * dur))
+      const buf = c.createBuffer(1, len, c.sampleRate)
+      const ch = buf.getChannelData(0)
+      for (let i = 0; i < len; i += 1) ch[i] = Math.random() * 2 - 1
+      const src = c.createBufferSource()
+      src.buffer = buf
+      const f = c.createBiquadFilter()
+      f.type = 'bandpass'
+      f.Q.value = 1.2
+      f.frequency.setValueAtTime(from, t)
+      f.frequency.exponentialRampToValueAtTime(to, t + dur * 0.7)
+      const g = c.createGain()
+      g.gain.setValueAtTime(0, t)
+      g.gain.linearRampToValueAtTime(vol, t + dur * 0.25)
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+      src.connect(f).connect(g).connect(c.destination)
+      src.start(t)
+      src.stop(t + dur + 0.05)
+    },
+    [ctx]
+  )
+
   // 합성 폴백(외부 파일 없을 때)
   const synth = useCallback(
     (key: SoundKey) => {
@@ -205,9 +234,18 @@ export function useShrineAudio() {
           tone(1174, 1.7, 0.08)
           tone(659, 2.2, 0.07)
           break
+        case 'coin':
+          // 놋쇠 짤랑 — 높은 배음 셋이 짧게 울리고 곧 죽는다(엽전이 쟁반에 닿는 소리)
+          tone(2640, 0.22, 0.14, 'triangle')
+          tone(3960, 0.14, 0.07)
+          tone(1780, 0.3, 0.06, 'sine', 1640)
+          break
+        case 'whoosh':
+          noise(0.42, 320, 2400, 0.22)
+          break
       }
     },
-    [tone]
+    [tone, noise]
   )
 
   const play = useCallback(

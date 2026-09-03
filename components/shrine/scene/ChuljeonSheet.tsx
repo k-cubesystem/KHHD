@@ -19,13 +19,14 @@
  *  4) 국면 전환은 setTimeout 체인이 아니라 animationend 가 몬다.
  */
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { X, ChevronLeft, Coins, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   CHULJEON_COIN_STEP_MS,
   CHULJEON_DISCLAIMER,
+  CHULJEON_MS,
   CHULJEON_ORIGIN_LINE,
   CHULJEON_PRIVACY_NOTICE,
   CHULJEON_RETIE_LINE,
@@ -44,6 +45,10 @@ import {
 } from '@/lib/domain/ritual/chuljeon'
 import { castChuljeonThrow, type ChuljeonStatus } from '@/app/actions/shrine/rituals'
 import { trackEvent } from '@/lib/analytics/ga4'
+import { hapticPulse } from '@/lib/utils/haptic'
+import type { SoundKey } from '@/lib/domain/shrine/types'
+import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
+import { useShrineAudio } from './useShrineAudio'
 
 const SHRINE_HREF = '/protected/shrine'
 
@@ -63,6 +68,8 @@ interface Props {
 }
 
 export function ChuljeonRitual({ status }: Props) {
+  // 소리는 이 페이지가 주인이다(오방기 페이지와 같은 구조) — 짤랑(닿을 때)·바라(셈이 끝날 때)
+  const { play } = useShrineAudio()
   const [phase, setPhase] = useState<Phase>('compose')
   const [ways, setWays] = useState<string[]>(['', ''])
   const [todayCount, setTodayCount] = useState(status.todayCount)
@@ -176,13 +183,14 @@ export function ChuljeonRitual({ status }: Props) {
           ) : (
             <>
               {/* key=throwNo — 판이 바뀌면 무대를 새로 세운다(위 throwNo 주석의 교착 방지) */}
-              <Tray key={throwNo} result={result} labels={filled} onSettled={() => setSettled(true)} />
+              <Tray key={throwNo} result={result} labels={filled} play={play} onSettled={() => setSettled(true)} />
               {settled && (
                 <Verdict
                   result={result}
                   labels={filled}
                   seed={seed}
                   remaining={remaining}
+                  play={play}
                   onThrowAgain={throwAgain}
                   onAgain={restart}
                 />
@@ -292,31 +300,83 @@ function ComposeStep({
 
 // ─── 2. 쟁반 ─────────────────────────────────────────────────
 
-/** 엽전 한 닢 — 글자면(常)이 길, 등면이 흉. */
-function Coin({ face, delayMs }: { face: CoinFace; delayMs: number }) {
+/**
+ * 닢마다 다른 흩어짐 — 세 닢이 판박이로 멎으면 그림이지 엽전이 아니다.
+ * 자리 번호가 정하므로 결정론이다(같은 판을 다시 그려도 같은 자리에 멎는다).
+ */
+const COIN_SCATTER = [
+  // x 는 출발점의 가로 치우침 — 양수라 산통(오른쪽)에서 날아든다. 산통에 가까운 셋째 닢이 가장 짧게 난다
+  { x: 38, tilt: -9 },
+  { x: 26, tilt: 6 },
+  { x: 12, tilt: -3 },
+] as const
+
+/**
+ * 엽전 한 닢 — 글자면(常平通寶)이 길, 등면(戶)이 흉.
+ *
+ * 네 겹이다(app/shrine-scene.css 척전 절 참고): 활공 → 포물선·튕김 → 공중제비 → 두 면.
+ * **면은 공중제비의 끝 각이 정한다** — 360 의 배수면 글자면이, 배수+180 이면 등면이 위로 온다.
+ * 그림을 바꿔치기하는 게 아니라 실제로 돌아서 그 면이 나오므로 눈이 속지 않는다.
+ * --cj-delay 는 바깥 한 곳에만 두고 안쪽 겹은 상속받는다(네 겹이 한 박자로 움직이는 근거).
+ */
+function Coin({
+  face,
+  index,
+  delayMs,
+  onLand,
+}: {
+  face: CoinFace
+  index: number
+  delayMs: number
+  /** 닢이 쟁반에 처음 닿았다 — 흙먼지·짤랑·햅틱은 여기서 난다(표식의 animationend 가 몬다) */
+  onLand: (el: HTMLElement) => void
+}) {
   const gil = face === 'gil'
+  const scatter = COIN_SCATTER[index % COIN_SCATTER.length]
   return (
     <span
       aria-hidden
-      className="chuljeon-coin grid h-9 w-9 place-items-center rounded-full border font-serif text-[13px] font-bold"
-      style={
-        {
-          '--cj-delay': `${delayMs}ms`,
-          borderColor: gil ? '#C9A84C88' : '#5C564C88',
-          background: gil
-            ? 'radial-gradient(circle at 38% 32%, #E8D08A, #A8842E 72%)'
-            : 'radial-gradient(circle at 38% 32%, #6E6656, #3A362E 72%)',
-          color: gil ? '#2A1F0A' : '#9A9184',
-          boxShadow: gil ? '0 4px 10px -6px rgba(201,168,76,0.9)' : '0 4px 10px -8px rgba(0,0,0,0.9)',
-        } as React.CSSProperties
-      }
+      className="chuljeon-coin relative block h-10 w-10"
+      style={{ '--cj-delay': `${delayMs}ms`, '--cj-x': `${scatter.x}px` } as React.CSSProperties}
     >
-      {gil ? '常' : ''}
-      {/* 엽전 가운데 네모 구멍 — 등면일 때 더 또렷하다 */}
+      <span className="chuljeon-shadow" />
+      <span className="chuljeon-arc relative block h-full w-full">
+        <span
+          className="chuljeon-spin relative block h-full w-full"
+          style={{ '--cj-spin': gil ? '1440deg' : '1620deg', '--cj-tilt': `${scatter.tilt}deg` } as React.CSSProperties}
+        >
+          <span className="chuljeon-face chuljeon-face-front" />
+          <span className="chuljeon-face chuljeon-face-back" />
+        </span>
+        {/* 접지 표식 — 보이지 않는다. 길이가 CHULJEON_MS.land 라 닢이 닿는 그 박자에 끝난다 */}
+        <span
+          className="chuljeon-land absolute inset-0"
+          onAnimationEnd={(e) => {
+            if (e.target === e.currentTarget && e.animationName === 'chuljeonLand') onLand(e.currentTarget)
+          }}
+        />
+      </span>
+    </span>
+  )
+}
+
+/** 산통(算筒) — 던지는 손. CSS 통 하나가 흔들렸다 기울며 닢을 쏟는다(chuljeonCupPour). */
+function Cup() {
+  return (
+    <span aria-hidden className="chuljeon-cup absolute right-2.5 top-2 z-[2] block h-9 w-7">
       <span
-        aria-hidden
-        className="absolute h-[7px] w-[7px] rounded-[1px]"
-        style={{ background: '#16140F', opacity: gil ? 0.55 : 0.8 }}
+        className="absolute inset-x-0 bottom-0 top-1 rounded-b-[7px] rounded-t-[3px]"
+        style={{
+          background: 'linear-gradient(90deg,#3B2A14,#8A6A34 42%,#C9A46A 58%,#5C4222)',
+          boxShadow: '0 5px 9px -4px rgba(0,0,0,0.9), inset 0 -6px 8px -6px rgba(0,0,0,0.6)',
+        }}
+      />
+      <span
+        className="absolute inset-x-0 top-0 h-2.5 rounded-full"
+        style={{
+          background: 'radial-gradient(ellipse at 50% 40%, #2A1D0C, #6B4A22 70%, #C9A46A)',
+          border: '1px solid rgba(201,164,106,0.5)',
+        }}
       />
     </span>
   )
@@ -327,23 +387,78 @@ function Coin({ face, delayMs }: { face: CoinFace; delayMs: number }) {
  *
  * 순서는 전부 **지연**이 준다(타이머 체인이 아니라). 마지막 닢의 animationend 가 셈의 끝이고,
  * 그때 결과 카드가 선다 — 지연을 두 곳에서 세지 않으므로 어긋날 자리가 없다.
+ * 흙먼지·짤랑도 같은 규율이다: 닢마다 접지 표식(.chuljeon-land)의 animationend 가 몬다.
  */
-function Tray({ result, labels, onSettled }: { result: ChuljeonResult; labels: string[]; onSettled: () => void }) {
+function Tray({
+  result,
+  labels,
+  play,
+  onSettled,
+}: {
+  result: ChuljeonResult
+  labels: string[]
+  play: (key: SoundKey) => void
+  onSettled: () => void
+}) {
   // 마지막 라운드가 곧 결과다. 앞 라운드는 동수라 다시 던진 판이므로 요약만 남긴다.
   const last = result.rounds[result.rounds.length - 1]
   const lead = (result.rounds.length - 1) * 260
   const lastCoinDelay = lead + (last.throws.length - 1) * CHULJEON_WAY_STEP_MS + 2 * CHULJEON_COIN_STEP_MS
+  const effectsRef = useRef<EffectsHandle>(null)
+  const trayRef = useRef<HTMLDivElement>(null)
+
+  // 닢이 닿은 자리(쟁반 기준 %)에 금가루·먼지를 뿌린다 — 좌표는 DOM 실측이라 길 수·글자 길이와 무관하다
+  const onLand = useCallback(
+    (el: HTMLElement) => {
+      const tray = trayRef.current?.getBoundingClientRect()
+      if (tray && tray.width > 0 && tray.height > 0) {
+        const r = el.getBoundingClientRect()
+        const x = ((r.left + r.width / 2 - tray.left) / tray.width) * 100
+        const y = ((r.top + r.height - tray.top) / tray.height) * 100
+        effectsRef.current?.emit('sparkle', x, y)
+        effectsRef.current?.emit('smoke', x, y)
+      }
+      play('coin')
+      hapticPulse(10)
+    },
+    [play]
+  )
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/25 px-3 py-3">
-      {result.rounds.length > 1 && (
-        <p className="mb-2 font-serif text-[11px] leading-relaxed text-ink-primary/50">{CHULJEON_RETIE_LINE}</p>
-      )}
+    <div
+      ref={trayRef}
+      className="relative overflow-hidden rounded-xl border px-3 pb-3"
+      style={{
+        // 놋쟁반 — 테두리는 놋쇠 결, 바닥은 가운데가 살짝 밝은 옻칠
+        borderColor: 'rgba(201,164,106,0.35)',
+        background: 'radial-gradient(ellipse at 50% 40%, rgba(60,44,22,0.55), rgba(0,0,0,0.35) 80%)',
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.5), inset 0 8px 18px -10px rgba(0,0,0,0.9)',
+      }}
+    >
+      <EffectsCanvas ref={effectsRef} />
+      {/* 머리 — 산통이 서고 닢이 날아드는 하늘. 쟁반이 overflow-hidden 이라 포물선 꼭대기(chuljeonArc 18%,
+          -64px)가 이 안에 들어와야 한다. 낮으면 공중의 닢이 잘려 «갑자기 나타나» 떨어진다(하네스 실측). */}
+      <div className="relative h-[74px]">
+        <Cup />
+        {result.rounds.length > 1 && (
+          <p className="absolute left-0 top-2 pr-10 font-serif text-[11px] leading-relaxed text-ink-primary/50">
+            {CHULJEON_RETIE_LINE}
+          </p>
+        )}
+      </div>
       <div className="space-y-2.5">
         {last.throws.map((t, wi) => {
           const chosen = result.picked === t.index
+          const rowStart = lead + wi * CHULJEON_WAY_STEP_MS
+          // 줄이 울리는 박자 = 첫 닢이 닿는 때, 셈 글자가 뜨는 박자 = 마지막 닢이 닿는 때
+          const rowLand = rowStart + CHULJEON_MS.land
+          const rowLastLand = rowStart + 2 * CHULJEON_COIN_STEP_MS + CHULJEON_MS.land
           return (
-            <div key={t.index} className="flex items-center gap-2.5">
+            <div
+              key={t.index}
+              className="chuljeon-row flex items-center gap-2.5"
+              style={{ '--cj-delay': `${rowLand}ms` } as React.CSSProperties}
+            >
               <span
                 className={`min-w-0 flex-1 truncate font-serif text-[13px] ${
                   chosen ? 'font-bold text-gold-100' : 'text-ink-primary/60'
@@ -353,15 +468,14 @@ function Tray({ result, labels, onSettled }: { result: ChuljeonResult; labels: s
               </span>
               <span className="flex gap-1.5">
                 {t.faces.map((f, ci) => (
-                  <Coin key={ci} face={f} delayMs={lead + wi * CHULJEON_WAY_STEP_MS + ci * CHULJEON_COIN_STEP_MS} />
+                  <Coin key={ci} face={f} index={ci} delayMs={rowStart + ci * CHULJEON_COIN_STEP_MS} onLand={onLand} />
                 ))}
               </span>
               <span
-                className={`w-[46px] shrink-0 text-right font-serif text-[11px] ${
+                className={`chuljeon-tally w-[46px] shrink-0 text-right font-serif text-[11px] ${
                   chosen ? 'text-gold-200' : 'text-ink-primary/40'
                 }`}
-                // 마지막 닢이 멎는 순간이 셈의 끝 — 여기서 결과 카드를 부른다
-                onAnimationEnd={undefined}
+                style={{ '--cj-delay': `${rowLastLand}ms` } as React.CSSProperties}
               >
                 {tallyText(t.gil)}
               </span>
@@ -391,6 +505,7 @@ function Verdict({
   labels,
   seed,
   remaining,
+  play,
   onThrowAgain,
   onAgain,
 }: {
@@ -398,6 +513,7 @@ function Verdict({
   labels: string[]
   seed: number
   remaining: number
+  play: (key: SoundKey) => void
   /** 같은 갈림길로 그 자리에서 한 판 더 */
   onThrowAgain: () => void
   /** 갈림길을 새로 적는다 */
@@ -407,12 +523,33 @@ function Verdict({
   return (
     <div className="space-y-3">
       <div
-        className="chuljeon-seal rounded-xl border px-3 py-3 text-center"
+        className="chuljeon-seal relative rounded-xl border px-3 py-3 text-center"
         style={{
           borderColor: decided ? '#C9A84C55' : '#FFFFFF14',
           background: decided ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.03)',
         }}
+        // 도장이 내려앉는 박자에 바라가 울린다 — 타이머가 아니라 연출이 몬다
+        onAnimationStart={(e) => {
+          if (e.target !== e.currentTarget || e.animationName !== 'chuljeonSeal') return
+          play('bara')
+          hapticPulse(20)
+        }}
       >
+        {decided && (
+          // 낙관 — 정해진 길 위에 내리찍히는 붉은 인장(chuljeonStamp)
+          <span
+            aria-hidden
+            className="chuljeon-stamp absolute -top-2.5 right-2 grid h-9 w-9 place-items-center rounded-[3px] border font-serif text-[18px] font-bold"
+            style={{
+              borderColor: 'rgba(158,43,43,0.75)',
+              color: '#B83232',
+              background: 'rgba(158,43,43,0.12)',
+              boxShadow: 'inset 0 0 0 1px rgba(158,43,43,0.35)',
+            }}
+          >
+            吉
+          </span>
+        )}
         <p className="font-serif text-[10px] tracking-[0.24em] text-gold-500/60">
           {decided ? `정 해 진 길 · ${CHULJEON_TALLY_LABEL[result.gil ?? 0]}` : '정 해 지 지 않 음'}
         </p>

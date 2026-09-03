@@ -365,10 +365,18 @@ describe('서버 액션 계약', () => {
 
 describe('연출 CSS 계약 — 무증상 사망 방지', () => {
   it('클래스·키프레임이 실재하고 길이가 CHULJEON_MS 와 같다', () => {
-    for (const cls of ['.chuljeon-coin', '.chuljeon-seal']) expect(CSS).toContain(`${cls} {`)
-    for (const kf of ['chuljeonCoin', 'chuljeonSeal']) expect(CSS).toMatch(new RegExp(`@keyframes\\s+${kf}\\b`))
+    for (const cls of ['.chuljeon-coin', '.chuljeon-arc', '.chuljeon-spin', '.chuljeon-land', '.chuljeon-seal'])
+      expect(CSS).toContain(`${cls} {`)
+    for (const kf of ['chuljeonCoin', 'chuljeonArc', 'chuljeonSpin', 'chuljeonLand', 'chuljeonSeal'])
+      expect(CSS).toMatch(new RegExp(`@keyframes\\s+${kf}\\b`))
+    // 한 닢의 네 겹(활공·포물선·공중제비·그림자)은 같은 길이라야 한 순간에 멎는다 —
+    // 마지막 닢의 animationend(활공 층) 가 셈의 끝인데 다른 층이 더 길면 아직 도는 중에 결과가 뜬다.
     for (const [cls, ms] of [
       ['chuljeon-coin', CHULJEON_MS.coin],
+      ['chuljeon-arc', CHULJEON_MS.coin],
+      ['chuljeon-spin', CHULJEON_MS.coin],
+      ['chuljeon-shadow', CHULJEON_MS.coin],
+      ['chuljeon-land', CHULJEON_MS.land],
       ['chuljeon-seal', CHULJEON_MS.seal],
     ] as const) {
       const block = new RegExp(`\\.${cls}\\s*\\{[^}]*\\}`).exec(CSS)?.[0] ?? ''
@@ -383,10 +391,29 @@ describe('연출 CSS 계약 — 무증상 사망 방지', () => {
     }
   })
 
+  /**
+   * ★ 게이트 목록은 손으로 관리된다(obangki.test 와 같은 결함 구조). 그래서 CSS 원본에서
+   *   chuljeon-* 를 역으로 뽑아 대조한다 — 새 연출을 넣고 등록을 빠뜨리면 여기서 걸린다.
+   */
+  it('★ CSS 안의 모든 chuljeon 연출이 게이트에 등록돼 있다', () => {
+    const cssClasses = [...CSS.matchAll(/^\.(chuljeon-[a-z-]+)\s*\{/gm)].map((m) => m[1])
+    const cssKeyframes = [...CSS.matchAll(/@keyframes\s+(chuljeon[A-Za-z]+)/g)].map((m) => m[1])
+    expect(cssClasses.length).toBeGreaterThan(0)
+    const missingClasses = [...new Set(cssClasses)].filter((c) => !GATE.includes(`'.${c}'`))
+    const missingKeyframes = [...new Set(cssKeyframes)].filter((k) => !GATE.includes(`'${k}'`))
+    expect({ missingClasses, missingKeyframes }).toEqual({ missingClasses: [], missingKeyframes: [] })
+  })
+
+  it('접지 표식이 첫 접지보다 늦지 않다 — 흙먼지가 닢보다 먼저 일면 거짓말이다', () => {
+    expect(CHULJEON_MS.land).toBeLessThan(CHULJEON_MS.coin)
+    expect(CHULJEON_MS.land).toBeGreaterThan(0)
+  })
+
   it('동작 줄이기(reduced-motion)가 새 연출도 덮는다', () => {
     const block = /@media \(prefers-reduced-motion: reduce\)([\s\S]*)$/.exec(CSS)?.[1] ?? ''
-    expect(block).toContain('.chuljeon-coin')
-    expect(block).toContain('.chuljeon-seal')
+    for (const cls of ['.chuljeon-coin', '.chuljeon-arc', '.chuljeon-spin', '.chuljeon-land', '.chuljeon-seal']) {
+      expect(block).toContain(cls)
+    }
   })
 
   it('화면이 순서를 지연으로 몰고 타이머로 몰지 않는다', () => {

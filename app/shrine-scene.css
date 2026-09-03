@@ -1280,13 +1280,13 @@
     transform: none;
   }
   35% {
-    transform: scaleX(0.995) rotate(-0.22deg);
+    transform: scaleX(0.995) rotate(-0.22deg) rotateX(1deg);
   }
   72% {
-    transform: scaleX(0.984) rotate(-0.6deg) translateY(-2px);
+    transform: scaleX(0.984) rotate(-0.6deg) translateY(-2px) rotateX(5deg);
   }
   100% {
-    transform: scaleX(0.968) rotate(-1.1deg) translateY(-5px);
+    transform: scaleX(0.968) rotate(-1.1deg) translateY(-6px) rotateX(11deg);
   }
 }
 
@@ -1398,6 +1398,135 @@
   }
 }
 
+/* ── 액막이 「게임필」(2026-09-04) — 불씨가 다가오면 종이가 달아오르고, 붙는 순간 번쩍이며 상이 울린다 ── */
+/* 달아오름 — 불씨가 부적 아랫자락 위에 있을 때만. 아래에서 배어나는 주황 빛이 숨 쉰다 */
+.ritual-heat {
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(255, 150, 60, 0.55),
+    rgba(255, 90, 20, 0.18) 45%,
+    transparent 70%
+  );
+  transform-origin: 50% 100%;
+  animation: ritualHeat 0.9s ease-in-out infinite alternate;
+  will-change: opacity, transform;
+}
+@keyframes ritualHeat {
+  from {
+    opacity: 0.55;
+    transform: scaleY(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1.06);
+  }
+}
+/* 점화 섬광 — 붙는 그 한 순간. 바닥에서 퍼졌다 사라진다 */
+.ritual-flash {
+  background: radial-gradient(
+    circle at 50% 96%,
+    rgba(255, 236, 190, 0.95),
+    rgba(255, 150, 60, 0.6) 30%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+  transform-origin: 50% 100%;
+  animation: ritualFlash 0.55s ease-out both;
+  will-change: opacity, transform;
+}
+@keyframes ritualFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+/* 상이 울린다 — 점화 순간의 미세한 진동(±2px). 길면 멀미다 */
+.ritual-shake {
+  animation: ritualShake 0.42s ease-out both;
+}
+@keyframes ritualShake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(-2px, 1px);
+  }
+  30% {
+    transform: translate(2px, -1px);
+  }
+  45% {
+    transform: translate(-1.5px, 1.5px);
+  }
+  60% {
+    transform: translate(1px, -1px);
+  }
+  80% {
+    transform: translate(-0.5px, 0.5px);
+  }
+}
+/* 재 무더기 — 다 탄 자리에 남는 것. 밑동을 축으로 내려앉는다 */
+.ritual-ash {
+  transform-origin: 50% 100%;
+  animation: ritualAshIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+@keyframes ritualAshIn {
+  from {
+    transform: scaleY(0.2) scaleX(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1) scaleX(1);
+    opacity: 1;
+  }
+}
+/* 남은 불티 — 재에서 하나씩 떠올라 꺼진다(자리마다 --rs-delay·--rs-x 가 다르다) */
+.ritual-spark {
+  animation: ritualSpark 1.9s ease-out var(--rs-delay, 0s) infinite;
+  will-change: transform, opacity;
+}
+@keyframes ritualSpark {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--rs-x, 0px), -54px) scale(0.3);
+    opacity: 0;
+  }
+}
+/* 마무리 낙관 — 「액막이 마침」 붉은 인장이 내리찍힌다 */
+.ritual-stamp {
+  animation: ritualStamp 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.15) 0.3s both;
+  will-change: transform, opacity;
+}
+@keyframes ritualStamp {
+  0% {
+    transform: scale(2.2) rotate(-14deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.93) rotate(-4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+    opacity: 1;
+  }
+}
+
 /* 모션 최소화 — 연소는 **즉시 완료**한다. `none` 이 아니라 0.01ms 인 이유:
    국면 전환이 animationend 에 걸려 있어 애니메이션을 지우면 화면이 연소 상태로 멈춘다. */
 @media (prefers-reduced-motion: reduce) {
@@ -1408,11 +1537,17 @@
   .ritual-char,
   .ritual-glow,
   .ritual-settle,
-  .ritual-cup {
+  .ritual-cup,
+  .ritual-flash,
+  .ritual-shake,
+  .ritual-ash,
+  .ritual-stamp {
     animation-duration: 0.01ms;
     animation-delay: 0s;
   }
-  .ritual-ember {
+  .ritual-ember,
+  .ritual-heat,
+  .ritual-spark {
     animation: none;
   }
 }
@@ -1466,25 +1601,28 @@
 }
 @keyframes obangkiShuffle {
   0% {
-    transform: rotate(0deg) translateY(0);
+    transform: rotate(0deg) translateY(0) scaleY(1);
+  }
+  8% {
+    transform: rotate(-3deg) translateY(2px) scaleY(0.96);
   }
   18% {
-    transform: rotate(-7deg) translateY(-6px);
+    transform: rotate(-10deg) translateY(-8px) scaleY(1.03);
   }
   38% {
-    transform: rotate(6deg) translateY(-9px);
+    transform: rotate(9deg) translateY(-12px) scaleY(1.04);
   }
   56% {
-    transform: rotate(-5deg) translateY(-5px);
+    transform: rotate(-7deg) translateY(-6px) scaleY(1.01);
   }
   74% {
-    transform: rotate(3.5deg) translateY(-7px);
+    transform: rotate(5deg) translateY(-9px) scaleY(1.02);
   }
   88% {
-    transform: rotate(-1.5deg) translateY(-2px);
+    transform: rotate(-2deg) translateY(1px) scaleY(0.97);
   }
   100% {
-    transform: rotate(0deg) translateY(0);
+    transform: rotate(0deg) translateY(0) scaleY(1);
   }
 }
 
@@ -1542,13 +1680,16 @@
 }
 @keyframes obangkiUnfurl {
   0% {
-    transform: scaleX(0.16) scaleY(0.82) rotate(-8deg);
+    transform: scaleX(0.12) scaleY(0.8) rotate(-10deg);
   }
-  55% {
-    transform: scaleX(1.08) scaleY(1.03) rotate(3deg);
+  45% {
+    transform: scaleX(1.12) scaleY(1.04) rotate(4deg);
   }
-  78% {
-    transform: scaleX(0.97) scaleY(0.99) rotate(-1.5deg);
+  66% {
+    transform: scaleX(0.94) scaleY(0.99) rotate(-2.5deg);
+  }
+  84% {
+    transform: scaleX(1.03) scaleY(1) rotate(1deg);
   }
   100% {
     transform: scaleX(1) scaleY(1) rotate(0deg);
@@ -1564,15 +1705,15 @@
 }
 @keyframes obangkiSamgiRise {
   0% {
-    transform: translateY(24px) scale(0.88);
+    transform: translateY(30px) scale(0.6) rotate(-6deg);
     opacity: 0;
   }
   62% {
-    transform: translateY(-5px) scale(1.05);
+    transform: translateY(-7px) scale(1.07) rotate(2deg);
     opacity: 1;
   }
   100% {
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1) rotate(0deg);
     opacity: 1;
   }
 }
@@ -1585,12 +1726,27 @@
 }
 @keyframes obangkiPurify {
   0% {
-    transform: translateY(0) scale(1);
+    transform: translate(0, 0) rotate(0deg) scale(1);
     opacity: 0.92;
     filter: blur(0);
   }
+  12% {
+    transform: translate(-3px, 0) rotate(-4deg) scale(1);
+    opacity: 0.92;
+    filter: blur(0);
+  }
+  24% {
+    transform: translate(3px, 0) rotate(4deg) scale(1.02);
+    opacity: 0.92;
+    filter: blur(0);
+  }
+  36% {
+    transform: translate(-2px, 0) rotate(-3deg) scale(1);
+    opacity: 0.9;
+    filter: blur(0);
+  }
   100% {
-    transform: translateY(-34px) scale(0.66);
+    transform: translate(0, -38px) rotate(6deg) scale(0.6);
     opacity: 0;
     filter: blur(3px);
   }
@@ -1613,31 +1769,286 @@
   }
 }
 
+/* ── 오방기 「게임필」(2026-09-04) — 다발이 실물 그림이 되고, 천이 결을 따라 물결친다 ── */
+/* 다발 바닥 그림자 — 다발이 들릴 때 오므라들고 내려앉을 때 퍼진다(흔들림과 반대 위상) */
+.obangki-bundle-shadow {
+  animation: obangkiBundleShadow 1.1s cubic-bezier(0.45, 0, 0.35, 1) both;
+  will-change: transform, opacity;
+}
+@keyframes obangkiBundleShadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.6;
+  }
+  38% {
+    transform: scaleX(0.72);
+    opacity: 0.35;
+  }
+  74% {
+    transform: scaleX(0.8);
+    opacity: 0.42;
+  }
+}
+
+/* 방울 울림 고리 — 색 버스트와 같은 키프레임을 금색으로 두 번(지연이 둘째 고리를 늦춘다) */
+.obangki-bell-ring {
+  border: 1.5px solid rgba(232, 208, 138, 0.9);
+  animation: obangkiBurst 0.7s ease-out var(--ob-delay, 0s) both;
+  will-change: transform, opacity;
+}
+
+/* 천의 결 — 기폭을 세로 띠 다섯으로 잘라 깃대에서 멀수록 크게, 한 박자씩 늦게 흔든다.
+   그러면 파도가 깃대에서 바깥 변으로 **지나간다**(스프라이트 게임의 천 리그와 같은 수법).
+   진폭(--ob-amp)·기울기(--ob-shear)는 띠 번호에 비례해 인라인으로 들어온다. */
+.obangki-wave {
+  animation: obangkiWave 1.7s ease-in-out var(--ob-delay, 0s) infinite;
+  will-change: transform;
+}
+@keyframes obangkiWave {
+  0%,
+  100% {
+    transform: translateY(0) skewY(0deg);
+  }
+  25% {
+    transform: translateY(calc(var(--ob-amp, 2px) * -1)) skewY(calc(var(--ob-shear, 1deg) * -1));
+  }
+  50% {
+    transform: translateY(0) skewY(0deg);
+  }
+  75% {
+    transform: translateY(var(--ob-amp, 2px)) skewY(var(--ob-shear, 1deg));
+  }
+}
+
 /* ── 척전(擲錢) 「엽전 세 닢」 — 갈림길을 정하는 의식 R-4 ──────────────────────
    전거는 태종실록 4년(1404): 종묘에서 쟁반 위에 동전을 던져 한양(2길1흉)으로 도읍을 정했다.
-   그래서 연출도 "쟁반 위에 떨어져 구르다 멎는" 한 동작이다 — 던지는 사람은 손을 대지 않는다.
-   길이 여럿이면 한 길씩 차례로 떨어진다(순서는 --cj-delay 가 준다, 타이머가 아니라). */
+   연출은 "산통을 기울여 → 닢이 떠올랐다 떨어져 → 공중제비 → 쟁반에 닿아 두 번 튕기고 → 멎는"
+   한 동작이다. 2026-09-04 개편: CSS 원 하나가 굴러 떨어지던 것(«종이쪼가리»)을 실제 엽전
+   앞·뒤 면 두 장의 3D 회전으로 바꿨다. 길이 여럿이면 한 길씩 차례로 떨어진다(순서는 --cj-delay).
+
+   한 닢은 네 겹이다 — 한 요소에 몰면 transform 이 서로를 지운다(오방기 펼침·펄럭임과 같은 교훈):
+     .chuljeon-coin    활공(가로 이동 + 등장)               chuljeonCoin  ← 마지막 닢의 animationend 가 셈의 끝
+     .chuljeon-arc     포물선 낙하 + 튕김 두 번(세로)         chuljeonArc
+     .chuljeon-spin    공중제비(rotateX) — 끝 각이 면을 정한다  chuljeonSpin
+     .chuljeon-shadow  바닥 그림자 — 높이와 반대로 커진다      chuljeonShadow
+   네 길이는 전부 CHULJEON_MS.coin 과 같다(lib/domain/ritual/chuljeon.ts · 테스트가 대조). */
 .chuljeon-coin {
-  animation: chuljeonCoin 0.72s cubic-bezier(0.3, 0.9, 0.35, 1) var(--cj-delay, 0s) both;
+  animation: chuljeonCoin 1s cubic-bezier(0.25, 0.7, 0.35, 1) var(--cj-delay, 0s) both;
   will-change: transform, opacity;
 }
 @keyframes chuljeonCoin {
   0% {
-    transform: translateY(-42px) rotateX(0deg) scale(0.82);
+    transform: translateX(var(--cj-x, -24px)) scale(0.78);
     opacity: 0;
   }
-  22% {
+  10% {
     opacity: 1;
   }
-  62% {
-    transform: translateY(4px) rotateX(540deg) scale(1.06);
-  }
-  80% {
-    transform: translateY(-3px) rotateX(680deg) scale(0.99);
+  56% {
+    transform: translateX(0) scale(1);
   }
   100% {
-    transform: translateY(0) rotateX(720deg) scale(1);
+    transform: translateX(0) scale(1);
     opacity: 1;
+  }
+}
+
+/* 세로 궤적 — 손을 떠나 살짝 떠올랐다(18%) 떨어져 닿고(56%) 두 번 튕긴다(70%·90%).
+   완급은 스톱마다 다르다: 오를 때 ease-out, 떨어질 때 ease-in — 중력이 그렇다. */
+.chuljeon-arc {
+  perspective: 150px;
+  animation: chuljeonArc 1s linear var(--cj-delay, 0s) both;
+  will-change: transform;
+}
+@keyframes chuljeonArc {
+  0% {
+    transform: translateY(-46px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  18% {
+    transform: translateY(-64px);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.6);
+  }
+  56% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  70% {
+    transform: translateY(-11px);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.6);
+  }
+  82% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  90% {
+    transform: translateY(-3px);
+    animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.6);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* 공중제비 — 공중에서 빠르게(0→86%), 닿은 뒤 남은 만큼을 느리게 마저 돈다.
+   --cj-spin 은 360 의 배수(길=글자면 위) 또는 배수+180(흉=등면 위) — 면은 각도가 정한다. */
+.chuljeon-spin {
+  transform-style: preserve-3d;
+  animation: chuljeonSpin 1s cubic-bezier(0.2, 0.55, 0.3, 1) var(--cj-delay, 0s) both;
+  will-change: transform;
+}
+@keyframes chuljeonSpin {
+  0% {
+    transform: rotateX(0deg) rotateZ(0deg);
+  }
+  56% {
+    transform: rotateX(calc(var(--cj-spin, 1440deg) * 0.86)) rotateZ(var(--cj-tilt, 0deg));
+  }
+  82% {
+    transform: rotateX(calc(var(--cj-spin, 1440deg) * 0.97)) rotateZ(var(--cj-tilt, 0deg));
+  }
+  100% {
+    transform: rotateX(var(--cj-spin, 1440deg)) rotateZ(var(--cj-tilt, 0deg));
+  }
+}
+
+/* 두 면 — 뒷면은 미리 180° 뒤집어 붙여 두고, 어느 면이든 뒤에서 보면 사라진다.
+   그림(coin-front/back.webp)이 없어도(404) 놋쇠·구리 그라디언트가 남는다. */
+.chuljeon-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+.chuljeon-face-front {
+  background-image: url('/shrine/ritual/coin-front.webp'), radial-gradient(circle at 38% 32%, #e8d08a, #a8842e 72%);
+}
+.chuljeon-face-back {
+  transform: rotateX(180deg);
+  background-image: url('/shrine/ritual/coin-back.webp'), radial-gradient(circle at 38% 32%, #8e8470, #4a443a 72%);
+}
+
+/* 바닥 그림자 — 닢이 높이 있을수록 작고 옅다. 닿는 순간 가장 넓고 짙다 */
+.chuljeon-shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -3px;
+  height: 7px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0) 70%);
+  animation: chuljeonShadow 1s linear var(--cj-delay, 0s) both;
+  will-change: transform, opacity;
+}
+@keyframes chuljeonShadow {
+  0% {
+    transform: scale(0.45);
+    opacity: 0;
+  }
+  18% {
+    transform: scale(0.3);
+    opacity: 0.18;
+  }
+  56% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(0.8);
+    opacity: 0.45;
+  }
+  82% {
+    transform: scale(1.05);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+}
+
+/* 닿는 순간의 표식 — 보이지 않는다. 이 animationend 가 흙먼지·짤랑·햅틱을 몬다(타이머 금지 규율).
+   길이는 CHULJEON_MS.land — 닢의 첫 접지(chuljeonArc 56%)와 같은 시각이다. */
+.chuljeon-land {
+  animation: chuljeonLand 0.56s linear var(--cj-delay, 0s) both;
+}
+@keyframes chuljeonLand {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.01;
+  }
+}
+
+/* 셈 글자 — 그 길의 마지막 닢이 닿는 박자에 튀어오르며 나타난다 */
+.chuljeon-tally {
+  animation: chuljeonTallyPop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3) var(--cj-delay, 0s) both;
+  will-change: transform, opacity;
+}
+@keyframes chuljeonTallyPop {
+  0% {
+    transform: scale(0.6) translateY(4px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.16) translateY(-1px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* 쟁반 한 줄이 울린다 — 첫 닢이 닿는 박자에 2px 내려앉았다 되돌아온다 */
+.chuljeon-row {
+  animation: chuljeonThud 0.36s ease-out var(--cj-delay, 0s) both;
+}
+@keyframes chuljeonThud {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(2px);
+  }
+  60% {
+    transform: translateY(-1px);
+  }
+}
+
+/* 산통(算筒) — 던지는 손. 흔들었다가(0~36%) 기울여 쏟고(52~66%) 되돌린다 */
+.chuljeon-cup {
+  transform-origin: 50% 80%;
+  animation: chuljeonCupPour 0.9s ease-in-out both;
+  will-change: transform;
+}
+@keyframes chuljeonCupPour {
+  0% {
+    transform: rotate(0deg) translateY(0);
+  }
+  12% {
+    transform: rotate(-6deg) translateY(-2px);
+  }
+  24% {
+    transform: rotate(6deg) translateY(-3px);
+  }
+  36% {
+    transform: rotate(-5deg) translateY(-2px);
+  }
+  52% {
+    transform: rotate(-58deg) translateY(-6px);
+  }
+  66% {
+    transform: rotate(-52deg) translateY(-5px);
+  }
+  100% {
+    transform: rotate(0deg) translateY(0);
   }
 }
 
@@ -1657,6 +2068,26 @@
   }
   100% {
     transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* 낙관 — 결정된 길 위에 내리찍히는 붉은 인장. 크게 떠 있다가 찍고 살짝 되튄다 */
+.chuljeon-stamp {
+  animation: chuljeonStamp 0.62s cubic-bezier(0.2, 0.9, 0.25, 1.15) 0.12s both;
+  will-change: transform, opacity;
+}
+@keyframes chuljeonStamp {
+  0% {
+    transform: scale(2.4) rotate(-16deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.92) rotate(-5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-7deg);
     opacity: 1;
   }
 }
@@ -1689,14 +2120,25 @@
   .obangki-unfurl,
   .obangki-samgi,
   .obangki-purified,
+  .obangki-bundle-shadow,
+  .obangki-bell-ring,
   .chuljeon-coin,
+  .chuljeon-arc,
+  .chuljeon-spin,
+  .chuljeon-shadow,
+  .chuljeon-land,
+  .chuljeon-tally,
+  .chuljeon-row,
+  .chuljeon-cup,
   .chuljeon-seal,
+  .chuljeon-stamp,
   .obangki-burst,
   .obangki-bubble {
     animation-duration: 0.01ms;
     animation-delay: 0s;
   }
-  .obangki-flutter {
+  .obangki-flutter,
+  .obangki-wave {
     animation: none;
   }
 }

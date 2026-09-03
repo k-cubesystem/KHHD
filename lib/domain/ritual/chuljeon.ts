@@ -57,8 +57,17 @@ export const CHULJEON_PRIVACY_NOTICE = '갈림길에 적으신 말은 저장되�
  * 대조는 테스트가 한다. 국면 전환은 setTimeout 체인이 아니라 animationend 가 몬다.
  */
 export const CHULJEON_MS = Object.freeze({
-  /** 엽전 한 닢이 쟁반에 떨어져 구르는 구간 — .chuljeon-coin */
-  coin: 720,
+  /**
+   * 엽전 한 닢의 전체 연출 — .chuljeon-coin (활공) · .chuljeon-arc (포물선·튕김) · .chuljeon-spin (공중제비).
+   * 세 겹이 같은 길이라야 한 순간에 멎는다(마지막 닢의 animationend 가 셈의 끝이다).
+   * 720 → 1000 (2026-09-04): 튕김 두 번이 읽히려면 낙하 뒤 0.4s 는 있어야 한다.
+   */
+  coin: 1000,
+  /**
+   * 닢이 쟁반에 **처음 닿는** 순간(던짐 시작 기준) — .chuljeon-land.
+   * 흙먼지·짤랑 소리·햅틱은 이 표식의 animationend 가 몬다(타이머가 아니라). coin 의 56% 지점.
+   */
+  land: 560,
   /** 정해진 길에 도장이 찍히는 구간 — .chuljeon-seal */
   seal: 620,
 })
