@@ -8,7 +8,30 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-08-25(25차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-04(27차) · 브랜치 `claude/determined-yonath`
+
+**(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
+
+CEO 지시 «지금 그냥 웹에서 움직이는 종이쪼가리 느낌 — 실제 애니메이션·게임처럼». 워크트리
+`.claude/worktrees/ritual-fx`(브랜치 `feature/ritual-fx`)에서 작업해 `claude/determined-yonath` 로 fast-forward.
+
+| 의식   | 전                              | 후                                                                                                                                                                 |
+| ------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 엽전   | CSS 원 하나에 常 한 글자        | 상평통보 앞·뒤 실물 그림 + **네 겹**(활공·포물선/튕김·공중제비·그림자). 면은 회전 끝 각이 정한다. 산통이 쏟고, 접지 표식 animationend 가 금가루·짤랑·햅틱, 낙관 吉 |
+| 오방기 | CSS 상자 셋 다발 · 한 장 기울기 | 감아쥔 다발 실물 그림 + 바닥 그림자, 요령 실물이 끈에 매달려 울림, **기폭 세로 띠 다섯의 천 결 파도**(.obangki-wave), 펼침 채찍·물릴 때 연기·바람                  |
+| 액막이 | 마스크 연소만                   | 불씨가 오면 달아오름(.ritual-heat)·불티 꼬리·점화 섬광/진동/바람·타는 동안 불티·종이가 위 축으로 들림(rotateX)·재 무더기/남은 불티/「마침」 낙관                   |
+
+- 새 자산 3장: `public/shrine/ritual/{coin-front,coin-back,obangki-bundle}.webp` — 생성기
+  `scripts/shrine-assets/ritual-chuljeon.mjs`(ritual-obangki.mjs 규약 복제, API 3회 PASS). 요령은 기존
+  `public/shrine/items/bell-yoryeong.webp` 재사용.
+- 계약 변경: `CHULJEON_MS.coin` 720→1000, `land` 560 신설(네 겹 길이 동일·역스캔 테스트). `SoundKey` +coin/whoosh
+  (아이템 화이트리스트에는 넣지 않음). `lib/utils/haptic.ts` 신설. SW `v12`.
+- 🔴 **27차 함정 ①**: 쟁반이 `overflow-hidden` 이라 포물선 꼭대기(-64px)의 닢이 잘려 «갑자기 나타나» 떨어졌다 —
+  쟁반 머리 74px 로 해소. 3D(backface) 문제로 오독하기 쉽다. 판정은 **애니메이션을 멈춰 세운 프레임**으로 했다:
+  `document.getAnimations().forEach(a => { a.pause(); a.currentTime = t })` + Playwright 스크린샷(결정론).
+  하네스(정적 HTML + 워크트리 `app/shrine-scene.css` + `public/`)는 세션 스크래치에 두고 리포에 넣지 않았다.
+- 🔴 **27차 함정 ②**: 숨겨진 브라우저 패널의 스크린샷은 타임아웃·낡은 프레임을 준다(feedback_hidden_pane_throttling
+  재확인). 연출 판정은 헤드리스 Playwright 로.
 
 **(25차 · 2026-08-25 새벽) 신당 단일화 + 백일기도 v2 「기도 액자」 — 프로덕션 라이브(`hhd-fkfac2urn`, 01:25):**
 
@@ -784,7 +807,6 @@ cat .next/static/chunks/*.css | grep -c "120d07"   # 고치기 전 0 · 고친 �
 
 **게이트**: tsc 0 · jest 3,563/3,563(168 suite) · next build ✓ · eslint 0 · 공개 4경로 200 ·
 라이브 CSS 에서 패널 배경 규칙 1건 실측.
-
 
 ---
 
