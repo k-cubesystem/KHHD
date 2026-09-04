@@ -437,8 +437,11 @@ export function deityStandBox(podiumTopY: number = PODIUM_TOP_Y, headRoomY: numb
  * 🔴 틀이 없는 테마에는 곱하지 않는다. 그쪽은 정본 키가 이미 33.3%p(45.3−12)라 1.4 배를 곱하면
  *    머리가 방 천장을 뚫는다(clamp 에 걸려 벽 전체를 덮는 그림이 된다).
  *    사용자 조절(−/＋)은 이 값 **위에** 곱해진다 — 화면의 100% 가 곧 이 기본이다.
+ *
+ * 🔴 1.6 → **1.45** (2026-09-04 CEO 「신위 크기가 너무 크니까 조금 줄여줘」). 1.4(첫 확정)와 1.6(재검수)
+ *    사이 — «조금» 이라 반 걸음만 물렸다. 닫집 여유는 커진다(용궁 기준 7.7%p → 약 10%p).
  */
-export const DEITY_STAND_GRANDEUR = 1.6
+export const DEITY_STAND_GRANDEUR = 1.45
 
 /** 이 테마의 신위 기본 배율. 틀이 있으면 위계 배율, 없으면 1(정본 그대로). */
 export function deityStandGrandeur(themeCode: string): number {

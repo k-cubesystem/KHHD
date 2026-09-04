@@ -343,7 +343,7 @@ function Coin({
       <span className="chuljeon-arc relative block h-full w-full">
         <span
           className="chuljeon-spin relative block h-full w-full"
-          style={{ '--cj-spin': gil ? '1440deg' : '1620deg', '--cj-tilt': `${scatter.tilt}deg` } as React.CSSProperties}
+          style={{ '--cj-spin': gil ? '1080deg' : '1260deg', '--cj-tilt': `${scatter.tilt}deg` } as React.CSSProperties}
         >
           <span className="chuljeon-face chuljeon-face-front" />
           <span className="chuljeon-face chuljeon-face-back" />

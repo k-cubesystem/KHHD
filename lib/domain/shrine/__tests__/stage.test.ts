@@ -766,8 +766,8 @@ describe('deityStandShift — 이동은 이동이어야 한다', () => {
  *    1.4 배면 머리가 방 위로 뚫고 나가 clamp 에 걸려 벽 전체를 덮는다.
  */
 describe('deityStandGrandeur — 기본 위계 배율', () => {
-  it('틀을 든 테마는 1.6배', () => {
-    expect(DEITY_STAND_GRANDEUR).toBe(1.6)
+  it('틀을 든 테마는 1.45배 (2026-09-04 「조금 줄여줘」— 1.4 과 1.6 의 반 걸음)', () => {
+    expect(DEITY_STAND_GRANDEUR).toBe(1.45)
     expect(deityStandGrandeur('banga')).toBe(DEITY_STAND_GRANDEUR)
     expect(deityStandGrandeur('dangsan')).toBe(DEITY_STAND_GRANDEUR)
   })

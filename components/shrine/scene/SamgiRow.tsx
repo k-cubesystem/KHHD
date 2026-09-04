@@ -135,11 +135,24 @@ export function UnfurledFlag({ color, size, delayMs }: { color: ObangkiColor; si
           width: size,
           height: size,
           animationDelay: `${delayMs}ms`,
-          // 상자가 아니라 깃발 실루엣을 따라 그림자가 지도록 — 정사각 상자의 빈 아랫쪽까지
-          // 빛나면 유령 사각형이 보인다
-          filter: `drop-shadow(0 6px 9px rgba(0,0,0,0.8)) drop-shadow(0 0 7px ${info.accent}66)`,
         }}
       >
+        {/* 그림자·색 기운은 **정적 겹**이다 — 종전처럼 드롭섀도 필터를 상자에 걸면 띠 다섯이 물결칠 때마다
+            서브트리 전체를 다시 필터링해 저사양 폰에서 끊긴다. 그림자가 같이 물결치지 않는 것은 눈에 띄지 않는다.
+            기 실루엣(brightness 0 + blur)이라 정사각 상자의 빈 아랫쪽이 어두워지는 유령 사각형은 없다. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute block"
+          style={{
+            inset: '-14%',
+            background: `radial-gradient(ellipse at 55% 32%, ${info.accent}55, transparent 62%)`,
+          }}
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 block"
+          style={{ ...image, filter: 'brightness(0) blur(4px)', opacity: 0.6, transform: 'translate(1px, 6px)' }}
+        />
         {strips.map((s) => (
           <FlagStrip key={s.k} left={s.left} width={s.width} k={s.k} baseDelayMs={waveBase} image={image} />
         ))}
