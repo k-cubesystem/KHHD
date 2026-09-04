@@ -87,8 +87,14 @@ export const AEKMAK_TEXT_MAX = 80
  * 국면 전환 자체는 setTimeout 체인이 아니라 CSS animationend 가 몬다(AekmakSheet).
  */
 export const BURN_MS = Object.freeze({
-  /** 부적 아래에서 위로 타오르는 전체 길이. 완급(BURN_CURVE)을 담을 만큼은 길어야 한다 */
-  total: 3200,
+  /**
+   * 부적 아래에서 위로 타오르는 전체 길이. 완급(BURN_CURVE)을 담을 만큼은 길어야 한다.
+   *
+   * 🔴 3200 → **4800** (2026-09-04 CEO 「불효과·타는효과 조금 더 천천히」). 같은 판에 불길
+   *    스프라이트(.ritual-flame)가 들어와 볼 것이 늘었으므로 길이도 함께 늘렸다 —
+   *    CSS 의 ritualBurn·ritualCurl·ritualChar·ritualFire 넷이 **모두** 이 값이어야 한다(테스트가 대조).
+   */
+  total: 4800,
   /** 재·불티 방출 주기(ShrineRoomClient 향로 연기 이미터와 같은 규약) */
   emit: 150,
 })

@@ -41,13 +41,23 @@ export const SAMGI_LAST_INDEX = 2
  * 띠는 STRIP_OVERLAP 만큼 겹친다(경계에 실금이 서지 않게).
  */
 const POLE_PCT = 8
-const CLOTH_STRIPS = 5
+/** 5 → **8** (2026-09-04 「좀 더 디테일하게」). 띠가 많을수록 파도의 마루가 부드럽고, 한 띠가
+ *  움직이는 폭이 줄어 경계의 층계도 눈에 덜 띈다. 진폭 상수는 바깥 띠(k=8)의 총량이 종전과
+ *  비슷하도록 함께 줄였다 — 띠만 늘리면 깃발이 통째로 출렁인다. */
+const CLOTH_STRIPS = 8
 const STRIP_PCT = (100 - POLE_PCT) / CLOTH_STRIPS
-const STRIP_OVERLAP = 0.6
-/** 띠 번호 k 의 진폭(px)·기울기(deg)·박자 지연(ms) — 깃대 쪽이 작고 빠르다 */
-const WAVE_AMP_PX = 1.05
-const WAVE_SHEAR_DEG = 0.55
-const WAVE_LAG_MS = 140
+const STRIP_OVERLAP = 1.2
+/**
+ * 띠 번호 k 의 진폭(px)·기울기(deg)·박자 지연(ms) — 깃대 쪽이 작고 빠르다.
+ *
+ * 🔴 이 셋은 **작아야 한다**(2026-09-04 실측). 띠는 서로 독립이라 이웃과의 세로 차가 1px 을 넘는
+ *    순간 경계가 «찢어진 종이»의 계단으로 읽힌다 — 잇는 기울기(skew)로 메우려면 18° 가 필요한데
+ *    그건 천이 아니라 고무가 된다. 그래서 형태 흔들림은 눈에 겨우 걸릴 만큼만 두고,
+ *    «천처럼 보이는» 몫은 이음매가 없는 접힘 그늘(.obangki-fold) 두 겹에 맡긴다.
+ */
+const WAVE_AMP_PX = 0.4
+const WAVE_SHEAR_DEG = 0.3
+const WAVE_LAG_MS = 58
 
 /**
  * 기 한 폭의 창 하나 — 창은 넘침을 자르고, 안쪽에 기 전체를 창 폭 대비로 키워 -left 만큼 밀어 넣는다.
@@ -100,7 +110,7 @@ function FlagStrip({
  * 한 요소에 둘을 얹으면 뒤엣것이 앞엣것을 지워 펼침이 통째로 사라진다 — 바깥이 펄럭이고 안이 펴진다.
  * 펄럭임은 펼침이 끝나는 박자에 시작하도록 같은 지연을 쓴다.
  *
- * 그 안에서 천은 세로 띠 다섯으로 잘려 결을 따라 물결친다(2026-09-04, FlagStrip) —
+ * 그 안에서 천은 세로 띠 여덟으로 잘려 결을 따라 물결치고, 그 위를 접힘 그늘(.obangki-fold)이 지나간다 —
  * 한 장이 통째로 기울던 것(«종이쪼가리»)을 천처럼 움직이게 한 것이 이번 개편의 핵심이다.
  */
 export function UnfurledFlag({ color, size, delayMs }: { color: ObangkiColor; size: number; delayMs: number }) {
@@ -168,6 +178,25 @@ export function UnfurledFlag({ color, size, delayMs }: { color: ObangkiColor; si
           }
         >
           {info.seal}
+        </span>
+        {/* 접힘 그늘 — 빛과 그늘의 띠가 깃대에서 바깥으로 지나간다. 실물 깃발이 펄럭일 때 눈이
+            읽는 것은 형태보다 이 명암의 이동이라, 천으로 보이게 하는 몫이 가장 크다.
+            마스크가 **기폭 그림 자체**라 깃대 밖 빈자리에는 그늘이 서지 않는다(유령 사각형 방지). */}
+        <span
+          aria-hidden
+          className="obangki-fold"
+          style={
+            {
+              maskImage: `url('/shrine/ritual/obangki-${color}.webp')`,
+              WebkitMaskImage: `url('/shrine/ritual/obangki-${color}.webp')`,
+              '--ob-delay': `${waveBase}ms`,
+            } as React.CSSProperties
+          }
+        >
+          {/* 두 겹이다 — 빠르고 좁은 결 위에 느리고 넓은 그늘이 **반대 방향**으로 흐른다.
+              한 겹이면 박자가 금세 읽혀 무늬가 도는 것처럼 보인다. */}
+          <span />
+          <span />
         </span>
       </span>
     </span>

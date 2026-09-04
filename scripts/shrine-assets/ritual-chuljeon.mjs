@@ -1,9 +1,19 @@
-// 신당 의식 연출 고급화 (2026-09-04) — 엽전·오방기 다발 스프라이트
+// 신당 의식 연출 고급화 (2026-09-04) — 의식 스프라이트(엽전·다발·불꽃)
 //
-// 굽는 것은 **세 장**이다.
+// 굽는 것은 **네 장**이다.
 //   coin-front.webp      상평통보 글자면(常平通寶) — 길(吉)
 //   coin-back.webp       상평통보 등면(戶 + 점 하나) — 흉(凶)
 //   obangki-bundle.webp  다섯 깃대를 기폭으로 감아쥔 다발(색이 보이지 않는다)
+//   flame-tongue.webp    액막이 불길 한 자락 — **검은 바탕**에 굽고 화면에서 screen 합성한다
+//
+// ⚠️ 불꽃만 크로마키를 쓰지 않는다(keying: 'luma'). 불은 반투명이라 순녹색 배경을 뽑으면
+//    가장자리에 녹색이 남고 속이 비친다. 대신 **검은 바탕에 굽고 밝기를 알파로 바꾼다** —
+//    가산광 소재의 정석이다(검정 = 없음, 밝을수록 진함).
+//
+// 🔴 왜 `mix-blend-mode: screen` 이 아니라 알파인가(2026-09-04 실측): 블렌드 모드는 **가장 가까운
+//    스태킹 컨텍스트 안에서만** 배후와 섞인다. 불길 층의 조상(무대의 perspective)이 컨텍스트를
+//    만들어, 그 안이 비어 있는 자리(다 타서 종이가 없는 위쪽)에서는 배후를 못 찾아
+//    **검은 사각형이 그대로 보였다**. 알파를 구워 넣으면 어디에 놓든 그 사고가 원천에서 없다.
 //
 // 엽전은 지금까지 CSS 원 하나에 常 한 글자였다(«웹에서 움직이는 종이쪼가리», CEO 09-04).
 // 앞·뒤 두 면이 실제 그림이어야 3D 회전(rotateX)에서 면이 바뀌는 것이 보인다.
@@ -39,7 +49,7 @@ const QA_DIR = path.join(ROOT, 'assets-src', 'shrine')
 const RAW_DIR = process.env.RITUAL_RAW_DIR || path.join(process.env.TEMP || '/tmp', 'shrine-ritual-chuljeon-raw')
 
 /** 총 생성 상한(재시도 포함). 3장 × (1회 + 재시도 2회) = 9. */
-const API_BUDGET = 9
+const API_BUDGET = 12
 let apiCalls = 0
 
 // ────────────────────────────── 프롬프트 ──────────────────────────────
@@ -83,12 +93,27 @@ const BUNDLE =
   `${STYLE}, ${LIGHT}, ${CHROMA}`
 
 /**
+ * 불길 한 자락 — 검은 바탕(가산광 규약). 심지도 초도 그리지 않는다: 화면에서 **부적의 타는 선**이
+ * 심지 노릇을 하고, 이 그림은 그 위로 올라가는 불꽃만 맡는다. 여러 벌을 크기·박자를 달리해 세우므로
+ * 한 자락은 **좁고 곧아야** 한다(넓게 퍼진 불덩이는 여럿 세우면 뭉개진다).
+ */
+const FLAME =
+  'A single tall tongue of fire burning upward, seen from the front. ' +
+  'It is brightest at the base where it is pale gold, warm orange through the body, with thin translucent tips that curl and taper to a point. ' +
+  'The flame stands upright, about two units wide and three units tall, filling the frame with an even margin. ' +
+  'Nothing is burning below it: no candle, no wick, no wood, no smoke, no sparks. ' +
+  'Warm painterly watercolor illustration, soft K-anime aesthetic, visible gentle brush texture, glowing and luminous, ' +
+  'the flame is the only lit thing on a solid pure black background (#000000) that fills the entire frame edge to edge, ' +
+  'no text, no letters, no watermark, no border, no frame'
+
+/**
  * @typedef {object} RitualAsset
  * @property {string} key
  * @property {string} file
  * @property {number} outW
  * @property {number|null} outH
  * @property {string} prompt
+ * @property {'chroma'|'luma'} [keying]  기본 'chroma'. 'luma' 는 검은 바탕의 밝기를 알파로 바꾼다(가산광).
  */
 
 /** @type {RitualAsset[]} */
@@ -96,6 +121,7 @@ const ASSETS = [
   { key: 'coin-front', file: 'coin-front.webp', outW: 256, outH: 256, prompt: COIN_FRONT },
   { key: 'coin-back', file: 'coin-back.webp', outW: 256, outH: 256, prompt: COIN_BACK },
   { key: 'obangki-bundle', file: 'obangki-bundle.webp', outW: 256, outH: 512, prompt: BUNDLE },
+  { key: 'flame-tongue', file: 'flame-tongue.webp', outW: 256, outH: 384, prompt: FLAME, keying: 'luma' },
 ]
 
 // ───────────────────── 크로마키 (ritual-obangki.mjs 규약 복제) ─────────────────────
@@ -180,6 +206,27 @@ function measureFringe(data, channels) {
   return { visible, ratio: visible ? green / visible : 0, edgeRatio: edge ? edgeGreen / edge : 0 }
 }
 
+/**
+ * 밝기 → 알파 (가산광 소재). 검은 바탕에 구운 불꽃을 어디에나 놓을 수 있는 RGBA 로 바꾼다.
+ *
+ * alpha = max(r,g,b) 로 잡고 RGB 를 그 비율로 **되돌린다**(un-premultiply). 검은 바탕에 그려진
+ * 그림은 이미 «색 × 밝기»로 곱해진 상태라, 나누지 않으면 가장자리가 탁해진다.
+ */
+function lumaToAlpha(data, channels) {
+  for (let i = 0; i < data.length; i += channels) {
+    const a = Math.max(data[i], data[i + 1], data[i + 2])
+    if (a === 0) {
+      data[i + 3] = 0
+      continue
+    }
+    const k = 255 / a
+    data[i] = Math.min(255, Math.round(data[i] * k))
+    data[i + 1] = Math.min(255, Math.round(data[i + 1] * k))
+    data[i + 2] = Math.min(255, Math.round(data[i + 2] * k))
+    data[i + 3] = a
+  }
+}
+
 // ───────────────────────────── 생성 ─────────────────────────────
 async function callModel(prompt) {
   if (!KEY) throw new Error('GEMINI 키 없음 — 메인 체크아웃 .env.local 의 GOOGLE_GENERATIVE_AI_API_KEY 확인')
@@ -194,16 +241,13 @@ async function callModel(prompt) {
   return Buffer.from(img.data, 'base64')
 }
 
-/** 트림 → 최종 규격. 엽전은 정사각(1:1), 다발은 1:2 로 `fill` 한다 — 늘인 정도를 로그로 남긴다. */
+/** 트림 → 최종 규격. 엽전은 정사각(1:1), 다발은 1:2 로 `contain` 한다 — 늘인 정도를 로그로 남긴다. */
 async function toFinal(pngBuf, asset) {
   const { data: trimmed, info: src } = await sharp(pngBuf).trim({ threshold: 10 }).toBuffer({ resolveWithObject: true })
+  // 가산광 자산의 여백은 **검정**이다 — lumaToAlpha 가 그 검정을 알파 0 으로 바꾼다.
+  const pad = asset.keying === 'luma' ? { r: 0, g: 0, b: 0, alpha: 1 } : { r: 0, g: 0, b: 0, alpha: 0 }
   const resized = asset.outH
-    ? sharp(trimmed).resize({
-        width: asset.outW,
-        height: asset.outH,
-        fit: 'contain',
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      })
+    ? sharp(trimmed).resize({ width: asset.outW, height: asset.outH, fit: 'contain', background: pad })
     : sharp(trimmed).resize({ width: asset.outW, fit: 'inside' })
   const buf = await resized.webp({ quality: 90, alphaQuality: 100 }).toBuffer()
   return { buf, srcW: src.width, srcH: src.height }
@@ -223,6 +267,19 @@ async function buildAsset(asset, { regen, rekey }) {
 
   await ensureRaw(regen && !rekey)
   await mkdir(OUT_DIR, { recursive: true })
+
+  // 가산광 자산 — 뽑을 배경이 없다(검정이 곧 «없음»). 규격을 맞춘 뒤 밝기를 알파로 바꾼다.
+  if (asset.keying === 'luma') {
+    const { buf, srcW, srcH } = await toFinal(await sharp(rawPng).png().toBuffer(), asset)
+    const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+    lumaToAlpha(data, info.channels)
+    const out = await sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
+      .webp({ quality: 90, alphaQuality: 100 })
+      .toBuffer()
+    console.log(`  · 가산광→알파 ${info.width}×${info.height} 원본 ${srcW}×${srcH}(${(srcW / srcH).toFixed(2)}:1)`)
+    await writeFile(outWebp, out)
+    return { key: asset.key, ok: true, file: asset.file, bytes: out.length, profile: 0, info }
+  }
 
   for (let round = 0; round < 2; round += 1) {
     let best = null

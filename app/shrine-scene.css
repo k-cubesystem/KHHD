@@ -1269,8 +1269,8 @@
   mask-repeat: no-repeat;
   /* 오그라듦은 별도 트랙 — 마스크(11스톱)와 변형(3스톱)의 완급이 달라야 한다 */
   animation:
-    ritualBurn 3.2s linear forwards,
-    ritualCurl 3.2s cubic-bezier(0.55, 0, 0.75, 0.95) forwards;
+    ritualBurn 4.8s linear forwards,
+    ritualCurl 4.8s cubic-bezier(0.55, 0, 0.75, 0.95) forwards;
   /* 불이 아래에서 올라오므로 종이는 위쪽(들린 자리)을 축으로 오그라든다 */
   transform-origin: 50% 6%;
   will-change: mask-position, transform;
@@ -1345,7 +1345,7 @@
   background-image: url('/shrine/ritual/burn-front.webp');
   background-size: 100% 220%;
   background-repeat: no-repeat;
-  animation: ritualChar 3.2s linear forwards;
+  animation: ritualChar 4.8s linear forwards;
   will-change: background-position;
 }
 
@@ -1356,7 +1356,7 @@
   background-size: 100% 220%;
   background-repeat: no-repeat;
   mix-blend-mode: screen;
-  animation: ritualChar 3.2s linear forwards;
+  animation: ritualChar 4.8s linear forwards;
   will-change: background-position;
 }
 
@@ -1576,6 +1576,116 @@
   }
 }
 
+/* ── 불길 (2026-09-04 CEO 「불효과·타는효과 조금 더 천천히 · 실제 애니메이션처럼」) ────────
+   종전에는 «타는 선»(구운 텍스처)과 파티클뿐이라 **불꽃 자체가 없었다**. 이제 그림으로 구운
+   불길 한 자락(flame-tongue.webp)을 여러 벌 세워 타는 선을 따라 함께 올린다.
+
+   ⚠️ 부적(.ritual-paper)의 **형제**여야 한다. 안에 두면 연소 마스크에 잘려 이미 탄 자리의 불꽃이
+      사라진다 — 불은 탄 자리 «위로» 올라가는 것이라 잘리면 안 된다.
+   ⚠️ 스프라이트는 **알파가 구워진** 그림이다(scripts/shrine-assets/ritual-chuljeon.mjs 의 lumaToAlpha:
+      검은 바탕에 굽고 밝기를 알파로 환산). 처음엔 `mix-blend-mode: screen` 을 썼는데, 블렌드는 가장
+      가까운 스태킹 컨텍스트 안에서만 배후를 찾으므로 **다 타서 종이가 없는 자리에서 검은 사각형이
+      드러났다**(2026-09-04 실측). 그래서 블렌드를 걷고 보통 합성으로 되돌렸다.
+
+   층의 세로 위치는 마스크 경계와 **한 식에서** 나온다:
+     경계 y(%) = 110 − 120·p        (BURN_MASK_SCALE 2.2 에서 유도 — lib/domain/ritual/aekmak.ts 주석)
+     불길 밑동 = 층 위 + 26%   →   translateY(%) = 84 − 1.2·p
+   아래 스톱은 BURN_CURVE 의 p 를 그 식에 넣은 값이다. 불이 타는 선을 앞지르거나 뒤처지지 않는
+   근거가 이 한 줄이고, 그래서 길이도 ritualBurn 과 같아야 한다. */
+/* 자르는 틀 — 부적 상자에 못 박혀 움직이지 않는다. 불길이 종이 밖으로 새어 나가지 않게 하는
+   유일한 장치다(다 탄 뒤 불꽃이 시트 위로 떠오르던 것을 2026-09-04 실측으로 잡았다). */
+.ritual-fire {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* 오르는 띠 — 타는 선을 따라 올라가는 것은 이 겹이다(틀이 아니라). */
+.ritual-fire-band {
+  position: absolute;
+  inset: 0;
+  /* 불길 밑동의 열기 — 스프라이트가 서는 26% 줄에 걸쳐 번진다 */
+  background: radial-gradient(ellipse 74% 13% at 50% 26%, rgba(255, 176, 74, 0.55), transparent 72%);
+  animation: ritualFire 4.8s linear forwards;
+  will-change: transform, opacity;
+}
+@keyframes ritualFire {
+  0% {
+    transform: translateY(84%);
+    opacity: 0;
+  }
+  10% {
+    transform: translateY(83.52%);
+    opacity: 0.85;
+  }
+  20% {
+    transform: translateY(79.8%);
+    opacity: 1;
+  }
+  30% {
+    transform: translateY(69.84%);
+  }
+  40% {
+    transform: translateY(53.04%);
+  }
+  50% {
+    transform: translateY(31.08%);
+  }
+  60% {
+    transform: translateY(7.56%);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-13.32%);
+    opacity: 0.62;
+  }
+  80% {
+    transform: translateY(-27.84%);
+    opacity: 0.12;
+  }
+  90% {
+    transform: translateY(-34.8%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(-36%);
+    opacity: 0;
+  }
+}
+
+/* 불길 한 자락 — 밑동(bottom: 74%)이 곧 타는 선이다. 자락마다 폭·키·박자가 달라야 «한 덩이 불»이
+   아니라 «여럿이 날름거리는 불»로 읽힌다(자리표는 AekmakSheet 의 BURN_FLAMES). */
+.ritual-flame {
+  position: absolute;
+  bottom: 74%;
+  background-image: url('/shrine/ritual/flame-tongue.webp');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transform-origin: 50% 100%;
+  animation: ritualFlame var(--fl-dur, 620ms) ease-in-out var(--fl-delay, 0ms) infinite;
+  will-change: transform, opacity;
+}
+@keyframes ritualFlame {
+  0%,
+  100% {
+    transform: scale(1, 1) skewX(0deg);
+    opacity: 0.9;
+  }
+  25% {
+    transform: scale(0.94, 1.16) skewX(3deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06, 0.88) skewX(-2.5deg);
+    opacity: 0.82;
+  }
+  75% {
+    transform: scale(0.97, 1.08) skewX(1.5deg);
+    opacity: 1;
+  }
+}
+
 /* 모션 최소화 — 연소는 **즉시 완료**한다. `none` 이 아니라 0.01ms 인 이유:
    국면 전환이 animationend 에 걸려 있어 애니메이션을 지우면 화면이 연소 상태로 멈춘다. */
 @media (prefers-reduced-motion: reduce) {
@@ -1587,6 +1697,7 @@
   .ritual-glow,
   .ritual-settle,
   .ritual-cup,
+  .ritual-fire-band,
   .ritual-flash,
   .ritual-shake,
   .ritual-ash,
@@ -1596,6 +1707,7 @@
   }
   .ritual-ember,
   .ritual-heat,
+  .ritual-flame,
   .ritual-spark {
     animation: none;
   }
@@ -1720,18 +1832,23 @@
   will-change: transform;
 }
 @keyframes obangkiFlutter {
+  /* 큰 숨(3.4s)은 띠 물결(1.7s)의 정확히 두 배 주기다 — 둘을 곱하면 «같은 박자의 반복»이 되므로
+     정지점을 어긋난 자리(22·41·63·84%)에 두어 두 파동이 매번 다른 지점에서 만나게 한다. */
   0%,
   100% {
-    transform: skewY(0deg) scaleX(1);
+    transform: translateX(0) skewY(0deg) scaleX(1) rotate(0deg);
   }
-  28% {
-    transform: skewY(-1.4deg) scaleX(0.994);
+  22% {
+    transform: translateX(-0.6px) skewY(-1.6deg) scaleX(0.992) rotate(-0.35deg);
   }
-  56% {
-    transform: skewY(1.1deg) scaleX(1.006);
+  41% {
+    transform: translateX(0.4px) skewY(0.5deg) scaleX(1.002) rotate(0.15deg);
   }
-  80% {
-    transform: skewY(-0.5deg) scaleX(0.998);
+  63% {
+    transform: translateX(0.9px) skewY(1.3deg) scaleX(1.007) rotate(0.4deg);
+  }
+  84% {
+    transform: translateX(-0.3px) skewY(-0.6deg) scaleX(0.997) rotate(-0.18deg);
   }
 }
 
@@ -1887,18 +2004,85 @@
   will-change: transform;
 }
 @keyframes obangkiWave {
+  /* 마루가 골보다 가파른 비대칭 파형 — 순수 사인은 «기계로 흔드는 천»이 된다. 세로 수축(scaleY)은
+     천이 접히며 짧아 보이는 만큼이고, 마루에서 늘고 골에서 준다(진폭과 위상이 반대). */
   0%,
   100% {
-    transform: translateY(0) skewY(0deg);
+    transform: translateY(0) skewY(0deg) scaleY(1);
   }
-  25% {
-    transform: translateY(calc(var(--ob-amp, 2px) * -1)) skewY(calc(var(--ob-shear, 1deg) * -1));
+  18% {
+    transform: translateY(calc(var(--ob-amp, 2px) * -1)) skewY(calc(var(--ob-shear, 1deg) * -1)) scaleY(1.014);
   }
-  50% {
-    transform: translateY(0) skewY(0deg);
+  36% {
+    transform: translateY(calc(var(--ob-amp, 2px) * -0.34)) skewY(calc(var(--ob-shear, 1deg) * -0.3)) scaleY(1.004);
   }
-  75% {
-    transform: translateY(var(--ob-amp, 2px)) skewY(var(--ob-shear, 1deg));
+  54% {
+    transform: translateY(var(--ob-amp, 2px)) skewY(var(--ob-shear, 1deg)) scaleY(0.988);
+  }
+  72% {
+    transform: translateY(calc(var(--ob-amp, 2px) * 0.4)) skewY(calc(var(--ob-shear, 1deg) * 0.36)) scaleY(0.996);
+  }
+  87% {
+    transform: translateY(calc(var(--ob-amp, 2px) * -0.24)) skewY(calc(var(--ob-shear, 1deg) * -0.2)) scaleY(1.006);
+  }
+}
+
+/* 접힘 그늘 — **천을 천으로 보이게 하는 층**(2026-09-04 「좀 더 디테일하게」).
+   띠(.obangki-wave)가 형태를 흔든다면 이 층은 그 위로 **빛과 그늘의 띠**를 지나보낸다.
+   실물 깃발이 펄럭일 때 눈이 읽는 것은 사실 형태보다 이 명암의 이동이다.
+
+   ⚠️ background-position 이 아니라 **transform** 으로 움직인다 — 위치 애니메이션은 매 프레임
+      다시 칠하지만 변형은 합성기에서 끝난다(깃발 셋 × 띠 여덟 위에 얹히는 층이라 값이 싸야 한다).
+   ⚠️ 마스크는 화면이 인라인으로 준다(색마다 다른 기폭 그림) — 없으면 깃대 밖 빈자리에도
+      그늘 띠가 떠서 유령 사각형이 보인다.
+   폭 300% 안에 무늬가 세 번 반복되므로 33.333%(= 기폭 한 폭) 를 지나면 이음매 없이 되돌아온다. */
+.obangki-fold {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.obangki-fold > span {
+  position: absolute;
+  top: -8%;
+  bottom: -8%;
+  left: -100%;
+  width: 300%;
+  background: repeating-linear-gradient(
+    99deg,
+    rgba(255, 246, 220, 0.17) 0%,
+    rgba(255, 246, 220, 0) 6%,
+    rgba(24, 15, 6, 0.22) 13%,
+    rgba(255, 246, 220, 0) 21%,
+    rgba(255, 246, 220, 0.17) 33.333%
+  );
+  animation: obangkiFold 1.7s linear var(--ob-delay, 0s) infinite;
+  will-change: transform;
+}
+/* 둘째 겹 — 느리고 넓은 그늘이 **반대 방향**으로 흐른다. 무늬의 한 마디는 그대로 33.333%(기폭 한 폭)라
+   되돌아오는 자리가 어긋나지 않는다 — 주기만 다르고 이음매는 그대로다. */
+.obangki-fold > span:nth-child(2) {
+  background: repeating-linear-gradient(
+    84deg,
+    rgba(255, 246, 220, 0.1) 0%,
+    rgba(255, 246, 220, 0) 11%,
+    rgba(24, 15, 6, 0.18) 19%,
+    rgba(24, 15, 6, 0) 28%,
+    rgba(255, 246, 220, 0.1) 33.333%
+  );
+  animation-duration: 2.9s;
+  animation-direction: reverse;
+}
+@keyframes obangkiFold {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(33.333%);
   }
 }
 
@@ -2237,7 +2421,8 @@
     animation-delay: 0s;
   }
   .obangki-flutter,
-  .obangki-wave {
+  .obangki-wave,
+  .obangki-fold > span {
     animation: none;
   }
 }

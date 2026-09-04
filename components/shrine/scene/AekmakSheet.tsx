@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
-import { Flame, X, Share2, Loader2 } from 'lucide-react'
+import { Flame, X } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   AEKMAK_DISCLAIMER,
@@ -35,9 +35,7 @@ import {
   type WritPlan,
 } from '@/lib/domain/ritual/aekmak'
 import { burnAekmak, type AekmakStatus } from '@/app/actions/shrine/rituals'
-import { claimShareReward } from '@/app/actions/payment/bok-points'
 import { trackEvent } from '@/lib/analytics/ga4'
-import { logger } from '@/lib/utils/logger'
 import { hapticPulse } from '@/lib/utils/haptic'
 import type { SoundKey } from '@/lib/domain/shrine/types'
 import { EffectsCanvas, type EffectsHandle } from './EffectsCanvas'
@@ -54,6 +52,19 @@ const DROP_SLACK = 24
 const DRAG_THRESHOLD = 6
 /** 불씨 꼬리 — 손이 이만큼(px) 움직일 때마다 지나온 자리에 불티 한 줌을 남긴다 */
 const EMBER_TRAIL_STEP = 14
+/**
+ * 타는 선을 따라 오르는 불길 여섯 자락 — 자리(left)·폭·키·박자가 다 달라야 «한 덩이 불»이 아니라
+ * «여럿이 날름거리는 불»로 읽힌다. 키(scale)는 불길 띠(26%)에 곱해지고, 자락마다 다른 박자로 흔들린다.
+ */
+const BURN_FLAMES = [
+  { left: '2%', width: '26%', scale: 0.78, delay: 0, dur: 640 },
+  { left: '18%', width: '32%', scale: 1.02, delay: 190, dur: 540 },
+  { left: '38%', width: '28%', scale: 0.88, delay: 80, dur: 700 },
+  { left: '54%', width: '34%', scale: 1.12, delay: 270, dur: 590 },
+  { left: '74%', width: '26%', scale: 0.82, delay: 40, dur: 660 },
+  { left: '30%', width: '40%', scale: 1.24, delay: 350, dur: 780 },
+] as const
+
 /** 마무리 카드의 남은 불티 다섯 — 자리·박자·흩날림이 다 다르다(같으면 전광판이다) */
 const SETTLE_SPARKS = [
   { left: '30%', delay: 0, dx: -6 },
@@ -91,7 +102,6 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
   const [monthCount, setMonthCount] = useState(status.monthCount)
   /** 점화 시각 — 마무리 문구의 결정론 시드. 렌더마다 Date.now() 를 부르면 문장이 흔들린다 */
   const [burnedAt, setBurnedAt] = useState(0)
-  const [sharing, setSharing] = useState(false)
 
   const effectsRef = useRef<EffectsHandle>(null)
   const dropRef = useRef<HTMLDivElement>(null)
@@ -246,30 +256,6 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
     [ignite, inDropZone]
   )
 
-  // ── 마무리 카드 공유 — 기존 공유 보상 흐름 재사용(새 지급 경로 없음) ──
-  const onShare = useCallback(async () => {
-    setSharing(true)
-    // 액운 원문은 물론 감정 태그도 문장에 담지 않는다 — 공유물에 남는 것은 "했다"뿐이다
-    const shareText = '오늘 신당에서 액막이를 했습니다.'
-    const url = typeof window === 'undefined' ? '' : `${window.location.origin}/protected/shrine`
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title: '액막이', text: shareText, url })
-      } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(`${shareText} ${url}`)
-        toast.success('링크를 복사했습니다')
-      }
-      trackEvent({ action: 'share_copy_link', category: 'social', label: 'aekmak' })
-      // 보상 금액·수령 자격은 전부 서버가 정한다(하루 1회). 실패해도 공유 UX 는 그대로.
-      claimShareReward().catch(() => {})
-    } catch (e) {
-      // 사용자가 공유 시트를 닫은 경우도 여기로 온다 — 실패로 알리지 않는다
-      logger.warn('[aekmak] 공유 취소/실패:', e)
-    } finally {
-      setSharing(false)
-    }
-  }, [])
-
   const recall = monthlyRecallLine(monthCount)
 
   return (
@@ -382,6 +368,29 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
                         play('bara')
                       }}
                     />
+                    {/* 불길 — 부적의 **형제**다(안에 두면 연소 마스크에 잘려 이미 탄 자리의 불이 사라진다).
+                        층 전체가 타는 선을 따라 오르고, 그 위에서 자락마다 제 박자로 날름거린다. */}
+                    {phase === 'burning' && (
+                      <span aria-hidden className="ritual-fire">
+                        <span className="ritual-fire-band">
+                          {BURN_FLAMES.map((f, i) => (
+                            <span
+                              key={i}
+                              className="ritual-flame"
+                              style={
+                                {
+                                  left: f.left,
+                                  width: f.width,
+                                  height: `${(34 * f.scale).toFixed(1)}%`,
+                                  '--fl-delay': `${f.delay}ms`,
+                                  '--fl-dur': `${f.dur}ms`,
+                                } as React.CSSProperties
+                              }
+                            />
+                          ))}
+                        </span>
+                      </span>
+                    )}
                     {/* 점화 섬광 — 붙는 그 한 순간, 캔버스 위(z12)에서 한 번 번쩍인다 */}
                     {phase === 'burning' && (
                       <span aria-hidden className="ritual-flash pointer-events-none absolute inset-0 z-[12]" />
@@ -421,9 +430,7 @@ export function AekmakStrip({ status, litCandles, play }: Props) {
                     recall={recall}
                     remaining={remaining}
                     limit={status.limit}
-                    sharing={sharing}
                     canBurnAgain={remaining > 0}
-                    onShare={() => void onShare()}
                     onAgain={() => {
                       setPhase('compose')
                       setTag(null)
@@ -687,9 +694,7 @@ function SettleCard({
   recall,
   remaining,
   limit,
-  sharing,
   canBurnAgain,
-  onShare,
   onAgain,
   onClose,
 }: {
@@ -697,9 +702,7 @@ function SettleCard({
   recall: string | null
   remaining: number
   limit: number
-  sharing: boolean
   canBurnAgain: boolean
-  onShare: () => void
   onAgain: () => void
   onClose: () => void
 }) {
@@ -777,17 +780,10 @@ function SettleCard({
 
       {recall && <p className="text-center font-sans text-[11px] text-ink-primary/40">{recall}</p>}
 
+      {/* 「액막이 카드」(공유) 폐지 — CEO 2026-09-04. 태운 것을 남에게 알리는 문이 의식의 마무리와
+          어울리지 않는다는 판단이라, 자리만 비운 게 아니라 공유 경로 자체를 걷어냈다. */}
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={onShare}
-          disabled={sharing}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gold-500/35 bg-gold-500/[0.08] py-2.5 font-serif text-[12px] font-bold text-gold-300 disabled:opacity-50"
-        >
-          {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
-          액막이 카드
-        </button>
-        {canBurnAgain ? (
+        {canBurnAgain && (
           <button
             type="button"
             onClick={onAgain}
@@ -795,15 +791,14 @@ function SettleCard({
           >
             한 장 더 태우기
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-white/10 bg-surface py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
-          >
-            신당으로
-          </button>
         )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 rounded-lg border border-white/10 bg-surface py-2.5 font-serif text-[12px] font-bold text-ink-primary/60"
+        >
+          신당으로
+        </button>
       </div>
     </div>
   )
