@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-04(29차 · 설계만) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-07(30차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -46,6 +46,33 @@ CEO 지시 «지금 그냥 웹에서 움직이는 종이쪼가리 느낌 — 실
 - 의식 완급: 다중 정지점 키프레임에 **구간별 timing-function**(진자 ease-in-out, 낙하 ease-in, 공중 등속 linear
   → 착지 ease-out). 엽전 회전수 4→3바퀴(길)/3.5(흉). 깃발 그림자·색 기운을 **정적 겹**으로(띠 물결마다 서브트리
   필터 재계산 제거 — 저사양 폰 끊김 예방).
+
+**(30차 · 2026-09-07) 「기운 무리(群)」 P0~P3 전부 구현 — 프로덕션 라이브(P0 `08d8bd66` · P1 `1ff1be3c` → 배포 `hhd-1dq4x6d85` / P2+P3 `02836247` → 배포 `hhd-bbs283e20`):**
+
+CEO(자러 가며): 「기본안대로 가고 P0 처방전부터 구현 시작, 기획 끝까지 완성하고 보고서, 마지막에 내가
+선택해야 하는 것만 알려줘. 마케팅·멤버십의 핵심 요인이 되게」. 결정 큐 7건은 전부 기본안(PRD §12).
+
+- **P0 처방전** `/protected/prescription[?target=]` — 다섯 블록(지금/타고난 기운 토글 · 모자란 결 · 채워 주는
+  기운 3갈래 · 곁에 둘 것 3층 · 덜어낼 것). 🔴 가족 게이트 **밖**에 둔다 — 무료는 서버가 ①②만 보내고(teaser)
+  나머지는 멤버십 업셀(`prescription_upsell_click`). 오행 표는 `remedy.ts` 가 정본(`REMEDY_TABLE`·
+  `elementRemedies`·`avoidRemedies` export), 사전은 `lib/domain/circle/element-lore.ts`(금지어 테스트 전량).
+- **P1 무리** — `circles`·`circle_members` 라이브(RLS 두 겹 + 컬럼 화이트리스트 실측). 가족은 **가상**(행 없음).
+  가족관리 「무리」 탭(`circle-panel`) · 무리 지도 `/protected/family/map?circle=<id>`(직장은 상단 고지 + 수치
+  비노출 — 렌더 테스트가 숫자 0건을 강제) · 가족 지도에 「든 사람·서로의 관계·역할 결」 세 섹션. 티어 상한은
+  코드 표 `CIRCLE_LIMITS_BY_TIER`(SINGLE 1/10 · FAMILY 3/10 · BUSINESS 10/30) — DB features 미사용.
+- **P2 선물** — `energy_gifts` 라이브(쓰기 service_role 전용). `giftItem`: 멱등 키(분 단위)·하루 20·
+  `spendBokchae` 단일 차감·`grant_shrine_item` 지급·연결 사용자면 웹푸시. 🔴 **시렁 자동 배치는 안 했다** —
+  연결 안 된 사람은 **내 보관함**으로 가고 «신당에서 그 사람 선반에 놓아 주세요» 안내(좌표 배치 코드는 P3 이후).
+  선물 카드 `/api/og/gift?el=&to=`(공개·이름만·명식 없음) + `navigator.share`/복사 + 기존 공유 보상.
+- **P3** — 「우리 팀 기운 한 장」 `/protected/family/map/print?circle=`(BUSINESS·MASTER, 다른 유료는 업셀
+  한 줄). 궁합 매트릭스는 **진입 링크가 원래 없어** 그대로 둠(삭제는 CEO 결정). AI 서술은 안 붙임(기본안).
+- 🔴 **`vercel deploy` 는 작업 트리를 올린다** — 커밋 안 된 P1 파일의 타입 오류로 P0 단독 배포가 원격 빌드에서
+  실패했다(프로덕션 무영향, alias 유지). **배포 전 tsc 가 트리 전체에서 통과해야 한다**, 커밋만으론 부족.
+- 🔴 자동 모드 분류기가 `push && vercel deploy` 를 한 줄로 묶으면 막았다 — push 와 deploy 는 **따로**.
+- 🔴 한글 금지어 부분 문자열 함정: '자를'(해고)이 「의자를」에 걸렸다 → '잘라'·'해고'로 대체.
+- 검증: jest 3804 · tsc · eslint(--max-warnings=0) · prod build · 정적 덤프+빌드 CSS 촬영(처방전 전체/맛보기·
+  무리 지도·무리 탭·선물 버튼·팀 한 장). 🔴 **실기기·로그인 검수는 못 했다**(e2e 자격증명 없음) — CEO 몫.
+- SW `CACHE_VERSION` v12 → v13.
 
 **(29차 · 2026-09-04) 「기운 무리(群)」 v1 — 설계 문서만, 코드 0, 배포 없음:**
 
