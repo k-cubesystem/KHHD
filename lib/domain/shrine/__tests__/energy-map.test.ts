@@ -1,11 +1,13 @@
 import {
   averageEnergy,
   buildEnergyMap,
+  buildFamilyEnergySummary,
   findComplements,
   highestElement,
   lowestElement,
   COMPLEMENT_MIN_GAP,
   type EnergyMapEntry,
+  type EnergySummarySource,
 } from '../energy-map'
 import type { Element } from '../types'
 
@@ -99,5 +101,63 @@ describe('buildEnergyMap', () => {
     const map = buildEnergyMap([])
     expect(map.entries).toHaveLength(0)
     expect(map.complements).toHaveLength(0)
+  })
+})
+
+/**
+ * 허브 배너 요약 — 지도 전체를 계산하지 않고 «타고난 기운»만 보고 한 줄을 고른다.
+ * 배너는 한 문장만 말할 수 있으므로, **가장 할 말이 있는 짝**(격차 최대)이 그 자리를 가져가야 한다.
+ */
+describe('buildFamilyEnergySummary — 배너 한 줄', () => {
+  const src = (id: string, name: string, energy: Record<Element, number>): EnergySummarySource => ({
+    targetId: id,
+    name,
+    avatarId: null,
+    energy,
+  })
+
+  it('사람 수·넘치는 기운·부족한 기운을 사람마다 뽑는다', () => {
+    const summary = buildFamilyEnergySummary([
+      src('self', '나', { wood: 80, fire: 20, earth: 50, metal: 50, water: 50 }),
+      src('m1', '어머니', { wood: 20, fire: 80, earth: 50, metal: 50, water: 50 }),
+    ])
+
+    expect(summary.count).toBe(2)
+    expect(summary.members.map((m) => m.name)).toEqual(['나', '어머니'])
+    expect(summary.members[0].strongest).toBe('wood')
+    expect(summary.members[0].yongsin).toBe('fire')
+    expect(summary.members[1].strongest).toBe('fire')
+    expect(summary.members[1].yongsin).toBe('wood')
+  })
+
+  it('★ 짝이 여럿이면 격차가 가장 큰 하나를 고른다 — 배너는 한 줄뿐이다', () => {
+    // 나 → 어머니(木 80 vs 20 = 60), 아버지 → 나(火 70 vs 20 = 50). 큰 쪽이 뽑혀야 한다.
+    const summary = buildFamilyEnergySummary([
+      src('self', '나', { wood: 80, fire: 20, earth: 50, metal: 50, water: 50 }),
+      src('m1', '어머니', { wood: 20, fire: 55, earth: 50, metal: 50, water: 50 }),
+      src('m2', '아버지', { wood: 45, fire: 70, earth: 50, metal: 50, water: 50 }),
+    ])
+
+    expect(summary.complement).not.toBeNull()
+    expect(summary.complement?.fromName).toBe('나')
+    expect(summary.complement?.toName).toBe('어머니')
+    expect(summary.complement?.element).toBe('wood')
+  })
+
+  it('메워줄 짝이 없으면 null — 그때 배너는 가족 평균의 부족한 기운을 말한다', () => {
+    const summary = buildFamilyEnergySummary([
+      src('self', '나', { ...BALANCED, water: 20 }),
+      src('m1', '동생', { ...BALANCED, water: 22 }),
+    ])
+
+    expect(summary.complement).toBeNull()
+    expect(summary.familyYongsin).toBe('water')
+  })
+
+  it('혼자면 견줄 것이 없다 — 화면이 «가족 등록» 상태로 갈리는 근거', () => {
+    const summary = buildFamilyEnergySummary([src('self', '나', BALANCED)])
+
+    expect(summary.count).toBe(1)
+    expect(summary.complement).toBeNull()
   })
 })

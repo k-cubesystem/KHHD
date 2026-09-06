@@ -54,6 +54,18 @@ export const HUB_SECTIONS = {
     id: 'hub-journey',
     title: '나의 복주머니',
   },
+  /**
+   * 복주머니 바로 아래 — 「우리 가족 기운 지도」 배너 (CEO 2026-09-04).
+   *
+   * 복주머니가 «나 한 사람의 여정»이라면 이 자리는 «식구끼리 견주는 자리»다. 가족 명부로 가는
+   * 문(런처·하단 탭)은 이미 있으므로, 배너는 가족을 등록해야만 볼 수 있는 것 — 서로의 오행을
+   * 나란히 두는 화면 — 을 앞세운다(`components/analysis/family-map-card.tsx` 머리말 참고).
+   * 제목은 화면에 글자로 서지 않는다(`sr-only`) — 카드가 제 이름을 달고 있다.
+   */
+  familyMap: {
+    id: 'hub-family-map',
+    title: '우리 가족 기운 지도',
+  },
   /** 맨 하단 — 질문으로 들어오는 입구(브라우징 롱테일). */
   themeFortune: {
     id: 'hub-theme',

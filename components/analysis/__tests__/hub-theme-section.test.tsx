@@ -46,6 +46,20 @@ jest.mock('@/app/actions/analysis/wallpaper', () => ({
   unlockWallpaperByAd: jest.fn(async () => ({ success: false, error: 'UNAUTHORIZED' })),
 }))
 
+/** 가족 기운 지도 배너의 서버 액션 — 같은 이유로 끊는다. 배너가 실제로 서도록 요약을 채워 준다. */
+jest.mock('@/app/actions/shrine/energy-map', () => ({
+  getFamilyEnergySummary: jest.fn(async () => ({
+    count: 3,
+    members: [
+      { targetId: 'self', name: '나', avatarId: null, strongest: 'wood', yongsin: 'fire' },
+      { targetId: 'm1', name: '어머니', avatarId: null, strongest: 'fire', yongsin: 'wood' },
+      { targetId: 'm2', name: '아버지', avatarId: null, strongest: 'water', yongsin: 'metal' },
+    ],
+    familyYongsin: 'metal',
+    complement: { fromId: 'self', fromName: '나', toId: 'm1', toName: '어머니', element: 'wood' },
+  })),
+}))
+
 /** 메인 배너(`JourneyCard`)가 `useRouter` 를 쓴다 — 렌더가 서려면 필요하다. */
 const push = jest.fn()
 

@@ -31,6 +31,20 @@ jest.mock('@/app/actions/analysis/wallpaper', () => ({
   unlockWallpaperByAd: jest.fn(async () => ({ success: false, error: 'UNAUTHORIZED' })),
 }))
 
+/** 가족 기운 지도 배너의 서버 액션 — 같은 이유로 끊는다. 배너가 실제로 서도록 요약을 채워 준다. */
+jest.mock('@/app/actions/shrine/energy-map', () => ({
+  getFamilyEnergySummary: jest.fn(async () => ({
+    count: 3,
+    members: [
+      { targetId: 'self', name: '나', avatarId: null, strongest: 'wood', yongsin: 'fire' },
+      { targetId: 'm1', name: '어머니', avatarId: null, strongest: 'fire', yongsin: 'wood' },
+      { targetId: 'm2', name: '아버지', avatarId: null, strongest: 'water', yongsin: 'metal' },
+    ],
+    familyYongsin: 'metal',
+    complement: { fromId: 'self', fromName: '나', toId: 'm1', toName: '어머니', element: 'wood' },
+  })),
+}))
+
 jest.mock('@/components/shared/AmbientVideo', () => ({
   AmbientVideo: () => null,
 }))
@@ -59,18 +73,38 @@ describe('허브 구성 — 세 자리만 남는다', () => {
     expect(container.querySelectorAll('[id^="hub-"]:not([id$="-title"])')).toHaveLength(allHubSections().length)
   })
 
-  it('아이콘 런처가 맨 위, 복주머니(여정)가 테마 앞, 인기테마가 맨 아래다 (CEO 08-22 재배치)', async () => {
+  it('런처 → 복주머니 → 가족 기운 지도 → 인기테마 순이다 (CEO 08-22 재배치 · 09-04 가족 배너)', async () => {
     const { container } = await renderHub()
 
     const launcher = container.querySelector(`#${HUB_SECTIONS.launcher.id}`)
     const theme = container.querySelector(`#${HUB_SECTIONS.themeFortune.id}`)
     const journey = container.querySelector(`#${HUB_SECTIONS.journey.id}`)
-    if (!launcher || !theme || !journey) throw new Error('허브 섹션이 없다')
+    const familyMap = container.querySelector(`#${HUB_SECTIONS.familyMap.id}`)
+    if (!launcher || !theme || !journey || !familyMap) throw new Error('허브 섹션이 없다')
 
-    for (const later of [journey, theme]) {
+    for (const later of [journey, familyMap, theme]) {
       expect(launcher.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     }
-    expect(journey.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // 가족 배너는 복주머니 «바로 아래»다 — 그 사이에 다른 섹션이 끼면 이 둘의 순서가 뒤집힌다
+    expect(journey.compareDocumentPosition(familyMap) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(familyMap.compareDocumentPosition(theme) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  /**
+   * 배너가 여는 문은 **지도**다(가족 명부가 아니라). 명부로 가는 문은 이미 런처·하단 탭에 있어,
+   * 배너까지 명부를 열면 같은 문이 셋이 된다 — 그 기획이 링크로 남아 있는지 본다.
+   */
+  it('가족 기운 지도 배너가 지도를 열고, 가족 관리는 보조 문으로 함께 선다 (CEO 09-04)', async () => {
+    const { container } = await renderHub()
+
+    const familyMap = container.querySelector<HTMLElement>(`#${HUB_SECTIONS.familyMap.id}`)
+    if (!familyMap) throw new Error('가족 배너 섹션이 없다')
+
+    const hrefs = [...familyMap.querySelectorAll('a')].map((a) => a.getAttribute('href'))
+    expect(hrefs).toContain('/protected/family/map')
+    expect(hrefs).toContain('/protected/family')
+    // 「타고난 기운」 라벨 — 지도(신당 살림까지 반영)와 다른 것을 보인다는 고지다. 떼면 두 화면이 어긋나 보인다
+    expect(within(familyMap).getByText(/타고난 기운 기준/)).toBeTruthy()
   })
 
   it('메인 배너는 하나다 — 사주 유도 카드가 복주머니 위에 다시 서지 않는다 (CEO 08-24)', async () => {

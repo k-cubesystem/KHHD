@@ -14,10 +14,13 @@ import {
 } from '@/lib/domain/shrine/energy'
 import {
   buildEnergyMap,
+  buildFamilyEnergySummary,
   highestElement,
   lowestElement,
   type EnergyMapEntry,
+  type EnergySummarySource,
   type FamilyEnergyMap,
+  type FamilyEnergySummary,
 } from '@/lib/domain/shrine/energy-map'
 
 /** 지도에 필요한 최소 카탈로그 필드만 — 방 렌더용 필드는 불필요 */
@@ -218,4 +221,62 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
   })
 
   return buildEnergyMap(entries)
+}
+
+/**
+ * 허브 배너용 요약 — 「우리 가족 기운 지도」 배너 하나가 쓰는 축약본.
+ *
+ * 🔴 **지도(getFamilyEnergyMap)를 부르지 않는다.** 그쪽은 신당·배치·카탈로그까지 일곱 번을
+ *    질의하는데, 허브는 첫 화면이라 배너 하나가 질 비용이 아니다. 여기서 읽는 것은 두 표뿐이고
+ *    (profiles · family_members) 기운은 **사주에서 유도한 타고난 값**이다.
+ *    그래서 배너 문구도 「타고난 기운」이라고 적는다 — 지도와 «다른 수»가 아니라
+ *    «다른 것»을 보이는 것이고, 그 차이는 라벨이 진다.
+ *
+ * 🔴 견줄 사람이 둘 미만이면 `count` 만 채워 돌려준다 — 배너가 «가족 등록» 상태로 선다.
+ *    비로그인·조회 실패는 null 이고, 그때 배너는 스스로 사라진다(빈 자리를 남기지 않는다).
+ */
+export async function getFamilyEnergySummary(): Promise<FamilyEnergySummary | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const [{ data: me }, { data: members }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name, birth_date, birth_time, calendar_type')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('family_members')
+      .select('id, name, relationship, birth_date, birth_time, calendar_type, avatar_id, member_category')
+      .eq('user_id', user.id)
+      .order('created_at'),
+  ])
+
+  const sources: EnergySummarySource[] = [
+    {
+      targetId: 'self',
+      name: me?.full_name || '나',
+      avatarId: null,
+      energy: baseFromBirth(me?.birth_date ?? null, me?.birth_time ?? null, me?.calendar_type !== 'lunar').base,
+    },
+    // 지도와 같은 두 규칙: relationship='본인' 자동 레코드는 self 와 이중 계상이라 빼고,
+    // 기본 비교 대상은 «가족»이다(지인은 지도에서 골라야 들어온다).
+    ...(members ?? [])
+      .filter((m) => m.relationship !== '본인' && toMemberCategory(m.member_category as string | null) === 'family')
+      .map((m) => ({
+        targetId: m.id as string,
+        name: (m.name as string) || '이름 없음',
+        avatarId: (m.avatar_id as string) ?? null,
+        energy: baseFromBirth(
+          (m.birth_date as string) ?? null,
+          (m.birth_time as string) ?? null,
+          m.calendar_type !== 'lunar'
+        ).base,
+      })),
+  ]
+
+  return buildFamilyEnergySummary(sources)
 }

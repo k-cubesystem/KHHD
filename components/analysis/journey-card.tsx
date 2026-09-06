@@ -211,7 +211,10 @@ export function JourneyFull({
         }}
       />
 
-      <div className="relative z-10 px-6 py-7 flex flex-col gap-4 text-center">
+      {/* 여백·글자 크기는 «한 화면에 배너 둘» 을 전제로 한 번 줄였다(CEO 2026-09-04).
+          🔴 문안 세 줄(사주 라벨·헤드라인·명언)은 CEO 가 명시한 자리라 **글자를 빼지 않고**
+             여백(py-7→py-5·gap-4→gap-3)과 글자 크기만 줄인다. hub-layout 테스트가 그 문구를 지킨다. */}
+      <div className="relative z-10 flex flex-col gap-3 px-5 py-5 text-center">
         {/* 라벨 + 수집 진행 */}
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-serif tracking-[0.4em] text-gold-500/60">나 의 복 주 머 니</p>
@@ -231,7 +234,7 @@ export function JourneyFull({
 
         {/* 헤드라인 — 첫 주머니(사주) / 진행중 / 완주 세 상태 */}
         <h2
-          className="text-[1.35rem] font-serif font-bold leading-[1.5] text-ink-light tracking-tight"
+          className="text-[1.18rem] font-serif font-bold leading-[1.45] text-ink-light tracking-tight"
           style={{ wordBreak: 'keep-all' }}
         >
           {journey.allComplete ? (
@@ -258,7 +261,7 @@ export function JourneyFull({
         </h2>
 
         {/* 부제 — 사주 단계에서는 구 배너의 명언이 그 자리를 대신한다(이탤릭 두 줄을 만들지 않는다) */}
-        <p className="text-[11px] italic font-serif text-ink-light/45 leading-relaxed">
+        <p className="text-[10.5px] italic font-serif text-ink-light/45 leading-snug">
           {atSaju ? `“${SAJU_QUOTE}”` : '주머니가 채워질수록, 나의 기운이 차오릅니다'}
         </p>
 
@@ -267,7 +270,7 @@ export function JourneyFull({
 
         {/* 서브 카피 */}
         <p
-          className="text-[12px] text-ink-light/55 font-sans font-light leading-relaxed"
+          className="text-[11.5px] text-ink-light/55 font-sans font-light leading-relaxed"
           style={{ wordBreak: 'keep-all' }}
         >
           {journey.allComplete ? (
@@ -342,7 +345,7 @@ export function JourneyFull({
               background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.35) 50%, transparent 65%)',
             }}
           />
-          <span className="relative z-10 flex items-center justify-center gap-2.5 py-3.5">
+          <span className="relative z-10 flex items-center justify-center gap-2.5 py-3">
             {showRewardCta ? (
               <Gift className="w-4 h-4 text-[#0A0A08]" />
             ) : (

@@ -7,6 +7,7 @@ import { ChevronRight } from 'lucide-react'
 import { HubLauncher } from './HubLauncher'
 import { ThemeThumbnail } from './ThemeThumbnail'
 import { JourneyCard } from './journey-card'
+import { FamilyMapCard } from './family-map-card'
 import { WallpaperCard } from './wallpaper-card'
 import { CoupangBanner } from '@/components/ads/coupang-banner'
 import { HUB_SECTIONS, hubHeadingId } from '@/lib/domain/analysis/hub-sections'
@@ -78,6 +79,22 @@ export function AnalysisDashboard() {
           {HUB_SECTIONS.journey.title}
         </h2>
         <JourneyCard variant="full" />
+      </motion.section>
+
+      {/* 우리 가족 기운 지도 — 복주머니(나 한 사람) 바로 아래 «식구끼리 견주는» 자리(CEO 2026-09-04).
+          🔴 견줄 상대가 없거나 비로그인이면 카드가 **스스로 사라진다** — 섹션 껍데기만 남아 빈 자리를
+             만들지 않도록, 자격 판단도 카드가 진다(이 파일은 서버 액션을 import 하지 않는다). */}
+      <motion.section
+        variants={fadeInUp}
+        id={HUB_SECTIONS.familyMap.id}
+        aria-labelledby={hubHeadingId(HUB_SECTIONS.familyMap.id)}
+        tabIndex={-1}
+        className={SECTION_ANCHOR}
+      >
+        <h2 id={hubHeadingId(HUB_SECTIONS.familyMap.id)} className="sr-only">
+          {HUB_SECTIONS.familyMap.title}
+        </h2>
+        <FamilyMapCard />
       </motion.section>
 
       {/* ① 인기테마운세 — 「도구」가 아니라 「질문」으로 들어오는 입구 (마스터 §3-2).
