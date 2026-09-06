@@ -8,11 +8,7 @@ import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
 import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-react'
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
-import {
-  buildEnergyMap,
-  type EnergyMapEntry,
-  type FamilyEnergyMap as MapData,
-} from '@/lib/domain/shrine/energy-map'
+import { buildEnergyMap, type EnergyMapEntry, type FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 
 /** 오행이 무엇인지 처음 보는 사람을 위한 접이식 설명 — saju-knowledge-graph 오행 노드 재사용. */
@@ -100,6 +96,11 @@ function ElementBars({ entry }: { entry: EnergyMapEntry }) {
   )
 }
 
+/** 처방전 — 막대 뒤에 와야 할 «왜·그래서 무엇을»(PRD-energy-circle §3-1). 본인은 target 을 붙이지 않는다. */
+function prescriptionHref(targetId: string): string {
+  return targetId === 'self' ? '/protected/prescription' : `/protected/prescription?target=${targetId}`
+}
+
 function MemberCard({ entry }: { entry: EnergyMapEntry }) {
   const href = entry.targetId === 'self' ? '/protected/shrine' : `/protected/shrine?member=${entry.targetId}`
   // 가족 카드(member-mission-card)와 같은 오행 정령 아바타를 쓴다
@@ -142,6 +143,13 @@ function MemberCard({ entry }: { entry: EnergyMapEntry }) {
           className="shrink-0 p-1.5 rounded-lg border border-gold-500/25 text-gold-400/80 hover:bg-gold-500/10"
         >
           <Home className="w-3.5 h-3.5" />
+        </Link>
+        <Link
+          href={prescriptionHref(entry.targetId)}
+          aria-label={`${entry.name} 기운 처방전 열기`}
+          className="shrink-0 rounded-lg border border-gold-500/25 bg-gold-500/[0.06] px-2 py-1.5 font-serif text-[11px] text-gold-300 hover:bg-gold-500/[0.12]"
+        >
+          처방전
         </Link>
       </div>
 

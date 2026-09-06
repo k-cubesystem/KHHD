@@ -2,16 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
-import { logger } from '@/lib/utils/logger'
-import { getSajuData } from '@/lib/domain/saju/saju'
-import { isLayer, isElement, type CatalogItem, type Element, type Placement } from '@/lib/domain/shrine/types'
-import {
-  DEFAULT_BASE,
-  deriveBaseFromDistribution,
-  applyModifiers,
-  computeEnergy,
-  indexCatalog,
-} from '@/lib/domain/shrine/energy'
+import { baseFromBirth } from '@/lib/domain/shrine/energy-born'
+import { isLayer, isElement, type CatalogItem, type Placement } from '@/lib/domain/shrine/types'
+import { applyModifiers, computeEnergy, indexCatalog } from '@/lib/domain/shrine/energy'
 import {
   buildEnergyMap,
   buildFamilyEnergySummary,
@@ -53,17 +46,6 @@ function toMapCatalogItem(r: MapCatalogRow): CatalogItem {
     // 기운 지도는 오행·세기만 본다 — 갈래·전거는 이 계산에 쓰이지 않는다
     matters: [],
     originNote: null,
-  }
-}
-
-function baseFromBirth(birthDate: string | null, birthTime: string | null, isSolar: boolean) {
-  if (!birthDate) return { base: { ...DEFAULT_BASE }, yongsin: null as Element | null }
-  try {
-    const saju = getSajuData(birthDate, birthTime || '12:00', isSolar)
-    return deriveBaseFromDistribution(saju.elementsDistribution)
-  } catch (e) {
-    logger.warn('[energy-map] 사주 유도 실패, 기본값 사용:', e)
-    return { base: { ...DEFAULT_BASE }, yongsin: null as Element | null }
   }
 }
 

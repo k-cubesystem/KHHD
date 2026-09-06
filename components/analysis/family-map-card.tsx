@@ -40,6 +40,7 @@ const CHIP_MAX = 3
 
 const MAP_HREF = '/protected/family/map'
 const FAMILY_HREF = '/protected/family'
+const PRESCRIPTION_HREF = '/protected/prescription'
 
 /** 먹빛 바탕 — 위의 복주머니 배너(진홍·비단)보다 한 걸음 물러서야 «주 배너»가 하나로 읽힌다. */
 const MAP_BG = 'linear-gradient(160deg, #12100C 0%, #171410 55%, #0F0D0A 100%)'
@@ -218,6 +219,16 @@ export function FamilyMapCard() {
             </Link>
           )}
         </div>
+
+        {/* 처방전 — 가족이 없어도 «내» 것은 볼 수 있다. 무료는 맛보기, 멤버십이 나머지를 연다(P0). */}
+        <Link
+          href={PRESCRIPTION_HREF}
+          onClick={() => trackEvent({ action: 'prescription_from_hub', category: 'engagement', label: 'hub_banner' })}
+          className="-mt-1 inline-flex items-center gap-1 self-start font-serif text-[11.5px] text-ink-light/50 transition-colors hover:text-gold-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
+        >
+          내 기운 처방전 — 모자란 기운을 무엇으로 채울지
+          <ArrowRight className="h-3 w-3" />
+        </Link>
       </div>
     </motion.div>
   )

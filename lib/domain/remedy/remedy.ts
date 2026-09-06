@@ -136,10 +136,16 @@ const AVOID_HINT: Record<Element, string> = {
   水: '어두운 방에 오래 있기, 밤을 새우는 일',
 }
 
+/**
+ * 오행 파생 표 묶음 — 처방전(`lib/domain/circle/prescription.ts`)이 읽는다.
+ * 🔴 여기서 내보내는 것은 «참조»다. 받아 간 쪽에서 표를 다시 적으면 그 순간 세 번째 사본이 된다.
+ */
+export const REMEDY_TABLE = { COLOR, DIRECTION, HOUR_BAND, SEASON, SPACE, BODY, RELATION, AVOID_HINT } as const
+
 // ===================== 십성·신살 파생 (사람마다 갈리는 자리) =====================
 
 /** 십성 다섯 무리 — 표시용 우리말 이름을 함께 둔다. 화면·프롬프트가 같은 말을 쓰게 하는 자리다. */
-const SIPSEONG_GROUPS = [
+export const SIPSEONG_GROUPS = [
   { key: 'gwan', plain: '책임을 맡는 결', members: ['정관', '편관'] },
   { key: 'siksang', plain: '만들어 내는 결', members: ['식신', '상관'] },
   { key: 'bigyeop', plain: '함께 가는 결', members: ['비견', '겁재'] },
@@ -147,8 +153,8 @@ const SIPSEONG_GROUPS = [
   { key: 'inseong', plain: '받아들이는 결', members: ['정인', '편인'] },
 ] as const
 
-type SipseongGroup = (typeof SIPSEONG_GROUPS)[number]
-type SipseongGroupKey = SipseongGroup['key']
+export type SipseongGroup = (typeof SIPSEONG_GROUPS)[number]
+export type SipseongGroupKey = SipseongGroup['key']
 
 /**
  * 무리별 «많을 때» 처방 — 그 기운이 과하면 생기는 버릇을 덜어내는 행동.
@@ -241,27 +247,12 @@ function dominantGroup(distribution: Record<string, number>): SipseongGroup {
 }
 
 /**
- * 처방 한 벌을 짓는다. **순수 함수** — 같은 사주는 언제 불러도 같은 처방이다.
- *
- * 🔴 `new Date()` 를 읽지 않는다. 「이달의 처방」 같은 시점 의존 항목을 넣고 싶어지는 자리지만,
- *    그러면 어제 본 처방과 오늘 본 처방이 달라져 사용자가 무엇을 믿을지 모르게 된다.
+ * 오행 하나에서 그대로 파생되는 처방 여섯 — 색·방향·시간·계절·자리·몸.
+ * `buildRemedySet`(명식 전체)과 처방전(`lib/domain/circle`, 기운 지도의 «모자란 기운»)이 함께 쓴다.
+ * 문장을 두 곳에 두면 한쪽만 고쳐져 같은 오행에 다른 말이 나온다 — 그래서 함수다.
  */
-export function buildRemedySet(ctx: SajuContext): RemedySet {
-  const advanced = ctx.analysis.advancedYongsin
-  const yongsin = elementOf(advanced?.finalYongsin, '土')
-  const huisin = elementOf(advanced?.huisin, yongsin)
-  const gisin = elementOf(advanced?.gisin, '金')
-
-  const { sipseong, sinsal } = ctx.analysis
-  const group = dominantGroup(sipseong.distribution)
-  const habit = HABIT_BY_GROUP[group.key]
-
-  // 신살은 여럿일 수 있다 — 표에 있는 것 중 **첫 번째**만 쓴다(선언 순서 고정 = 결정론).
-  const sinsalHit = Object.keys(SINSAL_WORD).find((name) => sinsal.some((item) => item.name === name))
-
-  const yongsinBasis = `채워야 할 기운이 ${yongsin}${advanced?.priority ? ` (${advanced.priority})` : ''}`
-
-  const items: RemedyItem[] = [
+export function elementRemedies(yongsin: Element, huisin: Element, yongsinBasis: string): RemedyItem[] {
+  return [
     {
       kind: 'color',
       label: '곁에 두는 색',
@@ -304,6 +295,52 @@ export function buildRemedySet(ctx: SajuContext): RemedySet {
       basis: `${yongsin} 기운과 같은 결의 음식·움직임`,
       action: '이번 주 장을 볼 때 그 결의 재료를 하나 담습니다.',
     },
+  ]
+}
+
+/** 덜어내는 처방 둘 — 기신 쪽 색 일색과 버릇. «금지»가 아니라 «과하지 않게»의 결. */
+export function avoidRemedies(gisin: Element): RemedyItem[] {
+  return [
+    {
+      kind: 'color',
+      label: '과하지 않게',
+      value: `${COLOR[gisin]} 일색`,
+      basis: `${gisin} 기운은 지금 더 채우지 않아도 되는 쪽`,
+      action: `방 안에서 ${COLOR[gisin]} 물건이 몰려 있는 곳을 하나 덜어냅니다.`,
+    },
+    {
+      kind: 'habit',
+      label: '덜어낼 버릇',
+      value: AVOID_HINT[gisin],
+      basis: `${gisin} 기운이 짙어지는 생활`,
+      action: '그중 하나를 이번 주에 한 번만 건너뜁니다.',
+    },
+  ]
+}
+
+/**
+ * 처방 한 벌을 짓는다. **순수 함수** — 같은 사주는 언제 불러도 같은 처방이다.
+ *
+ * 🔴 `new Date()` 를 읽지 않는다. 「이달의 처방」 같은 시점 의존 항목을 넣고 싶어지는 자리지만,
+ *    그러면 어제 본 처방과 오늘 본 처방이 달라져 사용자가 무엇을 믿을지 모르게 된다.
+ */
+export function buildRemedySet(ctx: SajuContext): RemedySet {
+  const advanced = ctx.analysis.advancedYongsin
+  const yongsin = elementOf(advanced?.finalYongsin, '土')
+  const huisin = elementOf(advanced?.huisin, yongsin)
+  const gisin = elementOf(advanced?.gisin, '金')
+
+  const { sipseong, sinsal } = ctx.analysis
+  const group = dominantGroup(sipseong.distribution)
+  const habit = HABIT_BY_GROUP[group.key]
+
+  // 신살은 여럿일 수 있다 — 표에 있는 것 중 **첫 번째**만 쓴다(선언 순서 고정 = 결정론).
+  const sinsalHit = Object.keys(SINSAL_WORD).find((name) => sinsal.some((item) => item.name === name))
+
+  const yongsinBasis = `채워야 할 기운이 ${yongsin}${advanced?.priority ? ` (${advanced.priority})` : ''}`
+
+  const items: RemedyItem[] = [
+    ...elementRemedies(yongsin, huisin, yongsinBasis),
     {
       kind: 'habit',
       label: habit.label,
@@ -331,22 +368,7 @@ export function buildRemedySet(ctx: SajuContext): RemedySet {
     })
   }
 
-  const avoid: RemedyItem[] = [
-    {
-      kind: 'color',
-      label: '과하지 않게',
-      value: `${COLOR[gisin]} 일색`,
-      basis: `${gisin} 기운은 지금 더 채우지 않아도 되는 쪽`,
-      action: `방 안에서 ${COLOR[gisin]} 물건이 몰려 있는 곳을 하나 덜어냅니다.`,
-    },
-    {
-      kind: 'habit',
-      label: '덜어낼 버릇',
-      value: AVOID_HINT[gisin],
-      basis: `${gisin} 기운이 짙어지는 생활`,
-      action: '그중 하나를 이번 주에 한 번만 건너뜁니다.',
-    },
-  ]
+  const avoid = avoidRemedies(gisin)
 
   return { yongsin, huisin, gisin, items, avoid }
 }
