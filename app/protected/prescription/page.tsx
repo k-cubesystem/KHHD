@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getPrescription } from '@/app/actions/circle/energy'
+import { getGiftSummary, type GiftSummary } from '@/app/actions/circle/gift'
 import { PrescriptionView } from '@/components/family/prescription-view'
 
 export const metadata: Metadata = {
@@ -27,7 +28,11 @@ export default async function PrescriptionPage({ searchParams }: { searchParams:
   if (!user) redirect('/auth/login')
 
   const isSelf = !target || target === 'self'
-  const payload = await getPrescription(isSelf ? 'self' : target)
+  const targetId = isSelf ? 'self' : target
+  const [payload, giftSummary] = await Promise.all([
+    getPrescription(targetId),
+    isSelf ? Promise.resolve<GiftSummary | null>(null) : getGiftSummary(targetId),
+  ])
 
   if (!payload) {
     return (
@@ -64,6 +69,8 @@ export default async function PrescriptionPage({ searchParams }: { searchParams:
   return (
     <PrescriptionView
       payload={payload}
+      targetId={targetId}
+      giftSummary={giftSummary}
       backHref={isSelf ? '/protected/analysis' : '/protected/family/map'}
       backLabel={isSelf ? '사주·궁합' : '기운 지도'}
     />

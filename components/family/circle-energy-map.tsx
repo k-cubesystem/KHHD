@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, Sparkles, Users } from 'lucide-react'
+import { ChevronLeft, Printer, Sparkles, Users } from 'lucide-react'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
 import { EnergyBars } from '@/components/family/energy-bars'
 import { EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
@@ -129,7 +129,14 @@ export function TeamRelations({ energy, compact = false }: { energy: CircleEnerg
   )
 }
 
-export function CircleEnergyMapView({ payload }: { payload: CircleEnergyPayload }) {
+export function CircleEnergyMapView({
+  payload,
+  sheet = 'hidden',
+}: {
+  payload: CircleEnergyPayload
+  /** 「기운 한 장」 문 — BUSINESS 은 인쇄 링크, 다른 유료 티어는 업셀 한 줄, 숨김. */
+  sheet?: 'print' | 'upsell' | 'hidden'
+}) {
   const { circle, energy } = payload
   const showNumbers = energy.scoreMode === 'full'
   const meta = CIRCLE_KIND_META[circle.kind]
@@ -173,6 +180,26 @@ export function CircleEnergyMapView({ payload }: { payload: CircleEnergyPayload 
         >
           {energy.notice}
         </p>
+      )}
+
+      {sheet === 'print' && (
+        <Link
+          href={`/protected/family/map/print?circle=${circle.id}`}
+          onClick={() => trackEvent({ action: 'team_sheet_open', category: 'engagement', label: circle.kind })}
+          className="mb-5 flex items-center justify-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/[0.1] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20"
+        >
+          <Printer className="h-3.5 w-3.5" /> {circle.name} 기운 한 장 — 자리마다 놓을 표 인쇄
+        </Link>
+      )}
+      {sheet === 'upsell' && (
+        <Link
+          href="/protected/store?tab=membership"
+          onClick={() => trackEvent({ action: 'business_gate_view', category: 'conversion', label: circle.kind })}
+          className="mb-5 block rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-center text-[11.5px] text-ink-light/55 hover:text-gold-300"
+          style={{ wordBreak: 'keep-all' }}
+        >
+          BUSINESS 멤버십은 무리 전원의 «책상 위 한 가지»를 표 한 장으로 인쇄합니다 →
+        </Link>
       )}
 
       {/* 무리 전체 균형 */}

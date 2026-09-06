@@ -9,6 +9,9 @@ import type { Element } from '@/lib/domain/shrine/types'
 import type { Prescription, PrescriptionTeaser } from '@/lib/domain/circle/prescription'
 import type { PrescriptionPayload } from '@/app/actions/circle/energy'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import type { GiftSummary } from '@/app/actions/circle/gift'
+import { GiftItemButton } from '@/components/family/gift-item-button'
+import { GiftCardButton } from '@/components/family/gift-card-button'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
@@ -191,7 +194,14 @@ function BlockThree({
   )
 }
 
-function BlockFour({ items, lacking }: Pick<Prescription, 'items' | 'lacking'>) {
+function BlockFour({
+  items,
+  lacking,
+  name,
+  targetId,
+  giftSummary,
+}: Pick<Prescription, 'items' | 'lacking' | 'name'> & { targetId: string; giftSummary: GiftSummary | null }) {
+  const canGift = targetId !== 'self'
   return (
     <section className="space-y-4 rounded-xl border border-white/10 bg-surface/30 p-4">
       <BlockLabel n="④" title="곁에 둘 것 — 세 층" />
@@ -212,19 +222,42 @@ function BlockFour({ items, lacking }: Pick<Prescription, 'items' | 'lacking'>) 
                 <p className="text-[10px] tabular-nums text-ink-light/45">
                   {EL_KO[s.element]} +{s.energyPower}
                 </p>
+                {canGift && (
+                  <GiftItemButton
+                    recipientMemberId={targetId}
+                    recipientName={name}
+                    itemId={s.id}
+                    itemName={s.name}
+                    element={s.element}
+                    priceBokchae={s.priceBokchae}
+                  />
+                )}
               </li>
             ))}
           </ul>
         ) : (
           <p className="text-[11.5px] text-ink-light/45">{label(lacking)} 기운의 살림이 아직 상점에 없습니다.</p>
         )}
-        <Link
-          href={STORE_ITEMS_HREF}
-          onClick={() => trackEvent({ action: 'prescription_shrine_cta', category: 'engagement', label: lacking })}
-          className="inline-flex items-center gap-1 font-serif text-[11.5px] font-bold text-gold-400"
-        >
-          {EL_KO[lacking]} 기운 살림 신당에 놓기 <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+        {canGift ? (
+          <p className="text-[10.5px] leading-snug text-ink-light/45" style={{ wordBreak: 'keep-all' }}>
+            {giftSummary && giftSummary.count > 0 ? (
+              <>
+                {name}님께 보낸 기운 선물 <b className="font-serif text-gold-300 tabular-nums">{giftSummary.count}</b>점
+                {giftSummary.last && <> · 마지막은 {giftSummary.last.itemName}</>}
+              </>
+            ) : (
+              <>선물한 살림은 {name}님이 실제 사용자로 연결돼 있으면 그분 보관함으로, 아니면 내 보관함으로 갑니다.</>
+            )}
+          </p>
+        ) : (
+          <Link
+            href={STORE_ITEMS_HREF}
+            onClick={() => trackEvent({ action: 'prescription_shrine_cta', category: 'engagement', label: lacking })}
+            className="inline-flex items-center gap-1 font-serif text-[11.5px] font-bold text-gold-400"
+          >
+            {EL_KO[lacking]} 기운 살림 신당에 놓기 <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -237,6 +270,7 @@ function BlockFour({ items, lacking }: Pick<Prescription, 'items' | 'lacking'>) 
           <dt className="text-ink-light/45">선물 셋</dt>
           <dd className="text-ink-light/85">{items.real.gifts.join(' · ')}</dd>
         </dl>
+        <GiftCardButton element={lacking} recipientName={canGift ? name : null} />
       </div>
 
       <div className="space-y-1.5">
@@ -283,10 +317,15 @@ function BlockFive({ avoid }: Pick<Prescription, 'avoid'>) {
 
 export function PrescriptionView({
   payload,
+  targetId,
+  giftSummary = null,
   backHref,
   backLabel,
 }: {
   payload: PrescriptionPayload
+  /** 'self' 또는 family_members.id — 선물 버튼은 남에게만 선다. */
+  targetId: string
+  giftSummary?: GiftSummary | null
   backHref: string
   backLabel: string
 }) {
@@ -337,7 +376,13 @@ export function PrescriptionView({
               sideNote={payload.prescription.sideNote}
               caution={payload.prescription.caution}
             />
-            <BlockFour items={payload.prescription.items} lacking={payload.prescription.lacking} />
+            <BlockFour
+              items={payload.prescription.items}
+              lacking={payload.prescription.lacking}
+              name={payload.prescription.name}
+              targetId={targetId}
+              giftSummary={giftSummary}
+            />
             <BlockFive avoid={payload.prescription.avoid} />
           </>
         ) : (

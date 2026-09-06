@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getFamilyEnergyMap } from '@/app/actions/shrine/energy-map'
 import { getCircleEnergy } from '@/app/actions/circle/energy'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
+import { canPrintTeamSheet } from '@/lib/domain/circle/print-access'
+import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { FamilyEnergyMapView } from '@/components/family/FamilyEnergyMap'
 import { CircleEnergyMapView } from '@/components/family/circle-energy-map'
 
@@ -25,7 +27,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
 
   // 내가 만든 무리(직장·모임·직접 이름) — 가족 지도와 다른 화면이다(고지·밴드 모드).
   if (circle && circle !== FAMILY_CIRCLE_ID) {
-    const payload = await getCircleEnergy(circle)
+    const [payload, membership] = await Promise.all([getCircleEnergy(circle), getCurrentUserMembership()])
     if (!payload) {
       return (
         <div className="min-h-screen w-full max-w-[480px] mx-auto px-4 py-16">
@@ -43,7 +45,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
         </div>
       )
     }
-    return <CircleEnergyMapView payload={payload} />
+    return <CircleEnergyMapView payload={payload} sheet={canPrintTeamSheet(membership?.tier) ? 'print' : 'upsell'} />
   }
 
   const [data, family] = await Promise.all([getFamilyEnergyMap(), getCircleEnergy(FAMILY_CIRCLE_ID)])
