@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { getFamilyWithMissions, type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
 import { getLinkedFamilies, listFamilyInviteLinks, type FamilyInviteSummary } from '@/app/actions/family-invite'
+import { getCirclesOverview, type CirclesOverview } from '@/app/actions/circle/circles'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
@@ -59,15 +60,18 @@ export default async function FamilyPage() {
 
   let invites: FamilyInviteSummary[] = []
   let linkedMemberIds: string[] = []
+  let circles: CirclesOverview | null = null
   try {
-    const [inviteRows, { data: linkedRows }] = await Promise.all([
+    const [inviteRows, { data: linkedRows }, overview] = await Promise.all([
       listFamilyInviteLinks(),
       supabase.from('family_members').select('id').eq('user_id', user.id).not('linked_user_id', 'is', null),
+      getCirclesOverview(),
     ])
     invites = inviteRows
     linkedMemberIds = (linkedRows ?? []).map((row) => row.id as string)
+    circles = overview
   } catch {
-    // 초대 정보가 없어도 가족 목록은 떠야 한다 — 패널만 빈 상태로 뜬다.
+    // 초대·무리 정보가 없어도 가족 목록은 떠야 한다 — 패널만 빈 상태로 뜬다.
   }
 
   return (
@@ -77,6 +81,7 @@ export default async function FamilyPage() {
       invites={invites}
       linkedMemberIds={linkedMemberIds}
       linkedFamilies={linkedFamilies}
+      circles={circles}
     />
   )
 }

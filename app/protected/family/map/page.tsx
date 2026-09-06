@@ -3,7 +3,10 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getFamilyEnergyMap } from '@/app/actions/shrine/energy-map'
+import { getCircleEnergy } from '@/app/actions/circle/energy'
+import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
 import { FamilyEnergyMapView } from '@/components/family/FamilyEnergyMap'
+import { CircleEnergyMapView } from '@/components/family/circle-energy-map'
 
 export const metadata: Metadata = {
   title: '우리 가족 기운 지도',
@@ -12,14 +15,38 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic'
 
-export default async function FamilyEnergyMapPage() {
+export default async function FamilyEnergyMapPage({ searchParams }: { searchParams: Promise<{ circle?: string }> }) {
+  const { circle } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const data = await getFamilyEnergyMap()
+  // 내가 만든 무리(직장·모임·직접 이름) — 가족 지도와 다른 화면이다(고지·밴드 모드).
+  if (circle && circle !== FAMILY_CIRCLE_ID) {
+    const payload = await getCircleEnergy(circle)
+    if (!payload) {
+      return (
+        <div className="min-h-screen w-full max-w-[480px] mx-auto px-4 py-16">
+          <div className="text-center space-y-5 border border-dashed border-gold-500/20 bg-surface/20 rounded-xl p-10">
+            <p className="text-[10px] tracking-[0.5em] text-gold-500/50 font-serif">氣運 地圖</p>
+            <h1 className="text-xl font-serif font-bold text-ink-light">그 무리를 찾지 못했습니다</h1>
+            <p className="text-sm text-ink-light/55 leading-relaxed">지워졌거나 내 무리가 아닙니다.</p>
+            <Link
+              href="/protected/family"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gold-500/15 border border-gold-500/40 text-gold-300 text-sm font-serif"
+            >
+              인연·무리로 가기
+            </Link>
+          </div>
+        </div>
+      )
+    }
+    return <CircleEnergyMapView payload={payload} />
+  }
+
+  const [data, family] = await Promise.all([getFamilyEnergyMap(), getCircleEnergy(FAMILY_CIRCLE_ID)])
 
   // 본인 1명뿐이면 비교할 게 없다 — 지도 대신 가족 등록으로 안내
   if (!data || data.entries.length < 2) {
@@ -44,5 +71,5 @@ export default async function FamilyEnergyMapPage() {
     )
   }
 
-  return <FamilyEnergyMapView data={data} />
+  return <FamilyEnergyMapView data={data} teamEntries={family?.energy.entries ?? []} />
 }

@@ -10,6 +10,8 @@ import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-rea
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { buildEnergyMap, type EnergyMapEntry, type FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
+import { buildCircleEnergy, type CircleMemberEnergy } from '@/lib/domain/circle/team-energy'
+import { TeamRelations } from '@/components/family/circle-energy-map'
 
 /** 오행이 무엇인지 처음 보는 사람을 위한 접이식 설명 — saju-knowledge-graph 오행 노드 재사용. */
 function ElementPrimer() {
@@ -169,7 +171,14 @@ function MemberCard({ entry }: { entry: EnergyMapEntry }) {
   )
 }
 
-export function FamilyEnergyMapView({ data }: { data: MapData }) {
+export function FamilyEnergyMapView({
+  data,
+  teamEntries = [],
+}: {
+  data: MapData
+  /** 무리 관계(명식 힌트 포함) — 서버가 가족 전원에 대해 계산해 넘긴다. 골라 낸 사람만 다시 엮는다. */
+  teamEntries?: readonly CircleMemberEnergy[]
+}) {
   /**
    * 지도에 올릴 사람을 **고른다**(2026-08-16).
    *
@@ -193,6 +202,9 @@ export function FamilyEnergyMapView({ data }: { data: MapData }) {
   const view = chosen.length >= 2 ? buildEnergyMap(chosen) : data
   const { entries, average, familyYongsin, complements } = view
   const acquaintances = data.entries.filter((e) => e.category === 'acquaintance')
+  // 무리 관계 — 지도에 올린 사람만으로 다시 엮는다(순수 함수라 클라이언트에서 그대로).
+  const teamPicked = teamEntries.filter((e) => picked.has(e.targetId))
+  const team = teamPicked.length >= 2 ? buildCircleEnergy('family', teamPicked) : null
 
   return (
     <div className="min-h-screen w-full max-w-[480px] mx-auto px-3 py-6 pb-28">
@@ -319,6 +331,9 @@ export function FamilyEnergyMapView({ data }: { data: MapData }) {
           </p>
         </section>
       )}
+
+      {/* 무리 관계 — 든 사람 · 서로의 관계 · 역할 결 (PRD-energy-circle §3-4) */}
+      {team && <TeamRelations energy={team} compact />}
 
       {/* 구성원별 */}
       <section className="space-y-3">

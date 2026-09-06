@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, ChevronLeft, Lock } from 'lucide-react'
-import { ELEMENTS, EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
+import { EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
+import { EnergyBars } from '@/components/family/energy-bars'
 import type { Element } from '@/lib/domain/shrine/types'
 import type { Prescription, PrescriptionTeaser } from '@/lib/domain/circle/prescription'
 import type { PrescriptionPayload } from '@/app/actions/circle/energy'
@@ -46,50 +47,6 @@ function BlockLabel({ n, title }: { n: string; title: string }) {
       <span className="text-[13px] text-gold-500">{n}</span>
       {title}
     </p>
-  )
-}
-
-/** 신당 방·기운 지도의 「氣運 균형」 막대와 같은 언어 — 세 화면이 같은 것을 말하고 있어야 한다. */
-function EnergyBars({
-  energy,
-  lacking,
-  strongest,
-}: {
-  energy: Record<Element, number>
-  lacking: Element
-  strongest: Element
-}) {
-  return (
-    <div className="flex gap-1.5">
-      {ELEMENTS.map((el) => {
-        const low = el === lacking
-        const high = el === strongest
-        return (
-          <div key={el} className="flex-1 text-center">
-            <div
-              className={`relative h-[52px] overflow-hidden rounded-md bg-white/[0.05] border ${
-                low
-                  ? 'border-gold-500/55 shadow-[0_0_10px_rgba(201,168,76,0.15)]'
-                  : high
-                    ? 'border-white/[0.18]'
-                    : 'border-white/[0.06]'
-              }`}
-            >
-              <div
-                className="absolute inset-x-0 bottom-0 rounded-t-md transition-[height] duration-500"
-                style={{ height: `${energy[el]}%`, background: EL_COLOR[el] }}
-              />
-            </div>
-            <div className="mt-1 font-serif text-[12px] text-ink-primary/75">
-              {EL_KO[el]} <span className="font-sans text-ink-light/45">{EL_LABEL[el]}</span>
-            </div>
-            <div className="text-[10px] tabular-nums text-ink-light/40">{energy[el]}</div>
-            {low && <div className="text-[9.5px] font-serif text-gold-400">모자람</div>}
-            {high && !low && <div className="text-[9.5px] font-serif text-ink-light/40">넉넉</div>}
-          </div>
-        )
-      })}
-    </div>
   )
 }
 

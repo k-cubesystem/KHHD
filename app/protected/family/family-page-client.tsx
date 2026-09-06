@@ -9,6 +9,8 @@ import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
 import { FamilyInvitePanel } from '@/components/family/family-invite-panel'
 import { LinkedFamiliesSection } from '@/components/family/linked-families-section'
 import type { FamilyInviteSummary, LinkedFamily } from '@/app/actions/family-invite'
+import type { CirclesOverview } from '@/app/actions/circle/circles'
+import { CirclePanel } from '@/components/family/circle-panel'
 import { BokUpsellModal } from '@/components/shared/bok-upsell-modal'
 import { canAddRelationship } from '@/app/actions/payment/membership'
 import { Button } from '@/components/ui/button'
@@ -94,6 +96,8 @@ interface FamilyPageClientProps {
   linkedMemberIds?: string[]
   /** 내가 남의 가족 자리에 붙어 있는 목록(읽기 전용). */
   linkedFamilies?: LinkedFamily[]
+  /** 무리(가족 가상 + 직장·모임) 개요 — 「무리」 탭. 조회 실패면 null 이고 탭은 안내만 띄운다. */
+  circles?: CirclesOverview | null
 }
 
 export function FamilyPageClient({
@@ -102,6 +106,7 @@ export function FamilyPageClient({
   invites = [],
   linkedMemberIds = [],
   linkedFamilies = [],
+  circles = null,
 }: FamilyPageClientProps) {
   const router = useRouter()
   // 사주 계산용으로 자동 생성되는 relationship='본인' 레코드는 목록·카운트·지도 입구에서 숨긴다.
@@ -113,8 +118,8 @@ export function FamilyPageClient({
    * 🔴 목록을 합쳐 두면 「아는 사람 사주 한번」으로 등록한 사람이 가족 틈에 섞여, 가족 신당·
    *    기운 지도 같은 «가족 전제» 화면과 목록이 서로 다른 말을 하게 된다.
    */
-  const [tab, setTab] = useState<MemberCategory>('family')
-  const membersByTab = members.filter((m) => toMemberCategory(m.member_category) === tab)
+  const [tab, setTab] = useState<MemberCategory | 'circle'>('family')
+  const membersByTab = tab === 'circle' ? [] : members.filter((m) => toMemberCategory(m.member_category) === tab)
   const countOf = (category: MemberCategory) =>
     members.filter((m) => toMemberCategory(m.member_category) === category).length
   const [isPending, startTransition] = useTransition()
@@ -268,8 +273,8 @@ export function FamilyPageClient({
         </Link>
       )}
 
-      {/* 갈래 탭 — 가족 / 지인 */}
-      <div className="mb-3 grid grid-cols-2 gap-2">
+      {/* 갈래 탭 — 가족 / 지인 / 무리 */}
+      <div className="mb-3 grid grid-cols-3 gap-2">
         {MEMBER_CATEGORIES.map((key) => (
           <button
             key={key}
@@ -286,10 +291,33 @@ export function FamilyPageClient({
             <span className="ml-1.5 text-[11px] opacity-60">{countOf(key)}</span>
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setTab('circle')}
+          aria-pressed={tab === 'circle'}
+          className={`rounded-lg border px-3 py-2 text-[13px] transition-colors ${
+            tab === 'circle'
+              ? 'border-gold-500/50 bg-gold-500/[0.12] font-bold text-gold-300'
+              : 'border-white/10 bg-white/[0.02] text-ink-light/55'
+          }`}
+        >
+          무리
+          <span className="ml-1.5 text-[11px] opacity-60">{(circles?.circles.length ?? 0) + 1}</span>
+        </button>
       </div>
 
+      {/* 무리 탭 — 가족(가상)·직장·모임 */}
+      {tab === 'circle' &&
+        (circles ? (
+          <CirclePanel overview={circles} />
+        ) : (
+          <p className="rounded-xl border border-dashed border-white/10 bg-surface/10 py-10 text-center text-sm text-ink-light/40">
+            무리 정보를 불러오지 못했습니다. 화면을 새로 고쳐 주세요.
+          </p>
+        ))}
+
       {/* 목록 */}
-      <section aria-label="인연 목록">
+      <section aria-label="인연 목록" hidden={tab === 'circle'}>
         {membersByTab.length > 0 ? (
           <div className="space-y-3">
             {membersByTab.map((member, idx) => (
