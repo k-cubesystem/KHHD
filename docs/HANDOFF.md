@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-07(31차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-07(32차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -46,6 +46,23 @@ CEO 지시 «지금 그냥 웹에서 움직이는 종이쪼가리 느낌 — 실
 - 의식 완급: 다중 정지점 키프레임에 **구간별 timing-function**(진자 ease-in-out, 낙하 ease-in, 공중 등속 linear
   → 착지 ease-out). 엽전 회전수 4→3바퀴(길)/3.5(흉). 깃발 그림자·색 기운을 **정적 겹**으로(띠 물결마다 서브트리
   필터 재계산 제거 — 저사양 폰 끊김 예방).
+
+**(32차 · 2026-09-07) 가족 초대(R-2) 제거 — 프로덕션 라이브(`3bded410` → 배포 `hhd-bfy89vztn`):**
+
+CEO: 「가족관리에서 가족 초대 이 부분은 전부 빼줘. 복잡하기만 하고 실사용력이 떨어져」.
+
+- 지운 것: `components/family/family-invite-panel.tsx` · `linked-families-section.tsx` · `app/actions/family-invite.ts`(+테스트) ·
+  `app/invite/family/[token]/`(수락 페이지) · `lib/domain/family/invite.ts` · `invite-repository.ts` · `invite-token.ts`(+테스트).
+  가족·인연 관리 페이지에서 초대 패널·「연결된 가족」 섹션·linked 조회가 사라졌다(질의 2개 감소).
+- 🔴 **남긴 것**: DB 표(`20260811_family_invite.sql` 원본)와 `family_members.linked_user_id` — 이미 연결된 자리는 유효하고,
+  기운 선물은 그 컬럼이 있으면 상대 보관함(+웹푸시)으로 간다. 웹푸시(R-1)는 별개라 그대로. 옛 초대 링크는 404.
+- 의례 화면의 「+식구 모시기」는 초대가 아니라 가족 등록 링크라 유지(GA 키 이름만 `familyInvite`).
+- 처방전 선물 안내 문구에서 «실제 사용자로 연결» 말을 뺐다(연결 수단이 없어졌으므로).
+- 검증: jest 3,749 · tsc · eslint 0 · build.
+- 🔴 **배포 사고(복구 완료)**: 백그라운드 `vercel deploy --yes` 가 cwd 를 이어받지 못해 **본체 main 체크아웃**에서 돌았고,
+  `.vercel` 이 없어 폴더 이름으로 **새 프로젝트 `haehwadang`** 을 만들어 main 의 옛 코드를 `haehwadang.vercel.app` 에
+  올렸다(k-haehwadang.com 무영향). `vercel project rm haehwadang` 으로 지우고 본체에 생긴 `.vercel/` 도 지웠다(가드 원복).
+  **규칙: 배포 명령은 같은 명령 안에서 `cd <워크트리>` 를 앞세운다.**
 
 **(31차 · 2026-09-07 아침) CEO 회신 7건 반영 — 프로덕션 라이브(`c8aaa5f5` → 배포 `hhd-89ctq99e3`):**
 
