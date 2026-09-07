@@ -267,7 +267,7 @@ function BlockFour({
                 {giftSummary.last && <> · 마지막은 {giftSummary.last.itemName}</>}
               </>
             ) : (
-              <>선물한 살림은 {name}님이 실제 사용자로 연결돼 있으면 그분 보관함으로, 아니면 내 보관함으로 갑니다.</>
+              <>선물한 살림은 내 보관함에 담깁니다. 신당에서 {name}님 선반 칸에 놓아 주세요.</>
             )}
           </p>
         ) : (
