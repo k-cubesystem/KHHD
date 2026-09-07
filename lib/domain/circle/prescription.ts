@@ -29,7 +29,7 @@ export interface PrescriptionCatalogItem {
   spriteUrl: string | null
 }
 
-/** 같은 무리의 다른 사람 — «사람에게서» 갈래를 세우는 데 쓴다. */
+/** 같은 그룹의 다른 사람 — «사람에게서» 갈래를 세우는 데 쓴다. */
 export interface PrescriptionMate {
   targetId: string
   name: string
@@ -128,7 +128,7 @@ export function pickShrineItems(
     .slice(0, limit)
 }
 
-/** 무리 안에서 그 기운을 가장 넉넉히 든 사람 — 격차가 COMPLEMENT_MIN_GAP 이상일 때만. */
+/** 그룹 안에서 그 기운을 가장 넉넉히 든 사람 — 격차가 COMPLEMENT_MIN_GAP 이상일 때만. */
 function bestGiver(mates: readonly PrescriptionMate[], element: Element, mine: number): PrescriptionMate | null {
   let best: PrescriptionMate | null = null
   for (const mate of mates) {

@@ -10,7 +10,7 @@ import { CirclePrintSheet } from '@/components/family/circle-print-sheet'
 
 export const metadata: Metadata = {
   title: '우리 팀 기운 한 장',
-  description: '무리 전원의 모자란 기운과 곁에 둘 것을 한 장으로',
+  description: '그룹 전원의 모자란 기운과 곁에 둘 것을 한 장으로',
 }
 
 export const dynamic = 'force-dynamic'
@@ -52,7 +52,7 @@ export default async function TeamSheetPage({ searchParams }: { searchParams: Pr
     return (
       <Panel
         title="BUSINESS 멤버십이 여는 한 장입니다"
-        body="무리 전원의 모자란 기운과 책상 위에 둘 한 가지를 표 한 장으로 뽑아, 자리마다 놓아 줄 수 있습니다."
+        body="그룹 전원의 모자란 기운과 책상 위에 둘 한 가지를 표 한 장으로 뽑아, 자리마다 놓아 줄 수 있습니다."
         href="/protected/store?tab=membership"
         cta="BUSINESS 멤버십 보기"
       />
@@ -63,10 +63,10 @@ export default async function TeamSheetPage({ searchParams }: { searchParams: Pr
   if (!payload) {
     return (
       <Panel
-        title="그 무리를 찾지 못했습니다"
-        body="지워졌거나 내 무리가 아닙니다."
+        title="그 그룹을 찾지 못했습니다"
+        body="지워졌거나 내 그룹이 아닙니다."
         href="/protected/family"
-        cta="인연·무리로 가기"
+        cta="가족·인연 관리로 가기"
       />
     )
   }

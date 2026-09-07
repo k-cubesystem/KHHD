@@ -12,6 +12,9 @@ import { buildEnergyMap, type EnergyMapEntry, type FamilyEnergyMap as MapData } 
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 import { buildCircleEnergy, type CircleMemberEnergy } from '@/lib/domain/circle/team-energy'
 import { TeamRelations } from '@/components/family/circle-energy-map'
+import { NarrativePanel } from '@/components/family/narrative-panel'
+import type { CachedNarrative } from '@/app/actions/circle/narrative'
+import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
 
 /** 오행이 무엇인지 처음 보는 사람을 위한 접이식 설명 — saju-knowledge-graph 오행 노드 재사용. */
 function ElementPrimer() {
@@ -174,10 +177,13 @@ function MemberCard({ entry }: { entry: EnergyMapEntry }) {
 export function FamilyEnergyMapView({
   data,
   teamEntries = [],
+  narrative = null,
 }: {
   data: MapData
-  /** 무리 관계(명식 힌트 포함) — 서버가 가족 전원에 대해 계산해 넘긴다. 골라 낸 사람만 다시 엮는다. */
+  /** 그룹 관계(명식 힌트 포함) — 서버가 가족 전원에 대해 계산해 넘긴다. 골라 낸 사람만 다시 엮는다. */
   teamEntries?: readonly CircleMemberEnergy[]
+  /** 지난 AI 풀이(30일 안). */
+  narrative?: CachedNarrative | null
 }) {
   /**
    * 지도에 올릴 사람을 **고른다**(2026-08-16).
@@ -202,7 +208,7 @@ export function FamilyEnergyMapView({
   const view = chosen.length >= 2 ? buildEnergyMap(chosen) : data
   const { entries, average, familyYongsin, complements } = view
   const acquaintances = data.entries.filter((e) => e.category === 'acquaintance')
-  // 무리 관계 — 지도에 올린 사람만으로 다시 엮는다(순수 함수라 클라이언트에서 그대로).
+  // 그룹 관계 — 지도에 올린 사람만으로 다시 엮는다(순수 함수라 클라이언트에서 그대로).
   const teamPicked = teamEntries.filter((e) => picked.has(e.targetId))
   const team = teamPicked.length >= 2 ? buildCircleEnergy('family', teamPicked) : null
 
@@ -214,7 +220,7 @@ export function FamilyEnergyMapView({
           className="inline-flex items-center gap-1 text-[12px] text-ink-light/50 hover:text-gold-300 font-serif"
         >
           <ChevronLeft className="w-4 h-4" />
-          가족 관리
+          가족·인연 관리
         </Link>
       </div>
 
@@ -332,8 +338,18 @@ export function FamilyEnergyMapView({
         </section>
       )}
 
-      {/* 무리 관계 — 든 사람 · 서로의 관계 · 역할 결 (PRD-energy-circle §3-4) */}
+      {/* 그룹 관계 — 든 사람 · 서로의 관계 · 역할 결 (PRD-energy-circle §3-4) */}
       {team && <TeamRelations energy={team} compact />}
+
+      {/* AI 풀이 — 가족 전체(고른 사람과 무관하게 «우리 가족» 한 벌) */}
+      <div className="mb-5">
+        <NarrativePanel
+          kind="circle"
+          targetKey={FAMILY_CIRCLE_ID}
+          initial={narrative}
+          title="AI 풀이 — 우리 가족 기운을 신당의 말로"
+        />
+      </div>
 
       {/* 구성원별 */}
       <section className="space-y-3">

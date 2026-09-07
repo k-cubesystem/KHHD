@@ -215,7 +215,7 @@ export function FamilyMapCard() {
               }
               className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-2.5 font-serif text-[12px] text-ink-light/65 transition-colors hover:text-ink-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold-500/60"
             >
-              가족 관리
+              가족·인연 관리
             </Link>
           )}
         </div>

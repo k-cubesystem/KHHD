@@ -10,7 +10,7 @@ import { LinkedFamiliesSection } from '@/components/family/linked-families-secti
 import { FamilyPageClient } from './family-page-client'
 
 export const metadata: Metadata = {
-  title: '가족 관리',
+  title: '가족·인연 관리',
   description: '소중한 인연들의 사주를 체계적으로 관리하세요',
 }
 
@@ -39,7 +39,7 @@ export default async function FamilyPage() {
         )}
         <MembershipGate
           feature="family"
-          title="가족 관리"
+          title="가족·인연 관리"
           description="소중한 인연들의 사주를 한곳에서 관리하고, 가족별 신당·궁합·미션을 이어갑니다. 멤버십 회원 전용 기능입니다."
           benefits={[
             '가족별 사주 · 신당 · 궁합 관리',
@@ -71,7 +71,7 @@ export default async function FamilyPage() {
     linkedMemberIds = (linkedRows ?? []).map((row) => row.id as string)
     circles = overview
   } catch {
-    // 초대·무리 정보가 없어도 가족 목록은 떠야 한다 — 패널만 빈 상태로 뜬다.
+    // 초대·그룹 정보가 없어도 가족 목록은 떠야 한다 — 패널만 빈 상태로 뜬다.
   }
 
   return (

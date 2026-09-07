@@ -94,7 +94,7 @@ async function loadBirth(supabase: SupabaseClient, userId: string, targetId: str
   return data ? toBirthRow(data as BirthDbRow, '가족') : null
 }
 
-/** 명식 전체 — 엔진이 실패하면 null(처방·무리 지도는 명식 없이도 선다). 엔진은 무거워 지연 로드. */
+/** 명식 전체 — 엔진이 실패하면 null(처방·그룹 지도는 명식 없이도 선다). 엔진은 무거워 지연 로드. */
 async function sajuContextOf(birth: BirthRow): Promise<SajuContext | null> {
   if (!birth.birthDate) return null
   try {
@@ -114,7 +114,7 @@ async function sajuContextOf(birth: BirthRow): Promise<SajuContext | null> {
   }
 }
 
-/** 용신·희신·기신 — 처방전과 무리 지도가 **같은 판정**(advancedYongsin)을 읽는다. */
+/** 용신·희신·기신 — 처방전과 그룹 지도가 **같은 판정**(advancedYongsin)을 읽는다. */
 function hintsOf(ctx: SajuContext | null): MansikHint | null {
   const adv = ctx?.analysis.advancedYongsin
   if (!adv) return null
@@ -201,7 +201,7 @@ export async function getPrescription(targetId: string): Promise<PrescriptionPay
   return { access: 'teaser', teaser: prescriptionTeaser(prescription) }
 }
 
-// ─── 무리 기운 지도 ─────────────────────────────────────────────────────
+// ─── 그룹 기운 지도 ─────────────────────────────────────────────────────
 
 export interface CircleEnergyPayload {
   circle: { id: string; name: string; kind: CircleKind }
@@ -209,10 +209,10 @@ export interface CircleEnergyPayload {
 }
 
 /**
- * 무리 한 벌의 기운 — 가족('family', 가상) 또는 내 무리 하나.
+ * 그룹 한 벌의 기운 — 가족('family', 가상) 또는 내 그룹 하나.
  *
  * 기운은 기운 지도와 같은 계산에서 오고, 명식 힌트(일간·용신·기신·십성)는 사람마다 엔진을 돌려 얹는다.
- * 🔴 본인은 모든 무리에 들어 있다(무리는 «내가 속한 사람들»이다). 지인은 무리에 넣어야 들어온다.
+ * 🔴 본인은 모든 그룹에 들어 있다(그룹은 «내가 속한 사람들»이다). 지인은 그룹에 넣어야 들어온다.
  * 🔴 점수는 어디에도 없다 — 도메인(team-energy)이 라벨·문장만 만든다.
  */
 export async function getCircleEnergy(circleId: string): Promise<CircleEnergyPayload | null> {

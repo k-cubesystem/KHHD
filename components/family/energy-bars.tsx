@@ -4,9 +4,9 @@ import { ELEMENTS, EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import type { Element } from '@/lib/domain/shrine/types'
 
 /**
- * 오행 다섯 막대 — 신당 방의 「氣運 균형」·기운 지도·처방전·무리 지도가 같은 것을 말하게 하는 공용 그림.
+ * 오행 다섯 막대 — 신당 방의 「氣運 균형」·기운 지도·처방전·그룹 지도가 같은 것을 말하게 하는 공용 그림.
  *
- * `showNumbers=false` 는 직장 무리(밴드 모드): 막대는 그리되 수를 적지 않는다(PRD-energy-circle §3-6).
+ * `showNumbers=false` 는 직장 그룹(밴드 모드): 막대는 그리되 수를 적지 않는다(PRD-energy-circle §3-6).
  */
 export function EnergyBars({
   energy,

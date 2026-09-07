@@ -12,11 +12,13 @@ import { CIRCLE_KIND_META } from '@/lib/domain/circle/circle'
 import { PAIR_LABEL_KO, type CircleEnergy, type PairLabel } from '@/lib/domain/circle/team-energy'
 import type { CircleEnergyPayload } from '@/app/actions/circle/energy'
 import { trackEvent } from '@/lib/analytics/ga4'
+import { NarrativePanel } from '@/components/family/narrative-panel'
+import type { CachedNarrative } from '@/app/actions/circle/narrative'
 
 /**
- * 무리 기운 지도 — 「전체 균형 · 그 기운을 든 사람 · 서로의 관계 · 역할 결 · 구성원별」.
+ * 그룹 기운 지도 — 「전체 균형 · 그 기운을 든 사람 · 서로의 관계 · 역할 결 · 구성원별」.
  *
- * 🔴 직장 무리(scoreMode 'bands')는 수를 적지 않는다. 막대는 그리되 숫자·점수·순위가 어디에도 없다 —
+ * 🔴 직장 그룹(scoreMode 'bands')는 수를 적지 않는다. 막대는 그리되 숫자·점수·순위가 어디에도 없다 —
  *    서버 응답에 점수가 없으므로 여기서 새로 만들 재료도 없다.
  */
 
@@ -46,7 +48,7 @@ function prescriptionHref(targetId: string): string {
   return targetId === 'self' ? '/protected/prescription' : `/protected/prescription?target=${targetId}`
 }
 
-/** 무리 관계 세 섹션 — 가족 지도도 같은 그림을 쓴다(FamilyEnergyMapView 가 import). */
+/** 그룹 관계 세 섹션 — 가족 지도도 같은 그림을 쓴다(FamilyEnergyMapView 가 import). */
 export function TeamRelations({ energy, compact = false }: { energy: CircleEnergy; compact?: boolean }) {
   const { lowest, holders, fallbackItem, pairs, roles } = energy
   const shown = compact ? pairs.filter((p) => p.label !== 'independent') : pairs
@@ -71,12 +73,12 @@ export function TeamRelations({ energy, compact = false }: { energy: CircleEnerg
               ))}
             </ul>
             <p className="text-[11.5px] leading-relaxed text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
-              이 사람 곁이 무리의 보약입니다. 같이 있는 시간을 늘리는 것이 물건보다 먼저입니다.
+              이 사람 곁이 그룹의 보약입니다. 같이 있는 시간을 늘리는 것이 물건보다 먼저입니다.
             </p>
           </>
         ) : (
           <p className="text-[11.5px] leading-relaxed text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
-            이 무리엔 {label(lowest)} 기운을 든 사람이 없습니다. 물건과 자리로 채웁니다 —{' '}
+            이 그룹엔 {label(lowest)} 기운을 든 사람이 없습니다. 물건과 자리로 채웁니다 —{' '}
             <b className="font-serif text-gold-300">{fallbackItem}</b>부터.
           </p>
         )}
@@ -132,10 +134,13 @@ export function TeamRelations({ energy, compact = false }: { energy: CircleEnerg
 export function CircleEnergyMapView({
   payload,
   sheet = 'hidden',
+  narrative = null,
 }: {
   payload: CircleEnergyPayload
   /** 「기운 한 장」 문 — BUSINESS 은 인쇄 링크, 다른 유료 티어는 업셀 한 줄, 숨김. */
   sheet?: 'print' | 'upsell' | 'hidden'
+  /** 지난 AI 풀이(30일 안). */
+  narrative?: CachedNarrative | null
 }) {
   const { circle, energy } = payload
   const showNumbers = energy.scoreMode === 'full'
@@ -156,7 +161,7 @@ export function CircleEnergyMapView({
           className="inline-flex items-center gap-1 font-serif text-[12px] text-ink-light/50 hover:text-gold-300"
         >
           <ChevronLeft className="h-4 w-4" />
-          인연·무리
+          가족·인연 관리
         </Link>
       </div>
 
@@ -198,25 +203,34 @@ export function CircleEnergyMapView({
           className="mb-5 block rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-center text-[11.5px] text-ink-light/55 hover:text-gold-300"
           style={{ wordBreak: 'keep-all' }}
         >
-          BUSINESS 멤버십은 무리 전원의 «책상 위 한 가지»를 표 한 장으로 인쇄합니다 →
+          BUSINESS 멤버십은 그룹 전원의 «책상 위 한 가지»를 표 한 장으로 인쇄합니다 →
         </Link>
       )}
 
-      {/* 무리 전체 균형 */}
+      {/* 그룹 전체 균형 */}
       <section className="mb-5 space-y-3 rounded-xl border border-gold-500/30 bg-gold-500/[0.06] p-4">
         <div className="flex items-baseline justify-between">
-          <span className="font-serif text-[13px] font-bold tracking-[0.1em] text-ink-primary">무리 전체 균형</span>
+          <span className="font-serif text-[13px] font-bold tracking-[0.1em] text-ink-primary">그룹 전체 균형</span>
           <span className="rounded-sm border border-gold-500/35 bg-gold-500/[0.12] px-2 py-[3px] text-[10.5px] text-gold-300">
             함께 채울 기운 <b className="font-serif text-gold-500">{EL_KO[energy.lowest]}</b>
           </span>
         </div>
         <EnergyBars energy={energy.average} lacking={energy.lowest} showNumbers={showNumbers} height={46} />
         <p className="text-[11px] leading-relaxed text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
-          무리 전체로는 <b className="font-serif text-gold-400">{EL_LABEL[energy.lowest]}</b> 기운이 가장 옅습니다.
+          그룹 전체로는 <b className="font-serif text-gold-400">{EL_LABEL[energy.lowest]}</b> 기운이 가장 옅습니다.
         </p>
       </section>
 
       <TeamRelations energy={energy} />
+
+      <div className="mb-5">
+        <NarrativePanel
+          kind="circle"
+          targetKey={circle.id}
+          initial={narrative}
+          title="AI 풀이 — 이 그룹의 기운을 신당의 말로"
+        />
+      </div>
 
       {/* 구성원별 */}
       <section className="space-y-3">

@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getPrescription } from '@/app/actions/circle/energy'
 import { getGiftSummary, type GiftSummary } from '@/app/actions/circle/gift'
+import { getCachedNarrative } from '@/app/actions/circle/narrative'
+import { getShopLinks } from '@/app/actions/circle/shop-links'
 import { PrescriptionView } from '@/components/family/prescription-view'
 
 export const metadata: Metadata = {
@@ -29,10 +31,16 @@ export default async function PrescriptionPage({ searchParams }: { searchParams:
 
   const isSelf = !target || target === 'self'
   const targetId = isSelf ? 'self' : target
-  const [payload, giftSummary] = await Promise.all([
+  const [payload, giftSummary, narrative] = await Promise.all([
     getPrescription(targetId),
     isSelf ? Promise.resolve<GiftSummary | null>(null) : getGiftSummary(targetId),
+    getCachedNarrative('prescription', targetId),
   ])
+  // 실물 항목의 쿠팡 링크 — 전체 처방전(멤버십)에만. 키워드는 처방전에서 나온다(전역 캐시).
+  const shopLinks =
+    payload?.access === 'full'
+      ? await getShopLinks([payload.prescription.items.real.desk, ...payload.prescription.items.real.gifts])
+      : {}
 
   if (!payload) {
     return (
@@ -59,7 +67,7 @@ export default async function PrescriptionPage({ searchParams }: { searchParams:
             href={isSelf ? '/protected/profile' : '/protected/family'}
             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gold-500/15 border border-gold-500/40 text-gold-300 text-sm font-serif"
           >
-            {isSelf ? '내 정보 등록하기' : '가족 관리로 가기'}
+            {isSelf ? '내 정보 등록하기' : '가족·인연 관리로 가기'}
           </Link>
         </div>
       </div>
@@ -71,6 +79,8 @@ export default async function PrescriptionPage({ searchParams }: { searchParams:
       payload={payload}
       targetId={targetId}
       giftSummary={giftSummary}
+      narrative={narrative}
+      shopLinks={shopLinks}
       backHref={isSelf ? '/protected/analysis' : '/protected/family/map'}
       backLabel={isSelf ? '사주·궁합' : '기운 지도'}
     />

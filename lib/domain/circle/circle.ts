@@ -1,10 +1,10 @@
 /**
- * 무리(群) — 가족·직장·모임·직접 이름. 사람 한 명이 여러 무리에 들어간다.
+ * 그룹(群) — 가족·직장·모임·직접 이름. 사람 한 명이 여러 그룹에 들어간다.
  *
- * 🔴 가족 무리는 **가상**이다(PRD-energy-circle §12-7 기본안): `family_members.member_category='family'`
+ * 🔴 가족 그룹은 **가상**이다(PRD-energy-circle §12-7 기본안): `family_members.member_category='family'`
  *    에서 파생하고 행을 만들지 않는다. 그래서 기존 가족 화면은 한 줄도 바뀌지 않는다.
  *
- * 🔴 직장(work) 무리는 «판단 도구»가 아니라 «돌봄 도구»다(채용절차법 §9-2 승계). 숫자 점수를 그리지
+ * 🔴 직장(work) 그룹은 «판단 도구»가 아니라 «돌봄 도구»다(채용절차법 §9-2 승계). 숫자 점수를 그리지
  *    않고(scoreMode 'bands'), 상단 고지를 달며, 사람을 넣을 때 본인 동의를 받는다.
  */
 
@@ -13,7 +13,7 @@ export type CircleKind = 'family' | 'work' | 'friends' | 'custom'
 /** 사용자가 만들 수 있는 종류 — 가족은 가상이라 만들지 않는다. */
 export const CREATABLE_CIRCLE_KINDS: readonly Exclude<CircleKind, 'family'>[] = ['work', 'friends', 'custom']
 
-/** 가족 무리의 고정 id — URL·액션에서 «행이 없는 무리»를 가리키는 값. */
+/** 가족 그룹의 고정 id — URL·액션에서 «행이 없는 그룹»를 가리키는 값. */
 export const FAMILY_CIRCLE_ID = 'family'
 
 export interface CircleKindMeta {
@@ -28,7 +28,7 @@ export interface CircleKindMeta {
   readonly notice: string | null
 }
 
-/** 직장 무리 상단 고지 — PLAN-popular-theme-fortune §9-4 강화 고지 그대로. */
+/** 직장 그룹 상단 고지 — PLAN-popular-theme-fortune §9-4 강화 고지 그대로. */
 export const WORK_NOTICE =
   '이 화면은 이미 함께 일하고 있는 사람과의 소통을 돕기 위한 것입니다. 채용·평가·인사 결정의 근거로 사용할 수 없습니다.'
 
@@ -39,7 +39,7 @@ export const CONSENT_TEXT =
 export const CIRCLE_KIND_META: Record<CircleKind, CircleKindMeta> = {
   family: {
     label: '가족',
-    hint: '등록된 가족이 그대로 한 무리입니다.',
+    hint: '등록된 가족이 그대로 한 그룹입니다.',
     scoreMode: 'full',
     consentRequired: false,
     notice: null,
@@ -60,7 +60,7 @@ export const CIRCLE_KIND_META: Record<CircleKind, CircleKindMeta> = {
   },
   custom: {
     label: '직접 이름',
-    hint: '내가 이름 붙인 무리.',
+    hint: '내가 이름 붙인 그룹.',
     scoreMode: 'full',
     consentRequired: false,
     notice: null,
@@ -82,16 +82,16 @@ export interface CircleLimits {
 }
 
 /**
- * PRD §12-2 기본안: SINGLE 1/10 · FAMILY 3/10 · BUSINESS 10/30.
+ * CEO 2026-09-07 확정: 그룹 수 SINGLE 1 · FAMILY 3 · BUSINESS 10, 그룹당 사람 SINGLE 2 · FAMILY 10 · BUSINESS 30.
  * MEMBER 는 tier 조회 실패 폴백(활성 구독은 맞는데 플랜 행을 못 읽은 경우) — 가장 낮은 유료 상한으로 본다.
  * MASTER 는 BUSINESS 와 같다(무제한이라는 말은 쓰지 않는다 — 숫자로 둔다).
  */
 export const CIRCLE_LIMITS_BY_TIER: Record<string, CircleLimits> = {
-  SINGLE: { maxCircles: 1, maxMembers: 10 },
+  SINGLE: { maxCircles: 1, maxMembers: 2 },
   FAMILY: { maxCircles: 3, maxMembers: 10 },
   BUSINESS: { maxCircles: 10, maxMembers: 30 },
   MASTER: { maxCircles: 10, maxMembers: 30 },
-  MEMBER: { maxCircles: 1, maxMembers: 10 },
+  MEMBER: { maxCircles: 1, maxMembers: 2 },
 }
 
 export const NO_CIRCLE_LIMITS: CircleLimits = { maxCircles: 0, maxMembers: 0 }
@@ -102,7 +102,7 @@ export function circleLimits(tier: string | null | undefined): CircleLimits {
   return CIRCLE_LIMITS_BY_TIER[tier.toUpperCase()] ?? CIRCLE_LIMITS_BY_TIER.MEMBER
 }
 
-/** 무리 상한에 걸렸을 때 다음 티어 — 업셀 문구가 «어느 티어가 여는지»만 말한다. */
+/** 그룹 상한에 걸렸을 때 다음 티어 — 업셀 문구가 «어느 티어가 여는지»만 말한다. */
 export function nextTierForCircles(tier: string | null | undefined): 'SINGLE' | 'FAMILY' | 'BUSINESS' | null {
   const t = tier?.toUpperCase()
   if (!t) return 'SINGLE'
@@ -120,7 +120,7 @@ export function normalizeCircleName(raw: string): string | null {
   return name
 }
 
-/** 하루에 만들 수 있는 무리 수 — 대량 생성 차단(ARCH §7). */
+/** 하루에 만들 수 있는 그룹 수 — 대량 생성 차단(ARCH §7). */
 export const CIRCLE_CREATE_DAILY_LIMIT = 5
 
 export interface CircleSummary {

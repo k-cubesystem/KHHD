@@ -37,6 +37,7 @@ const FEATURE_LABEL = {
   wealth: '재물운',
   samhap: '종합사주풀이',
   themeFortune: '인기테마운세',
+  circleNarrative: '기운 처방전·그룹 AI 풀이',
   imageGeneration: '이미지 생성',
   today: '오늘의 운세',
   newYear: '신년운세',

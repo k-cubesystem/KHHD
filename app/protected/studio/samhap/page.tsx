@@ -201,7 +201,7 @@ function SamhapPageContent() {
                     href="/protected/family"
                     className="text-[11px] text-white/35 transition-colors hover:text-gold-500"
                   >
-                    가족 관리
+                    가족·인연 관리
                   </Link>
                 }
               />

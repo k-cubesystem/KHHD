@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronLeft, Lock } from 'lucide-react'
+import { ArrowRight, ChevronLeft, ExternalLink, Lock } from 'lucide-react'
 import { EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { EnergyBars } from '@/components/family/energy-bars'
 import type { Element } from '@/lib/domain/shrine/types'
@@ -12,6 +12,9 @@ import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membershi
 import type { GiftSummary } from '@/app/actions/circle/gift'
 import { GiftItemButton } from '@/components/family/gift-item-button'
 import { GiftCardButton } from '@/components/family/gift-card-button'
+import { NarrativePanel } from '@/components/family/narrative-panel'
+import type { CachedNarrative } from '@/app/actions/circle/narrative'
+import { AD_DISCLOSURE_COUPANG } from '@/lib/domain/ads/rewarded'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
@@ -200,8 +203,26 @@ function BlockFour({
   name,
   targetId,
   giftSummary,
-}: Pick<Prescription, 'items' | 'lacking' | 'name'> & { targetId: string; giftSummary: GiftSummary | null }) {
+  shopLinks,
+}: Pick<Prescription, 'items' | 'lacking' | 'name'> & {
+  targetId: string
+  giftSummary: GiftSummary | null
+  shopLinks: Record<string, string>
+}) {
   const canGift = targetId !== 'self'
+  const hasShopLinks = Object.keys(shopLinks).length > 0
+  const shop = (keyword: string) =>
+    shopLinks[keyword] ? (
+      <a
+        href={shopLinks[keyword]}
+        target="_blank"
+        rel="noopener noreferrer sponsored"
+        onClick={() => trackEvent({ action: 'shop_link_click', category: 'conversion', label: keyword })}
+        className="ml-1.5 inline-flex items-center gap-0.5 rounded border border-gold-500/30 px-1.5 py-[1px] font-sans text-[10px] text-gold-300 hover:bg-gold-500/[0.1]"
+      >
+        쿠팡 <ExternalLink className="h-2.5 w-2.5" />
+      </a>
+    ) : null
   return (
     <section className="space-y-4 rounded-xl border border-white/10 bg-surface/30 p-4">
       <BlockLabel n="④" title="곁에 둘 것 — 세 층" />
@@ -264,12 +285,24 @@ function BlockFour({
         <p className="font-serif text-[11px] tracking-[0.14em] text-gold-500/60">실물</p>
         <dl className="grid grid-cols-[64px_1fr] gap-x-3 gap-y-1 text-[12px]">
           <dt className="text-ink-light/45">책상 위</dt>
-          <dd className="text-ink-light/85">{items.real.desk}</dd>
+          <dd className="text-ink-light/85">
+            {items.real.desk}
+            {shop(items.real.desk)}
+          </dd>
           <dt className="text-ink-light/45">집 안</dt>
           <dd className="text-ink-light/85">{items.real.home}</dd>
           <dt className="text-ink-light/45">선물 셋</dt>
-          <dd className="text-ink-light/85">{items.real.gifts.join(' · ')}</dd>
+          <dd className="text-ink-light/85">
+            {items.real.gifts.map((g, i) => (
+              <span key={g}>
+                {i > 0 && <span className="text-ink-light/30"> · </span>}
+                {g}
+                {shop(g)}
+              </span>
+            ))}
+          </dd>
         </dl>
+        {hasShopLinks && <p className="text-[9.5px] leading-snug text-ink-light/35">{AD_DISCLOSURE_COUPANG}</p>}
         <GiftCardButton element={lacking} recipientName={canGift ? name : null} />
       </div>
 
@@ -319,6 +352,8 @@ export function PrescriptionView({
   payload,
   targetId,
   giftSummary = null,
+  narrative = null,
+  shopLinks = {},
   backHref,
   backLabel,
 }: {
@@ -326,6 +361,10 @@ export function PrescriptionView({
   /** 'self' 또는 family_members.id — 선물 버튼은 남에게만 선다. */
   targetId: string
   giftSummary?: GiftSummary | null
+  /** 지난 AI 풀이(30일 안) — 있으면 바로 보인다. */
+  narrative?: CachedNarrative | null
+  /** 실물 항목 → 쿠팡 파트너스 링크. 없으면 품목명만. */
+  shopLinks?: Record<string, string>
   backHref: string
   backLabel: string
 }) {
@@ -382,8 +421,15 @@ export function PrescriptionView({
               name={payload.prescription.name}
               targetId={targetId}
               giftSummary={giftSummary}
+              shopLinks={shopLinks}
             />
             <BlockFive avoid={payload.prescription.avoid} />
+            <NarrativePanel
+              kind="prescription"
+              targetKey={targetId}
+              initial={narrative}
+              title="AI 풀이 — 이 처방전을 신당의 말로"
+            />
           </>
         ) : (
           <LockedRest teaser={payload.teaser} />

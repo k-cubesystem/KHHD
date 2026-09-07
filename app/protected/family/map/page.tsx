@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getFamilyEnergyMap } from '@/app/actions/shrine/energy-map'
 import { getCircleEnergy } from '@/app/actions/circle/energy'
+import { getCachedNarrative } from '@/app/actions/circle/narrative'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
 import { canPrintTeamSheet } from '@/lib/domain/circle/print-access'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
@@ -25,30 +26,44 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  // 내가 만든 무리(직장·모임·직접 이름) — 가족 지도와 다른 화면이다(고지·밴드 모드).
+  // 내가 만든 그룹(직장·모임·직접 이름) — 가족 지도와 다른 화면이다(고지·밴드 모드).
   if (circle && circle !== FAMILY_CIRCLE_ID) {
-    const [payload, membership] = await Promise.all([getCircleEnergy(circle), getCurrentUserMembership()])
+    const [payload, membership, narrative] = await Promise.all([
+      getCircleEnergy(circle),
+      getCurrentUserMembership(),
+      getCachedNarrative('circle', circle),
+    ])
     if (!payload) {
       return (
         <div className="min-h-screen w-full max-w-[480px] mx-auto px-4 py-16">
           <div className="text-center space-y-5 border border-dashed border-gold-500/20 bg-surface/20 rounded-xl p-10">
             <p className="text-[10px] tracking-[0.5em] text-gold-500/50 font-serif">氣運 地圖</p>
-            <h1 className="text-xl font-serif font-bold text-ink-light">그 무리를 찾지 못했습니다</h1>
-            <p className="text-sm text-ink-light/55 leading-relaxed">지워졌거나 내 무리가 아닙니다.</p>
+            <h1 className="text-xl font-serif font-bold text-ink-light">그 그룹을 찾지 못했습니다</h1>
+            <p className="text-sm text-ink-light/55 leading-relaxed">지워졌거나 내 그룹이 아닙니다.</p>
             <Link
               href="/protected/family"
               className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full bg-gold-500/15 border border-gold-500/40 text-gold-300 text-sm font-serif"
             >
-              인연·무리로 가기
+              가족·인연 관리로 가기
             </Link>
           </div>
         </div>
       )
     }
-    return <CircleEnergyMapView payload={payload} sheet={canPrintTeamSheet(membership?.tier) ? 'print' : 'upsell'} />
+    return (
+      <CircleEnergyMapView
+        payload={payload}
+        sheet={canPrintTeamSheet(membership?.tier) ? 'print' : 'upsell'}
+        narrative={narrative}
+      />
+    )
   }
 
-  const [data, family] = await Promise.all([getFamilyEnergyMap(), getCircleEnergy(FAMILY_CIRCLE_ID)])
+  const [data, family, narrative] = await Promise.all([
+    getFamilyEnergyMap(),
+    getCircleEnergy(FAMILY_CIRCLE_ID),
+    getCachedNarrative('circle', FAMILY_CIRCLE_ID),
+  ])
 
   // 본인 1명뿐이면 비교할 게 없다 — 지도 대신 가족 등록으로 안내
   if (!data || data.entries.length < 2) {
@@ -73,5 +88,5 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
     )
   }
 
-  return <FamilyEnergyMapView data={data} teamEntries={family?.energy.entries ?? []} />
+  return <FamilyEnergyMapView data={data} teamEntries={family?.energy.entries ?? []} narrative={narrative} />
 }

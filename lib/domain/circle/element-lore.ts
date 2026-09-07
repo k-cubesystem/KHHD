@@ -100,7 +100,7 @@ export function elementFromHanja(hanja: string | null | undefined): Element | nu
 }
 
 /**
- * 금지어 — 사전·처방전·무리 화면 문자열 전량이 이 목록을 피해야 한다.
+ * 금지어 — 사전·처방전·그룹 화면 문자열 전량이 이 목록을 피해야 한다.
  * 효능(표시광고법)과 채용(채용절차법)을 한 자리에 둔다: 새 문장을 쓰는 사람이 둘을 따로 찾지 않게.
  */
 export const LORE_BANNED_WORDS = {

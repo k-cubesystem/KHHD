@@ -16,8 +16,9 @@ test.describe('가족 관리', () => {
     await expect(addOrGate.first()).toBeVisible({ timeout: 20_000 })
   })
 
-  test('가족 궁합 매트릭스 접근', async ({ page }) => {
-    await page.goto('/protected/family/compatibility-matrix')
+  test('가족 기운 지도 접근', async ({ page }) => {
+    // 2026-09-07: 가짜 점수 궁합 매트릭스 삭제 → 기운 지도가 그 자리다.
+    await page.goto('/protected/family/map')
     await expect(page.locator('main')).toBeVisible()
   })
 })

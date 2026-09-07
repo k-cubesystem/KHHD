@@ -14,8 +14,8 @@ import {
 } from '@/lib/domain/circle/circle'
 import { bannedWordsIn } from '@/lib/domain/circle/element-lore'
 
-describe('무리 종류', () => {
-  it('가족은 만들 수 없는 가상 무리다', () => {
+describe('그룹 종류', () => {
+  it('가족은 만들 수 없는 가상 그룹이다', () => {
     expect(CREATABLE_CIRCLE_KINDS).not.toContain('family')
     expect(isCircleKind('family')).toBe(true)
     expect(isCreatableCircleKind('family')).toBe(false)
@@ -24,7 +24,7 @@ describe('무리 종류', () => {
     expect(FAMILY_CIRCLE_ID).toBe('family')
   })
 
-  it('🔴 직장 무리는 밴드 모드·동의 필수·상단 고지가 있다 — 나머지는 없다', () => {
+  it('🔴 직장 그룹은 밴드 모드·동의 필수·상단 고지가 있다 — 나머지는 없다', () => {
     expect(CIRCLE_KIND_META.work.scoreMode).toBe('bands')
     expect(CIRCLE_KIND_META.work.consentRequired).toBe(true)
     expect(CIRCLE_KIND_META.work.notice).toBe(WORK_NOTICE)
@@ -49,9 +49,9 @@ describe('무리 종류', () => {
   })
 })
 
-describe('티어 상한 (PRD §12-2 기본안)', () => {
-  it('SINGLE 1/10 · FAMILY 3/10 · BUSINESS 10/30, 비회원 0', () => {
-    expect(circleLimits('SINGLE')).toEqual({ maxCircles: 1, maxMembers: 10 })
+describe('티어 상한 (CEO 2026-09-07: 사람 2/10/30)', () => {
+  it('SINGLE 1/2 · FAMILY 3/10 · BUSINESS 10/30, 비회원 0', () => {
+    expect(circleLimits('SINGLE')).toEqual({ maxCircles: 1, maxMembers: 2 })
     expect(circleLimits('FAMILY')).toEqual({ maxCircles: 3, maxMembers: 10 })
     expect(circleLimits('BUSINESS')).toEqual({ maxCircles: 10, maxMembers: 30 })
     expect(circleLimits('MASTER')).toEqual(circleLimits('BUSINESS'))

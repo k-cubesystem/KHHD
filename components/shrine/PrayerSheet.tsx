@@ -174,7 +174,7 @@ export function PrayerSheet({ open, onOpenChange, shrineId, family, prayerCount 
                 href="/protected/family"
                 className="text-[11px] font-sans text-white/35 transition-colors hover:text-gold-500"
               >
-                가족 관리
+                가족·인연 관리
               </Link>
             }
           />

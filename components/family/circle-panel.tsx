@@ -29,7 +29,7 @@ import {
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * 「무리」 탭 — 가족(가상)과 내가 만든 무리들. 만들기 · 사람 넣기/빼기 · 지우기 · 기운 지도 문.
+ * 「그룹」 탭 — 가족(가상)과 내가 만든 그룹들. 만들기 · 사람 넣기/빼기 · 지우기 · 기운 지도 문.
  *
  * 상한·동의는 서버가 판정한다. 여기서는 결과를 말로 옮길 뿐이다.
  * 🔴 «무제한» 같은 말은 쓰지 않는다 — 상한은 숫자로 말한다(표시광고법 규율).
@@ -44,21 +44,21 @@ function mapHref(circleId: string): string {
 function errorMessage(error: CircleError, overview: CirclesOverview): string {
   switch (error) {
     case 'MEMBERSHIP_REQUIRED':
-      return '멤버십 회원만 무리를 만들 수 있습니다.'
+      return '멤버십 회원만 그룹을 만들 수 있습니다.'
     case 'LIMIT_CIRCLES':
       return overview.nextTier
-        ? `지금 등급에서는 무리를 ${overview.limits.maxCircles}개까지 만들 수 있습니다. ${overview.nextTier} 멤버십이 더 엽니다.`
-        : `무리는 ${overview.limits.maxCircles}개까지 만들 수 있습니다.`
+        ? `지금 등급에서는 그룹을 ${overview.limits.maxCircles}개까지 만들 수 있습니다. ${overview.nextTier} 멤버십이 더 엽니다.`
+        : `그룹은 ${overview.limits.maxCircles}개까지 만들 수 있습니다.`
     case 'LIMIT_MEMBERS':
-      return `한 무리에는 ${overview.limits.maxMembers}명까지 넣을 수 있습니다.`
+      return `한 그룹에는 ${overview.limits.maxMembers}명까지 넣을 수 있습니다.`
     case 'DAILY_LIMIT':
-      return '오늘은 무리를 더 만들 수 없습니다. 내일 다시 만들어 주세요.'
+      return '오늘은 그룹을 더 만들 수 없습니다. 내일 다시 만들어 주세요.'
     case 'INVALID_NAME':
-      return `무리 이름은 1~${CIRCLE_NAME_MAX}자로 적어 주세요.`
+      return `그룹 이름은 1~${CIRCLE_NAME_MAX}자로 적어 주세요.`
     case 'CONSENT_REQUIRED':
-      return '직장 무리에는 본인 동의를 받은 사람만 넣을 수 있습니다.'
+      return '직장 그룹에는 본인 동의를 받은 사람만 넣을 수 있습니다.'
     case 'NOT_FOUND':
-      return '무리나 사람을 찾지 못했습니다. 화면을 새로 고쳐 주세요.'
+      return '그룹나 사람을 찾지 못했습니다. 화면을 새로 고쳐 주세요.'
     default:
       return '잠시 뒤 다시 시도해 주세요.'
   }
@@ -140,7 +140,7 @@ function CircleCard({
           <ul className="space-y-1.5">
             <li className="flex items-center justify-between text-[12px] text-ink-light/70">
               <span>
-                나 <span className="text-ink-light/35">· 모든 무리에 들어 있습니다</span>
+                나 <span className="text-ink-light/35">· 모든 그룹에 들어 있습니다</span>
               </span>
             </li>
             {circle.members.map((m) => (
@@ -200,7 +200,7 @@ function CircleCard({
                 />
                 <span className="text-[10.5px] leading-snug text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
                   {CONSENT_TEXT}
-                  {meta.consentRequired && <b className="ml-1 text-gold-300/80">(직장 무리는 필수)</b>}
+                  {meta.consentRequired && <b className="ml-1 text-gold-300/80">(직장 그룹은 필수)</b>}
                 </span>
               </label>
               <Button
@@ -210,7 +210,7 @@ function CircleCard({
                 onClick={() =>
                   handle(
                     () => addCircleMember({ circleId: circle.id, memberId: pickId, consent, role }),
-                    '무리에 넣었습니다.',
+                    '그룹에 넣었습니다.',
                     'circle_member_add',
                     () => {
                       setPickId('')
@@ -225,19 +225,19 @@ function CircleCard({
               </Button>
             </div>
           ) : (
-            <p className="text-[11px] text-ink-light/40">등록된 인연이 모두 이 무리에 들어 있습니다.</p>
+            <p className="text-[11px] text-ink-light/40">등록된 인연이 모두 이 그룹에 들어 있습니다.</p>
           )}
 
           <button
             type="button"
             disabled={pending}
             onClick={() => {
-              if (!confirm(`「${circle.name}」 무리를 지울까요? 사람 정보는 남고 무리만 사라집니다.`)) return
-              handle(() => deleteCircle(circle.id), '무리를 지웠습니다.', 'circle_delete')
+              if (!confirm(`「${circle.name}」 그룹을 지울까요? 사람 정보는 남고 그룹만 사라집니다.`)) return
+              handle(() => deleteCircle(circle.id), '그룹을 지웠습니다.', 'circle_delete')
             }}
             className="inline-flex items-center gap-1 text-[11px] text-ink-light/40 hover:text-seal-light disabled:opacity-40"
           >
-            <Trash2 className="h-3.5 w-3.5" /> 무리 지우기
+            <Trash2 className="h-3.5 w-3.5" /> 그룹 지우기
           </button>
         </div>
       )}
@@ -264,7 +264,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
         }
         return
       }
-      toast.success('무리를 만들었습니다. 사람을 넣어 보세요.')
+      toast.success('그룹을 만들었습니다. 사람을 넣어 보세요.')
       trackEvent({ action: 'circle_create', category: 'engagement', label: kind })
       setName('')
       setFormOpen(false)
@@ -273,13 +273,13 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
   }
 
   return (
-    <section aria-label="무리 목록" className="space-y-3">
+    <section aria-label="그룹 목록" className="space-y-3">
       <p className="px-1 text-[11px] leading-relaxed text-ink-light/50" style={{ wordBreak: 'keep-all' }}>
-        무리는 기운을 나란히 볼 사람들의 묶음입니다. 가족은 등록된 대로 한 무리이고, 직장·모임은 직접 만듭니다. 한
-        사람이 여러 무리에 들어갈 수 있습니다.
+        그룹은 기운을 나란히 볼 사람들의 묶음입니다. 가족은 등록된 대로 한 그룹이고, 직장·모임은 직접 만듭니다. 한
+        사람이 여러 그룹에 들어갈 수 있습니다.
       </p>
 
-      {/* 가족 — 가상 무리 */}
+      {/* 가족 — 가상 그룹 */}
       <div className="flex items-center gap-2 rounded-xl border border-gold-500/25 bg-gold-500/[0.05] px-3.5 py-3">
         <span className="min-w-0 flex-1 truncate font-serif text-[14px] font-bold text-ink-light">
           우리 {overview.family.name}
@@ -306,7 +306,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={CIRCLE_NAME_MAX}
-              placeholder="무리 이름 (예: 마케팅팀)"
+              placeholder="그룹 이름 (예: 마케팅팀)"
               className="h-9 bg-black/20 text-[13px]"
               autoFocus
             />
@@ -354,7 +354,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
           onClick={() => setFormOpen(true)}
           className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold-500/30 bg-gold-500/[0.03] py-3 font-serif text-[13px] text-gold-300 hover:bg-gold-500/[0.08]"
         >
-          <Plus className="h-4 w-4" /> 무리 만들기
+          <Plus className="h-4 w-4" /> 그룹 만들기
           <span className="font-sans text-[10.5px] text-ink-light/40">
             ({overview.circles.length}/{overview.limits.maxCircles})
           </span>
@@ -362,7 +362,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
       ) : (
         <div className="space-y-1.5 rounded-xl border border-white/10 bg-surface/20 px-3.5 py-3 text-center">
           <p className="text-[12px] text-ink-light/60">
-            지금 등급에서는 무리를 {overview.limits.maxCircles}개까지 만들 수 있습니다.
+            지금 등급에서는 그룹을 {overview.limits.maxCircles}개까지 만들 수 있습니다.
           </p>
           {overview.nextTier && (
             <Link
@@ -372,7 +372,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
               }
               className="inline-flex items-center gap-1 font-serif text-[12px] font-bold text-gold-400"
             >
-              {overview.nextTier} 멤버십이 무리를 더 엽니다 <ChevronRight className="h-3.5 w-3.5" />
+              {overview.nextTier} 멤버십이 그룹을 더 엽니다 <ChevronRight className="h-3.5 w-3.5" />
             </Link>
           )}
         </div>

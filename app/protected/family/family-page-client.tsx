@@ -96,7 +96,7 @@ interface FamilyPageClientProps {
   linkedMemberIds?: string[]
   /** 내가 남의 가족 자리에 붙어 있는 목록(읽기 전용). */
   linkedFamilies?: LinkedFamily[]
-  /** 무리(가족 가상 + 직장·모임) 개요 — 「무리」 탭. 조회 실패면 null 이고 탭은 안내만 띄운다. */
+  /** 그룹(가족 가상 + 직장·모임) 개요 — 「그룹」 탭. 조회 실패면 null 이고 탭은 안내만 띄운다. */
   circles?: CirclesOverview | null
 }
 
@@ -219,7 +219,7 @@ export function FamilyPageClient({
       {/* 상단: 설명 + 추가 버튼 */}
       <section className="flex items-center justify-between px-1">
         <div>
-          <h1 className="text-lg font-serif font-medium text-ink-light">가족 관리</h1>
+          <h1 className="text-lg font-serif font-medium text-ink-light">가족·인연 관리</h1>
           <p className="text-xs text-ink-light/50 font-light mt-0.5">
             {members.length > 0
               ? `${members.length}명의 소중한 인연을 관리하고 있습니다`
@@ -273,7 +273,7 @@ export function FamilyPageClient({
         </Link>
       )}
 
-      {/* 갈래 탭 — 가족 / 지인 / 무리 */}
+      {/* 갈래 탭 — 가족 / 지인 / 그룹 */}
       <div className="mb-3 grid grid-cols-3 gap-2">
         {MEMBER_CATEGORIES.map((key) => (
           <button
@@ -301,18 +301,18 @@ export function FamilyPageClient({
               : 'border-white/10 bg-white/[0.02] text-ink-light/55'
           }`}
         >
-          무리
+          그룹
           <span className="ml-1.5 text-[11px] opacity-60">{(circles?.circles.length ?? 0) + 1}</span>
         </button>
       </div>
 
-      {/* 무리 탭 — 가족(가상)·직장·모임 */}
+      {/* 그룹 탭 — 가족(가상)·직장·모임 */}
       {tab === 'circle' &&
         (circles ? (
           <CirclePanel overview={circles} />
         ) : (
           <p className="rounded-xl border border-dashed border-white/10 bg-surface/10 py-10 text-center text-sm text-ink-light/40">
-            무리 정보를 불러오지 못했습니다. 화면을 새로 고쳐 주세요.
+            그룹 정보를 불러오지 못했습니다. 화면을 새로 고쳐 주세요.
           </p>
         ))}
 

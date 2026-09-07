@@ -146,8 +146,8 @@ describe('buildCircleEnergy', () => {
   })
 })
 
-describe('circleRoles — 십성 다섯 무리 합산', () => {
-  it('두꺼운 결·옅은 결을 무리 단위로 합쳐 말하고, 분포가 없으면 null', () => {
+describe('circleRoles — 십성 다섯 그룹 합산', () => {
+  it('두꺼운 결·옅은 결을 그룹 단위로 합쳐 말하고, 분포가 없으면 null', () => {
     const roles = circleRoles([
       member('a', '민수', energy({}), { sipseong: { 식신: 2, 상관: 1, 정관: 1, 비견: 1 } }),
       member('b', '지영', energy({}), { sipseong: { 식신: 1, 정인: 1 } }),

@@ -47,7 +47,7 @@ const ENTRIES = [
 ]
 
 describe('CircleEnergyMapView', () => {
-  it('🔴 직장 무리 — 상단 고지가 서고, 기운 수치가 한 곳도 없다(밴드 모드)', () => {
+  it('🔴 직장 그룹 — 상단 고지가 서고, 기운 수치가 한 곳도 없다(밴드 모드)', () => {
     const payload = {
       circle: { id: 'c1', name: '마케팅팀', kind: 'work' as const },
       energy: buildCircleEnergy('work', ENTRIES),
@@ -63,7 +63,7 @@ describe('CircleEnergyMapView', () => {
     expect(screen.getAllByText('거리가 약인 사이').length).toBeGreaterThan(0)
   })
 
-  it('모임 무리 — 고지가 없고 수치가 보인다(전체 모드)', () => {
+  it('모임 그룹 — 고지가 없고 수치가 보인다(전체 모드)', () => {
     const payload = {
       circle: { id: 'c2', name: '등산 모임', kind: 'friends' as const },
       energy: buildCircleEnergy('friends', ENTRIES),

@@ -17,8 +17,9 @@ test.describe('궁합 분석', () => {
     await expect(page.locator('main')).toBeVisible()
   })
 
-  test('가족 궁합 매트릭스', async ({ page }) => {
-    await page.goto('/protected/family/compatibility-matrix')
+  test('가족 기운 지도(그룹 관계) 접근', async ({ page }) => {
+    // 2026-09-07: 가짜 점수 궁합 매트릭스 삭제 → 관계는 기운 지도의 «서로의 관계» 라벨로.
+    await page.goto('/protected/family/map')
     await expect(page.locator('main')).toBeVisible()
   })
 })

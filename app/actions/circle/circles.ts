@@ -20,11 +20,11 @@ import {
 } from '@/lib/domain/circle/circle'
 
 /**
- * 무리 관리 액션 — 목록·만들기·사람 넣기/빼기·지우기.
+ * 그룹 관리 액션 — 목록·만들기·사람 넣기/빼기·지우기.
  *
- * 🔴 상한은 전부 서버가 판정한다(티어별 무리 수·구성원 수·하루 생성 수). UI 는 결과를 보일 뿐이다.
- * 🔴 소유 검증 두 겹: 무리(circles.user_id) + 사람(family_members.user_id). RLS 가 한 번 더 막는다.
- * 🔴 직장 무리는 등록 동의(consent) 없이는 사람을 넣지 못한다 — 제3자 생년월일이다.
+ * 🔴 상한은 전부 서버가 판정한다(티어별 그룹 수·구성원 수·하루 생성 수). UI 는 결과를 보일 뿐이다.
+ * 🔴 소유 검증 두 겹: 그룹(circles.user_id) + 사람(family_members.user_id). RLS 가 한 번 더 막는다.
+ * 🔴 직장 그룹은 등록 동의(consent) 없이는 사람을 넣지 못한다 — 제3자 생년월일이다.
  */
 
 const FAMILY_PATH = '/protected/family'
@@ -69,10 +69,10 @@ export interface CirclePerson {
 }
 
 export interface CirclesOverview {
-  /** 가상 가족 무리 — 본인 + 가족 갈래. 행이 없다. */
+  /** 가상 가족 그룹 — 본인 + 가족 갈래. 행이 없다. */
   family: { id: typeof FAMILY_CIRCLE_ID; name: string; kind: 'family'; memberCount: number }
   circles: CircleDetail[]
-  /** 무리에 넣을 수 있는 내 인연 전체(가족·지인). */
+  /** 그룹에 넣을 수 있는 내 인연 전체(가족·지인). */
   people: CirclePerson[]
   limits: CircleLimits
   tier: string | null
@@ -100,7 +100,7 @@ async function currentUser(supabase: SupabaseClient): Promise<string | null> {
   return user?.id ?? null
 }
 
-/** 내 무리 하나 — 소유 검증 포함. 없으면 null. */
+/** 내 그룹 하나 — 소유 검증 포함. 없으면 null. */
 async function ownCircle(supabase: SupabaseClient, userId: string, circleId: string) {
   if (!UUID.test(circleId)) return null
   const { data } = await supabase

@@ -37,6 +37,7 @@ export const AI_ACTION_LABELS: Record<string, string> = {
   fengshui_destiny: '풍수 운명',
   palm_destiny: '손금 운명',
   ritual_month_line: '초하루 문안',
+  circle_narrative: '기운 처방전·그룹 AI 풀이',
   // ── 기타 ──
   unknown: '기타',
 }
@@ -69,6 +70,7 @@ export const EMITTED_ACTION_TYPES = [
   'fengshui_destiny',
   'palm_destiny',
   'ritual_month_line',
+  'circle_narrative',
 ] as const
 
 export type EmittedActionType = (typeof EMITTED_ACTION_TYPES)[number]
@@ -96,6 +98,7 @@ export const ACTION_TO_PROMPT_KEY: Record<string, string | null> = {
   palm_destiny: 'palm_reading',
   fengshui_destiny: 'fengshui_analysis',
   ritual_month_line: null, // 무료 — 의례 카드 1줄
+  circle_narrative: null, // 프롬프트는 코드(lib/domain/circle/narrative.ts)가 짓는다 — 판가는 feature-costs
   wealth: 'wealth',
   image_generation: 'image_generation',
   // 사용자 복채 없음(내부·무료·shrine)
@@ -133,6 +136,7 @@ export const ACTION_TO_COST_KEY: Record<string, FeatureCostKey | null> = {
   image_generation: 'imageGeneration',
   samhap: 'samhap',
   theme_fortune: 'themeFortune',
+  circle_narrative: 'circleNarrative',
   trend: 'themeFortune',
   fortune: 'themeFortune',
   year2026: 'newYear',

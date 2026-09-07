@@ -29,6 +29,7 @@ export type FeatureCostKey =
   | 'imageGeneration'
   | 'samhap'
   | 'themeFortune'
+  | 'circleNarrative'
 
 export interface FeatureCost {
   /** 표시 복채(만냥). 실차감과 동일. */
@@ -53,6 +54,8 @@ export const FEATURE_COST = {
   // 🔴 5만냥을 쓰지 않는다 — 같은 값이면 재물 심층과 구분이 안 된다.
   //    무료 미끼 테마(§7-1)는 이 키를 안 쓰고 차감 경로 자체를 타지 않는다(themes.ts themeReadingCostKey).
   themeFortune: { display: 2, free: false },
+  // 처방전·그룹 지도 AI 풀이 — 엔진 값을 풀어 쓰는 FLASH 1회. 테마 풀이와 같은 무게(2026-09-07).
+  circleNarrative: { display: 2, free: false },
 } as const satisfies Record<FeatureCostKey, FeatureCost>
 
 /** MISSION_CATEGORIES / FORTUNE_MISSIONS 의 category 값 → FeatureCostKey */
