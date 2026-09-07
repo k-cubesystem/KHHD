@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-07(30차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-07(31차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -46,6 +46,30 @@ CEO 지시 «지금 그냥 웹에서 움직이는 종이쪼가리 느낌 — 실
 - 의식 완급: 다중 정지점 키프레임에 **구간별 timing-function**(진자 ease-in-out, 낙하 ease-in, 공중 등속 linear
   → 착지 ease-out). 엽전 회전수 4→3바퀴(길)/3.5(흉). 깃발 그림자·색 기운을 **정적 겹**으로(띠 물결마다 서브트리
   필터 재계산 제거 — 저사양 폰 끊김 예방).
+
+**(31차 · 2026-09-07 아침) CEO 회신 7건 반영 — 프로덕션 라이브(`c8aaa5f5` → 배포 `hhd-89ctq99e3`):**
+
+CEO: 「①무리✗ 그룹 만들기 ②쿠팡 파트너스 가입했어 ③가족·인연 관리 ④싱글 2명·패밀리 10명·비즈니스 30
+⑤가짜 점수 지움 ⑥마케팅 카피 승인 ⑦가족·인연 관리에도 AI 풀이」.
+
+- ① 사용자 문구 전량 **무리 → 그룹**(코드 식별자 `circle` 은 그대로). 🔴 받침 ㅂ이라 조사가 갈린다 —
+  «그룹은/을/으로/이다» 로 교정했다(치환만 하면 「그룹는」이 남는다).
+- ③ 페이지 제목 「가족 관리」 → **「가족·인연 관리」**(family 페이지·게이트·허브 배너·기도 시트·삼합·처방전 CTA·
+  지도 뒤로가기 전부).
+- ④ 그룹당 사람 상한 **SINGLE 2 · FAMILY 10 · BUSINESS 30**(그룹 수 1/3/10 유지) — `CIRCLE_LIMITS_BY_TIER`.
+- ⑤ 가짜 점수 궁합 매트릭스 `app/protected/family/compatibility-matrix/` **삭제**. e2e 두 스펙은 `/protected/family/map`
+  으로 옮겼다. `components/social/compatibility-matrix.tsx` 는 참조가 없어 그대로(별개 부채).
+- ② 쿠팡 파트너스 — 처방전 ④ 실물 항목(책상 위 한 가지·선물 셋)에 **검색 딥링크** + 대가성 고지.
+  `app/actions/circle/shop-links.ts`: 키워드별 전역 캐시 `affiliate_links`(30일) → 없는 것만
+  `createCoupangDeeplink`(기존 `lib/services/coupang-partners.ts`). 🔴 **키 `COUPANG_ACCESS_KEY`/`COUPANG_SECRET_KEY`
+  가 Vercel 에 있어야 링크가 생긴다** — 없으면 품목명만 보인다(빈 버튼 없음). 키를 넣으면 재배포가 필요하다.
+- ⑦ **AI 풀이** — 처방전(사람)·그룹 지도·가족 지도 아래 패널. `lib/domain/circle/narrative.ts`(프롬프트=엔진 값
+  풀어 쓰기, `validateNarrative` 가 금지어·점수·길이 거름, 한 번 재시도) · `app/actions/circle/narrative.ts`
+  (멤버십 → 속도 제한 → 지문 캐시 30일(`circle_narratives`) → `deductTalisman` 2만냥(`FEATURE_COST.circleNarrative`)
+  → FLASH → 저장 → 실패 환불). 🔴 같은 입력이면 다시 사지 않는다. action_type `circle_narrative` 등록.
+- ⑥ 카피 초안 `docs/REPORTS/COPY-20260907-energy-circle.md`(SNS 8편·앱 내·헤드라인).
+- 검증: jest 3,817 · tsc · eslint 0 · build · 정적 촬영(처방전 AI 패널+쿠팡 링크 · 그룹 지도 AI 패널).
+  🔴 실기기·실 AI 호출 검수는 CEO 몫(모델 호출은 로그인 상태에서만 일어난다).
 
 **(30차 · 2026-09-07) 「기운 무리(群)」 P0~P3 전부 구현 — 프로덕션 라이브(P0 `08d8bd66` · P1 `1ff1be3c` → 배포 `hhd-1dq4x6d85` / P2+P3 `02836247` → 배포 `hhd-bbs283e20`):**
 
