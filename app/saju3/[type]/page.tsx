@@ -22,6 +22,16 @@ export function generateStaticParams() {
   return TYPE_SLUGS.map((type) => ({ type }))
 }
 
+/**
+ * 🔴 유형은 열 개로 고정이다 — 목록에 없는 슬러그는 **라우팅 층에서 404** 를 내야 한다.
+ *
+ * 라이브 실측(2026-09-08): 이게 없어서 /saju3/아무거나 가 「페이지를 찾을 수 없습니다」 내용을
+ * **HTTP 200** 으로 돌려줬다(소프트 404). 페이지 안의 notFound() 만으로는 상태 코드가 200 으로
+ * 나갔다. 검색엔진에는 «얇은 페이지가 무한히 있는 사이트»로 보이고, 하필 지금 애드센스가
+ * 「가치가 별로 없는 콘텐츠」로 한 번 반려한 상태라 그대로 두면 안 되는 자리다.
+ */
+export const dynamicParams = false
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { type } = await params
   if (!isTypeSlug(type)) return { title: '3초 사주', robots: { index: false } }
