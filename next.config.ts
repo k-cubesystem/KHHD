@@ -42,18 +42,30 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 2678400, // 31일 캐시 (재요청 최소화)
   },
 
-  // 은퇴한 경로 — 이미 나간 링크·색인의 유입을 버리지 않는다.
-  // /ilgan(「3초 일간」)은 2026-08-21 「3초 사주」로 대체됐다.
-  async redirects() {
-    return [
-      { source: '/ilgan', destination: '/saju3', permanent: true },
-      { source: '/ilgan/:stem', destination: '/saju3', permanent: true },
-    ]
-  },
-
   // 정적 자산 캐싱 최적화
   async rewrites() {
     return []
+  },
+
+  /**
+   * 구 웹툰 주소 → 공개 라우트(2026-09-08 결정① — 무료 회차 비로그인 공개).
+   * · /webtoon.html: v5 에서 멈춘 정적 예고편 — 앱 0화가 정본이므로 301 로 합친다(공유 링크 생존).
+   *   ⚠️ redirects 는 public/ 파일보다 먼저 평가되므로 정적 파일이 남아 있어도 이 규칙이 이긴다.
+   * · /protected/webtoon/*: 로그인 벽 뒤 구주소 — 전부 새 주소로. (미들웨어보다 먼저 평가되어
+   *   비로그인도 로그인 화면이 아니라 본문에 닿는다.)
+   */
+  async redirects() {
+    return [
+      // 🔴 은퇴 경로는 **이 배열 하나**에 모은다. 2026-09-08 병합에서 양쪽 갈래가 각자
+      //    redirects() 를 더해 키가 둘이 됐고, 객체 리터럴이라 뒤엣것이 앞엣것을 조용히
+      //    덮었다 — /ilgan 308 이 통째로 사라질 뻔했다(타입체크의 중복 키 오류로 잡음).
+      // /ilgan(「3초 일간」)은 「3초 사주」로 대체됐다. 이미 나간 링크·색인을 버리지 않는다.
+      { source: '/ilgan', destination: '/saju3', permanent: true },
+      { source: '/ilgan/:stem', destination: '/saju3', permanent: true },
+      { source: '/webtoon.html', destination: '/webtoon/0', permanent: true },
+      { source: '/protected/webtoon', destination: '/webtoon', permanent: true },
+      { source: '/protected/webtoon/:path*', destination: '/webtoon/:path*', permanent: true },
+    ]
   },
 
   // Security headers

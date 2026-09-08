@@ -92,12 +92,12 @@ const PROFILE_GROUPS: readonly {
     title: '웹툰',
     gloss: '청담해화당 이야기',
     hero: {
-      href: '/protected/webtoon',
+      href: '/webtoon',
       icon: BookOpen,
       label: '웹툰 보기',
       sub: '회차를 읽고 댓글을 남깁니다',
     },
-    items: [{ href: '/protected/webtoon/story', icon: Sparkles, label: '내 이야기 쓰기', sub: '선정되면 한 화로' }],
+    items: [{ href: '/webtoon/story', icon: Sparkles, label: '내 이야기 쓰기', sub: '선정되면 한 화로' }],
   },
   {
     title: '살림',

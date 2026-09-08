@@ -76,7 +76,7 @@ describe('HUB_LAUNCHER — 아이콘 런처 8칸', () => {
   it('하단 네비와 같은 곳으로 가는 칸이 없다 (신당·웹툰·프로필)', () => {
     const hrefs = HUB_LAUNCHER.map((entry) => entry.href)
 
-    for (const nav of ['/protected/shrine', '/protected/webtoon', '/protected/profile']) {
+    for (const nav of ['/protected/shrine', '/webtoon', '/protected/profile']) {
       expect(hrefs).not.toContain(nav)
     }
   })

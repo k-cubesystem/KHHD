@@ -94,8 +94,10 @@ describe('🔴 명리 가이드 — 문장 규율(표시광고법)', () => {
 })
 
 describe('사이트맵 등재', () => {
-  const entries = sitemap()
-  const urls = entries.map((e) => e.url)
+  let urls: string[] = []
+  beforeAll(async () => {
+    urls = (await sitemap()).map((e) => e.url)
+  })
 
   it('가이드 목록과 32편 전부, 소개 페이지가 실린다', () => {
     expect(urls.some((u) => u.endsWith('/guide'))).toBe(true)

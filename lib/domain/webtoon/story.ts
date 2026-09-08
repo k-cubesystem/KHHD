@@ -62,7 +62,14 @@ export const STORY_PRIVACY_NOTICE =
   '보내신 사연은 공개되지 않습니다 — 청담해화당으로만 전해지고, 웹툰 어디에도 그대로 실리지 않습니다.'
 
 export const STORY_CONTACT_NOTICE =
-  '성함·연락처·카카오톡 아이디는 **이야기 제작을 위한 연락에만** 씁니다. 공개되지 않으며 선정되신 경우에만 연락드립니다.'
+  '이름·연락처·카카오톡 아이디는 **이야기 제작을 위한 연락에만** 씁니다. 공개되지 않으며 선정되신 경우에만 연락드립니다.'
+
+/**
+ * 동의 문구 — 접수 버튼이 아니라 **체크박스**가 동의다(2026-09-08 결정④).
+ * 실명·전화 강제는 함께 풀었다: 이름은 부를 이름(닉네임)이면 되고,
+ * 연락 수단은 전화·카카오 **둘 중 하나**만 있으면 된다.
+ */
+export const STORY_CONSENT_LABEL = '위 안내를 읽었으며, 이야기 제작 연락을 위해 남긴 이름·연락처를 쓰는 것에 동의합니다'
 
 export const STORY_SELECTION_NOTICE =
   '선정되면 담당자가 연락드려 어디까지 그려도 좋을지 함께 정합니다 — 이름·지명은 바꾸고, 원하지 않으시는 대목은 뺍니다.'
@@ -90,12 +97,16 @@ export const STORY_NO_EXTRA_COST_NOTICE = '선정되어 웹툰으로 그려질 �
 export interface StoryDraft {
   readonly title: string
   readonly body: string
+  /** 부를 이름 — 실명 강제 아님(닉네임 가능, 결정④) */
   readonly contactName: string
+  /** 선택 — 카카오와 둘 중 하나만 있으면 된다 */
   readonly contactPhone: string
   readonly contactKakao: string
+  /** 연락처 이용 동의 — 체크 없이는 접수되지 않는다 */
+  readonly consent: boolean
 }
 
-export type StoryField = 'title' | 'body' | 'contactName' | 'contactPhone' | 'contactKakao'
+export type StoryField = 'title' | 'body' | 'contactName' | 'contactPhone' | 'contactKakao' | 'consent'
 
 /** 어긋난 칸과 이유. 통과면 빈 배열이다. */
 export interface StoryIssue {
@@ -128,18 +139,28 @@ export function validateStory(draft: StoryDraft): readonly StoryIssue[] {
   else if (len(draft.body) > STORY_BODY_MAX)
     out.push({ field: 'body', message: `사연은 ${STORY_BODY_MAX}자까지입니다` })
 
-  if (len(draft.contactName) < 1) out.push({ field: 'contactName', message: '성함을 적어 주세요' })
+  if (len(draft.contactName) < 1)
+    out.push({ field: 'contactName', message: '부를 이름을 적어 주세요 (닉네임도 좋습니다)' })
   else if (len(draft.contactName) > STORY_NAME_MAX)
-    out.push({ field: 'contactName', message: `성함은 ${STORY_NAME_MAX}자까지입니다` })
+    out.push({ field: 'contactName', message: `이름은 ${STORY_NAME_MAX}자까지입니다` })
 
+  // 연락 수단 — 전화·카카오 **둘 중 하나**면 된다(결정④: 전화 필수 해제).
+  // 적은 값이 있으면 그 값의 모양만 본다. 둘 다 비면 선정돼도 연락할 길이 없다.
   const phone = draft.contactPhone.trim()
-  if (len(phone) < STORY_PHONE_MIN || digitCount(phone) < 8)
-    out.push({ field: 'contactPhone', message: '연락 가능한 번호를 적어 주세요' })
-  else if (len(phone) > STORY_PHONE_MAX)
-    out.push({ field: 'contactPhone', message: `번호는 ${STORY_PHONE_MAX}자까지입니다` })
+  const kakao = draft.contactKakao.trim()
+  if (phone.length === 0 && kakao.length === 0)
+    out.push({ field: 'contactPhone', message: '연락받을 번호나 카카오톡 아이디 중 하나는 남겨 주세요' })
+  if (phone.length > 0) {
+    if (len(phone) < STORY_PHONE_MIN || digitCount(phone) < 8)
+      out.push({ field: 'contactPhone', message: '연락 가능한 번호를 적어 주세요' })
+    else if (len(phone) > STORY_PHONE_MAX)
+      out.push({ field: 'contactPhone', message: `번호는 ${STORY_PHONE_MAX}자까지입니다` })
+  }
 
   if (len(draft.contactKakao) > STORY_KAKAO_MAX)
     out.push({ field: 'contactKakao', message: `카카오톡 아이디는 ${STORY_KAKAO_MAX}자까지입니다` })
+
+  if (draft.consent !== true) out.push({ field: 'consent', message: '연락처 이용 동의에 체크해 주세요' })
 
   return Object.freeze(out)
 }
