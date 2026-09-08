@@ -35,7 +35,7 @@ function detectPlatform(): Platform {
 }
 
 /** 비로그인 유입 첫 화면(3초 일간·이벤트 폼)에서는 띄우지 않는다 — 아직 아무것도 안 본 방문자에게 설치부터 권하면 결과 카드를 가린다. */
-const COLD_FUNNEL_PREFIXES = ['/ilgan', '/event']
+const COLD_FUNNEL_PREFIXES = ['/saju3', '/event']
 
 export function PWAInstallPrompt() {
   const pathname = usePathname()

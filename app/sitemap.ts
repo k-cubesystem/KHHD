@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { getSiteUrl } from '@/lib/utils/site-url'
-import { ILGAN_SLUGS } from '@/lib/domain/saju/ilgan'
+import { TYPE_SLUGS } from '@/lib/domain/saju/saju3'
 import { GUIDE_SLUGS } from '@/lib/content/guide'
 
 type ChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>
@@ -48,12 +48,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // 「3초 일간」 공개 페이지 + 일간별 공유 랜딩 10장 — 색인 대상(「경금 일간」 검색 유입)
-  const ilgan = ['/ilgan', ...ILGAN_SLUGS.map((s) => `/ilgan/${s}`)].map((route) => ({
+  // 「3초 사주」 공개 페이지 + 유형별 공유 랜딩 10장. /ilgan 은 2026-08-29 에 여기로 개조됐고
+  // 옛 주소는 next.config 의 308 로 넘어온다 — 사이트맵에는 새 주소만 올린다.
+  const saju3 = ['/saju3', ...TYPE_SLUGS.map((s) => `/saju3/${s}`)].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified,
     changeFrequency: 'weekly' as const,
-    priority: route === '/ilgan' ? 0.9 : 0.7,
+    priority: route === '/saju3' ? 0.9 : 0.7,
   }))
 
-  return [...routes, ...guide, ...ilgan]
+  return [...routes, ...guide, ...saju3]
 }
