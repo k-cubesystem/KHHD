@@ -39,8 +39,11 @@
 
 | 날짜       | 팀     | 완료 내용                                                                                                                                                                                                                                                                                     | 산출물                                                  |
 | ---------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 2026-08-22 | TEAM_G+B+C | 고민상담 → 「속풀이」 P0 **프로덕션 라이브** — 리네이밍 전면·이어 여쭙기 칩 복원·PC 480px 수복·질문권 환급 RPC·GA4 챗 계측(커밋 4bf6f07·73fa86b·7e8d397·ef0e287, 상세 docs/HANDOFF.md 22차) | PRD/ARCH-counsel-sokpuri-v1.md · P1=쿠팡 광고 리워드(파트너스 가입 선행) |
 | 2026-08-26 | TEAM_C | 관리자 **메인 대시보드 지표 수복** — 최근 결제 내역이 payments→profiles 임베드(PGRST200) 실패로 항상 비어 있던 것을 별도 프로필 조회로 교체, 총 분석 횟수 집계를 빈 테이블 saju_records→analysis_history로 이관, 총 회원수는 listUsers 배열 길이→Pagination.total, 조회 에러 전부 logger 기록 | app/admin/page.tsx · components/admin/traffic-chart.tsx |
 | 2026-08-26 | TEAM_C | 어드민 사용자 상세 **멤버십 등급 설정 수복** — `subscriptions`에 user_id 유니크 제약이 없어 `upsert(onConflict:'user_id')`가 항상 42P10으로 실패하던 것을 ACTIVE 행 UPDATE / 없으면 INSERT로 교체. NOT NULL인 `customer_key` 누락·존재하지 않는 `profiles.is_subscribed` 갱신도 함께 제거     | app/admin/users/actions.ts `updateUserSubscription`     |
+| 2026-09-05 | TEAM_G | **웹툰 페이지 운영·성장 로드맵 v1 설계** — 실측(가입 10·웹툰 이벤트 0·리포 원격 없음) 기반 3 Phase(문 열기→머물게→벌게)+상시 2 Track(연재·확산), 공개 read path=SECURITY DEFINER RPC(잠금 구조 차단), CEO 결정 5건에 권장안 부여. 🔴결정 전 코드 착수 금지·구현 브랜치는 determined-yonath | TEAM_G_DESIGN/prd/PRD-webtoon-page-roadmap-v1.md · architecture/ARCH-webtoon-page-roadmap-v1.md |
+| 2026-09-08 | TEAM_G+B+C+D | **웹툰 공개 전환+간이 진맥 라이브** (로드맵 Phase 1, CEO 결정①~⑤ 권장안 승인) — /webtoon 공개 라우트(비로그인 무료 열람·OG·사이트맵), webtoon.html→/webtoon/0 301, 간이 진맥 위젯(회차 중간·생년월일→결정론 오행, 무저장·localStorage, 업계 선례 없음), WEBTOON_FUNNEL 4단 계측, 등급 플립 가드, «매주 금요일» 고지. jest 4,757·lint 0/0. 🔴라이브 = feature/webtoon-public(bf5f3153+, restore/design-merge-0908 상위집합, hhd-at90sc6ew). 🔴main 루트 .vercel 제거됨 — 배포는 워크트리에 project.json 복사 후 vercel deploy --prod --yes. 잔여 W6=웹툰 리포 GitHub private 생성(CEO 1클릭) | app/webtoon/* · lib/domain/webtoon/jinmaek.ts · components/webtoon/{JinmaekWidget,WebtoonTrack,WebtoonCta}.tsx |
 | —          | —      | —                                                                                                                                                                                                                                                                                             | —                                                       |
 
 ---
@@ -91,6 +94,19 @@ main → 프로덕션
 dev  → 통합 개발
 feat/[기능명] → 기능 개발
 ```
+### 브랜치·워크트리 관례 (2026-08-24 확정)
+
+- 새 작업 시작 시 **`worktree-start` 스킬**을 먼저 실행 → `.claude/skills/worktree-start/SKILL.md`
+- 워크트리 경로 고정: `.claude/worktrees/<주제>` (`.git/info/exclude`로 제외됨)
+- 생성은 **항상 `-b`와 함께** — `git worktree add -b feature/<주제> .claude/worktrees/<주제> <base>`
+  · `--detach` 금지 (이름표 없는 커밋은 회수 불가)
+- base 브랜치는 **추측 금지**, 최근 커밋순으로 확인 후 확답받고 진행 (세션 4개 동시작업 충돌 이력)
+- 코드 수정·배포 전 **`git rev-parse --show-toplevel`로 위치 확인** (cwd 리셋 → main 오배포 이력)
+- 폴더는 탐색기로 옮기거나 지우지 말 것 — `git worktree remove` / `move`만 사용 (`.git` 포인터 파일 소실 이력)
+- `remove --force`는 git-무시 산출물(`assets-src/video`, `wallpapers`, `preview-shots`, `.vercel`)을
+  **영구 삭제**한다. 제거 전 `D:\anti\assets-archive\`로 이동할 것
+- 권한: `Bash(git worktree add|remove|prune|list)` → `.claude/settings.local.json`에 등록됨
+
 
 ---
 
