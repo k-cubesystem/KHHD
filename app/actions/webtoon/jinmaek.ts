@@ -6,6 +6,7 @@ import {
   JINMAEK_SLOTS,
   WU_XING_ORDER,
   balanceComment,
+  hasBatchim,
   themeComment,
   validBirthDate,
   type JinmaekReading,
@@ -67,7 +68,7 @@ export async function computeJinmaek(input: JinmaekInput): Promise<JinmaekResult
 
     const ilgan = findIlganByHan(saju.dayMaster)
     const dayMasterLine = ilgan
-      ? `일간은 ${ilgan.name}(${ilgan.hanja}) — 「${ilgan.image}」로 읽습니다.`
+      ? `일간은 ${ilgan.name}(${ilgan.hanja}) — 「${ilgan.image}」${hasBatchim(ilgan.image) ? '으로' : '로'} 읽습니다.`
       : '일간을 읽었습니다.'
 
     const slot = JINMAEK_SLOTS[no]

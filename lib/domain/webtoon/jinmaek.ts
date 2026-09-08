@@ -59,6 +59,15 @@ export interface JinmaekReading {
 
 const ELEMENT_KO: Record<WuXing, string> = { 木: '목(木)', 火: '화(火)', 土: '토(土)', 金: '금(金)', 水: '수(水)' }
 
+/** 마지막 한글 음절의 받침 유무 — 조사(은/는, 으로/로) 선택용. 괄호·한자 꼬리는 건너뛴다. */
+export function hasBatchim(s: string): boolean {
+  const m = s.match(/[가-힣](?=[^가-힣]*$)/)
+  if (!m) return false
+  return (m[0].charCodeAt(0) - 0xac00) % 28 > 0
+}
+
+const eunNeun = (s: string) => (hasBatchim(s) ? '은' : '는')
+
 const ELEMENT_SENSE: Record<WuXing, string> = {
   木: '뻗고 시작하는 힘',
   火: '드러내고 데우는 힘',
@@ -71,7 +80,7 @@ const ELEMENT_SENSE: Record<WuXing, string> = {
 export function themeComment(element: WuXing, count: number, total: 6 | 8): string {
   const name = ELEMENT_KO[element]
   const sense = ELEMENT_SENSE[element]
-  const base = `여덟 글자 중 ${name}은 ${sense}입니다.`
+  const base = `여덟 글자 중 ${name}${eunNeun(name)} ${sense}입니다.`
   const scope = total === 6 ? ' (태어난 시를 몰라 여섯 글자로 읽었습니다.)' : ''
   if (count === 0)
     return `${base} 손님의 자리에는 지금 이 글자가 보이지 않네요 — 전통은 이를 «비었다»가 아니라, 살면서 채워 가는 자리로 읽습니다.${scope}`
