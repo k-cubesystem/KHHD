@@ -30,7 +30,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const article = getGuideArticle(slug)
-  if (!article) return { title: '명리 가이드', robots: { index: false } }
+  // 🔴 여기서 끊는다 — 페이지 본문의 notFound() 만으로는 **상태 코드가 200 으로 나갔다.**
+  //    라이브 실측(2026-09-08): 라우트가 매칭된 뒤 notFound() 를 부르면 404 «화면»은 뜨는데
+  //    HTTP 는 200 이다(소프트 404). generateMetadata 는 응답 스트리밍 이전에 도는 자리라
+  //    여기서 부르면 상태 코드가 제대로 404 로 나간다.
+  //    얇은 페이지가 무한히 200 으로 열리는 셈이라, 애드센스가 「가치가 별로 없는 콘텐츠」로
+  //    반려한 뒤 재검토를 기다리는 지금은 특히 방치할 수 없는 자리다.
+  if (!article) notFound()
   const category = getGuideCategory(article.category)
   const ogTitle = article.hanja ? `${article.title} ${article.hanja}` : article.title
   return {
