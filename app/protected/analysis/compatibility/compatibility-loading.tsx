@@ -20,9 +20,9 @@ export function CompatibilityLoading({ person1, person2 }: CompatibilityLoadingP
         <motion.div
           animate={{ scale: [1, 1.1, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center"
+          className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-seal/25 to-gold-500/15 flex items-center justify-center"
         >
-          <Heart className="w-12 h-12 text-pink-500 fill-current" />
+          <Heart className="w-12 h-12 text-obangsaek-red fill-current" />
         </motion.div>
 
         <div className="space-y-4">
@@ -64,9 +64,7 @@ export function CompatibilityLoading({ person1, person2 }: CompatibilityLoadingP
             </motion.div>
           </div>
 
-          <p className="text-xs text-muted-foreground pt-4">
-            정확한 분석을 위해 최대 30초 정도 소요됩니다
-          </p>
+          <p className="text-xs text-muted-foreground pt-4">정확한 분석을 위해 최대 30초 정도 소요됩니다</p>
         </div>
       </motion.div>
     </div>

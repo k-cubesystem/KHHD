@@ -20,44 +20,52 @@ import { calculateSipseong } from '@/lib/saju-engine/sipseong'
 
 const GAN_INFO: Record<string, { colorClass: string; element: string; colorName: string }> = {
   甲: {
-    colorClass: 'text-green-600 bg-green-50 border-green-200',
+    colorClass: 'text-bok-sprout bg-bok-sprout/10 border-bok-sprout/30',
     element: 'Wood',
     colorName: '청(靑)',
   },
   乙: {
-    colorClass: 'text-green-600 bg-green-50 border-green-200',
+    colorClass: 'text-bok-sprout bg-bok-sprout/10 border-bok-sprout/30',
     element: 'Wood',
     colorName: '청(靑)',
   },
-  丙: { colorClass: 'text-red-600 bg-red-50 border-red-200', element: 'Fire', colorName: '적(赤)' },
-  丁: { colorClass: 'text-red-600 bg-red-50 border-red-200', element: 'Fire', colorName: '적(赤)' },
+  丙: {
+    colorClass: 'text-obangsaek-red bg-obangsaek-red/10 border-obangsaek-red/30',
+    element: 'Fire',
+    colorName: '적(赤)',
+  },
+  丁: {
+    colorClass: 'text-obangsaek-red bg-obangsaek-red/10 border-obangsaek-red/30',
+    element: 'Fire',
+    colorName: '적(赤)',
+  },
   戊: {
-    colorClass: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+    colorClass: 'text-gold-500 bg-gold-500/10 border-gold-500/30',
     element: 'Earth',
     colorName: '황(黃)',
   },
   己: {
-    colorClass: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+    colorClass: 'text-gold-500 bg-gold-500/10 border-gold-500/30',
     element: 'Earth',
     colorName: '황(黃)',
   },
   庚: {
-    colorClass: 'text-gray-600 bg-gray-50 border-gray-200',
+    colorClass: 'text-ink-primary bg-white/[0.08] border-white/20',
     element: 'Metal',
     colorName: '백(白)',
   },
   辛: {
-    colorClass: 'text-gray-600 bg-gray-50 border-gray-200',
+    colorClass: 'text-ink-primary bg-white/[0.08] border-white/20',
     element: 'Metal',
     colorName: '백(白)',
   },
   壬: {
-    colorClass: 'text-blue-900 bg-blue-50 border-blue-200',
+    colorClass: 'text-obangsaek-blue bg-obangsaek-blue/10 border-obangsaek-blue/30',
     element: 'Water',
     colorName: '흑(黑)',
   },
   癸: {
-    colorClass: 'text-blue-900 bg-blue-50 border-blue-200',
+    colorClass: 'text-obangsaek-blue bg-obangsaek-blue/10 border-obangsaek-blue/30',
     element: 'Water',
     colorName: '흑(黑)',
   },
@@ -108,7 +116,7 @@ const KOREAN_JI: Record<string, string> = {
 
 function createPillar(gan: string, ji: string): SajuPillar {
   const ganInfo = GAN_INFO[gan] || {
-    colorClass: 'text-gray-800 bg-gray-100',
+    colorClass: 'text-ink-primary bg-white/[0.06]',
     element: 'Unknown',
     colorName: '',
   }

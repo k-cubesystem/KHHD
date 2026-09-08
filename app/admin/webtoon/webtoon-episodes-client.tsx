@@ -325,7 +325,7 @@ export function WebtoonEpisodesClient({ initialEpisodes }: { initialEpisodes: Ad
         </div>
 
         {accessChanged && cuts.length > 0 && (
-          <p className="rounded-lg border border-amber-500/35 bg-amber-900/15 px-3 py-2 text-[11px] leading-relaxed text-amber-200">
+          <p className="rounded-lg border border-warning/35 bg-warning-light px-3 py-2 text-[11px] leading-relaxed text-warning-text">
             등급을 바꾸면 본문이 들어가는 버킷도 바뀝니다. 저장한 뒤 <b>본문을 다시 올려 주세요</b> — 지금 걸린{' '}
             {cuts.length}컷은 옛 버킷에 남아 독자에게 보이지 않습니다.
           </p>
@@ -358,7 +358,9 @@ export function WebtoonEpisodesClient({ initialEpisodes }: { initialEpisodes: Ad
           }}
           className="block w-full text-[11px] text-ink-light/60 file:mr-3 file:rounded-lg file:border-0 file:bg-primary/20 file:px-3 file:py-2 file:text-[11px] file:text-gold-200 disabled:opacity-40"
         />
-        {!episodeId && <p className="text-[11px] text-amber-300/80">회차를 먼저 저장하면 본문을 올릴 수 있습니다.</p>}
+        {!episodeId && (
+          <p className="text-[11px] text-warning-text/80">회차를 먼저 저장하면 본문을 올릴 수 있습니다.</p>
+        )}
 
         {uploading && (
           <p className="flex items-center gap-2 text-[11px] text-ink-light/60">
@@ -417,7 +419,7 @@ export function WebtoonEpisodesClient({ initialEpisodes }: { initialEpisodes: Ad
                 <span
                   className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
                     row.publishedAt
-                      ? 'border-emerald-500/40 text-emerald-300 bg-emerald-900/20'
+                      ? 'border-success/40 text-success-text bg-success-light'
                       : 'border-white/[0.06] text-ink-light/40'
                   }`}
                 >

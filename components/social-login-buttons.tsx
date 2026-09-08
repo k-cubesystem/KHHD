@@ -86,8 +86,8 @@ export default function SocialLoginButtons() {
   if (!isMounted) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="w-full h-12 bg-stone-800/50 animate-pulse rounded-lg" />
-        <div className="w-full h-12 bg-stone-800/50 animate-pulse rounded-lg" />
+        <div className="w-full h-12 bg-white/[0.06] animate-pulse rounded-lg" />
+        <div className="w-full h-12 bg-white/[0.06] animate-pulse rounded-lg" />
       </div>
     )
   }
@@ -96,7 +96,7 @@ export default function SocialLoginButtons() {
   if (inApp) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="px-4 py-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 text-center leading-relaxed">
+        <div className="px-4 py-3 rounded-lg bg-warning-light border border-warning-border text-xs text-warning-text text-center leading-relaxed">
           카카오톡 등 앱 내 브라우저에서는 소셜 로그인이 제한됩니다.
           <br />
           아래 버튼을 눌러 외부 브라우저에서 열어주세요.
@@ -104,7 +104,7 @@ export default function SocialLoginButtons() {
         <Button
           type="button"
           variant="outline"
-          className="w-full h-12 border-stone-600 rounded-lg text-stone-300 hover:text-white hover:border-stone-400 transition-all"
+          className="w-full h-12 border-white/25 rounded-lg text-ink-light/80 hover:text-white hover:border-white/40 transition-all"
           onClick={() => openInExternalBrowser(window.location.href)}
         >
           <ExternalLink className="w-4 h-4 mr-2" />
@@ -121,7 +121,7 @@ export default function SocialLoginButtons() {
         type="button"
         variant="outline"
         disabled={isLoading !== null}
-        className="relative w-full h-12 bg-white hover:bg-stone-50 border-0 rounded-lg transition-all active:scale-[0.98]"
+        className="relative w-full h-12 bg-white hover:bg-white/90 border-0 rounded-lg transition-all active:scale-[0.98]"
         onClick={(e) => handleLogin(e, 'google')}
       >
         <div className="flex items-center justify-center gap-3">
@@ -144,9 +144,9 @@ export default function SocialLoginButtons() {
             />
           </svg>
           {isLoading === 'google' ? (
-            <Loader2 className="w-4 h-4 animate-spin text-stone-400" />
+            <Loader2 className="w-4 h-4 animate-spin text-[#3C4043]/60" />
           ) : (
-            <span className="text-sm font-medium text-stone-700">Google로 계속하기</span>
+            <span className="text-sm font-medium text-[#3C4043]">Google로 계속하기</span>
           )}
         </div>
       </Button>
@@ -163,7 +163,7 @@ export default function SocialLoginButtons() {
             <path d="M12 3C5.373 3 0 7.373 0 12.768c0 3.425 2.164 6.426 5.46 8.214-.24.87-1.745 6.344-1.797 6.64-.04.227.24.436.463.284.28-.192 4.416-3.01 5.166-3.525.882.128 1.794.197 2.708.197 6.627 0 12-4.373 12-9.768C24 7.373 18.627 3 12 3z" />
           </svg>
           {isLoading === 'kakao' ? (
-            <Loader2 className="w-4 h-4 animate-spin text-stone-700" />
+            <Loader2 className="w-4 h-4 animate-spin text-[#191919]/70" />
           ) : (
             <span className="text-sm font-medium text-[#191919]/85">카카오로 계속하기</span>
           )}

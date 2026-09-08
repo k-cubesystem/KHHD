@@ -69,7 +69,7 @@ export function KakaoAddressSearch({ label, value, onChange, placeholder, classN
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md bg-stone-900 border-primary/20 text-ink-light">
+        <DialogContent className="sm:max-w-md bg-surface border-primary/20 text-ink-light">
           <DialogHeader>
             <DialogTitle className="text-primary font-serif">주소 검색</DialogTitle>
           </DialogHeader>

@@ -1,3 +1,4 @@
+import { WU_XING_COLORS } from '@/lib/domain/saju/saju'
 /**
  * 오늘의 운세 구조 요소(총운·행운의 색/숫자/시간)를 결정적으로 파생하는 순수 함수(F-7).
  *
@@ -19,7 +20,8 @@ export interface DailyLucky {
   timeRange: string
 }
 
-const EL_HEX: Record<string, string> = { 木: '#4A7C59', 火: '#C07055', 土: '#C5B358', 金: '#989390', 水: '#4A5D7C' }
+// 오행색 정본은 lib/domain/saju/saju.ts 하나다 — 여기서 표를 다시 적으면 화면마다 색이 갈라진다.
+const EL_HEX = WU_XING_COLORS
 const EL_COLOR_KO: Record<string, string> = { 木: '초록', 火: '빨강', 土: '황금', 金: '흰색', 水: '검정' }
 
 /** 상생(相生): key 오행을 낳아주는(돕는) 부모 오행. 水生木 → 木의 조력 = 水. */

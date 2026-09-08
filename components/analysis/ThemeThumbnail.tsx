@@ -78,8 +78,8 @@ export function ThemeThumbnail({ theme, eager = false, showCost = false, classNa
 
       {showCost && (
         <span
-          className={`absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-[9px] font-medium ${
-            isFreeTheme(theme) ? 'text-emerald-300' : 'text-gold-300'
+          className={`absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-[9px] ${
+            isFreeTheme(theme) ? 'font-bold text-gold-200' : 'font-medium text-gold-300'
           }`}
         >
           {themeCostLabel(theme)}

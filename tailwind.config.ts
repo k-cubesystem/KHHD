@@ -2,7 +2,17 @@ import type { Config } from 'tailwindcss'
 
 const config: Config = {
   darkMode: ['class'],
-  content: ['./pages/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
+  // 🔴 lib 도 스캔한다 — 오행 표(manse.ts GAN_INFO)·절기 표(seasonal-events)처럼 lib 가
+  //    클래스 문자열을 드는 관례가 실재하는데, lib 미스캔이라 그 클래스들은 CSS 가 아예
+  //    생성되지 않았다(2026-09-01 빌드 산출물 grep 으로 실증 — 옛 팔레트 클래스는 다른
+  //    파일에 같은 리터럴이 우연히 있어서만 살아 있었다).
+  content: [
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
+    './lib/**/*.{ts,tsx}',
+  ],
   theme: {
     container: {
       center: true,
@@ -80,11 +90,13 @@ const config: Config = {
           border: 'rgba(245,158,11,0.20)',
           text: '#FCD34D',
         },
+        // 🔴 값의 정본은 DESIGN.md 「Color」 — info 는 단청 청(#2D5F8A)이다.
+        //    2026-09-01 정합: Tailwind 기본 파랑(#3B82F6)으로 갈라져 있던 것을 문서에 맞췄다.
         info: {
-          DEFAULT: '#3B82F6',
-          light: 'rgba(59,130,246,0.10)',
-          border: 'rgba(59,130,246,0.20)',
-          text: '#93C5FD',
+          DEFAULT: '#2D5F8A',
+          light: 'rgba(45,95,138,0.12)',
+          border: 'rgba(45,95,138,0.25)',
+          text: '#8FB8DA',
         },
 
         // 오방색 (五方色) — Korean Traditional Colors
@@ -96,18 +108,22 @@ const config: Config = {
           black: '#1A1714',
         },
 
-        // 복 등급 (Bok Tier)
+        // 복 등급 (Bok Tier) — 오방색 성장 사다리. 정본은 DESIGN.md 「Bok Tier Colors」,
+        // lib/config/design-tokens.ts BOK_TIER_COLORS 와 값이 같아야 한다.
         bok: {
-          seed: '#8C7B50',
-          sprout: '#22C55E',
-          flower: '#F472B6',
-          tree: '#10B981',
-          forest: '#6EE7B7',
+          seed: '#8C7B50', // 황토 — 흙 속 씨앗 (土 간색)
+          sprout: '#4E9A6B', // 목(木) 청록 — WU_XING_COLORS.木 동일값
+          flower: '#C84040', // 연지 홍 — Red Light
+          tree: '#3F7A9E', // 창송(蒼松) 담청
+          forest: '#D4A017', // 금 — 오방 황, 만복의 정점
         },
       },
       fontFamily: {
         serif: ['var(--font-noto-serif)', 'serif'],
         sans: ['Pretendard', 'var(--font-noto-sans)', 'sans-serif'],
+        // DESIGN.md 「Data/Tables: JetBrains Mono」 — font-mono 가 39곳에서 쓰이는데
+        // 배선이 없어 브라우저 기본 모노로 떨어지고 있었다(2026-09-01 발견).
+        mono: ['var(--font-jetbrains)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       fontSize: {
         display: ['1.75rem', { lineHeight: '1.2', letterSpacing: '-0.03em', fontWeight: '600' }],

@@ -120,7 +120,7 @@ export function MemberMissionCard({ member, onClick, onEdit, onDelete, index }: 
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onDelete(member.id, member.name)}
-                  className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+                  className="text-xs text-error-text/90 hover:text-error-text hover:bg-error/10 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-2" />
                   삭제하기

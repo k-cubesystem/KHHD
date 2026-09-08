@@ -10,14 +10,14 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-stone-950">
+    <div className="relative min-h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-surface">
       {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/hanok-night-hero.jpg')" }}
       />
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-stone-950/60 via-stone-950/80 to-stone-950/95" />
+      <div className="absolute inset-0 bg-gradient-to-b from-surface/60 via-surface/80 to-surface/95" />
       {/* Texture */}
       <div className="hanji-overlay" />
 
@@ -31,7 +31,9 @@ export default function Page() {
             <span className="text-gold-500/60 text-xs tracking-widest">命理</span>
             <div className="h-px w-10 bg-gold-500/40" />
           </div>
-          <p className="mt-4 text-stone-400 text-sm text-center leading-relaxed">당신의 운명을 밝히는 AI 사주 분석</p>
+          <p className="mt-4 text-ink-light/60 text-sm text-center leading-relaxed">
+            당신의 운명을 밝히는 AI 사주 분석
+          </p>
         </div>
 
         {/* Form */}

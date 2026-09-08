@@ -187,7 +187,7 @@ function BlockThree({
           {mansikNote && <p style={{ wordBreak: 'keep-all' }}>{mansikNote}</p>}
           {sideNote && <p style={{ wordBreak: 'keep-all' }}>{sideNote}</p>}
           {caution && (
-            <p className="text-amber-300/70" style={{ wordBreak: 'keep-all' }}>
+            <p className="text-warning-text/70" style={{ wordBreak: 'keep-all' }}>
               {caution}
             </p>
           )}

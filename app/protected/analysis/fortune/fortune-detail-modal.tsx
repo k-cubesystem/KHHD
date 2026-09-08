@@ -55,20 +55,20 @@ export function FortuneDetailModal({ isOpen, onClose, date }: FortuneDetailModal
           {/* Keyword Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-yellow-500/10 text-yellow-500">
+              <div className="p-2 rounded-full bg-gold-500/10 text-gold-300">
                 <Wallet className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs text-ink-light/40">재물운</p>
+                <p className="text-xs text-ink-light/55">재물운</p>
                 <p className="text-sm font-medium">상승세</p>
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-3 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-pink-500/10 text-pink-500">
+              <div className="p-2 rounded-full bg-gold-500/10 text-gold-300">
                 <Heart className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs text-ink-light/40">애정운</p>
+                <p className="text-xs text-ink-light/55">애정운</p>
                 <p className="text-sm font-medium">보통</p>
               </div>
             </div>

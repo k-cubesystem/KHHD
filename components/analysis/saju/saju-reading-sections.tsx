@@ -23,6 +23,8 @@ import * as React from 'react'
  * 기록은 이미 결제된 풀이라 블러 없이 셋을 이어 붙인다.
  */
 
+import { WU_XING_COLORS, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type SajuReadingData = Record<string, any>
 
@@ -30,29 +32,51 @@ export type SajuReadingData = Record<string, any>
 export function SajuFreeSections({ data }: { data: SajuReadingData }) {
   return (
     <>
-      {/* ⭐ 특별한 사주 기운 */}
+      {/* ⭐ 특별한 사주 기운 — 이 풀이의 얼굴. /story 리포트 카드 문법(단청 보더·금테)에
+          희소성 문장은 稀 낙관(도장)을 찍은 세리프 인용으로 올린다. */}
       {data.specialEnergy?.title && (
-        <section className="mx-4 mb-6 p-5 rounded-2xl bg-gradient-to-br from-gold-500/15 via-gold-500/5 to-transparent border border-gold-500/30 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/20 rounded-full blur-[60px] pointer-events-none" />
-          <div className="relative z-10 space-y-3">
-            <p className="text-[10px] text-gold-500/60 tracking-wider">이 사주만의 특별한 기운</p>
-            <h3 className="text-lg font-serif font-bold text-gold-500">{data.specialEnergy.title as string}</h3>
-            <p className="text-sm text-ink-light/80 leading-relaxed">{data.specialEnergy.description as string}</p>
+        <section className="mx-4 mb-6 rounded-2xl border border-gold-500/30 bg-surface overflow-hidden shadow-gold-glow relative">
+          <div className="dancheong-border-top" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gold-500/15 rounded-full blur-[60px] pointer-events-none" />
+          <div className="relative z-10 p-5 space-y-3">
+            <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-gold-500 m-0">
+              이 사주만의 특별한 기운
+            </p>
+            <h3 className="font-serif text-[19px] font-bold text-gold-200 leading-snug break-keep m-0">
+              {data.specialEnergy.title as string}
+            </h3>
+            <p className="text-sm text-ink-light/80 font-light leading-[1.85] break-keep m-0">
+              {data.specialEnergy.description as string}
+            </p>
             {data.specialEnergy.rarity && (
-              <span className="inline-block px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 text-[11px] text-gold-500">
-                {data.specialEnergy.rarity as string}
-              </span>
+              <figure className="mt-4 mb-0 mx-0 flex items-start gap-3 rounded-xl border border-gold-500/25 bg-gold-500/[0.07] p-4">
+                <span
+                  className="w-9 h-9 shrink-0 rounded-[3px] bg-seal text-ink-light font-serif text-[16px] leading-none flex items-center justify-center shadow-dojang"
+                  aria-hidden
+                >
+                  稀
+                </span>
+                <blockquote className="font-serif text-[13.5px] leading-[1.8] text-gold-200 break-keep m-0">
+                  {data.specialEnergy.rarity as string}
+                </blockquote>
+              </figure>
             )}
             {data.specialEnergy.hiddenTalent && (
               <div className="pt-3 border-t border-gold-500/10">
-                <p className="text-[10px] text-gold-500/50 mb-1">숨겨진 재능</p>
-                <p className="text-sm text-ink-light/70 leading-relaxed">{data.specialEnergy.hiddenTalent as string}</p>
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-gold-500/70 mb-1">
+                  숨겨진 재능
+                </p>
+                <p className="text-sm text-ink-light/70 font-light leading-relaxed break-keep m-0">
+                  {data.specialEnergy.hiddenTalent as string}
+                </p>
               </div>
             )}
             {data.specialEnergy.destinyMission && (
               <div className="pt-3 border-t border-gold-500/10">
-                <p className="text-[10px] text-gold-500/50 mb-1">인생 미션</p>
-                <p className="text-sm text-ink-light/70 leading-relaxed">
+                <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-gold-500/70 mb-1">
+                  인생 미션
+                </p>
+                <p className="text-sm text-ink-light/70 font-light leading-relaxed break-keep m-0">
                   {data.specialEnergy.destinyMission as string}
                 </p>
               </div>
@@ -62,36 +86,32 @@ export function SajuFreeSections({ data }: { data: SajuReadingData }) {
       )}
 
       {/* 과거 역추산 */}
-      <ResultSection
-        title="과거에 이런 일이 있으셨을 거예요"
-        color="amber"
-        show={!!data.pastRetrograde?.events?.length}
-      >
+      <ResultSection title="과거에 이런 일이 있으셨을 거예요" show={!!data.pastRetrograde?.events?.length}>
         {(data.pastRetrograde?.events as Array<{ period?: string; description?: string; basis?: string }>)?.map(
           (event, i) => (
             <div key={i} className="space-y-1">
               <p className="text-sm text-ink-light">
-                <span className="text-amber-400/80 font-medium">{event.period}</span> — {event.description}
+                <span className="text-gold-300 font-medium">{event.period}</span> — {event.description}
               </p>
               <p className="text-[11px] text-ink-light/55 font-light">{event.basis}</p>
             </div>
           )
         )}
         {data.pastRetrograde?.accuracyHook && (
-          <p className="mt-3 pt-3 border-t border-amber-500/10 text-[11px] text-amber-400/60 italic">
+          <p className="mt-3 pt-3 border-t border-gold-500/10 text-[11px] text-gold-300/70 italic">
             {data.pastRetrograde.accuracyHook as string}
           </p>
         )}
       </ResultSection>
 
       {/* 현재 공감 */}
-      <ResultSection title="요즘 이런 상황이시죠?" color="blue" show={!!data.currentSituation?.description}>
+      <ResultSection title="요즘 이런 상황이시죠?" show={!!data.currentSituation?.description}>
         <p className="text-sm text-ink-light leading-relaxed">{data.currentSituation?.description as string}</p>
         {data.currentSituation?.basis && (
           <p className="text-[11px] text-ink-light/55 font-light mt-2">{data.currentSituation.basis as string}</p>
         )}
         {data.currentSituation?.advice && (
-          <p className="text-sm text-blue-400/80 font-medium mt-3 pt-3 border-t border-blue-500/10">
+          <p className="text-sm text-gold-300 font-medium mt-3 pt-3 border-t border-gold-500/10">
             {data.currentSituation.advice as string}
           </p>
         )}
@@ -106,35 +126,37 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
     <>
       {/* 격국·용신 + 오행 밸런스 */}
       {data.sajuStructure && (
-        <ResultSection title="내 사주의 구조예요" color="blue" show>
+        <ResultSection title="내 사주의 구조예요" show>
           {data.sajuStructure.geokgukName && (
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/10 mb-2">
-              <p className="text-xs text-blue-400/60 mb-0.5">격국</p>
-              <p className="text-sm text-blue-400 font-medium">{data.sajuStructure.geokgukName as string}</p>
+            <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/15 mb-2">
+              <p className="text-xs text-gold-500/70 mb-0.5">격국</p>
+              <p className="text-sm text-gold-300 font-medium">{data.sajuStructure.geokgukName as string}</p>
             </div>
           )}
           {data.sajuStructure.geokgukExplain && (
             <p className="text-sm text-ink-light/80 leading-relaxed">{data.sajuStructure.geokgukExplain as string}</p>
           )}
           {data.sajuStructure.yongsinElement && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/10 mt-2 mb-2">
-              <p className="text-xs text-emerald-400/60 mb-0.5">용신</p>
-              <p className="text-sm text-emerald-400 font-medium">{data.sajuStructure.yongsinElement as string}</p>
+            <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/15 mt-2 mb-2">
+              <p className="text-xs text-gold-500/70 mb-0.5">용신</p>
+              <p className="text-sm text-gold-300 font-medium">{data.sajuStructure.yongsinElement as string}</p>
             </div>
           )}
           {data.sajuStructure.yongsinExplain && (
             <p className="text-sm text-ink-light/80 leading-relaxed">{data.sajuStructure.yongsinExplain as string}</p>
           )}
           {data.sajuStructure.elementBalance && (
-            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-              <p className="text-xs text-ink-light/55 mb-2">오행 밸런스</p>
+            <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+              <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/60 mb-2">
+                오행 밸런스 五行
+              </p>
               {(
                 [
-                  { key: 'wood', label: '목(木)', color: 'bg-emerald-500/60' },
-                  { key: 'fire', label: '화(火)', color: 'bg-red-500/60' },
-                  { key: 'earth', label: '토(土)', color: 'bg-yellow-500/60' },
-                  { key: 'metal', label: '금(金)', color: 'bg-gray-300/60' },
-                  { key: 'water', label: '수(水)', color: 'bg-blue-500/60' },
+                  { key: 'wood', hanja: '木', label: '목' },
+                  { key: 'fire', hanja: '火', label: '화' },
+                  { key: 'earth', hanja: '土', label: '토' },
+                  { key: 'metal', hanja: '金', label: '금' },
+                  { key: 'water', hanja: '水', label: '수' },
                 ] as const
               ).map((el) => {
                 const bal = (
@@ -142,16 +164,26 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                 )?.[el.key]
                 if (!bal) return null
                 return (
-                  <div key={el.key} className="flex items-center gap-2">
-                    <span className="w-12 text-[11px] text-ink-light/50">{el.label}</span>
-                    <div className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden">
+                  <div key={el.key} className="flex items-center gap-2.5">
+                    <span
+                      className="font-serif text-[13px] w-4 text-center shrink-0"
+                      style={{ color: WU_XING_TEXT_COLORS[el.hanja] }}
+                    >
+                      {el.hanja}
+                    </span>
+                    <span className="font-sans text-[11px] text-ink-light/80 w-4 shrink-0">{el.label}</span>
+                    <div className="flex-1 h-1.5 bg-white/[0.08] rounded-full overflow-hidden">
                       <div
-                        className={`h-full ${el.color} rounded-full transition-all`}
-                        style={{ width: `${Math.min((bal.count ?? 0) * 20, 100)}%` }}
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min((bal.count ?? 0) * 20, 100)}%`,
+                          backgroundColor: WU_XING_COLORS[el.hanja],
+                          opacity: 0.85,
+                        }}
                       />
                     </div>
                     <span
-                      className={`text-[10px] w-10 text-right ${bal.status === '부족' ? 'text-red-400/60' : bal.status === '과다' ? 'text-amber-400/60' : 'text-ink-light/50'}`}
+                      className={`text-[10px] w-10 text-right shrink-0 ${bal.status === '부족' ? 'text-error-text/70' : bal.status === '과다' ? 'text-warning/80' : 'text-ink-light/50'}`}
                     >
                       {bal.status}
                     </span>
@@ -166,7 +198,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
       {/* 올해 월별 운세 */}
       {(data.yearlyMonthly as Array<{ month?: string; keyword?: string; content?: string; rating?: string }>)?.length >
         0 && (
-        <ResultSection title="올해 월별 운세예요" color="gold" show>
+        <ResultSection title="올해 월별 운세예요" show>
           <div className="grid grid-cols-2 gap-2">
             {(data.yearlyMonthly as Array<{ month?: string; keyword?: string; content?: string; rating?: string }>).map(
               (m, i) => (
@@ -174,7 +206,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-medium text-ink-light">{m.month}</span>
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${m.rating === '상' ? 'bg-emerald-500/10 text-emerald-400' : m.rating === '하' ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-ink-light/55'}`}
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${m.rating === '상' ? 'bg-gold-500/15 text-gold-300' : m.rating === '하' ? 'bg-error-light text-error-text' : 'bg-white/5 text-ink-light/55'}`}
                     >
                       {m.rating}
                     </span>
@@ -190,7 +222,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
 
       {/* 신살 — 도화살, 역마살 등 */}
       {data.cheon?.sinsal && (
-        <ResultSection title="특별한 기운이 있어요" color="gold" show>
+        <ResultSection title="특별한 기운이 있어요" show>
           {(data.cheon.sinsal as Array<{ name?: string; modern?: string }>)?.map((s, i) => (
             <div key={i} className="p-3 rounded-lg bg-gold-500/5 border border-gold-500/10">
               <p className="text-sm text-gold-500 font-medium">{s.name}</p>
@@ -202,10 +234,10 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
 
       {/* 직업운 */}
       {data.cheon?.career && typeof data.cheon.career === 'object' && (
-        <ResultSection title="나한테 맞는 직업이에요" color="blue" show>
+        <ResultSection title="나한테 맞는 직업이에요" show>
           {data.cheon.career.summary && (
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/10 mb-2">
-              <p className="text-sm text-blue-400 font-medium">{data.cheon.career.summary as string}</p>
+            <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/15 mb-2">
+              <p className="text-sm text-gold-300 font-medium">{data.cheon.career.summary as string}</p>
             </div>
           )}
           {data.cheon.career.personality_match && (
@@ -216,7 +248,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
               <p className="text-xs text-ink-light/55">잘 맞는 직업</p>
               {(data.cheon.career.best_jobs as string[]).map((job: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/70 flex gap-2">
-                  <span className="text-emerald-400/60 shrink-0">+</span> {job}
+                  <span className="text-gold-500/70 shrink-0">+</span> {job}
                 </p>
               ))}
             </div>
@@ -226,7 +258,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
               <p className="text-xs text-ink-light/55">안 맞는 직업</p>
               {(data.cheon.career.worst_jobs as string[]).map((job: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/70 flex gap-2">
-                  <span className="text-red-400/60 shrink-0">-</span> {job}
+                  <span className="text-error/60 shrink-0">-</span> {job}
                 </p>
               ))}
             </div>
@@ -246,7 +278,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
             </div>
           )}
           {data.cheon.career.celebrity_comparison && (
-            <p className="text-sm text-blue-400/70 mt-3 pt-3 border-t border-blue-500/10 italic">
+            <p className="text-sm text-gold-300/80 mt-3 pt-3 border-t border-gold-500/10 italic">
               {data.cheon.career.celebrity_comparison as string}
             </p>
           )}
@@ -254,17 +286,13 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
       )}
 
       {/* 재물운 + 투자 성향 통합 */}
-      <ResultSection
-        title="돈은 이렇게 벌고 굴리면 돼요"
-        color="emerald"
-        show={!!(data.cheon?.wealth || data.cheon?.investment)}
-      >
+      <ResultSection title="돈은 이렇게 벌고 굴리면 돼요" show={!!(data.cheon?.wealth || data.cheon?.investment)}>
         {data.cheon?.wealth && typeof data.cheon.wealth === 'string' && (
           <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.wealth}</p>
         )}
         {data.cheon?.investment?.style && (
-          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/10 mt-2">
-            <p className="text-sm text-emerald-400 font-medium">{data.cheon.investment.style as string}</p>
+          <div className="p-3 rounded-lg bg-gold-500/10 border border-gold-500/15 mt-2">
+            <p className="text-sm text-gold-300 font-medium">{data.cheon.investment.style as string}</p>
           </div>
         )}
         {data.cheon?.investment?.stockStyle && (
@@ -292,48 +320,48 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           </div>
         )}
         {data.cheon?.investment?.warning && (
-          <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 mt-2">
-            <p className="text-xs text-red-400/60 mb-1">주의</p>
+          <div className="p-3 rounded-lg bg-error-light border border-error-border mt-2">
+            <p className="text-xs text-error-text/70 mb-1">주의</p>
             <p className="text-sm text-ink-light/80">{data.cheon.investment.warning as string}</p>
           </div>
         )}
         {data.cheon?.investment?.recommendation && (
-          <p className="text-sm text-emerald-400/80 font-medium mt-3 pt-3 border-t border-emerald-500/10">
+          <p className="text-sm text-gold-300 font-medium mt-3 pt-3 border-t border-gold-500/10">
             {data.cheon.investment.recommendation as string}
           </p>
         )}
       </ResultSection>
 
       {/* 연애운 + 인간관계 통합 */}
-      <ResultSection title="연애와 인간관계는 이래요" color="rose" show={!!(data.cheon?.love || data.cheon?.people)}>
+      <ResultSection title="연애와 인간관계는 이래요" show={!!(data.cheon?.love || data.cheon?.people)}>
         {data.cheon?.love && typeof data.cheon.love === 'string' && (
           <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.love}</p>
         )}
         {data.cheon?.people?.good_match && (
-          <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10 mt-2">
-            <p className="text-xs text-emerald-400/60 mb-1">나랑 잘 맞는 사람</p>
+          <div className="p-3 rounded-lg bg-gold-500/5 border border-gold-500/10 mt-2">
+            <p className="text-xs text-gold-500/70 mb-1">나랑 잘 맞는 사람</p>
             <p className="text-sm text-ink-light/80 leading-relaxed">
               {(data.cheon.people.good_match as Record<string, unknown>).description as string}
             </p>
             {((data.cheon.people.good_match as Record<string, unknown>).examples as string[])?.map(
               (ex: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/60 flex gap-2 mt-1">
-                  <span className="text-emerald-400/60 shrink-0">+</span> {ex}
+                  <span className="text-gold-500/70 shrink-0">+</span> {ex}
                 </p>
               )
             )}
           </div>
         )}
         {data.cheon?.people?.bad_match && (
-          <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 mt-2">
-            <p className="text-xs text-red-400/60 mb-1">조심해야 하는 사람</p>
+          <div className="p-3 rounded-lg bg-error-light border border-error-border mt-2">
+            <p className="text-xs text-error-text/70 mb-1">조심해야 하는 사람</p>
             <p className="text-sm text-ink-light/80 leading-relaxed">
               {(data.cheon.people.bad_match as Record<string, unknown>).description as string}
             </p>
             {((data.cheon.people.bad_match as Record<string, unknown>).examples as string[])?.map(
               (ex: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/60 flex gap-2 mt-1">
-                  <span className="text-red-400/60 shrink-0">!</span> {ex}
+                  <span className="text-error/60 shrink-0">!</span> {ex}
                 </p>
               )
             )}
@@ -346,7 +374,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
           </div>
         )}
         {data.cheon?.people?.relationship_advice && (
-          <p className="text-sm text-rose-400/70 mt-3 pt-3 border-t border-rose-500/10">
+          <p className="text-sm text-gold-300/80 mt-3 pt-3 border-t border-gold-500/10">
             {data.cheon.people.relationship_advice as string}
           </p>
         )}
@@ -354,7 +382,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
 
       {/* 건강 */}
       {data.cheon?.health && typeof data.cheon.health === 'object' && (
-        <ResultSection title="건강은 이렇게 관리하세요" color="rose" show>
+        <ResultSection title="건강은 이렇게 관리하세요" show>
           {data.cheon.health.overall && (
             <p className="text-sm text-ink-light/80 leading-relaxed">{data.cheon.health.overall as string}</p>
           )}
@@ -363,7 +391,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
               <p className="text-xs text-ink-light/55">주의가 필요한 부위</p>
               {(data.cheon.health.weakOrgans as string[]).map((organ: string, i: number) => (
                 <p key={i} className="text-sm text-ink-light/70 flex gap-2">
-                  <span className="text-red-400/60 shrink-0">!</span> {organ}
+                  <span className="text-error/60 shrink-0">!</span> {organ}
                 </p>
               ))}
             </div>
@@ -393,7 +421,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
             )}
           </div>
           {data.cheon.health.warningPeriod && (
-            <p className="text-sm text-red-400/70 mt-2 pt-2 border-t border-red-500/10">
+            <p className="text-sm text-error-text/80 mt-2 pt-2 border-t border-error-border">
               {data.cheon.health.warningPeriod as string}
             </p>
           )}
@@ -403,7 +431,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
       {/* 운의 흐름 */}
       {/* 인생 타임라인 */}
       {data.cheon?.lifeTimeline && (
-        <ResultSection title="인생 타임라인이에요" color="blue" show>
+        <ResultSection title="인생 타임라인이에요" show>
           <div className="space-y-4">
             {(
               [
@@ -419,7 +447,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
                   dotClass: 'border-gold-500 bg-gold-500/30',
                   textClass: 'text-gold-500',
                 },
-                { label: '앞으로 10년', key: 'nextDecade', dotClass: 'border-blue-400', textClass: 'text-blue-400' },
+                { label: '앞으로 10년', key: 'nextDecade', dotClass: 'border-gold-300/60', textClass: 'text-gold-300' },
               ] as const
             ).map((item, i) => {
               const val = (data.cheon.lifeTimeline as Record<string, string>)?.[item.key]
@@ -443,7 +471,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
 
       {/* 개운법 상세 */}
       {data.gaewoon && (
-        <ResultSection title="이렇게 하면 운이 좋아져요" color="gold" show>
+        <ResultSection title="이렇게 하면 운이 좋아져요" show>
           <div className="grid grid-cols-2 gap-2">
             {data.gaewoon.luckyColor && (
               <div className="p-3 rounded-lg bg-surface/20 border border-white/5">
@@ -497,8 +525,8 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
             )}
           </div>
           {data.gaewoon.avoidItems && (
-            <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 mt-2">
-              <p className="text-[10px] text-red-400/50 mb-1">피해야 할 것</p>
+            <div className="p-3 rounded-lg bg-error-light border border-error-border mt-2">
+              <p className="text-[10px] text-error-text/70 mb-1">피해야 할 것</p>
               <p className="text-sm text-ink-light/70">
                 {((data.gaewoon.avoidItems as Record<string, unknown>).items as string[])?.join(', ')}
               </p>
@@ -524,11 +552,7 @@ export function SajuDeepSections({ data }: { data: SajuReadingData }) {
  */
 export function SajuCrossAnalysisSection({ data }: { data: SajuReadingData }) {
   return (
-    <ResultSection
-      title="여러 분석이 같은 결론을 가리키고 있어요"
-      color="gold"
-      show={!!data.crossAnalysis?.convergenceInsight}
-    >
+    <ResultSection title="여러 분석이 같은 결론을 가리키고 있어요" show={!!data.crossAnalysis?.convergenceInsight}>
       {data.crossAnalysis?.sajuAndFace && (
         <p className="text-sm text-ink-light/80 leading-relaxed">{data.crossAnalysis.sajuAndFace as string}</p>
       )}
@@ -577,40 +601,18 @@ function useRevealOnScroll() {
   return { ref, revealed }
 }
 
-function ResultSection({
-  title,
-  color,
-  show,
-  children,
-}: {
-  title: string
-  color: 'amber' | 'blue' | 'gold' | 'emerald' | 'rose'
-  show: boolean
-  children: React.ReactNode
-}) {
+// 모양 정본은 /story 섹션 헤딩 — 색색 카드 대신 차분한 카드 + 금줄 + 세리프 제목.
+// 색은 데이터(오행·등급)에만 쓰고 프레임은 통일한다(오방색 절제 원칙).
+function ResultSection({ title, show, children }: { title: string; show: boolean; children: React.ReactNode }) {
   const { ref, revealed } = useRevealOnScroll()
   if (!show) return null
-  const colors = {
-    amber: 'bg-amber-500/5 border-amber-500/15 text-amber-400',
-    blue: 'bg-blue-500/5 border-blue-500/15 text-blue-400',
-    gold: 'bg-gold-500/5 border-gold-500/15 text-gold-500',
-    emerald: 'bg-emerald-500/5 border-emerald-500/15 text-emerald-400',
-    rose: 'bg-rose-500/5 border-rose-500/15 text-rose-400',
-  }
-  const dotColors = {
-    amber: 'bg-amber-400',
-    blue: 'bg-blue-400',
-    gold: 'bg-gold-500',
-    emerald: 'bg-emerald-400',
-    rose: 'bg-rose-400',
-  }
   return (
     <section
       ref={ref}
-      className={`hanji-section reveal-soft ${revealed ? 'is-revealed' : ''} mx-4 mb-4 p-4 rounded-xl border ${colors[color]}`}
+      className={`hanji-section reveal-soft ${revealed ? 'is-revealed' : ''} mx-4 mb-4 p-4 rounded-2xl border border-white/10 bg-surface/40`}
     >
-      <h3 className={`text-sm font-serif font-medium mb-3 flex items-center gap-2 ${colors[color].split(' ')[2]}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColors[color]}`} />
+      <h3 className="mb-3 flex items-center gap-2.5 font-serif text-[15px] font-bold text-ink-light break-keep">
+        <span className="h-px w-5 bg-gold-500/60 shrink-0" aria-hidden />
         {title}
       </h3>
       <div className="space-y-3">{children}</div>

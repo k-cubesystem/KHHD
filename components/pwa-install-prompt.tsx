@@ -90,7 +90,7 @@ export function PWAInstallPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500">
-      <div className="mx-auto max-w-md bg-zinc-900/90 backdrop-blur-md border border-gold-500/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
+      <div className="mx-auto max-w-md bg-surface/90 backdrop-blur-md border border-gold-500/30 p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="bg-gold-500/20 p-2 rounded-lg">
             {platform.isMobile ? (
@@ -103,7 +103,7 @@ export function PWAInstallPrompt() {
             <h3 className="font-bold text-white text-sm">
               {platform.isMobile ? '해화당 앱 설치하기' : 'PC 버전 설치하기'}
             </h3>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-ink-light/60">
               {platform.isMobile ? '홈 화면에 추가하여 더 빠르게 이용하세요' : '바탕화면에 바로가기를 만들어보세요'}
             </p>
           </div>
@@ -123,7 +123,7 @@ export function PWAInstallPrompt() {
             aria-label="설치 안내 닫기"
             className="p-1 hover:bg-white/10 rounded-full transition-colors"
           >
-            <X className="w-4 h-4 text-zinc-400" />
+            <X className="w-4 h-4 text-ink-light/60" />
           </button>
         </div>
       </div>

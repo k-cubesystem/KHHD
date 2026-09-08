@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getDestinyTarget } from '../user/destiny'
-import { calculateAge } from '@/lib/domain/saju/saju'
+import { calculateAge, getSajuData } from '@/lib/domain/saju/saju'
+import { deriveRarityDirective } from '@/lib/domain/analysis/rarity-variation'
 import { saveAnalysisHistoryObserved } from '../user/history'
 import { recordFortuneEntry, getSelfFamilyMemberId } from '../fortune/fortune'
 import { buildMasterPromptForAction } from '@/lib/saju-engine/master-prompt-builder'
@@ -13,6 +14,8 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { logger } from '@/lib/utils/logger'
 import { addBokPoints } from '@/lib/services/bok-grant'
+import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
+import { chargeFeature } from '@/lib/services/feature-charge'
 
 /**
  * Gemini 고도화 시스템 프롬프트
@@ -86,6 +89,10 @@ export async function analyzeCheonjiinAction(
     return { success: false, error: '인증되지 않은 사용자입니다.' }
   }
 
+  // AI 가 실패하면 차감을 되돌린다. 차감 전 단계에서 나가면 null 이라 아무 일도 없다.
+  let refundOnFailure: (() => Promise<void>) | null = null
+  let chargedRemaining: number | undefined
+
   try {
     // 1. 대상 정보 조회 + 주소 병렬 조회
     const [target, workAddress] = await Promise.all([getDestinyTarget(targetId), getWorkAddress(user.id)])
@@ -132,6 +139,19 @@ export async function analyzeCheonjiinAction(
       return { success: true, cached: false }
     }
 
+    // 2.5 복채 차감 — 🔴 **여기가 과금의 유일한 지점이다.**
+    //
+    // 2026-09-01 까지는 화면(saju-result-client)이 차감한 뒤 이 액션을 불렀다. 이 액션은
+    // 'use server' export = 공개 엔드포인트이므로, 브라우저에서 직접 부르면 차감 없이
+    // 유료 풀이가 나왔다. 화면을 잠가도 서버가 강제하지 않으면 게이트가 아니다.
+    //
+    // 캐시 확인 **뒤**에 둔 것도 의도다 — 캐시 적중은 새 연산이 아니라 과금하지 않는다.
+    // 종전에는 클라가 먼저 차감하고 캐시면 되돌리는 왕복이 있었고, 그 왕복이 사라진다.
+    const charge = await chargeFeature({ userId: user.id, featureKey: 'SAJU', costKey: 'saju', label: '사주 풀이' })
+    if (!charge.ok) return charge.failure
+    refundOnFailure = charge.refundOnFailure
+    chargedRemaining = charge.remainingBalance
+
     // 3. 나이 계산
     // 명식·오행·대운 데이터는 아래 해화지기 마스터 엔진 프롬프트에서 단일 공급한다
     // (별도 만세력 계산 주입 시 대운 등이 이중·상충되므로 제거)
@@ -176,6 +196,14 @@ export async function analyzeCheonjiinAction(
       // 인(人) - 이미지는 multimodal Part로 전달, 텍스트엔 첨부 여부만 표시
       faceImageUrl: imageFlags.hasFaceImage ? '관상 이미지 첨부됨 (별도 이미지 참조)' : '관상 이미지 없음',
       handImageUrl: imageFlags.hasHandImage ? '손금 이미지 첨부됨 (별도 이미지 참조)' : '손금 이미지 없음',
+
+      // 희소성 문구 변주용 씨앗 — 프롬프트에 그대로 실리지 않는다(명식 단일 출처는 마스터 엔진)
+      raritySeed: buildRaritySeed(
+        target.birth_date,
+        target.birth_time,
+        target.calendar_type !== 'lunar',
+        target.is_leap_month ?? false
+      ),
     }
 
     // 8. 프롬프트 생성 (해화지기 마스터 엔진 연동)
@@ -206,11 +234,26 @@ export async function analyzeCheonjiinAction(
     // 복 포인트 적립 (분석 완료)
     await addBokPoints(30, 'ANALYSIS', targetId, `${target.name}님 사주 분석`).catch(() => {})
 
-    return { success: true, data: result, cached: false }
+    // remainingBalance 는 «이번 호출에서 실제로 차감했을 때»만 실린다 — 캐시 적중은 undefined.
+    return { success: true, data: result, cached: false, remainingBalance: chargedRemaining }
   } catch (error: unknown) {
     logger.error('[CheonjiinAnalysis] Error:', error)
+    await refundOnFailure?.()
     const message = error instanceof Error ? error.message : '분석 중 오류가 발생했습니다.'
     return { success: false, error: message }
+  }
+}
+
+/**
+ * 희소성 문구 변주의 씨앗 — 팔자 간지 8자.
+ * 만세력 계산이 실패해도 풀이 자체는 계속돼야 하므로 생년월일시 문자열로 물러선다.
+ */
+function buildRaritySeed(birthDate: string, birthTime: string | null, isSolar: boolean, isLeapMonth: boolean): string {
+  try {
+    return getSajuData(birthDate, birthTime || '12:00', isSolar, isLeapMonth).ganjiList.join('')
+  } catch (error: unknown) {
+    logger.error('[CheonjiinAnalysis] 희소성 시드 계산 실패 — 생년월일시로 대체:', error)
+    return `${birthDate}|${birthTime ?? ''}`
   }
 }
 
@@ -331,7 +374,8 @@ async function analyzeCheonjiinWithAI(
     summary: (data.summary as string) || '청담해화당 통합분석 결과',
     score: 0,
     model_used: getModelConfig('cheonjiin').model,
-    talisman_cost: 3,
+    // 기록되는 차감량은 실차감과 같아야 한다 — 3 은 옛 값이고 실차감은 FEATURE_COST.saju.display(2) 다.
+    talisman_cost: FEATURE_COST.saju.display,
   })
 
   logger.log('[CheonjiinAnalysis] AI 분석 완료')
@@ -353,6 +397,9 @@ function getDefaultCheonjiinPrompt(
   const hasHandImage = flags?.hasHandImage ?? vars.handImageUrl !== '손금 이미지 없음'
   const hasFengshui = flags?.hasFengshui ?? vars.homeAddress !== '정보 없음'
   const hasWorkAddress = flags?.hasWorkAddress ?? vars.workAddress !== '정보 없음'
+
+  // 명식마다 다른 희소성 틀 — 예시를 하나만 박아두면 모델이 그 한 문장으로 수렴한다
+  const rarity = deriveRarityDirective(vars.raritySeed || `${vars.birthDate}|${vars.birthTime}`)
 
   // DB 시스템 프롬프트가 있으면 사용, 없으면 기본 역할 정의 사용
   const systemRole =
@@ -612,7 +659,7 @@ ${
   "specialEnergy": {
     "title": "이 사주만의 특별한 기운 한줄 (예: '불꽃 속에서 탄생한 다이아몬드')",
     "description": "이 사람 사주에서 가장 독특한 점 (3~4문장, 60갑자+격국+용신+신살 종합)",
-    "rarity": "희소성 (예: '100명 중 5명 정도의 조합이에요')",
+    "rarity": "희소성 한 문장 — 반드시 '${rarity.scaleLine}' 틀을 살려서 쓰고, 결합하는 특성 두 가지는 이 명식의 격국·용신·일주 물상에서 실제로 도출한 서로 다른 것 두 가지로 써요. '극강의 지성과 실행력' 같은 상투 조합이나 어느 사주에나 붙는 범용 문구는 금지예요",
     "hiddenTalent": "본인도 모르는 숨겨진 재능 (2문장)",
     "destinyMission": "이 사주가 가진 인생 미션 (2문장)"
   },
@@ -661,7 +708,9 @@ ${
 ## 특별한 사주 기운 (specialEnergy) — 가장 중요한 차별화
 이 사람 사주에서 가장 독특한 조합을 찾아내요:
 - 60갑자 일주 물상 + 격국 + 용신 + 신살을 종합해요
-- "100명 중 N명" 같은 희소성을 표현해요
+- 희소성(rarity)은 이 명식에 배정된 틀 '${rarity.scaleLine}' 을 그대로 살려서 한 문장으로 써요 (다른 스케일 표현으로 바꾸지 마요)
+- 희소하다고 말하는 근거는 '${rarity.angleHint}' 각도에서 잡아요 — 이 각도로 이 명식의 특성 두 가지를 골라 묶어요
+- 어느 사주에나 그대로 붙일 수 있는 문구('지성과 실행력의 결합' 같은)면 실패예요. 격국·용신·일주 물상에서 실제로 도출한 말이어야 해요
 - 숨겨진 재능과 인생 미션을 구체적으로 써요
 - 이 섹션이 "와, 나만 이런 게 있구나" 하는 감동을 만들어야 해요
 

@@ -23,12 +23,17 @@ const TIER_ICONS: Record<BokTier, typeof Leaf> = {
   FOREST: Trees,
 }
 
+/**
+ * 복 등급 색은 DESIGN.md 「Bok Tier Colors」가 정본이고, 그 값이 그대로
+ * tailwind.config `bok.*` 토큰으로 등록돼 있다. Tailwind 기본 파스텔로 흉내 내면
+ * DESIGN.md 값과 조용히 어긋나므로 토큰만 쓴다.
+ */
 const TIER_COLORS: Record<BokTier, string> = {
-  SEED: 'text-amber-600',
-  SPROUT: 'text-green-500',
-  FLOWER: 'text-pink-400',
-  TREE: 'text-emerald-500',
-  FOREST: 'text-emerald-300',
+  SEED: 'text-bok-seed',
+  SPROUT: 'text-bok-sprout',
+  FLOWER: 'text-bok-flower',
+  TREE: 'text-bok-tree',
+  FOREST: 'text-bok-forest',
 }
 
 export function BokHubSection() {

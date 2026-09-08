@@ -2,17 +2,17 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: '이용약관 | 청담해화당',
+  title: '이용약관',
   description: '청담해화당 서비스 이용약관',
 }
 
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <article className="prose prose-invert prose-sm sm:prose-base mx-auto max-w-3xl prose-headings:text-amber-200 prose-strong:text-amber-100 prose-a:text-amber-400 hover:prose-a:text-amber-300">
+      <article className="prose prose-invert prose-sm sm:prose-base mx-auto max-w-3xl prose-headings:text-gold-200 prose-strong:text-gold-300 prose-a:text-gold-500 hover:prose-a:text-gold-300">
         <Link
           href="/"
-          className="mb-8 inline-flex items-center text-sm text-muted-foreground no-underline hover:text-amber-400"
+          className="mb-8 inline-flex items-center text-sm text-muted-foreground no-underline hover:text-gold-500"
         >
           ← 홈으로 돌아가기
         </Link>
@@ -68,8 +68,8 @@ export default function TermsOfServicePage() {
             <strong>무료 서비스</strong>: 오늘의 운세, 일부 기본 사주 분석, 출석체크 및 룰렛 이벤트
           </li>
           <li>
-            <strong>유료 서비스 (복채 차감)</strong>: 상세 사주팔자 분석, 천인지 분석, 궁합 분석, 사업 궁합, 관상
-            분석, 손금 분석, 풍수지리 분석, 재물운 분석, 2026년 운세, AI 이미지 생성
+            <strong>유료 서비스 (복채 차감)</strong>: 상세 사주팔자 분석, 천인지 분석, 궁합 분석, 사업 궁합, 관상 분석,
+            손금 분석, 풍수지리 분석, 재물운 분석, 2026년 운세, AI 이미지 생성
           </li>
           <li>
             <strong>멤버십 서비스</strong>: SINGLE(개인), FAMILY(가족), BUSINESS(사업) 등급별 월간 복채 지급 및 추가

@@ -43,7 +43,7 @@ export function CompatibilityForm({ onAnalyze }: CompatibilityFormProps) {
   }
 
   return (
-    <Card className="p-6 bg-zinc-900/50 border-white/10 backdrop-blur-sm">
+    <Card className="p-6 bg-surface/50 border-white/10 backdrop-blur-sm">
       <div className="text-center mb-8">
         <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-4">
           <Heart className="w-8 h-8 text-primary fill-current animate-pulse" />
@@ -51,7 +51,7 @@ export function CompatibilityForm({ onAnalyze }: CompatibilityFormProps) {
         <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
           상대방 정보 입력
         </h2>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-ink-light/60">
           상대방의 정확한 생년월일시를 입력할수록
           <br />더 정교한 궁합 분석이 가능합니다.
         </p>

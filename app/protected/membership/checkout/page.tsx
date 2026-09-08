@@ -161,7 +161,7 @@ function CheckoutContent() {
           />
         </div>
 
-        {error && <p className="text-red-400 text-sm text-center mb-4 bg-red-400/10 rounded-lg p-3">{error}</p>}
+        {error && <p className="text-error-text text-sm text-center mb-4 bg-error-light rounded-lg p-3">{error}</p>}
 
         <Button
           onClick={handleCheckout}

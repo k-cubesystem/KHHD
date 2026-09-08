@@ -26,14 +26,14 @@ export function InsufficientBokchaeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#1a1208] border border-gold-500/30 text-amber-50 max-w-sm p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="bg-[#1a1208] border border-gold-500/30 text-ink-primary max-w-sm p-0 overflow-hidden rounded-2xl">
         <DialogTitle className="sr-only">복채 부족 안내</DialogTitle>
 
         {/* Header gradient band */}
         <div className="relative bg-gradient-to-b from-[#2a1f08] to-[#1a1208] px-6 pt-6 pb-4 text-center border-b border-gold-500/20">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-amber-400/60 hover:text-amber-400 transition-colors"
+            className="absolute top-4 right-4 text-gold-500/60 hover:text-gold-500 transition-colors"
             aria-label="닫기"
           >
             <X size={18} />
@@ -48,8 +48,8 @@ export function InsufficientBokchaeModal({
             <Coins size={32} className="text-gold-500" />
           </motion.div>
 
-          <h2 className="text-lg font-semibold text-amber-100 leading-snug">복채가 부족합니다</h2>
-          <p className="text-sm text-amber-300/70 mt-1">
+          <h2 className="text-lg font-semibold text-ink-primary leading-snug">복채가 부족합니다</h2>
+          <p className="text-sm text-gold-300/70 mt-1">
             {featureLabel ? `${featureLabel}을(를) 보려면 복채가 필요합니다` : '운명을 보려면 복채가 필요합니다'}
           </p>
         </div>
@@ -57,16 +57,16 @@ export function InsufficientBokchaeModal({
         {/* Balance info */}
         <div className="px-6 py-4 space-y-2">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-amber-300/70">현재 잔액</span>
-            <span className="text-amber-200 font-medium">{currentBalance}만냥</span>
+            <span className="text-gold-300/70">현재 잔액</span>
+            <span className="text-gold-200 font-medium">{currentBalance}만냥</span>
           </div>
           <div className="flex justify-between items-center text-sm">
-            <span className="text-amber-300/70">필요 복채</span>
-            <span className="text-amber-200 font-medium">{requiredAmount}만냥</span>
+            <span className="text-gold-300/70">필요 복채</span>
+            <span className="text-gold-200 font-medium">{requiredAmount}만냥</span>
           </div>
           <div className="h-px bg-gold-500/20" />
           <div className="flex justify-between items-center text-sm font-semibold">
-            <span className="text-amber-300">부족한 복채</span>
+            <span className="text-gold-300">부족한 복채</span>
             <span className="text-gold-500">{shortfall}만냥</span>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function InsufficientBokchaeModal({
           <Button
             asChild
             variant="outline"
-            className="w-full border-gold-500/30 text-amber-200 hover:bg-gold-500/10 hover:text-amber-100 h-11 rounded-xl bg-transparent"
+            className="w-full border-gold-500/30 text-gold-200 hover:bg-gold-500/10 hover:text-ink-primary h-11 rounded-xl bg-transparent"
             onClick={onClose}
           >
             <Link href="/protected/fortune">
@@ -99,7 +99,7 @@ export function InsufficientBokchaeModal({
           <Button
             asChild
             variant="outline"
-            className="w-full border-gold-500/20 text-amber-300/70 hover:bg-gold-500/5 hover:text-amber-200 h-10 rounded-xl bg-transparent text-sm"
+            className="w-full border-gold-500/20 text-gold-300/70 hover:bg-gold-500/5 hover:text-gold-200 h-10 rounded-xl bg-transparent text-sm"
             onClick={onClose}
           >
             <Link href="/protected/membership">

@@ -16,12 +16,12 @@ export default function FengshuiError({ error, reset }: { error: Error & { diges
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <div className="w-full max-w-md text-center space-y-4">
         <div className="text-5xl mb-2">🏠</div>
-        <h2 className="text-lg font-bold text-amber-200">{t('unknown')}</h2>
+        <h2 className="text-lg font-bold text-error-text">{t('unknown')}</h2>
         <p className="text-sm text-ink-light/70">{t('unknownDesc')}</p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-medium text-ink-900 transition-colors hover:bg-gold-600"
           >
             <RefreshCw className="w-4 h-4" />
             {t('retry')}

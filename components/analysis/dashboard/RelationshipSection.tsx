@@ -11,7 +11,7 @@ export function RelationshipSection() {
   return (
     <Card className="group relative overflow-hidden card-glass-manse transition-all duration-300 h-full min-h-[160px] flex flex-col justify-between p-5">
       {/* Hover Decor */}
-      <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-gradient-to-br from-seal/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-2">
@@ -36,7 +36,7 @@ export function RelationshipSection() {
         <Button
           onClick={() => router.push('/protected/analysis/celebrity-compatibility')}
           variant="outline"
-          className="h-8 border-emerald-400/30 text-emerald-300 hover:bg-emerald-400/10 bg-transparent text-xs font-light w-full"
+          className="h-8 border-gold-500/30 text-gold-300 hover:bg-gold-500/10 bg-transparent text-xs font-light w-full"
         >
           💼 사업 궁합
         </Button>

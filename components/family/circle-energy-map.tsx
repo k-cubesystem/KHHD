@@ -39,7 +39,7 @@ function ElementChip({ el }: { el: Element }) {
 
 const PAIR_TONE: Record<PairLabel, string> = {
   complement: 'border-gold-500/45 text-gold-300 bg-gold-500/[0.08]',
-  lift: 'border-emerald-400/40 text-emerald-200 bg-emerald-500/[0.08]',
+  lift: 'border-bok-sprout/45 text-bok-sprout bg-bok-sprout/[0.08]',
   distance: 'border-seal/45 text-[#D9A0A0] bg-seal/[0.08]',
   independent: 'border-white/10 text-ink-light/50 bg-white/[0.02]',
 }

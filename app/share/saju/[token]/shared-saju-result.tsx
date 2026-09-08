@@ -66,19 +66,17 @@ function ResultSection({
   children: React.ReactNode
 }) {
   if (!show) return null
-  const colors = {
-    amber: 'bg-amber-500/5 border-amber-500/15 text-amber-400',
-    blue: 'bg-blue-500/5 border-blue-500/15 text-blue-400',
-    gold: 'bg-gold-500/5 border-gold-500/15 text-gold-500',
-    emerald: 'bg-emerald-500/5 border-emerald-500/15 text-emerald-400',
-    rose: 'bg-rose-500/5 border-rose-500/15 text-rose-400',
-  }
+  // 이 화면은 본풀이 화면의 **별도 복제본**이라, 파스텔 철거 때 color prop 만 사라진 본체와 달리
+  // 타입 에러 없이 옛 팔레트로 남아 있었다 — 공유 링크를 받은 사람만 blue/emerald/rose 화면을 봤다.
+  // 색 이름은 호출부 계약이라 남기고, 가리키는 값만 골드 규율로 모은다.
+  const CALM = 'bg-gold-500/5 border-gold-500/15 text-gold-300'
+  const colors = { amber: CALM, blue: CALM, gold: CALM, emerald: CALM, rose: CALM }
   const dotColors = {
-    amber: 'bg-amber-400',
-    blue: 'bg-blue-400',
+    amber: 'bg-gold-500',
+    blue: 'bg-gold-500',
     gold: 'bg-gold-500',
-    emerald: 'bg-emerald-400',
-    rose: 'bg-rose-400',
+    emerald: 'bg-gold-500',
+    rose: 'bg-gold-500',
   }
   return (
     <section className={`mx-4 mb-4 p-4 rounded-xl border ${colors[color]}`}>
@@ -107,16 +105,8 @@ function DetailSection({
   const strengths = data.strengths as string[] | undefined
   const weaknesses = data.weaknesses as string[] | undefined
 
-  const colorMap = {
-    blue: { bg: 'bg-blue-500/5', border: 'border-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
-    emerald: {
-      bg: 'bg-emerald-500/5',
-      border: 'border-emerald-500/15',
-      text: 'text-emerald-400',
-      dot: 'bg-emerald-400',
-    },
-    rose: { bg: 'bg-rose-500/5', border: 'border-rose-500/15', text: 'text-rose-400', dot: 'bg-rose-400' },
-  }
+  const CALM_FRAME = { bg: 'bg-gold-500/5', border: 'border-gold-500/15', text: 'text-gold-300', dot: 'bg-gold-500' }
+  const colorMap = { blue: CALM_FRAME, emerald: CALM_FRAME, rose: CALM_FRAME }
   const c = colorMap[color]
 
   return (
@@ -150,7 +140,7 @@ function DetailSection({
               <ul className="space-y-1">
                 {weaknesses.map((w, i) => (
                   <li key={i} className="text-sm text-ink-light/70 flex gap-2">
-                    <span className="text-red-400/60 shrink-0">-</span>
+                    <span className="text-obangsaek-red/70 shrink-0">-</span>
                     {w}
                   </li>
                 ))}
@@ -184,7 +174,7 @@ function ErrorState({ message }: { message: string }) {
       <header className="w-full max-w-[480px] mx-auto p-6 flex justify-center border-b border-primary/10">
         <Link href="/">
           <Image
-            src="/images/logo.png"
+            src="/logo-new.png"
             alt="청담 해화당"
             width={120}
             height={40}
@@ -264,14 +254,14 @@ function SajuResultBody({ data }: { data: AnalysisData }) {
           (event, i) => (
             <div key={i} className="space-y-1">
               <p className="text-sm text-ink-light">
-                <span className="text-amber-400/80 font-medium">{event.period}</span> — {event.description}
+                <span className="text-gold-300/80 font-medium">{event.period}</span> — {event.description}
               </p>
               <p className="text-[11px] text-ink-light/40 font-light">{event.basis}</p>
             </div>
           )
         )}
         {data.pastRetrograde?.accuracyHook && (
-          <p className="mt-3 pt-3 border-t border-amber-500/10 text-[11px] text-amber-400/60 italic">
+          <p className="mt-3 pt-3 border-t border-gold-500/10 text-[11px] text-gold-300/60 italic">
             {data.pastRetrograde.accuracyHook as string}
           </p>
         )}
@@ -284,7 +274,7 @@ function SajuResultBody({ data }: { data: AnalysisData }) {
           <p className="text-[11px] text-ink-light/40 font-light mt-2">{data.currentSituation.basis as string}</p>
         )}
         {data.currentSituation?.advice && (
-          <p className="text-sm text-blue-400/80 font-medium mt-3 pt-3 border-t border-blue-500/10">
+          <p className="text-sm text-gold-300/80 font-medium mt-3 pt-3 border-t border-gold-500/10">
             {data.currentSituation.advice as string}
           </p>
         )}
@@ -387,14 +377,14 @@ export function SharedSajuResult({ token }: SharedSajuResultProps) {
       {/* Background ambient glow */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.03] blur-[120px]" />
-        <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-amber-900/10 blur-[80px]" />
+        <div className="absolute bottom-[-10%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full bg-gold-700/10 blur-[80px]" />
       </div>
 
       {/* Header */}
       <header className="w-full max-w-[480px] px-6 py-4 flex justify-between items-center sticky top-0 bg-background/90 backdrop-blur-md z-50 border-b border-primary/10">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/logo.png"
+            src="/logo-new.png"
             alt="청담 해화당"
             width={110}
             height={36}

@@ -70,7 +70,7 @@ function getNodeColor(node: KnowledgeNode, highlighted: boolean, dimmed: boolean
         : { fill: '#374151', stroke: '#6b7280', text: '#d1d5db' }
 
   if (dimmed) return { fill: '#1f2937', stroke: '#374151', text: '#4b5563' }
-  if (highlighted) return { ...base, stroke: '#fbbf24' }
+  if (highlighted) return { ...base, stroke: '#D4AF37' }
   return base
 }
 
@@ -165,7 +165,7 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
       {/* SVG 그래프 */}
       <div
         ref={containerRef}
-        className="relative flex-1 rounded-xl border border-amber-900/30 bg-gray-950 overflow-hidden"
+        className="relative flex-1 rounded-xl border border-gold-700/30 bg-surface overflow-hidden"
         onClick={() => {
           setSelectedNode(null)
           setTooltip(null)
@@ -263,7 +263,7 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                 <circle
                   r={pos.r}
                   fill={color.fill}
-                  stroke={isFocused ? '#fbbf24' : isHighlighted ? '#f59e0b' : color.stroke}
+                  stroke={isFocused ? '#D4AF37' : isHighlighted ? '#C9A84C' : color.stroke}
                   strokeWidth={isFocused ? 3 : isHighlighted ? 2.5 : 1.5}
                   opacity={isDimmed ? 0.2 : 1}
                 />
@@ -319,15 +319,15 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                 top: Math.max(tooltip.y - 80, 8),
               }}
             >
-              <div className="bg-gray-900 border border-amber-800/50 rounded-lg p-3 shadow-xl max-w-[200px]">
+              <div className="bg-surface border border-gold-600/50 rounded-lg p-3 shadow-xl max-w-[200px]">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-amber-400 font-bold text-base">{tooltip.node.label}</span>
-                  {tooltip.node.korean && <span className="text-gray-400 text-xs">{tooltip.node.korean}</span>}
-                  <span className="text-xs text-gray-500 ml-auto">{tooltip.node.type}</span>
+                  <span className="text-gold-300 font-bold text-base">{tooltip.node.label}</span>
+                  {tooltip.node.korean && <span className="text-ink-light/60 text-xs">{tooltip.node.korean}</span>}
+                  <span className="text-xs text-ink-light/45 ml-auto">{tooltip.node.type}</span>
                 </div>
-                <p className="text-gray-300 text-xs leading-relaxed">{tooltip.node.description}</p>
+                <p className="text-ink-light/80 text-xs leading-relaxed">{tooltip.node.description}</p>
                 {tooltip.node.detail && (
-                  <p className="text-amber-200/60 text-xs mt-1 leading-relaxed">{tooltip.node.detail}</p>
+                  <p className="text-gold-200/60 text-xs mt-1 leading-relaxed">{tooltip.node.detail}</p>
                 )}
               </div>
             </motion.div>
@@ -337,23 +337,23 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
         {/* 빈 상태 안내 */}
         {visibleNodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-gray-600 text-sm">표시할 노드가 없습니다. 필터를 조정하세요.</p>
+            <p className="text-ink-light/55 text-sm">표시할 노드가 없습니다. 필터를 조정하세요.</p>
           </div>
         )}
 
         {/* 레이어 레이블 */}
         <div className="absolute top-3 left-3 space-y-1 opacity-50 pointer-events-none">
-          <div className="text-xs text-gray-500">● 안쪽: 오행</div>
-          <div className="text-xs text-gray-500">● 중간: 천간</div>
-          <div className="text-xs text-gray-500">● 바깥: 지지</div>
+          <div className="text-xs text-ink-light/45">● 안쪽: 오행</div>
+          <div className="text-xs text-ink-light/45">● 중간: 천간</div>
+          <div className="text-xs text-ink-light/45">● 바깥: 지지</div>
         </div>
       </div>
 
       {/* 사이드바 */}
       <div className="w-72 flex flex-col gap-3 overflow-y-auto">
         {/* 노드 타입 필터 */}
-        <div className="rounded-xl border border-amber-900/30 bg-gray-900/80 p-4">
-          <h3 className="text-amber-400 text-sm font-semibold mb-3">노드 표시</h3>
+        <div className="rounded-xl border border-gold-700/30 bg-surface/80 p-4">
+          <h3 className="text-gold-500 text-sm font-semibold mb-3">노드 표시</h3>
           <div className="flex flex-wrap gap-2">
             {(['오행', '천간', '지지'] as NodeType[]).map((t) => (
               <button
@@ -361,8 +361,8 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                 onClick={() => toggleNodeType(t)}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   visibleNodeTypes.has(t)
-                    ? 'bg-amber-700 text-amber-100 border border-amber-600'
-                    : 'bg-gray-800 text-gray-500 border border-gray-700'
+                    ? 'bg-gold-600 text-ink-light border border-gold-500'
+                    : 'bg-white/[0.06] text-ink-light/40 border border-white/10'
                 }`}
               >
                 {t}
@@ -372,8 +372,8 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
         </div>
 
         {/* 엣지 타입 필터 */}
-        <div className="rounded-xl border border-amber-900/30 bg-gray-900/80 p-4">
-          <h3 className="text-amber-400 text-sm font-semibold mb-3">관계 표시</h3>
+        <div className="rounded-xl border border-gold-700/30 bg-surface/80 p-4">
+          <h3 className="text-gold-500 text-sm font-semibold mb-3">관계 표시</h3>
           <div className="space-y-2">
             {ALL_EDGE_TYPES.map((type) => {
               const style = EDGE_STYLES[type]
@@ -383,8 +383,8 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                   onClick={() => toggleEdgeType(type)}
                   className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-all text-left ${
                     activeEdgeTypes.has(type)
-                      ? 'bg-gray-800 border border-gray-700'
-                      : 'bg-gray-950 border border-gray-800 opacity-40'
+                      ? 'bg-white/[0.08] border border-white/15'
+                      : 'bg-black/40 border border-white/10 opacity-40'
                   }`}
                 >
                   <span
@@ -394,7 +394,7 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                       opacity: activeEdgeTypes.has(type) ? 1 : 0.3,
                     }}
                   />
-                  <span className="text-gray-300">{style.label}</span>
+                  <span className="text-ink-light/80">{style.label}</span>
                 </button>
               )
             })}
@@ -409,36 +409,38 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="rounded-xl border border-amber-600/50 bg-gray-900/90 p-4"
+              className="rounded-xl border border-gold-500/50 bg-surface/90 p-4"
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-amber-300 font-bold text-xl">{selectedNodeData.label}</span>
+                    <span className="text-gold-300 font-bold text-xl">{selectedNodeData.label}</span>
                     {selectedNodeData.korean && (
-                      <span className="text-gray-400 text-sm">{selectedNodeData.korean}</span>
+                      <span className="text-ink-light/60 text-sm">{selectedNodeData.korean}</span>
                     )}
                   </div>
-                  <span className="text-xs text-amber-700 bg-amber-900/30 rounded px-1.5 py-0.5">
+                  <span className="text-xs text-gold-600 bg-gold-700/30 rounded px-1.5 py-0.5">
                     {selectedNodeData.type}
                     {selectedNodeData.element ? ` · ${selectedNodeData.element}` : ''}
                   </span>
                 </div>
                 <button
                   onClick={() => setSelectedNode(null)}
-                  className="text-gray-600 hover:text-gray-400 text-lg leading-none"
+                  className="text-ink-light/35 hover:text-ink-light/60 text-lg leading-none"
                 >
                   ×
                 </button>
               </div>
-              <p className="text-gray-300 text-xs leading-relaxed mb-2">{selectedNodeData.description}</p>
+              <p className="text-ink-light/80 text-xs leading-relaxed mb-2">{selectedNodeData.description}</p>
               {selectedNodeData.detail && (
-                <p className="text-amber-200/60 text-xs leading-relaxed mb-3">{selectedNodeData.detail}</p>
+                <p className="text-gold-200/60 text-xs leading-relaxed mb-3">{selectedNodeData.detail}</p>
               )}
 
               {selectedEdges.length > 0 && (
                 <>
-                  <h4 className="text-ink-light/50 text-caption font-semibold mb-2 uppercase tracking-wider">연결 관계</h4>
+                  <h4 className="text-ink-light/50 text-caption font-semibold mb-2 uppercase tracking-wider">
+                    연결 관계
+                  </h4>
                   <div className="space-y-1 max-h-48 overflow-y-auto">
                     {selectedEdges.map((edge) => {
                       const style = EDGE_STYLES[edge.type]
@@ -447,13 +449,13 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
                         <button
                           key={edge.id}
                           onClick={() => handleNodeClick(otherId)}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors text-left"
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors text-left"
                         >
                           <span className="text-xs" style={{ color: style.color }}>
                             {style.emoji}
                           </span>
-                          <span className="text-amber-300 font-medium text-xs w-5">{otherId}</span>
-                          <span className="text-gray-500 text-xs">{edge.label}</span>
+                          <span className="text-gold-300 font-medium text-xs w-5">{otherId}</span>
+                          <span className="text-ink-light/45 text-xs">{edge.label}</span>
                         </button>
                       )
                     })}
@@ -466,9 +468,9 @@ export function KnowledgeGraphViewer({ highlightNodes, className = '' }: Knowled
 
         {/* 사용 안내 */}
         {!selectedNodeData && (
-          <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+          <div className="rounded-xl border border-white/10 bg-surface/40 p-4">
             <h3 className="text-ink-light/50 text-caption font-semibold mb-2 uppercase tracking-wider">사용법</h3>
-            <ul className="text-gray-600 text-xs space-y-1">
+            <ul className="text-ink-light/55 text-xs space-y-1">
               <li>· 노드 클릭 → 관계 하이라이트</li>
               <li>· 노드 호버 → 설명 툴팁</li>
               <li>· 다시 클릭 → 선택 해제</li>

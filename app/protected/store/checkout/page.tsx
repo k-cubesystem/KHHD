@@ -4,6 +4,7 @@ import { ArrowLeft, Coins } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getActivePlans } from '@/app/actions/payment/products'
 import { BokchaeCheckoutClient } from './bokchae-checkout-client'
+import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,8 +93,7 @@ export default async function BokchaeCheckoutPage({ searchParams }: { searchPara
           </dl>
 
           <p className="mt-3 font-sans text-[11px] leading-relaxed text-ink-light/40">
-            지급된 복채는 만료 없이 사용하실 수 있습니다. 미사용분은 결제일로부터 7일 이내 전액 환불, 이후 90%
-            환불됩니다.
+            지급된 복채는 만료 없이 사용하실 수 있습니다. {chargeRefundPolicyLine()}
           </p>
         </section>
 

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getTossPaymentsSDK } from '@/lib/services/tosspayments'
 import { Button } from '@/components/ui/button'
 import { Check, Coins, Loader2, Zap, Sparkles, Gift } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -10,11 +9,13 @@ import { toast } from 'sonner'
 import { addTestCredits } from '@/app/actions/payment/products'
 import { GA } from '@/lib/analytics/ga4'
 import type { PricePlan, UserRole } from '@/types/auth'
+import { chargeRefundPolicyLine } from '@/lib/domain/payment/self-cancel'
 
 interface TalismanPurchaseSectionProps {
   initialPlans: PricePlan[]
   userRole: UserRole | string
-  memberId: string
+  /** 결제창을 여기서 열지 않게 된 뒤로는 쓰지 않는다 — 주문 확인 화면이 서버에서 다시 읽는다. */
+  memberId?: string
   /** 이 사용자가 이미 복채를 충전한 적 있는지 — false면 첫 충전 2배 노출 */
   hasCharged?: boolean
 }
@@ -89,12 +90,7 @@ const DEFAULT_BOKCHAE_PLANS: DisplayPlan[] = [
   },
 ]
 
-export function TalismanPurchaseSection({
-  initialPlans,
-  userRole,
-  memberId,
-  hasCharged = true,
-}: TalismanPurchaseSectionProps) {
+export function TalismanPurchaseSection({ initialPlans, userRole, hasCharged = true }: TalismanPurchaseSectionProps) {
   const router = useRouter()
   const [loadingPlan, setLoadingPlan] = useState<number | null>(null)
   const [isTestLoading, setIsTestLoading] = useState(false)
@@ -103,51 +99,29 @@ export function TalismanPurchaseSection({
   const sortedPlans = [...displayPlans].sort((a, b) => (a.sort_order ?? a.price) - (b.sort_order ?? b.price))
 
   /**
-   * 🔴 결제창을 여기서 바로 열지 않는다.
+   * 🔴 결제창을 여기서 열지 않는다. 예외 없다.
    *
    * 카드사 결제경로 심사가 요구하는 ⑤「구매하는 일련의 과정」이 없었다 — 상품 카드에서
    * 곧바로 토스 창이 떴다. 대금을 받기 전에 무엇을 얼마에 사는지 확인시키고 동의를 받는 것은
    * 「전자상거래법」 제8조의 판매자 의무이기도 하다. 주문 확인 화면으로 넘긴다.
    *
-   * DB 상품에는 id 가 있고 폴백 상수에는 없다. id 가 없으면 옛 경로(결제창 직행)로 떨어뜨려
-   * DB 가 잠깐 안 읽혀도 충전 자체는 막히지 않게 한다.
+   * 2026-09-01 까지 여기엔 «id 가 없으면(=DB 미조회 폴백) 옛 경로로 떨어뜨려 충전 자체는
+   * 막히지 않게 한다»는 예외가 있었다. 그 예외는 곧 「DB 가 잠깐 흔들리면 동의 없이 결제된다」는
+   * 뜻이고, 하필 그 조건에서 쓰이는 폴백 가격은 하드코딩이라 DB 가격과 어긋나면 카드 승인만
+   * 되고 confirmPayment 의 금액 대조에서 확정이 실패한다 — 돈은 빠졌는데 복채는 안 들어온다.
+   * 놓친 매출보다 동의 없는 결제가 훨씬 비싸다. 예외를 없앴다.
    */
-  const handleCharge = async (plan: DisplayPlan) => {
-    if (plan.id) {
-      GA.checkoutStart(plan.name, plan.price)
-      router.push(`/protected/store/checkout?pack=${plan.id}`)
+  const handleCharge = (plan: DisplayPlan) => {
+    if (!plan.id) {
+      GA.checkoutFail(plan.name, 'plans_unavailable')
+      toast.error('상품 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.')
       return
     }
-
-    setLoadingPlan(plan.credits)
-    // 퍼널: 결제 시도 (성공은 successUrl 페이지에서 bokchaeCharge 로 기록됨)
+    // 퍼널 6단계(결제 시작)는 종전과 같은 사용자 행동인 «상품 카드 누름»에 그대로 둔다.
+    // 새로 끼운 확인 화면의 통과율은 그 화면의 checkoutPayClick 으로 따로 본다.
     GA.checkoutStart(plan.name, plan.price)
-    try {
-      const sdk = await getTossPaymentsSDK('general')
-      if (!sdk) {
-        GA.checkoutFail(plan.name, 'sdk_unavailable')
-        toast.error('결제 모듈을 불러올 수 없습니다.')
-        setLoadingPlan(null)
-        return
-      }
-
-      const orderId = `BOKCHAE_${Date.now()}_${memberId.slice(0, 6)}`
-      const payment = sdk.payment({ customerKey: `HHD_${memberId.slice(0, 8)}` })
-      await payment.requestPayment({
-        method: 'CARD',
-        amount: { currency: 'KRW', value: plan.price },
-        orderId,
-        orderName: `${plan.name} (복채 ${plan.credits}만냥)`,
-        successUrl: `${window.location.origin}/protected/analysis/success?memberId=${memberId}&credits=${plan.credits}`,
-        failUrl: `${window.location.origin}/protected/analysis/fail`,
-        windowTarget: 'self',
-      })
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
-      GA.checkoutFail(plan.name, error instanceof Error ? error.message.slice(0, 40) : 'unknown')
-      toast.error(msg)
-      setLoadingPlan(null)
-    }
+    setLoadingPlan(plan.credits)
+    router.push(`/protected/store/checkout?pack=${plan.id}`)
   }
 
   const handleTestCharge = async () => {
@@ -259,7 +233,9 @@ export function TalismanPurchaseSection({
                       <span className="text-xs text-white/60">원</span>
                     </div>
                     {bonus > 0 && (
-                      <div className="text-[9px] text-green-400 font-bold text-right mt-0.5">보너스 +{bonus}만냥</div>
+                      <div className="text-[9px] text-success-text font-bold text-right mt-0.5">
+                        보너스 +{bonus}만냥
+                      </div>
                     )}
                   </div>
                 </div>
@@ -335,7 +311,7 @@ export function TalismanPurchaseSection({
         {[
           '제공 시점 — 결제 완료 즉시 전량 지급되며, 그 시점에 상품 제공이 완료됩니다',
           '사용 기간 — 지급된 복채는 만료 없이 사용하실 수 있습니다',
-          '환불은 미사용 복채에 한해 7일 이내 가능합니다',
+          chargeRefundPolicyLine(),
           '멤버십으로 지급되는 복채와 합산되며, 충전한 복채는 하루 사용 상한을 받지 않습니다',
         ].map((text, i) => (
           <p key={i} className="text-[9px] text-white/40 flex items-start gap-1.5">

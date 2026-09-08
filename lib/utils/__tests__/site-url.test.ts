@@ -71,12 +71,16 @@ describe('sitemap / robots — 오염된 환경변수에서도 URL 이 온전하
     expect(urls).toContain('https://k-haehwadang.com')
   })
 
-  it('sitemap 에는 공개 페이지만 — /protected/* 금지, /story·/webtoon.html 등재, 404 인 /auth/register 금지', () => {
+  it('sitemap 에는 공개 페이지만 — /protected/* 금지, /story·/webtoon.html 등재, 404 인 /auth/register 금지 · 폼뿐인 /auth/* 제외 · /guide·/about 등재', () => {
     const paths = sitemap().map((entry) => new URL(entry.url).pathname)
     expect(paths.some((path) => path.startsWith('/protected'))).toBe(false)
     expect(paths).toContain('/story')
     expect(paths).toContain('/webtoon.html')
-    expect(paths).toContain('/auth/sign-up')
+    // 2026-09-02 애드센스 «콘텐츠 부족» 반려 대응 — 폼뿐인 인증 화면은 사이트맵에서 뺐다(얇은 페이지 집계 방지).
+    expect(paths).not.toContain('/auth/sign-up')
+    expect(paths).not.toContain('/auth/login')
+    expect(paths).toContain('/guide')
+    expect(paths).toContain('/about')
     expect(paths).not.toContain('/auth/register')
   })
 

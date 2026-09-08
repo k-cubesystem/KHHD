@@ -54,17 +54,39 @@ export interface ManseResult {
 }
 
 // Mappings for UI
+//
+// 🔴 colorClass 는 **토큰만** 쓴다 — 값은 오행 정본(lib/domain/saju/saju.ts WU_XING_COLORS)과
+//    동일한 색의 클래스다(木=bok-sprout·火=obangsaek-red·土=gold-500·水=obangsaek-blue,
+//    金은 백(白)이라 white 계열). 예전의 bg-green-50 류 라이트 파스텔은 다크 카드 위에서
+//    「밝은 조각」으로 떠 보이던 이탈이었고, 소비처가 이 문자열에서 'green' 을 파싱해
+//    오행을 알아내는 구조까지 있었다(2026-09-01 철거 — ganElement 필드를 직접 쓴다).
 const GAN_INFO: Record<string, { colorClass: string; element: string; colorName: string }> = {
-  甲: { colorClass: 'text-green-600 bg-green-50 border-green-200', element: 'Wood', colorName: '청(靑)' }, // Yang Wood
-  乙: { colorClass: 'text-green-600 bg-green-50 border-green-200', element: 'Wood', colorName: '청(靑)' }, // Yin Wood
-  丙: { colorClass: 'text-red-600 bg-red-50 border-red-200', element: 'Fire', colorName: '적(赤)' }, // Yang Fire
-  丁: { colorClass: 'text-red-600 bg-red-50 border-red-200', element: 'Fire', colorName: '적(赤)' }, // Yin Fire
-  戊: { colorClass: 'text-yellow-600 bg-yellow-50 border-yellow-200', element: 'Earth', colorName: '황(黃)' }, // Yang Earth
-  己: { colorClass: 'text-yellow-600 bg-yellow-50 border-yellow-200', element: 'Earth', colorName: '황(黃)' }, // Yin Earth
-  庚: { colorClass: 'text-gray-600 bg-gray-50 border-gray-200', element: 'Metal', colorName: '백(白)' }, // Yang Metal
-  辛: { colorClass: 'text-gray-600 bg-gray-50 border-gray-200', element: 'Metal', colorName: '백(白)' }, // Yin Metal
-  壬: { colorClass: 'text-blue-900 bg-blue-50 border-blue-200', element: 'Water', colorName: '흑(黑)' }, // Yang Water
-  癸: { colorClass: 'text-blue-900 bg-blue-50 border-blue-200', element: 'Water', colorName: '흑(黑)' }, // Yin Water
+  甲: { colorClass: 'text-bok-sprout bg-bok-sprout/10 border-bok-sprout/30', element: 'Wood', colorName: '청(靑)' }, // Yang Wood
+  乙: { colorClass: 'text-bok-sprout bg-bok-sprout/10 border-bok-sprout/30', element: 'Wood', colorName: '청(靑)' }, // Yin Wood
+  丙: {
+    colorClass: 'text-obangsaek-red bg-obangsaek-red/10 border-obangsaek-red/30',
+    element: 'Fire',
+    colorName: '적(赤)',
+  }, // Yang Fire
+  丁: {
+    colorClass: 'text-obangsaek-red bg-obangsaek-red/10 border-obangsaek-red/30',
+    element: 'Fire',
+    colorName: '적(赤)',
+  }, // Yin Fire
+  戊: { colorClass: 'text-gold-500 bg-gold-500/10 border-gold-500/30', element: 'Earth', colorName: '황(黃)' }, // Yang Earth
+  己: { colorClass: 'text-gold-500 bg-gold-500/10 border-gold-500/30', element: 'Earth', colorName: '황(黃)' }, // Yin Earth
+  庚: { colorClass: 'text-ink-primary bg-white/[0.08] border-white/20', element: 'Metal', colorName: '백(白)' }, // Yang Metal
+  辛: { colorClass: 'text-ink-primary bg-white/[0.08] border-white/20', element: 'Metal', colorName: '백(白)' }, // Yin Metal
+  壬: {
+    colorClass: 'text-obangsaek-blue bg-obangsaek-blue/10 border-obangsaek-blue/30',
+    element: 'Water',
+    colorName: '흑(黑)',
+  }, // Yang Water
+  癸: {
+    colorClass: 'text-obangsaek-blue bg-obangsaek-blue/10 border-obangsaek-blue/30',
+    element: 'Water',
+    colorName: '흑(黑)',
+  }, // Yin Water
 }
 
 const JI_INFO: Record<string, { animal: string; element: string }> = {
@@ -111,7 +133,7 @@ const KOREAN_JI: Record<string, string> = {
 }
 
 function createPillar(gan: string, ji: string): SajuPillar {
-  const ganInfo = GAN_INFO[gan] || { colorClass: 'text-gray-800 bg-gray-100', element: 'Unknown', colorName: '' }
+  const ganInfo = GAN_INFO[gan] || { colorClass: 'text-ink-primary bg-white/[0.06]', element: 'Unknown', colorName: '' }
   const jiInfo = JI_INFO[ji] || { animal: 'Unknown', element: 'Unknown' }
 
   // Combine color name and animal (e.g. "푸른 용" -> "청룡" styling in UI is separate, but label helps)

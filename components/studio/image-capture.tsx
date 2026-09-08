@@ -179,7 +179,7 @@ export function ImageCapture({
         {/* Error Message */}
         {error && (
           <p
-            className="text-sm text-red-400 text-center font-sans anim-fade-in-up"
+            className="text-sm text-error-text text-center font-sans anim-fade-in-up"
             style={
               {
                 '--fade-y': '-10px',

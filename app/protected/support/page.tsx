@@ -4,7 +4,7 @@ import { MySupport } from './my-support'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: '문의하기 | 청담해화당' }
+export const metadata = { title: '문의하기' }
 
 export default async function SupportPage() {
   const tickets = await getMyTickets()

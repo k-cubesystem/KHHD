@@ -1,3 +1,4 @@
+import { WU_XING_COLORS, WU_XING_SURFACE_COLORS, WU_XING_TEXT_COLORS } from '@/lib/domain/saju/saju'
 /**
  * 명리학 지식 그래프 데이터
  * 오행, 천간, 지지, 십성, 신살 간의 관계를 노드/엣지로 표현
@@ -438,11 +439,12 @@ export function getNodeEdges(nodeId: string, activeEdgeTypes: Set<EdgeType>): Kn
 
 // 오행별 색상
 export const ELEMENT_COLORS: Record<string, { fill: string; stroke: string; text: string }> = {
-  木: { fill: '#2d5a3d', stroke: '#4A7C59', text: '#a8d5b5' },
-  火: { fill: '#6b2d1a', stroke: '#C07055', text: '#f0b09a' },
-  土: { fill: '#5a4a1a', stroke: '#C5B358', text: '#e8d890' },
-  金: { fill: '#3a3938', stroke: '#989390', text: '#d4d0cc' },
-  水: { fill: '#1a2b45', stroke: '#4A5D7C', text: '#8aadcc' },
+  // stroke 는 오행색 정본(saju.ts)에서, text 는 어두운 fill 위에 얹는 글자라 밝은 변형에서 온다.
+  木: { fill: WU_XING_SURFACE_COLORS['木'], stroke: WU_XING_COLORS['木'], text: WU_XING_TEXT_COLORS['木'] },
+  火: { fill: WU_XING_SURFACE_COLORS['火'], stroke: WU_XING_COLORS['火'], text: WU_XING_TEXT_COLORS['火'] },
+  土: { fill: WU_XING_SURFACE_COLORS['土'], stroke: WU_XING_COLORS['土'], text: WU_XING_TEXT_COLORS['土'] },
+  金: { fill: WU_XING_SURFACE_COLORS['金'], stroke: WU_XING_COLORS['金'], text: WU_XING_TEXT_COLORS['金'] },
+  水: { fill: WU_XING_SURFACE_COLORS['水'], stroke: WU_XING_COLORS['水'], text: WU_XING_TEXT_COLORS['水'] },
 }
 
 // 엣지 타입별 색상/스타일

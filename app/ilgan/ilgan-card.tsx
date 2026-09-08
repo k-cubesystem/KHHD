@@ -5,7 +5,23 @@ import { SaveCardButton } from './save-card-button'
  * 일간 카드 — 결과 화면(/ilgan)과 공유 랜딩(/ilgan/[stem])이 같은 모양을 쓴다.
  * 글리프 색만 오행 데이터 색(인라인) — 나머지는 토큰.
  */
-export function IlganCard({ info, dayPillar }: { info: IlganInfo; dayPillar?: string }) {
+export function IlganCard({
+  info,
+  dayPillar,
+  /**
+   * 이 카드의 제목이 그 화면의 최상위 제목인가.
+   *
+   * /ilgan 은 페이지에 h1(«내 일간은 무엇일까»)이 따로 있어 카드는 h2 다. 그런데 공유 랜딩
+   * /ilgan/[stem] 10개 페이지에는 페이지 h1 이 없어 문서 전체에 h1 이 0개였다 — 하필
+   * 검색·스레드 유입을 받으려고 만든 페이지들이다(sitemap 19개 중 10개).
+   */
+  asHeading = 'h2',
+}: {
+  info: IlganInfo
+  dayPillar?: string
+  asHeading?: 'h1' | 'h2'
+}) {
+  const Heading = asHeading
   const color = ELEMENT_COLOR[info.element]
   return (
     <section className="hanji-card rounded-xl border border-gold-500/25 p-6 text-center">
@@ -19,10 +35,10 @@ export function IlganCard({ info, dayPillar }: { info: IlganInfo; dayPillar?: st
           {info.han}
         </span>
       </div>
-      <h2 className="mt-3 font-serif text-2xl text-ink-primary">
+      <Heading className="mt-3 font-serif text-2xl text-ink-primary">
         {info.name}
         <span className="ml-1.5 text-[15px] text-ink-light/60">{info.hanja}</span>
-      </h2>
+      </Heading>
       <p className="mt-1 font-sans text-[12.5px] text-ink-light/65">
         {info.polarity}의 {info.elementKo}({ELEMENT_HANJA[info.element]}){dayPillar ? <> · 일주 {dayPillar}</> : null}
       </p>

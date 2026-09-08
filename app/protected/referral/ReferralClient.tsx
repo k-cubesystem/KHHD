@@ -139,7 +139,7 @@ export default function ReferralClient({
               onClick={handleCopyLink}
               className="border-primary/40 text-primary hover:bg-primary/10 shrink-0 px-3 py-2.5 h-auto"
             >
-              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              {copied ? <Check className="w-4 h-4 text-success-text" /> : <Copy className="w-4 h-4" />}
             </Button>
           </div>
         </div>

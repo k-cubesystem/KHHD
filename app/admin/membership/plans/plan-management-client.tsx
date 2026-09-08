@@ -226,8 +226,8 @@ export function PlanManagementClient() {
     SINGLE: { badge: 'bg-white/30 text-ink-primary/70 border-white/[0.08]', icon: 'text-ink-primary/55' },
     FAMILY: { badge: 'bg-gold-500/10 text-gold-400 border-gold-500/30', icon: 'text-gold-400' },
     BUSINESS: {
-      badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
-      icon: 'text-purple-400',
+      badge: 'bg-obangsaek-blue/15 text-info-text border-obangsaek-blue/30',
+      icon: 'text-info-text',
     },
   }
 
@@ -275,7 +275,7 @@ export function PlanManagementClient() {
                       </span>
                       <Badge className={cn('text-[9px] border', theme.badge)}>{plan.tier}</Badge>
                       {edited && (
-                        <Badge className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                        <Badge className="text-[9px] bg-warning-light text-warning-text border border-warning/30">
                           수정됨
                         </Badge>
                       )}
@@ -292,7 +292,7 @@ export function PlanManagementClient() {
                       <span
                         className={cn(
                           'text-[9px] font-bold',
-                          plan.is_active ? 'text-emerald-400' : 'text-ink-primary/30'
+                          plan.is_active ? 'text-success-text' : 'text-ink-primary/30'
                         )}
                       >
                         {plan.is_active ? 'LIVE' : 'OFF'}
@@ -495,7 +495,7 @@ export function PlanManagementClient() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-surface border-white/[0.08]">
-                              <SelectItem value="true" className="text-xs text-emerald-400">
+                              <SelectItem value="true" className="text-xs text-success-text">
                                 허용
                               </SelectItem>
                               <SelectItem value="false" className="text-xs text-ink-primary/55">
@@ -514,7 +514,7 @@ export function PlanManagementClient() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-surface border-white/[0.08]">
-                              <SelectItem value="true" className="text-xs text-emerald-400">
+                              <SelectItem value="true" className="text-xs text-success-text">
                                 허용
                               </SelectItem>
                               <SelectItem value="false" className="text-xs text-ink-primary/55">
@@ -573,7 +573,7 @@ export function PlanManagementClient() {
                         </Badge>
                       )}
                       {edited && (
-                        <Badge className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                        <Badge className="text-[9px] bg-warning-light text-warning-text border border-warning/30">
                           수정됨
                         </Badge>
                       )}
@@ -588,7 +588,7 @@ export function PlanManagementClient() {
                       <span
                         className={cn(
                           'text-[9px] font-bold',
-                          prod.is_active ? 'text-emerald-400' : 'text-ink-primary/30'
+                          prod.is_active ? 'text-success-text' : 'text-ink-primary/30'
                         )}
                       >
                         {prod.is_active ? '판매중' : '중지'}
@@ -727,7 +727,7 @@ export function PlanManagementClient() {
                               />
                               <button
                                 onClick={() => removeFeatureItem(prod.id, idx)}
-                                className="text-ink-primary/30 hover:text-red-400 transition-colors flex-shrink-0"
+                                className="text-ink-primary/30 hover:text-error-text transition-colors flex-shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>

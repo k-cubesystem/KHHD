@@ -69,7 +69,7 @@ export function AnalyticsClient({
         ))}
         {realtime ? (
           <span className="ml-auto flex items-center gap-2 text-ink-light/70 basis-full sm:basis-auto">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-success" />
             지금 {nf.format(realtime.activeVisitors)}명 · {nf.format(realtime.activeSessions)}세션 (30분)
           </span>
         ) : null}

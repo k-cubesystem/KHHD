@@ -160,7 +160,7 @@ export function IlganForm({ siteUrl, utm }: Props) {
         </p>
       </div>
 
-      {error ? <p className="font-sans text-[13px] text-red-400">{error}</p> : null}
+      {error ? <p className="font-sans text-[13px] text-error-text">{error}</p> : null}
 
       <Button type="submit" className="h-12 w-full text-[15px]" disabled={pending || !birthDate}>
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : '내 일간 보기'}

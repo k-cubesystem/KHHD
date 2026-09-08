@@ -50,12 +50,12 @@ export default function AnalysisError({ error, reset }: { error: Error & { diges
         <div className="mx-auto w-16 h-16 rounded-full bg-error-light border border-error-border flex items-center justify-center">
           <Icon className="w-7 h-7 text-error-text" />
         </div>
-        <h2 className="text-lg font-bold text-amber-200">{titleMap[errorType]}</h2>
+        <h2 className="text-lg font-bold text-error-text">{titleMap[errorType]}</h2>
         <p className="text-sm text-ink-light/70">{descMap[errorType]}</p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-medium text-ink-900 transition-colors hover:bg-gold-600"
           >
             <RefreshCw className="w-4 h-4" />
             {t('error.retry')}

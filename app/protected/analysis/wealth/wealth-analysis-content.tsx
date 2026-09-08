@@ -227,9 +227,9 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
 
           {/* 강점 & 리스크 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-surface/50 backdrop-blur-md border border-green-500/20">
+            <Card className="bg-surface/50 backdrop-blur-md border border-bok-sprout/20">
               <CardHeader>
-                <CardTitle className="text-lg font-serif text-green-400 flex items-center gap-2">
+                <CardTitle className="text-lg font-serif text-bok-sprout flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" />
                   재물 강점
                 </CardTitle>
@@ -238,7 +238,7 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
                 <ul className="space-y-2">
                   {wealthAnalysis.strengths.map((s, i) => (
                     <li key={i} className="text-ink-light/80 text-sm flex items-start gap-2">
-                      <span className="text-green-400 mt-0.5 flex-shrink-0">+</span>
+                      <span className="text-bok-sprout mt-0.5 flex-shrink-0">+</span>
                       {s}
                     </li>
                   ))}
@@ -246,9 +246,9 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
               </CardContent>
             </Card>
 
-            <Card className="bg-surface/50 backdrop-blur-md border border-red-500/20">
+            <Card className="bg-surface/50 backdrop-blur-md border border-error/20">
               <CardHeader>
-                <CardTitle className="text-lg font-serif text-red-400 flex items-center gap-2">
+                <CardTitle className="text-lg font-serif text-error-text flex items-center gap-2">
                   <ShieldAlert className="w-5 h-5" />
                   주의할 리스크
                 </CardTitle>
@@ -257,7 +257,7 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
                 <ul className="space-y-2">
                   {wealthAnalysis.risks.map((r, i) => (
                     <li key={i} className="text-ink-light/80 text-sm flex items-start gap-2">
-                      <span className="text-red-400 mt-0.5 flex-shrink-0">!</span>
+                      <span className="text-error-text mt-0.5 flex-shrink-0">!</span>
                       {r}
                     </li>
                   ))}
@@ -291,9 +291,9 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
           </Card>
 
           {/* 지금 바로 할 수 있는 행동 */}
-          <Card className="bg-surface/50 backdrop-blur-md border border-yellow-500/20">
+          <Card className="bg-surface/50 backdrop-blur-md border border-gold-500/20">
             <CardHeader>
-              <CardTitle className="text-xl font-serif text-yellow-400 flex items-center gap-2">
+              <CardTitle className="text-xl font-serif text-gold-300 flex items-center gap-2">
                 <Target className="w-5 h-5" />
                 지금 바로 실천하기
               </CardTitle>
@@ -302,7 +302,7 @@ export function WealthAnalysisContent({ initialTargetId, targets }: WealthAnalys
               <ul className="space-y-3">
                 {wealthAnalysis.actionItems.map((item, i) => (
                   <li key={i} className="text-ink-light/80 text-sm flex items-start gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 text-xs font-bold">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center text-gold-300 text-xs font-bold">
                       {i + 1}
                     </span>
                     {item}

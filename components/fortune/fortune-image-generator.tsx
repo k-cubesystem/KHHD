@@ -191,7 +191,7 @@ export function FortuneImageGenerator({
           setIsExpanded(true)
           handleGenerate()
         }}
-        className="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-white font-semibold shadow-md"
+        className="bg-gradient-to-r from-gold-500 to-gold-antique hover:from-gold-600 hover:to-gold-500 text-ink-900 font-semibold shadow-md"
         disabled={isGenerating}
       >
         {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
@@ -201,15 +201,15 @@ export function FortuneImageGenerator({
   }
 
   return (
-    <div className="rounded-2xl border border-amber-200/50 bg-gradient-to-b from-amber-50/30 to-white p-5 space-y-4">
+    <div className="rounded-2xl border border-gold-300/50 bg-gradient-to-b from-gold-300/20 to-white p-5 space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-300 flex items-center justify-center shadow-sm">
-          <ImageIcon className="w-4 h-4 text-white" />
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-500 to-gold-300 flex items-center justify-center shadow-sm">
+          <ImageIcon className="w-4 h-4 text-ink-900" />
         </div>
         <div>
-          <h3 className="font-bold text-amber-900 text-sm">나만의 운세 이미지 생성</h3>
-          <p className="text-xs text-amber-600/70">AI가 사주 정보로 개인 맞춤 이미지를 생성합니다</p>
+          <h3 className="font-bold text-gold-700 text-sm">나만의 운세 이미지 생성</h3>
+          <p className="text-xs text-gold-600/70">AI가 사주 정보로 개인 맞춤 이미지를 생성합니다</p>
         </div>
       </div>
 
@@ -227,15 +227,15 @@ export function FortuneImageGenerator({
               }}
               className={`rounded-xl p-2.5 text-center transition-all border ${
                 isSelected
-                  ? 'bg-amber-100 border-amber-400 shadow-sm'
-                  : 'bg-white border-amber-100 hover:border-amber-300'
+                  ? 'bg-gold-300/60 border-gold-500 shadow-sm'
+                  : 'bg-white border-gold-300/60 hover:border-gold-400'
               }`}
             >
               {(() => {
                 const Icon = TYPE_ICONS[type]
-                return <Icon className={`w-5 h-5 mx-auto mb-0.5 ${isSelected ? 'text-amber-700' : 'text-gray-500'}`} />
+                return <Icon className={`w-5 h-5 mx-auto mb-0.5 ${isSelected ? 'text-gold-600' : 'text-ink-900/60'}`} />
               })()}
-              <div className={`text-xs font-semibold ${isSelected ? 'text-amber-800' : 'text-gray-600'}`}>
+              <div className={`text-xs font-semibold ${isSelected ? 'text-gold-700' : 'text-ink-900/70'}`}>
                 {info.label}
               </div>
             </button>
@@ -244,13 +244,13 @@ export function FortuneImageGenerator({
       </div>
 
       {/* Selected type desc */}
-      <p className="text-xs text-center text-amber-700/60">{TYPE_LABELS[selectedType].desc}</p>
+      <p className="text-xs text-center text-gold-600/60">{TYPE_LABELS[selectedType].desc}</p>
 
       {/* Generate Button */}
       <Button
         onClick={handleGenerate}
         disabled={isGenerating}
-        className="w-full bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-white font-bold shadow-md rounded-xl py-5"
+        className="w-full bg-gradient-to-r from-gold-500 to-gold-antique hover:from-gold-600 hover:to-gold-500 text-ink-900 font-bold shadow-md rounded-xl py-5"
       >
         {isGenerating ? (
           <>
@@ -279,19 +279,19 @@ export function FortuneImageGenerator({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-center space-y-2">
+            <div className="rounded-xl bg-gold-300/20 border border-gold-300/60 p-4 text-center space-y-2">
               <div className="flex justify-center gap-1">
                 {[0, 1, 2, 3, 4].map((i) => (
                   <motion.div
                     key={i}
                     animate={{ scaleY: [1, 1.8, 1], opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.12 }}
-                    className="w-1.5 h-6 rounded-full bg-gradient-to-t from-amber-400 to-yellow-300"
+                    className="w-1.5 h-6 rounded-full bg-gradient-to-t from-gold-500 to-gold-300"
                   />
                 ))}
               </div>
-              <p className="text-xs text-amber-700">AI가 {TYPE_LABELS[selectedType].label}을 그리고 있습니다...</p>
-              <p className="text-xs text-amber-500/60">약 10-20초 소요됩니다</p>
+              <p className="text-xs text-gold-600">AI가 {TYPE_LABELS[selectedType].label}을 그리고 있습니다...</p>
+              <p className="text-xs text-gold-500/60">약 10-20초 소요됩니다</p>
             </div>
           </motion.div>
         )}
@@ -307,7 +307,7 @@ export function FortuneImageGenerator({
             transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             className="space-y-3"
           >
-            <div className="relative rounded-2xl overflow-hidden border-2 border-amber-200 shadow-lg">
+            <div className="relative rounded-2xl overflow-hidden border-2 border-gold-300 shadow-lg">
               {/* AI-generated image: may be a base64 data: URI or an opaque external URL.
                   Next.js <Image> does not support data: URIs, so <img> is intentional. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -335,7 +335,7 @@ export function FortuneImageGenerator({
                 onClick={handleDownload}
                 variant="outline"
                 size="sm"
-                className="border-amber-200 text-amber-700 hover:bg-amber-50"
+                className="border-gold-300 text-gold-600 hover:bg-gold-300/20"
               >
                 <Download className="w-4 h-4 mr-1.5" />
                 저장하기
@@ -344,7 +344,7 @@ export function FortuneImageGenerator({
                 onClick={handleShare}
                 variant="outline"
                 size="sm"
-                className="border-amber-200 text-amber-700 hover:bg-amber-50"
+                className="border-gold-300 text-gold-600 hover:bg-gold-300/20"
               >
                 <Share2 className="w-4 h-4 mr-1.5" />
                 공유하기

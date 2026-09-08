@@ -10,15 +10,15 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
 
   return (
     <html lang="ko">
-      <body className="bg-gray-950 text-white">
+      <body className="bg-surface text-ink-light">
         <div className="flex min-h-screen items-center justify-center px-4">
           <div className="w-full max-w-[480px] text-center">
             <div className="mb-6 text-5xl">🔧</div>
-            <h1 className="mb-2 text-xl font-bold text-amber-400">서비스에 문제가 발생했습니다</h1>
-            <p className="mb-6 text-sm text-gray-400">페이지를 새로고침하거나 잠시 후 다시 방문해 주세요.</p>
+            <h1 className="mb-2 text-xl font-bold text-error-text">서비스에 문제가 발생했습니다</h1>
+            <p className="mb-6 text-sm text-ink-light/70">페이지를 새로고침하거나 잠시 후 다시 방문해 주세요.</p>
             <button
               onClick={reset}
-              className="rounded-lg bg-amber-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-500"
+              className="rounded-lg bg-gold-500 px-6 py-2.5 text-sm font-medium text-ink-900 transition-colors hover:bg-gold-600"
             >
               새로고침
             </button>

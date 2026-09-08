@@ -7,7 +7,7 @@ import { getMembershipCancelOverview } from '@/app/actions/payment/cancel-reques
 import { MembershipCancelForm } from './membership-cancel-form'
 
 export const metadata: Metadata = {
-  title: '멤버십 해지 | 청담해화당',
+  title: '멤버십 해지',
   description: '멤버십을 직접 해지하고 잔여기간을 일할 환불받으실 수 있습니다.',
 }
 

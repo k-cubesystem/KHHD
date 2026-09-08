@@ -60,15 +60,11 @@ export function CacheSelectionDialog({ targetName, cacheDate, onViewCache, onNew
           className="bg-card border rounded-lg p-6 mb-6 space-y-4"
         >
           {/* 캐시 정보 */}
-          <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+          <div className="flex items-center gap-3 p-4 bg-gold-500/10 rounded-lg border border-gold-500/15">
+            <Clock className="w-5 h-5 text-gold-300 flex-shrink-0" />
             <div className="flex-1">
-              <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {formatDate(cacheDate)} 분석 결과
-              </div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                최근 7일 이내 분석은 다시 볼 수 있습니다
-              </div>
+              <div className="text-sm font-medium text-gold-200">{formatDate(cacheDate)} 분석 결과</div>
+              <div className="text-xs text-gold-500/70 mt-1">최근 7일 이내 분석은 다시 볼 수 있습니다</div>
             </div>
           </div>
 
@@ -83,8 +79,8 @@ export function CacheSelectionDialog({ targetName, cacheDate, onViewCache, onNew
           </div>
 
           {/* 새 분석 권장 조건 */}
-          <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-900">
-            <div className="text-xs text-amber-900 dark:text-amber-100">
+          <div className="bg-warning-light p-3 rounded-lg border border-warning-border">
+            <div className="text-xs text-warning-text">
               <strong>새 분석을 권장하는 경우:</strong>
               <ul className="mt-2 space-y-1 ml-4">
                 <li>• 이사를 했거나 주소가 바뀐 경우</li>
@@ -110,7 +106,7 @@ export function CacheSelectionDialog({ targetName, cacheDate, onViewCache, onNew
           <Button
             onClick={onNewAnalysis}
             size="lg"
-            className="w-full bg-gradient-to-r from-gold-500 to-gold-300 hover:from-[#C5A028] hover:to-[#E5D6B4] text-black font-semibold text-base"
+            className="w-full bg-gradient-to-r from-gold-500 to-gold-300 hover:from-gold-600 hover:to-gold-400 text-ink-900 font-semibold text-base"
           >
             <Sparkles className="w-5 h-5 mr-2" />
             새로 분석하기

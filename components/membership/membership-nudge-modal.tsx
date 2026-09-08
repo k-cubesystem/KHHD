@@ -43,16 +43,16 @@ interface TierStyle {
 const TIER_STYLE: Record<MembershipTier, TierStyle> = {
   FREE: {
     name: '무료',
-    color: 'text-zinc-400',
-    borderColor: 'border-zinc-600/40',
-    badgeClass: 'bg-zinc-700 text-zinc-300',
+    color: 'text-ink-light/60',
+    borderColor: 'border-white/10',
+    badgeClass: 'bg-white/[0.08] text-ink-light/80',
     icon: <Star className="w-4 h-4" />,
   },
   SINGLE: {
     name: '싱글 멤버십',
-    color: 'text-amber-400',
-    borderColor: 'border-amber-500/40',
-    badgeClass: 'bg-amber-900/60 text-amber-300',
+    color: 'text-gold-300',
+    borderColor: 'border-gold-500/40',
+    badgeClass: 'bg-gold-700/40 text-gold-300',
     icon: <Star className="w-4 h-4" />,
   },
   FAMILY: {
@@ -64,9 +64,9 @@ const TIER_STYLE: Record<MembershipTier, TierStyle> = {
   },
   BUSINESS: {
     name: '비즈니스 멤버십',
-    color: 'text-purple-400',
-    borderColor: 'border-purple-500/40',
-    badgeClass: 'bg-purple-900/60 text-purple-300',
+    color: 'text-gold-antique',
+    borderColor: 'border-gold-antique/40',
+    badgeClass: 'bg-gold-antique/15 text-gold-antique',
     icon: <Zap className="w-4 h-4" />,
   },
 }
@@ -217,14 +217,14 @@ export function MembershipNudgeModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-[#1a1208] border border-gold-500/30 text-amber-50 max-w-md p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="bg-[#1a1208] border border-gold-500/30 text-ink-primary max-w-md p-0 overflow-hidden rounded-2xl">
         <DialogTitle className="sr-only">멤버십 업그레이드 안내</DialogTitle>
 
         {/* Header */}
         <div className="relative bg-gradient-to-b from-[#2a1f08] to-[#1a1208] px-6 pt-6 pb-5 border-b border-gold-500/20">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-amber-400/60 hover:text-amber-400 transition-colors"
+            className="absolute top-4 right-4 text-gold-500/60 hover:text-gold-500 transition-colors"
             aria-label="닫기"
           >
             <X size={18} />
@@ -241,8 +241,8 @@ export function MembershipNudgeModal({
             </motion.div>
 
             <div>
-              <h2 className="text-base font-semibold text-amber-100 leading-snug">{copy.title}</h2>
-              <p className="text-xs text-amber-300/70 mt-0.5">
+              <h2 className="text-base font-semibold text-ink-primary leading-snug">{copy.title}</h2>
+              <p className="text-xs text-gold-300/70 mt-0.5">
                 {featureLabel ? `${featureLabel} · ` : ''}
                 {copy.subtitle}
               </p>
@@ -257,7 +257,7 @@ export function MembershipNudgeModal({
 
         {/* Tier comparison */}
         <div className="px-6 py-4 space-y-3">
-          <p className="text-xs text-amber-300/60 font-medium uppercase tracking-wider">등급 비교</p>
+          <p className="text-xs text-gold-300/60 font-medium uppercase tracking-wider">등급 비교</p>
 
           <div className="grid grid-cols-2 gap-3">
             {/* Current tier */}
@@ -266,10 +266,10 @@ export function MembershipNudgeModal({
                 <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', currentInfo.style.badgeClass)}>현재</Badge>
               </div>
               <p className={cn('text-sm font-semibold', currentInfo.style.color)}>{currentInfo.name}</p>
-              <p className="text-xs text-amber-300/50 mt-1">{priceLabel(currentInfo)}</p>
+              <p className="text-xs text-gold-300/50 mt-1">{priceLabel(currentInfo)}</p>
               <ul className="mt-2 space-y-1">
                 {factLines(currentInfo).map((line) => (
-                  <li key={line} className="text-xs text-amber-300/60">
+                  <li key={line} className="text-xs text-gold-300/60">
                     {line}
                   </li>
                 ))}
@@ -291,7 +291,7 @@ export function MembershipNudgeModal({
                 <Badge className={cn('text-[10px] px-2 py-0.5 rounded-full', nextInfo.style.badgeClass)}>추천</Badge>
               </div>
               <p className={cn('text-sm font-semibold', nextInfo.style.color)}>{nextInfo.name}</p>
-              <p className="text-xs text-amber-300/50 mt-1">{priceLabel(nextInfo)}</p>
+              <p className="text-xs text-gold-300/50 mt-1">{priceLabel(nextInfo)}</p>
               <ul className="mt-2 space-y-1">
                 {factLines(nextInfo).map((line) => (
                   <li key={line} className="text-xs text-gold-500/90 font-medium">
@@ -311,7 +311,7 @@ export function MembershipNudgeModal({
               </p>
               <ul className="space-y-1.5">
                 {newPerks.map((perk, i) => (
-                  <li key={i} className="flex items-center gap-2 text-xs text-amber-200/80">
+                  <li key={i} className="flex items-center gap-2 text-xs text-gold-200/80">
                     <Check className="w-3.5 h-3.5 text-gold-500 flex-shrink-0" />
                     {perk}
                   </li>
@@ -337,7 +337,7 @@ export function MembershipNudgeModal({
 
           <button
             onClick={onClose}
-            className="w-full text-xs text-amber-300/50 hover:text-amber-300/80 transition-colors py-1"
+            className="w-full text-xs text-gold-300/50 hover:text-gold-300/80 transition-colors py-1"
           >
             나중에 하기
           </button>
