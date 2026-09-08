@@ -170,7 +170,10 @@ export default async function EpisodePage({ params }: { params: Promise<{ no: st
               sub="사주·궁합·관상 — 청담해화당 본채"
             />
             <p className="text-center font-sans text-[11.5px] text-ink-primary/40">
-              다음 화는 <span className="font-bold text-gold-300/80">매주 금요일</span>에 이어집니다
+              다음 화는 <span className="font-bold text-gold-300/80">매주 화 · 금요일</span>에 이어집니다 ·{' '}
+              <Link href="/protected/notifications" className="underline underline-offset-2 text-gold-300/70">
+                🔔 새 회차 알림 받기
+              </Link>
             </p>
           </>
         )}

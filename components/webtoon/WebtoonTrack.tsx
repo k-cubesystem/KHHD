@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { collectEvent, collectFunnel } from '@/lib/analytics/collector'
 import { WEBTOON_FUNNEL } from '@/lib/analytics/funnel'
+import { markEpisodeRead } from '@/app/actions/webtoon/progress'
 
 /**
  * 웹툰 계측 비콘 — 본문 «맨 끝»에 눕혀 두는 보이지 않는 한 줄.
@@ -24,6 +25,13 @@ export function WebtoonTrack({ no, kind = 'view-complete' }: { no: number; kind?
     }
     collectFunnel('webtoon_view', WEBTOON_FUNNEL.webtoon_view, { no })
     collectEvent('webtoon_episode_view', 'webtoon', `ep${no}`)
+    // 이어보기 기록 — 브라우저(비로그인 포함) + 서버(로그인 시 기기 동기화). 실패 무해.
+    try {
+      localStorage.setItem('hhd_webtoon_last', JSON.stringify({ no, ts: Date.now() }))
+    } catch {
+      /* 저장 불가 환경 무시 */
+    }
+    void markEpisodeRead(no).catch(() => undefined)
 
     const el = ref.current
     if (!el || typeof IntersectionObserver === 'undefined') return

@@ -74,6 +74,7 @@ const ok: StoryDraft = {
   contactName: '김해화',
   contactPhone: '010-1234-5678',
   contactKakao: 'haehwa',
+  consent: true,
 }
 
 describe('사연 접수 — 비공개가 이 표의 전부다', () => {
@@ -107,7 +108,16 @@ describe('사연 접수 — 비공개가 이 표의 전부다', () => {
     expect(validateStory({ ...ok, contactPhone: 'abc' })[0].field).toBe('contactPhone')
   })
 
-  it('카카오톡 아이디는 **선택**이다 — 없어도 통과한다', () => {
+  it('결정④ — 전화는 선택: 카카오만 있어도 통과, 둘 다 비면 막힌다', () => {
+    expect(isStoryValid({ ...ok, contactPhone: '' })).toBe(true)
+    expect(validateStory({ ...ok, contactPhone: '', contactKakao: '' })[0].field).toBe('contactPhone')
+  })
+
+  it('결정④ — 동의 체크 없이는 접수되지 않는다', () => {
+    expect(validateStory({ ...ok, consent: false }).some((i) => i.field === 'consent')).toBe(true)
+  })
+
+  it('카카오톡 아이디는 **선택**이다 — 전화가 있으면 없어도 통과한다', () => {
     expect(isStoryValid({ ...ok, contactKakao: '' })).toBe(true)
   })
 

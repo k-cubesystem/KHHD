@@ -43,6 +43,12 @@ export const JINMAEK_SLOTS: Readonly<Record<number, JinmaekSlot>> = {
   3: { after: 2, element: '木', hook: '가족 얘기가 나온 김에 — 손님의 나무(木)는 어떤가 봅시다.', speaker: '해수' },
   4: { after: 2, element: '火', hook: '남 일 같지 않다면 — 손님의 불(火)부터 짚어 봅시다.', speaker: '해수' },
   5: { after: 3, element: '火', hook: '…밥은 먹고 다니시오? 손님의 불도 마저 봅시다.', speaker: '해화지기' },
+  6: {
+    after: 3,
+    element: '土',
+    hook: '이 집이 왜 안 무너지는지 아시오? — 손님 토(土)도 좀 봅시다.',
+    speaker: '해화지기',
+  },
 }
 
 /** 진맥 결과 — 서버 액션이 만들어 화면이 그린다. 간지 원문은 싣지 않는다(읽기 부담 최소). */

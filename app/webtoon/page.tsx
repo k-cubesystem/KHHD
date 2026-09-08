@@ -2,6 +2,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { BookOpen, ChevronRight, Lock as LockIcon, PenLine } from 'lucide-react'
 import { listEpisodes, listMyStories } from '@/app/actions/webtoon/webtoon'
+import { getLastReadEpisode } from '@/app/actions/webtoon/progress'
+import { WebtoonContinue } from '@/components/webtoon/WebtoonContinue'
 import { STORY_STATUS_LABEL } from '@/lib/domain/webtoon/story'
 
 export const metadata = {
@@ -19,7 +21,7 @@ export const metadata = {
  *    개수조차 화면에 나오지 않는다.
  */
 export default async function WebtoonPage() {
-  const [episodes, myStories] = await Promise.all([listEpisodes(), listMyStories()])
+  const [episodes, myStories, lastRead] = await Promise.all([listEpisodes(), listMyStories(), getLastReadEpisode()])
 
   return (
     <div className="min-h-screen px-4 py-8">
@@ -29,9 +31,11 @@ export default async function WebtoonPage() {
           <h1 className="mt-1 font-serif text-2xl font-bold text-ink-primary">청담해화당</h1>
           <p className="mt-2 font-sans text-[13px] text-ink-primary/50">공식 웹툰</p>
           <p className="mt-2 inline-block rounded-full border border-gold-500/30 bg-gold-500/[0.07] px-3 py-1 font-sans text-[11px] font-bold text-gold-300/90">
-            매주 금요일 연재 · 5화까지 전부 무료
+            매주 화·금 연재 · 무료
           </p>
         </header>
+
+        <WebtoonContinue serverLast={lastRead} />
 
         {episodes.length === 0 ? (
           <div className="hanji-card rounded-2xl border border-gold-500/25 p-6 text-center">
