@@ -47,6 +47,21 @@ const nextConfig: NextConfig = {
     return []
   },
 
+  /**
+   * 구 웹툰 주소 → 공개 라우트(2026-09-08 결정① — 무료 회차 비로그인 공개).
+   * · /webtoon.html: v5 에서 멈춘 정적 예고편 — 앱 0화가 정본이므로 301 로 합친다(공유 링크 생존).
+   *   ⚠️ redirects 는 public/ 파일보다 먼저 평가되므로 정적 파일이 남아 있어도 이 규칙이 이긴다.
+   * · /protected/webtoon/*: 로그인 벽 뒤 구주소 — 전부 새 주소로. (미들웨어보다 먼저 평가되어
+   *   비로그인도 로그인 화면이 아니라 본문에 닿는다.)
+   */
+  async redirects() {
+    return [
+      { source: '/webtoon.html', destination: '/webtoon/0', permanent: true },
+      { source: '/protected/webtoon', destination: '/webtoon', permanent: true },
+      { source: '/protected/webtoon/:path*', destination: '/webtoon/:path*', permanent: true },
+    ]
+  },
+
   // Security headers
   async headers() {
     return [

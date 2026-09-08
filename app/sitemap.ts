@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next'
 import { getSiteUrl } from '@/lib/utils/site-url'
 import { ILGAN_SLUGS } from '@/lib/domain/saju/ilgan'
 import { GUIDE_SLUGS } from '@/lib/content/guide'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type ChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>
 
@@ -22,13 +23,35 @@ const PUBLIC_ROUTES: readonly PublicRoute[] = [
   { path: '/guide', priority: 0.9, changeFrequency: 'weekly' },
   { path: '/story', priority: 0.9, changeFrequency: 'weekly' },
   { path: '/about', priority: 0.6, changeFrequency: 'monthly' },
-  { path: '/webtoon.html', priority: 0.6, changeFrequency: 'weekly' },
+  // 구 정적 예고편(/webtoon.html)은 /webtoon/0 으로 301 — 사이트맵은 새 주소만 싣는다
+  { path: '/webtoon', priority: 0.9, changeFrequency: 'weekly' },
   { path: '/business', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/terms', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/privacy', priority: 0.3, changeFrequency: 'yearly' },
 ]
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/**
+ * 공개(무료·게시) 회차 번호 — 실패하면 빈 배열(사이트맵 생성 자체를 막지 않는다).
+ * ⚠️ 빌드 환경에는 Supabase 키가 없을 수 있다 — 그래서 예외를 삼키고, 런타임 재생성 때 채워진다.
+ */
+async function freeEpisodeNos(): Promise<number[]> {
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('webtoon_episodes')
+      .select('no, access, published_at')
+      .eq('access', 'free')
+      .not('published_at', 'is', null)
+      .order('no', { ascending: true })
+    return (data ?? []).map((r) => Number(r.no)).filter((n) => Number.isInteger(n) && n >= 0)
+  } catch {
+    return []
+  }
+}
+
+export const revalidate = 3600
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getSiteUrl()
   const lastModified = new Date()
 
@@ -55,5 +78,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route === '/ilgan' ? 0.9 : 0.7,
   }))
 
-  return [...routes, ...guide, ...ilgan]
+  // 웹툰 무료 회차 — 비로그인 본문. 검색 유입의 새 문(2026-09-08 공개 전환).
+  const webtoon = (await freeEpisodeNos()).map((no) => ({
+    url: `${baseUrl}/webtoon/${no}`,
+    lastModified,
+    changeFrequency: 'monthly' as const,
+    priority: 0.8,
+  }))
+
+  return [...routes, ...guide, ...ilgan, ...webtoon]
 }

@@ -134,6 +134,31 @@ export async function saveEpisode(input: SaveEpisodeInput): Promise<SaveEpisodeR
 
   try {
     const supabase = await createClient()
+
+    // 🔴 등급 변경 가드 — 본문이 이미 올라간 회차의 free↔membership 전환을 막는다.
+    //    파일은 등급별로 다른 버킷(공개 webtoon / 비공개 webtoon-locked)에 살기 때문에,
+    //    행만 바꾸면 ①구 공개 URL 이 영구히 열려 있고 ②새 등급 쪽 서명·조회는 통째로 깨진다.
+    //    올바른 전환은 재업로드(tools/upload-episode.mjs 가 번호로 등급·버킷을 강제)다.
+    {
+      const { data: existing } = await supabase
+        .from('webtoon_episodes')
+        .select('id, access')
+        .eq('no', draft.no)
+        .maybeSingle()
+      if (existing && toEpisodeAccess(existing.access) !== draft.access) {
+        const { count } = await supabase
+          .from('webtoon_episode_pages')
+          .select('idx', { count: 'exact', head: true })
+          .eq('episode_id', String(existing.id))
+        if ((count ?? 0) > 0)
+          return {
+            success: false,
+            error: 'INVALID',
+            message:
+              '본문이 있는 회차는 등급을 바꿀 수 없습니다 — 업로드 도구로 재업로드하세요(버킷이 등급을 따라갑니다)',
+          }
+      }
+    }
     const { data, error } = await supabase
       .from('webtoon_episodes')
       .upsert(
@@ -153,7 +178,7 @@ export async function saveEpisode(input: SaveEpisodeInput): Promise<SaveEpisodeR
       logger.warn('[admin/webtoon] 회차 저장 실패:', error)
       return { success: false, error: 'FAILED', message: '저장하지 못했습니다' }
     }
-    revalidatePath('/protected/webtoon')
+    revalidatePath('/webtoon')
     revalidatePath('/admin/webtoon')
     return { success: true, episodeId: String(data.id) }
   } catch (e) {
@@ -173,7 +198,7 @@ export async function deleteEpisode(episodeId: string): Promise<AdminResult> {
       logger.warn('[admin/webtoon] 회차 삭제 실패:', error)
       return { success: false, error: 'FAILED' }
     }
-    revalidatePath('/protected/webtoon')
+    revalidatePath('/webtoon')
     revalidatePath('/admin/webtoon')
     return { success: true }
   } catch (e) {
@@ -230,7 +255,7 @@ export async function saveEpisodePages(episodeId: string, cuts: EpisodeCutInput[
       .gte('idx', rows.length)
     if (trimError) logger.warn('[admin/webtoon] 옛 컷 정리 실패(비치명):', trimError)
 
-    revalidatePath('/protected/webtoon')
+    revalidatePath('/webtoon')
     revalidatePath('/admin/webtoon')
     return { success: true }
   } catch (e) {
@@ -342,7 +367,7 @@ export async function updateStory(input: { id: string; status: StoryStatus; repl
       logger.warn('[admin/webtoon] 사연 갱신 실패:', error)
       return { success: false, error: 'FAILED' }
     }
-    revalidatePath('/protected/webtoon')
+    revalidatePath('/webtoon')
     revalidatePath('/admin/webtoon/stories')
     return { success: true }
   } catch (e) {
@@ -416,7 +441,7 @@ export async function setCommentHidden(commentId: string, hidden: boolean): Prom
       logger.warn('[admin/webtoon] 댓글 가림 변경 실패:', error)
       return { success: false, error: 'FAILED' }
     }
-    revalidatePath('/protected/webtoon')
+    revalidatePath('/webtoon')
     revalidatePath('/admin/webtoon/stories')
     return { success: true }
   } catch (e) {

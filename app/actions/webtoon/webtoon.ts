@@ -301,7 +301,7 @@ export async function addComment(episodeId: string, body: string): Promise<Comme
     return { success: false, error: 'FAILED' }
   }
 
-  revalidatePath('/protected/webtoon')
+  revalidatePath('/webtoon')
   return { success: true }
 }
 
@@ -323,7 +323,7 @@ export async function removeComment(commentId: string): Promise<CommentResult> {
     logger.warn('[webtoon] 댓글 삭제 실패:', error)
     return { success: false, error: 'FAILED' }
   }
-  revalidatePath('/protected/webtoon')
+  revalidatePath('/webtoon')
   return { success: true }
 }
 
@@ -477,7 +477,7 @@ export async function submitStory(input: {
       .eq('id', submissionId)
   }
 
-  revalidatePath('/protected/webtoon')
+  revalidatePath('/webtoon')
   return { success: true, notified }
 }
 

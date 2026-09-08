@@ -49,7 +49,7 @@ const ACTIONS = read('app/actions/webtoon/webtoon.ts')
 const FORM = read('components/webtoon/StoryForm.tsx')
 const REPORTS_MIGRATION = read('supabase/migrations/20260801_webtoon_reports.sql')
 const PAGES_MIGRATION = read('supabase/migrations/20260801_webtoon_pages_access.sql')
-const VIEWER = read('app/protected/webtoon/[no]/page.tsx')
+const VIEWER = read('app/webtoon/[no]/page.tsx')
 const PAGES_ACTION = ACTIONS.slice(
   ACTIONS.indexOf('export async function getEpisodePages'),
   ACTIONS.indexOf('export interface WebtoonComment')

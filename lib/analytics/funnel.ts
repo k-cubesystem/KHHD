@@ -29,3 +29,16 @@ export const CHAT_FUNNEL = {
 } as const
 
 export type ChatFunnelStep = keyof typeof CHAT_FUNNEL
+
+/**
+ * 웹툰 퍼널 — 공개 뷰어의 «읽는다 → 반응한다 → 넘어온다» 여정. 별개 이름 공간.
+ * 회차 번호는 metadata.no 로 싣는다(단계 수를 회차마다 늘리지 않는다).
+ */
+export const WEBTOON_FUNNEL = {
+  webtoon_view: 1, // 회차 진입(본문 1장 이상 로드)
+  webtoon_complete: 2, // 회차 완독(말미 도달)
+  webtoon_jinmaek: 3, // 간이 진맥 제출(생년월일 입력)
+  webtoon_cta_click: 4, // 서비스 CTA 클릭
+} as const
+
+export type WebtoonFunnelStep = keyof typeof WEBTOON_FUNNEL

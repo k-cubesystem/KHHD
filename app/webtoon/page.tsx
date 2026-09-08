@@ -4,7 +4,11 @@ import { BookOpen, ChevronRight, Lock as LockIcon, PenLine } from 'lucide-react'
 import { listEpisodes, listMyStories } from '@/app/actions/webtoon/webtoon'
 import { STORY_STATUS_LABEL } from '@/lib/domain/webtoon/story'
 
-export const metadata = { title: '웹툰' }
+export const metadata = {
+  title: '공식 웹툰',
+  description: '재앙을 풀어 맑은 물에 흘려보내는 집. 팔자 없는 남자와 팔자를 읽는 여자의 K-샤머니즘 웹툰 — 무료 연재.',
+  alternates: { canonical: '/webtoon' },
+}
 
 /**
  * 웹툰 — 회차 목록 + 「내 이야기 쓰기」 진입.
@@ -24,6 +28,9 @@ export default async function WebtoonPage() {
           <p className="font-serif text-[10px] tracking-[0.4em] text-gold-500/60">連 載</p>
           <h1 className="mt-1 font-serif text-2xl font-bold text-ink-primary">청담해화당</h1>
           <p className="mt-2 font-sans text-[13px] text-ink-primary/50">공식 웹툰</p>
+          <p className="mt-2 inline-block rounded-full border border-gold-500/30 bg-gold-500/[0.07] px-3 py-1 font-sans text-[11px] font-bold text-gold-300/90">
+            매주 금요일 연재 · 5화까지 전부 무료
+          </p>
         </header>
 
         {episodes.length === 0 ? (
@@ -43,7 +50,7 @@ export default async function WebtoonPage() {
             {episodes.map((ep) => (
               <li key={ep.id}>
                 <Link
-                  href={`/protected/webtoon/${ep.no}`}
+                  href={`/webtoon/${ep.no}`}
                   className="flex items-center gap-3 rounded-2xl border border-white/10 bg-surface/50 p-3"
                 >
                   <span className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-black/30">
@@ -89,7 +96,7 @@ export default async function WebtoonPage() {
 
         {/* 내 이야기 쓰기 — 연재 전에도 열려 있다. 사연이 쌓여야 그릴 것이 생긴다 */}
         <Link
-          href="/protected/webtoon/story"
+          href="/webtoon/story"
           className="flex items-center justify-between rounded-2xl border border-gold-500/35 bg-gold-500/[0.08] px-4 py-4"
         >
           <span className="min-w-0">
