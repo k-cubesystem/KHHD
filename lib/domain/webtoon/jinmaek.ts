@@ -49,6 +49,8 @@ export const JINMAEK_SLOTS: Readonly<Record<number, JinmaekSlot>> = {
     hook: '이 집이 왜 안 무너지는지 아시오? — 손님 토(土)도 좀 봅시다.',
     speaker: '해화지기',
   },
+  // 7화 테마는 도화살 — 오행이 아니라서 element 없이 전체 균형으로 읽는다
+  7: { after: 2, element: null, hook: '시선이 모이는 팔자인지 — 손님 등불부터 봅시다.', speaker: '해수' },
 }
 
 /** 진맥 결과 — 서버 액션이 만들어 화면이 그린다. 간지 원문은 싣지 않는다(읽기 부담 최소). */

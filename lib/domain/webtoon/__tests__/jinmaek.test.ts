@@ -12,8 +12,8 @@ describe('간이 진맥 — 슬롯 설정', () => {
     }
   })
 
-  it('라이브 0~6화가 전부 등재되어 있다', () => {
-    for (const no of [0, 1, 2, 3, 4, 5, 6]) expect(JINMAEK_SLOTS[no]).toBeDefined()
+  it('라이브 0~7화가 전부 등재되어 있다', () => {
+    for (const no of [0, 1, 2, 3, 4, 5, 6, 7]) expect(JINMAEK_SLOTS[no]).toBeDefined()
   })
 })
 
