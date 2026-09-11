@@ -79,7 +79,7 @@
 | 후속 과제 | `main` 브랜치 정리 — 2026-04-04 이후 스테일(정본이 400+커밋 앞). 사용자 미커밋 변경과 충돌해 보류 | 사용자 결정 |
 | 후속 과제 | **소프트 404** — 라우트 매칭 후 notFound() 가 404 화면을 **HTTP 200** 으로 돌려준다(/guide/*·/saju3/*·/share/*). noindex 는 붙어 색인은 막히나 상태 코드는 틀리다. dynamicParams=false·generateMetadata 내 notFound() 둘 다 무효 — 원인 규명부터 필요 | 별도 과제 분리 |
 | 관측 | GA4 신규 이벤트(`manse_tab`·`membership_cta`·`share_card_save`·챗 퍼널) 유입 확인 | 하루 뒤 |
-| ✅ 라이브 | **기운 그룹(群) v1 P0~P3 + CEO 회신 7건**(2026-09-07, 배포 `hhd-89ctq99e3` — 처방전 `/protected/prescription`(무료 맛보기 → 멤버십) · 「가족·인연 관리」 그룹 탭·그룹 지도(직장 고지·수치 비노출) · 기운 선물(`energy_gifts`) · 선물 카드 OG · BUSINESS 「우리 팀 기운 한 장」 · **AI 풀이 2만냥**(`circle_narratives` 30일 캐시, 엔진 값 풀어 쓰기) · **쿠팡 파트너스 검색 딥링크**(`affiliate_links`, 키 필요). 그룹당 사람 2/10/30. 가짜 궁합 매트릭스 삭제. **가족 초대(R-2) UI·액션 제거**(배포 `hhd-bfy89vztn`, DB·linked_user_id 보존). 🔴시렁 자동 배치 미구현 · 실기기 검수 대기 | CEO 실기기 검수 · Vercel 에 COUPANG_ACCESS_KEY/SECRET_KEY |
+| ✅ 라이브 | **기운 그룹(群) v1 P0~P3 + CEO 회신 7건**(2026-09-07, 배포 `hhd-89ctq99e3` — 처방전 `/protected/prescription`(무료 맛보기 → 멤버십) · 「가족·인연 관리」 그룹 탭·그룹 지도(직장 고지·수치 비노출) · 기운 선물(`energy_gifts`) · 선물 카드 OG · BUSINESS 「우리 팀 기운 한 장」 · **AI 풀이 2만냥**(`circle_narratives` 30일 캐시, 엔진 값 풀어 쓰기) · **쿠팡 파트너스 검색 딥링크**(`affiliate_links`, 키 필요). 그룹당 사람 2/10/30. 가짜 궁합 매트릭스 삭제. **33차(09-11): 오행 그래프=세력 비율(지장간·월지 무게, `lib/domain/saju/element-profile.ts`, 배포 `hhd-8z523za9e`) · 관계 5라벨(지켜 줄 신설)+이치·실천 문장** · **가족 초대(R-2) UI·액션 제거**(배포 `hhd-bfy89vztn`, DB·linked_user_id 보존). 🔴시렁 자동 배치 미구현 · 실기기 검수 대기 | CEO 실기기 검수 · Vercel 에 COUPANG_ACCESS_KEY/SECRET_KEY |
 
 ---
 
