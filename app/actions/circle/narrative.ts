@@ -14,7 +14,7 @@ import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { PREMIUM_PROSE_LAYER, TERM_DISCIPLINE } from '@/lib/ai/prose-quality'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
-import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
+import { FAMILY_CIRCLE_ID, TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
 import {
   NARRATIVE_CACHE_DAYS,
   NARRATIVE_SYSTEM_PROMPT,
@@ -22,24 +22,32 @@ import {
   circlePrompt,
   prescriptionFingerprint,
   prescriptionPrompt,
+  togetherFingerprint,
+  togetherPrompt,
   validateNarrative,
   type NarrativeKind,
 } from '@/lib/domain/circle/narrative'
-import { getCircleEnergy, getPrescription } from './energy'
+import { getCircleEnergy, getPrescription, getTogetherEnergy } from './energy'
 
 /**
- * AI 풀이 — 처방전(사람 한 명) · 그룹 지도(그룹 한 벌).
+ * AI 풀이 — 처방전(사람 한 명) · 그룹 지도(그룹 한 벌) · 함께 보기(고른 둘·셋·넷).
  *
- * 흐름: 로그인 → 멤버십 → 속도 제한 → 엔진 값(처방전/그룹) → 지문 → 캐시 맞으면 무료 반환
- *       → 복채 차감(표시=실차감, FEATURE_COST.circleNarrative) → 모델 → 거르기(한 번 재시도) → 저장.
+ * 흐름: 로그인 → 멤버십 → 속도 제한 → 엔진 값 → 지문 → 캐시 맞으면 무료 반환
+ *       → 복채 차감(표시=실차감, FEATURE_COST) → 모델 → 거르기(한 번 재시도) → 저장.
  * 실패하면 환불. 마스터는 실차감이 없어 환불 대상이 아니다(테마 풀이와 같은 규율).
  *
  * 🔴 AI 는 엔진 값을 «풀어 쓰기»만 한다. 프롬프트는 lib/domain/circle/narrative.ts 가 만든다.
+ * 🔴 함께 보기의 targetKey 는 «id,id,id»(화면이 고른 순서) — 저장 키는 정렬한 조합의 해시라 순서가 달라도 같은 조합이다.
  */
 
-const FEATURE_KEY = 'circle_narrative'
 const RATE_LIMIT = { interval: 60 * 1000, uniqueTokenPerInterval: 6 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const KIND_META: Record<NarrativeKind, { featureKey: string; cost: number }> = {
+  prescription: { featureKey: 'circle_narrative', cost: FEATURE_COST.circleNarrative.display },
+  circle: { featureKey: 'circle_narrative', cost: FEATURE_COST.circleNarrative.display },
+  together: { featureKey: 'together_narrative', cost: FEATURE_COST.togetherNarrative.display },
+}
 
 export type NarrativeErrorType =
   | 'UNAUTHORIZED'
@@ -58,13 +66,35 @@ export interface CachedNarrative {
   createdAt: string
 }
 
+function togetherIds(targetKey: string): string[] | null {
+  const ids = [
+    ...new Set(
+      targetKey
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    ),
+  ]
+  if (ids.length < TOGETHER_MIN || ids.length > TOGETHER_MAX) return null
+  if (!ids.every((id) => id === 'self' || UUID.test(id))) return null
+  return ids
+}
+
 function validTarget(kind: NarrativeKind, targetKey: string): boolean {
   if (kind === 'prescription') return targetKey === 'self' || UUID.test(targetKey)
+  if (kind === 'together') return togetherIds(targetKey) !== null
   return targetKey === FAMILY_CIRCLE_ID || UUID.test(targetKey)
 }
 
 function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex')
+}
+
+/** DB 의 target_key(≤64자) — 함께 보기는 정렬한 조합의 해시로 접는다. */
+function storageKey(kind: NarrativeKind, targetKey: string): string {
+  if (kind !== 'together') return targetKey
+  const ids = togetherIds(targetKey) ?? []
+  return `together:${sha256([...ids].sort().join(',')).slice(0, 40)}`
 }
 
 function cutoffISO(): string {
@@ -85,7 +115,7 @@ export async function getCachedNarrative(kind: NarrativeKind, targetKey: string)
     .select('body, created_at')
     .eq('user_id', user.id)
     .eq('kind', kind)
-    .eq('target_key', targetKey)
+    .eq('target_key', storageKey(kind, targetKey))
     .gte('created_at', cutoffISO())
     .order('created_at', { ascending: false })
     .limit(1)
@@ -106,6 +136,13 @@ async function materialOf(
       prompt: prescriptionPrompt(payload.prescription),
       fingerprint: prescriptionFingerprint(payload.prescription),
     }
+  }
+  if (kind === 'together') {
+    const ids = togetherIds(targetKey)
+    if (!ids) return null
+    const payload = await getTogetherEnergy(ids)
+    if (!payload || payload.energy.entries.length < TOGETHER_MIN) return null
+    return { prompt: togetherPrompt(payload.energy), fingerprint: togetherFingerprint(payload.energy) }
   }
   const payload = await getCircleEnergy(targetKey)
   if (!payload || payload.energy.entries.length < 2) return null
@@ -135,6 +172,7 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
     const material = await materialOf(kind, targetKey)
     if (!material) return { success: false, error: '풀이할 기운을 찾지 못했습니다.', errorType: 'NOT_FOUND' }
     const inputHash = sha256(material.fingerprint)
+    const key = storageKey(kind, targetKey)
 
     // 같은 입력의 풀이가 있으면 다시 사지 않는다.
     const { data: hit } = await supabase
@@ -142,7 +180,7 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
       .select('body, created_at')
       .eq('user_id', user.id)
       .eq('kind', kind)
-      .eq('target_key', targetKey)
+      .eq('target_key', key)
       .eq('input_hash', inputHash)
       .gte('created_at', cutoffISO())
       .order('created_at', { ascending: false })
@@ -150,9 +188,9 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
       .maybeSingle()
     if (hit) return { success: true, text: hit.body as string, cached: true, createdAt: hit.created_at as string }
 
-    const cost = FEATURE_COST.circleNarrative.display
+    const { featureKey, cost } = KIND_META[kind]
     if (cost > 0) {
-      const deducted = await deductTalisman(FEATURE_KEY, cost)
+      const deducted = await deductTalisman(featureKey, cost)
       if (!deducted.success) {
         return { success: false, error: deducted.error ?? '복채가 부족합니다.', errorType: 'INSUFFICIENT_BALANCE' }
       }
@@ -166,8 +204,8 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
     let lastReason = ''
     for (let attempt = 0; attempt < 2 && !text; attempt++) {
       const ai = await generateAIContent({
-        featureKey: FEATURE_KEY,
-        actionType: FEATURE_KEY,
+        featureKey,
+        actionType: featureKey,
         systemPrompt,
         userPrompt:
           attempt === 0
@@ -193,7 +231,7 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
       .insert({
         user_id: user.id,
         kind,
-        target_key: targetKey,
+        target_key: key,
         input_hash: inputHash,
         body: text,
         model: MODEL_FLASH,

@@ -13,7 +13,7 @@ import { bannedWordsIn } from './element-lore'
 import type { Prescription } from './prescription'
 import { PAIR_LABEL_KO, type CircleEnergy } from './team-energy'
 
-export type NarrativeKind = 'prescription' | 'circle'
+export type NarrativeKind = 'prescription' | 'circle' | 'together'
 
 export const NARRATIVE_MIN_CHARS = 180
 export const NARRATIVE_MAX_CHARS = 1600
@@ -101,6 +101,34 @@ export function circlePrompt(circleName: string, ce: CircleEnergy): string {
     .join('\n')
 }
 
+/** 둘·셋·넷 함께 보기 — 고른 사람들만으로 엮은 그룹 기운을 프롬프트로. 관계의 이치·실천 문장이 여기서 AI 재료가 된다. */
+export function togetherPrompt(ce: CircleEnergy): string {
+  const names = ce.entries.map((e) => e.name).join('·')
+  const members = ce.entries
+    .map(
+      (e) =>
+        `- ${e.name}(${e.relation}): 옅은 ${label(e.yongsin)}, 넉넉한 ${label(e.strongest)}${e.dayMaster ? `, 일간 ${label(e.dayMaster)}` : ''}`
+    )
+    .join('\n')
+  const pairs = ce.pairs
+    .map((pr) => `- ${pr.aName} ↔ ${pr.bName}: ${PAIR_LABEL_KO[pr.label]}\n  이치: ${pr.reason}\n  실천: ${pr.how}`)
+    .join('\n')
+  return [
+    `[엔진이 정한 값 — ${names} 함께 보기(${ce.entries.length}명)]`,
+    ce.notice ? `고지: ${ce.notice}` : '',
+    '[사람]',
+    members,
+    `함께 있을 때 가장 옅은 기운: ${label(ce.lowest)} · 든 사람: ${ce.holders.length > 0 ? ce.holders.map((h) => h.name).join(', ') : `없음 → 물건으로: ${ce.fallbackItem}`}`,
+    '[서로의 관계 — 엔진 판정]',
+    pairs || '- 뚜렷한 관계 없음 — 각자 서는 사이',
+    ce.roles ? `[역할 결] ${ce.roles.sentence}` : '',
+    '',
+    '위 값을 네 문단으로 풀어 쓰세요. ① 이 사람들이 함께 있을 때의 기운 결 ② 누가 누구에게 무엇을 주는지(엔진의 이치를 그대로, 새로 판정하지 말 것) ③ 부딪히거나 지치는 자리와 그것을 푸는 법 ④ 이번 주에 같이 할 한 가지. 사람을 고르거나 재는 말은 쓰지 않습니다.',
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
+}
+
 /** 캐시 키의 재료 — 화면에 영향을 주는 값만 뽑아 안정된 문자열로. 같은 입력이면 같은 문자열. */
 export function prescriptionFingerprint(p: Prescription): string {
   return JSON.stringify({
@@ -113,6 +141,16 @@ export function prescriptionFingerprint(p: Prescription): string {
     a: p.avoid.element,
     c: p.caution ? 1 : 0,
     m: p.mansikNote ? 1 : 0,
+  })
+}
+
+/** 함께 보기 지문 — 사람 순서와 무관하게(정렬) 같은 조합이면 같은 값. */
+export function togetherFingerprint(ce: CircleEnergy): string {
+  const sorted = [...ce.entries].sort((a, b) => a.targetId.localeCompare(b.targetId))
+  return JSON.stringify({
+    m: sorted.map((e) => `${e.targetId}:${e.yongsin}:${e.strongest}:${e.dayMaster ?? ''}`),
+    p: [...ce.pairs].map((pr) => `${[pr.aId, pr.bId].sort().join('-')}:${pr.label}`).sort(),
+    l: ce.lowest,
   })
 }
 

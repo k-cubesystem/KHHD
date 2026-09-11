@@ -16,6 +16,11 @@ export const CREATABLE_CIRCLE_KINDS: readonly Exclude<CircleKind, 'family'>[] = 
 /** 가족 그룹의 고정 id — URL·액션에서 «행이 없는 그룹»를 가리키는 값. */
 export const FAMILY_CIRCLE_ID = 'family'
 
+/** 둘·셋·넷 함께 보기 — 고를 수 있는 인원과 그 가상 그룹의 id(CEO 2026-09-12). */
+export const TOGETHER_MIN = 2
+export const TOGETHER_MAX = 4
+export const TOGETHER_CIRCLE_ID = 'together'
+
 export interface CircleKindMeta {
   readonly label: string
   /** 만들기 화면의 한 줄. */

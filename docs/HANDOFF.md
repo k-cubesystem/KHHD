@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-11(33차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-12(34차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,36 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(34차 · 2026-09-12) 가족·인연 지도 v2 — «팩트만 남기고, 디테일은 복채 AI 로» + 오각형 + 둘·셋·넷 함께 보기 (배포 기록은 아래 갱신):**
+
+CEO: 「가족·인연 관리는 전부 다시 기획 / 지금까지를 정리하고 불필요한 것 빼고 팩트만 남겨 간단히 / 디테일한 해석은
+복채를 써서 AI 분석으로 유도 / 둘·셋·넷 함께 보는 서로의 기운 분석을 AI 로 / 오행 그래프는 오각형으로」.
+기획서 `TEAM_G_DESIGN/prd/PRD-family-map-v2.md`(정리·뺀 것·새 배치·다음 회차).
+
+- **한 화면**: 가족 지도(가상 그룹 `family`)와 그룹 지도가 같은 `components/family/circle-energy-map.tsx`(v2) 를 쓴다.
+  `FamilyEnergyMap.tsx`·`energy-bars.tsx` 삭제(사람 고르기·오행 아코디언·막대·긴 관계 문장 함께 폐기). 지도 페이지는
+  `getCircleEnergy(circleId)` 하나로 분기(가족 <2명 = 등록 안내, 남의 그룹 = 못 찾음).
+- **무료로 보이는 것**: 오각형 겹침(전체=금 채움, 사람=선, 범례 이름을 눌러 숨김) · 「이것만 보면 됩니다」 세 줄(함께
+  채울 기운+든 사람/물건, 두꺼운 기운, 역할 결 칩 둘) · 「서로의 관계」 짝마다 `A ↔ B · 라벨 · 오행` 한 줄 · 구성원 한 줄
+  (옅은·넉넉 칩 + 처방전 문). 🔴 **수치는 어느 티어에도 없다**(렌더 테스트가 %·점·비율 숫자 0건 강제). 관계의
+  `reason`/`how` 문장은 화면에서 빠져 AI 프롬프트 재료로만 간다(「왜·함께 무엇을」은 AI 풀이로 — 유도 문장).
+- **오각형**: `lib/domain/circle/radar.ts`(축 상생 순 木火土金水 · 반지름 = share/40 · 균형 20% 고리 = 0.5) +
+  `components/family/element-radar.tsx`(SVG · 색은 design-tokens: 평균 `GOLD_500`, 사람 `OBANGSAEK`·`BOK_TIER_COLORS`
+  순환 `seriesColor(i)`). 처방전 ① 도 오각형(타고난 = 금 채움 · 살림 얹은 지금 = 점선) — 「타고난/살림」 토글 삭제.
+- **둘·셋·넷 함께 보기** = `NarrativeKind 'together'` · **3만냥**(`FEATURE_COST.togetherNarrative`, action_type
+  `together_narrative` — gemini/actions + payment-guide 라벨 동시 등록). `getTogetherEnergy(ids)`(2~4명, `self`|내
+  `family_members` uuid — 하나라도 남의 것이면 null) → `buildCircleEnergy('custom')` → `togetherPrompt`(네 문단: 함께
+  있을 때의 결 / 누가 누구에게 무엇을 / 부딪히는 자리·푸는 법 / 이번 주 같이 할 한 가지) · `togetherFingerprint`
+  (id 정렬 — 고른 순서가 달라도 같은 조합 = 같은 캐시). 화면 `components/family/together-panel.tsx`(칩으로 고르기,
+  최대 4 넘기면 토스트, 결과 문단). 🔴 `circle_narratives.target_key` 는 ≤64자 → `together:` + sha256(정렬 ids)[:40].
+  DB CHECK 에 'together' 추가 — `supabase/migrations/family/20260912_circle_narratives_together.sql`(라이브 적용됨).
+- 🔴 **34차 함정 ①**: `'use server'` 파일에 `export const` 를 두면 tsc 는 통과하고 **Turbopack 빌드가 «Export X
+  doesn't exist» 9건**으로 죽는다(리포 게이트 `use-server-exports.test.ts` 도 잡는다). 상수는 `lib/domain/circle/circle.ts`
+  (`TOGETHER_MIN/MAX/CIRCLE_ID`)로. ② python 패치로 TS 문자열의 `\n` 을 넣으면 실제 개행이 들어가 `.join('` 이
+  깨진다 — 패치 뒤 `sed -n` 으로 확인. ③ `jest.mock` 팩토리에서 바깥 `const` 즉시 참조 = TDZ.
+- 검증: tsc · eslint 0 · jest(전체) · build · 정적 촬영(가족 4인 지도 · 직장 3인 지도 · 처방전). 실기기 검수는 CEO 몫.
+- 다음 회차 후보(PRD §5): 목록 카드 축소(이름·관계·옅은/넉넉 칩·처방전) · 허브 배너 오각형 썸네일 · «최근 본 조합».
 
 **(32차 · 2026-09-07) 가족 초대(R-2) 제거 — 프로덕션 라이브(`3bded410` → 배포 `hhd-bfy89vztn`):**
 

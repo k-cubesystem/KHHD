@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowRight, ChevronLeft, ExternalLink, Lock } from 'lucide-react'
 import { EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
-import { EnergyBars } from '@/components/family/energy-bars'
+import { ElementRadar, RADAR_AVERAGE_COLOR, seriesColor, type RadarSeries } from '@/components/family/element-radar'
 import type { Element } from '@/lib/domain/shrine/types'
 import type { Prescription, PrescriptionTeaser } from '@/lib/domain/circle/prescription'
 import type { PrescriptionPayload } from '@/app/actions/circle/energy'
@@ -20,8 +20,8 @@ import { trackEvent } from '@/lib/analytics/ga4'
 /**
  * 기운 처방전 화면 — 다섯 블록(PRD-energy-circle §3-1).
  *
- * 값은 전부 서버가 정한 것이다(순수 함수 buildPrescription). 여기서는 그리기만 하고,
- * 「타고난/지금」 토글만 클라이언트 상태다(두 값을 다 받아 두었으므로 재조회 없음).
+ * 값은 전부 서버가 정한 것이다(순수 함수 buildPrescription). 여기서는 그리기만 한다 —
+ * ① 은 오각형 한 장(타고난 = 금색 채움, 살림 얹은 지금 = 점선)이라 토글이 없다.
  *
  * 🔴 무료(teaser)는 ①·② 만 온다 — 나머지는 **서버가 잘라서** 보내지 않았다. 잠금 패널은
  *    «가려진 것»이 아니라 «없는 것»의 자리다. 숨긴 개수는 서버가 실제 배열에서 센 수다.
@@ -29,8 +29,6 @@ import { trackEvent } from '@/lib/analytics/ga4'
 
 const STORE_ITEMS_HREF = '/protected/store?tab=items'
 const MEMBERSHIP_HREF = '/protected/store?tab=membership'
-
-type Mode = 'born' | 'live'
 
 function label(el: Element): string {
   return `${EL_LABEL[el]}(${EL_KO[el]})`
@@ -57,50 +55,27 @@ function BlockLabel({ n, title }: { n: string; title: string }) {
 }
 
 function BlockOne({
-  energy: born,
+  energy,
   energyLive,
   lacking,
   strongest,
 }: Pick<Prescription, 'energy' | 'energyLive' | 'lacking' | 'strongest'>) {
-  const [mode, setMode] = useState<Mode>('born')
-  const energy = mode === 'live' && energyLive ? energyLive : born
-
-  const pick = (next: Mode) => {
-    setMode(next)
-    trackEvent({ action: 'prescription_toggle', category: 'engagement', label: next })
-  }
-
+  const series: RadarSeries[] = [
+    { id: 'born', name: '타고난 기운', share: energy, color: RADAR_AVERAGE_COLOR, fill: true },
+    ...(energyLive
+      ? [{ id: 'live', name: '살림 얹은 지금', share: energyLive, color: seriesColor(0), dashed: true }]
+      : []),
+  ]
   return (
     <section className="space-y-3 rounded-xl border border-gold-500/30 bg-gold-500/[0.06] p-4">
-      <div className="flex items-center justify-between">
-        <BlockLabel n="①" title="타고난 기운" />
-        <div className="inline-flex overflow-hidden rounded-md border border-white/10 text-[11px]" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'born'}
-            onClick={() => pick('born')}
-            className={`px-2.5 py-1 font-serif ${mode === 'born' ? 'bg-gold-500/[0.14] text-gold-300' : 'text-ink-light/45'}`}
-          >
-            타고난 기운
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'live'}
-            disabled={!energyLive}
-            onClick={() => pick('live')}
-            className={`px-2.5 py-1 font-serif disabled:opacity-30 ${mode === 'live' ? 'bg-gold-500/[0.14] text-gold-300' : 'text-ink-light/45'}`}
-          >
-            살림 얹은 기운
-          </button>
-        </div>
-      </div>
-      <EnergyBars energy={energy} lacking={lacking} strongest={strongest} unit="%" />
-      <p className="text-[10.5px] leading-snug text-ink-light/45">
-        {mode === 'born'
-          ? '명식의 여덟 글자와 지지 속 숨은 기운(지장간), 계절의 무게까지 셈한 타고난 비율입니다. 모자란 자리는 이 값으로 정합니다.'
-          : '신당 살림·관상·손금을 얹은 지금의 기운을 비율로 본 것입니다.'}
+      <BlockLabel n="①" title="타고난 기운" />
+      <ElementRadar series={series} size={230} />
+      <p className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] text-ink-light/70">
+        옅은 <ElementChip el={lacking} /> 넉넉한 <ElementChip el={strongest} />
+      </p>
+      <p className="text-[10.5px] leading-snug text-ink-light/45" style={{ wordBreak: 'keep-all' }}>
+        금색은 명식의 여덟 글자와 지지 속 숨은 기운(지장간), 계절의 무게까지 셈한 타고난 비율입니다. 모자란 자리는 이
+        값으로 정합니다.{energyLive && ' 점선은 신당 살림·관상·손금을 얹은 지금의 기운입니다.'}
       </p>
     </section>
   )

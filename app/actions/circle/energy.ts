@@ -9,7 +9,15 @@ import type { SajuContext } from '@/lib/saju-engine/context-builder'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
 import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 import { elementFromHanja } from '@/lib/domain/circle/element-lore'
-import { FAMILY_CIRCLE_ID, CIRCLE_KIND_META, isCircleKind, type CircleKind } from '@/lib/domain/circle/circle'
+import {
+  FAMILY_CIRCLE_ID,
+  CIRCLE_KIND_META,
+  TOGETHER_CIRCLE_ID,
+  TOGETHER_MAX,
+  TOGETHER_MIN,
+  isCircleKind,
+  type CircleKind,
+} from '@/lib/domain/circle/circle'
 import { buildCircleEnergy, type CircleEnergy, type CircleMemberEnergy } from '@/lib/domain/circle/team-energy'
 import {
   buildPrescription,
@@ -22,6 +30,7 @@ import {
   type PrescriptionTeaser,
 } from '@/lib/domain/circle/prescription'
 import { getFamilyEnergyMap } from '@/app/actions/shrine/energy-map'
+import type { EnergyMapEntry } from '@/lib/domain/shrine/energy-map'
 
 /**
  * 처방전 응답 — 멤버십이 없으면 ①·② 만(teaser). 잘라내는 것은 **서버**다: 화면에 전량을 보내고
@@ -140,8 +149,8 @@ function toCatalogLite(row: CatalogLite): PrescriptionCatalogItem | null {
 /**
  * 기운 처방전 — 본인('self') 또는 내 가족 한 명.
  *
- * «지금 기운»은 기운 지도와 **같은 계산**(getFamilyEnergyMap)에서 가져온다 — 처방전이 지도와 다른 수를
- * 말하면 둘 다 못 믿게 된다. «타고난 기운»은 사주에서 유도하고, 명식의 용신·희신·기신은 곁들이는 힌트다.
+ * «타고난 기운»은 기운 지도와 **같은 계산**(getFamilyEnergyMap → 세력 프로필)에서 가져온다 — 처방전이 지도와 다른 수를
+ * 말하면 둘 다 못 믿게 된다. 명식의 용신·희신·기신은 곁들이는 힌트다.
  *
  * 비로그인·남의 id·생년월일 없음 → null. 멤버십이 없으면 teaser.
  */
@@ -179,7 +188,7 @@ export async function getPrescription(targetId: string): Promise<PrescriptionPay
 
   const catalog = ((catRows ?? []) as CatalogLite[]).map(toCatalogLite).filter((c): c is PrescriptionCatalogItem => !!c)
 
-  // «사람에게서» 갈래는 가족 안에서만 — 지인은 지도에서도 골라야 들어오는 사람이다.
+  // «사람에게서» 갈래는 가족 안에서만 — 지인은 그룹에 넣어야 들어오는 사람이다.
   const mates: PrescriptionMate[] = map.entries
     .filter((e) => e.targetId !== target && e.category !== 'acquaintance')
     .map((e) => ({ targetId: e.targetId, name: e.name, strongest: e.strongest, energy: e.energy }))
@@ -203,6 +212,55 @@ export async function getPrescription(targetId: string): Promise<PrescriptionPay
 export interface CircleEnergyPayload {
   circle: { id: string; name: string; kind: CircleKind }
   energy: CircleEnergy
+}
+
+/** 지도 항목들 → 명식 힌트(일간·용신·기신·십성)를 얹은 그룹 구성원. 사람마다 엔진을 한 번씩 돈다. */
+async function membersOf(
+  supabase: SupabaseClient,
+  userId: string,
+  entries: readonly EnergyMapEntry[]
+): Promise<CircleMemberEnergy[]> {
+  const memberTargetIds = entries.map((e) => e.targetId).filter((id) => id !== 'self')
+  const [{ data: me }, { data: rows }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('full_name, birth_date, birth_time, calendar_type, is_leap_month, gender')
+      .eq('id', userId)
+      .maybeSingle(),
+    memberTargetIds.length
+      ? supabase
+          .from('family_members')
+          .select('id, name, birth_date, birth_time, calendar_type, is_leap_month, gender')
+          .eq('user_id', userId)
+          .in('id', memberTargetIds)
+      : Promise.resolve({ data: [] as BirthDbRow[] }),
+  ])
+
+  const births = new Map<string, BirthRow>()
+  if (me) births.set('self', toBirthRow(me as BirthDbRow, '나'))
+  for (const row of (rows ?? []) as BirthDbRow[]) if (row.id) births.set(row.id, toBirthRow(row, '가족'))
+
+  return Promise.all(
+    entries.map(async (e) => {
+      const birth = births.get(e.targetId)
+      const ctx = birth ? await sajuContextOf(birth) : null
+      const hints = hintsOf(ctx)
+      const dayMaster: Element | null = ctx ? elementFromHanja(ctx.sajuData.dayMasterElement) : null
+      return {
+        targetId: e.targetId,
+        name: e.name,
+        relation: e.relation,
+        avatarId: e.avatarId,
+        energy: e.energy,
+        yongsin: e.yongsin,
+        strongest: e.strongest,
+        dayMaster,
+        mansikYongsin: hints?.yongsin ?? null,
+        mansikGisin: hints?.gisin ?? null,
+        sipseong: ctx?.analysis.sipseong.distribution ?? null,
+      }
+    })
+  )
 }
 
 /**
@@ -243,47 +301,33 @@ export async function getCircleEnergy(circleId: string): Promise<CircleEnergyPay
     return memberIds ? memberIds.has(e.targetId) : e.category !== 'acquaintance'
   })
 
-  const memberTargetIds = entries.map((e) => e.targetId).filter((id) => id !== 'self')
-  const [{ data: me }, { data: rows }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('full_name, birth_date, birth_time, calendar_type, is_leap_month, gender')
-      .eq('id', user.id)
-      .maybeSingle(),
-    memberTargetIds.length
-      ? supabase
-          .from('family_members')
-          .select('id, name, birth_date, birth_time, calendar_type, is_leap_month, gender')
-          .eq('user_id', user.id)
-          .in('id', memberTargetIds)
-      : Promise.resolve({ data: [] as BirthDbRow[] }),
-  ])
-
-  const births = new Map<string, BirthRow>()
-  if (me) births.set('self', toBirthRow(me as BirthDbRow, '나'))
-  for (const row of (rows ?? []) as BirthDbRow[]) if (row.id) births.set(row.id, toBirthRow(row, '가족'))
-
-  const members: CircleMemberEnergy[] = await Promise.all(
-    entries.map(async (e) => {
-      const birth = births.get(e.targetId)
-      const ctx = birth ? await sajuContextOf(birth) : null
-      const hints = hintsOf(ctx)
-      const dayMaster: Element | null = ctx ? elementFromHanja(ctx.sajuData.dayMasterElement) : null
-      return {
-        targetId: e.targetId,
-        name: e.name,
-        relation: e.relation,
-        avatarId: e.avatarId,
-        energy: e.energy,
-        yongsin: e.yongsin,
-        strongest: e.strongest,
-        dayMaster,
-        mansikYongsin: hints?.yongsin ?? null,
-        mansikGisin: hints?.gisin ?? null,
-        sipseong: ctx?.analysis.sipseong.distribution ?? null,
-      }
-    })
-  )
-
+  const members = await membersOf(supabase, user.id, entries)
   return { circle, energy: buildCircleEnergy(circle.kind, members) }
+}
+
+/**
+ * 둘·셋·넷 함께 보기 — 내 인연 중 고른 사람들만으로 엮은 기운(CEO 2026-09-12). AI 분석의 재료다.
+ * 고른 id 가 내 사람이 아니면(하나라도) null — 남의 id 를 섞는 IDOR 를 여기서 막는다.
+ */
+export async function getTogetherEnergy(rawIds: readonly string[]): Promise<CircleEnergyPayload | null> {
+  const ids = [...new Set(rawIds.map((s) => s.trim()).filter(Boolean))]
+  if (ids.length < TOGETHER_MIN || ids.length > TOGETHER_MAX) return null
+  if (!ids.every((id) => id === 'self' || UUID.test(id))) return null
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const map = await getFamilyEnergyMap()
+  if (!map) return null
+  const entries = ids.map((id) => map.entries.find((e) => e.targetId === id)).filter((e): e is EnergyMapEntry => !!e)
+  if (entries.length !== ids.length) return null
+
+  const members = await membersOf(supabase, user.id, entries)
+  return {
+    circle: { id: TOGETHER_CIRCLE_ID, name: entries.map((e) => e.name).join('·'), kind: 'custom' },
+    energy: buildCircleEnergy('custom', members),
+  }
 }

@@ -95,7 +95,8 @@ describe('🔴 배선 — 갈래가 실제로 흐른다', () => {
   it('기운 지도가 갈래를 싣고, 지인은 기본에서 빠져 있다', () => {
     // 「우리 가족 기운」 화면이라 지인이 자동으로 섞이면 평균과 «메워주는 관계»가 엉뚱해진다.
     expect(read('lib/domain/shrine/energy-map.ts')).toContain('category: MemberCategory')
-    expect(read('components/family/FamilyEnergyMap.tsx')).toContain("e.category !== 'acquaintance'")
+    // 가족 지도(가상 그룹 'family')의 기본 걸러내기는 그룹 기운 액션에 있다 — 지인은 그룹에 넣어야 들어온다.
+    expect(read('app/actions/circle/energy.ts')).toContain("e.category !== 'acquaintance'")
   })
 
   it('가족 화면이 갈래 탭으로 나뉜다', () => {

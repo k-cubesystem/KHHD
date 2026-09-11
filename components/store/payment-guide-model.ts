@@ -38,6 +38,7 @@ const FEATURE_LABEL = {
   samhap: '종합사주풀이',
   themeFortune: '인기테마운세',
   circleNarrative: '기운 처방전·그룹 AI 풀이',
+  togetherNarrative: '둘·셋·넷 함께 보는 기운 AI 분석',
   imageGeneration: '이미지 생성',
   today: '오늘의 운세',
   newYear: '신년운세',

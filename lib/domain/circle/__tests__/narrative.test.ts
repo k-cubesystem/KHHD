@@ -8,6 +8,8 @@ import {
   circlePrompt,
   prescriptionFingerprint,
   prescriptionPrompt,
+  togetherFingerprint,
+  togetherPrompt,
   validateNarrative,
 } from '@/lib/domain/circle/narrative'
 
@@ -83,6 +85,16 @@ describe('프롬프트 — 엔진 값만 싣고 풀어 쓰라고만 한다', () 
     expect(prompt).toContain('사람을 새로 들이라는 말은 쓰지 않습니다')
   })
 
+  it('함께 보기 프롬프트는 사람·관계의 이치·네 문단 지시를 싣고 점수가 없다', () => {
+    const prompt = togetherPrompt(CIRCLE)
+    expect(prompt).toContain('민수·지영 함께 보기(2명)')
+    expect(prompt).toContain('[서로의 관계 — 엔진 판정]')
+    expect(prompt).toContain('이치:')
+    expect(prompt).toContain('네 문단으로 풀어 쓰세요')
+    expect(prompt).toContain('사람을 고르거나 재는 말은 쓰지 않습니다')
+    expect(prompt).not.toMatch(/\d+\s*점|\d+\s*%/)
+  })
+
   it('시스템 프롬프트가 돌봄 규율(채용·효능·점수 금지)을 명시한다', () => {
     expect(NARRATIVE_SYSTEM_PROMPT).toContain('새로 판정하지 않습니다')
     expect(NARRATIVE_SYSTEM_PROMPT).toContain('«돌봄»')
@@ -99,6 +111,19 @@ describe('지문(fingerprint) — 같은 입력이면 같고, 화면이 바뀌�
     )
     expect(a).toBe(b)
     expect(a).not.toBe(c)
+  })
+
+  it('함께 보기 — 사람 순서를 바꿔도 같은 조합이면 같은 지문', () => {
+    const reversed = buildCircleEnergy('work', [
+      member('b', '지영', energy({ wood: 20, fire: 60 }), { mansikGisin: 'wood', dayMaster: 'fire' }),
+      member('self', '민수', energy({ wood: 75, fire: 30 }), { dayMaster: 'wood' }),
+    ])
+    expect(togetherFingerprint(reversed)).toBe(togetherFingerprint(CIRCLE))
+    const other = buildCircleEnergy('work', [
+      member('self', '민수', energy({ wood: 75, fire: 30 }), { dayMaster: 'wood' }),
+      member('c', '현우', energy({ water: 70 }), { dayMaster: 'water' }),
+    ])
+    expect(togetherFingerprint(other)).not.toBe(togetherFingerprint(CIRCLE))
   })
 
   it('그룹', () => {
