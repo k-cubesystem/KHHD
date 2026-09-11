@@ -58,6 +58,32 @@ describe('TogetherPanel — 둘·셋·넷 함께 보기', () => {
     expect(generateNarrative).toHaveBeenCalledWith('together', 'self,b,c')
   })
 
+  it('최근 본 조합 — 이 화면 사람들로만 된 것만 보이고, 누르면 서버 없이 그 풀이가 열린다', () => {
+    const recent = [
+      {
+        ids: ['b', 'self'],
+        names: ['지영', '나'],
+        text: '지난 풀이입니다.\n\n둘째 문단.',
+        createdAt: '2026-09-10T00:00:00.000Z',
+      },
+      {
+        ids: ['self', 'zzz'],
+        names: ['나', '모르는 이'],
+        text: '남의 화면 조합',
+        createdAt: '2026-09-09T00:00:00.000Z',
+      },
+    ]
+    render(<TogetherPanel people={PEOPLE.slice(0, 3)} kind="family" recent={recent} />)
+    expect(screen.getByText('최근 본 조합 — 다시 여는 데 복채가 들지 않습니다')).toBeInTheDocument()
+    expect(screen.queryByText(/모르는 이/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /지영·나/ }))
+    expect(screen.getByText('지난 풀이입니다.')).toBeInTheDocument()
+    expect(generateNarrative).not.toHaveBeenCalled()
+    // 고른 사람도 그 조합으로 바뀐다(현우는 빠진다)
+    expect(screen.getByRole('button', { name: /현우/, pressed: false })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeInTheDocument()
+  })
+
   it('복채가 모자라면 오류 토스트만 띄운다', async () => {
     generateNarrative.mockResolvedValue({
       success: false,

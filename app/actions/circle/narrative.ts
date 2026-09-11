@@ -66,6 +66,29 @@ export interface CachedNarrative {
   createdAt: string
 }
 
+/** 함께 보기의 사람 조합 — DB meta 컬럼에 남겨 «최근 본 조합» 목록이 이름을 되찾는다. */
+interface TogetherMeta {
+  ids: string[]
+  names: string[]
+}
+
+export interface RecentTogether extends TogetherMeta {
+  text: string
+  createdAt: string
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === 'string')
+}
+
+function isTogetherMeta(v: unknown): v is TogetherMeta {
+  if (!v || typeof v !== 'object') return false
+  const o = v as Record<string, unknown>
+  return (
+    isStringArray(o.ids) && isStringArray(o.names) && o.ids.length === o.names.length && o.ids.length >= TOGETHER_MIN
+  )
+}
+
 function togetherIds(targetKey: string): string[] | null {
   const ids = [
     ...new Set(
@@ -124,11 +147,45 @@ export async function getCachedNarrative(kind: NarrativeKind, targetKey: string)
   return { text: data.body as string, createdAt: data.created_at as string }
 }
 
-/** 엔진 값 → (프롬프트, 지문). 대상이 없으면 null. */
+/** 최근 본 조합 — 30일 안, 조합마다 최신 하나, 최신순 limit 개. 조회만(무료). */
+export async function getRecentTogether(limit = 5): Promise<RecentTogether[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data } = await supabase
+    .from('circle_narratives')
+    .select('target_key, body, created_at, meta')
+    .eq('user_id', user.id)
+    .eq('kind', 'together')
+    .gte('created_at', cutoffISO())
+    .order('created_at', { ascending: false })
+    .limit(limit * 4)
+
+  const seen = new Set<string>()
+  const out: RecentTogether[] = []
+  for (const row of data ?? []) {
+    const key = row.target_key as string
+    if (seen.has(key) || !isTogetherMeta(row.meta)) continue
+    seen.add(key)
+    out.push({
+      ids: row.meta.ids,
+      names: row.meta.names,
+      text: row.body as string,
+      createdAt: row.created_at as string,
+    })
+    if (out.length >= limit) break
+  }
+  return out
+}
+
+/** 엔진 값 → (프롬프트, 지문, 함께 보기면 사람 조합). 대상이 없으면 null. */
 async function materialOf(
   kind: NarrativeKind,
   targetKey: string
-): Promise<{ prompt: string; fingerprint: string } | null> {
+): Promise<{ prompt: string; fingerprint: string; meta?: TogetherMeta } | null> {
   if (kind === 'prescription') {
     const payload = await getPrescription(targetKey)
     if (!payload || payload.access !== 'full') return null
@@ -142,7 +199,11 @@ async function materialOf(
     if (!ids) return null
     const payload = await getTogetherEnergy(ids)
     if (!payload || payload.energy.entries.length < TOGETHER_MIN) return null
-    return { prompt: togetherPrompt(payload.energy), fingerprint: togetherFingerprint(payload.energy) }
+    return {
+      prompt: togetherPrompt(payload.energy),
+      fingerprint: togetherFingerprint(payload.energy),
+      meta: { ids: payload.energy.entries.map((e) => e.targetId), names: payload.energy.entries.map((e) => e.name) },
+    }
   }
   const payload = await getCircleEnergy(targetKey)
   if (!payload || payload.energy.entries.length < 2) return null
@@ -236,6 +297,7 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
         body: text,
         model: MODEL_FLASH,
         talisman_cost: cost,
+        meta: material.meta ?? null,
       })
       .select('created_at')
       .single()

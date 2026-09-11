@@ -7,6 +7,7 @@ import { ArrowRight, Users } from 'lucide-react'
 import { ELEMENTS, EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { getFamilyEnergySummary } from '@/app/actions/shrine/energy-map'
 import type { FamilyEnergySummary } from '@/lib/domain/shrine/energy-map'
+import { ElementRadar, RADAR_AVERAGE_COLOR, type RadarSeries } from '@/components/family/element-radar'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
@@ -72,6 +73,11 @@ export function FamilyMapCard() {
   const enough = summary.count >= 2
   const shown = summary.members.slice(0, CHIP_MAX)
   const rest = summary.count - shown.length
+  // 오각형 썸네일 — 전체는 금 채움, 칩에 선 사람은 그 칩과 같은 색(넘치는 기운 색)의 선. 지도(34차)의 축소판.
+  const thumb: RadarSeries[] = [
+    { id: 'average', name: '전체', share: summary.average, color: RADAR_AVERAGE_COLOR, fill: true },
+    ...shown.map((m) => ({ id: m.targetId, name: m.name, share: m.energy, color: EL_COLOR[m.strongest] })),
+  ]
 
   return (
     <motion.div
@@ -114,41 +120,55 @@ export function FamilyMapCard() {
 
         {enough ? (
           <>
-            <h3
-              className="font-serif text-[15px] font-bold leading-snug text-ink-light"
-              style={{ wordBreak: 'keep-all' }}
-            >
-              우리 가족, <span className="text-gold-500">서로의 기운</span>이 어떻게 맞물릴까요
-            </h3>
-
-            {/* 구성원 칩 — 이름 첫 글자를 그 사람의 «넘치는 기운» 색으로 두른다.
-                아바타 그림을 쓰지 않는 이유는 허브 첫 화면이기 때문이다(이미지 N장이 더 붙는다). */}
-            <ul className="flex flex-wrap items-center gap-1.5">
-              {shown.map((m) => (
-                <li
-                  key={m.targetId}
-                  className="flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5"
-                  style={{ borderColor: `${EL_COLOR[m.strongest]}55`, background: `${EL_COLOR[m.strongest]}14` }}
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <h3
+                  className="font-serif text-[15px] font-bold leading-snug text-ink-light"
+                  style={{ wordBreak: 'keep-all' }}
                 >
-                  <span
-                    aria-hidden
-                    className="grid h-5 w-5 place-items-center rounded-full font-serif text-[10px] font-bold"
-                    style={{ background: `${EL_COLOR[m.strongest]}30`, color: '#E8E4DC' }}
-                  >
-                    {m.name.slice(0, 1)}
-                  </span>
-                  <span className="max-w-[64px] truncate font-serif text-[11.5px] text-ink-light/85">{m.name}</span>
-                  <span className="font-serif text-[11px]" style={{ color: EL_COLOR[m.strongest] }}>
-                    {EL_KO[m.strongest]}
-                  </span>
-                </li>
-              ))}
-              {rest > 0 && (
-                <li className="rounded-full border border-white/10 px-2.5 py-1 font-serif text-[11px] text-ink-light/45">
-                  +{rest}
-                </li>
-              )}
-            </ul>
+                  우리 가족, <span className="text-gold-500">서로의 기운</span>이 어떻게 맞물릴까요
+                </h3>
+
+                {/* 구성원 칩 — 이름 첫 글자를 그 사람의 «넘치는 기운» 색으로 두른다. 썸네일의 선 색과 같다.
+                    아바타 그림을 쓰지 않는 이유는 허브 첫 화면이기 때문이다(이미지 N장이 더 붙는다). */}
+                <ul className="flex flex-wrap items-center gap-1.5">
+                  {shown.map((m) => (
+                    <li
+                      key={m.targetId}
+                      className="flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5"
+                      style={{ borderColor: `${EL_COLOR[m.strongest]}55`, background: `${EL_COLOR[m.strongest]}14` }}
+                    >
+                      <span
+                        aria-hidden
+                        className="grid h-5 w-5 place-items-center rounded-full font-serif text-[10px] font-bold"
+                        style={{ background: `${EL_COLOR[m.strongest]}30`, color: '#E8E4DC' }}
+                      >
+                        {m.name.slice(0, 1)}
+                      </span>
+                      <span className="max-w-[64px] truncate font-serif text-[11.5px] text-ink-light/85">{m.name}</span>
+                      <span className="font-serif text-[11px]" style={{ color: EL_COLOR[m.strongest] }}>
+                        {EL_KO[m.strongest]}
+                      </span>
+                    </li>
+                  ))}
+                  {rest > 0 && (
+                    <li className="rounded-full border border-white/10 px-2.5 py-1 font-serif text-[11px] text-ink-light/45">
+                      +{rest}
+                    </li>
+                  )}
+                </ul>
+              </div>
+
+              {/* 오각형 썸네일 — 지도의 첫 그림을 미리 보인다(수치 없음). */}
+              <ElementRadar
+                series={thumb}
+                size={92}
+                labels={false}
+                dots={false}
+                legend={false}
+                className="w-[92px] shrink-0"
+              />
+            </div>
 
             {/* 한 줄 풀이 — 메워주는 짝이 있으면 그것을, 없으면 온 가족이 함께 채울 기운을.
                 조사(이/가·을/를)가 갈리지 않는 문장만 쓴다 — 오행 이름이 값에 따라 바뀌므로. */}

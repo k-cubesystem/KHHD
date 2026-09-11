@@ -43,21 +43,27 @@ export function ElementRadar({
   series,
   size = 240,
   legend = true,
+  labels = true,
+  dots = true,
   className,
 }: {
   series: readonly RadarSeries[]
   size?: number
   legend?: boolean
+  /** 축 이름(木火土金水). 썸네일은 끈다 — 글자가 그림보다 커진다. */
+  labels?: boolean
+  /** 꼭짓점 점. */
+  dots?: boolean
   className?: string
 }) {
   const cx = size / 2
-  const cy = size / 2 + 6
-  const R = size / 2 - 34
+  const cy = size / 2 + (labels ? 6 : 0)
+  const R = size / 2 - (labels ? 34 : 4)
 
   return (
     <div className={className}>
       <svg
-        viewBox={`0 0 ${size} ${size + 8}`}
+        viewBox={`0 0 ${size} ${size + (labels ? 8 : 0)}`}
         width="100%"
         role="img"
         aria-label={`오행 오각형 그래프 — ${series.map((s) => s.name).join(', ')}`}
@@ -102,33 +108,32 @@ export function ElementRadar({
                 strokeLinejoin="round"
                 strokeDasharray={s.dashed ? '4 3' : undefined}
               />
-              {pts.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r={2.2} fill={s.color} />
-              ))}
+              {dots && pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={2.2} fill={s.color} />)}
             </g>
           )
         })}
-        {RADAR_AXES.map((el, i) => {
-          const p = pointAt(i, R + 20, cx, cy)
-          return (
-            <text
-              key={el}
-              x={p.x}
-              y={p.y}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill={EL_COLOR[el]}
-              fontSize={13}
-              fontWeight={700}
-              fontFamily="var(--font-serif, 'Noto Serif KR', serif)"
-            >
-              {EL_KO[el]}
-              <tspan fontSize={9} fontWeight={400} fill={INK_PRIMARY} fillOpacity={0.55} dx={2}>
-                {EL_LABEL[el]}
-              </tspan>
-            </text>
-          )
-        })}
+        {labels &&
+          RADAR_AXES.map((el, i) => {
+            const p = pointAt(i, R + 20, cx, cy)
+            return (
+              <text
+                key={el}
+                x={p.x}
+                y={p.y}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill={EL_COLOR[el]}
+                fontSize={13}
+                fontWeight={700}
+                fontFamily="var(--font-serif, 'Noto Serif KR', serif)"
+              >
+                {EL_KO[el]}
+                <tspan fontSize={9} fontWeight={400} fill={INK_PRIMARY} fillOpacity={0.55} dx={2}>
+                  {EL_LABEL[el]}
+                </tspan>
+              </text>
+            )
+          })}
       </svg>
       {legend && series.length > 1 && (
         <ul className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1">

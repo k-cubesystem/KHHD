@@ -5,11 +5,25 @@ import { getCirclesOverview, type CirclesOverview } from '@/app/actions/circle/c
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { MembershipGate } from '@/components/shared/membership-gate'
 import { GENERIC_MEMBERSHIP_BENEFIT_LINES } from '@/lib/domain/payment/membership-benefits'
+import { baseFromBirth } from '@/lib/domain/shrine/energy-born'
+import { highestElement, lowestElement } from '@/lib/domain/shrine/energy-map'
+import type { MemberEnergyHint } from '@/components/family/member-row'
 import { FamilyPageClient } from './family-page-client'
 
 export const metadata: Metadata = {
   title: '가족·인연 관리',
   description: '소중한 인연들의 사주를 체계적으로 관리하세요',
+}
+
+/** 목록 한 줄의 옅은·넉넉 칩 — 지도·처방전과 같은 계산(세력 비율)을 생년월일에서 바로 낸다. 저장하지 않는다. */
+function energyHints(members: readonly FamilyMemberWithMissions[]): Record<string, MemberEnergyHint> {
+  const out: Record<string, MemberEnergyHint> = {}
+  for (const m of members) {
+    const born = baseFromBirth(m.birth_date, m.birth_time, m.calendar_type !== 'lunar')
+    if (!born.yongsin) continue
+    out[m.id] = { yongsin: lowestElement(born.share), strongest: highestElement(born.share) }
+  }
+  return out
 }
 
 export default async function FamilyPage() {
@@ -57,5 +71,7 @@ export default async function FamilyPage() {
     // 그룹 정보가 없어도 가족 목록은 떠야 한다 — 탭만 안내 상태로 뜬다.
   }
 
-  return <FamilyPageClient initialMembers={members} isGuest={false} circles={circles} />
+  return (
+    <FamilyPageClient initialMembers={members} isGuest={false} circles={circles} energyById={energyHints(members)} />
+  )
 }

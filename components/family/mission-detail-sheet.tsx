@@ -70,19 +70,19 @@ export function MissionDetailSheet({ isOpen, onClose, member }: Props) {
         <SheetHeader className="text-left mb-6 space-y-4">
           <div>
             <SheetTitle className="text-xl font-serif font-bold text-white leading-snug">
-              운명의 빈틈을 메우는 <br />
-              <span className="text-gold-500">다섯 가지 지혜</span>
+              {member.name}님의 <span className="text-gold-500">풀이 기록</span>
             </SheetTitle>
             <p className="text-xs text-white/50 font-light mt-1">
-              부족한 운을 메우면 <strong className="text-white/80 font-medium">소중한 사람을 지키는 힘</strong>이
-              됩니다.
+              다섯 풀이(사주·관상·손금·풍수·궁합) 중{' '}
+              <strong className="text-white/80 font-medium">{completedCount}개</strong>를 마쳤습니다. 남은 것은 눌러서
+              바로 봅니다.
             </p>
           </div>
 
           {/* Progress Indicator */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-[10px] font-medium">
-              <span className="text-primary">운세 완성도</span>
+              <span className="text-primary">풀이 기록</span>
               <span className="text-white/60">
                 <span className="text-primary">{completedCount}</span> / {FAMILY_MISSION_TOTAL}
               </span>

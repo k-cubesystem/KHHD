@@ -14,7 +14,7 @@ import { highestElement } from '@/lib/domain/shrine/energy-map'
 import { CIRCLE_KIND_META } from '@/lib/domain/circle/circle'
 import { PAIR_LABEL_KO, type CircleEnergy, type PairLabel } from '@/lib/domain/circle/team-energy'
 import type { CircleEnergyPayload } from '@/app/actions/circle/energy'
-import type { CachedNarrative } from '@/app/actions/circle/narrative'
+import type { CachedNarrative, RecentTogether } from '@/app/actions/circle/narrative'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
@@ -197,12 +197,15 @@ export function CircleEnergyMapView({
   payload,
   sheet = 'hidden',
   narrative = null,
+  recentTogether = [],
 }: {
   payload: CircleEnergyPayload
   /** 「기운 한 장」 문 — BUSINESS 은 인쇄 링크, 다른 유료 티어는 업셀 한 줄, 숨김. */
   sheet?: 'print' | 'upsell' | 'hidden'
   /** 지난 AI 풀이(30일 안). */
   narrative?: CachedNarrative | null
+  /** 최근 본 함께 보기 조합(30일 안) — 이 화면의 사람들로만 이루어진 것이 걸러져 보인다. */
+  recentTogether?: readonly RecentTogether[]
 }) {
   const { circle, energy } = payload
   const meta = CIRCLE_KIND_META[circle.kind]
@@ -264,6 +267,7 @@ export function CircleEnergyMapView({
           <TogetherPanel
             kind={circle.kind}
             people={energy.entries.map((e) => ({ targetId: e.targetId, name: e.name, relation: e.relation }))}
+            recent={recentTogether}
           />
         )}
       </div>

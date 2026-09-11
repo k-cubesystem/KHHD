@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-12(34차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-12(35차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,26 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(35차 · 2026-09-12) 목록 한 줄 · 허브 오각형 썸네일 · 최근 본 조합 — CEO 「3만냥 유지, 나머지는 추천대로」 (배포 기록은 아래 갱신):**
+
+- **목록 카드 축소**(PRD-family-map-v2 §5): `components/family/member-row.tsx` 가 `member-mission-card.tsx` 를 대체 —
+  아바타(누르면 수정) · 이름 · 관계 · **옅은/넉넉 칩** · 「처방전」 · 「기록 N/5」 · 더보기(수정·삭제). 옛 «운대 %» 막대·
+  직업/취미 줄은 없다. 칩의 오행은 서버(`app/protected/family/page.tsx` `energyHints`)가 생년월일로 `baseFromBirth` →
+  지도·처방전과 같은 세력 비율에서 낸다(저장 없음). 다섯 풀이 진행은 「풀이 기록」 시트(`mission-detail-sheet.tsx`,
+  제목 「{이름}님의 풀이 기록」)로 옮겼다 — 시트의 격자·종합 CTA 는 그대로.
+- **허브 배너 오각형 썸네일**(`components/analysis/family-map-card.tsx`): 제목·칩 옆 92px 오각형 — 전체는 금 채움,
+  칩에 선 사람은 **칩과 같은 색**(넘치는 기운 색)의 선. `ElementRadar` 에 `labels`/`dots` 스위치 추가(썸네일은 둘 다 끔).
+  요약(`FamilyEnergySummary`)에 `average`, 사람마다 `energy` 를 더했다 — 🔴 요약을 mock 하는 허브 테스트 두 벌
+  (`hub-layout`·`hub-theme-section`)의 픽스처도 같이 늘려야 한다(안 늘리면 `share[el]` 에서 죽는다).
+- **최근 본 조합**: `circle_narratives.meta jsonb` 신설(마이그레이션 `20260912b_circle_narratives_meta.sql`, 라이브 적용) —
+  함께 보기 저장 때 `{ids, names}` 를 남긴다(target_key 는 해시라 되짚을 수 없다). `getRecentTogether()`(30일·조합마다
+  최신 하나·최대 5) → 지도 페이지가 `recentTogether` 로 내려 `TogetherPanel` 이 «최근 본 조합» 칩을 세운다. 누르면 **서버
+  호출 없이** 그 풀이가 열리고 사람도 그 조합으로 골라진다(복채 0). 이 화면 사람들로만 된 조합만 보인다.
+- e2e `e2e/prod/family-map.spec.ts` 를 지도 v2 문구(오각형 img·「이것만 보면 됩니다」·「서로의 관계」·수치 0)로 갱신 —
+  34차 뒤 낡아 있었다(프로덕션 스모크가 이 스펙을 돈다).
+- 🔴 **35차 함정**: jest 에 `--testPathIgnorePatterns` 를 CLI 로 주면 설정의 목록을 **덮어써** e2e 스펙 37벌이 딸려 들어와
+  «suite failed» 가 뜬다(테스트 실패 0). 임시 테스트는 지우고 기본 설정으로 돌릴 것.
 
 **(34차 · 2026-09-12) 가족·인연 지도 v2 — «팩트만 남기고, 디테일은 복채 AI 로» + 오각형 + 둘·셋·넷 함께 보기 — 프로덕션 라이브(`03212a65` → 배포 `hhd-pd0j29etk`):**
 

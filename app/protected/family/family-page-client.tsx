@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { addFamilyMember, deleteFamilyMember, updateFamilyMember } from '@/app/actions/user/family'
 import { type FamilyMemberWithMissions } from '@/app/actions/user/family-missions'
-import { MemberMissionCard } from '@/components/family/member-mission-card'
+import { MemberRow, type MemberEnergyHint } from '@/components/family/member-row'
 import { MissionDetailSheet } from '@/components/family/mission-detail-sheet'
 import type { CirclesOverview } from '@/app/actions/circle/circles'
 import { CirclePanel } from '@/components/family/circle-panel'
@@ -89,9 +89,11 @@ interface FamilyPageClientProps {
   isGuest: boolean
   /** 그룹(가족 가상 + 직장·모임) 개요 — 「그룹」 탭. 조회 실패면 null 이고 탭은 안내만 띄운다. */
   circles?: CirclesOverview | null
+  /** 사람마다 옅은·넉넉 오행(서버 계산) — 목록 한 줄의 칩. */
+  energyById?: Record<string, MemberEnergyHint>
 }
 
-export function FamilyPageClient({ initialMembers, isGuest, circles = null }: FamilyPageClientProps) {
+export function FamilyPageClient({ initialMembers, isGuest, circles = null, energyById = {} }: FamilyPageClientProps) {
   const router = useRouter()
   // 사주 계산용으로 자동 생성되는 relationship='본인' 레코드는 목록·카운트·지도 입구에서 숨긴다.
   // (DB 행은 삭제하지 않는다 — 사주 계산 소비처가 재생성에 의존)
@@ -247,7 +249,7 @@ export function FamilyPageClient({ initialMembers, isGuest, circles = null }: Fa
               </span>
             </span>
             <span className="block text-[11px] text-gold-200/60 mt-0.5">
-              {members.length + 1}명의 기운을 한눈에 · 서로 메울 오행을 봅니다
+              {members.length + 1}명의 타고난 오행을 오각형 한 장에 · 서로의 관계까지
             </span>
           </span>
           <ChevronRight className="w-4 h-4 text-gold-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
@@ -300,13 +302,13 @@ export function FamilyPageClient({ initialMembers, isGuest, circles = null }: Fa
       {/* 목록 */}
       <section aria-label="인연 목록" hidden={tab === 'circle'}>
         {membersByTab.length > 0 ? (
-          <div className="space-y-3">
-            {membersByTab.map((member, idx) => (
-              <MemberMissionCard
+          <div className="space-y-2">
+            {membersByTab.map((member) => (
+              <MemberRow
                 key={member.id}
                 member={member}
-                index={idx}
-                onClick={() => {
+                energy={energyById[member.id]}
+                onOpenRecord={() => {
                   setSelectedMember(member)
                   setIsSheetOpen(true)
                 }}

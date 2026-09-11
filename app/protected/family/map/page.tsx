@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCircleEnergy } from '@/app/actions/circle/energy'
-import { getCachedNarrative } from '@/app/actions/circle/narrative'
+import { getCachedNarrative, getRecentTogether } from '@/app/actions/circle/narrative'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
 import { canPrintTeamSheet } from '@/lib/domain/circle/print-access'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
@@ -46,10 +46,11 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   if (!user) redirect('/auth/login')
 
   const circleId = circle && circle !== FAMILY_CIRCLE_ID ? circle : FAMILY_CIRCLE_ID
-  const [payload, membership, narrative] = await Promise.all([
+  const [payload, membership, narrative, recentTogether] = await Promise.all([
     getCircleEnergy(circleId),
     getCurrentUserMembership(),
     getCachedNarrative('circle', circleId),
+    getRecentTogether(),
   ])
 
   if (!payload && circleId !== FAMILY_CIRCLE_ID) {
@@ -80,6 +81,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
       payload={payload}
       sheet={canPrintTeamSheet(membership?.tier) ? 'print' : 'upsell'}
       narrative={narrative}
+      recentTogether={recentTogether}
     />
   )
 }

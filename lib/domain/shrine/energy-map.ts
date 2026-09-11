@@ -142,6 +142,8 @@ export interface EnergySummaryMember {
   avatarId: string | null
   strongest: Element
   yongsin: Element
+  /** 타고난 비율(합 100) — 배너의 오각형 썸네일이 사람마다 선으로 겹친다. */
+  energy: Record<Element, number>
 }
 
 export interface FamilyEnergySummary {
@@ -150,6 +152,8 @@ export interface FamilyEnergySummary {
   members: readonly EnergySummaryMember[]
   /** 가족 평균에서 가장 부족한 기운 — 온 가족이 함께 채울 것 */
   familyYongsin: Element
+  /** 가족 평균 비율(합 100) — 오각형 썸네일의 금색 채움. */
+  average: Record<Element, number>
   /** 서로 메워주는 짝 하나(없으면 null). 여럿이면 격차가 가장 큰 짝을 고른다. */
   complement: Complement | null
 }
@@ -177,6 +181,7 @@ export function buildFamilyEnergySummary(sources: readonly EnergySummarySource[]
   const complements = findComplements(holders)
   let best: Complement | null = null
   for (const c of complements) if (best === null || gap(c) > gap(best)) best = c
+  const average = averageEnergy(holders)
 
   return {
     count: sources.length,
@@ -186,8 +191,10 @@ export function buildFamilyEnergySummary(sources: readonly EnergySummarySource[]
       avatarId: s.avatarId,
       strongest: holders[i].strongest,
       yongsin: holders[i].yongsin,
+      energy: s.energy,
     })),
-    familyYongsin: lowestElement(averageEnergy(holders)),
+    familyYongsin: lowestElement(average),
+    average,
     complement: best,
   }
 }

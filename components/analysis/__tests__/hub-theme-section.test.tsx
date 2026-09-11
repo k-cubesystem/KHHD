@@ -51,11 +51,33 @@ jest.mock('@/app/actions/shrine/energy-map', () => ({
   getFamilyEnergySummary: jest.fn(async () => ({
     count: 3,
     members: [
-      { targetId: 'self', name: '나', avatarId: null, strongest: 'wood', yongsin: 'fire' },
-      { targetId: 'm1', name: '어머니', avatarId: null, strongest: 'fire', yongsin: 'wood' },
-      { targetId: 'm2', name: '아버지', avatarId: null, strongest: 'water', yongsin: 'metal' },
+      {
+        targetId: 'self',
+        name: '나',
+        avatarId: null,
+        strongest: 'wood',
+        yongsin: 'fire',
+        energy: { wood: 38, fire: 10, earth: 20, metal: 16, water: 16 },
+      },
+      {
+        targetId: 'm1',
+        name: '어머니',
+        avatarId: null,
+        strongest: 'fire',
+        yongsin: 'wood',
+        energy: { wood: 10, fire: 36, earth: 20, metal: 18, water: 16 },
+      },
+      {
+        targetId: 'm2',
+        name: '아버지',
+        avatarId: null,
+        strongest: 'water',
+        yongsin: 'metal',
+        energy: { wood: 20, fire: 18, earth: 20, metal: 8, water: 34 },
+      },
     ],
     familyYongsin: 'metal',
+    average: { wood: 23, fire: 21, earth: 20, metal: 14, water: 22 },
     complement: { fromId: 'self', fromName: '나', toId: 'm1', toName: '어머니', element: 'wood' },
   })),
 }))

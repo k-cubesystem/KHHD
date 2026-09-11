@@ -129,6 +129,10 @@ describe('buildFamilyEnergySummary — 배너 한 줄', () => {
     expect(summary.members[0].yongsin).toBe('fire')
     expect(summary.members[1].strongest).toBe('fire')
     expect(summary.members[1].yongsin).toBe('wood')
+    // 오각형 썸네일 재료 — 사람마다 비율, 전체 평균
+    expect(summary.members[0].energy.wood).toBe(80)
+    expect(summary.average.wood).toBe(50)
+    expect(summary.average.fire).toBe(50)
   })
 
   it('★ 짝이 여럿이면 격차가 가장 큰 하나를 고른다 — 배너는 한 줄뿐이다', () => {
