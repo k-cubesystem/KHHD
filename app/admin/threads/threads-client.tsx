@@ -81,7 +81,7 @@ export function ThreadsAdminClient({
     <div className="space-y-6">
       {/* 상태 바 */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gold-500/20 bg-ink-primary/40 p-3 text-xs">
-        <span className={status.connected ? 'text-emerald-400' : 'text-red-400'}>
+        <span className={status.connected ? 'text-success-text' : 'text-error-text'}>
           {status.connected ? `● 연결됨 @${status.username ?? ''}` : '○ Threads 미연결 — S1 인증 필요'}
         </span>
         {status.tokenExpiresAt ? (
@@ -90,7 +90,7 @@ export function ThreadsAdminClient({
           </span>
         ) : null}
         <span className="text-ink-light/60">|</span>
-        <span className={status.automationEnabled ? 'text-emerald-400' : 'text-amber-400'}>
+        <span className={status.automationEnabled ? 'text-success-text' : 'text-warning-text'}>
           자동화 {status.automationEnabled ? 'ON' : 'OFF'}
         </span>
         <Button
@@ -154,8 +154,8 @@ export function ThreadsAdminClient({
                   <span className="text-ink-light/40">
                     {r.replied_at ? new Date(r.replied_at).toLocaleString('ko-KR') : ''}
                   </span>
-                  {r.our_reply_id ? <span className="text-emerald-400">답글함</span> : null}
-                  {r.hide_status === 'HIDDEN' ? <span className="text-amber-400">숨김</span> : null}
+                  {r.our_reply_id ? <span className="text-success-text">답글함</span> : null}
+                  {r.hide_status === 'HIDDEN' ? <span className="text-warning-text">숨김</span> : null}
                   <span className="ml-auto flex gap-1">
                     {(['apply', 'question', 'chat', 'spam'] as const).map((c) => (
                       <button
@@ -167,7 +167,7 @@ export function ThreadsAdminClient({
                       </button>
                     ))}
                     <button
-                      className="rounded border border-amber-500/40 px-1.5 text-[10px] text-amber-300 hover:bg-amber-500/10"
+                      className="rounded border border-warning/40 px-1.5 text-[10px] text-warning-text hover:bg-warning-light"
                       onClick={() =>
                         run(
                           `h-${r.id}`,
@@ -201,10 +201,10 @@ export function ThreadsAdminClient({
                 <span
                   className={
                     p.status === 'published'
-                      ? 'text-emerald-400'
+                      ? 'text-success-text'
                       : p.status === 'failed'
-                        ? 'text-red-400'
-                        : 'text-amber-400'
+                        ? 'text-error-text'
+                        : 'text-warning-text'
                   }
                 >
                   {p.status}
@@ -226,7 +226,7 @@ export function ThreadsAdminClient({
                 ) : null}
               </div>
               <p className="mt-1 whitespace-pre-wrap text-ink-light/85">{p.body}</p>
-              {p.error ? <p className="mt-1 text-red-400">{p.error}</p> : null}
+              {p.error ? <p className="mt-1 text-error-text">{p.error}</p> : null}
             </div>
           ))}
         </TabsContent>
@@ -261,11 +261,11 @@ export function ThreadsAdminClient({
 
 function cls(c: string) {
   return c === 'apply'
-    ? 'bg-emerald-500/20 text-emerald-300'
+    ? 'bg-success/20 text-success-text'
     : c === 'spam'
-      ? 'bg-red-500/20 text-red-300'
+      ? 'bg-error/20 text-error-text'
       : c === 'question'
-        ? 'bg-blue-500/20 text-blue-300'
+        ? 'bg-info/20 text-info-text'
         : 'bg-ink-light/10 text-ink-light/70'
 }
 
@@ -297,7 +297,7 @@ function QueueItem({
         <span className="text-ink-light/40">
           {q.variant_key} · {text.length}/500
         </span>
-        {q.error ? <span className="text-red-400">{q.error}</span> : null}
+        {q.error ? <span className="text-error-text">{q.error}</span> : null}
         <span className="ml-auto flex gap-2">
           <Button
             size="sm"
@@ -419,7 +419,7 @@ function RoundCard({
         <span className="rounded bg-ink-light/10 px-1.5">{r.topic}</span>
         <span
           className={
-            r.status === 'open' ? 'text-emerald-400' : r.status === 'drawn' ? 'text-gold-300' : 'text-ink-light/60'
+            r.status === 'open' ? 'text-success-text' : r.status === 'drawn' ? 'text-gold-300' : 'text-ink-light/60'
           }
         >
           {r.status}
@@ -491,11 +491,11 @@ function WinnerRow({
         <span
           className={
             w.draft_status === 'approved'
-              ? 'text-emerald-400'
+              ? 'text-success-text'
               : w.draft_status === 'ready'
                 ? 'text-gold-300'
                 : w.draft_status === 'failed'
-                  ? 'text-red-400'
+                  ? 'text-error-text'
                   : 'text-ink-light/60'
           }
         >
@@ -504,9 +504,9 @@ function WinnerRow({
         {e?.consent_public ? (
           <span className="text-ink-light/50">공개 동의</span>
         ) : (
-          <span className="text-amber-400">비공개</span>
+          <span className="text-warning-text">비공개</span>
         )}
-        {w.published_post_id ? <span className="text-emerald-400">발표됨</span> : null}
+        {w.published_post_id ? <span className="text-success-text">발표됨</span> : null}
         <span className="ml-auto flex gap-1.5">
           {w.draft_status === 'pending' || w.draft_status === 'failed' || w.draft_status === 'rejected' ? (
             <Button
@@ -677,7 +677,7 @@ function Delta({ current, previous }: { current: number; previous: number }) {
   if (d === null) return null
   const up = d >= 0
   return (
-    <span className={up ? 'text-emerald-400' : 'text-red-400'}>
+    <span className={up ? 'text-success-text' : 'text-error-text'}>
       {up ? '▲' : '▼'}
       {Math.abs(d)}%
     </span>
@@ -717,7 +717,7 @@ function ReportCard({ rep, prev }: { rep: Reports[number]; prev: Reports[number]
           {rep.period_start} ~ {rep.period_end}
         </span>
         {typeof daysLeft === 'number' ? (
-          <span className={daysLeft < 14 ? 'text-red-400' : 'text-ink-light/45'}>토큰 D-{daysLeft}</span>
+          <span className={daysLeft < 14 ? 'text-error-text' : 'text-ink-light/45'}>토큰 D-{daysLeft}</span>
         ) : (
           <span className="text-ink-light/45">토큰 미연결</span>
         )}
@@ -768,7 +768,7 @@ function ReportCard({ rep, prev }: { rep: Reports[number]; prev: Reports[number]
           </span>
         ) : null}
         {num(posts.insightsMissing) > 0 ? (
-          <span className="text-amber-400">인사이트 미수집 {num(posts.insightsMissing)}건</span>
+          <span className="text-warning-text">인사이트 미수집 {num(posts.insightsMissing)}건</span>
         ) : null}
       </div>
 

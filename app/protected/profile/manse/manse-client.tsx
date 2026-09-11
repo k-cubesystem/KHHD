@@ -501,7 +501,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 <div
                   className={cn(
                     'px-3 py-1 rounded-full text-xs font-bold',
-                    selectedMember.gender === 'male' ? 'bg-blue-500/20 text-blue-400' : 'bg-pink-500/20 text-pink-400'
+                    selectedMember.gender === 'male'
+                      ? 'bg-obangsaek-blue/30 text-info-text'
+                      : 'bg-seal/30 text-obangsaek-red'
                   )}
                 >
                   {selectedMember.gender === 'male' ? '남' : '여'}명
@@ -522,14 +524,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                 </TabsTrigger>
                 <TabsTrigger
                   value="fortune"
-                  className="group relative data-[state=active]:!bg-purple-500/25 data-[state=active]:!text-purple-400 data-[state=active]:shadow-[0_0_8px_rgba(168,85,247,0.15)] data-[state=active]:border-purple-500/40 flex items-center justify-center gap-1.5 px-2 py-3 rounded-xl border border-white/15 text-white/60 hover:text-white/80 hover:bg-white/10 transition-all duration-200"
+                  className="group relative data-[state=active]:!bg-obangsaek-blue/25 data-[state=active]:!text-info-text data-[state=active]:shadow-[0_0_8px_rgba(45,95,138,0.3)] data-[state=active]:border-obangsaek-blue/40 flex items-center justify-center gap-1.5 px-2 py-3 rounded-xl border border-white/15 text-white/60 hover:text-white/80 hover:bg-white/10 transition-all duration-200"
                 >
                   <TrendingUp className="w-4 h-4 shrink-0" />
                   <span className="text-xs font-semibold">운세흐름</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="report"
-                  className="group relative data-[state=active]:!bg-emerald-500/25 data-[state=active]:!text-emerald-400 data-[state=active]:shadow-[0_0_8px_rgba(16,185,129,0.15)] data-[state=active]:border-emerald-500/40 flex items-center justify-center gap-1.5 px-2 py-3 rounded-xl border border-white/15 text-white/60 hover:text-white/80 hover:bg-white/10 transition-all duration-200"
+                  className="group relative data-[state=active]:!bg-bok-sprout/25 data-[state=active]:!text-success-text data-[state=active]:shadow-[0_0_8px_rgba(78,154,107,0.25)] data-[state=active]:border-bok-sprout/40 flex items-center justify-center gap-1.5 px-2 py-3 rounded-xl border border-white/15 text-white/60 hover:text-white/80 hover:bg-white/10 transition-all duration-200"
                 >
                   <FileText className="w-4 h-4 shrink-0" />
                   <span className="text-xs font-semibold">분석리포트</span>
@@ -791,7 +793,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                   data.strength === 'strong'
                                     ? 'bg-primary/20 text-primary'
                                     : data.strength === 'moderate'
-                                      ? 'bg-blue-500/20 text-blue-400'
+                                      ? 'bg-obangsaek-blue/25 text-info-text'
                                       : 'bg-muted-foreground/20 text-muted-foreground'
                                 }`}
                               >
@@ -1274,11 +1276,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
 
                           <div className="space-y-3">
                             {engineData.relations.hap.length > 0 && (
-                              <div className="p-4 rounded-xl bg-green-900/15 border border-green-500/20">
+                              <div className="p-4 rounded-xl bg-bok-sprout/10 border border-bok-sprout/25">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-green-400 font-bold text-xs">합(合) — 서로 당기는 기운</span>
+                                  <span className="text-success-text font-bold text-xs">합(合) — 서로 당기는 기운</span>
                                 </div>
-                                <p className="text-green-300/80 text-xs mb-2">
+                                <p className="text-success-text/80 text-xs mb-2">
                                   {engineData.relations.hap.join('  ·  ')}
                                 </p>
                                 <p className="text-muted-foreground text-xs leading-relaxed">
@@ -1288,11 +1290,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               </div>
                             )}
                             {engineData.relations.chung.length > 0 && (
-                              <div className="p-4 rounded-xl bg-red-900/15 border border-red-500/20">
+                              <div className="p-4 rounded-xl bg-seal/15 border border-seal/30">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-red-400 font-bold text-xs">충(沖) — 부딪히는 기운</span>
+                                  <span className="text-obangsaek-red font-bold text-xs">충(沖) — 부딪히는 기운</span>
                                 </div>
-                                <p className="text-red-300/80 text-xs mb-2">
+                                <p className="text-error-text/80 text-xs mb-2">
                                   {engineData.relations.chung.join('  ·  ')}
                                 </p>
                                 <p className="text-muted-foreground text-xs leading-relaxed">
@@ -1302,11 +1304,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               </div>
                             )}
                             {engineData.relations.hyeong.length > 0 && (
-                              <div className="p-4 rounded-xl bg-orange-900/15 border border-orange-500/20">
+                              <div className="p-4 rounded-xl bg-warning/10 border border-warning/25">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className="text-orange-400 font-bold text-xs">형(刑) — 마찰·긴장</span>
+                                  <span className="text-warning font-bold text-xs">형(刑) — 마찰·긴장</span>
                                 </div>
-                                <p className="text-orange-300/80 text-xs mb-2">
+                                <p className="text-warning-text/80 text-xs mb-2">
                                   {engineData.relations.hyeong.join('  ·  ')}
                                 </p>
                                 <p className="text-muted-foreground text-xs leading-relaxed">
@@ -1680,19 +1682,19 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                     {engineData.warnings ? (
                       <>
                         {/* 통합 위험 지수 */}
-                        <Card className="p-6 bg-rose-950/20 border-rose-500/30">
+                        <Card className="p-6 bg-seal/10 border-seal/40">
                           <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-obangsaek-red uppercase tracking-wider flex items-center gap-2">
                               <Activity className="w-4 h-4" />
                               통합 위험 지수
                             </h3>
                             <span
                               className={cn(
                                 'px-3 py-1 rounded-full text-xs font-bold',
-                                engineData.warnings.riskLevel === 'low' && 'bg-emerald-500/20 text-emerald-400',
-                                engineData.warnings.riskLevel === 'medium' && 'bg-yellow-500/20 text-yellow-400',
-                                engineData.warnings.riskLevel === 'high' && 'bg-orange-500/20 text-orange-400',
-                                engineData.warnings.riskLevel === 'critical' && 'bg-rose-500/20 text-rose-400'
+                                engineData.warnings.riskLevel === 'low' && 'bg-success/20 text-success-text',
+                                engineData.warnings.riskLevel === 'medium' && 'bg-warning/20 text-warning-text',
+                                engineData.warnings.riskLevel === 'high' && 'bg-error/20 text-error-text',
+                                engineData.warnings.riskLevel === 'critical' && 'bg-seal/30 text-obangsaek-red'
                               )}
                             >
                               {engineData.warnings.riskLabel}
@@ -1702,14 +1704,12 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             <div
                               className={cn(
                                 'h-full rounded-full transition-all duration-700',
-                                engineData.warnings.riskScore < 25 && 'bg-emerald-500',
+                                engineData.warnings.riskScore < 25 && 'bg-success',
                                 engineData.warnings.riskScore >= 25 &&
                                   engineData.warnings.riskScore < 50 &&
-                                  'bg-yellow-500',
-                                engineData.warnings.riskScore >= 50 &&
-                                  engineData.warnings.riskScore < 75 &&
-                                  'bg-orange-500',
-                                engineData.warnings.riskScore >= 75 && 'bg-rose-500'
+                                  'bg-warning',
+                                engineData.warnings.riskScore >= 50 && engineData.warnings.riskScore < 75 && 'bg-error',
+                                engineData.warnings.riskScore >= 75 && 'bg-seal'
                               )}
                               style={{ width: `${engineData.warnings.riskScore}%` }}
                             />
@@ -1721,17 +1721,17 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           {/* 즉각 행동 지침 */}
                           {engineData.warnings.urgentActions.length > 0 && (
                             <div className="mt-5 space-y-2">
-                              <p className="text-xs font-bold text-rose-300 mb-3 flex items-center gap-1">
+                              <p className="text-xs font-bold text-error-text mb-3 flex items-center gap-1">
                                 <ShieldAlert className="w-3.5 h-3.5" />
                                 즉각 행동 지침
                               </p>
                               {engineData.warnings.urgentActions.map((action, i) => (
                                 <div
                                   key={i}
-                                  className="flex items-start gap-2 p-3 rounded-lg bg-rose-950/30 border border-rose-500/20"
+                                  className="flex items-start gap-2 p-3 rounded-lg bg-seal/15 border border-seal/30"
                                 >
-                                  <span className="text-rose-400 font-bold text-xs shrink-0 mt-0.5">{i + 1}.</span>
-                                  <p className="text-xs text-rose-200 leading-relaxed">{action}</p>
+                                  <span className="text-obangsaek-red font-bold text-xs shrink-0 mt-0.5">{i + 1}.</span>
+                                  <p className="text-xs text-error-text leading-relaxed">{action}</p>
                                 </div>
                               ))}
                             </div>
@@ -1742,7 +1742,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         {engineData.warnings.dayMasterWeakness.flaws.length > 0 && (
                           <Card className="p-6 bg-white/5 border-white/10">
                             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
-                              <TrendingDown className="w-4 h-4 text-rose-400" />
+                              <TrendingDown className="w-4 h-4 text-obangsaek-red" />
                               {saju?.dayMaster}일간 — 타고난 핵심 약점
                             </h3>
                             <div className="space-y-4">
@@ -1750,9 +1750,9 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                 {engineData.warnings.dayMasterWeakness.flaws.map((flaw, i) => (
                                   <div
                                     key={i}
-                                    className="flex items-start gap-2 p-3 rounded-lg bg-rose-950/20 border border-rose-500/15"
+                                    className="flex items-start gap-2 p-3 rounded-lg bg-seal/10 border border-seal/25"
                                   >
-                                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                                    <AlertTriangle className="w-3.5 h-3.5 text-obangsaek-red shrink-0 mt-0.5" />
                                     <p className="text-xs text-white/80 leading-relaxed">{flaw}</p>
                                   </div>
                                 ))}
@@ -1787,11 +1787,11 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         {engineData.warnings.gigusin && (
                           <Card className="p-6 bg-white/5 border-white/10">
                             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
-                              <Skull className="w-4 h-4 text-orange-400" />
+                              <Skull className="w-4 h-4 text-warning" />
                               기구신(忌仇神) — 피해야 할 에너지
                             </h3>
-                            <div className="mb-4 p-3 rounded-lg bg-orange-950/20 border border-orange-500/20">
-                              <p className="text-xs text-orange-300 leading-relaxed">
+                            <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/25">
+                              <p className="text-xs text-warning-text leading-relaxed">
                                 {engineData.warnings.gigusin.description}
                               </p>
                             </div>
@@ -1818,7 +1818,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                 <p className="text-[10px] text-muted-foreground mb-2 flex items-center gap-1">
                                   <Compass className="w-3 h-3" /> 회피 방위
                                 </p>
-                                <p className="text-xs font-bold text-orange-300">
+                                <p className="text-xs font-bold text-warning-text">
                                   {engineData.warnings.gigusin.avoidDirections.join(', ')}
                                 </p>
                               </div>
@@ -1828,7 +1828,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                   {engineData.warnings.gigusin.avoidNumbers.map((n) => (
                                     <span
                                       key={n}
-                                      className="w-7 h-7 rounded-full bg-orange-500/20 text-orange-300 flex items-center justify-center text-xs font-bold"
+                                      className="w-7 h-7 rounded-full bg-warning/20 text-warning-text flex items-center justify-center text-xs font-bold"
                                     >
                                       {n}
                                     </span>
@@ -1852,7 +1852,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                           {/* 공망 */}
                           <Card className="p-5 bg-white/5 border-white/10">
                             <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                              <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+                              <AlertTriangle className="w-3.5 h-3.5 text-warning" />
                               공망(空亡)
                             </h4>
                             <div className="flex gap-3 mb-3">
@@ -1860,7 +1860,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                 (z, i) => (
                                   <span
                                     key={i}
-                                    className="px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-xs font-bold"
+                                    className="px-3 py-1.5 rounded-lg bg-warning/10 border border-warning/25 text-warning-text text-xs font-bold"
                                   >
                                     {z}
                                   </span>
@@ -1876,8 +1876,8 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                       className={cn(
                                         'px-2 py-0.5 rounded text-[10px] font-bold',
                                         engineData.warnings!.gongmang.hasSevere
-                                          ? 'bg-rose-500/20 text-rose-300'
-                                          : 'bg-yellow-500/20 text-yellow-300'
+                                          ? 'bg-seal/25 text-error-text'
+                                          : 'bg-warning/20 text-warning-text'
                                       )}
                                     >
                                       {p}
@@ -1896,7 +1896,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             className={cn(
                               'p-5 border',
                               engineData.warnings.samjae.isActive
-                                ? 'bg-rose-950/20 border-rose-500/30'
+                                ? 'bg-seal/10 border-seal/40'
                                 : 'bg-white/5 border-white/10'
                             )}
                           >
@@ -1904,14 +1904,14 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                               <ShieldAlert
                                 className={cn(
                                   'w-3.5 h-3.5',
-                                  engineData.warnings.samjae.isActive ? 'text-rose-400' : 'text-muted-foreground'
+                                  engineData.warnings.samjae.isActive ? 'text-obangsaek-red' : 'text-muted-foreground'
                                 )}
                               />
                               삼재(三災)
                             </h4>
                             {engineData.warnings.samjae.isActive ? (
                               <>
-                                <span className="inline-block px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-bold mb-3">
+                                <span className="inline-block px-3 py-1 rounded-full bg-seal/25 text-error-text text-xs font-bold mb-3">
                                   {engineData.warnings.samjae.phase}
                                 </span>
                                 <div className="flex gap-1 mb-3">
@@ -1921,7 +1921,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                       className={cn(
                                         'px-2 py-1 rounded text-[10px] font-bold border',
                                         y === engineData.warnings!.samjae.currentYear
-                                          ? 'bg-rose-500/30 border-rose-500/50 text-rose-200'
+                                          ? 'bg-seal/30 border-seal/60 text-error-text'
                                           : 'bg-white/5 border-white/10 text-white/50'
                                       )}
                                     >
@@ -1929,13 +1929,13 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                     </span>
                                   ))}
                                 </div>
-                                <p className="text-[10px] text-rose-200 leading-relaxed">
+                                <p className="text-[10px] text-error-text leading-relaxed">
                                   {engineData.warnings.samjae.warning}
                                 </p>
                               </>
                             ) : (
                               <>
-                                <p className="text-xs text-emerald-400 font-bold mb-2">미발동</p>
+                                <p className="text-xs text-success-text font-bold mb-2">미발동</p>
                                 <p className="text-[10px] text-muted-foreground">
                                   {engineData.warnings.samjae.description}
                                 </p>
@@ -1950,7 +1950,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             className={cn(
                               'p-5 border',
                               engineData.warnings.wonjinsal.found
-                                ? 'bg-purple-950/20 border-purple-500/30'
+                                ? 'bg-obangsaek-blue/10 border-obangsaek-blue/40'
                                 : 'bg-white/5 border-white/10'
                             )}
                           >
@@ -1963,18 +1963,18 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                                   {engineData.warnings.wonjinsal.pairs.map((p, i) => (
                                     <span
                                       key={i}
-                                      className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold"
+                                      className="px-3 py-1 rounded-full bg-obangsaek-blue/25 text-info-text text-xs font-bold"
                                     >
                                       {p}
                                     </span>
                                   ))}
                                 </div>
-                                <p className="text-[10px] text-purple-200 leading-relaxed">
+                                <p className="text-[10px] text-info-text leading-relaxed">
                                   {engineData.warnings.wonjinsal.warning}
                                 </p>
                               </>
                             ) : (
-                              <p className="text-xs text-emerald-400">원진살 없음</p>
+                              <p className="text-xs text-success-text">원진살 없음</p>
                             )}
                           </Card>
 
@@ -1982,7 +1982,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             className={cn(
                               'p-5 border',
                               engineData.warnings.baekhosal.found
-                                ? 'bg-red-950/20 border-red-500/30'
+                                ? 'bg-seal/10 border-seal/40'
                                 : 'bg-white/5 border-white/10'
                             )}
                           >
@@ -1991,20 +1991,20 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                             </h4>
                             {engineData.warnings.baekhosal.found ? (
                               <>
-                                <span className="inline-block px-3 py-1 rounded-full bg-red-500/20 text-red-300 text-xs font-bold mb-3">
+                                <span className="inline-block px-3 py-1 rounded-full bg-seal/25 text-error-text text-xs font-bold mb-3">
                                   {engineData.warnings.baekhosal.dayPillar} 일주
                                 </span>
                                 <ul className="space-y-1">
                                   {engineData.warnings.baekhosal.cautions.map((c, i) => (
-                                    <li key={i} className="text-[10px] text-red-200 flex items-start gap-1">
-                                      <span className="text-red-400 shrink-0">•</span>
+                                    <li key={i} className="text-[10px] text-error-text flex items-start gap-1">
+                                      <span className="text-obangsaek-red shrink-0">•</span>
                                       {c}
                                     </li>
                                   ))}
                                 </ul>
                               </>
                             ) : (
-                              <p className="text-xs text-emerald-400">백호대살 없음</p>
+                              <p className="text-xs text-success-text">백호대살 없음</p>
                             )}
                           </Card>
                         </div>
@@ -2013,19 +2013,19 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                         {engineData.warnings.sipseongExcess.hasExcess && (
                           <Card className="p-6 bg-white/5 border-white/10">
                             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-5 flex items-center gap-2">
-                              <TrendingDown className="w-4 h-4 text-orange-400" />
+                              <TrendingDown className="w-4 h-4 text-warning" />
                               십성 과다 — 심리적 약점
                             </h3>
                             <div className="space-y-3">
                               {engineData.warnings.sipseongExcess.list.map((item, i) => (
-                                <div key={i} className="p-4 rounded-xl bg-orange-950/20 border border-orange-500/20">
+                                <div key={i} className="p-4 rounded-xl bg-warning/10 border border-warning/25">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 text-xs font-bold">
+                                    <span className="px-2 py-0.5 rounded bg-warning/20 text-warning-text text-xs font-bold">
                                       {item.sipseong} ×{item.count}
                                     </span>
                                   </div>
                                   <p className="text-xs text-white/80 mb-2 leading-relaxed">{item.weakness}</p>
-                                  <p className="text-[10px] text-emerald-400">완화: {item.mitigation}</p>
+                                  <p className="text-[10px] text-success-text">완화: {item.mitigation}</p>
                                 </div>
                               ))}
                             </div>
@@ -2280,7 +2280,7 @@ export default function ManseClient({ members, isSubscribed }: ManseClientProps)
                   data.strength === 'strong'
                     ? 'text-gold-500'
                     : data.strength === 'moderate'
-                      ? 'text-blue-400'
+                      ? 'text-info-text'
                       : 'text-white/40'
                 return (
                   <div key={key} className="p-4 rounded-xl bg-white/5 border border-white/10">

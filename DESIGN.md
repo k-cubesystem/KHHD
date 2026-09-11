@@ -101,13 +101,17 @@
 - CSS class: `.traditional-grid-bg`
 - 24px 격자 패턴, 골드 opacity 0.03
 
-## Bok Tier Colors
+## Bok Tier Colors (v2 — 오방색 성장 사다리, 2026-08-31)
 
-- SEED: #8C7B50 (dark gold)
-- SPROUT: #22C55E (green)
-- FLOWER: #F472B6 (pink)
-- TREE: #10B981 (emerald)
-- FOREST: #6EE7B7 (light emerald)
+씨앗이 흙에서 나 금빛 숲이 되는 성장 서사를 오방색·전통 간색으로 표현한다.
+
+- SEED: #8C7B50 (황토 — 흙 속 씨앗, 土 간색)
+- SPROUT: #4E9A6B (목(木) 청록 — WU_XING_COLORS.木 동일값)
+- FLOWER: #C84040 (연지 홍 — Red Light)
+- TREE: #3F7A9E (창송(蒼松) 담청 — 푸른 소나무)
+- FOREST: #D4A017 (금 — 오방 황, 만복의 정점 = 최고 등급)
+
+정본 동기 3곳: 이 문서 · tailwind.config `bok.*` · lib/config/design-tokens.ts `BOK_TIER_COLORS`.
 
 ## 토큰 사용 규칙 (v2 — 2026-07-05)
 
@@ -135,11 +139,12 @@
 
 ## Decisions Log
 
-| Date       | Decision                      | Rationale                                                                                            |
-| ---------- | ----------------------------- | ---------------------------------------------------------------------------------------------------- |
-| 2026-07-05 | 디자인 토큰 v2 (rgba→토큰)    | inline rgba 274+건 → gold-500/seal 토큰 + 투명도 modifier. 단일 소스, 모션 토큰, 커밋 가드 도입.     |
-| 2026-04-03 | Initial design system created | /design-consultation 리서치 기반. 경쟁사(SAJUME, 척척포춘) 분석 후 한국 전통 프리미엄 포지셔닝 확정. |
-| 2026-04-03 | 오방색 팔레트 채택            | 서양 점성술 앱 컬러(보라/우주)를 피하고 한국 고유 색채 시스템으로 차별화                             |
-| 2026-04-03 | 도장 CTA 버튼                 | 둥근 버튼 대신 각진 도장 스타일로 브랜드 정체성 확보                                                 |
-| 2026-04-03 | 배경 #0A0A08 (더 깊은 먹색)   | 기존 #0D0D0D보다 깊은 톤으로 고급 인쇄물 느낌 강화                                                   |
-| 2026-04-03 | JetBrains Mono for data       | 사주 팔자 수치(天干地支, 五行 점수)에 tabular-nums 필요                                              |
+| Date       | Decision                      | Rationale                                                                                               |
+| ---------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 2026-08-31 | 복 등급 5색 오방색 재설계 v2  | 기존 green/pink/emerald 파스텔이 오방색 규율과 충돌. 황토→목→연지→창송→금 성장 사다리로 교체(CEO 승인). |
+| 2026-07-05 | 디자인 토큰 v2 (rgba→토큰)    | inline rgba 274+건 → gold-500/seal 토큰 + 투명도 modifier. 단일 소스, 모션 토큰, 커밋 가드 도입.        |
+| 2026-04-03 | Initial design system created | /design-consultation 리서치 기반. 경쟁사(SAJUME, 척척포춘) 분석 후 한국 전통 프리미엄 포지셔닝 확정.    |
+| 2026-04-03 | 오방색 팔레트 채택            | 서양 점성술 앱 컬러(보라/우주)를 피하고 한국 고유 색채 시스템으로 차별화                                |
+| 2026-04-03 | 도장 CTA 버튼                 | 둥근 버튼 대신 각진 도장 스타일로 브랜드 정체성 확보                                                    |
+| 2026-04-03 | 배경 #0A0A08 (더 깊은 먹색)   | 기존 #0D0D0D보다 깊은 톤으로 고급 인쇄물 느낌 강화                                                      |
+| 2026-04-03 | JetBrains Mono for data       | 사주 팔자 수치(天干地支, 五行 점수)에 tabular-nums 필요                                                 |

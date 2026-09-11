@@ -186,7 +186,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-serif font-bold text-ink-light">분석 상세</h2>
                 <button onClick={handleToggleFavorite} className="p-1 hover:bg-primary/10 rounded transition-colors">
-                  <Star className={`w-5 h-5 ${isFavorite ? 'text-amber-400 fill-amber-400' : 'text-ink-light/40'}`} />
+                  <Star className={`w-5 h-5 ${isFavorite ? 'text-gold-500 fill-gold-500' : 'text-ink-light/40'}`} />
                 </button>
               </div>
               <button onClick={onClose} className="p-1 hover:bg-primary/10 rounded transition-colors">
@@ -303,7 +303,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                 <Button
                   onClick={() => setShowDeleteConfirm(true)}
                   variant="outline"
-                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50"
+                  className="w-full border-error/30 text-error-text hover:bg-error/10 hover:border-error/50"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   {t('delete')}
@@ -313,7 +313,7 @@ export function DetailModal({ isOpen, onClose, record, onUpdate }: DetailModalPr
                   <Button
                     onClick={handleDelete}
                     disabled={isDeleting}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                    className="flex-1 bg-error hover:bg-error/90 text-white"
                   >
                     <AlertTriangle className="w-4 h-4 mr-1" />
                     {isDeleting ? '삭제 중...' : t('confirm')}

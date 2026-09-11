@@ -108,16 +108,16 @@ export function TodayFortuneContent() {
                 <div className="h-px bg-primary/10" />
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
-                    <p className="text-xs text-ink-light/50">재물운</p>
-                    <p className="text-lg font-serif text-amber-400">★★★</p>
+                    <p className="text-xs text-ink-light/55">재물운</p>
+                    <p className="text-lg font-serif text-gold-300">★★★</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-ink-light/50">애정운</p>
-                    <p className="text-lg font-serif text-rose-400">★★★★</p>
+                    <p className="text-xs text-ink-light/55">애정운</p>
+                    <p className="text-lg font-serif text-gold-300">★★★★</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-ink-light/50">건강운</p>
-                    <p className="text-lg font-serif text-emerald-400">★★★</p>
+                    <p className="text-xs text-ink-light/55">건강운</p>
+                    <p className="text-lg font-serif text-gold-300">★★★</p>
                   </div>
                 </div>
               </div>

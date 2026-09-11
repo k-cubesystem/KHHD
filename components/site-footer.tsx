@@ -10,7 +10,22 @@ export function SiteFooter({ className }: SiteFooterProps) {
   return (
     <footer className={cn('w-full max-w-[480px] mx-auto pb-28', className)}>
       {/* 링크 바 */}
-      <div className="flex items-center justify-center gap-3 py-1.5 border-t border-primary/10 mb-4">
+      <div className="flex flex-wrap items-center justify-center gap-x-3 py-1.5 border-t border-primary/10 mb-4">
+        {/* 공개 콘텐츠 입구 — 로그인 없이 읽는 페이지. 크롤러가 «읽을 것»을 찾는 자리(애드센스 콘텐츠 부족 반려 대응) */}
+        <Link
+          href="/guide"
+          className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"
+        >
+          명리 가이드
+        </Link>
+        <span className="w-px h-3 bg-primary/20" />
+        <Link
+          href="/about"
+          className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"
+        >
+          해화당 소개
+        </Link>
+        <span className="w-px h-3 bg-primary/20" />
         <Link
           href="/terms"
           className="inline-flex min-h-[44px] items-center px-1 text-overline text-ink-light/55 hover:text-primary transition-colors"

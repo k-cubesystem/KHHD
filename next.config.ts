@@ -47,6 +47,27 @@ const nextConfig: NextConfig = {
     return []
   },
 
+  /**
+   * 구 웹툰 주소 → 공개 라우트(2026-09-08 결정① — 무료 회차 비로그인 공개).
+   * · /webtoon.html: v5 에서 멈춘 정적 예고편 — 앱 0화가 정본이므로 301 로 합친다(공유 링크 생존).
+   *   ⚠️ redirects 는 public/ 파일보다 먼저 평가되므로 정적 파일이 남아 있어도 이 규칙이 이긴다.
+   * · /protected/webtoon/*: 로그인 벽 뒤 구주소 — 전부 새 주소로. (미들웨어보다 먼저 평가되어
+   *   비로그인도 로그인 화면이 아니라 본문에 닿는다.)
+   */
+  async redirects() {
+    return [
+      // 🔴 은퇴 경로는 **이 배열 하나**에 모은다. 2026-09-08 병합에서 양쪽 갈래가 각자
+      //    redirects() 를 더해 키가 둘이 됐고, 객체 리터럴이라 뒤엣것이 앞엣것을 조용히
+      //    덮었다 — /ilgan 308 이 통째로 사라질 뻔했다(타입체크의 중복 키 오류로 잡음).
+      // /ilgan(「3초 일간」)은 「3초 사주」로 대체됐다. 이미 나간 링크·색인을 버리지 않는다.
+      { source: '/ilgan', destination: '/saju3', permanent: true },
+      { source: '/ilgan/:stem', destination: '/saju3', permanent: true },
+      { source: '/webtoon.html', destination: '/webtoon/0', permanent: true },
+      { source: '/protected/webtoon', destination: '/webtoon', permanent: true },
+      { source: '/protected/webtoon/:path*', destination: '/webtoon/:path*', permanent: true },
+    ]
+  },
+
   // Security headers
   async headers() {
     return [
@@ -78,13 +99,19 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               // 🔴 애드센스 도메인 4종(pagead2·googleadservices·tpc·doubleclick)이 빠지면
               //    광고 스크립트가 CSP 에 막혀 «태그는 붙였는데 아무것도 안 뜬다» 가 된다.
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com https://t1.daumcdn.net http://dapi.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://va.vercel-scripts.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://js.tosspayments.com https://t1.daumcdn.net http://dapi.kakao.com https://dapi.kakao.com https://www.googletagmanager.com https://va.vercel-scripts.com https://pagead2.googlesyndication.com https://partner.googleadservices.com https://tpc.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
               "img-src 'self' data: https: blob: http://t1.daumcdn.net https://t1.daumcdn.net http://map.daumcdn.net https://map.daumcdn.net",
               "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com https://pagead2.googlesyndication.com https://*.doubleclick.net",
+              // 🔴 adtrafficquality.google 은 애드센스의 무효 트래픽 판정(Sodar) 신호를 보내는 곳이다.
+              //    빠지면 **모든 페이지에서** CSP 위반이 콘솔에 찍히고 신호가 서버에 닿지 않는다
+              //    (2026-09-01 프로덕션 실측: 20개 페이지 로드 전부 이 오류 1건씩).
+              //    🔴 세 지시문을 **함께** 열어야 한다 — connect-src 만 열면 getconfig 는 통과하고
+              //    그다음 sodar2.js 로드가 script-src 에 막혀, 이번엔 처리되지 않은 프로미스 거절
+              //    (Uncaught (in promise) undefined)이 전 페이지에 뜬다. 실제로 그렇게 됐다.
+              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://images.unsplash.com https://cdn.jsdelivr.net http://dapi.kakao.com https://dapi.kakao.com https://*.google-analytics.com https://*.sentry.io https://*.tosspayments.com https://pagead2.googlesyndication.com https://*.doubleclick.net https://*.adtrafficquality.google",
               // 광고 본문은 iframe(safeframe)으로 들어온다 — frame-src 가 없으면 빈 자리만 남는다.
-              "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
+              "frame-src 'self' https://js.tosspayments.com https://*.tosspayments.com https://postcode.map.daum.net http://postcode.map.daum.net https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google",
               "media-src 'self' blob: data:",
               "base-uri 'self'",
               "object-src 'none'",

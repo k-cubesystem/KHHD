@@ -39,9 +39,9 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
   const todayIndex = today === 0 ? 6 : today - 1
 
   const getTrendIcon = (score: number) => {
-    if (score >= 70) return <TrendingUp className="w-4 h-4 text-green-400" strokeWidth={1} />
-    if (score >= 50) return <Minus className="w-4 h-4 text-yellow-400" strokeWidth={1} />
-    return <TrendingDown className="w-4 h-4 text-red-400" strokeWidth={1} />
+    if (score >= 70) return <TrendingUp className="w-4 h-4 text-bok-sprout" strokeWidth={1} />
+    if (score >= 50) return <Minus className="w-4 h-4 text-gold-500" strokeWidth={1} />
+    return <TrendingDown className="w-4 h-4 text-error-text" strokeWidth={1} />
   }
 
   return (
@@ -117,7 +117,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                     initial={{ width: 0 }}
                     animate={{ width: `${data.overallScore}%` }}
                     transition={{ duration: 1, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-primary to-yellow-400 rounded-full"
+                    className="h-full bg-gradient-to-r from-primary to-gold-antique rounded-full"
                   />
                 </div>
                 {data.overall && (
@@ -131,13 +131,13 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
           {data.lucky && (
             <section className="px-3 mb-4">
               <div className="flex gap-2 flex-wrap">
-                <Badge className="bg-yellow-400/10 text-yellow-400 border-yellow-400/20 font-light">
+                <Badge className="bg-gold-500/10 text-gold-300 border-gold-500/20 font-light">
                   행운의 색 {data.lucky.color}
                 </Badge>
-                <Badge className="bg-blue-400/10 text-blue-400 border-blue-400/20 font-light">
+                <Badge className="bg-obangsaek-blue/20 text-info-text border-obangsaek-blue/40 font-light">
                   길한 방향 {data.lucky.direction}
                 </Badge>
-                <Badge className="bg-purple-400/10 text-purple-400 border-purple-400/20 font-light">
+                <Badge className="bg-gold-antique/10 text-gold-antique border-gold-antique/25 font-light">
                   행운의 숫자 {data.lucky.number}
                 </Badge>
               </div>
@@ -181,10 +181,10 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                               className={cn(
                                 'font-serif font-light text-[10px]',
                                 day.keyword === '길(吉)'
-                                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                  ? 'bg-success/20 text-success-text border-success/30'
                                   : day.keyword === '주의'
-                                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                                    : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                                    ? 'bg-error/20 text-error-text border-error/30'
+                                    : 'bg-gold-500/20 text-gold-300 border-gold-500/30'
                               )}
                             >
                               {day.keyword}
@@ -208,7 +208,7 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
                               transition={{ duration: 0.8, delay: idx * 0.07 }}
                               className={cn(
                                 'w-full rounded-full',
-                                day.score >= 75 ? 'bg-green-400' : day.score >= 50 ? 'bg-primary' : 'bg-red-400'
+                                day.score >= 75 ? 'bg-bok-sprout' : day.score >= 50 ? 'bg-primary' : 'bg-error'
                               )}
                             />
                           </div>
@@ -224,9 +224,9 @@ export function WeeklyFortuneClient({ data }: { data: WeeklyFortuneData | null }
           {/* 주의사항 */}
           {data.caution && (
             <section className="px-3 mt-4">
-              <Card className="bg-yellow-400/5 border-yellow-400/20">
+              <Card className="bg-warning/5 border-warning/20">
                 <CardContent className="p-4 flex items-start gap-3">
-                  <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" strokeWidth={1} />
+                  <AlertCircle className="w-4 h-4 text-warning-text flex-shrink-0 mt-0.5" strokeWidth={1} />
                   <p className="text-xs text-ink-light/70 font-light leading-relaxed">{data.caution}</p>
                 </CardContent>
               </Card>

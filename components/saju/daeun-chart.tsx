@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { WU_XING_COLORS } from '@/lib/domain/saju/saju'
 
 // Dynamic imports for Recharts components to reduce initial bundle size
 const LineChart = dynamic(() => import('recharts').then((mod) => mod.LineChart), { ssr: false })
@@ -17,13 +18,8 @@ const ResponsiveContainer = dynamic(() => import('recharts').then((mod) => mod.R
 
 type Element = '木' | '火' | '土' | '金' | '水'
 
-const ELEMENT_COLORS: Record<Element, string> = {
-  木: '#4A7C59',
-  火: '#C07055',
-  土: '#C5B358',
-  金: '#E5E3DF',
-  水: '#4A5D7C',
-}
+// 오행색 정본은 lib/domain/saju/saju.ts 하나다 — 여기서 표를 다시 적으면 화면마다 색이 갈라진다.
+const ELEMENT_COLORS: Record<Element, string> = WU_XING_COLORS as Record<Element, string>
 
 export interface DaeunData {
   age: string

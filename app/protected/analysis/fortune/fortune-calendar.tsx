@@ -61,7 +61,7 @@ export function FortuneCalendar({ onDateSelect, selectedDate }: FortuneCalendarP
         {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
           <div
             key={day}
-            className={cn('text-center text-xs font-light py-2', i === 0 ? 'text-red-400/70' : 'text-ink-light/40')}
+            className={cn('text-center text-xs font-light py-2', i === 0 ? 'text-obangsaek-red' : 'text-ink-light/40')}
           >
             {day}
           </div>

@@ -401,11 +401,13 @@ export const SEASONAL_EVENTS_2026: SeasonalEvent[] = [
 
 /** Element Korean display labels */
 export const ELEMENT_LABELS: Record<Element, { label: string; color: string; bgColor: string }> = {
-  목: { label: '木 목', color: 'text-emerald-400', bgColor: 'bg-emerald-400/10 border-emerald-400/30' },
-  화: { label: '火 화', color: 'text-red-400', bgColor: 'bg-red-400/10 border-red-400/30' },
-  토: { label: '土 토', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10 border-yellow-500/30' },
-  금: { label: '金 금', color: 'text-gold-500', bgColor: 'bg-gold-500/10 border-gold-500/30' },
-  수: { label: '水 수', color: 'text-blue-400', bgColor: 'bg-blue-400/10 border-blue-400/30' },
+  // 오행 정본(saju.ts WU_XING_COLORS)과 같은 색의 토큰 — 木=bok-sprout·火=obangsaek-red·
+  // 土=gold-500·金=백(白, white 계열)·水=단청청(글자는 밝은 변형 info-text).
+  목: { label: '木 목', color: 'text-bok-sprout', bgColor: 'bg-bok-sprout/10 border-bok-sprout/30' },
+  화: { label: '火 화', color: 'text-obangsaek-red', bgColor: 'bg-obangsaek-red/10 border-obangsaek-red/30' },
+  토: { label: '土 토', color: 'text-gold-500', bgColor: 'bg-gold-500/10 border-gold-500/30' },
+  금: { label: '金 금', color: 'text-ink-primary', bgColor: 'bg-white/10 border-white/25' },
+  수: { label: '水 수', color: 'text-info-text', bgColor: 'bg-obangsaek-blue/10 border-obangsaek-blue/30' },
 }
 
 export const SEASON_LABELS: Record<Season, string> = {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Noto_Sans_KR, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display } from 'next/font/google'
+import { Noto_Sans_KR, Noto_Serif_KR, Nanum_Myeongjo, Playfair_Display, JetBrains_Mono } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { PWAInstallPrompt } from '@/components/pwa-install-prompt'
@@ -8,11 +8,12 @@ import { AgentationWrapper } from '@/components/agentation-wrapper'
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@next/third-parties/google'
-import Script from 'next/script'
-import { ADSENSE_CLIENT, isLiveAdEnvironment } from '@/lib/domain/ads/adsense'
+import { isLiveAdEnvironment } from '@/lib/domain/ads/adsense'
+import { AdsenseLoader } from '@/components/ads/adsense-loader'
 import { PageViewTracker } from '@/components/analytics/page-view-tracker'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
+import { getSiteUrl } from '@/lib/utils/site-url'
 import './globals.css'
 
 const notoSans = Noto_Sans_KR({
@@ -36,13 +37,23 @@ const nanumMyeongjo = Nanum_Myeongjo({
   subsets: ['latin'],
 })
 
+const jetbrains = JetBrains_Mono({
+  variable: '--font-jetbrains',
+  display: 'swap',
+  subsets: ['latin'],
+  weight: ['400', '600'],
+})
+
 const playfair = Playfair_Display({
   variable: '--font-playfair',
   display: 'swap',
   subsets: ['latin'],
 })
 
-const defaultUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'
+// metadataBase 는 반드시 «정본 도메인»이어야 한다. VERCEL_URL 은 배포마다 바뀌는 호스트이고
+// 배포 보호(deployment protection)가 걸려 있어 소셜 크롤러에게 302 를 돌려준다 —
+// og:image 가 그 주소로 나가면 카카오톡·페북 공유 미리보기가 통째로 빈칸이 된다(2026-09-01 라이브 실사고).
+const defaultUrl = getSiteUrl()
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
@@ -109,7 +120,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} font-serif font-light antialiased notranslate bg-[#0A0A08]`}
+        className={`${notoSans.variable} ${notoSerif.variable} ${nanumMyeongjo.variable} ${playfair.variable} ${jetbrains.variable} font-serif font-light antialiased notranslate bg-[#0A0A08]`}
         suppressHydrationWarning
       >
         {/* 애드센스 로더 — 🔴 반드시 lazyOnload(하이드레이션 끝난 뒤).
@@ -122,15 +133,9 @@ export default async function RootLayout({
                사이트 확인은 이미 통과했다(광고 송출 중) — 초기 HTML 요건은 확인 단계에만 필요했다.
                재확인이 필요해지면 애드센스의 「메타 태그」 확인 방식을 쓸 것(스크립트를 head 로
                되돌리면 이 사고가 그대로 재발한다).
-            🔴 진짜 서비스에서만 — 프리뷰·로컬에서 실리면 QA 노출이 무효 트래픽이 된다. */}
-        {isLiveAdEnvironment(process.env.VERCEL_ENV, process.env.NODE_ENV) && (
-          <Script
-            id="adsbygoogle-loader"
-            strategy="lazyOnload"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-          />
-        )}
+            🔴 진짜 서비스에서만 — 프리뷰·로컬에서 실리면 QA 노출이 무효 트래픽이 된다.
+            로더 본체는 components/ads/adsense-loader.tsx — 경로 게이팅(로그인·결제·신당 제외)도 거기서. */}
+        {isLiveAdEnvironment(process.env.VERCEL_ENV, process.env.NODE_ENV) && <AdsenseLoader />}
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             <QueryProvider>

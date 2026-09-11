@@ -45,7 +45,7 @@ export function SubscriptionBadge() {
   // 구독자: 멤버십 뱃지
   return (
     <Link href="/protected/membership/manage">
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gradient-to-r from-zen-gold/20 to-amber-100 border border-zen-gold/50 cursor-pointer transition-all shadow-sm hover:shadow-md">
+      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gradient-to-r from-zen-gold/20 to-gold-300 border border-zen-gold/50 cursor-pointer transition-all shadow-sm hover:shadow-md">
         <Crown className="w-3.5 h-3.5 text-zen-gold" />
         <span className="hidden sm:inline font-serif font-bold text-zen-gold text-xs tracking-wide">회원</span>
       </div>

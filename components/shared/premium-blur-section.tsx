@@ -28,7 +28,7 @@ export function PremiumBlurSection({ children, isPaid, ctaLabel }: PremiumBlurSe
             <Lock className="w-5 h-5 text-gold-500" />
           </div>
           <p className="text-sm text-ink-light/70">{t('premiumPreview')}</p>
-          <Button asChild className="bg-gold-500 hover:bg-gold-400 text-stone-900 font-bold">
+          <Button asChild className="bg-gold-500 hover:bg-gold-400 text-ink-900 font-bold">
             <Link href="/protected/membership">{ctaLabel ?? t('fullUnlock')}</Link>
           </Button>
           <p className="text-[11px] text-ink-light/60">

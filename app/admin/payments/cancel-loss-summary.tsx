@@ -153,11 +153,14 @@ export async function CancelLossSummary() {
                   </TableCell>
                   <TableCell>
                     {blocked ? (
-                      <Badge variant="secondary" className="bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <Badge
+                        variant="secondary"
+                        className="bg-warning-light text-warning-text border border-warning-border"
+                      >
                         상한 차단
                       </Badge>
                     ) : row.status === 'SUCCEEDED' ? (
-                      <Badge variant="secondary" className="bg-red-500/10 text-red-400 border border-red-500/20">
+                      <Badge variant="secondary" className="bg-error-light text-error-text border border-error-border">
                         손실 확정
                       </Badge>
                     ) : (

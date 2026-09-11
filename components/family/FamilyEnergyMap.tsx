@@ -257,7 +257,7 @@ export function FamilyEnergyMapView({
           })}
         </div>
         {chosen.length < 2 && (
-          <p className="text-[11px] text-amber-400/70">두 사람 이상 골라야 견줄 수 있어 전체를 보여 드립니다.</p>
+          <p className="text-[11px] text-warning-text/70">두 사람 이상 골라야 견줄 수 있어 전체를 보여 드립니다.</p>
         )}
         {acquaintances.length === 0 && (
           <p className="text-[11px] font-light text-ink-light/35">지인을 등록하면 여기서 함께 견줄 수 있습니다.</p>

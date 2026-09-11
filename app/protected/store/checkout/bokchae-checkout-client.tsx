@@ -38,7 +38,7 @@ export function BokchaeCheckoutClient({
       return
     }
     setPaying(true)
-    GA.checkoutStart(orderName, amount)
+    GA.checkoutPayClick(orderName, amount)
 
     try {
       const sdk = await getTossPaymentsSDK('general')
@@ -62,7 +62,9 @@ export function BokchaeCheckoutClient({
       })
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
-      logger.error('[복채 결제] error:', msg)
+      // logger 는 첫 인자가 Error 일 때만 Sentry captureException 을 탄다 — 문자열을 주면
+      // 스택 없는 captureMessage 로 떨어져 결제 장애가 메시지 단위로 쪼개진다.
+      logger.error(error instanceof Error ? error : new Error(msg))
       GA.checkoutFail(orderName, msg.slice(0, 40))
       toast.error(msg)
       setPaying(false)

@@ -181,9 +181,9 @@ export function UserDetailClient({
 
   const roleBadge = () => {
     if (role === 'admin')
-      return <Badge className="text-[9px] bg-red-500/10 text-red-400 border border-red-500/20">ADMIN</Badge>
+      return <Badge className="text-[9px] bg-error-light text-error-text border border-error-border">ADMIN</Badge>
     if (role === 'tester')
-      return <Badge className="text-[9px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">TESTER</Badge>
+      return <Badge className="text-[9px] bg-gold-500/10 text-gold-400 border border-gold-500/20">TESTER</Badge>
     return <Badge className="text-[9px] bg-white/30 text-ink-primary/40 border border-white/[0.08]">USER</Badge>
   }
 
@@ -211,7 +211,7 @@ export function UserDetailClient({
 
         <Button
           onClick={handleDelete}
-          className="h-8 text-xs bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40"
+          className="h-8 text-xs bg-error-light text-error-text border border-error-border hover:bg-error/20 hover:border-error/40"
         >
           <Trash2 className="w-3.5 h-3.5 mr-1.5" /> 삭제
         </Button>
@@ -317,10 +317,10 @@ export function UserDetailClient({
                       <SelectItem value="user" className="text-ink-primary/70 text-xs">
                         USER (일반)
                       </SelectItem>
-                      <SelectItem value="tester" className="text-yellow-400 text-xs">
+                      <SelectItem value="tester" className="text-gold-400 text-xs">
                         TESTER (테스터)
                       </SelectItem>
-                      <SelectItem value="admin" className="text-red-400 text-xs font-bold">
+                      <SelectItem value="admin" className="text-error-text text-xs font-bold">
                         ADMIN (관리자)
                       </SelectItem>
                     </SelectContent>
@@ -410,7 +410,7 @@ export function UserDetailClient({
                         <Button
                           size="sm"
                           disabled={balanceSaving}
-                          className="h-8 bg-green-600 hover:bg-green-700 text-xs gap-1.5"
+                          className="h-8 bg-success hover:bg-success/80 text-xs gap-1.5"
                           onClick={handleBalanceAdjust}
                         >
                           <Save className="w-3.5 h-3.5" /> 적용
@@ -418,7 +418,7 @@ export function UserDetailClient({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 text-ink-primary/55 hover:text-red-400 text-xs"
+                          className="h-8 text-ink-primary/55 hover:text-error-text text-xs"
                           onClick={() => {
                             setIsEditingBalance(false)
                             setDelta('')
@@ -463,8 +463,8 @@ export function UserDetailClient({
 
                 <div className="p-4 bg-surface/30 rounded-lg border border-white/[0.08]">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
-                      <Crown className="w-6 h-6 text-purple-400" />
+                    <div className="w-12 h-12 rounded-full bg-gold-500/10 border border-gold-500/20 flex items-center justify-center flex-shrink-0">
+                      <Crown className="w-6 h-6 text-gold-400" />
                     </div>
                     <div className="flex-1">
                       <Label className="text-[10px] text-ink-primary/40 font-medium">현재 등급</Label>
@@ -478,10 +478,10 @@ export function UserDetailClient({
                               <SelectItem value="FREE" className="text-ink-primary/70">
                                 FREE (무료)
                               </SelectItem>
-                              <SelectItem value="SINGLE" className="text-purple-300">
+                              <SelectItem value="SINGLE" className="text-info-text">
                                 SINGLE (싱글)
                               </SelectItem>
-                              <SelectItem value="FAMILY" className="text-pink-300">
+                              <SelectItem value="FAMILY" className="text-obangsaek-red">
                                 FAMILY (패밀리)
                               </SelectItem>
                               <SelectItem value="BUSINESS" className="text-gold-300 font-bold">
@@ -492,7 +492,7 @@ export function UserDetailClient({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 w-8 p-0 text-ink-primary/55 hover:text-red-400"
+                            className="h-8 w-8 p-0 text-ink-primary/55 hover:text-error-text"
                             onClick={() => setIsEditingTier(false)}
                           >
                             <X className="w-3.5 h-3.5" />
@@ -606,7 +606,7 @@ export function UserDetailClient({
                         <div>
                           <p
                             className={`text-sm font-bold font-mono ${
-                              settlement.kind === 'none' ? 'text-ink-primary' : 'text-amber-200'
+                              settlement.kind === 'none' ? 'text-ink-primary' : 'text-warning-text'
                             }`}
                           >
                             {settlement.net.toLocaleString()}원
@@ -614,7 +614,9 @@ export function UserDetailClient({
                           {settlement.kind !== 'none' && (
                             <p className="text-[10px] font-mono text-ink-primary/40 mt-0.5">
                               <span className="line-through">{payment.amount.toLocaleString()}원</span>
-                              <span className={settlement.kind === 'full' ? ' text-rose-300/90' : ' text-amber-300/90'}>
+                              <span
+                                className={settlement.kind === 'full' ? ' text-error-text/90' : ' text-warning-text/90'}
+                              >
                                 {' '}
                                 −{settlement.cancelled.toLocaleString()}원
                               </span>
@@ -626,11 +628,11 @@ export function UserDetailClient({
                           <Badge
                             className={
                               settlement.kind === 'full'
-                                ? 'text-[9px] bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                                ? 'text-[9px] bg-error-light text-error-text border border-error/30'
                                 : settlement.kind === 'partial'
-                                  ? 'text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                                  ? 'text-[9px] bg-warning-light text-warning-text border border-warning/30'
                                   : payment.status === 'completed'
-                                    ? 'text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                    ? 'text-[9px] bg-success-light text-success-text border border-success-border'
                                     : 'text-[9px] bg-white/30 text-ink-primary/40 border border-white/[0.08]'
                             }
                           >
@@ -687,7 +689,7 @@ export function UserDetailClient({
                         </div>
                         <span
                           className={`text-xs font-bold font-mono whitespace-nowrap tabular-nums ${
-                            plus ? 'text-emerald-400' : 'text-red-400'
+                            plus ? 'text-success-text' : 'text-error-text'
                           }`}
                         >
                           {plus ? '+' : ''}
@@ -723,14 +725,14 @@ export function UserDetailClient({
                         <Badge
                           className={`text-[9px] border ${
                             s.isFamily
-                              ? 'bg-purple-500/10 text-purple-300 border-purple-500/20'
+                              ? 'bg-obangsaek-blue/15 text-info-text border-obangsaek-blue/30'
                               : 'bg-gold-500/10 text-gold-300 border-gold-500/20'
                           }`}
                         >
                           {s.targetName}
                         </Badge>
                         {s.visibility === 'public' && (
-                          <Badge className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <Badge className="text-[9px] bg-success-light text-success-text border border-success-border">
                             공개
                           </Badge>
                         )}

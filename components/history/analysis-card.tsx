@@ -95,7 +95,7 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick,
             <button
               onClick={handleDelete}
               disabled={isDeleting}
-              className="px-2 py-1 text-[10px] bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+              className="px-2 py-1 text-[10px] bg-error text-white rounded hover:bg-error/90 transition-colors"
             >
               {isDeleting ? '삭제중...' : '확인'}
             </button>
@@ -109,10 +109,10 @@ export const AnalysisCard = memo(function AnalysisCard({ record, index, onClick,
         ) : (
           <button
             onClick={handleDelete}
-            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded transition-all"
+            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-error/10 rounded transition-all"
             title="삭제"
           >
-            <Trash2 className="w-3.5 h-3.5 text-red-400/60 hover:text-red-400" />
+            <Trash2 className="w-3.5 h-3.5 text-error-text/60 hover:text-error-text" />
           </button>
         )}
       </div>

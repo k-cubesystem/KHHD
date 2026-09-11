@@ -15,7 +15,7 @@ import { ZONE_LABEL } from '@/lib/domain/shrine/zones'
 
 const RARITY: Record<string, { label: string; cls: string }> = {
   common: { label: '일반', cls: 'text-ink-light/50 border-white/10 bg-white/[0.03]' },
-  rare: { label: '희귀', cls: 'text-sky-400 border-sky-500/20 bg-sky-900/20' },
+  rare: { label: '희귀', cls: 'text-info-text border-obangsaek-blue/40 bg-obangsaek-blue/20' },
   legendary: { label: '전설', cls: 'text-gold-300 border-gold-500/30 bg-gold-500/[0.08]' },
 }
 
@@ -109,7 +109,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                           {rarity.label}
                         </span>
                         {have > 0 && (
-                          <span className="text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-900/20 text-emerald-300 tabular-nums">
+                          <span className="text-[9px] px-2 py-0.5 rounded-full border border-success/30 bg-success/10 text-success-text tabular-nums">
                             보유 {have}
                           </span>
                         )}
@@ -153,7 +153,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                         </p>
                       )}
                       {item.unlockEffect?.type === 'chat_retention' && (
-                        <p className="text-[10px] text-sky-300/80 font-sans">
+                        <p className="text-[10px] text-info-text/80 font-sans">
                           ✦ 배치 효험: 대화 보존 +{item.unlockEffect.days ?? 90}일
                           {item.unlockEffect.maxStack ? ` (최대 ${item.unlockEffect.maxStack}개)` : ''}
                         </p>
@@ -170,7 +170,7 @@ export function ShrineShopClient({ data }: { data: ShopData }) {
                         rewardOnly
                           ? 'bg-white/[0.04] border border-gold-500/20 text-gold-500/70'
                           : free
-                            ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                            ? 'bg-success/15 border border-success/30 text-success-text'
                             : canAfford
                               ? 'bg-gold-500/15 border border-gold-500/30 text-gold-300'
                               : 'bg-white/[0.04] border border-white/[0.06] text-ink-light/30'

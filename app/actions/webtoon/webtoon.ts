@@ -301,7 +301,7 @@ export async function addComment(episodeId: string, body: string): Promise<Comme
     return { success: false, error: 'FAILED' }
   }
 
-  revalidatePath('/protected/webtoon')
+  revalidatePath('/webtoon')
   return { success: true }
 }
 
@@ -323,7 +323,7 @@ export async function removeComment(commentId: string): Promise<CommentResult> {
     logger.warn('[webtoon] 댓글 삭제 실패:', error)
     return { success: false, error: 'FAILED' }
   }
-  revalidatePath('/protected/webtoon')
+  revalidatePath('/webtoon')
   return { success: true }
 }
 
@@ -415,6 +415,8 @@ export async function submitStory(input: {
   contactName: string
   contactPhone: string
   contactKakao: string
+  /** 연락처 이용 동의(결정④) — 서버도 다시 본다. 체크 없이 온 요청은 접수하지 않는다 */
+  consent: boolean
 }): Promise<SubmitStoryResult> {
   const supabase = await createClient()
   const {
@@ -428,6 +430,7 @@ export async function submitStory(input: {
     contactName: String(input?.contactName ?? ''),
     contactPhone: String(input?.contactPhone ?? ''),
     contactKakao: String(input?.contactKakao ?? ''),
+    consent: input?.consent === true,
   }
   const issues = validateStory(draft)
   if (issues.length > 0) return { success: false, error: 'INVALID', message: issues[0].message }
@@ -477,7 +480,7 @@ export async function submitStory(input: {
       .eq('id', submissionId)
   }
 
-  revalidatePath('/protected/webtoon')
+  revalidatePath('/webtoon')
   return { success: true, notified }
 }
 

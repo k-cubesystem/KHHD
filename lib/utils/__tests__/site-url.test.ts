@@ -61,8 +61,8 @@ describe('sitemap / robots — 오염된 환경변수에서도 URL 이 온전하
     process.env.NEXT_PUBLIC_SITE_URL = 'https://k-haehwadang.com\n'
   })
 
-  it('sitemap 의 모든 URL 에 공백·개행이 없고 origin 이 정확하다', () => {
-    const urls = sitemap().map((entry) => entry.url)
+  it('sitemap 의 모든 URL 에 공백·개행이 없고 origin 이 정확하다', async () => {
+    const urls = (await sitemap()).map((entry) => entry.url)
     expect(urls.length).toBeGreaterThan(0)
     for (const url of urls) {
       expect(url).toMatch(ORIGIN_PATTERN)
@@ -71,12 +71,17 @@ describe('sitemap / robots — 오염된 환경변수에서도 URL 이 온전하
     expect(urls).toContain('https://k-haehwadang.com')
   })
 
-  it('sitemap 에는 공개 페이지만 — /protected/* 금지, /story·/webtoon.html 등재, 404 인 /auth/register 금지', () => {
-    const paths = sitemap().map((entry) => new URL(entry.url).pathname)
+  it('sitemap 에는 공개 페이지만 — /protected/* 금지, /story·/webtoon 등재(구 /webtoon.html 은 301 로 대체), 404 인 /auth/register 금지 · 폼뿐인 /auth/* 제외 · /guide·/about 등재', async () => {
+    const paths = (await sitemap()).map((entry) => new URL(entry.url).pathname)
     expect(paths.some((path) => path.startsWith('/protected'))).toBe(false)
     expect(paths).toContain('/story')
-    expect(paths).toContain('/webtoon.html')
-    expect(paths).toContain('/auth/sign-up')
+    expect(paths).toContain('/webtoon')
+    expect(paths).not.toContain('/webtoon.html')
+    // 2026-09-02 애드센스 «콘텐츠 부족» 반려 대응 — 폼뿐인 인증 화면은 사이트맵에서 뺐다(얇은 페이지 집계 방지).
+    expect(paths).not.toContain('/auth/sign-up')
+    expect(paths).not.toContain('/auth/login')
+    expect(paths).toContain('/guide')
+    expect(paths).toContain('/about')
     expect(paths).not.toContain('/auth/register')
   })
 

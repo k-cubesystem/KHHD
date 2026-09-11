@@ -107,10 +107,10 @@ export default function ByeongOYearEventPage() {
         <section className="space-y-4">
           <h2 className="text-lg font-serif text-white/90 px-2">🔑 2026년 핵심 키워드</h2>
           <div className="grid grid-cols-2 gap-3">
-            <KeywordCard icon={TrendingUp} label="이직/승진" color="text-blue-400" bg="bg-blue-400/10" />
+            <KeywordCard icon={TrendingUp} label="이직/승진" color="text-obangsaek-blue" bg="bg-obangsaek-blue/10" />
             <KeywordCard icon={Wallet} label="재물 급상승" color="text-gold-500" bg="bg-gold-500/10" />
             <KeywordCard icon={Heart} label="열정적 사랑" color="text-[#E53935]" bg="bg-[#E53935]/10" />
-            <KeywordCard icon={Sparkles} label="새로운 도전" color="text-purple-400" bg="bg-purple-400/10" />
+            <KeywordCard icon={Sparkles} label="새로운 도전" color="text-bok-sprout" bg="bg-bok-sprout/10" />
           </div>
         </section>
 

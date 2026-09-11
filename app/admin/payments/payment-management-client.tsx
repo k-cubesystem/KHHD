@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect , useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AdminPayment, getPayments } from './actions'
 import {
   describePaymentSettlement,
@@ -52,14 +52,14 @@ export function PaymentManagementClient() {
   const getStatusBadge = (status: string, settlement: PaymentSettlement) => {
     if (settlement.kind === 'full') {
       return (
-        <Badge className="bg-rose-500/10 text-rose-300 border border-rose-500/30 text-[9px] md:text-[10px]">
+        <Badge className="bg-error-light text-error-text border border-error/30 text-[9px] md:text-[10px]">
           전액취소
         </Badge>
       )
     }
     if (settlement.kind === 'partial') {
       return (
-        <Badge className="bg-amber-500/10 text-amber-300 border border-amber-500/30 text-[9px] md:text-[10px]">
+        <Badge className="bg-warning-light text-warning-text border border-warning/30 text-[9px] md:text-[10px]">
           부분취소
         </Badge>
       )
@@ -67,17 +67,17 @@ export function PaymentManagementClient() {
     switch (status) {
       case 'completed':
         return (
-          <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] md:text-[10px]">
+          <Badge className="bg-success-light text-success-text border border-success-border text-[9px] md:text-[10px]">
             성공
           </Badge>
         )
       case 'failed':
         return (
-          <Badge className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] md:text-[10px]">실패</Badge>
+          <Badge className="bg-error/20 text-error-text border border-error/40 text-[9px] md:text-[10px]">실패</Badge>
         )
       case 'test_charge':
         return (
-          <Badge className="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-[9px] md:text-[10px]">
+          <Badge className="bg-gold-500/10 text-gold-400 border border-gold-500/20 text-[9px] md:text-[10px]">
             테스트
           </Badge>
         )
@@ -95,7 +95,7 @@ export function PaymentManagementClient() {
     <div className="flex flex-col items-start gap-0.5">
       <span
         className={`font-mono font-bold tabular-nums ${size === 'card' ? 'text-base' : ''} ${
-          settlement.kind === 'none' ? 'text-ink-primary' : 'text-amber-200'
+          settlement.kind === 'none' ? 'text-ink-primary' : 'text-warning-text'
         }`}
       >
         ₩{settlement.net.toLocaleString()}
@@ -103,7 +103,7 @@ export function PaymentManagementClient() {
       {settlement.kind !== 'none' && (
         <span className="text-[10px] font-mono text-ink-primary/40">
           <span className="line-through">₩{payment.amount.toLocaleString()}</span>
-          <span className={`ml-1.5 ${settlement.kind === 'full' ? 'text-rose-300/90' : 'text-amber-300/90'}`}>
+          <span className={`ml-1.5 ${settlement.kind === 'full' ? 'text-error-text/90' : 'text-warning-text/90'}`}>
             {settlement.kind === 'full' ? '전액취소' : '부분취소'} −₩{settlement.cancelled.toLocaleString()}
           </span>
         </span>
@@ -138,19 +138,19 @@ export function PaymentManagementClient() {
               <SelectItem value="all" className="text-ink-primary/70">
                 모든 결제
               </SelectItem>
-              <SelectItem value="completed" className="text-emerald-400">
+              <SelectItem value="completed" className="text-success-text">
                 결제 성공
               </SelectItem>
-              <SelectItem value="partial_cancel" className="text-amber-300">
+              <SelectItem value="partial_cancel" className="text-warning-text">
                 부분 취소
               </SelectItem>
-              <SelectItem value="refunded" className="text-rose-300">
+              <SelectItem value="refunded" className="text-error-text">
                 전액 취소
               </SelectItem>
-              <SelectItem value="test_charge" className="text-yellow-400">
+              <SelectItem value="test_charge" className="text-gold-400">
                 테스트 충전
               </SelectItem>
-              <SelectItem value="failed" className="text-red-400">
+              <SelectItem value="failed" className="text-error-text">
                 결제 실패
               </SelectItem>
             </SelectContent>

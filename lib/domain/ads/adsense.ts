@@ -63,3 +63,39 @@ export function isLiveAdEnvironment(vercelEnv: string | undefined, nodeEnv: stri
 export function shouldRenderAds(vercelEnv: string | undefined, nodeEnv: string | undefined, slot: AdSlotName): boolean {
   return isLiveAdEnvironment(vercelEnv, nodeEnv) && isAdSlotConfigured(slot)
 }
+
+/**
+ * 광고를 «실어도 되는 화면»인가 — 경로 기준.
+ *
+ * 애드센스 정책 「게시자 콘텐츠가 없는 화면의 광고」(Low value content 하위 항목)는 로그인·가입·
+ * 결제·오류 같은 «읽을 것이 없는 화면»에 광고를 두는 것을 금한다. 2026-09-02 «가치가 별로 없는
+ * 콘텐츠» 반려의 한 축이 이것이다. 자동 광고는 켜지면 아무 화면에나 붙으므로 여기서 경로로 막는다.
+ *
+ * 제외 기준(전부 접두사 일치):
+ *   · 인증 — 폼뿐인 화면
+ *   · 결제·상점·멤버십 — 결제 버튼 옆 광고는 오클릭·정책 양쪽 위험
+ *   · 관리자·API·개발 프리뷰·디버그 — 콘텐츠가 아니다
+ *   · 초대·공유 카드·이벤트 폼 — 한 장짜리 전환 화면
+ *   · 신당 — 게임 화면. 광고가 무대 위에 얹히면 연출이 깨진다
+ */
+export const AD_EXCLUDED_PATH_PREFIXES: readonly string[] = [
+  '/auth',
+  '/admin',
+  '/api',
+  '/dev-preview',
+  '/test-destiny',
+  '/invite',
+  '/share',
+  '/event',
+  '/protected/store',
+  '/protected/membership',
+  '/protected/payment',
+  '/protected/shrine',
+  '/protected/support',
+]
+
+export function isAdEligiblePath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false
+  const path = pathname.split('?')[0].split('#')[0]
+  return !AD_EXCLUDED_PATH_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))
+}

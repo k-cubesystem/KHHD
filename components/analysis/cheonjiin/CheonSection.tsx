@@ -137,7 +137,7 @@ export function CheonSection({ data }: CheonSectionProps) {
             {/* 인생 타임라인 */}
             {data.lifeTimeline && (
               <div className="space-y-3 pt-4">
-                <div className="flex items-center gap-2 text-blue-300">
+                <div className="flex items-center gap-2 text-gold-300">
                   <Clock className="w-4 h-4" />
                   <span className="text-sm font-bold">인생 타임라인</span>
                 </div>
@@ -145,9 +145,9 @@ export function CheonSection({ data }: CheonSectionProps) {
                   {data.lifeTimeline.pastDecade && (
                     <TimelineCard
                       label="과거 10년"
-                      color="text-blue-300/70"
-                      borderColor="border-blue-300/20"
-                      bgColor="bg-blue-300/5"
+                      color="text-ink-light/50"
+                      borderColor="border-white/10"
+                      bgColor="bg-white/[0.03]"
                     >
                       {data.lifeTimeline.pastDecade}
                     </TimelineCard>
@@ -165,9 +165,9 @@ export function CheonSection({ data }: CheonSectionProps) {
                   {data.lifeTimeline.nextDecade && (
                     <TimelineCard
                       label="미래 10년"
-                      color="text-emerald-300/70"
-                      borderColor="border-emerald-300/20"
-                      bgColor="bg-emerald-300/5"
+                      color="text-gold-300/80"
+                      borderColor="border-gold-300/25"
+                      bgColor="bg-gold-500/5"
                     >
                       {data.lifeTimeline.nextDecade}
                     </TimelineCard>
@@ -180,10 +180,10 @@ export function CheonSection({ data }: CheonSectionProps) {
                 🔴 값이 문자열일 수도 **객체**일 수도 있다. 그대로 JSX 에 넣었다가 화면이 통째로
                    죽었다(React #31, 2026-08-17) — 반드시 toRichField 를 거친다. */}
             <div className="space-y-3 pt-4">
-              <RichDetail icon={Briefcase} label="직업·사업" color="text-amber-300" value={data.career} />
-              <RichDetail icon={Coins} label="재물운" color="text-yellow-300" value={data.wealth} />
-              <RichDetail icon={Heart} label="연애·결혼" color="text-rose-300" value={data.love} />
-              <RichDetail icon={Activity} label="건강" color="text-emerald-300" value={data.health} />
+              <RichDetail icon={Briefcase} label="직업·사업" color="text-gold-300" value={data.career} />
+              <RichDetail icon={Coins} label="재물운" color="text-gold-300" value={data.wealth} />
+              <RichDetail icon={Heart} label="연애·결혼" color="text-gold-300" value={data.love} />
+              <RichDetail icon={Activity} label="건강" color="text-gold-300" value={data.health} />
             </div>
           </div>
         </div>

@@ -79,7 +79,13 @@ export function AmbientVideo({ id, className, style, poster, fallback = null, ra
     return <>{fallback}</>
   }
 
-  // 파일 확인 중·미존재 → fallback(기존 연출 유지)
+  // 🔴 «확인 중»과 «없음»을 가른다.
+  //
+  // 종전에는 둘 다 fallback 을 그렸다. fallback 이 null 이던 시절에는 무증상이었지만,
+  // 사주 결과 로딩 화면의 fallback 자리에 정지 이미지(AmbientBackdrop)를 꽂은 뒤로는
+  // 영상이 정상인 환경에서도 매번 «이미지가 먼저 깔렸다가 영상으로 갈아끼워지는» 깜빡임이
+  // 생긴다. HEAD 응답을 기다리는 동안은 아무것도 그리지 않는 편이 맞다.
+  if (status === 'checking') return null
   if (status !== 'ok') return <>{fallback}</>
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect , useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AdminUser, getUsers, updateUserRole, deleteUser } from './actions'
 import { UserRole } from '@/types/auth'
 import { Input } from '@/components/ui/input'
@@ -228,11 +228,11 @@ export function UserManagementClient() {
                           className={cn(
                             'w-[110px] h-8 border-none font-medium text-xs rounded-md shadow-sm transition-all',
                             pendingRoles[user.id]
-                              ? 'bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/30'
+                              ? 'bg-warning-light text-warning-text ring-1 ring-warning/30'
                               : user.role === 'admin'
-                                ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20 hover:bg-red-500/20'
+                                ? 'bg-error-light text-error-text ring-1 ring-error/20 hover:bg-error/20'
                                 : user.role === 'tester'
-                                  ? 'bg-yellow-500/10 text-yellow-400 ring-1 ring-yellow-500/20 hover:bg-yellow-500/20'
+                                  ? 'bg-gold-500/10 text-gold-400 ring-1 ring-gold-500/20 hover:bg-gold-500/20'
                                   : 'bg-surface text-ink-primary/55 ring-1 ring-white/[0.08] hover:bg-white/[0.06] hover:text-ink-primary/70'
                           )}
                         >
@@ -245,12 +245,12 @@ export function UserManagementClient() {
                           >
                             USER
                           </SelectItem>
-                          <SelectItem value="tester" className="text-yellow-400 hover:bg-surface focus:bg-surface">
+                          <SelectItem value="tester" className="text-gold-400 hover:bg-surface focus:bg-surface">
                             TESTER
                           </SelectItem>
                           <SelectItem
                             value="admin"
-                            className="text-red-400 font-bold hover:bg-surface focus:bg-surface"
+                            className="text-error-text font-bold hover:bg-surface focus:bg-surface"
                           >
                             ADMIN
                           </SelectItem>
@@ -263,7 +263,7 @@ export function UserManagementClient() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-amber-400 hover:text-green-400 hover:bg-green-500/10 rounded-full transition-colors"
+                            className="h-8 w-8 text-warning-text hover:text-success-text hover:bg-success-light rounded-full transition-colors"
                             onClick={() => handleRoleSave(user.id)}
                             disabled={savingId === user.id}
                             title="권한 저장"
@@ -287,7 +287,7 @@ export function UserManagementClient() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-ink-primary/40 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors"
+                          className="h-8 w-8 text-ink-primary/40 hover:text-error-text hover:bg-error-light rounded-full transition-colors"
                           onClick={() => handleDelete(user.id)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -354,11 +354,11 @@ export function UserManagementClient() {
                       className={cn(
                         'h-7 md:h-8 border font-medium text-xs flex-1 max-w-[110px]',
                         pendingRoles[user.id]
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                          ? 'bg-warning-light text-warning-text border-warning/30'
                           : user.role === 'admin'
-                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                            ? 'bg-error-light text-error-text border-error/30'
                             : user.role === 'tester'
-                              ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                              ? 'bg-gold-500/10 text-gold-400 border-gold-500/30'
                               : 'bg-white/30 text-ink-primary/55 border-white/[0.08]'
                       )}
                     >
@@ -368,10 +368,10 @@ export function UserManagementClient() {
                       <SelectItem value="user" className="text-ink-primary/70 hover:bg-surface">
                         USER
                       </SelectItem>
-                      <SelectItem value="tester" className="text-yellow-400 hover:bg-surface">
+                      <SelectItem value="tester" className="text-gold-400 hover:bg-surface">
                         TESTER
                       </SelectItem>
-                      <SelectItem value="admin" className="text-red-400 font-bold hover:bg-surface">
+                      <SelectItem value="admin" className="text-error-text font-bold hover:bg-surface">
                         ADMIN
                       </SelectItem>
                     </SelectContent>
@@ -382,7 +382,7 @@ export function UserManagementClient() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-amber-400 hover:text-green-400 hover:bg-green-500/10"
+                        className="h-7 w-7 text-warning-text hover:text-success-text hover:bg-success-light"
                         onClick={() => handleRoleSave(user.id)}
                         disabled={savingId === user.id}
                         title="권한 저장"
@@ -406,7 +406,7 @@ export function UserManagementClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-ink-primary/40 hover:text-red-400 hover:bg-red-500/10"
+                      className="h-7 w-7 text-ink-primary/40 hover:text-error-text hover:bg-error-light"
                       onClick={() => handleDelete(user.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5" />

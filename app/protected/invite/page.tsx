@@ -117,12 +117,12 @@ export default function InviteCreatePage() {
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/20 border border-pink-500/30">
-          <Heart className="w-4 h-4 text-pink-400" />
-          <span className="text-xs font-bold text-pink-300 uppercase tracking-wider">친구 초대</span>
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-seal/20 border border-seal/30">
+          <Heart className="w-4 h-4 text-obangsaek-red" />
+          <span className="text-xs font-bold text-obangsaek-red uppercase tracking-wider">친구 초대</span>
         </div>
         <h1 className="text-4xl font-black">
-          <span className="bg-gradient-to-r from-pink-400 via-gold-500 to-pink-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-obangsaek-red via-gold-500 to-obangsaek-red bg-clip-text text-transparent">
             궁합 초대하기
           </span>
         </h1>
@@ -131,10 +131,10 @@ export default function InviteCreatePage() {
 
       {/* Generate Link Card */}
       {!inviteLink ? (
-        <Card className="p-8 bg-gradient-to-br from-pink-500/10 to-gold-500/10 border-pink-500/20">
+        <Card className="p-8 bg-gradient-to-br from-seal/10 to-gold-500/10 border-seal/20">
           <div className="text-center space-y-6">
-            <div className="w-20 h-20 mx-auto rounded-full bg-pink-500/20 flex items-center justify-center">
-              <Users className="w-10 h-10 text-pink-400" />
+            <div className="w-20 h-20 mx-auto rounded-full bg-seal/20 flex items-center justify-center">
+              <Users className="w-10 h-10 text-obangsaek-red" />
             </div>
             <div className="space-y-2">
               <h2 className="text-xl font-bold">초대 링크 생성</h2>
@@ -145,12 +145,12 @@ export default function InviteCreatePage() {
               </p>
             </div>
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-error-text text-sm">{error}</p>}
 
             <Button
               onClick={handleGenerateLink}
               disabled={loading}
-              className="bg-gradient-to-r from-pink-500 to-gold-500 text-black font-bold px-8 hover:opacity-90"
+              className="bg-gradient-to-r from-obangsaek-red to-gold-500 text-black font-bold px-8 hover:opacity-90"
             >
               {loading ? (
                 <>
@@ -171,7 +171,7 @@ export default function InviteCreatePage() {
           {/* Link Display */}
           <Card className="p-6 bg-white/5 border-white/10">
             <div className="space-y-4">
-              <div className="flex items-center gap-2 text-green-400">
+              <div className="flex items-center gap-2 text-success-text">
                 <Check className="w-5 h-5" />
                 <span className="font-bold">초대 링크가 생성되었습니다!</span>
               </div>
@@ -180,7 +180,7 @@ export default function InviteCreatePage() {
                 <Button
                   onClick={handleCopy}
                   variant="outline"
-                  className={`border-white/10 ${copied ? 'bg-green-500/20 text-green-400' : ''}`}
+                  className={`border-white/10 ${copied ? 'bg-success/20 text-success-text' : ''}`}
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </Button>

@@ -12,7 +12,7 @@ import { TargetSelect, toTargetOption } from '@/components/destiny/target-select
 import { toast } from 'sonner'
 import { analyzeCompatibilityAction } from '@/app/actions/ai/compatibility'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
@@ -137,35 +137,27 @@ export function CompatibilityClient({ targets, fixedTargetId }: CompatibilityCli
     const canProceed = await checkQuota()
     if (!canProceed) return
 
-    // 복채 차감(2만냥) — 마스터/무제한은 wallet 내부 면제. 부족 시 업셀 모달.
-    const deduct = await deductTalisman('COMPATIBILITY', COMPATIBILITY_COST)
-    if (!deduct.success) {
-      const handled = handleDeductResult(deduct, {
-        currentBalance: walletBalance ?? 0,
-        requiredAmount: COMPATIBILITY_COST,
-        featureLabel: '궁합 분석',
-      })
-      if (!handled) toast.error(deduct.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      return
-    }
-    if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)
-
+    // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서, 캐시 확인 뒤에 빠진다.
+    //    화면이 차감하던 종전 구조에서는 액션을 브라우저에서 직접 부르면 공짜였다.
+    //    실패 시 되돌리는 것도 액션이 한다 — 화면이 환급을 부르면 그 자체가 어뷰즈 경로가 된다.
     setIsAnalyzing(true)
 
     try {
       const response = await analyzeCompatibilityAction(person1.id, person2.id, relationship)
 
       if (response.success) {
-        // 캐시 히트(신규 연산 아님)면 환불 — 신규 분석만 과금(표시=실차감)
-        if (response.cached) await refundStudioCost('COMPATIBILITY').catch(() => {})
+        if (response.remainingBalance !== undefined) setWalletBalance(response.remainingBalance)
         setResult(response.data)
         toast.success('궁합 분석이 완료되었습니다!')
       } else {
-        await refundStudioCost('COMPATIBILITY').catch(() => {})
-        toast.error(response.error || '분석 중 오류가 발생했습니다.')
+        const handled = handleDeductResult(response, {
+          currentBalance: walletBalance ?? 0,
+          requiredAmount: COMPATIBILITY_COST,
+          featureLabel: '궁합 분석',
+        })
+        if (!handled) toast.error(response.error || '분석 중 오류가 발생했습니다.')
       }
     } catch {
-      await refundStudioCost('COMPATIBILITY').catch(() => {})
       toast.error('분석 중 오류가 발생했습니다.')
     } finally {
       setIsAnalyzing(false)

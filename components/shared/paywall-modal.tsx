@@ -25,23 +25,23 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm mx-auto p-0 overflow-hidden border border-amber-400/30 bg-[#1a1208]">
-        <div className="relative bg-gradient-to-b from-amber-900/60 to-transparent px-6 pt-8 pb-4">
+      <DialogContent className="max-w-sm mx-auto p-0 overflow-hidden border border-gold-500/30 bg-[#1a1208]">
+        <div className="relative bg-gradient-to-b from-gold-700/40 to-transparent px-6 pt-8 pb-4">
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-amber-400/60 hover:text-amber-300 transition-colors"
+            className="absolute top-3 right-3 text-gold-500/60 hover:text-gold-300 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
 
           <div className="flex justify-center mb-3">
-            <div className="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-400/30 flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-amber-400" />
+            <div className="w-16 h-16 rounded-full bg-gold-500/20 border border-gold-500/30 flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-gold-500" />
             </div>
           </div>
 
           <DialogHeader className="text-center">
-            <DialogTitle className="text-amber-200 text-lg font-bold leading-snug">
+            <DialogTitle className="text-gold-200 text-lg font-bold leading-snug">
               {isExhausted ? (
                 <>
                   무료 분석 {limit}회를
@@ -62,33 +62,33 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
                 key={i}
                 className={cn(
                   'h-2 flex-1 rounded-full transition-colors',
-                  i < usedCount ? 'bg-amber-500' : 'bg-amber-900/40 border border-amber-700/30'
+                  i < usedCount ? 'bg-gold-500' : 'bg-gold-700/25 border border-gold-700/30'
                 )}
               />
             ))}
           </div>
-          <p className="text-amber-300/70 text-xs text-center">
+          <p className="text-gold-300/70 text-xs text-center">
             {usedCount} / {limit} 무료 분석 사용
           </p>
 
           {isExhausted ? (
-            <p className="text-amber-100/80 text-sm text-center leading-relaxed">
+            <p className="text-ink-primary/80 text-sm text-center leading-relaxed">
               {t('exhausted')}
               <br />
-              <span className="text-amber-400 font-semibold">{t('unlockAction')}</span>
+              <span className="text-gold-300 font-semibold">{t('unlockAction')}</span>
             </p>
           ) : (
-            <p className="text-amber-100/80 text-sm text-center leading-relaxed">
+            <p className="text-ink-primary/80 text-sm text-center leading-relaxed">
               {t('lastChance')}
               <br />
-              <span className="text-amber-400 font-semibold">{t('unlockUnlimited')}</span>
+              <span className="text-gold-300 font-semibold">{t('unlockUnlimited')}</span>
             </p>
           )}
 
           <div className="space-y-2 pt-1">
             <Button
               asChild
-              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-900 font-bold h-12 text-base"
+              className="w-full bg-gold-500 hover:bg-gold-400 text-ink-900 font-bold h-12 text-base"
               onClick={() => {
                 GA.paywallClick('unlock')
                 onClose()
@@ -107,7 +107,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
                   GA.paywallClick('bokchae')
                   onClose()
                 }}
-                className="text-amber-400/50 hover:text-amber-300 text-xs transition-colors underline underline-offset-2"
+                className="text-gold-500/50 hover:text-gold-300 text-xs transition-colors underline underline-offset-2"
               >
                 {t('otherMethods')}
               </Link>
@@ -116,7 +116,7 @@ export function PaywallModal({ open, onClose, isExhausted = true, usedCount = 3,
             {!isExhausted && (
               <button
                 onClick={onClose}
-                className="w-full text-amber-500/60 hover:text-amber-400 text-xs py-1 transition-colors"
+                className="w-full text-gold-500/60 hover:text-gold-500 text-xs py-1 transition-colors"
               >
                 {t('continue')}
               </button>

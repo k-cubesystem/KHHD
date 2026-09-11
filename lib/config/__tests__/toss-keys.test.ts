@@ -119,7 +119,10 @@ describe('🔴 클라이언트 SDK — 용도를 반드시 밝힌다', () => {
   })
 
   it('복채 충전(requestPayment)은 general SDK 로 연다', () => {
-    const source = read('components/membership/talisman-purchase-section.tsx')
+    // 2026-09-01: 결제창을 여는 자리가 상점 카드에서 **주문 확인 화면**으로 옮겨졌다.
+    // 상품 카드는 이제 결제창을 열 수 없다(동의 없는 결제 경로 제거) — 그건
+    // purchase-consent-gate.test.ts 가 따로 잠근다. 불변식은 그대로고 지점만 옮긴다.
+    const source = read('app/protected/store/checkout/bokchae-checkout-client.tsx')
 
     expect(source).toContain('requestPayment')
     expect(source).toContain("getTossPaymentsSDK('general')")

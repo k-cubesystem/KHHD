@@ -20,6 +20,7 @@ import { submitStory, type StoryGateInfo } from '@/app/actions/webtoon/webtoon'
 import {
   STORY_BODY_MAX,
   STORY_BODY_MIN,
+  STORY_CONSENT_LABEL,
   STORY_CONTACT_NOTICE,
   STORY_FREE_NOTICE,
   STORY_KAKAO_MAX,
@@ -54,6 +55,7 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
     contactName: '',
     contactPhone: '',
     contactKakao: '',
+    consent: false,
   })
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState(false)
@@ -181,7 +183,7 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
         <p className="font-serif text-[11.5px] font-bold text-gold-200">연락처 (비공개)</p>
         <div>
           <label className={LABEL} htmlFor="story-name">
-            성함
+            부를 이름 <span className="font-sans text-[11px] text-ink-primary/35">· 닉네임도 좋습니다</span>
           </label>
           <input
             id="story-name"
@@ -195,7 +197,7 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
         </div>
         <div>
           <label className={LABEL} htmlFor="story-phone">
-            휴대전화
+            휴대전화 <span className="font-sans text-[11px] text-ink-primary/35">· 카카오와 둘 중 하나면 됩니다</span>
           </label>
           <input
             id="story-phone"
@@ -224,6 +226,16 @@ export function StoryForm({ gate, onDone }: { gate: StoryGateInfo; onDone?: () =
         <p className="font-sans text-[10.5px] leading-relaxed text-gold-500/60">
           🔒 {STORY_CONTACT_NOTICE.replace(/\*\*/g, '')}
         </p>
+        {/* 동의는 버튼이 아니라 체크가 한다(결정④) — 체크 없이는 접수되지 않는다 */}
+        <label className="flex items-start gap-2 rounded-lg border border-gold-500/20 bg-gold-500/[0.04] px-2.5 py-2.5">
+          <input
+            type="checkbox"
+            checked={draft.consent}
+            onChange={(e) => setDraft((d) => ({ ...d, consent: e.target.checked }))}
+            className="mt-0.5"
+          />
+          <span className="font-sans text-[11.5px] leading-relaxed text-ink-primary/70">{STORY_CONSENT_LABEL}</span>
+        </label>
       </div>
 
       {issues.length > 0 && draft.body.length > 0 && (

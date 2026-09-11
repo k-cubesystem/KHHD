@@ -7,7 +7,7 @@ import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
 import { getUserRole } from '@/lib/supabase/helpers'
 import { computeSpendPlan } from '@/lib/domain/payment/spend-plan'
-import { deductKeyLabel } from '@/lib/domain/payment/feature-costs'
+import { canonicalDeductCost, deductKeyLabel } from '@/lib/domain/payment/feature-costs'
 import { hasUnlimitedAccess, UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 import { logger } from '@/lib/utils/logger'
 
@@ -142,6 +142,14 @@ export async function deductTalisman(
   // «RPC 미설정» 폴백으로 해석되어 가드 없는 UPDATE 로 잔액이 **증액**된다.
   if (!Number.isInteger(amount) || amount <= 0) {
     logger.error('[Wallet] deductTalisman rejected invalid amount:', { featureKey, amount })
+    return { success: false, error: '잘못된 차감 금액입니다.' }
+  }
+  // 양수 정수인 것만으로는 부족하다. featureKey 에 정본 값이 있으면 **서버가 다시 도출해**
+  // 인자와 대조한다 — 그러지 않으면 deductTalisman('SAJU', 1) 로 2만냥짜리를 1만냥에 산다.
+  // 정본이 없는 동적 키(theme_* · VOUCHER_*)는 서버 액션 안에서 서버가 계산한 값이 온다.
+  const canonical = canonicalDeductCost(featureKey)
+  if (canonical !== null && amount !== canonical) {
+    logger.error('[Wallet] deductTalisman rejected tampered amount:', { featureKey, amount, canonical })
     return { success: false, error: '잘못된 차감 금액입니다.' }
   }
   if (isEdgeEnabled('payment')) {

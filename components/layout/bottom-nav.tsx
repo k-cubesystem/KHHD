@@ -27,7 +27,7 @@ export const BottomNav = memo(function BottomNav() {
     { label: t('analysis'), icon: '/icons/nav/analysis.webp', href: '/protected/analysis' },
     // 가족관리는 신당 상단(가족 탭 옆)으로 옮겼다 — 대상 탭과 같은 축이라 그 자리가 제자리다.
     // 비운 칸은 웹툰 연재가 잇는다(CEO 2026-08-01).
-    { label: t('webtoon'), icon: '/icons/nav/webtoon.webp', href: '/protected/webtoon' },
+    { label: t('webtoon'), icon: '/icons/nav/webtoon.webp', href: '/webtoon' },
     { label: t('shrine'), icon: '/icons/nav/shrine.webp', href: '/protected/shrine' },
     { label: t('chat'), icon: '/icons/nav/chat.webp', href: '/protected/ai-shaman' },
     { label: t('profile'), icon: '/icons/nav/profile.webp', href: '/protected/profile' },
@@ -52,7 +52,7 @@ export const BottomNav = memo(function BottomNav() {
               aria-current={isActive ? 'page' : undefined}
               aria-label={item.label}
               className={cn(
-                'flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-all text-stone-500 hover:text-stone-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background rounded-lg',
+                'flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-all text-ink-light/45 hover:text-ink-light/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500 focus-visible:ring-offset-1 focus-visible:ring-offset-background rounded-lg',
                 isActive && 'text-gold-500'
               )}
             >

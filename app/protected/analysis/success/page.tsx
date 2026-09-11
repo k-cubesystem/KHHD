@@ -4,7 +4,6 @@ import { useEffect, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { confirmPayment } from '@/app/actions/payment/payment'
-import { startFateAnalysis } from '@/app/actions/core/analysis'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import confetti from 'canvas-confetti'
@@ -12,6 +11,16 @@ import { GA } from '@/lib/analytics/ga4'
 import { logger } from '@/lib/utils/logger'
 import { useHydrated } from '@/hooks/use-hydrated'
 
+/**
+ * 복채 충전 결제의 승인 화면.
+ *
+ * 🔴 여기서 풀이를 돌리지 않는다. 2026-09-01 까지 이 화면은 승인 직후
+ *    `startFateAnalysis` 를 무조건 호출해 Gemini PRO 종합 리포트를 만들고
+ *    /protected/history 로 보냈다. 사용자는 «복채»를 샀는데 요청하지도 않은
+ *    간판 유료 상품이 공짜로 나갔고(PRO 호출 원가도 결제 건마다 붙었다),
+ *    그 호출이 실패하면 승인은 이미 끝났는데 화면은 「결제 승인 실패」를 띄웠다.
+ *    이 화면을 부르는 곳은 복채 충전 두 경로뿐이다 — 풀이를 기대하는 호출자는 없다.
+ */
 function PaymentProcessor() {
   // 결제 승인은 하이드레이션 이후에만 — 서버 렌더 단계에서 돌지 않게 막는 기존 관문 그대로다.
   const isMounted = useHydrated()
@@ -27,7 +36,6 @@ function PaymentProcessor() {
     const paymentKey = searchParams.get('paymentKey')
     const orderId = searchParams.get('orderId')
     const memberId = searchParams.get('memberId')
-    const homeAddress = searchParams.get('homeAddress')
     const credits = Number(searchParams.get('credits')) || 1
 
     if (!paymentKey || !orderId || !memberId) {
@@ -55,14 +63,8 @@ function PaymentProcessor() {
             : `복채 ${credited}만냥이 들어왔습니다 🎉`
         )
 
-        // 3. 분석 시작
-        const formData = new FormData()
-        formData.append('memberId', memberId)
-        if (homeAddress) formData.append('homeAddress', homeAddress)
-
-        await startFateAnalysis(formData)
-        toast.success('해화당 비록이 성공적으로 완성되었습니다.')
-        router.push('/protected/history')
+        // 2. 충전이 끝났으면 여기서 끝이다 — 사용자는 복채를 샀지 풀이를 산 게 아니다.
+        router.push('/protected/analysis')
       } catch (err: unknown) {
         logger.error('[결제 승인 실패]', err)
         toast.error(err instanceof Error ? err.message : String(err))

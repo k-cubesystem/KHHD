@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { analyzeCheonjiinAction } from '@/app/actions/ai/cheonjiin'
 import { createSajuShareTokenByTarget } from '@/app/actions/ai/share-saju'
 import { useAnalysisQuota } from '@/hooks/use-analysis-quota'
-import { deductTalisman, getWalletBalance, refundStudioCost } from '@/app/actions/payment/wallet'
+import { getWalletBalance } from '@/app/actions/payment/wallet'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { useInsufficientBokchae } from '@/hooks/use-insufficient-bokchae'
 import { InsufficientBokchaeModal } from '@/components/payment/insufficient-bokchae-modal'
@@ -13,12 +13,14 @@ import { PremiumBlurSection } from '@/components/shared/premium-blur-section'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { DestinyTarget } from '@/app/actions/user/destiny'
-import { RefreshCw, AlertTriangle, Settings, Sparkles, ChevronDown, Share2, Link2, Check, Loader2 } from 'lucide-react'
+import { RefreshCw, AlertTriangle, Settings, ChevronDown, Share2, Link2, Check, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { logger } from '@/lib/utils/logger'
 import { GA } from '@/lib/analytics/ga4'
 import { useShrineAudio } from '@/components/shrine/scene/useShrineAudio'
 import { PillarsStrip } from '@/components/analysis/PillarsStrip'
+import { ElementDistribution } from '@/components/analysis/report/element-distribution'
+import { AmbientBackdrop } from '@/components/analysis/report/ambient-backdrop'
 import { InSection } from '@/components/analysis/cheonjiin/InSection'
 import {
   SajuCrossAnalysisSection,
@@ -107,35 +109,26 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     setError(null)
     GA.analysisStart('saju')
 
-    // 복채 차감(2만냥) — 마스터/무제한은 wallet 내부에서 면제. 부족 시 업셀 모달.
-    const deduct = await deductTalisman('SAJU', SAJU_COST)
-    if (!deduct.success) {
-      setIsLoading(false)
-      const handled = handleDeductResult(deduct, {
-        currentBalance: walletBalance ?? 0,
-        requiredAmount: SAJU_COST,
-        featureLabel: '사주 분석',
-      })
-      if (!handled) toast.error(deduct.error || '풀이를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.')
-      return
-    }
-    if (deduct.remainingBalance !== undefined) setWalletBalance(deduct.remainingBalance)
-
+    // 🔴 여기서 차감하지 않는다. 복채는 서버 액션 안에서, 캐시 확인 뒤에 빠진다.
+    //    화면이 차감하던 종전 구조에서는 액션을 브라우저에서 직접 부르면 공짜였다.
+    //    실패 시 되돌리는 것도 액션이 한다 — 화면이 환급을 부르면 그 자체가 어뷰즈 경로가 된다.
     try {
       const result = await analyzeCheonjiinAction(target.id, null, false, true)
       if (result.success && result.data) {
-        // 캐시 히트(신규 연산 아님)면 환불 — 신규 분석만 과금(표시=실차감)
-        if (result.cached) await refundStudioCost('SAJU').catch(() => {})
+        if (result.remainingBalance !== undefined) setWalletBalance(result.remainingBalance)
         setData(result.data as AnalysisData)
         GA.analysisComplete('saju')
         setApiDone(true) // progress가 80% 미만이어도 완료 처리
       } else {
-        await refundStudioCost('SAJU').catch(() => {})
-        setError(result.error || '분석 중 오류가 발생했습니다.')
         setIsLoading(false)
+        const handled = handleDeductResult(result, {
+          currentBalance: walletBalance ?? 0,
+          requiredAmount: SAJU_COST,
+          featureLabel: '사주 분석',
+        })
+        if (!handled) setError(result.error || '분석 중 오류가 발생했습니다.')
       }
     } catch (err) {
-      await refundStudioCost('SAJU').catch(() => {})
       setError(err instanceof Error ? err.message : '분석 중 오류가 발생했습니다.')
       toast.error('분석 중 오류가 발생했습니다.')
       setIsLoading(false)
@@ -152,8 +145,8 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md space-y-4">
-          <AlertTriangle className="w-12 h-12 mx-auto text-red-400/80" />
-          <p className="text-red-400 text-sm">{error}</p>
+          <AlertTriangle className="w-12 h-12 mx-auto text-error/60" />
+          <p className="text-error-text text-sm">{error}</p>
           <div className="flex gap-2 justify-center">
             {error.includes('생년월일') ? (
               <Link href="/protected/settings">
@@ -208,68 +201,102 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
       <PaywallModal {...paywallProps} />
       <InsufficientBokchaeModal {...bokchaeModal} onClose={closeBokchaeModal} />
 
-      {/* 헤더 */}
-      <header className="text-center pt-8 pb-6 px-4">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gold-500/10 border border-gold-500/20 mb-3">
-          <Sparkles className="w-3 h-3 text-gold-500" />
-          <span className="text-[10px] font-medium text-gold-500 tracking-widest">청담해화당 통합분석</span>
-        </div>
-        <h1 className="text-2xl font-serif font-bold text-ink-light">
-          {target.name}님의 <span className="text-gold-500">사주풀이</span>
-        </h1>
-        {data.summary && (
-          <p className="text-sm text-ink-light/60 font-light mt-2 max-w-sm mx-auto leading-relaxed">
-            {data.summary as string}
-          </p>
-        )}
-        {isCached && (
-          <button
-            onClick={runAnalysis}
-            className="mt-3 inline-flex items-center gap-1 text-[11px] text-ink-light/30 hover:text-gold-500/60 transition-colors"
-          >
-            <RefreshCw className="w-3 h-3" />
-            새로 분석하기
-          </button>
-        )}
-      </header>
+      {/* 결과 상단(헤더 + 리포트 카드) — 뒤에 깊은 밤 서재 앰비언스를 깔고, 아래로 내려가며
+          배경색에 완전히 잠기게 한다. 표현 레이어일 뿐이라 내용은 그대로 z-10 위에 선다. */}
+      <div className="relative isolate">
+        <AmbientBackdrop id="study" variant="header" eager />
 
-      {/* 명식 4주 스트립 — AI 풀이의 근거(원국) 노출 */}
-      <div className="mx-4 mb-6">
-        <PillarsStrip
-          birthDate={target.birth_date}
-          birthTime={target.birth_time}
-          isSolar={target.calendar_type !== 'lunar'}
-          isLeapMonth={target.is_leap_month ?? false}
-          birthTimeUnknown={!target.birth_time}
-        />
-      </div>
+        {/* 헤더 — 모양 정본은 /story 섹션 헤딩(story-section-heading.tsx) */}
+        <header className="relative z-10 text-center pt-8 pb-6 px-4">
+          <div className="flex items-center justify-center gap-2.5 mb-3">
+            <span className="h-px w-5 bg-gold-500/60" aria-hidden />
+            <span className="font-sans text-[10px] font-bold uppercase tracking-[0.22em] text-gold-500">
+              Cheonjiin Report
+            </span>
+            <span className="h-px w-5 bg-gold-500/60" aria-hidden />
+          </div>
+          <h1 className="text-2xl font-serif font-bold text-ink-light tracking-tight">
+            {target.name}님의 <span className="text-gold-300">사주 상세풀이</span>
+          </h1>
+          {data.summary && (
+            <p className="text-sm text-ink-light/60 font-light mt-2 max-w-sm mx-auto leading-relaxed">
+              {data.summary as string}
+            </p>
+          )}
+          {isCached && (
+            <button
+              onClick={runAnalysis}
+              className="mt-3 inline-flex items-center gap-1 text-[11px] text-ink-light/30 hover:text-gold-500/60 transition-colors"
+            >
+              <RefreshCw className="w-3 h-3" />
+              새로 분석하기
+            </button>
+          )}
+        </header>
 
-      {/* 행운 정보 */}
-      {data.lucky && (
-        <section className="mx-4 mb-6 grid grid-cols-4 gap-2">
-          {[
-            { label: '색상', value: data.lucky.color },
-            { label: '방위', value: data.lucky.direction },
-            { label: '숫자', value: data.lucky.number },
-            { label: '키워드', value: data.lucky.keyword },
-          ].map(
-            (item) =>
-              item.value && (
-                <div key={item.label} className="text-center p-2.5 rounded-lg bg-surface/30 border border-white/5">
-                  <p className="text-[10px] text-ink-light/40">{item.label}</p>
-                  <p className="text-xs text-gold-500 font-medium mt-0.5">{String(item.value)}</p>
-                </div>
-              )
+        {/* 리포트 카드 — 명식·오행 분포·행운 요소를 한 장으로.
+          모양 정본은 /story 리포트 미리보기(story-report-preview.tsx) — 단청 상단 보더 + 금테 카드. */}
+        <section className="relative z-10 mx-4 mb-6 rounded-2xl border border-gold-500/25 bg-surface overflow-hidden shadow-gold-glow divide-y divide-white/10">
+          <div className="dancheong-border-top" />
+          <div className="px-4 py-4">
+            <PillarsStrip
+              frameless
+              birthDate={target.birth_date}
+              birthTime={target.birth_time}
+              isSolar={target.calendar_type !== 'lunar'}
+              isLeapMonth={target.is_leap_month ?? false}
+              birthTimeUnknown={!target.birth_time}
+            />
+          </div>
+          <div className="px-4 py-4">
+            <ElementDistribution
+              birthDate={target.birth_date}
+              birthTime={target.birth_time}
+              isSolar={target.calendar_type !== 'lunar'}
+              isLeapMonth={target.is_leap_month ?? false}
+              birthTimeUnknown={!target.birth_time}
+            />
+          </div>
+          {data.lucky && (
+            <div className="px-4 py-4">
+              <h3 className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/70 mb-2.5 m-0">
+                행운 요소
+              </h3>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[
+                  { label: '색상', value: data.lucky.color },
+                  { label: '방위', value: data.lucky.direction },
+                  { label: '숫자', value: data.lucky.number },
+                  { label: '키워드', value: data.lucky.keyword },
+                ].map(
+                  (item) =>
+                    item.value && (
+                      <div
+                        key={item.label}
+                        className="text-center py-2 px-1 rounded-lg bg-white/[0.03] border border-white/10"
+                      >
+                        <p className="text-[9px] text-ink-light/60">{item.label}</p>
+                        <p className="text-xs text-gold-300 font-medium mt-0.5 break-keep">{String(item.value)}</p>
+                      </div>
+                    )
+                )}
+              </div>
+            </div>
           )}
         </section>
-      )}
+      </div>
 
       <SajuFreeSections data={data} />
 
       {/* 프리미엄 섹션 — 무료 사용자에게 블러 처리 */}
       <PremiumBlurSection isPaid={quota.isPaid}>
         {/* 타고난 성격 */}
-        <DetailSection title={data.cheon?.title || '타고난 성격과 재능이에요'} data={data.cheon} color="blue" />
+        <DetailSection
+          title={data.cheon?.title || '타고난 성격과 재능이에요'}
+          data={data.cheon}
+          hanja="天"
+          tagline="하늘의 기운 · 타고난 것"
+        />
 
         <SajuDeepSections data={data} />
 
@@ -277,7 +304,12 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
         <CheonToJiDivider />
 
         {/* 운의 흐름 (地) */}
-        <DetailSection title={data.ji?.title || '지금 흐르는 운의 방향이에요'} data={data.ji} color="emerald" />
+        <DetailSection
+          title={data.ji?.title || '지금 흐르는 운의 방향이에요'}
+          data={data.ji}
+          hanja="地"
+          tagline="땅의 기운 · 흐르는 것"
+        />
 
         {/* 인연과 내면 (人)
             🔴 라이브가 天·地만 그리고 人 을 통째로 빠뜨리고 있었다(2026-08-18 발견). 저장본에는
@@ -287,6 +319,15 @@ export function SajuResultClient({ target, initialData = null, isCached = false 
 
         <SajuCrossAnalysisSection data={data} />
       </PremiumBlurSection>
+
+      {/* 풀이 → 공유 사이의 호흡. 모양 정본은 /story 비주얼 브레이크(story-visual-break.tsx) —
+          여기서는 글 없이 향로 앰비언스 + 단청 구분선만 두는 얇은 밴드로 줄였다. */}
+      <div className="relative mx-4 mt-8 mb-2 h-[132px] overflow-hidden rounded-2xl">
+        <AmbientBackdrop id="incense" variant="band" />
+        <div className="relative z-10 flex h-full items-center justify-center">
+          <div className="dancheong-divider w-16" />
+        </div>
+      </div>
 
       {/* 카카오톡/SNS 공유 */}
       <SajuShareSection targetId={target.id} targetName={target.name} summary={data.summary as string | undefined} />
@@ -329,11 +370,15 @@ function CheonToJiDivider() {
 function DetailSection({
   title,
   data,
-  color,
+  hanja,
+  tagline,
 }: {
   title: string
   data: Record<string, unknown> | null | undefined
-  color: 'blue' | 'emerald' | 'rose'
+  /** 챕터 한자 — 天 · 地 · 人 */
+  hanja: string
+  /** 헤더 오버라인 — 예) 하늘의 기운 · 타고난 것 */
+  tagline: string
 }) {
   const [isOpen, setIsOpen] = useState(true)
   if (!data) return null
@@ -353,39 +398,43 @@ function DetailSection({
       ? data.health
       : ((data.health as Record<string, unknown>)?.overall as string | undefined)
 
-  const colorMap = {
-    blue: { bg: 'bg-blue-500/5', border: 'border-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
-    emerald: {
-      bg: 'bg-emerald-500/5',
-      border: 'border-emerald-500/15',
-      text: 'text-emerald-400',
-      dot: 'bg-emerald-400',
-    },
-    rose: { bg: 'bg-rose-500/5', border: 'border-rose-500/15', text: 'text-rose-400', dot: 'bg-rose-400' },
-  }
-  const c = colorMap[color]
-
   return (
-    <section className={`mx-4 mb-4 rounded-xl border ${c.bg} ${c.border} overflow-hidden`}>
-      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-4">
-        <h3 className={`text-sm font-serif font-medium flex items-center gap-2 ${c.text}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-          {title}
-        </h3>
-        <ChevronDown className={`w-4 h-4 text-ink-light/30 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+    <section className="mx-4 mb-4 rounded-2xl border border-gold-500/20 bg-surface/50 overflow-hidden">
+      <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between gap-3 p-4">
+        <div className="flex flex-col gap-1.5 text-left min-w-0">
+          <span className="flex items-center gap-2.5">
+            <span className="font-serif text-[15px] leading-none text-gold-500" aria-hidden>
+              {hanja}
+            </span>
+            <span className="h-px w-5 bg-gold-500/60" aria-hidden />
+            <span className="font-sans text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-light/65">
+              {tagline}
+            </span>
+          </span>
+          <span className="font-serif text-[16px] font-bold text-ink-light break-keep leading-snug">{title}</span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-ink-light/30 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
         <div className="px-4 pb-4 space-y-4">
-          {content && <p className="text-sm text-ink-light/80 leading-relaxed whitespace-pre-line">{content}</p>}
+          {content && (
+            <p className="text-sm text-ink-light/85 font-light leading-[1.85] break-keep whitespace-pre-line">
+              {content}
+            </p>
+          )}
 
           {strengths && strengths.length > 0 && (
             <div>
-              <p className="text-xs text-ink-light/40 mb-1.5">강점</p>
+              <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/60 mb-1.5">
+                강점
+              </p>
               <ul className="space-y-1">
                 {strengths.map((s, i) => (
                   <li key={i} className="text-sm text-ink-light/70 flex gap-2">
-                    <span className="text-gold-500/60 shrink-0">+</span>
+                    <span className="text-gold-500/70 shrink-0">+</span>
                     {s}
                   </li>
                 ))}
@@ -395,11 +444,13 @@ function DetailSection({
 
           {weaknesses && weaknesses.length > 0 && (
             <div>
-              <p className="text-xs text-ink-light/40 mb-1.5">약점</p>
+              <p className="font-sans text-[10px] font-bold uppercase tracking-[0.18em] text-ink-light/60 mb-1.5">
+                보완점
+              </p>
               <ul className="space-y-1">
                 {weaknesses.map((w, i) => (
                   <li key={i} className="text-sm text-ink-light/70 flex gap-2">
-                    <span className="text-red-400/60 shrink-0">-</span>
+                    <span className="text-error/60 shrink-0">-</span>
                     {w}
                   </li>
                 ))}
@@ -583,7 +634,7 @@ function SajuShareSection({
             {isSharing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : copied ? (
-              <Check className="w-4 h-4 text-emerald-400" />
+              <Check className="w-4 h-4 text-success" />
             ) : (
               <Link2 className="w-4 h-4" />
             )}
@@ -620,7 +671,7 @@ function SajuShareSection({
               onClick={handleCopyLink}
               className="text-gold-500/60 hover:text-gold-500 transition-colors shrink-0"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Link2 className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Link2 className="w-3.5 h-3.5" />}
             </button>
           </div>
         )}
@@ -727,12 +778,14 @@ function SajuLoadingContent({ name, progress }: { name: string; progress: number
 
   return (
     <div className="min-h-screen bg-background px-4 py-8 relative overflow-hidden">
-      {/* 앰비언트 배경 영상 — 프로그레스·상식카드 뒤 레이어. 없으면 폴백(렌더 안 함), reduced-motion 존중 */}
+      {/* 앰비언트 배경 영상 — 프로그레스·상식카드 뒤 레이어. reduced-motion 존중.
+          🔴 영상이 우선이다. 영상이 없거나(404) reduced-motion 일 때만 정지 이미지로 떨어진다. */}
       <AmbientVideo
         id="analysis-ambient"
         rate={0.5}
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
         style={{ opacity: 0.16, mixBlendMode: 'screen' }}
+        fallback={<AmbientBackdrop id="roof" variant="screen" />}
       />
       <div className="max-w-sm mx-auto space-y-8 relative z-10">
         {/* 상단: 이름 + 프로그레스 */}
