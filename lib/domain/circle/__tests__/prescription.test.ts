@@ -37,8 +37,8 @@ function input(over: Partial<PrescriptionInput> = {}): PrescriptionInput {
   return {
     targetId: 'self',
     name: '지영',
-    energyNow: energy({ wood: 72, fire: 24, earth: 48, metal: 55, water: 61 }),
-    energyBorn: energy({ wood: 65, fire: 30 }),
+    energy: energy({ wood: 72, fire: 24, earth: 48, metal: 55, water: 61 }),
+    energyLive: energy({ wood: 65, fire: 30 }),
     mansik: null,
     catalog: CATALOG,
     mates: [MOM, DAD],
@@ -47,7 +47,7 @@ function input(over: Partial<PrescriptionInput> = {}): PrescriptionInput {
 }
 
 describe('buildPrescription — 다섯 블록', () => {
-  it('모자란 기운은 지도의 막대와 같은 값(energyNow 최저)이고, 넘치는 기운은 최고다', () => {
+  it('모자란 기운은 지도의 막대와 같은 값(energy 최저)이고, 넘치는 기운은 최고다', () => {
     const p = buildPrescription(input())
     expect(p.lacking).toBe('fire')
     expect(p.strongest).toBe('wood')
@@ -125,10 +125,10 @@ describe('buildPrescription — 다섯 블록', () => {
     const variants = [
       input(),
       input({ mansik: { yongsin: 'earth', huisin: 'metal', gisin: 'water' } }),
-      input({ energyNow: energy({ water: 12, metal: 80 }), mates: [MOM] }),
-      input({ energyNow: energy({ earth: 15, fire: 75 }), mates: [] }),
-      input({ energyNow: energy({ metal: 18, water: 70 }) }),
-      input({ energyNow: energy({ wood: 20, earth: 66 }) }),
+      input({ energy: energy({ water: 12, metal: 80 }), mates: [MOM] }),
+      input({ energy: energy({ earth: 15, fire: 75 }), mates: [] }),
+      input({ energy: energy({ metal: 18, water: 70 }) }),
+      input({ energy: energy({ wood: 20, earth: 66 }) }),
     ]
     for (const v of variants) {
       for (const text of prescriptionTexts(buildPrescription(v))) {

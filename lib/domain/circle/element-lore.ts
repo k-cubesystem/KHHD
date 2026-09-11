@@ -24,6 +24,8 @@ export interface ElementLore {
   readonly deskItem: string
   /** 선물 셋 — 실물. 효능이 아니라 «그 오행의 결»을 띤 물건. */
   readonly gifts: readonly [string, string, string]
+  /** 그 기운을 나눠 주는 사람과 «함께 하면 좋은 것» — 관계 문장의 실천 한 줄. */
+  readonly together: string
   /** 과하면 생기는 결 — 덜어낼 이유. */
   readonly excess: string
 }
@@ -34,6 +36,7 @@ export const ELEMENT_LORE: Record<Element, ElementLore> = {
     gains: '시작하는 힘, 뻗어 나가는 결',
     deskItem: '작은 관엽 화분',
     gifts: ['미니 화분', '원목 명함꽂이', '허브차'],
+    together: '새 일을 같이 시작하는 자리 — 아침 산책, 계획 세우기, 첫 삽을 함께 뜨기.',
     excess: '벌여만 놓고 거두지 못하는 결',
   },
   fire: {
@@ -41,6 +44,7 @@ export const ELEMENT_LORE: Record<Element, ElementLore> = {
     gains: '드러내는 힘, 사람 앞에 서는 온기',
     deskItem: '따뜻한 빛의 작은 스탠드',
     gifts: ['무드등', '붉은 계열 머그', '홍차'],
+    together: '밝은 자리에서 같이 밥 먹고 이야기하기 — 한낮에 만나고, 웃는 자리를 늘리기.',
     excess: '과열과 성급함, 밤늦은 흥분',
   },
   earth: {
@@ -48,6 +52,7 @@ export const ELEMENT_LORE: Record<Element, ElementLore> = {
     gains: '버티는 힘, 믿음이 가는 결',
     deskItem: '도자기 컵 하나',
     gifts: ['도자기 머그', '원석 문진', '황토색 담요'],
+    together: '정해진 시간에 만나기 — 같이 정리하고, 약속을 지키는 작은 일을 함께.',
     excess: '쌓아 두고 움직이지 않는 결',
   },
   metal: {
@@ -55,6 +60,7 @@ export const ELEMENT_LORE: Record<Element, ElementLore> = {
     gains: '정리하는 힘, 결단의 결',
     deskItem: '금속 펜 한 자루',
     gifts: ['금속 볼펜', '은색 카드지갑', '흰 손수건'],
+    together: '마무리를 같이 하기 — 정리·결산·끝내는 자리, 해 질 무렵에 만나기.',
     excess: '지나친 잣대와 차가운 말',
   },
   water: {
@@ -62,6 +68,7 @@ export const ELEMENT_LORE: Record<Element, ElementLore> = {
     gains: '듣는 힘, 유연함, 쉬는 결',
     deskItem: '책상 위에 늘 두는 물컵',
     gifts: ['유리 물병', '남색 노트', '미니 수경 화분'],
+    together: '조용히 듣는 시간 — 말 대신 곁에 앉기, 쉼을 같이, 밤에 짧게.',
     excess: '어둡고 늘어지는 결, 밤샘',
   },
 }
@@ -73,6 +80,15 @@ export const MOTHER_OF: Record<Element, Element> = {
   earth: 'fire',
   metal: 'earth',
   water: 'metal',
+}
+
+/** 상극(相剋) — 내가 누르는 기운. 木克土 · 土克水 · 水克火 · 火克金 · 金克木. */
+export const CONTROLS: Record<Element, Element> = {
+  wood: 'earth',
+  earth: 'water',
+  water: 'fire',
+  fire: 'metal',
+  metal: 'wood',
 }
 
 /** 상생 — 내가 낳는 기운. `MOTHER_OF` 의 역이다(테스트가 서로 맞는지 확인한다). */

@@ -56,7 +56,7 @@ export interface JieqiInfo {
 // ======== 상수 정의 ========
 
 // 천간 오행 매핑
-const GAN_WUXING: Record<string, string> = {
+export const GAN_WUXING: Record<string, string> = {
   甲: '木',
   乙: '木',
   丙: '火',
@@ -70,7 +70,7 @@ const GAN_WUXING: Record<string, string> = {
 }
 
 // 지지 오행 매핑
-const ZHI_WUXING: Record<string, string> = {
+export const ZHI_WUXING: Record<string, string> = {
   子: '水',
   丑: '土',
   寅: '木',

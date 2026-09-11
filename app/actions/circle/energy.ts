@@ -7,7 +7,6 @@ import { logger } from '@/lib/utils/logger'
 import { isSolarCalendar } from '@/lib/domain/saju/calendar'
 import type { SajuContext } from '@/lib/saju-engine/context-builder'
 import { isElement, type Element } from '@/lib/domain/shrine/types'
-import { baseFromBirth } from '@/lib/domain/shrine/energy-born'
 import { BAEKIL_ITEM_NAME } from '@/lib/domain/ritual/baekil'
 import { elementFromHanja } from '@/lib/domain/circle/element-lore'
 import { FAMILY_CIRCLE_ID, CIRCLE_KIND_META, isCircleKind, type CircleKind } from '@/lib/domain/circle/circle'
@@ -185,13 +184,11 @@ export async function getPrescription(targetId: string): Promise<PrescriptionPay
     .filter((e) => e.targetId !== target && e.category !== 'acquaintance')
     .map((e) => ({ targetId: e.targetId, name: e.name, strongest: e.strongest, energy: e.energy }))
 
-  const energyBorn = baseFromBirth(birth.birthDate, birth.birthTime, isSolarCalendar(birth.calendarType)).base
-
   const prescription = buildPrescription({
     targetId: target,
     name: entry.name,
-    energyNow: entry.energy,
-    energyBorn,
+    energy: entry.energy,
+    energyLive: entry.energyLive,
     mansik: hintsOf(ctx),
     catalog,
     mates,

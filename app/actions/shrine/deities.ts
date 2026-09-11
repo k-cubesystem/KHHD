@@ -8,7 +8,7 @@ import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { trackEvent } from '@/lib/analytics/ga4'
 import { spendBokchae, refundBokchae } from '@/lib/services/bokchae'
 import { assignGuardian, bondProgress, type BondProgress } from '@/lib/domain/shrine/deities'
-import { deriveBaseFromDistribution } from '@/lib/domain/shrine/energy'
+import { baseFromSajuData } from '@/lib/domain/shrine/energy-born'
 import { isElement, type Element, type ThemeAssets, type ThemePack } from '@/lib/domain/shrine/types'
 import { getSajuData } from '@/lib/domain/saju/saju'
 
@@ -215,7 +215,7 @@ export async function autoSeatGuardian(
     if (family.birth_date) {
       try {
         const saju = getSajuData(family.birth_date, family.birth_time || '12:00', family.calendar_type !== 'lunar')
-        yongsin = deriveBaseFromDistribution(saju.elementsDistribution).yongsin
+        yongsin = baseFromSajuData(saju).yongsin
       } catch (e) {
         logger.warn('[autoSeatGuardian] family yongsin derive failed:', e)
       }

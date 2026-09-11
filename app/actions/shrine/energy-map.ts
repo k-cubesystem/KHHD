@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { toMemberCategory, type MemberCategory } from '@/lib/domain/family/member-category'
 import { baseFromBirth } from '@/lib/domain/shrine/energy-born'
+import { energyToShare } from '@/lib/domain/saju/element-profile'
 import { isLayer, isElement, type CatalogItem, type Placement } from '@/lib/domain/shrine/types'
 import { applyModifiers, computeEnergy, indexCatalog } from '@/lib/domain/shrine/energy'
 import {
@@ -165,27 +166,20 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
   ]
 
   const entries: EnergyMapEntry[] = targets.map((t) => {
+    // 🔴 타고난 기운은 **명식에서 다시** 낸다(저장 프로필 base_* 는 낱개 세기 시절 값이라 쓰지 않는다 —
+    //    사람마다 계산 방식이 갈리면 같은 지도 위에서 비교가 안 된다). 세력 비율(합 100)이 지도의 막대다.
+    const born = baseFromBirth(t.birthDate, t.birthTime, t.isSolar)
     const stored = profileByTarget.get(t.id)
-    // 저장된 프로필이 정본(base_* 는 NOT NULL), 없으면 사주에서 즉석 유도 — 저장은 하지 않는다
-    let base = stored
-      ? {
-          wood: stored.base_wood,
-          fire: stored.base_fire,
-          earth: stored.base_earth,
-          metal: stored.base_metal,
-          water: stored.base_water,
-        }
-      : baseFromBirth(t.birthDate, t.birthTime, t.isSolar).base
-
-    base = applyModifiers(
-      base,
+    const liveBase = applyModifiers(
+      born.base,
       stored?.face_modifier as Record<string, unknown>,
       stored?.palm_modifier as Record<string, unknown>
     )
 
     const shrine = shrineByTarget.get(t.id)
     const placements = shrine ? (placementsByShrine.get(shrine.id) ?? []) : []
-    const { energy } = computeEnergy(base, placements, catalogById)
+    const { energy: live } = computeEnergy(liveBase, placements, catalogById)
+    const energy = born.share
 
     return {
       targetId: t.id,
@@ -197,6 +191,7 @@ export async function getFamilyEnergyMap(): Promise<FamilyEnergyMap | null> {
       itemCount: placements.length,
       deityName: shrine?.main_deity_id ? (deityName.get(shrine.main_deity_id) ?? null) : null,
       energy,
+      energyLive: energyToShare(live),
       yongsin: lowestElement(energy),
       strongest: highestElement(energy),
     }
@@ -242,7 +237,7 @@ export async function getFamilyEnergySummary(): Promise<FamilyEnergySummary | nu
       targetId: 'self',
       name: me?.full_name || '나',
       avatarId: null,
-      energy: baseFromBirth(me?.birth_date ?? null, me?.birth_time ?? null, me?.calendar_type !== 'lunar').base,
+      energy: baseFromBirth(me?.birth_date ?? null, me?.birth_time ?? null, me?.calendar_type !== 'lunar').share,
     },
     // 지도와 같은 두 규칙: relationship='본인' 자동 레코드는 self 와 이중 계상이라 빼고,
     // 기본 비교 대상은 «가족»이다(지인은 지도에서 골라야 들어온다).
@@ -256,7 +251,7 @@ export async function getFamilyEnergySummary(): Promise<FamilyEnergySummary | nu
           (m.birth_date as string) ?? null,
           (m.birth_time as string) ?? null,
           m.calendar_type !== 'lunar'
-        ).base,
+        ).share,
       })),
   ]
 

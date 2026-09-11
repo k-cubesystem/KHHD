@@ -14,12 +14,15 @@ export function EnergyBars({
   strongest,
   showNumbers = true,
   height = 52,
+  unit = '',
 }: {
   energy: Record<Element, number>
   lacking: Element
   strongest?: Element | null
   showNumbers?: boolean
   height?: number
+  /** '%' 면 값을 비율(합 100)로 읽어 막대 높이를 2.5배로 그린다(균형 20% = 절반). */
+  unit?: '' | '%'
 }) {
   return (
     <div className="flex gap-1.5">
@@ -40,13 +43,21 @@ export function EnergyBars({
             >
               <div
                 className="absolute inset-x-0 bottom-0 rounded-t-md transition-[height] duration-500"
-                style={{ height: `${energy[el]}%`, background: EL_COLOR[el] }}
+                style={{
+                  height: `${unit === '%' ? Math.min(100, energy[el] * 2.5) : energy[el]}%`,
+                  background: EL_COLOR[el],
+                }}
               />
             </div>
             <div className="mt-1 font-serif text-[12px] text-ink-primary/75">
               {EL_KO[el]} <span className="font-sans text-ink-light/45">{EL_LABEL[el]}</span>
             </div>
-            {showNumbers && <div className="text-[10px] tabular-nums text-ink-light/40">{energy[el]}</div>}
+            {showNumbers && (
+              <div className="text-[10px] tabular-nums text-ink-light/40">
+                {energy[el]}
+                {unit}
+              </div>
+            )}
             {low && <div className="font-serif text-[9.5px] text-gold-400">모자람</div>}
             {high && !low && <div className="font-serif text-[9.5px] text-ink-light/40">넉넉</div>}
           </div>

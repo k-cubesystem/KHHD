@@ -40,6 +40,7 @@ function ElementChip({ el }: { el: Element }) {
 const PAIR_TONE: Record<PairLabel, string> = {
   complement: 'border-gold-500/45 text-gold-300 bg-gold-500/[0.08]',
   lift: 'border-emerald-400/40 text-emerald-200 bg-emerald-500/[0.08]',
+  guard: 'border-sky-400/40 text-sky-200 bg-sky-500/[0.08]',
   distance: 'border-seal/45 text-[#D9A0A0] bg-seal/[0.08]',
   independent: 'border-white/10 text-ink-light/50 bg-white/[0.02]',
 }
@@ -103,6 +104,10 @@ export function TeamRelations({ energy, compact = false }: { energy: CircleEnerg
                 </div>
                 <p className="text-[11.5px] leading-snug text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
                   {p.reason}
+                </p>
+                <p className="text-[11px] leading-snug text-gold-200/75" style={{ wordBreak: 'keep-all' }}>
+                  <span className="font-serif text-gold-500/70">함께 · </span>
+                  {p.how}
                 </p>
               </li>
             ))}
@@ -215,7 +220,7 @@ export function CircleEnergyMapView({
             함께 채울 기운 <b className="font-serif text-gold-500">{EL_KO[energy.lowest]}</b>
           </span>
         </div>
-        <EnergyBars energy={energy.average} lacking={energy.lowest} showNumbers={showNumbers} height={46} />
+        <EnergyBars energy={energy.average} lacking={energy.lowest} showNumbers={showNumbers} height={46} unit="%" />
         <p className="text-[11px] leading-relaxed text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
           그룹 전체로는 <b className="font-serif text-gold-400">{EL_LABEL[energy.lowest]}</b> 기운이 가장 옅습니다.
         </p>
@@ -280,6 +285,7 @@ export function CircleEnergyMapView({
                 strongest={e.strongest}
                 showNumbers={showNumbers}
                 height={38}
+                unit="%"
               />
             </div>
           )

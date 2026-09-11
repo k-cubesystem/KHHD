@@ -17,7 +17,10 @@ export interface EnergyMapEntry {
   hasShrine: boolean
   itemCount: number
   deityName: string | null
+  /** 타고난 오행 비율(합 100) — 지장간·자리 무게로 낸 세력(element-profile). 지도의 막대. */
   energy: Record<Element, number>
+  /** 신당 살림·관상·손금을 얹은 기운을 비율로 — 처방전의 «살림 얹은 기운» 토글. */
+  energyLive: Record<Element, number>
   /** 가장 부족한 기운 (채워야 할 것) */
   yongsin: Element
   /** 가장 넘치는 기운 (남에게 나눠줄 수 있는 것) */

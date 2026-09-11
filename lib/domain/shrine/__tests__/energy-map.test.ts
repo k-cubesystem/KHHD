@@ -22,6 +22,7 @@ function entry(id: string, name: string, energy: Record<Element, number>): Energ
     itemCount: 0,
     deityName: null,
     energy,
+    energyLive: energy,
     yongsin: lowestElement(energy),
     strongest: highestElement(energy),
   }

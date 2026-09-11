@@ -1,6 +1,7 @@
 import { ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 import {
   CHILD_OF,
+  CONTROLS,
   ELEMENT_LORE,
   HANJA_OF,
   LORE_BANNED_WORDS,
@@ -19,13 +20,14 @@ describe('오행 결 사전', () => {
       expect(lore.gifts).toHaveLength(3)
       for (const gift of lore.gifts) expect(gift.length).toBeGreaterThan(1)
       expect(lore.excess.length).toBeGreaterThan(3)
+      expect(lore.together.length).toBeGreaterThan(8)
     }
   })
 
   it('🔴 효능·채용 금지어가 한 글자도 없다 (표시광고법 §9-1 · 채용절차법 §9-2)', () => {
     for (const el of ELEMENTS) {
       const lore = ELEMENT_LORE[el]
-      const texts = [lore.lacking, lore.gains, lore.deskItem, lore.excess, ...lore.gifts]
+      const texts = [lore.lacking, lore.gains, lore.deskItem, lore.excess, lore.together, ...lore.gifts]
       for (const text of texts) expect({ text, hits: bannedWordsIn(text) }).toEqual({ text, hits: [] })
     }
   })
@@ -50,6 +52,18 @@ describe('상생 고리', () => {
     expect(MOTHER_OF.earth).toBe('fire')
     expect(MOTHER_OF.metal).toBe('earth')
     expect(MOTHER_OF.water).toBe('metal')
+  })
+
+  it('상극 표 — 木克土·土克水·水克火·火克金·金克木, 다섯이 한 고리', () => {
+    expect(CONTROLS).toEqual({ wood: 'earth', earth: 'water', water: 'fire', fire: 'metal', metal: 'wood' })
+    let cur: (typeof ELEMENTS)[number] = 'wood'
+    const seen = new Set<string>()
+    for (let i = 0; i < 5; i++) {
+      seen.add(cur)
+      cur = CONTROLS[cur]
+    }
+    expect(cur).toBe('wood')
+    expect(seen.size).toBe(5)
   })
 
   it('다섯을 한 바퀴 돌면 제자리다(고리가 끊기지 않는다)', () => {

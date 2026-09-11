@@ -10,7 +10,7 @@
  *
  * 🔴 «모자란 기운»은 화면의 막대(기운 지도)와 같은 값이어야 한다 — 지도가 「火가 가장 모자라다」고
  *    했는데 처방전이 「土를 채우라」고 하면 사용자는 어느 쪽을 믿을지 모른다. 그래서 lacking 은
- *    energyNow 의 최저이고, 명식의 용신은 «다를 때만» 한 줄로 따로 말한다(mansikNote).
+ *    타고난 비율(element-profile)의 최저이고, 명식의 용신은 «다를 때만» 한 줄로 따로 말한다(mansikNote).
  */
 import type { Element } from '@/lib/domain/shrine/types'
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
@@ -47,10 +47,10 @@ export interface MansikHint {
 export interface PrescriptionInput {
   targetId: string
   name: string
-  /** 신당 살림·관상·손금까지 얹은 «지금» 기운 — 기운 지도의 막대와 같은 값. */
-  energyNow: Record<Element, number>
-  /** 사주에서 유도한 «타고난» 기운. 생년월일이 없으면 null. */
-  energyBorn: Record<Element, number> | null
+  /** 타고난 오행 비율(합 100) — 기운 지도의 막대와 같은 값(세력 프로필). */
+  energy: Record<Element, number>
+  /** 신당 살림·관상·손금을 얹은 기운을 비율로. 없으면 null. */
+  energyLive: Record<Element, number> | null
   mansik: MansikHint | null
   catalog: readonly PrescriptionCatalogItem[]
   mates: readonly PrescriptionMate[]
@@ -76,12 +76,12 @@ export interface LifeItem {
 export interface Prescription {
   targetId: string
   name: string
-  /** 모자란 기운 — energyNow 의 최저(지도와 같은 값). */
+  /** 모자란 기운 — 타고난 비율의 최저(지도와 같은 값). */
   lacking: Element
-  /** 넘치는 기운 — energyNow 의 최고. */
+  /** 넘치는 기운 — 타고난 비율의 최고. */
   strongest: Element
-  energyNow: Record<Element, number>
-  energyBorn: Record<Element, number> | null
+  energy: Record<Element, number>
+  energyLive: Record<Element, number> | null
   lore: { lacking: string; gains: string }
   /** 명식의 용신이 lacking 과 다를 때만 — 둘을 나란히 말하는 한 줄. */
   mansikNote: string | null
@@ -140,8 +140,8 @@ function bestGiver(mates: readonly PrescriptionMate[], element: Element, mine: n
 }
 
 export function buildPrescription(input: PrescriptionInput): Prescription {
-  const lacking = lowestElement(input.energyNow)
-  const strongest = highestElement(input.energyNow)
+  const lacking = lowestElement(input.energy)
+  const strongest = highestElement(input.energy)
   const mother = MOTHER_OF[lacking]
   const lore = ELEMENT_LORE[lacking]
   const mansik = input.mansik
@@ -164,7 +164,7 @@ export function buildPrescription(input: PrescriptionInput): Prescription {
     },
   ]
 
-  const giver = bestGiver(input.mates, lacking, input.energyNow[lacking])
+  const giver = bestGiver(input.mates, lacking, input.energy[lacking])
   if (giver) {
     fillers.push({
       kind: 'person',
@@ -188,7 +188,7 @@ export function buildPrescription(input: PrescriptionInput): Prescription {
 
   const mansikNote =
     mansik?.yongsin && mansik.yongsin !== lacking
-      ? `명식이 채우라 하는 기운은 ${label(mansik.yongsin)}이고, 지금 신당 살림까지 얹은 기운으로는 ${label(lacking)} 자리가 가장 옅습니다. 둘 다 곁에 두어도 됩니다.`
+      ? `명식이 채우라 하는 기운은 ${label(mansik.yongsin)}이고, 타고난 오행 비율로는 ${label(lacking)} 자리가 가장 옅습니다. 둘 다 곁에 두어도 됩니다.`
       : null
 
   const sideNote =
@@ -206,8 +206,8 @@ export function buildPrescription(input: PrescriptionInput): Prescription {
     name: input.name,
     lacking,
     strongest,
-    energyNow: input.energyNow,
-    energyBorn: input.energyBorn,
+    energy: input.energy,
+    energyLive: input.energyLive,
     lore: { lacking: lore.lacking, gains: lore.gains },
     mansikNote,
     sideNote,
@@ -228,8 +228,8 @@ export interface PrescriptionTeaser {
   name: string
   lacking: Element
   strongest: Element
-  energyNow: Record<Element, number>
-  energyBorn: Record<Element, number> | null
+  energy: Record<Element, number>
+  energyLive: Record<Element, number> | null
   lore: { lacking: string; gains: string }
   /** 멤버십이 여는 항목 수 — 채워 주는 기운·신당 살림·실물·생활·덜어낼 것. */
   hiddenCount: number
@@ -242,8 +242,8 @@ export function prescriptionTeaser(p: Prescription): PrescriptionTeaser {
     name: p.name,
     lacking: p.lacking,
     strongest: p.strongest,
-    energyNow: p.energyNow,
-    energyBorn: p.energyBorn,
+    energy: p.energy,
+    energyLive: p.energyLive,
     lore: p.lore,
     hiddenCount: p.fillers.length + p.items.shrine.length + realCount + p.items.life.length + p.avoid.items.length,
   }

@@ -18,8 +18,8 @@ function energy(partial: Partial<Record<Element, number>>): Record<Element, numb
 const input: PrescriptionInput = {
   targetId: 'b',
   name: '지영',
-  energyNow: energy({ wood: 72, fire: 24 }),
-  energyBorn: null,
+  energy: energy({ wood: 72, fire: 24 }),
+  energyLive: null,
   mansik: { yongsin: 'earth', huisin: 'metal', gisin: 'water' },
   catalog: [
     { id: 'a', name: '인등', element: 'fire', energyPower: 12, priceBokchae: 1500, emoji: '🪔', spriteUrl: null },
@@ -95,7 +95,7 @@ describe('지문(fingerprint) — 같은 입력이면 같고, 화면이 바뀌�
     const a = prescriptionFingerprint(buildPrescription(input))
     const b = prescriptionFingerprint(buildPrescription(input))
     const c = prescriptionFingerprint(
-      buildPrescription({ ...input, energyNow: energy({ wood: 72, fire: 24, water: 10 }) })
+      buildPrescription({ ...input, energy: energy({ wood: 72, fire: 24, water: 10 }) })
     )
     expect(a).toBe(b)
     expect(a).not.toBe(c)

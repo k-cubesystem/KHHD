@@ -107,7 +107,7 @@ export function prescriptionFingerprint(p: Prescription): string {
     t: p.targetId,
     l: p.lacking,
     s: p.strongest,
-    e: p.energyNow,
+    e: p.energy,
     f: p.fillers.map((f) => `${f.kind}:${f.personId ?? ''}`),
     sh: p.items.shrine.map((s) => s.id),
     a: p.avoid.element,

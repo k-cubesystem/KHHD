@@ -30,7 +30,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
 const STORE_ITEMS_HREF = '/protected/store?tab=items'
 const MEMBERSHIP_HREF = '/protected/store?tab=membership'
 
-type Mode = 'now' | 'born'
+type Mode = 'born' | 'live'
 
 function label(el: Element): string {
   return `${EL_LABEL[el]}(${EL_KO[el]})`
@@ -57,13 +57,13 @@ function BlockLabel({ n, title }: { n: string; title: string }) {
 }
 
 function BlockOne({
-  energyNow,
-  energyBorn,
+  energy: born,
+  energyLive,
   lacking,
   strongest,
-}: Pick<Prescription, 'energyNow' | 'energyBorn' | 'lacking' | 'strongest'>) {
-  const [mode, setMode] = useState<Mode>('now')
-  const energy = mode === 'born' && energyBorn ? energyBorn : energyNow
+}: Pick<Prescription, 'energy' | 'energyLive' | 'lacking' | 'strongest'>) {
+  const [mode, setMode] = useState<Mode>('born')
+  const energy = mode === 'live' && energyLive ? energyLive : born
 
   const pick = (next: Mode) => {
     setMode(next)
@@ -73,34 +73,34 @@ function BlockOne({
   return (
     <section className="space-y-3 rounded-xl border border-gold-500/30 bg-gold-500/[0.06] p-4">
       <div className="flex items-center justify-between">
-        <BlockLabel n="①" title="지금 기운" />
+        <BlockLabel n="①" title="타고난 기운" />
         <div className="inline-flex overflow-hidden rounded-md border border-white/10 text-[11px]" role="tablist">
           <button
             type="button"
             role="tab"
-            aria-selected={mode === 'now'}
-            onClick={() => pick('now')}
-            className={`px-2.5 py-1 font-serif ${mode === 'now' ? 'bg-gold-500/[0.14] text-gold-300' : 'text-ink-light/45'}`}
+            aria-selected={mode === 'born'}
+            onClick={() => pick('born')}
+            className={`px-2.5 py-1 font-serif ${mode === 'born' ? 'bg-gold-500/[0.14] text-gold-300' : 'text-ink-light/45'}`}
           >
-            지금 기운
+            타고난 기운
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={mode === 'born'}
-            disabled={!energyBorn}
-            onClick={() => pick('born')}
-            className={`px-2.5 py-1 font-serif disabled:opacity-30 ${mode === 'born' ? 'bg-gold-500/[0.14] text-gold-300' : 'text-ink-light/45'}`}
+            aria-selected={mode === 'live'}
+            disabled={!energyLive}
+            onClick={() => pick('live')}
+            className={`px-2.5 py-1 font-serif disabled:opacity-30 ${mode === 'live' ? 'bg-gold-500/[0.14] text-gold-300' : 'text-ink-light/45'}`}
           >
-            타고난 기운
+            살림 얹은 기운
           </button>
         </div>
       </div>
-      <EnergyBars energy={energy} lacking={lacking} strongest={strongest} />
+      <EnergyBars energy={energy} lacking={lacking} strongest={strongest} unit="%" />
       <p className="text-[10.5px] leading-snug text-ink-light/45">
-        {mode === 'now'
-          ? '신당 살림·관상·손금까지 얹은 지금의 기운입니다. 모자란 자리는 이 값으로 정합니다.'
-          : '사주에서 유도한 타고난 기운입니다. 살림을 놓기 전의 바탕이에요.'}
+        {mode === 'born'
+          ? '명식의 여덟 글자와 지지 속 숨은 기운(지장간), 계절의 무게까지 셈한 타고난 비율입니다. 모자란 자리는 이 값으로 정합니다.'
+          : '신당 살림·관상·손금을 얹은 지금의 기운을 비율로 본 것입니다.'}
       </p>
     </section>
   )
@@ -400,12 +400,7 @@ export function PrescriptionView({
       </header>
 
       <div className="space-y-4">
-        <BlockOne
-          energyNow={head.energyNow}
-          energyBorn={head.energyBorn}
-          lacking={head.lacking}
-          strongest={head.strongest}
-        />
+        <BlockOne energy={head.energy} energyLive={head.energyLive} lacking={head.lacking} strongest={head.strongest} />
         <BlockTwo lacking={head.lacking} lore={head.lore} />
         {payload.access === 'full' ? (
           <>

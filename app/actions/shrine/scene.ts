@@ -33,7 +33,8 @@ import { parseFixtureOffsets, type FixtureOffsets } from '@/lib/domain/shrine/fi
 import { clampPct } from '@/lib/domain/shrine/zones'
 import { parseMatters } from '@/lib/domain/shrine/item-matters'
 import { isGuardianType, parseGuardianSlugs } from '@/lib/domain/shrine/guardians'
-import { DEFAULT_BASE, deriveBaseFromDistribution, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
+import { DEFAULT_BASE, applyModifiers, ELEMENTS } from '@/lib/domain/shrine/energy'
+import { baseFromSajuData } from '@/lib/domain/shrine/energy-born'
 import { getShrineEffects } from '@/lib/services/shrine-effects'
 
 /**
@@ -171,7 +172,7 @@ async function familyProfile(
   if (family.birthDate) {
     try {
       const saju = getSajuData(family.birthDate, family.birthTime || '12:00', family.isSolar)
-      const derived = deriveBaseFromDistribution(saju.elementsDistribution)
+      const derived = baseFromSajuData(saju)
       base = derived.base
       yongsin = derived.yongsin
     } catch (e) {
@@ -248,7 +249,7 @@ async function loadOrComputeProfile(
 
     if (profile?.birth_date) {
       const saju = getSajuData(profile.birth_date, profile.birth_time || '12:00', profile.calendar_type !== 'lunar')
-      const { base, yongsin } = deriveBaseFromDistribution(saju.elementsDistribution)
+      const { base, yongsin } = baseFromSajuData(saju)
       await supabase.from('user_energy_profile').insert({
         user_id: userId,
         base_wood: base.wood,

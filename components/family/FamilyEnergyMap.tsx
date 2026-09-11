@@ -6,7 +6,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { findFiveAvatar } from '@/components/family/five-avatar-selector'
-import { ChevronLeft, ChevronDown, Sparkles, ArrowRight, Home } from 'lucide-react'
+import { ChevronLeft, ChevronDown, ArrowRight, Home } from 'lucide-react'
 import { ELEMENTS, EL_KO, EL_LABEL, EL_COLOR } from '@/lib/domain/shrine/energy'
 import { buildEnergyMap, type EnergyMapEntry, type FamilyEnergyMap as MapData } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
@@ -87,13 +87,13 @@ function ElementBars({ entry }: { entry: EnergyMapEntry }) {
             >
               <div
                 className="absolute inset-x-0 bottom-0 rounded-t-md"
-                style={{ height: `${entry.energy[el]}%`, background: EL_COLOR[el] }}
+                style={{ height: `${Math.min(100, entry.energy[el] * 2.5)}%`, background: EL_COLOR[el] }}
               />
             </div>
             <div className="font-serif text-[11px] mt-0.5 text-ink-primary/75">
               {EL_KO[el]} <span className="text-ink-light/45 font-sans">{EL_LABEL[el]}</span>
             </div>
-            <div className="text-[9.5px] text-ink-light/40 tabular-nums">{entry.energy[el]}</div>
+            <div className="text-[9.5px] text-ink-light/40 tabular-nums">{entry.energy[el]}%</div>
           </div>
         )
       })}
@@ -206,7 +206,7 @@ export function FamilyEnergyMapView({
   const chosen = data.entries.filter((e) => picked.has(e.targetId))
   // 둘 미만이면 견줄 것이 없다 — 원래 데이터로 되돌려 화면이 빈손이 되지 않게 한다.
   const view = chosen.length >= 2 ? buildEnergyMap(chosen) : data
-  const { entries, average, familyYongsin, complements } = view
+  const { entries, average, familyYongsin } = view
   const acquaintances = data.entries.filter((e) => e.category === 'acquaintance')
   // 그룹 관계 — 지도에 올린 사람만으로 다시 엮는다(순수 함수라 클라이언트에서 그대로).
   const teamPicked = teamEntries.filter((e) => picked.has(e.targetId))
@@ -228,7 +228,7 @@ export function FamilyEnergyMapView({
         <p className="text-[10px] tracking-[0.5em] text-gold-500/50 font-serif">氣運 地圖</p>
         <h1 className="text-2xl font-serif font-bold text-ink-light">우리 가족 기운 지도</h1>
         <p className="text-sm text-ink-light/50 font-sans">
-          {entries.length}명의 오행을 나란히 두고 서로 무엇을 메워줄 수 있는지 봅니다
+          {entries.length}명의 타고난 오행 비율을 나란히 두고 누가 누구를 채우는지 봅니다
         </p>
       </header>
 
@@ -289,13 +289,13 @@ export function FamilyEnergyMapView({
                 >
                   <div
                     className="absolute inset-x-0 bottom-0 rounded-t-md"
-                    style={{ height: `${average[el]}%`, background: EL_COLOR[el] }}
+                    style={{ height: `${Math.min(100, average[el] * 2.5)}%`, background: EL_COLOR[el] }}
                   />
                 </div>
                 <div className="font-serif text-[12px] mt-1 text-ink-primary/75">
                   {EL_KO[el]} <span className="text-ink-light/45 font-sans">{EL_LABEL[el]}</span>
                 </div>
-                <div className="text-[10px] text-ink-light/40 tabular-nums">{average[el]}</div>
+                <div className="text-[10px] text-ink-light/40 tabular-nums">{average[el]}%</div>
               </div>
             )
           })}
@@ -311,32 +311,6 @@ export function FamilyEnergyMapView({
           {EL_KO[familyYongsin]} 기운 신물 보러가기 <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </section>
-
-      {/* 서로 메워주는 관계 */}
-      {complements.length > 0 && (
-        <section className="rounded-xl border border-seal/30 bg-seal/[0.05] p-4 mb-5 space-y-2">
-          <p className="flex items-center gap-1.5 font-serif text-[13px] font-bold text-ink-primary">
-            <Sparkles className="w-3.5 h-3.5 text-seal" /> 서로 메워주는 인연
-          </p>
-          <ul className="space-y-1.5">
-            {complements.map((c, i) => (
-              <li key={`${c.fromId}-${c.toId}-${i}`} className="text-[11.5px] text-ink-light/70 leading-snug">
-                <b className="text-ink-light font-serif">{c.fromName}</b>
-                <span className="text-ink-light/40"> 의 </span>
-                <b className="font-serif" style={{ color: EL_COLOR[c.element] }}>
-                  {EL_LABEL[c.element]}({EL_KO[c.element]})
-                </b>
-                <span className="text-ink-light/40"> 기운이 </span>
-                <b className="text-ink-light font-serif">{c.toName}</b>
-                <span className="text-ink-light/40"> 의 모자란 곳을 채워줍니다.</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-[10.5px] text-ink-light/40 leading-snug pt-0.5">
-            같이 있는 시간을 늘리거나, 그 기운의 신물을 서로의 신당에 나눠 모시면 좋습니다.
-          </p>
-        </section>
-      )}
 
       {/* 그룹 관계 — 든 사람 · 서로의 관계 · 역할 결 (PRD-energy-circle §3-4) */}
       {team && <TeamRelations energy={team} compact />}
