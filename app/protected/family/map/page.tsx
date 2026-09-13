@@ -3,15 +3,17 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCircleEnergy } from '@/app/actions/circle/energy'
-import { getCachedNarrative, getRecentTogether } from '@/app/actions/circle/narrative'
+import { getRecentTogether } from '@/app/actions/circle/narrative'
+import { getShopLinks } from '@/app/actions/circle/shop-links'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
+import { allElementNeeds, allNeedKeywords } from '@/lib/domain/circle/element-lore'
 import { canPrintTeamSheet } from '@/lib/domain/circle/print-access'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { CircleEnergyMapView } from '@/components/family/circle-energy-map'
 
 export const metadata: Metadata = {
   title: '우리 가족 기운 지도',
-  description: '가족 구성원의 오행을 오각형 한 장에 겹쳐 봅니다',
+  description: '가족 구성원의 오행을 한 사람씩 오각형으로 보고, 서로의 기운은 AI 가 풀어 줍니다',
 }
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +37,8 @@ function EmptyState({ title, body, cta }: { title: string; body: React.ReactNode
 }
 
 /**
- * 기운 지도 — 가족(가상 그룹)과 내 그룹이 **같은 화면**(v2, PRD-family-map-v2). 팩트만 무료, 이치는 복채 AI 로.
+ * 기운 지도 v3 — 가족(가상 그룹)과 내 그룹이 **같은 화면**. 한 사람씩 오각형, 팩트 세 줄, 나머지는 복채 AI(함께 보기).
+ * 쿠팡 링크는 다섯 기운의 물건 전부를 한 번에 받아 둔다(전역 30일 캐시) — 고르는 사람이 바뀌어도 서버를 다시 부르지 않는다.
  */
 export default async function FamilyEnergyMapPage({ searchParams }: { searchParams: Promise<{ circle?: string }> }) {
   const { circle } = await searchParams
@@ -46,11 +49,11 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   if (!user) redirect('/auth/login')
 
   const circleId = circle && circle !== FAMILY_CIRCLE_ID ? circle : FAMILY_CIRCLE_ID
-  const [payload, membership, narrative, recentTogether] = await Promise.all([
+  const [payload, membership, recentTogether, shopLinks] = await Promise.all([
     getCircleEnergy(circleId),
     getCurrentUserMembership(),
-    getCachedNarrative('circle', circleId),
     getRecentTogether(),
+    getShopLinks(allNeedKeywords()),
   ])
 
   if (!payload && circleId !== FAMILY_CIRCLE_ID) {
@@ -59,7 +62,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
     )
   }
 
-  // 본인 1명뿐이면 겹칠 게 없다 — 지도 대신 가족 등록으로 안내
+  // 본인 1명뿐이면 함께 볼 사람이 없다 — 지도 대신 가족 등록으로 안내
   if (!payload || payload.energy.entries.length < 2) {
     return (
       <EmptyState
@@ -68,7 +71,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
           <>
             가족을 한 분이라도 등록하시면
             <br />
-            서로의 오행을 한 오각형에 겹쳐 볼 수 있어요.
+            서로의 오행을 함께 볼 수 있어요.
           </>
         }
         cta="가족 등록하러 가기"
@@ -80,8 +83,9 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
     <CircleEnergyMapView
       payload={payload}
       sheet={canPrintTeamSheet(membership?.tier) ? 'print' : 'upsell'}
-      narrative={narrative}
       recentTogether={recentTogether}
+      needs={allElementNeeds()}
+      shopLinks={shopLinks}
     />
   )
 }

@@ -2,17 +2,25 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { History, Loader2, Sparkles, Users } from 'lucide-react'
+import { ExternalLink, History, Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { generateNarrative, type RecentTogether } from '@/app/actions/circle/narrative'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
+import { parseTogetherSections } from '@/lib/domain/circle/narrative'
+import type { ElementNeeds } from '@/lib/domain/circle/element-lore'
+import { EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
+import { averageEnergy, lowestElement } from '@/lib/domain/shrine/energy-map'
+import type { Element } from '@/lib/domain/shrine/types'
+import { AD_DISCLOSURE_COUPANG } from '@/lib/domain/ads/rewarded'
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * 둘·셋·넷 함께 보기 — 고른 사람들의 «서로의 기운»을 AI 가 풀어 쓴다(복채). CEO 2026-09-12.
- * 판정(라벨·이치·실천)은 엔진이 하고 AI 는 네 문단으로 풀어 쓴다. 같은 조합이면 30일 안에는 다시 사지 않는다.
- * «최근 본 조합»(35차)은 이미 산 풀이를 한 번에 다시 연다 — 서버를 부르지 않고, 복채도 없다.
+ * AI 풀이 — 둘·셋·넷 함께 보기 (CEO 2026-09-13 「그룹 전체 풀이와 합쳐 재구성 · 서로의 오행을 복채로 · 장점·단점·필요한 것」).
+ *
+ * 사람을 고르면(2~4) 엔진이 그 조합의 관계·옅은 기운을 정하고 AI 가 다섯 토막(서로의 오행 · 장점 · 단점 · 필요한 것 ·
+ * 이번 주 한 가지)으로 풀어 쓴다. 풀이 아래 「필요한 것」 물건·자리는 엔진 값(사전·개운 표) 그대로이고 쿠팡 링크가 붙는다.
+ * 같은 조합이면 30일 안에는 다시 사지 않는다. «최근 본 조합»은 이미 산 풀이를 서버 없이 다시 연다(복채 0).
  */
 
 const STORE_HREF = '/protected/store?tab=bokchae'
@@ -21,13 +29,10 @@ export interface TogetherPerson {
   targetId: string
   name: string
   relation: string
-}
-
-function paragraphs(text: string): string[] {
-  return text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean)
+  /** 타고난 비율(합 100) — 고른 사람들의 «함께 옅은 기운»을 여기서 낸다. */
+  energy: Record<Element, number>
+  yongsin: Element
+  strongest: Element
 }
 
 function comboKey(ids: readonly string[]): string {
@@ -38,15 +43,123 @@ function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeZone: 'Asia/Seoul' }).format(new Date(iso))
 }
 
+function ElementChip({ el }: { el: Element }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-[1px] font-serif text-[11px] font-bold"
+      style={{ borderColor: `${EL_COLOR[el]}77`, background: `${EL_COLOR[el]}1a`, color: EL_COLOR[el] }}
+    >
+      {EL_KO[el]} <span className="font-sans font-normal text-ink-light/70">{EL_LABEL[el]}</span>
+    </span>
+  )
+}
+
+function ShopItem({ name, href, kind }: { name: string; href?: string; kind: string }) {
+  if (!href) return <span className="text-ink-light/85">{name}</span>
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      onClick={() => trackEvent({ action: 'shop_link_click', category: 'conversion', label: `${kind}:${name}` })}
+      className="inline-flex items-center gap-1 rounded border border-gold-500/30 bg-gold-500/[0.06] px-1.5 py-[1px] text-ink-light/90 hover:bg-gold-500/[0.12]"
+    >
+      {name}
+      <span className="inline-flex items-center gap-0.5 font-sans text-[10px] text-gold-300">
+        쿠팡 <ExternalLink className="h-2.5 w-2.5" />
+      </span>
+    </a>
+  )
+}
+
+/** 「필요한 것」 — 사람마다 옅은 기운의 물건, 그리고 고른 사람들에게 함께 맞는 풍수·물건. 값은 엔진(사전·개운 표) 그대로. */
+function NeedsBlock({
+  people,
+  needs,
+  shopLinks,
+  kind,
+}: {
+  people: readonly TogetherPerson[]
+  needs: Record<Element, ElementNeeds>
+  shopLinks: Record<string, string>
+  kind: string
+}) {
+  const together = lowestElement(averageEnergy(people))
+  const t = needs[together]
+  const hasLinks = Object.keys(shopLinks).length > 0
+  return (
+    <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+      <p className="font-serif text-[12px] font-bold tracking-[0.1em] text-gold-300">필요한 것 — 물건과 자리</p>
+      <ul className="space-y-2.5">
+        {people.map((p) => {
+          const n = needs[p.yongsin]
+          return (
+            <li key={p.targetId} className="text-[12px] leading-relaxed">
+              <p className="flex flex-wrap items-center gap-1.5">
+                <b className="font-serif text-ink-light">{p.name}</b>
+                <span className="text-ink-light/45">옅은</span> <ElementChip el={p.yongsin} />
+              </p>
+              <dl className="mt-1 grid grid-cols-[52px_1fr] gap-x-2 gap-y-1 text-ink-light/70">
+                <dt className="text-ink-light/45">책상 위</dt>
+                <dd>
+                  <ShopItem name={n.desk} href={shopLinks[n.desk]} kind={kind} />
+                </dd>
+                <dt className="text-ink-light/45">집 안</dt>
+                <dd className="text-ink-light/85">{n.home}</dd>
+                <dt className="text-ink-light/45">선물</dt>
+                <dd className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {n.gifts.map((g) => (
+                    <ShopItem key={g} name={g} href={shopLinks[g]} kind={kind} />
+                  ))}
+                </dd>
+              </dl>
+            </li>
+          )
+        })}
+      </ul>
+      <div className="space-y-1.5 border-t border-white/[0.06] pt-2.5 text-[12px] leading-relaxed">
+        <p className="flex flex-wrap items-center gap-1.5">
+          <b className="font-serif text-ink-light">서로에게 맞는 풍수·물건</b>
+          <span className="text-ink-light/45">함께 옅은</span> <ElementChip el={together} />
+        </p>
+        <dl className="grid grid-cols-[52px_1fr] gap-x-2 gap-y-1 text-ink-light/70">
+          <dt className="text-ink-light/45">자리</dt>
+          <dd>{t.home}</dd>
+          <dt className="text-ink-light/45">색</dt>
+          <dd>{t.color}</dd>
+          <dt className="text-ink-light/45">방향</dt>
+          <dd>{t.direction}</dd>
+          <dt className="text-ink-light/45">시간</dt>
+          <dd>{t.hourBand}</dd>
+          <dt className="text-ink-light/45">물건</dt>
+          <dd className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <ShopItem name={t.desk} href={shopLinks[t.desk]} kind={kind} />
+            {t.gifts.map((g) => (
+              <ShopItem key={g} name={g} href={shopLinks[g]} kind={kind} />
+            ))}
+          </dd>
+        </dl>
+      </div>
+      {hasLinks && <p className="text-[9.5px] leading-snug text-ink-light/35">{AD_DISCLOSURE_COUPANG}</p>}
+    </div>
+  )
+}
+
 export function TogetherPanel({
   people,
   kind,
   recent = [],
+  needs,
+  shopLinks = {},
 }: {
   people: readonly TogetherPerson[]
   kind: string
   /** 최근 본 조합(30일) — 이 화면의 사람들로만 이루어진 것만 보인다. */
   recent?: readonly RecentTogether[]
+  /** 다섯 기운의 물건·자리(서버 계산). */
+  needs: Record<Element, ElementNeeds>
+  /** 물건 이름 → 쿠팡 파트너스 링크. 없으면 이름만. */
+  shopLinks?: Record<string, string>
 }) {
   const [picked, setPicked] = useState<string[]>(() => people.slice(0, TOGETHER_MIN).map((p) => p.targetId))
   const [result, setResult] = useState<RecentTogether | null>(null)
@@ -103,16 +216,18 @@ export function TogetherPanel({
     trackEvent({ action: 'together_recent_open', category: 'engagement', label: kind, value: entry.ids.length })
   }
 
-  const pickedNames = people.filter((p) => picked.includes(p.targetId)).map((p) => p.name)
+  const pickedPeople = people.filter((p) => picked.includes(p.targetId))
+  const pickedNames = pickedPeople.map((p) => p.name)
+  const resultPeople = result ? people.filter((p) => result.ids.includes(p.targetId)) : []
 
   return (
-    <section className="space-y-3 rounded-xl border border-gold-500/25 bg-surface/30 p-4">
+    <section id="ai" className="space-y-3 rounded-xl border border-gold-500/30 bg-gold-500/[0.05] p-4">
       <p className="flex items-center gap-1.5 font-serif text-[13px] font-bold text-ink-primary">
-        <Users className="h-3.5 w-3.5 text-gold-400" /> 둘·셋·넷 함께 보기
+        <Sparkles className="h-3.5 w-3.5 text-gold-400" /> AI 풀이 — 둘·셋·넷 함께 보기
       </p>
       <p className="text-[11.5px] leading-relaxed text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
-        같이 볼 사람을 두 명에서 네 명까지 고르면, 그 사람들만 두고 누가 누구에게 무엇을 주는지·어디서 지치는지· 이번
-        주에 같이 할 한 가지를 AI 가 풀어 씁니다.
+        사람을 두 명에서 네 명까지 고르면 서로의 오행을 신당의 말로 풀어 씁니다 — 서로의 오행 · 장점 · 단점 · 필요한 것
+        · 이번 주 한 가지. 필요한 물건과 자리는 그 아래에 쿠팡 링크와 함께 섭니다.
       </p>
 
       <ul className="flex flex-wrap gap-1.5">
@@ -169,15 +284,31 @@ export function TogetherPanel({
       )}
 
       {result && (
-        <div className="space-y-2 rounded-lg border border-gold-500/20 bg-gold-500/[0.05] p-3">
+        <div className="space-y-3 rounded-lg border border-gold-500/20 bg-gold-500/[0.05] p-3">
           <p className="text-[10.5px] text-ink-light/45">
             {result.names.join(' · ')} · {formatDate(result.createdAt)}
           </p>
-          <div className="space-y-2.5 text-[13px] leading-relaxed text-ink-light/85" style={{ wordBreak: 'keep-all' }}>
-            {paragraphs(result.text).map((p, i) => (
-              <p key={i}>{p}</p>
+          <div className="space-y-3">
+            {parseTogetherSections(result.text).map((s, i) => (
+              <div key={`${s.heading}-${i}`} className="space-y-1">
+                {s.heading && (
+                  <h4 className="font-serif text-[12.5px] font-bold tracking-[0.08em] text-gold-300">{s.heading}</h4>
+                )}
+                {s.body.split(/\n+/).map((p, j) => (
+                  <p
+                    key={j}
+                    className="text-[13px] leading-relaxed text-ink-light/85"
+                    style={{ wordBreak: 'keep-all' }}
+                  >
+                    {p}
+                  </p>
+                ))}
+              </div>
             ))}
           </div>
+          {resultPeople.length >= TOGETHER_MIN && (
+            <NeedsBlock people={resultPeople} needs={needs} shopLinks={shopLinks} kind={kind} />
+          )}
         </div>
       )}
 
@@ -196,6 +327,9 @@ export function TogetherPanel({
           복채 충전
         </Link>
       </div>
+      <p className="text-[10.5px] text-ink-light/40">
+        같은 조합이면 30일 안에는 다시 사지 않습니다. 기운이 바뀌었을 때만 새로 짓습니다.
+      </p>
     </section>
   )
 }

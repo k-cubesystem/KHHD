@@ -11,7 +11,7 @@
  * 「채용·뽑·면접·지원자·적합도」 같은 채용 어휘도 쓰지 않는다 — 이 사전은 «판단»이 아니라 «돌봄»의 말이다.
  * 둘 다 테스트가 전량을 훑는다(`__tests__/element-lore.test.ts`).
  */
-import type { Element as RemedyElement } from '@/lib/domain/remedy/remedy'
+import { REMEDY_TABLE, type Element as RemedyElement } from '@/lib/domain/remedy/remedy'
 import type { Element } from '@/lib/domain/shrine/types'
 import { ELEMENTS } from '@/lib/domain/shrine/energy'
 
@@ -113,6 +113,58 @@ export function elementFromHanja(hanja: string | null | undefined): Element | nu
   if (!hanja) return null
   for (const el of ELEMENTS) if (HANJA_OF[el] === hanja) return el
   return null
+}
+
+/**
+ * 「필요한 것」 — 옅은 기운 하나를 채우는 물건·자리·색·방향·시간 (CEO 2026-09-13 「필요한 아이템, 서로에게 맞는 풍수와 오행 물건」).
+ * 물건은 이 사전(책상 위·선물 셋), 자리·색·방향·시간은 remedy 표 — 둘 다 참조일 뿐 세 번째 사본이 아니다.
+ */
+export interface ElementNeeds {
+  readonly element: Element
+  /** 책상 위 한 가지 — 쿠팡 검색어. */
+  readonly desk: string
+  /** 집·사무실에서 손댈 자리(돈이 들지 않는 것). */
+  readonly home: string
+  /** 선물 셋 — 쿠팡 검색어. */
+  readonly gifts: readonly [string, string, string]
+  readonly color: string
+  readonly direction: string
+  readonly hourBand: string
+}
+
+export function elementNeeds(el: Element): ElementNeeds {
+  const h = HANJA_OF[el]
+  const lore = ELEMENT_LORE[el]
+  return {
+    element: el,
+    desk: lore.deskItem,
+    home: REMEDY_TABLE.SPACE[h],
+    gifts: lore.gifts,
+    color: REMEDY_TABLE.COLOR[h],
+    direction: REMEDY_TABLE.DIRECTION[h],
+    hourBand: REMEDY_TABLE.HOUR_BAND[h],
+  }
+}
+
+/** 다섯 기운 전부 — 화면이 고른 사람이 바뀌어도 서버를 다시 부르지 않게 한 번에 내려 보낸다. */
+export function allElementNeeds(): Record<Element, ElementNeeds> {
+  return {
+    wood: elementNeeds('wood'),
+    fire: elementNeeds('fire'),
+    earth: elementNeeds('earth'),
+    metal: elementNeeds('metal'),
+    water: elementNeeds('water'),
+  }
+}
+
+/** 쿠팡 검색어 전부(책상 위 + 선물 셋 × 다섯 기운) — 지도가 한 번에 링크를 받아 둔다. */
+export function allNeedKeywords(): string[] {
+  const out: string[] = []
+  for (const el of ELEMENTS) {
+    const n = elementNeeds(el)
+    out.push(n.desk, ...n.gifts)
+  }
+  return out
 }
 
 /**

@@ -17,11 +17,13 @@ import { logger } from '@/lib/utils/logger'
 import { FAMILY_CIRCLE_ID, TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
 import {
   NARRATIVE_CACHE_DAYS,
-  NARRATIVE_SYSTEM_PROMPT,
+  NARRATIVE_MAX_CHARS_TOGETHER,
+  TOGETHER_SECTIONS,
   circleFingerprint,
   circlePrompt,
   prescriptionFingerprint,
   prescriptionPrompt,
+  systemPromptFor,
   togetherFingerprint,
   togetherPrompt,
   validateNarrative,
@@ -260,7 +262,9 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
       }
     }
 
-    const systemPrompt = [NARRATIVE_SYSTEM_PROMPT, TERM_DISCIPLINE, PREMIUM_PROSE_LAYER].join('\n\n')
+    const systemPrompt = [systemPromptFor(kind), TERM_DISCIPLINE, PREMIUM_PROSE_LAYER].join('\n\n')
+    const checkOptions =
+      kind === 'together' ? { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER } : undefined
     let text: string | null = null
     let lastReason = ''
     for (let attempt = 0; attempt < 2 && !text; attempt++) {
@@ -273,10 +277,10 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
             ? material.prompt
             : `${material.prompt}\n\n(지난 답은 «${lastReason}» 때문에 쓸 수 없었습니다. 규율을 지켜 다시 쓰세요.)`,
         temperature: 0.7,
-        maxTokens: 1200,
+        maxTokens: kind === 'together' ? 2200 : 1200,
         userId: user.id,
       })
-      const checked = validateNarrative(ai.text)
+      const checked = validateNarrative(ai.text, checkOptions)
       if (checked.ok) text = checked.text
       else lastReason = checked.reason
     }

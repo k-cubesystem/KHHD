@@ -73,11 +73,11 @@ export function FamilyMapCard() {
   const enough = summary.count >= 2
   const shown = summary.members.slice(0, CHIP_MAX)
   const rest = summary.count - shown.length
-  // 오각형 썸네일 — 전체는 금 채움, 칩에 선 사람은 그 칩과 같은 색(넘치는 기운 색)의 선. 지도(34차)의 축소판.
-  const thumb: RadarSeries[] = [
-    { id: 'average', name: '전체', share: summary.average, color: RADAR_AVERAGE_COLOR, fill: true },
-    ...shown.map((m) => ({ id: m.targetId, name: m.name, share: m.energy, color: EL_COLOR[m.strongest] })),
-  ]
+  // 오각형 썸네일 — 한 사람(본인)만 금 채움으로. 겹쳐 그리면 「뭔지 모르겠다」(CEO 2026-09-13) — 지도도 한 사람씩 본다.
+  const me = summary.members.find((m) => m.targetId === 'self') ?? summary.members[0]
+  const thumb: RadarSeries[] = me
+    ? [{ id: me.targetId, name: me.name, share: me.energy, color: RADAR_AVERAGE_COLOR, fill: true }]
+    : []
 
   return (
     <motion.div
@@ -159,15 +159,17 @@ export function FamilyMapCard() {
                 </ul>
               </div>
 
-              {/* 오각형 썸네일 — 지도의 첫 그림을 미리 보인다(수치 없음). */}
-              <ElementRadar
-                series={thumb}
-                size={92}
-                labels={false}
-                dots={false}
-                legend={false}
-                className="w-[92px] shrink-0"
-              />
+              {/* 오각형 썸네일 — 내 타고난 기운 한 장(수치 없음). */}
+              {thumb.length > 0 && (
+                <ElementRadar
+                  series={thumb}
+                  size={92}
+                  labels={false}
+                  dots={false}
+                  legend={false}
+                  className="w-[92px] shrink-0"
+                />
+              )}
             </div>
 
             {/* 한 줄 풀이 — 메워주는 짝이 있으면 그것을, 없으면 온 가족이 함께 채울 기운을.

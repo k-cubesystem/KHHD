@@ -6,8 +6,12 @@ import {
   NARRATIVE_SYSTEM_PROMPT,
   circleFingerprint,
   circlePrompt,
+  NARRATIVE_MAX_CHARS_TOGETHER,
+  TOGETHER_SECTIONS,
+  parseTogetherSections,
   prescriptionFingerprint,
   prescriptionPrompt,
+  systemPromptFor,
   togetherFingerprint,
   togetherPrompt,
   validateNarrative,
@@ -85,14 +89,21 @@ describe('프롬프트 — 엔진 값만 싣고 풀어 쓰라고만 한다', () 
     expect(prompt).toContain('사람을 새로 들이라는 말은 쓰지 않습니다')
   })
 
-  it('함께 보기 프롬프트는 사람·관계의 이치·네 문단 지시를 싣고 점수가 없다', () => {
+  it('함께 보기 프롬프트는 사람·관계의 이치·필요한 것(물건·자리)·다섯 머리말 지시를 싣고 점수가 없다', () => {
     const prompt = togetherPrompt(CIRCLE)
     expect(prompt).toContain('민수·지영 함께 보기(2명)')
     expect(prompt).toContain('[서로의 관계 — 엔진 판정]')
     expect(prompt).toContain('이치:')
-    expect(prompt).toContain('네 문단으로 풀어 쓰세요')
+    expect(prompt).toContain('[필요한 것 — 사람마다]')
+    expect(prompt).toContain('[서로에게 맞는 풍수·물건')
+    expect(prompt).toContain('책상 위')
+    expect(prompt).toContain('다섯 토막으로 풀어 쓰세요')
+    for (const h of TOGETHER_SECTIONS) expect(prompt).toContain(`「${h}」`)
     expect(prompt).toContain('사람을 고르거나 재는 말은 쓰지 않습니다')
     expect(prompt).not.toMatch(/\d+\s*점|\d+\s*%/)
+    // 시스템 프롬프트도 갈래에 따라 형식이 갈린다
+    expect(systemPromptFor('together')).toContain('다섯 토막')
+    expect(systemPromptFor('prescription')).toContain('세 문단')
   })
 
   it('시스템 프롬프트가 돌봄 규율(채용·효능·점수 금지)을 명시한다', () => {
@@ -130,6 +141,46 @@ describe('지문(fingerprint) — 같은 입력이면 같고, 화면이 바뀌�
     expect(circleFingerprint(CIRCLE)).toBe(circleFingerprint(CIRCLE))
     const other = buildCircleEnergy('work', [member('self', '민수', energy({ wood: 75, fire: 30 }))])
     expect(circleFingerprint(CIRCLE)).not.toBe(circleFingerprint(other))
+  })
+})
+
+describe('parseTogetherSections — 다섯 토막 가르기', () => {
+  const body = (h: string) => `${h} 토막의 본문입니다. 두 문장으로 씁니다.`
+  const five = TOGETHER_SECTIONS.map((h) => `${h}\n${body(h)}`).join('\n\n')
+
+  it('머리말 줄로 갈라 다섯 토막이 나온다', () => {
+    const sections = parseTogetherSections(five)
+    expect(sections.map((s) => s.heading)).toEqual([...TOGETHER_SECTIONS])
+    expect(sections[1].body).toBe(body('장점'))
+  })
+
+  it('「장점: …」「단점 — …」처럼 한 줄에 붙은 것과 괄호 머리말도 가르고, 띄어쓰기만으로는 머리말로 보지 않는다', () => {
+    const sections = parseTogetherSections(
+      '「서로의 오행」\n둘의 결.\n\n장점: 채워 주는 사이.\n장점 하나가 더 있습니다.\n\n단점 — 지치는 자리.'
+    )
+    expect(sections.map((s) => s.heading)).toEqual(['서로의 오행', '장점', '단점'])
+    expect(sections[0].body).toBe('둘의 결.')
+    expect(sections[1].body).toBe('채워 주는 사이.\n장점 하나가 더 있습니다.')
+    expect(sections[2].body).toBe('지치는 자리.')
+  })
+
+  it('머리말이 없으면 본문 한 덩이(옛 풀이 캐시 호환)', () => {
+    const sections = parseTogetherSections('첫 문단.\n\n둘째 문단.')
+    expect(sections).toHaveLength(1)
+    expect(sections[0].heading).toBe('')
+    expect(sections[0].body).toBe('첫 문단.\n둘째 문단.')
+  })
+
+  it('validateNarrative 는 함께 보기 머리말이 넷 미만이면 거른다(하나는 봐준다)', () => {
+    const long = (h: string) => `${h}\n${'곁에 둘 것을 함께 살핍니다. '.repeat(4)}`
+    const four = TOGETHER_SECTIONS.slice(0, 4).map(long).join('\n\n')
+    expect(validateNarrative(four, { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER }).ok).toBe(
+      true
+    )
+    const three = TOGETHER_SECTIONS.slice(0, 3).map(long).join('\n\n')
+    const res = validateNarrative(three, { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER })
+    expect(res.ok).toBe(false)
+    if (!res.ok) expect(res.reason).toBe('HEADINGS')
   })
 })
 

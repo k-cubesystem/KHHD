@@ -41,12 +41,13 @@ test.describe('우리 가족 기운 지도', () => {
       console.log('[PASS] 가족 0명 → 빈 상태 안내 (등록 유도)')
     } else {
       await expect(mapHeading).toBeVisible()
+      await expect(page.getByText('오행(五行)이란?')).toBeVisible()
+      await expect(page.getByText('누구의 기운을 볼까요')).toBeVisible()
       await expect(page.getByRole('img', { name: /오행 오각형 그래프/ })).toBeVisible()
       await expect(page.getByText('이것만 보면 됩니다')).toBeVisible()
       await expect(page.getByText('함께 채울 기운')).toBeVisible()
-      await expect(page.getByText('서로의 관계')).toBeVisible()
-      await expect(page.getByText('둘·셋·넷 함께 보기')).toBeVisible()
-      console.log('[PASS] 지도 v2 렌더 (오각형 + 팩트 + 관계 + 함께 보기)')
+      await expect(page.getByText(/둘·셋·넷 함께 보기/)).toBeVisible()
+      console.log('[PASS] 지도 v3 렌더 (오행이란 + 한 사람 오각형 + 팩트 + 함께 보기 AI)')
 
       // 오행 5종 — 오각형 축 이름
       for (const han of ['木', '火', '土', '金', '水']) {

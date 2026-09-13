@@ -9,7 +9,7 @@
  */
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import type { Element } from '@/lib/domain/shrine/types'
-import { bannedWordsIn } from './element-lore'
+import { bannedWordsIn, elementNeeds } from './element-lore'
 import type { Prescription } from './prescription'
 import { PAIR_LABEL_KO, type CircleEnergy } from './team-energy'
 
@@ -17,8 +17,14 @@ export type NarrativeKind = 'prescription' | 'circle' | 'together'
 
 export const NARRATIVE_MIN_CHARS = 180
 export const NARRATIVE_MAX_CHARS = 1600
+/** 함께 보기는 다섯 토막이라 길다. */
+export const NARRATIVE_MAX_CHARS_TOGETHER = 2400
 /** 캐시 유효 기간 — 같은 입력이면 이 안에서는 다시 사지 않는다. */
 export const NARRATIVE_CACHE_DAYS = 30
+
+/** 함께 보기 다섯 토막의 머리말 — 프롬프트·거르기·화면이 같은 문자열을 쓴다(CEO 2026-09-13 「장점·단점·필요한 것」). */
+export const TOGETHER_SECTIONS = ['서로의 오행', '장점', '단점', '필요한 것', '이번 주 한 가지'] as const
+export type TogetherSection = (typeof TOGETHER_SECTIONS)[number]
 
 function label(el: Element): string {
   return `${EL_LABEL[el]}(${EL_KO[el]})`
@@ -32,10 +38,24 @@ export const NARRATIVE_SYSTEM_PROMPT = `당신은 신당에서 마주 앉은 상
 - 효과를 단정하지 않습니다(보장·반드시·확실히·완치·치유·성공·대박·부자·평생·무제한 금지). 「~이 붙습니다」「~이 트입니다」「~을 곁에 둡니다」처럼 결의 말로 씁니다.
 - 숫자 점수·퍼센트·순위를 쓰지 않습니다.
 - 한자 용어는 처음 한 번만 괄호로 풀고, 그 뒤로는 우리말로 부릅니다.
-- 세 문단, 전체 500~800자. 각 문단은 세 문장에서 다섯 문장. 첫 문장은 인사·요약이 아니라 관찰로 시작합니다.
 - 주어를 지우고 씁니다("당신은" 금지). 부사(매우·정말·상당히·다소)는 지웁니다.
+- 첫 문장은 인사·요약이 아니라 관찰로 시작합니다.`
+
+const FORMAT_THREE = `형식:
+- 세 문단, 전체 500~800자. 각 문단은 세 문장에서 다섯 문장.
 - 마지막 문단은 오늘 할 수 있는 한 가지로 끝냅니다.
 - 출력은 본문만. 제목·머리말·목록 기호·따옴표 없이 문단 사이는 빈 줄 하나.`
+
+const FORMAT_TOGETHER = `형식:
+- 다섯 토막, 전체 700~1200자. 토막마다 첫 줄에 머리말만 한 줄로 적고(정확히 이 다섯: ${TOGETHER_SECTIONS.join(' / ')}), 다음 줄부터 본문 두 문장에서 네 문장.
+- 머리말 밖에는 제목·목록 기호·따옴표를 쓰지 않습니다. 토막 사이는 빈 줄 하나.
+- 「필요한 것」 토막은 [필요한 것] 에 적힌 물건·자리·색·방향만 부릅니다. 새 물건을 지어내지 않습니다.
+- 「이번 주 한 가지」 토막은 같이 할 수 있는 한 가지로 끝냅니다.`
+
+/** 갈래마다 형식이 다르다 — 처방전·그룹은 세 문단, 함께 보기는 머리말 다섯 토막. */
+export function systemPromptFor(kind: NarrativeKind): string {
+  return `${NARRATIVE_SYSTEM_PROMPT}\n\n${kind === 'together' ? FORMAT_TOGETHER : FORMAT_THREE}`
+}
 
 /** 처방전 → 프롬프트. 값은 전부 처방전에서 온다. */
 export function prescriptionPrompt(p: Prescription): string {
@@ -101,7 +121,15 @@ export function circlePrompt(circleName: string, ce: CircleEnergy): string {
     .join('\n')
 }
 
-/** 둘·셋·넷 함께 보기 — 고른 사람들만으로 엮은 그룹 기운을 프롬프트로. 관계의 이치·실천 문장이 여기서 AI 재료가 된다. */
+function needsLine(el: Element): string {
+  const n = elementNeeds(el)
+  return `책상 위 ${n.desk} · 집 안 ${n.home} · 선물 ${n.gifts.join(', ')} · 색 ${n.color} · 방향 ${n.direction} · 시간 ${n.hourBand}`
+}
+
+/**
+ * 둘·셋·넷 함께 보기 — 고른 사람들만으로 엮은 그룹 기운을 프롬프트로(CEO 2026-09-13: 서로의 오행 · 장점 · 단점 · 필요한 것).
+ * 관계의 이치·실천 문장과 「필요한 것」 물건·자리(사전·개운 표)가 여기서 AI 재료가 된다 — AI 는 새 물건을 짓지 않는다.
+ */
 export function togetherPrompt(ce: CircleEnergy): string {
   const names = ce.entries.map((e) => e.name).join('·')
   const members = ce.entries
@@ -113,6 +141,7 @@ export function togetherPrompt(ce: CircleEnergy): string {
   const pairs = ce.pairs
     .map((pr) => `- ${pr.aName} ↔ ${pr.bName}: ${PAIR_LABEL_KO[pr.label]}\n  이치: ${pr.reason}\n  실천: ${pr.how}`)
     .join('\n')
+  const needs = ce.entries.map((e) => `- ${e.name}(옅은 ${label(e.yongsin)}): ${needsLine(e.yongsin)}`).join('\n')
   return [
     `[엔진이 정한 값 — ${names} 함께 보기(${ce.entries.length}명)]`,
     ce.notice ? `고지: ${ce.notice}` : '',
@@ -122,11 +151,55 @@ export function togetherPrompt(ce: CircleEnergy): string {
     '[서로의 관계 — 엔진 판정]',
     pairs || '- 뚜렷한 관계 없음 — 각자 서는 사이',
     ce.roles ? `[역할 결] ${ce.roles.sentence}` : '',
+    '[필요한 것 — 사람마다]',
+    needs,
+    `[서로에게 맞는 풍수·물건 — 함께 옅은 ${label(ce.lowest)}] ${needsLine(ce.lowest)}`,
     '',
-    '위 값을 네 문단으로 풀어 쓰세요. ① 이 사람들이 함께 있을 때의 기운 결 ② 누가 누구에게 무엇을 주는지(엔진의 이치를 그대로, 새로 판정하지 말 것) ③ 부딪히거나 지치는 자리와 그것을 푸는 법 ④ 이번 주에 같이 할 한 가지. 사람을 고르거나 재는 말은 쓰지 않습니다.',
+    `위 값을 다섯 토막으로 풀어 쓰세요. 머리말은 정확히 ${TOGETHER_SECTIONS.map((s) => `「${s}」`).join(' ')} 순서입니다. ① 서로의 오행: 각자의 넉넉한·옅은 기운이 함께 있을 때 어떤 결이 되는지 ② 장점: 서로 채우고 끌어 주는 자리(엔진의 이치 그대로, 새로 판정하지 말 것) ③ 단점: 부딪히거나 지치는 자리와 그것을 푸는 법 ④ 필요한 것: 위 물건·자리·색·방향을 그대로 부르며 누가 무엇을 곁에 두면 좋은지 ⑤ 이번 주 한 가지: 같이 할 한 가지. 사람을 고르거나 재는 말은 쓰지 않습니다.`,
   ]
     .filter((line) => line !== '')
     .join('\n')
+}
+
+export interface NarrativeSection {
+  /** 머리말(다섯 중 하나). 머리말 없이 시작한 본문은 ''. */
+  heading: TogetherSection | ''
+  body: string
+}
+
+const HEADING_LEAD = /^[\s「『[(#*\-•]+/
+const HEADING_TRAIL = /[\s」』\])：:.]+$/
+/** 「장점: …」「단점 — …」처럼 머리말 뒤에 구분 기호를 두고 본문이 같은 줄에 붙은 경우. 띄어쓰기만으로는 머리말이 아니다. */
+const INLINE_HEADING = new RegExp(`^(${TOGETHER_SECTIONS.join('|')})[」』\\])]*\\s*[:：—–-]\\s*(.+)$`)
+
+/** 함께 보기 본문 → 머리말별 토막. 머리말이 하나도 없으면 본문 한 덩이(옛 풀이 캐시 호환). */
+export function parseTogetherSections(text: string): NarrativeSection[] {
+  const out: NarrativeSection[] = []
+  let current: NarrativeSection | null = null
+  const isSection = (s: string): s is TogetherSection => (TOGETHER_SECTIONS as readonly string[]).includes(s)
+  for (const raw of text.replace(/\r\n/g, '\n').split('\n')) {
+    const line = raw.trim()
+    if (!line) continue
+    const lead = line.replace(HEADING_LEAD, '')
+    const bare = lead.replace(HEADING_TRAIL, '')
+    if (isSection(bare)) {
+      current = { heading: bare, body: '' }
+      out.push(current)
+      continue
+    }
+    const inline = lead.match(INLINE_HEADING)
+    if (inline && isSection(inline[1])) {
+      current = { heading: inline[1], body: inline[2].trim() }
+      out.push(current)
+      continue
+    }
+    if (!current) {
+      current = { heading: '', body: '' }
+      out.push(current)
+    }
+    current.body = current.body ? `${current.body}\n${line}` : line
+  }
+  return out.filter((s) => s.body || s.heading)
 }
 
 /** 캐시 키의 재료 — 화면에 영향을 주는 값만 뽑아 안정된 문자열로. 같은 입력이면 같은 문자열. */
@@ -168,16 +241,27 @@ export function circleFingerprint(ce: CircleEnergy): string {
 export type NarrativeCheck = { ok: true; text: string } | { ok: false; reason: string }
 
 /** 모델 출력 거르기 — 길이·금지어·점수. 통과한 본문만 저장한다. */
-export function validateNarrative(raw: string): NarrativeCheck {
+export interface NarrativeCheckOptions {
+  /** 이 머리말들이 (하나 빠지는 것까지 봐주고) 본문에 서 있어야 한다 — 함께 보기의 다섯 토막. */
+  headings?: readonly string[]
+  maxChars?: number
+}
+
+export function validateNarrative(raw: string, options: NarrativeCheckOptions = {}): NarrativeCheck {
   const text = raw
     .replace(/\r\n/g, '\n')
     .replace(/^[#*>\-•\s]+|["「」"]+$/gm, (m) => (m.includes('\n') ? m : ''))
     .replace(/\n{3,}/g, '\n\n')
     .trim()
   if (text.length < NARRATIVE_MIN_CHARS) return { ok: false, reason: 'TOO_SHORT' }
-  if (text.length > NARRATIVE_MAX_CHARS) return { ok: false, reason: 'TOO_LONG' }
+  if (text.length > (options.maxChars ?? NARRATIVE_MAX_CHARS)) return { ok: false, reason: 'TOO_LONG' }
   const hits = bannedWordsIn(text)
   if (hits.length > 0) return { ok: false, reason: `BANNED:${hits.join(',')}` }
   if (/\d+\s*(점|%|퍼센트|위)\b/.test(text) || /\d+\s*(점|%|퍼센트)/.test(text)) return { ok: false, reason: 'SCORE' }
+  if (options.headings && options.headings.length > 0) {
+    const found = new Set(parseTogetherSections(text).map((s) => s.heading))
+    const present = options.headings.filter((h) => found.has(h as TogetherSection)).length
+    if (present < options.headings.length - 1) return { ok: false, reason: 'HEADINGS' }
+  }
   return { ok: true, text }
 }

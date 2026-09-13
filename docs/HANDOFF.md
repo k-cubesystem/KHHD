@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-12(35차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-13(36차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,33 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(36차 · 2026-09-13) 지도 v3 — 한 사람씩 · 서로의 오행은 복채 AI(장점·단점·필요한 것+쿠팡) · 오행이란 복원 · 웹툰에 앱 메뉴 (배포 기록은 아래 갱신):**
+
+CEO 재검수: 「웹툰에 들어가면 상단·하단 메뉴가 안 나와 / 가족 전체 오각형은 없애고 한 사람씩(복잡해서 뭔지 모르겠어) / 서로의
+관계도 다 보여주지 말고 서로의 오행을 복채로, AI 분석(장점·단점·필요한 것) / 그룹 전체 풀이와 합쳐 재구성 / 「오행이란?」
+다시 / 구성원은 드롭다운 / 필요한 아이템·풍수·오행 물건을 쿠팡으로」. 기획서 `PRD-family-map-v2.md §6-1`.
+
+- **웹툰 메뉴**: `app/webtoon/layout.tsx` 신설(보호 레이아웃과 같은 뼈대 — MobileHeader·main pt-14·SiteFooter·BottomNav).
+  `components/layout/bottom-nav.tsx` 의 숨김 규칙에 `/webtoon` 추가(테스트 `components/layout/__tests__/bottom-nav.test.tsx`).
+  비로그인도 같은 뼈대 — 머리글의 명식·종은 로그인 없으면 빈다(액션이 null/[] 반환).
+- **지도 v3** `components/family/circle-energy-map.tsx`: ① 「오행(五行)이란?」 접이식(v1 의 ElementPrimer 복원, `NODE_MAP`)
+  ② `TargetSelect`(사람 고르기 단일 출처)로 **한 사람** 오각형(금 채움) + 옅은/넉넉 칩 + 처방전 문 ③ 팩트 세 줄 ④ **AI 풀이 —
+  둘·셋·넷 함께 보기** 한 문(`together-panel.tsx`). 삭제: 겹친 오각형·범례 토글·「서로의 관계」 목록·구성원 줄·그룹 전체
+  `NarrativePanel`(kind `circle` 은 서버·DB 에 남음). 지도 페이지는 `getCachedNarrative('circle')` 대신 `getShopLinks(allNeedKeywords())`
+  - `allElementNeeds()` 를 내린다.
+- **함께 보기 AI 다섯 토막**: `lib/domain/circle/narrative.ts` — `TOGETHER_SECTIONS`(서로의 오행·장점·단점·필요한 것·이번 주
+  한 가지) · `systemPromptFor(kind)`(세 문단 vs 머리말 다섯 토막) · `togetherPrompt` 에 [필요한 것 — 사람마다]·[서로에게 맞는
+  풍수·물건] 재료(`elementNeeds`) · `parseTogetherSections`(머리말 줄·「장점: …」·「단점 — …」 가름, 머리말 없으면 한 덩이 =
+  옛 캐시 호환) · `validateNarrative(raw, {headings, maxChars})`(머리말 넷 미만이면 HEADINGS 로 거름, 함께 보기 최대 2,400자,
+  maxTokens 2,200).
+- **필요한 것 블록**: `lib/domain/circle/element-lore.ts` `elementNeeds(el)`(사전 책상 위·선물 셋 + remedy 표 자리·색·방향·시간,
+  사본 아님) · `allElementNeeds()` · `allNeedKeywords()`(20개). 화면은 고른 사람마다 옅은 기운의 물건과, 고른 사람들의 평균에서
+  가장 옅은 기운의 «서로에게 맞는 풍수·물건»을 그린다. 쿠팡 링크는 `affiliate_links` 전역 캐시(30일) — 🔴 Vercel 에
+  `COUPANG_ACCESS_KEY`/`COUPANG_SECRET_KEY` 가 없으면 이름만 선다.
+- 허브 배너 썸네일은 **본인 한 장**(`family-map-card.tsx`). prod e2e `family-map.spec.ts` v3 문구.
+- 🔴 **36차 함정**: 머리말 가르기에서 «머리말 + 띄어쓰기»를 머리말로 보면 본문 첫 단어가 「장점」인 문장이 토막으로 잘린다 —
+  구분 기호(: ： — –)가 있을 때만 한 줄 머리말이다.
 
 **(35차 · 2026-09-12) 목록 한 줄 · 허브 오각형 썸네일 · 최근 본 조합 — CEO 「3만냥 유지, 나머지는 추천대로」 — 프로덕션 라이브(`818aefb8` → 배포 `hhd-h9pfv2zq6`):**
 

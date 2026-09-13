@@ -33,8 +33,8 @@ export const BottomNav = memo(function BottomNav() {
     { label: t('profile'), icon: '/icons/nav/profile.webp', href: '/protected/profile' },
   ]
 
-  // Hidden on non-protected pages
-  if (!pathname.startsWith('/protected')) return null
+  // 보호 화면과 웹툰(공개지만 앱 뼈대를 쓴다 — CEO 2026-09-13)에서만 선다
+  if (!pathname.startsWith('/protected') && !pathname.startsWith('/webtoon')) return null
 
   return (
     <nav
