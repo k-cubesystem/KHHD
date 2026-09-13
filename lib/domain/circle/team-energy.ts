@@ -16,7 +16,7 @@ import type { Element } from '@/lib/domain/shrine/types'
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { averageEnergy, findComplements, lowestElement, type EnergyHolder } from '@/lib/domain/shrine/energy-map'
 import { REMEDY_TABLE, SIPSEONG_GROUPS, type SipseongGroupKey } from '@/lib/domain/remedy/remedy'
-import { CONTROLS, ELEMENT_LORE, HANJA_OF, MOTHER_OF } from './element-lore'
+import { CONTROLS, ELEMENT_LORE, HANJA_OF, MOTHER_OF, ROLE_PEOPLE } from './element-lore'
 import { CIRCLE_KIND_META, type CircleKind } from './circle'
 
 /** 그룹의 한 사람 — 기운 비율(합 100, 지도와 같은 값) + 명식 힌트(없으면 null). */
@@ -62,7 +62,10 @@ export interface PairRelation {
 
 export interface RoleGrain {
   key: SipseongGroupKey
+  /** 십성 무리의 우리 용어(«만들어 내는 결») — 프롬프트·인쇄물용. */
   plain: string
+  /** 보통 사람의 말(«아이디어를 내고 만들어 내는 사람») — 화면용. */
+  people: string
 }
 
 export interface CircleRoles {
@@ -246,9 +249,10 @@ export function circleRoles(entries: readonly CircleMemberEnergy[]): CircleRoles
   }
 
   return {
-    thick: { key: thick.key, plain: thick.plain },
-    thin: { key: thin.key, plain: thin.plain },
-    sentence: `이 그룹은 ${thick.plain}이 두껍고, ${thin.plain}이 옅습니다. 옅은 결은 지금 있는 사람 중 그 결에 가까운 사람과, 그 결을 보태는 물건으로 채웁니다.`,
+    thick: { key: thick.key, plain: thick.plain, people: ROLE_PEOPLE[thick.key] },
+    thin: { key: thin.key, plain: thin.plain, people: ROLE_PEOPLE[thin.key] },
+    // 보통 사람의 말(CEO 2026-09-14) — «두껍고·옅습니다» 대신 «많고·적습니다». 사람을 새로 들이라는 말은 쓰지 않는다.
+    sentence: `이 그룹에는 ${ROLE_PEOPLE[thick.key]}이 많고, ${ROLE_PEOPLE[thin.key]}은 적습니다. 적은 쪽은 지금 있는 사람 중 그 성향에 가까운 사람과, 그 기운을 보태는 물건으로 채웁니다.`,
   }
 }
 

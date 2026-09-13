@@ -11,7 +11,7 @@
  * 「채용·뽑·면접·지원자·적합도」 같은 채용 어휘도 쓰지 않는다 — 이 사전은 «판단»이 아니라 «돌봄»의 말이다.
  * 둘 다 테스트가 전량을 훑는다(`__tests__/element-lore.test.ts`).
  */
-import { REMEDY_TABLE, type Element as RemedyElement } from '@/lib/domain/remedy/remedy'
+import { REMEDY_TABLE, type Element as RemedyElement, type SipseongGroupKey } from '@/lib/domain/remedy/remedy'
 import type { Element } from '@/lib/domain/shrine/types'
 import { ELEMENTS } from '@/lib/domain/shrine/energy'
 
@@ -155,6 +155,49 @@ export function allElementNeeds(): Record<Element, ElementNeeds> {
     metal: elementNeeds('metal'),
     water: elementNeeds('water'),
   }
+}
+
+/**
+ * 보통 사람의 말 — 지도의 「이것만 보면 됩니다」가 쓴다(CEO 2026-09-14 「의미는 좋지만 해석이 어려워, 일반 사람이 이해하기 편하게」).
+ * «옅다·결·두껍다» 대신 «부족하다·분위기·많다»로 쓴다. 효능·채용 어휘 없음(테스트가 훑는다).
+ */
+export interface ElementPlain {
+  /** 그 기운이 가장 부족할 때 — 한두 문장. */
+  readonly lacking: string
+  /** 그 기운이 가장 넉넉할 때의 분위기 — 한 문장. */
+  readonly rich: string
+}
+
+export const ELEMENT_PLAIN: Record<Element, ElementPlain> = {
+  wood: {
+    lacking: '새로 시작하는 힘이 약해요. 계획은 있는데 첫발이 잘 안 떨어지는 편이에요.',
+    rich: '새 일을 잘 벌이고 앞으로 나아가는 분위기예요.',
+  },
+  fire: {
+    lacking: '활기와 표현이 부족해요. 분위기가 가라앉고 말수가 줄기 쉬워요.',
+    rich: '밝고 활발해서 자리가 금방 데워지는 분위기예요.',
+  },
+  earth: {
+    lacking: '중심이 흔들리기 쉬워요. 약속과 규칙이 잘 안 지켜지는 편이에요.',
+    rich: '차분하고 믿음직해서 서로 기댈 수 있는 분위기예요.',
+  },
+  metal: {
+    lacking: '마무리와 정리가 약해요. 벌여 놓고 끝을 못 내기 쉬워요.',
+    rich: '딱 부러지게 정리하고 결정을 잘 내리는 분위기예요.',
+  },
+  water: {
+    lacking: '쉬어 가는 여유와 들어 주는 힘이 부족해요. 서로 지치기 쉬워요.',
+    rich: '차분하게 잘 들어 주고 여유가 있는 분위기예요.',
+  },
+}
+
+/** 십성 다섯 무리 → 보통 사람의 말로 «어떤 사람». 전부 «사람»으로 끝나 조사가 갈리지 않는다(이 많고 / 은 적어요). */
+export const ROLE_PEOPLE: Record<SipseongGroupKey, string> = {
+  gwan: '책임지고 이끄는 사람',
+  siksang: '아이디어를 내고 만들어 내는 사람',
+  bigyeop: '옆에서 같이 뛰어 주는 사람',
+  jaeseong: '일을 벌이고 열매를 거두는 사람',
+  inseong: '배우고 받아들이며 받쳐 주는 사람',
 }
 
 /** 쿠팡 검색어 전부(책상 위 + 선물 셋 × 다섯 기운) — 지도가 한 번에 링크를 받아 둔다. */

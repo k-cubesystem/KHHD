@@ -97,7 +97,7 @@ function NeedsBlock({
             <li key={p.targetId} className="text-[12px] leading-relaxed">
               <p className="flex flex-wrap items-center gap-1.5">
                 <b className="font-serif text-ink-light">{p.name}</b>
-                <span className="text-ink-light/45">옅은</span> <ElementChip el={p.yongsin} />
+                <span className="text-ink-light/45">부족한</span> <ElementChip el={p.yongsin} />
               </p>
               <dl className="mt-1 grid grid-cols-[52px_1fr] gap-x-2 gap-y-1 text-ink-light/70">
                 <dt className="text-ink-light/45">책상 위</dt>
@@ -120,7 +120,7 @@ function NeedsBlock({
       <div className="space-y-1.5 border-t border-white/[0.06] pt-2.5 text-[12px] leading-relaxed">
         <p className="flex flex-wrap items-center gap-1.5">
           <b className="font-serif text-ink-light">서로에게 맞는 풍수·물건</b>
-          <span className="text-ink-light/45">함께 옅은</span> <ElementChip el={together} />
+          <span className="text-ink-light/45">함께 부족한</span> <ElementChip el={together} />
         </p>
         <dl className="grid grid-cols-[52px_1fr] gap-x-2 gap-y-1 text-ink-light/70">
           <dt className="text-ink-light/45">자리</dt>

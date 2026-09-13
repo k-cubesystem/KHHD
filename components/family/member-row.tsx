@@ -81,7 +81,7 @@ export function MemberRow({
         </div>
         {energy ? (
           <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10.5px] text-ink-light/50">
-            옅은 <ElementChip el={energy.yongsin} /> 넉넉한 <ElementChip el={energy.strongest} />
+            부족한 <ElementChip el={energy.yongsin} /> 넉넉한 <ElementChip el={energy.strongest} />
           </p>
         ) : (
           <p className="mt-0.5 text-[10.5px] text-ink-light/40">생년월일을 넣으면 기운이 보입니다</p>

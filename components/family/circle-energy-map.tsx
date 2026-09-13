@@ -11,7 +11,7 @@ import type { Element } from '@/lib/domain/shrine/types'
 import { highestElement } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 import { CIRCLE_KIND_META } from '@/lib/domain/circle/circle'
-import type { ElementNeeds } from '@/lib/domain/circle/element-lore'
+import { ELEMENT_PLAIN, type ElementNeeds } from '@/lib/domain/circle/element-lore'
 import type { CircleEnergy } from '@/lib/domain/circle/team-energy'
 import type { CircleEnergyPayload } from '@/app/actions/circle/energy'
 import type { RecentTogether } from '@/app/actions/circle/narrative'
@@ -126,10 +126,10 @@ function PersonSection({ energy }: { energy: CircleEnergy }) {
         legend={false}
       />
       <p className="flex flex-wrap items-center justify-center gap-1.5 text-[12px] text-ink-light/70">
-        옅은 <ElementChip el={person.yongsin} /> 넉넉한 <ElementChip el={person.strongest} />
+        부족한 <ElementChip el={person.yongsin} /> 넉넉한 <ElementChip el={person.strongest} />
       </p>
       <p className="text-center text-[10.5px] text-ink-light/40">
-        점선 고리가 고른 기운입니다. 안으로 들어간 꼭짓점이 옅은 기운.
+        점선 고리보다 안쪽으로 들어간 꼭짓점이 부족한 기운, 바깥으로 나간 꼭짓점이 넉넉한 기운이에요.
       </p>
       <Link
         href={prescriptionHref(person.targetId)}
@@ -137,53 +137,56 @@ function PersonSection({ energy }: { energy: CircleEnergy }) {
         onClick={() => trackEvent({ action: 'circle_map_prescription', category: 'engagement', label: person.yongsin })}
         className="flex items-center justify-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/[0.1] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20"
       >
-        {person.name}님의 기운 처방전 — 옅은 {EL_KO[person.yongsin]} 기운을 무엇으로 채울지
+        {person.name}님의 기운 처방전 — 부족한 {EL_KO[person.yongsin]} 기운을 무엇으로 채울지
       </Link>
     </section>
   )
 }
 
-function FactsSection({ energy }: { energy: CircleEnergy }) {
+function FactsSection({ energy, groupLabel }: { energy: CircleEnergy; groupLabel: string }) {
   const thick = highestElement(energy.average)
+  const holderNames = energy.holders.map((h) => h.name).join(', ')
   return (
-    <section className="mb-5 space-y-2.5 rounded-xl border border-white/10 bg-surface/30 p-4">
+    <section className="mb-5 space-y-3 rounded-xl border border-white/10 bg-surface/30 p-4">
       <p className="font-serif text-[13px] font-bold tracking-[0.1em] text-ink-primary">이것만 보면 됩니다</p>
-      <dl className="space-y-2 text-[12.5px]">
-        <div className="flex flex-wrap items-center gap-2">
-          <dt className="w-[92px] shrink-0 text-ink-light/45">함께 채울 기운</dt>
-          <dd className="flex flex-wrap items-center gap-1.5">
+      <div className="space-y-3 text-[12.5px] leading-relaxed text-ink-light/80" style={{ wordBreak: 'keep-all' }}>
+        <div>
+          <p className="flex flex-wrap items-center gap-1.5">
+            <span className="font-serif font-bold text-ink-light">{groupLabel}에 가장 부족한 기운</span>
             <ElementChip el={energy.lowest} />
+          </p>
+          <p className="mt-1 text-ink-light/65">{ELEMENT_PLAIN[energy.lowest].lacking}</p>
+          <p className="mt-1">
             {energy.holders.length > 0 ? (
-              <span className="text-ink-light/75">
-                든 사람 <b className="font-serif text-gold-300">{energy.holders.map((h) => h.name).join(', ')}</b>
-              </span>
+              <>
+                <b className="font-serif text-gold-300">{holderNames}</b>님이 이 기운을 넉넉히 갖고 있어요. 함께 있으면
+                자연스럽게 채워집니다.
+              </>
             ) : (
-              <span className="text-ink-light/60">
-                든 사람 없음 → 물건으로 <b className="font-serif text-gold-300">{energy.fallbackItem}</b>
-              </span>
+              <>
+                이 기운이 넉넉한 사람이 없어요. <b className="font-serif text-gold-300">{energy.fallbackItem}</b> 같은
+                물건을 곁에 두어 보세요.
+              </>
             )}
-          </dd>
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <dt className="w-[92px] shrink-0 text-ink-light/45">두꺼운 기운</dt>
-          <dd>
+        <div>
+          <p className="flex flex-wrap items-center gap-1.5">
+            <span className="font-serif font-bold text-ink-light">가장 넉넉한 기운</span>
             <ElementChip el={thick} />
-          </dd>
+          </p>
+          <p className="mt-1 text-ink-light/65">{ELEMENT_PLAIN[thick].rich}</p>
         </div>
         {energy.roles && (
-          <div className="flex flex-wrap items-center gap-2">
-            <dt className="w-[92px] shrink-0 text-ink-light/45">역할 결</dt>
-            <dd className="flex flex-wrap gap-1.5 text-[11.5px]">
-              <span className="rounded-full border border-gold-500/40 bg-gold-500/[0.1] px-2 py-[2px] font-serif text-gold-200">
-                두꺼운 · {energy.roles.thick.plain}
-              </span>
-              <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-[2px] font-serif text-ink-light/60">
-                옅은 · {energy.roles.thin.plain}
-              </span>
-            </dd>
+          <div>
+            <p className="font-serif font-bold text-ink-light">사람들의 성향</p>
+            <p className="mt-1 text-ink-light/65">
+              <b className="font-sans font-medium text-ink-light/85">{energy.roles.thick.people}</b>이 많고,{' '}
+              <b className="font-sans font-medium text-ink-light/85">{energy.roles.thin.people}</b>은 적어요.
+            </p>
           </div>
         )}
-      </dl>
+      </div>
       <p className="text-[11px] leading-snug text-ink-light/45" style={{ wordBreak: 'keep-all' }}>
         누가 누구를 채우고 어디서 부딪히는지는 아래 AI 풀이가 사람을 골라 풀어 씁니다.
       </p>
@@ -261,7 +264,7 @@ export function CircleEnergyMapView({
 
       <ElementPrimer />
       <PersonSection energy={energy} />
-      <FactsSection energy={energy} />
+      <FactsSection energy={energy} groupLabel={circle.kind === 'family' ? '우리 가족' : circle.name} />
 
       <div className="mb-5">
         <TogetherPanel

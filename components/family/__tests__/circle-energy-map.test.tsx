@@ -93,8 +93,12 @@ describe('CircleEnergyMapView v3 — 한 사람씩, 서로의 오행은 복채 A
   it('팩트 세 줄과 함께 보기 AI 문이 선다', () => {
     render(<CircleEnergyMapView payload={payloadOf('custom', '등산 모임')} needs={NEEDS} />)
     expect(screen.getByText('이것만 보면 됩니다')).toBeInTheDocument()
-    expect(screen.getByText('함께 채울 기운')).toBeInTheDocument()
-    expect(screen.getByText('역할 결')).toBeInTheDocument()
+    expect(screen.getByText(/가장 부족한 기운/)).toBeInTheDocument()
+    expect(screen.getByText('가장 넉넉한 기운')).toBeInTheDocument()
+    expect(screen.getByText('사람들의 성향')).toBeInTheDocument()
+    // 보통 사람의 말 — «든 사람·두꺼운·옅은·결» 같은 우리 용어가 팩트 카드에 없다
+    expect(screen.queryByText(/든 사람 없음|두꺼운 기운|역할 결/)).toBeNull()
+    expect(screen.getByText(/이 많고,/)).toBeInTheDocument()
     expect(screen.getByText('AI 풀이 — 둘·셋·넷 함께 보기')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeInTheDocument()
   })

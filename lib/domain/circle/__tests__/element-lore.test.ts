@@ -3,9 +3,11 @@ import {
   CHILD_OF,
   CONTROLS,
   ELEMENT_LORE,
+  ELEMENT_PLAIN,
   HANJA_OF,
   LORE_BANNED_WORDS,
   MOTHER_OF,
+  ROLE_PEOPLE,
   bannedWordsIn,
   elementFromHanja,
 } from '@/lib/domain/circle/element-lore'
@@ -97,5 +99,18 @@ describe('금지어 목록', () => {
     expect(LORE_BANNED_WORDS.hiring).toContain('채용')
     expect(bannedWordsIn('이 물건은 성공을 보장합니다')).toEqual(['보장', '성공'])
     expect(bannedWordsIn('시작하는 힘, 뻗어 나가는 결')).toEqual([])
+  })
+
+  it('보통 사람의 말 사전(ELEMENT_PLAIN·ROLE_PEOPLE)도 금지어가 없고, 사람 유형은 전부 «사람»으로 끝난다', () => {
+    for (const el of ELEMENTS) {
+      for (const text of [ELEMENT_PLAIN[el].lacking, ELEMENT_PLAIN[el].rich]) {
+        expect({ text, hits: bannedWordsIn(text) }).toEqual({ text, hits: [] })
+        expect(text).not.toMatch(/옅|두껍|결\b/)
+      }
+    }
+    for (const people of Object.values(ROLE_PEOPLE)) {
+      expect({ people, hits: bannedWordsIn(people) }).toEqual({ people, hits: [] })
+      expect(people.endsWith('사람')).toBe(true)
+    }
   })
 })
