@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ChevronDown, ChevronLeft, Printer, Users } from 'lucide-react'
+import { ChevronDown, ChevronLeft, Users } from 'lucide-react'
 import { ElementRadar, RADAR_AVERAGE_COLOR } from '@/components/family/element-radar'
 import { TogetherPanel } from '@/components/family/together-panel'
 import { TargetSelect, type TargetOption } from '@/components/destiny/target-select'
@@ -12,7 +12,6 @@ import { highestElement } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 import { CIRCLE_KIND_META } from '@/lib/domain/circle/circle'
 import { ELEMENT_PLAIN, type ElementNeeds } from '@/lib/domain/circle/element-lore'
-import type { TeamSheetDoor } from '@/lib/domain/circle/print-access'
 import type { CircleEnergy } from '@/lib/domain/circle/team-energy'
 import type { CircleEnergyPayload } from '@/app/actions/circle/energy'
 import type { RecentTogether } from '@/app/actions/circle/narrative'
@@ -24,6 +23,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
  *  - 겹친 오각형은 없앴다 — 드롭다운으로 **한 사람씩** 본다(복잡해서 뭔지 모르겠다).
  *  - 「서로의 관계」 무료 목록은 없앴다 — 서로의 오행은 **복채 AI**(둘·셋·넷 함께 보기)가 장점·단점·필요한 것으로 풀어 쓴다.
  *  - 그룹 전체 AI 풀이는 함께 보기에 합쳤다(문 하나). 필요한 물건은 쿠팡 링크와 함께.
+ *  - 「기운 한 장」 인쇄 문은 없앴다(2026-09-14 — 가족에 이어 팀 그룹도).
  *
  * 🔴 수치·점수 없음 — 직장 그룹의 밴드 규율을 전 화면이 그대로 따른다.
  */
@@ -204,14 +204,11 @@ function FactsSection({ energy, groupLabel }: { energy: CircleEnergy; groupLabel
 
 export function CircleEnergyMapView({
   payload,
-  sheet = 'hidden',
   recentTogether = [],
   needs,
   shopLinks = {},
 }: {
   payload: CircleEnergyPayload
-  /** 「기운 한 장」 문 — 정하는 곳은 teamSheetDoor(가족 지도는 숨김, 팀 그룹은 BUSINESS 인쇄 링크·그 밖은 업셀 한 줄). */
-  sheet?: TeamSheetDoor
   /** 최근 본 함께 보기 조합(30일 안) — 이 화면의 사람들로만 이루어진 것이 걸러져 보인다. */
   recentTogether?: readonly RecentTogether[]
   /** 다섯 기운의 물건·자리(서버 계산). */
@@ -285,26 +282,6 @@ export function CircleEnergyMapView({
           cautions={energy.cautions}
         />
       </div>
-
-      {sheet === 'print' && (
-        <Link
-          href={`/protected/family/map/print?circle=${circle.id}`}
-          onClick={() => trackEvent({ action: 'team_sheet_open', category: 'engagement', label: circle.kind })}
-          className="mb-5 flex items-center justify-center gap-1.5 rounded-lg border border-gold-500/40 bg-gold-500/[0.1] py-2.5 font-serif text-[12.5px] font-bold text-gold-200 hover:bg-gold-500/20"
-        >
-          <Printer className="h-3.5 w-3.5" /> {circle.name} 기운 한 장 — 자리마다 놓을 표 인쇄
-        </Link>
-      )}
-      {sheet === 'upsell' && (
-        <Link
-          href="/protected/store?tab=membership"
-          onClick={() => trackEvent({ action: 'business_gate_view', category: 'conversion', label: circle.kind })}
-          className="mb-5 block rounded-lg border border-white/10 bg-white/[0.02] px-3.5 py-2.5 text-center text-[11.5px] text-ink-light/55 hover:text-gold-300"
-          style={{ wordBreak: 'keep-all' }}
-        >
-          BUSINESS 멤버십은 그룹 전원의 «책상 위 한 가지»를 표 한 장으로 인쇄합니다 →
-        </Link>
-      )}
 
       <p className="mt-6 px-2 text-center text-[10px] leading-relaxed text-ink-light/35">
         재미로 즐기는 전통 풀이입니다. 의학적·심리적·재무적 조언을 대신하지 않습니다.

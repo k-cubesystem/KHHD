@@ -65,6 +65,9 @@ const nextConfig: NextConfig = {
       { source: '/webtoon.html', destination: '/webtoon/0', permanent: true },
       { source: '/protected/webtoon', destination: '/webtoon', permanent: true },
       { source: '/protected/webtoon/:path*', destination: '/webtoon/:path*', permanent: true },
+      // 「기운 한 장」 인쇄물은 2026-09-14 에 없앴다(가족·팀 그룹 모두). 옛 인쇄 링크는 같은 지도로 — ?circle= 은 그대로 따라간다.
+      // 되살릴 수 있는 기능이라 영구(308)가 아닌 임시(307)로 둔다 — 브라우저가 308 을 오래 기억한다.
+      { source: '/protected/family/map/print', destination: '/protected/family/map', permanent: false },
     ]
   },
 

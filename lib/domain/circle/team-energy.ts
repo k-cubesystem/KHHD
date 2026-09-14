@@ -103,7 +103,7 @@ export interface PairRelation {
 
 export interface RoleGrain {
   key: SipseongGroupKey
-  /** 십성 무리의 우리 용어(«만들어 내는 결») — 프롬프트·인쇄물용. */
+  /** 십성 무리의 우리 용어(«만들어 내는 결») — 프롬프트용. */
   plain: string
   /** 보통 사람의 말(«아이디어를 내고 만들어 내는 사람») — 화면용. */
   people: string

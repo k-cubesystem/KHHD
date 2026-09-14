@@ -7,8 +7,6 @@ import { getRecentTogether } from '@/app/actions/circle/narrative'
 import { getShopLinks } from '@/app/actions/circle/shop-links'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
 import { allElementNeeds, allNeedKeywords } from '@/lib/domain/circle/element-lore'
-import { teamSheetDoor } from '@/lib/domain/circle/print-access'
-import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { CircleEnergyMapView } from '@/components/family/circle-energy-map'
 
 export const metadata: Metadata = {
@@ -49,9 +47,8 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   if (!user) redirect('/auth/login')
 
   const circleId = circle && circle !== FAMILY_CIRCLE_ID ? circle : FAMILY_CIRCLE_ID
-  const [payload, membership, recentTogether, shopLinks] = await Promise.all([
+  const [payload, recentTogether, shopLinks] = await Promise.all([
     getCircleEnergy(circleId),
-    getCurrentUserMembership(),
     getRecentTogether(),
     getShopLinks(allNeedKeywords()),
   ])
@@ -82,7 +79,6 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   return (
     <CircleEnergyMapView
       payload={payload}
-      sheet={teamSheetDoor(payload.circle.kind, membership?.tier)}
       recentTogether={recentTogether}
       needs={allElementNeeds()}
       shopLinks={shopLinks}

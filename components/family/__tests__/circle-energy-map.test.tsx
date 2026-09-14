@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { CircleEnergyMapView } from '@/components/family/circle-energy-map'
 import { buildCircleEnergy, type CircleMemberEnergy } from '@/lib/domain/circle/team-energy'
 import { WORK_NOTICE } from '@/lib/domain/circle/circle'
-import { teamSheetDoor } from '@/lib/domain/circle/print-access'
 import { allElementNeeds } from '@/lib/domain/circle/element-lore'
 import type { Element } from '@/lib/domain/shrine/types'
 
@@ -56,29 +55,17 @@ function payloadOf(kind: 'work' | 'friends' | 'custom', name: string) {
 }
 
 describe('CircleEnergyMapView v3 — 한 사람씩, 서로의 오행은 복채 AI', () => {
-  it('🔴 가족 지도에는 «기운 한 장» 인쇄 문이 없고, 팀 그룹 BUSINESS 에만 선다(CEO 2026-09-14)', () => {
+  it('🔴 «기운 한 장» 인쇄 문은 가족·팀 그룹 어느 지도에도 없다(CEO 2026-09-14 — 인쇄 기능 전체 제거)', () => {
     const family = {
       circle: { id: 'family', name: '우리 가족', kind: 'family' as const },
       energy: buildCircleEnergy('family', ENTRIES),
     }
-    const { container, unmount } = render(
-      <CircleEnergyMapView payload={family} sheet={teamSheetDoor('family', 'BUSINESS')} needs={NEEDS} />
-    )
-    expect(container.textContent).not.toMatch(/기운 한 장|인쇄/)
-    expect(container.querySelector('a[href*="/family/map/print"]')).toBeNull()
-    unmount()
-
-    render(
-      <CircleEnergyMapView
-        payload={payloadOf('work', '마케팅팀')}
-        sheet={teamSheetDoor('work', 'BUSINESS')}
-        needs={NEEDS}
-      />
-    )
-    expect(screen.getByRole('link', { name: /마케팅팀 기운 한 장/ })).toHaveAttribute(
-      'href',
-      '/protected/family/map/print?circle=c1'
-    )
+    for (const payload of [family, payloadOf('work', '마케팅팀')]) {
+      const { container, unmount } = render(<CircleEnergyMapView payload={payload} needs={NEEDS} />)
+      expect(container.textContent).not.toMatch(/기운 한 장|인쇄/)
+      expect(container.querySelector('a[href*="/map/print"]')).toBeNull()
+      unmount()
+    }
   })
 
   it('🔴 직장 그룹 — 상단 고지가 서고, 기운 수치가 한 곳도 없다', () => {
