@@ -4,14 +4,35 @@
  * 🔴 AI 는 새로 판정하지 않는다. 여기서 만든 프롬프트는 엔진이 이미 정한 값(모자란 기운·채워 주는 기운·
  *    곁에 둘 것·관계 라벨·역할 결)을 그대로 싣고, 모델에게는 «풀어 쓰라»고만 한다(remedyPromptBlock 규율).
  * 🔴 돌봄의 말이다 — 점수·순위·채용 어휘 금지. 출력은 validateNarrative 가 다시 거른다.
+ * 🔴 함께 보기(둘·셋·넷)는 목소리·재료·형식이 달라 `together-prompt.ts` 로 나눴다(2026-09-14 v2 — 해요체·쉬운 말·비유).
  *
  * 순수 함수만 둔다. 해시·DB·모델 호출은 액션이 한다.
  */
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import type { Element } from '@/lib/domain/shrine/types'
-import { bannedWordsIn, elementNeeds } from './element-lore'
+import { PREMIUM_PROSE_LAYER, TERM_DISCIPLINE } from '@/lib/ai/prose-quality'
+import { bannedWordsIn } from './element-lore'
 import type { Prescription } from './prescription'
-import { PAIR_LABEL_KO, VITALITY_KO, type CircleEnergy } from './team-energy'
+import { PAIR_LABEL_KO, type CircleEnergy } from './team-energy'
+import {
+  TOGETHER_GENERATION,
+  TOGETHER_LEGACY_HEADINGS,
+  TOGETHER_SECTIONS,
+  TOGETHER_SYSTEM_PROMPT,
+  togetherJargonHits,
+  togetherRetryNote,
+  type TogetherSection,
+} from './together-prompt'
+
+export {
+  TOGETHER_JARGON_MAX,
+  TOGETHER_LEGACY_HEADINGS,
+  TOGETHER_SECTIONS,
+  TOGETHER_SYSTEM_PROMPT,
+  togetherJargonHits,
+  togetherPrompt,
+} from './together-prompt'
+export type { TogetherSection } from './together-prompt'
 
 export type NarrativeKind = 'prescription' | 'circle' | 'together'
 
@@ -21,20 +42,6 @@ export const NARRATIVE_MAX_CHARS = 1600
 export const NARRATIVE_MAX_CHARS_TOGETHER = 3200
 /** 캐시 유효 기간 — 같은 입력이면 이 안에서는 다시 사지 않는다. */
 export const NARRATIVE_CACHE_DAYS = 30
-
-/**
- * 함께 보기 여섯 토막의 머리말 — 프롬프트·거르기·화면이 같은 문자열을 쓴다(CEO 2026-09-13 「장점·단점·필요한 것」,
- * 2026-09-14 「사람마다 밥·운동·쉼 가운데 무엇이 좋은지 이유와 함께」).
- */
-export const TOGETHER_SECTIONS = [
-  '서로의 오행',
-  '장점',
-  '단점',
-  '사람마다 이렇게',
-  '필요한 것',
-  '이번 주 한 가지',
-] as const
-export type TogetherSection = (typeof TOGETHER_SECTIONS)[number]
 
 function label(el: Element): string {
   return `${EL_LABEL[el]}(${EL_KO[el]})`
@@ -56,16 +63,43 @@ const FORMAT_THREE = `형식:
 - 마지막 문단은 오늘 할 수 있는 한 가지로 끝냅니다.
 - 출력은 본문만. 제목·머리말·목록 기호·따옴표 없이 문단 사이는 빈 줄 하나.`
 
-const FORMAT_TOGETHER = `형식:
-- 여섯 토막, 전체 900~1600자. 토막마다 첫 줄에 머리말만 한 줄로 적고(정확히 이 여섯: ${TOGETHER_SECTIONS.join(' / ')}), 다음 줄부터 본문.
-- 머리말 밖에는 제목·목록 기호·따옴표를 쓰지 않습니다. 토막 사이는 빈 줄 하나.
-- 「사람마다 이렇게」 토막은 사람 수만큼 문단을 두고, 문단마다 그 사람 이름으로 시작합니다. [사람마다] 판정(같이 밥·몸 움직이기·쉬게 두기·정해진 시간·같이 마무리)을 그대로 쓰고 이유를 붙입니다.
-- 「필요한 것」 토막은 [필요한 것] 에 적힌 물건·자리·색·방향만 부릅니다. 새 물건을 지어내지 않습니다.
-- 「이번 주 한 가지」 토막은 같이 할 수 있는 한 가지로 끝냅니다.`
-
-/** 갈래마다 형식이 다르다 — 처방전·그룹은 세 문단, 함께 보기는 머리말 다섯 토막. */
+/** 갈래마다 목소리·형식이 다르다 — 처방전·그룹은 신당 상담가의 세 문단, 함께 보기는 해요체 이야기꾼의 여섯 토막. */
 export function systemPromptFor(kind: NarrativeKind): string {
-  return `${NARRATIVE_SYSTEM_PROMPT}\n\n${kind === 'together' ? FORMAT_TOGETHER : FORMAT_THREE}`
+  if (kind === 'together') return TOGETHER_SYSTEM_PROMPT
+  return `${NARRATIVE_SYSTEM_PROMPT}\n\n${FORMAT_THREE}`
+}
+
+export interface NarrativeRequest {
+  systemPrompt: string
+  temperature: number
+  maxTokens: number
+  /** 거르기에 걸려 다시 쓸 때 사용자 프롬프트 끝에 붙이는 말. */
+  retryNote: (reason: string) => string
+}
+
+/**
+ * 모델 호출 설정 — 액션과 A/B 하네스가 같은 값을 쓴다(한쪽만 고치면 실험과 실서비스가 갈라진다).
+ *
+ * 🔴 maxTokens 는 «생각 토큰 + 본문»의 한도다. gemini-3.8-flash 는 생각이 기본으로 켜져 있고 이 한도를 같이 쓴다.
+ *    2026-09-14 실측: 처방전 한도 1,200 은 생각에 약 1,150 을 먹혀 두 번 다 78자에서 끊겼고(→ 매번 실패·환불),
+ *    함께 보기 한도 3,000 도 3인 조합에서 생각 2,877 에 먹혀 184자에서 끊겼다. 본문 길이는 프롬프트와
+ *    validateNarrative 가 정하고 과금은 쓴 만큼이라, 한도는 넉넉히 둔다.
+ */
+export function narrativeRequestFor(kind: NarrativeKind): NarrativeRequest {
+  if (kind === 'together') {
+    return {
+      systemPrompt: TOGETHER_SYSTEM_PROMPT,
+      temperature: TOGETHER_GENERATION.temperature,
+      maxTokens: TOGETHER_GENERATION.maxTokens,
+      retryNote: togetherRetryNote,
+    }
+  }
+  return {
+    systemPrompt: [systemPromptFor(kind), TERM_DISCIPLINE, PREMIUM_PROSE_LAYER].join('\n\n'),
+    temperature: 0.7,
+    maxTokens: 8192,
+    retryNote: (reason) => `(지난 답은 «${reason}» 때문에 쓸 수 없었습니다. 규율을 지켜 다시 쓰세요.)`,
+  }
 }
 
 /** 처방전 → 프롬프트. 값은 전부 처방전에서 온다. */
@@ -132,86 +166,44 @@ export function circlePrompt(circleName: string, ce: CircleEnergy): string {
     .join('\n')
 }
 
-function needsLine(el: Element): string {
-  const n = elementNeeds(el)
-  return `책상 위 ${n.desk} · 집 안 ${n.home} · 선물 ${n.gifts.join(', ')} · 색 ${n.color} · 방향 ${n.direction} · 시간 ${n.hourBand}`
-}
-
-/**
- * 둘·셋·넷 함께 보기 — 고른 사람들만으로 엮은 그룹 기운을 프롬프트로(CEO 2026-09-13: 서로의 오행 · 장점 · 단점 · 필요한 것).
- * 관계의 이치·실천 문장과 「필요한 것」 물건·자리(사전·개운 표)가 여기서 AI 재료가 된다 — AI 는 새 물건을 짓지 않는다.
- */
-export function togetherPrompt(ce: CircleEnergy): string {
-  const names = ce.entries.map((e) => e.name).join('·')
-  const members = ce.entries
-    .map(
-      (e) =>
-        `- ${e.name}(${e.relation}): 옅은 ${label(e.yongsin)}, 넉넉한 ${label(e.strongest)}${e.dayMaster ? `, 일간 ${label(e.dayMaster)}` : ''}${e.vitality ? `, 타고난 힘 ${VITALITY_KO[e.vitality]}` : ''}`
-    )
-    .join('\n')
-  const pairs = ce.pairs
-    .map((pr) => `- ${pr.aName} ↔ ${pr.bName}: ${PAIR_LABEL_KO[pr.label]}\n  이치: ${pr.reason}\n  실천: ${pr.how}`)
-    .join('\n')
-  const care = ce.care
-    .map(
-      (c) =>
-        `- ${c.name}: 함께할 때 좋은 것 = ${c.label} — ${c.together}\n  이유: ${c.why}\n  해야 할 것: ${c.do}\n  피할 것: ${c.avoid}`
-    )
-    .join('\n')
-  const cautions = ce.cautions.map((c) => `- ${c.text}`).join('\n')
-  const needs = ce.entries.map((e) => `- ${e.name}(옅은 ${label(e.yongsin)}): ${needsLine(e.yongsin)}`).join('\n')
-  return [
-    `[엔진이 정한 값 — ${names} 함께 보기(${ce.entries.length}명)]`,
-    ce.notice ? `고지: ${ce.notice}` : '',
-    '[사람]',
-    members,
-    `함께 있을 때 가장 옅은 기운: ${label(ce.lowest)} · 든 사람: ${ce.holders.length > 0 ? ce.holders.map((h) => h.name).join(', ') : `없음 → 물건으로: ${ce.fallbackItem}`}`,
-    '[서로의 관계 — 엔진 판정]',
-    pairs || '- 뚜렷한 관계 없음 — 각자 서는 사이',
-    ce.roles ? `[역할 결] ${ce.roles.sentence}` : '',
-    '[사람마다 — 함께 있을 때 어떻게 (엔진 판정: 밥·몸 움직이기·쉬게 두기·정해진 시간·같이 마무리)]',
-    care,
-    '[같은 팀·가족이라도 조심할 것 — 상극]',
-    cautions || '- 뚜렷이 누르는 짝 없음',
-    '[필요한 것 — 사람마다]',
-    needs,
-    `[서로에게 맞는 풍수·물건 — 함께 옅은 ${label(ce.lowest)}] ${needsLine(ce.lowest)}`,
-    '',
-    `위 값을 여섯 토막으로 풀어 쓰세요. 머리말은 정확히 ${TOGETHER_SECTIONS.map((s) => `「${s}」`).join(' ')} 순서입니다. ① 서로의 오행: 각자의 넉넉한·옅은 기운이 함께 있을 때 어떤 결이 되는지 ② 장점: 서로 채우고 끌어 주는 자리(엔진의 이치 그대로, 새로 판정하지 말 것) ③ 단점: 부딪히거나 지치는 자리와 그것을 푸는 법, [조심할 것]의 짝은 여기서 «같은 팀이라도 이렇게 두세요»로 ④ 사람마다 이렇게: 사람마다 한 문단 — 같이 밥을 먹는 게 좋은지, 몸을 움직이는 게 좋은지, 쉬게 두는 게 좋은지 [사람마다] 판정 그대로 말하고, 왜 그런지(옅은 기운·넉넉한 기운·타고난 힘)를 붙이고, 해야 할 것 하나와 피할 것 하나 ⑤ 필요한 것: 위 물건·자리·색·방향을 그대로 부르며 누가 무엇을 곁에 두면 좋은지 ⑥ 이번 주 한 가지: 같이 할 한 가지. 사람을 고르거나 재는 말은 쓰지 않습니다.`,
-  ]
-    .filter((line) => line !== '')
-    .join('\n')
-}
-
 export interface NarrativeSection {
-  /** 머리말(다섯 중 하나). 머리말 없이 시작한 본문은 ''. */
+  /** 머리말(여섯 중 하나). 머리말 없이 시작한 본문은 ''. */
   heading: TogetherSection | ''
   body: string
 }
 
+const HEADING_NAMES: readonly string[] = [...TOGETHER_SECTIONS, ...Object.keys(TOGETHER_LEGACY_HEADINGS)]
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 const HEADING_LEAD = /^[\s「『[(#*\-•]+/
-const HEADING_TRAIL = /[\s」』\])：:.]+$/
-/** 「장점: …」「단점 — …」처럼 머리말 뒤에 구분 기호를 두고 본문이 같은 줄에 붙은 경우. 띄어쓰기만으로는 머리말이 아니다. */
-const INLINE_HEADING = new RegExp(`^(${TOGETHER_SECTIONS.join('|')})[」』\\])]*\\s*[:：—–-]\\s*(.+)$`)
+const HEADING_TRAIL = /[\s」』\])：:.*]+$/
+/** 「잘 맞는 점: …」「단점 — …」처럼 머리말 뒤에 구분 기호를 두고 본문이 같은 줄에 붙은 경우. 띄어쓰기만으로는 머리말이 아니다. */
+const INLINE_HEADING = new RegExp(`^(${HEADING_NAMES.map(escapeRe).join('|')})[」』\\])*]*\\s*[:：—–-]\\s*(.+)$`)
+
+/** 새 머리말이면 그대로, 39차까지의 옛 머리말이면 새 이름으로. 머리말이 아니면 null. */
+function canonicalHeading(s: string): TogetherSection | null {
+  const isSection = (x: string): x is TogetherSection => (TOGETHER_SECTIONS as readonly string[]).includes(x)
+  if (isSection(s)) return s
+  return TOGETHER_LEGACY_HEADINGS[s] ?? null
+}
 
 /** 함께 보기 본문 → 머리말별 토막. 머리말이 하나도 없으면 본문 한 덩이(옛 풀이 캐시 호환). */
 export function parseTogetherSections(text: string): NarrativeSection[] {
   const out: NarrativeSection[] = []
   let current: NarrativeSection | null = null
-  const isSection = (s: string): s is TogetherSection => (TOGETHER_SECTIONS as readonly string[]).includes(s)
   for (const raw of text.replace(/\r\n/g, '\n').split('\n')) {
     const line = raw.trim()
     if (!line) continue
     const lead = line.replace(HEADING_LEAD, '')
-    const bare = lead.replace(HEADING_TRAIL, '')
-    if (isSection(bare)) {
-      current = { heading: bare, body: '' }
+    const heading = canonicalHeading(lead.replace(HEADING_TRAIL, ''))
+    if (heading) {
+      current = { heading, body: '' }
       out.push(current)
       continue
     }
     const inline = lead.match(INLINE_HEADING)
-    if (inline && isSection(inline[1])) {
-      current = { heading: inline[1], body: inline[2].trim() }
+    const inlineHeading = inline ? canonicalHeading(inline[1]) : null
+    if (inline && inlineHeading) {
+      current = { heading: inlineHeading, body: inline[2].trim() }
       out.push(current)
       continue
     }
@@ -246,8 +238,8 @@ export function togetherFingerprint(ce: CircleEnergy): string {
     m: sorted.map((e) => `${e.targetId}:${e.yongsin}:${e.strongest}:${e.dayMaster ?? ''}:${e.vitality ?? ''}`),
     p: [...ce.pairs].map((pr) => `${[pr.aId, pr.bId].sort().join('-')}:${pr.label}`).sort(),
     l: ce.lowest,
-    // 여섯 토막(사람마다 이렇게) 판으로 바뀐 뒤의 캐시만 맞는다 — 옛 다섯 토막 풀이는 새로 짓는다.
-    v: 6,
+    // v7 — 쉬운 말 프롬프트(2026-09-14). 옛 판(어려운 말·합니다체) 풀이는 캐시로 내주지 않고 새로 짓는다.
+    v: 7,
   })
 }
 
@@ -264,11 +256,15 @@ export function circleFingerprint(ce: CircleEnergy): string {
 
 export type NarrativeCheck = { ok: true; text: string } | { ok: false; reason: string }
 
-/** 모델 출력 거르기 — 길이·금지어·점수. 통과한 본문만 저장한다. */
+/** 모델 출력 거르기 — 길이·금지어·점수(+ 함께 보기는 머리말·어려운 말). 통과한 본문만 저장한다. */
 export interface NarrativeCheckOptions {
-  /** 이 머리말들이 (하나 빠지는 것까지 봐주고) 본문에 서 있어야 한다 — 함께 보기의 다섯 토막. */
+  /** 이 머리말들이 (하나 빠지는 것까지 봐주고) 본문에 서 있어야 한다 — 함께 보기의 여섯 토막. */
   headings?: readonly string[]
   maxChars?: number
+  /** 어려운 말(결·옅다·일간·한자…)을 이만큼까지만 봐준다 — 넘으면 JARGON 으로 다시 쓴다. */
+  jargonMax?: number
+  /** 어려운 말 검사에서 먼저 지우는 말 — 사람 이름(«정재»·«한결»처럼 용어와 겹치는 이름). */
+  ignore?: readonly string[]
 }
 
 export function validateNarrative(raw: string, options: NarrativeCheckOptions = {}): NarrativeCheck {
@@ -286,6 +282,10 @@ export function validateNarrative(raw: string, options: NarrativeCheckOptions = 
     const found = new Set(parseTogetherSections(text).map((s) => s.heading))
     const present = options.headings.filter((h) => found.has(h as TogetherSection)).length
     if (present < options.headings.length - 1) return { ok: false, reason: 'HEADINGS' }
+  }
+  if (options.jargonMax !== undefined) {
+    const jargon = togetherJargonHits(text, options.ignore ?? [])
+    if (jargon.length > options.jargonMax) return { ok: false, reason: `JARGON:${jargon.slice(0, 5).join(',')}` }
   }
   return { ok: true, text }
 }

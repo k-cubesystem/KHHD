@@ -35,21 +35,40 @@ const PEOPLE = [
 ]
 const NEEDS = allElementNeeds()
 
-const FIVE = [
+/** 새 판(v2) 여섯 머리말 풀이. */
+const SIX = [
+  '한눈에 보면',
+  '나님은 불을 붙이는 성냥이고, 지영님은 그 불을 오래 지키는 난로 같아요.',
+  '',
+  '잘 맞는 점',
+  '나님이 먼저 시작하면 지영님이 활기를 더해 줘요.',
+  '',
+  '부딪히기 쉬운 점',
+  '둘 다 쉬는 시간이 짧아서 밤이 되면 지쳐요. 저녁엔 말을 줄이면 괜찮아요.',
+  '',
+  '사람마다 이렇게',
+  '나님은 조용히 기다려 주면 힘이 나요.',
+  '',
+  '곁에 두면 좋은 것',
+  '책상 위에 늘 두는 물컵을 둘 다 곁에 둬요. 북쪽에 어두운 색 소품 하나.',
+  '',
+  '이번 주에 해 볼 것',
+  '토요일 저녁에 같이 차 한 잔 해요.',
+].join('\n')
+
+/** 39차까지의 옛 머리말 풀이 — 30일 캐시·«최근 본 조합»에 남아 있을 수 있다. */
+const LEGACY = [
   '서로의 오행',
-  '넉넉한 나무와 넉넉한 불이 한자리에 있으면 자리가 데워집니다. 옅은 물은 둘 다 마르기 쉬운 자리입니다.',
+  '둘의 장면.',
   '',
   '장점',
-  '나무가 불을 낳으니 먼저 벌인 일을 밝게 드러내 주는 사이입니다.',
-  '',
-  '단점',
-  '둘 다 쉬는 결이 옅어 밤에 지칩니다. 말을 아끼는 시간을 같이 둡니다.',
+  '채워 주는 사이.',
   '',
   '필요한 것',
-  '책상 위에 늘 두는 물컵을 둘 다 곁에 둡니다. 북쪽에 어두운 색 소품 하나.',
+  '물컵.',
   '',
   '이번 주 한 가지',
-  '조용히 듣는 시간을 한 번 같이 둡니다.',
+  '같이 걷기.',
 ].join('\n')
 
 describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
@@ -77,12 +96,12 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     expect(screen.getByRole('button', { name: /두 명 이상 고르세요/ })).toBeDisabled()
   })
 
-  it('풀이는 다섯 머리말로 갈라 보이고, 아래에 사람마다 필요한 물건과 서로에게 맞는 풍수가 쿠팡 링크와 함께 선다', async () => {
+  it('풀이는 여섯 머리말로 갈라 보이고, 아래에 사람마다 필요한 물건과 서로에게 맞는 풍수가 쿠팡 링크와 함께 선다', async () => {
     generateNarrative.mockResolvedValue({
       success: true,
-      text: FIVE,
+      text: SIX,
       cached: false,
-      createdAt: '2026-09-13T00:00:00.000Z',
+      createdAt: '2026-09-14T00:00:00.000Z',
     })
     const links = {
       '책상 위에 늘 두는 물컵': 'https://link.coupang.com/a/water-cup',
@@ -90,12 +109,11 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     }
     const { container } = render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} shopLinks={links} />)
     fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
-    expect(await screen.findByRole('heading', { name: '장점' })).toBeInTheDocument()
-    for (const h of ['서로의 오행', '단점', '필요한 것', '이번 주 한 가지']) {
+    expect(await screen.findByRole('heading', { name: '잘 맞는 점' })).toBeInTheDocument()
+    for (const h of ['한눈에 보면', '부딪히기 쉬운 점', '사람마다 이렇게', '곁에 두면 좋은 것', '이번 주에 해 볼 것']) {
       expect(screen.getByRole('heading', { name: h })).toBeInTheDocument()
     }
     expect(generateNarrative).toHaveBeenCalledWith('together', 'self,b')
-    // 필요한 것 — 나(옅은 水)는 물컵, 지영(옅은 木)은 화분. 쿠팡 링크는 sponsored 로.
     expect(screen.getByText('필요한 것 — 물건과 자리')).toBeInTheDocument()
     const cup = screen.getAllByRole('link', { name: /책상 위에 늘 두는 물컵/ })[0]
     expect(cup.getAttribute('href')).toBe('https://link.coupang.com/a/water-cup')
@@ -106,10 +124,25 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     expect(container.textContent).not.toMatch(/\d+\s*점|\d+\s*%/)
   })
 
+  it('🔴 옛 머리말(서로의 오행·장점…)로 저장된 풀이도 새 머리말 이름으로 보인다', async () => {
+    generateNarrative.mockResolvedValue({
+      success: true,
+      text: LEGACY,
+      cached: true,
+      createdAt: '2026-09-10T00:00:00.000Z',
+    })
+    render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
+    fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
+    expect(await screen.findByRole('heading', { name: '잘 맞는 점' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '한눈에 보면' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '장점' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: '서로의 오행' })).toBeNull()
+  })
+
   it('풀이 아래 「함께 있을 때 이렇게」 — 고른 사람마다 밥·움직임·쉼 판정과 이유, 같은 팀이라도 조심할 짝이 선다', async () => {
     generateNarrative.mockResolvedValue({
       success: true,
-      text: FIVE,
+      text: SIX,
       cached: true,
       createdAt: '2026-09-14T00:00:00.000Z',
     })
@@ -174,12 +207,12 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} />)
     fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
     expect(await screen.findByText(/첫 문단입니다/)).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '장점' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: '잘 맞는 점' })).toBeNull()
   })
 
   it('최근 본 조합 — 이 화면 사람들로만 된 것만 보이고, 누르면 서버 없이 그 풀이가 열린다', () => {
     const recent = [
-      { ids: ['b', 'self'], names: ['지영', '나'], text: FIVE, createdAt: '2026-09-10T00:00:00.000Z' },
+      { ids: ['b', 'self'], names: ['지영', '나'], text: SIX, createdAt: '2026-09-10T00:00:00.000Z' },
       {
         ids: ['self', 'zzz'],
         names: ['나', '모르는 이'],
@@ -191,7 +224,7 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     expect(screen.getByText('최근 본 조합 — 다시 여는 데 복채가 들지 않습니다')).toBeInTheDocument()
     expect(screen.queryByText(/모르는 이/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /지영·나/ }))
-    expect(screen.getByRole('heading', { name: '장점' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '잘 맞는 점' })).toBeInTheDocument()
     expect(generateNarrative).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: /현우/, pressed: false })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /나·지영 함께 보기/ })).toBeInTheDocument()
@@ -207,6 +240,6 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
     await screen.findByRole('button', { name: /나·지영 함께 보기/ })
     expect(toast.error).toHaveBeenCalledWith('복채가 부족합니다.')
-    expect(screen.queryByRole('heading', { name: '장점' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: '잘 맞는 점' })).toBeNull()
   })
 })

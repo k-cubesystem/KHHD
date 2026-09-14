@@ -89,21 +89,19 @@ describe('프롬프트 — 엔진 값만 싣고 풀어 쓰라고만 한다', () 
     expect(prompt).toContain('사람을 새로 들이라는 말은 쓰지 않습니다')
   })
 
-  it('함께 보기 프롬프트는 사람·관계의 이치·필요한 것(물건·자리)·다섯 머리말 지시를 싣고 점수가 없다', () => {
+  it('함께 보기 프롬프트는 쉬운 말로 바꾼 데이터를 먼저 싣고 지시를 끝에 둔다 — 한자·점수 없음', () => {
     const prompt = togetherPrompt(CIRCLE)
-    expect(prompt).toContain('민수·지영 함께 보기(2명)')
-    expect(prompt).toContain('[서로의 관계 — 엔진 판정]')
-    expect(prompt).toContain('이치:')
-    expect(prompt).toContain('[필요한 것 — 사람마다]')
-    expect(prompt).toContain('[서로에게 맞는 풍수·물건')
-    expect(prompt).toContain('책상 위')
-    // 사람마다 밥·움직임·쉼 판정과 이유, 조심할 것(상극)이 재료로 들어간다
-    expect(prompt).toContain('[사람마다 — 함께 있을 때 어떻게')
-    expect(prompt).toContain('함께할 때 좋은 것 =')
-    expect(prompt).toContain('[같은 팀·가족이라도 조심할 것 — 상극]')
-    expect(prompt).toContain('여섯 토막으로 풀어 쓰세요')
-    for (const h of TOGETHER_SECTIONS) expect(prompt).toContain(`「${h}」`)
-    expect(prompt).toContain('사람을 고르거나 재는 말은 쓰지 않습니다')
+    expect(prompt.startsWith('<데이터>')).toBe(true)
+    expect(prompt).toContain('함께 보는 사람: 민수님·지영님 (2명)')
+    for (const block of ['[사람마다]', '[둘씩 보면]', '[같이 있을 때 조심할 것', '[다 같이 있을 때]']) {
+      expect(prompt).toContain(block)
+    }
+    expect(prompt).toContain('[곁에 둘 물건과 자리 — 이 목록에 있는 것만 써요]')
+    expect(prompt).toContain('같이 있을 때 맞는 방법:')
+    expect(prompt).toContain('거리가 약인 사이')
+    expect(prompt).toContain('책상에 둘 것:')
+    expect(prompt.trim().endsWith('첫 토막은 이 사람들을 생활 속 한 장면에 빗대어 시작해요.')).toBe(true)
+    expect(prompt).not.toMatch(/[一-鿿]/)
     expect(prompt).not.toMatch(/\d+\s*점|\d+\s*%/)
     // 시스템 프롬프트도 갈래에 따라 형식이 갈린다
     expect(systemPromptFor('together')).toContain('여섯 토막')
@@ -148,24 +146,37 @@ describe('지문(fingerprint) — 같은 입력이면 같고, 화면이 바뀌�
   })
 })
 
-describe('parseTogetherSections — 다섯 토막 가르기', () => {
-  const body = (h: string) => `${h} 토막의 본문입니다. 두 문장으로 씁니다.`
-  const five = TOGETHER_SECTIONS.map((h) => `${h}\n${body(h)}`).join('\n\n')
+describe('parseTogetherSections — 여섯 토막 가르기', () => {
+  const body = (h: string) => `${h} 토막의 본문이에요. 두 문장으로 써요.`
+  const six = TOGETHER_SECTIONS.map((h) => `${h}\n${body(h)}`).join('\n\n')
 
-  it('머리말 줄로 갈라 다섯 토막이 나온다', () => {
-    const sections = parseTogetherSections(five)
+  it('머리말 줄로 갈라 여섯 토막이 나온다', () => {
+    const sections = parseTogetherSections(six)
     expect(sections.map((s) => s.heading)).toEqual([...TOGETHER_SECTIONS])
-    expect(sections[1].body).toBe(body('장점'))
+    expect(sections[1].body).toBe(body('잘 맞는 점'))
   })
 
-  it('「장점: …」「단점 — …」처럼 한 줄에 붙은 것과 괄호 머리말도 가르고, 띄어쓰기만으로는 머리말로 보지 않는다', () => {
+  it('「잘 맞는 점: …」「부딪히기 쉬운 점 — …」·**굵은 머리말**도 가르고, 띄어쓰기만으로는 머리말로 보지 않는다', () => {
     const sections = parseTogetherSections(
-      '「서로의 오행」\n둘의 결.\n\n장점: 채워 주는 사이.\n장점 하나가 더 있습니다.\n\n단점 — 지치는 자리.'
+      '**한눈에 보면**\n둘의 장면.\n\n잘 맞는 점: 채워 주는 사이.\n잘 맞는 점 하나가 더 있어요.\n\n부딪히기 쉬운 점 — 지치는 자리.'
     )
-    expect(sections.map((s) => s.heading)).toEqual(['서로의 오행', '장점', '단점'])
-    expect(sections[0].body).toBe('둘의 결.')
-    expect(sections[1].body).toBe('채워 주는 사이.\n장점 하나가 더 있습니다.')
+    expect(sections.map((s) => s.heading)).toEqual(['한눈에 보면', '잘 맞는 점', '부딪히기 쉬운 점'])
+    expect(sections[0].body).toBe('둘의 장면.')
+    expect(sections[1].body).toBe('채워 주는 사이.\n잘 맞는 점 하나가 더 있어요.')
     expect(sections[2].body).toBe('지치는 자리.')
+  })
+
+  it('🔴 39차까지의 옛 머리말(서로의 오행·장점·필요한 것·이번 주 한 가지)은 새 이름으로 읽는다 — 30일 캐시에 남은 풀이', () => {
+    const sections = parseTogetherSections(
+      '「서로의 오행」\n둘의 장면.\n\n장점: 채워 주는 사이.\n\n필요한 것\n물컵.\n\n이번 주 한 가지\n같이 걷기.'
+    )
+    expect(sections.map((s) => s.heading)).toEqual([
+      '한눈에 보면',
+      '잘 맞는 점',
+      '곁에 두면 좋은 것',
+      '이번 주에 해 볼 것',
+    ])
+    expect(sections[1].body).toBe('채워 주는 사이.')
   })
 
   it('머리말이 없으면 본문 한 덩이(옛 풀이 캐시 호환)', () => {

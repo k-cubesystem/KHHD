@@ -11,19 +11,19 @@ import { UNLIMITED_BALANCE } from '@/lib/auth/privileges'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { generateAIContent } from '@/lib/services/ai-client'
 import { MODEL_FLASH } from '@/lib/config/ai-models'
-import { PREMIUM_PROSE_LAYER, TERM_DISCIPLINE } from '@/lib/ai/prose-quality'
 import { rateLimit } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/utils/logger'
 import { FAMILY_CIRCLE_ID, TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
 import {
   NARRATIVE_CACHE_DAYS,
   NARRATIVE_MAX_CHARS_TOGETHER,
+  TOGETHER_JARGON_MAX,
   TOGETHER_SECTIONS,
   circleFingerprint,
   circlePrompt,
+  narrativeRequestFor,
   prescriptionFingerprint,
   prescriptionPrompt,
-  systemPromptFor,
   togetherFingerprint,
   togetherPrompt,
   validateNarrative,
@@ -262,22 +262,27 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
       }
     }
 
-    const systemPrompt = [systemPromptFor(kind), TERM_DISCIPLINE, PREMIUM_PROSE_LAYER].join('\n\n')
+    // 시스템 프롬프트·온도·한도는 도메인 한 곳(narrativeRequestFor)이 정한다 — A/B 하네스와 같은 값.
+    const request = narrativeRequestFor(kind)
     const checkOptions =
-      kind === 'together' ? { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER } : undefined
+      kind === 'together'
+        ? {
+            headings: TOGETHER_SECTIONS,
+            maxChars: NARRATIVE_MAX_CHARS_TOGETHER,
+            jargonMax: TOGETHER_JARGON_MAX,
+            ignore: material.meta?.names ?? [],
+          }
+        : undefined
     let text: string | null = null
     let lastReason = ''
     for (let attempt = 0; attempt < 2 && !text; attempt++) {
       const ai = await generateAIContent({
         featureKey,
         actionType: featureKey,
-        systemPrompt,
-        userPrompt:
-          attempt === 0
-            ? material.prompt
-            : `${material.prompt}\n\n(지난 답은 «${lastReason}» 때문에 쓸 수 없었습니다. 규율을 지켜 다시 쓰세요.)`,
-        temperature: 0.7,
-        maxTokens: kind === 'together' ? 3000 : 1200,
+        systemPrompt: request.systemPrompt,
+        userPrompt: attempt === 0 ? material.prompt : `${material.prompt}\n\n${request.retryNote(lastReason)}`,
+        temperature: request.temperature,
+        maxTokens: request.maxTokens,
         userId: user.id,
       })
       const checked = validateNarrative(ai.text, checkOptions)
