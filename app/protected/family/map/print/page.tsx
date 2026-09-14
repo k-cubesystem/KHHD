@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { getCircleEnergy } from '@/app/actions/circle/energy'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
-import { canPrintTeamSheet } from '@/lib/domain/circle/print-access'
+import { canPrintTeamSheet, teamSheetDoor } from '@/lib/domain/circle/print-access'
 import { CirclePrintSheet } from '@/components/family/circle-print-sheet'
 
 export const metadata: Metadata = {
@@ -38,6 +38,7 @@ function Panel({ title, body, href, cta }: { title: string; body: string; href: 
 /**
  * 「우리 팀 기운 한 장」 — BUSINESS 전용 인쇄물(PRD-energy-circle §8: BUSINESS 에 처음 생기는 제 이름값).
  * 가족 게이트(레이아웃) 안이므로 비회원은 이미 걸러졌다. 여기서는 티어만 본다.
+ * 🔴 가족 지도 인쇄는 2026-09-14 에 없앴다 — 가족(circle 없음·family)으로 들어온 옛 링크는 지도로 돌려보낸다.
  */
 export default async function TeamSheetPage({ searchParams }: { searchParams: Promise<{ circle?: string }> }) {
   const { circle } = await searchParams
@@ -46,6 +47,7 @@ export default async function TeamSheetPage({ searchParams }: { searchParams: Pr
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
+  if (!circle || circle === FAMILY_CIRCLE_ID) redirect('/protected/family/map')
 
   const membership = await getCurrentUserMembership()
   if (!canPrintTeamSheet(membership?.tier)) {
@@ -59,7 +61,7 @@ export default async function TeamSheetPage({ searchParams }: { searchParams: Pr
     )
   }
 
-  const payload = await getCircleEnergy(circle && circle !== FAMILY_CIRCLE_ID ? circle : FAMILY_CIRCLE_ID)
+  const payload = await getCircleEnergy(circle)
   if (!payload) {
     return (
       <Panel
@@ -70,6 +72,8 @@ export default async function TeamSheetPage({ searchParams }: { searchParams: Pr
       />
     )
   }
+
+  if (teamSheetDoor(payload.circle.kind, membership?.tier) !== 'print') redirect('/protected/family/map')
 
   const printedAt = new Intl.DateTimeFormat('ko-KR', { dateStyle: 'long', timeZone: 'Asia/Seoul' }).format(new Date())
   return <CirclePrintSheet payload={payload} printedAt={printedAt} />

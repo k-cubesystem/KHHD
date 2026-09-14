@@ -12,6 +12,7 @@ import { highestElement } from '@/lib/domain/shrine/energy-map'
 import { NODE_MAP } from '@/lib/data/saju-knowledge-graph'
 import { CIRCLE_KIND_META } from '@/lib/domain/circle/circle'
 import { ELEMENT_PLAIN, type ElementNeeds } from '@/lib/domain/circle/element-lore'
+import type { TeamSheetDoor } from '@/lib/domain/circle/print-access'
 import type { CircleEnergy } from '@/lib/domain/circle/team-energy'
 import type { CircleEnergyPayload } from '@/app/actions/circle/energy'
 import type { RecentTogether } from '@/app/actions/circle/narrative'
@@ -209,8 +210,8 @@ export function CircleEnergyMapView({
   shopLinks = {},
 }: {
   payload: CircleEnergyPayload
-  /** 「기운 한 장」 문 — BUSINESS 은 인쇄 링크, 다른 유료 티어는 업셀 한 줄, 숨김. */
-  sheet?: 'print' | 'upsell' | 'hidden'
+  /** 「기운 한 장」 문 — 정하는 곳은 teamSheetDoor(가족 지도는 숨김, 팀 그룹은 BUSINESS 인쇄 링크·그 밖은 업셀 한 줄). */
+  sheet?: TeamSheetDoor
   /** 최근 본 함께 보기 조합(30일 안) — 이 화면의 사람들로만 이루어진 것이 걸러져 보인다. */
   recentTogether?: readonly RecentTogether[]
   /** 다섯 기운의 물건·자리(서버 계산). */

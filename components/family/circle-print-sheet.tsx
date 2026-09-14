@@ -14,6 +14,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
 /**
  * 「우리 팀 기운 한 장」 — 그룹 전원의 «모자란 기운 · 책상 위 한 가지 · 집 안 · 선물 셋 · 앉는 방향» 표(A4).
  * BUSINESS 전용(PRD-energy-circle §3-5 인쇄 층). 팀장이 뽑아서 책상마다 놓는 실물 행동을 앱이 문서로 만든다.
+ * 🔴 팀 그룹만 온다 — 가족 지도 인쇄는 2026-09-14 에 없앴다(teamSheetDoor).
  *
  * 종이는 밝다 — 앱은 먹빛이지만 이 화면은 인쇄물이라 종이색으로 그린다(의도적 단일 테마).
  * 🔴 점수·순위 없음. 직장 그룹은 고지가 종이에도 찍힌다.
@@ -52,7 +53,7 @@ export function CirclePrintSheet({ payload, printedAt }: { payload: CircleEnergy
 
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link
-          href={circle.id === 'family' ? '/protected/family/map' : `/protected/family/map?circle=${circle.id}`}
+          href={`/protected/family/map?circle=${circle.id}`}
           className="inline-flex items-center gap-1 font-serif text-[12px] text-ink-light/50 hover:text-gold-300"
         >
           <ChevronLeft className="h-4 w-4" />

@@ -7,7 +7,7 @@ import { getRecentTogether } from '@/app/actions/circle/narrative'
 import { getShopLinks } from '@/app/actions/circle/shop-links'
 import { FAMILY_CIRCLE_ID } from '@/lib/domain/circle/circle'
 import { allElementNeeds, allNeedKeywords } from '@/lib/domain/circle/element-lore'
-import { canPrintTeamSheet } from '@/lib/domain/circle/print-access'
+import { teamSheetDoor } from '@/lib/domain/circle/print-access'
 import { getCurrentUserMembership } from '@/lib/auth/subscription'
 import { CircleEnergyMapView } from '@/components/family/circle-energy-map'
 
@@ -82,7 +82,7 @@ export default async function FamilyEnergyMapPage({ searchParams }: { searchPara
   return (
     <CircleEnergyMapView
       payload={payload}
-      sheet={canPrintTeamSheet(membership?.tier) ? 'print' : 'upsell'}
+      sheet={teamSheetDoor(payload.circle.kind, membership?.tier)}
       recentTogether={recentTogether}
       needs={allElementNeeds()}
       shopLinks={shopLinks}

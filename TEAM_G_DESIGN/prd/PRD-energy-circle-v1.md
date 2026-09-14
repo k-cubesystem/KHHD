@@ -4,7 +4,7 @@
 상태: DRAFT — 결정 큐 7건(§12) 회신 후 P0 착수 가능
 선행: 허브 「우리 가족 기운 지도」 배너(e9c4ccbd, 28차) · 가족 기운 지도(`/protected/family/map`) · 개운 처방 엔진(`lib/domain/remedy/remedy.ts`)
 쌍둥이 문서: `TEAM_G_DESIGN/architecture/ARCH-energy-circle-v1.md`
-후속: **지도 층은 `PRD-family-map-v2.md`(2026-09-12)가 대체** — 팩트만·오각형·복채 AI 유도·둘·셋·넷 함께 보기. 처방전·선물·인쇄물은 이 문서 그대로.
+후속: **지도 층은 `PRD-family-map-v2.md`(2026-09-12)가 대체** — 팩트만·오각형·복채 AI 유도·둘·셋·넷 함께 보기. 처방전·선물·인쇄물은 이 문서 그대로. 🔴 2026-09-14(42차): 가족 지도의 인쇄 문은 뺐다 — 「우리 팀 기운 한 장」은 팀 그룹(BUSINESS)에만 남는다.
 
 > 코드 실측 기반 — 모든 경로는 2026-09-04 `claude/determined-yonath` 기준. **이번 세션은 설계만, 코드 없음.**
 
