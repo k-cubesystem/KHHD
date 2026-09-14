@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-14(43차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-14(44차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,26 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(44차 · 2026-09-14) 그룹에 사람 넣기 복구 + 가족·인연 관리 «가족관리·지인관리·그룹만들기» 개편 — 프로덕션 라이브(`097b82bd` → 배포 `hhd-o2c5coipw`):**
+
+CEO: 「가족인연관리 그룹관리에서 사람 추가가 안 되네 — 분석해서 해결 / 가족관리·지인관리·그룹만들기로 구분 / 가족관리·지인관리는 한 줄, 그룹만들기는 아래에 설명글」.
+
+- 🔴 **근본 원인(운영 실측)**: `addCircleMember` 가 `circle_members` 에 `upsert(onConflict: circle_id,member_id)` 를 썼다. PostgREST 는
+  `ON CONFLICT DO UPDATE SET` 에 기본 키 칸까지 넣는데, 마이그레이션(`20260904_energy_circles.sql`)이 authenticated 에 `UPDATE (role, consent_at)` 만
+  칸 단위로 줘서 **매번 42501 permission denied** — 출시(09-04) 뒤 `circle_members` 는 **0행**이었다. 증거: 운영 postgres_logs 의 같은 오류 4건(CEO 시도 시각),
+  `set local role authenticated` 트랜잭션 재현(upsert 형태=권한 거부 / 순수 insert=RLS 에서만 막힘, 둘 다 롤백).
+- 수정: 순수 `insert` + 기본 키 중복(23505)은 성공으로 본다. 🔴 UPDATE 권한을 넓히는 길은 막았다 — update 정책이 사람 소유를 보지 않아 남의 인연을 꽂는 IDOR 가 된다.
+  🔴 칸 단위 GRANT 가 걸린 표(shrines·circles·circle_members)에는 upsert 금지. 회귀 테스트 `app/actions/circle/__tests__/circles-add-member.test.ts`(수정 전 실패 확인).
+- 같은 화면에서 함께 찾은 결함 둘(재현 뒤 수정): ① 목록이 `useState(initialMembers)` 로 굳어 `router.refresh` 뒤에도 안 바뀌었다 — 등록·수정·삭제가 새로 고침 전까지
+  안 보였다 → props 에서 바로 만든다. ② 등록·수정 폼이 `member_category` 를 안 실어 서버가 가족으로 저장했다 — 지인 탭에서 등록해도 가족, **지인을 수정하면 가족으로
+  옮겨졌다** → 폼에 갈래 고르기(가족/지인) + hidden input.
+- 화면(`family-page-client.tsx`): 한 줄 «가족관리 N · 지인관리 N» + 아래 «그룹만들기» 카드(안내 한 줄·내 그룹 수). 위 추가 단추는 탭을 따라 «가족 추가/지인 추가»
+  (그룹만들기에서는 숨김). 관계 목록은 갈래에 맞는 것만(값은 예전 그대로). 기운 지도 입구 인원은 가족만 센다(지도는 가족만 올린다).
+- 그룹 패널(`circle-panel.tsx`): 가족 가상 카드 삭제(가족은 가족관리), «그룹은 이렇게 만들어요» 3단계 안내, 넣을 사람이 없으면 «아직 등록한 사람이 없어요» + «새 사람
+  등록하기»(지인 등록 폼), 있으면 «넣을 사람 고르기» + «그룹에 넣기» + «목록에 없는 사람은 새로 등록하기». 예전엔 사람이 0명이어도 «등록된 인연이 모두 이 그룹에 들어
+  있습니다»라고 떴다.
+- 테스트: `components/family/__tests__/family-page-client.test.tsx`(7) · 회귀(3). 검증: jest 4,875 · tsc · eslint 0 · build · 정적 촬영(430px).
 
 **(43차 · 2026-09-14) 팀 그룹 «기운 한 장» 인쇄도 제거 — 인쇄 기능 전체 삭제 — 프로덕션 라이브(`c06786d9` → 배포 `hhd-fnhak7ps7`):**
 
