@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronRight, Plus, Trash2, UserMinus } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,7 +29,10 @@ import {
 import { trackEvent } from '@/lib/analytics/ga4'
 
 /**
- * 「그룹」 탭 — 가족(가상)과 내가 만든 그룹들. 만들기 · 사람 넣기/빼기 · 지우기 · 기운 지도 문.
+ * 「그룹만들기」 — 직장·모임처럼 내가 묶는 그룹. 만들기 · 사람 넣기/빼기 · 지우기 · 기운 지도 문.
+ *
+ * 가족은 여기 두지 않는다(CEO 2026-09-14 「가족관리·지인관리·그룹만들기로 구분」). 가족 그룹은 가족관리 목록 그대로이고,
+ * 가족 기운 지도는 위 입구에서 연다. 넣을 사람은 가족관리·지인관리에 등록된 사람이다 — 목록에 없으면 «새 사람 등록»으로 먼저 등록한다.
  *
  * 상한·동의는 서버가 판정한다. 여기서는 결과를 말로 옮길 뿐이다.
  * 🔴 «무제한» 같은 말은 쓰지 않는다 — 상한은 숫자로 말한다(표시광고법 규율).
@@ -38,7 +41,7 @@ import { trackEvent } from '@/lib/analytics/ga4'
 const MEMBERSHIP_HREF = '/protected/store?tab=membership'
 
 function mapHref(circleId: string): string {
-  return circleId === 'family' ? '/protected/family/map' : `/protected/family/map?circle=${circleId}`
+  return `/protected/family/map?circle=${circleId}`
 }
 
 function errorMessage(error: CircleError, overview: CirclesOverview): string {
@@ -58,7 +61,7 @@ function errorMessage(error: CircleError, overview: CirclesOverview): string {
     case 'CONSENT_REQUIRED':
       return '직장 그룹에는 본인 동의를 받은 사람만 넣을 수 있습니다.'
     case 'NOT_FOUND':
-      return '그룹나 사람을 찾지 못했습니다. 화면을 새로 고쳐 주세요.'
+      return '그룹이나 사람을 찾지 못했습니다. 화면을 새로 고쳐 주세요.'
     default:
       return '잠시 뒤 다시 시도해 주세요.'
   }
@@ -66,7 +69,7 @@ function errorMessage(error: CircleError, overview: CirclesOverview): string {
 
 function KindBadge({ kind }: { kind: CircleKind }) {
   return (
-    <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-[1px] font-sans text-[10.5px] text-ink-light/55">
+    <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-[1px] font-sans text-[10.5px] text-ink-light/60">
       {CIRCLE_KIND_META[kind].label}
     </span>
   )
@@ -76,10 +79,12 @@ function CircleCard({
   circle,
   overview,
   onChanged,
+  onRegisterPerson,
 }: {
   circle: CircleDetail
   overview: CirclesOverview
   onChanged: () => void
+  onRegisterPerson?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -118,7 +123,7 @@ function CircleCard({
           />
           <span className="truncate font-serif text-[14px] font-bold text-ink-light">{circle.name}</span>
           <KindBadge kind={circle.kind} />
-          <span className="shrink-0 text-[11px] tabular-nums text-ink-light/45">{circle.members.length + 1}명</span>
+          <span className="shrink-0 text-[11px] tabular-nums text-ink-light/55">{circle.members.length + 1}명</span>
         </button>
         <Link
           href={mapHref(circle.id)}
@@ -140,14 +145,14 @@ function CircleCard({
           <ul className="space-y-1.5">
             <li className="flex items-center justify-between text-[12px] text-ink-light/70">
               <span>
-                나 <span className="text-ink-light/35">· 모든 그룹에 들어 있습니다</span>
+                나 <span className="text-ink-light/55">· 모든 그룹에 들어 있습니다</span>
               </span>
             </li>
             {circle.members.map((m) => (
               <li key={m.memberId} className="flex items-center justify-between gap-2 text-[12px]">
                 <span className="min-w-0 truncate text-ink-light/85">
-                  {m.name} <span className="text-ink-light/40">· {m.relationship}</span>
-                  {m.role && <span className="text-ink-light/40"> · {m.role}</span>}
+                  {m.name} <span className="text-ink-light/55">· {m.relationship}</span>
+                  {m.role && <span className="text-ink-light/55"> · {m.role}</span>}
                   {m.consentAt && <span className="ml-1 text-[10px] text-gold-300/70">동의</span>}
                 </span>
                 <button
@@ -161,7 +166,7 @@ function CircleCard({
                     )
                   }
                   aria-label={`${m.name} 빼기`}
-                  className="shrink-0 rounded-md border border-white/10 p-1 text-ink-light/45 hover:text-ink-light disabled:opacity-40"
+                  className="shrink-0 rounded-md border border-white/10 p-1 text-ink-light/55 hover:text-ink-light disabled:opacity-40"
                 >
                   <UserMinus className="h-3.5 w-3.5" />
                 </button>
@@ -169,64 +174,84 @@ function CircleCard({
             ))}
           </ul>
 
-          {candidates.length > 0 ? (
-            <div className="space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
-              <div className="grid grid-cols-[1fr_88px] gap-2">
-                <Select value={pickId} onValueChange={setPickId}>
-                  <SelectTrigger className="h-9 border-white/10 bg-black/30 text-[12px]">
-                    <SelectValue placeholder="넣을 사람" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {candidates.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} · {p.relationship}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  maxLength={20}
-                  placeholder="자리(선택)"
-                  className="h-9 bg-black/20 text-[12px]"
-                />
-              </div>
-              <label className="flex cursor-pointer items-start gap-2">
-                <Checkbox
-                  checked={consent}
-                  onCheckedChange={(v) => setConsent(v === true)}
-                  className="mt-0.5 border-gold-500/60"
-                />
-                <span className="text-[10.5px] leading-snug text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
-                  {CONSENT_TEXT}
-                  {meta.consentRequired && <b className="ml-1 text-gold-300/80">(직장 그룹은 필수)</b>}
-                </span>
-              </label>
-              <Button
+          <div className="space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-2.5">
+            <p className="text-[11.5px] font-bold text-ink-light/80">사람 넣기</p>
+            {candidates.length > 0 ? (
+              <>
+                <div className="grid grid-cols-[1fr_88px] gap-2">
+                  <Select value={pickId} onValueChange={setPickId}>
+                    <SelectTrigger className="h-9 border-white/10 bg-black/30 text-[12px]" aria-label="넣을 사람">
+                      <SelectValue placeholder="넣을 사람 고르기" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {candidates.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} · {p.relationship}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    maxLength={20}
+                    placeholder="자리(선택)"
+                    className="h-9 bg-black/20 text-[12px]"
+                  />
+                </div>
+                <label className="flex cursor-pointer items-start gap-2">
+                  <Checkbox
+                    checked={consent}
+                    onCheckedChange={(v) => setConsent(v === true)}
+                    className="mt-0.5 border-gold-500/60"
+                  />
+                  <span className="text-[10.5px] leading-snug text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
+                    {CONSENT_TEXT}
+                    {meta.consentRequired && <b className="ml-1 text-gold-300/80">(직장 그룹은 필수)</b>}
+                  </span>
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={pending || !pickId}
+                  onClick={() =>
+                    handle(
+                      () => addCircleMember({ circleId: circle.id, memberId: pickId, consent, role }),
+                      '그룹에 넣었습니다.',
+                      'circle_member_add',
+                      () => {
+                        setPickId('')
+                        setRole('')
+                        setConsent(false)
+                      }
+                    )
+                  }
+                  className="h-8 w-full bg-gold-500 text-[12px] text-black hover:bg-gold-500/80"
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" /> 그룹에 넣기
+                </Button>
+              </>
+            ) : (
+              <p className="text-[11px] leading-relaxed text-ink-light/60" style={{ wordBreak: 'keep-all' }}>
+                {overview.people.length === 0
+                  ? '아직 등록한 사람이 없어요. 새 사람을 먼저 등록하면 이 그룹에 넣을 수 있어요.'
+                  : '등록한 사람이 모두 이 그룹에 들어 있어요.'}
+              </p>
+            )}
+            {onRegisterPerson && (
+              <button
                 type="button"
-                size="sm"
-                disabled={pending || !pickId}
-                onClick={() =>
-                  handle(
-                    () => addCircleMember({ circleId: circle.id, memberId: pickId, consent, role }),
-                    '그룹에 넣었습니다.',
-                    'circle_member_add',
-                    () => {
-                      setPickId('')
-                      setRole('')
-                      setConsent(false)
-                    }
-                  )
-                }
-                className="h-8 w-full bg-gold-500 text-[12px] text-black hover:bg-gold-500/80"
+                onClick={() => {
+                  trackEvent({ action: 'circle_register_person', category: 'engagement', label: circle.kind })
+                  onRegisterPerson()
+                }}
+                className="inline-flex items-center gap-1 text-[11.5px] text-gold-300 hover:text-gold-200"
               >
-                <Plus className="mr-1 h-3.5 w-3.5" /> 넣기
-              </Button>
-            </div>
-          ) : (
-            <p className="text-[11px] text-ink-light/40">등록된 인연이 모두 이 그룹에 들어 있습니다.</p>
-          )}
+                <UserPlus className="h-3.5 w-3.5" />
+                {candidates.length > 0 ? '목록에 없는 사람은 새로 등록하기' : '새 사람 등록하기'}
+              </button>
+            )}
+          </div>
 
           <button
             type="button"
@@ -235,7 +260,7 @@ function CircleCard({
               if (!confirm(`「${circle.name}」 그룹을 지울까요? 사람 정보는 남고 그룹만 사라집니다.`)) return
               handle(() => deleteCircle(circle.id), '그룹을 지웠습니다.', 'circle_delete')
             }}
-            className="inline-flex items-center gap-1 text-[11px] text-ink-light/40 hover:text-seal-light disabled:opacity-40"
+            className="inline-flex items-center gap-1 text-[11px] text-ink-light/55 hover:text-seal-light disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" /> 그룹 지우기
           </button>
@@ -245,7 +270,14 @@ function CircleCard({
   )
 }
 
-export function CirclePanel({ overview }: { overview: CirclesOverview }) {
+export function CirclePanel({
+  overview,
+  onRegisterPerson,
+}: {
+  overview: CirclesOverview
+  /** 그룹에 넣을 사람이 목록에 없을 때 — 가족·인연 등록 폼을 연다. */
+  onRegisterPerson?: () => void
+}) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [formOpen, setFormOpen] = useState(false)
@@ -264,7 +296,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
         }
         return
       }
-      toast.success('그룹을 만들었습니다. 사람을 넣어 보세요.')
+      toast.success('그룹을 만들었습니다. 그룹을 눌러 사람을 넣어 보세요.')
       trackEvent({ action: 'circle_create', category: 'engagement', label: kind })
       setName('')
       setFormOpen(false)
@@ -273,29 +305,29 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
   }
 
   return (
-    <section aria-label="그룹 목록" className="space-y-3">
-      <p className="px-1 text-[11px] leading-relaxed text-ink-light/50" style={{ wordBreak: 'keep-all' }}>
-        그룹은 기운을 나란히 볼 사람들의 묶음입니다. 가족은 등록된 대로 한 그룹이고, 직장·모임은 직접 만듭니다. 한
-        사람이 여러 그룹에 들어갈 수 있습니다.
-      </p>
-
-      {/* 가족 — 가상 그룹 */}
-      <div className="flex items-center gap-2 rounded-xl border border-gold-500/25 bg-gold-500/[0.05] px-3.5 py-3">
-        <span className="min-w-0 flex-1 truncate font-serif text-[14px] font-bold text-ink-light">
-          우리 {overview.family.name}
-        </span>
-        <KindBadge kind="family" />
-        <span className="shrink-0 text-[11px] tabular-nums text-ink-light/45">{overview.family.memberCount}명</span>
-        <Link
-          href={mapHref('family')}
-          className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-gold-500/35 bg-gold-500/[0.08] px-2.5 py-1.5 font-serif text-[11.5px] text-gold-300 hover:bg-gold-500/[0.14]"
-        >
-          기운 지도 <ChevronRight className="h-3.5 w-3.5" />
-        </Link>
+    <section aria-label="그룹만들기" className="space-y-3">
+      <div className="space-y-1.5 rounded-xl border border-gold-500/20 bg-gold-500/[0.04] px-3.5 py-3">
+        <p className="font-serif text-[13px] font-bold text-gold-200">그룹은 이렇게 만들어요</p>
+        <ol className="space-y-1 text-[11.5px] leading-relaxed text-ink-light/70" style={{ wordBreak: 'keep-all' }}>
+          <li>① 아래 «새 그룹 만들기»로 그룹을 만들어요. 직장·모임·직접 이름 중에서 골라요.</li>
+          <li>
+            ② 그룹을 눌러 펼치고, 가족관리·지인관리에 등록한 사람을 넣어요. 목록에 없는 사람은 새로 등록하면 돼요.
+          </li>
+          <li>③ «기운 지도»에서 그룹 사람들의 기운을 한 사람씩 보고, AI 함께 보기로 서로의 기운을 풀어요.</li>
+        </ol>
+        <p className="text-[10.5px] leading-relaxed text-ink-light/55">
+          한 사람이 여러 그룹에 들어갈 수 있고, 나는 모든 그룹에 들어 있어요.
+        </p>
       </div>
 
+      {overview.circles.length === 0 && (
+        <p className="rounded-xl border border-dashed border-white/10 bg-surface/10 py-6 text-center text-[12px] text-ink-light/55">
+          아직 만든 그룹이 없어요.
+        </p>
+      )}
+
       {overview.circles.map((c) => (
-        <CircleCard key={c.id} circle={c} overview={overview} onChanged={refresh} />
+        <CircleCard key={c.id} circle={c} overview={overview} onChanged={refresh} onRegisterPerson={onRegisterPerson} />
       ))}
 
       {/* 만들기 */}
@@ -323,7 +355,7 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
               </SelectContent>
             </Select>
           </div>
-          <p className="text-[10.5px] leading-snug text-ink-light/45" style={{ wordBreak: 'keep-all' }}>
+          <p className="text-[10.5px] leading-snug text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
             {CIRCLE_KIND_META[kind].hint}
           </p>
           <div className="flex gap-2">
@@ -354,8 +386,8 @@ export function CirclePanel({ overview }: { overview: CirclesOverview }) {
           onClick={() => setFormOpen(true)}
           className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold-500/30 bg-gold-500/[0.03] py-3 font-serif text-[13px] text-gold-300 hover:bg-gold-500/[0.08]"
         >
-          <Plus className="h-4 w-4" /> 그룹 만들기
-          <span className="font-sans text-[10.5px] text-ink-light/40">
+          <Plus className="h-4 w-4" /> 새 그룹 만들기
+          <span className="font-sans text-[10.5px] text-ink-light/55">
             ({overview.circles.length}/{overview.limits.maxCircles})
           </span>
         </button>

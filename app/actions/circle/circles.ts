@@ -249,16 +249,17 @@ export async function addCircleMember(input: {
   if ((count ?? 0) >= circleLimits(membership.tier).maxMembers) return { success: false, error: 'LIMIT_MEMBERS' }
 
   const role = input.role?.replace(/\s+/g, ' ').trim().slice(0, 20) || null
-  const { error } = await supabase.from('circle_members').upsert(
-    {
-      circle_id: circle.id,
-      member_id: input.memberId,
-      role,
-      consent_at: input.consent ? new Date().toISOString() : null,
-    },
-    { onConflict: 'circle_id,member_id' }
-  )
-  if (error) {
+  // 🔴 upsert 금지 — PostgREST 는 ON CONFLICT DO UPDATE SET 에 circle_id·member_id 까지 넣는데 authenticated 의 UPDATE 권한은
+  //    role·consent_at 뿐이라 매번 42501(permission denied)로 막혔다(2026-09-14 운영 로그 실측, 그때까지 0건).
+  //    UPDATE 권한을 넓히면 update 정책이 사람 소유를 보지 않아 남의 인연을 꽂을 수 있다 — 그래서 순수 insert 로 넣는다.
+  const { error } = await supabase.from('circle_members').insert({
+    circle_id: circle.id,
+    member_id: input.memberId,
+    role,
+    consent_at: input.consent ? new Date().toISOString() : null,
+  })
+  // 이미 들어 있는 사람(기본 키 중복)은 넣은 것과 같다 — 두 번 눌러도 오류가 아니다.
+  if (error && error.code !== '23505') {
     logger.error('[circles] 사람 넣기 실패:', error.message)
     return { success: false, error: 'DB_ERROR' }
   }
