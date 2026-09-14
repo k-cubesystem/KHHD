@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-14(41차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-14(42차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,22 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(42차 · 2026-09-14) 가족 지도 «우리 가족 기운 한 장» 인쇄 문 제거 — 프로덕션 라이브(`1394acf3` → 배포 `hhd-mtoj67c4x`):**
+
+CEO: 「우리가족 기운한장 인쇄 기능은 없애줘」. 기획서 `PRD-family-map-v2.md §6-4`.
+
+- 인쇄 문은 가족 지도와 팀 그룹 지도가 같이 쓰는 `CircleEnergyMapView` 한 곳에 있었다(BUSINESS 는 «{이름} 기운 한 장 — 자리마다 놓을 표 인쇄»,
+  그 밖의 멤버십은 BUSINESS 업셀 한 줄). 원래 설계(`PRD-energy-circle-v1` §3-5)는 **팀용 BUSINESS 인쇄물**인데 지도 화면을 공유하면서
+  가족 지도에도 붙어 있었다.
+- 결정 한 곳 `teamSheetDoor(kind, tier)`(`lib/domain/circle/print-access.ts`): 가족 → 숨김(모든 티어), 팀 그룹 → BUSINESS·마스터는 인쇄 링크,
+  그 밖은 업셀. 지도 페이지는 이것만 따른다.
+- 인쇄 페이지(`/protected/family/map/print`): circle 이 없거나 family 면 지도로 redirect(옛 링크·즐겨찾기), 문이 'print' 가 아닌 조합도
+  redirect. 인쇄 표 뒤로가기의 가족 분기는 지웠다.
+- 🔴 **팀 그룹의 BUSINESS 인쇄는 남겼다** — CEO 가 짚은 것은 «우리 가족». 팀용까지 없애려면 `teamSheetDoor` 가 늘 hidden 을 돌려주게 하고
+  인쇄 페이지·`circle-print-sheet.tsx`·`print-access.ts` 를 지우면 된다. 멤버십 혜택 문구에는 인쇄 약속이 없다(grep 확인).
+- 테스트: `print-access.test.ts`(가족은 모든 티어 숨김, 팀 그룹은 그대로) · 지도 컴포넌트(가족 지도에 «기운 한 장·인쇄» 글자와 인쇄 링크가 없고,
+  팀 그룹 BUSINESS 링크는 선다). 검증: jest 4,871 · tsc · eslint 0 · build.
 
 **(41차 · 2026-09-14) 함께 보기 AI 풀이 프롬프트 v2 — 쉬운 해요체·생활 비유·물건은 «떠올리는 신호» — 프로덕션 라이브(`4b894097` → 배포 `hhd-7zkt8khi8`):**
 
