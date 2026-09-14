@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-14(42차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-14(43차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,18 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(43차 · 2026-09-14) 팀 그룹 «기운 한 장» 인쇄도 제거 — 인쇄 기능 전체 삭제 — 프로덕션 라이브(`c06786d9` → 배포 `hhd-fnhak7ps7`):**
+
+CEO: 「팀 그룹 인쇄도 없애줘」(42차에서 남긴 팀 그룹 BUSINESS 인쇄). 기획서 `PRD-family-map-v2.md §6-4`.
+
+- 삭제: `app/protected/family/map/print/page.tsx` · `components/family/circle-print-sheet.tsx` · `lib/domain/circle/print-access.ts`(+테스트).
+  지도(`circle-energy-map.tsx`)의 `sheet` prop·인쇄 링크·BUSINESS 업셀 한 줄, 지도 페이지의 멤버십 조회(문 판정에만 쓰였다)도 뺐다.
+  GA 이벤트 `team_sheet_open`·`team_sheet_view`·`team_sheet_print`·`business_gate_view` 는 더 이상 나가지 않는다.
+- 옛 인쇄 링크: `next.config.ts` redirects 에 `/protected/family/map/print` → `/protected/family/map`(307, `?circle=` 유지).
+  🔴 되살릴 수 있는 기능이라 영구(308)가 아닌 임시(307) — 브라우저가 308 을 오래 기억한다.
+- 되살리려면 이 커밋을 `git revert` 한다(redirect 한 줄도 같이 빠진다). 멤버십 혜택 문구에는 인쇄 약속이 없었다(grep 확인).
+- 테스트: 지도 컴포넌트 — 가족·팀 그룹 어느 지도에도 «기운 한 장·인쇄» 글자와 인쇄 링크가 없다. 검증: jest 4,865 · tsc · eslint 0 · build.
 
 **(42차 · 2026-09-14) 가족 지도 «우리 가족 기운 한 장» 인쇄 문 제거 — 프로덕션 라이브(`1394acf3` → 배포 `hhd-mtoj67c4x`):**
 
