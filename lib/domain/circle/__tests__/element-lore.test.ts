@@ -1,12 +1,16 @@
 import { ELEMENTS, EL_KO } from '@/lib/domain/shrine/energy'
 import {
+  ACTIVITY_LABEL,
+  CAUTION_OF,
   CHILD_OF,
   CONTROLS,
+  ELEMENT_CARE,
   ELEMENT_LORE,
   ELEMENT_PLAIN,
   HANJA_OF,
   LORE_BANNED_WORDS,
   MOTHER_OF,
+  RICH_AVOID,
   ROLE_PEOPLE,
   bannedWordsIn,
   elementFromHanja,
@@ -111,6 +115,15 @@ describe('금지어 목록', () => {
     for (const people of Object.values(ROLE_PEOPLE)) {
       expect({ people, hits: bannedWordsIn(people) }).toEqual({ people, hits: [] })
       expect(people.endsWith('사람')).toBe(true)
+    }
+    // 함께 있을 때 이렇게 — 사람마다 자리·이유·해야/피할 것, 조심할 것 문장(이름을 넣어 만든다)
+    for (const el of ELEMENTS) {
+      const care = ELEMENT_CARE[el]
+      for (const text of [care.together, care.do, care.why, RICH_AVOID[el], CAUTION_OF[el]('가', '나')]) {
+        expect({ text, hits: bannedWordsIn(text) }).toEqual({ text, hits: [] })
+        expect(text).not.toMatch(/절대|금지|하지 마/)
+      }
+      expect(ACTIVITY_LABEL[care.kind]).toBeTruthy()
     }
   })
 })

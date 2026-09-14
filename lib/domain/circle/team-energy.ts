@@ -16,7 +16,18 @@ import type { Element } from '@/lib/domain/shrine/types'
 import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { averageEnergy, findComplements, lowestElement, type EnergyHolder } from '@/lib/domain/shrine/energy-map'
 import { REMEDY_TABLE, SIPSEONG_GROUPS, type SipseongGroupKey } from '@/lib/domain/remedy/remedy'
-import { CONTROLS, ELEMENT_LORE, HANJA_OF, MOTHER_OF, ROLE_PEOPLE } from './element-lore'
+import {
+  ACTIVITY_LABEL,
+  CAUTION_OF,
+  CONTROLS,
+  ELEMENT_CARE,
+  ELEMENT_LORE,
+  HANJA_OF,
+  MOTHER_OF,
+  RICH_AVOID,
+  ROLE_PEOPLE,
+  type ActivityKind,
+} from './element-lore'
 import { CIRCLE_KIND_META, type CircleKind } from './circle'
 
 /** 그룹의 한 사람 — 기운 비율(합 100, 지도와 같은 값) + 명식 힌트(없으면 null). */
@@ -31,6 +42,36 @@ export interface CircleMemberEnergy extends EnergyHolder {
   mansikGisin: Element | null
   /** 십성 분포(정관·편관·…) — 역할 결. 없으면 null. */
   sipseong: Record<string, number> | null
+  /** 타고난 힘(신강·중화·신약) — 「쉬게 둘지, 몸으로 풀지」의 근거. 명식이 없으면 null/생략. */
+  vitality?: Vitality | null
+}
+
+/** 신강/신약 — 엔진의 다섯 단계(극강·신강·중화·신약·극약)를 셋으로 접는다. */
+export type Vitality = 'strong' | 'balanced' | 'weak'
+
+export const VITALITY_KO: Record<Vitality, string> = {
+  strong: '신강(타고난 힘이 센 편)',
+  balanced: '중화(타고난 힘이 고른 편)',
+  weak: '신약(타고난 힘이 약한 편)',
+}
+
+/** 「함께 있을 때 이렇게」 — 사람마다 하나. 밥·움직임·쉼 가운데 무엇이 좋은지와 그 이유, 해야 할 것·피할 것. */
+export interface MemberCare {
+  targetId: string
+  name: string
+  kind: ActivityKind
+  label: string
+  together: string
+  why: string
+  do: string
+  avoid: string
+}
+
+/** 같은 팀·가족이라도 조심할 것 — 상극으로 누르는 짝. */
+export interface PairCaution {
+  presserId: string
+  pressedId: string
+  text: string
 }
 
 export type PairLabel = 'complement' | 'lift' | 'guard' | 'distance' | 'independent'
@@ -89,10 +130,75 @@ export interface CircleEnergy {
   fallbackItem: string
   pairs: readonly PairRelation[]
   roles: CircleRoles | null
+  /** 사람마다 「함께 있을 때 이렇게」. */
+  care: readonly MemberCare[]
+  /** 같은 팀·가족이라도 조심할 짝(상극). 없으면 빈 배열. */
+  cautions: readonly PairCaution[]
 }
 
 /** 비율(합 100)에서 «넘친다»고 부를 수 있는 선 — 균형(20)보다 확실히 두꺼운 값. */
 export const STRONG_SHARE = 28
+
+/**
+ * 사람 하나의 「함께 있을 때 이렇게」 — 부족한 기운이 자리를 정하고, 타고난 힘(신강·신약)이 «몰아붙일지 채울지»를 정한다.
+ * 신약은 몸을 쓰는 자리라도 가벼운 산책과 쉼으로, 신강은 쉬는 자리라도 먼저 몸으로 풀고 쉬는 쪽으로 기운다.
+ */
+export function careOf(m: CircleMemberEnergy): MemberCare {
+  const base = ELEMENT_CARE[m.yongsin]
+  let kind: ActivityKind = base.kind
+  let together = base.together
+  let why = base.why
+  if (m.vitality === 'weak') {
+    if (kind === 'move') {
+      kind = 'rest'
+      together = '무리한 운동보다 가벼운 산책과 쉼 — 몸을 채운 뒤에 조금씩 움직이기'
+    }
+    why += ' 타고난 힘이 약한 편(신약)이라 몰아붙이기보다 채워 주는 쪽이 맞아요.'
+  } else if (m.vitality === 'strong') {
+    if (kind === 'rest') {
+      kind = 'move'
+      together = '가만히 두기보다 같이 몸을 쓰는 자리 — 걷기·운동으로 풀고 나서 쉬기'
+    }
+    why += ' 타고난 힘이 센 편(신강)이라 쌓인 것은 몸으로 풀어야 가벼워져요.'
+  }
+  return {
+    targetId: m.targetId,
+    name: m.name,
+    kind,
+    label: ACTIVITY_LABEL[kind],
+    together,
+    why,
+    do: base.do,
+    avoid: RICH_AVOID[m.strongest],
+  }
+}
+
+/** 상극으로 누르는 짝 — a 의 넉넉한 기운이 b 의 넉넉한 기운을 꺾을 때. 둘 다 같은 기운이 넘치면 서로 부딪히는 짝. */
+export function pairCautions(entries: readonly CircleMemberEnergy[]): PairCaution[] {
+  const out: PairCaution[] = []
+  for (let i = 0; i < entries.length; i++) {
+    for (let j = i + 1; j < entries.length; j++) {
+      const a = entries[i]
+      const b = entries[j]
+      if (CONTROLS[a.strongest] === b.strongest) {
+        out.push({ presserId: a.targetId, pressedId: b.targetId, text: CAUTION_OF[a.strongest](a.name, b.name) })
+      } else if (CONTROLS[b.strongest] === a.strongest) {
+        out.push({ presserId: b.targetId, pressedId: a.targetId, text: CAUTION_OF[b.strongest](b.name, a.name) })
+      } else if (
+        a.strongest === b.strongest &&
+        a.energy[a.strongest] >= STRONG_SHARE &&
+        b.energy[b.strongest] >= STRONG_SHARE
+      ) {
+        out.push({
+          presserId: a.targetId,
+          pressedId: b.targetId,
+          text: `${a.name}님과 ${b.name}님은 둘 다 ${label(a.strongest)} 기운이 넉넉해 같은 자리에서 부딪히기 쉬워요. ${RICH_AVOID[a.strongest]}.`,
+        })
+      }
+    }
+  }
+  return out
+}
 
 function label(el: Element): string {
   return `${EL_LABEL[el]}(${EL_KO[el]})`
@@ -217,7 +323,7 @@ export function pairRelation(a: CircleMemberEnergy, b: CircleMemberEnergy): Pair
     how:
       a.yongsin === b.yongsin
         ? `두 사람 다 ${label(a.yongsin)} 기운이 옅습니다. 같이 있을 때 그 기운의 물건 — ${ELEMENT_LORE[a.yongsin].deskItem} — 을 곁에 두면 둘 다 덕을 봅니다.`
-        : `${a.name}님은 ${label(a.yongsin)} 기운, ${b.name}님은 ${label(b.yongsin)} 기운이 옅습니다. 각자 그것을 챙기는 편이 낫습니다.`,
+        : `${a.name}님은 ${label(a.yongsin)} 기운, ${b.name}님은 ${label(b.yongsin)} 기운이 옅습니다. 각자 그것을 챙기는 편이 좋습니다.`,
   }
 }
 
@@ -271,6 +377,8 @@ export function buildCircleEnergy(kind: CircleKind, entries: readonly CircleMemb
     fallbackItem: ELEMENT_LORE[lowest].deskItem,
     pairs: allPairs(entries),
     roles: circleRoles(entries),
+    care: entries.map(careOf),
+    cautions: pairCautions(entries),
   }
 }
 
@@ -279,5 +387,7 @@ export function circleEnergyTexts(ce: CircleEnergy): string[] {
   const out: string[] = [ce.fallbackItem]
   for (const p of ce.pairs) out.push(PAIR_LABEL_KO[p.label], p.reason, p.how)
   if (ce.roles) out.push(ce.roles.sentence)
+  for (const c of ce.care) out.push(c.label, c.together, c.why, c.do, c.avoid)
+  for (const c of ce.cautions) out.push(c.text)
   return out
 }

@@ -5,9 +5,11 @@ import {
   STRONG_SHARE,
   allPairs,
   buildCircleEnergy,
+  careOf,
   circleEnergyTexts,
   circleRoles,
   holdersOf,
+  pairCautions,
   pairRelation,
   PAIR_LABEL_KO,
   type CircleMemberEnergy,
@@ -224,5 +226,64 @@ describe('circleRoles — 십성 다섯 무리 합산', () => {
     const roles = circleRoles([member('a', '민수', share({}), { sipseong: { 정관: 1, 식신: 1 } })])
     expect(roles?.thick.key).toBe('gwan')
     expect(roles?.thin.key).toBe('bigyeop')
+  })
+})
+
+describe('careOf — 함께 있을 때 이렇게(밥·움직임·쉼)와 그 이유', () => {
+  it('옅은 기운이 자리를 정한다 — 水 옅으면 쉬게 두기, 火 옅으면 같이 밥, 木 옅으면 몸 움직이기', () => {
+    expect(careOf(member('a', '가', share({ water: 5, wood: 60 }))).kind).toBe('rest')
+    expect(careOf(member('b', '나', share({ fire: 5, earth: 60 }))).kind).toBe('meal')
+    expect(careOf(member('c', '다', share({ wood: 5, metal: 60 }))).kind).toBe('move')
+  })
+
+  it('🔴 타고난 힘이 기운다 — 신약이면 몸 움직이기를 쉼 쪽으로, 신강이면 쉬게 두기를 몸 쪽으로. 이유에 그 말이 붙는다', () => {
+    const weak = careOf(member('c', '다', share({ wood: 5, metal: 60 }), { vitality: 'weak' }))
+    expect(weak.kind).toBe('rest')
+    expect(weak.why).toContain('신약')
+    const strong = careOf(member('a', '가', share({ water: 5, wood: 60 }), { vitality: 'strong' }))
+    expect(strong.kind).toBe('move')
+    expect(strong.why).toContain('신강')
+    const balanced = careOf(member('a', '가', share({ water: 5, wood: 60 }), { vitality: 'balanced' }))
+    expect(balanced.kind).toBe('rest')
+  })
+
+  it('피할 것은 넉넉한 기운에서, 해야 할 것은 옅은 기운에서 온다', () => {
+    const c = careOf(member('a', '가', share({ water: 5, fire: 60 })))
+    expect(c.avoid).toContain('밤늦게까지 들뜨는 자리')
+    expect(c.do).toContain('기다리기')
+  })
+})
+
+describe('pairCautions — 같은 팀·가족이라도 조심할 것(상극)', () => {
+  it('누르는 쪽 → 눌리는 쪽 방향으로 한 문장, 이름이 들어간다 (金克木)', () => {
+    const cautions = pairCautions([
+      member('a', '가', share({ metal: 60, water: 5 })),
+      member('b', '나', share({ wood: 60, fire: 5 })),
+    ])
+    expect(cautions).toHaveLength(1)
+    expect(cautions[0].presserId).toBe('a')
+    expect(cautions[0].pressedId).toBe('b')
+    expect(cautions[0].text).toContain('가님')
+    expect(cautions[0].text).toContain('나님')
+    expect(cautions[0].text).toContain('쇠가 나무를')
+  })
+
+  it('둘 다 같은 기운이 넘치면 부딪히는 짝, 상생·무관이면 없다', () => {
+    expect(
+      pairCautions([member('a', '가', share({ fire: 60, water: 5 })), member('b', '나', share({ fire: 55, metal: 5 }))])
+    ).toHaveLength(1)
+    expect(
+      pairCautions([member('a', '가', share({ wood: 60, water: 5 })), member('b', '나', share({ fire: 60, metal: 5 }))])
+    ).toHaveLength(0)
+  })
+
+  it('buildCircleEnergy 가 care·cautions 를 싣고, 문자열 전량에 금지어가 없다', () => {
+    const ce = buildCircleEnergy('family', [
+      member('self', '나', share({ water: 5, metal: 60 }), { vitality: 'weak' }),
+      member('b', '지영', share({ wood: 60, fire: 5 }), { vitality: 'strong' }),
+    ])
+    expect(ce.care.map((c) => c.targetId)).toEqual(['self', 'b'])
+    expect(ce.cautions.length).toBeGreaterThan(0)
+    for (const text of circleEnergyTexts(ce)) expect({ text, hits: bannedWordsIn(text) }).toEqual({ text, hits: [] })
   })
 })

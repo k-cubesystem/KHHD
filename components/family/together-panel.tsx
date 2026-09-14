@@ -8,7 +8,8 @@ import { generateNarrative, type RecentTogether } from '@/app/actions/circle/nar
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
 import { TOGETHER_MAX, TOGETHER_MIN } from '@/lib/domain/circle/circle'
 import { parseTogetherSections } from '@/lib/domain/circle/narrative'
-import type { ElementNeeds } from '@/lib/domain/circle/element-lore'
+import type { ActivityKind, ElementNeeds } from '@/lib/domain/circle/element-lore'
+import type { MemberCare, PairCaution } from '@/lib/domain/circle/team-energy'
 import { EL_COLOR, EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import { averageEnergy, lowestElement } from '@/lib/domain/shrine/energy-map'
 import type { Element } from '@/lib/domain/shrine/types'
@@ -69,6 +70,65 @@ function ShopItem({ name, href, kind }: { name: string; href?: string; kind: str
         쿠팡 <ExternalLink className="h-2.5 w-2.5" />
       </span>
     </a>
+  )
+}
+
+const ACTIVITY_ICON: Record<ActivityKind, string> = { move: '🏃', meal: '🍚', routine: '🗓', tidy: '🧹', rest: '😴' }
+
+/**
+ * 「함께 있을 때 이렇게」 — 사람마다 밥·몸 움직이기·쉬게 두기 가운데 무엇이 좋은지와 그 이유, 해야 할 것·피할 것.
+ * 그리고 같은 팀·가족이라도 조심할 짝(상극). 값은 엔진(careOf·pairCautions) 그대로 — AI 는 이것을 풀어 쓴다.
+ */
+function CareBlock({
+  people,
+  care,
+  cautions,
+}: {
+  people: readonly TogetherPerson[]
+  care: readonly MemberCare[]
+  cautions: readonly PairCaution[]
+}) {
+  const ids = new Set(people.map((p) => p.targetId))
+  const mine = care.filter((c) => ids.has(c.targetId))
+  const ours = cautions.filter((c) => ids.has(c.presserId) && ids.has(c.pressedId))
+  if (mine.length === 0) return null
+  return (
+    <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+      <p className="font-serif text-[12px] font-bold tracking-[0.1em] text-gold-300">함께 있을 때 이렇게</p>
+      <ul className="space-y-3">
+        {mine.map((c) => (
+          <li key={c.targetId} className="text-[12px] leading-relaxed" style={{ wordBreak: 'keep-all' }}>
+            <p className="flex flex-wrap items-center gap-1.5">
+              <b className="font-serif text-ink-light">{c.name}</b>
+              <span className="rounded-full border border-gold-500/40 bg-gold-500/[0.1] px-2 py-[1px] font-serif text-[11px] text-gold-200">
+                {ACTIVITY_ICON[c.kind]} {c.label}
+              </span>
+            </p>
+            <p className="mt-0.5 text-ink-light/85">{c.together}</p>
+            <p className="mt-0.5 text-[11.5px] text-ink-light/55">{c.why}</p>
+            <dl className="mt-1 grid grid-cols-[64px_1fr] gap-x-2 gap-y-0.5 text-ink-light/70">
+              <dt className="text-ink-light/45">해야 할 것</dt>
+              <dd>{c.do}</dd>
+              <dt className="text-ink-light/45">피할 것</dt>
+              <dd>{c.avoid}</dd>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      {ours.length > 0 && (
+        <div
+          className="space-y-1.5 border-t border-white/[0.06] pt-2.5 text-[12px] leading-relaxed"
+          style={{ wordBreak: 'keep-all' }}
+        >
+          <p className="font-serif font-bold text-ink-light">같은 팀·가족이라도 조심할 것</p>
+          <ul className="space-y-1.5 text-ink-light/75">
+            {ours.map((c) => (
+              <li key={`${c.presserId}-${c.pressedId}`}>{c.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -151,6 +211,8 @@ export function TogetherPanel({
   recent = [],
   needs,
   shopLinks = {},
+  care = [],
+  cautions = [],
 }: {
   people: readonly TogetherPerson[]
   kind: string
@@ -160,6 +222,10 @@ export function TogetherPanel({
   needs: Record<Element, ElementNeeds>
   /** 물건 이름 → 쿠팡 파트너스 링크. 없으면 이름만. */
   shopLinks?: Record<string, string>
+  /** 사람마다 「함께 있을 때 이렇게」(엔진 판정). */
+  care?: readonly MemberCare[]
+  /** 같은 팀·가족이라도 조심할 짝(상극). */
+  cautions?: readonly PairCaution[]
 }) {
   const [picked, setPicked] = useState<string[]>(() => people.slice(0, TOGETHER_MIN).map((p) => p.targetId))
   const [result, setResult] = useState<RecentTogether | null>(null)
@@ -226,8 +292,13 @@ export function TogetherPanel({
         <Sparkles className="h-3.5 w-3.5 text-gold-400" /> AI 풀이 — 둘·셋·넷 함께 보기
       </p>
       <p className="text-[11.5px] leading-relaxed text-ink-light/55" style={{ wordBreak: 'keep-all' }}>
-        사람을 두 명에서 네 명까지 고르면 서로의 오행을 신당의 말로 풀어 씁니다 — 서로의 오행 · 장점 · 단점 · 필요한 것
-        · 이번 주 한 가지. 필요한 물건과 자리는 그 아래에 쿠팡 링크와 함께 섭니다.
+        사람을 두 명에서 네 명까지 고르면 서로의 오행을 신당의 말로 풀어 씁니다 — 서로의 오행 · 장점 · 단점 · 사람마다
+        이렇게 (같이 밥이 좋은지, 몸을 움직이는 게 좋은지, 쉬게 두는 게 좋은지와 그 이유) · 필요한 것 · 이번 주 한 가지.
+        필요한 물건과 자리는 그 아래에 쿠팡 링크와 함께 섭니다.
+      </p>
+      <p className="text-[11px] leading-relaxed text-ink-light/45" style={{ wordBreak: 'keep-all' }}>
+        팀을 이끄는 팀장·사장님, 가족의 기운을 살피는 엄마·아빠, 모임의 리더가 보는 풀이입니다. 이미 곁에 있는 사람과
+        어떻게 지낼지를 말하지, 사람을 고르거나 재는 자리가 아닙니다.
       </p>
 
       <ul className="flex flex-wrap gap-1.5">
@@ -307,7 +378,10 @@ export function TogetherPanel({
             ))}
           </div>
           {resultPeople.length >= TOGETHER_MIN && (
-            <NeedsBlock people={resultPeople} needs={needs} shopLinks={shopLinks} kind={kind} />
+            <>
+              <CareBlock people={resultPeople} care={care} cautions={cautions} />
+              <NeedsBlock people={resultPeople} needs={needs} shopLinks={shopLinks} kind={kind} />
+            </>
           )}
         </div>
       )}

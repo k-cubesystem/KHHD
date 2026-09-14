@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { toast } from 'sonner'
 import { TogetherPanel, type TogetherPerson } from '@/components/family/together-panel'
 import { FEATURE_COST } from '@/lib/domain/payment/feature-costs'
@@ -104,6 +104,64 @@ describe('TogetherPanel — AI 풀이(둘·셋·넷 함께 보기)', () => {
     expect(screen.getByText('서로에게 맞는 풍수·물건')).toBeInTheDocument()
     expect(container.textContent).toContain('북쪽')
     expect(container.textContent).not.toMatch(/\d+\s*점|\d+\s*%/)
+  })
+
+  it('풀이 아래 「함께 있을 때 이렇게」 — 고른 사람마다 밥·움직임·쉼 판정과 이유, 같은 팀이라도 조심할 짝이 선다', async () => {
+    generateNarrative.mockResolvedValue({
+      success: true,
+      text: FIVE,
+      cached: true,
+      createdAt: '2026-09-14T00:00:00.000Z',
+    })
+    const care = [
+      {
+        targetId: 'self',
+        name: '나',
+        kind: 'rest' as const,
+        label: '쉬게 두기',
+        together: '쉬게 두는 자리',
+        why: '물 기운이 부족하면 쉼이 마릅니다.',
+        do: '먼저 묻지 말고 기다리기',
+        avoid: '벌여 놓기만 하는 자리',
+      },
+      {
+        targetId: 'b',
+        name: '지영',
+        kind: 'move' as const,
+        label: '몸 움직이기',
+        together: '같이 걷는 자리',
+        why: '나무 기운이 부족하면 시작이 약해요.',
+        do: '아침에 같이 걷기',
+        avoid: '밤늦게까지 들뜨는 자리',
+      },
+      {
+        targetId: 'c',
+        name: '현우',
+        kind: 'meal' as const,
+        label: '같이 밥',
+        together: '같이 밥',
+        why: '불',
+        do: '점심',
+        avoid: '밤',
+      },
+    ]
+    const cautions = [
+      { presserId: 'self', pressedId: 'b', text: '쇠가 나무를 치듯 나님의 결정이 지영님의 시작을 막기 쉬워요.' },
+      { presserId: 'self', pressedId: 'c', text: '현우와의 짝은 고르지 않았으니 보이면 안 됩니다.' },
+    ]
+    render(<TogetherPanel people={PEOPLE} kind="family" needs={NEEDS} care={care} cautions={cautions} />)
+    fireEvent.click(screen.getByRole('button', { name: /나·지영 함께 보기/ }))
+    const title = await screen.findByText('함께 있을 때 이렇게')
+    const block = within(title.parentElement as HTMLElement)
+    expect(block.getByText(/쉬게 두기/)).toBeInTheDocument()
+    expect(block.getByText(/몸 움직이기/)).toBeInTheDocument()
+    expect(block.getByText(/물 기운이 부족하면/)).toBeInTheDocument()
+    expect(block.getByText('먼저 묻지 말고 기다리기')).toBeInTheDocument()
+    // 고르지 않은 현우(같이 밥)는 블록에 없다
+    expect(block.queryByText(/같이 밥/)).toBeNull()
+    expect(block.getByText('같은 팀·가족이라도 조심할 것')).toBeInTheDocument()
+    expect(block.getByText(/쇠가 나무를 치듯/)).toBeInTheDocument()
+    expect(block.queryByText(/고르지 않았으니/)).toBeNull()
   })
 
   it('머리말 없는 옛 풀이도 한 덩이로 보인다(캐시 호환)', async () => {

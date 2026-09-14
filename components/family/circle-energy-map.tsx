@@ -280,6 +280,8 @@ export function CircleEnergyMapView({
           recent={recentTogether}
           needs={needs}
           shopLinks={shopLinks}
+          care={energy.care}
+          cautions={energy.cautions}
         />
       </div>
 

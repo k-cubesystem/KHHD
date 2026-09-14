@@ -97,12 +97,16 @@ describe('프롬프트 — 엔진 값만 싣고 풀어 쓰라고만 한다', () 
     expect(prompt).toContain('[필요한 것 — 사람마다]')
     expect(prompt).toContain('[서로에게 맞는 풍수·물건')
     expect(prompt).toContain('책상 위')
-    expect(prompt).toContain('다섯 토막으로 풀어 쓰세요')
+    // 사람마다 밥·움직임·쉼 판정과 이유, 조심할 것(상극)이 재료로 들어간다
+    expect(prompt).toContain('[사람마다 — 함께 있을 때 어떻게')
+    expect(prompt).toContain('함께할 때 좋은 것 =')
+    expect(prompt).toContain('[같은 팀·가족이라도 조심할 것 — 상극]')
+    expect(prompt).toContain('여섯 토막으로 풀어 쓰세요')
     for (const h of TOGETHER_SECTIONS) expect(prompt).toContain(`「${h}」`)
     expect(prompt).toContain('사람을 고르거나 재는 말은 쓰지 않습니다')
     expect(prompt).not.toMatch(/\d+\s*점|\d+\s*%/)
     // 시스템 프롬프트도 갈래에 따라 형식이 갈린다
-    expect(systemPromptFor('together')).toContain('다섯 토막')
+    expect(systemPromptFor('together')).toContain('여섯 토막')
     expect(systemPromptFor('prescription')).toContain('세 문단')
   })
 
@@ -173,11 +177,15 @@ describe('parseTogetherSections — 다섯 토막 가르기', () => {
 
   it('validateNarrative 는 함께 보기 머리말이 넷 미만이면 거른다(하나는 봐준다)', () => {
     const long = (h: string) => `${h}\n${'곁에 둘 것을 함께 살핍니다. '.repeat(4)}`
-    const four = TOGETHER_SECTIONS.slice(0, 4).map(long).join('\n\n')
-    expect(validateNarrative(four, { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER }).ok).toBe(
-      true
-    )
-    const three = TOGETHER_SECTIONS.slice(0, 3).map(long).join('\n\n')
+    const allButOne = TOGETHER_SECTIONS.slice(0, TOGETHER_SECTIONS.length - 1)
+      .map(long)
+      .join('\n\n')
+    expect(
+      validateNarrative(allButOne, { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER }).ok
+    ).toBe(true)
+    const three = TOGETHER_SECTIONS.slice(0, TOGETHER_SECTIONS.length - 2)
+      .map(long)
+      .join('\n\n')
     const res = validateNarrative(three, { headings: TOGETHER_SECTIONS, maxChars: NARRATIVE_MAX_CHARS_TOGETHER })
     expect(res.ok).toBe(false)
     if (!res.ok) expect(res.reason).toBe('HEADINGS')

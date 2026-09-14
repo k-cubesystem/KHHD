@@ -200,6 +200,89 @@ export const ROLE_PEOPLE: Record<SipseongGroupKey, string> = {
   inseong: '배우고 받아들이며 받쳐 주는 사람',
 }
 
+/**
+ * 「함께 있을 때 이렇게」 — 그 기운이 **부족한** 사람과 같이 있을 때 무엇이 좋은가(CEO 2026-09-14 「밥을 먹어야 좋은지,
+ * 운동을 해야 좋은지, 쉬게 두어야 좋은지 이유와 함께」). 자리·몸의 결은 remedy 표(BODY·SPACE)와 같은 방향이다.
+ */
+export type ActivityKind = 'move' | 'meal' | 'routine' | 'tidy' | 'rest'
+
+export const ACTIVITY_LABEL: Record<ActivityKind, string> = {
+  move: '몸 움직이기',
+  meal: '같이 밥',
+  routine: '정해진 시간',
+  tidy: '같이 마무리',
+  rest: '쉬게 두기',
+}
+
+export interface ElementCare {
+  readonly kind: ActivityKind
+  /** 함께할 때 좋은 자리 — 한 줄. */
+  readonly together: string
+  /** 해야 할 것 하나. */
+  readonly do: string
+  /** 왜 그런지 — 부족한 기운의 이치. */
+  readonly why: string
+}
+
+export const ELEMENT_CARE: Record<Element, ElementCare> = {
+  wood: {
+    kind: 'move',
+    together: '가볍게 몸을 움직이는 자리 — 같이 걷거나 스트레칭, 새 일의 첫걸음을 함께',
+    do: '아침에 같이 걷고, 새 일은 첫발만 같이 떼 주기',
+    why: '나무 기운이 부족하면 시작하는 힘이 약해요. 몸을 움직이고 첫발을 같이 떼면 그 기운이 살아나요.',
+  },
+  fire: {
+    kind: 'meal',
+    together: '밝은 자리에서 같이 밥 먹고 이야기하는 자리 — 낮에 만나고 웃는 자리를 늘리기',
+    do: '점심을 같이 먹고, 좋은 소식을 먼저 꺼내 주기',
+    why: '불 기운이 부족하면 활기와 표현이 가라앉아요. 따뜻한 밥과 웃는 자리가 그 기운을 데워요.',
+  },
+  earth: {
+    kind: 'routine',
+    together: '정해진 시간에 만나는 자리 — 같은 시간에 밥 먹고, 작은 약속을 지키는 일을 함께',
+    do: '식사 시간을 정해 두고 지키기, 작은 약속부터 먼저 지켜 주기',
+    why: '흙 기운이 부족하면 중심이 흔들려요. 규칙과 정해진 시간이 그 기운을 세워 줘요.',
+  },
+  metal: {
+    kind: 'tidy',
+    together: '마무리를 같이 하는 자리 — 정리·결산·끝내는 일, 해 질 무렵에 만나기',
+    do: '하던 일을 같이 끝맺고, 물건과 자리를 함께 정리하기',
+    why: '쇠 기운이 부족하면 마무리가 약해요. 끝을 같이 맺어 주면 그 기운이 붙어요.',
+  },
+  water: {
+    kind: 'rest',
+    together: '쉬게 두는 자리 — 말 대신 곁에 앉기, 조용히 듣기, 밤에는 짧게',
+    do: '먼저 묻지 말고 기다리기, 쉬는 시간을 지켜 주기',
+    why: '물 기운이 부족하면 쉼과 듣는 힘이 마릅니다. 가만히 두고 들어 주는 것이 그 기운을 채워요.',
+  },
+}
+
+/** 그 기운이 **넉넉한** 사람과 같이 있을 때 피할 자리 — 넘치는 쪽을 더 부추기지 않기. «금지»가 아니라 정도의 말. */
+export const RICH_AVOID: Record<Element, string> = {
+  wood: '벌여 놓기만 하는 자리 — 새 계획을 자꾸 보태지 않기',
+  fire: '밤늦게까지 들뜨는 자리 — 자극적인 말과 늦은 흥분은 줄이기',
+  earth: '쌓아 두고 움직이지 않는 자리 — 미루는 일을 같이 미루지 않기',
+  metal: '잣대를 세우는 자리 — 차가운 말과 지나친 원칙은 줄이기',
+  water: '어두운 데 오래 머무는 자리 — 밤새우는 일과 늘어지는 시간은 줄이기',
+}
+
+/**
+ * 같은 팀·가족이라도 조심할 것 — 상극(相剋). «누르는 쪽»의 넉넉한 기운이 «눌리는 쪽»의 넉넉한 기운을 꺾기 쉽다.
+ * 이름을 받아 문장을 만든다. 사람을 재는 말이 아니라 «자리를 어떻게 두는가»의 말이다.
+ */
+export const CAUTION_OF: Record<Element, (presser: string, pressed: string) => string> = {
+  wood: (a, b) =>
+    `나무가 흙을 파고들듯 ${a}님의 시작하는 힘이 ${b}님의 안정을 흔들기 쉬워요. 새 일을 꺼낼 땐 ${b}님에게 생각할 시간을 먼저 주세요.`,
+  earth: (a, b) =>
+    `흙이 물길을 막듯 ${a}님의 규칙이 ${b}님의 여유를 막기 쉬워요. 쉬는 시간까지 정해 주지는 않는 편이 좋아요.`,
+  water: (a, b) =>
+    `물이 불을 끄듯 ${a}님의 차분함이 ${b}님의 열의를 식히기 쉬워요. ${b}님이 들떠 있을 때 찬물 끼얹는 말은 아끼세요.`,
+  fire: (a, b) =>
+    `불이 쇠를 녹이듯 ${a}님의 열기가 ${b}님의 정리를 흐트러뜨리기 쉬워요. ${b}님이 마무리하는 중엔 새 이야기를 뒤로 미루세요.`,
+  metal: (a, b) =>
+    `쇠가 나무를 치듯 ${a}님의 딱 부러진 결정이 ${b}님의 새 시작을 막기 쉬워요. ${b}님이 처음 꺼낸 생각은 하루 두고 보세요.`,
+}
+
 /** 쿠팡 검색어 전부(책상 위 + 선물 셋 × 다섯 기운) — 지도가 한 번에 링크를 받아 둔다. */
 export function allNeedKeywords(): string[] {
   const out: string[] = []

@@ -11,19 +11,29 @@ import { EL_KO, EL_LABEL } from '@/lib/domain/shrine/energy'
 import type { Element } from '@/lib/domain/shrine/types'
 import { bannedWordsIn, elementNeeds } from './element-lore'
 import type { Prescription } from './prescription'
-import { PAIR_LABEL_KO, type CircleEnergy } from './team-energy'
+import { PAIR_LABEL_KO, VITALITY_KO, type CircleEnergy } from './team-energy'
 
 export type NarrativeKind = 'prescription' | 'circle' | 'together'
 
 export const NARRATIVE_MIN_CHARS = 180
 export const NARRATIVE_MAX_CHARS = 1600
-/** 함께 보기는 다섯 토막이라 길다. */
-export const NARRATIVE_MAX_CHARS_TOGETHER = 2400
+/** 함께 보기는 여섯 토막이라 길다. */
+export const NARRATIVE_MAX_CHARS_TOGETHER = 3200
 /** 캐시 유효 기간 — 같은 입력이면 이 안에서는 다시 사지 않는다. */
 export const NARRATIVE_CACHE_DAYS = 30
 
-/** 함께 보기 다섯 토막의 머리말 — 프롬프트·거르기·화면이 같은 문자열을 쓴다(CEO 2026-09-13 「장점·단점·필요한 것」). */
-export const TOGETHER_SECTIONS = ['서로의 오행', '장점', '단점', '필요한 것', '이번 주 한 가지'] as const
+/**
+ * 함께 보기 여섯 토막의 머리말 — 프롬프트·거르기·화면이 같은 문자열을 쓴다(CEO 2026-09-13 「장점·단점·필요한 것」,
+ * 2026-09-14 「사람마다 밥·운동·쉼 가운데 무엇이 좋은지 이유와 함께」).
+ */
+export const TOGETHER_SECTIONS = [
+  '서로의 오행',
+  '장점',
+  '단점',
+  '사람마다 이렇게',
+  '필요한 것',
+  '이번 주 한 가지',
+] as const
 export type TogetherSection = (typeof TOGETHER_SECTIONS)[number]
 
 function label(el: Element): string {
@@ -47,8 +57,9 @@ const FORMAT_THREE = `형식:
 - 출력은 본문만. 제목·머리말·목록 기호·따옴표 없이 문단 사이는 빈 줄 하나.`
 
 const FORMAT_TOGETHER = `형식:
-- 다섯 토막, 전체 700~1200자. 토막마다 첫 줄에 머리말만 한 줄로 적고(정확히 이 다섯: ${TOGETHER_SECTIONS.join(' / ')}), 다음 줄부터 본문 두 문장에서 네 문장.
+- 여섯 토막, 전체 900~1600자. 토막마다 첫 줄에 머리말만 한 줄로 적고(정확히 이 여섯: ${TOGETHER_SECTIONS.join(' / ')}), 다음 줄부터 본문.
 - 머리말 밖에는 제목·목록 기호·따옴표를 쓰지 않습니다. 토막 사이는 빈 줄 하나.
+- 「사람마다 이렇게」 토막은 사람 수만큼 문단을 두고, 문단마다 그 사람 이름으로 시작합니다. [사람마다] 판정(같이 밥·몸 움직이기·쉬게 두기·정해진 시간·같이 마무리)을 그대로 쓰고 이유를 붙입니다.
 - 「필요한 것」 토막은 [필요한 것] 에 적힌 물건·자리·색·방향만 부릅니다. 새 물건을 지어내지 않습니다.
 - 「이번 주 한 가지」 토막은 같이 할 수 있는 한 가지로 끝냅니다.`
 
@@ -135,12 +146,19 @@ export function togetherPrompt(ce: CircleEnergy): string {
   const members = ce.entries
     .map(
       (e) =>
-        `- ${e.name}(${e.relation}): 옅은 ${label(e.yongsin)}, 넉넉한 ${label(e.strongest)}${e.dayMaster ? `, 일간 ${label(e.dayMaster)}` : ''}`
+        `- ${e.name}(${e.relation}): 옅은 ${label(e.yongsin)}, 넉넉한 ${label(e.strongest)}${e.dayMaster ? `, 일간 ${label(e.dayMaster)}` : ''}${e.vitality ? `, 타고난 힘 ${VITALITY_KO[e.vitality]}` : ''}`
     )
     .join('\n')
   const pairs = ce.pairs
     .map((pr) => `- ${pr.aName} ↔ ${pr.bName}: ${PAIR_LABEL_KO[pr.label]}\n  이치: ${pr.reason}\n  실천: ${pr.how}`)
     .join('\n')
+  const care = ce.care
+    .map(
+      (c) =>
+        `- ${c.name}: 함께할 때 좋은 것 = ${c.label} — ${c.together}\n  이유: ${c.why}\n  해야 할 것: ${c.do}\n  피할 것: ${c.avoid}`
+    )
+    .join('\n')
+  const cautions = ce.cautions.map((c) => `- ${c.text}`).join('\n')
   const needs = ce.entries.map((e) => `- ${e.name}(옅은 ${label(e.yongsin)}): ${needsLine(e.yongsin)}`).join('\n')
   return [
     `[엔진이 정한 값 — ${names} 함께 보기(${ce.entries.length}명)]`,
@@ -151,11 +169,15 @@ export function togetherPrompt(ce: CircleEnergy): string {
     '[서로의 관계 — 엔진 판정]',
     pairs || '- 뚜렷한 관계 없음 — 각자 서는 사이',
     ce.roles ? `[역할 결] ${ce.roles.sentence}` : '',
+    '[사람마다 — 함께 있을 때 어떻게 (엔진 판정: 밥·몸 움직이기·쉬게 두기·정해진 시간·같이 마무리)]',
+    care,
+    '[같은 팀·가족이라도 조심할 것 — 상극]',
+    cautions || '- 뚜렷이 누르는 짝 없음',
     '[필요한 것 — 사람마다]',
     needs,
     `[서로에게 맞는 풍수·물건 — 함께 옅은 ${label(ce.lowest)}] ${needsLine(ce.lowest)}`,
     '',
-    `위 값을 다섯 토막으로 풀어 쓰세요. 머리말은 정확히 ${TOGETHER_SECTIONS.map((s) => `「${s}」`).join(' ')} 순서입니다. ① 서로의 오행: 각자의 넉넉한·옅은 기운이 함께 있을 때 어떤 결이 되는지 ② 장점: 서로 채우고 끌어 주는 자리(엔진의 이치 그대로, 새로 판정하지 말 것) ③ 단점: 부딪히거나 지치는 자리와 그것을 푸는 법 ④ 필요한 것: 위 물건·자리·색·방향을 그대로 부르며 누가 무엇을 곁에 두면 좋은지 ⑤ 이번 주 한 가지: 같이 할 한 가지. 사람을 고르거나 재는 말은 쓰지 않습니다.`,
+    `위 값을 여섯 토막으로 풀어 쓰세요. 머리말은 정확히 ${TOGETHER_SECTIONS.map((s) => `「${s}」`).join(' ')} 순서입니다. ① 서로의 오행: 각자의 넉넉한·옅은 기운이 함께 있을 때 어떤 결이 되는지 ② 장점: 서로 채우고 끌어 주는 자리(엔진의 이치 그대로, 새로 판정하지 말 것) ③ 단점: 부딪히거나 지치는 자리와 그것을 푸는 법, [조심할 것]의 짝은 여기서 «같은 팀이라도 이렇게 두세요»로 ④ 사람마다 이렇게: 사람마다 한 문단 — 같이 밥을 먹는 게 좋은지, 몸을 움직이는 게 좋은지, 쉬게 두는 게 좋은지 [사람마다] 판정 그대로 말하고, 왜 그런지(옅은 기운·넉넉한 기운·타고난 힘)를 붙이고, 해야 할 것 하나와 피할 것 하나 ⑤ 필요한 것: 위 물건·자리·색·방향을 그대로 부르며 누가 무엇을 곁에 두면 좋은지 ⑥ 이번 주 한 가지: 같이 할 한 가지. 사람을 고르거나 재는 말은 쓰지 않습니다.`,
   ]
     .filter((line) => line !== '')
     .join('\n')
@@ -221,9 +243,11 @@ export function prescriptionFingerprint(p: Prescription): string {
 export function togetherFingerprint(ce: CircleEnergy): string {
   const sorted = [...ce.entries].sort((a, b) => a.targetId.localeCompare(b.targetId))
   return JSON.stringify({
-    m: sorted.map((e) => `${e.targetId}:${e.yongsin}:${e.strongest}:${e.dayMaster ?? ''}`),
+    m: sorted.map((e) => `${e.targetId}:${e.yongsin}:${e.strongest}:${e.dayMaster ?? ''}:${e.vitality ?? ''}`),
     p: [...ce.pairs].map((pr) => `${[pr.aId, pr.bId].sort().join('-')}:${pr.label}`).sort(),
     l: ce.lowest,
+    // 여섯 토막(사람마다 이렇게) 판으로 바뀐 뒤의 캐시만 맞는다 — 옛 다섯 토막 풀이는 새로 짓는다.
+    v: 6,
   })
 }
 

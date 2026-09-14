@@ -277,7 +277,7 @@ export async function generateNarrative(kind: NarrativeKind, targetKey: string):
             ? material.prompt
             : `${material.prompt}\n\n(지난 답은 «${lastReason}» 때문에 쓸 수 없었습니다. 규율을 지켜 다시 쓰세요.)`,
         temperature: 0.7,
-        maxTokens: kind === 'together' ? 2200 : 1200,
+        maxTokens: kind === 'together' ? 3000 : 1200,
         userId: user.id,
       })
       const checked = validateNarrative(ai.text, checkOptions)

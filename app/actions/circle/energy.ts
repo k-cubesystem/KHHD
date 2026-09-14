@@ -18,7 +18,12 @@ import {
   isCircleKind,
   type CircleKind,
 } from '@/lib/domain/circle/circle'
-import { buildCircleEnergy, type CircleEnergy, type CircleMemberEnergy } from '@/lib/domain/circle/team-energy'
+import {
+  buildCircleEnergy,
+  type CircleEnergy,
+  type CircleMemberEnergy,
+  type Vitality,
+} from '@/lib/domain/circle/team-energy'
 import {
   buildPrescription,
   prescriptionTeaser,
@@ -131,6 +136,15 @@ function hintsOf(ctx: SajuContext | null): MansikHint | null {
     huisin: elementFromHanja(adv.huisin),
     gisin: elementFromHanja(adv.gisin),
   }
+}
+
+/** 신강·신약 — 정밀 점수제(5단계)가 있으면 그것, 없으면 십성 판정(3단계). 명식이 없으면 null. */
+function vitalityOf(ctx: SajuContext | null): Vitality | null {
+  const grade = ctx?.analysis.advancedStrength?.grade ?? ctx?.analysis.sipseong.strengthAssessment
+  if (!grade) return null
+  if (grade === '극강' || grade === '신강') return 'strong'
+  if (grade === '극약' || grade === '신약') return 'weak'
+  return 'balanced'
 }
 
 function toCatalogLite(row: CatalogLite): PrescriptionCatalogItem | null {
@@ -258,6 +272,7 @@ async function membersOf(
         mansikYongsin: hints?.yongsin ?? null,
         mansikGisin: hints?.gisin ?? null,
         sipseong: ctx?.analysis.sipseong.distribution ?? null,
+        vitality: vitalityOf(ctx),
       }
     })
   )

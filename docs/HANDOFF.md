@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-14(38차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-14(39차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,23 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(39차 · 2026-09-14) 함께 보기 AI — 「사람마다 이렇게」(밥·움직임·쉼 + 이유) · 같은 팀이라도 조심할 것 (배포 기록은 아래 갱신):**
+
+CEO: 「밥을 먹어야 좋은지, 운동을 해야 좋은지, 쉬게 두어야 하는지 이유와 함께 / 해야 할 행동·피할 행동·같이 하면 좋은 것 /
+같은 팀·가족이라도 조심할 것 / 사주팔자도 참조 / 팀장·사장님·엄마·아빠·리더가 보는 것」. 기획서 `PRD-family-map-v2.md §6-2`.
+
+- 사전 `element-lore.ts`: `ELEMENT_CARE`(부족한 기운 → 함께할 자리 kind 다섯 가지 `move|meal|routine|tidy|rest` + together·do·why),
+  `RICH_AVOID`(넉넉한 기운 → 피할 자리), `CAUTION_OF`(상극 다섯 방향, 이름을 받아 문장). 금지어·«금지» 어투 없음을 테스트가 훑는다.
+- 엔진 `team-energy.ts`: `Vitality`(신강·중화·신약 — `advancedStrength.grade` 5단계를 셋으로, 없으면 `sipseong.strengthAssessment`),
+  `careOf(member)`(신약이면 move→rest 쪽, 신강이면 rest→move 쪽으로 기울이고 이유에 한 줄), `pairCautions(entries)`(상극 짝 + 같은
+  기운 둘 다 넘치는 짝). `CircleEnergy.care`·`cautions` 로 실린다. `app/actions/circle/energy.ts` 가 `vitality` 를 얹는다.
+- 프롬프트 `narrative.ts`: 여섯 토막 `TOGETHER_SECTIONS`(… **사람마다 이렇게** …), 재료 블록 [사람마다 — 함께 있을 때 어떻게]·
+  [같은 팀·가족이라도 조심할 것 — 상극], 사람 줄에 «타고난 힘 신강/신약». 최대 3,200자·maxTokens 3,000. 🔴 지문에 `v: 6` 을 넣어
+  옛 다섯 토막 캐시는 새로 짓는다(같은 조합이라도 이번엔 복채가 든다 — 판이 달라졌기 때문).
+- 화면 `together-panel.tsx`: 결과 아래 「함께 있을 때 이렇게」(사람마다 판정 칩 🏃🍚🗓🧹😴 + 자리 + 이유 + 해야/피할 것, 그 아래
+  「같은 팀·가족이라도 조심할 것」 — 고른 사람들 안의 짝만) → 「필요한 것」. 설명에 «팀장·사장님·엄마·아빠·모임 리더가 보는 풀이,
+  사람을 고르거나 재는 자리가 아닙니다» 한 줄. 🔴 면접·채용 판단 용도는 넣지 않았다(채용절차법 — 직장 고지와 같은 자).
 
 **(38차 · 2026-09-14) 텍스트 AI 모델 gemini-3.7-flash → gemini-3.8-flash — 프로덕션 라이브(`419cc518` → 배포 `hhd-62im99gk2`, 키로 generateContent 실측 200·modelVersion gemini-3.8-flash):**
 
