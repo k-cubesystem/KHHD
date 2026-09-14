@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { unstable_cache, revalidatePath } from 'next/cache'
 import { isEdgeEnabled } from '@/lib/supabase/edge-config'
 import { invokeEdgeSafe } from '@/lib/supabase/invoke-edge'
@@ -110,7 +111,7 @@ export async function saveAnalysisHistory(
         summary: params.summary || null,
         score: params.score || null,
         prompt_version: params.prompt_version || null,
-        model_used: params.model_used || 'gemini-3.5-flash',
+        model_used: params.model_used || MODEL_FLASH,
         talisman_cost: params.talisman_cost || 0,
       })
       .select('id')

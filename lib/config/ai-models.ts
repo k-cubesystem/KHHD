@@ -11,12 +11,13 @@
 // Provider types
 export type AIProvider = 'gemini' | 'claude'
 
-// Gemini models — 텍스트 생성은 gemini-3.7-flash 로 통일(2026-08-14 갱신).
+// Gemini models — 텍스트 생성은 gemini-3.8-flash 로 통일(2026-09-14 갱신, CEO 「3.8 나왔으니 AI 분석 전부 3.8로」).
 // 🔴 gemini-3.5-pro 는 아직 출시되지 않았다 — «PRO 티어»가 Flash 를 가리키는 것은 그 때문이다.
-//    3.5-flash → 3.7-flash 는 최신 GA 로의 이동이며 출력 단가가 $9 → $7.5(인트로 $3.75)로 내려간다.
+//    3.7 → 3.8 은 최신 GA 로의 이동. 단가는 3.7 과 같다($1.50/$7.50, 인트로 $0.75/$3.75 ~2026-12-31).
+//    2026-09-14 실측: 프로젝트 키의 models API 목록(55개)에 gemini-3.8-flash 가 있다(공식 문서 Stable).
 // 이미지 생성은 별도 modality라 이미지 전용 모델 유지.
-export const GEMINI_PRO = 'gemini-3.7-flash'
-export const GEMINI_FLASH = 'gemini-3.7-flash'
+export const GEMINI_PRO = 'gemini-3.8-flash'
+export const GEMINI_FLASH = 'gemini-3.8-flash'
 export const GEMINI_IMAGE = 'gemini-3.1-flash-image-preview'
 
 // Claude models

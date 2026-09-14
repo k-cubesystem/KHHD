@@ -92,6 +92,8 @@ function aggregateDailyData(stats: GeminiDailyStat[]) {
 // ─────────────────────────────────────────
 // 시맨틱·오방 토큰 hex 만 쓴다(warning·info·obangsaek-blue·gold-500·success·seal·error·gold-700)
 const MODEL_COLORS: Record<string, string> = {
+  'gemini-3.8-flash': '#C9A84C',
+  'gemini-3.7-flash': '#8C7B50',
   'gemini-3.5-flash': '#F59E0B',
   'gemini-2.0-flash': '#3B82F6',
   'gemini-2.0-flash-lite': '#2D5F8A',

@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-14(37차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-14(38차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,22 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(38차 · 2026-09-14) 텍스트 AI 모델 gemini-3.7-flash → gemini-3.8-flash (배포 기록은 아래 갱신):**
+
+CEO: 「제미나이 3.8 Flash 나왔는데 우리 3.7 쓰고 있지? AI 분석들 다 3.8로」.
+
+- 정본 `lib/config/ai-models.ts` 의 `GEMINI_PRO`·`GEMINI_FLASH` 를 `gemini-3.8-flash` 로 — PRO/FLASH 티어의 텍스트 풀이
+  전부(사주·천지인·궁합·관상·손금·풍수·삼재·해화지기·운세·트렌드·재물·신년·기운 풀이·함께 보기…)가 이 상수를 읽는다.
+  이미지(`gemini-3.1-flash-image-preview`)는 별 modality 라 그대로.
+- 🔴 **실측 뒤 바꿨다**: 공식 모델 문서에 `gemini-3.8-flash` Stable, 프로젝트 키의 `GET /v1beta/models`(55개)에도 있음.
+  실측 스크립트는 세션 스크래치(`list-models.mjs`, `node --env-file=.env.local` — 키는 출력하지 않음). 새 모델로 갈 때는
+  항상 이 두 가지를 먼저 본다(키 무효·모델 ID 오타로 전 AI 가 죽은 전례).
+- 단가표 `lib/domain/gemini/pricing.ts` 에 `gemini-3.8-flash` $1.50/$7.50(3.7 과 동일, 인트로 $0.75/$3.75 ~2026-12-31,
+  정상가로 계상) 추가. `pricing.test.ts` 가 **지금 쓰는 모델이 단가표에 있는지**를 강제한다(모델만 올리고 단가를 빠뜨리는
+  실수 차단). 어드민 사용량 대시보드 색 표에 3.8·3.7 추가(모델 선택 목록은 단가표가 단일 출처라 자동).
+- 로그 라벨 기본값(`gemini-rate-limiter.ts`·`user/history.ts`)의 하드코딩 `'gemini-3.5-flash'` 를 `MODEL_FLASH` 로 —
+  기록이 실제 모델을 가리키게. CLAUDE.md 스택 줄 갱신.
 
 **(37차 · 2026-09-14) 「이것만 보면 됩니다」를 보통 사람의 말로 — 프로덕션 라이브(`cc3618f0` → 배포 `hhd-cqybog3ot`):**
 

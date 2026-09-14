@@ -1,4 +1,5 @@
 import { estimateCostUsd, isImageModel, IMAGE_MODEL_PRICE_USD, MODEL_PRICING } from '@/lib/domain/gemini/pricing'
+import { MODEL_FLASH, MODEL_PRO } from '@/lib/config/ai-models'
 
 describe('Gemini 비용 추정', () => {
   describe('이미지 모델 분기 (장당 고정)', () => {
@@ -37,6 +38,15 @@ describe('Gemini 비용 추정', () => {
 
     it('토큰 0 이면 비용 0', () => {
       expect(estimateCostUsd('gemini-3.5-flash', 0, 0)).toBe(0)
+    })
+
+    it('🔴 지금 쓰는 텍스트 모델(ai-models 정본)은 단가표에 반드시 있다 — 모델을 올리고 단가를 빠뜨리면 원가가 폴백값으로 어긋난다', () => {
+      for (const model of [MODEL_FLASH, MODEL_PRO]) {
+        expect({ model, priced: model in MODEL_PRICING }).toEqual({ model, priced: true })
+      }
+      // 2026-09-14 주력 3.8-flash — 공식 단가 3.7 과 동일(https://ai.google.dev/gemini-api/docs/pricing)
+      expect(MODEL_FLASH).toBe('gemini-3.8-flash')
+      expect(MODEL_PRICING['gemini-3.8-flash']).toEqual({ input: 1.5, output: 7.5 })
     })
   })
 })

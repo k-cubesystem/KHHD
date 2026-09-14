@@ -9,6 +9,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { MODEL_FLASH } from '@/lib/config/ai-models'
 import { logger } from '@/lib/utils/logger'
 import { estimateCostUsd, isImageModel } from '@/lib/domain/gemini/pricing'
 
@@ -44,7 +45,7 @@ async function acquireToken(): Promise<{
       allowed: data.allowed,
       remaining: data.remaining ?? 0,
       retryAfterSeconds: data.retry_after_seconds,
-      model: data.model ?? 'gemini-3.5-flash',
+      model: data.model ?? MODEL_FLASH,
     }
   } catch (e) {
     // 예외 시 허용 처리 (DB 연결 문제가 API를 막으면 안 됨)
@@ -131,7 +132,7 @@ export interface GeminiRateLimitOptions {
  */
 export async function withGeminiRateLimit<T>(fn: () => Promise<T>, options: GeminiRateLimitOptions = {}): Promise<T> {
   // cached: 호출자가 넘기지만 아래 로그 insert 는 cached: false 를 하드코딩 중 — 별도 확인 필요
-  const { userId = null, model = 'gemini-3.5-flash', actionType = 'unknown', cached: _cached = false } = options
+  const { userId = null, model = MODEL_FLASH, actionType = 'unknown', cached: _cached = false } = options
 
   // 1. 토큰 획득 시도
   const tokenResult = await acquireToken()
