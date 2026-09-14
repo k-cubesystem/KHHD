@@ -5,7 +5,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logger } from '@/lib/utils/logger'
 import { createCoupangDeeplink, hasCoupangApiKeys } from '@/lib/services/coupang-partners'
 import { sanitizeSubId } from '@/lib/domain/ads/coupang'
-import { SHOP_LINK_TTL_DAYS, SHOP_SUBID, coupangSearchUrl, normalizeShopKeywords } from '@/lib/domain/circle/shop-links'
+import {
+  SHOP_LINKS_PER_REQUEST,
+  SHOP_LINK_TTL_DAYS,
+  SHOP_SUBID,
+  coupangSearchUrl,
+  normalizeShopKeywords,
+} from '@/lib/domain/circle/shop-links'
 
 /**
  * 실물 항목의 쿠팡 파트너스 링크 — 키워드별 전역 캐시(affiliate_links, 30일).
@@ -38,7 +44,8 @@ export async function getShopLinks(rawKeywords: readonly string[]): Promise<Reco
     if ((row.created_at as string) >= cutoff) out[row.keyword as string] = row.url as string
   }
 
-  const missing = keywords.filter((k) => !out[k])
+  // 캐시에 없는 것만, 한 요청에 SHOP_LINKS_PER_REQUEST 개까지 새로 만든다 — 나머지는 다음 방문에 채워진다.
+  const missing = keywords.filter((k) => !out[k]).slice(0, SHOP_LINKS_PER_REQUEST)
   if (missing.length === 0 || !hasCoupangApiKeys()) return out
 
   const admin = createAdminClient()

@@ -8,7 +8,7 @@
 >
 > 갱신: 큰 작업을 마치거나 기기를 옮기기 전에 이 파일을 고치고 커밋한다.
 
-마지막 갱신: 2026-09-14(39차) · 브랜치 `claude/determined-yonath`
+마지막 갱신: 2026-09-14(40차) · 브랜치 `claude/determined-yonath`
 
 **(27차 · 2026-09-04) 의식 셋(액막이·오방기·엽전) 연출 게임필 — 프로덕션 라이브(`62c5c6cb` · 배포 `hhd-d7n8l57tt`):**
 
@@ -70,6 +70,19 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
 - 🔴 푸시가 non-fast-forward 로 막혀 **다른 세션의 09-01~09-09 커밋(팔레트 토큰화·웹툰 공개·분기 복구 등 271파일)을
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
+
+**(40차 · 2026-09-14) 쿠팡 키 상태 확인 + 가족 지도 쿠팡 링크 잘림 버그 (배포 기록은 아래 갱신):**
+
+CEO: 「쿠팡 키 어디에 입력하는지 링크 알려줘, 저번에 입력해 놓은 것 같은데」.
+
+- ✅ **키는 이미 들어가 있다.** `npx vercel env ls` 로 `COUPANG_ACCESS_KEY`·`COUPANG_SECRET_KEY` 가 **Production** 에 있음(생성 ≈08-22),
+  `affiliate_links` 에 쿠팡 링크 14개가 실제로 만들어져 있음. 입력 위치는 https://vercel.com/cubesystems-projects/hhd/settings/environment-variables .
+  🔴 34~39차 보고의 «쿠팡 키 투입 대기»는 확인 없이 옛 메모를 되풀이한 오류였다 — 이제 CEO 대기 항목에서 뺀다.
+- 🔴 **버그(36차에서 들어옴)**: `normalizeShopKeywords` 가 키워드를 `SHOP_LINKS_PER_REQUEST`(6)로 **조회 전에** 잘랐다. 가족 지도
+  「필요한 것」은 다섯 기운 × 네 가지 = 20품목을 한 번에 묻는데 앞의 6개(木 넷·火 둘)만 캐시 조회·생성 대상이 되어, 이미 캐시에 있던
+  水·金 링크조차 지도에서는 이름만 보였다. → `SHOP_LOOKUP_MAX`(40, 조회 상한)와 `SHOP_LINKS_PER_REQUEST`(6, 한 요청의 새 생성 상한)를
+  분리(`lib/domain/circle/shop-links.ts`, `app/actions/circle/shop-links.ts`). 남은 6품목(土 넷·火 둘)은 지도 첫 방문에 만들어진다.
+  회귀 테스트: 지도 품목 전부가 정리 단계에서 잘리지 않음.
 
 **(39차 · 2026-09-14) 함께 보기 AI — 「사람마다 이렇게」(밥·움직임·쉼 + 이유) · 같은 팀이라도 조심할 것 — 프로덕션 라이브(`0f36a3fb` → 배포 `hhd-8255ic1tx`):**
 
