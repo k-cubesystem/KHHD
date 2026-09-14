@@ -71,7 +71,7 @@ CEO: 「가족 전체 균형과 오행 그래프 점수가 현실적으로 안 �
   병합**했다(`8ecc233f`). 충돌은 `circle-energy-map.tsx` 색 한 줄 — 관계 라벨 톤을 토큰(`bok-sprout`·`info-*`·`error-*`)으로
   맞췄다(팔레트 잠금 테스트 통과). 병합 뒤 jest 4,810 · build 통과. 배포는 병합 트리(`hhd-8z523za9e`).
 
-**(38차 · 2026-09-14) 텍스트 AI 모델 gemini-3.7-flash → gemini-3.8-flash (배포 기록은 아래 갱신):**
+**(38차 · 2026-09-14) 텍스트 AI 모델 gemini-3.7-flash → gemini-3.8-flash — 프로덕션 라이브(`419cc518` → 배포 `hhd-62im99gk2`, 키로 generateContent 실측 200·modelVersion gemini-3.8-flash):**
 
 CEO: 「제미나이 3.8 Flash 나왔는데 우리 3.7 쓰고 있지? AI 분석들 다 3.8로」.
 
