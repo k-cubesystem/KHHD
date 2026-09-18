@@ -15,7 +15,18 @@ export function hasUnlimitedAccess(role: string | null | undefined): boolean {
   return role === 'admin'
 }
 
-/** 마스터용 티어 한도 — 가족·기록·일일 복채 전부 개방. */
+/**
+ * 이용권을 쓰지 않고 풀이를 통과하는 계정 — 마스터 + 검수(tester).
+ *
+ * 복채 시절 검수 계정은 하루 50만냥을 자동으로 받았다(잔액이 쌓이는 경로 하나 더).
+ * 이용권 전환 뒤에는 그 경로를 없애고 역할로 통과시킨다. 🔴 소비 판정에만 쓴다 —
+ * 가족 한도·기록 보관 같은 다른 한도는 여전히 hasUnlimitedAccess(마스터 전용)가 기준이다.
+ */
+export function hasPassBypass(role: string | null | undefined): boolean {
+  return role === 'admin' || role === 'tester'
+}
+
+/** 마스터용 티어 한도 — 가족·기록 전부 개방. */
 export const UNLIMITED_TIER_LIMITS = {
   tier: 'MASTER',
   daily_talisman_limit: UNLIMITED_BALANCE,

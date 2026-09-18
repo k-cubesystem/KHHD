@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { hasUnlimitedAccess } from '@/lib/auth/privileges'
 import { FREE_RETENTION_DAYS } from '@/lib/domain/payment/membership-benefits'
 
@@ -54,8 +55,22 @@ interface SubscriptionRow {
  * 활성 구독 핵심 판정 — 마스터 우선, 없으면 ACTIVE + 미만료 구독을 찾는다(tier 미조회, 경량).
  * 어떤 이유로든 조회 실패 시 null(비회원 취급) — 게이트/보관은 안전 측 실패.
  */
-async function resolveActiveSubscription(userId: string): Promise<ActiveSubscriptionCore | null> {
-  const supabase = await createClient()
+/**
+ * 판정에 쓸 클라이언트 — 기본은 로그인 사용자 세션(RLS: 본인 것만).
+ * 웹훅·크론·관리자 화면처럼 «남의» 멤버십을 읽어야 하는 서버 경로는 'admin' 을 넘긴다.
+ * 판정 규칙은 이 파일 한 곳에만 둔다(이용권 월 몫 계산도 이것을 쓴다).
+ */
+export type MembershipReader = 'session' | 'admin'
+
+async function readerClient(reader: MembershipReader) {
+  return reader === 'admin' ? createAdminClient() : await createClient()
+}
+
+async function resolveActiveSubscription(
+  userId: string,
+  reader: MembershipReader = 'session'
+): Promise<ActiveSubscriptionCore | null> {
+  const supabase = await readerClient(reader)
 
   // 1) 마스터(admin) 무제한 — privileges 단일 기준. 항상 통과.
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
@@ -99,8 +114,11 @@ export async function hasActiveMembership(userId: string): Promise<boolean> {
 }
 
 /** 활성 멤버십 상세(tier 포함) 또는 null. 카피/티어 표시용. */
-export async function getActiveMembership(userId: string): Promise<ActiveMembership | null> {
-  const core = await resolveActiveSubscription(userId)
+export async function getActiveMembership(
+  userId: string,
+  reader: MembershipReader = 'session'
+): Promise<ActiveMembership | null> {
+  const core = await resolveActiveSubscription(userId, reader)
   if (!core) return null
   if (core.isMaster) {
     return {
@@ -115,7 +133,7 @@ export async function getActiveMembership(userId: string): Promise<ActiveMembers
 
   let tier = 'MEMBER'
   if (core.planId) {
-    const supabase = await createClient()
+    const supabase = await readerClient(reader)
     const { data: plan } = await supabase.from('membership_plans').select('tier').eq('id', core.planId).maybeSingle()
     const planTier = (plan as { tier?: string } | null)?.tier
     if (planTier) tier = planTier
